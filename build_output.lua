@@ -1,327 +1,93 @@
 _G.IMPORTS = _G.IMPORTS or {}
-IMPORTS['nattlua/definitions/utility.nlua'] = function() --[[#type boolean = true | false]]
---[[#type integer = number]]
---[[#type Table = {[any] = any} | {}]]
---[[#type Function = function=(...any)>(...any)]]
---[[#type userdata = Table]]
---[[#type cdata = {[number] = any}]]
---[[#type cdata.@TypeOverride = "cdata"]]
---[[#type ctype = any]]
---[[#type thread = Table]]
---[[#type empty_function = function=(...)>(...any)]]
-
---[[#analyzer function NonLiteral(obj: any)
-	if obj.Type == "symbol" and (obj:GetData() == true or obj:GetData() == false) then
-		return types.Boolean()
-	end
-
-	if obj.Type == "number" or obj.Type == "string" then
-		obj = obj:Copy()
-		obj:SetLiteral(false)
-		return obj
-	end
-
-	return obj
-end]]
-
---[[#function List<|val: any|>
-	return {[number] = val | nil}
-end]]
-
---[[#function Map<|key: any, val: any|>
-	return {[key] = val | nil}
-end]]
-
---[[#function ErrorReturn<|...: ...any|>
-	return (...,) | (nil, string)
-end]]
-
---[[#analyzer function return_type(func: Function, i: number | nil)
-	local i = i and i:GetData() or nil
-	return {func:GetReturnTypes():Slice(i, i)}
-end]]
-
---[[#analyzer function set_return_type(func: Function, tup: any)
-	func:SetReturnTypes(tup)
-end]]
-
---[[#analyzer function argument_type(func: Function, i: number | nil)
-	local i = i and i:GetData() or nil
-	return {func:GetArguments():Slice(i, i)}
-end]]
-
---[[#analyzer function exclude(T: any, U: any)
-	T = T:Copy()
-	T:RemoveType(U)
-	return T
-end]]
-
---[[#analyzer function enum(tbl: Table)
-	assert(tbl:IsLiteral())
-	local union = types.Union()
-	analyzer:PushAnalyzerEnvironment("typesystem")
-
-	for key, val in tbl:pairs() do
-		analyzer:SetLocalOrGlobalValue(key, val)
-		union:AddType(val)
-	end
-
-	analyzer:PopAnalyzerEnvironment()
-	union:SetLiteral(true)
-	return union
-end]]
-
---[[#analyzer function keysof(tbl: Table | {})
-	local union = types.Union()
-
-	for _, keyval in ipairs(tbl:GetData()) do
-		union:AddType(keyval.key)
-	end
-
-	return union
-end]]
-
---[[#--
-analyzer function seal(tbl: Table)
-	if tbl:GetContract() then return end
-
-	for key, val in tbl:pairs() do
-		if val.Type == "function" and val:GetArguments():Get(1).Type == "union" then
-			local first_arg = val:GetArguments():Get(1)
-
-			if first_arg:GetType(tbl) and first_arg:GetType(types.Any()) then
-				val:GetArguments():Set(1, tbl)
-			end
-		end
-	end
-
-	tbl:SetContract(tbl)
-end]]
-
---[[#function nilable<|tbl: {[string] = any}|>
-	tbl = copy(tbl)
-
-	for key, val in pairs(tbl) do
-		tbl[key] = val | nil
-	end
+IMPORTS['nattlua/definitions/utility.nlua'] = function() 
 
-	return tbl
-end]]
 
---[[#analyzer function copy(obj: any)
-	local copy = obj:Copy()
-	copy.mutations = nil
-	copy.scope = nil
-	copy.potential_self = nil
-	return copy
-end]]
 
---[[#analyzer function UnionPairs(values: any)
-	if values.Type ~= "union" then values = types.Union({values}) end
 
-	local i = 1
-	return function()
-		local value = values:GetData()[i]
-		i = i + 1
-		return value
-	end
-end]]
 
---[[#-- typescript utility functions
-function Partial<|tbl: Table|>
-	local copy = {}
 
-	for key, val in pairs(tbl) do
-		copy[key] = val | nil
-	end
 
-	return copy
-end]]
 
---[[#function Required<|tbl: Table|>
-	local copy = {}
 
-	for key, val in pairs(tbl) do
-		copy[key] = val ~ nil
-	end
 
-	return copy
-end]]
 
---[[#-- this is more like a seal function as it allows you to modify the table
-function Readonly<|tbl: Table|>
-	local copy = {}
 
-	for key, val in pairs(tbl) do
-		copy[key] = val
-	end
-
-	copy.@Contract = copy
-	return copy
-end]]
-
---[[#function Record<|keys: string, tbl: Table|>
-	local out = {}
 
-	for value in UnionPairs(keys) do
-		out[value] = tbl
-	end
 
-	return out
-end]]
-
---[[#function Pick<|tbl: Table, keys: string|>
-	local out = {}
-
-	for value in UnionPairs(keys) do
-		if tbl[value] == nil then
-			error("missing key '" .. value .. "' in table", 2)
-		end
-
-		out[value] = tbl[value]
-	end
-
-	return out
-end]]
-
---[[#analyzer function Delete(tbl: Table, key: string)
-	local out = tbl:Copy()
-	tbl:Delete(key)
-	return out
-end]]
-
---[[#function Omit<|tbl: Table, keys: string|>
-	local out = copy<|tbl|>
-
-	for value in UnionPairs(keys) do
-		if tbl[value] == nil then
-			error("missing key '" .. value .. "' in table", 2)
-		end
-
-		Delete<|out, value|>
-	end
-
-	return out
-end]]
-
---[[#function Exclude<|a: any, b: any|>
-	return a ~ b
-end]]
-
---[[#analyzer function Union(...: ...any)
-	return types.Union({...})
-end]]
-
---[[#function Extract<|a: any, b: any|>
-	local out = Union<||>
-
-	for aval in UnionPairs(a) do
-		for bval in UnionPairs(b) do
-			if aval < bval then out = out | aval end
-		end
-	end
-
-	return out
-end]]
-
---[[#analyzer function Parameters(func: Function)
-	return {func:GetArguments():Copy():Unpack()}
-end]]
-
---[[#analyzer function ReturnType(func: Function)
-	return {func:GetReturnTypes():Copy():Unpack()}
-end]]
-
---[[#function Uppercase<|val: ref string|>
-	return val:upper()
-end]]
-
---[[#function Lowercase<|val: ref string|>
-	return val:lower()
-end]]
-
---[[#function Capitalize<|val: ref string|>
-	return val:sub(1, 1):upper() .. val:sub(2)
-end]]
-
---[[#function Uncapitalize<|val: ref string|>
-	return val:sub(1, 1):lower() .. val:sub(2)
-end]]
-
---[[#analyzer function PushTypeEnvironment(obj: any)
-	local tbl = types.Table()
-	tbl:Set(types.LString("_G"), tbl)
-	local g = analyzer:GetGlobalEnvironment("typesystem")
-	tbl:Set(
-		types.LString("__index"),
-		types.LuaTypeFunction(
-			function(self, key)
-				local ok, err = obj:Get(key)
-
-				if ok then return ok end
-
-				local val, err = analyzer:IndexOperator(key:GetNode(), g, key)
-
-				if val then return val end
-
-				analyzer:Error(key:GetNode(), err)
-				return types.Nil()
-			end,
-			{types.Any(), types.Any()},
-			{}
-		)
-	)
-	tbl:Set(
-		types.LString("__newindex"),
-		types.LuaTypeFunction(
-			function(self, key, val)
-				return analyzer:Assert(analyzer.curent_expression, obj:Set(key, val))
-			end,
-			{types.Any(), types.Any(), types.Any()},
-			{}
-		)
-	)
-	tbl:SetMetaTable(tbl)
-	analyzer:PushGlobalEnvironment(analyzer.current_statement, tbl, "typesystem")
-	analyzer:PushAnalyzerEnvironment("typesystem")
-end]]
-
---[[#analyzer function PopTypeEnvironment()
-	analyzer:PopAnalyzerEnvironment("typesystem")
-	analyzer:PopGlobalEnvironment("typesystem")
-end]]
-
---[[#analyzer function CurrentType(what: "table" | "tuple" | "function" | "union", level: literal nil | number)
-	return analyzer:GetCurrentType(what:GetData(), level and level:GetData())
-end]] end
-IMPORTS['nattlua/definitions/attest.nlua'] = function() --[[#local type attest = {}]]
-
---[[#analyzer function attest.equal(A: any, B: any)
-	if not A:Equal(B) then
-		error("expected " .. tostring(B) .. " got " .. tostring(A), 2)
-	end
-
-	return A
-end]]
-
---[[#analyzer function attest.literal(A: any)
-	analyzer:ErrorAssert(A:IsLiteral())
-	return A
-end]]
-
---[[#analyzer function attest.superset_of(A: any, B: any)
-	analyzer:ErrorAssert(B:IsSubsetOf(A))
-	return A
-end]]
-
---[[#analyzer function attest.subset_of(A: any, B: any)
-	analyzer:ErrorAssert(A:IsSubsetOf(B))
-	return A
-end]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ end
+IMPORTS['nattlua/definitions/attest.nlua'] = function() 
+
+
+
+
+
+
+
+
 
 _G.attest = attest end
 do local __M; IMPORTS["nattlua.other.loadstring"] = function(...) __M = __M or (function(...) local f = _G.loadstring or _G.load
-return function(str--[[#: string]], name--[[#: nil | string]])
+return function(str, name)
 	if _G.CompileString then
 		local var = CompileString(str, name or "loadstring", false)
 
@@ -330,7 +96,7 @@ return function(str--[[#: string]], name--[[#: nil | string]])
 		return setfenv(var, getfenv(1))
 	end
 
-	return (f--[[# as any]])(str, name)
+	return (f)(str, name)
 end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.other.table_print"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
 local tostring = _G.tostring
@@ -347,7 +113,7 @@ local luadata = {}
 local encode_table
 local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 
-local function count(tbl--[[#: Table]])
+local function count(tbl)
 	local i = 0
 
 	for _ in pairs(tbl) do
@@ -361,7 +127,7 @@ local tostringx
 
 do
 	local pretty_prints = {}
-	pretty_prints.table = function(t--[[#: Table]])
+	pretty_prints.table = function(t)
 		local str = tostring(t)
 		str = str .. " [" .. count(t) .. " subtables]"
 		-- guessing the location of a library
@@ -394,7 +160,7 @@ do
 
 		return str
 	end
-	pretty_prints["function"] = function(self--[[#: Function]])
+	pretty_prints["function"] = function(self)
 		if debug.getprettysource then
 			return (
 				"function[%p][%s](%s)"
@@ -408,7 +174,7 @@ do
 		return tostring(self)
 	end
 
-	function tostringx(val--[[#: any]])
+	function tostringx(val)
 		local t = type(val)
 		local f = pretty_prints[t]
 
@@ -418,7 +184,7 @@ do
 	end
 end
 
-local function getprettysource(level--[[#: number | Function]], append_line--[[#: boolean | nil]])
+local function getprettysource(level, append_line)
 	local info = debug.getinfo(type(level) == "number" and (level + 1) or level)
 
 	if info then
@@ -458,7 +224,7 @@ local function getprettysource(level--[[#: number | Function]], append_line--[[#
 	return pretty_source
 end
 
-local function getparams(func--[[#: Function]])
+local function getparams(func)
 	local params = {}
 
 	for i = 1, math.huge do
@@ -470,7 +236,7 @@ local function getparams(func--[[#: Function]])
 	return params
 end
 
-local function isarray(t--[[#: Table]])
+local function isarray(t)
 	local i = 0
 
 	for _ in pairs(t) do
@@ -484,12 +250,12 @@ end
 
 local env = {}
 luadata.Types = {}
---[[#type luadata.Types = Map<|string, function=(any)>(string) | nil|>]]
-local idx = function(var--[[#: any]])
+
+local idx = function(var)
 	return var.LuaDataType
 end
 
-function luadata.Type(var--[[#: any]])
+function luadata.Type(var)
 	local t = type(var)
 
 	if t == "table" then
@@ -501,9 +267,9 @@ function luadata.Type(var--[[#: any]])
 	return t
 end
 
---[[#local type Context = {tab = number, tab_limit = number, done = Table}]]
 
-function luadata.ToString(var, context--[[#: nil | Context]])
+
+function luadata.ToString(var, context)
 	context = context or {tab = -1}
 	local func = luadata.Types[luadata.Type(var)]
 
@@ -512,17 +278,17 @@ function luadata.ToString(var, context--[[#: nil | Context]])
 	if luadata.Types.fallback then return luadata.Types.fallback(var, context) end
 end
 
-function luadata.FromString(str--[[#: string]])
+function luadata.FromString(str)
 	local func = assert(loadstring("return " .. str), "luadata")
 	setfenv(func, env)
 	return func()
 end
 
-function luadata.Encode(tbl--[[#: Table]])
+function luadata.Encode(tbl)
 	return luadata.ToString(tbl)
 end
 
-function luadata.Decode(str--[[#: string]])
+function luadata.Decode(str)
 	local func, err = loadstring("return {\n" .. str .. "\n}", "luadata")
 
 	if not func then return func, err end
@@ -536,44 +302,44 @@ function luadata.Decode(str--[[#: string]])
 end
 
 function luadata.SetModifier(
-	type--[[#: string]],
-	callback--[[#: function=(any, Context)>(string)]],
-	func--[[#: nil]],
-	func_name--[[#: nil | string]]
+	type,
+	callback,
+	func,
+	func_name
 )
 	luadata.Types[type] = callback
 
 	if func_name then env[func_name] = func end
 end
 
-luadata.SetModifier("cdata", function(var--[[#: any]])
+luadata.SetModifier("cdata", function(var)
 	return tostring(var)
 end)
 
-luadata.SetModifier("number", function(var--[[#: number]])
+luadata.SetModifier("number", function(var)
 	return ("%s"):format(var)
 end)
 
-luadata.SetModifier("string", function(var--[[#: string]])
+luadata.SetModifier("string", function(var)
 	return ("%q"):format(var)
 end)
 
-luadata.SetModifier("boolean", function(var--[[#: boolean]])
+luadata.SetModifier("boolean", function(var)
 	return var and "true" or "false"
 end)
 
-luadata.SetModifier("function", function(var--[[#: Function]])
+luadata.SetModifier("function", function(var)
 	return (
 		"function(%s) --[==[ptr: %p    src: %s]==] end"
 	):format(table.concat(getparams(var), ", "), var, getprettysource(var, true))
 end)
 
-luadata.SetModifier("fallback", function(var--[[#: any]])
+luadata.SetModifier("fallback", function(var)
 	return "--[==[  " .. tostringx(var) .. "  ]==]"
 end)
 
 luadata.SetModifier("table", function(tbl, context)
-	local str--[[#: List<|string|>]] = {}
+	local str = {}
 
 	if context.tab_limit and context.tab >= context.tab_limit then
 		return "{--[[ " .. tostringx(tbl) .. " (tab limit reached)]]}"
@@ -650,25 +416,10 @@ return function(...)
 
 	io.write(luadata.ToString(tbl, {tab = -1, tab_limit = max_level, done = {}}):sub(0, -2))
 end end)(...) return __M end end
-IMPORTS['nattlua/lexer/token.nlua'] = function() --[[#local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
---[[#local type TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | TokenWhitespaceType]]
---[[#local type Token = {
-	@Name = "Token",
-	type = TokenType,
-	value = string,
-	start = number,
-	stop = number,
-	is_whitespace = boolean | nil,
-	whitespace = false | nil | {
-		[1 .. inf] = {
-			type = TokenWhitespaceType,
-			value = string,
-			start = number,
-			stop = number,
-		},
-	},
-}]]
---[[#local type TokenReturnType = TokenType | false]]
+IMPORTS['nattlua/lexer/token.nlua'] = function() 
+
+
+
 return {
 	Token = Token,
 	TokenType = TokenType,
@@ -676,11 +427,8 @@ return {
 } end
 IMPORTS['nattlua/code/code.lua'] = function() local META = {}
 META.__index = META
---[[#type META.@Name = "Code"]]
---[[#type META.@Self = {
-	Buffer = string,
-	Name = string,
-}]]
+
+
 
 function META:GetString()
 	return self.Buffer
@@ -694,15 +442,15 @@ function META:GetByteSize()
 	return #self.Buffer
 end
 
-function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
+function META:GetStringSlice(start, stop)
 	return self.Buffer:sub(start, stop)
 end
 
-function META:GetByte(pos--[[#: number]])
+function META:GetByte(pos)
 	return self.Buffer:byte(pos) or 0
 end
 
-function META:FindNearest(str--[[#: string]], start--[[#: number]])
+function META:FindNearest(str, start)
 	local _, pos = self.Buffer:find(str, start, true)
 
 	if not pos then return nil end
@@ -710,7 +458,7 @@ function META:FindNearest(str--[[#: string]], start--[[#: number]])
 	return pos + 1
 end
 
-local function remove_bom_header(str--[[#: string]])--[[#: string]]
+local function remove_bom_header(str)
 	if str:sub(1, 2) == "\xFE\xFF" then
 		return str:sub(3)
 	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
@@ -732,7 +480,7 @@ local function get_default_name()
 	return "unknown line : unknown name"
 end
 
-function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
+function META.New(lua_code, name)
 	local self = setmetatable(
 		{
 			Buffer = remove_bom_header(lua_code),
@@ -743,15 +491,15 @@ function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
 	return self
 end
 
---[[#type Code = META.@Self]]
+
 return META.New end
 do local __M; IMPORTS["nattlua.other.quote"] = function(...) __M = __M or (function(...) local helpers = {}
 
-function helpers.QuoteToken(str--[[#: string]])--[[#: string]]
+function helpers.QuoteToken(str)
 	return "❲" .. str .. "❳"
 end
 
-function helpers.QuoteTokens(var--[[#: List<|string|>]])--[[#: string]]
+function helpers.QuoteTokens(var)
 	local str = ""
 
 	for i, v in ipairs(var) do
@@ -768,9 +516,9 @@ function helpers.QuoteTokens(var--[[#: List<|string|>]])--[[#: string]]
 end
 
 return helpers end)(...) return __M end end
-do local __M; IMPORTS["nattlua.other.helpers"] = function(...) __M = __M or (function(...) --[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+do local __M; IMPORTS["nattlua.other.helpers"] = function(...) __M = __M or (function(...) 
 
---[[#IMPORTS['nattlua/code/code.lua']<|"~/nattlua/code/code.lua"|>]]
+
 local math = _G.math
 local table = _G.table
 local quote = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
@@ -782,12 +530,12 @@ local tostring = _G.tostring
 local next = _G.next
 local error = _G.error
 local ipairs = _G.ipairs
-local jit = _G.jit--[[# as jit | nil]]
+local jit = _G.jit
 local pcall = _G.pcall
 local unpack = _G.unpack
 local helpers = {}
 
-function helpers.LinePositionToSubPosition(code--[[#: string]], line--[[#: number]], character--[[#: number]])--[[#: number]]
+function helpers.LinePositionToSubPosition(code, line, character)
 	local line_pos = 1
 
 	for i = 1, #code do
@@ -813,7 +561,7 @@ function helpers.LinePositionToSubPosition(code--[[#: string]], line--[[#: numbe
 	return #code
 end
 
-function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: number]], stop--[[#: number]])
+function helpers.SubPositionToLinePosition(code, start, stop)
 	local line = 1
 	local line_start
 	local line_stop
@@ -866,8 +614,8 @@ function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: numb
 end
 
 do
-	local function get_lines_before(code--[[#: string]], pos--[[#: number]], lines--[[#: number]])--[[#: number,number,number]]
-		local line--[[#: number]] = 1
+	local function get_lines_before(code, pos, lines)
+		local line = 1
 		local first_line_pos = 1
 
 		for i = pos, 1, -1 do
@@ -885,8 +633,8 @@ do
 		return 1, first_line_pos, line
 	end
 
-	local function get_lines_after(code--[[#: string]], pos--[[#: number]], lines--[[#: number]])--[[#: number,number,number]]
-		local line--[[#: number]] = 1 -- to prevent warning about it always being true when comparing against 1
+	local function get_lines_after(code, pos, lines)
+		local line = 1 -- to prevent warning about it always being true when comparing against 1
 		local first_line_pos = 1
 
 		for i = pos, #code do
@@ -906,8 +654,8 @@ do
 
 	do
 		-- TODO: wtf am i doing here?
-		local args--[[#: List<|string | List<|string|>|>]]
-		local fmt = function(str--[[#: string]])
+		local args
+		local fmt = function(str)
 			local num = tonumber(str)
 
 			if not num then error("invalid format argument " .. str) end
@@ -917,23 +665,23 @@ do
 			return quote.QuoteToken(args[num] or "?")
 		end
 
-		function helpers.FormatMessage(msg--[[#: string]], ...)
+		function helpers.FormatMessage(msg, ...)
 			args = {...}
 			msg = msg:gsub("$(%d)", fmt)
 			return msg
 		end
 	end
 
-	local function clamp(num--[[#: number]], min--[[#: number]], max--[[#: number]])
+	local function clamp(num, min, max)
 		return math.min(math.max(num, min), max)
 	end
 
 	function helpers.FormatError(
-		code--[[#: Code]],
-		msg--[[#: string]],
-		start--[[#: number]],
-		stop--[[#: number]],
-		size--[[#: number]],
+		code,
+		msg,
+		start,
+		stop,
+		size,
 		...
 	)
 		local lua_code = code:GetString()
@@ -1013,10 +761,10 @@ do
 end
 
 function helpers.GetDataFromLineCharPosition(
-	tokens--[[#: {[number] = Token}]],
-	code--[[#: string]],
-	line--[[#: number]],
-	char--[[#: number]]
+	tokens,
+	code,
+	line,
+	char
 )
 	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
 
@@ -1080,7 +828,7 @@ do local __M; IMPORTS["nattlua.types.error_messages"] = function(...) __M = __M 
 local type = _G.type
 local ipairs = _G.ipairs
 local errors = {
-	subset = function(a--[[#: any]], b--[[#: any]], reason--[[#: string | List<|string|> | nil]])--[[#: false,string | {[number] = any | string}]]
+	subset = function(a, b, reason)
 		local msg = {a, " is not a subset of ", b}
 
 		if reason then
@@ -1098,12 +846,12 @@ local errors = {
 		return false, msg
 	end,
 	table_subset = function(
-		a_key--[[#: any]],
-		b_key--[[#: any]],
-		a--[[#: any]],
-		b--[[#: any]],
-		reason--[[#: string | List<|string|> | nil]]
-	)--[[#: false,string | {[number] = any | string}]]
+		a_key,
+		b_key,
+		a,
+		b,
+		reason
+	)
 		local msg = {"[", a_key, "]", a, " is not a subset of ", "[", b_key, "]", b}
 
 		if reason then
@@ -1120,29 +868,29 @@ local errors = {
 
 		return false, msg
 	end,
-	missing = function(a--[[#: any]], b--[[#: any]], reason--[[#: string | nil]])--[[#: false,string | {[number] = any | string}]]
+	missing = function(a, b, reason)
 		local msg = {a, " has no field ", b, " because ", reason}
 		return false, msg
 	end,
-	other = function(msg--[[#: {[number] = any | string} | string]])--[[#: false,string | {[number] = any | string}]]
+	other = function(msg)
 		return false, msg
 	end,
-	type_mismatch = function(a--[[#: any]], b--[[#: any]])--[[#: false,string | {[number] = any | string}]]
+	type_mismatch = function(a, b)
 		return false, {a, " is not the same type as ", b}
 	end,
-	value_mismatch = function(a--[[#: any]], b--[[#: any]])--[[#: false,string | {[number] = any | string}]]
+	value_mismatch = function(a, b)
 		return false, {a, " is not the same value as ", b}
 	end,
-	operation = function(op--[[#: any]], obj--[[#: any]], subject--[[#: string]])--[[#: false,string | {[number] = any | string}]]
+	operation = function(op, obj, subject)
 		return false, {"cannot ", op, " ", subject}
 	end,
-	numerically_indexed = function(obj--[[#: any]])--[[#: false,string | {[number] = any | string}]]
+	numerically_indexed = function(obj)
 		return false, {obj, " is not numerically indexed"}
 	end,
-	empty = function(obj--[[#: any]])--[[#: false,string | {[number] = any | string}]]
+	empty = function(obj)
 		return false, {obj, " is empty"}
 	end,
-	binary = function(op--[[#: string]], l--[[#: any]], r--[[#: any]])--[[#: false,string | {[number] = any | string}]]
+	binary = function(op, l, r)
 		return false,
 		{
 			l,
@@ -1153,13 +901,13 @@ local errors = {
 			" is not a valid binary operation",
 		}
 	end,
-	prefix = function(op--[[#: string]], l--[[#: any]])--[[#: false,string | {[number] = any | string}]]
+	prefix = function(op, l)
 		return false, {op, " ", l, " is not a valid prefix operation"}
 	end,
-	postfix = function(op--[[#: string]], r--[[#: any]])--[[#: false,string | {[number] = any | string}]]
+	postfix = function(op, r)
 		return false, {op, " ", r, " is not a valid postfix operation"}
 	end,
-	literal = function(obj--[[#: any]], reason--[[#: string | nil]])--[[#: false,string | {[number] = any | string}]]
+	literal = function(obj, reason)
 		local msg = {obj, " needs to be a literal"}
 
 		if reason then
@@ -1169,7 +917,7 @@ local errors = {
 
 		return false, msg
 	end,
-	string_pattern = function(a--[[#: any]], b--[[#: any]])--[[#: false,string | {[number] = any | string}]]
+	string_pattern = function(a, b)
 		return false,
 		{
 			"cannot find ",
@@ -1187,50 +935,50 @@ local setmetatable = _G.setmetatable
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local META = {}
 META.__index = META
---[[#type META.Type = string]]
---[[#type META.@Self = {}]]
---[[#local type TBaseType = META.@Self]]
---[[#type TBaseType.@Name = "TBaseType"]]
---[[#type META.Type = string]]
 
-function META.GetSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
-	tbl[name] = default--[[# as NonLiteral<|default|>]]
-	--[[#type tbl.@Self[name] = tbl[name] ]]
-	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
+
+
+
+
+
+function META.GetSet(tbl, name, default)
+	tbl[name] = default
+	
+	tbl["Set" .. name] = function(self, val)
 		self[name] = val
 		return self
 	end
-	tbl["Get" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
+	tbl["Get" .. name] = function(self)
 		return self[name]
 	end
 end
 
-function META.IsSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
-	tbl[name] = default--[[# as NonLiteral<|default|>]]
-	--[[#type tbl.@Self[name] = tbl[name] ]]
-	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
+function META.IsSet(tbl, name, default)
+	tbl[name] = default
+	
+	tbl["Set" .. name] = function(self, val)
 		self[name] = val
 		return self
 	end
-	tbl["Is" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
+	tbl["Is" .. name] = function(self)
 		return self[name]
 	end
 end
 
---[[#type META.Type = string]]
---[[#type TBaseType.Data = any | nil]]
---[[#type TBaseType.Name = string | nil]]
---[[#type TBaseType.parent = TBaseType | nil]]
-META:GetSet("AnalyzerEnvironment", nil--[[# as nil | "runtime" | "typesystem"]])
 
-function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]]) --error("nyi " .. a.Type .. " == " .. b.Type)
+
+
+
+META:GetSet("AnalyzerEnvironment", nil)
+
+function META.Equal(a, b) --error("nyi " .. a.Type .. " == " .. b.Type)
 end
 
 function META:CanBeNil()
 	return false
 end
 
-META:GetSet("Data", nil--[[# as nil | any]])
+META:GetSet("Data", nil)
 
 function META:GetLuaType()
 	if self.Contract and self.Contract.TypeOverride then
@@ -1265,8 +1013,8 @@ do
 		return nil
 	end
 
-	META:IsSet("Falsy", false--[[# as boolean]])
-	META:IsSet("Truthy", false--[[# as boolean]])
+	META:IsSet("Falsy", false)
+	META:IsSet("Truthy", false)
 end
 
 do
@@ -1274,7 +1022,7 @@ do
 		return self
 	end
 
-	function META:CopyInternalsFrom(obj--[[#: mutable TBaseType]])
+	function META:CopyInternalsFrom(obj)
 		self:SetNode(obj:GetNode())
 		self:SetTokenLabelSource(obj:GetTokenLabelSource())
 		self:SetLiteral(obj:IsLiteral())
@@ -1287,23 +1035,23 @@ do
 end
 
 do -- token, expression and statement association
-	META:GetSet("Upvalue", nil--[[# as nil | any]])
-	META:GetSet("TokenLabelSource", nil--[[# as nil | string]])
-	META:GetSet("Node", nil--[[# as nil | any]])
+	META:GetSet("Upvalue", nil)
+	META:GetSet("TokenLabelSource", nil)
+	META:GetSet("Node", nil)
 
-	function META:SetNode(node--[[#: nil | any]])
+	function META:SetNode(node)
 		self.Node = node
 
-		if node then node:AddType(self--[[# as any]]) end
+		if node then node:AddType(self) end
 
 		return self
 	end
 end
 
 do -- comes from tbl.@Name = "my name"
-	META:GetSet("Name", nil--[[# as nil | TBaseType]])
+	META:GetSet("Name", nil)
 
-	function META:SetName(name--[[#: TBaseType | nil]])
+	function META:SetName(name)
 		if name then assert(name:IsLiteral()) end
 
 		self.Name = name
@@ -1311,9 +1059,9 @@ do -- comes from tbl.@Name = "my name"
 end
 
 do -- comes from tbl.@TypeOverride = "my name"
-	META:GetSet("TypeOverride", nil--[[# as nil | TBaseType]])
+	META:GetSet("TypeOverride", nil)
 
-	function META:SetTypeOverride(name--[[#: any]])
+	function META:SetTypeOverride(name)
 		if type(name) == "table" and name:IsLiteral() then name = name:GetData() end
 
 		self.TypeOverride = name
@@ -1321,11 +1069,11 @@ do -- comes from tbl.@TypeOverride = "my name"
 end
 
 do
-	--[[#type TBaseType.disabled_unique_id = number | nil]]
-	META:GetSet("UniqueID", nil--[[# as nil | number]])
+	
+	META:GetSet("UniqueID", nil)
 	local ref = 0
 
-	function META:MakeUnique(b--[[#: boolean]])
+	function META:MakeUnique(b)
 		if b then
 			self.UniqueID = ref
 			ref = ref + 1
@@ -1353,7 +1101,7 @@ do
 		return self.UniqueID
 	end
 
-	function META.IsSameUniqueType(a--[[#: TBaseType]], b--[[#: TBaseType]])
+	function META.IsSameUniqueType(a, b)
 		if a.UniqueID and not b.UniqueID then
 			return type_errors.other({a, "is a unique type"})
 		end
@@ -1367,9 +1115,9 @@ do
 end
 
 do
-	META:IsSet("Literal", false--[[# as boolean]])
+	META:IsSet("Literal", false)
 
-	function META:CopyLiteralness(obj--[[#: TBaseType]])
+	function META:CopyLiteralness(obj)
 		self:SetLiteral(obj:IsLiteral())
 	end
 end
@@ -1385,7 +1133,7 @@ do -- operators
 		})
 	end
 
-	function META:Set(key--[[#: TBaseType | nil]], val--[[#: TBaseType | nil]])
+	function META:Set(key, val)
 		return type_errors.other(
 			{
 				"undefined set: ",
@@ -1400,7 +1148,7 @@ do -- operators
 		)
 	end
 
-	function META:Get(key--[[#: boolean]])
+	function META:Get(key)
 		return type_errors.other(
 			{
 				"undefined get: ",
@@ -1413,13 +1161,13 @@ do -- operators
 		)
 	end
 
-	function META:PrefixOperator(op--[[#: string]])
+	function META:PrefixOperator(op)
 		return type_errors.other({"no operator ", op, " on ", self})
 	end
 end
 
 do
-	function META:SetParent(parent--[[#: TBaseType | nil]])
+	function META:SetParent(parent)
 		if parent then
 			if parent ~= self then self.parent = parent end
 		else
@@ -1447,11 +1195,11 @@ do -- contract
 		self:SetContract(self:GetContract() or self:Copy())
 	end
 
-	META:GetSet("Contract", nil--[[# as TBaseType | nil]])
+	META:GetSet("Contract", nil)
 end
 
 do
-	META:GetSet("MetaTable", nil--[[# as TBaseType | nil]])
+	META:GetSet("MetaTable", nil)
 
 	function META:GetMetaTable()
 		local contract = self.Contract
@@ -1472,7 +1220,7 @@ function META:GetFirstValue()
 	return self
 end
 
-function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[#: string]])
+function META.LogicalComparison(l, r, op)
 	if op == "==" then
 		if l:IsLiteral() and r:IsLiteral() then return l:GetData() == r:GetData() end
 
@@ -1483,10 +1231,10 @@ function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[
 end
 
 function META.New()
-	return setmetatable({}--[[# as META.@Self]], META)
+	return setmetatable({}, META)
 end
 
---[[#type META.TBaseType = copy<|META|>.@Self]]
+
 return META end
 do local __M; IMPORTS["nattlua.types.union"] = function(...) __M = __M or (function(...) local tostring = tostring
 local math = math
@@ -1496,21 +1244,21 @@ local ipairs = _G.ipairs
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 
---[[#local type { TNumber } = IMPORTS['nattlua.types.number']("nattlua.types.number")]]
+
 
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
---[[#local type TBaseType = META.TBaseType]]
---[[#type META.@Name = "TUnion"]]
---[[#type TUnion = META.@Self]]
---[[#type TUnion.Data = List<|TBaseType|>]]
---[[#type TUnion.suppress = boolean]]
+
+
+
+
+
 META.Type = "union"
 
 function META:GetHash()
 	return tostring(self)
 end
 
-function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
+function META.Equal(a, b)
 	if a.suppress then return true end
 
 	if b.Type ~= "union" and #a.Data == 1 then return a.Data[1]:Equal(b) end
@@ -1584,7 +1332,7 @@ function META:__tostring()
 	return table.concat(s, " | ")
 end
 
-function META:AddType(e--[[#: TBaseType]])
+function META:AddType(e)
 	if e.Type == "union" then
 		for _, v in ipairs(e.Data) do
 			self:AddType(v)
@@ -1614,7 +1362,7 @@ function META:AddType(e--[[#: TBaseType]])
 		local sup = e
 
 		for i = #self.Data, 1, -1 do
-			local sub = self.Data[i]--[[# as TBaseType]] -- TODO, prove that the for loop will always yield TBaseType?
+			local sub = self.Data[i] -- TODO, prove that the for loop will always yield TBaseType?
 			if sub.Type == sup.Type then
 				if sub:IsSubsetOf(sup) then table.remove(self.Data, i) end
 			end
@@ -1657,7 +1405,7 @@ function META:GetLength()
 	return #self.Data
 end
 
-function META:RemoveType(e--[[#: TBaseType]])
+function META:RemoveType(e)
 	if e.Type == "union" then
 		for i, v in ipairs(e.Data) do
 			self:RemoveType(v)
@@ -1703,7 +1451,7 @@ function META:HasTuples()
 	return false
 end
 
-function META:GetAtIndex(i--[[#: number]])
+function META:GetAtIndex(i)
 	if not self:HasTuples() then return self end
 
 	local val
@@ -1743,7 +1491,7 @@ function META:GetAtIndex(i--[[#: number]])
 	return val
 end
 
-function META:Get(key--[[#: TBaseType]], from_table--[[#: nil | boolean]])
+function META:Get(key, from_table)
 	if from_table then
 		for _, obj in ipairs(self.Data) do
 			if obj.Get then
@@ -1767,7 +1515,7 @@ function META:Get(key--[[#: TBaseType]], from_table--[[#: nil | boolean]])
 	return type_errors.other(errors)
 end
 
-function META:Contains(key--[[#: TBaseType]])
+function META:Contains(key)
 	for _, obj in ipairs(self.Data) do
 		local ok, reason = key:IsSubsetOf(obj)
 
@@ -1777,7 +1525,7 @@ function META:Contains(key--[[#: TBaseType]])
 	return false
 end
 
-function META:ContainsOtherThan(key--[[#: TBaseType]])
+function META:ContainsOtherThan(key)
 	local found = false
 
 	for _, obj in ipairs(self.Data) do
@@ -1815,7 +1563,7 @@ function META:GetFalsy()
 	return copy
 end
 
-function META:IsType(typ--[[#: string]])
+function META:IsType(typ)
 	if self:IsEmpty() then return false end
 
 	for _, obj in ipairs(self.Data) do
@@ -1825,7 +1573,7 @@ function META:IsType(typ--[[#: string]])
 	return true
 end
 
-function META:HasType(typ--[[#: string]])
+function META:HasType(typ)
 	return self:GetType(typ) ~= false
 end
 
@@ -1837,7 +1585,7 @@ function META:CanBeNil()
 	return false
 end
 
-function META:GetType(typ--[[#: string]])
+function META:GetType(typ)
 	for _, obj in ipairs(self.Data) do
 		if obj.Type == typ then return obj end
 	end
@@ -1845,7 +1593,7 @@ function META:GetType(typ--[[#: string]])
 	return false
 end
 
-function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
+function META:IsTargetSubsetOfChild(target)
 	local errors = {}
 
 	for _, obj in ipairs(self:GetData()) do
@@ -1859,7 +1607,7 @@ function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 	return type_errors.subset(target, self, errors)
 end
 
-function META.IsSubsetOf(A--[[#: TUnion]], B--[[#: TBaseType]])
+function META.IsSubsetOf(A, B)
 	if B.Type ~= "union" then return A:IsSubsetOf(META.New({B})) end
 
 	if B.Type == "tuple" then B = B:Get(1) end
@@ -1881,7 +1629,7 @@ function META.IsSubsetOf(A--[[#: TUnion]], B--[[#: TBaseType]])
 	return true
 end
 
-function META:Union(union--[[#: TUnion]])
+function META:Union(union)
 	local copy = self:Copy()
 
 	for _, e in ipairs(union.Data) do
@@ -1891,7 +1639,7 @@ function META:Union(union--[[#: TUnion]])
 	return copy
 end
 
-function META:Intersect(union--[[#: TUnion]])
+function META:Intersect(union)
 	local copy = META.New()
 
 	for _, e in ipairs(self.Data) do
@@ -1901,7 +1649,7 @@ function META:Intersect(union--[[#: TUnion]])
 	return copy
 end
 
-function META:Subtract(union--[[#: TUnion]])
+function META:Subtract(union)
 	local copy = self:Copy()
 
 	for _, e in ipairs(self.Data) do
@@ -1911,7 +1659,7 @@ function META:Subtract(union--[[#: TUnion]])
 	return copy
 end
 
-function META:Copy(map--[[#: Map<|any, any|>]], copy_tables--[[#: nil | boolean]])
+function META:Copy(map, copy_tables)
 	map = map or {}
 	local copy = META.New()
 	map[self] = map[self] or copy
@@ -1991,7 +1739,7 @@ function META:EnableFalsy()
 	end
 end
 
-function META:SetMax(val--[[#: TNumber]])
+function META:SetMax(val)
 	local copy = self:Copy()
 
 	for _, e in ipairs(copy.Data) do
@@ -2001,7 +1749,7 @@ function META:SetMax(val--[[#: TNumber]])
 	return copy
 end
 
-function META:Call(analyzer--[[#: any]], arguments--[[#: TBaseType]], call_node--[[#: any]])
+function META:Call(analyzer, arguments, call_node)
 	if self:IsEmpty() then return type_errors.operation("call", nil) end
 
 	local is_overload = true
@@ -2090,7 +1838,7 @@ function META:GetLargestNumber()
 	return max[1]
 end
 
-function META.New(data--[[#: nil | List<|TBaseType|>]])
+function META.New(data)
 	local self = setmetatable({
 		Data = {},
 		Falsy = false,
@@ -2118,13 +1866,13 @@ local table = _G.table
 local setmetatable = _G.setmetatable
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
---[[#local type TBaseType = META.TBaseType]]
---[[#type META.@Name = "TSymbol"]]
---[[#type TSymbol = META.@Self]]
-META.Type = "symbol"
-META:GetSet("Data", nil--[[# as any]])
 
-function META.Equal(a--[[#: TSymbol]], b--[[#: TBaseType]])
+
+
+META.Type = "symbol"
+META:GetSet("Data", nil)
+
+function META.Equal(a, b)
 	return a.Type == b.Type and a:GetData() == b:GetData()
 end
 
@@ -2150,7 +1898,7 @@ function META:CanBeNil()
 	return self:GetData() == nil
 end
 
-function META.IsSubsetOf(A--[[#: TSymbol]], B--[[#: TBaseType]])
+function META.IsSubsetOf(A, B)
 	if B.Type == "tuple" then B = B:Get(1) end
 
 	if B.Type == "any" then return true end
@@ -2172,7 +1920,7 @@ function META:IsTruthy()
 	return not not self.Data
 end
 
-function META.New(data--[[#: any]])
+function META.New(data)
 	local self = setmetatable({Data = data}, META)
 	self:SetLiteral(true)
 	return self
@@ -2204,30 +1952,26 @@ local setmetatable = _G.setmetatable
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local bit = _G.bit32 or _G.bit
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
---[[#local type TBaseType = META.TBaseType]]
---[[#type META.@Name = "TNumber"]]
---[[#type TNumber = META.@Self]]
+
+
+
 META.Type = "number"
-META:GetSet("Data", nil--[[# as number | nil]])
---[[#local type TUnion = {
-	@Name = "TUnion",
-	Type = "union",
-	GetLargestNumber = function=(self)>(TNumber | nil, nil | any),
-}]]
+META:GetSet("Data", nil)
+
 
 do -- TODO, operators is mutated below, need to use upvalue position when analyzing typed arguments
 	local operators = {
-		["-"] = function(l--[[#: number]])
+		["-"] = function(l)
 			return -l
 		end,
-		["~"] = function(l--[[#: number]])
+		["~"] = function(l)
 			return bit.bnot(l)
 		end,
 	}
 
-	function META:PrefixOperator(op--[[#: keysof<|operators|>]])
+	function META:PrefixOperator(op)
 		if self:IsLiteral() then
-			local num = self.New(operators[op](self:GetData()--[[# as number]])):SetLiteral(true)
+			local num = self.New(operators[op](self:GetData())):SetLiteral(true)
 			local max = self:GetMax()
 
 			if max then num:SetMax(max:PrefixOperator(op)) end
@@ -2235,7 +1979,7 @@ do -- TODO, operators is mutated below, need to use upvalue position when analyz
 			return num
 		end
 
-		return self.New(nil--[[# as number]]) -- hmm
+		return self.New(nil) -- hmm
 	end
 end
 
@@ -2250,7 +1994,7 @@ function META:GetHash()
 	return "__@type@__" .. self.Type
 end
 
-function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
+function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end
 
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
@@ -2281,21 +2025,21 @@ function META:Copy()
 	if max then copy.Max = max:Copy() end
 
 	copy:CopyInternalsFrom(self)
-	return copy--[[# as any]] -- TODO: figure out inheritance
+	return copy -- TODO: figure out inheritance
 end
 
-function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TBaseType]])
-	if B.Type == "tuple" then B = (B--[[# as any]]):Get(1) end
+function META.IsSubsetOf(A, B)
+	if B.Type == "tuple" then B = (B):Get(1) end
 
 	if B.Type == "any" then return true end
 
-	if B.Type == "union" then return (B--[[# as any]]):IsTargetSubsetOfChild(A) end
+	if B.Type == "union" then return (B):IsTargetSubsetOfChild(A) end
 
 	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
 
 	if A:IsLiteral() and B:IsLiteral() then
-		local a = A:GetData()--[[# as number]]
-		local b = B:GetData()--[[# as number]]
+		local a = A:GetData()
+		local b = B:GetData()
 
 		-- compare against literals
 		-- nan
@@ -2327,7 +2071,7 @@ end
 
 function META:__tostring()
 	local n = self:GetData()
-	local s--[[#: string]]
+	local s
 
 	if n ~= n then s = "nan" end
 
@@ -2340,13 +2084,13 @@ function META:__tostring()
 	return "number"
 end
 
-META:GetSet("Max", nil--[[# as TNumber | nil]])
+META:GetSet("Max", nil)
 
-function META:SetMax(val--[[#: TBaseType | TUnion]])
+function META:SetMax(val)
 	local err
 
 	if val.Type == "union" then
-		val, err = (val--[[# as any]]):GetLargestNumber()
+		val, err = (val):GetLargestNumber()
 
 		if not val then return val, err end
 	end
@@ -2372,25 +2116,25 @@ end
 
 do
 	local operators = {
-		[">"] = function(a--[[#: number]], b--[[#: number]])
+		[">"] = function(a, b)
 			return a > b
 		end,
-		["<"] = function(a--[[#: number]], b--[[#: number]])
+		["<"] = function(a, b)
 			return a < b
 		end,
-		["<="] = function(a--[[#: number]], b--[[#: number]])
+		["<="] = function(a, b)
 			return a <= b
 		end,
-		[">="] = function(a--[[#: number]], b--[[#: number]])
+		[">="] = function(a, b)
 			return a >= b
 		end,
 	}
 
 	local function compare(
-		val--[[#: number]],
-		min--[[#: number]],
-		max--[[#: number]],
-		operator--[[#: keysof<|operators|>]]
+		val,
+		min,
+		max,
+		operator
 	)
 		local func = operators[operator]
 
@@ -2403,7 +2147,7 @@ do
 		return nil
 	end
 
-	function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: "=="]])--[[#: boolean | nil]]
+	function META.LogicalComparison(a, b, operator)
 		if not a:IsLiteral() or not b:IsLiteral() then return nil end
 
 		if operator == "==" then
@@ -2473,7 +2217,7 @@ do
 		return type_errors.binary(operator, a, b)
 	end
 
-	function META.LogicalComparison2(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber | nil,TNumber | nil]]
+	function META.LogicalComparison2(a, b, operator)
 		local a_min = a:GetData()
 		local b_min = b:GetData()
 
@@ -2483,10 +2227,10 @@ do
 
 		local a_max = a:GetMaxLiteral() or a_min
 		local b_max = b:GetMaxLiteral() or b_min
-		local a_min_res = nil--[[# as number]]
-		local b_min_res = nil--[[# as number]]
-		local a_max_res = nil--[[# as number]]
-		local b_max_res = nil--[[# as number]]
+		local a_min_res = nil
+		local b_min_res = nil
+		local a_max_res = nil
+		local b_max_res = nil
 
 		if operator == "<" then
 			a_min_res = math.min(a_min, b_max)
@@ -2509,7 +2253,7 @@ do
 end
 
 do
-	local operators--[[#: {[string] = function=(number, number)>(number)}]] = {
+	local operators = {
 		["+"] = function(l, r)
 			return l + r
 		end,
@@ -2548,18 +2292,18 @@ do
 		end,
 	}
 
-	function META.ArithmeticOperator(l--[[#: TNumber]], r--[[#: TNumber]], op--[[#: keysof<|operators|>]])--[[#: TNumber]]
+	function META.ArithmeticOperator(l, r, op)
 		local func = operators[op]
 
 		if l:IsLiteral() and r:IsLiteral() then
-			local obj = META.New(func(l:GetData()--[[# as number]], r:GetData()--[[# as number]])):SetLiteral(true)
+			local obj = META.New(func(l:GetData(), r:GetData())):SetLiteral(true)
 
 			if r:GetMax() then
-				obj:SetMax(l.ArithmeticOperator(l:GetMax() or l, r:GetMax()--[[# as TNumber]], op))
+				obj:SetMax(l.ArithmeticOperator(l:GetMax() or l, r:GetMax(), op))
 			end
 
 			if l:GetMax() then
-				obj:SetMax(l.ArithmeticOperator(l:GetMax()--[[# as TNumber]], r:GetMax() or r, op))
+				obj:SetMax(l.ArithmeticOperator(l:GetMax(), r:GetMax() or r, op))
 			end
 
 			return obj
@@ -2569,10 +2313,10 @@ do
 	end
 end
 
-function META.New(data--[[#: number | nil]])
+function META.New(data)
 	return setmetatable(
 		{
-			Data = data--[[# as number]],
+			Data = data,
 			Falsy = false,
 			Truthy = true,
 			Literal = false,
@@ -2583,10 +2327,10 @@ end
 
 return {
 	Number = META.New,
-	LNumber = function(num--[[#: number | nil]])
+	LNumber = function(num)
 		return META.New(num):SetLiteral(true)
 	end,
-	LNumberFromString = function(str--[[#: string]])
+	LNumberFromString = function(str)
 		local num = tonumber(str)
 
 		if not num then
@@ -2620,17 +2364,17 @@ local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error
 local ipairs = _G.ipairs
 local type = _G.type
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
---[[#local type TBaseType = META.TBaseType]]
---[[#type META.@Name = "TTuple"]]
---[[#type TTuple = META.@Self]]
---[[#type TTuple.Remainder = nil | TTuple]]
---[[#type TTuple.Repeat = nil | number]]
---[[#type TTuple.suppress = nil | boolean]]
---[[#type TTuple.Data = List<|TBaseType|>]]
-META.Type = "tuple"
-META:GetSet("Unpackable", false--[[# as boolean]])
 
-function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]])
+
+
+
+
+
+
+META.Type = "tuple"
+META:GetSet("Unpackable", false)
+
+function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end
 
 	if a.suppress then return true end
@@ -2676,7 +2420,7 @@ function META:__tostring()
 	return s
 end
 
-function META:Merge(tup--[[#: TTuple]])
+function META:Merge(tup)
 	if tup.Type == "union" then
 		for _, obj in ipairs(tup:GetData()) do
 			self:Merge(obj)
@@ -2699,7 +2443,7 @@ function META:Merge(tup--[[#: TTuple]])
 	return self
 end
 
-function META:Copy(map--[[#: Map<|any, any|>]], ...--[[#: ...any]])
+function META:Copy(map, ...)
 	map = map or {}
 	local copy = self.New({})
 	map[self] = map[self] or copy
@@ -2718,7 +2462,7 @@ function META:Copy(map--[[#: Map<|any, any|>]], ...--[[#: ...any]])
 	return copy
 end
 
-function META.IsSubsetOf(A--[[#: TTuple]], B--[[#: TBaseType]], max_length--[[#: nil | number]])
+function META.IsSubsetOf(A, B, max_length)
 	if A == B then return true end
 
 	if A.suppress then return true end
@@ -2771,7 +2515,7 @@ function META.IsSubsetOf(A--[[#: TTuple]], B--[[#: TBaseType]], max_length--[[#:
 	return true
 end
 
-function META.IsSubsetOfTupleWithoutExpansion(A--[[#: TTuple]], B--[[#: TBaseType]])
+function META.IsSubsetOfTupleWithoutExpansion(A, B)
 	for i, a in ipairs(A:GetData()) do
 		local b = B:GetWithoutExpansion(i)
 		local ok, err = a:IsSubsetOf(b)
@@ -2782,7 +2526,7 @@ function META.IsSubsetOfTupleWithoutExpansion(A--[[#: TTuple]], B--[[#: TBaseTyp
 	return true
 end
 
-function META.IsSubsetOfTuple(A--[[#: TTuple]], B--[[#: TBaseType]])
+function META.IsSubsetOfTuple(A, B)
 	if A:Equal(B) then return true end
 
 	if A:GetLength() == math.huge and B:GetLength() == math.huge then
@@ -2842,7 +2586,7 @@ function META:HasTuples()
 	return false
 end
 
-function META:Get(key--[[#: number | TBaseType]])
+function META:Get(key)
 	local real_key = key
 
 	if type(key) == "table" and key.Type == "number" and key:IsLiteral() then
@@ -2882,7 +2626,7 @@ function META:Get(key--[[#: number | TBaseType]])
 	return val
 end
 
-function META:GetWithoutExpansion(key--[[#: string]])
+function META:GetWithoutExpansion(key)
 	local val = self:GetData()[key]
 
 	if not val then if self.Remainder then return self.Remainder end end
@@ -2892,7 +2636,7 @@ function META:GetWithoutExpansion(key--[[#: string]])
 	return val
 end
 
-function META:Set(i--[[#: number]], val--[[#: TBaseType]])
+function META:Set(i, val)
 	if type(i) == "table" then
 		i = i:GetData()
 		return false, "expected number"
@@ -2955,7 +2699,7 @@ function META:GetMinimumLength()
 	local found_nil = false
 
 	for i = #self:GetData(), 1, -1 do
-		local obj = self:GetData()[i]--[[# as TBaseType]]
+		local obj = self:GetData()[i]
 
 		if
 			(
@@ -2979,7 +2723,7 @@ function META:GetMinimumLength()
 	return len
 end
 
-function META:GetSafeLength(arguments--[[#: TTuple]])
+function META:GetSafeLength(arguments)
 	local len = self:GetLength()
 
 	if len == math.huge or arguments:GetLength() == math.huge then
@@ -2989,17 +2733,17 @@ function META:GetSafeLength(arguments--[[#: TTuple]])
 	return len
 end
 
-function META:AddRemainder(obj--[[#: TBaseType]])
+function META:AddRemainder(obj)
 	self.Remainder = obj
 	return self
 end
 
-function META:SetRepeat(amt--[[#: number]])
+function META:SetRepeat(amt)
 	self.Repeat = amt
 	return self
 end
 
-function META:Unpack(length--[[#: nil | number]])
+function META:Unpack(length)
 	length = length or self:GetLength()
 	length = math.min(length, self:GetLength())
 	assert(length ~= math.huge, "length must be finite")
@@ -3034,7 +2778,7 @@ function META:UnpackWithoutExpansion()
 	return table.unpack(tbl)
 end
 
-function META:Slice(start--[[#: number]], stop--[[#: number]])
+function META:Slice(start, stop)
 	-- TODO: not accurate yet
 	start = start or 1
 	stop = stop or #self:GetData()
@@ -3061,7 +2805,7 @@ function META:GetFirstValue()
 	return first
 end
 
-function META:Concat(tup--[[#: TTuple]])
+function META:Concat(tup)
 	local start = self:GetLength()
 
 	for i, v in ipairs(tup:GetData()) do
@@ -3080,7 +2824,7 @@ function META:SetTable(data)
 			v.Type == "tuple" and
 			not (
 				v
-			--[[# as TTuple]]).Remainder and
+			).Remainder and
 			v ~= self
 		then
 			self:AddRemainder(v)
@@ -3090,7 +2834,7 @@ function META:SetTable(data)
 	end
 end
 
-function META.New(data--[[#: nil | List<|TBaseType|>]])
+function META.New(data)
 	local self = setmetatable({Data = {}, Falsy = false, Truthy = false, Literal = false}, META)
 
 	if data then self:SetTable(data) end
@@ -3105,7 +2849,7 @@ return {
 		self:SetRepeat(math.huge)
 		return self
 	end,
-	NormalizeTuples = function(types--[[#: List<|TBaseType|>]])
+	NormalizeTuples = function(types)
 		local arguments
 
 		if #types == 1 and types[1].Type == "tuple" then
@@ -3134,16 +2878,16 @@ return {
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.any"] = function(...) __M = __M or (function(...) local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
---[[#local type TBaseType = META.TBaseType]]
---[[#type META.@Name = "TAny"]]
---[[#type TAny = META.@Self]]
+
+
+
 META.Type = "any"
 
 function META:Get(key)
 	return self
 end
 
-function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType]])
+function META:Set(key, val)
 	return true
 end
 
@@ -3151,7 +2895,7 @@ function META:Copy()
 	return self
 end
 
-function META.IsSubsetOf(A--[[#: TAny]], B--[[#: TBaseType]])
+function META.IsSubsetOf(A, B)
 	return true
 end
 
@@ -3172,7 +2916,7 @@ function META:Call()
 	return Tuple({Tuple({}):AddRemainder(Tuple({META.New()}):SetRepeat(math.huge))})
 end
 
-function META.Equal(a--[[#: TAny]], b--[[#: TBaseType]])
+function META.Equal(a, b)
 	return a.Type == b.Type
 end
 
@@ -3426,16 +3170,16 @@ local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
 local context = IMPORTS['nattlua.analyzer.context']("nattlua.analyzer.context")
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 
---[[#local type { Token, TokenType } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
 
---[[#local type TBaseType = META.TBaseType]]
+
+
 META.Type = "string"
---[[#type META.@Name = "TString"]]
---[[#type TString = META.@Self]]
-META:GetSet("Data", nil--[[# as string | nil]])
-META:GetSet("PatternContract", nil--[[# as nil | string]])
 
-function META.Equal(a--[[#: TString]], b--[[#: BaseType]])
+
+META:GetSet("Data", nil)
+META:GetSet("PatternContract", nil)
+
+function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end
 
 	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
@@ -3458,7 +3202,7 @@ function META:Copy()
 	return copy
 end
 
-function META.IsSubsetOf(A--[[#: TString]], B--[[#: BaseType]])
+function META.IsSubsetOf(A, B)
 	if B.Type == "tuple" then B = B:Get(1) end
 
 	if B.Type == "any" then return true end
@@ -3512,7 +3256,7 @@ function META:__tostring()
 	return "string"
 end
 
-function META.LogicalComparison(a--[[#: TString]], b--[[#: TString]], op)
+function META.LogicalComparison(a, b, op)
 	if op == ">" then
 		if a:IsLiteral() and b:IsLiteral() then return a:GetData() > b:GetData() end
 
@@ -3546,13 +3290,13 @@ function META:IsTruthy()
 	return true
 end
 
-function META:PrefixOperator(op--[[#: string]])
+function META:PrefixOperator(op)
 	if op == "#" then
 		return Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral())
 	end
 end
 
-function META.New(data--[[#: string | nil]])
+function META.New(data)
 	local self = setmetatable({Data = data}, META)
 	-- analyzer might be nil when strings are made outside of the analyzer, like during tests
 	local analyzer = context:GetCurrentAnalyzer()
@@ -3566,13 +3310,13 @@ end
 
 return {
 	String = META.New,
-	LString = function(num--[[#: string]])
+	LString = function(num)
 		return META.New(num):SetLiteral(true)
 	end,
 	LStringNoMeta = function(str)
 		return setmetatable({Data = str}, META):SetLiteral(true)
 	end,
-	NodeToString = function(node--[[#: Token]])
+	NodeToString = function(node)
 		return META.New(node.value.value):SetLiteral(true):SetNode(node)
 	end,
 } end)(...) return __M end end
@@ -3587,14 +3331,14 @@ local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
---[[#local type BaseType = IMPORTS['nattlua/types/base.lua']("~/nattlua/types/base.lua")]]
+
 META.Type = "table"
---[[#type META.@Name = "TTable"]]
---[[#type TTable = META.@Self]]
-META:GetSet("Data", nil--[[# as {[any] = any} | {}]])
-META:GetSet("BaseTable", nil--[[# as TTable | nil]])
-META:GetSet("ReferenceId", nil--[[# as string | nil]])
-META:GetSet("Self", nil--[[# as TTable]])
+
+
+META:GetSet("Data", nil)
+META:GetSet("BaseTable", nil)
+META:GetSet("ReferenceId", nil)
+META:GetSet("Self", nil)
 
 function META:GetName()
 	if not self.Name then
@@ -3613,7 +3357,7 @@ function META:SetSelf(tbl)
 	self.Self = tbl
 end
 
-function META.Equal(a--[[#: BaseType]], b--[[#: BaseType]])
+function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end
 
 	if a:IsUnique() then return a:GetUniqueID() == b:GetUniqueID() end
@@ -3763,7 +3507,7 @@ function META:GetLength(analyzer)
 	return Number(len):SetLiteral(true)
 end
 
-function META:FollowsContract(contract--[[#: TTable]])
+function META:FollowsContract(contract)
 	if self:GetContract() == contract then return true end
 
 	do -- todo
@@ -3839,7 +3583,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 	return true
 end
 
-function META.IsSubsetOf(A--[[#: BaseType]], B--[[#: BaseType]])
+function META.IsSubsetOf(A, B)
 	if A.suppress then return true, "suppressed" end
 
 	if B.Type == "tuple" then B = B:Get(1) end
@@ -3917,7 +3661,7 @@ function META.IsSubsetOf(A--[[#: BaseType]], B--[[#: BaseType]])
 	return type_errors.subset(A, B)
 end
 
-function META:ContainsAllKeysIn(contract--[[#: TTable]])
+function META:ContainsAllKeysIn(contract)
 	for _, keyval in ipairs(contract:GetData()) do
 		if keyval.key:IsLiteral() then
 			local ok, err = self:FindKeyVal(keyval.key)
@@ -3949,7 +3693,7 @@ function META:IsDynamic()
 	return true
 end
 
-function META:Delete(key--[[#: BaseType]])
+function META:Delete(key)
 	local data = self:GetData()
 
 	for i = #data, 1, -1 do
@@ -3976,7 +3720,7 @@ function META:GetKeyUnion()
 	return union
 end
 
-function META:Contains(key--[[#: BaseType]])
+function META:Contains(key)
 	return self:FindKeyValReverse(key)
 end
 
@@ -3986,7 +3730,7 @@ function META:IsEmpty()
 	return self:GetData()[1] == nil
 end
 
-function META:FindKeyVal(key--[[#: BaseType]])
+function META:FindKeyVal(key)
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
@@ -4005,7 +3749,7 @@ function META:FindKeyVal(key--[[#: BaseType]])
 	return type_errors.missing(self, key, reasons)
 end
 
-function META:FindKeyValReverse(key--[[#: BaseType]])
+function META:FindKeyValReverse(key)
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
@@ -4038,7 +3782,7 @@ function META:FindKeyValReverse(key--[[#: BaseType]])
 	return type_errors.missing(self, key, reasons)
 end
 
-function META:FindKeyValReverseEqual(key--[[#: BaseType]])
+function META:FindKeyValReverseEqual(key)
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
@@ -4073,7 +3817,7 @@ function META:GetGlobalEnvironmentValues()
 	return values
 end
 
-function META:Set(key--[[#: BaseType]], val--[[#: BaseType | nil]], no_delete--[[#: boolean | nil]])
+function META:Set(key, val, no_delete)
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		self["Set" .. key:GetData():sub(2)](self, val)
 		return true
@@ -4118,7 +3862,7 @@ function META:Set(key--[[#: BaseType]], val--[[#: BaseType | nil]], no_delete--[
 	return true
 end
 
-function META:SetExplicit(key--[[#: BaseType]], val--[[#: BaseType]])
+function META:SetExplicit(key, val)
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		local key = "Set" .. key:GetData():sub(2)
 
@@ -4152,7 +3896,7 @@ function META:SetExplicit(key--[[#: BaseType]], val--[[#: BaseType]])
 	return true
 end
 
-function META:Get(key--[[#: BaseType]], from_contract)
+function META:Get(key, from_contract)
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		return self["Get" .. key:GetData():sub(2)](self)
 	end
@@ -4222,7 +3966,7 @@ function META:IsNumericallyIndexed()
 	return true
 end
 
-function META:CopyLiteralness(from--[[#: TTable]])
+function META:CopyLiteralness(from)
 	if not from:GetData() then return false end
 
 	if self:Equal(from) then return true end
@@ -4248,7 +3992,7 @@ function META:CopyLiteralness(from--[[#: TTable]])
 	return true
 end
 
-function META:CoerceUntypedFunctions(from--[[#: TTable]])
+function META:CoerceUntypedFunctions(from)
 	for _, kv in ipairs(self:GetData()) do
 		local kv_from, reason = from:FindKeyValReverse(kv.key)
 
@@ -4260,7 +4004,7 @@ function META:CoerceUntypedFunctions(from--[[#: TTable]])
 	end
 end
 
-function META:Copy(map--[[#: any]], ...)
+function META:Copy(map, ...)
 	map = map or {}
 	local copy = META.New()
 	map[self] = map[self] or copy
@@ -4321,7 +4065,7 @@ function META:pairs()
 	end
 end
 
---[[#type META.@Self.suppress = boolean]]
+
 
 function META:HasLiteralKeys()
 	if self.suppress then return true end
@@ -4430,12 +4174,12 @@ function META:IsTruthy()
 	return true
 end
 
-local function unpack_keyval(keyval--[[#: ref {key = any, val = any}]])
+local function unpack_keyval(keyval)
 	local key, val = keyval.key, keyval.val
 	return key, val
 end
 
-function META.Extend(A--[[#: TTable]], B--[[#: TTable]])
+function META.Extend(A, B)
 	if B.Type ~= "table" then return false, "cannot extend non table" end
 
 	local map = {}
@@ -4464,7 +4208,7 @@ function META.Extend(A--[[#: TTable]], B--[[#: TTable]])
 	return A
 end
 
-function META.Union(A--[[#: TTable]], B--[[#: TTable]])
+function META.Union(A, B)
 	local copy = META.New({})
 
 	for _, keyval in ipairs(A:GetData()) do
@@ -4495,7 +4239,7 @@ function META:Call(analyzer, arguments, ...)
 	return type_errors.other("table has no __call metamethod")
 end
 
-function META:PrefixOperator(op--[[#: "#"]])
+function META:PrefixOperator(op)
 	if op == "#" then
 		local keys = (self:GetContract() or self):GetData()
 
@@ -4528,540 +4272,84 @@ function META.New()
 end
 
 return {Table = META.New} end)(...) return __M end end
-IMPORTS['nattlua/definitions/lua/globals.nlua'] = function() --[[#type @Name = "_G"]]
---[[#type setmetatable = function=(table: Table, metatable: Table | nil)>(Table)]]
---[[#type select = function=(index: number | string, ...)>(...)]]
---[[#type rawlen = function=(v: Table | string)>(number)]]
---[[#type unpack = function=(list: Table, i: number, j: number)>(...) | function=(list: Table, i: number)>(...) | function=(list: Table)>(...)]]
---[[#type require = function=(modname: string)>(any)]]
---[[#type rawset = function=(table: Table, index: any, value: any)>(Table)]]
---[[#type getmetatable = function=(object: any)>(Table | nil)]]
---[[#type type = function=(v: any)>(string)]]
---[[#type collectgarbage = function=(opt: string, arg: number)>(...) | function=(opt: string)>(...) | function=()>(...)]]
---[[#type getfenv = function=(f: empty_function | number)>(Table) | function=()>(Table)]]
---[[#type pairs = function=(t: Table)>(empty_function, Table, nil)]]
---[[#type rawequal = function=(v1: any, v2: any)>(boolean)]]
---[[#type loadfile = function=(filename: string, mode: string, env: Table)>(empty_function | nil, string | nil) | function=(filename: string, mode: string)>(empty_function | nil, string | nil) | function=(filename: string)>(empty_function | nil, string | nil) | function=()>(empty_function | nil, string | nil)]]
---[[#type dofile = function=(filename: string)>(...) | function=()>(...)]]
---[[#type ipairs = function=(t: Table)>(empty_function, Table, number)]]
---[[#type tonumber = function=(e: number | string, base: number | nil)>(number | nil)]]
-_G.arg = _--[[# as List<|any|>]]
-
---[[#analyzer function type_print(...: ...any)
-	print(...)
-end]]
-
---[[#analyzer function print(...: ...any)
-	print(...)
-end]]
-
---[[#type tostring = function=(val: any)>(string)]]
-
---[[#analyzer function type_assert_truthy(obj: any, err: string | nil)
-	if obj:IsTruthy() then return obj end
-
-	error(err and err:GetData() or "assertion failed")
-end]]
-
---[[#analyzer function next(t: Map<|any, any|>, k: any)
-	if t.Type == "any" then return types.Any(), types.Any() end
-
-	if t:IsLiteral() then
-		if k and not (k.Type == "symbol" and k:GetData() == nil) then
-			for i, kv in ipairs(t:GetData()) do
-				if kv.key:IsSubsetOf(k) then
-					local kv = t:GetData()[i + 1]
-
-					if kv then
-						if not k:IsLiteral() then
-							return type.Union({types.Nil(), kv.key}), type.Union({types.Nil(), kv.val})
-						end
-
-						return kv.key, kv.val
-					end
-
-					return nil
-				end
-			end
-		else
-			local kv = t:GetData() and t:GetData()[1]
-
-			if kv then return kv.key, kv.val end
-		end
-	end
-
-	if t.Type == "union" then t = t:GetData() else t = {t} end
-
-	local k = types.Union()
-	local v = types.Union()
-
-	for _, t in ipairs(t) do
-		if not t:GetData() then return types.Any(), types.Any() end
-
-		for i, kv in ipairs(t:GetContract() and t:GetContract():GetData() or t:GetData()) do
-			if kv.Type then
-				k:AddType(types.Number())
-				v:AddType(kv)
-			else
-				kv.key:SetNode(t:GetNode())
-				kv.val:SetNode(t:GetNode())
-				k:AddType(kv.key)
-				v:AddType(kv.val)
-			end
-		end
-	end
-
-	return k, v
-end]]
-
---[[#analyzer function pairs(tbl: Table)
-	if tbl.Type == "table" and tbl:HasLiteralKeys() then
-		local i = 1
-		return function()
-			local kv = tbl:GetData()[i]
-
-			if not kv then return nil end
-
-			i = i + 1
-			local o = analyzer:GetMutatedTableValue(tbl, kv.key, kv.val)
-			return kv.key, o or kv.val
-		end
-	end
-
-	analyzer:PushAnalyzerEnvironment("typesystem")
-	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
-	analyzer:PopAnalyzerEnvironment()
-	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
-	local done = false
-
-	if v and v.Type == "union" then v:RemoveType(types.Symbol(nil)) end
-
-	return function()
-		if done then return nil end
-
-		done = true
-		return k, v
-	end
-end]]
-
---[[#analyzer function ipairs(tbl: {[number] = any} | {})
-	if tbl:IsLiteral() then
-		local i = 1
-		return function(key, val)
-			local kv = tbl:GetData()[i]
-
-			if not kv then return nil end
-
-			i = i + 1
-			return kv.key, kv.val
-		end
-	end
-
-	if tbl.Type == "table" and not tbl:IsNumericallyIndexed() then
-		analyzer:Warning(analyzer.current_expression, {tbl, " is not numerically indexed"})
-		local done = false
-		return function()
-			if done then return nil end
-
-			done = true
-			return types.Any(), types.Any()
-		end
-	end
-
-	analyzer:PushAnalyzerEnvironment("typesystem")
-	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
-	analyzer:PopAnalyzerEnvironment()
-	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
-	local done = false
-	return function()
-		if done then return nil end
-
-		done = true
-
-		-- v must never be nil here
-		if v.Type == "union" then v = v:Copy():RemoveType(types.Symbol(nil)) end
-
-		return k, v
-	end
-end]]
-
---[[#analyzer function require(name: string)
-	if not name:IsLiteral() then return types.Any() end
-
-	local str = name
-	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
-	local val = base_environment:Get(str)
-
-	if val then return val end
-
-	local modules = {
-		"table.new",
-		"jit.util",
-		"jit.opt",
-	}
-
-	for _, mod in ipairs(modules) do
-		if str:GetData() == mod then
-			local tbl
-
-			for key in mod:gmatch("[^%.]+") do
-				tbl = tbl or base_environment
-				tbl = tbl:Get(types.LString(key))
-			end
-
-			-- in case it's not found
-			-- TODO, add ability to configure the analyzer
-			analyzer:Warning(analyzer.current_expression, "module '" .. mod .. "' might not exist")
-			return tbl
-		end
-	end
-
-	if analyzer:GetLocalOrGlobalValue(str) then
-		return analyzer:GetLocalOrGlobalValue(str)
-	end
-
-	if package.loaders then
-		for i, searcher in ipairs(package.loaders) do
-			local loader = searcher(str:GetData())
-
-			if type(loader) == "function" then
-				local path = debug.getinfo(loader).source
-
-				if path:sub(1, 1) == "@" then
-					local path = path:sub(2)
-
-					if analyzer.loaded and analyzer.loaded[path] then
-						return analyzer.loaded[path]
-					end
-
-					local compiler = IMPORTS['nattlua']("nattlua").File(analyzer:ResolvePath(path))
-					assert(compiler:Lex())
-					assert(compiler:Parse())
-					local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-					analyzer.loaded = analyzer.loaded or {}
-					analyzer.loaded[path] = res
-					return res
-				end
-			end
-		end
-	end
-
-	analyzer:Error(name:GetNode(), "module '" .. str:GetData() .. "' not found")
-	return types.Any
-end]]
-
---[[#analyzer function type_error(str: string, level: number | nil)
-	error(str:GetData(), level and level:GetData() or nil)
-end]]
-
---[[#analyzer function load(code: string | function=()>(string | nil), chunk_name: string | nil)
-	if not code:IsLiteral() or code.Type == "union" then
-		return types.Tuple(
-			{
-				types.Union({types.Nil(), types.AnyFunction()}),
-				types.Union({types.Nil(), types.String()}),
-			}
-		)
-	end
-
-	local str = code:GetData()
-	local compiler = nl.Compiler(str, chunk_name and chunk_name:GetData() or nil)
-	assert(compiler:Lex())
-	assert(compiler:Parse())
-	return types.Function(
-		{
-			arg = types.Tuple({}),
-			ret = types.Tuple({}),
-			lua_function = function(...)
-				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-			end,
-		}
-	):SetNode(compiler.SyntaxTree)
-end]]
-
---[[#type loadstring = load]]
-
---[[#analyzer function dofile(path: string)
-	if not path:IsLiteral() then return types.Any() end
-
-	local f = assert(io.open(path:GetData(), "rb"))
-	local code = f:read("*all")
-	f:close()
-	local compiler = nl.Compiler(code, "@" .. path:GetData())
-	assert(compiler:Lex())
-	assert(compiler:Parse())
-	return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-end]]
-
---[[#analyzer function loadfile(path: string)
-	if not path:IsLiteral() then return types.Any() end
-
-	local f = assert(io.open(path:GetData(), "rb"))
-	local code = f:read("*all")
-	f:close()
-	local compiler = nl.Compiler(code, "@" .. path:GetData())
-	assert(compiler:Lex())
-	assert(compiler:Parse())
-	return types.Function(
-		{
-			arg = types.Tuple({}),
-			ret = types.Tuple({}),
-			lua_function = function(...)
-				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
-			end,
-		}
-	):SetNode(compiler.SyntaxTree)
-end]]
-
---[[#analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
-	tbl:Set(key, val, true)
-end]]
-
---[[#analyzer function rawget(tbl: {[any] = any} | {}, key: any)
-	local t, err = tbl:Get(key, true)
-
-	if t then return t end
-end]]
-
---[[#analyzer function assert(obj: any, msg: string | nil)
-	if not analyzer:IsDefinetlyReachable() then
-		analyzer:ThrowSilentError(obj)
-
-		if obj.Type == "union" then
-			obj = obj:Copy()
-			obj:DisableFalsy()
-			return obj
-		end
-
-		return obj
-	end
-
-	if obj.Type == "union" then
-		for _, tup in ipairs(obj:GetData()) do
-			if tup.Type == "tuple" and tup:Get(1):IsTruthy() then return tup end
-		end
-	end
-
-	if obj:IsTruthy() and not obj:IsFalsy() then
-		if obj.Type == "union" then
-			obj = obj:Copy()
-			obj:DisableFalsy()
-			return obj
-		end
-	end
-
-	if obj:IsFalsy() then
-		analyzer:ThrowError(msg and msg:GetData() or "assertion failed!", obj, obj:IsTruthy())
-
-		if obj.Type == "union" then
-			obj = obj:Copy()
-			obj:DisableFalsy()
-			return obj
-		end
-	end
-
-	return obj
-end]]
-
---[[#analyzer function error(msg: string, level: number | nil)
-	if not analyzer:IsDefinetlyReachable() then
-		analyzer:ThrowSilentError()
-		return
-	end
-
-	if msg:IsLiteral() then
-		analyzer:ThrowError(msg:GetData())
-	else
-		analyzer:ThrowError("error thrown from expression " .. tostring(analyzer.current_expression))
-	end
-end]]
-
---[[#analyzer function pcall(callable: function=(...any)>((...any)), ...: ...any)
-	local count = #analyzer:GetDiagnostics()
-	analyzer:PushProtectedCall()
-	local res = analyzer:Assert(analyzer.current_statement, analyzer:Call(callable, types.Tuple({...})))
-	analyzer:PopProtectedCall()
-	local diagnostics = analyzer:GetDiagnostics()
-	analyzer:ClearError()
-
-	for i = count, #diagnostics do
-		local diagnostic = diagnostics[i]
-
-		if diagnostic and diagnostic.severity == "error" then
-			return types.Boolean(), types.Union({types.LString(diagnostic.msg), types.Any()})
-		end
-	end
-
-	return types.True(), res
-end]]
-
---[[#analyzer function type_pcall(func: Function, ...: ...any)
-	local diagnostics_index = #analyzer.diagnostics
-	analyzer:PushProtectedCall()
-	local tuple = analyzer:Assert(analyzer.current_statement, analyzer:Call(func, types.Tuple({...})))
-	analyzer:PopProtectedCall()
-
-	do
-		local errors = {}
-
-		for i = diagnostics_index + 1, #analyzer.diagnostics do
-			local d = analyzer.diagnostics[i]
-			local msg = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers").FormatError(analyzer.compiler:GetCode(), d.msg, d.start, d.stop)
-			table.insert(errors, msg)
-		end
-
-		if errors[1] then return false, table.concat(errors, "\n") end
-	end
-
-	return true, tuple:Unpack()
-end]]
-
---[[#analyzer function xpcall(callable: any, error_cb: any, ...: ...any)
-	return analyzer:Assert(analyzer.current_statement, callable:Call(callable, types.Tuple(...), node))
-end]]
-
---[[#analyzer function select(index: 1 .. inf | "#", ...: ...any)
-	return select(index:GetData(), ...)
-end]]
-
---[[#analyzer function type(obj: any)
-	if obj.Type == "union" then
-		analyzer.type_checked = obj
-		local copy = types.Union()
-		copy:SetUpvalue(obj:GetUpvalue())
-
-		for _, v in ipairs(obj:GetData()) do
-			if v.GetLuaType then copy:AddType(types.LString(v:GetLuaType())) end
-		end
-
-		return copy
-	end
-
-	if obj.Type == "any" then return types.String() end
-
-	if obj.GetLuaType then return obj:GetLuaType() end
-
-	return types.String()
-end]]
-
---[[#function MetaTableFunctions<|T: any|>
-	return {
-		__gc = function=(T)>(),
-		__pairs = function=(T)>(function=(T)>(any, any)),
-		__tostring = function=(T)>(string),
-		__call = function=(T, ...any)>(...any),
-		__index = function=(T, key: any)>(),
-		__newindex = function=(T, key: any, value: any)>(),
-		__len = function=(a: T)>(number),
-		__unm = function=(a: T)>(any),
-		__bnot = function=(a: T)>(any),
-		__add = function=(a: T, b: any)>(any),
-		__sub = function=(a: T, b: any)>(any),
-		__mul = function=(a: T, b: any)>(any),
-		__div = function=(a: T, b: any)>(any),
-		__idiv = function=(a: T, b: any)>(any),
-		__mod = function=(a: T, b: any)>(any),
-		__pow = function=(a: T, b: any)>(any),
-		__band = function=(a: T, b: any)>(any),
-		__bor = function=(a: T, b: any)>(any),
-		__bxor = function=(a: T, b: any)>(any),
-		__shl = function=(a: T, b: any)>(any),
-		__shr = function=(a: T, b: any)>(any),
-		__concat = function=(a: T, b: any)>(any),
-		__eq = function=(a: T, b: any)>(boolean),
-		__lt = function=(a: T, b: any)>(boolean),
-		__le = function=(a: T, b: any)>(boolean),
-	}
-end]]
-
---[[#analyzer function setmetatable(tbl: Table, meta: Table | nil)
-	if not meta then
-		tbl:SetMetaTable()
-		return
-	end
-
-	if meta.Type == "table" then
-		if meta.Self then
-			analyzer:Assert(tbl:GetNode(), tbl:FollowsContract(meta.Self))
-			tbl:CopyLiteralness(meta.Self)
-			tbl:SetContract(meta.Self)
-			-- clear mutations so that when looking up values in the table they won't return their initial value
-			tbl.mutations = nil
-		else
-			meta.potential_self = meta.potential_self or types.Union({})
-			meta.potential_self:AddType(tbl)
-		end
-
-		tbl:SetMetaTable(meta)
-		local metatable_functions = analyzer:CallTypesystemUpvalue(types.LString("MetaTableFunctions"), tbl)
-
-		for _, kv in ipairs(metatable_functions:GetData()) do
-			local a = kv.val
-			local b = meta:Get(kv.key)
-
-			if b and b.Type == "function" then
-				local ok = analyzer:Assert(b:GetNode(), a:IsSubsetOf(b))
-
-				if ok then
-
-				--TODO: enrich callback types
-				--b:SetReturnTypes(a:GetReturnTypes())
-				--b:SetArguments(a:GetArguments())
-				--b.arguments_inferred = true
-				end
-			end
-		end
-	end
-
-	return tbl
-end]]
-
---[[#analyzer function getmetatable(tbl: Table)
-	if tbl.Type == "table" then return tbl:GetMetaTable() end
-end]]
-
---[[#analyzer function tostring(val: any)
-	if not val:IsLiteral() then return types.String() end
-
-	if val.Type == "string" then return val end
-
-	if val.Type == "table" then
-		if val:GetMetaTable() then
-			local func = val:GetMetaTable():Get(types.LString("__tostring"))
-
-			if func then
-				if func.Type == "function" then
-					return analyzer:Assert(analyzer.current_expression, analyzer:Call(func, types.Tuple({val})))
-				else
-					return func
-				end
-			end
-		end
-
-		return tostring(val:GetData())
-	end
-
-	return tostring(val:GetData())
-end]]
-
---[[#analyzer function tonumber(val: string | number, base: number | nil)
-	if not val:IsLiteral() or base and not base:IsLiteral() then
-		return types.Union({types.Nil(), types.Number()})
-	end
-
-	if val:IsLiteral() then
-		base = base and base:IsLiteral() and base:GetData()
-		return tonumber(val:GetData(), base)
-	end
-
-	return val
-end]]
+IMPORTS['nattlua/definitions/lua/globals.nlua'] = function() 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+_G.arg = _
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function _G.LSX(
-	tag--[[#: string]],
-	constructor--[[#: function=(Table, Table)>(Table)]],
-	props--[[#: Table]],
-	children--[[#: Table]]
+	tag,
+	constructor,
+	props,
+	children
 )
 	local e = constructor and
 		constructor(props, children) or
@@ -5072,386 +4360,74 @@ function _G.LSX(
 	e.tag = tag
 	return e
 end end
-IMPORTS['nattlua/definitions/lua/io.nlua'] = function() --[[#type io = {
-	write = function=(...)>(nil),
-	flush = function=()>(boolean | nil, string | nil),
-	read = function=(...)>(...),
-	lines = function=(...)>(empty_function),
-	setvbuf = function=(mode: string, size: number)>(boolean | nil, string | nil) | function=(mode: string)>(boolean | nil, string | nil),
-	seek = function=(whence: string, offset: number)>(number | nil, string | nil) | function=(whence: string)>(number | nil, string | nil) | function=()>(number | nil, string | nil),
-}]]
---[[#type File = {
-	close = function=(self)>(boolean | nil, string, number | nil),
-	write = function=(self, ...)>(self | nil, string | nil),
-	flush = function=(self)>(boolean | nil, string | nil),
-	read = function=(self, ...)>(...),
-	lines = function=(self, ...)>(empty_function),
-	setvbuf = function=(self, string, number)>(boolean | nil, string | nil) | function=(file: self, mode: string)>(boolean | nil, string | nil),
-	seek = function=(self, string, number)>(number | nil, string | nil) | function=(file: self, whence: string)>(number | nil, string | nil) | function=(file: self)>(number | nil, string | nil),
-}]]
---[[#type io.open = function=(string, string | nil)>(File)]]
---[[#type io.popen = function=(string, string | nil)>(File)]]
---[[#type io.output = function=()>(File)]]
---[[#type io.stdout = File]]
---[[#type io.stdin = File]]
---[[#type io.stderr = File]]
+IMPORTS['nattlua/definitions/lua/io.nlua'] = function() 
 
---[[#analyzer function io.type(obj: any)
-	local flags = types.Union()
-	flags:AddType(types.LString("file"))
-	flags:AddType(types.LString("closed file"))
-	print(("%p"):format(obj), ("%p"):format(env.typesystem.File))
 
-	if false and obj:IsSubsetOf(env.typesystem.File) then return flags end
 
-	flags:AddType(types.Nil())
-	return flags
-end]] end
-IMPORTS['nattlua/definitions/lua/luajit.nlua'] = function() --[[#type ffi = {
-	errno = function=(nil | number)>(number),
-	os = "Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other",
-	arch = "x86" | "x64" | "arm" | "ppc" | "ppcspe" | "mips",
-	C = {},
-	cdef = function=(string)>(nil),
-	abi = function=(string)>(boolean),
-	metatype = function=(ctype, Table)>(cdata),
-	new = function=(string | ctype, number | nil, ...any)>(cdata),
-	copy = function=(any, any, number | nil)>(nil),
-	alignof = function=(ctype)>(number),
-	cast = function=(ctype | string, cdata | string | number)>(cdata),
-	typeof = function=(ctype, ...any)>(ctype),
-	load = function=(string, boolean)>(userdata) | function=(string)>(userdata),
-	sizeof = function=(ctype, number)>(number) | function=(ctype)>(number),
-	string = function=(cdata, number | nil)>(string),
-	gc = function=(ctype, empty_function)>(cdata),
-	istype = function=(ctype, any)>(boolean),
-	fill = function=(cdata, number, any)>(nil) | function=(cdata, len: number)>(nil),
-	offsetof = function=(cdata, number)>(number),
-}]]
---[[#type ffi.C.@Name = "FFI_C"]]
---[[#type jit = {
-	os = ffi.os,
-	arch = ffi.arch,
-	attach = function=(empty_function, string)>(nil),
-	flush = function=()>(nil),
-	opt = {start = function=(...)>(nil)},
-	tracebarrier = function=()>(nil),
-	version_num = number,
-	version = string,
-	on = function=(empty_function | true, boolean | nil)>(nil),
-	off = function=(empty_function | true, boolean | nil)>(nil),
-	flush = function=(empty_function | true, boolean | nil)>(nil),
-	status = function=()>(boolean, ...string),
-	opt = {
-		start = function=(...string)>(nil),
-		stop = function=()>(nil),
-	},
-	util = {
-		funcinfo = function=(empty_function, position: number | nil)>(
-			{
-				linedefined = number, -- as for debug.getinfo
-				lastlinedefined = number, -- as for debug.getinfo
-				params = number, -- the number of parameters the function takes
-				stackslots = number, -- the number of stack slots the function's local variable use
-				upvalues = number, -- the number of upvalues the function uses
-				bytecodes = number, -- the number of bytecodes it the compiled function
-				gcconsts = number, -- the number of garbage collectable constants
-				nconsts = number, -- the number of lua_Number (double) constants
-				children = boolean, -- Boolean representing whether the function creates closures
-				currentline = number, -- as for debug.getinfo
-				isvararg = boolean, -- if the function is a vararg function
-				source = string, -- as for debug.getinfo
-				loc = string, -- a string describing the source and currentline, like "<source>:<line>"
-				ffid = number, -- the fast function id of the function (if it is one). In this case only upvalues above and addr below are valid
-				addr = any, -- the address of the function (if it is not a Lua function). If it's a C function rather than a fast function, only upvalues above is valid*
-			}
-		),
-	},
-}]] end
-IMPORTS['nattlua/definitions/lua/debug.nlua'] = function() --[[#type debug_getinfo = {
-	name = string,
-	namewhat = string,
-	source = string,
-	short_src = string,
-	linedefined = number,
-	lastlinedefined = number,
-	what = string,
-	currentline = number,
-	istailcall = boolean,
-	nups = number,
-	nparams = number,
-	isvararg = boolean,
-	func = any,
-	activelines = {[number] = boolean},
-}]]
---[[#type debug = {
-	sethook = function=(thread: thread, hook: empty_function, mask: string, count: number)>(nil) | function=(thread: thread, hook: empty_function, mask: string)>(nil) | function=(hook: empty_function, mask: string)>(nil),
-	getregistry = function=()>(nil),
-	traceback = function=(thread: thread, message: any, level: number)>(string) | function=(thread: thread, message: any)>(string) | function=(thread: thread)>(string) | function=()>(string),
-	setlocal = function=(thread: thread, level: number, local_: number, value: any)>(string | nil) | function=(level: number, local_: number, value: any)>(string | nil),
-	getinfo = function=(thread: thread, f: empty_function | number, what: string)>(debug_getinfo | nil) | function=(thread: thread, f: empty_function | number)>(debug_getinfo | nil) | function=(f: empty_function | number)>(debug_getinfo | nil),
-	upvalueid = function=(f: empty_function, n: number)>(userdata),
-	setupvalue = function=(f: empty_function, up: number, value: any)>(string | nil),
-	getlocal = function=(thread: thread, f: number | empty_function, local_: number)>(string | nil, any) | function=(f: number | empty_function, local_: number)>(string | nil, any),
-	upvaluejoin = function=(f1: empty_function, n1: number, f2: empty_function, n2: number)>(nil),
-	getupvalue = function=(f: empty_function, up: number)>(string | nil, any),
-	getmetatable = function=(value: any)>(Table | nil),
-	setmetatable = function=(value: any, Table: Table | nil)>(any),
-	gethook = function=(thread: thread)>(empty_function, string, number) | function=()>(empty_function, string, number),
-	getuservalue = function=(u: userdata)>(Table | nil),
-	debug = function=()>(nil),
-	getfenv = function=(o: any)>(Table),
-	setfenv = function=(object: any, Table: Table)>(any),
-	setuservalue = function=(udata: userdata, value: Table | nil)>(userdata),
-}]]
 
---[[#analyzer function debug.setfenv(val: Function, table: Table)
-	if val and (val:IsLiteral() or val.Type == "function") then
-		if val.Type == "number" then
-			analyzer:SetEnvironmentOverride(analyzer.environment_nodes[val:GetData()], table, "runtime")
-		elseif val:GetNode() then
-			analyzer:SetEnvironmentOverride(val:GetNode(), table, "runtime")
-		end
-	end
-end]]
 
---[[#analyzer function debug.getfenv(func: Function)
-	return analyzer:GetGlobalEnvironmentOverride(func.function_body_node or func, "runtime")
-end]]
 
---[[#type getfenv = debug.getfenv]]
---[[#type setfenv = debug.setfenv]] end
-IMPORTS['nattlua/definitions/lua/package.nlua'] = function() --[[#type package = {
-	searchpath = function=(name: string, path: string, sep: string, rep: string)>(string | nil, string | nil) | function=(name: string, path: string, sep: string)>(string | nil, string | nil) | function=(name: string, path: string)>(string | nil, string | nil),
-	seeall = function=(module: Table)>(nil),
-	loadlib = function=(libname: string, funcname: string)>(empty_function | nil),
-	config = "/\n;\n?\n!\n-\n",
-}]] end
-IMPORTS['nattlua/definitions/lua/bit.nlua'] = function() --[[#type bit32 = {
-	lrotate = function=(x: number, disp: number)>(number),
-	bor = function=(...)>(number),
-	rshift = function=(x: number, disp: number)>(number),
-	band = function=(...)>(number),
-	lshift = function=(x: number, disp: number)>(number),
-	rrotate = function=(x: number, disp: number)>(number),
-	replace = function=(n: number, v: number, field: number, width: number)>(number) | function=(n: number, v: number, field: number)>(number),
-	bxor = function=(...)>(number),
-	arshift = function=(x: number, disp: number)>(number),
-	extract = function=(n: number, field: number, width: number)>(number) | function=(n: number, field: number)>(number),
-	bnot = function=(x: number)>(number),
-	btest = function=(...)>(boolean),
-	tobit = function=(...)>(number),
-}]]
---[[#type bit = bit32]]
+
+
+ end
+IMPORTS['nattlua/definitions/lua/luajit.nlua'] = function() 
+
+ end
+IMPORTS['nattlua/definitions/lua/debug.nlua'] = function() 
+
+
+
+
+
+
+
+ end
+IMPORTS['nattlua/definitions/lua/package.nlua'] = function()  end
+IMPORTS['nattlua/definitions/lua/bit.nlua'] = function() 
+
 
 do
-	--[[#analyzer function bit.bor(...: ...number): number
-		local out = {}
+	
 
-		for i, num in ipairs({...}) do
-			if not num:IsLiteral() then return types.Number() end
+	
 
-			out[i] = num:GetData()
-		end
+	
 
-		return bit.bor(table.unpack(out))
-	end]]
+	
 
-	--[[#analyzer function bit.band(...: ...number): number
-		local out = {}
+	
 
-		for i, num in ipairs({...}) do
-			if not num:IsLiteral() then return types.Number() end
+	
 
-			out[i] = num:GetData()
-		end
+	
 
-		return bit.band(table.unpack(out))
-	end]]
+	
 
-	--[[#analyzer function bit.bxor(...: ...number): number
-		local out = {}
+	
 
-		for i, num in ipairs({...}) do
-			if not num:IsLiteral() then return types.Number() end
+	
 
-			out[i] = num:GetData()
-		end
+	
 
-		return bit.bxor(table.unpack(out))
-	end]]
-
-	--[[#analyzer function bit.tobit(n: number): number
-		if n:IsLiteral() then return bit.tobit(n:GetData()) end
-
-		return types.Number()
-	end]]
-
-	--[[#analyzer function bit.bnot(n: number): number
-		if n:IsLiteral() then return bit.bnot(n:GetData()) end
-
-		return types.Number()
-	end]]
-
-	--[[#analyzer function bit.bswap(n: number): number
-		if n:IsLiteral() then return bit.bswap(n:GetData()) end
-
-		return types.Number()
-	end]]
-
-	--[[#analyzer function bit.tohex(x: number, n: number): number
-		if x:IsLiteral() and n:IsLiteral() then
-			return bit.tohex(x:GetData(), n:GetData())
-		end
-
-		return types.String()
-	end]]
-
-	--[[#analyzer function bit.lshift(x: number, n: number): number
-		if x:IsLiteral() and n:IsLiteral() then
-			return bit.lshift(x:GetData(), n:GetData())
-		end
-
-		return types.Number()
-	end]]
-
-	--[[#analyzer function bit.rshift(x: number, n: number): number
-		if x:IsLiteral() and n:IsLiteral() then
-			return bit.rshift(x:GetData(), n:GetData())
-		end
-
-		return types.Number()
-	end]]
-
-	--[[#analyzer function bit.arshift(x: number, n: number): number
-		if x:IsLiteral() and n:IsLiteral() then
-			return bit.arshift(x:GetData(), n:GetData())
-		end
-
-		return types.Number()
-	end]]
-
-	--[[#analyzer function bit.rol(x: number, n: number): number
-		if x:IsLiteral() and n:IsLiteral() then
-			return bit.rol(x:GetData(), n:GetData())
-		end
-
-		return types.Number()
-	end]]
-
-	--[[#analyzer function bit.ror(x: number, n: number): number
-		if x:IsLiteral() and n:IsLiteral() then
-			return bit.ror(x:GetData(), n:GetData())
-		end
-
-		return types.Number()
-	end]]
+	
 end end
-IMPORTS['nattlua/definitions/lua/table.nlua'] = function() --[[#type table = {
-	maxn = function=(table: Table)>(number),
-	move = function=(a1: Table, f: any, e: any, t: any, a2: Table)>(nil) | function=(a1: Table, f: any, e: any, t: any)>(nil),
-	remove = function=(list: Table, pos: number)>(any) | function=(list: Table)>(any),
-	sort = function=(list: Table, comp: empty_function)>(nil) | function=(list: Table)>(nil),
-	unpack = function=(list: Table, i: number, j: number)>(...) | function=(list: Table, i: number)>(...) | function=(list: Table)>(...),
-	insert = function=(list: Table, pos: number, value: any)>(nil) | function=(list: Table, value: any)>(nil),
-	concat = function=(list: Table, sep: string, i: number, j: number)>(string) | function=(list: Table, sep: string, i: number)>(string) | function=(list: Table, sep: string)>(string) | function=(list: Table)>(string),
-	pack = function=(...)>(Table),
-	new = function=(number, number)>({[number] = any}),
-}]]
+IMPORTS['nattlua/definitions/lua/table.nlua'] = function() 
 
---[[#analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
-	if not tbl:IsLiteral() then return types.String() end
 
-	if separator and (separator.Type ~= "string" or not separator:IsLiteral()) then
-		return types.String()
-	end
 
-	local out = {}
 
-	for i, keyval in ipairs(tbl:GetData()) do
-		if not keyval.val:IsLiteral() or keyval.val.Type == "union" then
-			return types.String()
-		end
 
-		out[i] = keyval.val:GetData()
-	end
 
-	return table.concat(out, separator and separator:GetData() or nil)
-end]]
 
---[[#analyzer function table.insert(tbl: List<|any|>, ...: ...any)
-	if not tbl:HasLiteralKeys() then return end
 
-	local pos, val = ...
 
-	if not val then
-		val = pos
-		pos = tbl:GetLength(analyzer)
 
-		if pos:IsLiteral() then
-			pos:SetData(pos:GetData() + 1)
-			local max = pos:GetMax()
 
-			if max then max:SetData(max:GetData() + 1) end
-		end
-	else
-		pos = tbl:GetLength(analyzer)
-	end
 
-	if analyzer:IsInUncertainLoop() then pos:Widen() end
 
-	assert(type(pos) ~= "number")
-	analyzer:NewIndexOperator(analyzer.current_expression, tbl, pos, val)
-end]]
 
---[[#analyzer function table.remove(tbl: List<|any|>, index: number | nil)
-	if not tbl:IsLiteral() then return end
 
-	if index and not index:IsLiteral() then return end
-
-	index = index or 1
-	table.remove(pos:GetData(), index:GetData())
-end]]
-
---[[#analyzer function table.sort(tbl: List<|any|>, func: function=(a: any, b: any)>(boolean))
-	local union = types.Union()
-
-	if tbl.Type == "tuple" then
-		for i, v in ipairs(tbl:GetData()) do
-			union:AddType(v)
-		end
-	elseif tbl.Type == "table" then
-		for i, v in ipairs(tbl:GetData()) do
-			union:AddType(v.val)
-		end
-	end
-
-	func:GetArguments():GetData()[1] = union
-	func:GetArguments():GetData()[2] = union
-	func.arguments_inferred = true
-end]]
-
---[[#analyzer function table.getn(tbl: List<|any|>)
-	return tbl:GetLength()
-end]]
-
---[[#analyzer function table.unpack(tbl: List<|any|>)
-	local t = {}
-
-	for i = 1, 32 do
-		local v = tbl:Get(types.LNumber(i))
-
-		if not v then break end
-
-		t[i] = v
-	end
-
-	return table.unpack(t)
-end]]
-
---[[#type unpack = table.unpack]]
-
-function table.destructure(tbl--[[#: Table]], fields--[[#: List<|string|>]], with_default--[[#: boolean | nil]])
+function table.destructure(tbl, fields, with_default)
 	local out = {}
 
 	for i, key in ipairs(fields) do
@@ -5463,7 +4439,7 @@ function table.destructure(tbl--[[#: Table]], fields--[[#: List<|string|>]], wit
 	return table.unpack(out)
 end
 
-function table.mergetables(tables--[[#: List<|Table|>]])
+function table.mergetables(tables)
 	local out = {}
 
 	for i, tbl in ipairs(tables) do
@@ -5475,393 +4451,61 @@ function table.mergetables(tables--[[#: List<|Table|>]])
 	return out
 end
 
-function table.spread(tbl--[[#: nil | List<|any|>]])
+function table.spread(tbl)
 	if not tbl then return nil end
 
 	return table.unpack(tbl)
 end end
-IMPORTS['nattlua/definitions/lua/string.nlua'] = function() --[[#type string = {
-	find = function=(s: string, pattern: string, init: number | nil, plain: boolean | nil)>(number | nil, number | nil, ...string),
-	len = function=(s: string)>(number),
-	packsize = function=(fmt: string)>(number),
-	match = function=(s: string, pattern: string, init: number | nil)>(...string),
-	upper = function=(s: string)>(string),
-	sub = function=(s: string, i: number, j: number)>(string) | function=(s: string, i: number)>(string),
-	char = function=(...)>(string),
-	rep = function=(s: string, n: number, sep: string)>(string) | function=(s: string, n: number)>(string),
-	lower = function=(s: string)>(string),
-	dump = function=(empty_function: empty_function)>(string),
-	gmatch = function=(s: string, pattern: string)>(empty_function),
-	reverse = function=(s: string)>(string),
-	byte = function=(s: string, i: number | nil, j: number | nil)>(...number),
-	unpack = function=(fmt: string, s: string, pos: number | nil)>(...any),
-	gsub = function=(s: string, pattern: string, repl: string | Table | empty_function, n: number | nil)>(string, number),
-	format = function=(string, ...any)>(string),
-	pack = function=(fmt: string, ...any)>(string),
-}]]
-
---[[#analyzer function ^string.rep(str: string, n: number)
-	if str:IsLiteral() and n:IsLiteral() then
-		return types.LString(string.rep(str:GetData(), n:GetData()))
-	end
-
-	return types.String()
-end]]
-
---[[#analyzer function ^string.char(...: ...number)
-	local out = {}
-
-	for i, num in ipairs({...}) do
-		if not num:IsLiteral() then return types.String() end
-
-		out[i] = num:GetData()
-	end
-
-	return string.char(table.unpack(out))
-end]]
-
---[[#analyzer function ^string.format(s: string, ...: ...any)
-	if not s:IsLiteral() then return types.String() end
-
-	local ret = {...}
-
-	for i, v in ipairs(ret) do
-		if v:IsLiteral() and (v.Type == "string" or v.Type == "number") then
-			ret[i] = v:GetData()
-		else
-			return types.String()
-		end
-	end
-
-	return string.format(s:GetData(), table.unpack(ret))
-end]]
-
---[[#analyzer function ^string.gmatch(s: string, pattern: string)
-	if s:IsLiteral() and pattern:IsLiteral() then
-		local f = s:GetData():gmatch(pattern:GetData())
-		local i = 1
-		return function()
-			local strings = {f()}
-
-			if strings[1] then
-				for i, v in ipairs(strings) do
-					strings[i] = types.LString(v)
-				end
-
-				return types.Tuple(strings)
-			end
-		end
-	end
-
-	if pattern:IsLiteral() then
-		local _, count = pattern:GetData():gsub("%b()", "")
-		local done = false
-		return function()
-			if done then return end
-
-			done = true
-			return types.Tuple({types.String()}):SetRepeat(count)
-		end
-	end
-
-	local done = false
-	return function()
-		if done then return end
-
-		done = true
-		return types.String()
-	end
-end]]
-
---[[#analyzer function ^string.lower(str: string)
-	if str:IsLiteral() then return str:GetData():lower() end
-
-	return types.String()
-end]]
-
---[[#analyzer function ^string.upper(str: string)
-	if str:IsLiteral() then return str:GetData():upper() end
-
-	return types.String()
-end]]
-
---[[#analyzer function ^string.sub(str: string, a: number, b: number | nil)
-	if str:IsLiteral() and a:IsLiteral() then
-		if b and b:IsLiteral() then
-			return str:GetData():sub(a:GetData(), b:GetData())
-		end
-
-		return str:GetData():sub(a:GetData())
-	end
-
-	return types.String()
-end]]
-
---[[#analyzer function ^string.byte(str: string, from: number | nil, to: number | nil)
-	if str:IsLiteral() and not from and not to then
-		return string.byte(str:GetData())
-	end
-
-	if str:IsLiteral() and from and from:IsLiteral() and not to then
-		return string.byte(str:GetData(), from:GetData())
-	end
-
-	if str:IsLiteral() and from and from:IsLiteral() and to and to:IsLiteral() then
-		return string.byte(str:GetData(), from:GetData(), to:GetData())
-	end
-
-	if from and from:IsLiteral() and to and to:IsLiteral() then
-		return types.Tuple({}):AddRemainder(types.Tuple({types.Number()}):SetRepeat(to:GetData() - from:GetData() + 1))
-	end
-
-	return types.Tuple({}):AddRemainder(types.Tuple({types.Number()}):SetRepeat(math.huge))
-end]]
-
---[[#analyzer function ^string.match(str: string, pattern: string, start_position: number | nil)
-	str = str:IsLiteral() and str:GetData()
-	pattern = pattern:IsLiteral() and pattern:GetData()
-	start_position = start_position and
-		start_position:IsLiteral() and
-		start_position:GetData() or
-		1
-
-	if not str or not pattern then
-		return types.Tuple({types.Union({types.String(), types.Nil()})}):SetRepeat(math.huge)
-	end
-
-	local res = {str:match(pattern, start_position)}
-
-	for i, v in ipairs(res) do
-		if type(v) == "string" then
-			res[i] = types.LString(v)
-		else
-			res[i] = types.LNumber(v)
-		end
-	end
-
-	return table.unpack(res)
-end]]
-
---[[#analyzer function ^string.find(str: string, pattern: string, start_position: number | nil, no_pattern: boolean | nil)
-	str = str:IsLiteral() and str:GetData()
-	pattern = pattern:IsLiteral() and pattern:GetData()
-	start_position = start_position and
-		start_position:IsLiteral() and
-		start_position:GetData() or
-		1
-	no_pattern = no_pattern and no_pattern:IsLiteral() and no_pattern:GetData() or false
-
-	if not str or not pattern then
-		return types.Tuple(
-			{
-				types.Union({types.Number(), types.Nil()}),
-				types.Union({types.Number(), types.Nil()}),
-				types.Union({types.String(), types.Nil()}),
-			}
-		)
-	end
-
-	local start, stop, found = str:find(pattern, start_position, no_pattern)
-
-	if found then types.LString(found) end
-
-	return start, stop, found
-end]]
-
---[[#analyzer function ^string.len(str: string)
-	if str:IsLiteral() then return types.LNumber(#str:GetData()) end
-
-	return types.Number()
-end]]
-
---[[#analyzer function ^string.gsub(
-	str: string,
-	pattern: string,
-	replacement: function=(...string)>((...string)) | string | {[string] = string},
-	max_replacements: number | nil
-)
-	str = str:IsLiteral() and str:GetData()
-	pattern = pattern:IsLiteral() and pattern:GetData()
-
-	if replacement.Type == "string" then
-		if replacement:IsLiteral() then replacement = replacement:GetData() end
-	elseif replacement.Type == "table" then
-		local out = {}
-
-		for _, kv in ipairs(replacement:GetData()) do
-			if kv.key:IsLiteral() and kv.val:IsLiteral() then
-				out[kv.key:GetData()] = kv.val:GetData()
-			end
-		end
-
-		replacement = out
-	end
-
-	max_replacements = max_replacements and max_replacements:GetData()
-
-	if str and pattern and replacement then
-		--replacement:SetArguments(types.Tuple({types.String()}):SetRepeat(math.huge))
-		if type(replacement) == "string" or type(replacement) == "table" then
-			return string.gsub(str, pattern, replacement, max_replacements)
-		else
-			return string.gsub(
-				str,
-				pattern,
-				function(...)
-					analyzer:Assert(
-						replacement:GetNode(),
-						analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement:GetNode(), {...}))
-					)
-				end,
-				max_replacements
-			)
-		end
-	end
-
-	return types.String(), types.Number()
-end]] end
-IMPORTS['nattlua/definitions/lua/math.nlua'] = function() --[[#type math = {
-	ceil = function=(x: number)>(number),
-	tan = function=(x: number)>(number),
-	log10 = function=(x: number)>(number),
-	sinh = function=(x: number)>(number),
-	ldexp = function=(m: number, e: number)>(number),
-	tointeger = function=(x: number)>(number),
-	cosh = function=(x: number)>(number),
-	min = function=(x: number, ...)>(number),
-	fmod = function=(x: number, y: number)>(number),
-	exp = function=(x: number)>(number),
-	random = function=(m: number, n: number)>(number) | function=(m: number)>(number) | function=()>(number),
-	rad = function=(x: number)>(number),
-	log = function=(x: number, base: number)>(number) | function=(x: number)>(number),
-	cos = function=(x: number)>(number),
-	randomseed = function=(x: number)>(nil),
-	floor = function=(x: number)>(number),
-	tanh = function=(x: number)>(number),
-	max = function=(x: number, ...)>(number),
-	pow = function=(x: number, y: number)>(number),
-	ult = function=(m: number, n: number)>(boolean),
-	acos = function=(x: number)>(number),
-	type = function=(x: number)>(string),
-	abs = function=(x: number)>(number),
-	frexp = function=(x: number)>(number, number),
-	deg = function=(x: number)>(number),
-	modf = function=(x: number)>(number, number),
-	atan2 = function=(y: number, x: number)>(number),
-	asin = function=(x: number)>(number),
-	atan = function=(x: number)>(number),
-	sqrt = function=(x: number)>(number),
-	sin = function=(x: number)>(number),
-}]]
---[[#type math.huge = inf]]
---[[#type math.pi = 3.14159265358979323864338327950288]]
-
---[[#analyzer function math.sin(n: number)
-	return n:IsLiteral() and math.sin(n:GetData()) or types.Number()
-end]]
-
---[[#analyzer function math.cos(n: number)
-	return n:IsLiteral() and math.cos(n:GetData()) or types.Number()
-end]]
-
---[[#analyzer function math.ceil(n: number)
-	return n:IsLiteral() and math.ceil(n:GetData()) or types.Number()
-end]]
-
---[[#analyzer function math.floor(n: number)
-	return n:IsLiteral() and math.floor(n:GetData()) or types.Number()
-end]]
-
---[[#analyzer function math.min(...: ...number)
-	local numbers = {}
-
-	for i = 1, select("#", ...) do
-		local obj = select(i, ...)
-
-		if not obj:IsLiteral() then
-			return types.Number()
-		else
-			numbers[i] = obj:GetData()
-		end
-	end
-
-	return math.min(table.unpack(numbers))
-end]]
-
---[[#analyzer function math.max(...: ...number)
-	local numbers = {}
-
-	for i = 1, select("#", ...) do
-		local obj = select(i, ...)
-
-		if not obj:IsLiteral() then
-			return types.Number()
-		else
-			numbers[i] = obj:GetData()
-		end
-	end
-
-	return math.max(table.unpack(numbers))
-end]] end
-IMPORTS['nattlua/definitions/lua/os.nlua'] = function() --[[#type os = {
-	execute = function=(command: string)>(boolean | nil, string, number | nil) | function=()>(boolean | nil, string, number | nil),
-	rename = function=(oldname: string, newname: string)>(boolean | nil, string, number | nil),
-	getenv = function=(varname: string)>(string | nil),
-	difftime = function=(t2: number, t1: number)>(number),
-	exit = function=(code: boolean | number, close: boolean)>(nil) | function=(code: boolean | number)>(nil) | function=()>(nil),
-	remove = function=(filename: string)>(boolean | nil, string, number | nil),
-	setlocale = function=(local_e: string, category: string)>(string | nil) | function=(local_e: string)>(string | nil),
-	date = function=(format: string, time: number)>(string | Table) | function=(format: string)>(string | Table) | function=()>(string | Table),
-	time = function=(table: Table)>(number) | function=()>(number),
-	clock = function=()>(number),
-	tmpname = function=()>(string),
-}]] end
-IMPORTS['nattlua/definitions/lua/coroutine.nlua'] = function() --[[#type coroutine = {
-	create = function=(empty_function)>(thread),
-	close = function=(thread)>(boolean, string),
-	isyieldable = function=()>(boolean),
-	resume = function=(thread, ...)>(boolean, ...),
-	running = function=()>(thread, boolean),
-	status = function=(thread)>(string),
-	wrap = function=(empty_function)>(empty_function),
-	yield = function=(...)>(...),
-}]]
-
---[[#analyzer function coroutine.yield(...: ...any)
-	analyzer.yielded_results = {...}
-end]]
-
---[[#analyzer function coroutine.resume(thread: any, ...: ...any)
-	if thread.Type == "any" then
-		-- TODO: thread is untyped, when inferred
-		return types.Boolean()
-	end
-
-	if not thread.co_func then
-		error(tostring(thread) .. " is not a thread!", 2)
-	end
-
-	analyzer:Call(thread.co_func, types.Tuple({...}))
-	return types.Boolean()
-end]]
-
---[[#analyzer function coroutine.create(func: Function, ...: ...any)
-	local t = types.Table()
-	t.co_func = func
-	return t
-end]]
-
---[[#analyzer function coroutine.wrap(cb: Function)
-	return function(...)
-		analyzer:Call(cb, types.Tuple({...}))
-		local res = analyzer.yielded_results
-
-		if res then
-			analyzer.yielded_results = nil
-			return table.unpack(res)
-		end
-	end
-end]] end
+IMPORTS['nattlua/definitions/lua/string.nlua'] = function() 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ end
+IMPORTS['nattlua/definitions/lua/math.nlua'] = function() 
+
+
+
+
+
+
+
+
+
+
+
+
+
+ end
+IMPORTS['nattlua/definitions/lua/os.nlua'] = function()  end
+IMPORTS['nattlua/definitions/lua/coroutine.nlua'] = function() 
+
+
+
+
+
+
+
+ end
 do local __M; IMPORTS["nattlua.other.cparser"] = function(...) __M = __M or (function(...) local pcall = _G.pcall
 local type = _G.type
 local getmetatable = _G.getmetatable
@@ -9852,388 +8496,27 @@ cparser.parseString = function(cdecl, options, args)
 	return out
 end
 return cparser end)(...) return __M end end
-IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function() --[[#local analyzer function cast(node: any, args: any)
-	local table_print = IMPORTS['nattlua.other.table_print']("nattlua.other.table_print")
-	local cast = env.typesystem.cast
+IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function() 
 
-	local function cdata_metatable(from, const)
-		local meta = types.Table()
-		meta:Set(
-			types.LString("__index"),
-			types.LuaTypeFunction(
-				function(self, key)
-					-- i'm not really sure about this
-					-- boxed luajit ctypes seem to just get the metatable from the ctype
-					return analyzer:Assert(key:GetNode(), from:Get(key, from.Type == "union"))
-				end,
-				{types.Any(), types.Any()},
-				{}
-			)
-		)
 
-		if const then
-			meta:Set(
-				types.LString("__newindex"),
-				types.LuaTypeFunction(
-					function(self, key, value)
-						error("attempt to write to constant location")
-					end,
-					{types.Any(), types.Any(), types.Any()},
-					{}
-				)
-			)
-		end
 
-		meta:Set(
-			types.LString("__add"),
-			types.LuaTypeFunction(function(self, key)
-				return self
-			end, {types.Any(), types.Any()}, {})
-		)
-		meta:Set(
-			types.LString("__sub"),
-			types.LuaTypeFunction(function(self, key)
-				return self
-			end, {types.Any(), types.Any()}, {})
-		)
-		return meta
-	end
 
-	if node.tag == "Struct" or node.tag == "Union" then
-		local tbl = types.Table()
 
-		if node.n then
-			tbl.ffi_name = "struct " .. node.n
-			analyzer.current_tables = analyzer.current_tables or {}
-			table.insert(analyzer.current_tables, tbl)
-		end
 
-		for _, node in ipairs(node) do
-			if node.tag == "Pair" then
-				local key = types.LString(node[2])
-				local val = cast(node[1], args)
-				tbl:Set(key, val)
-			else
-				table_print(node)
-				error("NYI: " .. node.tag)
-			end
-		end
 
-		if node.n then table.remove(analyzer.current_tables) end
 
-		return tbl
-	elseif node.tag == "Function" then
-		local arguments = {}
 
-		for _, arg in ipairs(node) do
-			if arg.ellipsis then
-				table.insert(
-					arguments,
-					types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
-				)
-			else
-				_G.FUNCTION_ARGUMENT = true
-				local arg = cast(arg[1], args)
-				_G.FUNCTION_ARGUMENT = nil
-				table.insert(arguments, arg)
-			end
-		end
 
-		local return_type
 
-		if
-			node.t.tag == "Pointer" and
-			node.t.t.tag == "Qualified" and
-			node.t.t.t.n == "char"
-		then
-			local ptr = types.Table()
-			ptr:Set(types.Number(), types.Number())
-			return_type = types.Union({ptr, types.Nil()})
-		else
-			return_type = cast(node.t, args)
-		end
 
-		local obj = types.Function({
-			ret = types.Tuple({return_type}),
-			arg = types.Tuple(arguments),
-		})
-		obj:SetNode(analyzer.current_expression)
-		return obj
-	elseif node.tag == "Array" then
-		local tbl = types.Table()
-		-- todo node.size: array length
-		_G.FUNCTION_ARGUMENT = true
-		local t = cast(node.t, args)
-		_G.FUNCTION_ARGUMENT = nil
-		tbl:Set(types.Number(), t)
-		local meta = cdata_metatable(tbl)
-		tbl:SetContract(tbl)
-		tbl:SetMetaTable(meta)
-		return tbl
-	elseif node.tag == "Type" then
-		if
-			node.n == "double" or
-			node.n == "float" or
-			node.n == "int8_t" or
-			node.n == "uint8_t" or
-			node.n == "int16_t" or
-			node.n == "uint16_t" or
-			node.n == "int32_t" or
-			node.n == "uint32_t" or
-			node.n == "char" or
-			node.n == "signed char" or
-			node.n == "unsigned char" or
-			node.n == "short" or
-			node.n == "short int" or
-			node.n == "signed short" or
-			node.n == "signed short int" or
-			node.n == "unsigned short" or
-			node.n == "unsigned short int" or
-			node.n == "int" or
-			node.n == "signed" or
-			node.n == "signed int" or
-			node.n == "unsigned" or
-			node.n == "unsigned int" or
-			node.n == "long" or
-			node.n == "long int" or
-			node.n == "signed long" or
-			node.n == "signed long int" or
-			node.n == "unsigned long" or
-			node.n == "unsigned long int" or
-			node.n == "float" or
-			node.n == "double" or
-			node.n == "long double" or
-			node.n == "size_t"
-		then
-			return types.Number()
-		elseif
-			node.n == "int64_t" or
-			node.n == "uint64_t" or
-			node.n == "long long" or
-			node.n == "long long int" or
-			node.n == "signed long long" or
-			node.n == "signed long long int" or
-			node.n == "unsigned long long" or
-			node.n == "unsigned long long int"
-		then
-			return types.Number()
-		elseif node.n == "bool" or node.n == "_Bool" then
-			return types.Boolean()
-		elseif node.n == "void" then
-			return types.Nil()
-		elseif node.n == "va_list" then
-			return types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
-		elseif node.n:find("%$%d+%$") then
-			local val = table.remove(args, 1)
 
-			if not val then error("unable to lookup type $ #" .. (#args + 1), 2) end
 
-			return val
-		elseif node.parent and node.parent.tag == "TypeDef" then
-			if node.n:sub(1, 6) == "struct" then
-				local name = node.n:sub(7)
-				local tbl = types.Table()
-				tbl:SetName(types.LString(name))
-				return tbl
-			end
-		else
-			local val = analyzer:IndexOperator(
-				analyzer.current_expression,
-				env.typesystem.ffi:Get(types.LString("C")),
-				types.LString(node.n)
-			)
 
-			if not val or val.Type == "symbol" and val:GetData() == nil then
-				if analyzer.current_tables then
-					local current_tbl = analyzer.current_tables[#analyzer.current_tables]
 
-					if current_tbl and current_tbl.ffi_name == node.n then return current_tbl end
-				end
 
-				analyzer:Error(analyzer.current_expression, "cannot find value " .. node.n)
-				return types.Any()
-			end
 
-			return val
-		end
-	elseif node.tag == "Qualified" then
-		return cast(node.t, args)
-	elseif node.tag == "Pointer" then
-		if node.t.tag == "Type" and node.t.n == "void" then return types.Any() end
 
-		local ptr = types.Table()
-		local ctype = cast(node.t, args)
-		ptr:Set(types.Number(), ctype)
-		local meta = cdata_metatable(ctype, node.t.const)
-		ptr:SetMetaTable(meta)
-
-		if node.t.tag == "Qualified" and node.t.t.n == "char" then
-			ptr:Set(types.Number(), ctype)
-			ptr:SetName(types.LString("const char*"))
-
-			if _G.FUNCTION_ARGUMENT then
-				return types.Union({ptr, types.String(), types.Nil()})
-			end
-
-			return ptr
-		end
-
-		if node.t.tag == "Type" and node.t.n:sub(1, 1) ~= "$" then
-			ptr:SetName(types.LString(node.t.n .. "*"))
-		end
-
-		return types.Union({ptr, types.Nil()})
-	else
-		table_print(node)
-		error("NYI: " .. node.tag)
-	end
-end]]
-
---[[#analyzer function ffi.cdef(cdecl: string, ...: ...any)
-	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
-
-	for _, ctype in ipairs(assert(IMPORTS['nattlua.other.cparser']("nattlua.other.cparser").parseString(cdecl:GetData(), {}, {...}))) do
-		ctype.type.parent = ctype
-		analyzer:NewIndexOperator(
-			cdecl:GetNode(),
-			env.typesystem.ffi:Get(types.LString("C")),
-			types.LString(ctype.name),
-			env.typesystem.cast(ctype.type, {...})
-		)
-	end
-end]]
-
---[[#§env.typesystem.ffi:Get(types.LString("cdef")).no_expansion = true]]
-
---[[#analyzer function ffi.cast(cdecl: string, src: any)
-	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
-	local declarations = assert(IMPORTS['nattlua.other.cparser']("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}))
-	local ctype = env.typesystem.cast(declarations[#declarations].type)
-
-	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
-	if ctype.Type == "union" then
-		for _, v in ipairs(ctype:GetData()) do
-			if v.Type == "table" then
-				ctype = v
-
-				break
-			end
-		end
-	end
-
-	ctype:SetNode(cdecl:GetNode())
-
-	if ctype.Type == "any" then return ctype end
-
-	local nilable_ctype = ctype:Copy()
-
-	for _, keyval in ipairs(nilable_ctype:GetData()) do
-		keyval.val = types.Nilable(keyval.val)
-	end
-
-	ctype:SetMetaTable(ctype)
-	return ctype
-end]]
-
---[[#analyzer function ffi.typeof(cdecl: string, ...: ...any)
-	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-	local declarations = assert(IMPORTS['nattlua.other.cparser']("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
-	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
-
-	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
-	if ctype.Type == "union" then
-		for _, v in ipairs(ctype:GetData()) do
-			if v.Type == "table" then
-				ctype = v
-
-				break
-			end
-		end
-	end
-
-	ctype:SetNode(cdecl:GetNode())
-
-	if ctype.Type == "any" then return ctype end
-
-	local nilable_ctype = ctype:Copy()
-
-	for _, keyval in ipairs(nilable_ctype:GetData()) do
-		keyval.val = types.Nilable(keyval.val)
-	end
-
-	local old = ctype:GetContract()
-	ctype:SetContract()
-	ctype:Set(
-		types.LString("__call"),
-		types.LuaTypeFunction(
-			function(self, init)
-				if init then
-					analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable_ctype))
-				end
-
-				return self:Copy()
-			end,
-			{ctype, types.Nilable(nilable_ctype)},
-			{ctype}
-		)
-	)
-	ctype:SetMetaTable(ctype)
-	ctype:SetContract(old)
-	return ctype
-end]]
-
---[[#§env.typesystem.ffi:Get(types.LString("typeof")).no_expansion = true]]
-
---[[#analyzer function ffi.get_type(cdecl: string, ...: ...any)
-	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-	local declarations = assert(IMPORTS['nattlua.other.cparser']("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
-	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
-	ctype:SetNode(cdecl:GetNode())
-	return ctype
-end]]
-
---[[#analyzer function ffi.new(cdecl: any, ...: ...any)
-	local declarations = assert(IMPORTS['nattlua.other.cparser']("nattlua.other.cparser").parseString(cdecl:GetData(), {ffinew = true}, {...}))
-	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
-	return ctype
-end]]
-
---[[#analyzer function ffi.metatype(ctype: any, meta: any)
-	local new = meta:Get(types.LString("__new"))
-
-	if new then
-		meta:Set(
-			types.LString("__call"),
-			types.LuaTypeFunction(
-				function(self, ...)
-					local val = analyzer:Assert(analyzer.current_expression, analyzer:Call(new, types.Tuple({ctype, ...}))):Unpack()
-
-					if val.Type == "union" then
-						for i, v in ipairs(val:GetData()) do
-							if v.Type == "table" then v:SetMetaTable(meta) end
-						end
-					else
-						val:SetMetaTable(meta)
-					end
-
-					return val
-				end,
-				new:GetArguments():GetData(),
-				new:GetReturnTypes():GetData()
-			)
-		)
-	end
-
-	ctype:SetMetaTable(meta)
-end]]
-
---[[#analyzer function ffi.load(lib: string)
-	return env.typesystem.ffi:Get(types.LString("C"))
-end]]
-
---[[#analyzer function ffi.gc(ctype: any, callback: Function)
-	return ctype
-end]] end
+ end
 do local __M; IMPORTS["nattlua"] = function(...) __M = __M or (function(...) if not table.unpack and _G.unpack then table.unpack = _G.unpack end
 
 if not io or not io.write then
@@ -10338,11 +8621,8 @@ return {
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.code.code"] = function(...) __M = __M or (function(...) local META = {}
 META.__index = META
---[[#type META.@Name = "Code"]]
---[[#type META.@Self = {
-	Buffer = string,
-	Name = string,
-}]]
+
+
 
 function META:GetString()
 	return self.Buffer
@@ -10356,15 +8636,15 @@ function META:GetByteSize()
 	return #self.Buffer
 end
 
-function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
+function META:GetStringSlice(start, stop)
 	return self.Buffer:sub(start, stop)
 end
 
-function META:GetByte(pos--[[#: number]])
+function META:GetByte(pos)
 	return self.Buffer:byte(pos) or 0
 end
 
-function META:FindNearest(str--[[#: string]], start--[[#: number]])
+function META:FindNearest(str, start)
 	local _, pos = self.Buffer:find(str, start, true)
 
 	if not pos then return nil end
@@ -10372,7 +8652,7 @@ function META:FindNearest(str--[[#: string]], start--[[#: number]])
 	return pos + 1
 end
 
-local function remove_bom_header(str--[[#: string]])--[[#: string]]
+local function remove_bom_header(str)
 	if str:sub(1, 2) == "\xFE\xFF" then
 		return str:sub(3)
 	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
@@ -10394,7 +8674,7 @@ local function get_default_name()
 	return "unknown line : unknown name"
 end
 
-function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
+function META.New(lua_code, name)
 	local self = setmetatable(
 		{
 			Buffer = remove_bom_header(lua_code),
@@ -10405,27 +8685,12 @@ function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
 	return self
 end
 
---[[#type Code = META.@Self]]
+
 return META.New end)(...) return __M end end
-IMPORTS['./nattlua/lexer/token.nlua'] = function() --[[#local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
---[[#local type TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | TokenWhitespaceType]]
---[[#local type Token = {
-	@Name = "Token",
-	type = TokenType,
-	value = string,
-	start = number,
-	stop = number,
-	is_whitespace = boolean | nil,
-	whitespace = false | nil | {
-		[1 .. inf] = {
-			type = TokenWhitespaceType,
-			value = string,
-			start = number,
-			stop = number,
-		},
-	},
-}]]
---[[#local type TokenReturnType = TokenType | false]]
+IMPORTS['./nattlua/lexer/token.nlua'] = function() 
+
+
+
 return {
 	Token = Token,
 	TokenType = TokenType,
@@ -10443,7 +8708,7 @@ end end
 return table_new end)(...) return __M end end
 do local __M; IMPORTS["nattlua.other.table_pool"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
 local table_new = IMPORTS['nattlua.other.table_new']("nattlua.other.table_new")
-return function(alloc--[[#: ref (function=()>({[string] = any}))]], size--[[#: number]])
+return function(alloc, size)
 	local records = 0
 
 	for _, _ in pairs(alloc()) do
@@ -10451,7 +8716,7 @@ return function(alloc--[[#: ref (function=()>({[string] = any}))]], size--[[#: n
 	end
 
 	local i
-	local pool = table_new(size, records)--[[# as {[number] = nil | return_type<|alloc|>[1]}]]
+	local pool = table_new(size, records)
 
 	local function refill()
 		i = 1
@@ -10467,7 +8732,7 @@ return function(alloc--[[#: ref (function=()>({[string] = any}))]], size--[[#: n
 
 		if not tbl then
 			refill()
-			tbl = pool[i]--[[# as return_type<|alloc|>[1] ]]
+			tbl = pool[i]
 		end
 
 		i = i + 1
@@ -10475,36 +8740,17 @@ return function(alloc--[[#: ref (function=()>({[string] = any}))]], size--[[#: n
 	end
 end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.lexer.token"] = function(...) __M = __M or (function(...) local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
---[[#local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
---[[#local type TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | TokenWhitespaceType]]
---[[#local type TokenReturnType = TokenType | false]]
---[[#local type WhitespaceToken = {
-	type = TokenWhitespaceType,
-	value = string,
-	start = number,
-	stop = number,
-}]]
+
+
+
+
 local META = {}
 META.__index = META
 
---[[#local analyzer function parent_type(what: literal string, offset: literal number)
-	return analyzer:GetCurrentType(what:GetData(), offset:GetData())
-end]]
 
---[[#type META.@Name = "Token"]]
---[[#type META.@Self = {
-	type = TokenType,
-	value = string,
-	start = number,
-	stop = number,
-	is_whitespace = boolean | nil,
-	string_value = nil | string,
-	inferred_type = nil | any,
-	inferred_types = nil | List<|any|>,
-	whitespace = false | nil | {
-		[1 .. inf] = parent_type<|"table", 2|>,
-	},
-}]]
+
+
+
 
 function META:__tostring()
 	return self.type .. ": " .. self.value
@@ -10543,11 +8789,11 @@ local new_token = table_pool(
 )
 
 function META.New(
-	type--[[#: TokenType]],
-	is_whitespace--[[#: boolean]],
-	start--[[#: number]],
-	stop--[[#: number]]
-)--[[#: META.@Self]]
+	type,
+	is_whitespace,
+	start,
+	stop
+)
 	local tk = new_token()
 	tk.type = type
 	tk.is_whitespace = is_whitespace
@@ -10565,7 +8811,7 @@ return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.syntax.characters"] = function(...) __M = __M or (function(...) local characters = {}
 local B = string.byte
 
-function characters.IsLetter(c--[[#: number]])--[[#: boolean]]
+function characters.IsLetter(c)
 	return (
 			c >= B("a") and
 			c <= B("z")
@@ -10584,7 +8830,7 @@ function characters.IsLetter(c--[[#: number]])--[[#: boolean]]
 		)
 end
 
-function characters.IsDuringLetter(c--[[#: number]])--[[#: boolean]]
+function characters.IsDuringLetter(c)
 	return (
 			c >= B("a") and
 			c <= B("z")
@@ -10608,15 +8854,15 @@ function characters.IsDuringLetter(c--[[#: number]])--[[#: boolean]]
 		)
 end
 
-function characters.IsNumber(c--[[#: number]])--[[#: boolean]]
+function characters.IsNumber(c)
 	return (c >= B("0") and c <= B("9"))
 end
 
-function characters.IsSpace(c--[[#: number]])--[[#: boolean]]
+function characters.IsSpace(c)
 	return c > 0 and c <= 32
 end
 
-function characters.IsSymbol(c--[[#: number]])--[[#: boolean]]
+function characters.IsSymbol(c)
 	return c ~= B("_") and
 		(
 			(
@@ -10641,7 +8887,7 @@ function characters.IsSymbol(c--[[#: number]])--[[#: boolean]]
 		)
 end
 
-local function generate_map(str--[[#: string]])
+local function generate_map(str)
 	local out = {}
 
 	for i = 1, #str do
@@ -10653,32 +8899,17 @@ end
 
 local allowed_hex = generate_map("1234567890abcdefABCDEF")
 
-function characters.IsHex(c--[[#: number]])--[[#: boolean]]
+function characters.IsHex(c)
 	return allowed_hex[c] ~= nil
 end
 
 return characters end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.syntax"] = function(...) __M = __M or (function(...) --[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+do local __M; IMPORTS["nattlua.syntax.syntax"] = function(...) __M = __M or (function(...) 
 
 local META = {}
 META.__index = META
---[[#type META.@Name = "Syntax"]]
---[[#type META.@Self = {
-	BinaryOperatorInfo = Map<|string, {left_priority = number, right_priority = number}|>,
-	NumberAnnotations = List<|string|>,
-	Symbols = List<|string|>,
-	BinaryOperators = List<|List<|string|>|>,
-	PrefixOperators = Map<|string, true|>,
-	PostfixOperators = Map<|string, true|>,
-	PrimaryBinaryOperators = Map<|string, true|>,
-	SymbolCharacters = List<|string|>,
-	KeywordValues = Map<|string, true|>,
-	Keywords = Map<|string, true|>,
-	NonStandardKeywords = Map<|string, true|>,
-	BinaryOperatorFunctionTranslate = Map<|string, {string, string, string}|>,
-	PostfixOperatorFunctionTranslate = Map<|string, {string, string}|>,
-	PrefixOperatorFunctionTranslate = Map<|string, {string, string}|>,
-}]]
+
+
 
 function META.New()
 	local self = setmetatable(
@@ -10703,7 +8934,7 @@ function META.New()
 	return self
 end
 
-local function has_value(tbl--[[#: {[1 .. inf] = string} | {}]], value--[[#: string]])
+local function has_value(tbl, value)
 	for k, v in ipairs(tbl) do
 		if v == value then return true end
 	end
@@ -10711,7 +8942,7 @@ local function has_value(tbl--[[#: {[1 .. inf] = string} | {}]], value--[[#: str
 	return false
 end
 
-function META:AddSymbols(tbl--[[#: List<|string|>]])
+function META:AddSymbols(tbl)
 	for _, symbol in pairs(tbl) do
 		if symbol:find("%p") and not has_value(self.Symbols, symbol) then
 			table.insert(self.Symbols, symbol)
@@ -10723,7 +8954,7 @@ function META:AddSymbols(tbl--[[#: List<|string|>]])
 	end)
 end
 
-function META:AddNumberAnnotations(tbl--[[#: List<|string|>]])
+function META:AddNumberAnnotations(tbl)
 	for i, v in ipairs(tbl) do
 		if not has_value(self.NumberAnnotations, v) then
 			table.insert(self.NumberAnnotations, v)
@@ -10739,7 +8970,7 @@ function META:GetNumberAnnotations()
 	return self.NumberAnnotations
 end
 
-function META:AddBinaryOperators(tbl--[[#: List<|List<|string|>|>]])
+function META:AddBinaryOperators(tbl)
 	for priority, group in ipairs(tbl) do
 		for _, token in ipairs(group) do
 			local right = token:sub(1, 1) == "R"
@@ -10763,11 +8994,11 @@ function META:AddBinaryOperators(tbl--[[#: List<|List<|string|>|>]])
 	end
 end
 
-function META:GetBinaryOperatorInfo(tk--[[#: Token]])
+function META:GetBinaryOperatorInfo(tk)
 	return self.BinaryOperatorInfo[tk.value]
 end
 
-function META:AddPrefixOperators(tbl--[[#: List<|string|>]])
+function META:AddPrefixOperators(tbl)
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
@@ -10775,11 +9006,11 @@ function META:AddPrefixOperators(tbl--[[#: List<|string|>]])
 	end
 end
 
-function META:IsPrefixOperator(token--[[#: Token]])
+function META:IsPrefixOperator(token)
 	return self.PrefixOperators[token.value]
 end
 
-function META:AddPostfixOperators(tbl--[[#: List<|string|>]])
+function META:AddPostfixOperators(tbl)
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
@@ -10787,11 +9018,11 @@ function META:AddPostfixOperators(tbl--[[#: List<|string|>]])
 	end
 end
 
-function META:IsPostfixOperator(token--[[#: Token]])
+function META:IsPostfixOperator(token)
 	return self.PostfixOperators[token.value]
 end
 
-function META:AddPrimaryBinaryOperators(tbl--[[#: List<|string|>]])
+function META:AddPrimaryBinaryOperators(tbl)
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
@@ -10799,16 +9030,16 @@ function META:AddPrimaryBinaryOperators(tbl--[[#: List<|string|>]])
 	end
 end
 
-function META:IsPrimaryBinaryOperator(token--[[#: Token]])
+function META:IsPrimaryBinaryOperator(token)
 	return self.PrimaryBinaryOperators[token.value]
 end
 
-function META:AddSymbolCharacters(tbl--[[#: List<|string|>]])
+function META:AddSymbolCharacters(tbl)
 	self.SymbolCharacters = tbl
 	self:AddSymbols(tbl)
 end
 
-function META:AddKeywords(tbl--[[#: List<|string|>]])
+function META:AddKeywords(tbl)
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
@@ -10816,11 +9047,11 @@ function META:AddKeywords(tbl--[[#: List<|string|>]])
 	end
 end
 
-function META:IsKeyword(token--[[#: Token]])
+function META:IsKeyword(token)
 	return self.Keywords[token.value]
 end
 
-function META:AddKeywordValues(tbl--[[#: List<|string|>]])
+function META:AddKeywordValues(tbl)
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
@@ -10829,11 +9060,11 @@ function META:AddKeywordValues(tbl--[[#: List<|string|>]])
 	end
 end
 
-function META:IsKeywordValue(token--[[#: Token]])
+function META:IsKeywordValue(token)
 	return self.KeywordValues[token.value]
 end
 
-function META:AddNonStandardKeywords(tbl--[[#: List<|string|>]])
+function META:AddNonStandardKeywords(tbl)
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
@@ -10841,7 +9072,7 @@ function META:AddNonStandardKeywords(tbl--[[#: List<|string|>]])
 	end
 end
 
-function META:IsNonStandardKeyword(token--[[#: Token]])
+function META:IsNonStandardKeyword(token)
 	return self.NonStandardKeywords[token.value]
 end
 
@@ -10849,7 +9080,7 @@ function META:GetSymbols()
 	return self.Symbols
 end
 
-function META:AddBinaryOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
+function META:AddBinaryOperatorFunctionTranslate(tbl)
 	for k, v in pairs(tbl) do
 		local a, b, c = v:match("(.-)A(.-)B(.*)")
 
@@ -10859,11 +9090,11 @@ function META:AddBinaryOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>
 	end
 end
 
-function META:GetFunctionForBinaryOperator(token--[[#: Token]])
+function META:GetFunctionForBinaryOperator(token)
 	return self.BinaryOperatorFunctionTranslate[token.value]
 end
 
-function META:AddPrefixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
+function META:AddPrefixOperatorFunctionTranslate(tbl)
 	for k, v in pairs(tbl) do
 		local a, b = v:match("^(.-)A(.-)$")
 
@@ -10873,11 +9104,11 @@ function META:AddPrefixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>
 	end
 end
 
-function META:GetFunctionForPrefixOperator(token--[[#: Token]])
+function META:GetFunctionForPrefixOperator(token)
 	return self.PrefixOperatorFunctionTranslate[token.value]
 end
 
-function META:AddPostfixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
+function META:AddPostfixOperatorFunctionTranslate(tbl)
 	for k, v in pairs(tbl) do
 		local a, b = v:match("^(.-)A(.-)$")
 
@@ -10887,11 +9118,11 @@ function META:AddPostfixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|
 	end
 end
 
-function META:GetFunctionForPostfixOperator(token--[[#: Token]])
+function META:GetFunctionForPostfixOperator(token)
 	return self.PostfixOperatorFunctionTranslate[token.value]
 end
 
-function META:IsValue(token--[[#: Token]])
+function META:IsValue(token)
 	if token.type == "number" or token.type == "string" then return true end
 
 	if self:IsKeywordValue(token) then return true end
@@ -10903,7 +9134,7 @@ function META:IsValue(token--[[#: Token]])
 	return false
 end
 
-function META:GetTokenType(tk--[[#: Token]])
+function META:GetTokenType(tk)
 	if tk.type == "letter" and self:IsKeyword(tk) then
 		return "keyword"
 	elseif tk.type == "symbol" then
@@ -11026,7 +9257,7 @@ runtime:AddPostfixOperatorFunctionTranslate({
 	["ÆØÅÆ"] = "(A)",
 })
 return runtime end)(...) return __M end end
-do local __M; IMPORTS["nattlua.lexer.lexer"] = function(...) __M = __M or (function(...) --[[#local type { TokenType } = IMPORTS['./nattlua/lexer/token.nlua']("./token.nlua")]]
+do local __M; IMPORTS["nattlua.lexer.lexer"] = function(...) __M = __M or (function(...) 
 
 local Code = IMPORTS['nattlua.code.code']("nattlua.code.code")
 local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
@@ -11035,31 +9266,28 @@ local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
 local META = {}
 META.__index = META
---[[#type META.@Name = "Lexer"]]
---[[#type META.@Self = {
-	Code = Code,
-	Position = number,
-}]]
+
+
 local B = string.byte
 
-function META:GetLength()--[[#: number]]
+function META:GetLength()
 	return self.Code:GetByteSize()
 end
 
-function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])--[[#: string]]
+function META:GetStringSlice(start, stop)
 	return self.Code:GetStringSlice(start, stop)
 end
 
-function META:PeekByte(offset--[[#: number | nil]])--[[#: number]]
+function META:PeekByte(offset)
 	offset = offset or 0
 	return self.Code:GetByte(self.Position + offset)
 end
 
-function META:FindNearest(str--[[#: string]])--[[#: nil | number]]
+function META:FindNearest(str)
 	return self.Code:FindNearest(str, self.Position)
 end
 
-function META:ReadByte()--[[#: number]]
+function META:ReadByte()
 	local char = self:PeekByte()
 	self.Position = self.Position + 1
 	return char
@@ -11069,11 +9297,11 @@ function META:ResetState()
 	self.Position = 1
 end
 
-function META:Advance(len--[[#: number]])
+function META:Advance(len)
 	self.Position = self.Position + len
 end
 
-function META:SetPosition(i--[[#: number]])
+function META:SetPosition(i)
 	self.Position = i
 end
 
@@ -11081,28 +9309,28 @@ function META:GetPosition()
 	return self.Position
 end
 
-function META:TheEnd()--[[#: boolean]]
+function META:TheEnd()
 	return self.Position > self:GetLength()
 end
 
-function META:IsString(str--[[#: string]], offset--[[#: number | nil]])--[[#: boolean]]
+function META:IsString(str, offset)
 	offset = offset or 0
 	return self.Code:GetStringSlice(self.Position + offset, self.Position + offset + #str - 1) == str
 end
 
-function META:IsStringLower(str--[[#: string]], offset--[[#: number | nil]])--[[#: boolean]]
+function META:IsStringLower(str, offset)
 	offset = offset or 0
 	return self.Code:GetStringSlice(self.Position + offset, self.Position + offset + #str - 1):lower() == str
 end
 
 function META:OnError(
-	code--[[#: Code]],
-	msg--[[#: string]],
-	start--[[#: number | nil]],
-	stop--[[#: number | nil]]
+	code,
+	msg,
+	start,
+	stop
 ) end
 
-function META:Error(msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]])
+function META:Error(msg, start, stop)
 	self:OnError(self.Code, msg, start or self.Position, stop or self.Position)
 end
 
@@ -11135,11 +9363,11 @@ function META:ReadUnknown()
 	return "unknown", false
 end
 
-function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
+function META:Read()
 	return nil, nil
 end
 
-function META:ReadSimple()--[[#: TokenType,boolean,number,number]]
+function META:ReadSimple()
 	if self:ReadShebang() then return "shebang", false, 1, self.Position - 1 end
 
 	local start = self.Position
@@ -11159,10 +9387,10 @@ function META:ReadSimple()--[[#: TokenType,boolean,number,number]]
 end
 
 function META:NewToken(
-	type--[[#: TokenType]],
-	is_whitespace--[[#: boolean]],
-	start--[[#: number]],
-	stop--[[#: number]]
+	type,
+	is_whitespace,
+	start,
+	stop
 )
 	return Token(type, is_whitespace, start, stop)
 end
@@ -11172,7 +9400,7 @@ function META:ReadToken()
 	return self:NewToken(a, b, c, d)
 end
 
-function META:ReadFirstFromArray(strings--[[#: List<|string|>]])--[[#: boolean]]
+function META:ReadFirstFromArray(strings)
 	for _, str in ipairs(strings) do
 		if self:IsStringLower(str) then
 			self:Advance(#str)
@@ -11204,7 +9432,7 @@ for _, v in ipairs(fixed) do
 	map_single_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
 end
 
-local function reverse_escape_string(str, quote--[[#: '"' | "'"]])
+local function reverse_escape_string(str, quote)
 	if quote == "\"" then
 		str = str:gsub(pattern, map_double_quote)
 	elseif quote == "'" then
@@ -11267,7 +9495,7 @@ function META:GetTokens()
 	return tokens
 end
 
-function META.New(code--[[#: Code]])
+function META.New(code)
 	local self = setmetatable({
 		Code = code,
 		Position = 1,
@@ -11278,15 +9506,15 @@ end
 
 -- lua lexer
 do
-	--[[#local type Lexer = META.@Self]]
+	
 
-	--[[#local type { TokenReturnType } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+	
 
 	local characters = IMPORTS['nattlua.syntax.characters']("nattlua.syntax.characters")
 	local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 	local helpers = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 
-	local function ReadSpace(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+	local function ReadSpace(lexer)
 		if characters.IsSpace(lexer:PeekByte()) then
 			while not lexer:TheEnd() do
 				lexer:Advance(1)
@@ -11300,7 +9528,7 @@ do
 		return false
 	end
 
-	local function ReadLetter(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+	local function ReadLetter(lexer)
 		if not characters.IsLetter(lexer:PeekByte()) then return false end
 
 		while not lexer:TheEnd() do
@@ -11312,7 +9540,7 @@ do
 		return "letter"
 	end
 
-	local function ReadMultilineCComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+	local function ReadMultilineCComment(lexer)
 		if not lexer:IsString("/*") then return false end
 
 		local start = lexer:GetPosition()
@@ -11335,7 +9563,7 @@ do
 		return false
 	end
 
-	local function ReadLineCComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+	local function ReadLineCComment(lexer)
 		if not lexer:IsString("//") then return false end
 
 		lexer:Advance(2)
@@ -11349,7 +9577,7 @@ do
 		return "line_comment"
 	end
 
-	local function ReadLineComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+	local function ReadLineComment(lexer)
 		if not lexer:IsString("--") then return false end
 
 		lexer:Advance(2)
@@ -11363,7 +9591,7 @@ do
 		return "line_comment"
 	end
 
-	local function ReadMultilineComment(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+	local function ReadMultilineComment(lexer)
 		if
 			not lexer:IsString("--[") or
 			(
@@ -11402,7 +9630,7 @@ do
 		return false
 	end
 
-	local function ReadInlineAnalyzerDebugCode(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
+	local function ReadInlineAnalyzerDebugCode(lexer)
 		if not lexer:IsString("§") then return false end
 
 		lexer:Advance(#"§")
@@ -11424,7 +9652,7 @@ do
 		return "analyzer_debug_code"
 	end
 
-	local function ReadInlineParserDebugCode(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
+	local function ReadInlineParserDebugCode(lexer)
 		if not lexer:IsString("£") then return false end
 
 		lexer:Advance(#"£")
@@ -11446,7 +9674,7 @@ do
 		return "parser_debug_code"
 	end
 
-	local function ReadNumberPowExponent(lexer--[[#: Lexer]], what--[[#: string]])
+	local function ReadNumberPowExponent(lexer, what)
 		lexer:Advance(1)
 
 		if lexer:IsString("+") or lexer:IsString("-") then
@@ -11470,7 +9698,7 @@ do
 		return true
 	end
 
-	local function ReadHexNumber(lexer--[[#: Lexer]])
+	local function ReadHexNumber(lexer)
 		if not lexer:IsString("0") or not lexer:IsStringLower("x", 1) then
 			return false
 		end
@@ -11515,7 +9743,7 @@ do
 		return "number"
 	end
 
-	local function ReadBinaryNumber(lexer--[[#: Lexer]])
+	local function ReadBinaryNumber(lexer)
 		if not lexer:IsString("0") or not lexer:IsStringLower("b", 1) then
 			return false
 		end
@@ -11551,7 +9779,7 @@ do
 		return "number"
 	end
 
-	local function ReadDecimalNumber(lexer--[[#: Lexer]])
+	local function ReadDecimalNumber(lexer)
 		if
 			not characters.IsNumber(lexer:PeekByte()) and
 			(
@@ -11608,7 +9836,7 @@ do
 		return "number"
 	end
 
-	local function ReadMultilineString(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+	local function ReadMultilineString(lexer)
 		if
 			not lexer:IsString("[", 0) or
 			(
@@ -11659,8 +9887,8 @@ do
 		local B = string.byte
 		local escape_character = B([[\]])
 
-		local function build_string_reader(name--[[#: string]], quote--[[#: string]])
-			return function(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+		local function build_string_reader(name, quote)
+			return function(lexer)
 				if not lexer:IsString(quote) then return false end
 
 				local start = lexer:GetPosition()
@@ -11697,13 +9925,13 @@ do
 		ReadSingleQuoteString = build_string_reader("single", "'")
 	end
 
-	local function ReadSymbol(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
+	local function ReadSymbol(lexer)
 		if lexer:ReadFirstFromArray(runtime_syntax:GetSymbols()) then return "symbol" end
 
 		return false
 	end
 
-	local function ReadCommentEscape(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
+	local function ReadCommentEscape(lexer)
 		if lexer:IsString("--[[#") then
 			lexer:Advance(5)
 			lexer.comment_escape = "]]"
@@ -11717,9 +9945,9 @@ do
 		return false
 	end
 
-	local function ReadRemainingCommentEscape(lexer--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
-		if lexer.comment_escape and lexer:IsString(lexer.comment_escape--[[# as string]]) then
-			lexer:Advance(#lexer.comment_escape--[[# as string]])
+	local function ReadRemainingCommentEscape(lexer)
+		if lexer.comment_escape and lexer:IsString(lexer.comment_escape) then
+			lexer:Advance(#lexer.comment_escape)
 			lexer.comment_escape = nil
 			return "comment_escape"
 		end
@@ -11727,7 +9955,7 @@ do
 		return false
 	end
 
-	function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
+	function META:Read()
 		if ReadRemainingCommentEscape(self) then return "discard", false end
 
 		do
@@ -11759,643 +9987,62 @@ do
 end
 
 return META.New end)(...) return __M end end
-IMPORTS['./nattlua/parser/nodes.nlua'] = function() --[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+IMPORTS['./nattlua/parser/nodes.nlua'] = function() 
 
---[[#local type Node = {
-	type = "statement" | "expression",
-	kind = string,
-	id = number,
-	parent = Node | nil,
-	environment = "runtime" | "typesystem",
-}]]
---[[#local type Statement = Node & {
-	type = "statement",
-}]]
---[[#local type Expression = Node & {
-		type = "expression",
-		standalone_letter = Node | nil,
-		type_expression = Node | nil,
-		tokens = {
-			["("] = List<|Token|>,
-			[")"] = List<|Token|>,
-			[":"] = Token,
-			["as"] = Token,
-			["is"] = Token,
-		},
-	}]]
---[[#local type EmptyUnionTypeExpression = Expression & {
-		kind = "empty_union",
-		-- &= assignment operator?
-		tokens = Expression.tokens & {
-			["|"] = Token,
-		},
-	}]]
---[[#local type VarargTypeExpression = Node & {
-		type = "expression",
-		kind = "type_vararg",
-		expression = Node,
-		tokens = Expression.tokens & {
-			["..."] = Token,
-		},
-	}]]
---[[#local type ValueExpression = Expression & {
-		type = "expression",
-		kind = "value",
-		value = Token,
-		self_call = boolean,
-	}]]
---[[#// function( foo = Bar )
-local type FunctionArgumentSubExpression = Node & {
-		type = "expression",
-		kind = "function_argument",
-		identifier = nil | Token,
-		type_expression = Node,
-		tokens = Expression.tokens & {
-			[":"] = nil | Token,
-		},
-	}]]
---[[#local type FunctionReturnTypeSubExpression = Node & {
-		type = "expression",
-		kind = "function_return_type",
-		identifier = nil | Token,
-		type_expression = Node,
-		tokens = Expression.tokens & {
-			[":"] = nil | Token,
-		},
-	}]]
---[[#// { [key] = value }
-local type TableExpressionKeyValueSubExpression = Node & {
-		type = "expression",
-		kind = "table_expression_value",
-		expression_key = boolean,
-		key_expression = Node,
-		value_expression = Node,
-		tokens = Expression.tokens & {
-			["="] = Token,
-			["["] = Token,
-			["]"] = Token,
-		},
-	}]]
---[[#local type TableSpreadSubExpression = Node & {
-		type = "expression",
-		kind = "table_spread",
-		expression = Node,
-		tokens = Expression.tokens & {
-			["..."] = Token,
-		},
-	}]]
---[[#// { key = value }
-local type TableKeyValueSubExpression = Node & {
-		type = "expression",
-		kind = "table_key_value",
-		identifier = Token,
-		value_expression = Node,
-		spread = nil | TableSpreadSubExpression,
-		tokens = Expression.tokens & {
-			["="] = Token,
-		},
-	}]]
---[[#// { value }
-local type TableIndexValueSubExpression = Node & {
-		type = "expression",
-		kind = "table_index_value",
-		value_expression = Node,
-		spread = nil | TableSpreadSubExpression,
-		key = number,
-	}]]
---[[#// { [key] = value, key = value, value }
-local type TableExpression = Node & {
-		type = "expression",
-		kind = "table",
-		children = List<|Node|>,
-		spread = boolean,
-		is_array = boolean,
-		is_dictionary = boolean,
-		tokens = Expression.tokens & {
-			["{"] = Token,
-			["}"] = Token,
-			["separators"] = List<|Token|>,
-		},
-	}]]
---[[#// foo(a,b,c)
-local type PostfixCallSubExpression = Node & {
-		type = "expression",
-		kind = "postfix_call",
-		arguments = List<|Node|>,
-		is_type_call = boolean,
-		left = Node,
-		tokens = Expression.tokens & {
-			["arguments("] = nil | Token,
-			[","] = List<|Token|>,
-			["arguments)"] = nil | Token,
-			// type call
-			["!"] = Token,
-		},
-	}]]
---[[#local type PostfixIndexSubExpression = Node & {
-		type = "expression",
-		kind = "postfix_expression_index",
-		index = Node,
-		left = Node,
-		tokens = Expression.tokens & {
-			["["] = Token,
-			["]"] = Token,
-		},
-	}]]
---[[#local type EndOfFileStatement = Node & {
-		type = "statement",
-		kind = "end_of_file",
-		tokens = Expression.tokens & {
-			["end_of_file"] = Token,
-		},
-	}]]
---[[#local type DebugParserDebugCodeStatement = Node & {
-		type = "statement",
-		kind = "parser_debug_code",
-		lua_code = ValueExpression,
-		tokens = Expression.tokens & {
-			["£"] = Token,
-		},
-	}]]
---[[#local type DebugAnalyzerCodeStatement = Node & {
-		type = "statement",
-		kind = "analyzer_debug_code",
-		lua_code = ValueExpression,
-		tokens = Expression.tokens & {
-			["§"] = Token,
-		},
-	}]]
---[[#local type ReturnStatement = Node & {
-		type = "statement",
-		kind = "return",
-		expressions = List<|Node|>,
-		tokens = Expression.tokens & {
-			["return"] = Token,
-			[","] = List<|Token|>,
-		},
-	}]]
---[[#local type BreakStatement = Node & {
-		type = "statement",
-		kind = "break",
-		tokens = Expression.tokens & {
-			["break"] = Token,
-		},
-	}]]
---[[#local type ContinueStatement = Node & {
-		type = "statement",
-		kind = "continue",
-		tokens = Expression.tokens & {
-			["continue"] = Token,
-		},
-	}]]
---[[#local type SemicolonStatement = Node & {
-		type = "statement",
-		kind = "semicolon",
-		tokens = Expression.tokens & {
-			[";"] = Token,
-		},
-	}]]
---[[#local type GotoStatement = Node & {
-		type = "statement",
-		kind = "goto",
-		identifier = Token,
-		tokens = Expression.tokens & {
-			["goto"] = Token,
-		},
-	}]]
---[[#local type GotoLabelStatement = Node & {
-		type = "statement",
-		kind = "goto_label",
-		identifier = Token,
-		tokens = Expression.tokens & {
-			[" = =left"] = Token,
-			[" = =right"] = Token,
-		},
-	}]]
---[[#local type BinaryOperatorExpression = Node & {
-		type = "expression",
-		kind = "binary_operator",
-		operator = Token,
-		left = Node,
-		right = Node,
-	}]]
---[[#local type FunctionAnalyzerStatement = Node & {
-		type = "statement",
-		kind = "analyzer_function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		index_expression = BinaryOperatorExpression | ValueExpression,
-		tokens = Expression.tokens & {
-			["analyzer"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionTypeStatement = Node & {
-		type = "statement",
-		kind = "type_function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		index_expression = BinaryOperatorExpression | ValueExpression,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionAnalyzerExpression = Node & {
-		type = "expression",
-		kind = "analyzer_function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["analyzer"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionTypeExpression = Node & {
-		type = "expression",
-		kind = "type_function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionExpression = Node & {
-		type = "expression",
-		kind = "function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionLocalStatement = Node & {
-		type = "statement",
-		kind = "local_function",
-		label = Token,
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["local"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionLocalTypeStatement = Node & {
-		type = "statement",
-		kind = "local_type_function",
-		label = Token,
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["local"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionStatement = Node & {
-		type = "statement",
-		kind = "function",
-		index_expression = BinaryOperatorExpression | ValueExpression,
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionLocalAnalyzerStatement = Node & {
-		type = "statement",
-		kind = "local_analyzer_function",
-		label = Token,
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["local"] = Token,
-			["analyzer"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type ImportExpression = Node & {
-		type = "expression",
-		kind = "import",
-		path = string,
-		expressions = List<|Node|>,
-		tokens = Expression.tokens & {
-			["import"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			[","] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type PrefixOperatorExpression = Node & {
-		type = "expression",
-		kind = "prefix_operator",
-		operator = Token,
-		right = Node,
-	}]]
---[[#local type PostfixOperatorSubExpression = Node & {
-		type = "expression",
-		kind = "postfix_operator",
-		operator = Token,
-		left = Node,
-	}]]
---[[#local type RepeatStatement = Node & {
-		type = "statement",
-		kind = "repeat",
-		statements = List<|Node|>,
-		expression = Node,
-		tokens = Expression.tokens & {
-			["repeat"] = Token,
-			["until"] = Token,
-		},
-	}]]
---[[#local type DoStatement = Node & {
-		type = "statement",
-		kind = "do",
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["do"] = Token,
-			["end"] = Token,
-		},
-	}]]
---[[#local type IfStatement = Node & {
-		type = "statement",
-		kind = "if",
-		expressions = List<|Node|>,
-		statements = List<|List<|Node|>|>,
-		tokens = Expression.tokens & {
-			["if/else/elseif"] = List<|Token|>,
-			["then"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type WhileStatement = Node & {
-		type = "statement",
-		kind = "while",
-		expression = Node,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["while"] = Token,
-			["do"] = Token,
-			["end"] = Token,
-		},
-	}]]
---[[#local type ForNumericStatement = Node & {
-		type = "statement",
-		kind = "numeric_for",
-		identifier = Token,
-		init_expression = Node,
-		max_expression = Node,
-		step_expression = nil | Node,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["for"] = Token,
-			["="] = Token,
-			["do"] = Token,
-			["end"] = Token,
-			[",2"] = List<|Token|>,
-		},
-	}]]
---[[#local type ForGenericStatement = Node & {
-		type = "statement",
-		kind = "generic_for",
-		identifiers = List<|Node|>,
-		expressions = List<|Node|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["for"] = Token,
-			["="] = Token,
-			["in"] = Token,
-			["do"] = Token,
-			["end"] = Token,
-			["left,"] = List<|Token|>,
-			["right,"] = List<|Token|>,
-		},
-	}]]
---[[#local type AssignmentLocalStatement = Node & {
-		type = "statement",
-		kind = "local_assignment",
-		identifiers = List<|Node|>,
-		expressions = List<|Node|>,
-		tokens = Expression.tokens & {
-			["local"] = Token,
-			["left,"] = List<|Token|>,
-			["="] = nil | Token,
-			["right,"] = List<|Token|>,
-		},
-	}]]
---[[#local type AssignmentLocalTypeStatement = Node & {
-		type = "statement",
-		kind = "local_type_assignment",
-		identifiers = List<|Node|>,
-		expressions = List<|Node|>,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["local"] = Token,
-			["left,"] = List<|Token|>,
-			["="] = Token,
-			["right,"] = List<|Token|>,
-		},
-	}]]
---[[#local type AssignmentDestructureStatement = Node & {
-		type = "statement",
-		kind = "destructure_assignment",
-		default = nil | ValueExpression,
-		default_comma = Token,
-		left = List<|ValueExpression|>,
-		right = Node,
-		tokens = Expression.tokens & {
-			["{"] = Token,
-			[","] = List<|Token|>,
-			["}"] = Token,
-			["="] = Token,
-		},
-	}]]
---[[#local type AssignmentLocalDestructureStatement = Node & {
-		type = "statement",
-		kind = "local_destructure_assignment",
-		default = ValueExpression,
-		default_comma = Token,
-		left = List<|ValueExpression|>,
-		right = Node,
-		tokens = Expression.tokens & {
-			["local"] = Token,
-			["{"] = Token,
-			[","] = List<|Token|>,
-			["}"] = Token,
-			["="] = Token,
-		},
-	}]]
---[[#local type AssignmentStatement = Node & {
-		type = "statement",
-		kind = "assignment",
-		left = List<|Node|>,
-		right = List<|Node|>,
-		tokens = Expression.tokens & {
-			["="] = Token,
-			["left,"] = List<|Token|>,
-			["right,"] = List<|Token|>,
-		},
-	}]]
---[[#local type CallExpressionStatement = Node & {
-	type = "statement",
-	kind = "call_expression",
-	expression = Node,
-}]]
---[[#local type FunctionSignatureTypeExpression = Node & {
-		type = "expression",
-		kind = "function_signature",
-		stmnt = boolean; // ???
-		identifiers = nil | List<|FunctionArgumentSubExpression|>,
-		return_types = nil | List<|FunctionReturnTypeSubExpression|>,
-		tokens = Expression.tokens & {
-			["function"] = Token,
-			["="] = Token,
-			["arguments)"] = Token,
-			["arguments,"] = List<|Token|>,
-			["arguments("] = Token,
-			[">"] = Token,
-			["return("] = Token,
-			["return,"] = List<|Token|>,
-			["return)"] = Token,
-		},
-	}]]
---[[#local type AssignmentTypeStatement = Node & {
-		type = "statement",
-		kind = "type_assignment",
-		left = List<|Node|>,
-		right = List<|Node|>,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["^"] = nil | Token,
-			["="] = Token,
-			["left,"] = List<|Token|>,
-			["right,"] = List<|Token|>,
-		},
-	}]]
---[[#local type Nodes = {
-	EmptyUnionTypeExpression,
-	VarargTypeExpression,
-	ValueExpression,
-	FunctionArgumentSubExpression,
-	FunctionReturnTypeSubExpression,
-	TableExpressionKeyValueSubExpression,
-	TableSpreadSubExpression,
-	TableKeyValueSubExpression,
-	TableIndexValueSubExpression,
-	TableExpression,
-	PostfixCallSubExpression,
-	PostfixIndexSubExpression,
-	EndOfFileStatement,
-	DebugParserDebugCodeStatement,
-	DebugAnalyzerCodeStatement,
-	ReturnStatement,
-	BreakStatement,
-	ContinueStatement,
-	SemicolonStatement,
-	GotoStatement,
-	GotoLabelStatement,
-	BinaryOperatorExpression,
-	FunctionAnalyzerStatement,
-	FunctionTypeStatement,
-	FunctionAnalyzerExpression,
-	FunctionTypeExpression,
-	FunctionExpression,
-	FunctionLocalStatement,
-	FunctionLocalTypeStatement,
-	FunctionStatement,
-	FunctionLocalAnalyzerStatement,
-	ImportExpression,
-	PrefixOperatorExpression,
-	PostfixOperatorSubExpression,
-	RepeatStatement,
-	DoStatement,
-	IfStatement,
-	WhileStatement,
-	ForNumericStatement,
-	ForGenericStatement,
-	AssignmentLocalStatement,
-	AssignmentLocalTypeStatement,
-	AssignmentDestructureStatement,
-	AssignmentLocalDestructureStatement,
-	AssignmentStatement,
-	CallExpressionStatement,
-	FunctionSignatureTypeExpression,
-	AssignmentTypeStatement,
-}]]
---[[#local type ExpressionKind = (function()
-	local type union = |
 
-	for _, node in pairs(Nodes) do
-		if node.type == "expression" then type union = union | node.kind end
-	end
 
-	return union
-end)()]]
---[[#local type StatementKind = (function()
-	local type union = |
 
-	for _, node in pairs(Nodes) do
-		if node.type == "statement" then type union = union | node.kind end
-	end
 
-	return union
-end)()]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 return {
 	ExpressionKind = ExpressionKind,
 	StatementKind = StatementKind,
@@ -12449,643 +10096,62 @@ return {
 	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
 	AssignmentTypeStatement = AssignmentTypeStatement,
 } end
-IMPORTS['nattlua/parser/nodes.nlua'] = function() --[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+IMPORTS['nattlua/parser/nodes.nlua'] = function() 
 
---[[#local type Node = {
-	type = "statement" | "expression",
-	kind = string,
-	id = number,
-	parent = Node | nil,
-	environment = "runtime" | "typesystem",
-}]]
---[[#local type Statement = Node & {
-	type = "statement",
-}]]
---[[#local type Expression = Node & {
-		type = "expression",
-		standalone_letter = Node | nil,
-		type_expression = Node | nil,
-		tokens = {
-			["("] = List<|Token|>,
-			[")"] = List<|Token|>,
-			[":"] = Token,
-			["as"] = Token,
-			["is"] = Token,
-		},
-	}]]
---[[#local type EmptyUnionTypeExpression = Expression & {
-		kind = "empty_union",
-		-- &= assignment operator?
-		tokens = Expression.tokens & {
-			["|"] = Token,
-		},
-	}]]
---[[#local type VarargTypeExpression = Node & {
-		type = "expression",
-		kind = "type_vararg",
-		expression = Node,
-		tokens = Expression.tokens & {
-			["..."] = Token,
-		},
-	}]]
---[[#local type ValueExpression = Expression & {
-		type = "expression",
-		kind = "value",
-		value = Token,
-		self_call = boolean,
-	}]]
---[[#// function( foo = Bar )
-local type FunctionArgumentSubExpression = Node & {
-		type = "expression",
-		kind = "function_argument",
-		identifier = nil | Token,
-		type_expression = Node,
-		tokens = Expression.tokens & {
-			[":"] = nil | Token,
-		},
-	}]]
---[[#local type FunctionReturnTypeSubExpression = Node & {
-		type = "expression",
-		kind = "function_return_type",
-		identifier = nil | Token,
-		type_expression = Node,
-		tokens = Expression.tokens & {
-			[":"] = nil | Token,
-		},
-	}]]
---[[#// { [key] = value }
-local type TableExpressionKeyValueSubExpression = Node & {
-		type = "expression",
-		kind = "table_expression_value",
-		expression_key = boolean,
-		key_expression = Node,
-		value_expression = Node,
-		tokens = Expression.tokens & {
-			["="] = Token,
-			["["] = Token,
-			["]"] = Token,
-		},
-	}]]
---[[#local type TableSpreadSubExpression = Node & {
-		type = "expression",
-		kind = "table_spread",
-		expression = Node,
-		tokens = Expression.tokens & {
-			["..."] = Token,
-		},
-	}]]
---[[#// { key = value }
-local type TableKeyValueSubExpression = Node & {
-		type = "expression",
-		kind = "table_key_value",
-		identifier = Token,
-		value_expression = Node,
-		spread = nil | TableSpreadSubExpression,
-		tokens = Expression.tokens & {
-			["="] = Token,
-		},
-	}]]
---[[#// { value }
-local type TableIndexValueSubExpression = Node & {
-		type = "expression",
-		kind = "table_index_value",
-		value_expression = Node,
-		spread = nil | TableSpreadSubExpression,
-		key = number,
-	}]]
---[[#// { [key] = value, key = value, value }
-local type TableExpression = Node & {
-		type = "expression",
-		kind = "table",
-		children = List<|Node|>,
-		spread = boolean,
-		is_array = boolean,
-		is_dictionary = boolean,
-		tokens = Expression.tokens & {
-			["{"] = Token,
-			["}"] = Token,
-			["separators"] = List<|Token|>,
-		},
-	}]]
---[[#// foo(a,b,c)
-local type PostfixCallSubExpression = Node & {
-		type = "expression",
-		kind = "postfix_call",
-		arguments = List<|Node|>,
-		is_type_call = boolean,
-		left = Node,
-		tokens = Expression.tokens & {
-			["arguments("] = nil | Token,
-			[","] = List<|Token|>,
-			["arguments)"] = nil | Token,
-			// type call
-			["!"] = Token,
-		},
-	}]]
---[[#local type PostfixIndexSubExpression = Node & {
-		type = "expression",
-		kind = "postfix_expression_index",
-		index = Node,
-		left = Node,
-		tokens = Expression.tokens & {
-			["["] = Token,
-			["]"] = Token,
-		},
-	}]]
---[[#local type EndOfFileStatement = Node & {
-		type = "statement",
-		kind = "end_of_file",
-		tokens = Expression.tokens & {
-			["end_of_file"] = Token,
-		},
-	}]]
---[[#local type DebugParserDebugCodeStatement = Node & {
-		type = "statement",
-		kind = "parser_debug_code",
-		lua_code = ValueExpression,
-		tokens = Expression.tokens & {
-			["£"] = Token,
-		},
-	}]]
---[[#local type DebugAnalyzerCodeStatement = Node & {
-		type = "statement",
-		kind = "analyzer_debug_code",
-		lua_code = ValueExpression,
-		tokens = Expression.tokens & {
-			["§"] = Token,
-		},
-	}]]
---[[#local type ReturnStatement = Node & {
-		type = "statement",
-		kind = "return",
-		expressions = List<|Node|>,
-		tokens = Expression.tokens & {
-			["return"] = Token,
-			[","] = List<|Token|>,
-		},
-	}]]
---[[#local type BreakStatement = Node & {
-		type = "statement",
-		kind = "break",
-		tokens = Expression.tokens & {
-			["break"] = Token,
-		},
-	}]]
---[[#local type ContinueStatement = Node & {
-		type = "statement",
-		kind = "continue",
-		tokens = Expression.tokens & {
-			["continue"] = Token,
-		},
-	}]]
---[[#local type SemicolonStatement = Node & {
-		type = "statement",
-		kind = "semicolon",
-		tokens = Expression.tokens & {
-			[";"] = Token,
-		},
-	}]]
---[[#local type GotoStatement = Node & {
-		type = "statement",
-		kind = "goto",
-		identifier = Token,
-		tokens = Expression.tokens & {
-			["goto"] = Token,
-		},
-	}]]
---[[#local type GotoLabelStatement = Node & {
-		type = "statement",
-		kind = "goto_label",
-		identifier = Token,
-		tokens = Expression.tokens & {
-			[" = =left"] = Token,
-			[" = =right"] = Token,
-		},
-	}]]
---[[#local type BinaryOperatorExpression = Node & {
-		type = "expression",
-		kind = "binary_operator",
-		operator = Token,
-		left = Node,
-		right = Node,
-	}]]
---[[#local type FunctionAnalyzerStatement = Node & {
-		type = "statement",
-		kind = "analyzer_function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		index_expression = BinaryOperatorExpression | ValueExpression,
-		tokens = Expression.tokens & {
-			["analyzer"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionTypeStatement = Node & {
-		type = "statement",
-		kind = "type_function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		index_expression = BinaryOperatorExpression | ValueExpression,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionAnalyzerExpression = Node & {
-		type = "expression",
-		kind = "analyzer_function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["analyzer"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionTypeExpression = Node & {
-		type = "expression",
-		kind = "type_function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionExpression = Node & {
-		type = "expression",
-		kind = "function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionLocalStatement = Node & {
-		type = "statement",
-		kind = "local_function",
-		label = Token,
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["local"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionLocalTypeStatement = Node & {
-		type = "statement",
-		kind = "local_type_function",
-		label = Token,
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["local"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionStatement = Node & {
-		type = "statement",
-		kind = "function",
-		index_expression = BinaryOperatorExpression | ValueExpression,
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type FunctionLocalAnalyzerStatement = Node & {
-		type = "statement",
-		kind = "local_analyzer_function",
-		label = Token,
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["local"] = Token,
-			["analyzer"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type ImportExpression = Node & {
-		type = "expression",
-		kind = "import",
-		path = string,
-		expressions = List<|Node|>,
-		tokens = Expression.tokens & {
-			["import"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			[","] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type PrefixOperatorExpression = Node & {
-		type = "expression",
-		kind = "prefix_operator",
-		operator = Token,
-		right = Node,
-	}]]
---[[#local type PostfixOperatorSubExpression = Node & {
-		type = "expression",
-		kind = "postfix_operator",
-		operator = Token,
-		left = Node,
-	}]]
---[[#local type RepeatStatement = Node & {
-		type = "statement",
-		kind = "repeat",
-		statements = List<|Node|>,
-		expression = Node,
-		tokens = Expression.tokens & {
-			["repeat"] = Token,
-			["until"] = Token,
-		},
-	}]]
---[[#local type DoStatement = Node & {
-		type = "statement",
-		kind = "do",
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["do"] = Token,
-			["end"] = Token,
-		},
-	}]]
---[[#local type IfStatement = Node & {
-		type = "statement",
-		kind = "if",
-		expressions = List<|Node|>,
-		statements = List<|List<|Node|>|>,
-		tokens = Expression.tokens & {
-			["if/else/elseif"] = List<|Token|>,
-			["then"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}]]
---[[#local type WhileStatement = Node & {
-		type = "statement",
-		kind = "while",
-		expression = Node,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["while"] = Token,
-			["do"] = Token,
-			["end"] = Token,
-		},
-	}]]
---[[#local type ForNumericStatement = Node & {
-		type = "statement",
-		kind = "numeric_for",
-		identifier = Token,
-		init_expression = Node,
-		max_expression = Node,
-		step_expression = nil | Node,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["for"] = Token,
-			["="] = Token,
-			["do"] = Token,
-			["end"] = Token,
-			[",2"] = List<|Token|>,
-		},
-	}]]
---[[#local type ForGenericStatement = Node & {
-		type = "statement",
-		kind = "generic_for",
-		identifiers = List<|Node|>,
-		expressions = List<|Node|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["for"] = Token,
-			["="] = Token,
-			["in"] = Token,
-			["do"] = Token,
-			["end"] = Token,
-			["left,"] = List<|Token|>,
-			["right,"] = List<|Token|>,
-		},
-	}]]
---[[#local type AssignmentLocalStatement = Node & {
-		type = "statement",
-		kind = "local_assignment",
-		identifiers = List<|Node|>,
-		expressions = List<|Node|>,
-		tokens = Expression.tokens & {
-			["local"] = Token,
-			["left,"] = List<|Token|>,
-			["="] = nil | Token,
-			["right,"] = List<|Token|>,
-		},
-	}]]
---[[#local type AssignmentLocalTypeStatement = Node & {
-		type = "statement",
-		kind = "local_type_assignment",
-		identifiers = List<|Node|>,
-		expressions = List<|Node|>,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["local"] = Token,
-			["left,"] = List<|Token|>,
-			["="] = Token,
-			["right,"] = List<|Token|>,
-		},
-	}]]
---[[#local type AssignmentDestructureStatement = Node & {
-		type = "statement",
-		kind = "destructure_assignment",
-		default = nil | ValueExpression,
-		default_comma = Token,
-		left = List<|ValueExpression|>,
-		right = Node,
-		tokens = Expression.tokens & {
-			["{"] = Token,
-			[","] = List<|Token|>,
-			["}"] = Token,
-			["="] = Token,
-		},
-	}]]
---[[#local type AssignmentLocalDestructureStatement = Node & {
-		type = "statement",
-		kind = "local_destructure_assignment",
-		default = ValueExpression,
-		default_comma = Token,
-		left = List<|ValueExpression|>,
-		right = Node,
-		tokens = Expression.tokens & {
-			["local"] = Token,
-			["{"] = Token,
-			[","] = List<|Token|>,
-			["}"] = Token,
-			["="] = Token,
-		},
-	}]]
---[[#local type AssignmentStatement = Node & {
-		type = "statement",
-		kind = "assignment",
-		left = List<|Node|>,
-		right = List<|Node|>,
-		tokens = Expression.tokens & {
-			["="] = Token,
-			["left,"] = List<|Token|>,
-			["right,"] = List<|Token|>,
-		},
-	}]]
---[[#local type CallExpressionStatement = Node & {
-	type = "statement",
-	kind = "call_expression",
-	expression = Node,
-}]]
---[[#local type FunctionSignatureTypeExpression = Node & {
-		type = "expression",
-		kind = "function_signature",
-		stmnt = boolean; // ???
-		identifiers = nil | List<|FunctionArgumentSubExpression|>,
-		return_types = nil | List<|FunctionReturnTypeSubExpression|>,
-		tokens = Expression.tokens & {
-			["function"] = Token,
-			["="] = Token,
-			["arguments)"] = Token,
-			["arguments,"] = List<|Token|>,
-			["arguments("] = Token,
-			[">"] = Token,
-			["return("] = Token,
-			["return,"] = List<|Token|>,
-			["return)"] = Token,
-		},
-	}]]
---[[#local type AssignmentTypeStatement = Node & {
-		type = "statement",
-		kind = "type_assignment",
-		left = List<|Node|>,
-		right = List<|Node|>,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["^"] = nil | Token,
-			["="] = Token,
-			["left,"] = List<|Token|>,
-			["right,"] = List<|Token|>,
-		},
-	}]]
---[[#local type Nodes = {
-	EmptyUnionTypeExpression,
-	VarargTypeExpression,
-	ValueExpression,
-	FunctionArgumentSubExpression,
-	FunctionReturnTypeSubExpression,
-	TableExpressionKeyValueSubExpression,
-	TableSpreadSubExpression,
-	TableKeyValueSubExpression,
-	TableIndexValueSubExpression,
-	TableExpression,
-	PostfixCallSubExpression,
-	PostfixIndexSubExpression,
-	EndOfFileStatement,
-	DebugParserDebugCodeStatement,
-	DebugAnalyzerCodeStatement,
-	ReturnStatement,
-	BreakStatement,
-	ContinueStatement,
-	SemicolonStatement,
-	GotoStatement,
-	GotoLabelStatement,
-	BinaryOperatorExpression,
-	FunctionAnalyzerStatement,
-	FunctionTypeStatement,
-	FunctionAnalyzerExpression,
-	FunctionTypeExpression,
-	FunctionExpression,
-	FunctionLocalStatement,
-	FunctionLocalTypeStatement,
-	FunctionStatement,
-	FunctionLocalAnalyzerStatement,
-	ImportExpression,
-	PrefixOperatorExpression,
-	PostfixOperatorSubExpression,
-	RepeatStatement,
-	DoStatement,
-	IfStatement,
-	WhileStatement,
-	ForNumericStatement,
-	ForGenericStatement,
-	AssignmentLocalStatement,
-	AssignmentLocalTypeStatement,
-	AssignmentDestructureStatement,
-	AssignmentLocalDestructureStatement,
-	AssignmentStatement,
-	CallExpressionStatement,
-	FunctionSignatureTypeExpression,
-	AssignmentTypeStatement,
-}]]
---[[#local type ExpressionKind = (function()
-	local type union = |
 
-	for _, node in pairs(Nodes) do
-		if node.type == "expression" then type union = union | node.kind end
-	end
 
-	return union
-end)()]]
---[[#local type StatementKind = (function()
-	local type union = |
 
-	for _, node in pairs(Nodes) do
-		if node.type == "statement" then type union = union | node.kind end
-	end
 
-	return union
-end)()]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 return {
 	ExpressionKind = ExpressionKind,
 	StatementKind = StatementKind,
@@ -13139,13 +10205,13 @@ return {
 	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
 	AssignmentTypeStatement = AssignmentTypeStatement,
 } end
-do local __M; IMPORTS["nattlua.parser.node"] = function(...) __M = __M or (function(...) --[[#local type { Token } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+do local __M; IMPORTS["nattlua.parser.node"] = function(...) __M = __M or (function(...) 
 
---[[#local type { ExpressionKind, StatementKind } = IMPORTS['nattlua/parser/nodes.nlua']("~/nattlua/parser/nodes.nlua")]]
 
---[[#IMPORTS['nattlua/code/code.lua']<|"~/nattlua/code/code.lua"|>]]
---[[#local type NodeType = "expression" | "statement"]]
---[[#local type Node = any]]
+
+
+
+
 local ipairs = _G.ipairs
 local pairs = _G.pairs
 local setmetatable = _G.setmetatable
@@ -13156,31 +10222,16 @@ local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local META = {}
 META.__index = META
 META.Type = "node"
---[[#type META.@Name = "Node"]]
---[[#type META.@Self = {
-	type = "expression" | "statement",
-	kind = ExpressionKind | StatementKind,
-	id = number,
-	Code = Code,
-	tokens = Map<|string, Token|>,
-	environment = "typesystem" | "runtime",
-	parent = nil | self,
-	code_start = number,
-	code_stop = number,
-	first_node = nil | self,
-	statements = nil | List<|any|>,
-	value = nil | Token,
-	inferred_type = nil | any,
-	inferred_types = nil | List<|any|>,
-}]]
---[[#local type Node = META.@Self]]
+
+
+
 local id = 0
 
-function META.New(init--[[#: Omit<|META.@Self, "id" | "tokens"|>]])--[[#: Node]]
+function META.New(init)
 	id = id + 1
 	init.tokens = {}
 	init.id = id
-	return setmetatable(init--[[# as META.@Self]], META)
+	return setmetatable(init, META)
 end
 
 function META:__tostring()
@@ -13219,12 +10270,12 @@ function META:Render(config)
 	do
 		-- we have to do this because nattlua.transpiler.emitter is not yet typed
 		-- so if it's hoisted the self.nlua will fail
-		if IMPORTS--[[# as false]] then
+		if IMPORTS then
 			emitter = IMPORTS["nattlua.transpiler.emitter"]()
 		else
-			--[[#£ parser.dont_hoist_next_import = true]]
+			
 
-			emitter = require("nattlua.transpiler.emitter"--[[# as string]])
+			emitter = require("nattlua.transpiler.emitter")
 		end
 	end
 
@@ -13273,9 +10324,9 @@ function META:GetLength()
 	return stop - start
 end
 
-function META:GetNodes()--[[#: List<|any|>]]
+function META:GetNodes()
 	if self.kind == "if" then
-		local flat--[[#: List<|any|>]] = {}
+		local flat = {}
 
 		for _, statements in ipairs(assert(self.statements)) do
 			for _, v in ipairs(statements) do
@@ -13312,9 +10363,9 @@ function META:GetLastType()
 end
 
 local function find_by_type(
-	node--[[#: META.@Self]],
-	what--[[#: StatementKind | ExpressionKind]],
-	out--[[#: List<|META.@Name|>]]
+	node,
+	what,
+	out
 )
 	out = out or {}
 
@@ -13329,30 +10380,17 @@ local function find_by_type(
 	return out
 end
 
-function META:FindNodesByType(what--[[#: StatementKind | ExpressionKind]])
+function META:FindNodesByType(what)
 	return find_by_type(self, what, {})
 end
 
 return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.parser.base"] = function(...) __M = __M or (function(...) --[[#local type { Token, TokenType } = IMPORTS['nattlua/lexer/token.nlua']("~/nattlua/lexer/token.nlua")]]
+do local __M; IMPORTS["nattlua.parser.base"] = function(...) __M = __M or (function(...) 
 
---[[#local type { 
-	ExpressionKind,
-	StatementKind,
-	FunctionAnalyzerStatement,
-	FunctionTypeStatement,
-	FunctionAnalyzerExpression,
-	FunctionTypeExpression,
-	FunctionExpression,
-	FunctionLocalStatement,
-	FunctionLocalTypeStatement,
-	FunctionStatement,
-	FunctionLocalAnalyzerStatement,
-	ValueExpression
- } = IMPORTS['./nattlua/parser/nodes.nlua']("./nodes.nlua")]]
 
---[[#IMPORTS['nattlua/code/code.lua']<|"~/nattlua/code/code.lua"|>]]
---[[#local type NodeType = "expression" | "statement"]]
+
+
+
 local Node = IMPORTS['nattlua.parser.node']("nattlua.parser.node")
 local ipairs = _G.ipairs
 local pairs = _G.pairs
@@ -13363,30 +10401,15 @@ local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local META = {}
 META.__index = META
---[[#local type Node = Node.@Self]]
---[[#type META.@Self = {
-	config = any,
-	nodes = List<|any|>,
-	Code = Code,
-	current_statement = false | any,
-	current_expression = false | any,
-	root = false | any,
-	i = number,
-	tokens = List<|Token|>,
-	environment_stack = List<|"typesystem" | "runtime"|>,
-	OnNode = nil | function=(self, any)>(nil),
-}]]
---[[#type META.@Name = "Parser"]]
---[[#local type Parser = META.@Self]]
+
+
+
+
 
 function META.New(
-	tokens--[[#: List<|Token|>]],
-	code--[[#: Code]],
-	config--[[#: nil | {
-		root = nil | Node,
-		on_statement = nil | function=(Parser, Node)>(Node),
-		path = nil | string,
-	}]]
+	tokens,
+	code,
+	config
 )
 	return setmetatable(
 		{
@@ -13409,7 +10432,7 @@ do
 		return self.environment_stack[1] or "runtime"
 	end
 
-	function META:PushParserEnvironment(env--[[#: "runtime" | "typesystem"]])
+	function META:PushParserEnvironment(env)
 		table.insert(self.environment_stack, 1, env)
 	end
 
@@ -13419,8 +10442,8 @@ do
 end
 
 function META:StartNode(
-	type--[[#: "statement" | "expression"]],
-	kind--[[#: StatementKind | ExpressionKind]]
+	type,
+	kind
 )
 	local code_start = assert(self:GetToken()).start
 	local node = Node.New(
@@ -13447,7 +10470,7 @@ function META:StartNode(
 	return node
 end
 
-function META:EndNode(node--[[#: Node]])
+function META:EndNode(node)
 	local prev = self:GetToken(-1)
 
 	if prev then
@@ -13463,10 +10486,10 @@ function META:EndNode(node--[[#: Node]])
 end
 
 function META:Error(
-	msg--[[#: string]],
-	start_token--[[#: Token | nil]],
-	stop_token--[[#: Token | nil]],
-	...--[[#: ...any]]
+	msg,
+	start_token,
+	stop_token,
+	...
 )
 	local tk = self:GetToken()
 	local start = 0
@@ -13484,14 +10507,14 @@ function META:Error(
 end
 
 function META:OnError(
-	code--[[#: Code]],
-	message--[[#: string]],
-	start--[[#: number]],
-	stop--[[#: number]],
-	...--[[#: ...any]]
+	code,
+	message,
+	start,
+	stop,
+	...
 ) end
 
-function META:GetToken(offset--[[#: number | nil]])
+function META:GetToken(offset)
 	return self.tokens[self.i + (offset or 0)]
 end
 
@@ -13499,17 +10522,17 @@ function META:GetLength()
 	return #self.tokens
 end
 
-function META:Advance(offset--[[#: number]])
+function META:Advance(offset)
 	self.i = self.i + offset
 end
 
-function META:IsValue(str--[[#: string]], offset--[[#: number | nil]])
+function META:IsValue(str, offset)
 	local tk = self:GetToken(offset)
 
 	if tk then return tk.value == str end
 end
 
-function META:IsType(token_type--[[#: TokenType]], offset--[[#: number | nil]])
+function META:IsType(token_type, offset)
 	local tk = self:GetToken(offset)
 
 	if tk then return tk.type == token_type end
@@ -13531,7 +10554,7 @@ function META:RemoveToken(i)
 	return t
 end
 
-function META:AddTokens(tokens--[[#: {[1 .. inf] = Token}]])
+function META:AddTokens(tokens)
 	local eof = table.remove(self.tokens)
 
 	for i, token in ipairs(tokens) do
@@ -13545,11 +10568,11 @@ end
 
 do
 	local function error_expect(
-		self--[[#: META.@Self]],
-		str--[[#: string]],
-		what--[[#: string]],
-		start--[[#: Token | nil]],
-		stop--[[#: Token | nil]]
+		self,
+		str,
+		what,
+		start,
+		stop
 	)
 		local tk = self:GetToken()
 
@@ -13560,31 +10583,31 @@ do
 		end
 	end
 
-	function META:ExpectValue(str--[[#: string]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])--[[#: Token]]
+	function META:ExpectValue(str, error_start, error_stop)
 		if not self:IsValue(str) then
 			error_expect(self, str, "value", error_start, error_stop)
 		end
 
-		return self:ReadToken()--[[# as Token]]
+		return self:ReadToken()
 	end
 
 	function META:ExpectType(
-		str--[[#: TokenType]],
-		error_start--[[#: Token | nil]],
-		error_stop--[[#: Token | nil]]
-	)--[[#: Token]]
+		str,
+		error_start,
+		error_stop
+	)
 		if not self:IsType(str) then
 			error_expect(self, str, "type", error_start, error_stop)
 		end
 
-		return self:ReadToken()--[[# as Token]]
+		return self:ReadToken()
 	end
 end
 
 function META:ReadValues(
-	values--[[#: Map<|string, true|>]],
-	start--[[#: Token | nil]],
-	stop--[[#: Token | nil]]
+	values,
+	start,
+	stop
 )
 	local tk = self:GetToken()
 
@@ -13606,7 +10629,7 @@ function META:ReadValues(
 	return self:ReadToken()
 end
 
-function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
+function META:ReadNodes(stop_token)
 	local out = {}
 	local i = 1
 
@@ -13639,19 +10662,19 @@ function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 	return out
 end
 
-function META:ResolvePath(path--[[#: string]])
+function META:ResolvePath(path)
 	return path
 end
 
 function META:ReadMultipleValues(
-	max--[[#: nil | number]],
-	reader--[[#: ref function=(Parser, ...: ...any)>(nil | Node)]],
-	...--[[#: ref ...any]]
+	max,
+	reader,
+	...
 )
 	local out = {}
 
 	for i = 1, max or self:GetLength() do
-		local node = reader(self, ...)--[[# as Node | nil]]
+		local node = reader(self, ...)
 
 		if not node then break end
 
@@ -15362,7 +12385,7 @@ function META:NewToken(type, value)
 	return tk
 end
 
-function META:ReadTealFunctionArgument(expect_type--[[#: nil | boolean]])
+function META:ReadTealFunctionArgument(expect_type)
 	if
 		expect_type or
 		(
@@ -15778,7 +12801,7 @@ local table_insert = _G.table.insert
 local table_remove = _G.table.remove
 local ipairs = _G.ipairs
 
-function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
+function META:ReadIdentifier(expect_type)
 	if not self:IsType("letter") and not self:IsValue("...") then return end
 
 	local node = self:StartNode("expression", "value") -- as ValueExpression ]]
@@ -15805,14 +12828,14 @@ function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
 	return node
 end
 
-function META:ReadValueExpressionToken(expect_value--[[#: nil | string]])
+function META:ReadValueExpressionToken(expect_value)
 	local node = self:StartNode("expression", "value")
 	node.value = expect_value and self:ExpectValue(expect_value) or self:ReadToken()
 	self:EndNode(node)
 	return node
 end
 
-function META:ReadValueExpressionType(expect_value--[[#: TokenType]])
+function META:ReadValueExpressionType(expect_value)
 	local node = self:StartNode("expression", "value")
 	node.value = self:ExpectType(expect_value)
 	self:EndNode(node)
@@ -15820,7 +12843,7 @@ function META:ReadValueExpressionType(expect_value--[[#: TokenType]])
 end
 
 function META:ReadFunctionBody(
-	node--[[#: FunctionAnalyzerExpression | FunctionExpression | FunctionLocalStatement | FunctionStatement]]
+	node
 )
 	if self.TealCompat then
 		if self:IsValue("<") then
@@ -15847,7 +12870,7 @@ function META:ReadFunctionBody(
 end
 
 function META:ReadTypeFunctionBody(
-	node--[[#: FunctionTypeStatement | FunctionTypeExpression | FunctionLocalTypeStatement]]
+	node
 )
 	if self:IsValue("!") then
 		node.tokens["!"] = self:ExpectValue("!")
@@ -15898,7 +12921,7 @@ function META:ReadTypeFunctionBody(
 	return node
 end
 
-function META:ReadTypeFunctionArgument(expect_type--[[#: nil | boolean]])
+function META:ReadTypeFunctionArgument(expect_type)
 	if self:IsValue(")") then return end
 
 	if self:IsValue("...") then return end
@@ -15916,8 +12939,8 @@ function META:ReadTypeFunctionArgument(expect_type--[[#: nil | boolean]])
 end
 
 function META:ReadAnalyzerFunctionBody(
-	node--[[#: FunctionAnalyzerStatement | FunctionAnalyzerExpression | FunctionLocalAnalyzerStatement]],
-	type_args--[[#: boolean]]
+	node,
+	type_args
 )
 	node.tokens["arguments("] = self:ExpectValue("(")
 	node.identifiers = self:ReadMultipleValues(math_huge, self.ReadTypeFunctionArgument, type_args)
@@ -16141,26 +13164,26 @@ local META = {}
 META.__index = META
 local LexicalScope
 
-function META.GetSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
-	tbl[name] = default--[[# as NonLiteral<|default|>]]
-	--[[#type tbl.@Self[name] = tbl[name] ]]
-	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
+function META.GetSet(tbl, name, default)
+	tbl[name] = default
+	
+	tbl["Set" .. name] = function(self, val)
 		self[name] = val
 		return self
 	end
-	tbl["Get" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
+	tbl["Get" .. name] = function(self)
 		return self[name]
 	end
 end
 
-function META.IsSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
-	tbl[name] = default--[[# as NonLiteral<|default|>]]
-	--[[#type tbl.@Self[name] = tbl[name] ]]
-	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
+function META.IsSet(tbl, name, default)
+	tbl[name] = default
+	
+	tbl["Set" .. name] = function(self, val)
 		self[name] = val
 		return self
 	end
-	tbl["Is" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
+	tbl["Is" .. name] = function(self)
 		return self[name]
 	end
 end
@@ -16182,13 +13205,13 @@ do
 		return self:IsTruthy() and not self:IsFalsy()
 	end
 
-	META:IsSet("Falsy", false--[[# as boolean]])
-	META:IsSet("Truthy", false--[[# as boolean]])
+	META:IsSet("Falsy", false)
+	META:IsSet("Truthy", false)
 end
 
-META:IsSet("ConditionalScope", false--[[# as boolean]])
-META:GetSet("Parent", nil--[[# as boolean]])
-META:GetSet("Children", nil--[[# as boolean]])
+META:IsSet("ConditionalScope", false)
+META:GetSet("Parent", nil)
+META:GetSet("Children", nil)
 
 function META:SetParent(parent)
 	self.Parent = parent
@@ -16288,7 +13311,7 @@ function META:CreateUpvalue(key, obj, env)
 	return upvalue
 end
 
-function META:GetUpvalues(type--[[#: "runtime" | "typesystem"]])
+function META:GetUpvalues(type)
 	return self.upvalues[type].list
 end
 
@@ -16830,16 +13853,7 @@ local error = error
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
 return function(META)
-	--[[#type META.diagnostics = {
-		[1 .. inf] = {
-			node = any,
-			start = number,
-			stop = number,
-			msg = string,
-			severity = "warning" | "error",
-			traceback = string,
-		},
-	}]]
+	
 
 	table.insert(META.OnInitialize, function(self)
 		self.diagnostics = {}
@@ -16881,8 +13895,8 @@ return function(META)
 
 	function META:ReportDiagnostic(
 		node,
-		msg--[[#: {reasons = {[number] = string}} | {[number] = string}]],
-		severity--[[#: "warning" | "error"]]
+		msg,
+		severity
 	)
 		if self.SuppressDiagnostics then return end
 
@@ -17393,7 +14407,7 @@ return function(META)
 				return self.environment_stack and self.environment_stack[1] or "runtime"
 			end
 
-			function META:PushAnalyzerEnvironment(env--[[#: "typesystem" | "runtime"]])
+			function META:PushAnalyzerEnvironment(env)
 				self.environment_stack = self.environment_stack or {}
 				table.insert(self.environment_stack, 1, env)
 			end
@@ -20571,7 +17585,7 @@ local function operator(self, node, l, r, op, meta_method)
 	return type_errors.binary(op, l, r)
 end
 
-local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | nil]])
+local function logical_cmp_cast(val, err)
 	if err then return val, err end
 
 	if val == nil then
@@ -22453,7 +19467,7 @@ function META:EmitCall(node)
 		self.inside_call_expression = true
 		self:EmitExpression(node.left)
 
-		if node.expressions_typesystem then
+		if node.expressions_typesystem and not self.config.omit_invalid_code then
 			local emitted = self:StartEmittingInvalidLuaCode()
 			self:EmitToken(node.tokens["call_typesystem("])
 			self:EmitExpressionList(node.expressions_typesystem)
@@ -22577,7 +19591,7 @@ end
 
 do
 	function META:EmitFunctionBody(node)
-		if node.identifiers_typesystem then
+		if node.identifiers_typesystem and not self.config.omit_invalid_code then
 			local emitted = self:StartEmittingInvalidLuaCode()
 			self:EmitToken(node.tokens["arguments_typesystem("])
 			self:EmitExpressionList(node.identifiers_typesystem)
@@ -23293,12 +20307,16 @@ end
 
 function META:EmitIdentifier(node)
 	if node.identifier then
-		local ok = self:StartEmittingInvalidLuaCode()
 		self:EmitToken(node.identifier)
-		self:EmitToken(node.tokens[":"])
-		self:Whitespace(" ")
-		self:EmitTypeExpression(node)
-		self:StopEmittingInvalidLuaCode(ok)
+
+		if not self.config.omit_invalid_code then
+			local ok = self:StartEmittingInvalidLuaCode()
+			self:EmitToken(node.tokens[":"])
+			self:Whitespace(" ")
+			self:EmitTypeExpression(node)
+			self:StopEmittingInvalidLuaCode(ok)
+		end
+
 		return
 	end
 
@@ -23553,6 +20571,8 @@ do -- types
 	end
 
 	function META:EmitInvalidLuaCode(func, ...)
+		if self.config.omit_invalid_code then return end
+
 		local emitted = self:StartEmittingInvalidLuaCode()
 		self[func](self, ...)
 		self:StopEmittingInvalidLuaCode(emitted)
@@ -23928,10 +20948,10 @@ function META:Emit(cfg)
 end
 
 return function(
-	lua_code--[[#: string]],
-	name--[[#: string]],
-	config--[[#: {[any] = any}]],
-	level--[[#: number | nil]]
+	lua_code,
+	name,
+	config,
+	level
 )
 	local info = debug.getinfo(level or 2)
 	local parent_line = info and info.currentline or "unknown line"

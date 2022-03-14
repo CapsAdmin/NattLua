@@ -656,7 +656,7 @@ function META:EmitCall(node)
 		self.inside_call_expression = true
 		self:EmitExpression(node.left)
 
-		if node.expressions_typesystem then
+		if node.expressions_typesystem and not self.config.omit_invalid_code then
 			local emitted = self:StartEmittingInvalidLuaCode()
 			self:EmitToken(node.tokens["call_typesystem("])
 			self:EmitExpressionList(node.expressions_typesystem)
@@ -780,7 +780,7 @@ end
 
 do
 	function META:EmitFunctionBody(node)
-		if node.identifiers_typesystem then
+		if node.identifiers_typesystem and not self.config.omit_invalid_code then
 			local emitted = self:StartEmittingInvalidLuaCode()
 			self:EmitToken(node.tokens["arguments_typesystem("])
 			self:EmitExpressionList(node.identifiers_typesystem)
@@ -1496,12 +1496,16 @@ end
 
 function META:EmitIdentifier(node)
 	if node.identifier then
-		local ok = self:StartEmittingInvalidLuaCode()
 		self:EmitToken(node.identifier)
-		self:EmitToken(node.tokens[":"])
-		self:Whitespace(" ")
-		self:EmitTypeExpression(node)
-		self:StopEmittingInvalidLuaCode(ok)
+
+		if not self.config.omit_invalid_code then
+			local ok = self:StartEmittingInvalidLuaCode()
+			self:EmitToken(node.tokens[":"])
+			self:Whitespace(" ")
+			self:EmitTypeExpression(node)
+			self:StopEmittingInvalidLuaCode(ok)
+		end
+
 		return
 	end
 
@@ -1756,6 +1760,8 @@ do -- types
 	end
 
 	function META:EmitInvalidLuaCode(func, ...)
+		if self.config.omit_invalid_code then return end
+
 		local emitted = self:StartEmittingInvalidLuaCode()
 		self[func](self, ...)
 		self:StopEmittingInvalidLuaCode(emitted)

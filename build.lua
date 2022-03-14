@@ -16,6 +16,7 @@ local lua_code = c:Emit(
 		preserve_whitespace = false,
 		string_quote = "\"",
 		no_semicolon = true,
+		omit_invalid_code = true,
 		comment_type_annotations = true,
 		type_annotations = true,
 		force_parenthesis = true,
