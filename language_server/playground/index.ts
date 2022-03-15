@@ -3,7 +3,7 @@ import { editor, languages, MarkerSeverity } from "monaco-editor";
 
 const syntax = {
   defaultToken: "",
-  tokenPostfix: ".tl",
+  tokenPostfix: ".nl",
 
   keywords: [
     "and",
@@ -200,6 +200,10 @@ end
 local y = x`,
   language: "nattlua",
   theme: "vs-dark",
+});
+
+window.addEventListener("resize", () => {
+  obj.layout();
 });
 
 obj.onDidChangeCursorSelection((e) => {
