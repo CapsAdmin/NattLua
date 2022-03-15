@@ -7,7 +7,7 @@ META.__index = META
 	BinaryOperatorInfo = Map<|string, {left_priority = number, right_priority = number}|>,
 	NumberAnnotations = List<|string|>,
 	Symbols = List<|string|>,
-	BinaryOperators = List<|List<|string|>|>,
+	BinaryOperators = Map<|string, true|>,
 	PrefixOperators = Map<|string, true|>,
 	PostfixOperators = Map<|string, true|>,
 	PrimaryBinaryOperators = Map<|string, true|>,
@@ -99,6 +99,7 @@ function META:AddBinaryOperators(tbl--[[#: List<|List<|string|>|>]])
 			end
 
 			self:AddSymbols({token})
+			self.BinaryOperators[token] = true
 		end
 	end
 end

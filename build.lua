@@ -26,9 +26,7 @@ local lua_code = c:Emit(
 		},
 	}
 )
-
 lua_code = "local BUNDLE = true\n" .. lua_code
-
 io.write(" - OK\n")
 io.write("output is " .. #lua_code .. " bytes\n")
 -- double check that the lua_code is valid

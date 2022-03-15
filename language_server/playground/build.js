@@ -2,12 +2,14 @@ require("esbuild")
   .build({
     format: "iife",
     platform: "node",
-    entryPoints: ["index.ts"],
+    entryPoints: ["src/index.ts"],
     loader: "expose-loader",
     bundle: true,
-    outfile: "out.js",
+    outfile: "public/out.js",
     loader: {
       ".ttf": "dataurl",
+      ".lua": "text",
+      ".nlua": "text",
     },
   })
   .catch(() => process.exit(1));

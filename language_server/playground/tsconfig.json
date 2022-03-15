@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
+    "module": "ESNext",
     "target": "es6",
     "sourceMap": true,
     "watch": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "rootDir": "./src",
   },
   "exclude": ["node_modules"]
 }

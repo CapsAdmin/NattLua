@@ -8991,6 +8991,7 @@ function META:AddBinaryOperators(tbl)
 			end
 
 			self:AddSymbols({token})
+			self.BinaryOperators[token] = true
 		end
 	end
 end
@@ -10710,12 +10711,7 @@ typesystem:AddSymbolCharacters(
 		"|>",
 	}
 )
-typesystem:AddNumberAnnotations({
-	"ull",
-	"ll",
-	"ul",
-	"i",
-})
+typesystem:AddNumberAnnotations({"ull", "ll", "ul", "i"})
 typesystem:AddKeywords(
 	{
 		"do",
@@ -10747,6 +10743,7 @@ typesystem:AddNonStandardKeywords({
 	"import",
 	"literal",
 	"ref",
+	"analyzer",
 	"mutable",
 })
 typesystem:AddKeywordValues({
@@ -10755,10 +10752,16 @@ typesystem:AddKeywordValues({
 	"true",
 	"false",
 })
-typesystem:AddPrefixOperators({"-", "#", "not", "!", "~", "supertype"})
+typesystem:AddPrefixOperators({
+	"-",
+	"#",
+	"not",
+	"!",
+	"~",
+	"supertype",
+})
 typesystem:AddPostfixOperators(
-	{
-		-- these are just to make sure all code is covered by tests
+	{ -- these are just to make sure all code is covered by tests
 		"++",
 		"ÆØÅ",
 		"ÆØÅÆ",

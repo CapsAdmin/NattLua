@@ -1,29 +1,22 @@
 local Syntax = require("nattlua.syntax.syntax")
 local typesystem = Syntax()
-typesystem:AddSymbolCharacters(
-	{
-		",",
-		";",
-		"(",
-		")",
-		"{",
-		"}",
-		"[",
-		"]",
-		"=",
-		"::",
-		"\"",
-		"'",
-		"<|",
-		"|>",
-	}
-)
-typesystem:AddNumberAnnotations({
-	"ull",
-	"ll",
-	"ul",
-	"i",
+typesystem:AddSymbolCharacters({
+	",",
+	";",
+	"(",
+	")",
+	"{",
+	"}",
+	"[",
+	"]",
+	"=",
+	"::",
+	"\"",
+	"'",
+	"<|",
+	"|>",
 })
+typesystem:AddNumberAnnotations({"ull", "ll", "ul", "i"})
 typesystem:AddKeywords(
 	{
 		"do",
@@ -55,6 +48,7 @@ typesystem:AddNonStandardKeywords({
 	"import",
 	"literal",
 	"ref",
+	"analyzer",
 	"mutable",
 })
 typesystem:AddKeywordValues({
@@ -63,10 +57,16 @@ typesystem:AddKeywordValues({
 	"true",
 	"false",
 })
-typesystem:AddPrefixOperators({"-", "#", "not", "!", "~", "supertype"})
+typesystem:AddPrefixOperators({
+	"-",
+	"#",
+	"not",
+	"!",
+	"~",
+	"supertype",
+})
 typesystem:AddPostfixOperators(
-	{
-		-- these are just to make sure all code is covered by tests
+	{ -- these are just to make sure all code is covered by tests
 		"++",
 		"ÆØÅ",
 		"ÆØÅÆ",
