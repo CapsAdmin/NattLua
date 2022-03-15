@@ -4,6 +4,8 @@ NattLua is a superset of LuaJIT that adds a structural typesystem. It's built to
 
 The typesystem itself follows the same philosophy as Lua. It has low level concepts that give you the freedom to choose how much you want to constrain your program. (🦶🔫!)
 
+There is a [playground](https://capsadmin.github.io/NattLua/) you can try. It supports hover type information and other diagnostics.
+
 Complex type structures, such as array-like tables, map-like tables, metatables, and more are supported:
 
 ```lua
