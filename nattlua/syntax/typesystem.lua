@@ -1,21 +1,23 @@
 local Syntax = require("nattlua.syntax.syntax")
 local typesystem = Syntax()
-typesystem:AddSymbolCharacters({
-	",",
-	";",
-	"(",
-	")",
-	"{",
-	"}",
-	"[",
-	"]",
-	"=",
-	"::",
-	"\"",
-	"'",
-	"<|",
-	"|>",
-})
+typesystem:AddSymbolCharacters(
+	{
+		",",
+		";",
+		"(",
+		")",
+		"{",
+		"}",
+		"[",
+		"]",
+		"=",
+		"::",
+		"\"",
+		"'",
+		"<|",
+		"|>",
+	}
+)
 typesystem:AddNumberAnnotations({"ull", "ll", "ul", "i"})
 typesystem:AddKeywords(
 	{

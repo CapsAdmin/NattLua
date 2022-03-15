@@ -1,7 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.js",
+    "dev": "node build.js && yarn serve public"
   },
   "dependencies": {
     "esbuild": "^0.14.27",
@@ -11,6 +12,8 @@
     "wasmoon": "^1.12.1"
   },
   "devDependencies": {
+    "prettier": "^2.5.1",
+    "serve": "^13.0.2",
     "vscode-languageserver": "^7.0.0",
     "vscode-languageserver-protocol": "^3.16.0",
     "vscode-languageserver-textdocument": "^1.0.4"

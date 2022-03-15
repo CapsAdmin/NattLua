@@ -6,6 +6,7 @@
     "watch": true,
     "moduleResolution": "node",
     "rootDir": "./src",
+    "resolveJsonModule": true
   },
   "exclude": ["node_modules"]
 }

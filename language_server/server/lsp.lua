@@ -97,6 +97,8 @@ local function get_range(code, start, stop)
 	}
 end
 
+local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
+local runtime_env, typesystem_env = BuildBaseEnvironment()
 local cache = {}
 
 local function compile(self, uri, lua_code)
@@ -109,6 +111,7 @@ local function compile(self, uri, lua_code)
 	if cache[uri] then return cache[uri] end
 
 	local compiler = nl.Compiler(lua_code, uri, {type_annotations = true})
+	compiler:SetEnvironments(runtime_env, typesystem_env)
 
 	do
 		local resp = {
