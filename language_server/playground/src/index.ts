@@ -1,5 +1,5 @@
 import { editor as MonacoEditor, languages, MarkerSeverity } from "monaco-editor"
-import { PublishDiagnosticsParams, Range, DidChangeTextDocumentParams } from "vscode-languageserver"
+import { PublishDiagnosticsParams, Range, DidChangeTextDocumentParams, DiagnosticSeverity } from "vscode-languageserver"
 import { createEditor } from "./editor"
 import { loadLua, prettyPrint } from "./lua"
 import { registerSyntax } from "./syntax"
@@ -43,7 +43,7 @@ const main = async () => {
 		lsp.methods["textDocument/didChange"](lsp, response)
 	}
 
-	editor.onDidChangeModelContent((e) => {
+	tab.onDidChangeContent((e) => {
 		recompile()
 	})
 
@@ -83,13 +83,25 @@ const main = async () => {
 		const { diagnostics } = params as PublishDiagnosticsParams
 		const markers: MonacoEditor.IMarkerData[] = []
 		for (const diag of diagnostics) {
+			let severity: number = diag.severity
+
+			if (severity == 1) {
+				severity = MarkerSeverity.Error
+			} else if (severity == 2) {
+				severity = MarkerSeverity.Warning
+			} else if (severity == 3) {
+				severity = MarkerSeverity.Info
+			} else {
+				severity = MarkerSeverity.Hint
+			}
+
 			markers.push({
 				message: diag.message,
 				startLineNumber: diag.range.start.line + 1,
 				startColumn: diag.range.start.character + 1,
 				endLineNumber: diag.range.end.line + 1,
 				endColumn: diag.range.end.character + 1,
-				severity: diag.severity,
+				severity: severity,
 			})
 		}
 
