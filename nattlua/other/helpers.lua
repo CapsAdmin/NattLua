@@ -263,7 +263,7 @@ do
 	end
 end
 
-function helpers.GetDataFromLineCharPosition(
+function helpers.FindTokenFromLineCharacterPosition(
 	tokens--[[#: {[number] = Token}]],
 	code--[[#: string]],
 	line--[[#: number]],

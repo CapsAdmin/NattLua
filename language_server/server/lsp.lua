@@ -298,7 +298,7 @@ end
 lsp.methods["textDocument/hover"] = function(self, params)
 	local compiler = compile(self, params.textDocument.uri, params.textDocument.text)
 	local pos = params.position
-	local token, data = helpers.GetDataFromLineCharPosition(compiler.Tokens, compiler.Code:GetString(), pos.line + 1, pos.character + 1)
+	local token, data = helpers.FindTokenFromLineCharacterPosition(compiler.Tokens, compiler.Code:GetString(), pos.line + 1, pos.character + 1)
 
 	if not token or not data then return end
 
