@@ -4436,6 +4436,8 @@ IMPORTS['nattlua/definitions/lua/math.nlua'] = function()
 
 
 
+
+
  end
 IMPORTS['nattlua/definitions/lua/os.nlua'] = function()  end
 IMPORTS['nattlua/definitions/lua/coroutine.nlua'] = function() 
@@ -22617,6 +22619,10 @@ type math.pi = 3.14159265358979323864338327950288
 
 analyzer function math.sin(n: number)
 	return n:IsLiteral() and math.sin(n:GetData()) or types.Number()
+end
+
+analyzer function math.abs(n: number)
+	return n:IsLiteral() and math.abs(n:GetData()) or types.Number()
 end
 
 analyzer function math.cos(n: number)

@@ -38,6 +38,10 @@ analyzer function math.sin(n: number)
 	return n:IsLiteral() and math.sin(n:GetData()) or types.Number()
 end
 
+analyzer function math.abs(n: number)
+	return n:IsLiteral() and math.abs(n:GetData()) or types.Number()
+end
+
 analyzer function math.cos(n: number)
 	return n:IsLiteral() and math.cos(n:GetData()) or types.Number()
 end
