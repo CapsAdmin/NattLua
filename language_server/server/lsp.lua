@@ -84,7 +84,7 @@ local function get_range(code, start, stop)
 		},
 		["end"] = {
 			line = data.line_stop - 1,
-			character = data.character_stop - 1,
+			character = data.character_stop, -- not sure about this
 		},
 	}
 end
@@ -305,7 +305,7 @@ lsp.methods["textDocument/hover"] = function(self, params)
 	local found_parents = {}
 
 	do
-		local node = token
+		local node = token.parent
 
 		while node.parent do
 			table.insert(found_parents, node)
@@ -324,20 +324,20 @@ lsp.methods["textDocument/hover"] = function(self, params)
 	end
 
 	for _, node in ipairs(found_parents) do
-		add_code(tostring(node) .. ":")
+		local found = false
 
 		for _, obj in ipairs(node:GetTypes()) do
-			add_code("\t" .. tostring(obj))
-		end
-	end
+			if obj.Type == "string" and obj:GetData() == token.value then
 
-	if false then
-		add_line("nodes:\n\n")
-		add_line("\t[token - " .. token.type .. " (" .. token.value .. ")]")
+			else
+				add_code(tostring(obj))
+				found = true
 
-		for _, node in ipairs(found_parents) do
-			add_line("\t" .. tostring(node))
+				break
+			end
 		end
+
+		if found then break end
 	end
 
 	if found_parents[2] then

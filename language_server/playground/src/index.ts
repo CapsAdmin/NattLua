@@ -4,6 +4,7 @@ import { createEditor } from "./editor"
 import { loadLua, prettyPrint } from "./lua"
 import { registerSyntax } from "./syntax"
 import randomExamples from "./random.json"
+import { assortedExamples } from "./examples"
 
 const getRandomExample = () => {
 	return randomExamples[Math.floor(Math.random() * randomExamples.length)]
@@ -14,20 +15,22 @@ const main = async () => {
 	await registerSyntax(lua)
 
 	const editor = createEditor()
-	const tab = MonacoEditor.createModel(
-		`
-		local x = 1
-		if math.random() > 0.5 then
-			local hover_me = x
-			x = 2
-		elseif math.random() > 0.5 then
-			local hover_me = x
-			x = 3
-		end
-		local hover_me = x
-	`,
-		"nattlua",
-	)
+	const tab = MonacoEditor.createModel("local x = 1337", "nattlua")
+
+	const select = document.getElementById("examples") as HTMLSelectElement
+
+	select.addEventListener("change", () => {
+		tab.setValue(select.value)
+	})
+
+	for (const [name, code] of Object.entries(assortedExamples)) {
+		const option = new Option(name, code)
+		select.options.add(option)
+		if (name == "array") {
+			option.selected = true
+			tab.setValue(code)
+		}
+	}
 
 	document.getElementById("random-example").addEventListener("click", () => {
 		tab.setValue(getRandomExample())
@@ -118,9 +121,9 @@ const main = async () => {
 			markers.push({
 				message: diag.message,
 				startLineNumber: diag.range.start.line + 1,
-				startColumn: diag.range.start.character, // 0 indexed
+				startColumn: diag.range.start.character + 1,
 				endLineNumber: diag.range.end.line + 1,
-				endColumn: diag.range.end.character, // 0 indexed
+				endColumn: diag.range.end.character + 1,
 				severity: severity,
 			})
 		}

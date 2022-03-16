@@ -930,11 +930,8 @@ return {
 					scope = self:GetScope(),
 				}
 			)
-
 			local ok, err = Call(self, obj, arguments)
-
 			table.remove(self.call_stack)
-
 			self:PopActiveNode()
 			return ok, err
 		end

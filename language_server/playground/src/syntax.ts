@@ -2,6 +2,14 @@ import { languages } from "monaco-editor"
 import { LuaEngine } from "wasmoon"
 import { arrayUnion, escapeRegex, mapsToArray } from "./util"
 
+const uniqueCharacters = (str: string) => {
+	const unique = new Set<string>()
+	for (const char of str) {
+		unique.add(char)
+	}
+	return Array.from(unique).join("")
+}
+
 export const registerSyntax = async (lua: LuaEngine) => {
 	await lua.doString(`
     _G.syntax_typesystem = require("nattlua.syntax.typesystem")
@@ -10,7 +18,6 @@ export const registerSyntax = async (lua: LuaEngine) => {
 
 	const syntax_typesystem = lua.global.get("syntax_typesystem")
 	const syntax_runtime = lua.global.get("syntax_runtime")
-
 	const syntax: languages.IMonarchLanguage = {
 		defaultToken: "",
 		tokenPostfix: ".nl",
@@ -35,8 +42,8 @@ export const registerSyntax = async (lua: LuaEngine) => {
 			syntax_typesystem.PrimaryBinaryOperators,
 		]),
 
-		// we include these common regular expressions
-		symbols: new RegExp("[" + escapeRegex(arrayUnion(syntax_runtime.Symbols, syntax_typesystem.Symbols).join("")) + "]+"),
+		//symbols: new RegExp("[" + escapeRegex(uniqueCharacters(arrayUnion(syntax_runtime.Symbols, syntax_typesystem.Symbols).join(""))) + "]+"),
+		symbols: /[=><!~?:&|+\-*\/\^%]+/,
 
 		escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
 
@@ -45,7 +52,7 @@ export const registerSyntax = async (lua: LuaEngine) => {
 			root: [
 				// identifiers and keywords
 				[
-					/[a-zA-Z_]\w*/,
+					/[a-zA-Z_@]\w*/,
 					{
 						cases: {
 							"@typeKeywords": { token: "keyword.$0" },

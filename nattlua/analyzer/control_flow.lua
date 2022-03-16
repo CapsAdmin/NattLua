@@ -138,9 +138,11 @@ return function(META)
 			self.lua_error_thrown = msg
 		end
 
-		if not no_report then 
-			local frame = level and self.call_stack[-#self.call_stack + level + 1] or self.call_stack[#self.call_stack]
-			self:Error(frame.call_node, msg) 
+		if not no_report then
+			local frame = level and
+				self.call_stack[-#self.call_stack + level + 1] or
+				self.call_stack[#self.call_stack]
+			self:Error(frame.call_node, msg)
 		end
 	end
 
