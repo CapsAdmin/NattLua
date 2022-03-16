@@ -862,7 +862,6 @@ return {
 			-- not sure about this, it's used to access the call_node from deeper calls
 			-- without resorting to argument drilling
 			local node = call_node or obj:GetNode() or obj
-			self.current_call = node
 
 			-- call_node or obj:GetNode() might be nil when called from tests and other places
 			if node.recursively_called then return node.recursively_called:Copy() end
@@ -900,12 +899,10 @@ return {
 				return false, "call stack is too deep"
 			end
 
-			local is_runtime = self:IsRuntime()
+			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
+			self.call_stack = self.call_stack or {}
 
-			if is_runtime then
-				-- setup and track the callstack to avoid infinite loops or callstacks that are too big
-				self.call_stack = self.call_stack or {}
-
+			if self:IsRuntime() then
 				for _, v in ipairs(self.call_stack) do
 					-- if the callnode is the same, we're doing some infinite recursion
 					if v.call_node == self:GetActiveNode() then
@@ -922,24 +919,23 @@ return {
 						end
 					end
 				end
-
-				table.insert(
-					self.call_stack,
-					{
-						obj = obj,
-						function_node = obj.function_body_node,
-						call_node = self:GetActiveNode(),
-						scope = self:GetScope(),
-					}
-				)
 			end
+
+			table.insert(
+				self.call_stack,
+				{
+					obj = obj,
+					function_node = obj.function_body_node,
+					call_node = self:GetActiveNode(),
+					scope = self:GetScope(),
+				}
+			)
 
 			local ok, err = Call(self, obj, arguments)
 
-			if is_runtime then table.remove(self.call_stack) end
+			table.remove(self.call_stack)
 
 			self:PopActiveNode()
-			self.current_call = nil
 			return ok, err
 		end
 

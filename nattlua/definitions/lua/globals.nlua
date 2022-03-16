@@ -287,7 +287,7 @@ analyzer function rawget(tbl: {[any] = any} | {}, key: any)
 	if t then return t end
 end
 
-analyzer function assert(obj: any, msg: string | nil)
+analyzer function assert(obj: any, msg: string | nil, level: number | nil)
 	if not analyzer:IsDefinetlyReachable() then
 		analyzer:ThrowSilentError(obj)
 
@@ -315,7 +315,7 @@ analyzer function assert(obj: any, msg: string | nil)
 	end
 
 	if obj:IsFalsy() then
-		analyzer:ThrowError(msg and msg:GetData() or "assertion failed!", obj, obj:IsTruthy())
+		analyzer:ThrowError(msg and msg:GetData() or "assertion failed!", obj, obj:IsTruthy(), level and level:GetData() or nil)
 
 		if obj.Type == "union" then
 			obj = obj:Copy()
