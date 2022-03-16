@@ -539,6 +539,8 @@ local unpack = _G.unpack
 local helpers = {}
 
 function helpers.LinePositionToSubPosition(code, line, character)
+	line = math.max(line, 1)
+	character = math.max(character, 1)
 	local line_pos = 1
 
 	for i = 1, #code do
@@ -566,14 +568,14 @@ end
 
 function helpers.SubPositionToLinePosition(code, start, stop)
 	local line = 1
-	local line_start
-	local line_stop
+	local line_start = 1
+	local line_stop = nil
 	local within_start = 1
-	local within_stop
-	local character_start
-	local character_stop
-	local line_pos = 0
-	local char_pos = 0
+	local within_stop = #code
+	local character_start = 1
+	local character_stop = 1
+	local line_pos = 1
+	local char_pos = 1
 
 	for i = 1, #code do
 		local char = code:sub(i, i)
@@ -598,63 +600,28 @@ function helpers.SubPositionToLinePosition(code, start, stop)
 
 			line = line + 1
 			line_pos = i
-			char_pos = 0
+			char_pos = 1
 		else
 			char_pos = char_pos + 1
 		end
 	end
 
-	if not within_stop then within_stop = #code + 1 end
+	if line_start ~= line_stop then
+		character_start = within_start
+		character_stop = within_stop
+	end
 
 	return {
-		character_start = character_start or 0,
-		character_stop = character_stop or 0,
-		sub_line_before = {within_start + 1, start - 1},
-		sub_line_after = {stop + 1, within_stop - 1},
-		line_start = line_start or 0,
-		line_stop = line_stop or 0,
+		character_start = character_start,
+		character_stop = character_stop,
+		line_start = line_start,
+		line_stop = line_stop,
+		sub_line_before = {within_start, start - 1},
+		sub_line_after = {stop + 1, within_stop},
 	}
 end
 
 do
-	local function get_lines_before(code, pos, lines)
-		local line = 1
-		local first_line_pos = 1
-
-		for i = pos, 1, -1 do
-			local char = code:sub(i, i)
-
-			if char == "\n" then
-				if line == 1 then first_line_pos = i + 1 end
-
-				if line == lines + 1 then return i - 1, first_line_pos - 1, line end
-
-				line = line + 1
-			end
-		end
-
-		return 1, first_line_pos, line
-	end
-
-	local function get_lines_after(code, pos, lines)
-		local line = 1 -- to prevent warning about it always being true when comparing against 1
-		local first_line_pos = 1
-
-		for i = pos, #code do
-			local char = code:sub(i, i)
-
-			if char == "\n" then
-				if line == 1 then first_line_pos = i end
-
-				if line == lines + 1 then return first_line_pos + 1, i - 1, line end
-
-				line = line + 1
-			end
-		end
-
-		return first_line_pos + 1, #code, line - 1
-	end
-
 	do
 		-- TODO: wtf am i doing here?
 		local args
@@ -689,75 +656,145 @@ do
 	)
 		local lua_code = code:GetString()
 		local path = code:GetName()
-		size = size or 2
-		msg = helpers.FormatMessage(msg, ...)
-		start = clamp(start or 0, 1, #lua_code)
-		stop = clamp(stop or 0, 1, #lua_code)
-		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
+		return helpers.FormatErrorString(lua_code, path, msg, start, stop, size, ...)
+	end
 
-		if not data then return end
+	local function find_position_after_lines(str, line_count, reverse)
+		local count = 0
 
-		local line_start, line_stop = data.line_start, data.line_stop
-		local pre_start_pos, pre_stop_pos, lines_before = get_lines_before(lua_code, start, size)
-		local post_start_pos, post_stop_pos, lines_after = get_lines_after(lua_code, stop, size)
-		local spacing = #tostring(data.line_stop + lines_after)
-		local lines = {}
+		for i = 1, #str do
+			local char = str:sub(i, i)
 
-		do
-			if lines_before >= 0 then
-				local line = math.max(line_start - lines_before - 1, 1)
+			if char == "\n" then count = count + 1 end
 
-				for str in (lua_code:sub(pre_start_pos, pre_stop_pos)):gmatch("(.-)\n") do
-					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
-					table.insert(lines, prefix .. str)
-					line = line + 1
-				end
-			end
-
-			do
-				local line = line_start
-
-				for str in (lua_code:sub(start, stop) .. "\n"):gmatch("(.-)\n") do
-					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
-
-					if line == line_start then
-						prefix = prefix .. lua_code:sub(table.unpack(data.sub_line_before))
-					end
-
-					local test = str
-
-					if line == line_stop then
-						str = str .. lua_code:sub(table.unpack(data.sub_line_after))
-					end
-
-					str = str .. "\n" .. (" "):rep(#prefix) .. ("^"):rep(math.max(#test, 1))
-					table.insert(lines, prefix .. str)
-					line = line + 1
-				end
-			end
-
-			if lines_after > 0 then
-				local line = line_stop + 1
-
-				for str in (lua_code:sub(post_start_pos, post_stop_pos) .. "\n"):gmatch("(.-)\n") do
-					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
-					table.insert(lines, prefix .. str)
-					line = line + 1
-				end
-			end
+			if count >= line_count then return i - 1 end
 		end
 
+		return #str
+	end
+
+	local function split(self, separator)
+		local tbl = {}
+		local current_pos = 1
+
+		for i = 1, #self do
+			local start_pos, end_pos = self:find(separator, current_pos, true)
+
+			if not start_pos then break end
+
+			tbl[i] = self:sub(current_pos, start_pos - 1)
+			current_pos = end_pos + 1
+		end
+
+		if current_pos > 1 then
+			tbl[#tbl + 1] = self:sub(current_pos)
+		else
+			tbl[1] = self
+		end
+
+		return tbl
+	end
+
+	local function pad_left(str, len, char)
+		str = tostring(str)
+
+		if #str < len + 1 then return char:rep(len - #str + 1) .. str end
+
+		return str
+	end
+
+	function helpers.FormatErrorString(
+		lua_code,
+		path,
+		msg,
+		start,
+		stop,
+		size,
+		...
+	)
+		size = size or 2
+		msg = helpers.FormatMessage(msg, ...)
+		start = clamp(start or 1, 1, #lua_code)
+		stop = clamp(stop or 1, 1, #lua_code)
+		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
+		local code_before = lua_code:sub(1, data.sub_line_before[1] - 1) -- remove the newline
+		local code_between = lua_code:sub(data.sub_line_before[1] + 1, data.sub_line_after[2] - 1)
+		local code_after = lua_code:sub(data.sub_line_after[2] + 1, #lua_code) -- remove the newline
+		code_before = code_before:reverse():sub(1, find_position_after_lines(code_before:reverse(), size)):reverse()
+		code_after = code_after:sub(1, find_position_after_lines(code_after, size))
+		local lines_before = split(code_before, "\n")
+		local lines_between = split(code_between, "\n")
+		local lines_after = split(code_after, "\n")
+		local total_lines = #lines_before + #lines_between + #lines_after
+		local number_length = #tostring(total_lines)
+		local lines = {}
+		local i = data.line_start - #lines_before
+
+		for _, line in ipairs(lines_before) do
+			table.insert(lines, pad_left(i, number_length, " ") .. " | " .. line)
+			i = i + 1
+		end
+
+		for i2, line in ipairs(lines_between) do
+			local prefix = pad_left(i, number_length, " ") .. " | "
+			table.insert(lines, prefix .. line)
+
+			if #lines_between > 1 then
+				if i2 == 1 then
+					-- first line or the only line
+					local length_before = data.sub_line_before[2] - data.sub_line_before[1]
+					local arrow_length = #line - length_before
+					table.insert(lines, (" "):rep(#prefix + length_before) .. ("^"):rep(arrow_length))
+				elseif i2 == #lines_between then
+					-- last line
+					local length_before = data.sub_line_after[2] - data.sub_line_after[1]
+					local arrow_length = #line - length_before
+					table.insert(lines, (" "):rep(#prefix) .. ("^"):rep(arrow_length))
+				else
+					-- lines between
+					table.insert(lines, (" "):rep(#prefix) .. ("^"):rep(#line))
+				end
+			else
+				-- one line
+				local length_before = data.sub_line_before[2] - data.sub_line_before[1]
+				local length_after = data.sub_line_after[2] - data.sub_line_after[1]
+				local arrow_length = #line - length_before - length_after
+				table.insert(lines, (" "):rep(#prefix + length_before) .. ("^"):rep(arrow_length))
+			end
+
+			i = i + 1
+		end
+
+		for _, line in ipairs(lines_after) do
+			table.insert(lines, pad_left(i, number_length, " ") .. " | " .. line)
+			i = i + 1
+		end
+
+		local longest_line = 0
+
+		for _, line in ipairs(lines) do
+			if #line > longest_line then longest_line = #line end
+		end
+
+		table.insert(
+			lines,
+			1,
+			(" "):rep(number_length + 3) .. ("_"):rep(longest_line - number_length + 1)
+		)
+		table.insert(
+			lines,
+			(" "):rep(number_length + 3) .. ("-"):rep(longest_line - number_length + 1)
+		)
+
+		if path then
+			if path:sub(1, 1) == "@" then path = path:sub(2) end
+
+			local msg = path .. ":" .. data.line_start .. ":" .. data.character_start
+			table.insert(lines, pad_left("->", number_length, " ") .. " | " .. msg)
+		end
+
+		table.insert(lines, pad_left("->", number_length, " ") .. " | " .. msg)
 		local str = table.concat(lines, "\n")
-		local path = path and
-			(
-				path:gsub("@", "") .. ":" .. line_start .. ":" .. data.character_start
-			)
-			or
-			""
-		local msg = path .. (msg and ": " .. msg or "")
-		local post = (" "):rep(spacing - 2) .. "-> | " .. msg
-		local pre = ("-"):rep(100)
-		str = "\n" .. pre .. "\n" .. str .. "\n" .. pre .. "\n" .. post .. "\n"
 		str = str:gsub("\t", " ")
 		return str
 	end
@@ -772,20 +809,7 @@ function helpers.GetDataFromLineCharPosition(
 	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
 
 	for _, token in ipairs(tokens) do
-		local found = token.stop >= sub_pos -- and token.stop <= sub_pos
-		if not found then
-			if token.whitespace then
-				for _, token in ipairs(token.whitespace) do
-					if token.stop >= sub_pos then
-						found = true
-
-						break
-					end
-				end
-			end
-		end
-
-		if found then
+		if sub_pos >= token.start and sub_pos <= token.stop then
 			return token, helpers.SubPositionToLinePosition(code, token.start, token.stop)
 		end
 	end
@@ -8741,6 +8765,7 @@ return function(alloc, size)
 	end
 end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.lexer.token"] = function(...) __M = __M or (function(...) local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
+local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 
 
 
@@ -8768,10 +8793,6 @@ function META:GetTypes()
 end
 
 function META:GetLastType()
-	do
-		return self.inferred_type
-	end
-
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
@@ -10358,7 +10379,6 @@ end
 function META:AddType(obj)
 	self.inferred_types = self.inferred_types or {}
 	table.insert(self.inferred_types, obj)
-	self.inferred_type = obj
 end
 
 function META:GetTypes()
@@ -10366,10 +10386,6 @@ function META:GetTypes()
 end
 
 function META:GetLastType()
-	do
-		return self.inferred_type
-	end
-
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 

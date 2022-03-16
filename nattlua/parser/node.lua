@@ -155,7 +155,6 @@ end
 function META:AddType(obj)
 	self.inferred_types = self.inferred_types or {}
 	table.insert(self.inferred_types, obj)
-	self.inferred_type = obj
 end
 
 function META:GetTypes()
@@ -163,10 +162,6 @@ function META:GetTypes()
 end
 
 function META:GetLastType()
-	do
-		return self.inferred_type
-	end
-
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 

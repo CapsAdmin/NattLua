@@ -1,4 +1,5 @@
 local table_pool = require("nattlua.other.table_pool")
+local quote_helper = require("nattlua.other.quote")
 --[[#local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
 --[[#local type TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | TokenWhitespaceType]]
 --[[#local type TokenReturnType = TokenType | false]]
@@ -45,10 +46,6 @@ function META:GetTypes()
 end
 
 function META:GetLastType()
-	do
-		return self.inferred_type
-	end
-
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 

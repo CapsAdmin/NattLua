@@ -14,7 +14,20 @@ const main = async () => {
 	await registerSyntax(lua)
 
 	const editor = createEditor()
-	const tab = MonacoEditor.createModel(getRandomExample(), "nattlua")
+	const tab = MonacoEditor.createModel(
+		`
+		local x = 1
+		if math.random() > 0.5 then
+			local hover_me = x
+			x = 2
+		elseif math.random() > 0.5 then
+			local hover_me = x
+			x = 3
+		end
+		local hover_me = x
+	`,
+		"nattlua",
+	)
 
 	document.getElementById("random-example").addEventListener("click", () => {
 		tab.setValue(getRandomExample())
@@ -60,10 +73,16 @@ const main = async () => {
 				},
 			}
 
-			let result = lsp.methods["textDocument/hover"](lsp, response) as {
-				range: Range
-				contents: string
-			}
+			let result = lsp.methods["textDocument/hover"](lsp, response) as
+				| undefined
+				| {
+						range: Range
+						contents: string
+				  }
+
+			if (!result) return
+
+			// TODO: how to highlight non letters?
 
 			return {
 				contents: [
@@ -71,6 +90,7 @@ const main = async () => {
 						value: result.contents,
 					},
 				],
+				// these start at 1, but according to LSP they should be zero indexed
 				startLineNumber: result.range.start.line + 1,
 				startColumn: result.range.start.character + 1,
 				endLineNumber: result.range.end.line + 1,
@@ -98,9 +118,9 @@ const main = async () => {
 			markers.push({
 				message: diag.message,
 				startLineNumber: diag.range.start.line + 1,
-				startColumn: diag.range.start.character + 1,
+				startColumn: diag.range.start.character, // 0 indexed
 				endLineNumber: diag.range.end.line + 1,
-				endColumn: diag.range.end.character + 1,
+				endColumn: diag.range.end.character, // 0 indexed
 				severity: severity,
 			})
 		}
