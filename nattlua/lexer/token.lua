@@ -31,13 +31,12 @@ end]]
 }]]
 
 function META:__tostring()
-	return self.type .. ": " .. self.value
+	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .."]"
 end
 
 function META:AddType(obj)
 	self.inferred_types = self.inferred_types or {}
 	table.insert(self.inferred_types, obj)
-	self.inferred_type = obj
 end
 
 function META:GetTypes()
