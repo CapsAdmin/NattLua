@@ -1,6 +1,5 @@
 --[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
 
---[[#import<|"~/nattlua/code/code.lua"|>]]
 local math = _G.math
 local table = _G.table
 local quote = require("nattlua.other.quote")
@@ -125,19 +124,6 @@ do
 		return math.min(math.max(num, min), max)
 	end
 
-	function helpers.FormatError(
-		code--[[#: Code]],
-		msg--[[#: string]],
-		start--[[#: number]],
-		stop--[[#: number]],
-		size--[[#: number]],
-		...
-	)
-		local lua_code = code:GetString()
-		local path = code:GetName()
-		return helpers.FormatErrorString(lua_code, path, msg, start, stop, size, ...)
-	end
-
 	local function find_position_after_lines(str, line_count, reverse)
 		local count = 0
 
@@ -182,17 +168,15 @@ do
 		return str
 	end
 
-	function helpers.FormatErrorString(
+	function helpers.BuildSourceCodePointMessage(
 		lua_code--[[#: string]],
 		path--[[#: string]],
 		msg--[[#: string]],
 		start--[[#: number]],
 		stop--[[#: number]],
-		size--[[#: number]],
-		...
+		size--[[#: number]]
 	)
 		size = size or 2
-		msg = helpers.FormatMessage(msg, ...)
 		start = clamp(start or 1, 1, #lua_code)
 		stop = clamp(stop or 1, 1, #lua_code)
 		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)

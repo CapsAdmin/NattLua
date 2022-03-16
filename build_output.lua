@@ -428,74 +428,6 @@ return {
 	TokenType = TokenType,
 	TokenReturnType = TokenReturnType,
 } end
-IMPORTS['nattlua/code/code.lua'] = function() local META = {}
-META.__index = META
-
-
-
-function META:GetString()
-	return self.Buffer
-end
-
-function META:GetName()
-	return self.Name
-end
-
-function META:GetByteSize()
-	return #self.Buffer
-end
-
-function META:GetStringSlice(start, stop)
-	return self.Buffer:sub(start, stop)
-end
-
-function META:GetByte(pos)
-	return self.Buffer:byte(pos) or 0
-end
-
-function META:FindNearest(str, start)
-	local _, pos = self.Buffer:find(str, start, true)
-
-	if not pos then return nil end
-
-	return pos + 1
-end
-
-local function remove_bom_header(str)
-	if str:sub(1, 2) == "\xFE\xFF" then
-		return str:sub(3)
-	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
-		return str:sub(4)
-	end
-
-	return str
-end
-
-local function get_default_name()
-	local info = debug.getinfo(3)
-
-	if info then
-		local parent_line = info.currentline
-		local parent_name = info.source:sub(2)
-		return parent_name .. ":" .. parent_line
-	end
-
-	return "unknown line : unknown name"
-end
-
-function META.New(lua_code, name)
-	local self = setmetatable(
-		{
-			Buffer = remove_bom_header(lua_code),
-			Name = name or get_default_name(),
-		},
-		META
-	)
-	return self
-end
-
-
-return META.New end
 do local __M; IMPORTS["nattlua.other.quote"] = function(...) __M = __M or (function(...) local helpers = {}
 
 function helpers.QuoteToken(str)
@@ -520,7 +452,6 @@ end
 
 return helpers end)(...) return __M end end
 do local __M; IMPORTS["nattlua.other.helpers"] = function(...) __M = __M or (function(...) 
-
 
 local math = _G.math
 local table = _G.table
@@ -646,19 +577,6 @@ do
 		return math.min(math.max(num, min), max)
 	end
 
-	function helpers.FormatError(
-		code,
-		msg,
-		start,
-		stop,
-		size,
-		...
-	)
-		local lua_code = code:GetString()
-		local path = code:GetName()
-		return helpers.FormatErrorString(lua_code, path, msg, start, stop, size, ...)
-	end
-
 	local function find_position_after_lines(str, line_count, reverse)
 		local count = 0
 
@@ -703,17 +621,15 @@ do
 		return str
 	end
 
-	function helpers.FormatErrorString(
+	function helpers.BuildSourceCodePointMessage(
 		lua_code,
 		path,
 		msg,
 		start,
 		stop,
-		size,
-		...
+		size
 	)
 		size = size or 2
-		msg = helpers.FormatMessage(msg, ...)
 		start = clamp(start or 1, 1, #lua_code)
 		stop = clamp(stop or 1, 1, #lua_code)
 		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
@@ -8644,7 +8560,8 @@ return {
 		return runtime_env, typesystem_env
 	end,
 } end)(...) return __M end end
-do local __M; IMPORTS["nattlua.code.code"] = function(...) __M = __M or (function(...) local META = {}
+do local __M; IMPORTS["nattlua.code.code"] = function(...) __M = __M or (function(...) local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+local META = {}
 META.__index = META
 
 
@@ -8697,6 +8614,15 @@ local function get_default_name()
 	end
 
 	return "unknown line : unknown name"
+end
+
+function META:BuildSourceCodePointMessage(
+	msg,
+	start,
+	stop,
+	size
+)
+	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
 end
 
 function META.New(lua_code, name)
@@ -10128,6 +10054,84 @@ return {
 	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
 	AssignmentTypeStatement = AssignmentTypeStatement,
 } end
+IMPORTS['nattlua/code/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+local META = {}
+META.__index = META
+
+
+
+function META:GetString()
+	return self.Buffer
+end
+
+function META:GetName()
+	return self.Name
+end
+
+function META:GetByteSize()
+	return #self.Buffer
+end
+
+function META:GetStringSlice(start, stop)
+	return self.Buffer:sub(start, stop)
+end
+
+function META:GetByte(pos)
+	return self.Buffer:byte(pos) or 0
+end
+
+function META:FindNearest(str, start)
+	local _, pos = self.Buffer:find(str, start, true)
+
+	if not pos then return nil end
+
+	return pos + 1
+end
+
+local function remove_bom_header(str)
+	if str:sub(1, 2) == "\xFE\xFF" then
+		return str:sub(3)
+	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
+		return str:sub(4)
+	end
+
+	return str
+end
+
+local function get_default_name()
+	local info = debug.getinfo(3)
+
+	if info then
+		local parent_line = info.currentline
+		local parent_name = info.source:sub(2)
+		return parent_name .. ":" .. parent_line
+	end
+
+	return "unknown line : unknown name"
+end
+
+function META:BuildSourceCodePointMessage(
+	msg,
+	start,
+	stop,
+	size
+)
+	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
+end
+
+function META.New(lua_code, name)
+	local self = setmetatable(
+		{
+			Buffer = remove_bom_header(lua_code),
+			Name = name or get_default_name(),
+		},
+		META
+	)
+	return self
+end
+
+
+return META.New end
 IMPORTS['nattlua/parser/nodes.nlua'] = function() 
 
 
@@ -14299,7 +14303,7 @@ return function(META)
 							f:close()
 							local start = helpers.LinePositionToSubPosition(code, tonumber(line), 0)
 							local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
-							msg = helpers.FormatError(code, name, rest, start, stop)
+							msg = code:BuildSourceCodePointMessage(rest, start, stop)
 						end
 					end
 				end
@@ -14371,7 +14375,7 @@ return function(META)
 					local start, stop = v.call_node:GetStartStop()
 
 					if start and stop then
-						local part = helpers.FormatError(self.compiler:GetCode(), "", start, stop, 1)
+						local part = self.compiler:GetCode():BuildSourceCodePointMessage("", start, stop, 1)
 						str = str .. part .. "#" .. tostring(i) .. ": " .. self.compiler:GetCode():GetName()
 					end
 				end
@@ -14725,7 +14729,7 @@ return function(META)
 			str[i] = tostring(select(i, ...))
 		end
 
-		print(helpers.FormatError(node.Code, table.concat(str, ", "), start, stop, 1))
+		print(node.Code:BuildSourceCodePointMessage(table.concat(str, ", "), start, stop, 1))
 	end
 
 	function META:PushConditionalScope(statement, truthy, falsy)
@@ -20773,7 +20777,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, ...)
 		msg = "DEFERRED CALL: " .. msg
 	end
 
-	local msg = helpers.FormatError(code, msg, start, stop, nil, ...)
+	local msg = code:BuildSourceCodePointMessage(helpers.FormatMessage(msg, ...), start, stop)
 	local msg2 = ""
 
 	for line in (msg .. "\n"):gmatch("(.-)\n") do
@@ -21763,7 +21767,7 @@ analyzer function type_pcall(func: Function, ...: ...any)
 
 		for i = diagnostics_index + 1, #analyzer.diagnostics do
 			local d = analyzer.diagnostics[i]
-			local msg = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers").FormatError(analyzer.compiler:GetCode(), d.msg, d.start, d.stop)
+			local msg = analyzer.compiler:GetCode():BuildSourceCodePointMessage(d.msg, d.start, d.stop)
 			table.insert(errors, msg)
 		end
 

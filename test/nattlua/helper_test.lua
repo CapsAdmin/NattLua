@@ -65,7 +65,7 @@ ewww
 faz]]
 	local start, stop = test:find("FROM.-TO")
 	equal(
-		helpers.FormatErrorString(test, "script.txt", "hello world", start, stop, 2),
+		helpers.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
 		[[    ________________________________________________________
  3 | 111111E
  4 |     waddwa
@@ -94,7 +94,7 @@ ewww
 faz]]
 	local start, stop = test:find("FROM.-TO")
 	equal(
-		helpers.FormatErrorString(test, "script.txt", "hello world", start, stop, 2),
+		helpers.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
 		[[    _________________________________________
  3 | 111111E
  4 |     waddwa

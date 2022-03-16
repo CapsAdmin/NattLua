@@ -220,7 +220,7 @@ return function(META)
 			str[i] = tostring(select(i, ...))
 		end
 
-		print(helpers.FormatError(node.Code, table.concat(str, ", "), start, stop, 1))
+		print(node.Code:BuildSourceCodePointMessage(table.concat(str, ", "), start, stop, 1))
 	end
 
 	function META:PushConditionalScope(statement, truthy, falsy)

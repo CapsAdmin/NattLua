@@ -43,4 +43,4 @@ local function example(code)
 end
 
 local start, stop = example(code:GetString())
-print(helpers.FormatError(code, "pointing at this multiline string", start, stop))
+print(code:BuildSourceCodePointMessage("pointing at this multiline string", start, stop))
