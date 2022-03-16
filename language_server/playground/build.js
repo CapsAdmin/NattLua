@@ -37,10 +37,14 @@ require("esbuild")
 	.build({
 		format: "iife",
 		platform: "node",
-		entryPoints: ["src/index.ts"],
+		entryPoints: {
+			app: "src/index.ts",
+			"editor.worker": "monaco-editor/esm/vs/editor/editor.worker.js",
+		},
+		entryNames: "[name].bundle",
 		loader: "expose-loader",
 		bundle: true,
-		outfile: "public/out.js",
+		outdir: "public/",
 		loader: {
 			".ttf": "dataurl",
 			".lua": "text",

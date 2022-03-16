@@ -12,6 +12,7 @@ META.__index = META
 	PostfixOperators = Map<|string, true|>,
 	PrimaryBinaryOperators = Map<|string, true|>,
 	SymbolCharacters = List<|string|>,
+	SymbolPairs = Map<|string, string|>,
 	KeywordValues = Map<|string, true|>,
 	Keywords = Map<|string, true|>,
 	NonStandardKeywords = Map<|string, true|>,
@@ -31,6 +32,7 @@ function META.New()
 			PostfixOperators = {},
 			PrimaryBinaryOperators = {},
 			SymbolCharacters = {},
+			SymbolPairs = {},
 			KeywordValues = {},
 			Keywords = {},
 			NonStandardKeywords = {},
@@ -144,9 +146,21 @@ function META:IsPrimaryBinaryOperator(token--[[#: Token]])
 	return self.PrimaryBinaryOperators[token.value]
 end
 
-function META:AddSymbolCharacters(tbl--[[#: List<|string|>]])
-	self.SymbolCharacters = tbl
-	self:AddSymbols(tbl)
+function META:AddSymbolCharacters(tbl--[[#: List<|string | {string, string}|>]])
+	local list = {}
+
+	for _, val in ipairs(tbl) do
+		if type(val) == "table" then
+			table.insert(list, val[1])
+			table.insert(list, val[2])
+			self.SymbolPairs[val[1]] = val[2]
+		else
+			table.insert(list, val)
+		end
+	end
+
+	self.SymbolCharacters = list
+	self:AddSymbols(list)
 end
 
 function META:AddKeywords(tbl--[[#: List<|string|>]])

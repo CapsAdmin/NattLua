@@ -8923,6 +8923,7 @@ function META.New()
 			PostfixOperators = {},
 			PrimaryBinaryOperators = {},
 			SymbolCharacters = {},
+			SymbolPairs = {},
 			KeywordValues = {},
 			Keywords = {},
 			NonStandardKeywords = {},
@@ -9037,8 +9038,20 @@ function META:IsPrimaryBinaryOperator(token)
 end
 
 function META:AddSymbolCharacters(tbl)
-	self.SymbolCharacters = tbl
-	self:AddSymbols(tbl)
+	local list = {}
+
+	for _, val in ipairs(tbl) do
+		if type(val) == "table" then
+			table.insert(list, val[1])
+			table.insert(list, val[2])
+			self.SymbolPairs[val[1]] = val[2]
+		else
+			table.insert(list, val)
+		end
+	end
+
+	self.SymbolCharacters = list
+	self:AddSymbols(list)
 end
 
 function META:AddKeywords(tbl)
@@ -9159,18 +9172,14 @@ runtime:AddSymbolCharacters(
 	{
 		",",
 		";",
-		"(",
-		")",
-		"{",
-		"}",
-		"[",
-		"]",
 		"=",
 		"::",
-		"\"",
-		"'",
-		"<|",
-		"|>",
+		{"(", ")"},
+		{"{", "}"},
+		{"[", "]"},
+		{"\"", "\""},
+		{"'", "'"},
+		{"<|", "|>"},
 	}
 )
 runtime:AddNumberAnnotations({
@@ -10697,18 +10706,14 @@ typesystem:AddSymbolCharacters(
 	{
 		",",
 		";",
-		"(",
-		")",
-		"{",
-		"}",
-		"[",
-		"]",
 		"=",
 		"::",
-		"\"",
-		"'",
-		"<|",
-		"|>",
+		{"(", ")"},
+		{"{", "}"},
+		{"[", "]"},
+		{"\"", "\""},
+		{"'", "'"},
+		{"<|", "|>"},
 	}
 )
 typesystem:AddNumberAnnotations({"ull", "ll", "ul", "i"})
@@ -10745,6 +10750,7 @@ typesystem:AddNonStandardKeywords({
 	"ref",
 	"analyzer",
 	"mutable",
+	"type",
 })
 typesystem:AddKeywordValues({
 	"...",

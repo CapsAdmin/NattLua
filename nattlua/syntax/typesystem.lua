@@ -4,18 +4,14 @@ typesystem:AddSymbolCharacters(
 	{
 		",",
 		";",
-		"(",
-		")",
-		"{",
-		"}",
-		"[",
-		"]",
 		"=",
 		"::",
-		"\"",
-		"'",
-		"<|",
-		"|>",
+		{"(", ")"},
+		{"{", "}"},
+		{"[", "]"},
+		{"\"", "\""},
+		{"'", "'"},
+		{"<|", "|>"},
 	}
 )
 typesystem:AddNumberAnnotations({"ull", "ll", "ul", "i"})
@@ -52,6 +48,7 @@ typesystem:AddNonStandardKeywords({
 	"ref",
 	"analyzer",
 	"mutable",
+	"type",
 })
 typesystem:AddKeywordValues({
 	"...",

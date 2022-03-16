@@ -36,8 +36,7 @@ export const registerSyntax = async (lua: LuaEngine) => {
 		]),
 
 		// we include these common regular expressions
-		symwbols: new RegExp("[" + escapeRegex(arrayUnion(syntax_runtime.Symbols, syntax_typesystem.Symbols).join("")) + "]+"),
-		symbols: /[=><!~?:&|+\-*\/\^%]+/,
+		symbols: new RegExp("[" + escapeRegex(arrayUnion(syntax_runtime.Symbols, syntax_typesystem.Symbols).join("")) + "]+"),
 
 		escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
 
@@ -127,25 +126,15 @@ export const registerSyntax = async (lua: LuaEngine) => {
 			lineComment: "--",
 			blockComment: ["--[[", "]]"],
 		},
-		brackets: [
-			["{", "}"],
-			["[", "]"],
-			["(", ")"],
-		],
-		autoClosingPairs: [
-			{ open: "{", close: "}" },
-			{ open: "[", close: "]" },
-			{ open: "(", close: ")" },
-			{ open: '"', close: '"' },
-			{ open: "'", close: "'" },
-		],
-		surroundingPairs: [
-			{ open: "{", close: "}" },
-			{ open: "[", close: "]" },
-			{ open: "(", close: ")" },
-			{ open: '"', close: '"' },
-			{ open: "'", close: "'" },
-		],
+		brackets: [],
+		autoClosingPairs: [],
+		surroundingPairs: [],
+	}
+
+	for (let [l, r] of Object.entries(syntax_runtime.SymbolPairs as { [key: string]: string })) {
+		syntaxBrackets.brackets.push([l, r])
+		syntaxBrackets.autoClosingPairs.push({ open: l, close: r })
+		syntaxBrackets.surroundingPairs.push({ open: l, close: r })
 	}
 
 	languages.register({ id: "nattlua", extensions: [".lua", ".nl"] })

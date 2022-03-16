@@ -38,9 +38,9 @@ const main = async () => {
 			],
 		}
 
-		lsp.methods["textDocument/didChange"](lsp, response)
-
 		MonacoEditor.setModelMarkers(tab, "owner", [])
+
+		lsp.methods["textDocument/didChange"](lsp, response)
 	}
 
 	editor.onDidChangeModelContent((e) => {
@@ -89,12 +89,11 @@ const main = async () => {
 				startColumn: diag.range.start.character + 1,
 				endLineNumber: diag.range.end.line + 1,
 				endColumn: diag.range.end.character + 1,
-				severity: MarkerSeverity.Error,
+				severity: diag.severity,
 			})
 		}
 
-		const model = editor.getModel()
-		MonacoEditor.setModelMarkers(model, "owner", markers)
+		MonacoEditor.setModelMarkers(tab, "owner", markers)
 	})
 
 	editor.setModel(tab)

@@ -1,4 +1,4 @@
 build_output.lua
 node_modules
-out.*
+*.bundle.*
 yarn.lock
