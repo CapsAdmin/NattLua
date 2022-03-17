@@ -195,41 +195,41 @@ end
 analyzer function ^string.gsub(
 	str: string,
 	pattern: string,
-	replacement: function=(...string)>((...string)) | string | {[string] = string},
+	replacement: (ref function=(...string)>((...string))) | string | {[string] = string},
 	max_replacements: number | nil
 )
 	str = str:IsLiteral() and str:GetData()
 	pattern = pattern:IsLiteral() and pattern:GetData()
-
-	if replacement.Type == "string" then
-		if replacement:IsLiteral() then replacement = replacement:GetData() end
-	elseif replacement.Type == "table" then
-		local out = {}
-
-		for _, kv in ipairs(replacement:GetData()) do
-			if kv.key:IsLiteral() and kv.val:IsLiteral() then
-				out[kv.key:GetData()] = kv.val:GetData()
-			end
-		end
-
-		replacement = out
-	end
-
 	max_replacements = max_replacements and max_replacements:GetData()
 
 	if str and pattern and replacement then
-		--replacement:SetArguments(types.Tuple({types.String()}):SetRepeat(math.huge))
-		if type(replacement) == "string" or type(replacement) == "table" then
-			return string.gsub(str, pattern, replacement, max_replacements)
+		if replacement.Type == "string" and replacement:IsLiteral() then
+			return string.gsub(str, pattern, replacement:GetData(), max_replacements)
+		elseif replacement.Type == "table" and replacement:IsLiteral() then
+			local out = {}
+
+			for _, kv in ipairs(replacement:GetData()) do
+				if kv.key:IsLiteral() and kv.val:IsLiteral() then
+					out[kv.key:GetData()] = kv.val:GetData()
+				end
+			end
+
+			return string.gsub(str, pattern, out, max_replacements)
 		else
 			return string.gsub(
 				str,
 				pattern,
 				function(...)
-					analyzer:Assert(
+					local ret = analyzer:Assert(
 						replacement:GetNode(),
 						analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement:GetNode(), {...}))
 					)
+					local out = {}
+					for _, val in ipairs(ret:GetData()) do
+						if not val:IsLiteral() then return nil end
+						table.insert(out, val:GetData())
+					end
+					return table.unpack(out)
 				end,
 				max_replacements
 			)
