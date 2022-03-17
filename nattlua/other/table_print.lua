@@ -167,7 +167,7 @@ function luadata.Type(var--[[#: any]])
 	return t
 end
 
---[[#local type Context = {tab = number, tab_limit = number, done = Table}]]
+--[[#local type Context = {tab = number, tab_limit = number, done = copy<|Table|>}]]
 
 function luadata.ToString(var, context--[[#: nil | Context]])
 	context = context or {tab = -1}

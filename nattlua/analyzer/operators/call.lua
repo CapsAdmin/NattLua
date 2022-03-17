@@ -837,12 +837,15 @@ return {
 								not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())
 							)
 							or
-							not a:IsSubsetOf(b) and
-							a.Type ~= "union"
+							not a:IsSubsetOf(b)
 						)
 					then
-						b.arguments_inferred = true
-						self:Assert(self:GetActiveNode(), self:Call(b, b:GetArguments():Copy()))
+                        local func = a
+                        if func.Type == "union" then
+                            func = a:GetType("function")
+                        end
+                        b.arguments_inferred = true
+                        self:Assert(self:GetActiveNode(), self:Call(b, func:GetArguments():Copy()))
 					end
 				end
 			end
