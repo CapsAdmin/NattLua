@@ -287,7 +287,7 @@ analyzer function rawget(tbl: {[any] = any} | {}, key: any)
 	if t then return t end
 end
 
-analyzer function assert(obj: any, msg: string | nil)
+analyzer function assert(obj: any, msg: string | nil, level: number | nil)
 	if not analyzer:IsDefinetlyReachable() then
 		analyzer:ThrowSilentError(obj)
 
@@ -315,7 +315,7 @@ analyzer function assert(obj: any, msg: string | nil)
 	end
 
 	if obj:IsFalsy() then
-		analyzer:ThrowError(msg and msg:GetData() or "assertion failed!", obj, obj:IsTruthy())
+		analyzer:ThrowError(msg and msg:GetData() or "assertion failed!", obj, obj:IsTruthy(), level and level:GetData() or nil)
 
 		if obj.Type == "union" then
 			obj = obj:Copy()
@@ -334,7 +334,7 @@ analyzer function error(msg: string, level: number | nil)
 	end
 
 	if msg:IsLiteral() then
-		analyzer:ThrowError(msg:GetData())
+		analyzer:ThrowError(msg:GetData(), nil, nil, level and level:GetData() or nil)
 	else
 		analyzer:ThrowError("error thrown from expression " .. tostring(analyzer.current_expression))
 	end
@@ -370,7 +370,7 @@ analyzer function type_pcall(func: Function, ...: ...any)
 
 		for i = diagnostics_index + 1, #analyzer.diagnostics do
 			local d = analyzer.diagnostics[i]
-			local msg = require("nattlua.other.helpers").FormatError(analyzer.compiler:GetCode(), d.msg, d.start, d.stop)
+			local msg = analyzer.compiler:GetCode():BuildSourceCodePointMessage(d.msg, d.start, d.stop)
 			table.insert(errors, msg)
 		end
 

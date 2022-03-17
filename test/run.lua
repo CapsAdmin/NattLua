@@ -33,6 +33,7 @@ function _G.equal(a, b, level)
 
 		if type(b) == "string" then b = string.format("%q", b) end
 
+		diff(a, b)
 		error(tostring(a) .. " ~= " .. tostring(b), level + 1)
 	end
 end

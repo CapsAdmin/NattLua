@@ -3,7 +3,7 @@ import { registerSyntax } from "./syntax"
 import { loadLuaModule } from "./util"
 
 export const loadLua = async () => {
-	const factory = new LuaFactory()
+	const factory = new LuaFactory("https://unpkg.com/wasmoon/dist/glue.wasm")
 	const lua = await factory.createEngine({
 		openStandardLibs: true,
 	})

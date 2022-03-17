@@ -46,7 +46,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, ...)
 		msg = "DEFERRED CALL: " .. msg
 	end
 
-	local msg = helpers.FormatError(code, msg, start, stop, nil, ...)
+	local msg = code:BuildSourceCodePointMessage(helpers.FormatMessage(msg, ...), start, stop)
 	local msg2 = ""
 
 	for line in (msg .. "\n"):gmatch("(.-)\n") do

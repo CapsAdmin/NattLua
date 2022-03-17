@@ -11,6 +11,7 @@
   "search.exclude": {
     "build_output.lua": true,
     "examples/projects/luajit/out.lua": true,
-    "language_server/vscode": true
+    "language_server/vscode": true,
+    "**.js": true
   }
 }

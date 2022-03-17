@@ -1,3 +1,4 @@
+local helpers = require("nattlua.other.helpers")
 local META = {}
 META.__index = META
 --[[#type META.@Name = "Code"]]
@@ -54,6 +55,15 @@ local function get_default_name()
 	end
 
 	return "unknown line : unknown name"
+end
+
+function META:BuildSourceCodePointMessage(
+	msg--[[#: string]],
+	start--[[#: number]],
+	stop--[[#: number]],
+	size--[[#: number]]
+)
+	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
 end
 
 function META.New(lua_code--[[#: string]], name--[[#: string | nil]])

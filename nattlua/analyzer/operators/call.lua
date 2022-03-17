@@ -17,59 +17,6 @@ local LString = require("nattlua.types.string").LString
 local LNumber = require("nattlua.types.number").LNumber
 local Symbol = require("nattlua.types.symbol").Symbol
 local type_errors = require("nattlua.types.error_messages")
-
-local function lua_types_to_tuple(self, node, tps)
-	local tbl = {}
-
-	for i, v in ipairs(tps) do
-		if type(v) == "table" and v.Type ~= nil then
-			tbl[i] = v
-
-			if not v:GetNode() then v:SetNode(node) end
-		else
-			if type(v) == "function" then
-				tbl[i] = Function(
-					{
-						lua_function = v,
-						arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-						ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-					}
-				):SetNode(node):SetLiteral(true)
-
-				if node.statements then tbl[i].function_body_node = node end
-			else
-				local t = type(v)
-
-				if t == "number" then
-					tbl[i] = LNumber(v):SetNode(node)
-				elseif t == "string" then
-					tbl[i] = LString(v):SetNode(node)
-				elseif t == "boolean" then
-					tbl[i] = Symbol(v):SetNode(node)
-				elseif t == "table" then
-					local tbl = Table()
-
-					for _, val in ipairs(v) do
-						tbl:Insert(val)
-					end
-
-					tbl:SetContract(tbl)
-					return tbl
-				else
-					if node then print(node:Render(), "!") end
-
-					self:Print(t)
-					error(debug.traceback("NYI " .. t))
-				end
-			end
-		end
-	end
-
-	if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
-
-	return Tuple(tbl)
-end
-
 local unpack_union_tuples
 
 do
@@ -136,6 +83,58 @@ end
 
 return {
 	Call = function(META)
+		function META:LuaTypesToTuple(node, tps)
+			local tbl = {}
+
+			for i, v in ipairs(tps) do
+				if type(v) == "table" and v.Type ~= nil then
+					tbl[i] = v
+
+					if not v:GetNode() then v:SetNode(node) end
+				else
+					if type(v) == "function" then
+						tbl[i] = Function(
+							{
+								lua_function = v,
+								arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+								ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+							}
+						):SetNode(node):SetLiteral(true)
+
+						if node.statements then tbl[i].function_body_node = node end
+					else
+						local t = type(v)
+
+						if t == "number" then
+							tbl[i] = LNumber(v):SetNode(node)
+						elseif t == "string" then
+							tbl[i] = LString(v):SetNode(node)
+						elseif t == "boolean" then
+							tbl[i] = Symbol(v):SetNode(node)
+						elseif t == "table" then
+							local tbl = Table()
+
+							for _, val in ipairs(v) do
+								tbl:Insert(val)
+							end
+
+							tbl:SetContract(tbl)
+							return tbl
+						else
+							if node then print(node:Render(), "!") end
+
+							self:Print(t)
+							error(debug.traceback("NYI " .. t))
+						end
+					end
+				end
+			end
+
+			if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
+
+			return Tuple(tbl)
+		end
+
 		function META:AnalyzeFunctionBody(obj, function_node, arguments)
 			local scope = self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
 			self:PushGlobalEnvironment(
@@ -230,8 +229,7 @@ return {
 			end
 
 			if self:IsTypesystem() then
-				local ret = lua_types_to_tuple(
-					self,
+				local ret = self:LuaTypesToTuple(
 					obj:GetNode(),
 					{
 						self:CallLuaTypeFunction(
@@ -248,8 +246,7 @@ return {
 			local tuples = {}
 
 			for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
-				tuples[i] = lua_types_to_tuple(
-					self,
+				tuples[i] = self:LuaTypesToTuple(
 					obj:GetNode(),
 					{
 						self:CallLuaTypeFunction(
@@ -839,7 +836,8 @@ return {
 							not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())
 						)
 						or
-						not a:IsSubsetOf(b)
+						not a:IsSubsetOf(b) and
+						a.Type ~= "union"
 					then
 						b.arguments_inferred = true
 						self:Assert(self:GetActiveNode(), self:Call(b, b:GetArguments():Copy()))
@@ -862,7 +860,6 @@ return {
 			-- not sure about this, it's used to access the call_node from deeper calls
 			-- without resorting to argument drilling
 			local node = call_node or obj:GetNode() or obj
-			self.current_call = node
 
 			-- call_node or obj:GetNode() might be nil when called from tests and other places
 			if node.recursively_called then return node.recursively_called:Copy() end
@@ -900,12 +897,10 @@ return {
 				return false, "call stack is too deep"
 			end
 
-			local is_runtime = self:IsRuntime()
+			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
+			self.call_stack = self.call_stack or {}
 
-			if is_runtime then
-				-- setup and track the callstack to avoid infinite loops or callstacks that are too big
-				self.call_stack = self.call_stack or {}
-
+			if self:IsRuntime() then
 				for _, v in ipairs(self.call_stack) do
 					-- if the callnode is the same, we're doing some infinite recursion
 					if v.call_node == self:GetActiveNode() then
@@ -922,24 +917,20 @@ return {
 						end
 					end
 				end
-
-				table.insert(
-					self.call_stack,
-					{
-						obj = obj,
-						function_node = obj.function_body_node,
-						call_node = self:GetActiveNode(),
-						scope = self:GetScope(),
-					}
-				)
 			end
 
+			table.insert(
+				self.call_stack,
+				{
+					obj = obj,
+					function_node = obj.function_body_node,
+					call_node = self:GetActiveNode(),
+					scope = self:GetScope(),
+				}
+			)
 			local ok, err = Call(self, obj, arguments)
-
-			if is_runtime then table.remove(self.call_stack) end
-
+			table.remove(self.call_stack)
 			self:PopActiveNode()
-			self.current_call = nil
 			return ok, err
 		end
 

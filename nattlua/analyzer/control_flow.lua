@@ -112,7 +112,7 @@ return function(META)
 		end
 	end
 
-	function META:ThrowError(msg, obj, no_report)
+	function META:ThrowError(msg, obj, no_report, level)
 		if obj then
 			-- track "if x then" which has no binary or prefix operators
 			self:TrackUpvalue(obj)
@@ -138,7 +138,12 @@ return function(META)
 			self.lua_error_thrown = msg
 		end
 
-		if not no_report then self:Error(self.current_call, msg) end
+		if not no_report then
+			local frame = level and
+				self.call_stack[-#self.call_stack + level + 1] or
+				self.call_stack[#self.call_stack]
+			self:Error(frame.call_node, msg)
+		end
 	end
 
 	function META:GetThrownErrorMessage()
@@ -220,7 +225,7 @@ return function(META)
 			str[i] = tostring(select(i, ...))
 		end
 
-		print(helpers.FormatError(node.Code, table.concat(str, ", "), start, stop, 1))
+		print(node.Code:BuildSourceCodePointMessage(table.concat(str, ", "), start, stop, 1))
 	end
 
 	function META:PushConditionalScope(statement, truthy, falsy)

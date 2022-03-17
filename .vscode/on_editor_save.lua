@@ -132,6 +132,8 @@ if normalized:find("/nattlua/", nil, true) then
 		run_lua("examples/projects/gmod/nattlua.lua", path)
 	elseif is_nattlua then
 		run_nattlua(path)
+	elseif normalized:find("helpers.lua", nil, true) then
+		run_lua("test/run.lua", "test/nattlua/helper_test.lua")
 	elseif normalized:find("test/", nil, true) then
 		run_lua("test/run.lua", path)
 	elseif normalized:find("javascript_emitter") then

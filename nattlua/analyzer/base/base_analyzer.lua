@@ -295,7 +295,7 @@ return function(META)
 							f:close()
 							local start = helpers.LinePositionToSubPosition(code, tonumber(line), 0)
 							local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
-							msg = helpers.FormatError(code, name, rest, start, stop)
+							msg = code:BuildSourceCodePointMessage(rest, start, stop)
 						end
 					end
 				end
@@ -367,7 +367,7 @@ return function(META)
 					local start, stop = v.call_node:GetStartStop()
 
 					if start and stop then
-						local part = helpers.FormatError(self.compiler:GetCode(), "", start, stop, 1)
+						local part = self.compiler:GetCode():BuildSourceCodePointMessage("", start, stop, 1)
 						str = str .. part .. "#" .. tostring(i) .. ": " .. self.compiler:GetCode():GetName()
 					end
 				end

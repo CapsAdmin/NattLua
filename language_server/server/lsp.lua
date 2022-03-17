@@ -77,22 +77,14 @@ local SemanticTokenModifiers = {
 
 local function get_range(code, start, stop)
 	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
-
-	if data.line_start == 0 or data.line_stop == 0 then
-		print("invalid position")
-		print(start, stop)
-		table.print(data)
-		return
-	end
-
 	return {
 		start = {
 			line = data.line_start - 1,
-			character = data.character_start,
+			character = data.character_start - 1,
 		},
 		["end"] = {
 			line = data.line_stop - 1,
-			character = data.character_stop,
+			character = data.character_stop, -- not sure about this
 		},
 	}
 end
@@ -306,19 +298,17 @@ end
 lsp.methods["textDocument/hover"] = function(self, params)
 	local compiler = compile(self, params.textDocument.uri, params.textDocument.text)
 	local pos = params.position
-	local token, data = helpers.GetDataFromLineCharPosition(compiler.Tokens, compiler.Code:GetString(), pos.line + 1, pos.character + 1)
+	local token, data = helpers.FindTokenFromLineCharacterPosition(compiler.Tokens, compiler.Code:GetString(), pos.line + 1, pos.character + 1)
 
-	if not token or not data then
-		error("cannot find anything at " .. params.textDocument.uri .. ":" .. pos.line .. ":" .. pos.character)
-	end
+	if not token or not data then return end
 
 	local found_parents = {}
 
 	do
-		local node = token
+		local node = token.parent
 
 		while node.parent do
-			table.insert(found_parents, node.parent)
+			table.insert(found_parents, node)
 			node = node.parent
 		end
 	end
@@ -333,37 +323,25 @@ lsp.methods["textDocument/hover"] = function(self, params)
 		add_line("```lua\n" .. tostring(str) .. "\n```")
 	end
 
-	local function get_type(obj)
-		local upvalue = obj:GetUpvalue()
+	for _, node in ipairs(found_parents) do
+		local found = false
 
-		if upvalue then return upvalue:GetValue() end
+		for _, obj in ipairs(node:GetTypes()) do
+			if obj.Type == "string" and obj:GetData() == token.value then
 
-		return obj
-	end
-
-	if token:GetLastType() then
-		add_code(get_type(token:GetLastType()))
-	else
-		for _, node in ipairs(found_parents) do
-			if node:GetLastType() then
-				add_code(get_type(node:GetLastType()))
+			else
+				add_code(tostring(obj))
+				found = true
 
 				break
 			end
 		end
+
+		if found then break end
 	end
 
-	if false then
-		add_line("nodes:\n\n")
-		add_code("\t[token - " .. token.type .. " (" .. token.value .. ")]")
-
-		for _, node in ipairs(found_parents) do
-			add_code("\t" .. tostring(node))
-		end
-	end
-
-	if token and token.parent then
-		local min, max = token.parent:GetStartStop()
+	if found_parents[2] then
+		local min, max = found_parents[2]:GetStartStop()
 
 		if min then
 			local temp = helpers.SubPositionToLinePosition(compiler.Code:GetString(), min, max)
@@ -377,11 +355,11 @@ lsp.methods["textDocument/hover"] = function(self, params)
 		range = {
 			start = {
 				line = data.line_start - 1,
-				character = data.character_start,
+				character = data.character_start - 1,
 			},
 			["end"] = {
 				line = data.line_stop - 1,
-				character = data.character_stop + 1,
+				character = data.character_stop - 1,
 			},
 		},
 	}

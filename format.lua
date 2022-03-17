@@ -50,6 +50,7 @@ local config = {
 }
 local blacklist = {
 	"test_focus_result%.lua",
+	"test_focus%.lua",
 	"build_output%.lua",
 	"nattlua/other/cparser%.lua",
 	"nattlua/other/json%.lua",
@@ -86,7 +87,7 @@ for _, path in ipairs(lua_files) do
 				end
 
 				if bad_names[token.value] then
-					print(helpers.FormatError(compiler:GetCode(), "non descriptive variable name", token.start, token.stop))
+					print(compiler:GetCode():BuildSourceCodePointMessage("non descriptive variable name", token.start, token.stop))
 
 					if AUTOFIX and type(bad_names[token.value]) == "string" then
 						token.value = bad_names[token.value]

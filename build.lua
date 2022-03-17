@@ -1,3 +1,4 @@
+local args = ...
 local nl = require("nattlua")
 local entry = "./nattlua.lua"
 io.write("parsing " .. entry)
@@ -43,30 +44,34 @@ if not func then
 end
 
 io.write(" - OK\n")
--- run tests before we write the file
-local f = io.open("temp_build_output.lua", "w")
-f:write(lua_code)
-f:close()
-io.write("running tests with temp_build_output.lua")
-io.flush()
-local exit_code = os.execute("luajit -e 'require(\"temp_build_output\") require(\"test\")'")
 
-if exit_code ~= 0 then
-	io.write(" - FAIL\n")
-	return
+if args ~= "fast" then
+	-- run tests before we write the file
+	local f = io.open("temp_build_output.lua", "w")
+	f:write(lua_code)
+	f:close()
+	io.write("running tests with temp_build_output.lua")
+	io.flush()
+	local exit_code = os.execute("luajit -e 'require(\"temp_build_output\") require(\"test\")'")
+
+	if exit_code ~= 0 then
+		io.write(" - FAIL\n")
+		return
+	end
+
+	io.write(" - OK\n")
+	io.write("checking if file can be required outside of the working directory")
+	io.flush()
+	local exit_code = os.execute("cd .github && luajit -e 'local nl = loadfile(\"../temp_build_output.lua\")'")
+
+	if exit_code ~= 0 then
+		io.write(" - FAIL\n")
+		return
+	end
+
+	io.write(" - OK\n")
 end
 
-io.write(" - OK\n")
-io.write("checking if file can be required outside of the working directory")
-io.flush()
-local exit_code = os.execute("cd .github && luajit -e 'local nl = loadfile(\"../temp_build_output.lua\")'")
-
-if exit_code ~= 0 then
-	io.write(" - FAIL\n")
-	return
-end
-
-io.write(" - OK\n")
 io.write("writing build_output.lua")
 local f = io.open("build_output.lua", "w")
 f:write(lua_code)

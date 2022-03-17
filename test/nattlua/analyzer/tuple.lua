@@ -97,8 +97,8 @@ end
 
 local function Extract<|a: any, b: any|>
 	local out = Union<||>
-    for aval in UnionPairs(a) do
-		for bval in UnionPairs(b) do
+    for aval in UnionValues(a) do
+		for bval in UnionValues(b) do
 			if aval < bval then
 				out = out | aval
 			end

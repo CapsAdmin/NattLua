@@ -428,74 +428,6 @@ return {
 	TokenType = TokenType,
 	TokenReturnType = TokenReturnType,
 } end
-IMPORTS['nattlua/code/code.lua'] = function() local META = {}
-META.__index = META
-
-
-
-function META:GetString()
-	return self.Buffer
-end
-
-function META:GetName()
-	return self.Name
-end
-
-function META:GetByteSize()
-	return #self.Buffer
-end
-
-function META:GetStringSlice(start, stop)
-	return self.Buffer:sub(start, stop)
-end
-
-function META:GetByte(pos)
-	return self.Buffer:byte(pos) or 0
-end
-
-function META:FindNearest(str, start)
-	local _, pos = self.Buffer:find(str, start, true)
-
-	if not pos then return nil end
-
-	return pos + 1
-end
-
-local function remove_bom_header(str)
-	if str:sub(1, 2) == "\xFE\xFF" then
-		return str:sub(3)
-	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
-		return str:sub(4)
-	end
-
-	return str
-end
-
-local function get_default_name()
-	local info = debug.getinfo(3)
-
-	if info then
-		local parent_line = info.currentline
-		local parent_name = info.source:sub(2)
-		return parent_name .. ":" .. parent_line
-	end
-
-	return "unknown line : unknown name"
-end
-
-function META.New(lua_code, name)
-	local self = setmetatable(
-		{
-			Buffer = remove_bom_header(lua_code),
-			Name = name or get_default_name(),
-		},
-		META
-	)
-	return self
-end
-
-
-return META.New end
 do local __M; IMPORTS["nattlua.other.quote"] = function(...) __M = __M or (function(...) local helpers = {}
 
 function helpers.QuoteToken(str)
@@ -521,7 +453,6 @@ end
 return helpers end)(...) return __M end end
 do local __M; IMPORTS["nattlua.other.helpers"] = function(...) __M = __M or (function(...) 
 
-
 local math = _G.math
 local table = _G.table
 local quote = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
@@ -539,6 +470,8 @@ local unpack = _G.unpack
 local helpers = {}
 
 function helpers.LinePositionToSubPosition(code, line, character)
+	line = math.max(line, 1)
+	character = math.max(character, 1)
 	local line_pos = 1
 
 	for i = 1, #code do
@@ -566,14 +499,14 @@ end
 
 function helpers.SubPositionToLinePosition(code, start, stop)
 	local line = 1
-	local line_start
-	local line_stop
+	local line_start = 1
+	local line_stop = nil
 	local within_start = 1
-	local within_stop
-	local character_start
-	local character_stop
-	local line_pos = 0
-	local char_pos = 0
+	local within_stop = #code
+	local character_start = 1
+	local character_stop = 1
+	local line_pos = 1
+	local char_pos = 1
 
 	for i = 1, #code do
 		local char = code:sub(i, i)
@@ -598,63 +531,28 @@ function helpers.SubPositionToLinePosition(code, start, stop)
 
 			line = line + 1
 			line_pos = i
-			char_pos = 0
+			char_pos = 1
 		else
 			char_pos = char_pos + 1
 		end
 	end
 
-	if not within_stop then within_stop = #code + 1 end
+	if line_start ~= line_stop then
+		character_start = within_start
+		character_stop = within_stop
+	end
 
 	return {
-		character_start = character_start or 0,
-		character_stop = character_stop or 0,
-		sub_line_before = {within_start + 1, start - 1},
-		sub_line_after = {stop + 1, within_stop - 1},
-		line_start = line_start or 0,
-		line_stop = line_stop or 0,
+		character_start = character_start,
+		character_stop = character_stop,
+		line_start = line_start,
+		line_stop = line_stop,
+		sub_line_before = {within_start, start - 1},
+		sub_line_after = {stop + 1, within_stop},
 	}
 end
 
 do
-	local function get_lines_before(code, pos, lines)
-		local line = 1
-		local first_line_pos = 1
-
-		for i = pos, 1, -1 do
-			local char = code:sub(i, i)
-
-			if char == "\n" then
-				if line == 1 then first_line_pos = i + 1 end
-
-				if line == lines + 1 then return i - 1, first_line_pos - 1, line end
-
-				line = line + 1
-			end
-		end
-
-		return 1, first_line_pos, line
-	end
-
-	local function get_lines_after(code, pos, lines)
-		local line = 1 -- to prevent warning about it always being true when comparing against 1
-		local first_line_pos = 1
-
-		for i = pos, #code do
-			local char = code:sub(i, i)
-
-			if char == "\n" then
-				if line == 1 then first_line_pos = i end
-
-				if line == lines + 1 then return first_line_pos + 1, i - 1, line end
-
-				line = line + 1
-			end
-		end
-
-		return first_line_pos + 1, #code, line - 1
-	end
-
 	do
 		-- TODO: wtf am i doing here?
 		local args
@@ -679,91 +577,146 @@ do
 		return math.min(math.max(num, min), max)
 	end
 
-	function helpers.FormatError(
-		code,
+	local function find_position_after_lines(str, line_count, reverse)
+		local count = 0
+
+		for i = 1, #str do
+			local char = str:sub(i, i)
+
+			if char == "\n" then count = count + 1 end
+
+			if count >= line_count then return i - 1 end
+		end
+
+		return #str
+	end
+
+	local function split(self, separator)
+		local tbl = {}
+		local current_pos = 1
+
+		for i = 1, #self do
+			local start_pos, end_pos = self:find(separator, current_pos, true)
+
+			if not start_pos then break end
+
+			tbl[i] = self:sub(current_pos, start_pos - 1)
+			current_pos = end_pos + 1
+		end
+
+		if current_pos > 1 then
+			tbl[#tbl + 1] = self:sub(current_pos)
+		else
+			tbl[1] = self
+		end
+
+		return tbl
+	end
+
+	local function pad_left(str, len, char)
+		str = tostring(str)
+
+		if #str < len + 1 then return char:rep(len - #str + 1) .. str end
+
+		return str
+	end
+
+	function helpers.BuildSourceCodePointMessage(
+		lua_code,
+		path,
 		msg,
 		start,
 		stop,
-		size,
-		...
+		size
 	)
-		local lua_code = code:GetString()
-		local path = code:GetName()
 		size = size or 2
-		msg = helpers.FormatMessage(msg, ...)
-		start = clamp(start or 0, 1, #lua_code)
-		stop = clamp(stop or 0, 1, #lua_code)
+		start = clamp(start or 1, 1, #lua_code)
+		stop = clamp(stop or 1, 1, #lua_code)
 		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
-
-		if not data then return end
-
-		local line_start, line_stop = data.line_start, data.line_stop
-		local pre_start_pos, pre_stop_pos, lines_before = get_lines_before(lua_code, start, size)
-		local post_start_pos, post_stop_pos, lines_after = get_lines_after(lua_code, stop, size)
-		local spacing = #tostring(data.line_stop + lines_after)
+		local code_before = lua_code:sub(1, data.sub_line_before[1] - 1) -- remove the newline
+		local code_between = lua_code:sub(data.sub_line_before[1] + 1, data.sub_line_after[2] - 1)
+		local code_after = lua_code:sub(data.sub_line_after[2] + 1, #lua_code) -- remove the newline
+		code_before = code_before:reverse():sub(1, find_position_after_lines(code_before:reverse(), size)):reverse()
+		code_after = code_after:sub(1, find_position_after_lines(code_after, size))
+		local lines_before = split(code_before, "\n")
+		local lines_between = split(code_between, "\n")
+		local lines_after = split(code_after, "\n")
+		local total_lines = #lines_before + #lines_between + #lines_after
+		local number_length = #tostring(total_lines)
 		local lines = {}
+		local i = data.line_start - #lines_before
 
-		do
-			if lines_before >= 0 then
-				local line = math.max(line_start - lines_before - 1, 1)
-
-				for str in (lua_code:sub(pre_start_pos, pre_stop_pos)):gmatch("(.-)\n") do
-					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
-					table.insert(lines, prefix .. str)
-					line = line + 1
-				end
-			end
-
-			do
-				local line = line_start
-
-				for str in (lua_code:sub(start, stop) .. "\n"):gmatch("(.-)\n") do
-					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
-
-					if line == line_start then
-						prefix = prefix .. lua_code:sub(table.unpack(data.sub_line_before))
-					end
-
-					local test = str
-
-					if line == line_stop then
-						str = str .. lua_code:sub(table.unpack(data.sub_line_after))
-					end
-
-					str = str .. "\n" .. (" "):rep(#prefix) .. ("^"):rep(math.max(#test, 1))
-					table.insert(lines, prefix .. str)
-					line = line + 1
-				end
-			end
-
-			if lines_after > 0 then
-				local line = line_stop + 1
-
-				for str in (lua_code:sub(post_start_pos, post_stop_pos) .. "\n"):gmatch("(.-)\n") do
-					local prefix = (" "):rep(spacing - #tostring(line)) .. line .. " | "
-					table.insert(lines, prefix .. str)
-					line = line + 1
-				end
-			end
+		for _, line in ipairs(lines_before) do
+			table.insert(lines, pad_left(i, number_length, " ") .. " | " .. line)
+			i = i + 1
 		end
 
+		for i2, line in ipairs(lines_between) do
+			local prefix = pad_left(i, number_length, " ") .. " | "
+			table.insert(lines, prefix .. line)
+
+			if #lines_between > 1 then
+				if i2 == 1 then
+					-- first line or the only line
+					local length_before = data.sub_line_before[2] - data.sub_line_before[1]
+					local arrow_length = #line - length_before
+					table.insert(lines, (" "):rep(#prefix + length_before) .. ("^"):rep(arrow_length))
+				elseif i2 == #lines_between then
+					-- last line
+					local length_before = data.sub_line_after[2] - data.sub_line_after[1]
+					local arrow_length = #line - length_before
+					table.insert(lines, (" "):rep(#prefix) .. ("^"):rep(arrow_length))
+				else
+					-- lines between
+					table.insert(lines, (" "):rep(#prefix) .. ("^"):rep(#line))
+				end
+			else
+				-- one line
+				local length_before = data.sub_line_before[2] - data.sub_line_before[1]
+				local length_after = data.sub_line_after[2] - data.sub_line_after[1]
+				local arrow_length = #line - length_before - length_after
+				table.insert(lines, (" "):rep(#prefix + length_before) .. ("^"):rep(arrow_length))
+			end
+
+			i = i + 1
+		end
+
+		for _, line in ipairs(lines_after) do
+			table.insert(lines, pad_left(i, number_length, " ") .. " | " .. line)
+			i = i + 1
+		end
+
+		local longest_line = 0
+
+		for _, line in ipairs(lines) do
+			if #line > longest_line then longest_line = #line end
+		end
+
+		table.insert(
+			lines,
+			1,
+			(" "):rep(number_length + 3) .. ("_"):rep(longest_line - number_length + 1)
+		)
+		table.insert(
+			lines,
+			(" "):rep(number_length + 3) .. ("-"):rep(longest_line - number_length + 1)
+		)
+
+		if path then
+			if path:sub(1, 1) == "@" then path = path:sub(2) end
+
+			local msg = path .. ":" .. data.line_start .. ":" .. data.character_start
+			table.insert(lines, pad_left("->", number_length, " ") .. " | " .. msg)
+		end
+
+		table.insert(lines, pad_left("->", number_length, " ") .. " | " .. msg)
 		local str = table.concat(lines, "\n")
-		local path = path and
-			(
-				path:gsub("@", "") .. ":" .. line_start .. ":" .. data.character_start
-			)
-			or
-			""
-		local msg = path .. (msg and ": " .. msg or "")
-		local post = (" "):rep(spacing - 2) .. "-> | " .. msg
-		local pre = ("-"):rep(100)
-		str = "\n" .. pre .. "\n" .. str .. "\n" .. pre .. "\n" .. post .. "\n"
 		str = str:gsub("\t", " ")
 		return str
 	end
 end
 
-function helpers.GetDataFromLineCharPosition(
+function helpers.FindTokenFromLineCharacterPosition(
 	tokens,
 	code,
 	line,
@@ -772,20 +725,7 @@ function helpers.GetDataFromLineCharPosition(
 	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
 
 	for _, token in ipairs(tokens) do
-		local found = token.stop >= sub_pos -- and token.stop <= sub_pos
-		if not found then
-			if token.whitespace then
-				for _, token in ipairs(token.whitespace) do
-					if token.stop >= sub_pos then
-						found = true
-
-						break
-					end
-				end
-			end
-		end
-
-		if found then
+		if sub_pos >= token.start and sub_pos <= token.stop then
 			return token, helpers.SubPositionToLinePosition(code, token.start, token.stop)
 		end
 	end
@@ -4483,6 +4423,8 @@ IMPORTS['nattlua/definitions/lua/string.nlua'] = function()
 
  end
 IMPORTS['nattlua/definitions/lua/math.nlua'] = function() 
+
+
 
 
 
@@ -8537,7 +8479,23 @@ end
 do -- these are just helpers for print debugging
 	table.print = IMPORTS['nattlua.other.table_print']("nattlua.other.table_print")
 	debug.trace = function(...)
-		print(debug.traceback(...))
+		local level = 1
+
+		while true do
+			local info = debug.getinfo(level, "Sln")
+
+			if (not info) then break end
+
+			if (info.what) == "C" then
+				io.write(string.format("\t%i: C function\t\"%s\"\n", level, info.name))
+			else
+				io.write(string.format("\t%i: \"%s\"\t%s:%d\n", level, info.name, info.short_src, info.currentline))
+			end
+
+			level = level + 1
+		end
+
+		io.write("\n")
 	end
 -- local old = print; function print(...) old(debug.traceback()) end
 end
@@ -8620,7 +8578,8 @@ return {
 		return runtime_env, typesystem_env
 	end,
 } end)(...) return __M end end
-do local __M; IMPORTS["nattlua.code.code"] = function(...) __M = __M or (function(...) local META = {}
+do local __M; IMPORTS["nattlua.code.code"] = function(...) __M = __M or (function(...) local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+local META = {}
 META.__index = META
 
 
@@ -8673,6 +8632,15 @@ local function get_default_name()
 	end
 
 	return "unknown line : unknown name"
+end
+
+function META:BuildSourceCodePointMessage(
+	msg,
+	start,
+	stop,
+	size
+)
+	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
 end
 
 function META.New(lua_code, name)
@@ -8741,6 +8709,7 @@ return function(alloc, size)
 	end
 end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.lexer.token"] = function(...) __M = __M or (function(...) local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
+local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 
 
 
@@ -8768,10 +8737,6 @@ function META:GetTypes()
 end
 
 function META:GetLastType()
-	do
-		return self.inferred_type
-	end
-
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
@@ -10107,6 +10072,84 @@ return {
 	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
 	AssignmentTypeStatement = AssignmentTypeStatement,
 } end
+IMPORTS['nattlua/code/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+local META = {}
+META.__index = META
+
+
+
+function META:GetString()
+	return self.Buffer
+end
+
+function META:GetName()
+	return self.Name
+end
+
+function META:GetByteSize()
+	return #self.Buffer
+end
+
+function META:GetStringSlice(start, stop)
+	return self.Buffer:sub(start, stop)
+end
+
+function META:GetByte(pos)
+	return self.Buffer:byte(pos) or 0
+end
+
+function META:FindNearest(str, start)
+	local _, pos = self.Buffer:find(str, start, true)
+
+	if not pos then return nil end
+
+	return pos + 1
+end
+
+local function remove_bom_header(str)
+	if str:sub(1, 2) == "\xFE\xFF" then
+		return str:sub(3)
+	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
+		return str:sub(4)
+	end
+
+	return str
+end
+
+local function get_default_name()
+	local info = debug.getinfo(3)
+
+	if info then
+		local parent_line = info.currentline
+		local parent_name = info.source:sub(2)
+		return parent_name .. ":" .. parent_line
+	end
+
+	return "unknown line : unknown name"
+end
+
+function META:BuildSourceCodePointMessage(
+	msg,
+	start,
+	stop,
+	size
+)
+	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
+end
+
+function META.New(lua_code, name)
+	local self = setmetatable(
+		{
+			Buffer = remove_bom_header(lua_code),
+			Name = name or get_default_name(),
+		},
+		META
+	)
+	return self
+end
+
+
+return META.New end
 IMPORTS['nattlua/parser/nodes.nlua'] = function() 
 
 
@@ -10358,7 +10401,6 @@ end
 function META:AddType(obj)
 	self.inferred_types = self.inferred_types or {}
 	table.insert(self.inferred_types, obj)
-	self.inferred_type = obj
 end
 
 function META:GetTypes()
@@ -10366,10 +10408,6 @@ function META:GetTypes()
 end
 
 function META:GetLastType()
-	do
-		return self.inferred_type
-	end
-
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
@@ -14283,7 +14321,7 @@ return function(META)
 							f:close()
 							local start = helpers.LinePositionToSubPosition(code, tonumber(line), 0)
 							local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
-							msg = helpers.FormatError(code, name, rest, start, stop)
+							msg = code:BuildSourceCodePointMessage(rest, start, stop)
 						end
 					end
 				end
@@ -14355,7 +14393,7 @@ return function(META)
 					local start, stop = v.call_node:GetStartStop()
 
 					if start and stop then
-						local part = helpers.FormatError(self.compiler:GetCode(), "", start, stop, 1)
+						local part = self.compiler:GetCode():BuildSourceCodePointMessage("", start, stop, 1)
 						str = str .. part .. "#" .. tostring(i) .. ": " .. self.compiler:GetCode():GetName()
 					end
 				end
@@ -14601,7 +14639,7 @@ return function(META)
 		end
 	end
 
-	function META:ThrowError(msg, obj, no_report)
+	function META:ThrowError(msg, obj, no_report, level)
 		if obj then
 			-- track "if x then" which has no binary or prefix operators
 			self:TrackUpvalue(obj)
@@ -14627,7 +14665,12 @@ return function(META)
 			self.lua_error_thrown = msg
 		end
 
-		if not no_report then self:Error(self.current_call, msg) end
+		if not no_report then
+			local frame = level and
+				self.call_stack[-#self.call_stack + level + 1] or
+				self.call_stack[#self.call_stack]
+			self:Error(frame.call_node, msg)
+		end
 	end
 
 	function META:GetThrownErrorMessage()
@@ -14709,7 +14752,7 @@ return function(META)
 			str[i] = tostring(select(i, ...))
 		end
 
-		print(helpers.FormatError(node.Code, table.concat(str, ", "), start, stop, 1))
+		print(node.Code:BuildSourceCodePointMessage(table.concat(str, ", "), start, stop, 1))
 	end
 
 	function META:PushConditionalScope(statement, truthy, falsy)
@@ -15782,59 +15825,6 @@ local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
 local Symbol = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Symbol
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-
-local function lua_types_to_tuple(self, node, tps)
-	local tbl = {}
-
-	for i, v in ipairs(tps) do
-		if type(v) == "table" and v.Type ~= nil then
-			tbl[i] = v
-
-			if not v:GetNode() then v:SetNode(node) end
-		else
-			if type(v) == "function" then
-				tbl[i] = Function(
-					{
-						lua_function = v,
-						arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-						ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-					}
-				):SetNode(node):SetLiteral(true)
-
-				if node.statements then tbl[i].function_body_node = node end
-			else
-				local t = type(v)
-
-				if t == "number" then
-					tbl[i] = LNumber(v):SetNode(node)
-				elseif t == "string" then
-					tbl[i] = LString(v):SetNode(node)
-				elseif t == "boolean" then
-					tbl[i] = Symbol(v):SetNode(node)
-				elseif t == "table" then
-					local tbl = Table()
-
-					for _, val in ipairs(v) do
-						tbl:Insert(val)
-					end
-
-					tbl:SetContract(tbl)
-					return tbl
-				else
-					if node then print(node:Render(), "!") end
-
-					self:Print(t)
-					error(debug.traceback("NYI " .. t))
-				end
-			end
-		end
-	end
-
-	if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
-
-	return Tuple(tbl)
-end
-
 local unpack_union_tuples
 
 do
@@ -15901,6 +15891,58 @@ end
 
 return {
 	Call = function(META)
+		function META:LuaTypesToTuple(node, tps)
+			local tbl = {}
+
+			for i, v in ipairs(tps) do
+				if type(v) == "table" and v.Type ~= nil then
+					tbl[i] = v
+
+					if not v:GetNode() then v:SetNode(node) end
+				else
+					if type(v) == "function" then
+						tbl[i] = Function(
+							{
+								lua_function = v,
+								arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+								ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+							}
+						):SetNode(node):SetLiteral(true)
+
+						if node.statements then tbl[i].function_body_node = node end
+					else
+						local t = type(v)
+
+						if t == "number" then
+							tbl[i] = LNumber(v):SetNode(node)
+						elseif t == "string" then
+							tbl[i] = LString(v):SetNode(node)
+						elseif t == "boolean" then
+							tbl[i] = Symbol(v):SetNode(node)
+						elseif t == "table" then
+							local tbl = Table()
+
+							for _, val in ipairs(v) do
+								tbl:Insert(val)
+							end
+
+							tbl:SetContract(tbl)
+							return tbl
+						else
+							if node then print(node:Render(), "!") end
+
+							self:Print(t)
+							error(debug.traceback("NYI " .. t))
+						end
+					end
+				end
+			end
+
+			if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
+
+			return Tuple(tbl)
+		end
+
 		function META:AnalyzeFunctionBody(obj, function_node, arguments)
 			local scope = self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
 			self:PushGlobalEnvironment(
@@ -15995,8 +16037,7 @@ return {
 			end
 
 			if self:IsTypesystem() then
-				local ret = lua_types_to_tuple(
-					self,
+				local ret = self:LuaTypesToTuple(
 					obj:GetNode(),
 					{
 						self:CallLuaTypeFunction(
@@ -16013,8 +16054,7 @@ return {
 			local tuples = {}
 
 			for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
-				tuples[i] = lua_types_to_tuple(
-					self,
+				tuples[i] = self:LuaTypesToTuple(
 					obj:GetNode(),
 					{
 						self:CallLuaTypeFunction(
@@ -16604,7 +16644,8 @@ return {
 							not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())
 						)
 						or
-						not a:IsSubsetOf(b)
+						not a:IsSubsetOf(b) and
+						a.Type ~= "union"
 					then
 						b.arguments_inferred = true
 						self:Assert(self:GetActiveNode(), self:Call(b, b:GetArguments():Copy()))
@@ -16627,7 +16668,6 @@ return {
 			-- not sure about this, it's used to access the call_node from deeper calls
 			-- without resorting to argument drilling
 			local node = call_node or obj:GetNode() or obj
-			self.current_call = node
 
 			-- call_node or obj:GetNode() might be nil when called from tests and other places
 			if node.recursively_called then return node.recursively_called:Copy() end
@@ -16665,12 +16705,10 @@ return {
 				return false, "call stack is too deep"
 			end
 
-			local is_runtime = self:IsRuntime()
+			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
+			self.call_stack = self.call_stack or {}
 
-			if is_runtime then
-				-- setup and track the callstack to avoid infinite loops or callstacks that are too big
-				self.call_stack = self.call_stack or {}
-
+			if self:IsRuntime() then
 				for _, v in ipairs(self.call_stack) do
 					-- if the callnode is the same, we're doing some infinite recursion
 					if v.call_node == self:GetActiveNode() then
@@ -16687,24 +16725,20 @@ return {
 						end
 					end
 				end
-
-				table.insert(
-					self.call_stack,
-					{
-						obj = obj,
-						function_node = obj.function_body_node,
-						call_node = self:GetActiveNode(),
-						scope = self:GetScope(),
-					}
-				)
 			end
 
+			table.insert(
+				self.call_stack,
+				{
+					obj = obj,
+					function_node = obj.function_body_node,
+					call_node = self:GetActiveNode(),
+					scope = self:GetScope(),
+				}
+			)
 			local ok, err = Call(self, obj, arguments)
-
-			if is_runtime then table.remove(self.call_stack) end
-
+			table.remove(self.call_stack)
 			self:PopActiveNode()
-			self.current_call = nil
 			return ok, err
 		end
 
@@ -20757,7 +20791,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, ...)
 		msg = "DEFERRED CALL: " .. msg
 	end
 
-	local msg = helpers.FormatError(code, msg, start, stop, nil, ...)
+	local msg = code:BuildSourceCodePointMessage(helpers.FormatMessage(msg, ...), start, stop)
 	local msg2 = ""
 
 	for line in (msg .. "\n"):gmatch("(.-)\n") do
@@ -21165,7 +21199,7 @@ analyzer function copy(obj: any)
 	return copy
 end
 
-analyzer function UnionPairs(values: any)
+analyzer function UnionValues(values: any)
 	if values.Type ~= "union" then values = types.Union({values}) end
 
 	local i = 1
@@ -21212,7 +21246,7 @@ end
 function Record<|keys: string, tbl: Table|>
 	local out = {}
 
-	for value in UnionPairs(keys) do
+	for value in UnionValues(keys) do
 		out[value] = tbl
 	end
 
@@ -21222,7 +21256,7 @@ end
 function Pick<|tbl: Table, keys: string|>
 	local out = {}
 
-	for value in UnionPairs(keys) do
+	for value in UnionValues(keys) do
 		if tbl[value] == nil then
 			error("missing key '" .. value .. "' in table", 2)
 		end
@@ -21242,7 +21276,7 @@ end
 function Omit<|tbl: Table, keys: string|>
 	local out = copy<|tbl|>
 
-	for value in UnionPairs(keys) do
+	for value in UnionValues(keys) do
 		if tbl[value] == nil then
 			error("missing key '" .. value .. "' in table", 2)
 		end
@@ -21264,8 +21298,8 @@ end
 function Extract<|a: any, b: any|>
 	local out = Union<||>
 
-	for aval in UnionPairs(a) do
-		for bval in UnionPairs(b) do
+	for aval in UnionValues(a) do
+		for bval in UnionValues(b) do
 			if aval < bval then out = out | aval end
 		end
 	end
@@ -21664,7 +21698,7 @@ analyzer function rawget(tbl: {[any] = any} | {}, key: any)
 	if t then return t end
 end
 
-analyzer function assert(obj: any, msg: string | nil)
+analyzer function assert(obj: any, msg: string | nil, level: number | nil)
 	if not analyzer:IsDefinetlyReachable() then
 		analyzer:ThrowSilentError(obj)
 
@@ -21692,7 +21726,7 @@ analyzer function assert(obj: any, msg: string | nil)
 	end
 
 	if obj:IsFalsy() then
-		analyzer:ThrowError(msg and msg:GetData() or "assertion failed!", obj, obj:IsTruthy())
+		analyzer:ThrowError(msg and msg:GetData() or "assertion failed!", obj, obj:IsTruthy(), level and level:GetData() or nil)
 
 		if obj.Type == "union" then
 			obj = obj:Copy()
@@ -21711,7 +21745,7 @@ analyzer function error(msg: string, level: number | nil)
 	end
 
 	if msg:IsLiteral() then
-		analyzer:ThrowError(msg:GetData())
+		analyzer:ThrowError(msg:GetData(), nil, nil, level and level:GetData() or nil)
 	else
 		analyzer:ThrowError("error thrown from expression " .. tostring(analyzer.current_expression))
 	end
@@ -21747,7 +21781,7 @@ analyzer function type_pcall(func: Function, ...: ...any)
 
 		for i = diagnostics_index + 1, #analyzer.diagnostics do
 			local d = analyzer.diagnostics[i]
-			local msg = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers").FormatError(analyzer.compiler:GetCode(), d.msg, d.start, d.stop)
+			local msg = analyzer.compiler:GetCode():BuildSourceCodePointMessage(d.msg, d.start, d.stop)
 			table.insert(errors, msg)
 		end
 
@@ -22518,41 +22552,44 @@ end
 analyzer function ^string.gsub(
 	str: string,
 	pattern: string,
-	replacement: function=(...string)>((...string)) | string | {[string] = string},
+	replacement: (ref function=(...string)>((...string))) | string | {[string] = string},
 	max_replacements: number | nil
 )
 	str = str:IsLiteral() and str:GetData()
 	pattern = pattern:IsLiteral() and pattern:GetData()
-
-	if replacement.Type == "string" then
-		if replacement:IsLiteral() then replacement = replacement:GetData() end
-	elseif replacement.Type == "table" then
-		local out = {}
-
-		for _, kv in ipairs(replacement:GetData()) do
-			if kv.key:IsLiteral() and kv.val:IsLiteral() then
-				out[kv.key:GetData()] = kv.val:GetData()
-			end
-		end
-
-		replacement = out
-	end
-
 	max_replacements = max_replacements and max_replacements:GetData()
 
 	if str and pattern and replacement then
-		--replacement:SetArguments(types.Tuple({types.String()}):SetRepeat(math.huge))
-		if type(replacement) == "string" or type(replacement) == "table" then
-			return string.gsub(str, pattern, replacement, max_replacements)
+		if replacement.Type == "string" and replacement:IsLiteral() then
+			return string.gsub(str, pattern, replacement:GetData(), max_replacements)
+		elseif replacement.Type == "table" and replacement:IsLiteral() then
+			local out = {}
+
+			for _, kv in ipairs(replacement:GetData()) do
+				if kv.key:IsLiteral() and kv.val:IsLiteral() then
+					out[kv.key:GetData()] = kv.val:GetData()
+				end
+			end
+
+			return string.gsub(str, pattern, out, max_replacements)
 		else
 			return string.gsub(
 				str,
 				pattern,
 				function(...)
-					analyzer:Assert(
+					local ret = analyzer:Assert(
 						replacement:GetNode(),
 						analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement:GetNode(), {...}))
 					)
+					local out = {}
+
+					for _, val in ipairs(ret:GetData()) do
+						if not val:IsLiteral() then return nil end
+
+						table.insert(out, val:GetData())
+					end
+
+					return table.unpack(out)
 				end,
 				max_replacements
 			)
@@ -22599,6 +22636,10 @@ type math.pi = 3.14159265358979323864338327950288
 
 analyzer function math.sin(n: number)
 	return n:IsLiteral() and math.sin(n:GetData()) or types.Number()
+end
+
+analyzer function math.abs(n: number)
+	return n:IsLiteral() and math.abs(n:GetData()) or types.Number()
 end
 
 analyzer function math.cos(n: number)
@@ -23120,7 +23161,23 @@ end
 do -- these are just helpers for print debugging
 	table.print = IMPORTS['nattlua.other.table_print']("nattlua.other.table_print")
 	debug.trace = function(...)
-		print(debug.traceback(...))
+		local level = 1
+
+		while true do
+			local info = debug.getinfo(level, "Sln")
+
+			if (not info) then break end
+
+			if (info.what) == "C" then
+				io.write(string.format("\t%i: C function\t\"%s\"\n", level, info.name))
+			else
+				io.write(string.format("\t%i: \"%s\"\t%s:%d\n", level, info.name, info.short_src, info.currentline))
+			end
+
+			level = level + 1
+		end
+
+		io.write("\n")
 	end
 -- local old = print; function print(...) old(debug.traceback()) end
 end
