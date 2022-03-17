@@ -21199,7 +21199,7 @@ analyzer function copy(obj: any)
 	return copy
 end
 
-analyzer function UnionPairs(values: any)
+analyzer function UnionValues(values: any)
 	if values.Type ~= "union" then values = types.Union({values}) end
 
 	local i = 1
@@ -21246,7 +21246,7 @@ end
 function Record<|keys: string, tbl: Table|>
 	local out = {}
 
-	for value in UnionPairs(keys) do
+	for value in UnionValues(keys) do
 		out[value] = tbl
 	end
 
@@ -21256,7 +21256,7 @@ end
 function Pick<|tbl: Table, keys: string|>
 	local out = {}
 
-	for value in UnionPairs(keys) do
+	for value in UnionValues(keys) do
 		if tbl[value] == nil then
 			error("missing key '" .. value .. "' in table", 2)
 		end
@@ -21276,7 +21276,7 @@ end
 function Omit<|tbl: Table, keys: string|>
 	local out = copy<|tbl|>
 
-	for value in UnionPairs(keys) do
+	for value in UnionValues(keys) do
 		if tbl[value] == nil then
 			error("missing key '" .. value .. "' in table", 2)
 		end
@@ -21298,8 +21298,8 @@ end
 function Extract<|a: any, b: any|>
 	local out = Union<||>
 
-	for aval in UnionPairs(a) do
-		for bval in UnionPairs(b) do
+	for aval in UnionValues(a) do
+		for bval in UnionValues(b) do
 			if aval < bval then out = out | aval end
 		end
 	end
@@ -21745,7 +21745,7 @@ analyzer function error(msg: string, level: number | nil)
 	end
 
 	if msg:IsLiteral() then
-		analyzer:ThrowError(msg:GetData())
+		analyzer:ThrowError(msg:GetData(), nil, nil, level and level:GetData() or nil)
 	else
 		analyzer:ThrowError("error thrown from expression " .. tostring(analyzer.current_expression))
 	end

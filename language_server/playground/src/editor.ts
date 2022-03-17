@@ -12,7 +12,7 @@ export const createEditor = () => {
 
 	const editorInstance = editor.create(document.getElementById("container"), {
 		minimap: { enabled: false },
-		scrollBeyondLastLine: false,
+		scrollBeyondLastLine: true,
 		theme: "vs-dark",
 	})
 
