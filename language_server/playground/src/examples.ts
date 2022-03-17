@@ -146,5 +146,76 @@ end
 local b64 = enc("hello world")
 local txt = dec(b64)
 
-attest.equal(txt, "hello world")`
+attest.equal(txt, "hello world")`,
+
+typescript:
+`do
+	local function Required<|tbl: Table|>
+		local copy = {}
+	
+		for key, val in pairs(tbl) do
+			copy[key] = val ~ nil
+		end
+	
+		return copy
+	end
+
+	local type Props = {
+		a = nil | number,
+		b = nil | string,
+	  }
+	   
+	  local obj: Props = { a = 5 }
+	  local obj2 = Required<|Props|> = { a = 5 }
+end
+
+do
+	local function Required<|tbl: Table|>
+		local copy = {}
+
+		for key, val in pairs(tbl) do
+			copy[key] = val ~ nil
+		end
+
+		return copy
+	end
+
+	local type Props = {
+		a = nil | number,
+		b = nil | string,
+	}
+	local obj: Props = {a = 5}
+	local obj2: Required<|Props|> = {a = 5}
+end
+
+do
+	local function Readonly<|tbl: Table|>
+		local copy = {}
+	
+		for key, val in pairs(tbl) do
+			copy[key] = val
+		end
+	
+		setmetatable<|
+			copy,
+			{
+				__newindex = function(_, key)
+					error("Cannot assign to '" .. key .. "' because it is a read-only property.", 2)
+				end,
+			}
+		|>
+
+		return copy
+	end
+	
+	local type Todo = {
+        title = string
+    }
+
+	local todo: Readonly<|Todo|> = {
+		title = "Delete inactive users",
+	}
+    
+	todo.title = "Hello"
+end`
 }
