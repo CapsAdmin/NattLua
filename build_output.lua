@@ -88,6 +88,8 @@ IMPORTS['nattlua/definitions/attest.nlua'] = function()
 
 
 
+
+
 _G.attest = attest end
 do local __M; IMPORTS["nattlua.other.loadstring"] = function(...) __M = __M or (function(...) local f = _G.loadstring or _G.load
 return function(str, name)
@@ -8723,13 +8725,12 @@ META.__index = META
 
 
 function META:__tostring()
-	return self.type .. ": " .. self.value
+	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
 end
 
 function META:AddType(obj)
 	self.inferred_types = self.inferred_types or {}
 	table.insert(self.inferred_types, obj)
-	self.inferred_type = obj
 end
 
 function META:GetTypes()
@@ -10279,18 +10280,16 @@ META.Type = "node"
 
 
 
-local id = 0
 
 function META.New(init)
-	id = id + 1
 	init.tokens = {}
-	init.id = id
 	return setmetatable(init, META)
 end
 
 function META:__tostring()
+	local str = "[" .. self.type .. " - " .. self.kind
+
 	if self.type == "statement" then
-		local str = "[" .. self.type .. " - " .. self.kind .. "]"
 		local lua_code = self.Code:GetString()
 		local name = self.Code:GetName()
 
@@ -10302,20 +10301,14 @@ function META:__tostring()
 			else
 				str = str .. " @ " .. name:sub(2) .. ":" .. "?"
 			end
-		else
-			str = str .. " " .. ("%s"):format(self.id)
 		end
-
-		return str
 	elseif self.type == "expression" then
-		local str = "[" .. self.type .. " - " .. self.kind .. " - " .. ("%s"):format(self.id) .. "]"
-
 		if self.value and type(self.value.value) == "string" then
-			str = str .. ": " .. quote_helper.QuoteToken(self.value.value)
+			str = str .. " - " .. quote_helper.QuoteToken(self.value.value)
 		end
-
-		return str
 	end
+
+	return str .. "]"
 end
 
 function META:Render(config)
@@ -13964,6 +13957,16 @@ return function(META)
 		end
 
 		local msg_str = self:ErrorMessageToString(msg)
+
+		if
+			self.expect_diagnostic and
+			self.expect_diagnostic.severity == severity and
+			msg_str:find(self.expect_diagnostic.msg)
+		then
+			self.expect_diagnostic = nil
+			return
+		end
+
 		local key = msg_str .. "-" .. tostring(node) .. "-" .. "severity"
 		self.diagnostics_map = self.diagnostics_map or {}
 
@@ -21406,6 +21409,10 @@ analyzer function attest.truthy(obj: any, err: string | nil)
 	if obj:IsTruthy() then return obj end
 
 	error(err and err:GetData() or "assertion failed")
+end
+
+analyzer function attest.expect_diagnostic(severity: "warning" | "error", msg: string)
+	analyzer.expect_diagnostic = {msg = msg:GetData(), severity = severity:GetData()}
 end
 
 _G.attest = attest end

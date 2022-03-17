@@ -24,11 +24,17 @@ const main = async () => {
 	})
 
 	for (const [name, code] of Object.entries(assortedExamples)) {
-		const option = new Option(name, code)
+		let str
+		if (typeof code === "string") {
+			str = code
+		} else {
+			str = (await code).default
+		}
+		const option = new Option(name, str)
 		select.options.add(option)
 		if (name == "array") {
 			option.selected = true
-			tab.setValue(code)
+			tab.setValue(str)
 		}
 	}
 

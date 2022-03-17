@@ -80,6 +80,16 @@ return function(META)
 		end
 
 		local msg_str = self:ErrorMessageToString(msg)
+
+		if
+			self.expect_diagnostic and
+			self.expect_diagnostic.severity == severity and
+			msg_str:find(self.expect_diagnostic.msg)
+		then
+			self.expect_diagnostic = nil
+			return
+		end
+
 		local key = msg_str .. "-" .. tostring(node) .. "-" .. "severity"
 		self.diagnostics_map = self.diagnostics_map or {}
 

@@ -29,4 +29,8 @@ analyzer function attest.truthy(obj: any, err: string | nil)
 	error(err and err:GetData() or "assertion failed")
 end
 
+analyzer function attest.expect_diagnostic(severity: "warning" | "error", msg: string)
+	analyzer.expect_diagnostic = {msg = msg:GetData(), severity = severity:GetData()}
+end
+
 _G.attest = attest

@@ -41,6 +41,7 @@ end
 
 function META:__tostring()
 	local str = "[" .. self.type .. " - " .. self.kind
+
 	if self.type == "statement" then
 		local lua_code = self.Code:GetString()
 		local name = self.Code:GetName()
@@ -59,6 +60,7 @@ function META:__tostring()
 			str = str .. " - " .. quote_helper.QuoteToken(self.value.value)
 		end
 	end
+
 	return str .. "]"
 end
 

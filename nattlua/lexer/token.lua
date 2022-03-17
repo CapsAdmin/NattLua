@@ -32,7 +32,7 @@ end]]
 }]]
 
 function META:__tostring()
-	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .."]"
+	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
 end
 
 function META:AddType(obj)
