@@ -16643,12 +16643,14 @@ return {
 					if
 						a and
 						(
-							a.Type == "function" and
-							not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())
+							(
+								a.Type == "function" and
+								not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())
+							)
+							or
+							not a:IsSubsetOf(b) and
+							a.Type ~= "union"
 						)
-						or
-						not a:IsSubsetOf(b) and
-						a.Type ~= "union"
 					then
 						b.arguments_inferred = true
 						self:Assert(self:GetActiveNode(), self:Call(b, b:GetArguments():Copy()))
