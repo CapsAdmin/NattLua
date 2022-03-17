@@ -225,10 +225,13 @@ analyzer function ^string.gsub(
 						analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement:GetNode(), {...}))
 					)
 					local out = {}
+
 					for _, val in ipairs(ret:GetData()) do
 						if not val:IsLiteral() then return nil end
+
 						table.insert(out, val:GetData())
 					end
+
 					return table.unpack(out)
 				end,
 				max_replacements

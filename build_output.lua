@@ -8479,7 +8479,23 @@ end
 do -- these are just helpers for print debugging
 	table.print = IMPORTS['nattlua.other.table_print']("nattlua.other.table_print")
 	debug.trace = function(...)
-		print(debug.traceback(...))
+		local level = 1
+
+		while true do
+			local info = debug.getinfo(level, "Sln")
+
+			if (not info) then break end
+
+			if (info.what) == "C" then
+				io.write(string.format("\t%i: C function\t\"%s\"\n", level, info.name))
+			else
+				io.write(string.format("\t%i: \"%s\"\t%s:%d\n", level, info.name, info.short_src, info.currentline))
+			end
+
+			level = level + 1
+		end
+
+		io.write("\n")
 	end
 -- local old = print; function print(...) old(debug.traceback()) end
 end
@@ -15809,59 +15825,6 @@ local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
 local Symbol = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Symbol
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-
-local function lua_types_to_tuple(self, node, tps)
-	local tbl = {}
-
-	for i, v in ipairs(tps) do
-		if type(v) == "table" and v.Type ~= nil then
-			tbl[i] = v
-
-			if not v:GetNode() then v:SetNode(node) end
-		else
-			if type(v) == "function" then
-				tbl[i] = Function(
-					{
-						lua_function = v,
-						arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-						ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-					}
-				):SetNode(node):SetLiteral(true)
-
-				if node.statements then tbl[i].function_body_node = node end
-			else
-				local t = type(v)
-
-				if t == "number" then
-					tbl[i] = LNumber(v):SetNode(node)
-				elseif t == "string" then
-					tbl[i] = LString(v):SetNode(node)
-				elseif t == "boolean" then
-					tbl[i] = Symbol(v):SetNode(node)
-				elseif t == "table" then
-					local tbl = Table()
-
-					for _, val in ipairs(v) do
-						tbl:Insert(val)
-					end
-
-					tbl:SetContract(tbl)
-					return tbl
-				else
-					if node then print(node:Render(), "!") end
-
-					self:Print(t)
-					error(debug.traceback("NYI " .. t))
-				end
-			end
-		end
-	end
-
-	if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
-
-	return Tuple(tbl)
-end
-
 local unpack_union_tuples
 
 do
@@ -15928,6 +15891,58 @@ end
 
 return {
 	Call = function(META)
+		function META:LuaTypesToTuple(node, tps)
+			local tbl = {}
+
+			for i, v in ipairs(tps) do
+				if type(v) == "table" and v.Type ~= nil then
+					tbl[i] = v
+
+					if not v:GetNode() then v:SetNode(node) end
+				else
+					if type(v) == "function" then
+						tbl[i] = Function(
+							{
+								lua_function = v,
+								arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+								ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+							}
+						):SetNode(node):SetLiteral(true)
+
+						if node.statements then tbl[i].function_body_node = node end
+					else
+						local t = type(v)
+
+						if t == "number" then
+							tbl[i] = LNumber(v):SetNode(node)
+						elseif t == "string" then
+							tbl[i] = LString(v):SetNode(node)
+						elseif t == "boolean" then
+							tbl[i] = Symbol(v):SetNode(node)
+						elseif t == "table" then
+							local tbl = Table()
+
+							for _, val in ipairs(v) do
+								tbl:Insert(val)
+							end
+
+							tbl:SetContract(tbl)
+							return tbl
+						else
+							if node then print(node:Render(), "!") end
+
+							self:Print(t)
+							error(debug.traceback("NYI " .. t))
+						end
+					end
+				end
+			end
+
+			if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
+
+			return Tuple(tbl)
+		end
+
 		function META:AnalyzeFunctionBody(obj, function_node, arguments)
 			local scope = self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
 			self:PushGlobalEnvironment(
@@ -16022,8 +16037,7 @@ return {
 			end
 
 			if self:IsTypesystem() then
-				local ret = lua_types_to_tuple(
-					self,
+				local ret = self:LuaTypesToTuple(
 					obj:GetNode(),
 					{
 						self:CallLuaTypeFunction(
@@ -16040,8 +16054,7 @@ return {
 			local tuples = {}
 
 			for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
-				tuples[i] = lua_types_to_tuple(
-					self,
+				tuples[i] = self:LuaTypesToTuple(
 					obj:GetNode(),
 					{
 						self:CallLuaTypeFunction(
@@ -16631,7 +16644,8 @@ return {
 							not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())
 						)
 						or
-						not a:IsSubsetOf(b)
+						not a:IsSubsetOf(b) and
+						a.Type ~= "union"
 					then
 						b.arguments_inferred = true
 						self:Assert(self:GetActiveNode(), self:Call(b, b:GetArguments():Copy()))
@@ -22538,41 +22552,44 @@ end
 analyzer function ^string.gsub(
 	str: string,
 	pattern: string,
-	replacement: function=(...string)>((...string)) | string | {[string] = string},
+	replacement: (ref function=(...string)>((...string))) | string | {[string] = string},
 	max_replacements: number | nil
 )
 	str = str:IsLiteral() and str:GetData()
 	pattern = pattern:IsLiteral() and pattern:GetData()
-
-	if replacement.Type == "string" then
-		if replacement:IsLiteral() then replacement = replacement:GetData() end
-	elseif replacement.Type == "table" then
-		local out = {}
-
-		for _, kv in ipairs(replacement:GetData()) do
-			if kv.key:IsLiteral() and kv.val:IsLiteral() then
-				out[kv.key:GetData()] = kv.val:GetData()
-			end
-		end
-
-		replacement = out
-	end
-
 	max_replacements = max_replacements and max_replacements:GetData()
 
 	if str and pattern and replacement then
-		--replacement:SetArguments(types.Tuple({types.String()}):SetRepeat(math.huge))
-		if type(replacement) == "string" or type(replacement) == "table" then
-			return string.gsub(str, pattern, replacement, max_replacements)
+		if replacement.Type == "string" and replacement:IsLiteral() then
+			return string.gsub(str, pattern, replacement:GetData(), max_replacements)
+		elseif replacement.Type == "table" and replacement:IsLiteral() then
+			local out = {}
+
+			for _, kv in ipairs(replacement:GetData()) do
+				if kv.key:IsLiteral() and kv.val:IsLiteral() then
+					out[kv.key:GetData()] = kv.val:GetData()
+				end
+			end
+
+			return string.gsub(str, pattern, out, max_replacements)
 		else
 			return string.gsub(
 				str,
 				pattern,
 				function(...)
-					analyzer:Assert(
+					local ret = analyzer:Assert(
 						replacement:GetNode(),
 						analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement:GetNode(), {...}))
 					)
+					local out = {}
+
+					for _, val in ipairs(ret:GetData()) do
+						if not val:IsLiteral() then return nil end
+
+						table.insert(out, val:GetData())
+					end
+
+					return table.unpack(out)
 				end,
 				max_replacements
 			)
@@ -23144,7 +23161,23 @@ end
 do -- these are just helpers for print debugging
 	table.print = IMPORTS['nattlua.other.table_print']("nattlua.other.table_print")
 	debug.trace = function(...)
-		print(debug.traceback(...))
+		local level = 1
+
+		while true do
+			local info = debug.getinfo(level, "Sln")
+
+			if (not info) then break end
+
+			if (info.what) == "C" then
+				io.write(string.format("\t%i: C function\t\"%s\"\n", level, info.name))
+			else
+				io.write(string.format("\t%i: \"%s\"\t%s:%d\n", level, info.name, info.short_src, info.currentline))
+			end
+
+			level = level + 1
+		end
+
+		io.write("\n")
 	end
 -- local old = print; function print(...) old(debug.traceback()) end
 end

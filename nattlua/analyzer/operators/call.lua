@@ -85,11 +85,11 @@ return {
 	Call = function(META)
 		function META:LuaTypesToTuple(node, tps)
 			local tbl = {}
-		
+
 			for i, v in ipairs(tps) do
 				if type(v) == "table" and v.Type ~= nil then
 					tbl[i] = v
-		
+
 					if not v:GetNode() then v:SetNode(node) end
 				else
 					if type(v) == "function" then
@@ -100,11 +100,11 @@ return {
 								ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
 							}
 						):SetNode(node):SetLiteral(true)
-		
+
 						if node.statements then tbl[i].function_body_node = node end
 					else
 						local t = type(v)
-		
+
 						if t == "number" then
 							tbl[i] = LNumber(v):SetNode(node)
 						elseif t == "string" then
@@ -113,25 +113,25 @@ return {
 							tbl[i] = Symbol(v):SetNode(node)
 						elseif t == "table" then
 							local tbl = Table()
-		
+
 							for _, val in ipairs(v) do
 								tbl:Insert(val)
 							end
-		
+
 							tbl:SetContract(tbl)
 							return tbl
 						else
 							if node then print(node:Render(), "!") end
-		
+
 							self:Print(t)
 							error(debug.traceback("NYI " .. t))
 						end
 					end
 				end
 			end
-		
+
 			if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
-		
+
 			return Tuple(tbl)
 		end
 
