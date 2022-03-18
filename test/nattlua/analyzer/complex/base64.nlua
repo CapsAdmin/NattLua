@@ -3,7 +3,7 @@
 local b = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" -- You will need this for encoding/decoding
 -- encoding
 local function enc(data: ref string)
-	return ((data:gsub(".", function(x)
+	return ((data:gsub(".", function(x: ref string): ref string
 		local r, b = "", x:byte()
 
 		if not b then return r end
@@ -13,7 +13,7 @@ local function enc(data: ref string)
 		end
 
 		return r
-	end) .. "0000"):gsub("%d%d%d?%d?%d?%d?", function(x)
+	end) .. "0000"):gsub("%d%d%d?%d?%d?%d?", function(x: ref string): ref string
 		if (#x < 6) then return "" end
 
 		local c = 0
@@ -30,7 +30,7 @@ end
 local function dec(data: ref string)
 	data = string.gsub(data, "[^" .. b .. "=]", "")
 	return (
-		data:gsub(".", function(x)
+		data:gsub(".", function(x: ref string): ref string
 			if (x == "=") then return "" end
 
 			local pos = b:find(x)
@@ -44,7 +44,7 @@ local function dec(data: ref string)
 			end
 
 			return r
-		end):gsub("%d%d%d?%d?%d?%d?%d?%d?", function(x)
+		end):gsub("%d%d%d?%d?%d?%d?%d?%d?", function(x: ref string): ref string
 			if (#x ~= 8) then return "" end
 
 			local c = 0
