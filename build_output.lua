@@ -16648,12 +16648,29 @@ return {
 								not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())
 							)
 							or
-							not a:IsSubsetOf(b) and
-							a.Type ~= "union"
+							not a:IsSubsetOf(b)
 						)
 					then
+						local func = a
+
+						if func.Type == "union" then func = a:GetType("function") end
+
 						b.arguments_inferred = true
-						self:Assert(self:GetActiveNode(), self:Call(b, b:GetArguments():Copy()))
+						-- TODO: callbacks with ref arguments should not be called
+						-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
+						local has_ref_arg = false
+
+						for k, v in ipairs(b:GetArguments():GetData()) do
+							if v.ref_argument then
+								has_ref_arg = true
+
+								break
+							end
+						end
+
+						if not has_ref_arg then
+							self:Assert(self:GetActiveNode(), self:Call(b, func:GetArguments():Copy(nil, true)))
+						end
 					end
 				end
 			end

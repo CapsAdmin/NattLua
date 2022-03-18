@@ -31,7 +31,11 @@ local function dec(data: ref string)
 		data:gsub(".", function(x)
 			if (x == "=") then return "" end
 
-			local r, f = "", (b:find(x) - 1)
+			local pos = b:find(x)
+
+			if not pos then return "" end
+
+			local r, f = "", (pos - 1)
 
 			for i = 6, 1, -1 do
 				r = r .. (f % 2 ^ i - f % 2 ^ (i - 1) > 0 and "1" or "0")
