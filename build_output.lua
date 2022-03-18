@@ -16219,7 +16219,7 @@ return {
 					contract_override = args
 				end
 
-				do -- coerce untyped functions to constract callbacks
+				do -- coerce untyped functions to contract callbacks
 					for i, arg in ipairs(arguments:GetData()) do
 						if arg.Type == "function" then
 							if
@@ -22599,6 +22599,7 @@ analyzer function ^string.gsub(
 
 			return string.gsub(str, pattern, out, max_replacements)
 		else
+			replacement:SetArguments(types.Tuple({types.String()}):SetRepeat(math.huge))
 			return string.gsub(
 				str,
 				pattern,

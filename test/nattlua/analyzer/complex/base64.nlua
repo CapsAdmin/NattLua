@@ -1,3 +1,5 @@
+--§ require("jit.p").start("jp=Fpa", "-")
+--§ _G.LOL = false
 local b = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" -- You will need this for encoding/decoding
 -- encoding
 local function enc(data: ref string)

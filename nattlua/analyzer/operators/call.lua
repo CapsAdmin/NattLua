@@ -408,7 +408,7 @@ return {
 					contract_override = args
 				end
 
-				do -- coerce untyped functions to constract callbacks
+				do -- coerce untyped functions to contract callbacks
 					for i, arg in ipairs(arguments:GetData()) do
 						if arg.Type == "function" then
 							if
@@ -842,9 +842,7 @@ return {
 					then
 						local func = a
 
-						if func.Type == "union" then
-							func = a:GetType("function")
-						end
+						if func.Type == "union" then func = a:GetType("function") end
 
 						b.arguments_inferred = true
 						-- TODO: callbacks with ref arguments should not be called

@@ -12,9 +12,7 @@ type Material.setTextureURL = function=(
 )>()
 type material = {}
 type material.create = function=("UnlitGeneric" | "VertexLitGeneric")>(Material)
-
 type math.round = function=(number)>(number)
-
 type hook = {}
 type hook.add = function=(string, string, function=()>())>()
 type render = {}
@@ -22,7 +20,6 @@ type render.setMaterial = function=(Material)>()
 type render.drawTexturedRectUV = function=(number, number, number, number, number, number, number, number)>()
 type timer = {}
 type timer.systime = function=()>(number)
-
 --@name Sprite sheet Manager
 --@author Jacbo
 local mngr = {}
