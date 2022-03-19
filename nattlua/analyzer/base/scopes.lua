@@ -15,16 +15,6 @@ return function(META)
 		self.scope_stack = {}
 	end)
 
-	function META:Hash(node)
-		if node.Type == "string" then return node:GetHash() end
-
-		if type(node) == "string" then return node end
-
-		if type(node.value) == "string" then return node.value end
-
-		return node.value.value
-	end
-
 	function META:PushScope(scope)
 		table.insert(self.scope_stack, self.scope)
 		self.scope = scope
@@ -96,50 +86,6 @@ return function(META)
 		return scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
 	end
 
-	function META:SetEnvironmentOverride(node, obj, env)
-		node.environments_override = node.environments_override or {}
-		node.environments_override[env] = obj
-	end
-
-	function META:GetGlobalEnvironmentOverride(node, env)
-		if node.environments_override then return node.environments_override[env] end
-	end
-
-	function META:SetDefaultEnvironment(obj, env)
-		self.default_environment[env] = obj
-	end
-
-	function META:GetDefaultEnvironment(env)
-		return self.default_environment[env]
-	end
-
-	function META:PushGlobalEnvironment(node, obj, env)
-		table.insert(self.environments[env], 1, obj)
-		node.environments = node.environments or {}
-		node.environments[env] = obj
-		self.environment_nodes = self.environment_nodes or {}
-		table.insert(self.environment_nodes, 1, node)
-	end
-
-	function META:PopGlobalEnvironment(env)
-		table.remove(self.environment_nodes, 1)
-		table.remove(self.environments[env], 1)
-	end
-
-	function META:GetGlobalEnvironment(env)
-		local g = self.environments[env][1] or self:GetDefaultEnvironment(env)
-
-		if
-			self.environment_nodes[1] and
-			self.environment_nodes[1].environments_override and
-			self.environment_nodes[1].environments_override[env]
-		then
-			g = self.environment_nodes[1].environments_override[env]
-		end
-
-		return g
-	end
-
 	function META:GetLocalOrGlobalValue(key, scope)
 		local upvalue = self:FindLocalUpvalue(key, scope)
 
@@ -196,5 +142,53 @@ return function(META)
 
 		self:Assert(key, self:NewIndexOperator(key:GetNode(), g, key, val))
 		return val
+	end
+
+	do -- environment
+
+		function META:SetEnvironmentOverride(node, obj, env)
+			node.environments_override = node.environments_override or {}
+			node.environments_override[env] = obj
+		end
+	
+		function META:GetGlobalEnvironmentOverride(node, env)
+			if node.environments_override then return node.environments_override[env] end
+		end
+	
+		function META:SetDefaultEnvironment(obj, env)
+			self.default_environment[env] = obj
+		end
+	
+		function META:GetDefaultEnvironment(env)
+			return self.default_environment[env]
+		end
+	
+		function META:PushGlobalEnvironment(node, obj, env)
+			table.insert(self.environments[env], 1, obj)
+			node.environments = node.environments or {}
+			node.environments[env] = obj
+			self.environment_nodes = self.environment_nodes or {}
+			table.insert(self.environment_nodes, 1, node)
+		end
+	
+		function META:PopGlobalEnvironment(env)
+			table.remove(self.environment_nodes, 1)
+			table.remove(self.environments[env], 1)
+		end
+	
+		function META:GetGlobalEnvironment(env)
+			local g = self.environments[env][1] or self:GetDefaultEnvironment(env)
+	
+			if
+				self.environment_nodes[1] and
+				self.environment_nodes[1].environments_override and
+				self.environment_nodes[1].environments_override[env]
+			then
+				g = self.environment_nodes[1].environments_override[env]
+			end
+	
+			return g
+		end
+	
 	end
 end
