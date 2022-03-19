@@ -230,20 +230,20 @@ return function(META)
 
 	function META:PushConditionalScope(statement, truthy, falsy)
 		local scope = self:CreateAndPushScope()
-			scope:SetConditionalScope(true)
-			scope:SetStatement(statement)
-			scope:SetTruthy(truthy)
-			scope:SetFalsy(falsy)
-			return scope
-		end
+		scope:SetConditionalScope(true)
+		scope:SetStatement(statement)
+		scope:SetTruthy(truthy)
+		scope:SetFalsy(falsy)
+		return scope
+	end
 
-		function META:ErrorAndCloneCurrentScope(node, err)
-			self:Error(node, err)
-			self:CloneCurrentScope()
-			self:GetScope():SetConditionalScope(true)
-		end
+	function META:ErrorAndCloneCurrentScope(node, err)
+		self:Error(node, err)
+		self:CloneCurrentScope()
+		self:GetScope():SetConditionalScope(true)
+	end
 
-		function META:PopConditionalScope()
+	function META:PopConditionalScope()
 		self:PopScope()
 	end
 end

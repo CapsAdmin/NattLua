@@ -842,9 +842,7 @@ return {
 					then
 						local func = a
 
-						if func.Type == "union" then
-							func = a:GetType("function")
-						end
+						if func.Type == "union" then func = a:GetType("function") end
 
 						b.arguments_inferred = true
 						-- TODO: callbacks with ref arguments should not be called
