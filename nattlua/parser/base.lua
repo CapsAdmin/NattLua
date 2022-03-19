@@ -26,8 +26,9 @@ local type = _G.type
 local table = _G.table
 local helpers = require("nattlua.other.helpers")
 local quote_helper = require("nattlua.other.quote")
-local META = {}
-META.__index = META
+local class = require("nattlua.other.class")
+local META = class.CreateTemplate("parser")
+
 --[[#local type Node = Node.@Self]]
 --[[#type META.@Self = {
 	config = any,
