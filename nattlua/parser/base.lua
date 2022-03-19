@@ -12,7 +12,8 @@
 	FunctionLocalTypeStatement,
 	FunctionStatement,
 	FunctionLocalAnalyzerStatement,
-	ValueExpression
+	ValueExpression,
+	Nodes
  } = import("./nodes.nlua")]]
 
 --[[#import<|"~/nattlua/code/code.lua"|>]]
@@ -83,9 +84,9 @@ do
 end
 
 function META:StartNode(
-	type--[[#: "statement" | "expression"]],
-	kind--[[#: StatementKind | ExpressionKind]]
-)
+	type--[[#: ref ("statement" | "expression")]],
+	kind--[[#: ref (StatementKind | ExpressionKind)]]
+)--[[#: ref Node]]
 	local code_start = assert(self:GetToken()).start
 	local node = Node.New(
 		{
@@ -108,6 +109,16 @@ function META:StartNode(
 	if self.OnNode then self:OnNode(node) end
 
 	table.insert(self.nodes, 1, node)
+
+	--[[#
+		for _, t in pairs<|Nodes|> do
+			if t.kind == kind and t.type == type then
+				node = copy<|node|>.@Contract = t
+				break
+			end
+		end
+	]]
+
 	return node
 end
 

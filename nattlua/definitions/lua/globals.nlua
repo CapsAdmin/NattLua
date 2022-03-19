@@ -234,8 +234,8 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 	assert(compiler:Parse())
 	return types.Function(
 		{
-			arg = types.Tuple({}),
-			ret = types.Tuple({}),
+			arg = types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
+			ret = types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
 			lua_function = function(...)
 				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 			end,

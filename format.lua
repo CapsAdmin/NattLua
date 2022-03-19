@@ -39,14 +39,6 @@ local config = {
 	type_annotations = "explicit",
 	force_parenthesis = true,
 	skip_import = true,
-	extra_indent = {
-		CreateAndPushScope = {
-			to = "PopScope",
-		},
-		PushScope = {
-			to = "PopScope",
-		},
-	},
 }
 local blacklist = {
 	"test_focus_result%.lua",

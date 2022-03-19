@@ -175,5 +175,8 @@ return function(config)
 		func(self)
 	end
 
+	self.context_values = {}
+	self.context_ref = {}
+
 	return self
 end

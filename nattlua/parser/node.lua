@@ -48,12 +48,7 @@ function META:__tostring()
 
 		if name:sub(1, 1) == "@" then
 			local data = helpers.SubPositionToLinePosition(lua_code, self:GetStartStop())
-
-			if data and data.line_start then
-				str = str .. " @ " .. name:sub(2) .. ":" .. data.line_start
-			else
-				str = str .. " @ " .. name:sub(2) .. ":" .. "?"
-			end
+			str = str .. " @ " .. name:sub(2) .. ":" .. data.line_start
 		end
 	elseif self.type == "expression" then
 		if self.value and type(self.value.value) == "string" then
@@ -70,12 +65,15 @@ function META:Render(config)
 	do
 		-- we have to do this because nattlua.transpiler.emitter is not yet typed
 		-- so if it's hoisted the self.nlua will fail
+		
+		--[[# attest.expect_diagnostic("warning", "always false") ]]
+		--[[# attest.expect_diagnostic("warning", "always true") ]]
 		if IMPORTS--[[# as false]] then
 			emitter = IMPORTS["nattlua.transpiler.emitter"]()
 		else
 			--[[#£ parser.dont_hoist_next_import = true]]
-
 			emitter = require("nattlua.transpiler.emitter"--[[# as string]])
+			--[[# do return end ]]
 		end
 	end
 
@@ -125,10 +123,11 @@ function META:GetLength()
 end
 
 function META:GetNodes()--[[#: List<|any|>]]
+	local statements = self.statements --[[# as any]]
 	if self.kind == "if" then
 		local flat--[[#: List<|any|>]] = {}
 
-		for _, statements in ipairs(assert(self.statements)) do
+		for _, statements in ipairs(assert(statements)) do
 			for _, v in ipairs(statements) do
 				table.insert(flat, v)
 			end
@@ -137,7 +136,7 @@ function META:GetNodes()--[[#: List<|any|>]]
 		return flat
 	end
 
-	return self.statements or {}
+	return statements or {}
 end
 
 function META:HasNodes()
