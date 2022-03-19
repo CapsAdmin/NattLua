@@ -62,17 +62,17 @@ function META:Render(config)
 	local emitter
 
 	do
-		-- we have to do this because nattlua.transpiler.emitter is not yet typed
+		--[[#-- we have to do this because nattlua.transpiler.emitter is not yet typed
 		-- so if it's hoisted the self.nlua will fail
-		
-		--[[# attest.expect_diagnostic<|"warning", "always false"|> ]]
-		--[[# attest.expect_diagnostic<|"warning", "always true"|> ]]
+		attest.expect_diagnostic<|"warning", "always false"|>]]
+		--[[#attest.expect_diagnostic<|"warning", "always true"|>]]
+
 		if IMPORTS--[[# as false]] then
 			emitter = IMPORTS["nattlua.transpiler.emitter"]()
 		else
 			--[[#£ parser.dont_hoist_next_import = true]]
+
 			emitter = require("nattlua.transpiler.emitter"--[[# as string]])
-			--[[# do return end ]]
 		end
 	end
 
@@ -122,7 +122,8 @@ function META:GetLength()
 end
 
 function META:GetNodes()--[[#: List<|any|>]]
-	local statements = self.statements --[[# as any]]
+	local statements = self.statements--[[# as any]]
+
 	if self.kind == "if" then
 		local flat--[[#: List<|any|>]] = {}
 

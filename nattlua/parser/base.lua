@@ -110,18 +110,18 @@ function META:StartNode(
 
 	table.insert(self.nodes, 1, node)
 
-	--[[#
-        local function todo<||>
-            for _, t in pairs<|Nodes|> do
-                if t.kind == kind and t.type == type then
-                    node = copy<|node|>.@Contract = t
-                    break
-                end
-            end
-        end
-        todo<||>
-	]]
+	--[[#local function todo<||>
+		for _, t in pairs<|Nodes|> do
+			if t.kind == kind and t.type == type then
+				node = copy<|node|>.@Contract
+				 = t
 
+				break
+			end
+		end
+	end]]
+
+	--[[#todo<||>]]
 	return node
 end
 

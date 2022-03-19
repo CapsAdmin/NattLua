@@ -4,13 +4,11 @@ local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("base")
-
 --[[#type META.Type = string]]
 --[[#type META.@Self = {}]]
 --[[#local type TBaseType = META.@Self]]
 --[[#type TBaseType.@Name = "TBaseType"]]
 --[[#type META.Type = string]]
-
 --[[#type META.Type = string]]
 --[[#type TBaseType.Data = any | nil]]
 --[[#type TBaseType.Name = string | nil]]

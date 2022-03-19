@@ -167,7 +167,7 @@ do
 	end
 end
 
-function META.New(config) 
+function META.New(config)
 	config = config or {}
 	local self = setmetatable({config = config}, META)
 
@@ -177,7 +177,6 @@ function META.New(config)
 
 	self.context_values = {}
 	self.context_ref = {}
-
 	return self
 end
 

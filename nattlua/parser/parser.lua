@@ -8,6 +8,7 @@ local table_remove = _G.table.remove
 local ipairs = _G.ipairs
 
 --[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
+
 --[[#local type { 
 	ExpressionKind,
 	StatementKind,
@@ -22,7 +23,7 @@ local ipairs = _G.ipairs
 	FunctionLocalAnalyzerStatement,
 	ValueExpression
  } = import("./nodes.nlua")]]
- 
+
 function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
 	if not self:IsType("letter") and not self:IsValue("...") then return end
 

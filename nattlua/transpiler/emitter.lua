@@ -12,7 +12,6 @@ local assert = _G.assert
 local type = _G.type
 local setmetatable = _G.setmetatable
 local B = string.byte
-
 local META = class.CreateTemplate("emitter")
 local translate_binary = {
 	["&&"] = "and",

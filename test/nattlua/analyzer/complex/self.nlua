@@ -90,6 +90,7 @@ do
 	local self = setmetatable({}, META)
 	attest.equal(self:Foo(), _  as number)
 end
+
 local Lexer = require("nattlua.lexer.lexer")
 
 do
