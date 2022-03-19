@@ -88,8 +88,6 @@ return function(META)
 					return upvalue
 				end
 
-				function META:OnCreateLocalValue(upvalue, key, val) end
-
 				function META:FindLocalUpvalue(key, scope)
 					scope = scope or self:GetScope()
 
