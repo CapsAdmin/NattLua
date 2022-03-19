@@ -1,6 +1,6 @@
 local helpers = require("nattlua.other.helpers")
-local META = {}
-META.__index = META
+local class = require("nattlua.other.class")
+local META = class.CreateTemplate("code")
 --[[#type META.@Name = "Code"]]
 --[[#type META.@Self = {
 	Buffer = string,

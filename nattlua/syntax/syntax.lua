@@ -1,7 +1,7 @@
+local class = require("nattlua.other.class")
 --[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
 
-local META = {}
-META.__index = META
+local META = class.CreateTemplate("syntax")
 --[[#type META.@Name = "Syntax"]]
 --[[#type META.@Self = {
 	BinaryOperatorInfo = Map<|string, {left_priority = number, right_priority = number}|>,

@@ -3,10 +3,10 @@
 local Code = require("nattlua.code.code")
 local loadstring = require("nattlua.other.loadstring")
 local Token = require("nattlua.lexer.token").New
+local class = require("nattlua.other.class")
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
-local META = {}
-META.__index = META
+local META = class.CreateTemplate("lexer")
 --[[#type META.@Name = "Lexer"]]
 --[[#type META.@Self = {
 	Code = Code,

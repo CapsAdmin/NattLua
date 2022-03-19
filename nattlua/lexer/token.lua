@@ -1,5 +1,6 @@
 local table_pool = require("nattlua.other.table_pool")
 local quote_helper = require("nattlua.other.quote")
+local class = require("nattlua.other.class")
 --[[#local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
 --[[#local type TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | TokenWhitespaceType]]
 --[[#local type TokenReturnType = TokenType | false]]
@@ -9,8 +10,7 @@ local quote_helper = require("nattlua.other.quote")
 	start = number,
 	stop = number,
 }]]
-local META = {}
-META.__index = META
+local META = class.CreateTemplate("token")
 
 --[[#local analyzer function parent_type(what: literal string, offset: literal number)
 	return analyzer:GetCurrentType(what:GetData(), offset:GetData())

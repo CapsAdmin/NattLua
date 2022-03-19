@@ -140,7 +140,7 @@ function META:GetUpvalues(type--[[#: "runtime" | "typesystem"]])
 end
 
 function META:Copy()
-	local copy = META.New()
+	local copy = self.New()
 
 	if self.upvalues.typesystem then
 		for _, upvalue in ipairs(self.upvalues.typesystem.list) do

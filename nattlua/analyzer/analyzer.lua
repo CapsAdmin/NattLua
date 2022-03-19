@@ -1,10 +1,10 @@
+local class = require("nattlua.other.class")
 local tostring = tostring
 local error = error
 local setmetatable = setmetatable
 local ipairs = ipairs
 require("nattlua.types.types").Initialize()
-local META = {}
-META.__index = META
+local META = class.CreateTemplate("analyzer")
 META.OnInitialize = {}
 require("nattlua.analyzer.base.base_analyzer")(META)
 require("nattlua.analyzer.control_flow")(META)

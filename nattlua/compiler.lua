@@ -9,8 +9,8 @@ local debug = _G.debug
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local setmetatable = _G.setmetatable
 local Code = require("nattlua.code.code")
-local META = {}
-META.__index = META
+local class = require("nattlua.other.class")
+local META = class.CreateTemplate("compiler")
 
 function META:GetCode()
 	return self.Code

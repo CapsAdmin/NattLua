@@ -576,7 +576,11 @@ end
 
 function META:Get(key--[[#: BaseType]], from_contract)
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
-		return self["Get" .. key:GetData():sub(2)](self)
+        local val = self["Get" .. key:GetData():sub(2)](self)
+        if not val then
+			return type_errors.other("missing value on table " .. key:GetData())
+		end
+		return val
 	end
 
 	if key.Type == "union" then

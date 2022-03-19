@@ -1,5 +1,6 @@
 local runtime_syntax = require("nattlua.syntax.runtime")
 local characters = require("nattlua.syntax.characters")
+local class = require("nattlua.other.class")
 local print = _G.print
 local error = _G.error
 local debug = _G.debug
@@ -11,8 +12,8 @@ local assert = _G.assert
 local type = _G.type
 local setmetatable = _G.setmetatable
 local B = string.byte
-local META = {}
-META.__index = META
+
+local META = class.CreateTemplate("emitter")
 local translate_binary = {
 	["&&"] = "and",
 	["||"] = "or",
