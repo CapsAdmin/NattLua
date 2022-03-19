@@ -246,7 +246,7 @@ function META:Emit(cfg)
 	return emitter:BuildCode(self.SyntaxTree)
 end
 
-return function(
+function META.New(
 	lua_code--[[#: string]],
 	name--[[#: string]],
 	config--[[#: {[any] = any}]],
@@ -270,3 +270,5 @@ return function(
 		META
 	)
 end
+
+return META.New

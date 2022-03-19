@@ -8,74 +8,9 @@ local Union = require("nattlua.types.union").Union
 local table_insert = table.insert
 local table = _G.table
 local type = _G.type
-local upvalue_meta
-
-do
-	local META = {}
-	META.__index = META
-	META.Type = "upvalue"
-
-	function META:__tostring()
-		return "[" .. self.key .. ":" .. tostring(self.value) .. "]"
-	end
-
-	function META:GetValue()
-		return self.value
-	end
-
-	function META:GetKey()
-		return self.key
-	end
-
-	function META:SetValue(value)
-		self.value = value
-		value:SetUpvalue(self)
-	end
-
-	function META:SetImmutable(b)
-		self.immutable = b
-	end
-
-	function META:IsImmutable()
-		return self.immutable
-	end
-
-	upvalue_meta = META
-end
-
-local function Upvalue(obj)
-	local self = setmetatable({}, upvalue_meta)
-	self:SetValue(obj)
-	return self
-end
-
-local META = {}
-META.__index = META
-local LexicalScope
-
-function META.GetSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
-	tbl[name] = default--[[# as NonLiteral<|default|>]]
-	--[[#type tbl.@Self[name] = tbl[name] ]]
-	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
-		self[name] = val
-		return self
-	end
-	tbl["Get" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
-		return self[name]
-	end
-end
-
-function META.IsSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
-	tbl[name] = default--[[# as NonLiteral<|default|>]]
-	--[[#type tbl.@Self[name] = tbl[name] ]]
-	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
-		self[name] = val
-		return self
-	end
-	tbl["Is" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
-		return self[name]
-	end
-end
+local class = require("nattlua.other.class")
+local Upvalue = require("nattlua.analyzer.base.upvalue")
+local META = class.CreateTemplate("lexical_scope")
 
 do
 	function META:IsUncertain()
@@ -205,7 +140,7 @@ function META:GetUpvalues(type--[[#: "runtime" | "typesystem"]])
 end
 
 function META:Copy()
-	local copy = LexicalScope()
+	local copy = META.New()
 
 	if self.upvalues.typesystem then
 		for _, upvalue in ipairs(self.upvalues.typesystem.list) do
@@ -488,7 +423,7 @@ end
 
 local ref = 0
 
-function LexicalScope(parent, upvalue_position)
+function META.New(parent, upvalue_position)
 	ref = ref + 1
 	local scope = {
 		ref = ref,
@@ -510,4 +445,4 @@ function LexicalScope(parent, upvalue_position)
 	return scope
 end
 
-return LexicalScope
+return META.New

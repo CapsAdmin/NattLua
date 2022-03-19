@@ -2,37 +2,14 @@ local assert = _G.assert
 local tostring = _G.tostring
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
-local META = {}
-META.__index = META
+local class = require("nattlua.other.class")
+local META = class.CreateTemplate("base")
+
 --[[#type META.Type = string]]
 --[[#type META.@Self = {}]]
 --[[#local type TBaseType = META.@Self]]
 --[[#type TBaseType.@Name = "TBaseType"]]
 --[[#type META.Type = string]]
-
-function META.GetSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
-	tbl[name] = default--[[# as NonLiteral<|default|>]]
-	--[[#type tbl.@Self[name] = tbl[name] ]]
-	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
-		self[name] = val
-		return self
-	end
-	tbl["Get" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
-		return self[name]
-	end
-end
-
-function META.IsSet(tbl--[[#: ref any]], name--[[#: ref string]], default--[[#: ref any]])
-	tbl[name] = default--[[# as NonLiteral<|default|>]]
-	--[[#type tbl.@Self[name] = tbl[name] ]]
-	tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
-		self[name] = val
-		return self
-	end
-	tbl["Is" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
-		return self[name]
-	end
-end
 
 --[[#type META.Type = string]]
 --[[#type TBaseType.Data = any | nil]]
