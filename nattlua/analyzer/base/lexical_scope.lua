@@ -173,7 +173,7 @@ function META:FindUpvalue(key, env)
 				end
 			end
 
-			return upvalue, scope
+			return upvalue
 		end
 
 		prev_scope = scope

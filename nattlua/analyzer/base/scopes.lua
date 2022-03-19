@@ -93,21 +93,9 @@ return function(META)
 
 					if not scope then return end
 
-					local found, scope = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
+					local found = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
 
-					if found then return found, scope end
-				end
-
-				function META:FindLocalValue(key, scope)
-					local upvalue, scope = self:FindLocalUpvalue(key, scope)
-
-					if upvalue then
-						if self:IsRuntime() then
-							return self:GetMutatedUpvalue(upvalue) or upvalue:GetValue()
-						end
-
-						return upvalue:GetValue()
-					end
+					if found then return found end
 				end
 
 				function META:LocalValueExists(key, scope)
@@ -183,7 +171,15 @@ return function(META)
 				end
 
 				function META:GetLocalOrGlobalValue(key, scope)
-					local val = self:FindLocalValue(key, scope)
+					local upvalue = self:FindLocalUpvalue(key, scope)
+
+					if upvalue then
+						if self:IsRuntime() then
+							return self:GetMutatedUpvalue(upvalue) or upvalue:GetValue()
+						end
+
+						return upvalue:GetValue()
+					end
 
 					if val then return val end
 
@@ -191,7 +187,7 @@ return function(META)
 				end
 
 				function META:SetLocalOrGlobalValue(key, val, scope)
-					local upvalue, found_scope = self:FindLocalUpvalue(key, scope)
+					local upvalue = self:FindLocalUpvalue(key, scope)
 
 					if upvalue then
 						if upvalue:IsImmutable() then
