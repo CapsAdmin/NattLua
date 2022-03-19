@@ -65,8 +65,8 @@ function META:Render(config)
 		-- we have to do this because nattlua.transpiler.emitter is not yet typed
 		-- so if it's hoisted the self.nlua will fail
 		
-		--[[# attest.expect_diagnostic("warning", "always false") ]]
-		--[[# attest.expect_diagnostic("warning", "always true") ]]
+		--[[# attest.expect_diagnostic<|"warning", "always false"|> ]]
+		--[[# attest.expect_diagnostic<|"warning", "always true"|> ]]
 		if IMPORTS--[[# as false]] then
 			emitter = IMPORTS["nattlua.transpiler.emitter"]()
 		else
