@@ -1,6 +1,9 @@
 local META = ...
+--[[#local type { TokenType } = import("~/nattlua/lexer/token.nlua")]]
+
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
+local math_huge = math.huge
 
 local function Value(self, symbol, value)
 	local node = self:StartNode("expression", "value")
@@ -21,12 +24,10 @@ local function fix(tk, new_value)
 	return tk
 end
 
-function META:NewToken(type, value)
+function META:NewToken(type--[[#: TokenType]], value--[[#: string]])
 	local tk = {}
 	tk.type = type
 	tk.is_whitespace = false
-	tk.start = start
-	tk.stop = stop
 	tk.value = value
 	return tk
 end
@@ -81,7 +82,9 @@ function META:ReadTealFunctionSignature()
 end
 
 function META:ReadTealKeywordValueExpression()
-	if not typesystem_syntax:IsValue(self:GetToken()) then return end
+    local token = self:GetToken()
+    if not token then return end
+	if not typesystem_syntax:IsValue(token) then return end
 
 	local node = self:StartNode("expression", "value")
 	node.value = self:ReadToken()

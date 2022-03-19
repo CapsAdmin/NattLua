@@ -116,6 +116,20 @@ local type TableExpression = Node & {
 			["separators"] = List<|Token|>,
 		},
 	}
+// { [key] = value, key = value, value }
+local type TypeTableExpression = Node & {
+		type = "expression",
+		kind = "type_table",
+		children = List<|Node|>,
+		spread = boolean,
+		is_array = boolean,
+		is_dictionary = boolean,
+		tokens = Expression.tokens & {
+			["{"] = Token,
+			["}"] = Token,
+			["separators"] = List<|Token|>,
+		},
+	}
 // foo(a,b,c)
 local type PostfixCallSubExpression = Node & {
 		type = "expression",
@@ -341,6 +355,7 @@ local type FunctionStatement = Node & {
 		arguments = List<|FunctionArgumentSubExpression|>,
 		return_types = List<|FunctionReturnTypeSubExpression|>,
 		statements = List<|Node|>,
+        identifiers_typesystem = nil | List<|Node|>,
 		tokens = Expression.tokens & {
 			["function"] = Token,
 			["arguments)"] = Token,
@@ -542,6 +557,7 @@ local type FunctionSignatureTypeExpression = Node & {
 		stmnt = boolean; // ???
 		identifiers = nil | List<|FunctionArgumentSubExpression|>,
 		return_types = nil | List<|FunctionReturnTypeSubExpression|>,
+        identifiers_typesystem = nil | List<|Node|>,
 		tokens = Expression.tokens & {
 			["function"] = Token,
 			["="] = Token,
@@ -616,6 +632,7 @@ local type Nodes = {
 	CallExpressionStatement,
 	FunctionSignatureTypeExpression,
 	AssignmentTypeStatement,
+    TypeTableExpression,
 }
 local type ExpressionKind = (function()
 	local type union = |
@@ -687,4 +704,5 @@ return {
 	CallExpressionStatement = CallExpressionStatement,
 	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
 	AssignmentTypeStatement = AssignmentTypeStatement,
+    TypeTableExpression = TypeTableExpression,
 }

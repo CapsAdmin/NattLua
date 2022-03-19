@@ -266,15 +266,11 @@ analyzer function loadfile(path: string)
 	local compiler = nl.Compiler(code, "@" .. path:GetData())
 	assert(compiler:Lex())
 	assert(compiler:Parse())
-	return types.Function(
-		{
-			arg = types.Tuple({}),
-			ret = types.Tuple({}),
-			lua_function = function(...)
-				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
-			end,
-		}
-	):SetNode(compiler.SyntaxTree)
+    local f = types.AnyFunction()
+    f.Data.lua_function = function(...)
+        return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
+    end
+	return f:SetNode(compiler.SyntaxTree)
 end
 
 analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
