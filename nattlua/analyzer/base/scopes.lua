@@ -93,18 +93,7 @@ return function(META)
 
 					if not scope then return end
 
-					local found = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
-
-					if found then return found end
-				end
-
-				function META:LocalValueExists(key, scope)
-					scope = scope or self:GetScope()
-
-					if not scope then return end
-
-					local found = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
-					return found ~= nil
+					return scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
 				end
 
 				function META:SetEnvironmentOverride(node, obj, env)
@@ -150,8 +139,20 @@ return function(META)
 
 					return g
 				end
+				
+				function META:GetLocalOrGlobalValue(key, scope)
+					local upvalue = self:FindLocalUpvalue(key, scope)
 
-				function META:FindEnvironmentValue(key)
+					if upvalue then
+						if self:IsRuntime() then
+							return self:GetMutatedUpvalue(upvalue) or upvalue:GetValue()
+						end
+
+						return upvalue:GetValue()
+					end
+
+					if val then return val end
+
 					-- look up in parent if not found
 					if self:IsRuntime() then
 						local g = self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
@@ -168,22 +169,6 @@ return function(META)
 					end
 
 					return self:IndexOperator(key:GetNode(), self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()), key)
-				end
-
-				function META:GetLocalOrGlobalValue(key, scope)
-					local upvalue = self:FindLocalUpvalue(key, scope)
-
-					if upvalue then
-						if self:IsRuntime() then
-							return self:GetMutatedUpvalue(upvalue) or upvalue:GetValue()
-						end
-
-						return upvalue:GetValue()
-					end
-
-					if val then return val end
-
-					return self:FindEnvironmentValue(key)
 				end
 
 				function META:SetLocalOrGlobalValue(key, val, scope)
