@@ -425,17 +425,45 @@ return function(META)
 		end
 
 		do
+			function META:PushContextValue(key, value)
+				self.context_values[key] = self.context_values[key] or {}
+				table.insert(self.context_values[key], 1, value)
+			end
+
+			function META:GetContextValue(key, level)
+				return self.context_values[key] and self.context_values[key][level or 1]
+			end
+
+			function META:PopContextValue(key)
+				return table.remove(self.context_values[key], 1)
+			end
+		end
+
+		do
+			function META:PushContextRef(key)
+				self.context_ref[key] = (self.context_ref[key] or 0) + 1
+			end
+
+			function META:GetContextRef(key)
+				return self.context_ref[key] and self.context_ref[key] > 0
+			end
+
+			function META:PopContextRef(key)
+				self.context_ref[key] = (self.context_ref[key] or 0) - 1
+			end
+		end
+
+		do
 			function META:GetCurrentAnalyzerEnvironment()
-				return self.environment_stack and self.environment_stack[1] or "runtime"
+				return self:GetContextValue("analyzer_environment") or "runtime"
 			end
 
 			function META:PushAnalyzerEnvironment(env--[[#: "typesystem" | "runtime"]])
-				self.environment_stack = self.environment_stack or {}
-				table.insert(self.environment_stack, 1, env)
+				self:PushContextValue("analyzer_environment", env)
 			end
 
 			function META:PopAnalyzerEnvironment()
-				table.remove(self.environment_stack, 1)
+				self:PopContextValue("analyzer_environment")
 			end
 
 			function META:IsTypesystem()
@@ -450,51 +478,43 @@ return function(META)
 		do
 			function META:IsInUncertainLoop(scope)
 				scope = scope or self:GetScope():GetNearestFunctionScope()
-				return self.uncertain_loop_stack and
-					self.uncertain_loop_stack[1] == scope:GetNearestFunctionScope()
+				return self:GetContextValue("uncertain_loop") == scope:GetNearestFunctionScope()
 			end
 
 			function META:PushUncertainLoop(b)
-				self.uncertain_loop_stack = self.uncertain_loop_stack or {}
-				table.insert(self.uncertain_loop_stack, 1, b and self:GetScope():GetNearestFunctionScope())
+				return self:PushContextValue("uncertain_loop", b and self:GetScope():GetNearestFunctionScope())
 			end
 
 			function META:PopUncertainLoop()
-				table.remove(self.uncertain_loop_stack, 1)
+				return self:PopContextValue("uncertain_loop")
 			end
 		end
 
 		do
 			function META:GetActiveNode()
-				return self.active_node_stack and self.active_node_stack[1]
+				return self:GetContextValue("active_node")
 			end
 
 			function META:PushActiveNode(node)
-				self.active_node_stack = self.active_node_stack or {}
-				table.insert(self.active_node_stack, 1, node)
+				self:PushContextValue("active_node", node)
 			end
 
 			function META:PopActiveNode()
-				table.remove(self.active_node_stack, 1)
+				self:PopContextValue("active_node")
 			end
 		end
 
 		do
 			function META:PushCurrentType(obj, type)
-				self.current_type_stack = self.current_type_stack or {}
-				self.current_type_stack[type] = self.current_type_stack[type] or {}
-				table.insert(self.current_type_stack[type], 1, obj)
+				self:PushContextValue("current_type_" .. type, obj)
 			end
 
 			function META:PopCurrentType(type)
-				table.remove(self.current_type_stack[type], 1)
+				self:PopContextValue("current_type_" .. type)
 			end
 
 			function META:GetCurrentType(type, offset)
-				return self.current_type_stack and
-					self.current_type_stack[type] and
-					self.current_type_stack[type][offset or
-					1]
+				return self:GetContextValue("current_type_" .. type, offset)
 			end
 		end
 	end

@@ -118,16 +118,15 @@ return function(META)
 	end
 
 	function META:PushProtectedCall()
-		self.type_protected_call_stack = self.type_protected_call_stack or 0
-		self.type_protected_call_stack = self.type_protected_call_stack + 1
+		self:PushContextRef("type_protected_call")
 	end
 
 	function META:PopProtectedCall()
-		self.type_protected_call_stack = self.type_protected_call_stack - 1
+		self:PopContextRef("type_protected_call")
 	end
 
 	function META:IsTypeProtectedCall()
-		return self.type_protected_call_stack and self.type_protected_call_stack > 0
+		return self:GetContextRef("type_protected_call")
 	end
 
 	function META:Error(node, msg)
