@@ -137,7 +137,7 @@ return {
 						else
 							self:Error(node, err)
 						end
-					else
+					elseif err then
 						self:Error(node, err)
 					end
 				elseif self:IsTypesystem() then

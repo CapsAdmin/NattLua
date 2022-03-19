@@ -30,7 +30,8 @@ analyzer function attest.truthy(obj: any, err: string | nil)
 end
 
 analyzer function attest.expect_diagnostic(severity: "warning" | "error", msg: string)
-	analyzer.expect_diagnostic = {msg = msg:GetData(), severity = severity:GetData()}
+	analyzer.expect_diagnostic = analyzer.expect_diagnostic or {}
+	table.insert(analyzer.expect_diagnostic, {msg = msg:GetData(), severity = severity:GetData()})
 end
 
 _G.attest = attest

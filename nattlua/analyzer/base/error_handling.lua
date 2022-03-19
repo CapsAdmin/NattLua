@@ -83,10 +83,11 @@ return function(META)
 
 		if
 			self.expect_diagnostic and
-			self.expect_diagnostic.severity == severity and
-			msg_str:find(self.expect_diagnostic.msg)
+			self.expect_diagnostic[1] and
+			self.expect_diagnostic[1].severity == severity and
+			msg_str:find(self.expect_diagnostic[1].msg)
 		then
-			self.expect_diagnostic = nil
+			table.remove(self.expect_diagnostic, 1)
 			return
 		end
 

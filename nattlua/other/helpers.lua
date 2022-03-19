@@ -124,7 +124,7 @@ do
 		return math.min(math.max(num, min), max)
 	end
 
-	local function find_position_after_lines(str, line_count, reverse)
+	local function find_position_after_lines(str--[[#: string]], line_count--[[#: number]])
 		local count = 0
 
 		for i = 1, #str do
@@ -138,9 +138,9 @@ do
 		return #str
 	end
 
-	local function split(self, separator)
+	local function split(self--[[#: string]], separator--[[#: string]])
 		local tbl = {}
-		local current_pos = 1
+		local current_pos--[[#: number]] = 1
 
 		for i = 1, #self do
 			local start_pos, end_pos = self:find(separator, current_pos, true)
@@ -160,9 +160,7 @@ do
 		return tbl
 	end
 
-	local function pad_left(str, len, char)
-		str = tostring(str)
-
+	local function pad_left(str--[[#: string]], len--[[#: number]], char--[[#: string]])
 		if #str < len + 1 then return char:rep(len - #str + 1) .. str end
 
 		return str
@@ -170,7 +168,7 @@ do
 
 	function helpers.BuildSourceCodePointMessage(
 		lua_code--[[#: string]],
-		path--[[#: string]],
+		path--[[#: nil | string]],
 		msg--[[#: string]],
 		start--[[#: number]],
 		stop--[[#: number]],
@@ -194,12 +192,12 @@ do
 		local i = data.line_start - #lines_before
 
 		for _, line in ipairs(lines_before) do
-			table.insert(lines, pad_left(i, number_length, " ") .. " | " .. line)
+			table.insert(lines, pad_left(tostring(i), number_length, " ") .. " | " .. line)
 			i = i + 1
 		end
 
 		for i2, line in ipairs(lines_between) do
-			local prefix = pad_left(i, number_length, " ") .. " | "
+			local prefix = pad_left(tostring(i), number_length, " ") .. " | "
 			table.insert(lines, prefix .. line)
 
 			if #lines_between > 1 then
@@ -229,7 +227,7 @@ do
 		end
 
 		for _, line in ipairs(lines_after) do
-			table.insert(lines, pad_left(i, number_length, " ") .. " | " .. line)
+			table.insert(lines, pad_left(tostring(i), number_length, " ") .. " | " .. line)
 			i = i + 1
 		end
 
