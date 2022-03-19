@@ -1,5 +1,5 @@
-import { editor as MonacoEditor, languages, MarkerSeverity } from "monaco-editor"
-import { PublishDiagnosticsParams, Range, DidChangeTextDocumentParams, DiagnosticSeverity } from "vscode-languageserver"
+import { editor as MonacoEditor, IRange, languages, MarkerSeverity, Uri } from "monaco-editor"
+import { PublishDiagnosticsParams, Range, DidChangeTextDocumentParams, Position } from "vscode-languageserver"
 import { createEditor } from "./editor"
 import { loadLua, prettyPrint } from "./lua"
 import { registerSyntax } from "./syntax"
@@ -67,6 +67,57 @@ const main = async () => {
 
 	tab.onDidChangeContent((e) => {
 		recompile()
+	})
+
+	languages.registerRenameProvider("nattlua", {
+		provideRenameEdits: (model, position, newName, token) => {
+			let response = {
+				textDocument: {
+					uri: "file:///test.nlua",
+					text: model.getValue(),
+				},
+				position: {
+					line: position.lineNumber - 1,
+					character: position.column - 1,
+				},
+				newName,
+			}
+
+			let result = lsp.methods["textDocument/rename"](lsp, response) as {
+				changes: {
+					[uri: string]: {
+						textDocument: { version?: number }
+						edits: Array<{
+							range: { start: Position; end: Position }
+							newText: string
+						}>
+					}
+				}
+			}
+			let edits = []
+			for (const [uri, changes] of Object.entries(result.changes)) {
+				for (const change of changes.edits) {
+					edits.push({
+						resource: model.uri,
+						edit: {
+							range: {
+								startLineNumber: change.range.start.line + 1,
+								startColumn: change.range.start.character + 1,
+								endLineNumber: change.range.end.line + 1,
+								endColumn: change.range.end.character + 1,
+							},
+							text: change.newText,
+						},
+					})
+				}
+			}
+
+			console.log(edits)
+
+			return {
+				edits,
+			}
+		},
 	})
 
 	languages.registerHoverProvider("nattlua", {

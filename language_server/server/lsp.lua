@@ -295,13 +295,15 @@ end
 lsp.methods["textDocument/didSave"] = function(self, params)
 	compile(self, params.textDocument.uri, params.textDocument.text)
 end
-lsp.methods["textDocument/hover"] = function(self, params)
-	local compiler = compile(self, params.textDocument.uri, params.textDocument.text)
-	local pos = params.position
-	local token, data = helpers.FindTokenFromLineCharacterPosition(compiler.Tokens, compiler.Code:GetString(), pos.line + 1, pos.character + 1)
 
-	if not token or not data then return end
+local function find_token(self, uri, text, line, character)
+	local compiler = compile(self, uri, text)
+	local token, data = helpers.FindTokenFromLineCharacterPosition(compiler.Tokens, compiler.Code:GetString(), line + 1, character + 1)
 
+	return token, data
+end
+
+local function find_type_from_token(token)
 	local found_parents = {}
 
 	do
@@ -313,6 +315,58 @@ lsp.methods["textDocument/hover"] = function(self, params)
 		end
 	end
 
+
+	for _, node in ipairs(found_parents) do
+		for _, obj in ipairs(node:GetTypes()) do
+			if obj.Type == "string" and obj:GetData() == token.value then
+
+			else
+				return obj, found_parents
+			end
+		end
+	end
+
+	return nil, found_parents
+end
+
+lsp.methods["textDocument/rename"] = function(self, params)
+	local token, data = find_token(self, params.textDocument.uri, params.textDocument.text, params.position.line, params.position.character)
+	if not token or not data then return end
+
+	local obj = find_type_from_token(token)
+
+	local upvalue = obj:GetUpvalue()
+	local changes = {}
+	if upvalue and upvalue.mutations then
+		for i,v in ipairs(upvalue.mutations[upvalue:GetKey()]) do
+			local node = v.value:GetNode()
+			if node then
+				changes[params.textDocument.uri] = changes[params.textDocument.uri] or {
+					textDocument = {
+						version = nil,
+					},
+					edits = {},
+				}
+
+				local edits = changes[params.textDocument.uri].edits
+
+				table.insert(edits, {
+					range = get_range(node.Code, node:GetStartStop()),
+					newText = params.newName,
+				})
+			end
+		end
+	end
+
+	return {
+		changes = changes,
+	}
+end
+
+lsp.methods["textDocument/hover"] = function(self, params)
+	local token, data = find_token(self, params.textDocument.uri, params.textDocument.text, params.position.line, params.position.character)
+	if not token or not data then return end
+
 	local markdown = ""
 
 	local function add_line(str)
@@ -323,28 +377,15 @@ lsp.methods["textDocument/hover"] = function(self, params)
 		add_line("```lua\n" .. tostring(str) .. "\n```")
 	end
 
-	for _, node in ipairs(found_parents) do
-		local found = false
-
-		for _, obj in ipairs(node:GetTypes()) do
-			if obj.Type == "string" and obj:GetData() == token.value then
-
-			else
-				add_code(tostring(obj))
-				found = true
-
-				break
-			end
-		end
-
-		if found then break end
+	local obj, found_parents = find_type_from_token(token)
+	if obj then
+		add_code(tostring(obj))
 	end
-
 	if found_parents[2] then
 		local min, max = found_parents[2]:GetStartStop()
 
 		if min then
-			local temp = helpers.SubPositionToLinePosition(compiler.Code:GetString(), min, max)
+			local temp = helpers.SubPositionToLinePosition(found_parents[2].Code:GetString(), min, max)
 
 			if temp then data = temp end
 		end
