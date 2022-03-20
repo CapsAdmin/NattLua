@@ -24,12 +24,16 @@ const main = async () => {
 	})
 
 	for (const [name, code] of Object.entries(assortedExamples)) {
-		let str
+		let str: string
 		if (typeof code === "string") {
 			str = code
 		} else {
 			str = (await code).default
 		}
+
+		// remove attest.expect_diagnostic() calls
+		str = str.replaceAll(/attest\.expect_diagnostic\(.*\)/g, "")
+
 		const option = new Option(name, str)
 		select.options.add(option)
 		if (name == "array") {
@@ -69,11 +73,34 @@ const main = async () => {
 		recompile()
 	})
 
+	languages.registerInlayHintsProvider("nattlua", {
+		provideInlayHints(model, range) {
+			let response = {
+				textDocument: {
+					uri: model.uri,
+					text: model.getValue(),
+				},
+				start: {
+					line: range.getStartPosition().lineNumber - 1,
+					character: range.getStartPosition().column - 1,
+				},
+				end: {
+					line: range.getEndPosition().lineNumber - 1,
+					character: range.getEndPosition().column - 1,
+				},
+			}
+
+			let result = lsp.methods["textDocument/inlay"](lsp, response)
+
+			return result
+		},
+	})
+
 	languages.registerRenameProvider("nattlua", {
 		provideRenameEdits: (model, position, newName, token) => {
 			let response = {
 				textDocument: {
-					uri: "file:///test.nlua",
+					uri: model.uri,
 					text: model.getValue(),
 				},
 				position: {

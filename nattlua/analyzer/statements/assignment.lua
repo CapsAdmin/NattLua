@@ -43,7 +43,7 @@ return {
 		for left_pos, exp_key in ipairs(statement.left) do
 			if exp_key.kind == "value" then
 				-- local foo, bar = *
-				left[left_pos] = NodeToString(exp_key)
+				left[left_pos] = NodeToString(exp_key, true)
 			elseif exp_key.kind == "postfix_expression_index" then
 				-- foo[bar] = *
 				left[left_pos] = self:AnalyzeExpression(exp_key.expression)

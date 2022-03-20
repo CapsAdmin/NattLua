@@ -579,7 +579,7 @@ do
 		return math.min(math.max(num, min), max)
 	end
 
-	local function find_position_after_lines(str, line_count, reverse)
+	local function find_position_after_lines(str, line_count)
 		local count = 0
 
 		for i = 1, #str do
@@ -616,8 +616,6 @@ do
 	end
 
 	local function pad_left(str, len, char)
-		str = tostring(str)
-
 		if #str < len + 1 then return char:rep(len - #str + 1) .. str end
 
 		return str
@@ -649,12 +647,12 @@ do
 		local i = data.line_start - #lines_before
 
 		for _, line in ipairs(lines_before) do
-			table.insert(lines, pad_left(i, number_length, " ") .. " | " .. line)
+			table.insert(lines, pad_left(tostring(i), number_length, " ") .. " | " .. line)
 			i = i + 1
 		end
 
 		for i2, line in ipairs(lines_between) do
-			local prefix = pad_left(i, number_length, " ") .. " | "
+			local prefix = pad_left(tostring(i), number_length, " ") .. " | "
 			table.insert(lines, prefix .. line)
 
 			if #lines_between > 1 then
@@ -684,7 +682,7 @@ do
 		end
 
 		for _, line in ipairs(lines_after) do
-			table.insert(lines, pad_left(i, number_length, " ") .. " | " .. line)
+			table.insert(lines, pad_left(tostring(i), number_length, " ") .. " | " .. line)
 			i = i + 1
 		end
 
@@ -715,21 +713,6 @@ do
 		local str = table.concat(lines, "\n")
 		str = str:gsub("\t", " ")
 		return str
-	end
-end
-
-function helpers.FindTokenFromLineCharacterPosition(
-	tokens,
-	code,
-	line,
-	char
-)
-	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
-
-	for _, token in ipairs(tokens) do
-		if sub_pos >= token.start and sub_pos <= token.stop then
-			return token, helpers.SubPositionToLinePosition(code, token.start, token.stop)
-		end
 	end
 end
 
@@ -874,41 +857,52 @@ local errors = {
 	end,
 }
 return errors end)(...) return __M end end
+do local __M; IMPORTS["nattlua.other.class"] = function(...) __M = __M or (function(...) local class = {}
+
+function class.CreateTemplate(type_name)
+	local meta = {}
+	meta.Type = type_name
+	meta.__index = meta
+	
+
+	function meta.GetSet(tbl, name, default)
+		tbl[name] = default
+		
+		tbl["Set" .. name] = function(self, val)
+			self[name] = val
+			return self
+		end
+		tbl["Get" .. name] = function(self)
+			return self[name]
+		end
+	end
+
+	function meta.IsSet(tbl, name, default)
+		tbl[name] = default
+		
+		tbl["Set" .. name] = function(self, val)
+			self[name] = val
+			return self
+		end
+		tbl["Is" .. name] = function(self)
+			return self[name]
+		end
+	end
+
+	return meta
+end
+
+return class end)(...) return __M end end
 IMPORTS['nattlua/types/base.lua'] = function() local assert = _G.assert
 local tostring = _G.tostring
 local setmetatable = _G.setmetatable
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-local META = {}
-META.__index = META
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("base")
 
 
 
 
-
-
-function META.GetSet(tbl, name, default)
-	tbl[name] = default
-	
-	tbl["Set" .. name] = function(self, val)
-		self[name] = val
-		return self
-	end
-	tbl["Get" .. name] = function(self)
-		return self[name]
-	end
-end
-
-function META.IsSet(tbl, name, default)
-	tbl[name] = default
-	
-	tbl["Set" .. name] = function(self, val)
-		self[name] = val
-		return self
-	end
-	tbl["Is" .. name] = function(self)
-		return self[name]
-	end
-end
 
 
 
@@ -984,10 +978,10 @@ do -- token, expression and statement association
 	META:GetSet("TokenLabelSource", nil)
 	META:GetSet("Node", nil)
 
-	function META:SetNode(node)
+	function META:SetNode(node, is_local)
 		self.Node = node
 
-		if node then node:AddType(self) end
+		if node and not is_local then node:AddType(self) end
 
 		return self
 	end
@@ -3261,8 +3255,8 @@ return {
 	LStringNoMeta = function(str)
 		return setmetatable({Data = str}, META):SetLiteral(true)
 	end,
-	NodeToString = function(node)
-		return META.New(node.value.value):SetLiteral(true):SetNode(node)
+	NodeToString = function(node, is_local)
+		return META.New(node.value.value):SetLiteral(true):SetNode(node, is_local)
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.table"] = function(...) __M = __M or (function(...) local setmetatable = _G.setmetatable
@@ -3843,7 +3837,13 @@ end
 
 function META:Get(key, from_contract)
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
-		return self["Get" .. key:GetData():sub(2)](self)
+		local val = self["Get" .. key:GetData():sub(2)](self)
+
+		if not val then
+			return type_errors.other("missing value on table " .. key:GetData())
+		end
+
+		return val
 	end
 
 	if key.Type == "union" then
@@ -4235,6 +4235,8 @@ IMPORTS['nattlua/definitions/lua/globals.nlua'] = function()
 
 
 _G.arg = _
+
+
 
 
 
@@ -8581,8 +8583,8 @@ return {
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.code.code"] = function(...) __M = __M or (function(...) local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
-local META = {}
-META.__index = META
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("code")
 
 
 
@@ -8712,12 +8714,12 @@ return function(alloc, size)
 end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.lexer.token"] = function(...) __M = __M or (function(...) local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 
 
 
 
-local META = {}
-META.__index = META
+local META = class.CreateTemplate("token")
 
 
 
@@ -8871,10 +8873,11 @@ function characters.IsHex(c)
 end
 
 return characters end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.syntax"] = function(...) __M = __M or (function(...) 
+do local __M; IMPORTS["nattlua.syntax.syntax"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 
-local META = {}
-META.__index = META
+
+
+local META = class.CreateTemplate("syntax")
 
 
 
@@ -9239,10 +9242,10 @@ do local __M; IMPORTS["nattlua.lexer.lexer"] = function(...) __M = __M or (funct
 local Code = IMPORTS['nattlua.code.code']("nattlua.code.code")
 local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 local Token = IMPORTS['nattlua.lexer.token']("nattlua.lexer.token").New
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
-local META = {}
-META.__index = META
+local META = class.CreateTemplate("lexer")
 
 
 local B = string.byte
@@ -10020,6 +10023,7 @@ IMPORTS['./nattlua/parser/nodes.nlua'] = function()
 
 
 
+
 return {
 	ExpressionKind = ExpressionKind,
 	StatementKind = StatementKind,
@@ -10072,10 +10076,11 @@ return {
 	CallExpressionStatement = CallExpressionStatement,
 	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
 	AssignmentTypeStatement = AssignmentTypeStatement,
+	TypeTableExpression = TypeTableExpression,
 } end
 IMPORTS['nattlua/code/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
-local META = {}
-META.__index = META
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("code")
 
 
 
@@ -10207,6 +10212,7 @@ IMPORTS['nattlua/parser/nodes.nlua'] = function()
 
 
 
+
 return {
 	ExpressionKind = ExpressionKind,
 	StatementKind = StatementKind,
@@ -10259,6 +10265,7 @@ return {
 	CallExpressionStatement = CallExpressionStatement,
 	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
 	AssignmentTypeStatement = AssignmentTypeStatement,
+	TypeTableExpression = TypeTableExpression,
 } end
 do local __M; IMPORTS["nattlua.parser.node"] = function(...) __M = __M or (function(...) 
 
@@ -10274,9 +10281,8 @@ local type = _G.type
 local table = _G.table
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
-local META = {}
-META.__index = META
-META.Type = "node"
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("node")
 
 
 
@@ -10295,12 +10301,7 @@ function META:__tostring()
 
 		if name:sub(1, 1) == "@" then
 			local data = helpers.SubPositionToLinePosition(lua_code, self:GetStartStop())
-
-			if data and data.line_start then
-				str = str .. " @ " .. name:sub(2) .. ":" .. data.line_start
-			else
-				str = str .. " @ " .. name:sub(2) .. ":" .. "?"
-			end
+			str = str .. " @ " .. name:sub(2) .. ":" .. data.line_start
 		end
 	elseif self.type == "expression" then
 		if self.value and type(self.value.value) == "string" then
@@ -10315,8 +10316,9 @@ function META:Render(config)
 	local emitter
 
 	do
-		-- we have to do this because nattlua.transpiler.emitter is not yet typed
-		-- so if it's hoisted the self.nlua will fail
+		
+		
+
 		if IMPORTS then
 			emitter = IMPORTS["nattlua.transpiler.emitter"]()
 		else
@@ -10372,10 +10374,12 @@ function META:GetLength()
 end
 
 function META:GetNodes()
+	local statements = self.statements
+
 	if self.kind == "if" then
 		local flat = {}
 
-		for _, statements in ipairs(assert(self.statements)) do
+		for _, statements in ipairs(assert(statements)) do
 			for _, v in ipairs(statements) do
 				table.insert(flat, v)
 			end
@@ -10384,7 +10388,7 @@ function META:GetNodes()
 		return flat
 	end
 
-	return self.statements or {}
+	return statements or {}
 end
 
 function META:HasNodes()
@@ -10441,8 +10445,8 @@ local type = _G.type
 local table = _G.table
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
-local META = {}
-META.__index = META
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("parser")
 
 
 
@@ -10509,6 +10513,9 @@ function META:StartNode(
 	if self.OnNode then self:OnNode(node) end
 
 	table.insert(self.nodes, 1, node)
+
+	
+
 	return node
 end
 
@@ -12394,8 +12401,12 @@ function META:ReadCallOrAssignmentStatement()
 	)
 end end
 IMPORTS['nattlua/parser/teal.lua'] = function(...) local META = ...
+
+
+
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
+local math_huge = math.huge
 
 local function Value(self, symbol, value)
 	local node = self:StartNode("expression", "value")
@@ -12420,8 +12431,6 @@ function META:NewToken(type, value)
 	local tk = {}
 	tk.type = type
 	tk.is_whitespace = false
-	tk.start = start
-	tk.stop = stop
 	tk.value = value
 	return tk
 end
@@ -12476,7 +12485,11 @@ function META:ReadTealFunctionSignature()
 end
 
 function META:ReadTealKeywordValueExpression()
-	if not typesystem_syntax:IsValue(self:GetToken()) then return end
+	local token = self:GetToken()
+
+	if not token then return end
+
+	if not typesystem_syntax:IsValue(token) then return end
 
 	local node = self:StartNode("expression", "value")
 	node.value = self:ReadToken()
@@ -12842,6 +12855,10 @@ local table_insert = _G.table.insert
 local table_remove = _G.table.remove
 local ipairs = _G.ipairs
 
+
+
+
+
 function META:ReadIdentifier(expect_type)
 	if not self:IsType("letter") and not self:IsValue("...") then return end
 
@@ -13150,6 +13167,41 @@ function types.Initialize()
 end
 
 return types end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.base.upvalue"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("upvalue")
+
+function META:__tostring()
+	return "[" .. tostring(self.key) .. ":" .. tostring(self.value) .. "]"
+end
+
+function META:GetValue()
+	return self.value
+end
+
+function META:GetKey()
+	return self.key
+end
+
+function META:SetValue(value)
+	self.value = value
+	value:SetUpvalue(self)
+end
+
+function META:SetImmutable(b)
+	self.immutable = b
+end
+
+function META:IsImmutable()
+	return self.immutable
+end
+
+function META.New(obj)
+	local self = setmetatable({}, META)
+	self:SetValue(obj)
+	return self
+end
+
+return META.New end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.base.lexical_scope"] = function(...) __M = __M or (function(...) local ipairs = ipairs
 local pairs = pairs
 local error = error
@@ -13160,74 +13212,9 @@ local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local table_insert = table.insert
 local table = _G.table
 local type = _G.type
-local upvalue_meta
-
-do
-	local META = {}
-	META.__index = META
-	META.Type = "upvalue"
-
-	function META:__tostring()
-		return "[" .. self.key .. ":" .. tostring(self.value) .. "]"
-	end
-
-	function META:GetValue()
-		return self.value
-	end
-
-	function META:GetKey()
-		return self.key
-	end
-
-	function META:SetValue(value)
-		self.value = value
-		value:SetUpvalue(self)
-	end
-
-	function META:SetImmutable(b)
-		self.immutable = b
-	end
-
-	function META:IsImmutable()
-		return self.immutable
-	end
-
-	upvalue_meta = META
-end
-
-local function Upvalue(obj)
-	local self = setmetatable({}, upvalue_meta)
-	self:SetValue(obj)
-	return self
-end
-
-local META = {}
-META.__index = META
-local LexicalScope
-
-function META.GetSet(tbl, name, default)
-	tbl[name] = default
-	
-	tbl["Set" .. name] = function(self, val)
-		self[name] = val
-		return self
-	end
-	tbl["Get" .. name] = function(self)
-		return self[name]
-	end
-end
-
-function META.IsSet(tbl, name, default)
-	tbl[name] = default
-	
-	tbl["Set" .. name] = function(self, val)
-		self[name] = val
-		return self
-	end
-	tbl["Is" .. name] = function(self)
-		return self[name]
-	end
-end
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local Upvalue = IMPORTS['nattlua.analyzer.base.upvalue']("nattlua.analyzer.base.upvalue")
+local META = class.CreateTemplate("lexical_scope")
 
 do
 	function META:IsUncertain()
@@ -13325,7 +13312,7 @@ function META:FindUpvalue(key, env)
 				end
 			end
 
-			return upvalue, scope
+			return upvalue
 		end
 
 		prev_scope = scope
@@ -13357,7 +13344,7 @@ function META:GetUpvalues(type)
 end
 
 function META:Copy()
-	local copy = LexicalScope()
+	local copy = self.New()
 
 	if self.upvalues.typesystem then
 		for _, upvalue in ipairs(self.upvalues.typesystem.list) do
@@ -13640,7 +13627,7 @@ end
 
 local ref = 0
 
-function LexicalScope(parent, upvalue_position)
+function META.New(parent, upvalue_position)
 	ref = ref + 1
 	local scope = {
 		ref = ref,
@@ -13662,7 +13649,7 @@ function LexicalScope(parent, upvalue_position)
 	return scope
 end
 
-return LexicalScope end)(...) return __M end end
+return META.New end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.base.scopes"] = function(...) __M = __M or (function(...) local type = type
 local ipairs = ipairs
 local tostring = tostring
@@ -13679,16 +13666,6 @@ return function(META)
 		self.environments = {runtime = {}, typesystem = {}}
 		self.scope_stack = {}
 	end)
-
-	function META:Hash(node)
-		if node.Type == "string" then return node:GetHash() end
-
-		if type(node) == "string" then return node end
-
-		if type(node.value) == "string" then return node.value end
-
-		return node.value.value
-	end
 
 	function META:PushScope(scope)
 		table.insert(self.scope_stack, self.scope)
@@ -13753,20 +13730,16 @@ return function(META)
 		return upvalue
 	end
 
-	function META:OnCreateLocalValue(upvalue, key, val) end
-
 	function META:FindLocalUpvalue(key, scope)
 		scope = scope or self:GetScope()
 
 		if not scope then return end
 
-		local found, scope = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
-
-		if found then return found, scope end
+		return scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
 	end
 
-	function META:FindLocalValue(key, scope)
-		local upvalue, scope = self:FindLocalUpvalue(key, scope)
+	function META:GetLocalOrGlobalValue(key, scope)
+		local upvalue = self:FindLocalUpvalue(key, scope)
 
 		if upvalue then
 			if self:IsRuntime() then
@@ -13775,62 +13748,9 @@ return function(META)
 
 			return upvalue:GetValue()
 		end
-	end
 
-	function META:LocalValueExists(key, scope)
-		scope = scope or self:GetScope()
+		if val then return val end
 
-		if not scope then return end
-
-		local found = scope:FindUpvalue(key, self:GetCurrentAnalyzerEnvironment())
-		return found ~= nil
-	end
-
-	function META:SetEnvironmentOverride(node, obj, env)
-		node.environments_override = node.environments_override or {}
-		node.environments_override[env] = obj
-	end
-
-	function META:GetGlobalEnvironmentOverride(node, env)
-		if node.environments_override then return node.environments_override[env] end
-	end
-
-	function META:SetDefaultEnvironment(obj, env)
-		self.default_environment[env] = obj
-	end
-
-	function META:GetDefaultEnvironment(env)
-		return self.default_environment[env]
-	end
-
-	function META:PushGlobalEnvironment(node, obj, env)
-		table.insert(self.environments[env], 1, obj)
-		node.environments = node.environments or {}
-		node.environments[env] = obj
-		self.environment_nodes = self.environment_nodes or {}
-		table.insert(self.environment_nodes, 1, node)
-	end
-
-	function META:PopGlobalEnvironment(env)
-		table.remove(self.environment_nodes, 1)
-		table.remove(self.environments[env], 1)
-	end
-
-	function META:GetGlobalEnvironment(env)
-		local g = self.environments[env][1] or self:GetDefaultEnvironment(env)
-
-		if
-			self.environment_nodes[1] and
-			self.environment_nodes[1].environments_override and
-			self.environment_nodes[1].environments_override[env]
-		then
-			g = self.environment_nodes[1].environments_override[env]
-		end
-
-		return g
-	end
-
-	function META:FindEnvironmentValue(key)
 		-- look up in parent if not found
 		if self:IsRuntime() then
 			local g = self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
@@ -13849,16 +13769,8 @@ return function(META)
 		return self:IndexOperator(key:GetNode(), self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()), key)
 	end
 
-	function META:GetLocalOrGlobalValue(key, scope)
-		local val = self:FindLocalValue(key, scope)
-
-		if val then return val end
-
-		return self:FindEnvironmentValue(key)
-	end
-
 	function META:SetLocalOrGlobalValue(key, val, scope)
-		local upvalue, found_scope = self:FindLocalUpvalue(key, scope)
+		local upvalue = self:FindLocalUpvalue(key, scope)
 
 		if upvalue then
 			if upvalue:IsImmutable() then
@@ -13882,6 +13794,52 @@ return function(META)
 
 		self:Assert(key, self:NewIndexOperator(key:GetNode(), g, key, val))
 		return val
+	end
+
+	do -- environment
+		function META:SetEnvironmentOverride(node, obj, env)
+			node.environments_override = node.environments_override or {}
+			node.environments_override[env] = obj
+		end
+
+		function META:GetGlobalEnvironmentOverride(node, env)
+			if node.environments_override then return node.environments_override[env] end
+		end
+
+		function META:SetDefaultEnvironment(obj, env)
+			self.default_environment[env] = obj
+		end
+
+		function META:GetDefaultEnvironment(env)
+			return self.default_environment[env]
+		end
+
+		function META:PushGlobalEnvironment(node, obj, env)
+			table.insert(self.environments[env], 1, obj)
+			node.environments = node.environments or {}
+			node.environments[env] = obj
+			self.environment_nodes = self.environment_nodes or {}
+			table.insert(self.environment_nodes, 1, node)
+		end
+
+		function META:PopGlobalEnvironment(env)
+			table.remove(self.environment_nodes, 1)
+			table.remove(self.environments[env], 1)
+		end
+
+		function META:GetGlobalEnvironment(env)
+			local g = self.environments[env][1] or self:GetDefaultEnvironment(env)
+
+			if
+				self.environment_nodes[1] and
+				self.environment_nodes[1].environments_override and
+				self.environment_nodes[1].environments_override[env]
+			then
+				g = self.environment_nodes[1].environments_override[env]
+			end
+
+			return g
+		end
 	end
 end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.base.error_handling"] = function(...) __M = __M or (function(...) local table = _G.table
@@ -13960,10 +13918,11 @@ return function(META)
 
 		if
 			self.expect_diagnostic and
-			self.expect_diagnostic.severity == severity and
-			msg_str:find(self.expect_diagnostic.msg)
+			self.expect_diagnostic[1] and
+			self.expect_diagnostic[1].severity == severity and
+			msg_str:find(self.expect_diagnostic[1].msg)
 		then
-			self.expect_diagnostic = nil
+			table.remove(self.expect_diagnostic, 1)
 			return
 		end
 
@@ -13995,16 +13954,15 @@ return function(META)
 	end
 
 	function META:PushProtectedCall()
-		self.type_protected_call_stack = self.type_protected_call_stack or 0
-		self.type_protected_call_stack = self.type_protected_call_stack + 1
+		self:PushContextRef("type_protected_call")
 	end
 
 	function META:PopProtectedCall()
-		self.type_protected_call_stack = self.type_protected_call_stack - 1
+		self:PopContextRef("type_protected_call")
 	end
 
 	function META:IsTypeProtectedCall()
-		return self.type_protected_call_stack and self.type_protected_call_stack > 0
+		return self:GetContextRef("type_protected_call")
 	end
 
 	function META:Error(node, msg)
@@ -14154,6 +14112,18 @@ return function(META)
 			table.insert(self.deferred_calls, 1, {obj, arguments, node})
 		end
 
+		local function is_ref_function(func)
+			for i, v in ipairs(func:GetArguments():GetData()) do
+				if v.ref_argument then return true end
+			end
+
+			for i, v in ipairs(func:GetReturnTypes():GetData()) do
+				if v.ref_argument then return true end
+			end
+
+			return false
+		end
+
 		function META:AnalyzeUnreachableCode()
 			if not self.deferred_calls then return end
 
@@ -14163,22 +14133,36 @@ return function(META)
 			local called_count = 0
 
 			for _, v in ipairs(self.deferred_calls) do
-				if not v[1].called and not v[1].done and v[1].explicit_arguments then
+				local func = v[1]
+
+				if
+					not func.called and
+					not func.done and
+					func.explicit_arguments and
+					not is_ref_function(func)
+				then
 					local time = os.clock()
 					call(self, table.unpack(v))
 					called_count = called_count + 1
-					v[1].done = true
-					v[1].called = nil
+					func.done = true
+					func.called = nil
 				end
 			end
 
 			for _, v in ipairs(self.deferred_calls) do
-				if not v[1].called and not v[1].done and not v[1].explicit_arguments then
+				local func = v[1]
+
+				if
+					not func.called and
+					not func.done and
+					not func.explicit_arguments and
+					not is_ref_function(func)
+				then
 					local time = os.clock()
 					call(self, table.unpack(v))
 					called_count = called_count + 1
-					v[1].done = true
-					v[1].called = nil
+					func.done = true
+					func.called = nil
 				end
 			end
 
@@ -14454,17 +14438,45 @@ return function(META)
 		end
 
 		do
+			function META:PushContextValue(key, value)
+				self.context_values[key] = self.context_values[key] or {}
+				table.insert(self.context_values[key], 1, value)
+			end
+
+			function META:GetContextValue(key, level)
+				return self.context_values[key] and self.context_values[key][level or 1]
+			end
+
+			function META:PopContextValue(key)
+				return table.remove(self.context_values[key], 1)
+			end
+		end
+
+		do
+			function META:PushContextRef(key)
+				self.context_ref[key] = (self.context_ref[key] or 0) + 1
+			end
+
+			function META:GetContextRef(key)
+				return self.context_ref[key] and self.context_ref[key] > 0
+			end
+
+			function META:PopContextRef(key)
+				self.context_ref[key] = (self.context_ref[key] or 0) - 1
+			end
+		end
+
+		do
 			function META:GetCurrentAnalyzerEnvironment()
-				return self.environment_stack and self.environment_stack[1] or "runtime"
+				return self:GetContextValue("analyzer_environment") or "runtime"
 			end
 
 			function META:PushAnalyzerEnvironment(env)
-				self.environment_stack = self.environment_stack or {}
-				table.insert(self.environment_stack, 1, env)
+				self:PushContextValue("analyzer_environment", env)
 			end
 
 			function META:PopAnalyzerEnvironment()
-				table.remove(self.environment_stack, 1)
+				self:PopContextValue("analyzer_environment")
 			end
 
 			function META:IsTypesystem()
@@ -14479,51 +14491,43 @@ return function(META)
 		do
 			function META:IsInUncertainLoop(scope)
 				scope = scope or self:GetScope():GetNearestFunctionScope()
-				return self.uncertain_loop_stack and
-					self.uncertain_loop_stack[1] == scope:GetNearestFunctionScope()
+				return self:GetContextValue("uncertain_loop") == scope:GetNearestFunctionScope()
 			end
 
 			function META:PushUncertainLoop(b)
-				self.uncertain_loop_stack = self.uncertain_loop_stack or {}
-				table.insert(self.uncertain_loop_stack, 1, b and self:GetScope():GetNearestFunctionScope())
+				return self:PushContextValue("uncertain_loop", b and self:GetScope():GetNearestFunctionScope())
 			end
 
 			function META:PopUncertainLoop()
-				table.remove(self.uncertain_loop_stack, 1)
+				return self:PopContextValue("uncertain_loop")
 			end
 		end
 
 		do
 			function META:GetActiveNode()
-				return self.active_node_stack and self.active_node_stack[1]
+				return self:GetContextValue("active_node")
 			end
 
 			function META:PushActiveNode(node)
-				self.active_node_stack = self.active_node_stack or {}
-				table.insert(self.active_node_stack, 1, node)
+				self:PushContextValue("active_node", node)
 			end
 
 			function META:PopActiveNode()
-				table.remove(self.active_node_stack, 1)
+				self:PopContextValue("active_node")
 			end
 		end
 
 		do
 			function META:PushCurrentType(obj, type)
-				self.current_type_stack = self.current_type_stack or {}
-				self.current_type_stack[type] = self.current_type_stack[type] or {}
-				table.insert(self.current_type_stack[type], 1, obj)
+				self:PushContextValue("current_type_" .. type, obj)
 			end
 
 			function META:PopCurrentType(type)
-				table.remove(self.current_type_stack[type], 1)
+				self:PopContextValue("current_type_" .. type)
 			end
 
 			function META:GetCurrentType(type, offset)
-				return self.current_type_stack and
-					self.current_type_stack[type] and
-					self.current_type_stack[type][offset or
-					1]
+				return self:GetContextValue("current_type_" .. type, offset)
 			end
 		end
 	end
@@ -15122,33 +15126,27 @@ return function(META)
 
 	do
 		function META:PushTruthyExpressionContext()
-			self.truthy_expression_context = (self.truthy_expression_context or 0) + 1
+			self:PushContextRef("truthy_expression_context")
 		end
 
 		function META:PopTruthyExpressionContext()
-			self.truthy_expression_context = self.truthy_expression_context - 1
+			self:PopContextRef("truthy_expression_context")
 		end
 
 		function META:IsTruthyExpressionContext()
-			return self.truthy_expression_context and
-				self.truthy_expression_context > 0 and
-				true or
-				false
+			return self:GetContextRef("truthy_expression_context")
 		end
 
 		function META:PushFalsyExpressionContext()
-			self.falsy_expression_context = (self.falsy_expression_context or 0) + 1
+			self:PushContextRef("falsy_expression_context")
 		end
 
 		function META:PopFalsyExpressionContext()
-			self.falsy_expression_context = self.falsy_expression_context - 1
+			self:PopContextRef("falsy_expression_context")
 		end
 
 		function META:IsFalsyExpressionContext()
-			return self.falsy_expression_context and
-				self.falsy_expression_context > 0 and
-				true or
-				false
+			return self:GetContextRef("falsy_expression_context")
 		end
 	end
 
@@ -15785,7 +15783,7 @@ return {
 						else
 							self:Error(node, err)
 						end
-					else
+					elseif err then
 						self:Error(node, err)
 					end
 				elseif self:IsTypesystem() then
@@ -16875,7 +16873,7 @@ return {
 		for left_pos, exp_key in ipairs(statement.left) do
 			if exp_key.kind == "value" then
 				-- local foo, bar = *
-				left[left_pos] = NodeToString(exp_key)
+				left[left_pos] = NodeToString(exp_key, true)
 			elseif exp_key.kind == "postfix_expression_index" then
 				-- foo[bar] = *
 				left[left_pos] = self:AnalyzeExpression(exp_key.expression)
@@ -18448,6 +18446,7 @@ local ipairs = ipairs
 local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
 local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local table = _G.table
 return {
 	AnalyzeTable = function(self, node)
@@ -18469,34 +18468,48 @@ return {
 				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
 				self:NewIndexOperator(node, tbl, key, val)
 			elseif node.kind == "table_index_value" then
-				local obj = self:AnalyzeExpression(node.value_expression)
+				if node.spread then
+					local val = self:AnalyzeExpression(node.spread.expression):GetFirstValue()
 
-				if
-					node.value_expression.kind ~= "value" or
-					node.value_expression.value.value ~= "..."
-				then
-					obj = obj:GetFirstValue()
-				end
+					for _, kv in ipairs(val:GetData()) do
+						local val = kv.val
 
-				if obj.Type == "tuple" then
-					if tree.children[i + 1] then
-						tbl:Insert(obj:Get(1))
-					else
-						for i = 1, obj:GetMinimumLength() do
-							tbl:Set(LNumber(#tbl:GetData() + 1), obj:Get(i))
+						if val.Type == "union" and val:CanBeNil() then
+							val = val:Copy():RemoveType(Nil())
 						end
 
-						if obj.Remainder then
-							local current_index = LNumber(#tbl:GetData() + 1)
-							local max = LNumber(obj.Remainder:GetLength())
-							tbl:Set(current_index:SetMax(max), obj.Remainder:Get(1))
-						end
+						self:NewIndexOperator(node, tbl, kv.key, val)
 					end
 				else
-					if node.i then
-						tbl:Insert(LNumber(obj))
-					elseif obj then
-						tbl:Insert(obj)
+					local obj = self:AnalyzeExpression(node.value_expression)
+
+					if
+						node.value_expression.kind ~= "value" or
+						node.value_expression.value.value ~= "..."
+					then
+						obj = obj:GetFirstValue()
+					end
+
+					if obj.Type == "tuple" then
+						if tree.children[i + 1] then
+							tbl:Insert(obj:Get(1))
+						else
+							for i = 1, obj:GetMinimumLength() do
+								tbl:Set(LNumber(#tbl:GetData() + 1), obj:Get(i))
+							end
+
+							if obj.Remainder then
+								local current_index = LNumber(#tbl:GetData() + 1)
+								local max = LNumber(obj.Remainder:GetLength())
+								tbl:Set(current_index:SetMax(max), obj.Remainder:Get(1))
+							end
+						end
+					else
+						if node.i then
+							tbl:Insert(LNumber(obj))
+						elseif obj then
+							tbl:Insert(obj)
+						end
 					end
 				end
 			end
@@ -18696,13 +18709,13 @@ return {
 		return AnalyzeFunction(self, node)
 	end,
 } end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.analyzer"] = function(...) __M = __M or (function(...) local tostring = tostring
+do local __M; IMPORTS["nattlua.analyzer.analyzer"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local tostring = tostring
 local error = error
 local setmetatable = setmetatable
 local ipairs = ipairs
 IMPORTS['nattlua.types.types']("nattlua.types.types").Initialize()
-local META = {}
-META.__index = META
+local META = class.CreateTemplate("analyzer")
 META.OnInitialize = {}
 IMPORTS['nattlua.analyzer.base.base_analyzer']("nattlua.analyzer.base.base_analyzer")(META)
 IMPORTS['nattlua.analyzer.control_flow']("nattlua.analyzer.control_flow")(META)
@@ -18865,7 +18878,7 @@ do
 	end
 end
 
-return function(config)
+function META.New(config)
 	config = config or {}
 	local self = setmetatable({config = config}, META)
 
@@ -18873,10 +18886,15 @@ return function(config)
 		func(self)
 	end
 
+	self.context_values = {}
+	self.context_ref = {}
 	return self
-end end)(...) return __M end end
+end
+
+return META.New end)(...) return __M end end
 do local __M; IMPORTS["nattlua.transpiler.emitter"] = function(...) __M = __M or (function(...) local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local characters = IMPORTS['nattlua.syntax.characters']("nattlua.syntax.characters")
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local print = _G.print
 local error = _G.error
 local debug = _G.debug
@@ -18888,8 +18906,7 @@ local assert = _G.assert
 local type = _G.type
 local setmetatable = _G.setmetatable
 local B = string.byte
-local META = {}
-META.__index = META
+local META = class.CreateTemplate("emitter")
 local translate_binary = {
 	["&&"] = "and",
 	["||"] = "or",
@@ -20776,8 +20793,8 @@ local debug = _G.debug
 local BuildBaseEnvironment = IMPORTS['nattlua.runtime.base_environment']("nattlua.runtime.base_environment").BuildBaseEnvironment
 local setmetatable = _G.setmetatable
 local Code = IMPORTS['nattlua.code.code']("nattlua.code.code")
-local META = {}
-META.__index = META
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("compiler")
 
 function META:GetCode()
 	return self.Code
@@ -21013,7 +21030,7 @@ function META:Emit(cfg)
 	return emitter:BuildCode(self.SyntaxTree)
 end
 
-return function(
+function META.New(
 	lua_code,
 	name,
 	config,
@@ -21036,7 +21053,9 @@ return function(
 		},
 		META
 	)
-end end)(...) return __M end end
+end
+
+return META.New end)(...) return __M end end
 do local __M; IMPORTS["nattlua.init"] = function(...) __M = __M or (function(...) local nl = {}
 local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 nl.Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler")
@@ -21431,7 +21450,8 @@ analyzer function attest.truthy(obj: any, err: string | nil)
 end
 
 analyzer function attest.expect_diagnostic(severity: "warning" | "error", msg: string)
-	analyzer.expect_diagnostic = {msg = msg:GetData(), severity = severity:GetData()}
+	analyzer.expect_diagnostic = analyzer.expect_diagnostic or {}
+	table.insert(analyzer.expect_diagnostic, {msg = msg:GetData(), severity = severity:GetData()})
 end
 
 _G.attest = attest end
@@ -21671,8 +21691,8 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 	assert(compiler:Parse())
 	return types.Function(
 		{
-			arg = types.Tuple({}),
-			ret = types.Tuple({}),
+			arg = types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
+			ret = types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
 			lua_function = function(...)
 				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 			end,
@@ -21703,15 +21723,11 @@ analyzer function loadfile(path: string)
 	local compiler = nl.Compiler(code, "@" .. path:GetData())
 	assert(compiler:Lex())
 	assert(compiler:Parse())
-	return types.Function(
-		{
-			arg = types.Tuple({}),
-			ret = types.Tuple({}),
-			lua_function = function(...)
-				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
-			end,
-		}
-	):SetNode(compiler.SyntaxTree)
+	local f = types.AnyFunction()
+	f.Data.lua_function = function(...)
+		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
+	end
+	return f:SetNode(compiler.SyntaxTree)
 end
 
 analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
@@ -21776,6 +21792,8 @@ analyzer function error(msg: string, level: number | nil)
 		analyzer:ThrowError("error thrown from expression " .. tostring(analyzer.current_expression))
 	end
 end
+
+type type_error = error
 
 analyzer function pcall(callable: function=(...any)>((...any)), ...: ...any)
 	local count = #analyzer:GetDiagnostics()

@@ -261,21 +261,6 @@ do
 	end
 end
 
-function helpers.FindTokenFromLineCharacterPosition(
-	tokens--[[#: {[number] = Token}]],
-	code--[[#: string]],
-	line--[[#: number]],
-	char--[[#: number]]
-)
-	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
-
-	for _, token in ipairs(tokens) do
-		if sub_pos >= token.start and sub_pos <= token.stop then
-			return token, helpers.SubPositionToLinePosition(code, token.start, token.stop)
-		end
-	end
-end
-
 function helpers.JITOptimize()
 	if not jit then return end
 

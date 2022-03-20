@@ -83,10 +83,10 @@ do -- token, expression and statement association
 	META:GetSet("TokenLabelSource", nil--[[# as nil | string]])
 	META:GetSet("Node", nil--[[# as nil | any]])
 
-	function META:SetNode(node--[[#: nil | any]])
+	function META:SetNode(node--[[#: nil | any]], is_local --[[#: nil | boolean]])
 		self.Node = node
 
-		if node then node:AddType(self--[[# as any]]) end
+		if node and not is_local then node:AddType(self--[[# as any]]) end
 
 		return self
 	end

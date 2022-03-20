@@ -1,3 +1,4 @@
+const { execSync } = require("child_process")
 const fs = require("fs")
 const path = require("path")
 
@@ -32,6 +33,8 @@ for (let path of getAllFiles("../../test/nattlua/analyzer/")) {
 }
 
 fs.writeFileSync("src/random.json", JSON.stringify(tests))
+
+execSync("cd ../../ && luajit build.lua fast")
 
 require("esbuild")
 	.build({
