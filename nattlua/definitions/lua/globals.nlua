@@ -336,6 +336,8 @@ analyzer function error(msg: string, level: number | nil)
 	end
 end
 
+type type_error = error
+
 analyzer function pcall(callable: function=(...any)>((...any)), ...: ...any)
 	local count = #analyzer:GetDiagnostics()
 	analyzer:PushProtectedCall()

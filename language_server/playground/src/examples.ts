@@ -53,7 +53,12 @@ local tbl = parse(cfg) -- hover me`,
 
 type_assert: 
 `local function assert_whole_number<|T: number|>
-	assert(math.floor(T) == T, "Expected whole number", 2)
+	if math.floor(T) ~= T then
+		type_error("Expected whole number", 2)
+		return any
+	end
+
+	return T
 end
 
 local x = assert_whole_number<|5.5|>`,
