@@ -1,7 +1,7 @@
 -- https://github.com/Jacbo1/Public-Starfall/tree/main/Sprite%20Sheet%20Manager
 -- some starfall types
 type Material = {}
---Material.@Name = "Material"
+Material.@Name = "Material"
 type Material.__index = Material
 type Material.setTextureURL = function=(
 	Material,
@@ -24,8 +24,8 @@ type timer.systime = function=()>(number)
 --@author Jacbo
 local mngr = {}
 mngr.__index = mngr
-type mngr.@Name = "Sprite"
 type mngr.@Self = {
+    @Name = "Sprite",
 	loading = boolean,
 	rows = number,
 	columns = number,
@@ -101,7 +101,7 @@ function mngr:setCallback(callback: function=(Sprite)>())
 end
 
 -- Appends another piece of the sprite sheet
-function mngr:appendURL(url)
+function mngr:appendURL(url: string)
 	local mat = material.create("UnlitGeneric")
 	table.insert(self.mats, mat)
 	table.insert(self.loadings, true)
@@ -121,7 +121,8 @@ function mngr:appendURL(url)
 
 			self.loading = false
 
-			if self.cb then self.cb(self) end
+			local cb = self.cb
+			if cb then cb(self) end
 		end
 	)
 end

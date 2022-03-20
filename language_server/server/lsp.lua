@@ -418,30 +418,32 @@ lsp.methods["textDocument/inlay"] = function(self, params)
 	end
 
 	for _, assignment in ipairs(assignments) do
-		for i, left in ipairs(assignment.left) do
-			if not left.tokens[":"] and assignment.right[i] then
-				local types = left:GetTypes()
+		if assignment.environment == "runtime" then
+			for i, left in ipairs(assignment.left) do
+				if not left.tokens[":"] and assignment.right[i] then
+					local types = left:GetTypes()
 
-				if
-					types and
-					(
-						assignment.right[i].kind ~= "value" or
-						assignment.right[i].value.value.type == "letter"
-					)
-				then
-					local data = helpers.SubPositionToLinePosition(compiler.Code:GetString(), left:GetStartStop())
-					table.insert(
-						hints,
-						{
-							label = ": " .. tostring(Union(types)),
-							tooltip = tostring(left),
-							position = {
-								lineNumber = data.line_stop,
-								column = data.character_stop + 1,
-							},
-							kind = 1, -- type
-						}
-					)
+					if
+						types and
+						(
+							assignment.right[i].kind ~= "value" or
+							assignment.right[i].value.value.type == "letter"
+						)
+					then
+						local data = helpers.SubPositionToLinePosition(compiler.Code:GetString(), left:GetStartStop())
+						table.insert(
+							hints,
+							{
+								label = ": " .. tostring(Union(types)),
+								tooltip = tostring(left),
+								position = {
+									lineNumber = data.line_stop,
+									column = data.character_stop + 1,
+								},
+								kind = 1, -- type
+							}
+						)
+					end
 				end
 			end
 		end
