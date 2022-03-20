@@ -17,7 +17,7 @@ do
 	}
 
 	local function updateTodo(todo: Todo, fieldsToUpdate: Partial<|Todo|>)
-		return table.mergetables({todo, fieldsToUpdate})
+		return {...todo, ...fieldsToUpdate}
 	end
 
 	local todo1 = {
