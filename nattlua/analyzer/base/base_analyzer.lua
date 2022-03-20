@@ -355,7 +355,7 @@ return function(META)
 			end
 
 			function META:GetScopeHelper(scope)
-				self.scope_helper = {
+				scope.scope_helper = scope.scope_helper or {
 					typesystem = setmetatable(
 						{
 							analyzer = self,
@@ -366,8 +366,7 @@ return function(META)
 					),
 					runtime = setmetatable({analyzer = self, scope = scope, env = "runtime"}, scope_meta),
 				}
-				self.scope_helper.scope = scope
-				return self.scope_helper
+				return scope.scope_helper
 			end
 
 			function META:CallTypesystemUpvalue(name, ...)
