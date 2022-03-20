@@ -116,14 +116,15 @@ local function find_token_from_line_character_range(
 	local sub_pos_start = helpers.LinePositionToSubPosition(code, lineStart, charStart)
 	local sub_pos_stop = helpers.LinePositionToSubPosition(code, lineStop, charStop)
 	local found = {}
+
 	for _, token in ipairs(tokens) do
 		if token.start >= sub_pos_start and token.stop <= sub_pos_stop then
 			table.insert(found, token)
 		end
 	end
+
 	return found
 end
-
 
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local runtime_env, typesystem_env = BuildBaseEnvironment()
@@ -375,9 +376,7 @@ local function find_parent(token, type, kind)
 	local node = token.parent
 
 	while node.parent do
-		if node.type == type and node.kind == kind then
-			return node
-		end
+		if node.type == type and node.kind == kind then return node end
 
 		node = node.parent
 	end
@@ -385,12 +384,13 @@ local function find_parent(token, type, kind)
 	return nil
 end
 
-local function find_nodes(tokens, type, kind) 
+local function find_nodes(tokens, type, kind)
 	local nodes = {}
 	local done = {}
 
 	for _, token in ipairs(tokens) do
 		local node = find_parent(token, type, kind)
+
 		if node and not done[node] then
 			table.insert(nodes, node)
 			done[node] = true
@@ -402,28 +402,46 @@ end
 
 lsp.methods["textDocument/inlay"] = function(self, params)
 	local compiler = compile(self, params.textDocument.uri, params.textDocument.text)
-	local tokens = find_token_from_line_character_range(compiler.Tokens, compiler.Code:GetString(), params.start.line - 1, params.start.character -1, params["end"].line - 1, params["end"].character- 1)
+	local tokens = find_token_from_line_character_range(
+		compiler.Tokens,
+		compiler.Code:GetString(),
+		params.start.line - 1,
+		params.start.character - 1,
+		params["end"].line - 1,
+		params["end"].character - 1
+	)
 	local hints = {}
 	local assignments = find_nodes(tokens, "statement", "local_assignment")
+
 	for _, assingment in ipairs(find_nodes(tokens, "statement", "assignment")) do
 		table.insert(assignments, assingment)
 	end
+
 	for _, assignment in ipairs(assignments) do
 		for i, left in ipairs(assignment.left) do
 			if not left.tokens[":"] and assignment.right[i] then
 				local types = left:GetTypes()
-				if types and (assignment.right[i].kind ~= "value" or assignment.right[i].value.value.type == "letter") then
-					local data = helpers.SubPositionToLinePosition(compiler.Code:GetString(), left:GetStartStop())
 
-					table.insert(hints, {
-						label = ": " .. tostring(Union(types)),
-						tooltip = tostring(left),
-						position = {
-							lineNumber = data.line_stop,
-							column = data.character_stop + 1,
-						},
-						kind = 1 -- type
-					})
+				if
+					types and
+					(
+						assignment.right[i].kind ~= "value" or
+						assignment.right[i].value.value.type == "letter"
+					)
+				then
+					local data = helpers.SubPositionToLinePosition(compiler.Code:GetString(), left:GetStartStop())
+					table.insert(
+						hints,
+						{
+							label = ": " .. tostring(Union(types)),
+							tooltip = tostring(left),
+							position = {
+								lineNumber = data.line_stop,
+								column = data.character_stop + 1,
+							},
+							kind = 1, -- type
+						}
+					)
 				end
 			end
 		end
@@ -433,7 +451,6 @@ lsp.methods["textDocument/inlay"] = function(self, params)
 		hints = hints,
 	}
 end
-
 lsp.methods["textDocument/rename"] = function(self, params)
 	local token, data = find_token(
 		self,

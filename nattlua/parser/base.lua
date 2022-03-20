@@ -28,7 +28,6 @@ local helpers = require("nattlua.other.helpers")
 local quote_helper = require("nattlua.other.quote")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("parser")
-
 --[[#local type Node = Node.@Self]]
 --[[#type META.@Self = {
 	config = any,
@@ -114,17 +113,16 @@ function META:StartNode(
 	--[[#local function todo<||>
 		for _, t in pairs(Nodes) do
 			if t.kind == kind and t.type == type then
-                print(t, "!!!")
-                local lol = copy<|t|>
-                lol.@Contract = lol    
-                print(lol, "!!!")        
+				print(t, "!!!")
+				local lol = copy<|t|>
+				lol.@Contract = lol
+				print(lol, "!!!")
 				return lol
 			end
 		end
 	end]]
 
-	
-	return node --[[#as todo<||>]]
+	return node--[[# as todo<||>]]
 end
 
 function META:EndNode(node--[[#: Node]])

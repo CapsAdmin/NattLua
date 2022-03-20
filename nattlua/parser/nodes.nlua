@@ -355,7 +355,7 @@ local type FunctionStatement = Node & {
 		arguments = List<|FunctionArgumentSubExpression|>,
 		return_types = List<|FunctionReturnTypeSubExpression|>,
 		statements = List<|Node|>,
-        identifiers_typesystem = nil | List<|Node|>,
+		identifiers_typesystem = nil | List<|Node|>,
 		tokens = Expression.tokens & {
 			["function"] = Token,
 			["arguments)"] = Token,
@@ -557,7 +557,7 @@ local type FunctionSignatureTypeExpression = Node & {
 		stmnt = boolean; // ???
 		identifiers = nil | List<|FunctionArgumentSubExpression|>,
 		return_types = nil | List<|FunctionReturnTypeSubExpression|>,
-        identifiers_typesystem = nil | List<|Node|>,
+		identifiers_typesystem = nil | List<|Node|>,
 		tokens = Expression.tokens & {
 			["function"] = Token,
 			["="] = Token,
@@ -632,7 +632,7 @@ local type Nodes = {
 	CallExpressionStatement,
 	FunctionSignatureTypeExpression,
 	AssignmentTypeStatement,
-    TypeTableExpression,
+	TypeTableExpression,
 }
 local type ExpressionKind = (function()
 	local type union = |
@@ -704,5 +704,5 @@ return {
 	CallExpressionStatement = CallExpressionStatement,
 	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
 	AssignmentTypeStatement = AssignmentTypeStatement,
-    TypeTableExpression = TypeTableExpression,
+	TypeTableExpression = TypeTableExpression,
 }

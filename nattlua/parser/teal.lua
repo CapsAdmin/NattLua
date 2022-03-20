@@ -1,4 +1,5 @@
 local META = ...
+
 --[[#local type { TokenType } = import("~/nattlua/lexer/token.nlua")]]
 
 local runtime_syntax = require("nattlua.syntax.runtime")
@@ -82,8 +83,10 @@ function META:ReadTealFunctionSignature()
 end
 
 function META:ReadTealKeywordValueExpression()
-    local token = self:GetToken()
-    if not token then return end
+	local token = self:GetToken()
+
+	if not token then return end
+
 	if not typesystem_syntax:IsValue(token) then return end
 
 	local node = self:StartNode("expression", "value")

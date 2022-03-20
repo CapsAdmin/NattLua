@@ -27,15 +27,19 @@ return {
 			elseif node.kind == "table_index_value" then
 				if node.spread then
 					local val = self:AnalyzeExpression(node.spread.expression):GetFirstValue()
+
 					for _, kv in ipairs(val:GetData()) do
 						local val = kv.val
+
 						if val.Type == "union" and val:CanBeNil() then
 							val = val:Copy():RemoveType(Nil())
 						end
+
 						self:NewIndexOperator(node, tbl, kv.key, val)
 					end
 				else
 					local obj = self:AnalyzeExpression(node.value_expression)
+
 					if
 						node.value_expression.kind ~= "value" or
 						node.value_expression.value.value ~= "..."

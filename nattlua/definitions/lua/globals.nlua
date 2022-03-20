@@ -266,10 +266,10 @@ analyzer function loadfile(path: string)
 	local compiler = nl.Compiler(code, "@" .. path:GetData())
 	assert(compiler:Lex())
 	assert(compiler:Parse())
-    local f = types.AnyFunction()
-    f.Data.lua_function = function(...)
-        return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
-    end
+	local f = types.AnyFunction()
+	f.Data.lua_function = function(...)
+		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
+	end
 	return f:SetNode(compiler.SyntaxTree)
 end
 
