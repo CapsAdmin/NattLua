@@ -9967,117 +9967,6 @@ do
 end
 
 return META.New end)(...) return __M end end
-IMPORTS['./nattlua/parser/nodes.nlua'] = function() 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-return {
-	ExpressionKind = ExpressionKind,
-	StatementKind = StatementKind,
-	Nodes = Nodes,
-	EmptyUnionTypeExpression = EmptyUnionTypeExpression,
-	VarargTypeExpression = VarargTypeExpression,
-	ValueExpression = ValueExpression,
-	FunctionArgumentSubExpression = FunctionArgumentSubExpression,
-	FunctionReturnTypeSubExpression = FunctionReturnTypeSubExpression,
-	TableExpressionKeyValueSubExpression = TableExpressionKeyValueSubExpression,
-	TableSpreadSubExpression = TableSpreadSubExpression,
-	TableKeyValueSubExpression = TableKeyValueSubExpression,
-	TableIndexValueSubExpression = TableIndexValueSubExpression,
-	TableExpression = TableExpression,
-	PostfixCallSubExpression = PostfixCallSubExpression,
-	PostfixIndexSubExpression = PostfixIndexSubExpression,
-	EndOfFileStatement = EndOfFileStatement,
-	DebugParserDebugCodeStatement = DebugParserDebugCodeStatement,
-	DebugAnalyzerCodeStatement = DebugAnalyzerCodeStatement,
-	ReturnStatement = ReturnStatement,
-	BreakStatement = BreakStatement,
-	ContinueStatement = ContinueStatement,
-	SemicolonStatement = SemicolonStatement,
-	GotoStatement = GotoStatement,
-	GotoLabelStatement = GotoLabelStatement,
-	BinaryOperatorExpression = BinaryOperatorExpression,
-	FunctionAnalyzerStatement = FunctionAnalyzerStatement,
-	FunctionTypeStatement = FunctionTypeStatement,
-	FunctionAnalyzerExpression = FunctionAnalyzerExpression,
-	FunctionTypeExpression = FunctionTypeExpression,
-	FunctionExpression = FunctionExpression,
-	FunctionLocalStatement = FunctionLocalStatement,
-	FunctionLocalTypeStatement = FunctionLocalTypeStatement,
-	FunctionStatement = FunctionStatement,
-	FunctionLocalAnalyzerStatement = FunctionLocalAnalyzerStatement,
-	ImportExpression = ImportExpression,
-	PrefixOperatorExpression = PrefixOperatorExpression,
-	PostfixOperatorSubExpression = PostfixOperatorSubExpression,
-	RepeatStatement = RepeatStatement,
-	DoStatement = DoStatement,
-	IfStatement = IfStatement,
-	WhileStatement = WhileStatement,
-	ForNumericStatement = ForNumericStatement,
-	ForGenericStatement = ForGenericStatement,
-	AssignmentLocalStatement = AssignmentLocalStatement,
-	AssignmentLocalTypeStatement = AssignmentLocalTypeStatement,
-	AssignmentDestructureStatement = AssignmentDestructureStatement,
-	AssignmentLocalDestructureStatement = AssignmentLocalDestructureStatement,
-	AssignmentStatement = AssignmentStatement,
-	CallExpressionStatement = CallExpressionStatement,
-	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
-	AssignmentTypeStatement = AssignmentTypeStatement,
-	TypeTableExpression = TypeTableExpression,
-} end
 IMPORTS['nattlua/code/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("code")
@@ -10156,10 +10045,9 @@ end
 
 
 return META.New end
-IMPORTS['nattlua/parser/nodes.nlua'] = function() 
+IMPORTS['./nattlua/parser/nodes.nlua'] = function() 
 
-
-
+IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
 
 
 
@@ -10216,59 +10104,74 @@ IMPORTS['nattlua/parser/nodes.nlua'] = function()
 return {
 	ExpressionKind = ExpressionKind,
 	StatementKind = StatementKind,
-	Nodes = Nodes,
-	EmptyUnionTypeExpression = EmptyUnionTypeExpression,
-	VarargTypeExpression = VarargTypeExpression,
-	ValueExpression = ValueExpression,
-	FunctionArgumentSubExpression = FunctionArgumentSubExpression,
-	FunctionReturnTypeSubExpression = FunctionReturnTypeSubExpression,
-	TableExpressionKeyValueSubExpression = TableExpressionKeyValueSubExpression,
-	TableSpreadSubExpression = TableSpreadSubExpression,
-	TableKeyValueSubExpression = TableKeyValueSubExpression,
-	TableIndexValueSubExpression = TableIndexValueSubExpression,
-	TableExpression = TableExpression,
-	PostfixCallSubExpression = PostfixCallSubExpression,
-	PostfixIndexSubExpression = PostfixIndexSubExpression,
-	EndOfFileStatement = EndOfFileStatement,
-	DebugParserDebugCodeStatement = DebugParserDebugCodeStatement,
-	DebugAnalyzerCodeStatement = DebugAnalyzerCodeStatement,
-	ReturnStatement = ReturnStatement,
-	BreakStatement = BreakStatement,
-	ContinueStatement = ContinueStatement,
-	SemicolonStatement = SemicolonStatement,
-	GotoStatement = GotoStatement,
-	GotoLabelStatement = GotoLabelStatement,
-	BinaryOperatorExpression = BinaryOperatorExpression,
-	FunctionAnalyzerStatement = FunctionAnalyzerStatement,
-	FunctionTypeStatement = FunctionTypeStatement,
-	FunctionAnalyzerExpression = FunctionAnalyzerExpression,
-	FunctionTypeExpression = FunctionTypeExpression,
-	FunctionExpression = FunctionExpression,
-	FunctionLocalStatement = FunctionLocalStatement,
-	FunctionLocalTypeStatement = FunctionLocalTypeStatement,
-	FunctionStatement = FunctionStatement,
-	FunctionLocalAnalyzerStatement = FunctionLocalAnalyzerStatement,
-	ImportExpression = ImportExpression,
-	PrefixOperatorExpression = PrefixOperatorExpression,
-	PostfixOperatorSubExpression = PostfixOperatorSubExpression,
-	RepeatStatement = RepeatStatement,
-	DoStatement = DoStatement,
-	IfStatement = IfStatement,
-	WhileStatement = WhileStatement,
-	ForNumericStatement = ForNumericStatement,
-	ForGenericStatement = ForGenericStatement,
-	AssignmentLocalStatement = AssignmentLocalStatement,
-	AssignmentLocalTypeStatement = AssignmentLocalTypeStatement,
-	AssignmentDestructureStatement = AssignmentDestructureStatement,
-	AssignmentLocalDestructureStatement = AssignmentLocalDestructureStatement,
-	AssignmentStatement = AssignmentStatement,
-	CallExpressionStatement = CallExpressionStatement,
-	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
-	AssignmentTypeStatement = AssignmentTypeStatement,
-	TypeTableExpression = TypeTableExpression,
+	Node = Node,
+	statement = statement,
+	expression = expression,
+} end
+IMPORTS['nattlua/parser/nodes.nlua'] = function() 
+
+IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+return {
+	ExpressionKind = ExpressionKind,
+	StatementKind = StatementKind,
+	Node = Node,
+	statement = statement,
+	expression = expression,
 } end
 do local __M; IMPORTS["nattlua.parser.node"] = function(...) __M = __M or (function(...) 
-
 
 
 
@@ -10283,7 +10186,6 @@ local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("node")
-
 
 
 
@@ -10437,7 +10339,7 @@ do local __M; IMPORTS["nattlua.parser.base"] = function(...) __M = __M or (funct
 
 
 
-local Node = IMPORTS['nattlua.parser.node']("nattlua.parser.node")
+local CreateNode = IMPORTS['nattlua.parser.node']("nattlua.parser.node").New
 local ipairs = _G.ipairs
 local pairs = _G.pairs
 local setmetatable = _G.setmetatable
@@ -10447,7 +10349,6 @@ local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("parser")
-
 
 
 
@@ -10492,7 +10393,7 @@ function META:StartNode(
 	kind
 )
 	local code_start = assert(self:GetToken()).start
-	local node = Node.New(
+	local node = CreateNode(
 		{
 			type = type,
 			kind = kind,
@@ -11087,6 +10988,7 @@ do -- typesystem
 				node.tokens["identifier"] = self:ExpectType("letter")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ReadTypeExpression(0)
+				self:EndNode(node)
 				return node
 			end
 
@@ -11676,6 +11578,7 @@ do -- runtime
 					path = node.path,
 					working_directory = self.config.working_directory,
 					inline_require = not root_node.data_import,
+					on_statement = self.config.on_statement,
 				}
 			)
 
@@ -11733,6 +11636,7 @@ do -- runtime
 						root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
 						path = node.path,
 						working_directory = self.config.working_directory,
+						on_statement = self.config.on_statement,
 					--inline_require = true,
 					}
 				)
@@ -12662,6 +12566,7 @@ function META:ReadTealAssignment()
 	kv.left = {self:ReadValueExpressionToken()}
 	kv.tokens["="] = self:ExpectValue("=")
 	kv.right = {self:ReadTealExpression(0)}
+	self:EndNode(kv)
 	return kv
 end
 
@@ -12685,6 +12590,7 @@ function META:ReadTealRecordArray()
 	kv.tokens["="] = self:NewToken("symbol", "=")
 	kv.right = {self:ReadTealExpression(0)}
 	self:Advance(1) -- }
+	self:EndNode(kv)
 	return kv
 end
 
@@ -12819,16 +12725,16 @@ do
 
 		assignment.right = {bnode}
 		self:ExpectValue("end")
-		self:EndNode(assignment)
 		self:PopParserEnvironment("typesystem")
-		return assignment
 	end
 
 	function META:ReadTealEnumStatement()
 		if not self:IsValue("enum") or not self:IsType("letter", 1) then return nil end
 
 		local assignment = self:StartNode("statement", "assignment")
-		return ReadBody(self, assignment)
+		ReadBody(self, assignment)
+		self:EndNode(assignment)
+		return assignment
 	end
 
 	function META:ReadLocalTealEnumStatement()
@@ -13098,7 +13004,7 @@ function META:ReadRootNode()
 	if self:IsType("end_of_file") then
 		local eof = self:StartNode("statement", "end_of_file")
 		eof.tokens["end_of_file"] = self.tokens[#self.tokens]
-		self:EndNode(node)
+		self:EndNode(eof)
 		table.insert(node.statements, eof)
 		node.tokens["eof"] = eof.tokens["end_of_file"]
 	end
@@ -14342,19 +14248,19 @@ return function(META)
 			end
 
 			function META:GetScopeHelper(scope)
-				self.scope_helper = {
-					typesystem = setmetatable(
-						{
-							analyzer = self,
-							scope = scope,
-							env = "typesystem",
-						},
-						scope_meta
-					),
-					runtime = setmetatable({analyzer = self, scope = scope, env = "runtime"}, scope_meta),
-				}
-				self.scope_helper.scope = scope
-				return self.scope_helper
+				scope.scope_helper = scope.scope_helper or
+					{
+						typesystem = setmetatable(
+							{
+								analyzer = self,
+								scope = scope,
+								env = "typesystem",
+							},
+							scope_meta
+						),
+						runtime = setmetatable({analyzer = self, scope = scope, env = "runtime"}, scope_meta),
+					}
+				return scope.scope_helper
 			end
 
 			function META:CallTypesystemUpvalue(name, ...)
