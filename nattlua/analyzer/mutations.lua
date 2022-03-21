@@ -165,7 +165,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 			-- check if we have to infer the function, otherwise adding it to the union can cause collisions
 			if
 				value.Type == "function" and
-				not value.called and
+				not value:IsCalled() and
 				not value.explicit_return and
 				union:HasType("function")
 			then

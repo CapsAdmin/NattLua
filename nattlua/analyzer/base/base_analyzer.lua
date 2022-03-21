@@ -149,16 +149,15 @@ return function(META)
 				local func = v[1]
 
 				if
-					not func.called and
+					not func:IsCalled() and
 					not func.done and
 					func.explicit_arguments and
 					not is_ref_function(func)
 				then
-					local time = os.clock()
 					call(self, table.unpack(v))
 					called_count = called_count + 1
 					func.done = true
-					func.called = nil
+					func:ClearCalls()
 				end
 			end
 
@@ -166,16 +165,15 @@ return function(META)
 				local func = v[1]
 
 				if
-					not func.called and
+					not func:IsCalled() and
 					not func.done and
 					not func.explicit_arguments and
 					not is_ref_function(func)
 				then
-					local time = os.clock()
 					call(self, table.unpack(v))
 					called_count = called_count + 1
 					func.done = true
-					func.called = nil
+					func:ClearCalls()
 				end
 			end
 

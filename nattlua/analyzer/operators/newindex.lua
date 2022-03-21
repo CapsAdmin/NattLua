@@ -36,9 +36,9 @@ return {
 				local arg = val:GetArguments():Get(1)
 
 				if arg and not arg:GetContract() and not arg.Self then
-					val.called = true
+					val:SetCallOverride(true)
 					val = val:Copy()
-					val.called = nil
+					val:SetCallOverride(nil)
 					val:GetArguments():Set(1, Union({Any(), obj}))
 					self:CallMeLater(val, val:GetArguments(), val:GetNode(), true)
 				end

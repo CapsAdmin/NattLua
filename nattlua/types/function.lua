@@ -40,6 +40,14 @@ function META:IsCalled()
 	return self.called
 end
 
+function META:SetCallOverride(val)
+	self.called = val
+end
+
+function META:ClearCalls()
+	self.called = nil
+end
+
 function META:HasExplicitArguments()
 	return self.explicit_arguments
 end
@@ -51,12 +59,12 @@ end
 function META:SetReturnTypes(tup)
 	self:GetData().ret = tup
 	self.explicit_return_set = tup
-	self.called = nil
+	self:ClearCalls()
 end
 
 function META:SetArguments(tup)
 	self:GetData().arg = tup
-	self.called = nil
+	self:ClearCalls()
 end
 
 function META:Copy(map, ...)
@@ -95,12 +103,12 @@ function META.IsSubsetOf(A, B)
 		not ok and
 		(
 			(
-				not B.called and
+				not B:IsCalled() and
 				not B.explicit_return
 			)
 			or
 			(
-				not A.called and
+				not A:IsCalled() and
 				not A.explicit_return
 			)
 		)
@@ -136,12 +144,12 @@ function META.IsCallbackSubsetOf(A, B)
 		not ok and
 		(
 			(
-				not B.called and
+				not B:IsCalled() and
 				not B.explicit_return
 			)
 			or
 			(
-				not A.called and
+				not A:IsCalled() and
 				not A.explicit_return
 			)
 		)
