@@ -21,7 +21,7 @@ local function analyze_function_signature(self, node, current_function)
 	local args = {}
 	local argument_tuple_override
 	local return_tuple_override
-	self:CreateAndPushFunctionScope(current_function:GetData().scope, current_function:GetData().upvalue_position)
+	self:CreateAndPushFunctionScope(current_function)
 	self:PushAnalyzerEnvironment("typesystem")
 
 	if node.kind == "function" or node.kind == "local_function" then

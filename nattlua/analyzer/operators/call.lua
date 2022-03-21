@@ -136,7 +136,7 @@ return {
 		end
 
 		function META:AnalyzeFunctionBody(obj, function_node, arguments)
-			local scope = self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+			local scope = self:CreateAndPushFunctionScope(obj)
 			self:PushGlobalEnvironment(
 				function_node,
 				self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
@@ -358,7 +358,7 @@ return {
 				local contract_override = {}
 
 				do -- analyze the type expressions
-					self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+					self:CreateAndPushFunctionScope(obj)
 					self:PushAnalyzerEnvironment("typesystem")
 					local args = {}
 
@@ -689,7 +689,7 @@ return {
 
 				-- if the function has return type annotations, analyze them and use it as contract
 				if not return_contract and function_node.return_types and self:IsRuntime() then
-					self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+					self:CreateAndPushFunctionScope(obj)
 					self:PushAnalyzerEnvironment("typesystem")
 
 					for i, key in ipairs(function_node.identifiers) do

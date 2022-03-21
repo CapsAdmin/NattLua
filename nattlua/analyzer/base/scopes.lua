@@ -21,8 +21,8 @@ return function(META)
 		return scope
 	end
 
-	function META:CreateAndPushFunctionScope(scope, upvalue_position)
-		return self:PushScope(LexicalScope(scope or self:GetScope(), upvalue_position))
+	function META:CreateAndPushFunctionScope(obj)
+		return self:PushScope(LexicalScope(obj:GetData().scope or self:GetScope(), obj:GetData().upvalue_position, obj))
 	end
 
 	function META:CreateAndPushModuleScope()

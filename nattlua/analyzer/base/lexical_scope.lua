@@ -423,9 +423,10 @@ end
 
 local ref = 0
 
-function META.New(parent, upvalue_position)
+function META.New(parent, upvalue_position, obj)
 	ref = ref + 1
 	local scope = {
+		obj = obj,
 		ref = ref,
 		Children = {},
 		upvalue_position = upvalue_position,
