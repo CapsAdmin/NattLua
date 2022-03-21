@@ -12,16 +12,8 @@ local ipairs = _G.ipairs
 --[[#local type { 
 	ExpressionKind,
 	StatementKind,
-	FunctionAnalyzerStatement,
-	FunctionTypeStatement,
-	FunctionAnalyzerExpression,
-	FunctionTypeExpression,
-	FunctionExpression,
-	FunctionLocalStatement,
-	FunctionLocalTypeStatement,
-	FunctionStatement,
-	FunctionLocalAnalyzerStatement,
-	ValueExpression
+	statement,
+	expression
  } = import("./nodes.nlua")]]
 
 function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
@@ -66,7 +58,7 @@ function META:ReadValueExpressionType(expect_value--[[#: TokenType]])
 end
 
 function META:ReadFunctionBody(
-	node--[[#: FunctionAnalyzerExpression | FunctionExpression | FunctionLocalStatement | FunctionStatement]]
+	node--[[#: expression.analyzer_function | expression["function"] | statement["local_function"] | statement["function"] ]]
 )
 	if self.TealCompat then
 		if self:IsValue("<") then
@@ -93,7 +85,7 @@ function META:ReadFunctionBody(
 end
 
 function META:ReadTypeFunctionBody(
-	node--[[#: FunctionTypeStatement | FunctionTypeExpression | FunctionLocalTypeStatement]]
+	node--[[#: statement["type_function"] | expression["type_function"] | statement["type_function"] ]]
 )
 	if self:IsValue("!") then
 		node.tokens["!"] = self:ExpectValue("!")
@@ -162,7 +154,7 @@ function META:ReadTypeFunctionArgument(expect_type--[[#: nil | boolean]])
 end
 
 function META:ReadAnalyzerFunctionBody(
-	node--[[#: FunctionAnalyzerStatement | FunctionAnalyzerExpression | FunctionLocalAnalyzerStatement]],
+	node--[[#: statement["analyzer_function"] | expression["analyzer_function"] | statement["local_analyzer_function"] ]],
 	type_args--[[#: boolean]]
 )
 	node.tokens["arguments("] = self:ExpectValue("(")
@@ -263,7 +255,7 @@ function META:ReadRootNode()
 	if self:IsType("end_of_file") then
 		local eof = self:StartNode("statement", "end_of_file")
 		eof.tokens["end_of_file"] = self.tokens[#self.tokens]
-		self:EndNode(node)
+		self:EndNode(eof)
 		table.insert(node.statements, eof)
 		node.tokens["eof"] = eof.tokens["end_of_file"]
 	end

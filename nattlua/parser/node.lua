@@ -1,10 +1,8 @@
 --[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
-
---[[#local type { ExpressionKind, StatementKind } = import("~/nattlua/parser/nodes.nlua")]]
+--[[#local type { ExpressionKind, StatementKind, Node } = import("~/nattlua/parser/nodes.nlua")]]
 
 --[[#import<|"~/nattlua/code/code.lua"|>]]
 --[[#local type NodeType = "expression" | "statement"]]
---[[#local type Node = any]]
 local ipairs = _G.ipairs
 local pairs = _G.pairs
 local setmetatable = _G.setmetatable
@@ -15,23 +13,7 @@ local quote_helper = require("nattlua.other.quote")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("node")
 --[[#type META.@Name = "Node"]]
---[[#type META.@Self = {
-	type = "expression" | "statement",
-	kind = ExpressionKind | StatementKind,
-	id = number,
-	Code = Code,
-	tokens = Map<|string, Token|>,
-	environment = "typesystem" | "runtime",
-	parent = nil | self,
-	code_start = number,
-	code_stop = number,
-	first_node = nil | self,
-	statements = nil | List<|any|>,
-	value = nil | Token,
-	inferred_type = nil | any,
-	inferred_types = nil | List<|any|>,
-}]]
---[[#local type Node = META.@Self]]
+--[[#type META.@Self = Node]]
 
 function META.New(init--[[#: Omit<|META.@Self, "id" | "tokens"|>]])--[[#: Node]]
 	init.tokens = {}

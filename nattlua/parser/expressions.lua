@@ -201,6 +201,7 @@ do -- typesystem
 				node.tokens["identifier"] = self:ExpectType("letter")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ReadTypeExpression(0)
+				self:EndNode(node)
 				return node
 			end
 
@@ -790,6 +791,7 @@ do -- runtime
 					path = node.path,
 					working_directory = self.config.working_directory,
 					inline_require = not root_node.data_import,
+					on_statement = self.config.on_statement,
 				}
 			)
 
@@ -847,6 +849,7 @@ do -- runtime
 						root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
 						path = node.path,
 						working_directory = self.config.working_directory,
+						on_statement = self.config.on_statement,
 					--inline_require = true,
 					}
 				)

@@ -256,6 +256,7 @@ function META.New(
 	local parent_line = info and info.currentline or "unknown line"
 	local parent_name = info and info.source:sub(2) or "unknown name"
 	name = name or (parent_name .. ":" .. parent_line)
+
 	return setmetatable(
 		{
 			Code = Code(lua_code, name),

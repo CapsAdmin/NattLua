@@ -1,644 +1,478 @@
 local type { Token } = import("~/nattlua/lexer/token.nlua")
-
+import("~/nattlua/code/code.lua")
+local type statement = {}
+local type expression = {}
 local type Node = {
-	type = "statement" | "expression",
+	type = string,
 	kind = string,
 	id = number,
-	parent = Node | nil,
-	environment = "runtime" | "typesystem",
+	Code = Code,
+	tokens = Map<|string, Token|>,
+	environment = "typesystem" | "runtime",
+	parent = nil | self,
+	code_start = number,
+	code_stop = number,
+	first_node = nil | self,
+	statements = nil | List<|any|>,
+	value = nil | Token,
+	inferred_type = nil | any,
+	inferred_types = nil | List<|any|>,
 }
-local type Statement = Node & {
-	type = "statement",
+type expression["prefix_operator"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:101]
+	tokens = {
+	["value"] = Token,
+		["right"] = Token,
+	},
+	value = any,
+	right = any,
 }
-local type Expression = Node & {
-		type = "expression",
-		standalone_letter = Node | nil,
-		type_expression = Node | nil,
-		tokens = {
-			["("] = List<|Token|>,
-			[")"] = List<|Token|>,
-			[":"] = Token,
-			["as"] = Token,
-			["is"] = Token,
-		},
-	}
-local type EmptyUnionTypeExpression = Expression & {
-		kind = "empty_union",
-		-- &= assignment operator?
-		tokens = Expression.tokens & {
-			["|"] = Token,
-		},
-	}
-local type VarargTypeExpression = Node & {
-		type = "expression",
-		kind = "type_vararg",
-		expression = Node,
-		tokens = Expression.tokens & {
-			["..."] = Token,
-		},
-	}
-local type ValueExpression = Expression & {
-		type = "expression",
-		kind = "value",
-		value = Token,
-		self_call = boolean,
-	}
-// function( foo = Bar )
-local type FunctionArgumentSubExpression = Node & {
-		type = "expression",
-		kind = "function_argument",
-		identifier = nil | Token,
-		type_expression = Node,
-		tokens = Expression.tokens & {
-			[":"] = nil | Token,
-		},
-	}
-local type FunctionReturnTypeSubExpression = Node & {
-		type = "expression",
-		kind = "function_return_type",
-		identifier = nil | Token,
-		type_expression = Node,
-		tokens = Expression.tokens & {
-			[":"] = nil | Token,
-		},
-	}
-// { [key] = value }
-local type TableExpressionKeyValueSubExpression = Node & {
-		type = "expression",
-		kind = "table_expression_value",
-		expression_key = boolean,
-		key_expression = Node,
-		value_expression = Node,
-		tokens = Expression.tokens & {
-			["="] = Token,
-			["["] = Token,
-			["]"] = Token,
-		},
-	}
-local type TableSpreadSubExpression = Node & {
-		type = "expression",
-		kind = "table_spread",
-		expression = Node,
-		tokens = Expression.tokens & {
-			["..."] = Token,
-		},
-	}
-// { key = value }
-local type TableKeyValueSubExpression = Node & {
-		type = "expression",
-		kind = "table_key_value",
-		identifier = Token,
-		value_expression = Node,
-		spread = nil | TableSpreadSubExpression,
-		tokens = Expression.tokens & {
-			["="] = Token,
-		},
-	}
-// { value }
-local type TableIndexValueSubExpression = Node & {
-		type = "expression",
-		kind = "table_index_value",
-		value_expression = Node,
-		spread = nil | TableSpreadSubExpression,
-		key = number,
-	}
-// { [key] = value, key = value, value }
-local type TableExpression = Node & {
-		type = "expression",
-		kind = "table",
-		children = List<|Node|>,
-		spread = boolean,
-		is_array = boolean,
-		is_dictionary = boolean,
-		tokens = Expression.tokens & {
-			["{"] = Token,
-			["}"] = Token,
-			["separators"] = List<|Token|>,
-		},
-	}
-// { [key] = value, key = value, value }
-local type TypeTableExpression = Node & {
-		type = "expression",
-		kind = "type_table",
-		children = List<|Node|>,
-		spread = boolean,
-		is_array = boolean,
-		is_dictionary = boolean,
-		tokens = Expression.tokens & {
-			["{"] = Token,
-			["}"] = Token,
-			["separators"] = List<|Token|>,
-		},
-	}
-// foo(a,b,c)
-local type PostfixCallSubExpression = Node & {
-		type = "expression",
-		kind = "postfix_call",
-		arguments = List<|Node|>,
-		is_type_call = boolean,
-		left = Node,
-		tokens = Expression.tokens & {
-			["arguments("] = nil | Token,
-			[","] = List<|Token|>,
-			["arguments)"] = nil | Token,
-			// type call
-			["!"] = Token,
-		},
-	}
-local type PostfixIndexSubExpression = Node & {
-		type = "expression",
-		kind = "postfix_expression_index",
-		index = Node,
-		left = Node,
-		tokens = Expression.tokens & {
-			["["] = Token,
-			["]"] = Token,
-		},
-	}
-local type EndOfFileStatement = Node & {
-		type = "statement",
-		kind = "end_of_file",
-		tokens = Expression.tokens & {
-			["end_of_file"] = Token,
-		},
-	}
-local type DebugParserDebugCodeStatement = Node & {
-		type = "statement",
-		kind = "parser_debug_code",
-		lua_code = ValueExpression,
-		tokens = Expression.tokens & {
-			["£"] = Token,
-		},
-	}
-local type DebugAnalyzerCodeStatement = Node & {
-		type = "statement",
-		kind = "analyzer_debug_code",
-		lua_code = ValueExpression,
-		tokens = Expression.tokens & {
-			["§"] = Token,
-		},
-	}
-local type ReturnStatement = Node & {
-		type = "statement",
-		kind = "return",
-		expressions = List<|Node|>,
-		tokens = Expression.tokens & {
-			["return"] = Token,
-			[","] = List<|Token|>,
-		},
-	}
-local type BreakStatement = Node & {
-		type = "statement",
-		kind = "break",
-		tokens = Expression.tokens & {
-			["break"] = Token,
-		},
-	}
-local type ContinueStatement = Node & {
-		type = "statement",
-		kind = "continue",
-		tokens = Expression.tokens & {
-			["continue"] = Token,
-		},
-	}
-local type SemicolonStatement = Node & {
-		type = "statement",
-		kind = "semicolon",
-		tokens = Expression.tokens & {
-			[";"] = Token,
-		},
-	}
-local type GotoStatement = Node & {
-		type = "statement",
-		kind = "goto",
-		identifier = Token,
-		tokens = Expression.tokens & {
-			["goto"] = Token,
-		},
-	}
-local type GotoLabelStatement = Node & {
-		type = "statement",
-		kind = "goto_label",
-		identifier = Token,
-		tokens = Expression.tokens & {
-			[" = =left"] = Token,
-			[" = =right"] = Token,
-		},
-	}
-local type BinaryOperatorExpression = Node & {
-		type = "expression",
-		kind = "binary_operator",
-		operator = Token,
-		left = Node,
-		right = Node,
-	}
-local type FunctionAnalyzerStatement = Node & {
-		type = "statement",
-		kind = "analyzer_function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		index_expression = BinaryOperatorExpression | ValueExpression,
-		tokens = Expression.tokens & {
-			["analyzer"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}
-local type FunctionTypeStatement = Node & {
-		type = "statement",
-		kind = "type_function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		index_expression = BinaryOperatorExpression | ValueExpression,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}
-local type FunctionAnalyzerExpression = Node & {
-		type = "expression",
-		kind = "analyzer_function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["analyzer"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}
-local type FunctionTypeExpression = Node & {
-		type = "expression",
-		kind = "type_function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}
-local type FunctionExpression = Node & {
-		type = "expression",
-		kind = "function",
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}
-local type FunctionLocalStatement = Node & {
-		type = "statement",
-		kind = "local_function",
-		label = Token,
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["local"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}
-local type FunctionLocalTypeStatement = Node & {
-		type = "statement",
-		kind = "local_type_function",
-		label = Token,
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["local"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}
-local type FunctionStatement = Node & {
-		type = "statement",
-		kind = "function",
-		index_expression = BinaryOperatorExpression | ValueExpression,
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		identifiers_typesystem = nil | List<|Node|>,
-		tokens = Expression.tokens & {
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}
-local type FunctionLocalAnalyzerStatement = Node & {
-		type = "statement",
-		kind = "local_analyzer_function",
-		label = Token,
-		arguments = List<|FunctionArgumentSubExpression|>,
-		return_types = List<|FunctionReturnTypeSubExpression|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["local"] = Token,
-			["analyzer"] = Token,
-			["function"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			["arguments,"] = List<|Token|>,
-			["return_types,"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}
-local type ImportExpression = Node & {
-		type = "expression",
-		kind = "import",
-		path = string,
-		expressions = List<|Node|>,
-		tokens = Expression.tokens & {
-			["import"] = Token,
-			["arguments)"] = Token,
-			["arguments("] = Token,
-			[","] = List<|Token|>,
-			["end"] = Token,
-		},
-	}
-local type PrefixOperatorExpression = Node & {
-		type = "expression",
-		kind = "prefix_operator",
-		operator = Token,
-		right = Node,
-	}
-local type PostfixOperatorSubExpression = Node & {
-		type = "expression",
-		kind = "postfix_operator",
-		operator = Token,
-		left = Node,
-	}
-local type RepeatStatement = Node & {
-		type = "statement",
-		kind = "repeat",
-		statements = List<|Node|>,
-		expression = Node,
-		tokens = Expression.tokens & {
-			["repeat"] = Token,
-			["until"] = Token,
-		},
-	}
-local type DoStatement = Node & {
-		type = "statement",
-		kind = "do",
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["do"] = Token,
-			["end"] = Token,
-		},
-	}
-local type IfStatement = Node & {
-		type = "statement",
-		kind = "if",
-		expressions = List<|Node|>,
-		statements = List<|List<|Node|>|>,
-		tokens = Expression.tokens & {
-			["if/else/elseif"] = List<|Token|>,
-			["then"] = List<|Token|>,
-			["end"] = Token,
-		},
-	}
-local type WhileStatement = Node & {
-		type = "statement",
-		kind = "while",
-		expression = Node,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["while"] = Token,
-			["do"] = Token,
-			["end"] = Token,
-		},
-	}
-local type ForNumericStatement = Node & {
-		type = "statement",
-		kind = "numeric_for",
-		identifier = Token,
-		init_expression = Node,
-		max_expression = Node,
-		step_expression = nil | Node,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["for"] = Token,
-			["="] = Token,
-			["do"] = Token,
-			["end"] = Token,
-			[",2"] = List<|Token|>,
-		},
-	}
-local type ForGenericStatement = Node & {
-		type = "statement",
-		kind = "generic_for",
-		identifiers = List<|Node|>,
-		expressions = List<|Node|>,
-		statements = List<|Node|>,
-		tokens = Expression.tokens & {
-			["for"] = Token,
-			["="] = Token,
-			["in"] = Token,
-			["do"] = Token,
-			["end"] = Token,
-			["left,"] = List<|Token|>,
-			["right,"] = List<|Token|>,
-		},
-	}
-local type AssignmentLocalStatement = Node & {
-		type = "statement",
-		kind = "local_assignment",
-		identifiers = List<|Node|>,
-		expressions = List<|Node|>,
-		tokens = Expression.tokens & {
-			["local"] = Token,
-			["left,"] = List<|Token|>,
-			["="] = nil | Token,
-			["right,"] = List<|Token|>,
-		},
-	}
-local type AssignmentLocalTypeStatement = Node & {
-		type = "statement",
-		kind = "local_type_assignment",
-		identifiers = List<|Node|>,
-		expressions = List<|Node|>,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["local"] = Token,
-			["left,"] = List<|Token|>,
-			["="] = Token,
-			["right,"] = List<|Token|>,
-		},
-	}
-local type AssignmentDestructureStatement = Node & {
-		type = "statement",
-		kind = "destructure_assignment",
-		default = nil | ValueExpression,
-		default_comma = Token,
-		left = List<|ValueExpression|>,
-		right = Node,
-		tokens = Expression.tokens & {
-			["{"] = Token,
-			[","] = List<|Token|>,
-			["}"] = Token,
-			["="] = Token,
-		},
-	}
-local type AssignmentLocalDestructureStatement = Node & {
-		type = "statement",
-		kind = "local_destructure_assignment",
-		default = ValueExpression,
-		default_comma = Token,
-		left = List<|ValueExpression|>,
-		right = Node,
-		tokens = Expression.tokens & {
-			["local"] = Token,
-			["{"] = Token,
-			[","] = List<|Token|>,
-			["}"] = Token,
-			["="] = Token,
-		},
-	}
-local type AssignmentStatement = Node & {
-		type = "statement",
-		kind = "assignment",
-		left = List<|Node|>,
-		right = List<|Node|>,
-		tokens = Expression.tokens & {
-			["="] = Token,
-			["left,"] = List<|Token|>,
-			["right,"] = List<|Token|>,
-		},
-	}
-local type CallExpressionStatement = Node & {
-	type = "statement",
-	kind = "call_expression",
-	expression = Node,
+type statement["analyzer_function"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:125]
+	tokens = {
+		["expression"] = Token,
+		["function"] = Token,
+		["^"] = Token,
+		["self_call"] = Token,
+		["analyzer"] = Token,
+	},
+	expression = any,
+	self_call = any,
 }
-local type FunctionSignatureTypeExpression = Node & {
-		type = "expression",
-		kind = "function_signature",
-		stmnt = boolean; // ???
-		identifiers = nil | List<|FunctionArgumentSubExpression|>,
-		return_types = nil | List<|FunctionReturnTypeSubExpression|>,
-		identifiers_typesystem = nil | List<|Node|>,
-		tokens = Expression.tokens & {
-			["function"] = Token,
-			["="] = Token,
-			["arguments)"] = Token,
-			["arguments,"] = List<|Token|>,
-			["arguments("] = Token,
-			[">"] = Token,
-			["return("] = Token,
-			["return,"] = List<|Token|>,
-			["return)"] = Token,
-		},
-	}
-local type AssignmentTypeStatement = Node & {
-		type = "statement",
-		kind = "type_assignment",
-		left = List<|Node|>,
-		right = List<|Node|>,
-		tokens = Expression.tokens & {
-			["type"] = Token,
-			["^"] = nil | Token,
-			["="] = Token,
-			["left,"] = List<|Token|>,
-			["right,"] = List<|Token|>,
-		},
-	}
-local type Nodes = {
-	EmptyUnionTypeExpression,
-	VarargTypeExpression,
-	ValueExpression,
-	FunctionArgumentSubExpression,
-	FunctionReturnTypeSubExpression,
-	TableExpressionKeyValueSubExpression,
-	TableSpreadSubExpression,
-	TableKeyValueSubExpression,
-	TableIndexValueSubExpression,
-	TableExpression,
-	PostfixCallSubExpression,
-	PostfixIndexSubExpression,
-	EndOfFileStatement,
-	DebugParserDebugCodeStatement,
-	DebugAnalyzerCodeStatement,
-	ReturnStatement,
-	BreakStatement,
-	ContinueStatement,
-	SemicolonStatement,
-	GotoStatement,
-	GotoLabelStatement,
-	BinaryOperatorExpression,
-	FunctionAnalyzerStatement,
-	FunctionTypeStatement,
-	FunctionAnalyzerExpression,
-	FunctionTypeExpression,
-	FunctionExpression,
-	FunctionLocalStatement,
-	FunctionLocalTypeStatement,
-	FunctionStatement,
-	FunctionLocalAnalyzerStatement,
-	ImportExpression,
-	PrefixOperatorExpression,
-	PostfixOperatorSubExpression,
-	RepeatStatement,
-	DoStatement,
-	IfStatement,
-	WhileStatement,
-	ForNumericStatement,
-	ForGenericStatement,
-	AssignmentLocalStatement,
-	AssignmentLocalTypeStatement,
-	AssignmentDestructureStatement,
-	AssignmentLocalDestructureStatement,
-	AssignmentStatement,
-	CallExpressionStatement,
-	FunctionSignatureTypeExpression,
-	AssignmentTypeStatement,
-	TypeTableExpression,
+type expression["empty_union"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:267]
+	tokens = {
+		["|"] = Token,
+	},
+}
+type statement["local_assignment"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:314]
+	tokens = {
+		["type"] = Token,
+		["environment"] = Token,
+		["left"] = Token,
+		["right"] = Token,
+		["local"] = Token,
+		["="] = Token,
+	},
+	left = any,
+	right = any,
+}
+type expression["vararg"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:120]
+	tokens = {
+		["value"] = Token,
+		["..."] = Token,
+	},
+	value = any,
+}
+type expression["type_table"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:218]
+	tokens = {
+		["{"] = Token,
+		["}"] = Token,
+		["separators"] = Token,
+		["spread"] = Token,
+		["children"] = Token,
+	},
+	spread = any,
+	children = any,
+}
+type statement["while"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:391]
+	tokens = {
+		["expression"] = Token,
+		["statements"] = Token,
+		["do"] = Token,
+		["while"] = Token,
+		["end"] = Token,
+	},
+	expression = any,
+	statements = any,
+}
+type expression["analyzer_function"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:11]
+	tokens = {
+		["function"] = Token,
+		["analyzer"] = Token,
+	},
+}
+type expression["postfix_operator"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:283]
+	tokens = {
+		["value"] = Token,
+	},
+	value = any,
+}
+type expression["table"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:519]
+	tokens = {
+		["is_array"] = Token,
+		["{"] = Token,
+		["}"] = Token,
+		["separators"] = Token,
+		["children"] = Token,
+		["spread"] = Token,
+		["is_dictionary"] = Token,
+	},
+	is_dictionary = any,
+	children = any,
+	spread = any,
+	is_array = any,
+}
+type expression["function"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:22]
+	tokens = {
+		["function"] = Token,
+	},
+}
+type expression["function_signature"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:154]
+	tokens = {
+		["identifiers"] = Token,
+		["arguments)"] = Token,
+		["return_types"] = Token,
+		["="] = Token,
+		["return("] = Token,
+		["return)"] = Token,
+		["function"] = Token,
+		[">"] = Token,
+		["<"] = Token,
+		["identifiers_typesystem"] = Token,
+		[":"] = Token,
+		["arguments("] = Token,
+	},
+	identifiers = any,
+	return_types = any,
+}
+type expression["value"] = Node & { -- [statement - local_assignment @ nattlua/parser/parser.lua:30]
+	tokens = {
+		["standalone_letter"] = Token,
+		["value"] = Token,
+		[">"] = Token,
+		["<"] = Token,
+		["attribute"] = Token,
+		["type_expression"] = Token,
+		[":"] = Token,
+	},
+	type_expression = any,
+	value = any,
+	attribute = any,
+}
+type statement["analyzer_debug_code"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:412]
+	tokens = {
+		["lua_code"] = Token,
+	},
+	lua_code = any,
+}
+type statement["break"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:214]
+	tokens = {
+		["break"] = Token,
+	},
+}
+type expression["binary_operator"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:32]
+	tokens = {
+		["type"] = Token,
+		["right"] = Token,
+		["value"] = Token,
+		["left"] = Token,
+	},
+	value = any,
+	right = any,
+}
+type expression["postfix_call"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:292]
+	tokens = {
+		["expressions"] = Token,
+		["call_typesystem)"] = Token,
+		["call("] = Token,
+		["call)"] = Token,
+		["type_call"] = Token,
+		["value"] = Token,
+		["!"] = Token,
+		["call_typesystem("] = Token,
+		["expressions_typesystem"] = Token,
+	},
+	expressions = any,
+	value = any,
+	type_call = any,
+}
+type statement["do"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:223]
+	tokens = {
+		["do"] = Token,
+		["statements"] = Token,
+		["end"] = Token,
+	},
+	statements = any,
+}
+type expression["table_expression_value"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:190]
+	tokens = {
+		["key_expression"] = Token,
+		["value_expression"] = Token,
+		["["] = Token,
+		["]"] = Token,
+		["="] = Token,
+		["expression_key"] = Token,
+	},
+	key_expression = any,
+	value_expression = any,
+	expression_key = any,
+}
+type statement["generic_for"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:234]
+	tokens = {
+		["identifiers"] = Token,
+		["for"] = Token,
+		["statements"] = Token,
+		["do"] = Token,
+		["in"] = Token,
+		["expressions"] = Token,
+		["end"] = Token,
+	},
+	identifiers = any,
+	statements = any,
+	expressions = any,
+}
+type statement["destructure_assignment"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:30]
+	tokens = {
+		["default_comma"] = Token,
+		["{"] = Token,
+		["}"] = Token,
+		["default"] = Token,
+		["="] = Token,
+		["left"] = Token,
+		["right"] = Token,
+	},
+	left = any,
+	right = any,
+	default = any,
+	default_comma = any,
+}
+type expression["table_key_value"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:200]
+	tokens = {
+		["spread"] = Token,
+		["="] = Token,
+		["identifier"] = Token,
+		["value_expression"] = Token,
+	},
+	value_expression = any,
+}
+type statement["goto_label"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:249]
+	tokens = {
+		["identifier"] = Token,
+		["::"] = Token,
+	},
+}
+type statement["assignment"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:462]
+	tokens = {
+		["type"] = Token,
+		["environment"] = Token,
+		["="] = Token,
+		["left"] = Token,
+		["right"] = Token,
+	},
+	right = any,
+	left = any,
+	environment = any,
+}
+type statement["shebang"] = Node & { -- [statement - assignment @ ./nattlua/parser/parser.lua:230]
+	tokens = {
+		["shebang"] = Token,
+	},
+}
+type expression["table_index_value"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:208]
+	tokens = {
+		["value_expression"] = Token,
+		["key"] = Token,
+		["spread"] = Token,
+	},
+	key = any,
+	value_expression = any,
+}
+type statement["goto"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:260]
+	tokens = {
+		["identifier"] = Token,
+		["goto"] = Token,
+	},
+}
+type statement["local_type_function"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:202]
+	tokens = {
+		["identifiers"] = Token,
+		["arguments)"] = Token,
+		["function"] = Token,
+		["end"] = Token,
+		["statements"] = Token,
+		["local"] = Token,
+		["identifier"] = Token,
+		["arguments("] = Token,
+	},
+}
+type statement["end_of_file"] = Node & { -- [statement - local_assignment @ ./nattlua/parser/parser.lua:264]
+	tokens = {
+		["end_of_file"] = Token,
+	},
+}
+type statement["call_expression"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:492]
+	tokens = {
+		["value"] = Token,
+		["tokens"] = Token,
+	},
+	value = any,
+	tokens = any,
+}
+type statement["parser_debug_code"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:419]
+	tokens = {
+		["lua_code"] = Token,
+	},
+	lua_code = any,
+}
+type statement["continue"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:404]
+	tokens = {
+		["continue"] = Token,
+	},
+}
+type statement["return"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:381]
+	tokens = {
+		["expressions"] = Token,
+		["return"] = Token,
+	},
+	expressions = any,
+}
+type statement["numeric_for"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:345]
+	tokens = {
+		["identifiers"] = Token,
+		["for"] = Token,
+		["statements"] = Token,
+		["do"] = Token,
+		["="] = Token,
+		["expressions"] = Token,
+		["end"] = Token,
+	},
+	identifiers = any,
+	statements = any,
+	expressions = any,
+}
+type statement["local_function"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:158]
+	tokens = {
+		["identifier"] = Token,
+		["local"] = Token,
+		["function"] = Token,
+	},
+}
+type statement["local_analyzer_function"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:178]
+	tokens = {
+		["identifier"] = Token,
+		["function"] = Token,
+		["local"] = Token,
+		["analyzer"] = Token,
+	},
+}
+type expression["type_string"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:258]
+	tokens = {
+		["type_expression"] = Token,
+		["as"] = Token,
+		["$"] = Token,
+		["value"] = Token,
+	},
+	value = any,
+	type_expression = any,
+}
+type expression["tuple"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:71]
+	tokens = {
+		["expressions"] = Token,
+		["("] = Token,
+		[")"] = Token,
+	},
+	expressions = any,
+}
+type expression["type_function"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:171]
+	tokens = {
+		["function"] = Token,
+	},
+}
+type statement["function"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:103]
+	tokens = {
+		["expression"] = Token,
+		["self_call"] = Token,
+		["function"] = Token,
+		["kind"] = Token,
+	},
+	expression = any,
+	self_call = any,
+	kind = any,
+}
+type statement["type_function"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:103]
+	tokens = {
+		["expression"] = Token,
+		["self_call"] = Token,
+		["function"] = Token,
+		["kind"] = Token,
+	},
+	expression = any,
+	self_call = any,
+	kind = any,
+}
+type statement["repeat"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:360]
+	tokens = {
+		["expression"] = Token,
+		["statements"] = Token,
+		["repeat"] = Token,
+		["until"] = Token,
+	},
+	statements = any,
+	expression = any,
+}
+type statement["if"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:270]
+	tokens = {
+		["expressions"] = Token,
+		["statements"] = Token,
+		["if/else/elseif"] = Token,
+		["then"] = Token,
+		["end"] = Token,
+	},
+	expressions = any,
+	statements = any,
+}
+type statement["local_destructure_assignment"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:52]
+	tokens = {
+		["}"] = Token,
+		["right"] = Token,
+		["type"] = Token,
+		["environment"] = Token,
+		["{"] = Token,
+		["default_comma"] = Token,
+		["left"] = Token,
+		["default"] = Token,
+		["local"] = Token,
+		["="] = Token,
+	},
+	default = any,
+	default_comma = any,
+	right = any,
+	left = any,
+	environment = any,
+}
+type expression["table_spread"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:468]
+	tokens = {
+		["expression"] = Token,
+		["..."] = Token,
+	},
+	expression = any,
+}
+type statement["root"] = Node & { -- [statement - local_assignment @ ./nattlua/parser/parser.lua:225]
+	tokens = {
+		["shebang"] = Token,
+		["eof"] = Token,
+		["statements"] = Token,
+	},
+	statements = any,
+}
+type statement["semicolon"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:372]
+	tokens = {
+		[";"] = Token,
+	},
+}
+type expression["postfix_expression_index"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:327]
+	tokens = {
+		["]"] = Token,
+		["["] = Token,
+		["expression"] = Token,
+	},
+	expression = any,
 }
 local type ExpressionKind = (function()
 	local type union = |
 
-	for _, node in pairs(Nodes) do
-		if node.type == "expression" then type union = union | node.kind end
+	for kind, node in pairs(expression) do
+		node.type = "expression"
+		node.kind = kind
+		type union = union | kind
 	end
 
 	return union
@@ -646,63 +480,19 @@ end)()
 local type StatementKind = (function()
 	local type union = |
 
-	for _, node in pairs(Nodes) do
-		if node.type == "statement" then type union = union | node.kind end
+	for kind, node in pairs(statement) do
+		node.type = "statement"
+		node.kind = kind
+		type union = union | kind
 	end
 
 	return union
 end)()
+
 return {
 	ExpressionKind = ExpressionKind,
 	StatementKind = StatementKind,
-	Nodes = Nodes,
-	EmptyUnionTypeExpression = EmptyUnionTypeExpression,
-	VarargTypeExpression = VarargTypeExpression,
-	ValueExpression = ValueExpression,
-	FunctionArgumentSubExpression = FunctionArgumentSubExpression,
-	FunctionReturnTypeSubExpression = FunctionReturnTypeSubExpression,
-	TableExpressionKeyValueSubExpression = TableExpressionKeyValueSubExpression,
-	TableSpreadSubExpression = TableSpreadSubExpression,
-	TableKeyValueSubExpression = TableKeyValueSubExpression,
-	TableIndexValueSubExpression = TableIndexValueSubExpression,
-	TableExpression = TableExpression,
-	PostfixCallSubExpression = PostfixCallSubExpression,
-	PostfixIndexSubExpression = PostfixIndexSubExpression,
-	EndOfFileStatement = EndOfFileStatement,
-	DebugParserDebugCodeStatement = DebugParserDebugCodeStatement,
-	DebugAnalyzerCodeStatement = DebugAnalyzerCodeStatement,
-	ReturnStatement = ReturnStatement,
-	BreakStatement = BreakStatement,
-	ContinueStatement = ContinueStatement,
-	SemicolonStatement = SemicolonStatement,
-	GotoStatement = GotoStatement,
-	GotoLabelStatement = GotoLabelStatement,
-	BinaryOperatorExpression = BinaryOperatorExpression,
-	FunctionAnalyzerStatement = FunctionAnalyzerStatement,
-	FunctionTypeStatement = FunctionTypeStatement,
-	FunctionAnalyzerExpression = FunctionAnalyzerExpression,
-	FunctionTypeExpression = FunctionTypeExpression,
-	FunctionExpression = FunctionExpression,
-	FunctionLocalStatement = FunctionLocalStatement,
-	FunctionLocalTypeStatement = FunctionLocalTypeStatement,
-	FunctionStatement = FunctionStatement,
-	FunctionLocalAnalyzerStatement = FunctionLocalAnalyzerStatement,
-	ImportExpression = ImportExpression,
-	PrefixOperatorExpression = PrefixOperatorExpression,
-	PostfixOperatorSubExpression = PostfixOperatorSubExpression,
-	RepeatStatement = RepeatStatement,
-	DoStatement = DoStatement,
-	IfStatement = IfStatement,
-	WhileStatement = WhileStatement,
-	ForNumericStatement = ForNumericStatement,
-	ForGenericStatement = ForGenericStatement,
-	AssignmentLocalStatement = AssignmentLocalStatement,
-	AssignmentLocalTypeStatement = AssignmentLocalTypeStatement,
-	AssignmentDestructureStatement = AssignmentDestructureStatement,
-	AssignmentLocalDestructureStatement = AssignmentLocalDestructureStatement,
-	AssignmentStatement = AssignmentStatement,
-	CallExpressionStatement = CallExpressionStatement,
-	FunctionSignatureTypeExpression = FunctionSignatureTypeExpression,
-	AssignmentTypeStatement = AssignmentTypeStatement,
-	TypeTableExpression = TypeTableExpression,
+	Node = Node,
+	statement = statement,
+	expression = expression,
 }

@@ -260,6 +260,7 @@ function META:ReadTealAssignment()
 	kv.left = {self:ReadValueExpressionToken()}
 	kv.tokens["="] = self:ExpectValue("=")
 	kv.right = {self:ReadTealExpression(0)}
+	self:EndNode(kv)
 	return kv
 end
 
@@ -283,6 +284,7 @@ function META:ReadTealRecordArray()
 	kv.tokens["="] = self:NewToken("symbol", "=")
 	kv.right = {self:ReadTealExpression(0)}
 	self:Advance(1) -- }
+	self:EndNode(kv)
 	return kv
 end
 
@@ -417,16 +419,17 @@ do
 
 		assignment.right = {bnode}
 		self:ExpectValue("end")
-		self:EndNode(assignment)
 		self:PopParserEnvironment("typesystem")
-		return assignment
 	end
 
 	function META:ReadTealEnumStatement()
 		if not self:IsValue("enum") or not self:IsType("letter", 1) then return nil end
 
 		local assignment = self:StartNode("statement", "assignment")
-		return ReadBody(self, assignment)
+		ReadBody(self, assignment)
+		self:EndNode(assignment)
+
+		return assignment
 	end
 
 	function META:ReadLocalTealEnumStatement()

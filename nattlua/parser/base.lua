@@ -3,22 +3,14 @@
 --[[#local type { 
 	ExpressionKind,
 	StatementKind,
-	FunctionAnalyzerStatement,
-	FunctionTypeStatement,
-	FunctionAnalyzerExpression,
-	FunctionTypeExpression,
-	FunctionExpression,
-	FunctionLocalStatement,
-	FunctionLocalTypeStatement,
-	FunctionStatement,
-	FunctionLocalAnalyzerStatement,
-	ValueExpression,
-	Nodes
+	statement,
+	expression,
+	Node
  } = import("./nodes.nlua")]]
 
 --[[#import<|"~/nattlua/code/code.lua"|>]]
 --[[#local type NodeType = "expression" | "statement"]]
-local Node = require("nattlua.parser.node")
+local CreateNode = require("nattlua.parser.node").New
 local ipairs = _G.ipairs
 local pairs = _G.pairs
 local setmetatable = _G.setmetatable
@@ -28,7 +20,6 @@ local helpers = require("nattlua.other.helpers")
 local quote_helper = require("nattlua.other.quote")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("parser")
---[[#local type Node = Node.@Self]]
 --[[#type META.@Self = {
 	config = any,
 	nodes = List<|any|>,
@@ -88,7 +79,7 @@ function META:StartNode(
 	kind--[[#: ref (StatementKind | ExpressionKind)]]
 )--[[#: ref Node]]
 	local code_start = assert(self:GetToken()).start
-	local node = Node.New(
+	local node = CreateNode(
 		{
 			type = type,
 			kind = kind,
@@ -111,15 +102,14 @@ function META:StartNode(
 	table.insert(self.nodes, 1, node)
 
 	--[[#local function todo<||>
-		for _, t in pairs(Nodes) do
-			if t.kind == kind and t.type == type then
-				print(t, "!!!")
+		for _, t in pairs(type == "epression" and expression or statement) do
+			if t.kind == kind then
 				local lol = copy<|t|>
 				lol.@Contract = lol
-				print(lol, "!!!")
 				return lol
 			end
 		end
+		type_error("cannot find " .. tostring(type) .. " " .. tostring(kind))
 	end]]
 
 	return node--[[# as todo<||>]]
