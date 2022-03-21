@@ -428,7 +428,6 @@ do
 		local assignment = self:StartNode("statement", "assignment")
 		ReadBody(self, assignment)
 		self:EndNode(assignment)
-
 		return assignment
 	end
 

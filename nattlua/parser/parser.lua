@@ -9,12 +9,7 @@ local ipairs = _G.ipairs
 
 --[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
 
---[[#local type { 
-	ExpressionKind,
-	StatementKind,
-	statement,
-	expression
- } = import("./nodes.nlua")]]
+--[[#local type { ExpressionKind, StatementKind, statement, expression } = import("./nodes.nlua")]]
 
 function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
 	if not self:IsType("letter") and not self:IsValue("...") then return end

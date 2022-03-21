@@ -1,12 +1,6 @@
 --[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
 
---[[#local type { 
-	ExpressionKind,
-	StatementKind,
-	statement,
-	expression,
-	Node
- } = import("./nodes.nlua")]]
+--[[#local type { ExpressionKind, StatementKind, statement, expression, Node } = import("./nodes.nlua")]]
 
 --[[#import<|"~/nattlua/code/code.lua"|>]]
 --[[#local type NodeType = "expression" | "statement"]]
@@ -109,6 +103,7 @@ function META:StartNode(
 				return lol
 			end
 		end
+
 		type_error("cannot find " .. tostring(type) .. " " .. tostring(kind))
 	end]]
 

@@ -25,7 +25,7 @@ type timer.systime = function=()>(number)
 local mngr = {}
 mngr.__index = mngr
 type mngr.@Self = {
-    @Name = "Sprite",
+	@Name = "Sprite",
 	loading = boolean,
 	rows = number,
 	columns = number,
@@ -120,8 +120,8 @@ function mngr:appendURL(url: string)
 			end
 
 			self.loading = false
-
 			local cb = self.cb
+
 			if cb then cb(self) end
 		end
 	)
