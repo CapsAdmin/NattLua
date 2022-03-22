@@ -125,19 +125,7 @@ return function(META)
 			table.insert(self.deferred_calls, 1, {obj, arguments, node})
 		end
 
-		local function is_ref_function(func)
-			for i, v in ipairs(func:GetArguments():GetData()) do
-				if v.ref_argument then return true end
-			end
-
-			for i, v in ipairs(func:GetReturnTypes():GetData()) do
-				if v.ref_argument then return true end
-			end
-
-			return false
-		end
-
-		function META:AnalyzeUnreachableCode()
+        function META:AnalyzeUnreachableCode()
 			if not self.deferred_calls then return end
 
 			context:PushCurrentAnalyzer(self)
@@ -149,10 +137,10 @@ return function(META)
 				local func = v[1]
 
 				if
+					func.explicit_arguments and
 					not func:IsCalled() and
 					not func.done and
-					func.explicit_arguments and
-					not is_ref_function(func)
+					not func:IsRefFunction()
 				then
 					call(self, table.unpack(v))
 					called_count = called_count + 1
@@ -165,10 +153,10 @@ return function(META)
 				local func = v[1]
 
 				if
+					not func.explicit_arguments and
 					not func:IsCalled() and
 					not func.done and
-					not func.explicit_arguments and
-					not is_ref_function(func)
+					not func:IsRefFunction()
 				then
 					call(self, table.unpack(v))
 					called_count = called_count + 1
