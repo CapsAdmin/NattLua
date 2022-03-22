@@ -125,7 +125,7 @@ return function(META)
 			table.insert(self.deferred_calls, 1, {obj, arguments, node})
 		end
 
-		function META:AnalyzeUnreachableCode()
+        function META:AnalyzeUnreachableCode()
 			if not self.deferred_calls then return end
 
 			context:PushCurrentAnalyzer(self)
@@ -137,9 +137,9 @@ return function(META)
 				local func = v[1]
 
 				if
+                    func.explicit_arguments and
 					not func.called and
 					not func.done and
-					func.explicit_arguments and
 					not func:IsRefFunction()
 				then
 					local time = os.clock()
@@ -154,9 +154,9 @@ return function(META)
 				local func = v[1]
 
 				if
+                    not func.explicit_arguments and
 					not func.called and
 					not func.done and
-					not func.explicit_arguments and
 					not func:IsRefFunction()
 				then
 					local time = os.clock()
