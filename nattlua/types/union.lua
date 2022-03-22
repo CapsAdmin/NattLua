@@ -374,6 +374,10 @@ function META.IsSubsetOf(A--[[#: TUnion]], B--[[#: TBaseType]])
 
 	if B.Type == "tuple" then B = B:Get(1) end
 
+    if not A.Data[1] then
+        return type_errors.subset(A, B, "union is empty")
+    end
+
 	for _, a in ipairs(A.Data) do
 		if a.Type == "any" then return true end
 	end
@@ -611,6 +615,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 	if data then for _, v in ipairs(data) do
 		self:AddType(v)
 	end end
+    self.lol = debug.traceback()
 
 	return self
 end

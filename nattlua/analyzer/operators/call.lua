@@ -586,6 +586,12 @@ return {
 							self:Error(result:GetNode(), error.reason)
 						end
 					else
+						if result.Type == "tuple" and result:GetLength() == 1 then
+							local val = result:GetFirstValue()
+							if val.Type == "union" and val:GetLength() == 0 then
+								return
+							end
+						end
 						local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
 
 						if not ok then self:Error(result:GetNode(), reason) end
@@ -947,7 +953,31 @@ return {
 					scope = self:GetScope(),
 				}
 			)
+
+
+            local is_ref = self:IsRefCall() or obj.Type == "function" and obj:IsRefFunction()
+            local first_deferred_call = self.processing_deferred_calls and #self.call_stack == 1
+            local pushed = false
+            if is_ref then
+                self:PushRefCall()
+                self:PushDisableExpressionContext(false)
+                pushed = true
+            elseif not first_deferred_call then
+                print(call_node:Render())
+                self:PushDisableExpressionContext(true)
+                pushed = true
+            end
+
 			local ok, err = Call(self, obj, arguments)
+
+            if is_ref then
+                self:PopRefCall()
+            end
+
+            if pushed then
+                self:PopDisableExpressionContext()
+            end
+            
 			table.remove(self.call_stack)
 			self:PopActiveNode()
 			return ok, err

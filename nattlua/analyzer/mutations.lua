@@ -183,11 +183,11 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 
 		if obj.Type == "upvalue" then value:SetUpvalue(obj) end
 	end
-
+    
 	if value.Type == "union" then
-		local found_scope, data = scope:FindResponsibleConditionalScopeFromUpvalue(obj)
+		local found_scope, data = scope:FindResponsibleConditionalScopeFromUpvalue(obj)    
 
-		if found_scope then
+        if found_scope then
 			local stack = data.stack
 
 			if stack then
@@ -198,7 +198,17 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 						scope:IsPartOfTestStatementAs(found_scope)
 					)
 				then
-					local union = stack[#stack].falsy --:Copy()
+					local union = stack[#stack].falsy
+
+
+                    if union:GetLength() == 0 then
+                        union = Union()
+
+                        for _, val in ipairs(stack) do
+                            union:AddType(val.falsy)
+                        end
+                    end
+
 					if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 
 					return union
@@ -342,6 +352,26 @@ return function(META)
 	end
 
 	do
+        function META:PushRefCall()
+            self:PushContextRef("ref_call")
+        end
+
+        function META:PopRefCall()
+            self:PopContextRef("ref_call")
+        end
+        
+        function META:IsRefCall()
+            return self:GetContextRef("ref_call")
+        end
+
+        function META:PushDisableExpressionContext(b)
+            self:PushContextValue("disable_expression_context", b)
+        end
+
+        function META:PopDisableExpressionContext()
+            self:PopContextValue("disable_expression_context")
+        end
+
 		function META:PushTruthyExpressionContext()
 			self:PushContextRef("truthy_expression_context")
 		end
@@ -351,6 +381,7 @@ return function(META)
 		end
 
 		function META:IsTruthyExpressionContext()
+            if self:GetContextValue("disable_expression_context") == true then return false end
 			return self:GetContextRef("truthy_expression_context")
 		end
 
@@ -363,6 +394,7 @@ return function(META)
 		end
 
 		function META:IsFalsyExpressionContext()
+            if self:GetContextValue("disable_expression_context") == true then return false end
 			return self:GetContextRef("falsy_expression_context")
 		end
 	end
@@ -444,7 +476,7 @@ return function(META)
 
 			if not stack then return end
 
-			if self:IsTruthyExpressionContext() then
+            if self:IsTruthyExpressionContext() then
 				return stack[#stack].truthy:SetUpvalue(upvalue)
 			elseif self:IsFalsyExpressionContext() then
 				return stack[#stack].falsy:SetUpvalue(upvalue)
@@ -632,7 +664,6 @@ return function(META)
 					for _, data in ipairs(block.upvalues) do
 						if data.stack then
 							local union = self:GetMutatedUpvalue(data.upvalue)
-
 							if union.Type == "union" then
 								for _, v in ipairs(data.stack) do
 									union:RemoveType(v.truthy)

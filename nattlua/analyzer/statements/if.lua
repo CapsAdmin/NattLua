@@ -94,6 +94,7 @@ return {
 		local last_scope
 
 		for i, block in ipairs(blocks) do
+			block.scope = self:GetScope()
 			local scope = self:PushConditionalScope(statement, block.expression:IsTruthy(), block.expression:IsFalsy())
 
 			if last_scope then

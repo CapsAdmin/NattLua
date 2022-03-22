@@ -127,3 +127,14 @@ analyze[[
     local type tbl = {[number] = string} | {}
     attest.equal<|tbl[1], string|>
 ]]
+
+analyze[[
+    local function test(foo: string)
+        print(foo)
+    end
+    
+    local type t = | 
+    
+    attest.expect_diagnostic("error", "union is empty")
+    test(t)
+]]

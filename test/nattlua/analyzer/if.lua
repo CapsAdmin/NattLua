@@ -984,6 +984,32 @@ analyze[[
     end
 ]]
 analyze[[
+    local META = {}
+    META.__index = META
+
+    type META.@Self = {
+        Position = number,
+    }
+
+    local function GetStringSlice(start: number)
+    end
+
+    function META:IsString(str: string, offset: number | nil)
+        offset = offset or 0
+        GetStringSlice(self.Position + offset)
+        GetStringSlice(self.Position)
+        return math.random() > 0.5
+    end
+
+
+    local function ReadMultilineString(lexer: META.@Self)
+        -- PushTruthy/FalsyExpressionContext leak to calls
+        if lexer:IsString("[", 0) or lexer:IsString("[", 1) then
+        end
+    end
+
+]]
+analyze[[
     local MAYBE: boolean
 
     x = 1
@@ -1391,8 +1417,23 @@ analyze[[
 
     §assert(#analyzer.diagnostics == 0)
 ]]
+analyze[[
+    local type AddressInfo = {
+        addrinfo = 1337
+    }
+    local function connect(host: string | AddressInfo)
+        if type(host) == "table" and host.addrinfo then
+        else
+            attest.equal(host, _ as string)
+        end
+    end
+]]
 
 if false then
+    analyze[==[
+        
+    ]==]
+
 	pending[[
         do
             local x: {foo = nil | true}
