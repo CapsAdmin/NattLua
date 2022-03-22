@@ -125,18 +125,6 @@ return function(META)
 			table.insert(self.deferred_calls, 1, {obj, arguments, node})
 		end
 
-		local function is_ref_function(func)
-			for i, v in ipairs(func:GetArguments():GetData()) do
-				if v.ref_argument then return true end
-			end
-
-			for i, v in ipairs(func:GetReturnTypes():GetData()) do
-				if v.ref_argument then return true end
-			end
-
-			return false
-		end
-
 		function META:AnalyzeUnreachableCode()
 			if not self.deferred_calls then return end
 
@@ -152,7 +140,7 @@ return function(META)
 					not func.called and
 					not func.done and
 					func.explicit_arguments and
-					not is_ref_function(func)
+					not func:IsRefFunction()
 				then
 					local time = os.clock()
 					call(self, table.unpack(v))
@@ -169,7 +157,7 @@ return function(META)
 					not func.called and
 					not func.done and
 					not func.explicit_arguments and
-					not is_ref_function(func)
+					not func:IsRefFunction()
 				then
 					local time = os.clock()
 					call(self, table.unpack(v))

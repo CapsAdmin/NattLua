@@ -200,6 +200,18 @@ function META.New(data)
 	return setmetatable({Data = data or {}}, META)
 end
 
+function META:IsRefFunction()
+    for i, v in ipairs(self:GetArguments():GetData()) do
+        if v.ref_argument then return true end
+    end
+
+    for i, v in ipairs(self:GetReturnTypes():GetData()) do
+        if v.ref_argument then return true end
+    end
+
+    return false
+end
+
 return {
 	Function = META.New,
 	AnyFunction = function()
