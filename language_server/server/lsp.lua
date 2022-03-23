@@ -375,6 +375,8 @@ end
 local function find_parent(token, type, kind)
 	local node = token.parent
 
+	if not node then return nil end
+
 	while node.parent do
 		if node.type == type and node.kind == kind then return node end
 
@@ -420,7 +422,7 @@ lsp.methods["textDocument/inlay"] = function(self, params)
 	for _, assignment in ipairs(assignments) do
 		if assignment.environment == "runtime" then
 			for i, left in ipairs(assignment.left) do
-				if not left.tokens[":"] and assignment.right[i] then
+				if not left.tokens[":"] and assignment.right and assignment.right[i] then
 					local types = left:GetTypes()
 
 					if
@@ -431,11 +433,15 @@ lsp.methods["textDocument/inlay"] = function(self, params)
 						)
 					then
 						local data = helpers.SubPositionToLinePosition(compiler.Code:GetString(), left:GetStartStop())
+						local label =tostring(Union(types))
+						if #label > 20 then
+							label = label:sub(1, 20) .. "..."
+						end
 						table.insert(
 							hints,
 							{
-								label = ": " .. tostring(Union(types)),
-								tooltip = tostring(left),
+								label = ": " .. label,
+								tooltip = tostring(Union(types)),
 								position = {
 									lineNumber = data.line_stop,
 									column = data.character_stop + 1,
@@ -462,7 +468,7 @@ lsp.methods["textDocument/rename"] = function(self, params)
 		params.position.character
 	)
 
-	if not token or not data then return end
+	if not token or not data or not token.parent then return end
 
 	local obj = find_type_from_token(token)
 	local upvalue = obj:GetUpvalue()
@@ -505,7 +511,7 @@ lsp.methods["textDocument/hover"] = function(self, params)
 		params.position.character
 	)
 
-	if not token or not data then return end
+	if not token or not data or not token.parent then return end
 
 	local markdown = ""
 

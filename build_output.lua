@@ -1551,6 +1551,8 @@ function META.IsSubsetOf(A, B)
 
 	if B.Type == "tuple" then B = B:Get(1) end
 
+	if not A.Data[1] then return type_errors.subset(A, B, "union is empty") end
+
 	for _, a in ipairs(A.Data) do
 		if a.Type == "any" then return true end
 	end
@@ -1635,7 +1637,7 @@ function META:DisableTruthy()
 	local found = {}
 
 	for _, v in ipairs(self.Data) do
-		if v:IsTruthy() then table.insert(found, v) end
+		if v:IsCertainlyTrue() then table.insert(found, v) end
 	end
 
 	for _, v in ipairs(found) do
@@ -1659,7 +1661,7 @@ function META:DisableFalsy()
 	local found = {}
 
 	for _, v in ipairs(self.Data) do
-		if v:IsFalsy() then table.insert(found, v) end
+		if v:IsCertainlyFalse() then table.insert(found, v) end
 	end
 
 	for _, v in ipairs(found) do
@@ -1789,6 +1791,7 @@ function META.New(data)
 		self:AddType(v)
 	end end
 
+	self.lol = debug.traceback()
 	return self
 end
 
@@ -2906,6 +2909,14 @@ function META:IsCalled()
 	return self.called
 end
 
+function META:SetCallOverride(val)
+	self.called = val
+end
+
+function META:ClearCalls()
+	self.called = nil
+end
+
 function META:HasExplicitArguments()
 	return self.explicit_arguments
 end
@@ -2917,12 +2928,12 @@ end
 function META:SetReturnTypes(tup)
 	self:GetData().ret = tup
 	self.explicit_return_set = tup
-	self.called = nil
+	self:ClearCalls()
 end
 
 function META:SetArguments(tup)
 	self:GetData().arg = tup
-	self.called = nil
+	self:ClearCalls()
 end
 
 function META:Copy(map, ...)
@@ -2961,12 +2972,12 @@ function META.IsSubsetOf(A, B)
 		not ok and
 		(
 			(
-				not B.called and
+				not B:IsCalled() and
 				not B.explicit_return
 			)
 			or
 			(
-				not A.called and
+				not A:IsCalled() and
 				not A.explicit_return
 			)
 		)
@@ -3002,12 +3013,12 @@ function META.IsCallbackSubsetOf(A, B)
 		not ok and
 		(
 			(
-				not B.called and
+				not B:IsCalled() and
 				not B.explicit_return
 			)
 			or
 			(
-				not A.called and
+				not A:IsCalled() and
 				not A.explicit_return
 			)
 		)
@@ -3064,6 +3075,18 @@ end
 
 function META.New(data)
 	return setmetatable({Data = data or {}}, META)
+end
+
+function META:IsRefFunction()
+	for i, v in ipairs(self:GetArguments():GetData()) do
+		if v.ref_argument then return true end
+	end
+
+	for i, v in ipairs(self:GetReturnTypes():GetData()) do
+		if v.ref_argument then return true end
+	end
+
+	return false
 end
 
 return {
@@ -13533,9 +13556,10 @@ end
 
 local ref = 0
 
-function META.New(parent, upvalue_position)
+function META.New(parent, upvalue_position, obj)
 	ref = ref + 1
 	local scope = {
+		obj = obj,
 		ref = ref,
 		Children = {},
 		upvalue_position = upvalue_position,
@@ -13579,8 +13603,8 @@ return function(META)
 		return scope
 	end
 
-	function META:CreateAndPushFunctionScope(scope, upvalue_position)
-		return self:PushScope(LexicalScope(scope or self:GetScope(), upvalue_position))
+	function META:CreateAndPushFunctionScope(obj)
+		return self:PushScope(LexicalScope(obj:GetData().scope or self:GetScope(), obj:GetData().upvalue_position, obj))
 	end
 
 	function META:CreateAndPushModuleScope()
@@ -14008,7 +14032,7 @@ return function(META)
 				obj.mutations = nil
 			end
 
-			self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+			self:CreateAndPushFunctionScope(obj)
 			self:Assert(node, self:Call(obj, arguments, node))
 			self:PopScope()
 		end
@@ -14016,18 +14040,6 @@ return function(META)
 		function META:CallMeLater(obj, arguments, node)
 			self.deferred_calls = self.deferred_calls or {}
 			table.insert(self.deferred_calls, 1, {obj, arguments, node})
-		end
-
-		local function is_ref_function(func)
-			for i, v in ipairs(func:GetArguments():GetData()) do
-				if v.ref_argument then return true end
-			end
-
-			for i, v in ipairs(func:GetReturnTypes():GetData()) do
-				if v.ref_argument then return true end
-			end
-
-			return false
 		end
 
 		function META:AnalyzeUnreachableCode()
@@ -14042,16 +14054,16 @@ return function(META)
 				local func = v[1]
 
 				if
-					not func.called and
-					not func.done and
 					func.explicit_arguments and
-					not is_ref_function(func)
+					not func:IsCalled()
+					and
+					not func.done and
+					not func:IsRefFunction()
 				then
-					local time = os.clock()
 					call(self, table.unpack(v))
 					called_count = called_count + 1
 					func.done = true
-					func.called = nil
+					func:ClearCalls()
 				end
 			end
 
@@ -14059,16 +14071,16 @@ return function(META)
 				local func = v[1]
 
 				if
-					not func.called and
-					not func.done and
 					not func.explicit_arguments and
-					not is_ref_function(func)
+					not func:IsCalled()
+					and
+					not func.done and
+					not func:IsRefFunction()
 				then
-					local time = os.clock()
 					call(self, table.unpack(v))
 					called_count = called_count + 1
 					func.done = true
-					func.called = nil
+					func:ClearCalls()
 				end
 			end
 
@@ -14854,7 +14866,8 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 			-- check if we have to infer the function, otherwise adding it to the union can cause collisions
 			if
 				value.Type == "function" and
-				not value.called and
+				not value:IsCalled()
+				and
 				not value.explicit_return and
 				union:HasType("function")
 			then
@@ -14887,7 +14900,16 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 						scope:IsPartOfTestStatementAs(found_scope)
 					)
 				then
-					local union = stack[#stack].falsy --:Copy()
+					local union = stack[#stack].falsy
+
+					if union:GetLength() == 0 then
+						union = Union()
+
+						for _, val in ipairs(stack) do
+							union:AddType(val.falsy)
+						end
+					end
+
 					if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 
 					return union
@@ -15031,28 +15053,32 @@ return function(META)
 	end
 
 	do
-		function META:PushTruthyExpressionContext()
-			self:PushContextRef("truthy_expression_context")
+		do
+			function META:PushTruthyExpressionContext(b)
+				self:PushContextValue("truthy_expression_context", b)
+			end
+
+			function META:PopTruthyExpressionContext()
+				self:PopContextValue("truthy_expression_context")
+			end
+
+			function META:IsTruthyExpressionContext()
+				return self:GetContextValue("truthy_expression_context") == true
+			end
 		end
 
-		function META:PopTruthyExpressionContext()
-			self:PopContextRef("truthy_expression_context")
-		end
+		do
+			function META:PushFalsyExpressionContext(b)
+				self:PushContextValue("falsy_expression_context", b)
+			end
 
-		function META:IsTruthyExpressionContext()
-			return self:GetContextRef("truthy_expression_context")
-		end
+			function META:PopFalsyExpressionContext()
+				self:PopContextValue("falsy_expression_context")
+			end
 
-		function META:PushFalsyExpressionContext()
-			self:PushContextRef("falsy_expression_context")
-		end
-
-		function META:PopFalsyExpressionContext()
-			self:PopContextRef("falsy_expression_context")
-		end
-
-		function META:IsFalsyExpressionContext()
-			return self:GetContextRef("falsy_expression_context")
+			function META:IsFalsyExpressionContext()
+				return self:GetContextValue("falsy_expression_context") == true
+			end
 		end
 	end
 
@@ -15136,7 +15162,18 @@ return function(META)
 			if self:IsTruthyExpressionContext() then
 				return stack[#stack].truthy:SetUpvalue(upvalue)
 			elseif self:IsFalsyExpressionContext() then
-				return stack[#stack].falsy:SetUpvalue(upvalue)
+				local union = stack[#stack].falsy
+
+				if union:GetLength() == 0 then
+					union = Union()
+
+					for _, val in ipairs(stack) do
+						union:AddType(val.falsy)
+					end
+				end
+
+				union:SetUpvalue(upvalue)
+				return union
 			end
 		end
 
@@ -15588,9 +15625,9 @@ return {
 				local arg = val:GetArguments():Get(1)
 
 				if arg and not arg:GetContract() and not arg.Self then
-					val.called = true
+					val:SetCallOverride(true)
 					val = val:Copy()
-					val.called = nil
+					val:SetCallOverride(nil)
 					val:GetArguments():Set(1, Union({Any(), obj}))
 					self:CallMeLater(val, val:GetArguments(), val:GetNode(), true)
 				end
@@ -15851,7 +15888,9 @@ return {
 		end
 
 		function META:AnalyzeFunctionBody(obj, function_node, arguments)
-			local scope = self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+			local scope = self:CreateAndPushFunctionScope(obj)
+			self:PushTruthyExpressionContext(false)
+			self:PushFalsyExpressionContext(false)
 			self:PushGlobalEnvironment(
 				function_node,
 				self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
@@ -15896,6 +15935,8 @@ return {
 
 			self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
 			local function_scope = self:PopScope()
+			self:PopFalsyExpressionContext()
+			self:PopTruthyExpressionContext()
 
 			if scope.TrackedObjects then
 				for _, obj in ipairs(scope.TrackedObjects) do
@@ -16073,7 +16114,7 @@ return {
 				local contract_override = {}
 
 				do -- analyze the type expressions
-					self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+					self:CreateAndPushFunctionScope(obj)
 					self:PushAnalyzerEnvironment("typesystem")
 					local args = {}
 
@@ -16301,6 +16342,12 @@ return {
 							self:Error(result:GetNode(), error.reason)
 						end
 					else
+						if result.Type == "tuple" and result:GetLength() == 1 then
+							local val = result:GetFirstValue()
+
+							if val.Type == "union" and val:GetLength() == 0 then return end
+						end
+
 						local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
 
 						if not ok then self:Error(result:GetNode(), reason) end
@@ -16404,7 +16451,7 @@ return {
 
 				-- if the function has return type annotations, analyze them and use it as contract
 				if not return_contract and function_node.return_types and self:IsRuntime() then
-					self:CreateAndPushFunctionScope(obj:GetData().scope, obj:GetData().upvalue_position)
+					self:CreateAndPushFunctionScope(obj)
 					self:PushAnalyzerEnvironment("typesystem")
 
 					for i, key in ipairs(function_node.identifiers) do
@@ -17032,7 +17079,7 @@ local function analyze_function_signature(self, node, current_function)
 	local args = {}
 	local argument_tuple_override
 	local return_tuple_override
-	self:CreateAndPushFunctionScope(current_function:GetData().scope, current_function:GetData().upvalue_position)
+	self:CreateAndPushFunctionScope(current_function)
 	self:PushAnalyzerEnvironment("typesystem")
 
 	if node.kind == "function" or node.kind == "local_function" then
@@ -17289,7 +17336,7 @@ return {
 						exp.value.value == "."
 					)
 
-				if no_operator_expression then self:PushTruthyExpressionContext() end
+				if no_operator_expression then self:PushTruthyExpressionContext(true) end
 
 				local obj = self:AnalyzeExpression(exp)
 
@@ -17356,6 +17403,7 @@ return {
 		local last_scope
 
 		for i, block in ipairs(blocks) do
+			block.scope = self:GetScope()
 			local scope = self:PushConditionalScope(statement, block.expression:IsTruthy(), block.expression:IsFalsy())
 
 			if last_scope then
@@ -17590,7 +17638,7 @@ local function Binary(self, node, l, r, op)
 				end
 
 				-- right hand side of and is the "true" part
-				self:PushTruthyExpressionContext()
+				self:PushTruthyExpressionContext(true)
 				r = self:AnalyzeExpression(node.right)
 				self:PopTruthyExpressionContext()
 
@@ -17599,19 +17647,19 @@ local function Binary(self, node, l, r, op)
 				end
 			end
 		elseif node.value.value == "or" then
-			self:PushFalsyExpressionContext()
+			self:PushFalsyExpressionContext(true)
 			l = self:AnalyzeExpression(node.left)
 			self:PopFalsyExpressionContext()
 
 			if l:IsCertainlyFalse() then
-				self:PushFalsyExpressionContext()
+				self:PushFalsyExpressionContext(true)
 				r = self:AnalyzeExpression(node.right)
 				self:PopFalsyExpressionContext()
 			elseif l:IsCertainlyTrue() then
 				r = Nil():SetNode(node.right)
 			else
 				-- right hand side of or is the "false" part
-				self:PushFalsyExpressionContext()
+				self:PushFalsyExpressionContext(true)
 				r = self:AnalyzeExpression(node.right)
 				self:PopFalsyExpressionContext()
 			end
@@ -17653,8 +17701,12 @@ local function Binary(self, node, l, r, op)
 			if l.Type == "tuple" and r.Type == "tuple" then
 				return l:Copy():Concat(r)
 			elseif l.Type == "string" and r.Type == "string" then
-				return LString(l:GetData() .. r:GetData())
-			else
+				if l:IsLiteral() and r:IsLiteral() then
+					return LString(l:GetData() .. r:GetData())
+				end
+
+				return type_errors.binary(op, l, r)
+			elseif l.Type == "number" and r.Type == "number" then
 				return l:Copy():SetMax(r)
 			end
 		elseif op == "*" then
