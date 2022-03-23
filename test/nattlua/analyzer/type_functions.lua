@@ -558,3 +558,7 @@ analyze[[
         x={bar=2}
     }|>
 ]]
+analyze[[
+    local ok, err = _ as any | nil, _ as any | nil | string
+    attest.equal(assert(ok, err), _ as any)
+]]

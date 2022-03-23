@@ -280,3 +280,8 @@ pending[[
     print(x)
     end
 ]]
+analyze[[
+    local level = _ as 1 | 2
+    local info = level == 1 and (level + 10) or level
+    attest.equal(info, _ as 11|2)
+]]

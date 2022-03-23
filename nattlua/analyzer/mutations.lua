@@ -198,7 +198,16 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 						scope:IsPartOfTestStatementAs(found_scope)
 					)
 				then
-					local union = stack[#stack].falsy --:Copy()
+					local union = stack[#stack].falsy
+
+                    if union:GetLength() == 0 then
+                        union = Union()
+
+                        for _, val in ipairs(stack) do
+                            union:AddType(val.falsy)
+                        end
+                    end
+
 					if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 
 					return union
@@ -451,7 +460,20 @@ return function(META)
 			if self:IsTruthyExpressionContext() then
 				return stack[#stack].truthy:SetUpvalue(upvalue)
 			elseif self:IsFalsyExpressionContext() then
-				return stack[#stack].falsy:SetUpvalue(upvalue)
+				local union =  stack[#stack].falsy
+
+				if union:GetLength() == 0 then
+					union = Union()
+
+					for _, val in ipairs(stack) do
+						union:AddType(val.falsy)
+					end
+				end
+
+
+				union:SetUpvalue(upvalue) 
+
+				return union
 			end
 		end
 
