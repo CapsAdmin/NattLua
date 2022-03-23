@@ -125,7 +125,7 @@ return function(META)
 			table.insert(self.deferred_calls, 1, {obj, arguments, node})
 		end
 
-        function META:AnalyzeUnreachableCode()
+		function META:AnalyzeUnreachableCode()
 			if not self.deferred_calls then return end
 
 			context:PushCurrentAnalyzer(self)
@@ -138,7 +138,8 @@ return function(META)
 
 				if
 					func.explicit_arguments and
-					not func:IsCalled() and
+					not func:IsCalled()
+					and
 					not func.done and
 					not func:IsRefFunction()
 				then
@@ -154,7 +155,8 @@ return function(META)
 
 				if
 					not func.explicit_arguments and
-					not func:IsCalled() and
+					not func:IsCalled()
+					and
 					not func.done and
 					not func:IsRefFunction()
 				then

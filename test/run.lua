@@ -67,17 +67,15 @@ else
 
 	for path in io.popen("find " .. path):lines() do
 		if not path:find("/file_importing/", nil, true) then
-			if path:sub(-4) == ".lua" then
-				assert(loadfile(path))()
-			end
+			if path:sub(-4) == ".lua" then assert(loadfile(path))() end
 		end
 	end
 
-    for path in io.popen("find " .. path):lines() do
+	for path in io.popen("find " .. path):lines() do
 		if not path:find("/file_importing/", nil, true) then
 			if path:sub(-5) == ".nlua" then
 				require("test.helpers").RunCode(io.open(path, "r"):read("*all"))
-            end
+			end
 		end
 	end
 end

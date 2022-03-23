@@ -165,7 +165,8 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 			-- check if we have to infer the function, otherwise adding it to the union can cause collisions
 			if
 				value.Type == "function" and
-				not value:IsCalled() and
+				not value:IsCalled()
+				and
 				not value.explicit_return and
 				union:HasType("function")
 			then
@@ -200,13 +201,13 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 				then
 					local union = stack[#stack].falsy
 
-                    if union:GetLength() == 0 then
-                        union = Union()
+					if union:GetLength() == 0 then
+						union = Union()
 
-                        for _, val in ipairs(stack) do
-                            union:AddType(val.falsy)
-                        end
-                    end
+						for _, val in ipairs(stack) do
+							union:AddType(val.falsy)
+						end
+					end
 
 					if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 
@@ -460,7 +461,7 @@ return function(META)
 			if self:IsTruthyExpressionContext() then
 				return stack[#stack].truthy:SetUpvalue(upvalue)
 			elseif self:IsFalsyExpressionContext() then
-				local union =  stack[#stack].falsy
+				local union = stack[#stack].falsy
 
 				if union:GetLength() == 0 then
 					union = Union()
@@ -470,9 +471,7 @@ return function(META)
 					end
 				end
 
-
-				union:SetUpvalue(upvalue) 
-
+				union:SetUpvalue(upvalue)
 				return union
 			end
 		end

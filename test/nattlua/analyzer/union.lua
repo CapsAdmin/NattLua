@@ -127,7 +127,6 @@ analyze[[
     local type tbl = {[number] = string} | {}
     attest.equal<|tbl[1], string|>
 ]]
-
 analyze[[
     local function test(foo: string)
         print(foo)

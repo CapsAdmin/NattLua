@@ -209,15 +209,15 @@ function META.New(data)
 end
 
 function META:IsRefFunction()
-    for i, v in ipairs(self:GetArguments():GetData()) do
-        if v.ref_argument then return true end
-    end
+	for i, v in ipairs(self:GetArguments():GetData()) do
+		if v.ref_argument then return true end
+	end
 
-    for i, v in ipairs(self:GetReturnTypes():GetData()) do
-        if v.ref_argument then return true end
-    end
+	for i, v in ipairs(self:GetReturnTypes():GetData()) do
+		if v.ref_argument then return true end
+	end
 
-    return false
+	return false
 end
 
 return {

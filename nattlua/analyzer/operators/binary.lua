@@ -172,10 +172,11 @@ local function Binary(self, node, l, r, op)
 			if l.Type == "tuple" and r.Type == "tuple" then
 				return l:Copy():Concat(r)
 			elseif l.Type == "string" and r.Type == "string" then
-                if l:IsLiteral() and r:IsLiteral() then
-				return LString(l:GetData() .. r:GetData())
-                end
-                return type_errors.binary(op, l, r)
+				if l:IsLiteral() and r:IsLiteral() then
+					return LString(l:GetData() .. r:GetData())
+				end
+
+				return type_errors.binary(op, l, r)
 			elseif l.Type == "number" and r.Type == "number" then
 				return l:Copy():SetMax(r)
 			end

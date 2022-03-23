@@ -139,7 +139,6 @@ return {
 			local scope = self:CreateAndPushFunctionScope(obj)
 			self:PushTruthyExpressionContext(false)
 			self:PushFalsyExpressionContext(false)
-
 			self:PushGlobalEnvironment(
 				function_node,
 				self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
@@ -184,7 +183,6 @@ return {
 
 			self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
 			local function_scope = self:PopScope()
-
 			self:PopFalsyExpressionContext()
 			self:PopTruthyExpressionContext()
 
@@ -594,10 +592,10 @@ return {
 					else
 						if result.Type == "tuple" and result:GetLength() == 1 then
 							local val = result:GetFirstValue()
-							if val.Type == "union" and val:GetLength() == 0 then
-								return
-							end
+
+							if val.Type == "union" and val:GetLength() == 0 then return end
 						end
+
 						local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
 
 						if not ok then self:Error(result:GetNode(), reason) end
