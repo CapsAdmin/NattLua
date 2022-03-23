@@ -342,28 +342,32 @@ return function(META)
 	end
 
 	do
-		function META:PushTruthyExpressionContext()
-			self:PushContextRef("truthy_expression_context")
+		do
+			function META:PushTruthyExpressionContext(b)
+				self:PushContextValue("truthy_expression_context", b)
+			end
+
+			function META:PopTruthyExpressionContext()
+				self:PopContextValue("truthy_expression_context")
+			end
+
+			function META:IsTruthyExpressionContext()
+				return self:GetContextValue("truthy_expression_context") == true
+			end
 		end
 
-		function META:PopTruthyExpressionContext()
-			self:PopContextRef("truthy_expression_context")
-		end
+		do
+			function META:PushFalsyExpressionContext(b)
+				self:PushContextValue("falsy_expression_context", b)
+			end
 
-		function META:IsTruthyExpressionContext()
-			return self:GetContextRef("truthy_expression_context")
-		end
+			function META:PopFalsyExpressionContext()
+				self:PopContextValue("falsy_expression_context")
+			end
 
-		function META:PushFalsyExpressionContext()
-			self:PushContextRef("falsy_expression_context")
-		end
-
-		function META:PopFalsyExpressionContext()
-			self:PopContextRef("falsy_expression_context")
-		end
-
-		function META:IsFalsyExpressionContext()
-			return self:GetContextRef("falsy_expression_context")
+			function META:IsFalsyExpressionContext()
+				return self:GetContextValue("falsy_expression_context") == true
+			end
 		end
 	end
 

@@ -27,7 +27,7 @@ return {
 						exp.value.value == "."
 					)
 
-				if no_operator_expression then self:PushTruthyExpressionContext() end
+				if no_operator_expression then self:PushTruthyExpressionContext(true) end
 
 				local obj = self:AnalyzeExpression(exp)
 
@@ -94,6 +94,7 @@ return {
 		local last_scope
 
 		for i, block in ipairs(blocks) do
+			block.scope = self:GetScope()
 			local scope = self:PushConditionalScope(statement, block.expression:IsTruthy(), block.expression:IsFalsy())
 
 			if last_scope then

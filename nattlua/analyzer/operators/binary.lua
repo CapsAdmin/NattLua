@@ -109,7 +109,7 @@ local function Binary(self, node, l, r, op)
 				end
 
 				-- right hand side of and is the "true" part
-				self:PushTruthyExpressionContext()
+				self:PushTruthyExpressionContext(true)
 				r = self:AnalyzeExpression(node.right)
 				self:PopTruthyExpressionContext()
 
@@ -118,19 +118,19 @@ local function Binary(self, node, l, r, op)
 				end
 			end
 		elseif node.value.value == "or" then
-			self:PushFalsyExpressionContext()
+			self:PushFalsyExpressionContext(true)
 			l = self:AnalyzeExpression(node.left)
 			self:PopFalsyExpressionContext()
 
 			if l:IsCertainlyFalse() then
-				self:PushFalsyExpressionContext()
+				self:PushFalsyExpressionContext(true)
 				r = self:AnalyzeExpression(node.right)
 				self:PopFalsyExpressionContext()
 			elseif l:IsCertainlyTrue() then
 				r = Nil():SetNode(node.right)
 			else
 				-- right hand side of or is the "false" part
-				self:PushFalsyExpressionContext()
+				self:PushFalsyExpressionContext(true)
 				r = self:AnalyzeExpression(node.right)
 				self:PopFalsyExpressionContext()
 			end
