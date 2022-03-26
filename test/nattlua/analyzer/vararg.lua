@@ -397,3 +397,31 @@ analyze[[
     end
     attest.equal<|argument_type<|argument_type<|foo, 2|>[1], 2|>[1], ((number,)*inf,)|>
 ]]
+analyze[[
+    local type F = function=(foo: number, ...: (string,)*inf)>(nil)
+
+    local function foo(a: string, b: ref F)
+        b(1, "foo", "bar")
+    end
+    
+    foo("hello", function(a,b,c,d) 
+        attest.equal(a, 1)
+        attest.equal(b, "foo")
+        attest.equal(c, "bar")
+        attest.equal(d, nil)
+    end)
+]]
+
+analyze[[
+    local type F = function=(foo: number, ...: (string,)*inf)>(nil)
+
+    local function foo(a: string, b: ref F)
+    end
+    
+    foo("hello", function(a,b,c,d) 
+        attest.equal(a, _ as number)
+        attest.equal(b, _ as string)
+        attest.equal(c, _ as string)
+        attest.equal(d, _ as string)
+    end)
+]]

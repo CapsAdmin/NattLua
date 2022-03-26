@@ -380,7 +380,9 @@ return {
 							arguments:Set(i, arg)
 						end
 
-						if contract and contract.ref_argument and arg then
+						local ref_callback = arg and contract and contract.ref_argument and contract.Type == "function" and arg.Type == "function" and not arg.arguments_inferred 
+
+						if contract and contract.ref_argument and arg and not ref_callback then
 							self:CreateLocalValue(key.value.value, arg)
 						end
 
@@ -388,7 +390,7 @@ return {
 							args[i] = self:AnalyzeExpression(key.type_expression):GetFirstValue()
 						end
 
-						if contract and contract.ref_argument and arg then
+						if contract and contract.ref_argument and arg and not ref_callback then
 							args[i] = arg
 							args[i].ref_argument = true
 							local ok, err = args[i]:IsSubsetOf(contract)
@@ -430,7 +432,7 @@ return {
 								if not arg.explicit_arguments then
 									local contract = contract_override[i] or obj:GetArguments():Get(i)
 
-									if contract and not contract.ref_argument then
+									if contract then
 										if contract.Type == "union" then
 											local tup = Tuple({})
 
@@ -449,7 +451,7 @@ return {
 								if not arg.explicit_return then
 									local contract = contract_override[i] or obj:GetReturnTypes():Get(i)
 
-									if contract and not contract.ref_argument then
+									if contract then
 										if contract.Type == "union" then
 											local tup = Tuple({})
 
