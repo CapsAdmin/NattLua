@@ -122,6 +122,10 @@ do
 	require("nattlua.parser.base")
 end
 
+do 
+	require("nattlua.lexer.token")
+end
+
 do
 	local type { statement } = import("~/nattlua/parser/nodes.nlua")
 

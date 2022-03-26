@@ -4,6 +4,7 @@ local table_remove = _G.table.remove
 local math_huge = math.huge
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
+--[[#local type { Node } = import("~/nattlua/parser/nodes.nlua")]]
 
 function META:ReadAnalyzerFunctionExpression()
 	if not (self:IsValue("analyzer") and self:IsValue("function", 1)) then return end
@@ -36,7 +37,7 @@ function META:ReadIndexSubExpression()
 	return node
 end
 
-function META:IsCallExpression(offset)
+function META:IsCallExpression(offset--[[#: number]])
 	return self:IsValue("(", offset) or
 		self:IsValue("<|", offset) or
 		self:IsValue("{", offset) or
@@ -185,7 +186,7 @@ do -- typesystem
 	end
 
 	do
-		function META:read_type_table_entry(i)
+		function META:read_type_table_entry(i--[[#: number]])
 			if self:IsValue("[") then
 				local node = self:StartNode("expression", "table_expression_value")
 				node.expression_key = true
@@ -270,7 +271,7 @@ do -- typesystem
 		return node
 	end
 
-	function META:ReadAsSubExpression(node)
+	function META:ReadAsSubExpression(node--[[#: Node]])
 		if not self:IsValue("as") then return end
 
 		node.tokens["as"] = self:ExpectValue("as")
@@ -286,7 +287,7 @@ do -- typesystem
 		return node
 	end
 
-	function META:ReadTypeCallSubExpression(primary_node)
+	function META:ReadTypeCallSubExpression(primary_node--[[#: Node]])
 		if not self:IsCallExpression(0) then return end
 
 		local node = self:StartNode("expression", "postfix_call")
@@ -332,7 +333,7 @@ do -- typesystem
 		return node
 	end
 
-	function META:ReadTypeSubExpression(node)
+	function META:ReadTypeSubExpression(node--[[#: Node]])
 		for _ = 1, self:GetLength() do
 			local left_node = node
 			local found = self:ReadIndexSubExpression() or
@@ -356,7 +357,7 @@ do -- typesystem
 		return node
 	end
 
-	function META:ReadTypeExpression(priority)
+	function META:ReadTypeExpression(priority--[[#: number]])
 		if self.TealCompat then return self:ReadTealExpression(priority) end
 
 		self:PushParserEnvironment("typesystem")
@@ -431,7 +432,7 @@ do -- typesystem
 		)
 	end
 
-	function META:ExpectTypeExpression(priority)
+	function META:ExpectTypeExpression(priority--[[#: number]])
 		if not self:IsTypeExpression() then
 			local token = self:GetToken()
 			self:Error(
@@ -472,7 +473,7 @@ do -- runtime
 			return node
 		end
 
-		function META:read_table_entry(i)
+		function META:read_table_entry(i--[[#: number]])
 			if self:IsValue("[") then
 				local node = self:StartNode("expression", "table_expression_value")
 				node.expression_key = true
@@ -568,7 +569,7 @@ do -- runtime
 		return node
 	end
 
-	function META:ReadCallSubExpression(primary_node)
+	function META:ReadCallSubExpression(primary_node--[[#: Node]])
 		if not self:IsCallExpression(0) then return end
 
 		if primary_node and primary_node.kind == "function" then
@@ -642,7 +643,7 @@ do -- runtime
 		return node
 	end
 
-	function META:ReadSubExpression(node)
+	function META:ReadSubExpression(node--[[#: Node]])
 		for _ = 1, self:GetLength() do
 			local left_node = node
 
@@ -718,7 +719,7 @@ do -- runtime
 		return self:ReadValueExpressionToken()
 	end
 
-	local function resolve_import_path(self, path)
+	local function resolve_import_path(self--[[#: META.@Self]], path--[[#: string]])
 		local working_directory = self.config.working_directory or ""
 
 		if path:sub(1, 1) == "~" then
@@ -735,7 +736,7 @@ do -- runtime
 		return working_directory .. path
 	end
 
-	local function resolve_require_path(require_path)
+	local function resolve_require_path(require_path--[[#: string]])
 		require_path = require_path:gsub("%.", "/")
 
 		for package_path in (package.path .. ";"):gmatch("(.-);") do
@@ -751,7 +752,7 @@ do -- runtime
 		return nil
 	end
 
-	function META:HandleImportExpression(node, name, str, start)
+	function META:HandleImportExpression(node--[[#: Node]], name--[[#: string]], str--[[#: string]], start--[[#: number]])
 		if self.config.skip_import then return end
 
 		if self.dont_hoist_next_import then
@@ -821,7 +822,7 @@ do -- runtime
 		table.insert(self.RootStatement.imports, node)
 	end
 
-	function META:HandleImportDataExpression(node, path, start)
+	function META:HandleImportDataExpression(node--[[#: Node]], path--[[#: string]], start--[[#: number]])
 		if self.config.skip_import then return end
 
 		node.import_expression = true
@@ -891,7 +892,7 @@ do -- runtime
 		return node
 	end
 
-	function META:check_integer_division_operator(node)
+	function META:check_integer_division_operator(node--[[#: Node]])
 		if node and not node.idiv_resolved then
 			for i, token in ipairs(node.whitespace) do
 				if token.value:find("\n", nil, true) then break end
@@ -914,7 +915,7 @@ do -- runtime
 		end
 	end
 
-	function META:ReadRuntimeExpression(priority)
+	function META:ReadRuntimeExpression(priority--[[#: number]])
 		if self:GetCurrentParserEnvironment() == "typesystem" then
 			return self:ReadTypeExpression(priority)
 		end
@@ -996,7 +997,7 @@ do -- runtime
 		)
 	end
 
-	function META:ExpectRuntimeExpression(priority)
+	function META:ExpectRuntimeExpression(priority--[[#: number]])
 		if not self:IsRuntimeExpression() then
 			local token = self:GetToken()
 			self:Error(

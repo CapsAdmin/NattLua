@@ -3,7 +3,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 
 do -- destructure statement
-	function META:IsDestructureStatement(offset)
+	function META:IsDestructureStatement(offset--[[#: number]])
 		offset = offset or 0
 		return (
 				self:IsValue("{", offset + 0) and

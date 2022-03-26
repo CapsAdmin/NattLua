@@ -220,6 +220,16 @@ do
 		return self:ReadToken()--[[# as Token]]
 	end
 
+	function META:ExpectValueTranslate(str--[[#: string]], new_str--[[#: string]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])--[[#: Token]]
+		if not self:IsValue(str) then
+			error_expect(self, str, "value", error_start, error_stop)
+		end
+
+		local tk = self:ReadToken()--[[# as Token]]
+		tk.value = new_str
+		return tk
+	end
+
 	function META:ExpectType(
 		str--[[#: TokenType]],
 		error_start--[[#: Token | nil]],
@@ -230,6 +240,14 @@ do
 		end
 
 		return self:ReadToken()--[[# as Token]]
+	end
+
+	function META:NewToken(type--[[#: TokenType]], value--[[#: string]])
+		local tk = {}
+		tk.type = type
+		tk.is_whitespace = false
+		tk.value = value
+		return tk
 	end
 end
 
