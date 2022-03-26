@@ -10412,13 +10412,14 @@ do
 end
 
 function META:StartNode(
-	type,
+	node_type,
 	kind
 )
+	
 	local code_start = assert(self:GetToken()).start
 	local node = CreateNode(
 		{
-			type = type,
+			type = node_type,
 			kind = kind,
 			Code = self.Code,
 			code_start = code_start,
@@ -10428,7 +10429,7 @@ function META:StartNode(
 		}
 	)
 
-	if type == "expression" then
+	if node_type == "expression" then
 		self.current_expression = node
 	else
 		self.current_statement = node
@@ -10437,9 +10438,6 @@ function META:StartNode(
 	if self.OnNode then self:OnNode(node) end
 
 	table.insert(self.nodes, 1, node)
-
-	
-
 	return node
 end
 
@@ -16113,26 +16111,43 @@ return {
 				local len = contracts:GetSafeLength(arguments)
 				local contract_override = {}
 
-				do -- analyze the type expressions
+				if function_node.identifiers[1] then -- analyze the type expressions
 					self:CreateAndPushFunctionScope(obj)
 					self:PushAnalyzerEnvironment("typesystem")
 					local args = {}
 
-					for i, key in ipairs(function_node.identifiers) do
+					for i = 1, len do
+						local key = function_node.identifiers[i] or
+							function_node.identifiers[#function_node.identifiers]
+
 						if function_node.self_call then i = i + 1 end
 
 						-- stem type so that we can allow
 						-- function(x: foo<|x|>): nil
 						self:CreateLocalValue(key.value.value, Any())
-						local arg = arguments:Get(i)
-						local contract = contracts:Get(i)
+						local arg
+						local contract
+						arg = arguments:Get(i)
+
+						if key.value.value == "..." then
+							contract = contracts:GetWithoutExpansion(i)
+						else
+							contract = contracts:Get(i)
+						end
 
 						if not arg then
 							arg = Nil()
 							arguments:Set(i, arg)
 						end
 
-						if contract and contract.ref_argument and arg then
+						local ref_callback = arg and
+							contract and
+							contract.ref_argument and
+							contract.Type == "function" and
+							arg.Type == "function" and
+							not arg.arguments_inferred
+
+						if contract and contract.ref_argument and arg and not ref_callback then
 							self:CreateLocalValue(key.value.value, arg)
 						end
 
@@ -16140,7 +16155,7 @@ return {
 							args[i] = self:AnalyzeExpression(key.type_expression):GetFirstValue()
 						end
 
-						if contract and contract.ref_argument and arg then
+						if contract and contract.ref_argument and arg and not ref_callback then
 							args[i] = arg
 							args[i].ref_argument = true
 							local ok, err = args[i]:IsSubsetOf(contract)
@@ -16182,7 +16197,7 @@ return {
 								if not arg.explicit_arguments then
 									local contract = contract_override[i] or obj:GetArguments():Get(i)
 
-									if contract and not contract.ref_argument then
+									if contract then
 										if contract.Type == "union" then
 											local tup = Tuple({})
 
@@ -16190,8 +16205,11 @@ return {
 												tup:Merge(func:GetArguments())
 												arg:SetArguments(tup)
 											end
+
+											arg.arguments_inferred = true
 										elseif contract.Type == "function" then
 											arg:SetArguments(contract:GetArguments():Copy(nil, true)) -- force copy tables so we don't mutate the contract
+											arg.arguments_inferred = true
 										end
 									end
 								end
@@ -16199,7 +16217,7 @@ return {
 								if not arg.explicit_return then
 									local contract = contract_override[i] or obj:GetReturnTypes():Get(i)
 
-									if contract and not contract.ref_argument then
+									if contract then
 										if contract.Type == "union" then
 											local tup = Tuple({})
 
@@ -17138,7 +17156,7 @@ local function analyze_function_signature(self, node, current_function)
 
 						break
 					else
-						local val = self:Assert(node, obj:GetFirstValue())
+						local val = self:Assert(node, obj)
 
 						-- in case the tuple is empty
 						if val then args[i] = val end
@@ -17156,7 +17174,7 @@ local function analyze_function_signature(self, node, current_function)
 
 					break
 				else
-					local val = self:Assert(node, obj:GetFirstValue())
+					local val = self:Assert(node, obj)
 
 					-- in case the tuple is empty
 					if val then args[i] = val end
