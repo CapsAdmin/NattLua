@@ -15,6 +15,7 @@ local quote_helper = require("nattlua.other.quote")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("parser")
 --[[#type META.@Self = {
+	@Name = "Parser",
 	config = any,
 	nodes = List<|any|>,
 	Code = Code,
@@ -69,13 +70,19 @@ do
 end
 
 function META:StartNode(
-	type--[[#: ref ("statement" | "expression")]],
+	node_type--[[#: ref ("statement" | "expression")]],
 	kind--[[#: ref (StatementKind | ExpressionKind)]]
 )--[[#: ref Node]]
+
+	--[[#
+		local type T = node_type == "statement" and statement[kind] or expression[kind]
+	]]
+
 	local code_start = assert(self:GetToken()).start
+	
 	local node = CreateNode(
 		{
-			type = type,
+			type = node_type,
 			kind = kind,
 			Code = self.Code,
 			code_start = code_start,
@@ -85,7 +92,8 @@ function META:StartNode(
 		}
 	)
 
-	if type == "expression" then
+
+	if node_type == "expression" then
 		self.current_expression = node
 	else
 		self.current_statement = node
@@ -94,20 +102,8 @@ function META:StartNode(
 	if self.OnNode then self:OnNode(node) end
 
 	table.insert(self.nodes, 1, node)
-
-	--[[#local function todo<||>
-		for _, t in pairs(type == "epression" and expression or statement) do
-			if t.kind == kind then
-				local lol = copy<|t|>
-				lol.@Contract = lol
-				return lol
-			end
-		end
-
-		type_error("cannot find " .. tostring(type) .. " " .. tostring(kind))
-	end]]
-
-	return node--[[# as todo<||>]]
+	
+	return node --[[# as T]]
 end
 
 function META:EndNode(node--[[#: Node]])
@@ -308,13 +304,13 @@ end
 
 function META:ReadMultipleValues(
 	max--[[#: nil | number]],
-	reader--[[#: ref function=(Parser, ...: ...any)>(nil | Node)]],
+	reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (nil | Node))]],
 	...--[[#: ref ...any]]
 )
 	local out = {}
 
 	for i = 1, max or self:GetLength() do
-		local node = reader(self, ...)--[[# as Node | nil]]
+		local node = reader(self, ...)
 
 		if not node then break end
 

@@ -4,6 +4,7 @@ import("~/nattlua/code/code.lua")
 local type statement = {}
 local type expression = {}
 local type Node = {
+	@Name = "Node",
 	type = string,
 	kind = string,
 	id = number,
@@ -131,6 +132,7 @@ type expression["function_signature"] = Node & { -- [statement - local_assignmen
 			[":"] = Token,
 			["arguments("] = Token,
 		},
+		return_types = any,
 		identifiers = any,
 		return_types = any,
 	}
@@ -473,6 +475,7 @@ local type ExpressionKind = (function()
 	for kind, node in pairs(expression) do
 		node.type = "expression"
 		node.kind = kind
+		node.@Name = node.type .. "_" .. node.kind
 		type union = union | kind
 	end
 
@@ -484,6 +487,7 @@ local type StatementKind = (function()
 	for kind, node in pairs(statement) do
 		node.type = "statement"
 		node.kind = kind
+		node.@Name = node.type .. "_" .. node.kind
 		type union = union | kind
 	end
 
