@@ -32,4 +32,4 @@ function META.New(obj)
 	return self
 end
 
-return META.New
+return META

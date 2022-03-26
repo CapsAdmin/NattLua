@@ -1,5 +1,7 @@
 local META = ...
+
 --[[#local type { Node, statement } = import("~/nattlua/parser/nodes.nlua")]]
+
 --[[#local type { TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 local runtime_syntax = require("nattlua.syntax.runtime")
@@ -162,7 +164,7 @@ function META:ReadTealCallSubExpression()
 	return node
 end
 
-function META:ReadTealSubExpression(node --[[#: Node]])
+function META:ReadTealSubExpression(node--[[#: Node]])
 	for _ = 1, self:GetLength() do
 		local left_node = node
 		local found = self:ReadIndexSubExpression() or
@@ -279,7 +281,10 @@ function META:ReadTealRecordMetamethod()
 	return kv
 end
 
-local function ReadRecordBody(self--[[#: META.@Self]], assignment--[[#: statement.assignment | statement.local_assignment ]])
+local function ReadRecordBody(
+	self--[[#: META.@Self]],
+	assignment--[[#: statement.assignment | statement.local_assignment]]
+)
 	local func
 
 	if self:IsValue("<") then
@@ -305,7 +310,10 @@ local function ReadRecordBody(self--[[#: META.@Self]], assignment--[[#: statemen
 	local block = self:StartNode("statement", "do")
 	block.tokens["do"] = self:NewToken("letter", "do")
 	block.statements = {}
-	table.insert(block.statements, self:ParseString("PushTypeEnvironment<|" .. name .. "|>").statements[1])
+	table.insert(
+		block.statements,
+		self:ParseString("PushTypeEnvironment<|" .. name .. "|>").statements[1]
+	)
 
 	while true do
 		local node = self:ReadTealEnumStatement() or
@@ -374,7 +382,10 @@ function META:ReadLocalTealRecord()
 end
 
 do
-	local function ReadBody(self--[[#: META.@Self]], assignment--[[#: statement.assignment | statement.local_assignment ]])
+	local function ReadBody(
+		self--[[#: META.@Self]],
+		assignment--[[#: statement.assignment | statement.local_assignment]]
+	)
 		self:PushParserEnvironment("typesystem")
 		assignment.tokens["type"] = self:ExpectValueTranslate("enum", "type")
 		assignment.left = {self:ReadValueExpressionToken()}

@@ -1,7 +1,7 @@
 local helpers = require("nattlua.other.helpers")
 local util = require("examples.util")
 local nl = require("nattlua")
-local Code = require("nattlua.code.code")
+local Code = require("nattlua.code.code").New
 local code = nl.Compiler(
 	assert(
 		util.FetchCode(

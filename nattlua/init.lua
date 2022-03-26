@@ -1,6 +1,6 @@
 local nl = {}
 local loadstring = require("nattlua.other.loadstring")
-nl.Compiler = require("nattlua.compiler")
+nl.Compiler = require("nattlua.compiler").New
 
 function nl.load(code, name, config)
 	local obj = nl.Compiler(code, name, config)

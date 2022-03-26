@@ -294,4 +294,4 @@ function META:ReadNode()
 		self:ReadCallOrAssignmentStatement()
 end
 
-return META.New
+return META

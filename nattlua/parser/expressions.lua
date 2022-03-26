@@ -4,6 +4,7 @@ local table_remove = _G.table.remove
 local math_huge = math.huge
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
+
 --[[#local type { Node } = import("~/nattlua/parser/nodes.nlua")]]
 
 function META:ReadAnalyzerFunctionExpression()
@@ -899,8 +900,8 @@ do -- runtime
 
 				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
 					table_remove(node.whitespace, i)
-					local Code = require("nattlua.code.code")
-					local tokens = require("nattlua.lexer.lexer")(Code("/idiv" .. token.value:sub(2), "")):GetTokens()
+					local Code = require("nattlua.code.code").New
+					local tokens = require("nattlua.lexer.lexer").New(Code("/idiv" .. token.value:sub(2), "")):GetTokens()
 
 					for _, token in ipairs(tokens) do
 						self:check_integer_division_operator(token)

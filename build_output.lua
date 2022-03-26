@@ -421,15 +421,49 @@ return function(...)
 
 	io.write(luadata.ToString(tbl, {tab = -1, tab_limit = max_level, done = {}}):sub(0, -2))
 end end)(...) return __M end end
-IMPORTS['nattlua/lexer/token.nlua'] = function() 
+do local __M; IMPORTS["nattlua.other.table_new"] = function(...) __M = __M or (function(...) local table_new
+local ok
 
+if not _G.gmod then ok, table_new = pcall(require, "table.new") end
 
+if not ok then table_new = function(size, records)
+	return {}
+end end
 
-return {
-	Token = Token,
-	TokenType = TokenType,
-	TokenReturnType = TokenReturnType,
-} end
+return table_new end)(...) return __M end end
+do local __M; IMPORTS["nattlua.other.table_pool"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
+local table_new = IMPORTS['nattlua.other.table_new']("nattlua.other.table_new")
+return function(alloc, size)
+	local records = 0
+
+	for _, _ in pairs(alloc()) do
+		records = records + 1
+	end
+
+	local i
+	local pool = table_new(size, records)
+
+	local function refill()
+		i = 1
+
+		for i = 1, size do
+			pool[i] = alloc()
+		end
+	end
+
+	refill()
+	return function()
+		local tbl = pool[i]
+
+		if not tbl then
+			refill()
+			tbl = pool[i]
+		end
+
+		i = i + 1
+		return tbl
+	end
+end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.other.quote"] = function(...) __M = __M or (function(...) local helpers = {}
 
 function helpers.QuoteToken(str)
@@ -453,6 +487,99 @@ function helpers.QuoteTokens(var)
 end
 
 return helpers end)(...) return __M end end
+do local __M; IMPORTS["nattlua.other.class"] = function(...) __M = __M or (function(...) local class = {}
+
+function class.CreateTemplate(type_name)
+	local meta = {}
+	meta.Type = type_name
+	meta.__index = meta
+	
+
+	function meta.GetSet(tbl, name, default)
+		tbl[name] = default
+		
+		tbl["Set" .. name] = function(self, val)
+			self[name] = val
+			return self
+		end
+		tbl["Get" .. name] = function(self)
+			return self[name]
+		end
+	end
+
+	function meta.IsSet(tbl, name, default)
+		tbl[name] = default
+		
+		tbl["Set" .. name] = function(self, val)
+			self[name] = val
+			return self
+		end
+		tbl["Is" .. name] = function(self)
+			return self[name]
+		end
+	end
+
+	return meta
+end
+
+return class end)(...) return __M end end
+IMPORTS['nattlua/lexer/token.lua'] = function() local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
+local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("token")
+
+
+
+
+
+
+function META:__tostring()
+	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
+end
+
+function META:AddType(obj)
+	self.inferred_types = self.inferred_types or {}
+	table.insert(self.inferred_types, obj)
+end
+
+function META:GetTypes()
+	return self.inferred_types or {}
+end
+
+function META:GetLastType()
+	return self.inferred_types and self.inferred_types[#self.inferred_types]
+end
+
+local new_token = table_pool(
+	function()
+		local x = {
+			type = "unknown",
+			value = "",
+			whitespace = false,
+			start = 0,
+			stop = 0,
+		}
+		return x
+	end,
+	3105585
+)
+
+function META.New(
+	type,
+	is_whitespace,
+	start,
+	stop
+)
+	local tk = new_token()
+	tk.type = type
+	tk.is_whitespace = is_whitespace
+	tk.start = start
+	tk.stop = stop
+	setmetatable(tk, META)
+	return tk
+end
+
+return META end
 do local __M; IMPORTS["nattlua.other.helpers"] = function(...) __M = __M or (function(...) 
 
 local math = _G.math
@@ -857,42 +984,6 @@ local errors = {
 	end,
 }
 return errors end)(...) return __M end end
-do local __M; IMPORTS["nattlua.other.class"] = function(...) __M = __M or (function(...) local class = {}
-
-function class.CreateTemplate(type_name)
-	local meta = {}
-	meta.Type = type_name
-	meta.__index = meta
-	
-
-	function meta.GetSet(tbl, name, default)
-		tbl[name] = default
-		
-		tbl["Set" .. name] = function(self, val)
-			self[name] = val
-			return self
-		end
-		tbl["Get" .. name] = function(self)
-			return self[name]
-		end
-	end
-
-	function meta.IsSet(tbl, name, default)
-		tbl[name] = default
-		
-		tbl["Set" .. name] = function(self, val)
-			self[name] = val
-			return self
-		end
-		tbl["Is" .. name] = function(self)
-			return self[name]
-		end
-	end
-
-	return meta
-end
-
-return class end)(...) return __M end end
 IMPORTS['nattlua/types/base.lua'] = function() local assert = _G.assert
 local tostring = _G.tostring
 local setmetatable = _G.setmetatable
@@ -8682,66 +8773,10 @@ function META.New(lua_code, name)
 end
 
 
-return META.New end)(...) return __M end end
-IMPORTS['./nattlua/lexer/token.nlua'] = function() 
-
-
-
-return {
-	Token = Token,
-	TokenType = TokenType,
-	TokenReturnType = TokenReturnType,
-} end
-do local __M; IMPORTS["nattlua.other.table_new"] = function(...) __M = __M or (function(...) local table_new
-local ok
-
-if not _G.gmod then ok, table_new = pcall(require, "table.new") end
-
-if not ok then table_new = function(size, records)
-	return {}
-end end
-
-return table_new end)(...) return __M end end
-do local __M; IMPORTS["nattlua.other.table_pool"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
-local table_new = IMPORTS['nattlua.other.table_new']("nattlua.other.table_new")
-return function(alloc, size)
-	local records = 0
-
-	for _, _ in pairs(alloc()) do
-		records = records + 1
-	end
-
-	local i
-	local pool = table_new(size, records)
-
-	local function refill()
-		i = 1
-
-		for i = 1, size do
-			pool[i] = alloc()
-		end
-	end
-
-	refill()
-	return function()
-		local tbl = pool[i]
-
-		if not tbl then
-			refill()
-			tbl = pool[i]
-		end
-
-		i = i + 1
-		return tbl
-	end
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.lexer.token"] = function(...) __M = __M or (function(...) local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
+return META end)(...) return __M end end
+IMPORTS['./nattlua/lexer/token.lua'] = function() local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
-
-
-
-
 local META = class.CreateTemplate("token")
 
 
@@ -8795,10 +8830,63 @@ function META.New(
 	return tk
 end
 
-META.TokenWhitespaceType = TokenWhitespaceType
-META.TokenType = TokenType
-META.TokenReturnType = TokenReturnType
-META.WhitespaceToken = TokenReturnType
+return META end
+do local __M; IMPORTS["nattlua.lexer.token"] = function(...) __M = __M or (function(...) local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
+local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("token")
+
+
+
+
+
+
+function META:__tostring()
+	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
+end
+
+function META:AddType(obj)
+	self.inferred_types = self.inferred_types or {}
+	table.insert(self.inferred_types, obj)
+end
+
+function META:GetTypes()
+	return self.inferred_types or {}
+end
+
+function META:GetLastType()
+	return self.inferred_types and self.inferred_types[#self.inferred_types]
+end
+
+local new_token = table_pool(
+	function()
+		local x = {
+			type = "unknown",
+			value = "",
+			whitespace = false,
+			start = 0,
+			stop = 0,
+		}
+		return x
+	end,
+	3105585
+)
+
+function META.New(
+	type,
+	is_whitespace,
+	start,
+	stop
+)
+	local tk = new_token()
+	tk.type = type
+	tk.is_whitespace = is_whitespace
+	tk.start = start
+	tk.stop = stop
+	setmetatable(tk, META)
+	return tk
+end
+
 return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.syntax.characters"] = function(...) __M = __M or (function(...) local characters = {}
 local B = string.byte
@@ -9157,8 +9245,8 @@ function META:GetTokenType(tk)
 	return tk.type
 end
 
-return META.New end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.runtime"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax.syntax']("nattlua.syntax.syntax")
+return META end)(...) return __M end end
+do local __M; IMPORTS["nattlua.syntax.runtime"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax.syntax']("nattlua.syntax.syntax").New
 local runtime = Syntax()
 runtime:AddSymbolCharacters(
 	{
@@ -9262,7 +9350,7 @@ runtime:AddPostfixOperatorFunctionTranslate({
 return runtime end)(...) return __M end end
 do local __M; IMPORTS["nattlua.lexer.lexer"] = function(...) __M = __M or (function(...) 
 
-local Code = IMPORTS['nattlua.code.code']("nattlua.code.code")
+local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
 local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 local Token = IMPORTS['nattlua.lexer.token']("nattlua.lexer.token").New
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
@@ -9513,6 +9601,7 @@ do
 
 	
 
+	
 	local characters = IMPORTS['nattlua.syntax.characters']("nattlua.syntax.characters")
 	local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 	local helpers = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
@@ -9989,7 +10078,7 @@ do
 	end
 end
 
-return META.New end)(...) return __M end end
+return META end)(...) return __M end end
 IMPORTS['nattlua/code/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("code")
@@ -10067,7 +10156,7 @@ function META.New(lua_code, name)
 end
 
 
-return META.New end
+return META end
 IMPORTS['./nattlua/parser/nodes.nlua'] = function() 
 
 IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
@@ -10562,6 +10651,21 @@ do
 		return self:ReadToken()
 	end
 
+	function META:ExpectValueTranslate(
+		str,
+		new_str,
+		error_start,
+		error_stop
+	)
+		if not self:IsValue(str) then
+			error_expect(self, str, "value", error_start, error_stop)
+		end
+
+		local tk = self:ReadToken()
+		tk.value = new_str
+		return tk
+	end
+
 	function META:ExpectType(
 		str,
 		error_start,
@@ -10572,6 +10676,14 @@ do
 		end
 
 		return self:ReadToken()
+	end
+
+	function META:NewToken(type, value)
+		local tk = {}
+		tk.type = type
+		tk.is_whitespace = false
+		tk.value = value
+		return tk
 	end
 end
 
@@ -10660,7 +10772,7 @@ function META:ReadMultipleValues(
 end
 
 return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.typesystem"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax.syntax']("nattlua.syntax.syntax")
+do local __M; IMPORTS["nattlua.syntax.typesystem"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax.syntax']("nattlua.syntax.syntax").New
 local typesystem = Syntax()
 typesystem:AddSymbolCharacters(
 	{
@@ -10812,6 +10924,8 @@ local table_remove = _G.table.remove
 local math_huge = math.huge
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
+
+
 
 function META:ReadAnalyzerFunctionExpression()
 	if not (self:IsValue("analyzer") and self:IsValue("function", 1)) then return end
@@ -11706,8 +11820,8 @@ do -- runtime
 
 				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
 					table_remove(node.whitespace, i)
-					local Code = IMPORTS['nattlua.code.code']("nattlua.code.code")
-					local tokens = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer")(Code("/idiv" .. token.value:sub(2), "")):GetTokens()
+					local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
+					local tokens = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer").New(Code("/idiv" .. token.value:sub(2), "")):GetTokens()
 
 					for _, token in ipairs(tokens) do
 						self:check_integer_division_operator(token)
@@ -12329,36 +12443,11 @@ IMPORTS['nattlua/parser/teal.lua'] = function(...) local META = ...
 
 
 
+
+
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
 local math_huge = math.huge
-
-local function Value(self, symbol, value)
-	local node = self:StartNode("expression", "value")
-	node.value = self:NewToken(symbol, value)
-	self:EndNode(node)
-	return node
-end
-
-local function Parse(code)
-	local compiler = IMPORTS['nattlua']("nattlua").Compiler(code, "temp")
-	assert(compiler:Lex())
-	assert(compiler:Parse())
-	return compiler.SyntaxTree
-end
-
-local function fix(tk, new_value)
-	tk.value = new_value
-	return tk
-end
-
-function META:NewToken(type, value)
-	local tk = {}
-	tk.type = type
-	tk.is_whitespace = false
-	tk.value = value
-	return tk
-end
 
 function META:ReadTealFunctionArgument(expect_type)
 	if
@@ -12445,16 +12534,16 @@ function META:ReadTealTable()
 		kv.expression_key = true
 
 		if self:IsValue("(") then
-			kv.tokens["["] = fix(self:ExpectValue("("), "[")
+			kv.tokens["["] = self:ExpectValueTranslate("(", "[")
 			kv.key_expression = self:ReadTealExpression(0)
-			kv.tokens["]"] = fix(self:ExpectValue(")"), "]")
+			kv.tokens["]"] = self:ExpectValueTranslate(")", "]")
 		else
 			kv.tokens["["] = self:NewToken("symbol", "[")
 			kv.key_expression = self:ReadValueExpressionType("letter")
 			kv.tokens["]"] = self:NewToken("symbol", "]")
 		end
 
-		kv.tokens["="] = fix(self:ExpectValue(":"), "=")
+		kv.tokens["="] = self:ExpectValueTranslate(":", "=")
 		kv.value_expression = self:ReadTealExpression(0)
 		self:EndNode(kv)
 		node.children = {kv}
@@ -12508,9 +12597,9 @@ function META:ReadTealCallSubExpression()
 	if not self:IsValue("<") then return end
 
 	local node = self:StartNode("expression", "postfix_call")
-	node.tokens["call("] = fix(self:ExpectValue("<"), "<|")
+	node.tokens["call("] = self:ExpectValueTranslate("<", "<|")
 	node.expressions = self:ReadMultipleValues(nil, self.ReadTealExpression, 0)
-	node.tokens["call)"] = fix(self:ExpectValue(">"), "|>")
+	node.tokens["call)"] = self:ExpectValueTranslate(">", "|>")
 	node.type_call = true
 	self:EndNode(node)
 	return node
@@ -12597,7 +12686,7 @@ function META:ReadTealRecordKeyVal()
 	local kv = self:StartNode("statement", "assignment")
 	kv.tokens["type"] = self:NewToken("letter", "type")
 	kv.left = {self:ReadValueExpressionToken()}
-	kv.tokens["="] = fix(self:ExpectValue(":"), "=")
+	kv.tokens["="] = self:ExpectValueTranslate(":", "=")
 	kv.right = {self:ReadTealExpression(0)}
 	return kv
 end
@@ -12606,8 +12695,8 @@ function META:ReadTealRecordArray()
 	if not self:IsValue("{") then return nil end
 
 	local kv = self:StartNode("statement", "assignment")
-	kv.tokens["type"] = fix(self:ExpectValue("{"), "type")
-	kv.left = {Parse("_G[number] = 1").statements[1].left[1]}
+	kv.tokens["type"] = self:ExpectValueTranslate("{", "type")
+	kv.left = {self:ParseString("_G[number] = 1").statements[1].left[1]}
 	kv.tokens["="] = self:NewToken("symbol", "=")
 	kv.right = {self:ReadTealExpression(0)}
 	self:Advance(1) -- }
@@ -12626,14 +12715,17 @@ function META:ReadTealRecordMetamethod()
 	end
 
 	local kv = self:StartNode("statement", "assignment")
-	kv.tokens["type"] = fix(self:ExpectValue("metamethod"), "type")
+	kv.tokens["type"] = self:ExpectValueTranslate("metamethod", "type")
 	kv.left = {self:ReadValueExpressionToken()}
-	kv.tokens["="] = fix(self:ExpectValue(":"), "=")
+	kv.tokens["="] = self:ExpectValueTranslate(":", "=")
 	kv.right = {self:ReadTealExpression(0)}
 	return kv
 end
 
-local function ReadRecordBody(self, assignment)
+local function ReadRecordBody(
+	self,
+	assignment
+)
 	local func
 
 	if self:IsValue("<") then
@@ -12641,9 +12733,9 @@ local function ReadRecordBody(self, assignment)
 		func.tokens["local"] = self:NewToken("letter", "local")
 		func.tokens["identifier"] = assignment.left[1].value
 		func.tokens["function"] = self:NewToken("letter", "function")
-		func.tokens["arguments("] = fix(self:ExpectValue("<"), "<|")
+		func.tokens["arguments("] = self:ExpectValueTranslate("<", "<|")
 		func.identifiers = self:ReadMultipleValues(nil, self.ReadValueExpressionToken)
-		func.tokens["arguments)"] = fix(self:ExpectValue(">"), "|>")
+		func.tokens["arguments)"] = self:ExpectValueTranslate(">", "|>")
 		func.statements = {}
 	end
 
@@ -12659,7 +12751,10 @@ local function ReadRecordBody(self, assignment)
 	local block = self:StartNode("statement", "do")
 	block.tokens["do"] = self:NewToken("letter", "do")
 	block.statements = {}
-	table.insert(block.statements, Parse("PushTypeEnvironment<|" .. name .. "|>").statements[1])
+	table.insert(
+		block.statements,
+		self:ParseString("PushTypeEnvironment<|" .. name .. "|>").statements[1]
+	)
 
 	while true do
 		local node = self:ReadTealEnumStatement() or
@@ -12680,7 +12775,7 @@ local function ReadRecordBody(self, assignment)
 		end
 	end
 
-	table.insert(block.statements, Parse("PopTypeEnvironment<||>").statements[1])
+	table.insert(block.statements, self:ParseString("PopTypeEnvironment<||>").statements[1])
 	block.tokens["end"] = self:ExpectValue("end")
 	self:EndNode(block)
 	self:PopParserEnvironment("typesystem")
@@ -12688,7 +12783,7 @@ local function ReadRecordBody(self, assignment)
 	if func then
 		table.insert(func.statements, assignment)
 		table.insert(func.statements, block)
-		table.insert(func.statements, Parse("return " .. name).statements[1])
+		table.insert(func.statements, self:ParseString("return " .. name).statements[1])
 		func.tokens["end"] = self:NewToken("letter", "end")
 		self:EndNode(func)
 		return func
@@ -12702,7 +12797,7 @@ function META:ReadTealRecord()
 
 	self:PushParserEnvironment("typesystem")
 	local assignment = self:StartNode("statement", "assignment")
-	assignment.tokens["type"] = fix(self:ExpectValue("record"), "type")
+	assignment.tokens["type"] = self:ExpectValueTranslate("record", "type")
 	assignment.tokens["="] = self:NewToken("symbol", "=")
 	assignment.left = {self:ReadValueExpressionToken()}
 	return ReadRecordBody(self, assignment)
@@ -12721,16 +12816,19 @@ function META:ReadLocalTealRecord()
 	self:PushParserEnvironment("typesystem")
 	local assignment = self:StartNode("statement", "local_assignment")
 	assignment.tokens["local"] = self:ExpectValue("local")
-	assignment.tokens["type"] = fix(self:ExpectValue("record"), "type")
+	assignment.tokens["type"] = self:ExpectValueTranslate("record", "type")
 	assignment.tokens["="] = self:NewToken("symbol", "=")
 	assignment.left = {self:ReadValueExpressionToken()}
 	return ReadRecordBody(self, assignment)
 end
 
 do
-	local function ReadBody(self, assignment)
+	local function ReadBody(
+		self,
+		assignment
+	)
 		self:PushParserEnvironment("typesystem")
-		assignment.tokens["type"] = fix(self:ExpectValue("enum"), "type")
+		assignment.tokens["type"] = self:ExpectValueTranslate("enum", "type")
 		assignment.left = {self:ReadValueExpressionToken()}
 		assignment.tokens["="] = self:NewToken("symbol", "=")
 		local bnode = self:ReadValueExpressionType("string")
@@ -13069,7 +13167,7 @@ function META:ReadNode()
 		self:ReadCallOrAssignmentStatement()
 end
 
-return META.New end)(...) return __M end end
+return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.types"] = function(...) __M = __M or (function(...) local types = {}
 
 function types.Initialize()
@@ -13128,7 +13226,7 @@ function META.New(obj)
 	return self
 end
 
-return META.New end)(...) return __M end end
+return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.base.lexical_scope"] = function(...) __M = __M or (function(...) local ipairs = ipairs
 local pairs = pairs
 local error = error
@@ -13140,7 +13238,7 @@ local table_insert = table.insert
 local table = _G.table
 local type = _G.type
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
-local Upvalue = IMPORTS['nattlua.analyzer.base.upvalue']("nattlua.analyzer.base.upvalue")
+local Upvalue = IMPORTS['nattlua.analyzer.base.upvalue']("nattlua.analyzer.base.upvalue").New
 local META = class.CreateTemplate("lexical_scope")
 
 do
@@ -13577,11 +13675,11 @@ function META.New(parent, upvalue_position, obj)
 	return scope
 end
 
-return META.New end)(...) return __M end end
+return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.base.scopes"] = function(...) __M = __M or (function(...) local type = type
 local ipairs = ipairs
 local tostring = tostring
-local LexicalScope = IMPORTS['nattlua.analyzer.base.lexical_scope']("nattlua.analyzer.base.lexical_scope")
+local LexicalScope = IMPORTS['nattlua.analyzer.base.lexical_scope']("nattlua.analyzer.base.lexical_scope").New
 local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local table = _G.table
@@ -18867,7 +18965,7 @@ function META.New(config)
 	return self
 end
 
-return META.New end)(...) return __M end end
+return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.transpiler.emitter"] = function(...) __M = __M or (function(...) local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local characters = IMPORTS['nattlua.syntax.characters']("nattlua.syntax.characters")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
@@ -20768,7 +20866,7 @@ local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local debug = _G.debug
 local BuildBaseEnvironment = IMPORTS['nattlua.runtime.base_environment']("nattlua.runtime.base_environment").BuildBaseEnvironment
 local setmetatable = _G.setmetatable
-local Code = IMPORTS['nattlua.code.code']("nattlua.code.code")
+local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("compiler")
 
@@ -21022,19 +21120,19 @@ function META.New(
 			parent_line = parent_line,
 			parent_name = parent_name,
 			config = config,
-			Lexer = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer"),
-			Parser = IMPORTS['nattlua.parser.parser']("nattlua.parser.parser"),
-			Analyzer = IMPORTS['nattlua.analyzer.analyzer']("nattlua.analyzer.analyzer"),
+			Lexer = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer").New,
+			Parser = IMPORTS['nattlua.parser.parser']("nattlua.parser.parser").New,
+			Analyzer = IMPORTS['nattlua.analyzer.analyzer']("nattlua.analyzer.analyzer").New,
 			Emitter = IMPORTS['nattlua.transpiler.emitter']("nattlua.transpiler.emitter").New,
 		},
 		META
 	)
 end
 
-return META.New end)(...) return __M end end
+return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.init"] = function(...) __M = __M or (function(...) local nl = {}
 local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
-nl.Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler")
+nl.Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler").New
 
 function nl.load(code, name, config)
 	local obj = nl.Compiler(code, name, config)

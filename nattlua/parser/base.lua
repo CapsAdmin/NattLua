@@ -220,7 +220,12 @@ do
 		return self:ReadToken()--[[# as Token]]
 	end
 
-	function META:ExpectValueTranslate(str--[[#: string]], new_str--[[#: string]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])--[[#: Token]]
+	function META:ExpectValueTranslate(
+		str--[[#: string]],
+		new_str--[[#: string]],
+		error_start--[[#: Token | nil]],
+		error_stop--[[#: Token | nil]]
+	)--[[#: Token]]
 		if not self:IsValue(str) then
 			error_expect(self, str, "value", error_start, error_stop)
 		end

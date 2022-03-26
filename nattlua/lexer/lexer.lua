@@ -1,6 +1,6 @@
 --[[#local type { TokenType } = import("./token.lua")]]
 
-local Code = require("nattlua.code.code")
+local Code = require("nattlua.code.code").New
 local loadstring = require("nattlua.other.loadstring")
 local Token = require("nattlua.lexer.token").New
 local class = require("nattlua.other.class")
@@ -253,8 +253,8 @@ do
 	--[[#local type Lexer = META.@Self]]
 
 	--[[#local type { TokenType } = import("~/nattlua/lexer/token.lua")]]
-	--[[#local type TokenReturnType = TokenType | false ]]
 
+	--[[#local type TokenReturnType = TokenType | false]]
 	local characters = require("nattlua.syntax.characters")
 	local runtime_syntax = require("nattlua.syntax.runtime")
 	local helpers = require("nattlua.other.quote")
@@ -731,4 +731,4 @@ do
 	end
 end
 
-return META.New
+return META

@@ -78,4 +78,4 @@ function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
 end
 
 --[[#type Code = META.@Self]]
-return META.New
+return META

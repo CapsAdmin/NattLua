@@ -9,7 +9,7 @@ local table_insert = table.insert
 local table = _G.table
 local type = _G.type
 local class = require("nattlua.other.class")
-local Upvalue = require("nattlua.analyzer.base.upvalue")
+local Upvalue = require("nattlua.analyzer.base.upvalue").New
 local META = class.CreateTemplate("lexical_scope")
 
 do
@@ -446,4 +446,4 @@ function META.New(parent, upvalue_position, obj)
 	return scope
 end
 
-return META.New
+return META

@@ -180,4 +180,4 @@ function META.New(config)
 	return self
 end
 
-return META.New
+return META

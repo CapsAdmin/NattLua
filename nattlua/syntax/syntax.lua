@@ -275,4 +275,4 @@ function META:GetTokenType(tk--[[#: Token]])
 	return tk.type
 end
 
-return META.New
+return META

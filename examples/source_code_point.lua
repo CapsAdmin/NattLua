@@ -1,5 +1,5 @@
 local helpers = require("nattlua.other.helpers")
-local Code = require("nattlua.code.code")
+local Code = require("nattlua.code.code").New
 local str = [==[
 for i = 1, #code do
     local char = code:sub(i, i)

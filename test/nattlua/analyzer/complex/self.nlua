@@ -122,7 +122,7 @@ do
 	require("nattlua.parser.base")
 end
 
-do 
+do
 	require("nattlua.lexer.token")
 end
 
@@ -130,7 +130,7 @@ do
 	local type { statement } = import("~/nattlua/parser/nodes.nlua")
 
 	local META = require("nattlua.parser.base")
-	local Code = require("nattlua.code.code")
+	local Code = require("nattlua.code.code").New
 	local self = META.New({}, Code("dawwad", "asassa"), {})
 	local node = self:StartNode("statement", "do")
 	local tbl = self:ReadMultipleValues(
