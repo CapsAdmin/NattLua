@@ -80,7 +80,7 @@ local function analyze_function_signature(self, node, current_function)
 
 						break
 					else
-						local val = self:Assert(node, obj:GetFirstValue())
+						local val = self:Assert(node, obj)
 
 						-- in case the tuple is empty
 						if val then args[i] = val end
@@ -98,7 +98,7 @@ local function analyze_function_signature(self, node, current_function)
 
 					break
 				else
-					local val = self:Assert(node, obj:GetFirstValue())
+					local val = self:Assert(node, obj)
 
 					-- in case the tuple is empty
 					if val then args[i] = val end
