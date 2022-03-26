@@ -425,3 +425,26 @@ analyze[[
         attest.equal(d, _ as string)
     end)
 ]]
+
+analyze[[
+    local type F = function=(foo: number, ...: (any,)*inf)>(nil)
+
+    local function foo(a: string, func: ref F, ...: ref ...any)
+        local a,b,c,d,e = ...
+        attest.equal(a, 1)
+        attest.equal(b, 2)
+        attest.equal(c, 3)
+        attest.equal(d, 4)
+        attest.equal(e, nil)
+
+        func(...)
+    end
+
+    foo("hello", function(a,b,c,d,e) 
+        attest.equal(a, 1)
+        attest.equal(b, 2)
+        attest.equal(c, 3)
+        attest.equal(d, 4)
+        attest.equal(e, nil)
+    end,1,2,3,4)
+]]

@@ -361,19 +361,30 @@ return {
 				local len = contracts:GetSafeLength(arguments)
 				local contract_override = {}
 
-				do -- analyze the type expressions
+				if function_node.identifiers[1] then -- analyze the type expressions
 					self:CreateAndPushFunctionScope(obj)
 					self:PushAnalyzerEnvironment("typesystem")
 					local args = {}
 
-					for i, key in ipairs(function_node.identifiers) do
+					for i = 1, len do
+						local key = function_node.identifiers[i] or function_node.identifiers[#function_node.identifiers]
+
 						if function_node.self_call then i = i + 1 end
 
 						-- stem type so that we can allow
 						-- function(x: foo<|x|>): nil
 						self:CreateLocalValue(key.value.value, Any())
-						local arg = arguments:Get(i)
-						local contract = contracts:Get(i)
+
+						local arg
+						local contract
+
+						arg = arguments:Get(i)
+
+						if key.value.value == "..." then
+							contract = contracts:GetWithoutExpansion(i)
+						else
+							contract = contracts:Get(i)
+						end
 
 						if not arg then
 							arg = Nil()
