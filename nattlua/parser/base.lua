@@ -1,4 +1,4 @@
---[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
+--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type { ExpressionKind, StatementKind, statement, expression, Node } = import("./nodes.nlua")]]
 

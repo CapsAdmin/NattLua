@@ -1,6 +1,6 @@
 local class = require("nattlua.other.class")
 
---[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
+--[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]
 
 local META = class.CreateTemplate("syntax")
 --[[#type META.@Name = "Syntax"]]

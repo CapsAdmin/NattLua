@@ -1,4 +1,4 @@
---[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
+--[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]
 
 local math = _G.math
 local table = _G.table

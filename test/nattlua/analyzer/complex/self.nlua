@@ -28,7 +28,7 @@ do
 end
 
 do
-	local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")
+	local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")
 
 	local table_pool = require("nattlua.other.table_pool")
 	local new_token = table_pool(

@@ -5,7 +5,7 @@ local Number = require("nattlua.types.number").Number
 local context = require("nattlua.analyzer.context")
 local META = dofile("nattlua/types/base.lua")
 
---[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
+--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type TBaseType = META.TBaseType]]
 META.Type = "string"

@@ -7,7 +7,7 @@ local table_insert = _G.table.insert
 local table_remove = _G.table.remove
 local ipairs = _G.ipairs
 
---[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
+--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type { ExpressionKind, StatementKind, statement, expression } = import("./nodes.nlua")]]
 
