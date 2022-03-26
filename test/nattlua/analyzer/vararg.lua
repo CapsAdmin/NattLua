@@ -383,7 +383,6 @@ analyze[[
     local type F = function=(foo: number, ...: (string,)*inf)>(nil)
     attest.equal<|argument_type<|F, 2|>[1], ((string,)*inf,)|>
 ]]
-
 analyze[[
     local function foo(a: string, b: function=(number, ...: ...string)>(nil))
 
@@ -411,7 +410,6 @@ analyze[[
         attest.equal(d, nil)
     end)
 ]]
-
 analyze[[
     local type F = function=(foo: number, ...: (string,)*inf)>(nil)
 
@@ -425,7 +423,6 @@ analyze[[
         attest.equal(d, _ as string)
     end)
 ]]
-
 analyze[[
     local type F = function=(foo: number, ...: (any,)*inf)>(nil)
 

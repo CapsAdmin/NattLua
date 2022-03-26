@@ -873,7 +873,6 @@ analyze[[
 
     §assert(#analyzer.diagnostics == 0)
 ]]
-
 analyze[[
     local type F = function=(foo: number, ...: (string,)*inf)>(nil)
 

@@ -367,17 +367,16 @@ return {
 					local args = {}
 
 					for i = 1, len do
-						local key = function_node.identifiers[i] or function_node.identifiers[#function_node.identifiers]
+						local key = function_node.identifiers[i] or
+							function_node.identifiers[#function_node.identifiers]
 
 						if function_node.self_call then i = i + 1 end
 
 						-- stem type so that we can allow
 						-- function(x: foo<|x|>): nil
 						self:CreateLocalValue(key.value.value, Any())
-
 						local arg
 						local contract
-
 						arg = arguments:Get(i)
 
 						if key.value.value == "..." then
@@ -391,7 +390,12 @@ return {
 							arguments:Set(i, arg)
 						end
 
-						local ref_callback = arg and contract and contract.ref_argument and contract.Type == "function" and arg.Type == "function" and not arg.arguments_inferred 
+						local ref_callback = arg and
+							contract and
+							contract.ref_argument and
+							contract.Type == "function" and
+							arg.Type == "function" and
+							not arg.arguments_inferred
 
 						if contract and contract.ref_argument and arg and not ref_callback then
 							self:CreateLocalValue(key.value.value, arg)
@@ -451,6 +455,7 @@ return {
 												tup:Merge(func:GetArguments())
 												arg:SetArguments(tup)
 											end
+
 											arg.arguments_inferred = true
 										elseif contract.Type == "function" then
 											arg:SetArguments(contract:GetArguments():Copy(nil, true)) -- force copy tables so we don't mutate the contract

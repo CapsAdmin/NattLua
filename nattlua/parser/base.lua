@@ -73,13 +73,8 @@ function META:StartNode(
 	node_type--[[#: ref ("statement" | "expression")]],
 	kind--[[#: ref (StatementKind | ExpressionKind)]]
 )--[[#: ref Node]]
-
-	--[[#
-		local type T = node_type == "statement" and statement[kind] or expression[kind]
-	]]
-
+	--[[#local type T = node_type == "statement" and statement[kind] or expression[kind] ]]
 	local code_start = assert(self:GetToken()).start
-	
 	local node = CreateNode(
 		{
 			type = node_type,
@@ -92,7 +87,6 @@ function META:StartNode(
 		}
 	)
 
-
 	if node_type == "expression" then
 		self.current_expression = node
 	else
@@ -102,8 +96,7 @@ function META:StartNode(
 	if self.OnNode then self:OnNode(node) end
 
 	table.insert(self.nodes, 1, node)
-	
-	return node --[[# as T]]
+	return node--[[# as T]]
 end
 
 function META:EndNode(node--[[#: Node]])

@@ -122,21 +122,27 @@ do
 	require("nattlua.parser.base")
 end
 
-
 do
 	local type { statement } = import("~/nattlua/parser/nodes.nlua")
+
 	local META = require("nattlua.parser.base")
 	local Code = require("nattlua.code.code")
 	local self = META.New({}, Code("dawwad", "asassa"), {})
 	local node = self:StartNode("statement", "do")
-	local tbl = self:ReadMultipleValues(1, function(self,a,b,c)
-		attest.equal(a, 1)
-		attest.equal(b, 2)
-		attest.equal(c, 3)
-		local node = self:StartNode("statement", "do")
-		self:EndNode(node)
-		return node
-	end, 1,2,3)
-	attest.equal(tbl, _ as {[1..inf] = statement["do"]})
+	local tbl = self:ReadMultipleValues(
+		1,
+		function(self, a, b, c)
+			attest.equal(a, 1)
+			attest.equal(b, 2)
+			attest.equal(c, 3)
+			local node = self:StartNode("statement", "do")
+			self:EndNode(node)
+			return node
+		end,
+		1,
+		2,
+		3
+	)
+	attest.equal(tbl, _  as {[1 .. inf] = statement["do"]})
 	self:EndNode(node)
 end
