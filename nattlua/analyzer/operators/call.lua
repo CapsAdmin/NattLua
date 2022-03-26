@@ -438,8 +438,10 @@ return {
 												tup:Merge(func:GetArguments())
 												arg:SetArguments(tup)
 											end
+											arg.arguments_inferred = true
 										elseif contract.Type == "function" then
 											arg:SetArguments(contract:GetArguments():Copy(nil, true)) -- force copy tables so we don't mutate the contract
+											arg.arguments_inferred = true
 										end
 									end
 								end

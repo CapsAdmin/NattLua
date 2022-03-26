@@ -857,3 +857,19 @@ analyze[[
         attest.equal(node, 1337)
     end
 ]]
+analyze[[
+    local type F = function=(foo: number, a: string, b: boolean, c: string)>(nil)
+
+    local function foo(a: string, b: F)
+    
+    end
+    
+    foo("hello", function(a,b,c,d) 
+        attest.equal(a, _ as number)
+        attest.equal(b, _ as string)
+        attest.equal(c, _ as boolean)
+        attest.equal(d, _ as string)
+    end)
+
+    §assert(#analyzer.diagnostics == 0)
+]]
