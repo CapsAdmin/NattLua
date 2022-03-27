@@ -75,6 +75,7 @@ IMPORTS['nattlua/definitions/utility.nlua'] = function()
 
 
 
+
  end
 IMPORTS['nattlua/definitions/attest.nlua'] = function() 
 
@@ -8774,6 +8775,160 @@ end
 
 
 return META end)(...) return __M end end
+IMPORTS['nattlua/code/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("code")
+
+
+
+function META:GetString()
+	return self.Buffer
+end
+
+function META:GetName()
+	return self.Name
+end
+
+function META:GetByteSize()
+	return #self.Buffer
+end
+
+function META:GetStringSlice(start, stop)
+	return self.Buffer:sub(start, stop)
+end
+
+function META:GetByte(pos)
+	return self.Buffer:byte(pos) or 0
+end
+
+function META:FindNearest(str, start)
+	local _, pos = self.Buffer:find(str, start, true)
+
+	if not pos then return nil end
+
+	return pos + 1
+end
+
+local function remove_bom_header(str)
+	if str:sub(1, 2) == "\xFE\xFF" then
+		return str:sub(3)
+	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
+		return str:sub(4)
+	end
+
+	return str
+end
+
+local function get_default_name()
+	local info = debug.getinfo(3)
+
+	if info then
+		local parent_line = info.currentline
+		local parent_name = info.source:sub(2)
+		return parent_name .. ":" .. parent_line
+	end
+
+	return "unknown line : unknown name"
+end
+
+function META:BuildSourceCodePointMessage(
+	msg,
+	start,
+	stop,
+	size
+)
+	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
+end
+
+function META.New(lua_code, name)
+	local self = setmetatable(
+		{
+			Buffer = remove_bom_header(lua_code),
+			Name = name or get_default_name(),
+		},
+		META
+	)
+	return self
+end
+
+
+return META end
+IMPORTS['./nattlua/parser/nodes.nlua'] = function() 
+
+IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+return {
+	ExpressionKind = ExpressionKind,
+	StatementKind = StatementKind,
+	Node = Node,
+	statement = statement,
+	expression = expression,
+} end
+IMPORTS['./nattlua/config.nlua'] = function() 
+
+
+
+
+
+return {
+	LexerConfig = nil,
+	ParserConfig = nil,
+	AnalyzerConfig = nil,
+	TranspilerConfig = nil,
+	CompilerConfig = nil,
+} end
 IMPORTS['./nattlua/lexer/token.lua'] = function() local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
@@ -10079,85 +10234,7 @@ do
 end
 
 return META end)(...) return __M end end
-IMPORTS['nattlua/code/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
-local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
-local META = class.CreateTemplate("code")
-
-
-
-function META:GetString()
-	return self.Buffer
-end
-
-function META:GetName()
-	return self.Name
-end
-
-function META:GetByteSize()
-	return #self.Buffer
-end
-
-function META:GetStringSlice(start, stop)
-	return self.Buffer:sub(start, stop)
-end
-
-function META:GetByte(pos)
-	return self.Buffer:byte(pos) or 0
-end
-
-function META:FindNearest(str, start)
-	local _, pos = self.Buffer:find(str, start, true)
-
-	if not pos then return nil end
-
-	return pos + 1
-end
-
-local function remove_bom_header(str)
-	if str:sub(1, 2) == "\xFE\xFF" then
-		return str:sub(3)
-	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
-		return str:sub(4)
-	end
-
-	return str
-end
-
-local function get_default_name()
-	local info = debug.getinfo(3)
-
-	if info then
-		local parent_line = info.currentline
-		local parent_name = info.source:sub(2)
-		return parent_name .. ":" .. parent_line
-	end
-
-	return "unknown line : unknown name"
-end
-
-function META:BuildSourceCodePointMessage(
-	msg,
-	start,
-	stop,
-	size
-)
-	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
-end
-
-function META.New(lua_code, name)
-	local self = setmetatable(
-		{
-			Buffer = remove_bom_header(lua_code),
-			Name = name or get_default_name(),
-		},
-		META
-	)
-	return self
-end
-
-
-return META end
-IMPORTS['./nattlua/parser/nodes.nlua'] = function() 
+IMPORTS['./nattlua/parser/../parser/nodes.nlua'] = function() 
 
 IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
 
@@ -10219,6 +10296,19 @@ return {
 	Node = Node,
 	statement = statement,
 	expression = expression,
+} end
+IMPORTS['./nattlua/parser/../config.nlua'] = function() 
+
+
+
+
+
+return {
+	LexerConfig = nil,
+	ParserConfig = nil,
+	AnalyzerConfig = nil,
+	TranspilerConfig = nil,
+	CompilerConfig = nil,
 } end
 IMPORTS['nattlua/parser/nodes.nlua'] = function() 
 
@@ -10446,6 +10536,8 @@ end
 
 return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.parser.base"] = function(...) __M = __M or (function(...) 
+
+
 
 
 
@@ -13075,7 +13167,7 @@ assert(IMPORTS['nattlua/parser/teal.lua'])(META)
 
 function META:LexString(str, config)
 	config = config or {}
-	local code = Code(str)
+	local code = Code(str, config.file_path)
 	local lexer = Lexer(code, config)
 	local ok, tokens = xpcall(lexer.GetTokens, debug.traceback, lexer)
 
@@ -17169,7 +17261,7 @@ local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").Nod
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 return {
 	AnalyzeDestructureAssignment = function(self, statement)
-		local obj = self:AnalyzeExpression(statement.right)
+		local obj, err = self:AnalyzeExpression(statement.right)
 
 		if obj.Type == "union" then obj = obj:GetData()[1] end
 
@@ -17177,6 +17269,7 @@ return {
 
 		if obj.Type ~= "table" then
 			self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj.Type))
+			return
 		end
 
 		if statement.default then
@@ -18780,6 +18873,7 @@ return {
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.expressions.import"] = function(...) __M = __M or (function(...) local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 return {
 	AnalyzeImport = function(self, node)
 		-- ugly way of dealing with recursive import
@@ -18792,6 +18886,8 @@ return {
 		elseif node.data then
 			return LString(node.data)
 		end
+
+		return Nil():SetNode(node)
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.expressions.tuple"] = function(...) __M = __M or (function(...) local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
@@ -18925,20 +19021,7 @@ do
 	function META:AnalyzeExpression2(node)
 		self.current_expression = node
 
-		if node.type_expression then
-			if node.kind == "table" then
-				local obj = AnalyzeTable(self, node)
-				self:PushAnalyzerEnvironment("typesystem")
-				obj:SetContract(self:AnalyzeExpression(node.type_expression))
-				self:PopAnalyzerEnvironment()
-				return obj
-			end
-
-			self:PushAnalyzerEnvironment("typesystem")
-			local obj = self:AnalyzeExpression(node.type_expression)
-			self:PopAnalyzerEnvironment()
-			return obj
-		elseif node.kind == "value" then
+		if node.kind == "value" then
 			return AnalyzeAtomicValue(self, node)
 		elseif node.kind == "vararg" then
 			return AnalyzeVararg(self, node)
@@ -18981,6 +19064,28 @@ do
 
 	function META:AnalyzeExpression(node)
 		local obj, err = self:AnalyzeExpression2(node)
+
+		if node.type_expression then
+			local old = obj
+			self:PushAnalyzerEnvironment("typesystem")
+			obj = self:AnalyzeExpression(node.type_expression)
+			self:PopAnalyzerEnvironment()
+
+			if obj.Type == "table" then
+				if old.Type == "table" then
+					old:SetContract(obj)
+					obj = old
+				elseif old.Type == "tuple" and old:GetLength() == 1 then
+					local first = old:GetData()[1]
+
+					if first.Type == "table" then
+						first:SetContract(obj)
+						obj = old
+					end
+				end
+			end
+		end
+
 		node:AddType(obj or err)
 		return obj, err
 	end
@@ -19015,6 +19120,9 @@ local type = _G.type
 local setmetatable = _G.setmetatable
 local B = string.byte
 local META = class.CreateTemplate("emitter")
+
+
+
 local translate_binary = {
 	["&&"] = "and",
 	["||"] = "or",
@@ -19480,6 +19588,7 @@ function META:EmitFunctionSignature(node)
 end
 
 function META:EmitExpression(node)
+	local emitted_invalid_code = false
 	local newlines = self:IsLineBreaking()
 
 	if node.tokens["("] then
@@ -19499,7 +19608,7 @@ function META:EmitExpression(node)
 	elseif node.kind == "function" then
 		self:EmitAnonymousFunction(node)
 	elseif node.kind == "analyzer_function" then
-		self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
+		emitted_invalid_code = self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
 	elseif node.kind == "table" then
 		self:EmitTable(node)
 	elseif node.kind == "prefix_operator" then
@@ -19509,7 +19618,7 @@ function META:EmitExpression(node)
 	elseif node.kind == "postfix_call" then
 		if node.import_expression then
 			if not node.path or node.type_call then
-				self:EmitInvalidLuaCode("EmitImportExpression", node)
+				emitted_invalid_code = self:EmitInvalidLuaCode("EmitImportExpression", node)
 			else
 				self:EmitImportExpression(node)
 			end
@@ -19518,7 +19627,7 @@ function META:EmitExpression(node)
 		elseif node.expressions_typesystem then
 			self:EmitCall(node)
 		elseif node.type_call then
-			self:EmitInvalidLuaCode("EmitCall", node)
+			emitted_invalid_code = self:EmitInvalidLuaCode("EmitCall", node)
 		else
 			self:EmitCall(node)
 		end
@@ -19549,9 +19658,9 @@ function META:EmitExpression(node)
 	elseif node.kind == "tuple" then
 		self:EmitTuple(node)
 	elseif node.kind == "type_function" then
-		self:EmitInvalidLuaCode("EmitTypeFunction", node)
+		emitted_invalid_code = self:EmitInvalidLuaCode("EmitTypeFunction", node)
 	elseif node.kind == "function_signature" then
-		self:EmitInvalidLuaCode("EmitFunctionSignature", node)
+		emitted_invalid_code = self:EmitInvalidLuaCode("EmitFunctionSignature", node)
 	elseif node.kind == "vararg" then
 		self:EmitVararg(node)
 	else
@@ -19613,6 +19722,17 @@ function META:EmitExpression(node)
 				self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
 			end
 		end
+	end
+
+	if
+		emitted_invalid_code and
+		not self.is_call_expression and
+		(
+			self.config.comment_type_annotations or
+			self.config.omit_invalid_code
+		)
+	then
+		self:EmitNonSpace("nil")
 	end
 end
 
@@ -20294,7 +20414,9 @@ function META:EmitStatement(node)
 			if node.kind == "assignment" then self:Emit_ENVFromAssignment(node) end
 		end
 	elseif node.kind == "call_expression" then
+		self.is_call_expression = true
 		self:EmitExpression(node.value)
+		self.is_call_expression = false
 	elseif node.kind == "shebang" then
 		self:EmitToken(node.tokens["shebang"])
 	elseif node.kind == "continue" then
@@ -20762,7 +20884,7 @@ do -- types
 	end
 
 	function META:EmitInvalidLuaCode(func, ...)
-		if self.config.omit_invalid_code then return end
+		if self.config.omit_invalid_code then return true end
 
 		local emitted = self:StartEmittingInvalidLuaCode()
 		self[func](self, ...)
@@ -20903,6 +21025,8 @@ local setmetatable = _G.setmetatable
 local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("compiler")
+
+
 
 function META:GetCode()
 	return self.Code
@@ -21218,7 +21342,8 @@ IMPORTS['nattlua/definitions/lua/os.nlua']("./lua/os.nlua")
 IMPORTS['nattlua/definitions/lua/coroutine.nlua']("./lua/coroutine.nlua")
 IMPORTS['nattlua/definitions/typed_ffi.nlua']("./typed_ffi.nlua") end
 IMPORTS['DATA_nattlua/definitions/index.nlua'] = function() return [======[ _G.IMPORTS = _G.IMPORTS or {}
-IMPORTS['nattlua/definitions/utility.nlua'] = function() type boolean = true | false
+IMPORTS['nattlua/definitions/utility.nlua'] = function() type _ = any
+type boolean = true | false
 type integer = number
 type Table = {[any] = any} | {}
 type Function = function=(...any)>(...any)
