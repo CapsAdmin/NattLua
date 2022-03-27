@@ -1,6 +1,7 @@
 --[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type { ExpressionKind, StatementKind, statement, expression, Node } = import("./nodes.nlua")]]
+--[[# local type {ParserConfig} = import("./../config.nlua")]]
 
 --[[#import<|"~/nattlua/code/code.lua"|>]]
 --[[#local type NodeType = "expression" | "statement"]]
@@ -16,16 +17,16 @@ local class = require("nattlua.other.class")
 local META = class.CreateTemplate("parser")
 --[[#type META.@Self = {
 	@Name = "Parser",
-	config = any,
-	nodes = List<|any|>,
+	config = ParserConfig,
+	nodes = List<|Node|>,
 	Code = Code,
-	current_statement = false | any,
-	current_expression = false | any,
-	root = false | any,
+	current_statement = false | Node,
+	current_expression = false | Node,
+	root = false | Node,
 	i = number,
 	tokens = List<|Token|>,
 	environment_stack = List<|"typesystem" | "runtime"|>,
-	OnNode = nil | function=(self, any)>(nil),
+	OnNode = nil | function=(self, Node)>(nil),
 }]]
 --[[#type META.@Name = "Parser"]]
 --[[#local type Parser = META.@Self]]

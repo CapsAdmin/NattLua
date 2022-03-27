@@ -11,6 +11,7 @@ local setmetatable = _G.setmetatable
 local Code = require("nattlua.code.code").New
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("compiler")
+--[[# local type {CompilerConfig} = import("./config.nlua")]]
 
 function META:GetCode()
 	return self.Code
@@ -249,7 +250,7 @@ end
 function META.New(
 	lua_code--[[#: string]],
 	name--[[#: string]],
-	config--[[#: {[any] = any}]],
+	config--[[#: CompilerConfig]],
 	level--[[#: number | nil]]
 )
 	local info = debug.getinfo(level or 2)

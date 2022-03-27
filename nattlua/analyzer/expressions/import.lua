@@ -1,4 +1,5 @@
 local LString = require("nattlua.types.string").LString
+local Nil = require("nattlua.types.symbol").Nil
 return {
 	AnalyzeImport = function(self, node)
 		-- ugly way of dealing with recursive import
@@ -11,5 +12,7 @@ return {
 		elseif node.data then
 			return LString(node.data)
 		end
+
+		return Nil():SetNode(node)
 	end,
 }
