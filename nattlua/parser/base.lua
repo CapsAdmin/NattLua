@@ -1,7 +1,8 @@
 --[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type { ExpressionKind, StatementKind, statement, expression, Node } = import("./nodes.nlua")]]
---[[# local type {ParserConfig} = import("./../config.nlua")]]
+
+--[[#local type { ParserConfig } = import("./../config.nlua")]]
 
 --[[#import<|"~/nattlua/code/code.lua"|>]]
 --[[#local type NodeType = "expression" | "statement"]]

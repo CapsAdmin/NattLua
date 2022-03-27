@@ -162,6 +162,7 @@ do
 					obj = old
 				elseif old.Type == "tuple" and old:GetLength() == 1 then
 					local first = old:GetData()[1]
+
 					if first.Type == "table" then
 						first:SetContract(obj)
 						obj = old

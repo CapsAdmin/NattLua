@@ -4,7 +4,7 @@ local NodeToString = require("nattlua.types.string").NodeToString
 local Nil = require("nattlua.types.symbol").Nil
 return {
 	AnalyzeDestructureAssignment = function(self, statement)
-		local obj,err = self:AnalyzeExpression(statement.right)
+		local obj, err = self:AnalyzeExpression(statement.right)
 
 		if obj.Type == "union" then obj = obj:GetData()[1] end
 

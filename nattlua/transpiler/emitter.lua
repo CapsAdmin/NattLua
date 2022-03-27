@@ -13,7 +13,8 @@ local type = _G.type
 local setmetatable = _G.setmetatable
 local B = string.byte
 local META = class.CreateTemplate("emitter")
---[[# local type {ParserConfig} = import("../config.nlua")]]
+
+--[[#local type { ParserConfig } = import("../config.nlua")]]
 
 local translate_binary = {
 	["&&"] = "and",
@@ -274,7 +275,7 @@ do -- newline breaking
 		end
 	end
 
-	function META:ShouldLineBreakNode(node--[[#: Node ]])
+	function META:ShouldLineBreakNode(node--[[#: Node]])
 		if node.kind == "table" or node.kind == "type_table" then
 			for _, exp in ipairs(node.children) do
 				if exp.value_expression and exp.value_expression.kind == "function" then
