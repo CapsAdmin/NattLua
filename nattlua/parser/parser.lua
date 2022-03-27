@@ -203,7 +203,7 @@ assert(loadfile("nattlua/parser/teal.lua"))(META)
 
 function META:LexString(str--[[#: string]], config--[[#: nil | any]])
 	config = config or {}
-	local code = Code(str)
+	local code = Code(str, config.file_path)
 	local lexer = Lexer(code, config)
 	local ok, tokens = xpcall(lexer.GetTokens, debug.traceback, lexer)
 
