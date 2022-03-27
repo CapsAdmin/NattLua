@@ -181,6 +181,24 @@ check(
 		comment_type_annotations = true,
 		omit_invalid_code = true,
 	},
+	[[x = {...todo, ...fieldsToUpdate, foo = true}]],
+	[[x = table.mergetables{todo, fieldsToUpdate, {foo = true}}]]
+)
+check(
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		omit_invalid_code = false,
+	},
+	[[x = {...todo, ...fieldsToUpdate, foo = true}]],
+	[[x = {...todo, ...fieldsToUpdate, foo = true}]]
+)
+check(
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		omit_invalid_code = true,
+	},
 	[[foo<|"lol"|>]],
 	[[]]
 )

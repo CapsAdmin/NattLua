@@ -20060,7 +20060,11 @@ function META:EmitVararg(node)
 end
 
 function META:EmitTable(tree)
-	if tree.spread then self:EmitNonSpace("table.mergetables") end
+	if tree.spread then
+		if self.config.omit_invalid_code then
+			self:EmitNonSpace("table.mergetables")
+		end
+	end
 
 	local during_spread = false
 	self:EmitToken(tree.tokens["{"])
@@ -20077,17 +20081,22 @@ function META:EmitTable(tree)
 
 			if node.kind == "table_index_value" then
 				if node.spread then
-					if during_spread then
-						self:EmitNonSpace("},")
-						during_spread = false
-					end
+					if not self.config.omit_invalid_code then
+						self:EmitToken(node.spread.tokens["..."])
+						self:EmitExpression(node.spread.expression)
+					else
+						if during_spread then
+							self:EmitNonSpace("},")
+							during_spread = false
+						end
 
-					self:EmitExpression(node.spread.expression)
+						self:EmitExpression(node.spread.expression)
+					end
 				else
 					self:EmitExpression(node.value_expression)
 				end
 			elseif node.kind == "table_key_value" then
-				if tree.spread and not during_spread then
+				if self.config.omit_invalid_code and tree.spread and not during_spread then
 					during_spread = true
 					self:EmitNonSpace("{")
 				end
@@ -20825,6 +20834,12 @@ do -- types
 			error("unhandled token type " .. node.kind)
 		end
 
+		if node.tokens["as"] then
+			self:Whitespace(" ")
+			self:EmitToken(node.tokens["as"])
+			self:Whitespace(" ")
+		end
+
 		if not self.config.analyzer_function then
 			if node.type_expression then
 				self:EmitTypeExpression(node.type_expression)
@@ -20835,6 +20850,12 @@ do -- types
 			for _, node in ipairs(node.tokens[")"]) do
 				self:EmitToken(node)
 			end
+		end
+
+		if node.tokens[")"] and newlines then
+			self:Outdent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
 		end
 	end
 
