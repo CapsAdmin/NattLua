@@ -10924,6 +10924,8 @@ local table_remove = _G.table.remove
 local math_huge = math.huge
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
+local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
+local Lexer = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer").New
 
 
 
@@ -11704,8 +11706,7 @@ do -- runtime
 
 		if imported[key] == nil then
 			imported[key] = node
-			local nl = IMPORTS['nattlua']("nattlua")
-			local compiler, err = nl.ParseFile(
+			local root, err = self:ParseFile(
 				path,
 				{
 					root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
@@ -11717,11 +11718,11 @@ do -- runtime
 				}
 			)
 
-			if not compiler then
+			if not root then
 				self:Error("error importing file: $1", start, start, err)
 			end
 
-			node.RootStatement = compiler.SyntaxTree
+			node.RootStatement = root
 		else
 			-- ugly way of dealing with recursive require
 			node.RootStatement = imported[key]
@@ -11764,8 +11765,7 @@ do -- runtime
 			imported[key] = node
 
 			if node.path:sub(-4) == "lua" or node.path:sub(-5) ~= "nlua" then
-				local nl = IMPORTS['nattlua']("nattlua")
-				local compiler, err = nl.ParseFile(
+				local root, err = self:ParseFile(
 					node.path,
 					{
 						root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
@@ -11776,11 +11776,11 @@ do -- runtime
 					}
 				)
 
-				if not compiler then
+				if not root then
 					self:Error("error importing file: $1", start, start, err .. ": " .. node.path)
 				end
 
-				data = compiler.SyntaxTree:Render(
+				data = root:Render(
 					{
 						preserve_whitespace = false,
 						comment_type_annotations = false,
@@ -11820,8 +11820,7 @@ do -- runtime
 
 				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
 					table_remove(node.whitespace, i)
-					local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
-					local tokens = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer").New(Code("/idiv" .. token.value:sub(2), "")):GetTokens()
+					local tokens = self:LexString("/idiv" .. token.value:sub(2))
 
 					for _, token in ipairs(tokens) do
 						self:check_integer_division_operator(token)
@@ -12874,6 +12873,8 @@ end end
 do local __M; IMPORTS["nattlua.parser.parser"] = function(...) __M = __M or (function(...) local META = IMPORTS['nattlua.parser.base']("nattlua.parser.base")
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
+local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
+local Lexer = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer").New
 local math = _G.math
 local math_huge = math.huge
 local table_insert = _G.table.insert
@@ -13072,11 +13073,44 @@ assert(IMPORTS['nattlua/parser/expressions.lua'])(META)
 assert(IMPORTS['nattlua/parser/statements.lua'])(META)
 assert(IMPORTS['nattlua/parser/teal.lua'])(META)
 
-function META:ParseString(code)
-	local compiler = IMPORTS['nattlua']("nattlua").Compiler(code, "temp")
-	assert(compiler:Lex())
-	assert(compiler:Parse())
-	return compiler.SyntaxTree
+function META:LexString(str, config)
+	config = config or {}
+	local code = Code(str)
+	local lexer = Lexer(code, config)
+	local ok, tokens = xpcall(lexer.GetTokens, debug.traceback, lexer)
+
+	if not ok then return nil, tokens end
+
+	return tokens, code
+end
+
+function META:ParseString(str, config)
+	local tokens, code = self:LexString(str, config)
+
+	if not tokens then return nil, code end
+
+	local parser = self.New(tokens, code, config)
+	local ok, node = xpcall(parser.ReadRootNode, debug.traceback, parser)
+
+	if not ok then return nil, node end
+
+	return node
+end
+
+function META:ParseFile(path, config)
+	config = config or {}
+	config.file_path = config.file_path or path
+	config.file_name = config.file_name or path
+	local f, err = io.open(path, "rb")
+
+	if not f then return nil, err end
+
+	local code = f:read("*a")
+	f:close()
+
+	if not code then return nil, "file is empty" end
+
+	return self:ParseString(code, config)
 end
 
 local imported_index = nil
@@ -21150,19 +21184,6 @@ function nl.loadfile(path, config)
 	if not code then return nil, err end
 
 	return loadstring(code, path)
-end
-
-function nl.ParseFile(path, config)
-	config = config or {}
-	local code, err = nl.File(path, config)
-
-	if not code then return nil, err end
-
-	local ok, err = code:Parse()
-
-	if not ok then return nil, err end
-
-	return ok, code
 end
 
 function nl.File(path, config)

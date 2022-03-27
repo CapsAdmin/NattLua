@@ -4,6 +4,8 @@ local table_remove = _G.table.remove
 local math_huge = math.huge
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
+local Code = require("nattlua.code.code").New
+local Lexer = require("nattlua.lexer.lexer").New
 
 --[[#local type { Node } = import("~/nattlua/parser/nodes.nlua")]]
 
@@ -784,8 +786,7 @@ do -- runtime
 
 		if imported[key] == nil then
 			imported[key] = node
-			local nl = require("nattlua")
-			local compiler, err = nl.ParseFile(
+			local root, err = self:ParseFile(
 				path,
 				{
 					root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
@@ -797,11 +798,11 @@ do -- runtime
 				}
 			)
 
-			if not compiler then
+			if not root then
 				self:Error("error importing file: $1", start, start, err)
 			end
 
-			node.RootStatement = compiler.SyntaxTree
+			node.RootStatement = root
 		else
 			-- ugly way of dealing with recursive require
 			node.RootStatement = imported[key]
@@ -844,8 +845,7 @@ do -- runtime
 			imported[key] = node
 
 			if node.path:sub(-4) == "lua" or node.path:sub(-5) ~= "nlua" then
-				local nl = require("nattlua")
-				local compiler, err = nl.ParseFile(
+				local root, err = self:ParseFile(
 					node.path,
 					{
 						root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
@@ -856,11 +856,11 @@ do -- runtime
 					}
 				)
 
-				if not compiler then
+				if not root then
 					self:Error("error importing file: $1", start, start, err .. ": " .. node.path)
 				end
 
-				data = compiler.SyntaxTree:Render(
+				data = root:Render(
 					{
 						preserve_whitespace = false,
 						comment_type_annotations = false,
@@ -900,8 +900,7 @@ do -- runtime
 
 				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
 					table_remove(node.whitespace, i)
-					local Code = require("nattlua.code.code").New
-					local tokens = require("nattlua.lexer.lexer").New(Code("/idiv" .. token.value:sub(2), "")):GetTokens()
+					local tokens = self:LexString("/idiv" .. token.value:sub(2))
 
 					for _, token in ipairs(tokens) do
 						self:check_integer_division_operator(token)

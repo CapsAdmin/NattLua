@@ -14,7 +14,7 @@ META.Type = "string"
 META:GetSet("Data", nil--[[# as string | nil]])
 META:GetSet("PatternContract", nil--[[# as nil | string]])
 
-function META.Equal(a--[[#: TString]], b--[[#: BaseType]])
+function META.Equal(a--[[#: TString]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
 
 	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
@@ -37,7 +37,7 @@ function META:Copy()
 	return copy
 end
 
-function META.IsSubsetOf(A--[[#: TString]], B--[[#: BaseType]])
+function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 	if B.Type == "tuple" then B = B:Get(1) end
 
 	if B.Type == "any" then return true end

@@ -20,19 +20,6 @@ function nl.loadfile(path, config)
 	return loadstring(code, path)
 end
 
-function nl.ParseFile(path, config)
-	config = config or {}
-	local code, err = nl.File(path, config)
-
-	if not code then return nil, err end
-
-	local ok, err = code:Parse()
-
-	if not ok then return nil, err end
-
-	return ok, code
-end
-
 function nl.File(path, config)
 	config = config or {}
 	config.file_path = config.file_path or path

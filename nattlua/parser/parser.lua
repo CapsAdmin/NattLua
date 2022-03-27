@@ -1,6 +1,8 @@
 local META = require("nattlua.parser.base")
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
+local Code = require("nattlua.code.code").New
+local Lexer = require("nattlua.lexer.lexer").New
 local math = _G.math
 local math_huge = math.huge
 local table_insert = _G.table.insert
@@ -199,11 +201,44 @@ assert(loadfile("nattlua/parser/expressions.lua"))(META)
 assert(loadfile("nattlua/parser/statements.lua"))(META)
 assert(loadfile("nattlua/parser/teal.lua"))(META)
 
-function META:ParseString(code)
-	local compiler = require("nattlua").Compiler(code, "temp")
-	assert(compiler:Lex())
-	assert(compiler:Parse())
-	return compiler.SyntaxTree
+function META:LexString(str--[[#: string]], config--[[#: nil | any]])
+	config = config or {}
+	local code = Code(str)
+	local lexer = Lexer(code, config)
+	local ok, tokens = xpcall(lexer.GetTokens, debug.traceback, lexer)
+
+	if not ok then return nil, tokens end
+
+	return tokens, code
+end
+
+function META:ParseString(str--[[#: string]], config--[[#: nil | any]])
+	local tokens, code = self:LexString(str, config)
+
+	if not tokens then return nil, code end
+
+	local parser = self.New(tokens, code, config)
+	local ok, node = xpcall(parser.ReadRootNode, debug.traceback, parser)
+
+	if not ok then return nil, node end
+
+	return node
+end
+
+function META:ParseFile(path--[[#: string]], config--[[#: nil | any]])
+	config = config or {}
+	config.file_path = config.file_path or path
+	config.file_name = config.file_name or path
+	local f, err = io.open(path, "rb")
+
+	if not f then return nil, err end
+
+	local code = f:read("*a")
+	f:close()
+
+	if not code then return nil, "file is empty" end
+
+	return self:ParseString(code, config)
 end
 
 local imported_index = nil
