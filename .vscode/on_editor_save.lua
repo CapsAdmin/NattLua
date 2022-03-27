@@ -63,6 +63,7 @@ local function run_nattlua(path)
 				comment_type_annotations = true,
 				type_annotations = true,
 				force_parenthesis = true,
+				omit_invalid_code = lua_code:find("%-%-%s-OMIT_INVALID_LUA_CODE"),
 				extra_indent = {
 					Start = {to = "Stop"},
 					Toggle = "toggle",
