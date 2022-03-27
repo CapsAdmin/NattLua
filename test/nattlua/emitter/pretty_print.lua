@@ -144,6 +144,47 @@ check(
 	[=[--[[#type start = function=(...string)>(nil)]]]=]
 )
 check(
+	{preserve_whitespace = false, comment_type_annotations = true},
+	[[return {lol = Partial<|{foo = true}|>}]],
+	[=[return {lol = --[[#Partial<|{foo = true}|>]]nil}]=]
+)
+check(
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		omit_invalid_code = true,
+	},
+	[[return {lol = Partial<|{foo = true}|>}]],
+	[[return {lol = nil}]]
+)
+check(
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		omit_invalid_code = true,
+	},
+	[[local lol = Partial<|{foo = true}|>]],
+	[[local lol = nil]]
+)
+check(
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		omit_invalid_code = true,
+	},
+	[[lol = Partial<|{foo = true}|>]],
+	[[lol = nil]]
+)
+check(
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = true,
+		omit_invalid_code = true,
+	},
+	[[foo<|"lol"|>]],
+	[[]]
+)
+check(
 	{preserve_whitespace = false, type_annotations = true},
 	[=[local type x = (...,)]=]
 )

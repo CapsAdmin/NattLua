@@ -481,6 +481,7 @@ function META:EmitFunctionSignature(node--[[#: Node]])
 end
 
 function META:EmitExpression(node--[[#: Node]])
+	local emitted_invalid_code = false
 	local newlines = self:IsLineBreaking()
 
 	if node.tokens["("] then
@@ -500,7 +501,7 @@ function META:EmitExpression(node--[[#: Node]])
 	elseif node.kind == "function" then
 		self:EmitAnonymousFunction(node)
 	elseif node.kind == "analyzer_function" then
-		self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
+		emitted_invalid_code = self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
 	elseif node.kind == "table" then
 		self:EmitTable(node)
 	elseif node.kind == "prefix_operator" then
@@ -510,7 +511,7 @@ function META:EmitExpression(node--[[#: Node]])
 	elseif node.kind == "postfix_call" then
 		if node.import_expression then
 			if not node.path or node.type_call then
-				self:EmitInvalidLuaCode("EmitImportExpression", node)
+				emitted_invalid_code = self:EmitInvalidLuaCode("EmitImportExpression", node)
 			else
 				self:EmitImportExpression(node)
 			end
@@ -519,7 +520,7 @@ function META:EmitExpression(node--[[#: Node]])
 		elseif node.expressions_typesystem then
 			self:EmitCall(node)
 		elseif node.type_call then
-			self:EmitInvalidLuaCode("EmitCall", node)
+			emitted_invalid_code = self:EmitInvalidLuaCode("EmitCall", node)
 		else
 			self:EmitCall(node)
 		end
@@ -550,9 +551,9 @@ function META:EmitExpression(node--[[#: Node]])
 	elseif node.kind == "tuple" then
 		self:EmitTuple(node)
 	elseif node.kind == "type_function" then
-		self:EmitInvalidLuaCode("EmitTypeFunction", node)
+		emitted_invalid_code = self:EmitInvalidLuaCode("EmitTypeFunction", node)
 	elseif node.kind == "function_signature" then
-		self:EmitInvalidLuaCode("EmitFunctionSignature", node)
+		emitted_invalid_code = self:EmitInvalidLuaCode("EmitFunctionSignature", node)
 	elseif node.kind == "vararg" then
 		self:EmitVararg(node)
 	else
@@ -614,6 +615,17 @@ function META:EmitExpression(node--[[#: Node]])
 				self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
 			end
 		end
+	end
+
+	if
+		emitted_invalid_code and
+		not self.is_call_expression and
+		(
+			self.config.comment_type_annotations or
+			self.config.omit_invalid_code
+		)
+	then
+		self:EmitNonSpace("nil")
 	end
 end
 
@@ -1295,7 +1307,9 @@ function META:EmitStatement(node--[[#: Node]])
 			if node.kind == "assignment" then self:Emit_ENVFromAssignment(node) end
 		end
 	elseif node.kind == "call_expression" then
+		self.is_call_expression = true
 		self:EmitExpression(node.value)
+		self.is_call_expression = false
 	elseif node.kind == "shebang" then
 		self:EmitToken(node.tokens["shebang"])
 	elseif node.kind == "continue" then
@@ -1763,7 +1777,7 @@ do -- types
 	end
 
 	function META:EmitInvalidLuaCode(func--[[#: ref keyof<|META|>]], ...--[[#: ref ...any]])
-		if self.config.omit_invalid_code then return end
+		if self.config.omit_invalid_code then return true end
 
 		local emitted = self:StartEmittingInvalidLuaCode()
 		self[func](self, ...)
