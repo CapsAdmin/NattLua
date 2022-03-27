@@ -147,6 +147,6 @@ do
 		2,
 		3
 	)
-	attest.equal(tbl, _  as {[1 .. inf] = statement["do"]})
+	attest.equal(tbl, _  as {[1 .. inf] = {} as statement["do"]})
 	self:EndNode(node)
 end

@@ -214,7 +214,7 @@ end
 
 -- very short unit test
 local function replaceIRs(
-	haystack: InstructionList,
+	haystack: mutable InstructionList,
 	needle: InstructionList,
 	replaceBy: {[number] = {number, number | string}},
 	startPos: number
@@ -246,7 +246,8 @@ local function replaceIRs(
 
 			while (replaceByI < replacmentSize) do
 				-- here we can do a ref copy, not a real copy as we don't plan to edit the instructions/IR content later
-				table.insert(haystack, i + replaceByI, replaceBy[replaceByI + 1] as {[number] = number})
+				local temp = replaceBy[replaceByI + 1]
+				table.insert(haystack, i + replaceByI, {temp[1]})
 				replaceByI = replaceByI + 1
 			end
 

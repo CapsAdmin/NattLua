@@ -45,7 +45,7 @@ local new_token = table_pool(
 			whitespace = false,
 			start = 0,
 			stop = 0,
-		}
+		}--[[# as META.@Self]]
 		return x
 	end,
 	3105585

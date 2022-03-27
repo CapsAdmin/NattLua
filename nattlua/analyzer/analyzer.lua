@@ -106,20 +106,7 @@ do
 	function META:AnalyzeExpression2(node)
 		self.current_expression = node
 
-		if node.type_expression then
-			if node.kind == "table" then
-				local obj = AnalyzeTable(self, node)
-				self:PushAnalyzerEnvironment("typesystem")
-				obj:SetContract(self:AnalyzeExpression(node.type_expression))
-				self:PopAnalyzerEnvironment()
-				return obj
-			end
-
-			self:PushAnalyzerEnvironment("typesystem")
-			local obj = self:AnalyzeExpression(node.type_expression)
-			self:PopAnalyzerEnvironment()
-			return obj
-		elseif node.kind == "value" then
+		if node.kind == "value" then
 			return AnalyzeAtomicValue(self, node)
 		elseif node.kind == "vararg" then
 			return AnalyzeVararg(self, node)
@@ -162,6 +149,27 @@ do
 
 	function META:AnalyzeExpression(node)
 		local obj, err = self:AnalyzeExpression2(node)
+
+		if node.type_expression then
+			local old = obj
+			self:PushAnalyzerEnvironment("typesystem")
+			obj = self:AnalyzeExpression(node.type_expression)
+			self:PopAnalyzerEnvironment()
+
+			if obj.Type == "table" then
+				if old.Type == "table" then
+					old:SetContract(obj)
+					obj = old
+				elseif old.Type == "tuple" and old:GetLength() == 1 then
+					local first = old:GetData()[1]
+					if first.Type == "table" then
+						first:SetContract(obj)
+						obj = old
+					end
+				end
+			end
+		end
+
 		node:AddType(obj or err)
 		return obj, err
 	end
