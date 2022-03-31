@@ -13,5 +13,8 @@
     "examples/projects/luajit/out.lua": true,
     "language_server/vscode": true,
     "**.js": true
-  }
+  },
+  "files.associations": {
+    "*.nlua": "lua"
+  },
 }
