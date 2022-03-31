@@ -26,4 +26,5 @@
       "nattlua/definitions/",
   ],
   "Lua.runtime.version": "LuaJIT",
+  "editor.formatOnSave": false,
 }
