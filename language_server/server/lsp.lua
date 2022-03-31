@@ -246,12 +246,6 @@ do -- semantic tokens
 	end
 
 	local function token_to_type_mod(token)
-		if syntax.IsKeyword(token) or syntax.IsNonStandardKeyword(token) then
-			if token.value == "type" then return "type" end
-
-			return "keyword"
-		end
-
 		if token.parent and token.parent.kind == "local_assignment" then
 			return "declaration"
 		end

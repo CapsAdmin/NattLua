@@ -206,7 +206,6 @@ function META:ReadTealExpression(priority--[[#: number]])
 			)
 		then
 			first.standalone_letter = node
-			first.force_upvalue = force_upvalue
 		end
 	end
 

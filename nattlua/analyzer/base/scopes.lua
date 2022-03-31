@@ -97,8 +97,6 @@ return function(META)
 			return upvalue:GetValue()
 		end
 
-		if val then return val end
-
 		-- look up in parent if not found
 		if self:IsRuntime() then
 			local g = self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())

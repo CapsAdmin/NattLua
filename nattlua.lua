@@ -3,7 +3,7 @@ if not table.unpack and _G.unpack then table.unpack = _G.unpack end
 if not io or not io.write then
 	io = io or {}
 
-	if gmod then
+	if _G.gmod then
 		io.write = function(...)
 			for i = 1, select("#", ...) do
 				MsgC(Color(255, 255, 255), select(i, ...))

@@ -17,4 +17,13 @@
   "files.associations": {
     "*.nlua": "lua"
   },
+  "Lua.workspace.ignoreDir": [
+      "examples/nattlua/",
+      "examples/gmod/",
+      "examples/projects/",
+      "test/nattlua/analyzer/complex/",
+      "test/nattlua/analyzer/file_import/",
+      "nattlua/definitions/",
+  ],
+  "Lua.runtime.version": "LuaJIT",
 }
