@@ -59,6 +59,10 @@ end
 
 local path = ...
 
+if path == "nattlua/analyzer/statements/assignment.lua" then
+    path = "test/nattlua/analyzer/assignment.lua"
+end
+
 if path and path:sub(-4) == ".lua" then
 	assert(loadfile(path))()
 else
