@@ -1,23 +1,6 @@
-local io = require("io")
-local pcall = _G.pcall
 --require("nattlua.other.helpers").GlobalLookup()
-local map -- = {}
-if map then
-	debug.sethook(
-		function(evt)
-			if evt ~= "line" then return end
-
-			local info = debug.getinfo(2, "Sl")
-
-			if info.source:sub(1, 10) == "@./nattlua" then
-				local src = info.source:sub(2)
-				map[src] = map[src] or {}
-				map[src][info.currentline] = (map[src][info.currentline] or 0) + 1
-			end
-		end,
-		"l"
-	)
-end
+local io = require("io")
+package.path = package.path .. ";nattlua/other/?.lua"
 
 function _G.test(name, cb)
 	cb()
@@ -57,16 +40,28 @@ function _G.diff(input, expect)
 	os.execute("meld " .. a .. " " .. b)
 end
 
-local path = ...
+local test_path = ...
+local coverage_path = test_path
 
-if path == "nattlua/analyzer/statements/assignment.lua" then
-    path = "test/nattlua/analyzer/assignment.lua"
+if test_path == "nattlua/analyzer/statements/assignment.lua" then
+    test_path = "test/nattlua/analyzer/assignment.lua"
 end
 
-if path and path:sub(-4) == ".lua" then
-	assert(loadfile(path))()
+if test_path then
+    local luacov = require("nattlua.other.luacov")
+    luacov.init({
+        include = {
+            coverage_path,
+        }
+    })
+end
+
+print("running " .. (test_path or "all tests"))
+
+if test_path and test_path:sub(-4) == ".lua" then
+	assert(loadfile(test_path))()
 else
-	local what = path
+	local what = test_path
 	local path = "test/" .. ((what and what .. "/") or "nattlua/")
 
 	for path in io.popen("find " .. path):lines() do
@@ -80,23 +75,6 @@ else
 			if path:sub(-5) == ".nlua" then
 				require("test.helpers").RunCode(io.open(path, "r"):read("*all"))
 			end
-		end
-	end
-end
-
-if map then
-	for k, v in pairs(map) do
-		if k:find("nattlua/", 1, true) then
-			local f = io.open(k .. ".coverage", "w")
-			local i = 1
-
-			for line in io.open(k):lines() do
-				if map[k][i] then f:write("\n") else f:write(line, "\n") end
-
-				i = i + 1
-			end
-
-			f:close()
 		end
 	end
 end

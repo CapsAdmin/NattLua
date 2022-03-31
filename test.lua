@@ -1,1 +1,1 @@
-dofile("test/run.lua")
+assert(loadfile("test/run.lua"))(...)
