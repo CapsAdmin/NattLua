@@ -94,20 +94,21 @@ function META:StartNode(
 	if self.OnNode then self:OnNode(node) end
 
 	table.insert(self.nodes, 1, node)
+    --[[# 
+        local type T = any
 
-	--[[#local function todo<||>
-		for _, t in pairs(type == "epression" and expression or statement) do
-			if t.kind == kind then
-				local lol = copy<|t|>
-				lol.@Contract = lol
-				return lol
-			end
-		end
+        if type == "expression" then
+            T = expression[kind]
+        elseif type == "statement" then
+            T = statement[kind]
+        end
 
-		type_error("cannot find " .. tostring(type) .. " " .. tostring(kind))
-	end]]
+        if not T then
+            error("cannot find " .. type .. " " .. kind)
+        end
+    ]]
 
-	return node--[[# as todo<||>]]
+	return node--[[# as T]]
 end
 
 function META:EndNode(node--[[#: Node]])
