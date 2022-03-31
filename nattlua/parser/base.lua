@@ -28,6 +28,7 @@ local META = class.CreateTemplate("parser")
 	tokens = List<|Token|>,
 	environment_stack = List<|"typesystem" | "runtime"|>,
 	OnNode = nil | function=(self, Node)>(nil),
+	suppress_on_node = nil | {parent = Node, nodes = List<|Node|>},
 }]]
 --[[#type META.@Name = "Parser"]]
 --[[#local type Parser = META.@Self]]
@@ -101,6 +102,29 @@ function META:StartNode(
 	return node--[[# as T]]
 end
 
+function META:SuppressOnNode()
+	self.suppress_on_node = {parent = self.nodes[1], nodes = {}}
+end
+
+function META:ReRunOnNode(nodes)
+	if not self.suppress_on_node then return end
+
+	for _, node_a in ipairs(self.suppress_on_node.nodes) do
+		for i, node_b in ipairs(nodes) do
+			if node_a == node_b and self.config.on_node then
+				local new_node = self.config.on_node(self, node_a)
+
+				if new_node then
+					nodes[i] = new_node
+					new_node.parent = self.nodes[1]
+				end
+			end
+		end
+	end
+
+	self.suppress_on_node = nil
+end
+
 function META:EndNode(node--[[#: Node]])
 	local prev = self:GetToken(-1)
 
@@ -114,9 +138,24 @@ function META:EndNode(node--[[#: Node]])
 
 	table.remove(self.nodes, 1)
 
-	if self.config.on_node then self.config.on_node(self, node) end
+	if self.config.on_node then
+		if
+			self.suppress_on_node and
+			node.type == "expression" and
+			self.suppress_on_node.parent == self.nodes[1]
+		then
+			table.insert(self.suppress_on_node, node)
+		elseif self.config.on_node then
+			local new_node = self.config.on_node(self, node)
 
-	return self
+			if new_node then
+				node = new_node--[[# as any]]
+				node.parent = self.nodes[1]
+			end
+		end
+	end
+
+	return node
 end
 
 function META:Error(

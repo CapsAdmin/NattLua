@@ -53,7 +53,7 @@ function META:ReadTealFunctionSignature()
 		node.tokens["return)"] = self:NewToken("symbol", ")")
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -66,7 +66,7 @@ function META:ReadTealKeywordValueExpression()
 
 	local node = self:StartNode("expression", "value")
 	node.value = self:ReadToken()
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -76,7 +76,7 @@ function META:ReadTealVarargExpression()
 	local node = self:StartNode("expression", "value")
 	node.type_expression = self:ReadValueExpressionType("letter")
 	node.value = self:ExpectValue("...")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -104,7 +104,7 @@ function META:ReadTealTable()
 
 		kv.tokens["="] = self:ExpectValueTranslate(":", "=")
 		kv.value_expression = self:ReadTealExpression(0)
-		self:EndNode(kv)
+		kv = self:EndNode(kv)
 		node.children = {kv}
 	else
 		local i = 1
@@ -116,12 +116,12 @@ function META:ReadTealTable()
 			local key = self:StartNode("expression", "value")
 			key.value = self:NewToken("letter", "number")
 			key.standalone_letter = key
-			self:EndNode(key)
+			key = self:EndNode(key)
 			kv.key_expression = key
 			kv.tokens["]"] = self:NewToken("symbol", "]")
 			kv.tokens["="] = self:NewToken("symbol", "=")
 			kv.value_expression = self:ReadTealExpression(0)
-			self:EndNode(kv)
+			kv = self:EndNode(kv)
 			table.insert(node.children, kv)
 
 			if not self:IsValue(",") then
@@ -137,7 +137,7 @@ function META:ReadTealTable()
 	end
 
 	node.tokens["}"] = self:ExpectValue("}")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -148,7 +148,7 @@ function META:ReadTealTuple()
 	node.tokens["("] = self:ExpectValue("(")
 	node.expressions = self:ReadMultipleValues(nil, self.ReadTealExpression, 0)
 	node.tokens[")"] = self:ExpectValue(")")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -160,7 +160,7 @@ function META:ReadTealCallSubExpression()
 	node.expressions = self:ReadMultipleValues(nil, self.ReadTealExpression, 0)
 	node.tokens["call)"] = self:ExpectValueTranslate(">", "|>")
 	node.type_call = true
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -221,7 +221,7 @@ function META:ReadTealExpression(priority--[[#: number]])
 		node.value = self:ReadToken()
 		node.left = left_node
 		node.right = self:ReadTealExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
-		self:EndNode(node)
+		node = self:EndNode(node)
 	end
 
 	return node
@@ -235,7 +235,7 @@ function META:ReadTealAssignment()
 	kv.left = {self:ReadValueExpressionToken()}
 	kv.tokens["="] = self:ExpectValue("=")
 	kv.right = {self:ReadTealExpression(0)}
-	self:EndNode(kv)
+	kv = self:EndNode(kv)
 	return kv
 end
 
@@ -259,7 +259,7 @@ function META:ReadTealRecordArray()
 	kv.tokens["="] = self:NewToken("symbol", "=")
 	kv.right = {self:ReadTealExpression(0)}
 	self:Advance(1) -- }
-	self:EndNode(kv)
+	kv = self:EndNode(kv)
 	return kv
 end
 
@@ -304,9 +304,9 @@ local function ReadRecordBody(
 	tbl.tokens["{"] = self:NewToken("symbol", "{")
 	tbl.tokens["}"] = self:NewToken("symbol", "}")
 	tbl.children = {}
-	self:EndNode(tbl)
+	tbl = self:EndNode(tbl)
 	assignment.right = {tbl}
-	self:EndNode(assignment)
+	assignment = self:EndNode(assignment)
 	local block = self:StartNode("statement", "do")
 	block.tokens["do"] = self:NewToken("letter", "do")
 	block.statements = {}
@@ -336,7 +336,7 @@ local function ReadRecordBody(
 
 	table.insert(block.statements, self:ParseString("PopTypeEnvironment<||>").statements[1])
 	block.tokens["end"] = self:ExpectValue("end")
-	self:EndNode(block)
+	block = self:EndNode(block)
 	self:PopParserEnvironment("typesystem")
 
 	if func then
@@ -344,7 +344,7 @@ local function ReadRecordBody(
 		table.insert(func.statements, block)
 		table.insert(func.statements, self:ParseString("return " .. name).statements[1])
 		func.tokens["end"] = self:NewToken("letter", "end")
-		self:EndNode(func)
+		func = self:EndNode(func)
 		return func
 	end
 
@@ -398,7 +398,7 @@ do
 			bnode.value = self:NewToken("symbol", "|")
 			bnode.right = self:ReadValueExpressionType("string")
 			bnode.left = left
-			self:EndNode(bnode)
+			bnode = self:EndNode(bnode)
 		end
 
 		assignment.right = {bnode}
@@ -411,7 +411,7 @@ do
 
 		local assignment = self:StartNode("statement", "assignment")
 		ReadBody(self, assignment)
-		self:EndNode(assignment)
+		assignment = self:EndNode(assignment)
 		return assignment
 	end
 

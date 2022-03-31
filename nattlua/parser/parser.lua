@@ -36,21 +36,21 @@ function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
 		end
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
 function META:ReadValueExpressionToken(expect_value--[[#: nil | string]])
 	local node = self:StartNode("expression", "value")
 	node.value = expect_value and self:ExpectValue(expect_value) or self:ReadToken()
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
 function META:ReadValueExpressionType(expect_value--[[#: TokenType]])
 	local node = self:StartNode("expression", "value")
 	node.value = self:ExpectType(expect_value)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -170,7 +170,7 @@ function META:ReadAnalyzerFunctionBody(
 			end
 		end
 
-		self:EndNode(vararg)
+		vararg = self:EndNode(vararg)
 		table_insert(node.identifiers, vararg)
 	end
 
@@ -251,7 +251,7 @@ function META:ReadRootNode()
 	if self:IsType("shebang") then
 		shebang = self:StartNode("statement", "shebang")
 		shebang.tokens["shebang"] = self:ExpectType("shebang")
-		self:EndNode(shebang)
+		shebang = self:EndNode(shebang)
 		node.tokens["shebang"] = shebang.tokens["shebang"]
 	end
 
@@ -285,12 +285,12 @@ function META:ReadRootNode()
 	if self:IsType("end_of_file") then
 		local eof = self:StartNode("statement", "end_of_file")
 		eof.tokens["end_of_file"] = self.tokens[#self.tokens]
-		self:EndNode(eof)
+		eof = self:EndNode(eof)
 		table.insert(node.statements, eof)
 		node.tokens["eof"] = eof.tokens["end_of_file"]
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 

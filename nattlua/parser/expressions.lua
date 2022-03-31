@@ -16,7 +16,7 @@ function META:ReadAnalyzerFunctionExpression()
 	node.tokens["analyzer"] = self:ExpectValue("analyzer")
 	node.tokens["function"] = self:ExpectValue("function")
 	self:ReadAnalyzerFunctionBody(node)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -26,7 +26,7 @@ function META:ReadFunctionExpression()
 	local node = self:StartNode("expression", "function")
 	node.tokens["function"] = self:ExpectValue("function")
 	self:ReadFunctionBody(node)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -37,7 +37,7 @@ function META:ReadIndexSubExpression(left_node--[[#: Node]])
 	node.value = self:ReadToken()
 	node.right = self:ReadValueExpressionType("letter")
 	node.left = left_node
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -61,7 +61,7 @@ function META:ReadSelfCallSubExpression(left_node--[[#: Node]])
 	node.value = self:ReadToken()
 	node.right = self:ReadValueExpressionType("letter")
 	node.left = left_node
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -89,7 +89,7 @@ do -- typesystem
 
 			node.tokens["("] = pleft
 			node.tokens[")"] = self:ExpectValue(")", pleft)
-			self:EndNode(node)
+			node = self:EndNode(node)
 			return node
 		end
 
@@ -97,7 +97,7 @@ do -- typesystem
 		table_insert(node.tokens["("], 1, pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
 		table_insert(node.tokens[")"], self:ExpectValue(")"))
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -116,7 +116,7 @@ do -- typesystem
 
 		if node.value.value == "expand" then self:PopParserEnvironment() end
 
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -126,7 +126,7 @@ do -- typesystem
 		local node = self:StartNode("expression", "vararg")
 		node.tokens["..."] = self:ExpectValue("...")
 		node.value = self:ReadTypeExpression(0)
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -167,7 +167,7 @@ do -- typesystem
 		node.tokens["return("] = self:ExpectValue("(")
 		node.return_types = self:ReadMultipleValues(nil, self.ReadTypeSignatureFunctionArgument)
 		node.tokens["return)"] = self:ExpectValue(")")
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -177,7 +177,7 @@ do -- typesystem
 		local node = self:StartNode("expression", "type_function")
 		node.tokens["function"] = self:ExpectValue("function")
 		self:ReadTypeFunctionBody(node)
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -186,7 +186,7 @@ do -- typesystem
 
 		local node = self:StartNode("expression", "value")
 		node.value = self:ReadToken()
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -200,21 +200,21 @@ do -- typesystem
 				node.tokens["]"] = self:ExpectValue("]")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ReadTypeExpression(0)
-				self:EndNode(node)
+				node = self:EndNode(node)
 				return node
 			elseif self:IsType("letter") and self:IsValue("=", 1) then
 				local node = self:StartNode("sub_statement", "table_key_value")
 				node.tokens["identifier"] = self:ExpectType("letter")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ReadTypeExpression(0)
-				self:EndNode(node)
+				node = self:EndNode(node)
 				return node
 			end
 
 			local node = self:StartNode("sub_statement", "table_index_value")
 			node.key = i
 			node.value_expression = self:ReadTypeExpression(0)
-			self:EndNode(node)
+			node = self:EndNode(node)
 			return node
 		end
 
@@ -253,7 +253,7 @@ do -- typesystem
 			end
 
 			tree.tokens["}"] = self:ExpectValue("}")
-			self:EndNode(tree)
+			tree = self:EndNode(tree)
 			return tree
 		end
 	end
@@ -272,7 +272,7 @@ do -- typesystem
 
 		local node = self:StartNode("expression", "empty_union")
 		node.tokens["|"] = self:ReadToken("|")
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -289,7 +289,7 @@ do -- typesystem
 		local node = self:StartNode("expression", "postfix_operator")
 		node.value = self:ReadToken()
 		node.left = left_node
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -325,7 +325,7 @@ do -- typesystem
 
 		node.left = left_node
 		node.type_call = true
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -337,7 +337,7 @@ do -- typesystem
 		node.expression = self:ExpectTypeExpression(0)
 		node.tokens["]"] = self:ExpectValue("]")
 		node.left = left_node
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -412,7 +412,7 @@ do -- typesystem
 			node.value = self:ReadToken()
 			node.left = left_node
 			node.right = self:ReadTypeExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
-			self:EndNode(node)
+			node = self:EndNode(node)
 		end
 
 		self:PopParserEnvironment()
@@ -475,7 +475,7 @@ do -- runtime
 			local node = self:StartNode("expression", "table_spread")
 			node.tokens["..."] = self:ExpectValue("...")
 			node.expression = self:ExpectRuntimeExpression()
-			self:EndNode(node)
+			node = self:EndNode(node)
 			return node
 		end
 
@@ -488,7 +488,7 @@ do -- runtime
 				node.tokens["]"] = self:ExpectValue("]")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ExpectRuntimeExpression(0)
-				self:EndNode(node)
+				node = self:EndNode(node)
 				return node
 			elseif self:IsType("letter") and self:IsValue("=", 1) then
 				local node = self:StartNode("sub_statement", "table_key_value")
@@ -502,7 +502,7 @@ do -- runtime
 					node.value_expression = self:ExpectRuntimeExpression()
 				end
 
-				self:EndNode(node)
+				node = self:EndNode(node)
 				return node
 			end
 
@@ -516,7 +516,7 @@ do -- runtime
 			end
 
 			node.key = i
-			self:EndNode(node)
+			node = self:EndNode(node)
 			return node
 		end
 
@@ -561,7 +561,7 @@ do -- runtime
 			end
 
 			tree.tokens["}"] = self:ExpectValue("}")
-			self:EndNode(tree)
+			tree = self:EndNode(tree)
 			return tree
 		end
 	end
@@ -572,7 +572,7 @@ do -- runtime
 		local node = self:StartNode("expression", "postfix_operator")
 		node.value = self:ReadToken()
 		node.left = left_node
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -635,7 +635,7 @@ do -- runtime
 		end
 
 		node.left = left_node
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -647,7 +647,7 @@ do -- runtime
 		node.expression = self:ExpectRuntimeExpression()
 		node.tokens["]"] = self:ExpectValue("]")
 		node.left = left_node
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -697,7 +697,7 @@ do -- runtime
 		node.value = self:ReadToken()
 		node.tokens[1] = node.value
 		node.right = self:ExpectRuntimeExpression(math.huge)
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -960,7 +960,7 @@ do -- runtime
 			if node.left then node.left.parent = node end
 
 			node.right = self:ExpectRuntimeExpression(runtime_syntax:GetBinaryOperatorInfo(node.value).right_priority)
-			self:EndNode(node)
+			node = self:EndNode(node)
 
 			if not node.right then
 				local token = self:GetToken()

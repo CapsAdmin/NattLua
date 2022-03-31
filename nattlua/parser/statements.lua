@@ -42,7 +42,7 @@ do -- destructure statement
 			node.right = self:ReadRuntimeExpression(0)
 		end
 
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -70,7 +70,7 @@ do -- destructure statement
 			node.right = self:ReadRuntimeExpression(0)
 		end
 
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 end
@@ -90,7 +90,7 @@ do
 			node.right = self:ReadValueExpressionType("letter")
 			node.left = left
 			node.right.self_call = self_call
-			self:EndNode(node)
+			node = self:EndNode(node)
 		end
 
 		first.standalone_letter = node
@@ -115,7 +115,7 @@ do
 			self:ReadFunctionBody(node)
 		end
 
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -147,7 +147,7 @@ do
 		end
 
 		self:ReadAnalyzerFunctionBody(node, true)
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 end
@@ -160,7 +160,7 @@ function META:ReadLocalFunctionStatement()
 	node.tokens["function"] = self:ExpectValue("function")
 	node.tokens["identifier"] = self:ExpectType("letter")
 	self:ReadFunctionBody(node)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -181,7 +181,7 @@ function META:ReadLocalAnalyzerFunctionStatement()
 	node.tokens["function"] = self:ExpectValue("function")
 	node.tokens["identifier"] = self:ExpectType("letter")
 	self:ReadAnalyzerFunctionBody(node, true)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -204,7 +204,7 @@ function META:ReadLocalTypeFunctionStatement()
 	node.tokens["function"] = self:ExpectValue("function")
 	node.tokens["identifier"] = self:ExpectType("letter")
 	self:ReadTypeFunctionBody(node)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -213,7 +213,7 @@ function META:ReadBreakStatement()
 
 	local node = self:StartNode("statement", "break")
 	node.tokens["break"] = self:ExpectValue("break")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -224,7 +224,7 @@ function META:ReadDoStatement()
 	node.tokens["do"] = self:ExpectValue("do")
 	node.statements = self:ReadNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -239,7 +239,7 @@ function META:ReadGenericForStatement()
 	node.tokens["do"] = self:ExpectValue("do")
 	node.statements = self:ReadNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -250,7 +250,7 @@ function META:ReadGotoLabelStatement()
 	node.tokens["::"] = self:ExpectValue("::")
 	node.tokens["identifier"] = self:ExpectType("letter")
 	node.tokens["::"] = self:ExpectValue("::")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -260,7 +260,7 @@ function META:ReadGotoStatement()
 	local node = self:StartNode("statement", "goto")
 	node.tokens["goto"] = self:ExpectValue("goto")
 	node.tokens["identifier"] = self:ExpectType("letter")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -304,7 +304,7 @@ function META:ReadIfStatement()
 	end
 
 	node.tokens["end"] = self:ExpectValue("end")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -335,7 +335,7 @@ function META:ReadLocalAssignmentStatement()
 		node.right = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -350,7 +350,7 @@ function META:ReadNumericForStatement()
 	node.tokens["do"] = self:ExpectValue("do")
 	node.statements = self:ReadNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -362,7 +362,7 @@ function META:ReadRepeatStatement()
 	node.statements = self:ReadNodes({["until"] = true})
 	node.tokens["until"] = self:ExpectValue("until")
 	node.expression = self:ExpectRuntimeExpression()
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -371,7 +371,7 @@ function META:ReadSemicolonStatement()
 
 	local node = self:StartNode("statement", "semicolon")
 	node.tokens[";"] = self:ExpectValue(";")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -381,7 +381,7 @@ function META:ReadReturnStatement()
 	local node = self:StartNode("statement", "return")
 	node.tokens["return"] = self:ExpectValue("return")
 	node.expressions = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -394,7 +394,7 @@ function META:ReadWhileStatement()
 	node.tokens["do"] = self:ExpectValue("do")
 	node.statements = self:ReadNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -403,7 +403,7 @@ function META:ReadContinueStatement()
 
 	local node = self:StartNode("statement", "continue")
 	node.tokens["continue"] = self:ExpectValue("continue")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -411,7 +411,7 @@ function META:ReadDebugCodeStatement()
 	if self:IsType("analyzer_debug_code") then
 		local node = self:StartNode("statement", "analyzer_debug_code")
 		node.lua_code = self:ReadValueExpressionType("analyzer_debug_code")
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	elseif self:IsType("parser_debug_code") then
 		local token = self:ExpectType("parser_debug_code")
@@ -419,9 +419,9 @@ function META:ReadDebugCodeStatement()
 		local node = self:StartNode("statement", "parser_debug_code")
 		local code = self:StartNode("expression", "value")
 		code.value = token
-		self:EndNode(code)
+		code = self:EndNode(code)
 		node.lua_code = code
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 end
@@ -450,7 +450,7 @@ function META:ReadLocalTypeAssignmentStatement()
 		self:PopParserEnvironment()
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -471,20 +471,27 @@ function META:ReadTypeAssignmentStatement()
 		self:PopParserEnvironment()
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
 function META:ReadCallOrAssignmentStatement()
 	local start = self:GetToken()
+	self:SuppressOnNode()
 	local left = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
 
 	if self:IsValue("=") then
 		local node = self:StartNode("statement", "assignment")
 		node.tokens["="] = self:ExpectValue("=")
 		node.left = left
+
+		for i, v in ipairs(node.left) do
+			v.is_left_assignment = true
+		end
+
 		node.right = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
-		self:EndNode(node)
+		self:ReRunOnNode(node.left)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -492,7 +499,8 @@ function META:ReadCallOrAssignmentStatement()
 		local node = self:StartNode("statement", "call_expression")
 		node.value = left[1]
 		node.tokens = left[1].tokens
-		self:EndNode(node)
+		self:ReRunOnNode(left)
+		node = self:EndNode(node)
 		return node
 	end
 
