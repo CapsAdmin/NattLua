@@ -50,7 +50,7 @@ function META:Render(config)
 		attest.expect_diagnostic<|"warning", "always false"|>]]
 		--[[#attest.expect_diagnostic<|"warning", "always true"|>]]
 
-		if IMPORTS--[[# as false]] then
+		if _G.IMPORTS--[[# as false]] then
 			emitter = IMPORTS["nattlua.transpiler.emitter"]()
 		else
 			--[[#£ parser.dont_hoist_next_import = true]]
