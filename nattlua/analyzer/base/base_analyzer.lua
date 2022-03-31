@@ -179,7 +179,7 @@ return function(META)
 		local locals = ""
 		locals = locals .. "local bit=bit32 or _G.bit;"
 
-		if BUNDLE then
+		if _G.BUNDLE then
 			locals = locals .. "local nl=IMPORTS[\"nattlua\"]();"
 			locals = locals .. "local types=IMPORTS[\"nattlua.types.types\"]();"
 			locals = locals .. "local context=IMPORTS[\"nattlua.analyzer.context\"]();"

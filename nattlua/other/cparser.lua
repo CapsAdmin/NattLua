@@ -1610,7 +1610,7 @@ processDirectives = function(options, macros, lines, ...)
 
 	local function doMessage()
 		local msg = s:match("^%s*#+%s*[a-z]*%s+([^%s].*)")
-		xmessage(dirtok, options, n, msg or "#" .. dirtok)
+		xmessage(dirtok, options, n, msg or ("#" .. dirtok))
 	end
    -- undef
    local function doUndef(ti)
