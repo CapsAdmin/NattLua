@@ -37,7 +37,7 @@ function META.New(
 	code--[[#: Code]],
 	config--[[#: nil | {
 		root = nil | Node,
-		on_statement = nil | function=(Parser, Node)>(Node),
+		on_node = nil | function=(Parser, Node)>(Node),
 		path = nil | string,
 	}]]
 )
@@ -113,6 +113,9 @@ function META:EndNode(node--[[#: Node]])
 	end
 
 	table.remove(self.nodes, 1)
+
+	if self.config.on_node then self.config.on_node(self, node) end
+
 	return self
 end
 
@@ -306,10 +309,6 @@ function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 		else
 			out[i] = node
 			i = i + 1
-		end
-
-		if self.config and self.config.on_statement then
-			out[i] = self.config.on_statement(self, out[i - 1]) or out[i - 1]
 		end
 	end
 

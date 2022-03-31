@@ -63,7 +63,7 @@ function META:Render(config)
 
 	if self.type == "expression" then
 		em:EmitExpression(self)
-	else
+	elseif self.type == "statement" then
 		em:EmitStatement(self)
 	end
 

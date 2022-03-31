@@ -87,8 +87,8 @@ local compiler = assert(nl.File(
 	{
 		inline_require = true,
 		preserve_whitespace = false,
-		on_statement = function(self, node)
-			crawl_statement(node)
+		on_node = function(self, node)
+			if node.type == "statement" then crawl_statement(node) end
 		end,
 	}
 ):Parse())

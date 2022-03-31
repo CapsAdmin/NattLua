@@ -3,7 +3,7 @@ local type { Node } = import("./parser/nodes.nlua")
 local type LexerConfig = {}
 local type ParserConfig = {
 	root = Node,
-	on_statement = function=(ref Table, Node)>(Node),
+	on_node = function=(ref Table, Node)>(Node),
 	path = string,
 	skip_import = boolean,
 	emit_environment = boolean,

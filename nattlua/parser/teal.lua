@@ -89,7 +89,7 @@ function META:ReadTealTable()
 	node.children = {}
 
 	if self:IsValue(":", 1) or self:IsValue("(") then
-		local kv = self:StartNode("expression", "table_expression_value")
+		local kv = self:StartNode("sub_statement", "table_expression_value")
 		kv.expression_key = true
 
 		if self:IsValue("(") then
@@ -110,7 +110,7 @@ function META:ReadTealTable()
 		local i = 1
 
 		while true do
-			local kv = self:StartNode("expression", "table_expression_value")
+			local kv = self:StartNode("sub_statement", "table_expression_value")
 			kv.expression_key = true
 			kv.tokens["["] = self:NewToken("symbol", "[")
 			local key = self:StartNode("expression", "value")

@@ -11203,7 +11203,7 @@ do -- typesystem
 	do
 		function META:read_type_table_entry(i)
 			if self:IsValue("[") then
-				local node = self:StartNode("expression", "table_expression_value")
+				local node = self:StartNode("sub_statement", "table_expression_value")
 				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ReadTypeExpression(0)
@@ -11213,7 +11213,7 @@ do -- typesystem
 				self:EndNode(node)
 				return node
 			elseif self:IsType("letter") and self:IsValue("=", 1) then
-				local node = self:StartNode("expression", "table_key_value")
+				local node = self:StartNode("sub_statement", "table_key_value")
 				node.tokens["identifier"] = self:ExpectType("letter")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ReadTypeExpression(0)
@@ -11221,7 +11221,7 @@ do -- typesystem
 				return node
 			end
 
-			local node = self:StartNode("expression", "table_index_value")
+			local node = self:StartNode("sub_statement", "table_index_value")
 			node.key = i
 			node.value_expression = self:ReadTypeExpression(0)
 			self:EndNode(node)
@@ -11490,7 +11490,7 @@ do -- runtime
 
 		function META:read_table_entry(i)
 			if self:IsValue("[") then
-				local node = self:StartNode("expression", "table_expression_value")
+				local node = self:StartNode("sub_statement", "table_expression_value")
 				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ExpectRuntimeExpression(0)
@@ -11500,7 +11500,7 @@ do -- runtime
 				self:EndNode(node)
 				return node
 			elseif self:IsType("letter") and self:IsValue("=", 1) then
-				local node = self:StartNode("expression", "table_key_value")
+				local node = self:StartNode("sub_statement", "table_key_value")
 				node.tokens["identifier"] = self:ExpectType("letter")
 				node.tokens["="] = self:ExpectValue("=")
 				local spread = self:read_table_spread()
@@ -11515,7 +11515,7 @@ do -- runtime
 				return node
 			end
 
-			local node = self:StartNode("expression", "table_index_value")
+			local node = self:StartNode("sub_statement", "table_index_value")
 			local spread = self:read_table_spread()
 
 			if spread then
@@ -12621,7 +12621,7 @@ function META:ReadTealTable()
 	node.children = {}
 
 	if self:IsValue(":", 1) or self:IsValue("(") then
-		local kv = self:StartNode("expression", "table_expression_value")
+		local kv = self:StartNode("sub_statement", "table_expression_value")
 		kv.expression_key = true
 
 		if self:IsValue("(") then
@@ -12642,7 +12642,7 @@ function META:ReadTealTable()
 		local i = 1
 
 		while true do
-			local kv = self:StartNode("expression", "table_expression_value")
+			local kv = self:StartNode("sub_statement", "table_expression_value")
 			kv.expression_key = true
 			kv.tokens["["] = self:NewToken("symbol", "[")
 			local key = self:StartNode("expression", "value")

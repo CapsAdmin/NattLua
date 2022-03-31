@@ -30,12 +30,13 @@ function META:ReadFunctionExpression()
 	return node
 end
 
-function META:ReadIndexSubExpression()
+function META:ReadIndexSubExpression(left_node--[[#: Node]])
 	if not (self:IsValue(".") and self:IsType("letter", 1)) then return end
 
 	local node = self:StartNode("expression", "binary_operator")
 	node.value = self:ReadToken()
 	node.right = self:ReadValueExpressionType("letter")
+	node.left = left_node
 	self:EndNode(node)
 	return node
 end
@@ -51,7 +52,7 @@ function META:IsCallExpression(offset--[[#: number]])
 		)
 end
 
-function META:ReadSelfCallSubExpression()
+function META:ReadSelfCallSubExpression(left_node--[[#: Node]])
 	if not (self:IsValue(":") and self:IsType("letter", 1) and self:IsCallExpression(2)) then
 		return
 	end
@@ -59,6 +60,7 @@ function META:ReadSelfCallSubExpression()
 	local node = self:StartNode("expression", "binary_operator")
 	node.value = self:ReadToken()
 	node.right = self:ReadValueExpressionType("letter")
+	node.left = left_node
 	self:EndNode(node)
 	return node
 end
@@ -191,7 +193,7 @@ do -- typesystem
 	do
 		function META:read_type_table_entry(i--[[#: number]])
 			if self:IsValue("[") then
-				local node = self:StartNode("expression", "table_expression_value")
+				local node = self:StartNode("sub_statement", "table_expression_value")
 				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ReadTypeExpression(0)
@@ -201,7 +203,7 @@ do -- typesystem
 				self:EndNode(node)
 				return node
 			elseif self:IsType("letter") and self:IsValue("=", 1) then
-				local node = self:StartNode("expression", "table_key_value")
+				local node = self:StartNode("sub_statement", "table_key_value")
 				node.tokens["identifier"] = self:ExpectType("letter")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ReadTypeExpression(0)
@@ -209,7 +211,7 @@ do -- typesystem
 				return node
 			end
 
-			local node = self:StartNode("expression", "table_index_value")
+			local node = self:StartNode("sub_statement", "table_index_value")
 			node.key = i
 			node.value_expression = self:ReadTypeExpression(0)
 			self:EndNode(node)
@@ -281,16 +283,17 @@ do -- typesystem
 		node.type_expression = self:ReadTypeExpression(0)
 	end
 
-	function META:ReadPostfixTypeOperatorSubExpression()
+	function META:ReadPostfixTypeOperatorSubExpression(left_node--[[#: Node]])
 		if not typesystem_syntax:IsPostfixOperator(self:GetToken()) then return end
 
 		local node = self:StartNode("expression", "postfix_operator")
 		node.value = self:ReadToken()
+		node.left = left_node
 		self:EndNode(node)
 		return node
 	end
 
-	function META:ReadTypeCallSubExpression(primary_node--[[#: Node]])
+	function META:ReadTypeCallSubExpression(left_node--[[#: Node]], primary_node--[[#: Node]])
 		if not self:IsCallExpression(0) then return end
 
 		local node = self:StartNode("expression", "postfix_call")
@@ -320,18 +323,20 @@ do -- typesystem
 			end
 		end
 
+		node.left = left_node
 		node.type_call = true
 		self:EndNode(node)
 		return node
 	end
 
-	function META:ReadPostfixTypeIndexExpressionSubExpression()
+	function META:ReadPostfixTypeIndexExpressionSubExpression(left_node--[[#: Node]])
 		if not self:IsValue("[") then return end
 
 		local node = self:StartNode("expression", "postfix_expression_index")
 		node.tokens["["] = self:ExpectValue("[")
 		node.expression = self:ExpectTypeExpression(0)
 		node.tokens["]"] = self:ExpectValue("]")
+		node.left = left_node
 		self:EndNode(node)
 		return node
 	end
@@ -339,16 +344,14 @@ do -- typesystem
 	function META:ReadTypeSubExpression(node--[[#: Node]])
 		for _ = 1, self:GetLength() do
 			local left_node = node
-			local found = self:ReadIndexSubExpression() or
-				self:ReadSelfCallSubExpression() or
-				self:ReadPostfixTypeOperatorSubExpression() or
-				self:ReadTypeCallSubExpression(node) or
-				self:ReadPostfixTypeIndexExpressionSubExpression() or
+			local found = self:ReadIndexSubExpression(left_node) or
+				self:ReadSelfCallSubExpression(left_node) or
+				self:ReadPostfixTypeOperatorSubExpression(left_node) or
+				self:ReadTypeCallSubExpression(left_node, node) or
+				self:ReadPostfixTypeIndexExpressionSubExpression(left_node) or
 				self:ReadAsSubExpression(left_node)
 
 			if not found then break end
-
-			found.left = left_node
 
 			if left_node.value and left_node.value.value == ":" then
 				found.parser_call = true
@@ -478,7 +481,7 @@ do -- runtime
 
 		function META:read_table_entry(i--[[#: number]])
 			if self:IsValue("[") then
-				local node = self:StartNode("expression", "table_expression_value")
+				local node = self:StartNode("sub_statement", "table_expression_value")
 				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ExpectRuntimeExpression(0)
@@ -488,7 +491,7 @@ do -- runtime
 				self:EndNode(node)
 				return node
 			elseif self:IsType("letter") and self:IsValue("=", 1) then
-				local node = self:StartNode("expression", "table_key_value")
+				local node = self:StartNode("sub_statement", "table_key_value")
 				node.tokens["identifier"] = self:ExpectType("letter")
 				node.tokens["="] = self:ExpectValue("=")
 				local spread = self:read_table_spread()
@@ -503,7 +506,7 @@ do -- runtime
 				return node
 			end
 
-			local node = self:StartNode("expression", "table_index_value")
+			local node = self:StartNode("sub_statement", "table_index_value")
 			local spread = self:read_table_spread()
 
 			if spread then
@@ -563,16 +566,17 @@ do -- runtime
 		end
 	end
 
-	function META:ReadPostfixOperatorSubExpression()
+	function META:ReadPostfixOperatorSubExpression(left_node--[[#: Node]])
 		if not runtime_syntax:IsPostfixOperator(self:GetToken()) then return end
 
 		local node = self:StartNode("expression", "postfix_operator")
 		node.value = self:ReadToken()
+		node.left = left_node
 		self:EndNode(node)
 		return node
 	end
 
-	function META:ReadCallSubExpression(primary_node--[[#: Node]])
+	function META:ReadCallSubExpression(left_node--[[#: Node]], primary_node--[[#: Node]])
 		if not self:IsCallExpression(0) then return end
 
 		if primary_node and primary_node.kind == "function" then
@@ -615,8 +619,6 @@ do -- runtime
 			node.tokens["call)"] = self:ExpectValue(")")
 		end
 
-		self:EndNode(node)
-
 		if primary_node.kind == "value" then
 			local name = primary_node.value.value
 
@@ -632,16 +634,19 @@ do -- runtime
 			end
 		end
 
+		node.left = left_node
+		self:EndNode(node)
 		return node
 	end
 
-	function META:ReadPostfixIndexExpressionSubExpression()
+	function META:ReadPostfixIndexExpressionSubExpression(left_node--[[#: Node]])
 		if not self:IsValue("[") then return end
 
 		local node = self:StartNode("expression", "postfix_expression_index")
 		node.tokens["["] = self:ExpectValue("[")
 		node.expression = self:ExpectRuntimeExpression()
 		node.tokens["]"] = self:ExpectValue("]")
+		node.left = left_node
 		self:EndNode(node)
 		return node
 	end
@@ -667,15 +672,13 @@ do -- runtime
 				node.type_expression = self:ExpectTypeExpression(0)
 			end
 
-			local found = self:ReadIndexSubExpression() or
-				self:ReadSelfCallSubExpression() or
-				self:ReadCallSubExpression(node) or
-				self:ReadPostfixOperatorSubExpression() or
-				self:ReadPostfixIndexExpressionSubExpression()
+			local found = self:ReadIndexSubExpression(left_node) or
+				self:ReadSelfCallSubExpression(left_node) or
+				self:ReadCallSubExpression(left_node, node) or
+				self:ReadPostfixOperatorSubExpression(left_node) or
+				self:ReadPostfixIndexExpressionSubExpression(left_node)
 
 			if not found then break end
-
-			found.left = left_node
 
 			if left_node.value and left_node.value.value == ":" then
 				found.parser_call = true
@@ -794,7 +797,7 @@ do -- runtime
 					path = node.path,
 					working_directory = self.config.working_directory,
 					inline_require = not root_node.data_import,
-					on_statement = self.config.on_statement,
+					on_node = self.config.on_node,
 				}
 			)
 
@@ -851,7 +854,7 @@ do -- runtime
 						root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
 						path = node.path,
 						working_directory = self.config.working_directory,
-						on_statement = self.config.on_statement,
+						on_node = self.config.on_node,
 					--inline_require = true,
 					}
 				)
