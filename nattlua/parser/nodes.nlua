@@ -222,7 +222,6 @@ type statement["do"] = Node & { -- [statement - local_assignment @ nattlua/parse
 		},
 		statements = any,
 	}
-
 type statement["generic_for"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:234]
 		tokens = {
 			["identifiers"] = Token,
@@ -473,7 +472,7 @@ local type ExpressionKind = (function()
 	for kind, node in pairs(expression) do
 		node.type = "expression"
 		node.kind = kind
-	--	node.@Name = node.type .. "_" .. node.kind
+		--	node.@Name = node.type .. "_" .. node.kind
 		type union = union | kind
 	end
 
@@ -485,15 +484,13 @@ local type StatementKind = (function()
 	for kind, node in pairs(statement) do
 		node.type = "statement"
 		node.kind = kind
-	--	node.@Name = node.type .. "_" .. node.kind
+		--	node.@Name = node.type .. "_" .. node.kind
 		type union = union | kind
 	end
 
 	return union
 end)()
-
 type Node.kind = ExpressionKind | StatementKind
-
 return {
 	ExpressionKind = ExpressionKind,
 	StatementKind = StatementKind,
