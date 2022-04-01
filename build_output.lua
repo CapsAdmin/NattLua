@@ -6060,7 +6060,7 @@ processDirectives = function(options, macros, lines, ...)
 
 	local function doMessage()
 		local msg = s:match("^%s*#+%s*[a-z]*%s+([^%s].*)")
-		xmessage(dirtok, options, n, msg or "#" .. dirtok)
+		xmessage(dirtok, options, n, msg or ("#" .. dirtok))
 	end
 
 	-- undef
@@ -8584,7 +8584,7 @@ do local __M; IMPORTS["nattlua"] = function(...) __M = __M or (function(...) if 
 if not io or not io.write then
 	io = io or {}
 
-	if gmod then
+	if _G.gmod then
 		io.write = function(...)
 			for i = 1, select("#", ...) do
 				MsgC(Color(255, 255, 255), select(i, ...))
@@ -12789,7 +12789,6 @@ function META:ReadTealExpression(priority)
 			)
 		then
 			first.standalone_letter = node
-			first.force_upvalue = force_upvalue
 		end
 	end
 
@@ -13952,8 +13951,6 @@ return function(META)
 			return upvalue:GetValue()
 		end
 
-		if val then return val end
-
 		-- look up in parent if not found
 		if self:IsRuntime() then
 			local g = self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
@@ -14369,7 +14366,7 @@ return function(META)
 		local locals = ""
 		locals = locals .. "local bit=bit32 or _G.bit;"
 
-		if BUNDLE then
+		if _G.BUNDLE then
 			locals = locals .. "local nl=IMPORTS[\"nattlua\"]();"
 			locals = locals .. "local types=IMPORTS[\"nattlua.types.types\"]();"
 			locals = locals .. "local context=IMPORTS[\"nattlua.analyzer.context\"]();"
@@ -17116,6 +17113,7 @@ return {
 		local left = {}
 		local right = {}
 
+		-- first we evaluate the left hand side
 		for left_pos, exp_key in ipairs(statement.left) do
 			if exp_key.kind == "value" then
 				-- local foo, bar = *
@@ -17136,7 +17134,7 @@ return {
 				-- when "self" is looked up in the typesystem in analyzer:AnalyzeExpression, we refer left[right_pos]
 				-- use context?
 				self.left_assigned = left[right_pos]
-				local obj, err = self:AnalyzeExpression(exp_val)
+				local obj = self:Assert(exp_val, self:AnalyzeExpression(exp_val))
 				self:ClearTracked()
 
 				if obj.Type == "tuple" and obj:GetLength() == 1 then
@@ -17165,11 +17163,11 @@ return {
 						end
 					end
 				elseif obj.Type == "union" then
-					for i = 1, #statement.left do
-						-- if the union is empty or has no tuples, just assign it
-						if obj:IsEmpty() or not obj:HasTuples() then
-							right[right_pos] = obj
-						else
+					-- if the union is empty or has no tuples, just assign it
+					if obj:IsEmpty() or not obj:HasTuples() then
+						right[right_pos] = obj
+					else
+						for i = 1, #statement.left do
 							-- unpack unions with tuples
 							-- ⦗false, string, 2⦘ | ⦗true, 1⦘ at first index would be true | false
 							local index = right_pos + i - 1
@@ -21199,7 +21197,7 @@ local function stack_trace()
 end
 
 local traceback = function(self, obj, msg)
-	if self.debug or _G.TEST or true then
+	if self.debug or _G.TEST then
 		local ret = {
 			xpcall(function()
 				msg = msg or "no error"
@@ -23484,7 +23482,7 @@ if not table.unpack and _G.unpack then table.unpack = _G.unpack end
 if not io or not io.write then
 	io = io or {}
 
-	if gmod then
+	if _G.gmod then
 		io.write = function(...)
 			for i = 1, select("#", ...) do
 				MsgC(Color(255, 255, 255), select(i, ...))
