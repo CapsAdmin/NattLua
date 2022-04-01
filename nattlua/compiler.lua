@@ -10,6 +10,10 @@ local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBa
 local setmetatable = _G.setmetatable
 local Code = require("nattlua.code.code").New
 local class = require("nattlua.other.class")
+local Lexer = require("nattlua.lexer.lexer").New
+local Parser = require("nattlua.parser.parser").New
+local Analyzer = require("nattlua.analyzer.analyzer").New
+local Emitter = require("nattlua.transpiler.emitter").New
 local META = class.CreateTemplate("compiler")
 
 --[[#local type { CompilerConfig } = import("./config.nlua")]]
@@ -264,10 +268,10 @@ function META.New(
 			parent_line = parent_line,
 			parent_name = parent_name,
 			config = config,
-			Lexer = require("nattlua.lexer.lexer").New,
-			Parser = require("nattlua.parser.parser").New,
-			Analyzer = require("nattlua.analyzer.analyzer").New,
-			Emitter = require("nattlua.transpiler.emitter").New,
+			Lexer = Lexer,
+			Parser = Parser,
+			Analyzer = Analyzer,
+			Emitter = Emitter,
 		},
 		META
 	)

@@ -1,24 +1,10 @@
+local preprocess = require("nattlua.other.preprocess")
+preprocess.Init()
+local coverage = require("nattlua.other.coverage")
 local io = require("io")
 local pcall = _G.pcall
+
 --require("nattlua.other.helpers").GlobalLookup()
-local map -- = {}
-if map then
-	debug.sethook(
-		function(evt)
-			if evt ~= "line" then return end
-
-			local info = debug.getinfo(2, "Sl")
-
-			if info.source:sub(1, 10) == "@./nattlua" then
-				local src = info.source:sub(2)
-				map[src] = map[src] or {}
-				map[src][info.currentline] = (map[src][info.currentline] or 0) + 1
-			end
-		end,
-		"l"
-	)
-end
-
 function _G.test(name, cb)
 	cb()
 end
@@ -60,6 +46,15 @@ end
 local path = ...
 
 if path == "nattlua/analyzer/statements/assignment.lua" then
+	preprocess.Init()
+	local whitelist = {[path] = true}
+
+	function preprocess.Preprocess(code, name, path, from)
+		if whitelist[path] then coverage.PreProcess(code, name) end
+
+		return code
+	end
+
 	path = "test/nattlua/analyzer/assignment.lua"
 end
 
@@ -84,19 +79,6 @@ else
 	end
 end
 
-if map then
-	for k, v in pairs(map) do
-		if k:find("nattlua/", 1, true) then
-			local f = io.open(k .. ".coverage", "w")
-			local i = 1
-
-			for line in io.open(k):lines() do
-				if map[k][i] then f:write("\n") else f:write(line, "\n") end
-
-				i = i + 1
-			end
-
-			f:close()
-		end
-	end
+for k, v in pairs(coverage.GetAll()) do
+	coverage.Collect(k)
 end

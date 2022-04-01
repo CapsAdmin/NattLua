@@ -17,6 +17,8 @@ function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
 	if not self:IsType("letter") and not self:IsValue("...") then return end
 
 	local node = self:StartNode("expression", "value") -- as ValueExpression ]]
+	node.is_identifier = true
+
 	if self:IsValue("...") then
 		node.value = self:ExpectValue("...")
 	else

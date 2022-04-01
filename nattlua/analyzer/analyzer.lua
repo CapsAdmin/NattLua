@@ -14,7 +14,6 @@ require("nattlua.analyzer.operators.newindex").NewIndex(META)
 require("nattlua.analyzer.operators.call").Call(META)
 
 do
-	local AnalyzeAssignment = require("nattlua.analyzer.statements.assignment").AnalyzeAssignment
 	local AnalyzeDestructureAssignment = require("nattlua.analyzer.statements.destructure_assignment").AnalyzeDestructureAssignment
 	local AnalyzeFunction = require("nattlua.analyzer.statements.function").AnalyzeFunction
 	local AnalyzeIf = require("nattlua.analyzer.statements.if").AnalyzeIf
@@ -30,6 +29,7 @@ do
 	local AnalyzeWhile = require("nattlua.analyzer.statements.while").AnalyzeWhile
 
 	function META:AnalyzeStatement(node)
+		local AnalyzeAssignment = require("nattlua.analyzer.statements.assignment").AnalyzeAssignment
 		self.current_statement = node
 		self:PushAnalyzerEnvironment(node.environment or "runtime")
 

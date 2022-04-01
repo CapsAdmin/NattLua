@@ -114,7 +114,10 @@ if normalized:find("/nattlua/", nil, true) then
 
 	if not is_lua and not is_nattlua then return end
 
-	if normalized:find("language_server/server", nil, true) then
+	if normalized:find("other/coverage", nil, true) then
+		run_lua("test/run.lua", "nattlua/analyzer/statements/assignment.lua")
+	elseif normalized:find("language_server/server", nil, true) then
+		io.open("language_server/server/restart_me", "w"):close()
 		io.open("language_server/server/restart_me", "w"):close()
 		return
 	elseif normalized:find("typed_ffi.nlua", nil, true) and has_test_focus() then
