@@ -118,4 +118,5 @@ print<|anagram|> -- see console or hover me`,
 base64: import("../../../test/nattlua/analyzer/complex/base64.nlua"),
 typescript: import("../../../test/nattlua/analyzer/complex/typescript.nlua"),
 spritemanager: import("../../../test/nattlua/analyzer/complex/spritemanager.nlua"),
+brainfudge: import("../../../test/nattlua/analyzer/complex/brainfudge.nlua"),
 }

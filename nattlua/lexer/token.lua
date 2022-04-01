@@ -1,24 +1,13 @@
 local table_pool = require("nattlua.other.table_pool")
 local quote_helper = require("nattlua.other.quote")
 local class = require("nattlua.other.class")
---[[#local type TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
---[[#local type TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | TokenWhitespaceType]]
---[[#local type TokenReturnType = TokenType | false]]
---[[#local type WhitespaceToken = {
-	type = TokenWhitespaceType,
-	value = string,
-	start = number,
-	stop = number,
-}]]
 local META = class.CreateTemplate("token")
-
---[[#local analyzer function parent_type(what: literal string, offset: literal number)
-	return analyzer:GetCurrentType(what:GetData(), offset:GetData())
-end]]
-
 --[[#type META.@Name = "Token"]]
+--[[#type META.TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
+--[[#type META.TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | META.TokenWhitespaceType]]
 --[[#type META.@Self = {
-	type = TokenType,
+	@Name = "Token",
+	type = META.TokenType,
 	value = string,
 	start = number,
 	stop = number,
@@ -26,10 +15,10 @@ end]]
 	string_value = nil | string,
 	inferred_type = nil | any,
 	inferred_types = nil | List<|any|>,
-	whitespace = false | nil | {
-		[1 .. inf] = parent_type<|"table", 2|>,
-	},
+	parent = nil | any,
+	whitespace = false | nil | List<|CurrentType<|"table", 1|>|>,
 }]]
+--[[#type META.Token = META.@Self]]
 
 function META:__tostring()
 	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
@@ -56,14 +45,14 @@ local new_token = table_pool(
 			whitespace = false,
 			start = 0,
 			stop = 0,
-		}
+		}--[[# as META.@Self]]
 		return x
 	end,
 	3105585
 )
 
 function META.New(
-	type--[[#: TokenType]],
+	type--[[#: META.TokenType]],
 	is_whitespace--[[#: boolean]],
 	start--[[#: number]],
 	stop--[[#: number]]
@@ -77,8 +66,4 @@ function META.New(
 	return tk
 end
 
-META.TokenWhitespaceType = TokenWhitespaceType
-META.TokenType = TokenType
-META.TokenReturnType = TokenReturnType
-META.WhitespaceToken = TokenReturnType
 return META

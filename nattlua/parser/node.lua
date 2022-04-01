@@ -1,4 +1,4 @@
---[[#local type { Token } = import("~/nattlua/lexer/token.nlua")]]
+--[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type { ExpressionKind, StatementKind, Node } = import("~/nattlua/parser/nodes.nlua")]]
 
@@ -50,7 +50,7 @@ function META:Render(config)
 		attest.expect_diagnostic<|"warning", "always false"|>]]
 		--[[#attest.expect_diagnostic<|"warning", "always true"|>]]
 
-		if IMPORTS--[[# as false]] then
+		if _G.IMPORTS--[[# as false]] then
 			emitter = IMPORTS["nattlua.transpiler.emitter"]()
 		else
 			--[[#£ parser.dont_hoist_next_import = true]]
@@ -63,7 +63,7 @@ function META:Render(config)
 
 	if self.type == "expression" then
 		em:EmitExpression(self)
-	else
+	elseif self.type == "statement" then
 		em:EmitStatement(self)
 	end
 

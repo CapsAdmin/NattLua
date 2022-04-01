@@ -427,10 +427,10 @@ lsp.methods["textDocument/inlay"] = function(self, params)
 						)
 					then
 						local data = helpers.SubPositionToLinePosition(compiler.Code:GetString(), left:GetStartStop())
-						local label =tostring(Union(types))
-						if #label > 20 then
-							label = label:sub(1, 20) .. "..."
-						end
+						local label = tostring(Union(types))
+
+						if #label > 20 then label = label:sub(1, 20) .. "..." end
+
 						table.insert(
 							hints,
 							{

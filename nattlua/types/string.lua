@@ -5,7 +5,7 @@ local Number = require("nattlua.types.number").Number
 local context = require("nattlua.analyzer.context")
 local META = dofile("nattlua/types/base.lua")
 
---[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
+--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type TBaseType = META.TBaseType]]
 META.Type = "string"
@@ -14,7 +14,7 @@ META.Type = "string"
 META:GetSet("Data", nil--[[# as string | nil]])
 META:GetSet("PatternContract", nil--[[# as nil | string]])
 
-function META.Equal(a--[[#: TString]], b--[[#: BaseType]])
+function META.Equal(a--[[#: TString]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
 
 	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
@@ -37,7 +37,7 @@ function META:Copy()
 	return copy
 end
 
-function META.IsSubsetOf(A--[[#: TString]], B--[[#: BaseType]])
+function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 	if B.Type == "tuple" then B = B:Get(1) end
 
 	if B.Type == "any" then return true end

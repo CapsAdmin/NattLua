@@ -4,6 +4,10 @@ local table_remove = _G.table.remove
 local math_huge = math.huge
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
+local Code = require("nattlua.code.code").New
+local Lexer = require("nattlua.lexer.lexer").New
+
+--[[#local type { Node } = import("~/nattlua/parser/nodes.nlua")]]
 
 function META:ReadAnalyzerFunctionExpression()
 	if not (self:IsValue("analyzer") and self:IsValue("function", 1)) then return end
@@ -12,7 +16,7 @@ function META:ReadAnalyzerFunctionExpression()
 	node.tokens["analyzer"] = self:ExpectValue("analyzer")
 	node.tokens["function"] = self:ExpectValue("function")
 	self:ReadAnalyzerFunctionBody(node)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -22,21 +26,22 @@ function META:ReadFunctionExpression()
 	local node = self:StartNode("expression", "function")
 	node.tokens["function"] = self:ExpectValue("function")
 	self:ReadFunctionBody(node)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadIndexSubExpression()
+function META:ReadIndexSubExpression(left_node--[[#: Node]])
 	if not (self:IsValue(".") and self:IsType("letter", 1)) then return end
 
 	local node = self:StartNode("expression", "binary_operator")
 	node.value = self:ReadToken()
 	node.right = self:ReadValueExpressionType("letter")
-	self:EndNode(node)
+	node.left = left_node
+	node = self:EndNode(node)
 	return node
 end
 
-function META:IsCallExpression(offset)
+function META:IsCallExpression(offset--[[#: number]])
 	return self:IsValue("(", offset) or
 		self:IsValue("<|", offset) or
 		self:IsValue("{", offset) or
@@ -47,7 +52,7 @@ function META:IsCallExpression(offset)
 		)
 end
 
-function META:ReadSelfCallSubExpression()
+function META:ReadSelfCallSubExpression(left_node--[[#: Node]])
 	if not (self:IsValue(":") and self:IsType("letter", 1) and self:IsCallExpression(2)) then
 		return
 	end
@@ -55,7 +60,8 @@ function META:ReadSelfCallSubExpression()
 	local node = self:StartNode("expression", "binary_operator")
 	node.value = self:ReadToken()
 	node.right = self:ReadValueExpressionType("letter")
-	self:EndNode(node)
+	node.left = left_node
+	node = self:EndNode(node)
 	return node
 end
 
@@ -83,7 +89,7 @@ do -- typesystem
 
 			node.tokens["("] = pleft
 			node.tokens[")"] = self:ExpectValue(")", pleft)
-			self:EndNode(node)
+			node = self:EndNode(node)
 			return node
 		end
 
@@ -91,7 +97,7 @@ do -- typesystem
 		table_insert(node.tokens["("], 1, pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
 		table_insert(node.tokens[")"], self:ExpectValue(")"))
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -110,7 +116,7 @@ do -- typesystem
 
 		if node.value.value == "expand" then self:PopParserEnvironment() end
 
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -120,7 +126,7 @@ do -- typesystem
 		local node = self:StartNode("expression", "vararg")
 		node.tokens["..."] = self:ExpectValue("...")
 		node.value = self:ReadTypeExpression(0)
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -161,7 +167,7 @@ do -- typesystem
 		node.tokens["return("] = self:ExpectValue("(")
 		node.return_types = self:ReadMultipleValues(nil, self.ReadTypeSignatureFunctionArgument)
 		node.tokens["return)"] = self:ExpectValue(")")
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -171,7 +177,7 @@ do -- typesystem
 		local node = self:StartNode("expression", "type_function")
 		node.tokens["function"] = self:ExpectValue("function")
 		self:ReadTypeFunctionBody(node)
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -180,35 +186,35 @@ do -- typesystem
 
 		local node = self:StartNode("expression", "value")
 		node.value = self:ReadToken()
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
 	do
-		function META:read_type_table_entry(i)
+		function META:read_type_table_entry(i--[[#: number]])
 			if self:IsValue("[") then
-				local node = self:StartNode("expression", "table_expression_value")
+				local node = self:StartNode("sub_statement", "table_expression_value")
 				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ReadTypeExpression(0)
 				node.tokens["]"] = self:ExpectValue("]")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ReadTypeExpression(0)
-				self:EndNode(node)
+				node = self:EndNode(node)
 				return node
 			elseif self:IsType("letter") and self:IsValue("=", 1) then
-				local node = self:StartNode("expression", "table_key_value")
+				local node = self:StartNode("sub_statement", "table_key_value")
 				node.tokens["identifier"] = self:ExpectType("letter")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ReadTypeExpression(0)
-				self:EndNode(node)
+				node = self:EndNode(node)
 				return node
 			end
 
-			local node = self:StartNode("expression", "table_index_value")
+			local node = self:StartNode("sub_statement", "table_index_value")
 			node.key = i
 			node.value_expression = self:ReadTypeExpression(0)
-			self:EndNode(node)
+			node = self:EndNode(node)
 			return node
 		end
 
@@ -247,7 +253,7 @@ do -- typesystem
 			end
 
 			tree.tokens["}"] = self:ExpectValue("}")
-			self:EndNode(tree)
+			tree = self:EndNode(tree)
 			return tree
 		end
 	end
@@ -266,27 +272,28 @@ do -- typesystem
 
 		local node = self:StartNode("expression", "empty_union")
 		node.tokens["|"] = self:ReadToken("|")
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadAsSubExpression(node)
+	function META:ReadAsSubExpression(node--[[#: Node]])
 		if not self:IsValue("as") then return end
 
 		node.tokens["as"] = self:ExpectValue("as")
 		node.type_expression = self:ReadTypeExpression(0)
 	end
 
-	function META:ReadPostfixTypeOperatorSubExpression()
+	function META:ReadPostfixTypeOperatorSubExpression(left_node--[[#: Node]])
 		if not typesystem_syntax:IsPostfixOperator(self:GetToken()) then return end
 
 		local node = self:StartNode("expression", "postfix_operator")
 		node.value = self:ReadToken()
-		self:EndNode(node)
+		node.left = left_node
+		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadTypeCallSubExpression(primary_node)
+	function META:ReadTypeCallSubExpression(left_node--[[#: Node]], primary_node--[[#: Node]])
 		if not self:IsCallExpression(0) then return end
 
 		local node = self:StartNode("expression", "postfix_call")
@@ -316,35 +323,35 @@ do -- typesystem
 			end
 		end
 
+		node.left = left_node
 		node.type_call = true
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadPostfixTypeIndexExpressionSubExpression()
+	function META:ReadPostfixTypeIndexExpressionSubExpression(left_node--[[#: Node]])
 		if not self:IsValue("[") then return end
 
 		local node = self:StartNode("expression", "postfix_expression_index")
 		node.tokens["["] = self:ExpectValue("[")
 		node.expression = self:ExpectTypeExpression(0)
 		node.tokens["]"] = self:ExpectValue("]")
-		self:EndNode(node)
+		node.left = left_node
+		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadTypeSubExpression(node)
+	function META:ReadTypeSubExpression(node--[[#: Node]])
 		for _ = 1, self:GetLength() do
 			local left_node = node
-			local found = self:ReadIndexSubExpression() or
-				self:ReadSelfCallSubExpression() or
-				self:ReadPostfixTypeOperatorSubExpression() or
-				self:ReadTypeCallSubExpression(node) or
-				self:ReadPostfixTypeIndexExpressionSubExpression() or
+			local found = self:ReadIndexSubExpression(left_node) or
+				self:ReadSelfCallSubExpression(left_node) or
+				self:ReadPostfixTypeOperatorSubExpression(left_node) or
+				self:ReadTypeCallSubExpression(left_node, node) or
+				self:ReadPostfixTypeIndexExpressionSubExpression(left_node) or
 				self:ReadAsSubExpression(left_node)
 
 			if not found then break end
-
-			found.left = left_node
 
 			if left_node.value and left_node.value.value == ":" then
 				found.parser_call = true
@@ -356,7 +363,7 @@ do -- typesystem
 		return node
 	end
 
-	function META:ReadTypeExpression(priority)
+	function META:ReadTypeExpression(priority--[[#: number]])
 		if self.TealCompat then return self:ReadTealExpression(priority) end
 
 		self:PushParserEnvironment("typesystem")
@@ -405,7 +412,7 @@ do -- typesystem
 			node.value = self:ReadToken()
 			node.left = left_node
 			node.right = self:ReadTypeExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
-			self:EndNode(node)
+			node = self:EndNode(node)
 		end
 
 		self:PopParserEnvironment()
@@ -431,7 +438,7 @@ do -- typesystem
 		)
 	end
 
-	function META:ExpectTypeExpression(priority)
+	function META:ExpectTypeExpression(priority--[[#: number]])
 		if not self:IsTypeExpression() then
 			local token = self:GetToken()
 			self:Error(
@@ -468,23 +475,23 @@ do -- runtime
 			local node = self:StartNode("expression", "table_spread")
 			node.tokens["..."] = self:ExpectValue("...")
 			node.expression = self:ExpectRuntimeExpression()
-			self:EndNode(node)
+			node = self:EndNode(node)
 			return node
 		end
 
-		function META:read_table_entry(i)
+		function META:read_table_entry(i--[[#: number]])
 			if self:IsValue("[") then
-				local node = self:StartNode("expression", "table_expression_value")
+				local node = self:StartNode("sub_statement", "table_expression_value")
 				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ExpectRuntimeExpression(0)
 				node.tokens["]"] = self:ExpectValue("]")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ExpectRuntimeExpression(0)
-				self:EndNode(node)
+				node = self:EndNode(node)
 				return node
 			elseif self:IsType("letter") and self:IsValue("=", 1) then
-				local node = self:StartNode("expression", "table_key_value")
+				local node = self:StartNode("sub_statement", "table_key_value")
 				node.tokens["identifier"] = self:ExpectType("letter")
 				node.tokens["="] = self:ExpectValue("=")
 				local spread = self:read_table_spread()
@@ -495,11 +502,11 @@ do -- runtime
 					node.value_expression = self:ExpectRuntimeExpression()
 				end
 
-				self:EndNode(node)
+				node = self:EndNode(node)
 				return node
 			end
 
-			local node = self:StartNode("expression", "table_index_value")
+			local node = self:StartNode("sub_statement", "table_index_value")
 			local spread = self:read_table_spread()
 
 			if spread then
@@ -509,7 +516,7 @@ do -- runtime
 			end
 
 			node.key = i
-			self:EndNode(node)
+			node = self:EndNode(node)
 			return node
 		end
 
@@ -554,21 +561,22 @@ do -- runtime
 			end
 
 			tree.tokens["}"] = self:ExpectValue("}")
-			self:EndNode(tree)
+			tree = self:EndNode(tree)
 			return tree
 		end
 	end
 
-	function META:ReadPostfixOperatorSubExpression()
+	function META:ReadPostfixOperatorSubExpression(left_node--[[#: Node]])
 		if not runtime_syntax:IsPostfixOperator(self:GetToken()) then return end
 
 		local node = self:StartNode("expression", "postfix_operator")
 		node.value = self:ReadToken()
-		self:EndNode(node)
+		node.left = left_node
+		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadCallSubExpression(primary_node)
+	function META:ReadCallSubExpression(left_node--[[#: Node]], primary_node--[[#: Node]])
 		if not self:IsCallExpression(0) then return end
 
 		if primary_node and primary_node.kind == "function" then
@@ -611,8 +619,6 @@ do -- runtime
 			node.tokens["call)"] = self:ExpectValue(")")
 		end
 
-		self:EndNode(node)
-
 		if primary_node.kind == "value" then
 			local name = primary_node.value.value
 
@@ -628,21 +634,24 @@ do -- runtime
 			end
 		end
 
+		node.left = left_node
+		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadPostfixIndexExpressionSubExpression()
+	function META:ReadPostfixIndexExpressionSubExpression(left_node--[[#: Node]])
 		if not self:IsValue("[") then return end
 
 		local node = self:StartNode("expression", "postfix_expression_index")
 		node.tokens["["] = self:ExpectValue("[")
 		node.expression = self:ExpectRuntimeExpression()
 		node.tokens["]"] = self:ExpectValue("]")
-		self:EndNode(node)
+		node.left = left_node
+		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadSubExpression(node)
+	function META:ReadSubExpression(node--[[#: Node]])
 		for _ = 1, self:GetLength() do
 			local left_node = node
 
@@ -663,15 +672,13 @@ do -- runtime
 				node.type_expression = self:ExpectTypeExpression(0)
 			end
 
-			local found = self:ReadIndexSubExpression() or
-				self:ReadSelfCallSubExpression() or
-				self:ReadCallSubExpression(node) or
-				self:ReadPostfixOperatorSubExpression() or
-				self:ReadPostfixIndexExpressionSubExpression()
+			local found = self:ReadIndexSubExpression(left_node) or
+				self:ReadSelfCallSubExpression(left_node) or
+				self:ReadCallSubExpression(left_node, node) or
+				self:ReadPostfixOperatorSubExpression(left_node) or
+				self:ReadPostfixIndexExpressionSubExpression(left_node)
 
 			if not found then break end
-
-			found.left = left_node
 
 			if left_node.value and left_node.value.value == ":" then
 				found.parser_call = true
@@ -690,7 +697,7 @@ do -- runtime
 		node.value = self:ReadToken()
 		node.tokens[1] = node.value
 		node.right = self:ExpectRuntimeExpression(math.huge)
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -718,7 +725,7 @@ do -- runtime
 		return self:ReadValueExpressionToken()
 	end
 
-	local function resolve_import_path(self, path)
+	local function resolve_import_path(self--[[#: META.@Self]], path--[[#: string]])
 		local working_directory = self.config.working_directory or ""
 
 		if path:sub(1, 1) == "~" then
@@ -735,7 +742,7 @@ do -- runtime
 		return working_directory .. path
 	end
 
-	local function resolve_require_path(require_path)
+	local function resolve_require_path(require_path--[[#: string]])
 		require_path = require_path:gsub("%.", "/")
 
 		for package_path in (package.path .. ";"):gmatch("(.-);") do
@@ -751,7 +758,7 @@ do -- runtime
 		return nil
 	end
 
-	function META:HandleImportExpression(node, name, str, start)
+	function META:HandleImportExpression(node--[[#: Node]], name--[[#: string]], str--[[#: string]], start--[[#: number]])
 		if self.config.skip_import then return end
 
 		if self.dont_hoist_next_import then
@@ -782,8 +789,7 @@ do -- runtime
 
 		if imported[key] == nil then
 			imported[key] = node
-			local nl = require("nattlua")
-			local compiler, err = nl.ParseFile(
+			local root, err = self:ParseFile(
 				path,
 				{
 					root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
@@ -791,15 +797,15 @@ do -- runtime
 					path = node.path,
 					working_directory = self.config.working_directory,
 					inline_require = not root_node.data_import,
-					on_statement = self.config.on_statement,
+					on_node = self.config.on_node,
 				}
 			)
 
-			if not compiler then
+			if not root then
 				self:Error("error importing file: $1", start, start, err)
 			end
 
-			node.RootStatement = compiler.SyntaxTree
+			node.RootStatement = root
 		else
 			-- ugly way of dealing with recursive require
 			node.RootStatement = imported[key]
@@ -821,7 +827,7 @@ do -- runtime
 		table.insert(self.RootStatement.imports, node)
 	end
 
-	function META:HandleImportDataExpression(node, path, start)
+	function META:HandleImportDataExpression(node--[[#: Node]], path--[[#: string]], start--[[#: number]])
 		if self.config.skip_import then return end
 
 		node.import_expression = true
@@ -842,23 +848,22 @@ do -- runtime
 			imported[key] = node
 
 			if node.path:sub(-4) == "lua" or node.path:sub(-5) ~= "nlua" then
-				local nl = require("nattlua")
-				local compiler, err = nl.ParseFile(
+				local root, err = self:ParseFile(
 					node.path,
 					{
 						root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
 						path = node.path,
 						working_directory = self.config.working_directory,
-						on_statement = self.config.on_statement,
+						on_node = self.config.on_node,
 					--inline_require = true,
 					}
 				)
 
-				if not compiler then
+				if not root then
 					self:Error("error importing file: $1", start, start, err .. ": " .. node.path)
 				end
 
-				data = compiler.SyntaxTree:Render(
+				data = root:Render(
 					{
 						preserve_whitespace = false,
 						comment_type_annotations = false,
@@ -891,15 +896,14 @@ do -- runtime
 		return node
 	end
 
-	function META:check_integer_division_operator(node)
+	function META:check_integer_division_operator(node--[[#: Node]])
 		if node and not node.idiv_resolved then
 			for i, token in ipairs(node.whitespace) do
 				if token.value:find("\n", nil, true) then break end
 
 				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
 					table_remove(node.whitespace, i)
-					local Code = require("nattlua.code.code")
-					local tokens = require("nattlua.lexer.lexer")(Code("/idiv" .. token.value:sub(2), "")):GetTokens()
+					local tokens = self:LexString("/idiv" .. token.value:sub(2))
 
 					for _, token in ipairs(tokens) do
 						self:check_integer_division_operator(token)
@@ -914,7 +918,7 @@ do -- runtime
 		end
 	end
 
-	function META:ReadRuntimeExpression(priority)
+	function META:ReadRuntimeExpression(priority--[[#: number]])
 		if self:GetCurrentParserEnvironment() == "typesystem" then
 			return self:ReadTypeExpression(priority)
 		end
@@ -956,7 +960,7 @@ do -- runtime
 			if node.left then node.left.parent = node end
 
 			node.right = self:ExpectRuntimeExpression(runtime_syntax:GetBinaryOperatorInfo(node.value).right_priority)
-			self:EndNode(node)
+			node = self:EndNode(node)
 
 			if not node.right then
 				local token = self:GetToken()
@@ -996,7 +1000,7 @@ do -- runtime
 		)
 	end
 
-	function META:ExpectRuntimeExpression(priority)
+	function META:ExpectRuntimeExpression(priority--[[#: number]])
 		if not self:IsRuntimeExpression() then
 			local token = self:GetToken()
 			self:Error(

@@ -75,6 +75,7 @@ IMPORTS['nattlua/definitions/utility.nlua'] = function()
 
 
 
+
  end
 IMPORTS['nattlua/definitions/attest.nlua'] = function() 
 
@@ -421,15 +422,49 @@ return function(...)
 
 	io.write(luadata.ToString(tbl, {tab = -1, tab_limit = max_level, done = {}}):sub(0, -2))
 end end)(...) return __M end end
-IMPORTS['nattlua/lexer/token.nlua'] = function() 
+do local __M; IMPORTS["nattlua.other.table_new"] = function(...) __M = __M or (function(...) local table_new
+local ok
 
+if not _G.gmod then ok, table_new = pcall(require, "table.new") end
 
+if not ok then table_new = function(size, records)
+	return {}
+end end
 
-return {
-	Token = Token,
-	TokenType = TokenType,
-	TokenReturnType = TokenReturnType,
-} end
+return table_new end)(...) return __M end end
+do local __M; IMPORTS["nattlua.other.table_pool"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
+local table_new = IMPORTS['nattlua.other.table_new']("nattlua.other.table_new")
+return function(alloc, size)
+	local records = 0
+
+	for _, _ in pairs(alloc()) do
+		records = records + 1
+	end
+
+	local i
+	local pool = table_new(size, records)
+
+	local function refill()
+		i = 1
+
+		for i = 1, size do
+			pool[i] = alloc()
+		end
+	end
+
+	refill()
+	return function()
+		local tbl = pool[i]
+
+		if not tbl then
+			refill()
+			tbl = pool[i]
+		end
+
+		i = i + 1
+		return tbl
+	end
+end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.other.quote"] = function(...) __M = __M or (function(...) local helpers = {}
 
 function helpers.QuoteToken(str)
@@ -453,6 +488,99 @@ function helpers.QuoteTokens(var)
 end
 
 return helpers end)(...) return __M end end
+do local __M; IMPORTS["nattlua.other.class"] = function(...) __M = __M or (function(...) local class = {}
+
+function class.CreateTemplate(type_name)
+	local meta = {}
+	meta.Type = type_name
+	meta.__index = meta
+	
+
+	function meta.GetSet(tbl, name, default)
+		tbl[name] = default
+		
+		tbl["Set" .. name] = function(self, val)
+			self[name] = val
+			return self
+		end
+		tbl["Get" .. name] = function(self)
+			return self[name]
+		end
+	end
+
+	function meta.IsSet(tbl, name, default)
+		tbl[name] = default
+		
+		tbl["Set" .. name] = function(self, val)
+			self[name] = val
+			return self
+		end
+		tbl["Is" .. name] = function(self)
+			return self[name]
+		end
+	end
+
+	return meta
+end
+
+return class end)(...) return __M end end
+IMPORTS['nattlua/lexer/token.lua'] = function() local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
+local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("token")
+
+
+
+
+
+
+function META:__tostring()
+	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
+end
+
+function META:AddType(obj)
+	self.inferred_types = self.inferred_types or {}
+	table.insert(self.inferred_types, obj)
+end
+
+function META:GetTypes()
+	return self.inferred_types or {}
+end
+
+function META:GetLastType()
+	return self.inferred_types and self.inferred_types[#self.inferred_types]
+end
+
+local new_token = table_pool(
+	function()
+		local x = {
+			type = "unknown",
+			value = "",
+			whitespace = false,
+			start = 0,
+			stop = 0,
+		}
+		return x
+	end,
+	3105585
+)
+
+function META.New(
+	type,
+	is_whitespace,
+	start,
+	stop
+)
+	local tk = new_token()
+	tk.type = type
+	tk.is_whitespace = is_whitespace
+	tk.start = start
+	tk.stop = stop
+	setmetatable(tk, META)
+	return tk
+end
+
+return META end
 do local __M; IMPORTS["nattlua.other.helpers"] = function(...) __M = __M or (function(...) 
 
 local math = _G.math
@@ -857,42 +985,6 @@ local errors = {
 	end,
 }
 return errors end)(...) return __M end end
-do local __M; IMPORTS["nattlua.other.class"] = function(...) __M = __M or (function(...) local class = {}
-
-function class.CreateTemplate(type_name)
-	local meta = {}
-	meta.Type = type_name
-	meta.__index = meta
-	
-
-	function meta.GetSet(tbl, name, default)
-		tbl[name] = default
-		
-		tbl["Set" .. name] = function(self, val)
-			self[name] = val
-			return self
-		end
-		tbl["Get" .. name] = function(self)
-			return self[name]
-		end
-	end
-
-	function meta.IsSet(tbl, name, default)
-		tbl[name] = default
-		
-		tbl["Set" .. name] = function(self, val)
-			self[name] = val
-			return self
-		end
-		tbl["Is" .. name] = function(self)
-			return self[name]
-		end
-	end
-
-	return meta
-end
-
-return class end)(...) return __M end end
 IMPORTS['nattlua/types/base.lua'] = function() local assert = _G.assert
 local tostring = _G.tostring
 local setmetatable = _G.setmetatable
@@ -8682,66 +8774,165 @@ function META.New(lua_code, name)
 end
 
 
-return META.New end)(...) return __M end end
-IMPORTS['./nattlua/lexer/token.nlua'] = function() 
+return META end)(...) return __M end end
+IMPORTS['nattlua/code/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("code")
+
+
+
+function META:GetString()
+	return self.Buffer
+end
+
+function META:GetName()
+	return self.Name
+end
+
+function META:GetByteSize()
+	return #self.Buffer
+end
+
+function META:GetStringSlice(start, stop)
+	return self.Buffer:sub(start, stop)
+end
+
+function META:GetByte(pos)
+	return self.Buffer:byte(pos) or 0
+end
+
+function META:FindNearest(str, start)
+	local _, pos = self.Buffer:find(str, start, true)
+
+	if not pos then return nil end
+
+	return pos + 1
+end
+
+local function remove_bom_header(str)
+	if str:sub(1, 2) == "\xFE\xFF" then
+		return str:sub(3)
+	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
+		return str:sub(4)
+	end
+
+	return str
+end
+
+local function get_default_name()
+	local info = debug.getinfo(3)
+
+	if info then
+		local parent_line = info.currentline
+		local parent_name = info.source:sub(2)
+		return parent_name .. ":" .. parent_line
+	end
+
+	return "unknown line : unknown name"
+end
+
+function META:BuildSourceCodePointMessage(
+	msg,
+	start,
+	stop,
+	size
+)
+	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
+end
+
+function META.New(lua_code, name)
+	local self = setmetatable(
+		{
+			Buffer = remove_bom_header(lua_code),
+			Name = name or get_default_name(),
+		},
+		META
+	)
+	return self
+end
+
+
+return META end
+IMPORTS['./nattlua/parser/nodes.nlua'] = function() 
+
+IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 return {
-	Token = Token,
-	TokenType = TokenType,
-	TokenReturnType = TokenReturnType,
+	ExpressionKind = ExpressionKind,
+	StatementKind = StatementKind,
+	Node = Node,
+	statement = statement,
+	expression = expression,
 } end
-do local __M; IMPORTS["nattlua.other.table_new"] = function(...) __M = __M or (function(...) local table_new
-local ok
+IMPORTS['./nattlua/config.nlua'] = function() 
 
-if not _G.gmod then ok, table_new = pcall(require, "table.new") end
 
-if not ok then table_new = function(size, records)
-	return {}
-end end
 
-return table_new end)(...) return __M end end
-do local __M; IMPORTS["nattlua.other.table_pool"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
-local table_new = IMPORTS['nattlua.other.table_new']("nattlua.other.table_new")
-return function(alloc, size)
-	local records = 0
 
-	for _, _ in pairs(alloc()) do
-		records = records + 1
-	end
 
-	local i
-	local pool = table_new(size, records)
-
-	local function refill()
-		i = 1
-
-		for i = 1, size do
-			pool[i] = alloc()
-		end
-	end
-
-	refill()
-	return function()
-		local tbl = pool[i]
-
-		if not tbl then
-			refill()
-			tbl = pool[i]
-		end
-
-		i = i + 1
-		return tbl
-	end
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.lexer.token"] = function(...) __M = __M or (function(...) local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
+return {
+	LexerConfig = nil,
+	ParserConfig = nil,
+	AnalyzerConfig = nil,
+	TranspilerConfig = nil,
+	CompilerConfig = nil,
+} end
+IMPORTS['./nattlua/lexer/token.lua'] = function() local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
-
-
-
-
 local META = class.CreateTemplate("token")
 
 
@@ -8795,10 +8986,63 @@ function META.New(
 	return tk
 end
 
-META.TokenWhitespaceType = TokenWhitespaceType
-META.TokenType = TokenType
-META.TokenReturnType = TokenReturnType
-META.WhitespaceToken = TokenReturnType
+return META end
+do local __M; IMPORTS["nattlua.lexer.token"] = function(...) __M = __M or (function(...) local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
+local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("token")
+
+
+
+
+
+
+function META:__tostring()
+	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
+end
+
+function META:AddType(obj)
+	self.inferred_types = self.inferred_types or {}
+	table.insert(self.inferred_types, obj)
+end
+
+function META:GetTypes()
+	return self.inferred_types or {}
+end
+
+function META:GetLastType()
+	return self.inferred_types and self.inferred_types[#self.inferred_types]
+end
+
+local new_token = table_pool(
+	function()
+		local x = {
+			type = "unknown",
+			value = "",
+			whitespace = false,
+			start = 0,
+			stop = 0,
+		}
+		return x
+	end,
+	3105585
+)
+
+function META.New(
+	type,
+	is_whitespace,
+	start,
+	stop
+)
+	local tk = new_token()
+	tk.type = type
+	tk.is_whitespace = is_whitespace
+	tk.start = start
+	tk.stop = stop
+	setmetatable(tk, META)
+	return tk
+end
+
 return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.syntax.characters"] = function(...) __M = __M or (function(...) local characters = {}
 local B = string.byte
@@ -9157,8 +9401,8 @@ function META:GetTokenType(tk)
 	return tk.type
 end
 
-return META.New end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.runtime"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax.syntax']("nattlua.syntax.syntax")
+return META end)(...) return __M end end
+do local __M; IMPORTS["nattlua.syntax.runtime"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax.syntax']("nattlua.syntax.syntax").New
 local runtime = Syntax()
 runtime:AddSymbolCharacters(
 	{
@@ -9262,7 +9506,7 @@ runtime:AddPostfixOperatorFunctionTranslate({
 return runtime end)(...) return __M end end
 do local __M; IMPORTS["nattlua.lexer.lexer"] = function(...) __M = __M or (function(...) 
 
-local Code = IMPORTS['nattlua.code.code']("nattlua.code.code")
+local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
 local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 local Token = IMPORTS['nattlua.lexer.token']("nattlua.lexer.token").New
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
@@ -9513,6 +9757,7 @@ do
 
 	
 
+	
 	local characters = IMPORTS['nattlua.syntax.characters']("nattlua.syntax.characters")
 	local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 	local helpers = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
@@ -9989,88 +10234,11 @@ do
 	end
 end
 
-return META.New end)(...) return __M end end
-IMPORTS['nattlua/code/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
-local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
-local META = class.CreateTemplate("code")
-
-
-
-function META:GetString()
-	return self.Buffer
-end
-
-function META:GetName()
-	return self.Name
-end
-
-function META:GetByteSize()
-	return #self.Buffer
-end
-
-function META:GetStringSlice(start, stop)
-	return self.Buffer:sub(start, stop)
-end
-
-function META:GetByte(pos)
-	return self.Buffer:byte(pos) or 0
-end
-
-function META:FindNearest(str, start)
-	local _, pos = self.Buffer:find(str, start, true)
-
-	if not pos then return nil end
-
-	return pos + 1
-end
-
-local function remove_bom_header(str)
-	if str:sub(1, 2) == "\xFE\xFF" then
-		return str:sub(3)
-	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
-		return str:sub(4)
-	end
-
-	return str
-end
-
-local function get_default_name()
-	local info = debug.getinfo(3)
-
-	if info then
-		local parent_line = info.currentline
-		local parent_name = info.source:sub(2)
-		return parent_name .. ":" .. parent_line
-	end
-
-	return "unknown line : unknown name"
-end
-
-function META:BuildSourceCodePointMessage(
-	msg,
-	start,
-	stop,
-	size
-)
-	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
-end
-
-function META.New(lua_code, name)
-	local self = setmetatable(
-		{
-			Buffer = remove_bom_header(lua_code),
-			Name = name or get_default_name(),
-		},
-		META
-	)
-	return self
-end
-
-
-return META.New end
-IMPORTS['./nattlua/parser/nodes.nlua'] = function() 
+return META end)(...) return __M end end
+IMPORTS['./nattlua/parser/../parser/nodes.nlua'] = function() 
 
 IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
+
 
 
 
@@ -10131,9 +10299,23 @@ return {
 	statement = statement,
 	expression = expression,
 } end
+IMPORTS['./nattlua/parser/../config.nlua'] = function() 
+
+
+
+
+
+return {
+	LexerConfig = nil,
+	ParserConfig = nil,
+	AnalyzerConfig = nil,
+	TranspilerConfig = nil,
+	CompilerConfig = nil,
+} end
 IMPORTS['nattlua/parser/nodes.nlua'] = function() 
 
 IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
+
 
 
 
@@ -10244,7 +10426,7 @@ function META:Render(config)
 		
 		
 
-		if IMPORTS then
+		if _G.IMPORTS then
 			emitter = IMPORTS["nattlua.transpiler.emitter"]()
 		else
 			
@@ -10257,7 +10439,7 @@ function META:Render(config)
 
 	if self.type == "expression" then
 		em:EmitExpression(self)
-	else
+	elseif self.type == "statement" then
 		em:EmitStatement(self)
 	end
 
@@ -10362,6 +10544,8 @@ do local __M; IMPORTS["nattlua.parser.base"] = function(...) __M = __M or (funct
 
 
 
+
+
 local CreateNode = IMPORTS['nattlua.parser.node']("nattlua.parser.node").New
 local ipairs = _G.ipairs
 local pairs = _G.pairs
@@ -10412,13 +10596,14 @@ do
 end
 
 function META:StartNode(
-	type,
+	node_type,
 	kind
 )
+	
 	local code_start = assert(self:GetToken()).start
 	local node = CreateNode(
 		{
-			type = type,
+			type = node_type,
 			kind = kind,
 			Code = self.Code,
 			code_start = code_start,
@@ -10428,7 +10613,7 @@ function META:StartNode(
 		}
 	)
 
-	if type == "expression" then
+	if node_type == "expression" then
 		self.current_expression = node
 	else
 		self.current_statement = node
@@ -10437,10 +10622,30 @@ function META:StartNode(
 	if self.OnNode then self:OnNode(node) end
 
 	table.insert(self.nodes, 1, node)
-
-	
-
 	return node
+end
+
+function META:SuppressOnNode()
+	self.suppress_on_node = {parent = self.nodes[1], nodes = {}}
+end
+
+function META:ReRunOnNode(nodes)
+	if not self.suppress_on_node then return end
+
+	for _, node_a in ipairs(self.suppress_on_node.nodes) do
+		for i, node_b in ipairs(nodes) do
+			if node_a == node_b and self.config.on_node then
+				local new_node = self.config.on_node(self, node_a)
+
+				if new_node then
+					nodes[i] = new_node
+					new_node.parent = self.nodes[1]
+				end
+			end
+		end
+	end
+
+	self.suppress_on_node = nil
 end
 
 function META:EndNode(node)
@@ -10455,7 +10660,25 @@ function META:EndNode(node)
 	end
 
 	table.remove(self.nodes, 1)
-	return self
+
+	if self.config.on_node then
+		if
+			self.suppress_on_node and
+			node.type == "expression" and
+			self.suppress_on_node.parent == self.nodes[1]
+		then
+			table.insert(self.suppress_on_node, node)
+		elseif self.config.on_node then
+			local new_node = self.config.on_node(self, node)
+
+			if new_node then
+				node = new_node
+				node.parent = self.nodes[1]
+			end
+		end
+	end
+
+	return node
 end
 
 function META:Error(
@@ -10564,6 +10787,21 @@ do
 		return self:ReadToken()
 	end
 
+	function META:ExpectValueTranslate(
+		str,
+		new_str,
+		error_start,
+		error_stop
+	)
+		if not self:IsValue(str) then
+			error_expect(self, str, "value", error_start, error_stop)
+		end
+
+		local tk = self:ReadToken()
+		tk.value = new_str
+		return tk
+	end
+
 	function META:ExpectType(
 		str,
 		error_start,
@@ -10574,6 +10812,14 @@ do
 		end
 
 		return self:ReadToken()
+	end
+
+	function META:NewToken(type, value)
+		local tk = {}
+		tk.type = type
+		tk.is_whitespace = false
+		tk.value = value
+		return tk
 	end
 end
 
@@ -10626,10 +10872,6 @@ function META:ReadNodes(stop_token)
 			out[i] = node
 			i = i + 1
 		end
-
-		if self.config and self.config.on_statement then
-			out[i] = self.config.on_statement(self, out[i - 1]) or out[i - 1]
-		end
 	end
 
 	return out
@@ -10662,7 +10904,7 @@ function META:ReadMultipleValues(
 end
 
 return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.typesystem"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax.syntax']("nattlua.syntax.syntax")
+do local __M; IMPORTS["nattlua.syntax.typesystem"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax.syntax']("nattlua.syntax.syntax").New
 local typesystem = Syntax()
 typesystem:AddSymbolCharacters(
 	{
@@ -10814,6 +11056,10 @@ local table_remove = _G.table.remove
 local math_huge = math.huge
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
+local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
+local Lexer = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer").New
+
+
 
 function META:ReadAnalyzerFunctionExpression()
 	if not (self:IsValue("analyzer") and self:IsValue("function", 1)) then return end
@@ -10822,7 +11068,7 @@ function META:ReadAnalyzerFunctionExpression()
 	node.tokens["analyzer"] = self:ExpectValue("analyzer")
 	node.tokens["function"] = self:ExpectValue("function")
 	self:ReadAnalyzerFunctionBody(node)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -10832,17 +11078,18 @@ function META:ReadFunctionExpression()
 	local node = self:StartNode("expression", "function")
 	node.tokens["function"] = self:ExpectValue("function")
 	self:ReadFunctionBody(node)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadIndexSubExpression()
+function META:ReadIndexSubExpression(left_node)
 	if not (self:IsValue(".") and self:IsType("letter", 1)) then return end
 
 	local node = self:StartNode("expression", "binary_operator")
 	node.value = self:ReadToken()
 	node.right = self:ReadValueExpressionType("letter")
-	self:EndNode(node)
+	node.left = left_node
+	node = self:EndNode(node)
 	return node
 end
 
@@ -10857,7 +11104,7 @@ function META:IsCallExpression(offset)
 		)
 end
 
-function META:ReadSelfCallSubExpression()
+function META:ReadSelfCallSubExpression(left_node)
 	if not (self:IsValue(":") and self:IsType("letter", 1) and self:IsCallExpression(2)) then
 		return
 	end
@@ -10865,7 +11112,8 @@ function META:ReadSelfCallSubExpression()
 	local node = self:StartNode("expression", "binary_operator")
 	node.value = self:ReadToken()
 	node.right = self:ReadValueExpressionType("letter")
-	self:EndNode(node)
+	node.left = left_node
+	node = self:EndNode(node)
 	return node
 end
 
@@ -10893,7 +11141,7 @@ do -- typesystem
 
 			node.tokens["("] = pleft
 			node.tokens[")"] = self:ExpectValue(")", pleft)
-			self:EndNode(node)
+			node = self:EndNode(node)
 			return node
 		end
 
@@ -10901,7 +11149,7 @@ do -- typesystem
 		table_insert(node.tokens["("], 1, pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
 		table_insert(node.tokens[")"], self:ExpectValue(")"))
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -10920,7 +11168,7 @@ do -- typesystem
 
 		if node.value.value == "expand" then self:PopParserEnvironment() end
 
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -10930,7 +11178,7 @@ do -- typesystem
 		local node = self:StartNode("expression", "vararg")
 		node.tokens["..."] = self:ExpectValue("...")
 		node.value = self:ReadTypeExpression(0)
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -10971,7 +11219,7 @@ do -- typesystem
 		node.tokens["return("] = self:ExpectValue("(")
 		node.return_types = self:ReadMultipleValues(nil, self.ReadTypeSignatureFunctionArgument)
 		node.tokens["return)"] = self:ExpectValue(")")
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -10981,7 +11229,7 @@ do -- typesystem
 		local node = self:StartNode("expression", "type_function")
 		node.tokens["function"] = self:ExpectValue("function")
 		self:ReadTypeFunctionBody(node)
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -10990,35 +11238,35 @@ do -- typesystem
 
 		local node = self:StartNode("expression", "value")
 		node.value = self:ReadToken()
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
 	do
 		function META:read_type_table_entry(i)
 			if self:IsValue("[") then
-				local node = self:StartNode("expression", "table_expression_value")
+				local node = self:StartNode("sub_statement", "table_expression_value")
 				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ReadTypeExpression(0)
 				node.tokens["]"] = self:ExpectValue("]")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ReadTypeExpression(0)
-				self:EndNode(node)
+				node = self:EndNode(node)
 				return node
 			elseif self:IsType("letter") and self:IsValue("=", 1) then
-				local node = self:StartNode("expression", "table_key_value")
+				local node = self:StartNode("sub_statement", "table_key_value")
 				node.tokens["identifier"] = self:ExpectType("letter")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ReadTypeExpression(0)
-				self:EndNode(node)
+				node = self:EndNode(node)
 				return node
 			end
 
-			local node = self:StartNode("expression", "table_index_value")
+			local node = self:StartNode("sub_statement", "table_index_value")
 			node.key = i
 			node.value_expression = self:ReadTypeExpression(0)
-			self:EndNode(node)
+			node = self:EndNode(node)
 			return node
 		end
 
@@ -11057,7 +11305,7 @@ do -- typesystem
 			end
 
 			tree.tokens["}"] = self:ExpectValue("}")
-			self:EndNode(tree)
+			tree = self:EndNode(tree)
 			return tree
 		end
 	end
@@ -11076,7 +11324,7 @@ do -- typesystem
 
 		local node = self:StartNode("expression", "empty_union")
 		node.tokens["|"] = self:ReadToken("|")
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -11087,16 +11335,17 @@ do -- typesystem
 		node.type_expression = self:ReadTypeExpression(0)
 	end
 
-	function META:ReadPostfixTypeOperatorSubExpression()
+	function META:ReadPostfixTypeOperatorSubExpression(left_node)
 		if not typesystem_syntax:IsPostfixOperator(self:GetToken()) then return end
 
 		local node = self:StartNode("expression", "postfix_operator")
 		node.value = self:ReadToken()
-		self:EndNode(node)
+		node.left = left_node
+		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadTypeCallSubExpression(primary_node)
+	function META:ReadTypeCallSubExpression(left_node, primary_node)
 		if not self:IsCallExpression(0) then return end
 
 		local node = self:StartNode("expression", "postfix_call")
@@ -11126,35 +11375,35 @@ do -- typesystem
 			end
 		end
 
+		node.left = left_node
 		node.type_call = true
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadPostfixTypeIndexExpressionSubExpression()
+	function META:ReadPostfixTypeIndexExpressionSubExpression(left_node)
 		if not self:IsValue("[") then return end
 
 		local node = self:StartNode("expression", "postfix_expression_index")
 		node.tokens["["] = self:ExpectValue("[")
 		node.expression = self:ExpectTypeExpression(0)
 		node.tokens["]"] = self:ExpectValue("]")
-		self:EndNode(node)
+		node.left = left_node
+		node = self:EndNode(node)
 		return node
 	end
 
 	function META:ReadTypeSubExpression(node)
 		for _ = 1, self:GetLength() do
 			local left_node = node
-			local found = self:ReadIndexSubExpression() or
-				self:ReadSelfCallSubExpression() or
-				self:ReadPostfixTypeOperatorSubExpression() or
-				self:ReadTypeCallSubExpression(node) or
-				self:ReadPostfixTypeIndexExpressionSubExpression() or
+			local found = self:ReadIndexSubExpression(left_node) or
+				self:ReadSelfCallSubExpression(left_node) or
+				self:ReadPostfixTypeOperatorSubExpression(left_node) or
+				self:ReadTypeCallSubExpression(left_node, node) or
+				self:ReadPostfixTypeIndexExpressionSubExpression(left_node) or
 				self:ReadAsSubExpression(left_node)
 
 			if not found then break end
-
-			found.left = left_node
 
 			if left_node.value and left_node.value.value == ":" then
 				found.parser_call = true
@@ -11215,7 +11464,7 @@ do -- typesystem
 			node.value = self:ReadToken()
 			node.left = left_node
 			node.right = self:ReadTypeExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
-			self:EndNode(node)
+			node = self:EndNode(node)
 		end
 
 		self:PopParserEnvironment()
@@ -11278,23 +11527,23 @@ do -- runtime
 			local node = self:StartNode("expression", "table_spread")
 			node.tokens["..."] = self:ExpectValue("...")
 			node.expression = self:ExpectRuntimeExpression()
-			self:EndNode(node)
+			node = self:EndNode(node)
 			return node
 		end
 
 		function META:read_table_entry(i)
 			if self:IsValue("[") then
-				local node = self:StartNode("expression", "table_expression_value")
+				local node = self:StartNode("sub_statement", "table_expression_value")
 				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ExpectRuntimeExpression(0)
 				node.tokens["]"] = self:ExpectValue("]")
 				node.tokens["="] = self:ExpectValue("=")
 				node.value_expression = self:ExpectRuntimeExpression(0)
-				self:EndNode(node)
+				node = self:EndNode(node)
 				return node
 			elseif self:IsType("letter") and self:IsValue("=", 1) then
-				local node = self:StartNode("expression", "table_key_value")
+				local node = self:StartNode("sub_statement", "table_key_value")
 				node.tokens["identifier"] = self:ExpectType("letter")
 				node.tokens["="] = self:ExpectValue("=")
 				local spread = self:read_table_spread()
@@ -11305,11 +11554,11 @@ do -- runtime
 					node.value_expression = self:ExpectRuntimeExpression()
 				end
 
-				self:EndNode(node)
+				node = self:EndNode(node)
 				return node
 			end
 
-			local node = self:StartNode("expression", "table_index_value")
+			local node = self:StartNode("sub_statement", "table_index_value")
 			local spread = self:read_table_spread()
 
 			if spread then
@@ -11319,7 +11568,7 @@ do -- runtime
 			end
 
 			node.key = i
-			self:EndNode(node)
+			node = self:EndNode(node)
 			return node
 		end
 
@@ -11364,21 +11613,22 @@ do -- runtime
 			end
 
 			tree.tokens["}"] = self:ExpectValue("}")
-			self:EndNode(tree)
+			tree = self:EndNode(tree)
 			return tree
 		end
 	end
 
-	function META:ReadPostfixOperatorSubExpression()
+	function META:ReadPostfixOperatorSubExpression(left_node)
 		if not runtime_syntax:IsPostfixOperator(self:GetToken()) then return end
 
 		local node = self:StartNode("expression", "postfix_operator")
 		node.value = self:ReadToken()
-		self:EndNode(node)
+		node.left = left_node
+		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadCallSubExpression(primary_node)
+	function META:ReadCallSubExpression(left_node, primary_node)
 		if not self:IsCallExpression(0) then return end
 
 		if primary_node and primary_node.kind == "function" then
@@ -11421,8 +11671,6 @@ do -- runtime
 			node.tokens["call)"] = self:ExpectValue(")")
 		end
 
-		self:EndNode(node)
-
 		if primary_node.kind == "value" then
 			local name = primary_node.value.value
 
@@ -11438,17 +11686,20 @@ do -- runtime
 			end
 		end
 
+		node.left = left_node
+		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadPostfixIndexExpressionSubExpression()
+	function META:ReadPostfixIndexExpressionSubExpression(left_node)
 		if not self:IsValue("[") then return end
 
 		local node = self:StartNode("expression", "postfix_expression_index")
 		node.tokens["["] = self:ExpectValue("[")
 		node.expression = self:ExpectRuntimeExpression()
 		node.tokens["]"] = self:ExpectValue("]")
-		self:EndNode(node)
+		node.left = left_node
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -11473,15 +11724,13 @@ do -- runtime
 				node.type_expression = self:ExpectTypeExpression(0)
 			end
 
-			local found = self:ReadIndexSubExpression() or
-				self:ReadSelfCallSubExpression() or
-				self:ReadCallSubExpression(node) or
-				self:ReadPostfixOperatorSubExpression() or
-				self:ReadPostfixIndexExpressionSubExpression()
+			local found = self:ReadIndexSubExpression(left_node) or
+				self:ReadSelfCallSubExpression(left_node) or
+				self:ReadCallSubExpression(left_node, node) or
+				self:ReadPostfixOperatorSubExpression(left_node) or
+				self:ReadPostfixIndexExpressionSubExpression(left_node)
 
 			if not found then break end
-
-			found.left = left_node
 
 			if left_node.value and left_node.value.value == ":" then
 				found.parser_call = true
@@ -11500,7 +11749,7 @@ do -- runtime
 		node.value = self:ReadToken()
 		node.tokens[1] = node.value
 		node.right = self:ExpectRuntimeExpression(math.huge)
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -11592,8 +11841,7 @@ do -- runtime
 
 		if imported[key] == nil then
 			imported[key] = node
-			local nl = IMPORTS['nattlua']("nattlua")
-			local compiler, err = nl.ParseFile(
+			local root, err = self:ParseFile(
 				path,
 				{
 					root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
@@ -11601,15 +11849,15 @@ do -- runtime
 					path = node.path,
 					working_directory = self.config.working_directory,
 					inline_require = not root_node.data_import,
-					on_statement = self.config.on_statement,
+					on_node = self.config.on_node,
 				}
 			)
 
-			if not compiler then
+			if not root then
 				self:Error("error importing file: $1", start, start, err)
 			end
 
-			node.RootStatement = compiler.SyntaxTree
+			node.RootStatement = root
 		else
 			-- ugly way of dealing with recursive require
 			node.RootStatement = imported[key]
@@ -11652,23 +11900,22 @@ do -- runtime
 			imported[key] = node
 
 			if node.path:sub(-4) == "lua" or node.path:sub(-5) ~= "nlua" then
-				local nl = IMPORTS['nattlua']("nattlua")
-				local compiler, err = nl.ParseFile(
+				local root, err = self:ParseFile(
 					node.path,
 					{
 						root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
 						path = node.path,
 						working_directory = self.config.working_directory,
-						on_statement = self.config.on_statement,
+						on_node = self.config.on_node,
 					--inline_require = true,
 					}
 				)
 
-				if not compiler then
+				if not root then
 					self:Error("error importing file: $1", start, start, err .. ": " .. node.path)
 				end
 
-				data = compiler.SyntaxTree:Render(
+				data = root:Render(
 					{
 						preserve_whitespace = false,
 						comment_type_annotations = false,
@@ -11708,8 +11955,7 @@ do -- runtime
 
 				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
 					table_remove(node.whitespace, i)
-					local Code = IMPORTS['nattlua.code.code']("nattlua.code.code")
-					local tokens = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer")(Code("/idiv" .. token.value:sub(2), "")):GetTokens()
+					local tokens = self:LexString("/idiv" .. token.value:sub(2))
 
 					for _, token in ipairs(tokens) do
 						self:check_integer_division_operator(token)
@@ -11766,7 +12012,7 @@ do -- runtime
 			if node.left then node.left.parent = node end
 
 			node.right = self:ExpectRuntimeExpression(runtime_syntax:GetBinaryOperatorInfo(node.value).right_priority)
-			self:EndNode(node)
+			node = self:EndNode(node)
 
 			if not node.right then
 				local token = self:GetToken()
@@ -11865,7 +12111,7 @@ do -- destructure statement
 			node.right = self:ReadRuntimeExpression(0)
 		end
 
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -11893,7 +12139,7 @@ do -- destructure statement
 			node.right = self:ReadRuntimeExpression(0)
 		end
 
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 end
@@ -11913,7 +12159,7 @@ do
 			node.right = self:ReadValueExpressionType("letter")
 			node.left = left
 			node.right.self_call = self_call
-			self:EndNode(node)
+			node = self:EndNode(node)
 		end
 
 		first.standalone_letter = node
@@ -11938,7 +12184,7 @@ do
 			self:ReadFunctionBody(node)
 		end
 
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -11970,7 +12216,7 @@ do
 		end
 
 		self:ReadAnalyzerFunctionBody(node, true)
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 end
@@ -11983,7 +12229,7 @@ function META:ReadLocalFunctionStatement()
 	node.tokens["function"] = self:ExpectValue("function")
 	node.tokens["identifier"] = self:ExpectType("letter")
 	self:ReadFunctionBody(node)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12004,7 +12250,7 @@ function META:ReadLocalAnalyzerFunctionStatement()
 	node.tokens["function"] = self:ExpectValue("function")
 	node.tokens["identifier"] = self:ExpectType("letter")
 	self:ReadAnalyzerFunctionBody(node, true)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12027,7 +12273,7 @@ function META:ReadLocalTypeFunctionStatement()
 	node.tokens["function"] = self:ExpectValue("function")
 	node.tokens["identifier"] = self:ExpectType("letter")
 	self:ReadTypeFunctionBody(node)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12036,7 +12282,7 @@ function META:ReadBreakStatement()
 
 	local node = self:StartNode("statement", "break")
 	node.tokens["break"] = self:ExpectValue("break")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12047,7 +12293,7 @@ function META:ReadDoStatement()
 	node.tokens["do"] = self:ExpectValue("do")
 	node.statements = self:ReadNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12062,7 +12308,7 @@ function META:ReadGenericForStatement()
 	node.tokens["do"] = self:ExpectValue("do")
 	node.statements = self:ReadNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12073,7 +12319,7 @@ function META:ReadGotoLabelStatement()
 	node.tokens["::"] = self:ExpectValue("::")
 	node.tokens["identifier"] = self:ExpectType("letter")
 	node.tokens["::"] = self:ExpectValue("::")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12083,7 +12329,7 @@ function META:ReadGotoStatement()
 	local node = self:StartNode("statement", "goto")
 	node.tokens["goto"] = self:ExpectValue("goto")
 	node.tokens["identifier"] = self:ExpectType("letter")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12127,7 +12373,7 @@ function META:ReadIfStatement()
 	end
 
 	node.tokens["end"] = self:ExpectValue("end")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12158,7 +12404,7 @@ function META:ReadLocalAssignmentStatement()
 		node.right = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12173,7 +12419,7 @@ function META:ReadNumericForStatement()
 	node.tokens["do"] = self:ExpectValue("do")
 	node.statements = self:ReadNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12185,7 +12431,7 @@ function META:ReadRepeatStatement()
 	node.statements = self:ReadNodes({["until"] = true})
 	node.tokens["until"] = self:ExpectValue("until")
 	node.expression = self:ExpectRuntimeExpression()
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12194,7 +12440,7 @@ function META:ReadSemicolonStatement()
 
 	local node = self:StartNode("statement", "semicolon")
 	node.tokens[";"] = self:ExpectValue(";")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12204,7 +12450,7 @@ function META:ReadReturnStatement()
 	local node = self:StartNode("statement", "return")
 	node.tokens["return"] = self:ExpectValue("return")
 	node.expressions = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12217,7 +12463,7 @@ function META:ReadWhileStatement()
 	node.tokens["do"] = self:ExpectValue("do")
 	node.statements = self:ReadNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12226,7 +12472,7 @@ function META:ReadContinueStatement()
 
 	local node = self:StartNode("statement", "continue")
 	node.tokens["continue"] = self:ExpectValue("continue")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12234,7 +12480,7 @@ function META:ReadDebugCodeStatement()
 	if self:IsType("analyzer_debug_code") then
 		local node = self:StartNode("statement", "analyzer_debug_code")
 		node.lua_code = self:ReadValueExpressionType("analyzer_debug_code")
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	elseif self:IsType("parser_debug_code") then
 		local token = self:ExpectType("parser_debug_code")
@@ -12242,9 +12488,9 @@ function META:ReadDebugCodeStatement()
 		local node = self:StartNode("statement", "parser_debug_code")
 		local code = self:StartNode("expression", "value")
 		code.value = token
-		self:EndNode(code)
+		code = self:EndNode(code)
 		node.lua_code = code
-		self:EndNode(node)
+		node = self:EndNode(node)
 		return node
 	end
 end
@@ -12273,7 +12519,7 @@ function META:ReadLocalTypeAssignmentStatement()
 		self:PopParserEnvironment()
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12294,20 +12540,27 @@ function META:ReadTypeAssignmentStatement()
 		self:PopParserEnvironment()
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
 function META:ReadCallOrAssignmentStatement()
 	local start = self:GetToken()
+	self:SuppressOnNode()
 	local left = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
 
 	if self:IsValue("=") then
 		local node = self:StartNode("statement", "assignment")
 		node.tokens["="] = self:ExpectValue("=")
 		node.left = left
+
+		for i, v in ipairs(node.left) do
+			v.is_left_assignment = true
+		end
+
 		node.right = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
-		self:EndNode(node)
+		self:ReRunOnNode(node.left)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -12315,7 +12568,8 @@ function META:ReadCallOrAssignmentStatement()
 		local node = self:StartNode("statement", "call_expression")
 		node.value = left[1]
 		node.tokens = left[1].tokens
-		self:EndNode(node)
+		self:ReRunOnNode(left)
+		node = self:EndNode(node)
 		return node
 	end
 
@@ -12331,36 +12585,11 @@ IMPORTS['nattlua/parser/teal.lua'] = function(...) local META = ...
 
 
 
+
+
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
 local math_huge = math.huge
-
-local function Value(self, symbol, value)
-	local node = self:StartNode("expression", "value")
-	node.value = self:NewToken(symbol, value)
-	self:EndNode(node)
-	return node
-end
-
-local function Parse(code)
-	local compiler = IMPORTS['nattlua']("nattlua").Compiler(code, "temp")
-	assert(compiler:Lex())
-	assert(compiler:Parse())
-	return compiler.SyntaxTree
-end
-
-local function fix(tk, new_value)
-	tk.value = new_value
-	return tk
-end
-
-function META:NewToken(type, value)
-	local tk = {}
-	tk.type = type
-	tk.is_whitespace = false
-	tk.value = value
-	return tk
-end
 
 function META:ReadTealFunctionArgument(expect_type)
 	if
@@ -12407,7 +12636,7 @@ function META:ReadTealFunctionSignature()
 		node.tokens["return)"] = self:NewToken("symbol", ")")
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12420,7 +12649,7 @@ function META:ReadTealKeywordValueExpression()
 
 	local node = self:StartNode("expression", "value")
 	node.value = self:ReadToken()
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12430,7 +12659,7 @@ function META:ReadTealVarargExpression()
 	local node = self:StartNode("expression", "value")
 	node.type_expression = self:ReadValueExpressionType("letter")
 	node.value = self:ExpectValue("...")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12443,39 +12672,39 @@ function META:ReadTealTable()
 	node.children = {}
 
 	if self:IsValue(":", 1) or self:IsValue("(") then
-		local kv = self:StartNode("expression", "table_expression_value")
+		local kv = self:StartNode("sub_statement", "table_expression_value")
 		kv.expression_key = true
 
 		if self:IsValue("(") then
-			kv.tokens["["] = fix(self:ExpectValue("("), "[")
+			kv.tokens["["] = self:ExpectValueTranslate("(", "[")
 			kv.key_expression = self:ReadTealExpression(0)
-			kv.tokens["]"] = fix(self:ExpectValue(")"), "]")
+			kv.tokens["]"] = self:ExpectValueTranslate(")", "]")
 		else
 			kv.tokens["["] = self:NewToken("symbol", "[")
 			kv.key_expression = self:ReadValueExpressionType("letter")
 			kv.tokens["]"] = self:NewToken("symbol", "]")
 		end
 
-		kv.tokens["="] = fix(self:ExpectValue(":"), "=")
+		kv.tokens["="] = self:ExpectValueTranslate(":", "=")
 		kv.value_expression = self:ReadTealExpression(0)
-		self:EndNode(kv)
+		kv = self:EndNode(kv)
 		node.children = {kv}
 	else
 		local i = 1
 
 		while true do
-			local kv = self:StartNode("expression", "table_expression_value")
+			local kv = self:StartNode("sub_statement", "table_expression_value")
 			kv.expression_key = true
 			kv.tokens["["] = self:NewToken("symbol", "[")
 			local key = self:StartNode("expression", "value")
 			key.value = self:NewToken("letter", "number")
 			key.standalone_letter = key
-			self:EndNode(key)
+			key = self:EndNode(key)
 			kv.key_expression = key
 			kv.tokens["]"] = self:NewToken("symbol", "]")
 			kv.tokens["="] = self:NewToken("symbol", "=")
 			kv.value_expression = self:ReadTealExpression(0)
-			self:EndNode(kv)
+			kv = self:EndNode(kv)
 			table.insert(node.children, kv)
 
 			if not self:IsValue(",") then
@@ -12491,7 +12720,7 @@ function META:ReadTealTable()
 	end
 
 	node.tokens["}"] = self:ExpectValue("}")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12502,7 +12731,7 @@ function META:ReadTealTuple()
 	node.tokens["("] = self:ExpectValue("(")
 	node.expressions = self:ReadMultipleValues(nil, self.ReadTealExpression, 0)
 	node.tokens[")"] = self:ExpectValue(")")
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12510,11 +12739,11 @@ function META:ReadTealCallSubExpression()
 	if not self:IsValue("<") then return end
 
 	local node = self:StartNode("expression", "postfix_call")
-	node.tokens["call("] = fix(self:ExpectValue("<"), "<|")
+	node.tokens["call("] = self:ExpectValueTranslate("<", "<|")
 	node.expressions = self:ReadMultipleValues(nil, self.ReadTealExpression, 0)
-	node.tokens["call)"] = fix(self:ExpectValue(">"), "|>")
+	node.tokens["call)"] = self:ExpectValueTranslate(">", "|>")
 	node.type_call = true
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12575,7 +12804,7 @@ function META:ReadTealExpression(priority)
 		node.value = self:ReadToken()
 		node.left = left_node
 		node.right = self:ReadTealExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
-		self:EndNode(node)
+		node = self:EndNode(node)
 	end
 
 	return node
@@ -12589,7 +12818,7 @@ function META:ReadTealAssignment()
 	kv.left = {self:ReadValueExpressionToken()}
 	kv.tokens["="] = self:ExpectValue("=")
 	kv.right = {self:ReadTealExpression(0)}
-	self:EndNode(kv)
+	kv = self:EndNode(kv)
 	return kv
 end
 
@@ -12599,7 +12828,7 @@ function META:ReadTealRecordKeyVal()
 	local kv = self:StartNode("statement", "assignment")
 	kv.tokens["type"] = self:NewToken("letter", "type")
 	kv.left = {self:ReadValueExpressionToken()}
-	kv.tokens["="] = fix(self:ExpectValue(":"), "=")
+	kv.tokens["="] = self:ExpectValueTranslate(":", "=")
 	kv.right = {self:ReadTealExpression(0)}
 	return kv
 end
@@ -12608,12 +12837,12 @@ function META:ReadTealRecordArray()
 	if not self:IsValue("{") then return nil end
 
 	local kv = self:StartNode("statement", "assignment")
-	kv.tokens["type"] = fix(self:ExpectValue("{"), "type")
-	kv.left = {Parse("_G[number] = 1").statements[1].left[1]}
+	kv.tokens["type"] = self:ExpectValueTranslate("{", "type")
+	kv.left = {self:ParseString("_G[number] = 1").statements[1].left[1]}
 	kv.tokens["="] = self:NewToken("symbol", "=")
 	kv.right = {self:ReadTealExpression(0)}
 	self:Advance(1) -- }
-	self:EndNode(kv)
+	kv = self:EndNode(kv)
 	return kv
 end
 
@@ -12628,14 +12857,17 @@ function META:ReadTealRecordMetamethod()
 	end
 
 	local kv = self:StartNode("statement", "assignment")
-	kv.tokens["type"] = fix(self:ExpectValue("metamethod"), "type")
+	kv.tokens["type"] = self:ExpectValueTranslate("metamethod", "type")
 	kv.left = {self:ReadValueExpressionToken()}
-	kv.tokens["="] = fix(self:ExpectValue(":"), "=")
+	kv.tokens["="] = self:ExpectValueTranslate(":", "=")
 	kv.right = {self:ReadTealExpression(0)}
 	return kv
 end
 
-local function ReadRecordBody(self, assignment)
+local function ReadRecordBody(
+	self,
+	assignment
+)
 	local func
 
 	if self:IsValue("<") then
@@ -12643,9 +12875,9 @@ local function ReadRecordBody(self, assignment)
 		func.tokens["local"] = self:NewToken("letter", "local")
 		func.tokens["identifier"] = assignment.left[1].value
 		func.tokens["function"] = self:NewToken("letter", "function")
-		func.tokens["arguments("] = fix(self:ExpectValue("<"), "<|")
+		func.tokens["arguments("] = self:ExpectValueTranslate("<", "<|")
 		func.identifiers = self:ReadMultipleValues(nil, self.ReadValueExpressionToken)
-		func.tokens["arguments)"] = fix(self:ExpectValue(">"), "|>")
+		func.tokens["arguments)"] = self:ExpectValueTranslate(">", "|>")
 		func.statements = {}
 	end
 
@@ -12655,13 +12887,16 @@ local function ReadRecordBody(self, assignment)
 	tbl.tokens["{"] = self:NewToken("symbol", "{")
 	tbl.tokens["}"] = self:NewToken("symbol", "}")
 	tbl.children = {}
-	self:EndNode(tbl)
+	tbl = self:EndNode(tbl)
 	assignment.right = {tbl}
-	self:EndNode(assignment)
+	assignment = self:EndNode(assignment)
 	local block = self:StartNode("statement", "do")
 	block.tokens["do"] = self:NewToken("letter", "do")
 	block.statements = {}
-	table.insert(block.statements, Parse("PushTypeEnvironment<|" .. name .. "|>").statements[1])
+	table.insert(
+		block.statements,
+		self:ParseString("PushTypeEnvironment<|" .. name .. "|>").statements[1]
+	)
 
 	while true do
 		local node = self:ReadTealEnumStatement() or
@@ -12682,17 +12917,17 @@ local function ReadRecordBody(self, assignment)
 		end
 	end
 
-	table.insert(block.statements, Parse("PopTypeEnvironment<||>").statements[1])
+	table.insert(block.statements, self:ParseString("PopTypeEnvironment<||>").statements[1])
 	block.tokens["end"] = self:ExpectValue("end")
-	self:EndNode(block)
+	block = self:EndNode(block)
 	self:PopParserEnvironment("typesystem")
 
 	if func then
 		table.insert(func.statements, assignment)
 		table.insert(func.statements, block)
-		table.insert(func.statements, Parse("return " .. name).statements[1])
+		table.insert(func.statements, self:ParseString("return " .. name).statements[1])
 		func.tokens["end"] = self:NewToken("letter", "end")
-		self:EndNode(func)
+		func = self:EndNode(func)
 		return func
 	end
 
@@ -12704,7 +12939,7 @@ function META:ReadTealRecord()
 
 	self:PushParserEnvironment("typesystem")
 	local assignment = self:StartNode("statement", "assignment")
-	assignment.tokens["type"] = fix(self:ExpectValue("record"), "type")
+	assignment.tokens["type"] = self:ExpectValueTranslate("record", "type")
 	assignment.tokens["="] = self:NewToken("symbol", "=")
 	assignment.left = {self:ReadValueExpressionToken()}
 	return ReadRecordBody(self, assignment)
@@ -12723,16 +12958,19 @@ function META:ReadLocalTealRecord()
 	self:PushParserEnvironment("typesystem")
 	local assignment = self:StartNode("statement", "local_assignment")
 	assignment.tokens["local"] = self:ExpectValue("local")
-	assignment.tokens["type"] = fix(self:ExpectValue("record"), "type")
+	assignment.tokens["type"] = self:ExpectValueTranslate("record", "type")
 	assignment.tokens["="] = self:NewToken("symbol", "=")
 	assignment.left = {self:ReadValueExpressionToken()}
 	return ReadRecordBody(self, assignment)
 end
 
 do
-	local function ReadBody(self, assignment)
+	local function ReadBody(
+		self,
+		assignment
+	)
 		self:PushParserEnvironment("typesystem")
-		assignment.tokens["type"] = fix(self:ExpectValue("enum"), "type")
+		assignment.tokens["type"] = self:ExpectValueTranslate("enum", "type")
 		assignment.left = {self:ReadValueExpressionToken()}
 		assignment.tokens["="] = self:NewToken("symbol", "=")
 		local bnode = self:ReadValueExpressionType("string")
@@ -12743,7 +12981,7 @@ do
 			bnode.value = self:NewToken("symbol", "|")
 			bnode.right = self:ReadValueExpressionType("string")
 			bnode.left = left
-			self:EndNode(bnode)
+			bnode = self:EndNode(bnode)
 		end
 
 		assignment.right = {bnode}
@@ -12756,7 +12994,7 @@ do
 
 		local assignment = self:StartNode("statement", "assignment")
 		ReadBody(self, assignment)
-		self:EndNode(assignment)
+		assignment = self:EndNode(assignment)
 		return assignment
 	end
 
@@ -12778,6 +13016,8 @@ end end
 do local __M; IMPORTS["nattlua.parser.parser"] = function(...) __M = __M or (function(...) local META = IMPORTS['nattlua.parser.base']("nattlua.parser.base")
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
+local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
+local Lexer = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer").New
 local math = _G.math
 local math_huge = math.huge
 local table_insert = _G.table.insert
@@ -12811,21 +13051,21 @@ function META:ReadIdentifier(expect_type)
 		end
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
 function META:ReadValueExpressionToken(expect_value)
 	local node = self:StartNode("expression", "value")
 	node.value = expect_value and self:ExpectValue(expect_value) or self:ReadToken()
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
 function META:ReadValueExpressionType(expect_value)
 	local node = self:StartNode("expression", "value")
 	node.value = self:ExpectType(expect_value)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -12945,7 +13185,7 @@ function META:ReadAnalyzerFunctionBody(
 			end
 		end
 
-		self:EndNode(vararg)
+		vararg = self:EndNode(vararg)
 		table_insert(node.identifiers, vararg)
 	end
 
@@ -12976,11 +13216,44 @@ assert(IMPORTS['nattlua/parser/expressions.lua'])(META)
 assert(IMPORTS['nattlua/parser/statements.lua'])(META)
 assert(IMPORTS['nattlua/parser/teal.lua'])(META)
 
-function META:ParseString(code)
-	local compiler = IMPORTS['nattlua']("nattlua").Compiler(code, "temp")
-	assert(compiler:Lex())
-	assert(compiler:Parse())
-	return compiler.SyntaxTree
+function META:LexString(str, config)
+	config = config or {}
+	local code = Code(str, config.file_path)
+	local lexer = Lexer(code, config)
+	local ok, tokens = xpcall(lexer.GetTokens, debug.traceback, lexer)
+
+	if not ok then return nil, tokens end
+
+	return tokens, code
+end
+
+function META:ParseString(str, config)
+	local tokens, code = self:LexString(str, config)
+
+	if not tokens then return nil, code end
+
+	local parser = self.New(tokens, code, config)
+	local ok, node = xpcall(parser.ReadRootNode, debug.traceback, parser)
+
+	if not ok then return nil, node end
+
+	return node
+end
+
+function META:ParseFile(path, config)
+	config = config or {}
+	config.file_path = config.file_path or path
+	config.file_name = config.file_name or path
+	local f, err = io.open(path, "rb")
+
+	if not f then return nil, err end
+
+	local code = f:read("*a")
+	f:close()
+
+	if not code then return nil, "file is empty" end
+
+	return self:ParseString(code, config)
 end
 
 local imported_index = nil
@@ -12993,7 +13266,7 @@ function META:ReadRootNode()
 	if self:IsType("shebang") then
 		shebang = self:StartNode("statement", "shebang")
 		shebang.tokens["shebang"] = self:ExpectType("shebang")
-		self:EndNode(shebang)
+		shebang = self:EndNode(shebang)
 		node.tokens["shebang"] = shebang.tokens["shebang"]
 	end
 
@@ -13027,12 +13300,12 @@ function META:ReadRootNode()
 	if self:IsType("end_of_file") then
 		local eof = self:StartNode("statement", "end_of_file")
 		eof.tokens["end_of_file"] = self.tokens[#self.tokens]
-		self:EndNode(eof)
+		eof = self:EndNode(eof)
 		table.insert(node.statements, eof)
 		node.tokens["eof"] = eof.tokens["end_of_file"]
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -13071,7 +13344,7 @@ function META:ReadNode()
 		self:ReadCallOrAssignmentStatement()
 end
 
-return META.New end)(...) return __M end end
+return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.types"] = function(...) __M = __M or (function(...) local types = {}
 
 function types.Initialize()
@@ -13130,7 +13403,7 @@ function META.New(obj)
 	return self
 end
 
-return META.New end)(...) return __M end end
+return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.base.lexical_scope"] = function(...) __M = __M or (function(...) local ipairs = ipairs
 local pairs = pairs
 local error = error
@@ -13142,7 +13415,7 @@ local table_insert = table.insert
 local table = _G.table
 local type = _G.type
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
-local Upvalue = IMPORTS['nattlua.analyzer.base.upvalue']("nattlua.analyzer.base.upvalue")
+local Upvalue = IMPORTS['nattlua.analyzer.base.upvalue']("nattlua.analyzer.base.upvalue").New
 local META = class.CreateTemplate("lexical_scope")
 
 do
@@ -13579,11 +13852,11 @@ function META.New(parent, upvalue_position, obj)
 	return scope
 end
 
-return META.New end)(...) return __M end end
+return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.base.scopes"] = function(...) __M = __M or (function(...) local type = type
 local ipairs = ipairs
 local tostring = tostring
-local LexicalScope = IMPORTS['nattlua.analyzer.base.lexical_scope']("nattlua.analyzer.base.lexical_scope")
+local LexicalScope = IMPORTS['nattlua.analyzer.base.lexical_scope']("nattlua.analyzer.base.lexical_scope").New
 local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local table = _G.table
@@ -16113,26 +16386,43 @@ return {
 				local len = contracts:GetSafeLength(arguments)
 				local contract_override = {}
 
-				do -- analyze the type expressions
+				if function_node.identifiers[1] then -- analyze the type expressions
 					self:CreateAndPushFunctionScope(obj)
 					self:PushAnalyzerEnvironment("typesystem")
 					local args = {}
 
-					for i, key in ipairs(function_node.identifiers) do
+					for i = 1, len do
+						local key = function_node.identifiers[i] or
+							function_node.identifiers[#function_node.identifiers]
+
 						if function_node.self_call then i = i + 1 end
 
 						-- stem type so that we can allow
 						-- function(x: foo<|x|>): nil
 						self:CreateLocalValue(key.value.value, Any())
-						local arg = arguments:Get(i)
-						local contract = contracts:Get(i)
+						local arg
+						local contract
+						arg = arguments:Get(i)
+
+						if key.value.value == "..." then
+							contract = contracts:GetWithoutExpansion(i)
+						else
+							contract = contracts:Get(i)
+						end
 
 						if not arg then
 							arg = Nil()
 							arguments:Set(i, arg)
 						end
 
-						if contract and contract.ref_argument and arg then
+						local ref_callback = arg and
+							contract and
+							contract.ref_argument and
+							contract.Type == "function" and
+							arg.Type == "function" and
+							not arg.arguments_inferred
+
+						if contract and contract.ref_argument and arg and not ref_callback then
 							self:CreateLocalValue(key.value.value, arg)
 						end
 
@@ -16140,7 +16430,7 @@ return {
 							args[i] = self:AnalyzeExpression(key.type_expression):GetFirstValue()
 						end
 
-						if contract and contract.ref_argument and arg then
+						if contract and contract.ref_argument and arg and not ref_callback then
 							args[i] = arg
 							args[i].ref_argument = true
 							local ok, err = args[i]:IsSubsetOf(contract)
@@ -16182,7 +16472,7 @@ return {
 								if not arg.explicit_arguments then
 									local contract = contract_override[i] or obj:GetArguments():Get(i)
 
-									if contract and not contract.ref_argument then
+									if contract then
 										if contract.Type == "union" then
 											local tup = Tuple({})
 
@@ -16190,8 +16480,11 @@ return {
 												tup:Merge(func:GetArguments())
 												arg:SetArguments(tup)
 											end
+
+											arg.arguments_inferred = true
 										elseif contract.Type == "function" then
 											arg:SetArguments(contract:GetArguments():Copy(nil, true)) -- force copy tables so we don't mutate the contract
+											arg.arguments_inferred = true
 										end
 									end
 								end
@@ -16199,7 +16492,7 @@ return {
 								if not arg.explicit_return then
 									local contract = contract_override[i] or obj:GetReturnTypes():Get(i)
 
-									if contract and not contract.ref_argument then
+									if contract then
 										if contract.Type == "union" then
 											local tup = Tuple({})
 
@@ -17019,7 +17312,7 @@ local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").Nod
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 return {
 	AnalyzeDestructureAssignment = function(self, statement)
-		local obj = self:AnalyzeExpression(statement.right)
+		local obj, err = self:AnalyzeExpression(statement.right)
 
 		if obj.Type == "union" then obj = obj:GetData()[1] end
 
@@ -17027,6 +17320,7 @@ return {
 
 		if obj.Type ~= "table" then
 			self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj.Type))
+			return
 		end
 
 		if statement.default then
@@ -17138,7 +17432,7 @@ local function analyze_function_signature(self, node, current_function)
 
 						break
 					else
-						local val = self:Assert(node, obj:GetFirstValue())
+						local val = self:Assert(node, obj)
 
 						-- in case the tuple is empty
 						if val then args[i] = val end
@@ -17156,7 +17450,7 @@ local function analyze_function_signature(self, node, current_function)
 
 					break
 				else
-					local val = self:Assert(node, obj:GetFirstValue())
+					local val = self:Assert(node, obj)
 
 					-- in case the tuple is empty
 					if val then args[i] = val end
@@ -18630,6 +18924,7 @@ return {
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.expressions.import"] = function(...) __M = __M or (function(...) local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 return {
 	AnalyzeImport = function(self, node)
 		-- ugly way of dealing with recursive import
@@ -18642,6 +18937,8 @@ return {
 		elseif node.data then
 			return LString(node.data)
 		end
+
+		return Nil():SetNode(node)
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.expressions.tuple"] = function(...) __M = __M or (function(...) local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
@@ -18775,20 +19072,7 @@ do
 	function META:AnalyzeExpression2(node)
 		self.current_expression = node
 
-		if node.type_expression then
-			if node.kind == "table" then
-				local obj = AnalyzeTable(self, node)
-				self:PushAnalyzerEnvironment("typesystem")
-				obj:SetContract(self:AnalyzeExpression(node.type_expression))
-				self:PopAnalyzerEnvironment()
-				return obj
-			end
-
-			self:PushAnalyzerEnvironment("typesystem")
-			local obj = self:AnalyzeExpression(node.type_expression)
-			self:PopAnalyzerEnvironment()
-			return obj
-		elseif node.kind == "value" then
+		if node.kind == "value" then
 			return AnalyzeAtomicValue(self, node)
 		elseif node.kind == "vararg" then
 			return AnalyzeVararg(self, node)
@@ -18831,6 +19115,28 @@ do
 
 	function META:AnalyzeExpression(node)
 		local obj, err = self:AnalyzeExpression2(node)
+
+		if node.type_expression then
+			local old = obj
+			self:PushAnalyzerEnvironment("typesystem")
+			obj = self:AnalyzeExpression(node.type_expression)
+			self:PopAnalyzerEnvironment()
+
+			if obj.Type == "table" then
+				if old.Type == "table" then
+					old:SetContract(obj)
+					obj = old
+				elseif old.Type == "tuple" and old:GetLength() == 1 then
+					local first = old:GetData()[1]
+
+					if first.Type == "table" then
+						first:SetContract(obj)
+						obj = old
+					end
+				end
+			end
+		end
+
 		node:AddType(obj or err)
 		return obj, err
 	end
@@ -18849,7 +19155,7 @@ function META.New(config)
 	return self
 end
 
-return META.New end)(...) return __M end end
+return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.transpiler.emitter"] = function(...) __M = __M or (function(...) local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local characters = IMPORTS['nattlua.syntax.characters']("nattlua.syntax.characters")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
@@ -18865,6 +19171,9 @@ local type = _G.type
 local setmetatable = _G.setmetatable
 local B = string.byte
 local META = class.CreateTemplate("emitter")
+
+
+
 local translate_binary = {
 	["&&"] = "and",
 	["||"] = "or",
@@ -19330,6 +19639,7 @@ function META:EmitFunctionSignature(node)
 end
 
 function META:EmitExpression(node)
+	local emitted_invalid_code = false
 	local newlines = self:IsLineBreaking()
 
 	if node.tokens["("] then
@@ -19349,7 +19659,7 @@ function META:EmitExpression(node)
 	elseif node.kind == "function" then
 		self:EmitAnonymousFunction(node)
 	elseif node.kind == "analyzer_function" then
-		self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
+		emitted_invalid_code = self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
 	elseif node.kind == "table" then
 		self:EmitTable(node)
 	elseif node.kind == "prefix_operator" then
@@ -19359,7 +19669,7 @@ function META:EmitExpression(node)
 	elseif node.kind == "postfix_call" then
 		if node.import_expression then
 			if not node.path or node.type_call then
-				self:EmitInvalidLuaCode("EmitImportExpression", node)
+				emitted_invalid_code = self:EmitInvalidLuaCode("EmitImportExpression", node)
 			else
 				self:EmitImportExpression(node)
 			end
@@ -19368,7 +19678,7 @@ function META:EmitExpression(node)
 		elseif node.expressions_typesystem then
 			self:EmitCall(node)
 		elseif node.type_call then
-			self:EmitInvalidLuaCode("EmitCall", node)
+			emitted_invalid_code = self:EmitInvalidLuaCode("EmitCall", node)
 		else
 			self:EmitCall(node)
 		end
@@ -19399,9 +19709,9 @@ function META:EmitExpression(node)
 	elseif node.kind == "tuple" then
 		self:EmitTuple(node)
 	elseif node.kind == "type_function" then
-		self:EmitInvalidLuaCode("EmitTypeFunction", node)
+		emitted_invalid_code = self:EmitInvalidLuaCode("EmitTypeFunction", node)
 	elseif node.kind == "function_signature" then
-		self:EmitInvalidLuaCode("EmitFunctionSignature", node)
+		emitted_invalid_code = self:EmitInvalidLuaCode("EmitFunctionSignature", node)
 	elseif node.kind == "vararg" then
 		self:EmitVararg(node)
 	else
@@ -19463,6 +19773,17 @@ function META:EmitExpression(node)
 				self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
 			end
 		end
+	end
+
+	if
+		emitted_invalid_code and
+		not self.is_call_expression and
+		(
+			self.config.comment_type_annotations or
+			self.config.omit_invalid_code
+		)
+	then
+		self:EmitNonSpace("nil")
 	end
 end
 
@@ -19790,7 +20111,11 @@ function META:EmitVararg(node)
 end
 
 function META:EmitTable(tree)
-	if tree.spread then self:EmitNonSpace("table.mergetables") end
+	if tree.spread then
+		if self.config.omit_invalid_code then
+			self:EmitNonSpace("table.mergetables")
+		end
+	end
 
 	local during_spread = false
 	self:EmitToken(tree.tokens["{"])
@@ -19807,17 +20132,22 @@ function META:EmitTable(tree)
 
 			if node.kind == "table_index_value" then
 				if node.spread then
-					if during_spread then
-						self:EmitNonSpace("},")
-						during_spread = false
-					end
+					if not self.config.omit_invalid_code then
+						self:EmitToken(node.spread.tokens["..."])
+						self:EmitExpression(node.spread.expression)
+					else
+						if during_spread then
+							self:EmitNonSpace("},")
+							during_spread = false
+						end
 
-					self:EmitExpression(node.spread.expression)
+						self:EmitExpression(node.spread.expression)
+					end
 				else
 					self:EmitExpression(node.value_expression)
 				end
 			elseif node.kind == "table_key_value" then
-				if tree.spread and not during_spread then
+				if self.config.omit_invalid_code and tree.spread and not during_spread then
 					during_spread = true
 					self:EmitNonSpace("{")
 				end
@@ -20144,7 +20474,9 @@ function META:EmitStatement(node)
 			if node.kind == "assignment" then self:Emit_ENVFromAssignment(node) end
 		end
 	elseif node.kind == "call_expression" then
+		self.is_call_expression = true
 		self:EmitExpression(node.value)
+		self.is_call_expression = false
 	elseif node.kind == "shebang" then
 		self:EmitToken(node.tokens["shebang"])
 	elseif node.kind == "continue" then
@@ -20553,6 +20885,12 @@ do -- types
 			error("unhandled token type " .. node.kind)
 		end
 
+		if node.tokens["as"] then
+			self:Whitespace(" ")
+			self:EmitToken(node.tokens["as"])
+			self:Whitespace(" ")
+		end
+
 		if not self.config.analyzer_function then
 			if node.type_expression then
 				self:EmitTypeExpression(node.type_expression)
@@ -20563,6 +20901,12 @@ do -- types
 			for _, node in ipairs(node.tokens[")"]) do
 				self:EmitToken(node)
 			end
+		end
+
+		if node.tokens[")"] and newlines then
+			self:Outdent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
 		end
 	end
 
@@ -20612,7 +20956,7 @@ do -- types
 	end
 
 	function META:EmitInvalidLuaCode(func, ...)
-		if self.config.omit_invalid_code then return end
+		if self.config.omit_invalid_code then return true end
 
 		local emitted = self:StartEmittingInvalidLuaCode()
 		self[func](self, ...)
@@ -20750,9 +21094,11 @@ local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local debug = _G.debug
 local BuildBaseEnvironment = IMPORTS['nattlua.runtime.base_environment']("nattlua.runtime.base_environment").BuildBaseEnvironment
 local setmetatable = _G.setmetatable
-local Code = IMPORTS['nattlua.code.code']("nattlua.code.code")
+local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("compiler")
+
+
 
 function META:GetCode()
 	return self.Code
@@ -20853,7 +21199,7 @@ local function stack_trace()
 end
 
 local traceback = function(self, obj, msg)
-	if self.debug or _G.TEST then
+	if self.debug or _G.TEST or true then
 		local ret = {
 			xpcall(function()
 				msg = msg or "no error"
@@ -21004,19 +21350,19 @@ function META.New(
 			parent_line = parent_line,
 			parent_name = parent_name,
 			config = config,
-			Lexer = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer"),
-			Parser = IMPORTS['nattlua.parser.parser']("nattlua.parser.parser"),
-			Analyzer = IMPORTS['nattlua.analyzer.analyzer']("nattlua.analyzer.analyzer"),
+			Lexer = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer").New,
+			Parser = IMPORTS['nattlua.parser.parser']("nattlua.parser.parser").New,
+			Analyzer = IMPORTS['nattlua.analyzer.analyzer']("nattlua.analyzer.analyzer").New,
 			Emitter = IMPORTS['nattlua.transpiler.emitter']("nattlua.transpiler.emitter").New,
 		},
 		META
 	)
 end
 
-return META.New end)(...) return __M end end
+return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.init"] = function(...) __M = __M or (function(...) local nl = {}
 local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
-nl.Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler")
+nl.Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler").New
 
 function nl.load(code, name, config)
 	local obj = nl.Compiler(code, name, config)
@@ -21034,19 +21380,6 @@ function nl.loadfile(path, config)
 	if not code then return nil, err end
 
 	return loadstring(code, path)
-end
-
-function nl.ParseFile(path, config)
-	config = config or {}
-	local code, err = nl.File(path, config)
-
-	if not code then return nil, err end
-
-	local ok, err = code:Parse()
-
-	if not ok then return nil, err end
-
-	return ok, code
 end
 
 function nl.File(path, config)
@@ -21081,7 +21414,8 @@ IMPORTS['nattlua/definitions/lua/os.nlua']("./lua/os.nlua")
 IMPORTS['nattlua/definitions/lua/coroutine.nlua']("./lua/coroutine.nlua")
 IMPORTS['nattlua/definitions/typed_ffi.nlua']("./typed_ffi.nlua") end
 IMPORTS['DATA_nattlua/definitions/index.nlua'] = function() return [======[ _G.IMPORTS = _G.IMPORTS or {}
-IMPORTS['nattlua/definitions/utility.nlua'] = function() type boolean = true | false
+IMPORTS['nattlua/definitions/utility.nlua'] = function() type _ = any
+type boolean = true | false
 type integer = number
 type Table = {[any] = any} | {}
 type Function = function=(...any)>(...any)

@@ -13,6 +13,9 @@ local type = _G.type
 local setmetatable = _G.setmetatable
 local B = string.byte
 local META = class.CreateTemplate("emitter")
+
+--[[#local type { ParserConfig } = import("../config.nlua")]]
+
 local translate_binary = {
 	["&&"] = "and",
 	["||"] = "or",
@@ -23,7 +26,7 @@ local translate_prefix = {
 }
 
 do -- internal
-	function META:Whitespace(str, force)
+	function META:Whitespace(str--[[#: string]], force--[[#: boolean]])
 		if self.config.preserve_whitespace == nil and not force then return end
 
 		if str == "\t" then
@@ -54,12 +57,12 @@ do -- internal
 		self.i = self.i + 1
 	end
 
-	function META:EmitNonSpace(str)
+	function META:EmitNonSpace(str--[[#: string]])
 		self:Emit(str)
 		self.last_non_space_index = #self.out
 	end
 
-	function META:EmitSpace(str)
+	function META:EmitSpace(str--[[#: string]])
 		self:Emit(str)
 	end
 
@@ -77,7 +80,7 @@ do -- internal
 		return char and char:byte() or 0
 	end
 
-	function META:EmitWhitespace(token)
+	function META:EmitWhitespace(token--[[#: Token]])
 		if self.config.preserve_whitespace == false and token.type == "space" then
 			return
 		end
@@ -90,7 +93,7 @@ do -- internal
 		end
 	end
 
-	function META:EmitToken(node, translate)
+	function META:EmitToken(node--[[#: Node]], translate--[[#: any]])
 		if
 			self.config.extra_indent and
 			self.config.preserve_whitespace == false and
@@ -237,7 +240,7 @@ do -- internal
 	end
 
 	do
-		function META:PushLoop(node)
+		function META:PushLoop(node--[[#: Node]])
 			self.loop_nodes = self.loop_nodes or {}
 			table.insert(self.loop_nodes, node)
 		end
@@ -258,7 +261,7 @@ end
 
 do -- newline breaking
 	do
-		function META:PushForcedLineBreaking(b)
+		function META:PushForcedLineBreaking(b--[[#: boolean]])
 			self.force_newlines = self.force_newlines or {}
 			table.insert(self.force_newlines, b and debug.traceback())
 		end
@@ -272,7 +275,7 @@ do -- newline breaking
 		end
 	end
 
-	function META:ShouldLineBreakNode(node)
+	function META:ShouldLineBreakNode(node--[[#: Node]])
 		if node.kind == "table" or node.kind == "type_table" then
 			for _, exp in ipairs(node.children) do
 				if exp.value_expression and exp.value_expression.kind == "function" then
@@ -296,7 +299,7 @@ do -- newline breaking
 		return node:GetLength() > self.config.max_line_length
 	end
 
-	function META:EmitLineBreakableExpression(node)
+	function META:EmitLineBreakableExpression(node--[[#: Node]])
 		local newlines = self:ShouldLineBreakNode(node)
 
 		if newlines then
@@ -419,7 +422,7 @@ do
 		["U"] = true,
 	}
 
-	local function escape_string(str, quote)
+	local function escape_string(str--[[#: string]], quote--[[#: string]])
 		local new_str = {}
 
 		for i = 1, #str do
@@ -439,7 +442,7 @@ do
 		return table.concat(new_str)
 	end
 
-	function META:EmitStringToken(token)
+	function META:EmitStringToken(token--[[#: Token]])
 		if self.config.string_quote then
 			local current = token.value:sub(1, 1)
 			local target = self.config.string_quote
@@ -461,11 +464,11 @@ do
 	end
 end
 
-function META:EmitNumberToken(token)
+function META:EmitNumberToken(token--[[#: Token]])
 	self:EmitToken(token)
 end
 
-function META:EmitFunctionSignature(node)
+function META:EmitFunctionSignature(node--[[#: Node]])
 	self:EmitToken(node.tokens["function"])
 	self:EmitToken(node.tokens["="])
 	self:EmitToken(node.tokens["arguments("])
@@ -477,7 +480,8 @@ function META:EmitFunctionSignature(node)
 	self:EmitToken(node.tokens["return)"])
 end
 
-function META:EmitExpression(node)
+function META:EmitExpression(node--[[#: Node]])
+	local emitted_invalid_code = false
 	local newlines = self:IsLineBreaking()
 
 	if node.tokens["("] then
@@ -497,7 +501,7 @@ function META:EmitExpression(node)
 	elseif node.kind == "function" then
 		self:EmitAnonymousFunction(node)
 	elseif node.kind == "analyzer_function" then
-		self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
+		emitted_invalid_code = self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
 	elseif node.kind == "table" then
 		self:EmitTable(node)
 	elseif node.kind == "prefix_operator" then
@@ -507,7 +511,7 @@ function META:EmitExpression(node)
 	elseif node.kind == "postfix_call" then
 		if node.import_expression then
 			if not node.path or node.type_call then
-				self:EmitInvalidLuaCode("EmitImportExpression", node)
+				emitted_invalid_code = self:EmitInvalidLuaCode("EmitImportExpression", node)
 			else
 				self:EmitImportExpression(node)
 			end
@@ -516,7 +520,7 @@ function META:EmitExpression(node)
 		elseif node.expressions_typesystem then
 			self:EmitCall(node)
 		elseif node.type_call then
-			self:EmitInvalidLuaCode("EmitCall", node)
+			emitted_invalid_code = self:EmitInvalidLuaCode("EmitCall", node)
 		else
 			self:EmitCall(node)
 		end
@@ -547,9 +551,9 @@ function META:EmitExpression(node)
 	elseif node.kind == "tuple" then
 		self:EmitTuple(node)
 	elseif node.kind == "type_function" then
-		self:EmitInvalidLuaCode("EmitTypeFunction", node)
+		emitted_invalid_code = self:EmitInvalidLuaCode("EmitTypeFunction", node)
 	elseif node.kind == "function_signature" then
-		self:EmitInvalidLuaCode("EmitFunctionSignature", node)
+		emitted_invalid_code = self:EmitInvalidLuaCode("EmitFunctionSignature", node)
 	elseif node.kind == "vararg" then
 		self:EmitVararg(node)
 	else
@@ -612,20 +616,31 @@ function META:EmitExpression(node)
 			end
 		end
 	end
+
+	if
+		emitted_invalid_code and
+		not self.is_call_expression and
+		(
+			self.config.comment_type_annotations or
+			self.config.omit_invalid_code
+		)
+	then
+		self:EmitNonSpace("nil")
+	end
 end
 
-function META:EmitVarargTuple(node)
+function META:EmitVarargTuple(node--[[#: Node]])
 	self:Emit(tostring(node:GetLastType()))
 end
 
-function META:EmitExpressionIndex(node)
+function META:EmitExpressionIndex(node--[[#: Node]])
 	self:EmitExpression(node.left)
 	self:EmitToken(node.tokens["["])
 	self:EmitExpression(node.expression)
 	self:EmitToken(node.tokens["]"])
 end
 
-function META:EmitCall(node)
+function META:EmitCall(node--[[#: Node]])
 	local multiline_string = false
 
 	if #node.expressions == 1 and node.expressions[1].kind == "value" then
@@ -716,7 +731,7 @@ function META:EmitCall(node)
 	self.inside_call_expression = false
 end
 
-function META:EmitBinaryOperator(node)
+function META:EmitBinaryOperator(node--[[#: Node]])
 	local func_chunks = node.environment == "runtime" and
 		runtime_syntax:GetFunctionForBinaryOperator(node.value)
 
@@ -779,7 +794,7 @@ function META:EmitBinaryOperator(node)
 end
 
 do
-	function META:EmitFunctionBody(node)
+	function META:EmitFunctionBody(node--[[#: Node]])
 		if node.identifiers_typesystem and not self.config.omit_invalid_code then
 			local emitted = self:StartEmittingInvalidLuaCode()
 			self:EmitToken(node.tokens["arguments_typesystem("])
@@ -805,13 +820,13 @@ do
 		self:EmitToken(node.tokens["end"])
 	end
 
-	function META:EmitAnonymousFunction(node)
+	function META:EmitAnonymousFunction(node--[[#: Node]])
 		self:EmitToken(node.tokens["function"])
 		local distance = (node.tokens["end"].start - node.tokens["arguments)"].start)
 		self:EmitFunctionBody(node)
 	end
 
-	function META:EmitLocalFunction(node)
+	function META:EmitLocalFunction(node--[[#: Node]])
 		self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["function"])
@@ -820,7 +835,7 @@ do
 		self:EmitFunctionBody(node)
 	end
 
-	function META:EmitLocalAnalyzerFunction(node)
+	function META:EmitLocalAnalyzerFunction(node--[[#: Node]])
 		self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["analyzer"])
@@ -831,7 +846,7 @@ do
 		self:EmitFunctionBody(node)
 	end
 
-	function META:EmitLocalTypeFunction(node)
+	function META:EmitLocalTypeFunction(node--[[#: Node]])
 		self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["function"])
@@ -840,7 +855,7 @@ do
 		self:EmitFunctionBody(node, true)
 	end
 
-	function META:EmitTypeFunction(node)
+	function META:EmitTypeFunction(node--[[#: Node]])
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
 
@@ -851,7 +866,7 @@ do
 		self:EmitFunctionBody(node)
 	end
 
-	function META:EmitFunction(node)
+	function META:EmitFunction(node--[[#: Node]])
 		if node.tokens["local"] then
 			self:EmitToken(node.tokens["local"])
 			self:Whitespace(" ")
@@ -863,7 +878,7 @@ do
 		self:EmitFunctionBody(node)
 	end
 
-	function META:EmitAnalyzerFunctionStatement(node)
+	function META:EmitAnalyzerFunctionStatement(node--[[#: Node]])
 		if node.tokens["local"] then
 			self:EmitToken(node.tokens["local"])
 			self:Whitespace(" ")
@@ -887,7 +902,7 @@ do
 	end
 end
 
-function META:EmitTableExpressionValue(node)
+function META:EmitTableExpressionValue(node--[[#: Node]])
 	self:EmitToken(node.tokens["["])
 	self:EmitExpression(node.key_expression)
 	self:EmitToken(node.tokens["]"])
@@ -897,7 +912,7 @@ function META:EmitTableExpressionValue(node)
 	self:EmitExpression(node.value_expression)
 end
 
-function META:EmitTableKeyValue(node)
+function META:EmitTableKeyValue(node--[[#: Node]])
 	self:EmitToken(node.tokens["identifier"])
 	self:Whitespace(" ")
 	self:EmitToken(node.tokens["="])
@@ -914,11 +929,11 @@ function META:EmitTableKeyValue(node)
 	if break_binary then self:Outdent() end
 end
 
-function META:EmitEmptyUnion(node)
+function META:EmitEmptyUnion(node--[[#: Node]])
 	self:EmitToken(node.tokens["|"])
 end
 
-function META:EmitTuple(node)
+function META:EmitTuple(node--[[#: Node]])
 	self:EmitToken(node.tokens["("])
 	self:EmitExpressionList(node.expressions)
 
@@ -931,14 +946,18 @@ function META:EmitTuple(node)
 	self:EmitToken(node.tokens[")"])
 end
 
-function META:EmitVararg(node)
+function META:EmitVararg(node--[[#: Node]])
 	self:EmitToken(node.tokens["..."])
 
 	if not self.config.analyzer_function then self:EmitExpression(node.value) end
 end
 
-function META:EmitTable(tree)
-	if tree.spread then self:EmitNonSpace("table.mergetables") end
+function META:EmitTable(tree--[[#: Node]])
+	if tree.spread then
+		if self.config.omit_invalid_code then
+			self:EmitNonSpace("table.mergetables")
+		end
+	end
 
 	local during_spread = false
 	self:EmitToken(tree.tokens["{"])
@@ -955,17 +974,22 @@ function META:EmitTable(tree)
 
 			if node.kind == "table_index_value" then
 				if node.spread then
-					if during_spread then
-						self:EmitNonSpace("},")
-						during_spread = false
-					end
+					if not self.config.omit_invalid_code then
+						self:EmitToken(node.spread.tokens["..."])
+						self:EmitExpression(node.spread.expression)
+					else
+						if during_spread then
+							self:EmitNonSpace("},")
+							during_spread = false
+						end
 
-					self:EmitExpression(node.spread.expression)
+						self:EmitExpression(node.spread.expression)
+					end
 				else
 					self:EmitExpression(node.value_expression)
 				end
 			elseif node.kind == "table_key_value" then
-				if tree.spread and not during_spread then
+				if self.config.omit_invalid_code and tree.spread and not during_spread then
 					during_spread = true
 					self:EmitNonSpace("{")
 				end
@@ -999,7 +1023,7 @@ function META:EmitTable(tree)
 	self:EmitToken(tree.tokens["}"])
 end
 
-function META:EmitPrefixOperator(node)
+function META:EmitPrefixOperator(node--[[#: Node]])
 	local func_chunks = node.environment == "runtime" and
 		runtime_syntax:GetFunctionForPrefixOperator(node.value)
 
@@ -1029,7 +1053,7 @@ function META:EmitPrefixOperator(node)
 	end
 end
 
-function META:EmitPostfixOperator(node)
+function META:EmitPostfixOperator(node--[[#: Node]])
 	local func_chunks = node.environment == "runtime" and
 		runtime_syntax:GetFunctionForPostfixOperator(node.value)
 	-- no such thing as postfix operator in lua,
@@ -1041,7 +1065,7 @@ function META:EmitPostfixOperator(node)
 	self.operator_transformed = true
 end
 
-function META:EmitBlock(statements)
+function META:EmitBlock(statements--[[#: List<|Node|>]])
 	self:PushForcedLineBreaking(false)
 	self:Indent()
 	self:EmitStatements(statements)
@@ -1049,7 +1073,7 @@ function META:EmitBlock(statements)
 	self:PopForcedLineBreaking()
 end
 
-function META:EmitIfStatement(node)
+function META:EmitIfStatement(node--[[#: Node]])
 	local short = not self:ShouldLineBreakNode(node)
 
 	for i = 1, #node.statements do
@@ -1090,7 +1114,7 @@ function META:EmitIfStatement(node)
 	self:EmitToken(node.tokens["end"])
 end
 
-function META:EmitGenericForStatement(node)
+function META:EmitGenericForStatement(node--[[#: Node]])
 	self:EmitToken(node.tokens["for"])
 	self:Whitespace(" ")
 	self:EmitIdentifierList(node.identifiers)
@@ -1109,7 +1133,7 @@ function META:EmitGenericForStatement(node)
 	self:EmitToken(node.tokens["end"])
 end
 
-function META:EmitNumericForStatement(node)
+function META:EmitNumericForStatement(node--[[#: Node]])
 	self:EmitToken(node.tokens["for"])
 	self:PushLoop(node)
 	self:Whitespace(" ")
@@ -1128,7 +1152,7 @@ function META:EmitNumericForStatement(node)
 	self:EmitToken(node.tokens["end"])
 end
 
-function META:EmitWhileStatement(node)
+function META:EmitWhileStatement(node--[[#: Node]])
 	self:EmitToken(node.tokens["while"])
 	self:EmitLineBreakableExpression(node.expression)
 	self:EmitToken(node.tokens["do"])
@@ -1141,7 +1165,7 @@ function META:EmitWhileStatement(node)
 	self:EmitToken(node.tokens["end"])
 end
 
-function META:EmitRepeatStatement(node)
+function META:EmitRepeatStatement(node--[[#: Node]])
 	self:EmitToken(node.tokens["repeat"])
 	self:PushLoop(node)
 	self:Whitespace("\n")
@@ -1153,23 +1177,23 @@ function META:EmitRepeatStatement(node)
 	self:EmitExpression(node.expression)
 end
 
-function META:EmitLabelStatement(node)
+function META:EmitLabelStatement(node--[[#: Node]])
 	self:EmitToken(node.tokens["::"])
 	self:EmitToken(node.tokens["identifier"])
 	self:EmitToken(node.tokens["::"])
 end
 
-function META:EmitGotoStatement(node)
+function META:EmitGotoStatement(node--[[#: Node]])
 	self:EmitToken(node.tokens["goto"])
 	self:Whitespace(" ")
 	self:EmitToken(node.tokens["identifier"])
 end
 
-function META:EmitBreakStatement(node)
+function META:EmitBreakStatement(node--[[#: Node]])
 	self:EmitToken(node.tokens["break"])
 end
 
-function META:EmitContinueStatement(node)
+function META:EmitContinueStatement(node--[[#: Node]])
 	local loop_node = self:GetLoopNode()
 
 	if loop_node then
@@ -1182,7 +1206,7 @@ function META:EmitContinueStatement(node)
 	end
 end
 
-function META:EmitDoStatement(node)
+function META:EmitDoStatement(node--[[#: Node]])
 	self:EmitToken(node.tokens["do"])
 	self:Whitespace("\n")
 	self:EmitBlock(node.statements)
@@ -1191,7 +1215,7 @@ function META:EmitDoStatement(node)
 	self:EmitToken(node.tokens["end"])
 end
 
-function META:EmitReturnStatement(node)
+function META:EmitReturnStatement(node--[[#: Node]])
 	self:EmitToken(node.tokens["return"])
 
 	if node.expressions[1] then
@@ -1202,7 +1226,7 @@ function META:EmitReturnStatement(node)
 	end
 end
 
-function META:EmitSemicolonStatement(node)
+function META:EmitSemicolonStatement(node--[[#: Node]])
 	if self.config.no_semicolon then
 		self:EmitToken(node.tokens[";"], "")
 	else
@@ -1210,7 +1234,7 @@ function META:EmitSemicolonStatement(node)
 	end
 end
 
-function META:EmitAssignment(node)
+function META:EmitAssignment(node--[[#: Node]])
 	if node.tokens["local"] then
 		self:EmitToken(node.tokens["local"])
 		self:Whitespace(" ")
@@ -1237,7 +1261,7 @@ function META:EmitAssignment(node)
 	end
 end
 
-function META:EmitStatement(node)
+function META:EmitStatement(node--[[#: Node]])
 	if node.kind == "if" then
 		self:EmitIfStatement(node)
 	elseif node.kind == "goto" then
@@ -1292,7 +1316,9 @@ function META:EmitStatement(node)
 			if node.kind == "assignment" then self:Emit_ENVFromAssignment(node) end
 		end
 	elseif node.kind == "call_expression" then
+		self.is_call_expression = true
 		self:EmitExpression(node.value)
+		self.is_call_expression = false
 	elseif node.kind == "shebang" then
 		self:EmitToken(node.tokens["shebang"])
 	elseif node.kind == "continue" then
@@ -1328,7 +1354,7 @@ function META:EmitStatement(node)
 	end
 end
 
-local function general_kind(self, node)
+local function general_kind(self--[[#: META.@Self]], node--[[#: Node]])
 	if node.kind == "call_expression" then
 		for i, v in ipairs(node.value.expressions) do
 			if v.kind == "function" then return "other" end
@@ -1347,7 +1373,7 @@ local function general_kind(self, node)
 	return "other"
 end
 
-function META:EmitStatements(tbl)
+function META:EmitStatements(tbl--[[#: List<|Node|>]])
 	for i, node in ipairs(tbl) do
 		if i > 1 and general_kind(self, node) == "other" and node.kind ~= "end_of_file" then
 			self:Whitespace("\n")
@@ -1373,7 +1399,7 @@ function META:EmitStatements(tbl)
 	end
 end
 
-function META:ShouldBreakExpressionList(tbl)
+function META:ShouldBreakExpressionList(tbl--[[#: List<|Node|>]])
 	if self.config.preserve_whitespace == false then
 		if #tbl == 0 then return false end
 
@@ -1389,7 +1415,7 @@ function META:ShouldBreakExpressionList(tbl)
 	return false
 end
 
-function META:EmitNodeList(tbl, func)
+function META:EmitNodeList(tbl--[[#: List<|Node|>]], func--[[#: Function]])
 	for i = 1, #tbl do
 		self:PushForcedLineBreaking(self:ShouldLineBreakNode(tbl[i]))
 		local break_binary = self:IsLineBreaking() and tbl[i].kind == "binary_operator"
@@ -1415,7 +1441,7 @@ function META:EmitNodeList(tbl, func)
 	end
 end
 
-function META:HasTypeNotation(node)
+function META:HasTypeNotation(node--[[#: Node]])
 	return node.type_expression or node:GetLastType() or node.return_types
 end
 
@@ -1451,7 +1477,7 @@ function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
 	end
 end
 
-function META:EmitFunctionReturnAnnotation(node, analyzer_function)
+function META:EmitFunctionReturnAnnotation(node--[[#: Node]], analyzer_function--[[#: Node]])
 	if not self.config.type_annotations then return end
 
 	if self:HasTypeNotation(node) and node.tokens["return:"] then
@@ -1459,7 +1485,7 @@ function META:EmitFunctionReturnAnnotation(node, analyzer_function)
 	end
 end
 
-function META:EmitAnnotationExpression(node)
+function META:EmitAnnotationExpression(node--[[#: Node]])
 	if node.type_expression then
 		self:EmitTypeExpression(node.type_expression)
 	elseif node:GetLastType() and self.config.type_annotations ~= "explicit" then
@@ -1467,7 +1493,7 @@ function META:EmitAnnotationExpression(node)
 	end
 end
 
-function META:EmitAsAnnotationExpression(node)
+function META:EmitAsAnnotationExpression(node--[[#: Node]])
 	self:OptionalWhitespace()
 	self:Whitespace(" ")
 	self:EmitToken(node.tokens["as"])
@@ -1475,7 +1501,7 @@ function META:EmitAsAnnotationExpression(node)
 	self:EmitAnnotationExpression(node)
 end
 
-function META:EmitColonAnnotationExpression(node)
+function META:EmitColonAnnotationExpression(node--[[#: Node]])
 	if node.tokens[":"] then
 		self:EmitToken(node.tokens[":"])
 	else
@@ -1486,7 +1512,7 @@ function META:EmitColonAnnotationExpression(node)
 	self:EmitAnnotationExpression(node)
 end
 
-function META:EmitAnnotation(node)
+function META:EmitAnnotation(node--[[#: Node]])
 	if not self.config.type_annotations then return end
 
 	if self:HasTypeNotation(node) and not node.tokens["as"] then
@@ -1494,7 +1520,7 @@ function META:EmitAnnotation(node)
 	end
 end
 
-function META:EmitIdentifier(node)
+function META:EmitIdentifier(node--[[#: Node]])
 	if node.identifier then
 		self:EmitToken(node.identifier)
 
@@ -1513,7 +1539,7 @@ function META:EmitIdentifier(node)
 end
 
 do -- types
-	function META:EmitTypeBinaryOperator(node)
+	function META:EmitTypeBinaryOperator(node--[[#: Node]])
 		if node.left then self:EmitTypeExpression(node.left) end
 
 		if node.value.value == "." or node.value.value == ":" then
@@ -1527,12 +1553,12 @@ do -- types
 		if node.right then self:EmitTypeExpression(node.right) end
 	end
 
-	function META:EmitType(node)
+	function META:EmitType(node--[[#: Node]])
 		self:EmitToken(node.value)
 		self:EmitAnnotation(node)
 	end
 
-	function META:EmitTableType(node)
+	function META:EmitTableType(node--[[#: Node]])
 		local tree = node
 		self:EmitToken(tree.tokens["{"])
 		local newline = self:ShouldLineBreakNode(tree)
@@ -1586,7 +1612,7 @@ do -- types
 		self:EmitToken(tree.tokens["}"])
 	end
 
-	function META:EmitAnalyzerFunction(node)
+	function META:EmitAnalyzerFunction(node--[[#: Node]])
 		if not self.config.analyzer_function then
 			if node.tokens["analyzer"] then
 				self:EmitToken(node.tokens["analyzer"])
@@ -1652,7 +1678,7 @@ do -- types
 		end
 	end
 
-	function META:EmitTypeExpression(node)
+	function META:EmitTypeExpression(node--[[#: Node]])
 		if node.tokens["("] then
 			for _, node in ipairs(node.tokens["("]) do
 				self:EmitToken(node)
@@ -1701,6 +1727,12 @@ do -- types
 			error("unhandled token type " .. node.kind)
 		end
 
+		if node.tokens["as"] then
+			self:Whitespace(" ")
+			self:EmitToken(node.tokens["as"])
+			self:Whitespace(" ")
+		end
+
 		if not self.config.analyzer_function then
 			if node.type_expression then
 				self:EmitTypeExpression(node.type_expression)
@@ -1711,6 +1743,12 @@ do -- types
 			for _, node in ipairs(node.tokens[")"]) do
 				self:EmitToken(node)
 			end
+		end
+
+		if node.tokens[")"] and newlines then
+			self:Outdent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
 		end
 	end
 
@@ -1730,7 +1768,7 @@ do -- types
 		return emitted
 	end
 
-	function META:StopEmittingInvalidLuaCode(emitted)
+	function META:StopEmittingInvalidLuaCode(emitted--[[#: boolean]])
 		if emitted then
 			if self:GetPrevChar() == B("]") then self:Whitespace(" ") end
 
@@ -1759,8 +1797,8 @@ do -- types
 		end
 	end
 
-	function META:EmitInvalidLuaCode(func, ...)
-		if self.config.omit_invalid_code then return end
+	function META:EmitInvalidLuaCode(func--[[#: ref keyof<|META|>]], ...--[[#: ref ...any]])
+		if self.config.omit_invalid_code then return true end
 
 		local emitted = self:StartEmittingInvalidLuaCode()
 		self[func](self, ...)
@@ -1770,7 +1808,7 @@ do -- types
 end
 
 do -- extra
-	function META:EmitTranspiledDestructureAssignment(node)
+	function META:EmitTranspiledDestructureAssignment(node--[[#: Node]])
 		self:EmitToken(node.tokens["{"], "")
 
 		if node.default then
@@ -1813,7 +1851,7 @@ do -- extra
 		self:EmitNonSpace(")")
 	end
 
-	function META:EmitDestructureAssignment(node)
+	function META:EmitDestructureAssignment(node--[[#: Node]])
 		if node.tokens["local"] then self:EmitToken(node.tokens["local"]) end
 
 		if node.tokens["type"] then
@@ -1834,7 +1872,7 @@ do -- extra
 		self:EmitExpression(node.right)
 	end
 
-	function META:Emit_ENVFromAssignment(node)
+	function META:Emit_ENVFromAssignment(node--[[#: Node]])
 		for i, v in ipairs(node.left) do
 			if v.kind == "value" and v.value.value == "_ENV" then
 				if node.right[i] then
@@ -1846,7 +1884,7 @@ do -- extra
 		end
 	end
 
-	function META:EmitImportExpression(node)
+	function META:EmitImportExpression(node--[[#: Node]])
 		if not node.path then
 			self:EmitToken(node.left.value)
 			self:EmitToken(node.tokens["call("])
@@ -1865,7 +1903,7 @@ do -- extra
 		end
 	end
 
-	function META:EmitRequireExpression(node)
+	function META:EmitRequireExpression(node--[[#: Node]])
 		self:EmitToken(node.tokens["require"])
 		self:EmitToken(node.tokens["arguments("])
 		self:EmitExpressionList(node.expressions)
@@ -1873,7 +1911,7 @@ do -- extra
 	end
 end
 
-function META.New(config)
+function META.New(config--[[#: TranspilerConfig]])
 	local self = setmetatable({}, META)
 	self.config = config or {}
 	self.config.max_argument_length = self.config.max_argument_length or 5

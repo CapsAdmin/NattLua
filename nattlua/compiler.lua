@@ -8,9 +8,11 @@ local helpers = require("nattlua.other.helpers")
 local debug = _G.debug
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local setmetatable = _G.setmetatable
-local Code = require("nattlua.code.code")
+local Code = require("nattlua.code.code").New
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("compiler")
+
+--[[#local type { CompilerConfig } = import("./config.nlua")]]
 
 function META:GetCode()
 	return self.Code
@@ -249,7 +251,7 @@ end
 function META.New(
 	lua_code--[[#: string]],
 	name--[[#: string]],
-	config--[[#: {[any] = any}]],
+	config--[[#: CompilerConfig]],
 	level--[[#: number | nil]]
 )
 	local info = debug.getinfo(level or 2)
@@ -262,13 +264,13 @@ function META.New(
 			parent_line = parent_line,
 			parent_name = parent_name,
 			config = config,
-			Lexer = require("nattlua.lexer.lexer"),
-			Parser = require("nattlua.parser.parser"),
-			Analyzer = require("nattlua.analyzer.analyzer"),
+			Lexer = require("nattlua.lexer.lexer").New,
+			Parser = require("nattlua.parser.parser").New,
+			Analyzer = require("nattlua.analyzer.analyzer").New,
 			Emitter = require("nattlua.transpiler.emitter").New,
 		},
 		META
 	)
 end
 
-return META.New
+return META

@@ -49,10 +49,6 @@ function META:EmitExpression(node)
 		self:EmitImportExpression(node)
 	elseif node.kind == "type_table" then
 		self:EmitTableType(node)
-	elseif node.kind == "table_expression_value" then
-		self:EmitTableExpressionValue(node)
-	elseif node.kind == "table_key_value" then
-		self:EmitTableKeyValue(node)
 	else
 		error("unhandled token type " .. node.kind)
 	end
@@ -272,22 +268,6 @@ do
 	end
 end
 
-function META:EmitTableExpressionValue(node)
-	self:EmitToken(node.tokens["["])
-	self:Whitespace("(")
-	self:EmitExpression(node.expressions[1])
-	self:Whitespace(")")
-	self:EmitToken(node.tokens["]"])
-	self:EmitToken(node.tokens["="], ":")
-	self:EmitExpression(node.expressions[2])
-end
-
-function META:EmitTableKeyValue(node)
-	self:EmitToken(node.tokens["identifier"])
-	self:EmitToken(node.tokens["="], ":")
-	self:EmitExpression(node.value_expression)
-end
-
 function META:EmitTable(tree)
 	if tree.spread then self:Emit("table.mergetables") end
 
@@ -324,9 +304,17 @@ function META:EmitTable(tree)
 					self:Emit("{")
 				end
 
-				self:EmitTableKeyValue(node)
+				self:EmitToken(node.tokens["identifier"])
+				self:EmitToken(node.tokens["="], ":")
+				self:EmitExpression(node.value_expression)
 			elseif node.kind == "table_expression_value" then
-				self:EmitTableExpressionValue(node)
+				self:EmitToken(node.tokens["["])
+				self:Whitespace("(")
+				self:EmitExpression(node.expressions[1])
+				self:Whitespace(")")
+				self:EmitToken(node.tokens["]"])
+				self:EmitToken(node.tokens["="], ":")
+				self:EmitExpression(node.expressions[2])
 			end
 
 			if tree.tokens["separators"][i] then
@@ -949,10 +937,6 @@ do -- types
 			self:EmitToken(node.value)
 		elseif node.kind == "type_table" then
 			self:EmitTableType(node)
-		elseif node.kind == "table_expression_value" then
-			self:EmitTableExpressionValue(node)
-		elseif node.kind == "table_key_value" then
-			self:EmitTableKeyValue(node)
 		else
 			error("unhandled token type " .. node.kind)
 		end

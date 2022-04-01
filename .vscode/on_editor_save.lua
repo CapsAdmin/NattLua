@@ -60,9 +60,10 @@ local function run_nattlua(path)
 				preserve_whitespace = preserve_whitespace,
 				string_quote = "\"",
 				no_semicolon = true,
-				comment_type_annotations = true,
+				comment_type_annotations = lua_code:find("%-%-%s-COMMENT_TYPE_ANNOTATIONS") ~= nil,
 				type_annotations = true,
 				force_parenthesis = true,
+				omit_invalid_code = lua_code:find("%-%-%s-OMIT_INVALID_LUA_CODE") ~= nil,
 				extra_indent = {
 					Start = {to = "Stop"},
 					Toggle = "toggle",

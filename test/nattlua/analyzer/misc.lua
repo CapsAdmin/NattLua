@@ -569,10 +569,12 @@ analyze[[
         if not _G.LOL then
             error("test fail")
         end
+        _G.LOL = nil
     end
 
     local a = b()
 ]]
+assert(_G.LOL == nil)
 analyze[[
     a: number = (lol as function=()>(number))()
 

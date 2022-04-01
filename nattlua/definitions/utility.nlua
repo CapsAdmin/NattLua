@@ -1,3 +1,4 @@
+type _ = any
 type boolean = true | false
 type integer = number
 type Table = {[any] = any} | {}

@@ -1,6 +1,8 @@
---[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
+--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type { ExpressionKind, StatementKind, statement, expression, Node } = import("./nodes.nlua")]]
+
+--[[#local type { ParserConfig } = import("./../config.nlua")]]
 
 --[[#import<|"~/nattlua/code/code.lua"|>]]
 --[[#local type NodeType = "expression" | "statement"]]
@@ -15,16 +17,18 @@ local quote_helper = require("nattlua.other.quote")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("parser")
 --[[#type META.@Self = {
-	config = any,
-	nodes = List<|any|>,
+	@Name = "Parser",
+	config = ParserConfig,
+	nodes = List<|Node|>,
 	Code = Code,
-	current_statement = false | any,
-	current_expression = false | any,
-	root = false | any,
+	current_statement = false | Node,
+	current_expression = false | Node,
+	root = false | Node,
 	i = number,
 	tokens = List<|Token|>,
 	environment_stack = List<|"typesystem" | "runtime"|>,
-	OnNode = nil | function=(self, any)>(nil),
+	OnNode = nil | function=(self, Node)>(nil),
+	suppress_on_node = nil | {parent = Node, nodes = List<|Node|>},
 }]]
 --[[#type META.@Name = "Parser"]]
 --[[#local type Parser = META.@Self]]
@@ -34,7 +38,7 @@ function META.New(
 	code--[[#: Code]],
 	config--[[#: nil | {
 		root = nil | Node,
-		on_statement = nil | function=(Parser, Node)>(Node),
+		on_node = nil | function=(Parser, Node)>(Node),
 		path = nil | string,
 	}]]
 )
@@ -69,13 +73,14 @@ do
 end
 
 function META:StartNode(
-	type--[[#: ref ("statement" | "expression")]],
+	node_type--[[#: ref ("statement" | "expression")]],
 	kind--[[#: ref (StatementKind | ExpressionKind)]]
 )--[[#: ref Node]]
+	--[[#local type T = node_type == "statement" and statement[kind] or expression[kind] ]]
 	local code_start = assert(self:GetToken()).start
 	local node = CreateNode(
 		{
-			type = type,
+			type = node_type,
 			kind = kind,
 			Code = self.Code,
 			code_start = code_start,
@@ -85,7 +90,7 @@ function META:StartNode(
 		}
 	)
 
-	if type == "expression" then
+	if node_type == "expression" then
 		self.current_expression = node
 	else
 		self.current_statement = node
@@ -94,21 +99,30 @@ function META:StartNode(
 	if self.OnNode then self:OnNode(node) end
 
 	table.insert(self.nodes, 1, node)
-    --[[# 
-        local type T = any
-
-        if type == "expression" then
-            T = expression[kind]
-        elseif type == "statement" then
-            T = statement[kind]
-        end
-
-        if not T then
-            error("cannot find " .. type .. " " .. kind)
-        end
-    ]]
-
 	return node--[[# as T]]
+end
+
+function META:SuppressOnNode()
+	self.suppress_on_node = {parent = self.nodes[1], nodes = {}}
+end
+
+function META:ReRunOnNode(nodes)
+	if not self.suppress_on_node then return end
+
+	for _, node_a in ipairs(self.suppress_on_node.nodes) do
+		for i, node_b in ipairs(nodes) do
+			if node_a == node_b and self.config.on_node then
+				local new_node = self.config.on_node(self, node_a)
+
+				if new_node then
+					nodes[i] = new_node
+					new_node.parent = self.nodes[1]
+				end
+			end
+		end
+	end
+
+	self.suppress_on_node = nil
 end
 
 function META:EndNode(node--[[#: Node]])
@@ -123,7 +137,25 @@ function META:EndNode(node--[[#: Node]])
 	end
 
 	table.remove(self.nodes, 1)
-	return self
+
+	if self.config.on_node then
+		if
+			self.suppress_on_node and
+			node.type == "expression" and
+			self.suppress_on_node.parent == self.nodes[1]
+		then
+			table.insert(self.suppress_on_node, node)
+		elseif self.config.on_node then
+			local new_node = self.config.on_node(self, node)
+
+			if new_node then
+				node = new_node--[[# as any]]
+				node.parent = self.nodes[1]
+			end
+		end
+	end
+
+	return node
 end
 
 function META:Error(
@@ -232,6 +264,21 @@ do
 		return self:ReadToken()--[[# as Token]]
 	end
 
+	function META:ExpectValueTranslate(
+		str--[[#: string]],
+		new_str--[[#: string]],
+		error_start--[[#: Token | nil]],
+		error_stop--[[#: Token | nil]]
+	)--[[#: Token]]
+		if not self:IsValue(str) then
+			error_expect(self, str, "value", error_start, error_stop)
+		end
+
+		local tk = self:ReadToken()--[[# as Token]]
+		tk.value = new_str
+		return tk
+	end
+
 	function META:ExpectType(
 		str--[[#: TokenType]],
 		error_start--[[#: Token | nil]],
@@ -242,6 +289,14 @@ do
 		end
 
 		return self:ReadToken()--[[# as Token]]
+	end
+
+	function META:NewToken(type--[[#: TokenType]], value--[[#: string]])
+		local tk = {}
+		tk.type = type
+		tk.is_whitespace = false
+		tk.value = value
+		return tk
 	end
 end
 
@@ -294,10 +349,6 @@ function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 			out[i] = node
 			i = i + 1
 		end
-
-		if self.config and self.config.on_statement then
-			out[i] = self.config.on_statement(self, out[i - 1]) or out[i - 1]
-		end
 	end
 
 	return out
@@ -309,13 +360,13 @@ end
 
 function META:ReadMultipleValues(
 	max--[[#: nil | number]],
-	reader--[[#: ref function=(Parser, ...: ...any)>(nil | Node)]],
+	reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (nil | Node))]],
 	...--[[#: ref ...any]]
 )
 	local out = {}
 
 	for i = 1, max or self:GetLength() do
-		local node = reader(self, ...)--[[# as Node | nil]]
+		local node = reader(self, ...)
 
 		if not node then break end
 

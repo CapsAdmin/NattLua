@@ -1,13 +1,15 @@
 local META = require("nattlua.parser.base")
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
+local Code = require("nattlua.code.code").New
+local Lexer = require("nattlua.lexer.lexer").New
 local math = _G.math
 local math_huge = math.huge
 local table_insert = _G.table.insert
 local table_remove = _G.table.remove
 local ipairs = _G.ipairs
 
---[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.nlua")]]
+--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type { ExpressionKind, StatementKind, statement, expression } = import("./nodes.nlua")]]
 
@@ -34,21 +36,21 @@ function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
 		end
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
 function META:ReadValueExpressionToken(expect_value--[[#: nil | string]])
 	local node = self:StartNode("expression", "value")
 	node.value = expect_value and self:ExpectValue(expect_value) or self:ReadToken()
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
 function META:ReadValueExpressionType(expect_value--[[#: TokenType]])
 	local node = self:StartNode("expression", "value")
 	node.value = self:ExpectType(expect_value)
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -168,7 +170,7 @@ function META:ReadAnalyzerFunctionBody(
 			end
 		end
 
-		self:EndNode(vararg)
+		vararg = self:EndNode(vararg)
 		table_insert(node.identifiers, vararg)
 	end
 
@@ -199,11 +201,44 @@ assert(loadfile("nattlua/parser/expressions.lua"))(META)
 assert(loadfile("nattlua/parser/statements.lua"))(META)
 assert(loadfile("nattlua/parser/teal.lua"))(META)
 
-function META:ParseString(code)
-	local compiler = require("nattlua").Compiler(code, "temp")
-	assert(compiler:Lex())
-	assert(compiler:Parse())
-	return compiler.SyntaxTree
+function META:LexString(str--[[#: string]], config--[[#: nil | any]])
+	config = config or {}
+	local code = Code(str, config.file_path)
+	local lexer = Lexer(code, config)
+	local ok, tokens = xpcall(lexer.GetTokens, debug.traceback, lexer)
+
+	if not ok then return nil, tokens end
+
+	return tokens, code
+end
+
+function META:ParseString(str--[[#: string]], config--[[#: nil | any]])
+	local tokens, code = self:LexString(str, config)
+
+	if not tokens then return nil, code end
+
+	local parser = self.New(tokens, code, config)
+	local ok, node = xpcall(parser.ReadRootNode, debug.traceback, parser)
+
+	if not ok then return nil, node end
+
+	return node
+end
+
+function META:ParseFile(path--[[#: string]], config--[[#: nil | any]])
+	config = config or {}
+	config.file_path = config.file_path or path
+	config.file_name = config.file_name or path
+	local f, err = io.open(path, "rb")
+
+	if not f then return nil, err end
+
+	local code = f:read("*a")
+	f:close()
+
+	if not code then return nil, "file is empty" end
+
+	return self:ParseString(code, config)
 end
 
 local imported_index = nil
@@ -216,7 +251,7 @@ function META:ReadRootNode()
 	if self:IsType("shebang") then
 		shebang = self:StartNode("statement", "shebang")
 		shebang.tokens["shebang"] = self:ExpectType("shebang")
-		self:EndNode(shebang)
+		shebang = self:EndNode(shebang)
 		node.tokens["shebang"] = shebang.tokens["shebang"]
 	end
 
@@ -250,12 +285,12 @@ function META:ReadRootNode()
 	if self:IsType("end_of_file") then
 		local eof = self:StartNode("statement", "end_of_file")
 		eof.tokens["end_of_file"] = self.tokens[#self.tokens]
-		self:EndNode(eof)
+		eof = self:EndNode(eof)
 		table.insert(node.statements, eof)
 		node.tokens["eof"] = eof.tokens["end_of_file"]
 	end
 
-	self:EndNode(node)
+	node = self:EndNode(node)
 	return node
 end
 
@@ -294,4 +329,4 @@ function META:ReadNode()
 		self:ReadCallOrAssignmentStatement()
 end
 
-return META.New
+return META

@@ -814,3 +814,28 @@ analyze[[
 
     §assert(#analyzer.diagnostics == 0)
 ]]
+analyze[[
+    local type Lol = {}
+    local function CreateLol()
+        return { } as Lol
+    end
+    
+    local type T = {
+        foo = true,
+    }
+    local function lol()
+    
+        return CreateLol() as T
+    end
+    
+    local x = lol()
+    
+    attest.expect_diagnostic("error", "has no field.-bar")
+    x.bar = false
+    
+    attest.equal(x, {} as {
+        foo = true,
+    })
+    attest.equal(Lol, {})
+    attest.equal(T, {foo = true})
+]]

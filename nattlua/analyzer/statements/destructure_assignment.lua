@@ -4,7 +4,7 @@ local NodeToString = require("nattlua.types.string").NodeToString
 local Nil = require("nattlua.types.symbol").Nil
 return {
 	AnalyzeDestructureAssignment = function(self, statement)
-		local obj = self:AnalyzeExpression(statement.right)
+		local obj, err = self:AnalyzeExpression(statement.right)
 
 		if obj.Type == "union" then obj = obj:GetData()[1] end
 
@@ -12,6 +12,7 @@ return {
 
 		if obj.Type ~= "table" then
 			self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj.Type))
+			return
 		end
 
 		if statement.default then

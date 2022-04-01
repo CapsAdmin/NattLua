@@ -1,7 +1,7 @@
 local helpers = require("nattlua.other.helpers")
 helpers.JITOptimize()
 local util = require("examples.util")
-local Code = require("nattlua.code.code")
+local Code = require("nattlua.code.code").New
 local lua_code = assert(
 	util.FetchCode(
 		"examples/benchmarks/temp/10mb.lua",

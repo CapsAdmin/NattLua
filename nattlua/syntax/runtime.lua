@@ -1,4 +1,4 @@
-local Syntax = require("nattlua.syntax.syntax")
+local Syntax = require("nattlua.syntax.syntax").New
 local runtime = Syntax()
 runtime:AddSymbolCharacters(
 	{

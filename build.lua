@@ -40,6 +40,7 @@ if not func then
 	local f = io.open("temp_build_output.lua", "w")
 	f:write(lua_code)
 	f:close()
+	nl.File("temp_build_output.lua"):Parse()
 	return
 end
 
