@@ -12,7 +12,7 @@ do
 		if type(b) == "table" then b = json.encode(b) end
 
 		if not TableEqual(json.decode(a), json.decode(b)) then
-			error(a .. "\n~=\n" .. b)
+			error(a .. "\n~=\n" .. b, 2)
 		end
 	end
 
