@@ -40,7 +40,7 @@ return {
 		local left = {}
 		local right = {}
 
-        -- first we evaluate the left hand side
+		-- first we evaluate the left hand side
 		for left_pos, exp_key in ipairs(statement.left) do
 			if exp_key.kind == "value" then
 				-- local foo, bar = *
@@ -90,17 +90,17 @@ return {
 						end
 					end
 				elseif obj.Type == "union" then
-                    -- if the union is empty or has no tuples, just assign it
-                    if obj:IsEmpty() or not obj:HasTuples() then
-                        right[right_pos] = obj
-                    else
-                        for i = 1, #statement.left do
-                            -- unpack unions with tuples
-                            -- ⦗false, string, 2⦘ | ⦗true, 1⦘ at first index would be true | false
-                            local index = right_pos + i - 1
-                            right[index] = obj:GetAtIndex(index)
-                        end
-                    end
+					-- if the union is empty or has no tuples, just assign it
+					if obj:IsEmpty() or not obj:HasTuples() then
+						right[right_pos] = obj
+					else
+						for i = 1, #statement.left do
+							-- unpack unions with tuples
+							-- ⦗false, string, 2⦘ | ⦗true, 1⦘ at first index would be true | false
+							local index = right_pos + i - 1
+							right[index] = obj:GetAtIndex(index)
+						end
+					end
 				else
 					right[right_pos] = obj
 
