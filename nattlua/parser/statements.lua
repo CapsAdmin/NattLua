@@ -481,7 +481,7 @@ function META:ReadCallOrAssignmentStatement()
 	local left = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
 
 	if self:IsValue("=") then
-		local node = self:StartNode("statement", "assignment")
+		local node = self:StartNode("statement", "assignment", left[1])
 		node.tokens["="] = self:ExpectValue("=")
 		node.left = left
 
@@ -496,7 +496,7 @@ function META:ReadCallOrAssignmentStatement()
 	end
 
 	if left[1] and (left[1].kind == "postfix_call") and not left[2] then
-		local node = self:StartNode("statement", "call_expression")
+		local node = self:StartNode("statement", "call_expression", left[1])
 		node.value = left[1]
 		node.tokens = left[1].tokens
 		self:ReRunOnNode(left)

@@ -17,7 +17,7 @@ function coverage.Preprocess(code, key)
 
 		return call_expression
 	end
-
+ 
 	local compiler = nl.Compiler(
 		code,
 		"lol",
@@ -26,6 +26,7 @@ function coverage.Preprocess(code, key)
 				if node.type == "statement" then
 					if node.kind == "call_expression" then
 						local start, stop = node:GetStartStop()
+                        print(start, stop, node)
 						node.value = inject_call_expression(parser, node.value, start, stop)
 					end
 				elseif node.type == "expression" then
@@ -67,9 +68,11 @@ function coverage.GetAll()
 end
 
 function coverage.Collect(key)
-	local called = _G.__COVERAGE[key].called
-	local expressions = _G.__COVERAGE[key].expressions
-	local compiler = _G.__COVERAGE[key].compiler
+    local data = _G.__COVERAGE[key]
+
+	local called = data.called
+	local expressions = data.expressions
+	local compiler = data.compiler
 
 
 	local original = compiler.Code:GetString()
@@ -93,12 +96,14 @@ function coverage.Collect(key)
 	for _, start_stop in pairs(called) do
 		local start, stop = unpack(start_stop)
 
-		print(start, stop)
+		print(original:sub(start, stop), start, stop)
 
 		for i = start, stop do
 			buffer[i] = "#"
 		end
 	end
+
+    print(data.preprocesed)
 
 	print(table.concat(buffer))
 end

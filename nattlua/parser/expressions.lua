@@ -57,7 +57,7 @@ function META:ReadSelfCallSubExpression(left_node--[[#: Node]])
 		return
 	end
 
-	local node = self:StartNode("expression", "binary_operator")
+	local node = self:StartNode("expression", "binary_operator", left_node)
 	node.value = self:ReadToken()
 	node.right = self:ReadValueExpressionType("letter")
 	node.left = left_node
@@ -74,7 +74,7 @@ do -- typesystem
 
 		if not node or self:IsValue(",") then
 			local first_expression = node
-			local node = self:StartNode("expression", "tuple")
+			local node = self:StartNode("expression", "tuple", first_expression)
 
 			if self:IsValue(",") then
 				first_expression.tokens[","] = self:ExpectValue(",")
@@ -408,7 +408,7 @@ do -- typesystem
 			typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
 		do
 			local left_node = node
-			node = self:StartNode("expression", "binary_operator")
+			node = self:StartNode("expression", "binary_operator", left_node)
 			node.value = self:ReadToken()
 			node.left = left_node
 			node.right = self:ReadTypeExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
@@ -583,7 +583,7 @@ do -- runtime
 			if not primary_node.tokens[")"] then return end
 		end
 
-		local node = self:StartNode("expression", "postfix_call")
+		local node = self:StartNode("expression", "postfix_call", left_node)
 		local start = self:GetToken()
 
 		if self:IsValue("{") then
@@ -953,7 +953,7 @@ do -- runtime
 			runtime_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
 		do
 			local left_node = node
-			node = self:StartNode("expression", "binary_operator")
+			node = self:StartNode("expression", "binary_operator", first)
 			node.value = self:ReadToken()
 			node.left = left_node
 
