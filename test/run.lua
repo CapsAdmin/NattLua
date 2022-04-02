@@ -50,7 +50,7 @@ if path == "nattlua/analyzer/statements/assignment.lua" then
 	local whitelist = {[path] = true}
 
 	function preprocess.Preprocess(code, name, path, from)
-		if whitelist[path] then coverage.PreProcess(code, name) end
+		if whitelist[path] then return coverage.Preprocess(code, name) end
 
 		return code
 	end
@@ -79,6 +79,6 @@ else
 	end
 end
 
-for k, v in pairs(coverage.GetAll()) do
-	coverage.Collect(k)
-end
+--for k, v in pairs(coverage.GetAll()) do
+	--coverage.Collect(k)
+--end

@@ -112,7 +112,11 @@ function preprocess.package_load(name)
 			local code = f:read("*all") or ""
 			f:close()
 			code = preprocess.Preprocess(code, name, path, "package")
-			return load(code, "@" .. path)
+			local func, err = load(code, "@" .. path)
+			if not func then
+				print(err)
+			end
+			return func
 		end
 	end)
 
