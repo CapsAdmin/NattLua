@@ -1,1 +1,1 @@
-dofile("test/run.lua")
+loadfile("test/run.lua")(...)
