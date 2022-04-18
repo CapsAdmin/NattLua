@@ -44,13 +44,17 @@ function _G.diff(input, expect)
 end
 
 local path = ...
+local covered = {}
 
 if path == "nattlua/analyzer/statements/assignment.lua" then
 	preprocess.Init()
 	local whitelist = {[path] = true}
 
 	function preprocess.Preprocess(code, name, path, from)
-		if whitelist[path] then return coverage.Preprocess(code, name) end
+		if whitelist[path] then 
+			covered[name] = path
+			return coverage.Preprocess(code, name) 
+		end
 
 		return code
 	end
@@ -79,6 +83,9 @@ else
 	end
 end
 
---for k, v in pairs(coverage.GetAll()) do
-	--coverage.Collect(k)
---end
+for name, path in pairs(covered) do
+	local coverage = coverage.Collect(name)
+	local f = io.open(path .. ".coverage", "w")
+	f:write(coverage)
+	f:close()
+end

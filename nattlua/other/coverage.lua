@@ -15,6 +15,8 @@ function coverage.Preprocess(code, key)
 
 		if node.right then call_expression.right = node.right end
 
+		table.insert(expressions, node)
+
 		return call_expression
 	end
  
@@ -26,12 +28,10 @@ function coverage.Preprocess(code, key)
 				if node.type == "statement" then
 					if node.kind == "call_expression" then
 						local start, stop = node:GetStartStop()
-                        print(start, stop, node)
 						node.value = inject_call_expression(parser, node.value, start, stop)
 					end
 				elseif node.type == "expression" then
 					local start, stop = node:GetStartStop()
-					expressions[start .. "," .. stop] = {start, stop}
 
 					if node.is_left_assignment or node.is_identifier or 
 						(node.kind == "binary_operator" and (node.value.value == "." or node.value.value == ":")) or
@@ -39,8 +39,6 @@ function coverage.Preprocess(code, key)
 					then
 						return
 					end
-
-					expressions[start .. "," .. stop] = {start, stop}
 
 					return inject_call_expression(parser, node, start, stop)
 				end
@@ -67,6 +65,8 @@ function coverage.GetAll()
 	return _G.__COVERAGE
 end
 
+local MASK = " "
+
 function coverage.Collect(key)
     local data = _G.__COVERAGE[key]
 
@@ -74,38 +74,98 @@ function coverage.Collect(key)
 	local expressions = data.expressions
 	local compiler = data.compiler
 
-
 	local original = compiler.Code:GetString()
 	local buffer = {}
 	for i = 1, #original do
 		buffer[i] = original:sub(i, i)
 	end
-	
-	-- remove sub calls
-	for key1, start_stop in pairs(called) do
-		local start, stop = unpack(start_stop)
-		for key2, start_stop2 in pairs(called) do
-			local start2, stop2 = unpack(start_stop2)
 
-			if start2 > start and stop2 < stop then
-				called[key1] = nil
+	local not_called = {}
+
+	for _, exp in ipairs(expressions) do
+		local start, stop = exp:GetStartStop()
+		if not called[start..", "..stop] then
+			for i = start, stop do
+				not_called[i] = true
 			end
+		end
+	end
+
+	local function mask_token(token)
+		for i = token.start, token.stop do
+			if buffer[i] ~= MASK and buffer[i] ~= "\n" then
+				buffer[i] = MASK
+			end
+		end
+	end
+
+	local function mask_node(node)
+		local start, stop = node:GetStartStop()
+
+		for i = start, stop do
+			if buffer[i] ~= MASK and buffer[i] ~= "\n" then
+				buffer[i] = MASK
+			end
+		end		
+	end
+
+
+	local function mask_tokens(tokens)
+		for _, token in pairs(tokens) do
+			if not token.start then
+				for _, token in ipairs(token) do
+					mask_token(token)
+				end
+			else
+				mask_token(token)
+			end
+		end
+	end
+
+	for _, exp in ipairs(expressions) do
+		local start, stop = exp:GetStartStop()
+		local key = start..", "..stop
+		if called[key] then
+			local statement = exp:GetStatement()
+			if statement.kind == "local_assignment" then
+				for _, node in ipairs(statement.left) do
+					mask_node(node)
+				end
+			elseif statement.kind == "numeric_for" then
+				for _, node in ipairs(statement.identifiers) do
+					mask_node(node)
+				end
+				for _, node in ipairs(statement.expressions) do
+					mask_tokens(node.tokens)
+				end
+			end
+
+			mask_tokens(statement.tokens)
+			
+			if exp.kind == "table" then
+				for _, statement in ipairs(exp.children) do
+					mask_tokens(statement.tokens)
+				end
+			elseif exp.kind == "binary_operator" then
+				mask_token(exp.value)
+			end
+			mask_tokens(exp.tokens)
 		end
 	end
 
 	for _, start_stop in pairs(called) do
 		local start, stop = unpack(start_stop)
 
-		print(original:sub(start, stop), start, stop)
-
 		for i = start, stop do
-			buffer[i] = "#"
+			if not not_called[i] then
+				if buffer[i] ~= MASK and buffer[i] ~= "\n" then
+					buffer[i] = MASK
+				end
+			end
 		end
 	end
 
-    print(data.preprocesed)
-
-	print(table.concat(buffer))
+	return table.concat(buffer)
 end
 
 return coverage
