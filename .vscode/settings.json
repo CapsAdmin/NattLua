@@ -15,7 +15,8 @@
     "**.js": true
   },
   "files.associations": {
-    "*.nlua": "lua"
+    "*.nlua": "lua",
+    "*.lua.coverage": "lua",
   },
   "Lua.workspace.ignoreDir": [
       "examples/nattlua/",

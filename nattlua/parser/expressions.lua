@@ -619,7 +619,7 @@ do -- runtime
 			node.tokens["call)"] = self:ExpectValue(")")
 		end
 
-		if primary_node.kind == "value" then
+		if primary_node.kind == "value" and node.expressions[1] and node.expressions[1].value then
 			local name = primary_node.value.value
 
 			if
@@ -953,7 +953,7 @@ do -- runtime
 			runtime_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
 		do
 			local left_node = node
-			node = self:StartNode("expression", "binary_operator", first)
+			node = self:StartNode("expression", "binary_operator", left_node)
 			node.value = self:ReadToken()
 			node.left = left_node
 

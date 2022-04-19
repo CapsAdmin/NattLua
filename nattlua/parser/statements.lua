@@ -81,6 +81,7 @@ do
 
 		local node = self:ReadValueExpressionToken()
 		local first = node
+		first.standalone_letter = node
 
 		while self:IsValue(".") or self:IsValue(":") do
 			local left = node
@@ -90,10 +91,10 @@ do
 			node.right = self:ReadValueExpressionType("letter")
 			node.left = left
 			node.right.self_call = self_call
+			node.is_left_assignment = true
 			node = self:EndNode(node)
 		end
-
-		first.standalone_letter = node
+		
 		return node
 	end
 

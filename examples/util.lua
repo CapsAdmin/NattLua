@@ -7,7 +7,7 @@ function util.GetFilesRecursively(dir, ext)
 	local paths = {}
 
 	for line in lines:gmatch("(.-)\n") do
-		if line:sub(-4) == ext then table.insert(paths, line) end
+		if line:sub(-#ext) == ext then table.insert(paths, line) end
 	end
 
 	return paths

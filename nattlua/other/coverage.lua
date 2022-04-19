@@ -9,6 +9,11 @@ function coverage.Preprocess(code, key)
 	local function inject_call_expression(parser, node, start, stop)
 		local call_expression = parser:ParseString(" Æ(" .. start .. "," .. stop .. ") ").statements[1].value
 
+		if node.kind == "postfix_call" and not node.tokens["call("] then
+			node.tokens["call("] = parser:NewToken("symbol", "(")
+			node.tokens["call)"] = parser:NewToken("symbol", ")")
+		end
+
 		-- add comma to last expression since we're adding a new one
 		call_expression.expressions[#call_expression.expressions].tokens[","] = parser:NewToken("symbol", ",")
 		table.insert(call_expression.expressions, node)
@@ -16,6 +21,10 @@ function coverage.Preprocess(code, key)
 		if node.right then call_expression.right = node.right end
 
 		table.insert(expressions, node)
+
+		-- to prevent start stop messing up from previous injections
+		call_expression.code_start = node.code_start
+		call_expression.code_stop = node.code_stop
 
 		return call_expression
 	end
@@ -32,8 +41,8 @@ function coverage.Preprocess(code, key)
 					end
 				elseif node.type == "expression" then
 					local start, stop = node:GetStartStop()
-
-					if node.is_left_assignment or node.is_identifier or 
+					
+					if node.is_left_assignment or node.is_identifier or node:GetStatement().kind == "function" or
 						(node.kind == "binary_operator" and (node.value.value == "." or node.value.value == ":")) or
 						(node.parent.kind == "binary_operator" and (node.parent.value.value == "." or node.parent.value.value == ":"))
 					then
@@ -51,7 +60,9 @@ function coverage.Preprocess(code, key)
 	lua = [[
 local called = _G.__COVERAGE["]] .. key .. [["].called
 local function Æ(start, stop, ...)
-	called[start..", "..stop] = {start, stop}
+	local key = start..", "..stop
+	called[key] = called[key] or {start, stop, 0}
+	called[key][3] = called[key][3] + 1
 	return ...
 end
 ------------------------------------------------------
@@ -91,78 +102,9 @@ function coverage.Collect(key)
 		end
 	end
 
-	local function mask_token(token)
-		for i = token.start, token.stop do
-			if buffer[i] ~= MASK and buffer[i] ~= "\n" then
-				buffer[i] = MASK
-			end
-		end
-	end
-
-	local function mask_node(node)
-		local start, stop = node:GetStartStop()
-
-		for i = start, stop do
-			if buffer[i] ~= MASK and buffer[i] ~= "\n" then
-				buffer[i] = MASK
-			end
-		end		
-	end
-
-
-	local function mask_tokens(tokens)
-		for _, token in pairs(tokens) do
-			if not token.start then
-				for _, token in ipairs(token) do
-					mask_token(token)
-				end
-			else
-				mask_token(token)
-			end
-		end
-	end
-
-	for _, exp in ipairs(expressions) do
-		local start, stop = exp:GetStartStop()
-		local key = start..", "..stop
-		if called[key] then
-			local statement = exp:GetStatement()
-			if statement.kind == "local_assignment" then
-				for _, node in ipairs(statement.left) do
-					mask_node(node)
-				end
-			elseif statement.kind == "numeric_for" then
-				for _, node in ipairs(statement.identifiers) do
-					mask_node(node)
-				end
-				for _, node in ipairs(statement.expressions) do
-					mask_tokens(node.tokens)
-				end
-			end
-
-			mask_tokens(statement.tokens)
-			
-			if exp.kind == "table" then
-				for _, statement in ipairs(exp.children) do
-					mask_tokens(statement.tokens)
-				end
-			elseif exp.kind == "binary_operator" then
-				mask_token(exp.value)
-			end
-			mask_tokens(exp.tokens)
-		end
-	end
-
 	for _, start_stop in pairs(called) do
-		local start, stop = unpack(start_stop)
-
-		for i = start, stop do
-			if not not_called[i] then
-				if buffer[i] ~= MASK and buffer[i] ~= "\n" then
-					buffer[i] = MASK
-				end
-			end
-		end
+		local start, stop, count = start_stop[1], start_stop[2], start_stop[3]
+		buffer[start] = "--[[" .. count .. "]]" .. buffer[start]
 	end
 
 	return table.concat(buffer)
