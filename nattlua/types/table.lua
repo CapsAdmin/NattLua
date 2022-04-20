@@ -905,7 +905,7 @@ function META:PrefixOperator(op--[[#: "#"]])
 			return keys[1].key:Copy()
 		end
 
-		return Number(self:GetLength()):SetLiteral(self:IsLiteral())
+		return self:GetLength():SetLiteral(self:IsLiteral())
 	end
 end
 

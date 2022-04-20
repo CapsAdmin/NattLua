@@ -134,8 +134,6 @@ local function Prefix(self, node, r)
 	end
 
 	if op == "-" or op == "~" or op == "#" then
-		if r.Type == "table" then return r:GetLength() end
-
 		return r:PrefixOperator(op)
 	end
 
