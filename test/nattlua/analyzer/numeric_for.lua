@@ -104,3 +104,11 @@ analyze[[
     tbl[50] = true
     attest.equal(tbl[20], _ as (100..1000000) | true)
 ]]
+
+analyze[[
+    local tbl = {}
+    for i = 1, 2 | 3 do
+        tbl[i] = i
+    end
+    attest.equal(tbl[3], 3)
+]]
