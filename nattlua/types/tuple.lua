@@ -303,19 +303,11 @@ function META:Set(i--[[#: number]], val--[[#: TBaseType]])
 	return true
 end
 
-function META:IsConst()
-	for _, obj in ipairs(self:GetData()) do
-		if not obj:IsConst() then return false end
-	end
-
-	return true
-end
-
 function META:IsEmpty()
+	-- never called
 	return self:GetLength() == 0
 end
 
-function META:SetLength() end
 
 function META:IsTruthy()
 	local obj = self:Get(1)
@@ -402,16 +394,6 @@ function META:Unpack(length--[[#: nil | number]])
 	for _ = 1, length do
 		out[i] = self:Get(i)
 
-		if out[i] and out[i].Type == "tuple" then
-			if i == length then
-				for _, v in ipairs({out[i]:Unpack(out[i]:GetMinimumLength())}) do
-					out[i] = v
-					i = i + 1
-				end
-			else
-				out[i] = out[i]:Get(1)
-			end
-		end
 
 		i = i + 1
 	end

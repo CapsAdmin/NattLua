@@ -135,29 +135,6 @@ function META:AddType(e--[[#: TBaseType]])
 	return self
 end
 
-function META:RemoveDuplicates()
-	local indices = {}
-
-	for _, a in ipairs(self.Data) do
-		for i, b in ipairs(self.Data) do
-			if a ~= b and a:Equal(b) then table.insert(indices, i) end
-		end
-	end
-
-	if indices[1] then
-		local off = 0
-		local idx = 1
-
-		for i = 1, #self.Data do
-			while i + off == indices[idx] do
-				off = off + 1
-				idx = idx + 1
-			end
-
-			self.Data[i] = self.Data[i + off]
-		end
-	end
-end
 
 function META:GetData()
 	return self.Data
@@ -191,19 +168,6 @@ function META:Clear()
 	self.Data = {}
 end
 
-function META:GetMinimumLength()
-	local min = 1000
-
-	for _, obj in ipairs(self.Data) do
-		if obj.Type == "tuple" then
-			min = math.min(min, obj:GetMinimumLength())
-		else
-			min = math.min(min, 1)
-		end
-	end
-
-	return min
-end
 
 function META:HasTuples()
 	for _, obj in ipairs(self.Data) do
@@ -253,17 +217,7 @@ function META:GetAtIndex(i--[[#: number]])
 	return val
 end
 
-function META:Get(key--[[#: TBaseType]], from_table--[[#: nil | boolean]])
-	if from_table then
-		for _, obj in ipairs(self.Data) do
-			if obj.Get then
-				local val = obj:Get(key)
-
-				if val then return val end
-			end
-		end
-	end
-
+function META:Get(key--[[#: TBaseType]])
 	local errors = {}
 
 	for _, obj in ipairs(self.Data) do
@@ -282,20 +236,6 @@ function META:Contains(key--[[#: TBaseType]])
 		local ok, reason = key:IsSubsetOf(obj)
 
 		if ok then return true end
-	end
-
-	return false
-end
-
-function META:ContainsOtherThan(key--[[#: TBaseType]])
-	local found = false
-
-	for _, obj in ipairs(self.Data) do
-		if key:IsSubsetOf(obj) then
-			found = true
-		elseif found then
-			return true
-		end
 	end
 
 	return false
@@ -403,25 +343,6 @@ function META:Union(union--[[#: TUnion]])
 	return copy
 end
 
-function META:Intersect(union--[[#: TUnion]])
-	local copy = META.New()
-
-	for _, e in ipairs(self.Data) do
-		if union:Get(e) then copy:AddType(e) end
-	end
-
-	return copy
-end
-
-function META:Subtract(union--[[#: TUnion]])
-	local copy = self:Copy()
-
-	for _, e in ipairs(self.Data) do
-		copy:RemoveType(e)
-	end
-
-	return copy
-end
 
 function META:Copy(map--[[#: Map<|any, any|>]], copy_tables--[[#: nil | boolean]])
 	map = map or {}
@@ -454,30 +375,6 @@ function META:IsFalsy()
 	end
 
 	return false
-end
-
-function META:DisableTruthy()
-	local found = {}
-
-	for _, v in ipairs(self.Data) do
-		if v:IsCertainlyTrue() then table.insert(found, v) end
-	end
-
-	for _, v in ipairs(found) do
-		self:RemoveType(v)
-	end
-
-	self.truthy_disabled = found
-end
-
-function META:EnableTruthy()
-	if not self.truthy_disabled then return self end
-
-	for _, v in ipairs(self.truthy_disabled) do
-		self:AddType(v)
-	end
-
-	return self
 end
 
 function META:DisableFalsy()

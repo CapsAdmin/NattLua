@@ -257,31 +257,6 @@ local function copy(tbl)
 end
 
 return function(META)
-	function META:GetMutatedTableLength(obj)
-		local mutations = obj.mutations
-
-		if not mutations then return obj:GetLength() end
-
-		local temp = Table()
-
-		for key in pairs(mutations) do
-			local realkey
-
-			for _, kv in ipairs(obj:GetData()) do
-				if kv.key:GetHash() == key then
-					realkey = kv.key
-
-					break
-				end
-			end
-
-			local val = self:GetMutatedTableValue(obj, realkey, obj:Get(realkey))
-			temp:Set(realkey, val)
-		end
-
-		return temp:GetLength()
-	end
-
 	function META:GetMutatedTableValue(tbl, key, value)
 		if self:IsTypesystem() then return value end
 

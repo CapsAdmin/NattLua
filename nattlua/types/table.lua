@@ -367,9 +367,6 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 	return true
 end
 
-function META:IsDynamic()
-	return true
-end
 
 function META:Delete(key--[[#: BaseType]])
 	local data = self:GetData()
@@ -485,15 +482,6 @@ function META:Insert(val)
 	self.size:SetData(self.size:GetData() + 1)
 end
 
-function META:GetGlobalEnvironmentValues()
-	local values = {}
-
-	for i, keyval in ipairs(self:GetData()) do
-		values[i] = keyval.val
-	end
-
-	return values
-end
 
 function META:Set(key--[[#: BaseType]], val--[[#: BaseType | nil]], no_delete--[[#: boolean | nil]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
@@ -734,20 +722,6 @@ function META:PopContract()
 	table.remove(self.contracts)
 end
 
-function META:pairs()
-	local i = 1
-	return function()
-		local keyval = self:GetData() and
-			self:GetData()[i] or
-			self:GetContract() and
-			self:GetContract()[i]
-
-		if not keyval then return nil end
-
-		i = i + 1
-		return keyval.key, keyval.val
-	end
-end
 
 --[[#type META.@Self.suppress = boolean]]
 

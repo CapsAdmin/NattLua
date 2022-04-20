@@ -61,9 +61,9 @@ analyzer function enum(tbl: Table)
 	local union = types.Union()
 	analyzer:PushAnalyzerEnvironment("typesystem")
 
-	for key, val in tbl:pairs() do
-		analyzer:SetLocalOrGlobalValue(key, val)
-		union:AddType(val)
+	for _, keyval in ipairs(tbl:GetData()) do
+		analyzer:SetLocalOrGlobalValue(keyval.key, keyval.val)
+		union:AddType(keyval.val)
 	end
 
 	analyzer:PopAnalyzerEnvironment()
@@ -85,12 +85,12 @@ end
 analyzer function seal(tbl: Table)
 	if tbl:GetContract() then return end
 
-	for key, val in tbl:pairs() do
-		if val.Type == "function" and val:GetArguments():Get(1).Type == "union" then
-			local first_arg = val:GetArguments():Get(1)
+	for _, keyval in ipairs(tbl:GetData()) do
+		if keyval.val.Type == "function" and keyval.val:GetArguments():Get(1).Type == "union" then
+			local first_arg = keyval.val:GetArguments():Get(1)
 
 			if first_arg:GetType(tbl) and first_arg:GetType(types.Any()) then
-				val:GetArguments():Set(1, tbl)
+				keyval.val:GetArguments():Set(1, tbl)
 			end
 		end
 	end

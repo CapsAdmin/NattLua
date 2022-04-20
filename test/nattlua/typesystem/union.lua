@@ -52,14 +52,6 @@ test("a union containing one literal number should be a subset of a union contai
 	assert(Union(1):IsSubsetOf(Number()))
 end)
 
-local A = Union(1, 4, 5, 9, 13)
-local B = Union(2, 5, 6, 8, 9)
-local expected = Union(5, 9)
-
-test(tostring(A) .. " intersected with " .. tostring(B) .. " should result in " .. tostring(expected), function()
-	assert(A:Intersect(B):Equal(expected))
-end)
-
 local A = Union(1, 2, 3)
 local B = Union(1, 2, 3, 4)
 
