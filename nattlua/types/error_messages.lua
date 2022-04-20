@@ -61,9 +61,6 @@ local errors = {
 	numerically_indexed = function(obj--[[#: any]])--[[#: false,string | {[number] = any | string}]]
 		return false, {obj, " is not numerically indexed"}
 	end,
-	empty = function(obj--[[#: any]])--[[#: false,string | {[number] = any | string}]]
-		return false, {obj, " is empty"}
-	end,
 	binary = function(op--[[#: string]], l--[[#: any]], r--[[#: any]])--[[#: false,string | {[number] = any | string}]]
 		return false,
 		{
