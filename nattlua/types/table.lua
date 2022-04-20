@@ -367,7 +367,6 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 	return true
 end
 
-
 function META:Delete(key--[[#: BaseType]])
 	local data = self:GetData()
 
@@ -481,7 +480,6 @@ function META:Insert(val)
 	self:Set(self.size:Copy(), val)
 	self.size:SetData(self.size:GetData() + 1)
 end
-
 
 function META:Set(key--[[#: BaseType]], val--[[#: BaseType | nil]], no_delete--[[#: boolean | nil]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
@@ -721,7 +719,6 @@ end
 function META:PopContract()
 	table.remove(self.contracts)
 end
-
 
 --[[#type META.@Self.suppress = boolean]]
 

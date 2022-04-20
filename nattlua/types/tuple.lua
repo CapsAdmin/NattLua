@@ -70,7 +70,6 @@ function META:__tostring()
 end
 
 function META:Merge(tup--[[#: TTuple]])
-
 	local src = self:GetData()
 
 	for i = 1, tup:GetMinimumLength() do
@@ -170,8 +169,6 @@ end
 
 function META.IsSubsetOfTuple(A--[[#: TTuple]], B--[[#: TBaseType]])
 	if A:Equal(B) then return true end
-
-	
 
 	for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
 		local a, a_err = A:Get(i)
@@ -288,7 +285,6 @@ function META:IsEmpty()
 	return self:GetLength() == 0
 end
 
-
 function META:IsTruthy()
 	local obj = self:Get(1)
 
@@ -373,8 +369,6 @@ function META:Unpack(length--[[#: nil | number]])
 
 	for _ = 1, length do
 		out[i] = self:Get(i)
-
-
 		i = i + 1
 	end
 

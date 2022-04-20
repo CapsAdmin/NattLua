@@ -433,6 +433,7 @@ return {
 					for i, arg in ipairs(arguments:GetData()) do
 						if arg.Type == "function" then
 							local func = arg
+
 							if
 								contract_override[i] and
 								contract_override[i].Type == "union" and

@@ -55,7 +55,9 @@ do
 						table_insert(env[b.name], tk)
 					elseif b.r[tk.value] then
 						if not env[b.name][1] then
-							io.write(code:BuildSourceCodePointMessage("could not find the opening " .. b.name, tk.start, tk.stop))
+							io.write(
+								code:BuildSourceCodePointMessage("could not find the opening " .. b.name, tk.start, tk.stop)
+							)
 						else
 							table_remove(env[b.name])
 						end
@@ -66,7 +68,9 @@ do
 
 		for name, tokens in pairs(env) do
 			for _, tk in ipairs(tokens) do
-				io.write(code:BuildSourceCodePointMessage("could not the closing " .. name, tk.start, tk.stop))
+				io.write(
+					code:BuildSourceCodePointMessage("could not the closing " .. name, tk.start, tk.stop)
+				)
 			end
 		end
 	end

@@ -1,7 +1,6 @@
 local coverage = {}
 _G.__COVERAGE = _G.__COVERAGE or {}
 coverage.collected = {}
-
 local nl = require("nattlua")
 
 function coverage.Preprocess(code, key)
@@ -22,14 +21,12 @@ function coverage.Preprocess(code, key)
 		if node.right then call_expression.right = node.right end
 
 		table.insert(expressions, node)
-
 		-- to prevent start stop messing up from previous injections
 		call_expression.code_start = node.code_start
 		call_expression.code_stop = node.code_stop
-
 		return call_expression
 	end
- 
+
 	local compiler = nl.Compiler(
 		code,
 		"lol",
@@ -42,10 +39,27 @@ function coverage.Preprocess(code, key)
 					end
 				elseif node.type == "expression" then
 					local start, stop = node:GetStartStop()
-					
-					if node.is_left_assignment or node.is_identifier or node:GetStatement().kind == "function" or
-						(node.kind == "binary_operator" and (node.value.value == "." or node.value.value == ":")) or
-						(node.parent and node.parent.kind == "binary_operator" and (node.parent.value.value == "." or node.parent.value.value == ":"))
+
+					if
+						node.is_left_assignment or
+						node.is_identifier or
+						node:GetStatement().kind == "function" or
+						(
+							node.kind == "binary_operator" and
+							(
+								node.value.value == "." or
+								node.value.value == ":"
+							)
+						)
+						or
+						(
+							node.parent and
+							node.parent.kind == "binary_operator" and
+							(
+								node.parent.value.value == "." or
+								node.parent.value.value == ":"
+							)
+						)
 					then
 						return
 					end
@@ -68,8 +82,8 @@ local function Æ(start, stop, ...)
 end
 ------------------------------------------------------
 ]] .. lua
-	_G.__COVERAGE[key] = _G.__COVERAGE[key] or {called = {}, expressions = expressions, compiler = compiler, preprocesed = lua}
-
+	_G.__COVERAGE[key] = _G.__COVERAGE[key] or
+		{called = {}, expressions = expressions, compiler = compiler, preprocesed = lua}
 	return lua
 end
 
@@ -80,15 +94,16 @@ end
 local MASK = " "
 
 function coverage.Collect(key)
-    local data = _G.__COVERAGE[key]
+	local data = _G.__COVERAGE[key]
+
 	if not data then return end
 
 	local called = data.called
 	local expressions = data.expressions
 	local compiler = data.compiler
-
 	local original = compiler.Code:GetString()
 	local buffer = {}
+
 	for i = 1, #original do
 		buffer[i] = original:sub(i, i)
 	end
@@ -97,7 +112,8 @@ function coverage.Collect(key)
 
 	for _, exp in ipairs(expressions) do
 		local start, stop = exp:GetStartStop()
-		if not called[start..", "..stop] then
+
+		if not called[start .. ", " .. stop] then
 			for i = start, stop do
 				not_called[i] = true
 			end

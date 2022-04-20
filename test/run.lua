@@ -44,16 +44,17 @@ end
 
 local path = ...
 local is_coverage = path == "coverage"
-if is_coverage then
-	path = nil
-end
+
+if is_coverage then path = nil end
 
 if path == "remove_coverage" then
 	local util = require("examples.util")
 	local paths = util.GetFilesRecursively("./", "lua.coverage")
+
 	for _, path in ipairs(paths) do
 		os.remove(path)
 	end
+
 	return
 end
 
@@ -64,11 +65,12 @@ if is_coverage then
 
 	function preprocess.Preprocess(code, name, path, from)
 		if from == "package" then
-			if path and path:find("^nattlua/") and not path:find("^nattlua/other") then 
+			if path and path:find("^nattlua/") and not path:find("^nattlua/other") then
 				covered[name] = path
-				return coverage.Preprocess(code, name) 
+				return coverage.Preprocess(code, name)
 			end
 		end
+
 		return code
 	end
 end
@@ -97,6 +99,7 @@ end
 if is_coverage then
 	for name, path in pairs(covered) do
 		local coverage = coverage.Collect(name)
+
 		if coverage then
 			local f = io.open(path .. ".coverage", "w")
 			f:write(coverage)

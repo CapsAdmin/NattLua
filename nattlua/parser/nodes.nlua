@@ -135,7 +135,9 @@ type expression["table"] = Node & { -- [statement - local_assignment @ nattlua/p
 			["separators"] = List<|Token|>,
 		},
 		is_dictionary = boolean,
-		children = List<|expression["table_expression_value"] | expression["table_index_value"] | expression["table_key_value"]|>,
+		children = List<|
+			expression["table_expression_value"] | expression["table_index_value"] | expression["table_key_value"]
+		|>,
 		spread = boolean,
 		is_array = boolean,
 	}

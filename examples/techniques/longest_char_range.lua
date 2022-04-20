@@ -86,7 +86,10 @@ local function stop()
 			local str = chars:sub(char, char)
 
 			if not (str == "\n" or str == "\r" or str == "\t" or str == " ") then
-				error("chunk " .. i .. " contains invalid character " .. str .. " (" .. str:byte() .. ")", 2)
+				error(
+					"chunk " .. i .. " contains invalid character " .. str .. " (" .. str:byte() .. ")",
+					2
+				)
 			end
 		end
 	end

@@ -133,7 +133,13 @@ return function(META)
 				old[i] = upvalue
 			end
 
-			self:ApplyMutationsAfterReturn(self:GetScope(), nil, false, self:GetTrackedUpvalues(old), self:GetTrackedTables())
+			self:ApplyMutationsAfterReturn(
+				self:GetScope(),
+				nil,
+				false,
+				self:GetTrackedUpvalues(old),
+				self:GetTrackedTables()
+			)
 		else
 			self.lua_error_thrown = msg
 		end

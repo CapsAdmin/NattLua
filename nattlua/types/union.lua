@@ -135,7 +135,6 @@ function META:AddType(e--[[#: TBaseType]])
 	return self
 end
 
-
 function META:GetData()
 	return self.Data
 end
@@ -167,7 +166,6 @@ end
 function META:Clear()
 	self.Data = {}
 end
-
 
 function META:HasTuples()
 	for _, obj in ipairs(self.Data) do
@@ -332,7 +330,6 @@ function META:Union(union--[[#: TUnion]])
 
 	return copy
 end
-
 
 function META:Copy(map--[[#: Map<|any, any|>]], copy_tables--[[#: nil | boolean]])
 	map = map or {}

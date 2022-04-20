@@ -70,10 +70,8 @@ function preprocess.Init()
 			table.insert(package.loaders, 1, preprocess.package_load)
 		end
 
-		for k,v in pairs(package.loaded) do
-			if _G[k] ~= v then
-				package.loaded[k] = nil
-			end
+		for k, v in pairs(package.loaded) do
+			if _G[k] ~= v then package.loaded[k] = nil end
 		end
 	end
 end
@@ -119,9 +117,9 @@ function preprocess.package_load(name)
 			f:close()
 			code = preprocess.Preprocess(code, name, path, "package")
 			local func, err = load(code, "@" .. path)
-			if not func then
-				print(err)
-			end
+
+			if not func then print(err) end
+
 			return func
 		end
 	end)

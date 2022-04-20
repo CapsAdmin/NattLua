@@ -133,11 +133,11 @@ local function Prefix(self, node, r)
 		end
 	end
 
-	if op == "-" or op == "~" or op == "#" then
-		return r:PrefixOperator(op)
-	end
+	if op == "-" or op == "~" or op == "#" then return r:PrefixOperator(op) end
 
-	error("unhandled prefix operator in " .. self:GetCurrentAnalyzerEnvironment() .. ": " .. op .. tostring(r))
+	error(
+		"unhandled prefix operator in " .. self:GetCurrentAnalyzerEnvironment() .. ": " .. op .. tostring(r)
+	)
 end
 
 return {Prefix = Prefix}

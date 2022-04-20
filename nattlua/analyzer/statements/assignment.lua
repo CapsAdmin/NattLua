@@ -153,7 +153,10 @@ return {
 						val:CoerceUntypedFunctions(contract)
 					end
 
-					self:Assert(statement or val:GetNode() or exp_key.type_expression, check_type_against_contract(val, contract))
+					self:Assert(
+						statement or val:GetNode() or exp_key.type_expression,
+						check_type_against_contract(val, contract)
+					)
 				else
 					if contract.Type == "tuple" and contract:GetLength() == 1 then
 						contract = contract:Get(1)
@@ -202,7 +205,10 @@ return {
 							end
 
 							val:CopyLiteralness(contract)
-							self:Assert(statement or val:GetNode() or exp_key.type_expression, check_type_against_contract(val, contract))
+							self:Assert(
+								statement or val:GetNode() or exp_key.type_expression,
+								check_type_against_contract(val, contract)
+							)
 							val:SetContract(contract)
 						end
 					end

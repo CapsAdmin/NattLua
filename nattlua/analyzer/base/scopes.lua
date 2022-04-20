@@ -22,7 +22,9 @@ return function(META)
 	end
 
 	function META:CreateAndPushFunctionScope(obj)
-		return self:PushScope(LexicalScope(obj:GetData().scope or self:GetScope(), obj:GetData().upvalue_position, obj))
+		return self:PushScope(
+			LexicalScope(obj:GetData().scope or self:GetScope(), obj:GetData().upvalue_position, obj)
+		)
 	end
 
 	function META:CreateAndPushModuleScope()
@@ -112,7 +114,11 @@ return function(META)
 			return self:IndexOperator(key:GetNode(), g, key)
 		end
 
-		return self:IndexOperator(key:GetNode(), self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()), key)
+		return self:IndexOperator(
+			key:GetNode(),
+			self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()),
+			key
+		)
 	end
 
 	function META:SetLocalOrGlobalValue(key, val, scope)

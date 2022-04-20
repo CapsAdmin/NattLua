@@ -1,7 +1,7 @@
 local coverage = require("nattlua.other.coverage")
 
 local function collect(code)
-    assert(loadstring(coverage.Preprocess(code, "test")))()
+	assert(loadstring(coverage.Preprocess(code, "test")))()
 --    print(coverage.Collect("test"))
 end
 
@@ -32,7 +32,6 @@ collect([=[
     analyze([[]])
     analyze[[]]  
 ]=])
-
 collect[[
     local tbl = {}
     function tbl.ReceiveJSON(data, methods, ...)

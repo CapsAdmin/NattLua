@@ -818,7 +818,9 @@ local function addrinfo_get_ip(self)
 	if self.addrinfo.ai_addr == nil then return nil end
 
 	local str = ffi.new("char[256]")
-	local addr = assert(socket.inet_ntop(AF.lookup[self.family], self.addrinfo.ai_addr.sa_data, str, ffi.sizeof(str)))
+	local addr = assert(
+		socket.inet_ntop(AF.lookup[self.family], self.addrinfo.ai_addr.sa_data, str, ffi.sizeof(str))
+	)
 	return ffi.string(addr)
 end
 
@@ -869,7 +871,12 @@ function M.get_address_info(data--[[#: AddressInfo]])
 	end
 
 	local out = ffi.new("struct addrinfo*[1]")
-	local ok, err = socket.getaddrinfo(data.host ~= "*" and data.host or nil, data.service and tostring(data.service) or nil, hints, out)
+	local ok, err = socket.getaddrinfo(
+		data.host ~= "*" and data.host or nil,
+		data.service and tostring(data.service) or nil,
+		hints,
+		out
+	)
 
 	if not ok then return ok, err end
 
@@ -930,7 +937,11 @@ do
 	end
 
 	function M.create(family, socket_type, protocol)
-		local fd, err = socket.create(AF.strict_lookup(family), SOCK.strict_lookup(socket_type), IPPROTO.strict_lookup(protocol))
+		local fd, err = socket.create(
+			AF.strict_lookup(family),
+			SOCK.strict_lookup(socket_type),
+			IPPROTO.strict_lookup(protocol)
+		)
 
 		if not fd then return fd, err end
 

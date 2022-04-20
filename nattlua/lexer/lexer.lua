@@ -621,7 +621,11 @@ do
 			return "string"
 		end
 
-		lexer:Error("expected multiline string " .. helpers.QuoteToken(closing) .. " reached end of code", start, start + 1)
+		lexer:Error(
+			"expected multiline string " .. helpers.QuoteToken(closing) .. " reached end of code",
+			start,
+			start + 1
+		)
 		return false
 	end
 

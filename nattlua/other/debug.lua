@@ -82,7 +82,9 @@ function lib.EnableJITDumper()
 				local loc = fmtfunc(func, pc)
 
 				if loc ~= startloc then
-					out:write(format("[TRACE --- %s%s -- %s at %s]\n", startex, startloc, fmterr(otr, oex), loc))
+					out:write(
+						format("[TRACE --- %s%s -- %s at %s]\n", startex, startloc, fmterr(otr, oex), loc)
+					)
 				else
 					out:write(format("[TRACE --- %s%s -- %s]\n", startex, startloc, fmterr(otr, oex)))
 				end

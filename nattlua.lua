@@ -27,7 +27,9 @@ do -- these are just helpers for print debugging
 			if (info.what) == "C" then
 				io.write(string.format("\t%i: C function\t\"%s\"\n", level, info.name))
 			else
-				io.write(string.format("\t%i: \"%s\"\t%s:%d\n", level, info.name, info.short_src, info.currentline))
+				io.write(
+					string.format("\t%i: \"%s\"\t%s:%d\n", level, info.name, info.short_src, info.currentline)
+				)
 			end
 
 			level = level + 1

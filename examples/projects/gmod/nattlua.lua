@@ -111,9 +111,11 @@ local files = {
 }
 
 for _, info in ipairs(files) do
-	local compiler = assert(nl.File(working_directory .. info.path, {
-		working_directory = working_directory,
-	}))
+	local compiler = assert(
+		nl.File(working_directory .. info.path, {
+			working_directory = working_directory,
+		})
+	)
 	local last_directory = working_directory
 
 	function compiler:OnResolvePath(path)

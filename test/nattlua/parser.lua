@@ -217,7 +217,10 @@ test("operator precedence", function()
 	check(nl.Compiler("-2 ^ 2"), "^(-(2), 2)")
 	check(nl.Compiler("pcall(require, \"ffi\")"), "call(pcall, require, \"ffi\")")
 	check(nl.Compiler("1 / #a"), "/(1, #(a))")
-	check(nl.Compiler("jit.status and jit.status()"), "and(.(jit, status), call(.(jit, status)))")
+	check(
+		nl.Compiler("jit.status and jit.status()"),
+		"and(.(jit, status), call(.(jit, status)))"
+	)
 	check(nl.Compiler("a.b.c.d.e.f()"), "call(.(.(.(.(.(a, b), c), d), e), f))")
 	check(nl.Compiler("(foo.bar())"), "call(.(foo, bar))")
 	check(

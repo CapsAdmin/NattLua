@@ -79,7 +79,9 @@ for _, path in ipairs(lua_files) do
 				end
 
 				if bad_names[token.value] then
-					print(compiler:GetCode():BuildSourceCodePointMessage("non descriptive variable name", token.start, token.stop))
+					print(
+						compiler:GetCode():BuildSourceCodePointMessage("non descriptive variable name", token.start, token.stop)
+					)
 
 					if AUTOFIX and type(bad_names[token.value]) == "string" then
 						token.value = bad_names[token.value]

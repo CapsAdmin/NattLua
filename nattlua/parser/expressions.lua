@@ -619,7 +619,11 @@ do -- runtime
 			node.tokens["call)"] = self:ExpectValue(")")
 		end
 
-		if primary_node.kind == "value" and node.expressions[1] and node.expressions[1].value then
+		if
+			primary_node.kind == "value" and
+			node.expressions[1] and
+			node.expressions[1].value
+		then
 			local name = primary_node.value.value
 
 			if

@@ -453,7 +453,9 @@ do
 			local arr = map:GetBucket(key)
 
 			for i = 0, #arr - 1 do
-				print("[" .. i .. "] " .. ffi.string(arr:Get(i).key) .. " = " .. tostring(arr:Get(i).val))
+				print(
+					"[" .. i .. "] " .. ffi.string(arr:Get(i).key) .. " = " .. tostring(arr:Get(i).val)
+				)
 			end
 
 			error("key " .. key .. " = " .. tostring(map:Get(key)) .. " does not equal " .. val)

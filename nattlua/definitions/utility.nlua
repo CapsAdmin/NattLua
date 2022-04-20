@@ -86,7 +86,10 @@ analyzer function seal(tbl: Table)
 	if tbl:GetContract() then return end
 
 	for _, keyval in ipairs(tbl:GetData()) do
-		if keyval.val.Type == "function" and keyval.val:GetArguments():Get(1).Type == "union" then
+		if
+			keyval.val.Type == "function" and
+			keyval.val:GetArguments():Get(1).Type == "union"
+		then
 			local first_arg = keyval.val:GetArguments():Get(1)
 
 			if first_arg:GetType(tbl) and first_arg:GetType(types.Any()) then

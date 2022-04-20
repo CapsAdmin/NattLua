@@ -56,7 +56,13 @@ end
 
 local function crawl_statement(node)
 	if node.kind == "function" then
-		if (node.Code:GetName():find("parser/statements", nil, true) or node.Code:GetName():find("parser/expressions", nil, true) or node.Code:GetName():find("parser/parser", nil, true)) then
+		if
+			(
+				node.Code:GetName():find("parser/statements", nil, true) or
+				node.Code:GetName():find("parser/expressions", nil, true) or
+				node.Code:GetName():find("parser/parser", nil, true)
+			)
+		then
 			for _, node in ipairs(node.statements) do
 				crawl_statement(node)
 			end
@@ -82,16 +88,18 @@ local function crawl_statement(node)
 	end
 end
 
-local compiler = assert(nl.File(
-	"nattlua/parser/parser.lua",
-	{
-		inline_require = true,
-		preserve_whitespace = false,
-		on_node = function(self, node)
-			if node.type == "statement" then crawl_statement(node) end
-		end,
-	}
-):Parse())
+local compiler = assert(
+	nl.File(
+		"nattlua/parser/parser.lua",
+		{
+			inline_require = true,
+			preserve_whitespace = false,
+			on_node = function(self, node)
+				if node.type == "statement" then crawl_statement(node) end
+			end,
+		}
+	):Parse()
+)
 local code = [[
     local type statement = {}
     local type expression = {}
@@ -114,4 +122,6 @@ for _, v in pairs(found) do
 	code = code .. "}\n"
 end
 
-print(nl.Compiler(code, "", {preserve_whitespace = false, comment_type_annotations = false}):Emit())
+print(
+	nl.Compiler(code, "", {preserve_whitespace = false, comment_type_annotations = false}):Emit()
+)

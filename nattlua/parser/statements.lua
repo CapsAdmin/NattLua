@@ -94,7 +94,7 @@ do
 			node.is_left_assignment = true
 			node = self:EndNode(node)
 		end
-		
+
 		return node
 	end
 

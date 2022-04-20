@@ -3,22 +3,30 @@ local analyze = T.RunCode
 local String = T.String
 
 do -- number range
-	assert(analyze("local a: 1 .. 10 = 5"):GetLocalOrGlobalValue(String("a")):GetContract():GetMax())
+	assert(
+		analyze("local a: 1 .. 10 = 5"):GetLocalOrGlobalValue(String("a")):GetContract():GetMax()
+	)
 	analyze("local a: 1 .. 10 = 15", "15 is not a subset of 1..10")
 end
 
 do -- number range 0 .. inf
-	assert(analyze("local a: 1 .. inf = 5"):GetLocalOrGlobalValue(String("a")):GetContract():GetMax())
+	assert(
+		analyze("local a: 1 .. inf = 5"):GetLocalOrGlobalValue(String("a")):GetContract():GetMax()
+	)
 	analyze("local a: 1 .. inf = -15", "-15 is not a subset of 1..inf")
 end
 
 do -- number range -inf .. 0
-	assert(analyze("local a: -inf .. 0 = -5"):GetLocalOrGlobalValue(String("a")):GetContract():GetMax())
+	assert(
+		analyze("local a: -inf .. 0 = -5"):GetLocalOrGlobalValue(String("a")):GetContract():GetMax()
+	)
 	analyze("local a: -inf .. 0 = 15", "15 is not a subset of %-inf..0")
 end
 
 do -- number range -inf .. inf
-	assert(analyze("local a: -inf .. inf = -5"):GetLocalOrGlobalValue(String("a")):GetContract():GetMax())
+	assert(
+		analyze("local a: -inf .. inf = -5"):GetLocalOrGlobalValue(String("a")):GetContract():GetMax()
+	)
 	analyze("local a: -inf .. inf = 0/0", "nan is not a subset of %-inf..inf")
 end
 

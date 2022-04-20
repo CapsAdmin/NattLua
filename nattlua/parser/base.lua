@@ -75,7 +75,7 @@ end
 function META:StartNode(
 	node_type--[[#: ref ("statement" | "expression")]],
 	kind--[[#: ref (StatementKind | ExpressionKind)]],
-    start_node--[[#: nil | Node]]
+	start_node--[[#: nil | Node]]
 )--[[#: ref Node]]
 	--[[#local type T = node_type == "statement" and statement[kind] or expression[kind] ]]
 	local code_start = start_node and start_node.code_start or assert(self:GetToken()).start

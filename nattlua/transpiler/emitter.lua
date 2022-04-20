@@ -380,7 +380,9 @@ function META:BuildCode(block)
 								"do local __M; IMPORTS[\"" .. node.key .. "\"] = function(...) __M = __M or (function(...) " .. root:Render(self.config or {}) .. " end)(...) return __M end end\n"
 							)
 						elseif root then
-							self:Emit("IMPORTS['" .. node.key .. "'] = function() " .. root:Render(self.config or {}) .. " end\n")
+							self:Emit(
+								"IMPORTS['" .. node.key .. "'] = function() " .. root:Render(self.config or {}) .. " end\n"
+							)
 						end
 					end
 				end
