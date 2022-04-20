@@ -69,6 +69,12 @@ function preprocess.Init()
 		if not found then
 			table.insert(package.loaders, 1, preprocess.package_load)
 		end
+
+		for k,v in pairs(package.loaded) do
+			if _G[k] ~= v then
+				package.loaded[k] = nil
+			end
+		end
 	end
 end
 

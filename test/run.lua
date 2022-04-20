@@ -1,5 +1,4 @@
 local preprocess = require("nattlua.other.preprocess")
-preprocess.Init()
 local coverage = require("nattlua.other.coverage")
 local io = require("io")
 local pcall = _G.pcall
@@ -44,22 +43,34 @@ function _G.diff(input, expect)
 end
 
 local path = ...
+local is_coverage = path == "coverage"
+if is_coverage then
+	path = nil
+end
+
+if path == "remove_coverage" then
+	local util = require("examples.util")
+	local paths = util.GetFilesRecursively("./", "lua.coverage")
+	for _, path in ipairs(paths) do
+		os.remove(path)
+	end
+	return
+end
+
 local covered = {}
 
-if path == "nattlua/analyzer/statements/assignment.lua" then
+if is_coverage then
 	preprocess.Init()
-	local whitelist = {[path] = true}
 
 	function preprocess.Preprocess(code, name, path, from)
-		if whitelist[path] then 
-			covered[name] = path
-			return coverage.Preprocess(code, name) 
+		if from == "package" then
+			if path and path:find("^nattlua/") and not path:find("^nattlua/other") then 
+				covered[name] = path
+				return coverage.Preprocess(code, name) 
+			end
 		end
-
 		return code
 	end
-
-	path = "test/nattlua/analyzer/assignment.lua"
 end
 
 if path and path:sub(-4) == ".lua" then
@@ -83,9 +94,15 @@ else
 	end
 end
 
-for name, path in pairs(covered) do
-	local coverage = coverage.Collect(name)
-	local f = io.open(path .. ".coverage", "w")
-	f:write(coverage)
-	f:close()
+if is_coverage then
+	for name, path in pairs(covered) do
+		local coverage = coverage.Collect(name)
+		if coverage then
+			local f = io.open(path .. ".coverage", "w")
+			f:write(coverage)
+			f:close()
+		else
+			print("unable to find coverage information for " .. name)
+		end
+	end
 end

@@ -2,8 +2,9 @@ local coverage = {}
 _G.__COVERAGE = _G.__COVERAGE or {}
 coverage.collected = {}
 
+local nl = require("nattlua")
+
 function coverage.Preprocess(code, key)
-	local nl = require("nattlua")
 	local expressions = {}
 
 	local function inject_call_expression(parser, node, start, stop)
@@ -44,7 +45,7 @@ function coverage.Preprocess(code, key)
 					
 					if node.is_left_assignment or node.is_identifier or node:GetStatement().kind == "function" or
 						(node.kind == "binary_operator" and (node.value.value == "." or node.value.value == ":")) or
-						(node.parent.kind == "binary_operator" and (node.parent.value.value == "." or node.parent.value.value == ":"))
+						(node.parent and node.parent.kind == "binary_operator" and (node.parent.value.value == "." or node.parent.value.value == ":"))
 					then
 						return
 					end
@@ -80,6 +81,7 @@ local MASK = " "
 
 function coverage.Collect(key)
     local data = _G.__COVERAGE[key]
+	if not data then return end
 
 	local called = data.called
 	local expressions = data.expressions
