@@ -70,13 +70,6 @@ function META:__tostring()
 end
 
 function META:Merge(tup--[[#: TTuple]])
-	if tup.Type == "union" then
-		for _, obj in ipairs(tup:GetData()) do
-			self:Merge(obj)
-		end
-
-		return self
-	end
 
 	local src = self:GetData()
 
@@ -178,20 +171,7 @@ end
 function META.IsSubsetOfTuple(A--[[#: TTuple]], B--[[#: TBaseType]])
 	if A:Equal(B) then return true end
 
-	if A:GetLength() == math.huge and B:GetLength() == math.huge then
-		for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
-			local a = A:Get(i)
-			local b = B:Get(i)
-			local ok, err = a:IsSubsetOf(b)
-
-			if not ok then
-				local ok, err = type_errors.subset(a, b, err)
-				return ok, err, a, b, i
-			end
-		end
-
-		return true
-	end
+	
 
 	for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
 		local a, a_err = A:Get(i)
