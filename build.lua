@@ -53,7 +53,7 @@ if args ~= "fast" then
 	f:close()
 	io.write("running tests with temp_build_output.lua")
 	io.flush()
-	local exit_code = os.execute("luajit -e 'require(\"temp_build_output\") require(\"test\")'")
+	local exit_code = os.execute("luajit -e 'require(\"temp_build_output\") loadfile(\"test.lua\")()'")
 
 	if exit_code ~= 0 then
 		io.write(" - FAIL\n")
