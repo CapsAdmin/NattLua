@@ -395,7 +395,7 @@ function META:GetKeyUnion()
 	return union
 end
 
-function META:Contains(key--[[#: BaseType]])
+function META:HasKey(key--[[#: BaseType]])
 	return self:FindKeyValReverse(key)
 end
 

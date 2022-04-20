@@ -231,16 +231,6 @@ function META:Get(key--[[#: TBaseType]])
 	return type_errors.other(errors)
 end
 
-function META:Contains(key--[[#: TBaseType]])
-	for _, obj in ipairs(self.Data) do
-		local ok, reason = key:IsSubsetOf(obj)
-
-		if ok then return true end
-	end
-
-	return false
-end
-
 function META:IsEmpty()
 	return self.Data[1] == nil
 end
@@ -393,6 +383,7 @@ function META:DisableFalsy()
 end
 
 function META:EnableFalsy()
+	-- never called
 	if not self.falsy_disabled then return end
 
 	for _, v in ipairs(self.falsy_disabled) do
@@ -401,6 +392,7 @@ function META:EnableFalsy()
 end
 
 function META:SetMax(val--[[#: TNumber]])
+	-- never called
 	local copy = self:Copy()
 
 	for _, e in ipairs(copy.Data) do
@@ -480,6 +472,7 @@ function META:IsLiteral()
 end
 
 function META:GetLargestNumber()
+	-- never called
 	if #self:GetData() == 0 then return type_errors.other({"union is empty"}) end
 
 	local max = {}

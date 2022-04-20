@@ -99,7 +99,7 @@ end
 
 do
 	local analyzer function HasKey(tbl: Table, key: string)
-		return not not tbl:Contains(key)
+		return not not tbl:HasKey(key)
 	end
 
 	local function Pick<|tbl: Table, keys: string|>

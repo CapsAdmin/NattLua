@@ -35,7 +35,7 @@ return {
 				return obj:Get(key)
 			end
 
-			if obj:GetMetaTable() and (obj.Type ~= "table" or not obj:Contains(key)) then
+			if obj:GetMetaTable() and (obj.Type ~= "table" or not obj:HasKey(key)) then
 				local index = obj:GetMetaTable():Get(LString("__index"))
 
 				if index then
@@ -47,10 +47,10 @@ return {
 							(
 								index:GetContract() or
 								index
-							):Contains(key) or
+							):HasKey(key) or
 							(
 								index:GetMetaTable() and
-								index:GetMetaTable():Contains(LString("__index"))
+								index:GetMetaTable():HasKey(LString("__index"))
 							)
 						)
 					then
