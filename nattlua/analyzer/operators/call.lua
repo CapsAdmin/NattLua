@@ -432,6 +432,7 @@ return {
 				do -- coerce untyped functions to contract callbacks
 					for i, arg in ipairs(arguments:GetData()) do
 						if arg.Type == "function" then
+							local func = arg
 							if
 								contract_override[i] and
 								contract_override[i].Type == "union" and
@@ -440,11 +441,11 @@ return {
 								local merged = contract_override[i]:ShrinkToFunctionSignature()
 
 								if merged then
-									arg:SetArguments(merged:GetArguments())
-									arg:SetReturnTypes(merged:GetReturnTypes())
+									func:SetArguments(merged:GetArguments())
+									func:SetReturnTypes(merged:GetReturnTypes())
 								end
 							else
-								if not arg.explicit_arguments then
+								if not func.explicit_arguments then
 									local contract = contract_override[i] or obj:GetArguments():Get(i)
 
 									if contract then
@@ -453,18 +454,18 @@ return {
 
 											for _, func in ipairs(contract:GetData()) do
 												tup:Merge(func:GetArguments())
-												arg:SetArguments(tup)
+												func:SetArguments(tup)
 											end
 
-											arg.arguments_inferred = true
+											func.arguments_inferred = true
 										elseif contract.Type == "function" then
-											arg:SetArguments(contract:GetArguments():Copy(nil, true)) -- force copy tables so we don't mutate the contract
-											arg.arguments_inferred = true
+											func:SetArguments(contract:GetArguments():Copy(nil, true)) -- force copy tables so we don't mutate the contract
+											func.arguments_inferred = true
 										end
 									end
 								end
 
-								if not arg.explicit_return then
+								if not func.explicit_return then
 									local contract = contract_override[i] or obj:GetReturnTypes():Get(i)
 
 									if contract then
@@ -475,9 +476,9 @@ return {
 												tup:Merge(func:GetReturnTypes())
 											end
 
-											arg:SetReturnTypes(tup)
+											func:SetReturnTypes(tup)
 										elseif contract.Type == "function" then
-											arg:SetReturnTypes(contract:GetReturnTypes())
+											func:SetReturnTypes(contract:GetReturnTypes())
 										end
 									end
 								end
