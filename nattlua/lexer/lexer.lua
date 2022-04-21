@@ -139,64 +139,42 @@ function META:NewToken(
 	return Token(type, is_whitespace, start, stop)
 end
 
-function META:ReadToken()
-	local a, b, c, d = self:ReadSimple() -- TODO: unpack not working
-	return self:NewToken(a, b, c, d)
-end
+do
+	local fixed = {
+		"a",
+		"b",
+		"f",
+		"n",
+		"r",
+		"t",
+		"v",
+		"\\",
+		"\"",
+		"'",
+	}
+	local pattern = "\\[" .. table.concat(fixed, "\\") .. "]"
+	local map_double_quote = {[ [[\"]] ] = [["]]}
+	local map_single_quote = {[ [[\']] ] = [[']]}
 
-function META:ReadFirstFromArray(strings--[[#: List<|string|>]])--[[#: boolean]]
-	for _, str in ipairs(strings) do
-		if self:IsStringLower(str) then
-			self:Advance(#str)
-			return true
+	for _, v in ipairs(fixed) do
+		map_double_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
+		map_single_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
+	end
+
+	local function reverse_escape_string(str, quote--[[#: '"' | "'"]])
+		if quote == "\"" then
+			str = str:gsub(pattern, map_double_quote)
+		elseif quote == "'" then
+			str = str:gsub(pattern, map_single_quote)
 		end
+
+		return str
 	end
 
-	return false
-end
+	function META:ReadToken()
+		local type, is_whitespace, start, stop = self:ReadSimple() -- TODO: unpack not working
+		local token = self:NewToken(type, is_whitespace, start, stop)
 
-local fixed = {
-	"a",
-	"b",
-	"f",
-	"n",
-	"r",
-	"t",
-	"v",
-	"\\",
-	"\"",
-	"'",
-}
-local pattern = "\\[" .. table.concat(fixed, "\\") .. "]"
-local map_double_quote = {[ [[\"]] ] = [["]]}
-local map_single_quote = {[ [[\']] ] = [[']]}
-
-for _, v in ipairs(fixed) do
-	map_double_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
-	map_single_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
-end
-
-local function reverse_escape_string(str, quote--[[#: '"' | "'"]])
-	if quote == "\"" then
-		str = str:gsub(pattern, map_double_quote)
-	elseif quote == "'" then
-		str = str:gsub(pattern, map_single_quote)
-	end
-
-	return str
-end
-
-function META:GetTokens()
-	self:ResetState()
-	local tokens = {}
-
-	for i = self.Position, self:GetLength() + 1 do
-		tokens[i] = self:ReadToken()
-
-		if tokens[i].type == "end_of_file" then break end
-	end
-
-	for _, token in ipairs(tokens) do
 		token.value = self:GetStringSlice(token.start, token.stop)
 
 		if token.type == "string" then
@@ -212,6 +190,30 @@ function META:GetTokens()
 				token.string_value = token.value:sub(#start + 1, -#start - 1)
 			end
 		end
+
+		return token
+	end
+end
+
+function META:ReadFirstFromArray(strings--[[#: List<|string|>]])--[[#: boolean]]
+	for _, str in ipairs(strings) do
+		if self:IsStringLower(str) then
+			self:Advance(#str)
+			return true
+		end
+	end
+
+	return false
+end
+
+function META:GetTokens()
+	self:ResetState()
+	local tokens = {}
+
+	for i = self.Position, self:GetLength() + 1 do
+		tokens[i] = self:ReadToken()
+
+		if tokens[i].type == "end_of_file" then break end
 	end
 
 	local whitespace_buffer = {}
