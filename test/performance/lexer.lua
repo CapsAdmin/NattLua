@@ -21,7 +21,7 @@ do
 end
 
 do
-	local Lexer = require("nattlua.lexer.lexer")
+	local Lexer = require("nattlua.lexer.lexer").New
 	local lexer = Lexer(
 		Code(
 			assert(
