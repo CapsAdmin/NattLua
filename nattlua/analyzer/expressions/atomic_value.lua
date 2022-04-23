@@ -49,7 +49,13 @@ local function lookup_value(self, node)
 		end
 	end
 
-	return self:GetTrackedUpvalue(obj) or obj
+	local obj = self:GetTrackedUpvalue(obj) or obj
+
+	if obj:GetUpvalue() then
+		self:GetScope():AddDependency(obj:GetUpvalue())
+	end
+
+	return obj
 end
 
 local function is_primitive(val)
@@ -74,62 +80,54 @@ return {
 			elseif value == "false" then
 				return False():SetNode(node)
 			end
-		end
-
-		-- this means it's the first part of something, either >true<, >foo<.bar, >foo<()
-		local standalone_letter = type == "letter" and node.standalone_letter
-
-		if self:IsTypesystem() and standalone_letter and not node.force_upvalue then
-			if value == "current_table" then
-				return self:GetCurrentType("table")
-			elseif value == "current_tuple" then
-				return self:GetCurrentType("tuple")
-			elseif value == "current_function" then
-				return self:GetCurrentType("function")
-			elseif value == "current_union" then
-				return self:GetCurrentType("union")
-			end
-
-			local current_table = self:GetCurrentType("table")
-
-			if current_table then
-				if value == "self" then
-					return current_table
-				elseif
-					self.left_assigned and
-					self.left_assigned:GetData() == value and
-					not is_primitive(value)
-				then
-					return current_table
+		elseif node.force_upvalue then
+			return lookup_value(self, node)
+		elseif value == "..." then
+			return lookup_value(self, node)
+		elseif type == "letter" and node.standalone_letter then
+			-- standalone_letter means it's the first part of something, either >true<, >foo<.bar, >foo<()
+			if self:IsTypesystem() then
+				if value == "current_table" then
+					return self:GetCurrentType("table")
+				elseif value == "current_tuple" then
+					return self:GetCurrentType("tuple")
+				elseif value == "current_function" then
+					return self:GetCurrentType("function")
+				elseif value == "current_union" then
+					return self:GetCurrentType("union")
+				end
+	
+				local current_table = self:GetCurrentType("table")
+	
+				if current_table then
+					if value == "self" then
+						return current_table
+					elseif
+						self.left_assigned and
+						self.left_assigned:GetData() == value and
+						not is_primitive(value)
+					then
+						return current_table
+					end
+				end
+	
+				if value == "any" then
+					return Any():SetNode(node)
+				elseif value == "inf" then
+					return LNumber(math.huge):SetNode(node)
+				elseif value == "nan" then
+					return LNumber(math.abs(0 / 0)):SetNode(node)
+				elseif value == "string" then
+					return String():SetNode(node)
+				elseif value == "number" then
+					return Number():SetNode(node)
+				elseif value == "boolean" then
+					return Boolean():SetNode(node)
 				end
 			end
 
-			if value == "any" then
-				return Any():SetNode(node)
-			elseif value == "inf" then
-				return LNumber(math.huge):SetNode(node)
-			elseif value == "nan" then
-				return LNumber(math.abs(0 / 0)):SetNode(node)
-			elseif value == "string" then
-				return String():SetNode(node)
-			elseif value == "number" then
-				return Number():SetNode(node)
-			elseif value == "boolean" then
-				return Boolean():SetNode(node)
-			end
-		end
-
-		if standalone_letter or value == "..." or node.force_upvalue then
-			local val = lookup_value(self, node)
-
-			if val:GetUpvalue() then
-				self:GetScope():AddDependency(val:GetUpvalue())
-			end
-
-			return val
-		end
-
-		if type == "number" then
+			return lookup_value(self, node)
+		elseif type == "number" then
 			local num = LNumberFromString(value)
 
 			if not num then

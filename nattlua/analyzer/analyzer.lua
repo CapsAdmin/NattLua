@@ -97,7 +97,6 @@ do
 	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
 	local AnalyzeTable = require("nattlua.analyzer.expressions.table").AnalyzeTable
 	local AnalyzeAtomicValue = require("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
-	local AnalyzeImport = require("nattlua.analyzer.expressions.import").AnalyzeImport
 	local AnalyzeTuple = require("nattlua.analyzer.expressions.tuple").AnalyzeTuple
 	local AnalyzeVararg = require("nattlua.analyzer.expressions.vararg").AnalyzeVararg
 	local AnalyzeFunctionSignature = require("nattlua.analyzer.expressions.function_signature").AnalyzeFunctionSignature
@@ -127,15 +126,7 @@ do
 		elseif node.kind == "postfix_expression_index" then
 			return AnalyzePostfixIndex(self, node)
 		elseif node.kind == "postfix_call" then
-			if
-				node.import_expression and
-				node.left.value.value ~= "dofile" and
-				node.left.value.value ~= "loadfile"
-			then
-				return AnalyzeImport(self, node)
-			else
-				return AnalyzePostfixCall(self, node)
-			end
+			return AnalyzePostfixCall(self, node)
 		elseif node.kind == "empty_union" then
 			return Union({}):SetNode(node)
 		elseif node.kind == "tuple" then
@@ -147,29 +138,36 @@ do
 		end
 	end
 
-	function META:AnalyzeExpression(node)
-		local obj, err = self:AnalyzeExpression2(node)
+	function META:AnalyzeTypeExpression(node, parent_obj)
+		if not node.type_expression then
+			return parent_obj
+		end
 
-		if node.type_expression then
-			local old = obj
-			self:PushAnalyzerEnvironment("typesystem")
-			obj = self:AnalyzeExpression(node.type_expression)
-			self:PopAnalyzerEnvironment()
+		self:PushAnalyzerEnvironment("typesystem")
+		local obj = self:AnalyzeExpression(node.type_expression)
+		self:PopAnalyzerEnvironment()
 
-			if obj.Type == "table" then
-				if old.Type == "table" then
-					old:SetContract(obj)
-					obj = old
-				elseif old.Type == "tuple" and old:GetLength() == 1 then
-					local first = old:GetData()[1]
+		if obj.Type == "table" then
+			if parent_obj.Type == "table" then
+				parent_obj:SetContract(obj)
+				return parent_obj
+			elseif parent_obj.Type == "tuple" and parent_obj:GetLength() == 1 then
+				local first = parent_obj:GetData()[1]
 
-					if first.Type == "table" then
-						first:SetContract(obj)
-						obj = old
-					end
+				if first.Type == "table" then
+					first:SetContract(obj)
+					return parent_obj
 				end
 			end
 		end
+
+		return obj
+	end
+
+	function META:AnalyzeExpression(node)
+		local obj, err = self:AnalyzeExpression2(node)
+
+		obj = self:AnalyzeTypeExpression(node, obj)
 
 		node:AddType(obj or err)
 		return obj, err
