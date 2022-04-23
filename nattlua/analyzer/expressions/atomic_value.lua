@@ -87,16 +87,6 @@ return {
 		elseif type == "letter" and node.standalone_letter then
 			-- standalone_letter means it's the first part of something, either >true<, >foo<.bar, >foo<()
 			if self:IsTypesystem() then
-				if value == "current_table" then
-					return self:GetCurrentType("table")
-				elseif value == "current_tuple" then
-					return self:GetCurrentType("tuple")
-				elseif value == "current_function" then
-					return self:GetCurrentType("function")
-				elseif value == "current_union" then
-					return self:GetCurrentType("union")
-				end
-	
 				local current_table = self:GetCurrentType("table")
 	
 				if current_table then
