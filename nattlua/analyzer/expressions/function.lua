@@ -172,14 +172,12 @@ return {
 		self:CreateAndPushFunctionScope(obj)
 		self:PushAnalyzerEnvironment("typesystem")
 
-		local args = analyze_arguments(self, node)
-		local ret = analyze_return_types(self, node)
+		obj.Data.arg = analyze_arguments(self, node)
+		obj.Data.ret = analyze_return_types(self, node)
 	
 		self:PopAnalyzerEnvironment()
 		self:PopScope()
 		self:PopCurrentType("function")
-
-		local func
 
 		if
 			node.kind == "analyzer_function" or
@@ -189,22 +187,18 @@ return {
 
 			em:EmitFunctionBody(node)
 
-			func = self:CompileLuaAnalyzerDebugCode(
+			obj.Data.lua_function  = self:CompileLuaAnalyzerDebugCode(
 				"return function " .. em:Concat(),
 				node
 			)()
 		end
-
-		obj.Data.arg = args
-		obj.Data.ret = ret
-		obj.Data.lua_function = func
 
 		if node.statements then obj.function_body_node = node end
 
 		obj.explicit_arguments = has_explicit_arguments(node)
 		obj.explicit_return = has_expicit_return_type(node)
 
-		if self:IsRuntime() then self:CallMeLater(obj, args, node, true) end
+		if self:IsRuntime() then self:AddToUnreachableCodeAnalysis(obj) end
 
 		return obj
 	end,

@@ -40,7 +40,7 @@ return {
 					val = val:Copy()
 					val:SetCallOverride(nil)
 					val:GetArguments():Set(1, Union({Any(), obj}))
-					self:CallMeLater(val, val:GetArguments(), val:GetNode(), true)
+					self:AddToUnreachableCodeAnalysis(val, val:GetArguments(), val:GetNode(), true)
 				end
 			end
 

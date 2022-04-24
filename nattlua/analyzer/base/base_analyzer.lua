@@ -106,9 +106,9 @@ return function(META)
 			return tup
 		end
 
-		local function call(self, obj, arguments, node)
-			-- disregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-			arguments = obj:GetArguments():Copy()
+		local function call(self, obj, node)
+			-- use function's arguments in case they have been maniupulated (ie string.gsub)
+			local arguments = obj:GetArguments():Copy()
 			arguments = add_potential_self(arguments)
 
 			for _, obj in ipairs(arguments:GetData()) do
@@ -120,9 +120,9 @@ return function(META)
 			self:PopScope()
 		end
 
-		function META:CallMeLater(obj, arguments, node)
+		function META:AddToUnreachableCodeAnalysis(obj)
 			self.deferred_calls = self.deferred_calls or {}
-			table.insert(self.deferred_calls, 1, {obj, arguments, node})
+			table.insert(self.deferred_calls, 1, obj)
 		end
 
 		function META:AnalyzeUnreachableCode()
@@ -133,8 +133,7 @@ return function(META)
 			self.processing_deferred_calls = true
 			local called_count = 0
 
-			for _, v in ipairs(self.deferred_calls) do
-				local func = v[1]
+			for _, func in ipairs(self.deferred_calls) do
 
 				if
 					func.explicit_arguments and
@@ -143,16 +142,14 @@ return function(META)
 					not func.done and
 					not func:IsRefFunction()
 				then
-					call(self, table.unpack(v))
+					call(self, func, func.function_body_node)
 					called_count = called_count + 1
 					func.done = true
 					func:ClearCalls()
 				end
 			end
 
-			for _, v in ipairs(self.deferred_calls) do
-				local func = v[1]
-
+			for _, func in ipairs(self.deferred_calls) do
 				if
 					not func.explicit_arguments and
 					not func:IsCalled()
@@ -160,7 +157,7 @@ return function(META)
 					not func.done and
 					not func:IsRefFunction()
 				then
-					call(self, table.unpack(v))
+					call(self, func, func.function_body_node)
 					called_count = called_count + 1
 					func.done = true
 					func:ClearCalls()
