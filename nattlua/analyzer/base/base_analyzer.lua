@@ -311,7 +311,7 @@ return function(META)
 							f:close()
 							local start = helpers.LinePositionToSubPosition(code, tonumber(line), 0)
 							local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
-							msg = code:BuildSourceCodePointMessage(rest, start, stop)
+							msg = node.Code:BuildSourceCodePointMessage(rest, start, stop)
 						end
 					end
 				end
