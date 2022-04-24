@@ -259,17 +259,19 @@ return function(META)
 			-- append newlines so that potential line errors are correct
 			local lua_code = node.Code:GetString()
 
+			local line
+
 			if lua_code then
 				local start, stop = node:GetStartStop()
-				local line = helpers.SubPositionToLinePosition(lua_code, start, stop).line_start
+				line = helpers.SubPositionToLinePosition(lua_code, start, stop).line_start
 				code = ("\n"):rep(line - 1) .. code
 			end
 
-			local func, err = loadstring(code, node.name)
+			local func, err = loadstring(code, node.Code:GetName() .. ":" .. line)
 
 			if not func then
 				print("========================")
-				print(func, err, code.name, code)
+				print(func, err, node.Code:GetName(), code)
 				print(node)
 				print("=============NODE===========")
 
