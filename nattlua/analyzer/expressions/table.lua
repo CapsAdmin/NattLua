@@ -6,16 +6,15 @@ local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
 local table = _G.table
 return {
-	AnalyzeTable = function(self, node)
-		local tbl = Table():SetNode(node):SetLiteral(self:IsTypesystem())
+	AnalyzeTable = function(self, tree)
+		local tbl = Table():SetNode(tree):SetLiteral(self:IsTypesystem())
 
 		if self:IsRuntime() then tbl:SetReferenceId(tostring(tbl:GetData())) end
 
 		self:PushCurrentType(tbl, "table")
-		local tree = node
 		tbl.scope = self:GetScope()
 
-		for i, node in ipairs(node.children) do
+		for i, node in ipairs(tree.children) do
 			if node.kind == "table_key_value" then
 				local key = LString(node.tokens["identifier"].value):SetNode(node.tokens["identifier"])
 				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
