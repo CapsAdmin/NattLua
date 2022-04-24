@@ -7,23 +7,10 @@ local Function = require("nattlua.types.function").Function
 local Any = require("nattlua.types.any").Any
 local VarArg = require("nattlua.types.tuple").VarArg
 local ipairs = _G.ipairs
-local locals = ""
-locals = locals .. "local nl=require(\"nattlua\");"
-locals = locals .. "local types=require(\"nattlua.types.types\");"
+local Emitter = require("nattlua.transpiler.emitter").New
 
-for k, v in pairs(_G) do
-	locals = locals .. "local " .. tostring(k) .. "=_G." .. k .. ";"
-end
-
-local function analyze_function_signature(self, node, current_function)
-	local explicit_arguments = false
-	local explicit_return = false
+local function analyze_arguments(self, node)
 	local args = {}
-	local argument_tuple_override
-	local return_tuple_override
-	self:CreateAndPushFunctionScope(current_function)
-	self:PushAnalyzerEnvironment("typesystem")
-
 	if node.kind == "function" or node.kind == "local_function" then
 		for i, key in ipairs(node.identifiers) do
 			-- stem type so that we can allow
@@ -32,7 +19,6 @@ local function analyze_function_signature(self, node, current_function)
 
 			if key.type_expression then
 				args[i] = self:AnalyzeExpression(key.type_expression)
-				explicit_arguments = true
 			elseif key.value.value == "..." then
 				args[i] = VarArg(Any())
 			else
@@ -48,8 +34,6 @@ local function analyze_function_signature(self, node, current_function)
 		node.kind == "type_function" or
 		node.kind == "function_signature"
 	then
-		explicit_arguments = true
-
 		for i, key in ipairs(node.identifiers) do
 			local generic_type = node.identifiers_typesystem and node.identifiers_typesystem[i]
 
@@ -76,9 +60,7 @@ local function analyze_function_signature(self, node, current_function)
 					if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
 						-- if we pass in a tuple we override the argument type
 						-- function(mytuple): string
-						argument_tuple_override = obj
-
-						break
+						return obj
 					else
 						local val = self:Assert(node, obj)
 
@@ -94,9 +76,7 @@ local function analyze_function_signature(self, node, current_function)
 				if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
 					-- if we pass in a tuple we override the argument type
 					-- function(mytuple): string
-					argument_tuple_override = obj
-
-					break
+					return obj
 				else
 					local val = self:Assert(node, obj)
 
@@ -122,12 +102,13 @@ local function analyze_function_signature(self, node, current_function)
 			end
 		end
 	end
+	return Tuple(args)
+end
 
+local function analyze_return_types(self, node)
 	local ret = {}
 
 	if node.return_types then
-		explicit_return = true
-
 		-- TODO:
 		-- somethings up with function(): (a,b,c)
 		-- when doing this vesrus function(): a,b,c
@@ -138,21 +119,44 @@ local function analyze_function_signature(self, node, current_function)
 			if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 and not obj.Repeat then
 				-- if we pass in a tuple, we want to override the return type
 				-- function(): mytuple
-				return_tuple_override = obj
-
-				break
+				return obj
 			else
 				ret[i] = obj
 			end
 		end
 	end
 
-	self:PopAnalyzerEnvironment()
-	self:PopScope()
-	return argument_tuple_override or Tuple(args),
-	return_tuple_override or Tuple(ret),
-	explicit_arguments,
-	explicit_return
+	return Tuple(ret)
+end
+
+local function has_explicit_arguments(node)
+	if
+		node.kind == "analyzer_function" or
+		node.kind == "local_analyzer_function" or
+		node.kind == "local_type_function" or
+		node.kind == "type_function" or
+		node.kind == "function_signature"
+	then
+		return true
+	end
+
+	if node.kind == "function" or node.kind == "local_function" then
+		for i, key in ipairs(node.identifiers) do
+			if key.type_expression then
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
+local function has_expicit_return_type(node)
+	if node.return_types then
+		return true
+	end
+
+	return false
 end
 
 return {
@@ -163,19 +167,24 @@ return {
 				upvalue_position = #self:GetScope():GetUpvalues("runtime"),
 			}
 		):SetNode(node)
+		
 		self:PushCurrentType(obj, "function")
-		local args, ret, explicit_arguments, explicit_return = analyze_function_signature(self, node, obj)
-		local func
+		self:CreateAndPushFunctionScope(obj)
+		self:PushAnalyzerEnvironment("typesystem")
+
+		local args = analyze_arguments(self, node)
+		local ret = analyze_return_types(self, node)
+	
+		self:PopAnalyzerEnvironment()
+		self:PopScope()
 		self:PopCurrentType("function")
 
+		local func
+
 		if
-			node.statements and
-			(
-				node.kind == "analyzer_function" or
-				node.kind == "local_analyzer_function"
-			)
+			node.kind == "analyzer_function" or
+			node.kind == "local_analyzer_function"
 		then
-			local Emitter = require("nattlua.transpiler.emitter").New
 			local em = Emitter({type_annotations = false})
 
 			em:EmitFunctionBody(node)
@@ -192,8 +201,8 @@ return {
 
 		if node.statements then obj.function_body_node = node end
 
-		obj.explicit_arguments = explicit_arguments
-		obj.explicit_return = explicit_return
+		obj.explicit_arguments = has_explicit_arguments(node)
+		obj.explicit_return = has_expicit_return_type(node)
 
 		if self:IsRuntime() then self:CallMeLater(obj, args, node, true) end
 
