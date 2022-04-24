@@ -245,7 +245,7 @@ return function(META)
 		runtime_injection = runtime_injection:gsub("\n", ";")
 
 		function META:CompileLuaAnalyzerDebugCode(code, node)
-			local start, stop = code:find("^.-function%b()")
+			local start, stop = code:find("^.-function %b()")
 
 			if start and stop then
 				local before_function = code:sub(1, stop)
@@ -345,6 +345,7 @@ return function(META)
 			end
 
 			function META:GetScopeHelper(scope)
+				if not scope then debug.trace() end
 				scope.scope_helper = scope.scope_helper or
 					{
 						typesystem = setmetatable(

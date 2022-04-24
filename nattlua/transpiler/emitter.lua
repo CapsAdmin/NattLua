@@ -951,7 +951,7 @@ end
 function META:EmitVararg(node--[[#: Node]])
 	self:EmitToken(node.tokens["..."])
 
-	if not self.config.analyzer_function then self:EmitExpression(node.value) end
+	self:EmitExpression(node.value) 
 end
 
 function META:EmitTable(tree--[[#: Node]])
@@ -1615,18 +1615,14 @@ do -- types
 	end
 
 	function META:EmitAnalyzerFunction(node--[[#: Node]])
-		if not self.config.analyzer_function then
-			if node.tokens["analyzer"] then
-				self:EmitToken(node.tokens["analyzer"])
-				self:Whitespace(" ")
-			end
+		if node.tokens["analyzer"] then
+			self:EmitToken(node.tokens["analyzer"])
+			self:Whitespace(" ")
 		end
 
 		self:EmitToken(node.tokens["function"])
 
-		if not self.config.analyzer_function then
-			if node.tokens["^"] then self:EmitToken(node.tokens["^"]) end
-		end
+		if node.tokens["^"] then self:EmitToken(node.tokens["^"]) end
 
 		self:EmitToken(node.tokens["arguments("])
 
@@ -1657,7 +1653,7 @@ do -- types
 
 		self:EmitToken(node.tokens["arguments)"])
 
-		if node.tokens[":"] and not self.config.analyzer_function then
+		if node.tokens[":"] then
 			self:EmitToken(node.tokens[":"])
 			self:Whitespace(" ")
 
@@ -1690,7 +1686,7 @@ do -- types
 		if node.kind == "binary_operator" then
 			self:EmitTypeBinaryOperator(node)
 		elseif node.kind == "analyzer_function" then
-			self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
+			self:EmitAnalyzerFunction(node)
 		elseif node.kind == "table" then
 			self:EmitTable(node)
 		elseif node.kind == "prefix_operator" then
@@ -1698,11 +1694,7 @@ do -- types
 		elseif node.kind == "postfix_operator" then
 			self:EmitPostfixOperator(node)
 		elseif node.kind == "postfix_call" then
-			if node.type_call then
-				self:EmitInvalidLuaCode("EmitCall", node)
-			else
-				self:EmitCall(node)
-			end
+			self:EmitCall(node)
 		elseif node.kind == "postfix_expression_index" then
 			self:EmitExpressionIndex(node)
 		elseif node.kind == "value" then
@@ -1718,11 +1710,11 @@ do -- types
 		elseif node.kind == "tuple" then
 			self:EmitTuple(node)
 		elseif node.kind == "type_function" then
-			self:EmitInvalidLuaCode("EmitTypeFunction", node)
+			self:EmitTypeFunction(node)
 		elseif node.kind == "function" then
 			self:EmitAnonymousFunction(node)
 		elseif node.kind == "function_signature" then
-			self:EmitInvalidLuaCode("EmitFunctionSignature", node)
+			self:EmitFunctionSignature(node)
 		elseif node.kind == "vararg" then
 			self:EmitVararg(node)
 		else
@@ -1735,10 +1727,8 @@ do -- types
 			self:Whitespace(" ")
 		end
 
-		if not self.config.analyzer_function then
-			if node.type_expression then
-				self:EmitTypeExpression(node.type_expression)
-			end
+		if node.type_expression then
+			self:EmitTypeExpression(node.type_expression)
 		end
 
 		if node.tokens[")"] then

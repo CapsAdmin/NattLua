@@ -157,17 +157,6 @@ end
 
 return {
 	AnalyzeFunction = function(self, node)
-		if
-			node.type == "statement" and
-			(
-				node.kind == "local_analyzer_function" or
-				node.kind == "analyzer_function"
-			)
-		then
-			node.type = "expression"
-			node.kind = "analyzer_function"
-		end
-
 		local obj = Function(
 			{
 				scope = self:GetScope(),
@@ -186,10 +175,13 @@ return {
 				node.kind == "local_analyzer_function"
 			)
 		then
-			node.analyzer_function = true
-			--'local analyzer = self;local env = self:GetScopeHelper(scope);'
+			local Emitter = require("nattlua.transpiler.emitter").New
+			local em = Emitter({type_annotations = false})
+
+			em:EmitFunctionBody(node)
+
 			func = self:CompileLuaAnalyzerDebugCode(
-				"return  " .. node:Render({analyzer_function = true, comment_type_annotations = false}),
+				"return function " .. em:Concat(),
 				node
 			)()
 		end

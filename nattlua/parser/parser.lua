@@ -156,6 +156,8 @@ function META:ReadAnalyzerFunctionBody(
 	node--[[#: statement["analyzer_function"] | expression["analyzer_function"] | statement["local_analyzer_function"] ]],
 	type_args--[[#: boolean]]
 )
+	self:PushParserEnvironment("runtime")
+
 	node.tokens["arguments("] = self:ExpectValue("(")
 	node.identifiers = self:ReadMultipleValues(math_huge, self.ReadTypeFunctionArgument, type_args)
 
@@ -195,6 +197,8 @@ function META:ReadAnalyzerFunctionBody(
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectValue("end", start, start)
 	end
+
+	self:PopParserEnvironment()
 
 	return node
 end
