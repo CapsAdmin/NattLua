@@ -13,6 +13,6 @@ return {
 			return LString(node.data)
 		end
 
-		return Nil():SetNode(node)
+		return Nil()
 	end,
 }

@@ -67,8 +67,6 @@ analyzer function next(t: Map<|any, any|>, k: any)
 				k:AddType(types.Number())
 				v:AddType(kv)
 			else
-				kv.key:SetNode(t:GetNode())
-				kv.val:SetNode(t:GetNode())
 				k:AddType(kv.key)
 				v:AddType(kv.val)
 			end
@@ -95,7 +93,7 @@ analyzer function pairs(tbl: Table)
 	analyzer:PushAnalyzerEnvironment("typesystem")
 	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
 	analyzer:PopAnalyzerEnvironment()
-	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
+	local k, v = analyzer:CallLuaTypeFunction(next:GetData().lua_function, analyzer:GetScope(), tbl)
 	local done = false
 
 	if v and v.Type == "union" then v:RemoveType(types.Symbol(nil)) end
@@ -122,7 +120,7 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 	end
 
 	if tbl.Type == "table" and not tbl:IsNumericallyIndexed() then
-		analyzer:Warning(analyzer.current_expression, {tbl, " is not numerically indexed"})
+		analyzer:Warning({tbl, " is not numerically indexed"})
 		local done = false
 		return function()
 			if done then return nil end
@@ -135,7 +133,7 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 	analyzer:PushAnalyzerEnvironment("typesystem")
 	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
 	analyzer:PopAnalyzerEnvironment()
-	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
+	local k, v = analyzer:CallLuaTypeFunction(next:GetData().lua_function, analyzer:GetScope(), tbl)
 	local done = false
 	return function()
 		if done then return nil end
@@ -175,7 +173,7 @@ analyzer function require(name: string)
 
 			-- in case it's not found
 			-- TODO, add ability to configure the analyzer
-			analyzer:Warning(analyzer.current_expression, "module '" .. mod .. "' might not exist")
+			analyzer:Warning("module '" .. mod .. "' might not exist")
 			return tbl
 		end
 	end
@@ -210,7 +208,7 @@ analyzer function require(name: string)
 		end
 	end
 
-	analyzer:Error(name:GetNode(), "module '" .. str:GetData() .. "' not found")
+	analyzer:Error("module '" .. str:GetData() .. "' not found")
 	return types.Any
 end
 
@@ -240,7 +238,7 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 			end,
 		}
-	):SetNode(compiler.SyntaxTree)
+	)
 end
 
 type loadstring = load
@@ -270,7 +268,7 @@ analyzer function loadfile(path: string)
 	f.Data.lua_function = function(...)
 		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
 	end
-	return f:SetNode(compiler.SyntaxTree)
+	return f
 end
 
 analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
@@ -346,7 +344,7 @@ type type_error = error
 analyzer function pcall(callable: function=(...any)>((...any)), ...: ...any)
 	local count = #analyzer:GetDiagnostics()
 	analyzer:PushProtectedCall()
-	local res = analyzer:Assert(analyzer.current_statement, analyzer:Call(callable, types.Tuple({...})))
+	local res = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
 	analyzer:PopProtectedCall()
 	local diagnostics = analyzer:GetDiagnostics()
 	analyzer:ClearError()
@@ -365,7 +363,7 @@ end
 analyzer function type_pcall(func: Function, ...: ...any)
 	local diagnostics_index = #analyzer.diagnostics
 	analyzer:PushProtectedCall()
-	local tuple = analyzer:Assert(analyzer.current_statement, analyzer:Call(func, types.Tuple({...})))
+	local tuple = analyzer:Assert(analyzer:Call(func, types.Tuple({...})))
 	analyzer:PopProtectedCall()
 
 	do
@@ -384,7 +382,7 @@ analyzer function type_pcall(func: Function, ...: ...any)
 end
 
 analyzer function xpcall(callable: any, error_cb: any, ...: ...any)
-	return analyzer:Assert(analyzer.current_statement, callable:Call(callable, types.Tuple(...), node))
+	return analyzer:Assert(callable:Call(callable, types.Tuple(...), node))
 end
 
 analyzer function select(index: 1 .. inf | "#", ...: ...any)
@@ -449,7 +447,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 
 	if meta.Type == "table" then
 		if meta.Self then
-			analyzer:Assert(tbl:GetNode(), tbl:FollowsContract(meta.Self))
+			analyzer:Assert(tbl:FollowsContract(meta.Self))
 			tbl:CopyLiteralness(meta.Self)
 			tbl:SetContract(meta.Self)
 			-- clear mutations so that when looking up values in the table they won't return their initial value
@@ -467,7 +465,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 			local b = meta:Get(kv.key)
 
 			if b and b.Type == "function" then
-				local ok = analyzer:Assert(b:GetNode(), a:IsSubsetOf(b))
+				local ok = analyzer:Assert(a:IsSubsetOf(b))
 
 				if ok then
 
@@ -498,7 +496,7 @@ analyzer function tostring(val: any)
 
 			if func then
 				if func.Type == "function" then
-					return analyzer:Assert(analyzer.current_expression, analyzer:Call(func, types.Tuple({val})))
+					return analyzer:Assert(analyzer:Call(func, types.Tuple({val})))
 				else
 					return func
 				end

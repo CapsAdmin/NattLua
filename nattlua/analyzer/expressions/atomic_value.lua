@@ -31,7 +31,7 @@ local function lookup_value(self, node)
 
 		if not obj then
 			table.insert(errors, err)
-			self:Error(node, errors)
+			self:Error(errors)
 			return Nil()
 		end
 	else
@@ -44,8 +44,8 @@ local function lookup_value(self, node)
 		end
 
 		if not obj then
-			self:Warning(node, err)
-			obj = Any():SetNode(node)
+			self:Warning(err)
+			obj = Any()
 		end
 	end
 
@@ -74,11 +74,11 @@ return {
 
 		if type == "keyword" then
 			if value == "nil" then
-				return Nil():SetNode(node)
+				return Nil()
 			elseif value == "true" then
-				return True():SetNode(node)
+				return True()
 			elseif value == "false" then
-				return False():SetNode(node)
+				return False()
 			end
 		elseif node.force_upvalue then
 			return lookup_value(self, node)
@@ -102,17 +102,17 @@ return {
 				end
 	
 				if value == "any" then
-					return Any():SetNode(node)
+					return Any()
 				elseif value == "inf" then
-					return LNumber(math.huge):SetNode(node)
+					return LNumber(math.huge)
 				elseif value == "nan" then
-					return LNumber(math.abs(0 / 0)):SetNode(node)
+					return LNumber(math.abs(0 / 0))
 				elseif value == "string" then
-					return String():SetNode(node)
+					return String()
 				elseif value == "number" then
-					return Number():SetNode(node)
+					return Number()
 				elseif value == "boolean" then
-					return Boolean():SetNode(node)
+					return Boolean()
 				end
 			end
 
@@ -121,16 +121,15 @@ return {
 			local num = LNumberFromString(value)
 
 			if not num then
-				self:Error(node, "unable to convert " .. value .. " to number")
+				self:Error("unable to convert " .. value .. " to number")
 				num = Number()
 			end
 
-			num:SetNode(node)
 			return num
 		elseif type == "string" then
-			return LString(node.value.string_value):SetNode(node)
+			return LString(node.value.string_value)
 		elseif type == "letter" then
-			return LString(value):SetNode(node)
+			return LString(value)
 		end
 
 		self:FatalError("unhandled value type " .. type .. " " .. node:Render())

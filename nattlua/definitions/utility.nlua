@@ -263,11 +263,11 @@ analyzer function PushTypeEnvironment(obj: any)
 
 				if ok then return ok end
 
-				local val, err = analyzer:IndexOperator(key:GetNode(), g, key)
+				local val, err = analyzer:IndexOperator(g, key)
 
 				if val then return val end
 
-				analyzer:Error(key:GetNode(), err)
+				analyzer:Error(err)
 				return types.Nil()
 			end,
 			{types.Any(), types.Any()},
@@ -278,7 +278,7 @@ analyzer function PushTypeEnvironment(obj: any)
 		types.LString("__newindex"),
 		types.LuaTypeFunction(
 			function(self, key, val)
-				return analyzer:Assert(analyzer.curent_expression, obj:Set(key, val))
+				return analyzer:Assert(obj:Set(key, val))
 			end,
 			{types.Any(), types.Any(), types.Any()},
 			{}

@@ -152,6 +152,6 @@ return {
 		return setmetatable({Data = str}, META):SetLiteral(true)
 	end,
 	NodeToString = function(node--[[#: Token]], is_local--[[#: boolean | nil]])
-		return META.New(node.value.value):SetLiteral(true):SetNode(node, is_local)
+		return META.New(node.value.value):SetLiteral(true)
 	end,
 }

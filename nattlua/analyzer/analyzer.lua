@@ -112,9 +112,10 @@ do
 		elseif
 			node.kind == "function" or
 			node.kind == "analyzer_function" or
-			node.kind == "type_function"
+			node.kind == "type_function" or
+			node.kind == "function_signature"
 		then
-			return AnalyzeFunction(self, node)
+			return AnalyzeFunction(self, node):SetNode(node)
 		elseif node.kind == "table" or node.kind == "type_table" then
 			return AnalyzeTable(self, node)
 		elseif node.kind == "binary_operator" then
@@ -128,11 +129,9 @@ do
 		elseif node.kind == "postfix_call" then
 			return AnalyzePostfixCall(self, node)
 		elseif node.kind == "empty_union" then
-			return Union({}):SetNode(node)
+			return Union({})
 		elseif node.kind == "tuple" then
 			return AnalyzeTuple(self, node)
-		elseif node.kind == "function_signature" then
-			return AnalyzeFunctionSignature(self, node)
 		else
 			self:FatalError("unhandled expression " .. node.kind)
 		end

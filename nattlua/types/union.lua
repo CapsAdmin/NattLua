@@ -188,7 +188,6 @@ function META:GetAtIndex(i--[[#: number]])
 			if found then
 				if val then
 					val = self.New({val, found})
-					val:SetNode(found:GetNode())
 				else
 					val = found
 				end
@@ -201,7 +200,6 @@ function META:GetAtIndex(i--[[#: number]])
 			if val then
 				-- a non tuple in the union would be treated as a tuple with the value repeated
 				val = self.New({val, obj})
-				val:SetNode(self:GetNode())
 			elseif i == 1 then
 				val = obj
 			else
@@ -444,7 +442,7 @@ function META:Call(analyzer--[[#: any]], arguments--[[#: TBaseType]], call_node-
 	local new = META.New({})
 
 	for _, obj in ipairs(self.Data) do
-		local val = analyzer:Assert(call_node, analyzer:Call(obj, arguments, call_node))
+		local val = analyzer:Assert(analyzer:Call(obj, arguments, call_node))
 
 		-- TODO
 		if val.Type == "tuple" and val:GetLength() == 1 then

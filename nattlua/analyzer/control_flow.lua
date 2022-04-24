@@ -37,7 +37,7 @@ return function(META)
 		self:AnalyzeStatements(statement.statements)
 
 		if scope.missing_return and self:IsMaybeReachable() then
-			self:Return(statement, {Nil():SetNode(statement)})
+			self:Return(statement, {Nil()})
 		end
 
 		local union = Union({})
@@ -47,7 +47,6 @@ return function(META)
 				union:AddType(ret.types[1])
 			else
 				local tup = Tuple(ret.types)
-				tup:SetNode(ret.node)
 				union:AddType(tup)
 			end
 		end
@@ -148,7 +147,7 @@ return function(META)
 			local frame = level and
 				self.call_stack[-#self.call_stack + level + 1] or
 				self.call_stack[#self.call_stack]
-			self:Error(frame.call_node, msg)
+			self:Error(msg)
 		end
 	end
 
@@ -243,8 +242,8 @@ return function(META)
 		return scope
 	end
 
-	function META:ErrorAndCloneCurrentScope(node, err)
-		self:Error(node, err)
+	function META:ErrorAndCloneCurrentScope(err)
+		self:Error(err)
 		self:CloneCurrentScope()
 		self:GetScope():SetConditionalScope(true)
 	end

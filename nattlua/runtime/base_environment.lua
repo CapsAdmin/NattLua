@@ -54,7 +54,7 @@ return {
 		assert(compiler:Analyze(base))
 		typesystem_env.string_metatable:Set(
 			LStringNoMeta("__index"),
-			base:Assert(compiler.SyntaxTree, typesystem_env:Get(LStringNoMeta("string")))
+			base:Assert(typesystem_env:Get(LStringNoMeta("string")))
 		)
 		return runtime_env, typesystem_env
 	end,

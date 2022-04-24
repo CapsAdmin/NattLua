@@ -61,7 +61,7 @@ return {
 				-- when "self" is looked up in the typesystem in analyzer:AnalyzeExpression, we refer left[right_pos]
 				-- use context?
 				self.left_assigned = left[right_pos]
-				local obj = self:Assert(exp_val, self:AnalyzeExpression(exp_val))
+				local obj = self:Assert(self:AnalyzeExpression(exp_val))
 				self:ClearTracked()
 
 				if obj.Type == "tuple" and obj:GetLength() == 1 then
@@ -126,7 +126,7 @@ return {
 
 		-- here we check the types
 		for left_pos, exp_key in ipairs(statement.left) do
-			local val = right[left_pos] or Nil():SetNode(exp_key)
+			local val = right[left_pos] or Nil()
 
 			-- do we have a type expression? 
 			-- local a: >>number<< = 1
@@ -154,7 +154,6 @@ return {
 					end
 
 					self:Assert(
-						statement or val:GetNode() or exp_key.type_expression,
 						check_type_against_contract(val, contract)
 					)
 				else
@@ -206,7 +205,6 @@ return {
 
 							val:CopyLiteralness(contract)
 							self:Assert(
-								statement or val:GetNode() or exp_key.type_expression,
 								check_type_against_contract(val, contract)
 							)
 							val:SetContract(contract)
@@ -231,7 +229,7 @@ return {
 
 					if self:IsRuntime() then key = key:GetFirstValue() end
 
-					self:Assert(exp_key, self:NewIndexOperator(exp_key, obj, key, val))
+					self:Assert(self:NewIndexOperator(obj, key, val))
 				end
 			end
 		end

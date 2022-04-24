@@ -222,8 +222,7 @@ analyzer function ^string.gsub(
 				pattern,
 				function(...)
 					local ret = analyzer:Assert(
-						replacement:GetNode(),
-						analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement:GetNode(), {...}))
+						analyzer:Call(replacement, analyzer:LuaTypesToTuple({...}))
 					)
 					local out = {}
 

@@ -171,7 +171,6 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 				union:HasType("function")
 			then
 				self:Assert(
-					value:GetNode() or self.current_expression,
 					self:Call(value, value:GetArguments():Copy())
 				)
 			end
@@ -240,7 +239,7 @@ local function initialize_mutation_tracker(obj, scope, key, hash, node)
 	if obj.mutations[hash][1] == nil then
 		if obj.Type == "table" then
 			-- initialize the table mutations with an existing value or nil
-			local val = (obj:GetContract() or obj):Get(key) or Nil():SetNode(node)
+			local val = (obj:GetContract() or obj):Get(key) or Nil()
 			table.insert(
 				obj.mutations[hash],
 				{scope = obj.scope or scope:GetRoot(), value = val, contract = obj:GetContract()}

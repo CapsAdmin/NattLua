@@ -11,14 +11,14 @@ analyze("attest.equal(nil == nil, true)")
 
 test("declaring base types", function()
 	analyze[[
-        local type Symbol = analyzer function(T: any)
-            return types.Symbol((loadstring or load)("return " .. T:GetNode().value.value)(), true)
+        local type Symbol = analyzer function(T: string)
+            return types.Symbol((loadstring or load)("return " .. T:GetData())(), true)
         end
         
         -- primitive types
-        local type Nil = Symbol(nil)
-        local type True = Symbol(true)
-        local type False = Symbol(false)
+        local type Nil = Symbol("nil")
+        local type True = Symbol("true")
+        local type False = Symbol("false")
         local type Boolean = True | False
         local type Number = -inf .. inf | nan
         local type String = $".-"

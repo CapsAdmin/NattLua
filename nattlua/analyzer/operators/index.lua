@@ -5,7 +5,7 @@ local Union = require("nattlua.types.union").Union
 local type_errors = require("nattlua.types.error_messages")
 return {
 	Index = function(META)
-		function META:IndexOperator(node, obj, key)
+		function META:IndexOperator(obj, key)
 			if obj.Type == "union" then
 				local union = Union({})
 
@@ -27,7 +27,6 @@ return {
 					end
 				end
 
-				union:SetNode(node)
 				return union
 			end
 
@@ -54,7 +53,7 @@ return {
 							)
 						)
 					then
-						return self:IndexOperator(node, index:GetContract() or index, key)
+						return self:IndexOperator(index:GetContract() or index, key)
 					end
 
 					if index.Type == "function" then
@@ -69,7 +68,7 @@ return {
 
 			if self:IsRuntime() then
 				if obj.Type == "tuple" and obj:GetLength() == 1 then
-					return self:IndexOperator(node, obj:Get(1), key)
+					return self:IndexOperator(obj:Get(1), key)
 				end
 			end
 

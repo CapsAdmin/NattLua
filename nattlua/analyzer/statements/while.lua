@@ -6,7 +6,7 @@ return {
 		self:ClearTracked()
 
 		if obj:IsCertainlyFalse() then
-			self:Warning(statement.expression, "loop expression is always false")
+			self:Warning("loop expression is always false")
 		end
 
 		if obj:IsTruthy() then
@@ -31,7 +31,7 @@ return {
 
 				if obj:IsUncertain() or obj:IsFalsy() then break end
 
-				if i == 32 then self:Error(statement, "too many iterations") end
+				if i == 32 then self:Error("too many iterations") end
 			end
 		end
 	end,

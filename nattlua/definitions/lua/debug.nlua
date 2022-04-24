@@ -39,8 +39,8 @@ analyzer function debug.setfenv(val: Function, table: Table)
 	if val and (val:IsLiteral() or val.Type == "function") then
 		if val.Type == "number" then
 			analyzer:SetEnvironmentOverride(analyzer.environment_nodes[val:GetData()], table, "runtime")
-		elseif val:GetNode() then
-			analyzer:SetEnvironmentOverride(val:GetNode(), table, "runtime")
+		elseif val.function_body_node then
+			analyzer:SetEnvironmentOverride(val.function_body_node, table, "runtime")
 		end
 	end
 end

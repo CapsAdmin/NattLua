@@ -644,15 +644,15 @@ analyze[[
     
                 local data = meta:Get(types.LString("Data"))
                 
-                local constructor = analyzer:Assert(tbl:GetNode(), meta:Get(types.LString("constructor")))
+                local constructor = analyzer:Assert(meta:Get(types.LString("constructor")))
     
                 local self_arg = types.Any()
                 self_arg.ref_argument = true
                 constructor:GetArguments():Set(1, self_arg)
             
                 tbl:SetMetaTable(meta)
-                analyzer:Assert(tbl:GetNode(), analyzer:Call(constructor, types.Tuple({tbl, ...})))
-                analyzer:Assert(tbl:GetNode(), tbl:FollowsContract(data))
+                analyzer:Assert(analyzer:Call(constructor, types.Tuple({tbl, ...})))
+                analyzer:Assert(tbl:FollowsContract(data))
                 tbl:CopyLiteralness(data)
             
                 return tbl

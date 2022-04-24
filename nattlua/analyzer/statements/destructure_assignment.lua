@@ -11,7 +11,7 @@ return {
 		if obj.Type == "tuple" then obj = obj:Get(1) end
 
 		if obj.Type ~= "table" then
-			self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj.Type))
+			self:Error("expected a table on the right hand side, got " .. tostring(obj.Type))
 			return
 		end
 
@@ -28,9 +28,9 @@ return {
 
 			if not obj then
 				if self:IsRuntime() then
-					obj = Nil():SetNode(node)
+					obj = Nil()
 				else
-					self:Error(node, "field " .. tostring(node.value.value) .. " does not exist")
+					self:Error("field " .. tostring(node.value.value) .. " does not exist")
 				end
 			end
 

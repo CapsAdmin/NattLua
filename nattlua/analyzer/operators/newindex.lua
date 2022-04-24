@@ -6,7 +6,8 @@ local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
 return {
 	NewIndex = function(META)
-		function META:NewIndexOperator(node, obj, key, val)
+		function META:NewIndexOperator(obj, key, val)
+			if not obj then debug.trace() end
 			if obj.Type == "union" then
 				-- local x: nil | {foo = true}
 				-- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
@@ -16,10 +17,10 @@ return {
 				local falsy_union = Union()
 
 				for _, v in ipairs(obj:GetData()) do
-					local ok, err = self:NewIndexOperator(node, v, key, val)
+					local ok, err = self:NewIndexOperator(v, key, val)
 
 					if not ok then
-						self:ErrorAndCloneCurrentScope(node, err or "invalid set error", obj)
+						self:ErrorAndCloneCurrentScope(err or "invalid set error", obj)
 						falsy_union:AddType(v)
 					else
 						truthy_union:AddType(v)
@@ -29,10 +30,10 @@ return {
 
 				truthy_union:SetUpvalue(obj:GetUpvalue())
 				falsy_union:SetUpvalue(obj:GetUpvalue())
-				return new_union:SetNode(node)
+				return new_union
 			end
 
-			if val.Type == "function" and val:GetNode().self_call then
+			if val.Type == "function" and val.function_body_node and val.function_body_node.self_call then
 				local arg = val:GetArguments():Get(1)
 
 				if arg and not arg:GetContract() and not arg.Self then
@@ -40,7 +41,7 @@ return {
 					val = val:Copy()
 					val:SetCallOverride(nil)
 					val:GetArguments():Set(1, Union({Any(), obj}))
-					self:AddToUnreachableCodeAnalysis(val, val:GetArguments(), val:GetNode(), true)
+					self:AddToUnreachableCodeAnalysis(val, val:GetArguments(), val.function_body_node, true)
 				end
 			end
 
@@ -51,7 +52,7 @@ return {
 					if func.Type == "table" then return func:Set(key, val) end
 
 					if func.Type == "function" then
-						return self:Assert(node, self:Call(func, Tuple({obj, key, val}), key:GetNode()))
+						return self:Assert(self:Call(func, Tuple({obj, key, val}), key:GetNode()))
 					end
 				end
 			end
@@ -68,7 +69,6 @@ return {
 			then
 				if not obj:GetContract() then
 					self:Warning(
-						node,
 						{
 							"mutating function argument ",
 							obj,
@@ -79,7 +79,6 @@ return {
 					)
 				else
 					self:Error(
-						node,
 						{
 							"mutating function argument ",
 							obj,
@@ -114,9 +113,9 @@ return {
 
 					if existing then
 						if val.Type == "function" and existing.Type == "function" then
-							for i, v in ipairs(val:GetNode().identifiers) do
-								if not existing:GetNode().identifiers[i] then
-									self:Error(v, "too many arguments")
+							for i, v in ipairs(val.argument_identifiers) do
+								if not existing.argument_identifiers[i] then
+									self:Error("too many arguments")
 
 									break
 								end
@@ -135,10 +134,10 @@ return {
 								return true
 							end
 						else
-							self:Error(node, err)
+							self:Error(err)
 						end
 					elseif err then
-						self:Error(node, err)
+						self:Error(err)
 					end
 				elseif self:IsTypesystem() then
 					return obj:GetContract():SetExplicit(key, val)

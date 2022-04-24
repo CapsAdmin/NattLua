@@ -7,7 +7,7 @@ local Nil = require("nattlua.types.symbol").Nil
 local table = _G.table
 return {
 	AnalyzeTable = function(self, tree)
-		local tbl = Table():SetNode(tree):SetLiteral(self:IsTypesystem())
+		local tbl = Table():SetLiteral(self:IsTypesystem())
 
 		if self:IsRuntime() then tbl:SetReferenceId(tostring(tbl:GetData())) end
 
@@ -16,13 +16,13 @@ return {
 
 		for i, node in ipairs(tree.children) do
 			if node.kind == "table_key_value" then
-				local key = LString(node.tokens["identifier"].value):SetNode(node.tokens["identifier"])
+				local key = LString(node.tokens["identifier"].value)
 				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
-				self:NewIndexOperator(node, tbl, key, val)
+				self:NewIndexOperator(tbl, key, val)
 			elseif node.kind == "table_expression_value" then
 				local key = self:AnalyzeExpression(node.key_expression):GetFirstValue()
 				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
-				self:NewIndexOperator(node, tbl, key, val)
+				self:NewIndexOperator(tbl, key, val)
 			elseif node.kind == "table_index_value" then
 				if node.spread then
 					local val = self:AnalyzeExpression(node.spread.expression):GetFirstValue()
@@ -34,7 +34,7 @@ return {
 							val = val:Copy():RemoveType(Nil())
 						end
 
-						self:NewIndexOperator(node, tbl, kv.key, val)
+						self:NewIndexOperator(tbl, kv.key, val)
 					end
 				else
 					local obj = self:AnalyzeExpression(node.value_expression)

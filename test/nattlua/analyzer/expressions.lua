@@ -69,7 +69,7 @@ analyze[[
 
     attest.equal(result, 2)
 
-    §assert(env.runtime.result:GetNode().kind == "binary_operator")
+    --§assert(env.runtime.result:GetNode().kind == "binary_operator")
 ]]
 analyze[[
     local x = _ as number

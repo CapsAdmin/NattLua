@@ -19,7 +19,7 @@ return {
 		local uncertain_break = nil
 
 		for i = 1, 1000 do
-			local values = self:Assert(statement.expressions[1], self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
+			local values = self:Assert(self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
 
 			if
 				not values:Get(1) or
@@ -43,7 +43,7 @@ return {
 			local brk = false
 
 			for i, identifier in ipairs(statement.identifiers) do
-				local obj = self:Assert(identifier, values:Get(i))
+				local obj = self:Assert(values:Get(i))
 
 				if uncertain_break then
 					obj:SetLiteral(false)
@@ -68,7 +68,7 @@ return {
 				self.break_out_scope = nil
 			end
 
-			if i == 1000 then self:Error(statement, "too many iterations") end
+			if i == 1000 then self:Error("too many iterations") end
 
 			table.insert(values:GetData(), 1, args[1])
 			args = values:GetData()

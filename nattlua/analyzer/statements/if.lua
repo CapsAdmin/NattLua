@@ -57,7 +57,7 @@ return {
 
 					if obj:IsCertainlyTrue() and self:IsRuntime() then
 						if not contains_ref_argument(upvalues) then
-							self:Warning(exp, "if condition is always true")
+							self:Warning("if condition is always true")
 						end
 					end
 
@@ -66,13 +66,13 @@ return {
 
 				if obj:IsCertainlyFalse() and self:IsRuntime() then
 					if not contains_ref_argument(self:GetTrackedUpvalues()) then
-						self:Warning(exp, "if condition is always false")
+						self:Warning("if condition is always false")
 					end
 				end
 			else
 				if prev_expression:IsCertainlyFalse() and self:IsRuntime() then
 					if not contains_ref_argument(self:GetTrackedUpvalues()) then
-						self:Warning(statement.expressions[i - 1], "else part of if condition is always true")
+						self:Warning("else part of if condition is always true")
 					end
 				end
 

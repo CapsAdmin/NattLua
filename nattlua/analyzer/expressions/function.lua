@@ -22,7 +22,7 @@ local function analyze_arguments(self, node)
 			elseif key.value.value == "..." then
 				args[i] = VarArg(Any())
 			else
-				args[i] = Any():SetNode(key)
+				args[i] = Any()
 			end
 
 			self:CreateLocalValue(key.value.value, args[i])
@@ -62,13 +62,13 @@ local function analyze_arguments(self, node)
 						-- function(mytuple): string
 						return obj
 					else
-						local val = self:Assert(node, obj)
+						local val = self:Assert(obj)
 
 						-- in case the tuple is empty
 						if val then args[i] = val end
 					end
 				else
-					args[i] = Any():SetNode(key)
+					args[i] = Any()
 				end
 			else
 				local obj = self:AnalyzeExpression(key)
@@ -78,7 +78,7 @@ local function analyze_arguments(self, node)
 					-- function(mytuple): string
 					return obj
 				else
-					local val = self:Assert(node, obj)
+					local val = self:Assert(obj)
 
 					-- in case the tuple is empty
 					if val then args[i] = val end
@@ -166,7 +166,9 @@ return {
 				scope = self:GetScope(),
 				upvalue_position = #self:GetScope():GetUpvalues("runtime"),
 			}
-		):SetNode(node)
+		)
+
+		obj.argument_identifiers = node.identifiers
 		
 		self:PushCurrentType(obj, "function")
 		self:CreateAndPushFunctionScope(obj)
@@ -197,6 +199,7 @@ return {
 
 		obj.explicit_arguments = has_explicit_arguments(node)
 		obj.explicit_return = has_expicit_return_type(node)
+
 
 		if self:IsRuntime() then self:AddToUnreachableCodeAnalysis(obj) end
 

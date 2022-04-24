@@ -30,7 +30,7 @@ local function metatable_function(self, node, meta_method, l, r)
 
 		if func.Type ~= "function" then return func end
 
-		return self:Assert(node, self:Call(func, Tuple({l, r}))):Get(1)
+		return self:Assert(self:Call(func, Tuple({l, r}))):Get(1)
 	end
 end
 
@@ -58,15 +58,15 @@ local function operator(self, node, l, r, op, meta_method)
 			)
 		then
 			if l:IsLiteral() and r:IsLiteral() then
-				return LString(l:GetData() .. r:GetData()):SetNode(node)
+				return LString(l:GetData() .. r:GetData())
 			end
 
-			return String():SetNode(node)
+			return String()
 		end
 	end
 
 	if l.Type == "number" and r.Type == "number" then
-		return l:ArithmeticOperator(r, op):SetNode(node)
+		return l:ArithmeticOperator(r, op)
 	else
 		return metatable_function(self, node, meta_method, l, r)
 	end
@@ -100,7 +100,7 @@ local function Binary(self, node, l, r, op)
 			l = self:AnalyzeExpression(node.left)
 
 			if l:IsCertainlyFalse() then
-				r = Nil():SetNode(node.right)
+				r = Nil()
 			else
 				-- if a and a.foo then
 				-- ^ no binary operator means that it was just checked simply if it was truthy
@@ -127,7 +127,7 @@ local function Binary(self, node, l, r, op)
 				r = self:AnalyzeExpression(node.right)
 				self:PopFalsyExpressionContext()
 			elseif l:IsCertainlyTrue() then
-				r = Nil():SetNode(node.right)
+				r = Nil()
 			else
 				-- right hand side of or is the "false" part
 				self:PushFalsyExpressionContext(true)
@@ -195,9 +195,9 @@ local function Binary(self, node, l, r, op)
 
 	-- adding two tuples at runtime in lua will basically do this
 	if self:IsRuntime() then
-		if l.Type == "tuple" then l = self:Assert(node, l:GetFirstValue()) end
+		if l.Type == "tuple" then l = self:Assert(l:GetFirstValue()) end
 
-		if r.Type == "tuple" then r = self:Assert(node, r:GetFirstValue()) end
+		if r.Type == "tuple" then r = self:Assert(r:GetFirstValue()) end
 	end
 
 	do -- union unpacking
@@ -223,7 +223,7 @@ local function Binary(self, node, l, r, op)
 					local res, err = Binary(self, node, l, r, op)
 
 					if not res then
-						self:ErrorAndCloneCurrentScope(node, err, l) -- TODO, only left side?
+						self:ErrorAndCloneCurrentScope(err, l) -- TODO, only left side?
 					else
 						if res:IsTruthy() then
 							if type_checked then
@@ -274,7 +274,7 @@ local function Binary(self, node, l, r, op)
 				self:TrackUpvalue(r, truthy_union, falsy_union, op == "~=")
 			end
 
-			return new_union:SetNode(node)
+			return new_union
 		end
 	end
 
@@ -282,7 +282,7 @@ local function Binary(self, node, l, r, op)
 
 	do -- arithmetic operators
 		if op == "." or op == ":" then
-			return self:IndexOperator(node, l, r)
+			return self:IndexOperator(l, r)
 		elseif op == "+" then
 			local val = operator(self, node, l, r, op, "__add")
 
@@ -394,37 +394,37 @@ local function Binary(self, node, l, r, op)
 			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}) end
 
 			-- true or boolean
-			if l:IsTruthy() then return l:Copy():SetNode(node) end
+			if l:IsTruthy() then return l:Copy() end
 
 			-- false or true
-			if r:IsTruthy() then return r:Copy():SetNode(node) end
+			if r:IsTruthy() then return r:Copy() end
 
-			return r:Copy():SetNode(node)
+			return r:Copy()
 		elseif op == "and" or op == "&&" then
 			-- true and false
 			if l:IsTruthy() and r:IsFalsy() then
 				if l:IsFalsy() or r:IsTruthy() then return Union({l, r}) end
 
-				return r:Copy():SetNode(node)
+				return r:Copy()
 			end
 
 			-- false and true
 			if l:IsFalsy() and r:IsTruthy() then
 				if l:IsTruthy() or r:IsFalsy() then return Union({l, r}) end
 
-				return l:Copy():SetNode(node)
+				return l:Copy()
 			end
 
 			-- true and true
 			if l:IsTruthy() and r:IsTruthy() then
 				if l:IsFalsy() and r:IsFalsy() then return Union({l, r}) end
 
-				return r:Copy():SetNode(node)
+				return r:Copy()
 			else
 				-- false and false
 				if l:IsTruthy() and r:IsTruthy() then return Union({l, r}) end
 
-				return l:Copy():SetNode(node)
+				return l:Copy()
 			end
 		end
 	end

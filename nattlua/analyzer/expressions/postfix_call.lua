@@ -44,7 +44,7 @@ return {
 			arguments = NormalizeTuples(types)
 		end
 
-		local returned_tuple = self:Assert(node, self:Call(callable, arguments, node))
+		local returned_tuple = self:Assert(self:Call(callable, arguments, node))
 
 		-- TUPLE UNPACK MESS
 		if node.tokens["("] and node.tokens[")"] and returned_tuple.Type == "tuple" then

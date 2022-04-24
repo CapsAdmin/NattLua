@@ -53,7 +53,7 @@ return {
 
 			for i = literal_init, literal_max, literal_step do
 				self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
-				local i = LNumber(i):SetNode(statement.expressions[1])
+				local i = LNumber(i)
 				local brk = false
 
 				if uncertain_break then
@@ -104,14 +104,14 @@ return {
 						)
 					)
 				then
-					init = self:Assert(statement.expressions[1], init:SetMax(max))
+					init = self:Assert(init:SetMax(max))
 				end
 
 				if max.Type == "any" then init:SetLiteral(false) end
 			end
 
 			self:PushUncertainLoop(true)
-			local range = self:Assert(statement.expressions[1], init)
+			local range = self:Assert(init)
 			self:CreateLocalValue(statement.identifiers[1].value.value, range)
 			self:AnalyzeStatements(statement.statements)
 			self:PopUncertainLoop()

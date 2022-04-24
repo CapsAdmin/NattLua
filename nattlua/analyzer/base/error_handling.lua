@@ -23,11 +23,11 @@ return function(META)
 		self.diagnostics = {}
 	end)
 
-	function META:Assert(node, ok, err, ...)
+	function META:Assert(ok, err, ...)
 		if ok == false then
 			err = err or "assertion failed!"
-			self:Error(node, err)
-			return Any():SetNode(node)
+			self:Error(err)
+			return Any()
 		end
 
 		return ok, err, ...
@@ -58,19 +58,11 @@ return function(META)
 	end
 
 	function META:ReportDiagnostic(
-		node,
 		msg--[[#: {reasons = {[number] = string}} | {[number] = string}]],
 		severity--[[#: "warning" | "error"]]
 	)
 		if self.SuppressDiagnostics then return end
-
-		if not node then
-			io.write(
-				"reporting diagnostic without node, defaulting to current expression or statement\n"
-			)
-			--			io.write(debug.traceback(), "\n")
-			node = self.current_expression or self.current_statement
-		end
+		local node = self.current_expression or self.current_statement
 
 		if not msg or not severity then
 			io.write("msg = ", tostring(msg), "\n")
@@ -130,19 +122,15 @@ return function(META)
 		return self:GetContextRef("type_protected_call")
 	end
 
-	function META:Error(node, msg)
-		return self:ReportDiagnostic(node, msg, "error")
+	function META:Error(msg)
+		return self:ReportDiagnostic(msg, "error")
 	end
 
-	function META:Warning(node, msg)
-		return self:ReportDiagnostic(node, msg, "warning")
+	function META:Warning(msg)
+		return self:ReportDiagnostic(msg, "warning")
 	end
 
-	function META:FatalError(msg, node)
-		node = node or self.current_expression or self.current_statement
-
-		if node then self:ReportDiagnostic(node, msg, "fatal") end
-
+	function META:FatalError(msg)
 		error(msg, 2)
 	end
 

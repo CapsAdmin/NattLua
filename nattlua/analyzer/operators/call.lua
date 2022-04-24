@@ -83,14 +83,12 @@ end
 
 return {
 	Call = function(META)
-		function META:LuaTypesToTuple(node, tps)
+		function META:LuaTypesToTuple(tps)
 			local tbl = {}
 
 			for i, v in ipairs(tps) do
 				if type(v) == "table" and v.Type ~= nil then
 					tbl[i] = v
-
-					if not v:GetNode() then v:SetNode(node) end
 				else
 					if type(v) == "function" then
 						tbl[i] = Function(
@@ -99,18 +97,16 @@ return {
 								arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
 								ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
 							}
-						):SetNode(node):SetLiteral(true)
-
-						if node.statements then tbl[i].function_body_node = node end
+						):SetLiteral(true)
 					else
 						local t = type(v)
 
 						if t == "number" then
-							tbl[i] = LNumber(v):SetNode(node)
+							tbl[i] = LNumber(v)
 						elseif t == "string" then
-							tbl[i] = LString(v):SetNode(node)
+							tbl[i] = LString(v)
 						elseif t == "boolean" then
-							tbl[i] = Symbol(v):SetNode(node)
+							tbl[i] = Symbol(v)
 						elseif t == "table" then
 							local tbl = Table()
 
@@ -121,8 +117,6 @@ return {
 							tbl:SetContract(tbl)
 							return tbl
 						else
-							if node then print(node:Render(), "!") end
-
 							self:Print(t)
 							error(debug.traceback("NYI " .. t))
 						end
@@ -146,7 +140,7 @@ return {
 			)
 
 			if function_node.self_call then
-				self:CreateLocalValue("self", arguments:Get(1) or Nil():SetNode(function_node))
+				self:CreateLocalValue("self", arguments:Get(1) or Nil())
 			end
 
 			for i, identifier in ipairs(function_node.identifiers) do
@@ -160,7 +154,7 @@ return {
 					if identifier.value.value == "..." then
 						self:CreateLocalValue(identifier.value.value, arguments:Slice(argi))
 					else
-						self:CreateLocalValue(identifier.value.value, arguments:Get(argi) or Nil():SetNode(identifier))
+						self:CreateLocalValue(identifier.value.value, arguments:Get(argi) or Nil())
 					end
 				end
 			end
@@ -207,7 +201,7 @@ return {
 			end
 
 			if analyzed_return.Type ~= "tuple" then
-				return Tuple({analyzed_return}):SetNode(analyzed_return:GetNode()), scope
+				return Tuple({analyzed_return}), scope
 			end
 
 			return analyzed_return, scope
@@ -234,10 +228,8 @@ return {
 
 			if self:IsTypesystem() then
 				local ret = self:LuaTypesToTuple(
-					obj:GetNode(),
 					{
 						self:CallLuaTypeFunction(
-							self:GetActiveNode(),
 							obj:GetData().lua_function,
 							obj:GetData().scope or self:GetScope(),
 							arguments:UnpackWithoutExpansion()
@@ -251,10 +243,8 @@ return {
 
 			for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
 				tuples[i] = self:LuaTypesToTuple(
-					obj:GetNode(),
 					{
 						self:CallLuaTypeFunction(
-							self:GetActiveNode(),
 							obj:GetData().lua_function,
 							obj:GetData().scope or self:GetScope(),
 							table.unpack(arg)
@@ -308,7 +298,6 @@ return {
 				if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
 					if self.config.external_mutation then
 						self:Warning(
-							self:GetActiveNode(),
 							{
 								"argument #",
 								i,
@@ -556,7 +545,7 @@ return {
 
 					if not ok then
 						local _, err = type_errors.subset(a, b, {"return #", i, " '", b, "': ", reason})
-						self:Error(b and b:GetNode() or self.current_statement, err)
+						self:Error(err)
 					end
 
 					return
@@ -587,7 +576,7 @@ return {
 					for _, obj in ipairs(result:GetData()) do
 						if obj.Type ~= "tuple" then
 							-- if the function returns one value it's not in a tuple
-							obj = Tuple({obj}):SetNode(obj:GetNode())
+							obj = Tuple({obj})
 						end
 
 						-- check each tuple in the union
@@ -609,7 +598,7 @@ return {
 						end
 
 						for _, error in ipairs(errors) do
-							self:Error(result:GetNode(), error.reason)
+							self:Error(error.reason)
 						end
 					else
 						if result.Type == "tuple" and result:GetLength() == 1 then
@@ -620,7 +609,7 @@ return {
 
 						local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
 
-						if not ok then self:Error(result:GetNode(), reason) end
+						if not ok then self:Error(reason) end
 					end
 				end
 			end
@@ -693,13 +682,13 @@ return {
 								local node = function_node.identifiers[i + 1]
 
 								if node and not node.type_expression then
-									self:Warning(node, "argument is untyped")
+									self:Warning("argument is untyped")
 								end
 							elseif
 								function_node.identifiers[i] and
 								not function_node.identifiers[i].type_expression
 							then
-								self:Warning(function_node.identifiers[i], "argument is untyped")
+								self:Warning("argument is untyped")
 							end
 						end
 					end
@@ -789,7 +778,6 @@ return {
 				if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
 					falsy_union:AddType(v)
 					self:ErrorAndCloneCurrentScope(
-						self:GetActiveNode(),
 						{
 							"union ",
 							obj,
@@ -806,7 +794,7 @@ return {
 
 			truthy_union:SetUpvalue(obj:GetUpvalue())
 			falsy_union:SetUpvalue(obj:GetUpvalue())
-			return truthy_union:SetNode(self:GetActiveNode())
+			return truthy_union
 		end
 
 		local function Call(self, obj, arguments)
@@ -831,7 +819,6 @@ return {
 								-- error if we call any with tables that have contracts
 								-- since anything might happen to them in an any call
 								self:Error(
-									self:GetActiveNode(),
 									{
 										"cannot mutate argument with contract ",
 										arg:GetContract(),
@@ -890,7 +877,7 @@ return {
 						end
 
 						if not has_ref_arg then
-							self:Assert(self:GetActiveNode(), self:Call(b, func:GetArguments():Copy(nil, true)))
+							self:Assert(self:Call(b, func:GetArguments():Copy(nil, true)))
 						end
 					end
 				end

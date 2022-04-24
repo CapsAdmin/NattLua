@@ -111,11 +111,10 @@ return function(META)
 				return val, err
 			end
 
-			return self:IndexOperator(key:GetNode(), g, key)
+			return self:IndexOperator(g, key)
 		end
 
 		return self:IndexOperator(
-			key:GetNode(),
 			self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()),
 			key
 		)
@@ -126,7 +125,7 @@ return function(META)
 
 		if upvalue then
 			if upvalue:IsImmutable() then
-				return self:Error(key:GetNode(), {"cannot assign to const variable ", key})
+				return self:Error({"cannot assign to const variable ", key})
 			end
 
 			if not self:MutateUpvalue(upvalue, val) then upvalue:SetValue(val) end
@@ -141,10 +140,10 @@ return function(META)
 		end
 
 		if self:IsRuntime() then
-			self:Warning(key:GetNode(), {"_G[\"", key:GetNode(), "\"] = ", val})
+			self:Warning({"_G[\"", key:GetNode(), "\"] = ", val})
 		end
 
-		self:Assert(key, self:NewIndexOperator(key:GetNode(), g, key, val))
+		self:Assert(self:NewIndexOperator(g, key, val))
 		return val
 	end
 

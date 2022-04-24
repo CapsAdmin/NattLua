@@ -26,7 +26,7 @@ return {
 				local obj = self:AnalyzeExpression(key.left)
 				local key = self:AnalyzeExpression(key.right)
 				local val = AnalyzeFunction(self, statement)
-				self:NewIndexOperator(statement, obj, key, val)
+				self:NewIndexOperator(obj, key, val)
 			else
 				local key = NodeToString(key)
 				local val = AnalyzeFunction(self, statement)

@@ -52,7 +52,7 @@ analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 	if analyzer:IsInUncertainLoop() then pos:Widen() end
 
 	assert(type(pos) ~= "number")
-	analyzer:NewIndexOperator(analyzer.current_expression, tbl, pos, val)
+	analyzer:NewIndexOperator(tbl, pos, val)
 end
 
 analyzer function table.remove(tbl: List<|any|>, index: number | nil)

@@ -17,7 +17,7 @@ local function metatable_function(self, meta_method, l)
 		local func = l:GetMetaTable():Get(meta_method)
 
 		if func then
-			return self:Assert(l:GetNode(), self:Call(func, Tuple({l})):Get(1))
+			return self:Assert(self:Call(func, Tuple({l})):Get(1))
 		end
 	end
 end
@@ -60,7 +60,7 @@ local function Prefix(self, node, r)
 			local res, err = Prefix(self, node, r)
 
 			if not res then
-				self:ErrorAndCloneCurrentScope(node, err, r)
+				self:ErrorAndCloneCurrentScope(err, r)
 				falsy_union:AddType(r)
 			else
 				new_union:AddType(res)
@@ -72,10 +72,10 @@ local function Prefix(self, node, r)
 		end
 
 		self:TrackUpvalue(r, truthy_union, falsy_union)
-		return new_union:SetNode(node)
+		return new_union
 	end
 
-	if r.Type == "any" then return Any():SetNode(node) end
+	if r.Type == "any" then return Any() end
 
 	if self:IsTypesystem() then
 		if op == "typeof" then
@@ -125,11 +125,11 @@ local function Prefix(self, node, r)
 
 	if op == "not" or op == "!" then
 		if r:IsTruthy() and r:IsFalsy() then
-			return Boolean():SetNode(node)
+			return Boolean()
 		elseif r:IsTruthy() then
-			return False():SetNode(node)
+			return False()
 		elseif r:IsFalsy() then
-			return True():SetNode(node)
+			return True()
 		end
 	end
 

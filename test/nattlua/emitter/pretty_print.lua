@@ -339,7 +339,7 @@ then
 	return not scope.node.inferred_type:IsCalled()
 end]])
 identical([[if upvalue:IsImmutable() then
-	return self:Error(key:GetNode(), {"cannot assign to const variable ", key})
+	return self:Error({"cannot assign to const variable ", key})
 end]])
 identical([[if self:IsRuntime() then
 	return self:GetMutatedUpvalue(upvalue) or upvalue:GetValue()

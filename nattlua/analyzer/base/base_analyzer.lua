@@ -116,7 +116,7 @@ return function(META)
 			end
 
 			self:CreateAndPushFunctionScope(obj)
-			self:Assert(node, self:Call(obj, arguments, node))
+			self:Assert(self:Call(obj, arguments, node))
 			self:PopScope()
 		end
 
@@ -289,7 +289,7 @@ return function(META)
 			return func
 		end
 
-		function META:CallLuaTypeFunction(node, func, scope, ...)
+		function META:CallLuaTypeFunction(func, scope, ...)
 			self.function_scope = scope
 			local res = {pcall(func, ...)}
 			local ok = table.remove(res, 1)
@@ -308,7 +308,7 @@ return function(META)
 							f:close()
 							local start = helpers.LinePositionToSubPosition(code, tonumber(line), 0)
 							local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
-							msg = node.Code:BuildSourceCodePointMessage(rest, start, stop)
+							msg = self.current_expression.Code:BuildSourceCodePointMessage(rest, start, stop)
 						end
 					end
 				end
@@ -317,7 +317,7 @@ return function(META)
 
 				if trace and trace ~= "" then msg = msg .. "\ntraceback:\n" .. trace end
 
-				self:Error(node, msg)
+				self:Error(msg)
 			end
 
 			if res[1] == nil then res[1] = Nil() end
