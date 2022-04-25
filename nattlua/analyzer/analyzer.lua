@@ -27,9 +27,9 @@ do
 	local AnalyzeReturn = require("nattlua.analyzer.statements.return").AnalyzeReturn
 	local AnalyzeAnalyzerDebugCode = require("nattlua.analyzer.statements.analyzer_debug_code").AnalyzeAnalyzerDebugCode
 	local AnalyzeWhile = require("nattlua.analyzer.statements.while").AnalyzeWhile
+	local AnalyzeAssignment = require("nattlua.analyzer.statements.assignment").AnalyzeAssignment
 
 	function META:AnalyzeStatement(node)
-		local AnalyzeAssignment = require("nattlua.analyzer.statements.assignment").AnalyzeAssignment
 		self.current_statement = node
 		self:PushAnalyzerEnvironment(node.environment or "runtime")
 
@@ -99,7 +99,6 @@ do
 	local AnalyzeAtomicValue = require("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
 	local AnalyzeTuple = require("nattlua.analyzer.expressions.tuple").AnalyzeTuple
 	local AnalyzeVararg = require("nattlua.analyzer.expressions.vararg").AnalyzeVararg
-	local AnalyzeFunctionSignature = require("nattlua.analyzer.expressions.function_signature").AnalyzeFunctionSignature
 	local Union = require("nattlua.types.union").Union
 
 	function META:AnalyzeExpression2(node)
