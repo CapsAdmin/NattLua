@@ -1051,7 +1051,6 @@ do
 	end
 
 	function META:CopyInternalsFrom(obj)
-		self:SetNode(obj:GetNode())
 		self:SetTokenLabelSource(obj:GetTokenLabelSource())
 		self:SetLiteral(obj:IsLiteral())
 		self:SetContract(obj:GetContract())
@@ -1375,9 +1374,9 @@ function META:AddType(e)
 				e.Type ~= "function" or
 				e:GetContract() or
 				(
-					e:GetNode() and
+					e.function_body_node and
 					(
-						e:GetNode() == v:GetNode()
+						e.function_body_node == v.function_body_node
 					)
 				)
 			then
@@ -1659,7 +1658,12 @@ function META:SetMax(val)
 	return copy
 end
 
-function META:Call(analyzer, arguments, call_node)
+function META:Call(
+	analyzer,
+	arguments,
+	call_node,
+	not_recursive_call
+)
 	if self:IsEmpty() then return type_errors.operation("call", nil) end
 
 	local is_overload = true
@@ -1690,7 +1694,7 @@ function META:Call(analyzer, arguments, call_node)
 					}
 				)
 			else
-				local res, reason = analyzer:Call(obj, arguments, call_node)
+				local res, reason = analyzer:Call(obj, arguments, call_node, not_recursive_call)
 
 				if res then return res end
 
@@ -1704,7 +1708,7 @@ function META:Call(analyzer, arguments, call_node)
 	local new = META.New({})
 
 	for _, obj in ipairs(self.Data) do
-		local val = analyzer:Assert(analyzer:Call(obj, arguments, call_node))
+		local val = analyzer:Assert(analyzer:Call(obj, arguments, call_node, not_recursive_call))
 
 		-- TODO
 		if val.Type == "tuple" and val:GetLength() == 1 then
@@ -13829,9 +13833,7 @@ return function(META)
 			self:FatalError("tried to set environment value outside of Push/Pop/Environment")
 		end
 
-		if self:IsRuntime() then
-			self:Warning({"_G[\"", key:GetNode(), "\"] = ", val})
-		end
+		if self:IsRuntime() then self:Warning({"_G[\"", key, "\"] = ", val}) end
 
 		self:Assert(self:NewIndexOperator(g, key, val))
 		return val
@@ -15020,7 +15022,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 	return value
 end
 
-local function initialize_mutation_tracker(obj, scope, key, hash, node)
+local function initialize_mutation_tracker(obj, scope, key, hash)
 	obj.mutations = obj.mutations or {}
 	obj.mutations[hash] = obj.mutations[hash] or {}
 
@@ -15055,8 +15057,7 @@ return function(META)
 		if not hash then return end
 
 		local scope = self:GetScope()
-		local node = key:GetNode()
-		initialize_mutation_tracker(tbl, scope, key, hash, node)
+		initialize_mutation_tracker(tbl, scope, key, hash)
 		return get_value_from_scope(self, copy(tbl.mutations[hash]), scope, tbl, hash)
 	end
 
@@ -15068,8 +15069,7 @@ return function(META)
 		if not hash then return end
 
 		local scope = scope_override or self:GetScope()
-		local node = key:GetNode()
-		initialize_mutation_tracker(tbl, scope, key, hash, node)
+		initialize_mutation_tracker(tbl, scope, key, hash)
 
 		if self:IsInUncertainLoop(scope) then
 			if val.dont_widen then
@@ -16031,10 +16031,6 @@ return {
 				local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 
 				if not ok then
-					if b and b:GetNode() then
-						return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason})
-					end
-
 					return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 				end
 			end
@@ -16105,10 +16101,6 @@ return {
 				local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 
 				if not ok then
-					if b and b:GetNode() then
-						return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason})
-					end
-
 					return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 				end
 			end
@@ -16471,10 +16463,6 @@ return {
 						local ok, reason, a, b, i = arguments:IsSubsetOfTupleWithoutExpansion(obj:GetArguments())
 
 						if not ok then
-							if b and b:GetNode() then
-								return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason})
-							end
-
 							return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 						end
 					elseif self:IsRuntime() then
@@ -16589,13 +16577,10 @@ return {
 		end
 
 		local function make_callable_union(self, obj)
-			local new_union = obj.New()
 			local truthy_union = obj.New()
-			local falsy_union = obj.New()
 
 			for _, v in ipairs(obj.Data) do
 				if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-					falsy_union:AddType(v)
 					self:ErrorAndCloneCurrentScope(
 						{
 							"union ",
@@ -16607,12 +16592,10 @@ return {
 					)
 				else
 					truthy_union:AddType(v)
-					new_union:AddType(v)
 				end
 			end
 
 			truthy_union:SetUpvalue(obj:GetUpvalue())
-			falsy_union:SetUpvalue(obj:GetUpvalue())
 			return truthy_union
 		end
 
@@ -16654,7 +16637,7 @@ return {
 					end
 				end
 
-				return obj:Call(self, arguments)
+				return obj:Call(self, arguments, self:GetCallStack()[1].call_node, true)
 			end
 
 			-- mark the object as called so the unreachable code step won't call it
@@ -16702,8 +16685,6 @@ return {
 				end
 			end
 
-			if obj.expand then self:GetCallStack()[1].call_node.expand = obj end
-
 			if obj:GetData().lua_function then
 				return call_analyzer_function(self, obj, function_arguments, arguments)
 			elseif function_node then
@@ -16713,7 +16694,7 @@ return {
 			return call_type_signature_without_body(self, obj, arguments)
 		end
 
-		function META:Call(obj, arguments, call_node)
+		function META:Call(obj, arguments, call_node, not_recursive_call)
 			-- extra protection, maybe only useful during development
 			if debug.getinfo(300) then
 				debug.trace()
@@ -16723,7 +16704,7 @@ return {
 			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
 			self.call_stack = self.call_stack or {}
 
-			if self:IsRuntime() and call_node then
+			if self:IsRuntime() and call_node and not not_recursive_call then
 				for _, v in ipairs(self.call_stack) do
 					-- if the callnode is the same, we're doing some infinite recursion
 					if v.call_node == call_node then
@@ -17516,44 +17497,23 @@ function META:EmitCall(node)
 		multiline_string = node.expressions[1].value.value:sub(1, 1) == "["
 	end
 
-	if node.expand then
-		if not node.expand.expanded then
-			self:EmitNonSpace("local ")
-			self:EmitExpression(node.left.left)
-			self:EmitNonSpace("=")
-			self:EmitExpression(node.expand:GetNode())
-			node.expand.expanded = true
-		end
+	-- this will not work for calls with functions that contain statements
+	self.inside_call_expression = true
+	self:EmitExpression(node.left)
 
-		self.inside_call_expression = true
-		self:EmitExpression(node.left.left)
+	if node.expressions_typesystem and not self.config.omit_invalid_code then
+		local emitted = self:StartEmittingInvalidLuaCode()
+		self:EmitToken(node.tokens["call_typesystem("])
+		self:EmitExpressionList(node.expressions_typesystem)
+		self:EmitToken(node.tokens["call_typesystem)"])
+		self:StopEmittingInvalidLuaCode(emitted)
+	end
 
-		if node.tokens["call("] then
-			self:EmitToken(node.tokens["call("])
-		else
-			if self.config.force_parenthesis and not multiline_string then
-				self:EmitNonSpace("(")
-			end
-		end
+	if node.tokens["call("] then
+		self:EmitToken(node.tokens["call("])
 	else
-		-- this will not work for calls with functions that contain statements
-		self.inside_call_expression = true
-		self:EmitExpression(node.left)
-
-		if node.expressions_typesystem and not self.config.omit_invalid_code then
-			local emitted = self:StartEmittingInvalidLuaCode()
-			self:EmitToken(node.tokens["call_typesystem("])
-			self:EmitExpressionList(node.expressions_typesystem)
-			self:EmitToken(node.tokens["call_typesystem)"])
-			self:StopEmittingInvalidLuaCode(emitted)
-		end
-
-		if node.tokens["call("] then
-			self:EmitToken(node.tokens["call("])
-		else
-			if self.config.force_parenthesis and not multiline_string then
-				self:EmitNonSpace("(")
-			end
+		if self.config.force_parenthesis and not multiline_string then
+			self:EmitNonSpace("(")
 		end
 	end
 
@@ -20198,9 +20158,6 @@ local function Prefix(self, node, r)
 		elseif op == "mutable" then
 			r.mutable = true
 			return r
-		elseif op == "expand" then
-			r.expand = true
-			return r
 		elseif op == "$" then
 			if r.Type ~= "string" then
 				return type_errors.other("must evaluate to a string")
@@ -20703,7 +20660,7 @@ do
 			node.kind == "type_function" or
 			node.kind == "function_signature"
 		then
-			return AnalyzeFunction(self, node):SetNode(node)
+			return AnalyzeFunction(self, node)
 		elseif node.kind == "table" or node.kind == "type_table" then
 			return AnalyzeTable(self, node)
 		elseif node.kind == "binary_operator" then

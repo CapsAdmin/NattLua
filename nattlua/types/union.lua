@@ -109,9 +109,9 @@ function META:AddType(e--[[#: TBaseType]])
 				e.Type ~= "function" or
 				e:GetContract() or
 				(
-					e:GetNode() and
+					e.function_body_node and
 					(
-						e:GetNode() == v:GetNode()
+						e.function_body_node == v.function_body_node
 					)
 				)
 			then
@@ -393,7 +393,12 @@ function META:SetMax(val--[[#: TNumber]])
 	return copy
 end
 
-function META:Call(analyzer--[[#: any]], arguments--[[#: TBaseType]], call_node--[[#: any]])
+function META:Call(
+	analyzer--[[#: any]],
+	arguments--[[#: TBaseType]],
+	call_node--[[#: any]],
+	not_recursive_call
+)
 	if self:IsEmpty() then return type_errors.operation("call", nil) end
 
 	local is_overload = true
@@ -424,7 +429,7 @@ function META:Call(analyzer--[[#: any]], arguments--[[#: TBaseType]], call_node-
 					}
 				)
 			else
-				local res, reason = analyzer:Call(obj, arguments, call_node)
+				local res, reason = analyzer:Call(obj, arguments, call_node, not_recursive_call)
 
 				if res then return res end
 
@@ -438,7 +443,7 @@ function META:Call(analyzer--[[#: any]], arguments--[[#: TBaseType]], call_node-
 	local new = META.New({})
 
 	for _, obj in ipairs(self.Data) do
-		local val = analyzer:Assert(analyzer:Call(obj, arguments, call_node))
+		local val = analyzer:Assert(analyzer:Call(obj, arguments, call_node, not_recursive_call))
 
 		-- TODO
 		if val.Type == "tuple" and val:GetLength() == 1 then

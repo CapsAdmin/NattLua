@@ -212,10 +212,6 @@ return {
 				local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 
 				if not ok then
-					if b and b:GetNode() then
-						return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason})
-					end
-
 					return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 				end
 			end
@@ -286,10 +282,6 @@ return {
 				local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 
 				if not ok then
-					if b and b:GetNode() then
-						return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason})
-					end
-
 					return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 				end
 			end
@@ -652,10 +644,6 @@ return {
 						local ok, reason, a, b, i = arguments:IsSubsetOfTupleWithoutExpansion(obj:GetArguments())
 
 						if not ok then
-							if b and b:GetNode() then
-								return type_errors.subset(a, b, {"function argument #", i, " '", b, "': ", reason})
-							end
-
 							return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 						end
 					elseif self:IsRuntime() then
@@ -770,13 +758,10 @@ return {
 		end
 
 		local function make_callable_union(self, obj)
-			local new_union = obj.New()
 			local truthy_union = obj.New()
-			local falsy_union = obj.New()
 
 			for _, v in ipairs(obj.Data) do
 				if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-					falsy_union:AddType(v)
 					self:ErrorAndCloneCurrentScope(
 						{
 							"union ",
@@ -788,12 +773,10 @@ return {
 					)
 				else
 					truthy_union:AddType(v)
-					new_union:AddType(v)
 				end
 			end
 
 			truthy_union:SetUpvalue(obj:GetUpvalue())
-			falsy_union:SetUpvalue(obj:GetUpvalue())
 			return truthy_union
 		end
 
@@ -835,7 +818,7 @@ return {
 					end
 				end
 
-				return obj:Call(self, arguments)
+				return obj:Call(self, arguments, self:GetCallStack()[1].call_node, true)
 			end
 
 			-- mark the object as called so the unreachable code step won't call it
@@ -883,8 +866,6 @@ return {
 				end
 			end
 
-			if obj.expand then self:GetCallStack()[1].call_node.expand = obj end
-
 			if obj:GetData().lua_function then
 				return call_analyzer_function(self, obj, function_arguments, arguments)
 			elseif function_node then
@@ -894,7 +875,7 @@ return {
 			return call_type_signature_without_body(self, obj, arguments)
 		end
 
-		function META:Call(obj, arguments, call_node)
+		function META:Call(obj, arguments, call_node, not_recursive_call)
 			-- extra protection, maybe only useful during development
 			if debug.getinfo(300) then
 				debug.trace()
@@ -904,7 +885,7 @@ return {
 			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
 			self.call_stack = self.call_stack or {}
 
-			if self:IsRuntime() and call_node then
+			if self:IsRuntime() and call_node and not not_recursive_call then
 				for _, v in ipairs(self.call_stack) do
 					-- if the callnode is the same, we're doing some infinite recursion
 					if v.call_node == call_node then

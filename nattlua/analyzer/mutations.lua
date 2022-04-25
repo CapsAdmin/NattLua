@@ -230,7 +230,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 	return value
 end
 
-local function initialize_mutation_tracker(obj, scope, key, hash, node)
+local function initialize_mutation_tracker(obj, scope, key, hash)
 	obj.mutations = obj.mutations or {}
 	obj.mutations[hash] = obj.mutations[hash] or {}
 
@@ -265,8 +265,7 @@ return function(META)
 		if not hash then return end
 
 		local scope = self:GetScope()
-		local node = key:GetNode()
-		initialize_mutation_tracker(tbl, scope, key, hash, node)
+		initialize_mutation_tracker(tbl, scope, key, hash)
 		return get_value_from_scope(self, copy(tbl.mutations[hash]), scope, tbl, hash)
 	end
 
@@ -278,8 +277,7 @@ return function(META)
 		if not hash then return end
 
 		local scope = scope_override or self:GetScope()
-		local node = key:GetNode()
-		initialize_mutation_tracker(tbl, scope, key, hash, node)
+		initialize_mutation_tracker(tbl, scope, key, hash)
 
 		if self:IsInUncertainLoop(scope) then
 			if val.dont_widen then

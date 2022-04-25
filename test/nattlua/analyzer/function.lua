@@ -614,23 +614,6 @@ analyze[[
     type lol = nil
 ]]
 analyze[[
-    local function test!(T: any)
-        if T == string then
-            return expand setmetatable({}, {__call = function(_, a: ref T, b: ref T)
-            §assert(analyzer:GetCurrentAnalyzerEnvironment() == "runtime", "analyzer environment is not runtime")
-            return a .. b end})
-        else
-            return expand setmetatable({}, {__call = function(_, a: ref T, b: ref T) return a + b end})
-        end
-    end
-    
-    local a = test!(number)(1,2)
-    local b = test!(string)("1","2")
-    
-    attest.equal(a, 3)
-    attest.equal(b, "12")    
-]]
-analyze[[
     local type Type = "foo" | "bar" 
     local type Object = {
         foo = Type,

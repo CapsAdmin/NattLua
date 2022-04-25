@@ -136,9 +136,7 @@ return function(META)
 			self:FatalError("tried to set environment value outside of Push/Pop/Environment")
 		end
 
-		if self:IsRuntime() then
-			self:Warning({"_G[\"", key:GetNode(), "\"] = ", val})
-		end
+		if self:IsRuntime() then self:Warning({"_G[\"", key, "\"] = ", val}) end
 
 		self:Assert(self:NewIndexOperator(g, key, val))
 		return val

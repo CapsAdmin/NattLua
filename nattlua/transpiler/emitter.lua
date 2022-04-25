@@ -649,44 +649,23 @@ function META:EmitCall(node--[[#: Node]])
 		multiline_string = node.expressions[1].value.value:sub(1, 1) == "["
 	end
 
-	if node.expand then
-		if not node.expand.expanded then
-			self:EmitNonSpace("local ")
-			self:EmitExpression(node.left.left)
-			self:EmitNonSpace("=")
-			self:EmitExpression(node.expand:GetNode())
-			node.expand.expanded = true
-		end
+	-- this will not work for calls with functions that contain statements
+	self.inside_call_expression = true
+	self:EmitExpression(node.left)
 
-		self.inside_call_expression = true
-		self:EmitExpression(node.left.left)
+	if node.expressions_typesystem and not self.config.omit_invalid_code then
+		local emitted = self:StartEmittingInvalidLuaCode()
+		self:EmitToken(node.tokens["call_typesystem("])
+		self:EmitExpressionList(node.expressions_typesystem)
+		self:EmitToken(node.tokens["call_typesystem)"])
+		self:StopEmittingInvalidLuaCode(emitted)
+	end
 
-		if node.tokens["call("] then
-			self:EmitToken(node.tokens["call("])
-		else
-			if self.config.force_parenthesis and not multiline_string then
-				self:EmitNonSpace("(")
-			end
-		end
+	if node.tokens["call("] then
+		self:EmitToken(node.tokens["call("])
 	else
-		-- this will not work for calls with functions that contain statements
-		self.inside_call_expression = true
-		self:EmitExpression(node.left)
-
-		if node.expressions_typesystem and not self.config.omit_invalid_code then
-			local emitted = self:StartEmittingInvalidLuaCode()
-			self:EmitToken(node.tokens["call_typesystem("])
-			self:EmitExpressionList(node.expressions_typesystem)
-			self:EmitToken(node.tokens["call_typesystem)"])
-			self:StopEmittingInvalidLuaCode(emitted)
-		end
-
-		if node.tokens["call("] then
-			self:EmitToken(node.tokens["call("])
-		else
-			if self.config.force_parenthesis and not multiline_string then
-				self:EmitNonSpace("(")
-			end
+		if self.config.force_parenthesis and not multiline_string then
+			self:EmitNonSpace("(")
 		end
 	end
 

@@ -114,7 +114,7 @@ do
 			node.kind == "type_function" or
 			node.kind == "function_signature"
 		then
-			return AnalyzeFunction(self, node):SetNode(node)
+			return AnalyzeFunction(self, node)
 		elseif node.kind == "table" or node.kind == "type_table" then
 			return AnalyzeTable(self, node)
 		elseif node.kind == "binary_operator" then

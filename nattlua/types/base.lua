@@ -67,7 +67,6 @@ do
 	end
 
 	function META:CopyInternalsFrom(obj--[[#: mutable TBaseType]])
-		self:SetNode(obj:GetNode())
 		self:SetTokenLabelSource(obj:GetTokenLabelSource())
 		self:SetLiteral(obj:IsLiteral())
 		self:SetContract(obj:GetContract())

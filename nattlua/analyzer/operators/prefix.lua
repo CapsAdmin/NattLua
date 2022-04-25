@@ -92,9 +92,6 @@ local function Prefix(self, node, r)
 		elseif op == "mutable" then
 			r.mutable = true
 			return r
-		elseif op == "expand" then
-			r.expand = true
-			return r
 		elseif op == "$" then
 			if r.Type ~= "string" then
 				return type_errors.other("must evaluate to a string")
