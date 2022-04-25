@@ -221,9 +221,7 @@ analyzer function ^string.gsub(
 				str,
 				pattern,
 				function(...)
-					local ret = analyzer:Assert(
-						analyzer:Call(replacement, analyzer:LuaTypesToTuple({...}))
-					)
+					local ret = analyzer:Assert(analyzer:Call(replacement, analyzer:LuaTypesToTuple({...})))
 					local out = {}
 
 					for _, val in ipairs(ret:GetData()) do

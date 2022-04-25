@@ -174,7 +174,6 @@ do
 	function META:ReadToken()
 		local type, is_whitespace, start, stop = self:ReadSimple() -- TODO: unpack not working
 		local token = self:NewToken(type, is_whitespace, start, stop)
-
 		token.value = self:GetStringSlice(token.start, token.stop)
 
 		if token.type == "string" then

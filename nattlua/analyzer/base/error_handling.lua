@@ -62,6 +62,7 @@ return function(META)
 		severity--[[#: "warning" | "error"]]
 	)
 		if self.SuppressDiagnostics then return end
+
 		local node = self.current_expression or self.current_statement
 
 		if not msg or not severity then

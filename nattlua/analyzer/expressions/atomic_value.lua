@@ -51,9 +51,7 @@ local function lookup_value(self, node)
 
 	local obj = self:GetTrackedUpvalue(obj) or obj
 
-	if obj:GetUpvalue() then
-		self:GetScope():AddDependency(obj:GetUpvalue())
-	end
+	if obj:GetUpvalue() then self:GetScope():AddDependency(obj:GetUpvalue()) end
 
 	return obj
 end
@@ -88,7 +86,7 @@ return {
 			-- standalone_letter means it's the first part of something, either >true<, >foo<.bar, >foo<()
 			if self:IsTypesystem() then
 				local current_table = self:GetCurrentType("table")
-	
+
 				if current_table then
 					if value == "self" then
 						return current_table
@@ -100,7 +98,7 @@ return {
 						return current_table
 					end
 				end
-	
+
 				if value == "any" then
 					return Any()
 				elseif value == "inf" then

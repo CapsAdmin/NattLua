@@ -2,10 +2,8 @@ local table = _G.table
 local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
 local Tuple = require("nattlua.types.tuple").Tuple
 local AnalyzeImport = require("nattlua.analyzer.expressions.import").AnalyzeImport
-
 return {
 	AnalyzePostfixCall = function(self, node)
-
 		if
 			node.import_expression and
 			node.left.value.value ~= "dofile" and

@@ -114,10 +114,7 @@ return function(META)
 			return self:IndexOperator(g, key)
 		end
 
-		return self:IndexOperator(
-			self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()),
-			key
-		)
+		return self:IndexOperator(self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()), key)
 	end
 
 	function META:SetLocalOrGlobalValue(key, val, scope)

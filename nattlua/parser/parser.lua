@@ -157,7 +157,6 @@ function META:ReadAnalyzerFunctionBody(
 	type_args--[[#: boolean]]
 )
 	self:PushParserEnvironment("runtime")
-
 	node.tokens["arguments("] = self:ExpectValue("(")
 	node.identifiers = self:ReadMultipleValues(math_huge, self.ReadTypeFunctionArgument, type_args)
 
@@ -199,7 +198,6 @@ function META:ReadAnalyzerFunctionBody(
 	end
 
 	self:PopParserEnvironment()
-
 	return node
 end
 

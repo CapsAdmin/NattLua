@@ -11,6 +11,7 @@ local Emitter = require("nattlua.transpiler.emitter").New
 
 local function analyze_arguments(self, node)
 	local args = {}
+
 	if node.kind == "function" or node.kind == "local_function" then
 		for i, key in ipairs(node.identifiers) do
 			-- stem type so that we can allow
@@ -102,6 +103,7 @@ local function analyze_arguments(self, node)
 			end
 		end
 	end
+
 	return Tuple(args)
 end
 
@@ -142,9 +144,7 @@ local function has_explicit_arguments(node)
 
 	if node.kind == "function" or node.kind == "local_function" then
 		for i, key in ipairs(node.identifiers) do
-			if key.type_expression then
-				return true
-			end
+			if key.type_expression then return true end
 		end
 	end
 
@@ -152,9 +152,7 @@ local function has_explicit_arguments(node)
 end
 
 local function has_expicit_return_type(node)
-	if node.return_types then
-		return true
-	end
+	if node.return_types then return true end
 
 	return false
 end
@@ -167,39 +165,26 @@ return {
 				upvalue_position = #self:GetScope():GetUpvalues("runtime"),
 			}
 		)
-
 		obj.argument_identifiers = node.identifiers
-		
 		self:PushCurrentType(obj, "function")
 		self:CreateAndPushFunctionScope(obj)
 		self:PushAnalyzerEnvironment("typesystem")
-
 		obj.Data.arg = analyze_arguments(self, node)
 		obj.Data.ret = analyze_return_types(self, node)
-	
 		self:PopAnalyzerEnvironment()
 		self:PopScope()
 		self:PopCurrentType("function")
 
-		if
-			node.kind == "analyzer_function" or
-			node.kind == "local_analyzer_function"
-		then
+		if node.kind == "analyzer_function" or node.kind == "local_analyzer_function" then
 			local em = Emitter({type_annotations = false})
-
 			em:EmitFunctionBody(node)
-
-			obj.Data.lua_function  = self:CompileLuaAnalyzerDebugCode(
-				"return function " .. em:Concat(),
-				node
-			)()
+			obj.Data.lua_function = self:CompileLuaAnalyzerDebugCode("return function " .. em:Concat(), node)()
 		end
 
 		if node.statements then obj.function_body_node = node end
 
 		obj.explicit_arguments = has_explicit_arguments(node)
 		obj.explicit_return = has_expicit_return_type(node)
-
 
 		if self:IsRuntime() then self:AddToUnreachableCodeAnalysis(obj) end
 

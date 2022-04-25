@@ -134,7 +134,6 @@ return function(META)
 			local called_count = 0
 
 			for _, func in ipairs(self.deferred_calls) do
-
 				if
 					func.explicit_arguments and
 					not func:IsCalled()
@@ -255,7 +254,6 @@ return function(META)
 			code = locals .. code
 			-- append newlines so that potential line errors are correct
 			local lua_code = node.Code:GetString()
-
 			local line
 
 			if lua_code then
@@ -345,6 +343,7 @@ return function(META)
 
 			function META:GetScopeHelper(scope)
 				if not scope then debug.trace() end
+
 				scope.scope_helper = scope.scope_helper or
 					{
 						typesystem = setmetatable(

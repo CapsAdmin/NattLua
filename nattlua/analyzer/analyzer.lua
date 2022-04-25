@@ -137,9 +137,7 @@ do
 	end
 
 	function META:AnalyzeTypeExpression(node, parent_obj)
-		if not node.type_expression then
-			return parent_obj
-		end
+		if not node.type_expression then return parent_obj end
 
 		self:PushAnalyzerEnvironment("typesystem")
 		local obj = self:AnalyzeExpression(node.type_expression)
@@ -164,9 +162,7 @@ do
 
 	function META:AnalyzeExpression(node)
 		local obj, err = self:AnalyzeExpression2(node)
-
 		obj = self:AnalyzeTypeExpression(node, obj)
-
 		node:AddType(obj or err)
 		return obj, err
 	end

@@ -1452,12 +1452,7 @@ function META:GetAtIndex(i)
 			local found, err = obj:Get(i)
 
 			if found then
-				if val then
-					val = self.New({val, found})
-					val:SetNode(found:GetNode())
-				else
-					val = found
-				end
+				if val then val = self.New({val, found}) else val = found end
 			else
 				if val then val = self.New({val, Nil()}) else val = Nil() end
 
@@ -1467,7 +1462,6 @@ function META:GetAtIndex(i)
 			if val then
 				-- a non tuple in the union would be treated as a tuple with the value repeated
 				val = self.New({val, obj})
-				val:SetNode(self:GetNode())
 			elseif i == 1 then
 				val = obj
 			else
@@ -1710,7 +1704,7 @@ function META:Call(analyzer, arguments, call_node)
 	local new = META.New({})
 
 	for _, obj in ipairs(self.Data) do
-		local val = analyzer:Assert(call_node, analyzer:Call(obj, arguments, call_node))
+		local val = analyzer:Assert(analyzer:Call(obj, arguments, call_node))
 
 		-- TODO
 		if val.Type == "tuple" and val:GetLength() == 1 then
@@ -3211,7 +3205,7 @@ return {
 		return setmetatable({Data = str}, META):SetLiteral(true)
 	end,
 	NodeToString = function(node, is_local)
-		return META.New(node.value.value):SetLiteral(true):SetNode(node, is_local)
+		return META.New(node.value.value):SetLiteral(true)
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.table"] = function(...) __M = __M or (function(...) local setmetatable = _G.setmetatable
@@ -8535,7 +8529,7 @@ return {
 		assert(compiler:Analyze(base))
 		typesystem_env.string_metatable:Set(
 			LStringNoMeta("__index"),
-			base:Assert(compiler.SyntaxTree, typesystem_env:Get(LStringNoMeta("string")))
+			base:Assert(typesystem_env:Get(LStringNoMeta("string")))
 		)
 		return runtime_env, typesystem_env
 	end,
@@ -9330,64 +9324,41 @@ function META:NewToken(
 	return Token(type, is_whitespace, start, stop)
 end
 
-function META:ReadToken()
-	local a, b, c, d = self:ReadSimple() -- TODO: unpack not working
-	return self:NewToken(a, b, c, d)
-end
+do
+	local fixed = {
+		"a",
+		"b",
+		"f",
+		"n",
+		"r",
+		"t",
+		"v",
+		"\\",
+		"\"",
+		"'",
+	}
+	local pattern = "\\[" .. table.concat(fixed, "\\") .. "]"
+	local map_double_quote = {[ [[\"]] ] = [["]]}
+	local map_single_quote = {[ [[\']] ] = [[']]}
 
-function META:ReadFirstFromArray(strings)
-	for _, str in ipairs(strings) do
-		if self:IsStringLower(str) then
-			self:Advance(#str)
-			return true
+	for _, v in ipairs(fixed) do
+		map_double_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
+		map_single_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
+	end
+
+	local function reverse_escape_string(str, quote)
+		if quote == "\"" then
+			str = str:gsub(pattern, map_double_quote)
+		elseif quote == "'" then
+			str = str:gsub(pattern, map_single_quote)
 		end
+
+		return str
 	end
 
-	return false
-end
-
-local fixed = {
-	"a",
-	"b",
-	"f",
-	"n",
-	"r",
-	"t",
-	"v",
-	"\\",
-	"\"",
-	"'",
-}
-local pattern = "\\[" .. table.concat(fixed, "\\") .. "]"
-local map_double_quote = {[ [[\"]] ] = [["]]}
-local map_single_quote = {[ [[\']] ] = [[']]}
-
-for _, v in ipairs(fixed) do
-	map_double_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
-	map_single_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
-end
-
-local function reverse_escape_string(str, quote)
-	if quote == "\"" then
-		str = str:gsub(pattern, map_double_quote)
-	elseif quote == "'" then
-		str = str:gsub(pattern, map_single_quote)
-	end
-
-	return str
-end
-
-function META:GetTokens()
-	self:ResetState()
-	local tokens = {}
-
-	for i = self.Position, self:GetLength() + 1 do
-		tokens[i] = self:ReadToken()
-
-		if tokens[i].type == "end_of_file" then break end
-	end
-
-	for _, token in ipairs(tokens) do
+	function META:ReadToken()
+		local type, is_whitespace, start, stop = self:ReadSimple() -- TODO: unpack not working
+		local token = self:NewToken(type, is_whitespace, start, stop)
 		token.value = self:GetStringSlice(token.start, token.stop)
 
 		if token.type == "string" then
@@ -9403,6 +9374,30 @@ function META:GetTokens()
 				token.string_value = token.value:sub(#start + 1, -#start - 1)
 			end
 		end
+
+		return token
+	end
+end
+
+function META:ReadFirstFromArray(strings)
+	for _, str in ipairs(strings) do
+		if self:IsStringLower(str) then
+			self:Advance(#str)
+			return true
+		end
+	end
+
+	return false
+end
+
+function META:GetTokens()
+	self:ResetState()
+	local tokens = {}
+
+	for i = self.Position, self:GetLength() + 1 do
+		tokens[i] = self:ReadToken()
+
+		if tokens[i].type == "end_of_file" then break end
 	end
 
 	local whitespace_buffer = {}
@@ -13010,6 +13005,7 @@ function META:ReadAnalyzerFunctionBody(
 	node,
 	type_args
 )
+	self:PushParserEnvironment("runtime")
 	node.tokens["arguments("] = self:ExpectValue("(")
 	node.identifiers = self:ReadMultipleValues(math_huge, self.ReadTypeFunctionArgument, type_args)
 
@@ -13050,6 +13046,7 @@ function META:ReadAnalyzerFunctionBody(
 		node.tokens["end"] = self:ExpectValue("end", start, start)
 	end
 
+	self:PopParserEnvironment()
 	return node
 end
 
@@ -13807,14 +13804,10 @@ return function(META)
 				return val, err
 			end
 
-			return self:IndexOperator(key:GetNode(), g, key)
+			return self:IndexOperator(g, key)
 		end
 
-		return self:IndexOperator(
-			key:GetNode(),
-			self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()),
-			key
-		)
+		return self:IndexOperator(self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()), key)
 	end
 
 	function META:SetLocalOrGlobalValue(key, val, scope)
@@ -13822,7 +13815,7 @@ return function(META)
 
 		if upvalue then
 			if upvalue:IsImmutable() then
-				return self:Error(key:GetNode(), {"cannot assign to const variable ", key})
+				return self:Error({"cannot assign to const variable ", key})
 			end
 
 			if not self:MutateUpvalue(upvalue, val) then upvalue:SetValue(val) end
@@ -13837,10 +13830,10 @@ return function(META)
 		end
 
 		if self:IsRuntime() then
-			self:Warning(key:GetNode(), {"_G[\"", key:GetNode(), "\"] = ", val})
+			self:Warning({"_G[\"", key:GetNode(), "\"] = ", val})
 		end
 
-		self:Assert(key, self:NewIndexOperator(key:GetNode(), g, key, val))
+		self:Assert(self:NewIndexOperator(g, key, val))
 		return val
 	end
 
@@ -13906,11 +13899,11 @@ return function(META)
 		self.diagnostics = {}
 	end)
 
-	function META:Assert(node, ok, err, ...)
+	function META:Assert(ok, err, ...)
 		if ok == false then
 			err = err or "assertion failed!"
-			self:Error(node, err)
-			return Any():SetNode(node)
+			self:Error(err)
+			return Any()
 		end
 
 		return ok, err, ...
@@ -13941,19 +13934,12 @@ return function(META)
 	end
 
 	function META:ReportDiagnostic(
-		node,
 		msg,
 		severity
 	)
 		if self.SuppressDiagnostics then return end
 
-		if not node then
-			io.write(
-				"reporting diagnostic without node, defaulting to current expression or statement\n"
-			)
-			--			io.write(debug.traceback(), "\n")
-			node = self.current_expression or self.current_statement
-		end
+		local node = self.current_expression or self.current_statement
 
 		if not msg or not severity then
 			io.write("msg = ", tostring(msg), "\n")
@@ -14013,19 +13999,15 @@ return function(META)
 		return self:GetContextRef("type_protected_call")
 	end
 
-	function META:Error(node, msg)
-		return self:ReportDiagnostic(node, msg, "error")
+	function META:Error(msg)
+		return self:ReportDiagnostic(msg, "error")
 	end
 
-	function META:Warning(node, msg)
-		return self:ReportDiagnostic(node, msg, "warning")
+	function META:Warning(msg)
+		return self:ReportDiagnostic(msg, "warning")
 	end
 
-	function META:FatalError(msg, node)
-		node = node or self.current_expression or self.current_statement
-
-		if node then self:ReportDiagnostic(node, msg, "fatal") end
-
+	function META:FatalError(msg)
 		error(msg, 2)
 	end
 
@@ -14141,9 +14123,9 @@ return function(META)
 			return tup
 		end
 
-		local function call(self, obj, arguments, node)
-			-- disregard arguments and use function's arguments in case they have been maniupulated (ie string.gsub)
-			arguments = obj:GetArguments():Copy()
+		local function call(self, obj, node)
+			-- use function's arguments in case they have been maniupulated (ie string.gsub)
+			local arguments = obj:GetArguments():Copy()
 			arguments = add_potential_self(arguments)
 
 			for _, obj in ipairs(arguments:GetData()) do
@@ -14151,13 +14133,13 @@ return function(META)
 			end
 
 			self:CreateAndPushFunctionScope(obj)
-			self:Assert(node, self:Call(obj, arguments, node))
+			self:Assert(self:Call(obj, arguments, node))
 			self:PopScope()
 		end
 
-		function META:CallMeLater(obj, arguments, node)
+		function META:AddToUnreachableCodeAnalysis(obj)
 			self.deferred_calls = self.deferred_calls or {}
-			table.insert(self.deferred_calls, 1, {obj, arguments, node})
+			table.insert(self.deferred_calls, 1, obj)
 		end
 
 		function META:AnalyzeUnreachableCode()
@@ -14168,9 +14150,7 @@ return function(META)
 			self.processing_deferred_calls = true
 			local called_count = 0
 
-			for _, v in ipairs(self.deferred_calls) do
-				local func = v[1]
-
+			for _, func in ipairs(self.deferred_calls) do
 				if
 					func.explicit_arguments and
 					not func:IsCalled()
@@ -14178,16 +14158,14 @@ return function(META)
 					not func.done and
 					not func:IsRefFunction()
 				then
-					call(self, table.unpack(v))
+					call(self, func, func.function_body_node)
 					called_count = called_count + 1
 					func.done = true
 					func:ClearCalls()
 				end
 			end
 
-			for _, v in ipairs(self.deferred_calls) do
-				local func = v[1]
-
+			for _, func in ipairs(self.deferred_calls) do
 				if
 					not func.explicit_arguments and
 					not func:IsCalled()
@@ -14195,7 +14173,7 @@ return function(META)
 					not func.done and
 					not func:IsRefFunction()
 				then
-					call(self, table.unpack(v))
+					call(self, func, func.function_body_node)
 					called_count = called_count + 1
 					func.done = true
 					func:ClearCalls()
@@ -14280,7 +14258,7 @@ return function(META)
 		runtime_injection = runtime_injection:gsub("\n", ";")
 
 		function META:CompileLuaAnalyzerDebugCode(code, node)
-			local start, stop = code:find("^.-function%b()")
+			local start, stop = code:find("^.-function %b()")
 
 			if start and stop then
 				local before_function = code:sub(1, stop)
@@ -14293,18 +14271,19 @@ return function(META)
 			code = locals .. code
 			-- append newlines so that potential line errors are correct
 			local lua_code = node.Code:GetString()
+			local line
 
 			if lua_code then
 				local start, stop = node:GetStartStop()
-				local line = helpers.SubPositionToLinePosition(lua_code, start, stop).line_start
+				line = helpers.SubPositionToLinePosition(lua_code, start, stop).line_start
 				code = ("\n"):rep(line - 1) .. code
 			end
 
-			local func, err = loadstring(code, node.name)
+			local func, err = loadstring(code, node.Code:GetName() .. ":" .. line)
 
 			if not func then
 				print("========================")
-				print(func, err, code.name, code)
+				print(func, err, node.Code:GetName(), code)
 				print(node)
 				print("=============NODE===========")
 
@@ -14325,7 +14304,7 @@ return function(META)
 			return func
 		end
 
-		function META:CallLuaTypeFunction(node, func, scope, ...)
+		function META:CallLuaTypeFunction(func, scope, ...)
 			self.function_scope = scope
 			local res = {pcall(func, ...)}
 			local ok = table.remove(res, 1)
@@ -14344,16 +14323,18 @@ return function(META)
 							f:close()
 							local start = helpers.LinePositionToSubPosition(code, tonumber(line), 0)
 							local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
-							msg = code:BuildSourceCodePointMessage(rest, start, stop)
+							msg = self.current_expression.Code:BuildSourceCodePointMessage(rest, start, stop)
 						end
 					end
 				end
 
-				local trace = self:TypeTraceback(1)
+				local frame = self:GetCallStack()[1]
 
-				if trace and trace ~= "" then msg = msg .. "\ntraceback:\n" .. trace end
+				if frame then
+					self.current_expression = self:GetCallStack()[1].call_node
+				end
 
-				self:Error(node, msg)
+				self:Error(msg)
 			end
 
 			if res[1] == nil then res[1] = Nil() end
@@ -14378,6 +14359,8 @@ return function(META)
 			end
 
 			function META:GetScopeHelper(scope)
+				if not scope then debug.trace() end
+
 				scope.scope_helper = scope.scope_helper or
 					{
 						typesystem = setmetatable(
@@ -14407,11 +14390,9 @@ return function(META)
 		end
 
 		function META:TypeTraceback(from)
-			if not self.call_stack then return "" end
-
 			local str = ""
 
-			for i, v in ipairs(self.call_stack) do
+			for i, v in ipairs(self:GetCallStack()) do
 				if v.call_node and (not from or i > from) then
 					local start, stop = v.call_node:GetStartStop()
 
@@ -14540,20 +14521,6 @@ return function(META)
 		end
 
 		do
-			function META:GetActiveNode()
-				return self:GetContextValue("active_node")
-			end
-
-			function META:PushActiveNode(node)
-				self:PushContextValue("active_node", node)
-			end
-
-			function META:PopActiveNode()
-				self:PopContextValue("active_node")
-			end
-		end
-
-		do
 			function META:PushCurrentType(obj, type)
 				self:PushContextValue("current_type_" .. type, obj)
 			end
@@ -14607,7 +14574,7 @@ return function(META)
 		self:AnalyzeStatements(statement.statements)
 
 		if scope.missing_return and self:IsMaybeReachable() then
-			self:Return(statement, {Nil():SetNode(statement)})
+			self:Return(statement, {Nil()})
 		end
 
 		local union = Union({})
@@ -14617,7 +14584,6 @@ return function(META)
 				union:AddType(ret.types[1])
 			else
 				local tup = Tuple(ret.types)
-				tup:SetNode(ret.node)
 				union:AddType(tup)
 			end
 		end
@@ -14632,8 +14598,7 @@ return function(META)
 	function META:ThrowSilentError(assert_expression)
 		if assert_expression and assert_expression:IsCertainlyTrue() then return end
 
-		for i = #self.call_stack, 1, -1 do
-			local frame = self.call_stack[i]
+		for _, frame in ipairs(self:GetCallStack()) do
 			local function_scope = frame.scope:GetNearestFunctionScope()
 
 			if not assert_expression or assert_expression:IsCertainlyTrue() then
@@ -14715,10 +14680,10 @@ return function(META)
 		end
 
 		if not no_report then
-			local frame = level and
-				self.call_stack[-#self.call_stack + level + 1] or
-				self.call_stack[#self.call_stack]
-			self:Error(frame.call_node, msg)
+			local stack = self:GetCallStack()
+			local frame = level and stack[#stack - level] or stack[#stack]
+			self.current_expression = frame.call_node
+			self:Error(msg)
 		end
 	end
 
@@ -14813,8 +14778,8 @@ return function(META)
 		return scope
 	end
 
-	function META:ErrorAndCloneCurrentScope(node, err)
-		self:Error(node, err)
+	function META:ErrorAndCloneCurrentScope(err)
+		self:Error(err)
 		self:CloneCurrentScope()
 		self:GetScope():SetConditionalScope(true)
 	end
@@ -14995,10 +14960,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 				not value.explicit_return and
 				union:HasType("function")
 			then
-				self:Assert(
-					value:GetNode() or self.current_expression,
-					self:Call(value, value:GetArguments():Copy())
-				)
+				self:Assert(self:Call(value, value:GetArguments():Copy()))
 			end
 
 			union:AddType(value)
@@ -15065,7 +15027,7 @@ local function initialize_mutation_tracker(obj, scope, key, hash, node)
 	if obj.mutations[hash][1] == nil then
 		if obj.Type == "table" then
 			-- initialize the table mutations with an existing value or nil
-			local val = (obj:GetContract() or obj):Get(key) or Nil():SetNode(node)
+			local val = (obj:GetContract() or obj):Get(key) or Nil()
 			table.insert(
 				obj.mutations[hash],
 				{scope = obj.scope or scope:GetRoot(), value = val, contract = obj:GetContract()}
@@ -15563,7 +15525,7 @@ local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 return {
 	Index = function(META)
-		function META:IndexOperator(node, obj, key)
+		function META:IndexOperator(obj, key)
 			if obj.Type == "union" then
 				local union = Union({})
 
@@ -15585,7 +15547,6 @@ return {
 					end
 				end
 
-				union:SetNode(node)
 				return union
 			end
 
@@ -15612,11 +15573,11 @@ return {
 							)
 						)
 					then
-						return self:IndexOperator(node, index:GetContract() or index, key)
+						return self:IndexOperator(index:GetContract() or index, key)
 					end
 
 					if index.Type == "function" then
-						local obj, err = self:Call(index, Tuple({obj, key}), key:GetNode())
+						local obj, err = self:Call(index, Tuple({obj, key}), self.current_statement)
 
 						if not obj then return obj, err end
 
@@ -15627,7 +15588,7 @@ return {
 
 			if self:IsRuntime() then
 				if obj.Type == "tuple" and obj:GetLength() == 1 then
-					return self:IndexOperator(node, obj:Get(1), key)
+					return self:IndexOperator(obj:Get(1), key)
 				end
 			end
 
@@ -15697,7 +15658,9 @@ local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 return {
 	NewIndex = function(META)
-		function META:NewIndexOperator(node, obj, key, val)
+		function META:NewIndexOperator(obj, key, val)
+			if not obj then debug.trace() end
+
 			if obj.Type == "union" then
 				-- local x: nil | {foo = true}
 				-- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
@@ -15707,10 +15670,10 @@ return {
 				local falsy_union = Union()
 
 				for _, v in ipairs(obj:GetData()) do
-					local ok, err = self:NewIndexOperator(node, v, key, val)
+					local ok, err = self:NewIndexOperator(v, key, val)
 
 					if not ok then
-						self:ErrorAndCloneCurrentScope(node, err or "invalid set error", obj)
+						self:ErrorAndCloneCurrentScope(err or "invalid set error", obj)
 						falsy_union:AddType(v)
 					else
 						truthy_union:AddType(v)
@@ -15720,10 +15683,14 @@ return {
 
 				truthy_union:SetUpvalue(obj:GetUpvalue())
 				falsy_union:SetUpvalue(obj:GetUpvalue())
-				return new_union:SetNode(node)
+				return new_union
 			end
 
-			if val.Type == "function" and val:GetNode().self_call then
+			if
+				val.Type == "function" and
+				val.function_body_node and
+				val.function_body_node.self_call
+			then
 				local arg = val:GetArguments():Get(1)
 
 				if arg and not arg:GetContract() and not arg.Self then
@@ -15731,7 +15698,7 @@ return {
 					val = val:Copy()
 					val:SetCallOverride(nil)
 					val:GetArguments():Set(1, Union({Any(), obj}))
-					self:CallMeLater(val, val:GetArguments(), val:GetNode(), true)
+					self:AddToUnreachableCodeAnalysis(val, val:GetArguments(), val.function_body_node, true)
 				end
 			end
 
@@ -15742,7 +15709,7 @@ return {
 					if func.Type == "table" then return func:Set(key, val) end
 
 					if func.Type == "function" then
-						return self:Assert(node, self:Call(func, Tuple({obj, key, val}), key:GetNode()))
+						return self:Assert(self:Call(func, Tuple({obj, key, val}), self.current_statement))
 					end
 				end
 			end
@@ -15759,7 +15726,6 @@ return {
 			then
 				if not obj:GetContract() then
 					self:Warning(
-						node,
 						{
 							"mutating function argument ",
 							obj,
@@ -15770,7 +15736,6 @@ return {
 					)
 				else
 					self:Error(
-						node,
 						{
 							"mutating function argument ",
 							obj,
@@ -15805,9 +15770,9 @@ return {
 
 					if existing then
 						if val.Type == "function" and existing.Type == "function" then
-							for i, v in ipairs(val:GetNode().identifiers) do
-								if not existing:GetNode().identifiers[i] then
-									self:Error(v, "too many arguments")
+							for i, v in ipairs(val.argument_identifiers) do
+								if not existing.argument_identifiers[i] then
+									self:Error("too many arguments")
 
 									break
 								end
@@ -15826,10 +15791,10 @@ return {
 								return true
 							end
 						else
-							self:Error(node, err)
+							self:Error(err)
 						end
 					elseif err then
-						self:Error(node, err)
+						self:Error(err)
 					end
 				elseif self:IsTypesystem() then
 					return obj:GetContract():SetExplicit(key, val)
@@ -15937,14 +15902,12 @@ end
 
 return {
 	Call = function(META)
-		function META:LuaTypesToTuple(node, tps)
+		function META:LuaTypesToTuple(tps)
 			local tbl = {}
 
 			for i, v in ipairs(tps) do
 				if type(v) == "table" and v.Type ~= nil then
 					tbl[i] = v
-
-					if not v:GetNode() then v:SetNode(node) end
 				else
 					if type(v) == "function" then
 						tbl[i] = Function(
@@ -15953,18 +15916,16 @@ return {
 								arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
 								ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
 							}
-						):SetNode(node):SetLiteral(true)
-
-						if node.statements then tbl[i].function_body_node = node end
+						):SetLiteral(true)
 					else
 						local t = type(v)
 
 						if t == "number" then
-							tbl[i] = LNumber(v):SetNode(node)
+							tbl[i] = LNumber(v)
 						elseif t == "string" then
-							tbl[i] = LString(v):SetNode(node)
+							tbl[i] = LString(v)
 						elseif t == "boolean" then
-							tbl[i] = Symbol(v):SetNode(node)
+							tbl[i] = Symbol(v)
 						elseif t == "table" then
 							local tbl = Table()
 
@@ -15975,8 +15936,6 @@ return {
 							tbl:SetContract(tbl)
 							return tbl
 						else
-							if node then print(node:Render(), "!") end
-
 							self:Print(t)
 							error(debug.traceback("NYI " .. t))
 						end
@@ -16000,7 +15959,7 @@ return {
 			)
 
 			if function_node.self_call then
-				self:CreateLocalValue("self", arguments:Get(1) or Nil():SetNode(function_node))
+				self:CreateLocalValue("self", arguments:Get(1) or Nil())
 			end
 
 			for i, identifier in ipairs(function_node.identifiers) do
@@ -16014,7 +15973,7 @@ return {
 					if identifier.value.value == "..." then
 						self:CreateLocalValue(identifier.value.value, arguments:Slice(argi))
 					else
-						self:CreateLocalValue(identifier.value.value, arguments:Get(argi) or Nil():SetNode(identifier))
+						self:CreateLocalValue(identifier.value.value, arguments:Get(argi) or Nil())
 					end
 				end
 			end
@@ -16061,7 +16020,7 @@ return {
 			end
 
 			if analyzed_return.Type ~= "tuple" then
-				return Tuple({analyzed_return}):SetNode(analyzed_return:GetNode()), scope
+				return Tuple({analyzed_return}), scope
 			end
 
 			return analyzed_return, scope
@@ -16088,10 +16047,8 @@ return {
 
 			if self:IsTypesystem() then
 				local ret = self:LuaTypesToTuple(
-					obj:GetNode(),
 					{
 						self:CallLuaTypeFunction(
-							self:GetActiveNode(),
 							obj:GetData().lua_function,
 							obj:GetData().scope or self:GetScope(),
 							arguments:UnpackWithoutExpansion()
@@ -16105,10 +16062,8 @@ return {
 
 			for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
 				tuples[i] = self:LuaTypesToTuple(
-					obj:GetNode(),
 					{
 						self:CallLuaTypeFunction(
-							self:GetActiveNode(),
 							obj:GetData().lua_function,
 							obj:GetData().scope or self:GetScope(),
 							table.unpack(arg)
@@ -16162,7 +16117,6 @@ return {
 				if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
 					if self.config.external_mutation then
 						self:Warning(
-							self:GetActiveNode(),
 							{
 								"argument #",
 								i,
@@ -16410,7 +16364,7 @@ return {
 
 					if not ok then
 						local _, err = type_errors.subset(a, b, {"return #", i, " '", b, "': ", reason})
-						self:Error(b and b:GetNode() or self.current_statement, err)
+						self:Error(err)
 					end
 
 					return
@@ -16441,7 +16395,7 @@ return {
 					for _, obj in ipairs(result:GetData()) do
 						if obj.Type ~= "tuple" then
 							-- if the function returns one value it's not in a tuple
-							obj = Tuple({obj}):SetNode(obj:GetNode())
+							obj = Tuple({obj})
 						end
 
 						-- check each tuple in the union
@@ -16463,7 +16417,7 @@ return {
 						end
 
 						for _, error in ipairs(errors) do
-							self:Error(result:GetNode(), error.reason)
+							self:Error(error.reason)
 						end
 					else
 						if result.Type == "tuple" and result:GetLength() == 1 then
@@ -16474,7 +16428,7 @@ return {
 
 						local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
 
-						if not ok then self:Error(result:GetNode(), reason) end
+						if not ok then self:Error(reason) end
 					end
 				end
 			end
@@ -16486,7 +16440,7 @@ return {
 						function_node.kind == "type_function"
 					then
 						if function_node.identifiers_typesystem then
-							local call_expression = self:GetActiveNode()
+							local call_expression = self:GetCallStack()[1].call_node
 
 							for i, key in ipairs(function_node.identifiers) do
 								if function_node.self_call then i = i + 1 end
@@ -16547,13 +16501,13 @@ return {
 								local node = function_node.identifiers[i + 1]
 
 								if node and not node.type_expression then
-									self:Warning(node, "argument is untyped")
+									self:Warning("argument is untyped")
 								end
 							elseif
 								function_node.identifiers[i] and
 								not function_node.identifiers[i].type_expression
 							then
-								self:Warning(function_node.identifiers[i], "argument is untyped")
+								self:Warning("argument is untyped")
 							end
 						end
 					end
@@ -16643,7 +16597,6 @@ return {
 				if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
 					falsy_union:AddType(v)
 					self:ErrorAndCloneCurrentScope(
-						self:GetActiveNode(),
 						{
 							"union ",
 							obj,
@@ -16660,7 +16613,7 @@ return {
 
 			truthy_union:SetUpvalue(obj:GetUpvalue())
 			falsy_union:SetUpvalue(obj:GetUpvalue())
-			return truthy_union:SetNode(self:GetActiveNode())
+			return truthy_union
 		end
 
 		local function Call(self, obj, arguments)
@@ -16685,7 +16638,6 @@ return {
 								-- error if we call any with tables that have contracts
 								-- since anything might happen to them in an any call
 								self:Error(
-									self:GetActiveNode(),
 									{
 										"cannot mutate argument with contract ",
 										arg:GetContract(),
@@ -16744,13 +16696,13 @@ return {
 						end
 
 						if not has_ref_arg then
-							self:Assert(self:GetActiveNode(), self:Call(b, func:GetArguments():Copy(nil, true)))
+							self:Assert(self:Call(b, func:GetArguments():Copy(nil, true)))
 						end
 					end
 				end
 			end
 
-			if obj.expand then self:GetActiveNode().expand = obj end
+			if obj.expand then self:GetCallStack()[1].call_node.expand = obj end
 
 			if obj:GetData().lua_function then
 				return call_analyzer_function(self, obj, function_arguments, arguments)
@@ -16762,63 +16714,28 @@ return {
 		end
 
 		function META:Call(obj, arguments, call_node)
-			-- not sure about this, it's used to access the call_node from deeper calls
-			-- without resorting to argument drilling
-			local node = call_node or obj:GetNode() or obj
-
-			-- call_node or obj:GetNode() might be nil when called from tests and other places
-			if node.recursively_called then return node.recursively_called:Copy() end
-
-			self:PushActiveNode(node)
-
 			-- extra protection, maybe only useful during development
 			if debug.getinfo(300) then
-				local level = 1
-				print("Trace:")
-
-				while true do
-					local info = debug.getinfo(level, "Sln")
-
-					if not info then break end
-
-					if info.what == "C" then
-						print(string.format("\t%i: C function\t\"%s\"", level, info.name))
-					else
-						local path = info.source
-
-						if path:sub(1, 1) == "@" then
-							path = path:sub(2)
-						else
-							path = info.short_src
-						end
-
-						print(string.format("%i: %s\t%s:%s\t", level, info.name, path, info.currentline))
-					end
-
-					level = level + 1
-				end
-
-				print("")
+				debug.trace()
 				return false, "call stack is too deep"
 			end
 
 			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
 			self.call_stack = self.call_stack or {}
 
-			if self:IsRuntime() then
+			if self:IsRuntime() and call_node then
 				for _, v in ipairs(self.call_stack) do
 					-- if the callnode is the same, we're doing some infinite recursion
-					if v.call_node == self:GetActiveNode() then
+					if v.call_node == call_node then
 						if obj.explicit_return then
 							-- so if we have explicit return types, just return those
-							node.recursively_called = obj:GetReturnTypes():Copy()
-							return node.recursively_called
+							obj.recursively_called = obj:GetReturnTypes():Copy()
+							return obj.recursively_called
 						else
 							-- if not we sadly have to resort to any
 							-- TODO: error?
-							-- TODO: use VarArg() ?
-							node.recursively_called = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
-							return node.recursively_called
+							obj.recursively_called = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+							return obj.recursively_called
 						end
 					end
 				end
@@ -16826,17 +16743,20 @@ return {
 
 			table.insert(
 				self.call_stack,
+				1,
 				{
 					obj = obj,
-					function_node = obj.function_body_node,
-					call_node = self:GetActiveNode(),
+					call_node = call_node,
 					scope = self:GetScope(),
 				}
 			)
 			local ok, err = Call(self, obj, arguments)
-			table.remove(self.call_stack)
-			self:PopActiveNode()
+			table.remove(self.call_stack, 1)
 			return ok, err
+		end
+
+		function META:GetCallStack()
+			return self.call_stack or {}
 		end
 
 		function META:IsDefinetlyReachable()
@@ -16857,17 +16777,15 @@ return {
 				end
 			end
 
-			if self.call_stack then
-				for i = #self.call_stack, 1, -1 do
-					local scope = self.call_stack[i].scope
+			for _, frame in ipairs(self:GetCallStack()) do
+				local scope = frame.scope
 
-					if not scope:IsCertain() then
-						return false, "call stack scope is uncertain"
-					end
+				if not scope:IsCertain() then
+					return false, "call stack scope is uncertain"
+				end
 
-					if scope.uncertain_function_return == true then
-						return false, "call stack scope has uncertain function return"
-					end
+				if scope.uncertain_function_return == true then
+					return false, "call stack scope has uncertain function return"
 				end
 			end
 
@@ -16884,16 +16802,14 @@ return {
 				end
 			end
 
-			if self.call_stack then
-				for i = #self.call_stack, 1, -1 do
-					local parent_scope = self.call_stack[i].scope
+			for _, frame in ipairs(self:GetCallStack()) do
+				local parent_scope = frame.scope
 
-					if
-						not parent_scope:IsCertain() or
-						parent_scope.uncertain_function_return == true
-					then
-						if parent_scope:IsCertainFromScope(scope) then return false end
-					end
+				if
+					not parent_scope:IsCertain() or
+					parent_scope.uncertain_function_return == true
+				then
+					if parent_scope:IsCertainFromScope(scope) then return false end
 				end
 			end
 
@@ -16901,7 +16817,7 @@ return {
 		end
 
 		function META:UncertainReturn()
-			self.call_stack[#self.call_stack].scope:UncertainReturn()
+			self.call_stack[1].scope:UncertainReturn()
 		end
 	end,
 } end)(...) return __M end end
@@ -16918,7 +16834,7 @@ return {
 		if obj.Type == "tuple" then obj = obj:Get(1) end
 
 		if obj.Type ~= "table" then
-			self:Error(statement.right, "expected a table on the right hand side, got " .. tostring(obj.Type))
+			self:Error("expected a table on the right hand side, got " .. tostring(obj.Type))
 			return
 		end
 
@@ -16935,9 +16851,9 @@ return {
 
 			if not obj then
 				if self:IsRuntime() then
-					obj = Nil():SetNode(node)
+					obj = Nil()
 				else
-					self:Error(node, "field " .. tostring(node.value.value) .. " does not exist")
+					self:Error("field " .. tostring(node.value.value) .. " does not exist")
 				end
 			end
 
@@ -16949,2049 +16865,6 @@ return {
 		end
 	end,
 } end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.function"] = function(...) __M = __M or (function(...) local tostring = tostring
-local table = _G.table
-local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
-local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
-local Function = IMPORTS['nattlua.types.function']("nattlua.types.function").Function
-local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
-local VarArg = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").VarArg
-local ipairs = _G.ipairs
-local locals = ""
-locals = locals .. "local nl=require(\"nattlua\");"
-locals = locals .. "local types=require(\"nattlua.types.types\");"
-
-for k, v in pairs(_G) do
-	locals = locals .. "local " .. tostring(k) .. "=_G." .. k .. ";"
-end
-
-local function analyze_function_signature(self, node, current_function)
-	local explicit_arguments = false
-	local explicit_return = false
-	local args = {}
-	local argument_tuple_override
-	local return_tuple_override
-	self:CreateAndPushFunctionScope(current_function)
-	self:PushAnalyzerEnvironment("typesystem")
-
-	if node.kind == "function" or node.kind == "local_function" then
-		for i, key in ipairs(node.identifiers) do
-			-- stem type so that we can allow
-			-- function(x: foo<|x|>): nil
-			self:CreateLocalValue(key.value.value, Any())
-
-			if key.type_expression then
-				args[i] = self:AnalyzeExpression(key.type_expression)
-				explicit_arguments = true
-			elseif key.value.value == "..." then
-				args[i] = VarArg(Any())
-			else
-				args[i] = Any():SetNode(key)
-			end
-
-			self:CreateLocalValue(key.value.value, args[i])
-		end
-	elseif
-		node.kind == "analyzer_function" or
-		node.kind == "local_analyzer_function" or
-		node.kind == "local_type_function" or
-		node.kind == "type_function" or
-		node.kind == "function_signature"
-	then
-		explicit_arguments = true
-
-		for i, key in ipairs(node.identifiers) do
-			local generic_type = node.identifiers_typesystem and node.identifiers_typesystem[i]
-
-			if generic_type then
-				if generic_type.identifier and generic_type.identifier.value ~= "..." then
-					self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(key):GetFirstValue())
-				elseif generic_type.type_expression then
-					self:CreateLocalValue(generic_type.value.value, Any(), i)
-				end
-			end
-
-			if key.identifier and key.identifier.value ~= "..." then
-				args[i] = self:AnalyzeExpression(key):GetFirstValue()
-				self:CreateLocalValue(key.identifier.value, args[i])
-			elseif key.kind == "vararg" then
-				args[i] = self:AnalyzeExpression(key)
-			elseif key.type_expression then
-				self:CreateLocalValue(key.value.value, Any(), i)
-				args[i] = self:AnalyzeExpression(key.type_expression)
-			elseif key.kind == "value" then
-				if not node.statements then
-					local obj = self:AnalyzeExpression(key)
-
-					if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
-						-- if we pass in a tuple we override the argument type
-						-- function(mytuple): string
-						argument_tuple_override = obj
-
-						break
-					else
-						local val = self:Assert(node, obj)
-
-						-- in case the tuple is empty
-						if val then args[i] = val end
-					end
-				else
-					args[i] = Any():SetNode(key)
-				end
-			else
-				local obj = self:AnalyzeExpression(key)
-
-				if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
-					-- if we pass in a tuple we override the argument type
-					-- function(mytuple): string
-					argument_tuple_override = obj
-
-					break
-				else
-					local val = self:Assert(node, obj)
-
-					-- in case the tuple is empty
-					if val then args[i] = val end
-				end
-			end
-		end
-	else
-		self:FatalError("unhandled statement " .. tostring(node))
-	end
-
-	if node.self_call and node.expression then
-		self:PushAnalyzerEnvironment("runtime")
-		local val = self:AnalyzeExpression(node.expression.left):GetFirstValue()
-		self:PopAnalyzerEnvironment()
-
-		if val then
-			if val:GetContract() or val.Self then
-				table.insert(args, 1, val.Self or val)
-			else
-				table.insert(args, 1, Union({Any(), val}))
-			end
-		end
-	end
-
-	local ret = {}
-
-	if node.return_types then
-		explicit_return = true
-
-		-- TODO:
-		-- somethings up with function(): (a,b,c)
-		-- when doing this vesrus function(): a,b,c
-		-- the return tuple becomes a tuple inside a tuple
-		for i, type_exp in ipairs(node.return_types) do
-			local obj = self:AnalyzeExpression(type_exp)
-
-			if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 and not obj.Repeat then
-				-- if we pass in a tuple, we want to override the return type
-				-- function(): mytuple
-				return_tuple_override = obj
-
-				break
-			else
-				ret[i] = obj
-			end
-		end
-	end
-
-	self:PopAnalyzerEnvironment()
-	self:PopScope()
-	return argument_tuple_override or Tuple(args),
-	return_tuple_override or Tuple(ret),
-	explicit_arguments,
-	explicit_return
-end
-
-return {
-	AnalyzeFunction = function(self, node)
-		if
-			node.type == "statement" and
-			(
-				node.kind == "local_analyzer_function" or
-				node.kind == "analyzer_function"
-			)
-		then
-			node.type = "expression"
-			node.kind = "analyzer_function"
-		end
-
-		local obj = Function(
-			{
-				scope = self:GetScope(),
-				upvalue_position = #self:GetScope():GetUpvalues("runtime"),
-			}
-		):SetNode(node)
-		self:PushCurrentType(obj, "function")
-		local args, ret, explicit_arguments, explicit_return = analyze_function_signature(self, node, obj)
-		local func
-		self:PopCurrentType("function")
-
-		if
-			node.statements and
-			(
-				node.kind == "analyzer_function" or
-				node.kind == "local_analyzer_function"
-			)
-		then
-			node.analyzer_function = true
-			--'local analyzer = self;local env = self:GetScopeHelper(scope);'
-			func = self:CompileLuaAnalyzerDebugCode(
-				"return  " .. node:Render({analyzer_function = true, comment_type_annotations = false}),
-				node
-			)()
-		end
-
-		obj.Data.arg = args
-		obj.Data.ret = ret
-		obj.Data.lua_function = func
-
-		if node.statements then obj.function_body_node = node end
-
-		obj.explicit_arguments = explicit_arguments
-		obj.explicit_return = explicit_return
-
-		if self:IsRuntime() then self:CallMeLater(obj, args, node, true) end
-
-		return obj
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.function"] = function(...) __M = __M or (function(...) local AnalyzeFunction = IMPORTS['nattlua.analyzer.expressions.function']("nattlua.analyzer.expressions.function").AnalyzeFunction
-local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").NodeToString
-return {
-	AnalyzeFunction = function(self, statement)
-		if
-			statement.kind == "local_function" or
-			statement.kind == "local_analyzer_function" or
-			statement.kind == "local_type_function" or
-			(
-				not statement.expression and
-				statement.kind == "analyzer_function"
-			)
-		then
-			self:PushAnalyzerEnvironment(statement.kind == "local_function" and "runtime" or "typesystem")
-			self:CreateLocalValue(statement.tokens["identifier"].value, AnalyzeFunction(self, statement))
-			self:PopAnalyzerEnvironment()
-		elseif
-			statement.kind == "function" or
-			statement.kind == "analyzer_function" or
-			statement.kind == "type_function"
-		then
-			local key = statement.expression
-			self:PushAnalyzerEnvironment(statement.kind == "function" and "runtime" or "typesystem")
-
-			if key.kind == "binary_operator" then
-				local obj = self:AnalyzeExpression(key.left)
-				local key = self:AnalyzeExpression(key.right)
-				local val = AnalyzeFunction(self, statement)
-				self:NewIndexOperator(statement, obj, key, val)
-			else
-				local key = NodeToString(key)
-				local val = AnalyzeFunction(self, statement)
-				self:SetLocalOrGlobalValue(key, val)
-			end
-
-			self:PopAnalyzerEnvironment()
-		else
-			self:FatalError("unhandled statement: " .. statement.kind)
-		end
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.if"] = function(...) __M = __M or (function(...) local ipairs = ipairs
-local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-
-local function contains_ref_argument(upvalues)
-	for _, v in pairs(upvalues) do
-		if v.upvalue:GetValue().ref_argument or v.upvalue:GetValue().from_for_loop then
-			return true
-		end
-	end
-
-	return false
-end
-
-return {
-	AnalyzeIf = function(self, statement)
-		local prev_expression
-		local blocks = {}
-
-		for i, statements in ipairs(statement.statements) do
-			if statement.expressions[i] then
-				self.current_if_statement = statement
-				local exp = statement.expressions[i]
-				local no_operator_expression = exp.kind ~= "binary_operator" and
-					exp.kind ~= "prefix_operator" or
-					(
-						exp.kind == "binary_operator" and
-						exp.value.value == "."
-					)
-
-				if no_operator_expression then self:PushTruthyExpressionContext(true) end
-
-				local obj = self:AnalyzeExpression(exp)
-
-				if no_operator_expression then self:PopTruthyExpressionContext() end
-
-				if no_operator_expression then
-					-- track "if x then" which has no binary or prefix operators
-					self:TrackUpvalue(obj)
-				end
-
-				self.current_if_statement = nil
-				prev_expression = obj
-
-				if obj:IsTruthy() then
-					local upvalues = self:GetTrackedUpvalues()
-					local tables = self:GetTrackedTables()
-					self:ClearTracked()
-					table.insert(
-						blocks,
-						{
-							statements = statements,
-							upvalues = upvalues,
-							tables = tables,
-							expression = obj,
-						}
-					)
-
-					if obj:IsCertainlyTrue() and self:IsRuntime() then
-						if not contains_ref_argument(upvalues) then
-							self:Warning(exp, "if condition is always true")
-						end
-					end
-
-					if not obj:IsFalsy() then break end
-				end
-
-				if obj:IsCertainlyFalse() and self:IsRuntime() then
-					if not contains_ref_argument(self:GetTrackedUpvalues()) then
-						self:Warning(exp, "if condition is always false")
-					end
-				end
-			else
-				if prev_expression:IsCertainlyFalse() and self:IsRuntime() then
-					if not contains_ref_argument(self:GetTrackedUpvalues()) then
-						self:Warning(statement.expressions[i - 1], "else part of if condition is always true")
-					end
-				end
-
-				if prev_expression:IsFalsy() then
-					table.insert(
-						blocks,
-						{
-							statements = statements,
-							upvalues = blocks[#blocks] and blocks[#blocks].upvalues,
-							tables = blocks[#blocks] and blocks[#blocks].tables,
-							expression = prev_expression,
-							is_else = true,
-						}
-					)
-				end
-			end
-		end
-
-		local last_scope
-
-		for i, block in ipairs(blocks) do
-			block.scope = self:GetScope()
-			local scope = self:PushConditionalScope(statement, block.expression:IsTruthy(), block.expression:IsFalsy())
-
-			if last_scope then
-				last_scope:SetNextConditionalSibling(scope)
-				scope:SetPreviousConditionalSibling(last_scope)
-			end
-
-			last_scope = scope
-			scope:SetTrackedUpvalues(block.upvalues)
-			scope:SetTrackedTables(block.tables)
-
-			if block.is_else then
-				scope:SetElseConditionalScope(true)
-				self:ApplyMutationsInIfElse(blocks)
-			else
-				self:ApplyMutationsInIf(block.upvalues, block.tables)
-			end
-
-			self:AnalyzeStatements(block.statements)
-			self:PopConditionalScope()
-		end
-
-		self:ClearTracked()
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.do"] = function(...) __M = __M or (function(...) return {
-	AnalyzeDo = function(self, statement)
-		self:CreateAndPushScope()
-		self:AnalyzeStatements(statement.statements)
-		self:PopScope()
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.generic_for"] = function(...) __M = __M or (function(...) local table = _G.table
-local ipairs = ipairs
-local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
-local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-return {
-	AnalyzeGenericFor = function(self, statement)
-		local args = self:AnalyzeExpressions(statement.expressions)
-		local callable_iterator = table.remove(args, 1)
-
-		if not callable_iterator then return end
-
-		if callable_iterator.Type == "tuple" then
-			callable_iterator = callable_iterator:Get(1)
-		end
-
-		local returned_key = nil
-		local one_loop = callable_iterator and callable_iterator.Type == "any"
-		local uncertain_break = nil
-
-		for i = 1, 1000 do
-			local values = self:Assert(statement.expressions[1], self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
-
-			if
-				not values:Get(1) or
-				values:Get(1).Type == "symbol" and
-				values:Get(1):GetData() == nil
-			then
-				break
-			end
-
-			if i == 1 then
-				returned_key = values:Get(1)
-
-				if not returned_key:IsLiteral() then
-					returned_key = Union({Nil(), returned_key})
-				end
-
-				self:PushConditionalScope(statement, returned_key:IsTruthy(), returned_key:IsFalsy())
-				self:PushUncertainLoop(false)
-			end
-
-			local brk = false
-
-			for i, identifier in ipairs(statement.identifiers) do
-				local obj = self:Assert(identifier, values:Get(i))
-
-				if uncertain_break then
-					obj:SetLiteral(false)
-					brk = true
-				end
-
-				obj.from_for_loop = true
-				self:CreateLocalValue(identifier.value.value, obj)
-			end
-
-			self:AnalyzeStatements(statement.statements)
-
-			if self._continue_ then self._continue_ = nil end
-
-			if self.break_out_scope then
-				if self.break_out_scope:IsUncertain() then
-					uncertain_break = true
-				else
-					brk = true
-				end
-
-				self.break_out_scope = nil
-			end
-
-			if i == 1000 then self:Error(statement, "too many iterations") end
-
-			table.insert(values:GetData(), 1, args[1])
-			args = values:GetData()
-
-			if one_loop then break end
-
-			if brk then break end
-		end
-
-		if returned_key then
-			self:PopConditionalScope()
-			self:PopUncertainLoop()
-		end
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.call_expression"] = function(...) __M = __M or (function(...) return {
-	AnalyzeCall = function(self, statement)
-		self:AnalyzeExpression(statement.value)
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.binary"] = function(...) __M = __M or (function(...) local tostring = tostring
-local ipairs = ipairs
-local table = _G.table
-local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
-local String = IMPORTS['nattlua.types.string']("nattlua.types.string").String
-local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
-local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
-local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
-local Boolean = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Boolean
-local Symbol = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Symbol
-local False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
-local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-
-local function metatable_function(self, node, meta_method, l, r)
-	meta_method = LString(meta_method)
-
-	if r:GetMetaTable() or l:GetMetaTable() then
-		local func = (
-				l:GetMetaTable() and
-				l:GetMetaTable():Get(meta_method)
-			) or
-			(
-				r:GetMetaTable() and
-				r:GetMetaTable():Get(meta_method)
-			)
-
-		if not func then return end
-
-		if func.Type ~= "function" then return func end
-
-		return self:Assert(node, self:Call(func, Tuple({l, r}))):Get(1)
-	end
-end
-
-local function operator(self, node, l, r, op, meta_method)
-	if op == ".." then
-		if
-			(
-				l.Type == "string" and
-				r.Type == "string"
-			)
-			or
-			(
-				l.Type == "number" and
-				r.Type == "string"
-			)
-			or
-			(
-				l.Type == "number" and
-				r.Type == "number"
-			)
-			or
-			(
-				l.Type == "string" and
-				r.Type == "number"
-			)
-		then
-			if l:IsLiteral() and r:IsLiteral() then
-				return LString(l:GetData() .. r:GetData()):SetNode(node)
-			end
-
-			return String():SetNode(node)
-		end
-	end
-
-	if l.Type == "number" and r.Type == "number" then
-		return l:ArithmeticOperator(r, op):SetNode(node)
-	else
-		return metatable_function(self, node, meta_method, l, r)
-	end
-
-	return type_errors.binary(op, l, r)
-end
-
-local function logical_cmp_cast(val, err)
-	if err then return val, err end
-
-	if val == nil then
-		return Boolean()
-	elseif val == true then
-		return True()
-	elseif val == false then
-		return False()
-	end
-end
-
-local function Binary(self, node, l, r, op)
-	op = op or node.value.value
-	local cur_union
-
-	if op == "|" and self:IsTypesystem() then
-		cur_union = Union()
-		self:PushCurrentType(cur_union, "union")
-	end
-
-	if not l and not r then
-		if node.value.value == "and" then
-			l = self:AnalyzeExpression(node.left)
-
-			if l:IsCertainlyFalse() then
-				r = Nil():SetNode(node.right)
-			else
-				-- if a and a.foo then
-				-- ^ no binary operator means that it was just checked simply if it was truthy
-				if node.left.kind ~= "binary_operator" or node.left.value.value ~= "." then
-					self:TrackUpvalue(l)
-				end
-
-				-- right hand side of and is the "true" part
-				self:PushTruthyExpressionContext(true)
-				r = self:AnalyzeExpression(node.right)
-				self:PopTruthyExpressionContext()
-
-				if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
-					self:TrackUpvalue(r)
-				end
-			end
-		elseif node.value.value == "or" then
-			self:PushFalsyExpressionContext(true)
-			l = self:AnalyzeExpression(node.left)
-			self:PopFalsyExpressionContext()
-
-			if l:IsCertainlyFalse() then
-				self:PushFalsyExpressionContext(true)
-				r = self:AnalyzeExpression(node.right)
-				self:PopFalsyExpressionContext()
-			elseif l:IsCertainlyTrue() then
-				r = Nil():SetNode(node.right)
-			else
-				-- right hand side of or is the "false" part
-				self:PushFalsyExpressionContext(true)
-				r = self:AnalyzeExpression(node.right)
-				self:PopFalsyExpressionContext()
-			end
-		else
-			l = self:AnalyzeExpression(node.left)
-			r = self:AnalyzeExpression(node.right)
-		end
-
-		self:TrackUpvalueNonUnion(l)
-		self:TrackUpvalueNonUnion(r)
-
-		-- TODO: more elegant way of dealing with self?
-		if op == ":" then
-			self.self_arg_stack = self.self_arg_stack or {}
-			table.insert(self.self_arg_stack, l)
-		end
-	end
-
-	if cur_union then self:PopCurrentType("union") end
-
-	if self:IsTypesystem() then
-		if op == "|" then
-			cur_union:AddType(l)
-			cur_union:AddType(r)
-			return cur_union
-		elseif op == "==" then
-			return l:Equal(r) and True() or False()
-		elseif op == "~" then
-			if l.Type == "union" then return l:RemoveType(r) end
-
-			return l
-		elseif op == "&" or op == "extends" then
-			if l.Type ~= "table" then
-				return false, "type " .. tostring(l) .. " cannot be extended"
-			end
-
-			return l:Extend(r)
-		elseif op == ".." then
-			if l.Type == "tuple" and r.Type == "tuple" then
-				return l:Copy():Concat(r)
-			elseif l.Type == "string" and r.Type == "string" then
-				if l:IsLiteral() and r:IsLiteral() then
-					return LString(l:GetData() .. r:GetData())
-				end
-
-				return type_errors.binary(op, l, r)
-			elseif l.Type == "number" and r.Type == "number" then
-				return l:Copy():SetMax(r)
-			end
-		elseif op == "*" then
-			if l.Type == "tuple" and r.Type == "number" and r:IsLiteral() then
-				return l:Copy():SetRepeat(r:GetData())
-			end
-		elseif op == ">" or op == "supersetof" then
-			return Symbol((r:IsSubsetOf(l)))
-		elseif op == "<" or op == "subsetof" then
-			return Symbol((l:IsSubsetOf(r)))
-		elseif op == "+" then
-			if l.Type == "table" and r.Type == "table" then return l:Union(r) end
-		end
-	end
-
-	-- adding two tuples at runtime in lua will basically do this
-	if self:IsRuntime() then
-		if l.Type == "tuple" then l = self:Assert(node, l:GetFirstValue()) end
-
-		if r.Type == "tuple" then r = self:Assert(node, r:GetFirstValue()) end
-	end
-
-	do -- union unpacking
-		-- normalize l and r to be both unions to reduce complexity
-		if l.Type ~= "union" and r.Type == "union" then l = Union({l}) end
-
-		if l.Type == "union" and r.Type ~= "union" then r = Union({r}) end
-
-		if l.Type == "union" and r.Type == "union" then
-			local new_union = Union()
-			local truthy_union = Union():SetUpvalue(l:GetUpvalue())
-			local falsy_union = Union():SetUpvalue(l:GetUpvalue())
-
-			if op == "~=" then self.inverted_index_tracking = true end
-
-			local type_checked = self.type_checked
-
-			-- the return value from type(x)
-			if type_checked then self.type_checked = nil end
-
-			for _, l in ipairs(l:GetData()) do
-				for _, r in ipairs(r:GetData()) do
-					local res, err = Binary(self, node, l, r, op)
-
-					if not res then
-						self:ErrorAndCloneCurrentScope(node, err, l) -- TODO, only left side?
-					else
-						if res:IsTruthy() then
-							if type_checked then
-								for _, t in ipairs(type_checked:GetData()) do
-									if t.GetLuaType and t:GetLuaType() == l:GetData() then
-										truthy_union:AddType(t)
-									end
-								end
-							else
-								truthy_union:AddType(l)
-							end
-						end
-
-						if res:IsFalsy() then
-							if type_checked then
-								for _, t in ipairs(type_checked:GetData()) do
-									if t.GetLuaType and t:GetLuaType() == l:GetData() then
-										falsy_union:AddType(t)
-									end
-								end
-							else
-								falsy_union:AddType(l)
-							end
-						end
-
-						new_union:AddType(res)
-					end
-				end
-			end
-
-			if op == "~=" then self.inverted_index_tracking = nil end
-
-			if op ~= "or" and op ~= "and" then
-				local parent_table = l.parent_table or type_checked and type_checked.parent_table
-				local parent_key = l.parent_key or type_checked and type_checked.parent_key
-
-				if parent_table then
-					self:TrackTableIndexUnion(parent_table, parent_key, truthy_union, falsy_union)
-				elseif l.Type == "union" then
-					for _, l in ipairs(l:GetData()) do
-						if l.parent_table then
-							self:TrackTableIndexUnion(l.parent_table, l.parent_key, truthy_union, falsy_union)
-						end
-					end
-				end
-
-				self:TrackUpvalue(l, truthy_union, falsy_union, op == "~=")
-				self:TrackUpvalue(r, truthy_union, falsy_union, op == "~=")
-			end
-
-			return new_union:SetNode(node)
-		end
-	end
-
-	if l.Type == "any" or r.Type == "any" then return Any() end
-
-	do -- arithmetic operators
-		if op == "." or op == ":" then
-			return self:IndexOperator(node, l, r)
-		elseif op == "+" then
-			local val = operator(self, node, l, r, op, "__add")
-
-			if val then return val end
-		elseif op == "-" then
-			local val = operator(self, node, l, r, op, "__sub")
-
-			if val then return val end
-		elseif op == "*" then
-			local val = operator(self, node, l, r, op, "__mul")
-
-			if val then return val end
-		elseif op == "/" then
-			local val = operator(self, node, l, r, op, "__div")
-
-			if val then return val end
-		elseif op == "/idiv/" then
-			local val = operator(self, node, l, r, op, "__idiv")
-
-			if val then return val end
-		elseif op == "%" then
-			local val = operator(self, node, l, r, op, "__mod")
-
-			if val then return val end
-		elseif op == "^" then
-			local val = operator(self, node, l, r, op, "__pow")
-
-			if val then return val end
-		elseif op == "&" then
-			local val = operator(self, node, l, r, op, "__band")
-
-			if val then return val end
-		elseif op == "|" then
-			local val = operator(self, node, l, r, op, "__bor")
-
-			if val then return val end
-		elseif op == "~" then
-			local val = operator(self, node, l, r, op, "__bxor")
-
-			if val then return val end
-		elseif op == "<<" then
-			local val = operator(self, node, l, r, op, "__lshift")
-
-			if val then return val end
-		elseif op == ">>" then
-			local val = operator(self, node, l, r, op, "__rshift")
-
-			if val then return val end
-		elseif op == ".." then
-			local val = operator(self, node, l, r, op, "__concat")
-
-			if val then return val end
-		end
-	end
-
-	do -- logical operators
-		if op == "==" then
-			local res = metatable_function(self, node, "__eq", l, r)
-
-			if res then return res end
-
-			if l:IsLiteral() and l == r then return True() end
-
-			if l.Type ~= r.Type then return False() end
-
-			return logical_cmp_cast(l.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
-		elseif op == "~=" or op == "!=" then
-			local res = metatable_function(self, node, "__eq", l, r)
-
-			if res then
-				if res:IsLiteral() then res:SetData(not res:GetData()) end
-
-				return res
-			end
-
-			if l.Type ~= r.Type then return True() end
-
-			local val, err = l.LogicalComparison(l, r, "==", self:GetCurrentAnalyzerEnvironment())
-
-			if val ~= nil then val = not val end
-
-			return logical_cmp_cast(val, err)
-		elseif op == "<" then
-			local res = metatable_function(self, node, "__lt", l, r)
-
-			if res then return res end
-
-			return logical_cmp_cast(l.LogicalComparison(l, r, op))
-		elseif op == "<=" then
-			local res = metatable_function(self, node, "__le", l, r)
-
-			if res then return res end
-
-			return logical_cmp_cast(l.LogicalComparison(l, r, op))
-		elseif op == ">" then
-			local res = metatable_function(self, node, "__lt", l, r)
-
-			if res then return res end
-
-			return logical_cmp_cast(l.LogicalComparison(l, r, op))
-		elseif op == ">=" then
-			local res = metatable_function(self, node, "__le", l, r)
-
-			if res then return res end
-
-			return logical_cmp_cast(l.LogicalComparison(l, r, op))
-		elseif op == "or" or op == "||" then
-			-- boolean or boolean
-			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}) end
-
-			-- true or boolean
-			if l:IsTruthy() then return l:Copy():SetNode(node) end
-
-			-- false or true
-			if r:IsTruthy() then return r:Copy():SetNode(node) end
-
-			return r:Copy():SetNode(node)
-		elseif op == "and" or op == "&&" then
-			-- true and false
-			if l:IsTruthy() and r:IsFalsy() then
-				if l:IsFalsy() or r:IsTruthy() then return Union({l, r}) end
-
-				return r:Copy():SetNode(node)
-			end
-
-			-- false and true
-			if l:IsFalsy() and r:IsTruthy() then
-				if l:IsTruthy() or r:IsFalsy() then return Union({l, r}) end
-
-				return l:Copy():SetNode(node)
-			end
-
-			-- true and true
-			if l:IsTruthy() and r:IsTruthy() then
-				if l:IsFalsy() and r:IsFalsy() then return Union({l, r}) end
-
-				return r:Copy():SetNode(node)
-			else
-				-- false and false
-				if l:IsTruthy() and r:IsTruthy() then return Union({l, r}) end
-
-				return l:Copy():SetNode(node)
-			end
-		end
-	end
-
-	return type_errors.binary(op, l, r)
-end
-
-return {Binary = Binary} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.numeric_for"] = function(...) __M = __M or (function(...) local ipairs = ipairs
-local math = math
-local assert = assert
-local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
-local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
-local False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
-local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-local Binary = IMPORTS['nattlua.analyzer.operators.binary']("nattlua.analyzer.operators.binary").Binary
-
-local function get_largest_number(obj)
-	if obj:IsLiteral() then
-		if obj.Type == "union" then
-			local max = -math.huge
-
-			for _, v in ipairs(obj:GetData()) do
-				max = math.max(max, v:GetData())
-			end
-
-			return max
-		end
-
-		return obj:GetData()
-	end
-end
-
-return {
-	AnalyzeNumericFor = function(self, statement)
-		local init = self:AnalyzeExpression(statement.expressions[1]):GetFirstValue()
-		local max = self:AnalyzeExpression(statement.expressions[2]):GetFirstValue()
-		local step = statement.expressions[3] and
-			self:AnalyzeExpression(statement.expressions[3]):GetFirstValue() or
-			nil
-
-		if step then assert(step.Type == "number") end
-
-		local literal_init = get_largest_number(init)
-		local literal_max = get_largest_number(max)
-		local literal_step = not step and 1 or get_largest_number(step)
-		local condition = Union()
-
-		if literal_init and literal_max then
-			-- also check step
-			condition:AddType(Binary(self, statement, init, max, "<="))
-		else
-			condition:AddType(True())
-			condition:AddType(False())
-		end
-
-		self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
-
-		if literal_init and literal_max and literal_step and literal_max < 1000 then
-			local uncertain_break = false
-
-			for i = literal_init, literal_max, literal_step do
-				self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
-				local i = LNumber(i):SetNode(statement.expressions[1])
-				local brk = false
-
-				if uncertain_break then
-					i:SetLiteral(false)
-					brk = true
-				end
-
-				i.from_for_loop = true
-				self:CreateLocalValue(statement.identifiers[1].value.value, i)
-				self:AnalyzeStatements(statement.statements)
-
-				if self._continue_ then self._continue_ = nil end
-
-				if self.break_out_scope then
-					if self.break_out_scope:IsUncertain() then
-						uncertain_break = true
-					else
-						brk = true
-					end
-
-					self.break_out_scope = nil
-				end
-
-				self:PopConditionalScope()
-
-				if brk then break end
-			end
-		else
-			if literal_init then
-				init = LNumber(literal_init)
-				init.dont_widen = true
-
-				if max.Type == "number" or (max.Type == "union" and max:IsType("number")) then
-					if not max:IsLiteral() then
-						init:SetMax(LNumber(math.huge))
-					else
-						init:SetMax(max)
-					end
-				end
-			else
-				if
-					init.Type == "number" and
-					(
-						max.Type == "number" or
-						(
-							max.Type == "union" and
-							max:IsType("number")
-						)
-					)
-				then
-					init = self:Assert(statement.expressions[1], init:SetMax(max))
-				end
-
-				if max.Type == "any" then init:SetLiteral(false) end
-			end
-
-			self:PushUncertainLoop(true)
-			local range = self:Assert(statement.expressions[1], init)
-			self:CreateLocalValue(statement.identifiers[1].value.value, range)
-			self:AnalyzeStatements(statement.statements)
-			self:PopUncertainLoop()
-		end
-
-		self.break_out_scope = nil
-		self:PopConditionalScope()
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.break"] = function(...) __M = __M or (function(...) return {
-	AnalyzeBreak = function(self, statement)
-		self.break_out_scope = self:GetScope()
-		self.break_loop = true
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.continue"] = function(...) __M = __M or (function(...) return {
-	AnalyzeContinue = function(self, statement)
-		self._continue_ = true
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.repeat"] = function(...) __M = __M or (function(...) return {
-	AnalyzeRepeat = function(self, statement)
-		self:CreateAndPushScope()
-		self:AnalyzeStatements(statement.statements)
-		self:PopScope()
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.return"] = function(...) __M = __M or (function(...) local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-return {
-	AnalyzeReturn = function(self, statement)
-		local ret = self:AnalyzeExpressions(statement.expressions)
-		self:Return(statement, ret)
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.analyzer_debug_code"] = function(...) __M = __M or (function(...) return {
-	AnalyzeAnalyzerDebugCode = function(self, statement)
-		local code = statement.lua_code.value.value:sub(3)
-		self:CallLuaTypeFunction(
-			statement.lua_code,
-			self:CompileLuaAnalyzerDebugCode(code, statement.lua_code),
-			self:GetScope()
-		)
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.while"] = function(...) __M = __M or (function(...) return {
-	AnalyzeWhile = function(self, statement)
-		local obj = self:AnalyzeExpression(statement.expression)
-		local upvalues = self:GetTrackedUpvalues()
-		local tables = self:GetTrackedTables()
-		self:ClearTracked()
-
-		if obj:IsCertainlyFalse() then
-			self:Warning(statement.expression, "loop expression is always false")
-		end
-
-		if obj:IsTruthy() then
-			self:ApplyMutationsInIf(upvalues, tables)
-
-			for i = 1, 32 do
-				self:PushConditionalScope(statement, obj:IsTruthy(), obj:IsFalsy())
-				self:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy())
-				self:AnalyzeStatements(statement.statements)
-				self:PopUncertainLoop()
-				self:PopConditionalScope()
-
-				if self.break_out_scope then
-					self.break_out_scope = nil
-
-					break
-				end
-
-				if self:GetScope():DidCertainReturn() then break end
-
-				local obj = self:AnalyzeExpression(statement.expression)
-
-				if obj:IsUncertain() or obj:IsFalsy() then break end
-
-				if i == 32 then self:Error(statement, "too many iterations") end
-			end
-		end
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.assignment"] = function(...) __M = __M or (function(...) local ipairs = ipairs
-local tostring = tostring
-local table = _G.table
-local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").NodeToString
-local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-
-local function check_type_against_contract(val, contract)
-	-- if the contract is unique / nominal, ie
-	-- local a: Person = {name = "harald"}
-	-- Person is not a subset of {name = "harald"} because
-	-- Person is only equal to Person
-	-- so we need to disable this check during assignment
-	local skip_uniqueness = contract:IsUnique() and not val:IsUnique()
-
-	if skip_uniqueness then contract:DisableUniqueness() end
-
-	local ok, reason = val:IsSubsetOf(contract)
-
-	if skip_uniqueness then
-		contract:EnableUniqueness()
-		val:SetUniqueID(contract:GetUniqueID())
-	end
-
-	if not ok then return ok, reason end
-
-	-- make sure the table contains all the keys in the contract as well
-	-- since {foo = true, bar = "harald"} 
-	-- is technically a subset of 
-	-- {foo = true, bar = "harald", baz = "jane"}
-	if contract.Type == "table" and val.Type == "table" then
-		return val:ContainsAllKeysIn(contract)
-	end
-
-	return true
-end
-
-return {
-	AnalyzeAssignment = function(self, statement)
-		local left = {}
-		local right = {}
-
-		-- first we evaluate the left hand side
-		for left_pos, exp_key in ipairs(statement.left) do
-			if exp_key.kind == "value" then
-				-- local foo, bar = *
-				left[left_pos] = NodeToString(exp_key, true)
-			elseif exp_key.kind == "postfix_expression_index" then
-				-- foo[bar] = *
-				left[left_pos] = self:AnalyzeExpression(exp_key.expression)
-			elseif exp_key.kind == "binary_operator" then
-				-- foo.bar = *
-				left[left_pos] = self:AnalyzeExpression(exp_key.right)
-			else
-				self:FatalError("unhandled assignment expression " .. tostring(exp_key:Render()))
-			end
-		end
-
-		if statement.right then
-			for right_pos, exp_val in ipairs(statement.right) do
-				-- when "self" is looked up in the typesystem in analyzer:AnalyzeExpression, we refer left[right_pos]
-				-- use context?
-				self.left_assigned = left[right_pos]
-				local obj = self:Assert(exp_val, self:AnalyzeExpression(exp_val))
-				self:ClearTracked()
-
-				if obj.Type == "tuple" and obj:GetLength() == 1 then
-					obj = obj:Get(1)
-				end
-
-				if obj.Type == "tuple" then
-					if self:IsRuntime() then
-						-- at runtime unpack the tuple
-						for i = 1, #statement.left do
-							local index = right_pos + i - 1
-							right[index] = obj:Get(i)
-						end
-					end
-
-					if self:IsTypesystem() then
-						if obj:HasTuples() then
-							-- if we have a tuple with, plainly unpack the tuple while preserving the tuples inside
-							for i = 1, #statement.left do
-								local index = right_pos + i - 1
-								right[index] = obj:GetWithoutExpansion(i)
-							end
-						else
-							-- otherwise plainly assign it
-							right[right_pos] = obj
-						end
-					end
-				elseif obj.Type == "union" then
-					-- if the union is empty or has no tuples, just assign it
-					if obj:IsEmpty() or not obj:HasTuples() then
-						right[right_pos] = obj
-					else
-						for i = 1, #statement.left do
-							-- unpack unions with tuples
-							-- ⦗false, string, 2⦘ | ⦗true, 1⦘ at first index would be true | false
-							local index = right_pos + i - 1
-							right[index] = obj:GetAtIndex(index)
-						end
-					end
-				else
-					right[right_pos] = obj
-
-					-- when the right side has a type expression, it's invoked using the as operator
-					if exp_val.type_expression then obj:Seal() end
-				end
-			end
-
-			-- cuts the last arguments
-			-- local funciton test() return 1,2,3 end
-			-- local a,b,c = test(), 1337
-			-- a should be 1
-			-- b should be 1337
-			-- c should be nil
-			local last = statement.right[#statement.right]
-
-			if last.kind == "value" and last.value.value ~= "..." then
-				for _ = 1, #right - #statement.right do
-					table.remove(right, #right)
-				end
-			end
-		end
-
-		-- here we check the types
-		for left_pos, exp_key in ipairs(statement.left) do
-			local val = right[left_pos] or Nil():SetNode(exp_key)
-
-			-- do we have a type expression? 
-			-- local a: >>number<< = 1
-			if exp_key.type_expression then
-				self:PushAnalyzerEnvironment("typesystem")
-				local contract = self:AnalyzeExpression(exp_key.type_expression)
-				self:PopAnalyzerEnvironment()
-
-				if right[left_pos] then
-					local contract = contract
-
-					if contract.Type == "tuple" and contract:GetLength() == 1 then
-						contract = contract:Get(1)
-					end
-
-					-- we copy the literalness of the contract so that
-					-- local a: number = 1
-					-- becomes
-					-- local a: number = number
-					val:CopyLiteralness(contract)
-
-					if val.Type == "table" then
-						-- coerce any untyped functions based on contract
-						val:CoerceUntypedFunctions(contract)
-					end
-
-					self:Assert(
-						statement or val:GetNode() or exp_key.type_expression,
-						check_type_against_contract(val, contract)
-					)
-				else
-					if contract.Type == "tuple" and contract:GetLength() == 1 then
-						contract = contract:Get(1)
-					end
-				end
-
-				-- we set a's contract to be number
-				val:SetContract(contract)
-
-				-- this is for "local a: number" without the right side being assigned
-				if not right[left_pos] then
-					-- make a copy of the contract and use it
-					-- so the value can change independently from the contract
-					val = contract:Copy()
-					val:SetContract(contract)
-				end
-			end
-
-			-- used by the emitter
-			exp_key:AddType(val)
-			val:SetTokenLabelSource(exp_key)
-			val:SetAnalyzerEnvironment(self:GetCurrentAnalyzerEnvironment())
-
-			-- if all is well, create or mutate the value
-			if statement.kind == "local_assignment" then
-				local immutable = false
-
-				if exp_key.attribute then
-					if exp_key.attribute.value == "const" then immutable = true end
-				end
-
-				-- local assignment: local a = 1
-				self:CreateLocalValue(exp_key.value.value, val, immutable)
-			elseif statement.kind == "assignment" then
-				local key = left[left_pos]
-
-				-- plain assignment: a = 1
-				if exp_key.kind == "value" then
-					if self:IsRuntime() then -- check for any previous upvalues
-						local existing_value = self:GetLocalOrGlobalValue(key)
-						local contract = existing_value and existing_value:GetContract()
-
-						if contract then
-							if contract.Type == "tuple" then
-								contract = contract:GetFirstValue()
-							end
-
-							val:CopyLiteralness(contract)
-							self:Assert(
-								statement or val:GetNode() or exp_key.type_expression,
-								check_type_against_contract(val, contract)
-							)
-							val:SetContract(contract)
-						end
-					end
-
-					local val = self:SetLocalOrGlobalValue(key, val)
-
-					if val then
-						-- this is used for tracking function dependencies
-						if val.Type == "upvalue" then
-							self:GetScope():AddDependency(val)
-						else
-							self:GetScope():AddDependency({key = key, val = val})
-						end
-					end
-				else
-					-- TODO: refactor out to mutation assignment?
-					-- index assignment: foo[a] = 1
-					local obj = self:AnalyzeExpression(exp_key.left)
-					self:ClearTracked()
-
-					if self:IsRuntime() then key = key:GetFirstValue() end
-
-					self:Assert(exp_key, self:NewIndexOperator(exp_key, obj, key, val))
-				end
-			end
-		end
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.binary_operator"] = function(...) __M = __M or (function(...) local table = _G.table
-local Binary = IMPORTS['nattlua.analyzer.operators.binary']("nattlua.analyzer.operators.binary").Binary
-local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-local assert = _G.assert
-return {
-	AnalyzeBinaryOperator = function(self, node)
-		return self:Assert(node, Binary(self, node))
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.prefix"] = function(...) __M = __M or (function(...) local ipairs = ipairs
-local error = error
-local tostring = tostring
-local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
-local Boolean = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Boolean
-local False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
-local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
-local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
-local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
-
-local function metatable_function(self, meta_method, l)
-	if l:GetMetaTable() then
-		meta_method = LString(meta_method)
-		local func = l:GetMetaTable():Get(meta_method)
-
-		if func then
-			return self:Assert(l:GetNode(), self:Call(func, Tuple({l})):Get(1))
-		end
-	end
-end
-
-local function Prefix(self, node, r)
-	local op = node.value.value
-
-	if op == "not" then
-		self.inverted_index_tracking = not self.inverted_index_tracking
-	end
-
-	if not r then
-		r = self:AnalyzeExpression(node.right)
-
-		if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
-			if r.Type ~= "union" then self:TrackUpvalue(r, nil, nil, op == "not") end
-		end
-	end
-
-	if op == "not" then self.inverted_index_tracking = nil end
-
-	if op == "literal" then
-		r.literal_argument = true
-		return r
-	end
-
-	if op == "ref" then
-		r.ref_argument = true
-		return r
-	end
-
-	if r.Type == "tuple" then r = r:Get(1) or Nil() end
-
-	if r.Type == "union" then
-		local new_union = Union()
-		local truthy_union = Union():SetUpvalue(r:GetUpvalue())
-		local falsy_union = Union():SetUpvalue(r:GetUpvalue())
-
-		for _, r in ipairs(r:GetData()) do
-			local res, err = Prefix(self, node, r)
-
-			if not res then
-				self:ErrorAndCloneCurrentScope(node, err, r)
-				falsy_union:AddType(r)
-			else
-				new_union:AddType(res)
-
-				if res:IsTruthy() then truthy_union:AddType(r) end
-
-				if res:IsFalsy() then falsy_union:AddType(r) end
-			end
-		end
-
-		self:TrackUpvalue(r, truthy_union, falsy_union)
-		return new_union:SetNode(node)
-	end
-
-	if r.Type == "any" then return Any():SetNode(node) end
-
-	if self:IsTypesystem() then
-		if op == "typeof" then
-			self:PushAnalyzerEnvironment("runtime")
-			local obj = self:AnalyzeExpression(node.right)
-			self:PopAnalyzerEnvironment()
-
-			if not obj then
-				return type_errors.other("cannot find '" .. node.right:Render() .. "' in the current typesystem scope")
-			end
-
-			return obj:GetContract() or obj
-		elseif op == "unique" then
-			r:MakeUnique(true)
-			return r
-		elseif op == "mutable" then
-			r.mutable = true
-			return r
-		elseif op == "expand" then
-			r.expand = true
-			return r
-		elseif op == "$" then
-			if r.Type ~= "string" then
-				return type_errors.other("must evaluate to a string")
-			end
-
-			if not r:IsLiteral() then return type_errors.other("must be a literal") end
-
-			r:SetPatternContract(r:GetData())
-			return r
-		end
-	end
-
-	if op == "-" then
-		local res = metatable_function(self, "__unm", r)
-
-		if res then return res end
-	elseif op == "~" then
-		local res = metatable_function(self, "__bxor", r)
-
-		if res then return res end
-	elseif op == "#" then
-		local res = metatable_function(self, "__len", r)
-
-		if res then return res end
-	end
-
-	if op == "not" or op == "!" then
-		if r:IsTruthy() and r:IsFalsy() then
-			return Boolean():SetNode(node)
-		elseif r:IsTruthy() then
-			return False():SetNode(node)
-		elseif r:IsFalsy() then
-			return True():SetNode(node)
-		end
-	end
-
-	if op == "-" or op == "~" or op == "#" then return r:PrefixOperator(op) end
-
-	error(
-		"unhandled prefix operator in " .. self:GetCurrentAnalyzerEnvironment() .. ": " .. op .. tostring(r)
-	)
-end
-
-return {Prefix = Prefix} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.prefix_operator"] = function(...) __M = __M or (function(...) local Prefix = IMPORTS['nattlua.analyzer.operators.prefix']("nattlua.analyzer.operators.prefix").Prefix
-return {
-	AnalyzePrefixOperator = function(self, node)
-		return self:Assert(node, Prefix(self, node))
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.postfix"] = function(...) __M = __M or (function(...) local Binary = IMPORTS['nattlua.analyzer.operators.binary']("nattlua.analyzer.operators.binary").Binary
-local Node = IMPORTS['nattlua.parser.node']("nattlua.parser.node")
-return {
-	Postfix = function(self, node, r)
-		local op = node.value.value
-
-		if op == "++" then
-			return Binary(self, setmetatable({value = {value = "+"}}, Node), r, r)
-		end
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_operator"] = function(...) __M = __M or (function(...) local Postfix = IMPORTS['nattlua.analyzer.operators.postfix']("nattlua.analyzer.operators.postfix").Postfix
-return {
-	AnalyzePostfixOperator = function(self, node)
-		return self:Assert(node, Postfix(self, node, self:AnalyzeExpression(node.left)))
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_call"] = function(...) __M = __M or (function(...) local table = _G.table
-local NormalizeTuples = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").NormalizeTuples
-local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
-return {
-	AnalyzePostfixCall = function(self, node)
-		local is_type_call = node.type_call or
-			node.left and
-			(
-				node.left.kind == "local_generics_type_function" or
-				node.left.kind == "generics_type_function"
-			)
-		self:PushAnalyzerEnvironment(is_type_call and "typesystem" or "runtime")
-		local callable = self:AnalyzeExpression(node.left)
-		local self_arg
-
-		if
-			self.self_arg_stack and
-			node.left.kind == "binary_operator" and
-			node.left.value.value == ":"
-		then
-			self_arg = table.remove(self.self_arg_stack)
-		end
-
-		local types = self:AnalyzeExpressions(node.expressions)
-
-		if self_arg then table.insert(types, 1, self_arg) end
-
-		local arguments
-
-		if self:IsTypesystem() then
-			arguments = Tuple(types)
-		else
-			arguments = NormalizeTuples(types)
-		end
-
-		local returned_tuple = self:Assert(node, self:Call(callable, arguments, node))
-
-		-- TUPLE UNPACK MESS
-		if node.tokens["("] and node.tokens[")"] and returned_tuple.Type == "tuple" then
-			returned_tuple = returned_tuple:Get(1)
-		end
-
-		if self:IsTypesystem() then
-			if returned_tuple.Type == "tuple" and returned_tuple:GetLength() == 1 then
-				returned_tuple = returned_tuple:Get(1)
-			end
-		end
-
-		self:PopAnalyzerEnvironment()
-		return returned_tuple
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_index"] = function(...) __M = __M or (function(...) return {
-	AnalyzePostfixIndex = function(self, node)
-		return self:Assert(
-			node,
-			self:IndexOperator(
-				node,
-				self:AnalyzeExpression(node.left),
-				self:AnalyzeExpression(node.expression):GetFirstValue()
-			)
-		)
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.table"] = function(...) __M = __M or (function(...) local tostring = tostring
-local ipairs = ipairs
-local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
-local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
-local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
-local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-local table = _G.table
-return {
-	AnalyzeTable = function(self, node)
-		local tbl = Table():SetNode(node):SetLiteral(self:IsTypesystem())
-
-		if self:IsRuntime() then tbl:SetReferenceId(tostring(tbl:GetData())) end
-
-		self:PushCurrentType(tbl, "table")
-		local tree = node
-		tbl.scope = self:GetScope()
-
-		for i, node in ipairs(node.children) do
-			if node.kind == "table_key_value" then
-				local key = LString(node.tokens["identifier"].value):SetNode(node.tokens["identifier"])
-				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
-				self:NewIndexOperator(node, tbl, key, val)
-			elseif node.kind == "table_expression_value" then
-				local key = self:AnalyzeExpression(node.key_expression):GetFirstValue()
-				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
-				self:NewIndexOperator(node, tbl, key, val)
-			elseif node.kind == "table_index_value" then
-				if node.spread then
-					local val = self:AnalyzeExpression(node.spread.expression):GetFirstValue()
-
-					for _, kv in ipairs(val:GetData()) do
-						local val = kv.val
-
-						if val.Type == "union" and val:CanBeNil() then
-							val = val:Copy():RemoveType(Nil())
-						end
-
-						self:NewIndexOperator(node, tbl, kv.key, val)
-					end
-				else
-					local obj = self:AnalyzeExpression(node.value_expression)
-
-					if
-						node.value_expression.kind ~= "value" or
-						node.value_expression.value.value ~= "..."
-					then
-						obj = obj:GetFirstValue()
-					end
-
-					if obj.Type == "tuple" then
-						if tree.children[i + 1] then
-							tbl:Insert(obj:Get(1))
-						else
-							for i = 1, obj:GetMinimumLength() do
-								tbl:Set(LNumber(#tbl:GetData() + 1), obj:Get(i))
-							end
-
-							if obj.Remainder then
-								local current_index = LNumber(#tbl:GetData() + 1)
-								local max = LNumber(obj.Remainder:GetLength())
-								tbl:Set(current_index:SetMax(max), obj.Remainder:Get(1))
-							end
-						end
-					else
-						if node.i then
-							tbl:Insert(LNumber(obj))
-						elseif obj then
-							tbl:Insert(obj)
-						end
-					end
-				end
-			end
-
-			self:ClearTracked()
-		end
-
-		self:PopCurrentType("table")
-		return tbl
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.atomic_value"] = function(...) __M = __M or (function(...) local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
-local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").NodeToString
-local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
-local LNumberFromString = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumberFromString
-local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
-local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
-local False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
-local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
-local String = IMPORTS['nattlua.types.string']("nattlua.types.string").String
-local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
-local Boolean = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Boolean
-local table = _G.table
-
-local function lookup_value(self, node)
-	local errors = {}
-	local key = NodeToString(node)
-	local obj, err = self:GetLocalOrGlobalValue(key)
-
-	if self:IsTypesystem() then
-		-- we fallback to runtime if we can't find the value in the typesystem
-		if not obj then
-			table.insert(errors, err)
-			self:PushAnalyzerEnvironment("runtime")
-			obj, err = self:GetLocalOrGlobalValue(key)
-			self:PopAnalyzerEnvironment("runtime")
-
-			-- when in the typesystem we want to see the objects contract, not its runtime value
-			if obj and obj:GetContract() then obj = obj:GetContract() end
-		end
-
-		if not obj then
-			table.insert(errors, err)
-			self:Error(node, errors)
-			return Nil()
-		end
-	else
-		if not obj or (obj.Type == "symbol" and obj:GetData() == nil) then
-			self:PushAnalyzerEnvironment("typesystem")
-			local objt, errt = self:GetLocalOrGlobalValue(key)
-			self:PopAnalyzerEnvironment()
-
-			if objt then obj, err = objt, errt end
-		end
-
-		if not obj then
-			self:Warning(node, err)
-			obj = Any():SetNode(node)
-		end
-	end
-
-	return self:GetTrackedUpvalue(obj) or obj
-end
-
-local function is_primitive(val)
-	return val == "string" or
-		val == "number" or
-		val == "boolean" or
-		val == "true" or
-		val == "false" or
-		val == "nil"
-end
-
-return {
-	AnalyzeAtomicValue = function(self, node)
-		local value = node.value.value
-		local type = runtime_syntax:GetTokenType(node.value)
-
-		if type == "keyword" then
-			if value == "nil" then
-				return Nil():SetNode(node)
-			elseif value == "true" then
-				return True():SetNode(node)
-			elseif value == "false" then
-				return False():SetNode(node)
-			end
-		end
-
-		-- this means it's the first part of something, either >true<, >foo<.bar, >foo<()
-		local standalone_letter = type == "letter" and node.standalone_letter
-
-		if self:IsTypesystem() and standalone_letter and not node.force_upvalue then
-			if value == "current_table" then
-				return self:GetCurrentType("table")
-			elseif value == "current_tuple" then
-				return self:GetCurrentType("tuple")
-			elseif value == "current_function" then
-				return self:GetCurrentType("function")
-			elseif value == "current_union" then
-				return self:GetCurrentType("union")
-			end
-
-			local current_table = self:GetCurrentType("table")
-
-			if current_table then
-				if value == "self" then
-					return current_table
-				elseif
-					self.left_assigned and
-					self.left_assigned:GetData() == value and
-					not is_primitive(value)
-				then
-					return current_table
-				end
-			end
-
-			if value == "any" then
-				return Any():SetNode(node)
-			elseif value == "inf" then
-				return LNumber(math.huge):SetNode(node)
-			elseif value == "nan" then
-				return LNumber(math.abs(0 / 0)):SetNode(node)
-			elseif value == "string" then
-				return String():SetNode(node)
-			elseif value == "number" then
-				return Number():SetNode(node)
-			elseif value == "boolean" then
-				return Boolean():SetNode(node)
-			end
-		end
-
-		if standalone_letter or value == "..." or node.force_upvalue then
-			local val = lookup_value(self, node)
-
-			if val:GetUpvalue() then
-				self:GetScope():AddDependency(val:GetUpvalue())
-			end
-
-			return val
-		end
-
-		if type == "number" then
-			local num = LNumberFromString(value)
-
-			if not num then
-				self:Error(node, "unable to convert " .. value .. " to number")
-				num = Number()
-			end
-
-			num:SetNode(node)
-			return num
-		elseif type == "string" then
-			return LString(node.value.string_value):SetNode(node)
-		elseif type == "letter" then
-			return LString(value):SetNode(node)
-		end
-
-		self:FatalError("unhandled value type " .. type .. " " .. node:Render())
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.import"] = function(...) __M = __M or (function(...) local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
-local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-return {
-	AnalyzeImport = function(self, node)
-		-- ugly way of dealing with recursive import
-		local root = node.RootStatement
-
-		if root and root.kind ~= "root" then root = root.RootStatement end
-
-		if root then
-			return self:AnalyzeRootStatement(root)
-		elseif node.data then
-			return LString(node.data)
-		end
-
-		return Nil():SetNode(node)
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.tuple"] = function(...) __M = __M or (function(...) local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
-return {
-	AnalyzeTuple = function(self, node)
-		local tup = Tuple():SetNode(node):SetUnpackable(true)
-		self:PushCurrentType(tup, "tuple")
-		tup:SetTable(self:AnalyzeExpressions(node.expressions))
-		self:PopCurrentType("tuple")
-		return tup
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.vararg"] = function(...) __M = __M or (function(...) local VarArg = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").VarArg
-return {
-	AnalyzeVararg = function(self, node)
-		return VarArg(self:AnalyzeExpression(node.value)):SetNode(node)
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.function_signature"] = function(...) __M = __M or (function(...) local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
-local AnalyzeFunction = IMPORTS['nattlua.analyzer.expressions.function']("nattlua.analyzer.expressions.function").AnalyzeFunction
-return {
-	AnalyzeFunctionSignature = function(self, node)
-		return AnalyzeFunction(self, node)
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.analyzer"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
-local tostring = tostring
-local error = error
-local setmetatable = setmetatable
-local ipairs = ipairs
-IMPORTS['nattlua.types.types']("nattlua.types.types").Initialize()
-local META = class.CreateTemplate("analyzer")
-META.OnInitialize = {}
-IMPORTS['nattlua.analyzer.base.base_analyzer']("nattlua.analyzer.base.base_analyzer")(META)
-IMPORTS['nattlua.analyzer.control_flow']("nattlua.analyzer.control_flow")(META)
-IMPORTS['nattlua.analyzer.mutations']("nattlua.analyzer.mutations")(META)
-IMPORTS['nattlua.analyzer.operators.index']("nattlua.analyzer.operators.index").Index(META)
-IMPORTS['nattlua.analyzer.operators.newindex']("nattlua.analyzer.operators.newindex").NewIndex(META)
-IMPORTS['nattlua.analyzer.operators.call']("nattlua.analyzer.operators.call").Call(META)
-
-do
-	local AnalyzeDestructureAssignment = IMPORTS['nattlua.analyzer.statements.destructure_assignment']("nattlua.analyzer.statements.destructure_assignment").AnalyzeDestructureAssignment
-	local AnalyzeFunction = IMPORTS['nattlua.analyzer.statements.function']("nattlua.analyzer.statements.function").AnalyzeFunction
-	local AnalyzeIf = IMPORTS['nattlua.analyzer.statements.if']("nattlua.analyzer.statements.if").AnalyzeIf
-	local AnalyzeDo = IMPORTS['nattlua.analyzer.statements.do']("nattlua.analyzer.statements.do").AnalyzeDo
-	local AnalyzeGenericFor = IMPORTS['nattlua.analyzer.statements.generic_for']("nattlua.analyzer.statements.generic_for").AnalyzeGenericFor
-	local AnalyzeCall = IMPORTS['nattlua.analyzer.statements.call_expression']("nattlua.analyzer.statements.call_expression").AnalyzeCall
-	local AnalyzeNumericFor = IMPORTS['nattlua.analyzer.statements.numeric_for']("nattlua.analyzer.statements.numeric_for").AnalyzeNumericFor
-	local AnalyzeBreak = IMPORTS['nattlua.analyzer.statements.break']("nattlua.analyzer.statements.break").AnalyzeBreak
-	local AnalyzeContinue = IMPORTS['nattlua.analyzer.statements.continue']("nattlua.analyzer.statements.continue").AnalyzeContinue
-	local AnalyzeRepeat = IMPORTS['nattlua.analyzer.statements.repeat']("nattlua.analyzer.statements.repeat").AnalyzeRepeat
-	local AnalyzeReturn = IMPORTS['nattlua.analyzer.statements.return']("nattlua.analyzer.statements.return").AnalyzeReturn
-	local AnalyzeAnalyzerDebugCode = IMPORTS['nattlua.analyzer.statements.analyzer_debug_code']("nattlua.analyzer.statements.analyzer_debug_code").AnalyzeAnalyzerDebugCode
-	local AnalyzeWhile = IMPORTS['nattlua.analyzer.statements.while']("nattlua.analyzer.statements.while").AnalyzeWhile
-
-	function META:AnalyzeStatement(node)
-		local AnalyzeAssignment = IMPORTS['nattlua.analyzer.statements.assignment']("nattlua.analyzer.statements.assignment").AnalyzeAssignment
-		self.current_statement = node
-		self:PushAnalyzerEnvironment(node.environment or "runtime")
-
-		if node.kind == "assignment" or node.kind == "local_assignment" then
-			AnalyzeAssignment(self, node)
-		elseif
-			node.kind == "destructure_assignment" or
-			node.kind == "local_destructure_assignment"
-		then
-			AnalyzeDestructureAssignment(self, node)
-		elseif
-			node.kind == "function" or
-			node.kind == "type_function" or
-			node.kind == "local_function" or
-			node.kind == "local_type_function" or
-			node.kind == "local_analyzer_function" or
-			node.kind == "analyzer_function"
-		then
-			AnalyzeFunction(self, node)
-		elseif node.kind == "if" then
-			AnalyzeIf(self, node)
-		elseif node.kind == "while" then
-			AnalyzeWhile(self, node)
-		elseif node.kind == "do" then
-			AnalyzeDo(self, node)
-		elseif node.kind == "repeat" then
-			AnalyzeRepeat(self, node)
-		elseif node.kind == "return" then
-			AnalyzeReturn(self, node)
-		elseif node.kind == "break" then
-			AnalyzeBreak(self, node)
-		elseif node.kind == "continue" then
-			AnalyzeContinue(self, node)
-		elseif node.kind == "call_expression" then
-			AnalyzeCall(self, node)
-		elseif node.kind == "generic_for" then
-			AnalyzeGenericFor(self, node)
-		elseif node.kind == "numeric_for" then
-			AnalyzeNumericFor(self, node)
-		elseif node.kind == "analyzer_debug_code" then
-			AnalyzeAnalyzerDebugCode(self, node)
-		elseif node.kind == "import" then
-
-		elseif
-			node.kind ~= "end_of_file" and
-			node.kind ~= "semicolon" and
-			node.kind ~= "shebang" and
-			node.kind ~= "goto_label" and
-			node.kind ~= "parser_debug_code" and
-			node.kind ~= "goto"
-		then
-			self:FatalError("unhandled statement: " .. tostring(node))
-		end
-
-		self:PopAnalyzerEnvironment()
-	end
-end
-
-do
-	local AnalyzeBinaryOperator = IMPORTS['nattlua.analyzer.expressions.binary_operator']("nattlua.analyzer.expressions.binary_operator").AnalyzeBinaryOperator
-	local AnalyzePrefixOperator = IMPORTS['nattlua.analyzer.expressions.prefix_operator']("nattlua.analyzer.expressions.prefix_operator").AnalyzePrefixOperator
-	local AnalyzePostfixOperator = IMPORTS['nattlua.analyzer.expressions.postfix_operator']("nattlua.analyzer.expressions.postfix_operator").AnalyzePostfixOperator
-	local AnalyzePostfixCall = IMPORTS['nattlua.analyzer.expressions.postfix_call']("nattlua.analyzer.expressions.postfix_call").AnalyzePostfixCall
-	local AnalyzePostfixIndex = IMPORTS['nattlua.analyzer.expressions.postfix_index']("nattlua.analyzer.expressions.postfix_index").AnalyzePostfixIndex
-	local AnalyzeFunction = IMPORTS['nattlua.analyzer.expressions.function']("nattlua.analyzer.expressions.function").AnalyzeFunction
-	local AnalyzeTable = IMPORTS['nattlua.analyzer.expressions.table']("nattlua.analyzer.expressions.table").AnalyzeTable
-	local AnalyzeAtomicValue = IMPORTS['nattlua.analyzer.expressions.atomic_value']("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
-	local AnalyzeImport = IMPORTS['nattlua.analyzer.expressions.import']("nattlua.analyzer.expressions.import").AnalyzeImport
-	local AnalyzeTuple = IMPORTS['nattlua.analyzer.expressions.tuple']("nattlua.analyzer.expressions.tuple").AnalyzeTuple
-	local AnalyzeVararg = IMPORTS['nattlua.analyzer.expressions.vararg']("nattlua.analyzer.expressions.vararg").AnalyzeVararg
-	local AnalyzeFunctionSignature = IMPORTS['nattlua.analyzer.expressions.function_signature']("nattlua.analyzer.expressions.function_signature").AnalyzeFunctionSignature
-	local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-
-	function META:AnalyzeExpression2(node)
-		self.current_expression = node
-
-		if node.kind == "value" then
-			return AnalyzeAtomicValue(self, node)
-		elseif node.kind == "vararg" then
-			return AnalyzeVararg(self, node)
-		elseif
-			node.kind == "function" or
-			node.kind == "analyzer_function" or
-			node.kind == "type_function"
-		then
-			return AnalyzeFunction(self, node)
-		elseif node.kind == "table" or node.kind == "type_table" then
-			return AnalyzeTable(self, node)
-		elseif node.kind == "binary_operator" then
-			return AnalyzeBinaryOperator(self, node)
-		elseif node.kind == "prefix_operator" then
-			return AnalyzePrefixOperator(self, node)
-		elseif node.kind == "postfix_operator" then
-			return AnalyzePostfixOperator(self, node)
-		elseif node.kind == "postfix_expression_index" then
-			return AnalyzePostfixIndex(self, node)
-		elseif node.kind == "postfix_call" then
-			if
-				node.import_expression and
-				node.left.value.value ~= "dofile" and
-				node.left.value.value ~= "loadfile"
-			then
-				return AnalyzeImport(self, node)
-			else
-				return AnalyzePostfixCall(self, node)
-			end
-		elseif node.kind == "empty_union" then
-			return Union({}):SetNode(node)
-		elseif node.kind == "tuple" then
-			return AnalyzeTuple(self, node)
-		elseif node.kind == "function_signature" then
-			return AnalyzeFunctionSignature(self, node)
-		else
-			self:FatalError("unhandled expression " .. node.kind)
-		end
-	end
-
-	function META:AnalyzeExpression(node)
-		local obj, err = self:AnalyzeExpression2(node)
-
-		if node.type_expression then
-			local old = obj
-			self:PushAnalyzerEnvironment("typesystem")
-			obj = self:AnalyzeExpression(node.type_expression)
-			self:PopAnalyzerEnvironment()
-
-			if obj.Type == "table" then
-				if old.Type == "table" then
-					old:SetContract(obj)
-					obj = old
-				elseif old.Type == "tuple" and old:GetLength() == 1 then
-					local first = old:GetData()[1]
-
-					if first.Type == "table" then
-						first:SetContract(obj)
-						obj = old
-					end
-				end
-			end
-		end
-
-		node:AddType(obj or err)
-		return obj, err
-	end
-end
-
-function META.New(config)
-	config = config or {}
-	local self = setmetatable({config = config}, META)
-
-	for _, func in ipairs(META.OnInitialize) do
-		func(self)
-	end
-
-	self.context_values = {}
-	self.context_ref = {}
-	return self
-end
-
-return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.transpiler.emitter"] = function(...) __M = __M or (function(...) local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local characters = IMPORTS['nattlua.syntax.characters']("nattlua.syntax.characters")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
@@ -19944,8 +17817,7 @@ end
 
 function META:EmitVararg(node)
 	self:EmitToken(node.tokens["..."])
-
-	if not self.config.analyzer_function then self:EmitExpression(node.value) end
+	self:EmitExpression(node.value)
 end
 
 function META:EmitTable(tree)
@@ -20609,18 +18481,14 @@ do -- types
 	end
 
 	function META:EmitAnalyzerFunction(node)
-		if not self.config.analyzer_function then
-			if node.tokens["analyzer"] then
-				self:EmitToken(node.tokens["analyzer"])
-				self:Whitespace(" ")
-			end
+		if node.tokens["analyzer"] then
+			self:EmitToken(node.tokens["analyzer"])
+			self:Whitespace(" ")
 		end
 
 		self:EmitToken(node.tokens["function"])
 
-		if not self.config.analyzer_function then
-			if node.tokens["^"] then self:EmitToken(node.tokens["^"]) end
-		end
+		if node.tokens["^"] then self:EmitToken(node.tokens["^"]) end
 
 		self:EmitToken(node.tokens["arguments("])
 
@@ -20651,7 +18519,7 @@ do -- types
 
 		self:EmitToken(node.tokens["arguments)"])
 
-		if node.tokens[":"] and not self.config.analyzer_function then
+		if node.tokens[":"] then
 			self:EmitToken(node.tokens[":"])
 			self:Whitespace(" ")
 
@@ -20684,7 +18552,7 @@ do -- types
 		if node.kind == "binary_operator" then
 			self:EmitTypeBinaryOperator(node)
 		elseif node.kind == "analyzer_function" then
-			self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
+			self:EmitAnalyzerFunction(node)
 		elseif node.kind == "table" then
 			self:EmitTable(node)
 		elseif node.kind == "prefix_operator" then
@@ -20692,11 +18560,7 @@ do -- types
 		elseif node.kind == "postfix_operator" then
 			self:EmitPostfixOperator(node)
 		elseif node.kind == "postfix_call" then
-			if node.type_call then
-				self:EmitInvalidLuaCode("EmitCall", node)
-			else
-				self:EmitCall(node)
-			end
+			self:EmitCall(node)
 		elseif node.kind == "postfix_expression_index" then
 			self:EmitExpressionIndex(node)
 		elseif node.kind == "value" then
@@ -20712,11 +18576,11 @@ do -- types
 		elseif node.kind == "tuple" then
 			self:EmitTuple(node)
 		elseif node.kind == "type_function" then
-			self:EmitInvalidLuaCode("EmitTypeFunction", node)
+			self:EmitTypeFunction(node)
 		elseif node.kind == "function" then
 			self:EmitAnonymousFunction(node)
 		elseif node.kind == "function_signature" then
-			self:EmitInvalidLuaCode("EmitFunctionSignature", node)
+			self:EmitFunctionSignature(node)
 		elseif node.kind == "vararg" then
 			self:EmitVararg(node)
 		else
@@ -20729,10 +18593,8 @@ do -- types
 			self:Whitespace(" ")
 		end
 
-		if not self.config.analyzer_function then
-			if node.type_expression then
-				self:EmitTypeExpression(node.type_expression)
-			end
+		if node.type_expression then
+			self:EmitTypeExpression(node.type_expression)
 		end
 
 		if node.tokens[")"] then
@@ -20918,6 +18780,1993 @@ function META.New(config)
 	end
 
 	self:Initialize()
+	return self
+end
+
+return META end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.function"] = function(...) __M = __M or (function(...) local tostring = tostring
+local table = _G.table
+local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
+local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
+local Function = IMPORTS['nattlua.types.function']("nattlua.types.function").Function
+local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
+local VarArg = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").VarArg
+local ipairs = _G.ipairs
+local Emitter = IMPORTS['nattlua.transpiler.emitter']("nattlua.transpiler.emitter").New
+
+local function analyze_arguments(self, node)
+	local args = {}
+
+	if node.kind == "function" or node.kind == "local_function" then
+		for i, key in ipairs(node.identifiers) do
+			-- stem type so that we can allow
+			-- function(x: foo<|x|>): nil
+			self:CreateLocalValue(key.value.value, Any())
+
+			if key.type_expression then
+				args[i] = self:AnalyzeExpression(key.type_expression)
+			elseif key.value.value == "..." then
+				args[i] = VarArg(Any())
+			else
+				args[i] = Any()
+			end
+
+			self:CreateLocalValue(key.value.value, args[i])
+		end
+	elseif
+		node.kind == "analyzer_function" or
+		node.kind == "local_analyzer_function" or
+		node.kind == "local_type_function" or
+		node.kind == "type_function" or
+		node.kind == "function_signature"
+	then
+		for i, key in ipairs(node.identifiers) do
+			local generic_type = node.identifiers_typesystem and node.identifiers_typesystem[i]
+
+			if generic_type then
+				if generic_type.identifier and generic_type.identifier.value ~= "..." then
+					self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(key):GetFirstValue())
+				elseif generic_type.type_expression then
+					self:CreateLocalValue(generic_type.value.value, Any(), i)
+				end
+			end
+
+			if key.identifier and key.identifier.value ~= "..." then
+				args[i] = self:AnalyzeExpression(key):GetFirstValue()
+				self:CreateLocalValue(key.identifier.value, args[i])
+			elseif key.kind == "vararg" then
+				args[i] = self:AnalyzeExpression(key)
+			elseif key.type_expression then
+				self:CreateLocalValue(key.value.value, Any(), i)
+				args[i] = self:AnalyzeExpression(key.type_expression)
+			elseif key.kind == "value" then
+				if not node.statements then
+					local obj = self:AnalyzeExpression(key)
+
+					if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
+						-- if we pass in a tuple we override the argument type
+						-- function(mytuple): string
+						return obj
+					else
+						local val = self:Assert(obj)
+
+						-- in case the tuple is empty
+						if val then args[i] = val end
+					end
+				else
+					args[i] = Any()
+				end
+			else
+				local obj = self:AnalyzeExpression(key)
+
+				if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
+					-- if we pass in a tuple we override the argument type
+					-- function(mytuple): string
+					return obj
+				else
+					local val = self:Assert(obj)
+
+					-- in case the tuple is empty
+					if val then args[i] = val end
+				end
+			end
+		end
+	else
+		self:FatalError("unhandled statement " .. tostring(node))
+	end
+
+	if node.self_call and node.expression then
+		self:PushAnalyzerEnvironment("runtime")
+		local val = self:AnalyzeExpression(node.expression.left):GetFirstValue()
+		self:PopAnalyzerEnvironment()
+
+		if val then
+			if val:GetContract() or val.Self then
+				table.insert(args, 1, val.Self or val)
+			else
+				table.insert(args, 1, Union({Any(), val}))
+			end
+		end
+	end
+
+	return Tuple(args)
+end
+
+local function analyze_return_types(self, node)
+	local ret = {}
+
+	if node.return_types then
+		-- TODO:
+		-- somethings up with function(): (a,b,c)
+		-- when doing this vesrus function(): a,b,c
+		-- the return tuple becomes a tuple inside a tuple
+		for i, type_exp in ipairs(node.return_types) do
+			local obj = self:AnalyzeExpression(type_exp)
+
+			if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 and not obj.Repeat then
+				-- if we pass in a tuple, we want to override the return type
+				-- function(): mytuple
+				return obj
+			else
+				ret[i] = obj
+			end
+		end
+	end
+
+	return Tuple(ret)
+end
+
+local function has_explicit_arguments(node)
+	if
+		node.kind == "analyzer_function" or
+		node.kind == "local_analyzer_function" or
+		node.kind == "local_type_function" or
+		node.kind == "type_function" or
+		node.kind == "function_signature"
+	then
+		return true
+	end
+
+	if node.kind == "function" or node.kind == "local_function" then
+		for i, key in ipairs(node.identifiers) do
+			if key.type_expression then return true end
+		end
+	end
+
+	return false
+end
+
+local function has_expicit_return_type(node)
+	if node.return_types then return true end
+
+	return false
+end
+
+return {
+	AnalyzeFunction = function(self, node)
+		local obj = Function(
+			{
+				scope = self:GetScope(),
+				upvalue_position = #self:GetScope():GetUpvalues("runtime"),
+			}
+		)
+		obj.argument_identifiers = node.identifiers
+		self:PushCurrentType(obj, "function")
+		self:CreateAndPushFunctionScope(obj)
+		self:PushAnalyzerEnvironment("typesystem")
+		obj.Data.arg = analyze_arguments(self, node)
+		obj.Data.ret = analyze_return_types(self, node)
+		self:PopAnalyzerEnvironment()
+		self:PopScope()
+		self:PopCurrentType("function")
+
+		if node.kind == "analyzer_function" or node.kind == "local_analyzer_function" then
+			local em = Emitter({type_annotations = false})
+			em:EmitFunctionBody(node)
+			obj.Data.lua_function = self:CompileLuaAnalyzerDebugCode("return function " .. em:Concat(), node)()
+		end
+
+		if node.statements then obj.function_body_node = node end
+
+		obj.explicit_arguments = has_explicit_arguments(node)
+		obj.explicit_return = has_expicit_return_type(node)
+
+		if self:IsRuntime() then self:AddToUnreachableCodeAnalysis(obj) end
+
+		return obj
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.function"] = function(...) __M = __M or (function(...) local AnalyzeFunction = IMPORTS['nattlua.analyzer.expressions.function']("nattlua.analyzer.expressions.function").AnalyzeFunction
+local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").NodeToString
+return {
+	AnalyzeFunction = function(self, statement)
+		if
+			statement.kind == "local_function" or
+			statement.kind == "local_analyzer_function" or
+			statement.kind == "local_type_function"
+		then
+			self:PushAnalyzerEnvironment(statement.kind == "local_function" and "runtime" or "typesystem")
+			self:CreateLocalValue(statement.tokens["identifier"].value, AnalyzeFunction(self, statement))
+			self:PopAnalyzerEnvironment()
+		elseif
+			statement.kind == "function" or
+			statement.kind == "analyzer_function" or
+			statement.kind == "type_function"
+		then
+			local key = statement.expression
+			self:PushAnalyzerEnvironment(statement.kind == "function" and "runtime" or "typesystem")
+
+			if key.kind == "binary_operator" then
+				local obj = self:AnalyzeExpression(key.left)
+				local key = self:AnalyzeExpression(key.right)
+				local val = AnalyzeFunction(self, statement)
+				self:NewIndexOperator(obj, key, val)
+			else
+				local key = NodeToString(key)
+				local val = AnalyzeFunction(self, statement)
+				self:SetLocalOrGlobalValue(key, val)
+			end
+
+			self:PopAnalyzerEnvironment()
+		else
+			self:FatalError("unhandled statement: " .. statement.kind)
+		end
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.if"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+
+local function contains_ref_argument(upvalues)
+	for _, v in pairs(upvalues) do
+		if v.upvalue:GetValue().ref_argument or v.upvalue:GetValue().from_for_loop then
+			return true
+		end
+	end
+
+	return false
+end
+
+return {
+	AnalyzeIf = function(self, statement)
+		local prev_expression
+		local blocks = {}
+
+		for i, statements in ipairs(statement.statements) do
+			if statement.expressions[i] then
+				self.current_if_statement = statement
+				local exp = statement.expressions[i]
+				local no_operator_expression = exp.kind ~= "binary_operator" and
+					exp.kind ~= "prefix_operator" or
+					(
+						exp.kind == "binary_operator" and
+						exp.value.value == "."
+					)
+
+				if no_operator_expression then self:PushTruthyExpressionContext(true) end
+
+				local obj = self:AnalyzeExpression(exp)
+
+				if no_operator_expression then self:PopTruthyExpressionContext() end
+
+				if no_operator_expression then
+					-- track "if x then" which has no binary or prefix operators
+					self:TrackUpvalue(obj)
+				end
+
+				self.current_if_statement = nil
+				prev_expression = obj
+
+				if obj:IsTruthy() then
+					local upvalues = self:GetTrackedUpvalues()
+					local tables = self:GetTrackedTables()
+					self:ClearTracked()
+					table.insert(
+						blocks,
+						{
+							statements = statements,
+							upvalues = upvalues,
+							tables = tables,
+							expression = obj,
+						}
+					)
+
+					if obj:IsCertainlyTrue() and self:IsRuntime() then
+						if not contains_ref_argument(upvalues) then
+							self:Warning("if condition is always true")
+						end
+					end
+
+					if not obj:IsFalsy() then break end
+				end
+
+				if obj:IsCertainlyFalse() and self:IsRuntime() then
+					if not contains_ref_argument(self:GetTrackedUpvalues()) then
+						self:Warning("if condition is always false")
+					end
+				end
+			else
+				if prev_expression:IsCertainlyFalse() and self:IsRuntime() then
+					if not contains_ref_argument(self:GetTrackedUpvalues()) then
+						self:Warning("else part of if condition is always true")
+					end
+				end
+
+				if prev_expression:IsFalsy() then
+					table.insert(
+						blocks,
+						{
+							statements = statements,
+							upvalues = blocks[#blocks] and blocks[#blocks].upvalues,
+							tables = blocks[#blocks] and blocks[#blocks].tables,
+							expression = prev_expression,
+							is_else = true,
+						}
+					)
+				end
+			end
+		end
+
+		local last_scope
+
+		for i, block in ipairs(blocks) do
+			block.scope = self:GetScope()
+			local scope = self:PushConditionalScope(statement, block.expression:IsTruthy(), block.expression:IsFalsy())
+
+			if last_scope then
+				last_scope:SetNextConditionalSibling(scope)
+				scope:SetPreviousConditionalSibling(last_scope)
+			end
+
+			last_scope = scope
+			scope:SetTrackedUpvalues(block.upvalues)
+			scope:SetTrackedTables(block.tables)
+
+			if block.is_else then
+				scope:SetElseConditionalScope(true)
+				self:ApplyMutationsInIfElse(blocks)
+			else
+				self:ApplyMutationsInIf(block.upvalues, block.tables)
+			end
+
+			self:AnalyzeStatements(block.statements)
+			self:PopConditionalScope()
+		end
+
+		self:ClearTracked()
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.do"] = function(...) __M = __M or (function(...) return {
+	AnalyzeDo = function(self, statement)
+		self:CreateAndPushScope()
+		self:AnalyzeStatements(statement.statements)
+		self:PopScope()
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.generic_for"] = function(...) __M = __M or (function(...) local table = _G.table
+local ipairs = ipairs
+local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
+local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+return {
+	AnalyzeGenericFor = function(self, statement)
+		local args = self:AnalyzeExpressions(statement.expressions)
+		local callable_iterator = table.remove(args, 1)
+
+		if not callable_iterator then return end
+
+		if callable_iterator.Type == "tuple" then
+			callable_iterator = callable_iterator:Get(1)
+		end
+
+		local returned_key = nil
+		local one_loop = callable_iterator and callable_iterator.Type == "any"
+		local uncertain_break = nil
+
+		for i = 1, 1000 do
+			local values = self:Assert(self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
+
+			if
+				not values:Get(1) or
+				values:Get(1).Type == "symbol" and
+				values:Get(1):GetData() == nil
+			then
+				break
+			end
+
+			if i == 1 then
+				returned_key = values:Get(1)
+
+				if not returned_key:IsLiteral() then
+					returned_key = Union({Nil(), returned_key})
+				end
+
+				self:PushConditionalScope(statement, returned_key:IsTruthy(), returned_key:IsFalsy())
+				self:PushUncertainLoop(false)
+			end
+
+			local brk = false
+
+			for i, identifier in ipairs(statement.identifiers) do
+				local obj = self:Assert(values:Get(i))
+
+				if uncertain_break then
+					obj:SetLiteral(false)
+					brk = true
+				end
+
+				obj.from_for_loop = true
+				self:CreateLocalValue(identifier.value.value, obj)
+			end
+
+			self:AnalyzeStatements(statement.statements)
+
+			if self._continue_ then self._continue_ = nil end
+
+			if self.break_out_scope then
+				if self.break_out_scope:IsUncertain() then
+					uncertain_break = true
+				else
+					brk = true
+				end
+
+				self.break_out_scope = nil
+			end
+
+			if i == 1000 then self:Error("too many iterations") end
+
+			table.insert(values:GetData(), 1, args[1])
+			args = values:GetData()
+
+			if one_loop then break end
+
+			if brk then break end
+		end
+
+		if returned_key then
+			self:PopConditionalScope()
+			self:PopUncertainLoop()
+		end
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.call_expression"] = function(...) __M = __M or (function(...) return {
+	AnalyzeCall = function(self, statement)
+		self:AnalyzeExpression(statement.value)
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.binary"] = function(...) __M = __M or (function(...) local tostring = tostring
+local ipairs = ipairs
+local table = _G.table
+local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
+local String = IMPORTS['nattlua.types.string']("nattlua.types.string").String
+local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
+local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
+local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
+local Boolean = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Boolean
+local Symbol = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Symbol
+local False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+
+local function metatable_function(self, node, meta_method, l, r)
+	meta_method = LString(meta_method)
+
+	if r:GetMetaTable() or l:GetMetaTable() then
+		local func = (
+				l:GetMetaTable() and
+				l:GetMetaTable():Get(meta_method)
+			) or
+			(
+				r:GetMetaTable() and
+				r:GetMetaTable():Get(meta_method)
+			)
+
+		if not func then return end
+
+		if func.Type ~= "function" then return func end
+
+		return self:Assert(self:Call(func, Tuple({l, r}))):Get(1)
+	end
+end
+
+local function operator(self, node, l, r, op, meta_method)
+	if op == ".." then
+		if
+			(
+				l.Type == "string" and
+				r.Type == "string"
+			)
+			or
+			(
+				l.Type == "number" and
+				r.Type == "string"
+			)
+			or
+			(
+				l.Type == "number" and
+				r.Type == "number"
+			)
+			or
+			(
+				l.Type == "string" and
+				r.Type == "number"
+			)
+		then
+			if l:IsLiteral() and r:IsLiteral() then
+				return LString(l:GetData() .. r:GetData())
+			end
+
+			return String()
+		end
+	end
+
+	if l.Type == "number" and r.Type == "number" then
+		return l:ArithmeticOperator(r, op)
+	else
+		return metatable_function(self, node, meta_method, l, r)
+	end
+
+	return type_errors.binary(op, l, r)
+end
+
+local function logical_cmp_cast(val, err)
+	if err then return val, err end
+
+	if val == nil then
+		return Boolean()
+	elseif val == true then
+		return True()
+	elseif val == false then
+		return False()
+	end
+end
+
+local function Binary(self, node, l, r, op)
+	op = op or node.value.value
+	local cur_union
+
+	if op == "|" and self:IsTypesystem() then
+		cur_union = Union()
+		self:PushCurrentType(cur_union, "union")
+	end
+
+	if not l and not r then
+		if node.value.value == "and" then
+			l = self:AnalyzeExpression(node.left)
+
+			if l:IsCertainlyFalse() then
+				r = Nil()
+			else
+				-- if a and a.foo then
+				-- ^ no binary operator means that it was just checked simply if it was truthy
+				if node.left.kind ~= "binary_operator" or node.left.value.value ~= "." then
+					self:TrackUpvalue(l)
+				end
+
+				-- right hand side of and is the "true" part
+				self:PushTruthyExpressionContext(true)
+				r = self:AnalyzeExpression(node.right)
+				self:PopTruthyExpressionContext()
+
+				if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
+					self:TrackUpvalue(r)
+				end
+			end
+		elseif node.value.value == "or" then
+			self:PushFalsyExpressionContext(true)
+			l = self:AnalyzeExpression(node.left)
+			self:PopFalsyExpressionContext()
+
+			if l:IsCertainlyFalse() then
+				self:PushFalsyExpressionContext(true)
+				r = self:AnalyzeExpression(node.right)
+				self:PopFalsyExpressionContext()
+			elseif l:IsCertainlyTrue() then
+				r = Nil()
+			else
+				-- right hand side of or is the "false" part
+				self:PushFalsyExpressionContext(true)
+				r = self:AnalyzeExpression(node.right)
+				self:PopFalsyExpressionContext()
+			end
+		else
+			l = self:AnalyzeExpression(node.left)
+			r = self:AnalyzeExpression(node.right)
+		end
+
+		self:TrackUpvalueNonUnion(l)
+		self:TrackUpvalueNonUnion(r)
+
+		-- TODO: more elegant way of dealing with self?
+		if op == ":" then
+			self.self_arg_stack = self.self_arg_stack or {}
+			table.insert(self.self_arg_stack, l)
+		end
+	end
+
+	if cur_union then self:PopCurrentType("union") end
+
+	if self:IsTypesystem() then
+		if op == "|" then
+			cur_union:AddType(l)
+			cur_union:AddType(r)
+			return cur_union
+		elseif op == "==" then
+			return l:Equal(r) and True() or False()
+		elseif op == "~" then
+			if l.Type == "union" then return l:RemoveType(r) end
+
+			return l
+		elseif op == "&" or op == "extends" then
+			if l.Type ~= "table" then
+				return false, "type " .. tostring(l) .. " cannot be extended"
+			end
+
+			return l:Extend(r)
+		elseif op == ".." then
+			if l.Type == "tuple" and r.Type == "tuple" then
+				return l:Copy():Concat(r)
+			elseif l.Type == "string" and r.Type == "string" then
+				if l:IsLiteral() and r:IsLiteral() then
+					return LString(l:GetData() .. r:GetData())
+				end
+
+				return type_errors.binary(op, l, r)
+			elseif l.Type == "number" and r.Type == "number" then
+				return l:Copy():SetMax(r)
+			end
+		elseif op == "*" then
+			if l.Type == "tuple" and r.Type == "number" and r:IsLiteral() then
+				return l:Copy():SetRepeat(r:GetData())
+			end
+		elseif op == ">" or op == "supersetof" then
+			return Symbol((r:IsSubsetOf(l)))
+		elseif op == "<" or op == "subsetof" then
+			return Symbol((l:IsSubsetOf(r)))
+		elseif op == "+" then
+			if l.Type == "table" and r.Type == "table" then return l:Union(r) end
+		end
+	end
+
+	-- adding two tuples at runtime in lua will basically do this
+	if self:IsRuntime() then
+		if l.Type == "tuple" then l = self:Assert(l:GetFirstValue()) end
+
+		if r.Type == "tuple" then r = self:Assert(r:GetFirstValue()) end
+	end
+
+	do -- union unpacking
+		-- normalize l and r to be both unions to reduce complexity
+		if l.Type ~= "union" and r.Type == "union" then l = Union({l}) end
+
+		if l.Type == "union" and r.Type ~= "union" then r = Union({r}) end
+
+		if l.Type == "union" and r.Type == "union" then
+			local new_union = Union()
+			local truthy_union = Union():SetUpvalue(l:GetUpvalue())
+			local falsy_union = Union():SetUpvalue(l:GetUpvalue())
+
+			if op == "~=" then self.inverted_index_tracking = true end
+
+			local type_checked = self.type_checked
+
+			-- the return value from type(x)
+			if type_checked then self.type_checked = nil end
+
+			for _, l in ipairs(l:GetData()) do
+				for _, r in ipairs(r:GetData()) do
+					local res, err = Binary(self, node, l, r, op)
+
+					if not res then
+						self:ErrorAndCloneCurrentScope(err, l) -- TODO, only left side?
+					else
+						if res:IsTruthy() then
+							if type_checked then
+								for _, t in ipairs(type_checked:GetData()) do
+									if t.GetLuaType and t:GetLuaType() == l:GetData() then
+										truthy_union:AddType(t)
+									end
+								end
+							else
+								truthy_union:AddType(l)
+							end
+						end
+
+						if res:IsFalsy() then
+							if type_checked then
+								for _, t in ipairs(type_checked:GetData()) do
+									if t.GetLuaType and t:GetLuaType() == l:GetData() then
+										falsy_union:AddType(t)
+									end
+								end
+							else
+								falsy_union:AddType(l)
+							end
+						end
+
+						new_union:AddType(res)
+					end
+				end
+			end
+
+			if op == "~=" then self.inverted_index_tracking = nil end
+
+			if op ~= "or" and op ~= "and" then
+				local parent_table = l.parent_table or type_checked and type_checked.parent_table
+				local parent_key = l.parent_key or type_checked and type_checked.parent_key
+
+				if parent_table then
+					self:TrackTableIndexUnion(parent_table, parent_key, truthy_union, falsy_union)
+				elseif l.Type == "union" then
+					for _, l in ipairs(l:GetData()) do
+						if l.parent_table then
+							self:TrackTableIndexUnion(l.parent_table, l.parent_key, truthy_union, falsy_union)
+						end
+					end
+				end
+
+				self:TrackUpvalue(l, truthy_union, falsy_union, op == "~=")
+				self:TrackUpvalue(r, truthy_union, falsy_union, op == "~=")
+			end
+
+			return new_union
+		end
+	end
+
+	if l.Type == "any" or r.Type == "any" then return Any() end
+
+	do -- arithmetic operators
+		if op == "." or op == ":" then
+			return self:IndexOperator(l, r)
+		elseif op == "+" then
+			local val = operator(self, node, l, r, op, "__add")
+
+			if val then return val end
+		elseif op == "-" then
+			local val = operator(self, node, l, r, op, "__sub")
+
+			if val then return val end
+		elseif op == "*" then
+			local val = operator(self, node, l, r, op, "__mul")
+
+			if val then return val end
+		elseif op == "/" then
+			local val = operator(self, node, l, r, op, "__div")
+
+			if val then return val end
+		elseif op == "/idiv/" then
+			local val = operator(self, node, l, r, op, "__idiv")
+
+			if val then return val end
+		elseif op == "%" then
+			local val = operator(self, node, l, r, op, "__mod")
+
+			if val then return val end
+		elseif op == "^" then
+			local val = operator(self, node, l, r, op, "__pow")
+
+			if val then return val end
+		elseif op == "&" then
+			local val = operator(self, node, l, r, op, "__band")
+
+			if val then return val end
+		elseif op == "|" then
+			local val = operator(self, node, l, r, op, "__bor")
+
+			if val then return val end
+		elseif op == "~" then
+			local val = operator(self, node, l, r, op, "__bxor")
+
+			if val then return val end
+		elseif op == "<<" then
+			local val = operator(self, node, l, r, op, "__lshift")
+
+			if val then return val end
+		elseif op == ">>" then
+			local val = operator(self, node, l, r, op, "__rshift")
+
+			if val then return val end
+		elseif op == ".." then
+			local val = operator(self, node, l, r, op, "__concat")
+
+			if val then return val end
+		end
+	end
+
+	do -- logical operators
+		if op == "==" then
+			local res = metatable_function(self, node, "__eq", l, r)
+
+			if res then return res end
+
+			if l:IsLiteral() and l == r then return True() end
+
+			if l.Type ~= r.Type then return False() end
+
+			return logical_cmp_cast(l.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
+		elseif op == "~=" or op == "!=" then
+			local res = metatable_function(self, node, "__eq", l, r)
+
+			if res then
+				if res:IsLiteral() then res:SetData(not res:GetData()) end
+
+				return res
+			end
+
+			if l.Type ~= r.Type then return True() end
+
+			local val, err = l.LogicalComparison(l, r, "==", self:GetCurrentAnalyzerEnvironment())
+
+			if val ~= nil then val = not val end
+
+			return logical_cmp_cast(val, err)
+		elseif op == "<" then
+			local res = metatable_function(self, node, "__lt", l, r)
+
+			if res then return res end
+
+			return logical_cmp_cast(l.LogicalComparison(l, r, op))
+		elseif op == "<=" then
+			local res = metatable_function(self, node, "__le", l, r)
+
+			if res then return res end
+
+			return logical_cmp_cast(l.LogicalComparison(l, r, op))
+		elseif op == ">" then
+			local res = metatable_function(self, node, "__lt", l, r)
+
+			if res then return res end
+
+			return logical_cmp_cast(l.LogicalComparison(l, r, op))
+		elseif op == ">=" then
+			local res = metatable_function(self, node, "__le", l, r)
+
+			if res then return res end
+
+			return logical_cmp_cast(l.LogicalComparison(l, r, op))
+		elseif op == "or" or op == "||" then
+			-- boolean or boolean
+			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}) end
+
+			-- true or boolean
+			if l:IsTruthy() then return l:Copy() end
+
+			-- false or true
+			if r:IsTruthy() then return r:Copy() end
+
+			return r:Copy()
+		elseif op == "and" or op == "&&" then
+			-- true and false
+			if l:IsTruthy() and r:IsFalsy() then
+				if l:IsFalsy() or r:IsTruthy() then return Union({l, r}) end
+
+				return r:Copy()
+			end
+
+			-- false and true
+			if l:IsFalsy() and r:IsTruthy() then
+				if l:IsTruthy() or r:IsFalsy() then return Union({l, r}) end
+
+				return l:Copy()
+			end
+
+			-- true and true
+			if l:IsTruthy() and r:IsTruthy() then
+				if l:IsFalsy() and r:IsFalsy() then return Union({l, r}) end
+
+				return r:Copy()
+			else
+				-- false and false
+				if l:IsTruthy() and r:IsTruthy() then return Union({l, r}) end
+
+				return l:Copy()
+			end
+		end
+	end
+
+	return type_errors.binary(op, l, r)
+end
+
+return {Binary = Binary} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.numeric_for"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+local math = math
+local assert = assert
+local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
+local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
+local False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
+local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+local Binary = IMPORTS['nattlua.analyzer.operators.binary']("nattlua.analyzer.operators.binary").Binary
+
+local function get_largest_number(obj)
+	if obj:IsLiteral() then
+		if obj.Type == "union" then
+			local max = -math.huge
+
+			for _, v in ipairs(obj:GetData()) do
+				max = math.max(max, v:GetData())
+			end
+
+			return max
+		end
+
+		return obj:GetData()
+	end
+end
+
+return {
+	AnalyzeNumericFor = function(self, statement)
+		local init = self:AnalyzeExpression(statement.expressions[1]):GetFirstValue()
+		local max = self:AnalyzeExpression(statement.expressions[2]):GetFirstValue()
+		local step = statement.expressions[3] and
+			self:AnalyzeExpression(statement.expressions[3]):GetFirstValue() or
+			nil
+
+		if step then assert(step.Type == "number") end
+
+		local literal_init = get_largest_number(init)
+		local literal_max = get_largest_number(max)
+		local literal_step = not step and 1 or get_largest_number(step)
+		local condition = Union()
+
+		if literal_init and literal_max then
+			-- also check step
+			condition:AddType(Binary(self, statement, init, max, "<="))
+		else
+			condition:AddType(True())
+			condition:AddType(False())
+		end
+
+		self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
+
+		if literal_init and literal_max and literal_step and literal_max < 1000 then
+			local uncertain_break = false
+
+			for i = literal_init, literal_max, literal_step do
+				self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
+				local i = LNumber(i)
+				local brk = false
+
+				if uncertain_break then
+					i:SetLiteral(false)
+					brk = true
+				end
+
+				i.from_for_loop = true
+				self:CreateLocalValue(statement.identifiers[1].value.value, i)
+				self:AnalyzeStatements(statement.statements)
+
+				if self._continue_ then self._continue_ = nil end
+
+				if self.break_out_scope then
+					if self.break_out_scope:IsUncertain() then
+						uncertain_break = true
+					else
+						brk = true
+					end
+
+					self.break_out_scope = nil
+				end
+
+				self:PopConditionalScope()
+
+				if brk then break end
+			end
+		else
+			if literal_init then
+				init = LNumber(literal_init)
+				init.dont_widen = true
+
+				if max.Type == "number" or (max.Type == "union" and max:IsType("number")) then
+					if not max:IsLiteral() then
+						init:SetMax(LNumber(math.huge))
+					else
+						init:SetMax(max)
+					end
+				end
+			else
+				if
+					init.Type == "number" and
+					(
+						max.Type == "number" or
+						(
+							max.Type == "union" and
+							max:IsType("number")
+						)
+					)
+				then
+					init = self:Assert(init:SetMax(max))
+				end
+
+				if max.Type == "any" then init:SetLiteral(false) end
+			end
+
+			self:PushUncertainLoop(true)
+			local range = self:Assert(init)
+			self:CreateLocalValue(statement.identifiers[1].value.value, range)
+			self:AnalyzeStatements(statement.statements)
+			self:PopUncertainLoop()
+		end
+
+		self.break_out_scope = nil
+		self:PopConditionalScope()
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.break"] = function(...) __M = __M or (function(...) return {
+	AnalyzeBreak = function(self, statement)
+		self.break_out_scope = self:GetScope()
+		self.break_loop = true
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.continue"] = function(...) __M = __M or (function(...) return {
+	AnalyzeContinue = function(self, statement)
+		self._continue_ = true
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.repeat"] = function(...) __M = __M or (function(...) return {
+	AnalyzeRepeat = function(self, statement)
+		self:CreateAndPushScope()
+		self:AnalyzeStatements(statement.statements)
+		self:PopScope()
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.return"] = function(...) __M = __M or (function(...) local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+return {
+	AnalyzeReturn = function(self, statement)
+		local ret = self:AnalyzeExpressions(statement.expressions)
+		self:Return(statement, ret)
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.analyzer_debug_code"] = function(...) __M = __M or (function(...) return {
+	AnalyzeAnalyzerDebugCode = function(self, statement)
+		local code = statement.lua_code.value.value:sub(3)
+		self:CallLuaTypeFunction(self:CompileLuaAnalyzerDebugCode(code, statement.lua_code), self:GetScope())
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.while"] = function(...) __M = __M or (function(...) return {
+	AnalyzeWhile = function(self, statement)
+		local obj = self:AnalyzeExpression(statement.expression)
+		local upvalues = self:GetTrackedUpvalues()
+		local tables = self:GetTrackedTables()
+		self:ClearTracked()
+
+		if obj:IsCertainlyFalse() then
+			self:Warning("loop expression is always false")
+		end
+
+		if obj:IsTruthy() then
+			self:ApplyMutationsInIf(upvalues, tables)
+
+			for i = 1, 32 do
+				self:PushConditionalScope(statement, obj:IsTruthy(), obj:IsFalsy())
+				self:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy())
+				self:AnalyzeStatements(statement.statements)
+				self:PopUncertainLoop()
+				self:PopConditionalScope()
+
+				if self.break_out_scope then
+					self.break_out_scope = nil
+
+					break
+				end
+
+				if self:GetScope():DidCertainReturn() then break end
+
+				local obj = self:AnalyzeExpression(statement.expression)
+
+				if obj:IsUncertain() or obj:IsFalsy() then break end
+
+				if i == 32 then self:Error("too many iterations") end
+			end
+		end
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.assignment"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+local tostring = tostring
+local table = _G.table
+local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").NodeToString
+local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+
+local function check_type_against_contract(val, contract)
+	-- if the contract is unique / nominal, ie
+	-- local a: Person = {name = "harald"}
+	-- Person is not a subset of {name = "harald"} because
+	-- Person is only equal to Person
+	-- so we need to disable this check during assignment
+	local skip_uniqueness = contract:IsUnique() and not val:IsUnique()
+
+	if skip_uniqueness then contract:DisableUniqueness() end
+
+	local ok, reason = val:IsSubsetOf(contract)
+
+	if skip_uniqueness then
+		contract:EnableUniqueness()
+		val:SetUniqueID(contract:GetUniqueID())
+	end
+
+	if not ok then return ok, reason end
+
+	-- make sure the table contains all the keys in the contract as well
+	-- since {foo = true, bar = "harald"} 
+	-- is technically a subset of 
+	-- {foo = true, bar = "harald", baz = "jane"}
+	if contract.Type == "table" and val.Type == "table" then
+		return val:ContainsAllKeysIn(contract)
+	end
+
+	return true
+end
+
+return {
+	AnalyzeAssignment = function(self, statement)
+		local left = {}
+		local right = {}
+
+		-- first we evaluate the left hand side
+		for left_pos, exp_key in ipairs(statement.left) do
+			if exp_key.kind == "value" then
+				-- local foo, bar = *
+				left[left_pos] = NodeToString(exp_key, true)
+			elseif exp_key.kind == "postfix_expression_index" then
+				-- foo[bar] = *
+				left[left_pos] = self:AnalyzeExpression(exp_key.expression)
+			elseif exp_key.kind == "binary_operator" then
+				-- foo.bar = *
+				left[left_pos] = self:AnalyzeExpression(exp_key.right)
+			else
+				self:FatalError("unhandled assignment expression " .. tostring(exp_key:Render()))
+			end
+		end
+
+		if statement.right then
+			for right_pos, exp_val in ipairs(statement.right) do
+				-- when "self" is looked up in the typesystem in analyzer:AnalyzeExpression, we refer left[right_pos]
+				-- use context?
+				self.left_assigned = left[right_pos]
+				local obj = self:Assert(self:AnalyzeExpression(exp_val))
+				self:ClearTracked()
+
+				if obj.Type == "tuple" and obj:GetLength() == 1 then
+					obj = obj:Get(1)
+				end
+
+				if obj.Type == "tuple" then
+					if self:IsRuntime() then
+						-- at runtime unpack the tuple
+						for i = 1, #statement.left do
+							local index = right_pos + i - 1
+							right[index] = obj:Get(i)
+						end
+					end
+
+					if self:IsTypesystem() then
+						if obj:HasTuples() then
+							-- if we have a tuple with, plainly unpack the tuple while preserving the tuples inside
+							for i = 1, #statement.left do
+								local index = right_pos + i - 1
+								right[index] = obj:GetWithoutExpansion(i)
+							end
+						else
+							-- otherwise plainly assign it
+							right[right_pos] = obj
+						end
+					end
+				elseif obj.Type == "union" then
+					-- if the union is empty or has no tuples, just assign it
+					if obj:IsEmpty() or not obj:HasTuples() then
+						right[right_pos] = obj
+					else
+						for i = 1, #statement.left do
+							-- unpack unions with tuples
+							-- ⦗false, string, 2⦘ | ⦗true, 1⦘ at first index would be true | false
+							local index = right_pos + i - 1
+							right[index] = obj:GetAtIndex(index)
+						end
+					end
+				else
+					right[right_pos] = obj
+
+					-- when the right side has a type expression, it's invoked using the as operator
+					if exp_val.type_expression then obj:Seal() end
+				end
+			end
+
+			-- cuts the last arguments
+			-- local funciton test() return 1,2,3 end
+			-- local a,b,c = test(), 1337
+			-- a should be 1
+			-- b should be 1337
+			-- c should be nil
+			local last = statement.right[#statement.right]
+
+			if last.kind == "value" and last.value.value ~= "..." then
+				for _ = 1, #right - #statement.right do
+					table.remove(right, #right)
+				end
+			end
+		end
+
+		-- here we check the types
+		for left_pos, exp_key in ipairs(statement.left) do
+			local val = right[left_pos] or Nil()
+
+			-- do we have a type expression? 
+			-- local a: >>number<< = 1
+			if exp_key.type_expression then
+				self:PushAnalyzerEnvironment("typesystem")
+				local contract = self:AnalyzeExpression(exp_key.type_expression)
+				self:PopAnalyzerEnvironment()
+
+				if right[left_pos] then
+					local contract = contract
+
+					if contract.Type == "tuple" and contract:GetLength() == 1 then
+						contract = contract:Get(1)
+					end
+
+					-- we copy the literalness of the contract so that
+					-- local a: number = 1
+					-- becomes
+					-- local a: number = number
+					val:CopyLiteralness(contract)
+
+					if val.Type == "table" then
+						-- coerce any untyped functions based on contract
+						val:CoerceUntypedFunctions(contract)
+					end
+
+					self.current_expression = exp_key
+					self:Assert(check_type_against_contract(val, contract))
+				else
+					if contract.Type == "tuple" and contract:GetLength() == 1 then
+						contract = contract:Get(1)
+					end
+				end
+
+				-- we set a's contract to be number
+				val:SetContract(contract)
+
+				-- this is for "local a: number" without the right side being assigned
+				if not right[left_pos] then
+					-- make a copy of the contract and use it
+					-- so the value can change independently from the contract
+					val = contract:Copy()
+					val:SetContract(contract)
+				end
+			end
+
+			-- used by the emitter
+			exp_key:AddType(val)
+			val:SetTokenLabelSource(exp_key)
+			val:SetAnalyzerEnvironment(self:GetCurrentAnalyzerEnvironment())
+
+			-- if all is well, create or mutate the value
+			if statement.kind == "local_assignment" then
+				local immutable = false
+
+				if exp_key.attribute then
+					if exp_key.attribute.value == "const" then immutable = true end
+				end
+
+				-- local assignment: local a = 1
+				self:CreateLocalValue(exp_key.value.value, val, immutable)
+			elseif statement.kind == "assignment" then
+				local key = left[left_pos]
+
+				-- plain assignment: a = 1
+				if exp_key.kind == "value" then
+					if self:IsRuntime() then -- check for any previous upvalues
+						local existing_value = self:GetLocalOrGlobalValue(key)
+						local contract = existing_value and existing_value:GetContract()
+
+						if contract then
+							if contract.Type == "tuple" then
+								contract = contract:GetFirstValue()
+							end
+
+							val:CopyLiteralness(contract)
+							self:Assert(check_type_against_contract(val, contract))
+							val:SetContract(contract)
+						end
+					end
+
+					local val = self:SetLocalOrGlobalValue(key, val)
+
+					if val then
+						-- this is used for tracking function dependencies
+						if val.Type == "upvalue" then
+							self:GetScope():AddDependency(val)
+						else
+							self:GetScope():AddDependency({key = key, val = val})
+						end
+					end
+				else
+					-- TODO: refactor out to mutation assignment?
+					-- index assignment: foo[a] = 1
+					local obj = self:AnalyzeExpression(exp_key.left)
+					self:ClearTracked()
+
+					if self:IsRuntime() then key = key:GetFirstValue() end
+
+					self:Assert(self:NewIndexOperator(obj, key, val))
+				end
+			end
+		end
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.binary_operator"] = function(...) __M = __M or (function(...) local table = _G.table
+local Binary = IMPORTS['nattlua.analyzer.operators.binary']("nattlua.analyzer.operators.binary").Binary
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+local assert = _G.assert
+return {
+	AnalyzeBinaryOperator = function(self, node)
+		return self:Assert(Binary(self, node))
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.prefix"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+local error = error
+local tostring = tostring
+local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
+local Boolean = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Boolean
+local False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
+local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
+local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
+local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
+
+local function metatable_function(self, meta_method, l)
+	if l:GetMetaTable() then
+		meta_method = LString(meta_method)
+		local func = l:GetMetaTable():Get(meta_method)
+
+		if func then return self:Assert(self:Call(func, Tuple({l})):Get(1)) end
+	end
+end
+
+local function Prefix(self, node, r)
+	local op = node.value.value
+
+	if op == "not" then
+		self.inverted_index_tracking = not self.inverted_index_tracking
+	end
+
+	if not r then
+		r = self:AnalyzeExpression(node.right)
+
+		if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
+			if r.Type ~= "union" then self:TrackUpvalue(r, nil, nil, op == "not") end
+		end
+	end
+
+	if op == "not" then self.inverted_index_tracking = nil end
+
+	if op == "literal" then
+		r.literal_argument = true
+		return r
+	end
+
+	if op == "ref" then
+		r.ref_argument = true
+		return r
+	end
+
+	if r.Type == "tuple" then r = r:Get(1) or Nil() end
+
+	if r.Type == "union" then
+		local new_union = Union()
+		local truthy_union = Union():SetUpvalue(r:GetUpvalue())
+		local falsy_union = Union():SetUpvalue(r:GetUpvalue())
+
+		for _, r in ipairs(r:GetData()) do
+			local res, err = Prefix(self, node, r)
+
+			if not res then
+				self:ErrorAndCloneCurrentScope(err, r)
+				falsy_union:AddType(r)
+			else
+				new_union:AddType(res)
+
+				if res:IsTruthy() then truthy_union:AddType(r) end
+
+				if res:IsFalsy() then falsy_union:AddType(r) end
+			end
+		end
+
+		self:TrackUpvalue(r, truthy_union, falsy_union)
+		return new_union
+	end
+
+	if r.Type == "any" then return Any() end
+
+	if self:IsTypesystem() then
+		if op == "typeof" then
+			self:PushAnalyzerEnvironment("runtime")
+			local obj = self:AnalyzeExpression(node.right)
+			self:PopAnalyzerEnvironment()
+
+			if not obj then
+				return type_errors.other("cannot find '" .. node.right:Render() .. "' in the current typesystem scope")
+			end
+
+			return obj:GetContract() or obj
+		elseif op == "unique" then
+			r:MakeUnique(true)
+			return r
+		elseif op == "mutable" then
+			r.mutable = true
+			return r
+		elseif op == "expand" then
+			r.expand = true
+			return r
+		elseif op == "$" then
+			if r.Type ~= "string" then
+				return type_errors.other("must evaluate to a string")
+			end
+
+			if not r:IsLiteral() then return type_errors.other("must be a literal") end
+
+			r:SetPatternContract(r:GetData())
+			return r
+		end
+	end
+
+	if op == "-" then
+		local res = metatable_function(self, "__unm", r)
+
+		if res then return res end
+	elseif op == "~" then
+		local res = metatable_function(self, "__bxor", r)
+
+		if res then return res end
+	elseif op == "#" then
+		local res = metatable_function(self, "__len", r)
+
+		if res then return res end
+	end
+
+	if op == "not" or op == "!" then
+		if r:IsTruthy() and r:IsFalsy() then
+			return Boolean()
+		elseif r:IsTruthy() then
+			return False()
+		elseif r:IsFalsy() then
+			return True()
+		end
+	end
+
+	if op == "-" or op == "~" or op == "#" then return r:PrefixOperator(op) end
+
+	error(
+		"unhandled prefix operator in " .. self:GetCurrentAnalyzerEnvironment() .. ": " .. op .. tostring(r)
+	)
+end
+
+return {Prefix = Prefix} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.prefix_operator"] = function(...) __M = __M or (function(...) local Prefix = IMPORTS['nattlua.analyzer.operators.prefix']("nattlua.analyzer.operators.prefix").Prefix
+return {
+	AnalyzePrefixOperator = function(self, node)
+		return self:Assert(Prefix(self, node))
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.postfix"] = function(...) __M = __M or (function(...) local Binary = IMPORTS['nattlua.analyzer.operators.binary']("nattlua.analyzer.operators.binary").Binary
+local Node = IMPORTS['nattlua.parser.node']("nattlua.parser.node")
+return {
+	Postfix = function(self, node, r)
+		local op = node.value.value
+
+		if op == "++" then
+			return Binary(self, setmetatable({value = {value = "+"}}, Node), r, r)
+		end
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_operator"] = function(...) __M = __M or (function(...) local Postfix = IMPORTS['nattlua.analyzer.operators.postfix']("nattlua.analyzer.operators.postfix").Postfix
+return {
+	AnalyzePostfixOperator = function(self, node)
+		return self:Assert(Postfix(self, node, self:AnalyzeExpression(node.left)))
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.import"] = function(...) __M = __M or (function(...) local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+return {
+	AnalyzeImport = function(self, node)
+		-- ugly way of dealing with recursive import
+		local root = node.RootStatement
+
+		if root and root.kind ~= "root" then root = root.RootStatement end
+
+		if root then
+			return self:AnalyzeRootStatement(root)
+		elseif node.data then
+			return LString(node.data)
+		end
+
+		return Nil()
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_call"] = function(...) __M = __M or (function(...) local table = _G.table
+local NormalizeTuples = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").NormalizeTuples
+local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
+local AnalyzeImport = IMPORTS['nattlua.analyzer.expressions.import']("nattlua.analyzer.expressions.import").AnalyzeImport
+return {
+	AnalyzePostfixCall = function(self, node)
+		if
+			node.import_expression and
+			node.left.value.value ~= "dofile" and
+			node.left.value.value ~= "loadfile"
+		then
+			return AnalyzeImport(self, node)
+		end
+
+		local is_type_call = node.type_call or
+			node.left and
+			(
+				node.left.kind == "local_generics_type_function" or
+				node.left.kind == "generics_type_function"
+			)
+		self:PushAnalyzerEnvironment(is_type_call and "typesystem" or "runtime")
+		local callable = self:AnalyzeExpression(node.left)
+		local self_arg
+
+		if
+			self.self_arg_stack and
+			node.left.kind == "binary_operator" and
+			node.left.value.value == ":"
+		then
+			self_arg = table.remove(self.self_arg_stack)
+		end
+
+		local types = self:AnalyzeExpressions(node.expressions)
+
+		if self_arg then table.insert(types, 1, self_arg) end
+
+		local arguments
+
+		if self:IsTypesystem() then
+			arguments = Tuple(types)
+		else
+			arguments = NormalizeTuples(types)
+		end
+
+		local returned_tuple = self:Assert(self:Call(callable, arguments, node))
+
+		-- TUPLE UNPACK MESS
+		if node.tokens["("] and node.tokens[")"] and returned_tuple.Type == "tuple" then
+			returned_tuple = returned_tuple:Get(1)
+		end
+
+		if self:IsTypesystem() then
+			if returned_tuple.Type == "tuple" and returned_tuple:GetLength() == 1 then
+				returned_tuple = returned_tuple:Get(1)
+			end
+		end
+
+		self:PopAnalyzerEnvironment()
+		return returned_tuple
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_index"] = function(...) __M = __M or (function(...) return {
+	AnalyzePostfixIndex = function(self, node)
+		return self:Assert(
+			self:IndexOperator(
+				self:AnalyzeExpression(node.left),
+				self:AnalyzeExpression(node.expression):GetFirstValue()
+			)
+		)
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.table"] = function(...) __M = __M or (function(...) local tostring = tostring
+local ipairs = ipairs
+local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
+local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
+local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+local table = _G.table
+return {
+	AnalyzeTable = function(self, tree)
+		local tbl = Table():SetLiteral(self:IsTypesystem())
+
+		if self:IsRuntime() then tbl:SetReferenceId(tostring(tbl:GetData())) end
+
+		self:PushCurrentType(tbl, "table")
+		tbl.scope = self:GetScope()
+
+		for i, node in ipairs(tree.children) do
+			if node.kind == "table_key_value" then
+				local key = LString(node.tokens["identifier"].value)
+				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
+				self:NewIndexOperator(tbl, key, val)
+			elseif node.kind == "table_expression_value" then
+				local key = self:AnalyzeExpression(node.key_expression):GetFirstValue()
+				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
+				self:NewIndexOperator(tbl, key, val)
+			elseif node.kind == "table_index_value" then
+				if node.spread then
+					local val = self:AnalyzeExpression(node.spread.expression):GetFirstValue()
+
+					for _, kv in ipairs(val:GetData()) do
+						local val = kv.val
+
+						if val.Type == "union" and val:CanBeNil() then
+							val = val:Copy():RemoveType(Nil())
+						end
+
+						self:NewIndexOperator(tbl, kv.key, val)
+					end
+				else
+					local obj = self:AnalyzeExpression(node.value_expression)
+
+					if
+						node.value_expression.kind ~= "value" or
+						node.value_expression.value.value ~= "..."
+					then
+						obj = obj:GetFirstValue()
+					end
+
+					if obj.Type == "tuple" then
+						if tree.children[i + 1] then
+							tbl:Insert(obj:Get(1))
+						else
+							for i = 1, obj:GetMinimumLength() do
+								tbl:Set(LNumber(#tbl:GetData() + 1), obj:Get(i))
+							end
+
+							if obj.Remainder then
+								local current_index = LNumber(#tbl:GetData() + 1)
+								local max = LNumber(obj.Remainder:GetLength())
+								tbl:Set(current_index:SetMax(max), obj.Remainder:Get(1))
+							end
+						end
+					else
+						if node.i then
+							tbl:Insert(LNumber(obj))
+						elseif obj then
+							tbl:Insert(obj)
+						end
+					end
+				end
+			end
+
+			self:ClearTracked()
+		end
+
+		self:PopCurrentType("table")
+		return tbl
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.atomic_value"] = function(...) __M = __M or (function(...) local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
+local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").NodeToString
+local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
+local LNumberFromString = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumberFromString
+local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
+local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
+local False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
+local String = IMPORTS['nattlua.types.string']("nattlua.types.string").String
+local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
+local Boolean = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Boolean
+local table = _G.table
+
+local function lookup_value(self, node)
+	local errors = {}
+	local key = NodeToString(node)
+	local obj, err = self:GetLocalOrGlobalValue(key)
+
+	if self:IsTypesystem() then
+		-- we fallback to runtime if we can't find the value in the typesystem
+		if not obj then
+			table.insert(errors, err)
+			self:PushAnalyzerEnvironment("runtime")
+			obj, err = self:GetLocalOrGlobalValue(key)
+			self:PopAnalyzerEnvironment("runtime")
+
+			-- when in the typesystem we want to see the objects contract, not its runtime value
+			if obj and obj:GetContract() then obj = obj:GetContract() end
+		end
+
+		if not obj then
+			table.insert(errors, err)
+			self:Error(errors)
+			return Nil()
+		end
+	else
+		if not obj or (obj.Type == "symbol" and obj:GetData() == nil) then
+			self:PushAnalyzerEnvironment("typesystem")
+			local objt, errt = self:GetLocalOrGlobalValue(key)
+			self:PopAnalyzerEnvironment()
+
+			if objt then obj, err = objt, errt end
+		end
+
+		if not obj then
+			self:Warning(err)
+			obj = Any()
+		end
+	end
+
+	local obj = self:GetTrackedUpvalue(obj) or obj
+
+	if obj:GetUpvalue() then self:GetScope():AddDependency(obj:GetUpvalue()) end
+
+	return obj
+end
+
+local function is_primitive(val)
+	return val == "string" or
+		val == "number" or
+		val == "boolean" or
+		val == "true" or
+		val == "false" or
+		val == "nil"
+end
+
+return {
+	AnalyzeAtomicValue = function(self, node)
+		local value = node.value.value
+		local type = runtime_syntax:GetTokenType(node.value)
+
+		if type == "keyword" then
+			if value == "nil" then
+				return Nil()
+			elseif value == "true" then
+				return True()
+			elseif value == "false" then
+				return False()
+			end
+		elseif node.force_upvalue then
+			return lookup_value(self, node)
+		elseif value == "..." then
+			return lookup_value(self, node)
+		elseif type == "letter" and node.standalone_letter then
+			-- standalone_letter means it's the first part of something, either >true<, >foo<.bar, >foo<()
+			if self:IsTypesystem() then
+				local current_table = self:GetCurrentType("table")
+
+				if current_table then
+					if value == "self" then
+						return current_table
+					elseif
+						self.left_assigned and
+						self.left_assigned:GetData() == value and
+						not is_primitive(value)
+					then
+						return current_table
+					end
+				end
+
+				if value == "any" then
+					return Any()
+				elseif value == "inf" then
+					return LNumber(math.huge)
+				elseif value == "nan" then
+					return LNumber(math.abs(0 / 0))
+				elseif value == "string" then
+					return String()
+				elseif value == "number" then
+					return Number()
+				elseif value == "boolean" then
+					return Boolean()
+				end
+			end
+
+			return lookup_value(self, node)
+		elseif type == "number" then
+			local num = LNumberFromString(value)
+
+			if not num then
+				self:Error("unable to convert " .. value .. " to number")
+				num = Number()
+			end
+
+			return num
+		elseif type == "string" then
+			return LString(node.value.string_value)
+		elseif type == "letter" then
+			return LString(value)
+		end
+
+		self:FatalError("unhandled value type " .. type .. " " .. node:Render())
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.tuple"] = function(...) __M = __M or (function(...) local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
+return {
+	AnalyzeTuple = function(self, node)
+		local tup = Tuple():SetUnpackable(true)
+		self:PushCurrentType(tup, "tuple")
+		tup:SetTable(self:AnalyzeExpressions(node.expressions))
+		self:PopCurrentType("tuple")
+		return tup
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.vararg"] = function(...) __M = __M or (function(...) local VarArg = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").VarArg
+return {
+	AnalyzeVararg = function(self, node)
+		return VarArg(self:AnalyzeExpression(node.value))
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.analyzer"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local tostring = tostring
+local error = error
+local setmetatable = setmetatable
+local ipairs = ipairs
+IMPORTS['nattlua.types.types']("nattlua.types.types").Initialize()
+local META = class.CreateTemplate("analyzer")
+META.OnInitialize = {}
+IMPORTS['nattlua.analyzer.base.base_analyzer']("nattlua.analyzer.base.base_analyzer")(META)
+IMPORTS['nattlua.analyzer.control_flow']("nattlua.analyzer.control_flow")(META)
+IMPORTS['nattlua.analyzer.mutations']("nattlua.analyzer.mutations")(META)
+IMPORTS['nattlua.analyzer.operators.index']("nattlua.analyzer.operators.index").Index(META)
+IMPORTS['nattlua.analyzer.operators.newindex']("nattlua.analyzer.operators.newindex").NewIndex(META)
+IMPORTS['nattlua.analyzer.operators.call']("nattlua.analyzer.operators.call").Call(META)
+
+do
+	local AnalyzeDestructureAssignment = IMPORTS['nattlua.analyzer.statements.destructure_assignment']("nattlua.analyzer.statements.destructure_assignment").AnalyzeDestructureAssignment
+	local AnalyzeFunction = IMPORTS['nattlua.analyzer.statements.function']("nattlua.analyzer.statements.function").AnalyzeFunction
+	local AnalyzeIf = IMPORTS['nattlua.analyzer.statements.if']("nattlua.analyzer.statements.if").AnalyzeIf
+	local AnalyzeDo = IMPORTS['nattlua.analyzer.statements.do']("nattlua.analyzer.statements.do").AnalyzeDo
+	local AnalyzeGenericFor = IMPORTS['nattlua.analyzer.statements.generic_for']("nattlua.analyzer.statements.generic_for").AnalyzeGenericFor
+	local AnalyzeCall = IMPORTS['nattlua.analyzer.statements.call_expression']("nattlua.analyzer.statements.call_expression").AnalyzeCall
+	local AnalyzeNumericFor = IMPORTS['nattlua.analyzer.statements.numeric_for']("nattlua.analyzer.statements.numeric_for").AnalyzeNumericFor
+	local AnalyzeBreak = IMPORTS['nattlua.analyzer.statements.break']("nattlua.analyzer.statements.break").AnalyzeBreak
+	local AnalyzeContinue = IMPORTS['nattlua.analyzer.statements.continue']("nattlua.analyzer.statements.continue").AnalyzeContinue
+	local AnalyzeRepeat = IMPORTS['nattlua.analyzer.statements.repeat']("nattlua.analyzer.statements.repeat").AnalyzeRepeat
+	local AnalyzeReturn = IMPORTS['nattlua.analyzer.statements.return']("nattlua.analyzer.statements.return").AnalyzeReturn
+	local AnalyzeAnalyzerDebugCode = IMPORTS['nattlua.analyzer.statements.analyzer_debug_code']("nattlua.analyzer.statements.analyzer_debug_code").AnalyzeAnalyzerDebugCode
+	local AnalyzeWhile = IMPORTS['nattlua.analyzer.statements.while']("nattlua.analyzer.statements.while").AnalyzeWhile
+	local AnalyzeAssignment = IMPORTS['nattlua.analyzer.statements.assignment']("nattlua.analyzer.statements.assignment").AnalyzeAssignment
+
+	function META:AnalyzeStatement(node)
+		self.current_statement = node
+		self:PushAnalyzerEnvironment(node.environment or "runtime")
+
+		if node.kind == "assignment" or node.kind == "local_assignment" then
+			AnalyzeAssignment(self, node)
+		elseif
+			node.kind == "destructure_assignment" or
+			node.kind == "local_destructure_assignment"
+		then
+			AnalyzeDestructureAssignment(self, node)
+		elseif
+			node.kind == "function" or
+			node.kind == "type_function" or
+			node.kind == "local_function" or
+			node.kind == "local_type_function" or
+			node.kind == "local_analyzer_function" or
+			node.kind == "analyzer_function"
+		then
+			AnalyzeFunction(self, node)
+		elseif node.kind == "if" then
+			AnalyzeIf(self, node)
+		elseif node.kind == "while" then
+			AnalyzeWhile(self, node)
+		elseif node.kind == "do" then
+			AnalyzeDo(self, node)
+		elseif node.kind == "repeat" then
+			AnalyzeRepeat(self, node)
+		elseif node.kind == "return" then
+			AnalyzeReturn(self, node)
+		elseif node.kind == "break" then
+			AnalyzeBreak(self, node)
+		elseif node.kind == "continue" then
+			AnalyzeContinue(self, node)
+		elseif node.kind == "call_expression" then
+			AnalyzeCall(self, node)
+		elseif node.kind == "generic_for" then
+			AnalyzeGenericFor(self, node)
+		elseif node.kind == "numeric_for" then
+			AnalyzeNumericFor(self, node)
+		elseif node.kind == "analyzer_debug_code" then
+			AnalyzeAnalyzerDebugCode(self, node)
+		elseif node.kind == "import" then
+
+		elseif
+			node.kind ~= "end_of_file" and
+			node.kind ~= "semicolon" and
+			node.kind ~= "shebang" and
+			node.kind ~= "goto_label" and
+			node.kind ~= "parser_debug_code" and
+			node.kind ~= "goto"
+		then
+			self:FatalError("unhandled statement: " .. tostring(node))
+		end
+
+		self:PopAnalyzerEnvironment()
+	end
+end
+
+do
+	local AnalyzeBinaryOperator = IMPORTS['nattlua.analyzer.expressions.binary_operator']("nattlua.analyzer.expressions.binary_operator").AnalyzeBinaryOperator
+	local AnalyzePrefixOperator = IMPORTS['nattlua.analyzer.expressions.prefix_operator']("nattlua.analyzer.expressions.prefix_operator").AnalyzePrefixOperator
+	local AnalyzePostfixOperator = IMPORTS['nattlua.analyzer.expressions.postfix_operator']("nattlua.analyzer.expressions.postfix_operator").AnalyzePostfixOperator
+	local AnalyzePostfixCall = IMPORTS['nattlua.analyzer.expressions.postfix_call']("nattlua.analyzer.expressions.postfix_call").AnalyzePostfixCall
+	local AnalyzePostfixIndex = IMPORTS['nattlua.analyzer.expressions.postfix_index']("nattlua.analyzer.expressions.postfix_index").AnalyzePostfixIndex
+	local AnalyzeFunction = IMPORTS['nattlua.analyzer.expressions.function']("nattlua.analyzer.expressions.function").AnalyzeFunction
+	local AnalyzeTable = IMPORTS['nattlua.analyzer.expressions.table']("nattlua.analyzer.expressions.table").AnalyzeTable
+	local AnalyzeAtomicValue = IMPORTS['nattlua.analyzer.expressions.atomic_value']("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
+	local AnalyzeTuple = IMPORTS['nattlua.analyzer.expressions.tuple']("nattlua.analyzer.expressions.tuple").AnalyzeTuple
+	local AnalyzeVararg = IMPORTS['nattlua.analyzer.expressions.vararg']("nattlua.analyzer.expressions.vararg").AnalyzeVararg
+	local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+
+	function META:AnalyzeExpression2(node)
+		self.current_expression = node
+
+		if node.kind == "value" then
+			return AnalyzeAtomicValue(self, node)
+		elseif node.kind == "vararg" then
+			return AnalyzeVararg(self, node)
+		elseif
+			node.kind == "function" or
+			node.kind == "analyzer_function" or
+			node.kind == "type_function" or
+			node.kind == "function_signature"
+		then
+			return AnalyzeFunction(self, node):SetNode(node)
+		elseif node.kind == "table" or node.kind == "type_table" then
+			return AnalyzeTable(self, node)
+		elseif node.kind == "binary_operator" then
+			return AnalyzeBinaryOperator(self, node)
+		elseif node.kind == "prefix_operator" then
+			return AnalyzePrefixOperator(self, node)
+		elseif node.kind == "postfix_operator" then
+			return AnalyzePostfixOperator(self, node)
+		elseif node.kind == "postfix_expression_index" then
+			return AnalyzePostfixIndex(self, node)
+		elseif node.kind == "postfix_call" then
+			return AnalyzePostfixCall(self, node)
+		elseif node.kind == "empty_union" then
+			return Union({})
+		elseif node.kind == "tuple" then
+			return AnalyzeTuple(self, node)
+		else
+			self:FatalError("unhandled expression " .. node.kind)
+		end
+	end
+
+	function META:AnalyzeTypeExpression(node, parent_obj)
+		if not node.type_expression then return parent_obj end
+
+		self:PushAnalyzerEnvironment("typesystem")
+		local obj = self:AnalyzeExpression(node.type_expression)
+		self:PopAnalyzerEnvironment()
+
+		if obj.Type == "table" then
+			if parent_obj.Type == "table" then
+				parent_obj:SetContract(obj)
+				return parent_obj
+			elseif parent_obj.Type == "tuple" and parent_obj:GetLength() == 1 then
+				local first = parent_obj:GetData()[1]
+
+				if first.Type == "table" then
+					first:SetContract(obj)
+					return parent_obj
+				end
+			end
+		end
+
+		return obj
+	end
+
+	function META:AnalyzeExpression(node)
+		local obj, err = self:AnalyzeExpression2(node)
+		obj = self:AnalyzeTypeExpression(node, obj)
+		node:AddType(obj or err)
+		return obj, err
+	end
+end
+
+function META.New(config)
+	config = config or {}
+	local self = setmetatable({config = config}, META)
+
+	for _, func in ipairs(META.OnInitialize) do
+		func(self)
+	end
+
+	self.context_values = {}
+	self.context_ref = {}
 	return self
 end
 
@@ -21534,11 +21383,11 @@ analyzer function PushTypeEnvironment(obj: any)
 
 				if ok then return ok end
 
-				local val, err = analyzer:IndexOperator(key:GetNode(), g, key)
+				local val, err = analyzer:IndexOperator(g, key)
 
 				if val then return val end
 
-				analyzer:Error(key:GetNode(), err)
+				analyzer:Error(err)
 				return types.Nil()
 			end,
 			{types.Any(), types.Any()},
@@ -21549,7 +21398,7 @@ analyzer function PushTypeEnvironment(obj: any)
 		types.LString("__newindex"),
 		types.LuaTypeFunction(
 			function(self, key, val)
-				return analyzer:Assert(analyzer.curent_expression, obj:Set(key, val))
+				return analyzer:Assert(obj:Set(key, val))
 			end,
 			{types.Any(), types.Any(), types.Any()},
 			{}
@@ -21674,8 +21523,6 @@ analyzer function next(t: Map<|any, any|>, k: any)
 				k:AddType(types.Number())
 				v:AddType(kv)
 			else
-				kv.key:SetNode(t:GetNode())
-				kv.val:SetNode(t:GetNode())
 				k:AddType(kv.key)
 				v:AddType(kv.val)
 			end
@@ -21702,7 +21549,7 @@ analyzer function pairs(tbl: Table)
 	analyzer:PushAnalyzerEnvironment("typesystem")
 	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
 	analyzer:PopAnalyzerEnvironment()
-	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
+	local k, v = analyzer:CallLuaTypeFunction(next:GetData().lua_function, analyzer:GetScope(), tbl)
 	local done = false
 
 	if v and v.Type == "union" then v:RemoveType(types.Symbol(nil)) end
@@ -21729,7 +21576,7 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 	end
 
 	if tbl.Type == "table" and not tbl:IsNumericallyIndexed() then
-		analyzer:Warning(analyzer.current_expression, {tbl, " is not numerically indexed"})
+		analyzer:Warning({tbl, " is not numerically indexed"})
 		local done = false
 		return function()
 			if done then return nil end
@@ -21742,7 +21589,7 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 	analyzer:PushAnalyzerEnvironment("typesystem")
 	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
 	analyzer:PopAnalyzerEnvironment()
-	local k, v = analyzer:CallLuaTypeFunction(analyzer.current_expression, next:GetData().lua_function, analyzer:GetScope(), tbl)
+	local k, v = analyzer:CallLuaTypeFunction(next:GetData().lua_function, analyzer:GetScope(), tbl)
 	local done = false
 	return function()
 		if done then return nil end
@@ -21782,7 +21629,7 @@ analyzer function require(name: string)
 
 			-- in case it's not found
 			-- TODO, add ability to configure the analyzer
-			analyzer:Warning(analyzer.current_expression, "module '" .. mod .. "' might not exist")
+			analyzer:Warning("module '" .. mod .. "' might not exist")
 			return tbl
 		end
 	end
@@ -21817,7 +21664,7 @@ analyzer function require(name: string)
 		end
 	end
 
-	analyzer:Error(name:GetNode(), "module '" .. str:GetData() .. "' not found")
+	analyzer:Error("module '" .. str:GetData() .. "' not found")
 	return types.Any
 end
 
@@ -21847,7 +21694,7 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 			end,
 		}
-	):SetNode(compiler.SyntaxTree)
+	)
 end
 
 type loadstring = load
@@ -21877,7 +21724,7 @@ analyzer function loadfile(path: string)
 	f.Data.lua_function = function(...)
 		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
 	end
-	return f:SetNode(compiler.SyntaxTree)
+	return f
 end
 
 analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
@@ -21953,7 +21800,7 @@ type type_error = error
 analyzer function pcall(callable: function=(...any)>((...any)), ...: ...any)
 	local count = #analyzer:GetDiagnostics()
 	analyzer:PushProtectedCall()
-	local res = analyzer:Assert(analyzer.current_statement, analyzer:Call(callable, types.Tuple({...})))
+	local res = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
 	analyzer:PopProtectedCall()
 	local diagnostics = analyzer:GetDiagnostics()
 	analyzer:ClearError()
@@ -21972,7 +21819,7 @@ end
 analyzer function type_pcall(func: Function, ...: ...any)
 	local diagnostics_index = #analyzer.diagnostics
 	analyzer:PushProtectedCall()
-	local tuple = analyzer:Assert(analyzer.current_statement, analyzer:Call(func, types.Tuple({...})))
+	local tuple = analyzer:Assert(analyzer:Call(func, types.Tuple({...})))
 	analyzer:PopProtectedCall()
 
 	do
@@ -21991,7 +21838,7 @@ analyzer function type_pcall(func: Function, ...: ...any)
 end
 
 analyzer function xpcall(callable: any, error_cb: any, ...: ...any)
-	return analyzer:Assert(analyzer.current_statement, callable:Call(callable, types.Tuple(...), node))
+	return analyzer:Assert(callable:Call(callable, types.Tuple(...), node))
 end
 
 analyzer function select(index: 1 .. inf | "#", ...: ...any)
@@ -22056,7 +21903,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 
 	if meta.Type == "table" then
 		if meta.Self then
-			analyzer:Assert(tbl:GetNode(), tbl:FollowsContract(meta.Self))
+			analyzer:Assert(tbl:FollowsContract(meta.Self))
 			tbl:CopyLiteralness(meta.Self)
 			tbl:SetContract(meta.Self)
 			-- clear mutations so that when looking up values in the table they won't return their initial value
@@ -22074,7 +21921,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 			local b = meta:Get(kv.key)
 
 			if b and b.Type == "function" then
-				local ok = analyzer:Assert(b:GetNode(), a:IsSubsetOf(b))
+				local ok = analyzer:Assert(a:IsSubsetOf(b))
 
 				if ok then
 
@@ -22105,7 +21952,7 @@ analyzer function tostring(val: any)
 
 			if func then
 				if func.Type == "function" then
-					return analyzer:Assert(analyzer.current_expression, analyzer:Call(func, types.Tuple({val})))
+					return analyzer:Assert(analyzer:Call(func, types.Tuple({val})))
 				else
 					return func
 				end
@@ -22283,8 +22130,8 @@ analyzer function debug.setfenv(val: Function, table: Table)
 	if val and (val:IsLiteral() or val.Type == "function") then
 		if val.Type == "number" then
 			analyzer:SetEnvironmentOverride(analyzer.environment_nodes[val:GetData()], table, "runtime")
-		elseif val:GetNode() then
-			analyzer:SetEnvironmentOverride(val:GetNode(), table, "runtime")
+		elseif val.function_body_node then
+			analyzer:SetEnvironmentOverride(val.function_body_node, table, "runtime")
 		end
 	end
 end
@@ -22475,7 +22322,7 @@ analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 	if analyzer:IsInUncertainLoop() then pos:Widen() end
 
 	assert(type(pos) ~= "number")
-	analyzer:NewIndexOperator(analyzer.current_expression, tbl, pos, val)
+	analyzer:NewIndexOperator(tbl, pos, val)
 end
 
 analyzer function table.remove(tbl: List<|any|>, index: number | nil)
@@ -22777,10 +22624,7 @@ analyzer function ^string.gsub(
 				str,
 				pattern,
 				function(...)
-					local ret = analyzer:Assert(
-						replacement:GetNode(),
-						analyzer:Call(replacement, analyzer:LuaTypesToTuple(replacement:GetNode(), {...}))
-					)
+					local ret = analyzer:Assert(analyzer:Call(replacement, analyzer:LuaTypesToTuple({...})))
 					local out = {}
 
 					for _, val in ipairs(ret:GetData()) do
@@ -22956,7 +22800,7 @@ IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function() local analyzer functi
 				function(self, key)
 					-- i'm not really sure about this
 					-- boxed luajit ctypes seem to just get the metatable from the ctype
-					return analyzer:Assert(key:GetNode(), from:Get(key, from.Type == "union"))
+					return analyzer:Assert(from:Get(key, from.Type == "union"))
 				end,
 				{types.Any(), types.Any()},
 				{}
@@ -23049,7 +22893,6 @@ IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function() local analyzer functi
 			ret = types.Tuple({return_type}),
 			arg = types.Tuple(arguments),
 		})
-		obj:SetNode(analyzer.current_expression)
 		return obj
 	elseif node.tag == "Array" then
 		local tbl = types.Table()
@@ -23129,11 +22972,7 @@ IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function() local analyzer functi
 				return tbl
 			end
 		else
-			local val = analyzer:IndexOperator(
-				analyzer.current_expression,
-				env.typesystem.ffi:Get(types.LString("C")),
-				types.LString(node.n)
-			)
+			local val = analyzer:IndexOperator(env.typesystem.ffi:Get(types.LString("C")), types.LString(node.n))
 
 			if not val or val.Type == "symbol" and val:GetData() == nil then
 				if analyzer.current_tables then
@@ -23142,7 +22981,7 @@ IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function() local analyzer functi
 					if current_tbl and current_tbl.ffi_name == node.n then return current_tbl end
 				end
 
-				analyzer:Error(analyzer.current_expression, "cannot find value " .. node.n)
+				analyzer:Error("cannot find value " .. node.n)
 				return types.Any()
 			end
 
@@ -23187,7 +23026,6 @@ analyzer function ffi.cdef(cdecl: string, ...: ...any)
 	for _, ctype in ipairs(assert(IMPORTS['nattlua.other.cparser']("nattlua.other.cparser").parseString(cdecl:GetData(), {}, {...}))) do
 		ctype.type.parent = ctype
 		analyzer:NewIndexOperator(
-			cdecl:GetNode(),
 			env.typesystem.ffi:Get(types.LString("C")),
 			types.LString(ctype.name),
 			env.typesystem.cast(ctype.type, {...})
@@ -23212,8 +23050,6 @@ analyzer function ffi.cast(cdecl: string, src: any)
 			end
 		end
 	end
-
-	ctype:SetNode(cdecl:GetNode())
 
 	if ctype.Type == "any" then return ctype end
 
@@ -23243,8 +23079,6 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 		end
 	end
 
-	ctype:SetNode(cdecl:GetNode())
-
 	if ctype.Type == "any" then return ctype end
 
 	local nilable_ctype = ctype:Copy()
@@ -23259,9 +23093,7 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 		types.LString("__call"),
 		types.LuaTypeFunction(
 			function(self, init)
-				if init then
-					analyzer:Assert(init:GetNode(), init:IsSubsetOf(nilable_ctype))
-				end
+				if init then analyzer:Assert(init:IsSubsetOf(nilable_ctype)) end
 
 				return self:Copy()
 			end,
@@ -23280,7 +23112,6 @@ analyzer function ffi.get_type(cdecl: string, ...: ...any)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
 	local declarations = assert(IMPORTS['nattlua.other.cparser']("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
 	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
-	ctype:SetNode(cdecl:GetNode())
 	return ctype
 end
 
@@ -23298,7 +23129,7 @@ analyzer function ffi.metatype(ctype: any, meta: any)
 			types.LString("__call"),
 			types.LuaTypeFunction(
 				function(self, ...)
-					local val = analyzer:Assert(analyzer.current_expression, analyzer:Call(new, types.Tuple({ctype, ...}))):Unpack()
+					local val = analyzer:Assert(analyzer:Call(new, types.Tuple({ctype, ...}))):Unpack()
 
 					if val.Type == "union" then
 						for i, v in ipairs(val:GetData()) do

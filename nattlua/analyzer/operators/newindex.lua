@@ -8,6 +8,7 @@ return {
 	NewIndex = function(META)
 		function META:NewIndexOperator(obj, key, val)
 			if not obj then debug.trace() end
+
 			if obj.Type == "union" then
 				-- local x: nil | {foo = true}
 				-- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
@@ -33,7 +34,11 @@ return {
 				return new_union
 			end
 
-			if val.Type == "function" and val.function_body_node and val.function_body_node.self_call then
+			if
+				val.Type == "function" and
+				val.function_body_node and
+				val.function_body_node.self_call
+			then
 				local arg = val:GetArguments():Get(1)
 
 				if arg and not arg:GetContract() and not arg.Self then

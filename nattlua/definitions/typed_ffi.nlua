@@ -182,10 +182,7 @@ local analyzer function cast(node: any, args: any)
 				return tbl
 			end
 		else
-			local val = analyzer:IndexOperator(
-				env.typesystem.ffi:Get(types.LString("C")),
-				types.LString(node.n)
-			)
+			local val = analyzer:IndexOperator(env.typesystem.ffi:Get(types.LString("C")), types.LString(node.n))
 
 			if not val or val.Type == "symbol" and val:GetData() == nil then
 				if analyzer.current_tables then
@@ -306,9 +303,7 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 		types.LString("__call"),
 		types.LuaTypeFunction(
 			function(self, init)
-				if init then
-					analyzer:Assert(init:IsSubsetOf(nilable_ctype))
-				end
+				if init then analyzer:Assert(init:IsSubsetOf(nilable_ctype)) end
 
 				return self:Copy()
 			end,

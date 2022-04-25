@@ -170,9 +170,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 				not value.explicit_return and
 				union:HasType("function")
 			then
-				self:Assert(
-					self:Call(value, value:GetArguments():Copy())
-				)
+				self:Assert(self:Call(value, value:GetArguments():Copy()))
 			end
 
 			union:AddType(value)

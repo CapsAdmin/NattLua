@@ -186,11 +186,7 @@ function META:GetAtIndex(i--[[#: number]])
 			local found, err = obj:Get(i)
 
 			if found then
-				if val then
-					val = self.New({val, found})
-				else
-					val = found
-				end
+				if val then val = self.New({val, found}) else val = found end
 			else
 				if val then val = self.New({val, Nil()}) else val = Nil() end
 
