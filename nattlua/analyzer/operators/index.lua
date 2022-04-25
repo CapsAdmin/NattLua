@@ -57,7 +57,7 @@ return {
 					end
 
 					if index.Type == "function" then
-						local obj, err = self:Call(index, Tuple({obj, key}), key:GetNode())
+						local obj, err = self:Call(index, Tuple({obj, key}), self.current_statement)
 
 						if not obj then return obj, err end
 

@@ -313,9 +313,11 @@ return function(META)
 					end
 				end
 
-				local trace = self:TypeTraceback(1)
+				local frame = self:GetCallStack()[1]
 
-				if trace and trace ~= "" then msg = msg .. "\ntraceback:\n" .. trace end
+				if frame then
+					self.current_expression = self:GetCallStack()[1].call_node
+				end
 
 				self:Error(msg)
 			end
@@ -372,11 +374,9 @@ return function(META)
 		end
 
 		function META:TypeTraceback(from)
-			if not self.call_stack then return "" end
-
 			local str = ""
 
-			for i, v in ipairs(self.call_stack) do
+			for i, v in ipairs(self:GetCallStack()) do
 				if v.call_node and (not from or i > from) then
 					local start, stop = v.call_node:GetStartStop()
 
@@ -501,20 +501,6 @@ return function(META)
 
 			function META:PopUncertainLoop()
 				return self:PopContextValue("uncertain_loop")
-			end
-		end
-
-		do
-			function META:GetActiveNode()
-				return self:GetContextValue("active_node")
-			end
-
-			function META:PushActiveNode(node)
-				self:PushContextValue("active_node", node)
-			end
-
-			function META:PopActiveNode()
-				self:PopContextValue("active_node")
 			end
 		end
 

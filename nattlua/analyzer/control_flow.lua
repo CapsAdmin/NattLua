@@ -61,8 +61,7 @@ return function(META)
 	function META:ThrowSilentError(assert_expression)
 		if assert_expression and assert_expression:IsCertainlyTrue() then return end
 
-		for i = #self.call_stack, 1, -1 do
-			local frame = self.call_stack[i]
+		for _, frame in ipairs(self:GetCallStack()) do
 			local function_scope = frame.scope:GetNearestFunctionScope()
 
 			if not assert_expression or assert_expression:IsCertainlyTrue() then
@@ -144,9 +143,9 @@ return function(META)
 		end
 
 		if not no_report then
-			local frame = level and
-				self.call_stack[-#self.call_stack + level + 1] or
-				self.call_stack[#self.call_stack]
+			local stack = self:GetCallStack()
+			local frame = level and stack[#stack - level] or stack[#stack]
+			self.current_expression = frame.call_node
 			self:Error(msg)
 		end
 	end

@@ -621,7 +621,7 @@ return {
 						function_node.kind == "type_function"
 					then
 						if function_node.identifiers_typesystem then
-							local call_expression = self:GetActiveNode()
+							local call_expression = self:GetCallStack()[1].call_node
 
 							for i, key in ipairs(function_node.identifiers) do
 								if function_node.self_call then i = i + 1 end
@@ -883,7 +883,7 @@ return {
 				end
 			end
 
-			if obj.expand then self:GetActiveNode().expand = obj end
+			if obj.expand then self:GetCallStack()[1].call_node.expand = obj end
 
 			if obj:GetData().lua_function then
 				return call_analyzer_function(self, obj, function_arguments, arguments)
@@ -895,63 +895,28 @@ return {
 		end
 
 		function META:Call(obj, arguments, call_node)
-			-- not sure about this, it's used to access the call_node from deeper calls
-			-- without resorting to argument drilling
-			local node = call_node or obj:GetNode() or obj
-
-			-- call_node or obj:GetNode() might be nil when called from tests and other places
-			if node.recursively_called then return node.recursively_called:Copy() end
-
-			self:PushActiveNode(node)
-
 			-- extra protection, maybe only useful during development
 			if debug.getinfo(300) then
-				local level = 1
-				print("Trace:")
-
-				while true do
-					local info = debug.getinfo(level, "Sln")
-
-					if not info then break end
-
-					if info.what == "C" then
-						print(string.format("\t%i: C function\t\"%s\"", level, info.name))
-					else
-						local path = info.source
-
-						if path:sub(1, 1) == "@" then
-							path = path:sub(2)
-						else
-							path = info.short_src
-						end
-
-						print(string.format("%i: %s\t%s:%s\t", level, info.name, path, info.currentline))
-					end
-
-					level = level + 1
-				end
-
-				print("")
+				debug.trace()
 				return false, "call stack is too deep"
 			end
 
 			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
 			self.call_stack = self.call_stack or {}
 
-			if self:IsRuntime() then
+			if self:IsRuntime() and call_node then
 				for _, v in ipairs(self.call_stack) do
 					-- if the callnode is the same, we're doing some infinite recursion
-					if v.call_node == self:GetActiveNode() then
+					if v.call_node == call_node then
 						if obj.explicit_return then
 							-- so if we have explicit return types, just return those
-							node.recursively_called = obj:GetReturnTypes():Copy()
-							return node.recursively_called
+							obj.recursively_called = obj:GetReturnTypes():Copy()
+							return obj.recursively_called
 						else
 							-- if not we sadly have to resort to any
 							-- TODO: error?
-							-- TODO: use VarArg() ?
-							node.recursively_called = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
-							return node.recursively_called
+							obj.recursively_called = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+							return obj.recursively_called
 						end
 					end
 				end
@@ -959,17 +924,20 @@ return {
 
 			table.insert(
 				self.call_stack,
+				1,
 				{
 					obj = obj,
-					function_node = obj.function_body_node,
-					call_node = self:GetActiveNode(),
+					call_node = call_node,
 					scope = self:GetScope(),
 				}
 			)
 			local ok, err = Call(self, obj, arguments)
-			table.remove(self.call_stack)
-			self:PopActiveNode()
+			table.remove(self.call_stack, 1)
 			return ok, err
+		end
+
+		function META:GetCallStack()
+			return self.call_stack or {}
 		end
 
 		function META:IsDefinetlyReachable()
@@ -990,17 +958,15 @@ return {
 				end
 			end
 
-			if self.call_stack then
-				for i = #self.call_stack, 1, -1 do
-					local scope = self.call_stack[i].scope
+			for _, frame in ipairs(self:GetCallStack()) do
+				local scope = frame.scope
 
-					if not scope:IsCertain() then
-						return false, "call stack scope is uncertain"
-					end
+				if not scope:IsCertain() then
+					return false, "call stack scope is uncertain"
+				end
 
-					if scope.uncertain_function_return == true then
-						return false, "call stack scope has uncertain function return"
-					end
+				if scope.uncertain_function_return == true then
+					return false, "call stack scope has uncertain function return"
 				end
 			end
 
@@ -1017,16 +983,14 @@ return {
 				end
 			end
 
-			if self.call_stack then
-				for i = #self.call_stack, 1, -1 do
-					local parent_scope = self.call_stack[i].scope
+			for _, frame in ipairs(self:GetCallStack()) do
+				local parent_scope = frame.scope
 
-					if
-						not parent_scope:IsCertain() or
-						parent_scope.uncertain_function_return == true
-					then
-						if parent_scope:IsCertainFromScope(scope) then return false end
-					end
+				if
+					not parent_scope:IsCertain() or
+					parent_scope.uncertain_function_return == true
+				then
+					if parent_scope:IsCertainFromScope(scope) then return false end
 				end
 			end
 
@@ -1034,7 +998,7 @@ return {
 		end
 
 		function META:UncertainReturn()
-			self.call_stack[#self.call_stack].scope:UncertainReturn()
+			self.call_stack[1].scope:UncertainReturn()
 		end
 	end,
 }
