@@ -297,234 +297,232 @@ local function check_return_result(self, result, contract)
 	end
 end
 
-return {
-	Call = function(META)
-		function META:AnalyzeFunctionBody(obj, function_node, arguments)
-			local scope = self:CreateAndPushFunctionScope(obj)
-			self:PushTruthyExpressionContext(false)
-			self:PushFalsyExpressionContext(false)
-			self:PushGlobalEnvironment(
-				function_node,
-				self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
-				self:GetCurrentAnalyzerEnvironment()
-			)
+return function(META)
+    function META:AnalyzeFunctionBody(obj, function_node, arguments)
+        local scope = self:CreateAndPushFunctionScope(obj)
+        self:PushTruthyExpressionContext(false)
+        self:PushFalsyExpressionContext(false)
+        self:PushGlobalEnvironment(
+            function_node,
+            self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
+            self:GetCurrentAnalyzerEnvironment()
+        )
 
-			if function_node.self_call then
-				self:CreateLocalValue("self", arguments:Get(1) or Nil())
-			end
+        if function_node.self_call then
+            self:CreateLocalValue("self", arguments:Get(1) or Nil())
+        end
 
-			for i, identifier in ipairs(function_node.identifiers) do
-				local argi = function_node.self_call and (i + 1) or i
+        for i, identifier in ipairs(function_node.identifiers) do
+            local argi = function_node.self_call and (i + 1) or i
 
-				if self:IsTypesystem() then
-					self:CreateLocalValue(identifier.value.value, arguments:GetWithoutExpansion(argi))
-				end
+            if self:IsTypesystem() then
+                self:CreateLocalValue(identifier.value.value, arguments:GetWithoutExpansion(argi))
+            end
 
-				if self:IsRuntime() then
-					if identifier.value.value == "..." then
-						self:CreateLocalValue(identifier.value.value, arguments:Slice(argi))
-					else
-						self:CreateLocalValue(identifier.value.value, arguments:Get(argi) or Nil())
-					end
-				end
-			end
+            if self:IsRuntime() then
+                if identifier.value.value == "..." then
+                    self:CreateLocalValue(identifier.value.value, arguments:Slice(argi))
+                else
+                    self:CreateLocalValue(identifier.value.value, arguments:Get(argi) or Nil())
+                end
+            end
+        end
 
-			if
-				function_node.kind == "local_type_function" or
-				function_node.kind == "type_function"
-			then
-				self:PushAnalyzerEnvironment("typesystem")
-			end
+        if
+            function_node.kind == "local_type_function" or
+            function_node.kind == "type_function"
+        then
+            self:PushAnalyzerEnvironment("typesystem")
+        end
 
-			local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
+        local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
 
-			if
-				function_node.kind == "local_type_function" or
-				function_node.kind == "type_function"
-			then
-				self:PopAnalyzerEnvironment()
-			end
+        if
+            function_node.kind == "local_type_function" or
+            function_node.kind == "type_function"
+        then
+            self:PopAnalyzerEnvironment()
+        end
 
-			self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
-			local function_scope = self:PopScope()
-			self:PopFalsyExpressionContext()
-			self:PopTruthyExpressionContext()
+        self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
+        local function_scope = self:PopScope()
+        self:PopFalsyExpressionContext()
+        self:PopTruthyExpressionContext()
 
-			if scope.TrackedObjects then
-				for _, obj in ipairs(scope.TrackedObjects) do
-					if obj.Type == "upvalue" then
-						for i = #obj.mutations, 1, -1 do
-							local mut = obj.mutations[i]
+        if scope.TrackedObjects then
+            for _, obj in ipairs(scope.TrackedObjects) do
+                if obj.Type == "upvalue" then
+                    for i = #obj.mutations, 1, -1 do
+                        local mut = obj.mutations[i]
 
-							if mut.from_tracking then table.remove(obj.mutations, i) end
-						end
-					else
-						for _, mutations in pairs(obj.mutations) do
-							for i = #mutations, 1, -1 do
-								local mut = mutations[i]
+                        if mut.from_tracking then table.remove(obj.mutations, i) end
+                    end
+                else
+                    for _, mutations in pairs(obj.mutations) do
+                        for i = #mutations, 1, -1 do
+                            local mut = mutations[i]
 
-								if mut.from_tracking then table.remove(mutations, i) end
-							end
-						end
-					end
-				end
-			end
+                            if mut.from_tracking then table.remove(mutations, i) end
+                        end
+                    end
+                end
+            end
+        end
 
-			if analyzed_return.Type ~= "tuple" then
-				return Tuple({analyzed_return}), scope
-			end
+        if analyzed_return.Type ~= "tuple" then
+            return Tuple({analyzed_return}), scope
+        end
 
-			return analyzed_return, scope
-		end
+        return analyzed_return, scope
+    end
 
-		function META:CallBodyFunction(obj, arguments, function_node)
-			if obj:HasExplicitArguments() or function_node.identifiers_typesystem then
-				if
-					function_node.kind == "local_type_function" or
-					function_node.kind == "type_function"
-				then
-					if function_node.identifiers_typesystem then
-						local call_expression = self:GetCallStack()[1].call_node
+    function META:CallBodyFunction(obj, arguments, function_node)
+        if obj:HasExplicitArguments() or function_node.identifiers_typesystem then
+            if
+                function_node.kind == "local_type_function" or
+                function_node.kind == "type_function"
+            then
+                if function_node.identifiers_typesystem then
+                    local call_expression = self:GetCallStack()[1].call_node
 
-						for i, key in ipairs(function_node.identifiers) do
-							if function_node.self_call then i = i + 1 end
+                    for i, key in ipairs(function_node.identifiers) do
+                        if function_node.self_call then i = i + 1 end
 
-							local arg = arguments:Get(i)
-							local generic_upvalue = function_node.identifiers_typesystem and
-								function_node.identifiers_typesystem[i] or
-								nil
-							local generic_type = call_expression.expressions_typesystem and
-								call_expression.expressions_typesystem[i] or
-								nil
+                        local arg = arguments:Get(i)
+                        local generic_upvalue = function_node.identifiers_typesystem and
+                            function_node.identifiers_typesystem[i] or
+                            nil
+                        local generic_type = call_expression.expressions_typesystem and
+                            call_expression.expressions_typesystem[i] or
+                            nil
 
-							if generic_upvalue then
-								local T = self:AnalyzeExpression(generic_type)
-								self:CreateLocalValue(generic_upvalue.value.value, T)
-							end
-						end
+                        if generic_upvalue then
+                            local T = self:AnalyzeExpression(generic_type)
+                            self:CreateLocalValue(generic_upvalue.value.value, T)
+                        end
+                    end
 
-						local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
+                    local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
 
-						if not ok then return ok, err end
-					end
+                    if not ok then return ok, err end
+                end
 
-					-- otherwise if we're a analyzer function we just do a simple check and arguments are passed as is
-					-- local type foo(T: any) return T end
-					-- T becomes the type that is passed in, and not "any"
-					-- it's the equivalent of function foo<T extends any>(val: T) { return val }
-					local ok, reason, a, b, i = arguments:IsSubsetOfTupleWithoutExpansion(obj:GetArguments())
+                -- otherwise if we're a analyzer function we just do a simple check and arguments are passed as is
+                -- local type foo(T: any) return T end
+                -- T becomes the type that is passed in, and not "any"
+                -- it's the equivalent of function foo<T extends any>(val: T) { return val }
+                local ok, reason, a, b, i = arguments:IsSubsetOfTupleWithoutExpansion(obj:GetArguments())
 
-					if not ok then
-						return type_errors.subset(a, b, {"argument #", i, " - ", reason})
-					end
-				elseif self:IsRuntime() then
-					-- if we have explicit arguments, we need to do a complex check against the contract
-					-- this might mutate the arguments
-					local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
+                if not ok then
+                    return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+                end
+            elseif self:IsRuntime() then
+                -- if we have explicit arguments, we need to do a complex check against the contract
+                -- this might mutate the arguments
+                local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
 
-					if not ok then return ok, err end
-				end
-			end
+                if not ok then return ok, err end
+            end
+        end
 
-			-- crawl the function with the new arguments
-			-- return_result is either a union of tuples or a single tuple
-			local return_result, scope = self:AnalyzeFunctionBody(obj, function_node, arguments)
-			restore_mutated_types(self)
-			-- used for analyzing side effects
-			obj:AddScope(arguments, return_result, scope)
+        -- crawl the function with the new arguments
+        -- return_result is either a union of tuples or a single tuple
+        local return_result, scope = self:AnalyzeFunctionBody(obj, function_node, arguments)
+        restore_mutated_types(self)
+        -- used for analyzing side effects
+        obj:AddScope(arguments, return_result, scope)
 
-			if not obj:HasExplicitArguments() then
-				if not obj.arguments_inferred and function_node.identifiers then
-					for i in ipairs(obj:GetArguments():GetData()) do
-						if function_node.self_call then
-							-- we don't count the actual self argument
-							local node = function_node.identifiers[i + 1]
+        if not obj:HasExplicitArguments() then
+            if not obj.arguments_inferred and function_node.identifiers then
+                for i in ipairs(obj:GetArguments():GetData()) do
+                    if function_node.self_call then
+                        -- we don't count the actual self argument
+                        local node = function_node.identifiers[i + 1]
 
-							if node and not node.type_expression then
-								self:Warning("argument is untyped")
-							end
-						elseif
-							function_node.identifiers[i] and
-							not function_node.identifiers[i].type_expression
-						then
-							self:Warning("argument is untyped")
-						end
-					end
-				end
+                        if node and not node.type_expression then
+                            self:Warning("argument is untyped")
+                        end
+                    elseif
+                        function_node.identifiers[i] and
+                        not function_node.identifiers[i].type_expression
+                    then
+                        self:Warning("argument is untyped")
+                    end
+                end
+            end
 
-				obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
-			end
+            obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
+        end
 
-			do -- this is for the emitter
-				if function_node.identifiers then
-					for i, node in ipairs(function_node.identifiers) do
-						node:AddType(obj:GetArguments():Get(i))
-					end
-				end
+        do -- this is for the emitter
+            if function_node.identifiers then
+                for i, node in ipairs(function_node.identifiers) do
+                    node:AddType(obj:GetArguments():Get(i))
+                end
+            end
 
-				function_node:AddType(obj)
-			end
+            function_node:AddType(obj)
+        end
 
-			local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
+        local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
 
-			-- if the function has return type annotations, analyze them and use it as contract
-			if not return_contract and function_node.return_types and self:IsRuntime() then
-				self:CreateAndPushFunctionScope(obj)
-				self:PushAnalyzerEnvironment("typesystem")
+        -- if the function has return type annotations, analyze them and use it as contract
+        if not return_contract and function_node.return_types and self:IsRuntime() then
+            self:CreateAndPushFunctionScope(obj)
+            self:PushAnalyzerEnvironment("typesystem")
 
-				for i, key in ipairs(function_node.identifiers) do
-					if function_node.self_call then i = i + 1 end
+            for i, key in ipairs(function_node.identifiers) do
+                if function_node.self_call then i = i + 1 end
 
-					self:CreateLocalValue(key.value.value, arguments:Get(i))
-				end
+                self:CreateLocalValue(key.value.value, arguments:Get(i))
+            end
 
-				return_contract = Tuple(self:AnalyzeExpressions(function_node.return_types))
-				self:PopAnalyzerEnvironment()
-				self:PopScope()
-			end
+            return_contract = Tuple(self:AnalyzeExpressions(function_node.return_types))
+            self:PopAnalyzerEnvironment()
+            self:PopScope()
+        end
 
-			if not return_contract then
-				-- if there is no return type 
-				if self:IsRuntime() then
-					local copy
+        if not return_contract then
+            -- if there is no return type 
+            if self:IsRuntime() then
+                local copy
 
-					for i, v in ipairs(return_result:GetData()) do
-						if v.Type == "table" and not v:GetContract() then
-							copy = copy or return_result:Copy()
-							local tbl = Table()
+                for i, v in ipairs(return_result:GetData()) do
+                    if v.Type == "table" and not v:GetContract() then
+                        copy = copy or return_result:Copy()
+                        local tbl = Table()
 
-							for _, kv in ipairs(v:GetData()) do
-								tbl:Set(kv.key, self:GetMutatedTableValue(v, kv.key, kv.val))
-							end
+                        for _, kv in ipairs(v:GetData()) do
+                            tbl:Set(kv.key, self:GetMutatedTableValue(v, kv.key, kv.val))
+                        end
 
-							copy:Set(i, tbl)
-						end
-					end
+                        copy:Set(i, tbl)
+                    end
+                end
 
-					obj:GetReturnTypes():Merge(copy or return_result)
-				end
+                obj:GetReturnTypes():Merge(copy or return_result)
+            end
 
-				return return_result
-			end
+            return return_result
+        end
 
-			-- check against the function's return type
-			check_return_result(self, return_result, return_contract)
+        -- check against the function's return type
+        check_return_result(self, return_result, return_contract)
 
-			if self:IsTypesystem() then return return_result end
+        if self:IsTypesystem() then return return_result end
 
-			local contract = obj:GetReturnTypes():Copy()
+        local contract = obj:GetReturnTypes():Copy()
 
-			for _, v in ipairs(contract:GetData()) do
-				if v.Type == "table" then v:SetReferenceId(nil) end
-			end
+        for _, v in ipairs(contract:GetData()) do
+            if v.Type == "table" then v:SetReferenceId(nil) end
+        end
 
-			-- if a return type is marked with literal, it will pass the literal value back to the caller
-			-- a bit like generics
-			for i, v in ipairs(return_contract:GetData()) do
-				if v.ref_argument then contract:Set(i, return_result:Get(i)) end
-			end
+        -- if a return type is marked with literal, it will pass the literal value back to the caller
+        -- a bit like generics
+        for i, v in ipairs(return_contract:GetData()) do
+            if v.ref_argument then contract:Set(i, return_result:Get(i)) end
+        end
 
-			return contract
-		end
-	end,
-}
+        return contract
+    end
+end

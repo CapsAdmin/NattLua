@@ -7,9 +7,9 @@ local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 return {
 	Call = function(META)
-		require("nattlua.analyzer.operators.call_analyzer").Call(META)
-		require("nattlua.analyzer.operators.call_body").Call(META)
-		require("nattlua.analyzer.operators.call_function_signature").Call(META)
+		require("nattlua.analyzer.operators.call_analyzer")(META)
+		require("nattlua.analyzer.operators.call_body")(META)
+		require("nattlua.analyzer.operators.call_function_signature")(META)
 
 		local function make_callable_union(self, obj)
 			local truthy_union = obj.New()
@@ -42,9 +42,9 @@ return {
 				obj = make_callable_union(self, obj)
 			end
 
-			-- if obj is a tuple it will return its first value 
+			-- if obj is a tuple it will return its first value
+			-- (myfunc,otherfunc)(1) will always
 			obj = obj:GetFirstValue()
-			local function_node = obj.function_body_node
 
 			if obj.Type ~= "function" then
 				if obj.Type == "any" then
@@ -121,8 +121,8 @@ return {
 
 			if obj:GetData().lua_function then
 				return self:CallAnalyzerFunction(obj, function_arguments, arguments)
-			elseif function_node then
-				return self:CallBodyFunction(obj, arguments, function_node)
+			elseif obj.function_body_node then
+				return self:CallBodyFunction(obj, arguments, obj.function_body_node)
 			end
 
 			return self:CallFunctionSignature(obj, arguments)

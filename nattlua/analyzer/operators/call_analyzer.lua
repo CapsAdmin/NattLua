@@ -78,122 +78,120 @@ do
 	end
 end
 
-return {
-	Call = function(META)
-		function META:LuaTypesToTuple(tps)
-			local tbl = {}
+return function(META)
+    function META:LuaTypesToTuple(tps)
+        local tbl = {}
 
-			for i, v in ipairs(tps) do
-				if type(v) == "table" and v.Type ~= nil then
-					tbl[i] = v
-				else
-					if type(v) == "function" then
-						tbl[i] = Function(
-							{
-								lua_function = v,
-								arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-								ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-							}
-						):SetLiteral(true)
-					else
-						local t = type(v)
+        for i, v in ipairs(tps) do
+            if type(v) == "table" and v.Type ~= nil then
+                tbl[i] = v
+            else
+                if type(v) == "function" then
+                    tbl[i] = Function(
+                        {
+                            lua_function = v,
+                            arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+                            ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
+                        }
+                    ):SetLiteral(true)
+                else
+                    local t = type(v)
 
-						if t == "number" then
-							tbl[i] = LNumber(v)
-						elseif t == "string" then
-							tbl[i] = LString(v)
-						elseif t == "boolean" then
-							tbl[i] = Symbol(v)
-						elseif t == "table" then
-							local tbl = Table()
+                    if t == "number" then
+                        tbl[i] = LNumber(v)
+                    elseif t == "string" then
+                        tbl[i] = LString(v)
+                    elseif t == "boolean" then
+                        tbl[i] = Symbol(v)
+                    elseif t == "table" then
+                        local tbl = Table()
 
-							for _, val in ipairs(v) do
-								tbl:Insert(val)
-							end
+                        for _, val in ipairs(v) do
+                            tbl:Insert(val)
+                        end
 
-							tbl:SetContract(tbl)
-							return tbl
-						else
-							self:Print(t)
-							error(debug.traceback("NYI " .. t))
-						end
-					end
-				end
-			end
+                        tbl:SetContract(tbl)
+                        return tbl
+                    else
+                        self:Print(t)
+                        error(debug.traceback("NYI " .. t))
+                    end
+                end
+            end
+        end
 
-			if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
+        if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
 
-			return Tuple(tbl)
-		end
+        return Tuple(tbl)
+    end
 
-		function META:CallAnalyzerFunction(obj, function_arguments, arguments)
-			do
-				local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
+    function META:CallAnalyzerFunction(obj, function_arguments, arguments)
+        do
+            local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
 
-				if not ok then
-					return type_errors.subset(a, b, {"argument #", i, " - ", reason})
-				end
-			end
+            if not ok then
+                return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+            end
+        end
 
-			local len = function_arguments:GetLength()
+        local len = function_arguments:GetLength()
 
-			if len == math.huge and arguments:GetLength() == math.huge then
-				len = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
-			end
+        if len == math.huge and arguments:GetLength() == math.huge then
+            len = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
+        end
 
-			if self:IsTypesystem() then
-				local ret = self:LuaTypesToTuple(
-					{
-						self:CallLuaTypeFunction(
-							obj:GetData().lua_function,
-							obj:GetData().scope or self:GetScope(),
-							arguments:UnpackWithoutExpansion()
-						),
-					}
-				)
-				return ret
-			end
+        if self:IsTypesystem() then
+            local ret = self:LuaTypesToTuple(
+                {
+                    self:CallLuaTypeFunction(
+                        obj:GetData().lua_function,
+                        obj:GetData().scope or self:GetScope(),
+                        arguments:UnpackWithoutExpansion()
+                    ),
+                }
+            )
+            return ret
+        end
 
-			local tuples = {}
+        local tuples = {}
 
-			for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
-				tuples[i] = self:LuaTypesToTuple(
-					{
-						self:CallLuaTypeFunction(
-							obj:GetData().lua_function,
-							obj:GetData().scope or self:GetScope(),
-							table.unpack(arg)
-						),
-					}
-				)
-			end
+        for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
+            tuples[i] = self:LuaTypesToTuple(
+                {
+                    self:CallLuaTypeFunction(
+                        obj:GetData().lua_function,
+                        obj:GetData().scope or self:GetScope(),
+                        table.unpack(arg)
+                    ),
+                }
+            )
+        end
 
-			local ret = Tuple({})
+        local ret = Tuple({})
 
-			for _, tuple in ipairs(tuples) do
-				if tuple:GetUnpackable() or tuple:GetLength() == math.huge then
-					return tuple
-				end
-			end
+        for _, tuple in ipairs(tuples) do
+            if tuple:GetUnpackable() or tuple:GetLength() == math.huge then
+                return tuple
+            end
+        end
 
-			for _, tuple in ipairs(tuples) do
-				for i = 1, tuple:GetLength() do
-					local v = tuple:Get(i)
-					local existing = ret:Get(i)
+        for _, tuple in ipairs(tuples) do
+            for i = 1, tuple:GetLength() do
+                local v = tuple:Get(i)
+                local existing = ret:Get(i)
 
-					if existing then
-						if existing.Type == "union" then
-							existing:AddType(v)
-						else
-							ret:Set(i, Union({v, existing}))
-						end
-					else
-						ret:Set(i, v)
-					end
-				end
-			end
+                if existing then
+                    if existing.Type == "union" then
+                        existing:AddType(v)
+                    else
+                        ret:Set(i, Union({v, existing}))
+                    end
+                else
+                    ret:Set(i, v)
+                end
+            end
+        end
 
-			return ret
-		end
-	end,
-}
+        return ret
+    end
+end
