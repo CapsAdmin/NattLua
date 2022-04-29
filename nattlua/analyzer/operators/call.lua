@@ -1,8 +1,4 @@
 local ipairs = ipairs
-local math = math
-local table = _G.table
-local debug = debug
-local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 return {
@@ -34,7 +30,7 @@ return {
 			return truthy_union
 		end
 
-		local function Call(self, obj, arguments)
+		local function call(self, obj, arguments)
 			if obj.Type == "union" then
 				-- make sure the union is callable, we pass the analyzer and 
 				-- it will throw errors if the union contains something that is not callable
@@ -129,110 +125,16 @@ return {
 		end
 
 		function META:Call(obj, arguments, call_node, not_recursive_call)
-			-- extra protection, maybe only useful during development
-			if debug.getinfo(300) then
-				debug.trace()
-				return false, "call stack is too deep"
-			end
+			local ok, err = self:PushCallFrame(obj, call_node, not_recursive_call)
 
-			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
-			self.call_stack = self.call_stack or {}
+			if not ok == false then return ok, err end
+			if ok then return ok end
 
-			if self:IsRuntime() and call_node and not not_recursive_call then
-				for _, v in ipairs(self.call_stack) do
-					-- if the callnode is the same, we're doing some infinite recursion
-					if v.call_node == call_node then
-						if obj.explicit_return then
-							-- so if we have explicit return types, just return those
-							obj.recursively_called = obj:GetReturnTypes():Copy()
-							return obj.recursively_called
-						else
-							-- if not we sadly have to resort to any
-							-- TODO: error?
-							obj.recursively_called = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
-							return obj.recursively_called
-						end
-					end
-				end
-			end
+			local ok, err = call(self, obj, arguments)
 
-			table.insert(
-				self.call_stack,
-				1,
-				{
-					obj = obj,
-					call_node = call_node,
-					scope = self:GetScope(),
-				}
-			)
-			local ok, err = Call(self, obj, arguments)
-			table.remove(self.call_stack, 1)
+			self:PopCallFrame()
+
 			return ok, err
-		end
-
-		function META:GetCallStack()
-			return self.call_stack or {}
-		end
-
-		function META:IsDefinetlyReachable()
-			local scope = self:GetScope()
-			local function_scope = scope:GetNearestFunctionScope()
-
-			if not scope:IsCertain() then return false, "scope is uncertain" end
-
-			if function_scope.uncertain_function_return == true then
-				return false, "uncertain function return"
-			end
-
-			if function_scope.lua_silent_error then
-				for _, scope in ipairs(function_scope.lua_silent_error) do
-					if not scope:IsCertain() then
-						return false, "parent function scope can throw an error"
-					end
-				end
-			end
-
-			for _, frame in ipairs(self:GetCallStack()) do
-				local scope = frame.scope
-
-				if not scope:IsCertain() then
-					return false, "call stack scope is uncertain"
-				end
-
-				if scope.uncertain_function_return == true then
-					return false, "call stack scope has uncertain function return"
-				end
-			end
-
-			return true
-		end
-
-		function META:IsMaybeReachable()
-			local scope = self:GetScope()
-			local function_scope = scope:GetNearestFunctionScope()
-
-			if function_scope.lua_silent_error then
-				for _, scope in ipairs(function_scope.lua_silent_error) do
-					if not scope:IsCertain() then return false end
-				end
-			end
-
-			for _, frame in ipairs(self:GetCallStack()) do
-				local parent_scope = frame.scope
-
-				if
-					not parent_scope:IsCertain() or
-					parent_scope.uncertain_function_return == true
-				then
-					if parent_scope:IsCertainFromScope(scope) then return false end
-				end
-			end
-
-			return true
-		end
-
-		function META:UncertainReturn()
-			self.call_stack[1].scope:UncertainReturn()
 		end
 	end,
 }

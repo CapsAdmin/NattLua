@@ -517,7 +517,7 @@ return function(META)
             if v.Type == "table" then v:SetReferenceId(nil) end
         end
 
-        -- if a return type is marked with literal, it will pass the literal value back to the caller
+        -- if a return type is marked with ref, it will pass the ref value back to the caller
         -- a bit like generics
         for i, v in ipairs(return_contract:GetData()) do
             if v.ref_argument then contract:Set(i, return_result:Get(i)) end
