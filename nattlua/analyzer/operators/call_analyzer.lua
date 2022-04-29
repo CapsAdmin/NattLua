@@ -1,6 +1,5 @@
 local ipairs = ipairs
 local math = math
-local unpack_union_tuples
 local ipairs = ipairs
 local type = type
 local math = math
@@ -16,66 +15,63 @@ local LNumber = require("nattlua.types.number").LNumber
 local Symbol = require("nattlua.types.symbol").Symbol
 local type_errors = require("nattlua.types.error_messages")
 
-do
-	local ipairs = ipairs
+local function should_expand(arg, contract)
+    local b = arg.Type == "union"
 
-	local function should_expand(arg, contract)
-		local b = arg.Type == "union"
+    if contract.Type == "any" then b = false end
 
-		if contract.Type == "any" then b = false end
+    if contract.Type == "union" then b = false end
 
-		if contract.Type == "union" then b = false end
+    if arg.Type == "union" and contract.Type == "union" and contract:CanBeNil() then
+        b = true
+    end
 
-		if arg.Type == "union" and contract.Type == "union" and contract:CanBeNil() then
-			b = true
-		end
+    return b
+end
 
-		return b
-	end
+local function unpack_union_tuples(obj, input)
+    local input_signature = obj:GetArguments()
+    local out = {}
+    local lengths = {}
+    local max = 1
+    local ys = {}
+    local arg_length = #input
 
-	function unpack_union_tuples(func_obj, arguments, function_arguments)
-		local out = {}
-		local lengths = {}
-		local max = 1
-		local ys = {}
-		local arg_length = #arguments
+    for i, val in ipairs(input) do
+        if not obj.no_expansion and should_expand(val, input_signature:Get(i)) then
+            lengths[i] = #val:GetData()
+            max = max * lengths[i]
+        else
+            lengths[i] = 0
+        end
 
-		for i, obj in ipairs(arguments) do
-			if not func_obj.no_expansion and should_expand(obj, function_arguments:Get(i)) then
-				lengths[i] = #obj:GetData()
-				max = max * lengths[i]
-			else
-				lengths[i] = 0
-			end
+        ys[i] = 1
+    end
 
-			ys[i] = 1
-		end
+    for i = 1, max do
+        local args = {}
 
-		for i = 1, max do
-			local args = {}
+        for i, val in ipairs(input) do
+            if lengths[i] == 0 then
+                args[i] = val
+            else
+                args[i] = val:GetData()[ys[i]]
+            end
+        end
 
-			for i, obj in ipairs(arguments) do
-				if lengths[i] == 0 then
-					args[i] = obj
-				else
-					args[i] = obj:GetData()[ys[i]]
-				end
-			end
+        out[i] = args
 
-			out[i] = args
+        for i = arg_length, 2, -1 do
+            if i == arg_length then ys[i] = ys[i] + 1 end
 
-			for i = arg_length, 2, -1 do
-				if i == arg_length then ys[i] = ys[i] + 1 end
+            if ys[i] > lengths[i] then
+                ys[i] = 1
+                ys[i - 1] = ys[i - 1] + 1
+            end
+        end
+    end
 
-				if ys[i] > lengths[i] then
-					ys[i] = 1
-					ys[i - 1] = ys[i - 1] + 1
-				end
-			end
-		end
-
-		return out
-	end
+    return out
 end
 
 return function(META)
@@ -125,19 +121,20 @@ return function(META)
         return Tuple(tbl)
     end
 
-    function META:CallAnalyzerFunction(obj, function_arguments, arguments)
+    function META:CallAnalyzerFunction(obj, input)
+        local signature_arguments = obj:GetArguments()
         do
-            local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
+            local ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetArguments())
 
             if not ok then
                 return type_errors.subset(a, b, {"argument #", i, " - ", reason})
             end
         end
 
-        local len = function_arguments:GetLength()
+        local len = signature_arguments:GetLength()
 
-        if len == math.huge and arguments:GetLength() == math.huge then
-            len = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
+        if len == math.huge and input:GetLength() == math.huge then
+            len = math.max(signature_arguments:GetMinimumLength(), input:GetMinimumLength())
         end
 
         if self:IsTypesystem() then
@@ -146,7 +143,7 @@ return function(META)
                     self:CallLuaTypeFunction(
                         obj:GetData().lua_function,
                         obj:GetData().scope or self:GetScope(),
-                        arguments:UnpackWithoutExpansion()
+                        input:UnpackWithoutExpansion()
                     ),
                 }
             )
@@ -155,13 +152,13 @@ return function(META)
 
         local tuples = {}
 
-        for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
+        for i, arguments in ipairs(unpack_union_tuples(obj, {input:Unpack(len)})) do
             tuples[i] = self:LuaTypesToTuple(
                 {
                     self:CallLuaTypeFunction(
                         obj:GetData().lua_function,
                         obj:GetData().scope or self:GetScope(),
-                        table.unpack(arg)
+                        table.unpack(arguments)
                     ),
                 }
             )

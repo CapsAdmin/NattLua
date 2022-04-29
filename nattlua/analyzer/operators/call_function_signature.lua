@@ -1,16 +1,16 @@
 local ipairs = ipairs
 local type_errors = require("nattlua.types.error_messages")
 return function(META)
-	function META:CallFunctionSignature(obj, arguments)
+	function META:CallFunctionSignature(obj, input)
 		do
-			local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
+			local ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetArguments())
 
 			if not ok then
 				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 			end
 		end
 
-		for i, arg in ipairs(arguments:GetData()) do
+		for i, arg in ipairs(input:GetData()) do
 			if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
 				if self.config.external_mutation then
 					self:Warning(

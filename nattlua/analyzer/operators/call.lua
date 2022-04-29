@@ -30,7 +30,6 @@ return {
 			return truthy_union
 		end
 
-
 		local function infer_argument_functions(self, obj, input_arguments)
 			-- infer any uncalled functions in the arguments to get their return type
 			for i, b in ipairs(input_arguments:GetData()) do
@@ -117,9 +116,9 @@ return {
 				infer_argument_functions(self, obj, input_arguments)				
 
 				if obj:GetData().lua_function then
-					return self:CallAnalyzerFunction(obj, obj:GetArguments(), input_arguments)
+					return self:CallAnalyzerFunction(obj, input_arguments)
 				elseif obj.function_body_node then
-					return self:CallBodyFunction(obj, input_arguments, obj.function_body_node)
+					return self:CallBodyFunction(obj, input_arguments)
 				end
 
 				return self:CallFunctionSignature(obj, input_arguments)

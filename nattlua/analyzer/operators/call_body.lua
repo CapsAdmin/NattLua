@@ -29,9 +29,11 @@ local function restore_mutated_types(self)
 	env.mutated_types = {}
 end
 
-local function check_and_setup_arguments(self, arguments, contracts, function_node, obj)
-	local len = contracts:GetSafeLength(arguments)
-	local contract_override = {}
+local function check_input(self, obj, input_arguments)
+    local function_node = obj.function_body_node
+    local signature_arguments = obj:GetArguments()
+	local len = signature_arguments:GetSafeLength(input_arguments)
+	local signature_override = {}
 
 	if function_node.identifiers[1] then -- analyze the type expressions
 		self:CreateAndPushFunctionScope(obj)
@@ -49,17 +51,17 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 			self:CreateLocalValue(key.value.value, Any())
 			local arg
 			local contract
-			arg = arguments:Get(i)
+			arg = input_arguments:Get(i)
 
 			if key.value.value == "..." then
-				contract = contracts:GetWithoutExpansion(i)
+				contract = signature_arguments:GetWithoutExpansion(i)
 			else
-				contract = contracts:Get(i)
+				contract = signature_arguments:Get(i)
 			end
 
 			if not arg then
 				arg = Nil()
-				arguments:Set(i, arg)
+				input_arguments:Set(i, arg)
 			end
 
 			local ref_callback = arg and
@@ -98,20 +100,20 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 
 		self:PopAnalyzerEnvironment()
 		self:PopScope()
-		contract_override = args
+		signature_override = args
 	end
 
 	do -- coerce untyped functions to contract callbacks
-		for i, arg in ipairs(arguments:GetData()) do
+		for i, arg in ipairs(input_arguments:GetData()) do
 			if arg.Type == "function" then
 				local func = arg
 
 				if
-					contract_override[i] and
-					contract_override[i].Type == "union" and
-					not contract_override[i].ref_argument
+					signature_override[i] and
+					signature_override[i].Type == "union" and
+					not signature_override[i].ref_argument
 				then
-					local merged = contract_override[i]:ShrinkToFunctionSignature()
+					local merged = signature_override[i]:ShrinkToFunctionSignature()
 
 					if merged then
 						func:SetArguments(merged:GetArguments())
@@ -119,7 +121,7 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 					end
 				else
 					if not func.explicit_arguments then
-						local contract = contract_override[i] or obj:GetArguments():Get(i)
+						local contract = signature_override[i] or obj:GetArguments():Get(i)
 
 						if contract then
 							if contract.Type == "union" then
@@ -139,7 +141,7 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 					end
 
 					if not func.explicit_return then
-						local contract = contract_override[i] or obj:GetReturnTypes():Get(i)
+						local contract = signature_override[i] or obj:GetReturnTypes():Get(i)
 
 						if contract then
 							if contract.Type == "union" then
@@ -161,8 +163,8 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 	end
 
 	for i = 1, len do
-		local arg = arguments:Get(i)
-		local contract = contract_override[i] or contracts:Get(i)
+		local arg = input_arguments:Get(i)
+		local contract = signature_override[i] or signature_arguments:Get(i)
 		local ok, reason
 
 		if not arg then
@@ -207,13 +209,13 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 			arg:GetUpvalue() and
 			not contract.ref_argument
 		then
-			mutate_type(self, i, arg, contract, arguments)
+			mutate_type(self, i, arg, contract, input_arguments)
 		else
 			-- if it's a literal argument we pass the incoming value
 			if not contract.ref_argument then
 				local t = contract:Copy()
 				t:SetContract(contract)
-				arguments:Set(i, t)
+				input_arguments:Set(i, t)
 			end
 		end
 	end
@@ -221,10 +223,10 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 	return true
 end
 
-local function check_return_result(self, result, contract)
+local function check_output(self, output, output_signature)
 	if self:IsTypesystem() then
 		-- in the typesystem we must not unpack tuples when checking
-		local ok, reason, a, b, i = result:IsSubsetOfTupleWithoutExpansion(contract)
+		local ok, reason, a, b, i = output:IsSubsetOfTupleWithoutExpansion(output_signature)
 
 		if not ok then
 			local _, err = type_errors.subset(a, b, {"return #", i, " '", b, "': ", reason})
@@ -234,43 +236,43 @@ local function check_return_result(self, result, contract)
 		return
 	end
 
-	local original_contract = contract
+	local original_contract = output_signature
 
 	if
-		contract:GetLength() == 1 and
-		contract:Get(1).Type == "union" and
-		contract:Get(1):HasType("tuple")
+		output_signature:GetLength() == 1 and
+		output_signature:Get(1).Type == "union" and
+		output_signature:Get(1):HasType("tuple")
 	then
-		contract = contract:Get(1)
+		output_signature = output_signature:Get(1)
 	end
 
 	if
-		result.Type == "tuple" and
-		result:GetLength() == 1 and
-		result:Get(1) and
-		result:Get(1).Type == "union" and
-		result:Get(1):HasType("tuple")
+		output.Type == "tuple" and
+		output:GetLength() == 1 and
+		output:Get(1) and
+		output:Get(1).Type == "union" and
+		output:Get(1):HasType("tuple")
 	then
-		result = result:Get(1)
+		output = output:Get(1)
 	end
 
-	if result.Type == "union" then
+	if output.Type == "union" then
 		-- typically a function with mutliple uncertain returns
-		for _, obj in ipairs(result:GetData()) do
+		for _, obj in ipairs(output:GetData()) do
 			if obj.Type ~= "tuple" then
 				-- if the function returns one value it's not in a tuple
 				obj = Tuple({obj})
 			end
 
 			-- check each tuple in the union
-			check_return_result(self, obj, original_contract)
+			check_output(self, obj, original_contract)
 		end
 	else
-		if contract.Type == "union" then
+		if output_signature.Type == "union" then
 			local errors = {}
 
-			for _, contract in ipairs(contract:GetData()) do
-				local ok, reason = result:IsSubsetOfTuple(contract)
+			for _, contract in ipairs(output_signature:GetData()) do
+				local ok, reason = output:IsSubsetOfTuple(contract)
 
 				if ok then
 					-- something is ok then just return and don't report any errors found
@@ -284,13 +286,13 @@ local function check_return_result(self, result, contract)
 				self:Error(error.reason)
 			end
 		else
-			if result.Type == "tuple" and result:GetLength() == 1 then
-				local val = result:GetFirstValue()
+			if output.Type == "tuple" and output:GetLength() == 1 then
+				local val = output:GetFirstValue()
 
 				if val.Type == "union" and val:GetLength() == 0 then return end
 			end
 
-			local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
+			local ok, reason, a, b, i = output:IsSubsetOfTuple(output_signature)
 
 			if not ok then self:Error(reason) end
 		end
@@ -298,7 +300,7 @@ local function check_return_result(self, result, contract)
 end
 
 return function(META)
-    function META:AnalyzeFunctionBody(obj, function_node, arguments)
+    function META:AnalyzeFunctionBody(obj, function_node, input)
         local scope = self:CreateAndPushFunctionScope(obj)
         self:PushTruthyExpressionContext(false)
         self:PushFalsyExpressionContext(false)
@@ -309,21 +311,21 @@ return function(META)
         )
 
         if function_node.self_call then
-            self:CreateLocalValue("self", arguments:Get(1) or Nil())
+            self:CreateLocalValue("self", input:Get(1) or Nil())
         end
 
         for i, identifier in ipairs(function_node.identifiers) do
             local argi = function_node.self_call and (i + 1) or i
 
             if self:IsTypesystem() then
-                self:CreateLocalValue(identifier.value.value, arguments:GetWithoutExpansion(argi))
+                self:CreateLocalValue(identifier.value.value, input:GetWithoutExpansion(argi))
             end
 
             if self:IsRuntime() then
                 if identifier.value.value == "..." then
-                    self:CreateLocalValue(identifier.value.value, arguments:Slice(argi))
+                    self:CreateLocalValue(identifier.value.value, input:Slice(argi))
                 else
-                    self:CreateLocalValue(identifier.value.value, arguments:Get(argi) or Nil())
+                    self:CreateLocalValue(identifier.value.value, input:Get(argi) or Nil())
                 end
             end
         end
@@ -335,7 +337,7 @@ return function(META)
             self:PushAnalyzerEnvironment("typesystem")
         end
 
-        local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
+        local output = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
 
         if
             function_node.kind == "local_type_function" or
@@ -345,7 +347,7 @@ return function(META)
         end
 
         self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
-        local function_scope = self:PopScope()
+        self:PopScope()
         self:PopFalsyExpressionContext()
         self:PopTruthyExpressionContext()
 
@@ -369,14 +371,16 @@ return function(META)
             end
         end
 
-        if analyzed_return.Type ~= "tuple" then
-            return Tuple({analyzed_return}), scope
+        if output.Type ~= "tuple" then
+            return Tuple({output}), scope
         end
 
-        return analyzed_return, scope
+        return output, scope
     end
 
-    function META:CallBodyFunction(obj, arguments, function_node)
+    function META:CallBodyFunction(obj, input)
+        local function_node = obj.function_body_node
+
         if obj:HasExplicitArguments() or function_node.identifiers_typesystem then
             if
                 function_node.kind == "local_type_function" or
@@ -388,7 +392,6 @@ return function(META)
                     for i, key in ipairs(function_node.identifiers) do
                         if function_node.self_call then i = i + 1 end
 
-                        local arg = arguments:Get(i)
                         local generic_upvalue = function_node.identifiers_typesystem and
                             function_node.identifiers_typesystem[i] or
                             nil
@@ -402,7 +405,7 @@ return function(META)
                         end
                     end
 
-                    local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
+                    local ok, err = check_input(self, obj, input)
 
                     if not ok then return ok, err end
                 end
@@ -411,7 +414,7 @@ return function(META)
                 -- local type foo(T: any) return T end
                 -- T becomes the type that is passed in, and not "any"
                 -- it's the equivalent of function foo<T extends any>(val: T) { return val }
-                local ok, reason, a, b, i = arguments:IsSubsetOfTupleWithoutExpansion(obj:GetArguments())
+                local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetArguments())
 
                 if not ok then
                     return type_errors.subset(a, b, {"argument #", i, " - ", reason})
@@ -419,7 +422,7 @@ return function(META)
             elseif self:IsRuntime() then
                 -- if we have explicit arguments, we need to do a complex check against the contract
                 -- this might mutate the arguments
-                local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
+                local ok, err = check_input(self, obj, input)
 
                 if not ok then return ok, err end
             end
@@ -427,10 +430,10 @@ return function(META)
 
         -- crawl the function with the new arguments
         -- return_result is either a union of tuples or a single tuple
-        local return_result, scope = self:AnalyzeFunctionBody(obj, function_node, arguments)
+        local output, scope = self:AnalyzeFunctionBody(obj, function_node, input)
         restore_mutated_types(self)
         -- used for analyzing side effects
-        obj:AddScope(arguments, return_result, scope)
+        obj:AddScope(input, output, scope)
 
         if not obj:HasExplicitArguments() then
             if not obj.arguments_inferred and function_node.identifiers then
@@ -451,7 +454,7 @@ return function(META)
                 end
             end
 
-            obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
+            obj:GetArguments():Merge(input:Slice(1, obj:GetArguments():GetMinimumLength()))
         end
 
         do -- this is for the emitter
@@ -464,32 +467,32 @@ return function(META)
             function_node:AddType(obj)
         end
 
-        local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
+        local output_signature = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
 
         -- if the function has return type annotations, analyze them and use it as contract
-        if not return_contract and function_node.return_types and self:IsRuntime() then
+        if not output_signature and function_node.return_types and self:IsRuntime() then
             self:CreateAndPushFunctionScope(obj)
             self:PushAnalyzerEnvironment("typesystem")
 
             for i, key in ipairs(function_node.identifiers) do
                 if function_node.self_call then i = i + 1 end
 
-                self:CreateLocalValue(key.value.value, arguments:Get(i))
+                self:CreateLocalValue(key.value.value, input:Get(i))
             end
 
-            return_contract = Tuple(self:AnalyzeExpressions(function_node.return_types))
+            output_signature = Tuple(self:AnalyzeExpressions(function_node.return_types))
             self:PopAnalyzerEnvironment()
             self:PopScope()
         end
 
-        if not return_contract then
+        if not output_signature then
             -- if there is no return type 
             if self:IsRuntime() then
                 local copy
 
-                for i, v in ipairs(return_result:GetData()) do
+                for i, v in ipairs(output:GetData()) do
                     if v.Type == "table" and not v:GetContract() then
-                        copy = copy or return_result:Copy()
+                        copy = copy or output:Copy()
                         local tbl = Table()
 
                         for _, kv in ipairs(v:GetData()) do
@@ -500,16 +503,16 @@ return function(META)
                     end
                 end
 
-                obj:GetReturnTypes():Merge(copy or return_result)
+                obj:GetReturnTypes():Merge(copy or output)
             end
 
-            return return_result
+            return output
         end
 
         -- check against the function's return type
-        check_return_result(self, return_result, return_contract)
+        check_output(self, output, output_signature)
 
-        if self:IsTypesystem() then return return_result end
+        if self:IsTypesystem() then return output end
 
         local contract = obj:GetReturnTypes():Copy()
 
@@ -519,8 +522,8 @@ return function(META)
 
         -- if a return type is marked with ref, it will pass the ref value back to the caller
         -- a bit like generics
-        for i, v in ipairs(return_contract:GetData()) do
-            if v.ref_argument then contract:Set(i, return_result:Get(i)) end
+        for i, v in ipairs(output_signature:GetData()) do
+            if v.ref_argument then contract:Set(i, output:Get(i)) end
         end
 
         return contract
