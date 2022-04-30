@@ -225,7 +225,7 @@ return function(META)
 				for _, v in ipairs(self.call_stack) do
 					-- if the callnode is the same, we're doing some infinite recursion
 					if v.call_node == call_node then
-						if obj.explicit_return then
+						if obj:IsExplicitOutputSignature() then
 							-- so if we have explicit return types, just return those
 							obj.recursively_called = obj:GetOutputSignature():Copy()
 							return obj.recursively_called

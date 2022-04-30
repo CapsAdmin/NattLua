@@ -38,7 +38,7 @@ local function unpack_union_tuples(obj, input)
     local arg_length = #input
 
     for i, val in ipairs(input) do
-        if not obj.no_expansion and should_expand(val, input_signature:Get(i)) then
+        if not obj:GetPreventInputArgumentExpansion() and should_expand(val, input_signature:Get(i)) then
             lengths[i] = #val:GetData()
             max = max * lengths[i]
         else

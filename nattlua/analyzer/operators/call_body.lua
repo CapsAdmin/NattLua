@@ -69,7 +69,7 @@ local function check_input(self, obj, input_arguments)
 				contract.ref_argument and
 				contract.Type == "function" and
 				arg.Type == "function" and
-				not arg.arguments_inferred
+				not arg:IsArgumentsInferred()
 
 			if contract and contract.ref_argument and arg and not ref_callback then
 				self:CreateLocalValue(key.value.value, arg)
@@ -135,16 +135,16 @@ local function check_input(self, obj, input_arguments)
                                     func:SetCalled(false)
 								end
 
-								func.arguments_inferred = true
+								func:SetArgumentsInferred(true)
 							elseif contract.Type == "function" then
 								func:SetInputSignature(contract:GetInputSignature():Copy(nil, true)) -- force copy tables so we don't mutate the contract
                                 func:SetCalled(false)
-								func.arguments_inferred = true
+								func:SetArgumentsInferred(true)
 							end
 						end
 					end
 
-					if not func.explicit_return then
+					if not func:IsExplicitOutputSignature() then
 						local contract = signature_override[i] or obj:GetOutputSignature():Get(i)
 
 						if contract then
@@ -444,7 +444,7 @@ return function(META)
         obj:AddScope(input, output, scope)
 
         if not obj:IsExplicitInputSignature() then
-            if not obj.arguments_inferred and function_node.identifiers then
+            if not obj:IsArgumentsInferred() and function_node.identifiers then
                 for i in ipairs(obj:GetInputSignature():GetData()) do
                     if function_node.self_call then
                         -- we don't count the actual self argument

@@ -34,6 +34,8 @@ META:GetSet("Scope", nil)
 META:GetSet("UpvaluePosition", nil)
 META:GetSet("InputIdentifiers", nil)
 META:GetSet("AnalyzerFunction", nil)
+META:IsSet("ArgumentsInferred", false)
+META:GetSet("PreventInputArgumentExpansion", false)
 
 function META:Copy(map, ...)
 	map = map or {}
@@ -73,12 +75,12 @@ function META.IsSubsetOf(A, B)
 		(
 			(
 				not B:IsCalled() and
-				not B.explicit_return
+				not B:IsExplicitOutputSignature()
 			)
 			or
 			(
 				not A:IsCalled() and
-				not A.explicit_return
+				not A:IsExplicitOutputSignature()
 			)
 		)
 	then
@@ -114,12 +116,12 @@ function META.IsCallbackSubsetOf(A, B)
 		(
 			(
 				not B:IsCalled() and
-				not B.explicit_return
+				not B:IsExplicitOutputSignature()
 			)
 			or
 			(
 				not A:IsCalled() and
-				not A.explicit_return
+				not A:IsExplicitOutputSignature()
 			)
 		)
 	then

@@ -210,11 +210,12 @@ do -- operators
 end
 
 do
+	META:GetSet("Parent", nil --[[# as TBaseType | nil]])
 	function META:SetParent(parent--[[#: TBaseType | nil]])
 		if parent then
-			if parent ~= self then self.parent = parent end
+			if parent ~= self then self.Parent = parent end
 		else
-			self.parent = nil
+			self.Parent = nil
 		end
 	end
 
@@ -223,10 +224,10 @@ do
 		local done = {}
 
 		while true do
-			if not parent.parent or done[parent] then break end
+			if not parent.Parent or done[parent] then break end
 
 			done[parent] = true
-			parent = parent.parent
+			parent = parent.Parent
 		end
 
 		return parent

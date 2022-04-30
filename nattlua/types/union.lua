@@ -1,5 +1,4 @@
 local tostring = tostring
-local math = math
 local setmetatable = _G.setmetatable
 local table = _G.table
 local ipairs = _G.ipairs
@@ -388,72 +387,6 @@ function META:SetMax(val--[[#: TNumber]])
 	end
 
 	return copy
-end
-
-function META:Call(
-	analyzer--[[#: any]],
-	arguments--[[#: TBaseType]],
-	call_node--[[#: any]],
-	not_recursive_call
-)
-	if self:IsEmpty() then return type_errors.operation("call", nil) end
-
-	local is_overload = true
-
-	for _, obj in ipairs(self.Data) do
-		if obj.Type ~= "function" or obj:GetFunctionBodyNode() then
-			is_overload = false
-
-			break
-		end
-	end
-
-	if is_overload then
-		local errors = {}
-
-		for _, obj in ipairs(self.Data) do
-			if
-				obj.Type == "function" and
-				arguments:GetLength() < obj:GetInputSignature():GetMinimumLength()
-			then
-				table.insert(
-					errors,
-					{
-						"invalid amount of arguments: ",
-						arguments,
-						" ~= ",
-						obj:GetInputSignature(),
-					}
-				)
-			else
-				local res, reason = analyzer:Call(obj, arguments, call_node, not_recursive_call)
-
-				if res then return res end
-
-				table.insert(errors, reason)
-			end
-		end
-
-		return type_errors.other(errors)
-	end
-
-	local new = META.New({})
-
-	for _, obj in ipairs(self.Data) do
-		local val = analyzer:Assert(analyzer:Call(obj, arguments, call_node, not_recursive_call))
-
-		-- TODO
-		if val.Type == "tuple" and val:GetLength() == 1 then
-			val = val:Unpack(1)
-		elseif val.Type == "union" and val:GetMinimumLength() == 1 then
-			val = val:GetAtIndex(1)
-		end
-
-		new:AddType(val)
-	end
-
-	local Tuple = require("nattlua.types.tuple").Tuple
-	return Tuple({new})
 end
 
 function META:IsLiteral()

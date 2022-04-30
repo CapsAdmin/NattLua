@@ -167,7 +167,7 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 				value.Type == "function" and
 				not value:IsCalled()
 				and
-				not value.explicit_return and
+				not value:IsExplicitOutputSignature() and
 				union:HasType("function")
 			then
 				self:Assert(self:Call(value, value:GetInputSignature():Copy()))

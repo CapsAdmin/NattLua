@@ -1,34 +1,14 @@
 local ipairs = ipairs
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
+local type_errors = require("nattlua.types.error_messages")
+local Tuple = require("nattlua.types.tuple").Tuple
+
 return {
 	Call = function(META)
 		require("nattlua.analyzer.operators.call_analyzer")(META)
 		require("nattlua.analyzer.operators.call_body")(META)
 		require("nattlua.analyzer.operators.call_function_signature")(META)
-
-		local function make_callable_union(self, obj)
-			local truthy_union = obj.New()
-
-			for _, v in ipairs(obj.Data) do
-				if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-					self:ErrorAndCloneCurrentScope(
-						{
-							"union ",
-							obj,
-							" contains uncallable object ",
-							v,
-						},
-						obj
-					)
-				else
-					truthy_union:AddType(v)
-				end
-			end
-
-			truthy_union:SetUpvalue(obj:GetUpvalue())
-			return truthy_union
-		end
 
 		local function infer_argument_functions(self, obj, input)
 			-- infer any uncalled functions in the arguments to get their return type
@@ -51,7 +31,7 @@ return {
 
 						if func.Type == "union" then func = a:GetType("function") end
 
-						b.arguments_inferred = true
+						b:SetArgumentsInferred(true)
 						-- TODO: callbacks with ref arguments should not be called
 						-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
 						local has_ref_arg = false
@@ -73,12 +53,6 @@ return {
 		end
 
 		local function call(self, obj, input)
-			if obj.Type == "union" then
-				-- make sure the union is callable, we pass the analyzer and 
-				-- it will throw errors if the union contains something that is not callable
-				-- however it will continue and just remove those values from the union
-				obj = make_callable_union(self, obj)
-			end
 
 			-- if obj is a tuple it will return its first value
 			-- (myfunc,otherfunc)(1) will always
@@ -127,7 +101,100 @@ return {
 			end
 		end
 
+		local function make_callable_union(self, obj)
+			local truthy_union = obj.New()
+
+			for _, v in ipairs(obj.Data) do
+				if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
+					self:ErrorAndCloneCurrentScope(
+						{
+							"union ",
+							obj,
+							" contains uncallable object ",
+							v,
+						},
+						obj
+					)
+				else
+					truthy_union:AddType(v)
+				end
+			end
+
+			truthy_union:SetUpvalue(obj:GetUpvalue())
+			return truthy_union
+		end
+
+		function META:CallUnion(obj, input, call_node, not_recursive_call)
+			if obj:IsEmpty() then return type_errors.operation("call", nil) end
+
+			-- make sure the union is callable, we pass the analyzer and 
+			-- it will throw errors if the union contains something that is not callable
+			-- however it will continue and just remove those values from the union
+			obj = make_callable_union(self, obj)
+
+
+			local is_overload = true
+		
+			for _, obj in ipairs(obj.Data) do
+				if obj.Type ~= "function" or obj:GetFunctionBodyNode() then
+					is_overload = false
+		
+					break
+				end
+			end
+		
+			if is_overload then
+				local errors = {}
+		
+				for _, obj in ipairs(obj.Data) do
+					if
+						obj.Type == "function" and
+						input:GetLength() < obj:GetInputSignature():GetMinimumLength()
+					then
+						table.insert(
+							errors,
+							{
+								"invalid amount of arguments: ",
+								input,
+								" ~= ",
+								obj:GetInputSignature(),
+							}
+						)
+					else
+						local res, reason = self:Call(obj, input, call_node, not_recursive_call)
+		
+						if res then return res end
+		
+						table.insert(errors, reason)
+					end
+				end
+		
+				return type_errors.other(errors)
+			end
+		
+			local new = Union({})
+		
+			for _, obj in ipairs(obj.Data) do
+				local val = self:Assert(self:Call(obj, input, call_node, not_recursive_call))
+		
+				-- TODO
+				if val.Type == "tuple" and val:GetLength() == 1 then
+					val = val:Unpack(1)
+				elseif val.Type == "union" and val:GetMinimumLength() == 1 then
+					val = val:GetAtIndex(1)
+				end
+		
+				new:AddType(val)
+			end
+		
+			return Tuple({new})
+		end
+
 		function META:Call(obj, input, call_node, not_recursive_call)
+			if obj.Type == "union" then
+				return self:CallUnion(obj, input, call_node, not_recursive_call)
+			end
+
 			local ok, err = self:PushCallFrame(obj, call_node, not_recursive_call)
 
 			if not ok == false then return ok, err end
