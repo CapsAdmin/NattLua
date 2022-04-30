@@ -83,13 +83,12 @@ return function(META)
                 tbl[i] = v
             else
                 if type(v) == "function" then
-                    tbl[i] = Function(
-                        {
-                            lua_function = v,
-                            arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-                            ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-                        }
-                    ):SetLiteral(true)
+                    local func = Function()
+                    func:SetAnalyzerFunction(v)
+                    func:SetInputSignature(Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
+                    func:SetOutputSignature(Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
+                    func:SetLiteral(true)
+                    tbl[i] = func
                 else
                     local t = type(v)
 
@@ -141,8 +140,8 @@ return function(META)
             local ret = self:LuaTypesToTuple(
                 {
                     self:CallLuaTypeFunction(
-                        obj:GetData().lua_function,
-                        obj:GetData().scope or self:GetScope(),
+                        obj:GetAnalyzerFunction(),
+                        obj:GetScope() or self:GetScope(),
                         input:UnpackWithoutExpansion()
                     ),
                 }
@@ -156,8 +155,8 @@ return function(META)
             tuples[i] = self:LuaTypesToTuple(
                 {
                     self:CallLuaTypeFunction(
-                        obj:GetData().lua_function,
-                        obj:GetData().scope or self:GetScope(),
+                        obj:GetAnalyzerFunction(),
+                        obj:GetScope() or self:GetScope(),
                         table.unpack(arguments)
                     ),
                 }

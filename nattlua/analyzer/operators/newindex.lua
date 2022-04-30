@@ -36,8 +36,8 @@ return {
 
 			if
 				val.Type == "function" and
-				val.function_body_node and
-				val.function_body_node.self_call
+				val:GetFunctionBodyNode() and
+				val:GetFunctionBodyNode().self_call
 			then
 				local arg = val:GetInputSignature():Get(1)
 
@@ -46,7 +46,7 @@ return {
 					val = val:Copy()
 					val:SetCalled(nil)
 					val:GetInputSignature():Set(1, Union({Any(), obj}))
-					self:AddToUnreachableCodeAnalysis(val, val:GetInputSignature(), val.function_body_node, true)
+					self:AddToUnreachableCodeAnalysis(val, val:GetInputSignature(), val:GetFunctionBodyNode(), true)
 				end
 			end
 
@@ -118,8 +118,8 @@ return {
 
 					if existing then
 						if val.Type == "function" and existing.Type == "function" then
-							for i, v in ipairs(val.argument_identifiers) do
-								if not existing.argument_identifiers[i] then
+							for i, v in ipairs(val:GetInputIdentifiers()) do
+								if not existing:GetInputIdentifiers()[i] then
 									self:Error("too many arguments")
 
 									break
@@ -128,7 +128,9 @@ return {
 
 							val:SetInputSignature(existing:GetInputSignature())
 							val:SetOutputSignature(existing:GetOutputSignature())
-							val.explicit_arguments = true
+							val:SetExplicitOutputSignature(true)
+							val:SetExplicitInputSignature(true)
+							val:SetCalled(false)
 						end
 
 						local ok, err = val:IsSubsetOf(existing)

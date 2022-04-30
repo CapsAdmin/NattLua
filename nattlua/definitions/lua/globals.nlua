@@ -93,7 +93,7 @@ analyzer function pairs(tbl: Table)
 	analyzer:PushAnalyzerEnvironment("typesystem")
 	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
 	analyzer:PopAnalyzerEnvironment()
-	local k, v = analyzer:CallLuaTypeFunction(next:GetData().lua_function, analyzer:GetScope(), tbl)
+	local k, v = analyzer:CallLuaTypeFunction(next:GetAnalyzerFunction(), analyzer:GetScope(), tbl)
 	local done = false
 
 	if v and v.Type == "union" then v:RemoveType(types.Symbol(nil)) end
@@ -133,7 +133,7 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 	analyzer:PushAnalyzerEnvironment("typesystem")
 	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
 	analyzer:PopAnalyzerEnvironment()
-	local k, v = analyzer:CallLuaTypeFunction(next:GetData().lua_function, analyzer:GetScope(), tbl)
+	local k, v = analyzer:CallLuaTypeFunction(next:GetAnalyzerFunction(), analyzer:GetScope(), tbl)
 	local done = false
 	return function()
 		if done then return nil end
@@ -230,14 +230,11 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 	local compiler = nl.Compiler(str, chunk_name and chunk_name:GetData() or nil)
 	assert(compiler:Lex())
 	assert(compiler:Parse())
-	return types.Function(
-		{
-			arg = types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
-			ret = types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
-			lua_function = function(...)
-				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-			end,
-		}
+	return types.LuaTypeFunction(function(...)
+		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
+	end,
+		types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
+		types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
 	)
 end
 
@@ -265,9 +262,9 @@ analyzer function loadfile(path: string)
 	assert(compiler:Lex())
 	assert(compiler:Parse())
 	local f = types.AnyFunction()
-	f.Data.lua_function = function(...)
+	f:SetAnalyzerFunction(function(...)
 		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
-	end
+	end)
 	return f
 end
 

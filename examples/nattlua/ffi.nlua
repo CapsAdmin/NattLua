@@ -51,7 +51,7 @@ type ffi.C = {
 				type = analyzer:CallTypesystemUpvalue(types.LString("CDataPointer"), ctype_to_nl_type(info.return_type))
 			end
 
-			return types.Function({ret = types.Tuple({type}), arg = types.Tuple(arguments)})
+			return types.Function(types.Tuple(arguments), types.Tuple({type}))
 		end
 	end,
 }

@@ -33,7 +33,7 @@ return {
 		local function infer_argument_functions(self, obj, input)
 			-- infer any uncalled functions in the arguments to get their return type
 			for i, b in ipairs(input:GetData()) do
-				if b.Type == "function" and not b:IsCalled() and not b:HasExplicitOutputSignature() then
+				if b.Type == "function" and not b:IsCalled() and not b:IsExplicitOutputSignature() then
 					local a =  obj:GetInputSignature():Get(i)
 
 					if
@@ -115,9 +115,9 @@ return {
 
 				infer_argument_functions(self, obj, input)				
 
-				if obj:GetData().lua_function then
+				if obj:GetAnalyzerFunction() then
 					return self:CallAnalyzerFunction(obj, input)
-				elseif obj.function_body_node then
+				elseif obj:GetFunctionBodyNode() then
 					return self:CallBodyFunction(obj, input)
 				end
 

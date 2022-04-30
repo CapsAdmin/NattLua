@@ -23,7 +23,7 @@ return function(META)
 
 	function META:CreateAndPushFunctionScope(obj)
 		return self:PushScope(
-			LexicalScope(obj:GetData().scope or self:GetScope(), obj:GetData().upvalue_position, obj)
+			LexicalScope(obj:GetScope() or self:GetScope(), obj:GetUpvaluePosition(), obj)
 		)
 	end
 

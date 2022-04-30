@@ -633,19 +633,14 @@ analyze[[
 ]]
 analyze(
 	[[
-    local type Type = "foo" | "bar" 
-    local type Object = {
-        [1337] = 1,
-    }
-
-    local table_pool = function(alloc: ref (function=()>({[string] = any})))
+    local table_pool = function(alloc: (function=()>({[string] = any})))
         local pool = {} as {[number] = return_type<|alloc|>[1]}
         return function()
             return pool[1]
         end
     end
 
-    table_pool(function() return { [777] = 777 } as Object end)()
+    table_pool(function() return { [777] = 777 } end)()
 ]],
 	"777 is not the same type as string"
 )

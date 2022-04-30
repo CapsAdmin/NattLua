@@ -13,7 +13,9 @@ type NULL = INULL
 analyzer function hook.Add(eventName: string, obj: any, callback: ref function=(...any)>(...any))
 	local event_callback = env.typesystem.EventCallbacks:Get(eventName)
 	callback:SetOutputSignature(event_callback:GetOutputSignature())
+	callback:SetExplicitOutputSignature(true)
 	callback:SetInputSignature(event_callback:GetInputSignature())
+	callback:SetCalled(false)
 end
 
 analyzer function CompileString(code: string, name: string, should_throw: boolean | nil)

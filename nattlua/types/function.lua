@@ -11,7 +11,7 @@ local META = dofile("nattlua/types/base.lua")
 META.Type = "function"
 
 function META:__call(...)
-	if self:GetData().lua_function then return self:GetData().lua_function(...) end
+	if self:GetAnalyzerFunction() then return self:GetAnalyzerFunction()(...) end
 end
 
 function META.Equal(a, b)
@@ -25,48 +25,29 @@ function META:__tostring()
 end
 
 META:IsSet("Called", false)
-
-do
-	function META:GetInputSignature()
-		return self:GetData().arg or Tuple({})
-	end
-
-	function META:GetOutputSignature()
-		return self:GetData().ret or Tuple({})
-	end
-
-	function META:HasExplicitInputSignature()
-		return self.explicit_arguments
-	end
-
-	function META:HasExplicitOutputSignature()
-		return self.explicit_return_set
-	end
-
-	function META:SetOutputSignature(tup)
-		self:GetData().ret = tup
-		self.explicit_return_set = tup
-		self:SetCalled()
-	end
-
-	function META:SetInputSignature(tup)
-		self:GetData().arg = tup
-		self:SetCalled()
-	end
-end
+META:IsSet("ExplicitInputSignature", false)
+META:IsSet("ExplicitOutputSignature", false)
+META:GetSet("InputSignature", nil)
+META:GetSet("OutputSignature", nil)
+META:GetSet("FunctionBodyNode", nil)
+META:GetSet("Scope", nil)
+META:GetSet("UpvaluePosition", nil)
+META:GetSet("InputIdentifiers", nil)
+META:GetSet("AnalyzerFunction", nil)
 
 function META:Copy(map, ...)
 	map = map or {}
 	local copy = self.New({arg = Tuple({}), ret = Tuple({})})
 	map[self] = map[self] or copy
-	copy:GetData().ret = self:GetOutputSignature():Copy(map, ...)
-	copy:GetData().arg = self:GetInputSignature():Copy(map, ...)
-	copy:GetData().lua_function = self:GetData().lua_function
-	copy:GetData().scope = self:GetData().scope
+	copy:SetUpvaluePosition(self:GetUpvaluePosition())
+	copy:SetOutputSignature(self:GetOutputSignature():Copy(map, ...))
+	copy:SetInputSignature(self:GetInputSignature():Copy(map, ...))
+	copy:SetAnalyzerFunction(self:GetAnalyzerFunction())
+	copy:SetScope(self:GetScope())
 	copy:SetLiteral(self:IsLiteral())
 	copy:CopyInternalsFrom(self)
-	copy.function_body_node = self.function_body_node
-	copy.Called = self.Called
+	copy:SetFunctionBodyNode(self:GetFunctionBodyNode())
+	copy:SetCalled(self:IsCalled())
 	return copy
 end
 
@@ -192,8 +173,11 @@ function META:IsPure()
 	return #self:GetSideEffects() == 0
 end
 
-function META.New(data)
-	return setmetatable({Data = data or {}}, META)
+function META.New(input, output)
+	local self = setmetatable({}, META)
+	self:SetInputSignature(input)
+	self:SetOutputSignature(output)
+	return self
 end
 
 function META:IsRefFunction()
@@ -211,20 +195,11 @@ end
 return {
 	Function = META.New,
 	AnyFunction = function()
-		return META.New({
-			arg = Tuple({VarArg(Any())}),
-			ret = Tuple({VarArg(Any())}),
-		})
+		return META.New(Tuple({VarArg(Any())}), Tuple({VarArg(Any())}))
 	end,
 	LuaTypeFunction = function(lua_function, arg, ret)
-		local self = META.New()
-		self:SetData(
-			{
-				arg = Tuple(arg),
-				ret = Tuple(ret),
-				lua_function = lua_function,
-			}
-		)
+		local self = META.New(Tuple(arg), Tuple(ret))
+		self:SetAnalyzerFunction(lua_function)
 		return self
 	end,
 }

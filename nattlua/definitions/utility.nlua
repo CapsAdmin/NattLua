@@ -43,6 +43,8 @@ end
 
 analyzer function set_return_type(func: Function, tup: any)
 	func:SetOutputSignature(tup)
+	func:SetExplicitOutputSignature(true)
+	func:SetCalled(false)
 end
 
 analyzer function argument_type(func: Function, i: number | nil)

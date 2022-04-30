@@ -159,18 +159,15 @@ end
 
 return {
 	AnalyzeFunction = function(self, node)
-		local obj = Function(
-			{
-				scope = self:GetScope(),
-				upvalue_position = #self:GetScope():GetUpvalues("runtime"),
-			}
-		)
-		obj.argument_identifiers = node.identifiers
+		local obj = Function()
+		obj:SetUpvaluePosition(#self:GetScope():GetUpvalues("runtime"))
+		obj:SetScope(self:GetScope())
+		obj:SetInputIdentifiers(node.identifiers)
 		self:PushCurrentType(obj, "function")
 		self:CreateAndPushFunctionScope(obj)
 		self:PushAnalyzerEnvironment("typesystem")
-		obj.Data.arg = analyze_arguments(self, node)
-		obj.Data.ret = analyze_return_types(self, node)
+		obj:SetInputSignature(analyze_arguments(self, node))
+		obj:SetOutputSignature(analyze_return_types(self, node))
 		self:PopAnalyzerEnvironment()
 		self:PopScope()
 		self:PopCurrentType("function")
@@ -178,13 +175,13 @@ return {
 		if node.kind == "analyzer_function" or node.kind == "local_analyzer_function" then
 			local em = Emitter({type_annotations = false})
 			em:EmitFunctionBody(node)
-			obj.Data.lua_function = self:CompileLuaAnalyzerDebugCode("return function " .. em:Concat(), node)()
+			obj:SetAnalyzerFunction(self:CompileLuaAnalyzerDebugCode("return function " .. em:Concat(), node)())
 		end
 
-		if node.statements then obj.function_body_node = node end
+		if node.statements then obj:SetFunctionBodyNode(node) end
 
-		obj.explicit_arguments = has_explicit_arguments(node)
-		obj.explicit_return = has_expicit_return_type(node)
+		obj:SetExplicitInputSignature(has_explicit_arguments(node))
+		obj:SetExplicitOutputSignature(has_expicit_return_type(node))
 
 		if self:IsRuntime() then self:AddToUnreachableCodeAnalysis(obj) end
 

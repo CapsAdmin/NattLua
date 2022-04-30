@@ -99,10 +99,7 @@ local analyzer function cast(node: any, args: any)
 			return_type = cast(node.t, args)
 		end
 
-		local obj = types.Function({
-			ret = types.Tuple({return_type}),
-			arg = types.Tuple(arguments),
-		})
+		local obj = types.Function(types.Tuple(arguments), types.Tuple({return_type}))
 		return obj
 	elseif node.tag == "Array" then
 		local tbl = types.Table()

@@ -164,7 +164,9 @@ local type Events = {
 analyzer function hook.Add(eventName: string, obj: any, callback: function=(...)>(...))
 	local event_callback = env.typesystem.Events:Get(eventName)
 	callback:SetOutputSignature(event_callback:GetOutputSignature())
+	callback:SetExplicitOutputSignature(true)
 	callback:SetInputSignature(event_callback:GetInputSignature())
+	callback:SetCalled(false)
 end
 
 analyzer function Entity:IsPlayer()

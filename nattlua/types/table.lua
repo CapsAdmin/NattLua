@@ -669,7 +669,9 @@ function META:CoerceUntypedFunctions(from--[[#: TTable]])
 		if kv.val.Type == "function" and kv_from.val.Type == "function" then
 			kv.val:SetInputSignature(kv_from.val:GetInputSignature())
 			kv.val:SetOutputSignature(kv_from.val:GetOutputSignature())
-			kv.val.explicit_arguments = true
+			kv.val:SetExplicitOutputSignature(true)
+			kv.val:SetExplicitInputSignature(true)
+			kv.val:SetCalled(false)
 		end
 	end
 end

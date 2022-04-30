@@ -564,7 +564,7 @@ analyze[[
     local type b = analyzer function()
         _G.LOL = nil
         local t = analyzer:GetLocalOrGlobalValue(types.LString("a"))
-        local func = t:GetData().lua_function
+        local func = t:GetAnalyzerFunction()
         func()
         if not _G.LOL then
             error("test fail")

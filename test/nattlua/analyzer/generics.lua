@@ -11,10 +11,7 @@ analyze[=[
     local analyzer function FunctionFromTuples(arg: any, ret: any)
         if arg.Type ~= "tuple" then arg = types.Tuple({arg})  end -- TODO
         if ret.Type ~= "tuple" then ret = types.Tuple({ret})  end -- TODO
-        return types.Function({
-            arg = arg,
-            ret = ret,
-        })
+        return types.Function(arg, ret)
     end
 
     function events.Declare<|event_name: string, arguments: any, return_types: any|>
@@ -44,10 +41,7 @@ analyze[=[
     local analyzer function FunctionFromTuples(arg: any, ret: any)
         if arg.Type ~= "tuple" then arg = types.Tuple({arg})  end -- TODO
         if ret.Type ~= "tuple" then ret = types.Tuple({ret})  end -- TODO
-        return types.Function({
-            arg = arg,
-            ret = ret,
-        })
+        return types.Function(arg, ret)
     end
 
     function events.Declare<|event_name: string, arguments: any, return_types: any|>

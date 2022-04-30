@@ -135,13 +135,13 @@ return function(META)
 
 			for _, func in ipairs(self.deferred_calls) do
 				if
-					func:HasExplicitInputSignature() and
+					func:IsExplicitInputSignature() and
 					not func:IsCalled()
 					and
 					not func.done and
 					not func:IsRefFunction()
 				then
-					call(self, func, func.function_body_node)
+					call(self, func, func:GetFunctionBodyNode())
 					called_count = called_count + 1
 					func.done = true
 					func:SetCalled()
@@ -150,13 +150,13 @@ return function(META)
 
 			for _, func in ipairs(self.deferred_calls) do
 				if
-					not func:HasExplicitInputSignature() and
+					not func:IsExplicitInputSignature() and
 					not func:IsCalled()
 					and
 					not func.done and
 					not func:IsRefFunction()
 				then
-					call(self, func, func.function_body_node)
+					call(self, func, func:GetFunctionBodyNode())
 					called_count = called_count + 1
 					func.done = true
 					func:SetCalled()

@@ -64,10 +64,7 @@ function META:ShrinkToFunctionSignature()
 	end
 
 	local Function = require("nattlua.types.function").Function
-	return Function({
-		arg = arg,
-		ret = ret,
-	})
+	return Function(arg, ret)
 end
 
 local sort = function(a, b)
@@ -109,9 +106,9 @@ function META:AddType(e--[[#: TBaseType]])
 				e.Type ~= "function" or
 				e:GetContract() or
 				(
-					e.function_body_node and
+					e:GetFunctionBodyNode() and
 					(
-						e.function_body_node == v.function_body_node
+						e:GetFunctionBodyNode() == v:GetFunctionBodyNode()
 					)
 				)
 			then
@@ -404,7 +401,7 @@ function META:Call(
 	local is_overload = true
 
 	for _, obj in ipairs(self.Data) do
-		if obj.Type ~= "function" or obj.function_body_node then
+		if obj.Type ~= "function" or obj:GetFunctionBodyNode() then
 			is_overload = false
 
 			break

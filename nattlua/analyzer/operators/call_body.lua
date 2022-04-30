@@ -30,7 +30,7 @@ local function restore_mutated_types(self)
 end
 
 local function check_input(self, obj, input_arguments)
-    local function_node = obj.function_body_node
+    local function_node = obj:GetFunctionBodyNode()
     local signature_arguments = obj:GetInputSignature()
 	local len = signature_arguments:GetSafeLength(input_arguments)
 	local signature_override = {}
@@ -118,9 +118,11 @@ local function check_input(self, obj, input_arguments)
 					if merged then
 						func:SetInputSignature(merged:GetInputSignature())
 						func:SetOutputSignature(merged:GetOutputSignature())
+                		func:SetExplicitOutputSignature(true)
+                        func:SetCalled(false)
 					end
 				else
-					if not func:HasExplicitInputSignature() then
+					if not func:IsExplicitInputSignature() then
 						local contract = signature_override[i] or obj:GetInputSignature():Get(i)
 
 						if contract then
@@ -130,11 +132,13 @@ local function check_input(self, obj, input_arguments)
 								for _, func in ipairs(contract:GetData()) do
 									tup:Merge(func:GetInputSignature())
 									func:SetInputSignature(tup)
+                                    func:SetCalled(false)
 								end
 
 								func.arguments_inferred = true
 							elseif contract.Type == "function" then
 								func:SetInputSignature(contract:GetInputSignature():Copy(nil, true)) -- force copy tables so we don't mutate the contract
+                                func:SetCalled(false)
 								func.arguments_inferred = true
 							end
 						end
@@ -152,8 +156,12 @@ local function check_input(self, obj, input_arguments)
 								end
 
 								func:SetOutputSignature(tup)
+                                func:SetExplicitOutputSignature(true)
+                                func:SetCalled(false)
 							elseif contract.Type == "function" then
 								func:SetOutputSignature(contract:GetOutputSignature())
+                                func:SetExplicitOutputSignature(true)
+                                func:SetCalled(false)
 							end
 						end
 					end
@@ -379,9 +387,9 @@ return function(META)
     end
 
     function META:CallBodyFunction(obj, input)
-        local function_node = obj.function_body_node
+        local function_node = obj:GetFunctionBodyNode()
 
-        if obj:HasExplicitInputSignature() or function_node.identifiers_typesystem then
+        if obj:IsExplicitInputSignature() or function_node.identifiers_typesystem then
             if
                 function_node.kind == "local_type_function" or
                 function_node.kind == "type_function"
@@ -435,7 +443,7 @@ return function(META)
         -- used for analyzing side effects
         obj:AddScope(input, output, scope)
 
-        if not obj:HasExplicitInputSignature() then
+        if not obj:IsExplicitInputSignature() then
             if not obj.arguments_inferred and function_node.identifiers then
                 for i in ipairs(obj:GetInputSignature():GetData()) do
                     if function_node.self_call then
@@ -467,7 +475,7 @@ return function(META)
             function_node:AddType(obj)
         end
 
-        local output_signature = obj:HasExplicitOutputSignature() and obj:GetOutputSignature()
+        local output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
 
         -- if the function has return type annotations, analyze them and use it as contract
         if not output_signature and function_node.return_types and self:IsRuntime() then
