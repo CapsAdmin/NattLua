@@ -78,7 +78,7 @@ return {
 				return type_errors.other("attempt to index a string value")
 			end
 
-			local tracked = self:GetTrackedObjectWithKey(obj, key)
+			local tracked = self:GetTrackedTableWithKey(obj, key)
 
 			if tracked then return tracked end
 
