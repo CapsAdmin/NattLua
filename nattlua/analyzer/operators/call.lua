@@ -11,6 +11,11 @@ return {
 		require("nattlua.analyzer.operators.call_body")(META)
 		require("nattlua.analyzer.operators.call_function_signature")(META)
 
+
+		local function call_tuple(self, obj, input, call_node)
+			return self:Call(obj:GetFirstValue(), input, call_node, true)
+		end
+
 		local function call_union(self, obj, input, call_node)
 			if obj:IsEmpty() then return type_errors.operation("call", nil) end
 
@@ -140,6 +145,16 @@ return {
 			return Tuple({Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))})
 		end
 
+		local function call_other(obj)
+			return type_errors.other({
+				"type ",
+				obj.Type,
+				": ",
+				obj,
+				" cannot be called",
+			})
+		end
+
 		local function call_function(self, obj, input)
 			-- mark the object as called so the unreachable code step won't call it
 			obj:SetCalled(true)
@@ -191,20 +206,6 @@ return {
 			end
 
 			return self:CallFunctionSignature(obj, input)
-		end
-
-		local function call_other(obj)
-			return type_errors.other({
-				"type ",
-				obj.Type,
-				": ",
-				obj,
-				" cannot be called",
-			})
-		end
-
-		local function call_tuple(self, obj, input, call_node)
-			return self:Call(obj:GetFirstValue(), input, call_node, true)
 		end
 
 		function META:Call(obj, input, call_node, not_recursive_call)
