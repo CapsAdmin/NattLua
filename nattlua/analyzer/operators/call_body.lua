@@ -308,92 +308,13 @@ local function check_output(self, output, output_signature)
 end
 
 return function(META)
-    function META:AnalyzeFunctionBody(obj, function_node, input)
-        local scope = self:CreateAndPushFunctionScope(obj)
-        self:PushTruthyExpressionContext(false)
-        self:PushFalsyExpressionContext(false)
-        self:PushGlobalEnvironment(
-            function_node,
-            self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
-            self:GetCurrentAnalyzerEnvironment()
-        )
-
-        if function_node.self_call then
-            self:CreateLocalValue("self", input:Get(1) or Nil())
-        end
-
-        for i, identifier in ipairs(function_node.identifiers) do
-            local argi = function_node.self_call and (i + 1) or i
-
-            if self:IsTypesystem() then
-                self:CreateLocalValue(identifier.value.value, input:GetWithoutExpansion(argi))
-            end
-
-            if self:IsRuntime() then
-                if identifier.value.value == "..." then
-                    self:CreateLocalValue(identifier.value.value, input:Slice(argi))
-                else
-                    self:CreateLocalValue(identifier.value.value, input:Get(argi) or Nil())
-                end
-            end
-        end
-
-        if
-            function_node.kind == "local_type_function" or
-            function_node.kind == "type_function"
-        then
-            self:PushAnalyzerEnvironment("typesystem")
-        end
-
-        local output = self:AnalyzeStatementsAndCollectOutputSignatures(function_node)
-
-        if
-            function_node.kind == "local_type_function" or
-            function_node.kind == "type_function"
-        then
-            self:PopAnalyzerEnvironment()
-        end
-
-        self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
-        self:PopScope()
-        self:PopFalsyExpressionContext()
-        self:PopTruthyExpressionContext()
-
-        if scope.TrackedObjects then
-            for _, obj in ipairs(scope.TrackedObjects) do
-                if obj.Type == "upvalue" then
-                    for i = #obj.mutations, 1, -1 do
-                        local mut = obj.mutations[i]
-
-                        if mut.from_tracking then table.remove(obj.mutations, i) end
-                    end
-                else
-                    for _, mutations in pairs(obj.mutations) do
-                        for i = #mutations, 1, -1 do
-                            local mut = mutations[i]
-
-                            if mut.from_tracking then table.remove(mutations, i) end
-                        end
-                    end
-                end
-            end
-        end
-
-        if output.Type ~= "tuple" then
-            return Tuple({output}), scope
-        end
-
-        return output, scope
-    end
-
     function META:CallBodyFunction(obj, input)
         local function_node = obj:GetFunctionBodyNode()
+		local is_type_function = function_node.kind == "local_type_function" or function_node.kind == "type_function"
 
+	
         if obj:IsExplicitInputSignature() or function_node.identifiers_typesystem then
-            if
-                function_node.kind == "local_type_function" or
-                function_node.kind == "type_function"
-            then
+            if is_type_function then
                 if function_node.identifiers_typesystem then
                     local call_expression = self:GetCallStack()[1].call_node
 
@@ -438,7 +359,74 @@ return function(META)
 
         -- crawl the function with the new arguments
         -- return_result is either a union of tuples or a single tuple
-        local output, scope = self:AnalyzeFunctionBody(obj, function_node, input)
+		local scope = self:CreateAndPushFunctionScope(obj)
+        self:PushTruthyExpressionContext(false)
+        self:PushFalsyExpressionContext(false)
+        self:PushGlobalEnvironment(
+            function_node,
+            self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
+            self:GetCurrentAnalyzerEnvironment()
+        )
+
+        if function_node.self_call then
+            self:CreateLocalValue("self", input:Get(1) or Nil())
+        end
+
+        for i, identifier in ipairs(function_node.identifiers) do
+            local argi = function_node.self_call and (i + 1) or i
+
+            if self:IsTypesystem() then
+                self:CreateLocalValue(identifier.value.value, input:GetWithoutExpansion(argi))
+            end
+
+            if self:IsRuntime() then
+                if identifier.value.value == "..." then
+                    self:CreateLocalValue(identifier.value.value, input:Slice(argi))
+                else
+                    self:CreateLocalValue(identifier.value.value, input:Get(argi) or Nil())
+                end
+            end
+        end
+
+		if is_type_function then
+            self:PushAnalyzerEnvironment("typesystem")
+        end
+
+        local output = self:AnalyzeStatementsAndCollectOutputSignatures(function_node)
+
+		if is_type_function then
+            self:PopAnalyzerEnvironment()
+        end
+
+        self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
+        self:PopScope()
+        self:PopFalsyExpressionContext()
+        self:PopTruthyExpressionContext()
+
+        if scope.TrackedObjects then
+            for _, obj in ipairs(scope.TrackedObjects) do
+                if obj.Type == "upvalue" then
+                    for i = #obj.mutations, 1, -1 do
+                        local mut = obj.mutations[i]
+
+                        if mut.from_tracking then table.remove(obj.mutations, i) end
+                    end
+                else
+                    for _, mutations in pairs(obj.mutations) do
+                        for i = #mutations, 1, -1 do
+                            local mut = mutations[i]
+
+                            if mut.from_tracking then table.remove(mutations, i) end
+                        end
+                    end
+                end
+            end
+        end
+
+        if output.Type ~= "tuple" then
+            output = Tuple({output})
+        end
+
         restore_mutated_types(self)
         -- used for analyzing side effects
         obj:AddScope(input, output, scope)
