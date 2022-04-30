@@ -6,7 +6,6 @@ local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Number = require("nattlua.types.number").Number
 local LNumber = require("nattlua.types.number").LNumber
-local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
 --[[#local type BaseType = import("~/nattlua/types/base.lua")]]
@@ -879,22 +878,6 @@ function META.Union(A--[[#: TTable]], B--[[#: TTable]])
 	return copy
 end
 
-function META:Call(analyzer, arguments, ...)
-	local LString = require("nattlua.types.string").LString
-	local __call = self:GetMetaTable() and self:GetMetaTable():Get(LString("__call"))
-
-	if __call then
-		local new_arguments = {self}
-
-		for _, v in ipairs(arguments:GetData()) do
-			table.insert(new_arguments, v)
-		end
-
-		return analyzer:Call(__call, Tuple(new_arguments), ...)
-	end
-
-	return type_errors.other("table has no __call metamethod")
-end
 
 function META:PrefixOperator(op--[[#: "#"]])
 	if op == "#" then

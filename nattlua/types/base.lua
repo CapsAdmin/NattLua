@@ -166,16 +166,6 @@ do
 end
 
 do -- operators
-	function META:Call(...)
-		return type_errors.other({
-			"type ",
-			self.Type,
-			": ",
-			self,
-			" cannot be called",
-		})
-	end
-
 	function META:Set(key--[[#: TBaseType | nil]], val--[[#: TBaseType | nil]])
 		return type_errors.other(
 			{

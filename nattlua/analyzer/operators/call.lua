@@ -3,6 +3,7 @@ local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 local type_errors = require("nattlua.types.error_messages")
 local Tuple = require("nattlua.types.tuple").Tuple
+local LString = require("nattlua.types.string").LString
 
 return {
 	Call = function(META)
@@ -52,55 +53,6 @@ return {
 			end	
 		end
 
-		local function call(self, obj, input)
-
-			-- if obj is a tuple it will return its first value
-			-- (myfunc,otherfunc)(1) will always
-			obj = obj:GetFirstValue()
-
-			if obj.Type == "any" then
-				-- it's ok to call any types, it will just return any
-				-- check arguments that can be mutated
-				for _, arg in ipairs(input:GetData()) do
-					if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
-						if arg:GetContract() then
-							-- error if we call any with tables that have contracts
-							-- since anything might happen to them in an any call
-							self:Error(
-								{
-									"cannot mutate argument with contract ",
-									arg:GetContract(),
-								}
-							)
-						else
-							-- if we pass a table without a contract to an any call, we add any to its key values
-							for _, keyval in ipairs(arg:GetData()) do
-								keyval.key = Union({Any(), keyval.key})
-								keyval.val = Union({Any(), keyval.val})
-							end
-						end
-					end
-				end
-			end
-			
-			if obj.Type == "function" then
-				-- mark the object as called so the unreachable code step won't call it
-				obj:SetCalled(true)
-
-				infer_argument_functions(self, obj, input)				
-
-				if obj:GetAnalyzerFunction() then
-					return self:CallAnalyzerFunction(obj, input)
-				elseif obj:GetFunctionBodyNode() then
-					return self:CallBodyFunction(obj, input)
-				end
-
-				return self:CallFunctionSignature(obj, input)
-			else
-				return obj:Call(self, input, self:GetCallStack()[1].call_node, true)
-			end
-		end
-
 		local function make_callable_union(self, obj)
 			local truthy_union = obj.New()
 
@@ -124,7 +76,7 @@ return {
 			return truthy_union
 		end
 
-		function META:CallUnion(obj, input, call_node, not_recursive_call)
+		local function call_union(self, obj, input, call_node)
 			if obj:IsEmpty() then return type_errors.operation("call", nil) end
 
 			-- make sure the union is callable, we pass the analyzer and 
@@ -161,7 +113,7 @@ return {
 							}
 						)
 					else
-						local res, reason = self:Call(obj, input, call_node, not_recursive_call)
+						local res, reason = self:Call(obj, input, call_node, true)
 		
 						if res then return res end
 		
@@ -175,7 +127,7 @@ return {
 			local new = Union({})
 		
 			for _, obj in ipairs(obj.Data) do
-				local val = self:Assert(self:Call(obj, input, call_node, not_recursive_call))
+				local val = self:Assert(self:Call(obj, input, call_node, true))
 		
 				-- TODO
 				if val.Type == "tuple" and val:GetLength() == 1 then
@@ -190,9 +142,81 @@ return {
 			return Tuple({new})
 		end
 
+		local function call_table(self, obj, input, call_node)
+			local __call = obj:GetMetaTable() and obj:GetMetaTable():Get(LString("__call"))
+
+			if __call then
+				local new_input = {obj}
+		
+				for _, v in ipairs(input:GetData()) do
+					table.insert(new_input, v)
+				end
+				return self:Call(__call, Tuple(new_input), call_node, true)
+			end
+		
+			return type_errors.other("table has no __call metamethod")
+		end
+
+		local function call_any(self, input)
+			-- it's ok to call any types, it will just return any
+			-- check arguments that can be mutated
+			for _, arg in ipairs(input:GetData()) do
+				if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
+					if arg:GetContract() then
+						-- error if we call any with tables that have contracts
+						-- since anything might happen to them in an any call
+						self:Error(
+							{
+								"cannot mutate argument with contract ",
+								arg:GetContract(),
+							}
+						)
+					else
+						-- if we pass a table without a contract to an any call, we add any to its key values
+						for _, keyval in ipairs(arg:GetData()) do
+							keyval.key = Union({Any(), keyval.key})
+							keyval.val = Union({Any(), keyval.val})
+						end
+					end
+				end
+			end
+
+			return Tuple({Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))})
+		end
+
+		local function call_function(self, obj, input)
+			-- mark the object as called so the unreachable code step won't call it
+			obj:SetCalled(true)
+
+			infer_argument_functions(self, obj, input)				
+
+			if obj:GetAnalyzerFunction() then
+				return self:CallAnalyzerFunction(obj, input)
+			elseif obj:GetFunctionBodyNode() then
+				return self:CallBodyFunction(obj, input)
+			end
+
+			return self:CallFunctionSignature(obj, input)
+		end
+
 		function META:Call(obj, input, call_node, not_recursive_call)
+			-- if obj is a tuple it will return its first value
+			obj = obj:GetFirstValue()
+
 			if obj.Type == "union" then
-				return self:CallUnion(obj, input, call_node, not_recursive_call)
+				return call_union(self, obj, input, call_node)
+			elseif obj.Type == "table" then
+				return call_table(self, obj, input, call_node)
+			elseif obj.Type == "any" then
+				return call_any(self, input)
+			elseif obj.Type ~= "function" then
+				return type_errors.other({
+					"type ",
+					obj.Type,
+					": ",
+					obj,
+					" cannot be called",
+				})
 			end
 
 			local ok, err = self:PushCallFrame(obj, call_node, not_recursive_call)
@@ -200,7 +224,7 @@ return {
 			if not ok == false then return ok, err end
 			if ok then return ok end
 
-			local ok, err = call(self, obj, input)
+			local ok, err = call_function(self, obj, input)
 
 			self:PopCallFrame()
 
