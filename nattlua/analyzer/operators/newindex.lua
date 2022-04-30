@@ -42,9 +42,9 @@ return {
 				local arg = val:GetInputSignature():Get(1)
 
 				if arg and not arg:GetContract() and not arg.Self then
-					val:SetCallOverride(true)
+					val:SetCalled(true)
 					val = val:Copy()
-					val:SetCallOverride(nil)
+					val:SetCalled(nil)
 					val:GetInputSignature():Set(1, Union({Any(), obj}))
 					self:AddToUnreachableCodeAnalysis(val, val:GetInputSignature(), val.function_body_node, true)
 				end

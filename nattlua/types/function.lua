@@ -24,47 +24,35 @@ function META:__tostring()
 	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
 end
 
-function META:GetInputSignature()
-	return self:GetData().arg or Tuple({})
-end
+META:IsSet("Called", false)
 
-function META:GetOutputSignature()
-	return self:GetData().ret or Tuple({})
-end
+do
+	function META:GetInputSignature()
+		return self:GetData().arg or Tuple({})
+	end
 
-function META:SetCalled(b)
-	self.called = b
-end
+	function META:GetOutputSignature()
+		return self:GetData().ret or Tuple({})
+	end
 
-function META:IsCalled()
-	return self.called
-end
+	function META:HasExplicitInputSignature()
+		return self.explicit_arguments
+	end
 
-function META:SetCallOverride(val)
-	self.called = val
-end
+	function META:HasExplicitOutputSignature()
+		return self.explicit_return_set
+	end
 
-function META:ClearCalls()
-	self.called = nil
-end
+	function META:SetOutputSignature(tup)
+		self:GetData().ret = tup
+		self.explicit_return_set = tup
+		self:SetCalled()
+	end
 
-function META:HasExplicitInputSignature()
-	return self.explicit_arguments
-end
-
-function META:HasExplicitOutputSignature()
-	return self.explicit_return_set
-end
-
-function META:SetOutputSignature(tup)
-	self:GetData().ret = tup
-	self.explicit_return_set = tup
-	self:ClearCalls()
-end
-
-function META:SetInputSignature(tup)
-	self:GetData().arg = tup
-	self:ClearCalls()
+	function META:SetInputSignature(tup)
+		self:GetData().arg = tup
+		self:SetCalled()
+	end
 end
 
 function META:Copy(map, ...)
@@ -78,7 +66,7 @@ function META:Copy(map, ...)
 	copy:SetLiteral(self:IsLiteral())
 	copy:CopyInternalsFrom(self)
 	copy.function_body_node = self.function_body_node
-	copy.called = self.called
+	copy.Called = self.Called
 	return copy
 end
 

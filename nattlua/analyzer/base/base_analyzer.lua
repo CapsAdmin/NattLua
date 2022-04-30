@@ -144,7 +144,7 @@ return function(META)
 					call(self, func, func.function_body_node)
 					called_count = called_count + 1
 					func.done = true
-					func:ClearCalls()
+					func:SetCalled()
 				end
 			end
 
@@ -159,7 +159,7 @@ return function(META)
 					call(self, func, func.function_body_node)
 					called_count = called_count + 1
 					func.done = true
-					func:ClearCalls()
+					func:SetCalled()
 				end
 			end
 
