@@ -31,7 +31,7 @@ end
 
 local function check_input(self, obj, input_arguments)
     local function_node = obj.function_body_node
-    local signature_arguments = obj:GetArguments()
+    local signature_arguments = obj:GetInputSignature()
 	local len = signature_arguments:GetSafeLength(input_arguments)
 	local signature_override = {}
 
@@ -116,44 +116,44 @@ local function check_input(self, obj, input_arguments)
 					local merged = signature_override[i]:ShrinkToFunctionSignature()
 
 					if merged then
-						func:SetArguments(merged:GetArguments())
-						func:SetReturnTypes(merged:GetReturnTypes())
+						func:SetInputSignature(merged:GetInputSignature())
+						func:SetOutputSignature(merged:GetOutputSignature())
 					end
 				else
-					if not func.explicit_arguments then
-						local contract = signature_override[i] or obj:GetArguments():Get(i)
+					if not func:HasExplicitInputSignature() then
+						local contract = signature_override[i] or obj:GetInputSignature():Get(i)
 
 						if contract then
 							if contract.Type == "union" then
 								local tup = Tuple({})
 
 								for _, func in ipairs(contract:GetData()) do
-									tup:Merge(func:GetArguments())
-									func:SetArguments(tup)
+									tup:Merge(func:GetInputSignature())
+									func:SetInputSignature(tup)
 								end
 
 								func.arguments_inferred = true
 							elseif contract.Type == "function" then
-								func:SetArguments(contract:GetArguments():Copy(nil, true)) -- force copy tables so we don't mutate the contract
+								func:SetInputSignature(contract:GetInputSignature():Copy(nil, true)) -- force copy tables so we don't mutate the contract
 								func.arguments_inferred = true
 							end
 						end
 					end
 
 					if not func.explicit_return then
-						local contract = signature_override[i] or obj:GetReturnTypes():Get(i)
+						local contract = signature_override[i] or obj:GetOutputSignature():Get(i)
 
 						if contract then
 							if contract.Type == "union" then
 								local tup = Tuple({})
 
 								for _, func in ipairs(contract:GetData()) do
-									tup:Merge(func:GetReturnTypes())
+									tup:Merge(func:GetOutputSignature())
 								end
 
-								func:SetReturnTypes(tup)
+								func:SetOutputSignature(tup)
 							elseif contract.Type == "function" then
-								func:SetReturnTypes(contract:GetReturnTypes())
+								func:SetOutputSignature(contract:GetOutputSignature())
 							end
 						end
 					end
@@ -337,7 +337,7 @@ return function(META)
             self:PushAnalyzerEnvironment("typesystem")
         end
 
-        local output = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
+        local output = self:AnalyzeStatementsAndCollectOutputSignatures(function_node)
 
         if
             function_node.kind == "local_type_function" or
@@ -381,7 +381,7 @@ return function(META)
     function META:CallBodyFunction(obj, input)
         local function_node = obj.function_body_node
 
-        if obj:HasExplicitArguments() or function_node.identifiers_typesystem then
+        if obj:HasExplicitInputSignature() or function_node.identifiers_typesystem then
             if
                 function_node.kind == "local_type_function" or
                 function_node.kind == "type_function"
@@ -414,7 +414,7 @@ return function(META)
                 -- local type foo(T: any) return T end
                 -- T becomes the type that is passed in, and not "any"
                 -- it's the equivalent of function foo<T extends any>(val: T) { return val }
-                local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetArguments())
+                local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
 
                 if not ok then
                     return type_errors.subset(a, b, {"argument #", i, " - ", reason})
@@ -435,9 +435,9 @@ return function(META)
         -- used for analyzing side effects
         obj:AddScope(input, output, scope)
 
-        if not obj:HasExplicitArguments() then
+        if not obj:HasExplicitInputSignature() then
             if not obj.arguments_inferred and function_node.identifiers then
-                for i in ipairs(obj:GetArguments():GetData()) do
+                for i in ipairs(obj:GetInputSignature():GetData()) do
                     if function_node.self_call then
                         -- we don't count the actual self argument
                         local node = function_node.identifiers[i + 1]
@@ -454,20 +454,20 @@ return function(META)
                 end
             end
 
-            obj:GetArguments():Merge(input:Slice(1, obj:GetArguments():GetMinimumLength()))
+            obj:GetInputSignature():Merge(input:Slice(1, obj:GetInputSignature():GetMinimumLength()))
         end
 
         do -- this is for the emitter
             if function_node.identifiers then
                 for i, node in ipairs(function_node.identifiers) do
-                    node:AddType(obj:GetArguments():Get(i))
+                    node:AddType(obj:GetInputSignature():Get(i))
                 end
             end
 
             function_node:AddType(obj)
         end
 
-        local output_signature = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
+        local output_signature = obj:HasExplicitOutputSignature() and obj:GetOutputSignature()
 
         -- if the function has return type annotations, analyze them and use it as contract
         if not output_signature and function_node.return_types and self:IsRuntime() then
@@ -503,7 +503,7 @@ return function(META)
                     end
                 end
 
-                obj:GetReturnTypes():Merge(copy or output)
+                obj:GetOutputSignature():Merge(copy or output)
             end
 
             return output
@@ -514,7 +514,7 @@ return function(META)
 
         if self:IsTypesystem() then return output end
 
-        local contract = obj:GetReturnTypes():Copy()
+        local contract = obj:GetOutputSignature():Copy()
 
         for _, v in ipairs(contract:GetData()) do
             if v.Type == "table" then v:SetReferenceId(nil) end

@@ -16,19 +16,19 @@ end
 
 function META.Equal(a, b)
 	return a.Type == b.Type and
-		a:GetArguments():Equal(b:GetArguments()) and
-		a:GetReturnTypes():Equal(b:GetReturnTypes())
+		a:GetInputSignature():Equal(b:GetInputSignature()) and
+		a:GetOutputSignature():Equal(b:GetOutputSignature())
 end
 
 function META:__tostring()
-	return "function=" .. tostring(self:GetArguments()) .. ">" .. tostring(self:GetReturnTypes())
+	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
 end
 
-function META:GetArguments()
+function META:GetInputSignature()
 	return self:GetData().arg or Tuple({})
 end
 
-function META:GetReturnTypes()
+function META:GetOutputSignature()
 	return self:GetData().ret or Tuple({})
 end
 
@@ -48,21 +48,21 @@ function META:ClearCalls()
 	self.called = nil
 end
 
-function META:HasExplicitArguments()
+function META:HasExplicitInputSignature()
 	return self.explicit_arguments
 end
 
-function META:HasExplicitReturnTypes()
+function META:HasExplicitOutputSignature()
 	return self.explicit_return_set
 end
 
-function META:SetReturnTypes(tup)
+function META:SetOutputSignature(tup)
 	self:GetData().ret = tup
 	self.explicit_return_set = tup
 	self:ClearCalls()
 end
 
-function META:SetArguments(tup)
+function META:SetInputSignature(tup)
 	self:GetData().arg = tup
 	self:ClearCalls()
 end
@@ -71,8 +71,8 @@ function META:Copy(map, ...)
 	map = map or {}
 	local copy = self.New({arg = Tuple({}), ret = Tuple({})})
 	map[self] = map[self] or copy
-	copy:GetData().ret = self:GetReturnTypes():Copy(map, ...)
-	copy:GetData().arg = self:GetArguments():Copy(map, ...)
+	copy:GetData().ret = self:GetOutputSignature():Copy(map, ...)
+	copy:GetData().arg = self:GetInputSignature():Copy(map, ...)
 	copy:GetData().lua_function = self:GetData().lua_function
 	copy:GetData().scope = self:GetData().scope
 	copy:SetLiteral(self:IsLiteral())
@@ -91,13 +91,13 @@ function META.IsSubsetOf(A, B)
 
 	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
 
-	local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments())
+	local ok, reason = A:GetInputSignature():IsSubsetOf(B:GetInputSignature())
 
 	if not ok then
-		return type_errors.subset(A:GetArguments(), B:GetArguments(), reason)
+		return type_errors.subset(A:GetInputSignature(), B:GetInputSignature(), reason)
 	end
 
-	local ok, reason = A:GetReturnTypes():IsSubsetOf(B:GetReturnTypes())
+	local ok, reason = A:GetOutputSignature():IsSubsetOf(B:GetOutputSignature())
 
 	if
 		not ok and
@@ -117,7 +117,7 @@ function META.IsSubsetOf(A, B)
 	end
 
 	if not ok then
-		return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason)
+		return type_errors.subset(A:GetOutputSignature(), B:GetOutputSignature(), reason)
 	end
 
 	return true
@@ -132,13 +132,13 @@ function META.IsCallbackSubsetOf(A, B)
 
 	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
 
-	local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments(), A:GetArguments():GetMinimumLength())
+	local ok, reason = A:GetInputSignature():IsSubsetOf(B:GetInputSignature(), A:GetInputSignature():GetMinimumLength())
 
 	if not ok then
-		return type_errors.subset(A:GetArguments(), B:GetArguments(), reason)
+		return type_errors.subset(A:GetInputSignature(), B:GetInputSignature(), reason)
 	end
 
-	local ok, reason = A:GetReturnTypes():IsSubsetOf(B:GetReturnTypes())
+	local ok, reason = A:GetOutputSignature():IsSubsetOf(B:GetOutputSignature())
 
 	if
 		not ok and
@@ -158,7 +158,7 @@ function META.IsCallbackSubsetOf(A, B)
 	end
 
 	if not ok then
-		return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason)
+		return type_errors.subset(A:GetOutputSignature(), B:GetOutputSignature(), reason)
 	end
 
 	return true
@@ -209,11 +209,11 @@ function META.New(data)
 end
 
 function META:IsRefFunction()
-	for i, v in ipairs(self:GetArguments():GetData()) do
+	for i, v in ipairs(self:GetInputSignature():GetData()) do
 		if v.ref_argument then return true end
 	end
 
-	for i, v in ipairs(self:GetReturnTypes():GetData()) do
+	for i, v in ipairs(self:GetOutputSignature():GetData()) do
 		if v.ref_argument then return true end
 	end
 

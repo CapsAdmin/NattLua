@@ -204,8 +204,8 @@ local a = analyze[[
 
         local func = x.Test
     ]]
-equal(a:GetLocalOrGlobalValue(String("func")):GetArguments():Get(1):Get(String("GetPos")).Type, "function")
-equal(a:GetLocalOrGlobalValue(String("func")):GetArguments():Get(1):Get(String("Test")).Type, "function")
+equal(a:GetLocalOrGlobalValue(String("func")):GetInputSignature():Get(1):Get(String("GetPos")).Type, "function")
+equal(a:GetLocalOrGlobalValue(String("func")):GetInputSignature():Get(1):Get(String("Test")).Type, "function")
 analyze[[
         local type a = {
             foo = self,

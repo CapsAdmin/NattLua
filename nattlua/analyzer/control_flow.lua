@@ -29,7 +29,7 @@ return function(META)
 		end
 	end
 
-	function META:AnalyzeStatementsAndCollectReturnTypes(statement)
+	function META:AnalyzeStatementsAndCollectOutputSignatures(statement)
 		local scope = self:GetScope()
 		scope:MakeFunctionScope(statement)
 		self:AnalyzeStatements(statement.statements)
@@ -40,7 +40,7 @@ return function(META)
 
 		local union = Union({})
 
-		for _, ret in ipairs(scope:GetReturnTypes()) do
+		for _, ret in ipairs(scope:GetOutputSignature()) do
 			if #ret.types == 1 then
 				union:AddType(ret.types[1])
 			else
@@ -49,7 +49,7 @@ return function(META)
 			end
 		end
 
-		scope:ClearCertainReturnTypes()
+		scope:ClearCertainOutputSignatures()
 
 		if #union:GetData() == 1 then return union:GetData()[1] end
 
@@ -193,7 +193,7 @@ return function(META)
 			end
 		end
 
-		if not thrown then scope:CollectReturnTypes(node, types) end
+		if not thrown then scope:CollectOutputSignatures(node, types) end
 
 		if scope:IsUncertain() then
 			function_scope:UncertainReturn()
@@ -227,7 +227,7 @@ return function(META)
 					if v.call_node == call_node then
 						if obj.explicit_return then
 							-- so if we have explicit return types, just return those
-							obj.recursively_called = obj:GetReturnTypes():Copy()
+							obj.recursively_called = obj:GetOutputSignature():Copy()
 							return obj.recursively_called
 						else
 							-- if not we sadly have to resort to any

@@ -282,7 +282,7 @@ do
 		return self.returns ~= nil
 	end
 
-	function META:CollectReturnTypes(node, types)
+	function META:CollectOutputSignatures(node, types)
 		table.insert(self:GetNearestFunctionScope().returns, {node = node, types = types})
 	end
 
@@ -320,11 +320,11 @@ do
 		return self
 	end
 
-	function META:GetReturnTypes()
+	function META:GetOutputSignature()
 		return self.returns
 	end
 
-	function META:ClearCertainReturnTypes()
+	function META:ClearCertainOutputSignatures()
 		self.returns = {}
 	end
 

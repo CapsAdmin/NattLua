@@ -351,8 +351,8 @@ analyzer function ffi.metatype(ctype: any, meta: any)
 
 					return val
 				end,
-				new:GetArguments():GetData(),
-				new:GetReturnTypes():GetData()
+				new:GetInputSignature():GetData(),
+				new:GetOutputSignature():GetData()
 			)
 		)
 	end

@@ -59,8 +59,8 @@ function META:ShrinkToFunctionSignature()
 	for _, func in ipairs(self.Data) do
 		if func.Type ~= "function" then return false end
 
-		arg:Merge(func:GetArguments())
-		ret:Merge(func:GetReturnTypes())
+		arg:Merge(func:GetInputSignature())
+		ret:Merge(func:GetOutputSignature())
 	end
 
 	local Function = require("nattlua.types.function").Function
@@ -417,7 +417,7 @@ function META:Call(
 		for _, obj in ipairs(self.Data) do
 			if
 				obj.Type == "function" and
-				arguments:GetLength() < obj:GetArguments():GetMinimumLength()
+				arguments:GetLength() < obj:GetInputSignature():GetMinimumLength()
 			then
 				table.insert(
 					errors,
@@ -425,7 +425,7 @@ function META:Call(
 						"invalid amount of arguments: ",
 						arguments,
 						" ~= ",
-						obj:GetArguments(),
+						obj:GetInputSignature(),
 					}
 				)
 			else

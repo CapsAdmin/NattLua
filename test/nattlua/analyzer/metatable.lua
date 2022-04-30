@@ -648,7 +648,7 @@ analyze[[
     
                 local self_arg = types.Any()
                 self_arg.ref_argument = true
-                constructor:GetArguments():Set(1, self_arg)
+                constructor:GetInputSignature():Set(1, self_arg)
             
                 tbl:SetMetaTable(meta)
                 analyzer:Assert(analyzer:Call(constructor, types.Tuple({tbl, ...})))

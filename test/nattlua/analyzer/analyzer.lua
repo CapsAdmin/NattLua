@@ -248,16 +248,16 @@ do -- uncalled functions should be called
 	local lib = analyzer:GetLocalOrGlobalValue(String("lib"))
 	equal(
 		"number",
-		assert(lib:Get(String("foo1")):GetArguments():Get(1):GetType("number")).Type
+		assert(lib:Get(String("foo1")):GetInputSignature():Get(1):GetType("number")).Type
 	)
 	equal(
 		"number",
-		assert(lib:Get(String("foo1")):GetArguments():Get(2):GetType("number")).Type
+		assert(lib:Get(String("foo1")):GetInputSignature():Get(2):GetType("number")).Type
 	)
-	equal("number", assert(lib:Get(String("foo1")):GetReturnTypes():Get(1)).Type)
-	equal("number", lib:Get(String("foo2")):GetArguments():Get(1):GetType("number").Type)
-	equal("number", lib:Get(String("foo2")):GetArguments():Get(2):GetType("number").Type)
-	equal("number", lib:Get(String("foo2")):GetReturnTypes():Get(1):GetType("number").Type)
+	equal("number", assert(lib:Get(String("foo1")):GetOutputSignature():Get(1)).Type)
+	equal("number", lib:Get(String("foo2")):GetInputSignature():Get(1):GetType("number").Type)
+	equal("number", lib:Get(String("foo2")):GetInputSignature():Get(2):GetType("number").Type)
+	equal("number", lib:Get(String("foo2")):GetOutputSignature():Get(1):GetType("number").Type)
 end
 
 analyze[[

@@ -163,7 +163,7 @@ do
 			local obj = node:GetLastType():GetContract() or node:GetLastType()
 
 			if obj.Type == "function" then
-				for i, v in ipairs(obj:GetReturnTypes():GetData()) do
+				for i, v in ipairs(obj:GetOutputSignature():GetData()) do
 					str[i] = tostring(v)
 				end
 			else

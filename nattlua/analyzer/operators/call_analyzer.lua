@@ -30,7 +30,7 @@ local function should_expand(arg, contract)
 end
 
 local function unpack_union_tuples(obj, input)
-    local input_signature = obj:GetArguments()
+    local input_signature = obj:GetInputSignature()
     local out = {}
     local lengths = {}
     local max = 1
@@ -122,9 +122,9 @@ return function(META)
     end
 
     function META:CallAnalyzerFunction(obj, input)
-        local signature_arguments = obj:GetArguments()
+        local signature_arguments = obj:GetInputSignature()
         do
-            local ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetArguments())
+            local ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetInputSignature())
 
             if not ok then
                 return type_errors.subset(a, b, {"argument #", i, " - ", reason})

@@ -32,7 +32,7 @@ return function(META)
 		g:Set(LString("_G"), g)
 		self:PushAnalyzerEnvironment("runtime")
 		self:CreateLocalValue("...", argument_tuple)
-		local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(statement)
+		local analyzed_return = self:AnalyzeStatementsAndCollectOutputSignatures(statement)
 		self:PopAnalyzerEnvironment()
 		self:PopGlobalEnvironment("runtime")
 		self:PopGlobalEnvironment("typesystem")
@@ -108,7 +108,7 @@ return function(META)
 
 		local function call(self, obj, node)
 			-- use function's arguments in case they have been maniupulated (ie string.gsub)
-			local arguments = obj:GetArguments():Copy()
+			local arguments = obj:GetInputSignature():Copy()
 			arguments = add_potential_self(arguments)
 
 			for _, obj in ipairs(arguments:GetData()) do
@@ -135,7 +135,7 @@ return function(META)
 
 			for _, func in ipairs(self.deferred_calls) do
 				if
-					func.explicit_arguments and
+					func:HasExplicitInputSignature() and
 					not func:IsCalled()
 					and
 					not func.done and
@@ -150,7 +150,7 @@ return function(META)
 
 			for _, func in ipairs(self.deferred_calls) do
 				if
-					not func.explicit_arguments and
+					not func:HasExplicitInputSignature() and
 					not func:IsCalled()
 					and
 					not func.done and

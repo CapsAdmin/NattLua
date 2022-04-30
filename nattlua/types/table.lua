@@ -667,8 +667,8 @@ function META:CoerceUntypedFunctions(from--[[#: TTable]])
 		local kv_from, reason = from:FindKeyValReverse(kv.key)
 
 		if kv.val.Type == "function" and kv_from.val.Type == "function" then
-			kv.val:SetArguments(kv_from.val:GetArguments())
-			kv.val:SetReturnTypes(kv_from.val:GetReturnTypes())
+			kv.val:SetInputSignature(kv_from.val:GetInputSignature())
+			kv.val:SetOutputSignature(kv_from.val:GetOutputSignature())
 			kv.val.explicit_arguments = true
 		end
 	end

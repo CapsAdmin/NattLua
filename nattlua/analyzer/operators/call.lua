@@ -30,18 +30,18 @@ return {
 			return truthy_union
 		end
 
-		local function infer_argument_functions(self, obj, input_arguments)
+		local function infer_argument_functions(self, obj, input)
 			-- infer any uncalled functions in the arguments to get their return type
-			for i, b in ipairs(input_arguments:GetData()) do
-				if b.Type == "function" and not b:IsCalled() and not b:HasExplicitReturnTypes() then
-					local a =  obj:GetArguments():Get(i)
+			for i, b in ipairs(input:GetData()) do
+				if b.Type == "function" and not b:IsCalled() and not b:HasExplicitOutputSignature() then
+					local a =  obj:GetInputSignature():Get(i)
 
 					if
 						a and
 						(
 							(
 								a.Type == "function" and
-								not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())
+								not a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
 							)
 							or
 							not a:IsSubsetOf(b)
@@ -56,7 +56,7 @@ return {
 						-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
 						local has_ref_arg = false
 
-						for k, v in ipairs(b:GetArguments():GetData()) do
+						for k, v in ipairs(b:GetInputSignature():GetData()) do
 							if v.ref_argument then
 								has_ref_arg = true
 
@@ -65,14 +65,14 @@ return {
 						end
 
 						if not has_ref_arg then
-							self:Assert(self:Call(b, func:GetArguments():Copy(nil, true)))
+							self:Assert(self:Call(b, func:GetInputSignature():Copy(nil, true)))
 						end
 					end
 				end
 			end	
 		end
 
-		local function call(self, obj, input_arguments)
+		local function call(self, obj, input)
 			if obj.Type == "union" then
 				-- make sure the union is callable, we pass the analyzer and 
 				-- it will throw errors if the union contains something that is not callable
@@ -87,7 +87,7 @@ return {
 			if obj.Type == "any" then
 				-- it's ok to call any types, it will just return any
 				-- check arguments that can be mutated
-				for _, arg in ipairs(input_arguments:GetData()) do
+				for _, arg in ipairs(input:GetData()) do
 					if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
 						if arg:GetContract() then
 							-- error if we call any with tables that have contracts
@@ -113,27 +113,27 @@ return {
 				-- mark the object as called so the unreachable code step won't call it
 				obj:SetCalled(true)
 
-				infer_argument_functions(self, obj, input_arguments)				
+				infer_argument_functions(self, obj, input)				
 
 				if obj:GetData().lua_function then
-					return self:CallAnalyzerFunction(obj, input_arguments)
+					return self:CallAnalyzerFunction(obj, input)
 				elseif obj.function_body_node then
-					return self:CallBodyFunction(obj, input_arguments)
+					return self:CallBodyFunction(obj, input)
 				end
 
-				return self:CallFunctionSignature(obj, input_arguments)
+				return self:CallFunctionSignature(obj, input)
 			else
-				return obj:Call(self, input_arguments, self:GetCallStack()[1].call_node, true)
+				return obj:Call(self, input, self:GetCallStack()[1].call_node, true)
 			end
 		end
 
-		function META:Call(obj, input_arguments, call_node, not_recursive_call)
+		function META:Call(obj, input, call_node, not_recursive_call)
 			local ok, err = self:PushCallFrame(obj, call_node, not_recursive_call)
 
 			if not ok == false then return ok, err end
 			if ok then return ok end
 
-			local ok, err = call(self, obj, input_arguments)
+			local ok, err = call(self, obj, input)
 
 			self:PopCallFrame()
 

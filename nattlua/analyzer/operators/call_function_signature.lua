@@ -3,7 +3,7 @@ local type_errors = require("nattlua.types.error_messages")
 return function(META)
 	function META:CallFunctionSignature(obj, input)
 		do
-			local ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetArguments())
+			local ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetInputSignature())
 
 			if not ok then
 				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
@@ -26,7 +26,7 @@ return function(META)
 			end
 		end
 
-		local ret = obj:GetReturnTypes():Copy()
+		local ret = obj:GetOutputSignature():Copy()
 
 		-- clear any reference id from the returned arguments
 		for _, v in ipairs(ret:GetData()) do

@@ -77,8 +77,8 @@ analyzer function table.sort(tbl: List<|any|>, func: function=(a: any, b: any)>(
 		end
 	end
 
-	func:GetArguments():GetData()[1] = union
-	func:GetArguments():GetData()[2] = union
+	func:GetInputSignature():GetData()[1] = union
+	func:GetInputSignature():GetData()[2] = union
 	func.arguments_inferred = true
 end
 

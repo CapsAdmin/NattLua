@@ -470,8 +470,8 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 				if ok then
 
 				--TODO: enrich callback types
-				--b:SetReturnTypes(a:GetReturnTypes())
-				--b:SetArguments(a:GetArguments())
+				--b:SetOutputSignature(a:GetOutputSignature())
+				--b:SetInputSignature(a:GetInputSignature())
 				--b.arguments_inferred = true
 				end
 			end

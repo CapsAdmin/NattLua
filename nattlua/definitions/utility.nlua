@@ -38,16 +38,16 @@ end
 
 analyzer function return_type(func: Function, i: number | nil)
 	local i = i and i:GetData() or nil
-	return {func:GetReturnTypes():Slice(i, i)}
+	return {func:GetOutputSignature():Slice(i, i)}
 end
 
 analyzer function set_return_type(func: Function, tup: any)
-	func:SetReturnTypes(tup)
+	func:SetOutputSignature(tup)
 end
 
 analyzer function argument_type(func: Function, i: number | nil)
 	local i = i and i:GetData() or nil
-	return {func:GetArguments():Slice(i, i)}
+	return {func:GetInputSignature():Slice(i, i)}
 end
 
 analyzer function exclude(T: any, U: any)
@@ -88,12 +88,12 @@ analyzer function seal(tbl: Table)
 	for _, keyval in ipairs(tbl:GetData()) do
 		if
 			keyval.val.Type == "function" and
-			keyval.val:GetArguments():Get(1).Type == "union"
+			keyval.val:GetInputSignature():Get(1).Type == "union"
 		then
-			local first_arg = keyval.val:GetArguments():Get(1)
+			local first_arg = keyval.val:GetInputSignature():Get(1)
 
 			if first_arg:GetType(tbl) and first_arg:GetType(types.Any()) then
-				keyval.val:GetArguments():Set(1, tbl)
+				keyval.val:GetInputSignature():Set(1, tbl)
 			end
 		end
 	end
@@ -228,11 +228,11 @@ function Extract<|a: any, b: any|>
 end
 
 analyzer function Parameters(func: Function)
-	return {func:GetArguments():Copy():Unpack()}
+	return {func:GetInputSignature():Copy():Unpack()}
 end
 
 analyzer function ReturnType(func: Function)
-	return {func:GetReturnTypes():Copy():Unpack()}
+	return {func:GetOutputSignature():Copy():Unpack()}
 end
 
 function Uppercase<|val: ref string|>

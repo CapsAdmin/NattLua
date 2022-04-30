@@ -39,14 +39,14 @@ return {
 				val.function_body_node and
 				val.function_body_node.self_call
 			then
-				local arg = val:GetArguments():Get(1)
+				local arg = val:GetInputSignature():Get(1)
 
 				if arg and not arg:GetContract() and not arg.Self then
 					val:SetCallOverride(true)
 					val = val:Copy()
 					val:SetCallOverride(nil)
-					val:GetArguments():Set(1, Union({Any(), obj}))
-					self:AddToUnreachableCodeAnalysis(val, val:GetArguments(), val.function_body_node, true)
+					val:GetInputSignature():Set(1, Union({Any(), obj}))
+					self:AddToUnreachableCodeAnalysis(val, val:GetInputSignature(), val.function_body_node, true)
 				end
 			end
 
@@ -126,8 +126,8 @@ return {
 								end
 							end
 
-							val:SetArguments(existing:GetArguments())
-							val:SetReturnTypes(existing:GetReturnTypes())
+							val:SetInputSignature(existing:GetInputSignature())
+							val:SetOutputSignature(existing:GetOutputSignature())
 							val.explicit_arguments = true
 						end
 
