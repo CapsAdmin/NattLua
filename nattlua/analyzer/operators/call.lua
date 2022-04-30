@@ -4,13 +4,11 @@ local Any = require("nattlua.types.any").Any
 local type_errors = require("nattlua.types.error_messages")
 local Tuple = require("nattlua.types.tuple").Tuple
 local LString = require("nattlua.types.string").LString
-
 return {
 	Call = function(META)
 		require("nattlua.analyzer.operators.call_analyzer")(META)
 		require("nattlua.analyzer.operators.call_body")(META)
 		require("nattlua.analyzer.operators.call_function_signature")(META)
-
 
 		local function call_tuple(self, obj, input, call_node)
 			return self:Call(obj:GetFirstValue(), input, call_node, true)
@@ -23,8 +21,8 @@ return {
 				-- make sure the union is callable, we pass the analyzer and 
 				-- it will throw errors if the union contains something that is not callable
 				-- however it will continue and just remove those values from the union
-				
 				local truthy_union = obj.New()
+
 				for _, v in ipairs(obj.Data) do
 					if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
 						self:ErrorAndCloneCurrentScope(
@@ -45,20 +43,19 @@ return {
 				obj = truthy_union
 			end
 
-
 			local is_overload = true
-		
+
 			for _, obj in ipairs(obj.Data) do
 				if obj.Type ~= "function" or obj:GetFunctionBodyNode() then
 					is_overload = false
-		
+
 					break
 				end
 			end
-		
+
 			if is_overload then
 				local errors = {}
-		
+
 				for _, obj in ipairs(obj.Data) do
 					if
 						obj.Type == "function" and
@@ -75,31 +72,31 @@ return {
 						)
 					else
 						local res, reason = self:Call(obj, input, call_node, true)
-		
+
 						if res then return res end
-		
+
 						table.insert(errors, reason)
 					end
 				end
-		
+
 				return type_errors.other(errors)
 			end
-		
+
 			local new = Union({})
-		
+
 			for _, obj in ipairs(obj.Data) do
 				local val = self:Assert(self:Call(obj, input, call_node, true))
-		
+
 				-- TODO
 				if val.Type == "tuple" and val:GetLength() == 1 then
 					val = val:Unpack(1)
 				elseif val.Type == "union" and val:GetMinimumLength() == 1 then
 					val = val:GetAtIndex(1)
 				end
-		
+
 				new:AddType(val)
 			end
-		
+
 			return Tuple({new})
 		end
 
@@ -108,13 +105,14 @@ return {
 
 			if __call then
 				local new_input = {obj}
-		
+
 				for _, v in ipairs(input:GetData()) do
 					table.insert(new_input, v)
 				end
+
 				return self:Call(__call, Tuple(new_input), call_node, true)
 			end
-		
+
 			return type_errors.other("table has no __call metamethod")
 		end
 
@@ -162,7 +160,7 @@ return {
 			-- infer any uncalled functions in the arguments to get their return type
 			for i, b in ipairs(input:GetData()) do
 				if b.Type == "function" and not b:IsCalled() and not b:IsExplicitOutputSignature() then
-					local a =  obj:GetInputSignature():Get(i)
+					local a = obj:GetInputSignature():Get(i)
 
 					if
 						a and
@@ -197,7 +195,7 @@ return {
 						end
 					end
 				end
-			end				
+			end
 
 			if obj:GetAnalyzerFunction() then
 				return self:CallAnalyzerFunction(obj, input)
@@ -224,12 +222,11 @@ return {
 			local ok, err = self:PushCallFrame(obj, call_node, not_recursive_call)
 
 			if not ok == false then return ok, err end
+
 			if ok then return ok end
 
 			local ok, err = call_function(self, obj, input)
-
 			self:PopCallFrame()
-
 			return ok, err
 		end
 	end,

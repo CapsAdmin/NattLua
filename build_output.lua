@@ -495,8 +495,10 @@ function class.CreateTemplate(type_name)
 	meta.Type = type_name
 	meta.__index = meta
 	
+	local blacklist = {}
 
 	function meta.GetSet(tbl, name, default)
+		blacklist[name] = true
 		tbl[name] = default
 		
 		tbl["Set" .. name] = function(self, val)
@@ -509,6 +511,7 @@ function class.CreateTemplate(type_name)
 	end
 
 	function meta.IsSet(tbl, name, default)
+		blacklist[name] = true
 		tbl[name] = default
 		
 		tbl["Set" .. name] = function(self, val)
@@ -517,6 +520,21 @@ function class.CreateTemplate(type_name)
 		end
 		tbl["Is" .. name] = function(self)
 			return self[name]
+		end
+	end
+
+	function meta:DebugPropertyAccess()
+		meta.__index = function(self, key)
+			if meta[key] ~= nil then return meta[key] end
+
+			if not blacklist[key] then print(key) end
+
+			return rawget(self, key)
+		end
+		meta.__newindex = function(self, key, val)
+			if not blacklist[key] then print(key, val) end
+
+			rawset(self, key, val)
 		end
 	end
 
@@ -1150,16 +1168,6 @@ do
 end
 
 do -- operators
-	function META:Call(...)
-		return type_errors.other({
-			"type ",
-			self.Type,
-			": ",
-			self,
-			" cannot be called",
-		})
-	end
-
 	function META:Set(key, val)
 		return type_errors.other(
 			{
@@ -1194,11 +1202,13 @@ do -- operators
 end
 
 do
+	META:GetSet("Parent", nil)
+
 	function META:SetParent(parent)
 		if parent then
-			if parent ~= self then self.parent = parent end
+			if parent ~= self then self.Parent = parent end
 		else
-			self.parent = nil
+			self.Parent = nil
 		end
 	end
 
@@ -1207,10 +1217,10 @@ do
 		local done = {}
 
 		while true do
-			if not parent.parent or done[parent] then break end
+			if not parent.Parent or done[parent] then break end
 
 			done[parent] = true
-			parent = parent.parent
+			parent = parent.Parent
 		end
 
 		return parent
@@ -1264,7 +1274,6 @@ end
 
 return META end
 do local __M; IMPORTS["nattlua.types.union"] = function(...) __M = __M or (function(...) local tostring = tostring
-local math = math
 local setmetatable = _G.setmetatable
 local table = _G.table
 local ipairs = _G.ipairs
@@ -1324,15 +1333,12 @@ function META:ShrinkToFunctionSignature()
 	for _, func in ipairs(self.Data) do
 		if func.Type ~= "function" then return false end
 
-		arg:Merge(func:GetArguments())
-		ret:Merge(func:GetReturnTypes())
+		arg:Merge(func:GetInputSignature())
+		ret:Merge(func:GetOutputSignature())
 	end
 
 	local Function = IMPORTS['nattlua.types.function']("nattlua.types.function").Function
-	return Function({
-		arg = arg,
-		ret = ret,
-	})
+	return Function(arg, ret)
 end
 
 local sort = function(a, b)
@@ -1374,9 +1380,9 @@ function META:AddType(e)
 				e.Type ~= "function" or
 				e:GetContract() or
 				(
-					e.function_body_node and
+					e:GetFunctionBodyNode() and
 					(
-						e.function_body_node == v.function_body_node
+						e:GetFunctionBodyNode() == v:GetFunctionBodyNode()
 					)
 				)
 			then
@@ -1656,72 +1662,6 @@ function META:SetMax(val)
 	end
 
 	return copy
-end
-
-function META:Call(
-	analyzer,
-	arguments,
-	call_node,
-	not_recursive_call
-)
-	if self:IsEmpty() then return type_errors.operation("call", nil) end
-
-	local is_overload = true
-
-	for _, obj in ipairs(self.Data) do
-		if obj.Type ~= "function" or obj.function_body_node then
-			is_overload = false
-
-			break
-		end
-	end
-
-	if is_overload then
-		local errors = {}
-
-		for _, obj in ipairs(self.Data) do
-			if
-				obj.Type == "function" and
-				arguments:GetLength() < obj:GetArguments():GetMinimumLength()
-			then
-				table.insert(
-					errors,
-					{
-						"invalid amount of arguments: ",
-						arguments,
-						" ~= ",
-						obj:GetArguments(),
-					}
-				)
-			else
-				local res, reason = analyzer:Call(obj, arguments, call_node, not_recursive_call)
-
-				if res then return res end
-
-				table.insert(errors, reason)
-			end
-		end
-
-		return type_errors.other(errors)
-	end
-
-	local new = META.New({})
-
-	for _, obj in ipairs(self.Data) do
-		local val = analyzer:Assert(analyzer:Call(obj, arguments, call_node, not_recursive_call))
-
-		-- TODO
-		if val.Type == "tuple" and val:GetLength() == 1 then
-			val = val:Unpack(1)
-		elseif val.Type == "union" and val:GetMinimumLength() == 1 then
-			val = val:GetAtIndex(1)
-		end
-
-		new:AddType(val)
-	end
-
-	local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
-	return Tuple({new})
 end
 
 function META:IsLiteral()
@@ -2265,6 +2205,49 @@ return {
 	end,
 	TNumber = TNumber,
 } end)(...) return __M end end
+do local __M; IMPORTS["nattlua.types.any"] = function(...) __M = __M or (function(...) local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
+
+
+
+META.Type = "any"
+
+function META:Get(key)
+	return self
+end
+
+function META:Set(key, val)
+	return true
+end
+
+function META:Copy()
+	return self
+end
+
+function META.IsSubsetOf(A, B)
+	return true
+end
+
+function META:__tostring()
+	return "any"
+end
+
+function META:IsFalsy()
+	return true
+end
+
+function META:IsTruthy()
+	return true
+end
+
+function META.Equal(a, b)
+	return a.Type == b.Type
+end
+
+return {
+	Any = function()
+		return META.New()
+	end,
+} end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.tuple"] = function(...) __M = __M or (function(...) local tostring = tostring
 local table = _G.table
 local math = math
@@ -2749,54 +2732,6 @@ return {
 		return arguments
 	end,
 } end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.any"] = function(...) __M = __M or (function(...) local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
-
-
-
-META.Type = "any"
-
-function META:Get(key)
-	return self
-end
-
-function META:Set(key, val)
-	return true
-end
-
-function META:Copy()
-	return self
-end
-
-function META.IsSubsetOf(A, B)
-	return true
-end
-
-function META:__tostring()
-	return "any"
-end
-
-function META:IsFalsy()
-	return true
-end
-
-function META:IsTruthy()
-	return true
-end
-
-function META:Call()
-	local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
-	return Tuple({Tuple({}):AddRemainder(Tuple({META.New()}):SetRepeat(math.huge))})
-end
-
-function META.Equal(a, b)
-	return a.Type == b.Type
-end
-
-return {
-	Any = function()
-		return META.New()
-	end,
-} end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.function"] = function(...) __M = __M or (function(...) local tostring = _G.tostring
 local ipairs = _G.ipairs
 local setmetatable = _G.setmetatable
@@ -2810,74 +2745,45 @@ local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 META.Type = "function"
 
 function META:__call(...)
-	if self:GetData().lua_function then return self:GetData().lua_function(...) end
+	if self:GetAnalyzerFunction() then return self:GetAnalyzerFunction()(...) end
 end
 
 function META.Equal(a, b)
 	return a.Type == b.Type and
-		a:GetArguments():Equal(b:GetArguments()) and
-		a:GetReturnTypes():Equal(b:GetReturnTypes())
+		a:GetInputSignature():Equal(b:GetInputSignature()) and
+		a:GetOutputSignature():Equal(b:GetOutputSignature())
 end
 
 function META:__tostring()
-	return "function=" .. tostring(self:GetArguments()) .. ">" .. tostring(self:GetReturnTypes())
+	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
 end
 
-function META:GetArguments()
-	return self:GetData().arg or Tuple({})
-end
-
-function META:GetReturnTypes()
-	return self:GetData().ret or Tuple({})
-end
-
-function META:SetCalled(b)
-	self.called = b
-end
-
-function META:IsCalled()
-	return self.called
-end
-
-function META:SetCallOverride(val)
-	self.called = val
-end
-
-function META:ClearCalls()
-	self.called = nil
-end
-
-function META:HasExplicitArguments()
-	return self.explicit_arguments
-end
-
-function META:HasExplicitReturnTypes()
-	return self.explicit_return_set
-end
-
-function META:SetReturnTypes(tup)
-	self:GetData().ret = tup
-	self.explicit_return_set = tup
-	self:ClearCalls()
-end
-
-function META:SetArguments(tup)
-	self:GetData().arg = tup
-	self:ClearCalls()
-end
+META:IsSet("Called", false)
+META:IsSet("ExplicitInputSignature", false)
+META:IsSet("ExplicitOutputSignature", false)
+META:GetSet("InputSignature", nil)
+META:GetSet("OutputSignature", nil)
+META:GetSet("FunctionBodyNode", nil)
+META:GetSet("Scope", nil)
+META:GetSet("UpvaluePosition", nil)
+META:GetSet("InputIdentifiers", nil)
+META:GetSet("AnalyzerFunction", nil)
+META:IsSet("ArgumentsInferred", false)
+META:GetSet("PreventInputArgumentExpansion", false)
 
 function META:Copy(map, ...)
 	map = map or {}
 	local copy = self.New({arg = Tuple({}), ret = Tuple({})})
 	map[self] = map[self] or copy
-	copy:GetData().ret = self:GetReturnTypes():Copy(map, ...)
-	copy:GetData().arg = self:GetArguments():Copy(map, ...)
-	copy:GetData().lua_function = self:GetData().lua_function
-	copy:GetData().scope = self:GetData().scope
+	copy:SetUpvaluePosition(self:GetUpvaluePosition())
+	copy:SetOutputSignature(self:GetOutputSignature():Copy(map, ...))
+	copy:SetInputSignature(self:GetInputSignature():Copy(map, ...))
+	copy:SetAnalyzerFunction(self:GetAnalyzerFunction())
+	copy:SetScope(self:GetScope())
 	copy:SetLiteral(self:IsLiteral())
 	copy:CopyInternalsFrom(self)
-	copy.function_body_node = self.function_body_node
-	copy.called = self.called
+	copy:SetFunctionBodyNode(self:GetFunctionBodyNode())
+	copy:SetCalled(self:IsCalled())
 	return copy
 end
 
@@ -2890,25 +2796,25 @@ function META.IsSubsetOf(A, B)
 
 	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
 
-	local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments())
+	local ok, reason = A:GetInputSignature():IsSubsetOf(B:GetInputSignature())
 
 	if not ok then
-		return type_errors.subset(A:GetArguments(), B:GetArguments(), reason)
+		return type_errors.subset(A:GetInputSignature(), B:GetInputSignature(), reason)
 	end
 
-	local ok, reason = A:GetReturnTypes():IsSubsetOf(B:GetReturnTypes())
+	local ok, reason = A:GetOutputSignature():IsSubsetOf(B:GetOutputSignature())
 
 	if
 		not ok and
 		(
 			(
 				not B:IsCalled() and
-				not B.explicit_return
+				not B:IsExplicitOutputSignature()
 			)
 			or
 			(
 				not A:IsCalled() and
-				not A.explicit_return
+				not A:IsExplicitOutputSignature()
 			)
 		)
 	then
@@ -2916,7 +2822,7 @@ function META.IsSubsetOf(A, B)
 	end
 
 	if not ok then
-		return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason)
+		return type_errors.subset(A:GetOutputSignature(), B:GetOutputSignature(), reason)
 	end
 
 	return true
@@ -2931,25 +2837,25 @@ function META.IsCallbackSubsetOf(A, B)
 
 	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
 
-	local ok, reason = A:GetArguments():IsSubsetOf(B:GetArguments(), A:GetArguments():GetMinimumLength())
+	local ok, reason = A:GetInputSignature():IsSubsetOf(B:GetInputSignature(), A:GetInputSignature():GetMinimumLength())
 
 	if not ok then
-		return type_errors.subset(A:GetArguments(), B:GetArguments(), reason)
+		return type_errors.subset(A:GetInputSignature(), B:GetInputSignature(), reason)
 	end
 
-	local ok, reason = A:GetReturnTypes():IsSubsetOf(B:GetReturnTypes())
+	local ok, reason = A:GetOutputSignature():IsSubsetOf(B:GetOutputSignature())
 
 	if
 		not ok and
 		(
 			(
 				not B:IsCalled() and
-				not B.explicit_return
+				not B:IsExplicitOutputSignature()
 			)
 			or
 			(
 				not A:IsCalled() and
-				not A.explicit_return
+				not A:IsExplicitOutputSignature()
 			)
 		)
 	then
@@ -2957,7 +2863,7 @@ function META.IsCallbackSubsetOf(A, B)
 	end
 
 	if not ok then
-		return type_errors.subset(A:GetReturnTypes(), B:GetReturnTypes(), reason)
+		return type_errors.subset(A:GetOutputSignature(), B:GetOutputSignature(), reason)
 	end
 
 	return true
@@ -3003,16 +2909,19 @@ function META:IsPure()
 	return #self:GetSideEffects() == 0
 end
 
-function META.New(data)
-	return setmetatable({Data = data or {}}, META)
+function META.New(input, output)
+	local self = setmetatable({}, META)
+	self:SetInputSignature(input)
+	self:SetOutputSignature(output)
+	return self
 end
 
 function META:IsRefFunction()
-	for i, v in ipairs(self:GetArguments():GetData()) do
+	for i, v in ipairs(self:GetInputSignature():GetData()) do
 		if v.ref_argument then return true end
 	end
 
-	for i, v in ipairs(self:GetReturnTypes():GetData()) do
+	for i, v in ipairs(self:GetOutputSignature():GetData()) do
 		if v.ref_argument then return true end
 	end
 
@@ -3022,194 +2931,12 @@ end
 return {
 	Function = META.New,
 	AnyFunction = function()
-		return META.New({
-			arg = Tuple({VarArg(Any())}),
-			ret = Tuple({VarArg(Any())}),
-		})
+		return META.New(Tuple({VarArg(Any())}), Tuple({VarArg(Any())}))
 	end,
 	LuaTypeFunction = function(lua_function, arg, ret)
-		local self = META.New()
-		self:SetData(
-			{
-				arg = Tuple(arg),
-				ret = Tuple(ret),
-				lua_function = lua_function,
-			}
-		)
+		local self = META.New(Tuple(arg), Tuple(ret))
+		self:SetAnalyzerFunction(lua_function)
 		return self
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.context"] = function(...) __M = __M or (function(...) local current_analyzer = {}
-local CONTEXT = {}
-
-function CONTEXT:GetCurrentAnalyzer()
-	return current_analyzer[1]
-end
-
-function CONTEXT:PushCurrentAnalyzer(b)
-	table.insert(current_analyzer, 1, b)
-end
-
-function CONTEXT:PopCurrentAnalyzer()
-	table.remove(current_analyzer, 1)
-end
-
-return CONTEXT end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.string"] = function(...) __M = __M or (function(...) local tostring = tostring
-local setmetatable = _G.setmetatable
-local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
-local context = IMPORTS['nattlua.analyzer.context']("nattlua.analyzer.context")
-local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
-
-
-
-
-META.Type = "string"
-
-
-META:GetSet("Data", nil)
-META:GetSet("PatternContract", nil)
-
-function META.Equal(a, b)
-	if a.Type ~= b.Type then return false end
-
-	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
-
-	if not a:IsLiteral() and not b:IsLiteral() then return true end
-
-	return false
-end
-
-function META:GetHash()
-	if self:IsLiteral() then return self.Data end
-
-	return "__@type@__" .. self.Type
-end
-
-function META:Copy()
-	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
-	copy:SetPatternContract(self:GetPatternContract())
-	copy:CopyInternalsFrom(self)
-	return copy
-end
-
-function META.IsSubsetOf(A, B)
-	if B.Type == "tuple" then B = B:Get(1) end
-
-	if B.Type == "any" then return true end
-
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
-
-	if B.Type ~= "string" then return type_errors.type_mismatch(A, B) end
-
-	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then -- "A" subsetof "B"
-		return true
-	end
-
-	if A:IsLiteral() and not B:IsLiteral() then -- "A" subsetof string
-		return true
-	end
-
-	if not A:IsLiteral() and not B:IsLiteral() then -- string subsetof string
-		return true
-	end
-
-	if B.PatternContract then
-		if not A:GetData() then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
-			return type_errors.literal(A)
-		end
-
-		if not A:GetData():find(B.PatternContract) then
-			return type_errors.string_pattern(A, B)
-		end
-
-		return true
-	end
-
-	if A:IsLiteral() and B:IsLiteral() then
-		return type_errors.value_mismatch(A, B)
-	end
-
-	return type_errors.subset(A, B)
-end
-
-function META:__tostring()
-	if self.PatternContract then return "$\"" .. self.PatternContract .. "\"" end
-
-	if self:IsLiteral() then
-		if self:GetData() then return "\"" .. self:GetData() .. "\"" end
-
-		if self:GetData() == nil then return "string" end
-
-		return tostring(self:GetData())
-	end
-
-	return "string"
-end
-
-function META.LogicalComparison(a, b, op)
-	if op == ">" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() > b:GetData() end
-
-		return nil
-	elseif op == "<" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() < b:GetData() end
-
-		return nil
-	elseif op == "<=" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() <= b:GetData() end
-
-		return nil
-	elseif op == ">=" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() >= b:GetData() end
-
-		return nil
-	elseif op == "==" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
-
-		return nil
-	end
-
-	return type_errors.binary(op, a, b)
-end
-
-function META:IsFalsy()
-	return false
-end
-
-function META:IsTruthy()
-	return true
-end
-
-function META:PrefixOperator(op)
-	if op == "#" then
-		return Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral())
-	end
-end
-
-function META.New(data)
-	local self = setmetatable({Data = data}, META)
-	-- analyzer might be nil when strings are made outside of the analyzer, like during tests
-	local analyzer = context:GetCurrentAnalyzer()
-
-	if analyzer then
-		self:SetMetaTable(analyzer:GetDefaultEnvironment("typesystem").string_metatable)
-	end
-
-	return self
-end
-
-return {
-	String = META.New,
-	LString = function(num)
-		return META.New(num):SetLiteral(true)
-	end,
-	LStringNoMeta = function(str)
-		return setmetatable({Data = str}, META):SetLiteral(true)
-	end,
-	NodeToString = function(node, is_local)
-		return META.New(node.value.value):SetLiteral(true)
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.table"] = function(...) __M = __M or (function(...) local setmetatable = _G.setmetatable
@@ -3220,7 +2947,6 @@ local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
 local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
-local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 
@@ -3881,9 +3607,11 @@ function META:CoerceUntypedFunctions(from)
 		local kv_from, reason = from:FindKeyValReverse(kv.key)
 
 		if kv.val.Type == "function" and kv_from.val.Type == "function" then
-			kv.val:SetArguments(kv_from.val:GetArguments())
-			kv.val:SetReturnTypes(kv_from.val:GetReturnTypes())
-			kv.val.explicit_arguments = true
+			kv.val:SetInputSignature(kv_from.val:GetInputSignature())
+			kv.val:SetOutputSignature(kv_from.val:GetOutputSignature())
+			kv.val:SetExplicitOutputSignature(true)
+			kv.val:SetExplicitInputSignature(true)
+			kv.val:SetCalled(false)
 		end
 	end
 end
@@ -4091,23 +3819,6 @@ function META.Union(A, B)
 	return copy
 end
 
-function META:Call(analyzer, arguments, ...)
-	local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
-	local __call = self:GetMetaTable() and self:GetMetaTable():Get(LString("__call"))
-
-	if __call then
-		local new_arguments = {self}
-
-		for _, v in ipairs(arguments:GetData()) do
-			table.insert(new_arguments, v)
-		end
-
-		return analyzer:Call(__call, Tuple(new_arguments), ...)
-	end
-
-	return type_errors.other("table has no __call metamethod")
-end
-
 function META:PrefixOperator(op)
 	if op == "#" then
 		local keys = (self:GetContract() or self):GetData()
@@ -4141,6 +3852,179 @@ function META.New()
 end
 
 return {Table = META.New} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.context"] = function(...) __M = __M or (function(...) local current_analyzer = {}
+local CONTEXT = {}
+
+function CONTEXT:GetCurrentAnalyzer()
+	return current_analyzer[1]
+end
+
+function CONTEXT:PushCurrentAnalyzer(b)
+	table.insert(current_analyzer, 1, b)
+end
+
+function CONTEXT:PopCurrentAnalyzer()
+	table.remove(current_analyzer, 1)
+end
+
+return CONTEXT end)(...) return __M end end
+do local __M; IMPORTS["nattlua.types.string"] = function(...) __M = __M or (function(...) local tostring = tostring
+local setmetatable = _G.setmetatable
+local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
+local context = IMPORTS['nattlua.analyzer.context']("nattlua.analyzer.context")
+local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
+
+
+
+
+META.Type = "string"
+
+
+META:GetSet("Data", nil)
+META:GetSet("PatternContract", nil)
+
+function META.Equal(a, b)
+	if a.Type ~= b.Type then return false end
+
+	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
+
+	if not a:IsLiteral() and not b:IsLiteral() then return true end
+
+	return false
+end
+
+function META:GetHash()
+	if self:IsLiteral() then return self.Data end
+
+	return "__@type@__" .. self.Type
+end
+
+function META:Copy()
+	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
+	copy:SetPatternContract(self:GetPatternContract())
+	copy:CopyInternalsFrom(self)
+	return copy
+end
+
+function META.IsSubsetOf(A, B)
+	if B.Type == "tuple" then B = B:Get(1) end
+
+	if B.Type == "any" then return true end
+
+	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+
+	if B.Type ~= "string" then return type_errors.type_mismatch(A, B) end
+
+	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then -- "A" subsetof "B"
+		return true
+	end
+
+	if A:IsLiteral() and not B:IsLiteral() then -- "A" subsetof string
+		return true
+	end
+
+	if not A:IsLiteral() and not B:IsLiteral() then -- string subsetof string
+		return true
+	end
+
+	if B.PatternContract then
+		if not A:GetData() then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
+			return type_errors.literal(A)
+		end
+
+		if not A:GetData():find(B.PatternContract) then
+			return type_errors.string_pattern(A, B)
+		end
+
+		return true
+	end
+
+	if A:IsLiteral() and B:IsLiteral() then
+		return type_errors.value_mismatch(A, B)
+	end
+
+	return type_errors.subset(A, B)
+end
+
+function META:__tostring()
+	if self.PatternContract then return "$\"" .. self.PatternContract .. "\"" end
+
+	if self:IsLiteral() then
+		if self:GetData() then return "\"" .. self:GetData() .. "\"" end
+
+		if self:GetData() == nil then return "string" end
+
+		return tostring(self:GetData())
+	end
+
+	return "string"
+end
+
+function META.LogicalComparison(a, b, op)
+	if op == ">" then
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() > b:GetData() end
+
+		return nil
+	elseif op == "<" then
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() < b:GetData() end
+
+		return nil
+	elseif op == "<=" then
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() <= b:GetData() end
+
+		return nil
+	elseif op == ">=" then
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() >= b:GetData() end
+
+		return nil
+	elseif op == "==" then
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
+
+		return nil
+	end
+
+	return type_errors.binary(op, a, b)
+end
+
+function META:IsFalsy()
+	return false
+end
+
+function META:IsTruthy()
+	return true
+end
+
+function META:PrefixOperator(op)
+	if op == "#" then
+		return Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral())
+	end
+end
+
+function META.New(data)
+	local self = setmetatable({Data = data}, META)
+	-- analyzer might be nil when strings are made outside of the analyzer, like during tests
+	local analyzer = context:GetCurrentAnalyzer()
+
+	if analyzer then
+		self:SetMetaTable(analyzer:GetDefaultEnvironment("typesystem").string_metatable)
+	end
+
+	return self
+end
+
+return {
+	String = META.New,
+	LString = function(num)
+		return META.New(num):SetLiteral(true)
+	end,
+	LStringNoMeta = function(str)
+		return setmetatable({Data = str}, META):SetLiteral(true)
+	end,
+	NodeToString = function(node, is_local)
+		return META.New(node.value.value):SetLiteral(true)
+	end,
+} end)(...) return __M end end
 IMPORTS['nattlua/definitions/lua/globals.nlua'] = function() 
 
 
@@ -13530,7 +13414,7 @@ do
 		return self.returns ~= nil
 	end
 
-	function META:CollectReturnTypes(node, types)
+	function META:CollectOutputSignatures(node, types)
 		table.insert(self:GetNearestFunctionScope().returns, {node = node, types = types})
 	end
 
@@ -13568,11 +13452,11 @@ do
 		return self
 	end
 
-	function META:GetReturnTypes()
+	function META:GetOutputSignature()
 		return self.returns
 	end
 
-	function META:ClearCertainReturnTypes()
+	function META:ClearCertainOutputSignatures()
 		self.returns = {}
 	end
 
@@ -13719,9 +13603,7 @@ return function(META)
 	end
 
 	function META:CreateAndPushFunctionScope(obj)
-		return self:PushScope(
-			LexicalScope(obj:GetData().scope or self:GetScope(), obj:GetData().upvalue_position, obj)
-		)
+		return self:PushScope(LexicalScope(obj:GetScope() or self:GetScope(), obj:GetUpvaluePosition(), obj))
 	end
 
 	function META:CreateAndPushModuleScope()
@@ -14051,7 +13933,7 @@ return function(META)
 		g:Set(LString("_G"), g)
 		self:PushAnalyzerEnvironment("runtime")
 		self:CreateLocalValue("...", argument_tuple)
-		local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(statement)
+		local analyzed_return = self:AnalyzeStatementsAndCollectOutputSignatures(statement)
 		self:PopAnalyzerEnvironment()
 		self:PopGlobalEnvironment("runtime")
 		self:PopGlobalEnvironment("typesystem")
@@ -14127,7 +14009,7 @@ return function(META)
 
 		local function call(self, obj, node)
 			-- use function's arguments in case they have been maniupulated (ie string.gsub)
-			local arguments = obj:GetArguments():Copy()
+			local arguments = obj:GetInputSignature():Copy()
 			arguments = add_potential_self(arguments)
 
 			for _, obj in ipairs(arguments:GetData()) do
@@ -14154,31 +14036,31 @@ return function(META)
 
 			for _, func in ipairs(self.deferred_calls) do
 				if
-					func.explicit_arguments and
+					func:IsExplicitInputSignature() and
 					not func:IsCalled()
 					and
 					not func.done and
 					not func:IsRefFunction()
 				then
-					call(self, func, func.function_body_node)
+					call(self, func, func:GetFunctionBodyNode())
 					called_count = called_count + 1
 					func.done = true
-					func:ClearCalls()
+					func:SetCalled()
 				end
 			end
 
 			for _, func in ipairs(self.deferred_calls) do
 				if
-					not func.explicit_arguments and
+					not func:IsExplicitInputSignature() and
 					not func:IsCalled()
 					and
 					not func.done and
 					not func:IsRefFunction()
 				then
-					call(self, func, func.function_body_node)
+					call(self, func, func:GetFunctionBodyNode())
 					called_count = called_count + 1
 					func.done = true
-					func:ClearCalls()
+					func:SetCalled()
 				end
 			end
 
@@ -14538,9 +14420,7 @@ return function(META)
 	end
 end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.control_flow"] = function(...) __M = __M or (function(...) local ipairs = ipairs
-local type = type
-local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
-local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
+local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
@@ -14570,7 +14450,7 @@ return function(META)
 		end
 	end
 
-	function META:AnalyzeStatementsAndCollectReturnTypes(statement)
+	function META:AnalyzeStatementsAndCollectOutputSignatures(statement)
 		local scope = self:GetScope()
 		scope:MakeFunctionScope(statement)
 		self:AnalyzeStatements(statement.statements)
@@ -14581,7 +14461,7 @@ return function(META)
 
 		local union = Union({})
 
-		for _, ret in ipairs(scope:GetReturnTypes()) do
+		for _, ret in ipairs(scope:GetOutputSignature()) do
 			if #ret.types == 1 then
 				union:AddType(ret.types[1])
 			else
@@ -14590,7 +14470,7 @@ return function(META)
 			end
 		end
 
-		scope:ClearCertainReturnTypes()
+		scope:ClearCertainOutputSignatures()
 
 		if #union:GetData() == 1 then return union:GetData()[1] end
 
@@ -14734,7 +14614,7 @@ return function(META)
 			end
 		end
 
-		if not thrown then scope:CollectReturnTypes(node, types) end
+		if not thrown then scope:CollectOutputSignatures(node, types) end
 
 		if scope:IsUncertain() then
 			function_scope:UncertainReturn()
@@ -14745,6 +14625,116 @@ return function(META)
 		end
 
 		self:ApplyMutationsAfterReturn(scope, function_scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
+	end
+
+	do
+		function META:GetCallStack()
+			return self.call_stack or {}
+		end
+
+		function META:PushCallFrame(obj, call_node, not_recursive_call)
+			-- extra protection, maybe only useful during development
+			if debug.getinfo(300) then
+				debug.trace()
+				return false, "call stack is too deep"
+			end
+
+			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
+			self.call_stack = self.call_stack or {}
+
+			if self:IsRuntime() and call_node and not not_recursive_call then
+				for _, v in ipairs(self.call_stack) do
+					-- if the callnode is the same, we're doing some infinite recursion
+					if v.call_node == call_node then
+						if obj:IsExplicitOutputSignature() then
+							-- so if we have explicit return types, just return those
+							obj.recursively_called = obj:GetOutputSignature():Copy()
+							return obj.recursively_called
+						else
+							-- if not we sadly have to resort to any
+							-- TODO: error?
+							obj.recursively_called = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+							return obj.recursively_called
+						end
+					end
+				end
+			end
+
+			table.insert(
+				self.call_stack,
+				1,
+				{
+					obj = obj,
+					call_node = call_node,
+					scope = self:GetScope(),
+				}
+			)
+		end
+
+		function META:PopCallFrame()
+			table.remove(self.call_stack, 1)
+		end
+	end
+
+	function META:IsDefinetlyReachable()
+		local scope = self:GetScope()
+		local function_scope = scope:GetNearestFunctionScope()
+
+		if not scope:IsCertain() then return false, "scope is uncertain" end
+
+		if function_scope.uncertain_function_return == true then
+			return false, "uncertain function return"
+		end
+
+		if function_scope.lua_silent_error then
+			for _, scope in ipairs(function_scope.lua_silent_error) do
+				if not scope:IsCertain() then
+					return false, "parent function scope can throw an error"
+				end
+			end
+		end
+
+		for _, frame in ipairs(self:GetCallStack()) do
+			local scope = frame.scope
+
+			if not scope:IsCertain() then
+				return false, "call stack scope is uncertain"
+			end
+
+			if scope.uncertain_function_return == true then
+				return false, "call stack scope has uncertain function return"
+			end
+		end
+
+		return true
+	end
+
+	function META:IsMaybeReachable()
+		local scope = self:GetScope()
+		local function_scope = scope:GetNearestFunctionScope()
+
+		if function_scope.lua_silent_error then
+			for _, scope in ipairs(function_scope.lua_silent_error) do
+				if not scope:IsCertain() then return false end
+			end
+		end
+
+		for _, frame in ipairs(self:GetCallStack()) do
+			local parent_scope = frame.scope
+
+			if
+				not parent_scope:IsCertain() or
+				parent_scope.uncertain_function_return == true
+			then
+				if parent_scope:IsCertainFromScope(scope) then return false end
+			end
+		end
+
+		return true
+	end
+
+	function META:UncertainReturn()
+		self.call_stack[1].scope:UncertainReturn()
 	end
 
 	function META:Print(...)
@@ -14959,10 +14949,11 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 				value.Type == "function" and
 				not value:IsCalled()
 				and
-				not value.explicit_return and
+				not value:IsExplicitOutputSignature()
+				and
 				union:HasType("function")
 			then
-				self:Assert(self:Call(value, value:GetArguments():Copy()))
+				self:Assert(self:Call(value, value:GetInputSignature():Copy()))
 			end
 
 			union:AddType(value)
@@ -15147,226 +15138,237 @@ return function(META)
 	end
 
 	do
-		function META:ClearTracked()
-			if self.tracked_upvalues then
-				for _, upvalue in ipairs(self.tracked_upvalues) do
-					upvalue.tracked_stack = nil
+		do
+			function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
+				if self:IsTypesystem() then return end
+
+				local upvalue = obj:GetUpvalue()
+
+				if not upvalue then return end
+
+				if obj.Type == "union" then
+					if not truthy_union then truthy_union = obj:GetTruthy() end
+
+					if not falsy_union then falsy_union = obj:GetFalsy() end
+
+					upvalue.tracked_stack = upvalue.tracked_stack or {}
+					table.insert(
+						upvalue.tracked_stack,
+						{
+							truthy = truthy_union,
+							falsy = falsy_union,
+							inverted = inverted,
+						}
+					)
 				end
 
-				self.tracked_upvalues_done = nil
-				self.tracked_upvalues = nil
+				self.tracked_upvalues = self.tracked_upvalues or {}
+				self.tracked_upvalues_done = self.tracked_upvalues_done or {}
+
+				if not self.tracked_upvalues_done[upvalue] then
+					table.insert(self.tracked_upvalues, upvalue)
+					self.tracked_upvalues_done[upvalue] = true
+				end
 			end
 
-			if self.tracked_tables then
-				for _, tbl in ipairs(self.tracked_tables) do
-					tbl.tracked_stack = nil
+			function META:TrackUpvalueNonUnion(obj)
+				if self:IsTypesystem() then return end
+
+				local upvalue = obj:GetUpvalue()
+
+				if not upvalue then return end
+
+				self.tracked_upvalues = self.tracked_upvalues or {}
+				self.tracked_upvalues_done = self.tracked_upvalues_done or {}
+
+				if not self.tracked_upvalues_done[upvalue] then
+					table.insert(self.tracked_upvalues, upvalue)
+					self.tracked_upvalues_done[upvalue] = true
+				end
+			end
+
+			function META:GetTrackedUpvalue(obj)
+				if self:IsTypesystem() then return end
+
+				local upvalue = obj:GetUpvalue()
+				local stack = upvalue and upvalue.tracked_stack
+
+				if not stack then return end
+
+				if self:IsTruthyExpressionContext() then
+					return stack[#stack].truthy:SetUpvalue(upvalue)
+				elseif self:IsFalsyExpressionContext() then
+					local union = stack[#stack].falsy
+
+					if union:GetLength() == 0 then
+						union = Union()
+
+						for _, val in ipairs(stack) do
+							union:AddType(val.falsy)
+						end
+					end
+
+					union:SetUpvalue(upvalue)
+					return union
+				end
+			end
+
+			function META:GetTrackedUpvalues(old_upvalues)
+				local upvalues = {}
+				local translate = {}
+
+				if old_upvalues then
+					for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
+						local old = old_upvalues[i]
+						translate[old] = upvalue
+						upvalue.tracked_stack = old.tracked_stack
+					end
 				end
 
-				self.tracked_tables_done = nil
-				self.tracked_tables = nil
+				if self.tracked_upvalues then
+					for _, upvalue in ipairs(self.tracked_upvalues) do
+						local stack = upvalue.tracked_stack
+
+						if old_upvalues then upvalue = translate[upvalue] end
+
+						table.insert(upvalues, {upvalue = upvalue, stack = stack and copy(stack)})
+					end
+				end
+
+				return upvalues
+			end
+
+			function META:ClearTrackedUpvalues()
+				if self.tracked_upvalues then
+					for _, upvalue in ipairs(self.tracked_upvalues) do
+						upvalue.tracked_stack = nil
+					end
+
+					self.tracked_upvalues_done = nil
+					self.tracked_upvalues = nil
+				end
 			end
 		end
 
-		function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
-			if self:IsTypesystem() then return end
+		do
+			function META:TrackTableIndex(tbl, key, val)
+				if self:IsTypesystem() then return end
 
-			local upvalue = obj:GetUpvalue()
+				local hash = key:GetHash()
 
-			if not upvalue then return end
+				if not hash then return end
 
-			if obj.Type == "union" then
-				if not truthy_union then truthy_union = obj:GetTruthy() end
+				val.parent_table = tbl
+				val.parent_key = key
+				local truthy_union = val:GetTruthy()
+				local falsy_union = val:GetFalsy()
+				self:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, self.inverted_index_tracking, true)
+			end
 
-				if not falsy_union then falsy_union = obj:GetFalsy() end
+			function META:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, inverted, truthy_falsy)
+				if self:IsTypesystem() then return end
 
-				upvalue.tracked_stack = upvalue.tracked_stack or {}
+				local hash = key:GetHash()
+
+				if not hash then return end
+
+				tbl.tracked_stack = tbl.tracked_stack or {}
+				tbl.tracked_stack[hash] = tbl.tracked_stack[hash] or {}
+
+				if falsy_union then
+					falsy_union.parent_table = tbl
+					falsy_union.parent_key = key
+				end
+
+				if truthy_union then
+					truthy_union.parent_table = tbl
+					truthy_union.parent_key = key
+				end
+
+				for i = #tbl.tracked_stack[hash], 1, -1 do
+					local tracked = tbl.tracked_stack[hash][i]
+
+					if tracked.truthy_falsy then
+						table.remove(tbl.tracked_stack[hash], i)
+					end
+				end
+
 				table.insert(
-					upvalue.tracked_stack,
+					tbl.tracked_stack[hash],
 					{
+						contract = tbl:GetContract(),
+						key = key,
 						truthy = truthy_union,
 						falsy = falsy_union,
 						inverted = inverted,
+						truthy_falsy = truthy_falsy,
 					}
 				)
-			end
+				self.tracked_tables = self.tracked_tables or {}
+				self.tracked_tables_done = self.tracked_tables_done or {}
 
-			self.tracked_upvalues = self.tracked_upvalues or {}
-			self.tracked_upvalues_done = self.tracked_upvalues_done or {}
-
-			if not self.tracked_upvalues_done[upvalue] then
-				table.insert(self.tracked_upvalues, upvalue)
-				self.tracked_upvalues_done[upvalue] = true
-			end
-		end
-
-		function META:TrackUpvalueNonUnion(obj)
-			if self:IsTypesystem() then return end
-
-			local upvalue = obj:GetUpvalue()
-
-			if not upvalue then return end
-
-			self.tracked_upvalues = self.tracked_upvalues or {}
-			self.tracked_upvalues_done = self.tracked_upvalues_done or {}
-
-			if not self.tracked_upvalues_done[upvalue] then
-				table.insert(self.tracked_upvalues, upvalue)
-				self.tracked_upvalues_done[upvalue] = true
-			end
-		end
-
-		function META:GetTrackedUpvalue(obj)
-			if self:IsTypesystem() then return end
-
-			local upvalue = obj:GetUpvalue()
-			local stack = upvalue and upvalue.tracked_stack
-
-			if not stack then return end
-
-			if self:IsTruthyExpressionContext() then
-				return stack[#stack].truthy:SetUpvalue(upvalue)
-			elseif self:IsFalsyExpressionContext() then
-				local union = stack[#stack].falsy
-
-				if union:GetLength() == 0 then
-					union = Union()
-
-					for _, val in ipairs(stack) do
-						union:AddType(val.falsy)
-					end
-				end
-
-				union:SetUpvalue(upvalue)
-				return union
-			end
-		end
-
-		function META:TrackTableIndex(obj, key, val)
-			if self:IsTypesystem() then return end
-
-			local hash = key:GetHash()
-
-			if not hash then return end
-
-			val.parent_table = obj
-			val.parent_key = key
-			local truthy_union = val:GetTruthy()
-			local falsy_union = val:GetFalsy()
-			self:TrackTableIndexUnion(obj, key, truthy_union, falsy_union, self.inverted_index_tracking, true)
-		end
-
-		function META:TrackTableIndexUnion(obj, key, truthy_union, falsy_union, inverted, truthy_falsy)
-			if self:IsTypesystem() then return end
-
-			local hash = key:GetHash()
-
-			if not hash then return end
-
-			obj.tracked_stack = obj.tracked_stack or {}
-			obj.tracked_stack[hash] = obj.tracked_stack[hash] or {}
-
-			if falsy_union then
-				falsy_union.parent_table = obj
-				falsy_union.parent_key = key
-			end
-
-			if truthy_union then
-				truthy_union.parent_table = obj
-				truthy_union.parent_key = key
-			end
-
-			for i = #obj.tracked_stack[hash], 1, -1 do
-				local tracked = obj.tracked_stack[hash][i]
-
-				if tracked.truthy_falsy then
-					table.remove(obj.tracked_stack[hash], i)
+				if not self.tracked_tables_done[tbl] then
+					table.insert(self.tracked_tables, tbl)
+					self.tracked_tables_done[tbl] = true
 				end
 			end
 
-			table.insert(
-				obj.tracked_stack[hash],
-				{
-					contract = obj:GetContract(),
-					key = key,
-					truthy = truthy_union,
-					falsy = falsy_union,
-					inverted = inverted,
-					truthy_falsy = truthy_falsy,
-				}
-			)
-			self.tracked_tables = self.tracked_tables or {}
-			self.tracked_tables_done = self.tracked_tables_done or {}
+			function META:GetTrackedTableWithKey(tbl, key)
+				if not tbl.tracked_stack then return end
 
-			if not self.tracked_tables_done[obj] then
-				table.insert(self.tracked_tables, obj)
-				self.tracked_tables_done[obj] = true
+				local hash = key:GetHash()
+
+				if not hash then return end
+
+				local stack = tbl.tracked_stack[hash]
+
+				if not stack then return end
+
+				if self:IsTruthyExpressionContext() then
+					return stack[#stack].truthy
+				elseif self:IsFalsyExpressionContext() then
+					return stack[#stack].falsy
+				end
 			end
-		end
 
-		function META:GetTrackedObjectWithKey(obj, key)
-			if not obj.tracked_stack or obj.tracked_stack[1] then return end
+			function META:GetTrackedTables()
+				local tables = {}
 
-			local hash = key:GetHash()
-
-			if not hash then return end
-
-			local stack = obj.tracked_stack[hash]
-
-			if not stack then return end
-
-			if self:IsTruthyExpressionContext() then
-				return stack[#stack].truthy
-			elseif self:IsFalsyExpressionContext() then
-				return stack[#stack].falsy
-			end
-		end
-
-		function META:GetTrackedTables()
-			local tables = {}
-
-			if self.tracked_tables then
-				for _, tbl in ipairs(self.tracked_tables) do
-					if tbl.tracked_stack then
-						for _, stack in pairs(tbl.tracked_stack) do
-							table.insert(
-								tables,
-								{
-									obj = tbl,
-									key = stack[#stack].key,
-									stack = copy(stack),
-								}
-							)
+				if self.tracked_tables then
+					for _, tbl in ipairs(self.tracked_tables) do
+						if tbl.tracked_stack then
+							for _, stack in pairs(tbl.tracked_stack) do
+								table.insert(
+									tables,
+									{
+										obj = tbl,
+										key = stack[#stack].key,
+										stack = copy(stack),
+									}
+								)
+							end
 						end
 					end
 				end
+
+				return tables
 			end
 
-			return tables
+			function META:ClearTrackedTables()
+				if self.tracked_tables then
+					for _, tbl in ipairs(self.tracked_tables) do
+						tbl.tracked_stack = nil
+					end
+
+					self.tracked_tables_done = nil
+					self.tracked_tables = nil
+				end
+			end
 		end
 
-		function META:GetTrackedUpvalues(old_upvalues)
-			local upvalues = {}
-			local translate = {}
-
-			if old_upvalues then
-				for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
-					local old = old_upvalues[i]
-					translate[old] = upvalue
-					upvalue.tracked_stack = old.tracked_stack
-				end
-			end
-
-			if self.tracked_upvalues then
-				for _, upvalue in ipairs(self.tracked_upvalues) do
-					local stack = upvalue.tracked_stack
-
-					if old_upvalues then upvalue = translate[upvalue] end
-
-					table.insert(upvalues, {upvalue = upvalue, stack = stack and copy(stack)})
-				end
-			end
-
-			return upvalues
+		function META:ClearTracked()
+			self:ClearTrackedUpvalues()
+			self:ClearTrackedTables()
 		end
 
 		--[[
@@ -15598,7 +15600,7 @@ return {
 				return type_errors.other("attempt to index a string value")
 			end
 
-			local tracked = self:GetTrackedObjectWithKey(obj, key)
+			local tracked = self:GetTrackedTableWithKey(obj, key)
 
 			if tracked then return tracked end
 
@@ -15688,17 +15690,17 @@ return {
 
 			if
 				val.Type == "function" and
-				val.function_body_node and
-				val.function_body_node.self_call
+				val:GetFunctionBodyNode() and
+				val:GetFunctionBodyNode().self_call
 			then
-				local arg = val:GetArguments():Get(1)
+				local arg = val:GetInputSignature():Get(1)
 
 				if arg and not arg:GetContract() and not arg.Self then
-					val:SetCallOverride(true)
+					val:SetCalled(true)
 					val = val:Copy()
-					val:SetCallOverride(nil)
-					val:GetArguments():Set(1, Union({Any(), obj}))
-					self:AddToUnreachableCodeAnalysis(val, val:GetArguments(), val.function_body_node, true)
+					val:SetCalled(nil)
+					val:GetInputSignature():Set(1, Union({Any(), obj}))
+					self:AddToUnreachableCodeAnalysis(val, val:GetInputSignature(), val:GetFunctionBodyNode(), true)
 				end
 			end
 
@@ -15770,17 +15772,19 @@ return {
 
 					if existing then
 						if val.Type == "function" and existing.Type == "function" then
-							for i, v in ipairs(val.argument_identifiers) do
-								if not existing.argument_identifiers[i] then
+							for i, v in ipairs(val:GetInputIdentifiers()) do
+								if not existing:GetInputIdentifiers()[i] then
 									self:Error("too many arguments")
 
 									break
 								end
 							end
 
-							val:SetArguments(existing:GetArguments())
-							val:SetReturnTypes(existing:GetReturnTypes())
-							val.explicit_arguments = true
+							val:SetInputSignature(existing:GetInputSignature())
+							val:SetOutputSignature(existing:GetOutputSignature())
+							val:SetExplicitOutputSignature(true)
+							val:SetExplicitInputSignature(true)
+							val:SetCalled(false)
 						end
 
 						local ok, err = val:IsSubsetOf(existing)
@@ -15819,7 +15823,6 @@ return {
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.operators.call_analyzer"] = function(...) __M = __M or (function(...) local ipairs = ipairs
 local math = math
-local unpack_union_tuples
 local ipairs = ipairs
 local type = type
 local math = math
@@ -15835,187 +15838,186 @@ local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
 local Symbol = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Symbol
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 
-do
-	local ipairs = ipairs
+local function should_expand(arg, contract)
+	local b = arg.Type == "union"
 
-	local function should_expand(arg, contract)
-		local b = arg.Type == "union"
+	if contract.Type == "any" then b = false end
 
-		if contract.Type == "any" then b = false end
+	if contract.Type == "union" then b = false end
 
-		if contract.Type == "union" then b = false end
-
-		if arg.Type == "union" and contract.Type == "union" and contract:CanBeNil() then
-			b = true
-		end
-
-		return b
+	if arg.Type == "union" and contract.Type == "union" and contract:CanBeNil() then
+		b = true
 	end
 
-	function unpack_union_tuples(func_obj, arguments, function_arguments)
-		local out = {}
-		local lengths = {}
-		local max = 1
-		local ys = {}
-		local arg_length = #arguments
-
-		for i, obj in ipairs(arguments) do
-			if not func_obj.no_expansion and should_expand(obj, function_arguments:Get(i)) then
-				lengths[i] = #obj:GetData()
-				max = max * lengths[i]
-			else
-				lengths[i] = 0
-			end
-
-			ys[i] = 1
-		end
-
-		for i = 1, max do
-			local args = {}
-
-			for i, obj in ipairs(arguments) do
-				if lengths[i] == 0 then
-					args[i] = obj
-				else
-					args[i] = obj:GetData()[ys[i]]
-				end
-			end
-
-			out[i] = args
-
-			for i = arg_length, 2, -1 do
-				if i == arg_length then ys[i] = ys[i] + 1 end
-
-				if ys[i] > lengths[i] then
-					ys[i] = 1
-					ys[i - 1] = ys[i - 1] + 1
-				end
-			end
-		end
-
-		return out
-	end
+	return b
 end
 
-return {
-	Call = function(META)
-		function META:LuaTypesToTuple(tps)
-			local tbl = {}
+local function unpack_union_tuples(obj, input)
+	local input_signature = obj:GetInputSignature()
+	local out = {}
+	local lengths = {}
+	local max = 1
+	local ys = {}
+	local arg_length = #input
 
-			for i, v in ipairs(tps) do
-				if type(v) == "table" and v.Type ~= nil then
-					tbl[i] = v
-				else
-					if type(v) == "function" then
-						tbl[i] = Function(
-							{
-								lua_function = v,
-								arg = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-								ret = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)),
-							}
-						):SetLiteral(true)
-					else
-						local t = type(v)
-
-						if t == "number" then
-							tbl[i] = LNumber(v)
-						elseif t == "string" then
-							tbl[i] = LString(v)
-						elseif t == "boolean" then
-							tbl[i] = Symbol(v)
-						elseif t == "table" then
-							local tbl = Table()
-
-							for _, val in ipairs(v) do
-								tbl:Insert(val)
-							end
-
-							tbl:SetContract(tbl)
-							return tbl
-						else
-							self:Print(t)
-							error(debug.traceback("NYI " .. t))
-						end
-					end
-				end
-			end
-
-			if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
-
-			return Tuple(tbl)
+	for i, val in ipairs(input) do
+		if
+			not obj:GetPreventInputArgumentExpansion() and
+			should_expand(val, input_signature:Get(i))
+		then
+			lengths[i] = #val:GetData()
+			max = max * lengths[i]
+		else
+			lengths[i] = 0
 		end
 
-		function META:CallAnalyzerFunction(obj, function_arguments, arguments)
-			do
-				local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
+		ys[i] = 1
+	end
 
-				if not ok then
-					return type_errors.subset(a, b, {"argument #", i, " - ", reason})
-				end
+	for i = 1, max do
+		local args = {}
+
+		for i, val in ipairs(input) do
+			if lengths[i] == 0 then
+				args[i] = val
+			else
+				args[i] = val:GetData()[ys[i]]
 			end
+		end
 
-			local len = function_arguments:GetLength()
+		out[i] = args
 
-			if len == math.huge and arguments:GetLength() == math.huge then
-				len = math.max(function_arguments:GetMinimumLength(), arguments:GetMinimumLength())
+		for i = arg_length, 2, -1 do
+			if i == arg_length then ys[i] = ys[i] + 1 end
+
+			if ys[i] > lengths[i] then
+				ys[i] = 1
+				ys[i - 1] = ys[i - 1] + 1
 			end
+		end
+	end
 
-			if self:IsTypesystem() then
-				local ret = self:LuaTypesToTuple(
-					{
-						self:CallLuaTypeFunction(
-							obj:GetData().lua_function,
-							obj:GetData().scope or self:GetScope(),
-							arguments:UnpackWithoutExpansion()
-						),
-					}
-				)
-				return ret
-			end
+	return out
+end
 
-			local tuples = {}
+return function(META)
+	function META:LuaTypesToTuple(tps)
+		local tbl = {}
 
-			for i, arg in ipairs(unpack_union_tuples(obj, {arguments:Unpack(len)}, function_arguments)) do
-				tuples[i] = self:LuaTypesToTuple(
-					{
-						self:CallLuaTypeFunction(
-							obj:GetData().lua_function,
-							obj:GetData().scope or self:GetScope(),
-							table.unpack(arg)
-						),
-					}
-				)
-			end
+		for i, v in ipairs(tps) do
+			if type(v) == "table" and v.Type ~= nil then
+				tbl[i] = v
+			else
+				if type(v) == "function" then
+					local func = Function()
+					func:SetAnalyzerFunction(v)
+					func:SetInputSignature(Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
+					func:SetOutputSignature(Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
+					func:SetLiteral(true)
+					tbl[i] = func
+				else
+					local t = type(v)
 
-			local ret = Tuple({})
+					if t == "number" then
+						tbl[i] = LNumber(v)
+					elseif t == "string" then
+						tbl[i] = LString(v)
+					elseif t == "boolean" then
+						tbl[i] = Symbol(v)
+					elseif t == "table" then
+						local tbl = Table()
 
-			for _, tuple in ipairs(tuples) do
-				if tuple:GetUnpackable() or tuple:GetLength() == math.huge then
-					return tuple
-				end
-			end
-
-			for _, tuple in ipairs(tuples) do
-				for i = 1, tuple:GetLength() do
-					local v = tuple:Get(i)
-					local existing = ret:Get(i)
-
-					if existing then
-						if existing.Type == "union" then
-							existing:AddType(v)
-						else
-							ret:Set(i, Union({v, existing}))
+						for _, val in ipairs(v) do
+							tbl:Insert(val)
 						end
+
+						tbl:SetContract(tbl)
+						return tbl
 					else
-						ret:Set(i, v)
+						self:Print(t)
+						error(debug.traceback("NYI " .. t))
 					end
 				end
 			end
+		end
 
+		if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
+
+		return Tuple(tbl)
+	end
+
+	function META:CallAnalyzerFunction(obj, input)
+		local signature_arguments = obj:GetInputSignature()
+
+		do
+			local ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetInputSignature())
+
+			if not ok then
+				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+			end
+		end
+
+		local len = signature_arguments:GetLength()
+
+		if len == math.huge and input:GetLength() == math.huge then
+			len = math.max(signature_arguments:GetMinimumLength(), input:GetMinimumLength())
+		end
+
+		if self:IsTypesystem() then
+			local ret = self:LuaTypesToTuple(
+				{
+					self:CallLuaTypeFunction(
+						obj:GetAnalyzerFunction(),
+						obj:GetScope() or self:GetScope(),
+						input:UnpackWithoutExpansion()
+					),
+				}
+			)
 			return ret
 		end
-	end,
-} end)(...) return __M end end
+
+		local tuples = {}
+
+		for i, arguments in ipairs(unpack_union_tuples(obj, {input:Unpack(len)})) do
+			tuples[i] = self:LuaTypesToTuple(
+				{
+					self:CallLuaTypeFunction(
+						obj:GetAnalyzerFunction(),
+						obj:GetScope() or self:GetScope(),
+						table.unpack(arguments)
+					),
+				}
+			)
+		end
+
+		local ret = Tuple({})
+
+		for _, tuple in ipairs(tuples) do
+			if tuple:GetUnpackable() or tuple:GetLength() == math.huge then
+				return tuple
+			end
+		end
+
+		for _, tuple in ipairs(tuples) do
+			for i = 1, tuple:GetLength() do
+				local v = tuple:Get(i)
+				local existing = ret:Get(i)
+
+				if existing then
+					if existing.Type == "union" then
+						existing:AddType(v)
+					else
+						ret:Set(i, Union({v, existing}))
+					end
+				else
+					ret:Set(i, v)
+				end
+			end
+		end
+
+		return ret
+	end
+end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.operators.call_body"] = function(...) __M = __M or (function(...) local ipairs = ipairs
 local table = _G.table
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
@@ -16047,9 +16049,11 @@ local function restore_mutated_types(self)
 	env.mutated_types = {}
 end
 
-local function check_and_setup_arguments(self, arguments, contracts, function_node, obj)
-	local len = contracts:GetSafeLength(arguments)
-	local contract_override = {}
+local function check_input(self, obj, input_arguments)
+	local function_node = obj:GetFunctionBodyNode()
+	local signature_arguments = obj:GetInputSignature()
+	local len = signature_arguments:GetSafeLength(input_arguments)
+	local signature_override = {}
 
 	if function_node.identifiers[1] then -- analyze the type expressions
 		self:CreateAndPushFunctionScope(obj)
@@ -16067,17 +16071,17 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 			self:CreateLocalValue(key.value.value, Any())
 			local arg
 			local contract
-			arg = arguments:Get(i)
+			arg = input_arguments:Get(i)
 
 			if key.value.value == "..." then
-				contract = contracts:GetWithoutExpansion(i)
+				contract = signature_arguments:GetWithoutExpansion(i)
 			else
-				contract = contracts:Get(i)
+				contract = signature_arguments:Get(i)
 			end
 
 			if not arg then
 				arg = Nil()
-				arguments:Set(i, arg)
+				input_arguments:Set(i, arg)
 			end
 
 			local ref_callback = arg and
@@ -16085,7 +16089,7 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 				contract.ref_argument and
 				contract.Type == "function" and
 				arg.Type == "function" and
-				not arg.arguments_inferred
+				not arg:IsArgumentsInferred()
 
 			if contract and contract.ref_argument and arg and not ref_callback then
 				self:CreateLocalValue(key.value.value, arg)
@@ -16116,60 +16120,68 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 
 		self:PopAnalyzerEnvironment()
 		self:PopScope()
-		contract_override = args
+		signature_override = args
 	end
 
 	do -- coerce untyped functions to contract callbacks
-		for i, arg in ipairs(arguments:GetData()) do
+		for i, arg in ipairs(input_arguments:GetData()) do
 			if arg.Type == "function" then
 				local func = arg
 
 				if
-					contract_override[i] and
-					contract_override[i].Type == "union" and
-					not contract_override[i].ref_argument
+					signature_override[i] and
+					signature_override[i].Type == "union" and
+					not signature_override[i].ref_argument
 				then
-					local merged = contract_override[i]:ShrinkToFunctionSignature()
+					local merged = signature_override[i]:ShrinkToFunctionSignature()
 
 					if merged then
-						func:SetArguments(merged:GetArguments())
-						func:SetReturnTypes(merged:GetReturnTypes())
+						func:SetInputSignature(merged:GetInputSignature())
+						func:SetOutputSignature(merged:GetOutputSignature())
+						func:SetExplicitOutputSignature(true)
+						func:SetCalled(false)
 					end
 				else
-					if not func.explicit_arguments then
-						local contract = contract_override[i] or obj:GetArguments():Get(i)
+					if not func:IsExplicitInputSignature() then
+						local contract = signature_override[i] or obj:GetInputSignature():Get(i)
 
 						if contract then
 							if contract.Type == "union" then
 								local tup = Tuple({})
 
 								for _, func in ipairs(contract:GetData()) do
-									tup:Merge(func:GetArguments())
-									func:SetArguments(tup)
+									tup:Merge(func:GetInputSignature())
+									func:SetInputSignature(tup)
+									func:SetCalled(false)
 								end
 
-								func.arguments_inferred = true
+								func:SetArgumentsInferred(true)
 							elseif contract.Type == "function" then
-								func:SetArguments(contract:GetArguments():Copy(nil, true)) -- force copy tables so we don't mutate the contract
-								func.arguments_inferred = true
+								func:SetInputSignature(contract:GetInputSignature():Copy(nil, true)) -- force copy tables so we don't mutate the contract
+								func:SetCalled(false)
+								func:SetArgumentsInferred(true)
 							end
 						end
 					end
 
-					if not func.explicit_return then
-						local contract = contract_override[i] or obj:GetReturnTypes():Get(i)
+					if not func:IsExplicitOutputSignature() then
+						local contract = signature_override[i] or obj:GetOutputSignature():Get(i)
 
 						if contract then
 							if contract.Type == "union" then
 								local tup = Tuple({})
 
 								for _, func in ipairs(contract:GetData()) do
-									tup:Merge(func:GetReturnTypes())
+									tup:Merge(func:GetOutputSignature())
 								end
 
-								func:SetReturnTypes(tup)
+								func:SetOutputSignature(tup)
+								func:SetExplicitOutputSignature(true)
+								func:SetCalled(false)
 							elseif contract.Type == "function" then
-								func:SetReturnTypes(contract:GetReturnTypes())
+								func:SetOutputSignature(contract:GetOutputSignature())
+								func:SetExplicitOutputSignature(true)
+								func:SetCalled(false)
 							end
 						end
 					end
@@ -16179,8 +16191,8 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 	end
 
 	for i = 1, len do
-		local arg = arguments:Get(i)
-		local contract = contract_override[i] or contracts:Get(i)
+		local arg = input_arguments:Get(i)
+		local contract = signature_override[i] or signature_arguments:Get(i)
 		local ok, reason
 
 		if not arg then
@@ -16225,13 +16237,13 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 			arg:GetUpvalue() and
 			not contract.ref_argument
 		then
-			mutate_type(self, i, arg, contract, arguments)
+			mutate_type(self, i, arg, contract, input_arguments)
 		else
 			-- if it's a literal argument we pass the incoming value
 			if not contract.ref_argument then
 				local t = contract:Copy()
 				t:SetContract(contract)
-				arguments:Set(i, t)
+				input_arguments:Set(i, t)
 			end
 		end
 	end
@@ -16239,10 +16251,10 @@ local function check_and_setup_arguments(self, arguments, contracts, function_no
 	return true
 end
 
-local function check_return_result(self, result, contract)
+local function check_output(self, output, output_signature)
 	if self:IsTypesystem() then
 		-- in the typesystem we must not unpack tuples when checking
-		local ok, reason, a, b, i = result:IsSubsetOfTupleWithoutExpansion(contract)
+		local ok, reason, a, b, i = output:IsSubsetOfTupleWithoutExpansion(output_signature)
 
 		if not ok then
 			local _, err = type_errors.subset(a, b, {"return #", i, " '", b, "': ", reason})
@@ -16252,43 +16264,43 @@ local function check_return_result(self, result, contract)
 		return
 	end
 
-	local original_contract = contract
+	local original_contract = output_signature
 
 	if
-		contract:GetLength() == 1 and
-		contract:Get(1).Type == "union" and
-		contract:Get(1):HasType("tuple")
+		output_signature:GetLength() == 1 and
+		output_signature:Get(1).Type == "union" and
+		output_signature:Get(1):HasType("tuple")
 	then
-		contract = contract:Get(1)
+		output_signature = output_signature:Get(1)
 	end
 
 	if
-		result.Type == "tuple" and
-		result:GetLength() == 1 and
-		result:Get(1) and
-		result:Get(1).Type == "union" and
-		result:Get(1):HasType("tuple")
+		output.Type == "tuple" and
+		output:GetLength() == 1 and
+		output:Get(1) and
+		output:Get(1).Type == "union" and
+		output:Get(1):HasType("tuple")
 	then
-		result = result:Get(1)
+		output = output:Get(1)
 	end
 
-	if result.Type == "union" then
+	if output.Type == "union" then
 		-- typically a function with mutliple uncertain returns
-		for _, obj in ipairs(result:GetData()) do
+		for _, obj in ipairs(output:GetData()) do
 			if obj.Type ~= "tuple" then
 				-- if the function returns one value it's not in a tuple
 				obj = Tuple({obj})
 			end
 
 			-- check each tuple in the union
-			check_return_result(self, obj, original_contract)
+			check_output(self, obj, original_contract)
 		end
 	else
-		if contract.Type == "union" then
+		if output_signature.Type == "union" then
 			local errors = {}
 
-			for _, contract in ipairs(contract:GetData()) do
-				local ok, reason = result:IsSubsetOfTuple(contract)
+			for _, contract in ipairs(output_signature:GetData()) do
+				local ok, reason = output:IsSubsetOfTuple(contract)
 
 				if ok then
 					-- something is ok then just return and don't report any errors found
@@ -16302,382 +16314,439 @@ local function check_return_result(self, result, contract)
 				self:Error(error.reason)
 			end
 		else
-			if result.Type == "tuple" and result:GetLength() == 1 then
-				local val = result:GetFirstValue()
+			if output.Type == "tuple" and output:GetLength() == 1 then
+				local val = output:GetFirstValue()
 
 				if val.Type == "union" and val:GetLength() == 0 then return end
 			end
 
-			local ok, reason, a, b, i = result:IsSubsetOfTuple(contract)
+			local ok, reason, a, b, i = output:IsSubsetOfTuple(output_signature)
 
 			if not ok then self:Error(reason) end
 		end
 	end
 end
 
-return {
-	Call = function(META)
-		function META:AnalyzeFunctionBody(obj, function_node, arguments)
-			local scope = self:CreateAndPushFunctionScope(obj)
-			self:PushTruthyExpressionContext(false)
-			self:PushFalsyExpressionContext(false)
-			self:PushGlobalEnvironment(
-				function_node,
-				self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
-				self:GetCurrentAnalyzerEnvironment()
-			)
+return function(META)
+	function META:CallBodyFunction(obj, input)
+		local function_node = obj:GetFunctionBodyNode()
+		local is_type_function = function_node.kind == "local_type_function" or
+			function_node.kind == "type_function"
 
-			if function_node.self_call then
-				self:CreateLocalValue("self", arguments:Get(1) or Nil())
-			end
+		if obj:IsExplicitInputSignature() or function_node.identifiers_typesystem then
+			if is_type_function then
+				if function_node.identifiers_typesystem then
+					local call_expression = self:GetCallStack()[1].call_node
 
-			for i, identifier in ipairs(function_node.identifiers) do
-				local argi = function_node.self_call and (i + 1) or i
+					for i, key in ipairs(function_node.identifiers) do
+						if function_node.self_call then i = i + 1 end
 
-				if self:IsTypesystem() then
-					self:CreateLocalValue(identifier.value.value, arguments:GetWithoutExpansion(argi))
-				end
+						local generic_upvalue = function_node.identifiers_typesystem and
+							function_node.identifiers_typesystem[i] or
+							nil
+						local generic_type = call_expression.expressions_typesystem and
+							call_expression.expressions_typesystem[i] or
+							nil
 
-				if self:IsRuntime() then
-					if identifier.value.value == "..." then
-						self:CreateLocalValue(identifier.value.value, arguments:Slice(argi))
-					else
-						self:CreateLocalValue(identifier.value.value, arguments:Get(argi) or Nil())
-					end
-				end
-			end
-
-			if
-				function_node.kind == "local_type_function" or
-				function_node.kind == "type_function"
-			then
-				self:PushAnalyzerEnvironment("typesystem")
-			end
-
-			local analyzed_return = self:AnalyzeStatementsAndCollectReturnTypes(function_node)
-
-			if
-				function_node.kind == "local_type_function" or
-				function_node.kind == "type_function"
-			then
-				self:PopAnalyzerEnvironment()
-			end
-
-			self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
-			local function_scope = self:PopScope()
-			self:PopFalsyExpressionContext()
-			self:PopTruthyExpressionContext()
-
-			if scope.TrackedObjects then
-				for _, obj in ipairs(scope.TrackedObjects) do
-					if obj.Type == "upvalue" then
-						for i = #obj.mutations, 1, -1 do
-							local mut = obj.mutations[i]
-
-							if mut.from_tracking then table.remove(obj.mutations, i) end
-						end
-					else
-						for _, mutations in pairs(obj.mutations) do
-							for i = #mutations, 1, -1 do
-								local mut = mutations[i]
-
-								if mut.from_tracking then table.remove(mutations, i) end
-							end
+						if generic_upvalue then
+							local T = self:AnalyzeExpression(generic_type)
+							self:CreateLocalValue(generic_upvalue.value.value, T)
 						end
 					end
-				end
-			end
 
-			if analyzed_return.Type ~= "tuple" then
-				return Tuple({analyzed_return}), scope
-			end
-
-			return analyzed_return, scope
-		end
-
-		function META:CallBodyFunction(obj, arguments, function_node)
-			if obj:HasExplicitArguments() or function_node.identifiers_typesystem then
-				if
-					function_node.kind == "local_type_function" or
-					function_node.kind == "type_function"
-				then
-					if function_node.identifiers_typesystem then
-						local call_expression = self:GetCallStack()[1].call_node
-
-						for i, key in ipairs(function_node.identifiers) do
-							if function_node.self_call then i = i + 1 end
-
-							local arg = arguments:Get(i)
-							local generic_upvalue = function_node.identifiers_typesystem and
-								function_node.identifiers_typesystem[i] or
-								nil
-							local generic_type = call_expression.expressions_typesystem and
-								call_expression.expressions_typesystem[i] or
-								nil
-
-							if generic_upvalue then
-								local T = self:AnalyzeExpression(generic_type)
-								self:CreateLocalValue(generic_upvalue.value.value, T)
-							end
-						end
-
-						local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
-
-						if not ok then return ok, err end
-					end
-
-					-- otherwise if we're a analyzer function we just do a simple check and arguments are passed as is
-					-- local type foo(T: any) return T end
-					-- T becomes the type that is passed in, and not "any"
-					-- it's the equivalent of function foo<T extends any>(val: T) { return val }
-					local ok, reason, a, b, i = arguments:IsSubsetOfTupleWithoutExpansion(obj:GetArguments())
-
-					if not ok then
-						return type_errors.subset(a, b, {"argument #", i, " - ", reason})
-					end
-				elseif self:IsRuntime() then
-					-- if we have explicit arguments, we need to do a complex check against the contract
-					-- this might mutate the arguments
-					local ok, err = check_and_setup_arguments(self, arguments, obj:GetArguments(), function_node, obj)
+					local ok, err = check_input(self, obj, input)
 
 					if not ok then return ok, err end
 				end
-			end
 
-			-- crawl the function with the new arguments
-			-- return_result is either a union of tuples or a single tuple
-			local return_result, scope = self:AnalyzeFunctionBody(obj, function_node, arguments)
-			restore_mutated_types(self)
-			-- used for analyzing side effects
-			obj:AddScope(arguments, return_result, scope)
-
-			if not obj:HasExplicitArguments() then
-				if not obj.arguments_inferred and function_node.identifiers then
-					for i in ipairs(obj:GetArguments():GetData()) do
-						if function_node.self_call then
-							-- we don't count the actual self argument
-							local node = function_node.identifiers[i + 1]
-
-							if node and not node.type_expression then
-								self:Warning("argument is untyped")
-							end
-						elseif
-							function_node.identifiers[i] and
-							not function_node.identifiers[i].type_expression
-						then
-							self:Warning("argument is untyped")
-						end
-					end
-				end
-
-				obj:GetArguments():Merge(arguments:Slice(1, obj:GetArguments():GetMinimumLength()))
-			end
-
-			do -- this is for the emitter
-				if function_node.identifiers then
-					for i, node in ipairs(function_node.identifiers) do
-						node:AddType(obj:GetArguments():Get(i))
-					end
-				end
-
-				function_node:AddType(obj)
-			end
-
-			local return_contract = obj:HasExplicitReturnTypes() and obj:GetReturnTypes()
-
-			-- if the function has return type annotations, analyze them and use it as contract
-			if not return_contract and function_node.return_types and self:IsRuntime() then
-				self:CreateAndPushFunctionScope(obj)
-				self:PushAnalyzerEnvironment("typesystem")
-
-				for i, key in ipairs(function_node.identifiers) do
-					if function_node.self_call then i = i + 1 end
-
-					self:CreateLocalValue(key.value.value, arguments:Get(i))
-				end
-
-				return_contract = Tuple(self:AnalyzeExpressions(function_node.return_types))
-				self:PopAnalyzerEnvironment()
-				self:PopScope()
-			end
-
-			if not return_contract then
-				-- if there is no return type 
-				if self:IsRuntime() then
-					local copy
-
-					for i, v in ipairs(return_result:GetData()) do
-						if v.Type == "table" and not v:GetContract() then
-							copy = copy or return_result:Copy()
-							local tbl = Table()
-
-							for _, kv in ipairs(v:GetData()) do
-								tbl:Set(kv.key, self:GetMutatedTableValue(v, kv.key, kv.val))
-							end
-
-							copy:Set(i, tbl)
-						end
-					end
-
-					obj:GetReturnTypes():Merge(copy or return_result)
-				end
-
-				return return_result
-			end
-
-			-- check against the function's return type
-			check_return_result(self, return_result, return_contract)
-
-			if self:IsTypesystem() then return return_result end
-
-			local contract = obj:GetReturnTypes():Copy()
-
-			for _, v in ipairs(contract:GetData()) do
-				if v.Type == "table" then v:SetReferenceId(nil) end
-			end
-
-			-- if a return type is marked with literal, it will pass the literal value back to the caller
-			-- a bit like generics
-			for i, v in ipairs(return_contract:GetData()) do
-				if v.ref_argument then contract:Set(i, return_result:Get(i)) end
-			end
-
-			return contract
-		end
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.call_function_signature"] = function(...) __M = __M or (function(...) local ipairs = ipairs
-local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-return {
-	Call = function(META)
-		function META:CallFunctionSignature(obj, arguments)
-			do
-				local ok, reason, a, b, i = arguments:IsSubsetOfTuple(obj:GetArguments())
+				-- otherwise if we're a analyzer function we just do a simple check and arguments are passed as is
+				-- local type foo(T: any) return T end
+				-- T becomes the type that is passed in, and not "any"
+				-- it's the equivalent of function foo<T extends any>(val: T) { return val }
+				local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
 
 				if not ok then
 					return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 				end
+			elseif self:IsRuntime() then
+				-- if we have explicit arguments, we need to do a complex check against the contract
+				-- this might mutate the arguments
+				local ok, err = check_input(self, obj, input)
+
+				if not ok then return ok, err end
 			end
-
-			for i, arg in ipairs(arguments:GetData()) do
-				if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
-					if self.config.external_mutation then
-						self:Warning(
-							{
-								"argument #",
-								i,
-								" ",
-								arg,
-								" can be mutated by external call",
-							}
-						)
-					end
-				end
-			end
-
-			local ret = obj:GetReturnTypes():Copy()
-
-			-- clear any reference id from the returned arguments
-			for _, v in ipairs(ret:GetData()) do
-				if v.Type == "table" then v:SetReferenceId(nil) end
-			end
-
-			return ret
 		end
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.call"] = function(...) __M = __M or (function(...) local ipairs = ipairs
-local math = math
-local table = _G.table
-local debug = debug
-local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
-local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
-return {
-	Call = function(META)
-		IMPORTS['nattlua.analyzer.operators.call_analyzer']("nattlua.analyzer.operators.call_analyzer").Call(META)
-		IMPORTS['nattlua.analyzer.operators.call_body']("nattlua.analyzer.operators.call_body").Call(META)
-		IMPORTS['nattlua.analyzer.operators.call_function_signature']("nattlua.analyzer.operators.call_function_signature").Call(META)
 
-		local function make_callable_union(self, obj)
-			local truthy_union = obj.New()
+		-- crawl the function with the new arguments
+		-- return_result is either a union of tuples or a single tuple
+		local scope = self:CreateAndPushFunctionScope(obj)
+		self:PushTruthyExpressionContext(false)
+		self:PushFalsyExpressionContext(false)
+		self:PushGlobalEnvironment(
+			function_node,
+			self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
+			self:GetCurrentAnalyzerEnvironment()
+		)
 
-			for _, v in ipairs(obj.Data) do
-				if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-					self:ErrorAndCloneCurrentScope(
-						{
-							"union ",
-							obj,
-							" contains uncallable object ",
-							v,
-						},
-						obj
-					)
+		if function_node.self_call then
+			self:CreateLocalValue("self", input:Get(1) or Nil())
+		end
+
+		for i, identifier in ipairs(function_node.identifiers) do
+			local argi = function_node.self_call and (i + 1) or i
+
+			if self:IsTypesystem() then
+				self:CreateLocalValue(identifier.value.value, input:GetWithoutExpansion(argi))
+			end
+
+			if self:IsRuntime() then
+				if identifier.value.value == "..." then
+					self:CreateLocalValue(identifier.value.value, input:Slice(argi))
 				else
-					truthy_union:AddType(v)
+					self:CreateLocalValue(identifier.value.value, input:Get(argi) or Nil())
 				end
 			end
-
-			truthy_union:SetUpvalue(obj:GetUpvalue())
-			return truthy_union
 		end
 
-		local function Call(self, obj, arguments)
-			if obj.Type == "union" then
-				-- make sure the union is callable, we pass the analyzer and 
-				-- it will throw errors if the union contains something that is not callable
-				-- however it will continue and just remove those values from the union
-				obj = make_callable_union(self, obj)
-			end
+		if is_type_function then self:PushAnalyzerEnvironment("typesystem") end
 
-			-- if obj is a tuple it will return its first value 
-			obj = obj:GetFirstValue()
-			local function_node = obj.function_body_node
+		local output = self:AnalyzeStatementsAndCollectOutputSignatures(function_node)
 
-			if obj.Type ~= "function" then
-				if obj.Type == "any" then
-					-- it's ok to call any types, it will just return any
-					-- check arguments that can be mutated
-					for _, arg in ipairs(arguments:GetData()) do
-						if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
-							if arg:GetContract() then
-								-- error if we call any with tables that have contracts
-								-- since anything might happen to them in an any call
-								self:Error(
-									{
-										"cannot mutate argument with contract ",
-										arg:GetContract(),
-									}
-								)
-							else
-								-- if we pass a table without a contract to an any call, we add any to its key values
-								for _, keyval in ipairs(arg:GetData()) do
-									keyval.key = Union({Any(), keyval.key})
-									keyval.val = Union({Any(), keyval.val})
-								end
-							end
+		if is_type_function then self:PopAnalyzerEnvironment() end
+
+		self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
+		self:PopScope()
+		self:PopFalsyExpressionContext()
+		self:PopTruthyExpressionContext()
+
+		if scope.TrackedObjects then
+			for _, obj in ipairs(scope.TrackedObjects) do
+				if obj.Type == "upvalue" then
+					for i = #obj.mutations, 1, -1 do
+						local mut = obj.mutations[i]
+
+						if mut.from_tracking then table.remove(obj.mutations, i) end
+					end
+				else
+					for _, mutations in pairs(obj.mutations) do
+						for i = #mutations, 1, -1 do
+							local mut = mutations[i]
+
+							if mut.from_tracking then table.remove(mutations, i) end
 						end
 					end
 				end
+			end
+		end
 
-				return obj:Call(self, arguments, self:GetCallStack()[1].call_node, true)
+		if output.Type ~= "tuple" then output = Tuple({output}) end
+
+		restore_mutated_types(self)
+		-- used for analyzing side effects
+		obj:AddScope(input, output, scope)
+
+		if not obj:IsExplicitInputSignature() then
+			if not obj:IsArgumentsInferred() and function_node.identifiers then
+				for i in ipairs(obj:GetInputSignature():GetData()) do
+					if function_node.self_call then
+						-- we don't count the actual self argument
+						local node = function_node.identifiers[i + 1]
+
+						if node and not node.type_expression then
+							self:Warning("argument is untyped")
+						end
+					elseif
+						function_node.identifiers[i] and
+						not function_node.identifiers[i].type_expression
+					then
+						self:Warning("argument is untyped")
+					end
+				end
 			end
 
+			obj:GetInputSignature():Merge(input:Slice(1, obj:GetInputSignature():GetMinimumLength()))
+		end
+
+		do -- this is for the emitter
+			if function_node.identifiers then
+				for i, node in ipairs(function_node.identifiers) do
+					node:AddType(obj:GetInputSignature():Get(i))
+				end
+			end
+
+			function_node:AddType(obj)
+		end
+
+		local output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
+
+		-- if the function has return type annotations, analyze them and use it as contract
+		if not output_signature and function_node.return_types and self:IsRuntime() then
+			self:CreateAndPushFunctionScope(obj)
+			self:PushAnalyzerEnvironment("typesystem")
+
+			for i, key in ipairs(function_node.identifiers) do
+				if function_node.self_call then i = i + 1 end
+
+				self:CreateLocalValue(key.value.value, input:Get(i))
+			end
+
+			output_signature = Tuple(self:AnalyzeExpressions(function_node.return_types))
+			self:PopAnalyzerEnvironment()
+			self:PopScope()
+		end
+
+		if not output_signature then
+			-- if there is no return type 
+			if self:IsRuntime() then
+				local copy
+
+				for i, v in ipairs(output:GetData()) do
+					if v.Type == "table" and not v:GetContract() then
+						copy = copy or output:Copy()
+						local tbl = Table()
+
+						for _, kv in ipairs(v:GetData()) do
+							tbl:Set(kv.key, self:GetMutatedTableValue(v, kv.key, kv.val))
+						end
+
+						copy:Set(i, tbl)
+					end
+				end
+
+				obj:GetOutputSignature():Merge(copy or output)
+			end
+
+			return output
+		end
+
+		-- check against the function's return type
+		check_output(self, output, output_signature)
+
+		if self:IsTypesystem() then return output end
+
+		local contract = obj:GetOutputSignature():Copy()
+
+		for _, v in ipairs(contract:GetData()) do
+			if v.Type == "table" then v:SetReferenceId(nil) end
+		end
+
+		-- if a return type is marked with ref, it will pass the ref value back to the caller
+		-- a bit like generics
+		for i, v in ipairs(output_signature:GetData()) do
+			if v.ref_argument then contract:Set(i, output:Get(i)) end
+		end
+
+		return contract
+	end
+end end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.call_function_signature"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+return function(META)
+	function META:CallFunctionSignature(obj, input)
+		do
+			local ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetInputSignature())
+
+			if not ok then
+				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+			end
+		end
+
+		for i, arg in ipairs(input:GetData()) do
+			if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
+				if self.config.external_mutation then
+					self:Warning(
+						{
+							"argument #",
+							i,
+							" ",
+							arg,
+							" can be mutated by external call",
+						}
+					)
+				end
+			end
+		end
+
+		local ret = obj:GetOutputSignature():Copy()
+
+		-- clear any reference id from the returned arguments
+		for _, v in ipairs(ret:GetData()) do
+			if v.Type == "table" then v:SetReferenceId(nil) end
+		end
+
+		return ret
+	end
+end end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.call"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
+local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
+local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
+return {
+	Call = function(META)
+		IMPORTS['nattlua.analyzer.operators.call_analyzer']("nattlua.analyzer.operators.call_analyzer")(META)
+		IMPORTS['nattlua.analyzer.operators.call_body']("nattlua.analyzer.operators.call_body")(META)
+		IMPORTS['nattlua.analyzer.operators.call_function_signature']("nattlua.analyzer.operators.call_function_signature")(META)
+
+		local function call_tuple(self, obj, input, call_node)
+			return self:Call(obj:GetFirstValue(), input, call_node, true)
+		end
+
+		local function call_union(self, obj, input, call_node)
+			if obj:IsEmpty() then return type_errors.operation("call", nil) end
+
+			do
+				-- make sure the union is callable, we pass the analyzer and 
+				-- it will throw errors if the union contains something that is not callable
+				-- however it will continue and just remove those values from the union
+				local truthy_union = obj.New()
+
+				for _, v in ipairs(obj.Data) do
+					if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
+						self:ErrorAndCloneCurrentScope(
+							{
+								"union ",
+								obj,
+								" contains uncallable object ",
+								v,
+							},
+							obj
+						)
+					else
+						truthy_union:AddType(v)
+					end
+				end
+
+				truthy_union:SetUpvalue(obj:GetUpvalue())
+				obj = truthy_union
+			end
+
+			local is_overload = true
+
+			for _, obj in ipairs(obj.Data) do
+				if obj.Type ~= "function" or obj:GetFunctionBodyNode() then
+					is_overload = false
+
+					break
+				end
+			end
+
+			if is_overload then
+				local errors = {}
+
+				for _, obj in ipairs(obj.Data) do
+					if
+						obj.Type == "function" and
+						input:GetLength() < obj:GetInputSignature():GetMinimumLength()
+					then
+						table.insert(
+							errors,
+							{
+								"invalid amount of arguments: ",
+								input,
+								" ~= ",
+								obj:GetInputSignature(),
+							}
+						)
+					else
+						local res, reason = self:Call(obj, input, call_node, true)
+
+						if res then return res end
+
+						table.insert(errors, reason)
+					end
+				end
+
+				return type_errors.other(errors)
+			end
+
+			local new = Union({})
+
+			for _, obj in ipairs(obj.Data) do
+				local val = self:Assert(self:Call(obj, input, call_node, true))
+
+				-- TODO
+				if val.Type == "tuple" and val:GetLength() == 1 then
+					val = val:Unpack(1)
+				elseif val.Type == "union" and val:GetMinimumLength() == 1 then
+					val = val:GetAtIndex(1)
+				end
+
+				new:AddType(val)
+			end
+
+			return Tuple({new})
+		end
+
+		local function call_table(self, obj, input, call_node)
+			local __call = obj:GetMetaTable() and obj:GetMetaTable():Get(LString("__call"))
+
+			if __call then
+				local new_input = {obj}
+
+				for _, v in ipairs(input:GetData()) do
+					table.insert(new_input, v)
+				end
+
+				return self:Call(__call, Tuple(new_input), call_node, true)
+			end
+
+			return type_errors.other("table has no __call metamethod")
+		end
+
+		local function call_any(self, input)
+			-- it's ok to call any types, it will just return any
+			-- check arguments that can be mutated
+			for _, arg in ipairs(input:GetData()) do
+				if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
+					if arg:GetContract() then
+						-- error if we call any with tables that have contracts
+						-- since anything might happen to them in an any call
+						self:Error(
+							{
+								"cannot mutate argument with contract ",
+								arg:GetContract(),
+							}
+						)
+					else
+						-- if we pass a table without a contract to an any call, we add any to its key values
+						for _, keyval in ipairs(arg:GetData()) do
+							keyval.key = Union({Any(), keyval.key})
+							keyval.val = Union({Any(), keyval.val})
+						end
+					end
+				end
+			end
+
+			return Tuple({Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))})
+		end
+
+		local function call_other(obj)
+			return type_errors.other({
+				"type ",
+				obj.Type,
+				": ",
+				obj,
+				" cannot be called",
+			})
+		end
+
+		local function call_function(self, obj, input)
 			-- mark the object as called so the unreachable code step won't call it
 			obj:SetCalled(true)
-			local function_arguments = obj:GetArguments()
 
 			-- infer any uncalled functions in the arguments to get their return type
-			for i, b in ipairs(arguments:GetData()) do
-				if b.Type == "function" and not b:IsCalled() and not b:HasExplicitReturnTypes() then
-					local a = function_arguments:Get(i)
+			for i, b in ipairs(input:GetData()) do
+				if b.Type == "function" and not b:IsCalled() and not b:IsExplicitOutputSignature() then
+					local a = obj:GetInputSignature():Get(i)
 
 					if
 						a and
 						(
 							(
 								a.Type == "function" and
-								not a:GetReturnTypes():IsSubsetOf(b:GetReturnTypes())
+								not a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
 							)
 							or
 							not a:IsSubsetOf(b)
@@ -16687,12 +16756,12 @@ return {
 
 						if func.Type == "union" then func = a:GetType("function") end
 
-						b.arguments_inferred = true
+						b:SetArgumentsInferred(true)
 						-- TODO: callbacks with ref arguments should not be called
 						-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
 						local has_ref_arg = false
 
-						for k, v in ipairs(b:GetArguments():GetData()) do
+						for k, v in ipairs(b:GetInputSignature():GetData()) do
 							if v.ref_argument then
 								has_ref_arg = true
 
@@ -16701,126 +16770,43 @@ return {
 						end
 
 						if not has_ref_arg then
-							self:Assert(self:Call(b, func:GetArguments():Copy(nil, true)))
+							self:Assert(self:Call(b, func:GetInputSignature():Copy(nil, true)))
 						end
 					end
 				end
 			end
 
-			if obj:GetData().lua_function then
-				return self:CallAnalyzerFunction(obj, function_arguments, arguments)
-			elseif function_node then
-				return self:CallBodyFunction(obj, arguments, function_node)
+			if obj:GetAnalyzerFunction() then
+				return self:CallAnalyzerFunction(obj, input)
+			elseif obj:GetFunctionBodyNode() then
+				return self:CallBodyFunction(obj, input)
 			end
 
-			return self:CallFunctionSignature(obj, arguments)
+			return self:CallFunctionSignature(obj, input)
 		end
 
-		function META:Call(obj, arguments, call_node, not_recursive_call)
-			-- extra protection, maybe only useful during development
-			if debug.getinfo(300) then
-				debug.trace()
-				return false, "call stack is too deep"
+		function META:Call(obj, input, call_node, not_recursive_call)
+			if obj.Type == "tuple" then
+				return call_tuple(self, obj, input, call_node)
+			elseif obj.Type == "union" then
+				return call_union(self, obj, input, call_node)
+			elseif obj.Type == "table" then
+				return call_table(self, obj, input, call_node)
+			elseif obj.Type == "any" then
+				return call_any(self, input)
+			elseif obj.Type ~= "function" then
+				return call_other(obj)
 			end
 
-			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
-			self.call_stack = self.call_stack or {}
+			local ok, err = self:PushCallFrame(obj, call_node, not_recursive_call)
 
-			if self:IsRuntime() and call_node and not not_recursive_call then
-				for _, v in ipairs(self.call_stack) do
-					-- if the callnode is the same, we're doing some infinite recursion
-					if v.call_node == call_node then
-						if obj.explicit_return then
-							-- so if we have explicit return types, just return those
-							obj.recursively_called = obj:GetReturnTypes():Copy()
-							return obj.recursively_called
-						else
-							-- if not we sadly have to resort to any
-							-- TODO: error?
-							obj.recursively_called = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
-							return obj.recursively_called
-						end
-					end
-				end
-			end
+			if not ok == false then return ok, err end
 
-			table.insert(
-				self.call_stack,
-				1,
-				{
-					obj = obj,
-					call_node = call_node,
-					scope = self:GetScope(),
-				}
-			)
-			local ok, err = Call(self, obj, arguments)
-			table.remove(self.call_stack, 1)
+			if ok then return ok end
+
+			local ok, err = call_function(self, obj, input)
+			self:PopCallFrame()
 			return ok, err
-		end
-
-		function META:GetCallStack()
-			return self.call_stack or {}
-		end
-
-		function META:IsDefinetlyReachable()
-			local scope = self:GetScope()
-			local function_scope = scope:GetNearestFunctionScope()
-
-			if not scope:IsCertain() then return false, "scope is uncertain" end
-
-			if function_scope.uncertain_function_return == true then
-				return false, "uncertain function return"
-			end
-
-			if function_scope.lua_silent_error then
-				for _, scope in ipairs(function_scope.lua_silent_error) do
-					if not scope:IsCertain() then
-						return false, "parent function scope can throw an error"
-					end
-				end
-			end
-
-			for _, frame in ipairs(self:GetCallStack()) do
-				local scope = frame.scope
-
-				if not scope:IsCertain() then
-					return false, "call stack scope is uncertain"
-				end
-
-				if scope.uncertain_function_return == true then
-					return false, "call stack scope has uncertain function return"
-				end
-			end
-
-			return true
-		end
-
-		function META:IsMaybeReachable()
-			local scope = self:GetScope()
-			local function_scope = scope:GetNearestFunctionScope()
-
-			if function_scope.lua_silent_error then
-				for _, scope in ipairs(function_scope.lua_silent_error) do
-					if not scope:IsCertain() then return false end
-				end
-			end
-
-			for _, frame in ipairs(self:GetCallStack()) do
-				local parent_scope = frame.scope
-
-				if
-					not parent_scope:IsCertain() or
-					parent_scope.uncertain_function_return == true
-				then
-					if parent_scope:IsCertainFromScope(scope) then return false end
-				end
-			end
-
-			return true
-		end
-
-		function META:UncertainReturn()
-			self.call_stack[1].scope:UncertainReturn()
 		end
 	end,
 } end)(...) return __M end end
@@ -18316,7 +18302,7 @@ function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
 		local obj = node:GetLastType():GetContract() or node:GetLastType()
 
 		if obj.Type == "function" then
-			for i, v in ipairs(obj:GetReturnTypes():GetData()) do
+			for i, v in ipairs(obj:GetOutputSignature():GetData()) do
 				str[i] = tostring(v)
 			end
 		else
@@ -18927,18 +18913,15 @@ end
 
 return {
 	AnalyzeFunction = function(self, node)
-		local obj = Function(
-			{
-				scope = self:GetScope(),
-				upvalue_position = #self:GetScope():GetUpvalues("runtime"),
-			}
-		)
-		obj.argument_identifiers = node.identifiers
+		local obj = Function()
+		obj:SetUpvaluePosition(#self:GetScope():GetUpvalues("runtime"))
+		obj:SetScope(self:GetScope())
+		obj:SetInputIdentifiers(node.identifiers)
 		self:PushCurrentType(obj, "function")
 		self:CreateAndPushFunctionScope(obj)
 		self:PushAnalyzerEnvironment("typesystem")
-		obj.Data.arg = analyze_arguments(self, node)
-		obj.Data.ret = analyze_return_types(self, node)
+		obj:SetInputSignature(analyze_arguments(self, node))
+		obj:SetOutputSignature(analyze_return_types(self, node))
 		self:PopAnalyzerEnvironment()
 		self:PopScope()
 		self:PopCurrentType("function")
@@ -18946,13 +18929,13 @@ return {
 		if node.kind == "analyzer_function" or node.kind == "local_analyzer_function" then
 			local em = Emitter({type_annotations = false})
 			em:EmitFunctionBody(node)
-			obj.Data.lua_function = self:CompileLuaAnalyzerDebugCode("return function " .. em:Concat(), node)()
+			obj:SetAnalyzerFunction(self:CompileLuaAnalyzerDebugCode("return function " .. em:Concat(), node)())
 		end
 
-		if node.statements then obj.function_body_node = node end
+		if node.statements then obj:SetFunctionBodyNode(node) end
 
-		obj.explicit_arguments = has_explicit_arguments(node)
-		obj.explicit_return = has_expicit_return_type(node)
+		obj:SetExplicitInputSignature(has_explicit_arguments(node))
+		obj:SetExplicitOutputSignature(has_expicit_return_type(node))
 
 		if self:IsRuntime() then self:AddToUnreachableCodeAnalysis(obj) end
 
@@ -21137,16 +21120,18 @@ end
 
 analyzer function return_type(func: Function, i: number | nil)
 	local i = i and i:GetData() or nil
-	return {func:GetReturnTypes():Slice(i, i)}
+	return {func:GetOutputSignature():Slice(i, i)}
 end
 
 analyzer function set_return_type(func: Function, tup: any)
-	func:SetReturnTypes(tup)
+	func:SetOutputSignature(tup)
+	func:SetExplicitOutputSignature(true)
+	func:SetCalled(false)
 end
 
 analyzer function argument_type(func: Function, i: number | nil)
 	local i = i and i:GetData() or nil
-	return {func:GetArguments():Slice(i, i)}
+	return {func:GetInputSignature():Slice(i, i)}
 end
 
 analyzer function exclude(T: any, U: any)
@@ -21187,12 +21172,12 @@ analyzer function seal(tbl: Table)
 	for _, keyval in ipairs(tbl:GetData()) do
 		if
 			keyval.val.Type == "function" and
-			keyval.val:GetArguments():Get(1).Type == "union"
+			keyval.val:GetInputSignature():Get(1).Type == "union"
 		then
-			local first_arg = keyval.val:GetArguments():Get(1)
+			local first_arg = keyval.val:GetInputSignature():Get(1)
 
 			if first_arg:GetType(tbl) and first_arg:GetType(types.Any()) then
-				keyval.val:GetArguments():Set(1, tbl)
+				keyval.val:GetInputSignature():Set(1, tbl)
 			end
 		end
 	end
@@ -21327,11 +21312,11 @@ function Extract<|a: any, b: any|>
 end
 
 analyzer function Parameters(func: Function)
-	return {func:GetArguments():Copy():Unpack()}
+	return {func:GetInputSignature():Copy():Unpack()}
 end
 
 analyzer function ReturnType(func: Function)
-	return {func:GetReturnTypes():Copy():Unpack()}
+	return {func:GetOutputSignature():Copy():Unpack()}
 end
 
 function Uppercase<|val: ref string|>
@@ -21528,7 +21513,7 @@ analyzer function pairs(tbl: Table)
 	analyzer:PushAnalyzerEnvironment("typesystem")
 	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
 	analyzer:PopAnalyzerEnvironment()
-	local k, v = analyzer:CallLuaTypeFunction(next:GetData().lua_function, analyzer:GetScope(), tbl)
+	local k, v = analyzer:CallLuaTypeFunction(next:GetAnalyzerFunction(), analyzer:GetScope(), tbl)
 	local done = false
 
 	if v and v.Type == "union" then v:RemoveType(types.Symbol(nil)) end
@@ -21568,7 +21553,7 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 	analyzer:PushAnalyzerEnvironment("typesystem")
 	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
 	analyzer:PopAnalyzerEnvironment()
-	local k, v = analyzer:CallLuaTypeFunction(next:GetData().lua_function, analyzer:GetScope(), tbl)
+	local k, v = analyzer:CallLuaTypeFunction(next:GetAnalyzerFunction(), analyzer:GetScope(), tbl)
 	local done = false
 	return function()
 		if done then return nil end
@@ -21665,14 +21650,12 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 	local compiler = nl.Compiler(str, chunk_name and chunk_name:GetData() or nil)
 	assert(compiler:Lex())
 	assert(compiler:Parse())
-	return types.Function(
-		{
-			arg = types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
-			ret = types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
-			lua_function = function(...)
-				return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-			end,
-		}
+	return types.LuaTypeFunction(
+		function(...)
+			return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
+		end,
+		types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
+		types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
 	)
 end
 
@@ -21700,9 +21683,11 @@ analyzer function loadfile(path: string)
 	assert(compiler:Lex())
 	assert(compiler:Parse())
 	local f = types.AnyFunction()
-	f.Data.lua_function = function(...)
+
+	f:SetAnalyzerFunction(function(...)
 		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
-	end
+	end)
+
 	return f
 end
 
@@ -21905,8 +21890,8 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 				if ok then
 
 				--TODO: enrich callback types
-				--b:SetReturnTypes(a:GetReturnTypes())
-				--b:SetArguments(a:GetArguments())
+				--b:SetOutputSignature(a:GetOutputSignature())
+				--b:SetInputSignature(a:GetInputSignature())
 				--b.arguments_inferred = true
 				end
 			end
@@ -22109,14 +22094,14 @@ analyzer function debug.setfenv(val: Function, table: Table)
 	if val and (val:IsLiteral() or val.Type == "function") then
 		if val.Type == "number" then
 			analyzer:SetEnvironmentOverride(analyzer.environment_nodes[val:GetData()], table, "runtime")
-		elseif val.function_body_node then
-			analyzer:SetEnvironmentOverride(val.function_body_node, table, "runtime")
+		elseif val:GetFunctionBodyNode() then
+			analyzer:SetEnvironmentOverride(val:GetFunctionBodyNode(), table, "runtime")
 		end
 	end
 end
 
 analyzer function debug.getfenv(func: Function)
-	return analyzer:GetGlobalEnvironmentOverride(func.function_body_node or func, "runtime")
+	return analyzer:GetGlobalEnvironmentOverride(func:GetFunctionBodyNode() or func, "runtime")
 end
 
 type getfenv = debug.getfenv
@@ -22326,9 +22311,9 @@ analyzer function table.sort(tbl: List<|any|>, func: function=(a: any, b: any)>(
 		end
 	end
 
-	func:GetArguments():GetData()[1] = union
-	func:GetArguments():GetData()[2] = union
-	func.arguments_inferred = true
+	func:GetInputSignature():GetData()[1] = union
+	func:GetInputSignature():GetData()[2] = union
+	func:SetArgumentsInferred(true)
 end
 
 analyzer function table.getn(tbl: List<|any|>)
@@ -22598,7 +22583,8 @@ analyzer function ^string.gsub(
 
 			return string.gsub(str, pattern, out, max_replacements)
 		else
-			replacement:SetArguments(types.Tuple({types.String()}):SetRepeat(math.huge))
+			replacement:SetInputSignature(types.Tuple({types.String()}):SetRepeat(math.huge))
+			replacement:SetCalled(false)
 			return string.gsub(
 				str,
 				pattern,
@@ -22868,10 +22854,7 @@ IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function() local analyzer functi
 			return_type = cast(node.t, args)
 		end
 
-		local obj = types.Function({
-			ret = types.Tuple({return_type}),
-			arg = types.Tuple(arguments),
-		})
+		local obj = types.Function(types.Tuple(arguments), types.Tuple({return_type}))
 		return obj
 	elseif node.tag == "Array" then
 		local tbl = types.Table()
@@ -23012,7 +22995,7 @@ analyzer function ffi.cdef(cdecl: string, ...: ...any)
 	end
 end
 
-§env.typesystem.ffi:Get(types.LString("cdef")).no_expansion = true
+§env.typesystem.ffi:Get(types.LString("cdef")):SetPreventInputArgumentExpansion(true)
 
 analyzer function ffi.cast(cdecl: string, src: any)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
@@ -23085,7 +23068,7 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 	return ctype
 end
 
-§env.typesystem.ffi:Get(types.LString("typeof")).no_expansion = true
+§env.typesystem.ffi:Get(types.LString("typeof")):SetPreventInputArgumentExpansion(true)
 
 analyzer function ffi.get_type(cdecl: string, ...: ...any)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
@@ -23120,8 +23103,8 @@ analyzer function ffi.metatype(ctype: any, meta: any)
 
 					return val
 				end,
-				new:GetArguments():GetData(),
-				new:GetReturnTypes():GetData()
+				new:GetInputSignature():GetData(),
+				new:GetOutputSignature():GetData()
 			)
 		)
 	end

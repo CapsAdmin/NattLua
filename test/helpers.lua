@@ -82,7 +82,10 @@ do
 
 		if expect_error then
 			if not err or err == "" then
-				error("expected error, got nothing\n\n\n[" .. tostring(ok) .. ", " .. tostring(err) .. "]", 3)
+				error(
+					"expected error, got nothing\n\n\n[" .. tostring(ok) .. ", " .. tostring(err) .. "]",
+					3
+				)
 			elseif type(expect_error) == "string" then
 				if not err:find(expect_error) then
 					error("expected error '" .. expect_error .. "' got:\n>>\n" .. err .. "\n<<", 3)

@@ -878,7 +878,6 @@ function META.Union(A--[[#: TTable]], B--[[#: TTable]])
 	return copy
 end
 
-
 function META:PrefixOperator(op--[[#: "#"]])
 	if op == "#" then
 		local keys = (self:GetContract() or self):GetData()

@@ -167,7 +167,8 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 				value.Type == "function" and
 				not value:IsCalled()
 				and
-				not value:IsExplicitOutputSignature() and
+				not value:IsExplicitOutputSignature()
+				and
 				union:HasType("function")
 			then
 				self:Assert(self:Call(value, value:GetInputSignature():Copy()))
@@ -460,7 +461,7 @@ return function(META)
 					for _, upvalue in ipairs(self.tracked_upvalues) do
 						upvalue.tracked_stack = nil
 					end
-	
+
 					self.tracked_upvalues_done = nil
 					self.tracked_upvalues = nil
 				end
@@ -468,7 +469,6 @@ return function(META)
 		end
 
 		do
-
 			function META:TrackTableIndex(tbl, key, val)
 				if self:IsTypesystem() then return end
 
@@ -577,7 +577,7 @@ return function(META)
 					for _, tbl in ipairs(self.tracked_tables) do
 						tbl.tracked_stack = nil
 					end
-	
+
 					self.tracked_tables_done = nil
 					self.tracked_tables = nil
 				end
@@ -588,7 +588,6 @@ return function(META)
 			self:ClearTrackedUpvalues()
 			self:ClearTrackedTables()
 		end
-
 
 		--[[
 			local x: 1 | 2 | 3

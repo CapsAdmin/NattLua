@@ -200,7 +200,8 @@ do -- operators
 end
 
 do
-	META:GetSet("Parent", nil --[[# as TBaseType | nil]])
+	META:GetSet("Parent", nil--[[# as TBaseType | nil]])
+
 	function META:SetParent(parent--[[#: TBaseType | nil]])
 		if parent then
 			if parent ~= self then self.Parent = parent end

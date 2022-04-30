@@ -6,7 +6,7 @@ local Symbol = T.Symbol
 local Union = T.Union
 local Tuple = T.Tuple
 local overloads = Union(
-	Function(Tuple(Number(), String()),Tuple(Symbol("ROFL"))),
+	Function(Tuple(Number(), String()), Tuple(Symbol("ROFL"))),
 	Function(Tuple(String(), Number()), Tuple(Symbol("LOL")))
 )
 

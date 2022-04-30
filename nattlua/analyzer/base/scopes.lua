@@ -22,9 +22,7 @@ return function(META)
 	end
 
 	function META:CreateAndPushFunctionScope(obj)
-		return self:PushScope(
-			LexicalScope(obj:GetScope() or self:GetScope(), obj:GetUpvaluePosition(), obj)
-		)
+		return self:PushScope(LexicalScope(obj:GetScope() or self:GetScope(), obj:GetUpvaluePosition(), obj))
 	end
 
 	function META:CreateAndPushModuleScope()
