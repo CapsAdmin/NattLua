@@ -11,78 +11,34 @@ return {
 		require("nattlua.analyzer.operators.call_body")(META)
 		require("nattlua.analyzer.operators.call_function_signature")(META)
 
-		local function infer_argument_functions(self, obj, input)
-			-- infer any uncalled functions in the arguments to get their return type
-			for i, b in ipairs(input:GetData()) do
-				if b.Type == "function" and not b:IsCalled() and not b:IsExplicitOutputSignature() then
-					local a =  obj:GetInputSignature():Get(i)
-
-					if
-						a and
-						(
-							(
-								a.Type == "function" and
-								not a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
-							)
-							or
-							not a:IsSubsetOf(b)
-						)
-					then
-						local func = a
-
-						if func.Type == "union" then func = a:GetType("function") end
-
-						b:SetArgumentsInferred(true)
-						-- TODO: callbacks with ref arguments should not be called
-						-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
-						local has_ref_arg = false
-
-						for k, v in ipairs(b:GetInputSignature():GetData()) do
-							if v.ref_argument then
-								has_ref_arg = true
-
-								break
-							end
-						end
-
-						if not has_ref_arg then
-							self:Assert(self:Call(b, func:GetInputSignature():Copy(nil, true)))
-						end
-					end
-				end
-			end	
-		end
-
-		local function make_callable_union(self, obj)
-			local truthy_union = obj.New()
-
-			for _, v in ipairs(obj.Data) do
-				if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-					self:ErrorAndCloneCurrentScope(
-						{
-							"union ",
-							obj,
-							" contains uncallable object ",
-							v,
-						},
-						obj
-					)
-				else
-					truthy_union:AddType(v)
-				end
-			end
-
-			truthy_union:SetUpvalue(obj:GetUpvalue())
-			return truthy_union
-		end
-
 		local function call_union(self, obj, input, call_node)
 			if obj:IsEmpty() then return type_errors.operation("call", nil) end
 
-			-- make sure the union is callable, we pass the analyzer and 
-			-- it will throw errors if the union contains something that is not callable
-			-- however it will continue and just remove those values from the union
-			obj = make_callable_union(self, obj)
+			do
+				-- make sure the union is callable, we pass the analyzer and 
+				-- it will throw errors if the union contains something that is not callable
+				-- however it will continue and just remove those values from the union
+				
+				local truthy_union = obj.New()
+				for _, v in ipairs(obj.Data) do
+					if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
+						self:ErrorAndCloneCurrentScope(
+							{
+								"union ",
+								obj,
+								" contains uncallable object ",
+								v,
+							},
+							obj
+						)
+					else
+						truthy_union:AddType(v)
+					end
+				end
+
+				truthy_union:SetUpvalue(obj:GetUpvalue())
+				obj = truthy_union
+			end
 
 
 			local is_overload = true
@@ -188,7 +144,45 @@ return {
 			-- mark the object as called so the unreachable code step won't call it
 			obj:SetCalled(true)
 
-			infer_argument_functions(self, obj, input)				
+			-- infer any uncalled functions in the arguments to get their return type
+			for i, b in ipairs(input:GetData()) do
+				if b.Type == "function" and not b:IsCalled() and not b:IsExplicitOutputSignature() then
+					local a =  obj:GetInputSignature():Get(i)
+
+					if
+						a and
+						(
+							(
+								a.Type == "function" and
+								not a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
+							)
+							or
+							not a:IsSubsetOf(b)
+						)
+					then
+						local func = a
+
+						if func.Type == "union" then func = a:GetType("function") end
+
+						b:SetArgumentsInferred(true)
+						-- TODO: callbacks with ref arguments should not be called
+						-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
+						local has_ref_arg = false
+
+						for k, v in ipairs(b:GetInputSignature():GetData()) do
+							if v.ref_argument then
+								has_ref_arg = true
+
+								break
+							end
+						end
+
+						if not has_ref_arg then
+							self:Assert(self:Call(b, func:GetInputSignature():Copy(nil, true)))
+						end
+					end
+				end
+			end				
 
 			if obj:GetAnalyzerFunction() then
 				return self:CallAnalyzerFunction(obj, input)
@@ -197,6 +191,16 @@ return {
 			end
 
 			return self:CallFunctionSignature(obj, input)
+		end
+
+		local function call_other(obj)
+			return type_errors.other({
+				"type ",
+				obj.Type,
+				": ",
+				obj,
+				" cannot be called",
+			})
 		end
 
 		function META:Call(obj, input, call_node, not_recursive_call)
@@ -210,13 +214,7 @@ return {
 			elseif obj.Type == "any" then
 				return call_any(self, input)
 			elseif obj.Type ~= "function" then
-				return type_errors.other({
-					"type ",
-					obj.Type,
-					": ",
-					obj,
-					" cannot be called",
-				})
+				return call_other(obj)
 			end
 
 			local ok, err = self:PushCallFrame(obj, call_node, not_recursive_call)
