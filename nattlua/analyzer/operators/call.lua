@@ -203,11 +203,14 @@ return {
 			})
 		end
 
-		function META:Call(obj, input, call_node, not_recursive_call)
-			-- if obj is a tuple it will return its first value
-			obj = obj:GetFirstValue()
+		local function call_tuple(self, obj, input, call_node)
+			return self:Call(obj:GetFirstValue(), input, call_node, true)
+		end
 
-			if obj.Type == "union" then
+		function META:Call(obj, input, call_node, not_recursive_call)
+			if obj.Type == "tuple" then
+				return call_tuple(self, obj, input, call_node)
+			elseif obj.Type == "union" then
 				return call_union(self, obj, input, call_node)
 			elseif obj.Type == "table" then
 				return call_table(self, obj, input, call_node)
