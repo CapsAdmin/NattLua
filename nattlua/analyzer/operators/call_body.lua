@@ -74,68 +74,59 @@ local function check_input(self, obj, input)
 
 	local function_node = obj:GetFunctionBodyNode()
 	local input_signature = obj:GetInputSignature()
-	local len = input_signature:GetSafeLength(input)
+	local input_signature_length = input_signature:GetSafeLength(input)
 	local signature_override = {}
 
-	if function_node.identifiers[1] then -- analyze the type expressions
+	if function_node.identifiers[1] then 
+		-- analyze the type expressions
+		-- function foo(a: >>number<<, b: >>string<<)
+		-- against the input
+		-- foo(1, "hello")
+
 		self:CreateAndPushFunctionScope(obj)
 		self:PushAnalyzerEnvironment("typesystem")
 
-		for i = 1, len do
-			local key = function_node.identifiers[i] or
-				function_node.identifiers[#function_node.identifiers]
+		for i = 1, input_signature_length do
+			local node = function_node.identifiers[i] --[[argument]] or function_node.identifiers[#function_node.identifiers] --[[or the vararg]]
+			local identifier = node.value.value
+			local type_expression = node.type_expression
 
 			if function_node.self_call then i = i + 1 end
 
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
-			self:CreateLocalValue(key.value.value, Any())
-			local arg
-			local contract
-			arg = input:Get(i)
+			self:CreateLocalValue(identifier, Any())
 
-			if key.value.value == "..." then
+			local contract
+			if identifier == "..." then
 				contract = input_signature:GetWithoutExpansion(i)
 			else
 				contract = input_signature:Get(i)
 			end
 
+			local arg = input:Get(i)
 			if not arg then
 				arg = Nil()
 				input:Set(i, arg)
 			end
 
-			local ref_callback = arg and
-				contract and
-				contract.ref_argument and
-				contract.Type == "function" and
-				arg.Type == "function" and
-				not arg:IsArgumentsInferred()
-
-			if contract and contract.ref_argument and arg and not ref_callback then
-				self:CreateLocalValue(key.value.value, arg)
-			end
-
-			if key.type_expression then
-				signature_override[i] = self:AnalyzeExpression(key.type_expression):GetFirstValue()
-			end
-
-			if contract and contract.ref_argument and arg and not ref_callback then
+			if contract and contract.ref_argument and (contract.Type ~= "function" or arg.Type ~= "function" or arg:IsArgumentsInferred()) then
+				self:CreateLocalValue(identifier, arg)
 				signature_override[i] = arg
 				signature_override[i].ref_argument = true
+				
 				local ok, err = signature_override[i]:IsSubsetOf(contract)
 
 				if not ok then
 					return type_errors.other({"argument #", i, " ", arg, ": ", err})
 				end
-			elseif signature_override[i] then
-				self:CreateLocalValue(key.value.value, signature_override[i])
+			elseif type_expression then
+				signature_override[i] = self:AnalyzeExpression(type_expression):GetFirstValue()
+				self:CreateLocalValue(identifier, signature_override[i])
 			end
 
-			if not self.processing_deferred_calls then
-				if contract and contract.literal_argument and arg and not arg:IsLiteral() then
-					return type_errors.other({"argument #", i, " ", arg, ": not literal"})
-				end
+			if contract and contract.literal_argument and not self.processing_deferred_calls and arg and not arg:IsLiteral() then
+				return type_errors.other({"argument #", i, " ", arg, ": not literal"})
 			end
 		end
 
@@ -210,7 +201,7 @@ local function check_input(self, obj, input)
 		end
 	end
 
-	for i = 1, len do
+	for i = 1, input_signature_length do
 		local arg = input:Get(i)
 		local contract = signature_override[i] or input_signature:Get(i)
 		local ok, reason
