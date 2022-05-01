@@ -30,9 +30,51 @@ local function restore_mutated_types(self)
 end
 
 local function check_input(self, obj, input)
+	if not obj:IsExplicitInputSignature() then
+		-- if this function is completely untyped we don't check any input
+		return true
+	end
+
 	local function_node = obj:GetFunctionBodyNode()
-	local signature_arguments = obj:GetInputSignature()
-	local len = signature_arguments:GetSafeLength(input)
+
+	if function_node.kind == "local_type_function" or function_node.kind == "type_function" then
+		if not function_node.identifiers_typesystem and obj:IsExplicitInputSignature() then
+			-- if this is a type function we just do a simple check and arguments are passed as is
+			local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
+		
+			if not ok then
+				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+			end
+	
+			return ok, reason
+		end
+
+		if function_node.identifiers_typesystem then
+			-- if this is a generics we setup the generic upvalues for the signature
+			local call_expression = self:GetCallStack()[1].call_node
+		
+			for i = 1, #function_node.identifiers do
+				if function_node.self_call then i = i + 1 end
+		
+				local generic_upvalue = function_node.identifiers_typesystem and
+					function_node.identifiers_typesystem[i] or
+					nil
+		
+				local generic_type = call_expression.expressions_typesystem and
+					call_expression.expressions_typesystem[i] or
+					nil
+		
+				if generic_type and generic_upvalue then
+					local T = self:AnalyzeExpression(generic_type)
+					self:CreateLocalValue(generic_upvalue.value.value, T)
+				end
+			end
+		end
+	end
+
+	local function_node = obj:GetFunctionBodyNode()
+	local input_signature = obj:GetInputSignature()
+	local len = input_signature:GetSafeLength(input)
 	local signature_override = {}
 
 	if function_node.identifiers[1] then -- analyze the type expressions
@@ -54,9 +96,9 @@ local function check_input(self, obj, input)
 			arg = input:Get(i)
 
 			if key.value.value == "..." then
-				contract = signature_arguments:GetWithoutExpansion(i)
+				contract = input_signature:GetWithoutExpansion(i)
 			else
-				contract = signature_arguments:Get(i)
+				contract = input_signature:Get(i)
 			end
 
 			if not arg then
@@ -172,7 +214,7 @@ local function check_input(self, obj, input)
 
 	for i = 1, len do
 		local arg = input:Get(i)
-		local contract = signature_override[i] or signature_arguments:Get(i)
+		local contract = signature_override[i] or input_signature:Get(i)
 		local ok, reason
 
 		if not arg then
@@ -313,46 +355,8 @@ return function(META)
 		local is_type_function = function_node.kind == "local_type_function" or
 			function_node.kind == "type_function"
 
-		if is_type_function then
-			if function_node.identifiers_typesystem then
-				local call_expression = self:GetCallStack()[1].call_node
-			
-				for i = 1, #function_node.identifiers do
-					if function_node.self_call then i = i + 1 end
-			
-					local generic_upvalue = function_node.identifiers_typesystem and
-						function_node.identifiers_typesystem[i] or
-						nil
-			
-					local generic_type = call_expression.expressions_typesystem and
-						call_expression.expressions_typesystem[i] or
-						nil
-			
-					if generic_type and generic_upvalue then
-						local T = self:AnalyzeExpression(generic_type)
-						self:CreateLocalValue(generic_upvalue.value.value, T)
-					end
-				end
-
-				local ok, err = check_input(self, obj, input)
-			
-				if not ok then return ok, err end
-			elseif obj:IsExplicitInputSignature() then
-				-- otherwise if we're a analyzer function we just do a simple check and arguments are passed as is
-				-- local type foo(T: any) return T end
-				-- T becomes the type that is passed in, and not "any"
-				-- it's the equivalent of function foo<T extends any>(val: T) { return val }
-				local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
-			
-				if not ok then
-					return type_errors.subset(a, b, {"argument #", i, " - ", reason})
-				end
-			end
-		elseif obj:IsExplicitInputSignature() and self:IsRuntime() then
-			-- if we have explicit arguments, we need to do a complex check against the contract
-			-- this might mutate the arguments
+		do
 			local ok, err = check_input(self, obj, input)
-		
 			if not ok then return ok, err end
 		end
 
