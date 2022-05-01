@@ -388,9 +388,7 @@ return function(META)
 			end
 		end
 
-		if is_type_function then
-			self:PushAnalyzerEnvironment("typesystem")
-		end
+		if is_type_function then self:PushAnalyzerEnvironment("typesystem") end
 
 		local output = self:AnalyzeStatementsAndCollectOutputSignatures(function_node)
 

@@ -5,25 +5,11 @@ local table = _G.table
 local Tuple = require("nattlua.types.tuple").Tuple
 local VarArg = require("nattlua.types.tuple").VarArg
 local Any = require("nattlua.types.any").Any
-local Union = require("nattlua.types.union").Union
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
 META.Type = "function"
-
-function META:__call(...)
-	if self:GetAnalyzerFunction() then return self:GetAnalyzerFunction()(...) end
-end
-
-function META.Equal(a, b)
-	return a.Type == b.Type and
-		a:GetInputSignature():Equal(b:GetInputSignature()) and
-		a:GetOutputSignature():Equal(b:GetOutputSignature())
-end
-
-function META:__tostring()
-	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
-end
-
+META.Truthy = true
+META.Falsy = false
 META:IsSet("Called", false)
 META:IsSet("ExplicitInputSignature", false)
 META:IsSet("ExplicitOutputSignature", false)
@@ -36,6 +22,20 @@ META:GetSet("InputIdentifiers", nil)
 META:GetSet("AnalyzerFunction", nil)
 META:IsSet("ArgumentsInferred", false)
 META:GetSet("PreventInputArgumentExpansion", false)
+
+function META:__tostring()
+	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
+end
+
+function META:__call(...)
+	if self:GetAnalyzerFunction() then return self:GetAnalyzerFunction()(...) end
+end
+
+function META.Equal(a, b)
+	return a.Type == b.Type and
+		a:GetInputSignature():Equal(b:GetInputSignature()) and
+		a:GetOutputSignature():Equal(b:GetOutputSignature())
+end
 
 function META:Copy(map, ...)
 	map = map or {}
@@ -135,51 +135,38 @@ function META.IsCallbackSubsetOf(A, B)
 	return true
 end
 
-function META:IsFalsy()
-	return false
-end
-
-function META:IsTruthy()
-	return true
-end
-
-function META:AddScope(arguments, return_result, scope)
-	self.scopes = self.scopes or {}
-	table.insert(
-		self.scopes,
-		{
-			arguments = arguments,
-			return_result = return_result,
-			scope = scope,
-		}
-	)
-end
-
-function META:GetSideEffects()
-	local out = {}
-
-	for _, call_info in ipairs(self.scopes) do
-		for _, val in ipairs(call_info.scope:GetDependencies()) do
-			if val.scope ~= call_info.scope then table.insert(out, val) end
-		end
+do
+	function META:AddScope(arguments, return_result, scope)
+		self.scopes = self.scopes or {}
+		table.insert(
+			self.scopes,
+			{
+				arguments = arguments,
+				return_result = return_result,
+				scope = scope,
+			}
+		)
 	end
 
-	return out
-end
+	function META:GetSideEffects()
+		local out = {}
 
-function META:GetCallCount()
-	return #self.scopes
-end
+		for _, call_info in ipairs(self.scopes) do
+			for _, val in ipairs(call_info.scope:GetDependencies()) do
+				if val.scope ~= call_info.scope then table.insert(out, val) end
+			end
+		end
 
-function META:IsPure()
-	return #self:GetSideEffects() == 0
-end
+		return out
+	end
 
-function META.New(input, output)
-	local self = setmetatable({}, META)
-	self:SetInputSignature(input)
-	self:SetOutputSignature(output)
-	return self
+	function META:GetCallCount()
+		return #self.scopes
+	end
+
+	function META:IsPure()
+		return #self:GetSideEffects() == 0
+	end
 end
 
 function META:IsRefFunction()
@@ -192,6 +179,13 @@ function META:IsRefFunction()
 	end
 
 	return false
+end
+
+function META.New(input, output)
+	local self = setmetatable({}, META)
+	self:SetInputSignature(input)
+	self:SetOutputSignature(output)
+	return self
 end
 
 return {
