@@ -80,7 +80,6 @@ local function check_input(self, obj, input)
 	if function_node.identifiers[1] then -- analyze the type expressions
 		self:CreateAndPushFunctionScope(obj)
 		self:PushAnalyzerEnvironment("typesystem")
-		local args = {}
 
 		for i = 1, len do
 			local key = function_node.identifiers[i] or
@@ -118,19 +117,19 @@ local function check_input(self, obj, input)
 			end
 
 			if key.type_expression then
-				args[i] = self:AnalyzeExpression(key.type_expression):GetFirstValue()
+				signature_override[i] = self:AnalyzeExpression(key.type_expression):GetFirstValue()
 			end
 
 			if contract and contract.ref_argument and arg and not ref_callback then
-				args[i] = arg
-				args[i].ref_argument = true
-				local ok, err = args[i]:IsSubsetOf(contract)
+				signature_override[i] = arg
+				signature_override[i].ref_argument = true
+				local ok, err = signature_override[i]:IsSubsetOf(contract)
 
 				if not ok then
 					return type_errors.other({"argument #", i, " ", arg, ": ", err})
 				end
-			elseif args[i] then
-				self:CreateLocalValue(key.value.value, args[i])
+			elseif signature_override[i] then
+				self:CreateLocalValue(key.value.value, signature_override[i])
 			end
 
 			if not self.processing_deferred_calls then
@@ -142,7 +141,6 @@ local function check_input(self, obj, input)
 
 		self:PopAnalyzerEnvironment()
 		self:PopScope()
-		signature_override = args
 	end
 
 	do -- coerce untyped functions to contract callbacks
