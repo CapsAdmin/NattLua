@@ -29,10 +29,10 @@ local function restore_mutated_types(self)
 	env.mutated_types = {}
 end
 
-local function check_input(self, obj, input_arguments)
+local function check_input(self, obj, input)
 	local function_node = obj:GetFunctionBodyNode()
 	local signature_arguments = obj:GetInputSignature()
-	local len = signature_arguments:GetSafeLength(input_arguments)
+	local len = signature_arguments:GetSafeLength(input)
 	local signature_override = {}
 
 	if function_node.identifiers[1] then -- analyze the type expressions
@@ -51,7 +51,7 @@ local function check_input(self, obj, input_arguments)
 			self:CreateLocalValue(key.value.value, Any())
 			local arg
 			local contract
-			arg = input_arguments:Get(i)
+			arg = input:Get(i)
 
 			if key.value.value == "..." then
 				contract = signature_arguments:GetWithoutExpansion(i)
@@ -61,7 +61,7 @@ local function check_input(self, obj, input_arguments)
 
 			if not arg then
 				arg = Nil()
-				input_arguments:Set(i, arg)
+				input:Set(i, arg)
 			end
 
 			local ref_callback = arg and
@@ -104,7 +104,7 @@ local function check_input(self, obj, input_arguments)
 	end
 
 	do -- coerce untyped functions to contract callbacks
-		for i, arg in ipairs(input_arguments:GetData()) do
+		for i, arg in ipairs(input:GetData()) do
 			if arg.Type == "function" then
 				local func = arg
 
@@ -171,7 +171,7 @@ local function check_input(self, obj, input_arguments)
 	end
 
 	for i = 1, len do
-		local arg = input_arguments:Get(i)
+		local arg = input:Get(i)
 		local contract = signature_override[i] or signature_arguments:Get(i)
 		local ok, reason
 
@@ -217,13 +217,13 @@ local function check_input(self, obj, input_arguments)
 			arg:GetUpvalue() and
 			not contract.ref_argument
 		then
-			mutate_type(self, i, arg, contract, input_arguments)
+			mutate_type(self, i, arg, contract, input)
 		else
 			-- if it's a literal argument we pass the incoming value
 			if not contract.ref_argument then
 				local t = contract:Copy()
 				t:SetContract(contract)
-				input_arguments:Set(i, t)
+				input:Set(i, t)
 			end
 		end
 	end
@@ -313,48 +313,47 @@ return function(META)
 		local is_type_function = function_node.kind == "local_type_function" or
 			function_node.kind == "type_function"
 
-		if obj:IsExplicitInputSignature() or function_node.identifiers_typesystem then
-			if is_type_function then
-				if function_node.identifiers_typesystem then
-					local call_expression = self:GetCallStack()[1].call_node
-
-					for i, key in ipairs(function_node.identifiers) do
-						if function_node.self_call then i = i + 1 end
-
-						local generic_upvalue = function_node.identifiers_typesystem and
-							function_node.identifiers_typesystem[i] or
-							nil
-						local generic_type = call_expression.expressions_typesystem and
-							call_expression.expressions_typesystem[i] or
-							nil
-
-						if generic_upvalue then
-							local T = self:AnalyzeExpression(generic_type)
-							self:CreateLocalValue(generic_upvalue.value.value, T)
-						end
+		if is_type_function then
+			if function_node.identifiers_typesystem then
+				local call_expression = self:GetCallStack()[1].call_node
+			
+				for i = 1, #function_node.identifiers do
+					if function_node.self_call then i = i + 1 end
+			
+					local generic_upvalue = function_node.identifiers_typesystem and
+						function_node.identifiers_typesystem[i] or
+						nil
+			
+					local generic_type = call_expression.expressions_typesystem and
+						call_expression.expressions_typesystem[i] or
+						nil
+			
+					if generic_type and generic_upvalue then
+						local T = self:AnalyzeExpression(generic_type)
+						self:CreateLocalValue(generic_upvalue.value.value, T)
 					end
-
-					local ok, err = check_input(self, obj, input)
-
-					if not ok then return ok, err end
 				end
 
+				local ok, err = check_input(self, obj, input)
+			
+				if not ok then return ok, err end
+			elseif obj:IsExplicitInputSignature() then
 				-- otherwise if we're a analyzer function we just do a simple check and arguments are passed as is
 				-- local type foo(T: any) return T end
 				-- T becomes the type that is passed in, and not "any"
 				-- it's the equivalent of function foo<T extends any>(val: T) { return val }
 				local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
-
+			
 				if not ok then
 					return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 				end
-			elseif self:IsRuntime() then
-				-- if we have explicit arguments, we need to do a complex check against the contract
-				-- this might mutate the arguments
-				local ok, err = check_input(self, obj, input)
-
-				if not ok then return ok, err end
 			end
+		elseif obj:IsExplicitInputSignature() and self:IsRuntime() then
+			-- if we have explicit arguments, we need to do a complex check against the contract
+			-- this might mutate the arguments
+			local ok, err = check_input(self, obj, input)
+		
+			if not ok then return ok, err end
 		end
 
 		-- crawl the function with the new arguments
