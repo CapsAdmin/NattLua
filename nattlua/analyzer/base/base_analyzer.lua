@@ -61,12 +61,14 @@ return function(META)
 
 	do
 		local function add_potential_self(tup)
-			local self = tup:Get(1)
+			local tbl = tup:Get(1)
 
-			if self and self.Type == "union" then self = self:GetType("table") end
+			if tbl and tbl.Type == "union" then tbl = tbl:GetType("table") end
+			if not tbl then return tup end
 
-			if self and self.Self then
-				local self = self.Self
+
+			if tbl.Self then
+				local self = tbl.Self
 				local new_tup = Tuple({})
 
 				for i, obj in ipairs(tup:GetData()) do
@@ -78,9 +80,9 @@ return function(META)
 				end
 
 				return new_tup
-			elseif self and self.potential_self then
-				local meta = self
-				local self = self.potential_self:Copy()
+			elseif tbl.potential_self then
+				local meta = tbl
+				local self = tbl.potential_self:Copy()
 
 				if self.Type == "union" then
 					for _, obj in ipairs(self:GetData()) do

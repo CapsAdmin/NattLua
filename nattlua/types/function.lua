@@ -49,7 +49,12 @@ function META:Copy(map, ...)
 	copy:SetLiteral(self:IsLiteral())
 	copy:CopyInternalsFrom(self)
 	copy:SetFunctionBodyNode(self:GetFunctionBodyNode())
+	copy:SetInputIdentifiers(self:GetInputIdentifiers())
 	copy:SetCalled(self:IsCalled())
+	--copy:SetExplicitInputSignature(self:IsExplicitInputSignature())
+	--copy:SetExplicitOutputSignature(self:IsExplicitOutputSignature())
+	copy:SetArgumentsInferred(self:IsArgumentsInferred())
+	copy:SetPreventInputArgumentExpansion(self:GetPreventInputArgumentExpansion())
 	return copy
 end
 

@@ -299,37 +299,38 @@ test("complex", function()
     ]]
 end)
 
-test("lol", function()
-	analyze[[
-        do
-            type x = boolean | number
-        end
+analyze[[
+    do
+        type x = boolean | number
+    end
 
-        local type c = x
-        local a: c
-        local type b = {foo = a as any}
-        local c: function=(a: number, b:number)>(b, b)
+    local type c = x
+    local a: c
+    local type b = {foo = a as any}
+    local c: function=(a: number, w:number)>(b, b)
 
-        attest.superset_of(
-            c, 
-            nil as function=(_:number, _:number)>({foo = any}, {foo = any})
-        )
+    attest.equal(
+        c, 
+        nil as function=(number, number)>({foo = any}, {foo = any})
+    )
 
-        type x = nil
-    ]]
-end)
+    type x = nil
+]]
 
-test("lol2", function()
-	analyze[[
-        local function test(a:number,b: number)
-            return a + b
-        end
+analyze[[
+    local x: function=(a: number)>(a, a)
+    attest.equal(x, _ as function=(number)>(number, number))
+]]
 
-        test(1,1)
+analyze[[
+    local function test(a:number,b: number)
+        return a + b
+    end
 
-        attest.superset_of(test, nil as function=(_:number, _:number)>(number))
-    ]]
-end)
+    test(1,1)
+
+    attest.equal(test, nil as function=(_:number, _:number)>(number))
+]]
 
 test("make sure analyzer return flags dont leak over to deferred calls", function()
 	local foo = analyze([[
