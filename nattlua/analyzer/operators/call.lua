@@ -178,19 +178,10 @@ return {
 						if func.Type == "union" then func = a:GetType("function") end
 
 						b:SetArgumentsInferred(true)
+						
 						-- TODO: callbacks with ref arguments should not be called
 						-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
-						local has_ref_arg = false
-
-						for k, v in ipairs(b:GetInputSignature():GetData()) do
-							if v.ref_argument then
-								has_ref_arg = true
-
-								break
-							end
-						end
-
-						if not has_ref_arg then
+						if not b:IsRefFunction() then
 							self:Assert(self:Call(b, func:GetInputSignature():Copy(nil, true)))
 						end
 					end
