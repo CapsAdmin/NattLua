@@ -178,7 +178,7 @@ return {
 						if func.Type == "union" then func = a:GetType("function") end
 
 						b:SetArgumentsInferred(true)
-						
+
 						-- TODO: callbacks with ref arguments should not be called
 						-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
 						if not b:IsRefFunction() then

@@ -316,12 +316,10 @@ analyze[[
 
     type x = nil
 ]]
-
 analyze[[
     local x: function=(a: number)>(a, a)
     attest.equal(x, _ as function=(number)>(number, number))
 ]]
-
 analyze[[
     local function test(a:number,b: number)
         return a + b

@@ -2739,25 +2739,11 @@ local table = _G.table
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local VarArg = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").VarArg
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
-local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 META.Type = "function"
-
-function META:__call(...)
-	if self:GetAnalyzerFunction() then return self:GetAnalyzerFunction()(...) end
-end
-
-function META.Equal(a, b)
-	return a.Type == b.Type and
-		a:GetInputSignature():Equal(b:GetInputSignature()) and
-		a:GetOutputSignature():Equal(b:GetOutputSignature())
-end
-
-function META:__tostring()
-	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
-end
-
+META.Truthy = true
+META.Falsy = false
 META:IsSet("Called", false)
 META:IsSet("ExplicitInputSignature", false)
 META:IsSet("ExplicitOutputSignature", false)
@@ -2771,6 +2757,20 @@ META:GetSet("AnalyzerFunction", nil)
 META:IsSet("ArgumentsInferred", false)
 META:GetSet("PreventInputArgumentExpansion", false)
 
+function META:__tostring()
+	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
+end
+
+function META:__call(...)
+	if self:GetAnalyzerFunction() then return self:GetAnalyzerFunction()(...) end
+end
+
+function META.Equal(a, b)
+	return a.Type == b.Type and
+		a:GetInputSignature():Equal(b:GetInputSignature()) and
+		a:GetOutputSignature():Equal(b:GetOutputSignature())
+end
+
 function META:Copy(map, ...)
 	map = map or {}
 	local copy = self.New({arg = Tuple({}), ret = Tuple({})})
@@ -2783,7 +2783,12 @@ function META:Copy(map, ...)
 	copy:SetLiteral(self:IsLiteral())
 	copy:CopyInternalsFrom(self)
 	copy:SetFunctionBodyNode(self:GetFunctionBodyNode())
+	copy:SetInputIdentifiers(self:GetInputIdentifiers())
 	copy:SetCalled(self:IsCalled())
+	--copy:SetExplicitInputSignature(self:IsExplicitInputSignature())
+	--copy:SetExplicitOutputSignature(self:IsExplicitOutputSignature())
+	copy:SetArgumentsInferred(self:IsArgumentsInferred())
+	copy:SetPreventInputArgumentExpansion(self:GetPreventInputArgumentExpansion())
 	return copy
 end
 
@@ -2869,51 +2874,38 @@ function META.IsCallbackSubsetOf(A, B)
 	return true
 end
 
-function META:IsFalsy()
-	return false
-end
-
-function META:IsTruthy()
-	return true
-end
-
-function META:AddScope(arguments, return_result, scope)
-	self.scopes = self.scopes or {}
-	table.insert(
-		self.scopes,
-		{
-			arguments = arguments,
-			return_result = return_result,
-			scope = scope,
-		}
-	)
-end
-
-function META:GetSideEffects()
-	local out = {}
-
-	for _, call_info in ipairs(self.scopes) do
-		for _, val in ipairs(call_info.scope:GetDependencies()) do
-			if val.scope ~= call_info.scope then table.insert(out, val) end
-		end
+do
+	function META:AddScope(arguments, return_result, scope)
+		self.scopes = self.scopes or {}
+		table.insert(
+			self.scopes,
+			{
+				arguments = arguments,
+				return_result = return_result,
+				scope = scope,
+			}
+		)
 	end
 
-	return out
-end
+	function META:GetSideEffects()
+		local out = {}
 
-function META:GetCallCount()
-	return #self.scopes
-end
+		for _, call_info in ipairs(self.scopes) do
+			for _, val in ipairs(call_info.scope:GetDependencies()) do
+				if val.scope ~= call_info.scope then table.insert(out, val) end
+			end
+		end
 
-function META:IsPure()
-	return #self:GetSideEffects() == 0
-end
+		return out
+	end
 
-function META.New(input, output)
-	local self = setmetatable({}, META)
-	self:SetInputSignature(input)
-	self:SetOutputSignature(output)
-	return self
+	function META:GetCallCount()
+		return #self.scopes
+	end
+
+	function META:IsPure()
+		return #self:GetSideEffects() == 0
+	end
 end
 
 function META:IsRefFunction()
@@ -2926,6 +2918,13 @@ function META:IsRefFunction()
 	end
 
 	return false
+end
+
+function META.New(input, output)
+	local self = setmetatable({}, META)
+	self:SetInputSignature(input)
+	self:SetOutputSignature(output)
+	return self
 end
 
 return {
@@ -13962,12 +13961,14 @@ return function(META)
 
 	do
 		local function add_potential_self(tup)
-			local self = tup:Get(1)
+			local tbl = tup:Get(1)
 
-			if self and self.Type == "union" then self = self:GetType("table") end
+			if tbl and tbl.Type == "union" then tbl = tbl:GetType("table") end
 
-			if self and self.Self then
-				local self = self.Self
+			if not tbl then return tup end
+
+			if tbl.Self then
+				local self = tbl.Self
 				local new_tup = Tuple({})
 
 				for i, obj in ipairs(tup:GetData()) do
@@ -13979,9 +13980,9 @@ return function(META)
 				end
 
 				return new_tup
-			elseif self and self.potential_self then
-				local meta = self
-				local self = self.potential_self:Copy()
+			elseif tbl.potential_self then
+				local meta = tbl
+				local self = tbl.potential_self:Copy()
 
 				if self.Type == "union" then
 					for _, obj in ipairs(self:GetData()) do
@@ -16025,6 +16026,7 @@ local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
+local Function = IMPORTS['nattlua.types.function']("nattlua.types.function").Function
 
 local function mutate_type(self, i, arg, contract, arguments)
 	local env = self:GetScope():GetNearestFunctionScope()
@@ -16049,82 +16051,181 @@ local function restore_mutated_types(self)
 	env.mutated_types = {}
 end
 
-local function check_input(self, obj, input_arguments)
+local function shrink_union_to_function_signature(obj)
+	local arg = Tuple({})
+	local ret = Tuple({})
+
+	for _, func in ipairs(obj:GetData()) do
+		if func.Type ~= "function" then return false end
+
+		arg:Merge(func:GetInputSignature())
+		ret:Merge(func:GetOutputSignature())
+	end
+
+	return Function(arg, ret)
+end
+
+local function check_argument_against_contract(arg, contract, i)
+	local ok, reason
+
+	if not arg then
+		if contract:IsFalsy() then
+			arg = Nil()
+			ok = true
+		else
+			ok, reason = type_errors.other(
+				{
+					"argument #",
+					i,
+					" expected ",
+					contract,
+					" got nil",
+				}
+			)
+		end
+	elseif arg.Type == "table" and contract.Type == "table" then
+		ok, reason = arg:FollowsContract(contract)
+	else
+		if arg.Type == "function" and contract.Type == "function" then
+			ok, reason = arg:IsCallbackSubsetOf(contract)
+		else
+			ok, reason = arg:IsSubsetOf(contract)
+		end
+	end
+
+	if not ok then
+		return type_errors.other({"argument #", i, " ", arg, ": ", reason})
+	end
+
+	return true
+end
+
+local function check_input(self, obj, input)
+	if not obj:IsExplicitInputSignature() then
+		-- if this function is completely untyped we don't check any input
+		return true
+	end
+
 	local function_node = obj:GetFunctionBodyNode()
-	local signature_arguments = obj:GetInputSignature()
-	local len = signature_arguments:GetSafeLength(input_arguments)
+
+	if
+		function_node.kind == "local_type_function" or
+		function_node.kind == "type_function"
+	then
+		if not function_node.identifiers_typesystem and obj:IsExplicitInputSignature() then
+			-- if this is a type function we just do a simple check and arguments are passed as is
+			local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
+
+			if not ok then
+				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+			end
+
+			return ok, reason
+		end
+
+		if function_node.identifiers_typesystem then
+			-- if this is a generics we setup the generic upvalues for the signature
+			local call_expression = self:GetCallStack()[1].call_node
+
+			for i = 1, #function_node.identifiers do
+				if function_node.self_call then i = i + 1 end
+
+				local generic_upvalue = function_node.identifiers_typesystem and
+					function_node.identifiers_typesystem[i] or
+					nil
+				local generic_type = call_expression.expressions_typesystem and
+					call_expression.expressions_typesystem[i] or
+					nil
+
+				if generic_type and generic_upvalue then
+					local T = self:AnalyzeExpression(generic_type)
+					self:CreateLocalValue(generic_upvalue.value.value, T)
+				end
+			end
+		end
+	end
+
+	-- analyze the input signature to resolve generics and other types
+	local function_node = obj:GetFunctionBodyNode()
+	local input_signature = obj:GetInputSignature()
+	local input_signature_length = input_signature:GetSafeLength(input)
 	local signature_override = {}
 
-	if function_node.identifiers[1] then -- analyze the type expressions
+	if function_node.identifiers[1] then
+		-- analyze the type expressions
+		-- function foo(a: >>number<<, b: >>string<<)
+		-- against the input
+		-- foo(1, "hello")
 		self:CreateAndPushFunctionScope(obj)
 		self:PushAnalyzerEnvironment("typesystem")
-		local args = {}
 
-		for i = 1, len do
-			local key = function_node.identifiers[i] or
+		for i = 1, input_signature_length do
+			local node = function_node.identifiers[i] --[[argument]] or
 				function_node.identifiers[#function_node.identifiers]
+			--[[or the vararg]] local identifier = node.value.value
+			local type_expression = node.type_expression
 
 			if function_node.self_call then i = i + 1 end
 
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
-			self:CreateLocalValue(key.value.value, Any())
-			local arg
+			self:CreateLocalValue(identifier, Any())
 			local contract
-			arg = input_arguments:Get(i)
 
-			if key.value.value == "..." then
-				contract = signature_arguments:GetWithoutExpansion(i)
+			if identifier == "..." then
+				contract = input_signature:GetWithoutExpansion(i)
 			else
-				contract = signature_arguments:Get(i)
+				contract = input_signature:Get(i)
 			end
+
+			local arg = input:Get(i)
 
 			if not arg then
 				arg = Nil()
-				input_arguments:Set(i, arg)
+				input:Set(i, arg)
 			end
 
-			local ref_callback = arg and
+			if
 				contract and
 				contract.ref_argument and
-				contract.Type == "function" and
-				arg.Type == "function" and
-				not arg:IsArgumentsInferred()
-
-			if contract and contract.ref_argument and arg and not ref_callback then
-				self:CreateLocalValue(key.value.value, arg)
-			end
-
-			if key.type_expression then
-				args[i] = self:AnalyzeExpression(key.type_expression):GetFirstValue()
-			end
-
-			if contract and contract.ref_argument and arg and not ref_callback then
-				args[i] = arg
-				args[i].ref_argument = true
-				local ok, err = args[i]:IsSubsetOf(contract)
+				(
+					contract.Type ~= "function" or
+					arg.Type ~= "function" or
+					arg:IsArgumentsInferred()
+				)
+			then
+				self:CreateLocalValue(identifier, arg)
+				signature_override[i] = arg
+				signature_override[i].ref_argument = true
+				local ok, err = signature_override[i]:IsSubsetOf(contract)
 
 				if not ok then
 					return type_errors.other({"argument #", i, " ", arg, ": ", err})
 				end
-			elseif args[i] then
-				self:CreateLocalValue(key.value.value, args[i])
+			elseif type_expression then
+				signature_override[i] = self:AnalyzeExpression(type_expression):GetFirstValue()
+				self:CreateLocalValue(identifier, signature_override[i])
 			end
 
-			if not self.processing_deferred_calls then
-				if contract and contract.literal_argument and arg and not arg:IsLiteral() then
-					return type_errors.other({"argument #", i, " ", arg, ": not literal"})
-				end
+			if
+				contract and
+				contract.literal_argument and
+				not self.processing_deferred_calls and
+				arg and
+				not arg:IsLiteral()
+			then
+				return type_errors.other({"argument #", i, " ", arg, ": not literal"})
 			end
 		end
 
 		self:PopAnalyzerEnvironment()
 		self:PopScope()
-		signature_override = args
 	end
 
 	do -- coerce untyped functions to contract callbacks
-		for i, arg in ipairs(input_arguments:GetData()) do
+		for i = 1, input_signature_length do
+			local arg = input:Get(i)
+
 			if arg.Type == "function" then
 				local func = arg
 
@@ -16133,11 +16234,12 @@ local function check_input(self, obj, input_arguments)
 					signature_override[i].Type == "union" and
 					not signature_override[i].ref_argument
 				then
-					local merged = signature_override[i]:ShrinkToFunctionSignature()
+					local merged = shrink_union_to_function_signature(signature_override[i])
 
 					if merged then
 						func:SetInputSignature(merged:GetInputSignature())
 						func:SetOutputSignature(merged:GetOutputSignature())
+						func:SetExplicitInputSignature(true)
 						func:SetExplicitOutputSignature(true)
 						func:SetCalled(false)
 					end
@@ -16151,16 +16253,14 @@ local function check_input(self, obj, input_arguments)
 
 								for _, func in ipairs(contract:GetData()) do
 									tup:Merge(func:GetInputSignature())
-									func:SetInputSignature(tup)
-									func:SetCalled(false)
 								end
 
-								func:SetArgumentsInferred(true)
+								func:SetInputSignature(tup)
 							elseif contract.Type == "function" then
 								func:SetInputSignature(contract:GetInputSignature():Copy(nil, true)) -- force copy tables so we don't mutate the contract
-								func:SetCalled(false)
-								func:SetArgumentsInferred(true)
 							end
+
+							func:SetCalled(false)
 						end
 					end
 
@@ -16176,13 +16276,12 @@ local function check_input(self, obj, input_arguments)
 								end
 
 								func:SetOutputSignature(tup)
-								func:SetExplicitOutputSignature(true)
-								func:SetCalled(false)
 							elseif contract.Type == "function" then
 								func:SetOutputSignature(contract:GetOutputSignature())
-								func:SetExplicitOutputSignature(true)
-								func:SetCalled(false)
 							end
+
+							func:SetExplicitOutputSignature(true)
+							func:SetCalled(false)
 						end
 					end
 				end
@@ -16190,45 +16289,22 @@ local function check_input(self, obj, input_arguments)
 		end
 	end
 
-	for i = 1, len do
-		local arg = input_arguments:Get(i)
-		local contract = signature_override[i] or signature_arguments:Get(i)
-		local ok, reason
+	-- finally check the input against the generated signature
+	for i = 1, input_signature_length do
+		local arg = input:Get(i)
+		local contract = signature_override[i] or input_signature:Get(i)
 
-		if not arg then
-			if contract:IsFalsy() then
-				arg = Nil()
-				ok = true
-			else
-				ok, reason = type_errors.other(
-					{
-						"argument #",
-						i,
-						" expected ",
-						contract,
-						" got nil",
-					}
-				)
-			end
-		elseif arg.Type == "table" and contract.Type == "table" then
-			ok, reason = arg:FollowsContract(contract)
-		else
-			if contract.Type == "union" then
-				local shrunk = contract:ShrinkToFunctionSignature()
+		if contract.Type == "union" then
+			local shrunk = shrink_union_to_function_signature(contract)
 
-				if shrunk then contract = contract:ShrinkToFunctionSignature() end
-			end
-
-			if arg.Type == "function" and contract.Type == "function" then
-				ok, reason = arg:IsCallbackSubsetOf(contract)
-			else
-				ok, reason = arg:IsSubsetOf(contract)
-			end
+			if shrunk then contract = shrunk end
 		end
+
+		local ok, reason = check_argument_against_contract(arg, contract, i)
 
 		if not ok then
 			restore_mutated_types(self)
-			return type_errors.other({"argument #", i, " ", arg, ": ", reason})
+			return ok, reason
 		end
 
 		if
@@ -16237,14 +16313,12 @@ local function check_input(self, obj, input_arguments)
 			arg:GetUpvalue() and
 			not contract.ref_argument
 		then
-			mutate_type(self, i, arg, contract, input_arguments)
-		else
-			-- if it's a literal argument we pass the incoming value
-			if not contract.ref_argument then
-				local t = contract:Copy()
-				t:SetContract(contract)
-				input_arguments:Set(i, t)
-			end
+			mutate_type(self, i, arg, contract, input)
+		elseif not contract.ref_argument then
+			-- if it's a ref argument we pass the incoming value
+			local t = contract:Copy()
+			t:SetContract(contract)
+			input:Set(i, t)
 		end
 	end
 
@@ -16333,48 +16407,10 @@ return function(META)
 		local is_type_function = function_node.kind == "local_type_function" or
 			function_node.kind == "type_function"
 
-		if obj:IsExplicitInputSignature() or function_node.identifiers_typesystem then
-			if is_type_function then
-				if function_node.identifiers_typesystem then
-					local call_expression = self:GetCallStack()[1].call_node
+		do
+			local ok, err = check_input(self, obj, input)
 
-					for i, key in ipairs(function_node.identifiers) do
-						if function_node.self_call then i = i + 1 end
-
-						local generic_upvalue = function_node.identifiers_typesystem and
-							function_node.identifiers_typesystem[i] or
-							nil
-						local generic_type = call_expression.expressions_typesystem and
-							call_expression.expressions_typesystem[i] or
-							nil
-
-						if generic_upvalue then
-							local T = self:AnalyzeExpression(generic_type)
-							self:CreateLocalValue(generic_upvalue.value.value, T)
-						end
-					end
-
-					local ok, err = check_input(self, obj, input)
-
-					if not ok then return ok, err end
-				end
-
-				-- otherwise if we're a analyzer function we just do a simple check and arguments are passed as is
-				-- local type foo(T: any) return T end
-				-- T becomes the type that is passed in, and not "any"
-				-- it's the equivalent of function foo<T extends any>(val: T) { return val }
-				local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
-
-				if not ok then
-					return type_errors.subset(a, b, {"argument #", i, " - ", reason})
-				end
-			elseif self:IsRuntime() then
-				-- if we have explicit arguments, we need to do a complex check against the contract
-				-- this might mutate the arguments
-				local ok, err = check_input(self, obj, input)
-
-				if not ok then return ok, err end
-			end
+			if not ok then return ok, err end
 		end
 
 		-- crawl the function with the new arguments
@@ -16757,19 +16793,10 @@ return {
 						if func.Type == "union" then func = a:GetType("function") end
 
 						b:SetArgumentsInferred(true)
+
 						-- TODO: callbacks with ref arguments should not be called
 						-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
-						local has_ref_arg = false
-
-						for k, v in ipairs(b:GetInputSignature():GetData()) do
-							if v.ref_argument then
-								has_ref_arg = true
-
-								break
-							end
-						end
-
-						if not has_ref_arg then
+						if not b:IsRefFunction() then
 							self:Assert(self:Call(b, func:GetInputSignature():Copy(nil, true)))
 						end
 					end

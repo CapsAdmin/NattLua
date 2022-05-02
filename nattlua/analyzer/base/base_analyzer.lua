@@ -64,8 +64,8 @@ return function(META)
 			local tbl = tup:Get(1)
 
 			if tbl and tbl.Type == "union" then tbl = tbl:GetType("table") end
-			if not tbl then return tup end
 
+			if not tbl then return tup end
 
 			if tbl.Self then
 				local self = tbl.Self

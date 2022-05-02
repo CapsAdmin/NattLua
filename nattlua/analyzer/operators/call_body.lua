@@ -79,7 +79,6 @@ local function check_argument_against_contract(arg, contract, i)
 	return true
 end
 
-
 local function check_input(self, obj, input)
 	if not obj:IsExplicitInputSignature() then
 		-- if this function is completely untyped we don't check any input
@@ -88,33 +87,35 @@ local function check_input(self, obj, input)
 
 	local function_node = obj:GetFunctionBodyNode()
 
-	if function_node.kind == "local_type_function" or function_node.kind == "type_function" then
+	if
+		function_node.kind == "local_type_function" or
+		function_node.kind == "type_function"
+	then
 		if not function_node.identifiers_typesystem and obj:IsExplicitInputSignature() then
 			-- if this is a type function we just do a simple check and arguments are passed as is
 			local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
-		
+
 			if not ok then
 				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 			end
-	
+
 			return ok, reason
 		end
 
 		if function_node.identifiers_typesystem then
 			-- if this is a generics we setup the generic upvalues for the signature
 			local call_expression = self:GetCallStack()[1].call_node
-		
+
 			for i = 1, #function_node.identifiers do
 				if function_node.self_call then i = i + 1 end
-		
+
 				local generic_upvalue = function_node.identifiers_typesystem and
 					function_node.identifiers_typesystem[i] or
 					nil
-		
 				local generic_type = call_expression.expressions_typesystem and
 					call_expression.expressions_typesystem[i] or
 					nil
-		
+
 				if generic_type and generic_upvalue then
 					local T = self:AnalyzeExpression(generic_type)
 					self:CreateLocalValue(generic_upvalue.value.value, T)
@@ -124,24 +125,23 @@ local function check_input(self, obj, input)
 	end
 
 	-- analyze the input signature to resolve generics and other types
-
 	local function_node = obj:GetFunctionBodyNode()
 	local input_signature = obj:GetInputSignature()
 	local input_signature_length = input_signature:GetSafeLength(input)
 	local signature_override = {}
 
-	if function_node.identifiers[1] then 
+	if function_node.identifiers[1] then
 		-- analyze the type expressions
 		-- function foo(a: >>number<<, b: >>string<<)
 		-- against the input
 		-- foo(1, "hello")
-
 		self:CreateAndPushFunctionScope(obj)
 		self:PushAnalyzerEnvironment("typesystem")
 
 		for i = 1, input_signature_length do
-			local node = function_node.identifiers[i] --[[argument]] or function_node.identifiers[#function_node.identifiers] --[[or the vararg]]
-			local identifier = node.value.value
+			local node = function_node.identifiers[i] --[[argument]] or
+				function_node.identifiers[#function_node.identifiers]
+			--[[or the vararg]] local identifier = node.value.value
 			local type_expression = node.type_expression
 
 			if function_node.self_call then i = i + 1 end
@@ -149,8 +149,8 @@ local function check_input(self, obj, input)
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
 			self:CreateLocalValue(identifier, Any())
-
 			local contract
+
 			if identifier == "..." then
 				contract = input_signature:GetWithoutExpansion(i)
 			else
@@ -158,16 +158,24 @@ local function check_input(self, obj, input)
 			end
 
 			local arg = input:Get(i)
+
 			if not arg then
 				arg = Nil()
 				input:Set(i, arg)
 			end
 
-			if contract and contract.ref_argument and (contract.Type ~= "function" or arg.Type ~= "function" or arg:IsArgumentsInferred()) then
+			if
+				contract and
+				contract.ref_argument and
+				(
+					contract.Type ~= "function" or
+					arg.Type ~= "function" or
+					arg:IsArgumentsInferred()
+				)
+			then
 				self:CreateLocalValue(identifier, arg)
 				signature_override[i] = arg
 				signature_override[i].ref_argument = true
-				
 				local ok, err = signature_override[i]:IsSubsetOf(contract)
 
 				if not ok then
@@ -178,7 +186,13 @@ local function check_input(self, obj, input)
 				self:CreateLocalValue(identifier, signature_override[i])
 			end
 
-			if contract and contract.literal_argument and not self.processing_deferred_calls and arg and not arg:IsLiteral() then
+			if
+				contract and
+				contract.literal_argument and
+				not self.processing_deferred_calls and
+				arg and
+				not arg:IsLiteral()
+			then
 				return type_errors.other({"argument #", i, " ", arg, ": not literal"})
 			end
 		end
@@ -190,6 +204,7 @@ local function check_input(self, obj, input)
 	do -- coerce untyped functions to contract callbacks
 		for i = 1, input_signature_length do
 			local arg = input:Get(i)
+
 			if arg.Type == "function" then
 				local func = arg
 
@@ -223,6 +238,7 @@ local function check_input(self, obj, input)
 							elseif contract.Type == "function" then
 								func:SetInputSignature(contract:GetInputSignature():Copy(nil, true)) -- force copy tables so we don't mutate the contract
 							end
+
 							func:SetCalled(false)
 						end
 					end
@@ -242,7 +258,7 @@ local function check_input(self, obj, input)
 							elseif contract.Type == "function" then
 								func:SetOutputSignature(contract:GetOutputSignature())
 							end
-							
+
 							func:SetExplicitOutputSignature(true)
 							func:SetCalled(false)
 						end
@@ -253,13 +269,13 @@ local function check_input(self, obj, input)
 	end
 
 	-- finally check the input against the generated signature
-
 	for i = 1, input_signature_length do
 		local arg = input:Get(i)
 		local contract = signature_override[i] or input_signature:Get(i)
 
 		if contract.Type == "union" then
 			local shrunk = shrink_union_to_function_signature(contract)
+
 			if shrunk then contract = shrunk end
 		end
 
@@ -372,6 +388,7 @@ return function(META)
 
 		do
 			local ok, err = check_input(self, obj, input)
+
 			if not ok then return ok, err end
 		end
 
