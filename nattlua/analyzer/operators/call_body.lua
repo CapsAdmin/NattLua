@@ -5,6 +5,7 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
+local Function = require("nattlua.types.function").Function
 
 local function mutate_type(self, i, arg, contract, arguments)
 	local env = self:GetScope():GetNearestFunctionScope()
@@ -27,6 +28,20 @@ local function restore_mutated_types(self)
 	end
 
 	env.mutated_types = {}
+end
+
+local function shrink_union_to_function_signature(obj)
+	local arg = Tuple({})
+	local ret = Tuple({})
+
+	for _, func in ipairs(obj:GetData()) do
+		if func.Type ~= "function" then return false end
+
+		arg:Merge(func:GetInputSignature())
+		ret:Merge(func:GetOutputSignature())
+	end
+
+	return Function(arg, ret)
 end
 
 local function check_input(self, obj, input)
@@ -71,6 +86,8 @@ local function check_input(self, obj, input)
 			end
 		end
 	end
+
+	-- analyze the input signature to resolve generics and other types
 
 	local function_node = obj:GetFunctionBodyNode()
 	local input_signature = obj:GetInputSignature()
@@ -135,7 +152,8 @@ local function check_input(self, obj, input)
 	end
 
 	do -- coerce untyped functions to contract callbacks
-		for i, arg in ipairs(input:GetData()) do
+		for i = 1, input_signature_length do
+			local arg = input:Get(i)
 			if arg.Type == "function" then
 				local func = arg
 
@@ -144,11 +162,12 @@ local function check_input(self, obj, input)
 					signature_override[i].Type == "union" and
 					not signature_override[i].ref_argument
 				then
-					local merged = signature_override[i]:ShrinkToFunctionSignature()
+					local merged = shrink_union_to_function_signature(signature_override[i])
 
 					if merged then
 						func:SetInputSignature(merged:GetInputSignature())
 						func:SetOutputSignature(merged:GetOutputSignature())
+						func:SetExplicitInputSignature(true)
 						func:SetExplicitOutputSignature(true)
 						func:SetCalled(false)
 					end
@@ -162,16 +181,13 @@ local function check_input(self, obj, input)
 
 								for _, func in ipairs(contract:GetData()) do
 									tup:Merge(func:GetInputSignature())
-									func:SetInputSignature(tup)
-									func:SetCalled(false)
 								end
 
-								func:SetArgumentsInferred(true)
+								func:SetInputSignature(tup)
 							elseif contract.Type == "function" then
 								func:SetInputSignature(contract:GetInputSignature():Copy(nil, true)) -- force copy tables so we don't mutate the contract
-								func:SetCalled(false)
-								func:SetArgumentsInferred(true)
 							end
+							func:SetCalled(false)
 						end
 					end
 
@@ -187,13 +203,12 @@ local function check_input(self, obj, input)
 								end
 
 								func:SetOutputSignature(tup)
-								func:SetExplicitOutputSignature(true)
-								func:SetCalled(false)
 							elseif contract.Type == "function" then
 								func:SetOutputSignature(contract:GetOutputSignature())
-								func:SetExplicitOutputSignature(true)
-								func:SetCalled(false)
 							end
+							
+							func:SetExplicitOutputSignature(true)
+							func:SetCalled(false)
 						end
 					end
 				end
@@ -201,9 +216,12 @@ local function check_input(self, obj, input)
 		end
 	end
 
+	-- finally check the input against the generated signature
+
 	for i = 1, input_signature_length do
 		local arg = input:Get(i)
 		local contract = signature_override[i] or input_signature:Get(i)
+		
 		local ok, reason
 
 		if not arg then
@@ -225,9 +243,8 @@ local function check_input(self, obj, input)
 			ok, reason = arg:FollowsContract(contract)
 		else
 			if contract.Type == "union" then
-				local shrunk = contract:ShrinkToFunctionSignature()
-
-				if shrunk then contract = contract:ShrinkToFunctionSignature() end
+				local shrunk = shrink_union_to_function_signature(contract)
+				if shrunk then contract = shrunk end
 			end
 
 			if arg.Type == "function" and contract.Type == "function" then

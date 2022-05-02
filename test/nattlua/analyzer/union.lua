@@ -109,7 +109,19 @@ analyze(
 )
 analyze([[
     local analyzer function test(a: any, b: any)
-        assert(a:ShrinkToFunctionSignature():Equal(b))
+        local arg = types.Tuple({})
+        local ret = types.Tuple({})
+    
+        for _, func in ipairs(a:GetData()) do
+            if func.Type ~= "function" then return false end
+    
+            arg:Merge(func:GetInputSignature())
+            ret:Merge(func:GetOutputSignature())
+        end
+    
+        local f = types.Function(arg, ret)
+
+        assert(f:Equal(b))
     end
     local type A = function=(string)>(number)
     local type B = function=(number)>(boolean)
