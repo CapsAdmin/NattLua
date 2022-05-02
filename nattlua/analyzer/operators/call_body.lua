@@ -44,6 +44,42 @@ local function shrink_union_to_function_signature(obj)
 	return Function(arg, ret)
 end
 
+local function check_argument_against_contract(arg, contract, i)
+	local ok, reason
+
+	if not arg then
+		if contract:IsFalsy() then
+			arg = Nil()
+			ok = true
+		else
+			ok, reason = type_errors.other(
+				{
+					"argument #",
+					i,
+					" expected ",
+					contract,
+					" got nil",
+				}
+			)
+		end
+	elseif arg.Type == "table" and contract.Type == "table" then
+		ok, reason = arg:FollowsContract(contract)
+	else
+		if arg.Type == "function" and contract.Type == "function" then
+			ok, reason = arg:IsCallbackSubsetOf(contract)
+		else
+			ok, reason = arg:IsSubsetOf(contract)
+		end
+	end
+
+	if not ok then
+		return type_errors.other({"argument #", i, " ", arg, ": ", reason})
+	end
+
+	return true
+end
+
+
 local function check_input(self, obj, input)
 	if not obj:IsExplicitInputSignature() then
 		-- if this function is completely untyped we don't check any input
@@ -221,42 +257,17 @@ local function check_input(self, obj, input)
 	for i = 1, input_signature_length do
 		local arg = input:Get(i)
 		local contract = signature_override[i] or input_signature:Get(i)
-		
-		local ok, reason
 
-		if not arg then
-			if contract:IsFalsy() then
-				arg = Nil()
-				ok = true
-			else
-				ok, reason = type_errors.other(
-					{
-						"argument #",
-						i,
-						" expected ",
-						contract,
-						" got nil",
-					}
-				)
-			end
-		elseif arg.Type == "table" and contract.Type == "table" then
-			ok, reason = arg:FollowsContract(contract)
-		else
-			if contract.Type == "union" then
-				local shrunk = shrink_union_to_function_signature(contract)
-				if shrunk then contract = shrunk end
-			end
-
-			if arg.Type == "function" and contract.Type == "function" then
-				ok, reason = arg:IsCallbackSubsetOf(contract)
-			else
-				ok, reason = arg:IsSubsetOf(contract)
-			end
+		if contract.Type == "union" then
+			local shrunk = shrink_union_to_function_signature(contract)
+			if shrunk then contract = shrunk end
 		end
+
+		local ok, reason = check_argument_against_contract(arg, contract, i)
 
 		if not ok then
 			restore_mutated_types(self)
-			return type_errors.other({"argument #", i, " ", arg, ": ", reason})
+			return ok, reason
 		end
 
 		if
@@ -266,13 +277,11 @@ local function check_input(self, obj, input)
 			not contract.ref_argument
 		then
 			mutate_type(self, i, arg, contract, input)
-		else
-			-- if it's a literal argument we pass the incoming value
-			if not contract.ref_argument then
-				local t = contract:Copy()
-				t:SetContract(contract)
-				input:Set(i, t)
-			end
+		elseif not contract.ref_argument then
+			-- if it's a ref argument we pass the incoming value
+			local t = contract:Copy()
+			t:SetContract(contract)
+			input:Set(i, t)
 		end
 	end
 
