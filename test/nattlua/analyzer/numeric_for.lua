@@ -111,3 +111,46 @@ analyze[[
     end
     attest.equal(tbl[3], 3)
 ]]
+
+analyze[[
+    local lol = 0
+
+    for i = 1, 10 do
+        if math.random() > 0.5 then
+            break
+        end
+        lol = lol + 1
+        
+        local function check<||>
+            if i == 1 then
+                attest.equal(lol, 1)
+            elseif i == number then
+                attest.equal(lol, number)
+            end
+        end
+
+        check<||>
+    end
+    
+    attest.equal(lol, _ as number)
+
+]]
+
+analyze[[
+    for i = 1, 5 do
+        local a = _ as nil | 1
+        if not a then break end
+        attest.equal(a, 1)
+    end
+]]
+
+analyze[[
+    for i = 1, 10 do
+        local lol = 0
+        if math.random() > 0.5 then
+            break
+        end
+        lol = lol + 1
+        attest.equal(lol, 1)    
+    end
+]]

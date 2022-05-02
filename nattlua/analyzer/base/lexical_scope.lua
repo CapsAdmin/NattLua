@@ -224,6 +224,7 @@ end
 META:GetSet("PreviousConditionalSibling")
 META:GetSet("NextConditionalSibling")
 META:IsSet("ElseConditionalScope")
+META:IsSet("LoopScope")
 
 function META:SetStatement(statement)
 	self.statement = statement
@@ -314,6 +315,14 @@ do
 
 	function META:GetNearestFunctionScope()
 		local ok, scope = self:GetMemberInParents("returns")
+
+		if ok then return scope end
+
+		return self
+	end
+
+	function META:GetNearestLoopScope()
+		local ok, scope = self:GetMemberInParents("LoopScope")
 
 		if ok then return scope end
 

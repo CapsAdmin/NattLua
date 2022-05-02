@@ -6,6 +6,19 @@ local type_errors = require("nattlua.types.error_messages")
 return {
 	Index = function(META)
 		function META:IndexOperator(obj, key)
+			local ok, err = self:IndexOperator2(obj, key)
+			if not ok then
+				if self:ErrorMessageToString(err):find("^%s*$") then
+					print("==")
+					print(obj)
+					print(key)
+					print("==")
+					print(ok, self:ErrorMessageToString(err)) 
+				end
+			end
+			return ok, err
+		end
+		function META:IndexOperator2(obj, key)
 			if obj.Type == "union" then
 				local union = Union({})
 

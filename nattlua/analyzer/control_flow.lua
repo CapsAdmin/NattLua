@@ -10,7 +10,7 @@ return function(META)
 		for _, statement in ipairs(statements) do
 			self:AnalyzeStatement(statement)
 
-			if self:DidCertainBreak() or self:DidUncertainBreak() then break end
+			if self:DidCertainBreak() then break end
 			if self._continue_ then return end
 
 			if self:GetScope():DidCertainReturn() then
@@ -31,7 +31,10 @@ return function(META)
 	end
 
 	function META:Break()
-		self.break_out_scope = self:GetScope()
+		local scope = self:GetScope()
+		self.break_out_scope = scope
+
+		self:ApplyMutationsAfterReturn(scope, scope:GetNearestFunctionScope(), true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
 	end
 
 	function META:DidCertainBreak()

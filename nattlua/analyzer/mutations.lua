@@ -312,8 +312,8 @@ return function(META)
 		upvalue.mutations = upvalue.mutations or {}
 		upvalue.mutations[hash] = upvalue.mutations[hash] or {}
 
-		if self:IsInUncertainLoop(scope) then
-			if val.dont_widen then
+		if self:IsInUncertainLoop(scope) and upvalue.scope then
+			if val.dont_widen or scope:Contains(upvalue.scope) then
 				val = val:Copy()
 			else
 				val = val:Copy():Widen()

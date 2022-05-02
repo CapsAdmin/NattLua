@@ -492,12 +492,12 @@ return function(META)
 
 		do
 			function META:IsInUncertainLoop(scope)
-				scope = scope or self:GetScope():GetNearestFunctionScope()
-				return self:GetContextValue("uncertain_loop") == scope:GetNearestFunctionScope()
+				scope = scope or self:GetScope():GetNearestLoopScope()
+				return self:GetContextValue("uncertain_loop") == scope:GetNearestLoopScope()
 			end
 
 			function META:PushUncertainLoop(b)
-				return self:PushContextValue("uncertain_loop", b and self:GetScope():GetNearestFunctionScope())
+				return self:PushContextValue("uncertain_loop", b and self:GetScope():GetNearestLoopScope())
 			end
 
 			function META:PopUncertainLoop()

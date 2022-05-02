@@ -145,7 +145,7 @@ do
 		for i = 1, #self do
 			local start_pos, end_pos = self:find(separator, current_pos, true)
 
-			if not start_pos then break end
+			if not start_pos or not end_pos then break end
 
 			tbl[i] = self:sub(current_pos, start_pos - 1)
 			current_pos = end_pos + 1

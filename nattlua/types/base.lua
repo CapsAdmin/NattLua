@@ -218,7 +218,7 @@ do
 			if not parent.Parent or done[parent] then break end
 
 			done[parent] = true
-			parent = parent.Parent
+			parent = parent.Parent --[[# as any ]]
 		end
 
 		return parent

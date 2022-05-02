@@ -337,7 +337,7 @@ function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 
 		if stop_token and stop_token[tk.value] then break end
 
-		local node = self:ReadNode()
+		local node = (self--[[# as any]]):ReadNode()
 
 		if not node then break end
 
@@ -375,7 +375,7 @@ function META:ReadMultipleValues(
 
 		if not self:IsValue(",") then break end
 
-		node.tokens[","] = self:ExpectValue(",")
+		(node.tokens--[[# as any]])[","] = self:ExpectValue(",")
 	end
 
 	return out

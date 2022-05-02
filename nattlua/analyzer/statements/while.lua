@@ -15,6 +15,7 @@ return {
 			for i = 1, 32 do
 				self:PushConditionalScope(statement, obj:IsTruthy(), obj:IsFalsy())
 				self:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy())
+				self:GetScope():SetLoopScope(true)
 				self:AnalyzeStatements(statement.statements)
 				self:PopUncertainLoop()
 				self:PopConditionalScope()
@@ -30,7 +31,7 @@ return {
 
 				if obj:IsUncertain() or obj:IsFalsy() then break end
 
-				if i == 32 then self:Error("too many iterations") end
+				if i == 32 then self:Warning("too many iterations") end
 			end
 		end
 	end,

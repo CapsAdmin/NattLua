@@ -232,6 +232,10 @@ function string.GetPathFromFilename(path: ref string)
 	return path:match("^(.*[/\\])[^/\\]-$") or ""
 end
 
+function math.Clamp(low: ref number, n: ref number, high: ref number)
+	return math.min(math.max(n, low), high)
+end
+
 function string.ToTable(str: ref string)
 	local tbl = {}
 
@@ -240,10 +244,6 @@ function string.ToTable(str: ref string)
 	end
 
 	return tbl
-end
-
-function math.Clamp(low: ref number, n: ref number, high: ref number)
-	return math.min(math.max(n, low), high)
 end
 
 do
