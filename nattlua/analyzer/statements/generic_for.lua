@@ -58,14 +58,12 @@ return {
 
 			if self._continue_ then self._continue_ = nil end
 
-			if self.break_out_scope then
-				if self.break_out_scope:IsUncertain() then
-					uncertain_break = true
-				else
-					brk = true
-				end
-
-				self.break_out_scope = nil
+			if self:DidCertainBreak() then
+				brk = true
+				self:ClearBreak()
+			elseif self:DidUncertainBreak() then
+				uncertain_break = true
+				self:ClearBreak()
 			end
 
 			if i == 1000 then self:Error("too many iterations") end

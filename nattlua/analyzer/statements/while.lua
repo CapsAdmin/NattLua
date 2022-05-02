@@ -19,9 +19,8 @@ return {
 				self:PopUncertainLoop()
 				self:PopConditionalScope()
 
-				if self.break_out_scope then
-					self.break_out_scope = nil
-
+				if self:DidCertainBreak() or self:DidUncertainBreak() then
+					self:ClearBreak()
 					break
 				end
 

@@ -10,7 +10,8 @@ return function(META)
 		for _, statement in ipairs(statements) do
 			self:AnalyzeStatement(statement)
 
-			if self.break_out_scope or self._continue_ then return end
+			if self:DidCertainBreak() or self:DidUncertainBreak() then break end
+			if self._continue_ then return end
 
 			if self:GetScope():DidCertainReturn() then
 				self:GetScope():ClearCertainReturn()
@@ -27,6 +28,22 @@ return function(META)
 		else
 			self:GetScope().missing_return = true
 		end
+	end
+
+	function META:Break()
+		self.break_out_scope = self:GetScope()
+	end
+
+	function META:DidCertainBreak()
+		return self.break_out_scope and self.break_out_scope:IsCertain()
+	end
+
+	function META:DidUncertainBreak()
+		return self.break_out_scope and self.break_out_scope:IsUncertain()
+	end
+
+	function META:ClearBreak()
+		self.break_out_scope = nil
 	end
 
 	function META:AnalyzeStatementsAndCollectOutputSignatures(statement)
