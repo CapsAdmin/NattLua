@@ -571,10 +571,7 @@ function META:Get(key--[[#: BaseType]], from_contract)
 	end
 
 	if key.Type == "union" then
-
-		if key:IsEmpty() then
-			return type_errors.other("union key is empty")
-		end
+		if key:IsEmpty() then return type_errors.other("union key is empty") end
 
 		local union = Union({})
 		local errors = {}

@@ -11,6 +11,7 @@ return function(META)
 			self:AnalyzeStatement(statement)
 
 			if self:DidCertainBreak() then break end
+
 			if self._continue_ then return end
 
 			if self:GetScope():DidCertainReturn() then
@@ -33,8 +34,13 @@ return function(META)
 	function META:Break()
 		local scope = self:GetScope()
 		self.break_out_scope = scope
-
-		self:ApplyMutationsAfterReturn(scope, scope:GetNearestFunctionScope(), true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
+		self:ApplyMutationsAfterReturn(
+			scope,
+			scope:GetNearestFunctionScope(),
+			true,
+			scope:GetTrackedUpvalues(),
+			scope:GetTrackedTables()
+		)
 	end
 
 	function META:DidCertainBreak()

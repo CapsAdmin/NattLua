@@ -111,7 +111,6 @@ analyze[[
     end
     attest.equal(tbl[3], 3)
 ]]
-
 analyze[[
     local lol = 0
 
@@ -135,7 +134,6 @@ analyze[[
     attest.equal(lol, _ as number)
 
 ]]
-
 analyze[[
     for i = 1, 5 do
         local a = _ as nil | 1
@@ -143,7 +141,6 @@ analyze[[
         attest.equal(a, 1)
     end
 ]]
-
 analyze[[
     for i = 1, 10 do
         local lol = 0

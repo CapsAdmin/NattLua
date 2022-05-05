@@ -22,6 +22,7 @@ return {
 
 				if self:DidCertainBreak() or self:DidUncertainBreak() then
 					self:ClearBreak()
+
 					break
 				end
 

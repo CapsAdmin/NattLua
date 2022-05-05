@@ -50,11 +50,9 @@ return {
 		self:GetScope():SetLoopScope(true)
 
 		if literal_init and literal_max and literal_step and literal_max < 1000 then
-
 			for i = literal_init, literal_max, literal_step do
 				self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
 				local i = LNumber(i)
-
 				local brk = false
 				local uncertain_break = self:DidUncertainBreak()
 
@@ -72,16 +70,13 @@ return {
 
 				self:PopConditionalScope()
 
-				if self:DidCertainBreak() then
-					brk = true
-				end
+				if self:DidCertainBreak() then brk = true end
 
-				if uncertain_break then
-					self:PopUncertainLoop()
-				end
+				if uncertain_break then self:PopUncertainLoop() end
 
 				if brk then
 					self:ClearBreak()
+
 					break
 				end
 			end

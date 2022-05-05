@@ -7,9 +7,11 @@ local function read_statement(node)
 
 	if str:find("StartNode") and node.kind ~= "root" then
 		local local_name, type, kind = str:match("(%S-) = self:StartNode%(\"(.-)\", \"(.-)\"%)")
-		if not local_name then 
+
+		if not local_name then
 			local_name, type, kind = str:match("(%S-) = self:StartNode%(\"(.-)\", \"(.-)\",.-%)")
 		end
+
 		table.insert(
 			in_node,
 			1,
