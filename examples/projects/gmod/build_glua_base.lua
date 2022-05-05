@@ -157,8 +157,9 @@ local function emit_atomic_type(val)
 	elseif TypeMap[val.TYPE] then
 		e(TypeMap[val.TYPE])
 	else
+		e("nil -- NYI")
 		tprint(val)
-		error("NYI")
+		print("NYI")
 	end
 end
 
@@ -242,16 +243,20 @@ local function emit(key, val, self_argument)
 		e("{[number] = any}") -- numeric list?
 	elseif val.LINK == "Panel.PaintingDragging" then
 		e("boolean")
+	elseif val.LINK == "Global.BRANCH" then
+		e("\"unknown\" | \"chromium\" | \"dev\" | \"prerelease\" | \"x86-64\"")
 	elseif val.LINK == "net.Receivers" then
 		e("{[string] = string}")
 	elseif val.VALUE then
 		e(val.VALUE)
 	else
+		e("nil -- NYI")
+
 		for k, v in pairs(val) do
 			print(k, "\t\t=\t\t", v)
 		end
 
-		error("NYI")
+		print("NYI")
 	end
 end
 
