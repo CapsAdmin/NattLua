@@ -14,7 +14,7 @@ local setmetatable = _G.setmetatable
 local B = string.byte
 local META = class.CreateTemplate("emitter")
 
---[[#local type { ParserConfig } = import("../config.nlua")]]
+--[[#local type { ParserConfig } = import("./../config.nlua")]]
 
 local translate_binary = {
 	["&&"] = "and",

@@ -1,5 +1,5 @@
 local nl = require("nattlua")
-local ast = assert(nl.Compiler(assert(io.open("nattlua/parser/parser.lua")):read("*all")):Parse()).SyntaxTree
+local ast = assert(nl.Compiler(assert(io.open("nattlua/parser.lua")):read("*all")):Parse()).SyntaxTree
 print("==================================================")
 print("all while statements:")
 

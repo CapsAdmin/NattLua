@@ -1,6 +1,6 @@
 local nl = require("nattlua")
 local helpers = require("nattlua.other.helpers")
-local Code = require("nattlua.code.code").New
+local Code = require("nattlua.code").New
 local check_tokens
 
 do

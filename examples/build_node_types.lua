@@ -5,8 +5,11 @@ local found = {}
 local function read_statement(node)
 	local str = node:Render({preserve_whitespace = false})
 
-	if str:find("StartNode") then
+	if str:find("StartNode") and node.kind ~= "root" then
 		local local_name, type, kind = str:match("(%S-) = self:StartNode%(\"(.-)\", \"(.-)\"%)")
+		if not local_name then 
+			local_name, type, kind = str:match("(%S-) = self:StartNode%(\"(.-)\", \"(.-)\",.-%)")
+		end
 		table.insert(
 			in_node,
 			1,
@@ -60,7 +63,7 @@ local function crawl_statement(node)
 			(
 				node.Code:GetName():find("parser/statements", nil, true) or
 				node.Code:GetName():find("parser/expressions", nil, true) or
-				node.Code:GetName():find("parser/parser", nil, true)
+				node.Code:GetName():find("parser", nil, true)
 			)
 		then
 			for _, node in ipairs(node.statements) do
@@ -90,7 +93,7 @@ end
 
 local compiler = assert(
 	nl.File(
-		"nattlua/parser/parser.lua",
+		"nattlua/parser.lua",
 		{
 			inline_require = true,
 			preserve_whitespace = false,

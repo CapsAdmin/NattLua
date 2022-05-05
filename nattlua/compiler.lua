@@ -8,11 +8,11 @@ local helpers = require("nattlua.other.helpers")
 local debug = _G.debug
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local setmetatable = _G.setmetatable
-local Code = require("nattlua.code.code").New
+local Code = require("nattlua.code").New
 local class = require("nattlua.other.class")
-local Lexer = require("nattlua.lexer.lexer").New
-local Parser = require("nattlua.parser.parser").New
-local Analyzer = require("nattlua.analyzer.analyzer").New
+local Lexer = require("nattlua.lexer").New
+local Parser = require("nattlua.parser").New
+local Analyzer = require("nattlua.analyzer").New
 local Emitter = require("nattlua.transpiler.emitter").New
 local META = class.CreateTemplate("compiler")
 

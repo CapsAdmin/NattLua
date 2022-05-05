@@ -746,7 +746,7 @@ do
 		for i = 1, #self do
 			local start_pos, end_pos = self:find(separator, current_pos, true)
 
-			if not start_pos then break end
+			if not start_pos or not end_pos then break end
 
 			tbl[i] = self:sub(current_pos, start_pos - 1)
 			current_pos = end_pos + 1
@@ -3511,6 +3511,8 @@ function META:Get(key, from_contract)
 	end
 
 	if key.Type == "union" then
+		if key:IsEmpty() then return type_errors.other("union key is empty") end
+
 		local union = Union({})
 		local errors = {}
 
@@ -8421,7 +8423,7 @@ return {
 		return runtime_env, typesystem_env
 	end,
 } end)(...) return __M end end
-do local __M; IMPORTS["nattlua.code.code"] = function(...) __M = __M or (function(...) local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+do local __M; IMPORTS["nattlua.code"] = function(...) __M = __M or (function(...) local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("code")
 
@@ -8709,7 +8711,7 @@ function characters.IsHex(c)
 end
 
 return characters end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.syntax"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+do local __M; IMPORTS["nattlua.syntax"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 
 
 
@@ -8971,7 +8973,7 @@ function META:GetTokenType(tk)
 end
 
 return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.runtime"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax.syntax']("nattlua.syntax.syntax").New
+do local __M; IMPORTS["nattlua.syntax.runtime"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax']("nattlua.syntax").New
 local runtime = Syntax()
 runtime:AddSymbolCharacters(
 	{
@@ -9073,9 +9075,9 @@ runtime:AddPostfixOperatorFunctionTranslate({
 	["ÆØÅÆ"] = "(A)",
 })
 return runtime end)(...) return __M end end
-do local __M; IMPORTS["nattlua.lexer.lexer"] = function(...) __M = __M or (function(...) 
+do local __M; IMPORTS["nattlua.lexer"] = function(...) __M = __M or (function(...) 
 
-local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
+local Code = IMPORTS['nattlua.code']("nattlua.code").New
 local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 local Token = IMPORTS['nattlua.lexer.token']("nattlua.lexer.token").New
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
@@ -9809,84 +9811,6 @@ do
 end
 
 return META end)(...) return __M end end
-IMPORTS['nattlua/code/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
-local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
-local META = class.CreateTemplate("code")
-
-
-
-function META:GetString()
-	return self.Buffer
-end
-
-function META:GetName()
-	return self.Name
-end
-
-function META:GetByteSize()
-	return #self.Buffer
-end
-
-function META:GetStringSlice(start, stop)
-	return self.Buffer:sub(start, stop)
-end
-
-function META:GetByte(pos)
-	return self.Buffer:byte(pos) or 0
-end
-
-function META:FindNearest(str, start)
-	local _, pos = self.Buffer:find(str, start, true)
-
-	if not pos then return nil end
-
-	return pos + 1
-end
-
-local function remove_bom_header(str)
-	if str:sub(1, 2) == "\xFE\xFF" then
-		return str:sub(3)
-	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
-		return str:sub(4)
-	end
-
-	return str
-end
-
-local function get_default_name()
-	local info = debug.getinfo(3)
-
-	if info then
-		local parent_line = info.currentline
-		local parent_name = info.source:sub(2)
-		return parent_name .. ":" .. parent_line
-	end
-
-	return "unknown line : unknown name"
-end
-
-function META:BuildSourceCodePointMessage(
-	msg,
-	start,
-	stop,
-	size
-)
-	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
-end
-
-function META.New(lua_code, name)
-	local self = setmetatable(
-		{
-			Buffer = remove_bom_header(lua_code),
-			Name = name or get_default_name(),
-		},
-		META
-	)
-	return self
-end
-
-
-return META end
 IMPORTS['./nattlua/parser/nodes.nlua'] = function() 
 
 IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
@@ -10576,7 +10500,7 @@ function META:ReadNodes(stop_token)
 
 		if stop_token and stop_token[tk.value] then break end
 
-		local node = self:ReadNode()
+		local node = (self):ReadNode()
 
 		if not node then break end
 
@@ -10614,14 +10538,14 @@ function META:ReadMultipleValues(
 
 		if not self:IsValue(",") then break end
 
-		node.tokens[","] = self:ExpectValue(",")
+		(node.tokens)[","] = self:ExpectValue(",")
 	end
 
 	return out
 end
 
 return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.typesystem"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax.syntax']("nattlua.syntax.syntax").New
+do local __M; IMPORTS["nattlua.syntax.typesystem"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax']("nattlua.syntax").New
 local typesystem = Syntax()
 typesystem:AddSymbolCharacters(
 	{
@@ -10773,8 +10697,8 @@ local table_remove = _G.table.remove
 local math_huge = math.huge
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
-local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
-local Lexer = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer").New
+local Code = IMPORTS['nattlua.code']("nattlua.code").New
+local Lexer = IMPORTS['nattlua.lexer']("nattlua.lexer").New
 
 
 
@@ -12734,11 +12658,11 @@ do
 		return ReadBody(self, assignment)
 	end
 end end
-do local __M; IMPORTS["nattlua.parser.parser"] = function(...) __M = __M or (function(...) local META = IMPORTS['nattlua.parser.base']("nattlua.parser.base")
+do local __M; IMPORTS["nattlua.parser"] = function(...) __M = __M or (function(...) local META = IMPORTS['nattlua.parser.base']("nattlua.parser.base")
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
-local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
-local Lexer = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer").New
+local Code = IMPORTS['nattlua.code']("nattlua.code").New
+local Lexer = IMPORTS['nattlua.lexer']("nattlua.lexer").New
 local math = _G.math
 local math_huge = math.huge
 local table_insert = _G.table.insert
@@ -13355,6 +13279,7 @@ end
 META:GetSet("PreviousConditionalSibling")
 META:GetSet("NextConditionalSibling")
 META:IsSet("ElseConditionalScope")
+META:IsSet("LoopScope")
 
 function META:SetStatement(statement)
 	self.statement = statement
@@ -13445,6 +13370,14 @@ do
 
 	function META:GetNearestFunctionScope()
 		local ok, scope = self:GetMemberInParents("returns")
+
+		if ok then return scope end
+
+		return self
+	end
+
+	function META:GetNearestLoopScope()
+		local ok, scope = self:GetMemberInParents("LoopScope")
 
 		if ok then return scope end
 
@@ -14392,12 +14325,12 @@ return function(META)
 
 		do
 			function META:IsInUncertainLoop(scope)
-				scope = scope or self:GetScope():GetNearestFunctionScope()
-				return self:GetContextValue("uncertain_loop") == scope:GetNearestFunctionScope()
+				scope = scope or self:GetScope():GetNearestLoopScope()
+				return self:GetContextValue("uncertain_loop") == scope:GetNearestLoopScope()
 			end
 
 			function META:PushUncertainLoop(b)
-				return self:PushContextValue("uncertain_loop", b and self:GetScope():GetNearestFunctionScope())
+				return self:PushContextValue("uncertain_loop", b and self:GetScope():GetNearestLoopScope())
 			end
 
 			function META:PopUncertainLoop()
@@ -14432,7 +14365,9 @@ return function(META)
 		for _, statement in ipairs(statements) do
 			self:AnalyzeStatement(statement)
 
-			if self.break_out_scope or self._continue_ then return end
+			if self:DidCertainBreak() then break end
+
+			if self._continue_ then return end
 
 			if self:GetScope():DidCertainReturn() then
 				self:GetScope():ClearCertainReturn()
@@ -14449,6 +14384,30 @@ return function(META)
 		else
 			self:GetScope().missing_return = true
 		end
+	end
+
+	function META:Break()
+		local scope = self:GetScope()
+		self.break_out_scope = scope
+		self:ApplyMutationsAfterReturn(
+			scope,
+			scope:GetNearestFunctionScope(),
+			true,
+			scope:GetTrackedUpvalues(),
+			scope:GetTrackedTables()
+		)
+	end
+
+	function META:DidCertainBreak()
+		return self.break_out_scope and self.break_out_scope:IsCertain()
+	end
+
+	function META:DidUncertainBreak()
+		return self.break_out_scope and self.break_out_scope:IsUncertain()
+	end
+
+	function META:ClearBreak()
+		self.break_out_scope = nil
 	end
 
 	function META:AnalyzeStatementsAndCollectOutputSignatures(statement)
@@ -15095,8 +15054,8 @@ return function(META)
 		upvalue.mutations = upvalue.mutations or {}
 		upvalue.mutations[hash] = upvalue.mutations[hash] or {}
 
-		if self:IsInUncertainLoop(scope) then
-			if val.dont_widen then
+		if self:IsInUncertainLoop(scope) and upvalue.scope then
+			if val.dont_widen or scope:Contains(upvalue.scope) then
 				val = val:Copy()
 			else
 				val = val:Copy():Widen()
@@ -15529,6 +15488,22 @@ local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error
 return {
 	Index = function(META)
 		function META:IndexOperator(obj, key)
+			local ok, err = self:IndexOperator2(obj, key)
+
+			if not ok then
+				if self:ErrorMessageToString(err):find("^%s*$") then
+					print("==")
+					print(obj)
+					print(key)
+					print("==")
+					print(ok, self:ErrorMessageToString(err))
+				end
+			end
+
+			return ok, err
+		end
+
+		function META:IndexOperator2(obj, key)
 			if obj.Type == "union" then
 				local union = Union({})
 
@@ -16881,6 +16856,83 @@ return {
 		end
 	end,
 } end)(...) return __M end end
+IMPORTS['./nattlua/transpiler/../parser/nodes.nlua'] = function() 
+
+IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+return {
+	ExpressionKind = ExpressionKind,
+	StatementKind = StatementKind,
+	Node = Node,
+	statement = statement,
+	expression = expression,
+} end
+IMPORTS['./nattlua/transpiler/../config.nlua'] = function() 
+
+
+
+
+
+return {
+	LexerConfig = nil,
+	ParserConfig = nil,
+	AnalyzerConfig = nil,
+	TranspilerConfig = nil,
+	CompilerConfig = nil,
+} end
 do local __M; IMPORTS["nattlua.transpiler.emitter"] = function(...) __M = __M or (function(...) local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local characters = IMPORTS['nattlua.syntax.characters']("nattlua.syntax.characters")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
@@ -19195,14 +19247,12 @@ return {
 
 			if self._continue_ then self._continue_ = nil end
 
-			if self.break_out_scope then
-				if self.break_out_scope:IsUncertain() then
-					uncertain_break = true
-				else
-					brk = true
-				end
-
-				self.break_out_scope = nil
+			if self:DidCertainBreak() then
+				brk = true
+				self:ClearBreak()
+			elseif self:DidUncertainBreak() then
+				uncertain_break = true
+				self:ClearBreak()
 			end
 
 			if i == 1000 then self:Error("too many iterations") end
@@ -19710,16 +19760,17 @@ return {
 		end
 
 		self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
+		self:GetScope():SetLoopScope(true)
 
 		if literal_init and literal_max and literal_step and literal_max < 1000 then
-			local uncertain_break = false
-
 			for i = literal_init, literal_max, literal_step do
 				self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
 				local i = LNumber(i)
 				local brk = false
+				local uncertain_break = self:DidUncertainBreak()
 
 				if uncertain_break then
+					self:PushUncertainLoop(true)
 					i:SetLiteral(false)
 					brk = true
 				end
@@ -19730,19 +19781,17 @@ return {
 
 				if self._continue_ then self._continue_ = nil end
 
-				if self.break_out_scope then
-					if self.break_out_scope:IsUncertain() then
-						uncertain_break = true
-					else
-						brk = true
-					end
-
-					self.break_out_scope = nil
-				end
-
 				self:PopConditionalScope()
 
-				if brk then break end
+				if self:DidCertainBreak() then brk = true end
+
+				if uncertain_break then self:PopUncertainLoop() end
+
+				if brk then
+					self:ClearBreak()
+
+					break
+				end
 			end
 		else
 			if literal_init then
@@ -19780,14 +19829,12 @@ return {
 			self:PopUncertainLoop()
 		end
 
-		self.break_out_scope = nil
 		self:PopConditionalScope()
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.statements.break"] = function(...) __M = __M or (function(...) return {
 	AnalyzeBreak = function(self, statement)
-		self.break_out_scope = self:GetScope()
-		self.break_loop = true
+		self:Break()
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.statements.continue"] = function(...) __M = __M or (function(...) return {
@@ -19832,12 +19879,13 @@ do local __M; IMPORTS["nattlua.analyzer.statements.while"] = function(...) __M =
 			for i = 1, 32 do
 				self:PushConditionalScope(statement, obj:IsTruthy(), obj:IsFalsy())
 				self:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy())
+				self:GetScope():SetLoopScope(true)
 				self:AnalyzeStatements(statement.statements)
 				self:PopUncertainLoop()
 				self:PopConditionalScope()
 
-				if self.break_out_scope then
-					self.break_out_scope = nil
+				if self:DidCertainBreak() or self:DidUncertainBreak() then
+					self:ClearBreak()
 
 					break
 				end
@@ -19848,7 +19896,7 @@ do local __M; IMPORTS["nattlua.analyzer.statements.while"] = function(...) __M =
 
 				if obj:IsUncertain() or obj:IsFalsy() then break end
 
-				if i == 32 then self:Error("too many iterations") end
+				if i == 32 then self:Warning("too many iterations") end
 			end
 		end
 	end,
@@ -20576,7 +20624,7 @@ return {
 		return VarArg(self:AnalyzeExpression(node.value))
 	end,
 } end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.analyzer"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+do local __M; IMPORTS["nattlua.analyzer"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local tostring = tostring
 local error = error
 local setmetatable = setmetatable
@@ -20783,11 +20831,11 @@ local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local debug = _G.debug
 local BuildBaseEnvironment = IMPORTS['nattlua.runtime.base_environment']("nattlua.runtime.base_environment").BuildBaseEnvironment
 local setmetatable = _G.setmetatable
-local Code = IMPORTS['nattlua.code.code']("nattlua.code.code").New
+local Code = IMPORTS['nattlua.code']("nattlua.code").New
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
-local Lexer = IMPORTS['nattlua.lexer.lexer']("nattlua.lexer.lexer").New
-local Parser = IMPORTS['nattlua.parser.parser']("nattlua.parser.parser").New
-local Analyzer = IMPORTS['nattlua.analyzer.analyzer']("nattlua.analyzer.analyzer").New
+local Lexer = IMPORTS['nattlua.lexer']("nattlua.lexer").New
+local Parser = IMPORTS['nattlua.parser']("nattlua.parser").New
+local Analyzer = IMPORTS['nattlua.analyzer']("nattlua.analyzer").New
 local Emitter = IMPORTS['nattlua.transpiler.emitter']("nattlua.transpiler.emitter").New
 local META = class.CreateTemplate("compiler")
 

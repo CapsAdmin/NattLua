@@ -165,7 +165,7 @@ type expression["function_signature"] = Node & { -- [statement - local_assignmen
 		identifiers = any,
 		return_types = any,
 	}
-type expression["value"] = Node & { -- [statement - local_assignment @ nattlua/parser/parser.lua:30]
+type expression["value"] = Node & { -- [statement - local_assignment @ nattlua/parser.lua:30]
 		tokens = {
 			["standalone_letter"] = Token,
 			["value"] = Token,
@@ -271,7 +271,7 @@ type statement["assignment"] = Node & { -- [statement - local_assignment @ nattl
 		left = any,
 		environment = any,
 	}
-type statement["shebang"] = Node & { -- [statement - assignment @ ./nattlua/parser/parser.lua:230]
+type statement["shebang"] = Node & { -- [statement - assignment @ ./nattlua/parser.lua:230]
 		tokens = {
 			["shebang"] = Token,
 		},
@@ -295,7 +295,7 @@ type statement["local_type_function"] = Node & { -- [statement - local_assignmen
 		},
 		identifiers = any,
 	}
-type statement["end_of_file"] = Node & { -- [statement - local_assignment @ ./nattlua/parser/parser.lua:264]
+type statement["end_of_file"] = Node & { -- [statement - local_assignment @ ./nattlua/parser.lua:264]
 		tokens = {
 			["end_of_file"] = Token,
 		},
@@ -447,7 +447,7 @@ type expression["table_spread"] = Node & { -- [statement - local_assignment @ na
 		},
 		expression = any,
 	}
-type statement["root"] = Node & { -- [statement - local_assignment @ ./nattlua/parser/parser.lua:225]
+type statement["root"] = Node & { -- [statement - local_assignment @ ./nattlua/parser.lua:225]
 		tokens = {
 			["shebang"] = Token,
 			["eof"] = Token,

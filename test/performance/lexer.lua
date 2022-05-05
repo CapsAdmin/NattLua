@@ -1,7 +1,7 @@
 local helpers = require("nattlua.other.helpers")
 local util = require("examples.util")
 local nl = require("nattlua")
-local Code = require("nattlua.code.code").New
+local Code = require("nattlua.code").New
 local code = nl.Compiler(
 	assert(
 		util.FetchCode(
@@ -21,7 +21,7 @@ do
 end
 
 do
-	local Lexer = require("nattlua.lexer.lexer").New
+	local Lexer = require("nattlua.lexer").New
 	local lexer = Lexer(
 		Code(
 			assert(

@@ -91,7 +91,7 @@ do
 	attest.equal(self:Foo(), _  as number)
 end
 
-local Lexer = require("nattlua.lexer.lexer")
+local Lexer = require("nattlua.lexer")
 
 do
 	local base = require("nattlua.types.base")
@@ -130,7 +130,7 @@ do
 	local type { statement } = import("~/nattlua/parser/nodes.nlua")
 
 	local META = require("nattlua.parser.base")
-	local Code = require("nattlua.code.code").New
+	local Code = require("nattlua.code").New
 	local self = META.New({}, Code("dawwad", "asassa"), {})
 	local node = self:StartNode("statement", "do")
 	local tbl = self:ReadMultipleValues(

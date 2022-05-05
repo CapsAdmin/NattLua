@@ -8,7 +8,7 @@ export const loadLua = async () => {
 		openStandardLibs: true,
 	})
 
-	await loadLuaModule(lua, import("../../../build_output.lua"), "nattlua")
+	await loadLuaModule(lua, import("./../../../build_output.lua"), "nattlua")
 	await lua.doString("for k, v in pairs(package.preload) do print(k,v) end require('nattlua') for k,v in pairs(IMPORTS) do package.preload[k] = v end")
 	await loadLuaModule(lua, import("./../../server/lsp.lua"), "lsp")
 

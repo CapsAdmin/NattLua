@@ -4,8 +4,8 @@ local table_remove = _G.table.remove
 local math_huge = math.huge
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
-local Code = require("nattlua.code.code").New
-local Lexer = require("nattlua.lexer.lexer").New
+local Code = require("nattlua.code").New
+local Lexer = require("nattlua.lexer").New
 
 --[[#local type { Node } = import("~/nattlua/parser/nodes.nlua")]]
 

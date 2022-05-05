@@ -1,4 +1,4 @@
-local Syntax = require("nattlua.syntax.syntax").New
+local Syntax = require("nattlua.syntax").New
 local typesystem = Syntax()
 typesystem:AddSymbolCharacters(
 	{

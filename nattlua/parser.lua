@@ -1,8 +1,8 @@
 local META = require("nattlua.parser.base")
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
-local Code = require("nattlua.code.code").New
-local Lexer = require("nattlua.lexer.lexer").New
+local Code = require("nattlua.code").New
+local Lexer = require("nattlua.lexer").New
 local math = _G.math
 local math_huge = math.huge
 local table_insert = _G.table.insert
@@ -11,7 +11,7 @@ local ipairs = _G.ipairs
 
 --[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
---[[#local type { ExpressionKind, StatementKind, statement, expression } = import("./nodes.nlua")]]
+--[[#local type { ExpressionKind, StatementKind, statement, expression } = import("./parser/nodes.nlua")]]
 
 function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
 	if not self:IsType("letter") and not self:IsValue("...") then return end
