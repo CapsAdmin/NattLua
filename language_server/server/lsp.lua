@@ -469,7 +469,7 @@ lsp.methods["textDocument/rename"] = function(self, params)
 	local changes = {}
 
 	if upvalue and upvalue.mutations then
-		for i, v in ipairs(upvalue.mutations[upvalue:GetKey()]) do
+		for i, v in ipairs(upvalue.mutations) do
 			local node = v.value:GetNode()
 
 			if node then

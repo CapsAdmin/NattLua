@@ -7,7 +7,7 @@ local ipairs = ipairs
 local table = _G.table
 local Union = require("nattlua.types.union").Union
 
-local function get_value_from_scope(self, mutations, scope, obj, key)
+local function get_value_from_scope(self, mutations, scope, obj)
 	do
 		do
 			local last_scope
@@ -231,17 +231,17 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 	return value
 end
 
-local function initialize_mutation_tracker(obj, scope, key, hash)
-	obj.mutations = obj.mutations or {}
-	obj.mutations[hash] = obj.mutations[hash] or {}
+local function initialize_table_mutation_tracker(tbl, scope, key, hash)
+	tbl.mutations = tbl.mutations or {}
+	tbl.mutations[hash] = tbl.mutations[hash] or {}
 
-	if obj.mutations[hash][1] == nil then
-		if obj.Type == "table" then
+	if tbl.mutations[hash][1] == nil then
+		if tbl.Type == "table" then
 			-- initialize the table mutations with an existing value or nil
-			local val = (obj:GetContract() or obj):Get(key) or Nil()
+			local val = (tbl:GetContract() or tbl):Get(key) or Nil()
 			table.insert(
-				obj.mutations[hash],
-				{scope = obj.scope or scope:GetRoot(), value = val, contract = obj:GetContract()}
+				tbl.mutations[hash],
+				{scope = tbl.scope or scope:GetRoot(), value = val, contract = tbl:GetContract()}
 			)
 		end
 	end
@@ -266,8 +266,8 @@ return function(META)
 		if not hash then return end
 
 		local scope = self:GetScope()
-		initialize_mutation_tracker(tbl, scope, key, hash)
-		return get_value_from_scope(self, copy(tbl.mutations[hash]), scope, tbl, hash)
+		initialize_table_mutation_tracker(tbl, scope, key, hash)
+		return get_value_from_scope(self, copy(tbl.mutations[hash]), scope, tbl)
 	end
 
 	function META:MutateTable(tbl, key, val, scope_override, from_tracking)
@@ -278,7 +278,7 @@ return function(META)
 		if not hash then return end
 
 		local scope = scope_override or self:GetScope()
-		initialize_mutation_tracker(tbl, scope, key, hash)
+		initialize_table_mutation_tracker(tbl, scope, key, hash)
 
 		if self:IsInUncertainLoop(scope) then
 			if val.dont_widen then
@@ -297,10 +297,9 @@ return function(META)
 		if self:IsTypesystem() then return end
 
 		local scope = self:GetScope()
-		local hash = upvalue:GetKey()
 		upvalue.mutations = upvalue.mutations or {}
-		upvalue.mutations[hash] = upvalue.mutations[hash] or {}
-		return get_value_from_scope(self, copy(upvalue.mutations[hash]), scope, upvalue, hash)
+
+		return get_value_from_scope(self, copy(upvalue.mutations), scope, upvalue)
 	end
 
 	function META:MutateUpvalue(upvalue, val, scope_override, from_tracking)
@@ -310,7 +309,6 @@ return function(META)
 		local hash = upvalue:GetKey()
 		val:SetUpvalue(upvalue)
 		upvalue.mutations = upvalue.mutations or {}
-		upvalue.mutations[hash] = upvalue.mutations[hash] or {}
 
 		if self:IsInUncertainLoop(scope) and upvalue.scope then
 			if val.dont_widen or scope:Contains(upvalue.scope) then
@@ -320,7 +318,7 @@ return function(META)
 			end
 		end
 
-		table.insert(upvalue.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking})
+		table.insert(upvalue.mutations, {scope = scope, value = val, from_tracking = from_tracking})
 
 		if from_tracking then scope:AddTrackedObject(upvalue) end
 	end
