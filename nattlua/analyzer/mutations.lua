@@ -306,7 +306,6 @@ return function(META)
 		if self:IsTypesystem() then return end
 
 		local scope = scope_override or self:GetScope()
-		local hash = upvalue:GetKey()
 		val:SetUpvalue(upvalue)
 		upvalue.mutations = upvalue.mutations or {}
 
