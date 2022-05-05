@@ -261,7 +261,7 @@ return function(META)
 	function META:GetMutatedTableValue(tbl, key, value)
 		if self:IsTypesystem() then return value end
 
-		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue()
+		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
 
 		if not hash then return end
 
@@ -273,7 +273,7 @@ return function(META)
 	function META:MutateTable(tbl, key, val, scope_override, from_tracking)
 		if self:IsTypesystem() then return end
 
-		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue()
+		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
 
 		if not hash then return end
 
