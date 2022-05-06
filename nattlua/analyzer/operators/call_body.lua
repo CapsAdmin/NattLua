@@ -521,7 +521,7 @@ return function(META)
 						local tbl = Table()
 
 						for _, kv in ipairs(v:GetData()) do
-							tbl:Set(kv.key, self:GetMutatedTableValue(v, kv.key, kv.val))
+							tbl:Set(kv.key, self:GetMutatedTableValue(v, kv.key))
 						end
 
 						copy:Set(i, tbl)

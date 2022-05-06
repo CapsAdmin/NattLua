@@ -85,7 +85,7 @@ analyzer function pairs(tbl: Table)
 			if not kv then return nil end
 
 			i = i + 1
-			local o = analyzer:GetMutatedTableValue(tbl, kv.key, kv.val)
+			local o = analyzer:GetMutatedTableValue(tbl, kv.key)
 			return kv.key, o or kv.val
 		end
 	end

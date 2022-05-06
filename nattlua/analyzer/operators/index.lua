@@ -6,22 +6,6 @@ local type_errors = require("nattlua.types.error_messages")
 return {
 	Index = function(META)
 		function META:IndexOperator(obj, key)
-			local ok, err = self:IndexOperator2(obj, key)
-
-			if not ok then
-				if self:ErrorMessageToString(err):find("^%s*$") then
-					print("==")
-					print(obj)
-					print(key)
-					print("==")
-					print(ok, self:ErrorMessageToString(err))
-				end
-			end
-
-			return ok, err
-		end
-
-		function META:IndexOperator2(obj, key)
 			if obj.Type == "union" then
 				local union = Union({})
 
@@ -82,13 +66,11 @@ return {
 				end
 			end
 
-			if self:IsRuntime() then
-				if obj.Type == "tuple" and obj:GetLength() == 1 then
-					return self:IndexOperator(obj:Get(1), key)
-				end
-			end
-
 			if self:IsTypesystem() then return obj:Get(key) end
+
+			if obj.Type == "tuple" and obj:GetLength() == 1 then
+				return self:IndexOperator(obj:Get(1), key)
+			end
 
 			if obj.Type == "string" then
 				return type_errors.other("attempt to index a string value")
@@ -106,7 +88,7 @@ return {
 				if not val then return val, err end
 
 				if not obj.argument_index or contract.ref_argument then
-					local val = self:GetMutatedTableValue(obj, key, val)
+					local val = self:GetMutatedTableValue(obj, key)
 
 					if val then
 						if val.Type == "union" then val = val:Copy(nil, true) end
@@ -122,7 +104,7 @@ return {
 
 				--TODO: this seems wrong, but it's for deferred analysis maybe not clearing up muations?
 				if obj.mutations then
-					local tracked = self:GetMutatedTableValue(obj, key, val)
+					local tracked = self:GetMutatedTableValue(obj, key)
 
 					if tracked then return tracked end
 				end
@@ -131,7 +113,7 @@ return {
 				return val
 			end
 
-			local val = self:GetMutatedTableValue(obj, key, obj:Get(key))
+			local val = self:GetMutatedTableValue(obj, key)
 
 			if key:IsLiteral() then
 				local found_key = obj:FindKeyValReverse(key)
@@ -141,8 +123,12 @@ return {
 				end
 			end
 
-			self:TrackTableIndex(obj, key, val)
-			return val or Nil()
+			if val then
+				self:TrackTableIndex(obj, key, val)
+				return val
+			end
+
+			return Nil()
 		end
 	end,
 }

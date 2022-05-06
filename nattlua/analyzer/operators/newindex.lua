@@ -106,11 +106,7 @@ return {
 						if obj.mutable and obj:GetMetaTable() and obj:GetMetaTable().Self == obj then
 							return obj:SetExplicit(key, val)
 						else
-							existing, err = contract:Get(key)
-
-							if existing then
-								existing = self:GetMutatedTableValue(obj, key, existing)
-							end
+							existing = self:GetMutatedTableValue(obj, key)
 						end
 					else
 						existing, err = contract:Get(key)

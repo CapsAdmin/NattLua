@@ -258,9 +258,7 @@ local function copy(tbl)
 end
 
 return function(META)
-	function META:GetMutatedTableValue(tbl, key, value)
-		if self:IsTypesystem() then return value end
-
+	function META:GetMutatedTableValue(tbl, key)
 		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
 
 		if not hash then return end
@@ -271,8 +269,6 @@ return function(META)
 	end
 
 	function META:MutateTable(tbl, key, val, scope_override, from_tracking)
-		if self:IsTypesystem() then return end
-
 		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
 
 		if not hash then return end
@@ -294,8 +290,6 @@ return function(META)
 	end
 
 	function META:GetMutatedUpvalue(upvalue)
-		if self:IsTypesystem() then return end
-
 		local scope = self:GetScope()
 		upvalue.mutations = upvalue.mutations or {}
 
@@ -303,8 +297,6 @@ return function(META)
 	end
 
 	function META:MutateUpvalue(upvalue, val, scope_override, from_tracking)
-		if self:IsTypesystem() then return end
-
 		local scope = scope_override or self:GetScope()
 		val:SetUpvalue(upvalue)
 		upvalue.mutations = upvalue.mutations or {}
@@ -355,8 +347,6 @@ return function(META)
 	do
 		do
 			function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
-				if self:IsTypesystem() then return end
-
 				local upvalue = obj:GetUpvalue()
 
 				if not upvalue then return end
@@ -387,8 +377,6 @@ return function(META)
 			end
 
 			function META:TrackUpvalueNonUnion(obj)
-				if self:IsTypesystem() then return end
-
 				local upvalue = obj:GetUpvalue()
 
 				if not upvalue then return end
@@ -403,8 +391,6 @@ return function(META)
 			end
 
 			function META:GetTrackedUpvalue(obj)
-				if self:IsTypesystem() then return end
-
 				local upvalue = obj:GetUpvalue()
 				local stack = upvalue and upvalue.tracked_stack
 
@@ -467,8 +453,6 @@ return function(META)
 
 		do
 			function META:TrackTableIndex(tbl, key, val)
-				if self:IsTypesystem() then return end
-
 				local hash = key:GetHash()
 
 				if not hash then return end
@@ -481,8 +465,6 @@ return function(META)
 			end
 
 			function META:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, inverted, truthy_falsy)
-				if self:IsTypesystem() then return end
-
 				local hash = key:GetHash()
 
 				if not hash then return end
