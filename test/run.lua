@@ -74,23 +74,47 @@ if is_coverage then
 	end
 end
 
-if path and path:sub(-4) == ".lua" then
-	assert(loadfile(path))()
-else
+local function find_tests(path)
 	local what = path
 	local path = "test/" .. ((what and what .. "/") or "nattlua/")
+	local found = {}
 
 	for path in io.popen("find " .. path):lines() do
+		path = path:gsub("//", "/")
 		if not path:find("/file_importing/", nil, true) then
-			if path:sub(-4) == ".lua" then assert(loadfile(path))() end
+			table.insert(found, path)
 		end
 	end
 
-	for path in io.popen("find " .. path):lines() do
-		if not path:find("/file_importing/", nil, true) then
-			if path:sub(-5) == ".nlua" then
-				require("test.helpers").RunCode(io.open(path, "r"):read("*all"))
-			end
+	return found
+end
+
+
+if path and path:sub(-4) == ".lua" then
+	assert(loadfile(path))()
+else
+	local function format_time(seconds)
+		local str = ("%.3f"):format(seconds)
+		if seconds > 0.5 then
+			return "\x1b[0;31m"..str.." seconds\x1b[0m"
+		end
+		return str
+	end
+	local tests = find_tests(path)
+
+	for _, path in ipairs(tests) do
+		if path:sub(-4) == ".lua" then 
+			io.write(path, " ")
+			local time = os.clock()
+			assert(loadfile(path))()
+			io.write(" ", format_time(os.clock() - time), " seconds\n") 
+		end
+	end
+
+	for _, path in ipairs(tests) do
+		if path:sub(-4) == ".nlua" then 
+			io.write("running ", path, "\n")
+			require("test.helpers").RunCode(io.open(path, "r"):read("*all"))
 		end
 	end
 end

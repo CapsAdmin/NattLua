@@ -60,6 +60,11 @@ do
 	local runtime_env, typesystem_env = BuildBaseEnvironment()
 
 	function helpers.RunCode(code, expect_error, expect_warning)
+		local info = debug.getinfo(2)
+		local name = info.source:match("(test/nattlua/.+)") or info.source
+
+		io.write(".")
+		io.flush()
 		_G.TEST = true
 		local compiler = nl.Compiler(code, nil, nil, 3)
 		compiler:SetEnvironments(runtime_env:Copy(), typesystem_env)

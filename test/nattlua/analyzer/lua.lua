@@ -280,9 +280,11 @@ do --- allcases
 		return res
 	end
 
+    local code = ""
 	for _, v in pairs(allcases(4)) do
-		analyze("attest.equal(" .. tostring(v[1]) .. ", " .. tostring(v[2]) .. ")")
+		code = code .. "attest.equal(" .. tostring(v[1]) .. ", " .. tostring(v[2]) .. ")\n"
 	end
+    analyze(code)
 end
 
 if bit.tobit then
