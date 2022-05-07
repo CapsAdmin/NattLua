@@ -474,7 +474,7 @@ function META:FindKeyValReverseEqual(key--[[#: BaseType]])
 	return type_errors.missing(self, key, reasons)
 end
 
-function META:Insert(val)
+function META:Insert(val--[[#: BaseType]])
 	self.size = self.size or LNumber(1)
 	self:Set(self.size:Copy(), val)
 	self.size:SetData(self.size:GetData() + 1)
@@ -559,7 +559,7 @@ function META:SetExplicit(key--[[#: BaseType]], val--[[#: BaseType]])
 	return true
 end
 
-function META:Get(key--[[#: BaseType]], from_contract)
+function META:Get(key--[[#: BaseType]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		local val = self["Get" .. key:GetData():sub(2)](self)
 
@@ -638,6 +638,10 @@ function META:IsNumericallyIndexed()
 end
 
 function META:CopyLiteralness(from--[[#: TTable]])
+	assert(from.Type == "table" or from.Type == "any" or from.Type == "union")
+
+	if from.Type == "any" then return end
+
 	if not from:GetData() then return false end
 
 	if self:Equal(from) then return true end
@@ -664,6 +668,8 @@ function META:CopyLiteralness(from--[[#: TTable]])
 end
 
 function META:CoerceUntypedFunctions(from--[[#: TTable]])
+	assert(from.Type == "table")
+
 	for _, kv in ipairs(self:GetData()) do
 		local kv_from, reason = from:FindKeyValReverse(kv.key)
 
@@ -838,7 +844,7 @@ local function unpack_keyval(keyval--[[#: ref {key = any, val = any}]])
 end
 
 function META.Extend(A--[[#: TTable]], B--[[#: TTable]])
-	if B.Type ~= "table" then return false, "cannot extend non table" end
+	assert(B.Type == "table")
 
 	local map = {}
 
@@ -867,7 +873,9 @@ function META.Extend(A--[[#: TTable]], B--[[#: TTable]])
 end
 
 function META.Union(A--[[#: TTable]], B--[[#: TTable]])
-	local copy = META.New({})
+	assert(B.Type == "table")
+
+	local copy = META.New()
 
 	for _, keyval in ipairs(A:GetData()) do
 		copy:Set(unpack_keyval(keyval))
