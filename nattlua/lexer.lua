@@ -1,4 +1,5 @@
 --[[#local type { TokenType } = import("./lexer/token.lua")]]
+--[[#local type {Code} = import<|"~/nattlua/code.lua"|>]]
 
 local Code = require("nattlua.code").New
 local loadstring = require("nattlua.other.loadstring")

@@ -172,6 +172,8 @@ function META:HasTuples()
 end
 
 function META:GetAtIndex(i--[[#: number]])
+	assert(type(i) == "number")
+
 	if not self:HasTuples() then return self end
 
 	local val
@@ -244,6 +246,8 @@ function META:GetFalsy()
 end
 
 function META:IsType(typ--[[#: string]])
+	assert(type(typ) == "string")
+
 	if self:IsEmpty() then return false end
 
 	for _, obj in ipairs(self.Data) do
@@ -254,6 +258,8 @@ function META:IsType(typ--[[#: string]])
 end
 
 function META:HasType(typ--[[#: string]])
+	assert(type(typ) == "string")
+
 	return self:GetType(typ) ~= false
 end
 
@@ -266,6 +272,8 @@ function META:CanBeNil()
 end
 
 function META:GetType(typ--[[#: string]])
+	assert(type(typ) == "string")
+
 	for _, obj in ipairs(self.Data) do
 		if obj.Type == typ then return obj end
 	end
@@ -312,6 +320,7 @@ function META.IsSubsetOf(A--[[#: TUnion]], B--[[#: TBaseType]])
 end
 
 function META:Union(union--[[#: TUnion]])
+	assert(union.Type == "union")
 	local copy = self:Copy()
 
 	for _, e in ipairs(union.Data) do
@@ -430,7 +439,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 		self:AddType(v)
 	end end
 
-	self.lol = debug.traceback()
 	return self
 end
 

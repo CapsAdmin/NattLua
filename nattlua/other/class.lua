@@ -35,7 +35,7 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 
 	local function get_line()
 		local info = debug.getinfo(3)
-		return info.source:sub(2) .. ":" .. info.currentline
+		return info and info.source:sub(2) .. ":" .. info.currentline
 	end
 
 	function meta:DebugPropertyAccess()

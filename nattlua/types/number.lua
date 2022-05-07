@@ -53,7 +53,7 @@ function META:GetHash()
 	return "__@type@__" .. self.Type
 end
 
-function META.Equal(a--[[#: TNumber]], b--[[#: TNumber]])
+function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
 
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
@@ -379,6 +379,8 @@ function META.New(data--[[#: number | nil]])
 			Falsy = false,
 			Truthy = true,
 			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
 		},
 		META
 	)

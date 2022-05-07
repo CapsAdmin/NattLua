@@ -4,7 +4,7 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TAny = META.@Self]]
 META.Type = "any"
 
-function META:Get(key)
+function META:Get(key--[[#: TBaseType]])
 	return self
 end
 

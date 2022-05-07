@@ -61,7 +61,7 @@ analyzer function table.remove(tbl: List<|any|>, index: number | nil)
 	if index and not index:IsLiteral() then return end
 
 	index = index or 1
-	table.remove(pos:GetData(), index:GetData())
+	table.remove(tbl:GetData(), index:GetData())
 end
 
 analyzer function table.sort(tbl: List<|any|>, func: function=(a: any, b: any)>(boolean))

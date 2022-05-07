@@ -4,7 +4,7 @@
 
 --[[#local type { ParserConfig } = import("./../config.nlua")]]
 
---[[#import<|"~/nattlua/code/code.lua"|>]]
+--[[#local type {Code} = import<|"~/nattlua/code.lua"|>]]
 --[[#local type NodeType = "expression" | "statement"]]
 local CreateNode = require("nattlua.parser.node").New
 local ipairs = _G.ipairs

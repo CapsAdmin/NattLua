@@ -77,5 +77,5 @@ function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
 	return self
 end
 
---[[#type Code = META.@Self]]
+--[[#type META.Code = META.@Self]]
 return META

@@ -274,5 +274,5 @@ function META.New()
 	return setmetatable({}--[[# as META.@Self]], META)
 end
 
---[[#type META.TBaseType = copy<|META|>.@Self]]
+--[[#type META.TBaseType = any --copy<|META|>.@Self]]
 return META

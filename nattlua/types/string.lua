@@ -5,7 +5,7 @@ local Number = require("nattlua.types.number").Number
 local context = require("nattlua.analyzer.context")
 local META = dofile("nattlua/types/base.lua")
 
---[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
+--[[#local type { expression } = import("./../parser/nodes.nlua")]]
 
 --[[#local type TBaseType = META.TBaseType]]
 META.Type = "string"
@@ -59,11 +59,12 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 	end
 
 	if B.PatternContract then
-		if not A:GetData() then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
+		local str = A:GetData()
+		if not str then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
 			return type_errors.literal(A)
 		end
 
-		if not A:GetData():find(B.PatternContract) then
+		if not str:find(B.PatternContract) then
 			return type_errors.string_pattern(A, B)
 		end
 
@@ -81,19 +82,17 @@ function META:__tostring()
 	if self.PatternContract then return "$\"" .. self.PatternContract .. "\"" end
 
 	if self:IsLiteral() then
-		if self:GetData() then return "\"" .. self:GetData() .. "\"" end
-
-		if self:GetData() == nil then return "string" end
-
-		return tostring(self:GetData())
+		local str = self:GetData()
+		
+		if str then 
+			return "\"" .. str .. "\""
+		end
 	end
 
 	return "string"
 end
 
-function META.LogicalComparison(a--[[#: TString]], b--[[#: TString]], op--[[#: string]])
-	assert(b.Type == "string")
-
+function META.LogicalComparison(a--[[#: TString]], b--[[#: TBaseType]], op--[[#: string]])
 	if op == ">" then
 		if a:IsLiteral() and b:IsLiteral() then return a:GetData() > b:GetData() end
 
@@ -129,12 +128,20 @@ end
 
 function META:PrefixOperator(op--[[#: string]])
 	if op == "#" then
-		return Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral())
+		local str = self:GetData()
+		return Number(str and #str or nil):SetLiteral(self:IsLiteral())
 	end
 end
 
 function META.New(data--[[#: string | nil]])
-	local self = setmetatable({Data = data}, META)
+	local self = setmetatable({
+		Data = data,
+		Falsy = false,
+		Truthy = true,
+		Literal = false,
+		LiteralArgument = false,
+		ReferenceArgument = false,
+	}, META)
 	-- analyzer might be nil when strings are made outside of the analyzer, like during tests
 	local analyzer = context:GetCurrentAnalyzer()
 
@@ -150,10 +157,17 @@ return {
 	LString = function(num--[[#: string]])
 		return META.New(num):SetLiteral(true)
 	end,
-	LStringNoMeta = function(str--[[#: string]])
-		return setmetatable({Data = str}, META):SetLiteral(true)
+	LStringNoMeta = function(data--[[#: string]])
+		return setmetatable({
+			Data = data,
+			Falsy = false,
+			Truthy = true,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+		}, META):SetLiteral(true)
 	end,
-	NodeToString = function(node--[[#: Token]], is_local--[[#: boolean | nil]])
+	NodeToString = function(node--[[#: expression["value"] ]], is_local--[[#: boolean | nil]])
 		return META.New(node.value.value):SetLiteral(true)
 	end,
 }

@@ -2,7 +2,6 @@
 
 --[[#local type { ExpressionKind, StatementKind, Node } = import("~/nattlua/parser/nodes.nlua")]]
 
---[[#import<|"~/nattlua/code/code.lua"|>]]
 --[[#local type NodeType = "expression" | "statement"]]
 local ipairs = _G.ipairs
 local pairs = _G.pairs
