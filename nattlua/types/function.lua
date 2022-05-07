@@ -37,13 +37,13 @@ function META.Equal(a, b)
 		a:GetOutputSignature():Equal(b:GetOutputSignature())
 end
 
-function META:Copy(map, ...)
+function META:Copy(map, copy_tables)
 	map = map or {}
 	local copy = self.New({arg = Tuple({}), ret = Tuple({})})
 	map[self] = map[self] or copy
 	copy:SetUpvaluePosition(self:GetUpvaluePosition())
-	copy:SetOutputSignature(self:GetOutputSignature():Copy(map, ...))
-	copy:SetInputSignature(self:GetInputSignature():Copy(map, ...))
+	copy:SetOutputSignature(self:GetOutputSignature():Copy(map, copy_tables))
+	copy:SetInputSignature(self:GetInputSignature():Copy(map, copy_tables))
 	copy:SetAnalyzerFunction(self:GetAnalyzerFunction())
 	copy:SetScope(self:GetScope())
 	copy:SetLiteral(self:IsLiteral())

@@ -2,7 +2,6 @@ local tostring = tostring
 local table = _G.table
 local math = math
 local assert = assert
-local print = print
 local debug = debug
 local error = error
 local setmetatable = _G.setmetatable
@@ -19,7 +18,9 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TTuple.Remainder = nil | TTuple]]
 --[[#type TTuple.Repeat = nil | number]]
 --[[#type TTuple.suppress = nil | boolean]]
---[[#type TTuple.Data = List<|TBaseType|>]]
+
+META:GetSet("Data", nil--[[# as List<|TBaseType|>]])
+
 META.Type = "tuple"
 META:GetSet("Unpackable", false--[[# as boolean]])
 
@@ -31,8 +32,9 @@ function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]])
 	if #a.Data ~= #b.Data then return false end
 
 	for i = 1, #a.Data do
+		local val = a.Data[i] --[[# as TBaseType ]]
 		a.suppress = true
-		local ok = a.Data[i]:Equal(b.Data[i])
+		local ok = val:Equal(b.Data[i])
 		a.suppress = false
 
 		if not ok then return false end
@@ -45,7 +47,7 @@ function META:__tostring()
 	if self.suppress then return "current_tuple" end
 
 	self.suppress = true
-	local strings = {}
+	local strings--[[#: List<|string|> ]] = {}
 
 	for i, v in ipairs(self:GetData()) do
 		strings[i] = tostring(v)
@@ -55,7 +57,7 @@ function META:__tostring()
 
 	local s = "("
 
-	if #strings == 1 then
+	if #strings == 1 and strings[1] then
 		s = s .. strings[1] .. ","
 	else
 		s = s .. table.concat(strings, ", ")
@@ -70,13 +72,13 @@ function META:__tostring()
 end
 
 function META:Merge(tup--[[#: TTuple]])
-	local src = self:GetData()
+	local src = self:GetData() 
 
 	for i = 1, tup:GetMinimumLength() do
-		local a = self:Get(i)
-		local b = tup:Get(i)
+		local a = self:Get(i) 
+		local b = tup:Get(i) 
 
-		if a then src[i] = Union({a, b}) else src[i] = b:Copy() end
+		if a then src[i] = Union({a, b})  elseif b then src[i] = b:Copy() end
 	end
 
 	self.Remainder = tup.Remainder or self.Remainder
@@ -84,18 +86,18 @@ function META:Merge(tup--[[#: TTuple]])
 	return self
 end
 
-function META:Copy(map--[[#: Map<|any, any|>]], ...--[[#: ...any]])
+function META:Copy(map--[[#: Map<|any, any|> | nil ]], copy_tables--[[#: nil | boolean]])
 	map = map or {}
 	local copy = self.New({})
 	map[self] = map[self] or copy
 
 	for i, v in ipairs(self:GetData()) do
-		v = map[v] or v:Copy(map, ...)
+		v = map[v] or v:Copy(map, copy_tables)
 		map[v] = map[v] or v
 		copy:Set(i, v)
 	end
 
-	if self.Remainder then copy.Remainder = self.Remainder:Copy(nil, ...) end
+	if self.Remainder then copy.Remainder = self.Remainder:Copy(nil, copy_tables) end
 
 	copy.Repeat = self.Repeat
 	copy.Unpackable = self.Unpackable
@@ -108,19 +110,25 @@ function META.IsSubsetOf(A--[[#: TTuple]], B--[[#: TBaseType]], max_length--[[#:
 
 	if A.suppress then return true end
 
-	if A.Remainder and A:Get(1).Type == "any" and #A:GetData() == 0 then
-		return true
+	if A.Remainder then
+		local t = A:Get(1)
+		if t and t.Type == "any" and #A:GetData() == 0 then
+			return true
+		end
 	end
 
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 
-	if
-		A:Get(1) and
-		A:Get(1).Type == "any" and
-		B.Type == "tuple" and
-		B:GetLength() == 0
-	then
-		return true
+	do
+		local t = A:Get(1)
+		if
+			t and
+			t.Type == "any" and
+			B.Type == "tuple" and
+			B:GetLength() == 0
+		then
+			return true
+		end
 	end
 
 	if B.Type == "any" then return true end
@@ -220,7 +228,6 @@ function META:Get(key--[[#: number | TBaseType]])
 	end
 
 	if type(key) ~= "number" then
-		print(real_key, "REAL_KEY")
 		error("key must be a number, got " .. tostring(key) .. debug.traceback())
 	end
 
@@ -269,7 +276,6 @@ function META:Set(i--[[#: number]], val--[[#: TBaseType]])
 	self.Data[i] = val
 
 	if i > 32 then
-		print(debug.traceback())
 		error("tuple too long", 2)
 	end
 
@@ -297,7 +303,8 @@ function META:IsFalsy()
 	return false
 end
 
-function META:GetLength()
+function META:GetLength()--[[#: number]]
+	--[[# do return _ as number end ]] -- TODO: recursion
 	if self.Remainder then return #self:GetData() + self.Remainder:GetLength() end
 
 	if self.Repeat then return #self:GetData() * self.Repeat end
@@ -387,7 +394,7 @@ function META:Slice(start--[[#: number]], stop--[[#: number]])
 	local data = {}
 
 	for i = start, stop do
-		table.insert(data, self:GetData()[i])
+		table.insert(data, (self:GetData()--[[# as TBaseType]]) [i])
 	end
 
 	copy:SetData(data)
@@ -436,7 +443,7 @@ function META:SetTable(data)
 end
 
 function META.New(data--[[#: nil | List<|TBaseType|>]])
-	local self = setmetatable({Data = {}, Falsy = false, Truthy = false, Literal = false}, META)
+	local self = setmetatable({Data = {}, Falsy = false, Truthy = false, Literal = false, LiteralArgument = false, ReferenceArgument = false, Unpackable = false}, META)
 
 	if data then self:SetTable(data) end
 
@@ -453,7 +460,7 @@ return {
 	NormalizeTuples = function(types--[[#: List<|TBaseType|>]])
 		local arguments
 
-		if #types == 1 and types[1].Type == "tuple" then
+		if #types == 1 and types[1] and types[1].Type == "tuple" then
 			arguments = types[1]
 		else
 			local temp = {}
