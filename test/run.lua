@@ -89,17 +89,20 @@ local function find_tests(path)
 	return found
 end
 
+local function format_time(seconds)
+	local str = ("%.3f"):format(seconds)
+	if seconds > 0.5 then
+		return "\x1b[0;31m"..str.." seconds\x1b[0m"
+	end
+	return str
+end
 
 if path and path:sub(-4) == ".lua" then
+	io.write(path, " ")
+	local time = os.clock()
 	assert(loadfile(path))()
+	io.write(" ", format_time(os.clock() - time), " seconds\n") 
 else
-	local function format_time(seconds)
-		local str = ("%.3f"):format(seconds)
-		if seconds > 0.5 then
-			return "\x1b[0;31m"..str.." seconds\x1b[0m"
-		end
-		return str
-	end
 	local tests = find_tests(path)
 
 	for _, path in ipairs(tests) do
