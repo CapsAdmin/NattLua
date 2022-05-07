@@ -23,6 +23,8 @@ end
 local function Prefix(self, node, r)
 	local op = node.value.value
 
+	self.current_expression = node
+
 	if op == "not" then
 		self.inverted_index_tracking = not self.inverted_index_tracking
 	end
