@@ -18,7 +18,7 @@ function types.Initialize()
 	types.Nil = require("nattlua.types.symbol").Nil
 	types.True = require("nattlua.types.symbol").True
 	types.False = require("nattlua.types.symbol").False
-	types.Boolean = require("nattlua.types.symbol").Boolean
+	types.Boolean = require("nattlua.types.union").Boolean
 end
 
 return types

@@ -75,8 +75,4 @@ return {
 	False = function()
 		return Symbol(false)
 	end,
-	Boolean = function()
-		local Union = require("nattlua.types.union").Union
-		return Union({Symbol(true), Symbol(false)})
-	end,
 }

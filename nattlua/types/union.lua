@@ -3,6 +3,8 @@ local setmetatable = _G.setmetatable
 local table = _G.table
 local ipairs = _G.ipairs
 local Nil = require("nattlua.types.symbol").Nil
+local True = require("nattlua.types.symbol").True
+local False = require("nattlua.types.symbol").False
 local type_errors = require("nattlua.types.error_messages")
 
 --[[#local type { TNumber } = require("nattlua.types.number")]]
@@ -446,5 +448,8 @@ return {
 	Union = META.New,
 	Nilable = function(typ)
 		return META.New({typ, Nil()})
+	end,
+	Boolean = function()
+		return META.New({True(), False()})
 	end,
 }

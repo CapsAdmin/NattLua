@@ -9,7 +9,7 @@ local Nil = require("nattlua.types.symbol").Nil
 local LString = require("nattlua.types.string").LString
 local String = require("nattlua.types.string").String
 local Number = require("nattlua.types.number").Number
-local Boolean = require("nattlua.types.symbol").Boolean
+local Boolean = require("nattlua.types.union").Boolean
 local table = _G.table
 
 local function lookup_value(self, node)
