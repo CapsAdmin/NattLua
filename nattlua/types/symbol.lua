@@ -1,7 +1,5 @@
 local type = type
 local tostring = tostring
-local ipairs = ipairs
-local table = _G.table
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
