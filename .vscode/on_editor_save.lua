@@ -1,3 +1,4 @@
+_G.ON_EDITOR_SAVE = true
 local nl = require("nattlua")
 local did_something = false
 
@@ -73,7 +74,7 @@ local function run_nattlua(path)
 	)
 
 	if lua_code:find("%-%-%s-ENABLE_CODE_RESULT_TO_FILE") then
-		local f = io.open("test_focus_result.lua", "w")
+		local f = assert(io.open("test_focus_result.lua", "w"))
 		f:write(res)
 		f:close()
 	elseif lua_code:find("%-%-%s-ENABLE_CODE_RESULT") then

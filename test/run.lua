@@ -1,6 +1,7 @@
 local preprocess = require("nattlua.other.preprocess")
 local coverage = require("nattlua.other.coverage")
 local io = require("io")
+local io_write = _G.ON_EDITOR_SAVE and function() end or io.write
 local pcall = _G.pcall
 
 --require("nattlua.other.helpers").GlobalLookup()
@@ -27,13 +28,13 @@ function _G.diff(input, expect)
 	local b = os.tmpname()
 
 	do
-		local f = io.open(a, "w")
+		local f = assert(io.open(a, "w"))
 		f:write(input)
 		f:close()
 	end
 
 	do
-		local f = io.open(b, "w")
+		local f = assert(io.open(b, "w"))
 		f:write(expect)
 		f:close()
 	end
@@ -98,25 +99,25 @@ local function format_time(seconds)
 end
 
 if path and path:sub(-4) == ".lua" then
-	io.write(path, " ")
+	io_write(path, " ")
 	local time = os.clock()
 	assert(loadfile(path))()
-	io.write(" ", format_time(os.clock() - time), " seconds\n") 
+	io_write(" ", format_time(os.clock() - time), " seconds\n") 
 else
 	local tests = find_tests(path)
 
 	for _, path in ipairs(tests) do
 		if path:sub(-4) == ".lua" then 
-			io.write(path, " ")
+			io_write(path, " ")
 			local time = os.clock()
 			assert(loadfile(path))()
-			io.write(" ", format_time(os.clock() - time), " seconds\n") 
+			io_write(" ", format_time(os.clock() - time), " seconds\n") 
 		end
 	end
 
 	for _, path in ipairs(tests) do
 		if path:sub(-4) == ".nlua" then 
-			io.write("running ", path, "\n")
+			io_write("running ", path, "\n")
 			require("test.helpers").RunCode(io.open(path, "r"):read("*all"))
 		end
 	end
@@ -127,7 +128,7 @@ if is_coverage then
 		local coverage = coverage.Collect(name)
 
 		if coverage then
-			local f = io.open(path .. ".coverage", "w")
+			local f = assert(io.open(path .. ".coverage", "w"))
 			f:write(coverage)
 			f:close()
 		else

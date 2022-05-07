@@ -63,9 +63,11 @@ do
 		local info = debug.getinfo(2)
 		local name = info.source:match("(test/nattlua/.+)") or info.source
 
-		io.write(".")
-		io.flush()
-		_G.TEST = true
+		if not _G.ON_EDITOR_SAVE then
+			io.write(".")
+			io.flush()
+		end
+		_G.TEST = true	
 		local compiler = nl.Compiler(code, nil, nil, 3)
 		compiler:SetEnvironments(runtime_env:Copy(), typesystem_env)
 		local ok, err = compiler:Analyze()
