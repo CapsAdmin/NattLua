@@ -91,7 +91,9 @@ function META:__tostring()
 	return "string"
 end
 
-function META.LogicalComparison(a--[[#: TString]], b--[[#: TString]], op)
+function META.LogicalComparison(a--[[#: TString]], b--[[#: TString]], op--[[#: string]])
+	assert(b.Type == "string")
+
 	if op == ">" then
 		if a:IsLiteral() and b:IsLiteral() then return a:GetData() > b:GetData() end
 
@@ -148,7 +150,7 @@ return {
 	LString = function(num--[[#: string]])
 		return META.New(num):SetLiteral(true)
 	end,
-	LStringNoMeta = function(str)
+	LStringNoMeta = function(str--[[#: string]])
 		return setmetatable({Data = str}, META):SetLiteral(true)
 	end,
 	NodeToString = function(node--[[#: Token]], is_local--[[#: boolean | nil]])
