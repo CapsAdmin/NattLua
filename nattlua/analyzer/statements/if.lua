@@ -31,6 +31,8 @@ return {
 
 				local obj = self:AnalyzeExpression(exp)
 
+				self.current_expression = exp
+
 				if no_operator_expression then self:PopTruthyExpressionContext() end
 
 				if no_operator_expression then
