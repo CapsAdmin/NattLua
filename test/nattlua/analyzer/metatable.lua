@@ -647,7 +647,7 @@ analyze[[
                 local constructor = analyzer:Assert(meta:Get(types.LString("constructor")))
     
                 local self_arg = types.Any()
-                self_arg.ref_argument = true
+                self_arg:SetReferenceArgument(true)
                 constructor:GetInputSignature():Set(1, self_arg)
             
                 tbl:SetMetaTable(meta)

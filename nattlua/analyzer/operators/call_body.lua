@@ -166,7 +166,7 @@ local function check_input(self, obj, input)
 
 			if
 				contract and
-				contract.ref_argument and
+				contract:IsReferenceArgument() and
 				(
 					contract.Type ~= "function" or
 					arg.Type ~= "function" or
@@ -175,7 +175,7 @@ local function check_input(self, obj, input)
 			then
 				self:CreateLocalValue(identifier, arg)
 				signature_override[i] = arg
-				signature_override[i].ref_argument = true
+				signature_override[i]:SetReferenceArgument(true)
 				local ok, err = signature_override[i]:IsSubsetOf(contract)
 
 				if not ok then
@@ -188,7 +188,7 @@ local function check_input(self, obj, input)
 
 			if
 				contract and
-				contract.literal_argument and
+				contract:IsLiteralArgument() and
 				not self.processing_deferred_calls and
 				arg and
 				not arg:IsLiteral()
@@ -211,7 +211,7 @@ local function check_input(self, obj, input)
 				if
 					signature_override[i] and
 					signature_override[i].Type == "union" and
-					not signature_override[i].ref_argument
+					not signature_override[i]:IsReferenceArgument()
 				then
 					local merged = shrink_union_to_function_signature(signature_override[i])
 
@@ -290,10 +290,10 @@ local function check_input(self, obj, input)
 			arg.Type == "table" and
 			contract.Type == "table" and
 			arg:GetUpvalue() and
-			not contract.ref_argument
+			not contract:IsReferenceArgument()
 		then
 			mutate_type(self, i, arg, contract, input)
-		elseif not contract.ref_argument then
+		elseif not contract:IsReferenceArgument() then
 			-- if it's a ref argument we pass the incoming value
 			local t = contract:Copy()
 			t:SetContract(contract)
@@ -530,7 +530,7 @@ return function(META)
 		-- if a return type is marked with ref, it will pass the ref value back to the caller
 		-- a bit like generics
 		for i, v in ipairs(output_signature:GetData()) do
-			if v.ref_argument then contract:Set(i, output:Get(i)) end
+			if v:IsReferenceArgument() then contract:Set(i, output:Get(i)) end
 		end
 
 		return contract

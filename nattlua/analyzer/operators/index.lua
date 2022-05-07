@@ -87,7 +87,7 @@ return {
 
 				if not val then return val, err end
 
-				if not obj.argument_index or contract.ref_argument then
+				if not obj.argument_index or contract:IsReferenceArgument() then
 					local val = self:GetMutatedTableValue(obj, key)
 
 					if val then

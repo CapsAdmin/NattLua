@@ -38,12 +38,12 @@ local function Prefix(self, node, r)
 	if op == "not" then self.inverted_index_tracking = nil end
 
 	if op == "literal" then
-		r.literal_argument = true
+		r:SetLiteralArgument(true)
 		return r
 	end
 
 	if op == "ref" then
-		r.ref_argument = true
+		r:SetReferenceArgument(true)
 		return r
 	end
 

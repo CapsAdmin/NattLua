@@ -176,11 +176,11 @@ end
 
 function META:IsRefFunction()
 	for i, v in ipairs(self:GetInputSignature():GetData()) do
-		if v.ref_argument then return true end
+		if v:IsReferenceArgument() then return true end
 	end
 
 	for i, v in ipairs(self:GetOutputSignature():GetData()) do
-		if v.ref_argument then return true end
+		if v:IsReferenceArgument() then return true end
 	end
 
 	return false

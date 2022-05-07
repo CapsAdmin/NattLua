@@ -158,6 +158,11 @@ do
 end
 
 do
+	META:IsSet("LiteralArgument", false--[[# as boolean]])
+	META:IsSet("ReferenceArgument", false--[[# as boolean]])
+end
+
+do
 	META:IsSet("Literal", false--[[# as boolean]])
 
 	function META:CopyLiteralness(obj--[[#: TBaseType]])

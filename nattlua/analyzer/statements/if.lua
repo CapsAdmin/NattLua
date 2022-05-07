@@ -3,7 +3,7 @@ local Union = require("nattlua.types.union").Union
 
 local function contains_ref_argument(upvalues)
 	for _, v in pairs(upvalues) do
-		if v.upvalue:GetValue().ref_argument or v.upvalue:GetValue().from_for_loop then
+		if v.upvalue:GetValue():IsReferenceArgument() or v.upvalue:GetValue().from_for_loop then
 			return true
 		end
 	end
