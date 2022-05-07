@@ -434,25 +434,7 @@ return function(META)
 		self:PopFalsyExpressionContext()
 		self:PopTruthyExpressionContext()
 
-		if scope.TrackedObjects then
-			for _, obj in ipairs(scope.TrackedObjects) do
-				if obj.Type == "upvalue" then
-					for i = #obj.mutations, 1, -1 do
-						local mut = obj.mutations[i]
-
-						if mut.from_tracking then table.remove(obj.mutations, i) end
-					end
-				else
-					for _, mutations in pairs(obj.mutations) do
-						for i = #mutations, 1, -1 do
-							local mut = mutations[i]
-
-							if mut.from_tracking then table.remove(mutations, i) end
-						end
-					end
-				end
-			end
-		end
+		self:ClearScopedTrackedObjects(scope)
 
 		if output.Type ~= "tuple" then output = Tuple({output}) end
 

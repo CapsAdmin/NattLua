@@ -7,7 +7,7 @@ local ipairs = ipairs
 local table = _G.table
 local Union = require("nattlua.types.union").Union
 
-local function get_value_from_scope(self, mutations, scope, obj)
+local function get_value_from_scope(current_if_statement, mutations, scope, obj)
 	do
 		do
 			local last_scope
@@ -31,8 +31,8 @@ local function get_value_from_scope(self, mutations, scope, obj)
 				(
 					scope:IsPartOfTestStatementAs(mut.scope) or
 					(
-						self.current_if_statement and
-						mut.scope.statement == self.current_if_statement
+						current_if_statement and
+						mut.scope.statement == current_if_statement
 					)
 					or
 					(
@@ -162,18 +162,6 @@ local function get_value_from_scope(self, mutations, scope, obj)
 
 			if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 		else
-			-- check if we have to infer the function, otherwise adding it to the union can cause collisions
-			if
-				value.Type == "function" and
-				not value:IsCalled()
-				and
-				not value:IsExplicitOutputSignature()
-				and
-				union:HasType("function")
-			then
-				self:Assert(self:Call(value, value:GetInputSignature():Copy()))
-			end
-
 			union:AddType(value)
 		end
 	end
@@ -247,7 +235,7 @@ local function initialize_table_mutation_tracker(tbl, scope, key, hash)
 	end
 end
 
-local function copy(tbl)
+local function shallow_copy(tbl)
 	local copy = {}
 
 	for i, val in ipairs(tbl) do
@@ -265,7 +253,7 @@ return function(META)
 
 		local scope = self:GetScope()
 		initialize_table_mutation_tracker(tbl, scope, key, hash)
-		return get_value_from_scope(self, copy(tbl.mutations[hash]), scope, tbl)
+		return get_value_from_scope(self.current_if_statement, shallow_copy(tbl.mutations[hash]), scope, tbl)
 	end
 
 	function META:MutateTable(tbl, key, val, scope_override, from_tracking)
@@ -290,17 +278,16 @@ return function(META)
 	end
 
 	function META:GetMutatedUpvalue(upvalue)
-		local scope = self:GetScope()
 		upvalue.mutations = upvalue.mutations or {}
 
-		return get_value_from_scope(self, copy(upvalue.mutations), scope, upvalue)
+		return get_value_from_scope(self.current_if_statement, shallow_copy(upvalue.mutations), self:GetScope(), upvalue)
 	end
 
 	function META:MutateUpvalue(upvalue, val, scope_override, from_tracking)
-		local scope = scope_override or self:GetScope()
 		val:SetUpvalue(upvalue)
 		upvalue.mutations = upvalue.mutations or {}
-
+		
+		local scope = scope_override or self:GetScope()
 		if self:IsInUncertainLoop(scope) and upvalue.scope then
 			if val.dont_widen or scope:Contains(upvalue.scope) then
 				val = val:Copy()
@@ -312,6 +299,40 @@ return function(META)
 		table.insert(upvalue.mutations, {scope = scope, value = val, from_tracking = from_tracking})
 
 		if from_tracking then scope:AddTrackedObject(upvalue) end
+	end
+
+	function META:CopyObjectMutations(to, from)
+		to.mutations = from.mutations
+	end
+
+	function META:ClearObjectMutations(obj)
+		obj.mutations = nil
+	end
+
+	function META:HasMutations(obj)
+		return obj.mutations ~= nil
+	end
+
+	function META:ClearScopedTrackedObjects(scope)
+		if scope.TrackedObjects then
+			for _, obj in ipairs(scope.TrackedObjects) do
+				if obj.Type == "upvalue" then
+					for i = #obj.mutations, 1, -1 do
+						local mut = obj.mutations[i]
+
+						if mut.from_tracking then table.remove(obj.mutations, i) end
+					end
+				else
+					for _, mutations in pairs(obj.mutations) do
+						for i = #mutations, 1, -1 do
+							local mut = mutations[i]
+
+							if mut.from_tracking then table.remove(mutations, i) end
+						end
+					end
+				end
+			end
+		end
 	end
 
 	do
@@ -432,7 +453,7 @@ return function(META)
 
 						if old_upvalues then upvalue = translate[upvalue] end
 
-						table.insert(upvalues, {upvalue = upvalue, stack = stack and copy(stack)})
+						table.insert(upvalues, {upvalue = upvalue, stack = stack and shallow_copy(stack)})
 					end
 				end
 
@@ -540,7 +561,7 @@ return function(META)
 									{
 										obj = tbl,
 										key = stack[#stack].key,
-										stack = copy(stack),
+										stack = shallow_copy(stack),
 									}
 								)
 							end

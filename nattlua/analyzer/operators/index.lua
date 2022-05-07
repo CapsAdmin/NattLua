@@ -103,7 +103,7 @@ return {
 				if val.Type == "union" then val = val:Copy(nil, true) end
 
 				--TODO: this seems wrong, but it's for deferred analysis maybe not clearing up muations?
-				if obj.mutations then
+				if self:HasMutations(obj) then
 					local tracked = self:GetMutatedTableValue(obj, key)
 
 					if tracked then return tracked end

@@ -114,7 +114,7 @@ return function(META)
 			arguments = add_potential_self(arguments)
 
 			for _, obj in ipairs(arguments:GetData()) do
-				obj.mutations = nil
+				self:ClearObjectMutations(obj)
 			end
 
 			self:CreateAndPushFunctionScope(obj)

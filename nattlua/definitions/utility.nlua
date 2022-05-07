@@ -115,7 +115,7 @@ end
 
 analyzer function copy(obj: any)
 	local copy = obj:Copy()
-	copy.mutations = nil
+	analyzer:ClearObjectMutations(copy)
 	copy.scope = nil
 	copy.potential_self = nil
 	return copy

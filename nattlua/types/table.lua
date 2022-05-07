@@ -153,7 +153,7 @@ function META:GetLength(analyzer)
 	local len = 0
 
 	for _, kv in ipairs(self:GetData()) do
-		if analyzer and self.mutations then
+		if analyzer and analyzer:HasMutations(self) then
 			local val = analyzer:GetMutatedTableValue(self, kv.key)
 
 			if val.Type == "union" and val:CanBeNil() then
