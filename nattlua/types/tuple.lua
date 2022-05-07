@@ -234,15 +234,11 @@ function META:Get(key--[[#: number | TBaseType]])
 		return self.Remainder:Get(key - #self:GetData())
 	end
 
-	if
-		not val and
-		self:GetData()[#self:GetData()] and
-		(
-			self:GetData()[#self:GetData()].Repeat or
-			self:GetData()[#self:GetData()].Remainder
-		)
-	then
-		return self:GetData()[#self:GetData()]:Get(key)
+	if not val then
+		local last = self:GetData()[#self:GetData()]
+		if last and last.Type == "tuple" and (last.Repeat or last.Remainder) then
+			return last:Get(key)
+		end
 	end
 
 	if not val then

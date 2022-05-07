@@ -33,16 +33,21 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 		end
 	end
 
+	local function get_line()
+		local info = debug.getinfo(3)
+		return info.source:sub(2) .. ":" .. info.currentline
+	end
+
 	function meta:DebugPropertyAccess()
 		meta.__index = function(self, key)
 			if meta[key] ~= nil then return meta[key] end
 
-			if not blacklist[key] then print(key) end
+			if not blacklist[key] then print(key, get_line()) end
 
 			return rawget(self, key)
 		end
 		meta.__newindex = function(self, key, val)
-			if not blacklist[key] then print(key, val) end
+			if not blacklist[key] then print(key, val, get_line()) end
 
 			rawset(self, key, val)
 		end
