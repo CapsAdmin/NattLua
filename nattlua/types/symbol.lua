@@ -58,7 +58,15 @@ function META:IsTruthy()
 end
 
 function META.New(data--[[#: any]])
-	local self = setmetatable({Data = data}, META)
+	local self = setmetatable({
+		Data = data,
+		Falsy = false,
+		Truthy = false,
+		Literal = false,
+		LiteralArgument = false,
+		ReferenceArgument = false,
+	
+	}, META)
 	self:SetLiteral(true)
 	return self
 end
