@@ -40,7 +40,7 @@ function META.IsSubsetOf(A--[[#: TSymbol]], B--[[#: TBaseType]])
 
 	if B.Type == "any" then return true end
 
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+	if B.Type == "union" then return B:IsTargetSubsetOfChild(A--[[#as any]]) end
 
 	if B.Type ~= "symbol" then return type_errors.type_mismatch(A, B) end
 

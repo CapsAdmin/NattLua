@@ -15,6 +15,7 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TUnion = META.@Self]]
 --[[#type TUnion.Data = List<|TBaseType|>]]
 --[[#type TUnion.suppress = boolean]]
+--[[#type TUnion.falsy_disabled = List<|TBaseType|> | nil ]]
 META.Type = "union"
 
 function META:GetHash()
@@ -24,7 +25,7 @@ end
 function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 	if a.suppress then return true end
 
-	if b.Type ~= "union" and #a.Data == 1 then return a.Data[1]:Equal(b) end
+	if b.Type ~= "union" and #a.Data == 1 and a.Data[1] then return a.Data[1]:Equal(b) end
 
 	if a.Type ~= b.Type then return false end
 
@@ -32,40 +33,24 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 
 	for i = 1, #a.Data do
 		local ok = false
-		local a = a.Data[i]
+		local a = a.Data[i] --[[# as TBaseType ]]
 
 		for i = 1, #b.Data do
-			local b = b.Data[i]
-			a.suppress = true
+			local b = b.Data[i] --[[# as TBaseType ]]
+			a.suppress = true --[[# as boolean ]]
 			ok = a:Equal(b)
-			a.suppress = false
+			a.suppress = false --[[# as boolean ]]
 
 			if ok then break end
 		end
 
 		if not ok then
-			a.suppress = false
+			a.suppress = false --[[# as boolean ]]
 			return false
 		end
 	end
 
 	return true
-end
-
-function META:ShrinkToFunctionSignature()
-	local Tuple = require("nattlua.types.tuple").Tuple
-	local arg = Tuple({})
-	local ret = Tuple({})
-
-	for _, func in ipairs(self.Data) do
-		if func.Type ~= "function" then return false end
-
-		arg:Merge(func:GetInputSignature())
-		ret:Merge(func:GetOutputSignature())
-	end
-
-	local Function = require("nattlua.types.function").Function
-	return Function(arg, ret)
 end
 
 local sort = function(a, b)
@@ -178,7 +163,7 @@ function META:GetAtIndex(i--[[#: number]])
 
 	if not self:HasTuples() then return self end
 
-	local val
+	local val --[[#: any]]
 	local errors = {}
 
 	for _, obj in ipairs(self.Data) do
@@ -195,7 +180,7 @@ function META:GetAtIndex(i--[[#: number]])
 		else
 			if val then
 				-- a non tuple in the union would be treated as a tuple with the value repeated
-				val = self.New({val, obj})
+				val = self.New({val --[[#as any]], obj})
 			elseif i == 1 then
 				val = obj
 			else
@@ -332,7 +317,7 @@ function META:Union(union--[[#: TUnion]])
 	return copy
 end
 
-function META:Copy(map--[[#: Map<|any, any|>]], copy_tables--[[#: nil | boolean]])
+function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])
 	map = map or {}
 	local copy = META.New()
 	map[self] = map[self] or copy
@@ -435,6 +420,10 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 		Falsy = false,
 		Truthy = false,
 		Literal = false,
+		LiteralArgument = false,
+		ReferenceArgument = false,
+		suppress = false,
+		falsy_disabled = nil,
 	}, META)
 
 	if data then for _, v in ipairs(data) do
@@ -446,7 +435,7 @@ end
 
 return {
 	Union = META.New,
-	Nilable = function(typ)
+	Nilable = function(typ--[[: TBaseType]])
 		return META.New({typ, Nil()})
 	end,
 	Boolean = function()

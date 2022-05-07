@@ -125,6 +125,13 @@ do
 end
 
 do
+	local type { Union } = require("nattlua.types.union")
+
+	local obj = Union({1,2,3})
+	attest.equal(obj:GetData(), _ as List<|any|>)
+end
+
+do
 	require("nattlua.other.table_print")
 end
 

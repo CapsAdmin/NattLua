@@ -92,7 +92,7 @@ function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TBaseType]])
 
 	if B.Type == "any" then return true end
 
-	if B.Type == "union" then return (B--[[# as any]]):IsTargetSubsetOfChild(A) end
+	if B.Type == "union" then return (B--[[# as any]]):IsTargetSubsetOfChild(A--[[# as any]]) end
 
 	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
 
