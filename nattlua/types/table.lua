@@ -683,7 +683,7 @@ function META:CoerceUntypedFunctions(from--[[#: TTable]])
 	end
 end
 
-function META:Copy(map--[[#: any]], copy_tables--[[#: boolean | nil]])
+function META:Copy(map--[[#: Map<|any, any|> | nil ]], copy_tables--[[#: nil | boolean]])
 	map = map or {}
 	local copy = META.New()
 	map[self] = map[self] or copy

@@ -7,19 +7,24 @@ local VarArg = require("nattlua.types.tuple").VarArg
 local Any = require("nattlua.types.any").Any
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
+--[[#local type TBaseType = META.TBaseType]]
+--[[#type META.@Name = "TFunction"]]
+--[[#type TFunction = META.@Self]]
+--[[#type TFunction.scopes = List<|any|>]]
+
 META.Type = "function"
 META.Truthy = true
 META.Falsy = false
 META:IsSet("Called", false)
 META:IsSet("ExplicitInputSignature", false)
 META:IsSet("ExplicitOutputSignature", false)
-META:GetSet("InputSignature", nil)
-META:GetSet("OutputSignature", nil)
-META:GetSet("FunctionBodyNode", nil)
-META:GetSet("Scope", nil)
-META:GetSet("UpvaluePosition", nil)
-META:GetSet("InputIdentifiers", nil)
-META:GetSet("AnalyzerFunction", nil)
+META:GetSet("InputSignature", nil --[[# as TTuple]])
+META:GetSet("OutputSignature", nil --[[# as TTuple]])
+META:GetSet("FunctionBodyNode", nil --[[# as nil | any]])
+META:GetSet("Scope", nil --[[# as nil | any]])
+META:GetSet("UpvaluePosition", nil --[[# as nil | number]])
+META:GetSet("InputIdentifiers", nil --[[# as nil | List<|any|>]])
+META:GetSet("AnalyzerFunction", nil --[[# as nil | Function]])
 META:IsSet("ArgumentsInferred", false)
 META:GetSet("PreventInputArgumentExpansion", false)
 
@@ -27,23 +32,21 @@ function META:__tostring()
 	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
 end
 
-function META:__call(...)
+function META:__call(...--[[#: ...any]])
 	if self:GetAnalyzerFunction() then return self:GetAnalyzerFunction()(...) end
 end
 
-function META.Equal(a, b)
+function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]])
 	return a.Type == b.Type and
 		a:GetInputSignature():Equal(b:GetInputSignature()) and
 		a:GetOutputSignature():Equal(b:GetOutputSignature())
 end
 
-function META:Copy(map, copy_tables)
+function META:Copy(map--[[#: Map<|any, any|> | nil ]], copy_tables--[[#: nil | boolean]])
 	map = map or {}
-	local copy = self.New({arg = Tuple({}), ret = Tuple({})})
+	local copy = self.New(self:GetInputSignature():Copy(map, copy_tables), self:GetOutputSignature():Copy(map, copy_tables))
 	map[self] = map[self] or copy
 	copy:SetUpvaluePosition(self:GetUpvaluePosition())
-	copy:SetOutputSignature(self:GetOutputSignature():Copy(map, copy_tables))
-	copy:SetInputSignature(self:GetInputSignature():Copy(map, copy_tables))
 	copy:SetAnalyzerFunction(self:GetAnalyzerFunction())
 	copy:SetScope(self:GetScope())
 	copy:SetLiteral(self:IsLiteral())
@@ -58,7 +61,7 @@ function META:Copy(map, copy_tables)
 	return copy
 end
 
-function META.IsSubsetOf(A, B)
+function META.IsSubsetOf(A--[[#: TFunction]], B--[[#: TBaseType]])
 	if B.Type == "tuple" then B = B:Get(1) end
 
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
@@ -99,7 +102,7 @@ function META.IsSubsetOf(A, B)
 	return true
 end
 
-function META.IsCallbackSubsetOf(A, B)
+function META.IsCallbackSubsetOf(A--[[#: TFunction]], B--[[#: TBaseType]])
 	if B.Type == "tuple" then B = B:Get(1) end
 
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
@@ -141,7 +144,7 @@ function META.IsCallbackSubsetOf(A, B)
 end
 
 do
-	function META:AddScope(arguments, return_result, scope)
+	function META:AddScope(arguments--[[#: TTuple]], return_result--[[#: TTuple]], scope--[[#: any]])
 		self.scopes = self.scopes or {}
 		table.insert(
 			self.scopes,
@@ -186,10 +189,22 @@ function META:IsRefFunction()
 	return false
 end
 
-function META.New(input, output)
-	local self = setmetatable({}, META)
-	self:SetInputSignature(input)
-	self:SetOutputSignature(output)
+function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
+	local self = setmetatable({
+		Falsy = false, 
+		Truthy = true, 
+		Literal = false, 
+		LiteralArgument = false, 
+		ReferenceArgument = false,
+		Called = false,
+		ExplicitInputSignature = false,
+		ExplicitOutputSignature = false,
+		ArgumentsInferred = false,
+		PreventInputArgumentExpansion = false,
+		scopes = {},
+		InputSignature = input,
+		OutputSignature = output,
+	}, META)
 	return self
 end
 
@@ -198,7 +213,7 @@ return {
 	AnyFunction = function()
 		return META.New(Tuple({VarArg(Any())}), Tuple({VarArg(Any())}))
 	end,
-	LuaTypeFunction = function(lua_function, arg, ret)
+	LuaTypeFunction = function(lua_function--[[#: Function]], arg--[[#: List<|TBaseType|>]], ret--[[#: List<|TBaseType|>]])
 		local self = META.New(Tuple(arg), Tuple(ret))
 		self:SetAnalyzerFunction(lua_function)
 		return self

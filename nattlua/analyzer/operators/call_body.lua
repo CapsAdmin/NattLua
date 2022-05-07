@@ -287,7 +287,7 @@ local function check_input(self, obj, input)
 		end
 
 		if
-			arg.Type == "table" and
+			arg and arg.Type == "table" and
 			contract.Type == "table" and
 			arg:GetUpvalue() and
 			not contract:IsReferenceArgument()

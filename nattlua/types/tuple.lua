@@ -17,7 +17,7 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TTuple = META.@Self]]
 --[[#type TTuple.Remainder = nil | TTuple]]
 --[[#type TTuple.Repeat = nil | number]]
---[[#type TTuple.suppress = nil | boolean]]
+--[[#type TTuple.suppress = boolean]]
 
 META:GetSet("Data", nil--[[# as List<|TBaseType|>]])
 
@@ -443,7 +443,16 @@ function META:SetTable(data)
 end
 
 function META.New(data--[[#: nil | List<|TBaseType|>]])
-	local self = setmetatable({Data = {}, Falsy = false, Truthy = false, Literal = false, LiteralArgument = false, ReferenceArgument = false, Unpackable = false}, META)
+	local self = setmetatable({
+		Data = {}, 
+		Falsy = false, 
+		Truthy = false, 
+		Literal = false, 
+		LiteralArgument = false, 
+		ReferenceArgument = false, 
+		Unpackable = false, 
+		suppress = false --[[# as boolean]]
+	}, META)
 
 	if data then self:SetTable(data) end
 
