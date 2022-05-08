@@ -116,9 +116,11 @@ else
 	end
 
 	for _, path in ipairs(tests) do
-		if path:sub(-4) == ".nlua" then 
-			io_write("running ", path, "\n")
+		if path:sub(-5) == ".nlua" then 
+			local time = os.clock()
+			io_write(path, " ")
 			require("test.helpers").RunCode(io.open(path, "r"):read("*all"))
+			io_write(" ", format_time(os.clock() - time), " seconds\n") 
 		end
 	end
 end
