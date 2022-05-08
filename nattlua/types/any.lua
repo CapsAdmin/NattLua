@@ -1,3 +1,4 @@
+local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TAny"]]
@@ -34,6 +35,14 @@ end
 
 function META.Equal(a--[[#: TAny]], b--[[#: TBaseType]])
 	return a.Type == b.Type
+end
+
+function META.LogicalComparison(l--[[#: TAny]], r--[[#: TBaseType]], op--[[#: string]])
+	if op == "==" then
+		return true -- TODO: should be nil (true | false)?
+	end
+
+	return type_errors.binary(op, l, r)
 end
 
 return {

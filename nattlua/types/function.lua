@@ -11,6 +11,7 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type META.@Name = "TFunction"]]
 --[[#type TFunction = META.@Self]]
 --[[#type TFunction.scopes = List<|any|>]]
+--[[#type TFunction.suppress = boolean]]
 
 META.Type = "function"
 META.Truthy = true
@@ -33,7 +34,8 @@ function META:__tostring()
 end
 
 function META:__call(...--[[#: ...any]])
-	if self:GetAnalyzerFunction() then return self:GetAnalyzerFunction()(...) end
+	local f = self:GetAnalyzerFunction()
+	if f then return f(...) end
 end
 
 function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]])
@@ -204,6 +206,7 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 		scopes = {},
 		InputSignature = input,
 		OutputSignature = output,
+		suppress = false,
 	}, META)
 	return self
 end

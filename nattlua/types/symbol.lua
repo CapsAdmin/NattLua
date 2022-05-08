@@ -13,6 +13,16 @@ function META.Equal(a--[[#: TSymbol]], b--[[#: TBaseType]])
 	return a.Type == b.Type and a:GetData() == b:GetData()
 end
 
+function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#: string]])
+	if op == "==" then
+		if l:IsLiteral() and r:IsLiteral() then return l:GetData() == r:GetData() end
+
+		return nil
+	end
+
+	return type_errors.binary(op, l, r)
+end
+
 function META:GetLuaType()
 	return type(self:GetData())
 end

@@ -14,6 +14,7 @@ local type = _G.type
 local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TTuple"]]
+
 --[[#type TTuple = META.@Self]]
 --[[#type TTuple.Remainder = nil | TTuple]]
 --[[#type TTuple.Repeat = nil | number]]
@@ -220,47 +221,49 @@ function META:HasTuples()
 	return false
 end
 
-function META:Get(key--[[#: number | TBaseType]])
-	local real_key = key
+function META:GetWithNumber(i--[[#: number]])
+	local val = self:GetData()[i]
 
-	if type(key) == "table" and key.Type == "number" and key:IsLiteral() then
-		key = key:GetData()
-	end
-
-	if type(key) ~= "number" then
-		error("key must be a number, got " .. tostring(key) .. debug.traceback())
-	end
-
-	local val = self:GetData()[key]
-
-	if not val and self.Repeat and key <= (#self:GetData() * self.Repeat) then
-		return self:GetData()[((key - 1) % #self:GetData()) + 1]
+	if not val and self.Repeat and i <= (#self:GetData() * self.Repeat) then
+		return self:GetData()[((i - 1) % #self:GetData()) + 1]
 	end
 
 	if not val and self.Remainder then
-		return self.Remainder:Get(key - #self:GetData())
+		return self.Remainder:Get(i - #self:GetData())
 	end
 
 	if not val then
 		local last = self:GetData()[#self:GetData()]
 		if last and last.Type == "tuple" and (last.Repeat or last.Remainder) then
-			return last:Get(key)
+			return last:Get(i)
 		end
 	end
 
 	if not val then
-		return type_errors.other({"index ", real_key, " does not exist"})
+		return type_errors.other({"index ", tostring(i), " does not exist"})
 	end
 
 	return val
 end
 
-function META:GetWithoutExpansion(key--[[#: string]])
-	local val = self:GetData()[key]
+function META:Get(key--[[#: number | TBaseType]])
+	if type(key) == "number" then
+		return self:GetWithNumber(key)
+	end
+
+	assert(key.Type == "number")
+
+	if key:IsLiteral() then
+		return self:GetWithNumber(key:GetData())
+	end
+end
+
+function META:GetWithoutExpansion(i--[[#: number]])
+	local val = self:GetData()[i]
 
 	if not val then if self.Remainder then return self.Remainder end end
 
-	if not val then return type_errors.other({"index ", key, " does not exist"}) end
+	if not val then return type_errors.other({"index ", i, " does not exist"}) end
 
 	return val
 end
@@ -316,7 +319,7 @@ function META:GetMinimumLength()
 	if self.Repeat == math.huge or self.Repeat == 0 then return 0 end
 
 	local len = #self:GetData()
-	local found_nil = false
+	local found_nil--[[#: boolean ]] = false
 
 	for i = #self:GetData(), 1, -1 do
 		local obj = self:GetData()[i]--[[# as TBaseType]]
@@ -451,7 +454,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 		LiteralArgument = false, 
 		ReferenceArgument = false, 
 		Unpackable = false, 
-		suppress = false --[[# as boolean]]
+		suppress = false
 	}, META)
 
 	if data then self:SetTable(data) end
@@ -461,7 +464,7 @@ end
 
 return {
 	Tuple = META.New,
-	VarArg = function(t)
+	VarArg = function(t--[[#: TBaseType]])
 		local self = META.New({t})
 		self:SetRepeat(math.huge)
 		return self

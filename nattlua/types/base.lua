@@ -9,8 +9,6 @@ local META = class.CreateTemplate("base")
 --[[#local type TBaseType = META.@Self]]
 --[[#type TBaseType.@Name = "TBaseType"]]
 --[[#type META.Type = string]]
---[[#type META.Type = string]]
---[[#type TBaseType.Data = any | nil]]
 --[[#type TBaseType.Name = string | nil]]
 --[[#type TBaseType.parent = TBaseType | nil]]
 META:GetSet("AnalyzerEnvironment", nil--[[# as nil | "runtime" | "typesystem"]])
@@ -25,11 +23,11 @@ end
 META:GetSet("Data", nil--[[# as nil | any]])
 
 function META:GetLuaType()
-	if self.Contract and self.Contract.TypeOverride then
-		return self.Contract.TypeOverride
+	if self.Contract and self.Contract.TypeOverride and self.Contract.TypeOverride.Type == "string" and self.Contract.TypeOverride.Data then
+		return self.Contract.TypeOverride.Data
 	end
 
-	return self.TypeOverride or self.Type
+	return self.TypeOverride and self.TypeOverride.Type == "string" and self.TypeOverride.Data or self.Type
 end
 
 do
@@ -104,9 +102,7 @@ end
 do -- comes from tbl.@TypeOverride = "my name"
 	META:GetSet("TypeOverride", nil--[[# as nil | TBaseType]])
 
-	function META:SetTypeOverride(name--[[#: any]])
-		if type(name) == "table" and name:IsLiteral() then name = name:GetData() end
-
+	function META:SetTypeOverride(name--[[#: nil | TBaseType]])
 		self.TypeOverride = name
 	end
 end
@@ -261,12 +257,6 @@ function META:GetFirstValue()
 end
 
 function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[#: string]])
-	if op == "==" then
-		if l:IsLiteral() and r:IsLiteral() then return l:GetData() == r:GetData() end
-
-		return nil
-	end
-
 	return type_errors.binary(op, l, r)
 end
 
