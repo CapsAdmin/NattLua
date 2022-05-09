@@ -185,6 +185,7 @@ do
 				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1))
 			elseif token.value:sub(1, 1) == "[" then
 				local start = token.value:find("[", 2, true)
+				if not start then error("start not found") end
 				token.string_value = token.value:sub(start + 1, -start - 1)
 			end
 		end
