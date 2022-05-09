@@ -281,8 +281,13 @@ do --- allcases
 	end
 
     local code = ""
+    local done = {}
 	for _, v in pairs(allcases(4)) do
-		code = code .. "attest.equal(" .. tostring(v[1]) .. ", " .. tostring(v[2]) .. ")\n"
+        local str = "attest.equal(" .. tostring(v[1]) .. ", " .. tostring(v[2]) .. ")\n"
+        if not done[str] then
+		    code = code .. str
+            done[str] = true
+        end
 	end
     analyze(code)
 end
