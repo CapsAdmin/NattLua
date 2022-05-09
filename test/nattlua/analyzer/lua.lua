@@ -280,16 +280,18 @@ do --- allcases
 		return res
 	end
 
-    local code = ""
+    local code = {}
     local done = {}
+    local i = 1
 	for _, v in pairs(allcases(4)) do
         local str = "attest.equal(" .. tostring(v[1]) .. ", " .. tostring(v[2]) .. ")\n"
         if not done[str] then
-		    code = code .. str
+		    code[i] = str
+            i = i + 1
             done[str] = true
         end
 	end
-    analyze(code)
+    analyze(table.concat(code))
 end
 
 if bit.tobit then
