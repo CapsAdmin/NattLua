@@ -300,14 +300,14 @@ end)
 parse[[
     local parser = require "nattlua.parser"
     £ assert(#parser.nodes == 1)
-    £ assert(parser.nodes[1].kind == "root")
+    £ assert(parser.nodes[#parser.nodes + 1 - 1].kind == "root")
     
     do
-        £ assert(parser.nodes[1].kind == "do")
-        £ assert(parser.nodes[2].kind == "root")
+        £ assert(parser.nodes[#parser.nodes + 1 - 1].kind == "do")
+        £ assert(parser.nodes[#parser.nodes + 1 - 2].kind == "root")
         
         local function test()
-            £ assert(parser.nodes[1].kind == "local_function")
+            £ assert(parser.nodes[#parser.nodes + 1 - 1].kind == "local_function")
     
             local x = 1337
             £ parser.value = parser.current_expression
@@ -318,7 +318,7 @@ parse[[
     end
 
     £ assert(#parser.nodes == 1)
-    £ assert(parser.nodes[1].kind == "root")
+    £ assert(parser.nodes[#parser.nodes + 1 - 1].kind == "root")
 ]]
 
 do

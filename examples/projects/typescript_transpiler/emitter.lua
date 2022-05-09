@@ -5,8 +5,8 @@ local META = loadfile("nattlua/transpiler/emitter.lua")()
 
 function META:EmitExpression(node)
 	if node.tokens["("] then
-		for _, node in ipairs(node.tokens["("]) do
-			self:EmitToken(node)
+		for i = #node.tokens["("], 1, -1 do
+			self:EmitToken(node.tokens["("][i])
 		end
 	end
 
@@ -914,8 +914,8 @@ do -- types
 
 	function META:EmitTypeExpression(node)
 		if node.tokens["("] then
-			for _, node in ipairs(node.tokens["("]) do
-				self:EmitToken(node)
+			for i = #node.tokens["("], 1, -1 do
+				self:EmitToken(node.tokens["("][i])
 			end
 		end
 

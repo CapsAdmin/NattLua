@@ -94,7 +94,7 @@ do -- typesystem
 		end
 
 		node.tokens["("] = node.tokens["("] or {}
-		table_insert(node.tokens["("], 1, pleft)
+		table_insert(node.tokens["("], pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
 		table_insert(node.tokens[")"], self:ExpectValue(")"))
 		node = self:EndNode(node)
@@ -718,7 +718,7 @@ do -- runtime
 		end
 
 		node.tokens["("] = node.tokens["("] or {}
-		table_insert(node.tokens["("], 1, pleft)
+		table_insert(node.tokens["("], pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
 		table_insert(node.tokens[")"], self:ExpectValue(")"))
 		return node

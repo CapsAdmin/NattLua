@@ -60,15 +60,15 @@ end
 
 do
 	function META:GetCurrentParserEnvironment()
-		return self.environment_stack[1] or "runtime"
+		return self.environment_stack[#self.environment_stack] or "runtime"
 	end
 
 	function META:PushParserEnvironment(env--[[#: "runtime" | "typesystem"]])
-		table.insert(self.environment_stack, 1, env)
+		table.insert(self.environment_stack, env)
 	end
 
 	function META:PopParserEnvironment()
-		table.remove(self.environment_stack, 1)
+		table.remove(self.environment_stack)
 	end
 end
 
@@ -87,7 +87,7 @@ function META:StartNode(
 			code_start = code_start,
 			code_stop = code_start,
 			environment = self:GetCurrentParserEnvironment(),
-			parent = self.nodes[1],
+			parent = self.nodes[#self.nodes],
 		}
 	)
 
@@ -99,12 +99,12 @@ function META:StartNode(
 
 	if self.OnNode then self:OnNode(node) end
 
-	table.insert(self.nodes, 1, node)
+	table.insert(self.nodes, node)
 	return node--[[# as T]]
 end
 
 function META:SuppressOnNode()
-	self.suppress_on_node = {parent = self.nodes[1], nodes = {}}
+	self.suppress_on_node = {parent = self.nodes[#self.nodes], nodes = {}}
 end
 
 function META:ReRunOnNode(nodes)
@@ -117,7 +117,7 @@ function META:ReRunOnNode(nodes)
 
 				if new_node then
 					nodes[i] = new_node
-					new_node.parent = self.nodes[1]
+					new_node.parent = self.nodes[#self.nodes]
 				end
 			end
 		end
@@ -137,13 +137,13 @@ function META:EndNode(node--[[#: Node]])
 		if cur then node.code_stop = cur.stop end
 	end
 
-	table.remove(self.nodes, 1)
+	table.remove(self.nodes)
 
 	if self.config.on_node then
 		if
 			self.suppress_on_node and
 			node.type == "expression" and
-			self.suppress_on_node.parent == self.nodes[1]
+			self.suppress_on_node.parent == self.nodes[#self.nodes]
 		then
 			table.insert(self.suppress_on_node, node)
 		elseif self.config.on_node then
@@ -151,7 +151,7 @@ function META:EndNode(node--[[#: Node]])
 
 			if new_node then
 				node = new_node--[[# as any]]
-				node.parent = self.nodes[1]
+				node.parent = self.nodes[#self.nodes]
 			end
 		end
 	end
@@ -218,7 +218,7 @@ function META:ReadToken()
 	if not tk then return nil end
 
 	self:Advance(1)
-	tk.parent = self.nodes[1]
+	tk.parent = self.nodes[#self.nodes]
 	return tk
 end
 
@@ -362,12 +362,12 @@ end
 function META:ReadMultipleValues(
 	max--[[#: nil | number]],
 	reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (nil | Node))]],
-	...--[[#: ref ...any]]
+	a--[[#: ref any]],b--[[#: ref any]],c--[[#: ref any]]
 )
 	local out = {}
 
 	for i = 1, max or self:GetLength() do
-		local node = reader(self, ...)
+		local node = reader(self, a,b,c)
 
 		if not node then break end
 

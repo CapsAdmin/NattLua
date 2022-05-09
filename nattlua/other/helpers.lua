@@ -269,15 +269,15 @@ function helpers.JITOptimize()
 		"maxrecord=8000", -- 4000: maximum number of recorded IR instructions
 		"maxirconst=8000", -- 500: maximum number of IR constants of a trace
 		"maxside=5000", -- 100: maximum number of side traces of a root trace
-		"maxsnap=5000", -- 500: maximum number of snapshots for a trace
+		"maxsnap=500", -- 500: maximum number of snapshots for a trace
 		"hotloop=56", -- 56: number of iterations to detect a hot loop or hot call
-		"hotexit=10", -- 10: number of taken exits to start a side trace
+		"hotexit=50", -- 10: number of taken exits to start a side trace
 		"tryside=4", -- 4: number of attempts to compile a side trace
 		"instunroll=1000", -- 4: maximum unroll factor for instable loops
 		"loopunroll=1000", -- 15: maximum unroll factor for loop ops in side traces
 		"callunroll=1000", -- 3: maximum unroll factor for pseudo-recursive calls
 		"recunroll=0", -- 2: minimum unroll factor for true recursion
-		"maxmcode=16384", -- 512: maximum total size of all machine code areas in KBytes
+		"maxmcode=" .. (512 * 64), -- 512: maximum total size of all machine code areas in KBytes
 		--jit.os == "x64" and "sizemcode=64" or "sizemcode=32", -- Size of each machine code area in KBytes (Windows: 64K)
 		"+fold", -- Constant Folding, Simplifications and Reassociation
 		"+cse", -- Common-Subexpression Elimination

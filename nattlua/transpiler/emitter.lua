@@ -487,8 +487,8 @@ function META:EmitExpression(node--[[#: Node]])
 	local newlines = self:IsLineBreaking()
 
 	if node.tokens["("] then
-		for _, node in ipairs(node.tokens["("]) do
-			self:EmitToken(node)
+		for i = #node.tokens["("], 1, -1 do
+			self:EmitToken(node.tokens["("][i])
 		end
 
 		if node.tokens["("] and newlines then
@@ -1656,8 +1656,8 @@ do -- types
 
 	function META:EmitTypeExpression(node--[[#: Node]])
 		if node.tokens["("] then
-			for _, node in ipairs(node.tokens["("]) do
-				self:EmitToken(node)
+			for i = #node.tokens["("], 1, -1 do
+				self:EmitToken(node.tokens["("][i])
 			end
 		end
 
