@@ -622,7 +622,8 @@ do -- runtime
 		if
 			primary_node.kind == "value" and
 			node.expressions[1] and
-			node.expressions[1].value
+			node.expressions[1].value and
+			node.expressions[1].value.string_value
 		then
 			local name = primary_node.value.value
 
@@ -730,6 +731,7 @@ do -- runtime
 	end
 
 	local function resolve_import_path(self--[[#: META.@Self]], path--[[#: string]])
+		if not path then debug.trace() end
 		local working_directory = self.config.working_directory or ""
 
 		if path:sub(1, 1) == "~" then
