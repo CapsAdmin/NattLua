@@ -153,20 +153,23 @@ do
 		"\"",
 		"'",
 	}
-	local pattern = "\\[" .. table.concat(fixed, "\\") .. "]"
-	local map_double_quote = {[ [[\"]] ] = [["]]}
-	local map_single_quote = {[ [[\']] ] = [[']]}
-
+	local map = {}
 	for _, v in ipairs(fixed) do
-		map_double_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
-		map_single_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
+		map[v:byte()] = loadstring("return \"\\" .. v .. "\"")()
 	end
 
-	local function reverse_escape_string(str, quote--[[#: '"' | "'"]])
-		if quote == "\"" then
-			str = str:gsub(pattern, map_double_quote)
-		elseif quote == "'" then
-			str = str:gsub(pattern, map_single_quote)
+	local function reverse_escape_string(str--[[#: string]])
+		local pos = 1
+		while true do
+			local start, stop = str:find("\\", pos, true)
+			if not start or not stop then break end
+			local char = map[str:byte(start + 1, stop + 1)]
+			if char then
+				str = str:sub(1, start - 1) .. char .. str:sub(stop + 2)
+				pos = stop + 1
+			else
+				pos = pos + 1
+			end
 		end
 
 		return str
@@ -178,16 +181,11 @@ do
 		token.value = self:GetStringSlice(token.start, token.stop)
 
 		if token.type == "string" then
-			if token.value:sub(1, 1) == [["]] then
-				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1), "\"")
-			elseif token.value:sub(1, 1) == [[']] then
-				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1), "'")
+			if token.value:sub(1, 1) == [["]] or token.value:sub(1, 1) == [[']]  then
+				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1))
 			elseif token.value:sub(1, 1) == "[" then
-				local start = token.value:match("(%[[%=]*%[)")
-
-				if not start then error("unable to match string") end
-
-				token.string_value = token.value:sub(#start + 1, -#start - 1)
+				local start = token.value:find("[", 2, true)
+				token.string_value = token.value:sub(start + 1, -start - 1)
 			end
 		end
 

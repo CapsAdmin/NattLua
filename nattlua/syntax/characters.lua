@@ -1,7 +1,11 @@
 local characters = {}
 local B = string.byte
 
-function characters.IsLetter(c--[[#: number]])--[[#: boolean]]
+function characters.IsNumber(c--[[#: number]])--[[#: boolean]]
+	return (c >= B("0") and c <= B("9"))
+end
+
+function characters.IsLetter(c--[[#: ref number]])--[[#: ref boolean]]
 	return (
 			c >= B("a") and
 			c <= B("z")
@@ -21,31 +25,7 @@ function characters.IsLetter(c--[[#: number]])--[[#: boolean]]
 end
 
 function characters.IsDuringLetter(c--[[#: number]])--[[#: boolean]]
-	return (
-			c >= B("a") and
-			c <= B("z")
-		)
-		or
-		(
-			c >= B("0") and
-			c <= B("9")
-		)
-		or
-		(
-			c >= B("A") and
-			c <= B("Z")
-		)
-		or
-		(
-			c == B("_") or
-			c == B("@")
-			or
-			c >= 127
-		)
-end
-
-function characters.IsNumber(c--[[#: number]])--[[#: boolean]]
-	return (c >= B("0") and c <= B("9"))
+	return characters.IsLetter(c) or characters.IsNumber(c)
 end
 
 function characters.IsSpace(c--[[#: number]])--[[#: boolean]]
@@ -77,20 +57,23 @@ function characters.IsSymbol(c--[[#: number]])--[[#: boolean]]
 		)
 end
 
-local function generate_map(str--[[#: string]])
-	local out = {}
-
-	for i = 1, #str do
-		out[str:byte(i)] = true
-	end
-
-	return out
+function characters.IsHex(c--[[#: number]])--[[#: boolean]]
+	return characters.IsNumber(c) or (c >= B("a") and c <= B("f")) or (c >= B("A") and c <= B("F"))
 end
 
-local allowed_hex = generate_map("1234567890abcdefABCDEF")
+if jit then
+	local ffi = require("ffi")
 
-function characters.IsHex(c--[[#: number]])--[[#: boolean]]
-	return allowed_hex[c] ~= nil
+	for key, val in pairs(characters) do
+		local map = ffi.new("char[256]")
+
+		for i = 0, 255 do
+			map[i] = val(i) and 1 or 0
+		end
+
+		characters[key] = function(c--[[#: number]])--[[#: boolean]] return map[c] ~= 0 end
+	end
+
 end
 
 return characters
