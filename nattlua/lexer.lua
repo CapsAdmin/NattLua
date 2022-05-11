@@ -1,7 +1,6 @@
 --[[#local type { TokenType } = import("./lexer/token.lua")]]
 --[[#local type {Code} = import<|"~/nattlua/code.lua"|>]]
 
-local Code = require("nattlua.code").New
 local loadstring = require("nattlua.other.loadstring")
 local Token = require("nattlua.lexer.token").New
 local class = require("nattlua.other.class")
@@ -13,6 +12,7 @@ local META = class.CreateTemplate("lexer")
 	Code = Code,
 	Position = number,
 }]]
+
 local B = string.byte
 
 function META:GetLength()--[[#: number]]
@@ -112,11 +112,15 @@ function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
 	return nil, nil
 end
 
-function META:ReadSimple()--[[#: TokenType,boolean,number,number]]
+function META:ReadSimple()--[[#: (TokenType,boolean,number,number)]]
 	if self:ReadShebang() then return "shebang", false, 1, self.Position - 1 end
 
 	local start = self.Position
 	local type, is_whitespace = self:Read()
+
+	if type == "discard" then
+		return self:ReadSimple()
+	end
 
 	if not type then
 		if self:ReadEndOfFile() then
@@ -192,6 +196,28 @@ do
 
 		return token
 	end
+
+	function META:ReadNonWhitespaceToken()
+		local token = self:ReadToken()
+
+		if not token.is_whitespace then
+			token.whitespace = {}
+			return token
+		end
+
+		local whitespace = {token}
+		local whitespace_i = 2
+
+		for i = self.Position, self:GetLength() + 1 do
+			local token = self:ReadToken()
+			if not token.is_whitespace then
+				token.whitespace = whitespace
+				return token
+			end
+			whitespace[whitespace_i] = token
+			whitespace_i = whitespace_i + 1
+		end		
+	end
 end
 
 function META:ReadFirstFromArray(strings--[[#: List<|string|>]])--[[#: boolean]]
@@ -207,36 +233,21 @@ end
 
 function META:GetTokens()
 	self:ResetState()
+
 	local tokens = {}
+	local tokens_i = 1
 
 	for i = self.Position, self:GetLength() + 1 do
-		tokens[i] = self:ReadToken()
+		local token = self:ReadNonWhitespaceToken()
 
-		if tokens[i].type == "end_of_file" then break end
+		if not token then break end
+
+		tokens[tokens_i] = token
+		tokens_i = tokens_i + 1
+
+		if token.type == "end_of_file" then break end
 	end
 
-	local whitespace_buffer = {}
-	local whitespace_buffer_i = 1
-	local non_whitespace = {}
-	local non_whitespace_i = 1
-
-	for _, token in ipairs(tokens) do
-		if token.type ~= "discard" then
-			if token.is_whitespace then
-				whitespace_buffer[whitespace_buffer_i] = token
-				whitespace_buffer_i = whitespace_buffer_i + 1
-			else
-				token.whitespace = whitespace_buffer
-				non_whitespace[non_whitespace_i] = token
-				non_whitespace_i = non_whitespace_i + 1
-				whitespace_buffer = {}
-				whitespace_buffer_i = 1
-			end
-		end
-	end
-
-	local tokens = non_whitespace
-	tokens[#tokens].value = ""
 	return tokens
 end
 

@@ -2,6 +2,7 @@ local table_pool = require("nattlua.other.table_pool")
 local quote_helper = require("nattlua.other.quote")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("token")
+local setmetatable = _G.setmetatable
 --[[#type META.@Name = "Token"]]
 --[[#type META.TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
 --[[#type META.TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | META.TokenWhitespaceType]]
