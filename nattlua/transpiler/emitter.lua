@@ -263,7 +263,7 @@ do -- newline breaking
 	do
 		function META:PushForcedLineBreaking(b--[[#: boolean]])
 			self.force_newlines = self.force_newlines or {}
-			table.insert(self.force_newlines, b and debug.traceback())
+			table.insert(self.force_newlines, b)
 		end
 
 		function META:PopForcedLineBreaking()
