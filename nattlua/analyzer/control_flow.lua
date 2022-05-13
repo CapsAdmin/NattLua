@@ -238,13 +238,7 @@ return function(META)
 		end
 
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
-			-- extra protection, maybe only useful during development
-			if debug.getinfo(300) then
-				debug.trace()
-				return false, "call stack is too deep"
-			end
-
-			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
+				-- setup and track the callstack to avoid infinite loops or callstacks that are too big
 			self.call_stack = self.call_stack or {}
 
 			if self:IsRuntime() and call_node and not not_recursive_call then
