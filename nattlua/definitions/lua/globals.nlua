@@ -264,8 +264,8 @@ analyzer function loadfile(path: string)
 	assert(compiler:Parse())
 	local f = types.AnyFunction()
 
-	f:SetAnalyzerFunction(function(...)
-		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
+	f:SetAnalyzerFunction(function(a,b,c,d,e,f)
+		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, a,b,c,d,e,f)
 	end)
 
 	return f
