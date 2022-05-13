@@ -4,8 +4,7 @@ local table_remove = _G.table.remove
 local math_huge = math.huge
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
-local Code = require("nattlua.code").New
-local Lexer = require("nattlua.lexer").New
+local profiler = require("nattlua.other.profiler")
 
 --[[#local type { Node } = import("~/nattlua/parser/nodes.nlua")]]
 
@@ -366,6 +365,8 @@ do -- typesystem
 	function META:ReadTypeExpression(priority--[[#: number]])
 		if self.TealCompat then return self:ReadTealExpression(priority) end
 
+		profiler.PushZone("ReadTypeExpression")
+
 		self:PushParserEnvironment("typesystem")
 		local node
 		local force_upvalue
@@ -416,6 +417,9 @@ do -- typesystem
 		end
 
 		self:PopParserEnvironment()
+
+		profiler.PopZone()
+
 		return node
 	end
 
@@ -929,6 +933,8 @@ do -- runtime
 			return self:ReadTypeExpression(priority)
 		end
 
+		profiler.PushZone("ReadRuntimeExpression")
+
 		priority = priority or 0
 		local node = self:ReadParenthesisExpression() or
 			self:ReadPrefixOperatorExpression() or
@@ -981,6 +987,8 @@ do -- runtime
 		end
 
 		if node then node.first_node = first end
+
+		profiler.PopZone("ReadRuntimeExpression")
 
 		return node
 	end

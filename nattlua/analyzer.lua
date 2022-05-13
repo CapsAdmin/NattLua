@@ -1,4 +1,5 @@
 local class = require("nattlua.other.class")
+local profiler = require("nattlua.other.profiler")
 local tostring = tostring
 local error = error
 local setmetatable = setmetatable
@@ -30,6 +31,8 @@ do
 	local AnalyzeAssignment = require("nattlua.analyzer.statements.assignment").AnalyzeAssignment
 
 	function META:AnalyzeStatement(node)
+		profiler.PushZone("AnalyzeStatement - " .. node.kind)
+
 		self.current_statement = node
 		self:PushAnalyzerEnvironment(node.environment or "runtime")
 
@@ -85,6 +88,8 @@ do
 		end
 
 		self:PopAnalyzerEnvironment()
+
+		profiler.PopZone()
 	end
 end
 
@@ -137,6 +142,8 @@ do
 	end
 
 	function META:AnalyzeTypeExpression(node, parent_obj)
+		profiler.PushZone("AnalyzeTypeExpression - " .. node.kind)
+
 		if not node.type_expression then return parent_obj end
 
 		self:PushAnalyzerEnvironment("typesystem")
@@ -157,13 +164,20 @@ do
 			end
 		end
 
+		profiler.PopZone()
+
 		return obj
 	end
 
 	function META:AnalyzeExpression(node)
+		profiler.PushZone("AnalyzeExpression - " .. node.kind)
+
 		local obj, err = self:AnalyzeExpression2(node)
 		obj = self:AnalyzeTypeExpression(node, obj)
 		node:AddType(obj or err)
+		
+		profiler.PopZone()
+
 		return obj, err
 	end
 end

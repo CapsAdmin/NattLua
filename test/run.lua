@@ -1,8 +1,11 @@
 local preprocess = require("nattlua.other.preprocess")
 local coverage = require("nattlua.other.coverage")
+local profiler = require("nattlua.other.profiler")
 local io = require("io")
 local io_write = _G.ON_EDITOR_SAVE and function() end or io.write
 local pcall = _G.pcall
+
+profiler.Start()
 
 --require("nattlua.other.helpers").GlobalLookup()
 function _G.test(name, cb)
@@ -138,3 +141,5 @@ if is_coverage then
 		end
 	end
 end
+
+profiler.Stop()

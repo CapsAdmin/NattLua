@@ -1,6 +1,5 @@
 local META = require("nattlua.parser.base")
-local runtime_syntax = require("nattlua.syntax.runtime")
-local typesystem_syntax = require("nattlua.syntax.typesystem")
+local profiler = require("nattlua.other.profiler")
 local Code = require("nattlua.code").New
 local Lexer = require("nattlua.lexer").New
 local math = _G.math
@@ -301,7 +300,9 @@ end
 function META:ReadNode()
 	if self:IsType("end_of_file") then return end
 
-	return self:ReadDebugCodeStatement() or
+	profiler.PushZone("ReadStatement")
+
+	local node = self:ReadDebugCodeStatement() or
 		self:ReadReturnStatement() or
 		self:ReadBreakStatement() or
 		self:ReadContinueStatement() or
@@ -331,6 +332,10 @@ function META:ReadNode()
 		self:ReadGenericForStatement() or
 		self:ReadDestructureAssignmentStatement() or
 		self:ReadCallOrAssignmentStatement()
+
+	profiler.PopZone()
+
+	return node
 end
 
 return META
