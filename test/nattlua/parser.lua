@@ -298,7 +298,6 @@ test("parser errors", function()
 end)
 
 parse[[
-    local parser = require "nattlua.parser"
     £ assert(#parser.nodes == 1)
     £ assert(parser.nodes[#parser.nodes + 1 - 1].kind == "root")
     
