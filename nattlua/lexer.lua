@@ -60,12 +60,11 @@ end
 
 function META:IsString(str--[[#: string]], offset--[[#: number | nil]])--[[#: boolean]]
 	offset = offset or 0
-	return self.Code:GetStringSlice(self.Position + offset, self.Position + offset + #str - 1) == str
+	return self.Code:IsStringSlice(self.Position + offset, self.Position + offset + #str - 1, str)
 end
 
-function META:IsStringLower(str--[[#: string]], offset--[[#: number | nil]])--[[#: boolean]]
-	offset = offset or 0
-	return self.Code:GetStringSlice(self.Position + offset, self.Position + offset + #str - 1):lower() == str
+function META:IsStringLower(str--[[#: string]])--[[#: boolean]]
+	return self.Code:GetStringSlice(self.Position, self.Position + #str - 1):lower() == str
 end
 
 function META:OnError(
@@ -221,6 +220,17 @@ do
 end
 
 function META:ReadFirstFromArray(strings--[[#: List<|string|>]])--[[#: boolean]]
+	for _, str in ipairs(strings) do
+		if self:IsString(str) then
+			self:Advance(#str)
+			return true
+		end
+	end
+
+	return false
+end
+
+function META:ReadFirstLowercaseFromArray(strings--[[#: List<|string|>]])--[[#: boolean]]
 	for _, str in ipairs(strings) do
 		if self:IsStringLower(str) then
 			self:Advance(#str)
@@ -456,7 +466,7 @@ do
 	end
 
 	local function ReadHexNumber(lexer--[[#: Lexer]])
-		if not lexer:IsString("0") or not lexer:IsStringLower("x", 1) then
+		if not lexer:IsString("0") or (not lexer:IsString("x", 1) and not lexer:IsString("X", 1)) then
 			return false
 		end
 
@@ -482,11 +492,11 @@ do
 					break
 				end
 
-				if lexer:IsStringLower("p") then
+				if lexer:IsString("p") or lexer:IsString("P") then
 					if ReadNumberPowExponent(lexer, "pow") then break end
 				end
 
-				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+				if lexer:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then break end
 
 				lexer:Error(
 					"malformed hex number, got " .. string.char(lexer:PeekByte()),
@@ -501,7 +511,7 @@ do
 	end
 
 	local function ReadBinaryNumber(lexer--[[#: Lexer]])
-		if not lexer:IsString("0") or not lexer:IsStringLower("b", 1) then
+		if not lexer:IsString("0") or not (lexer:IsString("b", 1) and not lexer:IsString("B", 1)) then
 			return false
 		end
 
@@ -518,11 +528,11 @@ do
 					break
 				end
 
-				if lexer:IsStringLower("e") then
+				if lexer:IsString("e") or lexer:IsString("E") then
 					if ReadNumberPowExponent(lexer, "exponent") then break end
 				end
 
-				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+				if lexer:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then break end
 
 				lexer:Error(
 					"malformed binary number, got " .. string.char(lexer:PeekByte()),
@@ -579,7 +589,7 @@ do
 					if ReadNumberPowExponent(lexer, "exponent") then break end
 				end
 
-				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+				if lexer:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then break end
 
 				lexer:Error(
 					"malformed number, got " .. string.char(lexer:PeekByte()) .. " in decimal notation",
