@@ -212,7 +212,7 @@ function META:IsType(token_type--[[#: TokenType]], offset--[[#: number | nil]])
 	if tk then return tk.type == token_type end
 end
 
-function META:ReadToken()
+function META:ParseToken()
 	local tk = self:GetToken()
 
 	if not tk then return nil end
@@ -262,7 +262,7 @@ do
 			error_expect(self, str, "value", error_start, error_stop)
 		end
 
-		return self:ReadToken()--[[# as Token]]
+		return self:ParseToken()--[[# as Token]]
 	end
 
 	function META:ExpectValueTranslate(
@@ -275,7 +275,7 @@ do
 			error_expect(self, str, "value", error_start, error_stop)
 		end
 
-		local tk = self:ReadToken()--[[# as Token]]
+		local tk = self:ParseToken()--[[# as Token]]
 		tk.value = new_str
 		return tk
 	end
@@ -289,7 +289,7 @@ do
 			error_expect(self, str, "type", error_start, error_stop)
 		end
 
-		return self:ReadToken()--[[# as Token]]
+		return self:ParseToken()--[[# as Token]]
 	end
 
 	function META:NewToken(type--[[#: TokenType]], value--[[#: string]])
@@ -301,7 +301,7 @@ do
 	end
 end
 
-function META:ReadValues(
+function META:ParseValues(
 	values--[[#: Map<|string, true|>]],
 	start--[[#: Token | nil]],
 	stop--[[#: Token | nil]]
@@ -323,10 +323,10 @@ function META:ReadValues(
 		self:Error("expected $1 got $2", start, stop, array, tk.type)
 	end
 
-	return self:ReadToken()
+	return self:ParseToken()
 end
 
-function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
+function META:ParseNodes(stop_token--[[#: {[string] = true} | nil]])
 	local out = {}
 	local i = 1
 
@@ -337,7 +337,7 @@ function META:ReadNodes(stop_token--[[#: {[string] = true} | nil]])
 
 		if stop_token and stop_token[tk.value] then break end
 
-		local node = (self--[[# as any]]):ReadNode()
+		local node = (self--[[# as any]]):ParseNode()
 
 		if not node then break end
 
@@ -359,7 +359,7 @@ function META:ResolvePath(path--[[#: string]])
 	return path
 end
 
-function META:ReadMultipleValues(
+function META:ParseMultipleValues(
 	max--[[#: nil | number]],
 	reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (nil | Node))]],
 	a--[[#: ref any]],b--[[#: ref any]],c--[[#: ref any]]

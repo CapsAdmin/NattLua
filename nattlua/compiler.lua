@@ -184,7 +184,7 @@ function META:Parse()
 	end
 
 	local ok, res = xpcall(function()
-		return parser:ReadRootNode()
+		return parser:ParseRootNode()
 	end, function(msg)
 		return traceback(self, parser, msg)
 	end)

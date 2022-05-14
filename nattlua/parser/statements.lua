@@ -24,29 +24,29 @@ do -- destructure statement
 		end
 	end
 
-	function META:ReadDestructureAssignmentStatement()
+	function META:ParseDestructureAssignmentStatement()
 		if not self:IsDestructureStatement() then return end
 
 		local node = self:StartNode("statement", "destructure_assignment")
 
 		do
 			if self:IsType("letter") then
-				node.default = self:ReadValueExpressionToken()
+				node.default = self:ParseValueExpressionToken()
 				node.default_comma = self:ExpectValue(",")
 			end
 
 			node.tokens["{"] = self:ExpectValue("{")
-			node.left = self:ReadMultipleValues(nil, self.ReadIdentifier)
+			node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
 			node.tokens["}"] = self:ExpectValue("}")
 			node.tokens["="] = self:ExpectValue("=")
-			node.right = self:ReadRuntimeExpression(0)
+			node.right = self:ParseRuntimeExpression(0)
 		end
 
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadLocalDestructureAssignmentStatement()
+	function META:ParseLocalDestructureAssignmentStatement()
 		if not self:IsLocalDestructureAssignmentStatement() then return end
 
 		local node = self:StartNode("statement", "local_destructure_assignment")
@@ -59,15 +59,15 @@ do -- destructure statement
 
 		do -- remaining
 			if self:IsType("letter") then
-				node.default = self:ReadValueExpressionToken()
+				node.default = self:ParseValueExpressionToken()
 				node.default_comma = self:ExpectValue(",")
 			end
 
 			node.tokens["{"] = self:ExpectValue("{")
-			node.left = self:ReadMultipleValues(nil, self.ReadIdentifier)
+			node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
 			node.tokens["}"] = self:ExpectValue("}")
 			node.tokens["="] = self:ExpectValue("=")
-			node.right = self:ReadRuntimeExpression(0)
+			node.right = self:ParseRuntimeExpression(0)
 		end
 
 		node = self:EndNode(node)
@@ -76,10 +76,10 @@ do -- destructure statement
 end
 
 do
-	function META:ReadFunctionNameIndex()
+	function META:ParseFunctionNameIndex()
 		if not runtime_syntax:IsValue(self:GetToken()) then return end
 
-		local node = self:ReadValueExpressionToken()
+		local node = self:ParseValueExpressionToken()
 		local first = node
 		first.standalone_letter = node
 
@@ -87,8 +87,8 @@ do
 			local left = node
 			local self_call = self:IsValue(":")
 			node = self:StartNode("expression", "binary_operator")
-			node.value = self:ReadToken()
-			node.right = self:ReadValueExpressionType("letter")
+			node.value = self:ParseToken()
+			node.right = self:ParseValueExpressionType("letter")
 			node.left = left
 			node.right.self_call = self_call
 			node.is_left_assignment = true
@@ -98,12 +98,12 @@ do
 		return node
 	end
 
-	function META:ReadFunctionStatement()
+	function META:ParseFunctionStatement()
 		if not self:IsValue("function") then return end
 
 		local node = self:StartNode("statement", "function")
 		node.tokens["function"] = self:ExpectValue("function")
-		node.expression = self:ReadFunctionNameIndex()
+		node.expression = self:ParseFunctionNameIndex()
 
 		if node.expression and node.expression.kind == "binary_operator" then
 			node.self_call = node.expression.right.self_call
@@ -111,16 +111,16 @@ do
 
 		if self:IsValue("<|") then
 			node.kind = "type_function"
-			self:ReadTypeFunctionBody(node)
+			self:ParseTypeFunctionBody(node)
 		else
-			self:ReadFunctionBody(node)
+			self:ParseFunctionBody(node)
 		end
 
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadAnalyzerFunctionStatement()
+	function META:ParseAnalyzerFunctionStatement()
 		if not (self:IsValue("analyzer") and self:IsValue("function", 1)) then return end
 
 		local node = self:StartNode("statement", "analyzer_function")
@@ -130,10 +130,10 @@ do
 
 		if self:IsValue("^") then
 			force_upvalue = true
-			node.tokens["^"] = self:ReadToken()
+			node.tokens["^"] = self:ParseToken()
 		end
 
-		node.expression = self:ReadFunctionNameIndex()
+		node.expression = self:ParseFunctionNameIndex()
 
 		do -- hacky
 			if node.expression.left then
@@ -147,25 +147,25 @@ do
 			if node.expression.value.value == ":" then node.self_call = true end
 		end
 
-		self:ReadAnalyzerFunctionBody(node, true)
+		self:ParseAnalyzerFunctionBody(node, true)
 		node = self:EndNode(node)
 		return node
 	end
 end
 
-function META:ReadLocalFunctionStatement()
+function META:ParseLocalFunctionStatement()
 	if not (self:IsValue("local") and self:IsValue("function", 1)) then return end
 
 	local node = self:StartNode("statement", "local_function")
 	node.tokens["local"] = self:ExpectValue("local")
 	node.tokens["function"] = self:ExpectValue("function")
 	node.tokens["identifier"] = self:ExpectType("letter")
-	self:ReadFunctionBody(node)
+	self:ParseFunctionBody(node)
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadLocalAnalyzerFunctionStatement()
+function META:ParseLocalAnalyzerFunctionStatement()
 	if
 		not (
 			self:IsValue("local") and
@@ -181,12 +181,12 @@ function META:ReadLocalAnalyzerFunctionStatement()
 	node.tokens["analyzer"] = self:ExpectValue("analyzer")
 	node.tokens["function"] = self:ExpectValue("function")
 	node.tokens["identifier"] = self:ExpectType("letter")
-	self:ReadAnalyzerFunctionBody(node, true)
+	self:ParseAnalyzerFunctionBody(node, true)
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadLocalTypeFunctionStatement()
+function META:ParseLocalTypeFunctionStatement()
 	if
 		not (
 			self:IsValue("local") and
@@ -204,12 +204,12 @@ function META:ReadLocalTypeFunctionStatement()
 	node.tokens["local"] = self:ExpectValue("local")
 	node.tokens["function"] = self:ExpectValue("function")
 	node.tokens["identifier"] = self:ExpectType("letter")
-	self:ReadTypeFunctionBody(node)
+	self:ParseTypeFunctionBody(node)
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadBreakStatement()
+function META:ParseBreakStatement()
 	if not self:IsValue("break") then return nil end
 
 	local node = self:StartNode("statement", "break")
@@ -218,33 +218,33 @@ function META:ReadBreakStatement()
 	return node
 end
 
-function META:ReadDoStatement()
+function META:ParseDoStatement()
 	if not self:IsValue("do") then return nil end
 
 	local node = self:StartNode("statement", "do")
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ReadNodes({["end"] = true})
+	node.statements = self:ParseNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadGenericForStatement()
+function META:ParseGenericForStatement()
 	if not self:IsValue("for") then return nil end
 
 	local node = self:StartNode("statement", "generic_for")
 	node.tokens["for"] = self:ExpectValue("for")
-	node.identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier)
+	node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier)
 	node.tokens["in"] = self:ExpectValue("in")
-	node.expressions = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
+	node.expressions = self:ParseMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ReadNodes({["end"] = true})
+	node.statements = self:ParseNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadGotoLabelStatement()
+function META:ParseGotoLabelStatement()
 	if not self:IsValue("::") then return nil end
 
 	local node = self:StartNode("statement", "goto_label")
@@ -255,7 +255,7 @@ function META:ReadGotoLabelStatement()
 	return node
 end
 
-function META:ReadGotoStatement()
+function META:ParseGotoStatement()
 	if not self:IsValue("goto") or not self:IsType("letter", 1) then return nil end
 
 	local node = self:StartNode("statement", "goto")
@@ -265,7 +265,7 @@ function META:ReadGotoStatement()
 	return node
 end
 
-function META:ReadIfStatement()
+function META:ParseIfStatement()
 	if not self:IsValue("if") then return nil end
 
 	local node = self:StartNode("statement", "if")
@@ -280,7 +280,7 @@ function META:ReadIfStatement()
 		if i == 1 then
 			token = self:ExpectValue("if")
 		else
-			token = self:ReadValues({
+			token = self:ParseValues({
 				["else"] = true,
 				["elseif"] = true,
 				["end"] = true,
@@ -295,7 +295,7 @@ function META:ReadIfStatement()
 			node.tokens["then"][i] = self:ExpectValue("then")
 		end
 
-		node.statements[i] = self:ReadNodes({
+		node.statements[i] = self:ParseNodes({
 			["end"] = true,
 			["else"] = true,
 			["elseif"] = true,
@@ -309,18 +309,18 @@ function META:ReadIfStatement()
 	return node
 end
 
-function META:ReadLocalAssignmentStatement()
+function META:ParseLocalAssignmentStatement()
 	if not self:IsValue("local") then return end
 
 	local node = self:StartNode("statement", "local_assignment")
 	node.tokens["local"] = self:ExpectValue("local")
 
 	if self.TealCompat and self:IsValue(",", 1) then
-		node.left = self:ReadMultipleValues(nil, self.ReadIdentifier, false)
+		node.left = self:ParseMultipleValues(nil, self.ParseIdentifier, false)
 
 		if self:IsValue(":") then
 			self:Advance(1)
-			local expressions = self:ReadMultipleValues(nil, self.ReadTealExpression, 0)
+			local expressions = self:ParseMultipleValues(nil, self.ParseTealExpression, 0)
 
 			for i, v in ipairs(node.left) do
 				v.type_expression = expressions[i]
@@ -328,46 +328,46 @@ function META:ReadLocalAssignmentStatement()
 			end
 		end
 	else
-		node.left = self:ReadMultipleValues(nil, self.ReadIdentifier)
+		node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
 	end
 
 	if self:IsValue("=") then
 		node.tokens["="] = self:ExpectValue("=")
-		node.right = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
+		node.right = self:ParseMultipleValues(nil, self.ParseRuntimeExpression, 0)
 	end
 
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadNumericForStatement()
+function META:ParseNumericForStatement()
 	if not (self:IsValue("for") and self:IsValue("=", 2)) then return nil end
 
 	local node = self:StartNode("statement", "numeric_for")
 	node.tokens["for"] = self:ExpectValue("for")
-	node.identifiers = self:ReadMultipleValues(1, self.ReadIdentifier)
+	node.identifiers = self:ParseMultipleValues(1, self.ParseIdentifier)
 	node.tokens["="] = self:ExpectValue("=")
-	node.expressions = self:ReadMultipleValues(3, self.ExpectRuntimeExpression, 0)
+	node.expressions = self:ParseMultipleValues(3, self.ExpectRuntimeExpression, 0)
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ReadNodes({["end"] = true})
+	node.statements = self:ParseNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadRepeatStatement()
+function META:ParseRepeatStatement()
 	if not self:IsValue("repeat") then return nil end
 
 	local node = self:StartNode("statement", "repeat")
 	node.tokens["repeat"] = self:ExpectValue("repeat")
-	node.statements = self:ReadNodes({["until"] = true})
+	node.statements = self:ParseNodes({["until"] = true})
 	node.tokens["until"] = self:ExpectValue("until")
 	node.expression = self:ExpectRuntimeExpression()
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadSemicolonStatement()
+function META:ParseSemicolonStatement()
 	if not self:IsValue(";") then return nil end
 
 	local node = self:StartNode("statement", "semicolon")
@@ -376,30 +376,30 @@ function META:ReadSemicolonStatement()
 	return node
 end
 
-function META:ReadReturnStatement()
+function META:ParseReturnStatement()
 	if not self:IsValue("return") then return nil end
 
 	local node = self:StartNode("statement", "return")
 	node.tokens["return"] = self:ExpectValue("return")
-	node.expressions = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
+	node.expressions = self:ParseMultipleValues(nil, self.ParseRuntimeExpression, 0)
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadWhileStatement()
+function META:ParseWhileStatement()
 	if not self:IsValue("while") then return nil end
 
 	local node = self:StartNode("statement", "while")
 	node.tokens["while"] = self:ExpectValue("while")
 	node.expression = self:ExpectRuntimeExpression()
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ReadNodes({["end"] = true})
+	node.statements = self:ParseNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadContinueStatement()
+function META:ParseContinueStatement()
 	if not self:IsValue("continue") then return nil end
 
 	local node = self:StartNode("statement", "continue")
@@ -408,10 +408,10 @@ function META:ReadContinueStatement()
 	return node
 end
 
-function META:ReadDebugCodeStatement()
+function META:ParseDebugCodeStatement()
 	if self:IsType("analyzer_debug_code") then
 		local node = self:StartNode("statement", "analyzer_debug_code")
-		node.lua_code = self:ReadValueExpressionType("analyzer_debug_code")
+		node.lua_code = self:ParseValueExpressionType("analyzer_debug_code")
 		node = self:EndNode(node)
 		return node
 	elseif self:IsType("parser_debug_code") then
@@ -427,7 +427,7 @@ function META:ReadDebugCodeStatement()
 	end
 end
 
-function META:ReadLocalTypeAssignmentStatement()
+function META:ParseLocalTypeAssignmentStatement()
 	if
 		not (
 			self:IsValue("local") and
@@ -441,13 +441,13 @@ function META:ReadLocalTypeAssignmentStatement()
 	local node = self:StartNode("statement", "local_assignment")
 	node.tokens["local"] = self:ExpectValue("local")
 	node.tokens["type"] = self:ExpectValue("type")
-	node.left = self:ReadMultipleValues(nil, self.ReadIdentifier)
+	node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
 	node.environment = "typesystem"
 
 	if self:IsValue("=") then
 		node.tokens["="] = self:ExpectValue("=")
 		self:PushParserEnvironment("typesystem")
-		node.right = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+		node.right = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
@@ -455,20 +455,20 @@ function META:ReadLocalTypeAssignmentStatement()
 	return node
 end
 
-function META:ReadTypeAssignmentStatement()
+function META:ParseTypeAssignmentStatement()
 	if not (self:IsValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1))) then
 		return
 	end
 
 	local node = self:StartNode("statement", "assignment")
 	node.tokens["type"] = self:ExpectValue("type")
-	node.left = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+	node.left = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 	node.environment = "typesystem"
 
 	if self:IsValue("=") then
 		node.tokens["="] = self:ExpectValue("=")
 		self:PushParserEnvironment("typesystem")
-		node.right = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+		node.right = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
@@ -476,10 +476,10 @@ function META:ReadTypeAssignmentStatement()
 	return node
 end
 
-function META:ReadCallOrAssignmentStatement()
+function META:ParseCallOrAssignmentStatement()
 	local start = self:GetToken()
 	self:SuppressOnNode()
-	local left = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
+	local left = self:ParseMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
 
 	if self:IsValue("=") then
 		local node = self:StartNode("statement", "assignment", left[1])
@@ -490,7 +490,7 @@ function META:ReadCallOrAssignmentStatement()
 			v.is_left_assignment = true
 		end
 
-		node.right = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
+		node.right = self:ParseMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
 		self:ReRunOnNode(node.left)
 		node = self:EndNode(node)
 		return node

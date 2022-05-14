@@ -12,7 +12,7 @@ local ipairs = _G.ipairs
 
 --[[#local type { ExpressionKind, StatementKind, statement, expression } = import("./parser/nodes.nlua")]]
 
-function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
+function META:ParseIdentifier(expect_type--[[#: nil | boolean]])
 	if not self:IsType("letter") and not self:IsValue("...") then return end
 
 	local node = self:StartNode("expression", "value") -- as ValueExpression ]]
@@ -41,73 +41,73 @@ function META:ReadIdentifier(expect_type--[[#: nil | boolean]])
 	return node
 end
 
-function META:ReadValueExpressionToken(expect_value--[[#: nil | string]])
+function META:ParseValueExpressionToken(expect_value--[[#: nil | string]])
 	local node = self:StartNode("expression", "value")
-	node.value = expect_value and self:ExpectValue(expect_value) or self:ReadToken()
+	node.value = expect_value and self:ExpectValue(expect_value) or self:ParseToken()
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadValueExpressionType(expect_value--[[#: TokenType]])
+function META:ParseValueExpressionType(expect_value--[[#: TokenType]])
 	local node = self:StartNode("expression", "value")
 	node.value = self:ExpectType(expect_value)
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadFunctionBody(
+function META:ParseFunctionBody(
 	node--[[#: expression.analyzer_function | expression["function"] | statement["local_function"] | statement["function"] ]]
 )
 	if self.TealCompat then
 		if self:IsValue("<") then
 			node.tokens["arguments_typesystem("] = self:ExpectValue("<")
-			node.identifiers_typesystem = self:ReadMultipleValues(nil, self.ReadIdentifier)
+			node.identifiers_typesystem = self:ParseMultipleValues(nil, self.ParseIdentifier)
 			node.tokens["arguments_typesystem)"] = self:ExpectValue(">")
 		end
 	end
 
 	node.tokens["arguments("] = self:ExpectValue("(")
-	node.identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier)
+	node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier)
 	node.tokens["arguments)"] = self:ExpectValue(")", node.tokens["arguments("])
 
 	if self:IsValue(":") then
 		node.tokens["return:"] = self:ExpectValue(":")
 		self:PushParserEnvironment("typesystem")
-		node.return_types = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+		node.return_types = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
-	node.statements = self:ReadNodes({["end"] = true})
+	node.statements = self:ParseNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["function"])
 	return node
 end
 
-function META:ReadTypeFunctionBody(
+function META:ParseTypeFunctionBody(
 	node--[[#: statement["type_function"] | expression["type_function"] | statement["type_function"] ]]
 )
 	if self:IsValue("!") then
 		node.tokens["!"] = self:ExpectValue("!")
 		node.tokens["arguments("] = self:ExpectValue("(")
-		node.identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier, true)
+		node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier, true)
 
 		if self:IsValue("...") then
-			table_insert(node.identifiers, self:ReadValueExpressionToken("..."))
+			table_insert(node.identifiers, self:ParseValueExpressionToken("..."))
 		end
 
 		node.tokens["arguments)"] = self:ExpectValue(")")
 	else
 		node.tokens["arguments("] = self:ExpectValue("<|")
-		node.identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier, true)
+		node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier, true)
 
 		if self:IsValue("...") then
-			table_insert(node.identifiers, self:ReadValueExpressionToken("..."))
+			table_insert(node.identifiers, self:ParseValueExpressionToken("..."))
 		end
 
 		node.tokens["arguments)"] = self:ExpectValue("|>", node.tokens["arguments("])
 
 		if self:IsValue("(") then
 			local lparen = self:ExpectValue("(")
-			local identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier, true)
+			local identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier, true)
 			local rparen = self:ExpectValue(")")
 			node.identifiers_typesystem = node.identifiers
 			node.identifiers = identifiers
@@ -121,26 +121,26 @@ function META:ReadTypeFunctionBody(
 	if self:IsValue(":") then
 		node.tokens["return:"] = self:ExpectValue(":")
 		self:PushParserEnvironment("typesystem")
-		node.return_types = self:ReadMultipleValues(math.huge, self.ExpectTypeExpression, 0)
+		node.return_types = self:ParseMultipleValues(math.huge, self.ExpectTypeExpression, 0)
 		self:PopParserEnvironment("typesystem")
 	end
 
 	node.environment = "typesystem"
 	self:PushParserEnvironment("typesystem")
 	local start = self:GetToken()
-	node.statements = self:ReadNodes({["end"] = true})
+	node.statements = self:ParseNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", start, start)
 	self:PopParserEnvironment()
 	return node
 end
 
-function META:ReadTypeFunctionArgument(expect_type--[[#: nil | boolean]])
+function META:ParseTypeFunctionArgument(expect_type--[[#: nil | boolean]])
 	if self:IsValue(")") then return end
 
 	if self:IsValue("...") then return end
 
 	if expect_type or self:IsType("letter") and self:IsValue(":", 1) then
-		local identifier = self:ReadToken()
+		local identifier = self:ParseToken()
 		local token = self:ExpectValue(":")
 		local exp = self:ExpectTypeExpression(0)
 		exp.tokens[":"] = token
@@ -151,13 +151,13 @@ function META:ReadTypeFunctionArgument(expect_type--[[#: nil | boolean]])
 	return self:ExpectTypeExpression(0)
 end
 
-function META:ReadAnalyzerFunctionBody(
+function META:ParseAnalyzerFunctionBody(
 	node--[[#: statement["analyzer_function"] | expression["analyzer_function"] | statement["local_analyzer_function"] ]],
 	type_args--[[#: boolean]]
 )
 	self:PushParserEnvironment("runtime")
 	node.tokens["arguments("] = self:ExpectValue("(")
-	node.identifiers = self:ReadMultipleValues(math_huge, self.ReadTypeFunctionArgument, type_args)
+	node.identifiers = self:ParseMultipleValues(math_huge, self.ParseTypeFunctionArgument, type_args)
 
 	if self:IsValue("...") then
 		local vararg = self:StartNode("expression", "value")
@@ -181,17 +181,17 @@ function META:ReadAnalyzerFunctionBody(
 	if self:IsValue(":") then
 		node.tokens["return:"] = self:ExpectValue(":")
 		self:PushParserEnvironment("typesystem")
-		node.return_types = self:ReadMultipleValues(math.huge, self.ReadTypeExpression, 0)
+		node.return_types = self:ParseMultipleValues(math.huge, self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
-		node.statements = self:ReadNodes({["end"] = true})
+		node.statements = self:ParseNodes({["end"] = true})
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectValue("end", start, start)
 	elseif not self:IsValue(",") then
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
-		node.statements = self:ReadNodes({["end"] = true})
+		node.statements = self:ParseNodes({["end"] = true})
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectValue("end", start, start)
 	end
@@ -221,7 +221,7 @@ function META:ParseString(str--[[#: string]], config--[[#: nil | any]])
 	if not tokens then return nil, code end
 
 	local parser = self.New(tokens, code, config)
-	local ok, node = xpcall(parser.ReadRootNode, debug.traceback, parser)
+	local ok, node = xpcall(parser.ParseRootNode, debug.traceback, parser)
 
 	if not ok then return nil, node end
 
@@ -246,7 +246,7 @@ end
 
 local imported_index = nil
 
-function META:ReadRootNode()
+function META:ParseRootNode()
 	local node = self:StartNode("statement", "root")
 	self.RootStatement = self.config and self.config.root_statement_override or node
 	local shebang
@@ -277,7 +277,7 @@ function META:ReadRootNode()
 		end
 	end
 
-	node.statements = self:ReadNodes()
+	node.statements = self:ParseNodes()
 
 	if shebang then table.insert(node.statements, 1, shebang) end
 
@@ -297,41 +297,41 @@ function META:ReadRootNode()
 	return node
 end
 
-function META:ReadNode()
+function META:ParseNode()
 	if self:IsType("end_of_file") then return end
 
 	profiler.PushZone("ReadStatement")
 
-	local node = self:ReadDebugCodeStatement() or
-		self:ReadReturnStatement() or
-		self:ReadBreakStatement() or
-		self:ReadContinueStatement() or
-		self:ReadSemicolonStatement() or
-		self:ReadGotoStatement() or
-		self:ReadGotoLabelStatement() or
-		self:ReadRepeatStatement() or
-		self:ReadAnalyzerFunctionStatement() or
-		self:ReadFunctionStatement() or
-		self:ReadLocalTypeFunctionStatement() or
-		self:ReadLocalFunctionStatement() or
-		self:ReadLocalAnalyzerFunctionStatement() or
-		self:ReadLocalTypeAssignmentStatement() or
-		self:ReadLocalDestructureAssignmentStatement() or
+	local node = self:ParseDebugCodeStatement() or
+		self:ParseReturnStatement() or
+		self:ParseBreakStatement() or
+		self:ParseContinueStatement() or
+		self:ParseSemicolonStatement() or
+		self:ParseGotoStatement() or
+		self:ParseGotoLabelStatement() or
+		self:ParseRepeatStatement() or
+		self:ParseAnalyzerFunctionStatement() or
+		self:ParseFunctionStatement() or
+		self:ParseLocalTypeFunctionStatement() or
+		self:ParseLocalFunctionStatement() or
+		self:ParseLocalAnalyzerFunctionStatement() or
+		self:ParseLocalTypeAssignmentStatement() or
+		self:ParseLocalDestructureAssignmentStatement() or
 		self.TealCompat and
-		self:ReadLocalTealRecord()
+		self:ParseLocalTealRecord()
 		or
 		self.TealCompat and
-		self:ReadLocalTealEnumStatement()
+		self:ParseLocalTealEnumStatement()
 		or
-		self:ReadLocalAssignmentStatement() or
-		self:ReadTypeAssignmentStatement() or
-		self:ReadDoStatement() or
-		self:ReadIfStatement() or
-		self:ReadWhileStatement() or
-		self:ReadNumericForStatement() or
-		self:ReadGenericForStatement() or
-		self:ReadDestructureAssignmentStatement() or
-		self:ReadCallOrAssignmentStatement()
+		self:ParseLocalAssignmentStatement() or
+		self:ParseTypeAssignmentStatement() or
+		self:ParseDoStatement() or
+		self:ParseIfStatement() or
+		self:ParseWhileStatement() or
+		self:ParseNumericForStatement() or
+		self:ParseGenericForStatement() or
+		self:ParseDestructureAssignmentStatement() or
+		self:ParseCallOrAssignmentStatement()
 
 	profiler.PopZone()
 
