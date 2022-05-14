@@ -294,7 +294,11 @@ function META:IsFalsy()
 end
 
 function META:GetLength()--[[#: number]]
-	--[[# do return _ as number end ]] -- TODO: recursion
+	if false--[[# as true]] then
+		-- TODO: recursion
+		return nil--[[# as number]]
+	end
+
 	if self.Remainder then return #self:GetData() + self.Remainder:GetLength() end
 
 	if self.Repeat then return #self:GetData() * self.Repeat end
@@ -436,25 +440,25 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 	local self = setmetatable(
 		{
 			Data = {},
-		Data = {}, 
+			Data = {},
 			Data = {},
 			Falsy = false,
-		Falsy = false, 
+			Falsy = false,
 			Falsy = false,
 			Truthy = false,
-		Truthy = false, 
+			Truthy = false,
 			Truthy = false,
 			Literal = false,
-		Literal = false, 
+			Literal = false,
 			Literal = false,
 			LiteralArgument = false,
-		LiteralArgument = false, 
+			LiteralArgument = false,
 			LiteralArgument = false,
 			ReferenceArgument = false,
-		ReferenceArgument = false, 
+			ReferenceArgument = false,
 			ReferenceArgument = false,
 			Unpackable = false,
-		Unpackable = false, 
+			Unpackable = false,
 			Unpackable = false,
 			suppress = false,
 		},
