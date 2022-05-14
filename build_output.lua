@@ -427,9 +427,11 @@ local ok
 
 if not _G.gmod then ok, table_new = pcall(require, "table.new") end
 
-if not ok then table_new = function(size, records)
-	return {}
-end end
+if not ok then
+	table_new = function(size, records)
+		return {}
+	end
+end
 
 return table_new end)(...) return __M end end
 do local __M; IMPORTS["nattlua.other.table_pool"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
@@ -523,16 +525,21 @@ function class.CreateTemplate(type_name)
 		end
 	end
 
+	local function get_line()
+		local info = debug.getinfo(3)
+		return info and info.source:sub(2) .. ":" .. info.currentline
+	end
+
 	function meta:DebugPropertyAccess()
 		meta.__index = function(self, key)
 			if meta[key] ~= nil then return meta[key] end
 
-			if not blacklist[key] then print(key) end
+			if not blacklist[key] then print(key, get_line()) end
 
 			return rawget(self, key)
 		end
 		meta.__newindex = function(self, key, val)
-			if not blacklist[key] then print(key, val) end
+			if not blacklist[key] then print(key, val, get_line()) end
 
 			rawset(self, key, val)
 		end
@@ -546,6 +553,7 @@ IMPORTS['nattlua/lexer/token.lua'] = function() local table_pool = IMPORTS['natt
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("token")
+local setmetatable = _G.setmetatable
 
 
 
@@ -870,15 +878,15 @@ function helpers.JITOptimize()
 		"maxrecord=8000", -- 4000: maximum number of recorded IR instructions
 		"maxirconst=8000", -- 500: maximum number of IR constants of a trace
 		"maxside=5000", -- 100: maximum number of side traces of a root trace
-		"maxsnap=5000", -- 500: maximum number of snapshots for a trace
+		"maxsnap=500", -- 500: maximum number of snapshots for a trace
 		"hotloop=56", -- 56: number of iterations to detect a hot loop or hot call
-		"hotexit=10", -- 10: number of taken exits to start a side trace
+		"hotexit=50", -- 10: number of taken exits to start a side trace
 		"tryside=4", -- 4: number of attempts to compile a side trace
 		"instunroll=1000", -- 4: maximum unroll factor for instable loops
 		"loopunroll=1000", -- 15: maximum unroll factor for loop ops in side traces
 		"callunroll=1000", -- 3: maximum unroll factor for pseudo-recursive calls
 		"recunroll=0", -- 2: minimum unroll factor for true recursion
-		"maxmcode=16384", -- 512: maximum total size of all machine code areas in KBytes
+		"maxmcode=" .. (512 * 64), -- 512: maximum total size of all machine code areas in KBytes
 		--jit.os == "x64" and "sizemcode=64" or "sizemcode=32", -- Size of each machine code area in KBytes (Windows: 64K)
 		"+fold", -- Constant Folding, Simplifications and Reassociation
 		"+cse", -- Common-Subexpression Elimination
@@ -1013,8 +1021,6 @@ local META = class.CreateTemplate("base")
 
 
 
-
-
 META:GetSet("AnalyzerEnvironment", nil)
 
 function META.Equal(a, b) --error("nyi " .. a.Type .. " == " .. b.Type)
@@ -1027,11 +1033,19 @@ end
 META:GetSet("Data", nil)
 
 function META:GetLuaType()
-	if self.Contract and self.Contract.TypeOverride then
-		return self.Contract.TypeOverride
+	if
+		self.Contract and
+		self.Contract.TypeOverride and
+		self.Contract.TypeOverride.Type == "string" and
+		self.Contract.TypeOverride.Data
+	then
+		return self.Contract.TypeOverride.Data
 	end
 
-	return self.TypeOverride or self.Type
+	return self.TypeOverride and
+		self.TypeOverride.Type == "string" and
+		self.TypeOverride.Data or
+		self.Type
 end
 
 do
@@ -1076,6 +1090,8 @@ do
 		self:SetMetaTable(obj:GetMetaTable())
 		self:SetAnalyzerEnvironment(obj:GetAnalyzerEnvironment())
 		self:SetTypeOverride(obj:GetTypeOverride())
+		self:SetLiteralArgument(obj:IsLiteralArgument())
+		self:SetReferenceArgument(obj:IsReferenceArgument())
 	end
 end
 
@@ -1107,8 +1123,6 @@ do -- comes from tbl.@TypeOverride = "my name"
 	META:GetSet("TypeOverride", nil)
 
 	function META:SetTypeOverride(name)
-		if type(name) == "table" and name:IsLiteral() then name = name:GetData() end
-
 		self.TypeOverride = name
 	end
 end
@@ -1157,6 +1171,11 @@ do
 
 		return true
 	end
+end
+
+do
+	META:IsSet("LiteralArgument", false)
+	META:IsSet("ReferenceArgument", false)
 end
 
 do
@@ -1258,467 +1277,15 @@ function META:GetFirstValue()
 end
 
 function META.LogicalComparison(l, r, op)
-	if op == "==" then
-		if l:IsLiteral() and r:IsLiteral() then return l:GetData() == r:GetData() end
-
-		return nil
-	end
-
 	return type_errors.binary(op, l, r)
 end
 
 function META.New()
 	return setmetatable({}, META)
-end
-
-
+end --copy<|META|>.@Self
 return META end
-do local __M; IMPORTS["nattlua.types.union"] = function(...) __M = __M or (function(...) local tostring = tostring
-local setmetatable = _G.setmetatable
-local table = _G.table
-local ipairs = _G.ipairs
-local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-
-
-
-local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
-
-
-
-
-
-META.Type = "union"
-
-function META:GetHash()
-	return tostring(self)
-end
-
-function META.Equal(a, b)
-	if a.suppress then return true end
-
-	if b.Type ~= "union" and #a.Data == 1 then return a.Data[1]:Equal(b) end
-
-	if a.Type ~= b.Type then return false end
-
-	if #a.Data ~= #b.Data then return false end
-
-	for i = 1, #a.Data do
-		local ok = false
-		local a = a.Data[i]
-
-		for i = 1, #b.Data do
-			local b = b.Data[i]
-			a.suppress = true
-			ok = a:Equal(b)
-			a.suppress = false
-
-			if ok then break end
-		end
-
-		if not ok then
-			a.suppress = false
-			return false
-		end
-	end
-
-	return true
-end
-
-function META:ShrinkToFunctionSignature()
-	local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
-	local arg = Tuple({})
-	local ret = Tuple({})
-
-	for _, func in ipairs(self.Data) do
-		if func.Type ~= "function" then return false end
-
-		arg:Merge(func:GetInputSignature())
-		ret:Merge(func:GetOutputSignature())
-	end
-
-	local Function = IMPORTS['nattlua.types.function']("nattlua.types.function").Function
-	return Function(arg, ret)
-end
-
-local sort = function(a, b)
-	return a < b
-end
-
-function META:__tostring()
-	if self.suppress then return "current_union" end
-
-	local s = {}
-	self.suppress = true
-
-	for _, v in ipairs(self.Data) do
-		table.insert(s, tostring(v))
-	end
-
-	if not s[1] then
-		self.suppress = false
-		return "|"
-	end
-
-	self.suppress = false
-	table.sort(s, sort)
-	return table.concat(s, " | ")
-end
-
-function META:AddType(e)
-	if e.Type == "union" then
-		for _, v in ipairs(e.Data) do
-			self:AddType(v)
-		end
-
-		return self
-	end
-
-	for _, v in ipairs(self.Data) do
-		if v:Equal(e) then
-			if
-				e.Type ~= "function" or
-				e:GetContract() or
-				(
-					e:GetFunctionBodyNode() and
-					(
-						e:GetFunctionBodyNode() == v:GetFunctionBodyNode()
-					)
-				)
-			then
-				return self
-			end
-		end
-	end
-
-	if e.Type == "string" or e.Type == "number" then
-		local sup = e
-
-		for i = #self.Data, 1, -1 do
-			local sub = self.Data[i] -- TODO, prove that the for loop will always yield TBaseType?
-			if sub.Type == sup.Type then
-				if sub:IsSubsetOf(sup) then table.remove(self.Data, i) end
-			end
-		end
-	end
-
-	table.insert(self.Data, e)
-	return self
-end
-
-function META:GetData()
-	return self.Data
-end
-
-function META:GetLength()
-	return #self.Data
-end
-
-function META:RemoveType(e)
-	if e.Type == "union" then
-		for i, v in ipairs(e.Data) do
-			self:RemoveType(v)
-		end
-
-		return self
-	end
-
-	for i, v in ipairs(self.Data) do
-		if v:Equal(e) then
-			table.remove(self.Data, i)
-
-			break
-		end
-	end
-
-	return self
-end
-
-function META:Clear()
-	self.Data = {}
-end
-
-function META:HasTuples()
-	for _, obj in ipairs(self.Data) do
-		if obj.Type == "tuple" then return true end
-	end
-
-	return false
-end
-
-function META:GetAtIndex(i)
-	if not self:HasTuples() then return self end
-
-	local val
-	local errors = {}
-
-	for _, obj in ipairs(self.Data) do
-		if obj.Type == "tuple" then
-			local found, err = obj:Get(i)
-
-			if found then
-				if val then val = self.New({val, found}) else val = found end
-			else
-				if val then val = self.New({val, Nil()}) else val = Nil() end
-
-				table.insert(errors, err)
-			end
-		else
-			if val then
-				-- a non tuple in the union would be treated as a tuple with the value repeated
-				val = self.New({val, obj})
-			elseif i == 1 then
-				val = obj
-			else
-				val = Nil()
-			end
-		end
-	end
-
-	if not val then return false, errors end
-
-	return val
-end
-
-function META:Get(key)
-	local errors = {}
-
-	for _, obj in ipairs(self.Data) do
-		local ok, reason = key:IsSubsetOf(obj)
-
-		if ok then return obj end
-
-		table.insert(errors, reason)
-	end
-
-	return type_errors.other(errors)
-end
-
-function META:IsEmpty()
-	return self.Data[1] == nil
-end
-
-function META:GetTruthy()
-	local copy = self:Copy()
-
-	for _, obj in ipairs(self.Data) do
-		if not obj:IsTruthy() then copy:RemoveType(obj) end
-	end
-
-	return copy
-end
-
-function META:GetFalsy()
-	local copy = self:Copy()
-
-	for _, obj in ipairs(self.Data) do
-		if not obj:IsFalsy() then copy:RemoveType(obj) end
-	end
-
-	return copy
-end
-
-function META:IsType(typ)
-	if self:IsEmpty() then return false end
-
-	for _, obj in ipairs(self.Data) do
-		if obj.Type ~= typ then return false end
-	end
-
-	return true
-end
-
-function META:HasType(typ)
-	return self:GetType(typ) ~= false
-end
-
-function META:CanBeNil()
-	for _, obj in ipairs(self.Data) do
-		if obj.Type == "symbol" and obj:GetData() == nil then return true end
-	end
-
-	return false
-end
-
-function META:GetType(typ)
-	for _, obj in ipairs(self.Data) do
-		if obj.Type == typ then return obj end
-	end
-
-	return false
-end
-
-function META:IsTargetSubsetOfChild(target)
-	local errors = {}
-
-	for _, obj in ipairs(self:GetData()) do
-		local ok, reason = target:IsSubsetOf(obj)
-
-		if ok then return true end
-
-		table.insert(errors, reason)
-	end
-
-	return type_errors.subset(target, self, errors)
-end
-
-function META.IsSubsetOf(A, B)
-	if B.Type ~= "union" then return A:IsSubsetOf(META.New({B})) end
-
-	if B.Type == "tuple" then B = B:Get(1) end
-
-	if not A.Data[1] then return type_errors.subset(A, B, "union is empty") end
-
-	for _, a in ipairs(A.Data) do
-		if a.Type == "any" then return true end
-	end
-
-	for _, a in ipairs(A.Data) do
-		local b, reason = B:Get(a)
-
-		if not b then return type_errors.missing(B, a, reason) end
-
-		local ok, reason = a:IsSubsetOf(b)
-
-		if not ok then return type_errors.subset(a, b, reason) end
-	end
-
-	return true
-end
-
-function META:Union(union)
-	local copy = self:Copy()
-
-	for _, e in ipairs(union.Data) do
-		copy:AddType(e)
-	end
-
-	return copy
-end
-
-function META:Copy(map, copy_tables)
-	map = map or {}
-	local copy = META.New()
-	map[self] = map[self] or copy
-
-	for _, e in ipairs(self.Data) do
-		if e.Type == "table" and not copy_tables then
-			copy:AddType(e)
-		else
-			copy:AddType(e:Copy(map, copy_tables))
-		end
-	end
-
-	copy:CopyInternalsFrom(self)
-	return copy
-end
-
-function META:IsTruthy()
-	for _, v in ipairs(self.Data) do
-		if v:IsTruthy() then return true end
-	end
-
-	return false
-end
-
-function META:IsFalsy()
-	for _, v in ipairs(self.Data) do
-		if v:IsFalsy() then return true end
-	end
-
-	return false
-end
-
-function META:DisableFalsy()
-	local found = {}
-
-	for _, v in ipairs(self.Data) do
-		if v:IsCertainlyFalse() then table.insert(found, v) end
-	end
-
-	for _, v in ipairs(found) do
-		self:RemoveType(v)
-	end
-
-	self.falsy_disabled = found
-	return self
-end
-
-function META:EnableFalsy()
-	-- never called
-	if not self.falsy_disabled then return end
-
-	for _, v in ipairs(self.falsy_disabled) do
-		self:AddType(v)
-	end
-end
-
-function META:SetMax(val)
-	-- never called
-	local copy = self:Copy()
-
-	for _, e in ipairs(copy.Data) do
-		e:SetMax(val)
-	end
-
-	return copy
-end
-
-function META:IsLiteral()
-	for _, obj in ipairs(self:GetData()) do
-		if not obj:IsLiteral() then return false end
-	end
-
-	return true
-end
-
-function META:GetLargestNumber()
-	-- never called
-	if #self:GetData() == 0 then return type_errors.other({"union is empty"}) end
-
-	local max = {}
-
-	for _, obj in ipairs(self:GetData()) do
-		if obj.Type ~= "number" then
-			return type_errors.other({"union must contain numbers only", self})
-		end
-
-		if obj:IsLiteral() then table.insert(max, obj) else return obj end
-	end
-
-	table.sort(max, function(a, b)
-		return a:GetData() > b:GetData()
-	end)
-
-	return max[1]
-end
-
-function META.New(data)
-	local self = setmetatable({
-		Data = {},
-		Falsy = false,
-		Truthy = false,
-		Literal = false,
-	}, META)
-
-	if data then for _, v in ipairs(data) do
-		self:AddType(v)
-	end end
-
-	self.lol = debug.traceback()
-	return self
-end
-
-return {
-	Union = META.New,
-	Nilable = function(typ)
-		return META.New({typ, Nil()})
-	end,
-} end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.symbol"] = function(...) __M = __M or (function(...) local type = type
 local tostring = tostring
-local ipairs = ipairs
-local table = _G.table
 local setmetatable = _G.setmetatable
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
@@ -1730,6 +1297,16 @@ META:GetSet("Data", nil)
 
 function META.Equal(a, b)
 	return a.Type == b.Type and a:GetData() == b:GetData()
+end
+
+function META.LogicalComparison(l, r, op)
+	if op == "==" then
+		if l:IsLiteral() and r:IsLiteral() then return l:GetData() == r:GetData() end
+
+		return nil
+	end
+
+	return type_errors.binary(op, l, r)
 end
 
 function META:GetLuaType()
@@ -1777,7 +1354,17 @@ function META:IsTruthy()
 end
 
 function META.New(data)
-	local self = setmetatable({Data = data}, META)
+	local self = setmetatable(
+		{
+			Data = data,
+			Falsy = false,
+			Truthy = false,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+		},
+		META
+	)
 	self:SetLiteral(true)
 	return self
 end
@@ -1793,10 +1380,6 @@ return {
 	end,
 	False = function()
 		return Symbol(false)
-	end,
-	Boolean = function()
-		local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-		return Union({Symbol(true), Symbol(false)})
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.number"] = function(...) __M = __M or (function(...) local math = math
@@ -1853,6 +1436,10 @@ end
 function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end
 
+	if b:IsLiteralArgument() and a:IsLiteralArgument() then return true end
+
+	if b:IsLiteralArgument() and not a:IsLiteral() then return false end
+
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
 
 	if a:IsLiteral() and b:IsLiteral() then
@@ -1889,9 +1476,17 @@ function META.IsSubsetOf(A, B)
 
 	if B.Type == "any" then return true end
 
-	if B.Type == "union" then return (B):IsTargetSubsetOfChild(A) end
+	if B.Type == "union" then
+		return (B):IsTargetSubsetOfChild(A)
+	end
 
 	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
+
+	if A:IsLiteralArgument() and B:IsLiteralArgument() then return true end
+
+	if B:IsLiteralArgument() and not A:IsLiteral() then
+		return type_errors.subset(A, B)
+	end
 
 	if A:IsLiteral() and B:IsLiteral() then
 		local a = A:GetData()
@@ -1936,6 +1531,8 @@ function META:__tostring()
 	if self:GetMax() then s = s .. ".." .. tostring(self:GetMax()) end
 
 	if self:IsLiteral() then return s end
+
+	if self:IsLiteralArgument() then return "literal number" end
 
 	return "number"
 end
@@ -2176,6 +1773,8 @@ function META.New(data)
 			Falsy = false,
 			Truthy = true,
 			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
 		},
 		META
 	)
@@ -2205,63 +1804,17 @@ return {
 	end,
 	TNumber = TNumber,
 } end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.any"] = function(...) __M = __M or (function(...) local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
-
-
-
-META.Type = "any"
-
-function META:Get(key)
-	return self
-end
-
-function META:Set(key, val)
-	return true
-end
-
-function META:Copy()
-	return self
-end
-
-function META.IsSubsetOf(A, B)
-	return true
-end
-
-function META:__tostring()
-	return "any"
-end
-
-function META:IsFalsy()
-	return true
-end
-
-function META:IsTruthy()
-	return true
-end
-
-function META.Equal(a, b)
-	return a.Type == b.Type
-end
-
-return {
-	Any = function()
-		return META.New()
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.tuple"] = function(...) __M = __M or (function(...) local tostring = tostring
-local table = _G.table
-local math = math
-local assert = assert
-local print = print
-local debug = debug
-local error = error
+do local __M; IMPORTS["nattlua.types.union"] = function(...) __M = __M or (function(...) local tostring = tostring
 local setmetatable = _G.setmetatable
-local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
-local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+local table = _G.table
 local ipairs = _G.ipairs
-local type = _G.type
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
+local False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
+local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+
+
+
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 
 
@@ -2269,136 +1822,290 @@ local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 
 
 
+META.Type = "union"
 
-META.Type = "tuple"
-META:GetSet("Unpackable", false)
+function META:GetHash()
+	return tostring(self)
+end
 
 function META.Equal(a, b)
-	if a.Type ~= b.Type then return false end
-
 	if a.suppress then return true end
+
+	if b.Type ~= "union" and #a.Data == 1 and a.Data[1] then
+		return a.Data[1]:Equal(b)
+	end
+
+	if a.Type ~= b.Type then return false end
 
 	if #a.Data ~= #b.Data then return false end
 
 	for i = 1, #a.Data do
-		a.suppress = true
-		local ok = a.Data[i]:Equal(b.Data[i])
-		a.suppress = false
+		local ok = false
+		local a = a.Data[i]
 
-		if not ok then return false end
+		for i = 1, #b.Data do
+			local b = b.Data[i]
+			a.suppress = true
+			ok = a:Equal(b)
+			a.suppress = false
+
+			if ok then break end
+		end
+
+		if not ok then
+			a.suppress = false
+			return false
+		end
 	end
 
 	return true
 end
 
+local sort = function(a, b)
+	return a < b
+end
+
 function META:__tostring()
-	if self.suppress then return "current_tuple" end
+	if self.suppress then return "current_union" end
 
+	local s = {}
 	self.suppress = true
-	local strings = {}
 
-	for i, v in ipairs(self:GetData()) do
-		strings[i] = tostring(v)
+	for _, v in ipairs(self.Data) do
+		table.insert(s, tostring(v))
 	end
 
-	if self.Remainder then table.insert(strings, tostring(self.Remainder)) end
-
-	local s = "("
-
-	if #strings == 1 then
-		s = s .. strings[1] .. ","
-	else
-		s = s .. table.concat(strings, ", ")
+	if not s[1] then
+		self.suppress = false
+		return "|"
 	end
-
-	s = s .. ")"
-
-	if self.Repeat then s = s .. "*" .. tostring(self.Repeat) end
 
 	self.suppress = false
-	return s
+	table.sort(s, sort)
+	return table.concat(s, " | ")
 end
 
-function META:Merge(tup)
-	local src = self:GetData()
+function META:AddType(e)
+	if e.Type == "union" then
+		for _, v in ipairs(e.Data) do
+			self:AddType(v)
+		end
 
-	for i = 1, tup:GetMinimumLength() do
-		local a = self:Get(i)
-		local b = tup:Get(i)
-
-		if a then src[i] = Union({a, b}) else src[i] = b:Copy() end
+		return self
 	end
 
-	self.Remainder = tup.Remainder or self.Remainder
-	self.Repeat = tup.Repeat or self.Repeat
-	return self
-end
-
-function META:Copy(map, ...)
-	map = map or {}
-	local copy = self.New({})
-	map[self] = map[self] or copy
-
-	for i, v in ipairs(self:GetData()) do
-		v = map[v] or v:Copy(map, ...)
-		map[v] = map[v] or v
-		copy:Set(i, v)
-	end
-
-	if self.Remainder then copy.Remainder = self.Remainder:Copy(nil, ...) end
-
-	copy.Repeat = self.Repeat
-	copy.Unpackable = self.Unpackable
-	copy:CopyInternalsFrom(self)
-	return copy
-end
-
-function META.IsSubsetOf(A, B, max_length)
-	if A == B then return true end
-
-	if A.suppress then return true end
-
-	if A.Remainder and A:Get(1).Type == "any" and #A:GetData() == 0 then
-		return true
-	end
-
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
-
-	if
-		A:Get(1) and
-		A:Get(1).Type == "any" and
-		B.Type == "tuple" and
-		B:GetLength() == 0
-	then
-		return true
-	end
-
-	if B.Type == "any" then return true end
-
-	if B.Type == "table" then
-		if not B:IsNumericallyIndexed() then
-			return type_errors.numerically_indexed(B)
+	for _, v in ipairs(self.Data) do
+		if v:Equal(e) then
+			if
+				e.Type ~= "function" or
+				e:GetContract() or
+				(
+					e:GetFunctionBodyNode() and
+					(
+						e:GetFunctionBodyNode() == v:GetFunctionBodyNode()
+					)
+				)
+			then
+				return self
+			end
 		end
 	end
 
-	if B.Type ~= "tuple" then return type_errors.type_mismatch(A, B) end
+	if e.Type == "string" or e.Type == "number" then
+		local sup = e
 
-	max_length = max_length or math.max(A:GetMinimumLength(), B:GetMinimumLength())
+		for i = #self.Data, 1, -1 do
+			local sub = self.Data[i] -- TODO, prove that the for loop will always yield TBaseType?
+			if sub.Type == sup.Type then
+				if sub:IsSubsetOf(sup) then table.remove(self.Data, i) end
+			end
+		end
+	end
 
-	for i = 1, max_length do
-		local a, err = A:Get(i)
+	table.insert(self.Data, e)
+	return self
+end
 
-		if not a then return type_errors.subset(A, B, err) end
+function META:GetData()
+	return self.Data
+end
 
-		local b, err = B:Get(i)
+function META:GetLength()
+	return #self.Data
+end
 
-		if not b and a.Type == "any" then break end
+function META:RemoveType(e)
+	if e.Type == "union" then
+		for i, v in ipairs(e.Data) do
+			self:RemoveType(v)
+		end
 
-		if not b then return type_errors.missing(B, i, err) end
+		return self
+	end
 
-		A.suppress = true
+	for i, v in ipairs(self.Data) do
+		if v:Equal(e) then
+			table.remove(self.Data, i)
+
+			break
+		end
+	end
+
+	return self
+end
+
+function META:Clear()
+	self.Data = {}
+end
+
+function META:HasTuples()
+	for _, obj in ipairs(self.Data) do
+		if obj.Type == "tuple" then return true end
+	end
+
+	return false
+end
+
+function META:GetAtIndex(i)
+	assert(type(i) == "number")
+
+	if not self:HasTuples() then return self end
+
+	local val
+	local errors = {}
+
+	for _, obj in ipairs(self.Data) do
+		if obj.Type == "tuple" then
+			local found, err = obj:Get(i)
+
+			if found then
+				if val then val = self.New({val, found}) else val = found end
+			else
+				if val then val = self.New({val, Nil()}) else val = Nil() end
+
+				table.insert(errors, err)
+			end
+		else
+			if val then
+				-- a non tuple in the union would be treated as a tuple with the value repeated
+				val = self.New({val, obj})
+			elseif i == 1 then
+				val = obj
+			else
+				val = Nil()
+			end
+		end
+	end
+
+	if not val then return false, errors end
+
+	return val
+end
+
+function META:Get(key)
+	local errors = {}
+
+	for _, obj in ipairs(self.Data) do
+		local ok, reason = key:IsSubsetOf(obj)
+
+		if ok then return obj end
+
+		table.insert(errors, reason)
+	end
+
+	return type_errors.other(errors)
+end
+
+function META:IsEmpty()
+	return self.Data[1] == nil
+end
+
+function META:GetTruthy()
+	local copy = self:Copy()
+
+	for _, obj in ipairs(self.Data) do
+		if not obj:IsTruthy() then copy:RemoveType(obj) end
+	end
+
+	return copy
+end
+
+function META:GetFalsy()
+	local copy = self:Copy()
+
+	for _, obj in ipairs(self.Data) do
+		if not obj:IsFalsy() then copy:RemoveType(obj) end
+	end
+
+	return copy
+end
+
+function META:IsType(typ)
+	assert(type(typ) == "string")
+
+	if self:IsEmpty() then return false end
+
+	for _, obj in ipairs(self.Data) do
+		if obj.Type ~= typ then return false end
+	end
+
+	return true
+end
+
+function META:HasType(typ)
+	assert(type(typ) == "string")
+	return self:GetType(typ) ~= false
+end
+
+function META:CanBeNil()
+	for _, obj in ipairs(self.Data) do
+		if obj.Type == "symbol" and obj:GetData() == nil then return true end
+	end
+
+	return false
+end
+
+function META:GetType(typ)
+	assert(type(typ) == "string")
+
+	for _, obj in ipairs(self.Data) do
+		if obj.Type == typ then return obj end
+	end
+
+	return false
+end
+
+function META:IsTargetSubsetOfChild(target)
+	local errors = {}
+
+	for _, obj in ipairs(self:GetData()) do
+		local ok, reason = target:IsSubsetOf(obj)
+
+		if ok then return true end
+
+		table.insert(errors, reason)
+	end
+
+	return type_errors.subset(target, self, errors)
+end
+
+function META.IsSubsetOf(A, B)
+	if B.Type ~= "union" then return A:IsSubsetOf(META.New({B})) end
+
+	if B.Type == "tuple" then B = B:Get(1) end
+
+	if not A.Data[1] then return type_errors.subset(A, B, "union is empty") end
+
+	for _, a in ipairs(A.Data) do
+		if a.Type == "any" then return true end
+	end
+
+	for _, a in ipairs(A.Data) do
+		local b, reason = B:Get(a)
+
+		if not b then return type_errors.missing(B, a, reason) end
+
 		local ok, reason = a:IsSubsetOf(b)
-		A.suppress = false
 
 		if not ok then return type_errors.subset(a, b, reason) end
 	end
@@ -2406,536 +2113,143 @@ function META.IsSubsetOf(A, B, max_length)
 	return true
 end
 
-function META.IsSubsetOfTupleWithoutExpansion(A, B)
-	for i, a in ipairs(A:GetData()) do
-		local b = B:GetWithoutExpansion(i)
-		local ok, err = a:IsSubsetOf(b)
+function META:Union(union)
+	assert(union.Type == "union")
+	local copy = self:Copy()
 
-		if ok then return ok, err, a, b, i end
+	for _, e in ipairs(union.Data) do
+		copy:AddType(e)
 	end
 
-	return true
+	return copy
 end
 
-function META.IsSubsetOfTuple(A, B)
-	if A:Equal(B) then return true end
+function META:Copy(map, copy_tables)
+	map = map or {}
+	local copy = META.New()
+	map[self] = map[self] or copy
 
-	for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
-		local a, a_err = A:Get(i)
-		local b, b_err = B:Get(i)
-
-		if b and b.Type == "union" then b, b_err = b:GetAtIndex(i) end
-
-		if not a then
-			if b and b.Type == "any" then
-				a = Any()
-			else
-				return a, a_err, a, b, i
-			end
+	for _, e in ipairs(self.Data) do
+		if e.Type == "table" and not copy_tables then
+			copy:AddType(e)
+		else
+			copy:AddType(e:Copy(map, copy_tables))
 		end
-
-		if not b then return b, b_err, a, b, i end
-
-		if b.Type == "tuple" then
-			b = b:Get(1)
-
-			if not b then break end
-		end
-
-		a = a or Nil()
-		b = b or Nil()
-		local ok, reason = a:IsSubsetOf(b)
-
-		if not ok then return ok, reason, a, b, i end
 	end
 
-	return true
-end
-
-function META:HasTuples()
-	for _, v in ipairs(self.Data) do
-		if v.Type == "tuple" then return true end
-	end
-
-	if self.Remainder and self.Remainder.Type == "tuple" then return true end
-
-	return false
-end
-
-function META:Get(key)
-	local real_key = key
-
-	if type(key) == "table" and key.Type == "number" and key:IsLiteral() then
-		key = key:GetData()
-	end
-
-	if type(key) ~= "number" then
-		print(real_key, "REAL_KEY")
-		error("key must be a number, got " .. tostring(key) .. debug.traceback())
-	end
-
-	local val = self:GetData()[key]
-
-	if not val and self.Repeat and key <= (#self:GetData() * self.Repeat) then
-		return self:GetData()[((key - 1) % #self:GetData()) + 1]
-	end
-
-	if not val and self.Remainder then
-		return self.Remainder:Get(key - #self:GetData())
-	end
-
-	if
-		not val and
-		self:GetData()[#self:GetData()] and
-		(
-			self:GetData()[#self:GetData()].Repeat or
-			self:GetData()[#self:GetData()].Remainder
-		)
-	then
-		return self:GetData()[#self:GetData()]:Get(key)
-	end
-
-	if not val then
-		return type_errors.other({"index ", real_key, " does not exist"})
-	end
-
-	return val
-end
-
-function META:GetWithoutExpansion(key)
-	local val = self:GetData()[key]
-
-	if not val then if self.Remainder then return self.Remainder end end
-
-	if not val then return type_errors.other({"index ", key, " does not exist"}) end
-
-	return val
-end
-
-function META:Set(i, val)
-	if type(i) == "table" then
-		i = i:GetData()
-		return false, "expected number"
-	end
-
-	if val.Type == "tuple" and val:GetLength() == 1 then val = val:Get(1) end
-
-	self.Data[i] = val
-
-	if i > 32 then
-		print(debug.traceback())
-		error("tuple too long", 2)
-	end
-
-	return true
-end
-
-function META:IsEmpty()
-	-- never called
-	return self:GetLength() == 0
+	copy:CopyInternalsFrom(self)
+	return copy
 end
 
 function META:IsTruthy()
-	local obj = self:Get(1)
-
-	if obj then return obj:IsTruthy() end
+	for _, v in ipairs(self.Data) do
+		if v:IsTruthy() then return true end
+	end
 
 	return false
 end
 
 function META:IsFalsy()
-	local obj = self:Get(1)
-
-	if obj then return obj:IsFalsy() end
+	for _, v in ipairs(self.Data) do
+		if v:IsFalsy() then return true end
+	end
 
 	return false
 end
 
-function META:GetLength()
-	if self.Remainder then return #self:GetData() + self.Remainder:GetLength() end
+function META:DisableFalsy()
+	local found = {}
 
-	if self.Repeat then return #self:GetData() * self.Repeat end
-
-	return #self:GetData()
-end
-
-function META:GetMinimumLength()
-	if self.Repeat == math.huge or self.Repeat == 0 then return 0 end
-
-	local len = #self:GetData()
-	local found_nil = false
-
-	for i = #self:GetData(), 1, -1 do
-		local obj = self:GetData()[i]
-
-		if
-			(
-				obj.Type == "union" and
-				obj:CanBeNil()
-			) or
-			(
-				obj.Type == "symbol" and
-				obj:GetData() == nil
-			)
-		then
-			found_nil = true
-			len = i - 1
-		elseif found_nil then
-			len = i
-
-			break
-		end
+	for _, v in ipairs(self.Data) do
+		if v:IsCertainlyFalse() then table.insert(found, v) end
 	end
 
-	return len
-end
-
-function META:GetSafeLength(arguments)
-	local len = self:GetLength()
-
-	if len == math.huge or arguments:GetLength() == math.huge then
-		return math.max(self:GetMinimumLength(), arguments:GetMinimumLength())
+	for _, v in ipairs(found) do
+		self:RemoveType(v)
 	end
 
-	return len
-end
-
-function META:AddRemainder(obj)
-	self.Remainder = obj
+	self.falsy_disabled = found
 	return self
 end
 
-function META:SetRepeat(amt)
-	self.Repeat = amt
-	return self
-end
+function META:EnableFalsy()
+	-- never called
+	if not self.falsy_disabled then return end
 
-function META:Unpack(length)
-	length = length or self:GetLength()
-	length = math.min(length, self:GetLength())
-	assert(length ~= math.huge, "length must be finite")
-	local out = {}
-	local i = 1
-
-	for _ = 1, length do
-		out[i] = self:Get(i)
-		i = i + 1
+	for _, v in ipairs(self.falsy_disabled) do
+		self:AddType(v)
 	end
-
-	return table.unpack(out)
 end
 
-function META:UnpackWithoutExpansion()
-	local tbl = {table.unpack(self.Data)}
-
-	if self.Remainder then table.insert(tbl, self.Remainder) end
-
-	return table.unpack(tbl)
-end
-
-function META:Slice(start, stop)
-	-- TODO: not accurate yet
-	start = start or 1
-	stop = stop or #self:GetData()
+function META:SetMax(val)
+	-- never called
 	local copy = self:Copy()
-	local data = {}
 
-	for i = start, stop do
-		table.insert(data, self:GetData()[i])
+	for _, e in ipairs(copy.Data) do
+		e:SetMax(val)
 	end
 
-	copy:SetData(data)
 	return copy
 end
 
-function META:GetFirstValue()
-	if self.Remainder then return self.Remainder:GetFirstValue() end
-
-	local first, err = self:Get(1)
-
-	if not first then return first, err end
-
-	if first.Type == "tuple" then return first:GetFirstValue() end
-
-	return first
-end
-
-function META:Concat(tup)
-	local start = self:GetLength()
-
-	for i, v in ipairs(tup:GetData()) do
-		self:Set(start + i, v)
+function META:IsLiteral()
+	for _, obj in ipairs(self:GetData()) do
+		if not obj:IsLiteral() then return false end
 	end
 
-	return self
+	return true
 end
 
-function META:SetTable(data)
-	self.Data = {}
+function META:GetLargestNumber()
+	-- never called
+	if #self:GetData() == 0 then return type_errors.other({"union is empty"}) end
 
-	for i, v in ipairs(data) do
-		if
-			i == #data and
-			v.Type == "tuple" and
-			not (
-				v
-			).Remainder and
-			v ~= self
-		then
-			self:AddRemainder(v)
-		else
-			table.insert(self.Data, v)
+	local max = {}
+
+	for _, obj in ipairs(self:GetData()) do
+		if obj.Type ~= "number" then
+			return type_errors.other({"union must contain numbers only", self})
 		end
+
+		if obj:IsLiteral() then table.insert(max, obj) else return obj end
 	end
+
+	table.sort(max, function(a, b)
+		return a:GetData() > b:GetData()
+	end)
+
+	return max[1]
 end
 
 function META.New(data)
-	local self = setmetatable({Data = {}, Falsy = false, Truthy = false, Literal = false}, META)
+	local self = setmetatable(
+		{
+			Data = {},
+			Falsy = false,
+			Truthy = false,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+			suppress = false,
+			falsy_disabled = nil,
+		},
+		META
+	)
 
-	if data then self:SetTable(data) end
+	if data then for _, v in ipairs(data) do
+		self:AddType(v)
+	end end
 
 	return self
 end
 
 return {
-	Tuple = META.New,
-	VarArg = function(t)
-		local self = META.New({t})
-		self:SetRepeat(math.huge)
-		return self
+	Union = META.New,
+	Nilable = function(typ--[[: TBaseType]] )
+		return META.New({typ, Nil()})
 	end,
-	NormalizeTuples = function(types)
-		local arguments
-
-		if #types == 1 and types[1].Type == "tuple" then
-			arguments = types[1]
-		else
-			local temp = {}
-
-			for i, v in ipairs(types) do
-				if v.Type == "tuple" then
-					if i == #types then
-						table.insert(temp, v)
-					else
-						local obj = v:Get(1)
-
-						if obj then table.insert(temp, obj) end
-					end
-				else
-					table.insert(temp, v)
-				end
-			end
-
-			arguments = META.New(temp)
-		end
-
-		return arguments
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.function"] = function(...) __M = __M or (function(...) local tostring = _G.tostring
-local ipairs = _G.ipairs
-local setmetatable = _G.setmetatable
-local table = _G.table
-local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
-local VarArg = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").VarArg
-local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
-local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
-META.Type = "function"
-META.Truthy = true
-META.Falsy = false
-META:IsSet("Called", false)
-META:IsSet("ExplicitInputSignature", false)
-META:IsSet("ExplicitOutputSignature", false)
-META:GetSet("InputSignature", nil)
-META:GetSet("OutputSignature", nil)
-META:GetSet("FunctionBodyNode", nil)
-META:GetSet("Scope", nil)
-META:GetSet("UpvaluePosition", nil)
-META:GetSet("InputIdentifiers", nil)
-META:GetSet("AnalyzerFunction", nil)
-META:IsSet("ArgumentsInferred", false)
-META:GetSet("PreventInputArgumentExpansion", false)
-
-function META:__tostring()
-	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
-end
-
-function META:__call(...)
-	if self:GetAnalyzerFunction() then return self:GetAnalyzerFunction()(...) end
-end
-
-function META.Equal(a, b)
-	return a.Type == b.Type and
-		a:GetInputSignature():Equal(b:GetInputSignature()) and
-		a:GetOutputSignature():Equal(b:GetOutputSignature())
-end
-
-function META:Copy(map, ...)
-	map = map or {}
-	local copy = self.New({arg = Tuple({}), ret = Tuple({})})
-	map[self] = map[self] or copy
-	copy:SetUpvaluePosition(self:GetUpvaluePosition())
-	copy:SetOutputSignature(self:GetOutputSignature():Copy(map, ...))
-	copy:SetInputSignature(self:GetInputSignature():Copy(map, ...))
-	copy:SetAnalyzerFunction(self:GetAnalyzerFunction())
-	copy:SetScope(self:GetScope())
-	copy:SetLiteral(self:IsLiteral())
-	copy:CopyInternalsFrom(self)
-	copy:SetFunctionBodyNode(self:GetFunctionBodyNode())
-	copy:SetInputIdentifiers(self:GetInputIdentifiers())
-	copy:SetCalled(self:IsCalled())
-	--copy:SetExplicitInputSignature(self:IsExplicitInputSignature())
-	--copy:SetExplicitOutputSignature(self:IsExplicitOutputSignature())
-	copy:SetArgumentsInferred(self:IsArgumentsInferred())
-	copy:SetPreventInputArgumentExpansion(self:GetPreventInputArgumentExpansion())
-	return copy
-end
-
-function META.IsSubsetOf(A, B)
-	if B.Type == "tuple" then B = B:Get(1) end
-
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
-
-	if B.Type == "any" then return true end
-
-	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
-
-	local ok, reason = A:GetInputSignature():IsSubsetOf(B:GetInputSignature())
-
-	if not ok then
-		return type_errors.subset(A:GetInputSignature(), B:GetInputSignature(), reason)
-	end
-
-	local ok, reason = A:GetOutputSignature():IsSubsetOf(B:GetOutputSignature())
-
-	if
-		not ok and
-		(
-			(
-				not B:IsCalled() and
-				not B:IsExplicitOutputSignature()
-			)
-			or
-			(
-				not A:IsCalled() and
-				not A:IsExplicitOutputSignature()
-			)
-		)
-	then
-		return true
-	end
-
-	if not ok then
-		return type_errors.subset(A:GetOutputSignature(), B:GetOutputSignature(), reason)
-	end
-
-	return true
-end
-
-function META.IsCallbackSubsetOf(A, B)
-	if B.Type == "tuple" then B = B:Get(1) end
-
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
-
-	if B.Type == "any" then return true end
-
-	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
-
-	local ok, reason = A:GetInputSignature():IsSubsetOf(B:GetInputSignature(), A:GetInputSignature():GetMinimumLength())
-
-	if not ok then
-		return type_errors.subset(A:GetInputSignature(), B:GetInputSignature(), reason)
-	end
-
-	local ok, reason = A:GetOutputSignature():IsSubsetOf(B:GetOutputSignature())
-
-	if
-		not ok and
-		(
-			(
-				not B:IsCalled() and
-				not B:IsExplicitOutputSignature()
-			)
-			or
-			(
-				not A:IsCalled() and
-				not A:IsExplicitOutputSignature()
-			)
-		)
-	then
-		return true
-	end
-
-	if not ok then
-		return type_errors.subset(A:GetOutputSignature(), B:GetOutputSignature(), reason)
-	end
-
-	return true
-end
-
-do
-	function META:AddScope(arguments, return_result, scope)
-		self.scopes = self.scopes or {}
-		table.insert(
-			self.scopes,
-			{
-				arguments = arguments,
-				return_result = return_result,
-				scope = scope,
-			}
-		)
-	end
-
-	function META:GetSideEffects()
-		local out = {}
-
-		for _, call_info in ipairs(self.scopes) do
-			for _, val in ipairs(call_info.scope:GetDependencies()) do
-				if val.scope ~= call_info.scope then table.insert(out, val) end
-			end
-		end
-
-		return out
-	end
-
-	function META:GetCallCount()
-		return #self.scopes
-	end
-
-	function META:IsPure()
-		return #self:GetSideEffects() == 0
-	end
-end
-
-function META:IsRefFunction()
-	for i, v in ipairs(self:GetInputSignature():GetData()) do
-		if v.ref_argument then return true end
-	end
-
-	for i, v in ipairs(self:GetOutputSignature():GetData()) do
-		if v.ref_argument then return true end
-	end
-
-	return false
-end
-
-function META.New(input, output)
-	local self = setmetatable({}, META)
-	self:SetInputSignature(input)
-	self:SetOutputSignature(output)
-	return self
-end
-
-return {
-	Function = META.New,
-	AnyFunction = function()
-		return META.New(Tuple({VarArg(Any())}), Tuple({VarArg(Any())}))
-	end,
-	LuaTypeFunction = function(lua_function, arg, ret)
-		local self = META.New(Tuple(arg), Tuple(ret))
-		self:SetAnalyzerFunction(lua_function)
-		return self
+	Boolean = function()
+		return META.New({True(), False()})
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.table"] = function(...) __M = __M or (function(...) local setmetatable = _G.setmetatable
@@ -3093,7 +2407,7 @@ function META:GetLength(analyzer)
 	local len = 0
 
 	for _, kv in ipairs(self:GetData()) do
-		if analyzer and self.mutations then
+		if analyzer and analyzer:HasMutations(self) then
 			local val = analyzer:GetMutatedTableValue(self, kv.key)
 
 			if val.Type == "union" and val:CanBeNil() then
@@ -3499,7 +2813,7 @@ function META:SetExplicit(key, val)
 	return true
 end
 
-function META:Get(key, from_contract)
+function META:Get(key)
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		local val = self["Get" .. key:GetData():sub(2)](self)
 
@@ -3578,6 +2892,10 @@ function META:IsNumericallyIndexed()
 end
 
 function META:CopyLiteralness(from)
+	assert(from.Type == "table" or from.Type == "any" or from.Type == "union")
+
+	if from.Type == "any" then return end
+
 	if not from:GetData() then return false end
 
 	if self:Equal(from) then return true end
@@ -3604,6 +2922,8 @@ function META:CopyLiteralness(from)
 end
 
 function META:CoerceUntypedFunctions(from)
+	assert(from.Type == "table")
+
 	for _, kv in ipairs(self:GetData()) do
 		local kv_from, reason = from:FindKeyValReverse(kv.key)
 
@@ -3617,16 +2937,16 @@ function META:CoerceUntypedFunctions(from)
 	end
 end
 
-function META:Copy(map, ...)
+function META:Copy(map, copy_tables)
 	map = map or {}
 	local copy = META.New()
 	map[self] = map[self] or copy
 
 	for i, keyval in ipairs(self:GetData()) do
 		local k, v = keyval.key, keyval.val
-		k = map[keyval.key] or k:Copy(map, ...)
+		k = map[keyval.key] or k:Copy(map, copy_tables)
 		map[keyval.key] = map[keyval.key] or k
-		v = map[keyval.val] or v:Copy(map, ...)
+		v = map[keyval.val] or v:Copy(map, copy_tables)
 		map[keyval.val] = map[keyval.val] or v
 		copy:GetData()[i] = {key = k, val = v}
 	end
@@ -3778,8 +3098,7 @@ local function unpack_keyval(keyval)
 end
 
 function META.Extend(A, B)
-	if B.Type ~= "table" then return false, "cannot extend non table" end
-
+	assert(B.Type == "table")
 	local map = {}
 
 	if A:GetContract() then
@@ -3807,7 +3126,8 @@ function META.Extend(A, B)
 end
 
 function META.Union(A, B)
-	local copy = META.New({})
+	assert(B.Type == "table")
+	local copy = META.New()
 
 	for _, keyval in ipairs(A:GetData()) do
 		copy:Set(unpack_keyval(keyval))
@@ -3869,6 +3189,168 @@ function CONTEXT:PopCurrentAnalyzer()
 end
 
 return CONTEXT end)(...) return __M end end
+IMPORTS['nattlua/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("code")
+
+
+
+function META:GetString()
+	return self.Buffer
+end
+
+function META:GetName()
+	return self.Name
+end
+
+function META:GetByteSize()
+	return #self.Buffer
+end
+
+function META:GetStringSlice(start, stop)
+	return self.Buffer:sub(start, stop)
+end
+
+function META:IsStringSlice(start, stop, str)
+	return self.Buffer:sub(start, stop) == str
+end
+
+function META:GetByte(pos)
+	return self.Buffer:byte(pos) or 0
+end
+
+function META:FindNearest(str, start)
+	local _, pos = self.Buffer:find(str, start, true)
+
+	if not pos then return nil end
+
+	return pos + 1
+end
+
+local function remove_bom_header(str)
+	if str:sub(1, 2) == "\xFE\xFF" then
+		return str:sub(3)
+	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
+		return str:sub(4)
+	end
+
+	return str
+end
+
+local function get_default_name()
+	local info = debug.getinfo(3)
+
+	if info then
+		local parent_line = info.currentline
+		local parent_name = info.source:sub(2)
+		return parent_name .. ":" .. parent_line
+	end
+
+	return "unknown line : unknown name"
+end
+
+function META:BuildSourceCodePointMessage(
+	msg,
+	start,
+	stop,
+	size
+)
+	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
+end
+
+function META.New(lua_code, name)
+	local self = setmetatable(
+		{
+			Buffer = remove_bom_header(lua_code),
+			Name = name or get_default_name(),
+		},
+		META
+	)
+	return self
+end
+
+if jit then
+	local ffi = require("ffi")
+	ffi.cdef("int memcmp ( const void * ptr1, const void * ptr2, size_t num );")
+
+	function META:IsStringSlice(start, stop, str)
+		return (
+				ffi.C.memcmp
+			)((ffi.cast("unsigned char*", self.Buffer)) - 1 + start, str, #str) == 0
+	end
+
+	function META:GetByte(pos)
+		return ffi.cast("unsigned char*", self.Buffer)[pos - 1]
+	end
+end
+
+
+return META end
+IMPORTS['./nattlua/types/../parser/nodes.nlua'] = function() 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+return {
+	ExpressionKind = ExpressionKind,
+	StatementKind = StatementKind,
+	Node = Node,
+	statement = statement,
+	expression = expression,
+} end
 do local __M; IMPORTS["nattlua.types.string"] = function(...) __M = __M or (function(...) local tostring = tostring
 local setmetatable = _G.setmetatable
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
@@ -3887,6 +3369,10 @@ META:GetSet("PatternContract", nil)
 
 function META.Equal(a, b)
 	if a.Type ~= b.Type then return false end
+
+	if a:IsLiteralArgument() and b:IsLiteralArgument() then return true end
+
+	if b:IsLiteralArgument() and not a:IsLiteral() then return false end
 
 	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
 
@@ -3917,6 +3403,12 @@ function META.IsSubsetOf(A, B)
 
 	if B.Type ~= "string" then return type_errors.type_mismatch(A, B) end
 
+	if A:IsLiteralArgument() and B:IsLiteralArgument() then return true end
+
+	if B:IsLiteralArgument() and not A:IsLiteral() then
+		return type_errors.subset(A, B)
+	end
+
 	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then -- "A" subsetof "B"
 		return true
 	end
@@ -3930,11 +3422,13 @@ function META.IsSubsetOf(A, B)
 	end
 
 	if B.PatternContract then
-		if not A:GetData() then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
+		local str = A:GetData()
+
+		if not str then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
 			return type_errors.literal(A)
 		end
 
-		if not A:GetData():find(B.PatternContract) then
+		if not str:find(B.PatternContract) then
 			return type_errors.string_pattern(A, B)
 		end
 
@@ -3952,12 +3446,12 @@ function META:__tostring()
 	if self.PatternContract then return "$\"" .. self.PatternContract .. "\"" end
 
 	if self:IsLiteral() then
-		if self:GetData() then return "\"" .. self:GetData() .. "\"" end
+		local str = self:GetData()
 
-		if self:GetData() == nil then return "string" end
-
-		return tostring(self:GetData())
+		if str then return "\"" .. str .. "\"" end
 	end
+
+	if self:IsLiteralArgument() then return "literal string" end
 
 	return "string"
 end
@@ -3998,12 +3492,23 @@ end
 
 function META:PrefixOperator(op)
 	if op == "#" then
-		return Number(self:GetData() and #self:GetData() or nil):SetLiteral(self:IsLiteral())
+		local str = self:GetData()
+		return Number(str and #str or nil):SetLiteral(self:IsLiteral())
 	end
 end
 
 function META.New(data)
-	local self = setmetatable({Data = data}, META)
+	local self = setmetatable(
+		{
+			Data = data,
+			Falsy = false,
+			Truthy = true,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+		},
+		META
+	)
 	-- analyzer might be nil when strings are made outside of the analyzer, like during tests
 	local analyzer = context:GetCurrentAnalyzer()
 
@@ -4019,8 +3524,18 @@ return {
 	LString = function(num)
 		return META.New(num):SetLiteral(true)
 	end,
-	LStringNoMeta = function(str)
-		return setmetatable({Data = str}, META):SetLiteral(true)
+	LStringNoMeta = function(data)
+		return setmetatable(
+			{
+				Data = data,
+				Falsy = false,
+				Truthy = true,
+				Literal = false,
+				LiteralArgument = false,
+				ReferenceArgument = false,
+			},
+			META
+		):SetLiteral(true)
 	end,
 	NodeToString = function(node, is_local)
 		return META.New(node.value.value):SetLiteral(true)
@@ -8445,6 +7960,10 @@ function META:GetStringSlice(start, stop)
 	return self.Buffer:sub(start, stop)
 end
 
+function META:IsStringSlice(start, stop, str)
+	return self.Buffer:sub(start, stop) == str
+end
+
 function META:GetByte(pos)
 	return self.Buffer:byte(pos) or 0
 end
@@ -8499,12 +8018,28 @@ function META.New(lua_code, name)
 	return self
 end
 
+if jit then
+	local ffi = require("ffi")
+	ffi.cdef("int memcmp ( const void * ptr1, const void * ptr2, size_t num );")
+
+	function META:IsStringSlice(start, stop, str)
+		return (
+				ffi.C.memcmp
+			)((ffi.cast("unsigned char*", self.Buffer)) - 1 + start, str, #str) == 0
+	end
+
+	function META:GetByte(pos)
+		return ffi.cast("unsigned char*", self.Buffer)[pos - 1]
+	end
+end
+
 
 return META end)(...) return __M end end
 IMPORTS['./nattlua/lexer/token.lua'] = function() local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("token")
+local setmetatable = _G.setmetatable
 
 
 
@@ -8562,6 +8097,7 @@ do local __M; IMPORTS["nattlua.lexer.token"] = function(...) __M = __M or (funct
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("token")
+local setmetatable = _G.setmetatable
 
 
 
@@ -8618,6 +8154,10 @@ return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.syntax.characters"] = function(...) __M = __M or (function(...) local characters = {}
 local B = string.byte
 
+function characters.IsNumber(c)
+	return (c >= B("0") and c <= B("9"))
+end
+
 function characters.IsLetter(c)
 	return (
 			c >= B("a") and
@@ -8638,31 +8178,7 @@ function characters.IsLetter(c)
 end
 
 function characters.IsDuringLetter(c)
-	return (
-			c >= B("a") and
-			c <= B("z")
-		)
-		or
-		(
-			c >= B("0") and
-			c <= B("9")
-		)
-		or
-		(
-			c >= B("A") and
-			c <= B("Z")
-		)
-		or
-		(
-			c == B("_") or
-			c == B("@")
-			or
-			c >= 127
-		)
-end
-
-function characters.IsNumber(c)
-	return (c >= B("0") and c <= B("9"))
+	return characters.IsLetter(c) or characters.IsNumber(c)
 end
 
 function characters.IsSpace(c)
@@ -8694,20 +8210,33 @@ function characters.IsSymbol(c)
 		)
 end
 
-local function generate_map(str)
-	local out = {}
-
-	for i = 1, #str do
-		out[str:byte(i)] = true
-	end
-
-	return out
+function characters.IsHex(c)
+	return characters.IsNumber(c) or
+		(
+			c >= B("a") and
+			c <= B("f")
+		)
+		or
+		(
+			c >= B("A") and
+			c <= B("F")
+		)
 end
 
-local allowed_hex = generate_map("1234567890abcdefABCDEF")
+if jit then
+	local ffi = require("ffi")
 
-function characters.IsHex(c)
-	return allowed_hex[c] ~= nil
+	for key, val in pairs(characters) do
+		local map = ffi.new("char[256]")
+
+		for i = 0, 255 do
+			map[i] = val(i) and 1 or 0
+		end
+
+		characters[key] = function(c)
+			return map[c] ~= 0
+		end
+	end
 end
 
 return characters end)(...) return __M end end
@@ -9077,7 +8606,8 @@ runtime:AddPostfixOperatorFunctionTranslate({
 return runtime end)(...) return __M end end
 do local __M; IMPORTS["nattlua.lexer"] = function(...) __M = __M or (function(...) 
 
-local Code = IMPORTS['nattlua.code']("nattlua.code").New
+
+
 local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 local Token = IMPORTS['nattlua.lexer.token']("nattlua.lexer.token").New
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
@@ -9133,12 +8663,11 @@ end
 
 function META:IsString(str, offset)
 	offset = offset or 0
-	return self.Code:GetStringSlice(self.Position + offset, self.Position + offset + #str - 1) == str
+	return self.Code:IsStringSlice(self.Position + offset, self.Position + offset + #str - 1, str)
 end
 
-function META:IsStringLower(str, offset)
-	offset = offset or 0
-	return self.Code:GetStringSlice(self.Position + offset, self.Position + offset + #str - 1):lower() == str
+function META:IsStringLower(str)
+	return self.Code:GetStringSlice(self.Position, self.Position + #str - 1):lower() == str
 end
 
 function META:OnError(
@@ -9191,6 +8720,8 @@ function META:ReadSimple()
 	local start = self.Position
 	local type, is_whitespace = self:Read()
 
+	if type == "discard" then return self:ReadSimple() end
+
 	if not type then
 		if self:ReadEndOfFile() then
 			type = "end_of_file"
@@ -9226,20 +8757,28 @@ do
 		"\"",
 		"'",
 	}
-	local pattern = "\\[" .. table.concat(fixed, "\\") .. "]"
-	local map_double_quote = {[ [[\"]] ] = [["]]}
-	local map_single_quote = {[ [[\']] ] = [[']]}
+	local map = {}
 
 	for _, v in ipairs(fixed) do
-		map_double_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
-		map_single_quote["\\" .. v] = loadstring("return \"\\" .. v .. "\"")()
+		map[v:byte()] = loadstring("return \"\\" .. v .. "\"")()
 	end
 
-	local function reverse_escape_string(str, quote)
-		if quote == "\"" then
-			str = str:gsub(pattern, map_double_quote)
-		elseif quote == "'" then
-			str = str:gsub(pattern, map_single_quote)
+	local function reverse_escape_string(str)
+		local pos = 1
+
+		while true do
+			local start, stop = str:find("\\", pos, true)
+
+			if not start or not stop then break end
+
+			local char = map[str:byte(start + 1, stop + 1)]
+
+			if char then
+				str = str:sub(1, start - 1) .. char .. str:sub(stop + 2)
+				pos = stop + 1
+			else
+				pos = pos + 1
+			end
 		end
 
 		return str
@@ -9251,24 +8790,57 @@ do
 		token.value = self:GetStringSlice(token.start, token.stop)
 
 		if token.type == "string" then
-			if token.value:sub(1, 1) == [["]] then
-				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1), "\"")
-			elseif token.value:sub(1, 1) == [[']] then
-				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1), "'")
+			if token.value:sub(1, 1) == [["]] or token.value:sub(1, 1) == [[']] then
+				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1))
 			elseif token.value:sub(1, 1) == "[" then
-				local start = token.value:match("(%[[%=]*%[)")
+				local start = token.value:find("[", 2, true)
 
-				if not start then error("unable to match string") end
+				if not start then error("start not found") end
 
-				token.string_value = token.value:sub(#start + 1, -#start - 1)
+				token.string_value = token.value:sub(start + 1, -start - 1)
 			end
 		end
 
 		return token
 	end
+
+	function META:ReadNonWhitespaceToken()
+		local token = self:ReadToken()
+
+		if not token.is_whitespace then
+			token.whitespace = {}
+			return token
+		end
+
+		local whitespace = {token}
+		local whitespace_i = 2
+
+		for i = self.Position, self:GetLength() + 1 do
+			local token = self:ReadToken()
+
+			if not token.is_whitespace then
+				token.whitespace = whitespace
+				return token
+			end
+
+			whitespace[whitespace_i] = token
+			whitespace_i = whitespace_i + 1
+		end
+	end
 end
 
 function META:ReadFirstFromArray(strings)
+	for _, str in ipairs(strings) do
+		if self:IsString(str) then
+			self:Advance(#str)
+			return true
+		end
+	end
+
+	return false
+end
+
+function META:ReadFirstLowercaseFromArray(strings)
 	for _, str in ipairs(strings) do
 		if self:IsStringLower(str) then
 			self:Advance(#str)
@@ -9282,35 +8854,19 @@ end
 function META:GetTokens()
 	self:ResetState()
 	local tokens = {}
+	local tokens_i = 1
 
 	for i = self.Position, self:GetLength() + 1 do
-		tokens[i] = self:ReadToken()
+		local token = self:ReadNonWhitespaceToken()
 
-		if tokens[i].type == "end_of_file" then break end
+		if not token then break end
+
+		tokens[tokens_i] = token
+		tokens_i = tokens_i + 1
+
+		if token.type == "end_of_file" then break end
 	end
 
-	local whitespace_buffer = {}
-	local whitespace_buffer_i = 1
-	local non_whitespace = {}
-	local non_whitespace_i = 1
-
-	for _, token in ipairs(tokens) do
-		if token.type ~= "discard" then
-			if token.is_whitespace then
-				whitespace_buffer[whitespace_buffer_i] = token
-				whitespace_buffer_i = whitespace_buffer_i + 1
-			else
-				token.whitespace = whitespace_buffer
-				non_whitespace[non_whitespace_i] = token
-				non_whitespace_i = non_whitespace_i + 1
-				whitespace_buffer = {}
-				whitespace_buffer_i = 1
-			end
-		end
-	end
-
-	local tokens = non_whitespace
-	tokens[#tokens].value = ""
 	return tokens
 end
 
@@ -9519,7 +9075,13 @@ do
 	end
 
 	local function ReadHexNumber(lexer)
-		if not lexer:IsString("0") or not lexer:IsStringLower("x", 1) then
+		if
+			not lexer:IsString("0") or
+			(
+				not lexer:IsString("x", 1) and
+				not lexer:IsString("X", 1)
+			)
+		then
 			return false
 		end
 
@@ -9545,11 +9107,13 @@ do
 					break
 				end
 
-				if lexer:IsStringLower("p") then
+				if lexer:IsString("p") or lexer:IsString("P") then
 					if ReadNumberPowExponent(lexer, "pow") then break end
 				end
 
-				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+				if lexer:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then
+					break
+				end
 
 				lexer:Error(
 					"malformed hex number, got " .. string.char(lexer:PeekByte()),
@@ -9564,7 +9128,13 @@ do
 	end
 
 	local function ReadBinaryNumber(lexer)
-		if not lexer:IsString("0") or not lexer:IsStringLower("b", 1) then
+		if
+			not lexer:IsString("0") or
+			not (
+				lexer:IsString("b", 1) and
+				not lexer:IsString("B", 1)
+			)
+		then
 			return false
 		end
 
@@ -9581,11 +9151,13 @@ do
 					break
 				end
 
-				if lexer:IsStringLower("e") then
+				if lexer:IsString("e") or lexer:IsString("E") then
 					if ReadNumberPowExponent(lexer, "exponent") then break end
 				end
 
-				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+				if lexer:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then
+					break
+				end
 
 				lexer:Error(
 					"malformed binary number, got " .. string.char(lexer:PeekByte()),
@@ -9642,7 +9214,9 @@ do
 					if ReadNumberPowExponent(lexer, "exponent") then break end
 				end
 
-				if lexer:ReadFirstFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+				if lexer:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then
+					break
+				end
 
 				lexer:Error(
 					"malformed number, got " .. string.char(lexer:PeekByte()) .. " in decimal notation",
@@ -9813,7 +9387,8 @@ end
 return META end)(...) return __M end end
 IMPORTS['./nattlua/parser/nodes.nlua'] = function() 
 
-IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
+
+
 
 
 
@@ -9877,7 +9452,8 @@ return {
 } end
 IMPORTS['./nattlua/parser/../parser/nodes.nlua'] = function() 
 
-IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
+
+
 
 
 
@@ -9954,7 +9530,8 @@ return {
 } end
 IMPORTS['nattlua/parser/nodes.nlua'] = function() 
 
-IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
+
+
 
 
 
@@ -10017,7 +9594,6 @@ return {
 	expression = expression,
 } end
 do local __M; IMPORTS["nattlua.parser.node"] = function(...) __M = __M or (function(...) 
-
 
 
 
@@ -10186,6 +9762,7 @@ do local __M; IMPORTS["nattlua.parser.base"] = function(...) __M = __M or (funct
 
 
 
+
 local CreateNode = IMPORTS['nattlua.parser.node']("nattlua.parser.node").New
 local ipairs = _G.ipairs
 local pairs = _G.pairs
@@ -10223,15 +9800,15 @@ end
 
 do
 	function META:GetCurrentParserEnvironment()
-		return self.environment_stack[1] or "runtime"
+		return self.environment_stack[#self.environment_stack] or "runtime"
 	end
 
 	function META:PushParserEnvironment(env)
-		table.insert(self.environment_stack, 1, env)
+		table.insert(self.environment_stack, env)
 	end
 
 	function META:PopParserEnvironment()
-		table.remove(self.environment_stack, 1)
+		table.remove(self.environment_stack)
 	end
 end
 
@@ -10250,7 +9827,7 @@ function META:StartNode(
 			code_start = code_start,
 			code_stop = code_start,
 			environment = self:GetCurrentParserEnvironment(),
-			parent = self.nodes[1],
+			parent = self.nodes[#self.nodes],
 		}
 	)
 
@@ -10262,12 +9839,12 @@ function META:StartNode(
 
 	if self.OnNode then self:OnNode(node) end
 
-	table.insert(self.nodes, 1, node)
+	table.insert(self.nodes, node)
 	return node
 end
 
 function META:SuppressOnNode()
-	self.suppress_on_node = {parent = self.nodes[1], nodes = {}}
+	self.suppress_on_node = {parent = self.nodes[#self.nodes], nodes = {}}
 end
 
 function META:ReRunOnNode(nodes)
@@ -10280,7 +9857,7 @@ function META:ReRunOnNode(nodes)
 
 				if new_node then
 					nodes[i] = new_node
-					new_node.parent = self.nodes[1]
+					new_node.parent = self.nodes[#self.nodes]
 				end
 			end
 		end
@@ -10300,13 +9877,13 @@ function META:EndNode(node)
 		if cur then node.code_stop = cur.stop end
 	end
 
-	table.remove(self.nodes, 1)
+	table.remove(self.nodes)
 
 	if self.config.on_node then
 		if
 			self.suppress_on_node and
 			node.type == "expression" and
-			self.suppress_on_node.parent == self.nodes[1]
+			self.suppress_on_node.parent == self.nodes[#self.nodes]
 		then
 			table.insert(self.suppress_on_node, node)
 		elseif self.config.on_node then
@@ -10314,7 +9891,7 @@ function META:EndNode(node)
 
 			if new_node then
 				node = new_node
-				node.parent = self.nodes[1]
+				node.parent = self.nodes[#self.nodes]
 			end
 		end
 	end
@@ -10375,13 +9952,13 @@ function META:IsType(token_type, offset)
 	if tk then return tk.type == token_type end
 end
 
-function META:ReadToken()
+function META:ParseToken()
 	local tk = self:GetToken()
 
 	if not tk then return nil end
 
 	self:Advance(1)
-	tk.parent = self.nodes[1]
+	tk.parent = self.nodes[#self.nodes]
 	return tk
 end
 
@@ -10425,7 +10002,7 @@ do
 			error_expect(self, str, "value", error_start, error_stop)
 		end
 
-		return self:ReadToken()
+		return self:ParseToken()
 	end
 
 	function META:ExpectValueTranslate(
@@ -10438,7 +10015,7 @@ do
 			error_expect(self, str, "value", error_start, error_stop)
 		end
 
-		local tk = self:ReadToken()
+		local tk = self:ParseToken()
 		tk.value = new_str
 		return tk
 	end
@@ -10452,7 +10029,7 @@ do
 			error_expect(self, str, "type", error_start, error_stop)
 		end
 
-		return self:ReadToken()
+		return self:ParseToken()
 	end
 
 	function META:NewToken(type, value)
@@ -10464,7 +10041,7 @@ do
 	end
 end
 
-function META:ReadValues(
+function META:ParseValues(
 	values,
 	start,
 	stop
@@ -10486,10 +10063,10 @@ function META:ReadValues(
 		self:Error("expected $1 got $2", start, stop, array, tk.type)
 	end
 
-	return self:ReadToken()
+	return self:ParseToken()
 end
 
-function META:ReadNodes(stop_token)
+function META:ParseNodes(stop_token)
 	local out = {}
 	local i = 1
 
@@ -10500,7 +10077,7 @@ function META:ReadNodes(stop_token)
 
 		if stop_token and stop_token[tk.value] then break end
 
-		local node = (self):ReadNode()
+		local node = (self):ParseNode()
 
 		if not node then break end
 
@@ -10522,15 +10099,17 @@ function META:ResolvePath(path)
 	return path
 end
 
-function META:ReadMultipleValues(
+function META:ParseMultipleValues(
 	max,
 	reader,
-	...
+	a,
+	b,
+	c
 )
 	local out = {}
 
 	for i = 1, max or self:GetLength() do
-		local node = reader(self, ...)
+		local node = reader(self, a, b, c)
 
 		if not node then break end
 
@@ -10545,6 +10124,922 @@ function META:ReadMultipleValues(
 end
 
 return META end)(...) return __M end end
+do local __M; IMPORTS["jit.vmdef"] = function(...) __M = __M or (function(...) -- This is a generated file. DO NOT EDIT!
+return {
+	bcnames = "ISLT  ISGE  ISLE  ISGT  ISEQV ISNEV ISEQS ISNES ISEQN ISNEN ISEQP ISNEP ISTC  ISFC  IST   ISF   ISTYPEISNUM MOV   NOT   UNM   LEN   ADDVN SUBVN MULVN DIVVN MODVN ADDNV SUBNV MULNV DIVNV MODNV ADDVV SUBVV MULVV DIVVV MODVV POW   CAT   KSTR  KCDATAKSHORTKNUM  KPRI  KNIL  UGET  USETV USETS USETN USETP UCLO  FNEW  TNEW  TDUP  GGET  GSET  TGETV TGETS TGETB TGETR TSETV TSETS TSETB TSETM TSETR CALLM CALL  CALLMTCALLT ITERC ITERN VARG  ISNEXTRETM  RET   RET0  RET1  FORI  JFORI FORL  IFORL JFORL ITERL IITERLJITERLLOOP  ILOOP JLOOP JMP   FUNCF IFUNCFJFUNCFFUNCV IFUNCVJFUNCVFUNCC FUNCCW",
+	irnames = "LT    GE    LE    GT    ULT   UGE   ULE   UGT   EQ    NE    ABC   RETF  NOP   BASE  PVAL  GCSTEPHIOP  LOOP  USE   PHI   RENAMEPROF  KPRI  KINT  KGC   KPTR  KKPTR KNULL KNUM  KINT64KSLOT BNOT  BSWAP BAND  BOR   BXOR  BSHL  BSHR  BSAR  BROL  BROR  ADD   SUB   MUL   DIV   MOD   POW   NEG   ABS   LDEXP MIN   MAX   FPMATHADDOV SUBOV MULOV AREF  HREFK HREF  NEWREFUREFO UREFC FREF  TMPREFSTRREFLREF  ALOAD HLOAD ULOAD FLOAD XLOAD SLOAD VLOAD ALEN  ASTOREHSTOREUSTOREFSTOREXSTORESNEW  XSNEW TNEW  TDUP  CNEW  CNEWI BUFHDRBUFPUTBUFSTRTBAR  OBAR  XBAR  CONV  TOBIT TOSTR STRTO CALLN CALLA CALLL CALLS CALLXSCARG  ",
+	irfpm = {
+		[0] = "floor",
+		"ceil",
+		"trunc",
+		"sqrt",
+		"log",
+		"log2",
+		"other",
+	},
+	irfield = {
+		[0] = "str.len",
+		"func.env",
+		"func.pc",
+		"func.ffid",
+		"thread.env",
+		"tab.meta",
+		"tab.array",
+		"tab.node",
+		"tab.asize",
+		"tab.hmask",
+		"tab.nomm",
+		"udata.meta",
+		"udata.udtype",
+		"udata.file",
+		"sbuf.w",
+		"sbuf.e",
+		"sbuf.b",
+		"sbuf.l",
+		"sbuf.ref",
+		"sbuf.r",
+		"cdata.ctypeid",
+		"cdata.ptr",
+		"cdata.int",
+		"cdata.int64",
+		"cdata.int64_4",
+	},
+	ircall = {
+		[0] = "lj_str_cmp",
+		"lj_str_find",
+		"lj_str_new",
+		"lj_strscan_num",
+		"lj_strfmt_int",
+		"lj_strfmt_num",
+		"lj_strfmt_char",
+		"lj_strfmt_putint",
+		"lj_strfmt_putnum",
+		"lj_strfmt_putquoted",
+		"lj_strfmt_putfxint",
+		"lj_strfmt_putfnum_int",
+		"lj_strfmt_putfnum_uint",
+		"lj_strfmt_putfnum",
+		"lj_strfmt_putfstr",
+		"lj_strfmt_putfchar",
+		"lj_buf_putmem",
+		"lj_buf_putstr",
+		"lj_buf_putchar",
+		"lj_buf_putstr_reverse",
+		"lj_buf_putstr_lower",
+		"lj_buf_putstr_upper",
+		"lj_buf_putstr_rep",
+		"lj_buf_puttab",
+		"lj_bufx_set",
+		"lj_bufx_more",
+		"lj_serialize_put",
+		"lj_serialize_get",
+		"lj_serialize_encode",
+		"lj_serialize_decode",
+		"lj_buf_tostr",
+		"lj_tab_new_ah",
+		"lj_tab_new1",
+		"lj_tab_dup",
+		"lj_tab_clear",
+		"lj_tab_newkey",
+		"lj_tab_keyindex",
+		"lj_vm_next",
+		"lj_tab_len",
+		"lj_tab_len_hint",
+		"lj_gc_step_jit",
+		"lj_gc_barrieruv",
+		"lj_mem_newgco",
+		"lj_prng_u64d",
+		"lj_vm_modi",
+		"log10",
+		"exp",
+		"sin",
+		"cos",
+		"tan",
+		"asin",
+		"acos",
+		"atan",
+		"sinh",
+		"cosh",
+		"tanh",
+		"fputc",
+		"fwrite",
+		"fflush",
+		"lj_vm_floor",
+		"lj_vm_ceil",
+		"lj_vm_trunc",
+		"sqrt",
+		"log",
+		"lj_vm_log2",
+		"pow",
+		"atan2",
+		"ldexp",
+		"lj_vm_tobit",
+		"softfp_add",
+		"softfp_sub",
+		"softfp_mul",
+		"softfp_div",
+		"softfp_cmp",
+		"softfp_i2d",
+		"softfp_d2i",
+		"lj_vm_sfmin",
+		"lj_vm_sfmax",
+		"lj_vm_tointg",
+		"softfp_ui2d",
+		"softfp_f2d",
+		"softfp_d2ui",
+		"softfp_d2f",
+		"softfp_i2f",
+		"softfp_ui2f",
+		"softfp_f2i",
+		"softfp_f2ui",
+		"fp64_l2d",
+		"fp64_ul2d",
+		"fp64_l2f",
+		"fp64_ul2f",
+		"fp64_d2l",
+		"fp64_d2ul",
+		"fp64_f2l",
+		"fp64_f2ul",
+		"lj_carith_divi64",
+		"lj_carith_divu64",
+		"lj_carith_modi64",
+		"lj_carith_modu64",
+		"lj_carith_powi64",
+		"lj_carith_powu64",
+		"lj_cdata_newv",
+		"lj_cdata_setfin",
+		"strlen",
+		"memcpy",
+		"memset",
+		"lj_vm_errno",
+		"lj_carith_mul64",
+		"lj_carith_shl64",
+		"lj_carith_shr64",
+		"lj_carith_sar64",
+		"lj_carith_rol64",
+		"lj_carith_ror64",
+	},
+	traceerr = {
+		[0] = "error thrown or hook called during recording",
+		"trace too short",
+		"trace too long",
+		"trace too deep",
+		"too many snapshots",
+		"blacklisted",
+		"retry recording",
+		"NYI: bytecode %d",
+		"leaving loop in root trace",
+		"inner loop in root trace",
+		"loop unroll limit reached",
+		"bad argument type",
+		"JIT compilation disabled for function",
+		"call unroll limit reached",
+		"down-recursion, restarting",
+		"NYI: unsupported variant of FastFunc %s",
+		"NYI: return to lower frame",
+		"store with nil or NaN key",
+		"missing metamethod",
+		"looping index lookup",
+		"NYI: mixed sparse/dense table",
+		"symbol not in cache",
+		"NYI: unsupported C type conversion",
+		"NYI: unsupported C function type",
+		"guard would always fail",
+		"too many PHIs",
+		"persistent type instability",
+		"failed to allocate mcode memory",
+		"machine code too long",
+		"hit mcode limit (retrying)",
+		"too many spill slots",
+		"inconsistent register allocation",
+		"NYI: cannot assemble IR instruction %d",
+		"NYI: PHI shuffling too complex",
+		"NYI: register coalescing too complex",
+	},
+	ffnames = {
+		[0] = "Lua",
+		"C",
+		"assert",
+		"type",
+		"next",
+		"pairs",
+		"ipairs_aux",
+		"ipairs",
+		"getmetatable",
+		"setmetatable",
+		"getfenv",
+		"setfenv",
+		"rawget",
+		"rawset",
+		"rawequal",
+		"unpack",
+		"select",
+		"tonumber",
+		"tostring",
+		"error",
+		"pcall",
+		"xpcall",
+		"loadfile",
+		"load",
+		"loadstring",
+		"dofile",
+		"gcinfo",
+		"collectgarbage",
+		"newproxy",
+		"print",
+		"coroutine.status",
+		"coroutine.running",
+		"coroutine.isyieldable",
+		"coroutine.create",
+		"coroutine.yield",
+		"coroutine.resume",
+		"coroutine.wrap_aux",
+		"coroutine.wrap",
+		"math.abs",
+		"math.floor",
+		"math.ceil",
+		"math.sqrt",
+		"math.log10",
+		"math.exp",
+		"math.sin",
+		"math.cos",
+		"math.tan",
+		"math.asin",
+		"math.acos",
+		"math.atan",
+		"math.sinh",
+		"math.cosh",
+		"math.tanh",
+		"math.frexp",
+		"math.modf",
+		"math.log",
+		"math.atan2",
+		"math.pow",
+		"math.fmod",
+		"math.ldexp",
+		"math.min",
+		"math.max",
+		"math.random",
+		"math.randomseed",
+		"bit.tobit",
+		"bit.bnot",
+		"bit.bswap",
+		"bit.lshift",
+		"bit.rshift",
+		"bit.arshift",
+		"bit.rol",
+		"bit.ror",
+		"bit.band",
+		"bit.bor",
+		"bit.bxor",
+		"bit.tohex",
+		"string.byte",
+		"string.char",
+		"string.sub",
+		"string.rep",
+		"string.reverse",
+		"string.lower",
+		"string.upper",
+		"string.dump",
+		"string.find",
+		"string.match",
+		"string.gmatch_aux",
+		"string.gmatch",
+		"string.gsub",
+		"string.format",
+		"table.maxn",
+		"table.insert",
+		"table.concat",
+		"table.sort",
+		"table.new",
+		"table.clear",
+		"io.method.close",
+		"io.method.read",
+		"io.method.write",
+		"io.method.flush",
+		"io.method.seek",
+		"io.method.setvbuf",
+		"io.method.lines",
+		"io.method.__gc",
+		"io.method.__tostring",
+		"io.open",
+		"io.popen",
+		"io.tmpfile",
+		"io.close",
+		"io.read",
+		"io.write",
+		"io.flush",
+		"io.input",
+		"io.output",
+		"io.lines",
+		"io.type",
+		"os.execute",
+		"os.remove",
+		"os.rename",
+		"os.tmpname",
+		"os.getenv",
+		"os.exit",
+		"os.clock",
+		"os.date",
+		"os.time",
+		"os.difftime",
+		"os.setlocale",
+		"debug.getregistry",
+		"debug.getmetatable",
+		"debug.setmetatable",
+		"debug.getfenv",
+		"debug.setfenv",
+		"debug.getinfo",
+		"debug.getlocal",
+		"debug.setlocal",
+		"debug.getupvalue",
+		"debug.setupvalue",
+		"debug.upvalueid",
+		"debug.upvaluejoin",
+		"debug.sethook",
+		"debug.gethook",
+		"debug.debug",
+		"debug.traceback",
+		"jit.on",
+		"jit.off",
+		"jit.flush",
+		"jit.status",
+		"jit.security",
+		"jit.attach",
+		"jit.util.funcinfo",
+		"jit.util.funcbc",
+		"jit.util.funck",
+		"jit.util.funcuvname",
+		"jit.util.traceinfo",
+		"jit.util.traceir",
+		"jit.util.tracek",
+		"jit.util.tracesnap",
+		"jit.util.tracemc",
+		"jit.util.traceexitstub",
+		"jit.util.ircalladdr",
+		"jit.opt.start",
+		"jit.profile.start",
+		"jit.profile.stop",
+		"jit.profile.dumpstack",
+		"ffi.meta.__index",
+		"ffi.meta.__newindex",
+		"ffi.meta.__eq",
+		"ffi.meta.__len",
+		"ffi.meta.__lt",
+		"ffi.meta.__le",
+		"ffi.meta.__concat",
+		"ffi.meta.__call",
+		"ffi.meta.__add",
+		"ffi.meta.__sub",
+		"ffi.meta.__mul",
+		"ffi.meta.__div",
+		"ffi.meta.__mod",
+		"ffi.meta.__pow",
+		"ffi.meta.__unm",
+		"ffi.meta.__tostring",
+		"ffi.meta.__pairs",
+		"ffi.meta.__ipairs",
+		"ffi.clib.__index",
+		"ffi.clib.__newindex",
+		"ffi.clib.__gc",
+		"ffi.callback.free",
+		"ffi.callback.set",
+		"ffi.cdef",
+		"ffi.new",
+		"ffi.cast",
+		"ffi.typeof",
+		"ffi.typeinfo",
+		"ffi.istype",
+		"ffi.sizeof",
+		"ffi.alignof",
+		"ffi.offsetof",
+		"ffi.errno",
+		"ffi.string",
+		"ffi.copy",
+		"ffi.fill",
+		"ffi.abi",
+		"ffi.metatype",
+		"ffi.gc",
+		"ffi.load",
+		"buffer.method.free",
+		"buffer.method.reset",
+		"buffer.method.skip",
+		"buffer.method.set",
+		"buffer.method.put",
+		"buffer.method.putf",
+		"buffer.method.get",
+		"buffer.method.putcdata",
+		"buffer.method.reserve",
+		"buffer.method.commit",
+		"buffer.method.ref",
+		"buffer.method.encode",
+		"buffer.method.decode",
+		"buffer.method.__gc",
+		"buffer.method.__tostring",
+		"buffer.method.__len",
+		"buffer.new",
+		"buffer.encode",
+		"buffer.decode",
+	},
+} end)(...) return __M end end
+do local __M; IMPORTS["jit.zone"] = function(...) __M = __M or (function(...) ----------------------------------------------------------------------------
+-- LuaJIT profiler zones.
+--
+-- Copyright (C) 2005-2022 Mike Pall. All rights reserved.
+-- Released under the MIT license. See Copyright Notice in luajit.h
+----------------------------------------------------------------------------
+--
+-- This module implements a simple hierarchical zone model.
+--
+-- Example usage:
+--
+--   local zone = require("jit.zone")
+--   zone("AI")
+--   ...
+--     zone("A*")
+--     ...
+--     print(zone:get()) --> "A*"
+--     ...
+--     zone()
+--   ...
+--   print(zone:get()) --> "AI"
+--   ...
+--   zone()
+--
+----------------------------------------------------------------------------
+local remove = table.remove
+return setmetatable(
+	{
+		flush = function(t)
+			for i = #t, 1, -1 do
+				t[i] = nil
+			end
+		end,
+		get = function(t)
+			return t[#t]
+		end,
+	},
+	{
+		__call = function(t, zone)
+			if zone then
+				t[#t + 1] = zone
+			else
+				return (assert(remove(t), "empty zone stack"))
+			end
+		end,
+	}
+) end)(...) return __M end end
+do local __M; IMPORTS["jit.p"] = function(...) __M = __M or (function(...) ----------------------------------------------------------------------------
+-- LuaJIT profiler.
+--
+-- Copyright (C) 2005-2022 Mike Pall. All rights reserved.
+-- Released under the MIT license. See Copyright Notice in luajit.h
+----------------------------------------------------------------------------
+--
+-- This module is a simple command line interface to the built-in
+-- low-overhead profiler of LuaJIT.
+--
+-- The lower-level API of the profiler is accessible via the "jit.profile"
+-- module or the luaJIT_profile_* C API.
+--
+-- Example usage:
+--
+--   luajit -jp myapp.lua
+--   luajit -jp=s myapp.lua
+--   luajit -jp=-s myapp.lua
+--   luajit -jp=vl myapp.lua
+--   luajit -jp=G,profile.txt myapp.lua
+--
+-- The following dump features are available:
+--
+--   f  Stack dump: function name, otherwise module:line. Default mode.
+--   F  Stack dump: ditto, but always prepend module.
+--   l  Stack dump: module:line.
+--   <number> stack dump depth (callee < caller). Default: 1.
+--   -<number> Inverse stack dump depth (caller > callee).
+--   s  Split stack dump after first stack level. Implies abs(depth) >= 2.
+--   p  Show full path for module names.
+--   v  Show VM states. Can be combined with stack dumps, e.g. vf or fv.
+--   z  Show zones. Can be combined with stack dumps, e.g. zf or fz.
+--   r  Show raw sample counts. Default: show percentages.
+--   a  Annotate excerpts from source code files.
+--   A  Annotate complete source code files.
+--   G  Produce raw output suitable for graphical tools (e.g. flame graphs).
+--   m<number> Minimum sample percentage to be shown. Default: 3.
+--   i<number> Sampling interval in milliseconds. Default: 10.
+--
+----------------------------------------------------------------------------
+-- Cache some library functions and objects.
+local jit = require("jit")
+assert(jit.version_num == 20100, "LuaJIT core/library version mismatch")
+local profile = require("jit.profile")
+local vmdef = IMPORTS['jit.vmdef']("jit.vmdef")
+local math = math
+local pairs, ipairs, tonumber, floor = pairs, ipairs, tonumber, math.floor
+local sort, format = table.sort, string.format
+local stdout = io.stdout
+local zone -- Load jit.zone module on demand.
+-- Output file handle.
+local out
+------------------------------------------------------------------------------
+local prof_ud
+local prof_states, prof_split, prof_min, prof_raw, prof_fmt, prof_depth
+local prof_ann, prof_count1, prof_count2, prof_samples
+local map_vmmode = {
+	N = "Compiled",
+	I = "Interpreted",
+	C = "C code",
+	G = "Garbage Collector",
+	J = "JIT Compiler",
+}
+
+-- Profiler callback.
+local function prof_cb(th, samples, vmmode)
+	prof_samples = prof_samples + samples
+	local key_stack, key_stack2, key_state
+
+	-- Collect keys for sample.
+	if prof_states then
+		if prof_states == "v" then
+			key_state = map_vmmode[vmmode] or vmmode
+		else
+			key_state = zone:get() or "(none)"
+		end
+	end
+
+	if prof_fmt then
+		key_stack = profile.dumpstack(th, prof_fmt, prof_depth)
+		key_stack = key_stack:gsub("%[builtin#(%d+)%]", function(x)
+			return vmdef.ffnames[tonumber(x)]
+		end)
+
+		if prof_split == 2 then
+			local k1, k2 = key_stack:match("(.-) [<>] (.*)")
+
+			if k2 then key_stack, key_stack2 = k1, k2 end
+		elseif prof_split == 3 then
+			key_stack2 = profile.dumpstack(th, "l", 1)
+		end
+	end
+
+	-- Order keys.
+	local k1, k2
+
+	if prof_split == 1 then
+		if key_state then
+			k1 = key_state
+
+			if key_stack then k2 = key_stack end
+		end
+	elseif key_stack then
+		k1 = key_stack
+
+		if key_stack2 then k2 = key_stack2 elseif key_state then k2 = key_state end
+	end
+
+	-- Coalesce samples in one or two levels.
+	if k1 then
+		local t1 = prof_count1
+		t1[k1] = (t1[k1] or 0) + samples
+
+		if k2 then
+			local t2 = prof_count2
+			local t3 = t2[k1]
+
+			if not t3 then
+				t3 = {}
+				
+				t2[k1] = t3
+			end
+
+			t3[k2] = (t3[k2] or 0) + samples
+		end
+	end
+end
+
+------------------------------------------------------------------------------
+-- Show top N list.
+local function prof_top(count1, count2, samples, indent)
+	local t, n = {}, 0
+
+	for k in pairs(count1) do
+		n = n + 1
+		t[n] = k
+	end
+
+	sort(t, function(a, b)
+		return count1[a] > count1[b]
+	end)
+
+	for i = 1, n do
+		local k = t[i]
+		local v = count1[k]
+		local pct = floor(v * 100 / samples + 0.5)
+
+		if pct < prof_min then break end
+
+		if not prof_raw then
+			out:write(format("%s%2d%%  %s\n", indent, pct, k))
+		elseif prof_raw == "r" then
+			out:write(format("%s%5d  %s\n", indent, v, k))
+		else
+			out:write(format("%s %d\n", k, v))
+		end
+
+		if count2 then
+			local r = count2[k]
+
+			if r then
+				prof_top(
+					r,
+					nil,
+					v,
+					(
+							prof_split == 3 or
+							prof_split == 1
+						)
+						and
+						"  -- " or
+						(
+							prof_depth < 0 and
+							"  -> " or
+							"  <- "
+						)
+				)
+			end
+		end
+	end
+end
+
+-- Annotate source code
+local function prof_annotate(count1, samples)
+	local files = {}
+	local ms = 0
+
+	for k, v in pairs(count1) do
+		local pct = floor(v * 100 / samples + 0.5)
+		ms = math.max(ms, v)
+
+		if pct >= prof_min then
+			local file, line = k:match("^(.*):(%d+)$")
+
+			if not file then
+				file = k
+				
+				line = 0
+			end
+
+			local fl = files[file]
+
+			if not fl then
+				fl = {}
+				
+				files[file] = fl
+				
+				files[#files + 1] = file
+			end
+
+			line = tonumber(line)
+			fl[line] = prof_raw and v or pct
+		end
+	end
+
+	sort(files)
+	local fmtv, fmtn = " %3d%% | %s\n", "      | %s\n"
+
+	if prof_raw then
+		local n = math.max(5, math.ceil(math.log10(ms)))
+		fmtv = "%" .. n .. "d | %s\n"
+		fmtn = (" "):rep(n) .. " | %s\n"
+	end
+
+	local ann = prof_ann
+
+	for _, file in ipairs(files) do
+		local f0 = file:byte()
+
+		if f0 == 40 or f0 == 91 then
+			out:write(format("\n====== %s ======\n[Cannot annotate non-file]\n", file))
+
+			break
+		end
+
+		local fp, err = io.open(file)
+
+		if not fp then
+			out:write(format("====== ERROR: %s: %s\n", file, err))
+
+			break
+		end
+
+		out:write(format("\n====== %s ======\n", file))
+		local fl = files[file]
+		local n, show = 1, false
+
+		if ann ~= 0 then
+			for i = 1, ann do
+				if fl[i] then
+					show = true
+					
+					out:write("@@ 1 @@\n")
+					
+					break
+				end
+			end
+		end
+
+		for line in fp:lines() do
+			if line:byte() == 27 then
+				out:write("[Cannot annotate bytecode file]\n")
+
+				break
+			end
+
+			local v = fl[n]
+
+			if ann ~= 0 then
+				local v2 = fl[n + ann]
+
+				if show then
+					if v2 then
+						show = n + ann
+					elseif v then
+						show = n
+					elseif show + ann < n then
+						show = false
+					end
+				elseif v2 then
+					show = n + ann
+					out:write(format("@@ %d @@\n", n))
+				end
+
+				if not show then goto next end
+			end
+
+			if v then
+				out:write(format(fmtv, v, line))
+			else
+				out:write(format(fmtn, line))
+			end
+
+			::next::
+
+			n = n + 1
+		end
+
+		fp:close()
+	end
+end
+
+------------------------------------------------------------------------------
+-- Finish profiling and dump result.
+local function prof_finish()
+	if prof_ud then
+		profile.stop()
+		local samples = prof_samples
+
+		if samples == 0 then
+			if prof_raw ~= true then out:write("[No samples collected]\n") end
+
+			return
+		end
+
+		if prof_ann then
+			prof_annotate(prof_count1, samples)
+		else
+			prof_top(prof_count1, prof_count2, samples, "")
+		end
+
+		prof_count1 = nil
+		prof_count2 = nil
+		prof_ud = nil
+
+		if out ~= stdout then out:close() end
+	end
+end
+
+-- Start profiling.
+local function prof_start(mode)
+	local interval = ""
+	mode = mode:gsub("i%d*", function(s)
+		interval = s
+		
+		return ""
+	end)
+	prof_min = 3
+	mode = mode:gsub("m(%d+)", function(s)
+		prof_min = tonumber(s)
+		
+		return ""
+	end)
+	prof_depth = 1
+	mode = mode:gsub("%-?%d+", function(s)
+		prof_depth = tonumber(s)
+		
+		return ""
+	end)
+	local m = {}
+
+	for c in mode:gmatch(".") do
+		m[c] = c
+	end
+
+	prof_states = m.z or m.v
+
+	if prof_states == "z" then zone = IMPORTS['jit.zone']("jit.zone") end
+
+	local scope = m.l or m.f or m.F or (prof_states and "" or "f")
+	local flags = (m.p or "")
+	prof_raw = m.r
+
+	if m.s then
+		prof_split = 2
+
+		if prof_depth == -1 or m["-"] then
+			prof_depth = -2
+		elseif prof_depth == 1 then
+			prof_depth = 2
+		end
+	elseif mode:find("[fF].*l") then
+		scope = "l"
+		prof_split = 3
+	else
+		prof_split = (scope == "" or mode:find("[zv].*[lfF]")) and 1 or 0
+	end
+
+	prof_ann = m.A and 0 or (m.a and 3)
+
+	if prof_ann then
+		scope = "l"
+		prof_fmt = "pl"
+		prof_split = 0
+		prof_depth = 1
+	elseif m.G and scope ~= "" then
+		prof_fmt = flags .. scope .. "Z;"
+		prof_depth = -100
+		prof_raw = true
+		prof_min = 0
+	elseif scope == "" then
+		prof_fmt = false
+	else
+		local sc = prof_split == 3 and m.f or m.F or scope
+		prof_fmt = flags .. sc .. (prof_depth >= 0 and "Z < " or "Z > ")
+	end
+
+	prof_count1 = {}
+	prof_count2 = {}
+	prof_samples = 0
+	profile.start(scope:lower() .. interval, prof_cb)
+	prof_ud = newproxy(true)
+	getmetatable(prof_ud).__gc = prof_finish
+end
+
+------------------------------------------------------------------------------
+local function start(mode, outfile)
+	if not outfile then outfile = os.getenv("LUAJIT_PROFILEFILE") end
+
+	if outfile then
+		out = outfile == "-" and stdout or assert(io.open(outfile, "w"))
+	else
+		out = stdout
+	end
+
+	prof_start(mode or "f")
+end
+
+-- Public module functions.
+return {start = start, -- For -j command line option.
+stop = prof_finish} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.other.profiler"] = function(...) __M = __M or (function(...) local profiler = {}
+local should_run = true
+
+if _G.ON_EDITOR_SAVE or not jit then should_run = false end
+
+function profiler.Start()
+	if not should_run then return end
+
+	IMPORTS['jit.p']("jit.p").start("plz -")
+end
+
+function profiler.Stop()
+	if not should_run then return end
+
+	IMPORTS['jit.p']("jit.p").stop()
+end
+
+function profiler.PushZone(name)
+	if not should_run then return end
+
+	IMPORTS['jit.zone']("jit.zone")(name)
+end
+
+function profiler.PopZone()
+	if not should_run then return end
+
+	IMPORTS['jit.zone']("jit.zone")()
+end
+
+return profiler end)(...) return __M end end
 do local __M; IMPORTS["nattlua.syntax.typesystem"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax']("nattlua.syntax").New
 local typesystem = Syntax()
 typesystem:AddSymbolCharacters(
@@ -10697,38 +11192,37 @@ local table_remove = _G.table.remove
 local math_huge = math.huge
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
-local Code = IMPORTS['nattlua.code']("nattlua.code").New
-local Lexer = IMPORTS['nattlua.lexer']("nattlua.lexer").New
+local profiler = IMPORTS['nattlua.other.profiler']("nattlua.other.profiler")
 
 
 
-function META:ReadAnalyzerFunctionExpression()
+function META:ParseAnalyzerFunctionExpression()
 	if not (self:IsValue("analyzer") and self:IsValue("function", 1)) then return end
 
 	local node = self:StartNode("expression", "analyzer_function")
 	node.tokens["analyzer"] = self:ExpectValue("analyzer")
 	node.tokens["function"] = self:ExpectValue("function")
-	self:ReadAnalyzerFunctionBody(node)
+	self:ParseAnalyzerFunctionBody(node)
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadFunctionExpression()
+function META:ParseFunctionExpression()
 	if not self:IsValue("function") then return end
 
 	local node = self:StartNode("expression", "function")
 	node.tokens["function"] = self:ExpectValue("function")
-	self:ReadFunctionBody(node)
+	self:ParseFunctionBody(node)
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadIndexSubExpression(left_node)
+function META:ParseIndexSubExpression(left_node)
 	if not (self:IsValue(".") and self:IsType("letter", 1)) then return end
 
 	local node = self:StartNode("expression", "binary_operator")
-	node.value = self:ReadToken()
-	node.right = self:ReadValueExpressionType("letter")
+	node.value = self:ParseToken()
+	node.right = self:ParseValueExpressionType("letter")
 	node.left = left_node
 	node = self:EndNode(node)
 	return node
@@ -10745,25 +11239,25 @@ function META:IsCallExpression(offset)
 		)
 end
 
-function META:ReadSelfCallSubExpression(left_node)
+function META:ParseSelfCallSubExpression(left_node)
 	if not (self:IsValue(":") and self:IsType("letter", 1) and self:IsCallExpression(2)) then
 		return
 	end
 
 	local node = self:StartNode("expression", "binary_operator", left_node)
-	node.value = self:ReadToken()
-	node.right = self:ReadValueExpressionType("letter")
+	node.value = self:ParseToken()
+	node.right = self:ParseValueExpressionType("letter")
 	node.left = left_node
 	node = self:EndNode(node)
 	return node
 end
 
 do -- typesystem
-	function META:ReadParenthesisOrTupleTypeExpression()
+	function META:ParseParenthesisOrTupleTypeExpression()
 		if not self:IsValue("(") then return end
 
 		local pleft = self:ExpectValue("(")
-		local node = self:ReadTypeExpression(0)
+		local node = self:ParseTypeExpression(0)
 
 		if not node or self:IsValue(",") then
 			local first_expression = node
@@ -10771,7 +11265,7 @@ do -- typesystem
 
 			if self:IsValue(",") then
 				first_expression.tokens[","] = self:ExpectValue(",")
-				node.expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+				node.expressions = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 			else
 				node.expressions = {}
 			end
@@ -10787,25 +11281,25 @@ do -- typesystem
 		end
 
 		node.tokens["("] = node.tokens["("] or {}
-		table_insert(node.tokens["("], 1, pleft)
+		table_insert(node.tokens["("], pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
 		table_insert(node.tokens[")"], self:ExpectValue(")"))
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadPrefixOperatorTypeExpression()
+	function META:ParsePrefixOperatorTypeExpression()
 		if not typesystem_syntax:IsPrefixOperator(self:GetToken()) then return end
 
 		local node = self:StartNode("expression", "prefix_operator")
-		node.value = self:ReadToken()
+		node.value = self:ParseToken()
 		node.tokens[1] = node.value
 
 		if node.value.value == "expand" then
 			self:PushParserEnvironment("runtime")
 		end
 
-		node.right = self:ReadRuntimeExpression(math_huge)
+		node.right = self:ParseRuntimeExpression(math_huge)
 
 		if node.value.value == "expand" then self:PopParserEnvironment() end
 
@@ -10813,17 +11307,17 @@ do -- typesystem
 		return node
 	end
 
-	function META:ReadValueTypeExpression()
+	function META:ParseValueTypeExpression()
 		if not (self:IsValue("...") and self:IsType("letter", 1)) then return end
 
 		local node = self:StartNode("expression", "vararg")
 		node.tokens["..."] = self:ExpectValue("...")
-		node.value = self:ReadTypeExpression(0)
+		node.value = self:ParseTypeExpression(0)
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadTypeSignatureFunctionArgument(expect_type)
+	function META:ParseTypeSignatureFunctionArgument(expect_type)
 		if self:IsValue(")") then return end
 
 		if
@@ -10836,7 +11330,7 @@ do -- typesystem
 				self:IsValue(":", 1)
 			)
 		then
-			local identifier = self:ReadToken()
+			local identifier = self:ParseToken()
 			local token = self:ExpectValue(":")
 			local exp = self:ExpectTypeExpression(0)
 			exp.tokens[":"] = token
@@ -10847,38 +11341,38 @@ do -- typesystem
 		return self:ExpectTypeExpression(0)
 	end
 
-	function META:ReadFunctionSignatureExpression()
+	function META:ParseFunctionSignatureExpression()
 		if not (self:IsValue("function") and self:IsValue("=", 1)) then return end
 
 		local node = self:StartNode("expression", "function_signature")
 		node.tokens["function"] = self:ExpectValue("function")
 		node.tokens["="] = self:ExpectValue("=")
 		node.tokens["arguments("] = self:ExpectValue("(")
-		node.identifiers = self:ReadMultipleValues(nil, self.ReadTypeSignatureFunctionArgument)
+		node.identifiers = self:ParseMultipleValues(nil, self.ParseTypeSignatureFunctionArgument)
 		node.tokens["arguments)"] = self:ExpectValue(")")
 		node.tokens[">"] = self:ExpectValue(">")
 		node.tokens["return("] = self:ExpectValue("(")
-		node.return_types = self:ReadMultipleValues(nil, self.ReadTypeSignatureFunctionArgument)
+		node.return_types = self:ParseMultipleValues(nil, self.ParseTypeSignatureFunctionArgument)
 		node.tokens["return)"] = self:ExpectValue(")")
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadTypeFunctionExpression()
+	function META:ParseTypeFunctionExpression()
 		if not (self:IsValue("function") and self:IsValue("<|", 1)) then return end
 
 		local node = self:StartNode("expression", "type_function")
 		node.tokens["function"] = self:ExpectValue("function")
-		self:ReadTypeFunctionBody(node)
+		self:ParseTypeFunctionBody(node)
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadKeywordValueTypeExpression()
+	function META:ParseKeywordValueTypeExpression()
 		if not typesystem_syntax:IsValue(self:GetToken()) then return end
 
 		local node = self:StartNode("expression", "value")
-		node.value = self:ReadToken()
+		node.value = self:ParseToken()
 		node = self:EndNode(node)
 		return node
 	end
@@ -10889,29 +11383,29 @@ do -- typesystem
 				local node = self:StartNode("sub_statement", "table_expression_value")
 				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
-				node.key_expression = self:ReadTypeExpression(0)
+				node.key_expression = self:ParseTypeExpression(0)
 				node.tokens["]"] = self:ExpectValue("]")
 				node.tokens["="] = self:ExpectValue("=")
-				node.value_expression = self:ReadTypeExpression(0)
+				node.value_expression = self:ParseTypeExpression(0)
 				node = self:EndNode(node)
 				return node
 			elseif self:IsType("letter") and self:IsValue("=", 1) then
 				local node = self:StartNode("sub_statement", "table_key_value")
 				node.tokens["identifier"] = self:ExpectType("letter")
 				node.tokens["="] = self:ExpectValue("=")
-				node.value_expression = self:ReadTypeExpression(0)
+				node.value_expression = self:ParseTypeExpression(0)
 				node = self:EndNode(node)
 				return node
 			end
 
 			local node = self:StartNode("sub_statement", "table_index_value")
 			node.key = i
-			node.value_expression = self:ReadTypeExpression(0)
+			node.value_expression = self:ParseTypeExpression(0)
 			node = self:EndNode(node)
 			return node
 		end
 
-		function META:ReadTableTypeExpression()
+		function META:ParseTableTypeExpression()
 			if not self:IsValue("{") then return end
 
 			local tree = self:StartNode("expression", "type_table")
@@ -10941,7 +11435,7 @@ do -- typesystem
 				end
 
 				if not self:IsValue("}") then
-					tree.tokens["separators"][i] = self:ReadToken()
+					tree.tokens["separators"][i] = self:ParseToken()
 				end
 			end
 
@@ -10951,58 +11445,58 @@ do -- typesystem
 		end
 	end
 
-	function META:ReadStringTypeExpression()
+	function META:ParseStringTypeExpression()
 		if not (self:IsType("$") and self:IsType("string", 1)) then return end
 
 		local node = self:StartNode("expression", "type_string")
-		node.tokens["$"] = self:ReadToken("...")
+		node.tokens["$"] = self:ParseToken("...")
 		node.value = self:ExpectType("string")
 		return node
 	end
 
-	function META:ReadEmptyUnionTypeExpression()
+	function META:ParseEmptyUnionTypeExpression()
 		if not self:IsValue("|") then return end
 
 		local node = self:StartNode("expression", "empty_union")
-		node.tokens["|"] = self:ReadToken("|")
+		node.tokens["|"] = self:ParseToken("|")
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadAsSubExpression(node)
+	function META:ParseAsSubExpression(node)
 		if not self:IsValue("as") then return end
 
 		node.tokens["as"] = self:ExpectValue("as")
-		node.type_expression = self:ReadTypeExpression(0)
+		node.type_expression = self:ParseTypeExpression(0)
 	end
 
-	function META:ReadPostfixTypeOperatorSubExpression(left_node)
+	function META:ParsePostfixTypeOperatorSubExpression(left_node)
 		if not typesystem_syntax:IsPostfixOperator(self:GetToken()) then return end
 
 		local node = self:StartNode("expression", "postfix_operator")
-		node.value = self:ReadToken()
+		node.value = self:ParseToken()
 		node.left = left_node
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadTypeCallSubExpression(left_node, primary_node)
+	function META:ParseTypeCallSubExpression(left_node, primary_node)
 		if not self:IsCallExpression(0) then return end
 
 		local node = self:StartNode("expression", "postfix_call")
 		local start = self:GetToken()
 
 		if self:IsValue("{") then
-			node.expressions = {self:ReadTableTypeExpression()}
+			node.expressions = {self:ParseTableTypeExpression()}
 		elseif self:IsType("string") then
-			node.expressions = {self:ReadValueExpressionToken()}
+			node.expressions = {self:ParseValueExpressionToken()}
 		elseif self:IsValue("<|") then
 			node.tokens["call("] = self:ExpectValue("<|")
-			node.expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+			node.expressions = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 			node.tokens["call)"] = self:ExpectValue("|>")
 		else
 			node.tokens["call("] = self:ExpectValue("(")
-			node.expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+			node.expressions = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 			node.tokens["call)"] = self:ExpectValue(")")
 		end
 
@@ -11022,7 +11516,7 @@ do -- typesystem
 		return node
 	end
 
-	function META:ReadPostfixTypeIndexExpressionSubExpression(left_node)
+	function META:ParsePostfixTypeIndexExpressionSubExpression(left_node)
 		if not self:IsValue("[") then return end
 
 		local node = self:StartNode("expression", "postfix_expression_index")
@@ -11034,15 +11528,15 @@ do -- typesystem
 		return node
 	end
 
-	function META:ReadTypeSubExpression(node)
+	function META:ParseTypeSubExpression(node)
 		for _ = 1, self:GetLength() do
 			local left_node = node
-			local found = self:ReadIndexSubExpression(left_node) or
-				self:ReadSelfCallSubExpression(left_node) or
-				self:ReadPostfixTypeOperatorSubExpression(left_node) or
-				self:ReadTypeCallSubExpression(left_node, node) or
-				self:ReadPostfixTypeIndexExpressionSubExpression(left_node) or
-				self:ReadAsSubExpression(left_node)
+			local found = self:ParseIndexSubExpression(left_node) or
+				self:ParseSelfCallSubExpression(left_node) or
+				self:ParsePostfixTypeOperatorSubExpression(left_node) or
+				self:ParseTypeCallSubExpression(left_node, node) or
+				self:ParsePostfixTypeIndexExpressionSubExpression(left_node) or
+				self:ParseAsSubExpression(left_node)
 
 			if not found then break end
 
@@ -11056,9 +11550,10 @@ do -- typesystem
 		return node
 	end
 
-	function META:ReadTypeExpression(priority)
-		if self.TealCompat then return self:ReadTealExpression(priority) end
+	function META:ParseTypeExpression(priority)
+		if self.TealCompat then return self:ParseTealExpression(priority) end
 
+		profiler.PushZone("ParseTypeExpression")
 		self:PushParserEnvironment("typesystem")
 		local node
 		local force_upvalue
@@ -11068,21 +11563,21 @@ do -- typesystem
 			self:Advance(1)
 		end
 
-		node = self:ReadParenthesisOrTupleTypeExpression() or
-			self:ReadEmptyUnionTypeExpression() or
-			self:ReadPrefixOperatorTypeExpression() or
-			self:ReadAnalyzerFunctionExpression() or -- shared
-			self:ReadFunctionSignatureExpression() or
-			self:ReadTypeFunctionExpression() or -- shared
-			self:ReadFunctionExpression() or -- shared
-			self:ReadValueTypeExpression() or
-			self:ReadKeywordValueTypeExpression() or
-			self:ReadTableTypeExpression() or
-			self:ReadStringTypeExpression()
+		node = self:ParseParenthesisOrTupleTypeExpression() or
+			self:ParseEmptyUnionTypeExpression() or
+			self:ParsePrefixOperatorTypeExpression() or
+			self:ParseAnalyzerFunctionExpression() or -- shared
+			self:ParseFunctionSignatureExpression() or
+			self:ParseTypeFunctionExpression() or -- shared
+			self:ParseFunctionExpression() or -- shared
+			self:ParseValueTypeExpression() or
+			self:ParseKeywordValueTypeExpression() or
+			self:ParseTableTypeExpression() or
+			self:ParseStringTypeExpression()
 		local first = node
 
 		if node then
-			node = self:ReadTypeSubExpression(node)
+			node = self:ParseTypeSubExpression(node)
 
 			if
 				first.kind == "value" and
@@ -11102,13 +11597,14 @@ do -- typesystem
 		do
 			local left_node = node
 			node = self:StartNode("expression", "binary_operator", left_node)
-			node.value = self:ReadToken()
+			node.value = self:ParseToken()
 			node.left = left_node
-			node.right = self:ReadTypeExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
+			node.right = self:ParseTypeExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
 			node = self:EndNode(node)
 		end
 
 		self:PopParserEnvironment()
+		profiler.PopZone()
 		return node
 	end
 
@@ -11143,12 +11639,12 @@ do -- typesystem
 			return
 		end
 
-		return self:ReadTypeExpression(priority)
+		return self:ParseTypeExpression(priority)
 	end
 end
 
 do -- runtime
-	local ReadTableExpression
+	local ParseTableExpression
 
 	do
 		function META:read_table_spread()
@@ -11213,7 +11709,7 @@ do -- runtime
 			return node
 		end
 
-		function META:ReadTableExpression()
+		function META:ParseTableExpression()
 			if not self:IsValue("{") then return end
 
 			local tree = self:StartNode("expression", "table")
@@ -11249,7 +11745,7 @@ do -- runtime
 				end
 
 				if not self:IsValue("}") then
-					tree.tokens["separators"][i] = self:ReadToken()
+					tree.tokens["separators"][i] = self:ParseToken()
 				end
 			end
 
@@ -11259,17 +11755,17 @@ do -- runtime
 		end
 	end
 
-	function META:ReadPostfixOperatorSubExpression(left_node)
+	function META:ParsePostfixOperatorSubExpression(left_node)
 		if not runtime_syntax:IsPostfixOperator(self:GetToken()) then return end
 
 		local node = self:StartNode("expression", "postfix_operator")
-		node.value = self:ReadToken()
+		node.value = self:ParseToken()
 		node.left = left_node
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadCallSubExpression(left_node, primary_node)
+	function META:ParseCallSubExpression(left_node, primary_node)
 		if not self:IsCallExpression(0) then return end
 
 		if primary_node and primary_node.kind == "function" then
@@ -11280,18 +11776,18 @@ do -- runtime
 		local start = self:GetToken()
 
 		if self:IsValue("{") then
-			node.expressions = {self:ReadTableExpression()}
+			node.expressions = {self:ParseTableExpression()}
 		elseif self:IsType("string") then
-			node.expressions = {self:ReadValueExpressionToken()}
+			node.expressions = {self:ParseValueExpressionToken()}
 		elseif self:IsValue("<|") then
 			node.tokens["call("] = self:ExpectValue("<|")
-			node.expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+			node.expressions = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 			node.tokens["call)"] = self:ExpectValue("|>")
 			node.type_call = true
 
 			if self:IsValue("(") then
 				local lparen = self:ExpectValue("(")
-				local expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+				local expressions = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 				local rparen = self:ExpectValue(")")
 				node.expressions_typesystem = node.expressions
 				node.expressions = expressions
@@ -11303,19 +11799,20 @@ do -- runtime
 		elseif self:IsValue("!") then
 			node.tokens["!"] = self:ExpectValue("!")
 			node.tokens["call("] = self:ExpectValue("(")
-			node.expressions = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+			node.expressions = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 			node.tokens["call)"] = self:ExpectValue(")")
 			node.type_call = true
 		else
 			node.tokens["call("] = self:ExpectValue("(")
-			node.expressions = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
+			node.expressions = self:ParseMultipleValues(nil, self.ParseRuntimeExpression, 0)
 			node.tokens["call)"] = self:ExpectValue(")")
 		end
 
 		if
 			primary_node.kind == "value" and
 			node.expressions[1] and
-			node.expressions[1].value
+			node.expressions[1].value and
+			node.expressions[1].value.string_value
 		then
 			local name = primary_node.value.value
 
@@ -11336,7 +11833,7 @@ do -- runtime
 		return node
 	end
 
-	function META:ReadPostfixIndexExpressionSubExpression(left_node)
+	function META:ParsePostfixIndexExpressionSubExpression(left_node)
 		if not self:IsValue("[") then return end
 
 		local node = self:StartNode("expression", "postfix_expression_index")
@@ -11348,7 +11845,7 @@ do -- runtime
 		return node
 	end
 
-	function META:ReadSubExpression(node)
+	function META:ParseSubExpression(node)
 		for _ = 1, self:GetLength() do
 			local left_node = node
 
@@ -11369,11 +11866,11 @@ do -- runtime
 				node.type_expression = self:ExpectTypeExpression(0)
 			end
 
-			local found = self:ReadIndexSubExpression(left_node) or
-				self:ReadSelfCallSubExpression(left_node) or
-				self:ReadCallSubExpression(left_node, node) or
-				self:ReadPostfixOperatorSubExpression(left_node) or
-				self:ReadPostfixIndexExpressionSubExpression(left_node)
+			local found = self:ParseIndexSubExpression(left_node) or
+				self:ParseSelfCallSubExpression(left_node) or
+				self:ParseCallSubExpression(left_node, node) or
+				self:ParsePostfixOperatorSubExpression(left_node) or
+				self:ParsePostfixIndexExpressionSubExpression(left_node)
 
 			if not found then break end
 
@@ -11387,22 +11884,22 @@ do -- runtime
 		return node
 	end
 
-	function META:ReadPrefixOperatorExpression()
+	function META:ParsePrefixOperatorExpression()
 		if not runtime_syntax:IsPrefixOperator(self:GetToken()) then return end
 
 		local node = self:StartNode("expression", "prefix_operator")
-		node.value = self:ReadToken()
+		node.value = self:ParseToken()
 		node.tokens[1] = node.value
 		node.right = self:ExpectRuntimeExpression(math.huge)
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadParenthesisExpression()
+	function META:ParseParenthesisExpression()
 		if not self:IsValue("(") then return end
 
 		local pleft = self:ExpectValue("(")
-		local node = self:ReadRuntimeExpression(0)
+		local node = self:ParseRuntimeExpression(0)
 
 		if not node then
 			self:Error("empty parentheses group", pleft)
@@ -11410,19 +11907,21 @@ do -- runtime
 		end
 
 		node.tokens["("] = node.tokens["("] or {}
-		table_insert(node.tokens["("], 1, pleft)
+		table_insert(node.tokens["("], pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
 		table_insert(node.tokens[")"], self:ExpectValue(")"))
 		return node
 	end
 
-	function META:ReadValueExpression()
+	function META:ParseValueExpression()
 		if not runtime_syntax:IsValue(self:GetToken()) then return end
 
-		return self:ReadValueExpressionToken()
+		return self:ParseValueExpressionToken()
 	end
 
 	local function resolve_import_path(self, path)
+		if not path then debug.trace() end
+
 		local working_directory = self.config.working_directory or ""
 
 		if path:sub(1, 1) == "~" then
@@ -11615,22 +12114,23 @@ do -- runtime
 		end
 	end
 
-	function META:ReadRuntimeExpression(priority)
+	function META:ParseRuntimeExpression(priority)
 		if self:GetCurrentParserEnvironment() == "typesystem" then
-			return self:ReadTypeExpression(priority)
+			return self:ParseTypeExpression(priority)
 		end
 
+		profiler.PushZone("ParseRuntimeExpression")
 		priority = priority or 0
-		local node = self:ReadParenthesisExpression() or
-			self:ReadPrefixOperatorExpression() or
-			self:ReadAnalyzerFunctionExpression() or
-			self:ReadFunctionExpression() or
-			self:ReadValueExpression() or
-			self:ReadTableExpression()
+		local node = self:ParseParenthesisExpression() or
+			self:ParsePrefixOperatorExpression() or
+			self:ParseAnalyzerFunctionExpression() or
+			self:ParseFunctionExpression() or
+			self:ParseValueExpression() or
+			self:ParseTableExpression()
 		local first = node
 
 		if node then
-			node = self:ReadSubExpression(node)
+			node = self:ParseSubExpression(node)
 
 			if
 				first.kind == "value" and
@@ -11651,7 +12151,7 @@ do -- runtime
 		do
 			local left_node = node
 			node = self:StartNode("expression", "binary_operator", left_node)
-			node.value = self:ReadToken()
+			node.value = self:ParseToken()
 			node.left = left_node
 
 			if node.left then node.left.parent = node end
@@ -11673,6 +12173,7 @@ do -- runtime
 
 		if node then node.first_node = first end
 
+		profiler.PopZone("ParseRuntimeExpression")
 		return node
 	end
 
@@ -11709,7 +12210,7 @@ do -- runtime
 			return
 		end
 
-		return self:ReadRuntimeExpression(priority)
+		return self:ParseRuntimeExpression(priority)
 	end
 end end
 IMPORTS['nattlua/parser/statements.lua'] = function(...) local META = ...
@@ -11738,29 +12239,29 @@ do -- destructure statement
 		end
 	end
 
-	function META:ReadDestructureAssignmentStatement()
+	function META:ParseDestructureAssignmentStatement()
 		if not self:IsDestructureStatement() then return end
 
 		local node = self:StartNode("statement", "destructure_assignment")
 
 		do
 			if self:IsType("letter") then
-				node.default = self:ReadValueExpressionToken()
+				node.default = self:ParseValueExpressionToken()
 				node.default_comma = self:ExpectValue(",")
 			end
 
 			node.tokens["{"] = self:ExpectValue("{")
-			node.left = self:ReadMultipleValues(nil, self.ReadIdentifier)
+			node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
 			node.tokens["}"] = self:ExpectValue("}")
 			node.tokens["="] = self:ExpectValue("=")
-			node.right = self:ReadRuntimeExpression(0)
+			node.right = self:ParseRuntimeExpression(0)
 		end
 
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadLocalDestructureAssignmentStatement()
+	function META:ParseLocalDestructureAssignmentStatement()
 		if not self:IsLocalDestructureAssignmentStatement() then return end
 
 		local node = self:StartNode("statement", "local_destructure_assignment")
@@ -11773,15 +12274,15 @@ do -- destructure statement
 
 		do -- remaining
 			if self:IsType("letter") then
-				node.default = self:ReadValueExpressionToken()
+				node.default = self:ParseValueExpressionToken()
 				node.default_comma = self:ExpectValue(",")
 			end
 
 			node.tokens["{"] = self:ExpectValue("{")
-			node.left = self:ReadMultipleValues(nil, self.ReadIdentifier)
+			node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
 			node.tokens["}"] = self:ExpectValue("}")
 			node.tokens["="] = self:ExpectValue("=")
-			node.right = self:ReadRuntimeExpression(0)
+			node.right = self:ParseRuntimeExpression(0)
 		end
 
 		node = self:EndNode(node)
@@ -11790,10 +12291,10 @@ do -- destructure statement
 end
 
 do
-	function META:ReadFunctionNameIndex()
+	function META:ParseFunctionNameIndex()
 		if not runtime_syntax:IsValue(self:GetToken()) then return end
 
-		local node = self:ReadValueExpressionToken()
+		local node = self:ParseValueExpressionToken()
 		local first = node
 		first.standalone_letter = node
 
@@ -11801,8 +12302,8 @@ do
 			local left = node
 			local self_call = self:IsValue(":")
 			node = self:StartNode("expression", "binary_operator")
-			node.value = self:ReadToken()
-			node.right = self:ReadValueExpressionType("letter")
+			node.value = self:ParseToken()
+			node.right = self:ParseValueExpressionType("letter")
 			node.left = left
 			node.right.self_call = self_call
 			node.is_left_assignment = true
@@ -11812,12 +12313,12 @@ do
 		return node
 	end
 
-	function META:ReadFunctionStatement()
+	function META:ParseFunctionStatement()
 		if not self:IsValue("function") then return end
 
 		local node = self:StartNode("statement", "function")
 		node.tokens["function"] = self:ExpectValue("function")
-		node.expression = self:ReadFunctionNameIndex()
+		node.expression = self:ParseFunctionNameIndex()
 
 		if node.expression and node.expression.kind == "binary_operator" then
 			node.self_call = node.expression.right.self_call
@@ -11825,16 +12326,16 @@ do
 
 		if self:IsValue("<|") then
 			node.kind = "type_function"
-			self:ReadTypeFunctionBody(node)
+			self:ParseTypeFunctionBody(node)
 		else
-			self:ReadFunctionBody(node)
+			self:ParseFunctionBody(node)
 		end
 
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ReadAnalyzerFunctionStatement()
+	function META:ParseAnalyzerFunctionStatement()
 		if not (self:IsValue("analyzer") and self:IsValue("function", 1)) then return end
 
 		local node = self:StartNode("statement", "analyzer_function")
@@ -11844,10 +12345,10 @@ do
 
 		if self:IsValue("^") then
 			force_upvalue = true
-			node.tokens["^"] = self:ReadToken()
+			node.tokens["^"] = self:ParseToken()
 		end
 
-		node.expression = self:ReadFunctionNameIndex()
+		node.expression = self:ParseFunctionNameIndex()
 
 		do -- hacky
 			if node.expression.left then
@@ -11861,25 +12362,25 @@ do
 			if node.expression.value.value == ":" then node.self_call = true end
 		end
 
-		self:ReadAnalyzerFunctionBody(node, true)
+		self:ParseAnalyzerFunctionBody(node, true)
 		node = self:EndNode(node)
 		return node
 	end
 end
 
-function META:ReadLocalFunctionStatement()
+function META:ParseLocalFunctionStatement()
 	if not (self:IsValue("local") and self:IsValue("function", 1)) then return end
 
 	local node = self:StartNode("statement", "local_function")
 	node.tokens["local"] = self:ExpectValue("local")
 	node.tokens["function"] = self:ExpectValue("function")
 	node.tokens["identifier"] = self:ExpectType("letter")
-	self:ReadFunctionBody(node)
+	self:ParseFunctionBody(node)
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadLocalAnalyzerFunctionStatement()
+function META:ParseLocalAnalyzerFunctionStatement()
 	if
 		not (
 			self:IsValue("local") and
@@ -11895,12 +12396,12 @@ function META:ReadLocalAnalyzerFunctionStatement()
 	node.tokens["analyzer"] = self:ExpectValue("analyzer")
 	node.tokens["function"] = self:ExpectValue("function")
 	node.tokens["identifier"] = self:ExpectType("letter")
-	self:ReadAnalyzerFunctionBody(node, true)
+	self:ParseAnalyzerFunctionBody(node, true)
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadLocalTypeFunctionStatement()
+function META:ParseLocalTypeFunctionStatement()
 	if
 		not (
 			self:IsValue("local") and
@@ -11918,12 +12419,12 @@ function META:ReadLocalTypeFunctionStatement()
 	node.tokens["local"] = self:ExpectValue("local")
 	node.tokens["function"] = self:ExpectValue("function")
 	node.tokens["identifier"] = self:ExpectType("letter")
-	self:ReadTypeFunctionBody(node)
+	self:ParseTypeFunctionBody(node)
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadBreakStatement()
+function META:ParseBreakStatement()
 	if not self:IsValue("break") then return nil end
 
 	local node = self:StartNode("statement", "break")
@@ -11932,33 +12433,33 @@ function META:ReadBreakStatement()
 	return node
 end
 
-function META:ReadDoStatement()
+function META:ParseDoStatement()
 	if not self:IsValue("do") then return nil end
 
 	local node = self:StartNode("statement", "do")
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ReadNodes({["end"] = true})
+	node.statements = self:ParseNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadGenericForStatement()
+function META:ParseGenericForStatement()
 	if not self:IsValue("for") then return nil end
 
 	local node = self:StartNode("statement", "generic_for")
 	node.tokens["for"] = self:ExpectValue("for")
-	node.identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier)
+	node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier)
 	node.tokens["in"] = self:ExpectValue("in")
-	node.expressions = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
+	node.expressions = self:ParseMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ReadNodes({["end"] = true})
+	node.statements = self:ParseNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadGotoLabelStatement()
+function META:ParseGotoLabelStatement()
 	if not self:IsValue("::") then return nil end
 
 	local node = self:StartNode("statement", "goto_label")
@@ -11969,7 +12470,7 @@ function META:ReadGotoLabelStatement()
 	return node
 end
 
-function META:ReadGotoStatement()
+function META:ParseGotoStatement()
 	if not self:IsValue("goto") or not self:IsType("letter", 1) then return nil end
 
 	local node = self:StartNode("statement", "goto")
@@ -11979,7 +12480,7 @@ function META:ReadGotoStatement()
 	return node
 end
 
-function META:ReadIfStatement()
+function META:ParseIfStatement()
 	if not self:IsValue("if") then return nil end
 
 	local node = self:StartNode("statement", "if")
@@ -11994,7 +12495,7 @@ function META:ReadIfStatement()
 		if i == 1 then
 			token = self:ExpectValue("if")
 		else
-			token = self:ReadValues({
+			token = self:ParseValues({
 				["else"] = true,
 				["elseif"] = true,
 				["end"] = true,
@@ -12009,7 +12510,7 @@ function META:ReadIfStatement()
 			node.tokens["then"][i] = self:ExpectValue("then")
 		end
 
-		node.statements[i] = self:ReadNodes({
+		node.statements[i] = self:ParseNodes({
 			["end"] = true,
 			["else"] = true,
 			["elseif"] = true,
@@ -12023,18 +12524,18 @@ function META:ReadIfStatement()
 	return node
 end
 
-function META:ReadLocalAssignmentStatement()
+function META:ParseLocalAssignmentStatement()
 	if not self:IsValue("local") then return end
 
 	local node = self:StartNode("statement", "local_assignment")
 	node.tokens["local"] = self:ExpectValue("local")
 
 	if self.TealCompat and self:IsValue(",", 1) then
-		node.left = self:ReadMultipleValues(nil, self.ReadIdentifier, false)
+		node.left = self:ParseMultipleValues(nil, self.ParseIdentifier, false)
 
 		if self:IsValue(":") then
 			self:Advance(1)
-			local expressions = self:ReadMultipleValues(nil, self.ReadTealExpression, 0)
+			local expressions = self:ParseMultipleValues(nil, self.ParseTealExpression, 0)
 
 			for i, v in ipairs(node.left) do
 				v.type_expression = expressions[i]
@@ -12042,46 +12543,46 @@ function META:ReadLocalAssignmentStatement()
 			end
 		end
 	else
-		node.left = self:ReadMultipleValues(nil, self.ReadIdentifier)
+		node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
 	end
 
 	if self:IsValue("=") then
 		node.tokens["="] = self:ExpectValue("=")
-		node.right = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
+		node.right = self:ParseMultipleValues(nil, self.ParseRuntimeExpression, 0)
 	end
 
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadNumericForStatement()
+function META:ParseNumericForStatement()
 	if not (self:IsValue("for") and self:IsValue("=", 2)) then return nil end
 
 	local node = self:StartNode("statement", "numeric_for")
 	node.tokens["for"] = self:ExpectValue("for")
-	node.identifiers = self:ReadMultipleValues(1, self.ReadIdentifier)
+	node.identifiers = self:ParseMultipleValues(1, self.ParseIdentifier)
 	node.tokens["="] = self:ExpectValue("=")
-	node.expressions = self:ReadMultipleValues(3, self.ExpectRuntimeExpression, 0)
+	node.expressions = self:ParseMultipleValues(3, self.ExpectRuntimeExpression, 0)
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ReadNodes({["end"] = true})
+	node.statements = self:ParseNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadRepeatStatement()
+function META:ParseRepeatStatement()
 	if not self:IsValue("repeat") then return nil end
 
 	local node = self:StartNode("statement", "repeat")
 	node.tokens["repeat"] = self:ExpectValue("repeat")
-	node.statements = self:ReadNodes({["until"] = true})
+	node.statements = self:ParseNodes({["until"] = true})
 	node.tokens["until"] = self:ExpectValue("until")
 	node.expression = self:ExpectRuntimeExpression()
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadSemicolonStatement()
+function META:ParseSemicolonStatement()
 	if not self:IsValue(";") then return nil end
 
 	local node = self:StartNode("statement", "semicolon")
@@ -12090,30 +12591,30 @@ function META:ReadSemicolonStatement()
 	return node
 end
 
-function META:ReadReturnStatement()
+function META:ParseReturnStatement()
 	if not self:IsValue("return") then return nil end
 
 	local node = self:StartNode("statement", "return")
 	node.tokens["return"] = self:ExpectValue("return")
-	node.expressions = self:ReadMultipleValues(nil, self.ReadRuntimeExpression, 0)
+	node.expressions = self:ParseMultipleValues(nil, self.ParseRuntimeExpression, 0)
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadWhileStatement()
+function META:ParseWhileStatement()
 	if not self:IsValue("while") then return nil end
 
 	local node = self:StartNode("statement", "while")
 	node.tokens["while"] = self:ExpectValue("while")
 	node.expression = self:ExpectRuntimeExpression()
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ReadNodes({["end"] = true})
+	node.statements = self:ParseNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadContinueStatement()
+function META:ParseContinueStatement()
 	if not self:IsValue("continue") then return nil end
 
 	local node = self:StartNode("statement", "continue")
@@ -12122,10 +12623,10 @@ function META:ReadContinueStatement()
 	return node
 end
 
-function META:ReadDebugCodeStatement()
+function META:ParseDebugCodeStatement()
 	if self:IsType("analyzer_debug_code") then
 		local node = self:StartNode("statement", "analyzer_debug_code")
-		node.lua_code = self:ReadValueExpressionType("analyzer_debug_code")
+		node.lua_code = self:ParseValueExpressionType("analyzer_debug_code")
 		node = self:EndNode(node)
 		return node
 	elseif self:IsType("parser_debug_code") then
@@ -12141,7 +12642,7 @@ function META:ReadDebugCodeStatement()
 	end
 end
 
-function META:ReadLocalTypeAssignmentStatement()
+function META:ParseLocalTypeAssignmentStatement()
 	if
 		not (
 			self:IsValue("local") and
@@ -12155,13 +12656,13 @@ function META:ReadLocalTypeAssignmentStatement()
 	local node = self:StartNode("statement", "local_assignment")
 	node.tokens["local"] = self:ExpectValue("local")
 	node.tokens["type"] = self:ExpectValue("type")
-	node.left = self:ReadMultipleValues(nil, self.ReadIdentifier)
+	node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
 	node.environment = "typesystem"
 
 	if self:IsValue("=") then
 		node.tokens["="] = self:ExpectValue("=")
 		self:PushParserEnvironment("typesystem")
-		node.right = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+		node.right = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
@@ -12169,20 +12670,20 @@ function META:ReadLocalTypeAssignmentStatement()
 	return node
 end
 
-function META:ReadTypeAssignmentStatement()
+function META:ParseTypeAssignmentStatement()
 	if not (self:IsValue("type") and (self:IsType("letter", 1) or self:IsValue("^", 1))) then
 		return
 	end
 
 	local node = self:StartNode("statement", "assignment")
 	node.tokens["type"] = self:ExpectValue("type")
-	node.left = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+	node.left = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 	node.environment = "typesystem"
 
 	if self:IsValue("=") then
 		node.tokens["="] = self:ExpectValue("=")
 		self:PushParserEnvironment("typesystem")
-		node.right = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+		node.right = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
@@ -12190,10 +12691,10 @@ function META:ReadTypeAssignmentStatement()
 	return node
 end
 
-function META:ReadCallOrAssignmentStatement()
+function META:ParseCallOrAssignmentStatement()
 	local start = self:GetToken()
 	self:SuppressOnNode()
-	local left = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
+	local left = self:ParseMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
 
 	if self:IsValue("=") then
 		local node = self:StartNode("statement", "assignment", left[1])
@@ -12204,7 +12705,7 @@ function META:ReadCallOrAssignmentStatement()
 			v.is_left_assignment = true
 		end
 
-		node.right = self:ReadMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
+		node.right = self:ParseMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
 		self:ReRunOnNode(node.left)
 		node = self:EndNode(node)
 		return node
@@ -12237,7 +12738,7 @@ local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
 local math_huge = math.huge
 
-function META:ReadTealFunctionArgument(expect_type)
+function META:ParseTealFunctionArgument(expect_type)
 	if
 		expect_type or
 		(
@@ -12246,18 +12747,18 @@ function META:ReadTealFunctionArgument(expect_type)
 		) and
 		self:IsValue(":", 1)
 	then
-		local identifier = self:ReadToken()
+		local identifier = self:ParseToken()
 		local token = self:ExpectValue(":")
-		local exp = self:ReadTealExpression(0)
+		local exp = self:ParseTealExpression(0)
 		exp.tokens[":"] = token
 		exp.identifier = identifier
 		return exp
 	end
 
-	return self:ReadTealExpression(0)
+	return self:ParseTealExpression(0)
 end
 
-function META:ReadTealFunctionSignature()
+function META:ParseTealFunctionSignature()
 	if not self:IsValue("function") then return nil end
 
 	local node = self:StartNode("expression", "function_signature")
@@ -12265,20 +12766,20 @@ function META:ReadTealFunctionSignature()
 
 	if self:IsValue("<") then
 		node.tokens["<"] = self:ExpectValue("<")
-		node.identifiers_typesystem = self:ReadMultipleValues(math_huge, self.ReadTealFunctionArgument, false)
+		node.identifiers_typesystem = self:ParseMultipleValues(math_huge, self.ParseTealFunctionArgument, false)
 		node.tokens[">"] = self:ExpectValue(">")
 	end
 
 	node.tokens["="] = self:NewToken("symbol", "=")
 	node.tokens["arguments("] = self:ExpectValue("(")
-	node.identifiers = self:ReadMultipleValues(nil, self.ReadTealFunctionArgument)
+	node.identifiers = self:ParseMultipleValues(nil, self.ParseTealFunctionArgument)
 	node.tokens["arguments)"] = self:ExpectValue(")")
 	node.tokens[">"] = self:NewToken("symbol", ">")
 
 	if self:IsValue(":") then
 		node.tokens[":"] = self:ExpectValue(":")
 		node.tokens["return("] = self:NewToken("symbol", "(")
-		node.return_types = self:ReadMultipleValues(nil, self.ReadTealFunctionArgument)
+		node.return_types = self:ParseMultipleValues(nil, self.ParseTealFunctionArgument)
 		node.tokens["return)"] = self:NewToken("symbol", ")")
 	end
 
@@ -12286,7 +12787,7 @@ function META:ReadTealFunctionSignature()
 	return node
 end
 
-function META:ReadTealKeywordValueExpression()
+function META:ParseTealKeywordValueExpression()
 	local token = self:GetToken()
 
 	if not token then return end
@@ -12294,22 +12795,22 @@ function META:ReadTealKeywordValueExpression()
 	if not typesystem_syntax:IsValue(token) then return end
 
 	local node = self:StartNode("expression", "value")
-	node.value = self:ReadToken()
+	node.value = self:ParseToken()
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadTealVarargExpression()
+function META:ParseTealVarargExpression()
 	if not self:IsType("letter") or not self:IsValue("...", 1) then return end
 
 	local node = self:StartNode("expression", "value")
-	node.type_expression = self:ReadValueExpressionType("letter")
+	node.type_expression = self:ParseValueExpressionType("letter")
 	node.value = self:ExpectValue("...")
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadTealTable()
+function META:ParseTealTable()
 	if not self:IsValue("{") then return nil end
 
 	local node = self:StartNode("expression", "type_table")
@@ -12323,16 +12824,16 @@ function META:ReadTealTable()
 
 		if self:IsValue("(") then
 			kv.tokens["["] = self:ExpectValueTranslate("(", "[")
-			kv.key_expression = self:ReadTealExpression(0)
+			kv.key_expression = self:ParseTealExpression(0)
 			kv.tokens["]"] = self:ExpectValueTranslate(")", "]")
 		else
 			kv.tokens["["] = self:NewToken("symbol", "[")
-			kv.key_expression = self:ReadValueExpressionType("letter")
+			kv.key_expression = self:ParseValueExpressionType("letter")
 			kv.tokens["]"] = self:NewToken("symbol", "]")
 		end
 
 		kv.tokens["="] = self:ExpectValueTranslate(":", "=")
-		kv.value_expression = self:ReadTealExpression(0)
+		kv.value_expression = self:ParseTealExpression(0)
 		kv = self:EndNode(kv)
 		node.children = {kv}
 	else
@@ -12349,7 +12850,7 @@ function META:ReadTealTable()
 			kv.key_expression = key
 			kv.tokens["]"] = self:NewToken("symbol", "]")
 			kv.tokens["="] = self:NewToken("symbol", "=")
-			kv.value_expression = self:ReadTealExpression(0)
+			kv.value_expression = self:ParseTealExpression(0)
 			kv = self:EndNode(kv)
 			table.insert(node.children, kv)
 
@@ -12370,38 +12871,38 @@ function META:ReadTealTable()
 	return node
 end
 
-function META:ReadTealTuple()
+function META:ParseTealTuple()
 	if not self:IsValue("(") then return nil end
 
 	local node = self:StartNode("expression", "tuple")
 	node.tokens["("] = self:ExpectValue("(")
-	node.expressions = self:ReadMultipleValues(nil, self.ReadTealExpression, 0)
+	node.expressions = self:ParseMultipleValues(nil, self.ParseTealExpression, 0)
 	node.tokens[")"] = self:ExpectValue(")")
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadTealCallSubExpression()
+function META:ParseTealCallSubExpression()
 	if not self:IsValue("<") then return end
 
 	local node = self:StartNode("expression", "postfix_call")
 	node.tokens["call("] = self:ExpectValueTranslate("<", "<|")
-	node.expressions = self:ReadMultipleValues(nil, self.ReadTealExpression, 0)
+	node.expressions = self:ParseMultipleValues(nil, self.ParseTealExpression, 0)
 	node.tokens["call)"] = self:ExpectValueTranslate(">", "|>")
 	node.type_call = true
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadTealSubExpression(node)
+function META:ParseTealSubExpression(node)
 	for _ = 1, self:GetLength() do
 		local left_node = node
-		local found = self:ReadIndexSubExpression() or
-			--self:ReadSelfCallSubExpression() or
-			--self:ReadPostfixTypeOperatorSubExpression() or
-			self:ReadTealCallSubExpression() --or
-		--self:ReadPostfixTypeIndexExpressionSubExpression() or
-		--self:ReadAsSubExpression(left_node)
+		local found = self:ParseIndexSubExpression() or
+			--self:ParseSelfCallSubExpression() or
+			--self:ParsePostfixTypeOperatorSubExpression() or
+			self:ParseTealCallSubExpression() --or
+		--self:ParsePostfixTypeIndexExpressionSubExpression() or
+		--self:ParseAsSubExpression(left_node)
 		if not found then break end
 
 		found.left = left_node
@@ -12416,16 +12917,16 @@ function META:ReadTealSubExpression(node)
 	return node
 end
 
-function META:ReadTealExpression(priority)
-	local node = self:ReadTealFunctionSignature() or
-		self:ReadTealVarargExpression() or
-		self:ReadTealKeywordValueExpression() or
-		self:ReadTealTable() or
-		self:ReadTealTuple()
+function META:ParseTealExpression(priority)
+	local node = self:ParseTealFunctionSignature() or
+		self:ParseTealVarargExpression() or
+		self:ParseTealKeywordValueExpression() or
+		self:ParseTealTable() or
+		self:ParseTealTuple()
 	local first = node
 
 	if node then
-		node = self:ReadTealSubExpression(node)
+		node = self:ParseTealSubExpression(node)
 
 		if
 			first.kind == "value" and
@@ -12446,52 +12947,52 @@ function META:ReadTealExpression(priority)
 	do
 		local left_node = node
 		node = self:StartNode("expression", "binary_operator")
-		node.value = self:ReadToken()
+		node.value = self:ParseToken()
 		node.left = left_node
-		node.right = self:ReadTealExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
+		node.right = self:ParseTealExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
 		node = self:EndNode(node)
 	end
 
 	return node
 end
 
-function META:ReadTealAssignment()
+function META:ParseTealAssignment()
 	if not self:IsValue("type") or not self:IsType("letter", 1) then return nil end
 
 	local kv = self:StartNode("statement", "assignment")
 	kv.tokens["type"] = self:ExpectValue("type")
-	kv.left = {self:ReadValueExpressionToken()}
+	kv.left = {self:ParseValueExpressionToken()}
 	kv.tokens["="] = self:ExpectValue("=")
-	kv.right = {self:ReadTealExpression(0)}
+	kv.right = {self:ParseTealExpression(0)}
 	kv = self:EndNode(kv)
 	return kv
 end
 
-function META:ReadTealRecordKeyVal()
+function META:ParseTealRecordKeyVal()
 	if not self:IsType("letter") or not self:IsValue(":", 1) then return nil end
 
 	local kv = self:StartNode("statement", "assignment")
 	kv.tokens["type"] = self:NewToken("letter", "type")
-	kv.left = {self:ReadValueExpressionToken()}
+	kv.left = {self:ParseValueExpressionToken()}
 	kv.tokens["="] = self:ExpectValueTranslate(":", "=")
-	kv.right = {self:ReadTealExpression(0)}
+	kv.right = {self:ParseTealExpression(0)}
 	return kv
 end
 
-function META:ReadTealRecordArray()
+function META:ParseTealRecordArray()
 	if not self:IsValue("{") then return nil end
 
 	local kv = self:StartNode("statement", "assignment")
 	kv.tokens["type"] = self:ExpectValueTranslate("{", "type")
 	kv.left = {self:ParseString("_G[number] = 1").statements[1].left[1]}
 	kv.tokens["="] = self:NewToken("symbol", "=")
-	kv.right = {self:ReadTealExpression(0)}
+	kv.right = {self:ParseTealExpression(0)}
 	self:Advance(1) -- }
 	kv = self:EndNode(kv)
 	return kv
 end
 
-function META:ReadTealRecordMetamethod()
+function META:ParseTealRecordMetamethod()
 	if
 		not self:IsValue("metamethod") or
 		not self:IsType("letter", 1)
@@ -12503,13 +13004,13 @@ function META:ReadTealRecordMetamethod()
 
 	local kv = self:StartNode("statement", "assignment")
 	kv.tokens["type"] = self:ExpectValueTranslate("metamethod", "type")
-	kv.left = {self:ReadValueExpressionToken()}
+	kv.left = {self:ParseValueExpressionToken()}
 	kv.tokens["="] = self:ExpectValueTranslate(":", "=")
-	kv.right = {self:ReadTealExpression(0)}
+	kv.right = {self:ParseTealExpression(0)}
 	return kv
 end
 
-local function ReadRecordBody(
+local function ParseRecordBody(
 	self,
 	assignment
 )
@@ -12521,7 +13022,7 @@ local function ReadRecordBody(
 		func.tokens["identifier"] = assignment.left[1].value
 		func.tokens["function"] = self:NewToken("letter", "function")
 		func.tokens["arguments("] = self:ExpectValueTranslate("<", "<|")
-		func.identifiers = self:ReadMultipleValues(nil, self.ReadValueExpressionToken)
+		func.identifiers = self:ParseMultipleValues(nil, self.ParseValueExpressionToken)
 		func.tokens["arguments)"] = self:ExpectValueTranslate(">", "|>")
 		func.statements = {}
 	end
@@ -12544,12 +13045,12 @@ local function ReadRecordBody(
 	)
 
 	while true do
-		local node = self:ReadTealEnumStatement() or
-			self:ReadTealAssignment() or
-			self:ReadTealRecord() or
-			self:ReadTealRecordMetamethod() or
-			self:ReadTealRecordKeyVal() or
-			self:ReadTealRecordArray()
+		local node = self:ParseTealEnumStatement() or
+			self:ParseTealAssignment() or
+			self:ParseTealRecord() or
+			self:ParseTealRecordMetamethod() or
+			self:ParseTealRecordKeyVal() or
+			self:ParseTealRecordArray()
 
 		if not node then break end
 
@@ -12579,18 +13080,18 @@ local function ReadRecordBody(
 	return {assignment, block}
 end
 
-function META:ReadTealRecord()
+function META:ParseTealRecord()
 	if not self:IsValue("record") or not self:IsType("letter", 1) then return nil end
 
 	self:PushParserEnvironment("typesystem")
 	local assignment = self:StartNode("statement", "assignment")
 	assignment.tokens["type"] = self:ExpectValueTranslate("record", "type")
 	assignment.tokens["="] = self:NewToken("symbol", "=")
-	assignment.left = {self:ReadValueExpressionToken()}
-	return ReadRecordBody(self, assignment)
+	assignment.left = {self:ParseValueExpressionToken()}
+	return ParseRecordBody(self, assignment)
 end
 
-function META:ReadLocalTealRecord()
+function META:ParseLocalTealRecord()
 	if
 		not self:IsValue("local") or
 		not self:IsValue("record", 1)
@@ -12605,26 +13106,26 @@ function META:ReadLocalTealRecord()
 	assignment.tokens["local"] = self:ExpectValue("local")
 	assignment.tokens["type"] = self:ExpectValueTranslate("record", "type")
 	assignment.tokens["="] = self:NewToken("symbol", "=")
-	assignment.left = {self:ReadValueExpressionToken()}
-	return ReadRecordBody(self, assignment)
+	assignment.left = {self:ParseValueExpressionToken()}
+	return ParseRecordBody(self, assignment)
 end
 
 do
-	local function ReadBody(
+	local function ParseBody(
 		self,
 		assignment
 	)
 		self:PushParserEnvironment("typesystem")
 		assignment.tokens["type"] = self:ExpectValueTranslate("enum", "type")
-		assignment.left = {self:ReadValueExpressionToken()}
+		assignment.left = {self:ParseValueExpressionToken()}
 		assignment.tokens["="] = self:NewToken("symbol", "=")
-		local bnode = self:ReadValueExpressionType("string")
+		local bnode = self:ParseValueExpressionType("string")
 
 		while not self:IsValue("end") do
 			local left = bnode
 			bnode = self:StartNode("expression", "binary_operator")
 			bnode.value = self:NewToken("symbol", "|")
-			bnode.right = self:ReadValueExpressionType("string")
+			bnode.right = self:ParseValueExpressionType("string")
 			bnode.left = left
 			bnode = self:EndNode(bnode)
 		end
@@ -12634,16 +13135,16 @@ do
 		self:PopParserEnvironment("typesystem")
 	end
 
-	function META:ReadTealEnumStatement()
+	function META:ParseTealEnumStatement()
 		if not self:IsValue("enum") or not self:IsType("letter", 1) then return nil end
 
 		local assignment = self:StartNode("statement", "assignment")
-		ReadBody(self, assignment)
+		ParseBody(self, assignment)
 		assignment = self:EndNode(assignment)
 		return assignment
 	end
 
-	function META:ReadLocalTealEnumStatement()
+	function META:ParseLocalTealEnumStatement()
 		if
 			not self:IsValue("local") or
 			not self:IsValue("enum", 1)
@@ -12655,12 +13156,11 @@ do
 
 		local assignment = self:StartNode("statement", "local_assignment")
 		assignment.tokens["local"] = self:ExpectValue("local")
-		return ReadBody(self, assignment)
+		return ParseBody(self, assignment)
 	end
 end end
 do local __M; IMPORTS["nattlua.parser"] = function(...) __M = __M or (function(...) local META = IMPORTS['nattlua.parser.base']("nattlua.parser.base")
-local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
-local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
+local profiler = IMPORTS['nattlua.other.profiler']("nattlua.other.profiler")
 local Code = IMPORTS['nattlua.code']("nattlua.code").New
 local Lexer = IMPORTS['nattlua.lexer']("nattlua.lexer").New
 local math = _G.math
@@ -12673,7 +13173,7 @@ local ipairs = _G.ipairs
 
 
 
-function META:ReadIdentifier(expect_type)
+function META:ParseIdentifier(expect_type)
 	if not self:IsType("letter") and not self:IsValue("...") then return end
 
 	local node = self:StartNode("expression", "value") -- as ValueExpression ]]
@@ -12702,73 +13202,73 @@ function META:ReadIdentifier(expect_type)
 	return node
 end
 
-function META:ReadValueExpressionToken(expect_value)
+function META:ParseValueExpressionToken(expect_value)
 	local node = self:StartNode("expression", "value")
-	node.value = expect_value and self:ExpectValue(expect_value) or self:ReadToken()
+	node.value = expect_value and self:ExpectValue(expect_value) or self:ParseToken()
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadValueExpressionType(expect_value)
+function META:ParseValueExpressionType(expect_value)
 	local node = self:StartNode("expression", "value")
 	node.value = self:ExpectType(expect_value)
 	node = self:EndNode(node)
 	return node
 end
 
-function META:ReadFunctionBody(
+function META:ParseFunctionBody(
 	node
 )
 	if self.TealCompat then
 		if self:IsValue("<") then
 			node.tokens["arguments_typesystem("] = self:ExpectValue("<")
-			node.identifiers_typesystem = self:ReadMultipleValues(nil, self.ReadIdentifier)
+			node.identifiers_typesystem = self:ParseMultipleValues(nil, self.ParseIdentifier)
 			node.tokens["arguments_typesystem)"] = self:ExpectValue(">")
 		end
 	end
 
 	node.tokens["arguments("] = self:ExpectValue("(")
-	node.identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier)
+	node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier)
 	node.tokens["arguments)"] = self:ExpectValue(")", node.tokens["arguments("])
 
 	if self:IsValue(":") then
 		node.tokens["return:"] = self:ExpectValue(":")
 		self:PushParserEnvironment("typesystem")
-		node.return_types = self:ReadMultipleValues(nil, self.ReadTypeExpression, 0)
+		node.return_types = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
-	node.statements = self:ReadNodes({["end"] = true})
+	node.statements = self:ParseNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["function"])
 	return node
 end
 
-function META:ReadTypeFunctionBody(
+function META:ParseTypeFunctionBody(
 	node
 )
 	if self:IsValue("!") then
 		node.tokens["!"] = self:ExpectValue("!")
 		node.tokens["arguments("] = self:ExpectValue("(")
-		node.identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier, true)
+		node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier, true)
 
 		if self:IsValue("...") then
-			table_insert(node.identifiers, self:ReadValueExpressionToken("..."))
+			table_insert(node.identifiers, self:ParseValueExpressionToken("..."))
 		end
 
 		node.tokens["arguments)"] = self:ExpectValue(")")
 	else
 		node.tokens["arguments("] = self:ExpectValue("<|")
-		node.identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier, true)
+		node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier, true)
 
 		if self:IsValue("...") then
-			table_insert(node.identifiers, self:ReadValueExpressionToken("..."))
+			table_insert(node.identifiers, self:ParseValueExpressionToken("..."))
 		end
 
 		node.tokens["arguments)"] = self:ExpectValue("|>", node.tokens["arguments("])
 
 		if self:IsValue("(") then
 			local lparen = self:ExpectValue("(")
-			local identifiers = self:ReadMultipleValues(nil, self.ReadIdentifier, true)
+			local identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier, true)
 			local rparen = self:ExpectValue(")")
 			node.identifiers_typesystem = node.identifiers
 			node.identifiers = identifiers
@@ -12782,26 +13282,26 @@ function META:ReadTypeFunctionBody(
 	if self:IsValue(":") then
 		node.tokens["return:"] = self:ExpectValue(":")
 		self:PushParserEnvironment("typesystem")
-		node.return_types = self:ReadMultipleValues(math.huge, self.ExpectTypeExpression, 0)
+		node.return_types = self:ParseMultipleValues(math.huge, self.ExpectTypeExpression, 0)
 		self:PopParserEnvironment("typesystem")
 	end
 
 	node.environment = "typesystem"
 	self:PushParserEnvironment("typesystem")
 	local start = self:GetToken()
-	node.statements = self:ReadNodes({["end"] = true})
+	node.statements = self:ParseNodes({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", start, start)
 	self:PopParserEnvironment()
 	return node
 end
 
-function META:ReadTypeFunctionArgument(expect_type)
+function META:ParseTypeFunctionArgument(expect_type)
 	if self:IsValue(")") then return end
 
 	if self:IsValue("...") then return end
 
 	if expect_type or self:IsType("letter") and self:IsValue(":", 1) then
-		local identifier = self:ReadToken()
+		local identifier = self:ParseToken()
 		local token = self:ExpectValue(":")
 		local exp = self:ExpectTypeExpression(0)
 		exp.tokens[":"] = token
@@ -12812,13 +13312,13 @@ function META:ReadTypeFunctionArgument(expect_type)
 	return self:ExpectTypeExpression(0)
 end
 
-function META:ReadAnalyzerFunctionBody(
+function META:ParseAnalyzerFunctionBody(
 	node,
 	type_args
 )
 	self:PushParserEnvironment("runtime")
 	node.tokens["arguments("] = self:ExpectValue("(")
-	node.identifiers = self:ReadMultipleValues(math_huge, self.ReadTypeFunctionArgument, type_args)
+	node.identifiers = self:ParseMultipleValues(math_huge, self.ParseTypeFunctionArgument, type_args)
 
 	if self:IsValue("...") then
 		local vararg = self:StartNode("expression", "value")
@@ -12842,17 +13342,17 @@ function META:ReadAnalyzerFunctionBody(
 	if self:IsValue(":") then
 		node.tokens["return:"] = self:ExpectValue(":")
 		self:PushParserEnvironment("typesystem")
-		node.return_types = self:ReadMultipleValues(math.huge, self.ReadTypeExpression, 0)
+		node.return_types = self:ParseMultipleValues(math.huge, self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
-		node.statements = self:ReadNodes({["end"] = true})
+		node.statements = self:ParseNodes({["end"] = true})
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectValue("end", start, start)
 	elseif not self:IsValue(",") then
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
-		node.statements = self:ReadNodes({["end"] = true})
+		node.statements = self:ParseNodes({["end"] = true})
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectValue("end", start, start)
 	end
@@ -12882,7 +13382,7 @@ function META:ParseString(str, config)
 	if not tokens then return nil, code end
 
 	local parser = self.New(tokens, code, config)
-	local ok, node = xpcall(parser.ReadRootNode, debug.traceback, parser)
+	local ok, node = xpcall(parser.ParseRootNode, debug.traceback, parser)
 
 	if not ok then return nil, node end
 
@@ -12907,7 +13407,7 @@ end
 
 local imported_index = nil
 
-function META:ReadRootNode()
+function META:ParseRootNode()
 	local node = self:StartNode("statement", "root")
 	self.RootStatement = self.config and self.config.root_statement_override or node
 	local shebang
@@ -12938,7 +13438,7 @@ function META:ReadRootNode()
 		end
 	end
 
-	node.statements = self:ReadNodes()
+	node.statements = self:ParseNodes()
 
 	if shebang then table.insert(node.statements, 1, shebang) end
 
@@ -12958,42 +13458,837 @@ function META:ReadRootNode()
 	return node
 end
 
-function META:ReadNode()
+function META:ParseNode()
 	if self:IsType("end_of_file") then return end
 
-	return self:ReadDebugCodeStatement() or
-		self:ReadReturnStatement() or
-		self:ReadBreakStatement() or
-		self:ReadContinueStatement() or
-		self:ReadSemicolonStatement() or
-		self:ReadGotoStatement() or
-		self:ReadGotoLabelStatement() or
-		self:ReadRepeatStatement() or
-		self:ReadAnalyzerFunctionStatement() or
-		self:ReadFunctionStatement() or
-		self:ReadLocalTypeFunctionStatement() or
-		self:ReadLocalFunctionStatement() or
-		self:ReadLocalAnalyzerFunctionStatement() or
-		self:ReadLocalTypeAssignmentStatement() or
-		self:ReadLocalDestructureAssignmentStatement() or
+	profiler.PushZone("ReadStatement")
+	local node = self:ParseDebugCodeStatement() or
+		self:ParseReturnStatement() or
+		self:ParseBreakStatement() or
+		self:ParseContinueStatement() or
+		self:ParseSemicolonStatement() or
+		self:ParseGotoStatement() or
+		self:ParseGotoLabelStatement() or
+		self:ParseRepeatStatement() or
+		self:ParseAnalyzerFunctionStatement() or
+		self:ParseFunctionStatement() or
+		self:ParseLocalTypeFunctionStatement() or
+		self:ParseLocalFunctionStatement() or
+		self:ParseLocalAnalyzerFunctionStatement() or
+		self:ParseLocalTypeAssignmentStatement() or
+		self:ParseLocalDestructureAssignmentStatement() or
 		self.TealCompat and
-		self:ReadLocalTealRecord()
+		self:ParseLocalTealRecord()
 		or
 		self.TealCompat and
-		self:ReadLocalTealEnumStatement()
+		self:ParseLocalTealEnumStatement()
 		or
-		self:ReadLocalAssignmentStatement() or
-		self:ReadTypeAssignmentStatement() or
-		self:ReadDoStatement() or
-		self:ReadIfStatement() or
-		self:ReadWhileStatement() or
-		self:ReadNumericForStatement() or
-		self:ReadGenericForStatement() or
-		self:ReadDestructureAssignmentStatement() or
-		self:ReadCallOrAssignmentStatement()
+		self:ParseLocalAssignmentStatement() or
+		self:ParseTypeAssignmentStatement() or
+		self:ParseDoStatement() or
+		self:ParseIfStatement() or
+		self:ParseWhileStatement() or
+		self:ParseNumericForStatement() or
+		self:ParseGenericForStatement() or
+		self:ParseDestructureAssignmentStatement() or
+		self:ParseCallOrAssignmentStatement()
+	profiler.PopZone()
+	return node
 end
 
 return META end)(...) return __M end end
+do local __M; IMPORTS["nattlua.types.any"] = function(...) __M = __M or (function(...) local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
+
+
+
+META.Type = "any"
+
+function META:Get(key)
+	return self
+end
+
+function META:Set(key, val)
+	return true
+end
+
+function META:Copy()
+	return self
+end
+
+function META.IsSubsetOf(A, B)
+	return true
+end
+
+function META:__tostring()
+	return "any"
+end
+
+function META:IsFalsy()
+	return true
+end
+
+function META:IsTruthy()
+	return true
+end
+
+function META.Equal(a, b)
+	return a.Type == b.Type
+end
+
+function META.LogicalComparison(l, r, op)
+	if op == "==" then return true -- TODO: should be nil (true | false)?
+	end
+
+	return type_errors.binary(op, l, r)
+end
+
+return {
+	Any = function()
+		return META.New()
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.types.tuple"] = function(...) __M = __M or (function(...) local tostring = tostring
+local table = _G.table
+local math = math
+local assert = assert
+local debug = debug
+local error = error
+local setmetatable = _G.setmetatable
+local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
+local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+local ipairs = _G.ipairs
+local type = _G.type
+local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
+
+
+
+
+
+
+META:GetSet("Data", nil)
+META.Type = "tuple"
+META:GetSet("Unpackable", false)
+
+function META.Equal(a, b)
+	if a.Type ~= b.Type then return false end
+
+	if a.suppress then return true end
+
+	if #a.Data ~= #b.Data then return false end
+
+	for i = 1, #a.Data do
+		local val = a.Data[i]
+		a.suppress = true
+		local ok = val:Equal(b.Data[i])
+		a.suppress = false
+
+		if not ok then return false end
+	end
+
+	return true
+end
+
+function META:__tostring()
+	if self.suppress then return "current_tuple" end
+
+	self.suppress = true
+	local strings = {}
+
+	for i, v in ipairs(self:GetData()) do
+		strings[i] = tostring(v)
+	end
+
+	if self.Remainder then table.insert(strings, tostring(self.Remainder)) end
+
+	local s = "("
+
+	if #strings == 1 and strings[1] then
+		s = s .. strings[1] .. ","
+	else
+		s = s .. table.concat(strings, ", ")
+	end
+
+	s = s .. ")"
+
+	if self.Repeat then s = s .. "*" .. tostring(self.Repeat) end
+
+	self.suppress = false
+	return s
+end
+
+function META:Merge(tup)
+	local src = self:GetData()
+
+	for i = 1, tup:GetMinimumLength() do
+		local a = self:Get(i)
+		local b = tup:Get(i)
+
+		if a then src[i] = Union({a, b}) elseif b then src[i] = b:Copy() end
+	end
+
+	self.Remainder = tup.Remainder or self.Remainder
+	self.Repeat = tup.Repeat or self.Repeat
+	return self
+end
+
+function META:Copy(map, copy_tables)
+	map = map or {}
+	local copy = self.New({})
+	map[self] = map[self] or copy
+
+	for i, v in ipairs(self:GetData()) do
+		v = map[v] or v:Copy(map, copy_tables)
+		map[v] = map[v] or v
+		copy:Set(i, v)
+	end
+
+	if self.Remainder then copy.Remainder = self.Remainder:Copy(nil, copy_tables) end
+
+	copy.Repeat = self.Repeat
+	copy.Unpackable = self.Unpackable
+	copy:CopyInternalsFrom(self)
+	return copy
+end
+
+function META.IsSubsetOf(A, B, max_length)
+	if A == B then return true end
+
+	if A.suppress then return true end
+
+	if A.Remainder then
+		local t = A:Get(1)
+
+		if t and t.Type == "any" and #A:GetData() == 0 then return true end
+	end
+
+	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+
+	do
+		local t = A:Get(1)
+
+		if t and t.Type == "any" and B.Type == "tuple" and B:GetLength() == 0 then
+			return true
+		end
+	end
+
+	if B.Type == "any" then return true end
+
+	if B.Type == "table" then
+		if not B:IsNumericallyIndexed() then
+			return type_errors.numerically_indexed(B)
+		end
+	end
+
+	if B.Type ~= "tuple" then return type_errors.type_mismatch(A, B) end
+
+	max_length = max_length or math.max(A:GetMinimumLength(), B:GetMinimumLength())
+
+	for i = 1, max_length do
+		local a, err = A:Get(i)
+
+		if not a then return type_errors.subset(A, B, err) end
+
+		local b, err = B:Get(i)
+
+		if not b and a.Type == "any" then break end
+
+		if not b then return type_errors.missing(B, i, err) end
+
+		A.suppress = true
+		local ok, reason = a:IsSubsetOf(b)
+		A.suppress = false
+
+		if not ok then return type_errors.subset(a, b, reason) end
+	end
+
+	return true
+end
+
+function META.IsSubsetOfTupleWithoutExpansion(A, B)
+	for i, a in ipairs(A:GetData()) do
+		local b = B:GetWithoutExpansion(i)
+		local ok, err = a:IsSubsetOf(b)
+
+		if ok then return ok, err, a, b, i end
+	end
+
+	return true
+end
+
+function META.IsSubsetOfTuple(A, B)
+	if A:Equal(B) then return true end
+
+	for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
+		local a, a_err = A:Get(i)
+		local b, b_err = B:Get(i)
+
+		if b and b.Type == "union" then b, b_err = b:GetAtIndex(i) end
+
+		if not a then
+			if b and b.Type == "any" then
+				a = Any()
+			else
+				return a, a_err, a, b, i
+			end
+		end
+
+		if not b then return b, b_err, a, b, i end
+
+		if b.Type == "tuple" then
+			b = b:Get(1)
+
+			if not b then break end
+		end
+
+		a = a or Nil()
+		b = b or Nil()
+		local ok, reason = a:IsSubsetOf(b)
+
+		if not ok then return ok, reason, a, b, i end
+	end
+
+	return true
+end
+
+function META:HasTuples()
+	for _, v in ipairs(self.Data) do
+		if v.Type == "tuple" then return true end
+	end
+
+	if self.Remainder and self.Remainder.Type == "tuple" then return true end
+
+	return false
+end
+
+function META:GetWithNumber(i)
+	local val = self:GetData()[i]
+
+	if not val and self.Repeat and i <= (#self:GetData() * self.Repeat) then
+		return self:GetData()[((i - 1) % #self:GetData()) + 1]
+	end
+
+	if not val and self.Remainder then
+		return self.Remainder:Get(i - #self:GetData())
+	end
+
+	if not val then
+		local last = self:GetData()[#self:GetData()]
+
+		if last and last.Type == "tuple" and (last.Repeat or last.Remainder) then
+			return last:Get(i)
+		end
+	end
+
+	if not val then
+		return type_errors.other({"index ", tostring(i), " does not exist"})
+	end
+
+	return val
+end
+
+function META:Get(key)
+	if type(key) == "number" then return self:GetWithNumber(key) end
+
+	assert(key.Type == "number")
+
+	if key:IsLiteral() then return self:GetWithNumber(key:GetData()) end
+end
+
+function META:GetWithoutExpansion(i)
+	local val = self:GetData()[i]
+
+	if not val then if self.Remainder then return self.Remainder end end
+
+	if not val then return type_errors.other({"index ", i, " does not exist"}) end
+
+	return val
+end
+
+function META:Set(i, val)
+	if type(i) == "table" then
+		i = i:GetData()
+		return false, "expected number"
+	end
+
+	if val.Type == "tuple" and val:GetLength() == 1 then val = val:Get(1) end
+
+	self.Data[i] = val
+
+	if i > 32 then error("tuple too long", 2) end
+
+	return true
+end
+
+function META:IsEmpty()
+	-- never called
+	return self:GetLength() == 0
+end
+
+function META:IsTruthy()
+	local obj = self:Get(1)
+
+	if obj then return obj:IsTruthy() end
+
+	return false
+end
+
+function META:IsFalsy()
+	local obj = self:Get(1)
+
+	if obj then return obj:IsFalsy() end
+
+	return false
+end
+
+function META:GetLength()
+	if false then
+		-- TODO: recursion
+		return nil
+	end
+
+	if self.Remainder then return #self:GetData() + self.Remainder:GetLength() end
+
+	if self.Repeat then return #self:GetData() * self.Repeat end
+
+	return #self:GetData()
+end
+
+function META:GetMinimumLength()
+	if self.Repeat == math.huge or self.Repeat == 0 then return 0 end
+
+	local len = #self:GetData()
+	local found_nil = false
+
+	for i = #self:GetData(), 1, -1 do
+		local obj = self:GetData()[i]
+
+		if
+			(
+				obj.Type == "union" and
+				obj:CanBeNil()
+			) or
+			(
+				obj.Type == "symbol" and
+				obj:GetData() == nil
+			)
+		then
+			found_nil = true
+			len = i - 1
+		elseif found_nil then
+			len = i
+
+			break
+		end
+	end
+
+	return len
+end
+
+function META:GetSafeLength(arguments)
+	local len = self:GetLength()
+
+	if len == math.huge or arguments:GetLength() == math.huge then
+		return math.max(self:GetMinimumLength(), arguments:GetMinimumLength())
+	end
+
+	return len
+end
+
+function META:AddRemainder(obj)
+	self.Remainder = obj
+	return self
+end
+
+function META:SetRepeat(amt)
+	self.Repeat = amt
+	return self
+end
+
+function META:Unpack(length)
+	length = length or self:GetLength()
+	length = math.min(length, self:GetLength())
+	assert(length ~= math.huge, "length must be finite")
+	local out = {}
+	local i = 1
+
+	for _ = 1, length do
+		out[i] = self:Get(i)
+		i = i + 1
+	end
+
+	return table.unpack(out)
+end
+
+function META:UnpackWithoutExpansion()
+	local tbl = {table.unpack(self.Data)}
+
+	if self.Remainder then table.insert(tbl, self.Remainder) end
+
+	return table.unpack(tbl)
+end
+
+function META:Slice(start, stop)
+	-- TODO: not accurate yet
+	start = start or 1
+	stop = stop or #self:GetData()
+	local copy = self:Copy()
+	local data = {}
+
+	for i = start, stop do
+		table.insert(data, (self:GetData())[i])
+	end
+
+	copy:SetData(data)
+	return copy
+end
+
+function META:GetFirstValue()
+	if self.Remainder then return self.Remainder:GetFirstValue() end
+
+	local first, err = self:Get(1)
+
+	if not first then return first, err end
+
+	if first.Type == "tuple" then return first:GetFirstValue() end
+
+	return first
+end
+
+function META:Concat(tup)
+	local start = self:GetLength()
+
+	for i, v in ipairs(tup:GetData()) do
+		self:Set(start + i, v)
+	end
+
+	return self
+end
+
+function META:SetTable(data)
+	self.Data = {}
+
+	for i, v in ipairs(data) do
+		if
+			i == #data and
+			v.Type == "tuple" and
+			not (
+				v
+			).Remainder and
+			v ~= self
+		then
+			self:AddRemainder(v)
+		else
+			table.insert(self.Data, v)
+		end
+	end
+end
+
+function META.New(data)
+	local self = setmetatable(
+		{
+			Data = {},
+			Data = {},
+			Data = {},
+			Falsy = false,
+			Falsy = false,
+			Falsy = false,
+			Truthy = false,
+			Truthy = false,
+			Truthy = false,
+			Literal = false,
+			Literal = false,
+			Literal = false,
+			LiteralArgument = false,
+			LiteralArgument = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+			ReferenceArgument = false,
+			ReferenceArgument = false,
+			Unpackable = false,
+			Unpackable = false,
+			Unpackable = false,
+			suppress = false,
+		},
+		META
+	)
+
+	if data then self:SetTable(data) end
+
+	return self
+end
+
+return {
+	Tuple = META.New,
+	VarArg = function(t)
+		local self = META.New({t})
+		self:SetRepeat(math.huge)
+		return self
+	end,
+	NormalizeTuples = function(types)
+		local arguments
+
+		if #types == 1 and types[1] and types[1].Type == "tuple" then
+			arguments = types[1]
+		else
+			local temp = {}
+
+			for i, v in ipairs(types) do
+				if v.Type == "tuple" then
+					if i == #types then
+						table.insert(temp, v)
+					else
+						local obj = v:Get(1)
+
+						if obj then table.insert(temp, obj) end
+					end
+				else
+					table.insert(temp, v)
+				end
+			end
+
+			arguments = META.New(temp)
+		end
+
+		return arguments
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.types.function"] = function(...) __M = __M or (function(...) local tostring = _G.tostring
+local ipairs = _G.ipairs
+local setmetatable = _G.setmetatable
+local table = _G.table
+local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
+local VarArg = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").VarArg
+local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
+local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
+
+
+
+
+
+META.Type = "function"
+META.Truthy = true
+META.Falsy = false
+META:IsSet("Called", false)
+META:IsSet("ExplicitInputSignature", false)
+META:IsSet("ExplicitOutputSignature", false)
+META:GetSet("InputSignature", nil)
+META:GetSet("OutputSignature", nil)
+META:GetSet("FunctionBodyNode", nil)
+META:GetSet("Scope", nil)
+META:GetSet("UpvaluePosition", nil)
+META:GetSet("InputIdentifiers", nil)
+META:GetSet("AnalyzerFunction", nil)
+META:IsSet("ArgumentsInferred", false)
+META:GetSet("PreventInputArgumentExpansion", false)
+
+function META:__tostring()
+	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
+end
+
+function META:__call(...)
+	local f = self:GetAnalyzerFunction()
+
+	if f then return f(...) end
+end
+
+function META.Equal(a, b)
+	return a.Type == b.Type and
+		a:GetInputSignature():Equal(b:GetInputSignature()) and
+		a:GetOutputSignature():Equal(b:GetOutputSignature())
+end
+
+function META:Copy(map, copy_tables)
+	map = map or {}
+	local copy = self.New(
+		self:GetInputSignature():Copy(map, copy_tables),
+		self:GetOutputSignature():Copy(map, copy_tables)
+	)
+	map[self] = map[self] or copy
+	copy:SetUpvaluePosition(self:GetUpvaluePosition())
+	copy:SetAnalyzerFunction(self:GetAnalyzerFunction())
+	copy:SetScope(self:GetScope())
+	copy:SetLiteral(self:IsLiteral())
+	copy:CopyInternalsFrom(self)
+	copy:SetFunctionBodyNode(self:GetFunctionBodyNode())
+	copy:SetInputIdentifiers(self:GetInputIdentifiers())
+	copy:SetCalled(self:IsCalled())
+	--copy:SetExplicitInputSignature(self:IsExplicitInputSignature())
+	--copy:SetExplicitOutputSignature(self:IsExplicitOutputSignature())
+	copy:SetArgumentsInferred(self:IsArgumentsInferred())
+	copy:SetPreventInputArgumentExpansion(self:GetPreventInputArgumentExpansion())
+	return copy
+end
+
+function META.IsSubsetOf(A, B)
+	if B.Type == "tuple" then B = B:Get(1) end
+
+	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+
+	if B.Type == "any" then return true end
+
+	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
+
+	local ok, reason = A:GetInputSignature():IsSubsetOf(B:GetInputSignature())
+
+	if not ok then
+		return type_errors.subset(A:GetInputSignature(), B:GetInputSignature(), reason)
+	end
+
+	local ok, reason = A:GetOutputSignature():IsSubsetOf(B:GetOutputSignature())
+
+	if
+		not ok and
+		(
+			(
+				not B:IsCalled() and
+				not B:IsExplicitOutputSignature()
+			)
+			or
+			(
+				not A:IsCalled() and
+				not A:IsExplicitOutputSignature()
+			)
+		)
+	then
+		return true
+	end
+
+	if not ok then
+		return type_errors.subset(A:GetOutputSignature(), B:GetOutputSignature(), reason)
+	end
+
+	return true
+end
+
+function META.IsCallbackSubsetOf(A, B)
+	if B.Type == "tuple" then B = B:Get(1) end
+
+	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+
+	if B.Type == "any" then return true end
+
+	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
+
+	local ok, reason = A:GetInputSignature():IsSubsetOf(B:GetInputSignature(), A:GetInputSignature():GetMinimumLength())
+
+	if not ok then
+		return type_errors.subset(A:GetInputSignature(), B:GetInputSignature(), reason)
+	end
+
+	local ok, reason = A:GetOutputSignature():IsSubsetOf(B:GetOutputSignature())
+
+	if
+		not ok and
+		(
+			(
+				not B:IsCalled() and
+				not B:IsExplicitOutputSignature()
+			)
+			or
+			(
+				not A:IsCalled() and
+				not A:IsExplicitOutputSignature()
+			)
+		)
+	then
+		return true
+	end
+
+	if not ok then
+		return type_errors.subset(A:GetOutputSignature(), B:GetOutputSignature(), reason)
+	end
+
+	return true
+end
+
+do
+	function META:AddScope(arguments, return_result, scope)
+		self.scopes = self.scopes or {}
+		table.insert(
+			self.scopes,
+			{
+				arguments = arguments,
+				return_result = return_result,
+				scope = scope,
+			}
+		)
+	end
+
+	function META:GetSideEffects()
+		local out = {}
+
+		for _, call_info in ipairs(self.scopes) do
+			for _, val in ipairs(call_info.scope:GetDependencies()) do
+				if val.scope ~= call_info.scope then table.insert(out, val) end
+			end
+		end
+
+		return out
+	end
+
+	function META:GetCallCount()
+		return #self.scopes
+	end
+
+	function META:IsPure()
+		return #self:GetSideEffects() == 0
+	end
+end
+
+function META:IsRefFunction()
+	for i, v in ipairs(self:GetInputSignature():GetData()) do
+		if v:IsReferenceArgument() then return true end
+	end
+
+	for i, v in ipairs(self:GetOutputSignature():GetData()) do
+		if v:IsReferenceArgument() then return true end
+	end
+
+	return false
+end
+
+function META.New(input, output)
+	local self = setmetatable(
+		{
+			Falsy = false,
+			Truthy = true,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+			Called = false,
+			ExplicitInputSignature = false,
+			ExplicitOutputSignature = false,
+			ArgumentsInferred = false,
+			PreventInputArgumentExpansion = false,
+			scopes = {},
+			InputSignature = input,
+			OutputSignature = output,
+			suppress = false,
+		},
+		META
+	)
+	return self
+end
+
+return {
+	Function = META.New,
+	AnyFunction = function()
+		return META.New(Tuple({VarArg(Any())}), Tuple({VarArg(Any())}))
+	end,
+	LuaTypeFunction = function(
+		lua_function,
+		arg,
+		ret
+	)
+		local self = META.New(Tuple(arg), Tuple(ret))
+		self:SetAnalyzerFunction(lua_function)
+		return self
+	end,
+} end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.types"] = function(...) __M = __M or (function(...) local types = {}
 
 function types.Initialize()
@@ -13014,7 +14309,7 @@ function types.Initialize()
 	types.Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 	types.True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
 	types.False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
-	types.Boolean = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Boolean
+	types.Boolean = IMPORTS['nattlua.types.union']("nattlua.types.union").Boolean
 end
 
 return types end)(...) return __M end end
@@ -13853,11 +15148,11 @@ return function(META)
 	IMPORTS['nattlua.analyzer.base.scopes']("nattlua.analyzer.base.scopes")(META)
 	IMPORTS['nattlua.analyzer.base.error_handling']("nattlua.analyzer.base.error_handling")(META)
 
-	function META:AnalyzeRootStatement(statement, ...)
+	function META:AnalyzeRootStatement(statement, a, b, c, d, e, f)
 		context:PushCurrentAnalyzer(self)
-		local argument_tuple = ... and
-			Tuple({...}) or
-			Tuple({...}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+		local argument_tuple = a and
+			Tuple({a, b, c, d, e, f}) or
+			Tuple({a, b, c, d, e, f}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		self:CreateAndPushModuleScope()
 		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("runtime"), "runtime")
 		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("typesystem"), "typesystem")
@@ -13947,7 +15242,7 @@ return function(META)
 			arguments = add_potential_self(arguments)
 
 			for _, obj in ipairs(arguments:GetData()) do
-				obj.mutations = nil
+				self:ClearObjectMutations(obj)
 			end
 
 			self:CreateAndPushFunctionScope(obj)
@@ -14194,13 +15489,13 @@ return function(META)
 				return scope.scope_helper
 			end
 
-			function META:CallTypesystemUpvalue(name, ...)
+			function META:CallTypesystemUpvalue(name, a, b, c, d, e, f)
 				-- this is very internal-ish code
 				-- not sure what a nice interface for this really should be yet
 				self:PushAnalyzerEnvironment("typesystem")
 				local generics_func = self:GetLocalOrGlobalValue(name)
 				assert(generics_func.Type == "function", "cannot find typesystem function " .. name:GetData())
-				local argument_tuple = Tuple({...})
+				local argument_tuple = Tuple({a, b, c, d, e, f})
 				local returned_tuple = assert(self:Call(generics_func, argument_tuple))
 				self:PopAnalyzerEnvironment()
 				return returned_tuple:Unpack()
@@ -14593,12 +15888,6 @@ return function(META)
 		end
 
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
-			-- extra protection, maybe only useful during development
-			if debug.getinfo(300) then
-				debug.trace()
-				return false, "call stack is too deep"
-			end
-
 			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
 			self.call_stack = self.call_stack or {}
 
@@ -14749,7 +16038,7 @@ local ipairs = ipairs
 local table = _G.table
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 
-local function get_value_from_scope(self, mutations, scope, obj, key)
+local function get_value_from_scope(current_if_statement, mutations, scope, obj)
 	do
 		do
 			local last_scope
@@ -14773,8 +16062,8 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 				(
 					scope:IsPartOfTestStatementAs(mut.scope) or
 					(
-						self.current_if_statement and
-						mut.scope.statement == self.current_if_statement
+						current_if_statement and
+						mut.scope.statement == current_if_statement
 					)
 					or
 					(
@@ -14904,18 +16193,6 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 
 			if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 		else
-			-- check if we have to infer the function, otherwise adding it to the union can cause collisions
-			if
-				value.Type == "function" and
-				not value:IsCalled()
-				and
-				not value:IsExplicitOutputSignature()
-				and
-				union:HasType("function")
-			then
-				self:Assert(self:Call(value, value:GetInputSignature():Copy()))
-			end
-
 			union:AddType(value)
 		end
 	end
@@ -14973,23 +16250,23 @@ local function get_value_from_scope(self, mutations, scope, obj, key)
 	return value
 end
 
-local function initialize_mutation_tracker(obj, scope, key, hash)
-	obj.mutations = obj.mutations or {}
-	obj.mutations[hash] = obj.mutations[hash] or {}
+local function initialize_table_mutation_tracker(tbl, scope, key, hash)
+	tbl.mutations = tbl.mutations or {}
+	tbl.mutations[hash] = tbl.mutations[hash] or {}
 
-	if obj.mutations[hash][1] == nil then
-		if obj.Type == "table" then
+	if tbl.mutations[hash][1] == nil then
+		if tbl.Type == "table" then
 			-- initialize the table mutations with an existing value or nil
-			local val = (obj:GetContract() or obj):Get(key) or Nil()
+			local val = (tbl:GetContract() or tbl):Get(key) or Nil()
 			table.insert(
-				obj.mutations[hash],
-				{scope = obj.scope or scope:GetRoot(), value = val, contract = obj:GetContract()}
+				tbl.mutations[hash],
+				{scope = tbl.scope or scope:GetRoot(), value = val, contract = tbl:GetContract()}
 			)
 		end
 	end
 end
 
-local function copy(tbl)
+local function shallow_copy(tbl)
 	local copy = {}
 
 	for i, val in ipairs(tbl) do
@@ -15000,27 +16277,23 @@ local function copy(tbl)
 end
 
 return function(META)
-	function META:GetMutatedTableValue(tbl, key, value)
-		if self:IsTypesystem() then return value end
-
-		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue()
+	function META:GetMutatedTableValue(tbl, key)
+		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
 
 		if not hash then return end
 
 		local scope = self:GetScope()
-		initialize_mutation_tracker(tbl, scope, key, hash)
-		return get_value_from_scope(self, copy(tbl.mutations[hash]), scope, tbl, hash)
+		initialize_table_mutation_tracker(tbl, scope, key, hash)
+		return get_value_from_scope(self.current_if_statement, shallow_copy(tbl.mutations[hash]), scope, tbl)
 	end
 
 	function META:MutateTable(tbl, key, val, scope_override, from_tracking)
-		if self:IsTypesystem() then return end
-
-		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue()
+		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
 
 		if not hash then return end
 
 		local scope = scope_override or self:GetScope()
-		initialize_mutation_tracker(tbl, scope, key, hash)
+		initialize_table_mutation_tracker(tbl, scope, key, hash)
 
 		if self:IsInUncertainLoop(scope) then
 			if val.dont_widen then
@@ -15036,23 +16309,14 @@ return function(META)
 	end
 
 	function META:GetMutatedUpvalue(upvalue)
-		if self:IsTypesystem() then return end
-
-		local scope = self:GetScope()
-		local hash = upvalue:GetKey()
 		upvalue.mutations = upvalue.mutations or {}
-		upvalue.mutations[hash] = upvalue.mutations[hash] or {}
-		return get_value_from_scope(self, copy(upvalue.mutations[hash]), scope, upvalue, hash)
+		return get_value_from_scope(self.current_if_statement, shallow_copy(upvalue.mutations), self:GetScope(), upvalue)
 	end
 
 	function META:MutateUpvalue(upvalue, val, scope_override, from_tracking)
-		if self:IsTypesystem() then return end
-
-		local scope = scope_override or self:GetScope()
-		local hash = upvalue:GetKey()
 		val:SetUpvalue(upvalue)
 		upvalue.mutations = upvalue.mutations or {}
-		upvalue.mutations[hash] = upvalue.mutations[hash] or {}
+		local scope = scope_override or self:GetScope()
 
 		if self:IsInUncertainLoop(scope) and upvalue.scope then
 			if val.dont_widen or scope:Contains(upvalue.scope) then
@@ -15062,9 +16326,43 @@ return function(META)
 			end
 		end
 
-		table.insert(upvalue.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking})
+		table.insert(upvalue.mutations, {scope = scope, value = val, from_tracking = from_tracking})
 
 		if from_tracking then scope:AddTrackedObject(upvalue) end
+	end
+
+	function META:CopyObjectMutations(to, from)
+		to.mutations = from.mutations
+	end
+
+	function META:ClearObjectMutations(obj)
+		obj.mutations = nil
+	end
+
+	function META:HasMutations(obj)
+		return obj.mutations ~= nil
+	end
+
+	function META:ClearScopedTrackedObjects(scope)
+		if scope.TrackedObjects then
+			for _, obj in ipairs(scope.TrackedObjects) do
+				if obj.Type == "upvalue" then
+					for i = #obj.mutations, 1, -1 do
+						local mut = obj.mutations[i]
+
+						if mut.from_tracking then table.remove(obj.mutations, i) end
+					end
+				else
+					for _, mutations in pairs(obj.mutations) do
+						for i = #mutations, 1, -1 do
+							local mut = mutations[i]
+
+							if mut.from_tracking then table.remove(mutations, i) end
+						end
+					end
+				end
+			end
+		end
 	end
 
 	do
@@ -15100,8 +16398,6 @@ return function(META)
 	do
 		do
 			function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
-				if self:IsTypesystem() then return end
-
 				local upvalue = obj:GetUpvalue()
 
 				if not upvalue then return end
@@ -15132,8 +16428,6 @@ return function(META)
 			end
 
 			function META:TrackUpvalueNonUnion(obj)
-				if self:IsTypesystem() then return end
-
 				local upvalue = obj:GetUpvalue()
 
 				if not upvalue then return end
@@ -15148,8 +16442,6 @@ return function(META)
 			end
 
 			function META:GetTrackedUpvalue(obj)
-				if self:IsTypesystem() then return end
-
 				local upvalue = obj:GetUpvalue()
 				local stack = upvalue and upvalue.tracked_stack
 
@@ -15191,7 +16483,7 @@ return function(META)
 
 						if old_upvalues then upvalue = translate[upvalue] end
 
-						table.insert(upvalues, {upvalue = upvalue, stack = stack and copy(stack)})
+						table.insert(upvalues, {upvalue = upvalue, stack = stack and shallow_copy(stack)})
 					end
 				end
 
@@ -15212,8 +16504,6 @@ return function(META)
 
 		do
 			function META:TrackTableIndex(tbl, key, val)
-				if self:IsTypesystem() then return end
-
 				local hash = key:GetHash()
 
 				if not hash then return end
@@ -15226,8 +16516,6 @@ return function(META)
 			end
 
 			function META:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, inverted, truthy_falsy)
-				if self:IsTypesystem() then return end
-
 				local hash = key:GetHash()
 
 				if not hash then return end
@@ -15303,7 +16591,7 @@ return function(META)
 									{
 										obj = tbl,
 										key = stack[#stack].key,
-										stack = copy(stack),
+										stack = shallow_copy(stack),
 									}
 								)
 							end
@@ -15488,22 +16776,6 @@ local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error
 return {
 	Index = function(META)
 		function META:IndexOperator(obj, key)
-			local ok, err = self:IndexOperator2(obj, key)
-
-			if not ok then
-				if self:ErrorMessageToString(err):find("^%s*$") then
-					print("==")
-					print(obj)
-					print(key)
-					print("==")
-					print(ok, self:ErrorMessageToString(err))
-				end
-			end
-
-			return ok, err
-		end
-
-		function META:IndexOperator2(obj, key)
 			if obj.Type == "union" then
 				local union = Union({})
 
@@ -15564,13 +16836,11 @@ return {
 				end
 			end
 
-			if self:IsRuntime() then
-				if obj.Type == "tuple" and obj:GetLength() == 1 then
-					return self:IndexOperator(obj:Get(1), key)
-				end
-			end
-
 			if self:IsTypesystem() then return obj:Get(key) end
+
+			if obj.Type == "tuple" and obj:GetLength() == 1 then
+				return self:IndexOperator(obj:Get(1), key)
+			end
 
 			if obj.Type == "string" then
 				return type_errors.other("attempt to index a string value")
@@ -15587,8 +16857,8 @@ return {
 
 				if not val then return val, err end
 
-				if not obj.argument_index or contract.ref_argument then
-					local val = self:GetMutatedTableValue(obj, key, val)
+				if not obj.argument_index or contract:IsReferenceArgument() then
+					local val = self:GetMutatedTableValue(obj, key)
 
 					if val then
 						if val.Type == "union" then val = val:Copy(nil, true) end
@@ -15603,8 +16873,8 @@ return {
 				if val.Type == "union" then val = val:Copy(nil, true) end
 
 				--TODO: this seems wrong, but it's for deferred analysis maybe not clearing up muations?
-				if obj.mutations then
-					local tracked = self:GetMutatedTableValue(obj, key, val)
+				if self:HasMutations(obj) then
+					local tracked = self:GetMutatedTableValue(obj, key)
 
 					if tracked then return tracked end
 				end
@@ -15613,7 +16883,7 @@ return {
 				return val
 			end
 
-			local val = self:GetMutatedTableValue(obj, key, obj:Get(key))
+			local val = self:GetMutatedTableValue(obj, key)
 
 			if key:IsLiteral() then
 				local found_key = obj:FindKeyValReverse(key)
@@ -15623,8 +16893,12 @@ return {
 				end
 			end
 
-			self:TrackTableIndex(obj, key, val)
-			return val or Nil()
+			if val then
+				self:TrackTableIndex(obj, key, val)
+				return val
+			end
+
+			return Nil()
 		end
 	end,
 } end)(...) return __M end end
@@ -15736,11 +17010,7 @@ return {
 						if obj.mutable and obj:GetMetaTable() and obj:GetMetaTable().Self == obj then
 							return obj:SetExplicit(key, val)
 						else
-							existing, err = contract:Get(key)
-
-							if existing then
-								existing = self:GetMutatedTableValue(obj, key, existing)
-							end
+							existing = self:GetMutatedTableValue(obj, key)
 						end
 					else
 						existing, err = contract:Get(key)
@@ -15926,7 +17196,7 @@ return function(META)
 		local signature_arguments = obj:GetInputSignature()
 
 		do
-			local ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetInputSignature())
+			local ok, reason, a, b, i = input:IsSubsetOfTuple(signature_arguments)
 
 			if not ok then
 				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
@@ -15989,6 +17259,14 @@ return function(META)
 					ret:Set(i, v)
 				end
 			end
+		end
+
+		local output_signature = obj:GetOutputSignature()
+
+		if not output_signature:IsEmpty() then
+			local ok, err = ret:IsSubsetOfTuple(output_signature)
+
+			if not ok then return ok, err end
 		end
 
 		return ret
@@ -16162,7 +17440,7 @@ local function check_input(self, obj, input)
 
 			if
 				contract and
-				contract.ref_argument and
+				contract:IsReferenceArgument() and
 				(
 					contract.Type ~= "function" or
 					arg.Type ~= "function" or
@@ -16171,7 +17449,7 @@ local function check_input(self, obj, input)
 			then
 				self:CreateLocalValue(identifier, arg)
 				signature_override[i] = arg
-				signature_override[i].ref_argument = true
+				signature_override[i]:SetReferenceArgument(true)
 				local ok, err = signature_override[i]:IsSubsetOf(contract)
 
 				if not ok then
@@ -16180,16 +17458,6 @@ local function check_input(self, obj, input)
 			elseif type_expression then
 				signature_override[i] = self:AnalyzeExpression(type_expression):GetFirstValue()
 				self:CreateLocalValue(identifier, signature_override[i])
-			end
-
-			if
-				contract and
-				contract.literal_argument and
-				not self.processing_deferred_calls and
-				arg and
-				not arg:IsLiteral()
-			then
-				return type_errors.other({"argument #", i, " ", arg, ": not literal"})
 			end
 		end
 
@@ -16207,7 +17475,7 @@ local function check_input(self, obj, input)
 				if
 					signature_override[i] and
 					signature_override[i].Type == "union" and
-					not signature_override[i].ref_argument
+					not signature_override[i]:IsReferenceArgument()
 				then
 					local merged = shrink_union_to_function_signature(signature_override[i])
 
@@ -16283,13 +17551,14 @@ local function check_input(self, obj, input)
 		end
 
 		if
+			arg and
 			arg.Type == "table" and
 			contract.Type == "table" and
 			arg:GetUpvalue() and
-			not contract.ref_argument
+			not contract:IsReferenceArgument()
 		then
 			mutate_type(self, i, arg, contract, input)
-		elseif not contract.ref_argument then
+		elseif not contract:IsReferenceArgument() then
 			-- if it's a ref argument we pass the incoming value
 			local t = contract:Copy()
 			t:SetContract(contract)
@@ -16429,26 +17698,7 @@ return function(META)
 		self:PopScope()
 		self:PopFalsyExpressionContext()
 		self:PopTruthyExpressionContext()
-
-		if scope.TrackedObjects then
-			for _, obj in ipairs(scope.TrackedObjects) do
-				if obj.Type == "upvalue" then
-					for i = #obj.mutations, 1, -1 do
-						local mut = obj.mutations[i]
-
-						if mut.from_tracking then table.remove(obj.mutations, i) end
-					end
-				else
-					for _, mutations in pairs(obj.mutations) do
-						for i = #mutations, 1, -1 do
-							local mut = mutations[i]
-
-							if mut.from_tracking then table.remove(mutations, i) end
-						end
-					end
-				end
-			end
-		end
+		self:ClearScopedTrackedObjects(scope)
 
 		if output.Type ~= "tuple" then output = Tuple({output}) end
 
@@ -16517,7 +17767,7 @@ return function(META)
 						local tbl = Table()
 
 						for _, kv in ipairs(v:GetData()) do
-							tbl:Set(kv.key, self:GetMutatedTableValue(v, kv.key, kv.val))
+							tbl:Set(kv.key, self:GetMutatedTableValue(v, kv.key))
 						end
 
 						copy:Set(i, tbl)
@@ -16544,7 +17794,7 @@ return function(META)
 		-- if a return type is marked with ref, it will pass the ref value back to the caller
 		-- a bit like generics
 		for i, v in ipairs(output_signature:GetData()) do
-			if v.ref_argument then contract:Set(i, output:Get(i)) end
+			if v:IsReferenceArgument() then contract:Set(i, output:Get(i)) end
 		end
 
 		return contract
@@ -16858,7 +18108,8 @@ return {
 } end)(...) return __M end end
 IMPORTS['./nattlua/transpiler/../parser/nodes.nlua'] = function() 
 
-IMPORTS['nattlua/code/code.lua']("~/nattlua/code/code.lua")
+
+
 
 
 
@@ -17198,7 +18449,7 @@ do -- newline breaking
 	do
 		function META:PushForcedLineBreaking(b)
 			self.force_newlines = self.force_newlines or {}
-			table.insert(self.force_newlines, b and debug.traceback())
+			table.insert(self.force_newlines, b)
 		end
 
 		function META:PopForcedLineBreaking()
@@ -17422,8 +18673,8 @@ function META:EmitExpression(node)
 	local newlines = self:IsLineBreaking()
 
 	if node.tokens["("] then
-		for _, node in ipairs(node.tokens["("]) do
-			self:EmitToken(node)
+		for i = #node.tokens["("], 1, -1 do
+			self:EmitToken(node.tokens["("][i])
 		end
 
 		if node.tokens["("] and newlines then
@@ -18591,8 +19842,8 @@ do -- types
 
 	function META:EmitTypeExpression(node)
 		if node.tokens["("] then
-			for _, node in ipairs(node.tokens["("]) do
-				self:EmitToken(node)
+			for i = #node.tokens["("], 1, -1 do
+				self:EmitToken(node.tokens["("][i])
 			end
 		end
 
@@ -19063,7 +20314,7 @@ local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 
 local function contains_ref_argument(upvalues)
 	for _, v in pairs(upvalues) do
-		if v.upvalue:GetValue().ref_argument or v.upvalue:GetValue().from_for_loop then
+		if v.upvalue:GetValue():IsReferenceArgument() or v.upvalue:GetValue().from_for_loop then
 			return true
 		end
 	end
@@ -19090,6 +20341,7 @@ return {
 				if no_operator_expression then self:PushTruthyExpressionContext(true) end
 
 				local obj = self:AnalyzeExpression(exp)
+				self.current_expression = exp
 
 				if no_operator_expression then self:PopTruthyExpressionContext() end
 
@@ -19285,7 +20537,7 @@ local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
-local Boolean = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Boolean
+local Boolean = IMPORTS['nattlua.types.union']("nattlua.types.union").Boolean
 local Symbol = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Symbol
 local False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
@@ -20151,7 +21403,7 @@ local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
-local Boolean = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Boolean
+local Boolean = IMPORTS['nattlua.types.union']("nattlua.types.union").Boolean
 local False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
 local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
@@ -20168,6 +21420,7 @@ end
 
 local function Prefix(self, node, r)
 	local op = node.value.value
+	self.current_expression = node
 
 	if op == "not" then
 		self.inverted_index_tracking = not self.inverted_index_tracking
@@ -20184,12 +21437,12 @@ local function Prefix(self, node, r)
 	if op == "not" then self.inverted_index_tracking = nil end
 
 	if op == "literal" then
-		r.literal_argument = true
+		r:SetLiteralArgument(true)
 		return r
 	end
 
 	if op == "ref" then
-		r.ref_argument = true
+		r:SetReferenceArgument(true)
 		return r
 	end
 
@@ -20367,7 +21620,9 @@ return {
 			arguments = NormalizeTuples(types)
 		end
 
-		local returned_tuple = self:Assert(self:Call(callable, arguments, node))
+		local ret, err = self:Call(callable, arguments, node)
+		self.current_expression = node
+		local returned_tuple = self:Assert(ret, err)
 
 		-- TUPLE UNPACK MESS
 		if node.tokens["("] and node.tokens[")"] and returned_tuple.Type == "tuple" then
@@ -20484,7 +21739,7 @@ local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local String = IMPORTS['nattlua.types.string']("nattlua.types.string").String
 local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
-local Boolean = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Boolean
+local Boolean = IMPORTS['nattlua.types.union']("nattlua.types.union").Boolean
 local table = _G.table
 
 local function lookup_value(self, node)
@@ -20625,6 +21880,7 @@ return {
 	end,
 } end)(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local profiler = IMPORTS['nattlua.other.profiler']("nattlua.other.profiler")
 local tostring = tostring
 local error = error
 local setmetatable = setmetatable
@@ -20656,6 +21912,7 @@ do
 	local AnalyzeAssignment = IMPORTS['nattlua.analyzer.statements.assignment']("nattlua.analyzer.statements.assignment").AnalyzeAssignment
 
 	function META:AnalyzeStatement(node)
+		profiler.PushZone("AnalyzeStatement - " .. node.kind)
 		self.current_statement = node
 		self:PushAnalyzerEnvironment(node.environment or "runtime")
 
@@ -20711,6 +21968,7 @@ do
 		end
 
 		self:PopAnalyzerEnvironment()
+		profiler.PopZone()
 	end
 end
 
@@ -20763,6 +22021,8 @@ do
 	end
 
 	function META:AnalyzeTypeExpression(node, parent_obj)
+		profiler.PushZone("AnalyzeTypeExpression - " .. node.kind)
+
 		if not node.type_expression then return parent_obj end
 
 		self:PushAnalyzerEnvironment("typesystem")
@@ -20783,13 +22043,16 @@ do
 			end
 		end
 
+		profiler.PopZone()
 		return obj
 	end
 
 	function META:AnalyzeExpression(node)
+		profiler.PushZone("AnalyzeExpression - " .. node.kind)
 		local obj, err = self:AnalyzeExpression2(node)
 		obj = self:AnalyzeTypeExpression(node, obj)
 		node:AddType(obj or err)
+		profiler.PopZone()
 		return obj, err
 	end
 end
@@ -20883,6 +22146,12 @@ function META:OnDiagnostic(code, msg, severity, start, stop, ...)
 	end
 
 	msg = msg2
+
+	if severity == "error" then
+		msg = "\x1b[0;31m" .. msg .. "\x1b[0m"
+	elseif severity == "warning" then
+		msg = "\x1b[0;33m" .. msg .. "\x1b[0m"
+	end
 
 	if not _G.TEST then io.write(msg) end
 
@@ -21001,7 +22270,7 @@ function META:Parse()
 	end
 
 	local ok, res = xpcall(function()
-		return parser:ReadRootNode()
+		return parser:ParseRootNode()
 	end, function(msg)
 		return traceback(self, parser, msg)
 	end)
@@ -21272,7 +22541,7 @@ end
 
 analyzer function copy(obj: any)
 	local copy = obj:Copy()
-	copy.mutations = nil
+	analyzer:ClearObjectMutations(copy)
 	copy.scope = nil
 	copy.potential_self = nil
 	return copy
@@ -21580,7 +22849,7 @@ analyzer function pairs(tbl: Table)
 			if not kv then return nil end
 
 			i = i + 1
-			local o = analyzer:GetMutatedTableValue(tbl, kv.key, kv.val)
+			local o = analyzer:GetMutatedTableValue(tbl, kv.key)
 			return kv.key, o or kv.val
 		end
 	end
@@ -21759,8 +23028,8 @@ analyzer function loadfile(path: string)
 	assert(compiler:Parse())
 	local f = types.AnyFunction()
 
-	f:SetAnalyzerFunction(function(...)
-		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
+	f:SetAnalyzerFunction(function(a, b, c, d, e, f)
+		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, a, b, c, d, e, f)
 	end)
 
 	return f
@@ -21946,7 +23215,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 			tbl:CopyLiteralness(meta.Self)
 			tbl:SetContract(meta.Self)
 			-- clear mutations so that when looking up values in the table they won't return their initial value
-			tbl.mutations = nil
+			analyzer:ClearObjectMutations(tbl)
 		else
 			meta.potential_self = meta.potential_self or types.Union({})
 			meta.potential_self:AddType(tbl)
@@ -22370,7 +23639,7 @@ analyzer function table.remove(tbl: List<|any|>, index: number | nil)
 	if index and not index:IsLiteral() then return end
 
 	index = index or 1
-	table.remove(pos:GetData(), index:GetData())
+	table.remove(tbl:GetData(), index:GetData())
 end
 
 analyzer function table.sort(tbl: List<|any|>, func: function=(a: any, b: any)>(boolean))
