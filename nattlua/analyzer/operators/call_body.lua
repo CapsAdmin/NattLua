@@ -185,16 +185,6 @@ local function check_input(self, obj, input)
 				signature_override[i] = self:AnalyzeExpression(type_expression):GetFirstValue()
 				self:CreateLocalValue(identifier, signature_override[i])
 			end
-
-			if
-				contract and
-				contract:IsLiteralArgument() and
-				not self.processing_deferred_calls and
-				arg and
-				not arg:IsLiteral()
-			then
-				return type_errors.other({"argument #", i, " ", arg, ": not literal"})
-			end
 		end
 
 		self:PopAnalyzerEnvironment()

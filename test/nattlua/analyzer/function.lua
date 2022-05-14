@@ -741,7 +741,7 @@ analyze(
     
     foo(_ as string)    
 ]],
-	"not literal"
+	"string is not a subset of literal string"
 )
 analyze[[
     local function foo(str: literal ref (nil | string))

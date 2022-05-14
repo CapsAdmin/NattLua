@@ -17,6 +17,14 @@ META:GetSet("PatternContract", nil--[[# as nil | string]])
 function META.Equal(a--[[#: TString]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
 
+	if a:IsLiteralArgument() and b:IsLiteralArgument() then
+		return true
+	end
+
+	if b:IsLiteralArgument() and not a:IsLiteral() then
+		return false
+	end
+
 	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
 
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
@@ -45,6 +53,15 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 
 	if B.Type ~= "string" then return type_errors.type_mismatch(A, B) end
+
+
+	if A:IsLiteralArgument() and B:IsLiteralArgument() then
+		return true
+	end
+
+	if B:IsLiteralArgument() and not A:IsLiteral() then
+		return type_errors.subset(A, B)
+	end
 
 	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then -- "A" subsetof "B"
 		return true
@@ -87,6 +104,10 @@ function META:__tostring()
 		if str then 
 			return "\"" .. str .. "\""
 		end
+	end
+
+	if self:IsLiteralArgument() then
+		return "literal string"
 	end
 
 	return "string"

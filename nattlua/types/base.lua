@@ -72,6 +72,8 @@ do
 		self:SetMetaTable(obj:GetMetaTable())
 		self:SetAnalyzerEnvironment(obj:GetAnalyzerEnvironment())
 		self:SetTypeOverride(obj:GetTypeOverride())
+		self:SetLiteralArgument(obj:IsLiteralArgument())
+		self:SetReferenceArgument(obj:IsReferenceArgument())
 	end
 end
 
