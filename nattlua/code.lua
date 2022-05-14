@@ -88,7 +88,7 @@ if jit then
 	function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
 		return (
 				ffi.C.memcmp
-			--[[# as any]])(ffi.cast("unsigned char*", self.Buffer)--[[# as any]] - 1 + start, str, #str) == 0
+			--[[# as any]])((ffi.cast("unsigned char*", self.Buffer)--[[# as any]]) - 1 + start, str, #str) == 0
 	end
 
 	function META:GetByte(pos--[[#: number]])
