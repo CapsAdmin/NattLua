@@ -653,16 +653,13 @@ analyze[[
     
     local x = test(1)
 ]]
-analyze(
-	[[
+analyze[[
     local analyzer function test(foo: literal number): number
         return 1
     end
     
-    local x = test(_ as number)
-]],
-	"number is not a subset of literal number"
-)
+    attest.equal(test(_ as number), _ as number)
+]]
 analyze[[
     local analyzer function test(foo: literal number)
         return 1, 2
@@ -772,4 +769,13 @@ analyze[[
     end
     
     local x = test()
+]]
+
+analyze[[
+    local analyzer function test(x: literal number): number
+        return x:GetData() + 1
+    end
+    
+    local x = test(_ as number)
+    attest.equal(x, _ as number)
 ]]

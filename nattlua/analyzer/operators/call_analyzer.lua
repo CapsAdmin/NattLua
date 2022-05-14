@@ -125,19 +125,21 @@ return function(META)
 
 	function META:CallAnalyzerFunction(obj, input)
 		local signature_arguments = obj:GetInputSignature()
+		local output_signature = obj:GetOutputSignature()
 
 		do
 			local ok, reason, a, b, i = input:IsSubsetOfTuple(signature_arguments)
 
 			if not ok then
+				
+				if not output_signature:IsEmpty() then
+					if not a:IsLiteral() and b:IsLiteralArgument() and a.Type == b.Type then
+						return output_signature:Copy()
+					end
+				end
+
 				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 			end
-		end
-
-		local len = signature_arguments:GetLength()
-
-		if len == math.huge and input:GetLength() == math.huge then
-			len = math.max(signature_arguments:GetMinimumLength(), input:GetMinimumLength())
 		end
 
 		if self:IsTypesystem() then
@@ -151,6 +153,12 @@ return function(META)
 				}
 			)
 			return ret
+		end
+
+		local len = signature_arguments:GetLength()
+
+		if len == math.huge and input:GetLength() == math.huge then
+			len = math.max(signature_arguments:GetMinimumLength(), input:GetMinimumLength())
 		end
 
 		local tuples = {}
@@ -191,8 +199,6 @@ return function(META)
 				end
 			end
 		end
-
-		local output_signature = obj:GetOutputSignature()
 
 		if not output_signature:IsEmpty() then
 			local ok, err = ret:IsSubsetOfTuple(output_signature)
