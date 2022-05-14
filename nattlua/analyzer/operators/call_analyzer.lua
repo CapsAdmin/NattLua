@@ -127,7 +127,7 @@ return function(META)
 		local signature_arguments = obj:GetInputSignature()
 
 		do
-			local ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetInputSignature())
+			local ok, reason, a, b, i = input:IsSubsetOfTuple(signature_arguments)
 
 			if not ok then
 				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
