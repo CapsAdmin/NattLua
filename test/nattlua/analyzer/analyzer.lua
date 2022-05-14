@@ -626,3 +626,27 @@ analyze[[
     
     local a = test(true, true)
 ]]
+
+analyze([[
+    local analyzer function test(foo: number): number
+        return "foo"
+    end
+    
+    local x = test(1)
+]], [["foo" is not the same type as number]])
+
+analyze([[
+    local analyzer function test(foo: number): number
+        return 1, 2
+    end
+    
+    local x = test(1)
+]], [[index 2 does not exist]])
+
+analyze[[
+    local analyzer function test(foo: number)
+        return 1, 2
+    end
+    
+    local x = test(1)
+]]
