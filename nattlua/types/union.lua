@@ -15,7 +15,7 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TUnion = META.@Self]]
 --[[#type TUnion.Data = List<|TBaseType|>]]
 --[[#type TUnion.suppress = boolean]]
---[[#type TUnion.falsy_disabled = List<|TBaseType|> | nil ]]
+--[[#type TUnion.falsy_disabled = List<|TBaseType|> | nil]]
 META.Type = "union"
 
 function META:GetHash()
@@ -25,7 +25,9 @@ end
 function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 	if a.suppress then return true end
 
-	if b.Type ~= "union" and #a.Data == 1 and a.Data[1] then return a.Data[1]:Equal(b) end
+	if b.Type ~= "union" and #a.Data == 1 and a.Data[1] then
+		return a.Data[1]:Equal(b)
+	end
 
 	if a.Type ~= b.Type then return false end
 
@@ -33,19 +35,19 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 
 	for i = 1, #a.Data do
 		local ok = false
-		local a = a.Data[i] --[[# as TBaseType ]]
+		local a = a.Data[i]--[[# as TBaseType]]
 
 		for i = 1, #b.Data do
-			local b = b.Data[i] --[[# as TBaseType ]]
-			a.suppress = true --[[# as boolean ]]
+			local b = b.Data[i]--[[# as TBaseType]]
+			a.suppress = true--[[# as boolean]]
 			ok = a:Equal(b)
-			a.suppress = false --[[# as boolean ]]
+			a.suppress = false--[[# as boolean]]
 
 			if ok then break end
 		end
 
 		if not ok then
-			a.suppress = false --[[# as boolean ]]
+			a.suppress = false--[[# as boolean]]
 			return false
 		end
 	end
@@ -163,7 +165,7 @@ function META:GetAtIndex(i--[[#: number]])
 
 	if not self:HasTuples() then return self end
 
-	local val --[[#: any]]
+	local val--[[#: any]]
 	local errors = {}
 
 	for _, obj in ipairs(self.Data) do
@@ -180,7 +182,7 @@ function META:GetAtIndex(i--[[#: number]])
 		else
 			if val then
 				-- a non tuple in the union would be treated as a tuple with the value repeated
-				val = self.New({val --[[#as any]], obj})
+				val = self.New({val--[[# as any]], obj})
 			elseif i == 1 then
 				val = obj
 			else
@@ -246,7 +248,6 @@ end
 
 function META:HasType(typ--[[#: string]])
 	assert(type(typ) == "string")
-
 	return self:GetType(typ) ~= false
 end
 
@@ -415,16 +416,19 @@ function META:GetLargestNumber()
 end
 
 function META.New(data--[[#: nil | List<|TBaseType|>]])
-	local self = setmetatable({
-		Data = {},
-		Falsy = false,
-		Truthy = false,
-		Literal = false,
-		LiteralArgument = false,
-		ReferenceArgument = false,
-		suppress = false,
-		falsy_disabled = nil,
-	}, META)
+	local self = setmetatable(
+		{
+			Data = {},
+			Falsy = false,
+			Truthy = false,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+			suppress = false,
+			falsy_disabled = nil,
+		},
+		META
+	)
 
 	if data then for _, v in ipairs(data) do
 		self:AddType(v)
@@ -435,7 +439,7 @@ end
 
 return {
 	Union = META.New,
-	Nilable = function(typ--[[: TBaseType]])
+	Nilable = function(typ--[[: TBaseType]] )
 		return META.New({typ, Nil()})
 	end,
 	Boolean = function()

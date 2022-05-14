@@ -1,4 +1,4 @@
-local current_analyzer --[[#: List<|any|> ]] = {}
+local current_analyzer--[[#: List<|any|>]] = {}
 local CONTEXT = {}
 
 function CONTEXT:GetCurrentAnalyzer()

@@ -301,7 +301,6 @@ function META:ParseNode()
 	if self:IsType("end_of_file") then return end
 
 	profiler.PushZone("ReadStatement")
-
 	local node = self:ParseDebugCodeStatement() or
 		self:ParseReturnStatement() or
 		self:ParseBreakStatement() or
@@ -332,9 +331,7 @@ function META:ParseNode()
 		self:ParseGenericForStatement() or
 		self:ParseDestructureAssignmentStatement() or
 		self:ParseCallOrAssignmentStatement()
-
 	profiler.PopZone()
-
 	return node
 end
 

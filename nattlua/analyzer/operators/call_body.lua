@@ -277,7 +277,8 @@ local function check_input(self, obj, input)
 		end
 
 		if
-			arg and arg.Type == "table" and
+			arg and
+			arg.Type == "table" and
 			contract.Type == "table" and
 			arg:GetUpvalue() and
 			not contract:IsReferenceArgument()
@@ -423,7 +424,6 @@ return function(META)
 		self:PopScope()
 		self:PopFalsyExpressionContext()
 		self:PopTruthyExpressionContext()
-
 		self:ClearScopedTrackedObjects(scope)
 
 		if output.Type ~= "tuple" then output = Tuple({output}) end

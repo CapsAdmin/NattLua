@@ -626,23 +626,26 @@ analyze[[
     
     local a = test(true, true)
 ]]
-
-analyze([[
+analyze(
+	[[
     local analyzer function test(foo: number): number
         return "foo"
     end
     
     local x = test(1)
-]], [["foo" is not the same type as number]])
-
-analyze([[
+]],
+	[["foo" is not the same type as number]]
+)
+analyze(
+	[[
     local analyzer function test(foo: number): number
         return 1, 2
     end
     
     local x = test(1)
-]], [[index 2 does not exist]])
-
+]],
+	[[index 2 does not exist]]
+)
 analyze[[
     local analyzer function test(foo: number)
         return 1, 2
@@ -650,15 +653,16 @@ analyze[[
     
     local x = test(1)
 ]]
-
-analyze([[
+analyze(
+	[[
     local analyzer function test(foo: literal number): number
         return 1
     end
     
     local x = test(_ as number)
-]], "number is not a subset of literal number")
-
+]],
+	"number is not a subset of literal number"
+)
 analyze[[
     local analyzer function test(foo: literal number)
         return 1, 2
@@ -666,7 +670,6 @@ analyze[[
     
     local x = test(1)
 ]]
-
 analyze(
 	[[
     local function foo(s: literal string)
@@ -677,7 +680,6 @@ analyze(
 ]],
 	"string is not a subset of literal string"
 )
-
 analyze[[
     local analyzer function test(foo: literal number | literal string)
         return 1
@@ -686,47 +688,52 @@ analyze[[
     local x = test(1)
     local x = test("")
 ]]
-
-analyze([[
+analyze(
+	[[
     local analyzer function test(foo: literal number | literal string)
         return 1
     end
     
     local x = test(_ as number)
-]], "number is not a subset of literal number | literal string")
-
-analyze([[
+]],
+	"number is not a subset of literal number | literal string"
+)
+analyze(
+	[[
     local analyzer function test(foo: literal number | literal string)
         return 1
     end
     
     local x = test(_ as string)
-]], "string is not a subset of literal number | literal string")
-
-
-analyze([[
+]],
+	"string is not a subset of literal number | literal string"
+)
+analyze(
+	[[
     local analyzer function test(foo: literal number | literal string)
         return 1
     end
     
     local x = test(_ as string | number)
-]], "number | string is not a subset of literal number | literal string")
-
-analyze([[
+]],
+	"number | string is not a subset of literal number | literal string"
+)
+analyze(
+	[[
     local analyzer function test(foo: literal number | literal string)
         return 1
     end
     
     local x = test(_ as string | number)
-]], "number | string is not a subset of literal number | literal string")
-
+]],
+	"number | string is not a subset of literal number | literal string"
+)
 analyze[[
     local function test(foo: literal function=(literal number)>(literal number))
     end
     
     local x = test(_ as function=(1)>(1))
 ]]
-
 analyze[[
     local function test(foo: literal function=(literal number)>(literal number))
     end
@@ -739,23 +746,26 @@ analyze[[
     
     local x = test(_ as function=(literal string)>(literal string))
 ]]
-
-analyze([[
+analyze(
+	[[
     local analyzer function test(foo: literal function=(literal number)>(literal number))
         print(foo)
     end
     
     local x = test(_ as function=(number)>(1))
-]], "function=%(number,%)>%(1,%) is not a subset of function=%(literal number,%)>%(literal number,%)")
-
-analyze([[
+]],
+	"function=%(number,%)>%(1,%) is not a subset of function=%(literal number,%)>%(literal number,%)"
+)
+analyze(
+	[[
     local analyzer function test():(literal number)
         return types.Number()
     end
     
     local x = test()
-]], "number is not a subset of literal number")
-
+]],
+	"number is not a subset of literal number"
+)
 analyze[[
     local analyzer function test():(literal number)
         return 1

@@ -32,7 +32,6 @@ do
 
 	function META:AnalyzeStatement(node)
 		profiler.PushZone("AnalyzeStatement - " .. node.kind)
-
 		self.current_statement = node
 		self:PushAnalyzerEnvironment(node.environment or "runtime")
 
@@ -88,7 +87,6 @@ do
 		end
 
 		self:PopAnalyzerEnvironment()
-
 		profiler.PopZone()
 	end
 end
@@ -165,19 +163,15 @@ do
 		end
 
 		profiler.PopZone()
-
 		return obj
 	end
 
 	function META:AnalyzeExpression(node)
 		profiler.PushZone("AnalyzeExpression - " .. node.kind)
-
 		local obj, err = self:AnalyzeExpression2(node)
 		obj = self:AnalyzeTypeExpression(node, obj)
 		node:AddType(obj or err)
-		
 		profiler.PopZone()
-
 		return obj, err
 	end
 end

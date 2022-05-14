@@ -58,7 +58,16 @@ function characters.IsSymbol(c--[[#: number]])--[[#: boolean]]
 end
 
 function characters.IsHex(c--[[#: number]])--[[#: boolean]]
-	return characters.IsNumber(c) or (c >= B("a") and c <= B("f")) or (c >= B("A") and c <= B("F"))
+	return characters.IsNumber(c) or
+		(
+			c >= B("a") and
+			c <= B("f")
+		)
+		or
+		(
+			c >= B("A") and
+			c <= B("F")
+		)
 end
 
 if jit then
@@ -71,9 +80,10 @@ if jit then
 			map[i] = val(i) and 1 or 0
 		end
 
-		characters[key] = function(c--[[#: number]])--[[#: boolean]] return map[c] ~= 0 end
+		characters[key] = function(c--[[#: number]])--[[#: boolean]]
+			return map[c] ~= 0
+		end
 	end
-
 end
 
 return characters

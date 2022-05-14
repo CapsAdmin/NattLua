@@ -279,15 +279,14 @@ return function(META)
 
 	function META:GetMutatedUpvalue(upvalue)
 		upvalue.mutations = upvalue.mutations or {}
-
 		return get_value_from_scope(self.current_if_statement, shallow_copy(upvalue.mutations), self:GetScope(), upvalue)
 	end
 
 	function META:MutateUpvalue(upvalue, val, scope_override, from_tracking)
 		val:SetUpvalue(upvalue)
 		upvalue.mutations = upvalue.mutations or {}
-		
 		local scope = scope_override or self:GetScope()
+
 		if self:IsInUncertainLoop(scope) and upvalue.scope then
 			if val.dont_widen or scope:Contains(upvalue.scope) then
 				val = val:Copy()

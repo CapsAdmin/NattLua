@@ -12,20 +12,19 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TFunction = META.@Self]]
 --[[#type TFunction.scopes = List<|any|>]]
 --[[#type TFunction.suppress = boolean]]
-
 META.Type = "function"
 META.Truthy = true
 META.Falsy = false
 META:IsSet("Called", false)
 META:IsSet("ExplicitInputSignature", false)
 META:IsSet("ExplicitOutputSignature", false)
-META:GetSet("InputSignature", nil --[[# as TTuple]])
-META:GetSet("OutputSignature", nil --[[# as TTuple]])
-META:GetSet("FunctionBodyNode", nil --[[# as nil | any]])
-META:GetSet("Scope", nil --[[# as nil | any]])
-META:GetSet("UpvaluePosition", nil --[[# as nil | number]])
-META:GetSet("InputIdentifiers", nil --[[# as nil | List<|any|>]])
-META:GetSet("AnalyzerFunction", nil --[[# as nil | Function]])
+META:GetSet("InputSignature", nil--[[# as TTuple]])
+META:GetSet("OutputSignature", nil--[[# as TTuple]])
+META:GetSet("FunctionBodyNode", nil--[[# as nil | any]])
+META:GetSet("Scope", nil--[[# as nil | any]])
+META:GetSet("UpvaluePosition", nil--[[# as nil | number]])
+META:GetSet("InputIdentifiers", nil--[[# as nil | List<|any|>]])
+META:GetSet("AnalyzerFunction", nil--[[# as nil | Function]])
 META:IsSet("ArgumentsInferred", false)
 META:GetSet("PreventInputArgumentExpansion", false)
 
@@ -35,6 +34,7 @@ end
 
 function META:__call(...--[[#: ...any]])
 	local f = self:GetAnalyzerFunction()
+
 	if f then return f(...) end
 end
 
@@ -44,9 +44,12 @@ function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]])
 		a:GetOutputSignature():Equal(b:GetOutputSignature())
 end
 
-function META:Copy(map--[[#: Map<|any, any|> | nil ]], copy_tables--[[#: nil | boolean]])
+function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])
 	map = map or {}
-	local copy = self.New(self:GetInputSignature():Copy(map, copy_tables), self:GetOutputSignature():Copy(map, copy_tables))
+	local copy = self.New(
+		self:GetInputSignature():Copy(map, copy_tables),
+		self:GetOutputSignature():Copy(map, copy_tables)
+	)
 	map[self] = map[self] or copy
 	copy:SetUpvaluePosition(self:GetUpvaluePosition())
 	copy:SetAnalyzerFunction(self:GetAnalyzerFunction())
@@ -192,22 +195,25 @@ function META:IsRefFunction()
 end
 
 function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
-	local self = setmetatable({
-		Falsy = false, 
-		Truthy = true, 
-		Literal = false, 
-		LiteralArgument = false, 
-		ReferenceArgument = false,
-		Called = false,
-		ExplicitInputSignature = false,
-		ExplicitOutputSignature = false,
-		ArgumentsInferred = false,
-		PreventInputArgumentExpansion = false,
-		scopes = {},
-		InputSignature = input,
-		OutputSignature = output,
-		suppress = false,
-	}, META)
+	local self = setmetatable(
+		{
+			Falsy = false,
+			Truthy = true,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+			Called = false,
+			ExplicitInputSignature = false,
+			ExplicitOutputSignature = false,
+			ArgumentsInferred = false,
+			PreventInputArgumentExpansion = false,
+			scopes = {},
+			InputSignature = input,
+			OutputSignature = output,
+			suppress = false,
+		},
+		META
+	)
 	return self
 end
 
@@ -216,7 +222,11 @@ return {
 	AnyFunction = function()
 		return META.New(Tuple({VarArg(Any())}), Tuple({VarArg(Any())}))
 	end,
-	LuaTypeFunction = function(lua_function--[[#: Function]], arg--[[#: List<|TBaseType|>]], ret--[[#: List<|TBaseType|>]])
+	LuaTypeFunction = function(
+		lua_function--[[#: Function]],
+		arg--[[#: List<|TBaseType|>]],
+		ret--[[#: List<|TBaseType|>]]
+	)
 		local self = META.New(Tuple(arg), Tuple(ret))
 		self:SetAnalyzerFunction(lua_function)
 		return self

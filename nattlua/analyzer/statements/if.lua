@@ -30,7 +30,6 @@ return {
 				if no_operator_expression then self:PushTruthyExpressionContext(true) end
 
 				local obj = self:AnalyzeExpression(exp)
-
 				self.current_expression = exp
 
 				if no_operator_expression then self:PopTruthyExpressionContext() end

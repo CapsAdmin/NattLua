@@ -4,7 +4,7 @@ local did_something = false
 
 local function run_lua(path, ...)
 	did_something = true
-	print("running ", path,  ...)
+	print("running ", path, ...)
 	assert(loadfile(path))(...)
 end
 

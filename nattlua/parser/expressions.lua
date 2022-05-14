@@ -366,7 +366,6 @@ do -- typesystem
 		if self.TealCompat then return self:ParseTealExpression(priority) end
 
 		profiler.PushZone("ParseTypeExpression")
-
 		self:PushParserEnvironment("typesystem")
 		local node
 		local force_upvalue
@@ -417,9 +416,7 @@ do -- typesystem
 		end
 
 		self:PopParserEnvironment()
-
 		profiler.PopZone()
-
 		return node
 	end
 
@@ -736,6 +733,7 @@ do -- runtime
 
 	local function resolve_import_path(self--[[#: META.@Self]], path--[[#: string]])
 		if not path then debug.trace() end
+
 		local working_directory = self.config.working_directory or ""
 
 		if path:sub(1, 1) == "~" then
@@ -934,7 +932,6 @@ do -- runtime
 		end
 
 		profiler.PushZone("ParseRuntimeExpression")
-
 		priority = priority or 0
 		local node = self:ParseParenthesisExpression() or
 			self:ParsePrefixOperatorExpression() or
@@ -989,7 +986,6 @@ do -- runtime
 		if node then node.first_node = first end
 
 		profiler.PopZone("ParseRuntimeExpression")
-
 		return node
 	end
 

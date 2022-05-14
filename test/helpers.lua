@@ -67,7 +67,8 @@ do
 			io.write(".")
 			io.flush()
 		end
-		_G.TEST = true	
+
+		_G.TEST = true
 		local compiler = nl.Compiler(code, nil, nil, 3)
 		compiler:SetEnvironments(runtime_env:Copy(), typesystem_env)
 		local ok, err = compiler:Analyze()

@@ -62,9 +62,9 @@ function META:OnDiagnostic(code, msg, severity, start, stop, ...)
 	msg = msg2
 
 	if severity == "error" then
-		msg = "\x1b[0;31m".. msg .."\x1b[0m"
+		msg = "\x1b[0;31m" .. msg .. "\x1b[0m"
 	elseif severity == "warning" then
-		msg = "\x1b[0;33m".. msg .."\x1b[0m"
+		msg = "\x1b[0;33m" .. msg .. "\x1b[0m"
 	end
 
 	if not _G.TEST then io.write(msg) end

@@ -1,6 +1,7 @@
 local type { Token } = import("~/nattlua/lexer/token.lua")
 
 local type { Code } = import("~/nattlua/code.lua")
+
 local type statement = {}
 local type expression = {}
 local type Node = {

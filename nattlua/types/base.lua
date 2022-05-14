@@ -23,11 +23,19 @@ end
 META:GetSet("Data", nil--[[# as nil | any]])
 
 function META:GetLuaType()
-	if self.Contract and self.Contract.TypeOverride and self.Contract.TypeOverride.Type == "string" and self.Contract.TypeOverride.Data then
+	if
+		self.Contract and
+		self.Contract.TypeOverride and
+		self.Contract.TypeOverride.Type == "string" and
+		self.Contract.TypeOverride.Data
+	then
 		return self.Contract.TypeOverride.Data
 	end
 
-	return self.TypeOverride and self.TypeOverride.Type == "string" and self.TypeOverride.Data or self.Type
+	return self.TypeOverride and
+		self.TypeOverride.Type == "string" and
+		self.TypeOverride.Data or
+		self.Type
 end
 
 do
@@ -266,5 +274,5 @@ function META.New()
 	return setmetatable({}--[[# as META.@Self]], META)
 end
 
---[[#type META.TBaseType = any --copy<|META|>.@Self]]
+--[[#type META.TBaseType = any]] --copy<|META|>.@Self
 return META

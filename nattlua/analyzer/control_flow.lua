@@ -238,7 +238,7 @@ return function(META)
 		end
 
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
-				-- setup and track the callstack to avoid infinite loops or callstacks that are too big
+			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
 			self.call_stack = self.call_stack or {}
 
 			if self:IsRuntime() and call_node and not not_recursive_call then

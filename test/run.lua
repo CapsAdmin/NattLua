@@ -4,7 +4,6 @@ local profiler = require("nattlua.other.profiler")
 local io = require("io")
 local io_write = _G.ON_EDITOR_SAVE and function() end or io.write
 local pcall = _G.pcall
-
 profiler.Start()
 
 --require("nattlua.other.helpers").GlobalLookup()
@@ -85,6 +84,7 @@ local function find_tests(path)
 
 	for path in io.popen("find " .. path):lines() do
 		path = path:gsub("//", "/")
+
 		if not path:find("/file_importing/", nil, true) then
 			table.insert(found, path)
 		end
@@ -95,9 +95,9 @@ end
 
 local function format_time(seconds)
 	local str = ("%.3f"):format(seconds)
-	if seconds > 0.5 then
-		return "\x1b[0;31m"..str.." seconds\x1b[0m"
-	end
+
+	if seconds > 0.5 then return "\x1b[0;31m" .. str .. " seconds\x1b[0m" end
+
 	return str
 end
 
@@ -105,25 +105,25 @@ if path and path:sub(-4) == ".lua" then
 	io_write(path, " ")
 	local time = os.clock()
 	assert(loadfile(path))()
-	io_write(" ", format_time(os.clock() - time), " seconds\n") 
+	io_write(" ", format_time(os.clock() - time), " seconds\n")
 else
 	local tests = find_tests(path)
 
 	for _, path in ipairs(tests) do
-		if path:sub(-4) == ".lua" then 
+		if path:sub(-4) == ".lua" then
 			io_write(path, " ")
 			local time = os.clock()
 			assert(loadfile(path))()
-			io_write(" ", format_time(os.clock() - time), " seconds\n") 
+			io_write(" ", format_time(os.clock() - time), " seconds\n")
 		end
 	end
 
 	for _, path in ipairs(tests) do
-		if path:sub(-5) == ".nlua" then 
+		if path:sub(-5) == ".nlua" then
 			local time = os.clock()
 			io_write(path, " ")
 			require("test.helpers").RunCode(io.open(path, "r"):read("*all"))
-			io_write(" ", format_time(os.clock() - time), " seconds\n") 
+			io_write(" ", format_time(os.clock() - time), " seconds\n")
 		end
 	end
 end

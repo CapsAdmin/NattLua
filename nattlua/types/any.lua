@@ -38,8 +38,7 @@ function META.Equal(a--[[#: TAny]], b--[[#: TBaseType]])
 end
 
 function META.LogicalComparison(l--[[#: TAny]], r--[[#: TBaseType]], op--[[#: string]])
-	if op == "==" then
-		return true -- TODO: should be nil (true | false)?
+	if op == "==" then return true -- TODO: should be nil (true | false)?
 	end
 
 	return type_errors.binary(op, l, r)

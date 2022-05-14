@@ -17,13 +17,9 @@ META:GetSet("PatternContract", nil--[[# as nil | string]])
 function META.Equal(a--[[#: TString]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
 
-	if a:IsLiteralArgument() and b:IsLiteralArgument() then
-		return true
-	end
+	if a:IsLiteralArgument() and b:IsLiteralArgument() then return true end
 
-	if b:IsLiteralArgument() and not a:IsLiteral() then
-		return false
-	end
+	if b:IsLiteralArgument() and not a:IsLiteral() then return false end
 
 	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
 
@@ -54,10 +50,7 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 
 	if B.Type ~= "string" then return type_errors.type_mismatch(A, B) end
 
-
-	if A:IsLiteralArgument() and B:IsLiteralArgument() then
-		return true
-	end
+	if A:IsLiteralArgument() and B:IsLiteralArgument() then return true end
 
 	if B:IsLiteralArgument() and not A:IsLiteral() then
 		return type_errors.subset(A, B)
@@ -77,6 +70,7 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 
 	if B.PatternContract then
 		local str = A:GetData()
+
 		if not str then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
 			return type_errors.literal(A)
 		end
@@ -100,15 +94,11 @@ function META:__tostring()
 
 	if self:IsLiteral() then
 		local str = self:GetData()
-		
-		if str then 
-			return "\"" .. str .. "\""
-		end
+
+		if str then return "\"" .. str .. "\"" end
 	end
 
-	if self:IsLiteralArgument() then
-		return "literal string"
-	end
+	if self:IsLiteralArgument() then return "literal string" end
 
 	return "string"
 end
@@ -155,14 +145,17 @@ function META:PrefixOperator(op--[[#: string]])
 end
 
 function META.New(data--[[#: string | nil]])
-	local self = setmetatable({
-		Data = data,
-		Falsy = false,
-		Truthy = true,
-		Literal = false,
-		LiteralArgument = false,
-		ReferenceArgument = false,
-	}, META)
+	local self = setmetatable(
+		{
+			Data = data,
+			Falsy = false,
+			Truthy = true,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+		},
+		META
+	)
 	-- analyzer might be nil when strings are made outside of the analyzer, like during tests
 	local analyzer = context:GetCurrentAnalyzer()
 
@@ -179,14 +172,17 @@ return {
 		return META.New(num):SetLiteral(true)
 	end,
 	LStringNoMeta = function(data--[[#: string]])
-		return setmetatable({
-			Data = data,
-			Falsy = false,
-			Truthy = true,
-			Literal = false,
-			LiteralArgument = false,
-			ReferenceArgument = false,
-		}, META):SetLiteral(true)
+		return setmetatable(
+			{
+				Data = data,
+				Falsy = false,
+				Truthy = true,
+				Literal = false,
+				LiteralArgument = false,
+				ReferenceArgument = false,
+			},
+			META
+		):SetLiteral(true)
 	end,
 	NodeToString = function(node--[[#: expression["value"] ]], is_local--[[#: boolean | nil]])
 		return META.New(node.value.value):SetLiteral(true)

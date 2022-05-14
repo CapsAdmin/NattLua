@@ -193,6 +193,7 @@ return function(META)
 		end
 
 		local output_signature = obj:GetOutputSignature()
+
 		if not output_signature:IsEmpty() then
 			local ok, err = ret:IsSubsetOfTuple(output_signature)
 

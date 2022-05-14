@@ -683,7 +683,7 @@ function META:CoerceUntypedFunctions(from--[[#: TTable]])
 	end
 end
 
-function META:Copy(map--[[#: Map<|any, any|> | nil ]], copy_tables--[[#: nil | boolean]])
+function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])
 	map = map or {}
 	local copy = META.New()
 	map[self] = map[self] or copy
@@ -845,7 +845,6 @@ end
 
 function META.Extend(A--[[#: TTable]], B--[[#: TTable]])
 	assert(B.Type == "table")
-
 	local map = {}
 
 	if A:GetContract() then
@@ -874,7 +873,6 @@ end
 
 function META.Union(A--[[#: TTable]], B--[[#: TTable]])
 	assert(B.Type == "table")
-
 	local copy = META.New()
 
 	for _, keyval in ipairs(A:GetData()) do

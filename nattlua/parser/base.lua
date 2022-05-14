@@ -4,7 +4,8 @@
 
 --[[#local type { ParserConfig } = import("./../config.nlua")]]
 
---[[#local type {Code} = import<|"~/nattlua/code.lua"|>]]
+--[[#local type { Code } = import<|"~/nattlua/code.lua"|>]]
+
 --[[#local type NodeType = "expression" | "statement"]]
 local CreateNode = require("nattlua.parser.node").New
 local ipairs = _G.ipairs
@@ -362,12 +363,14 @@ end
 function META:ParseMultipleValues(
 	max--[[#: nil | number]],
 	reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (nil | Node))]],
-	a--[[#: ref any]],b--[[#: ref any]],c--[[#: ref any]]
+	a--[[#: ref any]],
+	b--[[#: ref any]],
+	c--[[#: ref any]]
 )
 	local out = {}
 
 	for i = 1, max or self:GetLength() do
-		local node = reader(self, a,b,c)
+		local node = reader(self, a, b, c)
 
 		if not node then break end
 

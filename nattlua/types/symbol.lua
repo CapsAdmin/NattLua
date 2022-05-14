@@ -50,7 +50,7 @@ function META.IsSubsetOf(A--[[#: TSymbol]], B--[[#: TBaseType]])
 
 	if B.Type == "any" then return true end
 
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A--[[#as any]]) end
+	if B.Type == "union" then return B:IsTargetSubsetOfChild(A--[[# as any]]) end
 
 	if B.Type ~= "symbol" then return type_errors.type_mismatch(A, B) end
 
@@ -68,15 +68,17 @@ function META:IsTruthy()
 end
 
 function META.New(data--[[#: any]])
-	local self = setmetatable({
-		Data = data,
-		Falsy = false,
-		Truthy = false,
-		Literal = false,
-		LiteralArgument = false,
-		ReferenceArgument = false,
-	
-	}, META)
+	local self = setmetatable(
+		{
+			Data = data,
+			Falsy = false,
+			Truthy = false,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+		},
+		META
+	)
 	self:SetLiteral(true)
 	return self
 end

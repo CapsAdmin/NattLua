@@ -121,21 +121,21 @@ do
 	local type { Symbol } = require("nattlua.types.symbol")
 
 	local str = Symbol(true)
-	attest.equal(str:GetData(), _ as any)
+	attest.equal(str:GetData(), _  as any)
 end
 
 do
 	local type { Union } = require("nattlua.types.union")
 
-	local obj = Union({1,2,3})
-	attest.equal(obj:GetData(), _ as List<|any|>)
+	local obj = Union({1, 2, 3})
+	attest.equal(obj:GetData(), _  as List<|any|>)
 end
 
 do
 	local type { Tuple } = require("nattlua.types.tuple")
 
-	local obj = Tuple({1,2,3})
-	attest.equal(obj:GetData(), _ as List<|any|>)
+	local obj = Tuple({1, 2, 3})
+	attest.equal(obj:GetData(), _  as List<|any|>)
 end
 
 do

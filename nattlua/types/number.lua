@@ -56,13 +56,9 @@ end
 function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
 
-	if b:IsLiteralArgument() and a:IsLiteralArgument() then
-		return true
-	end
+	if b:IsLiteralArgument() and a:IsLiteralArgument() then return true end
 
-	if b:IsLiteralArgument() and not a:IsLiteral() then
-		return false
-	end
+	if b:IsLiteralArgument() and not a:IsLiteral() then return false end
 
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
 
@@ -100,14 +96,13 @@ function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TBaseType]])
 
 	if B.Type == "any" then return true end
 
-	if B.Type == "union" then return (B--[[# as any]]):IsTargetSubsetOfChild(A--[[# as any]]) end
+	if B.Type == "union" then
+		return (B--[[# as any]]):IsTargetSubsetOfChild(A--[[# as any]])
+	end
 
 	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
 
-
-	if A:IsLiteralArgument() and B:IsLiteralArgument() then
-		return true
-	end
+	if A:IsLiteralArgument() and B:IsLiteralArgument() then return true end
 
 	if B:IsLiteralArgument() and not A:IsLiteral() then
 		return type_errors.subset(A, B)
@@ -157,9 +152,7 @@ function META:__tostring()
 
 	if self:IsLiteral() then return s end
 
-	if self:IsLiteralArgument() then
-		return "literal number"
-	end
+	if self:IsLiteralArgument() then return "literal number" end
 
 	return "number"
 end

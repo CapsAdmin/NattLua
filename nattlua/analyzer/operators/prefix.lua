@@ -22,7 +22,6 @@ end
 
 local function Prefix(self, node, r)
 	local op = node.value.value
-
 	self.current_expression = node
 
 	if op == "not" then

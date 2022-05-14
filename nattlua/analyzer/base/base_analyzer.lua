@@ -20,11 +20,11 @@ return function(META)
 	require("nattlua.analyzer.base.scopes")(META)
 	require("nattlua.analyzer.base.error_handling")(META)
 
-	function META:AnalyzeRootStatement(statement, a,b,c,d,e,f)
+	function META:AnalyzeRootStatement(statement, a, b, c, d, e, f)
 		context:PushCurrentAnalyzer(self)
 		local argument_tuple = a and
-			Tuple({a,b,c,d,e,f}) or
-			Tuple({a,b,c,d,e,f}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+			Tuple({a, b, c, d, e, f}) or
+			Tuple({a, b, c, d, e, f}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		self:CreateAndPushModuleScope()
 		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("runtime"), "runtime")
 		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("typesystem"), "typesystem")
@@ -361,13 +361,13 @@ return function(META)
 				return scope.scope_helper
 			end
 
-			function META:CallTypesystemUpvalue(name, a,b,c,d,e,f)
+			function META:CallTypesystemUpvalue(name, a, b, c, d, e, f)
 				-- this is very internal-ish code
 				-- not sure what a nice interface for this really should be yet
 				self:PushAnalyzerEnvironment("typesystem")
 				local generics_func = self:GetLocalOrGlobalValue(name)
 				assert(generics_func.Type == "function", "cannot find typesystem function " .. name:GetData())
-				local argument_tuple = Tuple({a,b,c,d,e,f})
+				local argument_tuple = Tuple({a, b, c, d, e, f})
 				local returned_tuple = assert(self:Call(generics_func, argument_tuple))
 				self:PopAnalyzerEnvironment()
 				return returned_tuple:Unpack()

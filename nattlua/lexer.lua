@@ -1,5 +1,6 @@
 --[[#local type { TokenType } = import("./lexer/token.lua")]]
---[[#local type {Code} = import<|"~/nattlua/code.lua"|>]]
+
+--[[#local type { Code } = import<|"~/nattlua/code.lua"|>]]
 
 local loadstring = require("nattlua.other.loadstring")
 local Token = require("nattlua.lexer.token").New
@@ -12,7 +13,6 @@ local META = class.CreateTemplate("lexer")
 	Code = Code,
 	Position = number,
 }]]
-
 local B = string.byte
 
 function META:GetLength()--[[#: number]]
@@ -111,15 +111,13 @@ function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
 	return nil, nil
 end
 
-function META:ReadSimple()--[[#: (TokenType,boolean,number,number)]]
+function META:ReadSimple()--[[#: (TokenType, boolean, number, number)]]
 	if self:ReadShebang() then return "shebang", false, 1, self.Position - 1 end
 
 	local start = self.Position
 	local type, is_whitespace = self:Read()
 
-	if type == "discard" then
-		return self:ReadSimple()
-	end
+	if type == "discard" then return self:ReadSimple() end
 
 	if not type then
 		if self:ReadEndOfFile() then
@@ -157,16 +155,21 @@ do
 		"'",
 	}
 	local map = {}
+
 	for _, v in ipairs(fixed) do
 		map[v:byte()] = loadstring("return \"\\" .. v .. "\"")()
 	end
 
 	local function reverse_escape_string(str--[[#: string]])
 		local pos = 1
+
 		while true do
 			local start, stop = str:find("\\", pos, true)
+
 			if not start or not stop then break end
+
 			local char = map[str:byte(start + 1, stop + 1)]
+
 			if char then
 				str = str:sub(1, start - 1) .. char .. str:sub(stop + 2)
 				pos = stop + 1
@@ -184,11 +187,13 @@ do
 		token.value = self:GetStringSlice(token.start, token.stop)
 
 		if token.type == "string" then
-			if token.value:sub(1, 1) == [["]] or token.value:sub(1, 1) == [[']]  then
+			if token.value:sub(1, 1) == [["]] or token.value:sub(1, 1) == [[']] then
 				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1))
 			elseif token.value:sub(1, 1) == "[" then
 				local start = token.value:find("[", 2, true)
+
 				if not start then error("start not found") end
+
 				token.string_value = token.value:sub(start + 1, -start - 1)
 			end
 		end
@@ -209,13 +214,15 @@ do
 
 		for i = self.Position, self:GetLength() + 1 do
 			local token = self:ReadToken()
+
 			if not token.is_whitespace then
 				token.whitespace = whitespace
 				return token
 			end
+
 			whitespace[whitespace_i] = token
 			whitespace_i = whitespace_i + 1
-		end		
+		end
 	end
 end
 
@@ -243,7 +250,6 @@ end
 
 function META:GetTokens()
 	self:ResetState()
-
 	local tokens = {}
 	local tokens_i = 1
 
@@ -466,7 +472,13 @@ do
 	end
 
 	local function ReadHexNumber(lexer--[[#: Lexer]])
-		if not lexer:IsString("0") or (not lexer:IsString("x", 1) and not lexer:IsString("X", 1)) then
+		if
+			not lexer:IsString("0") or
+			(
+				not lexer:IsString("x", 1) and
+				not lexer:IsString("X", 1)
+			)
+		then
 			return false
 		end
 
@@ -496,7 +508,9 @@ do
 					if ReadNumberPowExponent(lexer, "pow") then break end
 				end
 
-				if lexer:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+				if lexer:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then
+					break
+				end
 
 				lexer:Error(
 					"malformed hex number, got " .. string.char(lexer:PeekByte()),
@@ -511,7 +525,13 @@ do
 	end
 
 	local function ReadBinaryNumber(lexer--[[#: Lexer]])
-		if not lexer:IsString("0") or not (lexer:IsString("b", 1) and not lexer:IsString("B", 1)) then
+		if
+			not lexer:IsString("0") or
+			not (
+				lexer:IsString("b", 1) and
+				not lexer:IsString("B", 1)
+			)
+		then
 			return false
 		end
 
@@ -532,7 +552,9 @@ do
 					if ReadNumberPowExponent(lexer, "exponent") then break end
 				end
 
-				if lexer:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+				if lexer:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then
+					break
+				end
 
 				lexer:Error(
 					"malformed binary number, got " .. string.char(lexer:PeekByte()),
@@ -589,7 +611,9 @@ do
 					if ReadNumberPowExponent(lexer, "exponent") then break end
 				end
 
-				if lexer:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then break end
+				if lexer:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then
+					break
+				end
 
 				lexer:Error(
 					"malformed number, got " .. string.char(lexer:PeekByte()) .. " in decimal notation",
