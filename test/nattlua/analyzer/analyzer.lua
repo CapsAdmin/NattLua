@@ -770,7 +770,6 @@ analyze[[
     
     local x = test()
 ]]
-
 analyze[[
     local analyzer function test(x: literal number): number
         return x:GetData() + 1

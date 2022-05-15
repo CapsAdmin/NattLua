@@ -27,6 +27,7 @@ analyzer function ^string.rep(str: string, n: number, sep: nil | string)
 		if sep and sep:IsLiteral() then
 			return types.LString(string.rep(str:GetData(), n:GetData(), sep:GetData()))
 		end
+
 		return types.LString(string.rep(str:GetData(), n:GetData()))
 	end
 
@@ -40,9 +41,8 @@ analyzer function ^string.char(...: ...number)
 		if num.Type ~= "number" or not num:IsLiteral() then return types.String() end
 
 		out[i] = num:GetData()
-		if out[i] < 0 or out[i] > 255 then
-			error("out of range", 2)
-		end
+
+		if out[i] < 0 or out[i] > 255 then error("out of range", 2) end
 	end
 
 	return string.char(table.unpack(out))
@@ -56,9 +56,8 @@ analyzer function ^string.format(s: string, ...: ...any)
 	for i, v in ipairs(ret) do
 		if v:IsLiteral() then
 			ret[i] = v:GetData()
-			if v.Type == "function" then
-				ret[i] = v.GetData
-			end
+
+			if v.Type == "function" then ret[i] = v.GetData end
 		else
 			return types.String()
 		end

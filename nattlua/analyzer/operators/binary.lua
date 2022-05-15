@@ -67,19 +67,18 @@ local function operator(self, node, l, r, op, meta_method)
 	end
 
 	if l:IsLiteral() and r:IsLiteral() then
-		if  l.Type == "number" and r.Type == "string" then
+		if l.Type == "number" and r.Type == "string" then
 			local num = tonumber(r:GetData())
-			if num then
-				r = Number(num):SetLiteral(true)
-			end
+
+			if num then r = Number(num):SetLiteral(true) end
 		elseif l.Type == "string" and r.Type == "number" then
 			local num = tonumber(l:GetData())
-			if num then
-				l = Number(num):SetLiteral(true)
-			end
+
+			if num then l = Number(num):SetLiteral(true) end
 		elseif l.Type == "string" and r.Type == "string" then
 			local lnum = tonumber(l:GetData())
 			local rnum = tonumber(r:GetData())
+
 			if lnum and rnum then
 				l = Number(lnum):SetLiteral(true)
 				r = Number(rnum):SetLiteral(true)

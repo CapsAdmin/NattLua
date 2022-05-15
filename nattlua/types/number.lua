@@ -49,6 +49,7 @@ end
 
 function META:GetHash()
 	if self:IsNan() then return nil end
+
 	if self:IsLiteral() then return self.Data end
 
 	return "__@type@__" .. self.Type
@@ -113,7 +114,6 @@ function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TBaseType]])
 		local b = B:GetData()--[[# as number]]
 
 		-- compare against literals
-
 		if A.Type == "number" and B.Type == "number" then
 			if A:IsNan() and B:IsNan() then return true end
 		end

@@ -350,8 +350,10 @@ analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...a
 
 	do
 		local errors = {}
+
 		for i = math.max(diagnostics_index, 1), #diagnostics do
 			local d = diagnostics[i]
+
 			if d.severity == "error" then
 				return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
 			end
@@ -466,9 +468,7 @@ analyzer function getmetatable(tbl: Table)
 end
 
 analyzer function tostring(val: any)
-	if val.Type == "function" then
-		return "function: 0x000000000000"
-	end
+	if val.Type == "function" then return "function: 0x000000000000" end
 
 	if not val:IsLiteral() then return types.String() end
 

@@ -131,7 +131,6 @@ return function(META)
 			local ok, reason, a, b, i = input:IsSubsetOfTuple(signature_arguments)
 
 			if not ok then
-				
 				if not output_signature:IsEmpty() then
 					if not a:IsLiteral() and b:IsLiteralArgument() and a.Type == b.Type then
 						return output_signature:Copy()

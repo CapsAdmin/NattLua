@@ -142,8 +142,6 @@ function META:NewToken(
 end
 
 do
-	
-
 	function META:ReadToken()
 		local type, is_whitespace, start, stop = self:ReadSimple() -- TODO: unpack not working
 		local token = self:NewToken(type, is_whitespace, start, stop)

@@ -396,9 +396,7 @@ analyze[[
         obj_ne(t, 1)
         obj_ne(t, "")
     ]]
-
-
-    analyze[[
+analyze[[
         local undef = nil
         local type assert = attest.truthy
         local type pcall = attest.pcall
@@ -437,7 +435,6 @@ analyze[[
         assert(a1 == a2 and a2 == a4 and a1 ~= a3)
         assert(a3 == a5)
     ]]
-
 analyze[[
     local undef = nil
     local type assert = attest.truthy
@@ -453,7 +450,6 @@ analyze[[
     assert(0x1.1 == '0x1.' + '+0x.1')
     assert(0Xabcdef.0 == 0x.ABCDEFp+24)
 ]]
-
 analyze[[
 
     local undef = nil
