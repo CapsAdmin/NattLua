@@ -52,4 +52,5 @@ analyze[[
     attest.equal("\032\032\x41", "  A")
     attest.equal("\32\32\65", "  A")
     attest.equal("\u{01F698}", "🚘")
+    attest.equal("\xFF", "\xfF")
 ]]

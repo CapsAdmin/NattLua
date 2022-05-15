@@ -76,7 +76,7 @@ local function reverse_escape_string(str--[[#: string]])
             -- hex escape is always 3 characters
             if char == "x" then
                 len = 4
-                char = str:sub(start + 1, stop + len - 1)
+                char = str:sub(start + 1, stop + len - 1):lower()
             elseif is_number[char] then
 
                 -- byte escape can be between 1 and 3 characters
