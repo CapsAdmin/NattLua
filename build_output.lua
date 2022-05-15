@@ -91,6 +91,8 @@ IMPORTS['nattlua/definitions/attest.nlua'] = function()
 
 
 
+
+
 _G.attest = attest end
 do local __M; IMPORTS["nattlua.other.loadstring"] = function(...) __M = __M or (function(...) local f = _G.loadstring or _G.load
 return function(str, name)
@@ -1428,6 +1430,8 @@ function META:Widen()
 end
 
 function META:GetHash()
+	if self:IsNan() then return nil end
+
 	if self:IsLiteral() then return self.Data end
 
 	return "__@type@__" .. self.Type
@@ -1443,8 +1447,7 @@ function META.Equal(a, b)
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
 
 	if a:IsLiteral() and b:IsLiteral() then
-		-- nan
-		if a:GetData() ~= a:GetData() and b:GetData() ~= b:GetData() then return true end
+		if a:IsNan() and b:IsNan() then return true end
 
 		return a:GetData() == b:GetData()
 	end
@@ -1493,9 +1496,8 @@ function META.IsSubsetOf(A, B)
 		local b = B:GetData()
 
 		-- compare against literals
-		-- nan
 		if A.Type == "number" and B.Type == "number" then
-			if a ~= a and b ~= b then return true end
+			if A:IsNan() and B:IsNan() then return true end
 		end
 
 		if a == b then return true end
@@ -1520,11 +1522,16 @@ function META.IsSubsetOf(A, B)
 	return true
 end
 
+function META:IsNan()
+	local n = self:GetData()
+	return n ~= n
+end
+
 function META:__tostring()
 	local n = self:GetData()
 	local s
 
-	if n ~= n then s = "nan" end
+	if self:IsNan() then s = "nan" end
 
 	s = tostring(n)
 
@@ -2744,6 +2751,10 @@ function META:Set(key, val, no_delete)
 		return type_errors.other("key is nil")
 	end
 
+	if key.Type == "number" and key:IsNan() then
+		return type_errors.other("key is nan")
+	end
+
 	-- delete entry
 	if not no_delete and not self:GetContract() then
 		if (not val or (val.Type == "symbol" and val:GetData() == nil)) then
@@ -3612,8 +3623,6 @@ _G.arg = _
 
 
 
-
-
 function _G.LSX(
 	tag,
 	constructor,
@@ -3749,8 +3758,12 @@ IMPORTS['nattlua/definitions/lua/string.nlua'] = function()
 
 
 
+
+
  end
 IMPORTS['nattlua/definitions/lua/math.nlua'] = function() 
+
+
 
 
 
@@ -4268,7 +4281,7 @@ local function eliminateComments(options, lines, ...)
 
 	while type(s) == "string" do
 		local inString = false
-		local q = s:find("['\"\\/]", 1)
+		local q = s:find("[\'\"\\/]", 1)
 
 		while q ~= nil do
 			if hasOption(options, "-d:comments") then
@@ -4307,7 +4320,7 @@ local function eliminateComments(options, lines, ...)
 				end
 			end
 
-			q = s:find("['\"\\/]", q + 1)
+			q = s:find("[\'\"\\/]", q + 1)
 		end
 
 		coroutine.yield(s, n)
@@ -4446,7 +4459,7 @@ end
 local function isString(tok)
 	if type(tok) ~= "string" then return false end
 
-	return tok:find("^['\"]") ~= nil
+	return tok:find("^[\'\"]") ~= nil
 end
 
 local function isHeaderName(tok)
@@ -4576,7 +4589,7 @@ local function tokenizeLine(options, s, n, notNewline)
 			local q = p
 
 			repeat
-				q = s:find("['\"\\]", q + 1)
+				q = s:find("[\'\"\\]", q + 1)
 				l = s:byte(q)
 				xassert(q ~= nil, options, n, "Unterminated string or character constant")
 
@@ -4809,7 +4822,7 @@ expandMacros = function(options, macros, tokens, ...)
 						if type(t) == "string" then
 							if t:find("^%s+$") then t = " " end
 
-							if t:find("^['\"]") then
+							if t:find("^[\'\"]") then
 								t = string.format("%q", t):sub(2, -2)
 							end
 
@@ -8093,6 +8106,124 @@ function META.New(
 end
 
 return META end
+do local __M; IMPORTS["nattlua.other.reverse_escape_string"] = function(...) __M = __M or (function(...) local map = {
+	["a"] = "\a",
+	["b"] = "\b",
+	["f"] = "\f",
+	["n"] = "\n",
+	["r"] = "\r",
+	["t"] = "\t",
+	["v"] = "\v",
+	["\\"] = "\\",
+	["\""] = "\"",
+	["'"] = "'",
+}
+map["00"] = "\0"
+map["0"] = "\0"
+map["x00"] = "\0"
+
+for i = 1, 255 do
+	local char = string.char(i)
+	map[("%i"):format(i)] = char
+	map[("x%02x"):format(i)] = char
+end
+
+local is_number = {}
+
+for i = 0, 9 do
+	is_number[tostring(i)] = true
+end
+
+local bytemarkers = {{0x7FF, 192}, {0xFFFF, 224}, {0x1FFFFF, 240}}
+
+local function unicode_escape(decimal)
+	if decimal < 128 then return string.char(decimal) end
+
+	local charbytes = {}
+
+	for bytes, vals in ipairs(bytemarkers) do
+		if decimal <= vals[1] then
+			for b = bytes + 1, 2, -1 do
+				local mod = decimal % 64
+				decimal = (decimal - mod) / 64
+				charbytes[b] = string.char(128 + mod)
+			end
+
+			charbytes[1] = string.char(vals[2] + decimal)
+
+			break
+		end
+	end
+
+	return table.concat(charbytes)
+end
+
+local function reverse_escape_string(str)
+	local pos = 1
+
+	while true do
+		local start, stop = str:find("\\", pos, true)
+
+		if not start or not stop then break end
+
+		local len = 2
+		local char = str:sub(start + 1, stop + 1)
+
+		if char == "u" then
+			if str:sub(start + 2, stop + 2) == "{" then
+				local len = 3
+
+				while str:sub(start + len, stop + len) ~= "}" do
+					len = len + 1
+				end
+
+				local hex = tonumber(str:sub(start + 3, stop + len - 1), 16)
+
+				if hex then
+					local code = unicode_escape(hex)
+
+					if code then
+						str = str:sub(1, start - 1) .. code .. str:sub(stop + len + 1)
+					end
+				end
+			end
+		else
+			-- hex escape is always 3 characters
+			if char == "x" then
+				len = 4
+				char = str:sub(start + 1, stop + len - 1):lower()
+			elseif is_number[char] then
+				-- byte escape can be between 1 and 3 characters
+				len = 2
+
+				if is_number[str:sub(start + 2, stop + 2)] then
+					len = 3
+
+					if is_number[str:sub(start + 3, stop + 3)] then len = 4 end
+				end
+
+				char = str:sub(start + 1, stop + len - 1)
+
+				-- remove left zero padding
+				if #char == 3 and char:sub(1, 1) == "0" then
+					char = char:sub(2)
+
+					if #char == 2 and char:sub(1, 1) == "0" then char = char:sub(2) end
+				end
+			end
+
+			if map[char] then
+				str = str:sub(1, start - 1) .. map[char] .. str:sub(stop + len)
+			end
+		end
+
+		pos = pos + 1
+	end
+
+	return str
+end
+
+return reverse_escape_string end)(...) return __M end end
 do local __M; IMPORTS["nattlua.lexer.token"] = function(...) __M = __M or (function(...) local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
@@ -8608,7 +8739,7 @@ do local __M; IMPORTS["nattlua.lexer"] = function(...) __M = __M or (function(..
 
 
 
-local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
+local reverse_escape_string = IMPORTS['nattlua.other.reverse_escape_string']("nattlua.other.reverse_escape_string")
 local Token = IMPORTS['nattlua.lexer.token']("nattlua.lexer.token").New
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local setmetatable = _G.setmetatable
@@ -8745,45 +8876,6 @@ function META:NewToken(
 end
 
 do
-	local fixed = {
-		"a",
-		"b",
-		"f",
-		"n",
-		"r",
-		"t",
-		"v",
-		"\\",
-		"\"",
-		"'",
-	}
-	local map = {}
-
-	for _, v in ipairs(fixed) do
-		map[v:byte()] = loadstring("return \"\\" .. v .. "\"")()
-	end
-
-	local function reverse_escape_string(str)
-		local pos = 1
-
-		while true do
-			local start, stop = str:find("\\", pos, true)
-
-			if not start or not stop then break end
-
-			local char = map[str:byte(start + 1, stop + 1)]
-
-			if char then
-				str = str:sub(1, start - 1) .. char .. str:sub(stop + 2)
-				pos = stop + 1
-			else
-				pos = pos + 1
-			end
-		end
-
-		return str
-	end
-
 	function META:ReadToken()
 		local type, is_whitespace, start, stop = self:ReadSimple() -- TODO: unpack not working
 		local token = self:NewToken(type, is_whitespace, start, stop)
@@ -17194,19 +17286,20 @@ return function(META)
 
 	function META:CallAnalyzerFunction(obj, input)
 		local signature_arguments = obj:GetInputSignature()
+		local output_signature = obj:GetOutputSignature()
 
 		do
 			local ok, reason, a, b, i = input:IsSubsetOfTuple(signature_arguments)
 
 			if not ok then
+				if not output_signature:IsEmpty() then
+					if not a:IsLiteral() and b:IsLiteralArgument() and a.Type == b.Type then
+						return output_signature:Copy()
+					end
+				end
+
 				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
 			end
-		end
-
-		local len = signature_arguments:GetLength()
-
-		if len == math.huge and input:GetLength() == math.huge then
-			len = math.max(signature_arguments:GetMinimumLength(), input:GetMinimumLength())
 		end
 
 		if self:IsTypesystem() then
@@ -17220,6 +17313,12 @@ return function(META)
 				}
 			)
 			return ret
+		end
+
+		local len = signature_arguments:GetLength()
+
+		if len == math.huge and input:GetLength() == math.huge then
+			len = math.max(signature_arguments:GetMinimumLength(), input:GetMinimumLength())
 		end
 
 		local tuples = {}
@@ -17260,8 +17359,6 @@ return function(META)
 				end
 			end
 		end
-
-		local output_signature = obj:GetOutputSignature()
 
 		if not output_signature:IsEmpty() then
 			local ok, err = ret:IsSubsetOfTuple(output_signature)
@@ -18594,34 +18691,14 @@ function META:OptionalWhitespace()
 end
 
 do
-	local escape = {
-		["\a"] = [[\a]],
-		["\b"] = [[\b]],
-		["\f"] = [[\f]],
-		["\n"] = [[\n]],
-		["\r"] = [[\r]],
-		["\t"] = [[\t]],
-		["\v"] = [[\v]],
-	}
-	local skip_escape = {
-		["x"] = true,
-		["X"] = true,
-		["u"] = true,
-		["U"] = true,
-	}
-
 	local function escape_string(str, quote)
 		local new_str = {}
 
 		for i = 1, #str do
 			local c = str:sub(i, i)
 
-			if c == quote then
+			if c == quote and str:sub(i - 1, i - 1) ~= "\\" then
 				new_str[i] = "\\" .. c
-			elseif escape[c] then
-				new_str[i] = escape[c]
-			elseif c == "\\" and not skip_escape[str:sub(i + 1, i + 1)] then
-				new_str[i] = "\\\\"
 			else
 				new_str[i] = c
 			end
@@ -18636,7 +18713,7 @@ do
 			local target = self.config.string_quote
 
 			if current == "\"" or current == "'" then
-				local contents = escape_string(token.string_value, target)
+				local contents = escape_string(token.value:sub(2, -2), target)
 				self:EmitToken(token, target .. contents .. target)
 				return
 			end
@@ -20541,6 +20618,7 @@ local Boolean = IMPORTS['nattlua.types.union']("nattlua.types.union").Boolean
 local Symbol = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Symbol
 local False = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").False
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 
 local function metatable_function(self, node, meta_method, l, r)
@@ -20592,6 +20670,26 @@ local function operator(self, node, l, r, op, meta_method)
 			end
 
 			return String()
+		end
+	end
+
+	if l:IsLiteral() and r:IsLiteral() then
+		if l.Type == "number" and r.Type == "string" then
+			local num = tonumber(r:GetData())
+
+			if num then r = Number(num):SetLiteral(true) end
+		elseif l.Type == "string" and r.Type == "number" then
+			local num = tonumber(l:GetData())
+
+			if num then l = Number(num):SetLiteral(true) end
+		elseif l.Type == "string" and r.Type == "string" then
+			local lnum = tonumber(l:GetData())
+			local rnum = tonumber(r:GetData())
+
+			if lnum and rnum then
+				l = Number(lnum):SetLiteral(true)
+				r = Number(rnum):SetLiteral(true)
+			end
 		end
 	end
 
@@ -22751,7 +22849,7 @@ analyzer function attest.subset_of(A: any, B: any)
 end
 
 analyzer function attest.truthy(obj: any, err: string | nil)
-	if obj:IsTruthy() then return obj end
+	if obj:IsCertainlyTrue() then return obj end
 
 	error(err and err:GetData() or "assertion failed")
 end
@@ -22759,6 +22857,28 @@ end
 analyzer function attest.expect_diagnostic(severity: "warning" | "error", msg: string)
 	analyzer.expect_diagnostic = analyzer.expect_diagnostic or {}
 	table.insert(analyzer.expect_diagnostic, {msg = msg:GetData(), severity = severity:GetData()})
+end
+
+analyzer function attest.pcall(callable: Function, ...: ...any)
+	local diagnostics_index = #analyzer:GetDiagnostics()
+	analyzer:PushProtectedCall()
+	local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
+	analyzer:PopProtectedCall()
+	local diagnostics = analyzer:GetDiagnostics()
+
+	do
+		local errors = {}
+
+		for i = math.max(diagnostics_index, 1), #diagnostics do
+			local d = diagnostics[i]
+			local msg = analyzer.compiler:GetCode():BuildSourceCodePointMessage(d.msg, d.start, d.stop)
+			table.insert(errors, msg)
+		end
+
+		if errors[1] then return false, table.concat(errors, "\n") end
+	end
+
+	return true, tuple:Unpack()
 end
 
 _G.attest = attest end
@@ -23036,7 +23156,7 @@ analyzer function loadfile(path: string)
 end
 
 analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
-	tbl:Set(key, val, true)
+	analyzer:Assert(tbl:Set(key, val, true))
 end
 
 analyzer function rawget(tbl: {[any] = any} | {}, key: any)
@@ -23105,44 +23225,26 @@ end
 
 type type_error = error
 
-analyzer function pcall(callable: function=(...any)>((...any)), ...: ...any)
-	local count = #analyzer:GetDiagnostics()
+analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...any)
+	local diagnostics_index = #analyzer:GetDiagnostics()
 	analyzer:PushProtectedCall()
-	local res = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
+	local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
 	analyzer:PopProtectedCall()
 	local diagnostics = analyzer:GetDiagnostics()
-	analyzer:ClearError()
-
-	for i = count, #diagnostics do
-		local diagnostic = diagnostics[i]
-
-		if diagnostic and diagnostic.severity == "error" then
-			return types.Boolean(), types.Union({types.LString(diagnostic.msg), types.Any()})
-		end
-	end
-
-	return types.True(), res
-end
-
-analyzer function type_pcall(func: Function, ...: ...any)
-	local diagnostics_index = #analyzer.diagnostics
-	analyzer:PushProtectedCall()
-	local tuple = analyzer:Assert(analyzer:Call(func, types.Tuple({...})))
-	analyzer:PopProtectedCall()
 
 	do
 		local errors = {}
 
-		for i = diagnostics_index + 1, #analyzer.diagnostics do
-			local d = analyzer.diagnostics[i]
-			local msg = analyzer.compiler:GetCode():BuildSourceCodePointMessage(d.msg, d.start, d.stop)
-			table.insert(errors, msg)
-		end
+		for i = math.max(diagnostics_index, 1), #diagnostics do
+			local d = diagnostics[i]
 
-		if errors[1] then return false, table.concat(errors, "\n") end
+			if d.severity == "error" then
+				return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
+			end
+		end
 	end
 
-	return true, tuple:Unpack()
+	return true, tuple
 end
 
 analyzer function xpcall(callable: any, error_cb: any, ...: ...any)
@@ -23250,6 +23352,8 @@ analyzer function getmetatable(tbl: Table)
 end
 
 analyzer function tostring(val: any)
+	if val.Type == "function" then return "function: 0x000000000000" end
+
 	if not val:IsLiteral() then return types.String() end
 
 	if val.Type == "string" then return val end
@@ -23729,8 +23833,16 @@ IMPORTS['nattlua/definitions/lua/string.nlua'] = function() type string = {
 	pack = function=(fmt: string, ...any)>(string),
 }
 
-analyzer function ^string.rep(str: string, n: number)
+analyzer function ^string.reverse(str: literal string): string
+	return str:GetData():reverse()
+end
+
+analyzer function ^string.rep(str: string, n: number, sep: nil | string)
 	if str:IsLiteral() and n:IsLiteral() then
+		if sep and sep:IsLiteral() then
+			return types.LString(string.rep(str:GetData(), n:GetData(), sep:GetData()))
+		end
+
 		return types.LString(string.rep(str:GetData(), n:GetData()))
 	end
 
@@ -23741,9 +23853,11 @@ analyzer function ^string.char(...: ...number)
 	local out = {}
 
 	for i, num in ipairs({...}) do
-		if not num:IsLiteral() then return types.String() end
+		if num.Type ~= "number" or not num:IsLiteral() then return types.String() end
 
 		out[i] = num:GetData()
+
+		if out[i] < 0 or out[i] > 255 then error("out of range", 2) end
 	end
 
 	return string.char(table.unpack(out))
@@ -23755,8 +23869,10 @@ analyzer function ^string.format(s: string, ...: ...any)
 	local ret = {...}
 
 	for i, v in ipairs(ret) do
-		if v:IsLiteral() and (v.Type == "string" or v.Type == "number") then
+		if v:IsLiteral() then
 			ret[i] = v:GetData()
+
+			if v.Type == "function" then ret[i] = v.GetData end
 		else
 			return types.String()
 		end
@@ -23986,25 +24102,27 @@ IMPORTS['nattlua/definitions/lua/math.nlua'] = function() type math = {
 }
 type math.huge = inf
 type math.pi = 3.14159265358979323864338327950288
+type math.maxinteger = 0x7FFFFFFFFFFFFFFF
+type math.mininteger = 0x8000000000000000
 
-analyzer function math.sin(n: number)
-	return n:IsLiteral() and math.sin(n:GetData()) or types.Number()
+analyzer function math.sin(n: literal number): number
+	return math.sin(n:GetData())
 end
 
-analyzer function math.abs(n: number)
-	return n:IsLiteral() and math.abs(n:GetData()) or types.Number()
+analyzer function math.abs(n: literal number): number
+	return math.abs(n:GetData())
 end
 
-analyzer function math.cos(n: number)
-	return n:IsLiteral() and math.cos(n:GetData()) or types.Number()
+analyzer function math.cos(n: literal number): number
+	return math.cos(n:GetData())
 end
 
-analyzer function math.ceil(n: number)
-	return n:IsLiteral() and math.ceil(n:GetData()) or types.Number()
+analyzer function math.ceil(n: literal number): number
+	return math.ceil(n:GetData())
 end
 
-analyzer function math.floor(n: number)
-	return n:IsLiteral() and math.floor(n:GetData()) or types.Number()
+analyzer function math.floor(n: literal number): number
+	return math.floor(n:GetData())
 end
 
 analyzer function math.min(...: ...number)
