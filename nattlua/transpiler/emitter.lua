@@ -408,34 +408,14 @@ function META:OptionalWhitespace()
 end
 
 do
-	local escape = {
-		["\a"] = [[\a]],
-		["\b"] = [[\b]],
-		["\f"] = [[\f]],
-		["\n"] = [[\n]],
-		["\r"] = [[\r]],
-		["\t"] = [[\t]],
-		["\v"] = [[\v]],
-	}
-	local skip_escape = {
-		["x"] = true,
-		["X"] = true,
-		["u"] = true,
-		["U"] = true,
-	}
-
 	local function escape_string(str--[[#: string]], quote--[[#: string]])
 		local new_str = {}
 
 		for i = 1, #str do
 			local c = str:sub(i, i)
 
-			if c == quote then
+			if c == quote and str:sub(i - 1, i - 1) ~= "\\" then
 				new_str[i] = "\\" .. c
-			elseif escape[c] then
-				new_str[i] = escape[c]
-			elseif c == "\\" and not skip_escape[str:sub(i + 1, i + 1)] then
-				new_str[i] = "\\\\"
 			else
 				new_str[i] = c
 			end
@@ -450,7 +430,7 @@ do
 			local target = self.config.string_quote
 
 			if current == "\"" or current == "'" then
-				local contents = escape_string(token.string_value, target)
+				local contents = escape_string(token.value:sub(2, -2), target)
 				self:EmitToken(token, target .. contents .. target)
 				return
 			end

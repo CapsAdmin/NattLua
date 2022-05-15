@@ -1,16 +1,15 @@
 local map = {
-    ["a"] = "\a",
-    ["b"] = "\b",
-    ["f"] = "\f",
-    ["n"] = "\n",
-    ["r"] = "\r",
-    ["t"] = "\t",
-    ["v"] = "\v",
-    ["\\"] = "\\",
-    ["\""] = "\"",
-    ["'"] = "'",
+	["a"] = "\a",
+	["b"] = "\b",
+	["f"] = "\f",
+	["n"] = "\n",
+	["r"] = "\r",
+	["t"] = "\t",
+	["v"] = "\v",
+	["\\"] = "\\",
+	["\""] = "\"",
+	["'"] = "'",
 }
-
 map["00"] = "\0"
 map["0"] = "\0"
 map["x00"] = "\0"
@@ -92,9 +91,7 @@ local function reverse_escape_string(str--[[#: string]])
 				if is_number[str:sub(start + 2, stop + 2)] then
 					len = 3
 
-					if is_number[str:sub(start + 3, stop + 3)] then
-						len = 4
-					end
+					if is_number[str:sub(start + 3, stop + 3)] then len = 4 end
 				end
 
 				char = str:sub(start + 1, stop + len - 1)
@@ -103,9 +100,7 @@ local function reverse_escape_string(str--[[#: string]])
 				if #char == 3 and char:sub(1, 1) == "0" then
 					char = char:sub(2)
 
-					if #char == 2 and char:sub(1, 1) == "0" then
-						char = char:sub(2)
-					end
+					if #char == 2 and char:sub(1, 1) == "0" then char = char:sub(2) end
 				end
 			end
 
