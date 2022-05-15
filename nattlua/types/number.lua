@@ -48,6 +48,7 @@ function META:Widen()
 end
 
 function META:GetHash()
+	if self:IsNan() then return nil end
 	if self:IsLiteral() then return self.Data end
 
 	return "__@type@__" .. self.Type
@@ -63,8 +64,7 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
 
 	if a:IsLiteral() and b:IsLiteral() then
-		-- nan
-		if a:GetData() ~= a:GetData() and b:GetData() ~= b:GetData() then return true end
+		if a:IsNan() and b:IsNan() then return true end
 
 		return a:GetData() == b:GetData()
 	end
@@ -113,9 +113,9 @@ function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TBaseType]])
 		local b = B:GetData()--[[# as number]]
 
 		-- compare against literals
-		-- nan
+
 		if A.Type == "number" and B.Type == "number" then
-			if a ~= a and b ~= b then return true end
+			if A:IsNan() and B:IsNan() then return true end
 		end
 
 		if a == b then return true end
@@ -140,11 +140,16 @@ function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TBaseType]])
 	return true
 end
 
+function META:IsNan()
+	local n = self:GetData()
+	return n ~= n
+end
+
 function META:__tostring()
 	local n = self:GetData()
 	local s--[[#: string]]
 
-	if n ~= n then s = "nan" end
+	if self:IsNan() then s = "nan" end
 
 	s = tostring(n)
 

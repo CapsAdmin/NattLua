@@ -490,6 +490,10 @@ function META:Set(key--[[#: BaseType]], val--[[#: BaseType | nil]], no_delete--[
 		return type_errors.other("key is nil")
 	end
 
+	if key.Type == "number" and key:IsNan() then
+		return type_errors.other("key is nan")
+	end
+
 	-- delete entry
 	if not no_delete and not self:GetContract() then
 		if (not val or (val.Type == "symbol" and val:GetData() == nil)) then

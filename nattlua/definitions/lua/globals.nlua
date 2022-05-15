@@ -272,7 +272,7 @@ analyzer function loadfile(path: string)
 end
 
 analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
-	tbl:Set(key, val, true)
+	analyzer:Assert(tbl:Set(key, val, true))
 end
 
 analyzer function rawget(tbl: {[any] = any} | {}, key: any)
