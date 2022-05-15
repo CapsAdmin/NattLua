@@ -2,7 +2,7 @@
 
 --[[#local type { Code } = import<|"~/nattlua/code.lua"|>]]
 
-local loadstring = require("nattlua.other.loadstring")
+local reverse_escape_string = require("nattlua.other.reverse_escape_string")
 local Token = require("nattlua.lexer.token").New
 local class = require("nattlua.other.class")
 local setmetatable = _G.setmetatable
@@ -142,44 +142,7 @@ function META:NewToken(
 end
 
 do
-	local fixed = {
-		"a",
-		"b",
-		"f",
-		"n",
-		"r",
-		"t",
-		"v",
-		"\\",
-		"\"",
-		"'",
-	}
-	local map = {}
-
-	for _, v in ipairs(fixed) do
-		map[v:byte()] = loadstring("return \"\\" .. v .. "\"")()
-	end
-
-	local function reverse_escape_string(str--[[#: string]])
-		local pos = 1
-
-		while true do
-			local start, stop = str:find("\\", pos, true)
-
-			if not start or not stop then break end
-
-			local char = map[str:byte(start + 1, stop + 1)]
-
-			if char then
-				str = str:sub(1, start - 1) .. char .. str:sub(stop + 2)
-				pos = stop + 1
-			else
-				pos = pos + 1
-			end
-		end
-
-		return str
-	end
+	
 
 	function META:ReadToken()
 		local type, is_whitespace, start, stop = self:ReadSimple() -- TODO: unpack not working
