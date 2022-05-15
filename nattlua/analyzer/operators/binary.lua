@@ -11,6 +11,7 @@ local Boolean = require("nattlua.types.union").Boolean
 local Symbol = require("nattlua.types.symbol").Symbol
 local False = require("nattlua.types.symbol").False
 local Nil = require("nattlua.types.symbol").Nil
+local Number = require("nattlua.types.number").Number
 local type_errors = require("nattlua.types.error_messages")
 
 local function metatable_function(self, node, meta_method, l, r)
@@ -62,6 +63,27 @@ local function operator(self, node, l, r, op, meta_method)
 			end
 
 			return String()
+		end
+	end
+
+	if l:IsLiteral() and r:IsLiteral() then
+		if  l.Type == "number" and r.Type == "string" then
+			local num = tonumber(r:GetData())
+			if num then
+				r = Number(num):SetLiteral(true)
+			end
+		elseif l.Type == "string" and r.Type == "number" then
+			local num = tonumber(l:GetData())
+			if num then
+				l = Number(num):SetLiteral(true)
+			end
+		elseif l.Type == "string" and r.Type == "string" then
+			local lnum = tonumber(l:GetData())
+			local rnum = tonumber(r:GetData())
+			if lnum and rnum then
+				l = Number(lnum):SetLiteral(true)
+				r = Number(rnum):SetLiteral(true)
+			end
 		end
 	end
 
