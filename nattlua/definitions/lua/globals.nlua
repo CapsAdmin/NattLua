@@ -341,7 +341,7 @@ end
 
 type type_error = error
 
-analyzer function pcall(callable: Function, ...: ...any)
+analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...any)
 	local diagnostics_index = #analyzer:GetDiagnostics()
 	analyzer:PushProtectedCall()
 	local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
@@ -466,6 +466,10 @@ analyzer function getmetatable(tbl: Table)
 end
 
 analyzer function tostring(val: any)
+	if val.Type == "function" then
+		return "function: 0x000000000000"
+	end
+
 	if not val:IsLiteral() then return types.String() end
 
 	if val.Type == "string" then return val end
