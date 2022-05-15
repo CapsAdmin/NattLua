@@ -187,7 +187,7 @@ do
 end
 
 analyze[[
-    local ok, err = type_pcall(function()
+    local ok, err = attest.pcall(function()
         attest.equal(1, 2)
         return 1
     end)
@@ -196,7 +196,7 @@ analyze[[
     attest.superset_of(_ as string, err)
 ]]
 analyze[[
-    local ok, val = type_pcall(function() return 1 end)
+    local ok, val = attest.pcall(function() return 1 end)
     
     attest.equal(ok, true)
     attest.equal(val, 1)

@@ -341,44 +341,24 @@ end
 
 type type_error = error
 
-analyzer function pcall(callable: function=(...any)>((...any)), ...: ...any)
-	local count = #analyzer:GetDiagnostics()
+analyzer function pcall(callable: Function, ...: ...any)
+	local diagnostics_index = #analyzer:GetDiagnostics()
 	analyzer:PushProtectedCall()
-	local res = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
+	local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
 	analyzer:PopProtectedCall()
 	local diagnostics = analyzer:GetDiagnostics()
-	analyzer:ClearError()
-
-	for i = count, #diagnostics do
-		local diagnostic = diagnostics[i]
-
-		if diagnostic and diagnostic.severity == "error" then
-			return types.Boolean(), types.Union({types.LString(diagnostic.msg), types.Any()})
-		end
-	end
-
-	return types.True(), res
-end
-
-analyzer function type_pcall(func: Function, ...: ...any)
-	local diagnostics_index = #analyzer.diagnostics
-	analyzer:PushProtectedCall()
-	local tuple = analyzer:Assert(analyzer:Call(func, types.Tuple({...})))
-	analyzer:PopProtectedCall()
 
 	do
 		local errors = {}
-
-		for i = diagnostics_index + 1, #analyzer.diagnostics do
-			local d = analyzer.diagnostics[i]
-			local msg = analyzer.compiler:GetCode():BuildSourceCodePointMessage(d.msg, d.start, d.stop)
-			table.insert(errors, msg)
+		for i = math.max(diagnostics_index, 1), #diagnostics do
+			local d = diagnostics[i]
+			if d.severity == "error" then
+				return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
+			end
 		end
-
-		if errors[1] then return false, table.concat(errors, "\n") end
 	end
 
-	return true, tuple:Unpack()
+	return true, tuple
 end
 
 analyzer function xpcall(callable: any, error_cb: any, ...: ...any)
