@@ -362,9 +362,6 @@ return function(META)
 				return self:GetContextValue("falsy_expression_context") == true
 			end
 		end
-	end
-
-	do
 		do
 			function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
 				local upvalue = obj:GetUpvalue()
