@@ -44,8 +44,36 @@ local analyzer function cast(node: any, args: any)
 		)
 		return meta
 	end
+	if node.tag == "Enum" then
+		local tbl = types.Table()
+		local keys = {}
+		for i, node in ipairs(node) do
+			local key = types.LString(node[1])
+			local val = types.LNumber(node[2] or i - 1)
 
-	if node.tag == "Struct" or node.tag == "Union" then
+			tbl:Set(key, val)
+			table.insert(keys, key)
+		end
+
+		local key_union = types.Union(keys)
+
+		local meta = types.Table()
+		meta:Set(
+			types.LString("__call"),
+			types.LuaTypeFunction(
+				function(self, key)
+					return analyzer:Assert(tbl:Get(key))
+				end,
+				{types.Any(), key_union},
+				{}
+			)
+		)
+		tbl:SetMetaTable(meta)
+
+		tbl.is_enum = true
+
+		return tbl
+	elseif node.tag == "Struct" or node.tag == "Union" then
 		local tbl = types.Table()
 
 		if node.n then
@@ -294,6 +322,10 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 		keyval.val = types.Nilable(keyval.val)
 	end
 
+	if ctype.is_enum and ctype:GetMetaTable() then
+		return ctype
+	end
+
 	local old = ctype:GetContract()
 	ctype:SetContract()
 	ctype:Set(
@@ -325,6 +357,11 @@ end
 analyzer function ffi.new(cdecl: any, ...: ...any)
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {ffinew = true}, {...}))
 	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
+
+	if ctype.is_enum then
+		return ...
+	end
+
 	return ctype
 end
 

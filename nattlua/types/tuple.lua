@@ -181,11 +181,11 @@ function META.IsSubsetOfTuple(A--[[#: TTuple]], B--[[#: TBaseType]])
 			if b and b.Type == "any" then
 				a = Any()
 			else
-				return a, a_err, a, b, i
+				return a, a_err, a or Nil(), b, i
 			end
 		end
 
-		if not b then return b, b_err, a, b, i end
+		if not b then return b, b_err, a or Nil(), b, i end
 
 		if b.Type == "tuple" then
 			b = b:Get(1)

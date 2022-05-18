@@ -70,9 +70,13 @@ do
 		return types.Number()
 	end
 
-	analyzer function bit.tohex(x: number, n: number): number
-		if x:IsLiteral() and n:IsLiteral() then
-			return bit.tohex(x:GetData(), n:GetData())
+	analyzer function bit.tohex(x: number, n: nil | number): string
+		if x:IsLiteral() then
+			if n and n:IsLiteral() then
+				return bit.tohex(x:GetData(), n:GetData())
+			end
+
+			return bit.tohex(x:GetData())
 		end
 
 		return types.String()

@@ -78,6 +78,8 @@ local function unpack_union_tuples(obj, input)
 end
 
 return function(META)
+	local ffi = jit and require("ffi") or nil
+
 	function META:LuaTypesToTuple(tps)
 		local tbl = {}
 
@@ -110,7 +112,9 @@ return function(META)
 
 						tbl:SetContract(tbl)
 						return tbl
-					else
+					elseif ffi and t == "cdata" and tostring(ffi.typeof(v)):sub(1, 10) == "ctype<uint" or tostring(ffi.typeof(v)):sub(1, 9) == "ctype<int" then
+						tbl[i] = LNumber(v)
+					else													
 						self:Print(t)
 						error(debug.traceback("NYI " .. t))
 					end

@@ -386,6 +386,10 @@ analyzer function type(obj: any)
 
 	if obj.Type == "any" then return types.String() end
 
+	if obj.Type == "number" and type(obj.Data) == "cdata" then
+		return "cdata"
+	end
+
 	if obj.GetLuaType then return obj:GetLuaType() end
 
 	return types.String()
@@ -422,9 +426,17 @@ function MetaTableFunctions<|T: any|>
 end
 
 analyzer function setmetatable(tbl: Table, meta: Table | nil)
-	if not meta then
+	if not meta or meta.Type == "symbol" then
 		tbl:SetMetaTable()
-		return
+		return tbl
+	end
+	
+	do 
+		local meta = tbl:GetMetaTable()
+		if meta and meta:Get(types.LString("__metatable")) then
+			analyzer:ThrowError("cannot change a protected metatable")
+			return
+		end
 	end
 
 	if meta.Type == "table" then
@@ -464,7 +476,15 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 end
 
 analyzer function getmetatable(tbl: Table)
-	if tbl.Type == "table" then return tbl:GetMetaTable() end
+	local meta = tbl:GetMetaTable()
+	if meta then
+		local val = meta:Get(types.LString("__metatable"))
+		if val then
+			return val
+		end
+		return meta
+	end
+	return nil
 end
 
 analyzer function tostring(val: any)

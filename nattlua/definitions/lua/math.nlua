@@ -36,6 +36,10 @@ type math.pi = 3.14159265358979323864338327950288
 type math.maxinteger = 0x7FFFFFFFFFFFFFFF
 type math.mininteger = 0x8000000000000000
 
+analyzer function math.type(n: literal number): "float" | "integer" | "nil"
+	return "float"
+end
+
 analyzer function math.sin(n: literal number): number
 	return math.sin(n:GetData())
 end

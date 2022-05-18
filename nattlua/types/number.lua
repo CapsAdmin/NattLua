@@ -405,6 +405,10 @@ function META.New(data--[[#: number | nil]])
 	)
 end
 
+local function string_to_integer(str--[[#: string]])
+	return assert(loadstring("return " .. str))()--[[# as number]]
+end
+
 return {
 	Number = META.New,
 	LNumber = function(num--[[#: number | nil]])
@@ -415,11 +419,11 @@ return {
 
 		if not num then
 			if str:sub(1, 2) == "0b" then
-				num = tonumber(str:sub(3))
+				num = tonumber(str:sub(3), 2)
 			elseif str:lower():sub(-3) == "ull" then
-				num = tonumber(str:sub(1, -4))
+				num = string_to_integer(str)
 			elseif str:lower():sub(-2) == "ll" then
-				num = tonumber(str:sub(1, -3))
+				num = string_to_integer(str)
 			end
 		end
 
