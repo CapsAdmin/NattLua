@@ -1787,6 +1787,10 @@ function META.New(data)
 	)
 end
 
+local function string_to_integer(str)
+	return assert(loadstring("return " .. str))()
+end
+
 return {
 	Number = META.New,
 	LNumber = function(num)
@@ -1797,11 +1801,11 @@ return {
 
 		if not num then
 			if str:sub(1, 2) == "0b" then
-				num = tonumber(str:sub(3))
+				num = tonumber(str:sub(3), 2)
 			elseif str:lower():sub(-3) == "ull" then
-				num = tonumber(str:sub(1, -4))
+				num = string_to_integer(str)
 			elseif str:lower():sub(-2) == "ll" then
-				num = tonumber(str:sub(1, -3))
+				num = string_to_integer(str)
 			end
 		end
 
@@ -3762,6 +3766,8 @@ IMPORTS['nattlua/definitions/lua/string.nlua'] = function()
 
  end
 IMPORTS['nattlua/definitions/lua/math.nlua'] = function() 
+
+
 
 
 
@@ -7889,6 +7895,7 @@ if _G.gmod then
 	end
 end
 
+print(...)
 return m end)(...) return __M end end
 do local __M; IMPORTS["nattlua.runtime.base_environment"] = function(...) __M = __M or (function(...) local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
@@ -13823,11 +13830,11 @@ function META.IsSubsetOfTuple(A, B)
 			if b and b.Type == "any" then
 				a = Any()
 			else
-				return a, a_err, a, b, i
+				return a, a_err, a or Nil(), b, i
 			end
 		end
 
-		if not b then return b, b_err, a, b, i end
+		if not b then return b, b_err, a or Nil(), b, i end
 
 		if b.Type == "tuple" then
 			b = b:Get(1)
@@ -14082,25 +14089,11 @@ function META.New(data)
 	local self = setmetatable(
 		{
 			Data = {},
-			Data = {},
-			Data = {},
-			Falsy = false,
-			Falsy = false,
 			Falsy = false,
 			Truthy = false,
-			Truthy = false,
-			Truthy = false,
-			Literal = false,
-			Literal = false,
 			Literal = false,
 			LiteralArgument = false,
-			LiteralArgument = false,
-			LiteralArgument = false,
 			ReferenceArgument = false,
-			ReferenceArgument = false,
-			ReferenceArgument = false,
-			Unpackable = false,
-			Unpackable = false,
 			Unpackable = false,
 			suppress = false,
 		},
@@ -16485,9 +16478,7 @@ return function(META)
 				return self:GetContextValue("falsy_expression_context") == true
 			end
 		end
-	end
 
-	do
 		do
 			function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
 				local upvalue = obj:GetUpvalue()
@@ -17239,6 +17230,8 @@ local function unpack_union_tuples(obj, input)
 end
 
 return function(META)
+	local ffi = jit and require("ffi") or nil
+
 	function META:LuaTypesToTuple(tps)
 		local tbl = {}
 
@@ -17271,6 +17264,13 @@ return function(META)
 
 						tbl:SetContract(tbl)
 						return tbl
+					elseif
+						ffi and
+						t == "cdata" and
+						tostring(ffi.typeof(v)):sub(1, 10) == "ctype<uint" or
+						tostring(ffi.typeof(v)):sub(1, 9) == "ctype<int"
+					then
+						tbl[i] = LNumber(v)
 					else
 						self:Print(t)
 						error(debug.traceback("NYI " .. t))
@@ -21401,7 +21401,7 @@ return {
 					-- local a: number = number
 					val:CopyLiteralness(contract)
 
-					if val.Type == "table" then
+					if val.Type == "table" and contract.Type == "table" then
 						-- coerce any untyped functions based on contract
 						val:CoerceUntypedFunctions(contract)
 					end
@@ -23270,6 +23270,8 @@ analyzer function type(obj: any)
 
 	if obj.Type == "any" then return types.String() end
 
+	if obj.Type == "number" and type(obj.Data) == "cdata" then return "cdata" end
+
 	if obj.GetLuaType then return obj:GetLuaType() end
 
 	return types.String()
@@ -23306,9 +23308,18 @@ function MetaTableFunctions<|T: any|>
 end
 
 analyzer function setmetatable(tbl: Table, meta: Table | nil)
-	if not meta then
+	if not meta or meta.Type == "symbol" then
 		tbl:SetMetaTable()
+		return tbl
+	end
+
+	do
+		local meta = tbl:GetMetaTable()
+
+		if meta and meta:Get(types.LString("__metatable")) then
+			analyzer:ThrowError("cannot change a protected metatable")
 		return
+	end
 	end
 
 	if meta.Type == "table" then
@@ -23348,7 +23359,17 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 end
 
 analyzer function getmetatable(tbl: Table)
-	if tbl.Type == "table" then return tbl:GetMetaTable() end
+	local meta = tbl:GetMetaTable()
+
+	if meta then
+		local val = meta:Get(types.LString("__metatable"))
+
+		if val then return val end
+
+		return meta
+	end
+
+	return nil
 end
 
 analyzer function tostring(val: any)
@@ -23632,9 +23653,11 @@ do
 		return types.Number()
 	end
 
-	analyzer function bit.tohex(x: number, n: number): number
-		if x:IsLiteral() and n:IsLiteral() then
-			return bit.tohex(x:GetData(), n:GetData())
+	analyzer function bit.tohex(x: number, n: nil | number): string
+		if x:IsLiteral() then
+			if n and n:IsLiteral() then return bit.tohex(x:GetData(), n:GetData()) end
+
+			return bit.tohex(x:GetData())
 		end
 
 		return types.String()
@@ -24105,6 +24128,10 @@ type math.pi = 3.14159265358979323864338327950288
 type math.maxinteger = 0x7FFFFFFFFFFFFFFF
 type math.mininteger = 0x8000000000000000
 
+analyzer function math.type(n: literal number): "float" | "integer" | "nil"
+	return "float"
+end
+
 analyzer function math.sin(n: literal number): number
 	return math.sin(n:GetData())
 end
@@ -24262,7 +24289,33 @@ IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function() local analyzer functi
 		return meta
 	end
 
-	if node.tag == "Struct" or node.tag == "Union" then
+	if node.tag == "Enum" then
+		local tbl = types.Table()
+		local keys = {}
+
+		for i, node in ipairs(node) do
+			local key = types.LString(node[1])
+			local val = types.LNumber(node[2] or i - 1)
+			tbl:Set(key, val)
+			table.insert(keys, key)
+		end
+
+		local key_union = types.Union(keys)
+		local meta = types.Table()
+		meta:Set(
+			types.LString("__call"),
+			types.LuaTypeFunction(
+				function(self, key)
+					return analyzer:Assert(tbl:Get(key))
+				end,
+				{types.Any(), key_union},
+				{}
+			)
+		)
+		tbl:SetMetaTable(meta)
+		tbl.is_enum = true
+		return tbl
+	elseif node.tag == "Struct" or node.tag == "Union" then
 		local tbl = types.Table()
 
 		if node.n then
@@ -24511,6 +24564,8 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 		keyval.val = types.Nilable(keyval.val)
 	end
 
+	if ctype.is_enum and ctype:GetMetaTable() then return ctype end
+
 	local old = ctype:GetContract()
 	ctype:SetContract()
 	ctype:Set(
@@ -24542,6 +24597,9 @@ end
 analyzer function ffi.new(cdecl: any, ...: ...any)
 	local declarations = assert(IMPORTS['nattlua.other.cparser']("nattlua.other.cparser").parseString(cdecl:GetData(), {ffinew = true}, {...}))
 	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
+
+	if ctype.is_enum then return ... end
+
 	return ctype
 end
 
