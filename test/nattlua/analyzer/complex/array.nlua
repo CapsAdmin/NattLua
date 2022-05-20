@@ -5,7 +5,7 @@ META.__index = META
 
 function META:at(index: ref number)
     if index < 1 then
-        index = self.size + index
+        index = #self.data - index
     end
     return self.data[index]
 end
@@ -14,18 +14,21 @@ function META:concat(separator: ref nil | string)
     return table.concat(self.data, separator)
 end
 
-function _G.Array(size: ref number, value: ref any)
+local function Array<|T: any, Size: number|>(init: nil | {[Size] = T})
     local self = {
-        size = size,
-        data = {}
+        data = init || {} as {[Size] = T}
     }
     
-    type self.data[1 .. size] = value
-    seal<|self.data|>
-
     setmetatable(self, META)
     return self
 end
 
-local arr = Array(10, String)
-attest.equal(arr:at(-9), String)
+local arr = Array<|string, 1..10|>({"hello", "world"})
+
+attest.equal<|arr:at(-9), string|>
+attest.equal<|arr:at(3), string|>
+
+attest.expect_diagnostic<|"error", "not a subset of"|>
+arr:at(-20)
+
+attest.equal<|arr:concat(" "), string|>
