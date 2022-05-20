@@ -148,7 +148,7 @@ return {
 					-- local a: number = number
 					val:CopyLiteralness(contract)
 
-					if val.Type == "table" then
+					if val.Type == "table" and contract.Type == "table" then
 						-- coerce any untyped functions based on contract
 						val:CoerceUntypedFunctions(contract)
 					end

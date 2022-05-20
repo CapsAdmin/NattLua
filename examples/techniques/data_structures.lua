@@ -29,6 +29,10 @@ local function cast8(ptr)
 	return ffi.cast("uint8_t*", ptr)[0]
 end
 
+local function address_hash(key)
+	return ffi.cast(u64, key)
+end
+
 local function meiyan_hash(key)
 	local count = u64(#key)
 	local h = u64(0x811c9dc5)
@@ -329,17 +333,6 @@ function HashTableType(key_type, val_type)
 		if keyval_array == nil then
 			keyval_array = KeyValArray()
 			self.array:Set(index, keyval_array)
-		else
-			keyval_array = self.array:Get(index)
-		end
-
-		for i = 0, #keyval_array - 1 do
-			local keyval = keyval_array:Get(i)
-
-			if keyval.key == key then
-				keyval.val = val
-				return
-			end
 		end
 
 		local keyval = KeyVal()
@@ -444,7 +437,7 @@ do
 	local time = os.clock()
 
 	for i = 1, MAX do
-		local val = i / MAX
+		local val = i
 		local key = keys[(i % #keys) + 1] .. "-" .. i
 		map:Set(key, val)
 
