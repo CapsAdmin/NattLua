@@ -155,13 +155,14 @@ function META:GetLength(analyzer)
 	for _, kv in ipairs(self:GetData()) do
 		if analyzer and analyzer:HasMutations(self) then
 			local val = analyzer:GetMutatedTableValue(self, kv.key)
+			if val then
+				if val.Type == "union" and val:CanBeNil() then
+					return Number(len):SetLiteral(true):SetMax(Number(len + 1):SetLiteral(true))
+				end
 
-			if val.Type == "union" and val:CanBeNil() then
-				return Number(len):SetLiteral(true):SetMax(Number(len + 1):SetLiteral(true))
-			end
-
-			if val.Type == "symbol" and val:GetData() == nil then
-				return Number(len):SetLiteral(true)
+				if val.Type == "symbol" and val:GetData() == nil then
+					return Number(len):SetLiteral(true)
+				end
 			end
 		end
 

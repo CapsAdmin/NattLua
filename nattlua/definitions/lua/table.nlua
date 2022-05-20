@@ -13,7 +13,7 @@ type table = {
 analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
 	if not tbl:IsLiteral() then return types.String() end
 
-	if separator and (separator.Type ~= "string" or not separator:IsLiteral()) then
+	if separator and (separator.Type ~= "string" or not separator:IsLiteral()) and not separator.Type ~= "symbol" and separator:GetData() ~= nil then
 		return types.String()
 	end
 
@@ -38,11 +38,11 @@ analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 	if not val then
 		val = pos
 		pos = tbl:GetLength(analyzer)
-
+		
 		if pos:IsLiteral() then
 			pos:SetData(pos:GetData() + 1)
 			local max = pos:GetMax()
-
+			
 			if max then max:SetData(max:GetData() + 1) end
 		end
 	else

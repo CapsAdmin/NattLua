@@ -36,6 +36,10 @@ function ErrorReturn<|...: ...any|>
 	return (...,) | (nil, string)
 end
 
+analyzer function Widen(val: any)
+	return val:Copy():Widen()
+end
+
 analyzer function return_type(func: Function, i: number | nil)
 	local i = i and i:GetData() or nil
 	return {func:GetOutputSignature():Slice(i, i)}
