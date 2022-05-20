@@ -35,7 +35,6 @@ local function analyze_arguments(self, node)
 		node.kind == "type_function" or
 		node.kind == "function_signature"
 	then
-
 		if node.identifiers_typesystem then
 			for i, generic_type in ipairs(node.identifiers_typesystem) do
 				if generic_type.identifier and generic_type.identifier.value ~= "..." then

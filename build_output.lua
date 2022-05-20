@@ -76,6 +76,8 @@ IMPORTS['nattlua/definitions/utility.nlua'] = function()
 
 
 
+
+
  end
 IMPORTS['nattlua/definitions/attest.nlua'] = function() 
 
@@ -2421,12 +2423,14 @@ function META:GetLength(analyzer)
 		if analyzer and analyzer:HasMutations(self) then
 			local val = analyzer:GetMutatedTableValue(self, kv.key)
 
-			if val.Type == "union" and val:CanBeNil() then
-				return Number(len):SetLiteral(true):SetMax(Number(len + 1):SetLiteral(true))
-			end
+			if val then
+				if val.Type == "union" and val:CanBeNil() then
+					return Number(len):SetLiteral(true):SetMax(Number(len + 1):SetLiteral(true))
+				end
 
-			if val.Type == "symbol" and val:GetData() == nil then
-				return Number(len):SetLiteral(true)
+				if val.Type == "symbol" and val:GetData() == nil then
+					return Number(len):SetLiteral(true)
+				end
 			end
 		end
 
@@ -7895,7 +7899,6 @@ if _G.gmod then
 	end
 end
 
-print(...)
 return m end)(...) return __M end end
 do local __M; IMPORTS["nattlua.runtime.base_environment"] = function(...) __M = __M or (function(...) local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
@@ -16343,10 +16346,15 @@ local function initialize_table_mutation_tracker(tbl, scope, key, hash)
 		if tbl.Type == "table" then
 			-- initialize the table mutations with an existing value or nil
 			local val = (tbl:GetContract() or tbl):Get(key) or Nil()
-			table.insert(
-				tbl.mutations[hash],
-				{scope = tbl.scope or scope:GetRoot(), value = val, contract = tbl:GetContract()}
-			)
+
+			if not tbl.scope or not scope:IsCertainFromScope(tbl.scope) then
+				-- TODO: this doesn't seem like the right fix
+				-- it won't choose the table's creation scope if the current scope is valid
+				-- it would fix table.insert on a table created in some other functions
+				scope = tbl.scope or scope:GetRoot()
+			end
+
+			table.insert(tbl.mutations[hash], {scope = scope, value = val, contract = tbl:GetContract()})
 		end
 	end
 end
@@ -17457,6 +17465,8 @@ local function check_input(self, obj, input)
 	end
 
 	local function_node = obj:GetFunctionBodyNode()
+	self:CreateAndPushFunctionScope(obj)
+	self:PushAnalyzerEnvironment("typesystem")
 
 	if
 		function_node.kind == "local_type_function" or
@@ -17465,6 +17475,8 @@ local function check_input(self, obj, input)
 		if not function_node.identifiers_typesystem and obj:IsExplicitInputSignature() then
 			-- if this is a type function we just do a simple check and arguments are passed as is
 			local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
+			self:PopAnalyzerEnvironment()
+			self:PopScope()
 
 			if not ok then
 				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
@@ -17477,20 +17489,12 @@ local function check_input(self, obj, input)
 			-- if this is a generics we setup the generic upvalues for the signature
 			local call_expression = self:GetCallStack()[1].call_node
 
-			for i = 1, #function_node.identifiers do
-				if function_node.self_call then i = i + 1 end
-
-				local generic_upvalue = function_node.identifiers_typesystem and
-					function_node.identifiers_typesystem[i] or
-					nil
+			for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
 				local generic_type = call_expression.expressions_typesystem and
 					call_expression.expressions_typesystem[i] or
 					nil
-
-				if generic_type and generic_upvalue then
-					local T = self:AnalyzeExpression(generic_type)
-					self:CreateLocalValue(generic_upvalue.value.value, T)
-				end
+				local T = self:AnalyzeExpression(generic_type)
+				self:CreateLocalValue(generic_upvalue.value.value, T)
 			end
 		end
 	end
@@ -17506,9 +17510,6 @@ local function check_input(self, obj, input)
 		-- function foo(a: >>number<<, b: >>string<<)
 		-- against the input
 		-- foo(1, "hello")
-		self:CreateAndPushFunctionScope(obj)
-		self:PushAnalyzerEnvironment("typesystem")
-
 		for i = 1, input_signature_length do
 			local node = function_node.identifiers[i] --[[argument]] or
 				function_node.identifiers[#function_node.identifiers]
@@ -17557,10 +17558,10 @@ local function check_input(self, obj, input)
 				self:CreateLocalValue(identifier, signature_override[i])
 			end
 		end
-
-		self:PopAnalyzerEnvironment()
-		self:PopScope()
 	end
+
+	self:PopAnalyzerEnvironment()
+	self:PopScope()
 
 	do -- coerce untyped functions to contract callbacks
 		for i = 1, input_signature_length do
@@ -17782,6 +17783,19 @@ return function(META)
 				else
 					self:CreateLocalValue(identifier.value.value, input:Get(argi) or Nil())
 				end
+			end
+		end
+
+		if function_node.identifiers_typesystem then
+			-- if this is a generics we setup the generic upvalues for the signature
+			local call_expression = self:GetCallStack()[1].call_node
+
+			for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
+				local generic_type = call_expression.expressions_typesystem and
+					call_expression.expressions_typesystem[i] or
+					nil
+				local T = self:AnalyzeExpression(generic_type)
+				self:CreateLocalValue(generic_upvalue.value.value, T)
 			end
 		end
 
@@ -20196,17 +20210,17 @@ local function analyze_arguments(self, node)
 		node.kind == "type_function" or
 		node.kind == "function_signature"
 	then
-		for i, key in ipairs(node.identifiers) do
-			local generic_type = node.identifiers_typesystem and node.identifiers_typesystem[i]
-
-			if generic_type then
+		if node.identifiers_typesystem then
+			for i, generic_type in ipairs(node.identifiers_typesystem) do
 				if generic_type.identifier and generic_type.identifier.value ~= "..." then
-					self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(key):GetFirstValue())
+					self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(generic_type):GetFirstValue())
 				elseif generic_type.type_expression then
 					self:CreateLocalValue(generic_type.value.value, Any(), i)
 				end
 			end
+		end
 
+		for i, key in ipairs(node.identifiers) do
 			if key.identifier and key.identifier.value ~= "..." then
 				args[i] = self:AnalyzeExpression(key):GetFirstValue()
 				self:CreateLocalValue(key.identifier.value, args[i])
@@ -22560,6 +22574,10 @@ function ErrorReturn<|...: ...any|>
 	return (...,) | (nil, string)
 end
 
+analyzer function Widen(val: any)
+	return val:Copy():Widen()
+end
+
 analyzer function return_type(func: Function, i: number | nil)
 	local i = i and i:GetData() or nil
 	return {func:GetOutputSignature():Slice(i, i)}
@@ -22825,9 +22843,15 @@ analyzer function CurrentType(what: "table" | "tuple" | "function" | "union", le
 end end
 IMPORTS['nattlua/definitions/attest.nlua'] = function() local type attest = {}
 
-analyzer function attest.equal(A: any, B: any)
+analyzer function attest.equal(A: any, B: any, level: nil | literal number)
 	if not A:Equal(B) then
-		error("expected " .. tostring(B) .. " got " .. tostring(A), 2)
+		analyzer:ThrowError(
+			"expected " .. tostring(B) .. " got " .. tostring(A),
+			nil,
+			nil,
+			level and level:GetData() or 2
+		)
+		return
 	end
 
 	return A
@@ -23318,8 +23342,8 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 
 		if meta and meta:Get(types.LString("__metatable")) then
 			analyzer:ThrowError("cannot change a protected metatable")
-		return
-	end
+			return
+		end
 	end
 
 	if meta.Type == "table" then
@@ -23718,7 +23742,16 @@ IMPORTS['nattlua/definitions/lua/table.nlua'] = function() type table = {
 analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
 	if not tbl:IsLiteral() then return types.String() end
 
-	if separator and (separator.Type ~= "string" or not separator:IsLiteral()) then
+	if
+		separator and
+		(
+			separator.Type ~= "string" or
+			not separator:IsLiteral()
+		)
+		and
+		not separator.Type ~= "symbol" and
+		separator:GetData() ~= nil
+	then
 		return types.String()
 	end
 

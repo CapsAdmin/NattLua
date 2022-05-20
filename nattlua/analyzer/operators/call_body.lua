@@ -86,8 +86,6 @@ local function check_input(self, obj, input)
 	end
 
 	local function_node = obj:GetFunctionBodyNode()
-
-
 	self:CreateAndPushFunctionScope(obj)
 	self:PushAnalyzerEnvironment("typesystem")
 
@@ -98,7 +96,6 @@ local function check_input(self, obj, input)
 		if not function_node.identifiers_typesystem and obj:IsExplicitInputSignature() then
 			-- if this is a type function we just do a simple check and arguments are passed as is
 			local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
-
 			self:PopAnalyzerEnvironment()
 			self:PopScope()
 
@@ -117,7 +114,6 @@ local function check_input(self, obj, input)
 				local generic_type = call_expression.expressions_typesystem and
 					call_expression.expressions_typesystem[i] or
 					nil
-					
 				local T = self:AnalyzeExpression(generic_type)
 				self:CreateLocalValue(generic_upvalue.value.value, T)
 			end
@@ -135,7 +131,6 @@ local function check_input(self, obj, input)
 		-- function foo(a: >>number<<, b: >>string<<)
 		-- against the input
 		-- foo(1, "hello")
-
 		for i = 1, input_signature_length do
 			local node = function_node.identifiers[i] --[[argument]] or
 				function_node.identifiers[#function_node.identifiers]
@@ -184,7 +179,6 @@ local function check_input(self, obj, input)
 				self:CreateLocalValue(identifier, signature_override[i])
 			end
 		end
-
 	end
 
 	self:PopAnalyzerEnvironment()
@@ -421,7 +415,6 @@ return function(META)
 				local generic_type = call_expression.expressions_typesystem and
 					call_expression.expressions_typesystem[i] or
 					nil
-					
 				local T = self:AnalyzeExpression(generic_type)
 				self:CreateLocalValue(generic_upvalue.value.value, T)
 			end

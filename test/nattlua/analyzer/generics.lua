@@ -113,7 +113,6 @@ analyze[[
     local arr = Array<|string, 1..10|>({"hello", "world"})
     attest.equal(arr, _ as nil | {[1..10] = string})    
 ]]
-
 analyze[[
     local function Array<|T: any, Size: number|>(init: nil | {[Size] = T})
         attest.equal<|T, string|>

@@ -227,7 +227,7 @@ local function initialize_table_mutation_tracker(tbl, scope, key, hash)
 		if tbl.Type == "table" then
 			-- initialize the table mutations with an existing value or nil
 			local val = (tbl:GetContract() or tbl):Get(key) or Nil()
-			
+
 			if not tbl.scope or not scope:IsCertainFromScope(tbl.scope) then
 				-- TODO: this doesn't seem like the right fix
 				-- it won't choose the table's creation scope if the current scope is valid
@@ -235,10 +235,7 @@ local function initialize_table_mutation_tracker(tbl, scope, key, hash)
 				scope = tbl.scope or scope:GetRoot()
 			end
 
-			table.insert(
-				tbl.mutations[hash],
-				{scope = scope, value = val, contract = tbl:GetContract()}
-			)
+			table.insert(tbl.mutations[hash], {scope = scope, value = val, contract = tbl:GetContract()})
 		end
 	end
 end
@@ -370,6 +367,7 @@ return function(META)
 				return self:GetContextValue("falsy_expression_context") == true
 			end
 		end
+
 		do
 			function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
 				local upvalue = obj:GetUpvalue()

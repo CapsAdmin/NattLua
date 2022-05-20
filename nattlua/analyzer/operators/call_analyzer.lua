@@ -112,9 +112,14 @@ return function(META)
 
 						tbl:SetContract(tbl)
 						return tbl
-					elseif ffi and t == "cdata" and tostring(ffi.typeof(v)):sub(1, 10) == "ctype<uint" or tostring(ffi.typeof(v)):sub(1, 9) == "ctype<int" then
+					elseif
+						ffi and
+						t == "cdata" and
+						tostring(ffi.typeof(v)):sub(1, 10) == "ctype<uint" or
+						tostring(ffi.typeof(v)):sub(1, 9) == "ctype<int"
+					then
 						tbl[i] = LNumber(v)
-					else													
+					else
 						self:Print(t)
 						error(debug.traceback("NYI " .. t))
 					end

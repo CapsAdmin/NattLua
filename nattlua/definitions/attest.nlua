@@ -2,7 +2,12 @@ local type attest = {}
 
 analyzer function attest.equal(A: any, B: any, level: nil | literal number)
 	if not A:Equal(B) then
-		analyzer:ThrowError("expected " .. tostring(B) .. " got " .. tostring(A), nil, nil, level and level:GetData() or 2)
+		analyzer:ThrowError(
+			"expected " .. tostring(B) .. " got " .. tostring(A),
+			nil,
+			nil,
+			level and level:GetData() or 2
+		)
 		return
 	end
 
