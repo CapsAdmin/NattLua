@@ -35,17 +35,18 @@ local function analyze_arguments(self, node)
 		node.kind == "type_function" or
 		node.kind == "function_signature"
 	then
-		for i, key in ipairs(node.identifiers) do
-			local generic_type = node.identifiers_typesystem and node.identifiers_typesystem[i]
 
-			if generic_type then
+		if node.identifiers_typesystem then
+			for i, generic_type in ipairs(node.identifiers_typesystem) do
 				if generic_type.identifier and generic_type.identifier.value ~= "..." then
 					self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(key):GetFirstValue())
 				elseif generic_type.type_expression then
 					self:CreateLocalValue(generic_type.value.value, Any(), i)
 				end
 			end
+		end
 
+		for i, key in ipairs(node.identifiers) do
 			if key.identifier and key.identifier.value ~= "..." then
 				args[i] = self:AnalyzeExpression(key):GetFirstValue()
 				self:CreateLocalValue(key.identifier.value, args[i])

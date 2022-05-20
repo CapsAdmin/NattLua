@@ -106,7 +106,7 @@ local function check_input(self, obj, input)
 			-- if this is a generics we setup the generic upvalues for the signature
 			local call_expression = self:GetCallStack()[1].call_node
 
-			for i = 1, #function_node.identifiers do
+			for i = 1, #function_node.identifiers_typesystem do
 				if function_node.self_call then i = i + 1 end
 
 				local generic_upvalue = function_node.identifiers_typesystem and
@@ -115,7 +115,7 @@ local function check_input(self, obj, input)
 				local generic_type = call_expression.expressions_typesystem and
 					call_expression.expressions_typesystem[i] or
 					nil
-
+					
 				if generic_type and generic_upvalue then
 					local T = self:AnalyzeExpression(generic_type)
 					self:CreateLocalValue(generic_upvalue.value.value, T)

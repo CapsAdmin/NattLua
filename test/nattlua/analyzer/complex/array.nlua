@@ -1,0 +1,31 @@
+local type String = string
+
+local META = {}
+META.__index = META
+
+function META:at(index: ref number)
+    if index < 1 then
+        index = self.size + index
+    end
+    return self.data[index]
+end
+
+function META:concat(separator: ref nil | string)
+    return table.concat(self.data, separator)
+end
+
+function _G.Array(size: ref number, value: ref any)
+    local self = {
+        size = size,
+        data = {}
+    }
+    
+    type self.data[1 .. size] = value
+    seal<|self.data|>
+
+    setmetatable(self, META)
+    return self
+end
+
+local arr = Array(10, String)
+attest.equal(arr:at(-9), String)
