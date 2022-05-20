@@ -23,12 +23,28 @@ local function Array<|T: any, Size: number|>(init: nil | {[Size] = T})
     return self
 end
 
-local arr = Array<|string, 1..10|>({"hello", "world"})
+local function StaticArray(init: ref {[number] = any})
+    local self = {
+        data = init
+    }
+    
+    setmetatable(self, META)
+    return self
+end
 
-attest.equal<|arr:at(-9), string|>
-attest.equal<|arr:at(3), string|>
+do
+    local arr = Array<|string, 1..10|>({"hello", "world"})
 
-attest.expect_diagnostic<|"error", "not a subset of"|>
-arr:at(-20)
+    attest.equal<|arr:at(-9), string|>
+    attest.equal<|arr:at(3), string|>
 
-attest.equal<|arr:concat(" "), string|>
+    attest.expect_diagnostic<|"error", "not a subset of"|>
+    arr:at(-20)
+
+    attest.equal<|arr:concat(" "), string|>
+end
+
+do
+    local arr = StaticArray({11, 22, 33})
+    attest.equal(arr:at(1), 11)
+end

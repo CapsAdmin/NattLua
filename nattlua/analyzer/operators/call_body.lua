@@ -87,6 +87,10 @@ local function check_input(self, obj, input)
 
 	local function_node = obj:GetFunctionBodyNode()
 
+
+	self:CreateAndPushFunctionScope(obj)
+	self:PushAnalyzerEnvironment("typesystem")
+
 	if
 		function_node.kind == "local_type_function" or
 		function_node.kind == "type_function"
@@ -94,6 +98,9 @@ local function check_input(self, obj, input)
 		if not function_node.identifiers_typesystem and obj:IsExplicitInputSignature() then
 			-- if this is a type function we just do a simple check and arguments are passed as is
 			local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
+
+			self:PopAnalyzerEnvironment()
+			self:PopScope()
 
 			if not ok then
 				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
@@ -106,20 +113,13 @@ local function check_input(self, obj, input)
 			-- if this is a generics we setup the generic upvalues for the signature
 			local call_expression = self:GetCallStack()[1].call_node
 
-			for i = 1, #function_node.identifiers_typesystem do
-				if function_node.self_call then i = i + 1 end
-
-				local generic_upvalue = function_node.identifiers_typesystem and
-					function_node.identifiers_typesystem[i] or
-					nil
+			for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
 				local generic_type = call_expression.expressions_typesystem and
 					call_expression.expressions_typesystem[i] or
 					nil
 					
-				if generic_type and generic_upvalue then
-					local T = self:AnalyzeExpression(generic_type)
-					self:CreateLocalValue(generic_upvalue.value.value, T)
-				end
+				local T = self:AnalyzeExpression(generic_type)
+				self:CreateLocalValue(generic_upvalue.value.value, T)
 			end
 		end
 	end
@@ -135,8 +135,6 @@ local function check_input(self, obj, input)
 		-- function foo(a: >>number<<, b: >>string<<)
 		-- against the input
 		-- foo(1, "hello")
-		self:CreateAndPushFunctionScope(obj)
-		self:PushAnalyzerEnvironment("typesystem")
 
 		for i = 1, input_signature_length do
 			local node = function_node.identifiers[i] --[[argument]] or
@@ -187,9 +185,10 @@ local function check_input(self, obj, input)
 			end
 		end
 
-		self:PopAnalyzerEnvironment()
-		self:PopScope()
 	end
+
+	self:PopAnalyzerEnvironment()
+	self:PopScope()
 
 	do -- coerce untyped functions to contract callbacks
 		for i = 1, input_signature_length do
@@ -411,6 +410,20 @@ return function(META)
 				else
 					self:CreateLocalValue(identifier.value.value, input:Get(argi) or Nil())
 				end
+			end
+		end
+
+		if function_node.identifiers_typesystem then
+			-- if this is a generics we setup the generic upvalues for the signature
+			local call_expression = self:GetCallStack()[1].call_node
+
+			for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
+				local generic_type = call_expression.expressions_typesystem and
+					call_expression.expressions_typesystem[i] or
+					nil
+					
+				local T = self:AnalyzeExpression(generic_type)
+				self:CreateLocalValue(generic_upvalue.value.value, T)
 			end
 		end
 
