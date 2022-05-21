@@ -214,3 +214,8 @@ analyze[=[
         
 
 ]=]
+
+analyze[[
+    local x: 1..inf = 2
+    attest.equal<|x, 1..inf|>
+]]

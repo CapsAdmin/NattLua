@@ -82,6 +82,17 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	return false
 end
 
+function META:CopyLiteralness(num--[[#: TNumber]])
+	if num.Type == "number" and num:GetMax() then
+		if self:IsSubsetOf(num) then
+			self:SetData(num:GetData())
+			self:SetMax(num:GetMax())
+		end
+	else
+		self:SetLiteral(num:IsLiteral())
+	end
+end
+
 function META:Copy()
 	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
 	local max = self.Max

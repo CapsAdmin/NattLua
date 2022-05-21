@@ -383,7 +383,7 @@ do
 	end
 
 	function fs.get_files(path)
-		local out = {} -- [1] TODO
+		local out = {}
 		local ptr = ffi.C.opendir(path or "")
 
 		if ptr == nil then return nil, last_error() end
@@ -392,7 +392,8 @@ do
 
 		while true do
 			local dir_info = ffi.C.readdir(ptr)
-			dir_info = dir_info -- TODO
+			dir_info = dir_info
+
 			if dir_info == nil then break end
 
 			if not is_dots(dir_info.d_name) then
