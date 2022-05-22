@@ -91,13 +91,10 @@ do --- jit shift/xor
 
 	for i = 1, 200 do
 		a = bxor(a, b)
-		
 		b = sar(b, 14) + shl(b, 50)
 		a = a - b
-		
 		b = shl(b, 5) + sar(b, 59)
 		b = bxor(a, b)
-		
 		b = b - shl(b, 13) - shr(b, 51)
 	end
 
@@ -109,13 +106,10 @@ do --- jit rotate/xor
 
 	for i = 1, 200 do
 		a = bxor(a, b)
-		
 		b = rol(b, 14)
 		a = a - b
-		
 		b = rol(b, 5)
 		b = bxor(a, b)
-		
 		b = b - rol(b, 13)
 	end
 
@@ -127,13 +121,10 @@ do --- jit all ops
 
 	for i = 1, 200 do
 		a = bxor(a, b)
-		
 		b = rol(b, a)
 		a = a - b
-		
 		b = shr(b, a) + shl(b, bnot(a))
 		b = bxor(a, b)
-		
 		b = b - bswap(b)
 	end
 
