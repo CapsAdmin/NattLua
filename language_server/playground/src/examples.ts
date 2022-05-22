@@ -120,4 +120,5 @@ typescript: import("../../../test/nattlua/analyzer/complex/typescript.nlua"),
 spritemanager: import("../../../test/nattlua/analyzer/complex/spritemanager.nlua"),
 brainfudge: import("../../../test/nattlua/analyzer/complex/brainfudge.nlua"),
 ["js-array"]: import("../../../test/nattlua/analyzer/complex/array.nlua"),
+["maze"]: import("../../../test/nattlua/analyzer/complex/maze.nlua"),
 }
