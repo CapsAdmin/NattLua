@@ -230,13 +230,14 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 	local compiler = nl.Compiler(str, chunk_name and chunk_name:GetData() or nil)
 	assert(compiler:Lex())
 	assert(compiler:Parse())
-	return types.LuaTypeFunction(
-		function(...)
-			return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-		end,
-		types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
-		types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
-	)
+	local f = types.Function()
+	f:SetAnalyzerFunction(function(...)
+		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
+	end)
+	f:SetInputSignature(types.VarArg(types.Any()))
+	f:SetOutputSignature(types.VarArg(types.Any()))
+	
+	return f
 end
 
 type loadstring = load
