@@ -114,7 +114,7 @@ do
 end
 
 function love.load()
-	love.window.setMode(1500, 1500, {resizable = true, vsync = true, minwidth = 400, minheight = 300})
+	love.window.setMode(cell_size * maze_width, cell_size * maze_height, {resizable = true, vsync = true, x = 0, y = 0})
 end
 
 local function draw_arrow(x1: number, y1: number, x2: number, y2: number, arrlen: number, angle: number)
@@ -167,3 +167,6 @@ function love.draw()
 		end
 	end
 end
+
+local lick = (require as any)("lick")
+lick.reset = true

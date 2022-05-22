@@ -1,5 +1,5 @@
 local nl = require("nattlua")
-require("examples.projects.love2d.build_love_api")
+--require("examples.projects.love2d.build_love_api")
 local working_directory = "examples/projects/love2d/"
 local compiler = assert(
 	nl.File(
@@ -9,7 +9,7 @@ local compiler = assert(
 		}
 	)
 )
-compiler:Analyze()
+
 local code = compiler:Emit(
 	{
 		preserve_whitespace = false,
@@ -28,4 +28,7 @@ local code = compiler:Emit(
 local f = assert(io.open(working_directory .. "out/main.lua", "w"))
 f:write(code)
 f:close()
-os.execute("love " .. working_directory .. "out/")
+
+-- parse afterwards so hotreload is faster
+compiler:Analyze()
+--os.execute("love " .. working_directory .. "out/")
