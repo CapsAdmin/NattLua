@@ -1466,6 +1466,17 @@ function META.Equal(a, b)
 	return false
 end
 
+function META:CopyLiteralness(num)
+	if num.Type == "number" and num:GetMax() then
+		if self:IsSubsetOf(num) then
+			self:SetData(num:GetData())
+			self:SetMax(num:GetMax())
+		end
+	else
+		self:SetLiteral(num:IsLiteral())
+	end
+end
+
 function META:Copy()
 	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
 	local max = self.Max
@@ -2265,6 +2276,918 @@ return {
 		return META.New({True(), False()})
 	end,
 } end)(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.context"] = function(...) __M = __M or (function(...) local current_analyzer = {}
+local CONTEXT = {}
+
+function CONTEXT:GetCurrentAnalyzer()
+	return current_analyzer[1]
+end
+
+function CONTEXT:PushCurrentAnalyzer(b)
+	table.insert(current_analyzer, 1, b)
+end
+
+function CONTEXT:PopCurrentAnalyzer()
+	table.remove(current_analyzer, 1)
+end
+
+return CONTEXT end)(...) return __M end end
+IMPORTS['nattlua/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local META = class.CreateTemplate("code")
+
+
+
+function META:GetString()
+	return self.Buffer
+end
+
+function META:GetName()
+	return self.Name
+end
+
+function META:GetByteSize()
+	return #self.Buffer
+end
+
+function META:GetStringSlice(start, stop)
+	return self.Buffer:sub(start, stop)
+end
+
+function META:IsStringSlice(start, stop, str)
+	return self.Buffer:sub(start, stop) == str
+end
+
+function META:GetByte(pos)
+	return self.Buffer:byte(pos) or 0
+end
+
+function META:FindNearest(str, start)
+	local _, pos = self.Buffer:find(str, start, true)
+
+	if not pos then return nil end
+
+	return pos + 1
+end
+
+local function remove_bom_header(str)
+	if str:sub(1, 2) == "\xFE\xFF" then
+		return str:sub(3)
+	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
+		return str:sub(4)
+	end
+
+	return str
+end
+
+local function get_default_name()
+	local info = debug.getinfo(3)
+
+	if info then
+		local parent_line = info.currentline
+		local parent_name = info.source:sub(2)
+		return parent_name .. ":" .. parent_line
+	end
+
+	return "unknown line : unknown name"
+end
+
+function META:BuildSourceCodePointMessage(
+	msg,
+	start,
+	stop,
+	size
+)
+	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
+end
+
+function META.New(lua_code, name)
+	local self = setmetatable(
+		{
+			Buffer = remove_bom_header(lua_code),
+			Name = name or get_default_name(),
+		},
+		META
+	)
+	return self
+end
+
+if jit then
+	local ffi = require("ffi")
+	ffi.cdef("int memcmp ( const void * ptr1, const void * ptr2, size_t num );")
+
+	function META:IsStringSlice(start, stop, str)
+		return (
+				ffi.C.memcmp
+			)((ffi.cast("unsigned char*", self.Buffer)) - 1 + start, str, #str) == 0
+	end
+
+	function META:GetByte(pos)
+		return ffi.cast("unsigned char*", self.Buffer)[pos - 1]
+	end
+end
+
+
+return META end
+IMPORTS['./nattlua/types/../parser/nodes.nlua'] = function() 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+return {
+	ExpressionKind = ExpressionKind,
+	StatementKind = StatementKind,
+	Node = Node,
+	statement = statement,
+	expression = expression,
+} end
+do local __M; IMPORTS["nattlua.types.string"] = function(...) __M = __M or (function(...) local tostring = tostring
+local setmetatable = _G.setmetatable
+local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
+local context = IMPORTS['nattlua.analyzer.context']("nattlua.analyzer.context")
+local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
+
+
+
+
+META.Type = "string"
+
+
+META:GetSet("Data", nil)
+META:GetSet("PatternContract", nil)
+
+function META.Equal(a, b)
+	if a.Type ~= b.Type then return false end
+
+	if a:IsLiteralArgument() and b:IsLiteralArgument() then return true end
+
+	if b:IsLiteralArgument() and not a:IsLiteral() then return false end
+
+	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
+
+	if not a:IsLiteral() and not b:IsLiteral() then return true end
+
+	return false
+end
+
+function META:GetHash()
+	if self:IsLiteral() then return self.Data end
+
+	return "__@type@__" .. self.Type
+end
+
+function META:Copy()
+	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
+	copy:SetPatternContract(self:GetPatternContract())
+	copy:CopyInternalsFrom(self)
+	return copy
+end
+
+function META.IsSubsetOf(A, B)
+	if B.Type == "tuple" then B = B:Get(1) end
+
+	if B.Type == "any" then return true end
+
+	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+
+	if B.Type ~= "string" then return type_errors.type_mismatch(A, B) end
+
+	if A:IsLiteralArgument() and B:IsLiteralArgument() then return true end
+
+	if B:IsLiteralArgument() and not A:IsLiteral() then
+		return type_errors.subset(A, B)
+	end
+
+	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then -- "A" subsetof "B"
+		return true
+	end
+
+	if A:IsLiteral() and not B:IsLiteral() then -- "A" subsetof string
+		return true
+	end
+
+	if not A:IsLiteral() and not B:IsLiteral() then -- string subsetof string
+		return true
+	end
+
+	if B.PatternContract then
+		local str = A:GetData()
+
+		if not str then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
+			return type_errors.literal(A)
+		end
+
+		if not str:find(B.PatternContract) then
+			return type_errors.string_pattern(A, B)
+		end
+
+		return true
+	end
+
+	if A:IsLiteral() and B:IsLiteral() then
+		return type_errors.value_mismatch(A, B)
+	end
+
+	return type_errors.subset(A, B)
+end
+
+function META:__tostring()
+	if self.PatternContract then return "$\"" .. self.PatternContract .. "\"" end
+
+	if self:IsLiteral() then
+		local str = self:GetData()
+
+		if str then return "\"" .. str .. "\"" end
+	end
+
+	if self:IsLiteralArgument() then return "literal string" end
+
+	return "string"
+end
+
+function META.LogicalComparison(a, b, op)
+	if op == ">" then
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() > b:GetData() end
+
+		return nil
+	elseif op == "<" then
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() < b:GetData() end
+
+		return nil
+	elseif op == "<=" then
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() <= b:GetData() end
+
+		return nil
+	elseif op == ">=" then
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() >= b:GetData() end
+
+		return nil
+	elseif op == "==" then
+		if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
+
+		return nil
+	end
+
+	return type_errors.binary(op, a, b)
+end
+
+function META:IsFalsy()
+	return false
+end
+
+function META:IsTruthy()
+	return true
+end
+
+function META:PrefixOperator(op)
+	if op == "#" then
+		local str = self:GetData()
+		return Number(str and #str or nil):SetLiteral(self:IsLiteral())
+	end
+end
+
+function META.New(data)
+	local self = setmetatable(
+		{
+			Data = data,
+			Falsy = false,
+			Truthy = true,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+		},
+		META
+	)
+	-- analyzer might be nil when strings are made outside of the analyzer, like during tests
+	local analyzer = context:GetCurrentAnalyzer()
+
+	if analyzer then
+		self:SetMetaTable(analyzer:GetDefaultEnvironment("typesystem").string_metatable)
+	end
+
+	return self
+end
+
+return {
+	String = META.New,
+	LString = function(num)
+		return META.New(num):SetLiteral(true)
+	end,
+	LStringNoMeta = function(data)
+		return setmetatable(
+			{
+				Data = data,
+				Falsy = false,
+				Truthy = true,
+				Literal = false,
+				LiteralArgument = false,
+				ReferenceArgument = false,
+			},
+			META
+		):SetLiteral(true)
+	end,
+	NodeToString = function(node, is_local)
+		return META.New(node.value.value):SetLiteral(true)
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.types.any"] = function(...) __M = __M or (function(...) local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
+
+
+
+META.Type = "any"
+
+function META:Get(key)
+	return self
+end
+
+function META:Set(key, val)
+	return true
+end
+
+function META:Copy()
+	return self
+end
+
+function META.IsSubsetOf(A, B)
+	return true
+end
+
+function META:__tostring()
+	return "any"
+end
+
+function META:IsFalsy()
+	return true
+end
+
+function META:IsTruthy()
+	return true
+end
+
+function META.Equal(a, b)
+	return a.Type == b.Type
+end
+
+function META.LogicalComparison(l, r, op)
+	if op == "==" then return true -- TODO: should be nil (true | false)?
+	end
+
+	return type_errors.binary(op, l, r)
+end
+
+return {
+	Any = function()
+		return META.New()
+	end,
+} end)(...) return __M end end
+do local __M; IMPORTS["nattlua.types.tuple"] = function(...) __M = __M or (function(...) local tostring = tostring
+local table = _G.table
+local math = math
+local assert = assert
+local debug = debug
+local error = error
+local setmetatable = _G.setmetatable
+local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
+local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+local ipairs = _G.ipairs
+local type = _G.type
+local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
+
+
+
+
+
+
+META:GetSet("Data", nil)
+META.Type = "tuple"
+META:GetSet("Unpackable", false)
+
+function META.Equal(a, b)
+	if a.Type ~= b.Type then return false end
+
+	if a.suppress then return true end
+
+	if #a.Data ~= #b.Data then return false end
+
+	for i = 1, #a.Data do
+		local val = a.Data[i]
+		a.suppress = true
+		local ok = val:Equal(b.Data[i])
+		a.suppress = false
+
+		if not ok then return false end
+	end
+
+	return true
+end
+
+function META:__tostring()
+	if self.suppress then return "current_tuple" end
+
+	self.suppress = true
+	local strings = {}
+
+	for i, v in ipairs(self:GetData()) do
+		strings[i] = tostring(v)
+	end
+
+	if self.Remainder then table.insert(strings, tostring(self.Remainder)) end
+
+	local s = "("
+
+	if #strings == 1 and strings[1] then
+		s = s .. strings[1] .. ","
+	else
+		s = s .. table.concat(strings, ", ")
+	end
+
+	s = s .. ")"
+
+	if self.Repeat then s = s .. "*" .. tostring(self.Repeat) end
+
+	self.suppress = false
+	return s
+end
+
+function META:Merge(tup)
+	local src = self:GetData()
+
+	for i = 1, tup:GetMinimumLength() do
+		local a = self:Get(i)
+		local b = tup:Get(i)
+
+		if a then src[i] = Union({a, b}) elseif b then src[i] = b:Copy() end
+	end
+
+	self.Remainder = tup.Remainder or self.Remainder
+	self.Repeat = tup.Repeat or self.Repeat
+	return self
+end
+
+function META:Copy(map, copy_tables)
+	map = map or {}
+	local copy = self.New({})
+	map[self] = map[self] or copy
+
+	for i, v in ipairs(self:GetData()) do
+		v = map[v] or v:Copy(map, copy_tables)
+		map[v] = map[v] or v
+		copy:Set(i, v)
+	end
+
+	if self.Remainder then copy.Remainder = self.Remainder:Copy(nil, copy_tables) end
+
+	copy.Repeat = self.Repeat
+	copy.Unpackable = self.Unpackable
+	copy:CopyInternalsFrom(self)
+	return copy
+end
+
+function META.IsSubsetOf(A, B, max_length)
+	if A == B then return true end
+
+	if A.suppress then return true end
+
+	if A.Remainder then
+		local t = A:Get(1)
+
+		if t and t.Type == "any" and #A:GetData() == 0 then return true end
+	end
+
+	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+
+	do
+		local t = A:Get(1)
+
+		if t and t.Type == "any" and B.Type == "tuple" and B:GetLength() == 0 then
+			return true
+		end
+	end
+
+	if B.Type == "any" then return true end
+
+	if B.Type == "table" then
+		if not B:IsNumericallyIndexed() then
+			return type_errors.numerically_indexed(B)
+		end
+	end
+
+	if B.Type ~= "tuple" then return type_errors.type_mismatch(A, B) end
+
+	max_length = max_length or math.max(A:GetMinimumLength(), B:GetMinimumLength())
+
+	for i = 1, max_length do
+		local a, err = A:Get(i)
+
+		if not a then return type_errors.subset(A, B, err) end
+
+		local b, err = B:Get(i)
+
+		if not b and a.Type == "any" then break end
+
+		if not b then return type_errors.missing(B, i, err) end
+
+		A.suppress = true
+		local ok, reason = a:IsSubsetOf(b)
+		A.suppress = false
+
+		if not ok then return type_errors.subset(a, b, reason) end
+	end
+
+	return true
+end
+
+function META.IsSubsetOfTupleWithoutExpansion(A, B)
+	for i, a in ipairs(A:GetData()) do
+		local b = B:GetWithoutExpansion(i)
+		local ok, err = a:IsSubsetOf(b)
+
+		if ok then return ok, err, a, b, i end
+	end
+
+	return true
+end
+
+function META.IsSubsetOfTuple(A, B)
+	if A:Equal(B) then return true end
+
+	for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
+		local a, a_err = A:Get(i)
+		local b, b_err = B:Get(i)
+
+		if b and b.Type == "union" then b, b_err = b:GetAtIndex(i) end
+
+		if not a then
+			if b and b.Type == "any" then
+				a = Any()
+			else
+				return a, a_err, a or Nil(), b, i
+			end
+		end
+
+		if not b then return b, b_err, a or Nil(), b, i end
+
+		if b.Type == "tuple" then
+			b = b:Get(1)
+
+			if not b then break end
+		end
+
+		a = a or Nil()
+		b = b or Nil()
+		local ok, reason = a:IsSubsetOf(b)
+
+		if not ok then return ok, reason, a, b, i end
+	end
+
+	return true
+end
+
+function META:HasTuples()
+	for _, v in ipairs(self.Data) do
+		if v.Type == "tuple" then return true end
+	end
+
+	if self.Remainder and self.Remainder.Type == "tuple" then return true end
+
+	return false
+end
+
+function META:GetWithNumber(i)
+	local val = self:GetData()[i]
+
+	if not val and self.Repeat and i <= (#self:GetData() * self.Repeat) then
+		return self:GetData()[((i - 1) % #self:GetData()) + 1]
+	end
+
+	if not val and self.Remainder then
+		return self.Remainder:Get(i - #self:GetData())
+	end
+
+	if not val then
+		local last = self:GetData()[#self:GetData()]
+
+		if last and last.Type == "tuple" and (last.Repeat or last.Remainder) then
+			return last:Get(i)
+		end
+	end
+
+	if not val then
+		return type_errors.other({"index ", tostring(i), " does not exist"})
+	end
+
+	return val
+end
+
+function META:Get(key)
+	if type(key) == "number" then return self:GetWithNumber(key) end
+
+	assert(key.Type == "number")
+
+	if key:IsLiteral() then return self:GetWithNumber(key:GetData()) end
+end
+
+function META:GetWithoutExpansion(i)
+	local val = self:GetData()[i]
+
+	if not val then if self.Remainder then return self.Remainder end end
+
+	if not val then return type_errors.other({"index ", i, " does not exist"}) end
+
+	return val
+end
+
+function META:Set(i, val)
+	if type(i) == "table" then
+		i = i:GetData()
+		return false, "expected number"
+	end
+
+	if val.Type == "tuple" and val:GetLength() == 1 then val = val:Get(1) end
+
+	self.Data[i] = val
+
+	if i > 32 then error("tuple too long", 2) end
+
+	return true
+end
+
+function META:IsEmpty()
+	-- never called
+	return self:GetLength() == 0
+end
+
+function META:IsTruthy()
+	local obj = self:Get(1)
+
+	if obj then return obj:IsTruthy() end
+
+	return false
+end
+
+function META:IsFalsy()
+	local obj = self:Get(1)
+
+	if obj then return obj:IsFalsy() end
+
+	return false
+end
+
+function META:GetLength()
+	if false then
+		-- TODO: recursion
+		return nil
+	end
+
+	if self.Remainder then return #self:GetData() + self.Remainder:GetLength() end
+
+	if self.Repeat then return #self:GetData() * self.Repeat end
+
+	return #self:GetData()
+end
+
+function META:GetMinimumLength()
+	if self.Repeat == math.huge or self.Repeat == 0 then return 0 end
+
+	local len = #self:GetData()
+	local found_nil = false
+
+	for i = #self:GetData(), 1, -1 do
+		local obj = self:GetData()[i]
+
+		if
+			(
+				obj.Type == "union" and
+				obj:CanBeNil()
+			) or
+			(
+				obj.Type == "symbol" and
+				obj:GetData() == nil
+			)
+		then
+			found_nil = true
+			len = i - 1
+		elseif found_nil then
+			len = i
+
+			break
+		end
+	end
+
+	return len
+end
+
+function META:GetSafeLength(arguments)
+	local len = self:GetLength()
+
+	if len == math.huge or arguments:GetLength() == math.huge then
+		return math.max(self:GetMinimumLength(), arguments:GetMinimumLength())
+	end
+
+	return len
+end
+
+function META:AddRemainder(obj)
+	self.Remainder = obj
+	return self
+end
+
+function META:SetRepeat(amt)
+	self.Repeat = amt
+	return self
+end
+
+function META:Unpack(length)
+	length = length or self:GetLength()
+	length = math.min(length, self:GetLength())
+	assert(length ~= math.huge, "length must be finite")
+	local out = {}
+	local i = 1
+
+	for _ = 1, length do
+		out[i] = self:Get(i)
+		i = i + 1
+	end
+
+	return table.unpack(out)
+end
+
+function META:UnpackWithoutExpansion()
+	local tbl = {table.unpack(self.Data)}
+
+	if self.Remainder then table.insert(tbl, self.Remainder) end
+
+	return table.unpack(tbl)
+end
+
+function META:Slice(start, stop)
+	-- TODO: not accurate yet
+	start = start or 1
+	stop = stop or #self:GetData()
+	local copy = self:Copy()
+	local data = {}
+
+	for i = start, stop do
+		table.insert(data, (self:GetData())[i])
+	end
+
+	copy:SetData(data)
+	return copy
+end
+
+function META:GetFirstValue()
+	if self.Remainder then return self.Remainder:GetFirstValue() end
+
+	local first, err = self:Get(1)
+
+	if not first then return first, err end
+
+	if first.Type == "tuple" then return first:GetFirstValue() end
+
+	return first
+end
+
+function META:Concat(tup)
+	local start = self:GetLength()
+
+	for i, v in ipairs(tup:GetData()) do
+		self:Set(start + i, v)
+	end
+
+	return self
+end
+
+function META:SetTable(data)
+	self.Data = {}
+
+	for i, v in ipairs(data) do
+		if
+			i == #data and
+			v.Type == "tuple" and
+			not (
+				v
+			).Remainder and
+			v ~= self
+		then
+			self:AddRemainder(v)
+		else
+			table.insert(self.Data, v)
+		end
+	end
+end
+
+function META.New(data)
+	local self = setmetatable(
+		{
+			Data = {},
+			Falsy = false,
+			Truthy = false,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+			Unpackable = false,
+			suppress = false,
+		},
+		META
+	)
+
+	if data then self:SetTable(data) end
+
+	return self
+end
+
+return {
+	Tuple = META.New,
+	VarArg = function(t)
+		local self = META.New({t})
+		self:SetRepeat(math.huge)
+		return self
+	end,
+	NormalizeTuples = function(types)
+		local arguments
+
+		if #types == 1 and types[1] and types[1].Type == "tuple" then
+			arguments = types[1]
+		else
+			local temp = {}
+
+			for i, v in ipairs(types) do
+				if v.Type == "tuple" then
+					if i == #types then
+						table.insert(temp, v)
+					else
+						local obj = v:Get(1)
+
+						if obj then table.insert(temp, obj) end
+					end
+				else
+					table.insert(temp, v)
+				end
+			end
+
+			arguments = META.New(temp)
+		end
+
+		return arguments
+	end,
+} end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.table"] = function(...) __M = __M or (function(...) local setmetatable = _G.setmetatable
 local table = _G.table
 local ipairs = _G.ipairs
@@ -2273,8 +3196,11 @@ local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
 local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
+local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
+local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
+local context = IMPORTS['nattlua.analyzer.context']("nattlua.analyzer.context")
 
 META.Type = "table"
 
@@ -2369,6 +3295,19 @@ function META:__tostring()
 	if self.Name then
 		self.suppress = nil
 		return self.Name:GetData()
+	end
+
+	local meta = self:GetMetaTable()
+
+	if meta then
+		local func = meta:Get(LString("__tostring"))
+
+		if func then
+			local analyzer = context:GetCurrentAnalyzer()
+			local str = analyzer:Call(func, Tuple({self})):GetFirstValue()
+
+			if str and str:IsLiteral() then return str:GetData() end
+		end
 	end
 
 	local s = {}
@@ -3192,374 +4131,6 @@ function META.New()
 end
 
 return {Table = META.New} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.context"] = function(...) __M = __M or (function(...) local current_analyzer = {}
-local CONTEXT = {}
-
-function CONTEXT:GetCurrentAnalyzer()
-	return current_analyzer[1]
-end
-
-function CONTEXT:PushCurrentAnalyzer(b)
-	table.insert(current_analyzer, 1, b)
-end
-
-function CONTEXT:PopCurrentAnalyzer()
-	table.remove(current_analyzer, 1)
-end
-
-return CONTEXT end)(...) return __M end end
-IMPORTS['nattlua/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
-local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
-local META = class.CreateTemplate("code")
-
-
-
-function META:GetString()
-	return self.Buffer
-end
-
-function META:GetName()
-	return self.Name
-end
-
-function META:GetByteSize()
-	return #self.Buffer
-end
-
-function META:GetStringSlice(start, stop)
-	return self.Buffer:sub(start, stop)
-end
-
-function META:IsStringSlice(start, stop, str)
-	return self.Buffer:sub(start, stop) == str
-end
-
-function META:GetByte(pos)
-	return self.Buffer:byte(pos) or 0
-end
-
-function META:FindNearest(str, start)
-	local _, pos = self.Buffer:find(str, start, true)
-
-	if not pos then return nil end
-
-	return pos + 1
-end
-
-local function remove_bom_header(str)
-	if str:sub(1, 2) == "\xFE\xFF" then
-		return str:sub(3)
-	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
-		return str:sub(4)
-	end
-
-	return str
-end
-
-local function get_default_name()
-	local info = debug.getinfo(3)
-
-	if info then
-		local parent_line = info.currentline
-		local parent_name = info.source:sub(2)
-		return parent_name .. ":" .. parent_line
-	end
-
-	return "unknown line : unknown name"
-end
-
-function META:BuildSourceCodePointMessage(
-	msg,
-	start,
-	stop,
-	size
-)
-	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
-end
-
-function META.New(lua_code, name)
-	local self = setmetatable(
-		{
-			Buffer = remove_bom_header(lua_code),
-			Name = name or get_default_name(),
-		},
-		META
-	)
-	return self
-end
-
-if jit then
-	local ffi = require("ffi")
-	ffi.cdef("int memcmp ( const void * ptr1, const void * ptr2, size_t num );")
-
-	function META:IsStringSlice(start, stop, str)
-		return (
-				ffi.C.memcmp
-			)((ffi.cast("unsigned char*", self.Buffer)) - 1 + start, str, #str) == 0
-	end
-
-	function META:GetByte(pos)
-		return ffi.cast("unsigned char*", self.Buffer)[pos - 1]
-	end
-end
-
-
-return META end
-IMPORTS['./nattlua/types/../parser/nodes.nlua'] = function() 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-return {
-	ExpressionKind = ExpressionKind,
-	StatementKind = StatementKind,
-	Node = Node,
-	statement = statement,
-	expression = expression,
-} end
-do local __M; IMPORTS["nattlua.types.string"] = function(...) __M = __M or (function(...) local tostring = tostring
-local setmetatable = _G.setmetatable
-local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
-local context = IMPORTS['nattlua.analyzer.context']("nattlua.analyzer.context")
-local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
-
-
-
-
-META.Type = "string"
-
-
-META:GetSet("Data", nil)
-META:GetSet("PatternContract", nil)
-
-function META.Equal(a, b)
-	if a.Type ~= b.Type then return false end
-
-	if a:IsLiteralArgument() and b:IsLiteralArgument() then return true end
-
-	if b:IsLiteralArgument() and not a:IsLiteral() then return false end
-
-	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
-
-	if not a:IsLiteral() and not b:IsLiteral() then return true end
-
-	return false
-end
-
-function META:GetHash()
-	if self:IsLiteral() then return self.Data end
-
-	return "__@type@__" .. self.Type
-end
-
-function META:Copy()
-	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
-	copy:SetPatternContract(self:GetPatternContract())
-	copy:CopyInternalsFrom(self)
-	return copy
-end
-
-function META.IsSubsetOf(A, B)
-	if B.Type == "tuple" then B = B:Get(1) end
-
-	if B.Type == "any" then return true end
-
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
-
-	if B.Type ~= "string" then return type_errors.type_mismatch(A, B) end
-
-	if A:IsLiteralArgument() and B:IsLiteralArgument() then return true end
-
-	if B:IsLiteralArgument() and not A:IsLiteral() then
-		return type_errors.subset(A, B)
-	end
-
-	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then -- "A" subsetof "B"
-		return true
-	end
-
-	if A:IsLiteral() and not B:IsLiteral() then -- "A" subsetof string
-		return true
-	end
-
-	if not A:IsLiteral() and not B:IsLiteral() then -- string subsetof string
-		return true
-	end
-
-	if B.PatternContract then
-		local str = A:GetData()
-
-		if not str then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
-			return type_errors.literal(A)
-		end
-
-		if not str:find(B.PatternContract) then
-			return type_errors.string_pattern(A, B)
-		end
-
-		return true
-	end
-
-	if A:IsLiteral() and B:IsLiteral() then
-		return type_errors.value_mismatch(A, B)
-	end
-
-	return type_errors.subset(A, B)
-end
-
-function META:__tostring()
-	if self.PatternContract then return "$\"" .. self.PatternContract .. "\"" end
-
-	if self:IsLiteral() then
-		local str = self:GetData()
-
-		if str then return "\"" .. str .. "\"" end
-	end
-
-	if self:IsLiteralArgument() then return "literal string" end
-
-	return "string"
-end
-
-function META.LogicalComparison(a, b, op)
-	if op == ">" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() > b:GetData() end
-
-		return nil
-	elseif op == "<" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() < b:GetData() end
-
-		return nil
-	elseif op == "<=" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() <= b:GetData() end
-
-		return nil
-	elseif op == ">=" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() >= b:GetData() end
-
-		return nil
-	elseif op == "==" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
-
-		return nil
-	end
-
-	return type_errors.binary(op, a, b)
-end
-
-function META:IsFalsy()
-	return false
-end
-
-function META:IsTruthy()
-	return true
-end
-
-function META:PrefixOperator(op)
-	if op == "#" then
-		local str = self:GetData()
-		return Number(str and #str or nil):SetLiteral(self:IsLiteral())
-	end
-end
-
-function META.New(data)
-	local self = setmetatable(
-		{
-			Data = data,
-			Falsy = false,
-			Truthy = true,
-			Literal = false,
-			LiteralArgument = false,
-			ReferenceArgument = false,
-		},
-		META
-	)
-	-- analyzer might be nil when strings are made outside of the analyzer, like during tests
-	local analyzer = context:GetCurrentAnalyzer()
-
-	if analyzer then
-		self:SetMetaTable(analyzer:GetDefaultEnvironment("typesystem").string_metatable)
-	end
-
-	return self
-end
-
-return {
-	String = META.New,
-	LString = function(num)
-		return META.New(num):SetLiteral(true)
-	end,
-	LStringNoMeta = function(data)
-		return setmetatable(
-			{
-				Data = data,
-				Falsy = false,
-				Truthy = true,
-				Literal = false,
-				LiteralArgument = false,
-				ReferenceArgument = false,
-			},
-			META
-		):SetLiteral(true)
-	end,
-	NodeToString = function(node, is_local)
-		return META.New(node.value.value):SetLiteral(true)
-	end,
-} end)(...) return __M end end
 IMPORTS['nattlua/definitions/lua/globals.nlua'] = function() 
 
 
@@ -3647,6 +4218,8 @@ function _G.LSX(
 	return e
 end end
 IMPORTS['nattlua/definitions/lua/io.nlua'] = function() 
+
+
 
 
 
@@ -3770,6 +4343,10 @@ IMPORTS['nattlua/definitions/lua/string.nlua'] = function()
 
  end
 IMPORTS['nattlua/definitions/lua/math.nlua'] = function() 
+
+
+
+
 
 
 
@@ -13599,550 +14176,6 @@ function META:ParseNode()
 end
 
 return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.any"] = function(...) __M = __M or (function(...) local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
-
-
-
-META.Type = "any"
-
-function META:Get(key)
-	return self
-end
-
-function META:Set(key, val)
-	return true
-end
-
-function META:Copy()
-	return self
-end
-
-function META.IsSubsetOf(A, B)
-	return true
-end
-
-function META:__tostring()
-	return "any"
-end
-
-function META:IsFalsy()
-	return true
-end
-
-function META:IsTruthy()
-	return true
-end
-
-function META.Equal(a, b)
-	return a.Type == b.Type
-end
-
-function META.LogicalComparison(l, r, op)
-	if op == "==" then return true -- TODO: should be nil (true | false)?
-	end
-
-	return type_errors.binary(op, l, r)
-end
-
-return {
-	Any = function()
-		return META.New()
-	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.tuple"] = function(...) __M = __M or (function(...) local tostring = tostring
-local table = _G.table
-local math = math
-local assert = assert
-local debug = debug
-local error = error
-local setmetatable = _G.setmetatable
-local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
-local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
-local ipairs = _G.ipairs
-local type = _G.type
-local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
-
-
-
-
-
-
-META:GetSet("Data", nil)
-META.Type = "tuple"
-META:GetSet("Unpackable", false)
-
-function META.Equal(a, b)
-	if a.Type ~= b.Type then return false end
-
-	if a.suppress then return true end
-
-	if #a.Data ~= #b.Data then return false end
-
-	for i = 1, #a.Data do
-		local val = a.Data[i]
-		a.suppress = true
-		local ok = val:Equal(b.Data[i])
-		a.suppress = false
-
-		if not ok then return false end
-	end
-
-	return true
-end
-
-function META:__tostring()
-	if self.suppress then return "current_tuple" end
-
-	self.suppress = true
-	local strings = {}
-
-	for i, v in ipairs(self:GetData()) do
-		strings[i] = tostring(v)
-	end
-
-	if self.Remainder then table.insert(strings, tostring(self.Remainder)) end
-
-	local s = "("
-
-	if #strings == 1 and strings[1] then
-		s = s .. strings[1] .. ","
-	else
-		s = s .. table.concat(strings, ", ")
-	end
-
-	s = s .. ")"
-
-	if self.Repeat then s = s .. "*" .. tostring(self.Repeat) end
-
-	self.suppress = false
-	return s
-end
-
-function META:Merge(tup)
-	local src = self:GetData()
-
-	for i = 1, tup:GetMinimumLength() do
-		local a = self:Get(i)
-		local b = tup:Get(i)
-
-		if a then src[i] = Union({a, b}) elseif b then src[i] = b:Copy() end
-	end
-
-	self.Remainder = tup.Remainder or self.Remainder
-	self.Repeat = tup.Repeat or self.Repeat
-	return self
-end
-
-function META:Copy(map, copy_tables)
-	map = map or {}
-	local copy = self.New({})
-	map[self] = map[self] or copy
-
-	for i, v in ipairs(self:GetData()) do
-		v = map[v] or v:Copy(map, copy_tables)
-		map[v] = map[v] or v
-		copy:Set(i, v)
-	end
-
-	if self.Remainder then copy.Remainder = self.Remainder:Copy(nil, copy_tables) end
-
-	copy.Repeat = self.Repeat
-	copy.Unpackable = self.Unpackable
-	copy:CopyInternalsFrom(self)
-	return copy
-end
-
-function META.IsSubsetOf(A, B, max_length)
-	if A == B then return true end
-
-	if A.suppress then return true end
-
-	if A.Remainder then
-		local t = A:Get(1)
-
-		if t and t.Type == "any" and #A:GetData() == 0 then return true end
-	end
-
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
-
-	do
-		local t = A:Get(1)
-
-		if t and t.Type == "any" and B.Type == "tuple" and B:GetLength() == 0 then
-			return true
-		end
-	end
-
-	if B.Type == "any" then return true end
-
-	if B.Type == "table" then
-		if not B:IsNumericallyIndexed() then
-			return type_errors.numerically_indexed(B)
-		end
-	end
-
-	if B.Type ~= "tuple" then return type_errors.type_mismatch(A, B) end
-
-	max_length = max_length or math.max(A:GetMinimumLength(), B:GetMinimumLength())
-
-	for i = 1, max_length do
-		local a, err = A:Get(i)
-
-		if not a then return type_errors.subset(A, B, err) end
-
-		local b, err = B:Get(i)
-
-		if not b and a.Type == "any" then break end
-
-		if not b then return type_errors.missing(B, i, err) end
-
-		A.suppress = true
-		local ok, reason = a:IsSubsetOf(b)
-		A.suppress = false
-
-		if not ok then return type_errors.subset(a, b, reason) end
-	end
-
-	return true
-end
-
-function META.IsSubsetOfTupleWithoutExpansion(A, B)
-	for i, a in ipairs(A:GetData()) do
-		local b = B:GetWithoutExpansion(i)
-		local ok, err = a:IsSubsetOf(b)
-
-		if ok then return ok, err, a, b, i end
-	end
-
-	return true
-end
-
-function META.IsSubsetOfTuple(A, B)
-	if A:Equal(B) then return true end
-
-	for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
-		local a, a_err = A:Get(i)
-		local b, b_err = B:Get(i)
-
-		if b and b.Type == "union" then b, b_err = b:GetAtIndex(i) end
-
-		if not a then
-			if b and b.Type == "any" then
-				a = Any()
-			else
-				return a, a_err, a or Nil(), b, i
-			end
-		end
-
-		if not b then return b, b_err, a or Nil(), b, i end
-
-		if b.Type == "tuple" then
-			b = b:Get(1)
-
-			if not b then break end
-		end
-
-		a = a or Nil()
-		b = b or Nil()
-		local ok, reason = a:IsSubsetOf(b)
-
-		if not ok then return ok, reason, a, b, i end
-	end
-
-	return true
-end
-
-function META:HasTuples()
-	for _, v in ipairs(self.Data) do
-		if v.Type == "tuple" then return true end
-	end
-
-	if self.Remainder and self.Remainder.Type == "tuple" then return true end
-
-	return false
-end
-
-function META:GetWithNumber(i)
-	local val = self:GetData()[i]
-
-	if not val and self.Repeat and i <= (#self:GetData() * self.Repeat) then
-		return self:GetData()[((i - 1) % #self:GetData()) + 1]
-	end
-
-	if not val and self.Remainder then
-		return self.Remainder:Get(i - #self:GetData())
-	end
-
-	if not val then
-		local last = self:GetData()[#self:GetData()]
-
-		if last and last.Type == "tuple" and (last.Repeat or last.Remainder) then
-			return last:Get(i)
-		end
-	end
-
-	if not val then
-		return type_errors.other({"index ", tostring(i), " does not exist"})
-	end
-
-	return val
-end
-
-function META:Get(key)
-	if type(key) == "number" then return self:GetWithNumber(key) end
-
-	assert(key.Type == "number")
-
-	if key:IsLiteral() then return self:GetWithNumber(key:GetData()) end
-end
-
-function META:GetWithoutExpansion(i)
-	local val = self:GetData()[i]
-
-	if not val then if self.Remainder then return self.Remainder end end
-
-	if not val then return type_errors.other({"index ", i, " does not exist"}) end
-
-	return val
-end
-
-function META:Set(i, val)
-	if type(i) == "table" then
-		i = i:GetData()
-		return false, "expected number"
-	end
-
-	if val.Type == "tuple" and val:GetLength() == 1 then val = val:Get(1) end
-
-	self.Data[i] = val
-
-	if i > 32 then error("tuple too long", 2) end
-
-	return true
-end
-
-function META:IsEmpty()
-	-- never called
-	return self:GetLength() == 0
-end
-
-function META:IsTruthy()
-	local obj = self:Get(1)
-
-	if obj then return obj:IsTruthy() end
-
-	return false
-end
-
-function META:IsFalsy()
-	local obj = self:Get(1)
-
-	if obj then return obj:IsFalsy() end
-
-	return false
-end
-
-function META:GetLength()
-	if false then
-		-- TODO: recursion
-		return nil
-	end
-
-	if self.Remainder then return #self:GetData() + self.Remainder:GetLength() end
-
-	if self.Repeat then return #self:GetData() * self.Repeat end
-
-	return #self:GetData()
-end
-
-function META:GetMinimumLength()
-	if self.Repeat == math.huge or self.Repeat == 0 then return 0 end
-
-	local len = #self:GetData()
-	local found_nil = false
-
-	for i = #self:GetData(), 1, -1 do
-		local obj = self:GetData()[i]
-
-		if
-			(
-				obj.Type == "union" and
-				obj:CanBeNil()
-			) or
-			(
-				obj.Type == "symbol" and
-				obj:GetData() == nil
-			)
-		then
-			found_nil = true
-			len = i - 1
-		elseif found_nil then
-			len = i
-
-			break
-		end
-	end
-
-	return len
-end
-
-function META:GetSafeLength(arguments)
-	local len = self:GetLength()
-
-	if len == math.huge or arguments:GetLength() == math.huge then
-		return math.max(self:GetMinimumLength(), arguments:GetMinimumLength())
-	end
-
-	return len
-end
-
-function META:AddRemainder(obj)
-	self.Remainder = obj
-	return self
-end
-
-function META:SetRepeat(amt)
-	self.Repeat = amt
-	return self
-end
-
-function META:Unpack(length)
-	length = length or self:GetLength()
-	length = math.min(length, self:GetLength())
-	assert(length ~= math.huge, "length must be finite")
-	local out = {}
-	local i = 1
-
-	for _ = 1, length do
-		out[i] = self:Get(i)
-		i = i + 1
-	end
-
-	return table.unpack(out)
-end
-
-function META:UnpackWithoutExpansion()
-	local tbl = {table.unpack(self.Data)}
-
-	if self.Remainder then table.insert(tbl, self.Remainder) end
-
-	return table.unpack(tbl)
-end
-
-function META:Slice(start, stop)
-	-- TODO: not accurate yet
-	start = start or 1
-	stop = stop or #self:GetData()
-	local copy = self:Copy()
-	local data = {}
-
-	for i = start, stop do
-		table.insert(data, (self:GetData())[i])
-	end
-
-	copy:SetData(data)
-	return copy
-end
-
-function META:GetFirstValue()
-	if self.Remainder then return self.Remainder:GetFirstValue() end
-
-	local first, err = self:Get(1)
-
-	if not first then return first, err end
-
-	if first.Type == "tuple" then return first:GetFirstValue() end
-
-	return first
-end
-
-function META:Concat(tup)
-	local start = self:GetLength()
-
-	for i, v in ipairs(tup:GetData()) do
-		self:Set(start + i, v)
-	end
-
-	return self
-end
-
-function META:SetTable(data)
-	self.Data = {}
-
-	for i, v in ipairs(data) do
-		if
-			i == #data and
-			v.Type == "tuple" and
-			not (
-				v
-			).Remainder and
-			v ~= self
-		then
-			self:AddRemainder(v)
-		else
-			table.insert(self.Data, v)
-		end
-	end
-end
-
-function META.New(data)
-	local self = setmetatable(
-		{
-			Data = {},
-			Falsy = false,
-			Truthy = false,
-			Literal = false,
-			LiteralArgument = false,
-			ReferenceArgument = false,
-			Unpackable = false,
-			suppress = false,
-		},
-		META
-	)
-
-	if data then self:SetTable(data) end
-
-	return self
-end
-
-return {
-	Tuple = META.New,
-	VarArg = function(t)
-		local self = META.New({t})
-		self:SetRepeat(math.huge)
-		return self
-	end,
-	NormalizeTuples = function(types)
-		local arguments
-
-		if #types == 1 and types[1] and types[1].Type == "tuple" then
-			arguments = types[1]
-		else
-			local temp = {}
-
-			for i, v in ipairs(types) do
-				if v.Type == "tuple" then
-					if i == #types then
-						table.insert(temp, v)
-					else
-						local obj = v:Get(1)
-
-						if obj then table.insert(temp, obj) end
-					end
-				else
-					table.insert(temp, v)
-				end
-			end
-
-			arguments = META.New(temp)
-		end
-
-		return arguments
-	end,
-} end)(...) return __M end end
 do local __M; IMPORTS["nattlua.types.function"] = function(...) __M = __M or (function(...) local tostring = _G.tostring
 local ipairs = _G.ipairs
 local setmetatable = _G.setmetatable
@@ -15979,7 +16012,12 @@ return function(META)
 			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
 			self.call_stack = self.call_stack or {}
 
-			if self:IsRuntime() and call_node and not not_recursive_call then
+			if
+				self:IsRuntime() and
+				call_node and
+				not not_recursive_call and
+				not obj:IsRefFunction()
+			then
 				for _, v in ipairs(self.call_stack) do
 					-- if the callnode is the same, we're doing some infinite recursion
 					if v.call_node == call_node then
@@ -20598,7 +20636,7 @@ return {
 				self:ClearBreak()
 			end
 
-			if i == 1000 then self:Error("too many iterations") end
+			if i == (self.max_iterations or 1000) then self:Error("too many iterations") end
 
 			table.insert(values:GetData(), 1, args[1])
 			args = values:GetData()
@@ -23484,6 +23522,16 @@ analyzer function io.type(obj: any)
 
 	flags:AddType(types.Nil())
 	return flags
+end
+
+analyzer function io.write(...: ...string)
+	for i, v in ipairs({...}) do
+		if not v:IsLiteral() then return end
+	end
+
+	for i, v in ipairs({...}) do
+		io.write(v:GetData())
+	end
 end end
 IMPORTS['nattlua/definitions/lua/luajit.nlua'] = function() type ffi = {
 	errno = function=(nil | number)>(number),
@@ -24215,6 +24263,22 @@ analyzer function math.max(...: ...number)
 	end
 
 	return math.max(table.unpack(numbers))
+end
+
+analyzer function math.random(n: nil | number, m: nil | number)
+	if not analyzer.enable_random_functions then return types.Number() end
+
+	if n and m then return math.random(n:GetData(), m:GetData()) end
+
+	if n then return math.random(n and n:GetData()) end
+
+	return math.random()
+end
+
+analyzer function math.randomseed(n: number)
+	if not analyzer.enable_random_functions then return end
+
+	return math.randomseed(n:GetData())
 end end
 IMPORTS['nattlua/definitions/lua/os.nlua'] = function() type os = {
 	execute = function=(command: string)>(boolean | nil, string, number | nil) | function=()>(boolean | nil, string, number | nil),
