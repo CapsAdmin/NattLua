@@ -583,7 +583,7 @@ end
 
 function META:Get(key--[[#: BaseType]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
-		local val = self["Get" .. key:GetData():sub(2)](self)
+		local val = assert(self["Get" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self)
 
 		if not val then
 			return type_errors.other("missing value on table " .. key:GetData())
