@@ -6,8 +6,11 @@ local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Number = require("nattlua.types.number").Number
 local LNumber = require("nattlua.types.number").LNumber
+local LString = require("nattlua.types.string").LString
+local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
+local context = require("nattlua.analyzer.context")
 --[[#local type BaseType = import("~/nattlua/types/base.lua")]]
 META.Type = "table"
 --[[#type META.@Name = "TTable"]]
@@ -102,6 +105,19 @@ function META:__tostring()
 	if self.Name then
 		self.suppress = nil
 		return self.Name:GetData()
+	end
+
+	local meta = self:GetMetaTable()
+
+	if meta then
+		local func = meta:Get(LString("__tostring"))
+
+		if func then
+			local analyzer = context:GetCurrentAnalyzer()
+			local str = analyzer:Call(func, Tuple({self})):GetFirstValue()
+
+			if str and str:IsLiteral() then return str:GetData() end
+		end
 	end
 
 	local s = {}

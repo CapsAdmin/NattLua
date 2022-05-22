@@ -49,6 +49,7 @@ local blacklist = {
 	"examples/benchmarks/temp/10mb%.lua",
 	"examples/projects/luajit/out%.lua",
 	"test/nattlua/analyzer/file_importing/deep_error/.*",
+	"examples/projects/love2d/love%-api/.*",
 }
 
 local function is_blacklisted(path)

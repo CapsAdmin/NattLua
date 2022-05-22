@@ -66,7 +66,7 @@ return {
 				self:ClearBreak()
 			end
 
-			if i == 1000 then self:Error("too many iterations") end
+			if i == (self.max_iterations or 1000) then self:Error("too many iterations") end
 
 			table.insert(values:GetData(), 1, args[1])
 			args = values:GetData()

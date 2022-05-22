@@ -33,3 +33,13 @@ analyzer function io.type(obj: any)
 	flags:AddType(types.Nil())
 	return flags
 end
+
+analyzer function io.write(...: ...string)
+	for i, v in ipairs({...}) do
+		if not v:IsLiteral() then return end
+	end
+
+	for i, v in ipairs({...}) do
+		io.write(v:GetData())
+	end
+end

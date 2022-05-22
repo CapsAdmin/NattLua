@@ -91,3 +91,19 @@ analyzer function math.max(...: ...number)
 
 	return math.max(table.unpack(numbers))
 end
+
+analyzer function math.random(n: nil | number, m: nil | number)
+	if not analyzer.enable_random_functions then return types.Number() end
+
+	if n and m then return math.random(n:GetData(), m:GetData()) end
+
+	if n then return math.random(n and n:GetData()) end
+
+	return math.random()
+end
+
+analyzer function math.randomseed(n: number)
+	if not analyzer.enable_random_functions then return end
+
+	return math.randomseed(n:GetData())
+end

@@ -241,7 +241,12 @@ return function(META)
 			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
 			self.call_stack = self.call_stack or {}
 
-			if self:IsRuntime() and call_node and not not_recursive_call then
+			if
+				self:IsRuntime() and
+				call_node and
+				not not_recursive_call and
+				not obj:IsRefFunction()
+			then
 				for _, v in ipairs(self.call_stack) do
 					-- if the callnode is the same, we're doing some infinite recursion
 					if v.call_node == call_node then
