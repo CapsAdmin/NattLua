@@ -87,7 +87,10 @@ local function run_nattlua(path)
 		io.write(res, "\n")
 		io.write("=================\n")
 	end
---assert(load(res))()
+
+	if lua_code:find("%-%-%s-RUN_CODE") then
+		assert(load(res))()
+	end
 end
 
 local function has_test_focus()
