@@ -1,87 +1,39 @@
 os.execute(
 	"git clone git@github.com:love2d-community/love-api.git examples/projects/love2d/love-api"
 )
-local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
-local tprint = require("nattlua.other.table_print")
-local util = require("examples.util")
-local LString = require("nattlua.types.string").LString
-local nl = require("nattlua")
 
-function string.split(self, separator, plain_search)
+local love_api = require("love-api.love_api")
+
+local function string_split(str, separator, plain_search)
 	if plain_search == nil then plain_search = true end
 
 	local tbl = {}
 	local current_pos = 1
 
-	for i = 1, #self do
-		local start_pos, end_pos = self:find(separator, current_pos, plain_search)
+	for i = 1, #str do
+		local start_pos, end_pos = str:find(separator, current_pos, plain_search)
 
 		if not start_pos then break end
 
-		tbl[i] = self:sub(current_pos, start_pos - 1)
+		tbl[i] = str:sub(current_pos, start_pos - 1)
 		current_pos = end_pos + 1
 	end
 
 	if current_pos > 1 then
-		tbl[#tbl + 1] = self:sub(current_pos)
+		tbl[#tbl + 1] = str:sub(current_pos)
 	else
-		tbl[1] = self
+		tbl[1] = str
 	end
 
 	return tbl
 end
 
-local wiki_json = require("examples.projects.love2d.love-api.love_api")
--- used for referencing existing types, like if we already have math.pi defined, don't add it
-local _, base_env = BuildBaseEnvironment()
 -- i prefix all types with I to avoid conflicts when defining functions like Entity(entindex) in the typesystem
-local TypeMap = {}
 local code = {}
 local i = 1
 local e = function(str)
 	code[i] = str
 	i = i + 1
-end
-local t = 0
-
-local function indent()
-	e(string.rep("\t", t))
-end
-
-local function sort(a, b)
-	return a.key > b.key
-end
-
-local function to_list(map)
-	local list = {}
-
-	for k, v in pairs(map) do
-		table.insert(list, {key = k, val = v})
-	end
-
-	table.sort(list, sort)
-	return list
-end
-
-local function spairs(map)
-	local list = to_list(map)
-	local i = 0
-	return function()
-		i = i + 1
-
-		if not list[i] then return end
-
-		return list[i].key, list[i].val
-	end
-end
-
-local function emit_description(desc)
-	desc = desc:gsub("\n", function()
-		return "\n" .. ("\t"):rep(t)
-	end)
-	e("\n")
-	indent()
-	e("--[[ " .. desc .. " ]]\n")
 end
 
 e("local type love = {}\n")
@@ -112,9 +64,9 @@ function emit_type(t)
 		e("(Table | string)")
 	elseif t.name == "..." then
 		e("...")
-		emit_type({type = t.type})
+		emit_type({ type = t.type })
 	elseif t.type:find(" or ", nil, true) then
-		local tbl = t.type:split(" or ")
+		local tbl = string_split(t.type, " or ")
 
 		for i, v in ipairs(tbl) do
 			emit_type({
@@ -123,8 +75,7 @@ function emit_type(t)
 
 			if i ~= #tbl then e(" | ") end
 		end
-	elseif
-		t.type == "number" or
+	elseif t.type == "number" or
 		t.type == "string" or
 		t.type == "boolean" or
 		t.type == "nil" or
@@ -240,7 +191,7 @@ local function emit_enum(info)
 end
 
 do
-	for _, module in ipairs(wiki_json.modules) do
+	for _, module in ipairs(love_api.modules) do
 		for _, info in ipairs(module.enums) do
 			emit_enum(info)
 		end
@@ -248,21 +199,21 @@ do
 end
 
 do
-	for _, info in ipairs(wiki_json.types) do
+	for _, info in ipairs(love_api.types) do
 		emit_type_declaration(info)
 	end
 
-	for _, module in ipairs(wiki_json.modules) do
+	for _, module in ipairs(love_api.modules) do
 		for _, info in ipairs(module.types) do
 			emit_type_declaration(info)
 		end
 	end
 
-	for _, info in ipairs(wiki_json.types) do
+	for _, info in ipairs(love_api.types) do
 		emit_type_body(info)
 	end
 
-	for _, module in ipairs(wiki_json.modules) do
+	for _, module in ipairs(love_api.modules) do
 		for _, info in ipairs(module.types) do
 			emit_type_body(info)
 		end
@@ -270,19 +221,19 @@ do
 end
 
 do
-	for _, info in ipairs(wiki_json.functions) do
+	for _, info in ipairs(love_api.functions) do
 		e("type love." .. info.name .. " = ")
 		emit_function(info)
 		e("\n")
 	end
 
-	for _, info in ipairs(wiki_json.callbacks) do
+	for _, info in ipairs(love_api.callbacks) do
 		e("type love." .. info.name .. " = ")
 		emit_function(info)
 		e("\n")
 	end
 
-	for _, module in ipairs(wiki_json.modules) do
+	for _, module in ipairs(love_api.modules) do
 		e("type love." .. module.name .. " = {}")
 		e("\n")
 
@@ -305,7 +256,6 @@ e([[type love.@MetaTable = {
 e("return love")
 code = table.concat(code)
 -- pixvis and "sensor is never defined on the wiki as a class
-local f = io.open("examples/projects/love2d/game/love_api.nlua", "w")
+local f = io.open("src/love_api.nlua", "w")
 f:write(code)
 f:close()
-nl.Compiler(code):Analyze()

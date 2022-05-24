@@ -1,11 +1,11 @@
 local nl = require("nattlua")
---require("examples.projects.love2d.build_love_api")
-local working_directory = "examples/projects/love2d/"
+
 local compiler = assert(
 	nl.File(
-		working_directory .. "game/main.nlua",
+		"src/main.nlua",
 		{
-			working_directory = working_directory,
+			working_directory = "src/",
+			inline_require = true,
 		}
 	)
 )
@@ -20,15 +20,14 @@ local code = compiler:Emit(
 		type_annotations = true,
 		force_parenthesis = true,
 		extra_indent = {
-			Start = {to = "Stop"},
+			Start = { to = "Stop" },
 			Toggle = "toggle",
 		},
 	}
 )
-local f = assert(io.open(working_directory .. "out/main.lua", "w"))
+local f = assert(io.open("dist/main.lua", "w"))
 f:write(code)
 f:close()
 
 -- parse afterwards so hotreload is faster
 compiler:Analyze()
---os.execute("love " .. working_directory .. "out/")

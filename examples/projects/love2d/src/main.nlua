@@ -1,32 +1,38 @@
--- this computes the maze and the flowfield in the typesystem
--- this is overkill but it's a good example of how flexible the typesystem is
--- it will ensure complete soundness of the whole program
--- you can test this by changing x and y offsets and it should complain about accessing nil values
--- you can also print<|grid|> to see what's generated at analyze time
--- the Maze type also has a __tostring method which should show up in intellesnse of what the grid looks like
 §analyzer.max_iterations = 10000
-
 §analyzer.enable_random_functions = true
 
-local type love = import("./love_api.nlua")
+-- declare love as global so it will be available for all the other imports
+type love = import("./love_api.nlua")
+
+
 local Maze = import("./maze.nlua")
+local Vec2 = import("./vec2.nlua")
+local type Vec2 = Vec2.@Self
+
+local type Node = {
+	pos = Vec2,
+	wall = boolean,
+	goal = nil | boolean,
+	distance = number,
+	visited = boolean,
+}
+
 local maze_width = 13
 local maze_height = 13
 local cell_size = 30
-local grid = {}
+local grid = {} as {[1..maze_height] = {[1..maze_width] = Node}}
 
 do
 	local maze = Maze(maze_width, maze_height)
 	maze:Build(3)
-	local neighbours = {{-1, 0}, {0, -1}, {1, 0}, {0, 1}}
+	local neighbours = {Vec2(-1, 0), Vec2(0, -1), Vec2(1, 0), Vec2(0, 1)}
 
-	local function get_neighbours(x: ref number, y: ref number)
+	local function get_neighbours(pos: Vec2)
 		local tbl = {}
 
 		for _, xy in ipairs(neighbours) do
-			local x = xy[1] + x
-			local y = xy[2] + y
-			local found = grid[y] and grid[y][x]
+			local offset = xy + pos
+			local found = grid[offset.y] and grid[offset.y][offset.x]
 
 			if found then table.insert(tbl, found) end
 		end
@@ -34,27 +40,22 @@ do
 		return tbl
 	end
 
-	local function normalize_vector(x: number, y: number)
-		local length = math.sqrt(x * x + y * y)
-
-		if length == 0 then return 0, 0 end
-
-		return x / length, y / length
-	end
-
-	local stop
+	local stop: Node
 
 	for y = 1, maze.height do
 		grid[y] = grid[y] or {}
 
 		for x = 1, maze.width do
 			local state = {
-				x = x,
-				y = y,
+				pos = Vec2(x, y),
 				wall = maze:Get(x - 1, y - 1) == 1,
 			}
 
-			if x == maze.width and y == maze.height - 2 then
+			if x > 1 and y > 5 and x < 10 and y < 8 then
+				state.wall = false
+			end
+
+			if x == maze.width and y == maze.height then
 				stop = state
 				stop.goal = true
 			end
@@ -68,14 +69,14 @@ do
 
 	for _, node in ipairs(to_visit) do
 		if node.wall then
-			node.distance = 100
+			node.distance = 100000
 			node.visited = true
 		else
 			if node.distance then
-				local neighbours = get_neighbours(node.x, node.y)
+				local neighbours = get_neighbours(node.pos)
 
 				for _, n in ipairs(neighbours) do
-					if not n.visited and not n.wall then
+					if not n.visited then
 						n.visited = true
 						n.distance = node.distance + 1
 						table.insert(to_visit, n)
@@ -90,24 +91,17 @@ do
 			local center = grid[y][x]
 
 			if not center.wall then
-				local neighbours = get_neighbours(center.x, center.y)
-				local x = 0
-				local y = 0
+				local neighbours = get_neighbours(center.pos)
+				local pos = Vec2(0, 0)
 
 				for _, n in ipairs(neighbours) do
-					if n.distance and center.distance then
-						local xx, yy = n.x - center.x, n.y - center.y
-						local dist = center.distance - n.distance
-						x = x + xx * dist
-						y = y + yy * dist
+					if n.distance and center.distance and not n.wall then
+						local dir = n.pos - center.pos
+						pos = pos + (dir * (center.distance - n.distance))
 					end
 				end
 
-				local xx, yy = normalize_vector(x, y)
-				center.direction = {
-					x = xx,
-					y = yy,
-				}
+				center.direction = pos:GetNormalized()
 			end
 		end
 	end
@@ -124,17 +118,24 @@ local function draw_arrow(x1: number, y1: number, x2: number, y2: number, arrlen
 	love.graphics.line(x2, y2, x2 + arrlen * math.cos(a - angle), y2 + arrlen * math.sin(a - angle))
 end
 
+local function cell2pix(pos: Vec2)
+	local x = (pos.x - 1) * cell_size
+	local y = (pos.y - 1) * cell_size
+	return Vec2(x, y)
+end
+
+
 function love.draw()
 	for y = 1, #grid do
 		for x = 1, #grid[y] do
 			local state = grid[y][x]
 
 			if state.wall then
-				love.graphics.setColor(1, 1, 1)
+				love.graphics.setColor(1, 1, 1, 1)
 			elseif state.goal then
-				love.graphics.setColor(0, 1, 0)
+				love.graphics.setColor(0, 1, 0, 1)
 			else
-				love.graphics.setColor(0.1, 0, 0, state.distance and 10 / state.distance or 1)
+				love.graphics.setColor(1, 0, 0, state.distance and 10 / state.distance or 1)
 			end
 
 			local px = (x - 1) * cell_size
@@ -146,21 +147,26 @@ function love.draw()
 
 	for y = 1, #grid do
 		for x = 1, #grid[y] do
-			local state = grid[y][x]
-			local px = (x - 1) * cell_size
-			local py = (y - 1) * cell_size
-
-			if state.direction then
+			local cell = grid[y][x]
+			local dir = cell.direction
+			if dir then
 				local s = cell_size / 2
-				local dx = state.direction.x
-				local dy = state.direction.y
+				local pixel_pos = cell2pix(cell.pos)
+				
+				local start = pixel_pos - dir * s/2
+				local stop = pixel_pos + dir * s/2
+				
+				-- center the arrow
+				start = start + Vec2(s, s)
+				stop = stop + Vec2(s, s)
+
 				love.graphics.setColor(0.5, 0.5, 0.5, 1)
 				draw_arrow(
-					px + s - dx * s,
-					py + s - dy * s,
-					px + s + dx * s,
-					py + s + dy * s,
-					cell_size / 8,
+					start.x,
+					start.y,
+					stop.x,
+					stop.y,
+					cell_size / 10,
 					math.pi / 4
 				)
 			end
@@ -168,5 +174,13 @@ function love.draw()
 	end
 end
 
-local lick = (require as any)("lick")
-lick.reset = true
+
+_G.hot_reload_last_modified = os.time() + 1
+function love.update()
+	local info = love.filesystem.getInfo("main.lua")
+	if info and _G.hot_reload_last_modified < info.modtime then
+		£ parser.dont_hoist_next_import = true
+		assert(love.filesystem.load("main.lua"))()
+		print("RELOAD")
+	end
+end

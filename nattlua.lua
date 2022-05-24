@@ -78,7 +78,16 @@ elseif cmd == "build" then
 		f:write(compiler:Emit())
 		f:close()
 	else
-		assert(loadfile("./nlconfig.lua"))(unpack(ARGS))
+		if _G.IMPORTS then
+			for k,v in pairs(IMPORTS) do
+				if not k:find("/") then
+					package.preload[k] = v
+				end
+			end
+			package.preload.nattlua = package.preload["nattlua.init"]
+		end
+
+		assert(_G["load".."file"]("./nlconfig.lua"))(unpack(ARGS))
 	end
 end
 

@@ -23254,8 +23254,27 @@ analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...a
 	return true, tuple
 end
 
-analyzer function xpcall(callable: any, error_cb: any, ...: ...any)
-	return analyzer:Assert(callable:Call(callable, types.Tuple(...), node))
+analyzer function xpcall(callable: literal Function, error_cb: function=(any)>(), ...: ...any): (boolean, ...any)
+	local diagnostics_index = #analyzer:GetDiagnostics()
+	analyzer:PushProtectedCall()
+	local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
+	analyzer:PopProtectedCall()
+	local diagnostics = analyzer:GetDiagnostics()
+
+	do
+		local errors = {}
+
+		for i = math.max(diagnostics_index, 1), #diagnostics do
+			local d = diagnostics[i]
+
+			if d.severity == "error" then
+				analyzer:Assert(analyzer:Call(callable, types.Union({types.LString(d.msg)})))
+				return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
+			end
+		end
+	end
+
+	return true, tuple
 end
 
 analyzer function select(index: 1 .. inf | "#", ...: ...any)
@@ -24774,7 +24793,15 @@ elseif cmd == "build" then
 		f:write(compiler:Emit())
 		f:close()
 	else
-		assert(IMPORTS['./nlconfig.lua'])(unpack(ARGS))
+		if _G.IMPORTS then
+			for k, v in pairs(IMPORTS) do
+				if not k:find("/") then package.preload[k] = v end
+			end
+
+			package.preload.nattlua = package.preload["nattlua.init"]
+		end
+
+		assert(_G["load" .. "file"]("./nlconfig.lua"))(unpack(ARGS))
 	end
 end
 
