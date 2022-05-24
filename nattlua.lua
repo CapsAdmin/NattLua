@@ -56,4 +56,30 @@ if _G.gmod then
 	end
 end
 
+local ARGS = _G.ARGS or {...}
+local cmd = ARGS[1]
+
+if cmd == "run" then
+	local path = assert(unpack(ARGS, 2))
+	local compiler = assert(m.File(path))
+	compiler:Analyze()
+	assert(loadstring(compiler:Emit(), "@" .. path))(unpack(ARGS, 3))
+elseif cmd == "check" then
+	local path = assert(unpack(ARGS, 2))
+	local compiler = assert(m.File(path))
+	assert(compiler:Analyze())
+elseif cmd == "build" then
+	if unpack(ARGS, 2) then
+		local path_from = assert(unpack(ARGS, 2))
+		local compiler = assert(m.File(path_from))
+
+		local path_to = assert(unpack(ARGS, 3))
+		local f = assert(io.open(path_to, "w"))
+		f:write(compiler:Emit())
+		f:close()
+	else
+		assert(loadfile("./nlconfig.lua"))(unpack(ARGS))
+	end
+end
+
 return m

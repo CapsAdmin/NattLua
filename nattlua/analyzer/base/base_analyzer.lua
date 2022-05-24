@@ -177,12 +177,12 @@ return function(META)
 		local locals = ""
 		locals = locals .. "local bit=bit32 or _G.bit;"
 
-		if _G.BUNDLE then
-			locals = locals .. "local nl=IMPORTS[\"nattlua\"]();"
+		if BUNDLE then
+			locals = locals .. "local nl=IMPORTS[\"nattlua.init\"]();"
 			locals = locals .. "local types=IMPORTS[\"nattlua.types.types\"]();"
 			locals = locals .. "local context=IMPORTS[\"nattlua.analyzer.context\"]();"
 		else
-			locals = locals .. "local nl=require(\"nattlua\");"
+			locals = locals .. "local nl=require(\"nattlua.init\");"
 			locals = locals .. "local types=require(\"nattlua.types.types\");"
 			locals = locals .. "local context=require(\"nattlua.analyzer.context\");"
 		end
@@ -237,7 +237,7 @@ return function(META)
 		end
 
 		local runtime_injection = [[
-			local analyzer = context:GetCurrentAnalyzer()
+			local analyzer = assert(context:GetCurrentAnalyzer(), "no analyzer in context")
 			local env = analyzer:GetScopeHelper(analyzer.function_scope)
 		]]
 		runtime_injection = runtime_injection:gsub("\n", ";")
@@ -284,6 +284,7 @@ return function(META)
 
 				print("===============>=================")
 				self:FatalError(err)
+				return false, err
 			end
 
 			return func

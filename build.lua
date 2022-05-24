@@ -3,8 +3,11 @@ local nl = require("nattlua")
 local entry = "./nattlua.lua"
 io.write("parsing " .. entry)
 local c = assert(
-	nl.File(
-		entry,
+	nl.Compiler([[
+		_G.ARGS = {...}
+		return require("nattlua")
+	]],
+	"nattlua",
 		{
 			type_annotations = false,
 			inline_require = true,
@@ -74,8 +77,10 @@ if args ~= "fast" then
 end
 
 io.write("writing build_output.lua")
-local f = io.open("build_output.lua", "w")
-f:write(lua_code)
+local f = assert(io.open("build_output.lua", "w"))
+local shebang = "#!/usr/local/bin/luajit\n"
+f:write(shebang .. lua_code)
 f:close()
+os.execute("chmod +x ./build_output.lua")
 io.write(" - OK\n")
 os.remove("temp_build_output.lua")

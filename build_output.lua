@@ -1,3 +1,4 @@
+#!/usr/local/bin/luajit
 local BUNDLE = true
 _G.IMPORTS = _G.IMPORTS or {}
 IMPORTS['nattlua/definitions/utility.nlua'] = function() 
@@ -107,324 +108,6 @@ return function(str, name)
 	end
 
 	return (f)(str, name)
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.other.table_print"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
-local tostring = _G.tostring
-local type = _G.type
-local debug = _G.debug
-local table = _G.table
-local tonumber = _G.tonumber
-local pcall = _G.pcall
-local assert = _G.assert
-local load = _G.load
-local setfenv = _G.setfenv
-local io = _G.io
-local luadata = {}
-local encode_table
-local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
-
-local function count(tbl)
-	local i = 0
-
-	for _ in pairs(tbl) do
-		i = i + 1
-	end
-
-	return i
-end
-
-local tostringx
-
-do
-	local pretty_prints = {}
-	pretty_prints.table = function(t)
-		local str = tostring(t)
-		str = str .. " [" .. count(t) .. " subtables]"
-		-- guessing the location of a library
-		local sources = {}
-
-		for _, v in pairs(t) do
-			if type(v) == "function" then
-				local info = debug.getinfo(v)
-
-				if info then
-					local src = info.source
-					sources[src] = (sources[src] or 0) + 1
-				end
-			end
-		end
-
-		local tmp = {}
-
-		for k, v in pairs(sources) do
-			table.insert(tmp, {k = k, v = v})
-		end
-
-		table.sort(tmp, function(a, b)
-			return a.v > b.v
-		end)
-
-		if #tmp > 0 and tmp[1] then
-			str = str .. "[" .. tmp[1].k:gsub("!/%.%./", "") .. "]"
-		end
-
-		return str
-	end
-	pretty_prints["function"] = function(self)
-		if debug.getprettysource then
-			return (
-				"function[%p][%s](%s)"
-			):format(
-				self,
-				debug.getprettysource(self, true),
-				table.concat(debug.getparams(self), ", ")
-			)
-		end
-
-		return tostring(self)
-	end
-
-	function tostringx(val)
-		local t = type(val)
-		local f = pretty_prints[t]
-
-		if f then return f(val) end
-
-		return tostring(val)
-	end
-end
-
-local function getprettysource(level, append_line)
-	local info = debug.getinfo(type(level) == "number" and (level + 1) or level)
-
-	if info then
-		if info.source == "=[C]" and type(level) == "number" then
-			info = debug.getinfo(type(level) == "number" and (level + 2) or level)
-		end
-	end
-
-	local pretty_source = "debug.getinfo = nil"
-
-	if info then
-		if info.source:sub(1, 1) == "@" then
-			pretty_source = info.source:sub(2)
-
-			if append_line then
-				local line = info.currentline
-
-				if line == -1 then line = info.linedefined end
-
-				pretty_source = pretty_source .. ":" .. line
-			end
-		else
-			pretty_source = info.source:sub(0, 25)
-
-			if pretty_source ~= info.source then
-				pretty_source = pretty_source .. "...(+" .. #info.source - #pretty_source .. " chars)"
-			end
-
-			if pretty_source == "=[C]" and jit.vmdef then
-				local num = tonumber(tostring(info.func):match("#(%d+)") or "")
-
-				if num then pretty_source = jit.vmdef.ffnames[num] end
-			end
-		end
-	end
-
-	return pretty_source
-end
-
-local function getparams(func)
-	local params = {}
-
-	for i = 1, math.huge do
-		local key = debug.getlocal(func, i)
-
-		if key then table.insert(params, key) else break end
-	end
-
-	return params
-end
-
-local function isarray(t)
-	local i = 0
-
-	for _ in pairs(t) do
-		i = i + 1
-
-		if t[i] == nil then return false end
-	end
-
-	return true
-end
-
-local env = {}
-luadata.Types = {}
-
-local idx = function(var)
-	return var.LuaDataType
-end
-
-function luadata.Type(var)
-	local t = type(var)
-
-	if t == "table" then
-		local ok, res = pcall(idx, var)
-
-		if ok and res then return res end
-	end
-
-	return t
-end
-
-
-
-function luadata.ToString(var, context)
-	context = context or {tab = -1}
-	local func = luadata.Types[luadata.Type(var)]
-
-	if func then return func(var, context) end
-
-	if luadata.Types.fallback then return luadata.Types.fallback(var, context) end
-end
-
-function luadata.FromString(str)
-	local func = assert(loadstring("return " .. str), "luadata")
-	setfenv(func, env)
-	return func()
-end
-
-function luadata.Encode(tbl)
-	return luadata.ToString(tbl)
-end
-
-function luadata.Decode(str)
-	local func, err = loadstring("return {\n" .. str .. "\n}", "luadata")
-
-	if not func then return func, err end
-
-	setfenv(func, env)
-	local ok, err = pcall(func)
-
-	if not ok then return func, err end
-
-	return err
-end
-
-function luadata.SetModifier(
-	type,
-	callback,
-	func,
-	func_name
-)
-	luadata.Types[type] = callback
-
-	if func_name then env[func_name] = func end
-end
-
-luadata.SetModifier("cdata", function(var)
-	return tostring(var)
-end)
-
-luadata.SetModifier("number", function(var)
-	return ("%s"):format(var)
-end)
-
-luadata.SetModifier("string", function(var)
-	return ("%q"):format(var)
-end)
-
-luadata.SetModifier("boolean", function(var)
-	return var and "true" or "false"
-end)
-
-luadata.SetModifier("function", function(var)
-	return (
-		"function(%s) --[==[ptr: %p    src: %s]==] end"
-	):format(table.concat(getparams(var), ", "), var, getprettysource(var, true))
-end)
-
-luadata.SetModifier("fallback", function(var)
-	return "--[==[  " .. tostringx(var) .. "  ]==]"
-end)
-
-luadata.SetModifier("table", function(tbl, context)
-	local str = {}
-
-	if context.tab_limit and context.tab >= context.tab_limit then
-		return "{--[[ " .. tostringx(tbl) .. " (tab limit reached)]]}"
-	end
-
-	if context.done then
-		if context.done[tbl] then
-			return ("{--[=[%s already serialized]=]}"):format(tostring(tbl))
-		end
-
-		context.done[tbl] = true
-	end
-
-	context.tab = context.tab + 1
-
-	if context.tab == 0 then str = {} else str = {"{\n"} end
-
-	if isarray(tbl) then
-		if #tbl == 0 then
-			str = {"{"}
-		else
-			for i = 1, #tbl do
-				str[#str + 1] = ("%s%s,\n"):format(("\t"):rep(context.tab), luadata.ToString(tbl[i], context))
-			end
-		end
-	else
-		for key, value in pairs(tbl) do
-			value = luadata.ToString(value, context)
-
-			if value then
-				if type(key) == "string" and key:find("^[%w_]+$") and not tonumber(key) then
-					str[#str + 1] = ("%s%s = %s,\n"):format(("\t"):rep(context.tab), key, value)
-				else
-					key = luadata.ToString(key, context)
-
-					if key then
-						str[#str + 1] = ("%s[%s] = %s,\n"):format(("\t"):rep(context.tab), key, value)
-					end
-				end
-			end
-		end
-	end
-
-	if context.tab == 0 then
-		if str[1] == "{" then
-			str[#str + 1] = "}" -- empty table
-		else
-			str[#str + 1] = "\n"
-		end
-	else
-		if str[1] == "{" then
-			str[#str + 1] = "}" -- empty table
-		else
-			str[#str + 1] = ("%s}"):format(("\t"):rep(context.tab - 1))
-		end
-	end
-
-	context.tab = context.tab - 1
-	return table.concat(str, "")
-end)
-
-return function(...)
-	local tbl = {...}
-	local max_level
-
-	if
-		type(tbl[1]) == "table" and
-		type(tbl[2]) == "number" and
-		type(tbl[3]) == "nil"
-	then
-		max_level = tbl[2]
-		tbl[2] = nil
-	end
-
-	io.write(luadata.ToString(tbl, {tab = -1, tab_limit = max_level, done = {}}):sub(0, -2))
 end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.other.table_new"] = function(...) __M = __M or (function(...) local table_new
 local ok
@@ -3773,7 +3456,7 @@ end
 
 function META:Get(key)
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
-		local val = self["Get" .. key:GetData():sub(2)](self)
+		local val = assert(self["Get" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self)
 
 		if not val then
 			return type_errors.other("missing value on table " .. key:GetData())
@@ -4377,6 +4060,324 @@ IMPORTS['nattlua/definitions/lua/coroutine.nlua'] = function()
 
 
  end
+do local __M; IMPORTS["nattlua.other.table_print"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
+local tostring = _G.tostring
+local type = _G.type
+local debug = _G.debug
+local table = _G.table
+local tonumber = _G.tonumber
+local pcall = _G.pcall
+local assert = _G.assert
+local load = _G.load
+local setfenv = _G.setfenv
+local io = _G.io
+local luadata = {}
+local encode_table
+local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
+
+local function count(tbl)
+	local i = 0
+
+	for _ in pairs(tbl) do
+		i = i + 1
+	end
+
+	return i
+end
+
+local tostringx
+
+do
+	local pretty_prints = {}
+	pretty_prints.table = function(t)
+		local str = tostring(t)
+		str = str .. " [" .. count(t) .. " subtables]"
+		-- guessing the location of a library
+		local sources = {}
+
+		for _, v in pairs(t) do
+			if type(v) == "function" then
+				local info = debug.getinfo(v)
+
+				if info then
+					local src = info.source
+					sources[src] = (sources[src] or 0) + 1
+				end
+			end
+		end
+
+		local tmp = {}
+
+		for k, v in pairs(sources) do
+			table.insert(tmp, {k = k, v = v})
+		end
+
+		table.sort(tmp, function(a, b)
+			return a.v > b.v
+		end)
+
+		if #tmp > 0 and tmp[1] then
+			str = str .. "[" .. tmp[1].k:gsub("!/%.%./", "") .. "]"
+		end
+
+		return str
+	end
+	pretty_prints["function"] = function(self)
+		if debug.getprettysource then
+			return (
+				"function[%p][%s](%s)"
+			):format(
+				self,
+				debug.getprettysource(self, true),
+				table.concat(debug.getparams(self), ", ")
+			)
+		end
+
+		return tostring(self)
+	end
+
+	function tostringx(val)
+		local t = type(val)
+		local f = pretty_prints[t]
+
+		if f then return f(val) end
+
+		return tostring(val)
+	end
+end
+
+local function getprettysource(level, append_line)
+	local info = debug.getinfo(type(level) == "number" and (level + 1) or level)
+
+	if info then
+		if info.source == "=[C]" and type(level) == "number" then
+			info = debug.getinfo(type(level) == "number" and (level + 2) or level)
+		end
+	end
+
+	local pretty_source = "debug.getinfo = nil"
+
+	if info then
+		if info.source:sub(1, 1) == "@" then
+			pretty_source = info.source:sub(2)
+
+			if append_line then
+				local line = info.currentline
+
+				if line == -1 then line = info.linedefined end
+
+				pretty_source = pretty_source .. ":" .. line
+			end
+		else
+			pretty_source = info.source:sub(0, 25)
+
+			if pretty_source ~= info.source then
+				pretty_source = pretty_source .. "...(+" .. #info.source - #pretty_source .. " chars)"
+			end
+
+			if pretty_source == "=[C]" and jit.vmdef then
+				local num = tonumber(tostring(info.func):match("#(%d+)") or "")
+
+				if num then pretty_source = jit.vmdef.ffnames[num] end
+			end
+		end
+	end
+
+	return pretty_source
+end
+
+local function getparams(func)
+	local params = {}
+
+	for i = 1, math.huge do
+		local key = debug.getlocal(func, i)
+
+		if key then table.insert(params, key) else break end
+	end
+
+	return params
+end
+
+local function isarray(t)
+	local i = 0
+
+	for _ in pairs(t) do
+		i = i + 1
+
+		if t[i] == nil then return false end
+	end
+
+	return true
+end
+
+local env = {}
+luadata.Types = {}
+
+local idx = function(var)
+	return var.LuaDataType
+end
+
+function luadata.Type(var)
+	local t = type(var)
+
+	if t == "table" then
+		local ok, res = pcall(idx, var)
+
+		if ok and res then return res end
+	end
+
+	return t
+end
+
+
+
+function luadata.ToString(var, context)
+	context = context or {tab = -1}
+	local func = luadata.Types[luadata.Type(var)]
+
+	if func then return func(var, context) end
+
+	if luadata.Types.fallback then return luadata.Types.fallback(var, context) end
+end
+
+function luadata.FromString(str)
+	local func = assert(loadstring("return " .. str), "luadata")
+	setfenv(func, env)
+	return func()
+end
+
+function luadata.Encode(tbl)
+	return luadata.ToString(tbl)
+end
+
+function luadata.Decode(str)
+	local func, err = loadstring("return {\n" .. str .. "\n}", "luadata")
+
+	if not func then return func, err end
+
+	setfenv(func, env)
+	local ok, err = pcall(func)
+
+	if not ok then return func, err end
+
+	return err
+end
+
+function luadata.SetModifier(
+	type,
+	callback,
+	func,
+	func_name
+)
+	luadata.Types[type] = callback
+
+	if func_name then env[func_name] = func end
+end
+
+luadata.SetModifier("cdata", function(var)
+	return tostring(var)
+end)
+
+luadata.SetModifier("number", function(var)
+	return ("%s"):format(var)
+end)
+
+luadata.SetModifier("string", function(var)
+	return ("%q"):format(var)
+end)
+
+luadata.SetModifier("boolean", function(var)
+	return var and "true" or "false"
+end)
+
+luadata.SetModifier("function", function(var)
+	return (
+		"function(%s) --[==[ptr: %p    src: %s]==] end"
+	):format(table.concat(getparams(var), ", "), var, getprettysource(var, true))
+end)
+
+luadata.SetModifier("fallback", function(var)
+	return "--[==[  " .. tostringx(var) .. "  ]==]"
+end)
+
+luadata.SetModifier("table", function(tbl, context)
+	local str = {}
+
+	if context.tab_limit and context.tab >= context.tab_limit then
+		return "{--[[ " .. tostringx(tbl) .. " (tab limit reached)]]}"
+	end
+
+	if context.done then
+		if context.done[tbl] then
+			return ("{--[=[%s already serialized]=]}"):format(tostring(tbl))
+		end
+
+		context.done[tbl] = true
+	end
+
+	context.tab = context.tab + 1
+
+	if context.tab == 0 then str = {} else str = {"{\n"} end
+
+	if isarray(tbl) then
+		if #tbl == 0 then
+			str = {"{"}
+		else
+			for i = 1, #tbl do
+				str[#str + 1] = ("%s%s,\n"):format(("\t"):rep(context.tab), luadata.ToString(tbl[i], context))
+			end
+		end
+	else
+		for key, value in pairs(tbl) do
+			value = luadata.ToString(value, context)
+
+			if value then
+				if type(key) == "string" and key:find("^[%w_]+$") and not tonumber(key) then
+					str[#str + 1] = ("%s%s = %s,\n"):format(("\t"):rep(context.tab), key, value)
+				else
+					key = luadata.ToString(key, context)
+
+					if key then
+						str[#str + 1] = ("%s[%s] = %s,\n"):format(("\t"):rep(context.tab), key, value)
+					end
+				end
+			end
+		end
+	end
+
+	if context.tab == 0 then
+		if str[1] == "{" then
+			str[#str + 1] = "}" -- empty table
+		else
+			str[#str + 1] = "\n"
+		end
+	else
+		if str[1] == "{" then
+			str[#str + 1] = "}" -- empty table
+		else
+			str[#str + 1] = ("%s}"):format(("\t"):rep(context.tab - 1))
+		end
+	end
+
+	context.tab = context.tab - 1
+	return table.concat(str, "")
+end)
+
+return function(...)
+	local tbl = {...}
+	local max_level
+
+	if
+		type(tbl[1]) == "table" and
+		type(tbl[2]) == "number" and
+		type(tbl[3]) == "nil"
+	then
+		max_level = tbl[2]
+		tbl[2] = nil
+	end
+
+	io.write(luadata.ToString(tbl, {tab = -1, tab_limit = max_level, done = {}}):sub(0, -2))
+end end)(...) return __M end end
 do local __M; IMPORTS["nattlua.other.cparser"] = function(...) __M = __M or (function(...) local pcall = _G.pcall
 local type = _G.type
 local getmetatable = _G.getmetatable
@@ -8418,65 +8419,292 @@ IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function()
 
 
  end
-do local __M; IMPORTS["nattlua"] = function(...) __M = __M or (function(...) if not table.unpack and _G.unpack then table.unpack = _G.unpack end
-
-if not io or not io.write then
-	io = io or {}
-
-	if _G.gmod then
-		io.write = function(...)
-			for i = 1, select("#", ...) do
-				MsgC(Color(255, 255, 255), select(i, ...))
-			end
-		end
-	else
-		io.write = print
-	end
-end
-
-do -- these are just helpers for print debugging
-	table.print = IMPORTS['nattlua.other.table_print']("nattlua.other.table_print")
-	debug.trace = function(...)
-		local level = 1
-
-		while true do
-			local info = debug.getinfo(level, "Sln")
-
-			if (not info) then break end
-
-			if (info.what) == "C" then
-				io.write(string.format("\t%i: C function\t\"%s\"\n", level, info.name))
-			else
-				io.write(
-					string.format("\t%i: \"%s\"\t%s:%d\n", level, info.name, info.short_src, info.currentline)
-				)
-			end
-
-			level = level + 1
-		end
-
-		io.write("\n")
-	end
--- local old = print; function print(...) old(debug.traceback()) end
-end
-
+do local __M; IMPORTS["nattlua.compiler"] = function(...) __M = __M or (function(...) local io = io
+local error = error
+local xpcall = xpcall
+local tostring = tostring
+local table = _G.table
+local assert = assert
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
-helpers.JITOptimize()
---helpers.EnableJITDumper()
-local m = IMPORTS['nattlua.init']("nattlua.init")
+local debug = _G.debug
+local BuildBaseEnvironment = IMPORTS['nattlua.runtime.base_environment']("nattlua.runtime.base_environment").BuildBaseEnvironment
+local setmetatable = _G.setmetatable
+local Code = IMPORTS['nattlua.code']("nattlua.code").New
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local Lexer = IMPORTS['nattlua.lexer']("nattlua.lexer").New
+local Parser = IMPORTS['nattlua.parser']("nattlua.parser").New
+local Analyzer = IMPORTS['nattlua.analyzer']("nattlua.analyzer").New
+local Emitter = IMPORTS['nattlua.transpiler.emitter']("nattlua.transpiler.emitter").New
+local META = class.CreateTemplate("compiler")
 
-if _G.gmod then
-	local pairs = pairs
-	local getfenv = getfenv
-	module("nattlua")
-	local _G = getfenv(1)
 
-	for k, v in pairs(m) do
-		_G[k] = v
+
+function META:GetCode()
+	return self.Code
+end
+
+function META:__tostring()
+	local str = ""
+
+	if self.parent_name then
+		str = str .. "[" .. self.parent_name .. ":" .. self.parent_line .. "] "
+	end
+
+	local lua_code = self.Code:GetString()
+	local line = lua_code:match("(.-)\n")
+
+	if line then str = str .. line .. "..." else str = str .. lua_code end
+
+	return str
+end
+
+local repl = function()
+	return "\nbecause "
+end
+
+function META:OnDiagnostic(code, msg, severity, start, stop, ...)
+	local level = 0
+	local t = 0
+	msg = msg:gsub(" because ", repl)
+
+	if t > 0 then msg = "\n" .. msg end
+
+	if self.analyzer and self.analyzer.processing_deferred_calls then
+		msg = "DEFERRED CALL: " .. msg
+	end
+
+	local msg = code:BuildSourceCodePointMessage(helpers.FormatMessage(msg, ...), start, stop)
+	local msg2 = ""
+
+	for line in (msg .. "\n"):gmatch("(.-)\n") do
+		msg2 = msg2 .. (" "):rep(4 - level * 2) .. line .. "\n"
+	end
+
+	msg = msg2
+
+	if severity == "error" then
+		msg = "\x1b[0;31m" .. msg .. "\x1b[0m"
+	elseif severity == "warning" then
+		msg = "\x1b[0;33m" .. msg .. "\x1b[0m"
+	end
+
+	if not _G.TEST then io.write(msg) end
+
+	if
+		severity == "fatal" or
+		(
+			_G.TEST and
+			severity == "error" and
+			not _G.TEST_DISABLE_ERROR_PRINT
+		)
+		or
+		self.debug
+	then
+		local level = 2
+
+		if _G.TEST then
+			for i = 1, math.huge do
+				local info = debug.getinfo(i)
+
+				if not info then break end
+
+				if info.source:find("@test/nattlua", nil, true) then
+					level = i
+
+					break
+				end
+			end
+		end
+
+		error(msg, level)
 	end
 end
 
-return m end)(...) return __M end end
+local function stack_trace()
+	local s = ""
+
+	for i = 2, 50 do
+		local info = debug.getinfo(i)
+
+		if not info then break end
+
+		if info.source:sub(1, 1) == "@" then
+			if info.name == "Error" or info.name == "OnDiagnostic" then
+
+			else
+				s = s .. info.source:sub(2) .. ":" .. info.currentline .. " - " .. (
+						info.name or
+						"?"
+					) .. "\n"
+			end
+		end
+	end
+
+	return s
+end
+
+local traceback = function(self, obj, msg)
+	if self.debug or _G.TEST then
+		local ret = {
+			xpcall(function()
+				msg = msg or "no error"
+				local s = msg .. "\n" .. stack_trace()
+
+				if self.analyzer then s = s .. self.analyzer:DebugStateToString() end
+
+				return s
+			end, function(msg)
+				return debug.traceback(tostring(msg))
+			end),
+		}
+
+		if not ret[1] then return "error in error handling: " .. tostring(ret[2]) end
+
+		return table.unpack(ret, 2)
+	end
+
+	return msg
+end
+
+function META:Lex()
+	local lexer = self.Lexer(self:GetCode())
+	lexer.name = self.name
+	self.lexer = lexer
+	lexer.OnError = function(lexer, code, msg, start, stop, ...)
+		self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
+	end
+	local ok, tokens = xpcall(function()
+		return lexer:GetTokens()
+	end, function(msg)
+		return traceback(self, lexer, msg)
+	end)
+
+	if not ok then return nil, tokens end
+
+	self.Tokens = tokens
+	return self
+end
+
+function META:Parse()
+	if not self.Tokens then
+		local ok, err = self:Lex()
+
+		if not ok then return ok, err end
+	end
+
+	local parser = self.Parser(self.Tokens, self.Code, self.config)
+	self.parser = parser
+	parser.OnError = function(parser, code, msg, start, stop, ...)
+		self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
+	end
+
+	if self.OnNode then
+		parser.OnNode = function(_, node)
+			self:OnNode(node)
+		end
+	end
+
+	local ok, res = xpcall(function()
+		return parser:ParseRootNode()
+	end, function(msg)
+		return traceback(self, parser, msg)
+	end)
+
+	if not ok then return nil, res end
+
+	self.SyntaxTree = res
+	return self
+end
+
+function META:SetEnvironments(runtime, typesystem)
+	self.default_environment = {}
+	self.default_environment.runtime = runtime
+	self.default_environment.typesystem = typesystem
+end
+
+function META:Analyze(analyzer, ...)
+	if not self.SyntaxTree then
+		local ok, err = self:Parse()
+
+		if not ok then
+			assert(err)
+			return ok, err
+		end
+	end
+
+	local analyzer = analyzer or self.Analyzer()
+	self.analyzer = analyzer
+	analyzer.compiler = self
+	analyzer.OnDiagnostic = function(analyzer, ...)
+		self:OnDiagnostic(...)
+	end
+
+	if self.default_environment then
+		analyzer:SetDefaultEnvironment(self.default_environment["runtime"], "runtime")
+		analyzer:SetDefaultEnvironment(self.default_environment["typesystem"], "typesystem")
+	elseif self.default_environment ~= false then
+		local runtime_env, typesystem_env = BuildBaseEnvironment()
+		analyzer:SetDefaultEnvironment(runtime_env, "runtime")
+		analyzer:SetDefaultEnvironment(typesystem_env, "typesystem")
+	end
+
+	analyzer.ResolvePath = self.OnResolvePath
+	local args = {...}
+	local ok, res = xpcall(function()
+		local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))
+		analyzer:AnalyzeUnreachableCode()
+
+		if analyzer.OnFinish then analyzer:OnFinish() end
+
+		return res
+	end, function(msg)
+		return traceback(self, analyzer, msg)
+	end)
+	self.AnalyzedResult = res
+
+	if not ok then return nil, res end
+
+	return self
+end
+
+function META:Emit(cfg)
+	if not self.SyntaxTree then
+		local ok, err = self:Parse()
+
+		if not ok then return ok, err end
+	end
+
+	local emitter = self.Emitter(cfg or self.config)
+	self.emitter = emitter
+	return emitter:BuildCode(self.SyntaxTree)
+end
+
+function META.New(
+	lua_code,
+	name,
+	config,
+	level
+)
+	local info = debug.getinfo(level or 2)
+	local parent_line = info and info.currentline or "unknown line"
+	local parent_name = info and info.source:sub(2) or "unknown name"
+	name = name or (parent_name .. ":" .. parent_line)
+	return setmetatable(
+		{
+			Code = Code(lua_code, name),
+			parent_line = parent_line,
+			parent_name = parent_name,
+			config = config,
+			Lexer = Lexer,
+			Parser = Parser,
+			Analyzer = Analyzer,
+			Emitter = Emitter,
+		},
+		META
+	)
+end
+
+return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.runtime.base_environment"] = function(...) __M = __M or (function(...) local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local LStringNoMeta = IMPORTS['nattlua.types.string']("nattlua.types.string").LStringNoMeta
@@ -8516,8 +8744,8 @@ local function load_definitions()
 	-- import_data will be transformed on build and the local function will not be used
 	-- we canot use the upvalue path here either since this happens at parse time
 	local code = assert(IMPORTS['DATA_nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua"))
-	local nl = IMPORTS['nattlua']("nattlua")
-	return nl.Compiler(code, "@" .. path, config)
+	local Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler").New
+	return Compiler(code, "@" .. path, config)
 end
 
 return {
@@ -15426,12 +15654,12 @@ return function(META)
 		local locals = ""
 		locals = locals .. "local bit=bit32 or _G.bit;"
 
-		if _G.BUNDLE then
-			locals = locals .. "local nl=IMPORTS[\"nattlua\"]();"
+		if BUNDLE then
+			locals = locals .. "local nl=IMPORTS[\"nattlua.init\"]();"
 			locals = locals .. "local types=IMPORTS[\"nattlua.types.types\"]();"
 			locals = locals .. "local context=IMPORTS[\"nattlua.analyzer.context\"]();"
 		else
-			locals = locals .. "local nl=require(\"nattlua\");"
+			locals = locals .. "local nl=require(\"nattlua.init\");"
 			locals = locals .. "local types=require(\"nattlua.types.types\");"
 			locals = locals .. "local context=require(\"nattlua.analyzer.context\");"
 		end
@@ -15486,7 +15714,7 @@ return function(META)
 		end
 
 		local runtime_injection = [[
-			local analyzer = context:GetCurrentAnalyzer()
+			local analyzer = assert(context:GetCurrentAnalyzer(), "no analyzer in context")
 			local env = analyzer:GetScopeHelper(analyzer.function_scope)
 		]]
 		runtime_injection = runtime_injection:gsub("\n", ";")
@@ -15533,6 +15761,7 @@ return function(META)
 
 				print("===============>=================")
 				self:FatalError(err)
+				return false, err
 			end
 
 			return func
@@ -22234,292 +22463,6 @@ return {
 	TranspilerConfig = nil,
 	CompilerConfig = nil,
 } end
-do local __M; IMPORTS["nattlua.compiler"] = function(...) __M = __M or (function(...) local io = io
-local error = error
-local xpcall = xpcall
-local tostring = tostring
-local table = _G.table
-local assert = assert
-local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
-local debug = _G.debug
-local BuildBaseEnvironment = IMPORTS['nattlua.runtime.base_environment']("nattlua.runtime.base_environment").BuildBaseEnvironment
-local setmetatable = _G.setmetatable
-local Code = IMPORTS['nattlua.code']("nattlua.code").New
-local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
-local Lexer = IMPORTS['nattlua.lexer']("nattlua.lexer").New
-local Parser = IMPORTS['nattlua.parser']("nattlua.parser").New
-local Analyzer = IMPORTS['nattlua.analyzer']("nattlua.analyzer").New
-local Emitter = IMPORTS['nattlua.transpiler.emitter']("nattlua.transpiler.emitter").New
-local META = class.CreateTemplate("compiler")
-
-
-
-function META:GetCode()
-	return self.Code
-end
-
-function META:__tostring()
-	local str = ""
-
-	if self.parent_name then
-		str = str .. "[" .. self.parent_name .. ":" .. self.parent_line .. "] "
-	end
-
-	local lua_code = self.Code:GetString()
-	local line = lua_code:match("(.-)\n")
-
-	if line then str = str .. line .. "..." else str = str .. lua_code end
-
-	return str
-end
-
-local repl = function()
-	return "\nbecause "
-end
-
-function META:OnDiagnostic(code, msg, severity, start, stop, ...)
-	local level = 0
-	local t = 0
-	msg = msg:gsub(" because ", repl)
-
-	if t > 0 then msg = "\n" .. msg end
-
-	if self.analyzer and self.analyzer.processing_deferred_calls then
-		msg = "DEFERRED CALL: " .. msg
-	end
-
-	local msg = code:BuildSourceCodePointMessage(helpers.FormatMessage(msg, ...), start, stop)
-	local msg2 = ""
-
-	for line in (msg .. "\n"):gmatch("(.-)\n") do
-		msg2 = msg2 .. (" "):rep(4 - level * 2) .. line .. "\n"
-	end
-
-	msg = msg2
-
-	if severity == "error" then
-		msg = "\x1b[0;31m" .. msg .. "\x1b[0m"
-	elseif severity == "warning" then
-		msg = "\x1b[0;33m" .. msg .. "\x1b[0m"
-	end
-
-	if not _G.TEST then io.write(msg) end
-
-	if
-		severity == "fatal" or
-		(
-			_G.TEST and
-			severity == "error" and
-			not _G.TEST_DISABLE_ERROR_PRINT
-		)
-		or
-		self.debug
-	then
-		local level = 2
-
-		if _G.TEST then
-			for i = 1, math.huge do
-				local info = debug.getinfo(i)
-
-				if not info then break end
-
-				if info.source:find("@test/nattlua", nil, true) then
-					level = i
-
-					break
-				end
-			end
-		end
-
-		error(msg, level)
-	end
-end
-
-local function stack_trace()
-	local s = ""
-
-	for i = 2, 50 do
-		local info = debug.getinfo(i)
-
-		if not info then break end
-
-		if info.source:sub(1, 1) == "@" then
-			if info.name == "Error" or info.name == "OnDiagnostic" then
-
-			else
-				s = s .. info.source:sub(2) .. ":" .. info.currentline .. " - " .. (
-						info.name or
-						"?"
-					) .. "\n"
-			end
-		end
-	end
-
-	return s
-end
-
-local traceback = function(self, obj, msg)
-	if self.debug or _G.TEST then
-		local ret = {
-			xpcall(function()
-				msg = msg or "no error"
-				local s = msg .. "\n" .. stack_trace()
-
-				if self.analyzer then s = s .. self.analyzer:DebugStateToString() end
-
-				return s
-			end, function(msg)
-				return debug.traceback(tostring(msg))
-			end),
-		}
-
-		if not ret[1] then return "error in error handling: " .. tostring(ret[2]) end
-
-		return table.unpack(ret, 2)
-	end
-
-	return msg
-end
-
-function META:Lex()
-	local lexer = self.Lexer(self:GetCode())
-	lexer.name = self.name
-	self.lexer = lexer
-	lexer.OnError = function(lexer, code, msg, start, stop, ...)
-		self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
-	end
-	local ok, tokens = xpcall(function()
-		return lexer:GetTokens()
-	end, function(msg)
-		return traceback(self, lexer, msg)
-	end)
-
-	if not ok then return nil, tokens end
-
-	self.Tokens = tokens
-	return self
-end
-
-function META:Parse()
-	if not self.Tokens then
-		local ok, err = self:Lex()
-
-		if not ok then return ok, err end
-	end
-
-	local parser = self.Parser(self.Tokens, self.Code, self.config)
-	self.parser = parser
-	parser.OnError = function(parser, code, msg, start, stop, ...)
-		self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
-	end
-
-	if self.OnNode then
-		parser.OnNode = function(_, node)
-			self:OnNode(node)
-		end
-	end
-
-	local ok, res = xpcall(function()
-		return parser:ParseRootNode()
-	end, function(msg)
-		return traceback(self, parser, msg)
-	end)
-
-	if not ok then return nil, res end
-
-	self.SyntaxTree = res
-	return self
-end
-
-function META:SetEnvironments(runtime, typesystem)
-	self.default_environment = {}
-	self.default_environment.runtime = runtime
-	self.default_environment.typesystem = typesystem
-end
-
-function META:Analyze(analyzer, ...)
-	if not self.SyntaxTree then
-		local ok, err = self:Parse()
-
-		if not ok then
-			assert(err)
-			return ok, err
-		end
-	end
-
-	local analyzer = analyzer or self.Analyzer()
-	self.analyzer = analyzer
-	analyzer.compiler = self
-	analyzer.OnDiagnostic = function(analyzer, ...)
-		self:OnDiagnostic(...)
-	end
-
-	if self.default_environment then
-		analyzer:SetDefaultEnvironment(self.default_environment["runtime"], "runtime")
-		analyzer:SetDefaultEnvironment(self.default_environment["typesystem"], "typesystem")
-	elseif self.default_environment ~= false then
-		local runtime_env, typesystem_env = BuildBaseEnvironment()
-		analyzer:SetDefaultEnvironment(runtime_env, "runtime")
-		analyzer:SetDefaultEnvironment(typesystem_env, "typesystem")
-	end
-
-	analyzer.ResolvePath = self.OnResolvePath
-	local args = {...}
-	local ok, res = xpcall(function()
-		local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))
-		analyzer:AnalyzeUnreachableCode()
-
-		if analyzer.OnFinish then analyzer:OnFinish() end
-
-		return res
-	end, function(msg)
-		return traceback(self, analyzer, msg)
-	end)
-	self.AnalyzedResult = res
-
-	if not ok then return nil, res end
-
-	return self
-end
-
-function META:Emit(cfg)
-	if not self.SyntaxTree then
-		local ok, err = self:Parse()
-
-		if not ok then return ok, err end
-	end
-
-	local emitter = self.Emitter(cfg or self.config)
-	self.emitter = emitter
-	return emitter:BuildCode(self.SyntaxTree)
-end
-
-function META.New(
-	lua_code,
-	name,
-	config,
-	level
-)
-	local info = debug.getinfo(level or 2)
-	local parent_line = info and info.currentline or "unknown line"
-	local parent_name = info and info.source:sub(2) or "unknown name"
-	name = name or (parent_name .. ":" .. parent_line)
-	return setmetatable(
-		{
-			Code = Code(lua_code, name),
-			parent_line = parent_line,
-			parent_name = parent_name,
-			config = config,
-			Lexer = Lexer,
-			Parser = Parser,
-			Analyzer = Analyzer,
-			Emitter = Emitter,
-		},
-		META
-	)
-end
-
-return META end)(...) return __M end end
 do local __M; IMPORTS["nattlua.init"] = function(...) __M = __M or (function(...) local nl = {}
 local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 nl.Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler").New
@@ -23142,7 +23085,7 @@ analyzer function require(name: string)
 						return analyzer.loaded[path]
 					end
 
-					local compiler = IMPORTS['nattlua']("nattlua").File(analyzer:ResolvePath(path))
+					local compiler = IMPORTS['nattlua.init']("nattlua.init").File(analyzer:ResolvePath(path))
 					assert(compiler:Lex())
 					assert(compiler:Parse())
 					local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
@@ -23176,13 +23119,15 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 	local compiler = nl.Compiler(str, chunk_name and chunk_name:GetData() or nil)
 	assert(compiler:Lex())
 	assert(compiler:Parse())
-	return types.LuaTypeFunction(
-		function(...)
-			return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-		end,
-		types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge)),
-		types.Tuple({}):AddRemainder(types.Tuple({types.Any()}):SetRepeat(math.huge))
-	)
+	local f = types.Function()
+
+	f:SetAnalyzerFunction(function(...)
+		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
+	end)
+
+	f:SetInputSignature(types.VarArg(types.Any()))
+	f:SetOutputSignature(types.VarArg(types.Any()))
+	return f
 end
 
 type loadstring = load
@@ -24750,9 +24695,7 @@ IMPORTS['nattlua/definitions/lua/math.nlua']("./lua/math.nlua")
 IMPORTS['nattlua/definitions/lua/os.nlua']("./lua/os.nlua")
 IMPORTS['nattlua/definitions/lua/coroutine.nlua']("./lua/coroutine.nlua")
 IMPORTS['nattlua/definitions/typed_ffi.nlua']("./typed_ffi.nlua") ]======] end
-IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
-
-if not table.unpack and _G.unpack then table.unpack = _G.unpack end
+do local __M; IMPORTS["nattlua"] = function(...) __M = __M or (function(...) if not table.unpack and _G.unpack then table.unpack = _G.unpack end
 
 if not io or not io.write then
 	io = io or {}
@@ -24810,4 +24753,32 @@ if _G.gmod then
 	end
 end
 
-return m
+local ARGS = _G.ARGS or {...}
+local cmd = ARGS[1]
+
+if cmd == "run" then
+	local path = assert(unpack(ARGS, 2))
+	local compiler = assert(m.File(path))
+	compiler:Analyze()
+	assert(loadstring(compiler:Emit(), "@" .. path))(unpack(ARGS, 3))
+elseif cmd == "check" then
+	local path = assert(unpack(ARGS, 2))
+	local compiler = assert(m.File(path))
+	assert(compiler:Analyze())
+elseif cmd == "build" then
+	if unpack(ARGS, 2) then
+		local path_from = assert(unpack(ARGS, 2))
+		local compiler = assert(m.File(path_from))
+		local path_to = assert(unpack(ARGS, 3))
+		local f = assert(io.open(path_to, "w"))
+		f:write(compiler:Emit())
+		f:close()
+	else
+		assert(IMPORTS['./nlconfig.lua'])(unpack(ARGS))
+	end
+end
+
+return m end)(...) return __M end end
+IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
+_G.ARGS = {...}
+return IMPORTS['nattlua']("nattlua")

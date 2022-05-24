@@ -37,8 +37,8 @@ local function load_definitions()
 	-- import_data will be transformed on build and the local function will not be used
 	-- we canot use the upvalue path here either since this happens at parse time
 	local code = assert(import_data("nattlua/definitions/index.nlua"))
-	local nl = require("nattlua")
-	return nl.Compiler(code, "@" .. path, config)
+	local Compiler = require("nattlua.compiler").New
+	return Compiler(code, "@" .. path, config)
 end
 
 return {

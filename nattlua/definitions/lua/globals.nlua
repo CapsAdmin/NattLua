@@ -196,7 +196,7 @@ analyzer function require(name: string)
 						return analyzer.loaded[path]
 					end
 
-					local compiler = require("nattlua").File(analyzer:ResolvePath(path))
+					local compiler = require("nattlua.init").File(analyzer:ResolvePath(path))
 					assert(compiler:Lex())
 					assert(compiler:Parse())
 					local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
