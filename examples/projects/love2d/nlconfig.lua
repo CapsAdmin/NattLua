@@ -29,5 +29,5 @@ local f = assert(io.open("dist/main.lua", "w"))
 f:write(code)
 f:close()
 
--- parse afterwards so hotreload is faster
+-- analyze after file write so hotreload is faster
 compiler:Analyze()
