@@ -812,14 +812,13 @@ end
 		return
 	end
 
-	local f = io.open(arg[1])
+	local f = assert(io.open(arg[1]))
 	local text = f:read("*a")
 	f:close()
 	local code = brainfudge(text)
 
 	if arg[2] then
-		local f = io.open(arg[2], "w")
-		assert(f, "Could not write to " .. arg[2])
+		local f = assert(io.open(arg[2], "w"), "Could not write to " .. arg[2])
 		f:write(code)
 		f:close()
 		print("Wrote code to " .. arg[2])
