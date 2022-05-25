@@ -1657,7 +1657,7 @@ function love.draw()
 		end
 	end
 
-	for y = 0, #grid do
+	for y = 1, #grid do
 		for x = 1, #grid[y] do
 			local cell = grid[y][x]
 			local dir = cell.direction
