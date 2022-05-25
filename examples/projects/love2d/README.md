@@ -1,10 +1,15 @@
-install nattlua
+This a löve example written in Nattlua (lua with a typesystem and some other things)
 
-- luajit build.lua
-- sudo cp build_output.lua /usr/local/bin/nattlua
+First clone [nattlua](https://github.com/CapsAdmin/NattLua) somewhere and run
+```
+luajit build.lua
+sudo cp build_output.lua /usr/local/bin/nattlua
+```
 
-`nattlua build-api` to update api
+Then you can run the following commands:
 
-`nattlua build` to build the main.lua file
+* `nattlua build-api` build and update love type defintions from https://github.com/love2d-community/love-api
+* `nattlua build` build dist/main.lua from src/main.nlua
+* `nattlua run` run the output with love
 
-`nattlua run` to run the output
+running `nattlua build` will build `dist/main.lua` which is a single lua file based on the imports of `src/main.nlua` and type information stripped.
