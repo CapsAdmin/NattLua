@@ -1,12 +1,11 @@
-§analyzer.max_iterations = 10000
-§analyzer.enable_random_functions = true
-
 -- declare love as global so it will be available for all the other imports
 type love = import("./love_api.nlua")
 
-
+-- these imports will be bundled
 local Maze = import("./maze.nlua")
 local Vec2 = import("./vec2.nlua")
+
+-- not sure about this, Vec2 the metatable and which doubles as a constructor and NOT the type Vec2
 local type Vec2 = Vec2.@Self
 
 local type Node = {
@@ -15,6 +14,7 @@ local type Node = {
 	goal = nil | boolean,
 	distance = number,
 	visited = boolean,
+	direction = nil | Vec2,
 }
 
 local maze_width = 13
@@ -24,6 +24,7 @@ local grid = {} as {[1..maze_height] = {[1..maze_width] = Node}}
 
 do
 	local maze = Maze(maze_width, maze_height)
+
 	maze:Build(3)
 	local neighbours = {Vec2(-1, 0), Vec2(0, -1), Vec2(1, 0), Vec2(0, 1)}
 
@@ -44,7 +45,6 @@ do
 
 	for y = 1, maze.height do
 		grid[y] = grid[y] or {}
-
 		for x = 1, maze.width do
 			local state = {
 				pos = Vec2(x, y),
@@ -123,7 +123,6 @@ local function cell2pix(pos: Vec2)
 	local y = (pos.y - 1) * cell_size
 	return Vec2(x, y)
 end
-
 
 function love.draw()
 	for y = 1, #grid do

@@ -1329,6 +1329,7 @@ return love end
 IMPORTS['src/maze.nlua'] = function() local Maze = {}
 Maze.__index = Maze
 
+
 function Maze:__tostring()
 	local out = {}
 	table.insert(out, "Maze " .. self.width .. "x" .. self.height .. "\n")
@@ -1398,7 +1399,14 @@ function Maze:Build(seed)
 end
 
 local function constructor(_, width, height)
-	local self = setmetatable({width = width, height = height, grid = {}}, Maze)
+	local self = setmetatable(
+		{
+			grid = {},
+			--[[ lie to the typesystem since we're just about to fill the grid with numbers ]] width = width,
+			height = height,
+		},
+		Maze
+	)
 
 	for y = 0, height - 1 do
 		for x = 0, width - 1 do
@@ -1515,10 +1523,7 @@ end
 setmetatable(Vec2, {__call = constructor})
 return Vec2 end
 
-
-
-
-
+-- these imports will be bundled
 local Maze = IMPORTS['src/maze.nlua']("./maze.nlua")
 local Vec2 = IMPORTS['src/vec2.nlua']("./vec2.nlua")
 
@@ -1652,7 +1657,7 @@ function love.draw()
 		end
 	end
 
-	for y = 1, #grid do
+	for y = 0, #grid do
 		for x = 1, #grid[y] do
 			local cell = grid[y][x]
 			local dir = cell.direction
