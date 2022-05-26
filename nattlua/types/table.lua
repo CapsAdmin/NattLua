@@ -659,7 +659,9 @@ function META:IsNumericallyIndexed()
 	return true
 end
 
-function META:CopyLiteralness(from--[[#: TTable]])
+
+function META:CopyLiteralness(from)
+	if self.suppress then return end
 	assert(from.Type == "table" or from.Type == "any" or from.Type == "union")
 
 	if from.Type == "any" then return end
@@ -674,13 +676,17 @@ function META:CopyLiteralness(from--[[#: TTable]])
 		if not keyval then return type_errors.other(reason) end
 
 		if keyval_from.key.Type == "table" then
+			self.suppress = true
 			keyval.key:CopyLiteralness(keyval_from.key) -- TODO: never called
+			self.suppress = false
 		else
 			keyval.key:SetLiteral(keyval_from.key:IsLiteral())
 		end
 
 		if keyval_from.val.Type == "table" then
+			self.suppress = true
 			keyval.val:CopyLiteralness(keyval_from.val)
+			self.suppress = false
 		else
 			keyval.val:SetLiteral(keyval_from.val:IsLiteral())
 		end
