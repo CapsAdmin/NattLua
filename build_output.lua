@@ -12971,6 +12971,7 @@ do -- runtime
 						preserve_whitespace = false,
 						comment_type_annotations = false,
 						type_annotations = true,
+						inside_data_import = true,
 					}
 				)
 			else
@@ -18917,6 +18918,21 @@ do -- newline breaking
 	end
 end
 
+local function encapsulate_module(content, name, method)
+	if method == "loadstring" then
+		local len = 6
+
+		content:gsub("%[[=]*%[", function(s)
+			len = math.max(len, #s - 2)
+		end)
+
+		local eq = ("="):rep(len + 1)
+		return "assert(loadstring([" .. eq .. "[ return " .. content .. " ]" .. eq .. "], '" .. name .. "'))()"
+	end
+
+	return content
+end
+
 function META:BuildCode(block)
 	if block.imports then
 		self.done = {}
@@ -18937,15 +18953,31 @@ function META:BuildCode(block)
 					if root then
 						if node.left.value.value == "loadfile" then
 							self:Emit(
-								"IMPORTS['" .. node.key .. "'] = function(...) " .. root:Render(self.config or {}) .. " end\n"
+								"IMPORTS['" .. node.key .. "'] = " .. encapsulate_module(
+										"function(...) " .. root:Render(self.config or {}) .. " end",
+										"@" .. node.key,
+										self.config.module_encapsulation_method
+									) .. "\n"
 							)
 						elseif node.left.value.value == "require" then
 							self:Emit(
-								"do local __M; IMPORTS[\"" .. node.key .. "\"] = function(...) __M = __M or (function(...) " .. root:Render(self.config or {}) .. " end)(...) return __M end end\n"
+								"do local __M; IMPORTS[\"" .. node.key .. "\"] = function(...) __M = __M or (" .. encapsulate_module(
+										"function(...) " .. root:Render(self.config or {}) .. " end",
+										node.key,
+										self.config.module_encapsulation_method
+									) .. ")(...) return __M end end\n"
 							)
-						elseif root then
+						elseif self.config.inside_data_import then
 							self:Emit(
 								"IMPORTS['" .. node.key .. "'] = function() " .. root:Render(self.config or {}) .. " end\n"
+							)
+						else
+							self:Emit(
+								"IMPORTS['" .. node.key .. "'] = " .. encapsulate_module(
+										"function() " .. root:Render(self.config or {}) .. " end",
+										"@" .. node.key,
+										self.config.module_encapsulation_method
+									) .. "\n"
 							)
 						end
 					end
@@ -20314,9 +20346,17 @@ do -- types
 	function META:EmitInvalidLuaCode(func, ...)
 		if self.config.omit_invalid_code then return true end
 
+		local i = self.i
 		local emitted = self:StartEmittingInvalidLuaCode()
 		self[func](self, ...)
 		self:StopEmittingInvalidLuaCode(emitted)
+
+		if self.config.blank_invalid_code then
+			for i = self.i, i, -1 do
+				if self.out[i] then self.out[i] = self.out[i]:gsub("%S+", "") end
+			end
+		end
+
 		return emitted
 	end
 end

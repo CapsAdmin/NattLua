@@ -876,6 +876,7 @@ do -- runtime
 						preserve_whitespace = false,
 						comment_type_annotations = false,
 						type_annotations = true,
+						inside_data_import = true,
 					}
 				)
 			else
