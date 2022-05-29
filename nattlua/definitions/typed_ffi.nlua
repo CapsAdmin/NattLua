@@ -171,7 +171,9 @@ local analyzer function cast(node: any, args: any)
 			node.n == "float" or
 			node.n == "double" or
 			node.n == "long double" or
-			node.n == "size_t"
+			node.n == "size_t" or
+			node.n == "intptr_t" or
+			node.n == "uintptr_t"
 		then
 			return types.Number()
 		elseif
@@ -314,12 +316,13 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 
 	if ctype.Type == "any" then return ctype end
 
-	local nilable_ctype = ctype:Copy()
+	if ctype.Type == "table" then
+		local nilable_ctype = ctype:Copy()
 
-	for _, keyval in ipairs(nilable_ctype:GetData()) do
-		keyval.val = types.Nilable(keyval.val)
+		for _, keyval in ipairs(nilable_ctype:GetData()) do
+			keyval.val = types.Nilable(keyval.val)
+		end
 	end
-
 	if ctype.is_enum and ctype:GetMetaTable() then return ctype end
 
 	local old = ctype:GetContract()
