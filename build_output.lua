@@ -1,7 +1,7 @@
 #!/usr/local/bin/luajit
-local BUNDLE = true
+_G.BUNDLE = true
 _G.IMPORTS = _G.IMPORTS or {}
-IMPORTS['nattlua/definitions/utility.nlua'] = function() 
+IMPORTS['nattlua/definitions/utility.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -79,8 +79,8 @@ IMPORTS['nattlua/definitions/utility.nlua'] = function()
 
 
 
- end
-IMPORTS['nattlua/definitions/attest.nlua'] = function() 
+ end ]=======], '@nattlua/definitions/utility.nlua'))()
+IMPORTS['nattlua/definitions/attest.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -96,8 +96,8 @@ IMPORTS['nattlua/definitions/attest.nlua'] = function()
 
 
 
-_G.attest = attest end
-do local __M; IMPORTS["nattlua.other.loadstring"] = function(...) __M = __M or (function(...) local f = _G.loadstring or _G.load
+_G.attest = attest end ]=======], '@nattlua/definitions/attest.nlua'))()
+do local __M; IMPORTS["nattlua.other.loadstring"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local f = _G.loadstring or _G.load
 return function(str, name)
 	if _G.CompileString then
 		local var = CompileString(str, name or "loadstring", false)
@@ -108,8 +108,8 @@ return function(str, name)
 	end
 
 	return (f)(str, name)
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.other.table_new"] = function(...) __M = __M or (function(...) local table_new
+end end ]=======], '@./nattlua/other/loadstring.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.table_new"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local table_new
 local ok
 
 if not _G.gmod then ok, table_new = pcall(require, "table.new") end
@@ -120,8 +120,8 @@ if not ok then
 	end
 end
 
-return table_new end)(...) return __M end end
-do local __M; IMPORTS["nattlua.other.table_pool"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
+return table_new end ]=======], '@./nattlua/other/table_new.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.table_pool"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local pairs = _G.pairs
 local table_new = IMPORTS['nattlua.other.table_new']("nattlua.other.table_new")
 return function(alloc, size)
 	local records = 0
@@ -153,8 +153,8 @@ return function(alloc, size)
 		i = i + 1
 		return tbl
 	end
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.other.quote"] = function(...) __M = __M or (function(...) local helpers = {}
+end end ]=======], '@./nattlua/other/table_pool.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.quote"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local helpers = {}
 
 function helpers.QuoteToken(str)
 	return "❲" .. str .. "❳"
@@ -176,8 +176,8 @@ function helpers.QuoteTokens(var)
 	return str
 end
 
-return helpers end)(...) return __M end end
-do local __M; IMPORTS["nattlua.other.class"] = function(...) __M = __M or (function(...) local class = {}
+return helpers end ]=======], '@./nattlua/other/quote.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.class"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local class = {}
 
 function class.CreateTemplate(type_name)
 	local meta = {}
@@ -235,8 +235,8 @@ function class.CreateTemplate(type_name)
 	return meta
 end
 
-return class end)(...) return __M end end
-IMPORTS['nattlua/lexer/token.lua'] = function() local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
+return class end ]=======], '@./nattlua/other/class.lua'))())(...) return __M end end
+IMPORTS['nattlua/lexer/token.lua'] = assert(loadstring([=======[ return function() local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("token")
@@ -293,8 +293,8 @@ function META.New(
 	return tk
 end
 
-return META end
-do local __M; IMPORTS["nattlua.other.helpers"] = function(...) __M = __M or (function(...) 
+return META end ]=======], '@nattlua/lexer/token.lua'))()
+do local __M; IMPORTS["nattlua.other.helpers"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) 
 
 local math = _G.math
 local table = _G.table
@@ -592,8 +592,8 @@ function helpers.JITOptimize()
 	end
 end
 
-return helpers end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.error_messages"] = function(...) __M = __M or (function(...) local table = _G.table
+return helpers end ]=======], '@./nattlua/other/helpers.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.types.error_messages"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local table = _G.table
 local type = _G.type
 local ipairs = _G.ipairs
 local errors = {
@@ -694,8 +694,8 @@ local errors = {
 		}
 	end,
 }
-return errors end)(...) return __M end end
-IMPORTS['nattlua/types/base.lua'] = function() local assert = _G.assert
+return errors end ]=======], '@./nattlua/types/error_messages.lua'))())(...) return __M end end
+IMPORTS['nattlua/types/base.lua'] = assert(loadstring([=======[ return function() local assert = _G.assert
 local tostring = _G.tostring
 local setmetatable = _G.setmetatable
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
@@ -970,8 +970,8 @@ end
 function META.New()
 	return setmetatable({}, META)
 end --copy<|META|>.@Self
-return META end
-do local __M; IMPORTS["nattlua.types.symbol"] = function(...) __M = __M or (function(...) local type = type
+return META end ]=======], '@nattlua/types/base.lua'))()
+do local __M; IMPORTS["nattlua.types.symbol"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local type = type
 local tostring = tostring
 local setmetatable = _G.setmetatable
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
@@ -1068,8 +1068,8 @@ return {
 	False = function()
 		return Symbol(false)
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.number"] = function(...) __M = __M or (function(...) local math = math
+} end ]=======], '@./nattlua/types/symbol.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.types.number"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local math = math
 local assert = assert
 local error = _G.error
 local tostring = _G.tostring
@@ -1510,8 +1510,8 @@ return {
 		return META.New(num):SetLiteral(true)
 	end,
 	TNumber = TNumber,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.union"] = function(...) __M = __M or (function(...) local tostring = tostring
+} end ]=======], '@./nattlua/types/number.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.types.union"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local tostring = tostring
 local setmetatable = _G.setmetatable
 local table = _G.table
 local ipairs = _G.ipairs
@@ -1958,8 +1958,8 @@ return {
 	Boolean = function()
 		return META.New({True(), False()})
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.context"] = function(...) __M = __M or (function(...) local current_analyzer = {}
+} end ]=======], '@./nattlua/types/union.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.context"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local current_analyzer = {}
 local CONTEXT = {}
 
 function CONTEXT:GetCurrentAnalyzer()
@@ -1974,8 +1974,8 @@ function CONTEXT:PopCurrentAnalyzer()
 	table.remove(current_analyzer, 1)
 end
 
-return CONTEXT end)(...) return __M end end
-IMPORTS['nattlua/code.lua'] = function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+return CONTEXT end ]=======], '@./nattlua/analyzer/context.lua'))())(...) return __M end end
+IMPORTS['nattlua/code.lua'] = assert(loadstring([=======[ return function() local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("code")
 
@@ -2071,8 +2071,8 @@ if jit then
 end
 
 
-return META end
-IMPORTS['./nattlua/types/../parser/nodes.nlua'] = function() 
+return META end ]=======], '@nattlua/code.lua'))()
+IMPORTS['./nattlua/types/../parser/nodes.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -2136,8 +2136,8 @@ return {
 	Node = Node,
 	statement = statement,
 	expression = expression,
-} end
-do local __M; IMPORTS["nattlua.types.string"] = function(...) __M = __M or (function(...) local tostring = tostring
+} end ]=======], '@./nattlua/types/../parser/nodes.nlua'))()
+do local __M; IMPORTS["nattlua.types.string"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local tostring = tostring
 local setmetatable = _G.setmetatable
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
@@ -2326,8 +2326,8 @@ return {
 	NodeToString = function(node, is_local)
 		return META.New(node.value.value):SetLiteral(true)
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.any"] = function(...) __M = __M or (function(...) local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
+} end ]=======], '@./nattlua/types/string.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.types.any"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 
 
@@ -2377,8 +2377,8 @@ return {
 	Any = function()
 		return META.New()
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.tuple"] = function(...) __M = __M or (function(...) local tostring = tostring
+} end ]=======], '@./nattlua/types/any.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.types.tuple"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local tostring = tostring
 local table = _G.table
 local math = math
 local assert = assert
@@ -2870,8 +2870,8 @@ return {
 
 		return arguments
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.table"] = function(...) __M = __M or (function(...) local setmetatable = _G.setmetatable
+} end ]=======], '@./nattlua/types/tuple.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.types.table"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local setmetatable = _G.setmetatable
 local table = _G.table
 local ipairs = _G.ipairs
 local tostring = _G.tostring
@@ -3533,6 +3533,8 @@ function META:IsNumericallyIndexed()
 end
 
 function META:CopyLiteralness(from)
+	if self.suppress then return end
+
 	assert(from.Type == "table" or from.Type == "any" or from.Type == "union")
 
 	if from.Type == "any" then return end
@@ -3547,13 +3549,17 @@ function META:CopyLiteralness(from)
 		if not keyval then return type_errors.other(reason) end
 
 		if keyval_from.key.Type == "table" then
+			self.suppress = true
 			keyval.key:CopyLiteralness(keyval_from.key) -- TODO: never called
+			self.suppress = false
 		else
 			keyval.key:SetLiteral(keyval_from.key:IsLiteral())
 		end
 
 		if keyval_from.val.Type == "table" then
+			self.suppress = true
 			keyval.val:CopyLiteralness(keyval_from.val)
+			self.suppress = false
 		else
 			keyval.val:SetLiteral(keyval_from.val:IsLiteral())
 		end
@@ -3813,8 +3819,8 @@ function META.New()
 	return setmetatable({Data = {}, contracts = {}}, META)
 end
 
-return {Table = META.New} end)(...) return __M end end
-IMPORTS['nattlua/definitions/lua/globals.nlua'] = function() 
+return {Table = META.New} end ]=======], '@./nattlua/types/table.lua'))())(...) return __M end end
+IMPORTS['nattlua/definitions/lua/globals.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -3899,8 +3905,8 @@ function _G.LSX(
 		}
 	e.tag = tag
 	return e
-end end
-IMPORTS['nattlua/definitions/lua/io.nlua'] = function() 
+end end ]=======], '@nattlua/definitions/lua/globals.nlua'))()
+IMPORTS['nattlua/definitions/lua/io.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -3911,21 +3917,21 @@ IMPORTS['nattlua/definitions/lua/io.nlua'] = function()
 
 
 
- end
-IMPORTS['nattlua/definitions/lua/luajit.nlua'] = function() 
+ end ]=======], '@nattlua/definitions/lua/io.nlua'))()
+IMPORTS['nattlua/definitions/lua/luajit.nlua'] = assert(loadstring([=======[ return function() 
 
- end
-IMPORTS['nattlua/definitions/lua/debug.nlua'] = function() 
-
-
+ end ]=======], '@nattlua/definitions/lua/luajit.nlua'))()
+IMPORTS['nattlua/definitions/lua/debug.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
 
 
- end
-IMPORTS['nattlua/definitions/lua/package.nlua'] = function()  end
-IMPORTS['nattlua/definitions/lua/bit.nlua'] = function() 
+
+
+ end ]=======], '@nattlua/definitions/lua/debug.nlua'))()
+IMPORTS['nattlua/definitions/lua/package.nlua'] = assert(loadstring([=======[ return function()  end ]=======], '@nattlua/definitions/lua/package.nlua'))()
+IMPORTS['nattlua/definitions/lua/bit.nlua'] = assert(loadstring([=======[ return function() 
 
 
 do
@@ -3952,8 +3958,8 @@ do
 	
 
 	
-end end
-IMPORTS['nattlua/definitions/lua/table.nlua'] = function() 
+end end ]=======], '@nattlua/definitions/lua/bit.nlua'))()
+IMPORTS['nattlua/definitions/lua/table.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -3997,8 +4003,8 @@ function table.spread(tbl)
 	if not tbl then return nil end
 
 	return table.unpack(tbl)
-end end
-IMPORTS['nattlua/definitions/lua/string.nlua'] = function() 
+end end ]=======], '@nattlua/definitions/lua/table.nlua'))()
+IMPORTS['nattlua/definitions/lua/string.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -4024,8 +4030,8 @@ IMPORTS['nattlua/definitions/lua/string.nlua'] = function()
 
 
 
- end
-IMPORTS['nattlua/definitions/lua/math.nlua'] = function() 
+ end ]=======], '@nattlua/definitions/lua/string.nlua'))()
+IMPORTS['nattlua/definitions/lua/math.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -4049,9 +4055,9 @@ IMPORTS['nattlua/definitions/lua/math.nlua'] = function()
 
 
 
- end
-IMPORTS['nattlua/definitions/lua/os.nlua'] = function()  end
-IMPORTS['nattlua/definitions/lua/coroutine.nlua'] = function() 
+ end ]=======], '@nattlua/definitions/lua/math.nlua'))()
+IMPORTS['nattlua/definitions/lua/os.nlua'] = assert(loadstring([=======[ return function()  end ]=======], '@nattlua/definitions/lua/os.nlua'))()
+IMPORTS['nattlua/definitions/lua/coroutine.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -4059,8 +4065,8 @@ IMPORTS['nattlua/definitions/lua/coroutine.nlua'] = function()
 
 
 
- end
-do local __M; IMPORTS["nattlua.other.table_print"] = function(...) __M = __M or (function(...) local pairs = _G.pairs
+ end ]=======], '@nattlua/definitions/lua/coroutine.nlua'))()
+do local __M; IMPORTS["nattlua.other.table_print"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local pairs = _G.pairs
 local tostring = _G.tostring
 local type = _G.type
 local debug = _G.debug
@@ -4377,8 +4383,8 @@ return function(...)
 	end
 
 	io.write(luadata.ToString(tbl, {tab = -1, tab_limit = max_level, done = {}}):sub(0, -2))
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.other.cparser"] = function(...) __M = __M or (function(...) local pcall = _G.pcall
+end end ]=======], '@./nattlua/other/table_print.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.cparser"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local pcall = _G.pcall
 local type = _G.type
 local getmetatable = _G.getmetatable
 local tostring = _G.tostring
@@ -8397,8 +8403,8 @@ cparser.parseString = function(cdecl, options, args)
 
 	return out
 end
-return cparser end)(...) return __M end end
-IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function() 
+return cparser end ]=======], '@./nattlua/other/cparser.lua'))())(...) return __M end end
+IMPORTS['nattlua/definitions/typed_ffi.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -8418,8 +8424,8 @@ IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function()
 
 
 
- end
-do local __M; IMPORTS["nattlua.compiler"] = function(...) __M = __M or (function(...) local io = io
+ end ]=======], '@nattlua/definitions/typed_ffi.nlua'))()
+do local __M; IMPORTS["nattlua.compiler"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local io = io
 local error = error
 local xpcall = xpcall
 local tostring = tostring
@@ -8704,8 +8710,8 @@ function META.New(
 	)
 end
 
-return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.runtime.base_environment"] = function(...) __M = __M or (function(...) local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
+return META end ]=======], '@./nattlua/compiler.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.runtime.base_environment"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local LStringNoMeta = IMPORTS['nattlua.types.string']("nattlua.types.string").LStringNoMeta
 
@@ -8765,8 +8771,8 @@ return {
 		)
 		return runtime_env, typesystem_env
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.code"] = function(...) __M = __M or (function(...) local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+} end ]=======], '@./nattlua/runtime/base_environment.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.code"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("code")
 
@@ -8862,8 +8868,8 @@ if jit then
 end
 
 
-return META end)(...) return __M end end
-IMPORTS['./nattlua/lexer/token.lua'] = function() local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
+return META end ]=======], '@./nattlua/code.lua'))())(...) return __M end end
+IMPORTS['./nattlua/lexer/token.lua'] = assert(loadstring([=======[ return function() local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("token")
@@ -8920,8 +8926,8 @@ function META.New(
 	return tk
 end
 
-return META end
-do local __M; IMPORTS["nattlua.other.reverse_escape_string"] = function(...) __M = __M or (function(...) local map = {
+return META end ]=======], '@./nattlua/lexer/token.lua'))()
+do local __M; IMPORTS["nattlua.other.reverse_escape_string"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local map = {
 	["a"] = "\a",
 	["b"] = "\b",
 	["f"] = "\f",
@@ -9038,8 +9044,8 @@ local function reverse_escape_string(str)
 	return str
 end
 
-return reverse_escape_string end)(...) return __M end end
-do local __M; IMPORTS["nattlua.lexer.token"] = function(...) __M = __M or (function(...) local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
+return reverse_escape_string end ]=======], '@./nattlua/other/reverse_escape_string.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.lexer.token"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local table_pool = IMPORTS['nattlua.other.table_pool']("nattlua.other.table_pool")
 local quote_helper = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("token")
@@ -9096,8 +9102,8 @@ function META.New(
 	return tk
 end
 
-return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.characters"] = function(...) __M = __M or (function(...) local characters = {}
+return META end ]=======], '@./nattlua/lexer/token.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.syntax.characters"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local characters = {}
 local B = string.byte
 
 function characters.IsNumber(c)
@@ -9185,8 +9191,8 @@ if jit then
 	end
 end
 
-return characters end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+return characters end ]=======], '@./nattlua/syntax/characters.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.syntax"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 
 
 
@@ -9447,8 +9453,8 @@ function META:GetTokenType(tk)
 	return tk.type
 end
 
-return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.runtime"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax']("nattlua.syntax").New
+return META end ]=======], '@./nattlua/syntax.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.syntax.runtime"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local Syntax = IMPORTS['nattlua.syntax']("nattlua.syntax").New
 local runtime = Syntax()
 runtime:AddSymbolCharacters(
 	{
@@ -9549,8 +9555,8 @@ runtime:AddPostfixOperatorFunctionTranslate({
 	["ÆØÅ"] = "(A)",
 	["ÆØÅÆ"] = "(A)",
 })
-return runtime end)(...) return __M end end
-do local __M; IMPORTS["nattlua.lexer"] = function(...) __M = __M or (function(...) 
+return runtime end ]=======], '@./nattlua/syntax/runtime.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.lexer"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) 
 
 
 
@@ -10291,8 +10297,8 @@ do
 	end
 end
 
-return META end)(...) return __M end end
-IMPORTS['./nattlua/parser/nodes.nlua'] = function() 
+return META end ]=======], '@./nattlua/lexer.lua'))())(...) return __M end end
+IMPORTS['./nattlua/parser/nodes.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -10356,8 +10362,8 @@ return {
 	Node = Node,
 	statement = statement,
 	expression = expression,
-} end
-IMPORTS['./nattlua/parser/../parser/nodes.nlua'] = function() 
+} end ]=======], '@./nattlua/parser/nodes.nlua'))()
+IMPORTS['./nattlua/parser/../parser/nodes.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -10421,8 +10427,8 @@ return {
 	Node = Node,
 	statement = statement,
 	expression = expression,
-} end
-IMPORTS['./nattlua/parser/../config.nlua'] = function() 
+} end ]=======], '@./nattlua/parser/../parser/nodes.nlua'))()
+IMPORTS['./nattlua/parser/../config.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -10434,8 +10440,8 @@ return {
 	AnalyzerConfig = nil,
 	TranspilerConfig = nil,
 	CompilerConfig = nil,
-} end
-IMPORTS['nattlua/parser/nodes.nlua'] = function() 
+} end ]=======], '@./nattlua/parser/../config.nlua'))()
+IMPORTS['nattlua/parser/nodes.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -10499,8 +10505,8 @@ return {
 	Node = Node,
 	statement = statement,
 	expression = expression,
-} end
-do local __M; IMPORTS["nattlua.parser.node"] = function(...) __M = __M or (function(...) 
+} end ]=======], '@nattlua/parser/nodes.nlua'))()
+do local __M; IMPORTS["nattlua.parser.node"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) 
 
 
 
@@ -10660,8 +10666,8 @@ function META:FindNodesByType(what)
 	return find_by_type(self, what, {})
 end
 
-return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.parser.base"] = function(...) __M = __M or (function(...) 
+return META end ]=======], '@./nattlua/parser/node.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.parser.base"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) 
 
 
 
@@ -11030,8 +11036,8 @@ function META:ParseMultipleValues(
 	return out
 end
 
-return META end)(...) return __M end end
-do local __M; IMPORTS["jit.vmdef"] = function(...) __M = __M or (function(...) -- This is a generated file. DO NOT EDIT!
+return META end ]=======], '@./nattlua/parser/base.lua'))())(...) return __M end end
+do local __M; IMPORTS["jit.vmdef"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) -- This is a generated file. DO NOT EDIT!
 return {
 	bcnames = "ISLT  ISGE  ISLE  ISGT  ISEQV ISNEV ISEQS ISNES ISEQN ISNEN ISEQP ISNEP ISTC  ISFC  IST   ISF   ISTYPEISNUM MOV   NOT   UNM   LEN   ADDVN SUBVN MULVN DIVVN MODVN ADDNV SUBNV MULNV DIVNV MODNV ADDVV SUBVV MULVV DIVVV MODVV POW   CAT   KSTR  KCDATAKSHORTKNUM  KPRI  KNIL  UGET  USETV USETS USETN USETP UCLO  FNEW  TNEW  TDUP  GGET  GSET  TGETV TGETS TGETB TGETR TSETV TSETS TSETB TSETM TSETR CALLM CALL  CALLMTCALLT ITERC ITERN VARG  ISNEXTRETM  RET   RET0  RET1  FORI  JFORI FORL  IFORL JFORL ITERL IITERLJITERLLOOP  ILOOP JLOOP JMP   FUNCF IFUNCFJFUNCFFUNCV IFUNCVJFUNCVFUNCC FUNCCW",
 	irnames = "LT    GE    LE    GT    ULT   UGE   ULE   UGT   EQ    NE    ABC   RETF  NOP   BASE  PVAL  GCSTEPHIOP  LOOP  USE   PHI   RENAMEPROF  KPRI  KINT  KGC   KPTR  KKPTR KNULL KNUM  KINT64KSLOT BNOT  BSWAP BAND  BOR   BXOR  BSHL  BSHR  BSAR  BROL  BROR  ADD   SUB   MUL   DIV   MOD   POW   NEG   ABS   LDEXP MIN   MAX   FPMATHADDOV SUBOV MULOV AREF  HREFK HREF  NEWREFUREFO UREFC FREF  TMPREFSTRREFLREF  ALOAD HLOAD ULOAD FLOAD XLOAD SLOAD VLOAD ALEN  ASTOREHSTOREUSTOREFSTOREXSTORESNEW  XSNEW TNEW  TDUP  CNEW  CNEWI BUFHDRBUFPUTBUFSTRTBAR  OBAR  XBAR  CONV  TOBIT TOSTR STRTO CALLN CALLA CALLL CALLS CALLXSCARG  ",
@@ -11448,8 +11454,8 @@ return {
 		"buffer.encode",
 		"buffer.decode",
 	},
-} end)(...) return __M end end
-do local __M; IMPORTS["jit.zone"] = function(...) __M = __M or (function(...) ----------------------------------------------------------------------------
+} end ]=======], '@/usr/local/share/luajit-2.1.0-beta3/jit/vmdef.lua'))())(...) return __M end end
+do local __M; IMPORTS["jit.zone"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) ----------------------------------------------------------------------------
 -- LuaJIT profiler zones.
 --
 -- Copyright (C) 2005-2022 Mike Pall. All rights reserved.
@@ -11495,8 +11501,8 @@ return setmetatable(
 			end
 		end,
 	}
-) end)(...) return __M end end
-do local __M; IMPORTS["jit.p"] = function(...) __M = __M or (function(...) ----------------------------------------------------------------------------
+) end ]=======], '@/usr/local/share/luajit-2.1.0-beta3/jit/zone.lua'))())(...) return __M end end
+do local __M; IMPORTS["jit.p"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) ----------------------------------------------------------------------------
 -- LuaJIT profiler.
 --
 -- Copyright (C) 2005-2022 Mike Pall. All rights reserved.
@@ -11916,8 +11922,8 @@ end
 
 -- Public module functions.
 return {start = start, -- For -j command line option.
-stop = prof_finish} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.other.profiler"] = function(...) __M = __M or (function(...) local profiler = {}
+stop = prof_finish} end ]=======], '@/usr/local/share/luajit-2.1.0-beta3/jit/p.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.profiler"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local profiler = {}
 local should_run = true
 
 if _G.ON_EDITOR_SAVE or not jit then should_run = false end
@@ -11946,8 +11952,8 @@ function profiler.PopZone()
 	IMPORTS['jit.zone']("jit.zone")()
 end
 
-return profiler end)(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.typesystem"] = function(...) __M = __M or (function(...) local Syntax = IMPORTS['nattlua.syntax']("nattlua.syntax").New
+return profiler end ]=======], '@./nattlua/other/profiler.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.syntax.typesystem"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local Syntax = IMPORTS['nattlua.syntax']("nattlua.syntax").New
 local typesystem = Syntax()
 typesystem:AddSymbolCharacters(
 	{
@@ -12092,8 +12098,8 @@ typesystem:AddBinaryOperators(
 		{"R^"}, -- right associative
 	}
 )
-return typesystem end)(...) return __M end end
-IMPORTS['nattlua/parser/expressions.lua'] = function(...) local META = ...
+return typesystem end ]=======], '@./nattlua/syntax/typesystem.lua'))())(...) return __M end end
+IMPORTS['nattlua/parser/expressions.lua'] = assert(loadstring([=======[ return function(...) local META = ...
 local table_insert = _G.table.insert
 local table_remove = _G.table.remove
 local math_huge = math.huge
@@ -13120,8 +13126,8 @@ do -- runtime
 
 		return self:ParseRuntimeExpression(priority)
 	end
-end end
-IMPORTS['nattlua/parser/statements.lua'] = function(...) local META = ...
+end end ]=======], '@nattlua/parser/expressions.lua'))()
+IMPORTS['nattlua/parser/statements.lua'] = assert(loadstring([=======[ return function(...) local META = ...
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
 
@@ -13635,8 +13641,8 @@ function META:ParseCallOrAssignmentStatement()
 		self:GetToken().type,
 		self:GetToken().value
 	)
-end end
-IMPORTS['nattlua/parser/teal.lua'] = function(...) local META = ...
+end end ]=======], '@nattlua/parser/statements.lua'))()
+IMPORTS['nattlua/parser/teal.lua'] = assert(loadstring([=======[ return function(...) local META = ...
 
 
 
@@ -14066,8 +14072,8 @@ do
 		assignment.tokens["local"] = self:ExpectValue("local")
 		return ParseBody(self, assignment)
 	end
-end end
-do local __M; IMPORTS["nattlua.parser"] = function(...) __M = __M or (function(...) local META = IMPORTS['nattlua.parser.base']("nattlua.parser.base")
+end end ]=======], '@nattlua/parser/teal.lua'))()
+do local __M; IMPORTS["nattlua.parser"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local META = IMPORTS['nattlua.parser.base']("nattlua.parser.base")
 local profiler = IMPORTS['nattlua.other.profiler']("nattlua.other.profiler")
 local Code = IMPORTS['nattlua.code']("nattlua.code").New
 local Lexer = IMPORTS['nattlua.lexer']("nattlua.lexer").New
@@ -14404,8 +14410,8 @@ function META:ParseNode()
 	return node
 end
 
-return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.function"] = function(...) __M = __M or (function(...) local tostring = _G.tostring
+return META end ]=======], '@./nattlua/parser.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.types.function"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local tostring = _G.tostring
 local ipairs = _G.ipairs
 local setmetatable = _G.setmetatable
 local table = _G.table
@@ -14638,8 +14644,8 @@ return {
 		self:SetAnalyzerFunction(lua_function)
 		return self
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.types.types"] = function(...) __M = __M or (function(...) local types = {}
+} end ]=======], '@./nattlua/types/function.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.types.types"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local types = {}
 
 function types.Initialize()
 	types.Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
@@ -14662,8 +14668,8 @@ function types.Initialize()
 	types.Boolean = IMPORTS['nattlua.types.union']("nattlua.types.union").Boolean
 end
 
-return types end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.base.upvalue"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+return types end ]=======], '@./nattlua/types/types.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.base.upvalue"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local META = class.CreateTemplate("upvalue")
 
 function META:__tostring()
@@ -14697,8 +14703,8 @@ function META.New(obj)
 	return self
 end
 
-return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.base.lexical_scope"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+return META end ]=======], '@./nattlua/analyzer/base/upvalue.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.base.lexical_scope"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local pairs = pairs
 local error = error
 local tostring = tostring
@@ -15155,8 +15161,8 @@ function META.New(parent, upvalue_position, obj)
 	return scope
 end
 
-return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.base.scopes"] = function(...) __M = __M or (function(...) local type = type
+return META end ]=======], '@./nattlua/analyzer/base/lexical_scope.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.base.scopes"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local type = type
 local ipairs = ipairs
 local tostring = tostring
 local LexicalScope = IMPORTS['nattlua.analyzer.base.lexical_scope']("nattlua.analyzer.base.lexical_scope").New
@@ -15343,8 +15349,8 @@ return function(META)
 			return g
 		end
 	end
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.base.error_handling"] = function(...) __M = __M or (function(...) local table = _G.table
+end end ]=======], '@./nattlua/analyzer/base/scopes.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.base.error_handling"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local table = _G.table
 local type = type
 local ipairs = ipairs
 local tostring = tostring
@@ -15475,8 +15481,8 @@ return function(META)
 	function META:GetDiagnostics()
 		return self.diagnostics
 	end
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.base.base_analyzer"] = function(...) __M = __M or (function(...) local tonumber = tonumber
+end end ]=======], '@./nattlua/analyzer/base/error_handling.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.base.base_analyzer"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local tonumber = tonumber
 local ipairs = ipairs
 local os = os
 local print = print
@@ -15655,7 +15661,7 @@ return function(META)
 		local locals = ""
 		locals = locals .. "local bit=bit32 or _G.bit;"
 
-		if BUNDLE then
+		if _G.BUNDLE then
 			locals = locals .. "local nl=IMPORTS[\"nattlua.init\"]();"
 			locals = locals .. "local types=IMPORTS[\"nattlua.types.types\"]();"
 			locals = locals .. "local context=IMPORTS[\"nattlua.analyzer.context\"]();"
@@ -15998,8 +16004,8 @@ return function(META)
 			end
 		end
 	end
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.control_flow"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+end end ]=======], '@./nattlua/analyzer/base/base_analyzer.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.control_flow"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
@@ -16384,8 +16390,8 @@ return function(META)
 	function META:PopConditionalScope()
 		self:PopScope()
 	end
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.mutations"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+end end ]=======], '@./nattlua/analyzer/control_flow.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.mutations"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local print = print
@@ -17126,8 +17132,8 @@ return function(META)
 			end
 		end
 	end
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.index"] = function(...) __M = __M or (function(...) local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
+end end ]=======], '@./nattlua/analyzer/mutations.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.index"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
@@ -17260,8 +17266,8 @@ return {
 			return Nil()
 		end
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.newindex"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+} end ]=======], '@./nattlua/analyzer/operators/index.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.newindex"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local tostring = tostring
 local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
@@ -17425,8 +17431,8 @@ return {
 			return true
 		end
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.call_analyzer"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+} end ]=======], '@./nattlua/analyzer/operators/newindex.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.call_analyzer"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local math = math
 local ipairs = ipairs
 local type = type
@@ -17644,8 +17650,8 @@ return function(META)
 
 		return ret
 	end
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.call_body"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+end end ]=======], '@./nattlua/analyzer/operators/call_analyzer.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.call_body"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local table = _G.table
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
@@ -18178,8 +18184,8 @@ return function(META)
 
 		return contract
 	end
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.call_function_signature"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+end end ]=======], '@./nattlua/analyzer/operators/call_body.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.call_function_signature"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 return function(META)
 	function META:CallFunctionSignature(obj, input)
@@ -18216,8 +18222,8 @@ return function(META)
 
 		return ret
 	end
-end end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.call"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+end end ]=======], '@./nattlua/analyzer/operators/call_function_signature.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.call"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
@@ -18440,8 +18446,8 @@ return {
 			return ok, err
 		end
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.destructure_assignment"] = function(...) __M = __M or (function(...) local tostring = tostring
+} end ]=======], '@./nattlua/analyzer/operators/call.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.destructure_assignment"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local tostring = tostring
 local ipairs = ipairs
 local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").NodeToString
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
@@ -18484,8 +18490,8 @@ return {
 			end
 		end
 	end,
-} end)(...) return __M end end
-IMPORTS['./nattlua/transpiler/../parser/nodes.nlua'] = function() 
+} end ]=======], '@./nattlua/analyzer/statements/destructure_assignment.lua'))())(...) return __M end end
+IMPORTS['./nattlua/transpiler/../parser/nodes.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -18549,8 +18555,8 @@ return {
 	Node = Node,
 	statement = statement,
 	expression = expression,
-} end
-IMPORTS['./nattlua/transpiler/../config.nlua'] = function() 
+} end ]=======], '@./nattlua/transpiler/../parser/nodes.nlua'))()
+IMPORTS['./nattlua/transpiler/../config.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -18562,8 +18568,8 @@ return {
 	AnalyzerConfig = nil,
 	TranspilerConfig = nil,
 	CompilerConfig = nil,
-} end
-do local __M; IMPORTS["nattlua.transpiler.emitter"] = function(...) __M = __M or (function(...) local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
+} end ]=======], '@./nattlua/transpiler/../config.nlua'))()
+do local __M; IMPORTS["nattlua.transpiler.emitter"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local characters = IMPORTS['nattlua.syntax.characters']("nattlua.syntax.characters")
 local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local print = _G.print
@@ -18955,7 +18961,7 @@ function META:BuildCode(block)
 							self:Emit(
 								"IMPORTS['" .. node.key .. "'] = " .. encapsulate_module(
 										"function(...) " .. root:Render(self.config or {}) .. " end",
-										"@" .. node.key,
+										"@" .. node.path,
 										self.config.module_encapsulation_method
 									) .. "\n"
 							)
@@ -18963,7 +18969,7 @@ function META:BuildCode(block)
 							self:Emit(
 								"do local __M; IMPORTS[\"" .. node.key .. "\"] = function(...) __M = __M or (" .. encapsulate_module(
 										"function(...) " .. root:Render(self.config or {}) .. " end",
-										node.key,
+										"@" .. node.path,
 										self.config.module_encapsulation_method
 									) .. ")(...) return __M end end\n"
 							)
@@ -18975,7 +18981,7 @@ function META:BuildCode(block)
 							self:Emit(
 								"IMPORTS['" .. node.key .. "'] = " .. encapsulate_module(
 										"function() " .. root:Render(self.config or {}) .. " end",
-										"@" .. node.key,
+										"@" .. node.path,
 										self.config.module_encapsulation_method
 									) .. "\n"
 							)
@@ -20479,8 +20485,8 @@ function META.New(config)
 	return self
 end
 
-return META end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.function"] = function(...) __M = __M or (function(...) local tostring = tostring
+return META end ]=======], '@./nattlua/transpiler/emitter.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.function"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local tostring = tostring
 local table = _G.table
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
@@ -20669,8 +20675,8 @@ return {
 
 		return obj
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.function"] = function(...) __M = __M or (function(...) local AnalyzeFunction = IMPORTS['nattlua.analyzer.expressions.function']("nattlua.analyzer.expressions.function").AnalyzeFunction
+} end ]=======], '@./nattlua/analyzer/expressions/function.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.function"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local AnalyzeFunction = IMPORTS['nattlua.analyzer.expressions.function']("nattlua.analyzer.expressions.function").AnalyzeFunction
 local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").NodeToString
 return {
 	AnalyzeFunction = function(self, statement)
@@ -20706,8 +20712,8 @@ return {
 			self:FatalError("unhandled statement: " .. statement.kind)
 		end
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.if"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+} end ]=======], '@./nattlua/analyzer/statements/function.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.if"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 
 local function contains_ref_argument(upvalues)
@@ -20829,15 +20835,15 @@ return {
 
 		self:ClearTracked()
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.do"] = function(...) __M = __M or (function(...) return {
+} end ]=======], '@./nattlua/analyzer/statements/if.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.do"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) return {
 	AnalyzeDo = function(self, statement)
 		self:CreateAndPushScope()
 		self:AnalyzeStatements(statement.statements)
 		self:PopScope()
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.generic_for"] = function(...) __M = __M or (function(...) local table = _G.table
+} end ]=======], '@./nattlua/analyzer/statements/do.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.generic_for"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local table = _G.table
 local ipairs = ipairs
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
@@ -20859,6 +20865,8 @@ return {
 
 		for i = 1, 1000 do
 			local values = self:Assert(self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
+
+			if values.Type ~= "tuple" then values = Tuple({values}) end
 
 			if
 				not values:Get(1) or
@@ -20907,6 +20915,7 @@ return {
 
 			if i == (self.max_iterations or 1000) then self:Error("too many iterations") end
 
+			assert(values.Type == "tuple")
 			table.insert(values:GetData(), 1, args[1])
 			args = values:GetData()
 
@@ -20920,13 +20929,13 @@ return {
 			self:PopUncertainLoop()
 		end
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.call_expression"] = function(...) __M = __M or (function(...) return {
+} end ]=======], '@./nattlua/analyzer/statements/generic_for.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.call_expression"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) return {
 	AnalyzeCall = function(self, statement)
 		self:AnalyzeExpression(statement.value)
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.binary"] = function(...) __M = __M or (function(...) local tostring = tostring
+} end ]=======], '@./nattlua/analyzer/statements/call_expression.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.binary"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local tostring = tostring
 local ipairs = ipairs
 local table = _G.table
 local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
@@ -21381,8 +21390,8 @@ local function Binary(self, node, l, r, op)
 	return type_errors.binary(op, l, r)
 end
 
-return {Binary = Binary} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.numeric_for"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+return {Binary = Binary} end ]=======], '@./nattlua/analyzer/operators/binary.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.numeric_for"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local math = math
 local assert = assert
 local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
@@ -21502,38 +21511,38 @@ return {
 
 		self:PopConditionalScope()
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.break"] = function(...) __M = __M or (function(...) return {
+} end ]=======], '@./nattlua/analyzer/statements/numeric_for.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.break"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) return {
 	AnalyzeBreak = function(self, statement)
 		self:Break()
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.continue"] = function(...) __M = __M or (function(...) return {
+} end ]=======], '@./nattlua/analyzer/statements/break.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.continue"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) return {
 	AnalyzeContinue = function(self, statement)
 		self._continue_ = true
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.repeat"] = function(...) __M = __M or (function(...) return {
+} end ]=======], '@./nattlua/analyzer/statements/continue.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.repeat"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) return {
 	AnalyzeRepeat = function(self, statement)
 		self:CreateAndPushScope()
 		self:AnalyzeStatements(statement.statements)
 		self:PopScope()
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.return"] = function(...) __M = __M or (function(...) local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
+} end ]=======], '@./nattlua/analyzer/statements/repeat.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.return"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 return {
 	AnalyzeReturn = function(self, statement)
 		local ret = self:AnalyzeExpressions(statement.expressions)
 		self:Return(statement, ret)
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.analyzer_debug_code"] = function(...) __M = __M or (function(...) return {
+} end ]=======], '@./nattlua/analyzer/statements/return.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.analyzer_debug_code"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) return {
 	AnalyzeAnalyzerDebugCode = function(self, statement)
 		local code = statement.lua_code.value.value:sub(3)
 		self:CallLuaTypeFunction(self:CompileLuaAnalyzerDebugCode(code, statement.lua_code), self:GetScope())
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.while"] = function(...) __M = __M or (function(...) return {
+} end ]=======], '@./nattlua/analyzer/statements/analyzer_debug_code.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.while"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) return {
 	AnalyzeWhile = function(self, statement)
 		local obj = self:AnalyzeExpression(statement.expression)
 		local upvalues = self:GetTrackedUpvalues()
@@ -21571,8 +21580,8 @@ do local __M; IMPORTS["nattlua.analyzer.statements.while"] = function(...) __M =
 			end
 		end
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.statements.assignment"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+} end ]=======], '@./nattlua/analyzer/statements/while.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.statements.assignment"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local tostring = tostring
 local table = _G.table
 local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").NodeToString
@@ -21805,8 +21814,8 @@ return {
 			end
 		end
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.binary_operator"] = function(...) __M = __M or (function(...) local table = _G.table
+} end ]=======], '@./nattlua/analyzer/statements/assignment.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.binary_operator"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local table = _G.table
 local Binary = IMPORTS['nattlua.analyzer.operators.binary']("nattlua.analyzer.operators.binary").Binary
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local assert = _G.assert
@@ -21814,8 +21823,8 @@ return {
 	AnalyzeBinaryOperator = function(self, node)
 		return self:Assert(Binary(self, node))
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.prefix"] = function(...) __M = __M or (function(...) local ipairs = ipairs
+} end ]=======], '@./nattlua/analyzer/expressions/binary_operator.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.prefix"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local error = error
 local tostring = tostring
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
@@ -21953,14 +21962,14 @@ local function Prefix(self, node, r)
 	)
 end
 
-return {Prefix = Prefix} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.prefix_operator"] = function(...) __M = __M or (function(...) local Prefix = IMPORTS['nattlua.analyzer.operators.prefix']("nattlua.analyzer.operators.prefix").Prefix
+return {Prefix = Prefix} end ]=======], '@./nattlua/analyzer/operators/prefix.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.prefix_operator"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local Prefix = IMPORTS['nattlua.analyzer.operators.prefix']("nattlua.analyzer.operators.prefix").Prefix
 return {
 	AnalyzePrefixOperator = function(self, node)
 		return self:Assert(Prefix(self, node))
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.operators.postfix"] = function(...) __M = __M or (function(...) local Binary = IMPORTS['nattlua.analyzer.operators.binary']("nattlua.analyzer.operators.binary").Binary
+} end ]=======], '@./nattlua/analyzer/expressions/prefix_operator.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.operators.postfix"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local Binary = IMPORTS['nattlua.analyzer.operators.binary']("nattlua.analyzer.operators.binary").Binary
 local Node = IMPORTS['nattlua.parser.node']("nattlua.parser.node")
 return {
 	Postfix = function(self, node, r)
@@ -21970,14 +21979,14 @@ return {
 			return Binary(self, setmetatable({value = {value = "+"}}, Node), r, r)
 		end
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_operator"] = function(...) __M = __M or (function(...) local Postfix = IMPORTS['nattlua.analyzer.operators.postfix']("nattlua.analyzer.operators.postfix").Postfix
+} end ]=======], '@./nattlua/analyzer/operators/postfix.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_operator"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local Postfix = IMPORTS['nattlua.analyzer.operators.postfix']("nattlua.analyzer.operators.postfix").Postfix
 return {
 	AnalyzePostfixOperator = function(self, node)
 		return self:Assert(Postfix(self, node, self:AnalyzeExpression(node.left)))
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.import"] = function(...) __M = __M or (function(...) local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
+} end ]=======], '@./nattlua/analyzer/expressions/postfix_operator.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.import"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 return {
 	AnalyzeImport = function(self, node)
@@ -21994,8 +22003,8 @@ return {
 
 		return Nil()
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_call"] = function(...) __M = __M or (function(...) local table = _G.table
+} end ]=======], '@./nattlua/analyzer/expressions/import.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_call"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local table = _G.table
 local NormalizeTuples = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").NormalizeTuples
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local AnalyzeImport = IMPORTS['nattlua.analyzer.expressions.import']("nattlua.analyzer.expressions.import").AnalyzeImport
@@ -22057,8 +22066,8 @@ return {
 		self:PopAnalyzerEnvironment()
 		return returned_tuple
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_index"] = function(...) __M = __M or (function(...) return {
+} end ]=======], '@./nattlua/analyzer/expressions/postfix_call.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_index"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) return {
 	AnalyzePostfixIndex = function(self, node)
 		return self:Assert(
 			self:IndexOperator(
@@ -22067,8 +22076,8 @@ do local __M; IMPORTS["nattlua.analyzer.expressions.postfix_index"] = function(.
 			)
 		)
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.table"] = function(...) __M = __M or (function(...) local tostring = tostring
+} end ]=======], '@./nattlua/analyzer/expressions/postfix_index.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.table"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local tostring = tostring
 local ipairs = ipairs
 local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
 local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
@@ -22146,8 +22155,8 @@ return {
 		self:PopCurrentType("table")
 		return tbl
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.atomic_value"] = function(...) __M = __M or (function(...) local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
+} end ]=======], '@./nattlua/analyzer/expressions/table.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.atomic_value"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local NodeToString = IMPORTS['nattlua.types.string']("nattlua.types.string").NodeToString
 local LNumber = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumber
 local LNumberFromString = IMPORTS['nattlua.types.number']("nattlua.types.number").LNumberFromString
@@ -22281,8 +22290,8 @@ return {
 
 		self:FatalError("unhandled value type " .. type .. " " .. node:Render())
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.tuple"] = function(...) __M = __M or (function(...) local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
+} end ]=======], '@./nattlua/analyzer/expressions/atomic_value.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.tuple"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 return {
 	AnalyzeTuple = function(self, node)
 		local tup = Tuple():SetUnpackable(true)
@@ -22291,14 +22300,14 @@ return {
 		self:PopCurrentType("tuple")
 		return tup
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.expressions.vararg"] = function(...) __M = __M or (function(...) local VarArg = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").VarArg
+} end ]=======], '@./nattlua/analyzer/expressions/tuple.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.vararg"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local VarArg = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").VarArg
 return {
 	AnalyzeVararg = function(self, node)
 		return VarArg(self:AnalyzeExpression(node.value))
 	end,
-} end)(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer"] = function(...) __M = __M or (function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+} end ]=======], '@./nattlua/analyzer/expressions/vararg.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local profiler = IMPORTS['nattlua.other.profiler']("nattlua.other.profiler")
 local tostring = tostring
 local error = error
@@ -22489,8 +22498,8 @@ function META.New(config)
 	return self
 end
 
-return META end)(...) return __M end end
-IMPORTS['./nattlua/config.nlua'] = function() 
+return META end ]=======], '@./nattlua/analyzer.lua'))())(...) return __M end end
+IMPORTS['./nattlua/config.nlua'] = assert(loadstring([=======[ return function() 
 
 
 
@@ -22502,8 +22511,8 @@ return {
 	AnalyzerConfig = nil,
 	TranspilerConfig = nil,
 	CompilerConfig = nil,
-} end
-do local __M; IMPORTS["nattlua.init"] = function(...) __M = __M or (function(...) local nl = {}
+} end ]=======], '@./nattlua/config.nlua'))()
+do local __M; IMPORTS["nattlua.init"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local nl = {}
 local loadstring = IMPORTS['nattlua.other.loadstring']("nattlua.other.loadstring")
 nl.Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler").New
 
@@ -22541,8 +22550,8 @@ function nl.File(path, config)
 	return nl.Compiler(code, "@" .. path, config)
 end
 
-return nl end)(...) return __M end end
-IMPORTS['nattlua/definitions/index.nlua'] = function() IMPORTS['nattlua/definitions/utility.nlua']("./utility.nlua")
+return nl end ]=======], '@./nattlua/init.lua'))())(...) return __M end end
+IMPORTS['nattlua/definitions/index.nlua'] = assert(loadstring([=======[ return function() IMPORTS['nattlua/definitions/utility.nlua']("./utility.nlua")
 IMPORTS['nattlua/definitions/attest.nlua']("./attest.nlua")
 IMPORTS['nattlua/definitions/lua/globals.nlua']("./lua/globals.nlua")
 IMPORTS['nattlua/definitions/lua/io.nlua']("./lua/io.nlua")
@@ -22555,7 +22564,7 @@ IMPORTS['nattlua/definitions/lua/string.nlua']("./lua/string.nlua")
 IMPORTS['nattlua/definitions/lua/math.nlua']("./lua/math.nlua")
 IMPORTS['nattlua/definitions/lua/os.nlua']("./lua/os.nlua")
 IMPORTS['nattlua/definitions/lua/coroutine.nlua']("./lua/coroutine.nlua")
-IMPORTS['nattlua/definitions/typed_ffi.nlua']("./typed_ffi.nlua") end
+IMPORTS['nattlua/definitions/typed_ffi.nlua']("./typed_ffi.nlua") end ]=======], '@nattlua/definitions/index.nlua'))()
 IMPORTS['DATA_nattlua/definitions/index.nlua'] = function() return [======[ _G.IMPORTS = _G.IMPORTS or {}
 IMPORTS['nattlua/definitions/utility.nlua'] = function() type _ = any
 type boolean = true | false
@@ -24754,7 +24763,2598 @@ IMPORTS['nattlua/definitions/lua/math.nlua']("./lua/math.nlua")
 IMPORTS['nattlua/definitions/lua/os.nlua']("./lua/os.nlua")
 IMPORTS['nattlua/definitions/lua/coroutine.nlua']("./lua/coroutine.nlua")
 IMPORTS['nattlua/definitions/typed_ffi.nlua']("./typed_ffi.nlua") ]======] end
-do local __M; IMPORTS["nattlua"] = function(...) __M = __M or (function(...) if not table.unpack and _G.unpack then table.unpack = _G.unpack end
+do local __M; IMPORTS["language_server.server.ljsocket"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ffi = require("ffi")
+local socket = {}
+local e = {}
+
+do
+	
+	local C --[[: ffi.C]] = ffi.C
+
+	if ffi.os == "Windows" then C = assert(ffi.load("ws2_32")) end
+
+	local M = {}
+
+	local function generic_function(
+		C_name,
+		cdef,
+		alias,
+		size_error_handling
+	)
+		ffi.cdef(cdef)
+		alias = alias or C_name
+		local func_name = alias
+		local func = C[C_name]
+
+		if size_error_handling == false then
+			socket[func_name] = func
+		elseif size_error_handling then
+			socket[func_name] = function(...)
+				local len = func(...)
+
+				if len < 0 then return nil, socket.lasterror() end
+
+				return len
+			end
+		else
+			socket[func_name] = function(...)
+				local ret = func(...)
+
+				if ret == 0 then return true end
+
+				return nil, socket.lasterror()
+			end
+		end
+	end
+
+	ffi.cdef[[
+        struct in_addr {
+            uint32_t s_addr;
+        };
+
+        struct in6_addr {
+            union {
+                uint8_t u6_addr8[16];
+                uint16_t u6_addr16[8];
+                uint32_t u6_addr32[4];
+            } u6_addr;
+        };
+    ]]
+
+	-- https://www.cs.dartmouth.edu/~sergey/cs60/on-sockaddr-structs.txt
+	if ffi.os == "OSX" then
+		ffi.cdef[[
+            struct sockaddr {
+                uint8_t sa_len;
+                uint8_t sa_family;
+                char sa_data[14];
+            };
+
+            struct sockaddr_in {
+                uint8_t sin_len;
+                uint8_t sin_family;
+                uint16_t sin_port;
+                struct in_addr sin_addr;
+                char sin_zero[8];
+            };
+
+            struct sockaddr_in6 {
+                uint8_t sin6_len;
+                uint8_t sin6_family;
+                uint16_t sin6_port;
+                uint32_t sin6_flowinfo;
+                struct in6_addr sin6_addr;
+                uint32_t sin6_scope_id;
+            };
+        ]]
+	elseif ffi.os == "Windows" then
+		ffi.cdef[[
+            struct sockaddr {
+                uint16_t sa_family;
+                char sa_data[14];
+            };
+
+            struct sockaddr_in {
+                int16_t sin_family;
+                uint16_t sin_port;
+                struct in_addr sin_addr;
+                uint8_t sin_zero[8];
+            };
+
+            struct sockaddr_in6 {
+                int16_t sin6_family;
+                uint16_t sin6_port;
+                uint32_t sin6_flowinfo;
+                struct in6_addr sin6_addr;
+                uint32_t sin6_scope_id;
+            };
+        ]]
+	else -- posix
+		ffi.cdef[[
+            struct sockaddr {
+                uint16_t sa_family;
+                char sa_data[14];
+            };
+
+            struct sockaddr_in {
+                uint16_t sin_family;
+                uint16_t sin_port;
+                struct in_addr sin_addr;
+                char sin_zero[8];
+            };
+
+            struct sockaddr_in6 {
+                uint16_t sin6_family;
+                uint16_t sin6_port;
+                uint32_t sin6_flowinfo;
+                struct in6_addr sin6_addr;
+                uint32_t sin6_scope_id;
+            };
+        ]]
+	end
+
+	if ffi.os == "Windows" then
+		ffi.cdef[[
+            typedef size_t SOCKET;
+
+            struct addrinfo {
+                int ai_flags;
+                int ai_family;
+                int ai_socktype;
+                int ai_protocol;
+                size_t ai_addrlen;
+                char *ai_canonname;
+                struct sockaddr *ai_addr;
+                struct addrinfo *ai_next;
+            };
+        ]]
+		socket.INVALID_SOCKET = ffi.new("SOCKET", -1)
+	elseif ffi.os == "OSX" then
+		ffi.cdef[[
+            typedef int32_t SOCKET;
+
+            struct addrinfo {
+                int ai_flags;
+                int ai_family;
+                int ai_socktype;
+                int ai_protocol;
+                uint32_t ai_addrlen;
+                char *ai_canonname;
+                struct sockaddr *ai_addr;
+                struct addrinfo *ai_next;
+            };
+        ]]
+		socket.INVALID_SOCKET = -1
+	else
+		ffi.cdef[[
+            typedef int32_t SOCKET;
+
+            struct addrinfo {
+                int ai_flags;
+                int ai_family;
+                int ai_socktype;
+                int ai_protocol;
+                uint32_t ai_addrlen;
+                struct sockaddr *ai_addr;
+                char *ai_canonname;
+                struct addrinfo *ai_next;
+            };
+        ]]
+		socket.INVALID_SOCKET = -1
+	end
+
+	assert(ffi.sizeof("struct sockaddr") == 16)
+	assert(ffi.sizeof("struct sockaddr_in") == 16)
+
+	if ffi.os == "Windows" then
+		do
+			ffi.cdef[[
+                uint32_t GetLastError();
+            ]]
+			ffi.cdef[[
+                uint32_t FormatMessageA(
+                    uint32_t dwFlags,
+                    const void* lpSource,
+                    uint32_t dwMessageId,
+                    uint32_t dwLanguageId,
+                    char* lpBuffer,
+                    uint32_t nSize,
+                    va_list *Arguments
+                );
+            ]]
+			local FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
+			local FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200
+			local flags = bit.bor(FORMAT_MESSAGE_IGNORE_INSERTS, FORMAT_MESSAGE_FROM_SYSTEM)
+			local cache = {}
+
+			function socket.lasterror(num)
+				num = num or ffi.C.GetLastError()
+
+				if not cache[num] then
+					local buffer = ffi.new("char[512]")
+					local len = ffi.C.FormatMessageA(flags, nil, num, 0, buffer, ffi.sizeof(buffer), nil)
+					cache[num] = ffi.string(buffer, len - 2)
+				end
+
+				return cache[num]
+			end
+		end
+
+		do
+			ffi.cdef[[int WSAStartup(uint16_t version, void *wsa_data);]]
+			local wsa_data
+
+			if jit.arch == "x64" then
+				wsa_data = ffi.typeof([[struct {
+                    uint16_t wVersion;
+                    uint16_t wHighVersion;
+                    unsigned short iMax_M;
+                    unsigned short iMaxUdpDg;
+                    char * lpVendorInfo;
+                    char szDescription[257];
+                    char szSystemStatus[129];
+                }]])
+			else
+				wsa_data = ffi.typeof([[struct {
+                    uint16_t wVersion;
+                    uint16_t wHighVersion;
+                    char szDescription[257];
+                    char szSystemStatus[129];
+                    unsigned short iMax_M;
+                    unsigned short iMaxUdpDg;
+                    char * lpVendorInfo;
+                }]])
+			end
+
+			local function WORD(low, high)
+				return bit.bor(low, bit.lshift(high, 8))
+			end
+
+			function socket.initialize()
+				local data = wsa_data()
+
+				if C.WSAStartup(WORD(2, 2), data) == 0 then return data end
+
+				return nil, socket.lasterror()
+			end
+		end
+
+		do
+			ffi.cdef[[int WSACleanup();]]
+
+			function socket.shutdown()
+				if C.WSACleanup() == 0 then return true end
+
+				return nil, socket.lasterror()
+			end
+		end
+
+		if jit.arch ~= "x64" then -- xp or something
+			ffi.cdef[[int WSAAddressToStringA(struct sockaddr *, unsigned long, void *, char *, unsigned long *);]]
+
+			function socket.inet_ntop(family, pAddr, strptr, strlen)
+				-- win XP: http://memset.wordpress.com/2010/10/09/inet_ntop-for-win32/
+				local srcaddr = ffi.new("struct sockaddr_in")
+				ffi.copy(srcaddr.sin_addr, pAddr, ffi.sizeof(srcaddr.sin_addr))
+				srcaddr.sin_family = family
+				local len = ffi.new("unsigned long[1]", strlen)
+				C.WSAAddressToStringA(ffi.cast("struct sockaddr *", srcaddr), ffi.sizeof(srcaddr), nil, strptr, len)
+				return strptr
+			end
+		end
+
+		generic_function("closesocket", "int closesocket(SOCKET s);", "close")
+
+		do
+			ffi.cdef[[int ioctlsocket(SOCKET s, long cmd, unsigned long* argp);]]
+			local IOCPARM_MASK = 0x7
+			local IOC_IN = 0x80000000
+
+			local function _IOW(x, y, t)
+				return bit.bor(
+					IOC_IN,
+					bit.lshift(bit.band(ffi.sizeof(t), IOCPARM_MASK), 16),
+					bit.lshift(x, 8),
+					y
+				)
+			end
+
+			local FIONBIO = _IOW(string.byte("f"), 126, "uint32_t") -- -2147195266 -- 2147772030ULL
+			function socket.blocking(fd, b)
+				local ret = C.ioctlsocket(fd, FIONBIO, ffi.new("int[1]", b and 0 or 1))
+
+				if ret == 0 then return true end
+
+				return nil, socket.lasterror()
+			end
+		end
+
+		ffi.cdef[[
+            struct pollfd {
+                SOCKET fd;
+                short events;
+                short revents;
+            };
+            int WSAPoll(struct pollfd *fds, unsigned long int nfds, int timeout);
+        ]]
+
+		function socket.poll(fds, ndfs, timeout)
+			local ret = C.WSAPoll(fds, ndfs, timeout)
+
+			if ret < 0 then return nil, socket.lasterror() end
+
+			return ret
+		end
+	else
+		ffi.cdef[[
+            struct pollfd {
+                SOCKET fd;
+                short events;
+                short revents;
+            };
+
+            int poll(struct pollfd *fds, unsigned long nfds, int timeout);
+        ]]
+
+		do
+			local cache = {}
+
+			function socket.lasterror(num)
+				num = num or ffi.errno()
+
+				if not cache[num] then
+					local err = ffi.string(ffi.C.strerror(num))
+					cache[num] = err == "" and tostring(num) or err
+				end
+
+				return cache[num]
+			end
+		end
+
+		generic_function("close", "int close(SOCKET s);")
+
+		do
+			ffi.cdef[[int fcntl(int, int, ...);]]
+			local F_GETFL = 3
+			local F_SETFL = 4
+			local O_NONBLOCK = 04000
+
+			if ffi.os == "OSX" then O_NONBLOCK = 0x0004 end
+
+			function socket.blocking(fd, b)
+				local flags = ffi.C.fcntl(fd, F_GETFL, 0)
+
+				if flags < 0 then -- error
+				return nil, socket.lasterror() end
+
+				if b then
+					flags = bit.band(flags, bit.bnot(O_NONBLOCK))
+				else
+					flags = bit.bor(flags, O_NONBLOCK)
+				end
+
+				local ret = ffi.C.fcntl(fd, F_SETFL, ffi.new("int", flags))
+
+				if ret < 0 then return nil, socket.lasterror() end
+
+				return true
+			end
+		end
+
+		function socket.poll(fds, ndfs, timeout)
+			local ret = C.poll(fds, ndfs, timeout)
+
+			if ret < 0 then return nil, socket.lasterror() end
+
+			return ret
+		end
+	end
+
+	ffi.cdef[[
+        char *strerror(int errnum);
+        int getaddrinfo(const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res);
+        int getnameinfo(const struct sockaddr* sa, uint32_t salen, char* host, size_t hostlen, char* serv, size_t servlen, int flags);
+        void freeaddrinfo(struct addrinfo *ai);
+        const char *gai_strerror(int errcode);
+        char *inet_ntoa(struct in_addr in);
+        uint16_t ntohs(uint16_t netshort);
+    ]]
+
+	function socket.getaddrinfo(node_name, service_name, hints, result)
+		local ret = C.getaddrinfo(node_name, service_name, hints, result)
+
+		if ret == 0 then return true end
+
+		return nil, ffi.string(C.gai_strerror(ret))
+	end
+
+	function socket.getnameinfo(address, length, host, hostlen, serv, servlen, flags)
+		local ret = C.getnameinfo(address, length, host, hostlen, serv, servlen, flags)
+
+		if ret == 0 then return true end
+
+		return nil, ffi.string(C.gai_strerror(ret))
+	end
+
+	do
+		ffi.cdef[[const char *inet_ntop(int __af, const void *__cp, char *__buf, unsigned int __len);]]
+
+		function socket.inet_ntop(family, addrinfo, strptr, strlen)
+			if C.inet_ntop(family, addrinfo, strptr, strlen) == nil then
+				return nil, socket.lasterror()
+			end
+
+			return strptr
+		end
+	end
+
+	do
+		ffi.cdef[[SOCKET socket(int af, int type, int protocol);]]
+
+		--[[type C.socket = function(number, number, number): number]] function socket.create(af, type, protocol)
+			local fd = C.socket(af, type, protocol)
+
+			if fd <= 0 then return nil, socket.lasterror() end
+
+			return fd
+		end
+	end
+
+	generic_function("shutdown", "int shutdown(SOCKET s, int how);")
+	generic_function(
+		"setsockopt",
+		"int setsockopt(SOCKET s, int level, int optname, const void* optval, uint32_t optlen);"
+	)
+	generic_function(
+		"getsockopt",
+		"int getsockopt(SOCKET s, int level, int optname, void *optval, uint32_t *optlen);"
+	)
+	generic_function("accept", "SOCKET accept(SOCKET s, struct sockaddr *, int *);", nil, false)
+	generic_function("bind", "int bind(SOCKET s, const struct sockaddr* name, int namelen);")
+	generic_function("connect", "int connect(SOCKET s, const struct sockaddr * name, int namelen);")
+	generic_function("listen", "int listen(SOCKET s, int backlog);")
+	generic_function("recv", "int recv(SOCKET s, char* buf, int len, int flags);", nil, true)
+	generic_function(
+		"recvfrom",
+		"int recvfrom(SOCKET s, char* buf, int len, int flags, struct sockaddr *src_addr, unsigned int *addrlen);",
+		nil,
+		true
+	)
+	generic_function("send", "int send(SOCKET s, const char* buf, int len, int flags);", nil, true)
+	generic_function(
+		"sendto",
+		"int sendto(SOCKET s, const char* buf, int len, int flags, const struct sockaddr* to, int tolen);",
+		nil,
+		true
+	)
+	generic_function("getpeername", "int getpeername(SOCKET s, struct sockaddr *, unsigned int *);")
+	generic_function("getsockname", "int getsockname(SOCKET s, struct sockaddr *, unsigned int *);")
+	socket.inet_ntoa = C.inet_ntoa
+	socket.ntohs = C.ntohs
+
+	function socket.poll(fd, events, revents) end
+
+	e = {
+		TCP_NODELAY = 1,
+		TCP_MAXSEG = 2,
+		TCP_CORK = 3,
+		TCP_KEEPIDLE = 4,
+		TCP_KEEPINTVL = 5,
+		TCP_KEEPCNT = 6,
+		TCP_SYNCNT = 7,
+		TCP_LINGER2 = 8,
+		TCP_DEFER_ACCEPT = 9,
+		TCP_WINDOW_CLAMP = 10,
+		TCP_INFO = 11,
+		TCP_QUICKACK = 12,
+		TCP_CONGESTION = 13,
+		TCP_MD5SIG = 14,
+		TCP_THIN_LINEAR_TIMEOUTS = 16,
+		TCP_THIN_DUPACK = 17,
+		TCP_USER_TIMEOUT = 18,
+		TCP_REPAIR = 19,
+		TCP_REPAIR_QUEUE = 20,
+		TCP_QUEUE_SEQ = 21,
+		TCP_REPAIR_OPTIONS = 22,
+		TCP_FASTOPEN = 23,
+		TCP_TIMESTAMP = 24,
+		TCP_NOTSENT_LOWAT = 25,
+		TCP_CC_INFO = 26,
+		TCP_SAVE_SYN = 27,
+		TCP_SAVED_SYN = 28,
+		TCP_REPAIR_WINDOW = 29,
+		TCP_FASTOPEN_CONNECT = 30,
+		TCP_ULP = 31,
+		TCP_MD5SIG_EXT = 32,
+		TCP_FASTOPEN_KEY = 33,
+		TCP_FASTOPEN_NO_COOKIE = 34,
+		TCP_ZEROCOPY_RECEIVE = 35,
+		TCP_INQ = 36,
+		AF_INET = 2,
+		AF_INET6 = 10,
+		AF_UNSPEC = 0,
+		AF_UNIX = 1,
+		AF_AX25 = 3,
+		AF_IPX = 4,
+		AF_APPLETALK = 5,
+		AF_NETROM = 6,
+		AF_BRIDGE = 7,
+		AF_AAL5 = 8,
+		AF_X25 = 9,
+		INET6_ADDRSTRLEN = 46,
+		INET_ADDRSTRLEN = 16,
+		SO_DEBUG = 1,
+		SO_REUSEADDR = 2,
+		SO_TYPE = 3,
+		SO_ERROR = 4,
+		SO_DONTROUTE = 5,
+		SO_BROADCAST = 6,
+		SO_SNDBUF = 7,
+		SO_RCVBUF = 8,
+		SO_SNDBUFFORCE = 32,
+		SO_RCVBUFFORCE = 33,
+		SO_KEEPALIVE = 9,
+		SO_OOBINLINE = 10,
+		SO_NO_CHECK = 11,
+		SO_PRIORITY = 12,
+		SO_LINGER = 13,
+		SO_BSDCOMPAT = 14,
+		SO_REUSEPORT = 15,
+		SO_PASSCRED = 16,
+		SO_PEERCRED = 17,
+		SO_RCVLOWAT = 18,
+		SO_SNDLOWAT = 19,
+		SO_RCVTIMEO = 20,
+		SO_SNDTIMEO = 21,
+		SO_SECURITY_AUTHENTICATION = 22,
+		SO_SECURITY_ENCRYPTION_TRANSPORT = 23,
+		SO_SECURITY_ENCRYPTION_NETWORK = 24,
+		SO_BINDTODEVICE = 25,
+		SO_ATTACH_FILTER = 26,
+		SO_DETACH_FILTER = 27,
+		SO_GET_FILTER = 26,
+		SO_PEERNAME = 28,
+		SO_TIMESTAMP = 29,
+		SO_ACCEPTCONN = 30,
+		SO_PEERSEC = 31,
+		SO_PASSSEC = 34,
+		SO_TIMESTAMPNS = 35,
+		SO_MARK = 36,
+		SO_TIMESTAMPING = 37,
+		SO_PROTOCOL = 38,
+		SO_DOMAIN = 39,
+		SO_RXQ_OVFL = 40,
+		SO_WIFI_STATUS = 41,
+		SO_PEEK_OFF = 42,
+		SO_NOFCS = 43,
+		SO_LOCK_FILTER = 44,
+		SO_SELECT_ERR_QUEUE = 45,
+		SO_BUSY_POLL = 46,
+		SO_MAX_PACING_RATE = 47,
+		SO_BPF_EXTENSIONS = 48,
+		SO_INCOMING_CPU = 49,
+		SO_ATTACH_BPF = 50,
+		SO_DETACH_BPF = 27,
+		SO_ATTACH_REUSEPORT_CBPF = 51,
+		SO_ATTACH_REUSEPORT_EBPF = 52,
+		SO_CNX_ADVICE = 53,
+		SO_MEMINFO = 55,
+		SO_INCOMING_NAPI_ID = 56,
+		SO_COOKIE = 57,
+		SO_PEERGROUPS = 59,
+		SO_ZEROCOPY = 60,
+		SO_TXTIME = 61,
+		SOL_SOCKET = 1,
+		SOL_TCP = 6,
+		SOMAXCONN = 128,
+		IPPROTO_IP = 0,
+		IPPROTO_HOPOPTS = 0,
+		IPPROTO_ICMP = 1,
+		IPPROTO_IGMP = 2,
+		IPPROTO_IPIP = 4,
+		IPPROTO_TCP = 6,
+		IPPROTO_EGP = 8,
+		IPPROTO_PUP = 12,
+		IPPROTO_UDP = 17,
+		IPPROTO_IDP = 22,
+		IPPROTO_TP = 29,
+		IPPROTO_DCCP = 33,
+		IPPROTO_IPV6 = 41,
+		IPPROTO_ROUTING = 43,
+		IPPROTO_FRAGMENT = 44,
+		IPPROTO_RSVP = 46,
+		IPPROTO_GRE = 47,
+		IPPROTO_ESP = 50,
+		IPPROTO_AH = 51,
+		IPPROTO_ICMPV6 = 58,
+		IPPROTO_NONE = 59,
+		IPPROTO_DSTOPTS = 60,
+		IPPROTO_MTP = 92,
+		IPPROTO_ENCAP = 98,
+		IPPROTO_PIM = 103,
+		IPPROTO_COMP = 108,
+		IPPROTO_SCTP = 132,
+		IPPROTO_UDPLITE = 136,
+		IPPROTO_RAW = 255,
+		SOCK_STREAM = 1,
+		SOCK_DGRAM = 2,
+		SOCK_RAW = 3,
+		SOCK_RDM = 4,
+		SOCK_SEQPACKET = 5,
+		SOCK_DCCP = 6,
+		SOCK_PACKET = 10,
+		SOCK_CLOEXEC = 02000000,
+		SOCK_NONBLOCK = 04000,
+		AI_PASSIVE = 0x00000001,
+		AI_CANONNAME = 0x00000002,
+		AI_NUMERICHOST = 0x00000004,
+		AI_NUMERICSERV = 0x00000008,
+		AI_ALL = 0x00000100,
+		AI_ADDRCONFIG = 0x00000400,
+		AI_V4MAPPED = 0x00000800,
+		AI_NON_AUTHORITATIVE = 0x00004000,
+		AI_SECURE = 0x00008000,
+		AI_RETURN_PREFERRED_NAMES = 0x00010000,
+		AI_FQDN = 0x00020000,
+		AI_FILESERVER = 0x00040000,
+		POLLIN = 0x0001,
+		POLLPRI = 0x0002,
+		POLLOUT = 0x0004,
+		POLLRDNORM = 0x0040,
+		POLLWRNORM = 0x0004,
+		POLLRDBAND = 0x0080,
+		POLLWRBAND = 0x0100,
+		POLLEXTEND = 0x0200,
+		POLLATTRIB = 0x0400,
+		POLLNLINK = 0x0800,
+		POLLWRITE = 0x1000,
+		POLLERR = 0x0008,
+		POLLHUP = 0x0010,
+		POLLNVAL = 0x0020,
+		MSG_OOB = 0x01,
+		MSG_PEEK = 0x02,
+		MSG_DONTROUTE = 0x04,
+		MSG_CTRUNC = 0x08,
+		MSG_PROXY = 0x10,
+		MSG_TRUNC = 0x20,
+		MSG_DONTWAIT = 0x40,
+		MSG_EOR = 0x80,
+		MSG_WAITALL = 0x100,
+		MSG_FIN = 0x200,
+		MSG_SYN = 0x400,
+		MSG_CONFIRM = 0x800,
+		MSG_RST = 0x1000,
+		MSG_ERRQUEUE = 0x2000,
+		MSG_NOSIGNAL = 0x4000,
+		MSG_MORE = 0x8000,
+		MSG_WAITFORONE = 0x10000,
+		MSG_CMSG_CLOEXEC = 0x40000000,
+	}
+
+	if ffi.os == "Windows" then
+		e.SO_SNDLOWAT = 4099
+		e.SO_REUSEADDR = 4
+		e.SO_KEEPALIVE = 8
+		e.SOMAXCONN = 2147483647
+		e.AF_INET6 = 23
+		e.SO_RCVTIMEO = 4102
+		e.SOL_SOCKET = 65535
+		e.SO_LINGER = 128
+		e.SO_OOBINLINE = 256
+		e.POLLWRNORM = 16
+		e.SO_ERROR = 4103
+		e.SO_BROADCAST = 32
+		e.SO_ACCEPTCONN = 2
+		e.SO_RCVBUF = 4098
+		e.SO_SNDTIMEO = 4101
+		e.POLLIN = 768
+		e.POLLPRI = 1024
+		e.SO_TYPE = 4104
+		e.POLLRDBAND = 512
+		e.POLLWRBAND = 32
+		e.SO_SNDBUF = 4097
+		e.POLLNVAL = 4
+		e.POLLHUP = 2
+		e.POLLERR = 1
+		e.POLLRDNORM = 256
+		e.SO_DONTROUTE = 16
+		e.SO_RCVLOWAT = 4100
+	end
+
+	if ffi.os == "OSX" then
+		e.SOL_SOCKET = 0xffff
+		e.SO_DEBUG = 0x0001
+		e.SO_ACCEPTCONN = 0x0002
+		e.SO_REUSEADDR = 0x0004
+		e.SO_KEEPALIVE = 0x0008
+		e.SO_DONTROUTE = 0x0010
+		e.SO_BROADCAST = 0x0020
+	end
+
+	if socket.initialize then assert(socket.initialize()) end
+end
+
+local function capture_flags(what)
+	local flags = {}
+	local reverse = {}
+
+	for k, v in pairs(e) do
+		if k:sub(0, #what) == what then
+			k = k:sub(#what + 1):lower()
+			reverse[v] = k
+			flags[k] = v
+		end
+	end
+
+	return {
+		lookup = flags,
+		reverse = reverse,
+		strict_reverse = function(key)
+			if not key then
+				error("invalid " .. what:sub(0, -2) .. " flag: nil")
+				return
+			end
+
+			if not reverse[key] then
+				error("invalid " .. what:sub(0, -2) .. " flag: " .. key, 2)
+			end
+
+			return reverse[key]
+		end,
+		strict_lookup = function(key)
+			if not key then
+				error("invalid " .. what:sub(0, -2) .. " flag: nil")
+				return
+			end
+
+			if not flags[key] then
+				error("invalid " .. what:sub(0, -2) .. " flag: " .. key, 2)
+			end
+
+			return flags[key]
+		end,
+	}
+end
+
+local SOCK = capture_flags("SOCK_")
+local AF = capture_flags("AF_")
+local IPPROTO = capture_flags("IPPROTO_")
+local AI = capture_flags("AI_")
+local SOL = capture_flags("SOL_")
+local SO = capture_flags("SO_")
+local TCP = capture_flags("TCP_")
+local POLL = capture_flags("POLL")
+
+local function table_to_flags(flags, valid_flags, operation)
+	if type(flags) == "string" then flags = {flags} end
+
+	operation = operation or bit.band
+	local out = 0
+
+	for k, v in pairs(flags) do
+		local flag = valid_flags[v] or valid_flags[k]
+
+		if not flag then error("invalid flag " .. tostring(v), 2) end
+
+		out = operation(out, tonumber(flag))
+	end
+
+	return out
+end
+
+local function flags_to_table(flags, valid_flags, operation)
+	if not flags then return valid_flags.default_valid_flag end
+
+	operation = operation or bit.band
+	local out = {}
+
+	for k, v in pairs(valid_flags) do
+		if operation(flags, v) > 0 then out[k] = true end
+	end
+
+	return out
+end
+
+local M = {}
+local timeout_messages = {}
+timeout_messages["Operation now in progress"] = true
+timeout_messages["Resource temporarily unavailable"] = true
+timeout_messages["A non-blocking socket operation could not be completed immediately."] = true
+
+function M.poll(socket, flags, timeout)
+	local pfd = ffi.new(
+		"struct pollfd[1]",
+		{
+			{
+				fd = socket.fd,
+				events = table_to_flags(flags, POLL.lookup, bit.bor),
+				revents = 0,
+			},
+		}
+	)
+	local ok, err = socket.poll(pfd, 1, timeout or 0)
+
+	if not ok then return ok, err end
+
+	return flags_to_table(pfd[0].revents, POLL.lookup, bit.bor), ok
+end
+
+local function addrinfo_get_ip(self)
+	if self.addrinfo.ai_addr == nil then return nil end
+
+	local str = ffi.new("char[256]")
+	local addr = assert(
+		socket.inet_ntop(AF.lookup[self.family], self.addrinfo.ai_addr.sa_data, str, ffi.sizeof(str))
+	)
+	return ffi.string(addr)
+end
+
+local function addrinfo_get_port(self)
+	if self.addrinfo.ai_addr == nil then return nil end
+
+	if self.family == "inet" then
+		return ffi.cast("struct sockaddr_in*", self.addrinfo.ai_addr).sin_port
+	elseif self.family == "inet6" then
+		return ffi.cast("struct sockaddr_in6*", self.addrinfo.ai_addr).sin6_port
+	end
+
+	return nil, "unknown family " .. tostring(self.family)
+end
+
+local function addrinfo_to_table(res, host, service)
+	local info = {}
+
+	if res.ai_canonname ~= nil then
+		info.canonical_name = ffi.string(res.ai_canonname)
+	end
+
+	info.host = host ~= "*" and host or nil
+	info.service = service
+	info.family = AF.reverse[res.ai_family]
+	info.socket_type = SOCK.reverse[res.ai_socktype]
+	info.protocol = IPPROTO.reverse[res.ai_protocol]
+	info.flags = flags_to_table(res.ai_flags, AI.lookup, bit.band)
+	info.addrinfo = res
+	info.get_ip = addrinfo_get_ip
+	info.get_port = addrinfo_get_port
+	return info
+end
+
+function M.get_address_info(data)
+	local hints
+
+	if data.socket_type or data.protocol or data.flags or data.family then
+		hints = ffi.new(
+			"struct addrinfo",
+			{
+				ai_family = data.family and AF.strict_lookup(data.family) or nil,
+				ai_socktype = data.socket_type and SOCK.strict_lookup(data.socket_type) or nil,
+				ai_protocol = data.protocol and IPPROTO.strict_lookup(data.protocol) or nil,
+				ai_flags = data.flags and table_to_flags(data.flags, AI.lookup, bit.bor) or nil,
+			}
+		)
+	end
+
+	local out = ffi.new("struct addrinfo*[1]")
+	local ok, err = socket.getaddrinfo(
+		data.host ~= "*" and data.host or nil,
+		data.service and tostring(data.service) or nil,
+		hints,
+		out
+	)
+
+	if not ok then return ok, err end
+
+	local tbl = {}
+	local res = out[0]
+
+	while res ~= nil do
+		table.insert(tbl, addrinfo_to_table(res, data.host, data.service))
+		res = res.ai_next
+	end
+
+	--ffi.C.freeaddrinfo(out[0])
+	return tbl
+end
+
+function M.find_first_address(host, service, options)
+	options = options or {}
+	local info = {}
+	info.host = host
+	info.service = service
+	info.family = options.family or "inet"
+	info.socket_type = options.socket_type or "stream"
+	info.protocol = options.protocol or "tcp"
+	info.flags = options.flags
+
+	if host == "*" then
+		info.flags = info.flags or {}
+		table.insert(info.flags, "passive")
+	end
+
+	local addrinfo, err = M.get_address_info(info)
+
+	if not addrinfo then return nil, err end
+
+	if not addrinfo[1] then
+		return nil, "no addresses found (empty address info table)"
+	end
+
+	for _, v in ipairs(addrinfo) do
+		if
+			v.family == info.family and
+			v.socket_type == info.socket_type and
+			v.protocol == info.protocol
+		then
+			return v
+		end
+	end
+
+	return addrinfo[1]
+end
+
+do
+	local meta = {}
+	meta.__index = meta
+
+	function meta:__tostring()
+		return string.format("socket[%s-%s-%s][%s]", self.family, self.socket_type, self.protocol, self.fd)
+	end
+
+	function M.create(family, socket_type, protocol)
+		local fd, err = socket.create(
+			AF.strict_lookup(family),
+			SOCK.strict_lookup(socket_type),
+			IPPROTO.strict_lookup(protocol)
+		)
+
+		if not fd then return fd, err end
+
+		return setmetatable(
+			{
+				fd = fd,
+				family = family,
+				socket_type = socket_type,
+				protocol = protocol,
+				blocking = true,
+			},
+			meta
+		)
+	end
+
+	function meta:close()
+		if self.on_close then self:on_close() end
+
+		return socket.close(self.fd)
+	end
+
+	function meta:set_blocking(b)
+		local ok, err = socket.blocking(self.fd, b)
+
+		if not ok then return ok, err end
+
+		self.blocking = b
+		return ok, err
+	end
+
+	function meta:set_option(key, val, level)
+		level = level or "socket"
+
+		if type(val) == "boolean" then
+			val = ffi.new("int[1]", val and 1 or 0)
+		elseif type(val) == "number" then
+			val = ffi.new("int[1]", val)
+		elseif type(val) ~= "cdata" then
+			error("unknown value type: " .. type(val))
+		end
+
+		local env = SO
+
+		if level == "tcp" then env = TCP end
+
+		return socket.setsockopt(
+			self.fd,
+			SOL.strict_lookup(level),
+			env.strict_lookup(key),
+			ffi.cast("void *", val),
+			ffi.sizeof(val)
+		)
+	end
+
+	function meta:connect(host, service)
+		local res
+
+		if type(host) == "table" and host.addrinfo then
+			res = host
+		else
+			local res_, err = M.find_first_address(
+				host,
+				service,
+				{
+					family = self.family,
+					socket_type = self.socket_type,
+					protocol = self.protocol,
+				}
+			)
+
+			if not res_ then return res_, err end
+
+			res = res_
+		end
+
+		local ok, err = socket.connect(self.fd, res.addrinfo.ai_addr, res.addrinfo.ai_addrlen)
+
+		if not ok and not self.blocking then
+			if timeout_messages[err] then
+				self.timeout_connected = {host, service}
+				return true
+			end
+		elseif self.on_connect then
+			self:on_connect(host, service)
+		end
+
+		if not ok then return ok, err end
+
+		return true
+	end
+
+	function meta:on_connect() end
+
+	function meta:poll_connect()
+		if self.on_connect and self.timeout_connected and self:is_connected() then
+			local ok, err = self:on_connect(unpack(self.timeout_connected))
+			self.timeout_connected = nil
+			return ok, err
+		end
+
+		return nil, "timeout"
+	end
+
+	function meta:bind(host, service)
+		if host == "*" then host = nil end
+
+		if type(service) == "number" then service = tostring(service) end
+
+		local res
+
+		if type(host) == "table" and host.addrinfo then
+			res = host
+		else
+			local res_, err = M.find_first_address(
+				host,
+				service,
+				{
+					family = self.family,
+					socket_type = self.socket_type,
+					protocol = self.protocol,
+				}
+			)
+
+			if not res_ then return res_, err end
+
+			res = res_
+		end
+
+		return socket.bind(self.fd, res.addrinfo.ai_addr, res.addrinfo.ai_addrlen)
+	end
+
+	function meta:listen(max_connections)
+		max_connections = max_connections or e.SOMAXCONN
+		return socket.listen(self.fd, max_connections)
+	end
+
+	function meta:accept()
+		local address = ffi.new("struct sockaddr_in[1]")
+		local fd, err = socket.accept(
+			self.fd,
+			ffi.cast("struct sockaddr *", address),
+			ffi.new("unsigned int[1]", ffi.sizeof(address))
+		)
+
+		if fd ~= socket.INVALID_SOCKET then
+			local client = setmetatable(
+				{
+					fd = fd,
+					family = "unknown",
+					socket_type = "unknown",
+					protocol = "unknown",
+					blocking = true,
+				},
+				meta
+			)
+
+			if self.debug then
+				print(tostring(self), ": accept client: ", tostring(client))
+			end
+
+			return client
+		end
+
+		local err = socket.lasterror()
+
+		if not self.blocking and timeout_messages[err] then
+			return nil, "timeout"
+		end
+
+		if self.debug then print(tostring(self), ": accept error: ", err) end
+
+		return nil, err
+	end
+
+	if ffi.os == "Windows" then
+		function meta:is_connected()
+			local ip, service = self:get_peer_name()
+			local ip2, service2 = self:get_name()
+			return ip ~= "0.0.0.0" and ip2 ~= "0.0.0.0" and service ~= 0 and service2 ~= 0
+		end
+	else
+		function meta:is_connected()
+			local ip, service = self:get_peer_name()
+			local ip2, service2 = self:get_name()
+			return ip and ip2 and service ~= 0 and service2 ~= 0
+		end
+	end
+
+	function meta:get_peer_name()
+		local data = ffi.new("struct sockaddr_in")
+		local len = ffi.new("unsigned int[1]", ffi.sizeof(data))
+		local ok, err = socket.getpeername(self.fd, ffi.cast("struct sockaddr *", data), len)
+
+		if not ok then return ok, err end
+
+		return ffi.string(socket.inet_ntoa(data.sin_addr)), socket.ntohs(data.sin_port)
+	end
+
+	function meta:get_name()
+		local data = ffi.new("struct sockaddr_in")
+		local len = ffi.new("unsigned int[1]", ffi.sizeof(data))
+		local ok, err = socket.getsockname(self.fd, ffi.cast("struct sockaddr *", data), len)
+
+		if not ok then return ok, err end
+
+		return ffi.string(socket.inet_ntoa(data.sin_addr)), socket.ntohs(data.sin_port)
+	end
+
+	local default_flags = 0
+
+	if ffi.os ~= "Windows" then default_flags = e.MSG_NOSIGNAL end
+
+	function meta:send_to(addr, data, flags)
+		return self:send(data, flags, addr)
+	end
+
+	function meta:send(data, flags, addr)
+		flags = flags or default_flags
+
+		if self.on_send then return self:on_send(data, flags) end
+
+		local len, err
+
+		if addr then
+			len, err = socket.sendto(self.fd, data, #data, flags, addr.addrinfo.ai_addr, addr.addrinfo.ai_addrlen)
+		else
+			len, err = socket.send(self.fd, data, #data, flags)
+		end
+
+		if not len then
+			if not self.blocking and timeout_messages[err] then
+				return nil, "timeout"
+			end
+
+			return len, err
+		end
+
+		if len > 0 then return len end
+	end
+
+	function meta:receive_from(address, size, flags)
+		local src_addr
+		local src_addr_size
+
+		if not address then
+			src_addr = ffi.new("struct sockaddr_in[1]")
+			src_addr_size = ffi.sizeof("struct sockaddr_in")
+		else
+			src_addr = address.addrinfo.ai_addr
+			src_addr_size = address.addrinfo.ai_addrlen
+		end
+
+		return self:receive(size, flags, src_addr, src_addr_size)
+	end
+
+	function meta:receive(size, flags, src_address, address_len)
+		size = size or 64000
+		local buff = ffi.new("char[?]", size)
+
+		if self.on_receive then return self:on_receive(buff, size, flags) end
+
+		local len, err
+		local len_res
+
+		if src_address then
+			len_res = ffi.new("int[1]", address_len)
+			len, err = socket.recvfrom(
+				self.fd,
+				buff,
+				ffi.sizeof(buff),
+				flags or 0,
+				ffi.cast("struct sockaddr *", src_address),
+				len_res
+			)
+		else
+			len, err = socket.recv(self.fd, buff, ffi.sizeof(buff), flags or 0)
+		end
+
+		if not len then
+			if not self.blocking and timeout_messages[err] then
+				return nil, "timeout"
+			end
+
+			if self.debug then print(tostring(self), " error: ", err) end
+
+			return len, err
+		end
+
+		if len > 0 then
+			if self.debug then print(tostring(self), ": received ", len, " bytes") end
+
+			if src_address then
+				return ffi.string(buff, len),
+				{
+					addrinfo = {
+						ai_addr = ffi.cast("struct sockaddr *", src_address),
+						ai_addrlen = len_res[0],
+					},
+					family = self.family,
+					get_port = addrinfo_get_port,
+					get_ip = addrinfo_get_ip,
+				}
+			end
+
+			return ffi.string(buff, len)
+		end
+
+		if self.debug then print(tostring(self), ": closed") end
+
+		return nil, "closed"
+	end
+end
+
+function M.bind(host, service)
+	local info, err = M.find_first_address(
+		host,
+		service,
+		{
+			family = "inet",
+			socket_type = "stream",
+			protocol = "tcp",
+			flags = {"passive"},
+		}
+	)
+
+	if not info then return info, err end
+
+	local server, err = M.create(info.family, info.socket_type, info.protocol)
+
+	if not server then return server, err end
+
+	server:set_option("reuseaddr", 1)
+	local ok, err = server:bind(info)
+
+	if not ok then return ok, err end
+
+	server:set_option("sndbuf", 65536)
+	server:set_option("rcvbuf", 65536)
+	return server
+end
+
+return M end ]=======], '@./language_server/server/ljsocket.lua'))())(...) return __M end end
+do local __M; IMPORTS["language_server.server.lsp"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler").New
+local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+local lsp = {}
+lsp.methods = {}
+local TextDocumentSyncKind = {None = 0, Full = 1, Incremental = 2}
+local DiagnosticSeverity = {
+	error = 1,
+	fatal = 1, -- from lexer and parser
+	warning = 2,
+	information = 3,
+	hint = 4,
+}
+local SymbolKind = {
+	File = 1,
+	Module = 2,
+	Namespace = 3,
+	Package = 4,
+	Class = 5,
+	Method = 6,
+	Property = 7,
+	Field = 8,
+	Constructor = 9,
+	Enum = 10,
+	Interface = 11,
+	Function = 12,
+	Variable = 13,
+	Constant = 14,
+	String = 15,
+	Number = 16,
+	Boolean = 17,
+	Array = 18,
+	Object = 19,
+	Key = 20,
+	Null = 21,
+	EnumMember = 22,
+	Struct = 23,
+	Event = 24,
+	Operator = 25,
+	TypeParameter = 26,
+}
+local SemanticTokenTypes = {
+	"namespace",
+	"type",
+	"class",
+	"enum",
+	"interface",
+	"struct",
+	"typeParameter",
+	"parameter",
+	"variable",
+	"property",
+	"enumMember",
+	"event",
+	"function",
+	"method",
+	"macro",
+	"keyword",
+	"modifier",
+	"comment",
+	"string",
+	"number",
+	"regexp",
+	"operator",
+}
+local SemanticTokenModifiers = {
+	"declaration",
+	"definition",
+	"readonly",
+	"static",
+	"deprecated",
+	"abstract",
+	"async",
+	"modification",
+	"documentation",
+	"defaultLibrary",
+}
+
+local function get_range(code, start, stop)
+	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
+	return {
+		start = {
+			line = data.line_start - 1,
+			character = data.character_start - 1,
+		},
+		["end"] = {
+			line = data.line_stop - 1,
+			character = data.character_stop, -- not sure about this
+		},
+	}
+end
+
+local function find_token_from_line_character(
+	tokens,
+	code,
+	line,
+	char
+)
+	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
+
+	for _, token in ipairs(tokens) do
+		if sub_pos >= token.start and sub_pos <= token.stop then
+			return token, helpers.SubPositionToLinePosition(code, token.start, token.stop)
+		end
+	end
+end
+
+local function find_token_from_line_character_range(
+	tokens,
+	code,
+	lineStart,
+	charStart,
+	lineStop,
+	charStop
+)
+	local sub_pos_start = helpers.LinePositionToSubPosition(code, lineStart, charStart)
+	local sub_pos_stop = helpers.LinePositionToSubPosition(code, lineStop, charStop)
+	local found = {}
+
+	for _, token in ipairs(tokens) do
+		if token.start >= sub_pos_start and token.stop <= sub_pos_stop then
+			table.insert(found, token)
+		end
+	end
+
+	return found
+end
+
+local BuildBaseEnvironment = IMPORTS['nattlua.runtime.base_environment']("nattlua.runtime.base_environment").BuildBaseEnvironment
+local runtime_env, typesystem_env = BuildBaseEnvironment()
+local cache = {}
+
+local function compile(uri, lua_code)
+	lua_code = lua_code or cache[uri] and cache[uri].Code:GetString()
+
+	if cache[uri] and lua_code ~= cache[uri].Code:GetString() then
+		cache[uri] = nil
+	end
+
+	if cache[uri] then return cache[uri] end
+
+	local compiler = Compiler(lua_code, tostring(uri), {type_annotations = true})
+	compiler:SetEnvironments(runtime_env, typesystem_env)
+
+	do
+		local resp = {
+			method = "textDocument/publishDiagnostics",
+			params = {uri = uri, diagnostics = {}},
+		}
+
+		function compiler:OnDiagnostic(code, msg, severity, start, stop, ...)
+			local range = get_range(code, start, stop)
+
+			if not range then return end
+
+			table.insert(
+				resp.params.diagnostics,
+				{
+					severity = DiagnosticSeverity[severity],
+					range = range,
+					message = helpers.FormatMessage(msg, ...),
+				}
+			)
+		end
+
+		compiler:Lex()
+		compiler:Parse()
+
+		if VSCODE_PLUGIN then
+			if lua_code:find("--A" .. "NALYZE", nil, true) then compiler:Analyze() end
+		else
+			compiler:Analyze()
+		end
+
+		if #resp.params.diagnostics > 0 then lsp.Call(resp) end
+	end
+
+	lsp.Call({method = "workspace/semanticTokens/refresh"})
+	cache[uri] = compiler
+	return cache[uri]
+end
+
+lsp.methods["initialized"] = function(params)
+	print("vscode ready")
+end
+lsp.methods["initialize"] = function(params)
+	return {
+		clientInfo = {name = "NattLua", version = "1.0"},
+		capabilities = {
+			textDocumentSync = {
+				openClose = true,
+				change = TextDocumentSyncKind.Full,
+			},
+			hoverProvider = true,
+			publishDiagnostics = {
+				relatedInformation = true,
+				tagSupport = {1, 2},
+			},
+			semanticTokens = {
+				range = true,
+				legend = {
+					tokenTypes = SemanticTokenTypes,
+					tokenModifiers = SemanticTokenModifiers,
+				},
+			},
+		-- for symbols like all functions within a file
+		-- documentSymbolProvider = {label = "NattLua"},
+		-- highlighting equal upvalues
+		-- documentHighlightProvider = true, 
+		--[[completionProvider = {
+				resolveProvider = true,
+				triggerCharacters = { ".", ":" },
+			},
+			signatureHelpProvider = {
+				triggerCharacters = { "(" },
+			},
+			definitionProvider = true,
+			referencesProvider = true,
+			
+			workspaceSymbolProvider = true,
+			codeActionProvider = true,
+			codeLensProvider = {
+				resolveProvider = true,
+			},
+			documentFormattingProvider = true,
+			documentRangeFormattingProvider = true,
+			documentOnTypeFormattingProvider = {
+				firstTriggerCharacter = "}",
+				moreTriggerCharacter = { "end" },
+			},
+			renameProvider = true,
+			]] },
+	}
+end
+
+do -- semantic tokens
+	local tokenTypeMap = {}
+	local tokenModifiersMap = {}
+
+	for i, v in ipairs(SemanticTokenTypes) do
+		tokenTypeMap[v] = i - 1
+	end
+
+	for i, v in ipairs(SemanticTokenModifiers) do
+		tokenModifiersMap[v] = i - 1
+	end
+
+	local function token_to_type_mod(token)
+		if token.parent and token.parent.kind == "local_assignment" then
+			return "declaration"
+		end
+
+		if token.type == "number" then
+			return "number"
+		elseif token.type == "string" then
+			return "string"
+		end
+	end
+
+	lsp.methods["textDocument/semanticTokens/range"] = function(params)
+		local textDocument = params.textDocument
+		local range = params
+	end
+	lsp.methods["textDocument/semanticTokens/full"] = function(params)
+		local compiler = compile(params.textDocument.uri, params.textDocument.text)
+		local integers = {}
+		local last_y = 0
+		local last_x = 0
+
+		for _, token in ipairs(compiler.Tokens) do
+			local data = helpers.SubPositionToLinePosition(compiler.Code:GetString(), token.start, token.stop)
+
+			if data then
+				local len = #token.value
+				local y = (data.line_start - 1) - last_y
+				local x = data.character_start - last_x
+
+				if y ~= 0 then x = data.character_start end
+
+				local type, modifiers = token_to_type_mod(token)
+
+				if type then
+					table.insert(integers, y)
+					table.insert(integers, x)
+					table.insert(integers, len)
+					table.insert(integers, tokenTypeMap[type])
+					local result = 0
+
+					if modifiers then
+						for _, mod in ipairs(modifiers) do
+							assert(tokenModifiersMap[mod], "invalid modifier " .. mod)
+							result = bit.bor(result, bit.lshift(1, tokenModifiersMap[mod]))
+						end
+					end
+
+					table.insert(integers, result)
+					last_y = (data.line_start - 1)
+					last_x = data.character_start
+				end
+			end
+		end
+
+		return {data = integers}
+	end
+end
+
+lsp.methods["$/cancelRequest"] = function(params)
+	print("cancelRequest")
+	table.print(params)
+end
+lsp.methods["workspace/didChangeConfiguration"] = function(params)
+	print("configuration changed")
+	table.print(params)
+end
+lsp.methods["textDocument/didOpen"] = function(params)
+	compile(params.textDocument.uri, params.textDocument.text)
+	print("opened", params.textDocument.uri)
+end
+lsp.methods["textDocument/didClose"] = function(params)
+	cache[params.textDocument.uri] = nil
+	print("closed", params.textDocument.uri)
+end
+lsp.methods["textDocument/didChange"] = function(params)
+	compile(params.textDocument.uri, params.contentChanges[1].text)
+end
+lsp.methods["textDocument/didSave"] = function(params)
+	compile(params.textDocument.uri, params.textDocument.text)
+end
+
+local function find_token(uri, text, line, character)
+	local compiler = compile(uri, text)
+	local token, data = find_token_from_line_character(compiler.Tokens, compiler.Code:GetString(), line + 1, character + 1)
+	return token, data
+end
+
+local function find_type_from_token(token)
+	local found_parents = {}
+
+	do
+		local node = token.parent
+
+		while node.parent do
+			table.insert(found_parents, node)
+			node = node.parent
+		end
+	end
+
+	for _, node in ipairs(found_parents) do
+		for _, obj in ipairs(node:GetTypes()) do
+			if obj.Type == "string" and obj:GetData() == token.value then
+
+			else
+				return obj, found_parents, node
+			end
+		end
+	end
+
+	return nil, found_parents
+end
+
+local function has_value(tbl, str)
+	for _, v in ipairs(tbl) do
+		if v == str then return true end
+	end
+
+	return false
+end
+
+local function find_parent(token, type, kind)
+	local node = token.parent
+
+	if not node then return nil end
+
+	while node.parent do
+		if node.type == type and node.kind == kind then return node end
+
+		node = node.parent
+	end
+
+	return nil
+end
+
+local function find_nodes(tokens, type, kind)
+	local nodes = {}
+	local done = {}
+
+	for _, token in ipairs(tokens) do
+		local node = find_parent(token, type, kind)
+
+		if node and not done[node] then
+			table.insert(nodes, node)
+			done[node] = true
+		end
+	end
+
+	return nodes
+end
+
+lsp.methods["textDocument/inlay"] = function(params)
+	local compiler = compile(params.textDocument.uri, params.textDocument.text)
+	local tokens = find_token_from_line_character_range(
+		compiler.Tokens,
+		compiler.Code:GetString(),
+		params.start.line - 1,
+		params.start.character - 1,
+		params["end"].line - 1,
+		params["end"].character - 1
+	)
+	local hints = {}
+	local assignments = find_nodes(tokens, "statement", "local_assignment")
+
+	for _, assingment in ipairs(find_nodes(tokens, "statement", "assignment")) do
+		table.insert(assignments, assingment)
+	end
+
+	for _, assignment in ipairs(assignments) do
+		if assignment.environment == "runtime" then
+			for i, left in ipairs(assignment.left) do
+				if not left.tokens[":"] and assignment.right and assignment.right[i] then
+					local types = left:GetTypes()
+
+					if
+						types and
+						(
+							assignment.right[i].kind ~= "value" or
+							assignment.right[i].value.value.type == "letter"
+						)
+					then
+						local data = helpers.SubPositionToLinePosition(compiler.Code:GetString(), left:GetStartStop())
+						local label = tostring(Union(types))
+
+						if #label > 20 then label = label:sub(1, 20) .. "..." end
+
+						table.insert(
+							hints,
+							{
+								label = ": " .. label,
+								tooltip = tostring(Union(types)),
+								position = {
+									lineNumber = data.line_stop,
+									column = data.character_stop + 1,
+								},
+								kind = 1, -- type
+							}
+						)
+					end
+				end
+			end
+		end
+	end
+
+	return {
+		hints = hints,
+	}
+end
+lsp.methods["textDocument/rename"] = function(params)
+	local token, data = find_token(
+		params.textDocument.uri,
+		params.textDocument.text,
+		params.position.line,
+		params.position.character
+	)
+
+	if not token or not data or not token.parent then return end
+
+	local obj = find_type_from_token(token)
+	local upvalue = obj:GetUpvalue()
+	local changes = {}
+
+	if upvalue and upvalue.mutations then
+		for i, v in ipairs(upvalue.mutations) do
+			local node = v.value:GetNode()
+
+			if node then
+				changes[params.textDocument.uri] = changes[params.textDocument.uri] or
+					{
+						textDocument = {
+							version = nil,
+						},
+						edits = {},
+					}
+				local edits = changes[params.textDocument.uri].edits
+				table.insert(
+					edits,
+					{
+						range = get_range(node.Code, node:GetStartStop()),
+						newText = params.newName,
+					}
+				)
+			end
+		end
+	end
+
+	return {
+		changes = changes,
+	}
+end
+lsp.methods["textDocument/hover"] = function(params)
+	local token, data = find_token(
+		params.textDocument.uri,
+		params.textDocument.text,
+		params.position.line,
+		params.position.character
+	)
+
+	if not token or not data or not token.parent then return end
+
+	local markdown = ""
+
+	local function add_line(str)
+		markdown = markdown .. str .. "\n\n"
+	end
+
+	local function add_code(str)
+		add_line("```lua\n" .. tostring(str) .. "\n```")
+	end
+
+	local obj, found_parents = find_type_from_token(token)
+
+	if obj then add_code(tostring(obj)) end
+
+	if found_parents[2] then
+		local min, max = found_parents[2]:GetStartStop()
+
+		if min then
+			local temp = helpers.SubPositionToLinePosition(found_parents[2].Code:GetString(), min, max)
+
+			if temp then data = temp end
+		end
+	end
+
+	return {
+		contents = markdown,
+		range = {
+			start = {
+				line = data.line_start - 1,
+				character = data.character_start - 1,
+			},
+			["end"] = {
+				line = data.line_stop - 1,
+				character = data.character_stop,
+			},
+		},
+	}
+end
+
+do
+	local MessageType = {error = 1, warning = 2, info = 3, log = 4}
+
+	function lsp.ShowMessage(type, msg)
+		lsp.Call(
+			{
+				method = "window/showMessage",
+				params = {
+					type = assert(MessageType[type]),
+					message = msg,
+				},
+			}
+		)
+	end
+
+	function lsp.LogMessage(type, msg)
+		lsp.Call(
+			{
+				method = "window/logMessage",
+				params = {
+					type = assert(MessageType[type]),
+					message = msg,
+				},
+			}
+		)
+	end
+end
+
+function lsp.Call(params)
+	if lsp.methods[params.method] then lsp.methods[params.method](params) end
+end
+
+return lsp end ]=======], '@./language_server/server/lsp.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.json"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local pairs = _G.pairs
+local string = _G.string
+local error = _G.error
+local next = _G.next
+local type = _G.type
+local ipairs = _G.ipairs
+local table = _G.table
+local tostring = _G.tostring
+local select = _G.select
+local tonumber = _G.tonumber
+local json = {}
+-------------------------------------------------------------------------------
+-- Encode
+-------------------------------------------------------------------------------
+local encode
+local escape_char_map = {
+	["\\"] = "\\\\",
+	["\""] = "\\\"",
+	["\b"] = "\\b",
+	["\f"] = "\\f",
+	["\n"] = "\\n",
+	["\r"] = "\\r",
+	["\t"] = "\\t",
+}
+local escape_char_map_inv = {["\\/"] = "/"}
+
+for k, v in pairs(escape_char_map) do
+	escape_char_map_inv[v] = k
+end
+
+local function escape_char(c)
+	return escape_char_map[c] or string.format("\\u%04x", c:byte())
+end
+
+local function encode_nil(val, stack)
+	return "null"
+end
+
+local function encode_table(val, stack)
+	local res = {}
+	stack = stack or {}
+
+	-- Circular reference?
+	if stack[val] then error("circular reference") end
+
+	stack[val] = true
+
+	if val[1] ~= nil or next(val) == nil then
+		-- Treat as array -- check keys are valid and it is not sparse
+		local n = 0
+
+		for k in pairs(val) do
+			if type(k) ~= "number" then
+				error("invalid table: mixed or invalid key types")
+			end
+
+			n = n + 1
+		end
+
+		if n ~= #val then error("invalid table: sparse array") end
+
+		-- Encode
+		for i, v in ipairs(val) do
+			table.insert(res, encode(v, stack))
+		end
+
+		stack[val] = nil
+		return "[" .. table.concat(res, ",") .. "]"
+	else
+		-- Treat as an object
+		for k, v in pairs(val) do
+			if type(k) ~= "string" then
+				error("invalid table: mixed or invalid key types")
+			end
+
+			table.insert(res, encode(k, stack) .. ":" .. encode(v, stack))
+		end
+
+		stack[val] = nil
+		return "{" .. table.concat(res, ",") .. "}"
+	end
+end
+
+local function encode_string(val, stack)
+	return "\"" .. val:gsub("[%z\1-\31\"]", escape_char) .. "\""
+end
+
+local function encode_number(val, stack)
+	-- Check for NaN, -inf and inf
+	if val ~= val or val <= -math.huge or val >= math.huge then
+		error("unexpected number value '" .. tostring(val) .. "'")
+	end
+
+	return string.format("%.14g", val)
+end
+
+json.null = {}
+
+local function encode_null(val, stack)
+	return "null"
+end
+
+local function encode_boolean(val, stack)
+	return val and "true" or "false"
+end
+
+local type_func_map = {
+	["nil"] = encode_nil,
+	["table"] = encode_table,
+	["string"] = encode_string,
+	["number"] = encode_number,
+	["boolean"] = encode_boolean,
+}
+encode = function(val, stack)
+	if val == json.null then return encode_null(val, stack) end
+
+	local t = type(val)
+	local f = type_func_map[t]
+
+	if f then return f(val, stack) end
+
+	error("unexpected type '" .. t .. "'")
+end
+
+function json.encode(val)
+	return (encode(val, {}))
+end
+
+-------------------------------------------------------------------------------
+-- Decode
+-------------------------------------------------------------------------------
+local parse
+
+local function create_set(...)
+	local res = {}
+
+	for i = 1, select("#", ...) do
+		res[select(i, ...)] = true
+	end
+
+	return res
+end
+
+local space_chars = create_set(" ", "\t", "\r", "\n")
+local delim_chars = create_set(" ", "\t", "\r", "\n", "]", "}", ",")
+local escape_chars = create_set("\\", "/", "\"", "b", "f", "n", "r", "t", "u")
+local literals = create_set("true", "false", "null")
+local literal_map = {
+	["true"] = true,
+	["false"] = false,
+	["null"] = nil,
+}
+
+local function next_char(
+	str,
+	idx,
+	set,
+	negate
+)
+	for i = idx, #str do
+		if set[str:sub(i, i)] ~= negate then return i end
+	end
+
+	return #str + 1
+end
+
+local function decode_error(str, idx, msg)
+	local line_count = 1
+	local col_count = 1
+
+	for i = 1, idx - 1 do
+		col_count = col_count + 1
+
+		if str:sub(i, i) == "\n" then
+			line_count = line_count + 1
+			col_count = 1
+		end
+	end
+
+	error(string.format("%s at line %d col %d", msg, line_count, col_count))
+end
+
+local function codepoint_to_utf8(n)
+	-- http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-appendixa
+	local f = math.floor
+
+	if n <= 0x7f then
+		return string.char(n)
+	elseif n <= 0x7ff then
+		return string.char(f(n / 64) + 192, n % 64 + 128)
+	elseif n <= 0xffff then
+		return string.char(f(n / 4096) + 224, f(n % 4096 / 64) + 128, n % 64 + 128)
+	elseif n <= 0x10ffff then
+		return string.char(
+			f(n / 262144) + 240,
+			f(n % 262144 / 4096) + 128,
+			f(n % 4096 / 64) + 128,
+			n % 64 + 128
+		)
+	end
+
+	error(string.format("invalid unicode codepoint '%x'", n))
+end
+
+local function parse_unicode_escape(s)
+	local n1 = tonumber(s:sub(3, 6), 16)
+
+	if not n1 then error("failed to parse unicode escape") end
+
+	local n2 = tonumber(s:sub(9, 12), 16)
+
+	-- Surrogate pair?
+	if n2 then
+		return codepoint_to_utf8((n1 - 0xd800) * 0x400 + (n2 - 0xdc00) + 0x10000)
+	else
+		return codepoint_to_utf8(n1)
+	end
+end
+
+local function parse_string(str, i)
+	local has_unicode_escape = false
+	local has_surrogate_escape = false
+	local has_escape = false
+	local last
+
+	for j = i + 1, #str do
+		local x = str:byte(j)
+
+		if x < 32 then decode_error(str, j, "control character in string") end
+
+		if last == 92 then -- "\\" (escape char)
+			if x == 117 then -- "u" (unicode escape sequence)
+				local hex = str:sub(j + 1, j + 5)
+
+				if not hex:find("%x%x%x%x") then
+					decode_error(str, j, "invalid unicode escape in string")
+				end
+
+				if hex:find("^[dD][89aAbB]") then
+					has_surrogate_escape = true
+				else
+					has_unicode_escape = true
+				end
+			else
+				local c = string.char(x)
+
+				if not escape_chars[c] then
+					decode_error(str, j, "invalid escape char '" .. c .. "' in string")
+				end
+
+				has_escape = true
+			end
+
+			last = nil
+		elseif x == 34 then -- '"' (end of string)
+			local s = str:sub(i + 1, j - 1)
+
+			if has_surrogate_escape then
+				s = s:gsub("\\u[dD][89aAbB]..\\u....", parse_unicode_escape)
+			end
+
+			if has_unicode_escape then s = s:gsub("\\u....", parse_unicode_escape) end
+
+			if has_escape then s = s:gsub("\\.", escape_char_map_inv) end
+
+			return s, j + 1
+		else
+			last = x
+		end
+	end
+
+	decode_error(str, i, "expected closing quote for string")
+end
+
+local function parse_number(str, i)
+	local x = next_char(str, i, delim_chars)
+	local s = str:sub(i, x - 1)
+	local n = tonumber(s)
+
+	if not n then decode_error(str, i, "invalid number '" .. s .. "'") end
+
+	return n, x
+end
+
+local function parse_literal(str, i)
+	local x = next_char(str, i, delim_chars)
+	local word = str:sub(i, x - 1)
+
+	if not literals[word] then
+		decode_error(str, i, "invalid literal '" .. word .. "'")
+	end
+
+	return literal_map[word], x
+end
+
+local function parse_array(str, i) -- TODO: fix List<|any|>
+	local res = {}
+	local n = 1
+	i = i + 1
+
+	while 1 do
+		local x
+		i = next_char(str, i, space_chars, true)
+
+		-- Empty / end of array?
+		if str:sub(i, i) == "]" then
+			i = i + 1
+
+			break
+		end
+
+		-- Read token
+		x, i = parse(str, i)
+		res[n] = x
+		n = n + 1
+		-- Next token
+		i = next_char(str, i, space_chars, true)
+		local chr = str:sub(i, i)
+		i = i + 1
+
+		if chr == "]" then break end
+
+		if chr ~= "," then decode_error(str, i, "expected ']' or ','") end
+	end
+
+	return res, i
+end
+
+local function parse_object(str, i)
+	local res = {}
+	i = i + 1
+
+	while 1 do
+		local key, val
+		i = next_char(str, i, space_chars, true)
+
+		-- Empty / end of object?
+		if str:sub(i, i) == "}" then
+			i = i + 1
+
+			break
+		end
+
+		-- Read key
+		if str:sub(i, i) ~= "\"" then
+			decode_error(str, i, "expected string for key")
+		end
+
+		key, i = parse(str, i)
+		-- Read ':' delimiter
+		i = next_char(str, i, space_chars, true)
+
+		if str:sub(i, i) ~= ":" then
+			decode_error(str, i, "expected ':' after key")
+		end
+
+		i = next_char(str, i + 1, space_chars, true)
+		-- Read value
+		val, i = parse(str, i)
+		-- Union
+		res[key] = val
+		-- Next token
+		i = next_char(str, i, space_chars, true)
+		local chr = str:sub(i, i)
+		i = i + 1
+
+		if chr == "}" then break end
+
+		if chr ~= "," then decode_error(str, i, "expected '}' or ','") end
+	end
+
+	return res, i
+end
+
+local char_func_map = {
+	["\""] = parse_string,
+	["0"] = parse_number,
+	["1"] = parse_number,
+	["2"] = parse_number,
+	["3"] = parse_number,
+	["4"] = parse_number,
+	["5"] = parse_number,
+	["6"] = parse_number,
+	["7"] = parse_number,
+	["8"] = parse_number,
+	["9"] = parse_number,
+	["-"] = parse_number,
+	["t"] = parse_literal,
+	["f"] = parse_literal,
+	["n"] = parse_literal,
+	["["] = parse_array,
+	["{"] = parse_object,
+}
+parse = function(str, idx)
+	local chr = str:sub(idx, idx)
+	local f = char_func_map[chr]
+
+	if f then return f(str, idx) end
+
+	decode_error(str, idx, "unexpected character '" .. chr .. "'")
+	return nil, -1
+end
+
+function json.decode(str)
+	local res, idx = parse(str, next_char(str, 1, space_chars, true))
+	idx = next_char(str, idx, space_chars, true)
+
+	if idx <= #str then decode_error(str, idx, "trailing garbage") end
+
+	return res
+end
+
+return json end ]=======], '@./nattlua/other/json.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.jsonrpc"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local type = _G.type
+local ipairs = _G.ipairs
+local table = _G.table
+local xpcall = _G.xpcall
+local debug = _G.debug
+local pcall = _G.pcall
+local tonumber = _G.tonumber
+local json = IMPORTS['nattlua.other.json']("nattlua.other.json")
+local rpc_util = {}
+local VERSION = "2.0"
+local JSONRPC_ERRORS = {
+	PARSE_ERROR = -32700, -- Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text.
+	INVALID_REQUEST = -32600, -- The JSON sent is not a valid Request object.
+	METHOD_NOT_FOUND = -32601, -- The method does not exist / is not available.
+	INVALID_PARAMS = -32602, -- Invalid method parameter(s).
+	INTERNAL_ERROR = -32603, -- Internal JSON-RPC error.
+-- SERVER_ERROR = -32000 to -32099, -- , reserved for implementation-defined server-errors.
+}
+
+local function error_response(id, code, message)
+	return {
+		jsonrpc = VERSION,
+		id = id,
+		error = {
+			code = code,
+			message = message,
+		},
+	}
+end
+
+local function check_request(rpc)
+	if rpc.jsonrpc ~= VERSION then
+		return error_response(
+			nil,
+			JSONRPC_ERRORS.INVALID_REQUEST,
+			"this server only accepts jsonrpc version " .. VERSION
+		)
+	end
+
+	if type(rpc.method) ~= "string" then
+		return error_response(nil, JSONRPC_ERRORS.INVALID_REQUEST, "method must be a string")
+	end
+
+	do
+		local t = type(rpc.id)
+
+		if t ~= "string" and t ~= "number" and t ~= "nil" then
+			return error_response(
+				nil,
+				JSONRPC_ERRORS.INVALID_REQUEST,
+				"id must be a string, number or undefined. got " .. t
+			)
+		end
+	end
+end
+
+local function handle_rpc(rpc, is_array, methods, ...)
+	if is_array then
+		if not rpc[1] then
+			return error_response(nil, JSONRPC_ERRORS.INVALID_REQUEST, "empty batch array request")
+		end
+
+		local array = {}
+
+		for i, v in ipairs(rpc) do
+			local response = handle_rpc(v, nil, methods, ...)
+
+			if response then table.insert(array, response) end
+		end
+
+		if not array[1] then return end
+
+		return array
+	end
+
+	local err = check_request(rpc)
+
+	if err then return err end
+
+	if not methods[rpc.method] then
+		return error_response(rpc.id, JSONRPC_ERRORS.METHOD_NOT_FOUND, "Method " .. rpc.method .. " not found.")
+	end
+
+	local ok, res, err = xpcall(
+		function(...)
+			return methods[rpc.method](rpc.params, ...)
+		end,
+		function(err)
+			return debug.traceback(err)
+		end,
+		...
+	)
+
+	if not ok then
+		return error_response(rpc.id, JSONRPC_ERRORS.INTERNAL_ERROR, res)
+	end
+
+	-- notification has no response
+	if not rpc.id then return end
+
+	if not res then return error_response(rpc.id, err.code, err.message) end
+
+	return {
+		jsonrpc = rpc.jsonrpc,
+		id = rpc.id,
+		result = res,
+	}
+end
+
+function rpc_util.ReceiveJSON(data, methods, ...)
+	local ok, rpc = pcall(json.decode, data)
+
+	if not ok then
+		local err = rpc:match("^.+%.lua:%d+: (.+)")
+		return error_response(nil, JSONRPC_ERRORS.PARSE_ERROR, err)
+	end
+
+	return handle_rpc(rpc, data:sub(1, 1) == "[", methods, ...)
+end
+
+function rpc_util.ReceiveHTTP(state, data)
+	state.buffer = state.buffer or ""
+
+	if data then state.buffer = state.buffer .. data end
+
+	local buffer = state.buffer
+	local header, rest = buffer:match("^(.-)\r\n\r\n(.*)$")
+
+	if header then
+		local length = header:match("Content%-Length: (%d+)")
+
+		if length then
+			length = tonumber(length)
+
+			if #rest >= length then
+				local body = rest:sub(1, length)
+				state.buffer = buffer:sub(#header + 4 + length + 1)
+				return body
+			end
+		end
+	end
+end
+
+return rpc_util end ]=======], '@./nattlua/other/jsonrpc.lua'))())(...) return __M end end
+do local __M; IMPORTS["language_server.server.main"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ffi = require("ffi")
+local ljsocket = IMPORTS['language_server.server.ljsocket']("language_server.server.ljsocket")
+local lsp = IMPORTS['language_server.server.lsp']("language_server.server.lsp")
+local json = IMPORTS['nattlua.other.json']("nattlua.other.json")
+local rpc_util = IMPORTS['nattlua.other.jsonrpc']("nattlua.other.jsonrpc")
+return function(port)
+	port = port or 1337
+	_G.VSCODE_PLUGIN = true
+	local server = {}
+	server.methods = {}
+
+	function server:OnError(msg)
+		error(msg)
+	end
+
+	function server:OnReceiveBody(client, str)
+		table.insert(
+			self.responses,
+			{
+				client = client,
+				thread = coroutine.create(function()
+					local res = rpc_util.ReceiveJSON(str, self.methods, self, client)
+
+					if res.error then table.print(res) end
+
+					return res
+				end),
+			}
+		)
+	end
+
+	function server:Respond(client, res)
+		local encoded = json.encode(res)
+		local msg = string.format("Content-Length: %d\r\n\r\n%s", #encoded, encoded)
+		client:send(msg)
+	end
+
+	function server:Loop()
+		self.responses = {}
+		local socket = assert(ljsocket.create("inet", "stream", "tcp"))
+		assert(socket:set_blocking(false))
+		socket:set_option("nodelay", true, "tcp")
+		socket:set_option("reuseaddr", true)
+		socket:bind("*", port)
+		assert(socket:listen())
+		io.write("HOSTING AT: *:" .. port .. "\n")
+		local clients = {}
+		server.clients = clients
+
+		while true do
+			local client, err = socket:accept()
+
+			if client then
+				assert(client:set_blocking(false))
+				client:set_option("nodelay", true, "tcp")
+				client:set_option("cork", false, "tcp")
+				print("client joined", client)
+				table.insert(clients, client)
+			end
+
+			for i = #clients, 1, -1 do
+				local client = clients[i]
+				local chunk, err = client:receive()
+
+				if err and err ~= "timeout" then print(client, chunk, err) end
+
+				local body = rpc_util.ReceiveHTTP(client, chunk)
+
+				if body then self:OnReceiveBody(client, body) end
+
+				if not chunk then
+					if err == "closed" then
+						table.remove(clients, i)
+					elseif err ~= "timeout" then
+						table.remove(clients, i)
+						client:close()
+						print("error: ", err)
+					end
+				end
+			end
+
+			for i = #self.responses, 1, -1 do
+				local data = self.responses[i]
+				local ok, msg = coroutine.resume(data.thread)
+
+				if not ok then
+					if msg ~= "suspended" then table.remove(self.responses, i) end
+				else
+					if type(msg) == "table" then
+						self:Respond(data.client, msg)
+						table.remove(self.responses, i)
+					end
+				end
+			end
+
+			ffi.C.usleep(50000)
+		end
+	end
+
+	for k, v in pairs(lsp.methods) do
+		server.methods[k] = v
+	end
+
+	function lsp.Call(params)
+		for _, client in ipairs(server.clients) do
+			server:Respond(client, params)
+		end
+	end
+
+	ffi.cdef("int chdir(const char *filename); int usleep(unsigned int usec);")
+	io.stdout:setvbuf("no")
+	io.stderr:setvbuf("no")
+	io.flush()
+	server:Loop()
+end end ]=======], '@./language_server/server/main.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.cli"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local nattlua = IMPORTS['nattlua.init']("nattlua.init")
+local ARGS = _G.ARGS or {...}
+local cmd = ARGS[1]
+
+local function run_nlconfig()
+	if not io.open("./nlconfig.lua") then
+		io.write("No nlconfig.lua found.\n")
+		return
+	end
+
+	if _G.IMPORTS then
+		for k, v in pairs(IMPORTS) do
+			if not k:find("/") then package.preload[k] = v end
+		end
+
+		package.preload.nattlua = package.preload["nattlua.init"]
+	end
+
+	assert(_G["load" .. "file"]("./nlconfig.lua"))(unpack(ARGS))
+end
+
+if cmd == "run" then
+	if unpack(ARGS, 2) then
+		local path = assert(unpack(ARGS, 2))
+		local compiler = assert(nattlua.File(path))
+		compiler:Analyze()
+		assert(loadstring(compiler:Emit(), "@" .. path))(unpack(ARGS, 3))
+	else
+		run_nlconfig()
+	end
+elseif cmd == "check" then
+	if unpack(ARGS, 2) then
+		local path = assert(unpack(ARGS, 2))
+		local compiler = assert(nattlua.File(path))
+		assert(compiler:Analyze())
+	else
+		run_nlconfig()
+	end
+elseif cmd == "build" then
+	if unpack(ARGS, 2) then
+		local path_from = assert(unpack(ARGS, 2))
+		local compiler = assert(nattlua.File(path_from))
+		local path_to = assert(unpack(ARGS, 3))
+		local f = assert(io.open(path_to, "w"))
+		f:write(compiler:Emit())
+		f:close()
+	else
+		run_nlconfig()
+	end
+elseif cmd == "language-server" then
+	IMPORTS['language_server.server.main']("language_server.server.main")(assert(tonumber(unpack(ARGS, 2))))
+else
+	run_nlconfig()
+end end ]=======], '@./nattlua/cli.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) if not table.unpack and _G.unpack then table.unpack = _G.unpack end
 
 if not io or not io.write then
 	io = io or {}
@@ -24813,58 +27413,10 @@ if _G.gmod then
 end
 
 local ARGS = _G.ARGS or {...}
-local cmd = ARGS[1]
 
-local function run_nlconfig()
-	if not io.open("./nlconfig.lua") then
-		io.write("No nlconfig.lua found.\n")
-		return
-	end
+if ARGS[1] and ARGS[1] ~= "nattlua" then IMPORTS['nattlua.cli']("nattlua.cli") end
 
-	if _G.IMPORTS then
-		for k, v in pairs(IMPORTS) do
-			if not k:find("/") then package.preload[k] = v end
-		end
-
-		package.preload.nattlua = package.preload["nattlua.init"]
-	end
-
-	assert(_G["load" .. "file"]("./nlconfig.lua"))(unpack(ARGS))
-end
-
-if cmd == "run" then
-	if unpack(ARGS, 2) then
-		local path = assert(unpack(ARGS, 2))
-		local compiler = assert(m.File(path))
-		compiler:Analyze()
-		assert(loadstring(compiler:Emit(), "@" .. path))(unpack(ARGS, 3))
-	else
-		run_nlconfig()
-	end
-elseif cmd == "check" then
-	if unpack(ARGS, 2) then
-		local path = assert(unpack(ARGS, 2))
-		local compiler = assert(m.File(path))
-		assert(compiler:Analyze())
-	else
-		run_nlconfig()
-	end
-elseif cmd == "build" then
-	if unpack(ARGS, 2) then
-		local path_from = assert(unpack(ARGS, 2))
-		local compiler = assert(m.File(path_from))
-		local path_to = assert(unpack(ARGS, 3))
-		local f = assert(io.open(path_to, "w"))
-		f:write(compiler:Emit())
-		f:close()
-	else
-		run_nlconfig()
-	end
-else
-	run_nlconfig()
-end
-
-return m end)(...) return __M end end
+return m end ]=======], '@./nattlua.lua'))())(...) return __M end end
 IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 _G.ARGS = {...}
 return IMPORTS['nattlua']("nattlua")

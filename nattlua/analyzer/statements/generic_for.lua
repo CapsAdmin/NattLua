@@ -21,6 +21,10 @@ return {
 		for i = 1, 1000 do
 			local values = self:Assert(self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
 
+			if values.Type ~= "tuple" then
+				values = Tuple({values})
+			end	
+
 			if
 				not values:Get(1) or
 				values:Get(1).Type == "symbol" and
@@ -68,6 +72,7 @@ return {
 
 			if i == (self.max_iterations or 1000) then self:Error("too many iterations") end
 
+			assert(values.Type == "tuple")
 			table.insert(values:GetData(), 1, args[1])
 			args = values:GetData()
 
