@@ -1,4 +1,4 @@
-local nl = require("nattlua")
+local Compiler = require("nattlua.compiler").New
 local helpers = require("nattlua.other.helpers")
 local Union = require("nattlua.types.union").Union
 local lsp = {}
@@ -130,7 +130,7 @@ local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBa
 local runtime_env, typesystem_env = BuildBaseEnvironment()
 local cache = {}
 
-local function compile(self, uri, lua_code)
+local function compile(uri, lua_code)
 	lua_code = lua_code or cache[uri] and cache[uri].Code:GetString()
 
 	if cache[uri] and lua_code ~= cache[uri].Code:GetString() then
@@ -139,7 +139,7 @@ local function compile(self, uri, lua_code)
 
 	if cache[uri] then return cache[uri] end
 
-	local compiler = nl.Compiler(lua_code, tostring(uri), {type_annotations = true})
+	local compiler = Compiler(lua_code, tostring(uri), {type_annotations = true})
 	compiler:SetEnvironments(runtime_env, typesystem_env)
 
 	do
@@ -180,10 +180,10 @@ local function compile(self, uri, lua_code)
 	return cache[uri]
 end
 
-lsp.methods["initialized"] = function(self, params)
+lsp.methods["initialized"] = function(params)
 	print("vscode ready")
 end
-lsp.methods["initialize"] = function(self, params)
+lsp.methods["initialize"] = function(params)
 	return {
 		clientInfo = {name = "NattLua", version = "1.0"},
 		capabilities = {
@@ -257,12 +257,12 @@ do -- semantic tokens
 		end
 	end
 
-	lsp.methods["textDocument/semanticTokens/range"] = function(self, params)
+	lsp.methods["textDocument/semanticTokens/range"] = function(params)
 		local textDocument = params.textDocument
 		local range = params
 	end
-	lsp.methods["textDocument/semanticTokens/full"] = function(self, params)
-		local compiler = compile(self, params.textDocument.uri, params.textDocument.text)
+	lsp.methods["textDocument/semanticTokens/full"] = function(params)
+		local compiler = compile(params.textDocument.uri, params.textDocument.text)
 		local integers = {}
 		local last_y = 0
 		local last_x = 0
@@ -304,31 +304,31 @@ do -- semantic tokens
 	end
 end
 
-lsp.methods["$/cancelRequest"] = function(self, params)
+lsp.methods["$/cancelRequest"] = function(params)
 	print("cancelRequest")
 	table.print(params)
 end
-lsp.methods["workspace/didChangeConfiguration"] = function(self, params)
+lsp.methods["workspace/didChangeConfiguration"] = function(params)
 	print("configuration changed")
 	table.print(params)
 end
-lsp.methods["textDocument/didOpen"] = function(self, params)
-	compile(self, params.textDocument.uri, params.textDocument.text)
+lsp.methods["textDocument/didOpen"] = function(params)
+	compile(params.textDocument.uri, params.textDocument.text)
 	print("opened", params.textDocument.uri)
 end
-lsp.methods["textDocument/didClose"] = function(self, params)
+lsp.methods["textDocument/didClose"] = function(params)
 	cache[params.textDocument.uri] = nil
 	print("closed", params.textDocument.uri)
 end
-lsp.methods["textDocument/didChange"] = function(self, params)
-	compile(self, params.textDocument.uri, params.contentChanges[1].text)
+lsp.methods["textDocument/didChange"] = function(params)
+	compile(params.textDocument.uri, params.contentChanges[1].text)
 end
-lsp.methods["textDocument/didSave"] = function(self, params)
-	compile(self, params.textDocument.uri, params.textDocument.text)
+lsp.methods["textDocument/didSave"] = function(params)
+	compile(params.textDocument.uri, params.textDocument.text)
 end
 
-local function find_token(self, uri, text, line, character)
-	local compiler = compile(self, uri, text)
+local function find_token(uri, text, line, character)
+	local compiler = compile(uri, text)
 	local token, data = find_token_from_line_character(compiler.Tokens, compiler.Code:GetString(), line + 1, character + 1)
 	return token, data
 end
@@ -396,8 +396,8 @@ local function find_nodes(tokens, type, kind)
 	return nodes
 end
 
-lsp.methods["textDocument/inlay"] = function(self, params)
-	local compiler = compile(self, params.textDocument.uri, params.textDocument.text)
+lsp.methods["textDocument/inlay"] = function(params)
+	local compiler = compile(params.textDocument.uri, params.textDocument.text)
 	local tokens = find_token_from_line_character_range(
 		compiler.Tokens,
 		compiler.Code:GetString(),
@@ -453,9 +453,8 @@ lsp.methods["textDocument/inlay"] = function(self, params)
 		hints = hints,
 	}
 end
-lsp.methods["textDocument/rename"] = function(self, params)
+lsp.methods["textDocument/rename"] = function(params)
 	local token, data = find_token(
-		self,
 		params.textDocument.uri,
 		params.textDocument.text,
 		params.position.line,
@@ -496,9 +495,8 @@ lsp.methods["textDocument/rename"] = function(self, params)
 		changes = changes,
 	}
 end
-lsp.methods["textDocument/hover"] = function(self, params)
+lsp.methods["textDocument/hover"] = function(params)
 	local token, data = find_token(
-		self,
 		params.textDocument.uri,
 		params.textDocument.text,
 		params.position.line,
@@ -540,7 +538,7 @@ lsp.methods["textDocument/hover"] = function(self, params)
 			},
 			["end"] = {
 				line = data.line_stop - 1,
-				character = data.character_stop - 1,
+				character = data.character_stop,
 			},
 		},
 	}

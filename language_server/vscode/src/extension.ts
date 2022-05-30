@@ -67,12 +67,12 @@ function restartServer(
 }
 
 function getConfig<T>(option: string, defaultValue?: any): T {
-  const config = workspace.getConfiguration("generic-lsp");
+  const config = workspace.getConfiguration("nattlua");
   return config.get<T>(option, defaultValue);
 }
 
 export function activate(context: ExtensionContext) {
-  let output = window.createOutputChannel("Generic LSP");
+  let output = window.createOutputChannel("Nattlua");
 
   const path = getConfig<string>("path");
   const args = getConfig<string[]>("arguments");
@@ -84,7 +84,7 @@ export function activate(context: ExtensionContext) {
   const clientOptions: LanguageClientOptions = {
     documentSelector: extensions,
     synchronize: {
-      configurationSection: "generic-lsp",
+      configurationSection: "nattlua",
     },
   };
 
@@ -115,14 +115,14 @@ export function activate(context: ExtensionContext) {
         };
 
         client.on("error", (e) => {
-          output.appendLine(`Generic LSP Connection error : ${e.message}`);
+          output.appendLine(`Nattlua Connection error : ${e.message}`);
           setTimeout(() => {
             tryAgain();
           }, 10000);
         });
 
         client.on("close", () => {
-          output.appendLine(`Generic LSP Connection closed, retrying`);
+          output.appendLine(`Nattlua Connection closed, retrying`);
           tryAgain();
         });
 
@@ -134,9 +134,9 @@ export function activate(context: ExtensionContext) {
 
   client.trace = Trace.Verbose;
 
-  output.appendLine(`Generic LSP RUN: ${path} ${args.join(" ")}`);
-  output.appendLine(`Generic LSP CONNECT: ${ip} ${port}`);
-  output.appendLine(`Generic LSP EXTENSIONS: ${extensions.join(" ")}`);
+  output.appendLine(`Nattlua RUN: ${path} ${args.join(" ")}`);
+  output.appendLine(`Nattlua CONNECT: ${ip} ${port}`);
+  output.appendLine(`Nattlua EXTENSIONS: ${extensions.join(" ")}`);
 
   const ref = client.start();
 

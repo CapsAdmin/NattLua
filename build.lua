@@ -24,13 +24,14 @@ local lua_code = c:Emit(
 		comment_type_annotations = true,
 		type_annotations = true,
 		force_parenthesis = true,
+		module_encapsulation_method = "loadstring",
 		extra_indent = {
 			Start = {to = "Stop"},
 			Toggle = "toggle",
 		},
 	}
 )
-lua_code = "local BUNDLE = true\n" .. lua_code
+lua_code = "_G.BUNDLE = true\n" .. lua_code
 io.write(" - OK\n")
 io.write("output is " .. #lua_code .. " bytes\n")
 -- double check that the lua_code is valid

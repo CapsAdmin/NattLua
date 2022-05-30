@@ -84,7 +84,7 @@ end
 
 
 local function encode_string(val--[[#: string]], stack--[[#: Map<|any, true|>]])--[[#: string]]
-	return '"' .. val:gsub('[%z\1-\31\\"]', escape_char) .. '"'
+	return '"' .. val:gsub('[%z\1-\31\"]', escape_char) .. '"'
 end
 
 

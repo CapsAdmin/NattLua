@@ -1,6 +1,7 @@
 {
-    "name": "generic-lsp",
-    "description": "Generic LSP Language Client",
+    "name": "nattlua",
+    "description": "Nattlua Language Client",
+    "icon": "icon.png",
     "author": "CapsAdmin",
     "license": "MIT",
     "version": "0.0.1",
@@ -29,24 +30,25 @@
     "contributes": {
         "configuration": {
             "type": "object",
-            "title": "Generic LSP configuration",
+            "title": "Nattlua configuration",
             "properties": {
-                "generic-lsp.path": {
+                "nattlua.path": {
                     "type": "string",
-                    "default": "luajit",
-                    "description": "path to luajit"
+                    "default": "nattlua",
+                    "description": "path to executable"
                 },
-                "generic-lsp.arguments": {
+                "nattlua.arguments": {
                     "type": "array",
                     "default": [
-                        "./language_server/server/server.lua"
+                        "language-server",
+                        "1337"
                     ],
                     "items": {
                         "type": "string"
                     },
-                    "description": "Arguments for Lua server"
+                    "description": "arguments for executable"
                 },
-                "generic-lsp.extensions": {
+                "nattlua.extensions": {
                     "description": "extensions",
                     "type": "array",
                     "default": [
@@ -57,12 +59,12 @@
                         "type": "string"
                     }
                 },
-                "generic-lsp.ip": {
+                "nattlua.ip": {
                     "type": "string",
                     "default": "127.0.0.1",
                     "description": "ip"
                 },
-                "generic-lsp.port": {
+                "nattlua.port": {
                     "type": "string",
                     "default": 1337,
                     "description": "port"
@@ -74,6 +76,7 @@
         "vscode:prepublish": "yarn compile",
         "compile": "tsc -b",
         "watch": "tsc -b -w",
+        "build": "npx vsce package",
         "test": "sh ./scripts/e2e.sh"
     },
     "dependencies": {
@@ -82,6 +85,7 @@
     "devDependencies": {
         "@types/node": "^17.0.18",
         "@types/vscode": "^1.64.0",
-        "typescript": "^4.5.5"
+        "typescript": "^4.5.5",
+        "vsce": "^2.8.0"
     }
 }

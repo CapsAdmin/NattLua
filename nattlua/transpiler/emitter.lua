@@ -384,11 +384,11 @@ function META:BuildCode(block)
 					if root then
 						if node.left.value.value == "loadfile" then
 							self:Emit(
-								"IMPORTS['" .. node.key .. "'] = "..encapsulate_module("function(...) " .. root:Render(self.config or {}) .. " end", "@" .. node.key, self.config.module_encapsulation_method) .."\n"
+								"IMPORTS['" .. node.key .. "'] = "..encapsulate_module("function(...) " .. root:Render(self.config or {}) .. " end", "@" .. node.path, self.config.module_encapsulation_method) .."\n"
 							)
 						elseif node.left.value.value == "require" then
 							self:Emit(
-								"do local __M; IMPORTS[\"" .. node.key .. "\"] = function(...) __M = __M or (" .. encapsulate_module("function(...) " .. root:Render(self.config or {}) .. " end", node.key, self.config.module_encapsulation_method)..")(...) return __M end end\n"
+								"do local __M; IMPORTS[\"" .. node.key .. "\"] = function(...) __M = __M or (" .. encapsulate_module("function(...) " .. root:Render(self.config or {}) .. " end", "@" .. node.path, self.config.module_encapsulation_method)..")(...) return __M end end\n"
 							)
 						elseif self.config.inside_data_import then
 							self:Emit(
@@ -396,7 +396,7 @@ function META:BuildCode(block)
 							)
 						else
 							self:Emit(
-							"IMPORTS['" .. node.key .. "'] = " .. encapsulate_module("function() " .. root:Render(self.config or {}) .. " end", "@" .. node.key, self.config.module_encapsulation_method) .. "\n"
+							"IMPORTS['" .. node.key .. "'] = " .. encapsulate_module("function() " .. root:Render(self.config or {}) .. " end", "@" .. node.path, self.config.module_encapsulation_method) .. "\n"
 							)
 						end
 					end
