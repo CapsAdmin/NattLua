@@ -247,6 +247,12 @@ local setmetatable = _G.setmetatable
 
 
 
+function META:GetRoot()
+	if self.parent then return (self.parent):GetRoot() end
+
+	return self
+end
+
 function META:__tostring()
 	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
 end
@@ -2987,9 +2993,12 @@ function META:__tostring()
 
 		if func then
 			local analyzer = context:GetCurrentAnalyzer()
-			local str = analyzer:Call(func, Tuple({self})):GetFirstValue()
 
-			if str and str:IsLiteral() then return str:GetData() end
+			if analyzer then
+				local str = analyzer:Call(func, Tuple({self})):GetFirstValue()
+
+				if str and str:IsLiteral() then return str:GetData() end
+			end
 		end
 	end
 
@@ -8468,7 +8477,7 @@ local repl = function()
 	return "\nbecause "
 end
 
-function META:OnDiagnostic(code, msg, severity, start, stop, ...)
+function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 	local level = 0
 	local t = 0
 	msg = msg:gsub(" because ", repl)
@@ -8577,7 +8586,7 @@ function META:Lex()
 	lexer.name = self.name
 	self.lexer = lexer
 	lexer.OnError = function(lexer, code, msg, start, stop, ...)
-		self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
+		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, ...)
 	end
 	local ok, tokens = xpcall(function()
 		return lexer:GetTokens()
@@ -8601,7 +8610,7 @@ function META:Parse()
 	local parser = self.Parser(self.Tokens, self.Code, self.config)
 	self.parser = parser
 	parser.OnError = function(parser, code, msg, start, stop, ...)
-		self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
+		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, ...)
 	end
 
 	if self.OnNode then
@@ -8880,6 +8889,12 @@ local setmetatable = _G.setmetatable
 
 
 
+function META:GetRoot()
+	if self.parent then return (self.parent):GetRoot() end
+
+	return self
+end
+
 function META:__tostring()
 	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
 end
@@ -9055,6 +9070,12 @@ local setmetatable = _G.setmetatable
 
 
 
+
+function META:GetRoot()
+	if self.parent then return (self.parent):GetRoot() end
+
+	return self
+end
 
 function META:__tostring()
 	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
@@ -10587,6 +10608,12 @@ function META:GetStatement()
 	return self
 end
 
+function META:GetRoot()
+	if self.parent then return self.parent:GetRoot() end
+
+	return self
+end
+
 function META:GetRootExpression()
 	if self.parent and self.parent.type == "expression" then
 		return self.parent:GetRootExpression()
@@ -10756,29 +10783,6 @@ function META:StartNode(
 	return node
 end
 
-function META:SuppressOnNode()
-	self.suppress_on_node = {parent = self.nodes[#self.nodes], nodes = {}}
-end
-
-function META:ReRunOnNode(nodes)
-	if not self.suppress_on_node then return end
-
-	for _, node_a in ipairs(self.suppress_on_node.nodes) do
-		for i, node_b in ipairs(nodes) do
-			if node_a == node_b and self.config.on_node then
-				local new_node = self.config.on_node(self, node_a)
-
-				if new_node then
-					nodes[i] = new_node
-					new_node.parent = self.nodes[#self.nodes]
-				end
-			end
-		end
-	end
-
-	self.suppress_on_node = nil
-end
-
 function META:EndNode(node)
 	local prev = self:GetToken(-1)
 
@@ -10810,6 +10814,29 @@ function META:EndNode(node)
 	end
 
 	return node
+end
+
+function META:SuppressOnNode()
+	self.suppress_on_node = {parent = self.nodes[#self.nodes], nodes = {}}
+end
+
+function META:ReRunOnNode(nodes)
+	if not self.suppress_on_node then return end
+
+	for _, node_a in ipairs(self.suppress_on_node.nodes) do
+		for i, node_b in ipairs(nodes) do
+			if node_a == node_b and self.config.on_node then
+				local new_node = self.config.on_node(self, node_a)
+
+				if new_node then
+					nodes[i] = new_node
+					new_node.parent = self.nodes[#self.nodes]
+				end
+			end
+		end
+	end
+
+	self.suppress_on_node = nil
 end
 
 function META:Error(
@@ -10979,7 +11006,7 @@ function META:ParseValues(
 	return self:ParseToken()
 end
 
-function META:ParseNodes(stop_token)
+function META:ParseStatements(stop_token)
 	local out = {}
 	local i = 1
 
@@ -10990,7 +11017,7 @@ function META:ParseNodes(stop_token)
 
 		if stop_token and stop_token[tk.value] then break end
 
-		local node = (self):ParseNode()
+		local node = (self):ParseStatement()
 
 		if not node then break end
 
@@ -12197,7 +12224,6 @@ do -- typesystem
 		table_insert(node.tokens["("], pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
 		table_insert(node.tokens[")"], self:ExpectValue(")"))
-		node = self:EndNode(node)
 		return node
 	end
 
@@ -12907,6 +12933,7 @@ do -- runtime
 					working_directory = self.config.working_directory,
 					inline_require = not root_node.data_import,
 					on_node = self.config.on_node,
+					on_read_file = self.config.on_read_file,
 				}
 			)
 
@@ -12964,6 +12991,7 @@ do -- runtime
 						path = node.path,
 						working_directory = self.config.working_directory,
 						on_node = self.config.on_node,
+						on_read_file = self.config.on_read_file,
 					--inline_require = true,
 					}
 				)
@@ -13352,7 +13380,7 @@ function META:ParseDoStatement()
 
 	local node = self:StartNode("statement", "do")
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ParseNodes({["end"] = true})
+	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
@@ -13367,7 +13395,7 @@ function META:ParseGenericForStatement()
 	node.tokens["in"] = self:ExpectValue("in")
 	node.expressions = self:ParseMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ParseNodes({["end"] = true})
+	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
@@ -13424,7 +13452,7 @@ function META:ParseIfStatement()
 			node.tokens["then"][i] = self:ExpectValue("then")
 		end
 
-		node.statements[i] = self:ParseNodes({
+		node.statements[i] = self:ParseStatements({
 			["end"] = true,
 			["else"] = true,
 			["elseif"] = true,
@@ -13478,7 +13506,7 @@ function META:ParseNumericForStatement()
 	node.tokens["="] = self:ExpectValue("=")
 	node.expressions = self:ParseMultipleValues(3, self.ExpectRuntimeExpression, 0)
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ParseNodes({["end"] = true})
+	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
@@ -13489,7 +13517,7 @@ function META:ParseRepeatStatement()
 
 	local node = self:StartNode("statement", "repeat")
 	node.tokens["repeat"] = self:ExpectValue("repeat")
-	node.statements = self:ParseNodes({["until"] = true})
+	node.statements = self:ParseStatements({["until"] = true})
 	node.tokens["until"] = self:ExpectValue("until")
 	node.expression = self:ExpectRuntimeExpression()
 	node = self:EndNode(node)
@@ -13522,7 +13550,7 @@ function META:ParseWhileStatement()
 	node.tokens["while"] = self:ExpectValue("while")
 	node.expression = self:ExpectRuntimeExpression()
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ParseNodes({["end"] = true})
+	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
@@ -14152,7 +14180,7 @@ function META:ParseFunctionBody(
 		self:PopParserEnvironment()
 	end
 
-	node.statements = self:ParseNodes({["end"] = true})
+	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["function"])
 	return node
 end
@@ -14203,7 +14231,7 @@ function META:ParseTypeFunctionBody(
 	node.environment = "typesystem"
 	self:PushParserEnvironment("typesystem")
 	local start = self:GetToken()
-	node.statements = self:ParseNodes({["end"] = true})
+	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", start, start)
 	self:PopParserEnvironment()
 	return node
@@ -14260,13 +14288,13 @@ function META:ParseAnalyzerFunctionBody(
 		self:PopParserEnvironment()
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
-		node.statements = self:ParseNodes({["end"] = true})
+		node.statements = self:ParseStatements({["end"] = true})
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectValue("end", start, start)
 	elseif not self:IsValue(",") then
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
-		node.statements = self:ParseNodes({["end"] = true})
+		node.statements = self:ParseStatements({["end"] = true})
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectValue("end", start, start)
 	end
@@ -14300,13 +14328,17 @@ function META:ParseString(str, config)
 
 	if not ok then return nil, node end
 
+	node.lexer_tokens = tokens
+	node.parser = parser
+	node.code = code
 	return node
 end
 
-function META:ParseFile(path, config)
-	config = config or {}
-	config.file_path = config.file_path or path
-	config.file_name = config.file_name or path
+local function read_file(self, path)
+	local code = self.config.on_read_file and self.config.on_read_file(self, path)
+
+	if code then return code end
+
 	local f, err = io.open(path, "rb")
 
 	if not f then return nil, err end
@@ -14315,6 +14347,17 @@ function META:ParseFile(path, config)
 	f:close()
 
 	if not code then return nil, "file is empty" end
+
+	return code
+end
+
+function META:ParseFile(path, config)
+	config = config or {}
+	config.file_path = config.file_path or path
+	config.file_name = config.file_name or path
+	local code, err = read_file(self, path)
+
+	if not code then return code, err end
 
 	return self:ParseString(code, config)
 end
@@ -14352,7 +14395,7 @@ function META:ParseRootNode()
 		end
 	end
 
-	node.statements = self:ParseNodes()
+	node.statements = self:ParseStatements()
 
 	if shebang then table.insert(node.statements, 1, shebang) end
 
@@ -14372,7 +14415,7 @@ function META:ParseRootNode()
 	return node
 end
 
-function META:ParseNode()
+function META:ParseStatement()
 	if self:IsType("end_of_file") then return end
 
 	profiler.PushZone("ReadStatement")
@@ -15437,7 +15480,7 @@ return function(META)
 		local start, stop = node:GetStartStop()
 
 		if self.OnDiagnostic and not self:IsTypeProtectedCall() then
-			self:OnDiagnostic(node.Code, msg_str, severity, start, stop)
+			self:OnDiagnostic(node.Code, msg_str, severity, start, stop, node)
 		end
 
 		table.insert(
@@ -24525,7 +24568,9 @@ IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function() local analyzer functi
 			node.n == "float" or
 			node.n == "double" or
 			node.n == "long double" or
-			node.n == "size_t"
+			node.n == "size_t" or
+			node.n == "intptr_t" or
+			node.n == "uintptr_t"
 		then
 			return types.Number()
 		elseif
@@ -24652,8 +24697,12 @@ end
 
 analyzer function ffi.typeof(cdecl: string, ...: ...any)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-	local declarations = assert(IMPORTS['nattlua.other.cparser']("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
-	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
+	local args = {...}
+
+	if args[1] and args[1].Type == "tuple" then args = {args[1]:Unpack()} end
+
+	local declarations = assert(IMPORTS['nattlua.other.cparser']("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, args))
+	local ctype = env.typesystem.cast(declarations[#declarations].type, args)
 
 	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
 	if ctype.Type == "union" then
@@ -24670,8 +24719,10 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 
 	local nilable_ctype = ctype:Copy()
 
-	for _, keyval in ipairs(nilable_ctype:GetData()) do
-		keyval.val = types.Nilable(keyval.val)
+	if ctype.Type == "table" then
+		for _, keyval in ipairs(nilable_ctype:GetData()) do
+			keyval.val = types.Nilable(keyval.val)
+		end
 	end
 
 	if ctype.is_enum and ctype:GetMetaTable() then return ctype end
@@ -26049,8 +26100,73 @@ function M.bind(host, service)
 end
 
 return M end ]=======], '@./language_server/server/ljsocket.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.base64"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local b64 = {}
+-- Lua 5.1+ base64 v3.0 (c) 2009 by Alex Kloss <alexthkloss@web.de>
+-- licensed under the terms of the LGPL2
+-- character table string
+local b = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+-- encoding
+function b64.encode(data)
+	return (
+			(
+				data:gsub(".", function(x)
+					local r, b = "", x:byte()
+
+					for i = 8, 1, -1 do
+						r = r .. (b % 2 ^ i - b % 2 ^ (i - 1) > 0 and "1" or "0")
+					end
+
+					return r
+				end) .. "0000"
+			):gsub("%d%d%d?%d?%d?%d?", function(x)
+				if (#x < 6) then return "" end
+
+				local c = 0
+
+				for i = 1, 6 do
+					c = c + (x:sub(i, i) == "1" and 2 ^ (6 - i) or 0)
+				end
+
+				return b:sub(c + 1, c + 1)
+			end) .. (
+				{"", "==", "="}
+			)[#data % 3 + 1]
+		)
+end
+
+-- decoding
+function b64.decode(data)
+	data = string.gsub(data, "[^" .. b .. "=]", "")
+	return (
+		data:gsub(".", function(x)
+			if (x == "=") then return "" end
+
+			local r, f = "", (b:find(x) - 1)
+
+			for i = 6, 1, -1 do
+				r = r .. (f % 2 ^ i - f % 2 ^ (i - 1) > 0 and "1" or "0")
+			end
+
+			return r
+		end):gsub("%d%d%d?%d?%d?%d?%d?%d?", function(x)
+			if (#x ~= 8) then return "" end
+
+			local c = 0
+
+			for i = 1, 8 do
+				c = c + (x:sub(i, i) == "1" and 2 ^ (8 - i) or 0)
+			end
+
+			return string.char(c)
+		end)
+	)
+end
+
+return b64 end ]=======], '@./nattlua/other/base64.lua'))())(...) return __M end end
 do local __M; IMPORTS["language_server.server.lsp"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler").New
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
+local b64 = IMPORTS['nattlua.other.base64']("nattlua.other.base64")
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local lsp = {}
 lsp.methods = {}
@@ -26126,6 +26242,7 @@ local SemanticTokenModifiers = {
 	"documentation",
 	"defaultLibrary",
 }
+local working_directory
 
 local function get_range(code, start, stop)
 	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
@@ -26177,35 +26294,98 @@ local function find_token_from_line_character_range(
 	return found
 end
 
+local function get_analyzer_config()
+	
+
+	local f, err = loadfile("./nlconfig.lua")
+	local cfg = {}
+
+	if f then cfg = f("get-analyzer-config") or cfg end
+
+	if cfg.type_annotations == nil then cfg.type_annotations = true end
+
+	return cfg
+end
+
+local function get_emitter_config()
+	
+
+	local f, err = loadfile("./nlconfig.lua")
+	local cfg = {
+		preserve_whitespace = false,
+		string_quote = "\"",
+		no_semicolon = true,
+		comment_type_annotations = true,
+		type_annotations = "explicit",
+		force_parenthesis = true,
+		skip_import = true,
+	}
+
+	if f then cfg = f("get-emitter-config") or cfg end
+
+	return cfg
+end
+
 local BuildBaseEnvironment = IMPORTS['nattlua.runtime.base_environment']("nattlua.runtime.base_environment").BuildBaseEnvironment
 local runtime_env, typesystem_env = BuildBaseEnvironment()
 local cache = {}
+local temp_files = {}
 
-local function compile(uri, lua_code)
-	lua_code = lua_code or cache[uri] and cache[uri].Code:GetString()
+local function find_file(uri)
+	return cache[uri]
+end
 
-	if cache[uri] and lua_code ~= cache[uri].Code:GetString() then
-		cache[uri] = nil
+local function find_temp_file(uri)
+	return temp_files[uri]
+end
+
+local function store_temp_file(uri, content)
+	print("storing ", uri, #content)
+	temp_files[uri] = content
+end
+
+local function clear_temp_file(uri)
+	print("clearing ", uri)
+	temp_files[uri] = nil
+end
+
+local function recompile()
+	print("RECOMPILE")
+	local cfg = get_analyzer_config()
+
+	if not cfg.entry_point then return false end
+
+	local responses = {}
+	cfg.inline_require = false
+	cfg.on_read_file = function(parser, path)
+		responses[path] = responses[path] or
+			{
+				method = "textDocument/publishDiagnostics",
+				params = {uri = working_directory .. "/" .. path, diagnostics = {}},
+			}
+		return find_temp_file(working_directory .. "/" .. path)
 	end
-
-	if cache[uri] then return cache[uri] end
-
-	local compiler = Compiler(lua_code, tostring(uri), {type_annotations = true})
+	local compiler = Compiler(
+		[[return import("./]] .. cfg.entry_point .. [[")]],
+		tostring("file://" .. cfg.entry_point),
+		cfg
+	)
 	compiler:SetEnvironments(runtime_env, typesystem_env)
 
 	do
-		local resp = {
-			method = "textDocument/publishDiagnostics",
-			params = {uri = uri, diagnostics = {}},
-		}
-
-		function compiler:OnDiagnostic(code, msg, severity, start, stop, ...)
+		function compiler:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 			local range = get_range(code, start, stop)
 
 			if not range then return end
 
+			local name = code:GetName()
+			responses[name] = responses[name] or
+				{
+					method = "textDocument/publishDiagnostics",
+					params = {uri = working_directory .. "/" .. name, diagnostics = {}},
+				}
 			table.insert(
-				resp.params.diagnostics,
+				responses[name].params.diagnostics,
 				{
 					severity = DiagnosticSeverity[severity],
 					range = range,
@@ -26214,27 +26394,31 @@ local function compile(uri, lua_code)
 			)
 		end
 
-		compiler:Lex()
-		compiler:Parse()
+		if compiler:Parse() then
+			for _, root_node in ipairs(compiler.SyntaxTree.imports) do
+				local root = root_node.RootStatement
 
-		if VSCODE_PLUGIN then
-			if lua_code:find("--A" .. "NALYZE", nil, true) then compiler:Analyze() end
-		else
+				if not root_node.RootStatement.parser then
+					root = root_node.RootStatement.RootStatement
+				end
+
+				cache[working_directory .. "/" .. root.parser.config.file_path] = {tokens = root.lexer_tokens, code = root.code}
+			end
+
 			compiler:Analyze()
 		end
 
-		if #resp.params.diagnostics > 0 then lsp.Call(resp) end
+		for _, resp in pairs(responses) do
+			lsp.Call(resp)
+		end
 	end
 
 	lsp.Call({method = "workspace/semanticTokens/refresh"})
-	cache[uri] = compiler
-	return cache[uri]
+	return true
 end
 
-lsp.methods["initialized"] = function(params)
-	print("vscode ready")
-end
 lsp.methods["initialize"] = function(params)
+	working_directory = params.workspaceFolders[1].uri
 	return {
 		clientInfo = {name = "NattLua", version = "1.0"},
 		capabilities = {
@@ -26283,6 +26467,22 @@ lsp.methods["initialize"] = function(params)
 			]] },
 	}
 end
+lsp.methods["initialized"] = function(params)
+	recompile()
+end
+lsp.methods["nattlua/format"] = function(params)
+	print("FORMAT")
+	table.print(params)
+	local config = get_emitter_config()
+	config.comment_type_annotations = params.path:sub(-#".lua") == ".lua"
+	local compiler = Compiler(params.code, "@" .. params.path, config)
+	local code, err = compiler:Emit()
+	return {code = b64.encode(code)}
+end
+lsp.methods["shutdown"] = function(params)
+	print("SHUTDOWN")
+	table.print(params)
+end
 
 do -- semantic tokens
 	local tokenTypeMap = {}
@@ -26309,10 +26509,18 @@ do -- semantic tokens
 	end
 
 	lsp.methods["textDocument/semanticTokens/range"] = function(params)
+		do
+			return
+		end
+
 		local textDocument = params.textDocument
 		local range = params
 	end
 	lsp.methods["textDocument/semanticTokens/full"] = function(params)
+		do
+			return
+		end
+
 		local compiler = compile(params.textDocument.uri, params.textDocument.text)
 		local integers = {}
 		local last_y = 0
@@ -26356,6 +26564,10 @@ do -- semantic tokens
 end
 
 lsp.methods["$/cancelRequest"] = function(params)
+	do
+		return
+	end
+
 	print("cancelRequest")
 	table.print(params)
 end
@@ -26364,23 +26576,39 @@ lsp.methods["workspace/didChangeConfiguration"] = function(params)
 	table.print(params)
 end
 lsp.methods["textDocument/didOpen"] = function(params)
-	compile(params.textDocument.uri, params.textDocument.text)
-	print("opened", params.textDocument.uri)
+	do
+		return
+	end
+
+	store_temp_file(params.textDocument.uri, params.contentChanges[1].text)
+	recompile()
 end
 lsp.methods["textDocument/didClose"] = function(params)
-	cache[params.textDocument.uri] = nil
-	print("closed", params.textDocument.uri)
+	do
+		return
+	end
+
+	clear_temp_file(params.textDocument.uri)
 end
 lsp.methods["textDocument/didChange"] = function(params)
-	compile(params.textDocument.uri, params.contentChanges[1].text)
+	store_temp_file(params.textDocument.uri, params.contentChanges[1].text)
+	recompile()
 end
 lsp.methods["textDocument/didSave"] = function(params)
-	compile(params.textDocument.uri, params.textDocument.text)
+	do
+		return
+	end
+
+	clear_temp_file(params.textDocument.uri)
+	recompile()
 end
 
 local function find_token(uri, text, line, character)
-	local compiler = compile(uri, text)
-	local token, data = find_token_from_line_character(compiler.Tokens, compiler.Code:GetString(), line + 1, character + 1)
+	local data = find_file(uri)
+
+	if not data then return end
+
+	local token, data = find_token_from_line_character(data.tokens, data.code:GetString(), line + 1, character + 1)
 	return token, data
 end
 
@@ -26448,6 +26676,10 @@ local function find_nodes(tokens, type, kind)
 end
 
 lsp.methods["textDocument/inlay"] = function(params)
+	do
+		return
+	end
+
 	local compiler = compile(params.textDocument.uri, params.textDocument.text)
 	local tokens = find_token_from_line_character_range(
 		compiler.Tokens,
@@ -26505,6 +26737,10 @@ lsp.methods["textDocument/inlay"] = function(params)
 	}
 end
 lsp.methods["textDocument/rename"] = function(params)
+	do
+		return
+	end
+
 	local token, data = find_token(
 		params.textDocument.uri,
 		params.textDocument.text,
@@ -26547,6 +26783,10 @@ lsp.methods["textDocument/rename"] = function(params)
 	}
 end
 lsp.methods["textDocument/hover"] = function(params)
+	do
+		return
+	end
+
 	local token, data = find_token(
 		params.textDocument.uri,
 		params.textDocument.text,
@@ -27280,7 +27520,7 @@ return function(port)
 				end
 			end
 
-			ffi.C.usleep(50000)
+			ffi.C.usleep((1 / 30) * 1000000)
 		end
 	end
 
@@ -27308,14 +27548,6 @@ local function run_nlconfig()
 	if not io.open("./nlconfig.lua") then
 		io.write("No nlconfig.lua found.\n")
 		return
-	end
-
-	if _G.IMPORTS then
-		for k, v in pairs(IMPORTS) do
-			if not k:find("/") then package.preload[k] = v end
-		end
-
-		package.preload.nattlua = package.preload["nattlua.init"]
 	end
 
 	assert(_G["load" .. "file"]("./nlconfig.lua"))(unpack(ARGS))
@@ -27419,4 +27651,13 @@ if ARGS[1] and ARGS[1] ~= "nattlua" then IMPORTS['nattlua.cli']("nattlua.cli") e
 return m end ]=======], '@./nattlua.lua'))())(...) return __M end end
 IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")
 _G.ARGS = {...}
+
+if _G.IMPORTS then
+	for k, v in pairs(_G.IMPORTS) do
+		if not k:find("/") then package.preload[k] = v end
+	end
+
+	package.preload.nattlua = package.preload["nattlua.init"]
+end
+
 return IMPORTS['nattlua']("nattlua")

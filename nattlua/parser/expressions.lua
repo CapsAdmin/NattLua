@@ -806,6 +806,7 @@ do -- runtime
 					working_directory = self.config.working_directory,
 					inline_require = not root_node.data_import,
 					on_node = self.config.on_node,
+					on_read_file = self.config.on_read_file,
 				}
 			)
 
@@ -863,6 +864,7 @@ do -- runtime
 						path = node.path,
 						working_directory = self.config.working_directory,
 						on_node = self.config.on_node,
+						on_read_file = self.config.on_read_file,
 					--inline_require = true,
 					}
 				)

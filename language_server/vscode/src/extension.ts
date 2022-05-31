@@ -1,5 +1,5 @@
 import * as path from "path";
-import { workspace, ExtensionContext, window, OutputChannel } from "vscode";
+import { workspace, ExtensionContext, window, OutputChannel, languages, TextDocument, TextEdit, Range } from "vscode";
 
 import {
   LanguageClient,
@@ -17,8 +17,8 @@ const kill = () => {
   if (server) {
     server.kill("SIGKILL");
   }
-  server = undefined
-}
+  server = undefined;
+};
 
 function restartServer(
   path: string,
@@ -28,7 +28,7 @@ function restartServer(
   done: () => void
 ) {
   if (server) {
-    kill()
+    kill();
   }
 
   server = spawn(path, args, {
@@ -37,8 +37,8 @@ function restartServer(
 
   context.subscriptions.push({
     dispose: () => {
-      kill()
-    }
+      kill();
+    },
   });
 
   output.appendLine("RUNNING: " + path + " " + args.join(" "));
@@ -52,17 +52,17 @@ function restartServer(
   });
   server.stderr.on("data", (str) => {
     output.appendLine("STDERROR: " + str);
-    kill()
+    kill();
   });
 
   server.on("error", (err) => {
     output.appendLine("ERROR: " + err.toString());
-    kill()
+    kill();
   });
 
   process.on("exit", (code) => {
     output.appendLine("EXIT: " + code.toString());
-    kill()
+    kill();
   });
 }
 
@@ -87,6 +87,7 @@ export function activate(context: ExtensionContext) {
       configurationSection: "nattlua",
     },
   };
+
 
   client = new LanguageClient(
     "Generic Language Server",
@@ -131,6 +132,22 @@ export function activate(context: ExtensionContext) {
     },
     clientOptions
   );
+
+  languages.registerDocumentFormattingEditProvider(extensions, {
+    async provideDocumentFormattingEdits(document: TextDocument) {
+      try {
+        const range = document.validateRange(new Range(0, 0, Infinity, Infinity));
+        output.appendLine("formatting!!!")
+        const params = await client.sendRequest<{code: string}>("nattlua/format", {code: document.getText(), path: document.uri.path})
+        output.appendLine("got response!!!" + JSON.stringify(params, null, 2))
+        return [new TextEdit(range, Buffer.from(params.code, "base64").toString("utf8"))]
+      } catch(err) {
+        output.appendLine(`Nattlua Format error : ${err.message}`);
+      }
+      return []
+    },
+  });
+
 
   client.trace = Trace.Verbose;
 

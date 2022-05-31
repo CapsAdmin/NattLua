@@ -82,7 +82,7 @@ function META:GetStatement()
 end
 
 function META:GetRoot()
-	if self.parent then return self.parent:GetStatement() end
+	if self.parent then return self.parent:GetRoot() end
 
 	return self
 end

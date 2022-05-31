@@ -224,14 +224,18 @@ function META:ParseString(str--[[#: string]], config--[[#: nil | any]])
 	local ok, node = xpcall(parser.ParseRootNode, debug.traceback, parser)
 
 	if not ok then return nil, node end
-
+	node.lexer_tokens = tokens
+	node.parser = parser
+	node.code = code
 	return node
 end
 
-function META:ParseFile(path--[[#: string]], config--[[#: nil | any]])
-	config = config or {}
-	config.file_path = config.file_path or path
-	config.file_name = config.file_name or path
+local function read_file(self, path)
+	local code = self.config.on_read_file and self.config.on_read_file(self, path)
+	if code then
+		return code
+	end
+
 	local f, err = io.open(path, "rb")
 
 	if not f then return nil, err end
@@ -240,6 +244,17 @@ function META:ParseFile(path--[[#: string]], config--[[#: nil | any]])
 	f:close()
 
 	if not code then return nil, "file is empty" end
+
+	return code
+end
+
+function META:ParseFile(path--[[#: string]], config--[[#: nil | any]])
+	config = config or {}
+	config.file_path = config.file_path or path
+	config.file_name = config.file_name or path
+	
+	local code, err = read_file(self, path)
+	if not code then return code, err end
 
 	return self:ParseString(code, config)
 end

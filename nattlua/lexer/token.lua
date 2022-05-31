@@ -21,6 +21,14 @@ local setmetatable = _G.setmetatable
 }]]
 --[[#type META.Token = META.@Self]]
 
+function META:GetRoot()
+	if self.parent then
+		return (self.parent --[[#as any]]):GetRoot()
+	end
+
+	return self
+end
+
 function META:__tostring()
 	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
 end

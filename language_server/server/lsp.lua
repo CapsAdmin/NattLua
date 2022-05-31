@@ -1,5 +1,6 @@
 local Compiler = require("nattlua.compiler").New
 local helpers = require("nattlua.other.helpers")
+local b64 = require("nattlua.other.base64")
 local Union = require("nattlua.types.union").Union
 local lsp = {}
 lsp.methods = {}
@@ -75,6 +76,7 @@ local SemanticTokenModifiers = {
 	"documentation",
 	"defaultLibrary",
 }
+local working_directory
 
 local function get_range(code, start, stop)
 	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
@@ -126,35 +128,98 @@ local function find_token_from_line_character_range(
 	return found
 end
 
+local function get_analyzer_config()
+	--[[#£ parser.dont_hoist_next_import = true]]
+
+	local f, err = loadfile("./nlconfig.lua")
+	local cfg = {}
+
+	if f then cfg = f("get-analyzer-config") or cfg end
+
+	if cfg.type_annotations == nil then cfg.type_annotations = true end
+
+	return cfg
+end
+
+local function get_emitter_config()
+	--[[#£ parser.dont_hoist_next_import = true]]
+
+	local f, err = loadfile("./nlconfig.lua")
+	local cfg = {
+		preserve_whitespace = false,
+		string_quote = "\"",
+		no_semicolon = true,
+		comment_type_annotations = true,
+		type_annotations = "explicit",
+		force_parenthesis = true,
+		skip_import = true,
+	}
+
+	if f then cfg = f("get-emitter-config") or cfg end
+
+	return cfg
+end
+
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local runtime_env, typesystem_env = BuildBaseEnvironment()
 local cache = {}
+local temp_files = {}
 
-local function compile(uri, lua_code)
-	lua_code = lua_code or cache[uri] and cache[uri].Code:GetString()
+local function find_file(uri)
+	return cache[uri]
+end
 
-	if cache[uri] and lua_code ~= cache[uri].Code:GetString() then
-		cache[uri] = nil
+local function find_temp_file(uri)
+	return temp_files[uri]
+end
+
+local function store_temp_file(uri, content)
+	print("storing ", uri, #content)
+	temp_files[uri] = content
+end
+
+local function clear_temp_file(uri)
+	print("clearing ", uri)
+	temp_files[uri] = nil
+end
+
+local function recompile()
+	print("RECOMPILE")
+	local cfg = get_analyzer_config()
+
+	if not cfg.entry_point then return false end
+
+	local responses = {}
+	cfg.inline_require = false
+	cfg.on_read_file = function(parser, path)
+		responses[path] = responses[path] or
+			{
+				method = "textDocument/publishDiagnostics",
+				params = {uri = working_directory .. "/" .. path, diagnostics = {}},
+			}
+		return find_temp_file(working_directory .. "/" .. path)
 	end
-
-	if cache[uri] then return cache[uri] end
-
-	local compiler = Compiler(lua_code, tostring(uri), {type_annotations = true})
+	local compiler = Compiler(
+		[[return import("./]] .. cfg.entry_point .. [[")]],
+		tostring("file://" .. cfg.entry_point),
+		cfg
+	)
 	compiler:SetEnvironments(runtime_env, typesystem_env)
 
 	do
-		local resp = {
-			method = "textDocument/publishDiagnostics",
-			params = {uri = uri, diagnostics = {}},
-		}
-
-		function compiler:OnDiagnostic(code, msg, severity, start, stop, ...)
+		function compiler:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 			local range = get_range(code, start, stop)
 
 			if not range then return end
 
+			local name = code:GetName()
+			responses[name] = responses[name] or
+				{
+					method = "textDocument/publishDiagnostics",
+					params = {uri = working_directory .. "/" .. name, diagnostics = {}},
+				}
 			table.insert(
-				resp.params.diagnostics,
+				responses[name].params.diagnostics,
 				{
 					severity = DiagnosticSeverity[severity],
 					range = range,
@@ -163,27 +228,31 @@ local function compile(uri, lua_code)
 			)
 		end
 
-		compiler:Lex()
-		compiler:Parse()
+		if compiler:Parse() then
+			for _, root_node in ipairs(compiler.SyntaxTree.imports) do
+				local root = root_node.RootStatement
 
-		if VSCODE_PLUGIN then
-			if lua_code:find("--A" .. "NALYZE", nil, true) then compiler:Analyze() end
-		else
+				if not root_node.RootStatement.parser then
+					root = root_node.RootStatement.RootStatement
+				end
+
+				cache[working_directory .. "/" .. root.parser.config.file_path] = {tokens = root.lexer_tokens, code = root.code}
+			end
+
 			compiler:Analyze()
 		end
 
-		if #resp.params.diagnostics > 0 then lsp.Call(resp) end
+		for _, resp in pairs(responses) do
+			lsp.Call(resp)
+		end
 	end
 
 	lsp.Call({method = "workspace/semanticTokens/refresh"})
-	cache[uri] = compiler
-	return cache[uri]
+	return true
 end
 
-lsp.methods["initialized"] = function(params)
-	print("vscode ready")
-end
 lsp.methods["initialize"] = function(params)
+	working_directory = params.workspaceFolders[1].uri
 	return {
 		clientInfo = {name = "NattLua", version = "1.0"},
 		capabilities = {
@@ -232,6 +301,22 @@ lsp.methods["initialize"] = function(params)
 			]] },
 	}
 end
+lsp.methods["initialized"] = function(params)
+	recompile()
+end
+lsp.methods["nattlua/format"] = function(params)
+	print("FORMAT")
+	table.print(params)
+	local config = get_emitter_config()
+	config.comment_type_annotations = params.path:sub(-#".lua") == ".lua"
+	local compiler = Compiler(params.code, "@" .. params.path, config)
+	local code, err = compiler:Emit()
+	return {code = b64.encode(code)}
+end
+lsp.methods["shutdown"] = function(params)
+	print("SHUTDOWN")
+	table.print(params)
+end
 
 do -- semantic tokens
 	local tokenTypeMap = {}
@@ -258,10 +343,18 @@ do -- semantic tokens
 	end
 
 	lsp.methods["textDocument/semanticTokens/range"] = function(params)
+		do
+			return
+		end
+
 		local textDocument = params.textDocument
 		local range = params
 	end
 	lsp.methods["textDocument/semanticTokens/full"] = function(params)
+		do
+			return
+		end
+
 		local compiler = compile(params.textDocument.uri, params.textDocument.text)
 		local integers = {}
 		local last_y = 0
@@ -305,6 +398,10 @@ do -- semantic tokens
 end
 
 lsp.methods["$/cancelRequest"] = function(params)
+	do
+		return
+	end
+
 	print("cancelRequest")
 	table.print(params)
 end
@@ -313,23 +410,39 @@ lsp.methods["workspace/didChangeConfiguration"] = function(params)
 	table.print(params)
 end
 lsp.methods["textDocument/didOpen"] = function(params)
-	compile(params.textDocument.uri, params.textDocument.text)
-	print("opened", params.textDocument.uri)
+	do
+		return
+	end
+
+	store_temp_file(params.textDocument.uri, params.contentChanges[1].text)
+	recompile()
 end
 lsp.methods["textDocument/didClose"] = function(params)
-	cache[params.textDocument.uri] = nil
-	print("closed", params.textDocument.uri)
+	do
+		return
+	end
+
+	clear_temp_file(params.textDocument.uri)
 end
 lsp.methods["textDocument/didChange"] = function(params)
-	compile(params.textDocument.uri, params.contentChanges[1].text)
+	store_temp_file(params.textDocument.uri, params.contentChanges[1].text)
+	recompile()
 end
 lsp.methods["textDocument/didSave"] = function(params)
-	compile(params.textDocument.uri, params.textDocument.text)
+	do
+		return
+	end
+
+	clear_temp_file(params.textDocument.uri)
+	recompile()
 end
 
 local function find_token(uri, text, line, character)
-	local compiler = compile(uri, text)
-	local token, data = find_token_from_line_character(compiler.Tokens, compiler.Code:GetString(), line + 1, character + 1)
+	local data = find_file(uri)
+
+	if not data then return end
+
+	local token, data = find_token_from_line_character(data.tokens, data.code:GetString(), line + 1, character + 1)
 	return token, data
 end
 
@@ -397,6 +510,10 @@ local function find_nodes(tokens, type, kind)
 end
 
 lsp.methods["textDocument/inlay"] = function(params)
+	do
+		return
+	end
+
 	local compiler = compile(params.textDocument.uri, params.textDocument.text)
 	local tokens = find_token_from_line_character_range(
 		compiler.Tokens,
@@ -454,6 +571,10 @@ lsp.methods["textDocument/inlay"] = function(params)
 	}
 end
 lsp.methods["textDocument/rename"] = function(params)
+	do
+		return
+	end
+
 	local token, data = find_token(
 		params.textDocument.uri,
 		params.textDocument.text,
@@ -496,6 +617,10 @@ lsp.methods["textDocument/rename"] = function(params)
 	}
 end
 lsp.methods["textDocument/hover"] = function(params)
+	do
+		return
+	end
+
 	local token, data = find_token(
 		params.textDocument.uri,
 		params.textDocument.text,

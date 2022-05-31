@@ -1,4 +1,10 @@
 local args = ...
+
+if args == "vscode" then
+	os.execute("cd language_server/vscode && yarn && yarn build && code --install-extension nattlua-0.0.1.vsix")
+	return
+end
+
 local nl = require("nattlua")
 local entry = "./nattlua.lua"
 io.write("parsing " .. entry)
