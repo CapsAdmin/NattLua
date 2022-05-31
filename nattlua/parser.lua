@@ -77,7 +77,7 @@ function META:ParseFunctionBody(
 		self:PopParserEnvironment()
 	end
 
-	node.statements = self:ParseNodes({["end"] = true})
+	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["function"])
 	return node
 end
@@ -128,7 +128,7 @@ function META:ParseTypeFunctionBody(
 	node.environment = "typesystem"
 	self:PushParserEnvironment("typesystem")
 	local start = self:GetToken()
-	node.statements = self:ParseNodes({["end"] = true})
+	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", start, start)
 	self:PopParserEnvironment()
 	return node
@@ -185,13 +185,13 @@ function META:ParseAnalyzerFunctionBody(
 		self:PopParserEnvironment()
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
-		node.statements = self:ParseNodes({["end"] = true})
+		node.statements = self:ParseStatements({["end"] = true})
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectValue("end", start, start)
 	elseif not self:IsValue(",") then
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
-		node.statements = self:ParseNodes({["end"] = true})
+		node.statements = self:ParseStatements({["end"] = true})
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectValue("end", start, start)
 	end
@@ -277,7 +277,7 @@ function META:ParseRootNode()
 		end
 	end
 
-	node.statements = self:ParseNodes()
+	node.statements = self:ParseStatements()
 
 	if shebang then table.insert(node.statements, 1, shebang) end
 
@@ -297,7 +297,7 @@ function META:ParseRootNode()
 	return node
 end
 
-function META:ParseNode()
+function META:ParseStatement()
 	if self:IsType("end_of_file") then return end
 
 	profiler.PushZone("ReadStatement")

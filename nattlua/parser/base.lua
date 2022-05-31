@@ -104,6 +104,41 @@ function META:StartNode(
 	return node--[[# as T]]
 end
 
+
+function META:EndNode(node--[[#: Node]])
+	local prev = self:GetToken(-1)
+
+	if prev then
+		node.code_stop = prev.stop
+	else
+		local cur = self:GetToken()
+
+		if cur then node.code_stop = cur.stop end
+	end
+	
+	table.remove(self.nodes)
+
+	if self.config.on_node then
+		if
+			self.suppress_on_node and
+			node.type == "expression" and
+			self.suppress_on_node.parent == self.nodes[#self.nodes]
+		then
+			table.insert(self.suppress_on_node, node)
+		elseif self.config.on_node then
+			local new_node = self.config.on_node(self, node)
+
+			if new_node then
+				node = new_node--[[# as any]]
+				node.parent = self.nodes[#self.nodes]
+			end
+		end
+	end
+
+	return node
+end
+
+
 function META:SuppressOnNode()
 	self.suppress_on_node = {parent = self.nodes[#self.nodes], nodes = {}}
 end
@@ -125,39 +160,6 @@ function META:ReRunOnNode(nodes)
 	end
 
 	self.suppress_on_node = nil
-end
-
-function META:EndNode(node--[[#: Node]])
-	local prev = self:GetToken(-1)
-
-	if prev then
-		node.code_stop = prev.stop
-	else
-		local cur = self:GetToken()
-
-		if cur then node.code_stop = cur.stop end
-	end
-
-	table.remove(self.nodes)
-
-	if self.config.on_node then
-		if
-			self.suppress_on_node and
-			node.type == "expression" and
-			self.suppress_on_node.parent == self.nodes[#self.nodes]
-		then
-			table.insert(self.suppress_on_node, node)
-		elseif self.config.on_node then
-			local new_node = self.config.on_node(self, node)
-
-			if new_node then
-				node = new_node--[[# as any]]
-				node.parent = self.nodes[#self.nodes]
-			end
-		end
-	end
-
-	return node
 end
 
 function META:Error(
@@ -327,7 +329,7 @@ function META:ParseValues(
 	return self:ParseToken()
 end
 
-function META:ParseNodes(stop_token--[[#: {[string] = true} | nil]])
+function META:ParseStatements(stop_token--[[#: {[string] = true} | nil]])
 	local out = {}
 	local i = 1
 
@@ -338,7 +340,7 @@ function META:ParseNodes(stop_token--[[#: {[string] = true} | nil]])
 
 		if stop_token and stop_token[tk.value] then break end
 
-		local node = (self--[[# as any]]):ParseNode()
+		local node = (self--[[# as any]]):ParseStatement()
 
 		if not node then break end
 

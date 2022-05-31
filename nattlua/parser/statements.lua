@@ -223,7 +223,7 @@ function META:ParseDoStatement()
 
 	local node = self:StartNode("statement", "do")
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ParseNodes({["end"] = true})
+	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
@@ -238,7 +238,7 @@ function META:ParseGenericForStatement()
 	node.tokens["in"] = self:ExpectValue("in")
 	node.expressions = self:ParseMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ParseNodes({["end"] = true})
+	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
@@ -295,7 +295,7 @@ function META:ParseIfStatement()
 			node.tokens["then"][i] = self:ExpectValue("then")
 		end
 
-		node.statements[i] = self:ParseNodes({
+		node.statements[i] = self:ParseStatements({
 			["end"] = true,
 			["else"] = true,
 			["elseif"] = true,
@@ -349,7 +349,7 @@ function META:ParseNumericForStatement()
 	node.tokens["="] = self:ExpectValue("=")
 	node.expressions = self:ParseMultipleValues(3, self.ExpectRuntimeExpression, 0)
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ParseNodes({["end"] = true})
+	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
@@ -360,7 +360,7 @@ function META:ParseRepeatStatement()
 
 	local node = self:StartNode("statement", "repeat")
 	node.tokens["repeat"] = self:ExpectValue("repeat")
-	node.statements = self:ParseNodes({["until"] = true})
+	node.statements = self:ParseStatements({["until"] = true})
 	node.tokens["until"] = self:ExpectValue("until")
 	node.expression = self:ExpectRuntimeExpression()
 	node = self:EndNode(node)
@@ -393,7 +393,7 @@ function META:ParseWhileStatement()
 	node.tokens["while"] = self:ExpectValue("while")
 	node.expression = self:ExpectRuntimeExpression()
 	node.tokens["do"] = self:ExpectValue("do")
-	node.statements = self:ParseNodes({["end"] = true})
+	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", node.tokens["do"])
 	node = self:EndNode(node)
 	return node
