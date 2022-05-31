@@ -94,7 +94,7 @@ return function(META)
 		local start, stop = node:GetStartStop()
 
 		if self.OnDiagnostic and not self:IsTypeProtectedCall() then
-			self:OnDiagnostic(node.Code, msg_str, severity, start, stop)
+			self:OnDiagnostic(node.Code, msg_str, severity, start, stop, node)
 		end
 
 		table.insert(

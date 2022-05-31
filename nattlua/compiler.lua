@@ -41,7 +41,7 @@ local repl = function()
 	return "\nbecause "
 end
 
-function META:OnDiagnostic(code, msg, severity, start, stop, ...)
+function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 	local level = 0
 	local t = 0
 	msg = msg:gsub(" because ", repl)
@@ -150,7 +150,7 @@ function META:Lex()
 	lexer.name = self.name
 	self.lexer = lexer
 	lexer.OnError = function(lexer, code, msg, start, stop, ...)
-		self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
+		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, ...)
 	end
 	local ok, tokens = xpcall(function()
 		return lexer:GetTokens()
@@ -174,7 +174,7 @@ function META:Parse()
 	local parser = self.Parser(self.Tokens, self.Code, self.config)
 	self.parser = parser
 	parser.OnError = function(parser, code, msg, start, stop, ...)
-		self:OnDiagnostic(code, msg, "fatal", start, stop, ...)
+		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, ...)
 	end
 
 	if self.OnNode then
