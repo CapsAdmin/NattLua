@@ -5,6 +5,15 @@ io.write("parsing " .. entry)
 local c = assert(
 	nl.Compiler([[
 		_G.ARGS = {...}
+
+		if _G.IMPORTS then
+			for k, v in pairs(_G.IMPORTS) do
+				if not k:find("/") then package.preload[k] = v end
+			end
+	
+			package.preload.nattlua = package.preload["nattlua.init"]
+		end
+
 		return require("nattlua")
 	]],
 	"nattlua",
