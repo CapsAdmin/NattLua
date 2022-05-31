@@ -184,11 +184,11 @@ local function clear_temp_file(uri)
 end
 
 local function recompile()
-	print("RECOMPILE")
 	local cfg = get_analyzer_config()
 
 	if not cfg.entry_point then return false end
 
+	print("RECOMPILE")
 	local responses = {}
 	cfg.inline_require = false
 	cfg.on_read_file = function(parser, path)
@@ -617,10 +617,6 @@ lsp.methods["textDocument/rename"] = function(params)
 	}
 end
 lsp.methods["textDocument/hover"] = function(params)
-	do
-		return
-	end
-
 	local token, data = find_token(
 		params.textDocument.uri,
 		params.textDocument.text,

@@ -41,7 +41,7 @@ elseif cmd == "build" then
 		run_nlconfig()
 	end
 elseif cmd == "language-server" then
-	require("language_server.server.main")(assert(tonumber(unpack(ARGS, 2))))
+	require("language_server.server.main")()
 else
 	run_nlconfig()
 end

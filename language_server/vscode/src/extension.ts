@@ -1,5 +1,14 @@
 import * as path from "path";
-import { workspace, ExtensionContext, window, OutputChannel, languages, TextDocument, TextEdit, Range } from "vscode";
+import {
+  workspace,
+  ExtensionContext,
+  window,
+  OutputChannel,
+  languages,
+  TextDocument,
+  TextEdit,
+  Range,
+} from "vscode";
 
 import {
   LanguageClient,
@@ -25,12 +34,13 @@ function restartServer(
   args: string[],
   output: OutputChannel,
   context: ExtensionContext,
-  done: () => void
+  done: (host: string, port: number) => void
 ) {
   if (server) {
     kill();
   }
 
+  output.appendLine("RUNNING: " + path + " " + args.join(" "));
   server = spawn(path, args, {
     cwd: workspace.rootPath,
   });
@@ -41,13 +51,21 @@ function restartServer(
     },
   });
 
-  output.appendLine("RUNNING: " + path + " " + args.join(" "));
   let init = false;
-  server.stdout.on("data", (str) => {
-    output.appendLine(str);
-    if (!init) {
-      init = true;
-      done();
+
+  server.stdout.setEncoding("utf8");
+  server.stdout.on("data", (str: string) => {
+    output.append(str);
+
+    const match = [...str.matchAll(/HOST: ([\d.]*):([\d]+)/gm)][0];
+    if (match[0]) {
+      const host = match[1];
+      const port = parseInt(match[2], 10);
+
+      if (!init) {
+        init = true;
+        done(host, port);
+      }
     }
   });
   server.stderr.on("data", (str) => {
@@ -76,8 +94,6 @@ export function activate(context: ExtensionContext) {
 
   const path = getConfig<string>("path");
   const args = getConfig<string[]>("arguments");
-  const port = getConfig<number>("port");
-  const ip = getConfig<string>("ip");
 
   const extensions = getConfig<string[]>("extensions");
 
@@ -88,7 +104,6 @@ export function activate(context: ExtensionContext) {
     },
   };
 
-
   client = new LanguageClient(
     "Generic Language Server",
     () => {
@@ -96,7 +111,9 @@ export function activate(context: ExtensionContext) {
         let client = new Socket();
 
         client.on("connect", () => {
-          output.appendLine("CONNECTED");
+          output.appendLine(
+            "CONNECTED: " + client.address + ":" + client.remotePort
+          );
           resolve({
             reader: client,
             writer: client,
@@ -105,8 +122,8 @@ export function activate(context: ExtensionContext) {
 
         let tryAgain = () => {
           try {
-            restartServer(path, args, output, context, () => {
-              client.connect(port, ip);
+            restartServer(path, args, output, context, (host, port) => {
+              client.connect(port, host);
             });
           } catch (e) {
             setTimeout(() => {
@@ -136,24 +153,27 @@ export function activate(context: ExtensionContext) {
   languages.registerDocumentFormattingEditProvider(extensions, {
     async provideDocumentFormattingEdits(document: TextDocument) {
       try {
-        const range = document.validateRange(new Range(0, 0, Infinity, Infinity));
-        output.appendLine("formatting!!!")
-        const params = await client.sendRequest<{code: string}>("nattlua/format", {code: document.getText(), path: document.uri.path})
-        output.appendLine("got response!!!" + JSON.stringify(params, null, 2))
-        return [new TextEdit(range, Buffer.from(params.code, "base64").toString("utf8"))]
-      } catch(err) {
+        const range = document.validateRange(
+          new Range(0, 0, Infinity, Infinity)
+        );
+        const params = await client.sendRequest<{ code: string }>(
+          "nattlua/format",
+          { code: document.getText(), path: document.uri.path }
+        );
+        return [
+          new TextEdit(
+            range,
+            Buffer.from(params.code, "base64").toString("utf8")
+          ),
+        ];
+      } catch (err) {
         output.appendLine(`Nattlua Format error : ${err.message}`);
       }
-      return []
+      return [];
     },
   });
 
-
   client.trace = Trace.Verbose;
-
-  output.appendLine(`Nattlua RUN: ${path} ${args.join(" ")}`);
-  output.appendLine(`Nattlua CONNECT: ${ip} ${port}`);
-  output.appendLine(`Nattlua EXTENSIONS: ${extensions.join(" ")}`);
 
   const ref = client.start();
 
