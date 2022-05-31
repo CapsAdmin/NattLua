@@ -95,7 +95,7 @@ return function(port)
 				end
 			end
 
-			ffi.C.usleep(50000)
+			ffi.C.usleep((1/30) * 1000000)
 		end
 	end
 
