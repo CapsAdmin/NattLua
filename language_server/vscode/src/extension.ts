@@ -58,7 +58,7 @@ function restartServer(
     output.append(str);
 
     const match = [...str.matchAll(/HOST: ([\d.]*):([\d]+)/gm)][0];
-    if (match[0]) {
+    if (match && match[0]) {
       const host = match[1];
       const port = parseInt(match[2], 10);
 

@@ -14311,6 +14311,7 @@ function META:LexString(str, config)
 	config = config or {}
 	local code = Code(str, config.file_path)
 	local lexer = Lexer(code, config)
+	lexer.OnError = self.OnError
 	local ok, tokens = xpcall(lexer.GetTokens, debug.traceback, lexer)
 
 	if not ok then return nil, tokens end
@@ -14324,6 +14325,7 @@ function META:ParseString(str, config)
 	if not tokens then return nil, code end
 
 	local parser = self.New(tokens, code, config)
+	parser.OnError = self.OnError
 	local ok, node = xpcall(parser.ParseRootNode, debug.traceback, parser)
 
 	if not ok then return nil, node end
@@ -26379,6 +26381,7 @@ local function recompile()
 			if not range then return end
 
 			local name = code:GetName()
+			print("error: ", name, msg, severity)
 			responses[name] = responses[name] or
 				{
 					method = "textDocument/publishDiagnostics",
@@ -26471,8 +26474,6 @@ lsp.methods["initialized"] = function(params)
 	recompile()
 end
 lsp.methods["nattlua/format"] = function(params)
-	print("FORMAT")
-	table.print(params)
 	local config = get_emitter_config()
 	config.comment_type_annotations = params.path:sub(-#".lua") == ".lua"
 	local compiler = Compiler(params.code, "@" .. params.path, config)
@@ -26815,6 +26816,10 @@ lsp.methods["textDocument/hover"] = function(params)
 			if temp then data = temp end
 		end
 	end
+
+	local limit = 5000
+
+	if #markdown > limit then markdown = markdown:sub(0, limit) .. "\n```\n..." end
 
 	return {
 		contents = markdown,

@@ -213,6 +213,7 @@ local function recompile()
 			if not range then return end
 
 			local name = code:GetName()
+			print("error: ", name, msg, severity)
 			responses[name] = responses[name] or
 				{
 					method = "textDocument/publishDiagnostics",
@@ -305,8 +306,6 @@ lsp.methods["initialized"] = function(params)
 	recompile()
 end
 lsp.methods["nattlua/format"] = function(params)
-	print("FORMAT")
-	table.print(params)
 	local config = get_emitter_config()
 	config.comment_type_annotations = params.path:sub(-#".lua") == ".lua"
 	local compiler = Compiler(params.code, "@" .. params.path, config)
@@ -649,6 +648,10 @@ lsp.methods["textDocument/hover"] = function(params)
 			if temp then data = temp end
 		end
 	end
+
+	local limit = 5000
+
+	if #markdown > limit then markdown = markdown:sub(0, limit) .. "\n```\n..." end
 
 	return {
 		contents = markdown,
