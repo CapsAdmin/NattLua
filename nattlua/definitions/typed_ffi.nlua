@@ -300,8 +300,14 @@ end
 
 analyzer function ffi.typeof(cdecl: string, ...: ...any)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, {...}))
-	local ctype = env.typesystem.cast(declarations[#declarations].type, {...})
+
+	local args = {...}
+	if args[1] and args[1].Type == "tuple" then
+		args = {args[1]:Unpack()}
+	end
+
+	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, args))
+	local ctype = env.typesystem.cast(declarations[#declarations].type, args)
 
 	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
 	if ctype.Type == "union" then
@@ -316,9 +322,8 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 
 	if ctype.Type == "any" then return ctype end
 
+	local nilable_ctype = ctype:Copy()
 	if ctype.Type == "table" then
-		local nilable_ctype = ctype:Copy()
-
 		for _, keyval in ipairs(nilable_ctype:GetData()) do
 			keyval.val = types.Nilable(keyval.val)
 		end
