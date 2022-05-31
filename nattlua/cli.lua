@@ -8,14 +8,6 @@ local function run_nlconfig()
 		return
 	end
 
-	if _G.IMPORTS then
-		for k, v in pairs(_G.IMPORTS) do
-			if not k:find("/") then package.preload[k] = v end
-		end
-
-		package.preload.nattlua = package.preload["nattlua.init"]
-	end
-
 	assert(_G["load" .. "file"]("./nlconfig.lua"))(unpack(ARGS))
 end
 
