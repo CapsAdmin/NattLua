@@ -34,7 +34,7 @@
             "properties": {
                 "nattlua.path": {
                     "type": "string",
-                    "default": "nattlua",
+                    "default": "/usr/local/bin/nattlua",
                     "description": "path to executable"
                 },
                 "nattlua.arguments": {
