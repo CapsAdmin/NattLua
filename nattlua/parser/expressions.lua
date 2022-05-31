@@ -96,7 +96,7 @@ do -- typesystem
 		table_insert(node.tokens["("], pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
 		table_insert(node.tokens[")"], self:ExpectValue(")"))
-		node = self:EndNode(node)
+		
 		return node
 	end
 
