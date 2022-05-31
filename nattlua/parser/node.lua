@@ -81,6 +81,12 @@ function META:GetStatement()
 	return self
 end
 
+function META:GetRoot()
+	if self.parent then return self.parent:GetStatement() end
+
+	return self
+end
+
 function META:GetRootExpression()
 	if self.parent and self.parent.type == "expression" then
 		return self.parent:GetRootExpression()
