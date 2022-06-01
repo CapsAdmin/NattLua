@@ -23345,7 +23345,12 @@ analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...a
 		end
 	end
 
-	if not callable:GetFunctionBodyNode() or not callable:GetFunctionBodyNode() then
+	if
+		callable.Type ~= "function" or
+		not callable:GetFunctionBodyNode()
+		or
+		not callable:GetFunctionBodyNode()
+	then
 		return types.Boolean(), tuple
 	end
 
@@ -23372,7 +23377,12 @@ analyzer function xpcall(callable: literal Function, error_cb: function=(any)>()
 		end
 	end
 
-	if not callable:GetFunctionBodyNode() or not callable:GetFunctionBodyNode() then
+	if
+		callable.Type ~= "function" or
+		not callable:GetFunctionBodyNode()
+		or
+		not callable:GetFunctionBodyNode()
+	then
 		return types.Boolean(), tuple
 	end
 
@@ -26449,7 +26459,6 @@ lsp.methods["initialize"] = function(params)
 					tokenModifiers = SemanticTokenModifiers,
 				},
 			},
-			renameProvider = true,
 		-- for symbols like all functions within a file
 		-- documentSymbolProvider = {label = "NattLua"},
 		-- highlighting equal upvalues
@@ -26475,7 +26484,7 @@ lsp.methods["initialize"] = function(params)
 				firstTriggerCharacter = "}",
 				moreTriggerCharacter = { "end" },
 			},
-			
+			renameProvider = true,
 			]] },
 	}
 end
@@ -26763,7 +26772,6 @@ lsp.methods["textDocument/rename"] = function(params)
 	if upvalue and upvalue.mutations then
 		for i, v in ipairs(upvalue.mutations) do
 			local node = v.value:GetNode()
-			print(node, v, i, v.value)
 
 			if node then
 				changes[params.textDocument.uri] = changes[params.textDocument.uri] or
@@ -27308,8 +27316,6 @@ local JSONRPC_ERRORS = {
 }
 
 local function error_response(id, code, message)
-	print("LSP ERROR", id, code, message)
-	io.flush()
 	return {
 		jsonrpc = VERSION,
 		id = id,
