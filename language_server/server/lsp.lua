@@ -183,10 +183,17 @@ local function clear_temp_file(uri)
 	temp_files[uri] = nil
 end
 
-local function recompile()
+local function recompile(uri, single_file_only, force_analyze)
 	local cfg = get_analyzer_config()
+	local entry_point = cfg.entry_point
 
-	if not cfg.entry_point then return false end
+	if not entry_point and uri and (force_analyze or uri:find("%.nlua$")) then
+		entry_point = uri:gsub(working_directory .. "/", "")
+	end
+
+	if cfg.entry_point and single_file_only then return false end
+
+	if not entry_point then return false end
 
 	print("RECOMPILE")
 	local responses = {}
@@ -199,11 +206,7 @@ local function recompile()
 			}
 		return find_temp_file(working_directory .. "/" .. path)
 	end
-	local compiler = Compiler(
-		[[return import("./]] .. cfg.entry_point .. [[")]],
-		tostring("file://" .. cfg.entry_point),
-		cfg
-	)
+	local compiler = Compiler([[return import("./]] .. entry_point .. [[")]], "file://" .. entry_point, cfg)
 	compiler:SetEnvironments(runtime_env, typesystem_env)
 
 	do
@@ -409,31 +412,19 @@ lsp.methods["workspace/didChangeConfiguration"] = function(params)
 	table.print(params)
 end
 lsp.methods["textDocument/didOpen"] = function(params)
-	do
-		return
-	end
-
-	store_temp_file(params.textDocument.uri, params.contentChanges[1].text)
-	recompile()
+	store_temp_file(params.textDocument.uri, params.textDocument.text)
+	recompile(params.textDocument.uri, true, params.textDocument.text:find("%-%-ANALYZE") ~= nil)
 end
 lsp.methods["textDocument/didClose"] = function(params)
-	do
-		return
-	end
-
 	clear_temp_file(params.textDocument.uri)
 end
 lsp.methods["textDocument/didChange"] = function(params)
 	store_temp_file(params.textDocument.uri, params.contentChanges[1].text)
-	recompile()
+	recompile(params.textDocument.uri, nil, params.contentChanges[1].text:find("%-%-ANALYZE") ~= nil)
 end
 lsp.methods["textDocument/didSave"] = function(params)
-	do
-		return
-	end
-
 	clear_temp_file(params.textDocument.uri)
-	recompile()
+	recompile(params.textDocument.uri, nil, params.textDocument.text:find("%-%-ANALYZE") ~= nil)
 end
 
 local function find_token(uri, text, line, character)

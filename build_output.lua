@@ -1024,16 +1024,16 @@ function META:CanBeNil()
 	return self:GetData() == nil
 end
 
-function META.IsSubsetOf(A, B)
-	if B.Type == "tuple" then B = B:Get(1) end
+function META.IsSubsetOf(a, b)
+	if b.Type == "tuple" then b = b:Get(1) end
 
-	if B.Type == "any" then return true end
+	if b.Type == "any" then return true end
 
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 
-	if B.Type ~= "symbol" then return type_errors.type_mismatch(A, B) end
+	if b.Type ~= "symbol" then return type_errors.type_mismatch(a, b) end
 
-	if A:GetData() ~= B:GetData() then return type_errors.value_mismatch(A, B) end
+	if a:GetData() ~= b:GetData() then return type_errors.value_mismatch(a, b) end
 
 	return true
 end
@@ -1176,48 +1176,48 @@ function META:Copy()
 	return copy -- TODO: figure out inheritance
 end
 
-function META.IsSubsetOf(A, B)
-	if B.Type == "tuple" then B = (B):Get(1) end
+function META.IsSubsetOf(a, b)
+	if b.Type == "tuple" then b = (b):Get(1) end
 
-	if B.Type == "any" then return true end
+	if b.Type == "any" then return true end
 
-	if B.Type == "union" then
-		return (B):IsTargetSubsetOfChild(A)
+	if b.Type == "union" then
+		return (b):IsTargetSubsetOfChild(a)
 	end
 
-	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
+	if b.Type ~= "number" then return type_errors.type_mismatch(a, b) end
 
-	if A:IsLiteralArgument() and B:IsLiteralArgument() then return true end
+	if a:IsLiteralArgument() and b:IsLiteralArgument() then return true end
 
-	if B:IsLiteralArgument() and not A:IsLiteral() then
-		return type_errors.subset(A, B)
+	if b:IsLiteralArgument() and not a:IsLiteral() then
+		return type_errors.subset(a, b)
 	end
 
-	if A:IsLiteral() and B:IsLiteral() then
-		local a = A:GetData()
-		local b = B:GetData()
+	if a:IsLiteral() and b:IsLiteral() then
+		local a_num = a:GetData()
+		local b_num = b:GetData()
 
 		-- compare against literals
-		if A.Type == "number" and B.Type == "number" then
-			if A:IsNan() and B:IsNan() then return true end
+		if a.Type == "number" and b.Type == "number" then
+			if a:IsNan() and b:IsNan() then return true end
 		end
 
-		if a == b then return true end
+		if a_num == b_num then return true end
 
-		local max = B:GetMaxLiteral()
+		local max = b:GetMaxLiteral()
 
-		if max then if a >= b and a <= max then return true end end
+		if max then if a_num >= b_num and a_num <= max then return true end end
 
-		return type_errors.subset(A, B)
-	elseif A:GetData() == nil and B:GetData() == nil then
+		return type_errors.subset(a, b)
+	elseif a:GetData() == nil and b:GetData() == nil then
 		-- number contains number
 		return true
-	elseif A:IsLiteral() and not B:IsLiteral() then
+	elseif a:IsLiteral() and not b:IsLiteral() then
 		-- 42 subset of number?
 		return true
-	elseif not A:IsLiteral() and B:IsLiteral() then
+	elseif not a:IsLiteral() and b:IsLiteral() then
 		-- number subset of 42 ?
-		return type_errors.subset(A, B)
+		return type_errors.subset(a, b)
 	end
 
 	-- number == number
@@ -1802,25 +1802,25 @@ function META:IsTargetSubsetOfChild(target)
 	return type_errors.subset(target, self, errors)
 end
 
-function META.IsSubsetOf(A, B)
-	if B.Type ~= "union" then return A:IsSubsetOf(META.New({B})) end
+function META.IsSubsetOf(a, b)
+	if b.Type ~= "union" then return a:IsSubsetOf(META.New({b})) end
 
-	if B.Type == "tuple" then B = B:Get(1) end
+	if b.Type == "tuple" then b = b:Get(1) end
 
-	if not A.Data[1] then return type_errors.subset(A, B, "union is empty") end
+	if not a.Data[1] then return type_errors.subset(a, b, "union is empty") end
 
-	for _, a in ipairs(A.Data) do
-		if a.Type == "any" then return true end
+	for _, a_val in ipairs(a.Data) do
+		if a_val.Type == "any" then return true end
 	end
 
-	for _, a in ipairs(A.Data) do
-		local b, reason = B:Get(a)
+	for _, a_val in ipairs(a.Data) do
+		local b_val, reason = b:Get(a_val)
 
-		if not b then return type_errors.missing(B, a, reason) end
+		if not b_val then return type_errors.missing(b, a_val, reason) end
 
-		local ok, reason = a:IsSubsetOf(b)
+		local ok, reason = a_val:IsSubsetOf(b_val)
 
-		if not ok then return type_errors.subset(a, b, reason) end
+		if not ok then return type_errors.subset(a_val, b_val, reason) end
 	end
 
 	return true
@@ -2489,101 +2489,101 @@ function META:Copy(map, copy_tables)
 	return copy
 end
 
-function META.IsSubsetOf(A, B, max_length)
-	if A == B then return true end
+function META.IsSubsetOf(a, b, max_length)
+	if a == b then return true end
 
-	if A.suppress then return true end
+	if a.suppress then return true end
 
-	if A.Remainder then
-		local t = A:Get(1)
+	if a.Remainder then
+		local t = a:Get(1)
 
-		if t and t.Type == "any" and #A:GetData() == 0 then return true end
+		if t and t.Type == "any" and #a:GetData() == 0 then return true end
 	end
 
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 
 	do
-		local t = A:Get(1)
+		local t = a:Get(1)
 
-		if t and t.Type == "any" and B.Type == "tuple" and B:GetLength() == 0 then
+		if t and t.Type == "any" and b.Type == "tuple" and b:GetLength() == 0 then
 			return true
 		end
 	end
 
-	if B.Type == "any" then return true end
+	if b.Type == "any" then return true end
 
-	if B.Type == "table" then
-		if not B:IsNumericallyIndexed() then
-			return type_errors.numerically_indexed(B)
+	if b.Type == "table" then
+		if not b:IsNumericallyIndexed() then
+			return type_errors.numerically_indexed(b)
 		end
 	end
 
-	if B.Type ~= "tuple" then return type_errors.type_mismatch(A, B) end
+	if b.Type ~= "tuple" then return type_errors.type_mismatch(a, b) end
 
-	max_length = max_length or math.max(A:GetMinimumLength(), B:GetMinimumLength())
+	max_length = max_length or math.max(a:GetMinimumLength(), b:GetMinimumLength())
 
 	for i = 1, max_length do
-		local a, err = A:Get(i)
+		local a_val, err = a:Get(i)
 
-		if not a then return type_errors.subset(A, B, err) end
+		if not a_val then return type_errors.subset(a, b, err) end
 
-		local b, err = B:Get(i)
+		local b_val, err = b:Get(i)
 
-		if not b and a.Type == "any" then break end
+		if not b_val and a_val.Type == "any" then break end
 
-		if not b then return type_errors.missing(B, i, err) end
+		if not b_val then return type_errors.missing(b, i, err) end
 
-		A.suppress = true
-		local ok, reason = a:IsSubsetOf(b)
-		A.suppress = false
+		a.suppress = true
+		local ok, reason = a_val:IsSubsetOf(b_val)
+		a.suppress = false
 
-		if not ok then return type_errors.subset(a, b, reason) end
+		if not ok then return type_errors.subset(a_val, b_val, reason) end
 	end
 
 	return true
 end
 
-function META.IsSubsetOfTupleWithoutExpansion(A, B)
-	for i, a in ipairs(A:GetData()) do
-		local b = B:GetWithoutExpansion(i)
-		local ok, err = a:IsSubsetOf(b)
+function META.IsSubsetOfTupleWithoutExpansion(a, b)
+	for i, a_val in ipairs(a:GetData()) do
+		local b_val = b:GetWithoutExpansion(i)
+		local ok, err = a_val:IsSubsetOf(b_val)
 
-		if ok then return ok, err, a, b, i end
+		if ok then return ok, err, a_val, b_val, i end
 	end
 
 	return true
 end
 
-function META.IsSubsetOfTuple(A, B)
-	if A:Equal(B) then return true end
+function META.IsSubsetOfTuple(a, b)
+	if a:Equal(b) then return true end
 
-	for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
-		local a, a_err = A:Get(i)
-		local b, b_err = B:Get(i)
+	for i = 1, math.max(a:GetMinimumLength(), b:GetMinimumLength()) do
+		local a_val, a_err = a:Get(i)
+		local b_val, b_err = b:Get(i)
 
-		if b and b.Type == "union" then b, b_err = b:GetAtIndex(i) end
+		if b_val and b_val.Type == "union" then b_val, b_err = b_val:GetAtIndex(i) end
 
-		if not a then
-			if b and b.Type == "any" then
-				a = Any()
+		if not a_val then
+			if b_val and b_val.Type == "any" then
+				a_val = Any()
 			else
-				return a, a_err, a or Nil(), b, i
+				return a_val, a_err, a_val or Nil(), b_val, i
 			end
 		end
 
-		if not b then return b, b_err, a or Nil(), b, i end
+		if not b_val then return b_val, b_err, a_val or Nil(), b_val, i end
 
-		if b.Type == "tuple" then
-			b = b:Get(1)
+		if b_val.Type == "tuple" then
+			b_val = b_val:Get(1)
 
-			if not b then break end
+			if not b_val then break end
 		end
 
-		a = a or Nil()
-		b = b or Nil()
-		local ok, reason = a:IsSubsetOf(b)
+		a_val = a_val or Nil()
+		b_val = b_val or Nil()
+		local ok, reason = a_val:IsSubsetOf(b_val)
 
-		if not ok then return ok, reason, a, b, i end
+		if not ok then return ok, reason, a_val, b_val, i end
 	end
 
 	return true
@@ -3160,29 +3160,29 @@ function META:FollowsContract(contract)
 	return true
 end
 
-function META.IsSubsetOf(A, B)
-	if A.suppress then return true, "suppressed" end
+function META.IsSubsetOf(a, b)
+	if a.suppress then return true, "suppressed" end
 
-	if B.Type == "tuple" then B = B:Get(1) end
+	if b.Type == "tuple" then b = b:Get(1) end
 
-	if B.Type == "any" then return true, "b is any " end
+	if b.Type == "any" then return true, "b is any " end
 
-	local ok, err = A:IsSameUniqueType(B)
+	local ok, err = a:IsSameUniqueType(b)
 
 	if not ok then return ok, err end
 
-	if A == B then return true, "same type" end
+	if a == b then return true, "same type" end
 
-	if B.Type == "table" then
-		if B:GetMetaTable() and B:GetMetaTable() == A then
+	if b.Type == "table" then
+		if b:GetMetaTable() and b:GetMetaTable() == a then
 			return true, "same metatable"
 		end
 
-		--if B:GetSelf() and B:GetSelf():Equal(A) then return true end
+		--if b:GetSelf() and b:GetSelf():Equal(a) then return true end
 		local can_be_empty = true
-		A.suppress = true
+		a.suppress = true
 
-		for _, keyval in ipairs(B:GetData()) do
+		for _, keyval in ipairs(b:GetData()) do
 			if not keyval.val:CanBeNil() then
 				can_be_empty = false
 
@@ -3190,37 +3190,37 @@ function META.IsSubsetOf(A, B)
 			end
 		end
 
-		A.suppress = false
+		a.suppress = false
 
 		if
-			not A:GetData()[1] and
+			not a:GetData()[1] and
 			(
-				not A:GetContract() or
-				not A:GetContract():GetData()[1]
+				not a:GetContract() or
+				not a:GetContract():GetData()[1]
 			)
 		then
 			if can_be_empty then
 				return true, "can be empty"
 			else
-				return type_errors.subset(A, B)
+				return type_errors.subset(a, b)
 			end
 		end
 
-		for _, akeyval in ipairs(A:GetData()) do
-			local bkeyval, reason = B:FindKeyValReverse(akeyval.key)
+		for _, akeyval in ipairs(a:GetData()) do
+			local bkeyval, reason = b:FindKeyValReverse(akeyval.key)
 
 			if not akeyval.val:CanBeNil() then
 				if not bkeyval then
-					if A.BaseTable and A.BaseTable == B then
+					if a.BaseTable and a.BaseTable == b then
 						bkeyval = akeyval
 					else
 						return bkeyval, reason
 					end
 				end
 
-				A.suppress = true
+				a.suppress = true
 				local ok, err = akeyval.val:IsSubsetOf(bkeyval.val)
-				A.suppress = false
+				a.suppress = false
 
 				if not ok then
 					return type_errors.table_subset(akeyval.key, bkeyval.key, akeyval.val, bkeyval.val, err)
@@ -3229,13 +3229,13 @@ function META.IsSubsetOf(A, B)
 		end
 
 		return true, "all is equal"
-	elseif B.Type == "union" then
-		local u = Union({A})
-		local ok, err = u:IsSubsetOf(B)
+	elseif b.Type == "union" then
+		local u = Union({a})
+		local ok, err = u:IsSubsetOf(b)
 		return ok, err or "is subset of b"
 	end
 
-	return type_errors.subset(A, B)
+	return type_errors.subset(a, b)
 end
 
 function META:ContainsAllKeysIn(contract)
@@ -3753,43 +3753,43 @@ local function unpack_keyval(keyval)
 	return key, val
 end
 
-function META.Extend(A, B)
-	assert(B.Type == "table")
+function META.Extend(a, b)
+	assert(b.Type == "table")
 	local map = {}
 
-	if A:GetContract() then
-		if A == A:GetContract() then
-			A:SetContract()
-			A = A:Copy()
-			A:SetContract(A)
+	if a:GetContract() then
+		if a == a:GetContract() then
+			a:SetContract()
+			a = a:Copy()
+			a:SetContract(a)
 		end
 
-		A = A:GetContract()
+		a = a:GetContract()
 	else
-		A = A:Copy(map)
+		a = a:Copy(map)
 	end
 
-	map[B] = A
-	B = B:Copy(map)
+	map[b] = a
+	b = b:Copy(map)
 
-	for _, keyval in ipairs(B:GetData()) do
-		local ok, reason = A:SetExplicit(unpack_keyval(keyval))
+	for _, keyval in ipairs(b:GetData()) do
+		local ok, reason = a:SetExplicit(unpack_keyval(keyval))
 
 		if not ok then return ok, reason end
 	end
 
-	return A
+	return a
 end
 
-function META.Union(A, B)
-	assert(B.Type == "table")
+function META.Union(a, b)
+	assert(b.Type == "table")
 	local copy = META.New()
 
-	for _, keyval in ipairs(A:GetData()) do
+	for _, keyval in ipairs(a:GetData()) do
 		copy:Set(unpack_keyval(keyval))
 	end
 
-	for _, keyval in ipairs(B:GetData()) do
+	for _, keyval in ipairs(b:GetData()) do
 		copy:Set(unpack_keyval(keyval))
 	end
 
@@ -12838,13 +12838,7 @@ do -- runtime
 		if not self:IsValue("(") then return end
 
 		local pleft = self:ExpectValue("(")
-		local node = self:ParseRuntimeExpression(0)
-
-		if not node then
-			self:Error("empty parentheses group", pleft)
-			return
-		end
-
+		local node = self:ExpectRuntimeExpression(0)
 		node.tokens["("] = node.tokens["("] or {}
 		table_insert(node.tokens["("], pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
@@ -13126,6 +13120,7 @@ do -- runtime
 			token.value == "}" or
 			token.value == "," or
 			token.value == "]" or
+			token.value == ")" or
 			(
 				(
 					runtime_syntax:IsKeyword(token) or
@@ -13196,7 +13191,7 @@ do -- destructure statement
 			node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
 			node.tokens["}"] = self:ExpectValue("}")
 			node.tokens["="] = self:ExpectValue("=")
-			node.right = self:ParseRuntimeExpression(0)
+			node.right = self:ExpectRuntimeExpression(0)
 		end
 
 		node = self:EndNode(node)
@@ -13224,7 +13219,7 @@ do -- destructure statement
 			node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
 			node.tokens["}"] = self:ExpectValue("}")
 			node.tokens["="] = self:ExpectValue("=")
-			node.right = self:ParseRuntimeExpression(0)
+			node.right = self:ExpectRuntimeExpression(0)
 		end
 
 		node = self:EndNode(node)
@@ -13490,7 +13485,7 @@ function META:ParseLocalAssignmentStatement()
 
 	if self:IsValue("=") then
 		node.tokens["="] = self:ExpectValue("=")
-		node.right = self:ParseMultipleValues(nil, self.ParseRuntimeExpression, 0)
+		node.right = self:ParseMultipleValues(nil, self.ExpectRuntimeExpression, 0)
 	end
 
 	node = self:EndNode(node)
@@ -13604,7 +13599,7 @@ function META:ParseLocalTypeAssignmentStatement()
 	if self:IsValue("=") then
 		node.tokens["="] = self:ExpectValue("=")
 		self:PushParserEnvironment("typesystem")
-		node.right = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+		node.right = self:ParseMultipleValues(nil, self.ExpectTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
@@ -13619,13 +13614,13 @@ function META:ParseTypeAssignmentStatement()
 
 	local node = self:StartNode("statement", "assignment")
 	node.tokens["type"] = self:ExpectValue("type")
-	node.left = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+	node.left = self:ParseMultipleValues(nil, self.ExpectTypeExpression, 0)
 	node.environment = "typesystem"
 
 	if self:IsValue("=") then
 		node.tokens["="] = self:ExpectValue("=")
 		self:PushParserEnvironment("typesystem")
-		node.right = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+		node.right = self:ParseMultipleValues(nil, self.ExpectTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
@@ -14524,34 +14519,34 @@ function META:Copy(map, copy_tables)
 	return copy
 end
 
-function META.IsSubsetOf(A, B)
-	if B.Type == "tuple" then B = B:Get(1) end
+function META.IsSubsetOf(a, b)
+	if b.Type == "tuple" then b = b:Get(1) end
 
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 
-	if B.Type == "any" then return true end
+	if b.Type == "any" then return true end
 
-	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
+	if b.Type ~= "function" then return type_errors.type_mismatch(a, b) end
 
-	local ok, reason = A:GetInputSignature():IsSubsetOf(B:GetInputSignature())
+	local ok, reason = a:GetInputSignature():IsSubsetOf(b:GetInputSignature())
 
 	if not ok then
-		return type_errors.subset(A:GetInputSignature(), B:GetInputSignature(), reason)
+		return type_errors.subset(a:GetInputSignature(), b:GetInputSignature(), reason)
 	end
 
-	local ok, reason = A:GetOutputSignature():IsSubsetOf(B:GetOutputSignature())
+	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
 
 	if
 		not ok and
 		(
 			(
-				not B:IsCalled() and
-				not B:IsExplicitOutputSignature()
+				not b:IsCalled() and
+				not b:IsExplicitOutputSignature()
 			)
 			or
 			(
-				not A:IsCalled() and
-				not A:IsExplicitOutputSignature()
+				not a:IsCalled() and
+				not a:IsExplicitOutputSignature()
 			)
 		)
 	then
@@ -14559,40 +14554,40 @@ function META.IsSubsetOf(A, B)
 	end
 
 	if not ok then
-		return type_errors.subset(A:GetOutputSignature(), B:GetOutputSignature(), reason)
+		return type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature(), reason)
 	end
 
 	return true
 end
 
-function META.IsCallbackSubsetOf(A, B)
-	if B.Type == "tuple" then B = B:Get(1) end
+function META.IsCallbackSubsetOf(a, b)
+	if b.Type == "tuple" then b = b:Get(1) end
 
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 
-	if B.Type == "any" then return true end
+	if b.Type == "any" then return true end
 
-	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
+	if b.Type ~= "function" then return type_errors.type_mismatch(a, b) end
 
-	local ok, reason = A:GetInputSignature():IsSubsetOf(B:GetInputSignature(), A:GetInputSignature():GetMinimumLength())
+	local ok, reason = a:GetInputSignature():IsSubsetOf(b:GetInputSignature(), a:GetInputSignature():GetMinimumLength())
 
 	if not ok then
-		return type_errors.subset(A:GetInputSignature(), B:GetInputSignature(), reason)
+		return type_errors.subset(a:GetInputSignature(), b:GetInputSignature(), reason)
 	end
 
-	local ok, reason = A:GetOutputSignature():IsSubsetOf(B:GetOutputSignature())
+	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
 
 	if
 		not ok and
 		(
 			(
-				not B:IsCalled() and
-				not B:IsExplicitOutputSignature()
+				not b:IsCalled() and
+				not b:IsExplicitOutputSignature()
 			)
 			or
 			(
-				not A:IsCalled() and
-				not A:IsExplicitOutputSignature()
+				not a:IsCalled() and
+				not a:IsExplicitOutputSignature()
 			)
 		)
 	then
@@ -14600,7 +14595,7 @@ function META.IsCallbackSubsetOf(A, B)
 	end
 
 	if not ok then
-		return type_errors.subset(A:GetOutputSignature(), B:GetOutputSignature(), reason)
+		return type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature(), reason)
 	end
 
 	return true
@@ -19424,14 +19419,13 @@ do
 			self:Whitespace("\n")
 			self:Whitespace("\t")
 		end
-
-		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitAnonymousFunction(node)
 		self:EmitToken(node.tokens["function"])
 		local distance = (node.tokens["end"].start - node.tokens["arguments)"].start)
 		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitLocalFunction(node)
@@ -19441,6 +19435,7 @@ do
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["identifier"])
 		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitLocalAnalyzerFunction(node)
@@ -19452,6 +19447,7 @@ do
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["identifier"])
 		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitLocalTypeFunction(node)
@@ -19461,6 +19457,7 @@ do
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["identifier"])
 		self:EmitFunctionBody(node, true)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitTypeFunction(node)
@@ -19472,6 +19469,7 @@ do
 		end
 
 		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitFunction(node)
@@ -19484,6 +19482,7 @@ do
 		self:Whitespace(" ")
 		self:EmitExpression(node.expression or node.identifier)
 		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitAnalyzerFunctionStatement(node)
@@ -19507,6 +19506,7 @@ do
 		end
 
 		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 end
 
@@ -20708,6 +20708,7 @@ return {
 		if node.kind == "analyzer_function" or node.kind == "local_analyzer_function" then
 			local em = Emitter({type_annotations = false})
 			em:EmitFunctionBody(node)
+			em:EmitToken(node.tokens["end"])
 			obj:SetAnalyzerFunction(self:CompileLuaAnalyzerDebugCode("return function " .. em:Concat(), node)())
 		end
 
@@ -26369,10 +26370,17 @@ local function clear_temp_file(uri)
 	temp_files[uri] = nil
 end
 
-local function recompile()
+local function recompile(uri, single_file_only, force_analyze)
 	local cfg = get_analyzer_config()
+	local entry_point = cfg.entry_point
 
-	if not cfg.entry_point then return false end
+	if not entry_point and uri and (force_analyze or uri:find("%.nlua$")) then
+		entry_point = uri:gsub(working_directory .. "/", "")
+	end
+
+	if cfg.entry_point and single_file_only then return false end
+
+	if not entry_point then return false end
 
 	print("RECOMPILE")
 	local responses = {}
@@ -26385,11 +26393,7 @@ local function recompile()
 			}
 		return find_temp_file(working_directory .. "/" .. path)
 	end
-	local compiler = Compiler(
-		[[return import("./]] .. cfg.entry_point .. [[")]],
-		tostring("file://" .. cfg.entry_point),
-		cfg
-	)
+	local compiler = Compiler([[return import("./]] .. entry_point .. [[")]], "file://" .. entry_point, cfg)
 	compiler:SetEnvironments(runtime_env, typesystem_env)
 
 	do
@@ -26595,31 +26599,19 @@ lsp.methods["workspace/didChangeConfiguration"] = function(params)
 	table.print(params)
 end
 lsp.methods["textDocument/didOpen"] = function(params)
-	do
-		return
-	end
-
-	store_temp_file(params.textDocument.uri, params.contentChanges[1].text)
-	recompile()
+	store_temp_file(params.textDocument.uri, params.textDocument.text)
+	recompile(params.textDocument.uri, true, params.textDocument.text:find("%-%-ANALYZE") ~= nil)
 end
 lsp.methods["textDocument/didClose"] = function(params)
-	do
-		return
-	end
-
 	clear_temp_file(params.textDocument.uri)
 end
 lsp.methods["textDocument/didChange"] = function(params)
 	store_temp_file(params.textDocument.uri, params.contentChanges[1].text)
-	recompile()
+	recompile(params.textDocument.uri, nil, params.contentChanges[1].text:find("%-%-ANALYZE") ~= nil)
 end
 lsp.methods["textDocument/didSave"] = function(params)
-	do
-		return
-	end
-
 	clear_temp_file(params.textDocument.uri)
-	recompile()
+	recompile(params.textDocument.uri, nil, params.textDocument.text:find("%-%-ANALYZE") ~= nil)
 end
 
 local function find_token(uri, text, line, character)
@@ -26756,6 +26748,10 @@ lsp.methods["textDocument/inlay"] = function(params)
 	}
 end
 lsp.methods["textDocument/rename"] = function(params)
+	do
+		return
+	end
+
 	local token, data = find_token(
 		params.textDocument.uri,
 		params.textDocument.text,

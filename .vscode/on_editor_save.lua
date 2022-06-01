@@ -94,7 +94,7 @@ local function run_nattlua(path)
 end
 
 local function has_test_focus()
-	local f = io.open("test_focus.lua")
+	local f = io.open("test_focus.nlua")
 
 	if not f or (f and #f:read("*all") == 0) then
 		if f then f:close() end
@@ -126,7 +126,7 @@ if normalized:find("/nattlua/", nil, true) then
 		return
 	elseif normalized:find("typed_ffi.nlua", nil, true) and has_test_focus() then
 		print("running test focus")
-		run_nattlua("./test_focus.lua")
+		run_nattlua("./test_focus.nlua")
 	elseif normalized:find("lint.lua", nil, true) then
 		run_lua(path)
 	elseif normalized:find("build_glua_base.lua", nil, true) then
@@ -152,7 +152,7 @@ if normalized:find("/nattlua/", nil, true) then
 		run_lua(path)
 	elseif has_test_focus() then
 		print("running test focus")
-		run_nattlua("./test_focus.lua")
+		run_nattlua("./test_focus.nlua")
 	elseif
 		(
 			normalized:find("/nattlua/nattlua/", nil, true) or

@@ -471,7 +471,7 @@ To format the codebase with NattLua run `luajit format.lua`
 
 I've setup vscode to run the task `onsave` when a file is saved with the plugin `gruntfuggly.triggertaskonsave`. This runs `on_editor_save.lua` which has some logic to choose which files to run when modifying project.
 
-I also locally have a file called `test_focus.lua` in root which will override the test suite when the file is not empty. This makes it easier to debug specific tests and code.
+I also locally have a file called `test_focus.nlua` in root which will override the test suite when the file is not empty. This makes it easier to debug specific tests and code.
 
 Some debug language features are:
 

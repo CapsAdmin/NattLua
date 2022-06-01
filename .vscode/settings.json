@@ -5,7 +5,7 @@
       "nattlua/**/*.lua",
       "test/**/*.lua",
       "**/*.nlua",
-      "test_focus.lua"
+      "test_focus.nlua"
     ]
   },
   "search.exclude": {
