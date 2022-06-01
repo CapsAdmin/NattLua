@@ -562,3 +562,16 @@ analyze[[
     local ok, err = _ as any | nil, _ as any | nil | string
     attest.equal(assert(ok, err), _ as any)
 ]]
+analyze[[
+    type f = Function
+
+    local a, b, c = xpcall(f, f, 1,2,3)
+    attest.equal(a, _ as boolean)
+    attest.equal(b, _ as any)
+    attest.equal(c, _ as any)
+
+    local a, b, c = pcall(f, 1,2,3)
+    attest.equal(a, _ as boolean)
+    attest.equal(b, _ as any)
+    attest.equal(c, _ as any)
+]]

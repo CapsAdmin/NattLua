@@ -231,12 +231,13 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 	assert(compiler:Lex())
 	assert(compiler:Parse())
 	local f = types.Function()
+
 	f:SetAnalyzerFunction(function(...)
 		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
 	end)
+
 	f:SetInputSignature(types.VarArg(types.Any()))
 	f:SetOutputSignature(types.VarArg(types.Any()))
-	
 	return f
 end
 
@@ -361,6 +362,10 @@ analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...a
 		end
 	end
 
+	if not callable:GetFunctionBodyNode() or not callable:GetFunctionBodyNode() then
+		return types.Boolean(), tuple
+	end
+
 	return true, tuple
 end
 
@@ -371,8 +376,6 @@ analyzer function xpcall(callable: literal Function, error_cb: function=(any)>()
 	analyzer:PopProtectedCall()
 	local diagnostics = analyzer:GetDiagnostics()
 
-	
-	
 	do
 		local errors = {}
 
@@ -380,12 +383,14 @@ analyzer function xpcall(callable: literal Function, error_cb: function=(any)>()
 			local d = diagnostics[i]
 
 			if d.severity == "error" then
-
-				analyzer:Assert(analyzer:Call(callable,  types.Union({types.LString(d.msg)})))
-
+				analyzer:Assert(analyzer:Call(callable, types.Union({types.LString(d.msg)})))
 				return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
 			end
 		end
+	end
+
+	if not callable:GetFunctionBodyNode() or not callable:GetFunctionBodyNode() then
+		return types.Boolean(), tuple
 	end
 
 	return true, tuple
