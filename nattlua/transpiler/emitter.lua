@@ -356,9 +356,13 @@ end
 local function encapsulate_module(content, name, method)
 	if method == "loadstring" then
 		local len = 6
-		content:gsub("%[[=]*%[", function(s) len = math.max(len, #s - 2) end)
+
+		content:gsub("%[[=]*%[", function(s)
+			len = math.max(len, #s - 2)
+		end)
+
 		local eq = ("="):rep(len + 1)
-		return "assert(loadstring(["..eq.."[ return " .. content .. " ]" .. eq .. "], '" .. name .. "'))()"
+		return "assert(loadstring([" .. eq .. "[ return " .. content .. " ]" .. eq .. "], '" .. name .. "'))()"
 	end
 
 	return content
@@ -384,11 +388,19 @@ function META:BuildCode(block)
 					if root then
 						if node.left.value.value == "loadfile" then
 							self:Emit(
-								"IMPORTS['" .. node.key .. "'] = "..encapsulate_module("function(...) " .. root:Render(self.config or {}) .. " end", "@" .. node.path, self.config.module_encapsulation_method) .."\n"
+								"IMPORTS['" .. node.key .. "'] = " .. encapsulate_module(
+										"function(...) " .. root:Render(self.config or {}) .. " end",
+										"@" .. node.path,
+										self.config.module_encapsulation_method
+									) .. "\n"
 							)
 						elseif node.left.value.value == "require" then
 							self:Emit(
-								"do local __M; IMPORTS[\"" .. node.key .. "\"] = function(...) __M = __M or (" .. encapsulate_module("function(...) " .. root:Render(self.config or {}) .. " end", "@" .. node.path, self.config.module_encapsulation_method)..")(...) return __M end end\n"
+								"do local __M; IMPORTS[\"" .. node.key .. "\"] = function(...) __M = __M or (" .. encapsulate_module(
+										"function(...) " .. root:Render(self.config or {}) .. " end",
+										"@" .. node.path,
+										self.config.module_encapsulation_method
+									) .. ")(...) return __M end end\n"
 							)
 						elseif self.config.inside_data_import then
 							self:Emit(
@@ -396,7 +408,11 @@ function META:BuildCode(block)
 							)
 						else
 							self:Emit(
-							"IMPORTS['" .. node.key .. "'] = " .. encapsulate_module("function() " .. root:Render(self.config or {}) .. " end", "@" .. node.path, self.config.module_encapsulation_method) .. "\n"
+								"IMPORTS['" .. node.key .. "'] = " .. encapsulate_module(
+										"function() " .. root:Render(self.config or {}) .. " end",
+										"@" .. node.path,
+										self.config.module_encapsulation_method
+									) .. "\n"
 							)
 						end
 					end
@@ -792,14 +808,13 @@ do
 			self:Whitespace("\n")
 			self:Whitespace("\t")
 		end
-
-		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitAnonymousFunction(node--[[#: Node]])
 		self:EmitToken(node.tokens["function"])
 		local distance = (node.tokens["end"].start - node.tokens["arguments)"].start)
 		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitLocalFunction(node--[[#: Node]])
@@ -809,6 +824,7 @@ do
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["identifier"])
 		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitLocalAnalyzerFunction(node--[[#: Node]])
@@ -820,6 +836,7 @@ do
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["identifier"])
 		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitLocalTypeFunction(node--[[#: Node]])
@@ -829,6 +846,7 @@ do
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["identifier"])
 		self:EmitFunctionBody(node, true)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitTypeFunction(node--[[#: Node]])
@@ -840,6 +858,7 @@ do
 		end
 
 		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitFunction(node--[[#: Node]])
@@ -852,6 +871,7 @@ do
 		self:Whitespace(" ")
 		self:EmitExpression(node.expression or node.identifier)
 		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitAnalyzerFunctionStatement(node--[[#: Node]])
@@ -875,6 +895,7 @@ do
 		end
 
 		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 end
 
@@ -1772,9 +1793,7 @@ do -- types
 
 		if self.config.blank_invalid_code then
 			for i = self.i, i, -1 do
-				if self.out[i] then
-					self.out[i] = self.out[i]:gsub("%S+", "")
-				end
+				if self.out[i] then self.out[i] = self.out[i]:gsub("%S+", "") end
 			end
 		end
 
