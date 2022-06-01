@@ -114,6 +114,7 @@ function META:__tostring()
 
 		if func then
 			local analyzer = context:GetCurrentAnalyzer()
+
 			if analyzer then
 				local str = analyzer:Call(func, Tuple({self})):GetFirstValue()
 
@@ -280,29 +281,29 @@ function META:FollowsContract(contract--[[#: TTable]])
 	return true
 end
 
-function META.IsSubsetOf(A--[[#: BaseType]], B--[[#: BaseType]])
-	if A.suppress then return true, "suppressed" end
+function META.IsSubsetOf(a--[[#: BaseType]], b--[[#: BaseType]])
+	if a.suppress then return true, "suppressed" end
 
-	if B.Type == "tuple" then B = B:Get(1) end
+	if b.Type == "tuple" then b = b:Get(1) end
 
-	if B.Type == "any" then return true, "b is any " end
+	if b.Type == "any" then return true, "b is any " end
 
-	local ok, err = A:IsSameUniqueType(B)
+	local ok, err = a:IsSameUniqueType(b)
 
 	if not ok then return ok, err end
 
-	if A == B then return true, "same type" end
+	if a == b then return true, "same type" end
 
-	if B.Type == "table" then
-		if B:GetMetaTable() and B:GetMetaTable() == A then
+	if b.Type == "table" then
+		if b:GetMetaTable() and b:GetMetaTable() == a then
 			return true, "same metatable"
 		end
 
-		--if B:GetSelf() and B:GetSelf():Equal(A) then return true end
+		--if b:GetSelf() and b:GetSelf():Equal(a) then return true end
 		local can_be_empty = true
-		A.suppress = true
+		a.suppress = true
 
-		for _, keyval in ipairs(B:GetData()) do
+		for _, keyval in ipairs(b:GetData()) do
 			if not keyval.val:CanBeNil() then
 				can_be_empty = false
 
@@ -310,37 +311,37 @@ function META.IsSubsetOf(A--[[#: BaseType]], B--[[#: BaseType]])
 			end
 		end
 
-		A.suppress = false
+		a.suppress = false
 
 		if
-			not A:GetData()[1] and
+			not a:GetData()[1] and
 			(
-				not A:GetContract() or
-				not A:GetContract():GetData()[1]
+				not a:GetContract() or
+				not a:GetContract():GetData()[1]
 			)
 		then
 			if can_be_empty then
 				return true, "can be empty"
 			else
-				return type_errors.subset(A, B)
+				return type_errors.subset(a, b)
 			end
 		end
 
-		for _, akeyval in ipairs(A:GetData()) do
-			local bkeyval, reason = B:FindKeyValReverse(akeyval.key)
+		for _, akeyval in ipairs(a:GetData()) do
+			local bkeyval, reason = b:FindKeyValReverse(akeyval.key)
 
 			if not akeyval.val:CanBeNil() then
 				if not bkeyval then
-					if A.BaseTable and A.BaseTable == B then
+					if a.BaseTable and a.BaseTable == b then
 						bkeyval = akeyval
 					else
 						return bkeyval, reason
 					end
 				end
 
-				A.suppress = true
+				a.suppress = true
 				local ok, err = akeyval.val:IsSubsetOf(bkeyval.val)
-				A.suppress = false
+				a.suppress = false
 
 				if not ok then
 					return type_errors.table_subset(akeyval.key, bkeyval.key, akeyval.val, bkeyval.val, err)
@@ -349,13 +350,13 @@ function META.IsSubsetOf(A--[[#: BaseType]], B--[[#: BaseType]])
 		end
 
 		return true, "all is equal"
-	elseif B.Type == "union" then
-		local u = Union({A})
-		local ok, err = u:IsSubsetOf(B)
+	elseif b.Type == "union" then
+		local u = Union({a})
+		local ok, err = u:IsSubsetOf(b)
 		return ok, err or "is subset of b"
 	end
 
-	return type_errors.subset(A, B)
+	return type_errors.subset(a, b)
 end
 
 function META:ContainsAllKeysIn(contract--[[#: TTable]])
@@ -661,9 +662,9 @@ function META:IsNumericallyIndexed()
 	return true
 end
 
-
 function META:CopyLiteralness(from)
 	if self.suppress then return end
+
 	assert(from.Type == "table" or from.Type == "any" or from.Type == "union")
 
 	if from.Type == "any" then return end
@@ -873,43 +874,43 @@ local function unpack_keyval(keyval--[[#: ref {key = any, val = any}]])
 	return key, val
 end
 
-function META.Extend(A--[[#: TTable]], B--[[#: TTable]])
-	assert(B.Type == "table")
+function META.Extend(a--[[#: TTable]], b--[[#: TTable]])
+	assert(b.Type == "table")
 	local map = {}
 
-	if A:GetContract() then
-		if A == A:GetContract() then
-			A:SetContract()
-			A = A:Copy()
-			A:SetContract(A)
+	if a:GetContract() then
+		if a == a:GetContract() then
+			a:SetContract()
+			a = a:Copy()
+			a:SetContract(a)
 		end
 
-		A = A:GetContract()
+		a = a:GetContract()
 	else
-		A = A:Copy(map)
+		a = a:Copy(map)
 	end
 
-	map[B] = A
-	B = B:Copy(map)
+	map[b] = a
+	b = b:Copy(map)
 
-	for _, keyval in ipairs(B:GetData()) do
-		local ok, reason = A:SetExplicit(unpack_keyval(keyval))
+	for _, keyval in ipairs(b:GetData()) do
+		local ok, reason = a:SetExplicit(unpack_keyval(keyval))
 
 		if not ok then return ok, reason end
 	end
 
-	return A
+	return a
 end
 
-function META.Union(A--[[#: TTable]], B--[[#: TTable]])
-	assert(B.Type == "table")
+function META.Union(a--[[#: TTable]], b--[[#: TTable]])
+	assert(b.Type == "table")
 	local copy = META.New()
 
-	for _, keyval in ipairs(A:GetData()) do
+	for _, keyval in ipairs(a:GetData()) do
 		copy:Set(unpack_keyval(keyval))
 	end
 
-	for _, keyval in ipairs(B:GetData()) do
+	for _, keyval in ipairs(b:GetData()) do
 		copy:Set(unpack_keyval(keyval))
 	end
 

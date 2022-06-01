@@ -45,16 +45,16 @@ function META:CanBeNil()
 	return self:GetData() == nil
 end
 
-function META.IsSubsetOf(A--[[#: TSymbol]], B--[[#: TBaseType]])
-	if B.Type == "tuple" then B = B:Get(1) end
+function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
+	if b.Type == "tuple" then b = b:Get(1) end
 
-	if B.Type == "any" then return true end
+	if b.Type == "any" then return true end
 
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A--[[# as any]]) end
+	if b.Type == "union" then return b:IsTargetSubsetOfChild(a--[[# as any]]) end
 
-	if B.Type ~= "symbol" then return type_errors.type_mismatch(A, B) end
+	if b.Type ~= "symbol" then return type_errors.type_mismatch(a, b) end
 
-	if A:GetData() ~= B:GetData() then return type_errors.value_mismatch(A, B) end
+	if a:GetData() ~= b:GetData() then return type_errors.value_mismatch(a, b) end
 
 	return true
 end

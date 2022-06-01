@@ -66,34 +66,34 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	return copy
 end
 
-function META.IsSubsetOf(A--[[#: TFunction]], B--[[#: TBaseType]])
-	if B.Type == "tuple" then B = B:Get(1) end
+function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
+	if b.Type == "tuple" then b = b:Get(1) end
 
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 
-	if B.Type == "any" then return true end
+	if b.Type == "any" then return true end
 
-	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
+	if b.Type ~= "function" then return type_errors.type_mismatch(a, b) end
 
-	local ok, reason = A:GetInputSignature():IsSubsetOf(B:GetInputSignature())
+	local ok, reason = a:GetInputSignature():IsSubsetOf(b:GetInputSignature())
 
 	if not ok then
-		return type_errors.subset(A:GetInputSignature(), B:GetInputSignature(), reason)
+		return type_errors.subset(a:GetInputSignature(), b:GetInputSignature(), reason)
 	end
 
-	local ok, reason = A:GetOutputSignature():IsSubsetOf(B:GetOutputSignature())
+	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
 
 	if
 		not ok and
 		(
 			(
-				not B:IsCalled() and
-				not B:IsExplicitOutputSignature()
+				not b:IsCalled() and
+				not b:IsExplicitOutputSignature()
 			)
 			or
 			(
-				not A:IsCalled() and
-				not A:IsExplicitOutputSignature()
+				not a:IsCalled() and
+				not a:IsExplicitOutputSignature()
 			)
 		)
 	then
@@ -101,40 +101,40 @@ function META.IsSubsetOf(A--[[#: TFunction]], B--[[#: TBaseType]])
 	end
 
 	if not ok then
-		return type_errors.subset(A:GetOutputSignature(), B:GetOutputSignature(), reason)
+		return type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature(), reason)
 	end
 
 	return true
 end
 
-function META.IsCallbackSubsetOf(A--[[#: TFunction]], B--[[#: TBaseType]])
-	if B.Type == "tuple" then B = B:Get(1) end
+function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
+	if b.Type == "tuple" then b = b:Get(1) end
 
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 
-	if B.Type == "any" then return true end
+	if b.Type == "any" then return true end
 
-	if B.Type ~= "function" then return type_errors.type_mismatch(A, B) end
+	if b.Type ~= "function" then return type_errors.type_mismatch(a, b) end
 
-	local ok, reason = A:GetInputSignature():IsSubsetOf(B:GetInputSignature(), A:GetInputSignature():GetMinimumLength())
+	local ok, reason = a:GetInputSignature():IsSubsetOf(b:GetInputSignature(), a:GetInputSignature():GetMinimumLength())
 
 	if not ok then
-		return type_errors.subset(A:GetInputSignature(), B:GetInputSignature(), reason)
+		return type_errors.subset(a:GetInputSignature(), b:GetInputSignature(), reason)
 	end
 
-	local ok, reason = A:GetOutputSignature():IsSubsetOf(B:GetOutputSignature())
+	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
 
 	if
 		not ok and
 		(
 			(
-				not B:IsCalled() and
-				not B:IsExplicitOutputSignature()
+				not b:IsCalled() and
+				not b:IsExplicitOutputSignature()
 			)
 			or
 			(
-				not A:IsCalled() and
-				not A:IsExplicitOutputSignature()
+				not a:IsCalled() and
+				not a:IsExplicitOutputSignature()
 			)
 		)
 	then
@@ -142,7 +142,7 @@ function META.IsCallbackSubsetOf(A--[[#: TFunction]], B--[[#: TBaseType]])
 	end
 
 	if not ok then
-		return type_errors.subset(A:GetOutputSignature(), B:GetOutputSignature(), reason)
+		return type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature(), reason)
 	end
 
 	return true

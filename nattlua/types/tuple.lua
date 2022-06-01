@@ -103,101 +103,101 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	return copy
 end
 
-function META.IsSubsetOf(A--[[#: TTuple]], B--[[#: TBaseType]], max_length--[[#: nil | number]])
-	if A == B then return true end
+function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#: nil | number]])
+	if a == b then return true end
 
-	if A.suppress then return true end
+	if a.suppress then return true end
 
-	if A.Remainder then
-		local t = A:Get(1)
+	if a.Remainder then
+		local t = a:Get(1)
 
-		if t and t.Type == "any" and #A:GetData() == 0 then return true end
+		if t and t.Type == "any" and #a:GetData() == 0 then return true end
 	end
 
-	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
+	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 
 	do
-		local t = A:Get(1)
+		local t = a:Get(1)
 
-		if t and t.Type == "any" and B.Type == "tuple" and B:GetLength() == 0 then
+		if t and t.Type == "any" and b.Type == "tuple" and b:GetLength() == 0 then
 			return true
 		end
 	end
 
-	if B.Type == "any" then return true end
+	if b.Type == "any" then return true end
 
-	if B.Type == "table" then
-		if not B:IsNumericallyIndexed() then
-			return type_errors.numerically_indexed(B)
+	if b.Type == "table" then
+		if not b:IsNumericallyIndexed() then
+			return type_errors.numerically_indexed(b)
 		end
 	end
 
-	if B.Type ~= "tuple" then return type_errors.type_mismatch(A, B) end
+	if b.Type ~= "tuple" then return type_errors.type_mismatch(a, b) end
 
-	max_length = max_length or math.max(A:GetMinimumLength(), B:GetMinimumLength())
+	max_length = max_length or math.max(a:GetMinimumLength(), b:GetMinimumLength())
 
 	for i = 1, max_length do
-		local a, err = A:Get(i)
+		local a_val, err = a:Get(i)
 
-		if not a then return type_errors.subset(A, B, err) end
+		if not a_val then return type_errors.subset(a, b, err) end
 
-		local b, err = B:Get(i)
+		local b_val, err = b:Get(i)
 
-		if not b and a.Type == "any" then break end
+		if not b_val and a_val.Type == "any" then break end
 
-		if not b then return type_errors.missing(B, i, err) end
+		if not b_val then return type_errors.missing(b, i, err) end
 
-		A.suppress = true
-		local ok, reason = a:IsSubsetOf(b)
-		A.suppress = false
+		a.suppress = true
+		local ok, reason = a_val:IsSubsetOf(b_val)
+		a.suppress = false
 
-		if not ok then return type_errors.subset(a, b, reason) end
+		if not ok then return type_errors.subset(a_val, b_val, reason) end
 	end
 
 	return true
 end
 
-function META.IsSubsetOfTupleWithoutExpansion(A--[[#: TTuple]], B--[[#: TBaseType]])
-	for i, a in ipairs(A:GetData()) do
-		local b = B:GetWithoutExpansion(i)
-		local ok, err = a:IsSubsetOf(b)
+function META.IsSubsetOfTupleWithoutExpansion(a--[[#: TTuple]], b--[[#: TBaseType]])
+	for i, a_val in ipairs(a:GetData()) do
+		local b_val = b:GetWithoutExpansion(i)
+		local ok, err = a_val:IsSubsetOf(b_val)
 
-		if ok then return ok, err, a, b, i end
+		if ok then return ok, err, a_val, b_val, i end
 	end
 
 	return true
 end
 
-function META.IsSubsetOfTuple(A--[[#: TTuple]], B--[[#: TBaseType]])
-	if A:Equal(B) then return true end
+function META.IsSubsetOfTuple(a--[[#: TTuple]], b--[[#: TBaseType]])
+	if a:Equal(b) then return true end
 
-	for i = 1, math.max(A:GetMinimumLength(), B:GetMinimumLength()) do
-		local a, a_err = A:Get(i)
-		local b, b_err = B:Get(i)
+	for i = 1, math.max(a:GetMinimumLength(), b:GetMinimumLength()) do
+		local a_val, a_err = a:Get(i)
+		local b_val, b_err = b:Get(i)
 
-		if b and b.Type == "union" then b, b_err = b:GetAtIndex(i) end
+		if b_val and b_val.Type == "union" then b_val, b_err = b_val:GetAtIndex(i) end
 
-		if not a then
-			if b and b.Type == "any" then
-				a = Any()
+		if not a_val then
+			if b_val and b_val.Type == "any" then
+				a_val = Any()
 			else
-				return a, a_err, a or Nil(), b, i
+				return a_val, a_err, a_val or Nil(), b_val, i
 			end
 		end
 
-		if not b then return b, b_err, a or Nil(), b, i end
+		if not b_val then return b_val, b_err, a_val or Nil(), b_val, i end
 
-		if b.Type == "tuple" then
-			b = b:Get(1)
+		if b_val.Type == "tuple" then
+			b_val = b_val:Get(1)
 
-			if not b then break end
+			if not b_val then break end
 		end
 
-		a = a or Nil()
-		b = b or Nil()
-		local ok, reason = a:IsSubsetOf(b)
+		a_val = a_val or Nil()
+		b_val = b_val or Nil()
+		local ok, reason = a_val:IsSubsetOf(b_val)
 
-		if not ok then return ok, reason, a, b, i end
+		if not ok then return ok, reason, a_val, b_val, i end
 	end
 
 	return true

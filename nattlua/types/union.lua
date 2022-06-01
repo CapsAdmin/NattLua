@@ -283,25 +283,25 @@ function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 	return type_errors.subset(target, self, errors)
 end
 
-function META.IsSubsetOf(A--[[#: TUnion]], B--[[#: TBaseType]])
-	if B.Type ~= "union" then return A:IsSubsetOf(META.New({B})) end
+function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
+	if b.Type ~= "union" then return a:IsSubsetOf(META.New({b})) end
 
-	if B.Type == "tuple" then B = B:Get(1) end
+	if b.Type == "tuple" then b = b:Get(1) end
 
-	if not A.Data[1] then return type_errors.subset(A, B, "union is empty") end
+	if not a.Data[1] then return type_errors.subset(a, b, "union is empty") end
 
-	for _, a in ipairs(A.Data) do
-		if a.Type == "any" then return true end
+	for _, a_val in ipairs(a.Data) do
+		if a_val.Type == "any" then return true end
 	end
 
-	for _, a in ipairs(A.Data) do
-		local b, reason = B:Get(a)
+	for _, a_val in ipairs(a.Data) do
+		local b_val, reason = b:Get(a_val)
 
-		if not b then return type_errors.missing(B, a, reason) end
+		if not b_val then return type_errors.missing(b, a_val, reason) end
 
-		local ok, reason = a:IsSubsetOf(b)
+		local ok, reason = a_val:IsSubsetOf(b_val)
 
-		if not ok then return type_errors.subset(a, b, reason) end
+		if not ok then return type_errors.subset(a_val, b_val, reason) end
 	end
 
 	return true

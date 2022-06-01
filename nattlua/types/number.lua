@@ -103,48 +103,48 @@ function META:Copy()
 	return copy--[[# as any]] -- TODO: figure out inheritance
 end
 
-function META.IsSubsetOf(A--[[#: TNumber]], B--[[#: TBaseType]])
-	if B.Type == "tuple" then B = (B--[[# as any]]):Get(1) end
+function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
+	if b.Type == "tuple" then b = (b--[[# as any]]):Get(1) end
 
-	if B.Type == "any" then return true end
+	if b.Type == "any" then return true end
 
-	if B.Type == "union" then
-		return (B--[[# as any]]):IsTargetSubsetOfChild(A--[[# as any]])
+	if b.Type == "union" then
+		return (b--[[# as any]]):IsTargetSubsetOfChild(a--[[# as any]])
 	end
 
-	if B.Type ~= "number" then return type_errors.type_mismatch(A, B) end
+	if b.Type ~= "number" then return type_errors.type_mismatch(a, b) end
 
-	if A:IsLiteralArgument() and B:IsLiteralArgument() then return true end
+	if a:IsLiteralArgument() and b:IsLiteralArgument() then return true end
 
-	if B:IsLiteralArgument() and not A:IsLiteral() then
-		return type_errors.subset(A, B)
+	if b:IsLiteralArgument() and not a:IsLiteral() then
+		return type_errors.subset(a, b)
 	end
 
-	if A:IsLiteral() and B:IsLiteral() then
-		local a = A:GetData()--[[# as number]]
-		local b = B:GetData()--[[# as number]]
+	if a:IsLiteral() and b:IsLiteral() then
+		local a_num = a:GetData()--[[# as number]]
+		local b_num = b:GetData()--[[# as number]]
 
 		-- compare against literals
-		if A.Type == "number" and B.Type == "number" then
-			if A:IsNan() and B:IsNan() then return true end
+		if a.Type == "number" and b.Type == "number" then
+			if a:IsNan() and b:IsNan() then return true end
 		end
 
-		if a == b then return true end
+		if a_num == b_num then return true end
 
-		local max = B:GetMaxLiteral()
+		local max = b:GetMaxLiteral()
 
-		if max then if a >= b and a <= max then return true end end
+		if max then if a_num >= b_num and a_num <= max then return true end end
 
-		return type_errors.subset(A, B)
-	elseif A:GetData() == nil and B:GetData() == nil then
+		return type_errors.subset(a, b)
+	elseif a:GetData() == nil and b:GetData() == nil then
 		-- number contains number
 		return true
-	elseif A:IsLiteral() and not B:IsLiteral() then
+	elseif a:IsLiteral() and not b:IsLiteral() then
 		-- 42 subset of number?
 		return true
-	elseif not A:IsLiteral() and B:IsLiteral() then
+	elseif not a:IsLiteral() and b:IsLiteral() then
 		-- number subset of 42 ?
-		return type_errors.subset(A, B)
+		return type_errors.subset(a, b)
 	end
 
 	-- number == number
