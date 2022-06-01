@@ -362,7 +362,12 @@ analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...a
 		end
 	end
 
-	if not callable:GetFunctionBodyNode() or not callable:GetFunctionBodyNode() then
+	if
+		callable.Type ~= "function" or
+		not callable:GetFunctionBodyNode()
+		or
+		not callable:GetFunctionBodyNode()
+	then
 		return types.Boolean(), tuple
 	end
 
@@ -389,7 +394,12 @@ analyzer function xpcall(callable: literal Function, error_cb: function=(any)>()
 		end
 	end
 
-	if not callable:GetFunctionBodyNode() or not callable:GetFunctionBodyNode() then
+	if
+		callable.Type ~= "function" or
+		not callable:GetFunctionBodyNode()
+		or
+		not callable:GetFunctionBodyNode()
+	then
 		return types.Boolean(), tuple
 	end
 
