@@ -278,7 +278,7 @@ test("parser errors", function()
 			{"a = [=wa", "expected multiline string.-%[=%[.-got.-%[=w"},
 			{"a = [=[wa]=", "expected multiline string.-%]=%].-reached end of code"},
 			{"0xBEEFp+L", "malformed pow expected number, got L"},
-			{"foo(())", "empty parenth"},
+			{"foo(())", "expected beginning of expression, got.+%)"},
 			{"a = {", "expected beginning of expression.-end_of_file"},
 			{"a = 0b1LOL01", "malformed binary number, got L"},
 			{"a = 'aaaa", "expected single quote.-reached end of file"},

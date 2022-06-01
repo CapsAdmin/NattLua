@@ -39,7 +39,7 @@ do -- destructure statement
 			node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
 			node.tokens["}"] = self:ExpectValue("}")
 			node.tokens["="] = self:ExpectValue("=")
-			node.right = self:ParseRuntimeExpression(0)
+			node.right = self:ExpectRuntimeExpression(0)
 		end
 
 		node = self:EndNode(node)
@@ -67,7 +67,7 @@ do -- destructure statement
 			node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
 			node.tokens["}"] = self:ExpectValue("}")
 			node.tokens["="] = self:ExpectValue("=")
-			node.right = self:ParseRuntimeExpression(0)
+			node.right = self:ExpectRuntimeExpression(0)
 		end
 
 		node = self:EndNode(node)
@@ -333,7 +333,7 @@ function META:ParseLocalAssignmentStatement()
 
 	if self:IsValue("=") then
 		node.tokens["="] = self:ExpectValue("=")
-		node.right = self:ParseMultipleValues(nil, self.ParseRuntimeExpression, 0)
+		node.right = self:ParseMultipleValues(nil, self.ExpectRuntimeExpression, 0)
 	end
 
 	node = self:EndNode(node)
@@ -447,7 +447,7 @@ function META:ParseLocalTypeAssignmentStatement()
 	if self:IsValue("=") then
 		node.tokens["="] = self:ExpectValue("=")
 		self:PushParserEnvironment("typesystem")
-		node.right = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+		node.right = self:ParseMultipleValues(nil, self.ExpectTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
@@ -462,13 +462,13 @@ function META:ParseTypeAssignmentStatement()
 
 	local node = self:StartNode("statement", "assignment")
 	node.tokens["type"] = self:ExpectValue("type")
-	node.left = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+	node.left = self:ParseMultipleValues(nil, self.ExpectTypeExpression, 0)
 	node.environment = "typesystem"
 
 	if self:IsValue("=") then
 		node.tokens["="] = self:ExpectValue("=")
 		self:PushParserEnvironment("typesystem")
-		node.right = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+		node.right = self:ParseMultipleValues(nil, self.ExpectTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 

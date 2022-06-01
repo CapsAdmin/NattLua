@@ -96,7 +96,6 @@ do -- typesystem
 		table_insert(node.tokens["("], pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
 		table_insert(node.tokens[")"], self:ExpectValue(")"))
-		
 		return node
 	end
 
@@ -711,13 +710,7 @@ do -- runtime
 		if not self:IsValue("(") then return end
 
 		local pleft = self:ExpectValue("(")
-		local node = self:ParseRuntimeExpression(0)
-
-		if not node then
-			self:Error("empty parentheses group", pleft)
-			return
-		end
-
+		local node = self:ExpectRuntimeExpression(0)
 		node.tokens["("] = node.tokens["("] or {}
 		table_insert(node.tokens["("], pleft)
 		node.tokens[")"] = node.tokens[")"] or {}
@@ -999,6 +992,7 @@ do -- runtime
 			token.value == "}" or
 			token.value == "," or
 			token.value == "]" or
+			token.value == ")" or
 			(
 				(
 					runtime_syntax:IsKeyword(token) or
