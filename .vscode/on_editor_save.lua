@@ -88,9 +88,7 @@ local function run_nattlua(path)
 		io.write("=================\n")
 	end
 
-	if lua_code:find("%-%-%s-RUN_CODE") then
-		assert(load(res))()
-	end
+	if lua_code:find("%-%-%s-RUN_CODE") then assert(load(res))() end
 end
 
 local function has_test_focus()
@@ -121,8 +119,7 @@ if normalized:find("/nattlua/", nil, true) then
 	if normalized:find("other/coverage", nil, true) then
 		run_lua("test/run.lua", "test/nattlua/coverage.lua")
 	elseif normalized:find("language_server/server", nil, true) then
-		io.open("language_server/server/restart_me", "w"):close()
-		io.open("language_server/server/restart_me", "w"):close()
+		os.execute("luajit build.lua fast && luajit install.lua")
 		return
 	elseif normalized:find("typed_ffi.nlua", nil, true) and has_test_focus() then
 		print("running test focus")

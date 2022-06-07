@@ -93,8 +93,8 @@ return function(port)
 					if not ok then
 						if msg ~= "suspended" then table.remove(self.responses, i) end
 					else
-						if type(msg) == "table" then
-							self:Respond(data.client, msg)
+						if type(msg) == "table" or msg == nil then
+							self:Respond(data.client, msg or {})
 							table.remove(self.responses, i)
 						end
 					end

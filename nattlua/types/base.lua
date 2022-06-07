@@ -92,9 +92,6 @@ do -- token, expression and statement association
 
 	function META:SetNode(node--[[#: nil | any]], is_local--[[#: nil | boolean]])
 		self.Node = node
-
-		if node and not is_local then node:AddType(self--[[# as any]]) end
-
 		return self
 	end
 end

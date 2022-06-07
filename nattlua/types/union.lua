@@ -246,6 +246,22 @@ function META:IsType(typ--[[#: string]])
 	return true
 end
 
+function META:IsTypeExceptNil(typ--[[#: string]])
+	assert(type(typ) == "string")
+
+	if self:IsEmpty() then return false end
+
+	for _, obj in ipairs(self.Data) do
+		if obj.Type == "symbol" and obj.Data == nil then
+
+		else
+			if obj.Type ~= typ then return false end
+		end
+	end
+
+	return true
+end
+
 function META:HasType(typ--[[#: string]])
 	assert(type(typ) == "string")
 	return self:GetType(typ) ~= false

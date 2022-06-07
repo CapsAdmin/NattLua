@@ -16,7 +16,7 @@ local function analyze_arguments(self, node)
 		for i, key in ipairs(node.identifiers) do
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
-			self:CreateLocalValue(key.value.value, Any())
+			self:CreateLocalValue(key.value.value, Any()):SetNode(key)
 
 			if key.type_expression then
 				args[i] = self:AnalyzeExpression(key.type_expression)
@@ -26,7 +26,7 @@ local function analyze_arguments(self, node)
 				args[i] = Any()
 			end
 
-			self:CreateLocalValue(key.value.value, args[i])
+			self:CreateLocalValue(key.value.value, args[i]):SetNode(key)
 		end
 	elseif
 		node.kind == "analyzer_function" or
@@ -38,9 +38,9 @@ local function analyze_arguments(self, node)
 		if node.identifiers_typesystem then
 			for i, generic_type in ipairs(node.identifiers_typesystem) do
 				if generic_type.identifier and generic_type.identifier.value ~= "..." then
-					self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(generic_type):GetFirstValue())
+					self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(generic_type):GetFirstValue()):SetNode(generic_type)
 				elseif generic_type.type_expression then
-					self:CreateLocalValue(generic_type.value.value, Any(), i)
+					self:CreateLocalValue(generic_type.value.value, Any(), i):SetNode(generic_type)
 				end
 			end
 		end
@@ -48,11 +48,11 @@ local function analyze_arguments(self, node)
 		for i, key in ipairs(node.identifiers) do
 			if key.identifier and key.identifier.value ~= "..." then
 				args[i] = self:AnalyzeExpression(key):GetFirstValue()
-				self:CreateLocalValue(key.identifier.value, args[i])
+				self:CreateLocalValue(key.identifier.value, args[i]):SetNode(key)
 			elseif key.kind == "vararg" then
 				args[i] = self:AnalyzeExpression(key)
 			elseif key.type_expression then
-				self:CreateLocalValue(key.value.value, Any(), i)
+				self:CreateLocalValue(key.value.value, Any(), i):SetNode(key)
 				args[i] = self:AnalyzeExpression(key.type_expression)
 			elseif key.kind == "value" then
 				if not node.statements then

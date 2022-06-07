@@ -1,7 +1,10 @@
+--DONT_ANALYZE
 local Compiler = require("nattlua.compiler").New
 local helpers = require("nattlua.other.helpers")
 local b64 = require("nattlua.other.base64")
 local Union = require("nattlua.types.union").Union
+local runtime_syntax = require("nattlua.syntax.runtime")
+local typesystem_syntax = require("nattlua.syntax.typesystem")
 local lsp = {}
 lsp.methods = {}
 local TextDocumentSyncKind = {None = 0, Full = 1, Incremental = 2}
@@ -41,41 +44,225 @@ local SymbolKind = {
 	TypeParameter = 26,
 }
 local SemanticTokenTypes = {
-	"namespace",
-	"type",
-	"class",
-	"enum",
-	"interface",
-	"struct",
-	"typeParameter",
-	"parameter",
-	"variable",
-	"property",
-	"enumMember",
-	"event",
-	"function",
-	"method",
-	"macro",
-	"keyword",
-	"modifier",
-	"comment",
-	"string",
-	"number",
-	"regexp",
-	"operator",
+	-- identifiers or reference
+	"class", -- a class type. maybe META or Meta?
+	"typeParameter", -- local type >foo< = true
+	"parameter", -- function argument: function foo(>a<)
+	"variable", -- a local or global variable.
+	"property", -- a member property, member field, or member variable.
+	"enumMember", -- an enumeration property, constant, or member. uppercase variables and global non tables? local FOO = true ?
+	"event", --  an event property.
+	"function", -- local or global function: local function >foo<
+	"method", --  a member function or method: string.>bar<()
+	"type", -- misc type
+	-- tokens
+	"comment", -- 
+	"string", -- 
+	"keyword", -- 
+	"number", -- 
+	"regexp", -- regular expression literal.
+	"operator", --
+	"decorator", -- decorator syntax, maybe for @Foo in tables, $ and §
+	-- other identifiers or references
+	"namespace", -- namespace, module, or package.
+	"enum", -- 
+	"interface", --
+	"struct", -- 
+	"decorator", -- decorators and annotations.
+	"macro", --  a macro.
+	"label", --  a label. ??
 }
 local SemanticTokenModifiers = {
-	"declaration",
-	"definition",
-	"readonly",
-	"static",
-	"deprecated",
-	"abstract",
-	"async",
-	"modification",
-	"documentation",
-	"defaultLibrary",
+	"declaration", -- For declarations of symbols.
+	"definition", -- For definitions of symbols, for example, in header files.
+	"readonly", -- For readonly variables and member fields (constants).
+	"static", -- For class members (static members).
+	"private", -- For class members (static members).
+	"deprecated", -- For symbols that should no longer be used.
+	"abstract", -- For types and member functions that are abstract.
+	"async", -- For functions that are marked async.
+	"modification", -- For variable references where the variable is assigned to.
+	"documentation", -- For occurrences of symbols in documentation.
+	"defaultLibrary", -- For symbols that are part of the standard library.
 }
+
+local function find_type_from_token(token)
+	local found_parents = {}
+
+	do
+		local node = token.parent
+
+		while node and node.parent do
+			table.insert(found_parents, node)
+			node = node.parent
+		end
+	end
+
+	for _, node in ipairs(found_parents) do
+		for _, obj in ipairs(node:GetTypes()) do
+			if obj.Type == "string" and obj:GetData() == token.value then
+
+			else
+				return obj, found_parents, node
+			end
+		end
+	end
+
+	return nil, found_parents
+end
+
+local function token_to_type_mod(token)
+	if token.type == "symbol" and token.parent.kind == "function_signature" then
+		return {[token] = {"keyword"}}
+	end
+
+	if
+		runtime_syntax:IsNonStandardKeyword(token) or
+		typesystem_syntax:IsNonStandardKeyword(token)
+	then
+		-- check if it's used in a statement, because foo.type should not highlight
+		if token.parent and token.parent.type == "statement" then
+			return {[token] = {"keyword"}}
+		end
+	end
+
+	if runtime_syntax:IsKeywordValue(token) or typesystem_syntax:IsKeywordValue(token) then
+		return {[token] = {"type"}}
+	end
+
+	if
+		token.value == "." or
+		token.value == ":" or
+		token.value == "=" or
+		token.value == "or" or
+		token.value == "and" or
+		token.value == "not"
+	then
+		return {[token] = {"operator"}}
+	end
+
+	if runtime_syntax:IsKeyword(token) or typesystem_syntax:IsKeyword(token) then
+		return {[token] = {"keyword"}}
+	end
+
+	if
+		runtime_syntax:GetTokenType(token):find("operator") or
+		typesystem_syntax:GetTokenType(token):find("operator")
+	then
+		return {[token] = {"operator"}}
+	end
+
+	if token.type == "symbol" then return {[token] = {"keyword"}} end
+
+	do
+		local obj = find_type_from_token(token)
+
+		if obj then
+			local mods = {}
+
+			if obj:IsLiteral() then table.insert(mods, "readonly") end
+
+			if obj.Type == "union" then
+				if obj:IsTypeExceptNil("number") then
+					return {[token] = {"number", mods}}
+				elseif obj:IsTypeExceptNil("string") then
+					return {[token] = {"string", mods}}
+				elseif obj:IsTypeExceptNil("symbol") then
+					return {[token] = {"enumMember", mods}}
+				end
+
+				return {[token] = {"event"}}
+			end
+
+			if obj.Type == "number" then
+				return {[token] = {"number", mods}}
+			elseif obj.Type == "string" then
+				return {[token] = {"string", mods}}
+			elseif obj.Type == "tuple" or obj.Type == "symbol" then
+				return {[token] = {"enumMember", mods}}
+			elseif obj.Type == "any" then
+				return {[token] = {"regexp", mods}}
+			end
+
+			if obj.Type == "function" then return {[token] = {"function", mods}} end
+
+			local parent = obj:GetParent()
+
+			if parent then
+				if obj.Type == "function" then
+					return {[token] = {"macro", mods}}
+				else
+					if obj.Type == "table" then return {[token] = {"class", mods}} end
+
+					return {[token] = {"property", mods}}
+				end
+			end
+
+			if obj.Type == "table" then return {[token] = {"class", mods}} end
+		end
+	end
+
+	if token.type == "number" then
+		return {[token] = {"number"}}
+	elseif token.type == "string" then
+		return {[token] = {"string"}}
+	end
+
+	if
+		token.parent.kind == "value" and
+		token.parent.parent.kind == "binary_operator" and
+		(
+			token.parent.parent.value and
+			token.parent.parent.value.value == "." or
+			token.parent.parent.value.value == ":"
+		)
+	then
+		if token.value:sub(1, 1) == "@" then return {[token] = {"decorator"}} end
+	end
+
+	if token.type == "letter" and token.parent.kind:find("function", nil, true) then
+		return {[token] = {"function"}}
+	end
+
+	if
+		token.parent.kind == "value" and
+		token.parent.parent.kind == "binary_operator" and
+		(
+			token.parent.parent.value and
+			token.parent.parent.value.value == "." or
+			token.parent.parent.value.value == ":"
+		)
+	then
+		return {[token] = {"property"}}
+	end
+
+	if token.parent.kind == "table_key_value" then
+		return {[token] = {"property"}}
+	end
+
+	if token.parent.standalone_letter then
+		if token.parent.environment == "typesystem" then
+			return {[token] = {"type"}}
+		end
+
+		if _G[token.value] then return {[token] = {"namespace"}} end
+
+		return {[token] = {"variable"}}
+	end
+
+	if token.parent.is_identifier then
+		if token.parent.environment == "typesystem" then
+			return {[token] = {"typeParameter"}}
+		end
+
+		return {[token] = {"variable"}}
+	end
+
+	do
+		return {[token] = {"comment"}}
+	end
+end
+
 local working_directory
 
 local function get_range(code, start, stop)
@@ -183,19 +370,16 @@ local function clear_temp_file(uri)
 	temp_files[uri] = nil
 end
 
-local function recompile(uri, single_file_only, force_analyze)
+local function recompile(uri)
 	local cfg = get_analyzer_config()
 	local entry_point = cfg.entry_point
 
-	if not entry_point and uri and (force_analyze or uri:find("%.nlua$")) then
+	if not entry_point and uri then
 		entry_point = uri:gsub(working_directory .. "/", "")
 	end
 
-	if cfg.entry_point and single_file_only then return false end
-
 	if not entry_point then return false end
 
-	print("RECOMPILE")
 	local responses = {}
 	cfg.inline_require = false
 	cfg.on_read_file = function(parser, path)
@@ -236,14 +420,34 @@ local function recompile(uri, single_file_only, force_analyze)
 			for _, root_node in ipairs(compiler.SyntaxTree.imports) do
 				local root = root_node.RootStatement
 
-				if not root_node.RootStatement.parser then
-					root = root_node.RootStatement.RootStatement
-				end
+				if root_node.RootStatement then
+					if not root_node.RootStatement.parser then
+						root = root_node.RootStatement.RootStatement
+					end
 
-				cache[working_directory .. "/" .. root.parser.config.file_path] = {tokens = root.lexer_tokens, code = root.code}
+					cache[working_directory .. "/" .. root.parser.config.file_path] = {tokens = root.lexer_tokens, code = root.code}
+				end
 			end
 
-			compiler:Analyze()
+			local code = io.open(entry_point, "r"):read("*all")
+
+			if
+				(
+					code:find("-" .. "-ANALYZE", nil, true) or
+					code:find("--[[" .. "#", nil, true) or
+					(
+						uri and
+						uri:find("%.nlua$")
+					)
+				)
+				and
+				not code:find("-" .. "-DONT_ANALYZE", nil, true)
+			then
+				print("RECOMPILE")
+				compiler:Analyze()
+			end
+
+			lsp.Call({method = "workspace/semanticTokens/refresh", params = {}})
 		end
 
 		for _, resp in pairs(responses) do
@@ -251,12 +455,12 @@ local function recompile(uri, single_file_only, force_analyze)
 		end
 	end
 
-	lsp.Call({method = "workspace/semanticTokens/refresh"})
 	return true
 end
 
 lsp.methods["initialize"] = function(params)
 	working_directory = params.workspaceFolders[1].uri
+	table.print(params)
 	return {
 		clientInfo = {name = "NattLua", version = "1.0"},
 		capabilities = {
@@ -264,18 +468,23 @@ lsp.methods["initialize"] = function(params)
 				openClose = true,
 				change = TextDocumentSyncKind.Full,
 			},
+			semanticTokensProvider = {
+				legend = {
+					tokenTypes = SemanticTokenTypes,
+					tokenModifiers = SemanticTokenModifiers,
+				},
+				full = true,
+				range = false,
+			},
 			hoverProvider = true,
 			publishDiagnostics = {
 				relatedInformation = true,
 				tagSupport = {1, 2},
 			},
-			semanticTokens = {
-				range = true,
-				legend = {
-					tokenTypes = SemanticTokenTypes,
-					tokenModifiers = SemanticTokenModifiers,
-				},
+			inlayHintProvider = {
+				resolveProvider = true,
 			},
+			definitionProvider = true,
 		-- for symbols like all functions within a file
 		-- documentSymbolProvider = {label = "NattLua"},
 		-- highlighting equal upvalues
@@ -315,6 +524,11 @@ lsp.methods["nattlua/format"] = function(params)
 	local code, err = compiler:Emit()
 	return {code = b64.encode(code)}
 end
+lsp.methods["nattlua/syntax"] = function(params)
+	local data = require("nattlua.syntax.monarch_language")
+	print("SENDING SYNTAX", #data)
+	return {data = b64.encode(data)}
+end
 lsp.methods["shutdown"] = function(params)
 	print("SHUTDOWN")
 	table.print(params)
@@ -332,19 +546,10 @@ do -- semantic tokens
 		tokenModifiersMap[v] = i - 1
 	end
 
-	local function token_to_type_mod(token)
-		if token.parent and token.parent.kind == "local_assignment" then
-			return "declaration"
-		end
-
-		if token.type == "number" then
-			return "number"
-		elseif token.type == "string" then
-			return "string"
-		end
-	end
-
 	lsp.methods["textDocument/semanticTokens/range"] = function(params)
+		print("SEMANTIC TOKENS RANGE")
+		table.print(params)
+
 		do
 			return
 		end
@@ -353,44 +558,75 @@ do -- semantic tokens
 		local range = params
 	end
 	lsp.methods["textDocument/semanticTokens/full"] = function(params)
-		do
-			return
-		end
+		local data = find_file(params.textDocument.uri)
+		print("SEMANTIC FOKENS FULL REFRESH", data)
 
-		local compiler = compile(params.textDocument.uri, params.textDocument.text)
+		if not data then return end
+
 		local integers = {}
 		local last_y = 0
 		local last_x = 0
 
-		for _, token in ipairs(compiler.Tokens) do
-			local data = helpers.SubPositionToLinePosition(compiler.Code:GetString(), token.start, token.stop)
+		local function swap_endian(num, size)
+			local result = 0
 
-			if data then
+			for shift = 0, (size * 8) - 8, 8 do
+				result = bit.bor(bit.lshift(result, 8), bit.band(bit.rshift(num, shift), 0xff))
+			end
+
+			return result
+		end
+
+		local mods = {}
+
+		for _, token in ipairs(data.tokens) do
+			if token.type ~= "end_of_file" then
+				local modified_tokens = token_to_type_mod(token)
+
+				if modified_tokens then
+					for token, flags in pairs(modified_tokens) do
+						mods[token] = flags
+					end
+				end
+			end
+		end
+
+		for _, token in ipairs(data.tokens) do
+			if mods[token] then
+				local type, modifiers = unpack(mods[token])
+				local data = helpers.SubPositionToLinePosition(data.code:GetString(), token.start, token.stop)
 				local len = #token.value
 				local y = (data.line_start - 1) - last_y
-				local x = data.character_start - last_x
+				local x = (data.character_start - 1) - last_x
 
-				if y ~= 0 then x = data.character_start end
-
-				local type, modifiers = token_to_type_mod(token)
+				-- x is not relative when there's a new line
+				if y ~= 0 then x = data.character_start - 1 end
 
 				if type then
+					if x < 0 or y < 0 then
+						print(token)
+						table.print(data)
+						table.print({x = x, y = y, len = len, last_x = last_x, last_y = last_y})
+						error("bad token")
+					end
+
 					table.insert(integers, y)
 					table.insert(integers, x)
 					table.insert(integers, len)
+					assert(tokenTypeMap[type], "invalid type " .. type)
 					table.insert(integers, tokenTypeMap[type])
 					local result = 0
 
 					if modifiers then
 						for _, mod in ipairs(modifiers) do
 							assert(tokenModifiersMap[mod], "invalid modifier " .. mod)
-							result = bit.bor(result, bit.lshift(1, tokenModifiersMap[mod]))
+							result = bit.bor(result, bit.lshift(1, tokenModifiersMap[mod])) -- TODO, doesn't seem to be working
 						end
 					end
 
 					table.insert(integers, result)
-					last_y = (data.line_start - 1)
-					last_x = data.character_start
+					last_y = data.line_start - 1
+					last_x = data.character_start - 1
 				end
 			end
 		end
@@ -413,18 +649,18 @@ lsp.methods["workspace/didChangeConfiguration"] = function(params)
 end
 lsp.methods["textDocument/didOpen"] = function(params)
 	store_temp_file(params.textDocument.uri, params.textDocument.text)
-	recompile(params.textDocument.uri, true, params.textDocument.text:find("%-%-ANALYZE") ~= nil)
+	recompile(params.textDocument.uri)
 end
 lsp.methods["textDocument/didClose"] = function(params)
 	clear_temp_file(params.textDocument.uri)
 end
 lsp.methods["textDocument/didChange"] = function(params)
 	store_temp_file(params.textDocument.uri, params.contentChanges[1].text)
-	recompile(params.textDocument.uri, nil, params.contentChanges[1].text:find("%-%-ANALYZE") ~= nil)
+	recompile(params.textDocument.uri)
 end
 lsp.methods["textDocument/didSave"] = function(params)
 	clear_temp_file(params.textDocument.uri)
-	recompile(params.textDocument.uri, nil, params.textDocument.text:find("%-%-ANALYZE") ~= nil)
+	recompile(params.textDocument.uri)
 end
 
 local function find_token(uri, text, line, character)
@@ -434,31 +670,6 @@ local function find_token(uri, text, line, character)
 
 	local token, data = find_token_from_line_character(data.tokens, data.code:GetString(), line + 1, character + 1)
 	return token, data
-end
-
-local function find_type_from_token(token)
-	local found_parents = {}
-
-	do
-		local node = token.parent
-
-		while node.parent do
-			table.insert(found_parents, node)
-			node = node.parent
-		end
-	end
-
-	for _, node in ipairs(found_parents) do
-		for _, obj in ipairs(node:GetTypes()) do
-			if obj.Type == "string" and obj:GetData() == token.value then
-
-			else
-				return obj, found_parents, node
-			end
-		end
-	end
-
-	return nil, found_parents
 end
 
 local function has_value(tbl, str)
@@ -499,11 +710,8 @@ local function find_nodes(tokens, type, kind)
 	return nodes
 end
 
-lsp.methods["textDocument/inlay"] = function(params)
-	do
-		return
-	end
-
+lsp.methods["textDocument/inlayHint"] = function(params)
+	print("INLAY REQUEST")
 	local compiler = compile(params.textDocument.uri, params.textDocument.text)
 	local tokens = find_token_from_line_character_range(
 		compiler.Tokens,
@@ -556,9 +764,7 @@ lsp.methods["textDocument/inlay"] = function(params)
 		end
 	end
 
-	return {
-		hints = hints,
-	}
+	return hints
 end
 lsp.methods["textDocument/rename"] = function(params)
 	do
@@ -606,6 +812,30 @@ lsp.methods["textDocument/rename"] = function(params)
 		changes = changes,
 	}
 end
+lsp.methods["textDocument/definition"] = function(params)
+	local token, data = find_token(
+		params.textDocument.uri,
+		params.textDocument.text,
+		params.position.line,
+		params.position.character
+	)
+
+	if not token or not data or not token.parent then return end
+
+	local obj = find_type_from_token(token)
+
+	if not obj or not obj:GetUpvalue() then return end
+
+	local node = obj:GetUpvalue():GetNode()
+
+	if not node then return end
+
+	local data = find_file(params.textDocument.uri)
+	return {
+		uri = params.textDocument.uri,
+		range = get_range(data.code, node:GetStartStop()),
+	}
+end
 lsp.methods["textDocument/hover"] = function(params)
 	local token, data = find_token(
 		params.textDocument.uri,
@@ -628,19 +858,28 @@ lsp.methods["textDocument/hover"] = function(params)
 
 	local obj, found_parents = find_type_from_token(token)
 
-	if obj then add_code(tostring(obj)) end
+	if obj then
+		add_code(tostring(obj))
 
-	if found_parents[2] then
-		local min, max = found_parents[2]:GetStartStop()
+		if obj:GetUpvalue() then add_code(tostring(obj:GetUpvalue())) end
+	end
+
+	if found_parents[1] then
+		local min, max = found_parents[1]:GetStartStop()
 
 		if min then
-			local temp = helpers.SubPositionToLinePosition(found_parents[2].Code:GetString(), min, max)
+			local temp = helpers.SubPositionToLinePosition(found_parents[1].Code:GetString(), min, max)
 
 			if temp then data = temp end
 		end
 	end
 
 	local limit = 5000
+
+	for i = 1, #found_parents do
+		local min, max = found_parents[i]:GetStartStop()
+		add_code(tostring(found_parents[i]) .. " len=" .. tostring(max - min))
+	end
 
 	if #markdown > limit then markdown = markdown:sub(0, limit) .. "\n```\n..." end
 
@@ -687,6 +926,7 @@ do
 	end
 end
 
+-- this can be overriden
 function lsp.Call(params)
 	if lsp.methods[params.method] then lsp.methods[params.method](params) end
 end

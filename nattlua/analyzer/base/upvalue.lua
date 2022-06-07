@@ -26,6 +26,15 @@ function META:IsImmutable()
 	return self.immutable
 end
 
+function META:SetNode(node)
+	self.Node = node
+	return self
+end
+
+function META:GetNode()
+	return self.Node
+end
+
 function META.New(obj)
 	local self = setmetatable({}, META)
 	self:SetValue(obj)

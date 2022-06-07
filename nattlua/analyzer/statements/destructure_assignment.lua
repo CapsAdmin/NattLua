@@ -17,7 +17,7 @@ return {
 
 		if statement.default then
 			if statement.kind == "local_destructure_assignment" then
-				self:CreateLocalValue(statement.default.value.value, obj)
+				self:CreateLocalValue(statement.default.value.value, obj):SetNode(statement.default)
 			elseif statement.kind == "destructure_assignment" then
 				self:SetLocalOrGlobalValue(NodeToString(statement.default), obj)
 			end
@@ -35,7 +35,7 @@ return {
 			end
 
 			if statement.kind == "local_destructure_assignment" then
-				self:CreateLocalValue(node.value.value, obj)
+				self:CreateLocalValue(node.value.value, obj):SetNode(node.value)
 			elseif statement.kind == "destructure_assignment" then
 				self:SetLocalOrGlobalValue(NodeToString(node), obj)
 			end

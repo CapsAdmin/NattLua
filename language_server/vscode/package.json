@@ -28,36 +28,49 @@
   },
   "main": "./out/extension",
   "contributes": {
+    "configurationDefaults": {
+      "[nattlua]": {
+        "editor.semanticHighlighting.enabled": true
+      }
+    },
+    "languages": [
+      {
+        "id": "nattlua",
+        "extensions": [
+          ".nlua",
+          ".lua"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "nattlua",
+        "scopeName": "source.nlua",
+        "path": "./syntaxes/nlua.tmLanguage.json",
+        "tokenTypes": {
+          "comment.line.double-dash.doc.nlua": "other"
+        }
+      }
+    ],
     "configuration": {
       "type": "object",
-      "title": "Nattlua configuration",
+      "title": "nattlua configuration",
       "properties": {
         "nattlua.path": {
           "type": "string",
-          "default": "/usr/local/bin/nattlua",
+          "default": "/home/caps/.local/bin/nattlua",
           "description": "path to executable"
         },
         "nattlua.arguments": {
           "type": "array",
           "default": [
-            "language-server",
-            "1337"
+            "language-server"
           ],
           "items": {
             "type": "string"
           },
           "description": "arguments for executable"
-        },
-        "nattlua.extensions": {
-          "description": "extensions",
-          "type": "array",
-          "default": [
-            "lua",
-            "nlua"
-          ],
-          "items": {
-            "type": "string"
-          }
         }
       }
     }
