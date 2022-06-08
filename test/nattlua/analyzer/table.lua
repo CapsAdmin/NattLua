@@ -839,3 +839,35 @@ analyze[[
     attest.equal(Lol, {})
     attest.equal(T, {foo = true})
 ]]
+analyze[[
+    local tbl = {
+        foo = true,
+        bar = true,
+    }
+    local key: string
+    
+    if tbl[key] then
+        local key: string
+        local xx = tbl[key]
+        attest.equal(xx, _  as nil | true)
+        local key2: string
+        local xx = tbl[key2]
+        attest.equal(xx, _  as nil | true)
+    end
+]]
+analyze[[
+    local tbl = {
+        [1] = true,
+        [2] = true,
+    }
+    local key: number
+    
+    if tbl[key] then
+        local key: number
+        local xx = tbl[key]
+        attest.equal(xx, _  as nil | true)
+        local key2: number
+        local xx = tbl[key2]
+        attest.equal(xx, _  as nil | true)
+    end
+]]

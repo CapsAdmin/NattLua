@@ -35,8 +35,16 @@ function META:GetNode()
 	return self.Node
 end
 
+function META:GetHash()
+	return self.hash
+end
+
+local id = 0
+
 function META.New(obj)
 	local self = setmetatable({}, META)
+	self.hash = tostring(id)
+	id = id + 1
 	self:SetValue(obj)
 	return self
 end

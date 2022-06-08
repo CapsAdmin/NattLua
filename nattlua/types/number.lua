@@ -52,6 +52,12 @@ function META:GetHash()
 
 	if self:IsLiteral() then return self.Data end
 
+	local upvalue = self:GetUpvalue()
+
+	if upvalue then
+		return "__@type@__" .. upvalue:GetHash() .. "_" .. self.Type
+	end
+
 	return "__@type@__" .. self.Type
 end
 
