@@ -1,3 +1,4 @@
+--ANALYZE
 local tostring = tostring
 local setmetatable = _G.setmetatable
 local table = _G.table
@@ -31,6 +32,8 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 
 	if a.Type ~= b.Type then return false end
 
+	local b = b--[[# as TUnion]]
+
 	if #a.Data ~= #b.Data then return false end
 
 	for i = 1, #a.Data do
@@ -55,7 +58,7 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 	return true
 end
 
-local sort = function(a, b)
+local sort = function(a--[[#: string]], b--[[#: string]])
 	return a < b
 end
 

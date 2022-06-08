@@ -1,3 +1,4 @@
+--ANALYZE
 local tostring = tostring
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")

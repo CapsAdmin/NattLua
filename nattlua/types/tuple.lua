@@ -1,3 +1,4 @@
+--ANALYZE
 local tostring = tostring
 local table = _G.table
 local math = math
