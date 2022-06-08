@@ -246,10 +246,12 @@ analyze[[
 analyze[[
     local args: List<|string | List<|string|>|>
 
-    if type(args[_ as number]) == "string" then
-        attest.equal(args[_ as number], _ as string)
+    local x =_ as number
+
+    if type(args[x]) == "string" then
+        attest.equal(args[x], _ as string)
     else
-        attest.equal(args[_ as number], _ as nil | {[number | nil] = string})
+        attest.equal(args[x], _ as nil | {[number | nil] = string})
     end
 ]]
 pending[[

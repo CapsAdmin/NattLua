@@ -37,7 +37,7 @@ function META:GetHash()
 		return "__@type@__" .. upvalue:GetHash() .. "_" .. self.Type
 	end
 
-	return "__@type@__" .. self.Type
+	return "__@type@__" .. self.Type .. ("_%p"):format(self)
 end
 
 function META:Copy()
