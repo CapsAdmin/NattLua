@@ -1,3 +1,4 @@
+--ANALYZE
 local map = {
 	["a"] = "\a",
 	["b"] = "\b",
@@ -72,11 +73,7 @@ local function reverse_escape_string(str--[[#: string]])
 				local hex = tonumber(str:sub(start + 3, stop + len - 1), 16)
 
 				if hex then
-					local code = unicode_escape(hex)
-
-					if code then
-						str = str:sub(1, start - 1) .. code .. str:sub(stop + len + 1)
-					end
+					str = str:sub(1, start - 1) .. unicode_escape(hex) .. str:sub(stop + len + 1)
 				end
 			end
 		else

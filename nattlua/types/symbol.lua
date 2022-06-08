@@ -54,6 +54,8 @@ function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
 
 	if b.Type ~= "symbol" then return type_errors.type_mismatch(a, b) end
 
+	local b = b--[[# as TSymbol]]
+
 	if a:GetData() ~= b:GetData() then return type_errors.value_mismatch(a, b) end
 
 	return true

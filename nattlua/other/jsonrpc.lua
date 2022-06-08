@@ -1,3 +1,4 @@
+--ANALYZE
 local type = _G.type
 local ipairs = _G.ipairs
 local table = _G.table
@@ -8,6 +9,15 @@ local tonumber = _G.tonumber
 local json = require("nattlua.other.json")
 local rpc_util = {}
 local VERSION = "2.0"
+--[[#type Response = {
+	jsonrpc = VERSION,
+	id = nil | string,
+	result = Table,
+	error = nil | {
+		code = number,
+		message = string,
+	},
+}]]
 local JSONRPC_ERRORS = {
 	PARSE_ERROR = -32700, -- Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text.
 	INVALID_REQUEST = -32600, -- The JSON sent is not a valid Request object.
@@ -17,7 +27,7 @@ local JSONRPC_ERRORS = {
 -- SERVER_ERROR = -32000 to -32099, -- , reserved for implementation-defined server-errors.
 }
 
-local function error_response(id, code, message)
+local function error_response(id--[[#: nil | string]], code--[[#: number]], message--[[#: string]])
 	return {
 		jsonrpc = VERSION,
 		id = id,
@@ -28,7 +38,7 @@ local function error_response(id, code, message)
 	}
 end
 
-local function check_request(rpc)
+local function check_request(rpc--[[#: Table]])
 	if rpc.jsonrpc ~= VERSION then
 		return error_response(
 			nil,
@@ -54,13 +64,18 @@ local function check_request(rpc)
 	end
 end
 
-local function handle_rpc(rpc, is_array, methods, ...)
+local function handle_rpc(
+	rpc--[[#: Table]],
+	is_array--[[#: nil | boolean]],
+	methods--[[#: {[string] = Function}]],
+	...--[[#: ...any]]
+)
 	if is_array then
 		if not rpc[1] then
 			return error_response(nil, JSONRPC_ERRORS.INVALID_REQUEST, "empty batch array request")
 		end
 
-		local array = {}
+		local array--[[#: List<|Response|>]] = {}
 
 		for i, v in ipairs(rpc) do
 			local response = handle_rpc(v, nil, methods, ...)
@@ -85,7 +100,7 @@ local function handle_rpc(rpc, is_array, methods, ...)
 		function(...)
 			return methods[rpc.method](rpc.params, ...)
 		end,
-		function(err)
+		function(err--[[#: string]])
 			return debug.traceback(err)
 		end,
 		...
@@ -107,7 +122,7 @@ local function handle_rpc(rpc, is_array, methods, ...)
 	}
 end
 
-function rpc_util.ReceiveJSON(data, methods, ...)
+function rpc_util.ReceiveJSON(data--[[#: string]], methods--[[#: {[string] = Function}]], ...--[[#: ...any]])
 	local ok, rpc = pcall(json.decode, data)
 
 	if not ok then
@@ -115,10 +130,10 @@ function rpc_util.ReceiveJSON(data, methods, ...)
 		return error_response(nil, JSONRPC_ERRORS.PARSE_ERROR, err)
 	end
 
-	return handle_rpc(rpc, data:sub(1, 1) == "[", methods, ...)
+	return handle_rpc(rpc--[[# as Table]], data:sub(1, 1) == "[", methods, ...)
 end
 
-function rpc_util.ReceiveHTTP(state, data)
+function rpc_util.ReceiveHTTP(state--[[#: {buffer = string}]], data--[[#: string]])
 	state.buffer = state.buffer or ""
 
 	if data then state.buffer = state.buffer .. data end
@@ -132,7 +147,7 @@ function rpc_util.ReceiveHTTP(state, data)
 		if length then
 			length = tonumber(length)
 
-			if #rest >= length then
+			if rest and #rest >= length then
 				local body = rest:sub(1, length)
 				state.buffer = buffer:sub(#header + 4 + length + 1)
 				return body

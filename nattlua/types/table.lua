@@ -11,14 +11,15 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
 local context = require("nattlua.analyzer.context")
---[[#local type BaseType = import("~/nattlua/types/base.lua")]]
 META.Type = "table"
 --[[#type META.@Name = "TTable"]]
 --[[#type TTable = META.@Self]]
-META:GetSet("Data", nil--[[# as {[any] = any} | {}]])
+--[[#local type TBaseType = META.TBaseType]]
+META:GetSet("Data", nil--[[# as List<|{key = TBaseType, val = TBaseType}|>]])
 META:GetSet("BaseTable", nil--[[# as TTable | nil]])
 META:GetSet("ReferenceId", nil--[[# as string | nil]])
-META:GetSet("Self", nil--[[# as TTable]])
+META:GetSet("Self", nil--[[# as nil | TTable]])
+META:GetSet("Contracts", nil--[[# as List<|TTable|>]])
 
 function META:GetName()
 	if not self.Name then
@@ -37,7 +38,7 @@ function META:SetSelf(tbl)
 	self.Self = tbl
 end
 
-function META.Equal(a--[[#: BaseType]], b--[[#: BaseType]])
+function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
 
 	if a:IsUnique() then return a:GetUniqueID() == b:GetUniqueID() end
@@ -164,7 +165,7 @@ function META:__tostring()
 	return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
-function META:GetLength(analyzer)
+function META:GetLength(analyzer--[[#: any]])
 	local contract = self:GetContract()
 
 	if contract and contract ~= self then return contract:GetLength(analyzer) end
@@ -281,7 +282,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 	return true
 end
 
-function META.IsSubsetOf(a--[[#: BaseType]], b--[[#: BaseType]])
+function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 	if a.suppress then return true, "suppressed" end
 
 	if b.Type == "tuple" then b = b:Get(1) end
@@ -387,7 +388,7 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 	return true
 end
 
-function META:Delete(key--[[#: BaseType]])
+function META:Delete(key--[[#: TBaseType]])
 	local data = self:GetData()
 
 	for i = #data, 1, -1 do
@@ -414,7 +415,7 @@ function META:GetKeyUnion()
 	return union
 end
 
-function META:HasKey(key--[[#: BaseType]])
+function META:HasKey(key--[[#: TBaseType]])
 	return self:FindKeyValReverse(key)
 end
 
@@ -424,7 +425,7 @@ function META:IsEmpty()
 	return self:GetData()[1] == nil
 end
 
-function META:FindKeyVal(key--[[#: BaseType]])
+function META:FindKeyVal(key--[[#: TBaseType]])
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
@@ -443,7 +444,7 @@ function META:FindKeyVal(key--[[#: BaseType]])
 	return type_errors.missing(self, key, reasons)
 end
 
-function META:FindKeyValReverse(key--[[#: BaseType]])
+function META:FindKeyValReverse(key--[[#: TBaseType]])
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
@@ -476,7 +477,7 @@ function META:FindKeyValReverse(key--[[#: BaseType]])
 	return type_errors.missing(self, key, reasons)
 end
 
-function META:FindKeyValReverseEqual(key--[[#: BaseType]])
+function META:FindKeyValReverseEqual(key--[[#: TBaseType]])
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
@@ -495,13 +496,13 @@ function META:FindKeyValReverseEqual(key--[[#: BaseType]])
 	return type_errors.missing(self, key, reasons)
 end
 
-function META:Insert(val--[[#: BaseType]])
+function META:Insert(val--[[#: TBaseType]])
 	self.size = self.size or LNumber(1)
 	self:Set(self.size:Copy(), val)
 	self.size:SetData(self.size:GetData() + 1)
 end
 
-function META:Set(key--[[#: BaseType]], val--[[#: BaseType | nil]], no_delete--[[#: boolean | nil]])
+function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete--[[#: boolean | nil]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		self["Set" .. key:GetData():sub(2)](self, val)
 		return true
@@ -550,7 +551,7 @@ function META:Set(key--[[#: BaseType]], val--[[#: BaseType | nil]], no_delete--[
 	return true
 end
 
-function META:SetExplicit(key--[[#: BaseType]], val--[[#: BaseType]])
+function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		local key = "Set" .. key:GetData():sub(2)
 
@@ -584,7 +585,7 @@ function META:SetExplicit(key--[[#: BaseType]], val--[[#: BaseType]])
 	return true
 end
 
-function META:Get(key--[[#: BaseType]])
+function META:Get(key--[[#: TBaseType]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		local val = assert(self["Get" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self)
 
@@ -749,15 +750,15 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 end
 
 function META:GetContract()
-	return self.contracts[#self.contracts] or self.Contract
+	return self.Contracts[#self.Contracts] or self.Contract
 end
 
 function META:PushContract(contract)
-	table.insert(self.contracts, contract)
+	table.insert(self.Contracts, contract)
 end
 
 function META:PopContract()
-	table.remove(self.contracts)
+	table.remove(self.Contracts)
 end
 
 --[[#type META.@Self.suppress = boolean]]
@@ -946,7 +947,19 @@ function META.LogicalComparison(l, r, op, env)
 end
 
 function META.New()
-	return setmetatable({Data = {}, contracts = {}}, META)
+	return setmetatable(
+		{
+			Data = {},
+			Contracts = {},
+			Falsy = false,
+			Truthy = false,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+			suppress = false,
+		},
+		META
+	)
 end
 
 return {Table = META.New}

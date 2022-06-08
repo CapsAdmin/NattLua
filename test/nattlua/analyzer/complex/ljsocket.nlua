@@ -850,7 +850,7 @@ function M.poll(s: any, flags: List<|string|>, timeout: nil | number)
 				revents = 0,
 			},
 		}
-	) as any
+	)
 	local ok, err = socket.poll(pfd, 1, timeout or 0)
 
 	if not ok then return ok, err end

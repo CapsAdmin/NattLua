@@ -1,3 +1,4 @@
+--ANALYZE
 local pairs = _G.pairs
 local tostring = _G.tostring
 local type = _G.type

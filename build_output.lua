@@ -1124,7 +1124,13 @@ function META:GetHash()
 
 	if self:IsLiteral() then return self.Data end
 
-	return "__@type@__" .. self.Type
+	local upvalue = self:GetUpvalue()
+
+	if upvalue then
+		return "__@type@__" .. upvalue:GetHash() .. "_" .. self.Type
+	end
+
+	return "__@type@__" .. self.Type .. ("_%p"):format(self)
 end
 
 function META.Equal(a, b)
@@ -2193,7 +2199,13 @@ end
 function META:GetHash()
 	if self:IsLiteral() then return self.Data end
 
-	return "__@type@__" .. self.Type
+	local upvalue = self:GetUpvalue()
+
+	if upvalue then
+		return "__@type@__" .. upvalue:GetHash() .. "_" .. self.Type
+	end
+
+	return "__@type@__" .. self.Type .. ("_%p"):format(self)
 end
 
 function META:Copy()
@@ -2909,14 +2921,15 @@ local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 local context = IMPORTS['nattlua.analyzer.context']("nattlua.analyzer.context")
-
 META.Type = "table"
+
 
 
 META:GetSet("Data", nil)
 META:GetSet("BaseTable", nil)
 META:GetSet("ReferenceId", nil)
 META:GetSet("Self", nil)
+META:GetSet("Contracts", nil)
 
 function META:GetName()
 	if not self.Name then
@@ -3647,15 +3660,15 @@ function META:Copy(map, copy_tables)
 end
 
 function META:GetContract()
-	return self.contracts[#self.contracts] or self.Contract
+	return self.Contracts[#self.Contracts] or self.Contract
 end
 
 function META:PushContract(contract)
-	table.insert(self.contracts, contract)
+	table.insert(self.Contracts, contract)
 end
 
 function META:PopContract()
-	table.remove(self.contracts)
+	table.remove(self.Contracts)
 end
 
 
@@ -3844,7 +3857,19 @@ function META.LogicalComparison(l, r, op, env)
 end
 
 function META.New()
-	return setmetatable({Data = {}, contracts = {}}, META)
+	return setmetatable(
+		{
+			Data = {},
+			Contracts = {},
+			Falsy = false,
+			Truthy = false,
+			Literal = false,
+			LiteralArgument = false,
+			ReferenceArgument = false,
+			suppress = false,
+		},
+		META
+	)
 end
 
 return {Table = META.New} end ]=======], '@./nattlua/types/table.lua'))())(...) return __M end end
@@ -4094,7 +4119,8 @@ IMPORTS['nattlua/definitions/lua/coroutine.nlua'] = assert(loadstring([=======[ 
 
 
  end ]=======], '@nattlua/definitions/lua/coroutine.nlua'))()
-do local __M; IMPORTS["nattlua.other.table_print"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local pairs = _G.pairs
+do local __M; IMPORTS["nattlua.other.table_print"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) --ANALYZE
+local pairs = _G.pairs
 local tostring = _G.tostring
 local type = _G.type
 local debug = _G.debug
@@ -8961,7 +8987,8 @@ function META.New(
 end
 
 return META end ]=======], '@./nattlua/lexer/token.lua'))()
-do local __M; IMPORTS["nattlua.other.reverse_escape_string"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local map = {
+do local __M; IMPORTS["nattlua.other.reverse_escape_string"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) --ANALYZE
+local map = {
 	["a"] = "\a",
 	["b"] = "\b",
 	["f"] = "\f",
@@ -9035,11 +9062,7 @@ local function reverse_escape_string(str)
 				local hex = tonumber(str:sub(start + 3, stop + len - 1), 16)
 
 				if hex then
-					local code = unicode_escape(hex)
-
-					if code then
-						str = str:sub(1, start - 1) .. code .. str:sub(stop + len + 1)
-					end
+					str = str:sub(1, start - 1) .. unicode_escape(hex) .. str:sub(stop + len + 1)
 				end
 			end
 		else
@@ -14765,8 +14788,16 @@ function META:GetNode()
 	return self.Node
 end
 
+function META:GetHash()
+	return self.hash
+end
+
+local id = 0
+
 function META.New(obj)
 	local self = setmetatable({}, META)
+	self.hash = tostring(id)
+	id = id + 1
 	self:SetValue(obj)
 	return self
 end
@@ -26149,636 +26180,252 @@ function M.bind(host, service)
 end
 
 return M end ]=======], '@./language_server/server/ljsocket.lua'))())(...) return __M end end
-do local __M; IMPORTS["nattlua.other.base64"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local b64 = {}
--- Lua 5.1+ base64 v3.0 (c) 2009 by Alex Kloss <alexthkloss@web.de>
--- licensed under the terms of the LGPL2
--- character table string
-local b = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+do local __M; IMPORTS["nattlua.other.base64"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) 
+local base64 = {}
+local extract = _G.bit32 and _G.bit32.extract -- Lua 5.2/Lua 5.3 in compatibility mode
+if not extract then
+	if _G.bit then -- LuaJIT
+		local shl, shr, band = _G.bit.lshift, _G.bit.rshift, _G.bit.band
+		extract = function(v, from, width)
+			return band(shr(v, from), shl(1, width) - 1)
+		end
+	elseif _G._VERSION == "Lua 5.1" then
+		extract = function(v, from, width)
+			local w = 0
+			local flag = 2 ^ from
 
--- encoding
-function b64.encode(data)
-	return (
-			(
-				data:gsub(".", function(x)
-					local r, b = "", x:byte()
+			for i = 0, width - 1 do
+				local flag2 = flag + flag
 
-					for i = 8, 1, -1 do
-						r = r .. (b % 2 ^ i - b % 2 ^ (i - 1) > 0 and "1" or "0")
-					end
+				if v % flag2 >= flag then w = w + 2 ^ i end
 
-					return r
-				end) .. "0000"
-			):gsub("%d%d%d?%d?%d?%d?", function(x)
-				if (#x < 6) then return "" end
-
-				local c = 0
-
-				for i = 1, 6 do
-					c = c + (x:sub(i, i) == "1" and 2 ^ (6 - i) or 0)
-				end
-
-				return b:sub(c + 1, c + 1)
-			end) .. (
-				{"", "==", "="}
-			)[#data % 3 + 1]
-		)
-end
-
--- decoding
-function b64.decode(data)
-	data = string.gsub(data, "[^" .. b .. "=]", "")
-	return (
-		data:gsub(".", function(x)
-			if (x == "=") then return "" end
-
-			local r, f = "", (b:find(x) - 1)
-
-			for i = 6, 1, -1 do
-				r = r .. (f % 2 ^ i - f % 2 ^ (i - 1) > 0 and "1" or "0")
+				flag = flag2
 			end
 
-			return r
-		end):gsub("%d%d%d?%d?%d?%d?%d?%d?", function(x)
-			if (#x ~= 8) then return "" end
-
-			local c = 0
-
-			for i = 1, 8 do
-				c = c + (x:sub(i, i) == "1" and 2 ^ (8 - i) or 0)
-			end
-
-			return string.char(c)
-		end)
-	)
-end
-
-return b64 end ]=======], '@./nattlua/other/base64.lua'))())(...) return __M end end
-do local __M; IMPORTS["nattlua.other.json"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local pairs = _G.pairs
-local string = _G.string
-local error = _G.error
-local next = _G.next
-local type = _G.type
-local ipairs = _G.ipairs
-local table = _G.table
-local tostring = _G.tostring
-local select = _G.select
-local tonumber = _G.tonumber
-local json = {}
--------------------------------------------------------------------------------
--- Encode
--------------------------------------------------------------------------------
-local encode
-local escape_char_map = {
-	["\\"] = "\\\\",
-	["\""] = "\\\"",
-	["\b"] = "\\b",
-	["\f"] = "\\f",
-	["\n"] = "\\n",
-	["\r"] = "\\r",
-	["\t"] = "\\t",
-}
-local escape_char_map_inv = {["\\/"] = "/"}
-
-for k, v in pairs(escape_char_map) do
-	escape_char_map_inv[v] = k
-end
-
-local function escape_char(c)
-	return escape_char_map[c] or string.format("\\u%04x", c:byte())
-end
-
-local function encode_nil(val, stack)
-	return "null"
-end
-
-local function encode_table(val, stack)
-	local res = {}
-	stack = stack or {}
-
-	-- Circular reference?
-	if stack[val] then error("circular reference") end
-
-	stack[val] = true
-
-	if val[1] ~= nil or next(val) == nil then
-		-- Treat as array -- check keys are valid and it is not sparse
-		local n = 0
-
-		for k in pairs(val) do
-			if type(k) ~= "number" then
-				error("invalid table: mixed or invalid key types")
-			end
-
-			n = n + 1
+			return w
 		end
-
-		if n ~= #val then error("invalid table: sparse array") end
-
-		-- Encode
-		for i, v in ipairs(val) do
-			table.insert(res, encode(v, stack))
-		end
-
-		stack[val] = nil
-		return "[" .. table.concat(res, ",") .. "]"
-	else
-		-- Treat as an object
-		for k, v in pairs(val) do
-			if type(k) ~= "string" then
-				error("invalid table: mixed or invalid key types")
-			end
-
-			table.insert(res, encode(k, stack) .. ":" .. encode(v, stack))
-		end
-
-		stack[val] = nil
-		return "{" .. table.concat(res, ",") .. "}"
+	else -- Lua 5.3+
+		extract = load[[return function( v, from, width )
+			return ( v >> from ) & ((1 << width) - 1)
+		end]]()
 	end
 end
 
-local function encode_string(val, stack)
-	return "\"" .. val:gsub("[%z\1-\31\"]", escape_char) .. "\""
-end
-
-local function encode_number(val, stack)
-	-- Check for NaN, -inf and inf
-	if val ~= val or val <= -math.huge or val >= math.huge then
-		error("unexpected number value '" .. tostring(val) .. "'")
-	end
-
-	return string.format("%.14g", val)
-end
-
-json.null = {}
-
-local function encode_null(val, stack)
-	return "null"
-end
-
-local function encode_boolean(val, stack)
-	return val and "true" or "false"
-end
-
-local type_func_map = {
-	["nil"] = encode_nil,
-	["table"] = encode_table,
-	["string"] = encode_string,
-	["number"] = encode_number,
-	["boolean"] = encode_boolean,
-}
-encode = function(val, stack)
-	if val == json.null then return encode_null(val, stack) end
-
-	local t = type(val)
-	local f = type_func_map[t]
-
-	if f then return f(val, stack) end
-
-	error("unexpected type '" .. t .. "'")
-end
-
-function json.encode(val)
-	return (encode(val, {}))
-end
-
--------------------------------------------------------------------------------
--- Decode
--------------------------------------------------------------------------------
-local parse
-
-local function create_set(...)
-	local res = {}
-
-	for i = 1, select("#", ...) do
-		res[select(i, ...)] = true
-	end
-
-	return res
-end
-
-local space_chars = create_set(" ", "\t", "\r", "\n")
-local delim_chars = create_set(" ", "\t", "\r", "\n", "]", "}", ",")
-local escape_chars = create_set("\\", "/", "\"", "b", "f", "n", "r", "t", "u")
-local literals = create_set("true", "false", "null")
-local literal_map = {
-	["true"] = true,
-	["false"] = false,
-	["null"] = nil,
-}
-
-local function next_char(
-	str,
-	idx,
-	set,
-	negate
-)
-	for i = idx, #str do
-		if set[str:sub(i, i)] ~= negate then return i end
-	end
-
-	return #str + 1
-end
-
-local function decode_error(str, idx, msg)
-	local line_count = 1
-	local col_count = 1
-
-	for i = 1, idx - 1 do
-		col_count = col_count + 1
-
-		if str:sub(i, i) == "\n" then
-			line_count = line_count + 1
-			col_count = 1
-		end
-	end
-
-	error(string.format("%s at line %d col %d", msg, line_count, col_count))
-end
-
-local function codepoint_to_utf8(n)
-	-- http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-appendixa
-	local f = math.floor
-
-	if n <= 0x7f then
-		return string.char(n)
-	elseif n <= 0x7ff then
-		return string.char(f(n / 64) + 192, n % 64 + 128)
-	elseif n <= 0xffff then
-		return string.char(f(n / 4096) + 224, f(n % 4096 / 64) + 128, n % 64 + 128)
-	elseif n <= 0x10ffff then
-		return string.char(
-			f(n / 262144) + 240,
-			f(n % 262144 / 4096) + 128,
-			f(n % 4096 / 64) + 128,
-			n % 64 + 128
-		)
-	end
-
-	error(string.format("invalid unicode codepoint '%x'", n))
-end
-
-local function parse_unicode_escape(s)
-	local n1 = tonumber(s:sub(3, 6), 16)
-
-	if not n1 then error("failed to parse unicode escape") end
-
-	local n2 = tonumber(s:sub(9, 12), 16)
-
-	-- Surrogate pair?
-	if n2 then
-		return codepoint_to_utf8((n1 - 0xd800) * 0x400 + (n2 - 0xdc00) + 0x10000)
-	else
-		return codepoint_to_utf8(n1)
-	end
-end
-
-local function parse_string(str, i)
-	local has_unicode_escape = false
-	local has_surrogate_escape = false
-	local has_escape = false
-	local last
-
-	for j = i + 1, #str do
-		local x = str:byte(j)
-
-		if x < 32 then decode_error(str, j, "control character in string") end
-
-		if last == 92 then -- "\\" (escape char)
-			if x == 117 then -- "u" (unicode escape sequence)
-				local hex = str:sub(j + 1, j + 5)
-
-				if not hex:find("%x%x%x%x") then
-					decode_error(str, j, "invalid unicode escape in string")
-				end
-
-				if hex:find("^[dD][89aAbB]") then
-					has_surrogate_escape = true
-				else
-					has_unicode_escape = true
-				end
-			else
-				local c = string.char(x)
-
-				if not escape_chars[c] then
-					decode_error(str, j, "invalid escape char '" .. c .. "' in string")
-				end
-
-				has_escape = true
-			end
-
-			last = nil
-		elseif x == 34 then -- '"' (end of string)
-			local s = str:sub(i + 1, j - 1)
-
-			if has_surrogate_escape then
-				s = s:gsub("\\u[dD][89aAbB]..\\u....", parse_unicode_escape)
-			end
-
-			if has_unicode_escape then s = s:gsub("\\u....", parse_unicode_escape) end
-
-			if has_escape then s = s:gsub("\\.", escape_char_map_inv) end
-
-			return s, j + 1
-		else
-			last = x
-		end
-	end
-
-	decode_error(str, i, "expected closing quote for string")
-end
-
-local function parse_number(str, i)
-	local x = next_char(str, i, delim_chars)
-	local s = str:sub(i, x - 1)
-	local n = tonumber(s)
-
-	if not n then decode_error(str, i, "invalid number '" .. s .. "'") end
-
-	return n, x
-end
-
-local function parse_literal(str, i)
-	local x = next_char(str, i, delim_chars)
-	local word = str:sub(i, x - 1)
-
-	if not literals[word] then
-		decode_error(str, i, "invalid literal '" .. word .. "'")
-	end
-
-	return literal_map[word], x
-end
-
-local function parse_array(str, i) -- TODO: fix List<|any|>
-	local res = {}
-	local n = 1
-	i = i + 1
-
-	while 1 do
-		local x
-		i = next_char(str, i, space_chars, true)
-
-		-- Empty / end of array?
-		if str:sub(i, i) == "]" then
-			i = i + 1
-
-			break
-		end
-
-		-- Read token
-		x, i = parse(str, i)
-		res[n] = x
-		n = n + 1
-		-- Next token
-		i = next_char(str, i, space_chars, true)
-		local chr = str:sub(i, i)
-		i = i + 1
-
-		if chr == "]" then break end
-
-		if chr ~= "," then decode_error(str, i, "expected ']' or ','") end
-	end
-
-	return res, i
-end
-
-local function parse_object(str, i)
-	local res = {}
-	i = i + 1
-
-	while 1 do
-		local key, val
-		i = next_char(str, i, space_chars, true)
-
-		-- Empty / end of object?
-		if str:sub(i, i) == "}" then
-			i = i + 1
-
-			break
-		end
-
-		-- Read key
-		if str:sub(i, i) ~= "\"" then
-			decode_error(str, i, "expected string for key")
-		end
-
-		key, i = parse(str, i)
-		-- Read ':' delimiter
-		i = next_char(str, i, space_chars, true)
-
-		if str:sub(i, i) ~= ":" then
-			decode_error(str, i, "expected ':' after key")
-		end
-
-		i = next_char(str, i + 1, space_chars, true)
-		-- Read value
-		val, i = parse(str, i)
-		-- Union
-		res[key] = val
-		-- Next token
-		i = next_char(str, i, space_chars, true)
-		local chr = str:sub(i, i)
-		i = i + 1
-
-		if chr == "}" then break end
-
-		if chr ~= "," then decode_error(str, i, "expected '}' or ','") end
-	end
-
-	return res, i
-end
-
-local char_func_map = {
-	["\""] = parse_string,
-	["0"] = parse_number,
-	["1"] = parse_number,
-	["2"] = parse_number,
-	["3"] = parse_number,
-	["4"] = parse_number,
-	["5"] = parse_number,
-	["6"] = parse_number,
-	["7"] = parse_number,
-	["8"] = parse_number,
-	["9"] = parse_number,
-	["-"] = parse_number,
-	["t"] = parse_literal,
-	["f"] = parse_literal,
-	["n"] = parse_literal,
-	["["] = parse_array,
-	["{"] = parse_object,
-}
-parse = function(str, idx)
-	local chr = str:sub(idx, idx)
-	local f = char_func_map[chr]
-
-	if f then return f(str, idx) end
-
-	decode_error(str, idx, "unexpected character '" .. chr .. "'")
-	return nil, -1
-end
-
-function json.decode(str)
-	local res, idx = parse(str, next_char(str, 1, space_chars, true))
-	idx = next_char(str, idx, space_chars, true)
-
-	if idx <= #str then decode_error(str, idx, "trailing garbage") end
-
-	return res
-end
-
-return json end ]=======], '@./nattlua/other/json.lua'))())(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.monarch_language"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local syntax_typesystem = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
-local syntax_runtime = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
-local json = IMPORTS['nattlua.other.json']("nattlua.other.json")
-
-local function maps_to_array(maps)
-	local out = {}
-	local done = {}
-
-	for _, map in ipairs(maps) do
-		for key in pairs(map) do
-			if not done[key] then
-				table.insert(out, key)
-				done[key] = true
-			end
-		end
-	end
-
-	return out
-end
-
-local function regex(str)
-	return {
-		jstype = "regex",
-		value = str,
+function base64.makeencoder(s62, s63, spad)
+	local characters = {
+		[0] = "A",
+		"B",
+		"C",
+		"D",
+		"E",
+		"F",
+		"G",
+		"H",
+		"I",
+		"J",
+		"K",
+		"L",
+		"M",
+		"N",
+		"O",
+		"P",
+		"Q",
+		"R",
+		"S",
+		"T",
+		"U",
+		"V",
+		"W",
+		"X",
+		"Y",
+		"Z",
+		"a",
+		"b",
+		"c",
+		"d",
+		"e",
+		"f",
+		"g",
+		"h",
+		"i",
+		"j",
+		"k",
+		"l",
+		"m",
+		"n",
+		"o",
+		"p",
+		"q",
+		"r",
+		"s",
+		"t",
+		"u",
+		"v",
+		"w",
+		"x",
+		"y",
+		"z",
+		"0",
+		"1",
+		"2",
+		"3",
+		"4",
+		"5",
+		"6",
+		"7",
+		"8",
+		"9",
+		s62 or
+		"+",
+		s63 or
+		"/",
+		spad or
+		"=",
 	}
+	local encoder = {}
+
+	for b64code, char in pairs(characters) do
+		encoder[b64code] = char:byte()
+	end
+
+	return encoder
 end
 
-local syntax = {
-	defaultToken = "",
-	tokenPostfix = ".nl",
-	keywords = maps_to_array({syntax_runtime.Keywords, syntax_runtime.NonStandardKeywords}),
-	typeKeywords = maps_to_array(
-		{
-			syntax_typesystem.Keywords,
-			syntax_typesystem.NonStandardKeywords,
-			{
-				string = true,
-				any = true,
-				["nil"] = true,
-				boolean = true,
-				number = true,
-			},
-		}
-	),
-	brackets = {
-		{token = "delimiter.bracket", open = "{", close = "}"},
-		{token = "delimiter.array", open = "[", close = "]"},
-		{token = "delimiter.parenthesis", open = "(", close = ")"},
-	},
-	operators = maps_to_array(
-		{
-			syntax_runtime.PrefixOperators,
-			syntax_runtime.BinaryOperators,
-			syntax_runtime.PostfixOperators,
-			syntax_runtime.PrimaryBinaryOperators,
-			syntax_typesystem.PrefixOperators,
-			syntax_typesystem.BinaryOperators,
-			syntax_typesystem.PostfixOperators,
-			syntax_typesystem.PrimaryBinaryOperators,
-		}
-	),
-	--symbols: new RegExp("[" + escapeRegex(uniqueCharacters(arrayUnion(syntax_runtime.Symbols, syntax_typesystem.Symbols).join(""))) + "]+"),
-	symbols = regex[=[[=><!~?:&|+\-*\/\^%]+]=],
-	escapes = regex[=[\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})]=],
-	tokenizer = {
-		root = {
-			{
-				[[[a-zA-Z_@]\w*]],
-				{
-					cases = {
-						["@typeKeywords"] = {token = "keyword.$0"},
-						["@keywords"] = {token = "keyword.$0"},
-						["@default"] = "identifier",
-					},
-				},
-			},
-			{include = "@whitespace"},
-			{regex[=[[{}()\[\]]]=], "@brackets"},
-			{
-				[[@symbols]],
-				{
-					cases = {
-						["@operators"] = "delimiter",
-						["@default"] = "",
-					},
-				},
-			},
-			-- numbers
-			{regex[=[\d*\.\d+([eE][\-+]?\d+)?]=], "number.float"},
-			{regex[=[0[xX][0-9a-fA-F_]*[0-9a-fA-F]]=], "number.hex"},
-			{regex[=[\d+?]=], "number"},
-			-- delimiter: after number because of .\d floats
-			{regex[=[[;,.]]=], "delimiter"},
-			-- strings: recover on non-terminated strings
-			{regex[=["]([^"\\]|\\.)*$]=], "string.invalid"}, -- non-teminated string
-			{regex[=[['([^'\\]|\\.)*$]=], "string.invalid"}, -- non-teminated string
-			{regex[=["]]=], "string", "@string.\""},
-			{regex[=[']]=], "string", "@string.'"},
-		},
-		whitespace = {
-			{regex[=[[ \t\r\n]+]=], ""},
-			{regex[=[--\[([=]*)\[]=], "comment", "@comment.$1"},
-			{regex[=[--.*$]=], "comment"},
-		},
-		comment = {
-			{regex[=[[^\]]+]=], "comment"},
-			{
-				regex[=[\]([=]*)\]]=],
-				{
-					cases = {
-						["$1==$S2"] = {token = "comment", next = "@pop"},
-						["@default"] = "comment",
-					},
-				},
-			},
-			{regex[=[.]=], "comment"},
-		},
-		string = {
-			{regex[=[^\\"']+]=], "string"},
-			{regex[=[@escapes]=], "string.escape"},
-			{regex[=[\\.]=], "string.escape.invalid"},
-			{
-				regex[=[["']=],
-				{
-					cases = {
-						["$#==$S2"] = {token = "string", next = "@pop"},
-						["@default"] = "string",
-					},
-				},
-			},
-		},
-	},
-}
-local syntax_brackets = {
-	comments = {
-		lineComment = "--",
-		blockComment = {"--[[", "]]"},
-	},
-	brackets = {},
-	autoClosingPairs = {},
-	surroundingPairs = {},
-}
+function base64.makedecoder(s62, s63, spad)
+	local decoder = {}
 
-for l, r in pairs(syntax_runtime.SymbolPairs) do
-	table.insert(syntax_brackets.brackets, {l, r})
-	table.insert(syntax_brackets.autoClosingPairs, {open = l, close = r})
-	table.insert(syntax_brackets.surroundingPairs, {open = l, close = r})
+	for b64code, charcode in pairs(base64.makeencoder(s62, s63, spad)) do
+		decoder[charcode] = b64code
+	end
+
+	return decoder
 end
 
-return json.encode({
-	syntax = syntax,
-	syntax_brackets = syntax_brackets,
-}) end ]=======], '@./nattlua/syntax/monarch_language.lua'))())(...) return __M end end
+local DEFAULT_ENCODER = base64.makeencoder()
+local DEFAULT_DECODER = base64.makedecoder()
+local char, concat = string.char, table.concat
+
+function base64.encode(
+	str,
+	encoder,
+	usecaching
+)
+	encoder = encoder or DEFAULT_ENCODER
+	local t, k, n = {}, 1, #str
+	local lastn = n % 3
+	local cache = {}
+
+	for i = 1, n - lastn, 3 do
+		local a, b, c = str:byte(i, i + 2)
+		local v = a * 0x10000 + b * 0x100 + c
+		local s
+
+		if usecaching then
+			s = cache[v]
+
+			if not s then
+				s = char(
+					encoder[extract(v, 18, 6)],
+					encoder[extract(v, 12, 6)],
+					encoder[extract(v, 6, 6)],
+					encoder[extract(v, 0, 6)]
+				)
+				cache[v] = s
+			end
+		else
+			s = char(
+				encoder[extract(v, 18, 6)],
+				encoder[extract(v, 12, 6)],
+				encoder[extract(v, 6, 6)],
+				encoder[extract(v, 0, 6)]
+			)
+		end
+
+		t[k] = s
+		k = k + 1
+	end
+
+	if lastn == 2 then
+		local a, b = str:byte(n - 1, n)
+		local v = a * 0x10000 + b * 0x100
+		t[k] = char(
+			encoder[extract(v, 18, 6)],
+			encoder[extract(v, 12, 6)],
+			encoder[extract(v, 6, 6)],
+			encoder[64]
+		)
+	elseif lastn == 1 then
+		local v = str:byte(n) * 0x10000
+		t[k] = char(encoder[extract(v, 18, 6)], encoder[extract(v, 12, 6)], encoder[64], encoder[64])
+	end
+
+	return concat(t)
+end
+
+function base64.decode(
+	b64,
+	decoder,
+	usecaching
+)
+	decoder = decoder or (DEFAULT_DECODER)
+	local pattern = "[^%w%+%/%=]"
+
+	if decoder then
+		local s62, s63
+
+		for charcode, b64code in pairs(decoder) do
+			if b64code == 62 then
+				s62 = charcode
+			elseif b64code == 63 then
+				s63 = charcode
+			end
+		end
+
+		pattern = ("[^%%w%%%s%%%s%%=]"):format(char(s62), char(s63))
+	end
+
+	b64 = b64:gsub(pattern, "")
+	local cache = usecaching and {}
+	local t, k = {}, 1
+	local n = #b64
+	local padding = b64:sub(-2) == "==" and 2 or b64:sub(-1) == "=" and 1 or 0
+
+	for i = 1, padding > 0 and n - 4 or n, 4 do
+		local a, b, c, d = b64:byte(i, i + 3)
+		local s
+
+		if cache then
+			local v0 = a * 0x1000000 + b * 0x10000 + c * 0x100 + d
+			s = cache[v0]
+
+			if not s then
+				local v = decoder[a] * 0x40000 + decoder[b] * 0x1000 + decoder[c] * 0x40 + decoder[d]
+				s = char(extract(v, 16, 8), extract(v, 8, 8), extract(v, 0, 8))
+				cache[v0] = s
+			end
+		else
+			local v = decoder[a] * 0x40000 + decoder[b] * 0x1000 + decoder[c] * 0x40 + decoder[d]
+			s = char(extract(v, 16, 8), extract(v, 8, 8), extract(v, 0, 8))
+		end
+
+		t[k] = s
+		k = k + 1
+	end
+
+	if padding == 1 then
+		local a, b, c = b64:byte(n - 3, n - 1)
+		local v = decoder[a] * 0x40000 + decoder[b] * 0x1000 + decoder[c] * 0x40
+		t[k] = char(extract(v, 16, 8), extract(v, 8, 8))
+	elseif padding == 2 then
+		local a, b = b64:byte(n - 3, n - 2)
+		local v = decoder[a] * 0x40000 + decoder[b] * 0x1000
+		t[k] = char(extract(v, 16, 8))
+	end
+
+	return concat(t)
+end
+
+return base64 end ]=======], '@./nattlua/other/base64.lua'))())(...) return __M end end
 do local __M; IMPORTS["language_server.server.lsp"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) --DONT_ANALYZE
 local Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler").New
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
@@ -27213,16 +26860,11 @@ local function recompile(uri)
 			local code = io.open(entry_point, "r"):read("*all")
 
 			if
+				code:find("-" .. "-ANALYZE", nil, true) or
 				(
-					code:find("-" .. "-ANALYZE", nil, true) or
-					code:find("--[[" .. "#", nil, true) or
-					(
-						uri and
-						uri:find("%.nlua$")
-					)
+					uri and
+					uri:find("%.nlua$")
 				)
-				and
-				not code:find("-" .. "-DONT_ANALYZE", nil, true)
 			then
 				print("RECOMPILE")
 				compiler:Analyze()
@@ -27306,7 +26948,7 @@ lsp.methods["nattlua/format"] = function(params)
 	return {code = b64.encode(code)}
 end
 lsp.methods["nattlua/syntax"] = function(params)
-	local data = IMPORTS['nattlua.syntax.monarch_language']("nattlua.syntax.monarch_language")
+	local data = require("nattlua.syntax.monarch_language")
 	print("SENDING SYNTAX", #data)
 	return {data = b64.encode(data)}
 end
@@ -27713,7 +27355,422 @@ function lsp.Call(params)
 end
 
 return lsp end ]=======], '@./language_server/server/lsp.lua'))())(...) return __M end end
-do local __M; IMPORTS["nattlua.other.jsonrpc"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local type = _G.type
+do local __M; IMPORTS["nattlua.other.json"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) --ANALYZE
+local pairs = _G.pairs
+local string = _G.string
+local error = _G.error
+local next = _G.next
+local type = _G.type
+local ipairs = _G.ipairs
+local table = _G.table
+local tostring = _G.tostring
+local select = _G.select
+local tonumber = _G.tonumber
+local json = {}
+-------------------------------------------------------------------------------
+-- Encode
+-------------------------------------------------------------------------------
+local encode
+local escape_char_map = {
+	["\\"] = "\\\\",
+	["\""] = "\\\"",
+	["\b"] = "\\b",
+	["\f"] = "\\f",
+	["\n"] = "\\n",
+	["\r"] = "\\r",
+	["\t"] = "\\t",
+}
+local escape_char_map_inv = {["\\/"] = "/"}
+
+for k, v in pairs(escape_char_map) do
+	escape_char_map_inv[v] = k
+end
+
+local function escape_char(c)
+	return escape_char_map[c] or string.format("\\u%04x", c:byte())
+end
+
+local function encode_nil(val, stack)
+	return "null"
+end
+
+local function encode_table(val, stack)
+	local res = {}
+	stack = stack or {}
+
+	-- Circular reference?
+	if stack[val] then error("circular reference") end
+
+	stack[val] = true
+
+	if val[1] ~= nil or next(val) == nil then
+		-- Treat as array -- check keys are valid and it is not sparse
+		local n = 0
+
+		for k in pairs(val) do
+			if type(k) ~= "number" then
+				error("invalid table: mixed or invalid key types")
+			end
+
+			n = n + 1
+		end
+
+		if n ~= #val then error("invalid table: sparse array") end
+
+		-- Encode
+		for i, v in ipairs(val) do
+			table.insert(res, encode(v, stack))
+		end
+
+		stack[val] = nil
+		return "[" .. table.concat(res, ",") .. "]"
+	else
+		-- Treat as an object
+		for k, v in pairs(val) do
+			if type(k) ~= "string" then
+				error("invalid table: mixed or invalid key types")
+			end
+
+			table.insert(res, encode(k, stack) .. ":" .. encode(v, stack))
+		end
+
+		stack[val] = nil
+		return "{" .. table.concat(res, ",") .. "}"
+	end
+end
+
+local function encode_string(val, stack)
+	return "\"" .. val:gsub("[%z\1-\31\"]", escape_char) .. "\""
+end
+
+local function encode_number(val, stack)
+	-- Check for NaN, -inf and inf
+	if val ~= val or val <= -math.huge or val >= math.huge then
+		error("unexpected number value '" .. tostring(val) .. "'")
+	end
+
+	return string.format("%.14g", val)
+end
+
+json.null = {}
+
+local function encode_null(val, stack)
+	return "null"
+end
+
+local function encode_boolean(val, stack)
+	return val and "true" or "false"
+end
+
+local type_func_map = {
+	["nil"] = encode_nil,
+	["table"] = encode_table,
+	["string"] = encode_string,
+	["number"] = encode_number,
+	["boolean"] = encode_boolean,
+}
+encode = function(val, stack)
+	if val == json.null then return encode_null(val, stack) end
+
+	local t = type(val)
+	local f = type_func_map[t]
+
+	if f then return f(val, stack) end
+
+	error("unexpected type '" .. t .. "'")
+end
+
+function json.encode(val)
+	return (encode(val, {}))
+end
+
+-------------------------------------------------------------------------------
+-- Decode
+-------------------------------------------------------------------------------
+local parse
+
+local function create_set(...)
+	local res = {}
+
+	for i = 1, select("#", ...) do
+		res[select(i, ...)] = true
+	end
+
+	return res
+end
+
+local space_chars = create_set(" ", "\t", "\r", "\n")
+local delim_chars = create_set(" ", "\t", "\r", "\n", "]", "}", ",")
+local escape_chars = create_set("\\", "/", "\"", "b", "f", "n", "r", "t", "u")
+local literals = create_set("true", "false", "null")
+local literal_map = {
+	["true"] = true,
+	["false"] = false,
+	["null"] = nil,
+}
+
+local function next_char(
+	str,
+	idx,
+	set,
+	negate
+)
+	for i = idx, #str do
+		if set[str:sub(i, i)] ~= negate then return i end
+	end
+
+	return #str + 1
+end
+
+local function decode_error(str, idx, msg)
+	local line_count = 1
+	local col_count = 1
+
+	for i = 1, idx - 1 do
+		col_count = col_count + 1
+
+		if str:sub(i, i) == "\n" then
+			line_count = line_count + 1
+			col_count = 1
+		end
+	end
+
+	error(string.format("%s at line %d col %d", msg, line_count, col_count))
+end
+
+local function codepoint_to_utf8(n)
+	-- http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-appendixa
+	local f = math.floor
+
+	if n <= 0x7f then
+		return string.char(n)
+	elseif n <= 0x7ff then
+		return string.char(f(n / 64) + 192, n % 64 + 128)
+	elseif n <= 0xffff then
+		return string.char(f(n / 4096) + 224, f(n % 4096 / 64) + 128, n % 64 + 128)
+	elseif n <= 0x10ffff then
+		return string.char(
+			f(n / 262144) + 240,
+			f(n % 262144 / 4096) + 128,
+			f(n % 4096 / 64) + 128,
+			n % 64 + 128
+		)
+	end
+
+	error(string.format("invalid unicode codepoint '%x'", n))
+end
+
+local function parse_unicode_escape(s)
+	local n1 = tonumber(s:sub(3, 6), 16)
+
+	if not n1 then error("failed to parse unicode escape") end
+
+	local n2 = tonumber(s:sub(9, 12), 16)
+
+	-- Surrogate pair?
+	if n2 then
+		return codepoint_to_utf8((n1 - 0xd800) * 0x400 + (n2 - 0xdc00) + 0x10000)
+	else
+		return codepoint_to_utf8(n1)
+	end
+end
+
+local function parse_string(str, i)
+	local has_unicode_escape = false
+	local has_surrogate_escape = false
+	local has_escape = false
+	local last
+
+	for j = i + 1, #str do
+		local x = str:byte(j)
+
+		if x < 32 then decode_error(str, j, "control character in string") end
+
+		if last == 92 then -- "\\" (escape char)
+			if x == 117 then -- "u" (unicode escape sequence)
+				local hex = str:sub(j + 1, j + 5)
+
+				if not hex:find("%x%x%x%x") then
+					decode_error(str, j, "invalid unicode escape in string")
+				end
+
+				if hex:find("^[dD][89aAbB]") then
+					has_surrogate_escape = true
+				else
+					has_unicode_escape = true
+				end
+			else
+				local c = string.char(x)
+
+				if not escape_chars[c] then
+					decode_error(str, j, "invalid escape char '" .. c .. "' in string")
+				end
+
+				has_escape = true
+			end
+
+			last = nil
+		elseif x == 34 then -- '"' (end of string)
+			local s = str:sub(i + 1, j - 1)
+
+			if has_surrogate_escape then
+				s = s:gsub("\\u[dD][89aAbB]..\\u....", parse_unicode_escape)
+			end
+
+			if has_unicode_escape then s = s:gsub("\\u....", parse_unicode_escape) end
+
+			if has_escape then s = s:gsub("\\.", escape_char_map_inv) end
+
+			return s, j + 1
+		else
+			last = x
+		end
+	end
+
+	decode_error(str, i, "expected closing quote for string")
+end
+
+local function parse_number(str, i)
+	local x = next_char(str, i, delim_chars)
+	local s = str:sub(i, x - 1)
+	local n = tonumber(s)
+
+	if not n then decode_error(str, i, "invalid number '" .. s .. "'") end
+
+	return n, x
+end
+
+local function parse_literal(str, i)
+	local x = next_char(str, i, delim_chars)
+	local word = str:sub(i, x - 1)
+
+	if not literals[word] then
+		decode_error(str, i, "invalid literal '" .. word .. "'")
+	end
+
+	return literal_map[word], x
+end
+
+local function parse_array(str, i) -- TODO: fix List<|any|>
+	local res = {}
+	local n = 1
+	i = i + 1
+
+	while 1 do
+		local x
+		i = next_char(str, i, space_chars, true)
+
+		-- Empty / end of array?
+		if str:sub(i, i) == "]" then
+			i = i + 1
+
+			break
+		end
+
+		-- Read token
+		x, i = parse(str, i)
+		res[n] = x
+		n = n + 1
+		-- Next token
+		i = next_char(str, i, space_chars, true)
+		local chr = str:sub(i, i)
+		i = i + 1
+
+		if chr == "]" then break end
+
+		if chr ~= "," then decode_error(str, i, "expected ']' or ','") end
+	end
+
+	return res, i
+end
+
+local function parse_object(str, i)
+	local res = {}
+	i = i + 1
+
+	while 1 do
+		local key, val
+		i = next_char(str, i, space_chars, true)
+
+		-- Empty / end of object?
+		if str:sub(i, i) == "}" then
+			i = i + 1
+
+			break
+		end
+
+		-- Read key
+		if str:sub(i, i) ~= "\"" then
+			decode_error(str, i, "expected string for key")
+		end
+
+		key, i = parse(str, i)
+		-- Read ':' delimiter
+		i = next_char(str, i, space_chars, true)
+
+		if str:sub(i, i) ~= ":" then
+			decode_error(str, i, "expected ':' after key")
+		end
+
+		i = next_char(str, i + 1, space_chars, true)
+		-- Read value
+		val, i = parse(str, i)
+		-- Union
+		res[key] = val
+		-- Next token
+		i = next_char(str, i, space_chars, true)
+		local chr = str:sub(i, i)
+		i = i + 1
+
+		if chr == "}" then break end
+
+		if chr ~= "," then decode_error(str, i, "expected '}' or ','") end
+	end
+
+	return res, i
+end
+
+local char_func_map = {
+	["\""] = parse_string,
+	["0"] = parse_number,
+	["1"] = parse_number,
+	["2"] = parse_number,
+	["3"] = parse_number,
+	["4"] = parse_number,
+	["5"] = parse_number,
+	["6"] = parse_number,
+	["7"] = parse_number,
+	["8"] = parse_number,
+	["9"] = parse_number,
+	["-"] = parse_number,
+	["t"] = parse_literal,
+	["f"] = parse_literal,
+	["n"] = parse_literal,
+	["["] = parse_array,
+	["{"] = parse_object,
+}
+parse = function(str, idx)
+	local chr = str:sub(idx, idx)
+	local f = char_func_map[chr]
+
+	if f then return f(str, idx) end
+
+	decode_error(str, idx, "unexpected character '" .. chr .. "'")
+	return nil, -1
+end
+
+function json.decode(str)
+	local res, idx = parse(str, next_char(str, 1, space_chars, true))
+	idx = next_char(str, idx, space_chars, true)
+
+	if idx <= #str then decode_error(str, idx, "trailing garbage") end
+
+	return res
+end
+
+return json end ]=======], '@./nattlua/other/json.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.jsonrpc"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) --ANALYZE
+local type = _G.type
 local ipairs = _G.ipairs
 local table = _G.table
 local xpcall = _G.xpcall
@@ -27723,6 +27780,7 @@ local tonumber = _G.tonumber
 local json = IMPORTS['nattlua.other.json']("nattlua.other.json")
 local rpc_util = {}
 local VERSION = "2.0"
+
 local JSONRPC_ERRORS = {
 	PARSE_ERROR = -32700, -- Invalid JSON was received by the server. An error occurred on the server while parsing the JSON text.
 	INVALID_REQUEST = -32600, -- The JSON sent is not a valid Request object.
@@ -27769,7 +27827,12 @@ local function check_request(rpc)
 	end
 end
 
-local function handle_rpc(rpc, is_array, methods, ...)
+local function handle_rpc(
+	rpc,
+	is_array,
+	methods,
+	...
+)
 	if is_array then
 		if not rpc[1] then
 			return error_response(nil, JSONRPC_ERRORS.INVALID_REQUEST, "empty batch array request")
@@ -27847,7 +27910,7 @@ function rpc_util.ReceiveHTTP(state, data)
 		if length then
 			length = tonumber(length)
 
-			if #rest >= length then
+			if rest and #rest >= length then
 				local body = rest:sub(1, length)
 				state.buffer = buffer:sub(#header + 4 + length + 1)
 				return body

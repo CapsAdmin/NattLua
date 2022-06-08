@@ -678,18 +678,18 @@ analyze[[
     end
     
     local function replaceIRs(haystack: {[number] = {number, number}})
-        § assert(#env.runtime.haystack.contracts == 1)
+        § assert(#env.runtime.haystack.Contracts == 1)
         local i: number
         IREqual(haystack[i])
-        § assert(#env.runtime.haystack.contracts == 1)
+        § assert(#env.runtime.haystack.Contracts == 1)
         IREqual(haystack[i])
-        § assert(#env.runtime.haystack.contracts == 1)
+        § assert(#env.runtime.haystack.Contracts == 1)
     end
     
     local instList = {{1, 0}}
-    § assert(#env.runtime.instList.contracts == 0)
+    § assert(#env.runtime.instList.Contracts == 0)
     replaceIRs(instList)
-    § assert(#env.runtime.instList.contracts == 0)    
+    § assert(#env.runtime.instList.Contracts == 0)    
 ]]
 analyze[[
     local z = 2

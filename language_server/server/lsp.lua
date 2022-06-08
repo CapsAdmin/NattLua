@@ -432,16 +432,11 @@ local function recompile(uri)
 			local code = io.open(entry_point, "r"):read("*all")
 
 			if
+				code:find("-" .. "-ANALYZE", nil, true) or
 				(
-					code:find("-" .. "-ANALYZE", nil, true) or
-					code:find("--[[" .. "#", nil, true) or
-					(
-						uri and
-						uri:find("%.nlua$")
-					)
+					uri and
+					uri:find("%.nlua$")
 				)
-				and
-				not code:find("-" .. "-DONT_ANALYZE", nil, true)
 			then
 				print("RECOMPILE")
 				compiler:Analyze()
