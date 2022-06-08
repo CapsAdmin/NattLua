@@ -32,8 +32,6 @@
   "workbench.colorCustomizations": {
     "editor.background": "#1F1F1F"
   },
-  "editor.fontLigatures": true,
-  "editor.fontFamily": "'Fira Code', 'Droid Sans Mono', 'monospace', monospace",
   "editor.tokenColorCustomizations": {
     "strings": "#e99648",
     "numbers": "#fffa9b",
