@@ -1522,7 +1522,8 @@ return {
 	end,
 	TNumber = TNumber,
 } end ]=======], '@./nattlua/types/number.lua'))())(...) return __M end end
-do local __M; IMPORTS["nattlua.types.union"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local tostring = tostring
+do local __M; IMPORTS["nattlua.types.union"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) --ANALYZE
+local tostring = tostring
 local setmetatable = _G.setmetatable
 local table = _G.table
 local ipairs = _G.ipairs
@@ -1554,6 +1555,8 @@ function META.Equal(a, b)
 	end
 
 	if a.Type ~= b.Type then return false end
+
+	local b = b
 
 	if #a.Data ~= #b.Data then return false end
 
@@ -2164,7 +2167,8 @@ return {
 	statement = statement,
 	expression = expression,
 } end ]=======], '@./nattlua/types/../parser/nodes.nlua'))()
-do local __M; IMPORTS["nattlua.types.string"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local tostring = tostring
+do local __M; IMPORTS["nattlua.types.string"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) --ANALYZE
+local tostring = tostring
 local setmetatable = _G.setmetatable
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local Number = IMPORTS['nattlua.types.number']("nattlua.types.number").Number
@@ -2415,7 +2419,8 @@ return {
 		return META.New()
 	end,
 } end ]=======], '@./nattlua/types/any.lua'))())(...) return __M end end
-do local __M; IMPORTS["nattlua.types.tuple"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local tostring = tostring
+do local __M; IMPORTS["nattlua.types.tuple"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) --ANALYZE
+local tostring = tostring
 local table = _G.table
 local math = math
 local assert = assert
@@ -21264,6 +21269,9 @@ local function Binary(self, node, l, r, op)
 	end
 
 	do -- union unpacking
+		local original_l = l
+		local original_r = r
+
 		-- normalize l and r to be both unions to reduce complexity
 		if l.Type ~= "union" and r.Type == "union" then l = Union({l}) end
 
@@ -21273,6 +21281,12 @@ local function Binary(self, node, l, r, op)
 			local new_union = Union()
 			local truthy_union = Union():SetUpvalue(l:GetUpvalue())
 			local falsy_union = Union():SetUpvalue(l:GetUpvalue())
+			truthy_union.left_source = l
+			truthy_union.right_source = r
+			falsy_union.left_source = l
+			falsy_union.right_source = r
+			new_union.left_source = l
+			new_union.right_source = r
 
 			if op == "~=" then self.inverted_index_tracking = true end
 
@@ -21333,7 +21347,43 @@ local function Binary(self, node, l, r, op)
 					end
 				end
 
-				self:TrackUpvalue(l, truthy_union, falsy_union, op == "~=")
+				if (op == "==" or op == "~=") and l.left_source and l.right_source then
+					local key = l.right_source
+					local union = l.left_source
+					local expected = r
+					local truthy_union = Union():SetUpvalue(l:GetUpvalue())
+					local falsy_union = Union():SetUpvalue(l:GetUpvalue())
+
+					for k, v in ipairs(union.Data) do
+						local val = v:Get(key)
+
+						if val then
+							local res = Binary(self, node, val, expected, op)
+
+							if res:IsTruthy() then truthy_union:AddType(v) end
+
+							if res:IsFalsy() then falsy_union:AddType(v) end
+						end
+					end
+
+					if not truthy_union:IsEmpty() or not falsy_union:IsEmpty() then
+						self:TrackUpvalue(union, truthy_union, falsy_union, op == "~=")
+						return new_union
+					end
+				end
+
+				if
+					node.parent.kind == "binary_operator" and
+					(
+						node.parent.value.value == "==" or
+						node.parent.value.value == "~="
+					)
+				then
+
+				else
+					self:TrackUpvalue(l, truthy_union, falsy_union, op == "~=")
+				end
+
 				self:TrackUpvalue(r, truthy_union, falsy_union, op == "~=")
 			end
 
