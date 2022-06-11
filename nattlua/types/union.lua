@@ -34,6 +34,8 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 
 	local b = b--[[# as TUnion]]
 
+	if a:IsEmpty() and b:IsEmpty() then return true end
+
 	if #a.Data ~= #b.Data then return false end
 
 	for i = 1, #a.Data do
@@ -303,15 +305,19 @@ function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 end
 
 function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
-	if b.Type ~= "union" then return a:IsSubsetOf(META.New({b})) end
-
 	if b.Type == "tuple" then b = b:Get(1) end
 
-	if not a.Data[1] then return type_errors.subset(a, b, "union is empty") end
+	if b.Type ~= "union" then return a:IsSubsetOf(META.New({b})) end
 
 	for _, a_val in ipairs(a.Data) do
 		if a_val.Type == "any" then return true end
 	end
+
+	for _, b_val in ipairs(b.Data) do
+		if b_val.Type == "any" then return true end
+	end
+
+	if a:IsEmpty() then return type_errors.subset(a, b, "union is empty") end
 
 	for _, a_val in ipairs(a.Data) do
 		local b_val, reason = b:Get(a_val)
