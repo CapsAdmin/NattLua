@@ -210,8 +210,15 @@ do -- typesystem
 			end
 
 			local node = self:StartNode("sub_statement", "table_index_value")
-			node.key = i
-			node.value_expression = self:ParseTypeExpression(0)
+			local spread = self:read_table_spread()
+
+			if spread then
+				node.spread = spread
+			else
+				node.key = i
+				node.value_expression = self:ParseTypeExpression(0)
+			end
+
 			node = self:EndNode(node)
 			return node
 		end

@@ -34,7 +34,11 @@ return {
 							val = val:Copy():RemoveType(Nil())
 						end
 
-						self:NewIndexOperator(tbl, kv.key, val)
+						if kv.key.Type == "number" then
+							tbl:Insert(val)
+						else
+							self:NewIndexOperator(tbl, kv.key, val)
+						end
 					end
 				else
 					local obj = self:AnalyzeExpression(node.value_expression)
