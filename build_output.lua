@@ -1558,6 +1558,8 @@ function META.Equal(a, b)
 
 	local b = b
 
+	if a:IsEmpty() and b:IsEmpty() then return true end
+
 	if #a.Data ~= #b.Data then return false end
 
 	for i = 1, #a.Data do
@@ -1827,15 +1829,19 @@ function META:IsTargetSubsetOfChild(target)
 end
 
 function META.IsSubsetOf(a, b)
-	if b.Type ~= "union" then return a:IsSubsetOf(META.New({b})) end
-
 	if b.Type == "tuple" then b = b:Get(1) end
 
-	if not a.Data[1] then return type_errors.subset(a, b, "union is empty") end
+	if b.Type ~= "union" then return a:IsSubsetOf(META.New({b})) end
 
 	for _, a_val in ipairs(a.Data) do
 		if a_val.Type == "any" then return true end
 	end
+
+	for _, b_val in ipairs(b.Data) do
+		if b_val.Type == "any" then return true end
+	end
+
+	if a:IsEmpty() then return type_errors.subset(a, b, "union is empty") end
 
 	for _, a_val in ipairs(a.Data) do
 		local b_val, reason = b:Get(a_val)
@@ -12385,8 +12391,15 @@ do -- typesystem
 			end
 
 			local node = self:StartNode("sub_statement", "table_index_value")
-			node.key = i
-			node.value_expression = self:ParseTypeExpression(0)
+			local spread = self:read_table_spread()
+
+			if spread then
+				node.spread = spread
+			else
+				node.key = i
+				node.value_expression = self:ParseTypeExpression(0)
+			end
+
 			node = self:EndNode(node)
 			return node
 		end
@@ -19975,8 +19988,10 @@ function META:EmitStatement(node)
 	then
 		if self.config.comment_type_annotations or node.environment == "typesystem" then
 			self:EmitInvalidLuaCode("EmitDestructureAssignment", node)
-		else
+		elseif self.config.transpile_extensions then
 			self:EmitTranspiledDestructureAssignment(node)
+		else
+			self:EmitDestructureAssignment(node)
 		end
 	elseif node.kind == "assignment" or node.kind == "local_assignment" then
 		if node.environment == "typesystem" and self.config.comment_type_annotations then
@@ -20244,7 +20259,12 @@ do -- types
 				if newline then self:Whitespace("\t") end
 
 				if node.kind == "table_index_value" then
-					self:EmitTypeExpression(node.value_expression)
+					if node.spread then
+						self:EmitToken(node.spread.tokens["..."])
+						self:EmitExpression(node.spread.expression)
+					else
+						self:EmitTypeExpression(node.value_expression)
+					end
 				elseif node.kind == "table_key_value" then
 					self:EmitToken(node.tokens["identifier"])
 					self:Whitespace(" ")
@@ -22268,7 +22288,11 @@ return {
 							val = val:Copy():RemoveType(Nil())
 						end
 
-						self:NewIndexOperator(tbl, kv.key, val)
+						if kv.key.Type == "number" then
+							tbl:Insert(val)
+						else
+							self:NewIndexOperator(tbl, kv.key, val)
+						end
 					end
 				else
 					local obj = self:AnalyzeExpression(node.value_expression)
@@ -26993,6 +27017,7 @@ end
 lsp.methods["nattlua/format"] = function(params)
 	local config = get_emitter_config()
 	config.comment_type_annotations = params.path:sub(-#".lua") == ".lua"
+	config.transpile_extensions = params.path:sub(-#".lua") == ".lua"
 	local compiler = Compiler(params.code, "@" .. params.path, config)
 	local code, err = compiler:Emit()
 	return {code = b64.encode(code)}
