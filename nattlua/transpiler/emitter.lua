@@ -1300,8 +1300,10 @@ function META:EmitStatement(node--[[#: Node]])
 	then
 		if self.config.comment_type_annotations or node.environment == "typesystem" then
 			self:EmitInvalidLuaCode("EmitDestructureAssignment", node)
-		else
+		elseif self.config.transpile_extensions then
 			self:EmitTranspiledDestructureAssignment(node)
+		else
+			self:EmitDestructureAssignment(node)
 		end
 	elseif node.kind == "assignment" or node.kind == "local_assignment" then
 		if node.environment == "typesystem" and self.config.comment_type_annotations then
@@ -1569,7 +1571,12 @@ do -- types
 				if newline then self:Whitespace("\t") end
 
 				if node.kind == "table_index_value" then
-					self:EmitTypeExpression(node.value_expression)
+					if node.spread then
+						self:EmitToken(node.spread.tokens["..."])
+						self:EmitExpression(node.spread.expression)
+					else
+						self:EmitTypeExpression(node.value_expression)
+					end
 				elseif node.kind == "table_key_value" then
 					self:EmitToken(node.tokens["identifier"])
 					self:Whitespace(" ")

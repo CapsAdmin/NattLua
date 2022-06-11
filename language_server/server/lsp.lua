@@ -515,6 +515,7 @@ end
 lsp.methods["nattlua/format"] = function(params)
 	local config = get_emitter_config()
 	config.comment_type_annotations = params.path:sub(-#".lua") == ".lua"
+	config.transpile_extensions = params.path:sub(-#".lua") == ".lua"
 	local compiler = Compiler(params.code, "@" .. params.path, config)
 	local code, err = compiler:Emit()
 	return {code = b64.encode(code)}
