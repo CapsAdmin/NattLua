@@ -18,6 +18,15 @@ function META:ParseTealFunctionArgument(expect_type--[[#: nil | boolean]])
 		) and
 		self:IsValue(":", 1)
 	then
+		if self:IsValue("...") then
+			local node = self:StartNode("expression", "vararg")
+			node.tokens["..."] = self:ExpectValue("...")
+			node.tokens[":"] = self:ExpectValue(":")
+			node.value = self:ParseValueExpressionType("letter")
+			node = self:EndNode(node)
+			return node
+		end
+
 		local identifier = self:ParseToken()
 		local token = self:ExpectValue(":")
 		local exp = self:ParseTealExpression(0)
@@ -50,7 +59,7 @@ function META:ParseTealFunctionSignature()
 	if self:IsValue(":") then
 		node.tokens[":"] = self:ExpectValue(":")
 		node.tokens["return("] = self:NewToken("symbol", "(")
-		node.return_types = self:ParseMultipleValues(nil, self.ParseTealFunctionArgument)
+		node.return_types = self:ParseMultipleValues(nil, self.ParseTealExpression, 0)
 		node.tokens["return)"] = self:NewToken("symbol", ")")
 	end
 
@@ -74,9 +83,9 @@ end
 function META:ParseTealVarargExpression()
 	if not self:IsType("letter") or not self:IsValue("...", 1) then return end
 
-	local node = self:StartNode("expression", "value")
-	node.type_expression = self:ParseValueExpressionType("letter")
-	node.value = self:ExpectValue("...")
+	local node = self:StartNode("expression", "vararg")
+	node.value = self:ParseValueExpressionType("letter")
+	node.tokens["..."] = self:ExpectValue("...")
 	node = self:EndNode(node)
 	return node
 end

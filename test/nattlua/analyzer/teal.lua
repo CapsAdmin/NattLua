@@ -73,3 +73,8 @@ analyze[[
     end
     attest.equal<|TokenKind, "foo" | "bar" | "faz"|>
 ]]
+analyze[[
+    £parser.TealCompat = true
+    type LoadFunction = function(...:any): any...
+    attest.equal<|LoadFunction, Function|>
+]]
