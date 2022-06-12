@@ -7,8 +7,6 @@ local Tuple = require("nattlua.types.tuple").Tuple
 return {
 	NewIndex = function(META)
 		function META:NewIndexOperator(obj, key, val)
-			if not obj then debug.trace() end
-
 			if obj.Type == "union" then
 				-- local x: nil | {foo = true}
 				-- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
