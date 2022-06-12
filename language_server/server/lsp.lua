@@ -576,7 +576,7 @@ do -- semantic tokens
 		local mods = {}
 
 		for _, token in ipairs(data.tokens) do
-			if token.type ~= "end_of_file" then
+			if token.type ~= "end_of_file" and token.parent then
 				local modified_tokens = token_to_type_mod(token)
 
 				if modified_tokens then
