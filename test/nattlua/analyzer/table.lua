@@ -637,7 +637,7 @@ analyze[[
 
     local type x = META.@Self & {bar = false}
     attest.equal<|x, {foo = true, bar = false}|>
-    attest.equal(META.@Self, _ as {foo = true})
+    attest.equal<|META.@Self, _ as {foo = true}|>
 ]]
 analyze[[
     local t = {} as {[1 .. inf] = number}
@@ -891,3 +891,13 @@ analyze[[
         attest.equal(xx, _  as nil | true)
     end
 ]]
+analyze[[
+    local tbl = {}
+    tbl["@hello"] = true
+    attest.equal(tbl, {["@hello"] = true})
+]]
+analyze([[
+    local tbl = {}
+    type tbl["@hello"] = true
+    attest.equal(tbl, {["@hello"] = true})
+]], "no such function on table")

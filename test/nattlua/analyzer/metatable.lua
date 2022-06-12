@@ -636,7 +636,7 @@ analyze[[
         setmetatable(meta, meta)
         
         type meta.@Self = {}
-        meta.Data = meta.@Self
+        type meta.Data = meta.@Self
     
         function meta:__call(...)
     
@@ -668,9 +668,8 @@ analyze[[
     
     local Animal = class()
     
-    Animal.Data.name = "lol" as string
+    type Animal.Data.name = string
     type Animal.Data.age = number
-    --type Animal.Data.name = string
     
     function Animal:constructor(theName: string)
         self.name = theName
