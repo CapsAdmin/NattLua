@@ -126,3 +126,18 @@ analyze[[
         attest.equal(arr, _ as nil | {[1..10] = string})    
     end
 ]]
+analyze[[
+    local function sorted_keys<|A: any, B: any|>(m: {[A] = B}): ({[number] = A})
+        local keys = {}
+    
+        for k, _ in pairs(m) do
+            table.insert(keys, k)
+        end
+    
+        table.sort(keys)
+        return keys
+    end
+    
+    local keys = sorted_keys<|string, string|>({foo = "123", bar = "123", faz = "123"})
+    attest.equal<|keys, {[number] = string}|>
+]]

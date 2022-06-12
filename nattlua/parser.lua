@@ -125,8 +125,14 @@ function META:ParseTypeFunctionBody(
 		self:PopParserEnvironment("typesystem")
 	end
 
-	node.environment = "typesystem"
-	self:PushParserEnvironment("typesystem")
+	if node.identifiers_typesystem then
+		node.environment = "runtime"
+		self:PushParserEnvironment("runtime")
+	else
+		node.environment = "typesystem"
+		self:PushParserEnvironment("typesystem")
+	end
+
 	local start = self:GetToken()
 	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", start, start)

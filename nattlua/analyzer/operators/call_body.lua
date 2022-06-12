@@ -391,6 +391,21 @@ return function(META)
 			self:CreateLocalValue("self", input:Get(1) or Nil())
 		end
 
+		-- first setup runtime generics type arguments if any
+		if function_node.identifiers_typesystem then
+			-- if this is a generics we setup the generic upvalues for the signature
+			local call_expression = self:GetCallStack()[1].call_node
+
+			for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
+				local generic_type = call_expression.expressions_typesystem and
+					call_expression.expressions_typesystem[i] or
+					nil
+				local T = self:AnalyzeExpression(generic_type)
+				self:CreateLocalValue(generic_upvalue.value.value, T)
+			end
+		end
+
+		-- then setup the runtime arguments
 		for i, identifier in ipairs(function_node.identifiers) do
 			local argi = function_node.self_call and (i + 1) or i
 
@@ -407,17 +422,13 @@ return function(META)
 			end
 		end
 
-		if function_node.identifiers_typesystem then
-			-- if this is a generics we setup the generic upvalues for the signature
-			local call_expression = self:GetCallStack()[1].call_node
+		-- if we have a return type we must also set this up for this call
+		local output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
 
-			for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
-				local generic_type = call_expression.expressions_typesystem and
-					call_expression.expressions_typesystem[i] or
-					nil
-				local T = self:AnalyzeExpression(generic_type)
-				self:CreateLocalValue(generic_upvalue.value.value, T)
-			end
+		if function_node.return_types then
+			self:PushAnalyzerEnvironment("typesystem")
+			output_signature = Tuple(self:AnalyzeExpressions(function_node.return_types))
+			self:PopAnalyzerEnvironment()
 		end
 
 		if is_type_function then self:PushAnalyzerEnvironment("typesystem") end
@@ -470,27 +481,9 @@ return function(META)
 			function_node:AddType(obj)
 		end
 
-		local output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
-
-		-- if the function has return type annotations, analyze them and use it as contract
-		if not output_signature and function_node.return_types and self:IsRuntime() then
-			self:CreateAndPushFunctionScope(obj)
-			self:PushAnalyzerEnvironment("typesystem")
-
-			for i, key in ipairs(function_node.identifiers) do
-				if function_node.self_call then i = i + 1 end
-
-				self:CreateLocalValue(key.value.value, input:Get(i))
-			end
-
-			output_signature = Tuple(self:AnalyzeExpressions(function_node.return_types))
-			self:PopAnalyzerEnvironment()
-			self:PopScope()
-		end
-
 		if not output_signature then
 			-- if there is no return type 
-			if self:IsRuntime() then
+			if function_node.environment == "runtime" then
 				local copy
 
 				for i, v in ipairs(output:GetData()) do
@@ -515,9 +508,9 @@ return function(META)
 		-- check against the function's return type
 		check_output(self, output, output_signature)
 
-		if self:IsTypesystem() then return output end
+		if function_node.environment == "typesystem" then return output end
 
-		local contract = obj:GetOutputSignature():Copy()
+		local contract = output_signature:Copy()
 
 		for _, v in ipairs(contract:GetData()) do
 			if v.Type == "table" then v:SetReferenceId(nil) end
