@@ -55,3 +55,21 @@ analyze[[
 
     attest.equal(x, _ as {string, number, boolean})
 ]]
+analyze[[
+    £parser.TealCompat = true
+    local record tl
+        load_envs: { {any:any} : string }
+    end
+    £parser.TealCompat = false
+
+    attest.equal(tl, _ as {load_envs = {[{[any] = any}] = string}})
+]]
+analyze[[
+    £parser.TealCompat = true
+    local enum TokenKind
+        "foo"
+        "bar"
+        "faz"
+    end
+    attest.equal<|TokenKind, "foo" | "bar" | "faz"|>
+]]

@@ -7,6 +7,7 @@ local META = ...
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 local math_huge = math.huge
+local profiler = require("nattlua.other.profiler")
 
 function META:ParseTealFunctionArgument(expect_type--[[#: nil | boolean]])
 	if
@@ -88,17 +89,38 @@ function META:ParseTealTable()
 	node.tokens["separators"] = {}
 	node.children = {}
 
-	if self:IsValue(":", 1) or self:IsValue("(") then
+	if
+		self:IsValue(":", 1) or
+		self:IsValue("(") or
+		(
+			self:IsValue("{") and
+			self:IsValue(":", 2) and
+			self:IsValue(":", 5)
+		)
+	then
 		local kv = self:StartNode("sub_statement", "table_expression_value")
-		kv.expression_key = true
 
 		if self:IsValue("(") then
 			kv.tokens["["] = self:ExpectValueTranslate("(", "[")
 			kv.key_expression = self:ParseTealExpression(0)
 			kv.tokens["]"] = self:ExpectValueTranslate(")", "]")
+		elseif self:IsValue("{") then
+			kv.tokens["["] = self:NewToken("symbol", "[")
+			kv.key_expression = self:ParseTealTable()
+
+			if self:IsValue("}") then
+				kv = self:EndNode(kv)
+				node.children = {kv}
+				node.tokens["}"] = self:ExpectValue("}")
+				node = self:EndNode(node)
+				return node
+			end
+
+			kv.tokens["]"] = self:NewToken("symbol", "]")
 		else
 			kv.tokens["["] = self:NewToken("symbol", "[")
 			kv.key_expression = self:ParseValueExpressionType("letter")
+			kv.key_expression.standalone_letter = true
 			kv.tokens["]"] = self:NewToken("symbol", "]")
 		end
 
@@ -111,7 +133,6 @@ function META:ParseTealTable()
 
 		while true do
 			local kv = self:StartNode("sub_statement", "table_expression_value")
-			kv.expression_key = true
 			kv.tokens["["] = self:NewToken("symbol", "[")
 			local key = self:StartNode("expression", "value")
 			key.value = self:NewToken("letter", "number")
@@ -188,6 +209,8 @@ function META:ParseTealSubExpression(node--[[#: Node]])
 end
 
 function META:ParseTealExpression(priority--[[#: number]])
+	profiler.PushZone("ParseTealTypeExpression")
+	self:PushParserEnvironment("typesystem")
 	local node = self:ParseTealFunctionSignature() or
 		self:ParseTealVarargExpression() or
 		self:ParseTealKeywordValueExpression() or
@@ -209,7 +232,11 @@ function META:ParseTealExpression(priority--[[#: number]])
 		end
 	end
 
-	if self.TealCompat and self:IsValue(">") then return node end
+	if self.TealCompat and self:IsValue(">") then
+		self:PopParserEnvironment()
+		profiler.PopZone()
+		return node
+	end
 
 	while
 		typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()) and
@@ -223,6 +250,8 @@ function META:ParseTealExpression(priority--[[#: number]])
 		node = self:EndNode(node)
 	end
 
+	self:PopParserEnvironment()
+	profiler.PopZone()
 	return node
 end
 
@@ -385,7 +414,6 @@ do
 		self--[[#: META.@Self]],
 		assignment--[[#: statement.assignment | statement.local_assignment]]
 	)
-		self:PushParserEnvironment("typesystem")
 		assignment.tokens["type"] = self:ExpectValueTranslate("enum", "type")
 		assignment.left = {self:ParseValueExpressionToken()}
 		assignment.tokens["="] = self:NewToken("symbol", "=")
@@ -402,15 +430,16 @@ do
 
 		assignment.right = {bnode}
 		self:ExpectValue("end")
-		self:PopParserEnvironment("typesystem")
 	end
 
 	function META:ParseTealEnumStatement()
 		if not self:IsValue("enum") or not self:IsType("letter", 1) then return nil end
 
+		self:PushParserEnvironment("typesystem")
 		local assignment = self:StartNode("statement", "assignment")
 		ParseBody(self, assignment)
 		assignment = self:EndNode(assignment)
+		self:PopParserEnvironment("typesystem")
 		return assignment
 	end
 
@@ -424,8 +453,12 @@ do
 			return nil
 		end
 
+		self:PushParserEnvironment("typesystem")
 		local assignment = self:StartNode("statement", "local_assignment")
 		assignment.tokens["local"] = self:ExpectValue("local")
-		return ParseBody(self, assignment)
+		ParseBody(self, assignment)
+		assignment = self:EndNode(assignment)
+		self:PopParserEnvironment("typesystem")
+		return assignment
 	end
 end
