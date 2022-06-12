@@ -896,8 +896,33 @@ analyze[[
     tbl["@hello"] = true
     attest.equal(tbl, {["@hello"] = true})
 ]]
-analyze([[
+analyze(
+	[[
     local tbl = {}
     type tbl["@hello"] = true
     attest.equal(tbl, {["@hello"] = true})
-]], "no such function on table")
+]],
+	"no such function on table"
+)
+analyze[[
+    local tbl = {3, 2, 1}
+    table.sort(tbl)
+    attest.equal(tbl, {1, 2, 3})
+]]
+analyze[[
+    local tbl = {1, 2, 3}
+
+    table.sort(tbl, function(a, b)
+        return a > b
+    end)
+
+    attest.equal(tbl, {3, 2, 1})
+]]
+
+analyze([[
+    local tbl = {1, 2, 3}
+
+    table.sort(tbl, function(a, b)
+        return _ as boolean
+    end)
+]], "cannot sort literal table")

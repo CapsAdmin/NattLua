@@ -87,11 +87,31 @@ analyzer function table.sort(tbl: List<|any|>, func: nil | function=(a: any, b: 
 	end
 
 	if func then
-	func:GetInputSignature():GetData()[1] = union
-	func:GetInputSignature():GetData()[2] = union
-	func:SetArgumentsInferred(true)
+		func:GetInputSignature():GetData()[1] = union
+		func:GetInputSignature():GetData()[2] = union
+		func:SetArgumentsInferred(true)
 	end
 
+	if tbl:IsLiteral() then
+		if func then
+			table.sort(tbl:GetData(), function(a, b)
+				local b = analyzer:Call(func, types.Tuple({a.val, b.val})):Get(1)
+				if b:IsCertainlyTrue() or b:IsCertainlyFalse() then
+					return b:IsCertainlyTrue()
+				else
+					analyzer:Error("cannot sort literal table with function that returns an uncertain boolean")
+				end
+			end)
+		else
+			table.sort(tbl:GetData(), function(a, b)
+				return a.val:GetData() < b.val:GetData()
+			end)
+		end
+
+		for i, kv in ipairs(tbl:GetData()) do
+			kv.key = kv.key:SetData(i)
+		end
+	end
 end
 
 analyzer function table.getn(tbl: List<|any|>)
