@@ -192,7 +192,6 @@ do -- typesystem
 		function META:read_type_table_entry(i--[[#: number]])
 			if self:IsValue("[") then
 				local node = self:StartNode("sub_statement", "table_expression_value")
-				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ParseTypeExpression(0)
 				node.tokens["]"] = self:ExpectValue("]")
@@ -489,7 +488,6 @@ do -- runtime
 		function META:read_table_entry(i--[[#: number]])
 			if self:IsValue("[") then
 				local node = self:StartNode("sub_statement", "table_expression_value")
-				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ExpectRuntimeExpression(0)
 				node.tokens["]"] = self:ExpectValue("]")

@@ -105,11 +105,9 @@ type expression["table_expression_value"] = Node & { -- [statement - local_assig
 			["["] = Token,
 			["]"] = Token,
 			["="] = Token,
-			["expression_key"] = Token,
 		},
 		key_expression = any,
 		value_expression = any,
-		expression_key = any,
 	}
 type expression["table_index_value"] = Node & { -- [statement - local_assignment @ nattlua/parser/expressions.lua:208]
 		tokens = {
