@@ -400,8 +400,10 @@ return function(META)
 				local generic_type = call_expression.expressions_typesystem and
 					call_expression.expressions_typesystem[i] or
 					nil
-				local T = self:AnalyzeExpression(generic_type)
-				self:CreateLocalValue(generic_upvalue.value.value, T)
+				if generic_type then
+					local T = self:AnalyzeExpression(generic_type)
+					self:CreateLocalValue(generic_upvalue.value.value, T)
+				end
 			end
 		end
 

@@ -56,12 +56,15 @@ function META:ParseTealFunctionSignature()
 	node.tokens["arguments)"] = self:ExpectValue(")")
 	node.tokens[">"] = self:NewToken("symbol", ">")
 
+	node.tokens["return("] = self:NewToken("symbol", "(")
 	if self:IsValue(":") then
 		node.tokens[":"] = self:ExpectValue(":")
-		node.tokens["return("] = self:NewToken("symbol", "(")
 		node.return_types = self:ParseMultipleValues(nil, self.ParseTealExpression, 0)
-		node.tokens["return)"] = self:NewToken("symbol", ")")
+	else
+		node.tokens[":"] = self:NewToken("symbol", ":")
+		node.return_types = {}
 	end
+	node.tokens["return)"] = self:NewToken("symbol", ")")
 
 	node = self:EndNode(node)
 	return node
