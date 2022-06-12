@@ -73,7 +73,7 @@ analyzer function table.remove(tbl: List<|any|>, index: number | nil)
 	table.remove(tbl:GetData(), index:GetData())
 end
 
-analyzer function table.sort(tbl: List<|any|>, func: function=(a: any, b: any)>(boolean))
+analyzer function table.sort(tbl: List<|any|>, func: nil | function=(a: any, b: any)>(boolean))
 	local union = types.Union()
 
 	if tbl.Type == "tuple" then
@@ -86,9 +86,12 @@ analyzer function table.sort(tbl: List<|any|>, func: function=(a: any, b: any)>(
 		end
 	end
 
+	if func then
 	func:GetInputSignature():GetData()[1] = union
 	func:GetInputSignature():GetData()[2] = union
 	func:SetArgumentsInferred(true)
+	end
+
 end
 
 analyzer function table.getn(tbl: List<|any|>)
