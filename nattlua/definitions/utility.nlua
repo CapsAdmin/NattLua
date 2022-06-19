@@ -273,6 +273,12 @@ analyzer function PushTypeEnvironment(obj: any)
 
 				if val then return val end
 
+				do
+					analyzer.stem_types = analyzer.stem_types or {}
+					analyzer.stem_types[key:GetData()] = types.Symbol("StemType-" .. tostring(key))
+					return analyzer.stem_types[key:GetData()]
+				end
+
 				analyzer:Error(err)
 				return types.Nil()
 			end,
@@ -284,6 +290,22 @@ analyzer function PushTypeEnvironment(obj: any)
 		types.LString("__newindex"),
 		types.LuaTypeFunction(
 			function(self, key, val)
+				if analyzer.stem_types then
+					local stem = analyzer.stem_types[key:GetData()]
+
+					if stem then
+						for k, v in pairs(stem) do
+							stem[k] = nil
+						end
+
+						setmetatable(stem, getmetatable(val))
+
+						for k, v in pairs(val) do
+							stem[k] = v
+						end
+					end
+				end
+
 				return analyzer:Assert(obj:Set(key, val))
 			end,
 			{types.Any(), types.Any(), types.Any()},

@@ -78,3 +78,50 @@ analyze[[
     type LoadFunction = function(...:any): any...
     attest.equal<|LoadFunction, Function|>
 ]]
+analyze[[
+    £parser.TealCompat = true
+    local type Color = string
+    local record BagData
+        count: number
+        color: Color
+    end
+    local type DirectGraph = {Color:{BagData}}
+    £parser.TealCompat = false
+    attest.equal<|DirectGraph, {[string] = {[number] = {count = number, color = string}}}|>
+]]
+analyze[[
+    £parser.TealCompat = true
+    §analyzer.TealCompat = true
+
+    local type Color = string
+    local record BagData
+        count: number
+        color: Color
+    end
+    local type DirectGraph = {Color:{BagData}}
+    local function parse_line(_line: string) : Color, {BagData}
+        return "teal", {} as {BagData}
+    end
+    local M = {}
+    function M.parse_input() : DirectGraph
+        local r = {}
+        local lines = {"a", "b"}
+        for _, line in ipairs(lines) do
+            local color, data = parse_line(line)
+            r[color] = data
+        end
+        return r
+    end
+    £parser.TealCompat = false
+
+    local res = M.parse_input()
+
+    attest.equal<|res, {
+        [string] = { 
+            [number] = {
+                ["count"] = number,
+                ["color"] = string,
+            }
+        }
+    }|>
+]]
