@@ -33,7 +33,7 @@ local function escape_char(c--[[#: string]])
 	return escape_char_map[c] or string.format("\\u%04x", c:byte())
 end
 
-local function encode_nil(val--[[#: nil]], stack--[[#: Map<|any, true|>]])--[[#: string]]
+local function encode_nil(val--[[#: any]], stack--[[#: Map<|any, true|>]])--[[#: string]]
 	return "null"
 end
 
@@ -86,7 +86,7 @@ local function encode_string(val--[[#: string]], stack--[[#: Map<|any, true|>]])
 	return "\"" .. val:gsub("[%z\1-\31\"]", escape_char) .. "\""
 end
 
-local function encode_number(val--[[#: number]], stack--[[#: Map<|any, true|>]])--[[#: string]]
+local function encode_number(val--[[#: any]], stack--[[#: Map<|any, true|>]])--[[#: string]]
 	-- Check for NaN, -inf and inf
 	if val ~= val or val <= -math.huge or val >= math.huge then
 		error("unexpected number value '" .. tostring(val) .. "'")

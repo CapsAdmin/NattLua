@@ -3425,8 +3425,13 @@ end
 
 function META:Set(key, val, no_delete)
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
-		self["Set" .. key:GetData():sub(2)](self, val)
-		return true
+		if
+			context:GetCurrentAnalyzer() and
+			context:GetCurrentAnalyzer():GetCurrentAnalyzerEnvironment() == "typesystem"
+		then
+			self["Set" .. key:GetData():sub(2)](self, val)
+			return true
+		end
 	end
 
 	if key.Type == "symbol" and key:GetData() == nil then
@@ -3508,13 +3513,18 @@ end
 
 function META:Get(key)
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
-		local val = assert(self["Get" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self)
+		if
+			context:GetCurrentAnalyzer() and
+			context:GetCurrentAnalyzer():GetCurrentAnalyzerEnvironment() == "typesystem"
+		then
+			local val = assert(self["Get" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self)
 
-		if not val then
-			return type_errors.other("missing value on table " .. key:GetData())
+			if not val then
+				return type_errors.other("missing value on table " .. key:GetData())
+			end
+
+			return val
 		end
-
-		return val
 	end
 
 	if key.Type == "union" then
@@ -12373,7 +12383,6 @@ do -- typesystem
 		function META:read_type_table_entry(i)
 			if self:IsValue("[") then
 				local node = self:StartNode("sub_statement", "table_expression_value")
-				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ParseTypeExpression(0)
 				node.tokens["]"] = self:ExpectValue("]")
@@ -12670,7 +12679,6 @@ do -- runtime
 		function META:read_table_entry(i)
 			if self:IsValue("[") then
 				local node = self:StartNode("sub_statement", "table_expression_value")
-				node.expression_key = true
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ExpectRuntimeExpression(0)
 				node.tokens["]"] = self:ExpectValue("]")
@@ -13734,6 +13742,7 @@ IMPORTS['nattlua/parser/teal.lua'] = assert(loadstring([=======[ return function
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
 local math_huge = math.huge
+local profiler = IMPORTS['nattlua.other.profiler']("nattlua.other.profiler")
 
 function META:ParseTealFunctionArgument(expect_type)
 	if
@@ -13744,6 +13753,15 @@ function META:ParseTealFunctionArgument(expect_type)
 		) and
 		self:IsValue(":", 1)
 	then
+		if self:IsValue("...") then
+			local node = self:StartNode("expression", "vararg")
+			node.tokens["..."] = self:ExpectValue("...")
+			node.tokens[":"] = self:ExpectValue(":")
+			node.value = self:ParseValueExpressionType("letter")
+			node = self:EndNode(node)
+			return node
+		end
+
 		local identifier = self:ParseToken()
 		local token = self:ExpectValue(":")
 		local exp = self:ParseTealExpression(0)
@@ -13772,14 +13790,17 @@ function META:ParseTealFunctionSignature()
 	node.identifiers = self:ParseMultipleValues(nil, self.ParseTealFunctionArgument)
 	node.tokens["arguments)"] = self:ExpectValue(")")
 	node.tokens[">"] = self:NewToken("symbol", ">")
+	node.tokens["return("] = self:NewToken("symbol", "(")
 
 	if self:IsValue(":") then
 		node.tokens[":"] = self:ExpectValue(":")
-		node.tokens["return("] = self:NewToken("symbol", "(")
-		node.return_types = self:ParseMultipleValues(nil, self.ParseTealFunctionArgument)
-		node.tokens["return)"] = self:NewToken("symbol", ")")
+		node.return_types = self:ParseMultipleValues(nil, self.ParseTealExpression, 0)
+	else
+		node.tokens[":"] = self:NewToken("symbol", ":")
+		node.return_types = {}
 	end
 
+	node.tokens["return)"] = self:NewToken("symbol", ")")
 	node = self:EndNode(node)
 	return node
 end
@@ -13800,9 +13821,9 @@ end
 function META:ParseTealVarargExpression()
 	if not self:IsType("letter") or not self:IsValue("...", 1) then return end
 
-	local node = self:StartNode("expression", "value")
-	node.type_expression = self:ParseValueExpressionType("letter")
-	node.value = self:ExpectValue("...")
+	local node = self:StartNode("expression", "vararg")
+	node.value = self:ParseValueExpressionType("letter")
+	node.tokens["..."] = self:ExpectValue("...")
 	node = self:EndNode(node)
 	return node
 end
@@ -13815,17 +13836,38 @@ function META:ParseTealTable()
 	node.tokens["separators"] = {}
 	node.children = {}
 
-	if self:IsValue(":", 1) or self:IsValue("(") then
+	if
+		self:IsValue(":", 1) or
+		self:IsValue("(") or
+		(
+			self:IsValue("{") and
+			self:IsValue(":", 2) and
+			self:IsValue(":", 5)
+		)
+	then
 		local kv = self:StartNode("sub_statement", "table_expression_value")
-		kv.expression_key = true
 
 		if self:IsValue("(") then
 			kv.tokens["["] = self:ExpectValueTranslate("(", "[")
 			kv.key_expression = self:ParseTealExpression(0)
 			kv.tokens["]"] = self:ExpectValueTranslate(")", "]")
+		elseif self:IsValue("{") then
+			kv.tokens["["] = self:NewToken("symbol", "[")
+			kv.key_expression = self:ParseTealTable()
+
+			if self:IsValue("}") then
+				kv = self:EndNode(kv)
+				node.children = {kv}
+				node.tokens["}"] = self:ExpectValue("}")
+				node = self:EndNode(node)
+				return node
+			end
+
+			kv.tokens["]"] = self:NewToken("symbol", "]")
 		else
 			kv.tokens["["] = self:NewToken("symbol", "[")
 			kv.key_expression = self:ParseValueExpressionType("letter")
+			kv.key_expression.standalone_letter = true
 			kv.tokens["]"] = self:NewToken("symbol", "]")
 		end
 
@@ -13838,7 +13880,6 @@ function META:ParseTealTable()
 
 		while true do
 			local kv = self:StartNode("sub_statement", "table_expression_value")
-			kv.expression_key = true
 			kv.tokens["["] = self:NewToken("symbol", "[")
 			local key = self:StartNode("expression", "value")
 			key.value = self:NewToken("letter", "number")
@@ -13915,6 +13956,8 @@ function META:ParseTealSubExpression(node)
 end
 
 function META:ParseTealExpression(priority)
+	profiler.PushZone("ParseTealTypeExpression")
+	self:PushParserEnvironment("typesystem")
 	local node = self:ParseTealFunctionSignature() or
 		self:ParseTealVarargExpression() or
 		self:ParseTealKeywordValueExpression() or
@@ -13936,7 +13979,11 @@ function META:ParseTealExpression(priority)
 		end
 	end
 
-	if self.TealCompat and self:IsValue(">") then return node end
+	if self.TealCompat and self:IsValue(">") then
+		self:PopParserEnvironment()
+		profiler.PopZone()
+		return node
+	end
 
 	while
 		typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()) and
@@ -13950,6 +13997,8 @@ function META:ParseTealExpression(priority)
 		node = self:EndNode(node)
 	end
 
+	self:PopParserEnvironment()
+	profiler.PopZone()
 	return node
 end
 
@@ -14112,7 +14161,6 @@ do
 		self,
 		assignment
 	)
-		self:PushParserEnvironment("typesystem")
 		assignment.tokens["type"] = self:ExpectValueTranslate("enum", "type")
 		assignment.left = {self:ParseValueExpressionToken()}
 		assignment.tokens["="] = self:NewToken("symbol", "=")
@@ -14129,15 +14177,16 @@ do
 
 		assignment.right = {bnode}
 		self:ExpectValue("end")
-		self:PopParserEnvironment("typesystem")
 	end
 
 	function META:ParseTealEnumStatement()
 		if not self:IsValue("enum") or not self:IsType("letter", 1) then return nil end
 
+		self:PushParserEnvironment("typesystem")
 		local assignment = self:StartNode("statement", "assignment")
 		ParseBody(self, assignment)
 		assignment = self:EndNode(assignment)
+		self:PopParserEnvironment("typesystem")
 		return assignment
 	end
 
@@ -14151,9 +14200,13 @@ do
 			return nil
 		end
 
+		self:PushParserEnvironment("typesystem")
 		local assignment = self:StartNode("statement", "local_assignment")
 		assignment.tokens["local"] = self:ExpectValue("local")
-		return ParseBody(self, assignment)
+		ParseBody(self, assignment)
+		assignment = self:EndNode(assignment)
+		self:PopParserEnvironment("typesystem")
+		return assignment
 	end
 end end ]=======], '@nattlua/parser/teal.lua'))()
 do local __M; IMPORTS["nattlua.parser"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local META = IMPORTS['nattlua.parser.base']("nattlua.parser.base")
@@ -14283,8 +14336,14 @@ function META:ParseTypeFunctionBody(
 		self:PopParserEnvironment("typesystem")
 	end
 
-	node.environment = "typesystem"
-	self:PushParserEnvironment("typesystem")
+	if node.identifiers_typesystem then
+		node.environment = "runtime"
+		self:PushParserEnvironment("runtime")
+	else
+		node.environment = "typesystem"
+		self:PushParserEnvironment("typesystem")
+	end
+
 	local start = self:GetToken()
 	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectValue("end", start, start)
@@ -14572,8 +14631,8 @@ function META:Copy(map, copy_tables)
 	copy:SetFunctionBodyNode(self:GetFunctionBodyNode())
 	copy:SetInputIdentifiers(self:GetInputIdentifiers())
 	copy:SetCalled(self:IsCalled())
-	--copy:SetExplicitInputSignature(self:IsExplicitInputSignature())
-	--copy:SetExplicitOutputSignature(self:IsExplicitOutputSignature())
+	copy:SetExplicitInputSignature(self:IsExplicitInputSignature())
+	copy:SetExplicitOutputSignature(self:IsExplicitOutputSignature())
 	copy:SetArgumentsInferred(self:IsArgumentsInferred())
 	copy:SetPreventInputArgumentExpansion(self:GetPreventInputArgumentExpansion())
 	return copy
@@ -17393,8 +17452,6 @@ local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 return {
 	NewIndex = function(META)
 		function META:NewIndexOperator(obj, key, val)
-			if not obj then debug.trace() end
-
 			if obj.Type == "union" then
 				-- local x: nil | {foo = true}
 				-- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
@@ -17909,6 +17966,8 @@ local function check_input(self, obj, input)
 
 			if function_node.self_call then i = i + 1 end
 
+			if i > input_signature_length then break end
+
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
 			self:CreateLocalValue(identifier, Any())
@@ -18048,10 +18107,20 @@ local function check_input(self, obj, input)
 		then
 			mutate_type(self, i, arg, contract, input)
 		elseif not contract:IsReferenceArgument() then
-			-- if it's a ref argument we pass the incoming value
-			local t = contract:Copy()
-			t:SetContract(contract)
-			input:Set(i, t)
+			local doit = true
+
+			if contract.Type == "union" then
+				local t = contract:GetType("table")
+
+				if t and t.potential_self then doit = false end
+			end
+
+			if doit then
+				-- if it's a ref argument we pass the incoming value
+				local t = contract:Copy()
+				t:SetContract(contract)
+				input:Set(i, t)
+			end
 		end
 	end
 
@@ -18161,6 +18230,24 @@ return function(META)
 			self:CreateLocalValue("self", input:Get(1) or Nil())
 		end
 
+		-- first setup runtime generics type arguments if any
+		if function_node.identifiers_typesystem then
+			-- if this is a generics we setup the generic upvalues for the signature
+			local call_expression = self:GetCallStack()[1].call_node
+
+			for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
+				local generic_type = call_expression.expressions_typesystem and
+					call_expression.expressions_typesystem[i] or
+					nil
+
+				if generic_type then
+					local T = self:AnalyzeExpression(generic_type)
+					self:CreateLocalValue(generic_upvalue.value.value, T)
+				end
+			end
+		end
+
+		-- then setup the runtime arguments
 		for i, identifier in ipairs(function_node.identifiers) do
 			local argi = function_node.self_call and (i + 1) or i
 
@@ -18172,22 +18259,30 @@ return function(META)
 				if identifier.value.value == "..." then
 					self:CreateLocalValue(identifier.value.value, input:Slice(argi))
 				else
-					self:CreateLocalValue(identifier.value.value, input:Get(argi) or Nil())
+					local val
+					val = val or input:Get(argi)
+
+					if not val then
+						val = Nil()
+						local arg = obj:GetInputSignature():Get(argi)
+
+						if arg and arg:IsReferenceArgument() then
+							val:SetReferenceArgument(true)
+						end
+					end
+
+					self:CreateLocalValue(identifier.value.value, val)
 				end
 			end
 		end
 
-		if function_node.identifiers_typesystem then
-			-- if this is a generics we setup the generic upvalues for the signature
-			local call_expression = self:GetCallStack()[1].call_node
+		-- if we have a return type we must also set this up for this call
+		local output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
 
-			for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
-				local generic_type = call_expression.expressions_typesystem and
-					call_expression.expressions_typesystem[i] or
-					nil
-				local T = self:AnalyzeExpression(generic_type)
-				self:CreateLocalValue(generic_upvalue.value.value, T)
-			end
+		if function_node.return_types then
+			self:PushAnalyzerEnvironment("typesystem")
+			output_signature = Tuple(self:AnalyzeExpressions(function_node.return_types))
+			self:PopAnalyzerEnvironment()
 		end
 
 		if is_type_function then self:PushAnalyzerEnvironment("typesystem") end
@@ -18240,27 +18335,9 @@ return function(META)
 			function_node:AddType(obj)
 		end
 
-		local output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
-
-		-- if the function has return type annotations, analyze them and use it as contract
-		if not output_signature and function_node.return_types and self:IsRuntime() then
-			self:CreateAndPushFunctionScope(obj)
-			self:PushAnalyzerEnvironment("typesystem")
-
-			for i, key in ipairs(function_node.identifiers) do
-				if function_node.self_call then i = i + 1 end
-
-				self:CreateLocalValue(key.value.value, input:Get(i))
-			end
-
-			output_signature = Tuple(self:AnalyzeExpressions(function_node.return_types))
-			self:PopAnalyzerEnvironment()
-			self:PopScope()
-		end
-
 		if not output_signature then
 			-- if there is no return type 
-			if self:IsRuntime() then
+			if function_node.environment == "runtime" then
 				local copy
 
 				for i, v in ipairs(output:GetData()) do
@@ -18285,9 +18362,9 @@ return function(META)
 		-- check against the function's return type
 		check_output(self, output, output_signature)
 
-		if self:IsTypesystem() then return output end
+		if function_node.environment == "typesystem" then return output end
 
-		local contract = obj:GetOutputSignature():Copy()
+		local contract = output_signature:Copy()
 
 		for _, v in ipairs(contract:GetData()) do
 			if v.Type == "table" then v:SetReferenceId(nil) end
@@ -18523,7 +18600,7 @@ return {
 
 						-- TODO: callbacks with ref arguments should not be called
 						-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
-						if not b:IsRefFunction() then
+						if not b:IsRefFunction() and func then
 							self:Assert(self:Call(b, func:GetInputSignature():Copy(nil, true)))
 						end
 					end
@@ -23020,6 +23097,12 @@ analyzer function PushTypeEnvironment(obj: any)
 
 				if val then return val end
 
+				do
+					analyzer.stem_types = analyzer.stem_types or {}
+					analyzer.stem_types[key:GetData()] = types.Symbol("StemType-" .. tostring(key))
+					return analyzer.stem_types[key:GetData()]
+				end
+
 				analyzer:Error(err)
 				return types.Nil()
 			end,
@@ -23031,6 +23114,22 @@ analyzer function PushTypeEnvironment(obj: any)
 		types.LString("__newindex"),
 		types.LuaTypeFunction(
 			function(self, key, val)
+				if analyzer.stem_types then
+					local stem = analyzer.stem_types[key:GetData()]
+
+					if stem then
+						for k, v in pairs(stem) do
+							stem[k] = nil
+						end
+
+						setmetatable(stem, getmetatable(val))
+
+						for k, v in pairs(val) do
+							stem[k] = v
+						end
+					end
+				end
+
 				return analyzer:Assert(obj:Set(key, val))
 			end,
 			{types.Any(), types.Any(), types.Any()},
@@ -24060,7 +24159,7 @@ analyzer function table.remove(tbl: List<|any|>, index: number | nil)
 	table.remove(tbl:GetData(), index:GetData())
 end
 
-analyzer function table.sort(tbl: List<|any|>, func: function=(a: any, b: any)>(boolean))
+analyzer function table.sort(tbl: List<|any|>, func: nil | function=(a: any, b: any)>(boolean))
 	local union = types.Union()
 
 	if tbl.Type == "tuple" then
@@ -24073,9 +24172,33 @@ analyzer function table.sort(tbl: List<|any|>, func: function=(a: any, b: any)>(
 		end
 	end
 
-	func:GetInputSignature():GetData()[1] = union
-	func:GetInputSignature():GetData()[2] = union
-	func:SetArgumentsInferred(true)
+	if func then
+		func:GetInputSignature():GetData()[1] = union
+		func:GetInputSignature():GetData()[2] = union
+		func:SetArgumentsInferred(true)
+	end
+
+	if tbl:IsLiteral() then
+		if func then
+			table.sort(tbl:GetData(), function(a, b)
+				local b = analyzer:Call(func, types.Tuple({a.val, b.val})):Get(1)
+
+				if b:IsCertainlyTrue() or b:IsCertainlyFalse() then
+					return b:IsCertainlyTrue()
+				else
+					analyzer:Error("cannot sort literal table with function that returns an uncertain boolean")
+				end
+			end)
+		else
+			table.sort(tbl:GetData(), function(a, b)
+				return a.val:GetData() < b.val:GetData()
+			end)
+		end
+
+		for i, kv in ipairs(tbl:GetData()) do
+			kv.key = kv.key:SetData(i)
+		end
+	end
 end
 
 analyzer function table.getn(tbl: List<|any|>)
@@ -24357,7 +24480,10 @@ analyzer function ^string.gsub(
 
 			return string.gsub(str, pattern, out, max_replacements)
 		else
-			replacement:SetInputSignature(types.Tuple({types.String()}):SetRepeat(math.huge))
+			if not replacement:IsExplicitInputSignature() then
+				replacement:SetInputSignature(types.Tuple({types.String()}):SetRepeat(math.huge))
+			end
+
 			replacement:SetCalled(false)
 			return string.gsub(
 				str,
@@ -27078,7 +27204,7 @@ do -- semantic tokens
 		local mods = {}
 
 		for _, token in ipairs(data.tokens) do
-			if token.type ~= "end_of_file" then
+			if token.type ~= "end_of_file" and token.parent then
 				local modified_tokens = token_to_type_mod(token)
 
 				if modified_tokens then
@@ -27381,6 +27507,7 @@ lsp.methods["textDocument/hover"] = function(params)
 
 	if #markdown > limit then markdown = markdown:sub(0, limit) .. "\n```\n..." end
 
+	markdown = markdown:gsub("\\", "BSLASH_")
 	return {
 		contents = markdown,
 		range = {

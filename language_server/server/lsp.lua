@@ -878,6 +878,8 @@ lsp.methods["textDocument/hover"] = function(params)
 	end
 
 	if #markdown > limit then markdown = markdown:sub(0, limit) .. "\n```\n..." end
+	
+	markdown = markdown:gsub("\\", "BSLASH_")
 
 	return {
 		contents = markdown,

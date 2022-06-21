@@ -24,52 +24,51 @@ function Maze:Get(x: ref number, y: ref number)
 	return self.grid[y * self.width + x]
 end
 
-function Maze:Set(x: ref number, y: ref number, v: ref 1 | 0)
+function Maze:Set(x: ref number, y: ref number, v: ref (1 | 0))
 	self.grid[y * self.width + x] = v
+end
+
+local function build(self: ref any, x: ref number, y: ref number)
+	local r = math.random(0, 3)
+	self:Set(x, y, 0)
+
+	for i = 0, 3 do
+		local d = (i + r) % 4
+		local dx = 0
+		local dy = 0
+
+		if d == 0 then
+			dx = 1
+		elseif d == 1 then
+			dx = -1
+		elseif d == 2 then
+			dy = 1
+		else
+			dy = -1
+		end
+
+		local nx = x + dx
+		local ny = y + dy
+		local nx2 = nx + dx
+		local ny2 = ny + dy
+
+		if self:Get(nx, ny) == 1 then
+			if self:Get(nx2, ny2) == 1 then
+				self:Set(nx, ny, 0)
+				build(self, nx2, ny2)
+			end
+		end
+	end
 end
 
 function Maze:Build(seed: ref number)
 	math.randomseed(seed)
-
-	local function build(x: ref number, y: ref number)
-		local r = math.random(0, 3)
-		self:Set(x, y, 0)
-
-		for i = 0, 3 do
-			local d = (i + r) % 4
-			local dx = 0
-			local dy = 0
-
-			if d == 0 then
-				dx = 1
-			elseif d == 1 then
-				dx = -1
-			elseif d == 2 then
-				dy = 1
-			else
-				dy = -1
-			end
-
-			local nx = x + dx
-			local ny = y + dy
-			local nx2 = nx + dx
-			local ny2 = ny + dy
-
-			if self:Get(nx, ny) == 1 then
-				if self:Get(nx2, ny2) == 1 then
-					self:Set(nx, ny, 0)
-					build(nx2, ny2)
-				end
-			end
-		end
-	end
-
-	build(2, 2)
+	build(self, 2, 2)
 	self.grid[self.width + 2] = 0
 	self.grid[(self.height - 2) * self.width + self.width - 3] = 0
 end
 
-local function constructor(_, width: ref number, height: ref number)
+local function constructor(_: ref any, width: ref number, height: ref number)
 	local self = setmetatable({width = width, height = height, grid = {}}, Maze)
 
 	for y = 0, height - 1 do

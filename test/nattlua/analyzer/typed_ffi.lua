@@ -137,32 +137,27 @@ analyze[=[
 ]=]
 analyze[=[
     ffi.C = {}
-
 	local handle = ffi.typeof("struct {}")
 	local pointer = ffi.typeof("$*", handle)
-
 	local meta = {}
 	meta.__index = meta
+
 	do
 		local translate_mode = {
 			read = "r",
 			write = "w",
 			append = "a",
 		}
-
 		ffi.cdef("$ fopen(const char *, const char *);", pointer)
-		function meta:__new(file_name: string, mode: "write" | "read" | "append")
+
+		function meta:__new(file_name: string, mode: ref ("write" | "read" | "append"))
 			mode = translate_mode[mode]
-
-			attest.equal<|file_name, "YES"|>
+			attest.equal<|file_name, string|>
 			attest.equal<|mode, "w"|>
-
 			local f = ffi.C.fopen(file_name, mode)
-			
-			if f == nil then
-				return nil, "cannot open file"
-			end
-			
+
+			if f == nil then return nil, "cannot open file" end
+
 			return f
 		end
 
@@ -171,14 +166,15 @@ analyze[=[
 		end
 
 		ffi.cdef("int fclose($);", pointer)
+
 		function meta:close()
 			return ffi.C.fclose(self)
 		end
 	end
 
 	ffi.metatype(handle, meta)
-
 	local f = handle("YES", "write")
+
 	if f then
 		local int = f:close()
 		attest.equal<|int, number|>

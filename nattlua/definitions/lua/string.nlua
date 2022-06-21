@@ -228,7 +228,10 @@ analyzer function ^string.gsub(
 
 			return string.gsub(str, pattern, out, max_replacements)
 		else
-			replacement:SetInputSignature(types.Tuple({types.String()}):SetRepeat(math.huge))
+			if not replacement:IsExplicitInputSignature() then
+				replacement:SetInputSignature(types.Tuple({types.String()}):SetRepeat(math.huge))
+			end
+
 			replacement:SetCalled(false)
 			return string.gsub(
 				str,

@@ -139,6 +139,8 @@ local function check_input(self, obj, input)
 
 			if function_node.self_call then i = i + 1 end
 
+			if i > input_signature_length then break end
+
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
 			self:CreateLocalValue(identifier, Any())
@@ -278,10 +280,20 @@ local function check_input(self, obj, input)
 		then
 			mutate_type(self, i, arg, contract, input)
 		elseif not contract:IsReferenceArgument() then
-			-- if it's a ref argument we pass the incoming value
-			local t = contract:Copy()
-			t:SetContract(contract)
-			input:Set(i, t)
+			local doit = true
+
+			if contract.Type == "union" then
+				local t = contract:GetType("table")
+
+				if t and t.potential_self then doit = false end
+			end
+
+			if doit then
+				-- if it's a ref argument we pass the incoming value
+				local t = contract:Copy()
+				t:SetContract(contract)
+				input:Set(i, t)
+			end
 		end
 	end
 
@@ -400,6 +412,7 @@ return function(META)
 				local generic_type = call_expression.expressions_typesystem and
 					call_expression.expressions_typesystem[i] or
 					nil
+
 				if generic_type then
 					local T = self:AnalyzeExpression(generic_type)
 					self:CreateLocalValue(generic_upvalue.value.value, T)
@@ -419,7 +432,19 @@ return function(META)
 				if identifier.value.value == "..." then
 					self:CreateLocalValue(identifier.value.value, input:Slice(argi))
 				else
-					self:CreateLocalValue(identifier.value.value, input:Get(argi) or Nil())
+					local val
+					val = val or input:Get(argi)
+
+					if not val then
+						val = Nil()
+						local arg = obj:GetInputSignature():Get(argi)
+
+						if arg and arg:IsReferenceArgument() then
+							val:SetReferenceArgument(true)
+						end
+					end
+
+					self:CreateLocalValue(identifier.value.value, val)
 				end
 			end
 		end

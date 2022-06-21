@@ -424,24 +424,26 @@ analyze[[
 analyze[[
     local meta = {}
     meta.__index = meta
-
-    function meta:Foo(a: number)
-        return self.foo + 1
-    end
-
+    
     local function ctor1()
         return setmetatable({foo = 1}, meta)
     end
-
+    
     local function ctor2()
         local self = {}
         self.foo = 2
         setmetatable(self, meta)
         return self
     end
-
+    
     §analyzer:AnalyzeUnreachableCode()
-
+    
+    function meta:Foo(a: number)
+        return self.foo + 1
+    end
+    
+    §analyzer:AnalyzeUnreachableCode()
+    
     local type ret = return_type<|meta.Foo|>[1]
     attest.equal<|ret, 2 | 3|>
 ]]

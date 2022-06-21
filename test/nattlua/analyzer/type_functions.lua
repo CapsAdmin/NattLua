@@ -420,7 +420,7 @@ analyze[[
     META.__index = META
     META.MyField = true
 
-    local function extend(tbl: mutable {
+    local function extend(tbl: mutable ref {
         __index = self,
         MyField = boolean,
         [string] = any,

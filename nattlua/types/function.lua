@@ -59,8 +59,8 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	copy:SetFunctionBodyNode(self:GetFunctionBodyNode())
 	copy:SetInputIdentifiers(self:GetInputIdentifiers())
 	copy:SetCalled(self:IsCalled())
-	--copy:SetExplicitInputSignature(self:IsExplicitInputSignature())
-	--copy:SetExplicitOutputSignature(self:IsExplicitOutputSignature())
+	copy:SetExplicitInputSignature(self:IsExplicitInputSignature())
+	copy:SetExplicitOutputSignature(self:IsExplicitOutputSignature())
 	copy:SetArgumentsInferred(self:IsArgumentsInferred())
 	copy:SetPreventInputArgumentExpansion(self:GetPreventInputArgumentExpansion())
 	return copy
