@@ -504,7 +504,10 @@ end
 
 function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete--[[#: boolean | nil]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
-		if context:GetCurrentAnalyzer() and context:GetCurrentAnalyzer():GetCurrentAnalyzerEnvironment() == "typesystem" then
+		if
+			context:GetCurrentAnalyzer() and
+			context:GetCurrentAnalyzer():GetCurrentAnalyzerEnvironment() == "typesystem"
+		then
 			self["Set" .. key:GetData():sub(2)](self, val)
 			return true
 		end
@@ -589,13 +592,16 @@ end
 
 function META:Get(key--[[#: TBaseType]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
-		if context:GetCurrentAnalyzer() and context:GetCurrentAnalyzer():GetCurrentAnalyzerEnvironment() == "typesystem" then
+		if
+			context:GetCurrentAnalyzer() and
+			context:GetCurrentAnalyzer():GetCurrentAnalyzerEnvironment() == "typesystem"
+		then
 			local val = assert(self["Get" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self)
-			
+
 			if not val then
 				return type_errors.other("missing value on table " .. key:GetData())
 			end
-			
+
 			return val
 		end
 	end
