@@ -53,3 +53,24 @@ analyze(
 ]],
 	"2 is not the same type as string"
 )
+analyze[[
+    type VirtualNode = string | {string, {[string] = any}, [3 .. inf] = CurrentType<|"union"|>}
+    local myNode: VirtualNode = {
+        "div",
+        {id = "parent"},
+        {"div", {id = "first-child"}, "I'm the first child"},
+        {"div", {id = "second-child"}, "I'm the second child"},
+    }
+]]
+analyze(
+	[[
+    type VirtualNode = string | {string, {[string] = any}, [3 .. inf] = CurrentType<|"union"|>}
+    local myNode: VirtualNode = {
+        "div",
+        {id = "parent"},
+        {"div", {id = "first-child"}, "I'm the first child"},
+        {"div", {1,id = "second-child"}, "I'm the second child"},
+    }
+]],
+	"1 is not the same type as string"
+)
