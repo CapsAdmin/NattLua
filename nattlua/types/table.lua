@@ -684,25 +684,27 @@ function META:CopyLiteralness(from)
 
 	if self:Equal(from) then return true end
 
-	for _, keyval_from in ipairs(from:GetData()) do
-		local keyval, reason = self:FindKeyVal(keyval_from.key)
+	if from.Type == "table" then
+		for _, keyval_from in ipairs(from:GetData()) do
+			local keyval, reason = self:FindKeyVal(keyval_from.key)
 
-		if not keyval then return type_errors.other(reason) end
+			if not keyval then return type_errors.other(reason) end
 
-		if keyval_from.key.Type == "table" then
-			self.suppress = true
-			keyval.key:CopyLiteralness(keyval_from.key) -- TODO: never called
-			self.suppress = false
-		else
-			keyval.key:SetLiteral(keyval_from.key:IsLiteral())
-		end
+			if keyval_from.key.Type == "table" then
+				self.suppress = true
+				keyval.key:CopyLiteralness(keyval_from.key) -- TODO: never called
+				self.suppress = false
+			else
+				keyval.key:SetLiteral(keyval_from.key:IsLiteral())
+			end
 
-		if keyval_from.val.Type == "table" then
-			self.suppress = true
-			keyval.val:CopyLiteralness(keyval_from.val)
-			self.suppress = false
-		else
-			keyval.val:SetLiteral(keyval_from.val:IsLiteral())
+			if keyval_from.val.Type == "table" then
+				self.suppress = true
+				keyval.val:CopyLiteralness(keyval_from.val)
+				self.suppress = false
+			else
+				keyval.val:SetLiteral(keyval_from.val:IsLiteral())
+			end
 		end
 	end
 
