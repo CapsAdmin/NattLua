@@ -167,6 +167,32 @@ do
 		return str
 	end
 
+    
+    local function string_lengthsplit(str, len)
+        if #str > len then
+            local tbl = {}
+
+            local max = math.floor(#str/len)
+
+            for i = 0, max do
+
+                local left = i * len + 1
+                local right = (i * len) + len
+                local res = str:sub(left, right)
+
+                if res ~= "" then
+                    table.insert(tbl, res)
+                end
+            end
+
+            return tbl
+        end
+
+        return {str}
+    end
+
+    local MAX_WIDTH = 127
+
 	function helpers.BuildSourceCodePointMessage(
 		lua_code--[[#: string]],
 		path--[[#: nil | string]],
@@ -175,6 +201,27 @@ do
 		stop--[[#: number]],
 		size--[[#: number]]
 	)
+
+        do
+            local new_str = ""
+            local pos = 1
+            for i, chunk in ipairs(string_lengthsplit(lua_code, MAX_WIDTH)) do
+                if pos < start and i > 1 then
+                    start = start + 1
+                end
+
+                if pos < stop and i > 1 then
+                    stop = stop + 1
+                end
+
+                new_str = new_str .. chunk .. "\n"
+                pos = pos + #chunk
+
+            end
+
+            lua_code = new_str
+        end
+
 		size = size or 2
 		start = clamp(start or 1, 1, #lua_code)
 		stop = clamp(stop or 1, 1, #lua_code)
@@ -237,6 +284,8 @@ do
 		for _, line in ipairs(lines) do
 			if #line > longest_line then longest_line = #line end
 		end
+
+        longest_line = math.min(longest_line, MAX_WIDTH)
 
 		table.insert(
 			lines,
