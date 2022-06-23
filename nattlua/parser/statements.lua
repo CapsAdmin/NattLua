@@ -481,6 +481,40 @@ function META:ParseCallOrAssignmentStatement()
 	self:SuppressOnNode()
 	local left = self:ParseMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
 
+	if
+		(
+			self:IsValue("+") or
+			self:IsValue("-") or
+			self:IsValue("*") or
+			self:IsValue("/") or
+			self:IsValue("%") or
+			self:IsValue("^") or
+			self:IsValue("..")
+		) and
+		self:IsValue("=", 1)
+	then
+		-- roblox compound assignment
+		local op_token = self:ParseToken()
+		local eq_token = self:ParseToken()
+		local bop = self:StartNode("expression", "binary_operator")
+		bop.left = left[1]
+		bop.value = op_token
+		bop.right = self:ExpectRuntimeExpression(0)
+		self:EndNode(bop)
+		local node = self:StartNode("statement", "assignment", left[1])
+		node.tokens["="] = eq_token
+		node.left = left
+
+		for i, v in ipairs(node.left) do
+			v.is_left_assignment = true
+		end
+
+		node.right = {bop}
+		self:ReRunOnNode(node.left)
+		node = self:EndNode(node)
+		return node
+	end
+
 	if self:IsValue("=") then
 		local node = self:StartNode("statement", "assignment", left[1])
 		node.tokens["="] = self:ExpectValue("=")

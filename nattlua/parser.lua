@@ -339,11 +339,15 @@ function META:ParseStatement()
 		self:ParseLocalAnalyzerFunctionStatement() or
 		self:ParseLocalTypeAssignmentStatement() or
 		self:ParseLocalDestructureAssignmentStatement() or
-		self.TealCompat and
-		self:ParseLocalTealRecord()
+		(
+			self.TealCompat and
+			self:ParseLocalTealRecord()
+		)
 		or
-		self.TealCompat and
-		self:ParseLocalTealEnumStatement()
+		(
+			self.TealCompat and
+			self:ParseLocalTealEnumStatement()
+		)
 		or
 		self:ParseLocalAssignmentStatement() or
 		self:ParseTypeAssignmentStatement() or

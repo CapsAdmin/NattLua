@@ -959,7 +959,11 @@ do -- runtime
 		self:check_integer_division_operator(self:GetToken())
 
 		while
-			runtime_syntax:GetBinaryOperatorInfo(self:GetToken()) and
+			(
+				runtime_syntax:GetBinaryOperatorInfo(self:GetToken()) and
+				not self:IsValue("=", 1)
+			)
+			and
 			runtime_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
 		do
 			local left_node = node
