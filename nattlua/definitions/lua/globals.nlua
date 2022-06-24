@@ -17,6 +17,23 @@ type ipairs = function=(t: Table)>(empty_function, Table, number)
 type tonumber = function=(e: number | string, base: number | nil)>(number | nil)
 _G.arg = _  as List<|any|>
 
+analyzer function setfenv(val: Function, table: Table)
+	if val and (val:IsLiteral() or val.Type == "function") then
+		if val.Type == "number" then
+			analyzer:SetEnvironmentOverride(analyzer.environment_nodes[val:GetData()], table, "runtime")
+		elseif val:GetFunctionBodyNode() then
+			analyzer:SetEnvironmentOverride(val:GetFunctionBodyNode(), table, "runtime")
+		end
+	end
+end
+
+analyzer function getfenv(func: Function | nil)
+	if not func then
+		return analyzer:GetDefaultEnvironment("typesystem")
+	end
+	return analyzer:GetGlobalEnvironmentOverride(func:GetFunctionBodyNode() or func, "runtime")
+end
+
 analyzer function type_print(...: ...any)
 	print(...)
 end

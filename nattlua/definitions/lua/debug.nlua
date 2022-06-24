@@ -35,19 +35,7 @@ type debug = {
 	setuservalue = function=(udata: userdata, value: Table | nil)>(userdata),
 }
 
-analyzer function debug.setfenv(val: Function, table: Table)
-	if val and (val:IsLiteral() or val.Type == "function") then
-		if val.Type == "number" then
-			analyzer:SetEnvironmentOverride(analyzer.environment_nodes[val:GetData()], table, "runtime")
-		elseif val:GetFunctionBodyNode() then
-			analyzer:SetEnvironmentOverride(val:GetFunctionBodyNode(), table, "runtime")
-		end
-	end
-end
 
-analyzer function debug.getfenv(func: Function)
-	return analyzer:GetGlobalEnvironmentOverride(func:GetFunctionBodyNode() or func, "runtime")
-end
 
-type getfenv = debug.getfenv
-type setfenv = debug.setfenv
+type debug.getfenv = getfenv
+type debug.setfenv = setfenv
