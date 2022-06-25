@@ -23,13 +23,14 @@ end
 META:GetSet("Data", nil--[[# as nil | any]])
 
 function META:GetLuaType()
+	local contract = self:GetContract()
 	if
-		self.Contract and
-		self.Contract.TypeOverride and
-		self.Contract.TypeOverride.Type == "string" and
-		self.Contract.TypeOverride.Data
+		contract and
+		contract.TypeOverride and
+		contract.TypeOverride.Type == "string" and
+		contract.TypeOverride.Data
 	then
-		return self.Contract.TypeOverride.Data
+		return contract.TypeOverride.Data
 	end
 
 	return self.TypeOverride and
@@ -245,7 +246,7 @@ do
 	META:GetSet("MetaTable", nil--[[# as TBaseType | nil]])
 
 	function META:GetMetaTable()
-		local contract = self.Contract
+		local contract = self:GetContract()
 
 		if contract and contract.MetaTable then return contract.MetaTable end
 
