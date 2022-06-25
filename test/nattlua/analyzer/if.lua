@@ -1428,6 +1428,16 @@ analyze[[
         end
     end
 ]]
+analyze[[
+    local function last_error()
+        if math.random() > 0.5 then return "hello" end
+    end
+    
+    if math.random() > 0.5 then return end
+    
+    local str = last_error()
+    attest.equal(str, _  as nil | "hello")
+]]
 
 if false then
 	analyze[==[

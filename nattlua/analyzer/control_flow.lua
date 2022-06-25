@@ -326,11 +326,10 @@ return function(META)
 		for _, frame in ipairs(self:GetCallStack()) do
 			local parent_scope = frame.scope
 
-			if
-				not parent_scope:IsCertain() or
-				parent_scope.uncertain_function_return == true
-			then
-				if parent_scope:IsCertainFromScope(scope) then return false end
+			if parent_scope.uncertain_function_return then return true end
+
+			if not parent_scope:IsCertain() and parent_scope:IsCertainFromScope(scope) then
+				return false
 			end
 		end
 
