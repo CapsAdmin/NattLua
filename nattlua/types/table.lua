@@ -778,6 +778,11 @@ end
 function META:HasLiteralKeys()
 	if self.suppress then return true end
 
+	local contract =self:GetContract()
+	if contract and contract ~= self and not contract:HasLiteralKeys() then
+		return false
+	end
+
 	for _, v in ipairs(self:GetData()) do
 		if
 			v.val ~= self and

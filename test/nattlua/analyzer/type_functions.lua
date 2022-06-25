@@ -575,3 +575,14 @@ analyze[[
     attest.equal(b, _ as any)
     attest.equal(c, _ as any)
 ]]
+analyze[[
+    local function AddSymbols(tbl: List<|string|>)
+        for k,v in pairs(tbl) do
+            attest.equal(k, _ as number)
+            attest.equal(v, _ as string)
+        end
+    end
+    
+    local t: {[1] = nil | string} = {"hello"}
+    AddSymbols(t)
+]]
