@@ -1,40 +1,37 @@
 local T = require("test.helpers")
 local analyze = T.RunCode
-
-if false then
-	analyze[[
+analyze[[
         local function test(): ErrorReturn<|{foo = number}|>
-            if math.random() > 0.5 then
-                return {foo = number}
-            end
+            if math.random() > 0.5 then return {foo = 2} end
+        
             return nil, "uh oh"
-        end    
+        end
+        
+        local x, y = test()
+        
+        attest.equal(x, _ as nil | {foo = number})
+        attest.equal(y, _ as nil | string)
     ]]
-end
+analyze[[
 
-if false then
-	analyze[[
-
-        local function last_error()
-            if math.random() > 0.5 then
-                return "strerror returns null"
-            end
-
-            if math.random() > 0.5 then
-                return _ as string
-            end
+    local function last_error()
+        if math.random() > 0.5 then
+            return "strerror returns null"
         end
 
-        local function test(): ErrorReturn<|{foo = number}|>
-            if math.random() > 0.5 then
-                return {foo = number}
-            end
-            return nil, last_error()
-        end    
+        if math.random() > 0.5 then
+            return _ as string
+        end
+    end
 
-    ]]
-end
+    local function test(): ErrorReturn<|{foo = number}|>
+        if math.random() > 0.5 then
+            return {foo = number}
+        end
+        return nil, last_error()
+    end    
 
+]]
 analyze[[
     local function test(): (1,"lol1") | (2,"lol2")
         return 2, "lol2"
