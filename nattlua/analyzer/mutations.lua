@@ -326,7 +326,7 @@ return function(META)
 
 						if mut.from_tracking then table.remove(obj.mutations, i) end
 					end
-				else
+				elseif obj.mutations then
 					for _, mutations in pairs(obj.mutations) do
 						for i = #mutations, 1, -1 do
 							local mut = mutations[i]

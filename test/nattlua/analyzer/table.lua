@@ -347,7 +347,7 @@ analyze[[
     attest.equal(tbl.foo, true)
 ]]
 analyze[[
-    local function fill(t: mutable {foo = boolean, bar = number})
+    local function fill(t: mutable ref {foo = boolean, bar = number})
         t.foo = true
     end
     
@@ -918,11 +918,13 @@ analyze[[
 
     attest.equal(tbl, {3, 2, 1})
 ]]
-
-analyze([[
+analyze(
+	[[
     local tbl = {1, 2, 3}
 
     table.sort(tbl, function(a, b)
         return _ as boolean
     end)
-]], "cannot sort literal table")
+]],
+	"cannot sort literal table"
+)

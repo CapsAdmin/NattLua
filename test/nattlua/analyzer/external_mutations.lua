@@ -58,7 +58,7 @@ pending[[
     attest.equal<|a, {foo = true} | {[string] = string}|>
 ]]
 analyze[[
-    local function mutate_table(tbl: mutable {foo = number})
+    local function mutate_table(tbl: mutable ref {foo = number})
         if math.random() > 0.5 then
             tbl.foo = 2
         end
@@ -73,7 +73,7 @@ analyze[[
     attest.equal(tbl.foo, _ as 1 | 2)
 ]]
 analyze[[
-    local function mutate_table(tbl: mutable {foo = number})
+    local function mutate_table(tbl: mutable ref {foo = number})
         tbl.foo = 2
     end
 
@@ -100,7 +100,7 @@ analyze(
 	"immutable contract"
 )
 analyze([[
-    local function mutate_table(tbl: mutable {lol = number})
+    local function mutate_table(tbl: mutable ref {lol = number})
         tbl.lol = 1
     end
     
@@ -111,7 +111,7 @@ analyze([[
     attest.equal(tbl.lol, 1)
 ]])
 analyze([[
-    local function mutate_table(tbl: mutable {lol = number})
+    local function mutate_table(tbl: mutable ref {lol = number})
         tbl.lol = 1
     end
     
@@ -191,7 +191,7 @@ analyze[[
     
 ]]
 analyze[[
-    local function mutate(tbl: mutable {foo = number, [string] = any})
+    local function mutate(tbl: mutable ref {foo = number, [string] = any})
         tbl.lol = true
         tbl.foo = 3
     end
