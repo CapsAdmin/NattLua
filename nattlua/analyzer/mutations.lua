@@ -172,51 +172,47 @@ local function get_value_from_scope(current_if_statement, mutations, scope, obj)
 		value = union:GetData()[1]
 
 		if obj.Type == "upvalue" then value:SetUpvalue(obj) end
+
+		return value
 	end
 
-	if value.Type == "union" then
-		local found_scope, data = scope:FindResponsibleConditionalScopeFromUpvalue(obj)
+	local found_scope, data = scope:FindResponsibleConditionalScopeFromUpvalue(obj)
 
-		if found_scope then
-			local stack = data.stack
+	if not found_scope or not data.stack then return value end
 
-			if stack then
-				if
-					found_scope:IsElseConditionalScope() or
-					(
-						found_scope ~= scope and
-						scope:IsPartOfTestStatementAs(found_scope)
-					)
-				then
-					local union = stack[#stack].falsy
+	local stack = data.stack
 
-					if union:GetLength() == 0 then
-						union = Union()
+	if
+		found_scope:IsElseConditionalScope() or
+		(
+			found_scope ~= scope and
+			scope:IsPartOfTestStatementAs(found_scope)
+		)
+	then
+		local union = stack[#stack].falsy
 
-						for _, val in ipairs(stack) do
-							union:AddType(val.falsy)
-						end
-					end
+		if union:GetLength() == 0 then
+			union = Union()
 
-					if obj.Type == "upvalue" then union:SetUpvalue(obj) end
-
-					return union
-				else
-					local union = Union()
-
-					for _, val in ipairs(stack) do
-						union:AddType(val.truthy)
-					end
-
-					if obj.Type == "upvalue" then union:SetUpvalue(obj) end
-
-					return union
-				end
+			for _, val in ipairs(stack) do
+				union:AddType(val.falsy)
 			end
 		end
+
+		if obj.Type == "upvalue" then union:SetUpvalue(obj) end
+
+		return union
 	end
 
-	return value
+	local union = Union()
+
+	for _, val in ipairs(stack) do
+		union:AddType(val.truthy)
+	end
+
+	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
+
+	return union
 end
 
 local function initialize_table_mutation_tracker(tbl, scope, key, hash)
