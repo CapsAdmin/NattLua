@@ -78,6 +78,9 @@ if is_coverage then
 end
 
 local function find_tests(path)
+	if path and path:sub(-5) == ".nlua" then
+		return {path}
+	end
 	local what = path
 	local path = "test/" .. ((what and what .. "/") or "nattlua/")
 	local found = {}
