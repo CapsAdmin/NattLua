@@ -28,9 +28,8 @@ analyzer function setfenv(val: Function, table: Table)
 end
 
 analyzer function getfenv(func: Function | nil)
-	if not func then
-		return analyzer:GetDefaultEnvironment("typesystem")
-	end
+	if not func then return analyzer:GetDefaultEnvironment("typesystem") end
+
 	return analyzer:GetGlobalEnvironmentOverride(func:GetFunctionBodyNode() or func, "runtime")
 end
 

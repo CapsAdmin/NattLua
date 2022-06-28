@@ -21,9 +21,7 @@ return {
 		for i = 1, 1000 do
 			local values = self:Assert(self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
 
-			if values.Type ~= "tuple" then
-				values = Tuple({values})
-			end	
+			if values.Type ~= "tuple" then values = Tuple({values}) end
 
 			if
 				not values:Get(1) or
