@@ -56,7 +56,9 @@ return {
 				self:CreateLocalValue(identifier.value.value, obj)
 			end
 
+			self:CreateAndPushScope():SetLoopIteration(i)
 			self:AnalyzeStatements(statement.statements)
+			self:PopScope()
 
 			if self._continue_ then self._continue_ = nil end
 

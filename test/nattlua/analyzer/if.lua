@@ -1438,6 +1438,15 @@ analyze[[
     local str = last_error()
     attest.equal(str, _  as nil | "hello")
 ]]
+analyze[[
+    local ffi = require("ffi")
+
+    do
+        assert(ffi.sizeof("int") == 4)
+    end
+
+    attest.truthy(ffi.sizeof)
+]]
 
 if false then
 	analyze[==[

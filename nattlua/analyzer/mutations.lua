@@ -7,7 +7,7 @@ local ipairs = ipairs
 local table = _G.table
 local Union = require("nattlua.types.union").Union
 
-local function get_value_from_scope(current_if_statement, mutations, scope, obj)
+local function get_value_from_scope(mutations, scope, obj)
 	do
 		do
 			local last_scope
@@ -31,24 +31,13 @@ local function get_value_from_scope(current_if_statement, mutations, scope, obj)
 				(
 					scope:IsPartOfTestStatementAs(mut.scope) or
 					(
-						current_if_statement and
-						mut.scope.statement == current_if_statement
-					)
-					or
-					(
 						mut.from_tracking and
-						not mut.scope:IsCertainFromScope(scope)
-					)
-					or
-					(
-						obj.Type == "table" and
-						obj:GetContract() ~= mut.contract
+						not mut.scope:Contains(scope)
 					)
 				)
 				and
 				scope ~= mut.scope
 			then
-				-- not inside the same if statement"
 				table.remove(mutations, i)
 			end
 		end
@@ -254,7 +243,7 @@ return function(META)
 
 		local scope = self:GetScope()
 		initialize_table_mutation_tracker(tbl, scope, key, hash)
-		return get_value_from_scope(self.current_if_statement, shallow_copy(tbl.mutations[hash]), scope, tbl)
+		return get_value_from_scope(shallow_copy(tbl.mutations[hash]), scope, tbl)
 	end
 
 	function META:MutateTable(tbl, key, val, scope_override, from_tracking)
@@ -280,7 +269,7 @@ return function(META)
 
 	function META:GetMutatedUpvalue(upvalue)
 		upvalue.mutations = upvalue.mutations or {}
-		return get_value_from_scope(self.current_if_statement, shallow_copy(upvalue.mutations), self:GetScope(), upvalue)
+		return get_value_from_scope(shallow_copy(upvalue.mutations), self:GetScope(), upvalue)
 	end
 
 	function META:MutateUpvalue(upvalue, val, scope_override, from_tracking)

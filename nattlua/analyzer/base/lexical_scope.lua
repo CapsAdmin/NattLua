@@ -230,14 +230,26 @@ function META:SetStatement(statement)
 	self.statement = statement
 end
 
+function META:SetLoopIteration(i)
+	self.loop_iteration = i
+end
+
 function META:GetStatementType()
 	return self.statement and self.statement.kind
 end
 
 function META.IsPartOfTestStatementAs(a, b)
-	return a:GetStatementType() == "if" and
+	local yes = a:GetStatementType() == "if" and
 		b:GetStatementType() == "if" and
 		a.statement == b.statement
+
+	if yes then
+		local a_iteration = a:GetMemberInParents("loop_iteration")
+		local b_iteration = b:GetMemberInParents("loop_iteration")
+		return a_iteration == b_iteration
+	end
+
+	return yes
 end
 
 function META:FindFirstConditionalScope()

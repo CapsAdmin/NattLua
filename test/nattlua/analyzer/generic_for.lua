@@ -56,3 +56,17 @@ analyze[[
 
     attest.equal(sum, _ as number)
 ]]
+analyze[[
+    local e = {
+        SOCK_SEQPACKET = 5,
+        SOCK_DCCP = 6,
+    }
+    local what = "SOCK_"
+    
+    for k, v in pairs(e) do
+        if k:sub(0, #what) == what then
+            local lol = k:sub(#what + 1)    
+            lol:lower()
+        end
+    end
+]]

@@ -157,7 +157,7 @@ return function(META)
 
 			self:ApplyMutationsAfterReturn(
 				self:GetScope(),
-				nil,
+				self:GetScope():GetNearestFunctionScope(),
 				false,
 				self:GetTrackedUpvalues(old),
 				self:GetTrackedTables()
