@@ -11,12 +11,12 @@ local True = require("nattlua.types.symbol").True
 local Any = require("nattlua.types.any").Any
 local Tuple = require("nattlua.types.tuple").Tuple
 
-local function metatable_function(self, meta_method, l)
+local function metatable_function(self, meta_method, l, node)
 	if l:GetMetaTable() then
 		meta_method = LString(meta_method)
 		local func = l:GetMetaTable():Get(meta_method)
 
-		if func then return self:Assert(self:Call(func, Tuple({l})):Get(1)) end
+		if func then return self:Assert(self:Call(func, Tuple({l}), node):Get(1)) end
 	end
 end
 
@@ -106,15 +106,15 @@ local function Prefix(self, node, r)
 	end
 
 	if op == "-" then
-		local res = metatable_function(self, "__unm", r)
+		local res = metatable_function(self, "__unm", r, node)
 
 		if res then return res end
 	elseif op == "~" then
-		local res = metatable_function(self, "__bxor", r)
+		local res = metatable_function(self, "__bxor", r, node)
 
 		if res then return res end
 	elseif op == "#" then
-		local res = metatable_function(self, "__len", r)
+		local res = metatable_function(self, "__len", r, node)
 
 		if res then return res end
 	end
