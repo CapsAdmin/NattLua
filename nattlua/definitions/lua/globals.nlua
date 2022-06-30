@@ -357,7 +357,11 @@ analyzer function error(msg: string, level: number | nil)
 	end
 end
 
-type type_error = error
+analyzer function type_error(msg: literal string, level: literal (number | nil))
+	if analyzer.processing_deferred_calls then return end
+
+	analyzer:ThrowError(msg:GetData(), nil, nil, level and level:GetData() or nil)
+end
 
 analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...any)
 	local diagnostics_index = #analyzer:GetDiagnostics()
