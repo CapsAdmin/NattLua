@@ -414,7 +414,12 @@ do
         uint16_t ntohs(uint16_t netshort);
     ]]
 
-	function socket.getaddrinfo(node_name: nil | string, service_name: nil | string, hints: any, result: any)
+	function socket.getaddrinfo(
+		node_name: nil | string,
+		service_name: nil | string,
+		hints: ffi.get_type<|"struct addrinfo *"|>,
+		result: ffi.get_type<|"struct addrinfo **"|>
+	)
 		local ret = C.getaddrinfo(node_name, service_name, hints, result)
 
 		if ret == 0 then return true end
@@ -423,11 +428,11 @@ do
 	end
 
 	function socket.getnameinfo(
-		address: any,
+		address: ffi.get_type<|"struct sockaddr*"|> ~ nil,
 		length: number,
-		host: any,
+		host: ffi.get_type<|"char *"|> ~ nil,
 		hostlen: number,
-		serv: any,
+		serv: ffi.get_type<|"char *"|> ~ nil,
 		servlen: number,
 		flags: number
 	)
@@ -441,7 +446,12 @@ do
 	do
 		ffi.cdef[[const char *inet_ntop(int __af, const void *__cp, char *__buf, unsigned int __len);]]
 
-		function socket.inet_ntop(family: number, addrinfo: any, strptr: any, strlen: number)
+		function socket.inet_ntop(
+			family: number,
+			addrinfo: ffi.get_type<|"void*"|>,
+			strptr: ffi.get_type<|"char*"|>,
+			strlen: number
+		)
 			if C.inet_ntop(family, addrinfo, strptr, strlen) == nil then
 				return nil, socket.lasterror()
 			end
@@ -840,7 +850,11 @@ timeout_messages[errno.EINPROGRESS] = true
 timeout_messages[errno.EAGAIN] = true
 timeout_messages[errno.EWOULDBLOCK] = true
 
-function M.poll(s: any, flags: List<|string|>, timeout: nil | number)
+function M.poll(
+	s: ffi.get_type<|"struct pollfd*"|> ~ nil,
+	flags: List<|string|>,
+	timeout: nil | number
+)
 	local pfd = ffi.new(
 		"struct pollfd[1]",
 		{
@@ -942,7 +956,7 @@ function M.get_address_info(
 	local ok, err = socket.getaddrinfo(
 		data.host ~= "*" and data.host or nil,
 		data.service and tostring(data.service) or nil,
-		hints,
+		hints  as any,
 		out
 	)
 
@@ -1019,7 +1033,6 @@ do
 		on_connect = nil | function=(self, string | AddressInfo, string)>(),
 		on_send = nil | function=(self, string, number)>(),
 		on_receive = nil | function=(self, cdata, number, number)>(),
-		on_close = nil | function=(self)>(),
 		debug = true | nil,
 	}
 	type meta.@Self.@Name = "TSocket"
@@ -1054,8 +1067,7 @@ do
 	end
 
 	function meta:close()
-		if self.on_close then --self:on_close() TODO: any 
-		end
+		if self.on_close then (self  as any):on_close() end
 
 		return socket.close(self.fd)
 	end
@@ -1402,7 +1414,7 @@ function M.bind(host: string, service: string)
 	if not server then return server, err, num end
 
 	server:set_option("reuseaddr", 1)
-	local ok, err, num = server:bind(info  as any)
+	local ok, err, num = server:bind(info)
 
 	if not ok then return ok, err, num end
 
