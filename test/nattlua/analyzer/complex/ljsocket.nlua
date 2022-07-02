@@ -794,8 +794,8 @@ local TCP = capture_flags("TCP_")
 local POLL = capture_flags("POLL")
 
 local function table_to_flags(
-	flags: List<|string|> | string,
-	valid_flags: ref Map<|any, any|>,
+	valid_flags: ref Map<|string, number|>,
+	flags: List<|keysof<|valid_flags|>|> | keysof<|valid_flags|>,
 	operation: ref function=(number, number)>(number)
 )
 	if type(flags) == "string" then flags = {flags} end
@@ -804,11 +804,7 @@ local function table_to_flags(
 	local out = 0
 
 	for _, v in ipairs(flags) do
-		local flag = tonumber(valid_flags[v] as string)
-
-		if not flag then error("invalid flag " .. tostring(flag), 2) end
-
-		out = operation(out, flag)
+		out = operation(out, valid_flags[v])
 	end
 
 	return out
@@ -860,7 +856,7 @@ function M.poll(
 		{
 			{
 				fd = s.fd,
-				events = table_to_flags(flags, POLL.lookup, bit.bor),
+				events = table_to_flags(POLL.lookup, flags, bit.bor),
 				revents = 0,
 			},
 		}
@@ -947,7 +943,7 @@ function M.get_address_info(
 				ai_family = data.family and AF.strict_lookup(data.family) or nil,
 				ai_socktype = data.socket_type and SOCK.strict_lookup(data.socket_type) or nil,
 				ai_protocol = data.protocol and IPPROTO.strict_lookup(data.protocol) or nil,
-				ai_flags = data.flags and table_to_flags(data.flags, AI.lookup, bit.bor) or nil,
+				ai_flags = data.flags and table_to_flags(AI.lookup, data.flags, bit.bor) or nil,
 			}
 		)
 	end
@@ -1164,49 +1160,6 @@ do
 		return nil, "timeout"
 	end
 
-	function meta:get_peer_name()
-		local data = ffi.new("struct sockaddr_in")
-		local len = ffi.new("unsigned int[1]", ffi.sizeof(data))
-		local ok, err, num = socket.getpeername(self.fd, ffi.cast("struct sockaddr *", data), len)
-
-		if not ok then return ok, err, num end
-
-		local cstr = socket.inet_ntoa(data.sin_addr)
-
-		if not cstr then return false, socket.lasterror() end
-
-		return ffi.string(cstr), socket.ntohs(data.sin_port)
-	end
-
-	function meta:get_name()
-		local data = ffi.new("struct sockaddr_in")
-		local len = ffi.new("unsigned int[1]", ffi.sizeof(data))
-		local ok, err, num = socket.getsockname(self.fd, ffi.cast("struct sockaddr *", data), len)
-
-		if not ok then return ok, err, num end
-
-		local cstr = socket.inet_ntoa(data.sin_addr)
-
-		if not cstr then return false, socket.lasterror() end
-
-		return ffi.string(cstr), socket.ntohs(data.sin_port)
-	end
-
-	function meta:is_connected()
-		local ip, service, num = self:get_peer_name()
-		local ip2, service2, num2 = self:get_name()
-
-		if not ip and (num == errno.ECONNRESET or num == errno.ENOTSOCK) then
-			return false, service, num
-		end
-
-		if ffi.os == "Windows" then
-			return ip ~= "0.0.0.0" and ip2 ~= "0.0.0.0" and service ~= 0 and service2 ~= 0
-		else
-			return ip and ip2 and service ~= 0 and service2 ~= 0
-		end
-	end
-
 	function meta:bind(host: nil | string | AddressInfo, service: string | number | nil)
 		if host == "*" then host = nil end
 
@@ -1278,6 +1231,49 @@ do
 		end
 
 		return nil, err, num
+	end
+
+	function meta:is_connected()
+		local ip, service, num = self:get_peer_name()
+		local ip2, service2, num2 = self:get_name()
+
+		if not ip and (num == errno.ECONNRESET or num == errno.ENOTSOCK) then
+			return false, service, num
+		end
+
+		if ffi.os == "Windows" then
+			return ip ~= "0.0.0.0" and ip2 ~= "0.0.0.0" and service ~= 0 and service2 ~= 0
+		else
+			return ip and ip2 and service ~= 0 and service2 ~= 0
+		end
+	end
+
+	function meta:get_peer_name()
+		local data = ffi.new("struct sockaddr_in")
+		local len = ffi.new("unsigned int[1]", ffi.sizeof(data))
+		local ok, err, num = socket.getpeername(self.fd, ffi.cast("struct sockaddr *", data), len)
+
+		if not ok then return ok, err, num end
+
+		local cstr = socket.inet_ntoa(data.sin_addr)
+
+		if not cstr then return false, socket.lasterror() end
+
+		return ffi.string(cstr), socket.ntohs(data.sin_port)
+	end
+
+	function meta:get_name()
+		local data = ffi.new("struct sockaddr_in")
+		local len = ffi.new("unsigned int[1]", ffi.sizeof(data))
+		local ok, err, num = socket.getsockname(self.fd, ffi.cast("struct sockaddr *", data), len)
+
+		if not ok then return ok, err, num end
+
+		local cstr = socket.inet_ntoa(data.sin_addr)
+
+		if not cstr then return false, socket.lasterror() end
+
+		return ffi.string(cstr), socket.ntohs(data.sin_port)
 	end
 
 	local default_flags = 0
