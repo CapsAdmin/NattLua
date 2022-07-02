@@ -106,7 +106,10 @@ return {
 				if self:HasMutations(obj) then
 					local tracked = self:GetMutatedTableValue(obj, key)
 
-					if tracked then return tracked end
+					if tracked then
+						self:TrackTableIndex(obj, key, tracked)
+						return tracked
+					end
 				end
 
 				self:TrackTableIndex(obj, key, val)

@@ -1063,7 +1063,7 @@ do
 	end
 
 	function meta:close()
-		if self.on_close then (self  as any):on_close() end
+		if self.on_close then self:on_close() end
 
 		return socket.close(self.fd)
 	end

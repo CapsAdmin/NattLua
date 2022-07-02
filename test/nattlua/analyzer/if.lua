@@ -1447,6 +1447,33 @@ analyze[[
 
     attest.truthy(ffi.sizeof)
 ]]
+analyze[[
+    local meta = {}
+    meta.__index = meta
+    type meta.@Self = {
+        on_close = nil | function=(self)>(),
+        on_receive = nil | function=(self, string, number, number)>(),
+    }
+    type meta.@Self.@Name = "TSocket"
+
+    local function create()
+        return setmetatable({}, meta)
+    end
+
+    function meta:close()
+        if self.on_close then self:on_close() end
+    end
+
+    function meta:receive_from(size: number)
+        return self:receive(size)
+    end
+
+    function meta:receive(size: number)
+        if self.on_receive then return self:on_receive("hello", 1, size) end
+
+        if math.random() > 0.5 then self:close() end
+    end
+]]
 
 if false then
 	analyze[==[
