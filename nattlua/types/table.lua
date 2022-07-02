@@ -695,7 +695,7 @@ function META:CopyLiteralness(from)
 				keyval.key:CopyLiteralness(keyval_from.key) -- TODO: never called
 				self.suppress = false
 			else
-				keyval.key:SetLiteral(keyval_from.key:IsLiteral())
+				keyval.key:CopyLiteralness(keyval_from.key)
 			end
 
 			if keyval_from.val.Type == "table" then
@@ -703,7 +703,7 @@ function META:CopyLiteralness(from)
 				keyval.val:CopyLiteralness(keyval_from.val)
 				self.suppress = false
 			else
-				keyval.val:SetLiteral(keyval_from.val:IsLiteral())
+				keyval.val:CopyLiteralness(keyval_from.val)
 			end
 		end
 	end
@@ -778,7 +778,8 @@ end
 function META:HasLiteralKeys()
 	if self.suppress then return true end
 
-	local contract =self:GetContract()
+	local contract = self:GetContract()
+
 	if contract and contract ~= self and not contract:HasLiteralKeys() then
 		return false
 	end

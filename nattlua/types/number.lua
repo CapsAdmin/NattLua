@@ -91,11 +91,21 @@ end
 function META:CopyLiteralness(num--[[#: TNumber]])
 	if num.Type == "number" and num:GetMax() then
 		if self:IsSubsetOf(num) then
+			if num:IsReferenceArgument() then
+				self:SetLiteral(true)
+				self:SetReferenceArgument(true)
+			end
+
 			self:SetData(num:GetData())
 			self:SetMax(num:GetMax())
 		end
 	else
-		self:SetLiteral(num:IsLiteral())
+		if num:IsReferenceArgument() then
+			self:SetLiteral(true)
+			self:SetReferenceArgument(true)
+		else
+			self:SetLiteral(num:IsLiteral())
+		end
 	end
 end
 

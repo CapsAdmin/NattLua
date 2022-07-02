@@ -24,6 +24,7 @@ META:GetSet("Data", nil--[[# as nil | any]])
 
 function META:GetLuaType()
 	local contract = self:GetContract()
+
 	if
 		contract and
 		contract.TypeOverride and
@@ -170,7 +171,12 @@ do
 	META:IsSet("Literal", false--[[# as boolean]])
 
 	function META:CopyLiteralness(obj--[[#: TBaseType]])
-		self:SetLiteral(obj:IsLiteral())
+		if obj:IsReferenceArgument() then
+			self:SetLiteral(true)
+			self:SetReferenceArgument(true)
+		else
+			self:SetLiteral(obj:IsLiteral())
+		end
 	end
 end
 

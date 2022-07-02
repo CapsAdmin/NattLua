@@ -39,7 +39,7 @@ analyze([[local a: {[number] = any} = {foo = 1}]], [[has no field "foo"]])
 -- {[1 .. inf]: any}
 check(
 	analyze[[local a: {[1 .. inf] = any} = {[1234] = 1}]],
-	"{ [1234 as 1..inf] = number as any }"
+	"{ [1..inf] = number as any }"
 )
 analyze([[local a: {[1 .. inf] = any} = {[-1234] = 1}]], [[has no field %-1234]])
 analyze[[

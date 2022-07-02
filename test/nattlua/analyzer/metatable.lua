@@ -801,3 +801,52 @@ analyze[[
     lol()
 
 ]]
+analyze(
+	[[
+
+    type meta = {}
+    type meta.@Self = {
+        pointer = ref boolean,
+        ffi_name = ref string,
+        fields = {[string] = number | self | string},
+    }
+    
+    function meta:__index<|key: string|>
+        local type val = rawget<|self, key|>
+    
+        if val then return val end
+    
+        type_error<|("%q has no member named %q"):format(self.ffi_name, key), 2|>
+    end
+    
+    function meta:__add<|other: number|>
+        if self.pointer then return self end
+    
+        type_error<|("attempt to perform arithmetic on %q and %q"):format(self.ffi_name, TypeName<|other|>), 2|>
+    end
+    
+    function meta:__sub<|other: number|>
+        if self.pointer then return self end
+    
+        type_error<|("attempt to perform arithmetic on %q and %q"):format(self.ffi_name, TypeName<|other|>), 2|>
+    end
+    
+    function meta:__len<||>
+        type_error<|("attempt to get length of %q"):format(self.ffi_name), 2|>
+    end
+    
+    local function CData<|data: Table, name: string, pointer: boolean|>
+        local type self = setmetatable<|{
+            pointer = pointer,
+            ffi_name = name,
+            fields = data,
+        }, meta|>
+        return self
+    end
+    
+    local x = {} as CData<|{foo = number}, "struct 66", false|>
+    local y = x + 2
+
+]],
+	"x %+ 2.+attempt to perform arithmetic on"
+)
