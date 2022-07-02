@@ -1076,38 +1076,40 @@ do
 		return ok, err, num
 	end
 
-	function meta:set_option(
-		key: keysof<|SO.lookup|> | keysof<|TCP.lookup|>,
-		val: boolean | number | cdata,
-		level: "tcp" | "socket" | nil
-	)
-		level = level or "socket"
+	do
+		local function cast_value(val: boolean | number | cdata)
+			if type(val) == "boolean" then
+				return ffi.new("int[1]", val and 1 or 0)
+			elseif type(val) == "number" then
+				return ffi.new("int[1]", val)
+			elseif type(val) == "cdata" then
+				return val
+			end
 
-		if type(val) == "boolean" then
-			val = ffi.new("int[1]", val and 1 or 0)
-		elseif type(val) == "number" then
-			val = ffi.new("int[1]", val)
-		elseif type(val) ~= "cdata" then
-			error("unknown value type: " .. type(val))
+			error("unknown value type: " .. type(val), 3)
 		end
 
-		if level == "tcp" then
+		function meta:set_socket_option(key: keysof<|SO.lookup|>, val: boolean | number | cdata)
+			local val = cast_value(val)
 			return socket.setsockopt(
 				self.fd,
-				SOL.strict_lookup(level),
-				TCP.strict_lookup(key  as keysof<|TCP.lookup|>),
+				SOL.strict_lookup("socket"),
+				SO.strict_lookup(key),
 				ffi.cast("void *", val),
 				ffi.sizeof(val)
 			)
 		end
 
-		return socket.setsockopt(
-			self.fd,
-			SOL.strict_lookup(level),
-			SO.strict_lookup(key  as keysof<|SO.lookup|>),
-			ffi.cast("void *", val),
-			ffi.sizeof(val)
-		)
+		function meta:set_tcp_option(key: keysof<|TCP.lookup|>, val: boolean | number | cdata)
+			local val = cast_value(val)
+			return socket.setsockopt(
+				self.fd,
+				SOL.strict_lookup("tcp"),
+				TCP.strict_lookup(key),
+				ffi.cast("void *", val),
+				ffi.sizeof(val)
+			)
+		end
 	end
 
 	function meta:connect(host: string | AddressInfo, service: string)
@@ -1409,13 +1411,13 @@ function M.bind(host: string, service: string)
 
 	if not server then return server, err, num end
 
-	server:set_option("reuseaddr", 1)
+	server:set_socket_option("reuseaddr", 1)
 	local ok, err, num = server:bind(info)
 
 	if not ok then return ok, err, num end
 
-	server:set_option("sndbuf", 65536)
-	server:set_option("rcvbuf", 65536)
+	server:set_socket_option("sndbuf", 65536)
+	server:set_socket_option("rcvbuf", 65536)
 	return server
 end
 
