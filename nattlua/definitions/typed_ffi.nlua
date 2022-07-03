@@ -10,7 +10,7 @@ local analyzer function cast(node: any, args: any)
 				function(self, key)
 					-- i'm not really sure about this
 					-- boxed luajit ctypes seem to just get the metatable from the ctype
-					return analyzer:Assert(from:Get(key, from.Type == "union"))
+					return analyzer:Assert(analyzer:IndexOperator(from, key))
 				end,
 				{types.Any(), types.Any()},
 				{}
@@ -300,11 +300,9 @@ end
 
 analyzer function ffi.typeof(cdecl: string, ...: ...any)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-
 	local args = {...}
-	if args[1] and args[1].Type == "tuple" then
-		args = {args[1]:Unpack()}
-	end
+
+	if args[1] and args[1].Type == "tuple" then args = {args[1]:Unpack()} end
 
 	local declarations = assert(require("nattlua.other.cparser").parseString(cdecl:GetData(), {typeof = true}, args))
 	local ctype = env.typesystem.cast(declarations[#declarations].type, args)
@@ -323,11 +321,13 @@ analyzer function ffi.typeof(cdecl: string, ...: ...any)
 	if ctype.Type == "any" then return ctype end
 
 	local nilable_ctype = ctype:Copy()
+
 	if ctype.Type == "table" then
 		for _, keyval in ipairs(nilable_ctype:GetData()) do
 			keyval.val = types.Nilable(keyval.val)
 		end
 	end
+
 	if ctype.is_enum and ctype:GetMetaTable() then return ctype end
 
 	local old = ctype:GetContract()

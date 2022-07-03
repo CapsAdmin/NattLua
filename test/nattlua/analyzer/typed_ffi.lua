@@ -355,3 +355,14 @@ analyze[[
 		[number] = ffi.typeof<|"const char*"|> | nil | string
 	})
 ]]
+analyze[[
+	local ffi = require("ffi")
+	ffi.cdef([=[
+		struct foo {
+			char *str;
+		}
+	]=])
+	local foo = ffi.new("struct foo") as ffi.get_type<|"struct foo*"|> ~ nil
+
+	if foo.str then ffi.string(foo.str) end
+]]
