@@ -1,23 +1,24 @@
 local T = require("test.helpers")
 local analyze = T.RunCode
 local String = T.String
-local analyzer = analyze[[
+
+do
+	local analyzer = analyze[[
         -- index function
         local t = setmetatable({}, {__index = function(self, key) return 1 end})
         local a = t.lol
     ]]
-
-do
 	local a = analyzer:GetLocalOrGlobalValue(String("a"))
 	equal(1, a:GetData())
-	analyze[[
-        local meta = {} as {num = number, __index = self}
-
-        local a = setmetatable({}, meta)
-
-        attest.equal(a.num, _ as number)
-    ]]
 end
+
+analyze[[
+    local meta = {} as {num = number, __index = self}
+
+    local a = setmetatable({}, meta)
+
+    attest.equal(a.num, _ as number)
+]]
 
 do -- basic inheritance
 	local analyzer = analyze[[
