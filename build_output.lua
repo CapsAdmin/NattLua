@@ -17474,11 +17474,21 @@ return {
 					end
 
 					if index.Type == "function" then
+						local real_obj = obj
 						local obj, err = self:Call(index, Tuple({obj, key}), self.current_statement)
 
 						if not obj then return obj, err end
 
-						return obj:Get(1)
+						local val = obj:Get(1)
+
+						if val and (val.Type ~= "symbol" or val:GetData() ~= nil) then
+							if val.Type == "union" and val:CanBeNil() then
+								val:RemoveType(Nil())
+							end
+
+							self:TrackTableIndex(real_obj, key, val)
+							return val
+						end
 					end
 				end
 			end
