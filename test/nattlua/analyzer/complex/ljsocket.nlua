@@ -884,12 +884,7 @@ local function addrinfo_get_ip(self: AddressInfo)
 
 	local str = ffi.new("char[256]")
 	local addr = assert(
-		socket.inet_ntop(
-			AF.lookup[self.family],
-			self.addrinfo.ai_addr.sa_data,
-			str,
-			ffi.sizeof(str)
-		)
+		socket.inet_ntop(AF.lookup[self.family], self.addrinfo.ai_addr.sa_data, str, ffi.sizeof(str))
 	)
 	return ffi.string(addr)
 end
@@ -949,12 +944,12 @@ function M.get_address_info(
 		hints = ffi.new(
 			"struct addrinfo[1]",
 			{
-			{
-				ai_family = data.family and AF.strict_lookup(data.family) or nil,
-				ai_socktype = data.socket_type and SOCK.strict_lookup(data.socket_type) or nil,
-				ai_protocol = data.protocol and IPPROTO.strict_lookup(data.protocol) or nil,
-				ai_flags = data.flags and table_to_flags(AI.lookup, data.flags, bit.bor) or nil,
-			}
+				{
+					ai_family = data.family and AF.strict_lookup(data.family) or nil,
+					ai_socktype = data.socket_type and SOCK.strict_lookup(data.socket_type) or nil,
+					ai_protocol = data.protocol and IPPROTO.strict_lookup(data.protocol) or nil,
+					ai_flags = data.flags and table_to_flags(AI.lookup, data.flags, bit.bor) or nil,
+				},
 			}
 		)
 	end
@@ -984,11 +979,11 @@ end
 function M.find_first_address(
 	host: nil | string,
 	service: nil | string,
-	options: {
-		socket_type = keysof<|SOCK.lookup|>,
-		family = keysof<|AF.lookup|>,
-		flags = List<|keysof<|AI.lookup|>|> | nil,
-		protocol = keysof<|IPPROTO.lookup|>,
+	options: nil | {
+		socket_type = nil | keysof<|SOCK.lookup|>,
+		family = nil | keysof<|AF.lookup|>,
+		flags = nil | List<|keysof<|AI.lookup|>|> | nil,
+		protocol = nil | keysof<|IPPROTO.lookup|>,
 	}
 )
 	options = options or {}
@@ -1039,7 +1034,7 @@ do
 		on_close = nil | function=(self)>(),
 		on_connect = nil | function=(self, string | AddressInfo, string)>(),
 		on_send = nil | function=(self, string, number)>(),
-		on_receive = nil | function=(self, cdata, number, number)>(),
+		on_receive = nil | function=(self, cdata, number, nil | number)>(),
 		debug = true | nil,
 	}
 	type meta.@Self.@Name = "TSocket"
@@ -1199,7 +1194,7 @@ do
 		return socket.bind(self.fd, res.addrinfo.ai_addr, res.addrinfo.ai_addrlen)
 	end
 
-	function meta:listen(max_connections: number)
+	function meta:listen(max_connections: number | nil)
 		max_connections = max_connections or e.SOMAXCONN
 		return socket.listen(self.fd, max_connections)
 	end
@@ -1291,11 +1286,11 @@ do
 
 	if ffi.os ~= "Windows" then default_flags = e.MSG_NOSIGNAL end
 
-	function meta:send_to(addr: AddressInfo, data: string, flags: number)
+	function meta:send_to(addr: AddressInfo, data: string, flags: nil | number)
 		return self:send(data, flags, addr)
 	end
 
-	function meta:send(data: string, flags: number, addr: nil | AddressInfo)
+	function meta:send(data: string, flags: nil | number, addr: nil | AddressInfo)
 		flags = flags or default_flags
 
 		if self.on_send then return self:on_send(data, flags) end
@@ -1313,7 +1308,7 @@ do
 		if len > 0 then return len end
 	end
 
-	function meta:receive_from(address: nil | AddressInfo, size: number, flags: number)
+	function meta:receive_from(address: nil | AddressInfo, size: nil | number, flags: nil | number)
 		local src_addr
 		local src_addr_size
 
@@ -1329,10 +1324,10 @@ do
 	end
 
 	function meta:receive(
-		size: number,
-		flags: number,
+		size: nil | number,
+		flags: nil | number,
 		src_address: nil | ffi.get_type<|"struct sockaddr *"|> | ffi.get_type<|"struct sockaddr_in*"|>,
-		address_len: number
+		address_len: nil | number
 	)
 		size = size or 64000
 		local buff = ffi.new("char[?]", size)
@@ -1378,16 +1373,16 @@ do
 			if self.debug then print(tostring(self), ": received ", len, " bytes") end
 
 			if src_address then
-				return ffi.string(buff, len),
-				{
+				local address_info = {
 					addrinfo = {
 						ai_addr = ffi.cast("struct sockaddr *", src_address),
 						ai_addrlen = len_res[0],
-					},
+					} as ffi.get_type<|"struct addrinfo*"|> ~ nil, -- TODO: nested as not working?
 					family = self.family,
 					get_port = addrinfo_get_port,
 					get_ip = addrinfo_get_ip,
-				}
+				} as AddressInfo -- this is a lie, but need to restructure the code to avoid it
+				return ffi.string(buff, len), address_info
 			end
 
 			return ffi.string(buff, len)
@@ -1423,6 +1418,174 @@ function M.bind(host: string, service: string)
 	server:set_socket_option("sndbuf", 65536)
 	server:set_socket_option("rcvbuf", 65536)
 	return server
+end
+
+local type TEST = true
+
+if TEST then
+	local socket = M
+
+	do
+		for _, info in ipairs(assert(socket.get_address_info({host = "www.google.com"}))) do
+			print("================================")
+			print("host: ", info.host)
+			print("service: ", info.service)
+			print("ip: ", info:get_ip())
+			print("port: ", info:get_port())
+			print("family: ", info.family)
+			print("socket_type: ", info.socket_type)
+			print("protocol: ", info.protocol)
+			print("addrinfo: ", info.addrinfo)
+			print("flags: ")
+
+			for k, v in pairs(info.flags) do
+				print("\t", k, v)
+			end
+
+			print("ai_flags: ", info.addrinfo.ai_flags)
+			print("ai_family: ", info.addrinfo.ai_family)
+			print("ai_socktype: ", info.addrinfo.ai_socktype)
+			print("ai_protocol: ", info.addrinfo.ai_protocol)
+			print("ai_addrlen: ", info.addrinfo.ai_addrlen)
+			print("ai_canonname: ", info.addrinfo.ai_canonname)
+			print("ai_addr: ", info.addrinfo.ai_addr)
+			print("ai_next: ", info.addrinfo.ai_next)
+			print("================================")
+		end
+	end
+
+	do -- blocking server
+		local host = nil
+		local port = "5001"
+		local info = assert(
+			socket.find_first_address(
+				"*",
+				port,
+				{
+					socket_type = "stream",
+					family = "inet",
+					flags = {"passive"}, -- fill in ip
+					protocol = "tcp",
+				}
+			)
+		)
+		-- Create a SOCKET for connecting to server
+		local server = assert(socket.create(info.family, info.socket_type, info.protocol))
+		server:set_socket_option("reuseaddr", 1)
+		assert(server:bind(info))
+		assert(server:listen())
+		local body = "<html><body><h1>hello world</h1></body></html>"
+		local header = "[HTTP/1.1 200 OK\r\n" .. "Server: masrv/0.1.0\r\n" .. "Date: Thu, 28 Mar 2013 22:16:09 GMT\r\n" .. "Content-Type: text/html\r\n" .. "Connection: Keep-Alive\r\n" .. "Content-Length: " .. #body .. "\r\n" .. "Last-Modified: Wed, 21 Sep 2011 14:34:51 GMT\r\n" .. "Accept-Ranges: bytes\r\n" .. "\r\n"
+		local content = header .. body
+
+		do
+			local client, err = server:accept()
+
+			if client then
+				assert(client:send(content))
+				local str, err = client:receive()
+
+				if str then
+					print(str)
+					client:close()
+				elseif err == "closed" then
+					client:close()
+				end
+			end
+		end
+	end
+
+	do -- non blocking client
+		local host = "www.freebsd.no"
+		local socket = assert(socket.create("inet", "stream", "tcp"))
+		assert(socket:set_blocking(false))
+		assert(socket:connect(host, "http"))
+
+		do
+			if socket:is_connected() then
+				assert(
+					socket:send(
+						"GET / HTTP/1.1\r\n" .. "Host: " .. host .. "\r\n" .. "User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:64.0) Gecko/20100101 Firefox/64.0\r\n" .. "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" .. "Accept-Language: nb,nb-NO;q=0.9,en;q=0.8,no-NO;q=0.6,no;q=0.5,nn-NO;q=0.4,nn;q=0.3,en-US;q=0.1\r\n" .. --"Accept-Encoding: gzip, deflate\r\n"..
+							"DNT: 1\r\n" .. "Connection: keep-alive\r\n" .. "Upgrade-Insecure-Requests: 1\r\n" .. "\r\n"
+					)
+				)
+				local str = ""
+				local total_length
+
+				do
+					local chunk, err = socket:receive()
+
+					if chunk then
+						str = str .. chunk
+
+						if not total_length then
+							total_length = tonumber(assert(str:match("Content%-Length: (%d+)"), "no content length"))
+						end
+
+						if #str >= total_length then
+							print(str)
+							return
+						end
+					elseif err ~= "timeout" then
+
+					--error(err)
+					end
+				end
+			else
+				socket:poll_connect()
+			end
+		end
+	end
+
+	do
+		local port = "8080"
+		local address = assert(socket.find_first_address("*", port), "cannot find address")
+
+		do -- server
+			local server = assert(socket.create("inet", "dgram", "udp"))
+			assert(server:set_blocking(false))
+			assert(server:bind(address))
+			print("hosting at ", address:get_ip(), address:get_port())
+
+			function update_server()
+				local data, addr = server:receive_from()
+
+				if data and type(addr) == "table" then
+					assert(server:send_to(addr, "hello from server " .. os.clock()))
+				elseif addr ~= "timeout" then
+
+				--error(addr)
+				end
+			end
+		end
+
+		do -- client
+			local client = assert(socket.create("inet", "dgram", "udp"))
+			assert(client:set_blocking(false))
+			local next_send = 0
+
+			function update_client()
+				if next_send < os.clock() then
+					assert(client:send_to(address, "hello from client " .. os.clock()))
+					next_send = os.clock() + math.random() + 0.5
+				end
+
+				local data, addr = client:receive_from(address)
+
+				if data and type(addr) == "table" then
+					print(data, addr:get_ip(), addr:get_port())
+				elseif addr ~= "timeout" then
+
+				--error(addr)
+				end
+			end
+		end
+
+		do
+			update_server()
+			update_client()
+		end
+	end
 end
 
 return M
