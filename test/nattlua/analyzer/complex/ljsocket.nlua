@@ -880,13 +880,13 @@ local type AddressInfo = {
 }
 
 local function addrinfo_get_ip(self: AddressInfo)
-	if self.addrinfo.ai_addr ~= nil then return nil end
+	if self.addrinfo.ai_addr == nil then return nil end
 
 	local str = ffi.new("char[256]")
 	local addr = assert(
 		socket.inet_ntop(
 			AF.lookup[self.family],
-			(self.addrinfo.ai_addr  as ffi.get_type<|"struct sockaddr*"|> ~ nil).sa_data,
+			self.addrinfo.ai_addr.sa_data,
 			str,
 			ffi.sizeof(str)
 		)
@@ -918,7 +918,7 @@ local function addrinfo_to_table(
 	local info = {}
 
 	if res.ai_canonname ~= nil then
-		info.canonical_name = ffi.string(res.ai_canonname  as ffi.get_type<|"char *"|> ~ nil)
+		info.canonical_name = ffi.string(res.ai_canonname)
 	end
 
 	info.host = host ~= "*" and host or nil
@@ -947,14 +947,16 @@ function M.get_address_info(
 
 	if data.socket_type or data.protocol or data.flags or data.family then
 		hints = ffi.new(
-			"struct addrinfo",
+			"struct addrinfo[1]",
+			{
 			{
 				ai_family = data.family and AF.strict_lookup(data.family) or nil,
 				ai_socktype = data.socket_type and SOCK.strict_lookup(data.socket_type) or nil,
 				ai_protocol = data.protocol and IPPROTO.strict_lookup(data.protocol) or nil,
 				ai_flags = data.flags and table_to_flags(AI.lookup, data.flags, bit.bor) or nil,
 			}
-		) as ffi.get_type<|"struct addrinfo *"|>
+			}
+		)
 	end
 
 	local out = ffi.new("struct addrinfo*[1]")
