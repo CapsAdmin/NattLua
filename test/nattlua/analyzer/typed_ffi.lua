@@ -366,3 +366,27 @@ analyze[[
 
 	if foo.str then ffi.string(foo.str) end
 ]]
+analyze[=[
+    local ffi = require("ffi")
+    ffi.cdef([[
+        struct subtest {
+            int sa_data;
+        };
+        struct test {
+            struct subtest * ai_addr;
+        };
+    ]])
+    local type AddressInfo = {
+        addrinfo = ffi.get_type<|"struct test*"|> ~ nil,
+    }
+    
+    local function addrinfo_get_ip(self: AddressInfo)
+        if self.addrinfo.ai_addr == nil then return nil end
+    
+        local x = self.addrinfo.ai_addr.sa_data
+        attest.equal(x, _ as number)
+    end
+    
+    local info = {} as AddressInfo
+    addrinfo_get_ip(info)  
+]=]
