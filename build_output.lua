@@ -79,6 +79,8 @@ IMPORTS['nattlua/definitions/utility.nlua'] = assert(loadstring([=======[ return
 
 
 
+
+
  end ]=======], '@nattlua/definitions/utility.nlua'))()
 IMPORTS['nattlua/definitions/attest.nlua'] = assert(loadstring([=======[ return function() 
 
@@ -916,7 +918,12 @@ do
 	META:IsSet("Literal", false)
 
 	function META:CopyLiteralness(obj)
-		self:SetLiteral(obj:IsLiteral())
+		if obj:IsReferenceArgument() then
+			self:SetLiteral(true)
+			self:SetReferenceArgument(true)
+		else
+			self:SetLiteral(obj:IsLiteral())
+		end
 	end
 end
 
@@ -1207,11 +1214,21 @@ end
 function META:CopyLiteralness(num)
 	if num.Type == "number" and num:GetMax() then
 		if self:IsSubsetOf(num) then
+			if num:IsReferenceArgument() then
+				self:SetLiteral(true)
+				self:SetReferenceArgument(true)
+			end
+
 			self:SetData(num:GetData())
 			self:SetMax(num:GetMax())
 		end
 	else
-		self:SetLiteral(num:IsLiteral())
+		if num:IsReferenceArgument() then
+			self:SetLiteral(true)
+			self:SetReferenceArgument(true)
+		else
+			self:SetLiteral(num:IsLiteral())
+		end
 	end
 end
 
@@ -3660,7 +3677,7 @@ function META:CopyLiteralness(from)
 				keyval.key:CopyLiteralness(keyval_from.key) -- TODO: never called
 				self.suppress = false
 			else
-				keyval.key:SetLiteral(keyval_from.key:IsLiteral())
+				keyval.key:CopyLiteralness(keyval_from.key)
 			end
 
 			if keyval_from.val.Type == "table" then
@@ -3668,7 +3685,7 @@ function META:CopyLiteralness(from)
 				keyval.val:CopyLiteralness(keyval_from.val)
 				self.suppress = false
 			else
-				keyval.val:SetLiteral(keyval_from.val:IsLiteral())
+				keyval.val:CopyLiteralness(keyval_from.val)
 			end
 		end
 	end
@@ -17506,7 +17523,10 @@ return {
 				if self:HasMutations(obj) then
 					local tracked = self:GetMutatedTableValue(obj, key)
 
-					if tracked then return tracked end
+					if tracked then
+						self:TrackTableIndex(obj, key, tracked)
+						return tracked
+					end
 				end
 
 				self:TrackTableIndex(obj, key, val)
@@ -21268,7 +21288,7 @@ local function metatable_function(self, node, meta_method, l, r)
 
 		if func.Type ~= "function" then return func end
 
-		return self:Assert(self:Call(func, Tuple({l, r}))):Get(1)
+		return self:Assert(self:Call(func, Tuple({l, r}), node)):Get(1)
 	end
 end
 
@@ -22182,12 +22202,12 @@ local True = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").True
 local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 
-local function metatable_function(self, meta_method, l)
+local function metatable_function(self, meta_method, l, node)
 	if l:GetMetaTable() then
 		meta_method = LString(meta_method)
 		local func = l:GetMetaTable():Get(meta_method)
 
-		if func then return self:Assert(self:Call(func, Tuple({l})):Get(1)) end
+		if func then return self:Assert(self:Call(func, Tuple({l}), node):Get(1)) end
 	end
 end
 
@@ -22277,15 +22297,15 @@ local function Prefix(self, node, r)
 	end
 
 	if op == "-" then
-		local res = metatable_function(self, "__unm", r)
+		local res = metatable_function(self, "__unm", r, node)
 
 		if res then return res end
 	elseif op == "~" then
-		local res = metatable_function(self, "__bxor", r)
+		local res = metatable_function(self, "__bxor", r, node)
 
 		if res then return res end
 	elseif op == "#" then
-		local res = metatable_function(self, "__len", r)
+		local res = metatable_function(self, "__len", r, node)
 
 		if res then return res end
 	end
@@ -23174,6 +23194,10 @@ function Uncapitalize<|val: ref string|>
 	return val:sub(1, 1):lower() .. val:sub(2)
 end
 
+analyzer function TypeName(val: any)
+	return val.Type
+end
+
 analyzer function PushTypeEnvironment(obj: any)
 	local tbl = types.Table()
 	tbl:Set(types.LString("_G"), tbl)
@@ -23666,7 +23690,11 @@ analyzer function error(msg: string, level: number | nil)
 	end
 end
 
-type type_error = error
+analyzer function type_error(msg: literal string, level: literal (number | nil))
+	if analyzer.processing_deferred_calls then return end
+
+	analyzer:ThrowError(msg:GetData(), nil, nil, level and level:GetData() or nil)
+end
 
 analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...any)
 	local diagnostics_index = #analyzer:GetDiagnostics()
@@ -24781,7 +24809,7 @@ IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function() local analyzer functi
 				function(self, key)
 					-- i'm not really sure about this
 					-- boxed luajit ctypes seem to just get the metatable from the ctype
-					return analyzer:Assert(from:Get(key, from.Type == "union"))
+					return analyzer:Assert(analyzer:IndexOperator(from, key))
 				end,
 				{types.Any(), types.Any()},
 				{}
