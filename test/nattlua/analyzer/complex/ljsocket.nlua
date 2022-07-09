@@ -314,7 +314,8 @@ do
 				)
 			end
 
-			local FIONBIO = _IOW(string.byte("f"), 126, "uint32_t") -- -2147195266 -- 2147772030ULL
+			local FIONBIO = _IOW(string.byte("f"), 126, "uint32_t")
+
 			function socket.blocking(fd: Socket, b: boolean)
 				local ret = C.ioctlsocket(fd, FIONBIO, ffi.new("int[1]", b and 0 or 1))
 
