@@ -39,7 +39,7 @@ return {
 			then
 				local arg = val:GetInputSignature():Get(1)
 
-				if arg and not arg:GetContract() and not arg.Self then
+				if arg and not arg:GetContract() and not arg.Self and not self:IsTypesystem() then
 					val:SetCalled(true)
 					val = val:Copy()
 					val:SetCalled(nil)
