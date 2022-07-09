@@ -805,7 +805,7 @@ analyze[[
 analyze(
 	[[
 
-    type meta = {}
+    local type meta = {}
     type meta.@Self = {
         pointer = ref boolean,
         ffi_name = ref string,
