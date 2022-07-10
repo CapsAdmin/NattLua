@@ -400,7 +400,7 @@ local function recompile(uri)
 			if not range then return end
 
 			local name = code:GetName()
-			print("error: ", name, msg, severity)
+			print("error: ", name, msg, severity, ...)
 			responses[name] = responses[name] or
 				{
 					method = "textDocument/publishDiagnostics",
@@ -429,7 +429,7 @@ local function recompile(uri)
 				end
 			end
 
-			local code = io.open(entry_point, "r"):read("*all")
+			local code = assert(io.open((cfg.working_directory or "") .. entry_point, "r")):read("*all")
 
 			if
 				code:find("-" .. "-ANALYZE", nil, true) or
@@ -878,9 +878,8 @@ lsp.methods["textDocument/hover"] = function(params)
 	end
 
 	if #markdown > limit then markdown = markdown:sub(0, limit) .. "\n```\n..." end
-	
-	markdown = markdown:gsub("\\", "BSLASH_")
 
+	markdown = markdown:gsub("\\", "BSLASH_")
 	return {
 		contents = markdown,
 		range = {
