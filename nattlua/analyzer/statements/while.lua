@@ -32,7 +32,7 @@ return {
 
 				if obj:IsUncertain() or obj:IsFalsy() then break end
 
-				if i == 32 then self:Warning("too many iterations") end
+				if i == 32 and self:IsRuntime() then self:Warning("too many iterations") end
 			end
 		end
 	end,

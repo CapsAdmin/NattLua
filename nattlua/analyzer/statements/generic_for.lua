@@ -70,7 +70,9 @@ return {
 				self:ClearBreak()
 			end
 
-			if i == (self.max_iterations or 1000) then self:Error("too many iterations") end
+			if i == (self.max_iterations or 1000) and self:IsRuntime() then
+				self:Error("too many iterations")
+			end
 
 			assert(values.Type == "tuple")
 			table.insert(values:GetData(), 1, args[1])

@@ -93,7 +93,7 @@ analyzer function next(t: Map<|any, any|>, k: any)
 end
 
 analyzer function pairs(tbl: Table)
-	if tbl.Type == "table" and tbl:HasLiteralKeys() then
+	if tbl.Type == "table" and (tbl:HasLiteralKeys() or analyzer:IsTypesystem()) then
 		local i = 1
 		return function()
 			local kv = tbl:GetData()[i]
@@ -504,12 +504,15 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 			tbl:SetContract(meta.Self)
 			-- clear mutations so that when looking up values in the table they won't return their initial value
 			analyzer:ClearObjectMutations(tbl)
-		else
+		elseif analyzer:IsRuntime() then
 			meta.potential_self = meta.potential_self or types.Union({})
 			meta.potential_self:AddType(tbl)
 		end
 
 		tbl:SetMetaTable(meta)
+
+		if analyzer:IsTypesystem() then return tbl end
+
 		local metatable_functions = analyzer:CallTypesystemUpvalue(types.LString("MetaTableFunctions"), tbl)
 
 		for _, kv in ipairs(metatable_functions:GetData()) do
