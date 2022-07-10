@@ -8567,6 +8567,8 @@ IMPORTS['nattlua/definitions/typed_ffi.nlua'] = assert(loadstring([=======[ retu
 
 
 
+
+
  end ]=======], '@nattlua/definitions/typed_ffi.nlua'))()
 do local __M; IMPORTS["nattlua.compiler"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local io = io
 local error = error
@@ -17603,7 +17605,7 @@ return {
 			then
 				local arg = val:GetInputSignature():Get(1)
 
-				if arg and not arg:GetContract() and not arg.Self then
+				if arg and not arg:GetContract() and not arg.Self and not self:IsTypesystem() then
 					val:SetCalled(true)
 					val = val:Copy()
 					val:SetCalled(nil)
@@ -20911,7 +20913,7 @@ local function analyze_arguments(self, node)
 		self:PopAnalyzerEnvironment()
 
 		if val then
-			if val:GetContract() or val.Self then
+			if val:GetContract() or val.Self or self:IsTypesystem() then
 				table.insert(args, 1, val.Self or val)
 			else
 				table.insert(args, 1, Union({Any(), val}))
@@ -21243,7 +21245,9 @@ return {
 				self:ClearBreak()
 			end
 
-			if i == (self.max_iterations or 1000) then self:Error("too many iterations") end
+			if i == (self.max_iterations or 1000) and self:IsRuntime() then
+				self:Error("too many iterations")
+			end
 
 			assert(values.Type == "tuple")
 			table.insert(values:GetData(), 1, args[1])
@@ -21951,7 +21955,7 @@ do local __M; IMPORTS["nattlua.analyzer.statements.while"] = function(...) __M =
 
 				if obj:IsUncertain() or obj:IsFalsy() then break end
 
-				if i == 32 then self:Warning("too many iterations") end
+				if i == 32 and self:IsRuntime() then self:Warning("too many iterations") end
 			end
 		end
 	end,
@@ -23436,7 +23440,7 @@ analyzer function next(t: Map<|any, any|>, k: any)
 end
 
 analyzer function pairs(tbl: Table)
-	if tbl.Type == "table" and tbl:HasLiteralKeys() then
+	if tbl.Type == "table" and (tbl:HasLiteralKeys() or analyzer:IsTypesystem()) then
 		local i = 1
 		return function()
 			local kv = tbl:GetData()[i]
@@ -23847,12 +23851,15 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 			tbl:SetContract(meta.Self)
 			-- clear mutations so that when looking up values in the table they won't return their initial value
 			analyzer:ClearObjectMutations(tbl)
-		else
+		elseif analyzer:IsRuntime() then
 			meta.potential_self = meta.potential_self or types.Union({})
 			meta.potential_self:AddType(tbl)
 		end
 
 		tbl:SetMetaTable(meta)
+
+		if analyzer:IsTypesystem() then return tbl end
+
 		local metatable_functions = analyzer:CallTypesystemUpvalue(types.LString("MetaTableFunctions"), tbl)
 
 		for _, kv in ipairs(metatable_functions:GetData()) do
@@ -24071,7 +24078,7 @@ type debug = {
 	getregistry = function=()>(nil),
 	traceback = function=(thread: thread, message: any, level: number)>(string) | function=(thread: thread, message: any)>(string) | function=(thread: thread)>(string) | function=()>(string),
 	setlocal = function=(thread: thread, level: number, local_: number, value: any)>(string | nil) | function=(level: number, local_: number, value: any)>(string | nil),
-	getinfo = function=(thread: thread, f: empty_function | number, what: string)>(debug_getinfo | nil) | function=(thread: thread, f: empty_function | number)>(debug_getinfo | nil) | function=(f: empty_function | number)>(debug_getinfo | nil),
+	getinfo = function=(thread: thread, f: empty_function | number, what: nil | string)>(debug_getinfo | nil) | function=(thread: thread, f: empty_function | number, what: nil | string)>(debug_getinfo | nil) | function=(f: empty_function | number, what: nil | string)>(debug_getinfo | nil),
 	upvalueid = function=(f: empty_function, n: number)>(userdata),
 	setupvalue = function=(f: empty_function, up: number, value: any)>(string | nil),
 	getlocal = function=(thread: thread, f: number | empty_function, local_: number)>(string | nil, any) | function=(f: number | empty_function, local_: number)>(string | nil, any),
@@ -25062,6 +25069,18 @@ IMPORTS['nattlua/definitions/typed_ffi.nlua'] = function() local analyzer functi
 		table_print(node)
 		error("NYI: " .. node.tag)
 	end
+end
+
+analyzer function ffi.sizeof(cdata: any, len: nil | number)
+	if cdata.Type == "string" and cdata:IsLiteral() then
+		assert(IMPORTS['nattlua.other.cparser']("nattlua.other.cparser").parseString(cdata:GetData(), {typeof = true}))
+		local ffi = require("ffi")
+		local ok, val = pcall(ffi.sizeof, cdata:GetData(), len and len:GetData() or nil)
+
+		if ok then return val end
+	end
+
+	return types.Number()
 end
 
 analyzer function ffi.cdef(cdecl: string, ...: ...any)
