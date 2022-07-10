@@ -19,7 +19,7 @@ type debug = {
 	getregistry = function=()>(nil),
 	traceback = function=(thread: thread, message: any, level: number)>(string) | function=(thread: thread, message: any)>(string) | function=(thread: thread)>(string) | function=()>(string),
 	setlocal = function=(thread: thread, level: number, local_: number, value: any)>(string | nil) | function=(level: number, local_: number, value: any)>(string | nil),
-	getinfo = function=(thread: thread, f: empty_function | number, what: string)>(debug_getinfo | nil) | function=(thread: thread, f: empty_function | number)>(debug_getinfo | nil) | function=(f: empty_function | number)>(debug_getinfo | nil),
+	getinfo = function=(thread: thread, f: empty_function | number, what: nil | string)>(debug_getinfo | nil) | function=(thread: thread, f: empty_function | number, what: nil | string)>(debug_getinfo | nil) | function=(f: empty_function | number, what: nil | string)>(debug_getinfo | nil),
 	upvalueid = function=(f: empty_function, n: number)>(userdata),
 	setupvalue = function=(f: empty_function, up: number, value: any)>(string | nil),
 	getlocal = function=(thread: thread, f: number | empty_function, local_: number)>(string | nil, any) | function=(f: number | empty_function, local_: number)>(string | nil, any),
@@ -34,8 +34,5 @@ type debug = {
 	setfenv = function=(object: any, Table: Table)>(any),
 	setuservalue = function=(udata: userdata, value: Table | nil)>(userdata),
 }
-
-
-
 type debug.getfenv = getfenv
 type debug.setfenv = setfenv
