@@ -3527,12 +3527,15 @@ function META:Set(key, val, no_delete)
 		val:SetParent(self)
 		key:SetParent(self)
 		table.insert(self.Data, {key = key, val = val})
+		self.subset_cache = nil
 	else
 		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
 			keyval.val = val
 		else
 			keyval.val = Union({keyval.val, val})
 		end
+
+		self.subset_cache = nil
 	end
 
 	return true
@@ -3561,12 +3564,15 @@ function META:SetExplicit(key, val)
 		val:SetParent(self)
 		key:SetParent(self)
 		table.insert(self.Data, {key = key, val = val})
+		self.subset_cache = nil
 	else
 		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
 			keyval.val = val
 		else
 			keyval.val = Union({keyval.val, val})
 		end
+
+		self.subset_cache = nil
 	end
 
 	return true
@@ -11197,893 +11203,938 @@ function META:ParseMultipleValues(
 end
 
 return META end ]=======], '@./nattlua/parser/base.lua'))())(...) return __M end end
-do local __M; IMPORTS["jit.vmdef"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) -- This is a generated file. DO NOT EDIT!
-return {
-	bcnames = "ISLT  ISGE  ISLE  ISGT  ISEQV ISNEV ISEQS ISNES ISEQN ISNEN ISEQP ISNEP ISTC  ISFC  IST   ISF   ISTYPEISNUM MOV   NOT   UNM   LEN   ADDVN SUBVN MULVN DIVVN MODVN ADDNV SUBNV MULNV DIVNV MODNV ADDVV SUBVV MULVV DIVVV MODVV POW   CAT   KSTR  KCDATAKSHORTKNUM  KPRI  KNIL  UGET  USETV USETS USETN USETP UCLO  FNEW  TNEW  TDUP  GGET  GSET  TGETV TGETS TGETB TGETR TSETV TSETS TSETB TSETM TSETR CALLM CALL  CALLMTCALLT ITERC ITERN VARG  ISNEXTRETM  RET   RET0  RET1  FORI  JFORI FORL  IFORL JFORL ITERL IITERLJITERLLOOP  ILOOP JLOOP JMP   FUNCF IFUNCFJFUNCFFUNCV IFUNCVJFUNCVFUNCC FUNCCW",
-	irnames = "LT    GE    LE    GT    ULT   UGE   ULE   UGT   EQ    NE    ABC   RETF  NOP   BASE  PVAL  GCSTEPHIOP  LOOP  USE   PHI   RENAMEPROF  KPRI  KINT  KGC   KPTR  KKPTR KNULL KNUM  KINT64KSLOT BNOT  BSWAP BAND  BOR   BXOR  BSHL  BSHR  BSAR  BROL  BROR  ADD   SUB   MUL   DIV   MOD   POW   NEG   ABS   LDEXP MIN   MAX   FPMATHADDOV SUBOV MULOV AREF  HREFK HREF  NEWREFUREFO UREFC FREF  TMPREFSTRREFLREF  ALOAD HLOAD ULOAD FLOAD XLOAD SLOAD VLOAD ALEN  ASTOREHSTOREUSTOREFSTOREXSTORESNEW  XSNEW TNEW  TDUP  CNEW  CNEWI BUFHDRBUFPUTBUFSTRTBAR  OBAR  XBAR  CONV  TOBIT TOSTR STRTO CALLN CALLA CALLL CALLS CALLXSCARG  ",
-	irfpm = {
-		[0] = "floor",
-		"ceil",
-		"trunc",
-		"sqrt",
-		"log",
-		"log2",
-		"other",
-	},
-	irfield = {
-		[0] = "str.len",
-		"func.env",
-		"func.pc",
-		"func.ffid",
-		"thread.env",
-		"tab.meta",
-		"tab.array",
-		"tab.node",
-		"tab.asize",
-		"tab.hmask",
-		"tab.nomm",
-		"udata.meta",
-		"udata.udtype",
-		"udata.file",
-		"sbuf.w",
-		"sbuf.e",
-		"sbuf.b",
-		"sbuf.l",
-		"sbuf.ref",
-		"sbuf.r",
-		"cdata.ctypeid",
-		"cdata.ptr",
-		"cdata.int",
-		"cdata.int64",
-		"cdata.int64_4",
-	},
-	ircall = {
-		[0] = "lj_str_cmp",
-		"lj_str_find",
-		"lj_str_new",
-		"lj_strscan_num",
-		"lj_strfmt_int",
-		"lj_strfmt_num",
-		"lj_strfmt_char",
-		"lj_strfmt_putint",
-		"lj_strfmt_putnum",
-		"lj_strfmt_putquoted",
-		"lj_strfmt_putfxint",
-		"lj_strfmt_putfnum_int",
-		"lj_strfmt_putfnum_uint",
-		"lj_strfmt_putfnum",
-		"lj_strfmt_putfstr",
-		"lj_strfmt_putfchar",
-		"lj_buf_putmem",
-		"lj_buf_putstr",
-		"lj_buf_putchar",
-		"lj_buf_putstr_reverse",
-		"lj_buf_putstr_lower",
-		"lj_buf_putstr_upper",
-		"lj_buf_putstr_rep",
-		"lj_buf_puttab",
-		"lj_bufx_set",
-		"lj_bufx_more",
-		"lj_serialize_put",
-		"lj_serialize_get",
-		"lj_serialize_encode",
-		"lj_serialize_decode",
-		"lj_buf_tostr",
-		"lj_tab_new_ah",
-		"lj_tab_new1",
-		"lj_tab_dup",
-		"lj_tab_clear",
-		"lj_tab_newkey",
-		"lj_tab_keyindex",
-		"lj_vm_next",
-		"lj_tab_len",
-		"lj_tab_len_hint",
-		"lj_gc_step_jit",
-		"lj_gc_barrieruv",
-		"lj_mem_newgco",
-		"lj_prng_u64d",
-		"lj_vm_modi",
-		"log10",
-		"exp",
-		"sin",
-		"cos",
-		"tan",
-		"asin",
-		"acos",
-		"atan",
-		"sinh",
-		"cosh",
-		"tanh",
-		"fputc",
-		"fwrite",
-		"fflush",
-		"lj_vm_floor",
-		"lj_vm_ceil",
-		"lj_vm_trunc",
-		"sqrt",
-		"log",
-		"lj_vm_log2",
-		"pow",
-		"atan2",
-		"ldexp",
-		"lj_vm_tobit",
-		"softfp_add",
-		"softfp_sub",
-		"softfp_mul",
-		"softfp_div",
-		"softfp_cmp",
-		"softfp_i2d",
-		"softfp_d2i",
-		"lj_vm_sfmin",
-		"lj_vm_sfmax",
-		"lj_vm_tointg",
-		"softfp_ui2d",
-		"softfp_f2d",
-		"softfp_d2ui",
-		"softfp_d2f",
-		"softfp_i2f",
-		"softfp_ui2f",
-		"softfp_f2i",
-		"softfp_f2ui",
-		"fp64_l2d",
-		"fp64_ul2d",
-		"fp64_l2f",
-		"fp64_ul2f",
-		"fp64_d2l",
-		"fp64_d2ul",
-		"fp64_f2l",
-		"fp64_f2ul",
-		"lj_carith_divi64",
-		"lj_carith_divu64",
-		"lj_carith_modi64",
-		"lj_carith_modu64",
-		"lj_carith_powi64",
-		"lj_carith_powu64",
-		"lj_cdata_newv",
-		"lj_cdata_setfin",
-		"strlen",
-		"memcpy",
-		"memset",
-		"lj_vm_errno",
-		"lj_carith_mul64",
-		"lj_carith_shl64",
-		"lj_carith_shr64",
-		"lj_carith_sar64",
-		"lj_carith_rol64",
-		"lj_carith_ror64",
-	},
-	traceerr = {
-		[0] = "error thrown or hook called during recording",
-		"trace too short",
-		"trace too long",
-		"trace too deep",
-		"too many snapshots",
-		"blacklisted",
-		"retry recording",
-		"NYI: bytecode %d",
-		"leaving loop in root trace",
-		"inner loop in root trace",
-		"loop unroll limit reached",
-		"bad argument type",
-		"JIT compilation disabled for function",
-		"call unroll limit reached",
-		"down-recursion, restarting",
-		"NYI: unsupported variant of FastFunc %s",
-		"NYI: return to lower frame",
-		"store with nil or NaN key",
-		"missing metamethod",
-		"looping index lookup",
-		"NYI: mixed sparse/dense table",
-		"symbol not in cache",
-		"NYI: unsupported C type conversion",
-		"NYI: unsupported C function type",
-		"guard would always fail",
-		"too many PHIs",
-		"persistent type instability",
-		"failed to allocate mcode memory",
-		"machine code too long",
-		"hit mcode limit (retrying)",
-		"too many spill slots",
-		"inconsistent register allocation",
-		"NYI: cannot assemble IR instruction %d",
-		"NYI: PHI shuffling too complex",
-		"NYI: register coalescing too complex",
-	},
-	ffnames = {
-		[0] = "Lua",
-		"C",
-		"assert",
-		"type",
-		"next",
-		"pairs",
-		"ipairs_aux",
-		"ipairs",
-		"getmetatable",
-		"setmetatable",
-		"getfenv",
-		"setfenv",
-		"rawget",
-		"rawset",
-		"rawequal",
-		"unpack",
-		"select",
-		"tonumber",
-		"tostring",
-		"error",
-		"pcall",
-		"xpcall",
-		"loadfile",
-		"load",
-		"loadstring",
-		"dofile",
-		"gcinfo",
-		"collectgarbage",
-		"newproxy",
-		"print",
-		"coroutine.status",
-		"coroutine.running",
-		"coroutine.isyieldable",
-		"coroutine.create",
-		"coroutine.yield",
-		"coroutine.resume",
-		"coroutine.wrap_aux",
-		"coroutine.wrap",
-		"math.abs",
-		"math.floor",
-		"math.ceil",
-		"math.sqrt",
-		"math.log10",
-		"math.exp",
-		"math.sin",
-		"math.cos",
-		"math.tan",
-		"math.asin",
-		"math.acos",
-		"math.atan",
-		"math.sinh",
-		"math.cosh",
-		"math.tanh",
-		"math.frexp",
-		"math.modf",
-		"math.log",
-		"math.atan2",
-		"math.pow",
-		"math.fmod",
-		"math.ldexp",
-		"math.min",
-		"math.max",
-		"math.random",
-		"math.randomseed",
-		"bit.tobit",
-		"bit.bnot",
-		"bit.bswap",
-		"bit.lshift",
-		"bit.rshift",
-		"bit.arshift",
-		"bit.rol",
-		"bit.ror",
-		"bit.band",
-		"bit.bor",
-		"bit.bxor",
-		"bit.tohex",
-		"string.byte",
-		"string.char",
-		"string.sub",
-		"string.rep",
-		"string.reverse",
-		"string.lower",
-		"string.upper",
-		"string.dump",
-		"string.find",
-		"string.match",
-		"string.gmatch_aux",
-		"string.gmatch",
-		"string.gsub",
-		"string.format",
-		"table.maxn",
-		"table.insert",
-		"table.concat",
-		"table.sort",
-		"table.new",
-		"table.clear",
-		"io.method.close",
-		"io.method.read",
-		"io.method.write",
-		"io.method.flush",
-		"io.method.seek",
-		"io.method.setvbuf",
-		"io.method.lines",
-		"io.method.__gc",
-		"io.method.__tostring",
-		"io.open",
-		"io.popen",
-		"io.tmpfile",
-		"io.close",
-		"io.read",
-		"io.write",
-		"io.flush",
-		"io.input",
-		"io.output",
-		"io.lines",
-		"io.type",
-		"os.execute",
-		"os.remove",
-		"os.rename",
-		"os.tmpname",
-		"os.getenv",
-		"os.exit",
-		"os.clock",
-		"os.date",
-		"os.time",
-		"os.difftime",
-		"os.setlocale",
-		"debug.getregistry",
-		"debug.getmetatable",
-		"debug.setmetatable",
-		"debug.getfenv",
-		"debug.setfenv",
-		"debug.getinfo",
-		"debug.getlocal",
-		"debug.setlocal",
-		"debug.getupvalue",
-		"debug.setupvalue",
-		"debug.upvalueid",
-		"debug.upvaluejoin",
-		"debug.sethook",
-		"debug.gethook",
-		"debug.debug",
-		"debug.traceback",
-		"jit.on",
-		"jit.off",
-		"jit.flush",
-		"jit.status",
-		"jit.security",
-		"jit.attach",
-		"jit.util.funcinfo",
-		"jit.util.funcbc",
-		"jit.util.funck",
-		"jit.util.funcuvname",
-		"jit.util.traceinfo",
-		"jit.util.traceir",
-		"jit.util.tracek",
-		"jit.util.tracesnap",
-		"jit.util.tracemc",
-		"jit.util.traceexitstub",
-		"jit.util.ircalladdr",
-		"jit.opt.start",
-		"jit.profile.start",
-		"jit.profile.stop",
-		"jit.profile.dumpstack",
-		"ffi.meta.__index",
-		"ffi.meta.__newindex",
-		"ffi.meta.__eq",
-		"ffi.meta.__len",
-		"ffi.meta.__lt",
-		"ffi.meta.__le",
-		"ffi.meta.__concat",
-		"ffi.meta.__call",
-		"ffi.meta.__add",
-		"ffi.meta.__sub",
-		"ffi.meta.__mul",
-		"ffi.meta.__div",
-		"ffi.meta.__mod",
-		"ffi.meta.__pow",
-		"ffi.meta.__unm",
-		"ffi.meta.__tostring",
-		"ffi.meta.__pairs",
-		"ffi.meta.__ipairs",
-		"ffi.clib.__index",
-		"ffi.clib.__newindex",
-		"ffi.clib.__gc",
-		"ffi.callback.free",
-		"ffi.callback.set",
-		"ffi.cdef",
-		"ffi.new",
-		"ffi.cast",
-		"ffi.typeof",
-		"ffi.typeinfo",
-		"ffi.istype",
-		"ffi.sizeof",
-		"ffi.alignof",
-		"ffi.offsetof",
-		"ffi.errno",
-		"ffi.string",
-		"ffi.copy",
-		"ffi.fill",
-		"ffi.abi",
-		"ffi.metatype",
-		"ffi.gc",
-		"ffi.load",
-		"buffer.method.free",
-		"buffer.method.reset",
-		"buffer.method.skip",
-		"buffer.method.set",
-		"buffer.method.put",
-		"buffer.method.putf",
-		"buffer.method.get",
-		"buffer.method.putcdata",
-		"buffer.method.reserve",
-		"buffer.method.commit",
-		"buffer.method.ref",
-		"buffer.method.encode",
-		"buffer.method.decode",
-		"buffer.method.__gc",
-		"buffer.method.__tostring",
-		"buffer.method.__len",
-		"buffer.new",
-		"buffer.encode",
-		"buffer.decode",
-	},
-} end ]=======], '@/usr/local/share/luajit-2.1.0-beta3/jit/vmdef.lua'))())(...) return __M end end
-do local __M; IMPORTS["jit.zone"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) ----------------------------------------------------------------------------
--- LuaJIT profiler zones.
---
--- Copyright (C) 2005-2022 Mike Pall. All rights reserved.
--- Released under the MIT license. See Copyright Notice in luajit.h
-----------------------------------------------------------------------------
---
--- This module implements a simple hierarchical zone model.
---
--- Example usage:
---
---   local zone = require("jit.zone")
---   zone("AI")
---   ...
---     zone("A*")
---     ...
---     print(zone:get()) --> "A*"
---     ...
---     zone()
---   ...
---   print(zone:get()) --> "AI"
---   ...
---   zone()
---
-----------------------------------------------------------------------------
-local remove = table.remove
-return setmetatable(
-	{
-		flush = function(t)
-			for i = #t, 1, -1 do
-				t[i] = nil
+do local __M; IMPORTS["nattlua.other.profiler2"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) --ANALYZE
+local logf = function(f, ...)
+	io.write((f):format(...))
+end
+local wlog = print
+local logn = print
+local log = io.write
+local ok, jit_profiler = pcall(require, "jit.profile")
+
+if not ok then jit_profiler = nil end
+
+local get_time = os.clock
+
+local function read_file(path)
+	local f, err = io.open(path)
+
+	if not f then return nil, err end
+
+	local s, err = f:read("*a")
+
+	if not s then return nil, "empty file" end
+
+	return s
+end
+
+local function math_round(num, idp)
+	if idp and idp > 0 then
+		local mult = 10 ^ idp
+		return math.floor(num * mult + 0.5) / mult
+	end
+
+	return math.floor(num + 0.5)
+end
+
+local ok, jit_vmdef = pcall(require, "jit.vmdef")
+
+if not ok then jit_vmdef = nil end
+
+local ok, jit_util = pcall(require, "jit.util")
+
+if not ok then jit_util = nil end
+
+local utility = {}
+
+function utility.TableToColumns(title, tbl, columns, check, sort_key)
+	local top = {}
+
+	for k, v in pairs(tbl) do
+		if not check or check(v) then table.insert(top, {key = k, val = v}) end
+	end
+
+	if type(sort_key) == "function" then
+		table.sort(top, function(a, b)
+			return sort_key(a.val, b.val)
+		end)
+	else
+		table.sort(top, function(a, b)
+			return a.val[sort_key] > b.val[sort_key]
+		end)
+	end
+
+	local max_lengths = {}
+	local temp = {}
+
+	for _, column in ipairs(top) do
+		for key, data in ipairs(columns) do
+			data.tostring = data.tostring or function(...)
+				return ...
 			end
-		end,
-		get = function(t)
-			return t[#t]
-		end,
-	},
-	{
-		__call = function(t, zone)
-			if zone then
-				t[#t + 1] = zone
-			else
-				return (assert(remove(t), "empty zone stack"))
-			end
-		end,
-	}
-) end ]=======], '@/usr/local/share/luajit-2.1.0-beta3/jit/zone.lua'))())(...) return __M end end
-do local __M; IMPORTS["jit.p"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) ----------------------------------------------------------------------------
--- LuaJIT profiler.
---
--- Copyright (C) 2005-2022 Mike Pall. All rights reserved.
--- Released under the MIT license. See Copyright Notice in luajit.h
-----------------------------------------------------------------------------
---
--- This module is a simple command line interface to the built-in
--- low-overhead profiler of LuaJIT.
---
--- The lower-level API of the profiler is accessible via the "jit.profile"
--- module or the luaJIT_profile_* C API.
---
--- Example usage:
---
---   luajit -jp myapp.lua
---   luajit -jp=s myapp.lua
---   luajit -jp=-s myapp.lua
---   luajit -jp=vl myapp.lua
---   luajit -jp=G,profile.txt myapp.lua
---
--- The following dump features are available:
---
---   f  Stack dump: function name, otherwise module:line. Default mode.
---   F  Stack dump: ditto, but always prepend module.
---   l  Stack dump: module:line.
---   <number> stack dump depth (callee < caller). Default: 1.
---   -<number> Inverse stack dump depth (caller > callee).
---   s  Split stack dump after first stack level. Implies abs(depth) >= 2.
---   p  Show full path for module names.
---   v  Show VM states. Can be combined with stack dumps, e.g. vf or fv.
---   z  Show zones. Can be combined with stack dumps, e.g. zf or fz.
---   r  Show raw sample counts. Default: show percentages.
---   a  Annotate excerpts from source code files.
---   A  Annotate complete source code files.
---   G  Produce raw output suitable for graphical tools (e.g. flame graphs).
---   m<number> Minimum sample percentage to be shown. Default: 3.
---   i<number> Sampling interval in milliseconds. Default: 10.
---
-----------------------------------------------------------------------------
--- Cache some library functions and objects.
-local jit = require("jit")
-assert(jit.version_num == 20100, "LuaJIT core/library version mismatch")
-local profile = require("jit.profile")
-local vmdef = IMPORTS['jit.vmdef']("jit.vmdef")
-local math = math
-local pairs, ipairs, tonumber, floor = pairs, ipairs, tonumber, math.floor
-local sort, format = table.sort, string.format
-local stdout = io.stdout
-local zone -- Load jit.zone module on demand.
--- Output file handle.
-local out
-------------------------------------------------------------------------------
-local prof_ud
-local prof_states, prof_split, prof_min, prof_raw, prof_fmt, prof_depth
-local prof_ann, prof_count1, prof_count2, prof_samples
-local map_vmmode = {
-	N = "Compiled",
-	I = "Interpreted",
-	C = "C code",
-	G = "Garbage Collector",
-	J = "JIT Compiler",
+			data.friendly = data.friendly or data.key
+			max_lengths[data.key] = max_lengths[data.key] or 0
+			local str = tostring(data.tostring(column.val[data.key], column.val, top))
+			column.str = column.str or {}
+			column.str[data.key] = str
+
+			if #str > max_lengths[data.key] then max_lengths[data.key] = #str end
+
+			temp[key] = data
+		end
+	end
+
+	columns = temp
+	local width = 0
+
+	for _, v in pairs(columns) do
+		if max_lengths[v.key] > #v.friendly then
+			v.length = max_lengths[v.key]
+		else
+			v.length = #v.friendly + 1
+		end
+
+		width = width + #v.friendly + max_lengths[v.key] - 2
+	end
+
+	local out = " "
+	out = out .. ("_"):rep(width - 1) .. "\n"
+	out = out .. "|" .. (
+			" "
+		):rep(width / 2 - math.floor(#title / 2)) .. title .. (
+			" "
+		):rep(math.floor(width / 2) - #title + math.floor(#title / 2)) .. "|\n"
+	out = out .. "|" .. ("_"):rep(width - 1) .. "|\n"
+
+	for _, v in ipairs(columns) do
+		out = out .. "| " .. v.friendly .. ": " .. (
+				" "
+			):rep(-#v.friendly + max_lengths[v.key] - 1) -- 2 = : + |
+	end
+
+	out = out .. "|\n"
+
+	for _, v in ipairs(columns) do
+		out = out .. "|" .. ("_"):rep(v.length + 2)
+	end
+
+	out = out .. "|\n"
+
+	for _, v in ipairs(top) do
+		for _, column in ipairs(columns) do
+			out = out .. "| " .. v.str[column.key] .. (
+					" "
+				):rep(-#v.str[column.key] + column.length + 1)
+		end
+
+		out = out .. "|\n"
+	end
+
+	out = out .. "|"
+	out = out .. ("_"):rep(width - 1) .. "|\n"
+	return out
+end
+
+local function split(self, separator)
+	local tbl = {}
+	local current_pos = 1
+
+	for i = 1, #self do
+		local start_pos, end_pos = self:find(separator, current_pos, true)
+
+		if not start_pos or not end_pos then break end
+
+		tbl[i] = self:sub(current_pos, start_pos - 1)
+		current_pos = end_pos + 1
+	end
+
+	if current_pos > 1 then
+		tbl[#tbl + 1] = self:sub(current_pos)
+	else
+		tbl[1] = self
+	end
+
+	return tbl
+end
+
+local function trim(self)
+	local char = "%s*"
+	local _, start = self:find(char, 0)
+	local end_start, end_stop = self:reverse():find(char, 0)
+
+	if start and end_start and end_stop then
+		return self:sub(start + 1, (end_start - end_stop) - 2)
+	elseif start then
+		return self:sub(start + 1)
+	elseif end_start and end_stop then
+		return self:sub(0, (end_start - end_stop) - 2)
+	end
+
+	return self
+end
+
+local profiler = {}
+profiler.data = {sections = {}, statistical = {}, trace_aborts = {}}
+profiler.raw_data = {sections = {}, statistical = {}, trace_aborts = {}}
+local blacklist = {
+	["leaving loop in root trace"] = true,
+	["error thrown or hook fed during recording"] = true,
+	["too many spill slots"] = true,
 }
 
--- Profiler callback.
-local function prof_cb(th, samples, vmmode)
-	prof_samples = prof_samples + samples
-	local key_stack, key_stack2, key_state
-
-	-- Collect keys for sample.
-	if prof_states then
-		if prof_states == "v" then
-			key_state = map_vmmode[vmmode] or vmmode
-		else
-			key_state = zone:get() or "(none)"
-		end
+local function trace_dump_callback(what, trace_id, func, pc, trace_error_id, trace_error_arg)
+	if what == "abort" then
+		local info = jit_util.funcinfo(func, pc)
+		table.insert(profiler.raw_data.trace_aborts, {info, trace_error_id, trace_error_arg})
 	end
+end
 
-	if prof_fmt then
-		key_stack = profile.dumpstack(th, prof_fmt, prof_depth)
-		key_stack = key_stack:gsub("%[builtin#(%d+)%]", function(x)
-			return vmdef.ffnames[tonumber(x)]
-		end)
+local function parse_raw_trace_abort_data()
+	local data = profiler.data.trace_aborts
 
-		if prof_split == 2 then
-			local k1, k2 = key_stack:match("(.-) [<>] (.*)")
+	for _ = 1, #profiler.raw_data.trace_aborts do
+		local args = table.remove(profiler.raw_data.trace_aborts)
+		local info = args[1]
+		local trace_error_id = args[2]
+		local trace_error_arg = args[3]
+		local reason = jit_vmdef.traceerr[trace_error_id]
 
-			if k2 then key_stack, key_stack2 = k1, k2 end
-		elseif prof_split == 3 then
-			key_stack2 = profile.dumpstack(th, "l", 1)
-		end
-	end
-
-	-- Order keys.
-	local k1, k2
-
-	if prof_split == 1 then
-		if key_state then
-			k1 = key_state
-
-			if key_stack then k2 = key_stack end
-		end
-	elseif key_stack then
-		k1 = key_stack
-
-		if key_stack2 then k2 = key_stack2 elseif key_state then k2 = key_state end
-	end
-
-	-- Coalesce samples in one or two levels.
-	if k1 then
-		local t1 = prof_count1
-		t1[k1] = (t1[k1] or 0) + samples
-
-		if k2 then
-			local t2 = prof_count2
-			local t3 = t2[k1]
-
-			if not t3 then
-				t3 = {}
-				
-				t2[k1] = t3
+		if not blacklist[reason] then
+			if type(trace_error_arg) == "number" and reason:find("bytecode") then
+				trace_error_arg = string.sub(jit_vmdef.bcnames, trace_error_arg * 6 + 1, trace_error_arg * 6 + 6)
+				reason = reason:gsub("(%%d)", "%%s")
 			end
 
-			t3[k2] = (t3[k2] or 0) + samples
+			reason = reason:format(trace_error_arg)
+			local path = info.source
+			local line = info.currentline or info.linedefined
+			data[path] = data[path] or {}
+			data[path][line] = data[path][line] or {}
+			data[path][line][reason] = (data[path][line][reason] or 0) + 1
 		end
 	end
 end
 
-------------------------------------------------------------------------------
--- Show top N list.
-local function prof_top(count1, count2, samples, indent)
-	local t, n = {}, 0
+function profiler.EnableTraceAbortLogging(b--[[boolean]] )
+	if b then
+		jit.attach(
+			function(...)
+				local ok, err = xpcall(trace_dump_callback, error, ...)
 
-	for k in pairs(count1) do
-		n = n + 1
-		t[n] = k
+				if not ok then
+					logn(err)
+					profiler.EnableTraceAbortLogging(false)
+				end
+			end,
+			"trace"
+		)
+	else
+		jit.attach(trace_dump_callback)
 	end
+end
 
-	sort(t, function(a, b)
-		return count1[a] > count1[b]
-	end)
+local function parse_raw_statistical_data()
+	local data = profiler.data.statistical
 
-	for i = 1, n do
-		local k = t[i]
-		local v = count1[k]
-		local pct = floor(v * 100 / samples + 0.5)
+	for _ = 1, #profiler.raw_data.statistical do
+		local args = table.remove(profiler.raw_data.statistical)
+		local str, samples, vmstate = args[1], args[2], args[3]
+		local children = {}
 
-		if pct < prof_min then break end
+		for line in str:gmatch("(.-)\n") do
+			local path, line_number = line:match("(.+):(%d+)")
 
-		if not prof_raw then
-			out:write(format("%s%2d%%  %s\n", indent, pct, k))
-		elseif prof_raw == "r" then
-			out:write(format("%s%5d  %s\n", indent, v, k))
-		else
-			out:write(format("%s %d\n", k, v))
-		end
-
-		if count2 then
-			local r = count2[k]
-
-			if r then
-				prof_top(
-					r,
-					nil,
-					v,
-					(
-							prof_split == 3 or
-							prof_split == 1
-						)
-						and
-						"  -- " or
-						(
-							prof_depth < 0 and
-							"  -> " or
-							"  <- "
-						)
+			if not path and not line_number then
+				line = line:gsub("%[builtin#(%d+)%]", function(x)
+					return jit_vmdef.ffnames[tonumber(x)]
+				end)
+				table.insert(children, {name = line or -1, external_function = true})
+			else
+				table.insert(
+					children,
+					{path = path, line = tonumber(line_number) or -1, external_function = false}
 				)
 			end
 		end
+
+		local info = children[#children]
+		table.remove(children, #children)
+		local path = info.path or info.name
+		local line = tonumber(info.line) or -1
+		data[path] = data[path] or {}
+		data[path][line] = data[path][line] or
+			{
+				total_time = 0,
+				samples = 0,
+				children = {},
+				parents = {},
+				ready = false,
+				func_name = path,
+				vmstate = vmstate,
+			}
+		data[path][line].samples = data[path][line].samples + samples
+		data[path][line].start_time = data[path][line].start_time or get_time()
+		local parent = data[path][line]
+
+		for _, info in ipairs(children) do
+			local path = info.path or info.name
+			local line = tonumber(info.line) or -1
+			data[path] = data[path] or {}
+			data[path][line] = data[path][line] or
+				{
+					total_time = 0,
+					samples = 0,
+					children = {},
+					parents = {},
+					ready = false,
+					func_name = path,
+					vmstate = vmstate,
+				}
+			data[path][line].samples = data[path][line].samples + samples
+			data[path][line].start_time = data[path][line].start_time or get_time()
+			data[path][line].parents[tostring(parent)] = parent
+			parent.children[tostring(data[path][line])] = data[path][line]
+		--table.insert(data[path][line].parents, parent)
+		--table.insert(parent.children, data[path][line])
+		end
 	end
 end
 
--- Annotate source code
-local function prof_annotate(count1, samples)
-	local files = {}
-	local ms = 0
+local function statistical_callback(thread, samples, vmstate)
+	local str = jit_profiler.dumpstack(thread, "pl\n", 1000)
+	table.insert(profiler.raw_data.statistical, {str, samples, vmstate})
+end
 
-	for k, v in pairs(count1) do
-		local pct = floor(v * 100 / samples + 0.5)
-		ms = math.max(ms, v)
-
-		if pct >= prof_min then
-			local file, line = k:match("^(.*):(%d+)$")
-
-			if not file then
-				file = k
-				
-				line = 0
-			end
-
-			local fl = files[file]
-
-			if not fl then
-				fl = {}
-				
-				files[file] = fl
-				
-				files[#files + 1] = file
-			end
-
-			line = tonumber(line)
-			fl[line] = prof_raw and v or pct
-		end
+function profiler.EnableStatisticalProfiling(b)
+	if not jit_profiler then
+		wlog("jit profiler is not available")
+		return
 	end
 
-	sort(files)
-	local fmtv, fmtn = " %3d%% | %s\n", "      | %s\n"
+	profiler.busy = b
 
-	if prof_raw then
-		local n = math.max(5, math.ceil(math.log10(ms)))
-		fmtv = "%" .. n .. "d | %s\n"
-		fmtn = (" "):rep(n) .. " | %s\n"
-	end
+	if b then
+		jit_profiler.start("li0", function(...)
+			local ok, err = pcall(statistical_callback, ...)
 
-	local ann = prof_ann
-
-	for _, file in ipairs(files) do
-		local f0 = file:byte()
-
-		if f0 == 40 or f0 == 91 then
-			out:write(format("\n====== %s ======\n[Cannot annotate non-file]\n", file))
-
-			break
-		end
-
-		local fp, err = io.open(file)
-
-		if not fp then
-			out:write(format("====== ERROR: %s: %s\n", file, err))
-
-			break
-		end
-
-		out:write(format("\n====== %s ======\n", file))
-		local fl = files[file]
-		local n, show = 1, false
-
-		if ann ~= 0 then
-			for i = 1, ann do
-				if fl[i] then
-					show = true
-					
-					out:write("@@ 1 @@\n")
-					
-					break
-				end
+			if not ok then
+				logn(err)
+				profiler.EnableStatisticalProfiling(false)
 			end
-		end
-
-		for line in fp:lines() do
-			if line:byte() == 27 then
-				out:write("[Cannot annotate bytecode file]\n")
-
-				break
-			end
-
-			local v = fl[n]
-
-			if ann ~= 0 then
-				local v2 = fl[n + ann]
-
-				if show then
-					if v2 then
-						show = n + ann
-					elseif v then
-						show = n
-					elseif show + ann < n then
-						show = false
-					end
-				elseif v2 then
-					show = n + ann
-					out:write(format("@@ %d @@\n", n))
-				end
-
-				if not show then goto next end
-			end
-
-			if v then
-				out:write(format(fmtv, v, line))
-			else
-				out:write(format(fmtn, line))
-			end
-
-			::next::
-
-			n = n + 1
-		end
-
-		fp:close()
+		end)
+	else
+		jit_profiler.stop()
 	end
 end
 
-------------------------------------------------------------------------------
--- Finish profiling and dump result.
-local function prof_finish()
-	if prof_ud then
-		profile.stop()
-		local samples = prof_samples
+do
+	local started = false
 
-		if samples == 0 then
-			if prof_raw ~= true then out:write("[No samples collected]\n") end
-
-			return
-		end
-
-		if prof_ann then
-			prof_annotate(prof_count1, samples)
+	function profiler.ToggleStatistical()
+		if not started then
+			profiler.EnableStatisticalProfiling(true)
+			started = true
 		else
-			prof_top(prof_count1, prof_count2, samples, "")
+			profiler.EnableStatisticalProfiling(false)
+			profiler.PrintStatistical(0)
+			started = false
+			profiler.Restart()
+		end
+	end
+end
+
+function profiler.EasyStart()
+	profiler.EnableStatisticalProfiling(true)
+	profiler.EnableRealTimeTraceAbortLogging(true)
+end
+
+function profiler.EasyStop()
+	profiler.EnableRealTimeTraceAbortLogging(false)
+	profiler.EnableStatisticalProfiling(false)
+	profiler.PrintTraceAborts(0)
+	profiler.PrintStatistical(0)
+	started = false
+	profiler.Restart()
+end
+
+function profiler.Restart()
+	profiler.data = {sections = {}, statistical = {}, trace_aborts = {}}
+	profiler.raw_data = {sections = {}, statistical = {}, trace_aborts = {}}
+end
+
+do
+	local stack = {}
+	local enabled = false
+	local i = 0
+
+	function profiler.PushSection(section_name)
+		if not enabled then return end
+
+		local info = debug.getinfo(3)
+		local start_time = get_time()
+		table.insert(
+			stack,
+			{
+				section_name = section_name,
+				start_time = start_time,
+				info = info,
+				level = #stack,
+			}
+		)
+	end
+
+	function profiler.PopSection()
+		if not enabled then return end
+
+		local res = table.remove(stack)
+
+		if res then
+			local time = get_time() - res.start_time
+			local path, line = res.info.source, res.info.currentline
+
+			if type(res.section_name) == "string" then line = res.section_name end
+
+			local data = profiler.data.sections
+			data[path] = data[path] or {}
+			data[path][line] = data[path][line] or
+				{
+					total_time = 0,
+					samples = 0,
+					name = res.section_name,
+					section_name = res.section_name,
+					instrumental = true,
+					section = true,
+				}
+			data[path][line].total_time = data[path][line].total_time + time
+			data[path][line].samples = data[path][line].samples + 1
+			data[path][line].level = res.level
+			data[path][line].start_time = res.start_time
+			data[path][line].i = i
+			i = i + 1
+			return time
+		end
+	end
+
+	function profiler.RemoveSection(name)
+		profiler.data.sections[name] = nil
+	end
+
+	function profiler.EnableSectionProfiling(b, reset)
+		enabled = b
+
+		if reset then profiler.data.sections = {} end
+
+		stack = {}
+	end
+
+	profiler.PushSection()
+	profiler.PopSection()
+end
+
+do -- timer
+	local stack = {}
+
+	function profiler.StartTimer(str, ...)
+		table.insert(stack, {str = str and str:format(...), level = #stack})
+		local last = stack[#stack]
+		last.time = get_time() -- just to make sure there's overhead with table.insert and whatnot
+	end
+
+	function profiler.StopTimer(no_print)
+		local time = get_time()
+		local data = table.remove(stack)
+		local delta = time - data.time
+
+		if not no_print then
+			logf("%s%s: %1.22f\n", (" "):rep(data.level - 1), data.str, math_round(delta, 5))
 		end
 
-		prof_count1 = nil
-		prof_count2 = nil
-		prof_ud = nil
-
-		if out ~= stdout then out:close() end
-	end
-end
-
--- Start profiling.
-local function prof_start(mode)
-	local interval = ""
-	mode = mode:gsub("i%d*", function(s)
-		interval = s
-		
-		return ""
-	end)
-	prof_min = 3
-	mode = mode:gsub("m(%d+)", function(s)
-		prof_min = tonumber(s)
-		
-		return ""
-	end)
-	prof_depth = 1
-	mode = mode:gsub("%-?%d+", function(s)
-		prof_depth = tonumber(s)
-		
-		return ""
-	end)
-	local m = {}
-
-	for c in mode:gmatch(".") do
-		m[c] = c
+		return delta
 	end
 
-	prof_states = m.z or m.v
-
-	if prof_states == "z" then zone = IMPORTS['jit.zone']("jit.zone") end
-
-	local scope = m.l or m.f or m.F or (prof_states and "" or "f")
-	local flags = (m.p or "")
-	prof_raw = m.r
-
-	if m.s then
-		prof_split = 2
-
-		if prof_depth == -1 or m["-"] then
-			prof_depth = -2
-		elseif prof_depth == 1 then
-			prof_depth = 2
+	function profiler.ToggleTimer(val)
+		if started then
+			started = false
+			return profiler.StopTimer(val == true)
+		else
+			started = true
+			return profiler.StartTimer(val)
 		end
-	elseif mode:find("[fF].*l") then
-		scope = "l"
-		prof_split = 3
-	else
-		prof_split = (scope == "" or mode:find("[zv].*[lfF]")) and 1 or 0
 	end
-
-	prof_ann = m.A and 0 or (m.a and 3)
-
-	if prof_ann then
-		scope = "l"
-		prof_fmt = "pl"
-		prof_split = 0
-		prof_depth = 1
-	elseif m.G and scope ~= "" then
-		prof_fmt = flags .. scope .. "Z;"
-		prof_depth = -100
-		prof_raw = true
-		prof_min = 0
-	elseif scope == "" then
-		prof_fmt = false
-	else
-		local sc = prof_split == 3 and m.f or m.F or scope
-		prof_fmt = flags .. sc .. (prof_depth >= 0 and "Z < " or "Z > ")
-	end
-
-	prof_count1 = {}
-	prof_count2 = {}
-	prof_samples = 0
-	profile.start(scope:lower() .. interval, prof_cb)
-	prof_ud = newproxy(true)
-	getmetatable(prof_ud).__gc = prof_finish
 end
 
-------------------------------------------------------------------------------
-local function start(mode, outfile)
-	if not outfile then outfile = os.getenv("LUAJIT_PROFILEFILE") end
+function profiler.GetBenchmark(type, file, dump_line)
+	local benchmark_time
 
-	if outfile then
-		out = outfile == "-" and stdout or assert(io.open(outfile, "w"))
-	else
-		out = stdout
+	if profiler.start_time and profiler.stop_time then
+		benchmark_time = profiler.stop_time - profiler.start_time
 	end
 
-	prof_start(mode or "f")
+	if type == "statistical" then parse_raw_statistical_data() end
+
+	local out = {}
+
+	for path, lines in pairs(profiler.data[type]) do
+		if path:sub(1, 1) == "@" then path = path:sub(2) end
+
+		if not file or path:find(file) then
+			for line, data in pairs(lines) do
+				line = tonumber(line) or line
+				local name = "unknown(file not found)"
+				local debug_info
+
+				if data.func then
+					debug_info = debug.getinfo(data.func)
+					-- remove some useless fields
+					debug_info.source = nil
+					debug_info.short_src = nil
+					debug_info.currentline = nil
+					debug_info.func = nil
+				end
+
+				if dump_line then
+					local content = read_file(path)
+
+					if content then
+						name = split(content, "\n")[line]
+
+						if name then
+							name = name:gsub("function ", "")
+							name = trim(name)
+						end
+					end
+				elseif data.func then
+					name = ("%s(%s)"):format(data.func_name, table.concat(debug.getparams(data.func), ", "))
+				else
+					local full_path = path
+					name = full_path .. ":" .. line
+				end
+
+				if data.section_name then
+					data.section_name = data.section_name:match(".+lua/(.+)") or data.section_name
+				end
+
+				if name:find("\n", 1, true) then
+					name = name:gsub("\n", "")
+					name = name:sub(0, 50)
+				end
+
+				name = trim(name)
+				data.path = path
+				data.file_name = path:match(".+/(.+)%.") or path
+				data.line = line
+				data.name = name
+				data.debug_info = debug_info
+				data.ready = true
+
+				if data.total_time then
+					data.average_time = data.total_time / data.samples
+				--data.total_time = data.average_time * data.samples
+				end
+
+				if benchmark_time then
+					data.fraction_time = data.total_time / benchmark_time
+				end
+
+				data.start_time = data.start_time or 0
+				data.samples = data.samples or 0
+				data.sample_duration = get_time() - data.start_time
+				data.times_called = data.samples
+				table.insert(out, data)
+			end
+		end
+	end
+
+	return out
 end
 
--- Public module functions.
-return {start = start, -- For -j command line option.
-stop = prof_finish} end ]=======], '@/usr/local/share/luajit-2.1.0-beta3/jit/p.lua'))())(...) return __M end end
-do local __M; IMPORTS["nattlua.other.profiler"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local profiler = {}
+function profiler.PrintTraceAborts(min_samples)
+	min_samples = min_samples or 500
+	parse_raw_statistical_data()
+	parse_raw_trace_abort_data()
+	logn(
+		"trace abort reasons for functions that were sampled by the profiler more than ",
+		min_samples,
+		" times:"
+	)
+	local blacklist = {
+		["NYI: return to lower frame"] = true,
+		["inner loop in root trace"] = true,
+		["blacklisted"] = true,
+	}
+
+	for path, lines in pairs(profiler.data.trace_aborts) do
+		path = path:sub(2)
+		local s = profiler.data.statistical
+
+		if s[path] or not next(s) then
+			local full_path = path
+			local temp = {}
+
+			for line, reasons in pairs(lines) do
+				if not next(s) or s[path][line] and s[path][line].samples > min_samples then
+					local str = "unknown line"
+					local content, err = read_file(path)
+
+					if content then
+						local lines = split(content, "\n")
+						str = lines[line]
+						str = "\"" .. trim(str) .. "\""
+					else
+						str = err
+					end
+
+					for reason, count in pairs(reasons) do
+						if not blacklist[reason] then
+							table.insert(temp, "\t\t" .. trim(reason) .. " (x" .. count .. ")")
+							table.insert(temp, "\t\t\t" .. line .. ": " .. str)
+						end
+					end
+				end
+			end
+
+			if #temp > 0 then
+				logn("\t", full_path)
+				logn(table.concat(temp, "\n"))
+			end
+		end
+	end
+end
+
+function profiler.PrintSections()
+	log(
+		utility.TableToColumns(
+			"sections",
+			profiler.GetBenchmark("sections"),
+			{
+				{key = "times_called", friendly = "calls"},
+				{
+					key = "name",
+					tostring = function(val, column)
+						return ("    "):rep(column.level - 1) .. tostring(val)
+					end,
+				},
+				{
+					key = "average_time",
+					friendly = "time",
+					tostring = function(val)
+						return math_round(val * 100 * 100, 3)
+					end,
+				},
+			},
+			function(a)
+				return a.times_called > 50
+			end,
+			"i"
+		)
+	)
+end
+
+function profiler.PrintStatistical(min_samples)
+	min_samples = min_samples or 100
+	local tr = {
+		N = "native",
+		I = "interpreted",
+		G = "garbage collector",
+		J = "JIT compiler",
+		C = "C",
+	}
+	log(
+		utility.TableToColumns(
+			"statistical",
+			profiler.GetBenchmark("statistical"),
+			{
+				{key = "name"},
+				{
+					key = "times_called",
+					friendly = "percent",
+					tostring = function(val, column, columns)
+						return math_round((val / columns[#columns].val.times_called) * 100, 2)
+					end,
+				},
+				{
+					key = "vmstate",
+					tostring = function(str)
+						return tr[str]
+					end,
+				},
+				{
+					key = "samples",
+					tostring = function(val)
+						return val
+					end,
+				},
+			},
+			function(a)
+				return a.name and a.times_called > min_samples
+			end,
+			function(a, b)
+				return a.times_called < b.times_called
+			end
+		)
+	)
+end
+
+function profiler.StartInstrumental(file_filter, method)
+	method = method or "cr"
+	profiler.EnableSectionProfiling(true, true)
+	profiler.busy = true
+	local last_info
+
+	debug.sethook(
+		function(what, line)
+			local info = debug.getinfo(2)
+
+			if not file_filter or not info.source:find(file_filter, nil, true) then
+				if what == "call" then
+					if last_info and last_info.what == "C" then profiler.PopSection() end
+
+					local name
+
+					if info.what == "C" then
+						name = info.name
+
+						if not name then name = "" end
+
+						local info = debug.getinfo(3)
+						name = name .. " " .. info.source .. ":" .. info.currentline
+					end
+
+					profiler.PushSection(name)
+				elseif what == "return" then
+					profiler.PopSection()
+				end
+			end
+
+			last_info = info
+		end,
+		method
+	)
+
+	profiler.start_time = get_time()
+end
+
+function profiler.StopInstrumental(file_filter, show_everything)
+	profiler.EnableSectionProfiling(false)
+	profiler.stop_time = get_time()
+	profiler.busy = false
+	debug.sethook()
+	profiler.PopSection()
+	log(
+		utility.TableToColumns(
+			"instrumental",
+			profiler.GetBenchmark("sections"),
+			{
+				{key = "times_called", friendly = "calls"},
+				{key = "name"},
+				{
+					key = "average_time",
+					friendly = "time",
+					tostring = function(val)
+						return ("%f"):format(val)
+					end,
+				},
+				{
+					key = "total_time",
+					friendly = "total time",
+					tostring = function(val)
+						return ("%f"):format(val)
+					end,
+				},
+				{
+					key = "fraction_time",
+					friendly = "percent",
+					tostring = function(val)
+						return math_round(val * 100, 2)
+					end,
+				},
+			},
+			function(a)
+				return show_everything or a.average_time > 0.5 or (file_filter or a.times_called > 100)
+			end,
+			function(a, b)
+				return a.total_time < b.total_time
+			end
+		)
+	)
+end
+
+do
+	local started = false
+
+	function profiler.ToggleInstrumental(file_filter, method)
+		if file_filter == "" then file_filter = nil end
+
+		if not started then
+			profiler.StartInstrumental(file_filter, method)
+			started = true
+		else
+			profiler.StopInstrumental(file_filter, true)
+			started = false
+		end
+	end
+end
+
+function profiler.MeasureInstrumental(time, file_filter, show_everything)
+	profiler.StartInstrumental(file_filter)
+
+	event.Delay(time, function()
+		profiler.StopInstrumental(file_filter, show_everything)
+	end)
+end
+
+function profiler.DumpZerobraneProfileTree(min, filter)
+	min = min or 1
+	local huh = serializer.ReadFile("msgpack", "zerobrane_statistical.msgpack")
+	local most_samples
+	local path, root
+
+	for k, v in pairs(huh) do
+		most_samples = most_samples or v
+
+		if v.samples >= most_samples.samples then
+			most_samples = v
+			path = k
+			root = v
+		end
+	end
+
+	local level = 0
+
+	local function dump(path, node)
+		local percent = math_round((node.samples / root.samples) * 100, 3)
+
+		if percent > min then
+			if not filter or path:find(filter) then
+				logf("%s%s (%s) %s\n", ("\t"):rep(level), percent, node.samples, path)
+			else
+				logf("%s%s\n", ("\t"):rep(level), "...")
+			end
+
+			for path, child in pairs(node.children) do
+				level = level + 1
+				dump(path, child)
+				level = level - 1
+			end
+		end
+	end
+
+	dump(path, root)
+end
+
+function profiler.IsBusy()
+	return profiler.busy
+end
+
+local blacklist = {
+	["NYI: return to lower frame"] = true,
+	["inner loop in root trace"] = true,
+	["leaving loop in root trace"] = true,
+	["blacklisted"] = true,
+	["too many spill slots"] = true,
+	["down-recursion, restarting"] = true,
+}
+
+function profiler.EnableRealTimeTraceAbortLogging(b)
+	if not jit.attach then
+		wlog("jit profiler is not available")
+		return
+	end
+
+	if b then
+		local last_log
+
+		jit.attach(
+			function(what, trace_id, func, pc, trace_error_id, trace_error_arg)
+				if what == "abort" then
+					local info = jit_util.funcinfo(func, pc)
+					local reason = jit_vmdef.traceerr[trace_error_id]
+
+					if not blacklist[reason] then
+						if type(trace_error_arg) == "number" and reason:find("bytecode") then
+							trace_error_arg = string.sub(jit_vmdef.bcnames, trace_error_arg * 6 + 1, trace_error_arg * 6 + 6)
+							reason = reason:gsub("(%%d)", "%%s")
+						end
+
+						reason = reason:format(trace_error_arg)
+						local path = info.source
+						local line = info.currentline or info.linedefined
+						local content = read_file(path:sub(2)) or read_file(path:sub(2))
+						local str
+
+						if content then
+							str = string.format(
+								"%s:%s\n%s:--\t%s\n\n",
+								path:sub(2),
+								line,
+								trim(split(content, "\n")[line]),
+								reason
+							)
+						else
+							str = string.format("%s:%s:\n\t%s\n\n", path, line, reason)
+						end
+
+						if str ~= last_log then
+							log(str)
+							last_log = str
+						end
+					end
+				end
+			end,
+			"trace"
+		)
+	else
+		jit.attach(function() end)
+	end
+end
+
+local system_GetTime = get_time
+
+function profiler.MeasureFunction(func, count, name, no_print)
+	count = count or 1
+	name = name or "measure result"
+	local total_time = 0
+
+	for _ = 1, count do
+		local time = system_GetTime()
+		jit.tracebarrier()
+		func()
+		jit.tracebarrier()
+		total_time = total_time + system_GetTime() - time
+	end
+
+	if not no_print then
+		logf("%s: average: %1.22f total: %f\n", name, total_time / count, total_time)
+	end
+
+	return total_time, func
+end
+
+function profiler.MeasureFunctions(tbl, count)
+	local res = {}
+
+	for name, func in pairs(tbl) do
+		table.insert(res, {time = profiler.MeasureFunction(func, count, name, true), name = name})
+	end
+
+	table.sort(res, function(a, b)
+		return a.time < b.time
+	end)
+
+	for i, v in ipairs(res) do
+		logf("%s: average: %1.22f total: %f\n", v.name, v.time / count, v.time)
+	end
+end
+
+function profiler.Compare(old, new, count)
+	profiler.MeasureFunction(old, count, "OLD")
+	profiler.MeasureFunction(new, count, "NEW")
+end
+
+profiler.Restart()
+return profiler end ]=======], '@./nattlua/other/profiler2.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.profiler"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local profiler2 = IMPORTS['nattlua.other.profiler2']("nattlua.other.profiler2")
+local profiler = {}
 local should_run = true
 
 if _G.ON_EDITOR_SAVE or not jit then should_run = false end
@@ -12091,25 +12142,25 @@ if _G.ON_EDITOR_SAVE or not jit then should_run = false end
 function profiler.Start()
 	if not should_run then return end
 
-	IMPORTS['jit.p']("jit.p").start("plz -")
+	profiler2.EasyStart()
 end
 
 function profiler.Stop()
 	if not should_run then return end
 
-	IMPORTS['jit.p']("jit.p").stop()
+	profiler2.EasyStop()
 end
 
 function profiler.PushZone(name)
 	if not should_run then return end
 
-	IMPORTS['jit.zone']("jit.zone")(name)
+	profiler2.PushSection(name)
 end
 
 function profiler.PopZone()
 	if not should_run then return end
 
-	IMPORTS['jit.zone']("jit.zone")()
+	profiler2.PopSection()
 end
 
 return profiler end ]=======], '@./nattlua/other/profiler.lua'))())(...) return __M end end
@@ -27179,7 +27230,7 @@ local function recompile(uri)
 			if not range then return end
 
 			local name = code:GetName()
-			print("error: ", name, msg, severity)
+			print("error: ", name, msg, severity, ...)
 			responses[name] = responses[name] or
 				{
 					method = "textDocument/publishDiagnostics",
@@ -27208,7 +27259,7 @@ local function recompile(uri)
 				end
 			end
 
-			local code = io.open(entry_point, "r"):read("*all")
+			local code = assert(io.open((cfg.working_directory or "") .. entry_point, "r")):read("*all")
 
 			if
 				code:find("-" .. "-ANALYZE", nil, true) or
