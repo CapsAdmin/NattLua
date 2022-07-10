@@ -851,3 +851,120 @@ analyze(
 ]],
 	"x %+ 2.+attempt to perform arithmetic on"
 )
+analyze[[
+    local type meta = {}
+    type meta.__index = meta
+    
+    function meta:__index<|key: any|>
+        local obj = setmetatable<|{value = {[any] = any}}, meta|>
+        self.value[key] = obj | self.value[key]
+        return obj | any
+    end
+    
+    function meta:__newindex<|key: any, val: any|>
+        self.value[key] = self.value[key] | val
+    end
+    
+    function meta:__add<|other: any|>
+        return Widen(other)
+    end
+    
+    function meta:__concat<|other: any|>
+        return Widen(other)
+    end
+    
+    function meta:__len<||>
+        return number
+    end
+    
+    function meta:__unm<||>
+        return any
+    end
+    
+    function meta:__bnot<||>
+        return any
+    end
+    
+    function meta:__sub<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__mul<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__div<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__idiv<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__mod<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__pow<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__band<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__bor<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__bxor<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__shl<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__shr<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__eq<|b: any|>
+        return boolean
+    end
+    
+    function meta:__lt<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__le<|b: any|>
+        return Widen(b)
+    end
+    
+    function meta:__call<|...: ...any|>
+        local ret = setmetatable<|{value = {[any] = any}}, meta|>
+        self.value = function=((...))>((ret)) | self.value
+        return ret
+    end
+    
+    local function InferenceObject<||>
+        return setmetatable<|{value = {[any] = any}}, meta|>
+    end
+
+
+    local type lib = InferenceObject<||>
+
+    lib.foo.bar = true
+    lib.foo(1,2,3)
+
+    attest.equal<|lib, { ["value"] = {
+        [any] = any,
+        ["foo"] = any | { ["value"] = {
+                        [any] = any,
+                        ["bar"] = any | true
+                } } | { ["value"] = {
+                        [any] = any,
+                        ["value"] = any | self | function=(1, 2, 3)>({ ["value"] = { [any] = any } },)
+                } }
+        } }|>
+]]
