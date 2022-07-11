@@ -175,7 +175,6 @@ return {
 
 			-- used by the emitter
 			exp_key:AddType(val)
-			val:SetTokenLabelSource(exp_key)
 			val:SetAnalyzerEnvironment(self:GetCurrentAnalyzerEnvironment())
 
 			-- if all is well, create or mutate the value
