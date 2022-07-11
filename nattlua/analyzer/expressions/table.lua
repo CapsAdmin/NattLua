@@ -12,7 +12,7 @@ return {
 		if self:IsRuntime() then tbl:SetReferenceId(tostring(tbl:GetData())) end
 
 		self:PushCurrentType(tbl, "table")
-		tbl.scope = self:GetScope()
+		tbl:SetCreationScope(self:GetScope())
 
 		for i, node in ipairs(tree.children) do
 			if node.kind == "table_key_value" then

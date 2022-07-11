@@ -20,6 +20,7 @@ META:GetSet("BaseTable", nil--[[# as TTable | nil]])
 META:GetSet("ReferenceId", nil--[[# as string | nil]])
 META:GetSet("Self", nil--[[# as nil | TTable]])
 META:GetSet("Contracts", nil--[[# as List<|TTable|>]])
+META:GetSet("CreationScope", nil--[[# as any]])
 
 function META:GetName()
 	if not self.Name then
@@ -746,7 +747,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	copy.mutable = self.mutable
 	copy:SetLiteral(self:IsLiteral())
 	copy.mutations = self.mutations
-	copy.scope = self.scope
+	copy:SetCreationScope(self:GetCreationScope())
 	copy.BaseTable = self.BaseTable
 
 	--[[
