@@ -335,14 +335,14 @@ end
 
 function profiler.EasyStart()
 	profiler.EnableStatisticalProfiling(true)
-	profiler.EnableRealTimeTraceAbortLogging(true)
+	profiler.EnableTraceAbortLogging(true)
 end
 
 function profiler.EasyStop()
-	profiler.EnableRealTimeTraceAbortLogging(false)
+	profiler.EnableTraceAbortLogging(false)
 	profiler.EnableStatisticalProfiling(false)
-	profiler.PrintTraceAborts(0)
-	profiler.PrintStatistical(0)
+	profiler.PrintTraceAborts(500)
+	profiler.PrintStatistical(500)
 	started = false
 	profiler.Restart()
 end
