@@ -213,11 +213,11 @@ local function initialize_table_mutation_tracker(tbl, scope, key, hash)
 			-- initialize the table mutations with an existing value or nil
 			local val = (tbl:GetContract() or tbl):Get(key) or Nil()
 
-			if not tbl:GetCreationScope() or not scope:IsCertainFromScope(tbl:GetCreationScope()) then
-				-- TODO: this doesn't seem like the right fix
-				-- it won't choose the table's creation scope if the current scope is valid
-				-- it would fix table.insert on a table created in some other functions
-				scope = tbl:GetCreationScope() or scope:GetRoot()
+			if
+				tbl:GetCreationScope() and
+				not scope:IsCertainFromScope(tbl:GetCreationScope())
+			then
+				scope = tbl:GetCreationScope()
 			end
 
 			table.insert(tbl.mutations[hash], {scope = scope, value = val, contract = tbl:GetContract()})
