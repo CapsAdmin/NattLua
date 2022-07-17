@@ -27,13 +27,31 @@ function META:__tostring()
 		local lua_code = self.Code:GetString()
 		local name = self.Code:GetName()
 
-		if name:sub(1, 1) == "@" then
+		if name:sub(-4) == ".lua" or name:sub(-5) == ".nlua" then
 			local data = helpers.SubPositionToLinePosition(lua_code, self:GetStartStop())
-			str = str .. " @ " .. name:sub(2) .. ":" .. data.line_start
+			local name = name
+
+			if name:sub(1, 1) == "@" then name = name:sub(2) end
+
+			str = str .. " @ " .. name .. ":" .. data.line_start
 		end
 	elseif self.type == "expression" then
-		if self.value and type(self.value.value) == "string" then
-			str = str .. " - " .. quote_helper.QuoteToken(self.value.value)
+		if self.kind == "postfix_call" and self.Code then
+			local lua_code = self.Code:GetString()
+			local name = self.Code:GetName()
+
+			if name and lua_code and (name:sub(-4) == ".lua" or name:sub(-5) == ".nlua") then
+				local data = helpers.SubPositionToLinePosition(lua_code, self:GetStartStop())
+				local name = name
+
+				if name:sub(1, 1) == "@" then name = name:sub(2) end
+
+				str = str .. " @ " .. name .. ":" .. data.line_start
+			end
+		else
+			if self.value and type(self.value.value) == "string" then
+				str = str .. " - " .. quote_helper.QuoteToken(self.value.value)
+			end
 		end
 	end
 
