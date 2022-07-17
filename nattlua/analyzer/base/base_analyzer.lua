@@ -394,22 +394,13 @@ return function(META)
 
 		local function attempt_render(node)
 			local s = ""
-			local ok, err
-			ok, err = pcall(function()
+			local ok, err = xpcall(function()
 				s = s .. node:Render()
+			end, function(err)
+				print(debug.traceback(err))
 			end)
 
-			if not ok then
-				print("DebugStateString: failed to render node: " .. tostring(err))
-				ok, err = pcall(function()
-					s = s .. tostring(node)
-				end)
-
-				if not ok then
-					print("DebugStateString: failed to tostring node: " .. tostring(err))
-					s = s .. "* error in rendering statement * "
-				end
-			end
+			if not ok then s = "* error in rendering statement * " end
 
 			return s
 		end
