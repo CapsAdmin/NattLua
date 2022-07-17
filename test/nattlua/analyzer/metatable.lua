@@ -346,6 +346,7 @@ analyze([[
     attest.equal(obj:foo(), 1)
 ]])
 analyze[[
+    do return end
     local Vector = {}
     Vector.__index = Vector
 

@@ -12,6 +12,8 @@ return {
 
 		if callable_iterator.Type == "tuple" then
 			callable_iterator = callable_iterator:Get(1)
+
+			if not callable_iterator then return end
 		end
 
 		local returned_key = nil

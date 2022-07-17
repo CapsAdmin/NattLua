@@ -17,7 +17,7 @@ return {
 		for i, node in ipairs(tree.children) do
 			if node.kind == "table_key_value" then
 				local key = LString(node.tokens["identifier"].value)
-				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
+				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue() or Nil()
 				self:NewIndexOperator(tbl, key, val)
 			elseif node.kind == "table_expression_value" then
 				local key = self:AnalyzeExpression(node.key_expression):GetFirstValue()

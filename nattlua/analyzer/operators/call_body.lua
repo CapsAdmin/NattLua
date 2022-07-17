@@ -372,6 +372,7 @@ local function check_output(self, output, output_signature)
 			end
 
 			local ok, reason, a, b, i = output:IsSubsetOfTuple(output_signature)
+			print("\t", output, output_signature, ok, reason, a, b, i)
 
 			if not ok then self:Error(reason) end
 		end
@@ -535,6 +536,7 @@ return function(META)
 		end
 
 		-- check against the function's return type
+		print(obj, function_node and function_node:__tostring2())
 		check_output(self, output, output_signature)
 
 		if function_node.environment == "typesystem" then return output end

@@ -273,7 +273,10 @@ return function(META)
 					scope = self:GetScope(),
 				}
 			)
-		end
+		--[[for i, frame in ipairs(self.call_stack) do
+				print(("\t"):rep(i - 1) .. tostring(frame.call_node))
+				print(("\t"):rep(i - 1) .. tostring(frame.obj:GetFunctionBodyNode() or frame.obj))
+			end[[]] end
 
 		function META:PopCallFrame()
 			table.remove(self.call_stack, 1)

@@ -210,6 +210,20 @@ return {
 				return call_other(obj)
 			end
 
+			if
+				self:IsRuntime() and
+				obj:IsCalled() and
+				not obj:IsRefFunction()
+				and
+				obj:GetFunctionBodyNode() and
+				obj:GetFunctionBodyNode().environment == "runtime" and
+				not obj:GetAnalyzerFunction()
+				and
+				obj:IsExplicitInputSignature()
+			then
+				return obj:GetOutputSignature():Copy()
+			end
+
 			local ok, err = self:PushCallFrame(obj, call_node, not_recursive_call)
 
 			if not ok == false then return ok, err end
@@ -217,6 +231,7 @@ return {
 			if ok then return ok end
 
 			local ok, err = call_function(self, obj, input)
+			print(self:GetScope())
 			self:PopCallFrame()
 			return ok, err
 		end

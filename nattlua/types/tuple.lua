@@ -73,11 +73,19 @@ end
 function META:Merge(tup--[[#: TTuple]])
 	local src = self:GetData()
 
-	for i = 1, tup:GetMinimumLength() do
-		local a = self:Get(i)
-		local b = tup:Get(i)
+	if tup:GetMinimumLength() == 0 and tup:GetLength() == 1 then
+		local val = tup:Get(1)
+		if val then
+			src[1] = val
+		end
+	else
 
-		if a then src[i] = Union({a, b}) elseif b then src[i] = b:Copy() end
+		for i = 1, tup:GetMinimumLength() do
+			local a = self:Get(i)
+			local b = tup:Get(i)
+
+			if a then src[i] = Union({a, b}) elseif b then src[i] = b:Copy() end
+		end
 	end
 
 	self.Remainder = tup.Remainder or self.Remainder
