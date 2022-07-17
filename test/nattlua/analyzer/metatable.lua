@@ -358,7 +358,7 @@ analyze[[
     end
 
     setmetatable(Vector, {
-        __call = function(_, x: number, y: number, z: number)
+        __call = function(_, x: ref number, y: ref number, z: ref number)
             return setmetatable({x=x,y=y,z=z}, Vector)
         end
     })

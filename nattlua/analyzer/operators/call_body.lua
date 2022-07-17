@@ -393,6 +393,7 @@ return function(META)
 		-- crawl the function with the new arguments
 		-- return_result is either a union of tuples or a single tuple
 		local scope = self:CreateAndPushFunctionScope(obj)
+		obj.scope = scope
 		self:PushTruthyExpressionContext(false)
 		self:PushFalsyExpressionContext(false)
 		self:PushGlobalEnvironment(

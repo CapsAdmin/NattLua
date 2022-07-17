@@ -822,7 +822,6 @@ do
 	end
 
 	function META:CopyInternalsFrom(obj)
-		self:SetTokenLabelSource(obj:GetTokenLabelSource())
 		self:SetLiteral(obj:IsLiteral())
 		self:SetContract(obj:GetContract())
 		self:SetName(obj:GetName())
@@ -836,7 +835,6 @@ end
 
 do -- token, expression and statement association
 	META:GetSet("Upvalue", nil)
-	META:GetSet("TokenLabelSource", nil)
 	META:GetSet("Node", nil)
 
 	function META:SetNode(node, is_local)
@@ -2560,8 +2558,11 @@ end
 
 function META:Merge(tup)
 	local src = self:GetData()
+	local len = tup:GetMinimumLength()
 
-	for i = 1, tup:GetMinimumLength() do
+	if len == 0 and tup:GetLength() ~= math.huge then len = tup:GetLength() end
+
+	for i = 1, len do
 		local a = self:Get(i)
 		local b = tup:Get(i)
 
@@ -3002,6 +3003,7 @@ META:GetSet("BaseTable", nil)
 META:GetSet("ReferenceId", nil)
 META:GetSet("Self", nil)
 META:GetSet("Contracts", nil)
+META:GetSet("CreationScope", nil)
 
 function META:GetName()
 	if not self.Name then
@@ -3527,15 +3529,12 @@ function META:Set(key, val, no_delete)
 		val:SetParent(self)
 		key:SetParent(self)
 		table.insert(self.Data, {key = key, val = val})
-		self.subset_cache = nil
 	else
 		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
 			keyval.val = val
 		else
 			keyval.val = Union({keyval.val, val})
 		end
-
-		self.subset_cache = nil
 	end
 
 	return true
@@ -3564,15 +3563,12 @@ function META:SetExplicit(key, val)
 		val:SetParent(self)
 		key:SetParent(self)
 		table.insert(self.Data, {key = key, val = val})
-		self.subset_cache = nil
 	else
 		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
 			keyval.val = val
 		else
 			keyval.val = Union({keyval.val, val})
 		end
-
-		self.subset_cache = nil
 	end
 
 	return true
@@ -3734,7 +3730,7 @@ function META:Copy(map, copy_tables)
 	copy.mutable = self.mutable
 	copy:SetLiteral(self:IsLiteral())
 	copy.mutations = self.mutations
-	copy.scope = self.scope
+	copy:SetCreationScope(self:GetCreationScope())
 	copy.BaseTable = self.BaseTable
 
 	--[[
@@ -10695,13 +10691,31 @@ function META:__tostring()
 		local lua_code = self.Code:GetString()
 		local name = self.Code:GetName()
 
-		if name:sub(1, 1) == "@" then
+		if name:sub(-4) == ".lua" or name:sub(-5) == ".nlua" then
 			local data = helpers.SubPositionToLinePosition(lua_code, self:GetStartStop())
-			str = str .. " @ " .. name:sub(2) .. ":" .. data.line_start
+			local name = name
+
+			if name:sub(1, 1) == "@" then name = name:sub(2) end
+
+			str = str .. " @ " .. name .. ":" .. data.line_start
 		end
 	elseif self.type == "expression" then
-		if self.value and type(self.value.value) == "string" then
-			str = str .. " - " .. quote_helper.QuoteToken(self.value.value)
+		if self.kind == "postfix_call" and self.Code then
+			local lua_code = self.Code:GetString()
+			local name = self.Code:GetName()
+
+			if name and lua_code and (name:sub(-4) == ".lua" or name:sub(-5) == ".nlua") then
+				local data = helpers.SubPositionToLinePosition(lua_code, self:GetStartStop())
+				local name = name
+
+				if name:sub(1, 1) == "@" then name = name:sub(2) end
+
+				str = str .. " @ " .. name .. ":" .. data.line_start
+			end
+		else
+			if self.value and type(self.value.value) == "string" then
+				str = str .. " - " .. quote_helper.QuoteToken(self.value.value)
+			end
 		end
 	end
 
@@ -11545,14 +11559,14 @@ end
 
 function profiler.EasyStart()
 	profiler.EnableStatisticalProfiling(true)
-	profiler.EnableRealTimeTraceAbortLogging(true)
+	profiler.EnableTraceAbortLogging(true)
 end
 
 function profiler.EasyStop()
-	profiler.EnableRealTimeTraceAbortLogging(false)
+	profiler.EnableTraceAbortLogging(false)
 	profiler.EnableStatisticalProfiling(false)
-	profiler.PrintTraceAborts(0)
-	profiler.PrintStatistical(0)
+	profiler.PrintTraceAborts(500)
+	profiler.PrintStatistical(500)
 	started = false
 	profiler.Restart()
 end
@@ -16229,22 +16243,13 @@ return function(META)
 
 		local function attempt_render(node)
 			local s = ""
-			local ok, err
-			ok, err = pcall(function()
+			local ok, err = xpcall(function()
 				s = s .. node:Render()
+			end, function(err)
+				print(debug.traceback(err))
 			end)
 
-			if not ok then
-				print("DebugStateString: failed to render node: " .. tostring(err))
-				ok, err = pcall(function()
-					s = s .. tostring(node)
-				end)
-
-				if not ok then
-					print("DebugStateString: failed to tostring node: " .. tostring(err))
-					s = s .. "* error in rendering statement * "
-				end
-			end
+			if not ok then s = "* error in rendering statement * " end
 
 			return s
 		end
@@ -16577,7 +16582,11 @@ return function(META)
 			end
 		end
 
-		if not thrown then scope:CollectOutputSignatures(node, types) end
+		if not thrown then
+			scope:CollectOutputSignatures(node, types)
+		else
+			scope.throws = true
+		end
 
 		if scope:IsUncertain() then
 			function_scope:UncertainReturn()
@@ -16631,7 +16640,10 @@ return function(META)
 					scope = self:GetScope(),
 				}
 			)
-		end
+		--[[for i, frame in ipairs(self.call_stack) do
+				print(("\t"):rep(i - 1) .. tostring(frame.call_node))
+				print(("\t"):rep(i - 1) .. tostring(frame.obj:GetFunctionBodyNode() or frame.obj))
+			end[[]] end
 
 		function META:PopCallFrame()
 			table.remove(self.call_stack, 1)
@@ -16956,11 +16968,11 @@ local function initialize_table_mutation_tracker(tbl, scope, key, hash)
 			-- initialize the table mutations with an existing value or nil
 			local val = (tbl:GetContract() or tbl):Get(key) or Nil()
 
-			if not tbl.scope or not scope:IsCertainFromScope(tbl.scope) then
-				-- TODO: this doesn't seem like the right fix
-				-- it won't choose the table's creation scope if the current scope is valid
-				-- it would fix table.insert on a table created in some other functions
-				scope = tbl.scope or scope:GetRoot()
+			if
+				tbl:GetCreationScope() and
+				not scope:IsCertainFromScope(tbl:GetCreationScope())
+			then
+				scope = tbl:GetCreationScope()
 			end
 
 			table.insert(tbl.mutations[hash], {scope = scope, value = val, contract = tbl:GetContract()})
@@ -18392,6 +18404,7 @@ return function(META)
 		-- crawl the function with the new arguments
 		-- return_result is either a union of tuples or a single tuple
 		local scope = self:CreateAndPushFunctionScope(obj)
+		obj.scope = scope
 		self:PushTruthyExpressionContext(false)
 		self:PushFalsyExpressionContext(false)
 		self:PushGlobalEnvironment(
@@ -18801,6 +18814,24 @@ return {
 				return call_any(self, input)
 			elseif obj.Type ~= "function" then
 				return call_other(obj)
+			end
+
+			if
+				self:IsRuntime() and
+				obj:IsCalled() and
+				not obj:IsRefFunction()
+				and
+				obj:GetFunctionBodyNode() and
+				obj:GetFunctionBodyNode().environment == "runtime" and
+				not obj:GetAnalyzerFunction()
+				and
+				obj:IsExplicitInputSignature()
+			then
+				if obj.scope and obj.scope.throws then
+					self:GetScope():CertainReturn()
+				end
+
+				return obj:GetOutputSignature():Copy()
 			end
 
 			local ok, err = self:PushCallFrame(obj, call_node, not_recursive_call)
@@ -21238,6 +21269,8 @@ return {
 
 		if callable_iterator.Type == "tuple" then
 			callable_iterator = callable_iterator:Get(1)
+
+			if not callable_iterator then return end
 		end
 
 		local returned_key = nil
@@ -22188,7 +22221,6 @@ return {
 
 			-- used by the emitter
 			exp_key:AddType(val)
-			val:SetTokenLabelSource(exp_key)
 			val:SetAnalyzerEnvironment(self:GetCurrentAnalyzerEnvironment())
 
 			-- if all is well, create or mutate the value
@@ -22521,12 +22553,12 @@ return {
 		if self:IsRuntime() then tbl:SetReferenceId(tostring(tbl:GetData())) end
 
 		self:PushCurrentType(tbl, "table")
-		tbl.scope = self:GetScope()
+		tbl:SetCreationScope(self:GetScope())
 
 		for i, node in ipairs(tree.children) do
 			if node.kind == "table_key_value" then
 				local key = LString(node.tokens["identifier"].value)
-				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
+				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue() or Nil()
 				self:NewIndexOperator(tbl, key, val)
 			elseif node.kind == "table_expression_value" then
 				local key = self:AnalyzeExpression(node.key_expression):GetFirstValue()
@@ -22544,7 +22576,7 @@ return {
 						end
 
 						if kv.key.Type == "number" then
-							tbl:Insert(val)
+							self:NewIndexOperator(tbl, LNumber(tbl:GetLength(self):GetData() + 1), val)
 						else
 							self:NewIndexOperator(tbl, kv.key, val)
 						end
@@ -22561,7 +22593,7 @@ return {
 
 					if obj.Type == "tuple" then
 						if tree.children[i + 1] then
-							tbl:Insert(obj:Get(1))
+							self:NewIndexOperator(tbl, LNumber(tbl:GetLength(self):GetData() + 1), obj:Get(1))
 						else
 							for i = 1, obj:GetMinimumLength() do
 								tbl:Set(LNumber(#tbl:GetData() + 1), obj:Get(i))
@@ -22570,14 +22602,14 @@ return {
 							if obj.Remainder then
 								local current_index = LNumber(#tbl:GetData() + 1)
 								local max = LNumber(obj.Remainder:GetLength())
-								tbl:Set(current_index:SetMax(max), obj.Remainder:Get(1))
+								self:NewIndexOperator(tbl, current_index:SetMax(max), obj.Remainder:Get(1))
 							end
 						end
 					else
 						if node.i then
-							tbl:Insert(LNumber(obj))
+							self:NewIndexOperator(tbl, LNumber(tbl:GetLength(self):GetData() + 1), LNumber(obj))
 						elseif obj then
-							tbl:Insert(obj)
+							self:NewIndexOperator(tbl, LNumber(tbl:GetLength(self):GetData() + 1), obj)
 						end
 					end
 				end
@@ -23122,7 +23154,9 @@ end
 analyzer function copy(obj: any)
 	local copy = obj:Copy()
 	analyzer:ClearObjectMutations(copy)
-	copy.scope = nil
+
+	if copy.Type == "table" then copy:SetCreationScope(nil) end
+
 	copy.potential_self = nil
 	return copy
 end

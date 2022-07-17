@@ -72,8 +72,11 @@ end
 
 function META:Merge(tup--[[#: TTuple]])
 	local src = self:GetData()
+	local len = tup:GetMinimumLength()
 
-	for i = 1, tup:GetMinimumLength() do
+	if len == 0 and tup:GetLength() ~= math.huge then len = tup:GetLength() end
+
+	for i = 1, len do
 		local a = self:Get(i)
 		local b = tup:Get(i)
 

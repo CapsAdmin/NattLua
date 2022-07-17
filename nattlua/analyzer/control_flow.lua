@@ -76,7 +76,7 @@ return function(META)
 		end
 
 		scope:ClearCertainOutputSignatures()
-
+		
 		if #union:GetData() == 1 then return union:GetData()[1] end
 
 		return union
@@ -219,7 +219,7 @@ return function(META)
 			end
 		end
 
-		if not thrown then scope:CollectOutputSignatures(node, types) end
+		if not thrown then scope:CollectOutputSignatures(node, types) else scope.throws = true end
 
 		if scope:IsUncertain() then
 			function_scope:UncertainReturn()
@@ -273,7 +273,10 @@ return function(META)
 					scope = self:GetScope(),
 				}
 			)
-		end
+		--[[for i, frame in ipairs(self.call_stack) do
+				print(("\t"):rep(i - 1) .. tostring(frame.call_node))
+				print(("\t"):rep(i - 1) .. tostring(frame.obj:GetFunctionBodyNode() or frame.obj))
+			end[[]] end
 
 		function META:PopCallFrame()
 			table.remove(self.call_stack, 1)
