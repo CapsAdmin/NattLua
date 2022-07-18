@@ -662,6 +662,8 @@ analyze[[
     local a = {a = self}
 ]]
 analyze[[
+    local meta = {} as {num = number, __index = self}
+
     local a = setmetatable({} as {num = number}, meta)
 
     attest.equal(a.num, _ as number)
