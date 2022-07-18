@@ -21114,6 +21114,7 @@ return {
 				local val = AnalyzeFunction(self, statement)
 				self:NewIndexOperator(obj, key, val)
 			else
+				self.current_expression = key
 				local key = NodeToString(key)
 				local val = AnalyzeFunction(self, statement)
 				self:SetLocalOrGlobalValue(key, val)
