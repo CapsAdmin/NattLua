@@ -40,22 +40,30 @@ analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
 end
 
 analyzer function table.insert(tbl: List<|any|>, ...: ...any)
-	if not tbl:HasLiteralKeys() then return end
-
 	local pos, val = ...
 
 	if not val then
 		val = pos
 		pos = tbl:GetLength(analyzer)
-
-		if pos:IsLiteral() then
-			pos:SetData(pos:GetData() + 1)
-			local max = pos:GetMax()
-
-			if max then max:SetData(max:GetData() + 1) end
-		end
 	else
 		pos = tbl:GetLength(analyzer)
+	end
+
+	local contract = tbl:GetContract()
+
+	if contract then
+		local values = contract:GetValueUnion()
+		values:RemoveType(types.Nil())
+		analyzer:Assert(val:IsSubsetOf(values))
+	end
+
+	if not tbl:HasLiteralKeys() then return end
+
+	if pos and pos:IsLiteral() then
+		pos:SetData(pos:GetData() + 1)
+		local max = pos:GetMax()
+
+		if max then max:SetData(max:GetData() + 1) end
 	end
 
 	if analyzer:IsInUncertainLoop() then pos:Widen() end
@@ -65,12 +73,14 @@ analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 end
 
 analyzer function table.remove(tbl: List<|any|>, index: number | nil)
-	if not tbl:IsLiteral() then return end
+	if tbl:GetContract() then tbl = tbl:GetContract() end
 
-	if index and not index:IsLiteral() then return end
+	if not tbl:IsLiteral() then return tbl:Get(types.Number()) end
+
+	if index and not index:IsLiteral() then return tbl:Get(types.Number()) end
 
 	index = index or 1
-	table.remove(tbl:GetData(), index:GetData())
+	return table.remove(tbl:GetData(), index:GetData())
 end
 
 analyzer function table.sort(tbl: List<|any|>, func: nil | function=(a: any, b: any)>(boolean))
@@ -96,6 +106,7 @@ analyzer function table.sort(tbl: List<|any|>, func: nil | function=(a: any, b: 
 		if func then
 			table.sort(tbl:GetData(), function(a, b)
 				local b = analyzer:Call(func, types.Tuple({a.val, b.val})):Get(1)
+
 				if b:IsCertainlyTrue() or b:IsCertainlyFalse() then
 					return b:IsCertainlyTrue()
 				else

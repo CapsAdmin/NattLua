@@ -104,7 +104,6 @@ function META:StartNode(
 	return node--[[# as T]]
 end
 
-
 function META:EndNode(node--[[#: Node]])
 	local prev = self:GetToken(-1)
 
@@ -115,7 +114,7 @@ function META:EndNode(node--[[#: Node]])
 
 		if cur then node.code_stop = cur.stop end
 	end
-	
+
 	table.remove(self.nodes)
 
 	if self.config.on_node then
@@ -137,7 +136,6 @@ function META:EndNode(node--[[#: Node]])
 
 	return node
 end
-
 
 function META:SuppressOnNode()
 	self.suppress_on_node = {parent = self.nodes[#self.nodes], nodes = {}}
@@ -232,7 +230,7 @@ function META:RemoveToken(i)
 end
 
 function META:AddTokens(tokens--[[#: {[1 .. inf] = Token}]])
-	local eof = table.remove(self.tokens)
+	local eof = table.remove(self.tokens)--[[# as Token]]
 
 	for i, token in ipairs(tokens) do
 		if token.type == "end_of_file" then break end

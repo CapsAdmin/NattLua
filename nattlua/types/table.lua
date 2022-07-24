@@ -416,6 +416,16 @@ function META:GetKeyUnion()
 	return union
 end
 
+function META:GetValueUnion()
+	local union = Union()
+
+	for _, keyval in ipairs(self:GetData()) do
+		union:AddType(keyval.val:Copy())
+	end
+
+	return union
+end
+
 function META:HasKey(key--[[#: TBaseType]])
 	return self:FindKeyValReverse(key)
 end

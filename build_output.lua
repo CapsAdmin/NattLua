@@ -3399,6 +3399,16 @@ function META:GetKeyUnion()
 	return union
 end
 
+function META:GetValueUnion()
+	local union = Union()
+
+	for _, keyval in ipairs(self:GetData()) do
+		union:AddType(keyval.val:Copy())
+	end
+
+	return union
+end
+
 function META:HasKey(key)
 	return self:FindKeyValReverse(key)
 end
@@ -15983,18 +15993,19 @@ return function(META)
 			local total = #self.deferred_calls
 			self.processing_deferred_calls = true
 			local called_count = 0
+			local done = {}
 
 			for _, func in ipairs(self.deferred_calls) do
 				if
 					func:IsExplicitInputSignature() and
 					not func:IsCalled()
 					and
-					not func.done and
+					not done[func] and
 					not func:IsRefFunction()
 				then
 					call(self, func, func:GetFunctionBodyNode())
 					called_count = called_count + 1
-					func.done = true
+					done[func] = true
 					func:SetCalled()
 				end
 			end
@@ -16004,12 +16015,12 @@ return function(META)
 					not func:IsExplicitInputSignature() and
 					not func:IsCalled()
 					and
-					not func.done and
+					not done[func] and
 					not func:IsRefFunction()
 				then
 					call(self, func, func:GetFunctionBodyNode())
 					called_count = called_count + 1
-					func.done = true
+					done[func] = true
 					func:SetCalled()
 				end
 			end
@@ -18145,14 +18156,24 @@ local function check_input(self, obj, input)
 		-- against the input
 		-- foo(1, "hello")
 		for i = 1, input_signature_length do
-			local node = function_node.identifiers[i] --[[argument]] or
-				function_node.identifiers[#function_node.identifiers]
-			--[[or the vararg]] local identifier = node.value.value
-			local type_expression = node.type_expression
+			local node
+			local identifier
+			local type_expression
 
-			if function_node.self_call then i = i + 1 end
+			if i == 1 and function_node.self_call then
+				node = function_node
+				identifier = "self"
+				type_expression = function_node
+			else
+				local i = i
 
-			if i > input_signature_length then break end
+				if function_node.self_call then i = i - 1 end
+
+				node = function_node.identifiers[i] or
+					function_node.identifiers[#function_node.identifiers]
+				identifier = node.value.value
+				type_expression = node.type_expression
+			end
 
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
@@ -18190,7 +18211,12 @@ local function check_input(self, obj, input)
 					return type_errors.other({"argument #", i, " ", arg, ": ", err})
 				end
 			elseif type_expression then
-				signature_override[i] = self:AnalyzeExpression(type_expression):GetFirstValue()
+				if function_node.self_call and i == 1 then
+					signature_override[i] = input_signature:Get(1)
+				else
+					signature_override[i] = self:AnalyzeExpression(type_expression):GetFirstValue()
+				end
+
 				self:CreateLocalValue(identifier, signature_override[i])
 			end
 		end
@@ -20911,8 +20937,26 @@ local Emitter = IMPORTS['nattlua.transpiler.emitter']("nattlua.transpiler.emitte
 local function analyze_arguments(self, node)
 	local args = {}
 
+	if node.self_call and node.expression then
+		self:PushAnalyzerEnvironment("runtime")
+		local val = self:AnalyzeExpression(node.expression.left):GetFirstValue()
+		self:PopAnalyzerEnvironment()
+
+		if val then
+			if val:GetContract() or val.Self or self:IsTypesystem() then
+				args[1] = val.Self or val
+			else
+				args[1] = Union({Any(), val})
+			end
+
+			self:CreateLocalValue("self", args[1]):SetNode(node.expression.left)
+		end
+	end
+
 	if node.kind == "function" or node.kind == "local_function" then
 		for i, key in ipairs(node.identifiers) do
+			if node.self_call then i = i + 1 end
+
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
 			self:CreateLocalValue(key.value.value, Any()):SetNode(key)
@@ -20945,6 +20989,8 @@ local function analyze_arguments(self, node)
 		end
 
 		for i, key in ipairs(node.identifiers) do
+			if node.self_call then i = i + 1 end
+
 			if key.identifier and key.identifier.value ~= "..." then
 				args[i] = self:AnalyzeExpression(key):GetFirstValue()
 				self:CreateLocalValue(key.identifier.value, args[i]):SetNode(key)
@@ -20987,20 +21033,6 @@ local function analyze_arguments(self, node)
 		end
 	else
 		self:FatalError("unhandled statement " .. tostring(node))
-	end
-
-	if node.self_call and node.expression then
-		self:PushAnalyzerEnvironment("runtime")
-		local val = self:AnalyzeExpression(node.expression.left):GetFirstValue()
-		self:PopAnalyzerEnvironment()
-
-		if val then
-			if val:GetContract() or val.Self or self:IsTypesystem() then
-				table.insert(args, 1, val.Self or val)
-			else
-				table.insert(args, 1, Union({Any(), val}))
-			end
-		end
 	end
 
 	return Tuple(args)
@@ -24351,22 +24383,30 @@ analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
 end
 
 analyzer function table.insert(tbl: List<|any|>, ...: ...any)
-	if not tbl:HasLiteralKeys() then return end
-
 	local pos, val = ...
 
 	if not val then
 		val = pos
 		pos = tbl:GetLength(analyzer)
-
-		if pos:IsLiteral() then
-			pos:SetData(pos:GetData() + 1)
-			local max = pos:GetMax()
-
-			if max then max:SetData(max:GetData() + 1) end
-		end
 	else
 		pos = tbl:GetLength(analyzer)
+	end
+
+	local contract = tbl:GetContract()
+
+	if contract then
+		local values = contract:GetValueUnion()
+		values:RemoveType(types.Nil())
+		analyzer:Assert(val:IsSubsetOf(values))
+	end
+
+	if not tbl:HasLiteralKeys() then return end
+
+	if pos and pos:IsLiteral() then
+		pos:SetData(pos:GetData() + 1)
+		local max = pos:GetMax()
+
+		if max then max:SetData(max:GetData() + 1) end
 	end
 
 	if analyzer:IsInUncertainLoop() then pos:Widen() end
@@ -24376,12 +24416,14 @@ analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 end
 
 analyzer function table.remove(tbl: List<|any|>, index: number | nil)
-	if not tbl:IsLiteral() then return end
+	if tbl:GetContract() then tbl = tbl:GetContract() end
 
-	if index and not index:IsLiteral() then return end
+	if not tbl:IsLiteral() then return tbl:Get(types.Number()) end
+
+	if index and not index:IsLiteral() then return tbl:Get(types.Number()) end
 
 	index = index or 1
-	table.remove(tbl:GetData(), index:GetData())
+	return table.remove(tbl:GetData(), index:GetData())
 end
 
 analyzer function table.sort(tbl: List<|any|>, func: nil | function=(a: any, b: any)>(boolean))
