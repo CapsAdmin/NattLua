@@ -134,18 +134,19 @@ return function(META)
 			local total = #self.deferred_calls
 			self.processing_deferred_calls = true
 			local called_count = 0
+			local done = {}
 
 			for _, func in ipairs(self.deferred_calls) do
 				if
 					func:IsExplicitInputSignature() and
 					not func:IsCalled()
 					and
-					not func.done and
+					not done[func] and
 					not func:IsRefFunction()
 				then
 					call(self, func, func:GetFunctionBodyNode())
 					called_count = called_count + 1
-					func.done = true
+					done[func] = true
 					func:SetCalled()
 				end
 			end
@@ -155,12 +156,12 @@ return function(META)
 					not func:IsExplicitInputSignature() and
 					not func:IsCalled()
 					and
-					not func.done and
+					not done[func] and
 					not func:IsRefFunction()
 				then
 					call(self, func, func:GetFunctionBodyNode())
 					called_count = called_count + 1
-					func.done = true
+					done[func] = true
 					func:SetCalled()
 				end
 			end
