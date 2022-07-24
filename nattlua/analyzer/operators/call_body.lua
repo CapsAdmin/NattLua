@@ -134,14 +134,24 @@ local function check_input(self, obj, input)
 		-- against the input
 		-- foo(1, "hello")
 		for i = 1, input_signature_length do
-			local node = function_node.identifiers[i] --[[argument]] or
-				function_node.identifiers[#function_node.identifiers]
-			--[[or the vararg]] local identifier = node.value.value
-			local type_expression = node.type_expression
+			local node
+			local identifier
+			local type_expression
 
-			if function_node.self_call then i = i + 1 end
+			if i == 1 and function_node.self_call then
+				node = function_node
+				identifier = "self"
+				type_expression = function_node
+			else
+				local i = i
 
-			if i > input_signature_length then break end
+				if function_node.self_call then i = i - 1 end
+
+				node = function_node.identifiers[i] or
+					function_node.identifiers[#function_node.identifiers]
+				identifier = node.value.value
+				type_expression = node.type_expression
+			end
 
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
@@ -179,7 +189,12 @@ local function check_input(self, obj, input)
 					return type_errors.other({"argument #", i, " ", arg, ": ", err})
 				end
 			elseif type_expression then
-				signature_override[i] = self:AnalyzeExpression(type_expression):GetFirstValue()
+				if function_node.self_call and i == 1 then
+					signature_override[i] = input_signature:Get(1)
+				else
+					signature_override[i] = self:AnalyzeExpression(type_expression):GetFirstValue()
+				end
+
 				self:CreateLocalValue(identifier, signature_override[i])
 			end
 		end

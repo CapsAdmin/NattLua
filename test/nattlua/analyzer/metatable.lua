@@ -968,3 +968,17 @@ analyze[[
                 } }
         } }|>
 ]]
+analyze[[
+    local meta = {}
+    meta.__index = meta
+    type meta.@Self = {
+        type = number,
+    }
+
+    function meta:lol(foo: self.type)
+        return foo + 1
+    end
+
+    local s = setmetatable({type = 1}, meta)
+    attest.equal(s:lol(1), _  as number)
+]]

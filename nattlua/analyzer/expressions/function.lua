@@ -12,8 +12,26 @@ local Emitter = require("nattlua.transpiler.emitter").New
 local function analyze_arguments(self, node)
 	local args = {}
 
+	if node.self_call and node.expression then
+		self:PushAnalyzerEnvironment("runtime")
+		local val = self:AnalyzeExpression(node.expression.left):GetFirstValue()
+		self:PopAnalyzerEnvironment()
+
+		if val then
+			if val:GetContract() or val.Self or self:IsTypesystem() then
+				args[1] = val.Self or val
+			else
+				args[1] = Union({Any(), val})
+			end
+
+			self:CreateLocalValue("self", args[1]):SetNode(node.expression.left)
+		end
+	end
+
 	if node.kind == "function" or node.kind == "local_function" then
 		for i, key in ipairs(node.identifiers) do
+			if node.self_call then i = i + 1 end
+
 			-- stem type so that we can allow
 			-- function(x: foo<|x|>): nil
 			self:CreateLocalValue(key.value.value, Any()):SetNode(key)
@@ -46,6 +64,8 @@ local function analyze_arguments(self, node)
 		end
 
 		for i, key in ipairs(node.identifiers) do
+			if node.self_call then i = i + 1 end
+
 			if key.identifier and key.identifier.value ~= "..." then
 				args[i] = self:AnalyzeExpression(key):GetFirstValue()
 				self:CreateLocalValue(key.identifier.value, args[i]):SetNode(key)
@@ -88,20 +108,6 @@ local function analyze_arguments(self, node)
 		end
 	else
 		self:FatalError("unhandled statement " .. tostring(node))
-	end
-
-	if node.self_call and node.expression then
-		self:PushAnalyzerEnvironment("runtime")
-		local val = self:AnalyzeExpression(node.expression.left):GetFirstValue()
-		self:PopAnalyzerEnvironment()
-
-		if val then
-			if val:GetContract() or val.Self or self:IsTypesystem() then
-				table.insert(args, 1, val.Self or val)
-			else
-				table.insert(args, 1, Union({Any(), val}))
-			end
-		end
 	end
 
 	return Tuple(args)
