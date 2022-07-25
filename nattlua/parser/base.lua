@@ -123,7 +123,7 @@ function META:EndNode(node--[[#: Node]])
 			node.type == "expression" and
 			self.suppress_on_node.parent == self.nodes[#self.nodes]
 		then
-			table.insert(self.suppress_on_node, node)
+			table.insert(self.suppress_on_node.nodes, node)
 		elseif self.config.on_node then
 			local new_node = self.config.on_node(self, node)
 
