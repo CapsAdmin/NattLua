@@ -115,7 +115,7 @@ local function check_input(self, obj, input)
 			for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
 				local generic_type = call_expression.expressions_typesystem and
 					call_expression.expressions_typesystem[i] or
-					nil
+					generic_upvalue
 				local T = self:AnalyzeExpression(generic_type)
 				self:CreateLocalValue(generic_upvalue.value.value, T)
 			end
@@ -186,6 +186,8 @@ local function check_input(self, obj, input)
 				local ok, err = signature_override[i]:IsSubsetOf(contract)
 
 				if not ok then
+					self:PopAnalyzerEnvironment()
+					self:PopScope()
 					return type_errors.other({"argument #", i, " ", arg, ": ", err})
 				end
 			elseif type_expression then
