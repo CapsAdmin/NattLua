@@ -108,7 +108,7 @@ return function(META)
 			return tup
 		end
 
-		local function call(self, obj, node)
+		local function call(self, obj)
 			-- use function's arguments in case they have been maniupulated (ie string.gsub)
 			local arguments = obj:GetInputSignature():Copy()
 			arguments = add_potential_self(arguments)
@@ -118,7 +118,7 @@ return function(META)
 			end
 
 			self:CreateAndPushFunctionScope(obj)
-			self:Assert(self:Call(obj, arguments, node))
+			self:Assert(self:Call(obj, arguments, obj:GetFunctionBodyNode()))
 			self:PopScope()
 		end
 
@@ -141,10 +141,9 @@ return function(META)
 					func:IsExplicitInputSignature() and
 					not func:IsCalled()
 					and
-					not done[func] and
-					not func:IsRefFunction()
+					not done[func]
 				then
-					call(self, func, func:GetFunctionBodyNode())
+					call(self, func)
 					called_count = called_count + 1
 					done[func] = true
 					func:SetCalled()
@@ -156,10 +155,9 @@ return function(META)
 					not func:IsExplicitInputSignature() and
 					not func:IsCalled()
 					and
-					not done[func] and
-					not func:IsRefFunction()
+					not done[func]
 				then
-					call(self, func, func:GetFunctionBodyNode())
+					call(self, func)
 					called_count = called_count + 1
 					done[func] = true
 					func:SetCalled()
