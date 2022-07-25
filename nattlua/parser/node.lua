@@ -63,7 +63,7 @@ function META:Render(config)
 
 	do
 		--[[#-- we have to do this because nattlua.transpiler.emitter is not yet typed
-		-- so if it's hoisted the self.nlua will fail
+		-- so if it's hoisted the self/nodes.nlua will fail
 		attest.expect_diagnostic<|"warning", "always false"|>]]
 		--[[#attest.expect_diagnostic<|"warning", "always true"|>]]
 
