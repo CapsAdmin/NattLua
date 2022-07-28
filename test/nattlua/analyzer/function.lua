@@ -878,3 +878,13 @@ analyze[[
         attest.equal(d, _ as string)
     end)
 ]]
+
+analyze[[
+    local function foo(n: number): string
+        return "hello"
+    end
+    
+    attest.expect_diagnostic<|"error", "not the same type"|>
+    local x = foo("hello")
+    attest.equal(x, _ as string)
+]]

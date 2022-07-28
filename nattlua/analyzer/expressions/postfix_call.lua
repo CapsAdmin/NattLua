@@ -44,7 +44,16 @@ return {
 
 		local ret, err = self:Call(callable, arguments, node)
 		self.current_expression = node
-		local returned_tuple = self:Assert(ret, err)
+		
+		local returned_tuple
+		if not ret then
+			self:Error(err)
+			if callable.Type == "function" and callable:IsExplicitOutputSignature() then
+				returned_tuple = callable:GetOutputSignature():Copy()
+			end
+		else
+			returned_tuple = ret
+		end
 
 		-- TUPLE UNPACK MESS
 		if node.tokens["("] and node.tokens[")"] and returned_tuple.Type == "tuple" then

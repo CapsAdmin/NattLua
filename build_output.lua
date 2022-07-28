@@ -10965,7 +10965,7 @@ function META:EndNode(node)
 			node.type == "expression" and
 			self.suppress_on_node.parent == self.nodes[#self.nodes]
 		then
-			table.insert(self.suppress_on_node, node)
+			table.insert(self.suppress_on_node.nodes, node)
 		elseif self.config.on_node then
 			local new_node = self.config.on_node(self, node)
 
@@ -15967,7 +15967,7 @@ return function(META)
 			return tup
 		end
 
-		local function call(self, obj, node)
+		local function call(self, obj)
 			-- use function's arguments in case they have been maniupulated (ie string.gsub)
 			local arguments = obj:GetInputSignature():Copy()
 			arguments = add_potential_self(arguments)
@@ -15977,7 +15977,7 @@ return function(META)
 			end
 
 			self:CreateAndPushFunctionScope(obj)
-			self:Assert(self:Call(obj, arguments, node))
+			self:Assert(self:Call(obj, arguments, obj:GetFunctionBodyNode()))
 			self:PopScope()
 		end
 
@@ -16000,10 +16000,9 @@ return function(META)
 					func:IsExplicitInputSignature() and
 					not func:IsCalled()
 					and
-					not done[func] and
-					not func:IsRefFunction()
+					not done[func]
 				then
-					call(self, func, func:GetFunctionBodyNode())
+					call(self, func)
 					called_count = called_count + 1
 					done[func] = true
 					func:SetCalled()
@@ -16015,10 +16014,9 @@ return function(META)
 					not func:IsExplicitInputSignature() and
 					not func:IsCalled()
 					and
-					not done[func] and
-					not func:IsRefFunction()
+					not done[func]
 				then
-					call(self, func, func:GetFunctionBodyNode())
+					call(self, func)
 					called_count = called_count + 1
 					done[func] = true
 					func:SetCalled()
@@ -18137,7 +18135,7 @@ local function check_input(self, obj, input)
 			for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
 				local generic_type = call_expression.expressions_typesystem and
 					call_expression.expressions_typesystem[i] or
-					nil
+					generic_upvalue
 				local T = self:AnalyzeExpression(generic_type)
 				self:CreateLocalValue(generic_upvalue.value.value, T)
 			end
@@ -18208,6 +18206,8 @@ local function check_input(self, obj, input)
 				local ok, err = signature_override[i]:IsSubsetOf(contract)
 
 				if not ok then
+					self:PopAnalyzerEnvironment()
+					self:PopScope()
 					return type_errors.other({"argument #", i, " ", arg, ": ", err})
 				end
 			elseif type_expression then
@@ -22545,7 +22545,17 @@ return {
 
 		local ret, err = self:Call(callable, arguments, node)
 		self.current_expression = node
-		local returned_tuple = self:Assert(ret, err)
+		local returned_tuple
+
+		if not ret then
+			self:Error(err)
+
+			if callable.Type == "function" and callable:IsExplicitOutputSignature() then
+				returned_tuple = callable:GetOutputSignature():Copy()
+			end
+		else
+			returned_tuple = ret
+		end
 
 		-- TUPLE UNPACK MESS
 		if node.tokens["("] and node.tokens[")"] and returned_tuple.Type == "tuple" then
