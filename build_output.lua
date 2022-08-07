@@ -1171,7 +1171,17 @@ end
 function META:GetHash()
 	if self:IsNan() then return nil end
 
-	if self:IsLiteral() then return self.Data end
+	if self:IsLiteral() then
+		if self.Max then
+			local hash = self.Max:GetHash()
+
+			if hash and self.Data then
+				return "__@type@__" .. self.Type .. self.Data .. ".." .. hash
+			end
+		end
+
+		return self.Data
+	end
 
 	local upvalue = self:GetUpvalue()
 
@@ -2652,7 +2662,7 @@ function META.IsSubsetOfTupleWithoutExpansion(a, b)
 		local b_val = b:GetWithoutExpansion(i)
 		local ok, err = a_val:IsSubsetOf(b_val)
 
-		if ok then return ok, err, a_val, b_val, i end
+		if not ok then return ok, err, a_val, b_val, i end
 	end
 
 	return true
@@ -16441,6 +16451,9 @@ return function(META)
 		for _, ret in ipairs(scope:GetOutputSignature()) do
 			if #ret.types == 1 then
 				union:AddType(ret.types[1])
+			elseif #ret.types == 0 then
+				local tup = Tuple({Nil()})
+				union:AddType(tup)
 			else
 				local tup = Tuple(ret.types)
 				union:AddType(tup)
@@ -16984,7 +16997,7 @@ local function initialize_table_mutation_tracker(tbl, scope, key, hash)
 				scope = tbl:GetCreationScope()
 			end
 
-			table.insert(tbl.mutations[hash], {scope = scope, value = val, contract = tbl:GetContract()})
+			table.insert(tbl.mutations[hash], {scope = scope, value = val, contract = tbl:GetContract(), key = key})
 		end
 	end
 end
@@ -17026,7 +17039,7 @@ return function(META)
 			end
 		end
 
-		table.insert(tbl.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking})
+		table.insert(tbl.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking, key = key})
 
 		if from_tracking then scope:AddTrackedObject(tbl) end
 	end
@@ -18117,7 +18130,14 @@ local function check_input(self, obj, input)
 	then
 		if not function_node.identifiers_typesystem and obj:IsExplicitInputSignature() then
 			-- if this is a type function we just do a simple check and arguments are passed as is
-			local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
+			local ok, reason, a, b, i
+
+			if self:IsTypesystem() then
+				ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
+			else
+				ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetInputSignature())
+			end
+
 			self:PopAnalyzerEnvironment()
 			self:PopScope()
 
@@ -21291,6 +21311,7 @@ do local __M; IMPORTS["nattlua.analyzer.statements.do"] = function(...) __M = __
 do local __M; IMPORTS["nattlua.analyzer.statements.generic_for"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local table = _G.table
 local ipairs = ipairs
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
+local NormalizeTuples = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").NormalizeTuples
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 return {
@@ -21312,6 +21333,29 @@ return {
 
 		for i = 1, 1000 do
 			local values = self:Assert(self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
+
+			if values.Type == "tuple" and values:GetLength() == 1 then
+				values = values:Get(1)
+			end
+
+			if values.Type == "union" then
+				local tup = Tuple({})
+				local max_length = 0
+
+				for i, v in ipairs(values:GetData()) do
+					if v.Type == "tuple" and v:GetLength() > max_length then
+						max_length = v:GetLength()
+					end
+				end
+
+				if max_length ~= math.huge then
+					for i = 1, max_length do
+						tup:Set(i, values:GetAtIndex(i))
+					end
+
+					values = tup
+				end
+			end
 
 			if values.Type ~= "tuple" then values = Tuple({values}) end
 
@@ -21339,6 +21383,8 @@ return {
 			for i, identifier in ipairs(statement.identifiers) do
 				local obj = self:Assert(values:Get(i))
 
+				if obj.Type == "union" then obj:RemoveType(Nil()) end
+
 				if uncertain_break then
 					obj:SetLiteral(false)
 					brk = true
@@ -21346,6 +21392,7 @@ return {
 
 				obj.from_for_loop = true
 				self:CreateLocalValue(identifier.value.value, obj)
+				identifier:AddType(obj)
 			end
 
 			self:CreateAndPushScope():SetLoopIteration(i)
@@ -22280,9 +22327,11 @@ return {
 								contract = contract:GetFirstValue()
 							end
 
-							val:CopyLiteralness(contract)
-							self:Assert(check_type_against_contract(val, contract))
-							val:SetContract(contract)
+							if contract then
+								val:CopyLiteralness(contract)
+								self:Assert(check_type_against_contract(val, contract))
+								val:SetContract(contract)
+							end
 						end
 					end
 
@@ -22611,17 +22660,19 @@ return {
 				if node.spread then
 					local val = self:AnalyzeExpression(node.spread.expression):GetFirstValue()
 
-					for _, kv in ipairs(val:GetData()) do
-						local val = kv.val
+					if val.Type == "table" then
+						for _, kv in ipairs(val:GetData()) do
+							local val = kv.val
 
-						if val.Type == "union" and val:CanBeNil() then
-							val = val:Copy():RemoveType(Nil())
-						end
+							if val.Type == "union" and val:CanBeNil() then
+								val = val:Copy():RemoveType(Nil())
+							end
 
-						if kv.key.Type == "number" then
-							self:NewIndexOperator(tbl, LNumber(tbl:GetLength(self):GetData() + 1), val)
-						else
-							self:NewIndexOperator(tbl, kv.key, val)
+							if kv.key.Type == "number" then
+								self:NewIndexOperator(tbl, LNumber(tbl:GetLength(self):GetData() + 1), val)
+							else
+								self:NewIndexOperator(tbl, kv.key, val)
+							end
 						end
 					end
 				else
@@ -23154,17 +23205,26 @@ analyzer function enum(tbl: Table)
 	return union
 end
 
-analyzer function keysof(tbl: Table | {})
+analyzer function keysof(tbl: Table)
 	local union = types.Union()
 
-	for _, keyval in ipairs(tbl:GetData()) do
-		union:AddType(keyval.key)
+	if tbl.Type == "union" then
+		for _, val in ipairs(tbl:GetData()) do
+			if val.Type == "table" then
+				for _, keyval in ipairs(tbl:GetData()) do
+					union:AddType(keyval.key)
+				end
+			end
+		end
+	elseif tbl.Type == "table" then
+		for _, keyval in ipairs(tbl:GetData()) do
+			union:AddType(keyval.key)
+		end
 	end
 
 	return union
 end
 
---
 analyzer function seal(tbl: Table)
 	if tbl:GetContract() then return end
 
@@ -24080,19 +24140,27 @@ function _G.LSX(
 	return e
 end end
 IMPORTS['nattlua/definitions/lua/io.nlua'] = function() type io = {
-	write = function=(...)>(nil),
+	write = function=(...string)>(nil),
 	flush = function=()>(boolean | nil, string | nil),
-	read = function=(...)>(...),
-	lines = function=(...)>(empty_function),
+	read = function <|s: "*n" | "*a" | "*l" | number | nil|>
+		if s == "*n" then return nil | number end
+
+		return nil | string
+	end,
+	lines = function=()>(Function),
 	setvbuf = function=(mode: string, size: number)>(boolean | nil, string | nil) | function=(mode: string)>(boolean | nil, string | nil),
 	seek = function=(whence: string, offset: number)>(number | nil, string | nil) | function=(whence: string)>(number | nil, string | nil) | function=()>(number | nil, string | nil),
 }
 type File = {
 	close = function=(self)>(boolean | nil, string, number | nil),
-	write = function=(self, ...)>(self | nil, string | nil),
+	write = function=(self, ...(number | string))>(self | nil, string | nil),
 	flush = function=(self)>(boolean | nil, string | nil),
-	read = function=(self, ...)>(...),
-	lines = function=(self, ...)>(empty_function),
+	read = function <|self: File, s: "*n" | "*a" | "*l" | number | nil|>
+		if s == "*n" then return nil | number end
+
+		return nil | string
+	end,
+	lines = function=(self)>(Function),
 	setvbuf = function=(self, string, number)>(boolean | nil, string | nil) | function=(file: self, mode: string)>(boolean | nil, string | nil),
 	seek = function=(self, string, number)>(number | nil, string | nil) | function=(file: self, whence: string)>(number | nil, string | nil) | function=(file: self)>(number | nil, string | nil),
 }
@@ -24393,6 +24461,8 @@ analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
 end
 
 analyzer function table.insert(tbl: List<|any|>, ...: ...any)
+	if tbl.Type == "any" then return end
+
 	local pos, val = ...
 
 	if not val then
@@ -24756,7 +24826,7 @@ analyzer function ^string.gsub(
 			end
 
 			return string.gsub(str, pattern, out, max_replacements)
-		else
+		elseif replacement.Type == "function" then
 			if not replacement:IsExplicitInputSignature() then
 				replacement:SetInputSignature(types.Tuple({types.String()}):SetRepeat(math.huge))
 			end
@@ -26920,6 +26990,7 @@ local Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler").New
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 local b64 = IMPORTS['nattlua.other.base64']("nattlua.other.base64")
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
 local lsp = {}
@@ -27003,6 +27074,31 @@ local SemanticTokenModifiers = {
 	"defaultLibrary", -- For symbols that are part of the standard library.
 }
 
+local function GetFinalMutatedTable(tbl)
+	if not tbl.mutations then return tbl end
+
+	local out = Table()
+
+	for hash, mutations in pairs(tbl.mutations) do
+		local key = Union()
+		local val = Union()
+
+		for _, mutation in ipairs(mutations) do
+			key:AddType(mutation.key)
+
+			if mutation.value.Type == "table" then
+				val:AddType(GetFinalMutatedTable(mutation.value))
+			else
+				val:AddType(mutation.value)
+			end
+		end
+
+		out:Set(key, val)
+	end
+
+	return out
+end
+
 local function find_type_from_token(token)
 	local found_parents = {}
 
@@ -27015,17 +27111,34 @@ local function find_type_from_token(token)
 		end
 	end
 
-	for _, node in ipairs(found_parents) do
-		for _, obj in ipairs(node:GetTypes()) do
-			if obj.Type == "string" and obj:GetData() == token.value then
+	local union = Union({})
 
+	for _, node in ipairs(found_parents) do
+		local found = false
+
+		for _, obj in ipairs(node:GetTypes()) do
+			if type(obj) ~= "table" then
+				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
 			else
-				return obj, found_parents, node
+				if obj.Type == "string" and obj:GetData() == token.value then
+
+				else
+					if obj.Type == "table" then obj = GetFinalMutatedTable(obj) end
+
+					union:AddType(obj)
+					found = true
+				end
 			end
 		end
+
+		if found then break end
 	end
 
-	return nil, found_parents
+	if union:IsEmpty() then return nil, found_parents end
+
+	if union:GetLength() == 1 then return union:GetData()[1], found_parents end
+
+	return union, found_parents
 end
 
 local function token_to_type_mod(token)
@@ -27479,17 +27592,6 @@ do -- semantic tokens
 		local integers = {}
 		local last_y = 0
 		local last_x = 0
-
-		local function swap_endian(num, size)
-			local result = 0
-
-			for shift = 0, (size * 8) - 8, 8 do
-				result = bit.bor(bit.lshift(result, 8), bit.band(bit.rshift(num, shift), 0xff))
-			end
-
-			return result
-		end
-
 		local mods = {}
 
 		for _, token in ipairs(data.tokens) do

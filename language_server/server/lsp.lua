@@ -3,6 +3,7 @@ local Compiler = require("nattlua.compiler").New
 local helpers = require("nattlua.other.helpers")
 local b64 = require("nattlua.other.base64")
 local Union = require("nattlua.types.union").Union
+local Table = require("nattlua.types.table").Table
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 local lsp = {}
@@ -86,6 +87,31 @@ local SemanticTokenModifiers = {
 	"defaultLibrary", -- For symbols that are part of the standard library.
 }
 
+local function GetFinalMutatedTable(tbl)
+	if not tbl.mutations then return tbl end
+
+	local out = Table()
+
+	for hash, mutations in pairs(tbl.mutations) do
+		local key = Union()
+		local val = Union()
+
+		for _, mutation in ipairs(mutations) do
+			key:AddType(mutation.key)
+
+			if mutation.value.Type == "table" then
+				val:AddType(GetFinalMutatedTable(mutation.value))
+			else
+				val:AddType(mutation.value)
+			end
+		end
+
+		out:Set(key, val)
+	end
+
+	return out
+end
+
 local function find_type_from_token(token)
 	local found_parents = {}
 
@@ -98,17 +124,34 @@ local function find_type_from_token(token)
 		end
 	end
 
-	for _, node in ipairs(found_parents) do
-		for _, obj in ipairs(node:GetTypes()) do
-			if obj.Type == "string" and obj:GetData() == token.value then
+	local union = Union({})
 
+	for _, node in ipairs(found_parents) do
+		local found = false
+
+		for _, obj in ipairs(node:GetTypes()) do
+			if type(obj) ~= "table" then
+				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
 			else
-				return obj, found_parents, node
+				if obj.Type == "string" and obj:GetData() == token.value then
+
+				else
+					if obj.Type == "table" then obj = GetFinalMutatedTable(obj) end
+
+					union:AddType(obj)
+					found = true
+				end
 			end
 		end
+
+		if found then break end
 	end
 
-	return nil, found_parents
+	if union:IsEmpty() then return nil, found_parents end
+
+	if union:GetLength() == 1 then return union:GetData()[1], found_parents end
+
+	return union, found_parents
 end
 
 local function token_to_type_mod(token)
@@ -562,17 +605,6 @@ do -- semantic tokens
 		local integers = {}
 		local last_y = 0
 		local last_x = 0
-
-		local function swap_endian(num, size)
-			local result = 0
-
-			for shift = 0, (size * 8) - 8, 8 do
-				result = bit.bor(bit.lshift(result, 8), bit.band(bit.rshift(num, shift), 0xff))
-			end
-
-			return result
-		end
-
 		local mods = {}
 
 		for _, token in ipairs(data.tokens) do

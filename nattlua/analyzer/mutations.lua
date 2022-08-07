@@ -220,7 +220,7 @@ local function initialize_table_mutation_tracker(tbl, scope, key, hash)
 				scope = tbl:GetCreationScope()
 			end
 
-			table.insert(tbl.mutations[hash], {scope = scope, value = val, contract = tbl:GetContract()})
+			table.insert(tbl.mutations[hash], {scope = scope, value = val, contract = tbl:GetContract(), key = key})
 		end
 	end
 end
@@ -262,7 +262,7 @@ return function(META)
 			end
 		end
 
-		table.insert(tbl.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking})
+		table.insert(tbl.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking, key = key})
 
 		if from_tracking then scope:AddTrackedObject(tbl) end
 	end
