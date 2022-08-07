@@ -1,6 +1,7 @@
 local table = _G.table
 local ipairs = ipairs
 local Tuple = require("nattlua.types.tuple").Tuple
+local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 return {
@@ -22,6 +23,29 @@ return {
 
 		for i = 1, 1000 do
 			local values = self:Assert(self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
+
+			if values.Type == "tuple" and values:GetLength() == 1 then
+				values = values:Get(1)
+			end
+
+			if values.Type == "union" then
+				local tup = Tuple({})
+				local max_length = 0
+
+				for i, v in ipairs(values:GetData()) do
+					if v.Type == "tuple" and v:GetLength() > max_length then
+						max_length = v:GetLength()
+					end
+				end
+
+				if max_length ~= math.huge then
+					for i = 1, max_length do
+						tup:Set(i, values:GetAtIndex(i))
+					end
+
+					values = tup
+				end
+			end
 
 			if values.Type ~= "tuple" then values = Tuple({values}) end
 
@@ -49,6 +73,8 @@ return {
 			for i, identifier in ipairs(statement.identifiers) do
 				local obj = self:Assert(values:Get(i))
 
+				if obj.Type == "union" then obj:RemoveType(Nil()) end
+
 				if uncertain_break then
 					obj:SetLiteral(false)
 					brk = true
@@ -56,6 +82,7 @@ return {
 
 				obj.from_for_loop = true
 				self:CreateLocalValue(identifier.value.value, obj)
+				identifier:AddType(obj)
 			end
 
 			self:CreateAndPushScope():SetLoopIteration(i)

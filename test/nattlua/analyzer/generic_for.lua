@@ -70,3 +70,41 @@ analyze[[
         end
     end
 ]]
+analyze[[
+    local function sort(a: ref Table, b: ref Table)
+        return a.key > b.key
+    end
+    
+    local function to_list(map: ref Table)
+        local list = {}
+    
+        for k, v in pairs(map) do
+            table.insert(list, {key = k, val = v})
+        end
+    
+        table.sort(list, sort)
+        return list
+    end
+    
+    local function sorted_pairs(map: ref Table)
+        local list = to_list(map)
+        local i = 0
+        return function()
+            i = i + 1
+    
+            if not list[i] then return end
+    
+            return list[i].key, list[i].val
+        end
+    end
+    
+    local t = _  as {
+        ["PixelVisHandle"] = {["functions"] = {}, ["members"] = {}},
+        [string] = {["members"] = {}, ["functions"] = {}},
+    }
+    
+    for k, v in sorted_pairs(t) do
+        attest.equal(k, _ as string)
+        attest.equal(v, _ as {["functions"] = {}, ["members"] = {}})
+    end
+]]

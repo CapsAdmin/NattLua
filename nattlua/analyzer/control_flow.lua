@@ -69,6 +69,9 @@ return function(META)
 		for _, ret in ipairs(scope:GetOutputSignature()) do
 			if #ret.types == 1 then
 				union:AddType(ret.types[1])
+			elseif #ret.types == 0 then
+				local tup = Tuple({Nil()})
+				union:AddType(tup)
 			else
 				local tup = Tuple(ret.types)
 				union:AddType(tup)
@@ -76,7 +79,7 @@ return function(META)
 		end
 
 		scope:ClearCertainOutputSignatures()
-		
+
 		if #union:GetData() == 1 then return union:GetData()[1] end
 
 		return union
@@ -219,7 +222,11 @@ return function(META)
 			end
 		end
 
-		if not thrown then scope:CollectOutputSignatures(node, types) else scope.throws = true end
+		if not thrown then
+			scope:CollectOutputSignatures(node, types)
+		else
+			scope.throws = true
+		end
 
 		if scope:IsUncertain() then
 			function_scope:UncertainReturn()
