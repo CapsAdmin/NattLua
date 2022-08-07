@@ -166,7 +166,7 @@ function META.IsSubsetOfTupleWithoutExpansion(a--[[#: TTuple]], b--[[#: TBaseTyp
 		local b_val = b:GetWithoutExpansion(i)
 		local ok, err = a_val:IsSubsetOf(b_val)
 
-		if ok then return ok, err, a_val, b_val, i end
+		if not ok then return ok, err, a_val, b_val, i end
 	end
 
 	return true

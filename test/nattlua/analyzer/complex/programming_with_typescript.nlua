@@ -50,7 +50,7 @@ do
 end
 
 do
-	local function Map<|arr: ref List<|any|>, func: ref function=(val: arr[number] ~ nil)>(boolean)|>
+	local function Map<|arr: ref List<|any|>, func: ref function=(val: arr[number] ~ nil)>(ref any)|>
 		local result = {}
 
 		for i, val in ipairs(arr) do
@@ -70,7 +70,7 @@ end
 do
 	local type never = |
 
-	local function GetColValues<|columns: List<|{id = string, values = Table}|>, id: string|>
+	local function GetColValues<|columns: List<|{id = string, values = number}|>, id: string|>
 		for k, v in ipairs(columns) do
 			if v.id == id then return v.values end
 		end

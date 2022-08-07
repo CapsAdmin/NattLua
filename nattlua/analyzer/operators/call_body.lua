@@ -97,7 +97,14 @@ local function check_input(self, obj, input)
 	then
 		if not function_node.identifiers_typesystem and obj:IsExplicitInputSignature() then
 			-- if this is a type function we just do a simple check and arguments are passed as is
-			local ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
+			local ok, reason, a, b, i
+
+			if self:IsTypesystem() then
+				ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
+			else
+				ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetInputSignature())
+			end
+
 			self:PopAnalyzerEnvironment()
 			self:PopScope()
 

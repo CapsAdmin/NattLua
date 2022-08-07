@@ -854,6 +854,10 @@ analyze(
 analyze[[
     local type meta = {}
     type meta.__index = meta
+
+    type meta.@Self = {
+        value = ref {[any] = any}
+    }
     
     function meta:__index<|key: any|>
         local obj = setmetatable<|{value = {[any] = any}}, meta|>
@@ -957,16 +961,13 @@ analyze[[
     lib.foo.bar = true
     lib.foo(1,2,3)
 
-    attest.equal<|lib, { ["value"] = {
+    attest.equal<|lib, { ["value"] = { [any] = any } as {
         [any] = any,
-        ["foo"] = any | { ["value"] = {
-                        [any] = any,
-                        ["bar"] = any | true
-                } } | { ["value"] = {
-                        [any] = any,
-                        ["value"] = any | self | function=(1, 2, 3)>({ ["value"] = { [any] = any } },)
-                } }
-        } }|>
+        ["foo"] = any | { ["value"] = { [any] = any } },
+        ["bar"] = any | true,
+        ["value"] = any | function=(1, 2, 3)>({ ["value"] = { [any] = any }  },)
+       } }
+    |>
 ]]
 analyze[[
     local meta = {}
