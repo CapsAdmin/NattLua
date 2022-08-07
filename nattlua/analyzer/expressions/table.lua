@@ -27,17 +27,19 @@ return {
 				if node.spread then
 					local val = self:AnalyzeExpression(node.spread.expression):GetFirstValue()
 
-					for _, kv in ipairs(val:GetData()) do
-						local val = kv.val
+					if val.Type == "table" then
+						for _, kv in ipairs(val:GetData()) do
+							local val = kv.val
 
-						if val.Type == "union" and val:CanBeNil() then
-							val = val:Copy():RemoveType(Nil())
-						end
+							if val.Type == "union" and val:CanBeNil() then
+								val = val:Copy():RemoveType(Nil())
+							end
 
-						if kv.key.Type == "number" then
-							self:NewIndexOperator(tbl, LNumber(tbl:GetLength(self):GetData() + 1), val)
-						else
-							self:NewIndexOperator(tbl, kv.key, val)
+							if kv.key.Type == "number" then
+								self:NewIndexOperator(tbl, LNumber(tbl:GetLength(self):GetData() + 1), val)
+							else
+								self:NewIndexOperator(tbl, kv.key, val)
+							end
 						end
 					end
 				else
