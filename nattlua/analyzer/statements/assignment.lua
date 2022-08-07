@@ -201,9 +201,11 @@ return {
 								contract = contract:GetFirstValue()
 							end
 
-							val:CopyLiteralness(contract)
-							self:Assert(check_type_against_contract(val, contract))
-							val:SetContract(contract)
+							if contract then
+								val:CopyLiteralness(contract)
+								self:Assert(check_type_against_contract(val, contract))
+								val:SetContract(contract)
+							end
 						end
 					end
 
