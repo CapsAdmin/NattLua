@@ -813,7 +813,7 @@ end
 	end
 
 	local f = assert(io.open(arg[1]))
-	local text = f:read("*a")
+	local text = assert(f:read("*a"))
 	f:close()
 	local code = brainfudge(text)
 
