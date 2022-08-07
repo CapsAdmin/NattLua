@@ -77,17 +77,26 @@ analyzer function enum(tbl: Table)
 	return union
 end
 
-analyzer function keysof(tbl: Table | {})
+analyzer function keysof(tbl: Table)
 	local union = types.Union()
 
-	for _, keyval in ipairs(tbl:GetData()) do
-		union:AddType(keyval.key)
+	if tbl.Type == "union" then
+		for _, val in ipairs(tbl:GetData()) do
+			if val.Type == "table" then
+				for _, keyval in ipairs(tbl:GetData()) do
+					union:AddType(keyval.key)
+				end
+			end
+		end
+	elseif tbl.Type == "table" then
+		for _, keyval in ipairs(tbl:GetData()) do
+			union:AddType(keyval.key)
+		end
 	end
 
 	return union
 end
 
---
 analyzer function seal(tbl: Table)
 	if tbl:GetContract() then return end
 
@@ -120,9 +129,9 @@ end
 analyzer function copy(obj: any)
 	local copy = obj:Copy()
 	analyzer:ClearObjectMutations(copy)
-	if copy.Type == "table" then
-		copy:SetCreationScope(nil)
-	end
+
+	if copy.Type == "table" then copy:SetCreationScope(nil) end
+
 	copy.potential_self = nil
 	return copy
 end

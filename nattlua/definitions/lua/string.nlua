@@ -227,7 +227,7 @@ analyzer function ^string.gsub(
 			end
 
 			return string.gsub(str, pattern, out, max_replacements)
-		else
+		elseif replacement.Type == "function" then
 			if not replacement:IsExplicitInputSignature() then
 				replacement:SetInputSignature(types.Tuple({types.String()}):SetRepeat(math.huge))
 			end

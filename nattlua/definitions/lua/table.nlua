@@ -40,6 +40,7 @@ analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
 end
 
 analyzer function table.insert(tbl: List<|any|>, ...: ...any)
+	if tbl.Type == "any" then return end
 	local pos, val = ...
 
 	if not val then
