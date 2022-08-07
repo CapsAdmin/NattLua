@@ -50,7 +50,17 @@ end
 function META:GetHash()
 	if self:IsNan() then return nil end
 
-	if self:IsLiteral() then return self.Data end
+	if self:IsLiteral() then
+		if self.Max then
+			local hash = self.Max:GetHash()
+
+			if hash and self.Data then
+				return "__@type@__" .. self.Type .. self.Data .. ".." .. hash
+			end
+		end
+
+		return self.Data
+	end
 
 	local upvalue = self:GetUpvalue()
 
