@@ -86,6 +86,7 @@ do
 			self:FatalError("unhandled statement: " .. tostring(node))
 		end
 
+		node.scope = self:GetScope()
 		self:PopAnalyzerEnvironment()
 		profiler.PopZone()
 	end
@@ -171,6 +172,7 @@ do
 		local obj, err = self:AnalyzeExpression2(node)
 		obj = self:AnalyzeTypeExpression(node, obj)
 		node:AddType(obj or err)
+		node.scope = self:GetScope()
 		profiler.PopZone()
 		return obj, err
 	end

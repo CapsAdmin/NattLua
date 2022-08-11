@@ -87,7 +87,7 @@ local SemanticTokenModifiers = {
 	"defaultLibrary", -- For symbols that are part of the standard library.
 }
 
-local function GetFinalMutatedTable(tbl)
+local function GetFinalMutatedTable(tbl, scope)
 	if not tbl.mutations then return tbl end
 
 	local out = Table()
@@ -95,14 +95,23 @@ local function GetFinalMutatedTable(tbl)
 	for hash, mutations in pairs(tbl.mutations) do
 		local key = Union()
 		local val = Union()
+		local val = get_value_from_scope(shallow_copy(mutations), scope, tbl)
 
 		for _, mutation in ipairs(mutations) do
 			key:AddType(mutation.key)
 
-			if mutation.value.Type == "table" then
-				val:AddType(GetFinalMutatedTable(mutation.value))
-			else
-				val:AddType(mutation.value)
+			break
+		end
+
+		if false then
+			for _, mutation in ipairs(mutations) do
+				key:AddType(mutation.key)
+
+				if mutation.value.Type == "table" then
+					val:AddType(GetFinalMutatedTable(mutation.value, scope))
+				else
+					val:AddType(mutation.value)
+				end
 			end
 		end
 
@@ -124,6 +133,16 @@ local function find_type_from_token(token)
 		end
 	end
 
+	local scope
+
+	for _, node in ipairs(found_parents) do
+		if node.scope then
+			scope = node.scope
+
+			break
+		end
+	end
+
 	local union = Union({})
 
 	for _, node in ipairs(found_parents) do
@@ -136,7 +155,7 @@ local function find_type_from_token(token)
 				if obj.Type == "string" and obj:GetData() == token.value then
 
 				else
-					if obj.Type == "table" then obj = GetFinalMutatedTable(obj) end
+					if obj.Type == "table" then obj = GetFinalMutatedTable(obj, scope) end
 
 					union:AddType(obj)
 					found = true
@@ -147,11 +166,13 @@ local function find_type_from_token(token)
 		if found then break end
 	end
 
-	if union:IsEmpty() then return nil, found_parents end
+	if union:IsEmpty() then return nil, found_parents, scope end
 
-	if union:GetLength() == 1 then return union:GetData()[1], found_parents end
+	if union:GetLength() == 1 then
+		return union:GetData()[1], found_parents, scope
+	end
 
-	return union, found_parents
+	return union, found_parents, scope
 end
 
 local function token_to_type_mod(token)
@@ -482,7 +503,26 @@ local function recompile(uri)
 				)
 			then
 				print("RECOMPILE")
-				compiler:Analyze()
+				local ok, err = compiler:Analyze()
+
+				if not ok then
+					local name = compiler:GetCode():GetName()
+					responses[name] = responses[name] or
+						{
+							method = "textDocument/publishDiagnostics",
+							params = {uri = working_directory .. "/" .. name, diagnostics = {}},
+						}
+					table.insert(
+						responses[name].params.diagnostics,
+						{
+							severity = DiagnosticSeverity["fatal"],
+							range = get_range(compiler:GetCode(), 1, compiler:GetCode():GetByteSize()),
+							message = err,
+						}
+					)
+				end
+
+				print(ok, err)
 			end
 
 			lsp.Call({method = "workspace/semanticTokens/refresh", params = {}})
@@ -598,7 +638,7 @@ do -- semantic tokens
 	end
 	lsp.methods["textDocument/semanticTokens/full"] = function(params)
 		local data = find_file(params.textDocument.uri)
-		print("SEMANTIC FOKENS FULL REFRESH", data)
+		print("SEMANTIC TOKENS FULL REFRESH", data)
 
 		if not data then return end
 
@@ -884,7 +924,7 @@ lsp.methods["textDocument/hover"] = function(params)
 		add_line("```lua\n" .. tostring(str) .. "\n```")
 	end
 
-	local obj, found_parents = find_type_from_token(token)
+	local obj, found_parents, scope = find_type_from_token(token)
 
 	if obj then
 		add_code(tostring(obj))
@@ -908,6 +948,8 @@ lsp.methods["textDocument/hover"] = function(params)
 		local min, max = found_parents[i]:GetStartStop()
 		add_code(tostring(found_parents[i]) .. " len=" .. tostring(max - min))
 	end
+
+	if scope then markdown = markdown .. "\n" .. tostring(scope) end
 
 	if #markdown > limit then markdown = markdown:sub(0, limit) .. "\n```\n..." end
 

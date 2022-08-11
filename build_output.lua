@@ -2742,6 +2742,19 @@ end
 function META:Get(key)
 	if type(key) == "number" then return self:GetWithNumber(key) end
 
+	if key.Type == "union" then
+		local union = Union()
+
+		for _, v in ipairs(key:GetData()) do
+			if key.Type == "number" then
+				local val = (self):Get(v)
+				union:AddType(val)
+			end
+		end
+
+		return union
+	end
+
 	assert(key.Type == "number")
 
 	if key:IsLiteral() then return self:GetWithNumber(key:GetData()) end
@@ -13076,8 +13089,6 @@ do -- runtime
 	end
 
 	local function resolve_import_path(self, path)
-		if not path then debug.trace() end
-
 		local working_directory = self.config.working_directory or ""
 
 		if path:sub(1, 1) == "~" then
@@ -15242,7 +15253,7 @@ end
 META:GetSet("TrackedUpvalues")
 META:GetSet("TrackedTables")
 
-function META:TracksSameAs(scope)
+function META:TracksSameAs(scope, obj)
 	local upvalues_a, tables_a = self:GetTrackedUpvalues(), self:GetTrackedTables()
 	local upvalues_b, tables_b = scope:GetTrackedUpvalues(), scope:GetTrackedTables()
 
@@ -15258,7 +15269,7 @@ function META:TracksSameAs(scope)
 
 	for i, data_a in ipairs(tables_a) do
 		for i, data_b in ipairs(tables_b) do
-			if data_a.obj == data_b.obj then return true end
+			if data_a.obj == data_b.obj and data_a.obj == obj then return true end
 		end
 	end
 
@@ -15752,7 +15763,7 @@ return function(META)
 	end)
 
 	function META:Assert(ok, err, ...)
-		if ok == false then
+		if ok == nil or ok == false then
 			err = err or "assertion failed!"
 			self:Error(err)
 			return Any()
@@ -16213,8 +16224,6 @@ return function(META)
 			end
 
 			function META:GetScopeHelper(scope)
-				if not scope then debug.trace() end
-
 				scope.scope_helper = scope.scope_helper or
 					{
 						typesystem = setmetatable(
@@ -16859,8 +16868,8 @@ local function get_value_from_scope(mutations, scope, obj)
 					if mut.scope ~= scope then
 						local test_scope_b = mut.scope:FindFirstConditionalScope()
 
-						if test_scope_b then
-							if test_scope_a:TracksSameAs(test_scope_b) then
+						if test_scope_b and test_scope_b ~= test_scope_a and obj.Type ~= "table" then
+							if test_scope_a:TracksSameAs(test_scope_b, obj) then
 								-- forcing scope certainty because this scope is using the same test condition
 								mut.certain_override = true
 							end
@@ -16981,6 +16990,8 @@ local function get_value_from_scope(mutations, scope, obj)
 	return union
 end
 
+_G.get_value_from_scope = get_value_from_scope
+
 local function initialize_table_mutation_tracker(tbl, scope, key, hash)
 	tbl.mutations = tbl.mutations or {}
 	tbl.mutations[hash] = tbl.mutations[hash] or {}
@@ -17012,6 +17023,7 @@ local function shallow_copy(tbl)
 	return copy
 end
 
+_G.shallow_copy = shallow_copy
 return function(META)
 	function META:GetMutatedTableValue(tbl, key)
 		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
@@ -18234,7 +18246,7 @@ local function check_input(self, obj, input)
 				if function_node.self_call and i == 1 then
 					signature_override[i] = input_signature:Get(1)
 				else
-					signature_override[i] = self:AnalyzeExpression(type_expression):GetFirstValue()
+					signature_override[i] = self:Assert(self:AnalyzeExpression(type_expression)):GetFirstValue()
 				end
 
 				self:CreateLocalValue(identifier, signature_override[i])
@@ -18450,6 +18462,7 @@ return function(META)
 		-- crawl the function with the new arguments
 		-- return_result is either a union of tuples or a single tuple
 		local scope = self:CreateAndPushFunctionScope(obj)
+		function_node.scope = scope
 		obj.scope = scope
 		self:PushTruthyExpressionContext(false)
 		self:PushFalsyExpressionContext(false)
@@ -20206,7 +20219,7 @@ function META:EmitBreakStatement(node)
 end
 
 function META:EmitContinueStatement(node)
-	local loop_node = self:GetLoopNode()
+	local loop_node = self.config.transpile_extensions and self:GetLoopNode()
 
 	if loop_node then
 		self:EmitToken(node.tokens["continue"], "goto __CONTINUE__")
@@ -20982,14 +20995,14 @@ local function analyze_arguments(self, node)
 			self:CreateLocalValue(key.value.value, Any()):SetNode(key)
 
 			if key.type_expression then
-				args[i] = self:AnalyzeExpression(key.type_expression)
+				args[i] = self:Assert(self:AnalyzeExpression(key.type_expression)) or Any()
 			elseif key.value.value == "..." then
 				args[i] = VarArg(Any())
 			else
 				args[i] = Any()
 			end
 
-			self:CreateLocalValue(key.value.value, args[i]):SetNode(key)
+			self:CreateLocalValue(key.value.value, assert(args[i])):SetNode(key)
 		end
 	elseif
 		node.kind == "analyzer_function" or
@@ -22955,6 +22968,7 @@ do
 			self:FatalError("unhandled statement: " .. tostring(node))
 		end
 
+		node.scope = self:GetScope()
 		self:PopAnalyzerEnvironment()
 		profiler.PopZone()
 	end
@@ -23040,6 +23054,7 @@ do
 		local obj, err = self:AnalyzeExpression2(node)
 		obj = self:AnalyzeTypeExpression(node, obj)
 		node:AddType(obj or err)
+		node.scope = self:GetScope()
 		profiler.PopZone()
 		return obj, err
 	end
@@ -27074,7 +27089,7 @@ local SemanticTokenModifiers = {
 	"defaultLibrary", -- For symbols that are part of the standard library.
 }
 
-local function GetFinalMutatedTable(tbl)
+local function GetFinalMutatedTable(tbl, scope)
 	if not tbl.mutations then return tbl end
 
 	local out = Table()
@@ -27082,14 +27097,23 @@ local function GetFinalMutatedTable(tbl)
 	for hash, mutations in pairs(tbl.mutations) do
 		local key = Union()
 		local val = Union()
+		local val = get_value_from_scope(shallow_copy(mutations), scope, tbl)
 
 		for _, mutation in ipairs(mutations) do
 			key:AddType(mutation.key)
 
-			if mutation.value.Type == "table" then
-				val:AddType(GetFinalMutatedTable(mutation.value))
-			else
-				val:AddType(mutation.value)
+			break
+		end
+
+		if false then
+			for _, mutation in ipairs(mutations) do
+				key:AddType(mutation.key)
+
+				if mutation.value.Type == "table" then
+					val:AddType(GetFinalMutatedTable(mutation.value, scope))
+				else
+					val:AddType(mutation.value)
+				end
 			end
 		end
 
@@ -27111,6 +27135,16 @@ local function find_type_from_token(token)
 		end
 	end
 
+	local scope
+
+	for _, node in ipairs(found_parents) do
+		if node.scope then
+			scope = node.scope
+
+			break
+		end
+	end
+
 	local union = Union({})
 
 	for _, node in ipairs(found_parents) do
@@ -27123,7 +27157,7 @@ local function find_type_from_token(token)
 				if obj.Type == "string" and obj:GetData() == token.value then
 
 				else
-					if obj.Type == "table" then obj = GetFinalMutatedTable(obj) end
+					if obj.Type == "table" then obj = GetFinalMutatedTable(obj, scope) end
 
 					union:AddType(obj)
 					found = true
@@ -27134,11 +27168,13 @@ local function find_type_from_token(token)
 		if found then break end
 	end
 
-	if union:IsEmpty() then return nil, found_parents end
+	if union:IsEmpty() then return nil, found_parents, scope end
 
-	if union:GetLength() == 1 then return union:GetData()[1], found_parents end
+	if union:GetLength() == 1 then
+		return union:GetData()[1], found_parents, scope
+	end
 
-	return union, found_parents
+	return union, found_parents, scope
 end
 
 local function token_to_type_mod(token)
@@ -27469,7 +27505,26 @@ local function recompile(uri)
 				)
 			then
 				print("RECOMPILE")
-				compiler:Analyze()
+				local ok, err = compiler:Analyze()
+
+				if not ok then
+					local name = compiler:GetCode():GetName()
+					responses[name] = responses[name] or
+						{
+							method = "textDocument/publishDiagnostics",
+							params = {uri = working_directory .. "/" .. name, diagnostics = {}},
+						}
+					table.insert(
+						responses[name].params.diagnostics,
+						{
+							severity = DiagnosticSeverity["fatal"],
+							range = get_range(compiler:GetCode(), 1, compiler:GetCode():GetByteSize()),
+							message = err,
+						}
+					)
+				end
+
+				print(ok, err)
 			end
 
 			lsp.Call({method = "workspace/semanticTokens/refresh", params = {}})
@@ -27585,7 +27640,7 @@ do -- semantic tokens
 	end
 	lsp.methods["textDocument/semanticTokens/full"] = function(params)
 		local data = find_file(params.textDocument.uri)
-		print("SEMANTIC FOKENS FULL REFRESH", data)
+		print("SEMANTIC TOKENS FULL REFRESH", data)
 
 		if not data then return end
 
@@ -27871,7 +27926,7 @@ lsp.methods["textDocument/hover"] = function(params)
 		add_line("```lua\n" .. tostring(str) .. "\n```")
 	end
 
-	local obj, found_parents = find_type_from_token(token)
+	local obj, found_parents, scope = find_type_from_token(token)
 
 	if obj then
 		add_code(tostring(obj))
@@ -27895,6 +27950,8 @@ lsp.methods["textDocument/hover"] = function(params)
 		local min, max = found_parents[i]:GetStartStop()
 		add_code(tostring(found_parents[i]) .. " len=" .. tostring(max - min))
 	end
+
+	if scope then markdown = markdown .. "\n" .. tostring(scope) end
 
 	if #markdown > limit then markdown = markdown:sub(0, limit) .. "\n```\n..." end
 
