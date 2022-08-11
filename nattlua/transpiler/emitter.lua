@@ -1190,7 +1190,7 @@ function META:EmitBreakStatement(node--[[#: Node]])
 end
 
 function META:EmitContinueStatement(node--[[#: Node]])
-	local loop_node = self:GetLoopNode()
+	local loop_node = self.config.transpile_extensions and self:GetLoopNode()
 
 	if loop_node then
 		self:EmitToken(node.tokens["continue"], "goto __CONTINUE__")
