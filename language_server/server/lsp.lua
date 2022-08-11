@@ -93,29 +93,13 @@ local function GetFinalMutatedTable(tbl, scope)
 	local out = Table()
 
 	for hash, mutations in pairs(tbl.mutations) do
-		local key = Union()
-		local val = Union()
-		local val = get_value_from_scope(shallow_copy(mutations), scope, tbl)
-
 		for _, mutation in ipairs(mutations) do
-			key:AddType(mutation.key)
+			local key = mutation.key
+			local val = tbl:GetMutatedValue(key, scope)
+			out:Set(key, val)
 
 			break
 		end
-
-		if false then
-			for _, mutation in ipairs(mutations) do
-				key:AddType(mutation.key)
-
-				if mutation.value.Type == "table" then
-					val:AddType(GetFinalMutatedTable(mutation.value, scope))
-				else
-					val:AddType(mutation.value)
-				end
-			end
-		end
-
-		out:Set(key, val)
 	end
 
 	return out

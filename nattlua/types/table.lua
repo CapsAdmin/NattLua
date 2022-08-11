@@ -11,6 +11,8 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
 local context = require("nattlua.analyzer.context")
+local shallow_copy = require("nattlua.other.shallow_copy")
+local mutation_solver = require("nattlua.analyzer.mutation_solver")
 META.Type = "table"
 --[[#type META.@Name = "TTable"]]
 --[[#type TTable = META.@Self]]
@@ -973,6 +975,57 @@ function META.LogicalComparison(l, r, op, env)
 	end
 
 	return type_errors.binary(op, l, r)
+end
+
+do
+	local function initialize_table_mutation_tracker(tbl, scope, key, hash)
+		tbl.mutations = tbl.mutations or {}
+		tbl.mutations[hash] = tbl.mutations[hash] or {}
+
+		if tbl.mutations[hash][1] == nil then
+			if tbl.Type == "table" then
+				-- initialize the table mutations with an existing value or nil
+				local val = (tbl:GetContract() or tbl):Get(key) or Nil()
+
+				if
+					tbl:GetCreationScope() and
+					not scope:IsCertainFromScope(tbl:GetCreationScope())
+				then
+					scope = tbl:GetCreationScope()
+				end
+
+				table.insert(tbl.mutations[hash], {scope = scope, value = val, contract = tbl:GetContract(), key = key})
+			end
+		end
+	end
+
+	function META:GetMutatedValue(key, scope)
+		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
+
+		if not hash then return end
+
+		initialize_table_mutation_tracker(self, scope, key, hash)
+		return mutation_solver(shallow_copy(self.mutations[hash]), scope, self)
+	end
+
+	function META:Mutate(key, val, scope, from_tracking)
+		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
+
+		if not hash then return end
+
+		initialize_table_mutation_tracker(self, scope, key, hash)
+		table.insert(self.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking, key = key})
+
+		if from_tracking then scope:AddTrackedObject(self) end
+	end
+
+	function META:ClearMutations()
+		self.mutations = nil
+	end
+
+	function META:HasMutations()
+		return self.mutations ~= nil
+	end
 end
 
 function META.New()

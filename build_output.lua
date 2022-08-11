@@ -3004,6 +3004,219 @@ return {
 		return arguments
 	end,
 } end ]=======], '@./nattlua/types/tuple.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.shallow_copy"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local function shallow_copy(tbl)
+	local copy = {}
+
+	for i, val in ipairs(tbl) do
+		copy[i] = val
+	end
+
+	return copy
+end
+
+return shallow_copy end ]=======], '@./nattlua/other/shallow_copy.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.mutation_solver"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
+local table = _G.table
+local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+
+local function mutation_solver(mutations, scope, obj)
+	do
+		do
+			local last_scope
+
+			for i = #mutations, 1, -1 do
+				local mut = mutations[i]
+
+				if last_scope and mut.scope == last_scope then
+					-- "redudant mutation"
+					table.remove(mutations, i)
+				end
+
+				last_scope = mut.scope
+			end
+		end
+
+		for i = #mutations, 1, -1 do
+			local mut = mutations[i]
+
+			if
+				(
+					scope:IsPartOfTestStatementAs(mut.scope) or
+					(
+						mut.from_tracking and
+						not mut.scope:Contains(scope)
+					)
+				)
+				and
+				scope ~= mut.scope
+			then
+				table.remove(mutations, i)
+			end
+		end
+
+		do
+			for i = #mutations, 1, -1 do
+				local mut = mutations[i]
+
+				if mut.scope:IsElseConditionalScope() then
+					while true do
+						local mut = mutations[i]
+
+						if not mut then break end
+
+						if
+							not mut.scope:IsPartOfTestStatementAs(scope) and
+							not mut.scope:IsCertainFromScope(scope)
+						then
+							for i = i, 1, -1 do
+								if mutations[i].scope:IsCertainFromScope(scope) then
+									-- redudant mutation before else part of if statement
+									table.remove(mutations, i)
+								end
+							end
+
+							break
+						end
+
+						i = i - 1
+					end
+
+					break
+				end
+			end
+		end
+
+		do
+			local test_scope_a = scope:FindFirstConditionalScope()
+
+			if test_scope_a then
+				for _, mut in ipairs(mutations) do
+					if mut.scope ~= scope then
+						local test_scope_b = mut.scope:FindFirstConditionalScope()
+
+						if test_scope_b and test_scope_b ~= test_scope_a and obj.Type ~= "table" then
+							if test_scope_a:TracksSameAs(test_scope_b, obj) then
+								-- forcing scope certainty because this scope is using the same test condition
+								mut.certain_override = true
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
+	if not mutations[1] then return end
+
+	local union = Union({})
+
+	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
+
+	for _, mut in ipairs(mutations) do
+		local value = mut.value
+
+		if value.Type == "union" and #value:GetData() == 1 then
+			value = value:GetData()[1]
+		end
+
+		do
+			local upvalues = mut.scope:GetTrackedUpvalues()
+
+			if upvalues then
+				for _, data in ipairs(upvalues) do
+					local stack = data.stack
+
+					if stack then
+						local val
+
+						if mut.scope:IsElseConditionalScope() then
+							val = stack[#stack].falsy
+						else
+							val = stack[#stack].truthy
+						end
+
+						if val and (val.Type ~= "union" or not val:IsEmpty()) then
+							union:RemoveType(val)
+						end
+					end
+				end
+			end
+		end
+
+		-- IsCertain isn't really accurate and seems to be used as a last resort in case the above logic doesn't work
+		if mut.certain_override or mut.scope:IsCertainFromScope(scope) then
+			union:Clear()
+		end
+
+		if
+			union:Get(value) and
+			value.Type ~= "any" and
+			mutations[1].value.Type ~= "union" and
+			mutations[1].value.Type ~= "function" and
+			mutations[1].value.Type ~= "any"
+		then
+			union:RemoveType(mutations[1].value)
+		end
+
+		if _ == 1 and value.Type == "union" then
+			union = value:Copy()
+
+			if obj.Type == "upvalue" then union:SetUpvalue(obj) end
+		else
+			union:AddType(value)
+		end
+	end
+
+	local value = union
+
+	if #union:GetData() == 1 then
+		value = union:GetData()[1]
+
+		if obj.Type == "upvalue" then value:SetUpvalue(obj) end
+
+		return value
+	end
+
+	local found_scope, data = scope:FindResponsibleConditionalScopeFromUpvalue(obj)
+
+	if not found_scope or not data.stack then return value end
+
+	local stack = data.stack
+
+	if
+		found_scope:IsElseConditionalScope() or
+		(
+			found_scope ~= scope and
+			scope:IsPartOfTestStatementAs(found_scope)
+		)
+	then
+		local union = stack[#stack].falsy
+
+		if union:GetLength() == 0 then
+			union = Union()
+
+			for _, val in ipairs(stack) do
+				union:AddType(val.falsy)
+			end
+		end
+
+		if obj.Type == "upvalue" then union:SetUpvalue(obj) end
+
+		return union
+	end
+
+	local union = Union()
+
+	for _, val in ipairs(stack) do
+		union:AddType(val.truthy)
+	end
+
+	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
+
+	return union
+end
+
+return mutation_solver end ]=======], '@./nattlua/analyzer/mutation_solver.lua'))())(...) return __M end end
 do local __M; IMPORTS["nattlua.types.table"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local setmetatable = _G.setmetatable
 local table = _G.table
 local ipairs = _G.ipairs
@@ -3017,6 +3230,8 @@ local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
 local type_errors = IMPORTS['nattlua.types.error_messages']("nattlua.types.error_messages")
 local META = IMPORTS['nattlua/types/base.lua']("nattlua/types/base.lua")
 local context = IMPORTS['nattlua.analyzer.context']("nattlua.analyzer.context")
+local shallow_copy = IMPORTS['nattlua.other.shallow_copy']("nattlua.other.shallow_copy")
+local mutation_solver = IMPORTS['nattlua.analyzer.mutation_solver']("nattlua.analyzer.mutation_solver")
 META.Type = "table"
 
 
@@ -3979,6 +4194,57 @@ function META.LogicalComparison(l, r, op, env)
 	end
 
 	return type_errors.binary(op, l, r)
+end
+
+do
+	local function initialize_table_mutation_tracker(tbl, scope, key, hash)
+		tbl.mutations = tbl.mutations or {}
+		tbl.mutations[hash] = tbl.mutations[hash] or {}
+
+		if tbl.mutations[hash][1] == nil then
+			if tbl.Type == "table" then
+				-- initialize the table mutations with an existing value or nil
+				local val = (tbl:GetContract() or tbl):Get(key) or Nil()
+
+				if
+					tbl:GetCreationScope() and
+					not scope:IsCertainFromScope(tbl:GetCreationScope())
+				then
+					scope = tbl:GetCreationScope()
+				end
+
+				table.insert(tbl.mutations[hash], {scope = scope, value = val, contract = tbl:GetContract(), key = key})
+			end
+		end
+	end
+
+	function META:GetMutatedValue(key, scope)
+		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
+
+		if not hash then return end
+
+		initialize_table_mutation_tracker(self, scope, key, hash)
+		return mutation_solver(shallow_copy(self.mutations[hash]), scope, self)
+	end
+
+	function META:Mutate(key, val, scope, from_tracking)
+		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
+
+		if not hash then return end
+
+		initialize_table_mutation_tracker(self, scope, key, hash)
+		table.insert(self.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking, key = key})
+
+		if from_tracking then scope:AddTrackedObject(self) end
+	end
+
+	function META:ClearMutations()
+		self.mutations = nil
+	end
+
+	function META:HasMutations()
+		return self.mutations ~= nil
+	end
 end
 
 function META.New()
@@ -15037,6 +15303,8 @@ end
 
 return types end ]=======], '@./nattlua/types/types.lua'))())(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.base.upvalue"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local shallow_copy = IMPORTS['nattlua.other.shallow_copy']("nattlua.other.shallow_copy")
+local mutation_solver = IMPORTS['nattlua.analyzer.mutation_solver']("nattlua.analyzer.mutation_solver")
 local META = class.CreateTemplate("upvalue")
 
 function META:__tostring()
@@ -15075,6 +15343,29 @@ end
 
 function META:GetHash()
 	return self.hash
+end
+
+do
+	function META:GetMutatedValue(scope)
+		self.mutations = self.mutations or {}
+		return mutation_solver(shallow_copy(self.mutations), scope, self)
+	end
+
+	function META:Mutate(val, scope, from_tracking)
+		val:SetUpvalue(self)
+		self.mutations = self.mutations or {}
+		table.insert(self.mutations, {scope = scope, value = val, from_tracking = from_tracking})
+
+		if from_tracking then scope:AddTrackedObject(self) end
+	end
+
+	function META:ClearMutations()
+		self.mutations = nil
+	end
+
+	function META:HasMutations()
+		return self.mutations ~= nil
+	end
 end
 
 local id = 0
@@ -16784,264 +17075,21 @@ return function(META)
 		self:PopScope()
 	end
 end end ]=======], '@./nattlua/analyzer/control_flow.lua'))())(...) return __M end end
-do local __M; IMPORTS["nattlua.analyzer.mutations"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
-local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
-local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
-local print = print
-local tostring = tostring
-local ipairs = ipairs
+do local __M; IMPORTS["nattlua.analyzer.mutation_tracking"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local ipairs = ipairs
 local table = _G.table
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
-
-local function get_value_from_scope(mutations, scope, obj)
-	do
-		do
-			local last_scope
-
-			for i = #mutations, 1, -1 do
-				local mut = mutations[i]
-
-				if last_scope and mut.scope == last_scope then
-					-- "redudant mutation"
-					table.remove(mutations, i)
-				end
-
-				last_scope = mut.scope
-			end
-		end
-
-		for i = #mutations, 1, -1 do
-			local mut = mutations[i]
-
-			if
-				(
-					scope:IsPartOfTestStatementAs(mut.scope) or
-					(
-						mut.from_tracking and
-						not mut.scope:Contains(scope)
-					)
-				)
-				and
-				scope ~= mut.scope
-			then
-				table.remove(mutations, i)
-			end
-		end
-
-		do
-			for i = #mutations, 1, -1 do
-				local mut = mutations[i]
-
-				if mut.scope:IsElseConditionalScope() then
-					while true do
-						local mut = mutations[i]
-
-						if not mut then break end
-
-						if
-							not mut.scope:IsPartOfTestStatementAs(scope) and
-							not mut.scope:IsCertainFromScope(scope)
-						then
-							for i = i, 1, -1 do
-								if mutations[i].scope:IsCertainFromScope(scope) then
-									-- redudant mutation before else part of if statement
-									table.remove(mutations, i)
-								end
-							end
-
-							break
-						end
-
-						i = i - 1
-					end
-
-					break
-				end
-			end
-		end
-
-		do
-			local test_scope_a = scope:FindFirstConditionalScope()
-
-			if test_scope_a then
-				for _, mut in ipairs(mutations) do
-					if mut.scope ~= scope then
-						local test_scope_b = mut.scope:FindFirstConditionalScope()
-
-						if test_scope_b and test_scope_b ~= test_scope_a and obj.Type ~= "table" then
-							if test_scope_a:TracksSameAs(test_scope_b, obj) then
-								-- forcing scope certainty because this scope is using the same test condition
-								mut.certain_override = true
-							end
-						end
-					end
-				end
-			end
-		end
-	end
-
-	if not mutations[1] then return end
-
-	local union = Union({})
-
-	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
-
-	for _, mut in ipairs(mutations) do
-		local value = mut.value
-
-		if value.Type == "union" and #value:GetData() == 1 then
-			value = value:GetData()[1]
-		end
-
-		do
-			local upvalues = mut.scope:GetTrackedUpvalues()
-
-			if upvalues then
-				for _, data in ipairs(upvalues) do
-					local stack = data.stack
-
-					if stack then
-						local val
-
-						if mut.scope:IsElseConditionalScope() then
-							val = stack[#stack].falsy
-						else
-							val = stack[#stack].truthy
-						end
-
-						if val and (val.Type ~= "union" or not val:IsEmpty()) then
-							union:RemoveType(val)
-						end
-					end
-				end
-			end
-		end
-
-		-- IsCertain isn't really accurate and seems to be used as a last resort in case the above logic doesn't work
-		if mut.certain_override or mut.scope:IsCertainFromScope(scope) then
-			union:Clear()
-		end
-
-		if
-			union:Get(value) and
-			value.Type ~= "any" and
-			mutations[1].value.Type ~= "union" and
-			mutations[1].value.Type ~= "function" and
-			mutations[1].value.Type ~= "any"
-		then
-			union:RemoveType(mutations[1].value)
-		end
-
-		if _ == 1 and value.Type == "union" then
-			union = value:Copy()
-
-			if obj.Type == "upvalue" then union:SetUpvalue(obj) end
-		else
-			union:AddType(value)
-		end
-	end
-
-	local value = union
-
-	if #union:GetData() == 1 then
-		value = union:GetData()[1]
-
-		if obj.Type == "upvalue" then value:SetUpvalue(obj) end
-
-		return value
-	end
-
-	local found_scope, data = scope:FindResponsibleConditionalScopeFromUpvalue(obj)
-
-	if not found_scope or not data.stack then return value end
-
-	local stack = data.stack
-
-	if
-		found_scope:IsElseConditionalScope() or
-		(
-			found_scope ~= scope and
-			scope:IsPartOfTestStatementAs(found_scope)
-		)
-	then
-		local union = stack[#stack].falsy
-
-		if union:GetLength() == 0 then
-			union = Union()
-
-			for _, val in ipairs(stack) do
-				union:AddType(val.falsy)
-			end
-		end
-
-		if obj.Type == "upvalue" then union:SetUpvalue(obj) end
-
-		return union
-	end
-
-	local union = Union()
-
-	for _, val in ipairs(stack) do
-		union:AddType(val.truthy)
-	end
-
-	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
-
-	return union
-end
-
-_G.get_value_from_scope = get_value_from_scope
-
-local function initialize_table_mutation_tracker(tbl, scope, key, hash)
-	tbl.mutations = tbl.mutations or {}
-	tbl.mutations[hash] = tbl.mutations[hash] or {}
-
-	if tbl.mutations[hash][1] == nil then
-		if tbl.Type == "table" then
-			-- initialize the table mutations with an existing value or nil
-			local val = (tbl:GetContract() or tbl):Get(key) or Nil()
-
-			if
-				tbl:GetCreationScope() and
-				not scope:IsCertainFromScope(tbl:GetCreationScope())
-			then
-				scope = tbl:GetCreationScope()
-			end
-
-			table.insert(tbl.mutations[hash], {scope = scope, value = val, contract = tbl:GetContract(), key = key})
-		end
-	end
-end
-
-local function shallow_copy(tbl)
-	local copy = {}
-
-	for i, val in ipairs(tbl) do
-		copy[i] = val
-	end
-
-	return copy
-end
-
-_G.shallow_copy = shallow_copy
+local shallow_copy = IMPORTS['nattlua.other.shallow_copy']("nattlua.other.shallow_copy")
 return function(META)
 	function META:GetMutatedTableValue(tbl, key)
-		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
+		if tbl.Type ~= "table" then return end
 
-		if not hash then return end
-
-		local scope = self:GetScope()
-		initialize_table_mutation_tracker(tbl, scope, key, hash)
-		return get_value_from_scope(shallow_copy(tbl.mutations[hash]), scope, tbl)
+		return tbl:GetMutatedValue(key, self:GetScope())
 	end
 
 	function META:MutateTable(tbl, key, val, scope_override, from_tracking)
-		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
-
-		if not hash then return end
+		if tbl.Type ~= "table" then return end
 
 		local scope = scope_override or self:GetScope()
-		initialize_table_mutation_tracker(tbl, scope, key, hash)
 
 		if self:IsInUncertainLoop(scope) then
 			if val.dont_widen then
@@ -17051,19 +17099,14 @@ return function(META)
 			end
 		end
 
-		table.insert(tbl.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking, key = key})
-
-		if from_tracking then scope:AddTrackedObject(tbl) end
+		tbl:Mutate(key, val, scope, from_tracking)
 	end
 
 	function META:GetMutatedUpvalue(upvalue)
-		upvalue.mutations = upvalue.mutations or {}
-		return get_value_from_scope(shallow_copy(upvalue.mutations), self:GetScope(), upvalue)
+		return upvalue:GetMutatedValue(self:GetScope())
 	end
 
 	function META:MutateUpvalue(upvalue, val, scope_override, from_tracking)
-		val:SetUpvalue(upvalue)
-		upvalue.mutations = upvalue.mutations or {}
 		local scope = scope_override or self:GetScope()
 
 		if self:IsInUncertainLoop(scope) and upvalue.scope then
@@ -17074,21 +17117,19 @@ return function(META)
 			end
 		end
 
-		table.insert(upvalue.mutations, {scope = scope, value = val, from_tracking = from_tracking})
-
-		if from_tracking then scope:AddTrackedObject(upvalue) end
-	end
-
-	function META:CopyObjectMutations(to, from)
-		to.mutations = from.mutations
+		upvalue:Mutate(val, scope, from_tracking)
 	end
 
 	function META:ClearObjectMutations(obj)
-		obj.mutations = nil
+		if obj.Type ~= "table" and not obj.Type ~= "upvalue" then return end
+
+		obj:ClearMutations()
 	end
 
 	function META:HasMutations(obj)
-		return obj.mutations ~= nil
+		if obj.Type ~= "table" and not obj.Type ~= "upvalue" then return false end
+
+		return obj:HasMutations()
 	end
 
 	function META:ClearScopedTrackedObjects(scope)
@@ -17513,7 +17554,7 @@ return function(META)
 			end
 		end
 	end
-end end ]=======], '@./nattlua/analyzer/mutations.lua'))())(...) return __M end end
+end end ]=======], '@./nattlua/analyzer/mutation_tracking.lua'))())(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.operators.index"] = function(...) __M = __M or (assert(loadstring([=======[ return function(...) local LString = IMPORTS['nattlua.types.string']("nattlua.types.string").LString
 local Nil = IMPORTS['nattlua.types.symbol']("nattlua.types.symbol").Nil
 local Tuple = IMPORTS['nattlua.types.tuple']("nattlua.types.tuple").Tuple
@@ -22891,7 +22932,7 @@ local META = class.CreateTemplate("analyzer")
 META.OnInitialize = {}
 IMPORTS['nattlua.analyzer.base.base_analyzer']("nattlua.analyzer.base.base_analyzer")(META)
 IMPORTS['nattlua.analyzer.control_flow']("nattlua.analyzer.control_flow")(META)
-IMPORTS['nattlua.analyzer.mutations']("nattlua.analyzer.mutations")(META)
+IMPORTS['nattlua.analyzer.mutation_tracking']("nattlua.analyzer.mutation_tracking")(META)
 IMPORTS['nattlua.analyzer.operators.index']("nattlua.analyzer.operators.index").Index(META)
 IMPORTS['nattlua.analyzer.operators.newindex']("nattlua.analyzer.operators.newindex").NewIndex(META)
 IMPORTS['nattlua.analyzer.operators.call']("nattlua.analyzer.operators.call").Call(META)
@@ -27095,29 +27136,13 @@ local function GetFinalMutatedTable(tbl, scope)
 	local out = Table()
 
 	for hash, mutations in pairs(tbl.mutations) do
-		local key = Union()
-		local val = Union()
-		local val = get_value_from_scope(shallow_copy(mutations), scope, tbl)
-
 		for _, mutation in ipairs(mutations) do
-			key:AddType(mutation.key)
+			local key = mutation.key
+			local val = tbl:GetMutatedValue(key, scope)
+			out:Set(key, val)
 
 			break
 		end
-
-		if false then
-			for _, mutation in ipairs(mutations) do
-				key:AddType(mutation.key)
-
-				if mutation.value.Type == "table" then
-					val:AddType(GetFinalMutatedTable(mutation.value, scope))
-				else
-					val:AddType(mutation.value)
-				end
-			end
-		end
-
-		out:Set(key, val)
 	end
 
 	return out

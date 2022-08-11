@@ -1,4 +1,6 @@
 local class = require("nattlua.other.class")
+local shallow_copy = require("nattlua.other.shallow_copy")
+local mutation_solver = require("nattlua.analyzer.mutation_solver")
 local META = class.CreateTemplate("upvalue")
 
 function META:__tostring()
@@ -37,6 +39,29 @@ end
 
 function META:GetHash()
 	return self.hash
+end
+
+do
+	function META:GetMutatedValue(scope)
+		self.mutations = self.mutations or {}
+		return mutation_solver(shallow_copy(self.mutations), scope, self)
+	end
+
+	function META:Mutate(val, scope, from_tracking)
+		val:SetUpvalue(self)
+		self.mutations = self.mutations or {}
+		table.insert(self.mutations, {scope = scope, value = val, from_tracking = from_tracking})
+
+		if from_tracking then scope:AddTrackedObject(self) end
+	end
+
+	function META:ClearMutations()
+		self.mutations = nil
+	end
+
+	function META:HasMutations()
+		return self.mutations ~= nil
+	end
 end
 
 local id = 0
