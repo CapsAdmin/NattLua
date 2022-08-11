@@ -141,7 +141,7 @@ analyzer function include(path: string)
 	local compiler = assert(require("nattlua").File(full_path))
 	assert(compiler:Lex())
 	assert(compiler:Parse())
-	local res = analyzer:AnalyzeRootNode(compiler.SyntaxTree)
+	local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
 	analyzer.loaded = analyzer.loaded or {}
 	analyzer.loaded[path] = res
 	return res
