@@ -246,6 +246,19 @@ end
 function META:Get(key--[[#: number | TBaseType]])
 	if type(key) == "number" then return self:GetWithNumber(key) end
 
+	if key.Type == "union" then
+		local union = Union()
+
+		for _, v in ipairs(key:GetData()) do
+			if key.Type == "number" then
+				local val = (self--[[# as any]]):Get(v)
+				union:AddType(val)
+			end
+		end
+
+		return union--[[# as TBaseType]]
+	end
+
 	assert(key.Type == "number")
 
 	if key:IsLiteral() then return self:GetWithNumber(key:GetData()) end

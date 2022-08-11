@@ -221,7 +221,7 @@ do
 			local flags = bit.bor(FORMAT_MESSAGE_IGNORE_INSERTS, FORMAT_MESSAGE_FROM_SYSTEM)
 			local cache: Map<|number, string|> = {}
 
-			function socket.lasterror(num: number)
+			function socket.lasterror(num: nil | number)
 				num = num or ffi.C.GetLastError()
 
 				if not cache[num] then

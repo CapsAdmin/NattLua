@@ -163,7 +163,7 @@ end
 META:GetSet("TrackedUpvalues")
 META:GetSet("TrackedTables")
 
-function META:TracksSameAs(scope)
+function META:TracksSameAs(scope, obj)
 	local upvalues_a, tables_a = self:GetTrackedUpvalues(), self:GetTrackedTables()
 	local upvalues_b, tables_b = scope:GetTrackedUpvalues(), scope:GetTrackedTables()
 
@@ -179,7 +179,7 @@ function META:TracksSameAs(scope)
 
 	for i, data_a in ipairs(tables_a) do
 		for i, data_b in ipairs(tables_b) do
-			if data_a.obj == data_b.obj then return true end
+			if data_a.obj == data_b.obj and data_a.obj == obj then return true end
 		end
 	end
 

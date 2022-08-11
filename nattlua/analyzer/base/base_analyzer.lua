@@ -344,8 +344,6 @@ return function(META)
 			end
 
 			function META:GetScopeHelper(scope)
-				if not scope then debug.trace() end
-
 				scope.scope_helper = scope.scope_helper or
 					{
 						typesystem = setmetatable(

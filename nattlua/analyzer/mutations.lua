@@ -82,8 +82,8 @@ local function get_value_from_scope(mutations, scope, obj)
 					if mut.scope ~= scope then
 						local test_scope_b = mut.scope:FindFirstConditionalScope()
 
-						if test_scope_b and test_scope_b ~= test_scope_a then
-							if test_scope_a:TracksSameAs(test_scope_b) then
+						if test_scope_b and test_scope_b ~= test_scope_a and obj.Type ~= "table" then
+							if test_scope_a:TracksSameAs(test_scope_b, obj) then
 								-- forcing scope certainty because this scope is using the same test condition
 								mut.certain_override = true
 							end

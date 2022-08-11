@@ -1022,7 +1022,8 @@ analyze[[
         x = 3
     end
 
-    attest.equal(x, _ as 2|3)
+    -- anything can happen in a global environment
+    attest.equal(x, _ as 1|2|3)
 
     x = nil
 ]]
@@ -1487,6 +1488,18 @@ analyze[[
     end
 
     attest.equal(x.bar, _  as nil | {lol = true})
+]]
+analyze[[
+    local x = {}
+
+    if math.random() > 0.5 then x.foo = "no!" end
+
+    if math.random() > 0.4 then attest.equal(x.foo, _ as nil | "no!") end
+]]
+analyze[[
+    local x = {lol = math.random()}
+    if x.lol > 0.5 then x.foo = "no!" end
+    if x.lol > 0.4 then attest.equal(x.foo, _ as nil | "no!") end
 ]]
 
 if false then
