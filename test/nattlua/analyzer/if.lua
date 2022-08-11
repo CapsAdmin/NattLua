@@ -1474,6 +1474,20 @@ analyze[[
         if math.random() > 0.5 then self:close() end
     end
 ]]
+analyze[[
+    local x = {}
+
+    if math.random() > 0.5 then
+        x.foo = true
+        x.bar = {}
+
+        do
+            x.bar.lol = true
+        end
+    end
+
+    attest.equal(x.bar, _  as nil | {lol = true})
+]]
 
 if false then
 	analyze[==[

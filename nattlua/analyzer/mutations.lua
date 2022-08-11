@@ -82,7 +82,7 @@ local function get_value_from_scope(mutations, scope, obj)
 					if mut.scope ~= scope then
 						local test_scope_b = mut.scope:FindFirstConditionalScope()
 
-						if test_scope_b then
+						if test_scope_b and test_scope_b ~= test_scope_a then
 							if test_scope_a:TracksSameAs(test_scope_b) then
 								-- forcing scope certainty because this scope is using the same test condition
 								mut.certain_override = true
@@ -204,6 +204,8 @@ local function get_value_from_scope(mutations, scope, obj)
 	return union
 end
 
+_G.get_value_from_scope = get_value_from_scope
+
 local function initialize_table_mutation_tracker(tbl, scope, key, hash)
 	tbl.mutations = tbl.mutations or {}
 	tbl.mutations[hash] = tbl.mutations[hash] or {}
@@ -235,6 +237,7 @@ local function shallow_copy(tbl)
 	return copy
 end
 
+_G.shallow_copy = shallow_copy
 return function(META)
 	function META:GetMutatedTableValue(tbl, key)
 		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
