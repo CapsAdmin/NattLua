@@ -37,14 +37,14 @@ local function analyze_arguments(self, node)
 			self:CreateLocalValue(key.value.value, Any()):SetNode(key)
 
 			if key.type_expression then
-				args[i] = self:AnalyzeExpression(key.type_expression)
+				args[i] = self:Assert(self:AnalyzeExpression(key.type_expression)) or Any()
 			elseif key.value.value == "..." then
 				args[i] = VarArg(Any())
 			else
 				args[i] = Any()
 			end
 
-			self:CreateLocalValue(key.value.value, args[i]):SetNode(key)
+			self:CreateLocalValue(key.value.value, assert(args[i])):SetNode(key)
 		end
 	elseif
 		node.kind == "analyzer_function" or

@@ -24,7 +24,7 @@ return function(META)
 	end)
 
 	function META:Assert(ok, err, ...)
-		if ok == false then
+		if ok == nil or ok == false then
 			err = err or "assertion failed!"
 			self:Error(err)
 			return Any()

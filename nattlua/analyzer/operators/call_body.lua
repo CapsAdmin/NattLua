@@ -201,7 +201,7 @@ local function check_input(self, obj, input)
 				if function_node.self_call and i == 1 then
 					signature_override[i] = input_signature:Get(1)
 				else
-					signature_override[i] = self:AnalyzeExpression(type_expression):GetFirstValue()
+					signature_override[i] = self:Assert(self:AnalyzeExpression(type_expression)):GetFirstValue()
 				end
 
 				self:CreateLocalValue(identifier, signature_override[i])
@@ -417,6 +417,7 @@ return function(META)
 		-- crawl the function with the new arguments
 		-- return_result is either a union of tuples or a single tuple
 		local scope = self:CreateAndPushFunctionScope(obj)
+		function_node.scope = scope
 		obj.scope = scope
 		self:PushTruthyExpressionContext(false)
 		self:PushFalsyExpressionContext(false)
