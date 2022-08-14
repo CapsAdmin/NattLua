@@ -1033,6 +1033,12 @@ do
 		done = done or {}
 		local out = META.New()
 
+		if done[self] then
+			return done[self]
+		end
+
+		done[self] = out
+
 		for hash, mutations in pairs(self.mutations) do
 			for _, mutation in ipairs(mutations) do
 				local key = mutation.key
@@ -1045,7 +1051,6 @@ do
 
 					for _, val in ipairs(val:GetData()) do
 						if val.Type == "table" then
-							done[val] = true
 							union:AddType(val:GetMutatedFromScope(scope, done))
 						else
 							union:AddType(val)
@@ -1054,7 +1059,6 @@ do
 
 					out:Set(key, union)
 				elseif val.Type == "table" then
-					done[val] = true
 					out:Set(key, val:GetMutatedFromScope(scope, done))
 				else
 					out:Set(key, val)

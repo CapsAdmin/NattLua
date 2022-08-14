@@ -1502,6 +1502,49 @@ analyze[[
     if x.lol > 0.4 then attest.equal(x.foo, _ as nil | "no!") end
 ]]
 
+analyze[[
+    local x = {lol = math.random()}
+
+    if x.lol > 0.5 then
+        x.foo = "no!"
+
+        do
+            x.bar = "true"
+            x.tbl = {}
+
+            if math.random() > 0.5 then
+                x.tbl.bar = true
+
+                if math.random() > 0.5 then
+                    x.tbl.foo = {}
+
+                    if math.random() > 0.5 then
+                        x.tbl.foo.test = 1337
+                        x.tbl.foo.test2 = x
+                    end
+                end
+            end
+        end
+    end
+
+    local analyzer function GetMutatedFromScope(x: Table)
+        return x:GetMutatedFromScope(analyzer:GetScope())
+    end
+
+    attest.equal<|GetMutatedFromScope<|x|>, {
+        ["tbl"] = nil | {
+                ["foo"] = nil | {
+                        ["test2"] = CurrentType<|"table"|> | nil,
+                        ["test"] = 1337 | nil
+                },
+                ["bar"] = nil | true
+        },
+        ["foo"] = "no!" | nil,
+        ["lol"] = number,
+        ["bar"] = "true" | nil
+    }|>
+]]
+
 if false then
 	pending[[
         do
