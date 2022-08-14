@@ -1503,9 +1503,6 @@ analyze[[
 ]]
 
 if false then
-	analyze[==[
-        
-    ]==]
 	pending[[
         do
             local x: {foo = nil | true}

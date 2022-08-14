@@ -87,46 +87,6 @@ local SemanticTokenModifiers = {
 	"defaultLibrary", -- For symbols that are part of the standard library.
 }
 
-local function GetFinalMutatedTable(tbl, scope, done)
-	if not tbl.mutations then return tbl end
-
-	done = done or {}
-	local out = Table()
-
-	for hash, mutations in pairs(tbl.mutations) do
-		for _, mutation in ipairs(mutations) do
-			local key = mutation.key
-			local val = tbl:GetMutatedValue(key, scope)
-
-			if done[val] then break end
-
-			if val.Type == "union" then
-				local union = Union()
-
-				for _, val in ipairs(val:GetData()) do
-					if val.Type == "table" then
-						done[val] = true
-						union:AddType(GetFinalMutatedTable(val, scope))
-					else
-						union:AddType(val)
-					end
-				end
-
-				out:Set(key, union)
-			elseif val.Type == "table" then
-				done[val] = true
-				out:Set(key, GetFinalMutatedTable(val, scope))
-			else
-				out:Set(key, val)
-			end
-
-			break
-		end
-	end
-
-	return out
-end
-
 local function find_type_from_token(token)
 	local found_parents = {}
 
@@ -161,7 +121,7 @@ local function find_type_from_token(token)
 				if obj.Type == "string" and obj:GetData() == token.value then
 
 				else
-					if obj.Type == "table" then obj = GetFinalMutatedTable(obj, scope) end
+					if obj.Type == "table" then obj = obj:GetMutatedFromScope(scope) end
 
 					union:AddType(obj)
 					found = true
@@ -461,6 +421,7 @@ local function recompile(uri)
 		return find_temp_file(working_directory .. "/" .. path)
 	end
 	local compiler = Compiler([[return import("./]] .. entry_point .. [[")]], "file://" .. entry_point, cfg)
+	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
 
 	do

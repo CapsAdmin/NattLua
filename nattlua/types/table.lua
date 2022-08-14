@@ -1026,6 +1026,46 @@ do
 	function META:HasMutations()
 		return self.mutations ~= nil
 	end
+
+	function META:GetMutatedFromScope(scope, done)
+		if not self.mutations then return self end
+
+		done = done or {}
+		local out = META.New()
+
+		for hash, mutations in pairs(self.mutations) do
+			for _, mutation in ipairs(mutations) do
+				local key = mutation.key
+				local val = self:GetMutatedValue(key, scope)
+
+				if done[val] then break end
+
+				if val.Type == "union" then
+					local union = Union()
+
+					for _, val in ipairs(val:GetData()) do
+						if val.Type == "table" then
+							done[val] = true
+							union:AddType(val:GetMutatedFromScope(scope, done))
+						else
+							union:AddType(val)
+						end
+					end
+
+					out:Set(key, union)
+				elseif val.Type == "table" then
+					done[val] = true
+					out:Set(key, val:GetMutatedFromScope(scope, done))
+				else
+					out:Set(key, val)
+				end
+
+				break
+			end
+		end
+
+		return out
+	end
 end
 
 function META.New()
