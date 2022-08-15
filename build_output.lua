@@ -3022,17 +3022,18 @@ local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local function mutation_solver(mutations, scope, obj)
 	do
 		do
-			local last_scope
-
 			for i = #mutations, 1, -1 do
-				local mut = mutations[i]
+				local mut_a = mutations[i]
 
-				if last_scope and mut.scope == last_scope then
-					-- "redudant mutation"
-					table.remove(mutations, i)
+				for i = i - 1, 1, -1 do
+					local mut_b = mutations[i]
+
+					if mut_a.scope == mut_b.scope then
+						table.remove(mutations, i)
+
+						break
+					end
 				end
-
-				last_scope = mut.scope
 			end
 		end
 
@@ -4244,6 +4245,48 @@ do
 
 	function META:HasMutations()
 		return self.mutations ~= nil
+	end
+
+	function META:GetMutatedFromScope(scope, done)
+		if not self.mutations then return self end
+
+		done = done or {}
+		local out = META.New()
+
+		if done[self] then return done[self] end
+
+		done[self] = out
+
+		for hash, mutations in pairs(self.mutations) do
+			for _, mutation in ipairs(mutations) do
+				local key = mutation.key
+				local val = self:GetMutatedValue(key, scope)
+
+				if done[val] then break end
+
+				if val.Type == "union" then
+					local union = Union()
+
+					for _, val in ipairs(val:GetData()) do
+						if val.Type == "table" then
+							union:AddType(val:GetMutatedFromScope(scope, done))
+						else
+							union:AddType(val)
+						end
+					end
+
+					out:Set(key, union)
+				elseif val.Type == "table" then
+					out:Set(key, val:GetMutatedFromScope(scope, done))
+				else
+					out:Set(key, val)
+				end
+
+				break
+			end
+		end
+
+		return out
 	end
 end
 
@@ -27130,46 +27173,6 @@ local SemanticTokenModifiers = {
 	"defaultLibrary", -- For symbols that are part of the standard library.
 }
 
-local function GetFinalMutatedTable(tbl, scope, done)
-	if not tbl.mutations then return tbl end
-
-	done = done or {}
-	local out = Table()
-
-	for hash, mutations in pairs(tbl.mutations) do
-		for _, mutation in ipairs(mutations) do
-			local key = mutation.key
-			local val = tbl:GetMutatedValue(key, scope)
-
-			if done[val] then break end
-
-			if val.Type == "union" then
-				local union = Union()
-
-				for _, val in ipairs(val:GetData()) do
-					if val.Type == "table" then
-						done[val] = true
-						union:AddType(GetFinalMutatedTable(val, scope))
-					else
-						union:AddType(val)
-					end
-				end
-
-				out:Set(key, union)
-			elseif val.Type == "table" then
-				done[val] = true
-				out:Set(key, GetFinalMutatedTable(val, scope))
-			else
-				out:Set(key, val)
-			end
-
-			break
-		end
-	end
-
-	return out
-end
-
 local function find_type_from_token(token)
 	local found_parents = {}
 
@@ -27204,7 +27207,7 @@ local function find_type_from_token(token)
 				if obj.Type == "string" and obj:GetData() == token.value then
 
 				else
-					if obj.Type == "table" then obj = GetFinalMutatedTable(obj, scope) end
+					if obj.Type == "table" then obj = obj:GetMutatedFromScope(scope) end
 
 					union:AddType(obj)
 					found = true
@@ -27504,6 +27507,7 @@ local function recompile(uri)
 		return find_temp_file(working_directory .. "/" .. path)
 	end
 	local compiler = Compiler([[return import("./]] .. entry_point .. [[")]], "file://" .. entry_point, cfg)
+	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
 
 	do
@@ -27977,8 +27981,24 @@ lsp.methods["textDocument/hover"] = function(params)
 
 	if obj then
 		add_code(tostring(obj))
+		local upvalue = obj:GetUpvalue()
 
-		if obj:GetUpvalue() then add_code(tostring(obj:GetUpvalue())) end
+		if upvalue then
+			add_code(tostring(upvalue))
+
+			if upvalue:HasMutations() then
+				local code = ""
+
+				for i, mutation in ipairs(upvalue.mutations) do
+					code = code .. "-- " .. i .. "\n"
+					code = code .. "\tvalue = " .. tostring(mutation.value) .. "\n"
+					code = code .. "\tscope = " .. tostring(mutation.scope) .. "\n"
+					code = code .. "\ttracking = " .. tostring(mutation.from_tracking) .. "\n"
+				end
+
+				add_code(code)
+			end
+		end
 	end
 
 	if found_parents[1] then

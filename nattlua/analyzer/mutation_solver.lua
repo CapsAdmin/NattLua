@@ -5,17 +5,18 @@ local Union = require("nattlua.types.union").Union
 local function mutation_solver(mutations, scope, obj)
 	do
 		do
-			local last_scope
-
 			for i = #mutations, 1, -1 do
-				local mut = mutations[i]
+				local mut_a = mutations[i]
 
-				if last_scope and mut.scope == last_scope then
-					-- "redudant mutation"
-					table.remove(mutations, i)
+				for i = i - 1, 1, -1 do
+					local mut_b = mutations[i]
+
+					if mut_a.scope == mut_b.scope then
+						table.remove(mutations, i)
+
+						break
+					end
 				end
-
-				last_scope = mut.scope
 			end
 		end
 

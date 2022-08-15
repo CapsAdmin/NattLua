@@ -895,8 +895,24 @@ lsp.methods["textDocument/hover"] = function(params)
 
 	if obj then
 		add_code(tostring(obj))
+		local upvalue = obj:GetUpvalue()
 
-		if obj:GetUpvalue() then add_code(tostring(obj:GetUpvalue())) end
+		if upvalue then
+			add_code(tostring(upvalue))
+
+			if upvalue:HasMutations() then
+				local code = ""
+
+				for i, mutation in ipairs(upvalue.mutations) do
+					code = code .. "-- " .. i .. "\n"
+					code = code .. "\tvalue = " .. tostring(mutation.value) .. "\n"
+					code = code .. "\tscope = " .. tostring(mutation.scope) .. "\n"
+					code = code .. "\ttracking = " .. tostring(mutation.from_tracking) .. "\n"
+				end
+
+				add_code(code)
+			end
+		end
 	end
 
 	if found_parents[1] then
