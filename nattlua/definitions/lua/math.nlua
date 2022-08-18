@@ -93,7 +93,13 @@ analyzer function math.max(...: ...number)
 end
 
 analyzer function math.random(n: nil | number, m: nil | number)
-	if not analyzer.enable_random_functions then return types.Number() end
+	if not analyzer.enable_random_functions then
+		if n and n:IsLiteral() and m and m:IsLiteral() then
+			return types.LNumber(n:GetData()):SetMax(m)
+		end
+
+		return types.Number()
+	end
 
 	if n and m then return math.random(n:GetData(), m:GetData()) end
 

@@ -586,3 +586,7 @@ analyze[[
     local t: {[1] = nil | string} = {"hello"}
     AddSymbols(t)
 ]]
+analyze[[
+    local range = math.random(1, 5)
+    attest.equal(range, _  as 1 .. 5)
+]]
