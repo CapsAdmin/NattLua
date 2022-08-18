@@ -1594,26 +1594,27 @@ analyze[[
 if false then
 	pending[[
         local x = 1
-        local MAYBE = math.random() > 0.5
 
-        if MAYBE then
+        if math.random() > 0.5 then
             attest.equal<|x, 1|>
             x = 1.5
             attest.equal<|x, 1.5|>
             x = 1.75
             attest.equal<|x, 1.75|>
-            if MAYBE then
+        
+            if math.random() > 0.5 then
                 x = 2
-                if MAYBE then
-                    x = 2.5
-                end
+        
+                if math.random() > 0.5 then x = 2.5 end
+        
                 attest.equal<|x, 2 | 2.5|>
             end
+        
             x = 3
             attest.equal<|x, 3|>
         end
-        
-        attest.equal<|x, 1 | 2.5|>
+
+        attest.equal(x, _  as 3 | 1)
     ]]
 	pending[[
         local x = 1
