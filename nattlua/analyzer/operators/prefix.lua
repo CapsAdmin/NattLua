@@ -32,7 +32,7 @@ local function Prefix(self, node, r)
 		r = self:AnalyzeExpression(node.right)
 
 		if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
-			if r.Type ~= "union" then self:TrackUpvalue(r, nil, nil, op == "not") end
+			if r.Type ~= "union" then self:TrackUpvalue(r) end
 		end
 	end
 
@@ -70,7 +70,7 @@ local function Prefix(self, node, r)
 			end
 		end
 
-		self:TrackUpvalue(r, truthy_union, falsy_union)
+		self:TrackUpvalueUnion(r, truthy_union, falsy_union)
 		return new_union
 	end
 

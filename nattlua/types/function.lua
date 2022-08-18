@@ -166,7 +166,9 @@ do
 
 		for _, call_info in ipairs(self.scopes) do
 			for _, val in ipairs(call_info.scope:GetDependencies()) do
-				if val.scope ~= call_info.scope then table.insert(out, val) end
+				if (val.Type == "upvalue" and val:GetScope() or val.scope) ~= call_info.scope then
+					table.insert(out, val)
+				end
 			end
 		end
 

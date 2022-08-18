@@ -32,8 +32,8 @@ return function(META)
 	function META:MutateUpvalue(upvalue, val, scope_override, from_tracking)
 		local scope = scope_override or self:GetScope()
 
-		if self:IsInUncertainLoop(scope) and upvalue.scope then
-			if val.dont_widen or scope:Contains(upvalue.scope) then
+		if self:IsInUncertainLoop(scope) and upvalue:GetScope() then
+			if val.dont_widen or scope:Contains(upvalue:GetScope()) then
 				val = val:Copy()
 			else
 				val = val:Copy():Widen()
@@ -59,11 +59,7 @@ return function(META)
 		if scope.TrackedObjects then
 			for _, obj in ipairs(scope.TrackedObjects) do
 				if obj.Type == "upvalue" then
-					for i = #obj.mutations, 1, -1 do
-						local mut = obj.mutations[i]
-
-						if mut.from_tracking then table.remove(obj.mutations, i) end
-					end
+					obj:ClearTrackedMutations()
 				elseif obj.mutations then
 					for _, mutations in pairs(obj.mutations) do
 						for i = #mutations, 1, -1 do
@@ -107,26 +103,10 @@ return function(META)
 		end
 
 		do
-			function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
+			function META:TrackUpvalue(obj)
 				local upvalue = obj:GetUpvalue()
 
 				if not upvalue then return end
-
-				if obj.Type == "union" then
-					if not truthy_union then truthy_union = obj:GetTruthy() end
-
-					if not falsy_union then falsy_union = obj:GetFalsy() end
-
-					upvalue.tracked_stack = upvalue.tracked_stack or {}
-					table.insert(
-						upvalue.tracked_stack,
-						{
-							truthy = truthy_union,
-							falsy = falsy_union,
-							inverted = inverted,
-						}
-					)
-				end
 
 				self.tracked_upvalues = self.tracked_upvalues or {}
 				self.tracked_upvalues_done = self.tracked_upvalues_done or {}
@@ -135,6 +115,23 @@ return function(META)
 					table.insert(self.tracked_upvalues, upvalue)
 					self.tracked_upvalues_done[upvalue] = true
 				end
+			end
+
+			function META:TrackUpvalueUnion(obj, truthy_union, falsy_union, inverted)
+				local upvalue = obj:GetUpvalue()
+
+				if not upvalue then return end
+
+				upvalue.tracked_stack = upvalue.tracked_stack or {}
+				table.insert(
+					upvalue.tracked_stack,
+					{
+						truthy = truthy_union,
+						falsy = falsy_union,
+						inverted = inverted,
+					}
+				)
+				self:TrackUpvalue(obj)
 			end
 
 			function META:TrackUpvalueNonUnion(obj)

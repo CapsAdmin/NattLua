@@ -126,7 +126,11 @@ local function Binary(self, node, l, r, op)
 				-- if a and a.foo then
 				-- ^ no binary operator means that it was just checked simply if it was truthy
 				if node.left.kind ~= "binary_operator" or node.left.value.value ~= "." then
-					self:TrackUpvalue(l)
+					if l.Type == "union" then
+						self:TrackUpvalueUnion(l, l:GetTruthy(), l:GetFalsy())
+					else
+						self:TrackUpvalue(l)
+					end
 				end
 
 				-- right hand side of and is the "true" part
@@ -135,7 +139,11 @@ local function Binary(self, node, l, r, op)
 				self:PopTruthyExpressionContext()
 
 				if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
-					self:TrackUpvalue(r)
+					if r.Type == "union" then
+						self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
+					else
+						self:TrackUpvalue(r)
+					end
 				end
 			end
 		elseif node.value.value == "or" then
@@ -320,7 +328,7 @@ local function Binary(self, node, l, r, op)
 					end
 
 					if not truthy_union:IsEmpty() or not falsy_union:IsEmpty() then
-						self:TrackUpvalue(union, truthy_union, falsy_union, op == "~=")
+						self:TrackUpvalueUnion(union, truthy_union, falsy_union, op == "~=")
 						return new_union
 					end
 				end
@@ -334,10 +342,10 @@ local function Binary(self, node, l, r, op)
 				then
 
 				else
-					self:TrackUpvalue(l, truthy_union, falsy_union, op == "~=")
+					self:TrackUpvalueUnion(l, truthy_union, falsy_union, op == "~=")
 				end
 
-				self:TrackUpvalue(r, truthy_union, falsy_union, op == "~=")
+				self:TrackUpvalueUnion(r, truthy_union, falsy_union, op == "~=")
 			end
 
 			return new_union

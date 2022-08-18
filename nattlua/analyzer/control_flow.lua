@@ -140,7 +140,12 @@ return function(META)
 	function META:ThrowError(msg, obj, no_report, level)
 		if obj then
 			-- track "if x then" which has no binary or prefix operators
-			self:TrackUpvalue(obj)
+			if obj.Type == "union" then
+				self:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
+			else
+				self:TrackUpvalue(obj)
+			end
+
 			self.lua_assert_error_thrown = {
 				msg = msg,
 				obj = obj,

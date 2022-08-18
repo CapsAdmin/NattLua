@@ -2,65 +2,55 @@ local class = require("nattlua.other.class")
 local shallow_copy = require("nattlua.other.shallow_copy")
 local mutation_solver = require("nattlua.analyzer.mutation_solver")
 local META = class.CreateTemplate("upvalue")
+META:GetSet("Value")
+META:GetSet("Hash")
+META:GetSet("Key")
+META:IsSet("Immutable")
+META:GetSet("Node")
+META:GetSet("Position")
+META:GetSet("Shadow")
+META:GetSet("Scope")
+META:GetSet("Mutations")
 
 function META:__tostring()
 	return "[" .. tostring(self.key) .. ":" .. tostring(self.value) .. "]"
 end
 
-function META:GetValue()
-	return self.value
-end
-
-function META:GetKey()
-	return self.key
-end
-
 function META:SetValue(value)
-	self.value = value
+	self.Value = value
 	value:SetUpvalue(self)
-end
-
-function META:SetImmutable(b)
-	self.immutable = b
-end
-
-function META:IsImmutable()
-	return self.immutable
-end
-
-function META:SetNode(node)
-	self.Node = node
-	return self
-end
-
-function META:GetNode()
-	return self.Node
-end
-
-function META:GetHash()
-	return self.hash
 end
 
 do
 	function META:GetMutatedValue(scope)
-		self.mutations = self.mutations or {}
-		return mutation_solver(shallow_copy(self.mutations), scope, self)
+		self.Mutations = self.Mutations or {}
+		return mutation_solver(shallow_copy(self.Mutations), scope, self)
 	end
 
 	function META:Mutate(val, scope, from_tracking)
 		val:SetUpvalue(self)
-		self.mutations = self.mutations or {}
-		table.insert(self.mutations, {scope = scope, value = val, from_tracking = from_tracking})
+		self.Mutations = self.Mutations or {}
+		table.insert(self.Mutations, {scope = scope, value = val, from_tracking = from_tracking})
 
 		if from_tracking then scope:AddTrackedObject(self) end
 	end
 
 	function META:ClearMutations()
-		self.mutations = nil
+		self.Mutations = nil
 	end
 
 	function META:HasMutations()
-		return self.mutations ~= nil
+		return self.Mutations ~= nil
+	end
+
+	function META:ClearTrackedMutations()
+		local mutations = self:GetMutations()
+
+		for i = #mutations, 1, -1 do
+			local mut = mutations[i]
+
+			if mut.from_tracking then table.remove(mutations, i) end
+		end
 	end
 end
 
@@ -68,7 +58,7 @@ local id = 0
 
 function META.New(obj)
 	local self = setmetatable({}, META)
-	self.hash = tostring(id)
+	self:SetHash(tostring(id))
 	id = id + 1
 	self:SetValue(obj)
 	return self

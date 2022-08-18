@@ -97,13 +97,13 @@ function META:FindUpvalue(key, env)
 			local upvalue_position = prev_scope and prev_scope.upvalue_position
 
 			if upvalue_position then
-				if upvalue.position >= upvalue_position then
-					local upvalue = upvalue.shadow
+				if upvalue:GetPosition() >= upvalue_position then
+					local upvalue = upvalue:GetShadow()
 
 					while upvalue do
-						if upvalue.position <= upvalue_position then return upvalue end
+						if upvalue:GetPosition() <= upvalue_position then return upvalue end
 
-						upvalue = upvalue.shadow
+						upvalue = upvalue:GetShadow()
 					end
 				end
 			end
@@ -126,10 +126,10 @@ function META:CreateUpvalue(key, obj, env)
 	end
 
 	local upvalue = Upvalue(obj)
-	upvalue.key = key
-	upvalue.shadow = shadow
-	upvalue.position = #self.upvalues[env].list
-	upvalue.scope = self
+	upvalue:SetKey(key)
+	upvalue:SetShadow(shadow)
+	upvalue:SetPosition(#self.upvalues[env].list)
+	upvalue:SetScope(self)
 	table_insert(self.upvalues[env].list, upvalue)
 	self.upvalues[env].map[key] = upvalue
 	return upvalue
