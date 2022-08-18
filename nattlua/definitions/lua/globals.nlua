@@ -327,11 +327,11 @@ analyzer function assert(obj: any, msg: string | nil, level: number | nil)
 	end
 
 	if obj:IsFalsy() then
-		analyzer:ThrowError(
-			msg and msg:GetData() or "assertion failed!",
+		analyzer:AssertError(
 			obj,
-			obj:IsTruthy(),
-			level and level:GetData() or nil
+			msg and msg:GetData() or "assertion failed!",
+			level and level:GetData() or nil,
+			obj:IsTruthy()
 		)
 
 		if obj.Type == "union" then
@@ -351,7 +351,7 @@ analyzer function error(msg: string, level: number | nil)
 	end
 
 	if msg:IsLiteral() then
-		analyzer:ThrowError(msg:GetData(), nil, nil, level and level:GetData() or nil)
+		analyzer:ThrowError(msg:GetData(), level and level:GetData() or nil)
 	else
 		analyzer:ThrowError("error thrown from expression " .. tostring(analyzer.current_expression))
 	end
@@ -360,7 +360,7 @@ end
 analyzer function type_error(msg: literal string, level: literal (number | nil))
 	if analyzer.processing_deferred_calls then return end
 
-	analyzer:ThrowError(msg:GetData(), nil, nil, level and level:GetData() or nil)
+	analyzer:ThrowError(msg:GetData(), level and level:GetData() or nil)
 end
 
 analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...any)

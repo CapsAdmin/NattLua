@@ -137,42 +137,38 @@ return function(META)
 		end
 	end
 
-	function META:ThrowError(msg, obj, no_report, level)
-		if obj then
-			-- track "if x then" which has no binary or prefix operators
-			if obj.Type == "union" then
-				self:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
-			else
-				self:TrackUpvalue(obj)
-			end
-
-			self.lua_assert_error_thrown = {
-				msg = msg,
-				obj = obj,
-			}
-
-			if obj:IsTruthy() then
-				self:GetScope():UncertainReturn()
-			else
-				self:GetScope():CertainReturn()
-			end
-
-			local old = {}
-
-			for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
-				old[i] = upvalue
-			end
-
-			self:ApplyMutationsAfterReturn(
-				self:GetScope(),
-				self:GetScope():GetNearestFunctionScope(),
-				false,
-				self:GetTrackedUpvalues(old),
-				self:GetTrackedTables()
-			)
+	function META:AssertError(obj, msg, level, no_report)
+		-- track "if x then" which has no binary or prefix operators
+		if obj.Type == "union" then
+			self:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
 		else
-			self.lua_error_thrown = msg
+			self:TrackUpvalue(obj)
 		end
+
+		self.lua_assert_error_thrown = {
+			msg = msg,
+			obj = obj,
+		}
+
+		if obj:IsTruthy() then
+			self:GetScope():UncertainReturn()
+		else
+			self:GetScope():CertainReturn()
+		end
+
+		local old = {}
+
+		for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
+			old[i] = upvalue
+		end
+
+		self:ApplyMutationsAfterReturn(
+			self:GetScope(),
+			self:GetScope():GetNearestFunctionScope(),
+			false,
+			self:GetTrackedUpvalues(old),
+			self:GetTrackedTables()
+		)
 
 		if not no_report then
 			local stack = self:GetCallStack()
@@ -180,6 +176,14 @@ return function(META)
 			self.current_expression = frame.call_node
 			self:Error(msg)
 		end
+	end
+
+	function META:ThrowError(msg, obj, level)
+		self.lua_error_thrown = msg
+		local stack = self:GetCallStack()
+		local frame = level and stack[#stack - level] or stack[#stack]
+		self.current_expression = frame.call_node
+		self:Error(msg)
 	end
 
 	function META:GetThrownErrorMessage()
