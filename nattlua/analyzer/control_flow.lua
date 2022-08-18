@@ -171,18 +171,14 @@ return function(META)
 		)
 
 		if not no_report then
-			local stack = self:GetCallStack()
-			local frame = level and stack[#stack - level] or stack[#stack]
-			self.current_expression = frame.call_node
+			self.current_expression = self:GetCallFrame(level).call_node
 			self:Error(msg)
 		end
 	end
 
 	function META:ThrowError(msg, obj, level)
 		self.lua_error_thrown = msg
-		local stack = self:GetCallStack()
-		local frame = level and stack[#stack - level] or stack[#stack]
-		self.current_expression = frame.call_node
+		self.current_expression = self:GetCallFrame(level).call_node
 		self:Error(msg)
 	end
 
@@ -251,6 +247,12 @@ return function(META)
 	do
 		function META:GetCallStack()
 			return self.call_stack or {}
+		end
+
+		function META:GetCallFrame(level)
+			local stack = self:GetCallStack()
+			local frame = level and stack[#stack - level] or stack[#stack]
+			return frame
 		end
 
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
