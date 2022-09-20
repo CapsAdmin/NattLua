@@ -569,3 +569,30 @@ aw
 dawd
 ]])]=])
 identical([[local x = "\xFE\xFF"]])
+check(
+	{string_quote = "\""},
+	[[
+	code = code:gsub('\\"', "____DOUBLE_QUOTE_ESCAPE")
+]],
+	[[
+	code = code:gsub("\\\"", "____DOUBLE_QUOTE_ESCAPE")
+]]
+)
+check(
+	{string_quote = "\""},
+	[[
+	code = code:gsub('\\\"', "____DOUBLE_QUOTE_ESCAPE")
+]],
+	[[
+	code = code:gsub("\\\"", "____DOUBLE_QUOTE_ESCAPE")
+]]
+)
+check(
+	{string_quote = "\""},
+	[[
+	code = code:gsub('\\\\"', "____DOUBLE_QUOTE_ESCAPE")
+]],
+	[[
+	code = code:gsub("\\\\\"", "____DOUBLE_QUOTE_ESCAPE")
+]]
+)

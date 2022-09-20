@@ -445,8 +445,22 @@ do
 		for i = 1, #str do
 			local c = str:sub(i, i)
 
-			if c == quote and str:sub(i - 1, i - 1) ~= "\\" then
-				new_str[i] = "\\" .. c
+			if c == quote then
+				local escape_length = 0
+
+				for i = i - 1, 1, -1 do
+					if str:sub(i, i) == "\\" then
+						escape_length = escape_length + 1
+					else
+						break
+					end
+				end
+
+				if escape_length % 2 == 0 then
+					new_str[i] = "\\" .. c
+				else
+					new_str[i] = c
+				end
 			else
 				new_str[i] = c
 			end

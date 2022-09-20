@@ -219,16 +219,34 @@ function class.CreateTemplate(type_name)
 		return info and info.source:sub(2) .. ":" .. info.currentline
 	end
 
+	local done = {}
+
 	function meta:DebugPropertyAccess()
 		meta.__index = function(self, key)
 			if meta[key] ~= nil then return meta[key] end
 
-			if not blacklist[key] then print(key, get_line()) end
+			if not blacklist[key] then
+				local line = get_line()
+				local hash = key .. "-" .. line
+
+				if not done[hash] then
+					print(key, get_line())
+					done[hash] = true
+				end
+			end
 
 			return rawget(self, key)
 		end
 		meta.__newindex = function(self, key, val)
-			if not blacklist[key] then print(key, val, get_line()) end
+			if not blacklist[key] then
+				local line = get_line()
+				local hash = key .. "-" .. line
+
+				if not done[hash] then
+					print(key, val, line)
+					done[hash] = true
+				end
+			end
 
 			rawset(self, key, val)
 		end
@@ -15255,7 +15273,9 @@ do
 
 		for _, call_info in ipairs(self.scopes) do
 			for _, val in ipairs(call_info.scope:GetDependencies()) do
-				if val.scope ~= call_info.scope then table.insert(out, val) end
+				if (val.Type == "upvalue" and val:GetScope() or val.scope) ~= call_info.scope then
+					table.insert(out, val)
+				end
 			end
 		end
 
@@ -15349,65 +15369,55 @@ do local __M; IMPORTS["nattlua.analyzer.base.upvalue"] = function(...) __M = __M
 local shallow_copy = IMPORTS['nattlua.other.shallow_copy']("nattlua.other.shallow_copy")
 local mutation_solver = IMPORTS['nattlua.analyzer.mutation_solver']("nattlua.analyzer.mutation_solver")
 local META = class.CreateTemplate("upvalue")
+META:GetSet("Value")
+META:GetSet("Hash")
+META:GetSet("Key")
+META:IsSet("Immutable")
+META:GetSet("Node")
+META:GetSet("Position")
+META:GetSet("Shadow")
+META:GetSet("Scope")
+META:GetSet("Mutations")
 
 function META:__tostring()
 	return "[" .. tostring(self.key) .. ":" .. tostring(self.value) .. "]"
 end
 
-function META:GetValue()
-	return self.value
-end
-
-function META:GetKey()
-	return self.key
-end
-
 function META:SetValue(value)
-	self.value = value
+	self.Value = value
 	value:SetUpvalue(self)
-end
-
-function META:SetImmutable(b)
-	self.immutable = b
-end
-
-function META:IsImmutable()
-	return self.immutable
-end
-
-function META:SetNode(node)
-	self.Node = node
-	return self
-end
-
-function META:GetNode()
-	return self.Node
-end
-
-function META:GetHash()
-	return self.hash
 end
 
 do
 	function META:GetMutatedValue(scope)
-		self.mutations = self.mutations or {}
-		return mutation_solver(shallow_copy(self.mutations), scope, self)
+		self.Mutations = self.Mutations or {}
+		return mutation_solver(shallow_copy(self.Mutations), scope, self)
 	end
 
 	function META:Mutate(val, scope, from_tracking)
 		val:SetUpvalue(self)
-		self.mutations = self.mutations or {}
-		table.insert(self.mutations, {scope = scope, value = val, from_tracking = from_tracking})
+		self.Mutations = self.Mutations or {}
+		table.insert(self.Mutations, {scope = scope, value = val, from_tracking = from_tracking})
 
 		if from_tracking then scope:AddTrackedObject(self) end
 	end
 
 	function META:ClearMutations()
-		self.mutations = nil
+		self.Mutations = nil
 	end
 
 	function META:HasMutations()
-		return self.mutations ~= nil
+		return self.Mutations ~= nil
+	end
+
+	function META:ClearTrackedMutations()
+		local mutations = self:GetMutations()
+
+		for i = #mutations, 1, -1 do
+			local mut = mutations[i]
+
+			if mut.from_tracking then table.remove(mutations, i) end
+		end
 	end
 end
 
@@ -15415,7 +15425,7 @@ local id = 0
 
 function META.New(obj)
 	local self = setmetatable({}, META)
-	self.hash = tostring(id)
+	self:SetHash(tostring(id))
 	id = id + 1
 	self:SetValue(obj)
 	return self
@@ -15521,13 +15531,13 @@ function META:FindUpvalue(key, env)
 			local upvalue_position = prev_scope and prev_scope.upvalue_position
 
 			if upvalue_position then
-				if upvalue.position >= upvalue_position then
-					local upvalue = upvalue.shadow
+				if upvalue:GetPosition() >= upvalue_position then
+					local upvalue = upvalue:GetShadow()
 
 					while upvalue do
-						if upvalue.position <= upvalue_position then return upvalue end
+						if upvalue:GetPosition() <= upvalue_position then return upvalue end
 
-						upvalue = upvalue.shadow
+						upvalue = upvalue:GetShadow()
 					end
 				end
 			end
@@ -15550,10 +15560,10 @@ function META:CreateUpvalue(key, obj, env)
 	end
 
 	local upvalue = Upvalue(obj)
-	upvalue.key = key
-	upvalue.shadow = shadow
-	upvalue.position = #self.upvalues[env].list
-	upvalue.scope = self
+	upvalue:SetKey(key)
+	upvalue:SetShadow(shadow)
+	upvalue:SetPosition(#self.upvalues[env].list)
+	upvalue:SetScope(self)
 	table_insert(self.upvalues[env].list, upvalue)
 	self.upvalues[env].map[key] = upvalue
 	return upvalue
@@ -16862,44 +16872,49 @@ return function(META)
 		end
 	end
 
-	function META:ThrowError(msg, obj, no_report, level)
-		if obj then
-			-- track "if x then" which has no binary or prefix operators
-			self:TrackUpvalue(obj)
-			self.lua_assert_error_thrown = {
-				msg = msg,
-				obj = obj,
-			}
-
-			if obj:IsTruthy() then
-				self:GetScope():UncertainReturn()
-			else
-				self:GetScope():CertainReturn()
-			end
-
-			local old = {}
-
-			for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
-				old[i] = upvalue
-			end
-
-			self:ApplyMutationsAfterReturn(
-				self:GetScope(),
-				self:GetScope():GetNearestFunctionScope(),
-				false,
-				self:GetTrackedUpvalues(old),
-				self:GetTrackedTables()
-			)
+	function META:AssertError(obj, msg, level, no_report)
+		-- track "if x then" which has no binary or prefix operators
+		if obj.Type == "union" then
+			self:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
 		else
-			self.lua_error_thrown = msg
+			self:TrackUpvalue(obj)
 		end
+
+		self.lua_assert_error_thrown = {
+			msg = msg,
+			obj = obj,
+		}
+
+		if obj:IsTruthy() then
+			self:GetScope():UncertainReturn()
+		else
+			self:GetScope():CertainReturn()
+		end
+
+		local old = {}
+
+		for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
+			old[i] = upvalue
+		end
+
+		self:ApplyMutationsAfterReturn(
+			self:GetScope(),
+			self:GetScope():GetNearestFunctionScope(),
+			false,
+			self:GetTrackedUpvalues(old),
+			self:GetTrackedTables()
+		)
 
 		if not no_report then
-			local stack = self:GetCallStack()
-			local frame = level and stack[#stack - level] or stack[#stack]
-			self.current_expression = frame.call_node
+			self.current_expression = self:GetCallFrame(level).call_node
 			self:Error(msg)
 		end
+	end
+
+	function META:ThrowError(msg, obj, level)
+		self.lua_error_thrown = msg
+		self.current_expression = self:GetCallFrame(level).call_node
+		self:Error(msg)
 	end
 
 	function META:GetThrownErrorMessage()
@@ -16967,6 +16982,12 @@ return function(META)
 	do
 		function META:GetCallStack()
 			return self.call_stack or {}
+		end
+
+		function META:GetCallFrame(level)
+			local stack = self:GetCallStack()
+			local frame = level and stack[#stack - level] or stack[#stack]
+			return frame
 		end
 
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
@@ -17152,8 +17173,8 @@ return function(META)
 	function META:MutateUpvalue(upvalue, val, scope_override, from_tracking)
 		local scope = scope_override or self:GetScope()
 
-		if self:IsInUncertainLoop(scope) and upvalue.scope then
-			if val.dont_widen or scope:Contains(upvalue.scope) then
+		if self:IsInUncertainLoop(scope) and upvalue:GetScope() then
+			if val.dont_widen or scope:Contains(upvalue:GetScope()) then
 				val = val:Copy()
 			else
 				val = val:Copy():Widen()
@@ -17179,11 +17200,7 @@ return function(META)
 		if scope.TrackedObjects then
 			for _, obj in ipairs(scope.TrackedObjects) do
 				if obj.Type == "upvalue" then
-					for i = #obj.mutations, 1, -1 do
-						local mut = obj.mutations[i]
-
-						if mut.from_tracking then table.remove(obj.mutations, i) end
-					end
+					obj:ClearTrackedMutations()
 				elseif obj.mutations then
 					for _, mutations in pairs(obj.mutations) do
 						for i = #mutations, 1, -1 do
@@ -17227,26 +17244,10 @@ return function(META)
 		end
 
 		do
-			function META:TrackUpvalue(obj, truthy_union, falsy_union, inverted)
+			function META:TrackUpvalue(obj)
 				local upvalue = obj:GetUpvalue()
 
 				if not upvalue then return end
-
-				if obj.Type == "union" then
-					if not truthy_union then truthy_union = obj:GetTruthy() end
-
-					if not falsy_union then falsy_union = obj:GetFalsy() end
-
-					upvalue.tracked_stack = upvalue.tracked_stack or {}
-					table.insert(
-						upvalue.tracked_stack,
-						{
-							truthy = truthy_union,
-							falsy = falsy_union,
-							inverted = inverted,
-						}
-					)
-				end
 
 				self.tracked_upvalues = self.tracked_upvalues or {}
 				self.tracked_upvalues_done = self.tracked_upvalues_done or {}
@@ -17255,6 +17256,23 @@ return function(META)
 					table.insert(self.tracked_upvalues, upvalue)
 					self.tracked_upvalues_done[upvalue] = true
 				end
+			end
+
+			function META:TrackUpvalueUnion(obj, truthy_union, falsy_union, inverted)
+				local upvalue = obj:GetUpvalue()
+
+				if not upvalue then return end
+
+				upvalue.tracked_stack = upvalue.tracked_stack or {}
+				table.insert(
+					upvalue.tracked_stack,
+					{
+						truthy = truthy_union,
+						falsy = falsy_union,
+						inverted = inverted,
+					}
+				)
+				self:TrackUpvalue(obj)
 			end
 
 			function META:TrackUpvalueNonUnion(obj)
@@ -19558,8 +19576,22 @@ do
 		for i = 1, #str do
 			local c = str:sub(i, i)
 
-			if c == quote and str:sub(i - 1, i - 1) ~= "\\" then
-				new_str[i] = "\\" .. c
+			if c == quote then
+				local escape_length = 0
+
+				for i = i - 1, 1, -1 do
+					if str:sub(i, i) == "\\" then
+						escape_length = escape_length + 1
+					else
+						break
+					end
+				end
+
+				if escape_length % 2 == 0 then
+					new_str[i] = "\\" .. c
+				else
+					new_str[i] = c
+				end
 			else
 				new_str[i] = c
 			end
@@ -21313,7 +21345,11 @@ return {
 
 				if no_operator_expression then
 					-- track "if x then" which has no binary or prefix operators
-					self:TrackUpvalue(obj)
+					if obj.Type == "union" then
+						self:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
+					else
+						self:TrackUpvalue(obj)
+					end
 				end
 
 				self.current_if_statement = nil
@@ -21658,7 +21694,11 @@ local function Binary(self, node, l, r, op)
 				-- if a and a.foo then
 				-- ^ no binary operator means that it was just checked simply if it was truthy
 				if node.left.kind ~= "binary_operator" or node.left.value.value ~= "." then
-					self:TrackUpvalue(l)
+					if l.Type == "union" then
+						self:TrackUpvalueUnion(l, l:GetTruthy(), l:GetFalsy())
+					else
+						self:TrackUpvalue(l)
+					end
 				end
 
 				-- right hand side of and is the "true" part
@@ -21667,7 +21707,11 @@ local function Binary(self, node, l, r, op)
 				self:PopTruthyExpressionContext()
 
 				if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
-					self:TrackUpvalue(r)
+					if r.Type == "union" then
+						self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
+					else
+						self:TrackUpvalue(r)
+					end
 				end
 			end
 		elseif node.value.value == "or" then
@@ -21852,7 +21896,7 @@ local function Binary(self, node, l, r, op)
 					end
 
 					if not truthy_union:IsEmpty() or not falsy_union:IsEmpty() then
-						self:TrackUpvalue(union, truthy_union, falsy_union, op == "~=")
+						self:TrackUpvalueUnion(union, truthy_union, falsy_union, op == "~=")
 						return new_union
 					end
 				end
@@ -21866,10 +21910,10 @@ local function Binary(self, node, l, r, op)
 				then
 
 				else
-					self:TrackUpvalue(l, truthy_union, falsy_union, op == "~=")
+					self:TrackUpvalueUnion(l, truthy_union, falsy_union, op == "~=")
 				end
 
-				self:TrackUpvalue(r, truthy_union, falsy_union, op == "~=")
+				self:TrackUpvalueUnion(r, truthy_union, falsy_union, op == "~=")
 			end
 
 			return new_union
@@ -22499,7 +22543,7 @@ local function Prefix(self, node, r)
 		r = self:AnalyzeExpression(node.right)
 
 		if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
-			if r.Type ~= "union" then self:TrackUpvalue(r, nil, nil, op == "not") end
+			if r.Type ~= "union" then self:TrackUpvalue(r) end
 		end
 	end
 
@@ -22537,7 +22581,7 @@ local function Prefix(self, node, r)
 			end
 		end
 
-		self:TrackUpvalue(r, truthy_union, falsy_union)
+		self:TrackUpvalueUnion(r, truthy_union, falsy_union)
 		return new_union
 	end
 
@@ -23573,8 +23617,6 @@ analyzer function attest.equal(A: any, B: any, level: nil | literal number)
 	if not A:Equal(B) then
 		analyzer:ThrowError(
 			"expected " .. tostring(B) .. " got " .. tostring(A),
-			nil,
-			nil,
 			level and level:GetData() or 2
 		)
 		return
@@ -23961,11 +24003,11 @@ analyzer function assert(obj: any, msg: string | nil, level: number | nil)
 	end
 
 	if obj:IsFalsy() then
-		analyzer:ThrowError(
-			msg and msg:GetData() or "assertion failed!",
+		analyzer:AssertError(
 			obj,
-			obj:IsTruthy(),
-			level and level:GetData() or nil
+			msg and msg:GetData() or "assertion failed!",
+			level and level:GetData() or nil,
+			obj:IsTruthy()
 		)
 
 		if obj.Type == "union" then
@@ -23985,7 +24027,7 @@ analyzer function error(msg: string, level: number | nil)
 	end
 
 	if msg:IsLiteral() then
-		analyzer:ThrowError(msg:GetData(), nil, nil, level and level:GetData() or nil)
+		analyzer:ThrowError(msg:GetData(), level and level:GetData() or nil)
 	else
 		analyzer:ThrowError("error thrown from expression " .. tostring(analyzer.current_expression))
 	end
@@ -23994,7 +24036,7 @@ end
 analyzer function type_error(msg: literal string, level: literal (number | nil))
 	if analyzer.processing_deferred_calls then return end
 
-	analyzer:ThrowError(msg:GetData(), nil, nil, level and level:GetData() or nil)
+	analyzer:ThrowError(msg:GetData(), level and level:GetData() or nil)
 end
 
 analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...any)
@@ -25048,7 +25090,13 @@ analyzer function math.max(...: ...number)
 end
 
 analyzer function math.random(n: nil | number, m: nil | number)
-	if not analyzer.enable_random_functions then return types.Number() end
+	if not analyzer.enable_random_functions then
+		if n and n:IsLiteral() and m and m:IsLiteral() then
+			return types.LNumber(n:GetData()):SetMax(m)
+		end
+
+		return types.Number()
+	end
 
 	if n and m then return math.random(n:GetData(), m:GetData()) end
 
