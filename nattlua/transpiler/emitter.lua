@@ -362,7 +362,7 @@ local function encapsulate_module(content, name, method)
 		end)
 
 		local eq = ("="):rep(len + 1)
-		return "assert(loadstring([" .. eq .. "[ return " .. content .. " ]" .. eq .. "], '" .. name .. "'))()"
+		return "assert((loadstring or load)([" .. eq .. "[ return " .. content .. " ]" .. eq .. "], '" .. name .. "'))()"
 	end
 
 	return content
