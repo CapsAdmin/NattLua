@@ -13433,9 +13433,11 @@ do -- runtime
 	end
 
 	local function resolve_require_path(require_path)
+		local paths = package.path .. ";"
+		paths = paths .. "./?/init.lua;"
 		require_path = require_path:gsub("%.", "/")
 
-		for package_path in (package.path .. ";"):gmatch("(.-);") do
+		for package_path in paths:gmatch("(.-);") do
 			local lua_path = package_path:gsub("%?", require_path)
 			local f = io.open(lua_path, "r")
 
@@ -21033,9 +21035,21 @@ do -- extra
 	function META:EmitImportExpression(node)
 		if not node.path then
 			self:EmitToken(node.left.value)
-			self:EmitToken(node.tokens["call("])
+
+			if node.tokens["call("] then
+				self:EmitToken(node.tokens["call("])
+			elseif self.config.force_parenthesis then
+				self:EmitNonSpace("(")
+			end
+
 			self:EmitExpressionList(node.expressions)
-			self:EmitToken(node.tokens["call)"])
+
+			if node.tokens["call)"] then
+				self:EmitToken(node.tokens["call)"])
+			elseif self.config.force_parenthesis then
+				self:EmitNonSpace(")")
+			end
+
 			return
 		end
 
@@ -21043,9 +21057,20 @@ do -- extra
 			self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")
 		else
 			self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")
-			self:EmitToken(node.tokens["call("])
+
+			if node.tokens["call("] then
+				self:EmitToken(node.tokens["call("])
+			elseif self.config.force_parenthesis then
+				self:EmitNonSpace("(")
+			end
+
 			self:EmitExpressionList(node.expressions)
-			self:EmitToken(node.tokens["call)"])
+
+			if node.tokens["call)"] then
+				self:EmitToken(node.tokens["call)"])
+			elseif self.config.force_parenthesis then
+				self:EmitNonSpace(")")
+			end
 		end
 	end
 
