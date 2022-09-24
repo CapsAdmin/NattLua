@@ -747,9 +747,11 @@ do -- runtime
 	end
 
 	local function resolve_require_path(require_path--[[#: string]])
+		local paths = package.path .. ";"
+		paths = paths .. "./?/init.lua;"
 		require_path = require_path:gsub("%.", "/")
 
-		for package_path in (package.path .. ";"):gmatch("(.-);") do
+		for package_path in paths:gmatch("(.-);") do
 			local lua_path = package_path:gsub("%?", require_path)
 			local f = io.open(lua_path, "r")
 

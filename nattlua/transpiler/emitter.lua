@@ -1904,9 +1904,21 @@ do -- extra
 	function META:EmitImportExpression(node--[[#: Node]])
 		if not node.path then
 			self:EmitToken(node.left.value)
-			self:EmitToken(node.tokens["call("])
+
+			if node.tokens["call("] then
+				self:EmitToken(node.tokens["call("])
+			elseif self.config.force_parenthesis then
+				self:EmitNonSpace("(")
+			end
+
 			self:EmitExpressionList(node.expressions)
-			self:EmitToken(node.tokens["call)"])
+
+			if node.tokens["call)"] then
+				self:EmitToken(node.tokens["call)"])
+			elseif self.config.force_parenthesis then
+				self:EmitNonSpace(")")
+			end
+
 			return
 		end
 
@@ -1914,9 +1926,20 @@ do -- extra
 			self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")
 		else
 			self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")
-			self:EmitToken(node.tokens["call("])
+
+			if node.tokens["call("] then
+				self:EmitToken(node.tokens["call("])
+			elseif self.config.force_parenthesis then
+				self:EmitNonSpace("(")
+			end
+
 			self:EmitExpressionList(node.expressions)
-			self:EmitToken(node.tokens["call)"])
+
+			if node.tokens["call)"] then
+				self:EmitToken(node.tokens["call)"])
+			elseif self.config.force_parenthesis then
+				self:EmitNonSpace(")")
+			end
 		end
 	end
 
