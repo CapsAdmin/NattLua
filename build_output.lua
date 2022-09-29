@@ -13632,7 +13632,8 @@ do -- runtime
 			self:ParseAnalyzerFunctionExpression() or
 			self:ParseFunctionExpression() or
 			self:ParseValueExpression() or
-			self:ParseTableExpression()
+			self:ParseTableExpression() or
+			self:ParseLSXExpression()
 		local first = node
 
 		if node then
@@ -14749,6 +14750,90 @@ do
 		return assignment
 	end
 end end ]=======], '@nattlua/parser/teal.lua'))()
+IMPORTS['nattlua/parser/lsx.lua'] = assert((loadstring or load)([=======[ return function(...) local META = ...
+
+function META:ParseLSXExpression()
+	if
+		not (
+			self:IsValue("<") and
+			self:IsType("letter", 1) and
+			not self:IsValue("local", -1)
+		)
+	then
+		return
+	end
+
+	local node = self:StartNode("expression", "lsx")
+	node.tokens["<"] = self:ExpectValue("<")
+	node.tag = self:ExpectType("letter")
+	node.props = {}
+	node.children = {}
+
+	for i = 1, self:GetLength() do
+		if self:IsType("letter") and self:IsValue("=", 1) then
+			if self:IsValue("{", 2) then
+				local keyval = self:StartNode("expression", "lsx")
+				keyval.key = self:ExpectType("letter")
+				keyval.tokens["="] = self:ExpectValue("=")
+				keyval.tokens["{"] = self:ExpectValue("{")
+				keyval.val = self:ExpectRuntimeExpression()
+				keyval.tokens["}"] = self:ExpectValue("}")
+				keyval = self:EndNode(keyval)
+				table.insert(node.props, keyval)
+			elseif self:IsType("string", 2) or self:IsType("number", 2) then
+				local keyval = self:StartNode("expression", "lsx")
+				keyval.key = self:ExpectType("letter")
+				keyval.tokens["="] = self:ExpectValue("=")
+				keyval.val = self:ParseToken()
+				keyval = self:EndNode(keyval)
+				table.insert(node.props, keyval)
+			else
+				self:Error("expected = { or = string or = number got " .. self:GetToken(3).type)
+			end
+		else
+			break
+		end
+	end
+
+	if self:IsValue("/") then
+		node.tokens["/"] = self:ExpectValue("/")
+		node.tokens[">"] = self:ExpectValue(">")
+		node = self:EndNode(node)
+		return node
+	end
+
+	node.tokens[">"] = self:ExpectValue(">")
+
+	for i = 1, self:GetLength() do
+		if self:IsValue("{") then
+			local left = self:ExpectValue("{")
+			local child = self:ExpectRuntimeExpression()
+			child.tokens["lsx{"] = left
+			table.insert(node.children, child)
+			child.tokens["lsx}"] = self:ExpectValue("}")
+		end
+
+		for i = 1, self:GetLength() do
+			if self:IsValue("<") and self:IsType("letter", 1) then
+				table.insert(node.children, self:ParseLSXExpression())
+			else
+				break
+			end
+		end
+
+		if self:IsValue("<") and self:IsValue("/", 1) then break end
+
+		local tk = self:ParseToken()
+		table.insert(node.children, tk)
+	end
+
+	node.tokens["<2"] = self:ExpectValue("<")
+	node.tokens["/"] = self:ExpectValue("/")
+	node.tokens["type2"] = self:ExpectType("letter")
+	node.tokens[">2"] = self:ExpectValue(">")
+	node = self:EndNode(node)
+	return node
+end end ]=======], '@nattlua/parser/lsx.lua'))()
 do local __M; IMPORTS["nattlua.parser"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) local META = IMPORTS['nattlua.parser.base']("nattlua.parser.base")
 local profiler = IMPORTS['nattlua.other.profiler']("nattlua.other.profiler")
 local Code = IMPORTS['nattlua.code']("nattlua.code").New
@@ -14960,6 +15045,7 @@ end
 assert(IMPORTS['nattlua/parser/expressions.lua'])(META)
 assert(IMPORTS['nattlua/parser/statements.lua'])(META)
 assert(IMPORTS['nattlua/parser/teal.lua'])(META)
+assert(IMPORTS['nattlua/parser/lsx.lua'])(META)
 
 function META:LexString(str, config)
 	config = config or {}
@@ -19663,7 +19749,9 @@ function META:EmitExpression(node)
 		end
 	end
 
-	if node.kind == "binary_operator" then
+	if node.kind == "lsx" then
+		self:EmitLSXExpression(node)
+	elseif node.kind == "binary_operator" then
 		self:EmitBinaryOperator(node)
 	elseif node.kind == "function" then
 		self:EmitAnonymousFunction(node)
@@ -21088,6 +21176,60 @@ do -- extra
 		self:EmitToken(node.tokens["arguments("])
 		self:EmitExpressionList(node.expressions)
 		self:EmitToken(node.tokens["arguments)"])
+	end
+end
+
+do
+	function META:EmitLSXExpression(node)
+		self:EmitToken(node.tokens["<"])
+		self:EmitToken(node.tag)
+
+		for _, prop in ipairs(node.props) do
+			self:Whitespace(" ")
+			self:EmitToken(prop.key)
+			self:EmitToken(prop.tokens["="])
+
+			if prop.tokens["{"] then
+				self:EmitToken(prop.tokens["{"])
+				self:EmitExpression(prop.val)
+				self:EmitToken(prop.tokens["}"])
+			else
+				self:EmitToken(prop.val)
+			end
+		end
+
+		if node.children[1] then
+			self:EmitToken(node.tokens[">"])
+			self:Indent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+
+			for _, child in ipairs(node.children) do
+				if not child.tokens then
+					self:EmitToken(child)
+					self:Whitespace(" ")
+				elseif child.type == "expression" and child.kind == "lsx" then
+					self:EmitLSXExpression(child)
+				else
+					self:EmitToken(child.tokens["lsx{"])
+					self:EmitExpression(child)
+					self:EmitToken(child.tokens["lsx}"])
+				end
+			end
+
+			self:Outdent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+			self:EmitToken(node.tokens["<2"])
+			self:EmitToken(node.tokens["/"])
+			self:EmitToken(node.tokens["type2"])
+			self:EmitToken(node.tokens[">2"])
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+		else
+			self:EmitToken(node.tokens["/"])
+			self:EmitToken(node.tokens[">"])
+		end
 	end
 end
 
@@ -23042,6 +23184,12 @@ return {
 		return VarArg(self:AnalyzeExpression(node.value))
 	end,
 } end ]=======], '@./nattlua/analyzer/expressions/vararg.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.analyzer.expressions.lsx"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) local Any = IMPORTS['nattlua.types.any']("nattlua.types.any").Any
+return {
+	AnalyzeLSX = function(self, tree)
+		return Any() -- TODO
+	end,
+} end ]=======], '@./nattlua/analyzer/expressions/lsx.lua'))())(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local profiler = IMPORTS['nattlua.other.profiler']("nattlua.other.profiler")
 local tostring = tostring
@@ -23147,6 +23295,7 @@ do
 	local AnalyzeAtomicValue = IMPORTS['nattlua.analyzer.expressions.atomic_value']("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
 	local AnalyzeTuple = IMPORTS['nattlua.analyzer.expressions.tuple']("nattlua.analyzer.expressions.tuple").AnalyzeTuple
 	local AnalyzeVararg = IMPORTS['nattlua.analyzer.expressions.vararg']("nattlua.analyzer.expressions.vararg").AnalyzeVararg
+	local AnalyzeLSX = IMPORTS['nattlua.analyzer.expressions.lsx']("nattlua.analyzer.expressions.lsx").AnalyzeLSX
 	local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 
 	function META:AnalyzeExpression2(node)
@@ -23179,6 +23328,8 @@ do
 			return Union({})
 		elseif node.kind == "tuple" then
 			return AnalyzeTuple(self, node)
+		elseif node.kind == "lsx" then
+			return AnalyzeLSX(self, node)
 		else
 			self:FatalError("unhandled expression " .. node.kind)
 		end
@@ -27825,14 +27976,7 @@ do -- semantic tokens
 				-- x is not relative when there's a new line
 				if y ~= 0 then x = data.character_start - 1 end
 
-				if type then
-					if x < 0 or y < 0 then
-						print(token)
-						table.print(data)
-						table.print({x = x, y = y, len = len, last_x = last_x, last_y = last_y})
-						error("bad token")
-					end
-
+				if type and x >= 0 and y >= 0 then
 					table.insert(integers, y)
 					table.insert(integers, x)
 					table.insert(integers, len)
