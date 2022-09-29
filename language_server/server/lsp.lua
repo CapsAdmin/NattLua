@@ -657,14 +657,7 @@ do -- semantic tokens
 				-- x is not relative when there's a new line
 				if y ~= 0 then x = data.character_start - 1 end
 
-				if type then
-					if x < 0 or y < 0 then
-						print(token)
-						table.print(data)
-						table.print({x = x, y = y, len = len, last_x = last_x, last_y = last_y})
-						error("bad token")
-					end
-
+				if type and x >= 0 and y >= 0 then
 					table.insert(integers, y)
 					table.insert(integers, x)
 					table.insert(integers, len)
