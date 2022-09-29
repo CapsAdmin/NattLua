@@ -523,7 +523,9 @@ function META:EmitExpression(node--[[#: Node]])
 		end
 	end
 
-	if node.kind == "binary_operator" then
+	if node.kind == "lsx" then
+		self:EmitLSXExpression(node)
+	elseif node.kind == "binary_operator" then
 		self:EmitBinaryOperator(node)
 	elseif node.kind == "function" then
 		self:EmitAnonymousFunction(node)
@@ -1948,6 +1950,60 @@ do -- extra
 		self:EmitToken(node.tokens["arguments("])
 		self:EmitExpressionList(node.expressions)
 		self:EmitToken(node.tokens["arguments)"])
+	end
+end
+
+do
+	function META:EmitLSXExpression(node)
+		self:EmitToken(node.tokens["<"])
+		self:EmitToken(node.tag)
+
+		for _, prop in ipairs(node.props) do
+			self:Whitespace(" ")
+			self:EmitToken(prop.key)
+			self:EmitToken(prop.tokens["="])
+
+			if prop.tokens["{"] then
+				self:EmitToken(prop.tokens["{"])
+				self:EmitExpression(prop.val)
+				self:EmitToken(prop.tokens["}"])
+			else
+				self:EmitToken(prop.val)
+			end
+		end
+
+		if node.children[1] then
+			self:EmitToken(node.tokens[">"])
+			self:Indent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+
+			for _, child in ipairs(node.children) do
+				if not child.tokens then
+					self:EmitToken(child)
+					self:Whitespace(" ")
+				elseif child.type == "expression" and child.kind == "lsx" then
+					self:EmitLSXExpression(child)
+				else
+					self:EmitToken(child.tokens["lsx{"])
+					self:EmitExpression(child)
+					self:EmitToken(child.tokens["lsx}"])
+				end
+			end
+
+			self:Outdent()
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+			self:EmitToken(node.tokens["<2"])
+			self:EmitToken(node.tokens["/"])
+			self:EmitToken(node.tokens["type2"])
+			self:EmitToken(node.tokens[">2"])
+			self:Whitespace("\n")
+			self:Whitespace("\t")
+		else
+			self:EmitToken(node.tokens["/"])
+			self:EmitToken(node.tokens[">"])
+		end
 	end
 end
 
