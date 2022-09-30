@@ -18,7 +18,20 @@ function META:ParseLSXExpression()
 	node.children = {}
 
 	for i = 1, self:GetLength() do
-		if self:IsType("letter") and self:IsValue("=", 1) then
+		if self:IsValue("{") and self:IsValue("...", 1) then
+			local left = self:ExpectValue("{")
+			local spread = self:read_table_spread()
+
+			if not spread then
+				self:Error("expected table spread")
+				return
+			end
+
+			local right = self:ExpectValue("}")
+			spread.tokens["{"] = left
+			spread.tokens["}"] = right
+			table.insert(node.props, spread)
+		elseif self:IsType("letter") and self:IsValue("=", 1) then
 			if self:IsValue("{", 2) then
 				local keyval = self:StartNode("expression", "lsx")
 				keyval.key = self:ExpectType("letter")

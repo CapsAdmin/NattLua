@@ -382,7 +382,6 @@ local x = <View style={styles.container}>
 	lol <Text2 style={styles.index}>
 		{props.index}	
 	</Text2>
-	
 </View>
 
 local x = <View style={styles.container}>
