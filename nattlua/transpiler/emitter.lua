@@ -2062,9 +2062,7 @@ do
 
 			for i, child in ipairs(node.children) do
 				if not child.tokens then
-					self:Emit("[[")
 					self:EmitToken(child)
-					self:Emit("]]")
 					self:Whitespace(" ")
 				elseif child.type == "expression" and child.kind == "lsx" then
 					self:EmitTranspiledLSXExpression(child)

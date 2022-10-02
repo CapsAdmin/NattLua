@@ -84,7 +84,7 @@ function META:ParseLSXExpression()
 
 		if self:IsValue("<") and self:IsValue("/", 1) then break end
 
-		local tk = self:ParseToken()
+		local tk = self:ExpectType("string")
 		table.insert(node.children, tk)
 	end
 
