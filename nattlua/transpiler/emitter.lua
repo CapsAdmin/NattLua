@@ -2024,7 +2024,7 @@ do
 		self:Emit(",")
 		self:Emit("{")
 
-		for _, prop in ipairs(node.props) do
+		for i, prop in ipairs(node.props) do
 			if prop.kind == "table_spread" then
 				self:Whitespace(" ")
 				self:EmitToken(prop.tokens["{"])
@@ -2033,8 +2033,12 @@ do
 				self:EmitToken(prop.tokens["}"])
 			else
 				self:Whitespace(" ")
-				self:EmitToken(prop.key)
-				self:EmitToken(prop.tokens["="])
+				self:EmitToken(prop.key, "{k=")
+				self:EmitNonSpace("\"")
+				self:EmitNonSpace(prop.key.value)
+				self:EmitNonSpace("\"")
+				self:EmitToken(prop.tokens["="], ",")
+				self:EmitNonSpace("v=")
 
 				if prop.tokens["{"] then
 					self:EmitToken(prop.tokens["{"], "")
@@ -2043,9 +2047,11 @@ do
 				else
 					self:EmitToken(prop.val)
 				end
+
+				self:Emit("}")
 			end
 
-			self:Emit(",")
+			if i ~= #node.props then self:Emit(",") end
 		end
 
 		if node.children[1] then
@@ -2054,7 +2060,7 @@ do
 			self:Whitespace("\n")
 			self:Whitespace("\t")
 
-			for _, child in ipairs(node.children) do
+			for i, child in ipairs(node.children) do
 				if not child.tokens then
 					self:Emit("[[")
 					self:EmitToken(child)
@@ -2068,7 +2074,7 @@ do
 					self:EmitToken(child.tokens["lsx}"], "")
 				end
 
-				self:Emit(",")
+				if i ~= #node.children then self:Emit(",") end
 			end
 
 			self:Outdent()
