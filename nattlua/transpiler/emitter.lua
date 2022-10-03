@@ -1979,7 +1979,7 @@ do
 					self:EmitExpression(prop.value_expression)
 					self:EmitToken(prop.tokens["}"])
 				else
-					self:EmitToken(prop.value_expression)
+					self:EmitExpression(prop.value_expression)
 				end
 			end
 		end
@@ -2044,7 +2044,7 @@ do
 					self:EmitExpression(prop.value_expression)
 					self:EmitToken(prop.tokens["}"], "")
 				else
-					self:EmitToken(prop.value_expression)
+					self:EmitExpression(prop.value_expression)
 				end
 
 				self:Emit("}")
