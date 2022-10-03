@@ -1960,7 +1960,7 @@ end
 do
 	function META:EmitLSXExpression(node)
 		self:EmitToken(node.tokens["<"])
-		self:EmitToken(node.tag)
+		self:EmitExpression(node.tag)
 
 		for _, prop in ipairs(node.props) do
 			if prop.kind == "table_spread" then
@@ -1971,12 +1971,12 @@ do
 				self:EmitToken(prop.tokens["}"])
 			else
 				self:Whitespace(" ")
-				self:EmitToken(prop.key)
+				self:EmitToken(prop.tokens["identifier"])
 				self:EmitToken(prop.tokens["="])
 
 				if prop.tokens["{"] then
 					self:EmitToken(prop.tokens["{"])
-					self:EmitExpression(prop.val)
+					self:EmitExpression(prop.value_expression)
 					self:EmitToken(prop.tokens["}"])
 				else
 					self:EmitToken(prop.val)
@@ -1991,9 +1991,8 @@ do
 			self:Whitespace("\t")
 
 			for _, child in ipairs(node.children) do
-				if not child.tokens then
-					self:EmitToken(child)
-					self:Whitespace(" ")
+				if child.kind == "value" then
+					self:EmitExpression(child)
 				elseif child.type == "expression" and child.kind == "lsx" then
 					self:EmitLSXExpression(child)
 				else
@@ -2020,7 +2019,7 @@ do
 
 	function META:EmitTranspiledLSXExpression(node)
 		self:EmitToken(node.tokens["<"], "LSX(")
-		self:EmitToken(node.tag)
+		self:EmitExpression(node.tag)
 		self:Emit(",")
 		self:Emit("{")
 
@@ -2061,9 +2060,8 @@ do
 			self:Whitespace("\t")
 
 			for i, child in ipairs(node.children) do
-				if not child.tokens then
-					self:EmitToken(child)
-					self:Whitespace(" ")
+				if child.kind == "value" then
+					self:EmitExpression(child)
 				elseif child.type == "expression" and child.kind == "lsx" then
 					self:EmitTranspiledLSXExpression(child)
 				else
