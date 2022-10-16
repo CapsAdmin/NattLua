@@ -27467,93 +27467,35 @@ function base64.decode(
 end
 
 return base64 end ]=======], '@./nattlua/other/base64.lua'))())(...) return __M end end
-do local __M; IMPORTS["language_server.server.lsp"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) --DONT_ANALYZE
+do local __M; IMPORTS["nattlua.editor_helper.editor"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) --DONT_ANALYZE
 local Compiler = IMPORTS['nattlua.compiler']("nattlua.compiler").New
 local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
-local b64 = IMPORTS['nattlua.other.base64']("nattlua.other.base64")
 local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
 local Table = IMPORTS['nattlua.types.table']("nattlua.types.table").Table
 local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
-local lsp = {}
-lsp.methods = {}
-local TextDocumentSyncKind = {None = 0, Full = 1, Incremental = 2}
+local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
+local BuildBaseEnvironment = IMPORTS['nattlua.runtime.base_environment']("nattlua.runtime.base_environment").BuildBaseEnvironment
+local runtime_env, typesystem_env = BuildBaseEnvironment()
+local META = class.CreateTemplate("token")
+META:GetSet("WorkingDirectory", ".")
+
+META:GetSet("ConfigFunction", function()
+	return
+end)
+
+function META.New()
+	local self = {}
+	setmetatable(self, META)
+	return self
+end
+
 local DiagnosticSeverity = {
 	error = 1,
 	fatal = 1, -- from lexer and parser
 	warning = 2,
 	information = 3,
 	hint = 4,
-}
-local SymbolKind = {
-	File = 1,
-	Module = 2,
-	Namespace = 3,
-	Package = 4,
-	Class = 5,
-	Method = 6,
-	Property = 7,
-	Field = 8,
-	Constructor = 9,
-	Enum = 10,
-	Interface = 11,
-	Function = 12,
-	Variable = 13,
-	Constant = 14,
-	String = 15,
-	Number = 16,
-	Boolean = 17,
-	Array = 18,
-	Object = 19,
-	Key = 20,
-	Null = 21,
-	EnumMember = 22,
-	Struct = 23,
-	Event = 24,
-	Operator = 25,
-	TypeParameter = 26,
-}
-local SemanticTokenTypes = {
-	-- identifiers or reference
-	"class", -- a class type. maybe META or Meta?
-	"typeParameter", -- local type >foo< = true
-	"parameter", -- function argument: function foo(>a<)
-	"variable", -- a local or global variable.
-	"property", -- a member property, member field, or member variable.
-	"enumMember", -- an enumeration property, constant, or member. uppercase variables and global non tables? local FOO = true ?
-	"event", --  an event property.
-	"function", -- local or global function: local function >foo<
-	"method", --  a member function or method: string.>bar<()
-	"type", -- misc type
-	-- tokens
-	"comment", -- 
-	"string", -- 
-	"keyword", -- 
-	"number", -- 
-	"regexp", -- regular expression literal.
-	"operator", --
-	"decorator", -- decorator syntax, maybe for @Foo in tables, $ and §
-	-- other identifiers or references
-	"namespace", -- namespace, module, or package.
-	"enum", -- 
-	"interface", --
-	"struct", -- 
-	"decorator", -- decorators and annotations.
-	"macro", --  a macro.
-	"label", --  a label. ??
-}
-local SemanticTokenModifiers = {
-	"declaration", -- For declarations of symbols.
-	"definition", -- For definitions of symbols, for example, in header files.
-	"readonly", -- For readonly variables and member fields (constants).
-	"static", -- For class members (static members).
-	"private", -- For class members (static members).
-	"deprecated", -- For symbols that should no longer be used.
-	"abstract", -- For types and member functions that are abstract.
-	"async", -- For functions that are marked async.
-	"modification", -- For variable references where the variable is assigned to.
-	"documentation", -- For occurrences of symbols in documentation.
-	"defaultLibrary", -- For symbols that are part of the standard library.
 }
 
 local function find_type_from_token(token)
@@ -27762,8 +27704,6 @@ local function token_to_type_mod(token)
 	end
 end
 
-local working_directory
-
 local function get_range(code, start, stop)
 	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
 	return {
@@ -27793,23 +27733,15 @@ local function find_token_from_line_character(
 	end
 end
 
-local function get_analyzer_config()
-	
-
-	local f, err = loadfile("./nlconfig.lua")
-	local cfg = {}
-
-	if f then cfg = f("get-analyzer-config") or cfg end
+function META:GetAanalyzerConfig()
+	local cfg = self.ConfigFunction("get-analyzer-config") or {}
 
 	if cfg.type_annotations == nil then cfg.type_annotations = true end
 
 	return cfg
 end
 
-local function get_emitter_config()
-	
-
-	local f, err = loadfile("./nlconfig.lua")
+function META:GetEmitterConfig()
 	local cfg = {
 		preserve_whitespace = false,
 		string_quote = "\"",
@@ -27819,14 +27751,10 @@ local function get_emitter_config()
 		force_parenthesis = true,
 		skip_import = true,
 	}
-
-	if f then cfg = f("get-emitter-config") or cfg end
-
+	local cfg = self.ConfigFunction("get-emitter-config") or cfg
 	return cfg
 end
 
-local BuildBaseEnvironment = IMPORTS['nattlua.runtime.base_environment']("nattlua.runtime.base_environment").BuildBaseEnvironment
-local runtime_env, typesystem_env = BuildBaseEnvironment()
 local cache = {}
 local temp_files = {}
 
@@ -27863,18 +27791,18 @@ local function clear_temp_file(uri)
 	temp_files[uri] = nil
 end
 
-local function recompile(uri)
+function META:Recompile(uri)
 	local responses = {}
 	local compiler
 	local entry_point
 	local cfg
 
-	if working_directory then
-		cfg = get_analyzer_config()
+	if self.WorkingDirectory then
+		cfg = self:GetAanalyzerConfig()
 		entry_point = cfg.entry_point
 
 		if not entry_point and uri then
-			entry_point = uri:gsub(working_directory .. "/", "")
+			entry_point = uri:gsub(self.WorkingDirectory .. "/", "")
 		end
 
 		if not entry_point then return false end
@@ -27884,11 +27812,11 @@ local function recompile(uri)
 			responses[path] = responses[path] or
 				{
 					method = "textDocument/publishDiagnostics",
-					params = {uri = working_directory .. "/" .. path, diagnostics = {}},
+					params = {uri = self.WorkingDirectory .. "/" .. path, diagnostics = {}},
 				}
-			return find_temp_file(working_directory .. "/" .. path)
+			return find_temp_file(self.WorkingDirectory .. "/" .. path)
 		end
-		compiler = Compiler([[return import("./]] .. entry_point .. [[")]], "file://" .. entry_point, cfg)
+		compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
 	else
 		compiler = Compiler(find_temp_file(uri), uri)
 		responses[uri] = responses[uri] or
@@ -27912,7 +27840,7 @@ local function recompile(uri)
 			responses[name] = responses[name] or
 				{
 					method = "textDocument/publishDiagnostics",
-					params = {uri = working_directory .. "/" .. name, diagnostics = {}},
+					params = {uri = self.WorkingDirectory .. "/" .. name, diagnostics = {}},
 				}
 			table.insert(
 				responses[name].params.diagnostics,
@@ -27935,7 +27863,7 @@ local function recompile(uri)
 						end
 
 						store_file(
-							working_directory .. "/" .. root.parser.config.file_path,
+							self.WorkingDirectory .. "/" .. root.parser.config.file_path,
 							root.code,
 							root.lexer_tokens
 						)
@@ -27967,7 +27895,7 @@ local function recompile(uri)
 					responses[name] = responses[name] or
 						{
 							method = "textDocument/publishDiagnostics",
-							params = {uri = working_directory .. "/" .. name, diagnostics = {}},
+							params = {uri = self.WorkingDirectory .. "/" .. name, diagnostics = {}},
 						}
 					table.insert(
 						responses[name].params.diagnostics,
@@ -27982,96 +27910,79 @@ local function recompile(uri)
 				print(ok, err)
 			end
 
-			lsp.Call({method = "workspace/semanticTokens/refresh", params = {}})
+			self:OnRefresh()
 		end
 
 		for _, resp in pairs(responses) do
-			lsp.Call(resp)
+			self:OnResponse(resp)
 		end
 	end
 
 	return true
 end
 
-lsp.methods["initialize"] = function(params)
-	working_directory = params.workspaceFolders[1].uri
-	return {
-		clientInfo = {name = "NattLua", version = "1.0"},
-		capabilities = {
-			textDocumentSync = {
-				openClose = true,
-				change = TextDocumentSyncKind.Full,
-			},
-			semanticTokensProvider = {
-				legend = {
-					tokenTypes = SemanticTokenTypes,
-					tokenModifiers = SemanticTokenModifiers,
-				},
-				full = true,
-				range = false,
-			},
-			hoverProvider = true,
-			publishDiagnostics = {
-				relatedInformation = true,
-				tagSupport = {1, 2},
-			},
-			inlayHintProvider = {
-				resolveProvider = true,
-			},
-			definitionProvider = true,
-		-- for symbols like all functions within a file
-		-- documentSymbolProvider = {label = "NattLua"},
-		-- highlighting equal upvalues
-		-- documentHighlightProvider = true, 
-		--[[completionProvider = {
-				resolveProvider = true,
-				triggerCharacters = { ".", ":" },
-			},
-			signatureHelpProvider = {
-				triggerCharacters = { "(" },
-			},
-			definitionProvider = true,
-			referencesProvider = true,
-			
-			workspaceSymbolProvider = true,
-			codeActionProvider = true,
-			codeLensProvider = {
-				resolveProvider = true,
-			},
-			documentFormattingProvider = true,
-			documentRangeFormattingProvider = true,
-			documentOnTypeFormattingProvider = {
-				firstTriggerCharacter = "}",
-				moreTriggerCharacter = { "end" },
-			},
-			renameProvider = true,
-			]] },
-	}
+function META:OnResponse(response) end
+
+function META:OnRefresh() end
+
+function META:Initialize()
+	self:Recompile()
 end
-lsp.methods["initialized"] = function(params)
-	recompile()
-end
-lsp.methods["nattlua/format"] = function(params)
-	local config = get_emitter_config()
-	config.comment_type_annotations = params.path:sub(-#".lua") == ".lua"
-	config.transpile_extensions = params.path:sub(-#".lua") == ".lua"
-	local compiler = Compiler(params.code, "@" .. params.path, config)
+
+function META:Format(code, path)
+	local config = self:GetEmitterConfig()
+	config.comment_type_annotations = path:sub(-#".lua") == ".lua"
+	config.transpile_extensions = path:sub(-#".lua") == ".lua"
+	local compiler = Compiler(code, "@" .. path, config)
 	local code, err = compiler:Emit()
-	return {code = b64.encode(code)}
-end
-lsp.methods["nattlua/syntax"] = function(params)
-	local data = require("nattlua.syntax.monarch_language")
-	print("SENDING SYNTAX", #data)
-	return {data = b64.encode(data)}
-end
-lsp.methods["shutdown"] = function(params)
-	print("SHUTDOWN")
-	table.print(params)
+	return code
 end
 
 do -- semantic tokens
 	local tokenTypeMap = {}
 	local tokenModifiersMap = {}
+	local SemanticTokenTypes = {
+		-- identifiers or reference
+		"class", -- a class type. maybe META or Meta?
+		"typeParameter", -- local type >foo< = true
+		"parameter", -- function argument: function foo(>a<)
+		"variable", -- a local or global variable.
+		"property", -- a member property, member field, or member variable.
+		"enumMember", -- an enumeration property, constant, or member. uppercase variables and global non tables? local FOO = true ?
+		"event", --  an event property.
+		"function", -- local or global function: local function >foo<
+		"method", --  a member function or method: string.>bar<()
+		"type", -- misc type
+		-- tokens
+		"comment", -- 
+		"string", -- 
+		"keyword", -- 
+		"number", -- 
+		"regexp", -- regular expression literal.
+		"operator", --
+		"decorator", -- decorator syntax, maybe for @Foo in tables, $ and §
+		-- other identifiers or references
+		"namespace", -- namespace, module, or package.
+		"enum", -- 
+		"interface", --
+		"struct", -- 
+		"decorator", -- decorators and annotations.
+		"macro", --  a macro.
+		"label", --  a label. ??
+	}
+	local SemanticTokenModifiers = {
+		"declaration", -- For declarations of symbols.
+		"definition", -- For definitions of symbols, for example, in header files.
+		"readonly", -- For readonly variables and member fields (constants).
+		"static", -- For class members (static members).
+		"private", -- For class members (static members).
+		"deprecated", -- For symbols that should no longer be used.
+		"abstract", -- For types and member functions that are abstract.
+		"async", -- For functions that are marked async.
+		"modification", -- For variable references where the variable is assigned to.
+		"documentation", -- For occurrences of symbols in documentation.
+		"defaultLibrary", -- For symbols that are part of the standard library.
+	}
 
 	for i, v in ipairs(SemanticTokenTypes) do
 		tokenTypeMap[v] = i - 1
@@ -28081,20 +27992,8 @@ do -- semantic tokens
 		tokenModifiersMap[v] = i - 1
 	end
 
-	lsp.methods["textDocument/semanticTokens/range"] = function(params)
-		print("SEMANTIC TOKENS RANGE")
-		table.print(params)
-
-		do
-			return
-		end
-
-		local textDocument = params.textDocument
-		local range = params
-	end
-	lsp.methods["textDocument/semanticTokens/full"] = function(params)
-		local data = find_file(params.textDocument.uri)
-		print("SEMANTIC TOKENS FULL REFRESH", data)
+	function META:DescribeTokens(path)
+		local data = find_file(path)
 
 		if not data then return end
 
@@ -28148,36 +28047,27 @@ do -- semantic tokens
 			end
 		end
 
-		return {data = integers}
+		return integers
 	end
 end
 
-lsp.methods["$/cancelRequest"] = function(params)
-	do
-		return
-	end
+function META:OpenFile(path, code)
+	store_temp_file(path, code)
+	self:Recompile(path)
+end
 
-	print("cancelRequest")
-	table.print(params)
+function META:CloseFile(path)
+	clear_temp_file(path)
 end
-lsp.methods["workspace/didChangeConfiguration"] = function(params)
-	print("configuration changed")
-	table.print(params)
+
+function META:UpdateFile(path, code)
+	store_temp_file(path, code)
+	self:Recompile(path)
 end
-lsp.methods["textDocument/didOpen"] = function(params)
-	store_temp_file(params.textDocument.uri, params.textDocument.text)
-	recompile(params.textDocument.uri)
-end
-lsp.methods["textDocument/didClose"] = function(params)
-	clear_temp_file(params.textDocument.uri)
-end
-lsp.methods["textDocument/didChange"] = function(params)
-	store_temp_file(params.textDocument.uri, params.contentChanges[1].text)
-	recompile(params.textDocument.uri)
-end
-lsp.methods["textDocument/didSave"] = function(params)
-	clear_temp_file(params.textDocument.uri)
-	recompile(params.textDocument.uri)
+
+function META:SaveFile(path)
+	clear_temp_file(path)
+	self:Recompile(path)
 end
 
 local function find_token(uri, line, character)
@@ -28264,13 +28154,13 @@ local function find_nodes(tokens, type, kind)
 	return nodes
 end
 
-lsp.methods["textDocument/inlayHint"] = function(params)
+function META:GetInlayHints(path, start_line, start_character, stop_line, stop_character)
 	local tokens = find_token_from_line_character_range(
-		params.textDocument.uri,
-		params.start.line - 1,
-		params.start.character - 1,
-		params["end"].line - 1,
-		params["end"].character - 1
+		path,
+		start_line - 1,
+		start_character - 1,
+		stop_line - 1,
+		stop_character - 1
 	)
 
 	if not tokens then return end
@@ -28320,12 +28210,9 @@ lsp.methods["textDocument/inlayHint"] = function(params)
 
 	return hints
 end
-lsp.methods["textDocument/rename"] = function(params)
-	do
-		return
-	end
 
-	local token, data = find_token(params.textDocument.uri, params.position.line, params.position.character)
+function META:Rename(path, line, character, newName)
+	local token, data = find_token(path, line, character)
 
 	if not token or not data or not token.parent then return end
 
@@ -28338,19 +28225,19 @@ lsp.methods["textDocument/rename"] = function(params)
 			local node = v.value:GetNode()
 
 			if node then
-				changes[params.textDocument.uri] = changes[params.textDocument.uri] or
+				changes[path] = changes[path] or
 					{
 						textDocument = {
 							version = nil,
 						},
 						edits = {},
 					}
-				local edits = changes[params.textDocument.uri].edits
+				local edits = changes[path].edits
 				table.insert(
 					edits,
 					{
 						range = get_range(node.Code, node:GetStartStop()),
-						newText = params.newName,
+						newText = newName,
 					}
 				)
 			end
@@ -28361,8 +28248,9 @@ lsp.methods["textDocument/rename"] = function(params)
 		changes = changes,
 	}
 end
-lsp.methods["textDocument/definition"] = function(params)
-	local token, data = find_token(params.textDocument.uri, params.position.line, params.position.character)
+
+function META:GetDefinition(path, line, character)
+	local token, data = find_token(path, line, character)
 
 	if not token or not data or not token.parent then return end
 
@@ -28374,14 +28262,15 @@ lsp.methods["textDocument/definition"] = function(params)
 
 	if not node then return end
 
-	local data = find_file(params.textDocument.uri)
+	local data = find_file(path)
 	return {
-		uri = params.textDocument.uri,
+		uri = path,
 		range = get_range(data.code, node:GetStartStop()),
 	}
 end
-lsp.methods["textDocument/hover"] = function(params)
-	local token, data = find_token(params.textDocument.uri, params.position.line, params.position.character)
+
+function META:GetHover(path, line, character)
+	local token, data = find_token(path, line, character)
 
 	if not token or not data or not token.parent then return end
 
@@ -28454,6 +28343,194 @@ lsp.methods["textDocument/hover"] = function(params)
 			},
 		},
 	}
+end
+
+return META end ]=======], '@./nattlua/editor_helper/editor.lua'))())(...) return __M end end
+do local __M; IMPORTS["language_server.server.lsp"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) --DONT_ANALYZE
+local b64 = IMPORTS['nattlua.other.base64']("nattlua.other.base64")
+local EditorHelper = IMPORTS['nattlua.editor_helper.editor']("nattlua.editor_helper.editor")
+local lsp = {}
+lsp.methods = {}
+local TextDocumentSyncKind = {None = 0, Full = 1, Incremental = 2}
+local SemanticTokenTypes = {
+	-- identifiers or reference
+	"class", -- a class type. maybe META or Meta?
+	"typeParameter", -- local type >foo< = true
+	"parameter", -- function argument: function foo(>a<)
+	"variable", -- a local or global variable.
+	"property", -- a member property, member field, or member variable.
+	"enumMember", -- an enumeration property, constant, or member. uppercase variables and global non tables? local FOO = true ?
+	"event", --  an event property.
+	"function", -- local or global function: local function >foo<
+	"method", --  a member function or method: string.>bar<()
+	"type", -- misc type
+	-- tokens
+	"comment", -- 
+	"string", -- 
+	"keyword", -- 
+	"number", -- 
+	"regexp", -- regular expression literal.
+	"operator", --
+	"decorator", -- decorator syntax, maybe for @Foo in tables, $ and §
+	-- other identifiers or references
+	"namespace", -- namespace, module, or package.
+	"enum", -- 
+	"interface", --
+	"struct", -- 
+	"decorator", -- decorators and annotations.
+	"macro", --  a macro.
+	"label", --  a label. ??
+}
+local SemanticTokenModifiers = {
+	"declaration", -- For declarations of symbols.
+	"definition", -- For definitions of symbols, for example, in header files.
+	"readonly", -- For readonly variables and member fields (constants).
+	"static", -- For class members (static members).
+	"private", -- For class members (static members).
+	"deprecated", -- For symbols that should no longer be used.
+	"abstract", -- For types and member functions that are abstract.
+	"async", -- For functions that are marked async.
+	"modification", -- For variable references where the variable is assigned to.
+	"documentation", -- For occurrences of symbols in documentation.
+	"defaultLibrary", -- For symbols that are part of the standard library.
+}
+local editor_helper = EditorHelper.New()
+lsp.methods["initialize"] = function(params)
+	editor_helper:SetWorkingDirectory(params.workspaceFolders[1].uri)
+	return {
+		clientInfo = {name = "NattLua", version = "1.0"},
+		capabilities = {
+			textDocumentSync = {
+				openClose = true,
+				change = TextDocumentSyncKind.Full,
+			},
+			semanticTokensProvider = {
+				legend = {
+					tokenTypes = SemanticTokenTypes,
+					tokenModifiers = SemanticTokenModifiers,
+				},
+				full = true,
+				range = false,
+			},
+			hoverProvider = true,
+			publishDiagnostics = {
+				relatedInformation = true,
+				tagSupport = {1, 2},
+			},
+			inlayHintProvider = {
+				resolveProvider = true,
+			},
+			definitionProvider = true,
+			renameProvider = true,
+		-- for symbols like all functions within a file
+		-- documentSymbolProvider = {label = "NattLua"},
+		-- highlighting equal upvalues
+		-- documentHighlightProvider = true, 
+		--[[completionProvider = {
+				resolveProvider = true,
+				triggerCharacters = { ".", ":" },
+			},
+			signatureHelpProvider = {
+				triggerCharacters = { "(" },
+			},
+			definitionProvider = true,
+			referencesProvider = true,
+			
+			workspaceSymbolProvider = true,
+			codeActionProvider = true,
+			codeLensProvider = {
+				resolveProvider = true,
+			},
+			documentFormattingProvider = true,
+			documentRangeFormattingProvider = true,
+			documentOnTypeFormattingProvider = {
+				firstTriggerCharacter = "}",
+				moreTriggerCharacter = { "end" },
+			},
+			renameProvider = true,
+			]] },
+	}
+end
+lsp.methods["initialized"] = function(params)
+	editor_helper:Initialize()
+
+	function editor_helper:OnRefresh()
+		lsp.Call({method = "workspace/semanticTokens/refresh", params = {}})
+	end
+
+	function editor_helper:OnResponse(resp)
+		lsp.Call(resp)
+	end
+
+	
+
+	local f, err = loadfile("./nlconfig.lua")
+
+	if f then editor_helper:SetConfigFunction(f) end
+end
+lsp.methods["nattlua/format"] = function(params)
+	return {code = b64.encode(editor_helper:Format(params.code, params.path))}
+end
+lsp.methods["nattlua/syntax"] = function(params)
+	local data = require("nattlua.syntax.monarch_language")
+	print("SENDING SYNTAX", #data)
+	return {data = b64.encode(data)}
+end
+lsp.methods["shutdown"] = function(params)
+	print("SHUTDOWN")
+	table.print(params)
+end
+lsp.methods["textDocument/semanticTokens/full"] = function(params)
+	local integers = editor_helper:DescribeTokens(params.textDocument.uri)
+	return {data = integers}
+end
+lsp.methods["$/cancelRequest"] = function(params)
+	do
+		return
+	end
+
+	print("cancelRequest")
+	table.print(params)
+end
+lsp.methods["workspace/didChangeConfiguration"] = function(params)
+	print("configuration changed")
+	table.print(params)
+end
+lsp.methods["textDocument/didOpen"] = function(params)
+	editor_helper:OpenFile(params.textDocument.uri, params.textDocument.text)
+end
+lsp.methods["textDocument/didClose"] = function(params)
+	editor_helper:CloseFile(params.textDocument.uri)
+end
+lsp.methods["textDocument/didChange"] = function(params)
+	editor_helper:UpdateFile(params.textDocument.uri, params.contentChanges[1].text)
+end
+lsp.methods["textDocument/didSave"] = function(params)
+	editor_helper:SaveFile(params.textDocument.uri)
+end
+lsp.methods["textDocument/inlayHint"] = function(params)
+	local hints = editor_helper:GetInlayHints(
+		params.textDocument.uri,
+		params.start.line,
+		params.start.character,
+		params["end"].line,
+		params["end"].character
+	)
+	return hints
+end
+lsp.methods["textDocument/rename"] = function(params)
+	local changes = editor_helper:Rename(params.textDocument.uri, params.position.line, params.position.character, params.newName)
+	return {
+		changes = changes,
+	}
+end
+lsp.methods["textDocument/definition"] = function(params)
+	local data = editor_helper:GetDefinition(params.textDocument.uri, params.position.line, params.position.character)
+	return data
+end
+lsp.methods["textDocument/hover"] = function(params)
+	local data = editor_helper:GetHover(params.textDocument.uri, params.position.line, params.position.character)
+	return data
 end
 
 do
