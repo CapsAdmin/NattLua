@@ -313,12 +313,10 @@ local function find_temp_file(uri)
 end
 
 local function store_temp_file(uri, content)
-	print("storing ", uri, #content)
 	temp_files[uri] = content
 end
 
 local function clear_temp_file(uri)
-	print("clearing ", uri)
 	temp_files[uri] = nil
 end
 
@@ -408,7 +406,7 @@ function META:Recompile(uri)
 
 			if cfg then
 				if entry_point then
-					local code = assert(io.open((cfg.working_directory or "") .. entry_point, "r")):read("*all")
+					local code = self:ReadFile((cfg.working_directory or "") .. entry_point)
 					should_analyze = code:find("-" .. "-ANALYZE", nil, true)
 				end
 
@@ -418,7 +416,6 @@ function META:Recompile(uri)
 			end
 
 			if should_analyze then
-				print("RECOMPILE")
 				local ok, err = compiler:Analyze()
 
 				if not ok then
@@ -437,8 +434,6 @@ function META:Recompile(uri)
 						}
 					)
 				end
-
-				print(ok, err)
 			end
 
 			self:OnRefresh()
@@ -450,6 +445,13 @@ function META:Recompile(uri)
 	end
 
 	return true
+end
+
+function META:ReadFile(path)
+	local f = assert(io.open(path, "r"))
+	local str = f:read("*all")
+	f:close()
+	return str
 end
 
 function META:OnResponse(response) end
@@ -805,74 +807,11 @@ function META:GetHover(path, line, character)
 
 	if not token or not data or not token.parent then return end
 
-	local markdown = ""
-
-	local function add_line(str)
-		markdown = markdown .. str .. "\n\n"
-	end
-
-	local function add_code(str)
-		add_line("```lua\n" .. tostring(str) .. "\n```")
-	end
-
 	local obj, found_parents, scope = find_type_from_token(token)
-
-	if obj then
-		add_code(tostring(obj))
-		local upvalue = obj:GetUpvalue()
-
-		if upvalue then
-			add_code(tostring(upvalue))
-
-			if upvalue:HasMutations() then
-				local code = ""
-
-				for i, mutation in ipairs(upvalue.Mutations) do
-					code = code .. "-- " .. i .. "\n"
-					code = code .. "\tvalue = " .. tostring(mutation.value) .. "\n"
-					code = code .. "\tscope = " .. tostring(mutation.scope) .. "\n"
-					code = code .. "\ttracking = " .. tostring(mutation.from_tracking) .. "\n"
-				end
-
-				add_code(code)
-			end
-		end
-	end
-
-	if found_parents[1] then
-		local min, max = found_parents[1]:GetStartStop()
-
-		if min then
-			local temp = helpers.SubPositionToLinePosition(found_parents[1].Code:GetString(), min, max)
-
-			if temp then data = temp end
-		end
-	end
-
-	local limit = 5000
-
-	for i = 1, #found_parents do
-		local min, max = found_parents[i]:GetStartStop()
-		add_code(tostring(found_parents[i]) .. " len=" .. tostring(max - min))
-	end
-
-	if scope then markdown = markdown .. "\n" .. tostring(scope) end
-
-	if #markdown > limit then markdown = markdown:sub(0, limit) .. "\n```\n..." end
-
-	markdown = markdown:gsub("\\", "BSLASH_")
 	return {
-		contents = markdown,
-		range = {
-			start = {
-				line = data.line_start - 1,
-				character = data.character_start - 1,
-			},
-			["end"] = {
-				line = data.line_stop - 1,
-				character = data.character_stop,
-			},
-		},
+		obj = obj,
+		scope = scope,
+		found_parents = found_parents,
 	}
 end
 
