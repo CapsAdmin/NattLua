@@ -315,7 +315,7 @@ function helpers.JITOptimize()
 	if not jit then return end
 
 	jit.opt.start(
-		"maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
+		"maxtrace=2000", -- 1000 1-65535: maximum number of traces in the cache
 		"maxrecord=8000", -- 4000: maximum number of recorded IR instructions
 		"maxirconst=8000", -- 500: maximum number of IR constants of a trace
 		"maxside=5000", -- 100: maximum number of side traces of a root trace
@@ -327,8 +327,6 @@ function helpers.JITOptimize()
 		"loopunroll=1000", -- 15: maximum unroll factor for loop ops in side traces
 		"callunroll=1000", -- 3: maximum unroll factor for pseudo-recursive calls
 		"recunroll=0", -- 2: minimum unroll factor for true recursion
-		"maxmcode=" .. (512 * 64), -- 512: maximum total size of all machine code areas in KBytes
-		--jit.os == "x64" and "sizemcode=64" or "sizemcode=32", -- Size of each machine code area in KBytes (Windows: 64K)
 		"+fold", -- Constant Folding, Simplifications and Reassociation
 		"+cse", -- Common-Subexpression Elimination
 		"+dce", -- Dead-Code Elimination
@@ -343,6 +341,46 @@ function helpers.JITOptimize()
 
 	if jit.version_num >= 20100 then
 		jit.opt.start("minstitch=0") -- 0: minimum number of IR ins for a stitched trace.
+	end
+
+	-- below taken from https://github.com/love2d/love/blob/main/src/modules/love/jitsetup.lua
+
+	-- Somewhat arbitrary value. Needs to be higher than the combined sizes below,
+	-- and higher than the default (512) because that's already too low.
+	jit.opt.start("maxmcode=16384")
+
+	if jit.arch == "arm64" then
+		-- https://github.com/LuaJIT/LuaJIT/issues/285
+		-- LuaJIT 2.1 on arm64 currently (as of commit b4b2dce) can only use memory
+		-- for JIT compilation within a certain short range. Other libraries such as
+		-- SDL can take all the usable space in that range and cause attempts at JIT
+		-- compilation to both fail and take a long time.
+		-- This is a very hacky attempt at a workaround. LuaJIT allocates executable
+		-- code in pools. We'll try "reserving" pools before any external code is
+		-- executed, by causing JIT compilation via a small loop. We can't easily
+		-- tell if JIT compilation succeeded, so we do several successively smaller
+		-- pool allocations in case previous ones fail.
+		-- This is a really hacky hack and by no means foolproof - there are a lot of
+		-- potential situations (especially when threads are used) where previously
+		-- executed external code will still take up space that LuaJIT needed for itself.
+
+		jit.opt.start("sizemcode=2048")
+		for i=1, 100 do end
+		
+		jit.opt.start("sizemcode=1024")
+		for i=1, 100 do end
+		
+		jit.opt.start("sizemcode=512")
+		for i=1, 100 do end
+		
+		jit.opt.start("sizemcode=256")
+		for i=1, 100 do end
+		
+		jit.opt.start("sizemcode=128")
+		for i=1, 100 do end
+	else
+		-- Somewhat arbitrary value (>= the default).
+		jit.opt.start("sizemcode=128")
 	end
 end
 

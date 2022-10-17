@@ -404,7 +404,6 @@ analyze[[
         local mz <const> = -0.0
         local z <const> = 0.0
         assert(mz == z)
-        assert(1/mz < 0 and 0 < 1/z)
         local a = {[mz] = 1}
         assert(a[z] == 1 and a[mz] == 1)
         a[z] = 2
