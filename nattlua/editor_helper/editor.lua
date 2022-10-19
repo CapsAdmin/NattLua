@@ -321,7 +321,6 @@ local function clear_temp_file(uri)
 end
 
 function META:Recompile(uri)
-	local responses = {}
 	local compiler
 	local entry_point
 	local cfg
@@ -338,44 +337,28 @@ function META:Recompile(uri)
 
 		cfg.inline_require = false
 		cfg.on_read_file = function(parser, path)
-			responses[path] = responses[path] or
-				{
-					method = "textDocument/publishDiagnostics",
-					params = {uri = self.WorkingDirectory .. "/" .. path, diagnostics = {}},
-				}
 			return find_temp_file(self.WorkingDirectory .. "/" .. path)
 		end
 		compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
 	else
 		compiler = Compiler(find_temp_file(uri), uri)
-		responses[uri] = responses[uri] or
-			{
-				method = "textDocument/publishDiagnostics",
-				params = {uri = uri, diagnostics = {}},
-			}
 	end
 
 	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
+	local diagnostics = {}
 
 	do
-		function compiler:OnDiagnostic(code, msg, severity, start, stop, node, ...)
-			local range = get_range(code, start, stop)
-
-			if not range then return end
-
+		function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
 			local name = code:GetName()
-			print("error: ", name, msg, severity, ...)
-			responses[name] = responses[name] or
-				{
-					method = "textDocument/publishDiagnostics",
-					params = {uri = self.WorkingDirectory .. "/" .. name, diagnostics = {}},
-				}
+			diagnostics[name] = diagnostics[name] or {}
 			table.insert(
-				responses[name].params.diagnostics,
+				diagnostics[name],
 				{
-					severity = DiagnosticSeverity[severity],
-					range = range,
+					severity = severity,
+					code = code,
+					start = start,
+					stop = stop,
 					message = helpers.FormatMessage(msg, ...),
 				}
 			)
@@ -420,32 +403,28 @@ function META:Recompile(uri)
 
 				if not ok then
 					local name = compiler:GetCode():GetName()
-					responses[name] = responses[name] or
-						{
-							method = "textDocument/publishDiagnostics",
-							params = {uri = self.WorkingDirectory .. "/" .. name, diagnostics = {}},
-						}
+					diagnostics[name] = diagnostics[name] or {}
 					table.insert(
-						responses[name].params.diagnostics,
+						diagnostics,
 						{
-							severity = DiagnosticSeverity["fatal"],
-							range = get_range(compiler:GetCode(), 1, compiler:GetCode():GetByteSize()),
+							severity = "fatal",
+							code = compiler:GetCode(),
+							start = 1,
+							stop = compiler:GetCode():GetByteSize(),
 							message = err,
 						}
 					)
 				end
 			end
-
-			self:OnRefresh()
-		end
-
-		for _, resp in pairs(responses) do
-			self:OnResponse(resp)
 		end
 	end
 
-	return true
+	for name, data in pairs(diagnostics) do
+		self:OnDiagnostics(name, data)
+	end
 end
+
+function META:OnDiagnostics(name, data) end
 
 function META:ReadFile(path)
 	local f = assert(io.open(path, "r"))

@@ -290,19 +290,37 @@ function META:GetLastType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
-local new_token = table_pool(
-	function()
-		local x = {
-			type = "unknown",
-			value = "",
-			whitespace = false,
-			start = 0,
-			stop = 0,
-		}
-		return x
-	end,
-	3105585
-)
+local new_token
+
+if jit.arch == "arm64" then
+	new_token = table_pool(
+		function()
+			local x = {
+				type = "unknown",
+				value = "",
+				whitespace = false,
+				start = 0,
+				stop = 0,
+			}
+			return x
+		end,
+		100000
+	)
+else
+	new_token = table_pool(
+		function()
+			local x = {
+				type = "unknown",
+				value = "",
+				whitespace = false,
+				start = 0,
+				stop = 0,
+			}
+			return x
+		end,
+		3105585
+	)
+end
 
 function META.New(
 	type,
@@ -641,8 +659,6 @@ function helpers.JITOptimize()
 		"loopunroll=1000", -- 15: maximum unroll factor for loop ops in side traces
 		"callunroll=1000", -- 3: maximum unroll factor for pseudo-recursive calls
 		"recunroll=0", -- 2: minimum unroll factor for true recursion
-		"maxmcode=" .. (512 * 64), -- 512: maximum total size of all machine code areas in KBytes
-		--jit.os == "x64" and "sizemcode=64" or "sizemcode=32", -- Size of each machine code area in KBytes (Windows: 64K)
 		"+fold", -- Constant Folding, Simplifications and Reassociation
 		"+cse", -- Common-Subexpression Elimination
 		"+dce", -- Dead-Code Elimination
@@ -657,6 +673,61 @@ function helpers.JITOptimize()
 
 	if jit.version_num >= 20100 then
 		jit.opt.start("minstitch=0") -- 0: minimum number of IR ins for a stitched trace.
+	end
+
+	-- below taken from https://github.com/love2d/love/blob/main/src/modules/love/jitsetup.lua
+	-- Somewhat arbitrary value. Needs to be higher than the combined sizes below,
+	-- and higher than the default (512) because that's already too low.
+	jit.opt.start("maxmcode=32768")
+
+	if jit.arch == "arm64" then
+		-- https://github.com/LuaJIT/LuaJIT/issues/285
+		-- LuaJIT 2.1 on arm64 currently (as of commit b4b2dce) can only use memory
+		-- for JIT compilation within a certain short range. Other libraries such as
+		-- SDL can take all the usable space in that range and cause attempts at JIT
+		-- compilation to both fail and take a long time.
+		-- This is a very hacky attempt at a workaround. LuaJIT allocates executable
+		-- code in pools. We'll try "reserving" pools before any external code is
+		-- executed, by causing JIT compilation via a small loop. We can't easily
+		-- tell if JIT compilation succeeded, so we do several successively smaller
+		-- pool allocations in case previous ones fail.
+		-- This is a really hacky hack and by no means foolproof - there are a lot of
+		-- potential situations (especially when threads are used) where previously
+		-- executed external code will still take up space that LuaJIT needed for itself.
+		jit.opt.start("sizemcode=2048")
+
+		for i = 1, 100 do
+
+		end
+
+		jit.opt.start("sizemcode=1024")
+
+		for i = 1, 100 do
+
+		end
+
+		jit.opt.start("sizemcode=512")
+
+		for i = 1, 100 do
+
+		end
+
+		jit.opt.start("sizemcode=256")
+
+		for i = 1, 100 do
+
+		end
+
+		jit.opt.start("sizemcode=128")
+
+		for i = 1, 100 do
+
+		end
+
+		jit.opt.start("sizemcode=2048")
+	else
+		-- Somewhat arbitrary value (>= the default).
+		jit.opt.start("sizemcode=128")
 	end
 end
 
@@ -9405,19 +9476,37 @@ function META:GetLastType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
-local new_token = table_pool(
-	function()
-		local x = {
-			type = "unknown",
-			value = "",
-			whitespace = false,
-			start = 0,
-			stop = 0,
-		}
-		return x
-	end,
-	3105585
-)
+local new_token
+
+if jit.arch == "arm64" then
+	new_token = table_pool(
+		function()
+			local x = {
+				type = "unknown",
+				value = "",
+				whitespace = false,
+				start = 0,
+				stop = 0,
+			}
+			return x
+		end,
+		100000
+	)
+else
+	new_token = table_pool(
+		function()
+			local x = {
+				type = "unknown",
+				value = "",
+				whitespace = false,
+				start = 0,
+				stop = 0,
+			}
+			return x
+		end,
+		3105585
+	)
+end
 
 function META.New(
 	type,
@@ -9584,19 +9673,37 @@ function META:GetLastType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
-local new_token = table_pool(
-	function()
-		local x = {
-			type = "unknown",
-			value = "",
-			whitespace = false,
-			start = 0,
-			stop = 0,
-		}
-		return x
-	end,
-	3105585
-)
+local new_token
+
+if jit.arch == "arm64" then
+	new_token = table_pool(
+		function()
+			local x = {
+				type = "unknown",
+				value = "",
+				whitespace = false,
+				start = 0,
+				stop = 0,
+			}
+			return x
+		end,
+		100000
+	)
+else
+	new_token = table_pool(
+		function()
+			local x = {
+				type = "unknown",
+				value = "",
+				whitespace = false,
+				start = 0,
+				stop = 0,
+			}
+			return x
+		end,
+		3105585
+	)
+end
 
 function META.New(
 	type,
@@ -27790,7 +27897,6 @@ local function clear_temp_file(uri)
 end
 
 function META:Recompile(uri)
-	local responses = {}
 	local compiler
 	local entry_point
 	local cfg
@@ -27807,44 +27913,28 @@ function META:Recompile(uri)
 
 		cfg.inline_require = false
 		cfg.on_read_file = function(parser, path)
-			responses[path] = responses[path] or
-				{
-					method = "textDocument/publishDiagnostics",
-					params = {uri = self.WorkingDirectory .. "/" .. path, diagnostics = {}},
-				}
 			return find_temp_file(self.WorkingDirectory .. "/" .. path)
 		end
 		compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
 	else
 		compiler = Compiler(find_temp_file(uri), uri)
-		responses[uri] = responses[uri] or
-			{
-				method = "textDocument/publishDiagnostics",
-				params = {uri = uri, diagnostics = {}},
-			}
 	end
 
 	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
+	local diagnostics = {}
 
 	do
-		function compiler:OnDiagnostic(code, msg, severity, start, stop, node, ...)
-			local range = get_range(code, start, stop)
-
-			if not range then return end
-
+		function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
 			local name = code:GetName()
-			print("error: ", name, msg, severity, ...)
-			responses[name] = responses[name] or
-				{
-					method = "textDocument/publishDiagnostics",
-					params = {uri = self.WorkingDirectory .. "/" .. name, diagnostics = {}},
-				}
+			diagnostics[name] = diagnostics[name] or {}
 			table.insert(
-				responses[name].params.diagnostics,
+				diagnostics[name],
 				{
-					severity = DiagnosticSeverity[severity],
-					range = range,
+					severity = severity,
+					code = code,
+					start = start,
+					stop = stop,
 					message = helpers.FormatMessage(msg, ...),
 				}
 			)
@@ -27889,32 +27979,28 @@ function META:Recompile(uri)
 
 				if not ok then
 					local name = compiler:GetCode():GetName()
-					responses[name] = responses[name] or
-						{
-							method = "textDocument/publishDiagnostics",
-							params = {uri = self.WorkingDirectory .. "/" .. name, diagnostics = {}},
-						}
+					diagnostics[name] = diagnostics[name] or {}
 					table.insert(
-						responses[name].params.diagnostics,
+						diagnostics,
 						{
-							severity = DiagnosticSeverity["fatal"],
-							range = get_range(compiler:GetCode(), 1, compiler:GetCode():GetByteSize()),
+							severity = "fatal",
+							code = compiler:GetCode(),
+							start = 1,
+							stop = compiler:GetCode():GetByteSize(),
 							message = err,
 						}
 					)
 				end
 			end
-
-			self:OnRefresh()
-		end
-
-		for _, resp in pairs(responses) do
-			self:OnResponse(resp)
 		end
 	end
 
-	return true
+	for name, data in pairs(diagnostics) do
+		self:OnDiagnostics(name, data)
+	end
 end
+
+function META:OnDiagnostics(name, data) end
 
 function META:ReadFile(path)
 	local f = assert(io.open(path, "r"))
@@ -28391,6 +28477,28 @@ lsp.methods["initialize"] = function(params)
 			]] },
 	}
 end
+
+local function get_range(code, start, stop)
+	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
+	return {
+		start = {
+			line = data.line_start - 1,
+			character = data.character_start - 1,
+		},
+		["end"] = {
+			line = data.line_stop - 1,
+			character = data.character_stop, -- not sure about this
+		},
+	}
+end
+
+local DiagnosticSeverity = {
+	error = 1,
+	fatal = 1, -- from lexer and parser
+	warning = 2,
+	information = 3,
+	hint = 4,
+}
 lsp.methods["initialized"] = function(params)
 	editor_helper:Initialize()
 
@@ -28398,8 +28506,27 @@ lsp.methods["initialized"] = function(params)
 		lsp.Call({method = "workspace/semanticTokens/refresh", params = {}})
 	end
 
-	function editor_helper:OnResponse(resp)
-		lsp.Call(resp)
+	function editor_helper:OnDiagnostics(path, data)
+		local diagnostics = {}
+
+		for i, v in ipairs(data) do
+			local range = get_range(v.code, v.start, v.stop)
+			diagnostics[i] = {
+				severity = DiagnosticSeverity[v.severity],
+				range = range,
+				message = v.message,
+			}
+		end
+
+		lsp.Call(
+			{
+				method = "textDocument/publishDiagnostics",
+				params = {
+					uri = self.WorkingDirectory .. "/" .. path,
+					diagnostics = diagnostics,
+				},
+			}
+		)
 	end
 
 	

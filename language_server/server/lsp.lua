@@ -104,6 +104,28 @@ lsp.methods["initialize"] = function(params)
 			]] },
 	}
 end
+
+local function get_range(code, start, stop)
+	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
+	return {
+		start = {
+			line = data.line_start - 1,
+			character = data.character_start - 1,
+		},
+		["end"] = {
+			line = data.line_stop - 1,
+			character = data.character_stop, -- not sure about this
+		},
+	}
+end
+
+local DiagnosticSeverity = {
+	error = 1,
+	fatal = 1, -- from lexer and parser
+	warning = 2,
+	information = 3,
+	hint = 4,
+}
 lsp.methods["initialized"] = function(params)
 	editor_helper:Initialize()
 
@@ -111,8 +133,27 @@ lsp.methods["initialized"] = function(params)
 		lsp.Call({method = "workspace/semanticTokens/refresh", params = {}})
 	end
 
-	function editor_helper:OnResponse(resp)
-		lsp.Call(resp)
+	function editor_helper:OnDiagnostics(path, data)
+		local diagnostics = {}
+
+		for i, v in ipairs(data) do
+			local range = get_range(v.code, v.start, v.stop)
+			diagnostics[i] = {
+				severity = DiagnosticSeverity[v.severity],
+				range = range,
+				message = v.message,
+			}
+		end
+
+		lsp.Call(
+			{
+				method = "textDocument/publishDiagnostics",
+				params = {
+					uri = self.WorkingDirectory .. "/" .. path,
+					diagnostics = diagnostics,
+				},
+			}
+		)
 	end
 
 	--[[#£ parser.dont_hoist_next_import = true]]
