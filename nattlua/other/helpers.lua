@@ -315,7 +315,7 @@ function helpers.JITOptimize()
 	if not jit then return end
 
 	jit.opt.start(
-		"maxtrace=2000", -- 1000 1-65535: maximum number of traces in the cache
+		"maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
 		"maxrecord=8000", -- 4000: maximum number of recorded IR instructions
 		"maxirconst=8000", -- 500: maximum number of IR constants of a trace
 		"maxside=5000", -- 100: maximum number of side traces of a root trace
@@ -347,7 +347,7 @@ function helpers.JITOptimize()
 
 	-- Somewhat arbitrary value. Needs to be higher than the combined sizes below,
 	-- and higher than the default (512) because that's already too low.
-	jit.opt.start("maxmcode=16384")
+	jit.opt.start("maxmcode=32768")
 
 	if jit.arch == "arm64" then
 		-- https://github.com/LuaJIT/LuaJIT/issues/285
@@ -378,6 +378,8 @@ function helpers.JITOptimize()
 		
 		jit.opt.start("sizemcode=128")
 		for i=1, 100 do end
+		
+		jit.opt.start("sizemcode=2048")
 	else
 		-- Somewhat arbitrary value (>= the default).
 		jit.opt.start("sizemcode=128")

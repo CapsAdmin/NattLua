@@ -46,19 +46,36 @@ function META:GetLastType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
-local new_token = table_pool(
-	function()
-		local x = {
-			type = "unknown",
-			value = "",
-			whitespace = false,
-			start = 0,
-			stop = 0,
-		}--[[# as META.@Self]]
-		return x
-	end,
-	3105585
-)
+local new_token
+if jit.arch == "arm64" then
+	new_token = table_pool(
+		function()
+			local x = {
+				type = "unknown",
+				value = "",
+				whitespace = false,
+				start = 0,
+				stop = 0,
+			}--[[# as META.@Self]]
+			return x
+		end,
+		100000
+	)
+else
+	new_token = table_pool(
+		function()
+			local x = {
+				type = "unknown",
+				value = "",
+				whitespace = false,
+				start = 0,
+				stop = 0,
+			}--[[# as META.@Self]]
+			return x
+		end,
+		3105585
+	)
+end
 
 function META.New(
 	type--[[#: META.TokenType]],
