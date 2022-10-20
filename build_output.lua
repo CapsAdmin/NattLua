@@ -28166,7 +28166,7 @@ local function find_token(uri, line, character)
 		return
 	end
 
-	local token, data = find_token_from_line_character(data.tokens, data.code:GetString(), line + 1, character + 1)
+	local token = find_token_from_line_character(data.tokens, data.code:GetString(), line + 1, character + 1)
 	return token, data
 end
 
@@ -28299,42 +28299,57 @@ function META:GetInlayHints(path, start_line, start_character, stop_line, stop_c
 	return hints
 end
 
-function META:Rename(path, line, character, newName)
+local function token_to_upvalue(token)
+	local node = token
+
+	while node do
+		local types = node:GetTypes()
+
+		if #types > 0 then
+			for i, v in ipairs(types) do
+				local upvalue = v:GetUpvalue()
+
+				if upvalue then return upvalue end
+			end
+		end
+
+		node = node.parent
+	end
+end
+
+function META:GetCode(path)
+	local data = find_file(path)
+	return data.code
+end
+
+function META:GetRenameInstructions(path, line, character, newName)
 	local token, data = find_token(path, line, character)
+	assert(token.type == "letter", "cannot rename non letter " .. token.value)
 
-	if not token or not data or not token.parent then return end
+	if not token then return end
 
-	local obj = find_type_from_token(token)
-	local upvalue = obj:GetUpvalue()
-	local changes = {}
+	local upvalue = token_to_upvalue(token)
+	local edits = {}
 
-	if upvalue and upvalue.mutations then
-		for i, v in ipairs(upvalue.mutations) do
-			local node = v.value:GetNode()
+	for i, v in ipairs(data.tokens) do
+		local u = token_to_upvalue(v)
 
-			if node then
-				changes[path] = changes[path] or
-					{
-						textDocument = {
-							version = nil,
-						},
-						edits = {},
-					}
-				local edits = changes[path].edits
+		if u == upvalue and v.type == "letter" then
+			if v.value == token.value then
 				table.insert(
 					edits,
 					{
-						range = get_range(node.Code, node:GetStartStop()),
-						newText = newName,
+						start = v.start,
+						stop = v.stop,
+						from = v.value,
+						to = newName,
 					}
 				)
 			end
 		end
 	end
 
-	return {
-		changes = changes,
-	}
+	return edits
 end
 
 function META:GetDefinition(path, line, character)
@@ -28586,9 +28601,24 @@ lsp.methods["textDocument/inlayHint"] = function(params)
 	return hints
 end
 lsp.methods["textDocument/rename"] = function(params)
-	local changes = editor_helper:Rename(params.textDocument.uri, params.position.line, params.position.character, params.newName)
+	local edits = {}
+
+	for _, edit in ipairs(
+		editor_helper:GetRenameInstructions(params.textDocument.uri, params.position.line - 1, params.position.character - 1, params.newName)
+	) do
+		table.insert(
+			edits,
+			{
+				range = get_range(editor_helper:GetCode(params.textDocument.uri), edit.start, edit.stop),
+				newText = edit.to,
+			}
+		)
+	end
+
 	return {
-		changes = changes,
+		changes = {
+			[params.textDocument.uri] = edits,
+		},
 	}
 end
 lsp.methods["textDocument/definition"] = function(params)

@@ -49,4 +49,79 @@ do
 	assert(diagnostics[1].data[1].message:find("expected assignment or call") ~= nil)
 end
 
-print("done")
+local function get_line_char(code)
+	local _, start = code:find(">>")
+	code = code:gsub(">>", "  ")
+	local line = 0
+	local char = 0
+	for i = 1, start do
+		if code:sub(i, i) == "\n" then
+			line = line + 1
+			char = 0
+		else
+			char = char + 1
+		end
+	end
+	return code, line, char
+end
+
+local function apply_edits(code, edits)
+	for i = #edits, 1, -1 do
+		local edit = edits[i]
+		local before = code:sub(1, edit.start - 1)
+		local after = code:sub(edit.stop + 1, #code)
+		code = before .. edit.to .. after
+	end
+	return code
+end
+ 
+do
+	local code = [[
+        local a = 1
+		do
+			a = 2
+			function foo()
+				>>a = 3
+				asdf(a, a, a)
+			end
+		end
+    ]]
+	
+	local code, line, char = get_line_char(code)
+
+	local editor = single_file(code)
+	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line, char, "b"))
+	assert(#new_code == #new_code)
+end
+
+do
+	local code = [[local >>a = 1]]
+	
+	local code, line, char = get_line_char(code)
+	local editor = single_file(code)
+	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line, char, "foo"))
+	assert(new_code:find("local%s+foo%s+%=") ~= nil)
+end
+
+do
+	local code = [[
+        local function foo()
+
+		end
+
+		foo()
+		>>foo()
+
+		function lol()
+			foo()
+			local bar = foo
+			bar()
+		end
+    ]]
+	
+	local code, line, char = get_line_char(code)
+	local editor = single_file(code)
+	
+	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line, char , "LOL"))
+	assert(code:gsub("foo", "LOL") == new_code)
+end

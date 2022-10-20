@@ -213,9 +213,24 @@ lsp.methods["textDocument/inlayHint"] = function(params)
 	return hints
 end
 lsp.methods["textDocument/rename"] = function(params)
-	local changes = editor_helper:Rename(params.textDocument.uri, params.position.line, params.position.character, params.newName)
+	local edits = {}
+
+	for _, edit in ipairs(
+		editor_helper:GetRenameInstructions(params.textDocument.uri, params.position.line - 1, params.position.character - 1, params.newName)
+	) do
+		table.insert(
+			edits,
+			{
+				range = get_range(editor_helper:GetCode(params.textDocument.uri), edit.start, edit.stop),
+				newText = edit.to,
+			}
+		)
+	end
+
 	return {
-		changes = changes,
+		changes = {
+			[params.textDocument.uri] = edits,
+		},
 	}
 end
 lsp.methods["textDocument/definition"] = function(params)
