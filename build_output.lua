@@ -290,6 +290,226 @@ function META:GetLastType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
+function META:FindType()
+	local found_parents = {}
+
+	do
+		local node = self.parent
+
+		while node and node.parent do
+			table.insert(found_parents, node)
+			node = node.parent
+		end
+	end
+
+	local scope
+
+	for _, node in ipairs(found_parents) do
+		if node.scope then
+			scope = node.scope
+
+			break
+		end
+	end
+
+	local types = {}
+
+	for _, node in ipairs(found_parents) do
+		local found = false
+
+		for _, obj in ipairs(node:GetTypes()) do
+			if type(obj) ~= "table" then
+				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
+			else
+				if obj.Type == "string" and obj:GetData() == self.value then
+
+				else
+					if obj.Type == "table" then obj = obj:GetMutatedFromScope(scope) end
+
+					table.insert(types, obj)
+					found = true
+				end
+			end
+		end
+
+		if found then break end
+	end
+
+	return types, found_parents, scope
+end
+
+function META:FindUpvalue()
+	local node = self
+
+	while node do
+		local types = node:GetTypes()
+
+		if #types > 0 then
+			for i, v in ipairs(types) do
+				local upvalue = v:GetUpvalue()
+
+				if upvalue then return upvalue end
+			end
+		end
+
+		node = node.parent
+	end
+end
+
+function META:GetTypeMod()
+	local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
+	local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
+	local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+	local token = self
+
+	if token.type == "symbol" and token.parent.kind == "function_signature" then
+		return "keyword"
+	end
+
+	if
+		runtime_syntax:IsNonStandardKeyword(token) or
+		typesystem_syntax:IsNonStandardKeyword(token)
+	then
+		-- check if it's used in a statement, because foo.type should not highlight
+		if token.parent and token.parent.type == "statement" then
+			return "keyword"
+		end
+	end
+
+	if runtime_syntax:IsKeywordValue(token) or typesystem_syntax:IsKeywordValue(token) then
+		return "type"
+	end
+
+	if
+		token.value == "." or
+		token.value == ":" or
+		token.value == "=" or
+		token.value == "or" or
+		token.value == "and" or
+		token.value == "not"
+	then
+		return "operator"
+	end
+
+	if runtime_syntax:IsKeyword(token) or typesystem_syntax:IsKeyword(token) then
+		return "keyword"
+	end
+
+	if
+		runtime_syntax:GetTokenType(token):find("operator") or
+		typesystem_syntax:GetTokenType(token):find("operator")
+	then
+		return "operator"
+	end
+
+	if token.type == "symbol" then return "keyword" end
+
+	do
+		local obj
+		local types = token:FindType()
+
+		if #types == 1 then obj = types[1] else obj = Union(types) end
+
+		if obj then
+			local mods = {}
+
+			if obj:IsLiteral() then table.insert(mods, "readonly") end
+
+			if obj.Type == "union" then
+				if obj:IsTypeExceptNil("number") then
+					return "number", mods
+				elseif obj:IsTypeExceptNil("string") then
+					return "string", mods
+				elseif obj:IsTypeExceptNil("symbol") then
+					return "enumMember", mods
+				end
+
+				return "event"
+			end
+
+			if obj.Type == "number" then
+				return "number", mods
+			elseif obj.Type == "string" then
+				return "string", mods
+			elseif obj.Type == "tuple" or obj.Type == "symbol" then
+				return "enumMember", mods
+			elseif obj.Type == "any" then
+				return "regexp", mods
+			end
+
+			if obj.Type == "function" then return "function", mods end
+
+			local parent = obj:GetParent()
+
+			if parent then
+				if obj.Type == "function" then
+					return "macro", mods
+				else
+					if obj.Type == "table" then return "class", mods end
+
+					return "property", mods
+				end
+			end
+
+			if obj.Type == "table" then return "class", mods end
+		end
+	end
+
+	if token.type == "number" then
+		return "number"
+	elseif token.type == "string" then
+		return "string"
+	end
+
+	if
+		token.parent.kind == "value" and
+		token.parent.parent.kind == "binary_operator" and
+		(
+			token.parent.parent.value and
+			token.parent.parent.value.value == "." or
+			token.parent.parent.value.value == ":"
+		)
+	then
+		if token.value:sub(1, 1) == "@" then return "decorator" end
+	end
+
+	if token.type == "letter" and token.parent.kind:find("function", nil, true) then
+		return "function"
+	end
+
+	if
+		token.parent.kind == "value" and
+		token.parent.parent.kind == "binary_operator" and
+		(
+			token.parent.parent.value and
+			token.parent.parent.value.value == "." or
+			token.parent.parent.value.value == ":"
+		)
+	then
+		return "property"
+	end
+
+	if token.parent.kind == "table_key_value" then return "property" end
+
+	if token.parent.standalone_letter then
+		if token.parent.environment == "typesystem" then return "type" end
+
+		if _G[token.value] then return "namespace" end
+
+		return "variable"
+	end
+
+	if token.parent.is_identifier then
+		if token.parent.environment == "typesystem" then return "typeParameter" end
+
+		return "variable"
+	end
+
+	do
+		return "comment"
+	end
+end
+
 local new_token
 
 if jit.arch == "arm64" then
@@ -338,400 +558,516 @@ function META.New(
 end
 
 return META end ]=======], '@nattlua/lexer/token.lua'))()
-do local __M; IMPORTS["nattlua.other.helpers"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) 
+do local __M; IMPORTS["nattlua.syntax"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 
-local math = _G.math
-local table = _G.table
-local quote = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
-local type = _G.type
-local pairs = _G.pairs
-local assert = _G.assert
-local tonumber = _G.tonumber
-local tostring = _G.tostring
-local next = _G.next
-local error = _G.error
-local ipairs = _G.ipairs
-local jit = _G.jit
-local pcall = _G.pcall
-local unpack = _G.unpack
-local helpers = {}
 
-function helpers.LinePositionToSubPosition(code, line, character)
-	line = math.max(line, 1)
-	character = math.max(character, 1)
-	local line_pos = 1
 
-	for i = 1, #code do
-		local c = code:sub(i, i)
+local META = class.CreateTemplate("syntax")
 
-		if line_pos == line then
-			local char_pos = 1
 
-			for i = i, i + character do
-				local c = code:sub(i, i)
 
-				if char_pos == character then return i end
-
-				char_pos = char_pos + 1
-			end
-
-			return i
-		end
-
-		if c == "\n" then line_pos = line_pos + 1 end
-	end
-
-	return #code
-end
-
-function helpers.SubPositionToLinePosition(code, start, stop)
-	local line = 1
-	local line_start = 1
-	local line_stop = nil
-	local within_start = 1
-	local within_stop = #code
-	local character_start = 1
-	local character_stop = 1
-	local line_pos = 1
-	local char_pos = 1
-
-	for i = 1, #code do
-		local char = code:sub(i, i)
-
-		if i == stop then
-			line_stop = line
-			character_stop = char_pos
-		end
-
-		if i == start then
-			line_start = line
-			within_start = line_pos
-			character_start = char_pos
-		end
-
-		if char == "\n" then
-			if line_stop then
-				within_stop = i
-
-				break
-			end
-
-			line = line + 1
-			line_pos = i
-			char_pos = 1
-		else
-			char_pos = char_pos + 1
-		end
-	end
-
-	if line_start ~= line_stop then
-		character_start = within_start
-		character_stop = within_stop
-	end
-
-	return {
-		character_start = character_start,
-		character_stop = character_stop,
-		line_start = line_start,
-		line_stop = line_stop,
-		sub_line_before = {within_start, start - 1},
-		sub_line_after = {stop + 1, within_stop},
-	}
-end
-
-do
-	do
-		-- TODO: wtf am i doing here?
-		local args
-		local fmt = function(str)
-			local num = tonumber(str)
-
-			if not num then error("invalid format argument " .. str) end
-
-			if type(args[num]) == "table" then return quote.QuoteTokens(args[num]) end
-
-			return quote.QuoteToken(args[num] or "?")
-		end
-
-		function helpers.FormatMessage(msg, ...)
-			args = {...}
-			msg = msg:gsub("$(%d)", fmt)
-			return msg
-		end
-	end
-
-	local function clamp(num, min, max)
-		return math.min(math.max(num, min), max)
-	end
-
-	local function find_position_after_lines(str, line_count)
-		local count = 0
-
-		for i = 1, #str do
-			local char = str:sub(i, i)
-
-			if char == "\n" then count = count + 1 end
-
-			if count >= line_count then return i - 1 end
-		end
-
-		return #str
-	end
-
-	local function split(self, separator)
-		local tbl = {}
-		local current_pos = 1
-
-		for i = 1, #self do
-			local start_pos, end_pos = self:find(separator, current_pos, true)
-
-			if not start_pos or not end_pos then break end
-
-			tbl[i] = self:sub(current_pos, start_pos - 1)
-			current_pos = end_pos + 1
-		end
-
-		if current_pos > 1 then
-			tbl[#tbl + 1] = self:sub(current_pos)
-		else
-			tbl[1] = self
-		end
-
-		return tbl
-	end
-
-	local function pad_left(str, len, char)
-		if #str < len + 1 then return char:rep(len - #str + 1) .. str end
-
-		return str
-	end
-
-	local function string_lengthsplit(str, len)
-		if #str > len then
-			local tbl = {}
-			local max = math.floor(#str / len)
-
-			for i = 0, max do
-				local left = i * len + 1
-				local right = (i * len) + len
-				local res = str:sub(left, right)
-
-				if res ~= "" then table.insert(tbl, res) end
-			end
-
-			return tbl
-		end
-
-		return {str}
-	end
-
-	local MAX_WIDTH = 127
-
-	function helpers.BuildSourceCodePointMessage(
-		lua_code,
-		path,
-		msg,
-		start,
-		stop,
-		size
+function META.New()
+	local self = setmetatable(
+		{
+			NumberAnnotations = {},
+			BinaryOperatorInfo = {},
+			Symbols = {},
+			BinaryOperators = {},
+			PrefixOperators = {},
+			PostfixOperators = {},
+			PrimaryBinaryOperators = {},
+			SymbolCharacters = {},
+			SymbolPairs = {},
+			KeywordValues = {},
+			Keywords = {},
+			NonStandardKeywords = {},
+			BinaryOperatorFunctionTranslate = {},
+			PostfixOperatorFunctionTranslate = {},
+			PrefixOperatorFunctionTranslate = {},
+		},
+		META
 	)
-		do
-			local new_str = ""
-			local pos = 1
+	return self
+end
 
-			for i, chunk in ipairs(string_lengthsplit(lua_code, MAX_WIDTH)) do
-				if pos < start and i > 1 then
-					start = start + 1
-				end
+local function has_value(tbl, value)
+	for k, v in ipairs(tbl) do
+		if v == value then return true end
+	end
 
-				if pos < stop and i > 1 then
-					stop = stop + 1
-				end
+	return false
+end
 
-				new_str = new_str .. chunk .. "\n"
-				pos = pos + #chunk
-			end
-
-			lua_code = new_str
+function META:AddSymbols(tbl)
+	for _, symbol in pairs(tbl) do
+		if symbol:find("%p") and not has_value(self.Symbols, symbol) then
+			table.insert(self.Symbols, symbol)
 		end
+	end
 
-		size = size or 2
-		start = clamp(start or 1, 1, #lua_code)
-		stop = clamp(stop or 1, 1, #lua_code)
-		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
-		local code_before = lua_code:sub(1, data.sub_line_before[1] - 1) -- remove the newline
-		local code_between = lua_code:sub(data.sub_line_before[1] + 1, data.sub_line_after[2] - 1)
-		local code_after = lua_code:sub(data.sub_line_after[2] + 1, #lua_code) -- remove the newline
-		code_before = code_before:reverse():sub(1, find_position_after_lines(code_before:reverse(), size)):reverse()
-		code_after = code_after:sub(1, find_position_after_lines(code_after, size))
-		local lines_before = split(code_before, "\n")
-		local lines_between = split(code_between, "\n")
-		local lines_after = split(code_after, "\n")
-		local total_lines = #lines_before + #lines_between + #lines_after
-		local number_length = #tostring(total_lines)
-		local lines = {}
-		local i = data.line_start - #lines_before
+	table.sort(self.Symbols, function(a, b)
+		return #a > #b
+	end)
+end
 
-		for _, line in ipairs(lines_before) do
-			table.insert(lines, pad_left(tostring(i), number_length, " ") .. " | " .. line)
-			i = i + 1
+function META:AddNumberAnnotations(tbl)
+	for i, v in ipairs(tbl) do
+		if not has_value(self.NumberAnnotations, v) then
+			table.insert(self.NumberAnnotations, v)
 		end
+	end
 
-		for i2, line in ipairs(lines_between) do
-			local prefix = pad_left(tostring(i), number_length, " ") .. " | "
-			table.insert(lines, prefix .. line)
+	table.sort(self.NumberAnnotations, function(a, b)
+		return #a > #b
+	end)
+end
 
-			if #lines_between > 1 then
-				if i2 == 1 then
-					-- first line or the only line
-					local length_before = data.sub_line_before[2] - data.sub_line_before[1]
-					local arrow_length = #line - length_before
-					table.insert(lines, (" "):rep(#prefix + length_before) .. ("^"):rep(arrow_length))
-				elseif i2 == #lines_between then
-					-- last line
-					local length_before = data.sub_line_after[2] - data.sub_line_after[1]
-					local arrow_length = #line - length_before
-					table.insert(lines, (" "):rep(#prefix) .. ("^"):rep(arrow_length))
-				else
-					-- lines between
-					table.insert(lines, (" "):rep(#prefix) .. ("^"):rep(#line))
-				end
+function META:GetNumberAnnotations()
+	return self.NumberAnnotations
+end
+
+function META:AddBinaryOperators(tbl)
+	for priority, group in ipairs(tbl) do
+		for _, token in ipairs(group) do
+			local right = token:sub(1, 1) == "R"
+
+			if right then token = token:sub(2) end
+
+			if right then
+				self.BinaryOperatorInfo[token] = {
+					left_priority = priority + 1,
+					right_priority = priority,
+				}
 			else
-				-- one line
-				local length_before = data.sub_line_before[2] - data.sub_line_before[1]
-				local length_after = data.sub_line_after[2] - data.sub_line_after[1]
-				local arrow_length = #line - length_before - length_after
-				table.insert(lines, (" "):rep(#prefix + length_before) .. ("^"):rep(arrow_length))
+				self.BinaryOperatorInfo[token] = {
+					left_priority = priority,
+					right_priority = priority,
+				}
 			end
 
-			i = i + 1
+			self:AddSymbols({token})
+			self.BinaryOperators[token] = true
 		end
-
-		for _, line in ipairs(lines_after) do
-			table.insert(lines, pad_left(tostring(i), number_length, " ") .. " | " .. line)
-			i = i + 1
-		end
-
-		local longest_line = 0
-
-		for _, line in ipairs(lines) do
-			if #line > longest_line then longest_line = #line end
-		end
-
-		longest_line = math.min(longest_line, MAX_WIDTH)
-		table.insert(
-			lines,
-			1,
-			(" "):rep(number_length + 3) .. ("_"):rep(longest_line - number_length + 1)
-		)
-		table.insert(
-			lines,
-			(" "):rep(number_length + 3) .. ("-"):rep(longest_line - number_length + 1)
-		)
-
-		if path then
-			if path:sub(1, 1) == "@" then path = path:sub(2) end
-
-			local msg = path .. ":" .. data.line_start .. ":" .. data.character_start
-			table.insert(lines, pad_left("->", number_length, " ") .. " | " .. msg)
-		end
-
-		table.insert(lines, pad_left("->", number_length, " ") .. " | " .. msg)
-		local str = table.concat(lines, "\n")
-		str = str:gsub("\t", " ")
-		return str
 	end
 end
 
-function helpers.JITOptimize()
-	if not jit then return end
+function META:GetBinaryOperatorInfo(tk)
+	return self.BinaryOperatorInfo[tk.value]
+end
 
-	jit.opt.start(
-		"maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
-		"maxrecord=8000", -- 4000: maximum number of recorded IR instructions
-		"maxirconst=8000", -- 500: maximum number of IR constants of a trace
-		"maxside=5000", -- 100: maximum number of side traces of a root trace
-		"maxsnap=500", -- 500: maximum number of snapshots for a trace
-		"hotloop=56", -- 56: number of iterations to detect a hot loop or hot call
-		"hotexit=50", -- 10: number of taken exits to start a side trace
-		"tryside=4", -- 4: number of attempts to compile a side trace
-		"instunroll=1000", -- 4: maximum unroll factor for instable loops
-		"loopunroll=1000", -- 15: maximum unroll factor for loop ops in side traces
-		"callunroll=1000", -- 3: maximum unroll factor for pseudo-recursive calls
-		"recunroll=0", -- 2: minimum unroll factor for true recursion
-		"+fold", -- Constant Folding, Simplifications and Reassociation
-		"+cse", -- Common-Subexpression Elimination
-		"+dce", -- Dead-Code Elimination
-		"+narrow", -- Narrowing of numbers to integers
-		"+loop", -- Loop Optimizations (code hoisting)
-		"+fwd", -- Load Forwarding (L2L) and Store Forwarding (S2L)
-		"+dse", -- Dead-Store Elimination
-		"+abc", -- Array Bounds Check Elimination
-		"+sink", -- Allocation/Store Sinking
-		"+fuse" -- Fusion of operands into instructions
-	)
+function META:AddPrefixOperators(tbl)
+	self:AddSymbols(tbl)
 
-	if jit.version_num >= 20100 then
-		jit.opt.start("minstitch=0") -- 0: minimum number of IR ins for a stitched trace.
-	end
-
-	-- below taken from https://github.com/love2d/love/blob/main/src/modules/love/jitsetup.lua
-	-- Somewhat arbitrary value. Needs to be higher than the combined sizes below,
-	-- and higher than the default (512) because that's already too low.
-	jit.opt.start("maxmcode=32768")
-
-	if jit.arch == "arm64" then
-		-- https://github.com/LuaJIT/LuaJIT/issues/285
-		-- LuaJIT 2.1 on arm64 currently (as of commit b4b2dce) can only use memory
-		-- for JIT compilation within a certain short range. Other libraries such as
-		-- SDL can take all the usable space in that range and cause attempts at JIT
-		-- compilation to both fail and take a long time.
-		-- This is a very hacky attempt at a workaround. LuaJIT allocates executable
-		-- code in pools. We'll try "reserving" pools before any external code is
-		-- executed, by causing JIT compilation via a small loop. We can't easily
-		-- tell if JIT compilation succeeded, so we do several successively smaller
-		-- pool allocations in case previous ones fail.
-		-- This is a really hacky hack and by no means foolproof - there are a lot of
-		-- potential situations (especially when threads are used) where previously
-		-- executed external code will still take up space that LuaJIT needed for itself.
-		jit.opt.start("sizemcode=2048")
-
-		for i = 1, 100 do
-
-		end
-
-		jit.opt.start("sizemcode=1024")
-
-		for i = 1, 100 do
-
-		end
-
-		jit.opt.start("sizemcode=512")
-
-		for i = 1, 100 do
-
-		end
-
-		jit.opt.start("sizemcode=256")
-
-		for i = 1, 100 do
-
-		end
-
-		jit.opt.start("sizemcode=128")
-
-		for i = 1, 100 do
-
-		end
-
-		jit.opt.start("sizemcode=2048")
-	else
-		-- Somewhat arbitrary value (>= the default).
-		jit.opt.start("sizemcode=128")
+	for _, str in ipairs(tbl) do
+		self.PrefixOperators[str] = true
 	end
 end
 
-return helpers end ]=======], '@./nattlua/other/helpers.lua'))())(...) return __M end end
+function META:IsPrefixOperator(token)
+	return self.PrefixOperators[token.value]
+end
+
+function META:AddPostfixOperators(tbl)
+	self:AddSymbols(tbl)
+
+	for _, str in ipairs(tbl) do
+		self.PostfixOperators[str] = true
+	end
+end
+
+function META:IsPostfixOperator(token)
+	return self.PostfixOperators[token.value]
+end
+
+function META:AddPrimaryBinaryOperators(tbl)
+	self:AddSymbols(tbl)
+
+	for _, str in ipairs(tbl) do
+		self.PrimaryBinaryOperators[str] = true
+	end
+end
+
+function META:IsPrimaryBinaryOperator(token)
+	return self.PrimaryBinaryOperators[token.value]
+end
+
+function META:AddSymbolCharacters(tbl)
+	local list = {}
+
+	for _, val in ipairs(tbl) do
+		if type(val) == "table" then
+			table.insert(list, val[1])
+			table.insert(list, val[2])
+			self.SymbolPairs[val[1]] = val[2]
+		else
+			table.insert(list, val)
+		end
+	end
+
+	self.SymbolCharacters = list
+	self:AddSymbols(list)
+end
+
+function META:AddKeywords(tbl)
+	self:AddSymbols(tbl)
+
+	for _, str in ipairs(tbl) do
+		self.Keywords[str] = true
+	end
+end
+
+function META:IsKeyword(token)
+	return self.Keywords[token.value]
+end
+
+function META:AddKeywordValues(tbl)
+	self:AddSymbols(tbl)
+
+	for _, str in ipairs(tbl) do
+		self.Keywords[str] = true
+		self.KeywordValues[str] = true
+	end
+end
+
+function META:IsKeywordValue(token)
+	return self.KeywordValues[token.value]
+end
+
+function META:AddNonStandardKeywords(tbl)
+	self:AddSymbols(tbl)
+
+	for _, str in ipairs(tbl) do
+		self.NonStandardKeywords[str] = true
+	end
+end
+
+function META:IsNonStandardKeyword(token)
+	return self.NonStandardKeywords[token.value]
+end
+
+function META:GetSymbols()
+	return self.Symbols
+end
+
+function META:AddBinaryOperatorFunctionTranslate(tbl)
+	for k, v in pairs(tbl) do
+		local a, b, c = v:match("(.-)A(.-)B(.*)")
+
+		if a and b and c then
+			self.BinaryOperatorFunctionTranslate[k] = {" " .. a, b, c .. " "}
+		end
+	end
+end
+
+function META:GetFunctionForBinaryOperator(token)
+	return self.BinaryOperatorFunctionTranslate[token.value]
+end
+
+function META:AddPrefixOperatorFunctionTranslate(tbl)
+	for k, v in pairs(tbl) do
+		local a, b = v:match("^(.-)A(.-)$")
+
+		if a and b then
+			self.PrefixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+		end
+	end
+end
+
+function META:GetFunctionForPrefixOperator(token)
+	return self.PrefixOperatorFunctionTranslate[token.value]
+end
+
+function META:AddPostfixOperatorFunctionTranslate(tbl)
+	for k, v in pairs(tbl) do
+		local a, b = v:match("^(.-)A(.-)$")
+
+		if a and b then
+			self.PostfixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+		end
+	end
+end
+
+function META:GetFunctionForPostfixOperator(token)
+	return self.PostfixOperatorFunctionTranslate[token.value]
+end
+
+function META:IsValue(token)
+	if token.type == "number" or token.type == "string" then return true end
+
+	if self:IsKeywordValue(token) then return true end
+
+	if self:IsKeyword(token) then return false end
+
+	if token.type == "letter" then return true end
+
+	return false
+end
+
+function META:GetTokenType(tk)
+	if tk.type == "letter" and self:IsKeyword(tk) then
+		return "keyword"
+	elseif tk.type == "symbol" then
+		if self:IsPrefixOperator(tk) then
+			return "operator_prefix"
+		elseif self:IsPostfixOperator(tk) then
+			return "operator_postfix"
+		elseif self:GetBinaryOperatorInfo(tk) then
+			return "operator_binary"
+		end
+	end
+
+	return tk.type
+end
+
+return META end ]=======], '@./nattlua/syntax.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.syntax.runtime"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) local Syntax = IMPORTS['nattlua.syntax']("nattlua.syntax").New
+local runtime = Syntax()
+runtime:AddSymbolCharacters(
+	{
+		",",
+		";",
+		"=",
+		"::",
+		{"(", ")"},
+		{"{", "}"},
+		{"[", "]"},
+		{"\"", "\""},
+		{"'", "'"},
+		{"<|", "|>"},
+	}
+)
+runtime:AddNumberAnnotations({
+	"ull",
+	"ll",
+	"ul",
+	"i",
+})
+runtime:AddKeywords(
+	{
+		"do",
+		"end",
+		"if",
+		"then",
+		"else",
+		"elseif",
+		"for",
+		"in",
+		"while",
+		"repeat",
+		"until",
+		"break",
+		"return",
+		"local",
+		"function",
+		"and",
+		"not",
+		"or",
+		-- these are just to make sure all code is covered by tests
+		"ÆØÅ",
+		"ÆØÅÆ",
+	}
+)
+-- these are keywords, but can be used as names
+runtime:AddNonStandardKeywords({"continue", "import", "literal", "ref", "mutable", "goto"})
+runtime:AddKeywordValues({
+	"...",
+	"nil",
+	"true",
+	"false",
+})
+runtime:AddPrefixOperators({"-", "#", "not", "!", "~", "supertype"})
+runtime:AddPostfixOperators(
+	{
+		-- these are just to make sure all code is covered by tests
+		"++",
+		"ÆØÅ",
+		"ÆØÅÆ",
+	}
+)
+runtime:AddBinaryOperators(
+	{
+		{"or", "||"},
+		{"and", "&&"},
+		{"<", ">", "<=", ">=", "~=", "==", "!="},
+		{"|"},
+		{"~"},
+		{"&"},
+		{"<<", ">>"},
+		{"R.."}, -- right associative
+		{"+", "-"},
+		{"*", "/", "/idiv/", "%"},
+		{"R^"}, -- right associative
+	}
+)
+runtime:AddPrimaryBinaryOperators({
+	".",
+	":",
+})
+runtime:AddBinaryOperatorFunctionTranslate(
+	{
+		[">>"] = "bit.rshift(A, B)",
+		["<<"] = "bit.lshift(A, B)",
+		["|"] = "bit.bor(A, B)",
+		["&"] = "bit.band(A, B)",
+		["//"] = "math.floor(A / B)",
+		["~"] = "bit.bxor(A, B)",
+	}
+)
+runtime:AddPrefixOperatorFunctionTranslate({
+	["~"] = "bit.bnot(A)",
+})
+runtime:AddPostfixOperatorFunctionTranslate({
+	["++"] = "(A+1)",
+	["ÆØÅ"] = "(A)",
+	["ÆØÅÆ"] = "(A)",
+})
+return runtime end ]=======], '@./nattlua/syntax/runtime.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.syntax.typesystem"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) local Syntax = IMPORTS['nattlua.syntax']("nattlua.syntax").New
+local typesystem = Syntax()
+typesystem:AddSymbolCharacters(
+	{
+		",",
+		";",
+		"=",
+		"::",
+		{"(", ")"},
+		{"{", "}"},
+		{"[", "]"},
+		{"\"", "\""},
+		{"'", "'"},
+		{"<|", "|>"},
+	}
+)
+typesystem:AddNumberAnnotations({"ull", "ll", "ul", "i"})
+typesystem:AddKeywords(
+	{
+		"do",
+		"end",
+		"if",
+		"then",
+		"else",
+		"elseif",
+		"for",
+		"in",
+		"while",
+		"repeat",
+		"until",
+		"break",
+		"return",
+		"local",
+		"function",
+		"and",
+		"not",
+		"or",
+		-- these are just to make sure all code is covered by tests
+		"ÆØÅ",
+		"ÆØÅÆ",
+	}
+)
+-- these are keywords, but can be used as names
+typesystem:AddNonStandardKeywords({
+	"continue",
+	"import",
+	"literal",
+	"ref",
+	"analyzer",
+	"mutable",
+	"type",
+})
+typesystem:AddKeywordValues({
+	"...",
+	"nil",
+	"true",
+	"false",
+})
+typesystem:AddPrefixOperators({
+	"-",
+	"#",
+	"not",
+	"!",
+	"~",
+	"supertype",
+})
+typesystem:AddPostfixOperators(
+	{ -- these are just to make sure all code is covered by tests
+		"++",
+		"ÆØÅ",
+		"ÆØÅÆ",
+	}
+)
+typesystem:AddBinaryOperators(
+	{
+		{"or", "||"},
+		{"and", "&&"},
+		{"<", ">", "<=", ">=", "~=", "==", "!="},
+		{"|"},
+		{"~"},
+		{"&"},
+		{"<<", ">>"},
+		{"R.."}, -- right associative
+		{"+", "-"},
+		{"*", "/", "/idiv/", "%"},
+		{"R^"}, -- right associative
+	}
+)
+typesystem:AddPrimaryBinaryOperators({
+	".",
+	":",
+})
+typesystem:AddBinaryOperatorFunctionTranslate(
+	{
+		[">>"] = "bit.rshift(A, B)",
+		["<<"] = "bit.lshift(A, B)",
+		["|"] = "bit.bor(A, B)",
+		["&"] = "bit.band(A, B)",
+		["//"] = "math.floor(A / B)",
+		["~"] = "bit.bxor(A, B)",
+	}
+)
+typesystem:AddPrefixOperatorFunctionTranslate({
+	["~"] = "bit.bnot(A)",
+})
+typesystem:AddPostfixOperatorFunctionTranslate({
+	["++"] = "(A+1)",
+	["ÆØÅ"] = "(A)",
+	["ÆØÅÆ"] = "(A)",
+})
+typesystem:AddPrefixOperators(
+	{
+		"-",
+		"#",
+		"not",
+		"~",
+		"typeof",
+		"$",
+		"unique",
+		"mutable",
+		"ref",
+		"literal",
+		"supertype",
+		"expand",
+	}
+)
+typesystem:AddPrimaryBinaryOperators({"."})
+typesystem:AddBinaryOperators(
+	{
+		{"or"},
+		{"and"},
+		{"extends"},
+		{"subsetof"},
+		{"supersetof"},
+		{"<", ">", "<=", ">=", "~=", "=="},
+		{"|"},
+		{"~"},
+		{"&"},
+		{"<<", ">>"},
+		{"R.."}, -- right associative
+		{"+", "-"},
+		{"*", "/", "/idiv/", "%"},
+		{"R^"}, -- right associative
+	}
+)
+return typesystem end ]=======], '@./nattlua/syntax/typesystem.lua'))())(...) return __M end end
 do local __M; IMPORTS["nattlua.types.error_messages"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) local table = _G.table
 local type = _G.type
 local ipairs = _G.ipairs
@@ -2153,6 +2489,400 @@ return {
 		return META.New({True(), False()})
 	end,
 } end ]=======], '@./nattlua/types/union.lua'))())(...) return __M end end
+do local __M; IMPORTS["nattlua.other.helpers"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) 
+
+local math = _G.math
+local table = _G.table
+local quote = IMPORTS['nattlua.other.quote']("nattlua.other.quote")
+local type = _G.type
+local pairs = _G.pairs
+local assert = _G.assert
+local tonumber = _G.tonumber
+local tostring = _G.tostring
+local next = _G.next
+local error = _G.error
+local ipairs = _G.ipairs
+local jit = _G.jit
+local pcall = _G.pcall
+local unpack = _G.unpack
+local helpers = {}
+
+function helpers.LinePositionToSubPosition(code, line, character)
+	line = math.max(line, 1)
+	character = math.max(character, 1)
+	local line_pos = 1
+
+	for i = 1, #code do
+		local c = code:sub(i, i)
+
+		if line_pos == line then
+			local char_pos = 1
+
+			for i = i, i + character do
+				local c = code:sub(i, i)
+
+				if char_pos == character then return i end
+
+				char_pos = char_pos + 1
+			end
+
+			return i
+		end
+
+		if c == "\n" then line_pos = line_pos + 1 end
+	end
+
+	return #code
+end
+
+function helpers.SubPositionToLinePosition(code, start, stop)
+	local line = 1
+	local line_start = 1
+	local line_stop = nil
+	local within_start = 1
+	local within_stop = #code
+	local character_start = 1
+	local character_stop = 1
+	local line_pos = 1
+	local char_pos = 1
+
+	for i = 1, #code do
+		local char = code:sub(i, i)
+
+		if i == stop then
+			line_stop = line
+			character_stop = char_pos
+		end
+
+		if i == start then
+			line_start = line
+			within_start = line_pos
+			character_start = char_pos
+		end
+
+		if char == "\n" then
+			if line_stop then
+				within_stop = i
+
+				break
+			end
+
+			line = line + 1
+			line_pos = i
+			char_pos = 1
+		else
+			char_pos = char_pos + 1
+		end
+	end
+
+	if line_start ~= line_stop then
+		character_start = within_start
+		character_stop = within_stop
+	end
+
+	return {
+		character_start = character_start,
+		character_stop = character_stop,
+		line_start = line_start,
+		line_stop = line_stop,
+		sub_line_before = {within_start, start - 1},
+		sub_line_after = {stop + 1, within_stop},
+	}
+end
+
+do
+	do
+		-- TODO: wtf am i doing here?
+		local args
+		local fmt = function(str)
+			local num = tonumber(str)
+
+			if not num then error("invalid format argument " .. str) end
+
+			if type(args[num]) == "table" then return quote.QuoteTokens(args[num]) end
+
+			return quote.QuoteToken(args[num] or "?")
+		end
+
+		function helpers.FormatMessage(msg, ...)
+			args = {...}
+			msg = msg:gsub("$(%d)", fmt)
+			return msg
+		end
+	end
+
+	local function clamp(num, min, max)
+		return math.min(math.max(num, min), max)
+	end
+
+	local function find_position_after_lines(str, line_count)
+		local count = 0
+
+		for i = 1, #str do
+			local char = str:sub(i, i)
+
+			if char == "\n" then count = count + 1 end
+
+			if count >= line_count then return i - 1 end
+		end
+
+		return #str
+	end
+
+	local function split(self, separator)
+		local tbl = {}
+		local current_pos = 1
+
+		for i = 1, #self do
+			local start_pos, end_pos = self:find(separator, current_pos, true)
+
+			if not start_pos or not end_pos then break end
+
+			tbl[i] = self:sub(current_pos, start_pos - 1)
+			current_pos = end_pos + 1
+		end
+
+		if current_pos > 1 then
+			tbl[#tbl + 1] = self:sub(current_pos)
+		else
+			tbl[1] = self
+		end
+
+		return tbl
+	end
+
+	local function pad_left(str, len, char)
+		if #str < len + 1 then return char:rep(len - #str + 1) .. str end
+
+		return str
+	end
+
+	local function string_lengthsplit(str, len)
+		if #str > len then
+			local tbl = {}
+			local max = math.floor(#str / len)
+
+			for i = 0, max do
+				local left = i * len + 1
+				local right = (i * len) + len
+				local res = str:sub(left, right)
+
+				if res ~= "" then table.insert(tbl, res) end
+			end
+
+			return tbl
+		end
+
+		return {str}
+	end
+
+	local MAX_WIDTH = 127
+
+	function helpers.BuildSourceCodePointMessage(
+		lua_code,
+		path,
+		msg,
+		start,
+		stop,
+		size
+	)
+		do
+			local new_str = ""
+			local pos = 1
+
+			for i, chunk in ipairs(string_lengthsplit(lua_code, MAX_WIDTH)) do
+				if pos < start and i > 1 then
+					start = start + 1
+				end
+
+				if pos < stop and i > 1 then
+					stop = stop + 1
+				end
+
+				new_str = new_str .. chunk .. "\n"
+				pos = pos + #chunk
+			end
+
+			lua_code = new_str
+		end
+
+		size = size or 2
+		start = clamp(start or 1, 1, #lua_code)
+		stop = clamp(stop or 1, 1, #lua_code)
+		local data = helpers.SubPositionToLinePosition(lua_code, start, stop)
+		local code_before = lua_code:sub(1, data.sub_line_before[1] - 1) -- remove the newline
+		local code_between = lua_code:sub(data.sub_line_before[1] + 1, data.sub_line_after[2] - 1)
+		local code_after = lua_code:sub(data.sub_line_after[2] + 1, #lua_code) -- remove the newline
+		code_before = code_before:reverse():sub(1, find_position_after_lines(code_before:reverse(), size)):reverse()
+		code_after = code_after:sub(1, find_position_after_lines(code_after, size))
+		local lines_before = split(code_before, "\n")
+		local lines_between = split(code_between, "\n")
+		local lines_after = split(code_after, "\n")
+		local total_lines = #lines_before + #lines_between + #lines_after
+		local number_length = #tostring(total_lines)
+		local lines = {}
+		local i = data.line_start - #lines_before
+
+		for _, line in ipairs(lines_before) do
+			table.insert(lines, pad_left(tostring(i), number_length, " ") .. " | " .. line)
+			i = i + 1
+		end
+
+		for i2, line in ipairs(lines_between) do
+			local prefix = pad_left(tostring(i), number_length, " ") .. " | "
+			table.insert(lines, prefix .. line)
+
+			if #lines_between > 1 then
+				if i2 == 1 then
+					-- first line or the only line
+					local length_before = data.sub_line_before[2] - data.sub_line_before[1]
+					local arrow_length = #line - length_before
+					table.insert(lines, (" "):rep(#prefix + length_before) .. ("^"):rep(arrow_length))
+				elseif i2 == #lines_between then
+					-- last line
+					local length_before = data.sub_line_after[2] - data.sub_line_after[1]
+					local arrow_length = #line - length_before
+					table.insert(lines, (" "):rep(#prefix) .. ("^"):rep(arrow_length))
+				else
+					-- lines between
+					table.insert(lines, (" "):rep(#prefix) .. ("^"):rep(#line))
+				end
+			else
+				-- one line
+				local length_before = data.sub_line_before[2] - data.sub_line_before[1]
+				local length_after = data.sub_line_after[2] - data.sub_line_after[1]
+				local arrow_length = #line - length_before - length_after
+				table.insert(lines, (" "):rep(#prefix + length_before) .. ("^"):rep(arrow_length))
+			end
+
+			i = i + 1
+		end
+
+		for _, line in ipairs(lines_after) do
+			table.insert(lines, pad_left(tostring(i), number_length, " ") .. " | " .. line)
+			i = i + 1
+		end
+
+		local longest_line = 0
+
+		for _, line in ipairs(lines) do
+			if #line > longest_line then longest_line = #line end
+		end
+
+		longest_line = math.min(longest_line, MAX_WIDTH)
+		table.insert(
+			lines,
+			1,
+			(" "):rep(number_length + 3) .. ("_"):rep(longest_line - number_length + 1)
+		)
+		table.insert(
+			lines,
+			(" "):rep(number_length + 3) .. ("-"):rep(longest_line - number_length + 1)
+		)
+
+		if path then
+			if path:sub(1, 1) == "@" then path = path:sub(2) end
+
+			local msg = path .. ":" .. data.line_start .. ":" .. data.character_start
+			table.insert(lines, pad_left("->", number_length, " ") .. " | " .. msg)
+		end
+
+		table.insert(lines, pad_left("->", number_length, " ") .. " | " .. msg)
+		local str = table.concat(lines, "\n")
+		str = str:gsub("\t", " ")
+		return str
+	end
+end
+
+function helpers.JITOptimize()
+	if not jit then return end
+
+	jit.opt.start(
+		"maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
+		"maxrecord=8000", -- 4000: maximum number of recorded IR instructions
+		"maxirconst=8000", -- 500: maximum number of IR constants of a trace
+		"maxside=5000", -- 100: maximum number of side traces of a root trace
+		"maxsnap=500", -- 500: maximum number of snapshots for a trace
+		"hotloop=56", -- 56: number of iterations to detect a hot loop or hot call
+		"hotexit=50", -- 10: number of taken exits to start a side trace
+		"tryside=4", -- 4: number of attempts to compile a side trace
+		"instunroll=1000", -- 4: maximum unroll factor for instable loops
+		"loopunroll=1000", -- 15: maximum unroll factor for loop ops in side traces
+		"callunroll=1000", -- 3: maximum unroll factor for pseudo-recursive calls
+		"recunroll=0", -- 2: minimum unroll factor for true recursion
+		"+fold", -- Constant Folding, Simplifications and Reassociation
+		"+cse", -- Common-Subexpression Elimination
+		"+dce", -- Dead-Code Elimination
+		"+narrow", -- Narrowing of numbers to integers
+		"+loop", -- Loop Optimizations (code hoisting)
+		"+fwd", -- Load Forwarding (L2L) and Store Forwarding (S2L)
+		"+dse", -- Dead-Store Elimination
+		"+abc", -- Array Bounds Check Elimination
+		"+sink", -- Allocation/Store Sinking
+		"+fuse" -- Fusion of operands into instructions
+	)
+
+	if jit.version_num >= 20100 then
+		jit.opt.start("minstitch=0") -- 0: minimum number of IR ins for a stitched trace.
+	end
+
+	-- below taken from https://github.com/love2d/love/blob/main/src/modules/love/jitsetup.lua
+	-- Somewhat arbitrary value. Needs to be higher than the combined sizes below,
+	-- and higher than the default (512) because that's already too low.
+	jit.opt.start("maxmcode=32768")
+
+	if jit.arch == "arm64" then
+		-- https://github.com/LuaJIT/LuaJIT/issues/285
+		-- LuaJIT 2.1 on arm64 currently (as of commit b4b2dce) can only use memory
+		-- for JIT compilation within a certain short range. Other libraries such as
+		-- SDL can take all the usable space in that range and cause attempts at JIT
+		-- compilation to both fail and take a long time.
+		-- This is a very hacky attempt at a workaround. LuaJIT allocates executable
+		-- code in pools. We'll try "reserving" pools before any external code is
+		-- executed, by causing JIT compilation via a small loop. We can't easily
+		-- tell if JIT compilation succeeded, so we do several successively smaller
+		-- pool allocations in case previous ones fail.
+		-- This is a really hacky hack and by no means foolproof - there are a lot of
+		-- potential situations (especially when threads are used) where previously
+		-- executed external code will still take up space that LuaJIT needed for itself.
+		jit.opt.start("sizemcode=2048")
+
+		for i = 1, 100 do
+
+		end
+
+		jit.opt.start("sizemcode=1024")
+
+		for i = 1, 100 do
+
+		end
+
+		jit.opt.start("sizemcode=512")
+
+		for i = 1, 100 do
+
+		end
+
+		jit.opt.start("sizemcode=256")
+
+		for i = 1, 100 do
+
+		end
+
+		jit.opt.start("sizemcode=128")
+
+		for i = 1, 100 do
+
+		end
+
+		jit.opt.start("sizemcode=2048")
+	else
+		-- Somewhat arbitrary value (>= the default).
+		jit.opt.start("sizemcode=128")
+	end
+end
+
+return helpers end ]=======], '@./nattlua/other/helpers.lua'))())(...) return __M end end
 do local __M; IMPORTS["nattlua.analyzer.context"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) local current_analyzer = {}
 local CONTEXT = {}
 
@@ -9476,6 +10206,226 @@ function META:GetLastType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
+function META:FindType()
+	local found_parents = {}
+
+	do
+		local node = self.parent
+
+		while node and node.parent do
+			table.insert(found_parents, node)
+			node = node.parent
+		end
+	end
+
+	local scope
+
+	for _, node in ipairs(found_parents) do
+		if node.scope then
+			scope = node.scope
+
+			break
+		end
+	end
+
+	local types = {}
+
+	for _, node in ipairs(found_parents) do
+		local found = false
+
+		for _, obj in ipairs(node:GetTypes()) do
+			if type(obj) ~= "table" then
+				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
+			else
+				if obj.Type == "string" and obj:GetData() == self.value then
+
+				else
+					if obj.Type == "table" then obj = obj:GetMutatedFromScope(scope) end
+
+					table.insert(types, obj)
+					found = true
+				end
+			end
+		end
+
+		if found then break end
+	end
+
+	return types, found_parents, scope
+end
+
+function META:FindUpvalue()
+	local node = self
+
+	while node do
+		local types = node:GetTypes()
+
+		if #types > 0 then
+			for i, v in ipairs(types) do
+				local upvalue = v:GetUpvalue()
+
+				if upvalue then return upvalue end
+			end
+		end
+
+		node = node.parent
+	end
+end
+
+function META:GetTypeMod()
+	local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
+	local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
+	local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+	local token = self
+
+	if token.type == "symbol" and token.parent.kind == "function_signature" then
+		return "keyword"
+	end
+
+	if
+		runtime_syntax:IsNonStandardKeyword(token) or
+		typesystem_syntax:IsNonStandardKeyword(token)
+	then
+		-- check if it's used in a statement, because foo.type should not highlight
+		if token.parent and token.parent.type == "statement" then
+			return "keyword"
+		end
+	end
+
+	if runtime_syntax:IsKeywordValue(token) or typesystem_syntax:IsKeywordValue(token) then
+		return "type"
+	end
+
+	if
+		token.value == "." or
+		token.value == ":" or
+		token.value == "=" or
+		token.value == "or" or
+		token.value == "and" or
+		token.value == "not"
+	then
+		return "operator"
+	end
+
+	if runtime_syntax:IsKeyword(token) or typesystem_syntax:IsKeyword(token) then
+		return "keyword"
+	end
+
+	if
+		runtime_syntax:GetTokenType(token):find("operator") or
+		typesystem_syntax:GetTokenType(token):find("operator")
+	then
+		return "operator"
+	end
+
+	if token.type == "symbol" then return "keyword" end
+
+	do
+		local obj
+		local types = token:FindType()
+
+		if #types == 1 then obj = types[1] else obj = Union(types) end
+
+		if obj then
+			local mods = {}
+
+			if obj:IsLiteral() then table.insert(mods, "readonly") end
+
+			if obj.Type == "union" then
+				if obj:IsTypeExceptNil("number") then
+					return "number", mods
+				elseif obj:IsTypeExceptNil("string") then
+					return "string", mods
+				elseif obj:IsTypeExceptNil("symbol") then
+					return "enumMember", mods
+				end
+
+				return "event"
+			end
+
+			if obj.Type == "number" then
+				return "number", mods
+			elseif obj.Type == "string" then
+				return "string", mods
+			elseif obj.Type == "tuple" or obj.Type == "symbol" then
+				return "enumMember", mods
+			elseif obj.Type == "any" then
+				return "regexp", mods
+			end
+
+			if obj.Type == "function" then return "function", mods end
+
+			local parent = obj:GetParent()
+
+			if parent then
+				if obj.Type == "function" then
+					return "macro", mods
+				else
+					if obj.Type == "table" then return "class", mods end
+
+					return "property", mods
+				end
+			end
+
+			if obj.Type == "table" then return "class", mods end
+		end
+	end
+
+	if token.type == "number" then
+		return "number"
+	elseif token.type == "string" then
+		return "string"
+	end
+
+	if
+		token.parent.kind == "value" and
+		token.parent.parent.kind == "binary_operator" and
+		(
+			token.parent.parent.value and
+			token.parent.parent.value.value == "." or
+			token.parent.parent.value.value == ":"
+		)
+	then
+		if token.value:sub(1, 1) == "@" then return "decorator" end
+	end
+
+	if token.type == "letter" and token.parent.kind:find("function", nil, true) then
+		return "function"
+	end
+
+	if
+		token.parent.kind == "value" and
+		token.parent.parent.kind == "binary_operator" and
+		(
+			token.parent.parent.value and
+			token.parent.parent.value.value == "." or
+			token.parent.parent.value.value == ":"
+		)
+	then
+		return "property"
+	end
+
+	if token.parent.kind == "table_key_value" then return "property" end
+
+	if token.parent.standalone_letter then
+		if token.parent.environment == "typesystem" then return "type" end
+
+		if _G[token.value] then return "namespace" end
+
+		return "variable"
+	end
+
+	if token.parent.is_identifier then
+		if token.parent.environment == "typesystem" then return "typeParameter" end
+
+		return "variable"
+	end
+
+	do
+		return "comment"
+	end
+end
+
 local new_token
 
 if jit.arch == "arm64" then
@@ -9673,6 +10623,226 @@ function META:GetLastType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
+function META:FindType()
+	local found_parents = {}
+
+	do
+		local node = self.parent
+
+		while node and node.parent do
+			table.insert(found_parents, node)
+			node = node.parent
+		end
+	end
+
+	local scope
+
+	for _, node in ipairs(found_parents) do
+		if node.scope then
+			scope = node.scope
+
+			break
+		end
+	end
+
+	local types = {}
+
+	for _, node in ipairs(found_parents) do
+		local found = false
+
+		for _, obj in ipairs(node:GetTypes()) do
+			if type(obj) ~= "table" then
+				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
+			else
+				if obj.Type == "string" and obj:GetData() == self.value then
+
+				else
+					if obj.Type == "table" then obj = obj:GetMutatedFromScope(scope) end
+
+					table.insert(types, obj)
+					found = true
+				end
+			end
+		end
+
+		if found then break end
+	end
+
+	return types, found_parents, scope
+end
+
+function META:FindUpvalue()
+	local node = self
+
+	while node do
+		local types = node:GetTypes()
+
+		if #types > 0 then
+			for i, v in ipairs(types) do
+				local upvalue = v:GetUpvalue()
+
+				if upvalue then return upvalue end
+			end
+		end
+
+		node = node.parent
+	end
+end
+
+function META:GetTypeMod()
+	local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
+	local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
+	local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
+	local token = self
+
+	if token.type == "symbol" and token.parent.kind == "function_signature" then
+		return "keyword"
+	end
+
+	if
+		runtime_syntax:IsNonStandardKeyword(token) or
+		typesystem_syntax:IsNonStandardKeyword(token)
+	then
+		-- check if it's used in a statement, because foo.type should not highlight
+		if token.parent and token.parent.type == "statement" then
+			return "keyword"
+		end
+	end
+
+	if runtime_syntax:IsKeywordValue(token) or typesystem_syntax:IsKeywordValue(token) then
+		return "type"
+	end
+
+	if
+		token.value == "." or
+		token.value == ":" or
+		token.value == "=" or
+		token.value == "or" or
+		token.value == "and" or
+		token.value == "not"
+	then
+		return "operator"
+	end
+
+	if runtime_syntax:IsKeyword(token) or typesystem_syntax:IsKeyword(token) then
+		return "keyword"
+	end
+
+	if
+		runtime_syntax:GetTokenType(token):find("operator") or
+		typesystem_syntax:GetTokenType(token):find("operator")
+	then
+		return "operator"
+	end
+
+	if token.type == "symbol" then return "keyword" end
+
+	do
+		local obj
+		local types = token:FindType()
+
+		if #types == 1 then obj = types[1] else obj = Union(types) end
+
+		if obj then
+			local mods = {}
+
+			if obj:IsLiteral() then table.insert(mods, "readonly") end
+
+			if obj.Type == "union" then
+				if obj:IsTypeExceptNil("number") then
+					return "number", mods
+				elseif obj:IsTypeExceptNil("string") then
+					return "string", mods
+				elseif obj:IsTypeExceptNil("symbol") then
+					return "enumMember", mods
+				end
+
+				return "event"
+			end
+
+			if obj.Type == "number" then
+				return "number", mods
+			elseif obj.Type == "string" then
+				return "string", mods
+			elseif obj.Type == "tuple" or obj.Type == "symbol" then
+				return "enumMember", mods
+			elseif obj.Type == "any" then
+				return "regexp", mods
+			end
+
+			if obj.Type == "function" then return "function", mods end
+
+			local parent = obj:GetParent()
+
+			if parent then
+				if obj.Type == "function" then
+					return "macro", mods
+				else
+					if obj.Type == "table" then return "class", mods end
+
+					return "property", mods
+				end
+			end
+
+			if obj.Type == "table" then return "class", mods end
+		end
+	end
+
+	if token.type == "number" then
+		return "number"
+	elseif token.type == "string" then
+		return "string"
+	end
+
+	if
+		token.parent.kind == "value" and
+		token.parent.parent.kind == "binary_operator" and
+		(
+			token.parent.parent.value and
+			token.parent.parent.value.value == "." or
+			token.parent.parent.value.value == ":"
+		)
+	then
+		if token.value:sub(1, 1) == "@" then return "decorator" end
+	end
+
+	if token.type == "letter" and token.parent.kind:find("function", nil, true) then
+		return "function"
+	end
+
+	if
+		token.parent.kind == "value" and
+		token.parent.parent.kind == "binary_operator" and
+		(
+			token.parent.parent.value and
+			token.parent.parent.value.value == "." or
+			token.parent.parent.value.value == ":"
+		)
+	then
+		return "property"
+	end
+
+	if token.parent.kind == "table_key_value" then return "property" end
+
+	if token.parent.standalone_letter then
+		if token.parent.environment == "typesystem" then return "type" end
+
+		if _G[token.value] then return "namespace" end
+
+		return "variable"
+	end
+
+	if token.parent.is_identifier then
+		if token.parent.environment == "typesystem" then return "typeParameter" end
+
+		return "variable"
+	end
+
+	do
+		return "comment"
+	end
+end
+
 local new_token
 
 if jit.arch == "arm64" then
@@ -9810,370 +10980,6 @@ if jit then
 end
 
 return characters end ]=======], '@./nattlua/syntax/characters.lua'))())(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
-
-
-
-local META = class.CreateTemplate("syntax")
-
-
-
-function META.New()
-	local self = setmetatable(
-		{
-			NumberAnnotations = {},
-			BinaryOperatorInfo = {},
-			Symbols = {},
-			BinaryOperators = {},
-			PrefixOperators = {},
-			PostfixOperators = {},
-			PrimaryBinaryOperators = {},
-			SymbolCharacters = {},
-			SymbolPairs = {},
-			KeywordValues = {},
-			Keywords = {},
-			NonStandardKeywords = {},
-			BinaryOperatorFunctionTranslate = {},
-			PostfixOperatorFunctionTranslate = {},
-			PrefixOperatorFunctionTranslate = {},
-		},
-		META
-	)
-	return self
-end
-
-local function has_value(tbl, value)
-	for k, v in ipairs(tbl) do
-		if v == value then return true end
-	end
-
-	return false
-end
-
-function META:AddSymbols(tbl)
-	for _, symbol in pairs(tbl) do
-		if symbol:find("%p") and not has_value(self.Symbols, symbol) then
-			table.insert(self.Symbols, symbol)
-		end
-	end
-
-	table.sort(self.Symbols, function(a, b)
-		return #a > #b
-	end)
-end
-
-function META:AddNumberAnnotations(tbl)
-	for i, v in ipairs(tbl) do
-		if not has_value(self.NumberAnnotations, v) then
-			table.insert(self.NumberAnnotations, v)
-		end
-	end
-
-	table.sort(self.NumberAnnotations, function(a, b)
-		return #a > #b
-	end)
-end
-
-function META:GetNumberAnnotations()
-	return self.NumberAnnotations
-end
-
-function META:AddBinaryOperators(tbl)
-	for priority, group in ipairs(tbl) do
-		for _, token in ipairs(group) do
-			local right = token:sub(1, 1) == "R"
-
-			if right then token = token:sub(2) end
-
-			if right then
-				self.BinaryOperatorInfo[token] = {
-					left_priority = priority + 1,
-					right_priority = priority,
-				}
-			else
-				self.BinaryOperatorInfo[token] = {
-					left_priority = priority,
-					right_priority = priority,
-				}
-			end
-
-			self:AddSymbols({token})
-			self.BinaryOperators[token] = true
-		end
-	end
-end
-
-function META:GetBinaryOperatorInfo(tk)
-	return self.BinaryOperatorInfo[tk.value]
-end
-
-function META:AddPrefixOperators(tbl)
-	self:AddSymbols(tbl)
-
-	for _, str in ipairs(tbl) do
-		self.PrefixOperators[str] = true
-	end
-end
-
-function META:IsPrefixOperator(token)
-	return self.PrefixOperators[token.value]
-end
-
-function META:AddPostfixOperators(tbl)
-	self:AddSymbols(tbl)
-
-	for _, str in ipairs(tbl) do
-		self.PostfixOperators[str] = true
-	end
-end
-
-function META:IsPostfixOperator(token)
-	return self.PostfixOperators[token.value]
-end
-
-function META:AddPrimaryBinaryOperators(tbl)
-	self:AddSymbols(tbl)
-
-	for _, str in ipairs(tbl) do
-		self.PrimaryBinaryOperators[str] = true
-	end
-end
-
-function META:IsPrimaryBinaryOperator(token)
-	return self.PrimaryBinaryOperators[token.value]
-end
-
-function META:AddSymbolCharacters(tbl)
-	local list = {}
-
-	for _, val in ipairs(tbl) do
-		if type(val) == "table" then
-			table.insert(list, val[1])
-			table.insert(list, val[2])
-			self.SymbolPairs[val[1]] = val[2]
-		else
-			table.insert(list, val)
-		end
-	end
-
-	self.SymbolCharacters = list
-	self:AddSymbols(list)
-end
-
-function META:AddKeywords(tbl)
-	self:AddSymbols(tbl)
-
-	for _, str in ipairs(tbl) do
-		self.Keywords[str] = true
-	end
-end
-
-function META:IsKeyword(token)
-	return self.Keywords[token.value]
-end
-
-function META:AddKeywordValues(tbl)
-	self:AddSymbols(tbl)
-
-	for _, str in ipairs(tbl) do
-		self.Keywords[str] = true
-		self.KeywordValues[str] = true
-	end
-end
-
-function META:IsKeywordValue(token)
-	return self.KeywordValues[token.value]
-end
-
-function META:AddNonStandardKeywords(tbl)
-	self:AddSymbols(tbl)
-
-	for _, str in ipairs(tbl) do
-		self.NonStandardKeywords[str] = true
-	end
-end
-
-function META:IsNonStandardKeyword(token)
-	return self.NonStandardKeywords[token.value]
-end
-
-function META:GetSymbols()
-	return self.Symbols
-end
-
-function META:AddBinaryOperatorFunctionTranslate(tbl)
-	for k, v in pairs(tbl) do
-		local a, b, c = v:match("(.-)A(.-)B(.*)")
-
-		if a and b and c then
-			self.BinaryOperatorFunctionTranslate[k] = {" " .. a, b, c .. " "}
-		end
-	end
-end
-
-function META:GetFunctionForBinaryOperator(token)
-	return self.BinaryOperatorFunctionTranslate[token.value]
-end
-
-function META:AddPrefixOperatorFunctionTranslate(tbl)
-	for k, v in pairs(tbl) do
-		local a, b = v:match("^(.-)A(.-)$")
-
-		if a and b then
-			self.PrefixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
-		end
-	end
-end
-
-function META:GetFunctionForPrefixOperator(token)
-	return self.PrefixOperatorFunctionTranslate[token.value]
-end
-
-function META:AddPostfixOperatorFunctionTranslate(tbl)
-	for k, v in pairs(tbl) do
-		local a, b = v:match("^(.-)A(.-)$")
-
-		if a and b then
-			self.PostfixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
-		end
-	end
-end
-
-function META:GetFunctionForPostfixOperator(token)
-	return self.PostfixOperatorFunctionTranslate[token.value]
-end
-
-function META:IsValue(token)
-	if token.type == "number" or token.type == "string" then return true end
-
-	if self:IsKeywordValue(token) then return true end
-
-	if self:IsKeyword(token) then return false end
-
-	if token.type == "letter" then return true end
-
-	return false
-end
-
-function META:GetTokenType(tk)
-	if tk.type == "letter" and self:IsKeyword(tk) then
-		return "keyword"
-	elseif tk.type == "symbol" then
-		if self:IsPrefixOperator(tk) then
-			return "operator_prefix"
-		elseif self:IsPostfixOperator(tk) then
-			return "operator_postfix"
-		elseif self:GetBinaryOperatorInfo(tk) then
-			return "operator_binary"
-		end
-	end
-
-	return tk.type
-end
-
-return META end ]=======], '@./nattlua/syntax.lua'))())(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.runtime"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) local Syntax = IMPORTS['nattlua.syntax']("nattlua.syntax").New
-local runtime = Syntax()
-runtime:AddSymbolCharacters(
-	{
-		",",
-		";",
-		"=",
-		"::",
-		{"(", ")"},
-		{"{", "}"},
-		{"[", "]"},
-		{"\"", "\""},
-		{"'", "'"},
-		{"<|", "|>"},
-	}
-)
-runtime:AddNumberAnnotations({
-	"ull",
-	"ll",
-	"ul",
-	"i",
-})
-runtime:AddKeywords(
-	{
-		"do",
-		"end",
-		"if",
-		"then",
-		"else",
-		"elseif",
-		"for",
-		"in",
-		"while",
-		"repeat",
-		"until",
-		"break",
-		"return",
-		"local",
-		"function",
-		"and",
-		"not",
-		"or",
-		-- these are just to make sure all code is covered by tests
-		"ÆØÅ",
-		"ÆØÅÆ",
-	}
-)
--- these are keywords, but can be used as names
-runtime:AddNonStandardKeywords({"continue", "import", "literal", "ref", "mutable", "goto"})
-runtime:AddKeywordValues({
-	"...",
-	"nil",
-	"true",
-	"false",
-})
-runtime:AddPrefixOperators({"-", "#", "not", "!", "~", "supertype"})
-runtime:AddPostfixOperators(
-	{
-		-- these are just to make sure all code is covered by tests
-		"++",
-		"ÆØÅ",
-		"ÆØÅÆ",
-	}
-)
-runtime:AddBinaryOperators(
-	{
-		{"or", "||"},
-		{"and", "&&"},
-		{"<", ">", "<=", ">=", "~=", "==", "!="},
-		{"|"},
-		{"~"},
-		{"&"},
-		{"<<", ">>"},
-		{"R.."}, -- right associative
-		{"+", "-"},
-		{"*", "/", "/idiv/", "%"},
-		{"R^"}, -- right associative
-	}
-)
-runtime:AddPrimaryBinaryOperators({
-	".",
-	":",
-})
-runtime:AddBinaryOperatorFunctionTranslate(
-	{
-		[">>"] = "bit.rshift(A, B)",
-		["<<"] = "bit.lshift(A, B)",
-		["|"] = "bit.bor(A, B)",
-		["&"] = "bit.band(A, B)",
-		["//"] = "math.floor(A / B)",
-		["~"] = "bit.bxor(A, B)",
-	}
-)
-runtime:AddPrefixOperatorFunctionTranslate({
-	["~"] = "bit.bnot(A)",
-})
-runtime:AddPostfixOperatorFunctionTranslate({
-	["++"] = "(A+1)",
-	["ÆØÅ"] = "(A)",
-	["ÆØÅÆ"] = "(A)",
-})
-return runtime end ]=======], '@./nattlua/syntax/runtime.lua'))())(...) return __M end end
 do local __M; IMPORTS["nattlua.lexer"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) 
 
 
@@ -12640,152 +13446,6 @@ function profiler.PopZone()
 end
 
 return profiler end ]=======], '@./nattlua/other/profiler.lua'))())(...) return __M end end
-do local __M; IMPORTS["nattlua.syntax.typesystem"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) local Syntax = IMPORTS['nattlua.syntax']("nattlua.syntax").New
-local typesystem = Syntax()
-typesystem:AddSymbolCharacters(
-	{
-		",",
-		";",
-		"=",
-		"::",
-		{"(", ")"},
-		{"{", "}"},
-		{"[", "]"},
-		{"\"", "\""},
-		{"'", "'"},
-		{"<|", "|>"},
-	}
-)
-typesystem:AddNumberAnnotations({"ull", "ll", "ul", "i"})
-typesystem:AddKeywords(
-	{
-		"do",
-		"end",
-		"if",
-		"then",
-		"else",
-		"elseif",
-		"for",
-		"in",
-		"while",
-		"repeat",
-		"until",
-		"break",
-		"return",
-		"local",
-		"function",
-		"and",
-		"not",
-		"or",
-		-- these are just to make sure all code is covered by tests
-		"ÆØÅ",
-		"ÆØÅÆ",
-	}
-)
--- these are keywords, but can be used as names
-typesystem:AddNonStandardKeywords({
-	"continue",
-	"import",
-	"literal",
-	"ref",
-	"analyzer",
-	"mutable",
-	"type",
-})
-typesystem:AddKeywordValues({
-	"...",
-	"nil",
-	"true",
-	"false",
-})
-typesystem:AddPrefixOperators({
-	"-",
-	"#",
-	"not",
-	"!",
-	"~",
-	"supertype",
-})
-typesystem:AddPostfixOperators(
-	{ -- these are just to make sure all code is covered by tests
-		"++",
-		"ÆØÅ",
-		"ÆØÅÆ",
-	}
-)
-typesystem:AddBinaryOperators(
-	{
-		{"or", "||"},
-		{"and", "&&"},
-		{"<", ">", "<=", ">=", "~=", "==", "!="},
-		{"|"},
-		{"~"},
-		{"&"},
-		{"<<", ">>"},
-		{"R.."}, -- right associative
-		{"+", "-"},
-		{"*", "/", "/idiv/", "%"},
-		{"R^"}, -- right associative
-	}
-)
-typesystem:AddPrimaryBinaryOperators({
-	".",
-	":",
-})
-typesystem:AddBinaryOperatorFunctionTranslate(
-	{
-		[">>"] = "bit.rshift(A, B)",
-		["<<"] = "bit.lshift(A, B)",
-		["|"] = "bit.bor(A, B)",
-		["&"] = "bit.band(A, B)",
-		["//"] = "math.floor(A / B)",
-		["~"] = "bit.bxor(A, B)",
-	}
-)
-typesystem:AddPrefixOperatorFunctionTranslate({
-	["~"] = "bit.bnot(A)",
-})
-typesystem:AddPostfixOperatorFunctionTranslate({
-	["++"] = "(A+1)",
-	["ÆØÅ"] = "(A)",
-	["ÆØÅÆ"] = "(A)",
-})
-typesystem:AddPrefixOperators(
-	{
-		"-",
-		"#",
-		"not",
-		"~",
-		"typeof",
-		"$",
-		"unique",
-		"mutable",
-		"ref",
-		"literal",
-		"supertype",
-		"expand",
-	}
-)
-typesystem:AddPrimaryBinaryOperators({"."})
-typesystem:AddBinaryOperators(
-	{
-		{"or"},
-		{"and"},
-		{"extends"},
-		{"subsetof"},
-		{"supersetof"},
-		{"<", ">", "<=", ">=", "~=", "=="},
-		{"|"},
-		{"~"},
-		{"&"},
-		{"<<", ">>"},
-		{"R.."}, -- right associative
-		{"+", "-"},
-		{"*", "/", "/idiv/", "%"},
-		{"R^"}, -- right associative
-	}
-)
-return typesystem end ]=======], '@./nattlua/syntax/typesystem.lua'))())(...) return __M end end
 IMPORTS['nattlua/parser/expressions.lua'] = assert((loadstring or load)([=======[ return function(...) local META = ...
 local table_insert = _G.table.insert
 local table_remove = _G.table.remove
@@ -27592,223 +28252,12 @@ META:GetSet("ConfigFunction", function()
 end)
 
 function META.New()
-	local self = {}
+	local self = {
+		TempFiles = {},
+		LoadedFiles = {},
+	}
 	setmetatable(self, META)
 	return self
-end
-
-local DiagnosticSeverity = {
-	error = 1,
-	fatal = 1, -- from lexer and parser
-	warning = 2,
-	information = 3,
-	hint = 4,
-}
-
-local function find_type_from_token(token)
-	local found_parents = {}
-
-	do
-		local node = token.parent
-
-		while node and node.parent do
-			table.insert(found_parents, node)
-			node = node.parent
-		end
-	end
-
-	local scope
-
-	for _, node in ipairs(found_parents) do
-		if node.scope then
-			scope = node.scope
-
-			break
-		end
-	end
-
-	local union = Union({})
-
-	for _, node in ipairs(found_parents) do
-		local found = false
-
-		for _, obj in ipairs(node:GetTypes()) do
-			if type(obj) ~= "table" then
-				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
-			else
-				if obj.Type == "string" and obj:GetData() == token.value then
-
-				else
-					if obj.Type == "table" then obj = obj:GetMutatedFromScope(scope) end
-
-					union:AddType(obj)
-					found = true
-				end
-			end
-		end
-
-		if found then break end
-	end
-
-	if union:IsEmpty() then return nil, found_parents, scope end
-
-	if union:GetLength() == 1 then
-		return union:GetData()[1], found_parents, scope
-	end
-
-	return union, found_parents, scope
-end
-
-local function token_to_type_mod(token)
-	if token.type == "symbol" and token.parent.kind == "function_signature" then
-		return {[token] = {"keyword"}}
-	end
-
-	if
-		runtime_syntax:IsNonStandardKeyword(token) or
-		typesystem_syntax:IsNonStandardKeyword(token)
-	then
-		-- check if it's used in a statement, because foo.type should not highlight
-		if token.parent and token.parent.type == "statement" then
-			return {[token] = {"keyword"}}
-		end
-	end
-
-	if runtime_syntax:IsKeywordValue(token) or typesystem_syntax:IsKeywordValue(token) then
-		return {[token] = {"type"}}
-	end
-
-	if
-		token.value == "." or
-		token.value == ":" or
-		token.value == "=" or
-		token.value == "or" or
-		token.value == "and" or
-		token.value == "not"
-	then
-		return {[token] = {"operator"}}
-	end
-
-	if runtime_syntax:IsKeyword(token) or typesystem_syntax:IsKeyword(token) then
-		return {[token] = {"keyword"}}
-	end
-
-	if
-		runtime_syntax:GetTokenType(token):find("operator") or
-		typesystem_syntax:GetTokenType(token):find("operator")
-	then
-		return {[token] = {"operator"}}
-	end
-
-	if token.type == "symbol" then return {[token] = {"keyword"}} end
-
-	do
-		local obj = find_type_from_token(token)
-
-		if obj then
-			local mods = {}
-
-			if obj:IsLiteral() then table.insert(mods, "readonly") end
-
-			if obj.Type == "union" then
-				if obj:IsTypeExceptNil("number") then
-					return {[token] = {"number", mods}}
-				elseif obj:IsTypeExceptNil("string") then
-					return {[token] = {"string", mods}}
-				elseif obj:IsTypeExceptNil("symbol") then
-					return {[token] = {"enumMember", mods}}
-				end
-
-				return {[token] = {"event"}}
-			end
-
-			if obj.Type == "number" then
-				return {[token] = {"number", mods}}
-			elseif obj.Type == "string" then
-				return {[token] = {"string", mods}}
-			elseif obj.Type == "tuple" or obj.Type == "symbol" then
-				return {[token] = {"enumMember", mods}}
-			elseif obj.Type == "any" then
-				return {[token] = {"regexp", mods}}
-			end
-
-			if obj.Type == "function" then return {[token] = {"function", mods}} end
-
-			local parent = obj:GetParent()
-
-			if parent then
-				if obj.Type == "function" then
-					return {[token] = {"macro", mods}}
-				else
-					if obj.Type == "table" then return {[token] = {"class", mods}} end
-
-					return {[token] = {"property", mods}}
-				end
-			end
-
-			if obj.Type == "table" then return {[token] = {"class", mods}} end
-		end
-	end
-
-	if token.type == "number" then
-		return {[token] = {"number"}}
-	elseif token.type == "string" then
-		return {[token] = {"string"}}
-	end
-
-	if
-		token.parent.kind == "value" and
-		token.parent.parent.kind == "binary_operator" and
-		(
-			token.parent.parent.value and
-			token.parent.parent.value.value == "." or
-			token.parent.parent.value.value == ":"
-		)
-	then
-		if token.value:sub(1, 1) == "@" then return {[token] = {"decorator"}} end
-	end
-
-	if token.type == "letter" and token.parent.kind:find("function", nil, true) then
-		return {[token] = {"function"}}
-	end
-
-	if
-		token.parent.kind == "value" and
-		token.parent.parent.kind == "binary_operator" and
-		(
-			token.parent.parent.value and
-			token.parent.parent.value.value == "." or
-			token.parent.parent.value.value == ":"
-		)
-	then
-		return {[token] = {"property"}}
-	end
-
-	if token.parent.kind == "table_key_value" then
-		return {[token] = {"property"}}
-	end
-
-	if token.parent.standalone_letter then
-		if token.parent.environment == "typesystem" then
-			return {[token] = {"type"}}
-		end
-
-		if _G[token.value] then return {[token] = {"namespace"}} end
-
-		return {[token] = {"variable"}}
-	end
-
-	if token.parent.is_identifier then
-		if token.parent.environment == "typesystem" then
-			return {[token] = {"typeParameter"}}
-		end
-
-		return {[token] = {"variable"}}
-	end
-
-	do
-		return {[token] = {"comment"}}
-	end
 end
 
 local function get_range(code, start, stop)
@@ -27823,21 +28272,6 @@ local function get_range(code, start, stop)
 			character = data.character_stop, -- not sure about this
 		},
 	}
-end
-
-local function find_token_from_line_character(
-	tokens,
-	code,
-	line,
-	char
-)
-	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
-
-	for _, token in ipairs(tokens) do
-		if sub_pos >= token.start and sub_pos <= token.stop then
-			return token, helpers.SubPositionToLinePosition(code, token.start, token.stop)
-		end
-	end
 end
 
 function META:GetAanalyzerConfig()
@@ -27862,38 +28296,35 @@ function META:GetEmitterConfig()
 	return cfg
 end
 
-local cache = {}
-local temp_files = {}
-
-local function find_file(uri)
-	if not cache[uri] then
-		print("no such file loaded ", uri)
+function META:GetFile(path)
+	if not self.LoadedFiles[path] then
+		print("no such file loaded ", path)
 
 		for k, v in pairs(cache) do
 			print(k)
 		end
 	end
 
-	return cache[uri]
+	return self.LoadedFiles[path]
 end
 
-local function store_file(uri, code, tokens)
-	cache[uri] = {
+function META:GetTempFile(path)
+	return self.TempFiles[path]
+end
+
+function META:StoreFile(path, code, tokens)
+	self.LoadedFiles[path] = {
 		code = code,
 		tokens = tokens,
 	}
 end
 
-local function find_temp_file(uri)
-	return temp_files[uri]
+function META:StoreTempFile(path, code)
+	self.TempFiles[path] = code
 end
 
-local function store_temp_file(uri, content)
-	temp_files[uri] = content
-end
-
-local function clear_temp_file(uri)
-	temp_files[uri] = nil
+function META:ClearTempFile(path)
+	self.TempFiles[path] = nil
 end
 
 function META:Recompile(uri)
@@ -27913,11 +28344,11 @@ function META:Recompile(uri)
 
 		cfg.inline_require = false
 		cfg.on_read_file = function(parser, path)
-			return find_temp_file(self.WorkingDirectory .. "/" .. path)
+			return self:GetTempFile(self.WorkingDirectory .. "/" .. path)
 		end
 		compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
 	else
-		compiler = Compiler(find_temp_file(uri), uri)
+		compiler = Compiler(self:GetTempFile(uri), uri)
 	end
 
 	compiler.debug = true
@@ -27950,7 +28381,7 @@ function META:Recompile(uri)
 							root = root_node.RootStatement.RootStatement
 						end
 
-						store_file(
+						self:StoreFile(
 							self.WorkingDirectory .. "/" .. root.parser.config.file_path,
 							root.code,
 							root.lexer_tokens
@@ -27958,7 +28389,7 @@ function META:Recompile(uri)
 					end
 				end
 			else
-				store_file(uri, compiler.Code, compiler.Tokens)
+				self:StoreFile(uri, compiler.Code, compiler.Tokens)
 			end
 
 			local should_analyze = true
@@ -28081,7 +28512,7 @@ do -- semantic tokens
 	end
 
 	function META:DescribeTokens(path)
-		local data = find_file(path)
+		local data = self:GetFile(path)
 
 		if not data then return end
 
@@ -28092,13 +28523,9 @@ do -- semantic tokens
 
 		for _, token in ipairs(data.tokens) do
 			if token.type ~= "end_of_file" and token.parent then
-				local modified_tokens = token_to_type_mod(token)
+				local type, modss = token:GetTypeMod()
 
-				if modified_tokens then
-					for token, flags in pairs(modified_tokens) do
-						mods[token] = flags
-					end
-				end
+				if type then mods[token] = {type, modss} end
 			end
 		end
 
@@ -28140,59 +28567,66 @@ do -- semantic tokens
 end
 
 function META:OpenFile(path, code)
-	store_temp_file(path, code)
+	self:StoreTempFile(path, code)
 	self:Recompile(path)
 end
 
 function META:CloseFile(path)
-	clear_temp_file(path)
+	self:ClearTempFile(path)
 end
 
 function META:UpdateFile(path, code)
-	store_temp_file(path, code)
+	self:StoreTempFile(path, code)
 	self:Recompile(path)
 end
 
 function META:SaveFile(path)
-	clear_temp_file(path)
+	self:ClearTempFile(path)
 	self:Recompile(path)
 end
 
-local function find_token(uri, line, character)
-	local data = find_file(uri)
+function META:FindToken(path, line, char)
+	local data = self:GetFile(path)
 
 	if not data then
-		print("unable to find token", uri, line, character)
+		print("unable to find token", path, line, character)
 		return
 	end
 
-	local token = find_token_from_line_character(data.tokens, data.code:GetString(), line + 1, character + 1)
-	return token, data
+	local sub_pos = helpers.LinePositionToSubPosition(data.code:GetString(), line + 1, char + 1)
+
+	for _, token in ipairs(data.tokens) do
+		if sub_pos >= token.start and sub_pos <= token.stop then
+			return token, data
+		end
+	end
+
+	return nil
 end
 
-local function find_token_from_line_character_range(
-	uri,
-	lineStart,
-	charStart,
-	lineStop,
-	charStop
+function META:FindTokensFromRange(
+	path,
+	line_start,
+	char_start,
+	line_stop,
+	char_stop
 )
-	local data = find_file(uri)
+	local data = self:GetFile(path)
 
 	if not data then
 		print(
 			"unable to find requested token range",
-			uri,
-			lineStart,
-			charStart,
-			lineStop,
-			charStop
+			path,
+			line_start,
+			char_start,
+			line_stop,
+			char_stop
 		)
 		return
 	end
 
-	local sub_pos_start = helpers.LinePositionToSubPosition(data.code, lineStart, charStart)
-	local sub_pos_stop = helpers.LinePositionToSubPosition(data.code, lineStop, charStop)
+	local sub_pos_start = helpers.LinePositionToSubPosition(data.code, line_start, char_start)
+	local sub_pos_stop = helpers.LinePositionToSubPosition(data.code, line_stop, char_stop)
 	local found = {}
 
 	for _, token in ipairs(tokens) do
@@ -28243,7 +28677,7 @@ local function find_nodes(tokens, type, kind)
 end
 
 function META:GetInlayHints(path, start_line, start_character, stop_line, stop_character)
-	local tokens = find_token_from_line_character_range(
+	local tokens = self:FindTokensFromRange(
 		path,
 		start_line - 1,
 		start_character - 1,
@@ -28318,17 +28752,17 @@ local function token_to_upvalue(token)
 end
 
 function META:GetCode(path)
-	local data = find_file(path)
+	local data = self:GetFile(path)
 	return data.code
 end
 
 function META:GetRenameInstructions(path, line, character, newName)
-	local token, data = find_token(path, line, character)
+	local token, data = self:FindToken(path, line, character)
 	assert(token.type == "letter", "cannot rename non letter " .. token.value)
 
 	if not token then return end
 
-	local upvalue = token_to_upvalue(token)
+	local upvalue = token:FindUpvalue()
 	local edits = {}
 
 	for i, v in ipairs(data.tokens) do
@@ -28353,11 +28787,11 @@ function META:GetRenameInstructions(path, line, character, newName)
 end
 
 function META:GetDefinition(path, line, character)
-	local token, data = find_token(path, line, character)
+	local token, data = self:FindToken(path, line, character)
 
 	if not token or not data or not token.parent then return end
 
-	local obj = find_type_from_token(token)
+	local obj = token:FindType()[1]
 
 	if not obj or not obj:GetUpvalue() then return end
 
@@ -28365,7 +28799,7 @@ function META:GetDefinition(path, line, character)
 
 	if not node then return end
 
-	local data = find_file(path)
+	local data = self:GetFile(path)
 	return {
 		uri = path,
 		range = get_range(data.code, node:GetStartStop()),
@@ -28373,13 +28807,13 @@ function META:GetDefinition(path, line, character)
 end
 
 function META:GetHover(path, line, character)
-	local token, data = find_token(path, line, character)
+	local token, data = self:FindToken(path, line, character)
 
 	if not token or not data or not token.parent then return end
 
-	local obj, found_parents, scope = find_type_from_token(token)
+	local types, found_parents, scope = token:FindType()
 	return {
-		obj = obj,
+		obj = Union(types),
 		scope = scope,
 		found_parents = found_parents,
 	}

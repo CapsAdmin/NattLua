@@ -22,9 +22,7 @@ local setmetatable = _G.setmetatable
 --[[#type META.Token = META.@Self]]
 
 function META:GetRoot()
-	if self.parent then
-		return (self.parent --[[#as any]]):GetRoot()
-	end
+	if self.parent then return (self.parent--[[# as any]]):GetRoot() end
 
 	return self
 end
@@ -46,7 +44,228 @@ function META:GetLastType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
+function META:FindType()
+	local found_parents = {}
+
+	do
+		local node = self.parent
+
+		while node and node.parent do
+			table.insert(found_parents, node)
+			node = node.parent
+		end
+	end
+
+	local scope
+
+	for _, node in ipairs(found_parents) do
+		if node.scope then
+			scope = node.scope
+
+			break
+		end
+	end
+
+	local types = {}
+
+	for _, node in ipairs(found_parents) do
+		local found = false
+
+		for _, obj in ipairs(node:GetTypes()) do
+			if type(obj) ~= "table" then
+				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
+			else
+				if obj.Type == "string" and obj:GetData() == self.value then
+
+				else
+					if obj.Type == "table" then obj = obj:GetMutatedFromScope(scope) end
+
+					table.insert(types, obj)
+					found = true
+				end
+			end
+		end
+
+		if found then break end
+	end
+
+	return types, found_parents, scope
+end
+
+function META:FindUpvalue()
+	local node = self
+
+	while node do
+		local types = node:GetTypes()
+
+		if #types > 0 then
+			for i, v in ipairs(types) do
+				local upvalue = v:GetUpvalue()
+
+				if upvalue then return upvalue end
+			end
+		end
+
+		node = node.parent
+	end
+end
+
+function META:GetTypeMod()
+	local runtime_syntax = require("nattlua.syntax.runtime")
+	local typesystem_syntax = require("nattlua.syntax.typesystem")
+	local Union = require("nattlua.types.union").Union
+	local token = self
+
+	if token.type == "symbol" and token.parent.kind == "function_signature" then
+		return "keyword"
+	end
+
+	if
+		runtime_syntax:IsNonStandardKeyword(token) or
+		typesystem_syntax:IsNonStandardKeyword(token)
+	then
+		-- check if it's used in a statement, because foo.type should not highlight
+		if token.parent and token.parent.type == "statement" then
+			return "keyword"
+		end
+	end
+
+	if runtime_syntax:IsKeywordValue(token) or typesystem_syntax:IsKeywordValue(token) then
+		return "type"
+	end
+
+	if
+		token.value == "." or
+		token.value == ":" or
+		token.value == "=" or
+		token.value == "or" or
+		token.value == "and" or
+		token.value == "not"
+	then
+		return "operator"
+	end
+
+	if runtime_syntax:IsKeyword(token) or typesystem_syntax:IsKeyword(token) then
+		return "keyword"
+	end
+
+	if
+		runtime_syntax:GetTokenType(token):find("operator") or
+		typesystem_syntax:GetTokenType(token):find("operator")
+	then
+		return "operator"
+	end
+
+	if token.type == "symbol" then return "keyword" end
+
+	do
+		local obj
+		local types = token:FindType()
+
+		if #types == 1 then obj = types[1] else obj = Union(types) end
+
+		if obj then
+			local mods = {}
+
+			if obj:IsLiteral() then table.insert(mods, "readonly") end
+
+			if obj.Type == "union" then
+				if obj:IsTypeExceptNil("number") then
+					return "number", mods
+				elseif obj:IsTypeExceptNil("string") then
+					return "string", mods
+				elseif obj:IsTypeExceptNil("symbol") then
+					return "enumMember", mods
+				end
+
+				return "event"
+			end
+
+			if obj.Type == "number" then
+				return "number", mods
+			elseif obj.Type == "string" then
+				return "string", mods
+			elseif obj.Type == "tuple" or obj.Type == "symbol" then
+				return "enumMember", mods
+			elseif obj.Type == "any" then
+				return "regexp", mods
+			end
+
+			if obj.Type == "function" then return "function", mods end
+
+			local parent = obj:GetParent()
+
+			if parent then
+				if obj.Type == "function" then
+					return "macro", mods
+				else
+					if obj.Type == "table" then return "class", mods end
+
+					return "property", mods
+				end
+			end
+
+			if obj.Type == "table" then return "class", mods end
+		end
+	end
+
+	if token.type == "number" then
+		return "number"
+	elseif token.type == "string" then
+		return "string"
+	end
+
+	if
+		token.parent.kind == "value" and
+		token.parent.parent.kind == "binary_operator" and
+		(
+			token.parent.parent.value and
+			token.parent.parent.value.value == "." or
+			token.parent.parent.value.value == ":"
+		)
+	then
+		if token.value:sub(1, 1) == "@" then return "decorator" end
+	end
+
+	if token.type == "letter" and token.parent.kind:find("function", nil, true) then
+		return "function"
+	end
+
+	if
+		token.parent.kind == "value" and
+		token.parent.parent.kind == "binary_operator" and
+		(
+			token.parent.parent.value and
+			token.parent.parent.value.value == "." or
+			token.parent.parent.value.value == ":"
+		)
+	then
+		return "property"
+	end
+
+	if token.parent.kind == "table_key_value" then return "property" end
+
+	if token.parent.standalone_letter then
+		if token.parent.environment == "typesystem" then return "type" end
+
+		if _G[token.value] then return "namespace" end
+
+		return "variable"
+	end
+
+	if token.parent.is_identifier then
+		if token.parent.environment == "typesystem" then return "typeParameter" end
+
+		return "variable"
+	end
+
+	do
+		return "comment"
+	end
+end
+
 local new_token
+
 if jit.arch == "arm64" then
 	new_token = table_pool(
 		function()

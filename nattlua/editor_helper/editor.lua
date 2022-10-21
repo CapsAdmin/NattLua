@@ -16,223 +16,12 @@ META:GetSet("ConfigFunction", function()
 end)
 
 function META.New()
-	local self = {}
+	local self = {
+		TempFiles = {},
+		LoadedFiles = {},
+	}
 	setmetatable(self, META)
 	return self
-end
-
-local DiagnosticSeverity = {
-	error = 1,
-	fatal = 1, -- from lexer and parser
-	warning = 2,
-	information = 3,
-	hint = 4,
-}
-
-local function find_type_from_token(token)
-	local found_parents = {}
-
-	do
-		local node = token.parent
-
-		while node and node.parent do
-			table.insert(found_parents, node)
-			node = node.parent
-		end
-	end
-
-	local scope
-
-	for _, node in ipairs(found_parents) do
-		if node.scope then
-			scope = node.scope
-
-			break
-		end
-	end
-
-	local union = Union({})
-
-	for _, node in ipairs(found_parents) do
-		local found = false
-
-		for _, obj in ipairs(node:GetTypes()) do
-			if type(obj) ~= "table" then
-				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
-			else
-				if obj.Type == "string" and obj:GetData() == token.value then
-
-				else
-					if obj.Type == "table" then obj = obj:GetMutatedFromScope(scope) end
-
-					union:AddType(obj)
-					found = true
-				end
-			end
-		end
-
-		if found then break end
-	end
-
-	if union:IsEmpty() then return nil, found_parents, scope end
-
-	if union:GetLength() == 1 then
-		return union:GetData()[1], found_parents, scope
-	end
-
-	return union, found_parents, scope
-end
-
-local function token_to_type_mod(token)
-	if token.type == "symbol" and token.parent.kind == "function_signature" then
-		return {[token] = {"keyword"}}
-	end
-
-	if
-		runtime_syntax:IsNonStandardKeyword(token) or
-		typesystem_syntax:IsNonStandardKeyword(token)
-	then
-		-- check if it's used in a statement, because foo.type should not highlight
-		if token.parent and token.parent.type == "statement" then
-			return {[token] = {"keyword"}}
-		end
-	end
-
-	if runtime_syntax:IsKeywordValue(token) or typesystem_syntax:IsKeywordValue(token) then
-		return {[token] = {"type"}}
-	end
-
-	if
-		token.value == "." or
-		token.value == ":" or
-		token.value == "=" or
-		token.value == "or" or
-		token.value == "and" or
-		token.value == "not"
-	then
-		return {[token] = {"operator"}}
-	end
-
-	if runtime_syntax:IsKeyword(token) or typesystem_syntax:IsKeyword(token) then
-		return {[token] = {"keyword"}}
-	end
-
-	if
-		runtime_syntax:GetTokenType(token):find("operator") or
-		typesystem_syntax:GetTokenType(token):find("operator")
-	then
-		return {[token] = {"operator"}}
-	end
-
-	if token.type == "symbol" then return {[token] = {"keyword"}} end
-
-	do
-		local obj = find_type_from_token(token)
-
-		if obj then
-			local mods = {}
-
-			if obj:IsLiteral() then table.insert(mods, "readonly") end
-
-			if obj.Type == "union" then
-				if obj:IsTypeExceptNil("number") then
-					return {[token] = {"number", mods}}
-				elseif obj:IsTypeExceptNil("string") then
-					return {[token] = {"string", mods}}
-				elseif obj:IsTypeExceptNil("symbol") then
-					return {[token] = {"enumMember", mods}}
-				end
-
-				return {[token] = {"event"}}
-			end
-
-			if obj.Type == "number" then
-				return {[token] = {"number", mods}}
-			elseif obj.Type == "string" then
-				return {[token] = {"string", mods}}
-			elseif obj.Type == "tuple" or obj.Type == "symbol" then
-				return {[token] = {"enumMember", mods}}
-			elseif obj.Type == "any" then
-				return {[token] = {"regexp", mods}}
-			end
-
-			if obj.Type == "function" then return {[token] = {"function", mods}} end
-
-			local parent = obj:GetParent()
-
-			if parent then
-				if obj.Type == "function" then
-					return {[token] = {"macro", mods}}
-				else
-					if obj.Type == "table" then return {[token] = {"class", mods}} end
-
-					return {[token] = {"property", mods}}
-				end
-			end
-
-			if obj.Type == "table" then return {[token] = {"class", mods}} end
-		end
-	end
-
-	if token.type == "number" then
-		return {[token] = {"number"}}
-	elseif token.type == "string" then
-		return {[token] = {"string"}}
-	end
-
-	if
-		token.parent.kind == "value" and
-		token.parent.parent.kind == "binary_operator" and
-		(
-			token.parent.parent.value and
-			token.parent.parent.value.value == "." or
-			token.parent.parent.value.value == ":"
-		)
-	then
-		if token.value:sub(1, 1) == "@" then return {[token] = {"decorator"}} end
-	end
-
-	if token.type == "letter" and token.parent.kind:find("function", nil, true) then
-		return {[token] = {"function"}}
-	end
-
-	if
-		token.parent.kind == "value" and
-		token.parent.parent.kind == "binary_operator" and
-		(
-			token.parent.parent.value and
-			token.parent.parent.value.value == "." or
-			token.parent.parent.value.value == ":"
-		)
-	then
-		return {[token] = {"property"}}
-	end
-
-	if token.parent.kind == "table_key_value" then
-		return {[token] = {"property"}}
-	end
-
-	if token.parent.standalone_letter then
-		if token.parent.environment == "typesystem" then
-			return {[token] = {"type"}}
-		end
-
-		if _G[token.value] then return {[token] = {"namespace"}} end
-
-		return {[token] = {"variable"}}
-	end
-
-	if token.parent.is_identifier then
-		if token.parent.environment == "typesystem" then
-			return {[token] = {"typeParameter"}}
-		end
-
-		return {[token] = {"variable"}}
-	end
-
-	do
-		return {[token] = {"comment"}}
-	end
 end
 
 local function get_range(code, start, stop)
@@ -247,21 +36,6 @@ local function get_range(code, start, stop)
 			character = data.character_stop, -- not sure about this
 		},
 	}
-end
-
-local function find_token_from_line_character(
-	tokens--[[#: {[number] = Token}]],
-	code--[[#: string]],
-	line--[[#: number]],
-	char--[[#: number]]
-)
-	local sub_pos = helpers.LinePositionToSubPosition(code, line, char)
-
-	for _, token in ipairs(tokens) do
-		if sub_pos >= token.start and sub_pos <= token.stop then
-			return token, helpers.SubPositionToLinePosition(code, token.start, token.stop)
-		end
-	end
 end
 
 function META:GetAanalyzerConfig()
@@ -286,38 +60,35 @@ function META:GetEmitterConfig()
 	return cfg
 end
 
-local cache = {}
-local temp_files = {}
-
-local function find_file(uri)
-	if not cache[uri] then
-		print("no such file loaded ", uri)
+function META:GetFile(path)
+	if not self.LoadedFiles[path] then
+		print("no such file loaded ", path)
 
 		for k, v in pairs(cache) do
 			print(k)
 		end
 	end
 
-	return cache[uri]
+	return self.LoadedFiles[path]
 end
 
-local function store_file(uri, code, tokens)
-	cache[uri] = {
+function META:GetTempFile(path)
+	return self.TempFiles[path]
+end
+
+function META:StoreFile(path, code, tokens)
+	self.LoadedFiles[path] = {
 		code = code,
 		tokens = tokens,
 	}
 end
 
-local function find_temp_file(uri)
-	return temp_files[uri]
+function META:StoreTempFile(path, code)
+	self.TempFiles[path] = code
 end
 
-local function store_temp_file(uri, content)
-	temp_files[uri] = content
-end
-
-local function clear_temp_file(uri)
-	temp_files[uri] = nil
+function META:ClearTempFile(path)
+	self.TempFiles[path] = nil
 end
 
 function META:Recompile(uri)
@@ -337,11 +108,11 @@ function META:Recompile(uri)
 
 		cfg.inline_require = false
 		cfg.on_read_file = function(parser, path)
-			return find_temp_file(self.WorkingDirectory .. "/" .. path)
+			return self:GetTempFile(self.WorkingDirectory .. "/" .. path)
 		end
 		compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
 	else
-		compiler = Compiler(find_temp_file(uri), uri)
+		compiler = Compiler(self:GetTempFile(uri), uri)
 	end
 
 	compiler.debug = true
@@ -374,7 +145,7 @@ function META:Recompile(uri)
 							root = root_node.RootStatement.RootStatement
 						end
 
-						store_file(
+						self:StoreFile(
 							self.WorkingDirectory .. "/" .. root.parser.config.file_path,
 							root.code,
 							root.lexer_tokens
@@ -382,7 +153,7 @@ function META:Recompile(uri)
 					end
 				end
 			else
-				store_file(uri, compiler.Code, compiler.Tokens)
+				self:StoreFile(uri, compiler.Code, compiler.Tokens)
 			end
 
 			local should_analyze = true
@@ -505,7 +276,7 @@ do -- semantic tokens
 	end
 
 	function META:DescribeTokens(path)
-		local data = find_file(path)
+		local data = self:GetFile(path)
 
 		if not data then return end
 
@@ -516,13 +287,9 @@ do -- semantic tokens
 
 		for _, token in ipairs(data.tokens) do
 			if token.type ~= "end_of_file" and token.parent then
-				local modified_tokens = token_to_type_mod(token)
+				local type, modss = token:GetTypeMod()
 
-				if modified_tokens then
-					for token, flags in pairs(modified_tokens) do
-						mods[token] = flags
-					end
-				end
+				if type then mods[token] = {type, modss} end
 			end
 		end
 
@@ -564,59 +331,66 @@ do -- semantic tokens
 end
 
 function META:OpenFile(path, code)
-	store_temp_file(path, code)
+	self:StoreTempFile(path, code)
 	self:Recompile(path)
 end
 
 function META:CloseFile(path)
-	clear_temp_file(path)
+	self:ClearTempFile(path)
 end
 
 function META:UpdateFile(path, code)
-	store_temp_file(path, code)
+	self:StoreTempFile(path, code)
 	self:Recompile(path)
 end
 
 function META:SaveFile(path)
-	clear_temp_file(path)
+	self:ClearTempFile(path)
 	self:Recompile(path)
 end
 
-local function find_token(uri, line, character)
-	local data = find_file(uri)
+function META:FindToken(path, line, char)
+	local data = self:GetFile(path)
 
 	if not data then
-		print("unable to find token", uri, line, character)
+		print("unable to find token", path, line, character)
 		return
 	end
 
-	local token = find_token_from_line_character(data.tokens, data.code:GetString(), line + 1, character + 1)
-	return token, data
+	local sub_pos = helpers.LinePositionToSubPosition(data.code:GetString(), line + 1, char + 1)
+
+	for _, token in ipairs(data.tokens) do
+		if sub_pos >= token.start and sub_pos <= token.stop then
+			return token, data
+		end
+	end
+
+	return nil
 end
 
-local function find_token_from_line_character_range(
-	uri--[[#: string]],
-	lineStart--[[#: number]],
-	charStart--[[#: number]],
-	lineStop--[[#: number]],
-	charStop--[[#: number]]
+function META:FindTokensFromRange(
+	path--[[#: string]],
+	line_start--[[#: number]],
+	char_start--[[#: number]],
+	line_stop--[[#: number]],
+	char_stop--[[#: number]]
 )
-	local data = find_file(uri)
+	local data = self:GetFile(path)
 
 	if not data then
 		print(
 			"unable to find requested token range",
-			uri,
-			lineStart,
-			charStart,
-			lineStop,
-			charStop
+			path,
+			line_start,
+			char_start,
+			line_stop,
+			char_stop
 		)
 		return
 	end
 
-	local sub_pos_start = helpers.LinePositionToSubPosition(data.code, lineStart, charStart)
-	local sub_pos_stop = helpers.LinePositionToSubPosition(data.code, lineStop, charStop)
+	local sub_pos_start = helpers.LinePositionToSubPosition(data.code, line_start, char_start)
+	local sub_pos_stop = helpers.LinePositionToSubPosition(data.code, line_stop, char_stop)
 	local found = {}
 
 	for _, token in ipairs(tokens) do
@@ -667,7 +441,7 @@ local function find_nodes(tokens, type, kind)
 end
 
 function META:GetInlayHints(path, start_line, start_character, stop_line, stop_character)
-	local tokens = find_token_from_line_character_range(
+	local tokens = self:FindTokensFromRange(
 		path,
 		start_line - 1,
 		start_character - 1,
@@ -742,18 +516,17 @@ local function token_to_upvalue(token)
 end
 
 function META:GetCode(path)
-	local data = find_file(path)
-
+	local data = self:GetFile(path)
 	return data.code
 end
 
 function META:GetRenameInstructions(path, line, character, newName)
-	local token, data = find_token(path, line, character)
+	local token, data = self:FindToken(path, line, character)
 	assert(token.type == "letter", "cannot rename non letter " .. token.value)
 
 	if not token then return end
 
-	local upvalue = token_to_upvalue(token)
+	local upvalue = token:FindUpvalue()
 	local edits = {}
 
 	for i, v in ipairs(data.tokens) do
@@ -778,11 +551,11 @@ function META:GetRenameInstructions(path, line, character, newName)
 end
 
 function META:GetDefinition(path, line, character)
-	local token, data = find_token(path, line, character)
+	local token, data = self:FindToken(path, line, character)
 
 	if not token or not data or not token.parent then return end
 
-	local obj = find_type_from_token(token)
+	local obj = token:FindType()[1]
 
 	if not obj or not obj:GetUpvalue() then return end
 
@@ -790,7 +563,7 @@ function META:GetDefinition(path, line, character)
 
 	if not node then return end
 
-	local data = find_file(path)
+	local data = self:GetFile(path)
 	return {
 		uri = path,
 		range = get_range(data.code, node:GetStartStop()),
@@ -798,13 +571,13 @@ function META:GetDefinition(path, line, character)
 end
 
 function META:GetHover(path, line, character)
-	local token, data = find_token(path, line, character)
+	local token, data = self:FindToken(path, line, character)
 
 	if not token or not data or not token.parent then return end
 
-	local obj, found_parents, scope = find_type_from_token(token)
+	local types, found_parents, scope = token:FindType()
 	return {
-		obj = obj,
+		obj = Union(types),
 		scope = scope,
 		found_parents = found_parents,
 	}
