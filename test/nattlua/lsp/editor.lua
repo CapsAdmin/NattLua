@@ -4,7 +4,6 @@ local path = "./test.nlua"
 local function single_file(code)
 	local helper = EditorHelper.New()
 	helper:Initialize()
-
 	local diagnostics = {}
 
 	function helper:OnDiagnostics(name, data)
@@ -44,7 +43,6 @@ end
 
 do
 	local editor, diagnostics = single_file([[locwal]])
-
 	assert(diagnostics[1].name == "test.nlua")
 	assert(diagnostics[1].data[1].message:find("expected assignment or call") ~= nil)
 end
@@ -54,6 +52,7 @@ local function get_line_char(code)
 	code = code:gsub(">>", "  ")
 	local line = 0
 	local char = 0
+
 	for i = 1, start do
 		if code:sub(i, i) == "\n" then
 			line = line + 1
@@ -62,6 +61,7 @@ local function get_line_char(code)
 			char = char + 1
 		end
 	end
+
 	return code, line, char
 end
 
@@ -72,9 +72,10 @@ local function apply_edits(code, edits)
 		local after = code:sub(edit.stop + 1, #code)
 		code = before .. edit.to .. after
 	end
+
 	return code
 end
- 
+
 do
 	local code = [[
         local a = 1
@@ -86,9 +87,7 @@ do
 			end
 		end
     ]]
-	
 	local code, line, char = get_line_char(code)
-
 	local editor = single_file(code)
 	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line, char, "b"))
 	assert(#new_code == #new_code)
@@ -96,7 +95,6 @@ end
 
 do
 	local code = [[local >>a = 1]]
-	
 	local code, line, char = get_line_char(code)
 	local editor = single_file(code)
 	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line, char, "foo"))
@@ -118,10 +116,8 @@ do
 			bar()
 		end
     ]]
-	
 	local code, line, char = get_line_char(code)
 	local editor = single_file(code)
-	
-	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line, char , "LOL"))
+	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line, char, "LOL"))
 	assert(code:gsub("foo", "LOL") == new_code)
 end

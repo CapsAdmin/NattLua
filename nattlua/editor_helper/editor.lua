@@ -25,7 +25,7 @@ function META.New()
 end
 
 local function get_range(code, start, stop)
-	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
+	local data = code:SubPosToLineChar(start, stop)
 	return {
 		start = {
 			line = data.line_start - 1,
@@ -296,7 +296,7 @@ do -- semantic tokens
 		for _, token in ipairs(data.tokens) do
 			if mods[token] then
 				local type, modifiers = unpack(mods[token])
-				local data = helpers.SubPositionToLinePosition(data.code:GetString(), token.start, token.stop)
+				local data = data.code:LineCharToSubPos(token.start, token.stop)
 				local len = #token.value
 				local y = (data.line_start - 1) - last_y
 				local x = (data.character_start - 1) - last_x
@@ -357,7 +357,7 @@ function META:FindToken(path, line, char)
 		return
 	end
 
-	local sub_pos = helpers.LinePositionToSubPosition(data.code:GetString(), line + 1, char + 1)
+	local sub_pos = data.code:LineCharToSubPos(line + 1, char + 1)
 
 	for _, token in ipairs(data.tokens) do
 		if sub_pos >= token.start and sub_pos <= token.stop then
@@ -389,8 +389,8 @@ function META:FindTokensFromRange(
 		return
 	end
 
-	local sub_pos_start = helpers.LinePositionToSubPosition(data.code, line_start, char_start)
-	local sub_pos_stop = helpers.LinePositionToSubPosition(data.code, line_stop, char_stop)
+	local sub_pos_start = data.code:LineCharToSubPos(line_start, char_start)
+	local sub_pos_stop = data.code:LineCharToSubPos(line_stop, char_stop)
 	local found = {}
 
 	for _, token in ipairs(tokens) do
@@ -471,7 +471,7 @@ function META:GetInlayHints(path, start_line, start_character, stop_line, stop_c
 							assignment.right[i].value.value.type == "letter"
 						)
 					then
-						local data = helpers.SubPositionToLinePosition(compiler.Code:GetString(), left:GetStartStop())
+						local data = compiler.Code:SubPosToLineChar(left:GetStartStop())
 						local label = tostring(Union(types))
 
 						if #label > 20 then label = label:sub(1, 20) .. "..." end
@@ -558,8 +558,12 @@ function META:GetHover(path, line, character)
 	if not token or not data or not token.parent then return end
 
 	local types, found_parents, scope = token:FindType()
+	local obj
+
+	if #types == 1 then obj = types[1] else obj = Union(types) end
+
 	return {
-		obj = Union(types),
+		obj = obj,
 		scope = scope,
 		found_parents = found_parents,
 	}

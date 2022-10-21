@@ -39,6 +39,14 @@ function META:FindNearest(str--[[#: string]], start--[[#: number]])
 	return pos + 1
 end
 
+function META:LineCharToSubPos(line, char)
+	return helpers.LinePositionToSubPosition(self:GetString(), line, char)
+end
+
+function META:SubPosToLineChar(start, stop)
+	return helpers.SubPositionToLinePosition(self:GetString(), start, stop)
+end
+
 local function remove_bom_header(str--[[#: string]])--[[#: string]]
 	if str:sub(1, 2) == "\xFE\xFF" then
 		return str:sub(3)
