@@ -60,61 +60,50 @@ function META:GetEmitterConfig()
 	return cfg
 end
 
-function META:GetFile(path)
-	if not self.LoadedFiles[path] then
-		print("no such file loaded ", path)
+do
+	function META:GetFile(path)
+		if not self.LoadedFiles[path] then error(path .. " not loaded") end
 
-		for k, v in pairs(cache) do
-			print(k)
-		end
+		return self.LoadedFiles[path]
 	end
 
-	return self.LoadedFiles[path]
+	function META:LoadFile(path, code, tokens)
+		self.LoadedFiles[path] = {
+			code = code,
+			tokens = tokens,
+		}
+	end
+
+	function META:UnloadFile(path)
+		self.LoadedFiles[path] = nil
+	end
 end
 
-function META:GetTempFile(path)
-	return self.TempFiles[path]
-end
+do
+	function META:SetFileContent(path, code)
+		self.TempFiles[path] = code
+	end
 
-function META:StoreFile(path, code, tokens)
-	self.LoadedFiles[path] = {
-		code = code,
-		tokens = tokens,
-	}
-end
-
-function META:StoreTempFile(path, code)
-	self.TempFiles[path] = code
-end
-
-function META:ClearTempFile(path)
-	self.TempFiles[path] = nil
+	function META:GetFileContent(path)
+		return self.TempFiles[path]
+	end
 end
 
 function META:Recompile(uri)
-	local compiler
-	local entry_point
-	local cfg
+	local cfg = self:GetAanalyzerConfig()
+	local entry_point = cfg.entry_point
 
-	if self.WorkingDirectory then
-		cfg = self:GetAanalyzerConfig()
-		entry_point = cfg.entry_point
-
-		if not entry_point and uri then
-			entry_point = uri:gsub(self.WorkingDirectory .. "/", "")
-		end
-
-		if not entry_point then return false end
-
-		cfg.inline_require = false
-		cfg.on_read_file = function(parser, path)
-			return self:GetTempFile(self.WorkingDirectory .. "/" .. path)
-		end
-		compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
-	else
-		compiler = Compiler(self:GetTempFile(uri), uri)
+	if not entry_point and uri then
+		entry_point = uri:gsub(self.WorkingDirectory .. "/", "")
 	end
 
+	if not entry_point then return false end
+
+	cfg.inline_require = false
+	cfg.on_read_file = function(parser, path)
+		return self:GetFileContent(self.WorkingDirectory .. "/" .. path)
+	end
+	local compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
 	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
 	local diagnostics = {}
@@ -145,7 +134,7 @@ function META:Recompile(uri)
 							root = root_node.RootStatement.RootStatement
 						end
 
-						self:StoreFile(
+						self:LoadFile(
 							self.WorkingDirectory .. "/" .. root.parser.config.file_path,
 							root.code,
 							root.lexer_tokens
@@ -153,7 +142,7 @@ function META:Recompile(uri)
 					end
 				end
 			else
-				self:StoreFile(uri, compiler.Code, compiler.Tokens)
+				self:LoadFile(uri, compiler.Code, compiler.Tokens)
 			end
 
 			local should_analyze = true
@@ -221,142 +210,28 @@ function META:Format(code, path)
 	return code
 end
 
-do -- semantic tokens
-	local tokenTypeMap = {}
-	local tokenModifiersMap = {}
-	local SemanticTokenTypes = {
-		-- identifiers or reference
-		"class", -- a class type. maybe META or Meta?
-		"typeParameter", -- local type >foo< = true
-		"parameter", -- function argument: function foo(>a<)
-		"variable", -- a local or global variable.
-		"property", -- a member property, member field, or member variable.
-		"enumMember", -- an enumeration property, constant, or member. uppercase variables and global non tables? local FOO = true ?
-		"event", --  an event property.
-		"function", -- local or global function: local function >foo<
-		"method", --  a member function or method: string.>bar<()
-		"type", -- misc type
-		-- tokens
-		"comment", -- 
-		"string", -- 
-		"keyword", -- 
-		"number", -- 
-		"regexp", -- regular expression literal.
-		"operator", --
-		"decorator", -- decorator syntax, maybe for @Foo in tables, $ and §
-		-- other identifiers or references
-		"namespace", -- namespace, module, or package.
-		"enum", -- 
-		"interface", --
-		"struct", -- 
-		"decorator", -- decorators and annotations.
-		"macro", --  a macro.
-		"label", --  a label. ??
-	}
-	local SemanticTokenModifiers = {
-		"declaration", -- For declarations of symbols.
-		"definition", -- For definitions of symbols, for example, in header files.
-		"readonly", -- For readonly variables and member fields (constants).
-		"static", -- For class members (static members).
-		"private", -- For class members (static members).
-		"deprecated", -- For symbols that should no longer be used.
-		"abstract", -- For types and member functions that are abstract.
-		"async", -- For functions that are marked async.
-		"modification", -- For variable references where the variable is assigned to.
-		"documentation", -- For occurrences of symbols in documentation.
-		"defaultLibrary", -- For symbols that are part of the standard library.
-	}
-
-	for i, v in ipairs(SemanticTokenTypes) do
-		tokenTypeMap[v] = i - 1
-	end
-
-	for i, v in ipairs(SemanticTokenModifiers) do
-		tokenModifiersMap[v] = i - 1
-	end
-
-	function META:DescribeTokens(path)
-		local data = self:GetFile(path)
-
-		if not data then return end
-
-		local integers = {}
-		local last_y = 0
-		local last_x = 0
-		local mods = {}
-
-		for _, token in ipairs(data.tokens) do
-			if token.type ~= "end_of_file" and token.parent then
-				local type, modss = token:GetTypeMod()
-
-				if type then mods[token] = {type, modss} end
-			end
-		end
-
-		for _, token in ipairs(data.tokens) do
-			if mods[token] then
-				local type, modifiers = unpack(mods[token])
-				local data = data.code:LineCharToSubPos(token.start, token.stop)
-				local len = #token.value
-				local y = (data.line_start - 1) - last_y
-				local x = (data.character_start - 1) - last_x
-
-				-- x is not relative when there's a new line
-				if y ~= 0 then x = data.character_start - 1 end
-
-				if type and x >= 0 and y >= 0 then
-					table.insert(integers, y)
-					table.insert(integers, x)
-					table.insert(integers, len)
-					assert(tokenTypeMap[type], "invalid type " .. type)
-					table.insert(integers, tokenTypeMap[type])
-					local result = 0
-
-					if modifiers then
-						for _, mod in ipairs(modifiers) do
-							assert(tokenModifiersMap[mod], "invalid modifier " .. mod)
-							result = bit.bor(result, bit.lshift(1, tokenModifiersMap[mod])) -- TODO, doesn't seem to be working
-						end
-					end
-
-					table.insert(integers, result)
-					last_y = data.line_start - 1
-					last_x = data.character_start - 1
-				end
-			end
-		end
-
-		return integers
-	end
-end
-
 function META:OpenFile(path, code)
-	self:StoreTempFile(path, code)
+	self:SetFileContent(path, code)
 	self:Recompile(path)
 end
 
 function META:CloseFile(path)
-	self:ClearTempFile(path)
+	self:SetFileContent(path, nil)
+	self:UnloadFile(path)
 end
 
 function META:UpdateFile(path, code)
-	self:StoreTempFile(path, code)
+	self:SetFileContent(path, code)
 	self:Recompile(path)
 end
 
 function META:SaveFile(path)
-	self:ClearTempFile(path)
+	self:SetFileContent(path, nil)
 	self:Recompile(path)
 end
 
 function META:FindToken(path, line, char)
 	local data = self:GetFile(path)
-
-	if not data then
-		print("unable to find token", path, line, character)
-		return
-	end
-
 	local sub_pos = data.code:LineCharToSubPos(line + 1, char + 1)
 
 	for _, token in ipairs(data.tokens) do
@@ -365,7 +240,7 @@ function META:FindToken(path, line, char)
 		end
 	end
 
-	return nil
+	error("cannot find token at " .. path .. ":" .. line .. ":" .. char, 2)
 end
 
 function META:FindTokensFromRange(
@@ -376,19 +251,6 @@ function META:FindTokensFromRange(
 	char_stop--[[#: number]]
 )
 	local data = self:GetFile(path)
-
-	if not data then
-		print(
-			"unable to find requested token range",
-			path,
-			line_start,
-			char_start,
-			line_stop,
-			char_stop
-		)
-		return
-	end
-
 	local sub_pos_start = data.code:LineCharToSubPos(line_start, char_start)
 	local sub_pos_stop = data.code:LineCharToSubPos(line_stop, char_stop)
 	local found = {}
@@ -402,99 +264,90 @@ function META:FindTokensFromRange(
 	return found
 end
 
-local function has_value(tbl, str)
-	for _, v in ipairs(tbl) do
-		if v == str then return true end
-	end
+do
+	local function find_parent(token, type, kind)
+		local node = token.parent
 
-	return false
-end
+		if not node then return nil end
 
-local function find_parent(token, type, kind)
-	local node = token.parent
+		while node.parent do
+			if node.type == type and node.kind == kind then return node end
 
-	if not node then return nil end
-
-	while node.parent do
-		if node.type == type and node.kind == kind then return node end
-
-		node = node.parent
-	end
-
-	return nil
-end
-
-local function find_nodes(tokens, type, kind)
-	local nodes = {}
-	local done = {}
-
-	for _, token in ipairs(tokens) do
-		local node = find_parent(token, type, kind)
-
-		if node and not done[node] then
-			table.insert(nodes, node)
-			done[node] = true
+			node = node.parent
 		end
+
+		return nil
 	end
 
-	return nodes
-end
+	local function find_nodes(tokens, type, kind)
+		local nodes = {}
+		local done = {}
 
-function META:GetInlayHints(path, start_line, start_character, stop_line, stop_character)
-	local tokens = self:FindTokensFromRange(
-		path,
-		start_line - 1,
-		start_character - 1,
-		stop_line - 1,
-		stop_character - 1
-	)
+		for _, token in ipairs(tokens) do
+			local node = find_parent(token, type, kind)
 
-	if not tokens then return end
+			if node and not done[node] then
+				table.insert(nodes, node)
+				done[node] = true
+			end
+		end
 
-	local hints = {}
-	local assignments = find_nodes(tokens, "statement", "local_assignment")
-
-	for _, assingment in ipairs(find_nodes(tokens, "statement", "assignment")) do
-		table.insert(assignments, assingment)
+		return nodes
 	end
 
-	for _, assignment in ipairs(assignments) do
-		if assignment.environment == "runtime" then
-			for i, left in ipairs(assignment.left) do
-				if not left.tokens[":"] and assignment.right and assignment.right[i] then
-					local types = left:GetAssociatedTypes()
+	function META:GetInlayHints(path, start_line, start_character, stop_line, stop_character)
+		local tokens = self:FindTokensFromRange(
+			path,
+			start_line - 1,
+			start_character - 1,
+			stop_line - 1,
+			stop_character - 1
+		)
+		local hints = {}
+		local assignments = find_nodes(tokens, "statement", "local_assignment")
 
-					if
-						types and
-						(
-							assignment.right[i].kind ~= "value" or
-							assignment.right[i].value.value.type == "letter"
-						)
-					then
-						local data = compiler.Code:SubPosToLineChar(left:GetStartStop())
-						local label = tostring(Union(types))
+		for _, assingment in ipairs(find_nodes(tokens, "statement", "assignment")) do
+			table.insert(assignments, assingment)
+		end
 
-						if #label > 20 then label = label:sub(1, 20) .. "..." end
+		for _, assignment in ipairs(assignments) do
+			if assignment.environment == "runtime" then
+				for i, left in ipairs(assignment.left) do
+					if not left.tokens[":"] and assignment.right and assignment.right[i] then
+						local types = left:GetAssociatedTypes()
 
-						table.insert(
-							hints,
-							{
-								label = ": " .. label,
-								tooltip = tostring(Union(types)),
-								position = {
-									lineNumber = data.line_stop,
-									column = data.character_stop + 1,
-								},
-								kind = 1, -- type
-							}
-						)
+						if
+							types and
+							(
+								assignment.right[i].kind ~= "value" or
+								assignment.right[i].value.value.type == "letter"
+							)
+						then
+							local data = compiler.Code:SubPosToLineChar(left:GetStartStop())
+							local label = tostring(Union(types))
+
+							if #label > 20 then label = label:sub(1, 20) .. "..." end
+
+							table.insert(
+								hints,
+								{
+									label = ": " .. label,
+									tooltip = tostring(Union(types)),
+									position = {
+										lineNumber = data.line_stop,
+										column = data.character_stop + 1,
+									},
+									kind = 1, -- type
+								}
+							)
+						end
 					end
 				end
 			end
 		end
-	end
 
-	return hints
+		return hints
+	end
 end
 
 function META:GetCode(path)
@@ -504,10 +357,6 @@ end
 
 function META:GetRenameInstructions(path, line, character, newName)
 	local token, data = self:FindToken(path, line, character)
-	assert(token.type == "letter", "cannot rename non letter " .. token.value)
-
-	if not token then return end
-
 	local upvalue = token:FindUpvalue()
 	local edits = {}
 
@@ -534,33 +383,29 @@ end
 
 function META:GetDefinition(path, line, character)
 	local token, data = self:FindToken(path, line, character)
+	local types = token:FindType()
 
-	if not token or not data or not token.parent then return end
-
-	local obj = token:FindType()[1]
-
-	if not obj or not obj:GetUpvalue() then return end
-
-	local node = obj:GetUpvalue():GetNode()
-
-	if not node then return end
-
-	local data = self:GetFile(path)
-	return {
-		uri = path,
-		range = get_range(data.code, node:GetStartStop()),
-	}
+	if types[1] then
+		local node = types[1]:GetUpvalue():GetNode()
+		return {
+			uri = path,
+			range = get_range(data.code, node:GetStartStop()),
+		}
+	end
 end
 
 function META:GetHover(path, line, character)
-	local token, data = self:FindToken(path, line, character)
+	local token
+	local ok, err = pcall(function()
+		token = self:FindToken(path, line, character)
+	end)
 
-	if not token or not data or not token.parent then return end
+	if not ok then return end
 
 	local types, found_parents, scope = token:FindType()
 	local obj
 
-	if #types == 1 then obj = types[1] else obj = Union(types) end
+	if #types == 1 then obj = types[1] elseif #types > 1 then obj = Union(types) end
 
 	return {
 		obj = obj,

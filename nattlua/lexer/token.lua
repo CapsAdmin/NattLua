@@ -110,7 +110,7 @@ function META:FindUpvalue()
 	end
 end
 
-function META:GetTypeMod()
+function META:GetSemanticType()
 	local runtime_syntax = require("nattlua.syntax.runtime")
 	local typesystem_syntax = require("nattlua.syntax.typesystem")
 	local Union = require("nattlua.types.union").Union
@@ -162,7 +162,7 @@ function META:GetTypeMod()
 		local obj
 		local types = token:FindType()
 
-		if #types == 1 then obj = types[1] else obj = Union(types) end
+		if #types == 1 then obj = types[1] elseif #types > 1 then obj = Union(types) end
 
 		if obj then
 			local mods = {}

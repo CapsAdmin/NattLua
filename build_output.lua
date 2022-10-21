@@ -277,16 +277,16 @@ function META:__tostring()
 	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
 end
 
-function META:AddType(obj)
+function META:AssociateType(obj)
 	self.inferred_types = self.inferred_types or {}
 	table.insert(self.inferred_types, obj)
 end
 
-function META:GetTypes()
+function META:GetAssociatedTypes()
 	return self.inferred_types or {}
 end
 
-function META:GetLastType()
+function META:GetLastAssociatedType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
@@ -317,7 +317,7 @@ function META:FindType()
 	for _, node in ipairs(found_parents) do
 		local found = false
 
-		for _, obj in ipairs(node:GetTypes()) do
+		for _, obj in ipairs(node:GetAssociatedTypes()) do
 			if type(obj) ~= "table" then
 				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
 			else
@@ -342,7 +342,7 @@ function META:FindUpvalue()
 	local node = self
 
 	while node do
-		local types = node:GetTypes()
+		local types = node:GetAssociatedTypes()
 
 		if #types > 0 then
 			for i, v in ipairs(types) do
@@ -356,7 +356,7 @@ function META:FindUpvalue()
 	end
 end
 
-function META:GetTypeMod()
+function META:GetSemanticType()
 	local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 	local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
 	local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
@@ -408,7 +408,7 @@ function META:GetTypeMod()
 		local obj
 		local types = token:FindType()
 
-		if #types == 1 then obj = types[1] else obj = Union(types) end
+		if #types == 1 then obj = types[1] elseif #types > 1 then obj = Union(types) end
 
 		if obj then
 			local mods = {}
@@ -2102,10 +2102,10 @@ function META:__tostring()
 	return table.concat(s, " | ")
 end
 
-function META:AddType(e)
+function META:AssociateType(e)
 	if e.Type == "union" then
 		for _, v in ipairs(e.Data) do
-			self:AddType(v)
+			self:AssociateType(v)
 		end
 
 		return self
@@ -2355,7 +2355,7 @@ function META:Union(union)
 	local copy = self:Copy()
 
 	for _, e in ipairs(union.Data) do
-		copy:AddType(e)
+		copy:AssociateType(e)
 	end
 
 	return copy
@@ -2368,9 +2368,9 @@ function META:Copy(map, copy_tables)
 
 	for _, e in ipairs(self.Data) do
 		if e.Type == "table" and not copy_tables then
-			copy:AddType(e)
+			copy:AssociateType(e)
 		else
-			copy:AddType(e:Copy(map, copy_tables))
+			copy:AssociateType(e:Copy(map, copy_tables))
 		end
 	end
 
@@ -2414,7 +2414,7 @@ function META:EnableFalsy()
 	if not self.falsy_disabled then return end
 
 	for _, v in ipairs(self.falsy_disabled) do
-		self:AddType(v)
+		self:AssociateType(v)
 	end
 end
 
@@ -2474,7 +2474,7 @@ function META.New(data)
 	)
 
 	if data then for _, v in ipairs(data) do
-		self:AddType(v)
+		self:AssociateType(v)
 	end end
 
 	return self
@@ -2935,6 +2935,14 @@ function META:FindNearest(str, start)
 	if not pos then return nil end
 
 	return pos + 1
+end
+
+function META:LineCharToSubPos(line, char)
+	return helpers.LinePositionToSubPosition(self:GetString(), line, char)
+end
+
+function META:SubPosToLineChar(start, stop)
+	return helpers.SubPositionToLinePosition(self:GetString(), start, stop)
 end
 
 local function remove_bom_header(str)
@@ -3567,7 +3575,7 @@ function META:Get(key)
 		for _, v in ipairs(key:GetData()) do
 			if key.Type == "number" then
 				local val = (self):Get(v)
-				union:AddType(val)
+				union:AssociateType(val)
 			end
 		end
 
@@ -3983,7 +3991,7 @@ local function mutation_solver(mutations, scope, obj)
 
 			if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 		else
-			union:AddType(value)
+			union:AssociateType(value)
 		end
 	end
 
@@ -4016,7 +4024,7 @@ local function mutation_solver(mutations, scope, obj)
 			union = Union()
 
 			for _, val in ipairs(stack) do
-				union:AddType(val.falsy)
+				union:AssociateType(val.falsy)
 			end
 		end
 
@@ -4028,7 +4036,7 @@ local function mutation_solver(mutations, scope, obj)
 	local union = Union()
 
 	for _, val in ipairs(stack) do
-		union:AddType(val.truthy)
+		union:AssociateType(val.truthy)
 	end
 
 	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
@@ -4451,7 +4459,7 @@ function META:GetKeyUnion()
 	local union = Union()
 
 	for _, keyval in ipairs(self:GetData()) do
-		union:AddType(keyval.key:Copy())
+		union:AssociateType(keyval.key:Copy())
 	end
 
 	return union
@@ -4461,7 +4469,7 @@ function META:GetValueUnion()
 	local union = Union()
 
 	for _, keyval in ipairs(self:GetData()) do
-		union:AddType(keyval.val:Copy())
+		union:AssociateType(keyval.val:Copy())
 	end
 
 	return union
@@ -4668,7 +4676,7 @@ function META:Get(key)
 			local obj, reason = self:Get(k)
 
 			if obj then
-				union:AddType(obj)
+				union:AssociateType(obj)
 			else
 				table.insert(errors, reason)
 			end
@@ -4686,11 +4694,11 @@ function META:Get(key)
 		for _, keyval in ipairs(self:GetData()) do
 			if keyval.key.Type == "union" then
 				for _, ukey in ipairs(keyval.key:GetData()) do
-					if ukey:IsSubsetOf(key) then union:AddType(keyval.val) end
+					if ukey:IsSubsetOf(key) then union:AssociateType(keyval.val) end
 				end
 			elseif keyval.key.Type == key.Type or keyval.key.Type == "any" then
 				if keyval.key:IsLiteral() then
-					union:AddType(keyval.val)
+					union:AssociateType(keyval.val)
 				else
 					found_non_literal = true
 
@@ -5088,9 +5096,9 @@ do
 
 					for _, val in ipairs(val:GetData()) do
 						if val.Type == "table" then
-							union:AddType(val:GetMutatedFromScope(scope, done))
+							union:AssociateType(val:GetMutatedFromScope(scope, done))
 						else
-							union:AddType(val)
+							union:AssociateType(val)
 						end
 					end
 
@@ -10113,6 +10121,14 @@ function META:FindNearest(str, start)
 	return pos + 1
 end
 
+function META:LineCharToSubPos(line, char)
+	return helpers.LinePositionToSubPosition(self:GetString(), line, char)
+end
+
+function META:SubPosToLineChar(start, stop)
+	return helpers.SubPositionToLinePosition(self:GetString(), start, stop)
+end
+
 local function remove_bom_header(str)
 	if str:sub(1, 2) == "\xFE\xFF" then
 		return str:sub(3)
@@ -10193,16 +10209,16 @@ function META:__tostring()
 	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
 end
 
-function META:AddType(obj)
+function META:AssociateType(obj)
 	self.inferred_types = self.inferred_types or {}
 	table.insert(self.inferred_types, obj)
 end
 
-function META:GetTypes()
+function META:GetAssociatedTypes()
 	return self.inferred_types or {}
 end
 
-function META:GetLastType()
+function META:GetLastAssociatedType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
@@ -10233,7 +10249,7 @@ function META:FindType()
 	for _, node in ipairs(found_parents) do
 		local found = false
 
-		for _, obj in ipairs(node:GetTypes()) do
+		for _, obj in ipairs(node:GetAssociatedTypes()) do
 			if type(obj) ~= "table" then
 				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
 			else
@@ -10258,7 +10274,7 @@ function META:FindUpvalue()
 	local node = self
 
 	while node do
-		local types = node:GetTypes()
+		local types = node:GetAssociatedTypes()
 
 		if #types > 0 then
 			for i, v in ipairs(types) do
@@ -10272,7 +10288,7 @@ function META:FindUpvalue()
 	end
 end
 
-function META:GetTypeMod()
+function META:GetSemanticType()
 	local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 	local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
 	local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
@@ -10324,7 +10340,7 @@ function META:GetTypeMod()
 		local obj
 		local types = token:FindType()
 
-		if #types == 1 then obj = types[1] else obj = Union(types) end
+		if #types == 1 then obj = types[1] elseif #types > 1 then obj = Union(types) end
 
 		if obj then
 			local mods = {}
@@ -10610,16 +10626,16 @@ function META:__tostring()
 	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
 end
 
-function META:AddType(obj)
+function META:AssociateType(obj)
 	self.inferred_types = self.inferred_types or {}
 	table.insert(self.inferred_types, obj)
 end
 
-function META:GetTypes()
+function META:GetAssociatedTypes()
 	return self.inferred_types or {}
 end
 
-function META:GetLastType()
+function META:GetLastAssociatedType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
@@ -10650,7 +10666,7 @@ function META:FindType()
 	for _, node in ipairs(found_parents) do
 		local found = false
 
-		for _, obj in ipairs(node:GetTypes()) do
+		for _, obj in ipairs(node:GetAssociatedTypes()) do
 			if type(obj) ~= "table" then
 				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
 			else
@@ -10675,7 +10691,7 @@ function META:FindUpvalue()
 	local node = self
 
 	while node do
-		local types = node:GetTypes()
+		local types = node:GetAssociatedTypes()
 
 		if #types > 0 then
 			for i, v in ipairs(types) do
@@ -10689,7 +10705,7 @@ function META:FindUpvalue()
 	end
 end
 
-function META:GetTypeMod()
+function META:GetSemanticType()
 	local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 	local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
 	local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
@@ -10741,7 +10757,7 @@ function META:GetTypeMod()
 		local obj
 		local types = token:FindType()
 
-		if #types == 1 then obj = types[1] else obj = Union(types) end
+		if #types == 1 then obj = types[1] elseif #types > 1 then obj = Union(types) end
 
 		if obj then
 			local mods = {}
@@ -12079,16 +12095,16 @@ function META:HasNodes()
 	return self.statements ~= nil
 end
 
-function META:AddType(obj)
+function META:AssociateType(obj)
 	self.inferred_types = self.inferred_types or {}
 	table.insert(self.inferred_types, obj)
 end
 
-function META:GetTypes()
+function META:GetAssociatedTypes()
 	return self.inferred_types or {}
 end
 
-function META:GetLastType()
+function META:GetLastAssociatedType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
@@ -16667,11 +16683,11 @@ do
 			if scope:IsFunctionScope() then
 				if
 					scope.node and
-					scope.node:GetLastType() and
-					scope.node:GetLastType().Type == "function" and
+					scope.node:GetLastAssociatedType() and
+					scope.node:GetLastAssociatedType().Type == "function" and
 					not scope:Contains(from)
 				then
-					return not scope.node:GetLastType():IsCalled()
+					return not scope.node:GetLastAssociatedType():IsCalled()
 				end
 			end
 
@@ -17670,13 +17686,13 @@ return function(META)
 
 		for _, ret in ipairs(scope:GetOutputSignature()) do
 			if #ret.types == 1 then
-				union:AddType(ret.types[1])
+				union:AssociateType(ret.types[1])
 			elseif #ret.types == 0 then
 				local tup = Tuple({Nil()})
-				union:AddType(tup)
+				union:AssociateType(tup)
 			else
 				local tup = Tuple(ret.types)
-				union:AddType(tup)
+				union:AssociateType(tup)
 			end
 		end
 
@@ -18171,7 +18187,7 @@ return function(META)
 						union = Union()
 
 						for _, val in ipairs(stack) do
-							union:AddType(val.falsy)
+							union:AssociateType(val.falsy)
 						end
 					end
 
@@ -18347,7 +18363,7 @@ return function(META)
 						local union = Union()
 
 						for _, v in ipairs(data.stack) do
-							if v.truthy then union:AddType(v.truthy) end
+							if v.truthy then union:AssociateType(v.truthy) end
 						end
 
 						if not union:IsEmpty() then
@@ -18363,7 +18379,7 @@ return function(META)
 					local union = Union()
 
 					for _, v in ipairs(data.stack) do
-						if v.truthy then union:AddType(v.truthy) end
+						if v.truthy then union:AssociateType(v.truthy) end
 					end
 
 					if not union:IsEmpty() then
@@ -18508,7 +18524,7 @@ return {
 
 						if not val then return val, err end
 
-						union:AddType(val)
+						union:AssociateType(val)
 					end
 				end
 
@@ -18652,10 +18668,10 @@ return {
 
 					if not ok then
 						self:ErrorAndCloneCurrentScope(err or "invalid set error", obj)
-						falsy_union:AddType(v)
+						falsy_union:AssociateType(v)
 					else
-						truthy_union:AddType(v)
-						new_union:AddType(v)
+						truthy_union:AssociateType(v)
+						new_union:AssociateType(v)
 					end
 				end
 
@@ -18993,7 +19009,7 @@ return function(META)
 
 				if existing then
 					if existing.Type == "union" then
-						existing:AddType(v)
+						existing:AssociateType(v)
 					else
 						ret:Set(i, Union({v, existing}))
 					end
@@ -19543,11 +19559,11 @@ return function(META)
 		do -- this is for the emitter
 			if function_node.identifiers then
 				for i, node in ipairs(function_node.identifiers) do
-					node:AddType(obj:GetInputSignature():Get(i))
+					node:AssociateType(obj:GetInputSignature():Get(i))
 				end
 			end
 
-			function_node:AddType(obj)
+			function_node:AssociateType(obj)
 		end
 
 		if not output_signature then
@@ -19669,7 +19685,7 @@ return {
 							obj
 						)
 					else
-						truthy_union:AddType(v)
+						truthy_union:AssociateType(v)
 					end
 				end
 
@@ -19728,7 +19744,7 @@ return {
 					val = val:GetAtIndex(1)
 				end
 
-				new:AddType(val)
+				new:AssociateType(val)
 			end
 
 			return Tuple({new})
@@ -20661,7 +20677,7 @@ function META:EmitExpression(node)
 end
 
 function META:EmitVarargTuple(node)
-	self:Emit(tostring(node:GetLastType()))
+	self:Emit(tostring(node:GetLastAssociatedType()))
 end
 
 function META:EmitExpressionIndex(node)
@@ -21460,7 +21476,7 @@ function META:EmitNodeList(tbl, func)
 end
 
 function META:HasTypeNotation(node)
-	return node.type_expression or node:GetLastType() or node.return_types
+	return node.type_expression or node:GetLastAssociatedType() or node.return_types
 end
 
 function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
@@ -21478,10 +21494,10 @@ function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
 
 			if i ~= #node.return_types then self:EmitToken(exp.tokens[","]) end
 		end
-	elseif node:GetLastType() and self.config.type_annotations ~= "explicit" then
+	elseif node:GetLastAssociatedType() and self.config.type_annotations ~= "explicit" then
 		local str = {}
 		-- this iterates the first return tuple
-		local obj = node:GetLastType():GetContract() or node:GetLastType()
+		local obj = node:GetLastAssociatedType():GetContract() or node:GetLastAssociatedType()
 
 		if obj.Type == "function" then
 			for i, v in ipairs(obj:GetOutputSignature():GetData()) do
@@ -21506,8 +21522,10 @@ end
 function META:EmitAnnotationExpression(node)
 	if node.type_expression then
 		self:EmitTypeExpression(node.type_expression)
-	elseif node:GetLastType() and self.config.type_annotations ~= "explicit" then
-		self:Emit(tostring(node:GetLastType():GetContract() or node:GetLastType()))
+	elseif node:GetLastAssociatedType() and self.config.type_annotations ~= "explicit" then
+		self:Emit(
+			tostring(node:GetLastAssociatedType():GetContract() or node:GetLastAssociatedType())
+		)
 	end
 end
 
@@ -22586,7 +22604,7 @@ return {
 
 				obj.from_for_loop = true
 				self:CreateLocalValue(identifier.value.value, obj)
-				identifier:AddType(obj)
+				identifier:AssociateType(obj)
 			end
 
 			self:CreateAndPushScope():SetLoopIteration(i)
@@ -22811,8 +22829,8 @@ local function Binary(self, node, l, r, op)
 
 	if self:IsTypesystem() then
 		if op == "|" then
-			cur_union:AddType(l)
-			cur_union:AddType(r)
+			cur_union:AssociateType(l)
+			cur_union:AssociateType(r)
 			return cur_union
 		elseif op == "==" then
 			return l:Equal(r) and True() or False()
@@ -22896,11 +22914,11 @@ local function Binary(self, node, l, r, op)
 							if type_checked then
 								for _, t in ipairs(type_checked:GetData()) do
 									if t.GetLuaType and t:GetLuaType() == l:GetData() then
-										truthy_union:AddType(t)
+										truthy_union:AssociateType(t)
 									end
 								end
 							else
-								truthy_union:AddType(l)
+								truthy_union:AssociateType(l)
 							end
 						end
 
@@ -22908,15 +22926,15 @@ local function Binary(self, node, l, r, op)
 							if type_checked then
 								for _, t in ipairs(type_checked:GetData()) do
 									if t.GetLuaType and t:GetLuaType() == l:GetData() then
-										falsy_union:AddType(t)
+										falsy_union:AssociateType(t)
 									end
 								end
 							else
-								falsy_union:AddType(l)
+								falsy_union:AssociateType(l)
 							end
 						end
 
-						new_union:AddType(res)
+						new_union:AssociateType(res)
 					end
 				end
 			end
@@ -22950,9 +22968,9 @@ local function Binary(self, node, l, r, op)
 						if val then
 							local res = Binary(self, node, val, expected, op)
 
-							if res:IsTruthy() then truthy_union:AddType(v) end
+							if res:IsTruthy() then truthy_union:AssociateType(v) end
 
-							if res:IsFalsy() then falsy_union:AddType(v) end
+							if res:IsFalsy() then falsy_union:AssociateType(v) end
 						end
 					end
 
@@ -23178,10 +23196,10 @@ return {
 
 		if literal_init and literal_max then
 			-- also check step
-			condition:AddType(Binary(self, statement, init, max, "<="))
+			condition:AssociateType(Binary(self, statement, init, max, "<="))
 		else
-			condition:AddType(True())
-			condition:AddType(False())
+			condition:AssociateType(True())
+			condition:AssociateType(False())
 		end
 
 		self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
@@ -23502,7 +23520,7 @@ return {
 			end
 
 			-- used by the emitter
-			exp_key:AddType(val)
+			exp_key:AssociateType(val)
 			val:SetAnalyzerEnvironment(self:GetCurrentAnalyzerEnvironment())
 
 			-- if all is well, create or mutate the value
@@ -23632,13 +23650,13 @@ local function Prefix(self, node, r)
 
 			if not res then
 				self:ErrorAndCloneCurrentScope(err, r)
-				falsy_union:AddType(r)
+				falsy_union:AssociateType(r)
 			else
-				new_union:AddType(res)
+				new_union:AssociateType(res)
 
-				if res:IsTruthy() then truthy_union:AddType(r) end
+				if res:IsTruthy() then truthy_union:AssociateType(r) end
 
-				if res:IsFalsy() then falsy_union:AddType(r) end
+				if res:IsFalsy() then falsy_union:AssociateType(r) end
 			end
 		end
 
@@ -24081,7 +24099,7 @@ return {
 		self:PushAnalyzerEnvironment("runtime")
 		local func = self:AnalyzeExpression(node.tag)
 
-		if node.tokens["type2"] then node.tokens["type2"]:AddType(func) end
+		if node.tokens["type2"] then node.tokens["type2"]:AssociateType(func) end
 
 		local tbl = Table()
 
@@ -24295,7 +24313,7 @@ do
 		profiler.PushZone("AnalyzeExpression - " .. node.kind)
 		local obj, err = self:AnalyzeExpression2(node)
 		obj = self:AnalyzeTypeExpression(node, obj)
-		node:AddType(obj or err)
+		node:AssociateType(obj or err)
 		node.scope = self:GetScope()
 		profiler.PopZone()
 		return obj, err
@@ -24454,7 +24472,7 @@ analyzer function enum(tbl: Table)
 
 	for _, keyval in ipairs(tbl:GetData()) do
 		analyzer:SetLocalOrGlobalValue(keyval.key, keyval.val)
-		union:AddType(keyval.val)
+		union:AssociateType(keyval.val)
 	end
 
 	analyzer:PopAnalyzerEnvironment()
@@ -24469,13 +24487,13 @@ analyzer function keysof(tbl: Table)
 		for _, val in ipairs(tbl:GetData()) do
 			if val.Type == "table" then
 				for _, keyval in ipairs(tbl:GetData()) do
-					union:AddType(keyval.key)
+					union:AssociateType(keyval.key)
 				end
 			end
 		end
 	elseif tbl.Type == "table" then
 		for _, keyval in ipairs(tbl:GetData()) do
-			union:AddType(keyval.key)
+			union:AssociateType(keyval.key)
 		end
 	end
 
@@ -24870,11 +24888,11 @@ analyzer function next(t: Map<|any, any|>, k: any)
 
 		for i, kv in ipairs(t:GetContract() and t:GetContract():GetData() or t:GetData()) do
 			if kv.Type then
-				k:AddType(types.Number())
-				v:AddType(kv)
+				k:AssociateType(types.Number())
+				v:AssociateType(kv)
 			else
-				k:AddType(kv.key)
-				v:AddType(kv.val)
+				k:AssociateType(kv.key)
+				v:AssociateType(kv.val)
 			end
 		end
 	end
@@ -25227,7 +25245,7 @@ analyzer function type(obj: any)
 		copy:SetUpvalue(obj:GetUpvalue())
 
 		for _, v in ipairs(obj:GetData()) do
-			if v.GetLuaType then copy:AddType(types.LString(v:GetLuaType())) end
+			if v.GetLuaType then copy:AssociateType(types.LString(v:GetLuaType())) end
 		end
 
 		return copy
@@ -25296,7 +25314,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 			analyzer:ClearObjectMutations(tbl)
 		elseif analyzer:IsRuntime() then
 			meta.potential_self = meta.potential_self or types.Union({})
-			meta.potential_self:AddType(tbl)
+			meta.potential_self:AssociateType(tbl)
 		end
 
 		tbl:SetMetaTable(meta)
@@ -25416,13 +25434,13 @@ type io.stderr = File
 
 analyzer function io.type(obj: any)
 	local flags = types.Union()
-	flags:AddType(types.LString("file"))
-	flags:AddType(types.LString("closed file"))
+	flags:AssociateType(types.LString("file"))
+	flags:AssociateType(types.LString("closed file"))
 	print(("%p"):format(obj), ("%p"):format(env.typesystem.File))
 
 	if false and obj:IsSubsetOf(env.typesystem.File) then return flags end
 
-	flags:AddType(types.Nil())
+	flags:AssociateType(types.Nil())
 	return flags
 end
 
@@ -25754,11 +25772,11 @@ analyzer function table.sort(tbl: List<|any|>, func: nil | function=(a: any, b: 
 
 	if tbl.Type == "tuple" then
 		for i, v in ipairs(tbl:GetData()) do
-			union:AddType(v)
+			union:AssociateType(v)
 		end
 	elseif tbl.Type == "table" then
 		for i, v in ipairs(tbl:GetData()) do
-			union:AddType(v.val)
+			union:AssociateType(v.val)
 		end
 	end
 
@@ -28261,7 +28279,7 @@ function META.New()
 end
 
 local function get_range(code, start, stop)
-	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
+	local data = code:SubPosToLineChar(start, stop)
 	return {
 		start = {
 			line = data.line_start - 1,
@@ -28296,61 +28314,50 @@ function META:GetEmitterConfig()
 	return cfg
 end
 
-function META:GetFile(path)
-	if not self.LoadedFiles[path] then
-		print("no such file loaded ", path)
+do
+	function META:GetFile(path)
+		if not self.LoadedFiles[path] then error(path .. " not loaded") end
 
-		for k, v in pairs(cache) do
-			print(k)
-		end
+		return self.LoadedFiles[path]
 	end
 
-	return self.LoadedFiles[path]
+	function META:LoadFile(path, code, tokens)
+		self.LoadedFiles[path] = {
+			code = code,
+			tokens = tokens,
+		}
+	end
+
+	function META:UnloadFile(path)
+		self.LoadedFiles[path] = nil
+	end
 end
 
-function META:GetTempFile(path)
-	return self.TempFiles[path]
-end
+do
+	function META:SetFileContent(path, code)
+		self.TempFiles[path] = code
+	end
 
-function META:StoreFile(path, code, tokens)
-	self.LoadedFiles[path] = {
-		code = code,
-		tokens = tokens,
-	}
-end
-
-function META:StoreTempFile(path, code)
-	self.TempFiles[path] = code
-end
-
-function META:ClearTempFile(path)
-	self.TempFiles[path] = nil
+	function META:GetFileContent(path)
+		return self.TempFiles[path]
+	end
 end
 
 function META:Recompile(uri)
-	local compiler
-	local entry_point
-	local cfg
+	local cfg = self:GetAanalyzerConfig()
+	local entry_point = cfg.entry_point
 
-	if self.WorkingDirectory then
-		cfg = self:GetAanalyzerConfig()
-		entry_point = cfg.entry_point
-
-		if not entry_point and uri then
-			entry_point = uri:gsub(self.WorkingDirectory .. "/", "")
-		end
-
-		if not entry_point then return false end
-
-		cfg.inline_require = false
-		cfg.on_read_file = function(parser, path)
-			return self:GetTempFile(self.WorkingDirectory .. "/" .. path)
-		end
-		compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
-	else
-		compiler = Compiler(self:GetTempFile(uri), uri)
+	if not entry_point and uri then
+		entry_point = uri:gsub(self.WorkingDirectory .. "/", "")
 	end
 
+	if not entry_point then return false end
+
+	cfg.inline_require = false
+	cfg.on_read_file = function(parser, path)
+		return self:GetFileContent(self.WorkingDirectory .. "/" .. path)
+	end
+	local compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
 	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
 	local diagnostics = {}
@@ -28381,7 +28388,7 @@ function META:Recompile(uri)
 							root = root_node.RootStatement.RootStatement
 						end
 
-						self:StoreFile(
+						self:LoadFile(
 							self.WorkingDirectory .. "/" .. root.parser.config.file_path,
 							root.code,
 							root.lexer_tokens
@@ -28389,7 +28396,7 @@ function META:Recompile(uri)
 					end
 				end
 			else
-				self:StoreFile(uri, compiler.Code, compiler.Tokens)
+				self:LoadFile(uri, compiler.Code, compiler.Tokens)
 			end
 
 			local should_analyze = true
@@ -28457,143 +28464,29 @@ function META:Format(code, path)
 	return code
 end
 
-do -- semantic tokens
-	local tokenTypeMap = {}
-	local tokenModifiersMap = {}
-	local SemanticTokenTypes = {
-		-- identifiers or reference
-		"class", -- a class type. maybe META or Meta?
-		"typeParameter", -- local type >foo< = true
-		"parameter", -- function argument: function foo(>a<)
-		"variable", -- a local or global variable.
-		"property", -- a member property, member field, or member variable.
-		"enumMember", -- an enumeration property, constant, or member. uppercase variables and global non tables? local FOO = true ?
-		"event", --  an event property.
-		"function", -- local or global function: local function >foo<
-		"method", --  a member function or method: string.>bar<()
-		"type", -- misc type
-		-- tokens
-		"comment", -- 
-		"string", -- 
-		"keyword", -- 
-		"number", -- 
-		"regexp", -- regular expression literal.
-		"operator", --
-		"decorator", -- decorator syntax, maybe for @Foo in tables, $ and §
-		-- other identifiers or references
-		"namespace", -- namespace, module, or package.
-		"enum", -- 
-		"interface", --
-		"struct", -- 
-		"decorator", -- decorators and annotations.
-		"macro", --  a macro.
-		"label", --  a label. ??
-	}
-	local SemanticTokenModifiers = {
-		"declaration", -- For declarations of symbols.
-		"definition", -- For definitions of symbols, for example, in header files.
-		"readonly", -- For readonly variables and member fields (constants).
-		"static", -- For class members (static members).
-		"private", -- For class members (static members).
-		"deprecated", -- For symbols that should no longer be used.
-		"abstract", -- For types and member functions that are abstract.
-		"async", -- For functions that are marked async.
-		"modification", -- For variable references where the variable is assigned to.
-		"documentation", -- For occurrences of symbols in documentation.
-		"defaultLibrary", -- For symbols that are part of the standard library.
-	}
-
-	for i, v in ipairs(SemanticTokenTypes) do
-		tokenTypeMap[v] = i - 1
-	end
-
-	for i, v in ipairs(SemanticTokenModifiers) do
-		tokenModifiersMap[v] = i - 1
-	end
-
-	function META:DescribeTokens(path)
-		local data = self:GetFile(path)
-
-		if not data then return end
-
-		local integers = {}
-		local last_y = 0
-		local last_x = 0
-		local mods = {}
-
-		for _, token in ipairs(data.tokens) do
-			if token.type ~= "end_of_file" and token.parent then
-				local type, modss = token:GetTypeMod()
-
-				if type then mods[token] = {type, modss} end
-			end
-		end
-
-		for _, token in ipairs(data.tokens) do
-			if mods[token] then
-				local type, modifiers = unpack(mods[token])
-				local data = helpers.SubPositionToLinePosition(data.code:GetString(), token.start, token.stop)
-				local len = #token.value
-				local y = (data.line_start - 1) - last_y
-				local x = (data.character_start - 1) - last_x
-
-				-- x is not relative when there's a new line
-				if y ~= 0 then x = data.character_start - 1 end
-
-				if type and x >= 0 and y >= 0 then
-					table.insert(integers, y)
-					table.insert(integers, x)
-					table.insert(integers, len)
-					assert(tokenTypeMap[type], "invalid type " .. type)
-					table.insert(integers, tokenTypeMap[type])
-					local result = 0
-
-					if modifiers then
-						for _, mod in ipairs(modifiers) do
-							assert(tokenModifiersMap[mod], "invalid modifier " .. mod)
-							result = bit.bor(result, bit.lshift(1, tokenModifiersMap[mod])) -- TODO, doesn't seem to be working
-						end
-					end
-
-					table.insert(integers, result)
-					last_y = data.line_start - 1
-					last_x = data.character_start - 1
-				end
-			end
-		end
-
-		return integers
-	end
-end
-
 function META:OpenFile(path, code)
-	self:StoreTempFile(path, code)
+	self:SetFileContent(path, code)
 	self:Recompile(path)
 end
 
 function META:CloseFile(path)
-	self:ClearTempFile(path)
+	self:SetFileContent(path, nil)
+	self:UnloadFile(path)
 end
 
 function META:UpdateFile(path, code)
-	self:StoreTempFile(path, code)
+	self:SetFileContent(path, code)
 	self:Recompile(path)
 end
 
 function META:SaveFile(path)
-	self:ClearTempFile(path)
+	self:SetFileContent(path, nil)
 	self:Recompile(path)
 end
 
 function META:FindToken(path, line, char)
 	local data = self:GetFile(path)
-
-	if not data then
-		print("unable to find token", path, line, character)
-		return
-	end
-
-	local sub_pos = helpers.LinePositionToSubPosition(data.code:GetString(), line + 1, char + 1)
+	local sub_pos = data.code:LineCharToSubPos(line + 1, char + 1)
 
 	for _, token in ipairs(data.tokens) do
 		if sub_pos >= token.start and sub_pos <= token.stop then
@@ -28601,7 +28494,7 @@ function META:FindToken(path, line, char)
 		end
 	end
 
-	return nil
+	error("cannot find token at " .. path .. ":" .. line .. ":" .. char, 2)
 end
 
 function META:FindTokensFromRange(
@@ -28612,21 +28505,8 @@ function META:FindTokensFromRange(
 	char_stop
 )
 	local data = self:GetFile(path)
-
-	if not data then
-		print(
-			"unable to find requested token range",
-			path,
-			line_start,
-			char_start,
-			line_stop,
-			char_stop
-		)
-		return
-	end
-
-	local sub_pos_start = helpers.LinePositionToSubPosition(data.code, line_start, char_start)
-	local sub_pos_stop = helpers.LinePositionToSubPosition(data.code, line_stop, char_stop)
+	local sub_pos_start = data.code:LineCharToSubPos(line_start, char_start)
+	local sub_pos_stop = data.code:LineCharToSubPos(line_stop, char_stop)
 	local found = {}
 
 	for _, token in ipairs(tokens) do
@@ -28638,116 +28518,89 @@ function META:FindTokensFromRange(
 	return found
 end
 
-local function has_value(tbl, str)
-	for _, v in ipairs(tbl) do
-		if v == str then return true end
-	end
+do
+	local function find_parent(token, type, kind)
+		local node = token.parent
 
-	return false
-end
+		if not node then return nil end
 
-local function find_parent(token, type, kind)
-	local node = token.parent
+		while node.parent do
+			if node.type == type and node.kind == kind then return node end
 
-	if not node then return nil end
-
-	while node.parent do
-		if node.type == type and node.kind == kind then return node end
-
-		node = node.parent
-	end
-
-	return nil
-end
-
-local function find_nodes(tokens, type, kind)
-	local nodes = {}
-	local done = {}
-
-	for _, token in ipairs(tokens) do
-		local node = find_parent(token, type, kind)
-
-		if node and not done[node] then
-			table.insert(nodes, node)
-			done[node] = true
+			node = node.parent
 		end
+
+		return nil
 	end
 
-	return nodes
-end
+	local function find_nodes(tokens, type, kind)
+		local nodes = {}
+		local done = {}
 
-function META:GetInlayHints(path, start_line, start_character, stop_line, stop_character)
-	local tokens = self:FindTokensFromRange(
-		path,
-		start_line - 1,
-		start_character - 1,
-		stop_line - 1,
-		stop_character - 1
-	)
+		for _, token in ipairs(tokens) do
+			local node = find_parent(token, type, kind)
 
-	if not tokens then return end
+			if node and not done[node] then
+				table.insert(nodes, node)
+				done[node] = true
+			end
+		end
 
-	local hints = {}
-	local assignments = find_nodes(tokens, "statement", "local_assignment")
-
-	for _, assingment in ipairs(find_nodes(tokens, "statement", "assignment")) do
-		table.insert(assignments, assingment)
+		return nodes
 	end
 
-	for _, assignment in ipairs(assignments) do
-		if assignment.environment == "runtime" then
-			for i, left in ipairs(assignment.left) do
-				if not left.tokens[":"] and assignment.right and assignment.right[i] then
-					local types = left:GetTypes()
+	function META:GetInlayHints(path, start_line, start_character, stop_line, stop_character)
+		local tokens = self:FindTokensFromRange(
+			path,
+			start_line - 1,
+			start_character - 1,
+			stop_line - 1,
+			stop_character - 1
+		)
+		local hints = {}
+		local assignments = find_nodes(tokens, "statement", "local_assignment")
 
-					if
-						types and
-						(
-							assignment.right[i].kind ~= "value" or
-							assignment.right[i].value.value.type == "letter"
-						)
-					then
-						local data = helpers.SubPositionToLinePosition(compiler.Code:GetString(), left:GetStartStop())
-						local label = tostring(Union(types))
+		for _, assingment in ipairs(find_nodes(tokens, "statement", "assignment")) do
+			table.insert(assignments, assingment)
+		end
 
-						if #label > 20 then label = label:sub(1, 20) .. "..." end
+		for _, assignment in ipairs(assignments) do
+			if assignment.environment == "runtime" then
+				for i, left in ipairs(assignment.left) do
+					if not left.tokens[":"] and assignment.right and assignment.right[i] then
+						local types = left:GetAssociatedTypes()
 
-						table.insert(
-							hints,
-							{
-								label = ": " .. label,
-								tooltip = tostring(Union(types)),
-								position = {
-									lineNumber = data.line_stop,
-									column = data.character_stop + 1,
-								},
-								kind = 1, -- type
-							}
-						)
+						if
+							types and
+							(
+								assignment.right[i].kind ~= "value" or
+								assignment.right[i].value.value.type == "letter"
+							)
+						then
+							local data = compiler.Code:SubPosToLineChar(left:GetStartStop())
+							local label = tostring(Union(types))
+
+							if #label > 20 then label = label:sub(1, 20) .. "..." end
+
+							table.insert(
+								hints,
+								{
+									label = ": " .. label,
+									tooltip = tostring(Union(types)),
+									position = {
+										lineNumber = data.line_stop,
+										column = data.character_stop + 1,
+									},
+									kind = 1, -- type
+								}
+							)
+						end
 					end
 				end
 			end
 		end
-	end
 
-	return hints
-end
-
-local function token_to_upvalue(token)
-	local node = token
-
-	while node do
-		local types = node:GetTypes()
-
-		if #types > 0 then
-			for i, v in ipairs(types) do
-				local upvalue = v:GetUpvalue()
-
-				if upvalue then return upvalue end
-			end
-		end
-
-		node = node.parent
+		return hints
 	end
 end
 
@@ -28758,15 +28611,11 @@ end
 
 function META:GetRenameInstructions(path, line, character, newName)
 	local token, data = self:FindToken(path, line, character)
-	assert(token.type == "letter", "cannot rename non letter " .. token.value)
-
-	if not token then return end
-
 	local upvalue = token:FindUpvalue()
 	local edits = {}
 
 	for i, v in ipairs(data.tokens) do
-		local u = token_to_upvalue(v)
+		local u = v:FindUpvalue()
 
 		if u == upvalue and v.type == "letter" then
 			if v.value == token.value then
@@ -28788,32 +28637,32 @@ end
 
 function META:GetDefinition(path, line, character)
 	local token, data = self:FindToken(path, line, character)
+	local types = token:FindType()
 
-	if not token or not data or not token.parent then return end
-
-	local obj = token:FindType()[1]
-
-	if not obj or not obj:GetUpvalue() then return end
-
-	local node = obj:GetUpvalue():GetNode()
-
-	if not node then return end
-
-	local data = self:GetFile(path)
-	return {
-		uri = path,
-		range = get_range(data.code, node:GetStartStop()),
-	}
+	if types[1] then
+		local node = types[1]:GetUpvalue():GetNode()
+		return {
+			uri = path,
+			range = get_range(data.code, node:GetStartStop()),
+		}
+	end
 end
 
 function META:GetHover(path, line, character)
-	local token, data = self:FindToken(path, line, character)
+	local token
+	local ok, err = pcall(function()
+		token = self:FindToken(path, line, character)
+	end)
 
-	if not token or not data or not token.parent then return end
+	if not ok then return end
 
 	local types, found_parents, scope = token:FindType()
+	local obj
+
+	if #types == 1 then obj = types[1] elseif #types > 1 then obj = Union(types) end
+
 	return {
-		obj = Union(types),
+		obj = obj,
 		scope = scope,
 		found_parents = found_parents,
 	}
@@ -28996,10 +28845,107 @@ lsp.methods["shutdown"] = function(params)
 	print("SHUTDOWN")
 	table.print(params)
 end
-lsp.methods["textDocument/semanticTokens/full"] = function(params)
-	local integers = editor_helper:DescribeTokens(params.textDocument.uri)
-	return {data = integers}
+
+do
+	local tokenTypeMap = {}
+	local tokenModifiersMap = {}
+	local SemanticTokenTypes = {
+		-- identifiers or reference
+		"class", -- a class type. maybe META or Meta?
+		"typeParameter", -- local type >foo< = true
+		"parameter", -- function argument: function foo(>a<)
+		"variable", -- a local or global variable.
+		"property", -- a member property, member field, or member variable.
+		"enumMember", -- an enumeration property, constant, or member. uppercase variables and global non tables? local FOO = true ?
+		"event", --  an event property.
+		"function", -- local or global function: local function >foo<
+		"method", --  a member function or method: string.>bar<()
+		"type", -- misc type
+		-- tokens
+		"comment", -- 
+		"string", -- 
+		"keyword", -- 
+		"number", -- 
+		"regexp", -- regular expression literal.
+		"operator", --
+		"decorator", -- decorator syntax, maybe for @Foo in tables, $ and §
+		-- other identifiers or references
+		"namespace", -- namespace, module, or package.
+		"enum", -- 
+		"interface", --
+		"struct", -- 
+		"decorator", -- decorators and annotations.
+		"macro", --  a macro.
+		"label", --  a label. ??
+	}
+	local SemanticTokenModifiers = {
+		"declaration", -- For declarations of symbols.
+		"definition", -- For definitions of symbols, for example, in header files.
+		"readonly", -- For readonly variables and member fields (constants).
+		"static", -- For class members (static members).
+		"private", -- For class members (static members).
+		"deprecated", -- For symbols that should no longer be used.
+		"abstract", -- For types and member functions that are abstract.
+		"async", -- For functions that are marked async.
+		"modification", -- For variable references where the variable is assigned to.
+		"documentation", -- For occurrences of symbols in documentation.
+		"defaultLibrary", -- For symbols that are part of the standard library.
+	}
+
+	for i, v in ipairs(SemanticTokenTypes) do
+		tokenTypeMap[v] = i - 1
+	end
+
+	for i, v in ipairs(SemanticTokenModifiers) do
+		tokenModifiersMap[v] = i - 1
+	end
+
+	lsp.methods["textDocument/semanticTokens/full"] = function(params)
+		local data = editor_helper:GetFile(params.textDocument.uri)
+		local integers = {}
+		local last_y = 0
+		local last_x = 0
+
+		for _, token in ipairs(data.tokens) do
+			if token.type ~= "end_of_file" then
+				local type, modifiers = token:GetSemanticType()
+
+				if type then
+					local data = data.code:SubPosToLineChar(token.start, token.stop)
+					local len = #token.value
+					local y = (data.line_start - 1) - last_y
+					local x = (data.character_start - 1) - last_x
+
+					-- x is not relative when there's a new line
+					if y ~= 0 then x = data.character_start - 1 end
+
+					if x >= 0 and y >= 0 then
+						table.insert(integers, y)
+						table.insert(integers, x)
+						table.insert(integers, len)
+						assert(tokenTypeMap[type], "invalid type " .. type)
+						table.insert(integers, tokenTypeMap[type])
+						local result = 0
+
+						if modifiers then
+							for _, mod in ipairs(modifiers) do
+								assert(tokenModifiersMap[mod], "invalid modifier " .. mod)
+								result = bit.bor(result, bit.lshift(1, tokenModifiersMap[mod])) -- TODO, doesn't seem to be working
+							end
+						end
+
+						table.insert(integers, result)
+						last_y = data.line_start - 1
+						last_x = data.character_start - 1
+					end
+				end
+			end
+		end
+
+		return {data = integers}
+	end
 end
+
 lsp.methods["$/cancelRequest"] = function(params)
 	do
 		return
