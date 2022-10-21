@@ -182,8 +182,8 @@ local function Binary(self, node, l, r, op)
 
 	if self:IsTypesystem() then
 		if op == "|" then
-			cur_union:AddType(l)
-			cur_union:AddType(r)
+			cur_union:AssociateType(l)
+			cur_union:AssociateType(r)
 			return cur_union
 		elseif op == "==" then
 			return l:Equal(r) and True() or False()
@@ -267,11 +267,11 @@ local function Binary(self, node, l, r, op)
 							if type_checked then
 								for _, t in ipairs(type_checked:GetData()) do
 									if t.GetLuaType and t:GetLuaType() == l:GetData() then
-										truthy_union:AddType(t)
+										truthy_union:AssociateType(t)
 									end
 								end
 							else
-								truthy_union:AddType(l)
+								truthy_union:AssociateType(l)
 							end
 						end
 
@@ -279,15 +279,15 @@ local function Binary(self, node, l, r, op)
 							if type_checked then
 								for _, t in ipairs(type_checked:GetData()) do
 									if t.GetLuaType and t:GetLuaType() == l:GetData() then
-										falsy_union:AddType(t)
+										falsy_union:AssociateType(t)
 									end
 								end
 							else
-								falsy_union:AddType(l)
+								falsy_union:AssociateType(l)
 							end
 						end
 
-						new_union:AddType(res)
+						new_union:AssociateType(res)
 					end
 				end
 			end
@@ -321,9 +321,9 @@ local function Binary(self, node, l, r, op)
 						if val then
 							local res = Binary(self, node, val, expected, op)
 
-							if res:IsTruthy() then truthy_union:AddType(v) end
+							if res:IsTruthy() then truthy_union:AssociateType(v) end
 
-							if res:IsFalsy() then falsy_union:AddType(v) end
+							if res:IsFalsy() then falsy_union:AssociateType(v) end
 						end
 					end
 

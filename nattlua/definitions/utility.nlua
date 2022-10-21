@@ -69,7 +69,7 @@ analyzer function enum(tbl: Table)
 
 	for _, keyval in ipairs(tbl:GetData()) do
 		analyzer:SetLocalOrGlobalValue(keyval.key, keyval.val)
-		union:AddType(keyval.val)
+		union:AssociateType(keyval.val)
 	end
 
 	analyzer:PopAnalyzerEnvironment()
@@ -84,13 +84,13 @@ analyzer function keysof(tbl: Table)
 		for _, val in ipairs(tbl:GetData()) do
 			if val.Type == "table" then
 				for _, keyval in ipairs(tbl:GetData()) do
-					union:AddType(keyval.key)
+					union:AssociateType(keyval.key)
 				end
 			end
 		end
 	elseif tbl.Type == "table" then
 		for _, keyval in ipairs(tbl:GetData()) do
-			union:AddType(keyval.key)
+			union:AssociateType(keyval.key)
 		end
 	end
 

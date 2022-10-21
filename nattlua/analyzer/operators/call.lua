@@ -35,7 +35,7 @@ return {
 							obj
 						)
 					else
-						truthy_union:AddType(v)
+						truthy_union:AssociateType(v)
 					end
 				end
 
@@ -94,7 +94,7 @@ return {
 					val = val:GetAtIndex(1)
 				end
 
-				new:AddType(val)
+				new:AssociateType(val)
 			end
 
 			return Tuple({new})

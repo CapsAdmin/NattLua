@@ -7,7 +7,7 @@ return {
 		self:PushAnalyzerEnvironment("runtime")
 		local func = self:AnalyzeExpression(node.tag)
 
-		if node.tokens["type2"] then node.tokens["type2"]:AddType(func) end
+		if node.tokens["type2"] then node.tokens["type2"]:AssociateType(func) end
 
 		local tbl = Table()
 

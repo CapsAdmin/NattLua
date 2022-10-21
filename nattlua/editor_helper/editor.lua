@@ -462,7 +462,7 @@ function META:GetInlayHints(path, start_line, start_character, stop_line, stop_c
 		if assignment.environment == "runtime" then
 			for i, left in ipairs(assignment.left) do
 				if not left.tokens[":"] and assignment.right and assignment.right[i] then
-					local types = left:GetTypes()
+					local types = left:GetAssociatedTypes()
 
 					if
 						types and
@@ -497,24 +497,6 @@ function META:GetInlayHints(path, start_line, start_character, stop_line, stop_c
 	return hints
 end
 
-local function token_to_upvalue(token)
-	local node = token
-
-	while node do
-		local types = node:GetTypes()
-
-		if #types > 0 then
-			for i, v in ipairs(types) do
-				local upvalue = v:GetUpvalue()
-
-				if upvalue then return upvalue end
-			end
-		end
-
-		node = node.parent
-	end
-end
-
 function META:GetCode(path)
 	local data = self:GetFile(path)
 	return data.code
@@ -530,7 +512,7 @@ function META:GetRenameInstructions(path, line, character, newName)
 	local edits = {}
 
 	for i, v in ipairs(data.tokens) do
-		local u = token_to_upvalue(v)
+		local u = v:FindUpvalue()
 
 		if u == upvalue and v.type == "letter" then
 			if v.value == token.value then

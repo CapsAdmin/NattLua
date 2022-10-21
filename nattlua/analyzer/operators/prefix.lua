@@ -60,13 +60,13 @@ local function Prefix(self, node, r)
 
 			if not res then
 				self:ErrorAndCloneCurrentScope(err, r)
-				falsy_union:AddType(r)
+				falsy_union:AssociateType(r)
 			else
-				new_union:AddType(res)
+				new_union:AssociateType(res)
 
-				if res:IsTruthy() then truthy_union:AddType(r) end
+				if res:IsTruthy() then truthy_union:AssociateType(r) end
 
-				if res:IsFalsy() then falsy_union:AddType(r) end
+				if res:IsFalsy() then falsy_union:AssociateType(r) end
 			end
 		end
 

@@ -30,7 +30,7 @@ test("declaring base types", function()
         
         local analyzer function AddToUnion(union: any, what: any)
             -- this modifies the existing type rather than creating a new one
-            union:AddType(what)
+            union:AssociateType(what)
         end
         AddToUnion<|Any, Table|>
         AddToUnion<|Any, Function|>
@@ -443,8 +443,8 @@ analyze[[
         -- We work around this by mutating the type after its declaration
 
         local analyzer function extend_any(obj: any, func: any, tbl: any)
-            obj:AddType(tbl)
-            obj:AddType(func)
+            obj:AssociateType(tbl)
+            obj:AssociateType(func)
         end
 
         --extend_any<|Any, Function, Table|>

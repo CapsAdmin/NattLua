@@ -149,16 +149,16 @@ function META:HasNodes()
 	return self.statements ~= nil
 end
 
-function META:AddType(obj)
+function META:AssociateType(obj)
 	self.inferred_types = self.inferred_types or {}
 	table.insert(self.inferred_types, obj)
 end
 
-function META:GetTypes()
+function META:GetAssociatedTypes()
 	return self.inferred_types or {}
 end
 
-function META:GetLastType()
+function META:GetLastAssociatedType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 

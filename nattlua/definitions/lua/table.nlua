@@ -89,11 +89,11 @@ analyzer function table.sort(tbl: List<|any|>, func: nil | function=(a: any, b: 
 
 	if tbl.Type == "tuple" then
 		for i, v in ipairs(tbl:GetData()) do
-			union:AddType(v)
+			union:AssociateType(v)
 		end
 	elseif tbl.Type == "table" then
 		for i, v in ipairs(tbl:GetData()) do
-			union:AddType(v.val)
+			union:AssociateType(v.val)
 		end
 	end
 

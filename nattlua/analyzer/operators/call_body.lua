@@ -529,11 +529,11 @@ return function(META)
 		do -- this is for the emitter
 			if function_node.identifiers then
 				for i, node in ipairs(function_node.identifiers) do
-					node:AddType(obj:GetInputSignature():Get(i))
+					node:AssociateType(obj:GetInputSignature():Get(i))
 				end
 			end
 
-			function_node:AddType(obj)
+			function_node:AssociateType(obj)
 		end
 
 		if not output_signature then

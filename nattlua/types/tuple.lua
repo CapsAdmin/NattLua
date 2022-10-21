@@ -252,7 +252,7 @@ function META:Get(key--[[#: number | TBaseType]])
 		for _, v in ipairs(key:GetData()) do
 			if key.Type == "number" then
 				local val = (self--[[# as any]]):Get(v)
-				union:AddType(val)
+				union:AssociateType(val)
 			end
 		end
 

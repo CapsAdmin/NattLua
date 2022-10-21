@@ -412,7 +412,7 @@ function META:GetKeyUnion()
 	local union = Union()
 
 	for _, keyval in ipairs(self:GetData()) do
-		union:AddType(keyval.key:Copy())
+		union:AssociateType(keyval.key:Copy())
 	end
 
 	return union
@@ -422,7 +422,7 @@ function META:GetValueUnion()
 	local union = Union()
 
 	for _, keyval in ipairs(self:GetData()) do
-		union:AddType(keyval.val:Copy())
+		union:AssociateType(keyval.val:Copy())
 	end
 
 	return union
@@ -629,7 +629,7 @@ function META:Get(key--[[#: TBaseType]])
 			local obj, reason = self:Get(k)
 
 			if obj then
-				union:AddType(obj)
+				union:AssociateType(obj)
 			else
 				table.insert(errors, reason)
 			end
@@ -647,11 +647,11 @@ function META:Get(key--[[#: TBaseType]])
 		for _, keyval in ipairs(self:GetData()) do
 			if keyval.key.Type == "union" then
 				for _, ukey in ipairs(keyval.key:GetData()) do
-					if ukey:IsSubsetOf(key) then union:AddType(keyval.val) end
+					if ukey:IsSubsetOf(key) then union:AssociateType(keyval.val) end
 				end
 			elseif keyval.key.Type == key.Type or keyval.key.Type == "any" then
 				if keyval.key:IsLiteral() then
-					union:AddType(keyval.val)
+					union:AssociateType(keyval.val)
 				else
 					found_non_literal = true
 
@@ -1051,9 +1051,9 @@ do
 
 					for _, val in ipairs(val:GetData()) do
 						if val.Type == "table" then
-							union:AddType(val:GetMutatedFromScope(scope, done))
+							union:AssociateType(val:GetMutatedFromScope(scope, done))
 						else
-							union:AddType(val)
+							union:AssociateType(val)
 						end
 					end
 

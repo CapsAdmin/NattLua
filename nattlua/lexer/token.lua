@@ -31,16 +31,16 @@ function META:__tostring()
 	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
 end
 
-function META:AddType(obj)
+function META:AssociateType(obj)
 	self.inferred_types = self.inferred_types or {}
 	table.insert(self.inferred_types, obj)
 end
 
-function META:GetTypes()
+function META:GetAssociatedTypes()
 	return self.inferred_types or {}
 end
 
-function META:GetLastType()
+function META:GetLastAssociatedType()
 	return self.inferred_types and self.inferred_types[#self.inferred_types]
 end
 
@@ -71,7 +71,7 @@ function META:FindType()
 	for _, node in ipairs(found_parents) do
 		local found = false
 
-		for _, obj in ipairs(node:GetTypes()) do
+		for _, obj in ipairs(node:GetAssociatedTypes()) do
 			if type(obj) ~= "table" then
 				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
 			else
@@ -96,7 +96,7 @@ function META:FindUpvalue()
 	local node = self
 
 	while node do
-		local types = node:GetTypes()
+		local types = node:GetAssociatedTypes()
 
 		if #types > 0 then
 			for i, v in ipairs(types) do

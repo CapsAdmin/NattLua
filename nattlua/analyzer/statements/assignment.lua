@@ -174,7 +174,7 @@ return {
 			end
 
 			-- used by the emitter
-			exp_key:AddType(val)
+			exp_key:AssociateType(val)
 			val:SetAnalyzerEnvironment(self:GetCurrentAnalyzerEnvironment())
 
 			-- if all is well, create or mutate the value

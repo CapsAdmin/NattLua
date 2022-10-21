@@ -198,7 +198,7 @@ return function(META)
 
 				if existing then
 					if existing.Type == "union" then
-						existing:AddType(v)
+						existing:AssociateType(v)
 					else
 						ret:Set(i, Union({v, existing}))
 					end

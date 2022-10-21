@@ -366,11 +366,11 @@ do
 			if scope:IsFunctionScope() then
 				if
 					scope.node and
-					scope.node:GetLastType() and
-					scope.node:GetLastType().Type == "function" and
+					scope.node:GetLastAssociatedType() and
+					scope.node:GetLastAssociatedType().Type == "function" and
 					not scope:Contains(from)
 				then
-					return not scope.node:GetLastType():IsCalled()
+					return not scope.node:GetLastAssociatedType():IsCalled()
 				end
 			end
 

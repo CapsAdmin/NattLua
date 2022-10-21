@@ -82,7 +82,7 @@ return {
 
 				obj.from_for_loop = true
 				self:CreateLocalValue(identifier.value.value, obj)
-				identifier:AddType(obj)
+				identifier:AssociateType(obj)
 			end
 
 			self:CreateAndPushScope():SetLoopIteration(i)

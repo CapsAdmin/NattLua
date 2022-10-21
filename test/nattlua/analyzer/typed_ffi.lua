@@ -85,7 +85,7 @@ analyze[=[
 		local new_union = types.Union({})
 		for _, obj in ipairs(union:GetData()) do
 			obj:Delete(types.LString("__call"))
-			new_union:AddType(obj)
+			new_union:AssociateType(obj)
 		end
 		return new_union
 	end

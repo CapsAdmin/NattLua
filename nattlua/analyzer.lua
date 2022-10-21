@@ -174,7 +174,7 @@ do
 		profiler.PushZone("AnalyzeExpression - " .. node.kind)
 		local obj, err = self:AnalyzeExpression2(node)
 		obj = self:AnalyzeTypeExpression(node, obj)
-		node:AddType(obj or err)
+		node:AssociateType(obj or err)
 		node.scope = self:GetScope()
 		profiler.PopZone()
 		return obj, err

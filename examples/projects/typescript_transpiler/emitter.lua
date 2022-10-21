@@ -31,7 +31,7 @@ function META:EmitExpression(node)
 			self:EmitToken(node.value, "")
 			node.value.whitespace = nil
 
-			if not node:GetLastType() or not node:GetLastType():GetUpvalue() then
+			if not node:GetLastAssociatedType() or not node:GetLastAssociatedType():GetUpvalue() then
 				self:Emit("globalThis.")
 			end
 
@@ -61,7 +61,7 @@ function META:EmitExpression(node)
 end
 
 function META:EmitVarargTuple(node)
-	self:Emit(tostring(node:GetLastType()))
+	self:Emit(tostring(node:GetLastAssociatedType()))
 end
 
 function META:EmitExpressionIndex(node)
@@ -156,11 +156,11 @@ do
 		self:EmitToken(node.tokens["arguments)"])
 		self:Emit(" => {")
 
-		if self.config.type_annotations and node:GetLastType() and not analyzer_function then
+		if self.config.type_annotations and node:GetLastAssociatedType() and not analyzer_function then
 			--self:Emit(" --[[ : ")
 			local str = {}
 			-- this iterates the first return tuple
-			local obj = node:GetLastType():GetContract() or node:GetLastType()
+			local obj = node:GetLastAssociatedType():GetContract() or node:GetLastAssociatedType()
 
 			if obj.Type == "function" then
 				for i, v in ipairs(obj:GetOutputSignature():GetData()) do
@@ -271,7 +271,7 @@ end
 function META:EmitTable(tree)
 	if tree.spread then self:Emit("table.mergetables") end
 
-	local is_array = tree:GetLastType() and tree:GetLastType():IsNumericallyIndexed()
+	local is_array = tree:GetLastAssociatedType() and tree:GetLastAssociatedType():IsNumericallyIndexed()
 	local during_spread = false
 
 	if is_array then
@@ -763,9 +763,9 @@ function META:EmitIdentifier(node)
 		if node.type_expression then
 			self:EmitToken(node.tokens[":"])
 			self:EmitTypeExpression(node.type_expression)
-		elseif node:GetLastType() then
+		elseif node:GetLastAssociatedType() then
 			self:Emit(": ")
-			self:Emit(tostring((node:GetLastType():GetContract() or node:GetLastType())))
+			self:Emit(tostring((node:GetLastAssociatedType():GetContract() or node:GetLastAssociatedType())))
 		end
 	end
 end
