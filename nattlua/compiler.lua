@@ -211,7 +211,7 @@ function META:Analyze(analyzer, ...)
 		end
 	end
 
-	local analyzer = analyzer or self.Analyzer()
+	local analyzer = analyzer or self.Analyzer(self.config)
 	self.analyzer = analyzer
 	analyzer.compiler = self
 	analyzer.OnDiagnostic = function(analyzer, ...)

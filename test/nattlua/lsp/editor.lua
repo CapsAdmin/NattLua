@@ -13,10 +13,6 @@ local function single_file(code)
 		})
 	end
 
-	function helper:ReadFile(path)
-		return code
-	end
-
 	helper:OpenFile(path, code)
 	return helper, diagnostics
 end
@@ -120,4 +116,51 @@ do
 	local editor = single_file(code)
 	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line, char, "LOL"))
 	assert(code:gsub("foo", "LOL") == new_code)
+end
+
+do
+	local helper = EditorHelper.New()
+	helper:Initialize()
+
+	function helper:OnDiagnostics(name, data)
+		print(name)
+		table.print(data)
+	end
+
+	helper:SetFileContent(
+		"./main.nlua",
+		[[
+		do
+			local type a = import("./a.nlua")
+			local type b = import("./b.nlua")
+
+			attest.equal(a + b, 5)
+		end
+
+		do
+			local a = import("./a.nlua")
+			local b = import("./b.nlua")
+			assert(a + b == 5)
+		end
+
+		do
+			local a = dofile("./a.nlua")
+			local b = dofile("./b.nlua")
+			assert(a + b == 5)
+		end
+
+		do
+			local a = loadfile("./a.nlua")()
+			local b = loadfile("./b.nlua")()
+			assert(a + b == 5)
+		end
+	]]
+	)
+	helper:SetFileContent("./a.nlua", [[
+		return 2
+	]])
+	helper:SetFileContent("./b.nlua", [[
+		return 3
+	]])
+	helper:Recompile("./main.nlua")
 end

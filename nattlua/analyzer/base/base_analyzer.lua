@@ -170,6 +170,23 @@ return function(META)
 		end
 	end
 
+	function META:ReadFile(path)
+		local code = self.config.on_read_file and self.config.on_read_file(self, path)
+
+		if code then return code end
+
+		local f, err = io.open(path, "rb")
+
+		if not f then return nil, err end
+
+		local code = f:read("*a")
+		f:close()
+
+		if not code then return nil, "file is empty" end
+
+		return code
+	end
+
 	do
 		local helpers = require("nattlua.other.helpers")
 		local loadstring = require("nattlua.other.loadstring")

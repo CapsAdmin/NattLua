@@ -85,22 +85,25 @@ do
 	end
 
 	function META:GetFileContent(path)
+		if not self.TempFiles[path] then error(path .. " is not loaded") end
+
 		return self.TempFiles[path]
 	end
 end
 
-function META:Recompile(uri)
+function META:Recompile(path)
 	local cfg = self:GetAanalyzerConfig()
 	local entry_point = cfg.entry_point
 
-	if not entry_point and uri then
-		entry_point = uri:gsub(self.WorkingDirectory .. "/", "")
+	if not entry_point and path then
+		entry_point = path:gsub(self.WorkingDirectory .. "/", "")
 	end
 
 	if not entry_point then return false end
 
 	cfg.inline_require = false
 	cfg.on_read_file = function(parser, path)
+		path = path:gsub(self.WorkingDirectory .. "/", "")
 		return self:GetFileContent(self.WorkingDirectory .. "/" .. path)
 	end
 	local compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
@@ -108,73 +111,70 @@ function META:Recompile(uri)
 	compiler:SetEnvironments(runtime_env, typesystem_env)
 	local diagnostics = {}
 
-	do
-		function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
-			local name = code:GetName()
-			diagnostics[name] = diagnostics[name] or {}
-			table.insert(
-				diagnostics[name],
-				{
-					severity = severity,
-					code = code,
-					start = start,
-					stop = stop,
-					message = helpers.FormatMessage(msg, ...),
-				}
-			)
-		end
+	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
+		local name = code:GetName()
+		diagnostics[name] = diagnostics[name] or {}
+		table.insert(
+			diagnostics[name],
+			{
+				severity = severity,
+				code = code,
+				start = start,
+				stop = stop,
+				message = helpers.FormatMessage(msg, ...),
+			}
+		)
+	end
 
-		if compiler:Parse() then
-			if compiler.SyntaxTree.imports then
-				for _, root_node in ipairs(compiler.SyntaxTree.imports) do
-					local root = root_node.RootStatement
+	if compiler:Parse() then
+		if compiler.SyntaxTree.imports then
+			for _, root_node in ipairs(compiler.SyntaxTree.imports) do
+				local root = root_node.RootStatement
 
-					if root_node.RootStatement then
-						if not root_node.RootStatement.parser then
-							root = root_node.RootStatement.RootStatement
-						end
-
-						self:LoadFile(
-							self.WorkingDirectory .. "/" .. root.parser.config.file_path,
-							root.code,
-							root.lexer_tokens
-						)
+				if root_node.RootStatement then
+					if not root_node.RootStatement.parser then
+						root = root_node.RootStatement.RootStatement
 					end
-				end
-			else
-				self:LoadFile(uri, compiler.Code, compiler.Tokens)
-			end
 
-			local should_analyze = true
-
-			if cfg then
-				if entry_point then
-					local code = self:ReadFile((cfg.working_directory or "") .. entry_point)
-					should_analyze = code:find("-" .. "-ANALYZE", nil, true)
-				end
-
-				if not should_analyze and uri and uri:find("%.nlua$") then
-					should_analyze = true
-				end
-			end
-
-			if should_analyze then
-				local ok, err = compiler:Analyze()
-
-				if not ok then
-					local name = compiler:GetCode():GetName()
-					diagnostics[name] = diagnostics[name] or {}
-					table.insert(
-						diagnostics,
-						{
-							severity = "fatal",
-							code = compiler:GetCode(),
-							start = 1,
-							stop = compiler:GetCode():GetByteSize(),
-							message = err,
-						}
+					self:LoadFile(
+						self.WorkingDirectory .. "/" .. root.parser.config.file_path,
+						root.code,
+						root.lexer_tokens
 					)
 				end
+			end
+		else
+			self:LoadFile(path, compiler.Code, compiler.Tokens)
+		end
+
+		local should_analyze = true
+
+		if cfg then
+			if entry_point then
+				should_analyze = self:GetFileContent(path):find("-" .. "-ANALYZE", nil, true)
+			end
+
+			if not should_analyze and path and path:find("%.nlua$") then
+				should_analyze = true
+			end
+		end
+
+		if should_analyze then
+			local ok, err = compiler:Analyze(nil, cfg)
+
+			if not ok then
+				local name = compiler:GetCode():GetName()
+				diagnostics[name] = diagnostics[name] or {}
+				table.insert(
+					diagnostics,
+					{
+						severity = "fatal",
+						code = compiler:GetCode(),
+						start = 1,
+						stop = compiler:GetCode():GetByteSize(),
+						message = err,
+					}
+				)
 			end
 		end
 	end
@@ -185,13 +185,6 @@ function META:Recompile(uri)
 end
 
 function META:OnDiagnostics(name, data) end
-
-function META:ReadFile(path)
-	local f = assert(io.open(path, "r"))
-	local str = f:read("*all")
-	f:close()
-	return str
-end
 
 function META:OnResponse(response) end
 
