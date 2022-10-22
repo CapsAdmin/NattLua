@@ -48,6 +48,7 @@ local SemanticTokenModifiers = {
 	"defaultLibrary", -- For symbols that are part of the standard library.
 }
 local editor_helper = EditorHelper.New()
+editor_helper.debug = true
 lsp.methods["initialize"] = function(params)
 	editor_helper:SetWorkingDirectory(params.workspaceFolders[1].uri)
 	return {
@@ -167,11 +168,9 @@ lsp.methods["nattlua/format"] = function(params)
 end
 lsp.methods["nattlua/syntax"] = function(params)
 	local data = require("nattlua.syntax.monarch_language")
-	print("SENDING SYNTAX", #data)
 	return {data = b64.encode(data)}
 end
 lsp.methods["shutdown"] = function(params)
-	print("SHUTDOWN")
 	table.print(params)
 end
 

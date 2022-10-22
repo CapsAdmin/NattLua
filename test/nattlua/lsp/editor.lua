@@ -39,7 +39,7 @@ end
 
 do
 	local editor, diagnostics = single_file([[locwal]])
-	assert(diagnostics[1].name == "test.nlua")
+	assert(diagnostics[1].name == "./test.nlua")
 	assert(diagnostics[1].data[1].message:find("expected assignment or call") ~= nil)
 end
 

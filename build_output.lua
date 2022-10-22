@@ -28348,14 +28348,44 @@ function META:GetEmitterConfig()
 	return cfg
 end
 
+function META:DebugLog(str)
+	if self.debug then print(coroutine.running(), str) end
+end
+
+function META:NormalizePath(path)
+	local start, stop = path:find(self.WorkingDirectory, 1, true)
+
+	if start == 1 and stop then path = path:sub(stop + 1, #path) end
+
+	if path:sub(1, #self.WorkingDirectory) ~= self.WorkingDirectory then
+		path = self.WorkingDirectory .. path
+	end
+
+	return path
+end
+
 do
 	function META:GetFile(path)
-		if not self.LoadedFiles[path] then error(path .. " not loaded") end
+		path = self:NormalizePath(path)
+
+		if not self.LoadedFiles[path] then
+			self:DebugLog("[" .. path .. "] is not loaded")
+			self:DebugLog("=== these are loaded ===")
+
+			for k, v in pairs(self.LoadedFiles) do
+				self:DebugLog("[" .. k .. "] is loaded")
+			end
+
+			self:DebugLog("===")
+			error(path .. " not loaded", 2)
+		end
 
 		return self.LoadedFiles[path]
 	end
 
 	function META:LoadFile(path, code, tokens)
+		path = self:NormalizePath(path)
+		self:DebugLog("[" .. path .. "] loaded with " .. #tokens .. " tokens")
 		self.LoadedFiles[path] = {
 			code = code,
 			tokens = tokens,
@@ -28363,17 +28393,39 @@ do
 	end
 
 	function META:UnloadFile(path)
+		path = self:NormalizePath(path)
+		self:DebugLog("[" .. path .. "] unloaded")
 		self.LoadedFiles[path] = nil
 	end
 end
 
 do
 	function META:SetFileContent(path, code)
+		path = self:NormalizePath(path)
+
+		if code then
+			self:DebugLog("[" .. path .. "] content loaded with " .. #code .. " bytes")
+		else
+			self:DebugLog("[" .. path .. "] content unloaded")
+		end
+
 		self.TempFiles[path] = code
 	end
 
 	function META:GetFileContent(path)
-		if not self.TempFiles[path] then error(path .. " is not loaded") end
+		path = self:NormalizePath(path)
+
+		if not self.TempFiles[path] then
+			self:DebugLog("[" .. path .. "] content is not loaded")
+			self:DebugLog("=== these are loaded ===")
+
+			for k, v in pairs(self.TempFiles) do
+				self:DebugLog("[" .. k .. "] content is loaded")
+			end
+
+			self:DebugLog("===")
+			error(path .. " is not loaded", 2)
+		end
 
 		return self.TempFiles[path]
 	end
@@ -28381,19 +28433,22 @@ end
 
 function META:Recompile(path)
 	local cfg = self:GetAanalyzerConfig()
-	local entry_point = cfg.entry_point
-
-	if not entry_point and path then
-		entry_point = path:gsub(self.WorkingDirectory .. "/", "")
-	end
+	local entry_point = path or cfg.entry_point
 
 	if not entry_point then return false end
 
 	cfg.inline_require = false
 	cfg.on_read_file = function(parser, path)
-		path = path:gsub(self.WorkingDirectory .. "/", "")
-		return self:GetFileContent(self.WorkingDirectory .. "/" .. path)
+		if not self.TempFiles[path] then
+			local f = assert(io.open(path, "rb"))
+			local content = f:read("*all")
+			f:close()
+			self:SetFileContent(path, content)
+		end
+
+		return self:GetFileContent(path)
 	end
+	self:DebugLog("[" .. entry_point .. "] compiling")
 	local compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
 	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
@@ -28415,6 +28470,8 @@ function META:Recompile(path)
 	end
 
 	if compiler:Parse() then
+		self:DebugLog("[" .. entry_point .. "] parsed with " .. #compiler.Tokens .. " tokens")
+
 		if compiler.SyntaxTree.imports then
 			for _, root_node in ipairs(compiler.SyntaxTree.imports) do
 				local root = root_node.RootStatement
@@ -28424,14 +28481,12 @@ function META:Recompile(path)
 						root = root_node.RootStatement.RootStatement
 					end
 
-					self:LoadFile(
-						self.WorkingDirectory .. "/" .. root.parser.config.file_path,
-						root.code,
-						root.lexer_tokens
-					)
+					self:SetFileContent(root.parser.config.file_path, root.code:GetString())
+					self:LoadFile(root.parser.config.file_path, root.code, root.lexer_tokens)
 				end
 			end
 		else
+			self:SetFileContent(path, compiler.Code:GetString())
 			self:LoadFile(path, compiler.Code, compiler.Tokens)
 		end
 
@@ -28465,6 +28520,14 @@ function META:Recompile(path)
 				)
 			end
 		end
+
+		self:DebugLog(
+			"[" .. entry_point .. "] analyzed with " .. (
+					diagnostics[name] and
+					#diagnostics[name] or
+					0
+				) .. " diagnostics"
+		)
 	end
 
 	for name, data in pairs(diagnostics) do
@@ -28746,6 +28809,7 @@ local SemanticTokenModifiers = {
 	"defaultLibrary", -- For symbols that are part of the standard library.
 }
 local editor_helper = EditorHelper.New()
+editor_helper.debug = true
 lsp.methods["initialize"] = function(params)
 	editor_helper:SetWorkingDirectory(params.workspaceFolders[1].uri)
 	return {
@@ -28865,11 +28929,9 @@ lsp.methods["nattlua/format"] = function(params)
 end
 lsp.methods["nattlua/syntax"] = function(params)
 	local data = require("nattlua.syntax.monarch_language")
-	print("SENDING SYNTAX", #data)
 	return {data = b64.encode(data)}
 end
 lsp.methods["shutdown"] = function(params)
-	print("SHUTDOWN")
 	table.print(params)
 end
 
