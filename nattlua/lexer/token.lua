@@ -45,6 +45,7 @@ function META:GetLastAssociatedType()
 end
 
 function META:FindType()
+	if false --[[#as true]] then return end
 	local found_parents = {}
 
 	do
@@ -93,6 +94,7 @@ function META:FindType()
 end
 
 function META:FindUpvalue()
+	if false --[[#as true]] then return end
 	local node = self
 
 	while node do
@@ -111,6 +113,7 @@ function META:FindUpvalue()
 end
 
 function META:GetSemanticType()
+	if false --[[#as true]] then return end
 	local runtime_syntax = require("nattlua.syntax.runtime")
 	local typesystem_syntax = require("nattlua.syntax.typesystem")
 	local Union = require("nattlua.types.union").Union
