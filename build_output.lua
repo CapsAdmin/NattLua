@@ -216,7 +216,10 @@ function class.CreateTemplate(type_name)
 
 	local function get_line()
 		local info = debug.getinfo(3)
-		return info and info.source:sub(2) .. ":" .. info.currentline
+
+		if not info then return "**unknown line**" end
+
+		return info.source:sub(2) .. ":" .. info.currentline
 	end
 
 	local done = {}
@@ -291,6 +294,8 @@ function META:GetLastAssociatedType()
 end
 
 function META:FindType()
+	if false then return end
+
 	local found_parents = {}
 
 	do
@@ -339,6 +344,8 @@ function META:FindType()
 end
 
 function META:FindUpvalue()
+	if false then return end
+
 	local node = self
 
 	while node do
@@ -357,6 +364,8 @@ function META:FindUpvalue()
 end
 
 function META:GetSemanticType()
+	if false then return end
+
 	local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 	local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
 	local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
@@ -10223,6 +10232,8 @@ function META:GetLastAssociatedType()
 end
 
 function META:FindType()
+	if false then return end
+
 	local found_parents = {}
 
 	do
@@ -10271,6 +10282,8 @@ function META:FindType()
 end
 
 function META:FindUpvalue()
+	if false then return end
+
 	local node = self
 
 	while node do
@@ -10289,6 +10302,8 @@ function META:FindUpvalue()
 end
 
 function META:GetSemanticType()
+	if false then return end
+
 	local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 	local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
 	local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
@@ -10640,6 +10655,8 @@ function META:GetLastAssociatedType()
 end
 
 function META:FindType()
+	if false then return end
+
 	local found_parents = {}
 
 	do
@@ -10688,6 +10705,8 @@ function META:FindType()
 end
 
 function META:FindUpvalue()
+	if false then return end
+
 	local node = self
 
 	while node do
@@ -10706,6 +10725,8 @@ function META:FindUpvalue()
 end
 
 function META:GetSemanticType()
+	if false then return end
+
 	local runtime_syntax = IMPORTS['nattlua.syntax.runtime']("nattlua.syntax.runtime")
 	local typesystem_syntax = IMPORTS['nattlua.syntax.typesystem']("nattlua.syntax.typesystem")
 	local Union = IMPORTS['nattlua.types.union']("nattlua.types.union").Union
