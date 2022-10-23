@@ -46,19 +46,19 @@ end
 local function get_line_char(code)
 	local _, start = code:find(">>")
 	code = code:gsub(">>", "  ")
-	local line = 0
-	local char = 0
+	local line_pos = 0
+	local char_pos = 0
 
 	for i = 1, start do
 		if code:sub(i, i) == "\n" then
-			line = line + 1
-			char = 0
+			line_pos = line_pos + 1
+			char_pos = 0
 		else
-			char = char + 1
+			char_pos = char_pos + 1
 		end
 	end
 
-	return code, line, char
+	return code, line_pos, char_pos
 end
 
 local function apply_edits(code, edits)
@@ -83,17 +83,17 @@ do
 			end
 		end
     ]]
-	local code, line, char = get_line_char(code)
+	local code, line_pos, char_pos = get_line_char(code)
 	local editor = single_file(code)
-	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line, char, "b"))
+	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line_pos, char_pos, "b"))
 	assert(#new_code == #new_code)
 end
 
 do
 	local code = [[local >>a = 1]]
-	local code, line, char = get_line_char(code)
+	local code, line_pos, char_pos = get_line_char(code)
 	local editor = single_file(code)
-	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line, char, "foo"))
+	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line_pos, char_pos, "foo"))
 	assert(new_code:find("local%s+foo%s+%=") ~= nil)
 end
 
@@ -112,9 +112,9 @@ do
 			bar()
 		end
     ]]
-	local code, line, char = get_line_char(code)
+	local code, line_pos, char_pos = get_line_char(code)
 	local editor = single_file(code)
-	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line, char, "LOL"))
+	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line_pos, char_pos, "LOL"))
 	assert(code:gsub("foo", "LOL") == new_code)
 end
 

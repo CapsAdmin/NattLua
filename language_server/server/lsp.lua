@@ -312,7 +312,7 @@ lsp.methods["textDocument/rename"] = function(params)
 	local edits = {}
 
 	for _, edit in ipairs(
-		editor_helper:GetRenameInstructions(params.textDocument.uri, params.position.line - 1, params.position.character - 1, params.newName)
+		editor_helper:GetRenameInstructions(params.textDocument.uri, params.position.line, params.position.character, params.newName)
 	) do
 		table.insert(
 			edits,
