@@ -336,7 +336,7 @@ end
 lsp.methods["textDocument/hover"] = function(params)
 	local data = editor_helper:GetHover(params.textDocument.uri, params.position.line, params.position.character)
 
-	if not data then return end
+	if not data then return {} end
 
 	local markdown = ""
 

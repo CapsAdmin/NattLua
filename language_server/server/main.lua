@@ -21,7 +21,7 @@ return function(port)
 				thread = coroutine.create(function()
 					local res = rpc_util.ReceiveJSON(str, self.methods, self, client)
 
-					if res.error then table.print(res) end
+					if res and res.error then table.print(res) end
 
 					return res
 				end),
@@ -91,7 +91,10 @@ return function(port)
 					local ok, msg = coroutine.resume(data.thread)
 
 					if not ok then
-						if msg ~= "suspended" then table.remove(self.responses, i) end
+						if msg ~= "suspended" then
+							print(ok, msg)
+							table.remove(self.responses, i)
+						end
 					else
 						if type(msg) == "table" or msg == nil then
 							self:Respond(data.client, msg or {})

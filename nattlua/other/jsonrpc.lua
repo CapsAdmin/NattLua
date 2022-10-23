@@ -113,7 +113,41 @@ local function handle_rpc(
 	-- notification has no response
 	if not rpc.id then return end
 
-	if not res then return error_response(rpc.id, err.code, err.message) end
+	if not res and not err then
+		return error_response(
+			rpc.id,
+			JSONRPC_ERRORS.INTERNAL_ERROR,
+			"Method " .. rpc.method .. " does not return an error"
+		)
+	end
+
+	if not res then
+		if type(err) ~= "table" then
+			return error_response(
+				rpc.id,
+				JSONRPC_ERRORS.INTERNAL_ERROR,
+				"Method " .. rpc.method .. " returns nil, " .. type(err) .. " when we expect nil, {code = number, message = string}"
+			)
+		end
+
+		if type(err.code) ~= "number" then
+			return error_response(
+				rpc.id,
+				JSONRPC_ERRORS.INTERNAL_ERROR,
+				"Method " .. rpc.method .. " returns nil, {code = " .. type(err.code) .. "} when we expect nil, {code = number}"
+			)
+		end
+
+		if type(err.message) ~= "string" then
+			return error_response(
+				rpc.id,
+				JSONRPC_ERRORS.INTERNAL_ERROR,
+				"Method " .. rpc.method .. " returns nil, {message = " .. type(err.code) .. "} when we expect nil, {message = string}"
+			)
+		end
+
+		return error_response(rpc.id, err.code, err.message)
+	end
 
 	return {
 		jsonrpc = rpc.jsonrpc,

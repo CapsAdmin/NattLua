@@ -5098,27 +5098,29 @@ do
 				local key = mutation.key
 				local val = self:GetMutatedValue(key, scope)
 
-				if done[val] then break end
+				if val then
+					if done[val] then break end
 
-				if val.Type == "union" then
-					local union = Union()
+					if val.Type == "union" then
+						local union = Union()
 
-					for _, val in ipairs(val:GetData()) do
-						if val.Type == "table" then
-							union:AssociateType(val:GetMutatedFromScope(scope, done))
-						else
-							union:AssociateType(val)
+						for _, val in ipairs(val:GetData()) do
+							if val.Type == "table" then
+								union:AssociateType(val:GetMutatedFromScope(scope, done))
+							else
+								union:AssociateType(val)
+							end
 						end
+
+						out:Set(key, union)
+					elseif val.Type == "table" then
+						out:Set(key, val:GetMutatedFromScope(scope, done))
+					else
+						out:Set(key, val)
 					end
 
-					out:Set(key, union)
-				elseif val.Type == "table" then
-					out:Set(key, val:GetMutatedFromScope(scope, done))
-				else
-					out:Set(key, val)
+					break
 				end
-
-				break
 			end
 		end
 
@@ -29097,7 +29099,7 @@ end
 lsp.methods["textDocument/hover"] = function(params)
 	local data = editor_helper:GetHover(params.textDocument.uri, params.position.line, params.position.character)
 
-	if not data then return end
+	if not data then return {} end
 
 	local markdown = ""
 
@@ -29725,7 +29727,41 @@ local function handle_rpc(
 	-- notification has no response
 	if not rpc.id then return end
 
-	if not res then return error_response(rpc.id, err.code, err.message) end
+	if not res and not err then
+		return error_response(
+			rpc.id,
+			JSONRPC_ERRORS.INTERNAL_ERROR,
+			"Method " .. rpc.method .. " does not return an error"
+		)
+	end
+
+	if not res then
+		if type(err) ~= "table" then
+			return error_response(
+				rpc.id,
+				JSONRPC_ERRORS.INTERNAL_ERROR,
+				"Method " .. rpc.method .. " returns nil, " .. type(err) .. " when we expect nil, {code = number, message = string}"
+			)
+		end
+
+		if type(err.code) ~= "number" then
+			return error_response(
+				rpc.id,
+				JSONRPC_ERRORS.INTERNAL_ERROR,
+				"Method " .. rpc.method .. " returns nil, {code = " .. type(err.code) .. "} when we expect nil, {code = number}"
+			)
+		end
+
+		if type(err.message) ~= "string" then
+			return error_response(
+				rpc.id,
+				JSONRPC_ERRORS.INTERNAL_ERROR,
+				"Method " .. rpc.method .. " returns nil, {message = " .. type(err.code) .. "} when we expect nil, {message = string}"
+			)
+		end
+
+		return error_response(rpc.id, err.code, err.message)
+	end
 
 	return {
 		jsonrpc = rpc.jsonrpc,
@@ -29792,7 +29828,7 @@ return function(port)
 				thread = coroutine.create(function()
 					local res = rpc_util.ReceiveJSON(str, self.methods, self, client)
 
-					if res.error then table.print(res) end
+					if res and res.error then table.print(res) end
 
 					return res
 				end),
@@ -29862,7 +29898,10 @@ return function(port)
 					local ok, msg = coroutine.resume(data.thread)
 
 					if not ok then
-						if msg ~= "suspended" then table.remove(self.responses, i) end
+						if msg ~= "suspended" then
+							print(ok, msg)
+							table.remove(self.responses, i)
+						end
 					else
 						if type(msg) == "table" or msg == nil then
 							self:Respond(data.client, msg or {})
