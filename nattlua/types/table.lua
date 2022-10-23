@@ -1033,9 +1033,7 @@ do
 		done = done or {}
 		local out = META.New()
 
-		if done[self] then
-			return done[self]
-		end
+		if done[self] then return done[self] end
 
 		done[self] = out
 
@@ -1044,27 +1042,29 @@ do
 				local key = mutation.key
 				local val = self:GetMutatedValue(key, scope)
 
-				if done[val] then break end
+				if val then
+					if done[val] then break end
 
-				if val.Type == "union" then
-					local union = Union()
+					if val.Type == "union" then
+						local union = Union()
 
-					for _, val in ipairs(val:GetData()) do
-						if val.Type == "table" then
-							union:AssociateType(val:GetMutatedFromScope(scope, done))
-						else
-							union:AssociateType(val)
+						for _, val in ipairs(val:GetData()) do
+							if val.Type == "table" then
+								union:AssociateType(val:GetMutatedFromScope(scope, done))
+							else
+								union:AssociateType(val)
+							end
 						end
+
+						out:Set(key, union)
+					elseif val.Type == "table" then
+						out:Set(key, val:GetMutatedFromScope(scope, done))
+					else
+						out:Set(key, val)
 					end
 
-					out:Set(key, union)
-				elseif val.Type == "table" then
-					out:Set(key, val:GetMutatedFromScope(scope, done))
-				else
-					out:Set(key, val)
+					break
 				end
-
-				break
 			end
 		end
 
