@@ -165,3 +165,34 @@ do
 	]])
 	helper:Recompile("./main.nlua")
 end
+
+do
+	local helper = EditorHelper.New()
+	helper:Initialize()
+
+	function helper:OnDiagnostics(name, data)
+		print(name)
+		table.print(data)
+		error("should not be called")
+	end
+
+	helper:SetConfigFunction(function(...)
+		local cmd = ...
+
+		if cmd == "get-analyzer-config" then
+			return {
+				inline_require = true,
+				entry_point = "./src/main.nlua",
+			}
+		end
+	end)
+
+	_G.loaded = nil
+	helper:SetFileContent("./src/main.nlua", [[
+		§ _G.loaded = true
+	]])
+	helper:Recompile()
+	helper:Recompile("./src/main.nlua")
+	assert(_G.loaded)
+	_G.loaded = nil
+end

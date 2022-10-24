@@ -245,14 +245,13 @@ local function read_file(self, path)
 
 	if code then return code end
 
-	local f, err = io.open(path, "rb")
-
-	if not f then return nil, err end
+	local f = assert(io.open(path, "rb"))
 
 	local code = f:read("*a")
 	f:close()
 
-	if not code then return nil, "file is empty" end
+	if not code then error("file is empty", 2) end
+
 
 	return code
 end
@@ -261,9 +260,9 @@ function META:ParseFile(path--[[#: string]], config--[[#: nil | any]])
 	config = config or {}
 	config.file_path = config.file_path or path
 	config.file_name = config.file_name or path
-	local code, err = read_file(self, path)
+	local ok, code = pcall(read_file, self, path)
 
-	if not code then return code, err end
+	if not ok then return ok, code end
 
 	return self:ParseString(code, config)
 end

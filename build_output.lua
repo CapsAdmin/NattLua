@@ -15862,14 +15862,11 @@ local function read_file(self, path)
 
 	if code then return code end
 
-	local f, err = io.open(path, "rb")
-
-	if not f then return nil, err end
-
+	local f = assert(io.open(path, "rb"))
 	local code = f:read("*a")
 	f:close()
 
-	if not code then return nil, "file is empty" end
+	if not code then error("file is empty", 2) end
 
 	return code
 end
@@ -15878,9 +15875,9 @@ function META:ParseFile(path, config)
 	config = config or {}
 	config.file_path = config.file_path or path
 	config.file_name = config.file_name or path
-	local code, err = read_file(self, path)
+	local ok, code = pcall(read_file, self, path)
 
-	if not code then return code, err end
+	if not ok then return ok, code end
 
 	return self:ParseString(code, config)
 end
@@ -25509,14 +25506,13 @@ type jit = {
 	os = ffi.os,
 	arch = ffi.arch,
 	attach = function=(empty_function, string)>(nil),
-	flush = function=()>(nil),
 	opt = {start = function=(...)>(nil)},
 	tracebarrier = function=()>(nil),
 	version_num = number,
 	version = string,
 	on = function=(empty_function | true, boolean | nil)>(nil),
 	off = function=(empty_function | true, boolean | nil)>(nil),
-	flush = function=(empty_function | true, boolean | nil)>(nil),
+	flush = function=(nil | empty_function | true, boolean | nil)>(nil),
 	status = function=()>(boolean, ...string),
 	opt = {
 		start = function=(...string)>(nil),
@@ -28293,7 +28289,7 @@ local class = IMPORTS['nattlua.other.class']("nattlua.other.class")
 local BuildBaseEnvironment = IMPORTS['nattlua.runtime.base_environment']("nattlua.runtime.base_environment").BuildBaseEnvironment
 local runtime_env, typesystem_env = BuildBaseEnvironment()
 local META = class.CreateTemplate("token")
-META:GetSet("WorkingDirectory", ".")
+META:GetSet("WorkingDirectory", "./")
 
 META:GetSet("ConfigFunction", function()
 	return
@@ -28494,7 +28490,7 @@ function META:Recompile(path)
 
 		if cfg then
 			if entry_point then
-				should_analyze = self:GetFileContent(path):find("-" .. "-ANALYZE", nil, true)
+				should_analyze = self:GetFileContent(entry_point):find("-" .. "-ANALYZE", nil, true)
 			end
 
 			if not should_analyze and path and path:find("%.nlua$") then

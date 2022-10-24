@@ -9,7 +9,7 @@ local class = require("nattlua.other.class")
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local runtime_env, typesystem_env = BuildBaseEnvironment()
 local META = class.CreateTemplate("token")
-META:GetSet("WorkingDirectory", ".")
+META:GetSet("WorkingDirectory", "./")
 
 META:GetSet("ConfigFunction", function()
 	return
@@ -42,7 +42,10 @@ function META:GetAanalyzerConfig()
 	local cfg = self.ConfigFunction("get-analyzer-config") or {}
 
 	if cfg.type_annotations == nil then cfg.type_annotations = true end
-	if cfg.should_crawl_untyped_functions == nil then cfg.should_crawl_untyped_functions = false end
+
+	if cfg.should_crawl_untyped_functions == nil then
+		cfg.should_crawl_untyped_functions = false
+	end
 
 	return cfg
 end
@@ -207,7 +210,7 @@ function META:Recompile(path)
 
 		if cfg then
 			if entry_point then
-				should_analyze = self:GetFileContent(path):find("-" .. "-ANALYZE", nil, true)
+				should_analyze = self:GetFileContent(entry_point):find("-" .. "-ANALYZE", nil, true)
 			end
 
 			if not should_analyze and path and path:find("%.nlua$") then
