@@ -42,6 +42,7 @@ function META:GetAanalyzerConfig()
 	local cfg = self.ConfigFunction("get-analyzer-config") or {}
 
 	if cfg.type_annotations == nil then cfg.type_annotations = true end
+	if cfg.should_crawl_untyped_functions == nil then cfg.should_crawl_untyped_functions = false end
 
 	return cfg
 end
@@ -448,6 +449,8 @@ function META:GetDefinition(path, line, character)
 			range = get_range(data.code, node:GetStartStop()),
 		}
 	end
+
+	return {}
 end
 
 function META:GetHover(path, line, character)

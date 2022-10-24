@@ -183,6 +183,11 @@ end
 
 function META.New(config)
 	config = config or {}
+
+	if config.should_crawl_untyped_functions == nil then
+		config.should_crawl_untyped_functions = true
+	end
+
 	local self = setmetatable({config = config}, META)
 
 	for _, func in ipairs(META.OnInitialize) do

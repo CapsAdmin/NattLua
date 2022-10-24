@@ -125,6 +125,7 @@ do
 	function helper:OnDiagnostics(name, data)
 		print(name)
 		table.print(data)
+		error("should not be called")
 	end
 
 	helper:SetFileContent(

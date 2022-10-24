@@ -2806,89 +2806,59 @@ end
 function helpers.JITOptimize()
 	if not jit then return end
 
-	jit.opt.start(
-		"maxtrace=65535", -- 1000 1-65535: maximum number of traces in the cache
-		"maxrecord=8000", -- 4000: maximum number of recorded IR instructions
-		"maxirconst=8000", -- 500: maximum number of IR constants of a trace
-		"maxside=5000", -- 100: maximum number of side traces of a root trace
-		"maxsnap=500", -- 500: maximum number of snapshots for a trace
-		"hotloop=56", -- 56: number of iterations to detect a hot loop or hot call
-		"hotexit=50", -- 10: number of taken exits to start a side trace
-		"tryside=4", -- 4: number of attempts to compile a side trace
-		"instunroll=1000", -- 4: maximum unroll factor for instable loops
-		"loopunroll=1000", -- 15: maximum unroll factor for loop ops in side traces
-		"callunroll=1000", -- 3: maximum unroll factor for pseudo-recursive calls
-		"recunroll=0", -- 2: minimum unroll factor for true recursion
-		"+fold", -- Constant Folding, Simplifications and Reassociation
-		"+cse", -- Common-Subexpression Elimination
-		"+dce", -- Dead-Code Elimination
-		"+narrow", -- Narrowing of numbers to integers
-		"+loop", -- Loop Optimizations (code hoisting)
-		"+fwd", -- Load Forwarding (L2L) and Store Forwarding (S2L)
-		"+dse", -- Dead-Store Elimination
-		"+abc", -- Array Bounds Check Elimination
-		"+sink", -- Allocation/Store Sinking
-		"+fuse" -- Fusion of operands into instructions
-	)
+	local GC64 = #tostring({}) == 19
+	local params = {
+		maxtrace = 1000, -- 1 > 65535: Max number of of traces in cache. 
+		maxrecord = 4000, -- Max number of of recorded IR instructions.
+		maxirconst = 500, -- Max number of of IR constants of a trace.
+		maxside = 100, -- Max number of of side traces of a root trace.
+		maxsnap = 500, -- Max number of of snapshots for a trace.
+		minstitch = jit.version_num >= 20100 and 0 or nil, -- Min number of of IR ins for a stitched trace.
+		--
+		hotloop = 56, -- number of iter. to detect a hot loop/call.
+		hotexit = 10, -- number of taken exits to start a side trace.
+		tryside = 4, -- number of attempts to compile a side trace.
+		--
+		instunroll = 4, -- max unroll for instable loops.
+		loopunroll = 15, -- max unroll for loop ops in side traces.
+		callunroll = 3, -- max. unroll for recursive calls.
+		recunroll = 2, -- min  unroll for true recursion.
+		--
+		sizemcode = jit.os == "Windows" or GC64 and 64 or 32, -- size of each machine code area (in KBytes).
+		maxmcode = 512, -- max total size of all machine code areas (in KBytes).
+	}
 
-	if jit.version_num >= 20100 then
-		jit.opt.start("minstitch=0") -- 0: minimum number of IR ins for a stitched trace.
+	-- from open resty
+	if true then
+		params.maxtrace = 65535
+		params.maxmcode = 1024 * 40
+		params.sizemcode = params.maxmcode
 	end
 
-	-- below taken from https://github.com/love2d/love/blob/main/src/modules/love/jitsetup.lua
-	-- Somewhat arbitrary value. Needs to be higher than the combined sizes below,
-	-- and higher than the default (512) because that's already too low.
-	jit.opt.start("maxmcode=32768")
+	local flags = {
+		"fold", -- Constant Folding, Simplifications and Reassociation
+		"cse", -- Common-Subexpression Elimination
+		"dce", -- Dead-Code Elimination
+		"narrow", -- Narrowing of numbers to integers
+		"loop", -- Loop Optimizations (code hoisting)
+		"fwd", -- Load Forwarding (L2L) and Store Forwarding (S2L)
+		"dse", -- Dead-Store Elimination
+		"abc", -- Array Bounds Check Elimination
+		"sink", -- Allocation/Store Sinking
+		"fuse", -- Fusion of operands into instructions
+	}
+	local args = {}
 
-	if jit.arch == "arm64" then
-		-- https://github.com/LuaJIT/LuaJIT/issues/285
-		-- LuaJIT 2.1 on arm64 currently (as of commit b4b2dce) can only use memory
-		-- for JIT compilation within a certain short range. Other libraries such as
-		-- SDL can take all the usable space in that range and cause attempts at JIT
-		-- compilation to both fail and take a long time.
-		-- This is a very hacky attempt at a workaround. LuaJIT allocates executable
-		-- code in pools. We'll try "reserving" pools before any external code is
-		-- executed, by causing JIT compilation via a small loop. We can't easily
-		-- tell if JIT compilation succeeded, so we do several successively smaller
-		-- pool allocations in case previous ones fail.
-		-- This is a really hacky hack and by no means foolproof - there are a lot of
-		-- potential situations (especially when threads are used) where previously
-		-- executed external code will still take up space that LuaJIT needed for itself.
-		jit.opt.start("sizemcode=2048")
-
-		for i = 1, 100 do
-
-		end
-
-		jit.opt.start("sizemcode=1024")
-
-		for i = 1, 100 do
-
-		end
-
-		jit.opt.start("sizemcode=512")
-
-		for i = 1, 100 do
-
-		end
-
-		jit.opt.start("sizemcode=256")
-
-		for i = 1, 100 do
-
-		end
-
-		jit.opt.start("sizemcode=128")
-
-		for i = 1, 100 do
-
-		end
-
-		jit.opt.start("sizemcode=2048")
-	else
-		-- Somewhat arbitrary value (>= the default).
-		jit.opt.start("sizemcode=128")
+	for k, v in pairs(params) do
+		table.insert(args, k .. "=" .. tostring(v))
 	end
+
+	for _, v in ipairs(flags) do
+		table.insert(args, "+" .. v)
+	end
+
+	jit.opt.start(unpack(args))
+	jit.flush()
 end
 
 return helpers end ]=======], '@./nattlua/other/helpers.lua'))())(...) return __M end end
@@ -19918,6 +19888,25 @@ return {
 				return obj:GetOutputSignature():Copy()
 			end
 
+			if
+				not self.config.should_crawl_untyped_functions and
+				self:IsRuntime() and
+				obj:IsCalled() and
+				not obj:IsRefFunction()
+				and
+				obj:GetFunctionBodyNode() and
+				obj:GetFunctionBodyNode().environment == "runtime" and
+				not obj:GetAnalyzerFunction()
+				and
+				not obj:IsExplicitInputSignature()
+			then
+				if obj.scope and obj.scope.throws then
+					self:GetScope():CertainReturn()
+				end
+
+				return obj:GetOutputSignature():Copy()
+			end
+
 			local ok, err = self:PushCallFrame(obj, call_node, not_recursive_call)
 
 			if not ok == false then return ok, err end
@@ -24362,6 +24351,11 @@ end
 
 function META.New(config)
 	config = config or {}
+
+	if config.should_crawl_untyped_functions == nil then
+		config.should_crawl_untyped_functions = true
+	end
+
 	local self = setmetatable({config = config}, META)
 
 	for _, func in ipairs(META.OnInitialize) do
@@ -28333,6 +28327,10 @@ function META:GetAanalyzerConfig()
 
 	if cfg.type_annotations == nil then cfg.type_annotations = true end
 
+	if cfg.should_crawl_untyped_functions == nil then
+		cfg.should_crawl_untyped_functions = false
+	end
+
 	return cfg
 end
 
@@ -28738,6 +28736,8 @@ function META:GetDefinition(path, line, character)
 			range = get_range(data.code, node:GetStartStop()),
 		}
 	end
+
+	return {}
 end
 
 function META:GetHover(path, line, character)

@@ -224,6 +224,26 @@ return {
 				if obj.scope and obj.scope.throws then
 					self:GetScope():CertainReturn()
 				end
+
+				return obj:GetOutputSignature():Copy()
+			end
+
+			if
+				not self.config.should_crawl_untyped_functions and
+				self:IsRuntime() and
+				obj:IsCalled() and
+				not obj:IsRefFunction()
+				and
+				obj:GetFunctionBodyNode() and
+				obj:GetFunctionBodyNode().environment == "runtime" and
+				not obj:GetAnalyzerFunction()
+				and
+				not obj:IsExplicitInputSignature()
+			then
+				if obj.scope and obj.scope.throws then
+					self:GetScope():CertainReturn()
+				end
+
 				return obj:GetOutputSignature():Copy()
 			end
 
