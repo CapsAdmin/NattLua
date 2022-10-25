@@ -150,7 +150,7 @@ lsp.methods["initialized"] = function(params)
 			{
 				method = "textDocument/publishDiagnostics",
 				params = {
-					uri = self.WorkingDirectory .. "/" .. path,
+					uri = path,
 					diagnostics = diagnostics,
 				},
 			}
