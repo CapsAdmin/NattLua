@@ -150,13 +150,20 @@ end
 function META:Recompile(path)
 	local cfg = self:GetAanalyzerConfig()
 	local entry_point = path or cfg.entry_point
-
 	if not entry_point then return false end
-
+	if path then path = self:NormalizePath(path) end
+	entry_point = self:NormalizePath(entry_point)
 	cfg.inline_require = false
 	cfg.on_read_file = function(parser, path)
 		if not self.TempFiles[path] then
-			local f = assert(io.open(path, "rb"))
+
+			local path2 = path
+			local prefix = "file://"
+			if path2:sub(1, #prefix) == prefix then
+				path2 = path:sub(#prefix + 1)
+			end
+
+			local f = assert(io.open(path2, "rb"))
 			local content = f:read("*all")
 			f:close()
 			self:SetFileContent(path, content)
@@ -197,8 +204,11 @@ function META:Recompile(path)
 						root = root_node.RootStatement.RootStatement
 					end
 
-					self:SetFileContent(root.parser.config.file_path, root.code:GetString())
-					self:LoadFile(root.parser.config.file_path, root.code, root.lexer_tokens)
+					-- if root is false it failed to import and will be reported shortly after
+					if root then
+						self:SetFileContent(root.parser.config.file_path, root.code:GetString())
+						self:LoadFile(root.parser.config.file_path, root.code, root.lexer_tokens)
+					end
 				end
 			end
 		else
