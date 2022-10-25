@@ -169,10 +169,7 @@ end
 do
 	local helper = EditorHelper.New()
 	helper:Initialize()
-
 	function helper:OnDiagnostics(name, data)
-		print(name)
-		table.print(data)
 		error("should not be called")
 	end
 
@@ -195,4 +192,33 @@ do
 	helper:Recompile("./src/main.nlua")
 	assert(_G.loaded)
 	_G.loaded = nil
+end
+
+
+do
+	local helper = EditorHelper.New()
+	helper:Initialize()
+
+	local called = false
+	function helper:OnDiagnostics(name, data)
+		assert(data[1].message:find("error importing") ~= nil)
+		called = true
+	end
+
+	helper:SetConfigFunction(function(...)
+		local cmd = ...
+
+		if cmd == "get-analyzer-config" then
+			return {
+				inline_require = true,
+				entry_point = "./src/bad.nlua",
+			}
+		end
+	end)
+
+	helper:SetFileContent("./src/main.nlua", [[
+		error("should not be called")
+	]])
+	helper:Recompile()
+	assert(called)
 end

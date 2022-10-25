@@ -184,7 +184,7 @@ function META:Recompile(path)
 			}
 		)
 	end
-
+	
 	if compiler:Parse() then
 		self:DebugLog("[" .. entry_point .. "] parsed with " .. #compiler.Tokens .. " tokens")
 
@@ -210,7 +210,7 @@ function META:Recompile(path)
 
 		if cfg then
 			if entry_point then
-				should_analyze = self:GetFileContent(entry_point):find("-" .. "-ANALYZE", nil, true)
+				should_analyze = self.TempFiles[entry_point] and self:GetFileContent(entry_point):find("-" .. "-ANALYZE", nil, true)
 			end
 
 			if not should_analyze and path and path:find("%.nlua$") then
