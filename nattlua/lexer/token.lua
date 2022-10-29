@@ -45,7 +45,8 @@ function META:GetLastAssociatedType()
 end
 
 function META:FindType()
-	if false --[[#as true]] then return end
+	if false--[[# as true]] then return end
+
 	local found_parents = {}
 
 	do
@@ -94,7 +95,8 @@ function META:FindType()
 end
 
 function META:FindUpvalue()
-	if false --[[#as true]] then return end
+	if false--[[# as true]] then return end
+
 	local node = self
 
 	while node do
@@ -113,23 +115,26 @@ function META:FindUpvalue()
 end
 
 function META:GetSemanticType()
-	if false --[[#as true]] then return end
+	if false--[[# as true]] then return end
+
 	local runtime_syntax = require("nattlua.syntax.runtime")
 	local typesystem_syntax = require("nattlua.syntax.typesystem")
 	local Union = require("nattlua.types.union").Union
 	local token = self
 
-	if token.type == "symbol" and token.parent.kind == "function_signature" then
-		return "keyword"
-	end
-
-	if
-		runtime_syntax:IsNonStandardKeyword(token) or
-		typesystem_syntax:IsNonStandardKeyword(token)
-	then
-		-- check if it's used in a statement, because foo.type should not highlight
-		if token.parent and token.parent.type == "statement" then
+	if token.parent then
+		if token.type == "symbol" and token.parent.kind == "function_signature" then
 			return "keyword"
+		end
+
+		if
+			runtime_syntax:IsNonStandardKeyword(token) or
+			typesystem_syntax:IsNonStandardKeyword(token)
+		then
+			-- check if it's used in a statement, because foo.type should not highlight
+			if token.parent and token.parent.type == "statement" then
+				return "keyword"
+			end
 		end
 	end
 
@@ -218,53 +223,53 @@ function META:GetSemanticType()
 		return "string"
 	end
 
-	if
-		token.parent.kind == "value" and
-		token.parent.parent.kind == "binary_operator" and
-		(
-			token.parent.parent.value and
-			token.parent.parent.value.value == "." or
-			token.parent.parent.value.value == ":"
-		)
-	then
-		if token.value:sub(1, 1) == "@" then return "decorator" end
+	if token.parent then
+		if
+			token.parent.kind == "value" and
+			token.parent.parent.kind == "binary_operator" and
+			(
+				token.parent.parent.value and
+				token.parent.parent.value.value == "." or
+				token.parent.parent.value.value == ":"
+			)
+		then
+			if token.value:sub(1, 1) == "@" then return "decorator" end
+		end
+
+		if token.type == "letter" and token.parent.kind:find("function", nil, true) then
+			return "function"
+		end
+
+		if
+			token.parent.kind == "value" and
+			token.parent.parent.kind == "binary_operator" and
+			(
+				token.parent.parent.value and
+				token.parent.parent.value.value == "." or
+				token.parent.parent.value.value == ":"
+			)
+		then
+			return "property"
+		end
+
+		if token.parent.kind == "table_key_value" then return "property" end
+
+		if token.parent.standalone_letter then
+			if token.parent.environment == "typesystem" then return "type" end
+
+			if _G[token.value] then return "namespace" end
+
+			return "variable"
+		end
+
+		if token.parent.is_identifier then
+			if token.parent.environment == "typesystem" then return "typeParameter" end
+
+			return "variable"
+		end
 	end
 
-	if token.type == "letter" and token.parent.kind:find("function", nil, true) then
-		return "function"
-	end
-
-	if
-		token.parent.kind == "value" and
-		token.parent.parent.kind == "binary_operator" and
-		(
-			token.parent.parent.value and
-			token.parent.parent.value.value == "." or
-			token.parent.parent.value.value == ":"
-		)
-	then
-		return "property"
-	end
-
-	if token.parent.kind == "table_key_value" then return "property" end
-
-	if token.parent.standalone_letter then
-		if token.parent.environment == "typesystem" then return "type" end
-
-		if _G[token.value] then return "namespace" end
-
-		return "variable"
-	end
-
-	if token.parent.is_identifier then
-		if token.parent.environment == "typesystem" then return "typeParameter" end
-
-		return "variable"
-	end
-
-	do
-		return "comment"
-	end
+	return "comment"
 end
 
 local new_token

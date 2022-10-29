@@ -167,31 +167,26 @@ do
 		return str
 	end
 
-    
-    local function string_lengthsplit(str, len)
-        if #str > len then
-            local tbl = {}
+	local function string_lengthsplit(str, len)
+		if #str > len then
+			local tbl = {}
+			local max = math.floor(#str / len)
 
-            local max = math.floor(#str/len)
+			for i = 0, max do
+				local left = i * len + 1
+				local right = (i * len) + len
+				local res = str:sub(left, right)
 
-            for i = 0, max do
+				if res ~= "" then table.insert(tbl, res) end
+			end
 
-                local left = i * len + 1
-                local right = (i * len) + len
-                local res = str:sub(left, right)
+			return tbl
+		end
 
-                if res ~= "" then
-                    table.insert(tbl, res)
-                end
-            end
+		return {str}
+	end
 
-            return tbl
-        end
-
-        return {str}
-    end
-
-    local MAX_WIDTH = 127
+	local MAX_WIDTH = 127
 
 	function helpers.BuildSourceCodePointMessage(
 		lua_code--[[#: string]],
@@ -201,26 +196,21 @@ do
 		stop--[[#: number]],
 		size--[[#: number]]
 	)
+		do
+			local new_str = ""
+			local pos = 1
 
-        do
-            local new_str = ""
-            local pos = 1
-            for i, chunk in ipairs(string_lengthsplit(lua_code, MAX_WIDTH)) do
-                if pos < start and i > 1 then
-                    start = start + 1
-                end
+			for i, chunk in ipairs(string_lengthsplit(lua_code, MAX_WIDTH)) do
+				if pos < start and i > 1 then start = start + 1 end
 
-                if pos < stop and i > 1 then
-                    stop = stop + 1
-                end
+				if pos < stop and i > 1 then stop = stop + 1 end
 
-                new_str = new_str .. chunk .. "\n"
-                pos = pos + #chunk
+				new_str = new_str .. chunk .. "\n"
+				pos = pos + #chunk
+			end
 
-            end
-
-            lua_code = new_str
-        end
+			lua_code = new_str
+		end
 
 		size = size or 2
 		start = clamp(start or 1, 1, #lua_code)
@@ -285,8 +275,7 @@ do
 			if #line > longest_line then longest_line = #line end
 		end
 
-        longest_line = math.min(longest_line, MAX_WIDTH)
-
+		longest_line = math.min(longest_line, MAX_WIDTH)
 		table.insert(
 			lines,
 			1,
@@ -315,7 +304,6 @@ function helpers.JITOptimize()
 	if not jit then return end
 
 	local GC64 = #tostring({}) == 19
-
 	local params = {
 		maxtrace = 1000, -- 1 > 65535: Max number of of traces in cache. 
 		maxrecord = 4000, -- Max number of of recorded IR instructions.
@@ -336,12 +324,24 @@ function helpers.JITOptimize()
 		sizemcode = jit.os == "Windows" or GC64 and 64 or 32, -- size of each machine code area (in KBytes).
 		maxmcode = 512, -- max total size of all machine code areas (in KBytes).
 	}
+	params.maxtrace = 65535
 
-	-- from open resty
-	if true then
-		params.maxtrace=65535
-		params.maxmcode=1024*40
-		params.sizemcode=params.maxmcode
+	if jit.arch == "arm64" then
+		-- initially i used these settings, but it didn't work that well
+		-- https://github.com/love2d/love/blob/8e7fd10b6fd9b6dce6d61d728271019c28a7213e/src/modules/love/jitsetup.lua#L36
+		-- this makes it not crash as much and improves performance a lot, the size is crazy high i guess but it works
+		params.maxmcode = 1024 * 40
+		-- this should be 32 or 64 or something, but setting it to the same as maxmcode seems to work much better
+		params.sizemcode = params.maxmcode
+	else
+		params.maxrecord = 20000
+		params.maxirconst = 1500
+		params.maxsnap = 1500
+		params.minstitch = 3
+		params.maxmcode = 40960
+		params.sizemcode = 40960
+		params.loopunroll = 100
+		params.recunroll = 0
 	end
 
 	local flags = {
@@ -354,20 +354,19 @@ function helpers.JITOptimize()
 		"dse", -- Dead-Store Elimination
 		"abc", -- Array Bounds Check Elimination
 		"sink", -- Allocation/Store Sinking
-		"fuse" -- Fusion of operands into instructions
+		"fuse", -- Fusion of operands into instructions
 	}
-
 	local args = {}
+
 	for k, v in pairs(params) do
 		table.insert(args, k .. "=" .. tostring(v))
 	end
 
-	for _,v in ipairs(flags) do
+	for _, v in ipairs(flags) do
 		table.insert(args, "+" .. v)
 	end
 
 	jit.opt.start(unpack(args))
-
 	jit.flush()
 end
 
