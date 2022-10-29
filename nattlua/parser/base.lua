@@ -20,10 +20,8 @@ local META = class.CreateTemplate("parser")
 --[[#type META.@Self = {
 	@Name = "Parser",
 	config = ParserConfig,
-	nodes = List<|Node|>,
+	nodes = List<|Node|>, -- node stack for parent nodes
 	Code = Code,
-	current_statement = false | Node,
-	current_expression = false | Node,
 	root = false | Node,
 	i = number,
 	tokens = List<|Token|>,
@@ -48,8 +46,6 @@ function META.New(
 			config = config or {},
 			Code = code,
 			nodes = {},
-			current_statement = false,
-			current_expression = false,
 			environment_stack = {},
 			root = false,
 			i = 1,
@@ -91,12 +87,6 @@ function META:StartNode(
 			parent = self.nodes[#self.nodes],
 		}
 	)
-
-	if node_type == "expression" then
-		self.current_expression = node
-	else
-		self.current_statement = node
-	end
 
 	if self.OnNode then self:OnNode(node) end
 
