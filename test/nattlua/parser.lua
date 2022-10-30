@@ -300,15 +300,15 @@ test("parser errors", function()
 end)
 
 parse[[
-    £ assert(#parser.nodes == 1)
-    £ assert(parser.nodes[#parser.nodes + 1 - 1].kind == "root")
+    £ assert(#parser.node_stack == 1)
+    £ assert(parser.node_stack[#parser.node_stack + 1 - 1].kind == "root")
     
     do
-        £ assert(parser.nodes[#parser.nodes + 1 - 1].kind == "do")
-        £ assert(parser.nodes[#parser.nodes + 1 - 2].kind == "root")
+        £ assert(parser.node_stack[#parser.node_stack + 1 - 1].kind == "do")
+        £ assert(parser.node_stack[#parser.node_stack + 1 - 2].kind == "root")
         
         local function test()
-            £ assert(parser.nodes[#parser.nodes + 1 - 1].kind == "local_function")
+            £ assert(parser.node_stack[#parser.node_stack + 1 - 1].kind == "local_function")
 			£ parser.config.on_node = function(_, node) if node.kind == "value" and node.value.value == "1337" then parser.value = node end end
             local x = 1337
 			£ parser.OnNode = nil
@@ -318,8 +318,8 @@ parse[[
         end
     end
 
-    £ assert(#parser.nodes == 1)
-    £ assert(parser.nodes[#parser.nodes + 1 - 1].kind == "root")
+    £ assert(#parser.node_stack == 1)
+    £ assert(parser.node_stack[#parser.node_stack + 1 - 1].kind == "root")
 ]]
 
 do
