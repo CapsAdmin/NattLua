@@ -309,9 +309,9 @@ parse[[
         
         local function test()
             £ assert(parser.node_stack[#parser.node_stack + 1 - 1].kind == "local_function")
-			£ parser.config.on_node = function(_, node) if node.kind == "value" and node.value.value == "1337" then parser.value = node end end
+			£ parser.config.on_parsed_node = function(_, node) if node.kind == "value" and node.value.value == "1337" then parser.value = node end end
             local x = 1337
-			£ parser.OnNode = nil
+			£ parser.config.on_parsed_node = nil
             £ assert(parser.value.kind == "value")
             £ assert(parser.value.parent.kind == "local_assignment")
             £ assert(parser.value.parent.parent.kind == "local_function")

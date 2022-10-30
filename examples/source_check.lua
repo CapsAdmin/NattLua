@@ -22,7 +22,7 @@ for _, path in ipairs(paths) do
 	end
 
 	local list = {}
-	c.OnNode = function(_, node)
+	c.OnPreCreateNode = function(_, node)
 		table.insert(list, node)
 	end
 	c:Parse()

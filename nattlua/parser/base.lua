@@ -26,8 +26,9 @@ local META = class.CreateTemplate("parser")
 	current_token_index = number,
 	node_stack = List<|Node|>,
 	environment_stack = List<|"typesystem" | "runtime"|>,
-	OnNode = nil | function=(self, Node)>(nil),
-	suppress_on_node = nil | {parent = Node, node_stack = List<|Node|>},
+	OnPreCreateNode = nil | function=(self, Node)>(nil),
+	OnParsedNode = nil | function=(self, Node)>(nil),
+	suppress_on_parsed_node = nil | {parent = Node, node_stack = List<|Node|>},
 }]]
 --[[#type META.@Name = "Parser"]]
 --[[#local type Parser = META.@Self]]
@@ -37,7 +38,7 @@ function META.New(
 	code--[[#: Code]],
 	config--[[#: nil | {
 		root = nil | Node,
-		on_node = nil | function=(Parser, Node)>(Node),
+		on_parsed_node = nil | function=(Parser, Node)>(Node),
 		path = nil | string,
 	}]]
 )
@@ -87,7 +88,7 @@ function META:StartNode(
 		}
 	)
 
-	if self.OnNode then self:OnNode(node) end
+	if self.OnPreCreateNode then self:OnPreCreateNode(node) end
 
 	table.insert(self.node_stack, node)
 	return node--[[# as T]]
@@ -106,15 +107,17 @@ function META:EndNode(node--[[#: Node]])
 
 	table.remove(self.node_stack)
 
-	if self.config.on_node then
+	if self.OnParsedNode then self:OnParsedNode(node) end
+
+	if self.config.on_parsed_node then
 		if
-			self.suppress_on_node and
+			self.suppress_on_parsed_node and
 			node.type == "expression" and
-			self.suppress_on_node.parent == self.node_stack[#self.node_stack]
+			self.suppress_on_parsed_node.parent == self.node_stack[#self.node_stack]
 		then
-			table.insert(self.suppress_on_node.node_stack, node)
+			table.insert(self.suppress_on_parsed_node.node_stack, node)
 		else
-			local new_node = self.config.on_node(self, node)
+			local new_node = self.config.on_parsed_node(self, node)
 
 			if new_node then
 				node = new_node--[[# as any]]
@@ -127,16 +130,16 @@ function META:EndNode(node--[[#: Node]])
 end
 
 function META:SuppressOnNode()
-	self.suppress_on_node = {parent = self.node_stack[#self.node_stack], node_stack = {}}
+	self.suppress_on_parsed_node = {parent = self.node_stack[#self.node_stack], node_stack = {}}
 end
 
 function META:ReRunOnNode(node_stack--[[#: List<|Node|>]])
-	if not self.suppress_on_node then return end
+	if not self.suppress_on_parsed_node then return end
 
-	for _, node_a in ipairs(self.suppress_on_node.node_stack) do
+	for _, node_a in ipairs(self.suppress_on_parsed_node.node_stack) do
 		for i, node_b in ipairs(node_stack) do
-			if node_a == node_b and self.config.on_node then
-				local new_node = self.config.on_node(self, node_a)
+			if node_a == node_b and self.config.on_parsed_node then
+				local new_node = self.config.on_parsed_node(self, node_a)
 
 				if new_node then
 					node_stack[i] = new_node
@@ -146,7 +149,7 @@ function META:ReRunOnNode(node_stack--[[#: List<|Node|>]])
 		end
 	end
 
-	self.suppress_on_node = nil
+	self.suppress_on_parsed_node = nil
 end
 
 function META:Error(

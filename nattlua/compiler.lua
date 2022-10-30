@@ -177,9 +177,9 @@ function META:Parse()
 		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, ...)
 	end
 
-	if self.OnNode then
-		parser.OnNode = function(_, node)
-			self:OnNode(node)
+	if self.OnPreCreateNode then
+		parser.OnPreCreateNode = function(_, node)
+			self:OnPreCreateNode(node)
 		end
 	end
 

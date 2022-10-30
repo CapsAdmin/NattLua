@@ -246,12 +246,10 @@ local function read_file(self, path)
 	if code then return code end
 
 	local f = assert(io.open(path, "rb"))
-
 	local code = f:read("*a")
 	f:close()
 
 	if not code then error("file is empty", 2) end
-
 
 	return code
 end

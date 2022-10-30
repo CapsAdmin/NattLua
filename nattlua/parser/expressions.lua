@@ -803,7 +803,7 @@ do -- runtime
 					path = node.path,
 					working_directory = self.config.working_directory,
 					inline_require = not root_node.data_import,
-					on_node = self.config.on_node,
+					on_parsed_node = self.config.on_parsed_node,
 					on_read_file = self.config.on_read_file,
 				}
 			)
@@ -861,7 +861,7 @@ do -- runtime
 						root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
 						path = node.path,
 						working_directory = self.config.working_directory,
-						on_node = self.config.on_node,
+						on_parsed_node = self.config.on_parsed_node,
 						on_read_file = self.config.on_read_file,
 					--inline_require = true,
 					}
@@ -884,7 +884,7 @@ do -- runtime
 				f, err = io.open(node.path, "rb")
 
 				if f then
-					data = f:read("*all")
+					data = f:read("*a")
 					f:close()
 				end
 			end

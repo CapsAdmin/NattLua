@@ -31,7 +31,7 @@ function coverage.Preprocess(code, key)
 		code,
 		"lol",
 		{
-			on_node = function(parser, node)
+			on_parsed_node = function(parser, node)
 				if node.type == "statement" then
 					if node.kind == "call_expression" then
 						local start, stop = node:GetStartStop()

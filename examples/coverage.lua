@@ -137,7 +137,7 @@ local compiler = nl.Compiler(
 ]],
 	"lol",
 	{
-		on_node = function(parser, node)
+		on_parsed_node = function(parser, node)
 			if
 				node.type == "expression" and
 				not node.is_left_assignment and

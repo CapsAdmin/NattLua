@@ -12170,10 +12170,9 @@ function META.New(
 		{
 			config = config or {},
 			Code = code,
-			nodes = {},
+			node_stack = {},
 			environment_stack = {},
-			root = false,
-			i = 1,
+			current_token_index = 1,
 			tokens = tokens,
 		},
 		META
@@ -12205,17 +12204,17 @@ function META:StartNode(
 		{
 			type = node_type,
 			kind = kind,
+			environment = self:GetCurrentParserEnvironment(),
 			Code = self.Code,
 			code_start = code_start,
 			code_stop = code_start,
-			environment = self:GetCurrentParserEnvironment(),
-			parent = self.nodes[#self.nodes],
+			parent = self.node_stack[#self.node_stack],
 		}
 	)
 
 	if self.OnNode then self:OnNode(node) end
 
-	table.insert(self.nodes, node)
+	table.insert(self.node_stack, node)
 	return node
 end
 
@@ -12230,21 +12229,21 @@ function META:EndNode(node)
 		if cur then node.code_stop = cur.stop end
 	end
 
-	table.remove(self.nodes)
+	table.remove(self.node_stack)
 
 	if self.config.on_node then
 		if
 			self.suppress_on_node and
 			node.type == "expression" and
-			self.suppress_on_node.parent == self.nodes[#self.nodes]
+			self.suppress_on_node.parent == self.node_stack[#self.node_stack]
 		then
-			table.insert(self.suppress_on_node.nodes, node)
-		elseif self.config.on_node then
+			table.insert(self.suppress_on_node.node_stack, node)
+		else
 			local new_node = self.config.on_node(self, node)
 
 			if new_node then
 				node = new_node
-				node.parent = self.nodes[#self.nodes]
+				node.parent = self.node_stack[#self.node_stack]
 			end
 		end
 	end
@@ -12253,20 +12252,20 @@ function META:EndNode(node)
 end
 
 function META:SuppressOnNode()
-	self.suppress_on_node = {parent = self.nodes[#self.nodes], nodes = {}}
+	self.suppress_on_node = {parent = self.node_stack[#self.node_stack], node_stack = {}}
 end
 
-function META:ReRunOnNode(nodes)
+function META:ReRunOnNode(node_stack)
 	if not self.suppress_on_node then return end
 
-	for _, node_a in ipairs(self.suppress_on_node.nodes) do
-		for i, node_b in ipairs(nodes) do
+	for _, node_a in ipairs(self.suppress_on_node.node_stack) do
+		for i, node_b in ipairs(node_stack) do
 			if node_a == node_b and self.config.on_node then
 				local new_node = self.config.on_node(self, node_a)
 
 				if new_node then
-					nodes[i] = new_node
-					new_node.parent = self.nodes[#self.nodes]
+					node_stack[i] = new_node
+					new_node.parent = self.node_stack[#self.node_stack]
 				end
 			end
 		end
@@ -12305,7 +12304,7 @@ function META:OnError(
 ) end
 
 function META:GetToken(offset)
-	return self.tokens[self.i + (offset or 0)]
+	return self.tokens[self.current_token_index + (offset or 0)]
 end
 
 function META:GetLength()
@@ -12313,7 +12312,7 @@ function META:GetLength()
 end
 
 function META:Advance(offset)
-	self.i = self.i + offset
+	self.current_token_index = self.current_token_index + offset
 end
 
 function META:IsValue(str, offset)
@@ -12334,7 +12333,7 @@ function META:ParseToken()
 	if not tk then return nil end
 
 	self:Advance(1)
-	tk.parent = self.nodes[#self.nodes]
+	tk.parent = self.node_stack[#self.node_stack]
 	return tk
 end
 
@@ -12350,7 +12349,7 @@ function META:AddTokens(tokens)
 	for i, token in ipairs(tokens) do
 		if token.type == "end_of_file" then break end
 
-		table.insert(self.tokens, self.i + i - 1, token)
+		table.insert(self.tokens, self.current_token_index + i - 1, token)
 	end
 
 	table.insert(self.tokens, eof)
@@ -13461,7 +13460,8 @@ function profiler.PopZone()
 end
 
 return profiler end ]=======], '@./nattlua/other/profiler.lua'))())(...) return __M end end
-IMPORTS['nattlua/parser/expressions.lua'] = assert((loadstring or load)([=======[ return function(...) local META = ...
+IMPORTS['nattlua/parser/expressions.lua'] = assert((loadstring or load)([=======[ return function(...) --ANALYZE
+local META = ...
 local table_insert = _G.table.insert
 local table_remove = _G.table.remove
 local math_huge = math.huge
@@ -14347,7 +14347,7 @@ do -- runtime
 				f, err = io.open(node.path, "rb")
 
 				if f then
-					data = f:read("*all")
+					data = f:read("*a")
 					f:close()
 				end
 			end
