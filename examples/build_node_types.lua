@@ -110,23 +110,40 @@ local code = [[
     local type expression = {}
 ]]
 
-for _, v in pairs(found) do
+local function sorted_pairs(tbl)
+	local keys = {}
+
+	for k in pairs(tbl) do
+		table.insert(keys, k)
+	end
+
+	table.sort(keys, function(a, b)
+		return tostring(a) > tostring(b)
+	end)
+
+	local i = 0
+	return function()
+		i = i + 1
+		return keys[i], tbl[keys[i]]
+	end
+end
+
+for _, v in sorted_pairs(found) do
 	code = code .. "type " .. v.type .. "[\"" .. v.kind .. "\"] = { -- " .. v.node .. "\n"
 	code = code .. "tokens = {\n"
 
-	for k, v in pairs(v.tokens) do
+	for k, v in sorted_pairs(v.tokens) do
 		code = code .. "[\"" .. k .. "\"] = Token,\n"
 	end
 
 	code = code .. "},\n"
 
-	for k, v in pairs(v.fields) do
+	for k, v in sorted_pairs(v.fields) do
 		code = code .. k .. " = any,\n"
 	end
 
 	code = code .. "}\n"
 end
 
-print(
-	nl.Compiler(code, "", {preserve_whitespace = false, comment_type_annotations = false}):Emit()
-)
+local res = nl.Compiler(code, "", {preserve_whitespace = false, comment_type_annotations = false}):Emit()
+print(res, #res)
