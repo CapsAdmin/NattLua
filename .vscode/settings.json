@@ -6,7 +6,8 @@
       "language_server/**/*.lua",
       "test/**/*.lua",
       "**/*.nlua",
-      "test_focus.nlua"
+      "test_focus.nlua",
+      "build.lua"
     ]
   },
   "search.exclude": {
