@@ -14,7 +14,7 @@ local setmetatable = _G.setmetatable
 local B = string.byte
 local META = class.CreateTemplate("emitter")
 
---[[#local type { ParserConfig } = import("./../config.nlua")]]
+--[[#local type { ParserConfig, TranspilerConfig } = import("./../config.nlua")]]
 
 local translate_binary = {
 	["&&"] = "and",
@@ -1509,7 +1509,9 @@ function META:EmitAnnotationExpression(node--[[#: Node]])
 	if node.type_expression then
 		self:EmitTypeExpression(node.type_expression)
 	elseif node:GetLastAssociatedType() and self.config.type_annotations ~= "explicit" then
-		self:Emit(tostring(node:GetLastAssociatedType():GetContract() or node:GetLastAssociatedType()))
+		self:Emit(
+			tostring(node:GetLastAssociatedType():GetContract() or node:GetLastAssociatedType())
+		)
 	end
 end
 

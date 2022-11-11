@@ -334,14 +334,14 @@ function META:ParseStatements(stop_token--[[#: {[string] = true} | nil]])
 
 		if not node then break end
 
-		if node[1] then
+		if node.type then
+			out[i] = node
+			i = i + 1
+		else
 			for _, v in ipairs(node) do
 				out[i] = v
 				i = i + 1
 			end
-		else
-			out[i] = node
-			i = i + 1
 		end
 	end
 

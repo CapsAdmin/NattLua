@@ -544,7 +544,9 @@ do -- runtime
 					tree.is_dictionary = true
 				end
 
-				if entry.spread then tree.spread = true end
+				if entry.kind == "table_index_value" and entry.spread then
+					tree.spread = true
+				end
 
 				tree.children[i] = entry
 
@@ -690,7 +692,7 @@ do -- runtime
 
 			if not found then break end
 
-			if left_node.value and left_node.value.value == ":" then
+			if left_node.kind == "value" and left_node.value.value == ":" then
 				found.parser_call = true
 			end
 
