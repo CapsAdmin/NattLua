@@ -379,6 +379,8 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 						keyval.val.Type == "union" and
 						keyval.val:CanBeNil()
 					)
+					or
+					keyval.val.Type == "any"
 				then
 					return true
 				end

@@ -56,3 +56,13 @@ analyze[[
     attest.equal(META.code, _ as string)
     attest.equal(META.codeawdawd, _ as any)
 ]]
+analyze[[
+    local type Node = {
+        type = any,
+        kind = any,
+    }
+    local x: Node = {
+        type = "lol",
+    -- but no kind!
+    }
+]]

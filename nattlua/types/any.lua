@@ -33,6 +33,10 @@ function META:IsTruthy()
 	return true
 end
 
+function META:CanBeNil()
+	return true
+end
+
 function META.Equal(a--[[#: TAny]], b--[[#: TBaseType]])
 	return a.Type == b.Type
 end
