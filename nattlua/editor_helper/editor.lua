@@ -150,18 +150,19 @@ end
 function META:Recompile(path)
 	local cfg = self:GetAanalyzerConfig()
 	local entry_point = path or cfg.entry_point
+
 	if not entry_point then return false end
+
 	if path then path = self:NormalizePath(path) end
+
 	entry_point = self:NormalizePath(entry_point)
 	cfg.inline_require = false
 	cfg.on_read_file = function(parser, path)
 		if not self.TempFiles[path] then
-
 			local path2 = path
 			local prefix = "file://"
-			if path2:sub(1, #prefix) == prefix then
-				path2 = path:sub(#prefix + 1)
-			end
+
+			if path2:sub(1, #prefix) == prefix then path2 = path:sub(#prefix + 1) end
 
 			local f = assert(io.open(path2, "rb"))
 			local content = f:read("*all")
@@ -191,7 +192,7 @@ function META:Recompile(path)
 			}
 		)
 	end
-	
+
 	if compiler:Parse() then
 		self:DebugLog("[" .. entry_point .. "] parsed with " .. #compiler.Tokens .. " tokens")
 
@@ -208,19 +209,22 @@ function META:Recompile(path)
 					if root then
 						self:SetFileContent(root.parser.config.file_path, root.code:GetString())
 						self:LoadFile(root.parser.config.file_path, root.code, root.lexer_tokens)
+						diagnostics[root.parser.config.file_path] = diagnostics[root.parser.config.file_path] or {}
 					end
 				end
 			end
 		else
 			self:SetFileContent(path, compiler.Code:GetString())
 			self:LoadFile(path, compiler.Code, compiler.Tokens)
+			diagnostics[path] = diagnostics[path] or {}
 		end
 
 		local should_analyze = true
 
 		if cfg then
 			if entry_point then
-				should_analyze = self.TempFiles[entry_point] and self:GetFileContent(entry_point):find("-" .. "-ANALYZE", nil, true)
+				should_analyze = self.TempFiles[entry_point] and
+					self:GetFileContent(entry_point):find("-" .. "-ANALYZE", nil, true)
 			end
 
 			if not should_analyze and path and path:find("%.nlua$") then

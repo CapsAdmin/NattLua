@@ -1,7 +1,9 @@
 local args = ...
 
 if args == "vscode" then
-	os.execute("cd language_server/vscode && yarn && yarn build && code --install-extension nattlua-0.0.1.vsix")
+	os.execute(
+		"cd language_server/vscode && yarn && yarn build && code --install-extension nattlua-0.0.1.vsix"
+	)
 	return
 end
 
@@ -9,7 +11,8 @@ local nl = require("nattlua")
 local entry = "./nattlua.lua"
 io.write("parsing " .. entry)
 local c = assert(
-	nl.Compiler([[
+	nl.Compiler(
+		[[
 		_G.ARGS = {...}
 
 		if _G.IMPORTS then
@@ -22,7 +25,7 @@ local c = assert(
 
 		return require("nattlua")
 	]],
-	"nattlua",
+		"nattlua",
 		{
 			type_annotations = false,
 			inline_require = true,
@@ -47,6 +50,7 @@ local lua_code = c:Emit(
 	}
 )
 lua_code = "_G.BUNDLE = true\n" .. lua_code
+lua_code = lua_code:gsub("%#%!%/usr%/local%/bin%/luajit\n", "\n")
 io.write(" - OK\n")
 io.write("output is " .. #lua_code .. " bytes\n")
 -- double check that the lua_code is valid

@@ -94,7 +94,7 @@ function helpers.SubPositionToLinePosition(code--[[#: string]], start--[[#: numb
 		character_start = character_start,
 		character_stop = character_stop,
 		line_start = line_start,
-		line_stop = line_stop,
+		line_stop = line_stop or line_start,
 		sub_line_before = {within_start, start - 1},
 		sub_line_after = {stop + 1, within_stop},
 	}

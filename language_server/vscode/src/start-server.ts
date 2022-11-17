@@ -3,6 +3,8 @@ import { ExtensionContext, OutputChannel, workspace } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import { unwatchFile, watchFile } from "fs"
+import { dirname } from "path";
+import { chdir } from "process";
 let server: ChildProcessWithoutNullStreams;
 let init = false
 
@@ -39,7 +41,10 @@ export function spawnServer(config:
         unwatchFile(config.path)
     })
 
-    server = spawn(config.path, config.args, { cwd })
+    const nattluaDir = dirname(config.path)
+    chdir(nattluaDir)
+    server = spawn(config.path, config.args, { cwd: nattluaDir })
+    chdir(cwd)
 
     config.context.subscriptions.push({
         dispose: () => {
@@ -70,7 +75,8 @@ export function spawnServer(config:
 }
 
 export const startServerConnection = (config: {
-    path: string, args: string[],
+    path: string,
+    args: string[],
     client: LanguageClient,
     serverOutput: OutputChannel,
     context: ExtensionContext

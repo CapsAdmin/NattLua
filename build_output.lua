@@ -2595,7 +2595,7 @@ function helpers.SubPositionToLinePosition(code, start, stop)
 		character_start = character_start,
 		character_stop = character_stop,
 		line_start = line_start,
-		line_stop = line_stop,
+		line_stop = line_stop or line_start,
 		sub_line_before = {within_start, start - 1},
 		sub_line_after = {stop + 1, within_stop},
 	}
@@ -3291,6 +3291,10 @@ function META:IsFalsy()
 end
 
 function META:IsTruthy()
+	return true
+end
+
+function META:CanBeNil()
 	return true
 end
 
@@ -4415,6 +4419,8 @@ function META:ContainsAllKeysIn(contract)
 						keyval.val.Type == "union" and
 						keyval.val:CanBeNil()
 					)
+					or
+					keyval.val.Type == "any"
 				then
 					return true
 				end
@@ -9906,9 +9912,9 @@ function META:Parse()
 		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, ...)
 	end
 
-	if self.OnNode then
-		parser.OnNode = function(_, node)
-			self:OnNode(node)
+	if self.OnPreCreateNode then
+		parser.OnPreCreateNode = function(_, node)
+			self:OnPreCreateNode(node)
 		end
 	end
 
@@ -12212,7 +12218,7 @@ function META:StartNode(
 		}
 	)
 
-	if self.OnNode then self:OnNode(node) end
+	if self.OnPreCreateNode then self:OnPreCreateNode(node) end
 
 	table.insert(self.node_stack, node)
 	return node
@@ -12231,15 +12237,17 @@ function META:EndNode(node)
 
 	table.remove(self.node_stack)
 
-	if self.config.on_node then
+	if self.OnParsedNode then self:OnParsedNode(node) end
+
+	if self.config.on_parsed_node then
 		if
-			self.suppress_on_node and
+			self.suppress_on_parsed_node and
 			node.type == "expression" and
-			self.suppress_on_node.parent == self.node_stack[#self.node_stack]
+			self.suppress_on_parsed_node.parent == self.node_stack[#self.node_stack]
 		then
-			table.insert(self.suppress_on_node.node_stack, node)
+			table.insert(self.suppress_on_parsed_node.node_stack, node)
 		else
-			local new_node = self.config.on_node(self, node)
+			local new_node = self.config.on_parsed_node(self, node)
 
 			if new_node then
 				node = new_node
@@ -12252,16 +12260,16 @@ function META:EndNode(node)
 end
 
 function META:SuppressOnNode()
-	self.suppress_on_node = {parent = self.node_stack[#self.node_stack], node_stack = {}}
+	self.suppress_on_parsed_node = {parent = self.node_stack[#self.node_stack], node_stack = {}}
 end
 
 function META:ReRunOnNode(node_stack)
-	if not self.suppress_on_node then return end
+	if not self.suppress_on_parsed_node then return end
 
-	for _, node_a in ipairs(self.suppress_on_node.node_stack) do
+	for _, node_a in ipairs(self.suppress_on_parsed_node.node_stack) do
 		for i, node_b in ipairs(node_stack) do
-			if node_a == node_b and self.config.on_node then
-				local new_node = self.config.on_node(self, node_a)
+			if node_a == node_b and self.config.on_parsed_node then
+				local new_node = self.config.on_parsed_node(self, node_a)
 
 				if new_node then
 					node_stack[i] = new_node
@@ -12271,7 +12279,7 @@ function META:ReRunOnNode(node_stack)
 		end
 	end
 
-	self.suppress_on_node = nil
+	self.suppress_on_parsed_node = nil
 end
 
 function META:Error(
@@ -12456,14 +12464,14 @@ function META:ParseStatements(stop_token)
 
 		if not node then break end
 
-		if node[1] then
+		if node.type then
+			out[i] = node
+			i = i + 1
+		else
 			for _, v in ipairs(node) do
 				out[i] = v
 				i = i + 1
 			end
-		else
-			out[i] = node
-			i = i + 1
 		end
 	end
 
@@ -13460,8 +13468,7 @@ function profiler.PopZone()
 end
 
 return profiler end ]=======], '@./nattlua/other/profiler.lua'))())(...) return __M end end
-IMPORTS['nattlua/parser/expressions.lua'] = assert((loadstring or load)([=======[ return function(...) --ANALYZE
-local META = ...
+IMPORTS['nattlua/parser/expressions.lua'] = assert((loadstring or load)([=======[ return function(...) local META = ...
 local table_insert = _G.table.insert
 local table_remove = _G.table.remove
 local math_huge = math.huge
@@ -14007,7 +14014,9 @@ do -- runtime
 					tree.is_dictionary = true
 				end
 
-				if entry.spread then tree.spread = true end
+				if entry.kind == "table_index_value" and entry.spread then
+					tree.spread = true
+				end
 
 				tree.children[i] = entry
 
@@ -14153,7 +14162,7 @@ do -- runtime
 
 			if not found then break end
 
-			if left_node.value and left_node.value.value == ":" then
+			if left_node.kind == "value" and left_node.value.value == ":" then
 				found.parser_call = true
 			end
 
@@ -14266,7 +14275,7 @@ do -- runtime
 					path = node.path,
 					working_directory = self.config.working_directory,
 					inline_require = not root_node.data_import,
-					on_node = self.config.on_node,
+					on_parsed_node = self.config.on_parsed_node,
 					on_read_file = self.config.on_read_file,
 				}
 			)
@@ -14324,7 +14333,7 @@ do -- runtime
 						root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
 						path = node.path,
 						working_directory = self.config.working_directory,
-						on_node = self.config.on_node,
+						on_parsed_node = self.config.on_parsed_node,
 						on_read_file = self.config.on_read_file,
 					--inline_require = true,
 					}
@@ -28495,12 +28504,14 @@ function META:Recompile(path)
 					if root then
 						self:SetFileContent(root.parser.config.file_path, root.code:GetString())
 						self:LoadFile(root.parser.config.file_path, root.code, root.lexer_tokens)
+						diagnostics[root.parser.config.file_path] = diagnostics[root.parser.config.file_path] or {}
 					end
 				end
 			end
 		else
 			self:SetFileContent(path, compiler.Code:GetString())
 			self:LoadFile(path, compiler.Code, compiler.Tokens)
+			diagnostics[path] = diagnostics[path] or {}
 		end
 
 		local should_analyze = true
@@ -29987,7 +29998,9 @@ elseif cmd == "language-server" then
 else
 	run_nlconfig()
 end end ]=======], '@./nattlua/cli.lua'))())(...) return __M end end
-do local __M; IMPORTS["nattlua"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) if not table.unpack and _G.unpack then table.unpack = _G.unpack end
+do local __M; IMPORTS["nattlua"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) 
+
+if not table.unpack and _G.unpack then table.unpack = _G.unpack end
 
 if not io or not io.write then
 	io = io or {}
@@ -30047,7 +30060,10 @@ end
 
 local ARGS = _G.ARGS or {...}
 
-if ARGS[1] and ARGS[1] ~= "nattlua" then IMPORTS['nattlua.cli']("nattlua.cli") end
+if ARGS[1] and ARGS[1] ~= "nattlua" then
+	_G.ARGS = {...}
+	IMPORTS['nattlua.cli']("nattlua.cli")
+end
 
 return m end ]=======], '@./nattlua.lua'))())(...) return __M end end
 IMPORTS['nattlua/definitions/index.nlua']("nattlua/definitions/index.nlua")

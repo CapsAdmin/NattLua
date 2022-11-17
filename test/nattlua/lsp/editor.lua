@@ -123,6 +123,8 @@ do
 	helper:Initialize()
 
 	function helper:OnDiagnostics(name, data)
+		if #data == 0 then return end
+
 		print(name)
 		table.print(data)
 		error("should not be called")
@@ -169,7 +171,10 @@ end
 do
 	local helper = EditorHelper.New()
 	helper:Initialize()
+
 	function helper:OnDiagnostics(name, data)
+		if #data == 0 then return end
+
 		error("should not be called")
 	end
 
@@ -194,12 +199,11 @@ do
 	_G.loaded = nil
 end
 
-
 do
 	local helper = EditorHelper.New()
 	helper:Initialize()
-
 	local called = false
+
 	function helper:OnDiagnostics(name, data)
 		assert(data[1].message:find("error importing") ~= nil)
 		called = true

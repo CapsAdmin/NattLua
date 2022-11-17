@@ -1,3 +1,5 @@
+#!/usr/local/bin/luajit
+
 if not table.unpack and _G.unpack then table.unpack = _G.unpack end
 
 if not io or not io.write then
@@ -58,6 +60,9 @@ end
 
 local ARGS = _G.ARGS or {...}
 
-if ARGS[1] and ARGS[1] ~= "nattlua" then require("nattlua.cli") end
+if ARGS[1] and ARGS[1] ~= "nattlua" then
+	_G.ARGS = {...}
+	require("nattlua.cli")
+end
 
 return m

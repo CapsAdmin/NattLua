@@ -23,6 +23,10 @@
   },
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "unpublished.nattlua",
+  "nattlua.path": "/home/caps/github/nattlua/nattlua.lua",
+  "nattlua.arguments": [
+    "language-server"
+  ],
   "[typescript]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
   },
