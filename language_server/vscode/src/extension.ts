@@ -7,6 +7,7 @@ import {
   LanguageClientOptions
 } from "vscode-languageclient/node";
 import { startServerConnection } from "./start-server";
+import { resolveVariables } from "./vscode-variables";
 
 let client: LanguageClient;
 const config = workspace.getConfiguration("nattlua");
@@ -14,8 +15,12 @@ const config = workspace.getConfiguration("nattlua");
 export async function activate(context: ExtensionContext) {
   let serverOutput = window.createOutputChannel("Nattlua Server");
 
-  const path = config.get<string>("path");
-  const args = config.get<string[]>("arguments");
+  const path = resolveVariables(config.get<string>("path"));
+  const args = config.get<string[]>("arguments")
+  for (let i = 0; i < args.length; i++) {
+    args[i] = resolveVariables(args[i]);
+  }
+
   const selector = [{ scheme: 'file', language: 'nattlua' }];
 
   const clientOptions: LanguageClientOptions = {

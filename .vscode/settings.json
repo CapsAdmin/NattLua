@@ -23,7 +23,7 @@
   },
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "unpublished.nattlua",
-  "nattlua.path": "/home/caps/github/nattlua/nattlua.lua",
+  "nattlua.path": "${workspaceFolder}/nattlua.lua",
   "nattlua.arguments": [
     "language-server"
   ],
