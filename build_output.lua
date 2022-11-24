@@ -29953,8 +29953,30 @@ return function(port)
 	server:Loop()
 end end ]=======], '@./language_server/server/main.lua'))())(...) return __M end end
 do local __M; IMPORTS["nattlua.cli"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) local nattlua = IMPORTS['nattlua.init']("nattlua.init")
-local ARGS = _G.ARGS or {...}
-local cmd = ARGS[1]
+local default = {}
+default.run = function(path, ...)
+	assert(path)
+	local compiler = assert(nattlua.File(path))
+	compiler:Analyze()
+	assert(loadstring(compiler:Emit(), "@" .. path))(...)
+end
+default.check = function(path)
+	assert(path)
+	local path = assert(unpack(ARGS, 2))
+	local compiler = assert(nattlua.File(path))
+	assert(compiler:Analyze())
+end
+default.build = function(path, path_to)
+	assert(path)
+	assert(path_to)
+	local compiler = assert(nattlua.File(path_from))
+	local f = assert(io.open(path_to, "w"))
+	f:write(compiler:Emit())
+	f:close()
+end
+default["language-server"] = function()
+	IMPORTS['language_server.server.main']("language_server.server.main")()
+end
 
 local function run_nlconfig()
 	if not io.open("./nlconfig.lua") then
@@ -29962,41 +29984,25 @@ local function run_nlconfig()
 		return
 	end
 
-	assert(_G["load" .. "file"]("./nlconfig.lua"))(unpack(ARGS))
+	return assert(_G["load" .. "file"]("./nlconfig.lua"))()
 end
 
-if cmd == "run" then
-	if unpack(ARGS, 2) then
-		local path = assert(unpack(ARGS, 2))
-		local compiler = assert(nattlua.File(path))
-		compiler:Analyze()
-		assert(loadstring(compiler:Emit(), "@" .. path))(unpack(ARGS, 3))
-	else
-		run_nlconfig()
+local override = run_nlconfig()
+
+if override then
+	for k, v in pairs(override) do
+		if default[k] then
+			io.write("nlconfig.lua overrides default command ", k, "\n")
+		end
+
+		default[k] = v
 	end
-elseif cmd == "check" then
-	if unpack(ARGS, 2) then
-		local path = assert(unpack(ARGS, 2))
-		local compiler = assert(nattlua.File(path))
-		assert(compiler:Analyze())
-	else
-		run_nlconfig()
-	end
-elseif cmd == "build" then
-	if unpack(ARGS, 2) then
-		local path_from = assert(unpack(ARGS, 2))
-		local compiler = assert(nattlua.File(path_from))
-		local path_to = assert(unpack(ARGS, 3))
-		local f = assert(io.open(path_to, "w"))
-		f:write(compiler:Emit())
-		f:close()
-	else
-		run_nlconfig()
-	end
-elseif cmd == "language-server" then
-	IMPORTS['language_server.server.main']("language_server.server.main")()
-else
-	run_nlconfig()
+end
+
+function _G.RUN_CLI(cmd, ...)
+	local func = assert(default[cmd], "Unknown command " .. cmd)
+	io.write("running ", cmd, " with arguments ", table.concat({...}, " "), "\n")
+	func(...)
 end end ]=======], '@./nattlua/cli.lua'))())(...) return __M end end
 do local __M; IMPORTS["nattlua"] = function(...) __M = __M or (assert((loadstring or load)([=======[ return function(...) 
 
@@ -30046,6 +30052,7 @@ local helpers = IMPORTS['nattlua.other.helpers']("nattlua.other.helpers")
 helpers.JITOptimize()
 --helpers.EnableJITDumper()
 local m = IMPORTS['nattlua.init']("nattlua.init")
+package.loaded.nattlua = m
 
 if _G.gmod then
 	local pairs = pairs
@@ -30060,9 +30067,9 @@ end
 
 local ARGS = _G.ARGS or {...}
 
-if ARGS[1] and ARGS[1] ~= "nattlua" then
-	_G.ARGS = {...}
+if ARGS[1] and ARGS[1] ~= "nattlua" and ARGS[1] ~= "temp_build_output" then
 	IMPORTS['nattlua.cli']("nattlua.cli")
+	_G.RUN_CLI(unpack(ARGS))
 end
 
 return m end ]=======], '@./nattlua.lua'))())(...) return __M end end

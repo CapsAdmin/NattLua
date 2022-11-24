@@ -158,7 +158,8 @@ do
 			if not is_dots(data[0].cFileName) then
 				out[i] = ffi.string(data[0].cFileName)
 				i = i + 1
-			end		until ffi.C.FindNextFileA(handle, data) == 0
+			end		
+		until ffi.C.FindNextFileA(handle, data) == 0
 
 		if ffi.C.FindClose(handle) == 0 then return nil, last_error() end
 

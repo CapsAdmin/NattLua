@@ -1,8 +1,10 @@
-local cmd = ...
+local config = {}
 
-if cmd == "build-api" then
+config["build-api"] = function()
 	os.execute("nattlua run build_api.nlua")
-elseif cmd == "build" then
+end
+
+config["build"] = function()
 	local nl = require("nattlua")
 
 	local compiler = assert(
@@ -36,9 +38,13 @@ elseif cmd == "build" then
 
 	-- analyze after file write so hotreload is faster
 	compiler:Analyze()
-elseif cmd == "run" then
+end
+
+config["run"] = function()
 	if not io.open("dist/main.lua") then
 		os.execute("nattlua build")
 	end
 	os.execute("love dist/")
 end
+
+return config

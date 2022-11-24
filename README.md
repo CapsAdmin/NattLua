@@ -1,8 +1,8 @@
 # About
 
-NattLua is a superset of LuaJIT that adds a structural typesystem. It's built to do accurate analysis with the ability to optionally constrain variables.
+NattLua is a superset of LuaJIT that adds a structural typesystem. It's geared towards doing accurate analysis/inference with the ability to constrain with contracts.
 
-The typesystem itself follows the same philosophy as Lua. It has low level concepts that give you the freedom to choose how much you want to constrain your program. (🦶🔫!)
+The typesystem itself follows the same philosophy as Lua and feels similar to Lua. It has a few powerful mechanisms that the rest of the typesystem and default environment is built on top of.
 
 There is a [playground](https://capsadmin.github.io/NattLua/) you can try. It supports hover type information and other diagnostics.
 
@@ -465,9 +465,13 @@ I have not fully decided the syntax for the language and runtime semantics for l
 
 # Development
 
-To run tests run `luajit test.lua`
-To build run `luajit build.lua`
-To format the codebase with NattLua run `luajit format.lua`
+To run tests run `luajit nattlua.lua test`
+To build run `luajit nattlua.lua build`
+To format the codebase with NattLua run `luajit nattlua.lua format`
+To build vscode extension run `luajit nattlua.lua build:vscode`
+To install run `luajit nattlua.lua install`
+
+If you install you'd get the binary `nattlua` which behaves the same as `luajit nattlua.lua ...`
 
 I've setup vscode to run the task `onsave` when a file is saved with the plugin `gruntfuggly.triggertaskonsave`. This runs `on_editor_save.lua` which has some logic to choose which files to run when modifying project.
 

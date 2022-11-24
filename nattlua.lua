@@ -46,6 +46,7 @@ local helpers = require("nattlua.other.helpers")
 helpers.JITOptimize()
 --helpers.EnableJITDumper()
 local m = require("nattlua.init")
+package.loaded.nattlua = m
 
 if _G.gmod then
 	local pairs = pairs
@@ -60,9 +61,9 @@ end
 
 local ARGS = _G.ARGS or {...}
 
-if ARGS[1] and ARGS[1] ~= "nattlua" then
-	_G.ARGS = {...}
+if ARGS[1] and ARGS[1] ~= "nattlua" and ARGS[1] ~= "temp_build_output" then
 	require("nattlua.cli")
+	_G.RUN_CLI(unpack(ARGS))
 end
 
 return m
