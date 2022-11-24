@@ -466,9 +466,13 @@ I have not fully decided the syntax for the language and runtime semantics for l
 # Development
 
 To run tests run `luajit nattlua.lua test`
+
 To build run `luajit nattlua.lua build`
+
 To format the codebase with NattLua run `luajit nattlua.lua format`
+
 To build vscode extension run `luajit nattlua.lua build:vscode`
+
 To install run `luajit nattlua.lua install`
 
 If you install you'd get the binary `nattlua` which behaves the same as `luajit nattlua.lua ...`
