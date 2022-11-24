@@ -2,7 +2,7 @@ name: build
 on: [push]
 
 jobs:
-  test:
+  nattlua:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,15 +19,17 @@ jobs:
       - name: build and install luajit
         run: cd luajit && make && sudo make install && sudo ln -sf luajit-2.1.0-beta3 /usr/local/bin/luajit && cd ..
 
-      - name: test
+      - name: run nattlua tests
         run: luajit nattlua.lua test
 
-      - name: build
+      - name: build nattlua to build_output.lua and run tests with it
         run: luajit nattlua.lua build
 
-      - name: upload
+      - name: replace nattlua.lua with build_output.lua for upload
+        run: rm nattlua.lua && mv build_output.lua nattlua.lua
+
+      - name: upload nattlua.lua
         uses: actions/upload-artifact@v3
         with:
-          name: nattlua
-          run: rm nattlua.lua && mv build_output.lua nattlua.lua
+          name: nattlua          
           path: nattlua.lua
