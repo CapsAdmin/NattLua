@@ -20,4 +20,4 @@ jobs:
         run: cd luajit && make && sudo make install && sudo ln -sf luajit-2.1.0-beta3 /usr/local/bin/luajit && cd ..
 
       - name: test
-        run: ls && luajit test.lua
+        run: luajit nattlua.lua test
