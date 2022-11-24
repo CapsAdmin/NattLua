@@ -16,17 +16,18 @@ jobs:
           ref: v2.1
           path: luajit
 
-      - name: build luajit
+      - name: build and install luajit
         run: cd luajit && make && sudo make install && sudo ln -sf luajit-2.1.0-beta3 /usr/local/bin/luajit && cd ..
-
-      - name: build nattlua
-        run: luajit nattlua.lua build
 
       - name: test
         run: luajit nattlua.lua test
 
-      - name: upload nattlua
+      - name: build
+        run: luajit nattlua.lua build
+
+      - name: upload
         uses: actions/upload-artifact@v3
         with:
-          name: nattlua.lua
-          path: build_output.lua
+          name: nattlua
+          run: rm nattlua.lua && mv build_output.lua nattlua.lua
+          path: nattlua.lua
