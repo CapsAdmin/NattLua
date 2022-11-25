@@ -210,14 +210,14 @@ do
 	end
 
 	helper:SetConfigFunction(function(...)
-		local cmd = ...
-
-		if cmd == "get-analyzer-config" then
-			return {
-				inline_require = true,
-				entry_point = "./src/bad.nlua",
-			}
-		end
+		return {
+			["get-analyzer-config"] = function()
+				return {
+					inline_require = true,
+					entry_point = "./src/bad.nlua",
+				}
+			end
+		}
 	end)
 
 	helper:SetFileContent("./src/main.nlua", [[

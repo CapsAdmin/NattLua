@@ -138,5 +138,4 @@ config.check = function()
 	compiler:Analyze()
 	require("nattlua.other.profiler").Stop()
 end
-
 return config

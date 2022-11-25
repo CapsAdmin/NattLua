@@ -15,6 +15,12 @@ META:GetSet("ConfigFunction", function()
 	return
 end)
 
+function META:GetProjectConfig(what)
+	local get_config = self.ConfigFunction
+	local config = get_config()
+	return config and config[what] and config[what]()
+end
+
 function META.New()
 	local self = {
 		TempFiles = {},
@@ -39,7 +45,7 @@ local function get_range(code, start, stop)
 end
 
 function META:GetAanalyzerConfig()
-	local cfg = self.ConfigFunction("get-analyzer-config") or {}
+	local cfg = self:GetProjectConfig("get-analyzer-config") or {}
 
 	if cfg.type_annotations == nil then cfg.type_annotations = true end
 
@@ -51,17 +57,16 @@ function META:GetAanalyzerConfig()
 end
 
 function META:GetEmitterConfig()
-	local cfg = {
-		preserve_whitespace = false,
-		string_quote = "\"",
-		no_semicolon = true,
-		comment_type_annotations = true,
-		type_annotations = "explicit",
-		force_parenthesis = true,
-		skip_import = true,
-	}
-	local cfg = self.ConfigFunction("get-emitter-config") or cfg
-	return cfg
+	return self:GetProjectConfig("get-emitter-config") or
+		{
+			preserve_whitespace = false,
+			string_quote = "\"",
+			no_semicolon = true,
+			comment_type_annotations = true,
+			type_annotations = "explicit",
+			force_parenthesis = true,
+			skip_import = true,
+		}
 end
 
 function META:DebugLog(str)

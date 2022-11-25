@@ -1,12 +1,9 @@
 local config = {}
-
 config["build-api"] = function()
 	os.execute("nattlua run build_api.nlua")
 end
-
 config["build"] = function()
 	local nl = require("nattlua")
-
 	local compiler = assert(
 		nl.File(
 			"src/main.nlua",
@@ -16,7 +13,6 @@ config["build"] = function()
 			}
 		)
 	)
-
 	local code = compiler:Emit(
 		{
 			preserve_whitespace = false,
@@ -27,7 +23,7 @@ config["build"] = function()
 			type_annotations = true,
 			force_parenthesis = true,
 			extra_indent = {
-				Start = { to = "Stop" },
+				Start = {to = "Stop"},
 				Toggle = "toggle",
 			},
 		}
@@ -35,16 +31,12 @@ config["build"] = function()
 	local f = assert(io.open("dist/main.lua", "w"))
 	f:write(code)
 	f:close()
-
 	-- analyze after file write so hotreload is faster
 	compiler:Analyze()
 end
-
 config["run"] = function()
-	if not io.open("dist/main.lua") then
-		os.execute("nattlua build")
-	end
+	if not io.open("dist/main.lua") then os.execute("nattlua build") end
+
 	os.execute("love dist/")
 end
-
 return config
