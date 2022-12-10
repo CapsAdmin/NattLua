@@ -928,3 +928,33 @@ analyze(
 ]],
 	"cannot sort literal table"
 )
+analyze([[
+    local x = {
+        foo: string,
+    }
+
+    attest.equal(x.foo, _ as string)
+]])
+analyze(
+	[[
+    local x = {
+        foo: string = 1337,
+    }
+]],
+	"1337 is not the same type as string"
+)
+analyze[[
+    local x = {
+        ["foo" .. "_" .. "bar"]: number
+    }
+    attest.equal(x.foo_bar, _ as number)  
+]]
+analyze(
+	[[
+    local x = {
+        ["foo" .. "_" .. "bar"]: number = "test"
+    }
+    attest.equal(x.foo_bar, _ as number)  
+]],
+	"not the same type as number"
+)

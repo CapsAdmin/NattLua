@@ -491,8 +491,17 @@ do -- runtime
 				node.tokens["["] = self:ExpectValue("[")
 				node.key_expression = self:ExpectRuntimeExpression(0)
 				node.tokens["]"] = self:ExpectValue("]")
-				node.tokens["="] = self:ExpectValue("=")
-				node.value_expression = self:ExpectRuntimeExpression(0)
+
+				if self:IsValue(":") and not self:IsValue("(", 2) then
+					node.tokens[":"] = self:ExpectValue(":")
+					node.type_expression = self:ExpectTypeExpression(0)
+				end
+
+				if self:IsValue("=") then
+					node.tokens["="] = self:ExpectValue("=")
+					node.value_expression = self:ExpectRuntimeExpression(0)
+				end
+
 				node = self:EndNode(node)
 				return node
 			elseif self:IsType("letter") and self:IsValue("=", 1) then
@@ -505,6 +514,25 @@ do -- runtime
 					node.spread = spread
 				else
 					node.value_expression = self:ExpectRuntimeExpression()
+				end
+
+				node = self:EndNode(node)
+				return node
+			elseif self:IsType("letter") and self:IsValue(":", 1) and not self:IsValue("(", 3) then
+				local node = self:StartNode("sub_statement", "table_key_value")
+				node.tokens["identifier"] = self:ExpectType("letter")
+				node.tokens[":"] = self:ExpectValue(":")
+				node.type_expression = self:ExpectTypeExpression(0)
+
+				if self:IsValue("=") then
+					node.tokens["="] = self:ExpectValue("=")
+					local spread = self:read_table_spread()
+
+					if spread then
+						node.spread = spread
+					else
+						node.value_expression = self:ExpectRuntimeExpression()
+					end
 				end
 
 				node = self:EndNode(node)

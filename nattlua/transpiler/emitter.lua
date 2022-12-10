@@ -931,19 +931,32 @@ end
 
 function META:EmitTableKeyValue(node--[[#: Node]])
 	self:EmitToken(node.tokens["identifier"])
-	self:Whitespace(" ")
-	self:EmitToken(node.tokens["="])
-	self:Whitespace(" ")
-	local break_binary = node.value_expression.kind == "binary_operator" and
-		self:ShouldLineBreakNode(node.value_expression)
 
-	if break_binary then self:Indent() end
+	if node.tokens[":"] then
+		local ok = self:StartEmittingInvalidLuaCode()
+		self:EmitToken(node.tokens[":"])
+		self:Whitespace(" ")
+		self:EmitTypeExpression(node.type_expression)
+		self:StopEmittingInvalidLuaCode(ok)
+	end
 
-	self:PushForcedLineBreaking(break_binary)
-	self:EmitExpression(node.value_expression)
-	self:PopForcedLineBreaking()
+	if node.tokens["="] then
+		self:Whitespace(" ")
+		self:EmitToken(node.tokens["="])
+		self:Whitespace(" ")
+		local break_binary = node.value_expression.kind == "binary_operator" and
+			self:ShouldLineBreakNode(node.value_expression)
 
-	if break_binary then self:Outdent() end
+		if break_binary then self:Indent() end
+
+		self:PushForcedLineBreaking(break_binary)
+		self:EmitExpression(node.value_expression)
+		self:PopForcedLineBreaking()
+
+		if break_binary then self:Outdent() end
+	else
+		self:EmitNonSpace(" = nil")
+	end
 end
 
 function META:EmitEmptyUnion(node--[[#: Node]])
