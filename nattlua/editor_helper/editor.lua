@@ -466,10 +466,13 @@ function META:GetDefinition(path, line, character)
 
 	if types[1] then
 		local node = types[1]:GetUpvalue():GetNode()
-		return {
-			uri = path,
-			range = get_range(data.code, node:GetStartStop()),
-		}
+
+		if node then
+			return {
+				uri = path,
+				range = get_range(data.code, node:GetStartStop()),
+			}
+		end
 	end
 
 	return {}
