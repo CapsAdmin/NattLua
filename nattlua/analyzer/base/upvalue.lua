@@ -13,7 +13,7 @@ META:GetSet("Scope")
 META:GetSet("Mutations")
 
 function META:__tostring()
-	return "[" .. tostring(self.key) .. ":" .. tostring(self.value) .. "]"
+	return "[" .. tostring(self.Scope) .. ":" .. tostring(self.Position) .. ":" .. tostring(self.key) .. ":" .. tostring(self.value) .. "]"
 end
 
 function META:SetValue(value)
