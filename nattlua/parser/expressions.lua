@@ -509,6 +509,25 @@ do -- runtime
 
 				node = self:EndNode(node)
 				return node
+			elseif self:IsType("letter") and self:IsValue(":", 1) then
+				local node = self:StartNode("sub_statement", "table_key_value")
+				node.tokens["identifier"] = self:ExpectType("letter")
+				node.tokens[":"] = self:ExpectValue(":")
+				node.type_expression = self:ExpectTypeExpression(0)
+
+				if self:IsValue("=") then
+					node.tokens["="] = self:ExpectValue("=")
+					local spread = self:read_table_spread()
+
+					if spread then
+						node.spread = spread
+					else
+						node.value_expression = self:ExpectRuntimeExpression()
+					end
+				end
+
+				node = self:EndNode(node)
+				return node
 			end
 
 			local node = self:StartNode("sub_statement", "table_index_value")

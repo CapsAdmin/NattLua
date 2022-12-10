@@ -78,7 +78,7 @@ test("escape comments", function()
             b --[[#: number]], 
             c --[[#: string]]) 
         end
-         
+        print(argument_type<|foo|>)
         attest.equal<|argument_type<|foo, 1|>[1], string|>
         attest.equal<|argument_type<|foo, 2|>[1], number|>
         attest.equal<|argument_type<|foo, 3|>[1], string|>

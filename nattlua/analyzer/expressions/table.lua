@@ -5,6 +5,37 @@ local LString = require("nattlua.types.string").LString
 local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
 local table = _G.table
+
+local function check_type_against_contract(val, contract)
+	-- if the contract is unique / nominal, ie
+	-- local a: Person = {name = "harald"}
+	-- Person is not a subset of {name = "harald"} because
+	-- Person is only equal to Person
+	-- so we need to disable this check during assignment
+	local skip_uniqueness = contract:IsUnique() and not val:IsUnique()
+
+	if skip_uniqueness then contract:DisableUniqueness() end
+
+	local ok, reason = val:IsSubsetOf(contract)
+
+	if skip_uniqueness then
+		contract:EnableUniqueness()
+		val:SetUniqueID(contract:GetUniqueID())
+	end
+
+	if not ok then return ok, reason end
+
+	-- make sure the table contains all the keys in the contract as well
+	-- since {foo = true, bar = "harald"} 
+	-- is technically a subset of 
+	-- {foo = true, bar = "harald", baz = "jane"}
+	if contract.Type == "table" and val.Type == "table" then
+		return val:ContainsAllKeysIn(contract)
+	end
+
+	return true
+end
+
 return {
 	AnalyzeTable = function(self, tree)
 		local tbl = Table():SetLiteral(self:IsTypesystem())
@@ -17,8 +48,18 @@ return {
 		for i, node in ipairs(tree.children) do
 			if node.kind == "table_key_value" then
 				local key = LString(node.tokens["identifier"].value)
-				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue() or Nil()
-				self:NewIndexOperator(tbl, key, val)
+
+				if node.type_expression then
+					self:PushAnalyzerEnvironment("typesystem")
+					local contract = self:AnalyzeExpression(node.type_expression):GetFirstValue() or Nil()
+					self:PopAnalyzerEnvironment()
+					local val = self:AnalyzeExpression(node.value_expression):GetFirstValue() or Nil()
+					self:Assert(check_type_against_contract(val, contract))
+					self:NewIndexOperator(tbl, key, val)
+				else
+					local val = self:AnalyzeExpression(node.value_expression):GetFirstValue() or Nil()
+					self:NewIndexOperator(tbl, key, val)
+				end
 			elseif node.kind == "table_expression_value" then
 				local key = self:AnalyzeExpression(node.key_expression):GetFirstValue()
 				local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
