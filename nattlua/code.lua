@@ -27,6 +27,19 @@ function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#:
 	return self.Buffer:sub(start, stop) == str
 end
 
+if jit then
+	function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
+		for i = 1, #str do
+			local a = self.Buffer:byte(start + i - 1)
+			local b = str:byte(i)
+
+			if a ~= b then return false end
+		end
+
+		return true
+	end
+end
+
 function META:GetByte(pos--[[#: number]])
 	return self.Buffer:byte(pos) or 0
 end
@@ -87,21 +100,6 @@ function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
 		META
 	)
 	return self
-end
-
-if jit then
-	local ffi = require("ffi")
-	ffi.cdef("int memcmp ( const void * ptr1, const void * ptr2, size_t num );")
-
-	function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
-		return (
-				ffi.C.memcmp
-			--[[# as any]])((ffi.cast("unsigned char*", self.Buffer)--[[# as any]]) - 1 + start, str, #str) == 0
-	end
-
-	function META:GetByte(pos--[[#: number]])
-		return ffi.cast("unsigned char*", self.Buffer)[pos - 1]
-	end
 end
 
 --[[#type META.Code = META.@Self]]
