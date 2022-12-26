@@ -193,13 +193,13 @@ function META:Advance(offset--[[#: number]])
 	self.current_token_index = self.current_token_index + offset
 end
 
-function META:IsValue(str--[[#: string]], offset--[[#: number | nil]])
+function META:IsTokenValue(str--[[#: string]], offset--[[#: number | nil]])
 	local tk = self:GetToken(offset)
 
 	if tk then return tk.value == str end
 end
 
-function META:IsType(token_type--[[#: TokenType]], offset--[[#: number | nil]])
+function META:IsTokenType(token_type--[[#: TokenType]], offset--[[#: number | nil]])
 	local tk = self:GetToken(offset)
 
 	if tk then return tk.type == token_type end
@@ -250,8 +250,8 @@ do
 		end
 	end
 
-	function META:ExpectValue(str--[[#: string]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])--[[#: Token]]
-		if not self:IsValue(str) then
+	function META:ExpectTokenValue(str--[[#: string]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])--[[#: Token]]
+		if not self:IsTokenValue(str) then
 			error_expect(self, str, "value", error_start, error_stop)
 		end
 
@@ -264,7 +264,7 @@ do
 		error_start--[[#: Token | nil]],
 		error_stop--[[#: Token | nil]]
 	)--[[#: Token]]
-		if not self:IsValue(str) then
+		if not self:IsTokenValue(str) then
 			error_expect(self, str, "value", error_start, error_stop)
 		end
 
@@ -273,12 +273,12 @@ do
 		return tk
 	end
 
-	function META:ExpectType(
+	function META:ExpectTokenType(
 		str--[[#: TokenType]],
 		error_start--[[#: Token | nil]],
 		error_stop--[[#: Token | nil]]
 	)--[[#: Token]]
-		if not self:IsType(str) then
+		if not self:IsTokenType(str) then
 			error_expect(self, str, "type", error_start, error_stop)
 		end
 
@@ -368,9 +368,9 @@ function META:ParseMultipleValues(
 
 		out[i] = node
 
-		if not self:IsValue(",") then break end
+		if not self:IsTokenValue(",") then break end
 
-		(node.tokens--[[# as any]])[","] = self:ExpectValue(",")
+		(node.tokens--[[# as any]])[","] = self:ExpectTokenValue(",")
 	end
 
 	return out

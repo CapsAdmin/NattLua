@@ -13,26 +13,28 @@ local ipairs = _G.ipairs
 --[[#local type { ExpressionKind, StatementKind, statement, expression } = import("./parser/nodes.nlua")]]
 
 function META:ParseIdentifier(expect_type--[[#: nil | boolean]])
-	if not self:IsType("letter") and not self:IsValue("...") then return end
+	if not self:IsTokenType("letter") and not self:IsTokenValue("...") then
+		return
+	end
 
 	local node = self:StartNode("expression", "value") -- as ValueExpression ]]
 	node.is_identifier = true
 
-	if self:IsValue("...") then
-		node.value = self:ExpectValue("...")
+	if self:IsTokenValue("...") then
+		node.value = self:ExpectTokenValue("...")
 	else
-		node.value = self:ExpectType("letter")
+		node.value = self:ExpectTokenType("letter")
 
-		if self:IsValue("<") then
-			node.tokens["<"] = self:ExpectValue("<")
-			node.attribute = self:ExpectType("letter")
-			node.tokens[">"] = self:ExpectValue(">")
+		if self:IsTokenValue("<") then
+			node.tokens["<"] = self:ExpectTokenValue("<")
+			node.attribute = self:ExpectTokenType("letter")
+			node.tokens[">"] = self:ExpectTokenValue(">")
 		end
 	end
 
 	if expect_type ~= false then
-		if self:IsValue(":") or expect_type then
-			node.tokens[":"] = self:ExpectValue(":")
+		if self:IsTokenValue(":") or expect_type then
+			node.tokens[":"] = self:ExpectTokenValue(":")
 			node.type_expression = self:ExpectTypeExpression(0)
 		end
 	end
@@ -43,14 +45,14 @@ end
 
 function META:ParseValueExpressionToken(expect_value--[[#: nil | string]])
 	local node = self:StartNode("expression", "value")
-	node.value = expect_value and self:ExpectValue(expect_value) or self:ParseToken()
+	node.value = expect_value and self:ExpectTokenValue(expect_value) or self:ParseToken()
 	node = self:EndNode(node)
 	return node
 end
 
 function META:ParseValueExpressionType(expect_value--[[#: TokenType]])
 	local node = self:StartNode("expression", "value")
-	node.value = self:ExpectType(expect_value)
+	node.value = self:ExpectTokenType(expect_value)
 	node = self:EndNode(node)
 	return node
 end
@@ -59,56 +61,56 @@ function META:ParseFunctionBody(
 	node--[[#: expression.analyzer_function | expression["function"] | statement["local_function"] | statement["function"] ]]
 )
 	if self.TealCompat then
-		if self:IsValue("<") then
-			node.tokens["arguments_typesystem("] = self:ExpectValue("<")
+		if self:IsTokenValue("<") then
+			node.tokens["arguments_typesystem("] = self:ExpectTokenValue("<")
 			node.identifiers_typesystem = self:ParseMultipleValues(nil, self.ParseIdentifier)
-			node.tokens["arguments_typesystem)"] = self:ExpectValue(">")
+			node.tokens["arguments_typesystem)"] = self:ExpectTokenValue(">")
 		end
 	end
 
-	node.tokens["arguments("] = self:ExpectValue("(")
+	node.tokens["arguments("] = self:ExpectTokenValue("(")
 	node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier)
-	node.tokens["arguments)"] = self:ExpectValue(")", node.tokens["arguments("])
+	node.tokens["arguments)"] = self:ExpectTokenValue(")", node.tokens["arguments("])
 
-	if self:IsValue(":") then
-		node.tokens["return:"] = self:ExpectValue(":")
+	if self:IsTokenValue(":") then
+		node.tokens["return:"] = self:ExpectTokenValue(":")
 		self:PushParserEnvironment("typesystem")
 		node.return_types = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
 	node.statements = self:ParseStatements({["end"] = true})
-	node.tokens["end"] = self:ExpectValue("end", node.tokens["function"])
+	node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["function"])
 	return node
 end
 
 function META:ParseTypeFunctionBody(
 	node--[[#: statement["type_function"] | expression["type_function"] | statement["type_function"] ]]
 )
-	if self:IsValue("!") then
-		node.tokens["!"] = self:ExpectValue("!")
-		node.tokens["arguments("] = self:ExpectValue("(")
+	if self:IsTokenValue("!") then
+		node.tokens["!"] = self:ExpectTokenValue("!")
+		node.tokens["arguments("] = self:ExpectTokenValue("(")
 		node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier, true)
 
-		if self:IsValue("...") then
+		if self:IsTokenValue("...") then
 			table_insert(node.identifiers, self:ParseValueExpressionToken("..."))
 		end
 
-		node.tokens["arguments)"] = self:ExpectValue(")")
+		node.tokens["arguments)"] = self:ExpectTokenValue(")")
 	else
-		node.tokens["arguments("] = self:ExpectValue("<|")
+		node.tokens["arguments("] = self:ExpectTokenValue("<|")
 		node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier, true)
 
-		if self:IsValue("...") then
+		if self:IsTokenValue("...") then
 			table_insert(node.identifiers, self:ParseValueExpressionToken("..."))
 		end
 
-		node.tokens["arguments)"] = self:ExpectValue("|>", node.tokens["arguments("])
+		node.tokens["arguments)"] = self:ExpectTokenValue("|>", node.tokens["arguments("])
 
-		if self:IsValue("(") then
-			local lparen = self:ExpectValue("(")
+		if self:IsTokenValue("(") then
+			local lparen = self:ExpectTokenValue("(")
 			local identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier, true)
-			local rparen = self:ExpectValue(")")
+			local rparen = self:ExpectTokenValue(")")
 			node.identifiers_typesystem = node.identifiers
 			node.identifiers = identifiers
 			node.tokens["arguments_typesystem("] = node.tokens["arguments("]
@@ -118,8 +120,8 @@ function META:ParseTypeFunctionBody(
 		end
 	end
 
-	if self:IsValue(":") then
-		node.tokens["return:"] = self:ExpectValue(":")
+	if self:IsTokenValue(":") then
+		node.tokens["return:"] = self:ExpectTokenValue(":")
 		self:PushParserEnvironment("typesystem")
 		node.return_types = self:ParseMultipleValues(math.huge, self.ExpectTypeExpression, 0)
 		self:PopParserEnvironment("typesystem")
@@ -135,19 +137,19 @@ function META:ParseTypeFunctionBody(
 
 	local start = self:GetToken()
 	node.statements = self:ParseStatements({["end"] = true})
-	node.tokens["end"] = self:ExpectValue("end", start, start)
+	node.tokens["end"] = self:ExpectTokenValue("end", start, start)
 	self:PopParserEnvironment()
 	return node
 end
 
 function META:ParseTypeFunctionArgument(expect_type--[[#: nil | boolean]])
-	if self:IsValue(")") then return end
+	if self:IsTokenValue(")") then return end
 
-	if self:IsValue("...") then return end
+	if self:IsTokenValue("...") then return end
 
-	if expect_type or self:IsType("letter") and self:IsValue(":", 1) then
+	if expect_type or self:IsTokenType("letter") and self:IsTokenValue(":", 1) then
 		local identifier = self:ParseToken()
-		local token = self:ExpectValue(":")
+		local token = self:ExpectTokenValue(":")
 		local exp = self:ExpectTypeExpression(0)
 		exp.tokens[":"] = token
 		exp.identifier = identifier
@@ -162,18 +164,18 @@ function META:ParseAnalyzerFunctionBody(
 	type_args--[[#: boolean]]
 )
 	self:PushParserEnvironment("runtime")
-	node.tokens["arguments("] = self:ExpectValue("(")
+	node.tokens["arguments("] = self:ExpectTokenValue("(")
 	node.identifiers = self:ParseMultipleValues(math_huge, self.ParseTypeFunctionArgument, type_args)
 
-	if self:IsValue("...") then
+	if self:IsTokenValue("...") then
 		local vararg = self:StartNode("expression", "value")
-		vararg.value = self:ExpectValue("...")
+		vararg.value = self:ExpectTokenValue("...")
 
-		if self:IsValue(":") or type_args then
-			vararg.tokens[":"] = self:ExpectValue(":")
+		if self:IsTokenValue(":") or type_args then
+			vararg.tokens[":"] = self:ExpectTokenValue(":")
 			vararg.type_expression = self:ExpectTypeExpression(0)
 		else
-			if self:IsType("letter") then
+			if self:IsTokenType("letter") then
 				vararg.type_expression = self:ExpectTypeExpression(0)
 			end
 		end
@@ -182,10 +184,10 @@ function META:ParseAnalyzerFunctionBody(
 		table_insert(node.identifiers, vararg)
 	end
 
-	node.tokens["arguments)"] = self:ExpectValue(")", node.tokens["arguments("])
+	node.tokens["arguments)"] = self:ExpectTokenValue(")", node.tokens["arguments("])
 
-	if self:IsValue(":") then
-		node.tokens["return:"] = self:ExpectValue(":")
+	if self:IsTokenValue(":") then
+		node.tokens["return:"] = self:ExpectTokenValue(":")
 		self:PushParserEnvironment("typesystem")
 		node.return_types = self:ParseMultipleValues(math.huge, self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
@@ -193,13 +195,13 @@ function META:ParseAnalyzerFunctionBody(
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
 		node.statements = self:ParseStatements({["end"] = true})
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
-		node.tokens["end"] = self:ExpectValue("end", start, start)
-	elseif not self:IsValue(",") then
+		node.tokens["end"] = self:ExpectTokenValue("end", start, start)
+	elseif not self:IsTokenValue(",") then
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
 		node.statements = self:ParseStatements({["end"] = true})
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
-		node.tokens["end"] = self:ExpectValue("end", start, start)
+		node.tokens["end"] = self:ExpectTokenValue("end", start, start)
 	end
 
 	self:PopParserEnvironment()
@@ -272,9 +274,9 @@ function META:ParseRootNode()
 	self.RootStatement = self.config and self.config.root_statement_override or node
 	local shebang
 
-	if self:IsType("shebang") then
+	if self:IsTokenType("shebang") then
 		shebang = self:StartNode("statement", "shebang")
-		shebang.tokens["shebang"] = self:ExpectType("shebang")
+		shebang.tokens["shebang"] = self:ExpectTokenType("shebang")
 		shebang = self:EndNode(shebang)
 		node.tokens["shebang"] = shebang.tokens["shebang"]
 	end
@@ -306,7 +308,7 @@ function META:ParseRootNode()
 		table.insert(node.statements, 1, import_tree.statements[1])
 	end
 
-	if self:IsType("end_of_file") then
+	if self:IsTokenType("end_of_file") then
 		local eof = self:StartNode("statement", "end_of_file")
 		eof.tokens["end_of_file"] = self.tokens[#self.tokens]
 		eof = self:EndNode(eof)
@@ -319,7 +321,7 @@ function META:ParseRootNode()
 end
 
 function META:ParseStatement()
-	if self:IsType("end_of_file") then return end
+	if self:IsTokenType("end_of_file") then return end
 
 	profiler.PushZone("ReadStatement")
 	local node = self:ParseDebugCodeStatement() or

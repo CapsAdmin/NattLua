@@ -3,23 +3,23 @@ local META = ...
 function META:ParseLSXExpression()
 	if
 		not (
-			self:IsValue("<") and
-			self:IsType("letter", 1) and
-			not self:IsValue("local", -1)
+			self:IsTokenValue("<") and
+			self:IsTokenType("letter", 1) and
+			not self:IsTokenValue("local", -1)
 		)
 	then
 		return
 	end
 
 	local node = self:StartNode("expression", "lsx")
-	node.tokens["<"] = self:ExpectValue("<")
+	node.tokens["<"] = self:ExpectTokenValue("<")
 	node.tag = self:ParseFunctionNameIndex()
 	node.props = {}
 	node.children = {}
 
 	for i = 1, self:GetLength() do
-		if self:IsValue("{") and self:IsValue("...", 1) then
-			local left = self:ExpectValue("{")
+		if self:IsTokenValue("{") and self:IsTokenValue("...", 1) then
+			local left = self:ExpectTokenValue("{")
 			local spread = self:read_table_spread()
 
 			if not spread then
@@ -27,24 +27,24 @@ function META:ParseLSXExpression()
 				return
 			end
 
-			local right = self:ExpectValue("}")
+			local right = self:ExpectTokenValue("}")
 			spread.tokens["{"] = left
 			spread.tokens["}"] = right
 			table.insert(node.props, spread)
-		elseif self:IsType("letter") and self:IsValue("=", 1) then
-			if self:IsValue("{", 2) then
+		elseif self:IsTokenType("letter") and self:IsTokenValue("=", 1) then
+			if self:IsTokenValue("{", 2) then
 				local keyval = self:StartNode("sub_statement", "table_key_value")
-				keyval.tokens["identifier"] = self:ExpectType("letter")
-				keyval.tokens["="] = self:ExpectValue("=")
-				keyval.tokens["{"] = self:ExpectValue("{")
+				keyval.tokens["identifier"] = self:ExpectTokenType("letter")
+				keyval.tokens["="] = self:ExpectTokenValue("=")
+				keyval.tokens["{"] = self:ExpectTokenValue("{")
 				keyval.value_expression = self:ExpectRuntimeExpression()
-				keyval.tokens["}"] = self:ExpectValue("}")
+				keyval.tokens["}"] = self:ExpectTokenValue("}")
 				keyval = self:EndNode(keyval)
 				table.insert(node.props, keyval)
-			elseif self:IsType("string", 2) or self:IsType("number", 2) then
+			elseif self:IsTokenType("string", 2) or self:IsTokenType("number", 2) then
 				local keyval = self:StartNode("sub_statement", "table_key_value")
-				keyval.tokens["identifier"] = self:ExpectType("letter")
-				keyval.tokens["="] = self:ExpectValue("=")
+				keyval.tokens["identifier"] = self:ExpectTokenType("letter")
+				keyval.tokens["="] = self:ExpectTokenValue("=")
 				keyval.value_expression = self:ParseKeywordValueTypeExpression()
 				keyval = self:EndNode(keyval)
 				table.insert(node.props, keyval)
@@ -56,46 +56,46 @@ function META:ParseLSXExpression()
 		end
 	end
 
-	if self:IsValue("/") then
-		node.tokens["/"] = self:ExpectValue("/")
-		node.tokens[">"] = self:ExpectValue(">")
+	if self:IsTokenValue("/") then
+		node.tokens["/"] = self:ExpectTokenValue("/")
+		node.tokens[">"] = self:ExpectTokenValue(">")
 		node = self:EndNode(node)
 		return node
 	end
 
-	node.tokens[">"] = self:ExpectValue(">")
+	node.tokens[">"] = self:ExpectTokenValue(">")
 
 	for i = 1, self:GetLength() do
-		if self:IsValue("{") then
-			local left = self:ExpectValue("{")
+		if self:IsTokenValue("{") then
+			local left = self:ExpectTokenValue("{")
 			local child = self:ExpectRuntimeExpression()
 			child.tokens["lsx{"] = left
 			table.insert(node.children, child)
-			child.tokens["lsx}"] = self:ExpectValue("}")
+			child.tokens["lsx}"] = self:ExpectTokenValue("}")
 		end
 
 		for i = 1, self:GetLength() do
-			if self:IsValue("<") and self:IsType("letter", 1) then
+			if self:IsTokenValue("<") and self:IsTokenType("letter", 1) then
 				table.insert(node.children, self:ParseLSXExpression())
 			else
 				break
 			end
 		end
 
-		if self:IsValue("<") and self:IsValue("/", 1) then break end
+		if self:IsTokenValue("<") and self:IsTokenValue("/", 1) then break end
 
 		do
 			local string_node = self:StartNode("expression", "value")
-			string_node.value = self:ExpectType("string")
+			string_node.value = self:ExpectTokenType("string")
 			string_node = self:EndNode(string_node)
 			table.insert(node.children, string_node)
 		end
 	end
 
-	node.tokens["<2"] = self:ExpectValue("<")
-	node.tokens["/"] = self:ExpectValue("/")
-	node.tokens["type2"] = self:ExpectType("letter")
-	node.tokens[">2"] = self:ExpectValue(">")
+	node.tokens["<2"] = self:ExpectTokenValue("<")
+	node.tokens["/"] = self:ExpectTokenValue("/")
+	node.tokens["type2"] = self:ExpectTokenType("letter")
+	node.tokens[">2"] = self:ExpectTokenValue(">")
 	node = self:EndNode(node)
 	return node
 end
