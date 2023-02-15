@@ -274,7 +274,7 @@ end
 
 local new_token
 
-if jit.arch == "arm64" then
+if jit and jit.arch == "arm64" then
 	new_token = table_pool(
 		function()
 			local x = {

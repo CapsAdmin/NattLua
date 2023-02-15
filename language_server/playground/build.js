@@ -34,7 +34,7 @@ for (let path of getAllFiles("../../test/nattlua/analyzer/")) {
 
 fs.writeFileSync("src/random.json", JSON.stringify(tests))
 
-execSync("cd ../../ && luajit build.lua fast")
+execSync("cd ../../ && luajit nattlua.lua build fast")
 
 require("esbuild")
 	.build({

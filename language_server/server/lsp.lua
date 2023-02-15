@@ -306,13 +306,13 @@ lsp.methods["textDocument/inlayHint"] = function(params)
 		params["end"].line,
 		params["end"].character
 	)
-	return hints
+	return {hints = hints}
 end
 lsp.methods["textDocument/rename"] = function(params)
 	local edits = {}
 
 	for _, edit in ipairs(
-		editor_helper:GetRenameInstructions(params.textDocument.uri, params.position.line, params.position.character, params.newName)
+		editor_helper:GetRenameInstructions(params.textDocument.uri, params.position.line, params.position.character - 1, params.newName)
 	) do
 		table.insert(
 			edits,
@@ -371,14 +371,13 @@ lsp.methods["textDocument/hover"] = function(params)
 	end
 
 	local wtf = data.found_parents
+	local linepos
 
 	if wtf[1] then
 		local min, max = wtf[1]:GetStartStop()
 
 		if min then
-			local temp = helpers.SubPositionToLinePosition(wtf[1].Code:GetString(), min, max)
-
-			if temp then data = temp end
+			linepos = helpers.SubPositionToLinePosition(wtf[1].Code:GetString(), min, max)
 		end
 
 		for i = 1, #wtf do
@@ -386,6 +385,8 @@ lsp.methods["textDocument/hover"] = function(params)
 			add_code(tostring(wtf[i]) .. " len=" .. tostring(max - min))
 		end
 	end
+
+	if not linepos then return {} end
 
 	if data.scope then markdown = markdown .. "\n" .. tostring(data.scope) end
 
@@ -398,12 +399,12 @@ lsp.methods["textDocument/hover"] = function(params)
 		contents = markdown,
 		range = {
 			start = {
-				line = data.line_start - 1,
-				character = data.character_start - 1,
+				line = linepos.line_start - 1,
+				character = linepos.character_start - 1,
 			},
 			["end"] = {
-				line = data.line_stop - 1,
-				character = data.character_stop,
+				line = linepos.line_stop - 1,
+				character = linepos.character_stop,
 			},
 		},
 	}

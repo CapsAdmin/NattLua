@@ -50,17 +50,23 @@ export const loadLuaModule = async (lua: LuaEngine, p: Promise<{ default: string
 	// I think something broke with moonwasm. There seems to be a limit on how large the string can be.
 	// This may be taking it too far but I've spent too much time on this already..
 
-	let chunks = chunkSubstr(code, 4096)
-	let i = 0
-	for (let chunk of chunks) {
-		let byteEscaped = ""
-		for (let i = 0; i < chunk.length; i++) {
-			byteEscaped += `\\${chunk.charCodeAt(i)}`
+	const bytes = (new TextEncoder()).encode(code)
+	let bytesString: string[] = []
+	let bytesStringIndex = 0
+	for (let i = 0; i < bytes.length; i++) {
+		let code = bytes[i]
+		bytesString[bytesStringIndex] = `\\${code}`
+		bytesStringIndex++
+		if (bytesStringIndex > 8000) {
+			let str = `CHUNKS = CHUNKS or {};CHUNKS[#CHUNKS + 1] = "${bytesString.join("")}"`
+			lua.doStringSync(str)
+			bytesString = []
+			bytesStringIndex = 0
 		}
-
-		let str = `CHUNKS = CHUNKS or {};CHUNKS[#CHUNKS + 1] = "${byteEscaped}"`
+	}
+	{
+		let str = `CHUNKS = CHUNKS or {};CHUNKS[#CHUNKS + 1] = "${bytesString.join("")}"`
 		lua.doStringSync(str)
-		i++
 	}
 
 	let str = `

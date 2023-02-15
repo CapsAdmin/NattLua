@@ -5,17 +5,17 @@
 		"dev": "node build.js && yarn serve public"
 	},
 	"dependencies": {
-		"esbuild": "^0.14.27",
-		"monaco-editor": "^0.34.0",
-		"ts-loader": "^9.2.8",
-		"typescript": "^4.6.2",
-		"wasmoon": "^1.14.0"
+		"esbuild": "^0.17.8",
+		"monaco-editor": "^0.35.0",
+		"ts-loader": "^9.4.2",
+		"typescript": "^4.9.5",
+		"wasmoon": "^1.14.1"
 	},
 	"devDependencies": {
-		"prettier": "^2.5.1",
-		"serve": "^13.0.2",
-		"vscode-languageserver": "^7.0.0",
-		"vscode-languageserver-protocol": "^3.16.0",
-		"vscode-languageserver-textdocument": "^1.0.4"
+		"prettier": "^2.8.4",
+		"serve": "^14.2.0",
+		"vscode-languageserver": "^8.0.2",
+		"vscode-languageserver-protocol": "^3.17.2",
+		"vscode-languageserver-textdocument": "^1.0.8"
 	}
 }

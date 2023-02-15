@@ -334,7 +334,7 @@ function META:FindTokensFromRange(
 	local sub_pos_stop = data.code:LineCharToSubPos(line_stop, char_stop)
 	local found = {}
 
-	for _, token in ipairs(tokens) do
+	for _, token in ipairs(data.tokens) do
 		if token.start >= sub_pos_start and token.stop <= sub_pos_stop then
 			table.insert(found, token)
 		end
@@ -402,7 +402,7 @@ do
 								assignment.right[i].value.value.type == "letter"
 							)
 						then
-							local data = compiler.Code:SubPosToLineChar(left:GetStartStop())
+							local data = self:GetCode(path):SubPosToLineChar(left:GetStartStop())
 							local label = tostring(Union(types))
 
 							if #label > 20 then label = label:sub(1, 20) .. "..." end

@@ -1,5 +1,5 @@
-import { editor as MonacoEditor, IRange, languages, MarkerSeverity, Uri } from "monaco-editor"
-import { PublishDiagnosticsParams, Range, DidChangeTextDocumentParams, Position } from "vscode-languageserver"
+import { editor, editor as MonacoEditor, IRange, languages, MarkerSeverity, Uri } from "monaco-editor"
+import { PublishDiagnosticsParams, Range, DidChangeTextDocumentParams, Position, URI } from "vscode-languageserver"
 import { createEditor } from "./editor"
 import { loadLua, prettyPrint } from "./lua"
 import { registerSyntax } from "./syntax"
@@ -8,6 +8,10 @@ import { assortedExamples } from "./examples"
 
 const getRandomExample = () => {
 	return randomExamples[Math.floor(Math.random() * randomExamples.length)]
+}
+
+const pathFromURI = (uri: Uri) => {
+	return "./test.nlua" //uri.fsPath + ".nlua"
 }
 
 const main = async () => {
@@ -42,7 +46,7 @@ const main = async () => {
 	const recompile = () => {
 		let request: DidChangeTextDocumentParams = {
 			textDocument: {
-				uri: "file:///test.nlua",
+				uri: "./test.nlua",
 			} as DidChangeTextDocumentParams["textDocument"],
 			contentChanges: [
 				{
@@ -92,7 +96,7 @@ const main = async () => {
 		provideInlayHints(model, range) {
 			let request = {
 				textDocument: {
-					uri: model.uri,
+					uri: pathFromURI(model.uri),
 					text: model.getValue(),
 				},
 				start: {
@@ -105,7 +109,9 @@ const main = async () => {
 				},
 			}
 
-			return callMethodOnServer("textDocument/inlayHint", request)
+			let response = callMethodOnServer("textDocument/inlayHint", request)
+
+			return response
 		},
 	})
 
@@ -113,7 +119,7 @@ const main = async () => {
 		provideRenameEdits: (model, position, newName, token) => {
 			let request = {
 				textDocument: {
-					uri: model.uri,
+					uri: pathFromURI(model.uri),
 					text: model.getValue(),
 				},
 				position: {
@@ -125,21 +131,20 @@ const main = async () => {
 
 			let response = callMethodOnServer("textDocument/rename", request) as {
 				changes: {
-					[uri: string]: {
-						textDocument: { version?: number }
-						edits: Array<{
-							range: { start: Position; end: Position }
-							newText: string
-						}>
-					}
+					[uri: string]: Array<{
+						range: { start: Position; end: Position }
+						newText: string
+					}>
 				}
 			}
-			let edits = []
+
+			let edits: Awaited<ReturnType<languages.RenameProvider["provideRenameEdits"]>>["edits"] = []
 			for (const [uri, changes] of Object.entries(response.changes)) {
-				for (const change of changes.edits) {
+				for (const change of changes) {
 					edits.push({
 						resource: model.uri,
-						edit: {
+						versionId: model.getVersionId(),
+						textEdit: {
 							range: {
 								startLineNumber: change.range.start.line + 1,
 								startColumn: change.range.start.character + 1,
@@ -164,7 +169,7 @@ const main = async () => {
 		provideHover: (model, position) => {
 			let request = {
 				textDocument: {
-					uri: "file:///test.nlua",
+					uri: pathFromURI(model.uri),
 					text: model.getValue(),
 				},
 				position: {
@@ -180,7 +185,15 @@ const main = async () => {
 					contents: string
 				}
 
-			if (!response) return
+			if (!response || !response.range) return {
+				contents: [],
+				range: {
+					startLineNumber: 1,
+					startColumn: 1,
+					endLineNumber: 1,
+					endColumn: 1,
+				}
+			}
 
 			// TODO: how to highlight non letters?
 
@@ -190,11 +203,13 @@ const main = async () => {
 						value: response.contents,
 					},
 				],
-				// these start at 1, but according to LSP they should be zero indexed
-				startLineNumber: response.range.start.line + 1,
-				startColumn: response.range.start.character + 1,
-				endLineNumber: response.range.end.line + 1,
-				endColumn: response.range.end.character + 1,
+				range: {
+					// these start at 1, but according to LSP they should be zero indexed
+					startLineNumber: response.range.start.line + 1,
+					startColumn: response.range.start.character + 1,
+					endLineNumber: response.range.end.line + 1,
+					endColumn: response.range.end.character + 1,
+				},
 			}
 		},
 	})
@@ -229,8 +244,7 @@ const main = async () => {
 	})
 
 	editor.setModel(tab)
-
-	setTimeout(() => recompile(), 100)
+	recompile()
 }
 
 main()
