@@ -244,6 +244,9 @@ const main = async () => {
 	})
 
 	editor.setModel(tab)
+
+	callMethodOnServer("initialized", {})
+
 	recompile()
 }
 

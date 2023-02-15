@@ -239,9 +239,9 @@ function META:Recompile(path)
 
 		if should_analyze then
 			local ok, err = compiler:Analyze(nil, cfg)
+			local name = compiler:GetCode():GetName()
 
 			if not ok then
-				local name = compiler:GetCode():GetName()
 				diagnostics[name] = diagnostics[name] or {}
 				table.insert(
 					diagnostics,
@@ -254,15 +254,17 @@ function META:Recompile(path)
 					}
 				)
 			end
-		end
 
-		self:DebugLog(
-			"[" .. entry_point .. "] analyzed with " .. (
-					diagnostics[name] and
-					#diagnostics[name] or
-					0
-				) .. " diagnostics"
-		)
+			self:DebugLog(
+				"[" .. entry_point .. "] analyzed with " .. (
+						diagnostics[name] and
+						#diagnostics[name] or
+						0
+					) .. " diagnostics"
+			)
+		else
+			self:DebugLog("[" .. entry_point .. "] skipped analysis")
+		end
 	end
 
 	for name, data in pairs(diagnostics) do
