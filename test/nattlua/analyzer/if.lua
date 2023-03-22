@@ -1588,93 +1588,57 @@ analyze[[
         attest.equal<|x, 3|>
     end
     
-    attest.equal<|x, 3 | 2.5|>
+    attest.equal<|x, 1 | 3|>
+]]
+analyze[[
+    local x = 1
+
+    if math.random() > 0.5 then
+        if math.random() > 0.5 then x = 3 end
+
+        x = 4
+    end
+
+    attest.equal(x, _  as 1 | 4)
+]]
+analyze[[
+    local x = 1
+
+    if math.random() > 0.5 then
+        if true then
+            do
+                x = 1337
+            end
+        end
+        attest.equal<|x, 1337|>
+        x = 2
+        attest.equal<|x, 2|>
+    else
+        attest.equal<|x, 1|>
+        x = 66
+    end
+    
+    attest.equal<|x, 2 | 66|>
+]]
+analyze[[
+    local x = 1
+
+    if MAYBE then
+        x = 2
+
+        if MAYBE then x = 1337 end
+
+        x = 0 -- the last one counts
+    elseif MAYBE then
+        x = 3
+    elseif MAYBE then
+        x = 4
+    end
+
+    attest.equal<|x, 0 | 1 | 3 | 4|>
 ]]
 
 if false then
-	pending[[
-        local x = 1
-
-        if math.random() > 0.5 then
-            attest.equal<|x, 1|>
-            x = 1.5
-            attest.equal<|x, 1.5|>
-            x = 1.75
-            attest.equal<|x, 1.75|>
-        
-            if math.random() > 0.5 then
-                x = 2
-        
-                if math.random() > 0.5 then x = 2.5 end
-        
-                attest.equal<|x, 2 | 2.5|>
-            end
-        
-            x = 3
-            attest.equal<|x, 3|>
-        end
-
-        attest.equal(x, _  as 3 | 1)
-    ]]
-	pending[[
-        local x = 1
-
-        if math.random() > 0.5 then
-            if true then
-                do
-                    x = 1337
-                end
-            end
-            attest.equal<|x, 1337|>
-            x = 2
-            attest.equal<|x, 2|>
-        else
-            attest.equal<|x, 1|>
-            x = 66
-        end
-        
-        attest.equal<|x, 1 | 2|>
-    ]]
-	pending[[
-        local x = 1
-
-        
-        if MAYBE then
-            x = 2
-
-            if MAYBE then
-                x = 1337
-            end
-
-            x = 0 -- the last one counts
-
-        elseif MAYBE then
-            x = 3
-        elseif MAYBE then
-            x = 4
-        end
-
-        attest.equal<|x, 1337 | 0 | 1 | 3 | 4|>
-    ]]
-	pending[[
-        elseif MAYBE then
-            attest.equal<|x, 1|>
-            x = 3
-            attest.equal<|x, 3|>
-        elseif MAYBE then
-            attest.equal<|x, 1|>
-            x = 4
-            attest.equal<|x, 4|>
-        else
-            attest.equal<|x, 1|>
-            x = 5
-            attest.equal<|x, 5|>
-        end
-
-        print(x)
-
-        --attest.equal<|x, 1 | 2 | 3 | 4|>
-    ]]
 	pending([[
         local a: nil | 1
 

@@ -4,7 +4,7 @@ local Union = require("nattlua.types.union").Union
 
 local function mutation_solver(mutations, scope, obj)
 	do
-		do
+		do -- remove scopes that are equal
 			for i = #mutations, 1, -1 do
 				local mut_a = mutations[i]
 
@@ -12,6 +12,22 @@ local function mutation_solver(mutations, scope, obj)
 					local mut_b = mutations[i]
 
 					if mut_a.scope == mut_b.scope then
+						table.remove(mutations, i)
+
+						break
+					end
+				end
+			end
+		end
+
+		do -- only keep last mutation in scope, excluding previously nested scopes
+			for i = #mutations, 1, -1 do
+				local mut_a = mutations[i]
+
+				for i = i - 1, 1, -1 do
+					local mut_b = mutations[i]
+
+					if mut_a.scope:Contains(mut_b.scope) then
 						table.remove(mutations, i)
 
 						break
