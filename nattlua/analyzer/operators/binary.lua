@@ -162,6 +162,14 @@ local function Binary(self, node, l, r, op)
 				self:PushFalsyExpressionContext(true)
 				r = self:AnalyzeExpression(node.right)
 				self:PopFalsyExpressionContext()
+
+				if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
+					if r.Type == "union" then
+						self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
+					else
+						self:TrackUpvalue(r)
+					end
+				end
 			end
 		else
 			l = self:AnalyzeExpression(node.left)

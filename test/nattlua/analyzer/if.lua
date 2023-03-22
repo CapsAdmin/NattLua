@@ -1637,17 +1637,17 @@ analyze[[
 
     attest.equal<|x, 0 | 1 | 3 | 4|>
 ]]
+analyze[[
+    local a: boolean
+
+    if not a or a then attest.equal(a, _  as boolean) end
+
+    if not a then attest.equal(a, false) end
+
+    if a then attest.equal(a, true) end
+]]
 
 if false then
-	pending([[
-        local a: nil | 1
-
-        if not a or true and a or false then
-            attest.equal(a, _ as 1 | nil)
-        end
-
-        attest.equal(a, _ as 1 | nil)
-    ]])
 	pending[[
         local MAYBE: boolean
         local x = 0
