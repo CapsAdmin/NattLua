@@ -52,7 +52,17 @@ local function mutation_solver(mutations, scope, obj)
 			end
 		end
 
-		for i = #mutations, 1, -1 do
+		--[[
+			-- remove mutations that occur in a sibling scope of an if statement
+			local x = val
+			if y then
+				x = val
+				-- if x is resolved here we remove the below mutation
+			else
+				x = val
+				-- if x is resolved here, we remove the above mutation
+			end
+		]] for i = #mutations, 1, -1 do
 			local mut = mutations[i]
 
 			if
@@ -60,7 +70,14 @@ local function mutation_solver(mutations, scope, obj)
 				(
 					scope:BelongsToIfStatement(mut.scope) or
 					(
-						mut.from_tracking and
+						-- we do the same for tracked if statements scopes
+						--[[
+							if foo.bar then
+								-- here foo.bar is tracked to be at least truthy
+							else
+								-- here foo.bar is tracked to be at least falsy
+							end
+						]] mut.from_tracking and
 						not mut.scope:Contains(scope)
 					)
 				)

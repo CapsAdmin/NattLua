@@ -466,7 +466,7 @@ function META:GetDefinition(path, line, character)
 	local token, data = self:FindToken(path, line, character)
 	local types = token:FindType()
 
-	if types[1] then
+	if types[1] and types[1]:GetUpvalue() then
 		local node = types[1]:GetUpvalue():GetNode()
 
 		if node then
