@@ -202,7 +202,7 @@ function META:FindResponsibleConditionalScopeFromUpvalue(upvalue)
 		-- ideally when cloning a scope, the new scope should be 
 		-- inside of the returned scope, then we wouldn't need this code
 		for _, child in ipairs(scope:GetChildren()) do
-			if child ~= scope and self:IsPartOfTestStatementAs(child) then
+			if child ~= scope and self:BelongsToIfStatement(child) then
 				local upvalues = child:GetTrackedUpvalues()
 
 				if upvalues then
@@ -238,7 +238,7 @@ function META:GetStatementType()
 	return self.statement and self.statement.kind
 end
 
-function META.IsPartOfTestStatementAs(a, b)
+function META.BelongsToIfStatement(a, b)
 	local yes = a:GetStatementType() == "if" and
 		b:GetStatementType() == "if" and
 		a.statement == b.statement
@@ -358,7 +358,7 @@ do
 
 		local scope = self
 
-		if self:IsPartOfTestStatementAs(from) then return true end
+		if self:BelongsToIfStatement(from) then return true end
 
 		while true do
 			if scope == from then break end

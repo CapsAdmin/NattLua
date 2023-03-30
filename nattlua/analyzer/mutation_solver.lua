@@ -4,8 +4,17 @@ local Union = require("nattlua.types.union").Union
 
 local function mutation_solver(mutations, scope, obj)
 	do
-		do -- remove scopes that are equal
-			for i = #mutations, 1, -1 do
+		do
+			--[[
+				remove mutations that are in the same scope
+
+				x = val -- remove
+				x = val -- remove
+				do
+					x = val
+				end
+				x = val
+			]] for i = #mutations, 1, -1 do
 				local mut_a = mutations[i]
 
 				for i = i - 1, 1, -1 do
@@ -20,8 +29,15 @@ local function mutation_solver(mutations, scope, obj)
 			end
 		end
 
-		do -- only keep last mutation in scope, excluding previously nested scopes
-			for i = #mutations, 1, -1 do
+		do
+			--[[
+				only keep last mutation in scope, excluding previously nested scopes
+
+				do
+					x = val -- remove
+				end
+				x = val
+			]] for i = #mutations, 1, -1 do
 				local mut_a = mutations[i]
 
 				for i = i - 1, 1, -1 do
@@ -40,15 +56,14 @@ local function mutation_solver(mutations, scope, obj)
 			local mut = mutations[i]
 
 			if
+				scope ~= mut.scope and
 				(
-					scope:IsPartOfTestStatementAs(mut.scope) or
+					scope:BelongsToIfStatement(mut.scope) or
 					(
 						mut.from_tracking and
 						not mut.scope:Contains(scope)
 					)
 				)
-				and
-				scope ~= mut.scope
 			then
 				table.remove(mutations, i)
 			end
@@ -65,7 +80,7 @@ local function mutation_solver(mutations, scope, obj)
 						if not mut then break end
 
 						if
-							not mut.scope:IsPartOfTestStatementAs(scope) and
+							not mut.scope:BelongsToIfStatement(scope) and
 							not mut.scope:IsCertainFromScope(scope)
 						then
 							for i = i, 1, -1 do
@@ -187,7 +202,7 @@ local function mutation_solver(mutations, scope, obj)
 		found_scope:IsElseConditionalScope() or
 		(
 			found_scope ~= scope and
-			scope:IsPartOfTestStatementAs(found_scope)
+			scope:BelongsToIfStatement(found_scope)
 		)
 	then
 		local union = stack[#stack].falsy
