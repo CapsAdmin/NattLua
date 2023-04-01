@@ -4,71 +4,50 @@ local Union = require("nattlua.types.union").Union
 
 local function mutation_solver(mutations, scope, obj)
 	do
-		do
-			--[[
-				remove mutations that are in the same scope
+		--[[
+			remove previous mutations that are in the same scope
 
+			y = val -- remove
+			x = val -- remove
+			x = val -- remove
+			do
 				x = val -- remove
-				x = val -- remove
-				do
-					x = val
-				end
-				x = val
-			]] for i = #mutations, 1, -1 do
-				local mut_a = mutations[i]
-
-				for i = i - 1, 1, -1 do
-					local mut_b = mutations[i]
-
-					if mut_a.scope == mut_b.scope then
-						table.remove(mutations, i)
-
-						break
-					end
-				end
+				y = val -- keep
 			end
-		end
+			x = val -- keep
+		]] for i = #mutations, 1, -1 do
+			local mut_a = mutations[i]
 
-		do
-			--[[
-				only keep last mutation in scope, excluding previously nested scopes
-
-				do
-					x = val -- remove
-				end
-				x = val
-			]] for i = #mutations, 1, -1 do
-				local mut_a = mutations[i]
-
-				for i = i - 1, 1, -1 do
-					local mut_b = mutations[i]
+			if mut_a then
+				for j = i - 1, 1, -1 do
+					local mut_b = mutations[j]
 
 					if mut_a.scope:Contains(mut_b.scope) then
-						table.remove(mutations, i)
-
+						table.remove(mutations, j)
+					else
 						break
 					end
 				end
 			end
 		end
 
-		--[[
-			-- remove mutations that occur in a sibling scope of an if statement
-			local x = val
-			if y then
-				x = val
-				-- if x is resolved here we remove the below mutation
-			else
-				x = val
-				-- if x is resolved here, we remove the above mutation
-			end
-		]] for i = #mutations, 1, -1 do
-			local mut = mutations[i]
+		for i = #mutations, 1, -1 do
+			local mut_a = mutations[i]
 
 			if
-				scope ~= mut.scope and
+				scope ~= mut_a.scope and
 				(
-					scope:BelongsToIfStatement(mut.scope) or
+					--[[
+						-- remove mutations that occur in a sibling scope of an if statement
+						local x = val
+						if y then
+							x = val
+							-- if x is resolved here we remove the below mutation
+						else
+							x = val
+							-- if x is resolved here, we remove the above mutation
+						end
+					]] scope:BelongsToIfStatement(mut_a.scope) or
 					(
 						-- we do the same for tracked if statements scopes
 						--[[
@@ -77,8 +56,8 @@ local function mutation_solver(mutations, scope, obj)
 							else
 								-- here foo.bar is tracked to be at least falsy
 							end
-						]] mut.from_tracking and
-						not mut.scope:Contains(scope)
+						]] mut_a.from_tracking and
+						not mut_a.scope:Contains(scope)
 					)
 				)
 			then
@@ -86,59 +65,53 @@ local function mutation_solver(mutations, scope, obj)
 			end
 		end
 
-		do
-			for i = #mutations, 1, -1 do
-				local mut = mutations[i]
+		for i = #mutations, 1, -1 do
+			local mut = mutations[i]
 
-				if mut.scope:IsElseConditionalScope() then
-					while true do
-						local mut = mutations[i]
+			if mut.scope:IsElseConditionalScope() then
+				for i = i - 1, 1, -1 do
+					local mut = mutations[i]
 
-						if not mut then break end
-
-						if
-							not mut.scope:BelongsToIfStatement(scope) and
-							not mut.scope:IsCertainFromScope(scope)
-						then
-							for i = i, 1, -1 do
-								if mutations[i].scope:IsCertainFromScope(scope) then
-									-- redudant mutation before else part of if statement
-									table.remove(mutations, i)
-								end
+					if
+						not mut.scope:BelongsToIfStatement(scope) and
+						not mut.scope:IsCertainFromScope(scope)
+					then
+						for i = i, 1, -1 do
+							if mutations[i].scope:IsCertainFromScope(scope) then
+								-- redudant mutation before else part of if statement
+								table.remove(mutations, i)
 							end
-
-							break
 						end
 
-						i = i - 1
+						break
 					end
-
-					break
 				end
+
+				break
 			end
 		end
+	end
 
-		do
-			local test_scope_a = scope:FindFirstConditionalScope()
+	if not mutations[1] then return end
 
-			if test_scope_a then
-				for _, mut in ipairs(mutations) do
-					if mut.scope ~= scope then
-						local test_scope_b = mut.scope:FindFirstConditionalScope()
+	do
+		local test_scope_a = scope:FindFirstConditionalScope()
 
-						if test_scope_b and test_scope_b ~= test_scope_a and obj.Type ~= "table" then
-							if test_scope_a:TracksSameAs(test_scope_b, obj) then
-								-- forcing scope certainty because this scope is using the same test condition
-								mut.certain_override = true
-							end
+		if test_scope_a then
+			for _, mut in ipairs(mutations) do
+				if mut.scope ~= scope then
+					local test_scope_b = mut.scope:FindFirstConditionalScope()
+
+					if test_scope_b and test_scope_b ~= test_scope_a and obj.Type ~= "table" then
+						if test_scope_a:TracksSameAs(test_scope_b, obj) then
+							-- forcing scope certainty because this scope is using the same test condition
+							mut.certain_override = true
 						end
 					end
 				end
 			end
 		end
 	end
-
-	if not mutations[1] then return end
 
 	local union = Union({})
 
