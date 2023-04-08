@@ -194,6 +194,7 @@ function META:Recompile(path)
 				start = start,
 				stop = stop,
 				message = helpers.FormatMessage(msg, ...),
+				trace = debug.traceback(),
 			}
 		)
 	end

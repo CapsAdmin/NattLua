@@ -142,7 +142,7 @@ lsp.methods["initialized"] = function(params)
 			diagnostics[i] = {
 				severity = DiagnosticSeverity[v.severity],
 				range = range,
-				message = v.message,
+				message = v.message .. "\n" .. v.trace,
 			}
 		end
 
