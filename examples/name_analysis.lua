@@ -1,6 +1,7 @@
 -- split by casing as well? SetCleint GetClient TransferCleint
 local nl = require("nattlua")
 local runtime_syntax = require("nattlua.syntax.runtime")
+local typesystem_syntax = require("nattlua.syntax.typesystem")
 local util = require("examples.util")
 
 local function levenshtein(s, t, lim)
@@ -75,7 +76,7 @@ local function check_tokens(tokens)
 	local score = {}
 
 	for i, tk in ipairs(tokens) do
-		if tk.type == "letter" and not runtime_syntax:IsKeyword(tk) then
+		if runtime_syntax:IsVariableName(tk) and typesystem_syntax:IsVariableName(tk) then
 			score[tk.value] = score[tk.value] or {}
 
 			if tk.value:sub(1, 1) == tk.value:sub(1, 1):upper() then
@@ -126,6 +127,7 @@ local function check_tokens(tokens)
 		if not blacklist[token.value] then io.write(token.value, " ") end
 	end
 
+	print("")
 	print("these identifiers are very similar:")
 
 	for _, a in ipairs(temp) do
@@ -152,13 +154,27 @@ end
 
 local paths = util.GetFilesRecursively("./nattlua")
 local all_tokens = {}
+local blacklist = {
+	"base64.lua",
+	"cparser.lua",
+}
+
+local function is_blacklisted(path)
+	for _, v in ipairs(blacklist) do
+		if path:find(v, nil, true) then return true end
+	end
+
+	return false
+end
 
 for _, path in ipairs(paths) do
-	local code = assert(assert(nl.File(path)):Parse())
-	local tokens = code.Tokens
+	if not is_blacklisted(path) then
+		local code = assert(assert(nl.File(path)):Parse())
+		local tokens = code.Tokens
 
-	for _, token in ipairs(tokens) do
-		table.insert(all_tokens, token)
+		for _, token in ipairs(tokens) do
+			table.insert(all_tokens, token)
+		end
 	end
 end
 

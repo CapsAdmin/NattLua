@@ -172,6 +172,15 @@ function META:AddKeywords(tbl--[[#: List<|string|>]])
 	end
 end
 
+function META:IsVariableName(token--[[#: Token]])
+	return token.type == "letter" and
+		not self:IsKeyword(token)
+		and
+		not self:IsKeywordValue(token)
+		and
+		not self:IsNonStandardKeyword(token)
+end
+
 function META:IsKeyword(token--[[#: Token]])
 	return self.Keywords[token.value]
 end
