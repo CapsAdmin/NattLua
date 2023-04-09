@@ -80,11 +80,11 @@ analyzer function next(t: Map<|any, any|>, k: any)
 
 		for i, kv in ipairs(t:GetContract() and t:GetContract():GetData() or t:GetData()) do
 			if kv.Type then
-				k:AssociateType(types.Number())
-				v:AssociateType(kv)
+				k:AddType(types.Number())
+				v:AddType(kv)
 			else
-				k:AssociateType(kv.key)
-				v:AssociateType(kv.val)
+				k:AddType(kv.key)
+				v:AddType(kv.val)
 			end
 		end
 	end
@@ -433,7 +433,7 @@ analyzer function type(obj: any)
 		copy:SetUpvalue(obj:GetUpvalue())
 
 		for _, v in ipairs(obj:GetData()) do
-			if v.GetLuaType then copy:AssociateType(types.LString(v:GetLuaType())) end
+			if v.GetLuaType then copy:AddType(types.LString(v:GetLuaType())) end
 		end
 
 		return copy
@@ -502,7 +502,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 			analyzer:ClearObjectMutations(tbl)
 		elseif analyzer:IsRuntime() then
 			meta.potential_self = meta.potential_self or types.Union({})
-			meta.potential_self:AssociateType(tbl)
+			meta.potential_self:AddType(tbl)
 		end
 
 		tbl:SetMetaTable(meta)

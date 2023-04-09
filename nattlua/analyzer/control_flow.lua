@@ -68,13 +68,13 @@ return function(META)
 
 		for _, ret in ipairs(scope:GetOutputSignature()) do
 			if #ret.types == 1 then
-				union:AssociateType(ret.types[1])
+				union:AddType(ret.types[1])
 			elseif #ret.types == 0 then
 				local tup = Tuple({Nil()})
-				union:AssociateType(tup)
+				union:AddType(tup)
 			else
 				local tup = Tuple(ret.types)
-				union:AssociateType(tup)
+				union:AddType(tup)
 			end
 		end
 

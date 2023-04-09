@@ -20,10 +20,10 @@ return {
 
 					if not ok then
 						self:ErrorAndCloneCurrentScope(err or "invalid set error", obj)
-						falsy_union:AssociateType(v)
+						falsy_union:AddType(v)
 					else
-						truthy_union:AssociateType(v)
-						new_union:AssociateType(v)
+						truthy_union:AddType(v)
+						new_union:AddType(v)
 					end
 				end
 

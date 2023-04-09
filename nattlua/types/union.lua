@@ -84,10 +84,10 @@ function META:__tostring()
 	return table.concat(s, " | ")
 end
 
-function META:AssociateType(e--[[#: TBaseType]])
+function META:AddType(e--[[#: TBaseType]])
 	if e.Type == "union" then
 		for _, v in ipairs(e.Data) do
-			self:AssociateType(v)
+			self:AddType(v)
 		end
 
 		return self
@@ -337,7 +337,7 @@ function META:Union(union--[[#: TUnion]])
 	local copy = self:Copy()
 
 	for _, e in ipairs(union.Data) do
-		copy:AssociateType(e)
+		copy:AddType(e)
 	end
 
 	return copy
@@ -350,9 +350,9 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 
 	for _, e in ipairs(self.Data) do
 		if e.Type == "table" and not copy_tables then
-			copy:AssociateType(e)
+			copy:AddType(e)
 		else
-			copy:AssociateType(e:Copy(map, copy_tables))
+			copy:AddType(e:Copy(map, copy_tables))
 		end
 	end
 
@@ -396,7 +396,7 @@ function META:EnableFalsy()
 	if not self.falsy_disabled then return end
 
 	for _, v in ipairs(self.falsy_disabled) do
-		self:AssociateType(v)
+		self:AddType(v)
 	end
 end
 
@@ -456,7 +456,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 	)
 
 	if data then for _, v in ipairs(data) do
-		self:AssociateType(v)
+		self:AddType(v)
 	end end
 
 	return self

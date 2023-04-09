@@ -163,7 +163,7 @@ return function(META)
 						union = Union()
 
 						for _, val in ipairs(stack) do
-							union:AssociateType(val.falsy)
+							union:AddType(val.falsy)
 						end
 					end
 
@@ -339,7 +339,7 @@ return function(META)
 						local union = Union()
 
 						for _, v in ipairs(data.stack) do
-							if v.truthy then union:AssociateType(v.truthy) end
+							if v.truthy then union:AddType(v.truthy) end
 						end
 
 						if not union:IsEmpty() then
@@ -355,7 +355,7 @@ return function(META)
 					local union = Union()
 
 					for _, v in ipairs(data.stack) do
-						if v.truthy then union:AssociateType(v.truthy) end
+						if v.truthy then union:AddType(v.truthy) end
 					end
 
 					if not union:IsEmpty() then

@@ -40,10 +40,10 @@ return {
 
 		if literal_init and literal_max then
 			-- also check step
-			condition:AssociateType(Binary(self, statement, init, max, "<="))
+			condition:AddType(Binary(self, statement, init, max, "<="))
 		else
-			condition:AssociateType(True())
-			condition:AssociateType(False())
+			condition:AddType(True())
+			condition:AddType(False())
 		end
 
 		self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())

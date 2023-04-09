@@ -8,7 +8,7 @@
 	local union = types.Union()
 
 	for _, keyval in ipairs(tbl:GetData()) do
-		union:AssociateType(keyval.key)
+		union:AddType(keyval.key)
 	end
 
 	return union

@@ -168,7 +168,7 @@ local function mutation_solver(mutations, scope, obj)
 
 			if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 		else
-			union:AssociateType(value)
+			union:AddType(value)
 		end
 	end
 
@@ -201,7 +201,7 @@ local function mutation_solver(mutations, scope, obj)
 			union = Union()
 
 			for _, val in ipairs(stack) do
-				union:AssociateType(val.falsy)
+				union:AddType(val.falsy)
 			end
 		end
 
@@ -213,7 +213,7 @@ local function mutation_solver(mutations, scope, obj)
 	local union = Union()
 
 	for _, val in ipairs(stack) do
-		union:AssociateType(val.truthy)
+		union:AddType(val.truthy)
 	end
 
 	if obj.Type == "upvalue" then union:SetUpvalue(obj) end

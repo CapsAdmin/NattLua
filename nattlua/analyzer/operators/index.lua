@@ -23,7 +23,7 @@ return {
 
 						if not val then return val, err end
 
-						union:AssociateType(val)
+						union:AddType(val)
 					end
 				end
 
