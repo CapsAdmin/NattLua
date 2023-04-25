@@ -47,7 +47,7 @@ function META:GetMemberInParents(what)
 	local scope = self
 
 	while true do
-		if scope[what] then return scope[what], scope end
+		if scope[what] ~= nil then return scope[what], scope end
 
 		scope = scope:GetParent()
 
