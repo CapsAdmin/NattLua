@@ -30,20 +30,6 @@ function META.New()
 	return self
 end
 
-local function get_range(code, start, stop)
-	local data = code:SubPosToLineChar(start, stop)
-	return {
-		start = {
-			line = data.line_start - 1,
-			character = data.character_start - 1,
-		},
-		["end"] = {
-			line = data.line_stop - 1,
-			character = data.character_stop, -- not sure about this
-		},
-	}
-end
-
 function META:GetAanalyzerConfig()
 	local cfg = self:GetProjectConfig("get-analyzer-config") or {}
 
@@ -79,6 +65,10 @@ function META:NormalizePath(path)
 	if start == 1 and stop then path = path:sub(stop + 1, #path) end
 
 	if path:sub(1, #self.WorkingDirectory) ~= self.WorkingDirectory then
+		if self.WorkingDirectory:sub(#self.WorkingDirectory) ~= "/" then
+			if path:sub(1, 1) ~= "/" then path = "/" .. path end
+		end
+
 		path = self.WorkingDirectory .. path
 	end
 
@@ -467,18 +457,22 @@ function META:GetDefinition(path, line, character)
 	local token, data = self:FindToken(path, line, character)
 	local types = token:FindType()
 
-	if types[1] and types[1]:GetUpvalue() then
-		local node = types[1]:GetUpvalue():GetNode()
+	if types[1] then
+		if types[1]:GetUpvalue() then
+			local node = types[1]:GetUpvalue():GetNode()
+			return node
+		end
 
-		if node then
-			return {
-				uri = path,
-				range = get_range(data.code, node:GetStartStop()),
-			}
+		if types[1].GetFunctionBodyNode and types[1]:GetFunctionBodyNode() then
+			local node = types[1]:GetFunctionBodyNode()
+			return node
+		end
+
+		if types[1]:GetNode() then
+			local node = types[1]:GetNode()
+			return node
 		end
 	end
-
-	return {}
 end
 
 function META:GetHover(path, line, character)

@@ -87,6 +87,16 @@ function META:Render(config)
 	return em:Concat()
 end
 
+function META:GetSourcePath()
+	if self.Code then
+		local path = self.Code:GetName()
+
+		if path:sub(1, 1) == "@" then path = path:sub(2) end
+
+		return path
+	end
+end
+
 function META:GetStartStop()
 	return self.code_start, self.code_stop
 end

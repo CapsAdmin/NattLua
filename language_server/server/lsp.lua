@@ -76,6 +76,7 @@ lsp.methods["initialize"] = function(params)
 			},
 			definitionProvider = true,
 			renameProvider = true,
+			definitionProvider = true,
 		-- for symbols like all functions within a file
 		-- documentSymbolProvider = {label = "NattLua"},
 		-- highlighting equal upvalues
@@ -87,7 +88,6 @@ lsp.methods["initialize"] = function(params)
 			signatureHelpProvider = {
 				triggerCharacters = { "(" },
 			},
-			definitionProvider = true,
 			referencesProvider = true,
 			
 			workspaceSymbolProvider = true,
@@ -330,8 +330,20 @@ lsp.methods["textDocument/rename"] = function(params)
 	}
 end
 lsp.methods["textDocument/definition"] = function(params)
-	local data = editor_helper:GetDefinition(params.textDocument.uri, params.position.line, params.position.character)
-	return data
+	local node = editor_helper:GetDefinition(params.textDocument.uri, params.position.line, params.position.character)
+
+	if node then
+		local start, stop = node:GetStartStop()
+		local path = node:GetSourcePath() or params.textDocument.uri
+		path = editor_helper:NormalizePath(path)
+		editor_helper:OpenFile(path, node.Code:GetString())
+		return {
+			uri = path,
+			range = get_range(editor_helper:GetCode(path), start, stop),
+		}
+	end
+
+	return {}
 end
 lsp.methods["textDocument/hover"] = function(params)
 	local data = editor_helper:GetHover(params.textDocument.uri, params.position.line, params.position.character)
