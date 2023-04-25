@@ -90,11 +90,11 @@ do
 		path = self:NormalizePath(path)
 
 		if not self.LoadedFiles[path] then
-			self:DebugLog("[" .. path .. "] is not loaded")
+			self:DebugLog("[ " .. path .. " ] is not loaded")
 			self:DebugLog("=== these are loaded ===")
 
 			for k, v in pairs(self.LoadedFiles) do
-				self:DebugLog("[" .. k .. "] is loaded")
+				self:DebugLog("[ " .. k .. " ] is loaded")
 			end
 
 			self:DebugLog("===")
@@ -106,7 +106,7 @@ do
 
 	function META:LoadFile(path, code, tokens)
 		path = self:NormalizePath(path)
-		self:DebugLog("[" .. path .. "] loaded with " .. #tokens .. " tokens")
+		self:DebugLog("[ " .. path .. " ] loaded with " .. #tokens .. " tokens")
 		self.LoadedFiles[path] = {
 			code = code,
 			tokens = tokens,
@@ -115,7 +115,7 @@ do
 
 	function META:UnloadFile(path)
 		path = self:NormalizePath(path)
-		self:DebugLog("[" .. path .. "] unloaded")
+		self:DebugLog("[ " .. path .. " ] unloaded")
 		self.LoadedFiles[path] = nil
 	end
 end
@@ -125,9 +125,9 @@ do
 		path = self:NormalizePath(path)
 
 		if code then
-			self:DebugLog("[" .. path .. "] content loaded with " .. #code .. " bytes")
+			self:DebugLog("[ " .. path .. " ] content loaded with " .. #code .. " bytes")
 		else
-			self:DebugLog("[" .. path .. "] content unloaded")
+			self:DebugLog("[ " .. path .. " ] content unloaded")
 		end
 
 		self.TempFiles[path] = code
@@ -137,11 +137,11 @@ do
 		path = self:NormalizePath(path)
 
 		if not self.TempFiles[path] then
-			self:DebugLog("[" .. path .. "] content is not loaded")
+			self:DebugLog("[ " .. path .. " ] content is not loaded")
 			self:DebugLog("=== these are loaded ===")
 
 			for k, v in pairs(self.TempFiles) do
-				self:DebugLog("[" .. k .. "] content is loaded")
+				self:DebugLog("[ " .. k .. " ] content is loaded")
 			end
 
 			self:DebugLog("===")
@@ -177,7 +177,7 @@ function META:Recompile(path)
 
 		return self:GetFileContent(path)
 	end
-	self:DebugLog("[" .. entry_point .. "] compiling")
+	self:DebugLog("[ " .. entry_point .. " ] compiling")
 	local compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
 	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
@@ -200,7 +200,7 @@ function META:Recompile(path)
 	end
 
 	if compiler:Parse() then
-		self:DebugLog("[" .. entry_point .. "] parsed with " .. #compiler.Tokens .. " tokens")
+		self:DebugLog("[ " .. entry_point .. " ] parsed with " .. #compiler.Tokens .. " tokens")
 
 		if compiler.SyntaxTree.imports then
 			for _, root_node in ipairs(compiler.SyntaxTree.imports) do
@@ -257,14 +257,14 @@ function META:Recompile(path)
 			end
 
 			self:DebugLog(
-				"[" .. entry_point .. "] analyzed with " .. (
+				"[ " .. entry_point .. " ] analyzed with " .. (
 						diagnostics[name] and
 						#diagnostics[name] or
 						0
 					) .. " diagnostics"
 			)
 		else
-			self:DebugLog("[" .. entry_point .. "] skipped analysis")
+			self:DebugLog("[ " .. entry_point .. " ] skipped analysis")
 		end
 	end
 
