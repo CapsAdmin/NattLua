@@ -64,6 +64,7 @@ return {
 					self:NewIndexOperator(tbl, key, contract)
 				else
 					local val = self:AnalyzeExpression(node.value_expression):GetFirstValue() or Nil()
+					val:SetNode(node.value_expression)
 					self:NewIndexOperator(tbl, key, val)
 				end
 			elseif node.kind == "table_expression_value" then

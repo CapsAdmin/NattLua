@@ -71,12 +71,12 @@ lsp.methods["initialize"] = function(params)
 				relatedInformation = true,
 				tagSupport = {1, 2},
 			},
-			inlayHintProvider = {
-				resolveProvider = true,
-			},
+			inlayHintProvider = true,
 			definitionProvider = true,
 			renameProvider = true,
 			definitionProvider = true,
+			inlineValueProvider = true,
+			referencesProvider = true,
 		-- for symbols like all functions within a file
 		-- documentSymbolProvider = {label = "NattLua"},
 		-- highlighting equal upvalues
@@ -88,7 +88,6 @@ lsp.methods["initialize"] = function(params)
 			signatureHelpProvider = {
 				triggerCharacters = { "(" },
 			},
-			referencesProvider = true,
 			
 			workspaceSymbolProvider = true,
 			codeActionProvider = true,
@@ -298,6 +297,48 @@ end
 lsp.methods["textDocument/didSave"] = function(params)
 	editor_helper:SaveFile(params.textDocument.uri)
 end
+lsp.methods["textDocument/inlineValue"] = function(params)
+	local hints = editor_helper:GetInlayHints(
+		params.textDocument.uri,
+		params.start.line,
+		params.start.character,
+		params["end"].line,
+		params["end"].character
+	)
+	local result = {}
+	print("INLAY", #hints)
+
+	for k, v in pairs(hints) do
+		table.insert(
+			result,
+			{
+				range = get_range(editor_helper:GetCode(params.textDocument.uri), v.position.start, v.position.stop),
+				text = v.tooltip,
+			}
+		)
+	end
+
+	return result
+end
+lsp.methods["textDocument/references"] = function(params)
+	local nodes = editor_helper:GetReferences(params.textDocument.uri, params.position.line, params.position.character - 1)
+	local result = {}
+
+	for k, node in pairs(nodes) do
+		local path = node:GetSourcePath()
+		path = editor_helper:NormalizePath(path)
+		editor_helper:OpenFile(path, node.Code:GetString())
+		table.insert(
+			result,
+			{
+				uri = path,
+				range = get_range(editor_helper:GetCode(path), node:GetStartStop()),
+			}
+		)
+	end
+
+	return result
+end
 lsp.methods["textDocument/inlayHint"] = function(params)
 	local hints = editor_helper:GetInlayHints(
 		params.textDocument.uri,
@@ -380,6 +421,22 @@ lsp.methods["textDocument/hover"] = function(params)
 				add_code(code)
 			end
 		end
+	end
+
+	do
+		local types, found_parents, scope = data.token:FindType()
+		local str = "-- types --\n"
+
+		for _, node in ipairs(found_parents) do
+			str = str .. tostring(node) .. "\n"
+
+			for _, obj in ipairs(node:GetAssociatedTypes()) do
+				str = str .. "\t" .. tostring(obj) .. "\n"
+			end
+		end
+
+		str = str .. "-----------\n"
+		add_code(str)
 	end
 
 	local wtf = data.found_parents

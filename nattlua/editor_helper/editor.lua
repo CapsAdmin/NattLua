@@ -404,7 +404,7 @@ do
 								hints,
 								{
 									label = ": " .. label,
-									tooltip = tostring(Union(types)),
+									tooltip = label,
 									position = {
 										lineNumber = data.line_stop,
 										column = data.character_stop + 1,
@@ -492,7 +492,30 @@ function META:GetHover(path, line, character)
 		obj = obj,
 		scope = scope,
 		found_parents = found_parents,
+		token = token,
 	}
+end
+
+function META:GetReferences(path, line, character)
+	local token, data = self:FindToken(path, line, character)
+	local types = token:FindType()
+	local references = {}
+
+	for _, obj in ipairs(types) do
+		local node
+
+		if obj:GetUpvalue() then
+			node = obj:GetUpvalue():GetNode()
+		elseif obj.GetFunctionBodyNode and obj:GetFunctionBodyNode() then
+			node = obj:GetFunctionBodyNode()
+		elseif obj:GetNode() then
+			node = obj:GetNode()
+		end
+
+		if node then table.insert(references, node) end
+	end
+
+	return references
 end
 
 return META
