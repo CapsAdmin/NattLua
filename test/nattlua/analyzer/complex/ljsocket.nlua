@@ -1539,6 +1539,8 @@ if TEST then
 	end
 
 	do
+		local update_server
+		local update_client
 		local port = "8080"
 		local address = assert(socket.find_first_address("*", port), "cannot find address")
 
