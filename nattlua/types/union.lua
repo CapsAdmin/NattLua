@@ -80,6 +80,9 @@ function META:__tostring()
 	end
 
 	self.suppress = false
+
+	if #s == 1 then return s[1] .. "|" end
+
 	table.sort(s, sort)
 	return table.concat(s, " | ")
 end
