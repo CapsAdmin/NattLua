@@ -13,7 +13,7 @@ analyze[[
 -- file import
 equal(
 	8,
-	assert(require("nattlua").File("test/nattlua/analyzer/file_importing/test/main.nlua")):Analyze().AnalyzedResult:GetData()
+	assert(require("nattlua").File("test/nattlua/analyzer/file_importing/test/main.nlua")):Analyze().AnalyzedResult:GetFirstValue():GetData()
 )
 --[=[
 	run([[
