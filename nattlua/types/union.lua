@@ -171,7 +171,11 @@ end
 function META:GetAtIndex(i--[[#: number]])
 	assert(type(i) == "number")
 
-	if not self:HasTuples() then return self end
+	if not self:HasTuples() then
+		if self:GetLength() == 1 then return self:GetData()[1] end
+
+		return self
+	end
 
 	local val--[[#: any]]
 	local errors = {}
@@ -200,6 +204,8 @@ function META:GetAtIndex(i--[[#: number]])
 	end
 
 	if not val then return false, errors end
+
+	if val.Type == "union" and val:GetLength() == 1 then return val:GetData()[1] end
 
 	return val
 end

@@ -179,6 +179,10 @@ function META.IsSubsetOfTuple(a--[[#: TTuple]], b--[[#: TBaseType]])
 		local a_val, a_err = a:Get(i)
 		local b_val, b_err = b:Get(i)
 
+		if a_val and a_val.Type == "union" then
+			a_val, a_err = a_val:GetAtIndex(i)
+		end
+
 		if b_val and b_val.Type == "union" then b_val, b_err = b_val:GetAtIndex(i) end
 
 		if not a_val then

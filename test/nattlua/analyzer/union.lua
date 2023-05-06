@@ -149,3 +149,7 @@ analyze[[
     attest.expect_diagnostic("error", "union is empty")
     test(t)
 ]]
+analyze[[
+    local type s = _  as string | string
+    string.reverse(s)
+]]
