@@ -57,14 +57,14 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 
-	if B.Type ~= "string" then return type_errors.type_mismatch(A, B) end
+	if B.Type ~= "string" then return false, type_errors.type_mismatch(A, B) end
 
 	local B = B--[[# as TString]]
 
 	if A:IsLiteralArgument() and B:IsLiteralArgument() then return true end
 
 	if B:IsLiteralArgument() and not A:IsLiteral() then
-		return type_errors.subset(A, B)
+		return false, type_errors.subset(A, B)
 	end
 
 	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then -- "A" subsetof "B"
@@ -83,21 +83,21 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 		local str = A:GetData()
 
 		if not str then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
-			return type_errors.literal(A)
+			return false, type_errors.literal(A)
 		end
 
 		if not str:find(B.PatternContract) then
-			return type_errors.string_pattern(A, B)
+			return false, type_errors.string_pattern(A, B)
 		end
 
 		return true
 	end
 
 	if A:IsLiteral() and B:IsLiteral() then
-		return type_errors.value_mismatch(A, B)
+		return false, type_errors.value_mismatch(A, B)
 	end
 
-	return type_errors.subset(A, B)
+	return false, type_errors.subset(A, B)
 end
 
 function META:__tostring()
@@ -137,7 +137,7 @@ function META.LogicalComparison(a--[[#: TString]], b--[[#: TBaseType]], op--[[#:
 		return nil
 	end
 
-	return type_errors.binary(op, a, b)
+	return false, type_errors.binary(op, a, b)
 end
 
 function META:IsFalsy()

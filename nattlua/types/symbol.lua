@@ -20,7 +20,7 @@ function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#:
 		return nil
 	end
 
-	return type_errors.binary(op, l, r)
+	return false, type_errors.binary(op, l, r)
 end
 
 function META:GetLuaType()
@@ -52,11 +52,13 @@ function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
 
 	if b.Type == "union" then return b:IsTargetSubsetOfChild(a--[[# as any]]) end
 
-	if b.Type ~= "symbol" then return type_errors.type_mismatch(a, b) end
+	if b.Type ~= "symbol" then return false, type_errors.type_mismatch(a, b) end
 
 	local b = b--[[# as TSymbol]]
 
-	if a:GetData() ~= b:GetData() then return type_errors.value_mismatch(a, b) end
+	if a:GetData() ~= b:GetData() then
+		return false, type_errors.value_mismatch(a, b)
+	end
 
 	return true
 end

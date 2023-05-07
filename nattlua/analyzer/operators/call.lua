@@ -15,7 +15,7 @@ return {
 		end
 
 		local function call_union(self, obj, input, call_node)
-			if obj:IsEmpty() then return type_errors.operation("call", nil) end
+			if obj:IsEmpty() then return false, type_errors.operation("call", nil) end
 
 			do
 				-- make sure the union is callable, we pass the analyzer and 
@@ -79,7 +79,7 @@ return {
 					end
 				end
 
-				return type_errors.other(errors)
+				return false, type_errors.other(errors)
 			end
 
 			local new = Union({})
@@ -113,7 +113,7 @@ return {
 				return self:Call(__call, Tuple(new_input), call_node, true)
 			end
 
-			return type_errors.other("table has no __call metamethod")
+			return false, type_errors.other("table has no __call metamethod")
 		end
 
 		local function call_any(self, input)
@@ -144,13 +144,16 @@ return {
 		end
 
 		local function call_other(obj)
-			return type_errors.other({
-				"type ",
-				obj.Type,
-				": ",
-				obj,
-				" cannot be called",
-			})
+			return false,
+			type_errors.other(
+				{
+					"type ",
+					obj.Type,
+					": ",
+					obj,
+					" cannot be called",
+				}
+			)
 		end
 
 		local function call_function(self, obj, input)

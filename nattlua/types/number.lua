@@ -138,12 +138,12 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 		return (b--[[# as any]]):IsTargetSubsetOfChild(a--[[# as any]])
 	end
 
-	if b.Type ~= "number" then return type_errors.type_mismatch(a, b) end
+	if b.Type ~= "number" then return false, type_errors.type_mismatch(a, b) end
 
 	if a:IsLiteralArgument() and b:IsLiteralArgument() then return true end
 
 	if b:IsLiteralArgument() and not a:IsLiteral() then
-		return type_errors.subset(a, b)
+		return false, type_errors.subset(a, b)
 	end
 
 	if a:IsLiteral() and b:IsLiteral() then
@@ -161,7 +161,7 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 
 		if max then if a_num >= b_num and a_num <= max then return true end end
 
-		return type_errors.subset(a, b)
+		return false, type_errors.subset(a, b)
 	elseif a:GetData() == nil and b:GetData() == nil then
 		-- number contains number
 		return true
@@ -170,7 +170,7 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 		return true
 	elseif not a:IsLiteral() and b:IsLiteral() then
 		-- number subset of 42 ?
-		return type_errors.subset(a, b)
+		return false, type_errors.subset(a, b)
 	end
 
 	-- number == number
@@ -211,7 +211,7 @@ function META:SetMax(val--[[#: TBaseType | TUnion]])
 	end
 
 	if val.Type ~= "number" then
-		return type_errors.other({"max must be a number, got ", val})
+		return false, type_errors.other({"max must be a number, got ", val})
 	end
 
 	if val:IsLiteral() then
@@ -329,7 +329,7 @@ do
 
 		if operators[operator] then return nil end
 
-		return type_errors.binary(operator, a, b)
+		return false, type_errors.binary(operator, a, b)
 	end
 
 	function META.LogicalComparison2(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber | nil,TNumber | nil]]

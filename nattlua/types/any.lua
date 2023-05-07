@@ -45,7 +45,7 @@ function META.LogicalComparison(l--[[#: TAny]], r--[[#: TBaseType]], op--[[#: st
 	if op == "==" then return true -- TODO: should be nil (true | false)?
 	end
 
-	return type_errors.binary(op, l, r)
+	return false, type_errors.binary(op, l, r)
 end
 
 return {

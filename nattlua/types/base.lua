@@ -149,11 +149,11 @@ do
 
 	function META.IsSameUniqueType(a--[[#: TBaseType]], b--[[#: TBaseType]])
 		if a.UniqueID and not b.UniqueID then
-			return type_errors.other({a, "is a unique type"})
+			return false, type_errors.other({a, "is a unique type"})
 		end
 
 		if a.UniqueID ~= b.UniqueID then
-			return type_errors.other({a, "is not the same unique type as ", a})
+			return false, type_errors.other({a, "is not the same unique type as ", a})
 		end
 
 		return true
@@ -180,7 +180,8 @@ end
 
 do -- operators
 	function META:Set(key--[[#: TBaseType | nil]], val--[[#: TBaseType | nil]])
-		return type_errors.other(
+		return false,
+		type_errors.other(
 			{
 				"undefined set: ",
 				self,
@@ -195,7 +196,8 @@ do -- operators
 	end
 
 	function META:Get(key--[[#: boolean]])
-		return type_errors.other(
+		return false,
+		type_errors.other(
 			{
 				"undefined get: ",
 				self,
@@ -208,7 +210,7 @@ do -- operators
 	end
 
 	function META:PrefixOperator(op--[[#: string]])
-		return type_errors.other({"no operator ", op, " on ", self})
+		return false, type_errors.other({"no operator ", op, " on ", self})
 	end
 end
 
@@ -269,7 +271,7 @@ function META:GetFirstValue()
 end
 
 function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[#: string]])
-	return type_errors.binary(op, l, r)
+	return false, type_errors.binary(op, l, r)
 end
 
 function META.New()

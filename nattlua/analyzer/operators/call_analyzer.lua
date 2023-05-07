@@ -146,7 +146,7 @@ return function(META)
 					end
 				end
 
-				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+				return false, type_errors.subset(a, b, {"argument #", i, " - ", reason})
 			end
 		end
 

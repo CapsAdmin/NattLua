@@ -83,7 +83,7 @@ return {
 			end
 
 			if obj.Type == "string" then
-				return type_errors.other("attempt to index a string value")
+				return false, type_errors.other("attempt to index a string value")
 			end
 
 			local tracked = self:GetTrackedTableWithKey(obj, key)

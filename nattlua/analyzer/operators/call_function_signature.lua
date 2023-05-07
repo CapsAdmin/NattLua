@@ -6,7 +6,7 @@ return function(META)
 			local ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetInputSignature())
 
 			if not ok then
-				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+				return false, type_errors.subset(a, b, {"argument #", i, " - ", reason})
 			end
 		end
 

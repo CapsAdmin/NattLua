@@ -73,12 +73,13 @@ function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 
 	if b.Type == "any" then return true end
 
-	if b.Type ~= "function" then return type_errors.type_mismatch(a, b) end
+	if b.Type ~= "function" then return false, type_errors.type_mismatch(a, b) end
 
 	local ok, reason = a:GetInputSignature():IsSubsetOf(b:GetInputSignature())
 
 	if not ok then
-		return type_errors.subset(a:GetInputSignature(), b:GetInputSignature(), reason)
+		return false,
+		type_errors.subset(a:GetInputSignature(), b:GetInputSignature(), reason)
 	end
 
 	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
@@ -101,7 +102,8 @@ function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 	end
 
 	if not ok then
-		return type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature(), reason)
+		return false,
+		type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature(), reason)
 	end
 
 	return true
@@ -114,12 +116,13 @@ function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 
 	if b.Type == "any" then return true end
 
-	if b.Type ~= "function" then return type_errors.type_mismatch(a, b) end
+	if b.Type ~= "function" then return false, type_errors.type_mismatch(a, b) end
 
 	local ok, reason = a:GetInputSignature():IsSubsetOf(b:GetInputSignature(), a:GetInputSignature():GetMinimumLength())
 
 	if not ok then
-		return type_errors.subset(a:GetInputSignature(), b:GetInputSignature(), reason)
+		return false,
+		type_errors.subset(a:GetInputSignature(), b:GetInputSignature(), reason)
 	end
 
 	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
@@ -142,7 +145,8 @@ function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 	end
 
 	if not ok then
-		return type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature(), reason)
+		return false,
+		type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature(), reason)
 	end
 
 	return true

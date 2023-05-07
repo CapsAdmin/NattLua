@@ -245,7 +245,8 @@ function META:FollowsContract(contract--[[#: TTable]])
 			local ok, err = res.val:IsSubsetOf(keyval.val)
 
 			if not ok then
-				return type_errors.other(
+				return false,
+				type_errors.other(
 					{
 						"the key ",
 						res.key,
@@ -268,7 +269,8 @@ function META:FollowsContract(contract--[[#: TTable]])
 			local ok, err = keyval.val:IsSubsetOf(res.val)
 
 			if not ok then
-				return type_errors.other(
+				return false,
+				type_errors.other(
 					{
 						"the key ",
 						keyval.key,
@@ -327,7 +329,7 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 			if can_be_empty then
 				return true, "can be empty"
 			else
-				return type_errors.subset(a, b)
+				return false, type_errors.subset(a, b)
 			end
 		end
 
@@ -348,7 +350,8 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 				a.suppress = false
 
 				if not ok then
-					return type_errors.table_subset(akeyval.key, bkeyval.key, akeyval.val, bkeyval.val, err)
+					return false,
+					type_errors.table_subset(akeyval.key, bkeyval.key, akeyval.val, bkeyval.val, err)
 				end
 			end
 		end
@@ -360,7 +363,7 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 		return ok, err or "is subset of b"
 	end
 
-	return type_errors.subset(a, b)
+	return false, type_errors.subset(a, b)
 end
 
 function META:ContainsAllKeysIn(contract--[[#: TTable]])
@@ -385,7 +388,7 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 					return true
 				end
 
-				return type_errors.other({keyval.key, " is missing from ", contract})
+				return false, type_errors.other({keyval.key, " is missing from ", contract})
 			end
 		end
 	end
@@ -452,11 +455,10 @@ function META:FindKeyVal(key--[[#: TBaseType]])
 	end
 
 	if not reasons[1] then
-		local ok, reason = type_errors.missing(self, key, "table is empty")
-		reasons[1] = reason
+		reasons[1] = type_errors.missing(self, key, "table is empty")
 	end
 
-	return type_errors.missing(self, key, reasons)
+	return false, type_errors.missing(self, key, reasons)
 end
 
 function META:FindKeyValReverse(key--[[#: TBaseType]])
@@ -485,11 +487,10 @@ function META:FindKeyValReverse(key--[[#: TBaseType]])
 	end
 
 	if not reasons[1] then
-		local ok, reason = type_errors.missing(self, key, "table is empty")
-		reasons[1] = reason
+		reasons[1] = type_errors.missing(self, key, "table is empty")
 	end
 
-	return type_errors.missing(self, key, reasons)
+	return false, type_errors.missing(self, key, reasons)
 end
 
 function META:FindKeyValReverseEqual(key--[[#: TBaseType]])
@@ -504,11 +505,10 @@ function META:FindKeyValReverseEqual(key--[[#: TBaseType]])
 	end
 
 	if not reasons[1] then
-		local ok, reason = type_errors.missing(self, key, "table is empty")
-		reasons[1] = reason
+		reasons[1] = type_errors.missing(self, key, "table is empty")
 	end
 
-	return type_errors.missing(self, key, reasons)
+	return false, type_errors.missing(self, key, reasons)
 end
 
 function META:Insert(val--[[#: TBaseType]])
@@ -529,11 +529,11 @@ function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete-
 	end
 
 	if key.Type == "symbol" and key:GetData() == nil then
-		return type_errors.other("key is nil")
+		return false, type_errors.other("key is nil")
 	end
 
 	if key.Type == "number" and key:IsNan() then
-		return type_errors.other("key is nan")
+		return false, type_errors.other("key is nan")
 	end
 
 	-- delete entry
@@ -576,7 +576,7 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 		local key = "Set" .. key:GetData():sub(2)
 
 		if not self[key] then
-			return type_errors.other("no such function on table: " .. key)
+			return false, type_errors.other("no such function on table: " .. key)
 		end
 
 		self[key](self, val)
@@ -584,7 +584,7 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 	end
 
 	if key.Type == "symbol" and key:GetData() == nil then
-		return type_errors.other("key is nil")
+		return false, type_errors.other("key is nil")
 	end
 
 	-- if the key exists, check if we can replace it and maybe the value
@@ -614,7 +614,7 @@ function META:Get(key--[[#: TBaseType]])
 			local val = assert(self["Get" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self)
 
 			if not val then
-				return type_errors.other("missing value on table " .. key:GetData())
+				return false, type_errors.other("missing value on table " .. key:GetData())
 			end
 
 			return val
@@ -622,7 +622,7 @@ function META:Get(key--[[#: TBaseType]])
 	end
 
 	if key.Type == "union" then
-		if key:IsEmpty() then return type_errors.other("union key is empty") end
+		if key:IsEmpty() then return false, type_errors.other("union key is empty") end
 
 		local union = Union({})
 		local errors = {}
@@ -637,7 +637,7 @@ function META:Get(key--[[#: TBaseType]])
 			end
 		end
 
-		if union:GetLength() == 0 then return type_errors.other(errors) end
+		if union:GetLength() == 0 then return false, type_errors.other(errors) end
 
 		return union
 	end
@@ -674,10 +674,10 @@ function META:Get(key--[[#: TBaseType]])
 
 		if keyval then return keyval.val end
 
-		return type_errors.other(reason)
+		return false, type_errors.other(reason)
 	end
 
-	return type_errors.other(reason)
+	return false, type_errors.other(reason)
 end
 
 function META:IsNumericallyIndexed()
@@ -703,7 +703,7 @@ function META:CopyLiteralness(from)
 		for _, keyval_from in ipairs(from:GetData()) do
 			local keyval, reason = self:FindKeyVal(keyval_from.key)
 
-			if not keyval then return type_errors.other(reason) end
+			if not keyval then return false, type_errors.other(reason) end
 
 			if keyval_from.key.Type == "table" then
 				self.suppress = true
@@ -811,7 +811,8 @@ function META:HasLiteralKeys()
 			self.suppress = false
 
 			if not ok then
-				return type_errors.other(
+				return false,
+				type_errors.other(
 					{
 						"the key ",
 						v.key,
@@ -854,7 +855,8 @@ function META:IsLiteral()
 			self.suppress = false
 
 			if not ok then
-				return type_errors.other(
+				return false,
+				type_errors.other(
 					{
 						"the key ",
 						v.key,
@@ -880,7 +882,8 @@ function META:IsLiteral()
 			self.suppress = false
 
 			if not ok then
-				return type_errors.other(
+				return false,
+				type_errors.other(
 					{
 						"the value ",
 						v.val,
@@ -976,7 +979,7 @@ function META.LogicalComparison(l, r, op, env)
 		end
 	end
 
-	return type_errors.binary(op, l, r)
+	return false, type_errors.binary(op, l, r)
 end
 
 do

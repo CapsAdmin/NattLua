@@ -92,7 +92,7 @@ local function operator(self, node, l, r, op, meta_method)
 		return metatable_function(self, node, meta_method, l, r)
 	end
 
-	return type_errors.binary(op, l, r)
+	return false, type_errors.binary(op, l, r)
 end
 
 local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | nil]])
@@ -213,7 +213,7 @@ local function Binary(self, node, l, r, op)
 					return LString(l:GetData() .. r:GetData())
 				end
 
-				return type_errors.binary(op, l, r)
+				return false, type_errors.binary(op, l, r)
 			elseif l.Type == "number" and r.Type == "number" then
 				return l:Copy():SetMax(r)
 			end
@@ -511,7 +511,7 @@ local function Binary(self, node, l, r, op)
 		end
 	end
 
-	return type_errors.binary(op, l, r)
+	return false, type_errors.binary(op, l, r)
 end
 
 return {Binary = Binary}

@@ -132,30 +132,30 @@ function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#:
 
 	if b.Type == "table" then
 		if not b:IsNumericallyIndexed() then
-			return type_errors.numerically_indexed(b)
+			return false, type_errors.numerically_indexed(b)
 		end
 	end
 
-	if b.Type ~= "tuple" then return type_errors.type_mismatch(a, b) end
+	if b.Type ~= "tuple" then return false, type_errors.type_mismatch(a, b) end
 
 	max_length = max_length or math.max(a:GetMinimumLength(), b:GetMinimumLength())
 
 	for i = 1, max_length do
 		local a_val, err = a:Get(i)
 
-		if not a_val then return type_errors.subset(a, b, err) end
+		if not a_val then return false, type_errors.subset(a, b, err) end
 
 		local b_val, err = b:Get(i)
 
 		if not b_val and a_val.Type == "any" then break end
 
-		if not b_val then return type_errors.missing(b, i, err) end
+		if not b_val then return false, type_errors.missing(b, i, err) end
 
 		a.suppress = true
 		local ok, reason = a_val:IsSubsetOf(b_val)
 		a.suppress = false
 
-		if not ok then return type_errors.subset(a_val, b_val, reason) end
+		if not ok then return false, type_errors.subset(a_val, b_val, reason) end
 	end
 
 	return true
@@ -241,7 +241,7 @@ function META:GetWithNumber(i--[[#: number]])
 	end
 
 	if not val then
-		return type_errors.other({"index ", tostring(i), " does not exist"})
+		return false, type_errors.other({"index ", tostring(i), " does not exist"})
 	end
 
 	return val
@@ -273,7 +273,9 @@ function META:GetWithoutExpansion(i--[[#: number]])
 
 	if not val then if self.Remainder then return self.Remainder end end
 
-	if not val then return type_errors.other({"index ", i, " does not exist"}) end
+	if not val then
+		return false, type_errors.other({"index ", i, " does not exist"})
+	end
 
 	return val
 end

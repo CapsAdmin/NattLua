@@ -83,7 +83,8 @@ local function Prefix(self, node, r)
 			self:PopAnalyzerEnvironment()
 
 			if not obj then
-				return type_errors.other("cannot find '" .. node.right:Render() .. "' in the current typesystem scope")
+				return false,
+				type_errors.other("cannot find '" .. node.right:Render() .. "' in the current typesystem scope")
 			end
 
 			return obj:GetContract() or obj
@@ -95,10 +96,12 @@ local function Prefix(self, node, r)
 			return r
 		elseif op == "$" then
 			if r.Type ~= "string" then
-				return type_errors.other("must evaluate to a string")
+				return false, type_errors.other("must evaluate to a string")
 			end
 
-			if not r:IsLiteral() then return type_errors.other("must be a literal") end
+			if not r:IsLiteral() then
+				return false, type_errors.other("must be a literal")
+			end
 
 			r:SetPatternContract(r:GetData())
 			return r

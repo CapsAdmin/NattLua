@@ -54,7 +54,8 @@ local function check_argument_against_contract(arg, contract, i)
 			arg = Nil()
 			ok = true
 		else
-			ok, reason = type_errors.other(
+			ok = false
+			reason = type_errors.other(
 				{
 					"argument #",
 					i,
@@ -75,7 +76,7 @@ local function check_argument_against_contract(arg, contract, i)
 	end
 
 	if not ok then
-		return type_errors.other({"argument #", i, " ", arg, ": ", reason})
+		return false, type_errors.other({"argument #", i, " ", arg, ": ", reason})
 	end
 
 	return true
@@ -109,7 +110,7 @@ local function check_input(self, obj, input)
 			self:PopScope()
 
 			if not ok then
-				return type_errors.subset(a, b, {"argument #", i, " - ", reason})
+				return false, type_errors.subset(a, b, {"argument #", i, " - ", reason})
 			end
 
 			return ok, reason
@@ -195,7 +196,7 @@ local function check_input(self, obj, input)
 				if not ok then
 					self:PopAnalyzerEnvironment()
 					self:PopScope()
-					return type_errors.other({"argument #", i, " ", arg, ": ", err})
+					return false, type_errors.other({"argument #", i, " ", arg, ": ", err})
 				end
 			elseif type_expression then
 				if function_node.self_call and i == 1 then
@@ -332,8 +333,7 @@ local function check_output(self, output, output_signature)
 		local ok, reason, a, b, i = output:IsSubsetOfTupleWithoutExpansion(output_signature)
 
 		if not ok then
-			local _, err = type_errors.subset(a, b, {"return #", i, " '", b, "': ", reason})
-			self:Error(err)
+			self:Error(type_errors.subset(a, b, {"return #", i, " '", b, "': ", reason}))
 		end
 
 		return

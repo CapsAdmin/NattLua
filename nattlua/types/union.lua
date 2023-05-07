@@ -221,7 +221,7 @@ function META:Get(key--[[#: TBaseType]])
 		table.insert(errors, reason)
 	end
 
-	return type_errors.other(errors)
+	return false, type_errors.other(errors)
 end
 
 function META:IsEmpty()
@@ -310,7 +310,7 @@ function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 		table.insert(errors, reason)
 	end
 
-	return type_errors.subset(target, self, errors)
+	return false, type_errors.subset(target, self, errors)
 end
 
 function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
@@ -326,16 +326,16 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
 		if b_val.Type == "any" then return true end
 	end
 
-	if a:IsEmpty() then return type_errors.subset(a, b, "union is empty") end
+	if a:IsEmpty() then return false, type_errors.subset(a, b, "union is empty") end
 
 	for _, a_val in ipairs(a.Data) do
 		local b_val, reason = b:Get(a_val)
 
-		if not b_val then return type_errors.missing(b, a_val, reason) end
+		if not b_val then return false, type_errors.missing(b, a_val, reason) end
 
 		local ok, reason = a_val:IsSubsetOf(b_val)
 
-		if not ok then return type_errors.subset(a_val, b_val, reason) end
+		if not ok then return false, type_errors.subset(a_val, b_val, reason) end
 	end
 
 	return true
@@ -430,13 +430,15 @@ end
 
 function META:GetLargestNumber()
 	-- never called
-	if #self:GetData() == 0 then return type_errors.other({"union is empty"}) end
+	if #self:GetData() == 0 then
+		return false, type_errors.other({"union is empty"})
+	end
 
 	local max = {}
 
 	for _, obj in ipairs(self:GetData()) do
 		if obj.Type ~= "number" then
-			return type_errors.other({"union must contain numbers only", self})
+			return false, type_errors.other({"union must contain numbers only", self})
 		end
 
 		if obj:IsLiteral() then table.insert(max, obj) else return obj end
