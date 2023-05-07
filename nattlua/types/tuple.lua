@@ -240,9 +240,7 @@ function META:GetWithNumber(i--[[#: number]])
 		end
 	end
 
-	if not val then
-		return false, type_errors.other({"index ", tostring(i), " does not exist"})
-	end
+	if not val then return false, type_errors.missing_index(i) end
 
 	return val
 end
@@ -273,9 +271,7 @@ function META:GetWithoutExpansion(i--[[#: number]])
 
 	if not val then if self.Remainder then return self.Remainder end end
 
-	if not val then
-		return false, type_errors.other({"index ", i, " does not exist"})
-	end
+	if not val then return false, type_errors.missing_index(i) end
 
 	return val
 end
