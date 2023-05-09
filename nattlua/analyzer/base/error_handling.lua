@@ -54,7 +54,7 @@ return function(META)
 			end
 		end
 
-		return table.concat(out)
+		return table.concat(out, " ")
 	end
 
 	function META:ReportDiagnostic(

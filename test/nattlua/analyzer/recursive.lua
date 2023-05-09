@@ -19,7 +19,7 @@ analyze(
         return nil, 1
     end
 ]],
-	"nil is not the same type as number"
+	"nil.-is not a subset of.-number"
 )
 analyze[[
     local type Json = string | number | boolean | nil | {[string] = CurrentType<|"union", 2|>} | {[number] = CurrentType<|"union", 1|>}
@@ -51,7 +51,7 @@ analyze(
         }
     }
 ]],
-	"2 is not the same type as string"
+	"2.-is not a subset of.-string"
 )
 analyze[[
     type VirtualNode = string | {string, {[string] = any}, [3 .. inf] = CurrentType<|"union"|>}
@@ -72,5 +72,5 @@ analyze(
         {"div", {1,id = "second-child"}, "I'm the second child"},
     }
 ]],
-	"1 is not the same type as string"
+	"1.-is not a subset of.-string"
 )

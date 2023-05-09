@@ -331,11 +331,15 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
 	for _, a_val in ipairs(a.Data) do
 		local b_val, reason = b:Get(a_val)
 
-		if not b_val then return false, type_errors.missing(b, a_val, reason) end
+		if not b_val then
+			return false, type_errors.because(type_errors.table_index(b, a_val), reason)
+		end
 
 		local ok, reason = a_val:IsSubsetOf(b_val)
 
-		if not ok then return false, type_errors.subset(a_val, b_val, reason) end
+		if not ok then
+			return false, type_errors.because(type_errors.subset(a_val, b_val), reason)
+		end
 	end
 
 	return true
@@ -430,9 +434,7 @@ end
 
 function META:GetLargestNumber()
 	-- never called
-	if #self:GetData() == 0 then
-		return false, type_errors.empty_union()
-	end
+	if #self:GetData() == 0 then return false, type_errors.empty_union() end
 
 	local max = {}
 

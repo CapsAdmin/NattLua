@@ -281,10 +281,10 @@ analyze[[
 ]]
 analyze([[
     local a: UNKNOWN_GLOBAL = true
-]], "has no field.-UNKNOWN_GLOBAL")
+]], "has no key.-UNKNOWN_GLOBAL")
 analyze([[
     unknown_type_function<|1,2,3|>
-]], "has no field.-unknown_type_function")
+]], "has no key.-unknown_type_function")
 analyze(
 	[[
     local type should_error = function()
@@ -410,7 +410,7 @@ analyze(
 
     test(foo)
 ]],
-	"hello.-is not the same type as.-number"
+	"hello.-is not a subset of.-number"
 )
 analyze[[
     return function()
@@ -634,7 +634,7 @@ analyze(
     
     local x = test(1)
 ]],
-	[["foo" is not the same type as number]]
+	[["foo".-is not a subset of.-number]]
 )
 analyze(
 	[[

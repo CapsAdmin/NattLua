@@ -138,7 +138,7 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 		return (b--[[# as any]]):IsTargetSubsetOfChild(a--[[# as any]])
 	end
 
-	if b.Type ~= "number" then return false, type_errors.type_mismatch(a, b) end
+	if b.Type ~= "number" then return false, type_errors.subset(a, b) end
 
 	if a:IsLiteralArgument() and b:IsLiteralArgument() then return true end
 
@@ -211,7 +211,7 @@ function META:SetMax(val--[[#: TBaseType | TUnion]])
 	end
 
 	if val.Type ~= "number" then
-		return false, type_errors.expected_max_number(val)
+		return false, type_errors.subset(val, "number")
 	end
 
 	if val:IsLiteral() then

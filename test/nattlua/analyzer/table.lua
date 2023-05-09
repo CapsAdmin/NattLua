@@ -92,7 +92,7 @@ test("indexing nil in a table with a contract should error", function()
         local tbl: {foo = true} = {foo = true}
         local a = tbl.bar
     ]],
-		"\"bar\" is not the same value as \"foo\""
+		"bar.-is not a subset of.-foo"
 	)
 end)
 
@@ -109,7 +109,7 @@ test("empty type table shouldn't be writable", function()
 	analyze([[
         local a: {} = {}
         a.lol = true
-    ]], "has no field .-lol")
+    ]], "has no key .-lol")
 end)
 
 test("wrong right hand type should error", function()
@@ -128,7 +128,7 @@ test("should error when key doesn't match the type", function()
         a.lol = "a"
         a[1] = "a"
     ]],
-		"is not the same type as string"
+		".-is not a subset of.-string"
 	)
 end)
 
@@ -138,7 +138,7 @@ test("with typed numerically indexed table should error", function()
         local tbl: {1,true,3} = {1, true, 3}
         tbl[2] = false
     ]],
-		"false is not the same value as true"
+		"false.-is not a subset of.-true"
 	)
 end)
 
@@ -152,7 +152,7 @@ test("which has no data but contract says it does should return what the contrac
         local tbl = {} as {[string] = 1}
         attest.equal(tbl[true], nil)
     ]],
-		"has no field true"
+		"has no key true"
 	)
 end)
 
@@ -404,7 +404,7 @@ analyze(
     local obj = {}
     mutate(obj)
 ]],
-	"{ } has no field.-Foo"
+	"{ } has no key.-Foo"
 )
 analyze(
 	[[
@@ -418,7 +418,7 @@ analyze(
     local obj = {Foo = true}
     mutate(obj)
 ]],
-	"has no field \"Bar\""
+	"has no key \"Bar\""
 )
 analyze[[
     local type Foo = {}
@@ -544,7 +544,7 @@ analyze(
         
     end
 ]],
-	"has no field \"Foo\""
+	"has no key \"Foo\""
 )
 
 if false then
@@ -592,7 +592,7 @@ analyze(
         [GREEN] = 4,
     }
 ]],
-	"has no field string"
+	"has no key string"
 )
 analyze[[
     local type Foo = { bar = 1337 }
@@ -625,7 +625,7 @@ analyze(
     }
     t.foo["test"] = true
 ]],
-	"is not the same value as .-foo"
+	".-is not a subset of.-foo"
 )
 analyze[[
     local META =  {}
@@ -830,7 +830,7 @@ analyze[[
     
     local x = lol()
     
-    attest.expect_diagnostic("error", "has no field.-bar")
+    attest.expect_diagnostic("error", "has no key.-bar")
     x.bar = false
     
     attest.equal(x, {} as {
@@ -941,7 +941,7 @@ analyze(
         foo: string = 1337,
     }
 ]],
-	"1337 is not the same type as string"
+	"1337.-is not a subset of.-string"
 )
 analyze[[
     local x = {
@@ -956,5 +956,5 @@ analyze(
     }
     attest.equal(x.foo_bar, _ as number)  
 ]],
-	"not the same type as number"
+	".-is not a subset of.-number"
 )

@@ -149,11 +149,11 @@ do
 
 	function META.IsSameUniqueType(a--[[#: TBaseType]], b--[[#: TBaseType]])
 		if a.UniqueID and not b.UniqueID then
-			return false, type_errors.unique_type(a)
+			return false, type_errors.unique_type_type_mismatch(a, b)
 		end
 
 		if a.UniqueID ~= b.UniqueID then
-			return false, type_errors.not_unique_type(a, b)
+			return false, type_errors.unique_type_mismatch(a, b)
 		end
 
 		return true

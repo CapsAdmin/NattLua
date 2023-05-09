@@ -57,7 +57,7 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 
-	if B.Type ~= "string" then return false, type_errors.type_mismatch(A, B) end
+	if B.Type ~= "string" then return false, type_errors.subset(A, B) end
 
 	local B = B--[[# as TString]]
 
@@ -83,18 +83,18 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 		local str = A:GetData()
 
 		if not str then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
-			return false, type_errors.literal(A)
+			return false, type_errors.string_pattern_type_mismatch(A)
 		end
 
 		if not str:find(B.PatternContract) then
-			return false, type_errors.string_pattern(A, B)
+			return false, type_errors.string_pattern_match_fail(A, B)
 		end
 
 		return true
 	end
 
 	if A:IsLiteral() and B:IsLiteral() then
-		return false, type_errors.value_mismatch(A, B)
+		return false, type_errors.subset(A, B)
 	end
 
 	return false, type_errors.subset(A, B)

@@ -35,13 +35,13 @@ analyze[[
     ]]
 -- {[number]: any}
 check(analyze[[local a: {[number] = any} = {[1] = 1}]], "{ [number] = number as any }")
-analyze([[local a: {[number] = any} = {foo = 1}]], [[has no field "foo"]])
+analyze([[local a: {[number] = any} = {foo = 1}]], [[has no key "foo"]])
 -- {[1 .. inf]: any}
 check(
 	analyze[[local a: {[1 .. inf] = any} = {[1234] = 1}]],
 	"{ [1..inf] = number as any }"
 )
-analyze([[local a: {[1 .. inf] = any} = {[-1234] = 1}]], [[has no field %-1234]])
+analyze([[local a: {[1 .. inf] = any} = {[-1234] = 1}]], [[has no key %-1234]])
 analyze[[
         -- traditional array
         local function Array<|T: any, L: number|>
@@ -58,7 +58,7 @@ analyze(
 
         local list: Array<|number, 3|> = {1, 2, 3, 4}
     ]],
-	"has no field 4"
+	"has no key 4"
 )
 analyze[[
     local a: {1,2,3} = {1,2,3}

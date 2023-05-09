@@ -70,7 +70,7 @@ test("which is explicitly annotated should error when the actual return value is
 
         local a: string = test(1)
     ]],
-		"1.-is not the same type as string"
+		"1.-is not a subset of.-string"
 	)
 end)
 
@@ -81,7 +81,7 @@ test("which is explicitly annotated should error when the actual return value is
             return a
         end
     ]],
-		"number is not the same type as string"
+		"number.-is not a subset of.-string"
 	)
 end)
 
@@ -139,7 +139,7 @@ test("arguments that are explicitly typed should error", function()
 
         test("a")
     ]],
-		"\"a\" is not the same type as number"
+		"\"a\".-is not a subset of.-number"
 	)
 	analyze(
 		[[
@@ -159,7 +159,7 @@ test("arguments that are explicitly typed should error", function()
 
         test(123, "a")
     ]],
-		"\"a\" is not the same type as number"
+		"\"a\".-is not a subset of.-number"
 	)
 end)
 
@@ -264,7 +264,7 @@ test("calling a union", function()
     ]]
 end)
 
-test("calling a union that has no field a function should error", function()
+test("calling a union that has no key a function should error", function()
 	analyze(
 		[[
         local type test = function=(boolean, boolean)>(number) | function=(boolean)>(string) | number
@@ -641,7 +641,7 @@ analyze(
 
     table_pool(function() return { [777] = 777 } end)()
 ]],
-	"777 is not the same type as string"
+	"777.-is not a subset of.-string"
 )
 analyze[[
     local function foo(x: function=(number, string)>())
@@ -788,7 +788,7 @@ analyze(
     local x = {"", "b", 1}
     foo(x)
 ]],
-	"key 3 is not a subset of nil | string"
+	"1 is not a subset of nil | string"
 )
 analyze[[
     local function fmt(str: string)
@@ -878,13 +878,12 @@ analyze[[
         attest.equal(d, _ as string)
     end)
 ]]
-
 analyze[[
     local function foo(n: number): string
         return "hello"
     end
     
-    attest.expect_diagnostic<|"error", "not the same type"|>
+    attest.expect_diagnostic<|"error", "is not a subset of"|>
     local x = foo("hello")
     attest.equal(x, _ as string)
 ]]

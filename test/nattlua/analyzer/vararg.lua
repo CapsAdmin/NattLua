@@ -274,7 +274,7 @@ analyze(
         print("!", ...)
     end)(1,2,"foo",4,5)
 ]],
-	"foo.-is not the same type as number"
+	"foo.-is not a subset of.-number"
 )
 analyze[[
     local function foo()

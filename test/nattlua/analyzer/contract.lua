@@ -11,7 +11,7 @@ analyze(
 
     end
 ]],
-	"is not the same value as"
+	"is not a subset of"
 )
 analyze(
 	[[
@@ -24,7 +24,7 @@ analyze(
         return 1,2,3
     end
 ]],
-	"number is not the same type as string"
+	"number.-is not a subset of.-string"
 )
 analyze[[
     local type contract = {}

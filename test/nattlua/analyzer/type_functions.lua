@@ -413,7 +413,7 @@ analyze(
     }
     table.sort(tbl, function(a, b) end)
 ]],
-	"foo.-is not the same type as number"
+	"foo.-is not a subset of.-number"
 )
 analyze[[
     local META = {}

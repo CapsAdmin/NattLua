@@ -136,7 +136,7 @@ function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#:
 		end
 	end
 
-	if b.Type ~= "tuple" then return false, type_errors.type_mismatch(a, b) end
+	if b.Type ~= "tuple" then return false, type_errors.subset(a, b) end
 
 	max_length = max_length or math.max(a:GetMinimumLength(), b:GetMinimumLength())
 
@@ -149,13 +149,13 @@ function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#:
 
 		if not b_val and a_val.Type == "any" then break end
 
-		if not b_val then return false, type_errors.missing(b, i, err) end
+		if not b_val then return false, type_errors.because(type_errors.table_index(b, i), err) end
 
 		a.suppress = true
 		local ok, reason = a_val:IsSubsetOf(b_val)
 		a.suppress = false
 
-		if not ok then return false, type_errors.subset(a_val, b_val, reason) end
+		if not ok then return false, type_errors.because(type_errors.subset(a_val, b_val), reason) end
 	end
 
 	return true

@@ -25,15 +25,7 @@ return {
 
 				for _, v in ipairs(obj.Data) do
 					if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-						self:ErrorAndCloneCurrentScope(
-							{
-								"union ",
-								obj,
-								" contains uncallable object ",
-								v,
-							},
-							obj
-						)
+						self:ErrorAndCloneCurrentScope(type_errors.union_contains_non_callable(obj, v), obj)
 					else
 						truthy_union:AddType(v)
 					end
@@ -101,7 +93,12 @@ return {
 		end
 
 		local function call_table(self, obj, input, call_node)
-			local __call = obj:GetMetaTable() and obj:GetMetaTable():Get(LString("__call"))
+			if not obj:GetMetaTable() then
+				return false,
+				type_errors.because(type_errors.table_index(obj, "__call"), " it has no metatable")
+			end
+
+			local __call, reason = obj:GetMetaTable():Get(LString("__call"))
 
 			if __call then
 				local new_input = {obj}
@@ -113,7 +110,8 @@ return {
 				return self:Call(__call, Tuple(new_input), call_node, true)
 			end
 
-			return false, type_errors.missing_call_metamethod()
+			return false,
+			type_errors.because(type_errors.table_index(obj, "__call"), reason)
 		end
 
 		local function call_any(self, input)

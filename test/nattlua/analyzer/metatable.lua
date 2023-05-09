@@ -148,7 +148,7 @@ analyze(
         -- error on newindex
 
         local type error = analyzer function(msg: string)
-            assert(type(msg:GetData()) == "string", "msg has no field a string?")
+            assert(type(msg:GetData()) == "string", "msg has no key a string?")
             error(msg:GetData())
         end
 
@@ -389,7 +389,7 @@ analyze(
 
     attest.equal(new_vector, _ as {x = number, y = number, z = number})
 ]],
-	"4 is not the same type as"
+	"4.-is not a subset of"
 )
 analyze[[
     type code_ptr = {

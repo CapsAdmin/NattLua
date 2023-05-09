@@ -56,7 +56,7 @@ analyze(
         return "", "lol2"
     end
 ]],
-	"\"\" is not the same type as 1"
+	"\"\".-is not a subset of.-1"
 )
 analyze[[
     local function foo()

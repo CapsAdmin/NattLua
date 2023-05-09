@@ -55,7 +55,7 @@ local function check_argument_against_contract(arg, contract, i)
 			ok = true
 		else
 			ok = false
-			reason = type_errors.expected_argument_got_nil(i, contract)
+			reason = type_errors.subset("*missing argument #" .. i .. "* ", contract)
 		end
 	elseif arg.Type == "table" and contract.Type == "table" then
 		ok, reason = arg:FollowsContract(contract)
@@ -68,7 +68,7 @@ local function check_argument_against_contract(arg, contract, i)
 	end
 
 	if not ok then
-		return false, type_errors.missing_argument(i, arg, reason)
+		return false, type_errors.context("argument #" .. i .. ":", reason)
 	end
 
 	return true
@@ -102,7 +102,7 @@ local function check_input(self, obj, input)
 			self:PopScope()
 
 			if not ok then
-				return false, type_errors.subset(a, b, {"argument #", i, " - ", reason})
+				return false, type_errors.subset.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
 			end
 
 			return ok, reason
@@ -188,7 +188,7 @@ local function check_input(self, obj, input)
 				if not ok then
 					self:PopAnalyzerEnvironment()
 					self:PopScope()
-					return false, type_errors.missing_argument(i, arg, err)
+					return false, type_errors.context("argument #" .. i, err)
 				end
 			elseif type_expression then
 				if function_node.self_call and i == 1 then

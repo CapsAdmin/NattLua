@@ -83,8 +83,7 @@ local function Prefix(self, node, r)
 			self:PopAnalyzerEnvironment()
 
 			if not obj then
-				return false,
-				type_errors.typeof_lookup_missing(node.right:Render())
+				return false, type_errors.typeof_lookup_missing(node.right:Render())
 			end
 
 			return obj:GetContract() or obj
@@ -95,12 +94,8 @@ local function Prefix(self, node, r)
 			r.mutable = true
 			return r
 		elseif op == "$" then
-			if r.Type ~= "string" then
-				return false, type_errors.must_evauluate_to_string()
-			end
-
-			if not r:IsLiteral() then
-				return false, type_errors.must_be_literal("must be a literal")
+			if r.Type ~= "string" or not r:IsLiteral() then
+				return false, type_errors.string_pattern_invalid_construction(r)
 			end
 
 			r:SetPatternContract(r:GetData())

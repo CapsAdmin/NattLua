@@ -52,13 +52,11 @@ function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
 
 	if b.Type == "union" then return b:IsTargetSubsetOfChild(a--[[# as any]]) end
 
-	if b.Type ~= "symbol" then return false, type_errors.type_mismatch(a, b) end
+	if b.Type ~= "symbol" then return false, type_errors.subset(a, b) end
 
 	local b = b--[[# as TSymbol]]
 
-	if a:GetData() ~= b:GetData() then
-		return false, type_errors.value_mismatch(a, b)
-	end
+	if a:GetData() ~= b:GetData() then return false, type_errors.subset(a, b) end
 
 	return true
 end
