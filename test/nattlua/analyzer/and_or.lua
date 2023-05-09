@@ -3,13 +3,13 @@ local analyze = T.RunCode
 analyze[[
         -- order of 'and' expression
         local res = 0
-        local a = function(arg) 
+        local a = function(x) 
             if res == 0 then
-                attest.equal(arg, 1)
+                attest.equal(x, 1)
             elseif res == 1 then
-                attest.equal(arg, 2)
+                attest.equal(x, 2)
             end
-            res = arg
+            res = x
             return true 
         end
         local b = a(1) and a(2)
