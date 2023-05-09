@@ -79,7 +79,7 @@ return {
 					end
 				end
 
-				return false, type_errors.other(errors)
+				return false, errors
 			end
 
 			local new = Union({})
@@ -113,7 +113,7 @@ return {
 				return self:Call(__call, Tuple(new_input), call_node, true)
 			end
 
-			return false, type_errors.other("table has no __call metamethod")
+			return false, type_errors.missing_call_metamethod()
 		end
 
 		local function call_any(self, input)
@@ -144,16 +144,7 @@ return {
 		end
 
 		local function call_other(obj)
-			return false,
-			type_errors.other(
-				{
-					"type ",
-					obj.Type,
-					": ",
-					obj,
-					" cannot be called",
-				}
-			)
+			return false, type_errors.invalid_type_call(obj.Type, obj)
 		end
 
 		local function call_function(self, obj, input)

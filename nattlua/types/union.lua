@@ -221,7 +221,7 @@ function META:Get(key--[[#: TBaseType]])
 		table.insert(errors, reason)
 	end
 
-	return false, type_errors.other(errors)
+	return false, errors
 end
 
 function META:IsEmpty()
@@ -431,14 +431,14 @@ end
 function META:GetLargestNumber()
 	-- never called
 	if #self:GetData() == 0 then
-		return false, type_errors.other({"union is empty"})
+		return false, type_errors.empty_union()
 	end
 
 	local max = {}
 
 	for _, obj in ipairs(self:GetData()) do
 		if obj.Type ~= "number" then
-			return false, type_errors.other({"union must contain numbers only", self})
+			return false, type_errors.union_numbers_only(self)
 		end
 
 		if obj:IsLiteral() then table.insert(max, obj) else return obj end

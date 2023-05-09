@@ -149,11 +149,11 @@ do
 
 	function META.IsSameUniqueType(a--[[#: TBaseType]], b--[[#: TBaseType]])
 		if a.UniqueID and not b.UniqueID then
-			return false, type_errors.other({a, "is a unique type"})
+			return false, type_errors.unique_type(a)
 		end
 
 		if a.UniqueID ~= b.UniqueID then
-			return false, type_errors.other({a, "is not the same unique type as ", a})
+			return false, type_errors.not_unique_type(a, b)
 		end
 
 		return true
@@ -180,37 +180,15 @@ end
 
 do -- operators
 	function META:Set(key--[[#: TBaseType | nil]], val--[[#: TBaseType | nil]])
-		return false,
-		type_errors.other(
-			{
-				"undefined set: ",
-				self,
-				"[",
-				key,
-				"] = ",
-				val,
-				" on type ",
-				self.Type,
-			}
-		)
+		return false, type_errors.undefined_set(self, key, val, self.Type)
 	end
 
 	function META:Get(key--[[#: boolean]])
-		return false,
-		type_errors.other(
-			{
-				"undefined get: ",
-				self,
-				"[",
-				key,
-				"] on type ",
-				self.Type,
-			}
-		)
+		return false, type_errors.undefined_get(self, key, self.Type)
 	end
 
 	function META:PrefixOperator(op--[[#: string]])
-		return false, type_errors.other({"no operator ", op, " on ", self})
+		return false, type_errors.no_operator(op, self)
 	end
 end
 

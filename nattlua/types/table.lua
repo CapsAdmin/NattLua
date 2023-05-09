@@ -245,17 +245,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 			local ok, err = res.val:IsSubsetOf(keyval.val)
 
 			if not ok then
-				return false,
-				type_errors.other(
-					{
-						"the key ",
-						res.key,
-						" is not a subset of ",
-						keyval.key,
-						" because ",
-						err,
-					}
-				)
+				return false, type_errors.key_subset(res.key, keyval.key, err)
 			end
 		end
 	end
@@ -269,17 +259,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 			local ok, err = keyval.val:IsSubsetOf(res.val)
 
 			if not ok then
-				return false,
-				type_errors.other(
-					{
-						"the key ",
-						keyval.key,
-						" is not a subset of ",
-						res.val,
-						" because ",
-						err,
-					}
-				)
+				return false, type_errors.key_subset(keyval.key, res.val, err)
 			end
 		end
 	end
@@ -388,7 +368,7 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 					return true
 				end
 
-				return false, type_errors.other({keyval.key, " is missing from ", contract})
+				return false, type_errors.key_missing_contract({keyval.key, contract})
 			end
 		end
 	end
@@ -529,11 +509,11 @@ function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete-
 	end
 
 	if key.Type == "symbol" and key:GetData() == nil then
-		return false, type_errors.other("key is nil")
+		return false, type_errors.key_nil()
 	end
 
 	if key.Type == "number" and key:IsNan() then
-		return false, type_errors.other("key is nan")
+		return false, type_errors.key_nan()
 	end
 
 	-- delete entry
@@ -576,7 +556,7 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 		local key = "Set" .. key:GetData():sub(2)
 
 		if not self[key] then
-			return false, type_errors.other("no such function on table: " .. key)
+			return false, type_errors.no_such_function_table(key)
 		end
 
 		self[key](self, val)
@@ -584,7 +564,7 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 	end
 
 	if key.Type == "symbol" and key:GetData() == nil then
-		return false, type_errors.other("key is nil")
+		return false, type_errors.key_nil()
 	end
 
 	-- if the key exists, check if we can replace it and maybe the value
@@ -614,7 +594,7 @@ function META:Get(key--[[#: TBaseType]])
 			local val = assert(self["Get" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self)
 
 			if not val then
-				return false, type_errors.other("missing value on table " .. key:GetData())
+				return false, type_errors.missing_value_on_table(key)
 			end
 
 			return val
@@ -622,7 +602,7 @@ function META:Get(key--[[#: TBaseType]])
 	end
 
 	if key.Type == "union" then
-		if key:IsEmpty() then return false, type_errors.other("union key is empty") end
+		if key:IsEmpty() then return false, type_errors.union_key_empty() end
 
 		local union = Union({})
 		local errors = {}
@@ -637,7 +617,7 @@ function META:Get(key--[[#: TBaseType]])
 			end
 		end
 
-		if union:GetLength() == 0 then return false, type_errors.other(errors) end
+		if union:GetLength() == 0 then return false, errors end
 
 		return union
 	end
@@ -674,10 +654,10 @@ function META:Get(key--[[#: TBaseType]])
 
 		if keyval then return keyval.val end
 
-		return false, type_errors.other(reason)
+		return false, reason
 	end
 
-	return false, type_errors.other(reason)
+	return false, reason
 end
 
 function META:IsNumericallyIndexed()
@@ -703,7 +683,7 @@ function META:CopyLiteralness(from)
 		for _, keyval_from in ipairs(from:GetData()) do
 			local keyval, reason = self:FindKeyVal(keyval_from.key)
 
-			if not keyval then return false, type_errors.other(reason) end
+			if not keyval then return false, reason end
 
 			if keyval_from.key.Type == "table" then
 				self.suppress = true
@@ -811,15 +791,7 @@ function META:HasLiteralKeys()
 			self.suppress = false
 
 			if not ok then
-				return false,
-				type_errors.other(
-					{
-						"the key ",
-						v.key,
-						" is not a literal because ",
-						reason,
-					}
-				)
+				return false, type_errors.key_not_literal(v.key, reason)
 			end
 		end
 	end
@@ -841,13 +813,7 @@ function META:IsLiteral()
 		then
 			if v.key.Type == "union" then
 				return false,
-				type_errors.other(
-					{
-						"the value ",
-						v.val,
-						" is not a literal because it's a union",
-					}
-				)
+				type_errors.value_not_literal_because_union(v.val, " is not a literal because it's a union")
 			end
 
 			self.suppress = true
@@ -855,26 +821,11 @@ function META:IsLiteral()
 			self.suppress = false
 
 			if not ok then
-				return false,
-				type_errors.other(
-					{
-						"the key ",
-						v.key,
-						" is not a literal because ",
-						reason,
-					}
-				)
+				return false, type_errors.key_not_literal(v.key, reason)
 			end
 
 			if v.val.Type == "union" then
-				return false,
-				type_errors.other(
-					{
-						"the value ",
-						v.val,
-						" is not a literal because it's a union",
-					}
-				)
+				return false, type_errors.value_not_literal_because_union(v.val)
 			end
 
 			self.suppress = true
@@ -882,15 +833,7 @@ function META:IsLiteral()
 			self.suppress = false
 
 			if not ok then
-				return false,
-				type_errors.other(
-					{
-						"the value ",
-						v.val,
-						" is not a literal because ",
-						reason,
-					}
-				)
+				return false, type_errors.value_not_literal(v.val, reason)
 			end
 		end
 	end

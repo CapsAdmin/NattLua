@@ -211,7 +211,7 @@ function META:SetMax(val--[[#: TBaseType | TUnion]])
 	end
 
 	if val.Type ~= "number" then
-		return false, type_errors.other({"max must be a number, got ", val})
+		return false, type_errors.expected_max_number(val)
 	end
 
 	if val:IsLiteral() then

@@ -84,7 +84,7 @@ local function Prefix(self, node, r)
 
 			if not obj then
 				return false,
-				type_errors.other("cannot find '" .. node.right:Render() .. "' in the current typesystem scope")
+				type_errors.typeof_lookup_missing(node.right:Render())
 			end
 
 			return obj:GetContract() or obj
@@ -96,11 +96,11 @@ local function Prefix(self, node, r)
 			return r
 		elseif op == "$" then
 			if r.Type ~= "string" then
-				return false, type_errors.other("must evaluate to a string")
+				return false, type_errors.must_evauluate_to_string()
 			end
 
 			if not r:IsLiteral() then
-				return false, type_errors.other("must be a literal")
+				return false, type_errors.must_be_literal("must be a literal")
 			end
 
 			r:SetPatternContract(r:GetData())
