@@ -145,7 +145,7 @@ return {
 			return false, type_errors.invalid_type_call(obj.Type, obj)
 		end
 
-		local function call_function(self, obj, input)
+		local function call_function_internal(self, obj, input)
 			-- mark the object as called so the unreachable code step won't call it
 			obj:SetCalled(true)
 
@@ -189,19 +189,7 @@ return {
 			return self:CallFunctionSignature(obj, input)
 		end
 
-		function META:Call(obj, input, call_node, not_recursive_call)
-			if obj.Type == "tuple" then
-				return call_tuple(self, obj, input, call_node)
-			elseif obj.Type == "union" then
-				return call_union(self, obj, input, call_node)
-			elseif obj.Type == "table" then
-				return call_table(self, obj, input, call_node)
-			elseif obj.Type == "any" then
-				return call_any(self, input)
-			elseif obj.Type ~= "function" then
-				return call_other(obj)
-			end
-
+		local function call_function(self, obj, input, call_node, not_recursive_call)
 			if
 				self:IsRuntime() and
 				obj:IsCalled() and
@@ -245,9 +233,25 @@ return {
 
 			if ok then return ok end
 
-			local ok, err = call_function(self, obj, input)
+			local ok, err = call_function_internal(self, obj, input)
 			self:PopCallFrame()
 			return ok, err
+		end
+
+		function META:Call(obj, input, call_node, not_recursive_call)
+			if obj.Type == "tuple" then
+				return call_tuple(self, obj, input, call_node)
+			elseif obj.Type == "union" then
+				return call_union(self, obj, input, call_node)
+			elseif obj.Type == "table" then
+				return call_table(self, obj, input, call_node)
+			elseif obj.Type == "any" then
+				return call_any(self, input)
+			elseif obj.Type == "function" then
+				return call_function(self, obj, input, call_node, not_recursive_call)
+			end
+
+			return call_other(obj)
 		end
 	end,
 }
