@@ -107,7 +107,7 @@ analyzer function table.sort(tbl: List<|any|>, func: nil | function=(a: any, b: 
 	if tbl:IsLiteral() then
 		if func then
 			table.sort(tbl:GetData(), function(a, b)
-				local b = analyzer:Call(func, types.Tuple({a.val, b.val})):Get(1)
+				local b = func:Call(analyzer, types.Tuple({a.val, b.val})):Get(1)
 
 				if b:IsCertainlyTrue() or b:IsCertainlyFalse() then
 					return b:IsCertainlyTrue()

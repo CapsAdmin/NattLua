@@ -12,7 +12,6 @@ require("nattlua.analyzer.control_flow")(META)
 require("nattlua.analyzer.mutation_tracking")(META)
 require("nattlua.analyzer.operators.index").Index(META)
 require("nattlua.analyzer.operators.newindex").NewIndex(META)
-require("nattlua.analyzer.operators.call").Call(META)
 
 do
 	local AnalyzeDestructureAssignment = require("nattlua.analyzer.statements.destructure_assignment").AnalyzeDestructureAssignment

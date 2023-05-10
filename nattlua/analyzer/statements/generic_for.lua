@@ -22,7 +22,7 @@ return {
 		local uncertain_break = nil
 
 		for i = 1, 1000 do
-			local values = self:Assert(self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
+			local values = self:Assert(callable_iterator:Call(self, Tuple(args), statement.expressions[1]))
 
 			if values.Type == "tuple" and values:GetLength() == 1 then
 				values = values:Get(1)

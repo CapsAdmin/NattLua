@@ -390,7 +390,7 @@ analyzer function ffi.metatype(ctype: any, meta: any)
 			types.LString("__call"),
 			types.LuaTypeFunction(
 				function(self, ...)
-					local val = analyzer:Assert(analyzer:Call(new, types.Tuple({ctype, ...}))):Unpack()
+					local val = analyzer:Assert(new:Call(analyzer, types.Tuple({ctype, ...}))):Unpack()
 
 					if val.Type == "union" then
 						for i, v in ipairs(val:GetData()) do

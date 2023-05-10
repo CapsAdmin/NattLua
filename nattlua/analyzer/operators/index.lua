@@ -58,7 +58,7 @@ return {
 
 					if index.Type == "function" then
 						local real_obj = obj
-						local obj, err = self:Call(index, Tuple({obj, key}), self.current_statement)
+						local obj, err = index:Call(self, Tuple({obj, key}), self.current_statement)
 
 						if not obj then return obj, err end
 

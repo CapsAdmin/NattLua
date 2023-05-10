@@ -397,181 +397,179 @@ local function check_output(self, output, output_signature)
 	end
 end
 
-return function(META)
-	function META:CallBodyFunction(obj, input)
-		local function_node = obj:GetFunctionBodyNode()
-		local is_type_function = function_node.kind == "local_type_function" or
-			function_node.kind == "type_function"
+return function(self, obj, input)
+	local function_node = obj:GetFunctionBodyNode()
+	local is_type_function = function_node.kind == "local_type_function" or
+		function_node.kind == "type_function"
 
-		do
-			local ok, err = check_input(self, obj, input)
+	do
+		local ok, err = check_input(self, obj, input)
 
-			if not ok then return ok, err end
-		end
+		if not ok then return ok, err end
+	end
 
-		-- crawl the function with the new arguments
-		-- return_result is either a union of tuples or a single tuple
-		local scope = self:CreateAndPushFunctionScope(obj)
-		function_node.scope = scope
-		obj.scope = scope
-		self:PushTruthyExpressionContext(false)
-		self:PushFalsyExpressionContext(false)
-		self:PushGlobalEnvironment(
-			function_node,
-			self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
-			self:GetCurrentAnalyzerEnvironment()
-		)
+	-- crawl the function with the new arguments
+	-- return_result is either a union of tuples or a single tuple
+	local scope = self:CreateAndPushFunctionScope(obj)
+	function_node.scope = scope
+	obj.scope = scope
+	self:PushTruthyExpressionContext(false)
+	self:PushFalsyExpressionContext(false)
+	self:PushGlobalEnvironment(
+		function_node,
+		self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
+		self:GetCurrentAnalyzerEnvironment()
+	)
 
-		if function_node.self_call then
-			self:CreateLocalValue("self", input:Get(1) or Nil())
-		end
+	if function_node.self_call then
+		self:CreateLocalValue("self", input:Get(1) or Nil())
+	end
 
-		-- first setup runtime generics type arguments if any
-		if function_node.identifiers_typesystem then
-			-- if this is a generics we setup the generic upvalues for the signature
-			local call_expression = self:GetCallStack()[1].call_node
+	-- first setup runtime generics type arguments if any
+	if function_node.identifiers_typesystem then
+		-- if this is a generics we setup the generic upvalues for the signature
+		local call_expression = self:GetCallStack()[1].call_node
 
-			for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
-				local generic_type = call_expression.expressions_typesystem and
-					call_expression.expressions_typesystem[i] or
-					nil
+		for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
+			local generic_type = call_expression.expressions_typesystem and
+				call_expression.expressions_typesystem[i] or
+				nil
 
-				if generic_type then
-					local T = self:AnalyzeExpression(generic_type)
-					self:CreateLocalValue(generic_upvalue.value.value, T)
-				end
+			if generic_type then
+				local T = self:AnalyzeExpression(generic_type)
+				self:CreateLocalValue(generic_upvalue.value.value, T)
 			end
 		end
+	end
 
-		-- then setup the runtime arguments
-		for i, identifier in ipairs(function_node.identifiers) do
-			local argi = function_node.self_call and (i + 1) or i
+	-- then setup the runtime arguments
+	for i, identifier in ipairs(function_node.identifiers) do
+		local argi = function_node.self_call and (i + 1) or i
 
-			if self:IsTypesystem() then
-				self:CreateLocalValue(identifier.value.value, input:GetWithoutExpansion(argi))
-			end
+		if self:IsTypesystem() then
+			self:CreateLocalValue(identifier.value.value, input:GetWithoutExpansion(argi))
+		end
 
-			if self:IsRuntime() then
-				if identifier.value.value == "..." then
-					self:CreateLocalValue(identifier.value.value, input:Slice(argi))
-				else
-					local val
-					val = val or input:Get(argi)
+		if self:IsRuntime() then
+			if identifier.value.value == "..." then
+				self:CreateLocalValue(identifier.value.value, input:Slice(argi))
+			else
+				local val
+				val = val or input:Get(argi)
 
-					if not val then
-						val = Nil()
-						local arg = obj:GetInputSignature():Get(argi)
+				if not val then
+					val = Nil()
+					local arg = obj:GetInputSignature():Get(argi)
 
-						if arg and arg:IsReferenceArgument() then
-							val:SetReferenceArgument(true)
-						end
+					if arg and arg:IsReferenceArgument() then
+						val:SetReferenceArgument(true)
 					end
-
-					self:CreateLocalValue(identifier.value.value, val)
 				end
+
+				self:CreateLocalValue(identifier.value.value, val)
 			end
 		end
+	end
 
-		-- if we have a return type we must also set this up for this call
-		local output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
+	-- if we have a return type we must also set this up for this call
+	local output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
 
-		if function_node.return_types then
-			self:PushAnalyzerEnvironment("typesystem")
-			output_signature = Tuple(self:AnalyzeExpressions(function_node.return_types))
-			self:PopAnalyzerEnvironment()
-		end
+	if function_node.return_types then
+		self:PushAnalyzerEnvironment("typesystem")
+		output_signature = Tuple(self:AnalyzeExpressions(function_node.return_types))
+		self:PopAnalyzerEnvironment()
+	end
 
-		if is_type_function then self:PushAnalyzerEnvironment("typesystem") end
+	if is_type_function then self:PushAnalyzerEnvironment("typesystem") end
 
-		local output = self:AnalyzeStatementsAndCollectOutputSignatures(function_node)
+	local output = self:AnalyzeStatementsAndCollectOutputSignatures(function_node)
 
-		if is_type_function then self:PopAnalyzerEnvironment() end
+	if is_type_function then self:PopAnalyzerEnvironment() end
 
-		self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
-		self:PopScope()
-		self:PopFalsyExpressionContext()
-		self:PopTruthyExpressionContext()
-		self:ClearScopedTrackedObjects(scope)
+	self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
+	self:PopScope()
+	self:PopFalsyExpressionContext()
+	self:PopTruthyExpressionContext()
+	self:ClearScopedTrackedObjects(scope)
 
-		if output.Type ~= "tuple" then output = Tuple({output}) end
+	if output.Type ~= "tuple" then output = Tuple({output}) end
 
-		restore_mutated_types(self)
-		-- used for analyzing side effects
-		obj:AddScope(input, output, scope)
+	restore_mutated_types(self)
+	-- used for analyzing side effects
+	obj:AddScope(input, output, scope)
 
-		if not obj:IsExplicitInputSignature() then
-			if not obj:IsArgumentsInferred() and function_node.identifiers then
-				for i in ipairs(obj:GetInputSignature():GetData()) do
-					if function_node.self_call then
-						-- we don't count the actual self argument
-						local node = function_node.identifiers[i + 1]
+	if not obj:IsExplicitInputSignature() then
+		if not obj:IsArgumentsInferred() and function_node.identifiers then
+			for i in ipairs(obj:GetInputSignature():GetData()) do
+				if function_node.self_call then
+					-- we don't count the actual self argument
+					local node = function_node.identifiers[i + 1]
 
-						if node and not node.type_expression then
-							self:Warning("argument is untyped")
-						end
-					elseif
-						function_node.identifiers[i] and
-						not function_node.identifiers[i].type_expression
-					then
+					if node and not node.type_expression then
 						self:Warning("argument is untyped")
 					end
+				elseif
+					function_node.identifiers[i] and
+					not function_node.identifiers[i].type_expression
+				then
+					self:Warning("argument is untyped")
 				end
 			end
-
-			obj:GetInputSignature():Merge(input:Slice(1, obj:GetInputSignature():GetMinimumLength()))
 		end
 
-		do -- this is for the emitter
-			if function_node.identifiers then
-				for i, node in ipairs(function_node.identifiers) do
-					node:AssociateType(obj:GetInputSignature():Get(i))
-				end
-			end
-
-			function_node:AssociateType(obj)
-		end
-
-		if not output_signature then
-			-- if there is no return type 
-			if function_node.environment == "runtime" then
-				local copy
-
-				for i, v in ipairs(output:GetData()) do
-					if v.Type == "table" and not v:GetContract() then
-						copy = copy or output:Copy()
-						local tbl = Table()
-
-						for _, kv in ipairs(v:GetData()) do
-							tbl:Set(kv.key, self:GetMutatedTableValue(v, kv.key))
-						end
-
-						copy:Set(i, tbl)
-					end
-				end
-
-				obj:GetOutputSignature():Merge(copy or output)
-			end
-
-			return output
-		end
-
-		-- check against the function's return type
-		check_output(self, output, output_signature)
-
-		if function_node.environment == "typesystem" then return output end
-
-		local contract = output_signature:Copy()
-
-		for _, v in ipairs(contract:GetData()) do
-			if v.Type == "table" then v:SetReferenceId(nil) end
-		end
-
-		-- if a return type is marked with ref, it will pass the ref value back to the caller
-		-- a bit like generics
-		for i, v in ipairs(output_signature:GetData()) do
-			if v:IsReferenceArgument() then contract:Set(i, output:Get(i)) end
-		end
-
-		return contract
+		obj:GetInputSignature():Merge(input:Slice(1, obj:GetInputSignature():GetMinimumLength()))
 	end
+
+	do -- this is for the emitter
+		if function_node.identifiers then
+			for i, node in ipairs(function_node.identifiers) do
+				node:AssociateType(obj:GetInputSignature():Get(i))
+			end
+		end
+
+		function_node:AssociateType(obj)
+	end
+
+	if not output_signature then
+		-- if there is no return type 
+		if function_node.environment == "runtime" then
+			local copy
+
+			for i, v in ipairs(output:GetData()) do
+				if v.Type == "table" and not v:GetContract() then
+					copy = copy or output:Copy()
+					local tbl = Table()
+
+					for _, kv in ipairs(v:GetData()) do
+						tbl:Set(kv.key, self:GetMutatedTableValue(v, kv.key))
+					end
+
+					copy:Set(i, tbl)
+				end
+			end
+
+			obj:GetOutputSignature():Merge(copy or output)
+		end
+
+		return output
+	end
+
+	-- check against the function's return type
+	check_output(self, output, output_signature)
+
+	if function_node.environment == "typesystem" then return output end
+
+	local contract = output_signature:Copy()
+
+	for _, v in ipairs(contract:GetData()) do
+		if v.Type == "table" then v:SetReferenceId(nil) end
+	end
+
+	-- if a return type is marked with ref, it will pass the ref value back to the caller
+	-- a bit like generics
+	for i, v in ipairs(output_signature:GetData()) do
+		if v:IsReferenceArgument() then contract:Set(i, output:Get(i)) end
+	end
+
+	return contract
 end

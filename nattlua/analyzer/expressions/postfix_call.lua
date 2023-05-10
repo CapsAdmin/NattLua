@@ -43,7 +43,7 @@ return {
 			arguments = NormalizeTuples(types)
 		end
 
-		local ret, err = self:Call(callable, arguments, node)
+		local ret, err = callable:Call(self, arguments, node)
 		self.current_expression = node
 		local returned_tuple
 

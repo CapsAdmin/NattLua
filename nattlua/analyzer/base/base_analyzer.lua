@@ -118,7 +118,7 @@ return function(META)
 			end
 
 			self:CreateAndPushFunctionScope(obj)
-			self:Assert(self:Call(obj, arguments, obj:GetFunctionBodyNode()))
+			self:Assert(obj:Call(self, arguments, obj:GetFunctionBodyNode()))
 			self:PopScope()
 		end
 
@@ -383,7 +383,7 @@ return function(META)
 				local generics_func = self:GetLocalOrGlobalValue(name)
 				assert(generics_func.Type == "function", "cannot find typesystem function " .. name:GetData())
 				local argument_tuple = Tuple({a, b, c, d, e, f})
-				local returned_tuple = assert(self:Call(generics_func, argument_tuple))
+				local returned_tuple = assert(generics_func:Call(self, argument_tuple))
 				self:PopAnalyzerEnvironment()
 				return returned_tuple:Unpack()
 			end
@@ -522,6 +522,66 @@ return function(META)
 
 			function META:GetCurrentType(type, offset)
 				return self:GetContextValue("current_type_" .. type, offset)
+			end
+		end
+
+		do
+			local Function = require("nattlua.types.function").Function
+			local LNumber = require("nattlua.types.number").LNumber
+			local Table = require("nattlua.types.table").Table
+			local Symbol = require("nattlua.types.symbol").Symbol
+			local ffi = jit and require("ffi") or nil
+
+			function META:LuaTypesToTuple(tps)
+				local tbl = {}
+
+				for i, v in ipairs(tps) do
+					if type(v) == "table" and v.Type ~= nil then
+						tbl[i] = v
+					else
+						if type(v) == "function" then
+							local func = Function()
+							func:SetAnalyzerFunction(v)
+							func:SetInputSignature(Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
+							func:SetOutputSignature(Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
+							func:SetLiteral(true)
+							tbl[i] = func
+						else
+							local t = type(v)
+
+							if t == "number" then
+								tbl[i] = LNumber(v)
+							elseif t == "string" then
+								tbl[i] = LString(v)
+							elseif t == "boolean" then
+								tbl[i] = Symbol(v)
+							elseif t == "table" then
+								local tbl = Table()
+
+								for _, val in ipairs(v) do
+									tbl:Insert(val)
+								end
+
+								tbl:SetContract(tbl)
+								return tbl
+							elseif
+								ffi and
+								t == "cdata" and
+								tostring(ffi.typeof(v)):sub(1, 10) == "ctype<uint" or
+								tostring(ffi.typeof(v)):sub(1, 9) == "ctype<int"
+							then
+								tbl[i] = LNumber(v)
+							else
+								self:Print(t)
+								error(debug.traceback("NYI " .. t))
+							end
+						end
+					end
+				end
+
+				if tbl[1] and tbl[1].Type == "tuple" and #tbl == 1 then return tbl[1] end
+
+				return Tuple(tbl)
 			end
 		end
 	end

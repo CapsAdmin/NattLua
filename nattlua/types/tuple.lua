@@ -149,13 +149,17 @@ function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#:
 
 		if not b_val and a_val.Type == "any" then break end
 
-		if not b_val then return false, type_errors.because(type_errors.table_index(b, i), err) end
+		if not b_val then
+			return false, type_errors.because(type_errors.table_index(b, i), err)
+		end
 
 		a.suppress = true
 		local ok, reason = a_val:IsSubsetOf(b_val)
 		a.suppress = false
 
-		if not ok then return false, type_errors.because(type_errors.subset(a_val, b_val), reason) end
+		if not ok then
+			return false, type_errors.because(type_errors.subset(a_val, b_val), reason)
+		end
 	end
 
 	return true
@@ -450,7 +454,7 @@ function META:SetTable(data)
 		then
 			self:AddRemainder(v)
 		else
-			table.insert(self.Data, v)
+			table.insert(self.Data, v--[[# as any]])
 		end
 	end
 end
@@ -473,6 +477,10 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 	if data then self:SetTable(data) end
 
 	return self
+end
+
+function META:Call(analyzer, input, call_node)
+	return (self:GetFirstValue() --[[#as any]]):Call(analyzer, input, call_node, true)
 end
 
 return {

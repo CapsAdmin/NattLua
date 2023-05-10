@@ -654,7 +654,7 @@ analyze[[
                 constructor:GetInputSignature():Set(1, self_arg)
             
                 tbl:SetMetaTable(meta)
-                analyzer:Assert(analyzer:Call(constructor, types.Tuple({tbl, ...})))
+                analyzer:Assert(constructor:Call(analyzer, types.Tuple({tbl, ...})))
                 analyzer:Assert(tbl:FollowsContract(data))
                 tbl:CopyLiteralness(data)
             

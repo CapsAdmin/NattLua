@@ -55,7 +55,7 @@ return {
 					if func.Type == "table" then return func:Set(key, val) end
 
 					if func.Type == "function" then
-						return self:Assert(self:Call(func, Tuple({obj, key, val}), self.current_statement))
+						return self:Assert(func:Call(self, Tuple({obj, key, val}), self.current_statement))
 					end
 				end
 			end

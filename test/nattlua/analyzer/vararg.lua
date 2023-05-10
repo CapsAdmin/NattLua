@@ -233,7 +233,7 @@ analyze[[
     end
     
     local analyzer function call(obj: any, ...: ...any)
-        analyzer:Call(obj.func, types.Tuple({...}))
+        obj.func:Call(analyzer, types.Tuple({...}))
     end
     
     local co = create(function(a,b,c)

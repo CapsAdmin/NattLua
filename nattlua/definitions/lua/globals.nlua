@@ -362,7 +362,7 @@ end
 analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...any)
 	local diagnostics_index = #analyzer:GetDiagnostics()
 	analyzer:PushProtectedCall()
-	local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
+	local tuple = analyzer:Assert(callable:Call(analyzer, types.Tuple({...})))
 	analyzer:PopProtectedCall()
 	local diagnostics = analyzer:GetDiagnostics()
 
@@ -393,7 +393,7 @@ end
 analyzer function xpcall(callable: literal Function, error_cb: function=(any)>(), ...: ...any): (boolean, ...any)
 	local diagnostics_index = #analyzer:GetDiagnostics()
 	analyzer:PushProtectedCall()
-	local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
+	local tuple = analyzer:Assert(callable:Call(analyzer, types.Tuple({...})))
 	analyzer:PopProtectedCall()
 	local diagnostics = analyzer:GetDiagnostics()
 
@@ -404,7 +404,7 @@ analyzer function xpcall(callable: literal Function, error_cb: function=(any)>()
 			local d = diagnostics[i]
 
 			if d.severity == "error" then
-				analyzer:Assert(analyzer:Call(callable, types.Union({types.LString(d.msg)})))
+				analyzer:Assert(callable:Call(analyzer, types.Union({types.LString(d.msg)})))
 				return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
 			end
 		end
@@ -559,7 +559,7 @@ analyzer function tostring(val: any)
 
 			if func then
 				if func.Type == "function" then
-					return analyzer:Assert(analyzer:Call(func, types.Tuple({val})))
+					return analyzer:Assert(func:Call(analyzer, types.Tuple({val})))
 				else
 					return func
 				end
