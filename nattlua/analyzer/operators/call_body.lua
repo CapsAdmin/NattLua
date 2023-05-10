@@ -102,7 +102,8 @@ local function check_input(self, obj, input)
 			self:PopScope()
 
 			if not ok then
-				return false, type_errors.subset.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+				return false,
+				type_errors.subset.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
 			end
 
 			return ok, reason
@@ -325,7 +326,9 @@ local function check_output(self, output, output_signature)
 		local ok, reason, a, b, i = output:IsSubsetOfTupleWithoutExpansion(output_signature)
 
 		if not ok then
-			self:Error(type_errors.subset(a, b, {"return #", i, " '", b, "': ", reason}))
+			self:Error(
+				type_errors.context("return #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+			)
 		end
 
 		return

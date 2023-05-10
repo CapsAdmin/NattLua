@@ -326,7 +326,9 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
 		if b_val.Type == "any" then return true end
 	end
 
-	if a:IsEmpty() then return false, type_errors.subset(a, b, "union is empty") end
+	if a:IsEmpty() then
+		return false, type_errors.because(type_errors.subset(a, b), "union is empty")
+	end
 
 	for _, a_val in ipairs(a.Data) do
 		local b_val, reason = b:Get(a_val)

@@ -79,7 +79,7 @@ function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 
 	if not ok then
 		return false,
-		type_errors.subset(a:GetInputSignature(), b:GetInputSignature(), reason)
+		type_errors.because(type_errors.subset(a:GetInputSignature(), b:GetInputSignature()), reason)
 	end
 
 	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
@@ -103,7 +103,7 @@ function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 
 	if not ok then
 		return false,
-		type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature(), reason)
+		type_errors.because(type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature()), reason)
 	end
 
 	return true
@@ -122,7 +122,7 @@ function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 
 	if not ok then
 		return false,
-		type_errors.subset(a:GetInputSignature(), b:GetInputSignature(), reason)
+		type_errors.because(type_errors.subset(a:GetInputSignature(), b:GetInputSignature()), reason)
 	end
 
 	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
@@ -146,7 +146,7 @@ function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 
 	if not ok then
 		return false,
-		type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature(), reason)
+		type_errors.because(type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature()), reason)
 	end
 
 	return true

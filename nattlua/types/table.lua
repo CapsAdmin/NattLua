@@ -506,7 +506,7 @@ function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete-
 			context:GetCurrentAnalyzer() and
 			context:GetCurrentAnalyzer():GetCurrentAnalyzerEnvironment() == "typesystem"
 		then
-			self["Set" .. key:GetData():sub(2)](self, val)
+			assert(self["Set" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self, val)
 			return true
 		end
 	end
@@ -556,13 +556,7 @@ end
 
 function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
-		local key = "Set" .. key:GetData():sub(2)
-
-		if not self[key] then
-			return false, type_errors.no_such_function_table(key)
-		end
-
-		self[key](self, val)
+		assert(self["Set" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self, val)
 		return true
 	end
 

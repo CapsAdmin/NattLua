@@ -902,7 +902,7 @@ analyze(
     type tbl["@hello"] = true
     attest.equal(tbl, {["@hello"] = true})
 ]],
-	"no such function on table"
+	"hello is not a function"
 )
 analyze[[
     local tbl = {3, 2, 1}

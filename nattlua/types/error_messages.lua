@@ -104,10 +104,6 @@ do -- index errors
 		}
 	end
 
-	function type_errors.no_such_function_table(key--[[#: any]])--[[#: Reason]]
-		return {"no such function on table:", key}
-	end
-
 	function type_errors.table_index(a--[[#: any]], b--[[#: any]])--[[#: Reason]]
 		return {a, "has no key", b}
 	end
@@ -168,14 +164,8 @@ do -- subset errors
 		return msg
 	end
 
-	function type_errors.subset(a--[[#: any]], b--[[#: any]], reason--[[#: Reason | nil]])--[[#: Reason]]
-		return type_errors.because({a, "is not a subset of", b}, reason)
-	end
-end
-
-do -- argument errors
-	function type_errors.missing_argument(i--[[#: number]], arg--[[#: any]], reason--[[#: Reason]])--[[#: Reason]]
-		return {"argument #", i, arg, ":", reason}
+	function type_errors.subset(a--[[#: any]], b--[[#: any]])--[[#: Reason]]
+		return {a, "is not a subset of", b}
 	end
 end
 
