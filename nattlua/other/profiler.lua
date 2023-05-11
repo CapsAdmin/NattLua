@@ -13,7 +13,15 @@ end
 function profiler.Stop()
 	if not should_run then return end
 
-	profiler2.EasyStop()
+	profiler2.EasyStop(
+		{
+			{title = "all", filter = nil},
+			{title = "lexer", filter = "nattlua/lexer"},
+			{title = "parser", filter = "nattlua/parser"},
+			{title = "types", filter = "nattlua/types"},
+			{title = "analyzer", filter = "nattlua/analyzer"},
+		}
+	)
 end
 
 function profiler.PushZone(name--[[#: string]])

@@ -5,18 +5,22 @@ end
 local wlog = print
 local logn = print
 local log = io.write
-
 local ok, jit_profiler = pcall(require, "jit.profile")
+
 if not ok then jit_profiler = nil end
 
 local get_time = os.clock
 
 local function read_file(path)
-    local f, err = io.open(path)
-    if not f then return nil, err end
-    local s, err = f:read("*a")
-    if not s then return nil, "empty file" end
-    return s
+	local f, err = io.open(path)
+
+	if not f then return nil, err end
+
+	local s, err = f:read("*a")
+
+	if not s then return nil, "empty file" end
+
+	return s
 end
 
 local function math_round(num, idp)
@@ -28,11 +32,12 @@ local function math_round(num, idp)
 	return math.floor(num + 0.5)
 end
 
-
 local ok, jit_vmdef = pcall(require, "jit.vmdef")
+
 if not ok then jit_vmdef = nil end
 
 local ok, jit_util = pcall(require, "jit.util")
+
 if not ok then jit_util = nil end
 
 local utility = {}
@@ -338,11 +343,16 @@ function profiler.EasyStart()
 	profiler.EnableTraceAbortLogging(true)
 end
 
-function profiler.EasyStop()
+function profiler.EasyStop(stats_filter)
+	stats_filter = stats_filter or {{title = "statistical", filter = nil}}
 	profiler.EnableTraceAbortLogging(false)
 	profiler.EnableStatisticalProfiling(false)
 	profiler.PrintTraceAborts(500)
-	profiler.PrintStatistical(500)
+
+	for i, v in ipairs(stats_filter) do
+		profiler.PrintStatistical(500, v.title, v.filter)
+	end
+
 	started = false
 	profiler.Restart()
 end
@@ -564,15 +574,15 @@ function profiler.PrintTraceAborts(min_samples)
 			for line, reasons in pairs(lines) do
 				if not next(s) or s[path][line] and s[path][line].samples > min_samples then
 					local str = "unknown line"
-                        local content, err = read_file(path)
+					local content, err = read_file(path)
 
-                        if content then
-                            local lines = split(content, "\n")
-                            str = lines[line]
-                            str = "\"" .. trim(str) .. "\""
-                        else
-                            str = err
-                        end
+					if content then
+						local lines = split(content, "\n")
+						str = lines[line]
+						str = "\"" .. trim(str) .. "\""
+					else
+						str = err
+					end
 
 					for reason, count in pairs(reasons) do
 						if not blacklist[reason] then
@@ -620,7 +630,7 @@ function profiler.PrintSections()
 	)
 end
 
-function profiler.PrintStatistical(min_samples)
+function profiler.PrintStatistical(min_samples, title, file_filter)
 	min_samples = min_samples or 100
 	local tr = {
 		N = "native",
@@ -631,8 +641,8 @@ function profiler.PrintStatistical(min_samples)
 	}
 	log(
 		utility.TableToColumns(
-			"statistical",
-			profiler.GetBenchmark("statistical"),
+			title or "statistical",
+			profiler.GetBenchmark("statistical", file_filter),
 			{
 				{key = "name"},
 				{
@@ -648,7 +658,7 @@ function profiler.PrintStatistical(min_samples)
 						return tr[str]
 					end,
 				},
-                {
+				{
 					key = "samples",
 					tostring = function(val)
 						return val
