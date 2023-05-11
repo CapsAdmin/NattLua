@@ -1,5 +1,6 @@
 local ipairs = ipairs
 local Union = require("nattlua.types.union").Union
+local type_errors = require("nattlua.types.error_messages")
 
 local function contains_ref_argument(upvalues)
 	for _, v in pairs(upvalues) do
@@ -62,7 +63,7 @@ return {
 
 					if obj:IsCertainlyTrue() and self:IsRuntime() then
 						if not contains_ref_argument(upvalues) then
-							self:Warning("if condition is always true")
+							self:Warning(type_errors.if_always_true())
 						end
 					end
 
@@ -71,13 +72,13 @@ return {
 
 				if obj:IsCertainlyFalse() and self:IsRuntime() then
 					if not contains_ref_argument(self:GetTrackedUpvalues()) then
-						self:Warning("if condition is always false")
+						self:Warning(type_errors.if_always_false())
 					end
 				end
 			else
 				if prev_expression:IsCertainlyFalse() and self:IsRuntime() then
 					if not contains_ref_argument(self:GetTrackedUpvalues()) then
-						self:Warning("else part of if condition is always true")
+						self:Warning(type_errors.if_else_always_true())
 					end
 				end
 

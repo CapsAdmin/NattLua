@@ -11,6 +11,7 @@ local String = require("nattlua.types.string").String
 local Number = require("nattlua.types.number").Number
 local Boolean = require("nattlua.types.union").Boolean
 local table = _G.table
+local type_errors = require("nattlua.types.error_messages")
 
 local function lookup_value(self, node)
 	local errors = {}
@@ -119,7 +120,7 @@ return {
 			local num = LNumberFromString(value)
 
 			if not num then
-				self:Error("unable to convert " .. value .. " to number")
+				self:Error(type_errors.invalid_number(value))
 				num = Number()
 			end
 

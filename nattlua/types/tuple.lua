@@ -480,7 +480,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 end
 
 function META:Call(analyzer, input, call_node)
-	return (self:GetFirstValue() --[[#as any]]):Call(analyzer, input, call_node, true)
+	return (self:GetFirstValue()--[[# as any]]):Call(analyzer, input, call_node, true)
 end
 
 return {

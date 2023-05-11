@@ -16,15 +16,7 @@ return function(self, obj, input)
 	for i, arg in ipairs(input:GetData()) do
 		if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
 			if self.config.external_mutation then
-				self:Warning(
-					{
-						"argument #",
-						i,
-						" ",
-						arg,
-						" can be mutated by external call",
-					}
-				)
+				self:Warning(type_errors.argument_mutation(i, arg))
 			end
 		end
 	end

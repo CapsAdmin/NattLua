@@ -1,3 +1,4 @@
+local type_errors = require("nattlua.types.error_messages")
 return {
 	AnalyzeWhile = function(self, statement)
 		local obj = self:AnalyzeExpression(statement.expression)
@@ -6,7 +7,7 @@ return {
 		self:ClearTracked()
 
 		if obj:IsCertainlyFalse() then
-			self:Warning("loop expression is always false")
+			self:Warning(type_errors.loop_always_false())
 		end
 
 		if obj:IsTruthy() then
@@ -32,7 +33,9 @@ return {
 
 				if obj:IsUncertain() or obj:IsFalsy() then break end
 
-				if i == 32 and self:IsRuntime() then self:Warning("too many iterations") end
+				if i == 32 and self:IsRuntime() then
+					self:Warning(type_errors.too_many_iterations())
+				end
 			end
 		end
 	end,

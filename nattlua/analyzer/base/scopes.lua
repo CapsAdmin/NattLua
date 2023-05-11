@@ -5,6 +5,7 @@ local LexicalScope = require("nattlua.analyzer.base.lexical_scope").New
 local Table = require("nattlua.types.table").Table
 local LString = require("nattlua.types.string").LString
 local table = _G.table
+local type_errors = require("nattlua.types.error_messages")
 return function(META)
 	table.insert(META.OnInitialize, function(self)
 		self.default_environment = {
@@ -120,7 +121,7 @@ return function(META)
 
 		if upvalue then
 			if upvalue:IsImmutable() then
-				return self:Error({"cannot assign to const variable ", key})
+				return self:Error(type_errors.const_assignment(key))
 			end
 
 			if not self:MutateUpvalue(upvalue, val) then upvalue:SetValue(val) end
@@ -134,7 +135,9 @@ return function(META)
 			self:FatalError("tried to set environment value outside of Push/Pop/Environment")
 		end
 
-		if self:IsRuntime() then self:Warning({"_G[\"", key, "\"] = ", val}) end
+		if self:IsRuntime() then
+			self:Warning(type_errors.global_assignment(key, val))
+		end
 
 		self:Assert(self:NewIndexOperator(g, key, val))
 		return val

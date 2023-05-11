@@ -506,13 +506,13 @@ return function(self, obj, input)
 					local node = function_node.identifiers[i + 1]
 
 					if node and not node.type_expression then
-						self:Warning("argument is untyped")
+						self:Warning(type_errors.untyped_argument())
 					end
 				elseif
 					function_node.identifiers[i] and
 					not function_node.identifiers[i].type_expression
 				then
-					self:Warning("argument is untyped")
+					self:Warning(type_errors.untyped_argument())
 				end
 			end
 		end

@@ -210,6 +210,76 @@ do -- operator errors
 	end
 end
 
+function type_errors.mutating_function_argument(obj--[[#: any]], i--[[#: number]])--[[#: Reason]]
+	return {
+		"mutating function argument ",
+		obj,
+		" #" .. i,
+		" without a contract",
+	}
+end
+
+function type_errors.global_assignment(key--[[#: any]], val--[[#: any]])--[[#: Reason]]
+	return {"_G[\"", key, "\"] = ", val}
+end
+
+function type_errors.if_always_false()--[[#: Reason]]
+	return {"if condition is always false"}
+end
+
+function type_errors.if_always_true()--[[#: Reason]]
+	return {"if condition is always true"}
+end
+
+function type_errors.if_else_always_true()--[[#: Reason]]
+	return {"else part of if condition is always true"}
+end
+
+function type_errors.destructure_assignment(type_name--[[#: string]])--[[#: Reason]]
+	return {"expected a table on the right hand side, got", type_name}
+end
+
+function type_errors.destructure_assignment_missing(name--[[#: any]])--[[#: Reason]]
+	return {"field", name, "does not exist"}
+end
+
+function type_errors.mutating_immutable_function_argument(obj--[[#: any]], i--[[#: number]])--[[#: Reason]]
+	return {
+		"mutating function argument",
+		obj,
+		"#" .. i,
+		"with an immutable contract",
+	}
+end
+
+function type_errors.loop_always_false()--[[#: Reason]]
+	return {"loop expression is always false"}
+end
+
+function type_errors.too_many_iterations()--[[#: Reason]]
+	return {"too many iterations"}
+end
+
+function type_errors.untyped_argument()--[[#: Reason]]
+	return {"argument is untyped"}
+end
+
+function type_errors.argument_mutation(i--[[#: number]], arg--[[#: any]])--[[#: Reason]]
+	return {
+		"argument #" .. i,
+		arg,
+		"can be mutated by external call",
+	}
+end
+
+function type_errors.const_assignment(key--[[#: any]])--[[#: Reason]]
+	return {"cannot assign to const variable", key}
+end
+
+function type_errors.invalid_number(value--[[#: any]])--[[#: Reason]]
+	return {"unable to convert", value, "to number"}
+end
+
 function type_errors.typeof_lookup_missing(type_name--[[#: string]])--[[#: Reason]]
 	return {"cannot find '" .. type_name .. "' in the current typesystem scope"}
 end

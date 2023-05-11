@@ -4,6 +4,7 @@ local LString = require("nattlua.types.string").LString
 local Any = require("nattlua.types.any").Any
 local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
+local type_errors = require("nattlua.types.error_messages")
 return {
 	NewIndex = function(META)
 		function META:NewIndexOperator(obj, key, val)
@@ -71,25 +72,9 @@ return {
 				not obj.mutable
 			then
 				if not obj:GetContract() then
-					self:Warning(
-						{
-							"mutating function argument ",
-							obj,
-							" #",
-							obj.argument_index,
-							" without a contract",
-						}
-					)
+					self:Warning(type_errors.mutating_function_argument(obj, obj.argument_index))
 				else
-					self:Error(
-						{
-							"mutating function argument ",
-							obj,
-							" #",
-							obj.argument_index,
-							" with an immutable contract",
-						}
-					)
+					self:Error(type_errors.mutating_immutable_function_argument(obj, obj.argument_index))
 				end
 			end
 

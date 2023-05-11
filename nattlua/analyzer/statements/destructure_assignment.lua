@@ -2,6 +2,7 @@ local tostring = tostring
 local ipairs = ipairs
 local NodeToString = require("nattlua.types.string").NodeToString
 local Nil = require("nattlua.types.symbol").Nil
+local type_errors = require("nattlua.types.error_messages")
 return {
 	AnalyzeDestructureAssignment = function(self, statement)
 		local obj, err = self:AnalyzeExpression(statement.right)
@@ -11,7 +12,7 @@ return {
 		if obj.Type == "tuple" then obj = obj:Get(1) end
 
 		if obj.Type ~= "table" then
-			self:Error("expected a table on the right hand side, got " .. tostring(obj.Type))
+			self:Error(type_errors.destructure_assignment(obj.Type))
 			return
 		end
 
@@ -30,7 +31,7 @@ return {
 				if self:IsRuntime() then
 					obj = Nil()
 				else
-					self:Error("field " .. tostring(node.value.value) .. " does not exist")
+					self:Error(type_errors.destructure_assignment_missing(node.value.value))
 				end
 			end
 
