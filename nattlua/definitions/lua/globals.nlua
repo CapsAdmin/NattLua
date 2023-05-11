@@ -454,7 +454,7 @@ function MetaTableFunctions<|T: any|>
 		__pairs = function=(T)>(function=(T)>(any, any)),
 		__tostring = function=(T)>(string),
 		__call = function=(T, ...any)>(...any),
-		__index = function=(T, key: any)>(),
+		__index = function=(T, key: any)>(any),
 		__newindex = function=(T, key: any, value: any)>(),
 		__len = function=(a: T)>(number),
 		__unm = function=(a: T)>(any),
