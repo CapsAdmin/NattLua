@@ -333,7 +333,7 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 
 				if not ok then
 					return false,
-					type_errors.table_subset(akeyval.key, bkeyval.key, akeyval.val, bkeyval.val, err)
+					type_errors.because(type_errors.table_subset(akeyval.key, bkeyval.key, akeyval.val, bkeyval.val), err)
 				end
 			end
 		end
@@ -1018,7 +1018,7 @@ end
 function META:Call(analyzer, input, call_node)
 	if not self:GetMetaTable() then
 		return false,
-		type_errors.because(type_errors.table_index(self, "__call"), " it has no metatable")
+		type_errors.because(type_errors.table_index(self, "__call"), "it has no metatable")
 	end
 
 	local __call, reason = self:GetMetaTable():Get(LString("__call"))

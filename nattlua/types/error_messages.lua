@@ -12,10 +12,7 @@ function type_errors.because(msg--[[#: Reason]], reason--[[#: nil | Reason]])--[
 		if type(reason) ~= "table" then reason = {reason} end
 
 		table.insert(msg, "because")
-
-		for i, v in ipairs(reason) do
-			table.insert(msg, v)
-		end
+		table.insert(msg, reason)
 	end
 
 	return msg
@@ -50,9 +47,7 @@ do -- string pattern
 
 	function type_errors.string_pattern_type_mismatch(a--[[#: any]])--[[#: Reason]]
 		return type_errors.context(
-			"to compare against a string pattern,",
-			a,
-			"must be a string literal, but",
+			{"to compare against a string pattern,", a, "must be a string literal, but"},
 			type_errors.subset(a, "literal string")
 		)
 	end
@@ -140,28 +135,8 @@ do -- union errors
 end
 
 do -- subset errors
-	function type_errors.table_subset(
-		a_key--[[#: any]],
-		b_key--[[#: any]],
-		a--[[#: any]],
-		b--[[#: any]],
-		reason--[[#: Reason]]
-	)--[[#: Reason]]
-		local msg = {"[", a_key, "]", a, "is not a subset of", "[", b_key, "]", b}
-
-		if reason then
-			table.insert(msg, "because")
-
-			if type(reason) == "table" then
-				for i, v in ipairs(reason) do
-					table.insert(msg, v)
-				end
-			else
-				table.insert(msg, reason)
-			end
-		end
-
-		return msg
+	function type_errors.table_subset(a_key--[[#: any]], b_key--[[#: any]], a--[[#: any]], b--[[#: any]])--[[#: Reason]]
+		return {"[", a_key, "]", a, "is not a subset of", "[", b_key, "]", b}
 	end
 
 	function type_errors.subset(a--[[#: any]], b--[[#: any]])--[[#: Reason]]
