@@ -13,8 +13,7 @@ local Tuple = require("nattlua.types.tuple").Tuple
 
 local function metatable_function(self, meta_method, l, node)
 	if l:GetMetaTable() then
-		meta_method = LString(meta_method)
-		local func = l:GetMetaTable():Get(meta_method)
+		local func = l:GetMetaTable():Get(LString(meta_method))
 
 		if func then return self:Assert(func:Call(self, Tuple({l}), node):Get(1)) end
 	end
