@@ -274,10 +274,10 @@ end
 
 analyzer function PushTypeEnvironment(obj: any)
 	local tbl = types.Table()
-	tbl:Set(types.LString("_G"), tbl)
+	tbl:Set(types.ConstString("_G"), tbl)
 	local g = analyzer:GetGlobalEnvironment("typesystem")
 	tbl:Set(
-		types.LString("__index"),
+		types.ConstString("__index"),
 		types.LuaTypeFunction(
 			function(self, key)
 				local ok, err = obj:Get(key)
@@ -302,7 +302,7 @@ analyzer function PushTypeEnvironment(obj: any)
 		)
 	)
 	tbl:Set(
-		types.LString("__newindex"),
+		types.ConstString("__newindex"),
 		types.LuaTypeFunction(
 			function(self, key, val)
 				if analyzer.stem_types then

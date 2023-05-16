@@ -13,6 +13,7 @@ function types.Initialize()
 	types.LuaTypeFunction = require("nattlua.types.function").LuaTypeFunction
 	types.String = require("nattlua.types.string").String
 	types.LString = require("nattlua.types.string").LString
+	types.ConstString = require("nattlua.types.string").ConstString
 	types.Any = require("nattlua.types.any").Any
 	types.Symbol = require("nattlua.types.symbol").Symbol
 	types.Nil = require("nattlua.types.symbol").Nil

@@ -724,7 +724,7 @@ analyze[[
 ]]
 analyze[[
     local analyzer function foo(n: number): number, string
-        return types.LNumber(1337), types.LString("foo")
+        return types.LNumber(1337), types.ConstString("foo")
     end
     
     local x,y = foo(1)

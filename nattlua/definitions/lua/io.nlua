@@ -32,8 +32,8 @@ type io.stderr = File
 
 analyzer function io.type(obj: any)
 	local flags = types.Union()
-	flags:AddType(types.LString("file"))
-	flags:AddType(types.LString("closed file"))
+	flags:AddType(types.ConstString("file"))
+	flags:AddType(types.ConstString("closed file"))
 	print(("%p"):format(obj), ("%p"):format(env.typesystem.File))
 
 	if false and obj:IsSubsetOf(env.typesystem.File) then return flags end

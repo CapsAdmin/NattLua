@@ -17,7 +17,7 @@ analyze([[
 ]])
 analyze[[
     local analyzer function unknown(tbl: {[any] = any} | {} )
-        tbl:Set(types.LString("foo"), types.LString("bar"))
+        tbl:Set(types.ConstString("foo"), types.ConstString("bar"))
     end
     
     local x = {}

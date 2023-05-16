@@ -107,7 +107,7 @@ analyzer function pairs(tbl: Table)
 	end
 
 	analyzer:PushAnalyzerEnvironment("typesystem")
-	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
+	local next = analyzer:GetLocalOrGlobalValue(types.ConstString("next"))
 	analyzer:PopAnalyzerEnvironment()
 	local k, v = analyzer:CallLuaTypeFunction(next:GetAnalyzerFunction(), analyzer:GetScope(), tbl)
 	local done = false
@@ -147,7 +147,7 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 	end
 
 	analyzer:PushAnalyzerEnvironment("typesystem")
-	local next = analyzer:GetLocalOrGlobalValue(types.LString("next"))
+	local next = analyzer:GetLocalOrGlobalValue(types.ConstString("next"))
 	analyzer:PopAnalyzerEnvironment()
 	local k, v = analyzer:CallLuaTypeFunction(next:GetAnalyzerFunction(), analyzer:GetScope(), tbl)
 	local done = false
@@ -487,7 +487,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 	do
 		local meta = tbl:GetMetaTable()
 
-		if meta and meta:Get(types.LString("__metatable")) then
+		if meta and meta:Get(types.ConstString("__metatable")) then
 			analyzer:ThrowError("cannot change a protected metatable")
 			return
 		end
@@ -509,7 +509,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 
 		if analyzer:IsTypesystem() then return tbl end
 
-		local metatable_functions = analyzer:CallTypesystemUpvalue(types.LString("MetaTableFunctions"), tbl)
+		local metatable_functions = analyzer:CallTypesystemUpvalue(types.ConstString("MetaTableFunctions"), tbl)
 
 		for _, kv in ipairs(metatable_functions:GetData()) do
 			local a = kv.val
@@ -536,7 +536,7 @@ analyzer function getmetatable(tbl: Table)
 	local meta = tbl:GetMetaTable()
 
 	if meta then
-		local val = meta:Get(types.LString("__metatable"))
+		local val = meta:Get(types.ConstString("__metatable"))
 
 		if val then return val end
 
@@ -555,7 +555,7 @@ analyzer function tostring(val: any)
 
 	if val.Type == "table" then
 		if val:GetMetaTable() then
-			local func = val:GetMetaTable():Get(types.LString("__tostring"))
+			local func = val:GetMetaTable():Get(types.ConstString("__tostring"))
 
 			if func then
 				if func.Type == "function" then

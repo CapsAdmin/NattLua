@@ -7,6 +7,7 @@ local Nil = require("nattlua.types.symbol").Nil
 local Number = require("nattlua.types.number").Number
 local LNumber = require("nattlua.types.number").LNumber
 local LString = require("nattlua.types.string").LString
+local ConstString = require("nattlua.types.string").ConstString
 local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
@@ -115,7 +116,7 @@ function META:__tostring()
 	local meta = self:GetMetaTable()
 
 	if meta then
-		local func = meta:Get(LString("__tostring"))
+		local func = meta:Get(ConstString("__tostring"))
 
 		if func then
 			local analyzer = context:GetCurrentAnalyzer()
@@ -1022,7 +1023,7 @@ function META:Call(analyzer, input, call_node)
 		type_errors.because(type_errors.table_index(self, "__call"), "it has no metatable")
 	end
 
-	local __call, reason = self:GetMetaTable():Get(LString("__call"))
+	local __call, reason = self:GetMetaTable():Get(ConstString("__call"))
 
 	if __call then
 		local new_input = {self}
@@ -1056,7 +1057,7 @@ function META:NewIndex(analyzer, key, val)
 	end
 
 	if self:GetMetaTable() then
-		local func = self:GetMetaTable():Get(LString("__newindex"))
+		local func = self:GetMetaTable():Get(ConstString("__newindex"))
 
 		if func then
 			if func.Type == "table" then return func:Set(key, val) end
@@ -1154,7 +1155,7 @@ end
 
 function META:Index(analyzer, key)
 	if self:GetMetaTable() and not self:HasKey(key) then
-		local index = self:GetMetaTable():Get(LString("__index"))
+		local index = self:GetMetaTable():Get(ConstString("__index"))
 
 		if index then
 			if index == self then return self:Get(key) end
@@ -1168,7 +1169,7 @@ function META:Index(analyzer, key)
 					):HasKey(key) or
 					(
 						index:GetMetaTable() and
-						index:GetMetaTable():HasKey(LString("__index"))
+						index:GetMetaTable():HasKey(ConstString("__index"))
 					)
 				)
 			then

@@ -408,7 +408,7 @@ analyze[[
 analyze[[
     local type tbl = {}
     type tbl.@Name = "blackbox"
-    setmetatable<|tbl, {__call = analyzer function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.LString("foo")) end}|>
+    setmetatable<|tbl, {__call = analyzer function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.ConstString("foo")) end}|>
 
     local lol = tbl({foo = 1337})
 
@@ -416,7 +416,7 @@ analyze[[
 ]]
 analyze[[
     local type tbl = {}
-    type tbl.__call = analyzer function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.LString("foo")) end
+    type tbl.__call = analyzer function(self: typeof tbl, tbl: {foo = nil | number}) return tbl:Get(types.ConstString("foo")) end
     setmetatable<|tbl, tbl|>
 
     local lol = tbl({foo = 1337})
@@ -645,9 +645,9 @@ analyze[[
     
             local analyzer function setmetatable(tbl: Table, meta: Table, ...: ...any)
     
-                local data = meta:Get(types.LString("Data"))
+                local data = meta:Get(types.ConstString("Data"))
                 
-                local constructor = analyzer:Assert(meta:Get(types.LString("constructor")))
+                local constructor = analyzer:Assert(meta:Get(types.ConstString("constructor")))
     
                 local self_arg = types.Any()
                 self_arg:SetReferenceArgument(true)

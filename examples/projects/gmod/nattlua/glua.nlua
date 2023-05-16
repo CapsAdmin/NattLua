@@ -44,7 +44,7 @@ analyzer function isstring(obj: any)
 		analyzer,
 		analyzer.current_expression,
 		typ,
-		types.LString("string"),
+		types.ConstString("string"),
 		"runtime",
 		"=="
 	)
@@ -57,7 +57,7 @@ analyzer function istable(obj: any)
 		analyzer,
 		analyzer.current_expression,
 		typ,
-		types.LString("table"),
+		types.ConstString("table"),
 		"runtime",
 		"=="
 	)

@@ -563,7 +563,7 @@ analyze[[
 
     local type b = analyzer function()
         _G.LOL = nil
-        local t = analyzer:GetLocalOrGlobalValue(types.LString("a"))
+        local t = analyzer:GetLocalOrGlobalValue(types.ConstString("a"))
         local func = t:GetAnalyzerFunction()
         func()
         if not _G.LOL then

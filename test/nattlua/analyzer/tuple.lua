@@ -118,7 +118,7 @@ local a = {
     foo = foo()
 }
 
-§assert(env.runtime.a:Get(types.LString("foo")).Type ~= "tuple")
+§assert(env.runtime.a:Get(types.ConstString("foo")).Type ~= "tuple")
 
 
 local function prefix (w1: ref string, w2: ref string)

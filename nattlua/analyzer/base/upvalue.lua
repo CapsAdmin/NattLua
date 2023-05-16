@@ -18,6 +18,7 @@ end
 
 function META:SetValue(value)
 	self.Value = value
+	if not value then debug.trace() end
 	value:SetUpvalue(self)
 end
 

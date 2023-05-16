@@ -325,7 +325,7 @@ analyze[[
         foo = foo()
     }
     
-    §assert(env.runtime.a:Get(types.LString("foo")).Type ~= "tuple")
+    §assert(env.runtime.a:Get(types.ConstString("foo")).Type ~= "tuple")
 ]]
 analyze[[
     local a,b,c = 1,2,3

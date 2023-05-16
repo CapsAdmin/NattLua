@@ -178,19 +178,27 @@ function META.New(data--[[#: string | nil]])
 end
 
 function META:Index(analyzer, key)
-	local index = (self:GetMetaTable() --[[#as any]]):Get(META.New("__index"):SetLiteral(true)  --[[#as any]])
+	local index = (
+		self:GetMetaTable()
+	--[[# as any]]):Get(META.New("__index"):SetLiteral(true)--[[# as any]])
 
-	if index:HasKey(key) then
-		return analyzer:IndexOperator(index, key)
-	end
+	if index:HasKey(key) then return analyzer:IndexOperator(index, key) end
 
 	return false, type_errors.index_string_attempt()
 end
 
+local cache--[[#: Map<|string, TBaseType|>]] = {}
 return {
 	String = META.New,
-	LString = function(num--[[#: string]])
-		return META.New(num):SetLiteral(true)
+	LString = function(str--[[#: string]])
+		return META.New(str):SetLiteral(true)
+	end,
+	ConstString = function(str--[[#: string]])
+		if cache[str] then return cache[str] end
+
+		local obj = META.New(str):SetLiteral(true)
+		cache[str] = obj
+		return obj
 	end,
 	LStringNoMeta = function(data--[[#: string]])
 		return setmetatable(

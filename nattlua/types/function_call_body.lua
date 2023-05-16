@@ -447,7 +447,7 @@ return function(self, obj, input)
 		local argi = function_node.self_call and (i + 1) or i
 
 		if self:IsTypesystem() then
-			self:CreateLocalValue(identifier.value.value, input:GetWithoutExpansion(argi))
+			self:CreateLocalValue(identifier.value.value, self:Assert(input:GetWithoutExpansion(argi)))
 		end
 
 		if self:IsRuntime() then

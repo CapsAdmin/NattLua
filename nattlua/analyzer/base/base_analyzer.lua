@@ -10,6 +10,7 @@ local debug = debug
 local io = io
 local load = loadstring or load
 local LString = require("nattlua.types.string").LString
+local ConstString = require("nattlua.types.string").ConstString
 local Tuple = require("nattlua.types.tuple").Tuple
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
@@ -29,7 +30,7 @@ return function(META)
 		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("runtime"), "runtime")
 		self:PushGlobalEnvironment(statement, self:GetDefaultEnvironment("typesystem"), "typesystem")
 		local g = self:GetGlobalEnvironment("typesystem")
-		g:Set(LString("_G"), g)
+		g:Set(ConstString("_G"), g)
 		self:PushAnalyzerEnvironment("runtime")
 		self:CreateLocalValue("...", argument_tuple)
 		local analyzed_return = self:AnalyzeStatementsAndCollectOutputSignatures(statement)
