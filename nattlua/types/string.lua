@@ -178,27 +178,11 @@ function META.New(data--[[#: string | nil]])
 end
 
 function META:Index(analyzer, key)
-	local index_key = META.New("__index"):SetLiteral(true)  --[[#as any]]
-	local index = (self:GetMetaTable() --[[#as any]]):Get(index_key)
+	local index = (self:GetMetaTable() --[[#as any]]):Get(META.New("__index"):SetLiteral(true)  --[[#as any]])
 
-	if index == self then return self:Get(key) end
-
-	if
-		(
-			(
-				index:GetContract() or
-				index
-			):HasKey(key) or
-			(
-				index:GetMetaTable() and
-				index:GetMetaTable():HasKey(index_key)
-			)
-		)
-	then
-		return analyzer:IndexOperator(index:GetContract() or index, key)
+	if index:HasKey(key) then
+		return analyzer:IndexOperator(index, key)
 	end
-
-	if analyzer:IsTypesystem() then return self:Get(key) end
 
 	return false, type_errors.index_string_attempt()
 end
