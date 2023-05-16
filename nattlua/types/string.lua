@@ -177,6 +177,32 @@ function META.New(data--[[#: string | nil]])
 	return self
 end
 
+function META:Index(analyzer, key)
+	local index_key = META.New("__index"):SetLiteral(true)  --[[#as any]]
+	local index = (self:GetMetaTable() --[[#as any]]):Get(index_key)
+
+	if index == self then return self:Get(key) end
+
+	if
+		(
+			(
+				index:GetContract() or
+				index
+			):HasKey(key) or
+			(
+				index:GetMetaTable() and
+				index:GetMetaTable():HasKey(index_key)
+			)
+		)
+	then
+		return analyzer:IndexOperator(index:GetContract() or index, key)
+	end
+
+	if analyzer:IsTypesystem() then return self:Get(key) end
+
+	return false, type_errors.index_string_attempt()
+end
+
 return {
 	String = META.New,
 	LString = function(num--[[#: string]])

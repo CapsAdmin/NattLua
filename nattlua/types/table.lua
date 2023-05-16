@@ -1136,6 +1136,109 @@ function META:NewIndex(analyzer, key, val)
 	return true
 end
 
+function META:Index(analyzer, key)
+	if self:GetMetaTable() and not self:HasKey(key) then
+		local index = self:GetMetaTable():Get(LString("__index"))
+
+		if index then
+			if index == self then return self:Get(key) end
+
+			if
+				index.Type == "table" and
+				(
+					(
+						index:GetContract() or
+						index
+					):HasKey(key) or
+					(
+						index:GetMetaTable() and
+						index:GetMetaTable():HasKey(LString("__index"))
+					)
+				)
+			then
+				return analyzer:IndexOperator(index:GetContract() or index, key)
+			end
+
+			if index.Type == "function" then
+				local real_obj = self
+				local obj, err = index:Call(analyzer, Tuple({self, key}), analyzer.current_statement)
+
+				if not obj then return obj, err end
+
+				local val = obj:Get(1)
+
+				if val and (val.Type ~= "symbol" or val:GetData() ~= nil) then
+					if val.Type == "union" and val:CanBeNil() then
+						val:RemoveType(Nil())
+					end
+
+					analyzer:TrackTableIndex(real_obj, key, val)
+					return val
+				end
+			end
+		end
+	end
+
+	if analyzer:IsTypesystem() then return self:Get(key) end
+
+	local tracked = analyzer:GetTrackedTableWithKey(self, key)
+
+	if tracked then return tracked end
+
+	local contract = self:GetContract()
+
+	if contract then
+		local val, err = contract:Get(key)
+
+		if not val then return val, err end
+
+		if not self.argument_index or contract:IsReferenceArgument() then
+			local val = analyzer:GetMutatedTableValue(self, key)
+
+			if val then
+				if val.Type == "union" then val = val:Copy(nil, true) end
+
+				if not val:GetContract() then val:SetContract(val) end
+
+				analyzer:TrackTableIndex(self, key, val)
+				return val
+			end
+		end
+
+		if val.Type == "union" then val = val:Copy(nil, true) end
+
+		--TODO: this seems wrong, but it's for deferred analysis maybe not clearing up muations?
+		if analyzer:HasMutations(self) then
+			local tracked = analyzer:GetMutatedTableValue(self, key)
+
+			if tracked then
+				analyzer:TrackTableIndex(self, key, tracked)
+				return tracked
+			end
+		end
+
+		analyzer:TrackTableIndex(self, key, val)
+		return val
+	end
+
+	local val = analyzer:GetMutatedTableValue(self, key)
+
+	if key:IsLiteral() then
+		local found_key = self:FindKeyValReverse(key)
+
+		if found_key and not found_key.key:IsLiteral() then
+			val = Union({Nil(), val})
+		end
+	end
+
+	if val then
+		analyzer:TrackTableIndex(self, key, val)
+		return val
+	end
+
+	return Nil()
+end
+
 function META.New()
 	return setmetatable(
 		{

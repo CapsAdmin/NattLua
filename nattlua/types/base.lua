@@ -1,3 +1,4 @@
+--ANALYZE
 local assert = _G.assert
 local tostring = _G.tostring
 local setmetatable = _G.setmetatable
@@ -258,6 +259,10 @@ end
 
 function META:NewIndex(analyzer, key, val)
 	return self:Set(key, val)
+end
+
+function META:Index(analyzer, key)
+	return self:Get(key)
 end
 
 function META.New()
