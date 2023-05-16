@@ -13,6 +13,7 @@ local META = dofile("nattlua/types/base.lua")
 local context = require("nattlua.analyzer.context")
 local shallow_copy = require("nattlua.other.shallow_copy")
 local mutation_solver = require("nattlua.analyzer.mutation_solver")
+local Any = require("nattlua.types.any").Any
 META.Type = "table"
 --[[#type META.@Name = "TTable"]]
 --[[#type TTable = META.@Self]]
@@ -1035,6 +1036,104 @@ function META:Call(analyzer, input, call_node)
 
 	return false,
 	type_errors.because(type_errors.table_index(self, "__call"), reason)
+end
+
+function META:NewIndex(analyzer, key, val)
+	if self:GetMetaTable() then
+		local func = self:GetMetaTable():Get(LString("__newindex"))
+
+		if func then
+			if func.Type == "table" then return func:Set(key, val) end
+
+			if func.Type == "function" then
+				return analyzer:Assert(func:Call(analyzer, Tuple({self, key, val}), analyzer.current_statement))
+			end
+		end
+	end
+
+	if
+		self.argument_index and
+		(
+			not self:GetContract() or
+			not self:GetContract().mutable
+		)
+		and
+		not self.mutable
+	then
+		if not self:GetContract() then
+			analyzer:Warning(type_errors.mutating_function_argument(self, self.argument_index))
+		else
+			analyzer:Error(type_errors.mutating_immutable_function_argument(self, self.argument_index))
+		end
+	end
+
+	local contract = self:GetContract()
+
+	if contract then
+		if analyzer:IsRuntime() then
+			local existing
+			local err
+
+			if self == contract then
+				if self.mutable and self:GetMetaTable() and self:GetMetaTable().Self == self then
+					return self:SetExplicit(key, val)
+				else
+					existing = analyzer:GetMutatedTableValue(self, key)
+				end
+			else
+				existing, err = contract:Get(key)
+			end
+
+			if existing then
+				if val.Type == "function" and existing.Type == "function" then
+					for i, v in ipairs(val:GetInputIdentifiers()) do
+						if not existing:GetInputIdentifiers()[i] then
+							analyzer:Error("too many arguments")
+
+							break
+						end
+					end
+
+					val:SetInputSignature(existing:GetInputSignature())
+					val:SetOutputSignature(existing:GetOutputSignature())
+					val:SetExplicitOutputSignature(true)
+					val:SetExplicitInputSignature(true)
+					val:SetCalled(false)
+				end
+
+				local ok, err = val:IsSubsetOf(existing)
+
+				if ok then
+					if self == contract then
+						analyzer:MutateTable(self, key, val)
+						return true
+					end
+				else
+					analyzer:Error(err)
+				end
+			elseif err then
+				analyzer:Error(err)
+			end
+		elseif analyzer:IsTypesystem() then
+			return self:GetContract():SetExplicit(key, val)
+		end
+	end
+
+	if analyzer:IsTypesystem() then
+		if val.Type ~= "symbol" or val.Data ~= nil then
+			return self:SetExplicit(key, val)
+		else
+			return self:Set(key, val)
+		end
+	end
+
+	analyzer:MutateTable(self, key, val)
+
+	if not self:GetContract() then
+		return self:Set(key, val, analyzer:IsRuntime())
+	end
+
+	return true
 end
 
 function META.New()

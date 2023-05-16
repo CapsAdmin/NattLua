@@ -256,6 +256,10 @@ function META:Call(analyzer, input, call_node)
 	return false, type_errors.invalid_type_call(self.Type, self)
 end
 
+function META:NewIndex(analyzer, key, val)
+	return self:Set(key, val)
+end
+
 function META.New()
 	return setmetatable({}--[[# as META.@Self]], META)
 end

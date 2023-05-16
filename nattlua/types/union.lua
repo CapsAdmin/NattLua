@@ -478,10 +478,13 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 end
 
 function META:Call(analyzer, input, call_node)
-	if false --[[#as true]] then return end
+	if false--[[# as true]] then return end
+
 	local Tuple = require("nattlua.types.tuple").Tuple
 
-	if self:IsEmpty() then return false, type_errors.operation("call", nil, "union") end
+	if self:IsEmpty() then
+		return false, type_errors.operation("call", nil, "union")
+	end
 
 	do
 		-- make sure the union is callable, we pass the analyzer and 
@@ -491,7 +494,7 @@ function META:Call(analyzer, input, call_node)
 
 		for _, v in ipairs(self.Data) do
 			if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-				analyzer:ErrorAndCloneCurrentScope(type_errors.union_contains_non_callable(self, v), self --[[#as any]])
+				analyzer:ErrorAndCloneCurrentScope(type_errors.union_contains_non_callable(self, v), self--[[# as any]])
 			else
 				truthy_union:AddType(v)
 			end
@@ -556,6 +559,31 @@ function META:Call(analyzer, input, call_node)
 	end
 
 	return Tuple({new--[[# as any]]})
+end
+
+function META:NewIndex(analyzer, key, val)
+	-- local x: nil | {foo = true}
+	-- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
+	-- log(x.foo) << no error, because now x has no key nil
+	local new_union = META.New()
+	local truthy_union = META.New()
+	local falsy_union = META.New()
+
+	for _, v in ipairs(self:GetData()) do
+		local ok, err = analyzer:NewIndexOperator(v, key, val)
+
+		if not ok then
+			analyzer:ErrorAndCloneCurrentScope(err or "invalid set error", self--[[# as any]])
+			falsy_union:AddType(v)
+		else
+			truthy_union:AddType(v)
+			new_union:AddType(v)
+		end
+	end
+
+	truthy_union:SetUpvalue(self:GetUpvalue())
+	falsy_union:SetUpvalue(self:GetUpvalue())
+	return new_union
 end
 
 return {

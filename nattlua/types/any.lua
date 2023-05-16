@@ -48,6 +48,10 @@ function META.LogicalComparison(l--[[#: TAny]], r--[[#: TBaseType]], op--[[#: st
 	return false, type_errors.binary(op, l, r)
 end
 
+function META:NewIndex(key, val)
+	return true
+end
+
 function META:Call(analyzer, input, call_node)
 	local Tuple = require("nattlua.types.tuple").Tuple
 	local Union = require("nattlua.types.union").Union

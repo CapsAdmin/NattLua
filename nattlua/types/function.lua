@@ -321,6 +321,10 @@ do
 	end
 end
 
+function META:NewIndex(analyzer, key, val)
+	
+end
+
 return {
 	Function = META.New,
 	AnyFunction = function()
