@@ -1039,6 +1039,22 @@ function META:Call(analyzer, input, call_node)
 end
 
 function META:NewIndex(analyzer, key, val)
+	if
+		val.Type == "function" and
+		val:GetFunctionBodyNode() and
+		val:GetFunctionBodyNode().self_call
+	then
+		local arg = val:GetInputSignature():Get(1)
+
+		if arg and not arg:GetContract() and not arg.Self and not analyzer:IsTypesystem() then
+			val:SetCalled(true)
+			val = val:Copy()
+			val:SetCalled(nil)
+			val:GetInputSignature():Set(1, Union({Any(), self}))
+			analyzer:AddToUnreachableCodeAnalysis(val, val:GetInputSignature(), val:GetFunctionBodyNode(), true)
+		end
+	end
+
 	if self:GetMetaTable() then
 		local func = self:GetMetaTable():Get(LString("__newindex"))
 
