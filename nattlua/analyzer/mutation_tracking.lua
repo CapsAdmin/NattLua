@@ -9,10 +9,10 @@ return function(META)
 		return tbl:GetMutatedValue(key, self:GetScope())
 	end
 
-	function META:MutateTable(tbl, key, val, scope_override, from_tracking)
+	function META:MutateTable(tbl, key, val, from_tracking)
 		if tbl.Type ~= "table" then return end
 
-		local scope = scope_override or self:GetScope()
+		local scope = self:GetScope()
 
 		if self:IsInUncertainLoop(scope) then
 			if val.dont_widen then
@@ -29,8 +29,8 @@ return function(META)
 		return upvalue:GetMutatedValue(self:GetScope())
 	end
 
-	function META:MutateUpvalue(upvalue, val, scope_override, from_tracking)
-		local scope = scope_override or self:GetScope()
+	function META:MutateUpvalue(upvalue, val, from_tracking)
+		local scope = self:GetScope()
 
 		if self:IsInUncertainLoop(scope) and upvalue:GetScope() then
 			if val.dont_widen or scope:Contains(upvalue:GetScope()) then
@@ -344,7 +344,7 @@ return function(META)
 
 						if not union:IsEmpty() then
 							union:SetUpvalue(data.upvalue)
-							self:MutateUpvalue(data.upvalue, union, nil, true)
+							self:MutateUpvalue(data.upvalue, union, true)
 						end
 					end
 				end
@@ -359,7 +359,7 @@ return function(META)
 					end
 
 					if not union:IsEmpty() then
-						self:MutateTable(data.obj, data.key, union, nil, true)
+						self:MutateTable(data.obj, data.key, union, true)
 					end
 				end
 			end
@@ -388,7 +388,7 @@ return function(META)
 								union:SetUpvalue(data.upvalue)
 							end
 
-							self:MutateUpvalue(data.upvalue, union, nil, true)
+							self:MutateUpvalue(data.upvalue, union, true)
 						end
 					end
 				end
@@ -404,7 +404,7 @@ return function(META)
 								end
 							end
 
-							self:MutateTable(data.obj, data.key, union, nil, true)
+							self:MutateTable(data.obj, data.key, union, true)
 						end
 					end
 				end
@@ -452,13 +452,15 @@ return function(META)
 		end
 
 		function META:ApplyMutationsAfterReturn(scope, scope_override, negate, upvalues, tables)
+			self:PushScope(scope_override)
+
 			if upvalues then
 				for _, data in ipairs(upvalues) do
 					local val = solve(data, scope, negate)
 
 					if val then
 						val:SetUpvalue(data.upvalue)
-						self:MutateUpvalue(data.upvalue, val, scope_override, true)
+						self:MutateUpvalue(data.upvalue, val, true)
 					end
 				end
 			end
@@ -467,11 +469,11 @@ return function(META)
 				for _, data in ipairs(tables) do
 					local val = solve(data, scope, negate)
 
-					if val then
-						self:MutateTable(data.obj, data.key, val, scope_override, true)
-					end
+					if val then self:MutateTable(data.obj, data.key, val, true) end
 				end
 			end
+
+			self:PopScope()
 		end
 	end
 end
