@@ -1062,7 +1062,7 @@ function META:NewIndex(analyzer, key, val)
 			if func.Type == "table" then return func:Set(key, val) end
 
 			if func.Type == "function" then
-				return analyzer:Assert(func:Call(analyzer, Tuple({self, key, val}), analyzer.current_statement))
+				return func:Call(analyzer, Tuple({self, key, val}), analyzer.current_statement)
 			end
 		end
 	end
@@ -1094,7 +1094,7 @@ function META:NewIndex(analyzer, key, val)
 				if self.mutable and self:GetMetaTable() and self:GetMetaTable().Self == self then
 					return self:SetExplicit(key, val)
 				else
-					existing = analyzer:GetMutatedTableValue(self, key)
+					existing = self:GetMutatedValue(key, analyzer:GetScope())
 				end
 			else
 				existing, err = contract:Get(key)
@@ -1172,7 +1172,7 @@ function META:Index(analyzer, key)
 					)
 				)
 			then
-				return analyzer:IndexOperator(index:GetContract() or index, key)
+				return (index:GetContract() or index):Index(analyzer, key)
 			end
 
 			if index.Type == "function" then
@@ -1209,7 +1209,7 @@ function META:Index(analyzer, key)
 		if not val then return val, err end
 
 		if not self.argument_index or contract:IsReferenceArgument() then
-			local val = analyzer:GetMutatedTableValue(self, key)
+			local val = self:GetMutatedValue(key, analyzer:GetScope())
 
 			if val then
 				if val.Type == "union" then val = val:Copy(nil, true) end
@@ -1224,20 +1224,17 @@ function META:Index(analyzer, key)
 		if val.Type == "union" then val = val:Copy(nil, true) end
 
 		--TODO: this seems wrong, but it's for deferred analysis maybe not clearing up muations?
-		if analyzer:HasMutations(self) then
-			local tracked = analyzer:GetMutatedTableValue(self, key)
+		if self:HasMutations() then
+			local tracked = self:GetMutatedValue(key, analyzer:GetScope())
 
-			if tracked then
-				analyzer:TrackTableIndex(self, key, tracked)
-				return tracked
-			end
+			if tracked then val = tracked end
 		end
 
 		analyzer:TrackTableIndex(self, key, val)
 		return val
 	end
 
-	local val = analyzer:GetMutatedTableValue(self, key)
+	local val = self:GetMutatedValue(key, analyzer:GetScope())
 
 	if key:IsLiteral() then
 		local found_key = self:FindKeyValReverse(key)

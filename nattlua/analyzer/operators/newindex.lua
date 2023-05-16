@@ -8,9 +8,7 @@ local type_errors = require("nattlua.types.error_messages")
 return {
 	NewIndex = function(META)
 		function META:NewIndexOperator(obj, key, val)
-			if obj.Type == "union" then return obj:NewIndex(self, key, val) end
-
-			return obj:NewIndex(self, key, val)
+			return self:Assert(obj:NewIndex(self, key, val))
 		end
 	end,
 }
