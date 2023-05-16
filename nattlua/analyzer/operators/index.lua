@@ -6,31 +6,13 @@ local type_errors = require("nattlua.types.error_messages")
 return {
 	Index = function(META)
 		function META:IndexOperator(obj, key)
-			if obj.Type == "union" then
-				local union = Union({})
+			if obj.Type == "union" then return obj:Index(self, key) end
 
-				for _, obj in ipairs(obj.Data) do
-					if obj.Type == "tuple" and obj:GetLength() == 1 then
-						obj = obj:Get(1)
-					end
-
-					-- if we have a union with an empty table, don't do anything
-					-- ie {[number] = string} | {}
-					if obj.Type == "table" and obj:IsEmpty() then
-
-					else
-						local val, err = obj:Get(key)
-
-						if not val then return val, err end
-
-						union:AddType(val)
-					end
-				end
-
-				return union
+			if self:IsRuntime() and obj.Type == "tuple" and obj:GetLength() == 1 then
+				obj = obj:Get(1)
 			end
 
-			if obj.Type ~= "table" and obj.Type ~= "tuple" and obj.Type ~= "string" then
+			if obj.Type ~= "table" and obj.Type ~= "string" then
 				return obj:Get(key)
 			end
 
@@ -77,10 +59,6 @@ return {
 			end
 
 			if self:IsTypesystem() then return obj:Get(key) end
-
-			if obj.Type == "tuple" and obj:GetLength() == 1 then
-				return self:IndexOperator(obj:Get(1), key)
-			end
 
 			if obj.Type == "string" then
 				return false, type_errors.index_string_attempt()
