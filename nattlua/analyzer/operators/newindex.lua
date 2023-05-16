@@ -9,6 +9,7 @@ return {
 	NewIndex = function(META)
 		function META:NewIndexOperator(obj, key, val)
 			if obj.Type == "any" then return true end
+
 			if obj.Type == "union" then
 				-- local x: nil | {foo = true}
 				-- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
@@ -50,100 +51,103 @@ return {
 				end
 			end
 
-			if obj:GetMetaTable() then
-				local func = obj:GetMetaTable():Get(LString("__newindex"))
+			if obj.Type == "table" then
+				if obj:GetMetaTable() then
+					local func = obj:GetMetaTable():Get(LString("__newindex"))
 
-				if func then
-					if func.Type == "table" then return func:Set(key, val) end
+					if func then
+						if func.Type == "table" then return func:Set(key, val) end
 
-					if func.Type == "function" then
-						return self:Assert(func:Call(self, Tuple({obj, key, val}), self.current_statement))
+						if func.Type == "function" then
+							return self:Assert(func:Call(self, Tuple({obj, key, val}), self.current_statement))
+						end
 					end
 				end
-			end
 
-			if
-				obj.Type == "table" and
-				obj.argument_index and
-				(
-					not obj:GetContract() or
-					not obj:GetContract().mutable
-				)
-				and
-				not obj.mutable
-			then
-				if not obj:GetContract() then
-					self:Warning(type_errors.mutating_function_argument(obj, obj.argument_index))
-				else
-					self:Error(type_errors.mutating_immutable_function_argument(obj, obj.argument_index))
-				end
-			end
-
-			local contract = obj:GetContract()
-
-			if contract then
-				if self:IsRuntime() then
-					local existing
-					local err
-
-					if obj == contract then
-						if obj.mutable and obj:GetMetaTable() and obj:GetMetaTable().Self == obj then
-							return obj:SetExplicit(key, val)
-						else
-							existing = self:GetMutatedTableValue(obj, key)
-						end
+				if
+					obj.argument_index and
+					(
+						not obj:GetContract() or
+						not obj:GetContract().mutable
+					)
+					and
+					not obj.mutable
+				then
+					if not obj:GetContract() then
+						self:Warning(type_errors.mutating_function_argument(obj, obj.argument_index))
 					else
-						existing, err = contract:Get(key)
+						self:Error(type_errors.mutating_immutable_function_argument(obj, obj.argument_index))
 					end
+				end
 
-					if existing then
-						if val.Type == "function" and existing.Type == "function" then
-							for i, v in ipairs(val:GetInputIdentifiers()) do
-								if not existing:GetInputIdentifiers()[i] then
-									self:Error("too many arguments")
+				local contract = obj:GetContract()
 
-									break
-								end
-							end
+				if contract then
+					if self:IsRuntime() then
+						local existing
+						local err
 
-							val:SetInputSignature(existing:GetInputSignature())
-							val:SetOutputSignature(existing:GetOutputSignature())
-							val:SetExplicitOutputSignature(true)
-							val:SetExplicitInputSignature(true)
-							val:SetCalled(false)
-						end
-
-						local ok, err = val:IsSubsetOf(existing)
-
-						if ok then
-							if obj == contract then
-								self:MutateTable(obj, key, val)
-								return true
+						if obj == contract then
+							if obj.mutable and obj:GetMetaTable() and obj:GetMetaTable().Self == obj then
+								return obj:SetExplicit(key, val)
+							else
+								existing = self:GetMutatedTableValue(obj, key)
 							end
 						else
+							existing, err = contract:Get(key)
+						end
+
+						if existing then
+							if val.Type == "function" and existing.Type == "function" then
+								for i, v in ipairs(val:GetInputIdentifiers()) do
+									if not existing:GetInputIdentifiers()[i] then
+										self:Error("too many arguments")
+
+										break
+									end
+								end
+
+								val:SetInputSignature(existing:GetInputSignature())
+								val:SetOutputSignature(existing:GetOutputSignature())
+								val:SetExplicitOutputSignature(true)
+								val:SetExplicitInputSignature(true)
+								val:SetCalled(false)
+							end
+
+							local ok, err = val:IsSubsetOf(existing)
+
+							if ok then
+								if obj == contract then
+									self:MutateTable(obj, key, val)
+									return true
+								end
+							else
+								self:Error(err)
+							end
+						elseif err then
 							self:Error(err)
 						end
-					elseif err then
-						self:Error(err)
+					elseif self:IsTypesystem() then
+						return obj:GetContract():SetExplicit(key, val)
 					end
-				elseif self:IsTypesystem() then
-					return obj:GetContract():SetExplicit(key, val)
 				end
+
+				if self:IsTypesystem() then
+					if val.Type ~= "symbol" or val.Data ~= nil then
+						return obj:SetExplicit(key, val)
+					else
+						return obj:Set(key, val)
+					end
+				end
+
+				self:MutateTable(obj, key, val)
+
+				if not obj:GetContract() then return obj:Set(key, val, self:IsRuntime()) end
+
+				return true
 			end
 
-			if self:IsTypesystem() then
-				if obj.Type == "table" and (val.Type ~= "symbol" or val.Data ~= nil) then
-					return obj:SetExplicit(key, val)
-				else
-					return obj:Set(key, val)
-				end
-			end
-
-			self:MutateTable(obj, key, val)
-
-			if not obj:GetContract() then return obj:Set(key, val, self:IsRuntime()) end
-
-			return true
+			return obj:Set(key, val)
 		end
 	end,
 }

@@ -1,1 +1,0 @@
-This is the base typesystem which includes a union of types used by the analyzer. It should be independent from everything else.
