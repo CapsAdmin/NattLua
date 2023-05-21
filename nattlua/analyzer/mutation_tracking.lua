@@ -134,20 +134,6 @@ return function(META)
 				self:TrackUpvalue(obj)
 			end
 
-			function META:TrackUpvalueNonUnion(obj)
-				local upvalue = obj:GetUpvalue()
-
-				if not upvalue then return end
-
-				self.tracked_upvalues = self.tracked_upvalues or {}
-				self.tracked_upvalues_done = self.tracked_upvalues_done or {}
-
-				if not self.tracked_upvalues_done[upvalue] then
-					table.insert(self.tracked_upvalues, upvalue)
-					self.tracked_upvalues_done[upvalue] = true
-				end
-			end
-
 			function META:GetTrackedUpvalue(obj)
 				local upvalue = obj:GetUpvalue()
 				local stack = upvalue and upvalue.tracked_stack

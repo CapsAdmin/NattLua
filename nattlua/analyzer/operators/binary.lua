@@ -176,8 +176,8 @@ local function Binary(self, node, l, r, op)
 			r = self:AnalyzeExpression(node.right)
 		end
 
-		self:TrackUpvalueNonUnion(l)
-		self:TrackUpvalueNonUnion(r)
+		self:TrackUpvalue(l)
+		self:TrackUpvalue(r)
 
 		-- TODO: more elegant way of dealing with self?
 		if op == ":" then
