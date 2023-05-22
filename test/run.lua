@@ -6,7 +6,7 @@ local io_write = _G.ON_EDITOR_SAVE and function() end or io.write
 local pcall = _G.pcall
 profiler.Start()
 
---require("nattlua.other.helpers").GlobalLookup()
+--require("nattlua.other.debug").GlobalLookup()
 function _G.test(name, cb)
 	cb()
 end
@@ -78,9 +78,8 @@ if is_coverage then
 end
 
 local function find_tests(path)
-	if path and path:sub(-5) == ".nlua" then
-		return {path}
-	end
+	if path and path:sub(-5) == ".nlua" then return {path} end
+
 	local what = path
 	local path = "test/" .. ((what and what .. "/") or "nattlua/")
 	local found = {}

@@ -7,6 +7,11 @@ local math_huge = math.huge
 local table_insert = _G.table.insert
 local table_remove = _G.table.remove
 local ipairs = _G.ipairs
+local pcall = _G.pcall
+local xpcall = _G.xpcall
+local assert = _G.assert
+local debug = _G.debug
+local io = _G.io
 
 --[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
@@ -293,7 +298,7 @@ function META:ParseRootNode()
 			self.RootStatement.imports = self.RootStatement.imports or {}
 
 			for _, import in ipairs(imported_index.imports) do
-				table.insert(self.RootStatement.imports, import)
+				table_insert(self.RootStatement.imports, import)
 			end
 
 			import_tree = imported_index
@@ -302,17 +307,17 @@ function META:ParseRootNode()
 
 	node.statements = self:ParseStatements()
 
-	if shebang then table.insert(node.statements, 1, shebang) end
+	if shebang then table_insert(node.statements, 1, shebang) end
 
 	if import_tree then
-		table.insert(node.statements, 1, import_tree.statements[1])
+		table_insert(node.statements, 1, import_tree.statements[1])
 	end
 
 	if self:IsTokenType("end_of_file") then
 		local eof = self:StartNode("statement", "end_of_file")
 		eof.tokens["end_of_file"] = self.tokens[#self.tokens]
 		eof = self:EndNode(eof)
-		table.insert(node.statements, eof)
+		table_insert(node.statements, eof)
 		node.tokens["eof"] = eof.tokens["end_of_file"]
 	end
 

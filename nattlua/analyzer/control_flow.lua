@@ -1,4 +1,6 @@
 local ipairs = ipairs
+local table_remove = _G.table.remove
+local table_insert = _G.table.insert
 local Any = require("nattlua.types.any").Any
 local Nil = require("nattlua.types.symbol").Nil
 local Tuple = require("nattlua.types.tuple").Tuple
@@ -93,7 +95,7 @@ return function(META)
 
 			if not assert_expression or assert_expression:IsCertainlyTrue() then
 				function_scope.lua_silent_error = function_scope.lua_silent_error or {}
-				table.insert(function_scope.lua_silent_error, 1, self:GetScope())
+				table_insert(function_scope.lua_silent_error, 1, self:GetScope())
 				frame.scope:UncertainReturn()
 			end
 
@@ -106,7 +108,7 @@ return function(META)
 
 					for _, a in ipairs(frame.scope:GetTrackedUpvalues()) do
 						for _, b in ipairs(self:GetTrackedUpvalues()) do
-							if a.upvalue == b.upvalue then table.insert(upvalues, a) end
+							if a.upvalue == b.upvalue then table_insert(upvalues, a) end
 						end
 					end
 				end
@@ -118,7 +120,7 @@ return function(META)
 
 					for _, a in ipairs(frame.scope:GetTrackedTables()) do
 						for _, b in ipairs(self:GetTrackedTables()) do
-							if a.obj == b.obj then table.insert(tables, a) end
+							if a.obj == b.obj then table_insert(tables, a) end
 						end
 					end
 				end
@@ -216,7 +218,7 @@ return function(META)
 		local thrown = false
 
 		if function_scope.lua_silent_error then
-			local errored_scope = table.remove(function_scope.lua_silent_error)
+			local errored_scope = table_remove(function_scope.lua_silent_error)
 
 			if
 				errored_scope and
@@ -282,7 +284,7 @@ return function(META)
 				end
 			end
 
-			table.insert(
+			table_insert(
 				self.call_stack,
 				1,
 				{
@@ -297,7 +299,7 @@ return function(META)
 			end]] end
 
 		function META:PopCallFrame()
-			table.remove(self.call_stack, 1)
+			table_remove(self.call_stack, 1)
 		end
 	end
 

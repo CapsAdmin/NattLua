@@ -137,7 +137,7 @@ function lib.GlobalLookup()
 	local tostring = tostring
 	local io = io
 	local print = function(str--[[#: string]])
-		io.write(str, "\n")
+		io.write(tostring(str), "\n")
 	end
 	local rawset = rawset
 	local rawget = rawget
@@ -152,21 +152,36 @@ function lib.GlobalLookup()
 
 	copy._G = copy
 	local blacklist = {require = true, _G = true}
+	local done = {}
 	setmetatable(
 		_G,
 		{
 			__index = function(_, key)
 				if not blacklist[key] then
-					print("_G." .. tostring(key))
-					print(debug.traceback():match(".-\n.-\n(.-)\n"))
+					local hash = "_G." .. tostring(key) .. "\n" .. (
+							debug.traceback():match(".-\n.-\n(.-)\n") or
+							""
+						)
+
+					if not done[hash] then
+						print(hash)
+						done[hash] = true
+					end
 				end
 
 				return rawget(copy, key)
 			end,
 			__newindex = function(_, key, val)
 				if not blacklist[key] then
-					print("_G." .. tostring(key) .. " = " .. tostring(val))
-					print(debug.traceback():match(".-\n.-\n(.-)\n"))
+					local hash = "_G." .. tostring(key) .. " = " .. tostring(val) .. "\n" .. (
+							debug.traceback():match(".-\n.-\n(.-)\n") or
+							""
+						)
+
+					if not done[hash] then
+						print(hash)
+						done[hash] = true
+					end
 				end
 
 				rawset(copy, key, val)

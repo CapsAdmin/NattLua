@@ -1,3 +1,4 @@
+local setmetatable = _G.setmetatable
 local helpers = require("nattlua.other.helpers")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("code")

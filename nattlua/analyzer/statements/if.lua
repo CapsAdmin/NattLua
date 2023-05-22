@@ -1,4 +1,5 @@
-local ipairs = ipairs
+local ipairs = _G.ipairs
+local pairs = _G.pairs
 local Union = require("nattlua.types.union").Union
 local type_errors = require("nattlua.types.error_messages")
 

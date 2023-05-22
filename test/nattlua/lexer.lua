@@ -1,5 +1,7 @@
 local nl = require("nattlua")
 local runtime_syntax = require("nattlua.syntax.runtime")
+local table_insert = _G.table.insert
+local ipairs = _G.ipairs
 
 local function tokenize(code)
 	return assert(nl.Compiler(code):Lex()).Tokens
@@ -123,26 +125,26 @@ do
 		local passes = {}
 
 		for _, p in ipairs(parts) do
-			table.insert(passes, p)
+			table_insert(passes, p)
 		end
 
 		for _, p in ipairs(parts) do
-			table.insert(passes, "." .. p)
+			table_insert(passes, "." .. p)
 		end
 
 		for _, a in ipairs(parts) do
 			for _, b in ipairs(parts) do
-				table.insert(passes, a .. "." .. b)
+				table_insert(passes, a .. "." .. b)
 			end
 		end
 
 		for _, a in ipairs(passes) do
-			table.insert(out, prefix .. a)
+			table_insert(out, prefix .. a)
 
 			for _, b in ipairs(powers) do
-				table.insert(out, prefix .. a .. psign .. b)
-				table.insert(out, prefix .. a .. psign .. "-" .. b)
-				table.insert(out, prefix .. a .. psign .. "+" .. b)
+				table_insert(out, prefix .. a .. psign .. b)
+				table_insert(out, prefix .. a .. psign .. "-" .. b)
+				table_insert(out, prefix .. a .. psign .. "+" .. b)
 			end
 		end
 	end
@@ -155,7 +157,7 @@ do
 
 		for _ = 1, math.random(max - min + 1) + min - 1 do
 			local x = math.random(#l)
-			table.insert(out, l:sub(x, x))
+			table_insert(out, l:sub(x, x))
 		end
 
 		return table.concat(out)
@@ -175,7 +177,7 @@ do
 		local code = {}
 
 		for i, p in ipairs(passes) do
-			table.insert(code, "local x" .. i .. " = " .. p)
+			table_insert(code, "local x" .. i .. " = " .. p)
 		end
 
 		local input = table.concat(code, "\n")

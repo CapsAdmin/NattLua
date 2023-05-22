@@ -2,6 +2,7 @@ local setmetatable = _G.setmetatable
 local table = _G.table
 local ipairs = _G.ipairs
 local tostring = _G.tostring
+local assert = _G.assert
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Number = require("nattlua.types.number").Number

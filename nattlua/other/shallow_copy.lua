@@ -1,3 +1,5 @@
+local ipairs = _G.ipairs
+
 local function shallow_copy(tbl)
 	local copy = {}
 

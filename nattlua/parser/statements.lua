@@ -1,6 +1,8 @@
 local META = ...
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
+local math_huge = _G.math.huge
+local ipairs = _G.ipairs
 
 do -- destructure statement
 	function META:IsDestructureStatement(offset--[[#: number]])
@@ -240,7 +242,7 @@ function META:ParseGenericForStatement()
 	node.tokens["for"] = self:ExpectTokenValue("for")
 	node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier)
 	node.tokens["in"] = self:ExpectTokenValue("in")
-	node.expressions = self:ParseMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
+	node.expressions = self:ParseMultipleValues(math_huge, self.ExpectRuntimeExpression, 0)
 	node.tokens["do"] = self:ExpectTokenValue("do")
 	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
@@ -495,7 +497,7 @@ end
 function META:ParseCallOrAssignmentStatement()
 	local start = self:GetToken()
 	self:SuppressOnNode()
-	local left = self:ParseMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
+	local left = self:ParseMultipleValues(math_huge, self.ExpectRuntimeExpression, 0)
 
 	if
 		(
@@ -540,7 +542,7 @@ function META:ParseCallOrAssignmentStatement()
 			v.is_left_assignment = true
 		end
 
-		node.right = self:ParseMultipleValues(math.huge, self.ExpectRuntimeExpression, 0)
+		node.right = self:ParseMultipleValues(math_huge, self.ExpectRuntimeExpression, 0)
 		self:ReRunOnNode(node.left)
 		node = self:EndNode(node)
 		return node

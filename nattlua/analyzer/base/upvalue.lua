@@ -1,6 +1,10 @@
 local class = require("nattlua.other.class")
 local shallow_copy = require("nattlua.other.shallow_copy")
 local mutation_solver = require("nattlua.analyzer.mutation_solver")
+local tostring = _G.tostring
+local assert = _G.assert
+local table_insert = _G.table.insert
+local setmetatable = _G.setmetatable
 local META = class.CreateTemplate("upvalue")
 META:GetSet("Value")
 META:GetSet("Hash")
@@ -18,7 +22,9 @@ end
 
 function META:SetValue(value)
 	self.Value = value
+
 	if not value then debug.trace() end
+
 	value:SetUpvalue(self)
 end
 
@@ -31,7 +37,7 @@ do
 	function META:Mutate(val, scope, from_tracking)
 		val:SetUpvalue(self)
 		self.Mutations = self.Mutations or {}
-		table.insert(self.Mutations, {scope = scope, value = val, from_tracking = from_tracking})
+		table_insert(self.Mutations, {scope = scope, value = val, from_tracking = from_tracking})
 
 		if from_tracking then scope:AddTrackedObject(self) end
 	end

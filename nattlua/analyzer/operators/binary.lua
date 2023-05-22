@@ -1,5 +1,6 @@
 local tostring = tostring
 local ipairs = ipairs
+local tonumber = tonumber
 local table = _G.table
 local LString = require("nattlua.types.string").LString
 local String = require("nattlua.types.string").String

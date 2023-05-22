@@ -11,6 +11,7 @@ local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 local CreateNode = require("nattlua.parser.node").New
 local ipairs = _G.ipairs
 local pairs = _G.pairs
+local assert = _G.assert
 local setmetatable = _G.setmetatable
 local type = _G.type
 local table = _G.table

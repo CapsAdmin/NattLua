@@ -1,7 +1,10 @@
 local META = ...
 local table_insert = _G.table.insert
 local table_remove = _G.table.remove
+local ipairs = _G.ipairs
 local math_huge = math.huge
+local io_open = _G.io.open
+local package = _G.package
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 local profiler = require("nattlua.other.profiler")
@@ -91,7 +94,7 @@ do -- typesystem
 			end
 
 			if first_expression then
-				table.insert(node.expressions, 1, first_expression)
+				table_insert(node.expressions, 1, first_expression)
 			end
 
 			node.tokens["("] = pleft
@@ -764,7 +767,7 @@ do -- runtime
 		local node = self:StartNode("expression", "prefix_operator")
 		node.value = self:ParseToken()
 		node.tokens[1] = node.value
-		node.right = self:ExpectRuntimeExpression(math.huge)
+		node.right = self:ExpectRuntimeExpression(math_huge)
 		node = self:EndNode(node)
 		return node
 	end
@@ -811,7 +814,7 @@ do -- runtime
 
 		for package_path in paths:gmatch("(.-);") do
 			local lua_path = package_path:gsub("%?", require_path)
-			local f = io.open(lua_path, "r")
+			local f = io_open(lua_path, "r")
 
 			if f then
 				f:close()
@@ -878,18 +881,18 @@ do -- runtime
 
 		if root_node.data_import and dont_hoist_import then
 			root_node.imports = root_node.imports or {}
-			table.insert(root_node.imports, node)
+			table_insert(root_node.imports, node)
 			return
 		end
 
 		if name == "require" and not self.config.inline_require then
 			root_node.imports = root_node.imports or {}
-			table.insert(root_node.imports, node)
+			table_insert(root_node.imports, node)
 			return
 		end
 
 		self.RootStatement.imports = self.RootStatement.imports or {}
-		table.insert(self.RootStatement.imports, node)
+		table_insert(self.RootStatement.imports, node)
 	end
 
 	function META:HandleImportDataExpression(node--[[#: Node]], path--[[#: string]], start--[[#: number]])
@@ -939,7 +942,7 @@ do -- runtime
 				)
 			else
 				local f
-				f, err = io.open(node.path, "rb")
+				f, err = io_open(node.path, "rb")
 
 				if f then
 					data = f:read("*a")
@@ -959,7 +962,7 @@ do -- runtime
 		if _G.dont_hoist_import and _G.dont_hoist_import > 0 then return end
 
 		self.RootStatement.imports = self.RootStatement.imports or {}
-		table.insert(self.RootStatement.imports, node)
+		table_insert(self.RootStatement.imports, node)
 		return node
 	end
 

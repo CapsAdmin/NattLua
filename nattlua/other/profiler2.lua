@@ -5,6 +5,10 @@ end
 local wlog = print
 local logn = print
 local log = io.write
+local error = _G.error
+local xpcall = _G.xpcall
+local assert = _G.assert
+local table_insert = _G.table.insert
 local ok, jit_profiler = pcall(require, "jit.profile")
 
 if not ok then jit_profiler = nil end
@@ -46,7 +50,7 @@ function utility.TableToColumns(title, tbl, columns, check, sort_key)
 	local top = {}
 
 	for k, v in pairs(tbl) do
-		if not check or check(v) then table.insert(top, {key = k, val = v}) end
+		if not check or check(v) then table_insert(top, {key = k, val = v}) end
 	end
 
 	if type(sort_key) == "function" then
@@ -180,7 +184,7 @@ local blacklist = {
 local function trace_dump_callback(what, trace_id, func, pc, trace_error_id, trace_error_arg)
 	if what == "abort" then
 		local info = jit_util.funcinfo(func, pc)
-		table.insert(profiler.raw_data.trace_aborts, {info, trace_error_id, trace_error_arg})
+		table_insert(profiler.raw_data.trace_aborts, {info, trace_error_id, trace_error_arg})
 	end
 end
 
@@ -243,9 +247,9 @@ local function parse_raw_statistical_data()
 				line = line:gsub("%[builtin#(%d+)%]", function(x)
 					return jit_vmdef.ffnames[tonumber(x)]
 				end)
-				table.insert(children, {name = line or -1, external_function = true})
+				table_insert(children, {name = line or -1, external_function = true})
 			else
-				table.insert(
+				table_insert(
 					children,
 					{path = path, line = tonumber(line_number) or -1, external_function = false}
 				)
@@ -289,15 +293,15 @@ local function parse_raw_statistical_data()
 			data[path][line].start_time = data[path][line].start_time or get_time()
 			data[path][line].parents[tostring(parent)] = parent
 			parent.children[tostring(data[path][line])] = data[path][line]
-		--table.insert(data[path][line].parents, parent)
-		--table.insert(parent.children, data[path][line])
+		--table_insert(data[path][line].parents, parent)
+		--table_insert(parent.children, data[path][line])
 		end
 	end
 end
 
 local function statistical_callback(thread, samples, vmstate)
 	local str = jit_profiler.dumpstack(thread, "pl\n", 1000)
-	table.insert(profiler.raw_data.statistical, {str, samples, vmstate})
+	table_insert(profiler.raw_data.statistical, {str, samples, vmstate})
 end
 
 function profiler.EnableStatisticalProfiling(b)
@@ -372,7 +376,7 @@ do
 
 		local info = debug.getinfo(3)
 		local start_time = get_time()
-		table.insert(
+		table_insert(
 			stack,
 			{
 				section_name = section_name,
@@ -435,9 +439,9 @@ do -- timer
 	local stack = {}
 
 	function profiler.StartTimer(str, ...)
-		table.insert(stack, {str = str and str:format(...), level = #stack})
+		table_insert(stack, {str = str and str:format(...), level = #stack})
 		local last = stack[#stack]
-		last.time = get_time() -- just to make sure there's overhead with table.insert and whatnot
+		last.time = get_time() -- just to make sure there's overhead with table_insert and whatnot
 	end
 
 	function profiler.StopTimer(no_print)
@@ -540,7 +544,7 @@ function profiler.GetBenchmark(type, file, dump_line)
 				data.samples = data.samples or 0
 				data.sample_duration = get_time() - data.start_time
 				data.times_called = data.samples
-				table.insert(out, data)
+				table_insert(out, data)
 			end
 		end
 	end
@@ -586,8 +590,8 @@ function profiler.PrintTraceAborts(min_samples)
 
 					for reason, count in pairs(reasons) do
 						if not blacklist[reason] then
-							table.insert(temp, "\t\t" .. trim(reason) .. " (x" .. count .. ")")
-							table.insert(temp, "\t\t\t" .. line .. ": " .. str)
+							table_insert(temp, "\t\t" .. trim(reason) .. " (x" .. count .. ")")
+							table_insert(temp, "\t\t\t" .. line .. ": " .. str)
 						end
 					end
 				end
@@ -914,7 +918,7 @@ function profiler.MeasureFunctions(tbl, count)
 	local res = {}
 
 	for name, func in pairs(tbl) do
-		table.insert(res, {time = profiler.MeasureFunction(func, count, name, true), name = name})
+		table_insert(res, {time = profiler.MeasureFunction(func, count, name, true), name = name})
 	end
 
 	table.sort(res, function(a, b)

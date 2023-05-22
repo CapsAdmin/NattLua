@@ -7,6 +7,8 @@ local Token = require("nattlua.lexer.token").New
 local class = require("nattlua.other.class")
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
+local string_rep = _G.string.rep
+local string = _G.string
 local META = class.CreateTemplate("lexer")
 --[[#type META.@Name = "Lexer"]]
 --[[#type META.@Self = {
@@ -620,7 +622,7 @@ do
 		end
 
 		lexer:Advance(1)
-		local closing = "]" .. string.rep("=", (lexer:GetPosition() - start) - 2) .. "]"
+		local closing = "]" .. string_rep("=", (lexer:GetPosition() - start) - 2) .. "]"
 		local pos = lexer:FindNearest(closing)
 
 		if pos then
