@@ -18,7 +18,6 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TUnion = META.@Self]]
 --[[#type TUnion.Data = List<|TBaseType|>]]
 --[[#type TUnion.suppress = boolean]]
---[[#type TUnion.falsy_disabled = List<|TBaseType|> | nil]]
 META.Type = "union"
 
 function META:GetHash()
@@ -230,6 +229,16 @@ function META:IsEmpty()
 	return self.Data[1] == nil
 end
 
+function META:RemoveCertainlyFalsy()
+	local copy = self:Copy()
+
+	for _, v in ipairs(self.Data) do
+		if v:IsCertainlyFalse() then copy:RemoveType(v) end
+	end
+
+	return copy
+end
+
 function META:GetTruthy()
 	local copy = self:Copy()
 
@@ -393,68 +402,12 @@ function META:IsFalsy()
 	return false
 end
 
-function META:DisableFalsy()
-	local found = {}
-
-	for _, v in ipairs(self.Data) do
-		if v:IsCertainlyFalse() then table.insert(found, v) end
-	end
-
-	for _, v in ipairs(found) do
-		self:RemoveType(v)
-	end
-
-	self.falsy_disabled = found
-	return self
-end
-
-function META:EnableFalsy()
-	-- never called
-	if not self.falsy_disabled then return end
-
-	for _, v in ipairs(self.falsy_disabled) do
-		self:AddType(v)
-	end
-end
-
-function META:SetMax(val--[[#: TNumber]])
-	-- never called
-	local copy = self:Copy()
-
-	for _, e in ipairs(copy.Data) do
-		e:SetMax(val)
-	end
-
-	return copy
-end
-
 function META:IsLiteral()
 	for _, obj in ipairs(self:GetData()) do
 		if not obj:IsLiteral() then return false end
 	end
 
 	return true
-end
-
-function META:GetLargestNumber()
-	-- never called
-	if #self:GetData() == 0 then return false, type_errors.empty_union() end
-
-	local max = {}
-
-	for _, obj in ipairs(self:GetData()) do
-		if obj.Type ~= "number" then
-			return false, type_errors.union_numbers_only(self)
-		end
-
-		if obj:IsLiteral() then table.insert(max, obj) else return obj end
-	end
-
-	table.sort(max, function(a, b)
-		return a:GetData() > b:GetData()
-	end)
-
-	return max[1]
 end
 
 function META.New(data--[[#: nil | List<|TBaseType|>]])
@@ -467,7 +420,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			LiteralArgument = false,
 			ReferenceArgument = false,
 			suppress = false,
-			falsy_disabled = nil,
 		},
 		META
 	)

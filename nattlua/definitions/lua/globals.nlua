@@ -299,11 +299,7 @@ analyzer function assert(obj: any, msg: string | nil, level: number | nil)
 	if not analyzer:IsDefinetlyReachable() then
 		analyzer:ThrowSilentError(obj)
 
-		if obj.Type == "union" then
-			obj = obj:Copy()
-			obj:DisableFalsy()
-			return obj
-		end
+		if obj.Type == "union" then return obj:RemoveCertainlyFalsy() end
 
 		return obj
 	end
@@ -315,11 +311,7 @@ analyzer function assert(obj: any, msg: string | nil, level: number | nil)
 	end
 
 	if obj:IsTruthy() and not obj:IsFalsy() then
-		if obj.Type == "union" then
-			obj = obj:Copy()
-			obj:DisableFalsy()
-			return obj
-		end
+		if obj.Type == "union" then return obj:RemoveCertainlyFalsy() end
 	end
 
 	if obj:IsFalsy() then
@@ -330,11 +322,7 @@ analyzer function assert(obj: any, msg: string | nil, level: number | nil)
 			obj:IsTruthy()
 		)
 
-		if obj.Type == "union" then
-			obj = obj:Copy()
-			obj:DisableFalsy()
-			return obj
-		end
+		if obj.Type == "union" then return obj:RemoveCertainlyFalsy() end
 	end
 
 	return obj

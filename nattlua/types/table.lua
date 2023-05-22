@@ -398,17 +398,6 @@ function META:Delete(key--[[#: TBaseType]])
 	return true
 end
 
-function META:GetKeyUnion()
-	-- never called
-	local union = Union()
-
-	for _, keyval in ipairs(self:GetData()) do
-		union:AddType(keyval.key:Copy())
-	end
-
-	return union
-end
-
 function META:GetValueUnion()
 	local union = Union()
 

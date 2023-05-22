@@ -582,7 +582,7 @@ function profiler.PrintTraceAborts(min_samples)
 
 					if content then
 						local lines = split(content, "\n")
-						str = lines[line]
+						str = lines[line] or "unknown line"
 						str = "\"" .. trim(str) .. "\""
 					else
 						str = err
