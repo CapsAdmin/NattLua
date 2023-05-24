@@ -540,28 +540,6 @@ function META:NewIndex(analyzer, key, val)
 	return new_union
 end
 
-function META:Index(analyzer, key)
-	local union = META.New({})
-
-	for _, obj in ipairs(self.Data) do
-		if obj.Type == "tuple" and obj:GetLength() == 1 then obj = obj:Get(1) end
-
-		-- if we have a union with an empty table, don't do anything
-		-- ie {[number] = string} | {}
-		if obj.Type == "table" and obj:IsEmpty() then
-
-		else
-			local val, err = obj:Get(key)
-
-			if not val then return val, err end
-
-			union:AddType(val)
-		end
-	end
-
-	return union
-end
-
 return {
 	Union = META.New,
 	Nilable = function(typ--[[: TBaseType]] )

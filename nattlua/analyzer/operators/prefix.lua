@@ -158,7 +158,7 @@ local function Prefix(analyzer, node, r)
 		end
 	end
 
-	return false, type_errors.no_operator(op, analyzer)
+	return false, type_errors.no_operator(op, r)
 end
 
 return {Prefix = Prefix}

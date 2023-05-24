@@ -170,16 +170,6 @@ function META.New(data--[[#: string | nil]])
 	return self
 end
 
-function META:Index(analyzer, key)
-	local index = (
-		self:GetMetaTable()
-	--[[# as any]]):Get(META.New("__index"):SetLiteral(true)--[[# as any]])
-
-	if index:HasKey(key) then return analyzer:IndexOperator(index, key) end
-
-	return false, type_errors.index_string_attempt()
-end
-
 local cache--[[#: Map<|string, TBaseType|>]] = {}
 return {
 	String = META.New,

@@ -257,10 +257,6 @@ function META:NewIndex(analyzer, key, val)
 	return self:Set(key, val)
 end
 
-function META:Index(analyzer, key)
-	return self:Get(key)
-end
-
 function META.New()
 	return setmetatable({}--[[# as META.@Self]], META)
 end

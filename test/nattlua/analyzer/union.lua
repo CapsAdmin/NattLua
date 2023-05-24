@@ -87,7 +87,7 @@ analyze[[
 ]]
 analyze[[
     local shapes = _ as {[number] = 1} | {[number] = 2} | {[number] = 3}
-    attest.equal(shapes[0], _ as 1|2|3)
+    attest.equal(shapes[0], _ as 1|2|3|nil)
 ]]
 analyze(
 	[[
