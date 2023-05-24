@@ -5,6 +5,7 @@ local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
 local LString = require("nattlua.types.string").LString
+local ConstString = require("nattlua.types.string").ConstString
 local Boolean = require("nattlua.types.union").Boolean
 local False = require("nattlua.types.symbol").False
 local True = require("nattlua.types.symbol").True
@@ -13,7 +14,7 @@ local Tuple = require("nattlua.types.tuple").Tuple
 
 local function metatable_function(self, meta_method, l, node)
 	if l:GetMetaTable() then
-		local func = l:GetMetaTable():Get(LString(meta_method))
+		local func = l:GetMetaTable():Get(ConstString(meta_method))
 
 		if func then return self:Assert(func:Call(self, Tuple({l}), node):Get(1)) end
 	end
@@ -21,21 +22,10 @@ end
 
 local function Prefix(self, node, r)
 	local op = node.value.value
-	self.current_expression = node
 
-	if op == "not" then
-		self.inverted_index_tracking = not self.inverted_index_tracking
+	if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
+		if r.Type ~= "union" then self:TrackUpvalue(r) end
 	end
-
-	if not r then
-		r = self:AnalyzeExpression(node.right)
-
-		if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
-			if r.Type ~= "union" then self:TrackUpvalue(r) end
-		end
-	end
-
-	if op == "not" then self.inverted_index_tracking = nil end
 
 	if op == "literal" then
 		r:SetLiteralArgument(true)

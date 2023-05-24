@@ -3,6 +3,7 @@ local ipairs = ipairs
 local tonumber = tonumber
 local table = _G.table
 local LString = require("nattlua.types.string").LString
+local ConstString = require("nattlua.types.string").ConstString
 local String = require("nattlua.types.string").String
 local Any = require("nattlua.types.any").Any
 local Tuple = require("nattlua.types.tuple").Tuple
@@ -16,7 +17,7 @@ local Number = require("nattlua.types.number").Number
 local type_errors = require("nattlua.types.error_messages")
 
 local function metatable_function(self, node, meta_method, l, r)
-	meta_method = LString(meta_method)
+	meta_method = ConstString(meta_method)
 
 	if r:GetMetaTable() or l:GetMetaTable() then
 		local func = (
@@ -257,9 +258,6 @@ local function Binary(self, node, l, r, op)
 			falsy_union.right_source = r
 			new_union.left_source = l
 			new_union.right_source = r
-
-			if op == "~=" then self.inverted_index_tracking = true end
-
 			local type_checked = self.type_checked
 
 			-- the return value from type(x)
@@ -300,8 +298,6 @@ local function Binary(self, node, l, r, op)
 					end
 				end
 			end
-
-			if op == "~=" then self.inverted_index_tracking = nil end
 
 			if op ~= "or" and op ~= "and" then
 				local parent_table = l.parent_table or type_checked and type_checked.parent_table
