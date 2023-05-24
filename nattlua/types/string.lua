@@ -148,6 +148,10 @@ function META:IsTruthy()
 	return true
 end
 
+function META:Get()
+	return false, type_errors.index_string_attempt()
+end
+
 function META.New(data--[[#: string | nil]])
 	local self = setmetatable(
 		{

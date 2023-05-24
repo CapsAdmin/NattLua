@@ -111,7 +111,7 @@ local function index_union(analyzer, obj, key)
 	local union = Union({})
 
 	for _, obj in ipairs(obj:GetData()) do
-		if obj.Type == "tuple" and obj:GetLength() == 1 then obj = obj:Get(1) end
+		if obj.Type == "tuple" then obj = analyzer:IndexOperator(obj, key) end
 
 		-- if we have a union with an empty table, don't do anything
 		-- ie {[number] = string} | {}
@@ -134,7 +134,7 @@ local function index_string(analyzer, obj, key)
 
 	if index:HasKey(key) then return analyzer:IndexOperator(index, key) end
 
-	return false, type_errors.index_string_attempt()
+	return obj:Get(key)
 end
 
 local function index_tuple(analyzer, obj, key)
