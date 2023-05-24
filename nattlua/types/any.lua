@@ -63,12 +63,10 @@ function META:Call(analyzer, input, call_node)
 			if arg:GetContract() then
 				-- error if we call any with tables that have contracts
 				-- since anything might happen to them in an any call
-				analyzer:Error(
-					{
-						"cannot mutate argument with contract ",
-						arg:GetContract(),
-					}
-				)
+				analyzer:Error({
+					"cannot mutate argument with contract ",
+					arg:GetContract(),
+				})
 			else
 				-- if we pass a table without a contract to an any call, we add any to its key values
 				for _, keyval in ipairs(arg:GetData()) do

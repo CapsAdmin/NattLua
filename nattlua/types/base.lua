@@ -187,10 +187,6 @@ do -- operators
 	function META:Get(key--[[#: boolean]])
 		return false, type_errors.undefined_get(self, key, self.Type)
 	end
-
-	function META:PrefixOperator(op--[[#: string]])
-		return false, type_errors.no_operator(op, self)
-	end
 end
 
 do

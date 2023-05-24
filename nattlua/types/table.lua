@@ -884,18 +884,6 @@ function META.Union(a--[[#: TTable]], b--[[#: TTable]])
 	return copy
 end
 
-function META:PrefixOperator(op--[[#: "#"]])
-	if op == "#" then
-		local keys = (self:GetContract() or self):GetData()
-
-		if #keys == 1 and keys[1].key and keys[1].key.Type == "number" then
-			return keys[1].key:Copy()
-		end
-
-		return self:GetLength():SetLiteral(self:IsLiteral())
-	end
-end
-
 function META.LogicalComparison(l, r, op, env)
 	if op == "==" then
 		if env == "runtime" then

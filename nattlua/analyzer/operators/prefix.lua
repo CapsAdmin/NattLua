@@ -11,20 +11,23 @@ local False = require("nattlua.types.symbol").False
 local True = require("nattlua.types.symbol").True
 local Any = require("nattlua.types.any").Any
 local Tuple = require("nattlua.types.tuple").Tuple
+local Number = require("nattlua.types.number").Number
 
-local function metatable_function(self, meta_method, l, node)
-	if l:GetMetaTable() then
-		local func = l:GetMetaTable():Get(ConstString(meta_method))
+local function metatable_function(analyzer, meta_method, obj, node)
+	if obj:GetMetaTable() then
+		local func = obj:GetMetaTable():Get(ConstString(meta_method))
 
-		if func then return self:Assert(func:Call(self, Tuple({l}), node):Get(1)) end
+		if func then
+			return analyzer:Assert(func:Call(analyzer, Tuple({obj}), node):Get(1))
+		end
 	end
 end
 
-local function Prefix(self, node, r)
+local function Prefix(analyzer, node, r)
 	local op = node.value.value
 
 	if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
-		if r.Type ~= "union" then self:TrackUpvalue(r) end
+		if r.Type ~= "union" then analyzer:TrackUpvalue(r) end
 	end
 
 	if op == "literal" then
@@ -45,10 +48,10 @@ local function Prefix(self, node, r)
 		local falsy_union = Union():SetUpvalue(r:GetUpvalue())
 
 		for _, r in ipairs(r:GetData()) do
-			local res, err = Prefix(self, node, r)
+			local res, err = Prefix(analyzer, node, r)
 
 			if not res then
-				self:ErrorAndCloneCurrentScope(err, r)
+				analyzer:ErrorAndCloneCurrentScope(err, r)
 				falsy_union:AddType(r)
 			else
 				new_union:AddType(res)
@@ -59,17 +62,15 @@ local function Prefix(self, node, r)
 			end
 		end
 
-		self:TrackUpvalueUnion(r, truthy_union, falsy_union)
+		analyzer:TrackUpvalueUnion(r, truthy_union, falsy_union)
 		return new_union
 	end
 
-	if r.Type == "any" then return Any() end
-
-	if self:IsTypesystem() then
+	if analyzer:IsTypesystem() then
 		if op == "typeof" then
-			self:PushAnalyzerEnvironment("runtime")
-			local obj = self:AnalyzeExpression(node.right)
-			self:PopAnalyzerEnvironment()
+			analyzer:PushAnalyzerEnvironment("runtime")
+			local obj = analyzer:AnalyzeExpression(node.right)
+			analyzer:PopAnalyzerEnvironment()
 
 			if not obj then
 				return false, type_errors.typeof_lookup_missing(node.right:Render())
@@ -92,18 +93,59 @@ local function Prefix(self, node, r)
 		end
 	end
 
-	if op == "-" then
-		local res = metatable_function(self, "__unm", r, node)
+	if r.Type == "any" then
+		return r
+	elseif r.Type == "table" then
+		if op == "-" then
+			local res = metatable_function(analyzer, "__unm", r, node)
 
-		if res then return res end
-	elseif op == "~" then
-		local res = metatable_function(self, "__bxor", r, node)
+			if res then return res end
+		elseif op == "~" then
+			local res = metatable_function(analyzer, "__bxor", r, node)
 
-		if res then return res end
-	elseif op == "#" then
-		local res = metatable_function(self, "__len", r, node)
+			if res then return res end
+		elseif op == "#" then
+			local res = metatable_function(analyzer, "__len", r, node)
 
-		if res then return res end
+			if res then return res end
+
+			local keys = (r:GetContract() or r):GetData()
+
+			if #keys == 1 and keys[1].key and keys[1].key.Type == "number" then
+				return keys[1].key:Copy()
+			end
+
+			return r:GetLength():SetLiteral(r:IsLiteral())
+		end
+	elseif r.Type == "number" then
+		if op == "-" then
+			if r:IsLiteral() then
+				local num = r.New(-r:GetData()):SetLiteral(true)
+				local max = r:GetMax()
+
+				if max then num:SetMax(max:PrefixOperator(op)) end
+
+				return num
+			end
+
+			return r.New(nil)
+		elseif op == "~" then
+			if r:IsLiteral() then
+				local num = r.New(bit.bnot(r:GetData())):SetLiteral(true)
+				local max = r:GetMax()
+
+				if max then num:SetMax(max:PrefixOperator(op)) end
+
+				return num
+			end
+
+			return r.New(nil)
+		end
+	elseif r.Type == "string" then
+		if op == "#" then
+			local str = r:GetData()
+			return Number(str and #str or nil):SetLiteral(r:IsLiteral())
+		end
 	end
 
 	if op == "not" or op == "!" then
@@ -116,11 +158,7 @@ local function Prefix(self, node, r)
 		end
 	end
 
-	if op == "-" or op == "~" or op == "#" then return r:PrefixOperator(op) end
-
-	error(
-		"unhandled prefix operator in " .. self:GetCurrentAnalyzerEnvironment() .. ": " .. op .. tostring(r)
-	)
+	return false, type_errors.no_operator(op, analyzer)
 end
 
 return {Prefix = Prefix}

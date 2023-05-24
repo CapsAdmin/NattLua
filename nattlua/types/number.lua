@@ -18,30 +18,6 @@ META:GetSet("Data", nil--[[# as number | nil]])
 	GetLargestNumber = function=(self)>(TNumber | nil, nil | any),
 }]]
 
-do -- TODO, operators is mutated below, need to use upvalue position when analyzing typed arguments
-	local operators = {
-		["-"] = function(l--[[#: number]])
-			return -l
-		end,
-		["~"] = function(l--[[#: number]])
-			return bit.bnot(l)
-		end,
-	}
-
-	function META:PrefixOperator(op--[[#: keysof<|operators|>]])
-		if self:IsLiteral() then
-			local num = self.New(operators[op](self:GetData()--[[# as number]])):SetLiteral(true)
-			local max = self:GetMax()
-
-			if max then num:SetMax(max:PrefixOperator(op)) end
-
-			return num
-		end
-
-		return self.New(nil--[[# as number]]) -- hmm
-	end
-end
-
 function META:Widen()
 	self:SetLiteral(false)
 	return self

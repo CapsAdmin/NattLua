@@ -148,13 +148,6 @@ function META:IsTruthy()
 	return true
 end
 
-function META:PrefixOperator(op--[[#: string]])
-	if op == "#" then
-		local str = self:GetData()
-		return Number(str and #str or nil):SetLiteral(self:IsLiteral())
-	end
-end
-
 function META.New(data--[[#: string | nil]])
 	local self = setmetatable(
 		{
