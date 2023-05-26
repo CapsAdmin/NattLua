@@ -10,8 +10,8 @@ return function(META)
 	function META:MutateTable(tbl, key, val, from_tracking)
 		local scope = self:GetScope()
 
-		if self:IsInUncertainLoop(scope) then
-			if val.dont_widen then
+		if self:IsInUncertainLoop(scope) and tbl:GetCreationScope() then
+			if val.dont_widen or scope:Contains(tbl:GetCreationScope()) then
 				val = val:Copy()
 			else
 				val = val:Copy():Widen()

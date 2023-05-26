@@ -151,3 +151,13 @@ analyze[[
         attest.equal(lol, 1)    
     end
 ]]
+analyze[[
+    for i = 1, 10 do
+        local lol = {x = 0}
+    
+        if math.random() > 0.5 then break end
+    
+        lol.x = lol.x + 1
+        attest.equal(lol.x, 1)
+    end
+]]
