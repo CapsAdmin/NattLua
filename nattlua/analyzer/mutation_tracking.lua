@@ -4,8 +4,6 @@ local Union = require("nattlua.types.union").Union
 local shallow_copy = require("nattlua.other.shallow_copy")
 return function(META)
 	function META:GetMutatedTableValue(tbl, key)
-		if tbl.Type ~= "table" then return end
-
 		return tbl:GetMutatedValue(key, self:GetScope())
 	end
 
