@@ -18,11 +18,6 @@ META:GetSet("Data", nil--[[# as number | nil]])
 	GetLargestNumber = function=(self)>(TNumber | nil, nil | any),
 }]]
 
-function META:Widen()
-	self:SetLiteral(false)
-	return self
-end
-
 function META:GetHash()
 	if self:IsNan() then return nil end
 
