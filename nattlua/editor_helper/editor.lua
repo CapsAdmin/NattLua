@@ -468,7 +468,7 @@ function META:GetDefinition(path, line, character)
 			return node
 		end
 
-		if types[1]:GetNode() then
+		if types[1].GetNode and types[1]:GetNode() then
 			local node = types[1]:GetNode()
 			return node
 		end
