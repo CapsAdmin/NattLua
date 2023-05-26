@@ -269,10 +269,11 @@ local function parse_raw_statistical_data()
 				parents = {},
 				ready = false,
 				func_name = path,
-				vmstate = vmstate,
+				vmstate = {},
 			}
 		data[path][line].samples = data[path][line].samples + samples
 		data[path][line].start_time = data[path][line].start_time or get_time()
+		data[path][line].vmstate[vmstate] = (data[path][line].vmstate[vmstate] or 0) + 1
 		local parent = data[path][line]
 
 		for _, info in ipairs(children) do
@@ -287,10 +288,11 @@ local function parse_raw_statistical_data()
 					parents = {},
 					ready = false,
 					func_name = path,
-					vmstate = vmstate,
+					vmstate = {},
 				}
 			data[path][line].samples = data[path][line].samples + samples
 			data[path][line].start_time = data[path][line].start_time or get_time()
+			data[path][line].vmstate[vmstate] = (data[path][line].vmstate[vmstate] or 0) + 1
 			data[path][line].parents[tostring(parent)] = parent
 			parent.children[tostring(data[path][line])] = data[path][line]
 		--table_insert(data[path][line].parents, parent)
@@ -299,30 +301,29 @@ local function parse_raw_statistical_data()
 	end
 end
 
-local function statistical_callback(thread, samples, vmstate)
-	local str = jit_profiler.dumpstack(thread, "pl\n", 1000)
-	table_insert(profiler.raw_data.statistical, {str, samples, vmstate})
-end
+do
+	local i = 1
 
-function profiler.EnableStatisticalProfiling(b)
-	if not jit_profiler then
-		wlog("jit profiler is not available")
-		return
+	local function statistical_callback(thread, samples, vmstate)
+		local str = jit_profiler.dumpstack(thread, "pl\n", 1000)
+		profiler.raw_data.statistical[i] = {str, samples, vmstate}
+		i = i + 1
 	end
 
-	profiler.busy = b
+	function profiler.EnableStatisticalProfiling(b)
+		if not jit_profiler then
+			wlog("jit profiler is not available")
+			return
+		end
 
-	if b then
-		jit_profiler.start("li0", function(...)
-			local ok, err = pcall(statistical_callback, ...)
+		profiler.busy = b
+		i = 1
 
-			if not ok then
-				logn(err)
-				profiler.EnableStatisticalProfiling(false)
-			end
-		end)
-	else
-		jit_profiler.stop()
+		if b then
+			jit_profiler.start("li2", statistical_callback)
+		else
+			jit_profiler.stop()
+		end
 	end
 end
 
@@ -637,12 +638,19 @@ end
 function profiler.PrintStatistical(min_samples, title, file_filter)
 	min_samples = min_samples or 100
 	local tr = {
-		N = "native",
-		I = "interpreted",
-		G = "garbage collector",
-		J = "JIT compiler",
-		C = "C",
+		{from = "N", to = "native"},
+		{from = "I", to = "interpreted"},
+		{from = "G", to = "garbage collection"},
+		{from = "J", to = "compiling"},
+		{from = "C", to = "C code"},
 	}
+	local vmstate_friendly = {}
+
+	for k, v in pairs(tr) do
+		table.insert(vmstate_friendly, v.from .. " = " .. v.to)
+	end
+
+	vmstate_friendly = table.concat(vmstate_friendly, ", ")
 	log(
 		utility.TableToColumns(
 			title or "statistical",
@@ -658,8 +666,27 @@ function profiler.PrintStatistical(min_samples, title, file_filter)
 				},
 				{
 					key = "vmstate",
-					tostring = function(str)
-						return tr[str]
+					friendly = vmstate_friendly,
+					tostring = function(vmstatemap)
+						local str = {}
+						local total_count = 0
+
+						for state, count in pairs(vmstatemap) do
+							total_count = total_count + count
+						end
+
+						for _, tr in pairs(tr) do
+							vmstatemap[tr.from] = vmstatemap[tr.from] or 0
+
+							for state, count in pairs(vmstatemap) do
+								if tr.from == state then
+									--table.insert(str, string.format("%s %02d%%", state, (count / total_count) * 100))
+									table.insert(str, state:rep(math.floor(count / total_count * (#vmstate_friendly - 3))))
+								end
+							end
+						end
+
+						return table.concat(str, "")
 					end,
 				},
 				{
