@@ -487,7 +487,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 			tbl:CopyLiteralness(meta.Self)
 			tbl:SetContract(meta.Self)
 			-- clear mutations so that when looking up values in the table they won't return their initial value
-			analyzer:ClearObjectMutations(tbl)
+			tbl:ClearMutations()
 		elseif analyzer:IsRuntime() then
 			meta.potential_self = meta.potential_self or types.Union({})
 			meta.potential_self:AddType(tbl)

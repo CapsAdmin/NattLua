@@ -179,7 +179,7 @@ function META:GetLength(analyzer--[[#: any]])
 	local len = 0
 
 	for _, kv in ipairs(self:GetData()) do
-		if analyzer and analyzer:HasMutations(self) then
+		if analyzer and self:HasMutations() then
 			local val = analyzer:GetMutatedTableValue(self, kv.key)
 
 			if val then
@@ -1015,120 +1015,6 @@ function META:Call(analyzer, input, call_node)
 
 	return false,
 	type_errors.because(type_errors.table_index(self, "__call"), reason)
-end
-
-function META:NewIndex(analyzer, key, val)
-	if
-		val.Type == "function" and
-		val:GetFunctionBodyNode() and
-		val:GetFunctionBodyNode().self_call
-	then
-		local arg = val:GetInputSignature():Get(1)
-
-		if arg and not arg:GetContract() and not arg.Self and not analyzer:IsTypesystem() then
-			val:SetCalled(true)
-			val = val:Copy()
-			val:SetCalled(nil)
-			val:GetInputSignature():Set(1, Union({Any(), self}))
-			analyzer:AddToUnreachableCodeAnalysis(val, val:GetInputSignature(), val:GetFunctionBodyNode(), true)
-		end
-	end
-
-	if self:GetMetaTable() then
-		local func = self:GetMetaTable():Get(ConstString("__newindex"))
-
-		if func then
-			if func.Type == "table" then return func:Set(key, val) end
-
-			if func.Type == "function" then
-				return func:Call(analyzer, Tuple({self, key, val}), analyzer.current_statement)
-			end
-		end
-	end
-
-	if
-		self.argument_index and
-		(
-			not self:GetContract() or
-			not self:GetContract().mutable
-		)
-		and
-		not self.mutable
-	then
-		if not self:GetContract() then
-			analyzer:Warning(type_errors.mutating_function_argument(self, self.argument_index))
-		else
-			analyzer:Error(type_errors.mutating_immutable_function_argument(self, self.argument_index))
-		end
-	end
-
-	local contract = self:GetContract()
-
-	if contract then
-		if analyzer:IsRuntime() then
-			local existing
-			local err
-
-			if self == contract then
-				if self.mutable and self:GetMetaTable() and self:GetMetaTable().Self == self then
-					return self:SetExplicit(key, val)
-				else
-					existing = self:GetMutatedValue(key, analyzer:GetScope())
-				end
-			else
-				existing, err = contract:Get(key)
-			end
-
-			if existing then
-				if val.Type == "function" and existing.Type == "function" then
-					for i, v in ipairs(val:GetInputIdentifiers()) do
-						if not existing:GetInputIdentifiers()[i] then
-							analyzer:Error("too many arguments")
-
-							break
-						end
-					end
-
-					val:SetInputSignature(existing:GetInputSignature())
-					val:SetOutputSignature(existing:GetOutputSignature())
-					val:SetExplicitOutputSignature(true)
-					val:SetExplicitInputSignature(true)
-					val:SetCalled(false)
-				end
-
-				local ok, err = val:IsSubsetOf(existing)
-
-				if ok then
-					if self == contract then
-						analyzer:MutateTable(self, key, val)
-						return true
-					end
-				else
-					analyzer:Error(err)
-				end
-			elseif err then
-				analyzer:Error(err)
-			end
-		elseif analyzer:IsTypesystem() then
-			return self:GetContract():SetExplicit(key, val)
-		end
-	end
-
-	if analyzer:IsTypesystem() then
-		if val.Type ~= "symbol" or val.Data ~= nil then
-			return self:SetExplicit(key, val)
-		else
-			return self:Set(key, val)
-		end
-	end
-
-	analyzer:MutateTable(self, key, val)
-
-	if not self:GetContract() then
-		return self:Set(key, val, analyzer:IsRuntime())
-	end
-
-	return true
 end
 
 function META.New()

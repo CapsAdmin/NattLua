@@ -10,8 +10,6 @@ return function(META)
 	end
 
 	function META:MutateTable(tbl, key, val, from_tracking)
-		if tbl.Type ~= "table" then return end
-
 		local scope = self:GetScope()
 
 		if self:IsInUncertainLoop(scope) then
@@ -41,18 +39,6 @@ return function(META)
 		end
 
 		upvalue:Mutate(val, scope, from_tracking)
-	end
-
-	function META:ClearObjectMutations(obj)
-		if obj.Type ~= "table" and not obj.Type ~= "upvalue" then return end
-
-		obj:ClearMutations()
-	end
-
-	function META:HasMutations(obj)
-		if obj.Type ~= "table" and not obj.Type ~= "upvalue" then return false end
-
-		return obj:HasMutations()
 	end
 
 	function META:ClearScopedTrackedObjects(scope)

@@ -117,7 +117,9 @@ return function(META)
 			arguments = add_potential_self(arguments)
 
 			for _, obj in ipairs(arguments:GetData()) do
-				self:ClearObjectMutations(obj)
+				if obj.Type == "upvalue" or obj.Type == "table" then
+					obj:ClearMutations()
+				end
 			end
 
 			self:CreateAndPushFunctionScope(obj)

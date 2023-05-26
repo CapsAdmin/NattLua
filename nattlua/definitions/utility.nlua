@@ -128,7 +128,7 @@ end
 
 analyzer function copy(obj: any)
 	local copy = obj:Copy()
-	analyzer:ClearObjectMutations(copy)
+	copy:ClearMutations()
 
 	if copy.Type == "table" then copy:SetCreationScope(nil) end
 

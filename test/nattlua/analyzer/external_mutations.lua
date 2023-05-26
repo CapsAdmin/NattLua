@@ -274,7 +274,7 @@ analyze[[
     
         function META:MakeUnique(b: boolean)
             if b then
-                §assert(not analyzer:HasMutations(env.runtime.self))
+                §assert(not env.runtime.self:HasMutations())
                 self.UniqueID = ref
                 ref = ref + 1
             else

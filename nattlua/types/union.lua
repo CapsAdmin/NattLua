@@ -515,31 +515,6 @@ function META:Call(analyzer, input, call_node)
 	return Tuple({new--[[# as any]]})
 end
 
-function META:NewIndex(analyzer, key, val)
-	-- local x: nil | {foo = true}
-	-- log(x.foo) << error because nil cannot be indexed, to continue we have to remove nil from the union
-	-- log(x.foo) << no error, because now x has no key nil
-	local new_union = META.New()
-	local truthy_union = META.New()
-	local falsy_union = META.New()
-
-	for _, v in ipairs(self:GetData()) do
-		local ok, err = analyzer:NewIndexOperator(v, key, val)
-
-		if not ok then
-			analyzer:ErrorAndCloneCurrentScope(err or "invalid set error", self--[[# as any]])
-			falsy_union:AddType(v)
-		else
-			truthy_union:AddType(v)
-			new_union:AddType(v)
-		end
-	end
-
-	truthy_union:SetUpvalue(self:GetUpvalue())
-	falsy_union:SetUpvalue(self:GetUpvalue())
-	return new_union
-end
-
 return {
 	Union = META.New,
 	Nilable = function(typ--[[: TBaseType]] )
