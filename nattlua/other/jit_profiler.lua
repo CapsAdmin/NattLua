@@ -1,4 +1,8 @@
 --ANALYZE
+local jit = require("jit")
+local jit_profiler = require("jit.profile")
+local jit_vmdef = require("jit.vmdef")
+local jit_util = require("jit.util")
 local logf = function(f, ...)
 	io.write((f):format(...))
 end
@@ -9,13 +13,9 @@ local error = _G.error
 local xpcall = _G.xpcall
 local assert = _G.assert
 local table_insert = _G.table.insert
-local ok, jit_profiler = pcall(require, "jit.profile")
 local stringx = require("nattlua.other.string")
 local mathx = require("nattlua.other.math")
 local formating = require("nattlua.other.formating")
-
-if not ok then jit_profiler = nil end
-
 local get_time = os.clock
 
 local function read_file(path)
@@ -29,15 +29,6 @@ local function read_file(path)
 
 	return s
 end
-
-
-local ok, jit_vmdef = pcall(require, "jit.vmdef")
-
-if not ok then jit_vmdef = nil end
-
-local ok, jit_util = pcall(require, "jit.util")
-
-if not ok then jit_util = nil end
 
 local profiler = {}
 profiler.sections = {}
@@ -70,7 +61,7 @@ function profiler.EnableTraceAbortLogging(b--[[#: ]]--[[boolean]] )
 	end
 end
 
-function profiler.EnableStatisticalProfiling(b)
+function profiler.EnableStatisticalProfiling(b--[[#: boolean]])
 	i = 1
 
 	if b then
@@ -89,11 +80,18 @@ function profiler.EnableStatisticalProfiling(b)
 end
 
 do
-	local stack = {}
-	local enabled = false
+	local stack--[[#: List<|
+		{
+			section_name = string,
+			start_time = number,
+			info = debug_getinfo,
+			level = number,
+		}
+	|>]] = {}
+	local enabled = false--[[# as boolean]]
 	local i = 0
 
-	function profiler.PushSection(section_name)
+	function profiler.PushSection(section_name--[[#: string]])
 		if not enabled then return end
 
 		local info = debug.getinfo(3)
@@ -116,10 +114,8 @@ do
 
 		if res then
 			local time = get_time() - res.start_time
-			local path, line = res.info.source, res.info.currentline
-
-			if type(res.section_name) == "string" then line = res.section_name end
-
+			local path = res.info.source
+			local line = res.info.currentline
 			local data = profiler.sections
 			data[path] = data[path] or {}
 			data[path][line] = data[path][line] or
@@ -141,7 +137,7 @@ do
 		end
 	end
 
-	function profiler.RemoveSection(name)
+	function profiler.RemoveSection(name--[[#: string]])
 		profiler.sections[name] = nil
 	end
 
@@ -153,7 +149,7 @@ do
 		stack = {}
 	end
 
-	profiler.PushSection()
+	profiler.PushSection("huh")
 	profiler.PopSection()
 end
 
@@ -221,15 +217,13 @@ do
 				data[path][line].vmstate[vmstate] = (data[path][line].vmstate[vmstate] or 0) + 1
 				data[path][line].parents[tostring(parent)] = parent
 				parent.children[tostring(data[path][line])] = data[path][line]
-			--table_insert(data[path][line].parents, parent)
-			--table_insert(parent.children, data[path][line])
 			end
 		end
 
 		return data
 	end
 
-	function profiler.GetBenchmark(file)
+	function profiler.GetBenchmark(file--[[#: nil | string]])
 		local out = {}
 
 		for path, lines in pairs(parse_raw_statistical_data(profiler.raw_statistical)) do
@@ -291,7 +285,7 @@ do
 		return out
 	end
 
-	function profiler.PrintStatistical(min_samples, title, file_filter)
+	function profiler.PrintStatistical(min_samples--[[#: nil | number]], title--[[#: nil | string]], file_filter--[[#: nil | string]])
 		min_samples = min_samples or 100
 		local tr = {
 			{from = "N", to = "native"},
@@ -323,7 +317,7 @@ do
 					{
 						key = "vmstate",
 						friendly = vmstate_friendly,
-						tostring = function(vmstatemap)
+						tostring = function(vmstatemap--[[#: string]])
 							local str = {}
 							local total_count = 0
 
@@ -399,7 +393,7 @@ do
 		return data
 	end
 
-	function profiler.PrintTraceAborts(min_samples)
+	function profiler.PrintTraceAborts(min_samples--[[#: nil | number]])
 		min_samples = min_samples or 500
 		logn(
 			"trace abort reasons for functions that were sampled by the profiler more than ",
