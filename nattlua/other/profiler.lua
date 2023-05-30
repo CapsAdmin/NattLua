@@ -30,16 +30,4 @@ function profiler.Stop()
 	end
 end
 
-function profiler.PushZone(name--[[#: string]])
-	if not should_run then return end
-
-	jit_profiler.PushSection(name)
-end
-
-function profiler.PopZone()
-	if not should_run then return end
-
-	jit_profiler.PopSection()
-end
-
 return profiler

@@ -392,7 +392,6 @@ do -- typesystem
 	function META:ParseTypeExpression(priority--[[#: number]])
 		if self.TealCompat then return self:ParseTealExpression(priority) end
 
-		profiler.PushZone("ParseTypeExpression")
 		self:PushParserEnvironment("typesystem")
 		local node
 		local force_upvalue
@@ -443,7 +442,6 @@ do -- typesystem
 		end
 
 		self:PopParserEnvironment()
-		profiler.PopZone()
 		return node
 	end
 
@@ -993,7 +991,6 @@ do -- runtime
 			return self:ParseTypeExpression(priority)
 		end
 
-		profiler.PushZone("ParseRuntimeExpression")
 		priority = priority or 0
 		local node = self:ParseParenthesisExpression() or
 			self:ParsePrefixOperatorExpression() or
@@ -1052,7 +1049,6 @@ do -- runtime
 
 		if node then node.first_node = first end
 
-		profiler.PopZone("ParseRuntimeExpression")
 		return node
 	end
 

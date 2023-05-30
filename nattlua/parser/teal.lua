@@ -223,7 +223,6 @@ function META:ParseTealSubExpression(node--[[#: Node]])
 end
 
 function META:ParseTealExpression(priority--[[#: number]])
-	profiler.PushZone("ParseTealTypeExpression")
 	self:PushParserEnvironment("typesystem")
 	local node = self:ParseTealFunctionSignature() or
 		self:ParseTealVarargExpression() or
@@ -248,7 +247,6 @@ function META:ParseTealExpression(priority--[[#: number]])
 
 	if self.TealCompat and self:IsTokenValue(">") then
 		self:PopParserEnvironment()
-		profiler.PopZone()
 		return node
 	end
 
@@ -265,7 +263,6 @@ function META:ParseTealExpression(priority--[[#: number]])
 	end
 
 	self:PopParserEnvironment()
-	profiler.PopZone()
 	return node
 end
 
