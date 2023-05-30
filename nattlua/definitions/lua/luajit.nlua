@@ -14,7 +14,7 @@ type Modules["ffi"] = {
 	load = function=(string, boolean)>(userdata) | function=(string)>(userdata),
 	sizeof = function=(ctype, number)>(number) | function=(ctype)>(number),
 	string = function=(cdata, number | nil)>(string),
-	gc = function=(ctype, empty_function)>(cdata),
+	gc = function=(ctype, Function)>(cdata),
 	istype = function=(ctype, any)>(boolean),
 	fill = function=(cdata, number, any)>(nil) | function=(cdata, len: number)>(nil),
 	offsetof = function=(cdata, number)>(number),
@@ -32,16 +32,40 @@ type Modules["jit.vmdef"] = {
 type Modules["jit.opt"] = {
 	start = function=(...string)>(nil),
 }
+local type jit_attach_bc = function=(func: Function--[[the function that's just been recorded]] )>(nil)
+local type jit_attach_trace = function=(
+	what: "flush" | "start" | "stop" | "abort", -- a description of the trace event
+	tr: number, -- the trace number, not available for flush
+	func: Function, -- the function being traced, available for start and abort
+	pc: number, -- the program counter - the bytecode number of the function being recorded (if this a Lua function), available for start and abort
+	otr: number, -- start: the parent trace number if this is a side trace, abort: abort code
+	oex: number | string -- start: the exit number for the parent trace, abort: abort reason (string)
+)>(nil)
+local type jit_attach_record = function=(
+	tr: number, -- the trace number, not available for flush
+	func: Function, -- the function being traced, available for start and abort
+	pc: number, -- the program counter - the bytecode number of the function being recorded (if this a Lua function), available for start and abort
+	depth: number -- the depth of the inlining of the current bytecode
+)>(nil)
+local type jit_attach_texit = function=(
+	tr: number, -- the trace number, not available for flush
+	ex: number, -- the exit number
+	ngpr: number, -- the number of general-purpose and floating point registers that are active at the exit
+	nfpr: number -- the number of general-purpose and floating point registers that are active at the exit
+)>(nil)
 type jit = {
 	os = Modules["ffi"].os,
 	arch = Modules["ffi"].arch,
-	attach = function=(empty_function, string)>(nil),
+	attach = function=(
+		jit_attach_bc | jit_attach_trace | jit_attach_record | jit_attach_texit,
+		"bc" | "trace" | "record" | "texit" | nil
+	)>(nil),
 	tracebarrier = function=()>(nil),
 	version_num = number,
 	version = string,
-	on = function=(empty_function | true, boolean | nil)>(nil),
-	off = function=(empty_function | true, boolean | nil)>(nil),
-	flush = function=(nil | empty_function | true, boolean | nil)>(nil),
+	on = function=(Function | true, boolean | nil)>(nil),
+	off = function=(Function | true, boolean | nil)>(nil),
+	flush = function=(nil | Function | true, boolean | nil)>(nil),
 	status = function=()>(boolean, ...string),
 	security = function=()>(boolean, ...string),
 	opt = Modules["jit.opt"],
@@ -52,7 +76,8 @@ type Modules["jit.profile"] = {
 	dumpstack = Function,
 }
 type Modules["jit.util"] = {
-	funcinfo = function=(empty_function, position: number | nil)>(
+	-- Retrieves LuaJIT information about a given function, similarly to debug.getinfo
+	funcinfo = function=(Function, position: number | nil)>(
 		{
 			linedefined = number, -- as for debug.getinfo
 			lastlinedefined = number, -- as for debug.getinfo
@@ -67,18 +92,47 @@ type Modules["jit.util"] = {
 			isvararg = boolean, -- if the function is a vararg function
 			source = string, -- as for debug.getinfo
 			loc = string, -- a string describing the source and currentline, like "<source>:<line>"
-			ffid = number, -- the fast function id of the function (if it is one). In this case only upvalues above and addr below are valid
-			addr = any, -- the address of the function (if it is not a Lua function). If it's a C function rather than a fast function, only upvalues above is valid*
+			ffid = nil | number, -- the fast function id of the function (if it is one). In this case only upvalues above and addr below are valid
+			addr = nil | number, -- the address of the function (if it is not a Lua function). If it's a C function rather than a fast function, only upvalues above is valid*
 		}
 	),
-	funcuvname = Function,
-	traceinfo = Function,
-	traceir = Function,
-	tracek = Function,
-	tracesnap = Function,
-	traceexitstub = Function,
-	ircalladdr = Function,
-	tracemc = Function,
-	funcbc = Function,
-	funck = Function,
+	-- Does the exact same thing as debug.getupvalue except it only returns the name, not the name and the object. 
+	-- The upvalue indexes also start at 0 rather than 1, so doing jit.util.funcuvname(func, 0) will get you the same name as debug.getupvalue(func, 1)
+	funcuvname = function=(func: Function, index: number)>(nil | string), -- The function returns nil if there is no upvalue with the given index, otherwise the name of the upvalue is returned
+	-- Returns table fields
+	traceinfo = function=(trace: number)>(
+		{
+			-- the linked trace (0 for link types: none, return, interpreter)
+			link = number,
+			-- the lowest IR constant (???)
+			nk = number,
+			-- the next IR instruction (???)
+			nins = number,
+			-- the link type
+			linktype = "none" | "root" | "loop" | "tail-recursion" | "up-recursion" | "down-recursion" | "interpreter" | "return",
+			-- number of snapshots (for use with jit.util.tracesnap)
+			nexit = number,
+		}
+	),
+	--
+	traceir = function=(trace: number, position: number | nil)>(number, number, number, number, number),
+	--
+	tracek = function=(trace: number, position: number | nil)>(any, number, number | nil),
+	--[[
+		Returns table fields:
+			0 (ref) (number): first IR ref for the snapshot
+			1 (nslots) (number): the number of valid slots
+			all indexes except first 2 and last (there might not be any of these): the snapshot map
+			last index in table (number): -16777216 (255 << 24)
+	]] tracesnap = function=(trace: number, sn: number | nil)>(List<|number|>),
+	-- Returns the exit number to retrieve exit stub address from (gotten via jit.attach with the texit event)
+	traceexitstub = function=(exitno: number)>(number),
+	-- Gets the address of a function from a list of functions
+	ircalladdr = function=(index: number)>(number),
+	--
+	tracemc = function=(tr: number)>(string, number, number),
+	-- Returns bytecode of a function at a position.
+	funcuvname = function=(func: Function, index: number)>(number, number),
+	-- Gets a constant at a certain index in a function.
+	funck = function=(func: Function, index: number)>(any),
 }

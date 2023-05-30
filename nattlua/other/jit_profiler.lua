@@ -18,7 +18,7 @@ local mathx = require("nattlua.other.math")
 local formating = require("nattlua.other.formating")
 local get_time = os.clock
 
-local function read_file(path)
+local function read_file(path--[[#: string]])
 	local f, err = io.open(path)
 
 	if not f then return nil, err end
@@ -80,11 +80,11 @@ function profiler.EnableStatisticalProfiling(b--[[#: boolean]])
 end
 
 do
-	local function parse_raw_statistical_data(raw_data)
+	local function parse_raw_statistical_data(raw_data--[[#: List<|{string, number, string}|>]])
 		local data = {}
 
 		for i = #raw_data, 1, -1 do
-			local args = raw_data[i]
+			local args = assert(raw_data[i])
 			local str, samples, vmstate = args[1], args[2], args[3]
 			local children = {}
 
@@ -211,7 +211,11 @@ do
 		return out
 	end
 
-	function profiler.PrintStatistical(min_samples--[[#: nil | number]], title--[[#: nil | string]], file_filter--[[#: nil | string]])
+	function profiler.PrintStatistical(
+		min_samples--[[#: nil | number]],
+		title--[[#: nil | string]],
+		file_filter--[[#: nil | string]]
+	)
 		min_samples = min_samples or 100
 		local tr = {
 			{from = "N", to = "native"},
@@ -243,7 +247,7 @@ do
 					{
 						key = "vmstate",
 						friendly = vmstate_friendly,
-						tostring = function(vmstatemap--[[#: string]])
+						tostring = function(vmstatemap--[[#: Map<|string, number|>]])
 							local str = {}
 							local total_count = 0
 
@@ -291,7 +295,7 @@ do
 		["down-recursion, restarting"] = true,
 	}
 
-	local function parse_raw_trace_abort_data(raw_data)
+	local function parse_raw_trace_abort_data(raw_data--[[#: any]])
 		local data = {}
 
 		for i = #raw_data, 1, -1 do
