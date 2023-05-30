@@ -1,3 +1,4 @@
+type Modules = {}
 import("./utility.nlua")
 import("./attest.nlua")
 import("./lua/globals.nlua")

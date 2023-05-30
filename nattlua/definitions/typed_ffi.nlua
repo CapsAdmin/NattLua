@@ -255,16 +255,15 @@ local analyzer function cast(node: any, args: any)
 	end
 end
 
+local type ffi = require("ffi")
+
 analyzer function ffi.sizeof(cdata: any, len: nil | number)
 	if cdata.Type == "string" and cdata:IsLiteral() then
-
 		assert(require("nattlua.other.cparser").parseString(cdata:GetData(), {typeof = true}))
-
 		local ffi = require("ffi")
 		local ok, val = pcall(ffi.sizeof, cdata:GetData(), len and len:GetData() or nil)
-		if ok then
-			return val
-		end
+
+		if ok then return val end
 	end
 
 	return types.Number()

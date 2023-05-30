@@ -31,7 +31,7 @@ analyze[[
     attest.equal(require("test.nattlua.analyzer.file_importing.complex.adapter"), 14)
 ]]
 analyze[[
-    attest.equal(require("table.new"), table.new)
+    attest.equal(require("table.new"), _ as function=(number, number)>({[number] = any}))
 ]]
 analyze[[
     attest.equal(require("string"), string)

@@ -1245,6 +1245,7 @@ analyze[[
     end
 ]]
 analyze[[
+    local ffi = require("ffi")
     local val: any
 
     if type(val) == "boolean" then

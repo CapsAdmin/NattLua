@@ -514,11 +514,6 @@ analyze[[
     attest.equal(table_new, _ as "module 'foo' not found" | any)
 ]]
 analyze[[
-    local table_new = require("table.new")
-    attest.equal(table_new, table.new)
-    §assert(#analyzer.diagnostics == 1)
-]]
-analyze[[
     local a, b = load("" as string)
     attest.equal(a, _ as nil | Function)
     attest.equal(b, _ as nil | string)

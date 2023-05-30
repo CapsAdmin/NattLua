@@ -168,30 +168,17 @@ analyzer function require(name: string)
 
 	local str = name
 	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
-	local val = base_environment:Get(str)
 
-	if val then return val end
+	do
+		local val = base_environment:Get(str)
 
-	local modules = {
-		"table.new",
-		"jit.util",
-		"jit.opt",
-	}
+		if val then return val end
+	end
 
-	for _, mod in ipairs(modules) do
-		if str:GetData() == mod then
-			local tbl
+	do
+		local val = base_environment:Get(types.LString("Modules")):Get(str)
 
-			for key in mod:gmatch("[^%.]+") do
-				tbl = tbl or base_environment
-				tbl = tbl:Get(types.LString(key))
-			end
-
-			-- in case it's not found
-			-- TODO, add ability to configure the analyzer
-			analyzer:Warning("module '" .. mod .. "' might not exist")
-			return tbl
-		end
+		if val then return val end
 	end
 
 	if analyzer:GetLocalOrGlobalValue(str) then

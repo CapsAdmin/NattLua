@@ -1,6 +1,8 @@
 local T = require("test.helpers")
 local analyze = T.RunCode
 analyze[=[
+	local ffi = require("ffi")
+
 	ffi.C = {}
 
 	local ctype = ffi.typeof([[struct {
@@ -18,6 +20,8 @@ analyze[=[
 	}, typeof struct|>
 ]=]
 analyze[=[
+	local ffi = require("ffi")
+
 	ffi.C = {}
 
 	local ctype = ffi.typeof([[struct {
@@ -40,6 +44,7 @@ analyze[=[
 	}, typeof struct|>
 ]=]
 analyze[=[
+	local ffi = require("ffi")
 	ffi.C = {}
 
 	ffi.cdef("typedef size_t lol;")
@@ -53,6 +58,7 @@ analyze[=[
 	attest.equal<|typeof ffi.C.foo, function=(number, boolean, number)>(number) |>
 ]=]
 analyze[=[
+	local ffi = require("ffi")
 	ffi.C = {}
 
 	local struct
@@ -95,11 +101,13 @@ analyze[=[
 	attest.equal<|typeof union, {foo = number, bar2 = number} | {foo = number, bar3 = number} | {foo = number, uhoh = number, bar1 = number}|>
 ]=]
 analyze[=[
+	local ffi = require("ffi")
 	ffi.C = {}
 	local ctype = ffi.typeof("struct { const char *foo; }")
 	attest.equal(ctype.foo, _ as ffi.typeof<|"const char*"|>)
 ]=]
 analyze[=[
+	local ffi = require("ffi")
 	ffi.C = {}
 	local struct
 	local LINUX = jit.os == "Linux"
@@ -121,6 +129,7 @@ analyze[=[
 	attest.equal<|typeof ffi.C.foo, function=(number)>((nil)) | function=(number)>((number)) | function=(nil | string | ffi.typeof<|"const char*"|>)>((nil)) |>
 ]=]
 analyze[=[
+	local ffi = require("ffi")
 	ffi.C = {}
 	ffi.cdef("void foo(void *ptr, int foo, const char *test);")
 
@@ -128,6 +137,7 @@ analyze[=[
 	ffi.C.foo(nil, 1, "")
 ]=]
 analyze[=[
+	local ffi = require("ffi")
 	ffi.C = {}
 	local ctype = ffi.typeof("struct { int foo; }")
 
@@ -136,7 +146,8 @@ analyze[=[
 	attest.equal<|(typeof cdata).foo, number|>
 ]=]
 analyze[=[
-    ffi.C = {}
+    local ffi = require("ffi")
+	ffi.C = {}
 	local handle = ffi.typeof("struct {}")
 	local pointer = ffi.typeof("$*", handle)
 	local meta = {}
@@ -181,7 +192,8 @@ analyze[=[
 	end
 ]=]
 analyze[=[	
-    ffi.C = {}
+    local ffi = require("ffi")
+	ffi.C = {}
 	ffi.cdef([[
 		struct in6_addr {
             union {
@@ -197,6 +209,7 @@ analyze[=[
 	attest.equal(lol.u6_addr.u6_addr16, _ as {[number] = number})
 ]=]
 analyze[=[
+	local ffi = require("ffi")
 	ffi.C = {}
 
 	ffi.cdef[[
@@ -207,6 +220,8 @@ analyze[=[
 	attest.equal<|num, number|>
 ]=]
 analyze[=[
+	local ffi = require("ffi")
+
 	local buffer = ffi.new("char[?]", 5)
 	attest.equal<|buffer, {[number] = number}|>
 
@@ -214,6 +229,7 @@ analyze[=[
 	attest.equal<|buffer, {[number] = number}|>
 ]=]
 analyze[[
+	local ffi = require("ffi")
 	ffi.C = {}
 
 	if _ as boolean then
@@ -232,6 +248,7 @@ analyze[[
 
 ]]
 analyze[=[
+	local ffi = require("ffi")
 	ffi.C = {}
 
 	if math.random() > 0.5 then
@@ -248,9 +265,9 @@ analyze[=[
 	
 ]=]
 analyze[[
+	local ffi = require("ffi")
 	ffi.C = {}
 
-	local ffi = require "ffi"
 	ffi.cdef("typedef struct ac_t ac_t;")
 	attest.equal(ffi.C.ac_t, ffi.C.ac_t)
 
@@ -261,19 +278,22 @@ analyze[[
 	end
 ]]
 analyze[[
+	local ffi = require("ffi")
+
 	local newbuf = ffi.new("char [?]", _ as number)
 	attest.equal(newbuf, _ as {[number] = number})
 ]]
 analyze[[
+	local ffi = require("ffi")
 	local gbuf_n = 1024
 	local gbuf = ffi.new("char [?]", gbuf_n)
 	gbuf = gbuf + 1
 	attest.equal(gbuf, gbuf)
 ]]
 analyze[==[
+	local ffi = require("ffi")
 	ffi.C = {}
 
-	local ffi = require("ffi")
 	ffi.cdef([[
 		struct addrinfo {
 			int foo;
@@ -294,9 +314,8 @@ analyze[==[
 	end
 ]==]
 analyze[==[
-	ffi.C = {}
-
 	local ffi = require("ffi")
+	ffi.C = {}
 	ffi.cdef([[
 		uint32_t FormatMessageA(
 			uint32_t dwFlags,
@@ -308,9 +327,8 @@ analyze[==[
 
 ]==]
 analyze[=[
-	ffi.C = {}
-
 	local ffi = require("ffi")
+	ffi.C = {}
 
 	ffi.cdef[[
 		struct sockaddr {
@@ -349,6 +367,7 @@ analyze[=[
 	attest.equal(box[0], _ as {a = number, b = number})
 ]=]
 analyze[[
+	local ffi = require("ffi")
 	local str_v = ffi.new("const char *[?]", 1)
 
 	attest.equal(str_v, _ as {

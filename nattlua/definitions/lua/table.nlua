@@ -7,8 +7,8 @@ type table = {
 	insert = function=(list: Table, pos: number, value: any)>(nil) | function=(list: Table, value: any)>(nil),
 	concat = function=(list: Table, sep: string, i: number, j: number)>(string) | function=(list: Table, sep: string, i: number)>(string) | function=(list: Table, sep: string)>(string) | function=(list: Table)>(string),
 	pack = function=(...)>(Table),
-	new = function=(number, number)>({[number] = any}),
 }
+type Modules["table.new"] = function=(number, number)>({[number] = any})
 
 analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
 	if not tbl:IsLiteral() then return types.String() end
