@@ -1,27 +1,25 @@
 local lib = {}
 
 local function inject_full_path()
-	local ok, lib = pcall(require, "jit.util"--[[# as string]]) -- to avoid warning
-	if ok and type(lib) == "table" and lib.funcinfo then
-		lib._old_funcinfo = lib._old_funcinfo or lib.funcinfo
+	local lib = require("jit.util")
+	lib._old_funcinfo = lib._old_funcinfo or lib.funcinfo
 
-		function lib.funcinfo(...)
-			local ret = {lib._old_funcinfo(...)}
-			local info = ret[1]
+	function lib.funcinfo(...)
+		local ret = {lib._old_funcinfo(...)}
+		local info = ret[1]
 
-			if
-				info and
-				type(info) == "table" and
-				type(info.loc) == "string" and
-				type(info.source) == "string" and
-				type(info.currentline) == "number" and
-				info.source:sub(1, 1) == "@"
-			then
-				info.loc = info.source:sub(2) .. ":" .. info.currentline
-			end
-
-			return unpack(ret)
+		if
+			info and
+			type(info) == "table" and
+			type(info.loc) == "string" and
+			type(info.source) == "string" and
+			type(info.currentline) == "number" and
+			info.source:sub(1, 1) == "@"
+		then
+			info.loc = info.source:sub(2) .. ":" .. info.currentline
 		end
+
+		return unpack(ret)
 	end
 end
 
@@ -31,8 +29,8 @@ function lib.EnableJITDumper()
 	if jit.version_num ~= 20100 then return end
 
 	inject_full_path()
-	local jutil = require("jit.util"--[[# as string]])
-	local vmdef = require("jit.vmdef"--[[# as string]])
+	local jutil = require("jit.util")
+	local vmdef = require("jit.vmdef")
 	local funcinfo, traceinfo = jutil.funcinfo, jutil.traceinfo
 	local type, format = _G.type, string.format
 	local stdout, stderr = io.stdout, io.stderr
