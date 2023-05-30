@@ -248,7 +248,7 @@ do
 	--[[#local type TokenReturnType = TokenType | false]]
 	local characters = require("nattlua.syntax.characters")
 	local runtime_syntax = require("nattlua.syntax.runtime")
-	local helpers = require("nattlua.other.quote")
+	local formating = require("nattlua.other.formating")
 
 	local function ReadSpace(lexer--[[#: Lexer]])--[[#: TokenReturnType]]
 		if characters.IsSpace(lexer:PeekByte()) then
@@ -614,7 +614,7 @@ do
 
 		if not lexer:IsString("[") then
 			lexer:Error(
-				"expected multiline string " .. helpers.QuoteToken(lexer:GetStringSlice(start, lexer:GetPosition() - 1) .. "[") .. " got " .. helpers.QuoteToken(lexer:GetStringSlice(start, lexer:GetPosition())),
+				"expected multiline string " .. formating.QuoteToken(lexer:GetStringSlice(start, lexer:GetPosition() - 1) .. "[") .. " got " .. formating.QuoteToken(lexer:GetStringSlice(start, lexer:GetPosition())),
 				start,
 				start + 1
 			)
@@ -631,7 +631,7 @@ do
 		end
 
 		lexer:Error(
-			"expected multiline string " .. helpers.QuoteToken(closing) .. " reached end of code",
+			"expected multiline string " .. formating.QuoteToken(closing) .. " reached end of code",
 			start,
 			start + 1
 		)

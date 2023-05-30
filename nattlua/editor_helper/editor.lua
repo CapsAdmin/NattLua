@@ -1,6 +1,6 @@
 --DONT_ANALYZE
 local Compiler = require("nattlua.compiler").New
-local helpers = require("nattlua.other.helpers")
+local formating = require("nattlua.other.formating")
 local Union = require("nattlua.types.union").Union
 local Table = require("nattlua.types.table").Table
 local runtime_syntax = require("nattlua.syntax.runtime")
@@ -183,7 +183,7 @@ function META:Recompile(path)
 				code = code,
 				start = start,
 				stop = stop,
-				message = helpers.FormatMessage(msg, ...),
+				message = formating.FormatMessage(msg, ...),
 				trace = debug.traceback(),
 			}
 		)

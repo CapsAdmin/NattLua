@@ -364,7 +364,6 @@ return function(META)
 	end
 
 	function META:Print(...)
-		local helpers = require("nattlua.other.helpers")
 		local node = self.current_expression
 		local start, stop = node:GetStartStop()
 

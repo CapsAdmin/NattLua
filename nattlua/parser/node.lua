@@ -8,8 +8,7 @@ local pairs = _G.pairs
 local setmetatable = _G.setmetatable
 local type = _G.type
 local table = _G.table
-local helpers = require("nattlua.other.helpers")
-local quote_helper = require("nattlua.other.quote")
+local formating = require("nattlua.other.formating")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("node")
 --[[#type META.@Name = "Node"]]
@@ -28,7 +27,7 @@ function META:__tostring()
 		local name = self.Code:GetName()
 
 		if name:sub(-4) == ".lua" or name:sub(-5) == ".nlua" then
-			local data = helpers.SubPositionToLinePosition(lua_code, self:GetStartStop())
+			local data = formating.SubPositionToLinePosition(lua_code, self:GetStartStop())
 			local name = name
 
 			if name:sub(1, 1) == "@" then name = name:sub(2) end
@@ -41,7 +40,7 @@ function META:__tostring()
 			local name = self.Code:GetName()
 
 			if name and lua_code and (name:sub(-4) == ".lua" or name:sub(-5) == ".nlua") then
-				local data = helpers.SubPositionToLinePosition(lua_code, self:GetStartStop())
+				local data = formating.SubPositionToLinePosition(lua_code, self:GetStartStop())
 				local name = name
 
 				if name:sub(1, 1) == "@" then name = name:sub(2) end
@@ -50,7 +49,7 @@ function META:__tostring()
 			end
 		else
 			if self.value and type(self.value.value) == "string" then
-				str = str .. " - " .. quote_helper.QuoteToken(self.value.value)
+				str = str .. " - " .. formating.QuoteToken(self.value.value)
 			end
 		end
 	end

@@ -1,4 +1,3 @@
-local helpers = require("nattlua.other.helpers")
 local util = require("examples.util")
 local nl = require("nattlua")
 local Code = require("nattlua.code").New
@@ -12,7 +11,6 @@ local code = nl.Compiler(
 	"10mb.lua"
 )
 
---helpers.EnableJITDumper()
 do
 	-- should take around 1.2 seconds
 	local tokens = util.Measure("code:Lex()", function()

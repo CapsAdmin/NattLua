@@ -193,7 +193,7 @@ return function(META)
 	end
 
 	do
-		local helpers = require("nattlua.other.helpers")
+		local formating = require("nattlua.other.formating")
 		local loadstring = require("nattlua.other.loadstring")
 		local locals = ""
 		locals = locals .. "local bit=bit32 or _G.bit;"
@@ -281,7 +281,7 @@ return function(META)
 
 			if lua_code then
 				local start, stop = node:GetStartStop()
-				line = helpers.SubPositionToLinePosition(lua_code, start, stop).line_start
+				line = formating.SubPositionToLinePosition(lua_code, start, stop).line_start
 				code = ("\n"):rep(line - 1) .. code
 			end
 
@@ -328,7 +328,7 @@ return function(META)
 						if f then
 							local code = f:read("*all")
 							f:close()
-							local start = helpers.LinePositionToSubPosition(code, tonumber(line), 0)
+							local start = formating.LinePositionToSubPosition(code, tonumber(line), 0)
 							local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
 							msg = self.current_expression.Code:BuildSourceCodePointMessage(rest, start, stop)
 						end

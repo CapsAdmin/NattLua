@@ -1,7 +1,5 @@
 local util = require("examples.util")
-local helpers = require("nattlua.other.helpers")
-helpers.JITOptimize()
---helpers.EnableJITDumper()
+require("nattlua.other.jit_options")()
 util.LoadGithub("GitSparTV/LLLua/master/src/lexer/tokens.lua", "lexer.tokens")
 util.LoadGithub("GitSparTV/LLLua/master/src/lexer/chars.lua", "lexer.chars")
 util.LoadGithub("GitSparTV/LLLua/master/src/lexer/init.lua", "lllua-lexer")

@@ -1,4 +1,3 @@
-local helpers = require("nattlua.other.helpers")
 local nl = require("nattlua")
 local util = require("examples.util")
 local code = nl.Compiler(

@@ -1,8 +1,8 @@
-local helpers = require("nattlua.other.helpers")
+local formating = require("nattlua.other.formating")
 
 do
 	local test = [[1]]
-	local data = helpers.SubPositionToLinePosition(test, 1, 1)
+	local data = formating.SubPositionToLinePosition(test, 1, 1)
 	equal(data.line_start, 1)
 	equal(data.line_stop, 1)
 	equal(data.character_start, 1)
@@ -16,7 +16,7 @@ do
 bar
 faz]]
 	local start, stop = test:find("bar")
-	local data = helpers.SubPositionToLinePosition(test, start, stop)
+	local data = formating.SubPositionToLinePosition(test, start, stop)
 	equal(data.line_start, 2)
 	equal(data.line_stop, 2)
 	equal(data.character_start, 1)
@@ -29,7 +29,7 @@ do
 	local test = [[foo
 bar
 faz]]
-	local data = helpers.SubPositionToLinePosition(test, 1, #test)
+	local data = formating.SubPositionToLinePosition(test, 1, #test)
 	equal(data.line_start, 1)
 	equal(data.line_stop, 3)
 	equal(data.character_start, 1)
@@ -44,7 +44,7 @@ bar
 faz]]
 	local start, stop = test:find("faz")
 	equal(test:sub(start, stop), "faz")
-	local data = helpers.SubPositionToLinePosition(test, start, stop)
+	local data = formating.SubPositionToLinePosition(test, start, stop)
 	equal(data.line_start, 3)
 	equal(data.line_stop, 3)
 	equal(data.character_start, 1)
@@ -65,7 +65,7 @@ ewww
 faz]]
 	local start, stop = test:find("FROM.-TO")
 	equal(
-		helpers.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
+		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
 		[[    ________________________________________________________
  3 | 111111E
  4 |     waddwa
@@ -94,7 +94,7 @@ ewww
 faz]]
 	local start, stop = test:find("FROM.-TO")
 	equal(
-		helpers.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
+		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
 		[[    _________________________________________
  3 | 111111E
  4 |     waddwa
@@ -118,7 +118,7 @@ end
 do
 	local test = ("x"):rep(500) .. "FROM---TO" .. ("x"):rep(500)
 	local start, stop = test:find("FROM.-TO")
-	equal(helpers.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2), [[    _______________________________________________________________________________________________________________________________
+	equal(formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2), [[    _______________________________________________________________________________________________________________________________
  2 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
  3 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
  4 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxFROM---T
@@ -134,31 +134,31 @@ end
 
 do
 	local test = [[]]
-	local pos = helpers.LinePositionToSubPosition(test, 2, 6)
+	local pos = formating.LinePositionToSubPosition(test, 2, 6)
 	equal(pos, #test)
 end
 
 do
 	local test = [[foo]]
-	local pos = helpers.LinePositionToSubPosition(test, 2, 6)
+	local pos = formating.LinePositionToSubPosition(test, 2, 6)
 	equal(pos, #test)
 end
 
 do
 	local test = [[foo]]
-	local pos = helpers.LinePositionToSubPosition(test, 1, 1)
+	local pos = formating.LinePositionToSubPosition(test, 1, 1)
 	equal(pos, 1)
 end
 
 do
 	local test = [[foo]]
-	local pos = helpers.LinePositionToSubPosition(test, 0, 0)
+	local pos = formating.LinePositionToSubPosition(test, 0, 0)
 	equal(pos, 1)
 end
 
 do
 	local test = [[foo]]
-	local pos = helpers.LinePositionToSubPosition(test, 1, 2)
+	local pos = formating.LinePositionToSubPosition(test, 1, 2)
 	equal(pos, 2)
 end
 
@@ -168,7 +168,7 @@ wddwaFOOdawdaw
 dwadawadwdaw
 dwdwadw
 ]]
-	local pos = helpers.LinePositionToSubPosition(test, 2, 6)
+	local pos = formating.LinePositionToSubPosition(test, 2, 6)
 	local start = pos
 	local stop = pos + #"FOO" - 1
 	equal(test:sub(start, stop), "FOO")

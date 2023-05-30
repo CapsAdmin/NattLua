@@ -144,7 +144,7 @@ if normalized:find("/nattlua/", nil, true) then
 		run_lua("examples/projects/love2d/nlconfig.lua", path)
 	elseif is_nattlua and not normalized:find("/definitions/", nil, true) then
 		run_nattlua(path)
-	elseif normalized:find("helpers.lua", nil, true) then
+	elseif normalized:find("formating.lua", nil, true) then
 		run_lua("test/run.lua", "test/nattlua/helper_test.lua")
 	elseif normalized:find("test/", nil, true) then
 		run_lua("test/run.lua", path)

@@ -1,5 +1,5 @@
 local table_pool = require("nattlua.other.table_pool")
-local quote_helper = require("nattlua.other.quote")
+local formating = require("nattlua.other.formating")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("token")
 local setmetatable = _G.setmetatable
@@ -28,7 +28,7 @@ function META:GetRoot()
 end
 
 function META:__tostring()
-	return "[token - " .. self.type .. " - " .. quote_helper.QuoteToken(self.value) .. "]"
+	return "[token - " .. self.type .. " - " .. formating.QuoteToken(self.value) .. "]"
 end
 
 function META:AssociateType(obj)

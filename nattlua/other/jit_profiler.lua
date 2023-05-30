@@ -10,6 +10,9 @@ local xpcall = _G.xpcall
 local assert = _G.assert
 local table_insert = _G.table.insert
 local ok, jit_profiler = pcall(require, "jit.profile")
+local stringx = require("nattlua.other.string")
+local mathx = require("nattlua.other.math")
+local formating = require("nattlua.other.formating")
 
 if not ok then jit_profiler = nil end
 
@@ -27,14 +30,6 @@ local function read_file(path)
 	return s
 end
 
-local function math_round(num, idp)
-	if idp and idp > 0 then
-		local mult = 10 ^ idp
-		return math.floor(num * mult + 0.5) / mult
-	end
-
-	return math.floor(num + 0.5)
-end
 
 local ok, jit_vmdef = pcall(require, "jit.vmdef")
 
@@ -163,132 +158,6 @@ do
 end
 
 do
-	local function table_to_columns(title, tbl, columns, check, sort_key)
-		local top = {}
-
-		for k, v in pairs(tbl) do
-			if not check or check(v) then table_insert(top, {key = k, val = v}) end
-		end
-
-		if type(sort_key) == "function" then
-			table.sort(top, function(a, b)
-				return sort_key(a.val, b.val)
-			end)
-		else
-			table.sort(top, function(a, b)
-				return a.val[sort_key] > b.val[sort_key]
-			end)
-		end
-
-		local max_lengths = {}
-		local temp = {}
-
-		for _, column in ipairs(top) do
-			for key, data in ipairs(columns) do
-				data.tostring = data.tostring or function(...)
-					return ...
-				end
-				data.friendly = data.friendly or data.key
-				max_lengths[data.key] = max_lengths[data.key] or 0
-				local str = tostring(data.tostring(column.val[data.key], column.val, top))
-				column.str = column.str or {}
-				column.str[data.key] = str
-
-				if #str > max_lengths[data.key] then max_lengths[data.key] = #str end
-
-				temp[key] = data
-			end
-		end
-
-		columns = temp
-		local width = 0
-
-		for _, v in pairs(columns) do
-			if max_lengths[v.key] > #v.friendly then
-				v.length = max_lengths[v.key]
-			else
-				v.length = #v.friendly + 1
-			end
-
-			width = width + #v.friendly + max_lengths[v.key] - 2
-		end
-
-		local out = " "
-		out = out .. ("_"):rep(width - 1) .. "\n"
-		out = out .. "|" .. (
-				" "
-			):rep(width / 2 - math.floor(#title / 2)) .. title .. (
-				" "
-			):rep(math.floor(width / 2) - #title + math.floor(#title / 2)) .. "|\n"
-		out = out .. "|" .. ("_"):rep(width - 1) .. "|\n"
-
-		for _, v in ipairs(columns) do
-			out = out .. "| " .. v.friendly .. ": " .. (
-					" "
-				):rep(-#v.friendly + max_lengths[v.key] - 1) -- 2 = : + |
-		end
-
-		out = out .. "|\n"
-
-		for _, v in ipairs(columns) do
-			out = out .. "|" .. ("_"):rep(v.length + 2)
-		end
-
-		out = out .. "|\n"
-
-		for _, v in ipairs(top) do
-			for _, column in ipairs(columns) do
-				out = out .. "| " .. v.str[column.key] .. (
-						" "
-					):rep(-#v.str[column.key] + column.length + 1)
-			end
-
-			out = out .. "|\n"
-		end
-
-		out = out .. "|"
-		out = out .. ("_"):rep(width - 1) .. "|\n"
-		return out
-	end
-
-	local function split(self--[[#: string]], separator--[[#: string]])
-		local tbl = {}
-		local current_pos--[[#: number]] = 1
-
-		for i = 1, #self do
-			local start_pos, end_pos = self:find(separator, current_pos, true)
-
-			if not start_pos or not end_pos then break end
-
-			tbl[i] = self:sub(current_pos, start_pos - 1)
-			current_pos = end_pos + 1
-		end
-
-		if current_pos > 1 then
-			tbl[#tbl + 1] = self:sub(current_pos)
-		else
-			tbl[1] = self
-		end
-
-		return tbl
-	end
-
-	local function trim(self--[[#: string]])
-		local char = "%s*"
-		local _, start = self:find(char, 0)
-		local end_start, end_stop = self:reverse():find(char, 0)
-
-		if start and end_start and end_stop then
-			return self:sub(start + 1, (end_start - end_stop) - 2)
-		elseif start then
-			return self:sub(start + 1)
-		elseif end_start and end_stop then
-			return self:sub(0, (end_start - end_stop) - 2)
-		end
-
-		return self
-	end
-
 	local function parse_raw_statistical_data(raw_data)
 		local data = {}
 
@@ -397,7 +266,7 @@ do
 						name = name:sub(0, 50)
 					end
 
-					name = trim(name)
+					name = stringx.trim(name)
 					data.path = path
 					data.file_name = path:match(".+/(.+)%.") or path
 					data.line = line
@@ -439,7 +308,7 @@ do
 
 		vmstate_friendly = table.concat(vmstate_friendly, ", ")
 		log(
-			table_to_columns(
+			formating.TableToColumns(
 				title or "statistical",
 				profiler.GetBenchmark(file_filter),
 				{
@@ -448,7 +317,7 @@ do
 						key = "times_called",
 						friendly = "percent",
 						tostring = function(val, column, columns)
-							return math_round((val / columns[#columns].val.times_called) * 100, 2)
+							return mathx.round((val / columns[#columns].val.times_called) * 100, 2)
 						end,
 					},
 					{
@@ -557,16 +426,16 @@ do
 						local content, err = read_file(path)
 
 						if content then
-							local lines = split(content, "\n")
+							local lines = stringx.split(content, "\n")
 							str = lines[line] or "unknown line"
-							str = "\"" .. trim(str) .. "\""
+							str = "\"" .. stringx.trim(str) .. "\""
 						else
 							str = err
 						end
 
 						for reason, count in pairs(reasons) do
 							if not blacklist[reason] then
-								table_insert(temp, "\t\t" .. trim(reason) .. " (x" .. count .. ")")
+								table_insert(temp, "\t\t" .. stringx.trim(reason) .. " (x" .. count .. ")")
 								table_insert(temp, "\t\t\t" .. line .. ": " .. str)
 							end
 						end

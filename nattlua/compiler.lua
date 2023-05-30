@@ -4,7 +4,7 @@ local xpcall = xpcall
 local tostring = tostring
 local table = _G.table
 local assert = assert
-local helpers = require("nattlua.other.helpers")
+local formating = require("nattlua.other.formating")
 local debug = _G.debug
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local setmetatable = _G.setmetatable
@@ -52,7 +52,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 		msg = "DEFERRED CALL: " .. msg
 	end
 
-	local msg = code:BuildSourceCodePointMessage(helpers.FormatMessage(msg, ...), start, stop)
+	local msg = code:BuildSourceCodePointMessage(formating.FormatMessage(msg, ...), start, stop)
 	local msg2 = ""
 
 	for line in (msg .. "\n"):gmatch("(.-)\n") do

@@ -1,5 +1,4 @@
-local helpers = require("nattlua.other.helpers")
-helpers.JITOptimize()
+require("nattlua.other.jit_options")()
 local util = require("examples.util")
 local Code = require("nattlua.code").New
 local lua_code = assert(

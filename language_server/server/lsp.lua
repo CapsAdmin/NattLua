@@ -1,7 +1,7 @@
 --DONT_ANALYZE
 local b64 = require("nattlua.other.base64")
 local EditorHelper = require("nattlua.editor_helper.editor")
-local helpers = require("nattlua.other.helpers")
+local formating = require("nattlua.other.formating")
 local lsp = {}
 lsp.methods = {}
 local TextDocumentSyncKind = {None = 0, Full = 1, Incremental = 2}
@@ -106,7 +106,7 @@ lsp.methods["initialize"] = function(params)
 end
 
 local function get_range(code, start, stop)
-	local data = helpers.SubPositionToLinePosition(code:GetString(), start, stop)
+	local data = formating.SubPositionToLinePosition(code:GetString(), start, stop)
 	return {
 		start = {
 			line = data.line_start - 1,
@@ -446,7 +446,7 @@ lsp.methods["textDocument/hover"] = function(params)
 		local min, max = wtf[1]:GetStartStop()
 
 		if min then
-			linepos = helpers.SubPositionToLinePosition(wtf[1].Code:GetString(), min, max)
+			linepos = formating.SubPositionToLinePosition(wtf[1].Code:GetString(), min, max)
 		end
 
 		for i = 1, #wtf do

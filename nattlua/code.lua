@@ -1,5 +1,5 @@
 local setmetatable = _G.setmetatable
-local helpers = require("nattlua.other.helpers")
+local formating = require("nattlua.other.formating")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("code")
 --[[#type META.@Name = "Code"]]
@@ -54,11 +54,11 @@ function META:FindNearest(str--[[#: string]], start--[[#: number]])
 end
 
 function META:LineCharToSubPos(line, char)
-	return helpers.LinePositionToSubPosition(self:GetString(), line, char)
+	return formating.LinePositionToSubPosition(self:GetString(), line, char)
 end
 
 function META:SubPosToLineChar(start, stop)
-	return helpers.SubPositionToLinePosition(self:GetString(), start, stop)
+	return formating.SubPositionToLinePosition(self:GetString(), start, stop)
 end
 
 local function remove_bom_header(str--[[#: string]])--[[#: string]]
@@ -89,7 +89,7 @@ function META:BuildSourceCodePointMessage(
 	stop--[[#: number]],
 	size--[[#: number]]
 )
-	return helpers.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
+	return formating.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
 end
 
 function META.New(lua_code--[[#: string]], name--[[#: string | nil]])

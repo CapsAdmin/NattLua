@@ -42,9 +42,7 @@ do -- these are just helpers for print debugging
 -- local old = print; function print(...) old(debug.traceback()) end
 end
 
-local helpers = require("nattlua.other.helpers")
-helpers.JITOptimize()
---helpers.EnableJITDumper()
+require("nattlua.other.jit_options")()
 local m = require("nattlua.init")
 package.loaded.nattlua = m
 

@@ -1,4 +1,3 @@
-local helpers = require("nattlua.other.helpers")
 local Code = require("nattlua.code").New
 local str = [==[
 for i = 1, #code do

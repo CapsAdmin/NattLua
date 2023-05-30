@@ -1,6 +1,5 @@
 local nl = require("nattlua")
 local runtime_syntax = require("nattlua.syntax.runtime")
-local helpers = require("nattlua.other.helpers")
 
 local function GetFilesRecursively(dir, ext)
 	ext = ext or {".lua"}

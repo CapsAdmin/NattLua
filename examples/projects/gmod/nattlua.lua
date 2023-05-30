@@ -80,8 +80,6 @@ end
 
 if false then LintCodebase() end
 
-local helpers = require("nattlua.other.helpers")
---helpers.EnableJITDumper()
 local working_directory = "examples/projects/gmod/"
 local files = {
 	{

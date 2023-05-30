@@ -1,5 +1,4 @@
-local helpers = require("nattlua.other.helpers")
-helpers.JITOptimize()
+require("nattlua.other.jit_options")()
 local nl = require("nattlua")
 local util = require("examples.util")
 local load = loadstring or load
