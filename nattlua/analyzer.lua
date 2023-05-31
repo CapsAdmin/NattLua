@@ -6,6 +6,7 @@ local ipairs = ipairs
 require("nattlua.types.types").Initialize()
 local META = class.CreateTemplate("analyzer")
 META.OnInitialize = {}
+require("nattlua.other.context_mixin")(META)
 require("nattlua.analyzer.base.base_analyzer")(META)
 require("nattlua.analyzer.control_flow")(META)
 require("nattlua.analyzer.mutation_tracking")(META)
