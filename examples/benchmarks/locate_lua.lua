@@ -1,25 +1,22 @@
 local nl = require("nattlua")
-local files = {}
+
+require("nattlua.other.profiler").Start()
+
 
 for full_path in io.popen("locate .lua"):read("*all"):gmatch("(.-)\n") do
-	if
-		full_path:sub(-4) == ".lua" and
-		not full_path:find("GarrysMod")
-		and
-		not full_path:find("pac3")
-		and
-		not full_path:find("notagain")
-		and
-		not full_path:find("gmod")
-		and
-		not full_path:find("gm%-")
-	then
-		table.insert(files, full_path)
+	if full_path:sub(-4) == ".lua" then
+		local ok, err = loadfile(full_path)
+		if ok then
+			io.write("PARSE ", full_path)
+			local func, err = nl.loadfile(full_path, {
+				skip_import = true,
+			})
+			if not func then io.write(err, " - FAIL\n") else io.write(" - OK\n") end
+		else
+			io.write("SKIP ", full_path, " - FAIL : ", err, "\n")
+		end
 	end
 end
 
-for _, full_path in ipairs(files) do
-	local func, err = nl.loadfile(full_path)
 
-	if not func then print(err) end
-end
+require("nattlua.other.profiler").Stop()

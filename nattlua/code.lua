@@ -24,11 +24,8 @@ function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
 	return self.Buffer:sub(start, stop)
 end
 
-function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
-	return self.Buffer:sub(start, stop) == str
-end
-
 if jit then
+	-- this is faster in luajit than the else block
 	function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
 		for i = 1, #str do
 			local a = self.Buffer:byte(start + i - 1)
@@ -38,6 +35,10 @@ if jit then
 		end
 
 		return true
+	end
+else
+	function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
+		return self.Buffer:sub(start, stop) == str
 	end
 end
 

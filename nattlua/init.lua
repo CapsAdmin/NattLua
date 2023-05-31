@@ -17,7 +17,7 @@ function nl.loadfile(path, config)
 
 	if not code then return nil, err end
 
-	return loadstring(code, path)
+	return loadstring(code, "@" .. path)
 end
 
 function nl.File(path, config)

@@ -47,13 +47,9 @@ do -- internal
 	end
 
 	function META:Emit(str)
-		if type(str) ~= "string" then
-			error(debug.traceback("attempted to emit a non string " .. tostring(str)))
-		end
-
 		if str == "" then return end
 
-		self.out[self.i] = str or ""
+		self.out[self.i] = str
 		self.i = self.i + 1
 	end
 

@@ -10,7 +10,7 @@ local lua_code = assert(
 local Lexer = util.LoadGithub("LoganDark/lua-lexer/master/lexer.lua", "lua-lexer")
 local sec = util.MeasureFunction(function()
 	util.Measure("Lexer(lua_code)", function()
-		tokens = Lexer(Code(lua_code, "examples/benchmarks/temp/10mb.lua"))
+		tokens = Lexer(Code(lua_code, "examples/benchmarks/temp/10mb.lua"):GetString())
 	end)
 end)
 print("lexing only took " .. sec .. " seconds")
