@@ -1,11 +1,9 @@
 local META = require("nattlua.parser.base")
-local profiler = require("nattlua.other.profiler")
 local Code = require("nattlua.code").New
 local Lexer = require("nattlua.lexer").New
 local math = _G.math
 local math_huge = math.huge
 local table_insert = _G.table.insert
-local table_remove = _G.table.remove
 local ipairs = _G.ipairs
 local pcall = _G.pcall
 local xpcall = _G.xpcall
@@ -129,7 +127,7 @@ function META:ParseTypeFunctionBody(
 		node.tokens["return:"] = self:ExpectTokenValue(":")
 		self:PushParserEnvironment("typesystem")
 		node.return_types = self:ParseMultipleValues(math.huge, self.ExpectTypeExpression, 0)
-		self:PopParserEnvironment("typesystem")
+		self:PopParserEnvironment()
 	end
 
 	if node.identifiers_typesystem then
@@ -221,7 +219,7 @@ assert(loadfile("nattlua/parser/lsx.lua"))(META)
 function META:LexString(str--[[#: string]], config--[[#: nil | any]])
 	config = config or {}
 	local code = Code(str, config.file_path)
-	local lexer = Lexer(code, config)
+	local lexer = Lexer(code)
 	lexer.OnError = self.OnError
 	local ok, tokens = xpcall(lexer.GetTokens, debug.traceback, lexer)
 

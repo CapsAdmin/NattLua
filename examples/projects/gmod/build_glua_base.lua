@@ -116,7 +116,8 @@ local function emit_atomic_type(val)
 	end
 
 	if val.TYPE:find("|", nil, true) then
-		local values = {}(val.TYPE .. "|"):gsub("([^|]-)|", function(val)
+		local values = {};
+		(val.TYPE .. "|"):gsub("([^|]-)|", function(val)
 			table.insert(values, val)
 		end)
 

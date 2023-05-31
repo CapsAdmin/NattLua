@@ -2,7 +2,7 @@ local preprocess = require("nattlua.other.preprocess")
 local coverage = require("nattlua.other.coverage")
 local profiler = require("nattlua.other.profiler")
 local io = require("io")
-local io_write = _G.ON_EDITOR_SAVE and function() end or io.write
+local io_write = _G.ON_EDITOR_SAVE and function(...) end or io.write
 local pcall = _G.pcall
 profiler.Start()
 
@@ -11,7 +11,7 @@ function _G.test(name, cb)
 	cb()
 end
 
-function _G.pending() end
+function _G.pending(...) end
 
 function _G.equal(a, b, level)
 	level = level or 1

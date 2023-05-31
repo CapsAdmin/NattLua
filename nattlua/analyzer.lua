@@ -1,5 +1,4 @@
 local class = require("nattlua.other.class")
-local profiler = require("nattlua.other.profiler")
 local tostring = tostring
 local error = error
 local setmetatable = setmetatable

@@ -7,7 +7,6 @@ local io_open = _G.io.open
 local package = _G.package
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
-local profiler = require("nattlua.other.profiler")
 
 --[[#local type { Node } = import("~/nattlua/parser/nodes.nlua")]]
 

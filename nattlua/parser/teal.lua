@@ -7,7 +7,6 @@ local META = ...
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 local math_huge = math.huge
-local profiler = require("nattlua.other.profiler")
 
 function META:ParseTealFunctionArgument(expect_type--[[#: nil | boolean]])
 	if
@@ -380,7 +379,7 @@ local function ParseRecordBody(
 	table.insert(block.statements, self:ParseString("PopTypeEnvironment<||>").statements[1])
 	block.tokens["end"] = self:ExpectTokenValue("end")
 	block = self:EndNode(block)
-	self:PopParserEnvironment("typesystem")
+	self:PopParserEnvironment()
 
 	if func then
 		table.insert(func.statements, assignment)
@@ -458,7 +457,7 @@ do
 		local assignment = self:StartNode("statement", "assignment")
 		ParseBody(self, assignment)
 		assignment = self:EndNode(assignment)
-		self:PopParserEnvironment("typesystem")
+		self:PopParserEnvironment()
 		return assignment
 	end
 
@@ -477,7 +476,7 @@ do
 		assignment.tokens["local"] = self:ExpectTokenValue("local")
 		ParseBody(self, assignment)
 		assignment = self:EndNode(assignment)
-		self:PopParserEnvironment("typesystem")
+		self:PopParserEnvironment()
 		return assignment
 	end
 end
