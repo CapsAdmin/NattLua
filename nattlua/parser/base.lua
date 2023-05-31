@@ -74,6 +74,20 @@ do
 	end
 end
 
+do
+	function META:PushParentNode(node--[[#: Node]])
+		self:PushContextValue("parent_node", node)
+	end
+
+	function META:GetParentNode(level)
+		return self:GetContextValue("parent_node", level)
+	end
+
+	function META:PopParentNode()
+		self:PopContextValue("parent_node")
+	end
+end
+
 function META:StartNode(
 	node_type--[[#: ref ("statement" | "expression")]],
 	kind--[[#: ref (StatementKind | ExpressionKind)]],
@@ -89,13 +103,13 @@ function META:StartNode(
 			Code = self.Code,
 			code_start = code_start,
 			code_stop = code_start,
-			parent = self.node_stack[#self.node_stack],
+			parent = self:GetParentNode(),
 		}
 	)
 
 	if self.OnPreCreateNode then self:OnPreCreateNode(node) end
 
-	table.insert(self.node_stack, node)
+	self:PushParentNode(node)
 	return node--[[# as T]]
 end
 
@@ -110,7 +124,7 @@ function META:EndNode(node--[[#: Node]])
 		if cur then node.code_stop = cur.stop end
 	end
 
-	table.remove(self.node_stack)
+	self:PopParentNode()
 
 	if self.OnParsedNode then self:OnParsedNode(node) end
 
@@ -118,7 +132,7 @@ function META:EndNode(node--[[#: Node]])
 		if
 			self.suppress_on_parsed_node and
 			node.type == "expression" and
-			self.suppress_on_parsed_node.parent == self.node_stack[#self.node_stack]
+			self.suppress_on_parsed_node.parent == self:GetParentNode()
 		then
 			table.insert(self.suppress_on_parsed_node.node_stack, node)
 		else
@@ -126,7 +140,7 @@ function META:EndNode(node--[[#: Node]])
 
 			if new_node then
 				node = new_node--[[# as any]]
-				node.parent = self.node_stack[#self.node_stack]
+				node.parent = self:GetParentNode()
 			end
 		end
 	end
@@ -135,7 +149,7 @@ function META:EndNode(node--[[#: Node]])
 end
 
 function META:SuppressOnNode()
-	self.suppress_on_parsed_node = {parent = self.node_stack[#self.node_stack], node_stack = {}}
+	self.suppress_on_parsed_node = {parent = self:GetParentNode(), node_stack = {}}
 end
 
 function META:ReRunOnNode(node_stack--[[#: List<|Node|>]])
@@ -148,7 +162,7 @@ function META:ReRunOnNode(node_stack--[[#: List<|Node|>]])
 
 				if new_node then
 					node_stack[i] = new_node
-					new_node.parent = self.node_stack[#self.node_stack]
+					new_node.parent = self:GetParentNode()
 				end
 			end
 		end
@@ -216,7 +230,7 @@ function META:ParseToken()
 	if not tk then return nil end
 
 	self:Advance(1)
-	tk.parent = self.node_stack[#self.node_stack]
+	tk.parent = self:GetParentNode()
 	return tk
 end
 
