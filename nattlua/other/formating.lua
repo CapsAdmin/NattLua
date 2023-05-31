@@ -158,6 +158,8 @@ do
 		stop--[[#: number]],
 		size--[[#: number]]
 	)
+		if #lua_code > 500000 then return "code too big: " .. msg end
+
 		do
 			local new_str = ""
 			local pos = 1
