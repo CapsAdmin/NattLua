@@ -17,9 +17,7 @@ local type = _G.type
 local table = _G.table
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("parser")
-
 META.OnInitialize = {}
-
 --[[#type META.@Self = {
 	@Name = "Parser",
 	config = ParserConfig,
@@ -27,17 +25,13 @@ META.OnInitialize = {}
 	tokens = List<|Token|>,
 	current_token_index = number,
 	node_stack = List<|Node|>,
-	environment_stack = List<|"typesystem" | "runtime"|>,
 	OnPreCreateNode = nil | function=(self, Node)>(nil),
 	OnParsedNode = nil | function=(self, Node)>(nil),
 	suppress_on_parsed_node = nil | {parent = Node, node_stack = List<|Node|>},
 }]]
-
 --[[#type META.@Name = "Parser"]]
 --[[#local type Parser = META.@Self]]
-
 require("nattlua.other.context_mixin")(META)
-
 
 function META.New(
 	tokens--[[#: List<|Token|>]],
@@ -52,8 +46,7 @@ function META.New(
 		{
 			config = config or {},
 			Code = code,
-			node_stack = {},		
-			environment_stack = {},
+			node_stack = {},
 			current_token_index = 1,
 			tokens = tokens,
 		},
@@ -68,33 +61,18 @@ function META.New(
 end
 
 do
-	function META:GetCurrentParserEnvironment()
-		return self:GetContextValue2("parser_environment") or "runtime"
-	end
-
 	function META:PushParserEnvironment(env--[[#: "typesystem" | "runtime"]])
-		self:PushContextValue2("parser_environment", env)
+		self:PushContextValue("parser_environment", env)
 	end
 
-	function META:PopParserEnvironment()
-		self:PopContextValue2("parser_environment")
-	end
-end
-
-do
 	function META:GetCurrentParserEnvironment()
-		return self.environment_stack[#self.environment_stack] or "runtime"
-	end
-
-	function META:PushParserEnvironment(env--[[#: "runtime" | "typesystem"]])
-		table.insert(self.environment_stack, env)
+		return self:GetContextValue("parser_environment") or "runtime"
 	end
 
 	function META:PopParserEnvironment()
-		table.remove(self.environment_stack)
+		self:PopContextValue("parser_environment")
 	end
 end
-
 
 function META:StartNode(
 	node_type--[[#: ref ("statement" | "expression")]],
