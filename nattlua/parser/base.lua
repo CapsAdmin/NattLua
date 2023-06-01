@@ -24,14 +24,13 @@ META.OnInitialize = {}
 	Code = Code,
 	tokens = List<|Token|>,
 	current_token_index = number,
-	node_stack = List<|Node|>,
 	OnPreCreateNode = nil | function=(self, Node)>(nil),
 	OnParsedNode = nil | function=(self, Node)>(nil),
 	suppress_on_parsed_node = nil | {parent = Node, node_stack = List<|Node|>},
 }]]
 --[[#type META.@Name = "Parser"]]
---[[#local type Parser = META.@Self]]
 require("nattlua.other.context_mixin")(META)
+--[[#local type Parser = META.@Self]]
 
 function META.New(
 	tokens--[[#: List<|Token|>]],
@@ -42,22 +41,18 @@ function META.New(
 		path = nil | string,
 	}]]
 )
-	local self = setmetatable(
-		{
-			config = config or {},
-			Code = code,
-			node_stack = {},
-			current_token_index = 1,
-			tokens = tokens,
-		},
-		META
-	)
+	local self = {
+		config = config or {},
+		Code = code,
+		current_token_index = 1,
+		tokens = tokens,
+	}
 
 	for _, func in ipairs(META.OnInitialize) do
 		func(self)
 	end
 
-	return self
+	return setmetatable(self, META)
 end
 
 do
@@ -80,7 +75,7 @@ do
 	end
 
 	function META:GetParentNode(level)
-		return self:GetContextValue("parent_node", level)
+		return self:GetContextValue("parent_node", level)--[[# as Node | nil]]
 	end
 
 	function META:PopParentNode()
