@@ -580,7 +580,8 @@ function META:Get(key--[[#: TBaseType]])
 			context:GetCurrentAnalyzer() and
 			context:GetCurrentAnalyzer():GetCurrentAnalyzerEnvironment() == "typesystem"
 		then
-			return assert(self["Get" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self)
+			return assert(self["Get" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self) or
+				Nil()
 		end
 	end
 
