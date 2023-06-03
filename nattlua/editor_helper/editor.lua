@@ -312,6 +312,11 @@ function META:FindToken(path, line, char)
 		end
 	end
 
+	-- fallback  to the last token
+	local token = data.tokens[#data.tokens]
+
+	if token then return token, data end
+
 	error("cannot find token at " .. path .. ":" .. line .. ":" .. char, 2)
 end
 
