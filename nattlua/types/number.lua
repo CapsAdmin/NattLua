@@ -6,6 +6,7 @@ local tonumber = _G.tonumber
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local bit = _G.bit32 or _G.bit
+local jit = _G.jit
 local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TNumber"]]
@@ -37,6 +38,10 @@ function META:GetHash()
 
 	if upvalue then
 		return "__@type@__" .. upvalue:GetHash() .. "_" .. self.Type
+	end
+
+	if not jit then
+		return "__@type@__" .. self.Type .. ("_%s"):format(tostring(self))
 	end
 
 	return "__@type@__" .. self.Type .. ("_%p"):format(self)
@@ -414,6 +419,11 @@ function META.New(data--[[#: number | nil]])
 end
 
 local function string_to_integer(str--[[#: string]])
+	if not jit and _VERSION == "Lua 5.1" then
+		str = str:lower():gsub("ull", "")
+		str = str:gsub("ll", "")
+	end
+
 	return assert(loadstring("return " .. str))()--[[# as number]]
 end
 

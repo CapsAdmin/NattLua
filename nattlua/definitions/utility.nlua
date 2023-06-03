@@ -340,3 +340,11 @@ end
 analyzer function CurrentType(what: "table" | "tuple" | "function" | "union", level: literal nil | number)
 	return analyzer:GetCurrentType(what:GetData(), level and level:GetData())
 end
+
+analyzer function LuaVersion()
+	if jit and _VERSION == "Lua 5.1" then
+		return "LuaJIT"
+	else
+		return "Lua 5.1"
+	end
+end

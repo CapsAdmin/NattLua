@@ -1,6 +1,7 @@
 --ANALYZE
 local tostring = tostring
 local setmetatable = _G.setmetatable
+local jit = _G.jit
 local type_errors = require("nattlua.types.error_messages")
 local Number = require("nattlua.types.number").Number
 local context = require("nattlua.analyzer.context")
@@ -38,6 +39,10 @@ function META:GetHash()
 
 	if upvalue then
 		return "__@type@__" .. upvalue:GetHash() .. "_" .. self.Type
+	end
+
+	if not jit then
+		return "__@type@__" .. self.Type .. ("_%s"):format(tostring(self))
 	end
 
 	return "__@type@__" .. self.Type .. ("_%p"):format(self)

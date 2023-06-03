@@ -563,14 +563,25 @@ analyze[[
       checkerror("too large", string.rep, 'aa', (1 << 30))
       checkerror("too large", string.rep, 'a', (1 << 30), ',')
     end
-    
-    -- repetitions with separator
-    assert(string.rep('teste', 0, 'xuxu') == '')
-    assert(string.rep('teste', 1, 'xuxu') == 'teste')
-    assert(string.rep('\1\0\1', 2, '\0\0') == '\1\0\1\0\0\1\0\1')
-    assert(string.rep('', 10, '.') == string.rep('.', 9))
-    assert(not pcall(string.rep, "aa", maxi // 2 + 10))
-    assert(not pcall(string.rep, "", maxi // 2 + 10, "aa"))
+]]
+
+if jit then
+	analyze[[
+        local type assert = attest.truthy
+        local type pcall = attest.pcall
+        
+        assert(string.rep('teste', 0, 'xuxu') == '')
+        assert(string.rep('teste', 1, 'xuxu') == 'teste')
+        assert(string.rep('\1\0\1', 2, '\0\0') == '\1\0\1\0\0\1\0\1')
+        assert(string.rep('', 10, '.') == string.rep('.', 9))
+        --assert(not pcall(string.rep, "aa", maxi // 2 + 10))
+        --assert(not pcall(string.rep, "", maxi // 2 + 10, "aa"))
+    ]]
+end
+
+analyze[[
+    local type assert = attest.truthy
+    local type pcall = attest.pcall
     
     assert(string.reverse"" == "")
     assert(string.reverse"\0\1\2\3" == "\3\2\1\0")

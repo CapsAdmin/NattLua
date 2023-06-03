@@ -1,4 +1,7 @@
 --PwLAIN_LUA
+
+if LuaVersion() ~= "LuaJIT" then return end
+
 local undef = nil
 local type assert = attest.truthy
 local type pcall = attest.pcall

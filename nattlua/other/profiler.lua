@@ -1,8 +1,8 @@
-local jit_profiler = require("nattlua.other.jit_profiler")
+local has_jit, jit_profiler = pcall(require, "nattlua.other.jit_profiler")
 local profiler = {}
 local should_run = true
 
-if _G.ON_EDITOR_SAVE or not jit then should_run = false end
+if _G.ON_EDITOR_SAVE or not has_jit then should_run = false end
 
 function profiler.Start()
 	if not should_run then return end

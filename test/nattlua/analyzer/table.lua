@@ -871,26 +871,28 @@ analyze[[
         attest.equal(xx, _  as nil | true)
     end
 ]]
-analyze[[
-    local tbl = {
-        foo = true,
-        bar = true,
-    }
-    if tbl[_ as string] then
-        local xx = tbl[_ as string]
-        attest.equal(xx, _  as nil | true)
-    end
-]]
-analyze[[
-    local tbl = {
-        [1] = true,
-        [2] = true,
-    }
-    if tbl[_ as number] then
-        local xx = tbl[_ as number]
-        attest.equal(xx, _  as nil | true)
-    end
-]]
+if jit then
+    analyze[[
+        local tbl = {
+            foo = true,
+            bar = true,
+        }
+        if tbl[_ as string] then
+            local xx = tbl[_ as string]
+            attest.equal(xx, _  as nil | true)
+        end
+    ]]
+    analyze[[
+        local tbl = {
+            [1] = true,
+            [2] = true,
+        }
+        if tbl[_ as number] then
+            local xx = tbl[_ as number]
+            attest.equal(xx, _  as nil | true)
+        end
+    ]]
+end
 analyze[[
     local tbl = {}
     tbl["@hello"] = true

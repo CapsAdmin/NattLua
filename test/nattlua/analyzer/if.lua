@@ -1440,15 +1440,19 @@ analyze[[
     local str = last_error()
     attest.equal(str, _  as nil | "hello")
 ]]
-analyze[[
-    local ffi = require("ffi")
 
-    do
-        assert(ffi.sizeof("int") == 4)
-    end
+if jit then
+	analyze[[
+        local ffi = require("ffi")
 
-    attest.truthy(ffi.sizeof)
-]]
+        do
+            assert(ffi.sizeof("int") == 4)
+        end
+
+        attest.truthy(ffi.sizeof)
+    ]]
+end
+
 analyze[[
     local meta = {}
     meta.__index = meta

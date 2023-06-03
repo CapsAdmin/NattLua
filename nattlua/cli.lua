@@ -28,7 +28,7 @@ default["language-server"] = function()
 end
 
 local function run_nlconfig()
-	if not io.open("./nlconfig.lua") then
+	if not loadfile("./nlconfig.lua") then
 		io.write("No nlconfig.lua found.\n")
 		return
 	end
