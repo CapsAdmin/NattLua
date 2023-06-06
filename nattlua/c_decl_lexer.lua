@@ -268,6 +268,9 @@ local META
 
 do
 	META = loadfile("nattlua/lexer.lua")()
+-- apparently long int long is also fine this is not correct
+--[=[
+
 	local characters = require("nattlua.syntax.characters")
 	local arr = {}
 
@@ -279,7 +282,7 @@ do
 		return #a > #b
 	end)
 
-	function META:ReadLetter()--[[#: TokenReturnType]]
+	function META:ReadLetter2()--[[#: TokenReturnType]]
 		if not characters.IsLetter(self:PeekByte()) then return false end
 
 		if self:ReadFirstFromArray(arr) then return "letter" end
@@ -292,7 +295,7 @@ do
 
 		return "letter"
 	end
-end
+	]=] end
 
 LEXER_META = META
 local META
@@ -316,14 +319,47 @@ do
 	end
 
 	function META:ParseStatement()
-		local node = self:ParseTypeDef()
+		local node = self:ParseTypeDefStatement() or self:ParseFunctionDeclarationStatement()
 
 		if node then return node end
 
 		self:Error("expected statement")
 	end
 
-	function META:ParseTypeDef()
+	function META:ParseFunctionDeclarationStatement()
+		local node = self:StartNode("statement", "function_declaration")
+		node.return_type = self:ParseTypeDeclaration()
+		node.tokens["identifier"] = self:ExpectTokenType("letter")
+		node.tokens["("] = self:ExpectTokenValue("(")
+		node.arguments = self:ParseFunctionArguments()
+		node.tokens[")"] = self:ExpectTokenValue(")")
+		node.tokens[";"] = self:ExpectTokenValue(";")
+		return self:EndNode(node)
+	end
+
+	function META:ParseFunctionArguments()
+		local out = {}
+
+		while not self:IsTokenValue(")") do
+			local node = self:StartNode("statement", "function_argument")
+			node.expression = self:ParseExpression()
+
+			if self:IsTokenType("letter") then
+				node.tokens["identifier"] = self:ExpectTokenType("letter")
+			end
+
+			-- belongs to function node?
+			if self:IsTokenValue(",") then
+				node.tokens[","] = self:ExpectTokenValue(",")
+			end
+
+			table.insert(out, self:EndNode(node))
+		end
+
+		return out
+	end
+
+	function META:ParseTypeDefStatement()
 		if not self:IsTokenValue("typedef") then return end
 
 		local node = self:StartNode("statement", "typedef")
@@ -365,13 +401,114 @@ do
 	end
 
 	do
-		function META:ParseTypeDeclaration()
-			local node = self:StartNode("expression", "type_declaration")
+		local modifiers = {
+			volatile = true,
+			restrict = true,
+			inline = true,
+			extern = true,
+			static = true,
+			int = true,
+			char = true,
+			double = true,
+			long = true,
+			short = true,
+			signed = true,
+			register = true,
+			const = true,
+			unsigned = true,
+			float = true,
+		}
 
-			if self:IsTokenType("letter") then
-				node.tokens["type"] = self:ExpectTokenType("letter")
+		function META:ParseExpression()
+			local node = self:StartNode("expression", "type_expression")
+
+			if self:IsTokenValue("*") then
+				node.expression = self:ParsePointerExpression()
+			elseif self:IsTokenValue("(") then
+				node.expression = self:ParseParenExpression()
+			elseif self:IsTokenValue("[") then
+				node.expression = self:ParseArrayExpression()
 			end
 
+			return self:EndNode(node)
+		end
+
+		function META:ParseArrayExpression()
+			local node = self:StartNode("expression", "array_expression")
+
+			if self:IsTokenType("letter") then
+				node.tokens["identifier"] = self:ExpectTokenType("letter")
+			end
+
+			node.tokens["["] = self:ExpectTokenValue("[")
+
+			if self:IsTokenType("number") then
+				node.size = self:ExpectTokenType("number")
+			end
+
+			node.tokens["]"] = self:ExpectTokenValue("]")
+
+			if self:IsTokenValue("[") then
+				node.expression = self:ParseArrayExpression()
+			end
+
+			return self:EndNode(node)
+		end
+
+		function META:ParseParenExpression()
+			local open = self:ExpectTokenValue("(")
+			local expression = self:ParseExpression()
+			local close = self:ExpectTokenValue(")")
+
+			if self:IsTokenValue("(") then
+				local node = self:StartNode("expression", "function_expression")
+				node.tokens["("] = open
+				node.expression = expression
+				node.tokens[")"] = close
+				node.tokens["arguments_("] = self:ExpectTokenValue("(")
+				node.arguments = self:ParseFunctionArguments()
+				node.tokens["arguments_)"] = self:ExpectTokenValue(")")
+				return self:EndNode(node)
+			end
+
+			local node = self:StartNode("expression", "paren_expression")
+			node.tokens["("] = open
+			node.expression = expression
+			node.tokens[")"] = close
+
+			if self:IsTokenValue("[") then
+				local array_exp = self:ParseArrayExpression()
+				array_exp.left_expression = node
+				self:EndNode(node)
+				return array_exp
+			end
+
+			return self:EndNode(node)
+		end
+
+		function META:ParsePointerExpression()
+			local node = self:StartNode("expression", "pointer_expression")
+			node.tokens["*"] = self:ExpectTokenValue("*")
+
+			if self:IsTokenType("letter") then
+				node.tokens["identifier"] = self:ExpectTokenType("letter")
+			end
+
+			node.expression = self:ParseExpression()
+			return self:EndNode(node)
+		end
+
+		function META:ParseTypeDeclaration()
+			local node = self:StartNode("expression", "type_declaration")
+			local modifiers = {}
+
+			while self:IsTokenType("letter") do
+				table.insert(modifiers, self:GetToken())
+				self:Advance(1)
+			end
+
+			node.modifiers = modifiers
+			node.expression = self:ParseExpression()
 			return self:EndNode(node)
 		end
 	end
@@ -429,6 +566,68 @@ do
 	function META:EmitTypeDeclaration(node)
 		if node.tokens["type"] then self:EmitToken(node.tokens["type"]) end
 	end
+
+	function META:EmitTypeExpression(node)
+		if node.kind == "type_declaration" then
+			if node.modifiers then
+				for _, modifier in ipairs(node.modifiers) do
+					self:EmitToken(modifier)
+				end
+			end
+
+			self:EmitTypeExpression(node.expression)
+		elseif node.kind == "type_expression" then
+			if node.modifiers then
+				for _, modifier in ipairs(node.modifiers) do
+					self:EmitToken(modifier)
+				end
+			end
+
+			if node.expression then self:EmitTypeExpression(node.expression) end
+		elseif node.kind == "function_expression" then
+			self:EmitToken(node.tokens["("])
+			self:EmitTypeExpression(node.expression)
+			self:EmitToken(node.tokens[")"])
+
+			if node.arguments then
+				self:EmitToken(node.tokens["arguments_("])
+
+				for i, argument in ipairs(node.arguments) do
+					self:EmitTypeExpression(argument.expression)
+
+					if argument.tokens["identifier"] then
+						self:EmitToken(argument.tokens["identifier"])
+					end
+
+					if node.tokens[","] then self:EmitToken(node.tokens[","]) end
+				end
+
+				self:EmitToken(node.tokens["arguments_)"])
+			end
+		elseif node.kind == "pointer_expression" then
+			self:EmitToken(node.tokens["*"])
+
+			if node.tokens["identifier"] then
+				self:EmitToken(node.tokens["identifier"])
+			end
+
+			self:EmitTypeExpression(node.expression)
+		elseif node.kind == "paren_expression" then
+			self:EmitToken(node.tokens["("])
+			self:EmitTypeExpression(node.expression)
+			self:EmitToken(node.tokens[")"])
+		elseif node.kind == "array_expression" then
+			if node.left_expression then self:EmitTypeExpression(node.left_expression) end
+
+			self:EmitToken(node.tokens["["])
+
+			if node.size then self:EmitToken(node.size) end
+
+			self:EmitToken(node.tokens["]"])
+
+			if node.expression then self:EmitTypeExpression(node.expression) end
+		end
+	end
 end
 
 local EMITTER_META = META
@@ -436,8 +635,7 @@ local Code = require("nattlua.code").New
 local Lexer = LEXER_META.New
 local Parser = PARSER_META.New
 local Emitter = EMITTER_META.New
-local code = Code(
-	[[
+local c_code = [[
 	typedef struct uni_t {
 		int8_t a;
 		int16_t b;
@@ -446,9 +644,6 @@ local code = Code(
 				
 	long long test(int a);
 	int test(int a, int b);
-
-	#define foo 1
-	#pragma once
 
 	/* test */
 	// test
@@ -463,14 +658,35 @@ local code = Code(
 
 	extern int foo;
 
-]],
-	"test.c"
-)
-local lex = Lexer(code)
-local tokens = lex:GetTokens()
-local parser = Parser(tokens, code)
-local compiler = require("nattlua.compiler")
-parser.OnError = function(parser, code, msg, start, stop, ...)
-	return compiler.OnDiagnostic({}, code, msg, "fatal", start, stop, nil, ...)
+]]
+c_code = [=[
+	//long static volatile int unsigned long long **foo[7]
+	//char* (*foo)(char*)
+	long static volatile int unsigned long *(*(**foo [2][8])(char *))[];
+]=]
+
+local function test(c_code, parse_func, emit_func)
+	local code = Code(c_code, "test.c")
+	local lex = Lexer(code)
+	local tokens = lex:GetTokens()
+	local parser = Parser(tokens, code)
+	local compiler = require("nattlua.compiler")
+	parser.OnError = function(parser, code, msg, start, stop, ...)
+		return compiler.OnDiagnostic({}, code, msg, "fatal", start, stop, nil, ...)
+	end
+	local emitter = Emitter()
+	emitter[emit_func](emitter, parser[parse_func](parser))
+	assert(emitter:Concat() == c_code)
 end
-print(Emitter():BuildCode(parser:ParseRootNode()), "!")
+
+test(
+	"long static volatile int unsigned long *(*(**foo [2][8])(char *))[]",
+	"ParseTypeDeclaration",
+	"EmitTypeExpression"
+)
+test(
+	"long static volatile int unsigned long long **foo[7]",
+	"ParseTypeDeclaration",
+	"EmitTypeExpression"
+)
+test("char* (*foo)(char*)", "ParseTypeDeclaration", "EmitTypeExpression")
