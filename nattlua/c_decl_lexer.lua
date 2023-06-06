@@ -1,4 +1,5 @@
 -- http://unixwiz.net/techtips/reading-cdecl.html
+-- https://eli.thegreenplace.net/2007/11/24/the-context-sensitivity-of-cs-grammar/
 local test = [[
 
 union test {
@@ -319,11 +320,24 @@ do
 	end
 
 	function META:ParseStatement()
-		local node = self:ParseTypeDefStatement() or self:ParseFunctionDeclarationStatement()
+		if self:IsTokenType("end_of_file") then return end
+
+		local node = self:ParseTypeDefStatement() or
+			self:ParseStructStatement() or
+			self:ParseFunctionDeclarationStatement()
 
 		if node then return node end
 
 		self:Error("expected statement")
+	end
+
+	function META:ParseStructStatement()
+		local node = self:ParseStruct()
+
+		if node then
+			node.tokens[";"] = self:ExpectTokenValue(";")
+			return node
+		end
 	end
 
 	function META:ParseFunctionDeclarationStatement()
@@ -341,12 +355,7 @@ do
 		local out = {}
 
 		while not self:IsTokenValue(")") do
-			local node = self:StartNode("statement", "function_argument")
-			node.expression = self:ParseExpression()
-
-			if self:IsTokenType("letter") then
-				node.tokens["identifier"] = self:ExpectTokenType("letter")
-			end
+			local node = self:ParseTypeDeclaration()
 
 			-- belongs to function node?
 			if self:IsTokenValue(",") then
@@ -376,6 +385,8 @@ do
 	end
 
 	function META:ParseStruct()
+		if not self:IsTokenValue("struct") then return end
+
 		local node = self:StartNode("statement", "struct")
 		node.tokens["struct"] = self:ExpectTokenValue("struct")
 
@@ -389,9 +400,14 @@ do
 		while true do
 			if self:IsTokenValue("}") then break end
 
-			local field = self:StartNode("statement", "field")
+			local field = self:StartNode("statement", "struct_field")
 			field.type_declaration = self:ParseTypeDeclaration()
-			field.tokens["identifier"] = self:ExpectTokenType("letter")
+
+			if self:IsTokenValue(":") then
+				field.tokens[":"] = self:ExpectTokenValue(":")
+				field.bit_field = self:ExpectTokenType("number")
+			end
+
 			field.tokens[";"] = self:ExpectTokenValue(";")
 			table.insert(node.fields, self:EndNode(field))
 		end
@@ -502,7 +518,7 @@ do
 			local node = self:StartNode("expression", "type_declaration")
 			local modifiers = {}
 
-			while self:IsTokenType("letter") do
+			while self:IsTokenType("letter") and not self:IsTokenValue("(", 1) do
 				table.insert(modifiers, self:GetToken())
 				self:Advance(1)
 			end
@@ -526,7 +542,30 @@ do
 	end
 
 	function META:EmitStatement(node)
-		if node.kind == "typedef" then self:EmitTypeDef(node) end
+		if node.kind == "typedef" then
+			self:EmitTypeDef(node)
+		elseif node.kind == "struct" then
+			self:EmitStructStatement(node)
+		elseif node.kind == "end_of_file" then
+			self:EmitToken(node.tokens["end_of_file"])
+		elseif node.kind == "function_declaration" then
+			self:EmitFunctionDeclarationStatement(node)
+		end
+	end
+
+	function META:EmitFunctionDeclarationStatement(node)
+		self:EmitTypeExpression(node.return_type)
+		self:EmitToken(node.tokens["identifier"])
+		self:EmitToken(node.tokens["("])
+
+		for i, arg in ipairs(node.arguments) do
+			self:EmitTypeExpression(arg)
+
+			if arg.tokens[","] then self:EmitToken(arg.tokens[","]) end
+		end
+
+		self:EmitToken(node.tokens[")"])
+		self:EmitToken(node.tokens[";"])
 	end
 
 	function META:EmitTypeDef(node)
@@ -538,6 +577,11 @@ do
 			self:EmitToken(node.tokens["identifier"])
 		end
 
+		self:EmitToken(node.tokens[";"])
+	end
+
+	function META:EmitStructStatement(node)
+		self:EmitStruct(node)
 		self:EmitToken(node.tokens[";"])
 	end
 
@@ -558,8 +602,12 @@ do
 	end
 
 	function META:EmitField(node)
-		self:EmitTypeDeclaration(node.type_declaration)
-		self:EmitToken(node.tokens["identifier"])
+		self:EmitTypeExpression(node.type_declaration)
+
+		if node.tokens[":"] then self:EmitToken(node.tokens[":"]) end
+
+		if node.bit_field then self:EmitToken(node.bit_field) end
+
 		self:EmitToken(node.tokens[";"])
 	end
 
@@ -593,11 +641,7 @@ do
 				self:EmitToken(node.tokens["arguments_("])
 
 				for i, argument in ipairs(node.arguments) do
-					self:EmitTypeExpression(argument.expression)
-
-					if argument.tokens["identifier"] then
-						self:EmitToken(argument.tokens["identifier"])
-					end
+					self:EmitTypeExpression(argument)
 
 					if node.tokens[","] then self:EmitToken(node.tokens[","]) end
 				end
@@ -666,6 +710,8 @@ c_code = [=[
 ]=]
 
 local function test(c_code, parse_func, emit_func)
+	parse_func = parse_func or "ParseRootNode"
+	emit_func = emit_func or "BuildCode"
 	local code = Code(c_code, "test.c")
 	local lex = Lexer(code)
 	local tokens = lex:GetTokens()
@@ -675,8 +721,13 @@ local function test(c_code, parse_func, emit_func)
 		return compiler.OnDiagnostic({}, code, msg, "fatal", start, stop, nil, ...)
 	end
 	local emitter = Emitter()
-	emitter[emit_func](emitter, parser[parse_func](parser))
-	assert(emitter:Concat() == c_code)
+	local res = emitter[emit_func](emitter, parser[parse_func](parser))
+	res = res or emitter:Concat()
+
+	if res ~= c_code then
+		print("expected\n", c_code)
+		print("got\n", res)
+	end
 end
 
 test(
@@ -690,3 +741,17 @@ test(
 	"EmitTypeExpression"
 )
 test("char* (*foo)(char*)", "ParseTypeDeclaration", "EmitTypeExpression")
+test([[
+typedef struct uni_t {
+	int8_t a;
+	int16_t b;
+	int32_t c;
+} uni_t;
+]])
+test([[
+struct uni_t {
+	int a : 1;
+	int b : 1;
+};
+]])
+test([[bool call_b(int * a);]])
