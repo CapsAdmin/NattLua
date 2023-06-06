@@ -117,7 +117,9 @@ if normalized:find("/nattlua/", nil, true) then
 
 	if not is_lua and not is_nattlua then return end
 
-	if normalized:find("other/coverage", nil, true) then
+	if normalized:find("c_decl_lexer", nil, true) then
+		run_lua("nattlua/c_decl_lexer.lua")
+	elseif normalized:find("other/coverage", nil, true) then
 		run_lua("test/run.lua", "test/nattlua/coverage.lua")
 	elseif normalized:find("nattlua/editor_helper/editor.lua", nil, true) then
 		run_lua("test/run.lua", "test/nattlua/lsp/editor.lua")
