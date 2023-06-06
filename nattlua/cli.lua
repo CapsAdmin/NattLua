@@ -1,7 +1,4 @@
 local nattlua = require("nattlua.init")
-
-
-
 local default = {}
 default.run = function(path, ...)
 	assert(path)
@@ -28,11 +25,14 @@ default["language-server"] = function()
 end
 
 local function run_nlconfig()
-	if not loadfile("./nlconfig.lua") then
+	local load_file = _G["load" .. "file"]
+
+	if not load_file("./nlconfig.lua") then
 		io.write("No nlconfig.lua found.\n")
 		return
 	end
-	return assert(_G["load" .. "file"]("./nlconfig.lua"))()
+
+	return assert(load_file("./nlconfig.lua"))()
 end
 
 local override = run_nlconfig()
@@ -42,14 +42,13 @@ if override then
 		if default[k] then
 			io.write("nlconfig.lua overrides default command ", k, "\n")
 		end
+
 		default[k] = v
 	end
 end
 
 function _G.RUN_CLI(cmd, ...)
 	local func = assert(default[cmd], "Unknown command " .. cmd)
-
-	io.write("running ",cmd," with arguments ", table.concat({...}, " "), "\n")
-
+	io.write("running ", cmd, " with arguments ", table.concat({...}, " "), "\n")
 	func(...)
 end
