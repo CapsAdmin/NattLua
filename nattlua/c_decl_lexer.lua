@@ -324,6 +324,7 @@ do
 
 		local node = self:ParseTypeDefStatement() or
 			self:ParseStructStatement() or
+			self:ParseEnumStatement() or
 			self:ParseFunctionDeclarationStatement()
 
 		if node then return node end
@@ -340,6 +341,15 @@ do
 		end
 	end
 
+	function META:ParseEnumStatement()
+		local node = self:ParseEnum()
+
+		if node then
+			node.tokens[";"] = self:ExpectTokenValue(";")
+			return node
+		end
+	end
+
 	function META:ParseFunctionDeclarationStatement()
 		local node = self:StartNode("statement", "function_declaration")
 		node.return_type = self:ParseTypeDeclaration()
@@ -347,6 +357,14 @@ do
 		node.tokens["("] = self:ExpectTokenValue("(")
 		node.arguments = self:ParseFunctionArguments()
 		node.tokens[")"] = self:ExpectTokenValue(")")
+
+		if self:IsTokenValue("asm") then
+			node.tokens["asm"] = self:ExpectTokenValue("asm")
+			node.tokens["asm_("] = self:ExpectTokenValue("(")
+			node.tokens["asm_string"] = self:ExpectTokenType("string")
+			node.tokens["asm_)"] = self:ExpectTokenValue(")")
+		end
+
 		node.tokens[";"] = self:ExpectTokenValue(";")
 		return self:EndNode(node)
 	end
@@ -384,6 +402,41 @@ do
 		return self:EndNode(node)
 	end
 
+	function META:ParseEnum()
+		if not self:IsTokenValue("enum") then return end
+
+		local node = self:StartNode("statement", "enum")
+		node.tokens["enum"] = self:ExpectTokenValue("enum")
+		node.fields = {}
+
+		if self:IsTokenType("letter") then
+			node.tokens["identifier"] = self:ExpectTokenType("letter")
+		end
+
+		node.tokens["{"] = self:ExpectTokenValue("{")
+
+		while true do
+			if self:IsTokenValue("}") then break end
+
+			local field = self:StartNode("statement", "enum_field")
+			field.tokens["identifier"] = self:ExpectTokenType("letter")
+
+			if self:IsTokenValue("=") then
+				field.tokens["="] = self:ExpectTokenValue("=")
+				field.tokens["value"] = self:ExpectTokenType("number")
+			end
+
+			if self:IsTokenValue(",") then
+				field.tokens[","] = self:ExpectTokenValue(",")
+			end
+
+			table.insert(node.fields, self:EndNode(field))
+		end
+
+		node.tokens["}"] = self:ExpectTokenValue("}")
+		return self:EndNode(node)
+	end
+
 	function META:ParseStruct()
 		if not self:IsTokenValue("struct") then return end
 
@@ -406,6 +459,27 @@ do
 			if self:IsTokenValue(":") then
 				field.tokens[":"] = self:ExpectTokenValue(":")
 				field.bit_field = self:ExpectTokenType("number")
+			end
+
+			if self:IsTokenValue(",") then
+				field.shorthand_identifiers = {}
+				local shorthand = {}
+				shorthand[","] = self:ExpectTokenValue(",")
+				table.insert(field.shorthand_identifiers, shorthand)
+
+				while true do
+					local shorthand = {}
+					shorthand.token = self:ExpectTokenType("letter")
+
+					if self:IsTokenValue(";") then
+						table.insert(field.shorthand_identifiers, shorthand)
+
+						break
+					end
+
+					shorthand[","] = self:ExpectTokenValue(",")
+					table.insert(field.shorthand_identifiers, shorthand)
+				end
 			end
 
 			field.tokens[";"] = self:ExpectTokenValue(";")
@@ -544,6 +618,8 @@ do
 	function META:EmitStatement(node)
 		if node.kind == "typedef" then
 			self:EmitTypeDef(node)
+		elseif node.kind == "enum" then
+			self:EmitEnumStatement(node)
 		elseif node.kind == "struct" then
 			self:EmitStructStatement(node)
 		elseif node.kind == "end_of_file" then
@@ -565,6 +641,14 @@ do
 		end
 
 		self:EmitToken(node.tokens[")"])
+
+		if node.tokens["asm"] then
+			self:EmitToken(node.tokens["asm"])
+			self:EmitToken(node.tokens["asm_("])
+			self:EmitToken(node.tokens["asm_string"])
+			self:EmitToken(node.tokens["asm_)"])
+		end
+
 		self:EmitToken(node.tokens[";"])
 	end
 
@@ -585,6 +669,36 @@ do
 		self:EmitToken(node.tokens[";"])
 	end
 
+	function META:EmitEnumStatement(node)
+		self:EmitEnum(node)
+		self:EmitToken(node.tokens[";"])
+	end
+
+	function META:EmitEnum(node)
+		self:EmitToken(node.tokens["enum"])
+
+		if node.tokens["identifier"] then
+			self:EmitToken(node.tokens["identifier"])
+		end
+
+		self:EmitToken(node.tokens["{"])
+
+		for _, field in ipairs(node.fields) do
+			if field.tokens["identifier"] then
+				self:EmitToken(field.tokens["identifier"])
+			end
+
+			if field.tokens["="] then
+				self:EmitToken(field.tokens["="])
+				self:EmitToken(field.tokens["number"])
+			end
+
+			if field.tokens[","] then self:EmitToken(field.tokens[","]) end
+		end
+
+		self:EmitToken(node.tokens["}"])
+	end
+
 	function META:EmitStruct(node)
 		self:EmitToken(node.tokens["struct"])
 
@@ -595,7 +709,23 @@ do
 		self:EmitToken(node.tokens["{"])
 
 		for _, field in ipairs(node.fields) do
-			self:EmitField(field)
+			if field.shorthand_identifiers then
+				self:EmitTypeExpression(field.type_declaration)
+
+				if field.tokens[":"] then self:EmitToken(field.tokens[":"]) end
+
+				if field.bit_field then self:EmitToken(field.bit_field) end
+
+				for _, identifier in ipairs(field.shorthand_identifiers) do
+					if identifier.token then self:EmitToken(identifier.token) end
+
+					if identifier[","] then self:EmitToken(identifier[","]) end
+				end
+
+				self:EmitToken(field.tokens[";"])
+			else
+				self:EmitField(field)
+			end
 		end
 
 		self:EmitToken(node.tokens["}"])
@@ -755,3 +885,6 @@ struct uni_t {
 };
 ]])
 test([[bool call_b(int * a);]])
+test([[bool call_b(int * a) asm("test");]])
+test([[typedef struct s_8i { int a,b,c,d,e,f,g,h; } s_8i;]])
+test([[enum s_8i { a,b };]])
