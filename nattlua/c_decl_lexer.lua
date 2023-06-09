@@ -10,12 +10,6 @@ union test {
 		struct { _Bool b0:1,b1:1,b2:1,b3:1; };
 		};
 		
-		typedef struct s_ii { int x, y; } s_ii;
-		typedef struct s_jj { int64_t x, y; } s_jj;
-		typedef struct s_ff { float x, y; } s_ff;
-		typedef struct s_dd { double x, y; } s_dd;
-		typedef struct s_8i { int a,b,c,d,e,f,g,h; } s_8i;
-		
 		int call_i(int a);
 		int call_ii(int a, int b);
 		int call_10i(int a, int b, int c, int d, int e, int f, int g, int h, int i, int j);
@@ -302,7 +296,7 @@ LEXER_META = META
 local META
 
 do
-	META = loadfile("nattlua/parser/base.lua")()
+	META = loadfile("nattlua/parser.lua")()
 
 	function META:ParseRootNode()
 		local node = self:StartNode("statement", "root")
@@ -323,31 +317,17 @@ do
 		if self:IsTokenType("end_of_file") then return end
 
 		local node = self:ParseTypeDefStatement() or
-			self:ParseStructStatement() or
-			self:ParseEnumStatement() or
+			self:ParseStruct() or
+			self:ParseEnum() or
 			self:ParseFunctionDeclarationStatement()
 
-		if node then return node end
-
-		self:Error("expected statement")
-	end
-
-	function META:ParseStructStatement()
-		local node = self:ParseStruct()
-
-		if node then
-			node.tokens[";"] = self:ExpectTokenValue(";")
-			return node
+		if not node then
+			self:Error("expected statement")
+			return
 		end
-	end
 
-	function META:ParseEnumStatement()
-		local node = self:ParseEnum()
-
-		if node then
-			node.tokens[";"] = self:ExpectTokenValue(";")
-			return node
-		end
+		node.tokens[";"] = self:ExpectTokenValue(";")
+		return node
 	end
 
 	function META:ParseFunctionDeclarationStatement()
@@ -365,7 +345,6 @@ do
 			node.tokens["asm_)"] = self:ExpectTokenValue(")")
 		end
 
-		node.tokens[";"] = self:ExpectTokenValue(";")
 		return self:EndNode(node)
 	end
 
@@ -392,13 +371,22 @@ do
 		local node = self:StartNode("statement", "typedef")
 		node.tokens["typedef"] = self:ExpectTokenType("letter")
 
-		if self:IsTokenValue("struct") then node.struct = self:ParseStruct() end
+		if self:IsTokenValue("struct") then
+			node.value = self:ParseStruct()
+		elseif self:IsTokenValue("union") then
+			node.value = self:ParseUnion()
+		elseif self:IsTokenValue("enum") then
+			node.value = self:ParseEnum()
+		elseif self:IsTokenValue("enum") then
+			node.value = self:ParseEnum()
+		else
+			node.value = self:ParseTypeDeclaration()
+		end
 
 		if self:IsTokenType("letter") then
 			node.tokens["identifier"] = self:ExpectTokenType("letter")
 		end
 
-		node.tokens[";"] = self:ExpectTokenValue(";")
 		return self:EndNode(node)
 	end
 
@@ -438,10 +426,18 @@ do
 	end
 
 	function META:ParseStruct()
-		if not self:IsTokenValue("struct") then return end
+		return self:ParseStructOrUnion("struct")
+	end
 
-		local node = self:StartNode("statement", "struct")
-		node.tokens["struct"] = self:ExpectTokenValue("struct")
+	function META:ParseUnion()
+		return self:ParseStructOrUnion("union")
+	end
+
+	function META:ParseStructOrUnion(type)
+		if not self:IsTokenValue(type) then return end
+
+		local node = self:StartNode("statement", type)
+		node.tokens[type] = self:ExpectTokenValue(type)
 
 		if self:IsTokenType("letter") then
 			node.tokens["identifier"] = self:ExpectTokenType("letter")
@@ -471,6 +467,11 @@ do
 					local shorthand = {}
 					shorthand.token = self:ExpectTokenType("letter")
 
+					if self:IsTokenValue(":") then
+						shorthand[":"] = self:ExpectTokenValue(":")
+						shorthand.bit_field = self:ExpectTokenType("number")
+					end
+
 					if self:IsTokenValue(";") then
 						table.insert(field.shorthand_identifiers, shorthand)
 
@@ -491,25 +492,7 @@ do
 	end
 
 	do
-		local modifiers = {
-			volatile = true,
-			restrict = true,
-			inline = true,
-			extern = true,
-			static = true,
-			int = true,
-			char = true,
-			double = true,
-			long = true,
-			short = true,
-			signed = true,
-			register = true,
-			const = true,
-			unsigned = true,
-			float = true,
-		}
-
-		function META:ParseExpression()
+		function META:ParseCExpression()
 			local node = self:StartNode("expression", "type_expression")
 
 			if self:IsTokenValue("*") then
@@ -531,11 +514,7 @@ do
 			end
 
 			node.tokens["["] = self:ExpectTokenValue("[")
-
-			if self:IsTokenType("number") then
-				node.size = self:ExpectTokenType("number")
-			end
-
+			node.size_expression = self:ParseRuntimeExpression()
 			node.tokens["]"] = self:ExpectTokenValue("]")
 
 			if self:IsTokenValue("[") then
@@ -547,7 +526,7 @@ do
 
 		function META:ParseParenExpression()
 			local open = self:ExpectTokenValue("(")
-			local expression = self:ParseExpression()
+			local expression = self:ParseCExpression()
 			local close = self:ExpectTokenValue(")")
 
 			if self:IsTokenValue("(") then
@@ -584,7 +563,7 @@ do
 				node.tokens["identifier"] = self:ExpectTokenType("letter")
 			end
 
-			node.expression = self:ParseExpression()
+			node.expression = self:ParseCExpression()
 			return self:EndNode(node)
 		end
 
@@ -598,7 +577,7 @@ do
 			end
 
 			node.modifiers = modifiers
-			node.expression = self:ParseExpression()
+			node.expression = self:ParseCExpression()
 			return self:EndNode(node)
 		end
 	end
@@ -618,15 +597,19 @@ do
 	function META:EmitStatement(node)
 		if node.kind == "typedef" then
 			self:EmitTypeDef(node)
+		elseif node.kind == "union" then
+			self:EmitUnion(node)
 		elseif node.kind == "enum" then
-			self:EmitEnumStatement(node)
+			self:EmitEnum(node)
 		elseif node.kind == "struct" then
-			self:EmitStructStatement(node)
+			self:EmitStruct(node)
 		elseif node.kind == "end_of_file" then
 			self:EmitToken(node.tokens["end_of_file"])
 		elseif node.kind == "function_declaration" then
 			self:EmitFunctionDeclarationStatement(node)
 		end
+
+		if node.tokens[";"] then self:EmitToken(node.tokens[";"]) end
 	end
 
 	function META:EmitFunctionDeclarationStatement(node)
@@ -648,30 +631,16 @@ do
 			self:EmitToken(node.tokens["asm_string"])
 			self:EmitToken(node.tokens["asm_)"])
 		end
-
-		self:EmitToken(node.tokens[";"])
 	end
 
 	function META:EmitTypeDef(node)
 		self:EmitToken(node.tokens["typedef"])
 
-		if node.struct then self:EmitStruct(node.struct) end
+		if node.value then self:EmitStatement(node.value) end
 
 		if node.tokens["identifier"] then
 			self:EmitToken(node.tokens["identifier"])
 		end
-
-		self:EmitToken(node.tokens[";"])
-	end
-
-	function META:EmitStructStatement(node)
-		self:EmitStruct(node)
-		self:EmitToken(node.tokens[";"])
-	end
-
-	function META:EmitEnumStatement(node)
-		self:EmitEnum(node)
-		self:EmitToken(node.tokens[";"])
 	end
 
 	function META:EmitEnum(node)
@@ -700,7 +669,15 @@ do
 	end
 
 	function META:EmitStruct(node)
-		self:EmitToken(node.tokens["struct"])
+		return self:EmitStructOrUnion(node, "struct")
+	end
+
+	function META:EmitUnion(node)
+		return self:EmitStructOrUnion(node, "union")
+	end
+
+	function META:EmitStructOrUnion(node, type)
+		self:EmitToken(node.tokens[type])
 
 		if node.tokens["identifier"] then
 			self:EmitToken(node.tokens["identifier"])
@@ -719,26 +696,26 @@ do
 				for _, identifier in ipairs(field.shorthand_identifiers) do
 					if identifier.token then self:EmitToken(identifier.token) end
 
+					if identifier[":"] then self:EmitToken(identifier[":"]) end
+
+					if identifier.bit_field then self:EmitToken(identifier.bit_field) end
+
 					if identifier[","] then self:EmitToken(identifier[","]) end
 				end
 
 				self:EmitToken(field.tokens[";"])
 			else
-				self:EmitField(field)
+				self:EmitTypeExpression(field.type_declaration)
+
+				if field.tokens[":"] then self:EmitToken(field.tokens[":"]) end
+
+				if field.bit_field then self:EmitToken(field.bit_field) end
+
+				self:EmitToken(field.tokens[";"])
 			end
 		end
 
 		self:EmitToken(node.tokens["}"])
-	end
-
-	function META:EmitField(node)
-		self:EmitTypeExpression(node.type_declaration)
-
-		if node.tokens[":"] then self:EmitToken(node.tokens[":"]) end
-
-		if node.bit_field then self:EmitToken(node.bit_field) end
-
-		self:EmitToken(node.tokens[";"])
 	end
 
 	function META:EmitTypeDeclaration(node)
@@ -795,7 +772,7 @@ do
 
 			self:EmitToken(node.tokens["["])
 
-			if node.size then self:EmitToken(node.size) end
+			if node.size_expression then self:EmitExpression(node.size_expression) end
 
 			self:EmitToken(node.tokens["]"])
 
@@ -887,4 +864,41 @@ struct uni_t {
 test([[bool call_b(int * a);]])
 test([[bool call_b(int * a) asm("test");]])
 test([[typedef struct s_8i { int a,b,c,d,e,f,g,h; } s_8i;]])
+test([[typedef union s_8i { int a,b,c,d,e,f,g,h; } s_8i;]])
+test([[typedef enum s_8i { a,b,c,d,e,f,g,h } s_8i;]])
 test([[enum s_8i { a,b };]])
+test[[struct { _Bool b0:1,b1:1,b2:1,b3:1; };]]
+--test[[void foo(int a[1+2], int b);]]
+local ffi = require("ffi")
+ffi.typeof[[ int[0?2:0] ]]
+ffi.typeof[[ int[0||0] ]]
+ffi.typeof[[ int[0&&0] ]]
+ffi.typeof[[ int[0|0] ]]
+ffi.typeof[[ int[0^0] ]]
+ffi.typeof[[ int[0&0] ]]
+ffi.typeof[[ int[0==0] ]]
+ffi.typeof[[ int[0!=0] ]]
+ffi.typeof[[ int[0<0] ]]
+ffi.typeof[[ int[0>0] ]]
+ffi.typeof[[ int[0<=0] ]]
+ffi.typeof[[ int[0>=0] ]]
+ffi.typeof[[ int[0<<0] ]]
+ffi.typeof[[ int[0>>0] ]]
+ffi.typeof[[ int[0+0] ]]
+ffi.typeof[[ int[0-0] ]]
+ffi.typeof[[ int[1%1] ]]
+ffi.typeof[[ int[-0] ]]
+--ffi.typeof[[ int[~10] ]]
+ffi.typeof[[ int[!0] ]]
+ffi.typeof[[ int[+0] ]]
+local s = ffi.typeof[[
+	struct {
+		int a : 2;
+		int b : 2;
+		int c : 2;
+		int d : 2;
+		int e : 2;
+		int f : 2;
+	 }
+]]
+print(ffi.sizeof(s(1, 0, 2, 5, 6)))
