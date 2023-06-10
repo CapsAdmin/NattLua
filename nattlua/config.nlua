@@ -33,6 +33,7 @@ local type TranspilerConfig = {
 	module_encapsulation_method = "loadstring",
 	blank_invalid_code = boolean,
 	transpile_extensions = boolean,
+	skip_translation = boolean,
 }
 return {
 	LexerConfig = Partial<|LexerConfig|>,
