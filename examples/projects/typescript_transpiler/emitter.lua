@@ -111,7 +111,6 @@ function META:EmitBinaryOperator(node)
 		if node.right then self:EmitExpression(node.right) end
 
 		self:Emit(func_chunks[3])
-		self.operator_transformed = true
 	else
 		-- move whitespace
 		if node.left and node.left.value then
@@ -346,15 +345,10 @@ local translate = {
 function META:EmitPrefixOperator(node)
 	local func_chunks = runtime_syntax:GetFunctionForPrefixOperator(node.value)
 
-	if self.TranslatePrefixOperator then
-		func_chunks = self:TranslatePrefixOperator(node) or func_chunks
-	end
-
 	if func_chunks then
 		self:Emit(func_chunks[1])
 		self:EmitExpression(node.right)
 		self:Emit(func_chunks[2])
-		self.operator_transformed = true
 	else
 		if runtime_syntax:IsKeyword(node.value) then
 			self:Whitespace("?")
@@ -395,7 +389,6 @@ function META:EmitPostfixOperator(node)
 	self:Emit(func_chunks[1])
 	self:EmitExpression(node.left)
 	self:Emit(func_chunks[2])
-	self.operator_transformed = true
 end
 
 function META:EmitBlock(statements)
