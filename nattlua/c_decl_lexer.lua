@@ -226,71 +226,11 @@ union test {
 		float __stdcall stdcall_ff(float a, float b);
 		
 ]]
-local basic_types = {
-	["char"] = true,
-	["signed char"] = true,
-	["unsigned char"] = true,
-	["short"] = true,
-	["short int"] = true,
-	["signed short"] = true,
-	["signed short int"] = true,
-	["unsigned short"] = true,
-	["unsigned short int"] = true,
-	["int"] = true,
-	["signed"] = true,
-	["signed int"] = true,
-	["unsigned"] = true,
-	["unsigned int"] = true,
-	["long"] = true,
-	["long int"] = true,
-	["signed long"] = true,
-	["signed long int"] = true,
-	["unsigned long"] = true,
-	["unsigned long int"] = true,
-	["long long"] = true,
-	["long long int"] = true,
-	["signed long long"] = true,
-	["signed long long int"] = true,
-	["unsigned long long"] = true,
-	["unsigned long long int"] = true,
-	["float"] = true,
-	["double"] = true,
-	["long double"] = true,
-	["size_t"] = true,
-	["_Boolean"] = true,
-}
 local META
 
 do
 	META = loadfile("nattlua/lexer.lua")()
--- apparently long int long is also fine this is not correct
---[=[
-
-	local characters = require("nattlua.syntax.characters")
-	local arr = {}
-
-	for type in pairs(basic_types) do
-		if type:find(" ", nil, true) then table.insert(arr, type) end
-	end
-
-	table.sort(arr, function(a, b)
-		return #a > #b
-	end)
-
-	function META:ReadLetter2()--[[#: TokenReturnType]]
-		if not characters.IsLetter(self:PeekByte()) then return false end
-
-		if self:ReadFirstFromArray(arr) then return "letter" end
-
-		while not self:TheEnd() do
-			self:Advance(1)
-
-			if not characters.IsDuringLetter(self:PeekByte()) then break end
-		end
-
-		return "letter"
-	end
-	]=] end
+end
 
 LEXER_META = META
 local META
@@ -411,7 +351,7 @@ do
 
 			if self:IsTokenValue("=") then
 				field.tokens["="] = self:ExpectTokenValue("=")
-				field.tokens["value"] = self:ExpectTokenType("number")
+				field.value = self:ExpectRuntimeExpression()
 			end
 
 			if self:IsTokenValue(",") then
@@ -449,42 +389,81 @@ do
 		while true do
 			if self:IsTokenValue("}") then break end
 
-			local field = self:StartNode("statement", "struct_field")
-			field.type_declaration = self:ParseTypeDeclaration()
+			if
+				self:IsTokenValue("enum") or
+				(
+					self:IsTokenValue("const") and
+					self:IsTokenValue("enum", 1)
+				)
+			then
+				local const
 
-			if self:IsTokenValue(":") then
-				field.tokens[":"] = self:ExpectTokenValue(":")
-				field.bit_field = self:ExpectTokenType("number")
-			end
+				if self:IsTokenValue("const") then
+					const = self:ExpectTokenValue("const")
+				end
 
-			if self:IsTokenValue(",") then
-				field.shorthand_identifiers = {}
-				local shorthand = {}
-				shorthand[","] = self:ExpectTokenValue(",")
-				table.insert(field.shorthand_identifiers, shorthand)
+				local field = self:ParseEnum()
+				field.tokens["const"] = const
+				field.tokens[";"] = self:ExpectTokenValue(";")
+				table.insert(node.fields, self:EndNode(field))
+			elseif
+				self:IsTokenValue("struct") or
+				(
+					self:IsTokenValue("const") and
+					self:IsTokenValue("struct", 1)
+				)
+			then
+				local const
 
-				while true do
+				if self:IsTokenValue("const") then
+					const = self:ExpectTokenValue("const")
+				end
+
+				local field = self:ParseStruct()
+				field.tokens["const"] = const
+				field.tokens[";"] = self:ExpectTokenValue(";")
+				table.insert(node.fields, self:EndNode(field))
+			else
+				local field = self:StartNode("statement", "struct_field")
+				field.type_declaration = self:ParseTypeDeclaration()
+
+				if self:IsTokenValue(":") then
+					field.tokens[":"] = self:ExpectTokenValue(":")
+					field.bit_field = self:ExpectTokenType("number")
+				end
+
+				if self:IsTokenValue("=") then
+					field.tokens["="] = self:ExpectTokenValue("=")
+					field.value = self:ExpectRuntimeExpression()
+				elseif self:IsTokenValue(",") then
+					field.shorthand_identifiers = {}
 					local shorthand = {}
-					shorthand.token = self:ExpectTokenType("letter")
-
-					if self:IsTokenValue(":") then
-						shorthand[":"] = self:ExpectTokenValue(":")
-						shorthand.bit_field = self:ExpectTokenType("number")
-					end
-
-					if self:IsTokenValue(";") then
-						table.insert(field.shorthand_identifiers, shorthand)
-
-						break
-					end
-
 					shorthand[","] = self:ExpectTokenValue(",")
 					table.insert(field.shorthand_identifiers, shorthand)
-				end
-			end
 
-			field.tokens[";"] = self:ExpectTokenValue(";")
-			table.insert(node.fields, self:EndNode(field))
+					while true do
+						local shorthand = {}
+						shorthand.token = self:ExpectTokenType("letter")
+
+						if self:IsTokenValue(":") then
+							shorthand[":"] = self:ExpectTokenValue(":")
+							shorthand.bit_field = self:ExpectTokenType("number")
+						end
+
+						if self:IsTokenValue(";") then
+							table.insert(field.shorthand_identifiers, shorthand)
+
+							break
+						end
+
+						shorthand[","] = self:ExpectTokenValue(",")
+						table.insert(field.shorthand_identifiers, shorthand)
+					end
+				end
+
+				field.tokens[";"] = self:ExpectTokenValue(";")
+				table.insert(node.fields, self:EndNode(field))
+			end
 		end
 
 		node.tokens["}"] = self:ExpectTokenValue("}")
@@ -659,7 +638,7 @@ do
 
 			if field.tokens["="] then
 				self:EmitToken(field.tokens["="])
-				self:EmitToken(field.tokens["number"])
+				self:EmitExpression(field.value)
 			end
 
 			if field.tokens[","] then self:EmitToken(field.tokens[","]) end
@@ -705,11 +684,30 @@ do
 
 				self:EmitToken(field.tokens[";"])
 			else
-				self:EmitTypeExpression(field.type_declaration)
+				if field.kind == "struct_field" then
+					self:EmitTypeExpression(field.type_declaration)
 
-				if field.tokens[":"] then self:EmitToken(field.tokens[":"]) end
+					if field.tokens[":"] then self:EmitToken(field.tokens[":"]) end
 
-				if field.bit_field then self:EmitToken(field.bit_field) end
+					if field.bit_field then self:EmitToken(field.bit_field) end
+
+					if field.tokens["="] then
+						self:EmitToken(field.tokens["="])
+						self:EmitExpression(field.value)
+					end
+				elseif field.kind == "struct" then
+					if field.tokens["const"] then
+						self:EmitToken(field.tokens["const"])
+					end
+
+					self:EmitStruct(field)
+				elseif field.kind == "enum" then
+					if field.tokens["const"] then
+						self:EmitToken(field.tokens["const"])
+					end
+
+					self:EmitEnum(field)
+				end
 
 				self:EmitToken(field.tokens[";"])
 			end
@@ -827,7 +825,7 @@ local function test(c_code, parse_func, emit_func)
 	parser.OnError = function(parser, code, msg, start, stop, ...)
 		return compiler.OnDiagnostic({}, code, msg, "fatal", start, stop, nil, ...)
 	end
-	local emitter = Emitter()
+	local emitter = Emitter({skip_translation = true})
 	local res = emitter[emit_func](emitter, parser[parse_func](parser))
 	res = res or emitter:Concat()
 
@@ -868,37 +866,34 @@ test([[typedef union s_8i { int a,b,c,d,e,f,g,h; } s_8i;]])
 test([[typedef enum s_8i { a,b,c,d,e,f,g,h } s_8i;]])
 test([[enum s_8i { a,b };]])
 test[[struct { _Bool b0:1,b1:1,b2:1,b3:1; };]]
---test[[void foo(int a[1+2], int b);]]
-local ffi = require("ffi")
-ffi.typeof[[ int[0?2:0] ]]
-ffi.typeof[[ int[0||0] ]]
-ffi.typeof[[ int[0&&0] ]]
-ffi.typeof[[ int[0|0] ]]
-ffi.typeof[[ int[0^0] ]]
-ffi.typeof[[ int[0&0] ]]
-ffi.typeof[[ int[0==0] ]]
-ffi.typeof[[ int[0!=0] ]]
-ffi.typeof[[ int[0<0] ]]
-ffi.typeof[[ int[0>0] ]]
-ffi.typeof[[ int[0<=0] ]]
-ffi.typeof[[ int[0>=0] ]]
-ffi.typeof[[ int[0<<0] ]]
-ffi.typeof[[ int[0>>0] ]]
-ffi.typeof[[ int[0+0] ]]
-ffi.typeof[[ int[0-0] ]]
-ffi.typeof[[ int[1%1] ]]
-ffi.typeof[[ int[-0] ]]
---ffi.typeof[[ int[~10] ]]
-ffi.typeof[[ int[!0] ]]
-ffi.typeof[[ int[+0] ]]
-local s = ffi.typeof[[
-	struct {
-		int a : 2;
-		int b : 2;
-		int c : 2;
-		int d : 2;
-		int e : 2;
-		int f : 2;
-	 }
+test[[void foo(int a[1+2], int b);]]
+test[[void foo(int a[1+2*2], int b);]]
+test[[void foo(int a[1<<2], int b);]]
+test[[void foo(int a[sizeof(int)], int b);]] --test[[void foo(int a[1?2:3], int b);]] WIP
+test[[
+
+	typedef struct foo_t {
+		static const int cc = 17;
+		enum { CC = -37 };
+		int i;
+		const int ci;
+		int bi:8;
+		const int cbi:8;
+		en_t e;
+		const en_t ce;
+		int a[10];
+		const int ca[10];
+		const char cac[10];
+		s_t s;
+		cs_t cs;
+		pcs_t pcs1, pcs2;
+		const struct {
+			int ni;
+		};
+		complex cx;
+		const complex ccx;
+		complex *cp;
+		const complex *ccp;
+	} foo_t;     
+
 ]]
-print(ffi.sizeof(s(1, 0, 2, 5, 6)))
