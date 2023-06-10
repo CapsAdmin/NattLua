@@ -16,15 +16,6 @@ local META = class.CreateTemplate("emitter")
 
 --[[#local type { ParserConfig, TranspilerConfig } = import("./../config.nlua")]]
 
-local translate_binary = {
-	["&&"] = "and",
-	["||"] = "or",
-	["!="] = "~=",
-}
-local translate_prefix = {
-	["!"] = "not ",
-}
-
 do -- internal
 	function META:Whitespace(str--[[#: string]], force--[[#: boolean]])
 		if self.config.preserve_whitespace == nil and not force then return end
@@ -739,68 +730,6 @@ function META:EmitCall(node--[[#: Node]])
 	self.inside_call_expression = false
 end
 
-function META:EmitBinaryOperator(node--[[#: Node]])
-	local func_chunks = node.environment == "runtime" and
-		runtime_syntax:GetFunctionForBinaryOperator(node.value)
-
-	if func_chunks then
-		self:Emit(func_chunks[1])
-
-		if node.left then self:EmitExpression(node.left) end
-
-		self:Emit(func_chunks[2])
-
-		if node.right then self:EmitExpression(node.right) end
-
-		self:Emit(func_chunks[3])
-		self.operator_transformed = true
-	else
-		if node.left then self:EmitExpression(node.left) end
-
-		if node.value.value == "." or node.value.value == ":" then
-			self:EmitToken(node.value)
-		elseif
-			node.value.value == "and" or
-			node.value.value == "or" or
-			node.value.value == "||" or
-			node.value.value == "&&"
-		then
-			if self:IsLineBreaking() then
-				if
-					self:GetPrevChar() == B(")") and
-					node.left.kind ~= "postfix_call" and
-					(
-						node.left.kind == "binary_operator" and
-						node.left.right.kind ~= "postfix_call"
-					)
-				then
-					self:Whitespace("\n")
-					self:Whitespace("\t")
-				else
-					self:Whitespace(" ")
-				end
-
-				self:EmitToken(node.value, translate_binary[node.value.value])
-
-				if node.right then
-					self:Whitespace("\n")
-					self:Whitespace("\t")
-				end
-			else
-				self:Whitespace(" ")
-				self:EmitToken(node.value, translate_binary[node.value.value])
-				self:Whitespace(" ")
-			end
-		else
-			self:Whitespace(" ")
-			self:EmitToken(node.value, translate_binary[node.value.value])
-			self:Whitespace(" ")
-		end
-
-		if node.right then self:EmitExpression(node.right) end
-	end
-end
-
 do
 	function META:EmitFunctionBody(node--[[#: Node]])
 		if node.identifiers_typesystem and not self.config.omit_invalid_code then
@@ -1048,33 +977,98 @@ function META:EmitTable(tree--[[#: Node]])
 	self:EmitToken(tree.tokens["}"])
 end
 
-function META:EmitPrefixOperator(node--[[#: Node]])
-	local func_chunks = node.environment == "runtime" and
-		runtime_syntax:GetFunctionForPrefixOperator(node.value)
+do
+	local translate_prefix = {
+		["!"] = "not ",
+	}
 
-	if self.TranslatePrefixOperator then
-		func_chunks = self:TranslatePrefixOperator(node) or func_chunks
-	end
+	function META:EmitPrefixOperator(node--[[#: Node]])
+		local func_chunks = not self.config.skip_translation and
+			node.environment == "runtime" and
+			runtime_syntax:GetFunctionForPrefixOperator(node.value)
 
-	if func_chunks then
-		self:Emit(func_chunks[1])
-		self:EmitExpression(node.right)
-		self:Emit(func_chunks[2])
-		self.operator_transformed = true
-	else
+		if func_chunks then self:Emit(func_chunks[1]) end
+
 		if
 			runtime_syntax:IsKeyword(node.value) or
 			runtime_syntax:IsNonStandardKeyword(node.value)
 		then
 			self:OptionalWhitespace()
-			self:EmitToken(node.value, translate_prefix[node.value.value])
-			self:OptionalWhitespace()
-			self:EmitExpression(node.right)
-		else
-			self:EmitToken(node.value, translate_prefix[node.value.value])
-			self:OptionalWhitespace()
-			self:EmitExpression(node.right)
 		end
+
+		self:EmitToken(
+			node.value,
+			not self.config.skip_translation and translate_prefix[node.value.value] or nil
+		)
+		self:OptionalWhitespace()
+		self:EmitExpression(node.right)
+
+		if func_chunks then self:Emit(func_chunks[2]) end
+	end
+end
+
+do
+	local translate_binary = {
+		["&&"] = "and",
+		["||"] = "or",
+		["!="] = "~=",
+	}
+
+	function META:EmitBinaryOperator(node--[[#: Node]])
+		local func_chunks = not self.config.skip_translation and
+			node.environment == "runtime" and
+			runtime_syntax:GetFunctionForBinaryOperator(node.value)
+
+		if func_chunks then self:Emit(func_chunks[1]) end
+
+		if node.left then self:EmitExpression(node.left) end
+
+		if func_chunks then self:Emit(func_chunks[2]) end
+
+		if node.value.value == "." or node.value.value == ":" then
+			self:EmitToken(node.value)
+		else
+			local special_break = node.value.value == "and" or
+				node.value.value == "or" or
+				node.value.value == "||" or
+				node.value.value == "&&"
+
+			if special_break and self:IsLineBreaking() then
+				if
+					self:GetPrevChar() == B(")") and
+					node.left.kind ~= "postfix_call" and
+					(
+						node.left.kind == "binary_operator" and
+						node.left.right.kind ~= "postfix_call"
+					)
+				then
+					self:Whitespace("\n")
+					self:Whitespace("\t")
+				else
+					self:Whitespace(" ")
+				end
+			else
+				self:Whitespace(" ")
+			end
+
+			self:EmitToken(
+				node.value,
+				not self.config.skip_translation and translate_binary[node.value.value] or nil
+			)
+
+			if special_break and self:IsLineBreaking() then
+				if node.right then
+					self:Whitespace("\n")
+					self:Whitespace("\t")
+				end
+			else
+				self:Whitespace(" ")
+			end
+		end
+
+		if node.right then self:EmitExpression(node.right) end
+
+		if func_chunks then self:Emit(func_chunks[3]) end
 	end
 end
 
@@ -1087,7 +1081,6 @@ function META:EmitPostfixOperator(node--[[#: Node]])
 	self:Emit(func_chunks[1])
 	self:EmitExpression(node.left)
 	self:Emit(func_chunks[2])
-	self.operator_transformed = true
 end
 
 function META:EmitBlock(statements--[[#: List<|Node|>]])
