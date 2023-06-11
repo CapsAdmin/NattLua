@@ -40,6 +40,8 @@ do -- internal
 	function META:Emit(str)
 		if str == "" then return end
 
+		if str == nil then error("nil") end
+
 		self.out[self.i] = str
 		self.i = self.i + 1
 	end

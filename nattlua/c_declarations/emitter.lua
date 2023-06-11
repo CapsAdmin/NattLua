@@ -25,7 +25,13 @@ end
 
 function META:EmitFunctionDeclarationStatement(node)
 	self:EmitTypeExpression(node.return_type)
+
+	if node.tokens["(2"] then self:EmitToken(node.tokens["(2"]) end
+
 	self:EmitToken(node.tokens["identifier"])
+
+	if node.tokens[")2"] then self:EmitToken(node.tokens[")2"]) end
+
 	self:EmitToken(node.tokens["("])
 
 	for i, arg in ipairs(node.arguments) do
@@ -137,9 +143,7 @@ function META:EmitStructOrUnion(node, type)
 					self:EmitExpression(field.value)
 				end
 			elseif field.kind == "struct" then
-				if field.tokens["const"] then
-					self:EmitToken(field.tokens["const"])
-				end
+				if field.tokens["const"] then self:EmitToken(field.tokens["const"]) end
 
 				self:EmitStruct(field)
 
@@ -147,9 +151,7 @@ function META:EmitStructOrUnion(node, type)
 					self:EmitToken(field.tokens["identifier2"])
 				end
 			elseif field.kind == "union" then
-				if field.tokens["const"] then
-					self:EmitToken(field.tokens["const"])
-				end
+				if field.tokens["const"] then self:EmitToken(field.tokens["const"]) end
 
 				self:EmitUnion(field)
 
@@ -157,9 +159,7 @@ function META:EmitStructOrUnion(node, type)
 					self:EmitToken(field.tokens["identifier2"])
 				end
 			elseif field.kind == "enum" then
-				if field.tokens["const"] then
-					self:EmitToken(field.tokens["const"])
-				end
+				if field.tokens["const"] then self:EmitToken(field.tokens["const"]) end
 
 				self:EmitEnum(field)
 
@@ -194,13 +194,19 @@ function META:EmitTypeExpression(node)
 			for _, modifier in ipairs(node.modifiers) do
 				if modifier.kind == "attribute_expression" then
 					self:EmitAttributeExpression(modifier)
+				elseif modifier.kind == "struct" then
+					self:EmitStruct(modifier)
+				elseif modifier.kind == "union" then
+					self:EmitUnion(modifier)
+				elseif modifier.kind == "enum" then
+					self:EmitEnum(modifier)
 				else
 					self:EmitToken(modifier)
 				end
 			end
 		end
 
-		self:EmitTypeExpression(node.expression)
+		if node.expression then self:EmitTypeExpression(node.expression) end
 	elseif node.kind == "type_expression" then
 		if node.modifiers then
 			for _, modifier in ipairs(node.modifiers) do

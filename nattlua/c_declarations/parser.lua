@@ -29,6 +29,10 @@ function META:ParseStatement()
 		return
 	end
 
+	if not self:IsTokenValue(";") then
+		print("expected semicolon after statement: ", node and node.kind or "wtf")
+	end
+
 	node.tokens[";"] = self:ExpectTokenValue(";")
 	return node
 end
@@ -38,7 +42,15 @@ function META:ParseFunctionDeclarationStatement()
 	self.nameless = true
 	node.return_type = self:ParseTypeDeclaration()
 	self.nameless = nil
-	node.tokens["identifier"] = self:ExpectTokenType("letter")
+
+	if self:IsTokenValue("(") then
+		self.parsing_function = true
+		node.expression = self:ParseCExpression()
+		self.parsing_function = false
+	else
+		node.tokens["identifier"] = self:ExpectTokenType("letter")
+	end
+
 	node.tokens["("] = self:ExpectTokenValue("(")
 	node.arguments = self:ParseFunctionArguments()
 	node.tokens[")"] = self:ExpectTokenValue(")")
@@ -88,8 +100,6 @@ function META:ParseTypeDefStatement()
 		node.value = self:ParseUnion()
 	elseif self:IsTokenValue("enum") then
 		node.value = self:ParseEnum()
-	elseif self:IsTokenValue("enum") then
-		node.value = self:ParseEnum()
 	else
 		node.value = self:ParseTypeDeclaration()
 	end
@@ -110,6 +120,11 @@ function META:ParseEnum()
 
 	if self:IsTokenType("letter") then
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
+	end
+
+	if not self:IsTokenValue("{") then
+		-- forward declaration
+		return self:EndNode(node)
 	end
 
 	node.tokens["{"] = self:ExpectTokenValue("{")
@@ -185,6 +200,10 @@ function META:ParseStructOrUnion(type)
 				field.tokens["identifier2"] = self:ExpectTokenType("letter")
 			end
 
+			if self:IsTokenValue("[") or self:IsTokenValue("*") then
+				field.expression = self:ParseCExpression()
+			end
+
 			field.tokens[";"] = self:ExpectTokenValue(";")
 			table.insert(node.fields, self:EndNode(field))
 		elseif
@@ -207,6 +226,10 @@ function META:ParseStructOrUnion(type)
 				field.tokens["identifier2"] = self:ExpectTokenType("letter")
 			end
 
+			if self:IsTokenValue("[") or self:IsTokenValue("*") then
+				field.expression = self:ParseCExpression()
+			end
+
 			field.tokens[";"] = self:ExpectTokenValue(";")
 			table.insert(node.fields, self:EndNode(field))
 		elseif
@@ -227,6 +250,10 @@ function META:ParseStructOrUnion(type)
 
 			if self:IsTokenType("letter") then
 				field.tokens["identifier2"] = self:ExpectTokenType("letter")
+			end
+
+			if self:IsTokenValue("[") or self:IsTokenValue("*") then
+				field.expression = self:ParseCExpression()
 			end
 
 			field.tokens[";"] = self:ExpectTokenValue(";")
@@ -293,6 +320,16 @@ do
 		return self:EndNode(node)
 	end
 
+	function META:ParseReturnTypexpression()
+		local node = self:StartNode("expression", "type_expression")
+
+		if self:IsTokenValue("*") then
+			node.expression = self:ParsePointerExpression()
+		end
+
+		return self:EndNode(node)
+	end
+
 	function META:ParseArrayExpression()
 		local node = self:StartNode("expression", "array_expression")
 
@@ -314,17 +351,26 @@ do
 	function META:ParseParenExpression()
 		local open = self:ExpectTokenValue("(")
 		local expression = self:ParseCExpression()
+
+		if not expression.value then
+			if self.parsing_function then
+				expression = self:ExpectTokenType("letter")
+			end
+		end
+
 		local close = self:ExpectTokenValue(")")
 
-		if self:IsTokenValue("(") then
-			local node = self:StartNode("expression", "function_expression")
-			node.tokens["("] = open
-			node.expression = expression
-			node.tokens[")"] = close
-			node.tokens["arguments_("] = self:ExpectTokenValue("(")
-			node.arguments = self:ParseFunctionArguments()
-			node.tokens["arguments_)"] = self:ExpectTokenValue(")")
-			return self:EndNode(node)
+		if not self.parsing_function then
+			if self:IsTokenValue("(") then
+				local node = self:StartNode("expression", "function_expression")
+				node.tokens["("] = open
+				node.expression = expression
+				node.tokens[")"] = close
+				node.tokens["arguments_("] = self:ExpectTokenValue("(")
+				node.arguments = self:ParseFunctionArguments()
+				node.tokens["arguments_)"] = self:ExpectTokenValue(")")
+				return self:EndNode(node)
+			end
 		end
 
 		local node = self:StartNode("expression", "paren_expression")
@@ -362,13 +408,41 @@ do
 		return self:EndNode(node)
 	end
 
+	function META:FindEndOfReturnType()
+		--[[
+			unsigned int bgfx_set_transform(const void*,unsigned short);
+    		unsigned int(bgfx_set_transform)(const void*,unsigned short);
+    		unsigned int (*bgfx_set_transform)(const void*,unsigned short);
+		]]
+
+		local offset = 0
+		local found_opening = false
+		while true do
+			if self:IsTokenValue("(", offset) then
+				found_opening = true
+			end
+
+			if found_opening then
+				if self:IsTokenValue(")", offset) then
+					return offset
+				end
+			end
+
+			offset = offset + 1
+		end
+	end
+
 	function META:ParseTypeDeclaration()
 		local node = self:StartNode("expression", "type_declaration")
 		local modifiers = {}
 
 		while self:IsTokenType("letter") do -- skip function declaration
-			if not self:IsTokenValue("(", 1) then
-				table.insert(modifiers, self:ExpectTokenType("letter"))
+			if self:IsTokenValue("union") then
+				table.insert(modifiers, self:ParseUnion())
+			elseif self:IsTokenValue("struct") then
+				table.insert(modifiers, self:ParseStruct())
+			elseif self:IsTokenValue("enum") then
+				table.insert(modifiers, self:ParseEnum())
 			elseif self:IsTokenValue("__attribute__") or self:IsTokenValue("__attribute") then
 				local attrnode = self:StartNode("expression", "attribute_expression")
 				attrnode.tokens["__attribute__"] = self:ExpectTokenType("letter")
@@ -377,24 +451,49 @@ do
 				attrnode.tokens[")"] = self:ExpectTokenValue(")")
 				table.insert(modifiers, self:EndNode(attrnode))
 			else
-				break
+				table.insert(modifiers, self:ExpectTokenType("letter"))
 			end
 
-			if self:IsTokenValue("(") and self:IsTokenValue("*", 1) then break end
+			for i = 0, 10 do
+				if self:IsTokenValue(")", i) and self:IsTokenValue("(", i + 1) then 
+					
+				end
+			end
 		end
 
-		-- function pointer in arg list
-		if
-			self:IsTokenType("letter") and
-			self:IsTokenValue("(", 1) and
-			self:IsTokenValue("*", 2)
-		then
-			table.insert(modifiers, self:ExpectTokenType("letter"))
-		end
-
+		print(self:GetToken(), "!")
 		node.modifiers = modifiers
-		node.expression = self:ParseCExpression()
+
+		if self:IsTokenValue("(") then
+
+		else
+			node.expression = self:ParseCExpression()
+		end
+
 		return self:EndNode(node)
+	end
+end
+
+if false then
+	for k, v in pairs(META) do
+		if type(v) == "function" then
+			META[k] = function(self, ...)
+				if
+					getmetatable(self) and
+					k ~= "GetToken" and
+					debug.getinfo(2).source:find("c_declarations")
+				then
+					print(
+						debug.getinfo(2).source:sub(2) .. ":" .. debug.getinfo(2).currentline,
+						k,
+						self:GetToken().value,
+						...
+					)
+				end
+
+				return v(self, ...)
+			end
+		end
 	end
 end
 
