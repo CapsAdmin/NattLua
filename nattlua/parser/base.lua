@@ -256,11 +256,20 @@ do
 		stop--[[#: Token | nil]]
 	)
 		local tk = self:GetToken()
+		local node = self:GetParentNode()
+		local kind = node and node.kind or "unknown"
 
 		if not tk then
-			self:Error("expected $1 $2: reached end of code", start, stop, what, str)
+			self:Error(
+				"expected $1 $2: reached end of code while parsing $3",
+				start,
+				stop,
+				what,
+				str,
+				kind
+			)
 		else
-			self:Error("expected $1 $2: got $3", start, stop, what, str, tk[what])
+			self:Error("expected $1 $2: got $3 while parsing $4", start, stop, what, str, tk[what], kind)
 		end
 	end
 
