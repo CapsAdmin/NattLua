@@ -1,231 +1,5 @@
 -- http://unixwiz.net/techtips/reading-cdecl.html
 -- https://eli.thegreenplace.net/2007/11/24/the-context-sensitivity-of-cs-grammar/
-local test = [[
-
-union test {
-		uint32_t u;
-		struct { int a:10,b:10,c:11,d:1; };
-		struct { unsigned int e:10,f:10,g:11,h:1; };
-		struct { int8_t i:4,j:5,k:5,l:3; };
-		struct { _Bool b0:1,b1:1,b2:1,b3:1; };
-		};
-		
-		int call_i(int a);
-		int call_ii(int a, int b);
-		int call_10i(int a, int b, int c, int d, int e, int f, int g, int h, int i, int j);
-		
-		typedef enum { XYZ } e_u;
-		
-		e_u call_ie(e_u a) asm("call_i");
-		
-		int64_t call_ji(int64_t a, int b);
-		int64_t call_ij(int a, int64_t b);
-		int64_t call_jj(int64_t a, int64_t b);
-		
-		double call_dd(double a, double b);
-		double call_10d(double a, double b, double c, double d, double e, double f, double g, double h, double i, double j);
-		
-		float call_ff(float a, float b);
-		float call_10f(float a, float b, float c, float d, float e, float f, float g, float h, float i, float j);
-		
-		double call_idifjd(int a, double b, int c, float d, int64_t e, double f);
-		
-		int call_p_i(int *a);
-		int *call_p_p(int *a);
-		int call_pp_i(int *a, int *b);
-		
-		double call_ividi(int a, ...);
-		
-		s_ii call_sii(s_ii a);
-		s_jj call_sjj(s_jj a);
-		s_ff call_sff(s_ff a);
-		s_dd call_sdd(s_dd a);
-		s_8i call_s8i(s_8i a);
-		s_ii call_siisii(s_ii a, s_ii b);
-		s_ff call_sffsff(s_ff a, s_ff b);
-		s_dd call_sddsdd(s_dd a, s_dd b);
-		s_8i call_s8is8i(s_8i a, s_8i b);
-		s_8i call_is8ii(int a, s_8i b, int c);
-		
-		int __fastcall fastcall_void(void);
-		int __fastcall fastcall_i(int a);
-		int __fastcall fastcall_ii(int a, int b);
-		int __fastcall fastcall_iii(int a, int b, int c);
-		int64_t __fastcall fastcall_ji(int64_t a, int b);
-		double __fastcall fastcall_dd(double a, double b);
-		int __fastcall fastcall_pp_i(int *a, int *b);
-		s_ii __fastcall fastcall_siisii(s_ii a, s_ii b);
-		s_dd __fastcall fastcall_sddsdd(s_dd a, s_dd b);
-		
-		int __stdcall stdcall_i(int a);
-		int __stdcall stdcall_ii(int a, int b);
-		double __stdcall stdcall_dd(double a, double b);
-		float __stdcall stdcall_ff(float a, float b);
-		
-		void qsort(void *base, size_t nmemb, size_t size,
-					 int (*compar)(const uint8_t *, const uint8_t *));
-		
-		
-				typedef struct s_t {
-						int v, w;
-					} s_t;
-					
-					typedef const s_t cs_t;
-					
-					typedef enum en_t { EE } en_t;
-					
-					typedef struct pcs_t {
-						int v;
-						const int w;
-					} pcs_t;
-					
-					typedef struct foo_t {
-						static const int cc = 17;
-						enum { CC = -37 };
-						int i;
-						const int ci;
-						int bi:8;
-						const int cbi:8;
-						en_t e;
-						const en_t ce;
-						int a[10];
-						const int ca[10];
-						const char cac[10];
-						s_t s;
-						cs_t cs;
-						pcs_t pcs1, pcs2;
-						const struct {
-							int ni;
-						};
-						complex cx;
-						const complex ccx;
-						complex *cp;
-						const complex *ccp;
-					} foo_t;     
-		
-					typedef struct bar_t {
-						int v, w;
-					} bar_t;
-					// Same structure, but treated as different struct.
-					typedef struct barx_t {
-						int v, w;
-					} barx_t;
-					
-					typedef struct nest_t {
-						int a,b;
-						struct { int c,d; };
-						struct { int e1,e2; } e;
-						int f[2];
-					} nest_t;
-					
-					typedef union uni_t {
-						int8_t a;
-						int16_t b;
-						int32_t c;
-					} uni_t;
-					
-					typedef struct arrinc_t {
-						int a[];
-					} arrinc_t;
-					
-					typedef enum uenum_t {
-						UE0, UE71 = 71, UE72
-					} uenum_t;
-					
-					typedef enum ienum_t {
-						IE0, IEM12 = -12, IEM11
-					} ienum_t;
-					
-					typedef struct foo_t {
-						bool b;
-						int8_t i8;
-						uint8_t u8;
-						int16_t i16;
-						uint16_t u16;
-						int32_t i32;
-						uint32_t u32;
-						int64_t i64;
-						uint64_t u64;
-						float f;
-						double d;
-						complex cf;
-						complex cd;
-						uint8_t __attribute__((mode(__V16QI__))) v16qi;
-						int __attribute__((mode(__V4SI__))) v4si;
-						double __attribute__((mode(__V2DF__))) v2df;
-						int *pi;
-						int *__ptr32 p32i;
-						const int *pci;
-						volatile int *pvi;
-						int **ppi;
-						const int **ppci;
-						void **ppv;
-						char *(*ppf)(char *, const char *);
-						int ai[10];
-						int ai_guard;
-						int ai2[10];
-						char ac[10];
-						char ac_guard;
-						bar_t s;
-						bar_t s2;
-						bar_t *ps;
-						const bar_t *pcs;
-						barx_t sx;
-						struct { int a,b,c; } si;
-						int si_guard;
-						nest_t sn;
-						uni_t ui;
-						uenum_t ue;
-						ienum_t ie;
-					} foo_t;
-					
-					char *strcpy(char *dest, const char *src);
-					typedef struct FILE FILE;
-					int fileno(FILE *stream);
-					int _fileno(FILE *stream);
-		
-					typedef enum enum_i { FOO_I = -1, II = 10 } enum_i;
-		typedef enum enum_u { FOO_U = 1, UU = 10 } enum_u;
-		
-		enum_i call_ei_i(int a) asm("call_i");
-		enum_u call_eu_i(int a) asm("call_i");
-		int call_i_ei(enum_i a) asm("call_i");
-		int call_i_eu(enum_u a) asm("call_i");
-		
-		
-		int call_10i(int a, int b, int c, int d, int e, int f, int g, int h, int i, int j);
-		double call_10d(double a, double b, double c, double d, double e, double f, double g, double h, double i, double j);
-		float call_10f(float a, float b, float c, float d, float e, float f, float g, float h, float i, float j);
-		int64_t call_ij(int a, int64_t b);
-		bool call_b(int a) asm("call_i");
-		
-		int64_t call_max(double,double,double,double,double,double,double,double,double,double,double,double,double,double,double,double,double) asm("call_10d");
-		
-		int64_t call_10j_p(int a, int b, int c, int d, int e, int f, int g, int h, int i, const char *p) asm("call_10j");
-		
-		int8_t call_i_i8(int a) asm("call_i");
-		uint8_t call_i_u8(int a) asm("call_i");
-		int16_t call_i_i16(int a) asm("call_i");
-		uint16_t call_i_u16(int a) asm("call_i");
-		int call_i8_i(int8_t a) asm("call_i");
-		int call_u8_i(uint8_t a) asm("call_i");
-		int call_i16_i(int16_t a) asm("call_i");
-		int call_u16_i(uint16_t a) asm("call_i");
-		
-		int __fastcall fastcall_void(void);
-		int __fastcall fastcall_i(int a);
-		int __fastcall fastcall_ii(int a, int b);
-		int __fastcall fastcall_iii(int a, int b, int c);
-		int64_t __fastcall fastcall_ji(int64_t a, int b);
-		double __fastcall fastcall_dd(double a, double b);
-		int __fastcall fastcall_pp_i(int *a, int *b);
-		
-		int __stdcall stdcall_i(int a);
-		int __stdcall stdcall_ii(int a, int b);
-		double __stdcall stdcall_dd(double a, double b);
-		float __stdcall stdcall_ff(float a, float b);
-		
-]]
 local META
 
 do
@@ -259,6 +33,7 @@ do
 		local node = self:ParseTypeDefStatement() or
 			self:ParseStruct() or
 			self:ParseEnum() or
+			self:ParseUnion() or
 			self:ParseFunctionDeclarationStatement()
 
 		if not node then
@@ -272,7 +47,9 @@ do
 
 	function META:ParseFunctionDeclarationStatement()
 		local node = self:StartNode("statement", "function_declaration")
+		self.nameless = true
 		node.return_type = self:ParseTypeDeclaration()
+		self.nameless = nil
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
 		node.tokens["("] = self:ExpectTokenValue("(")
 		node.arguments = self:ParseFunctionArguments()
@@ -292,14 +69,20 @@ do
 		local out = {}
 
 		while not self:IsTokenValue(")") do
-			local node = self:ParseTypeDeclaration()
+			if self:IsTokenValue("...") then
+				local node = self:StartNode("expression", "vararg")
+				node.tokens["..."] = self:ExpectTokenValue("...")
+				table.insert(out, node)
+			else
+				local node = self:ParseTypeDeclaration()
 
-			-- belongs to function node?
-			if self:IsTokenValue(",") then
-				node.tokens[","] = self:ExpectTokenValue(",")
+				-- belongs to function node?
+				if self:IsTokenValue(",") then
+					node.tokens[","] = self:ExpectTokenValue(",")
+				end
+
+				table.insert(out, node)
 			end
-
-			table.insert(out, self:EndNode(node))
 		end
 
 		return out
@@ -383,6 +166,11 @@ do
 			node.tokens["identifier"] = self:ExpectTokenType("letter")
 		end
 
+		if not self:IsTokenValue("{") then
+			-- forward declaration
+			return self:EndNode(node)
+		end
+
 		node.tokens["{"] = self:ExpectTokenValue("{")
 		node.fields = {}
 
@@ -404,6 +192,11 @@ do
 
 				local field = self:ParseEnum()
 				field.tokens["const"] = const
+
+				if self:IsTokenType("letter") then
+					field.tokens["identifier2"] = self:ExpectTokenType("letter")
+				end
+
 				field.tokens[";"] = self:ExpectTokenValue(";")
 				table.insert(node.fields, self:EndNode(field))
 			elseif
@@ -421,6 +214,33 @@ do
 
 				local field = self:ParseStruct()
 				field.tokens["const"] = const
+
+				if self:IsTokenType("letter") then
+					field.tokens["identifier2"] = self:ExpectTokenType("letter")
+				end
+
+				field.tokens[";"] = self:ExpectTokenValue(";")
+				table.insert(node.fields, self:EndNode(field))
+			elseif
+				self:IsTokenValue("union") or
+				(
+					self:IsTokenValue("const") and
+					self:IsTokenValue("union", 1)
+				)
+			then
+				local const
+
+				if self:IsTokenValue("const") then
+					const = self:ExpectTokenValue("const")
+				end
+
+				local field = self:ParseUnion()
+				field.tokens["const"] = const
+
+				if self:IsTokenType("letter") then
+					field.tokens["identifier2"] = self:ExpectTokenType("letter")
+				end
+
 				field.tokens[";"] = self:ExpectTokenValue(";")
 				table.insert(node.fields, self:EndNode(field))
 			else
@@ -538,8 +358,16 @@ do
 			local node = self:StartNode("expression", "pointer_expression")
 			node.tokens["*"] = self:ExpectTokenValue("*")
 
-			if self:IsTokenType("letter") then
-				node.tokens["identifier"] = self:ExpectTokenType("letter")
+			if self:IsTokenValue("__ptr32") then
+				node.tokens["__ptr32"] = self:ExpectTokenValue("__ptr32")
+			elseif self:IsTokenValue("__ptr64") then
+				node.tokens["__ptr64"] = self:ExpectTokenValue("__ptr64")
+			end
+
+			if not self.nameless then
+				if self:IsTokenType("letter") then
+					node.tokens["identifier"] = self:ExpectTokenType("letter")
+				end
 			end
 
 			node.expression = self:ParseCExpression()
@@ -550,9 +378,30 @@ do
 			local node = self:StartNode("expression", "type_declaration")
 			local modifiers = {}
 
-			while self:IsTokenType("letter") and not self:IsTokenValue("(", 1) do
-				table.insert(modifiers, self:GetToken())
-				self:Advance(1)
+			while self:IsTokenType("letter") do -- skip function declaration
+				if not self:IsTokenValue("(", 1) then
+					table.insert(modifiers, self:ExpectTokenType("letter"))
+				elseif self:IsTokenValue("__attribute__") or self:IsTokenValue("__attribute") then
+					local attrnode = self:StartNode("expression", "attribute_expression")
+					attrnode.tokens["__attribute__"] = self:ExpectTokenType("letter")
+					attrnode.tokens["("] = self:ExpectTokenValue("(")
+					attrnode.expression = self:ParseRuntimeExpression()
+					attrnode.tokens[")"] = self:ExpectTokenValue(")")
+					table.insert(modifiers, self:EndNode(attrnode))
+				else
+					break
+				end
+
+				if self:IsTokenValue("(") and self:IsTokenValue("*", 1) then break end
+			end
+
+			-- function pointer in arg list
+			if
+				self:IsTokenType("letter") and
+				self:IsTokenValue("(", 1) and
+				self:IsTokenValue("*", 2)
+			then
+				table.insert(modifiers, self:ExpectTokenType("letter"))
 			end
 
 			node.modifiers = modifiers
@@ -615,7 +464,13 @@ do
 	function META:EmitTypeDef(node)
 		self:EmitToken(node.tokens["typedef"])
 
-		if node.value then self:EmitStatement(node.value) end
+		if node.value then
+			if node.value.type == "statement" then
+				self:EmitStatement(node.value)
+			else
+				self:EmitTypeExpression(node.value)
+			end
+		end
 
 		if node.tokens["identifier"] then
 			self:EmitToken(node.tokens["identifier"])
@@ -662,6 +517,9 @@ do
 			self:EmitToken(node.tokens["identifier"])
 		end
 
+		-- forward declaration
+		if not node.tokens["{"] then return end
+
 		self:EmitToken(node.tokens["{"])
 
 		for _, field in ipairs(node.fields) do
@@ -701,12 +559,30 @@ do
 					end
 
 					self:EmitStruct(field)
+
+					if field.tokens["identifier2"] then
+						self:EmitToken(field.tokens["identifier2"])
+					end
+				elseif field.kind == "union" then
+					if field.tokens["const"] then
+						self:EmitToken(field.tokens["const"])
+					end
+
+					self:EmitUnion(field)
+
+					if field.tokens["identifier2"] then
+						self:EmitToken(field.tokens["identifier2"])
+					end
 				elseif field.kind == "enum" then
 					if field.tokens["const"] then
 						self:EmitToken(field.tokens["const"])
 					end
 
 					self:EmitEnum(field)
+
+					if field.tokens["identifier2"] then
+						self:EmitToken(field.tokens["identifier2"])
+					end
 				end
 
 				self:EmitToken(field.tokens[";"])
@@ -720,11 +596,24 @@ do
 		if node.tokens["type"] then self:EmitToken(node.tokens["type"]) end
 	end
 
+	function META:EmitAttributeExpression(node)
+		self:EmitToken(node.tokens["__attribute__"])
+		self:EmitToken(node.tokens["("])
+		self:EmitExpression(node.expression)
+		self:EmitToken(node.tokens[")"])
+	end
+
 	function META:EmitTypeExpression(node)
-		if node.kind == "type_declaration" then
+		if node.kind == "vararg" then
+			self:EmitToken(node.tokens["..."])
+		elseif node.kind == "type_declaration" then
 			if node.modifiers then
 				for _, modifier in ipairs(node.modifiers) do
-					self:EmitToken(modifier)
+					if modifier.kind == "attribute_expression" then
+						self:EmitAttributeExpression(modifier)
+					else
+						self:EmitToken(modifier)
+					end
 				end
 			end
 
@@ -732,7 +621,11 @@ do
 		elseif node.kind == "type_expression" then
 			if node.modifiers then
 				for _, modifier in ipairs(node.modifiers) do
-					self:EmitToken(modifier)
+					if modifier.kind == "attribute_expression" then
+						self:EmitAttributeExpression(modifier)
+					else
+						self:EmitToken(modifier)
+					end
 				end
 			end
 
@@ -748,13 +641,17 @@ do
 				for i, argument in ipairs(node.arguments) do
 					self:EmitTypeExpression(argument)
 
-					if node.tokens[","] then self:EmitToken(node.tokens[","]) end
+					if argument.tokens[","] then self:EmitToken(argument.tokens[","]) end
 				end
 
 				self:EmitToken(node.tokens["arguments_)"])
 			end
 		elseif node.kind == "pointer_expression" then
 			self:EmitToken(node.tokens["*"])
+
+			if node.tokens["__ptr32"] then self:EmitToken(node.tokens["__ptr32"]) end
+
+			if node.tokens["__ptr64"] then self:EmitToken(node.tokens["__ptr64"]) end
 
 			if node.tokens["identifier"] then
 				self:EmitToken(node.tokens["identifier"])
@@ -814,6 +711,25 @@ c_code = [=[
 	long static volatile int unsigned long *(*(**foo [2][8])(char *))[];
 ]=]
 
+local function diff(input, expect)
+	local a = os.tmpname()
+	local b = os.tmpname()
+
+	do
+		local f = assert(io.open(a, "w"))
+		f:write(input)
+		f:close()
+	end
+
+	do
+		local f = assert(io.open(b, "w"))
+		f:write(expect)
+		f:close()
+	end
+
+	os.execute("meld " .. a .. " " .. b)
+end
+
 local function test(c_code, parse_func, emit_func)
 	parse_func = parse_func or "ParseRootNode"
 	emit_func = emit_func or "BuildCode"
@@ -832,6 +748,7 @@ local function test(c_code, parse_func, emit_func)
 	if res ~= c_code then
 		print("expected\n", c_code)
 		print("got\n", res)
+		diff(c_code, res)
 	end
 end
 
@@ -871,29 +788,257 @@ test[[void foo(int a[1+2*2], int b);]]
 test[[void foo(int a[1<<2], int b);]]
 test[[void foo(int a[sizeof(int)], int b);]] --test[[void foo(int a[1?2:3], int b);]] WIP
 test[[
-
-	typedef struct foo_t {
-		static const int cc = 17;
-		enum { CC = -37 };
-		int i;
-		const int ci;
-		int bi:8;
-		const int cbi:8;
-		en_t e;
-		const en_t ce;
-		int a[10];
-		const int ca[10];
-		const char cac[10];
-		s_t s;
-		cs_t cs;
-		pcs_t pcs1, pcs2;
-		const struct {
-			int ni;
-		};
-		complex cx;
-		const complex ccx;
-		complex *cp;
-		const complex *ccp;
-	} foo_t;     
-
+	void qsort(int (*compar)(const uint8_t *, const uint8_t *));
 ]]
+test[[
+typedef struct foo_t {
+	static const int cc = 17;
+	enum { CC = -37 };
+	int i;
+	const int ci;
+	int bi:8;
+	const int cbi:8;
+	en_t e;
+	const en_t ce;
+	int a[10];
+	const int ca[10];
+	const char cac[10];
+	s_t s;
+	cs_t cs;
+	pcs_t pcs1, pcs2;
+	const struct {
+		int ni;
+	};
+	complex cx;
+	const complex ccx;
+	complex *cp;
+	const complex *ccp;
+} foo_t; 
+]]
+test([[
+
+	union test {
+			uint32_t u;
+			struct { int a:10,b:10,c:11,d:1; };
+			struct { unsigned int e:10,f:10,g:11,h:1; };
+			struct { int8_t i:4,j:5,k:5,l:3; };
+			struct { _Bool b0:1,b1:1,b2:1,b3:1; };
+			};
+			
+			int call_i(int a);
+			int call_ii(int a, int b);
+			int call_10i(int a, int b, int c, int d, int e, int f, int g, int h, int i, int j);
+			
+			typedef enum { XYZ } e_u;
+			
+			e_u call_ie(e_u a) asm("call_i");
+			
+			int64_t call_ji(int64_t a, int b);
+			int64_t call_ij(int a, int64_t b);
+			int64_t call_jj(int64_t a, int64_t b);
+			
+			double call_dd(double a, double b);
+			double call_10d(double a, double b, double c, double d, double e, double f, double g, double h, double i, double j);
+			
+			float call_ff(float a, float b);
+			float call_10f(float a, float b, float c, float d, float e, float f, float g, float h, float i, float j);
+			
+			double call_idifjd(int a, double b, int c, float d, int64_t e, double f);
+			
+			int call_p_i(int *a);
+			int *call_p_p(int *a);
+			int call_pp_i(int *a, int *b);
+			
+			double call_ividi(int a, ...);
+			
+			s_ii call_sii(s_ii a);
+			s_jj call_sjj(s_jj a);
+			s_ff call_sff(s_ff a);
+			s_dd call_sdd(s_dd a);
+			s_8i call_s8i(s_8i a);
+			s_ii call_siisii(s_ii a, s_ii b);
+			s_ff call_sffsff(s_ff a, s_ff b);
+			s_dd call_sddsdd(s_dd a, s_dd b);
+			s_8i call_s8is8i(s_8i a, s_8i b);
+			s_8i call_is8ii(int a, s_8i b, int c);
+			
+			int __fastcall fastcall_void(void);
+			int __fastcall fastcall_i(int a);
+			int __fastcall fastcall_ii(int a, int b);
+			int __fastcall fastcall_iii(int a, int b, int c);
+			int64_t __fastcall fastcall_ji(int64_t a, int b);
+			double __fastcall fastcall_dd(double a, double b);
+			int __fastcall fastcall_pp_i(int *a, int *b);
+			s_ii __fastcall fastcall_siisii(s_ii a, s_ii b);
+			s_dd __fastcall fastcall_sddsdd(s_dd a, s_dd b);
+			
+			int __stdcall stdcall_i(int a);
+			int __stdcall stdcall_ii(int a, int b);
+			double __stdcall stdcall_dd(double a, double b);
+			float __stdcall stdcall_ff(float a, float b);
+			
+			void qsort(void *base, size_t nmemb, size_t size,
+						 int (*compar)(const uint8_t *, const uint8_t *));
+			
+			
+					typedef struct s_t {
+							int v, w;
+						} s_t;
+						
+						typedef const s_t cs_t;
+						
+						typedef enum en_t { EE } en_t;
+						
+						typedef struct pcs_t {
+							int v;
+							const int w;
+						} pcs_t;
+						
+						typedef struct foo_t {
+							static const int cc = 17;
+							enum { CC = -37 };
+							int i;
+							const int ci;
+							int bi:8;
+							const int cbi:8;
+							en_t e;
+							const en_t ce;
+							int a[10];
+							const int ca[10];
+							const char cac[10];
+							s_t s;
+							cs_t cs;
+							pcs_t pcs1, pcs2;
+							const struct {
+								int ni;
+							};
+							complex cx;
+							const complex ccx;
+							complex *cp;
+							const complex *ccp;
+						} foo_t;     
+			
+						typedef struct bar_t {
+							int v, w;
+						} bar_t;
+						// Same structure, but treated as different struct.
+						typedef struct barx_t {
+							int v, w;
+						} barx_t;
+						
+						typedef struct nest_t {
+							int a,b;
+							struct { int c,d; };
+							struct { int e1,e2; } e;
+							int f[2];
+						} nest_t;
+						
+						typedef union uni_t {
+							int8_t a;
+							int16_t b;
+							int32_t c;
+						} uni_t;
+						
+						typedef struct arrinc_t {
+							int a[];
+						} arrinc_t;
+						
+						typedef enum uenum_t {
+							UE0, UE71 = 71, UE72
+						} uenum_t;
+						
+						typedef enum ienum_t {
+							IE0, IEM12 = -12, IEM11
+						} ienum_t;
+						
+						typedef struct foo_t {
+							bool b;
+							int8_t i8;
+							uint8_t u8;
+							int16_t i16;
+							uint16_t u16;
+							int32_t i32;
+							uint32_t u32;
+							int64_t i64;
+							uint64_t u64;
+							float f;
+							double d;
+							complex cf;
+							complex cd;
+							uint8_t __attribute__((mode(__V16QI__))) v16qi;
+							int __attribute__((mode(__V4SI__))) v4si;
+							double __attribute__((mode(__V2DF__))) v2df;
+							int *pi;
+							int *__ptr32 p32i;
+							const int *pci;
+							volatile int *pvi;
+							int **ppi;
+							const int **ppci;
+							void **ppv;
+							char *(*ppf)(char *, const char *);
+							int ai[10];
+							int ai_guard;
+							int ai2[10];
+							char ac[10];
+							char ac_guard;
+							bar_t s;
+							bar_t s2;
+							bar_t *ps;
+							const bar_t *pcs;
+							barx_t sx;
+							struct { int a,b,c; } si;
+							int si_guard;
+							nest_t sn;
+							uni_t ui;
+							uenum_t ue;
+							ienum_t ie;
+						} foo_t;
+						
+						char *strcpy(char *dest, const char *src);
+						typedef struct FILE FILE;
+						int fileno(FILE *stream);
+						int _fileno(FILE *stream);
+			
+						typedef enum enum_i { FOO_I = -1, II = 10 } enum_i;
+			typedef enum enum_u { FOO_U = 1, UU = 10 } enum_u;
+			
+			enum_i call_ei_i(int a) asm("call_i");
+			enum_u call_eu_i(int a) asm("call_i");
+			int call_i_ei(enum_i a) asm("call_i");
+			int call_i_eu(enum_u a) asm("call_i");
+			
+			
+			int call_10i(int a, int b, int c, int d, int e, int f, int g, int h, int i, int j);
+			double call_10d(double a, double b, double c, double d, double e, double f, double g, double h, double i, double j);
+			float call_10f(float a, float b, float c, float d, float e, float f, float g, float h, float i, float j);
+			int64_t call_ij(int a, int64_t b);
+			bool call_b(int a) asm("call_i");
+			
+			int64_t call_max(double,double,double,double,double,double,double,double,double,double,double,double,double,double,double,double,double) asm("call_10d");
+			
+			int64_t call_10j_p(int a, int b, int c, int d, int e, int f, int g, int h, int i, const char *p) asm("call_10j");
+			
+			int8_t call_i_i8(int a) asm("call_i");
+			uint8_t call_i_u8(int a) asm("call_i");
+			int16_t call_i_i16(int a) asm("call_i");
+			uint16_t call_i_u16(int a) asm("call_i");
+			int call_i8_i(int8_t a) asm("call_i");
+			int call_u8_i(uint8_t a) asm("call_i");
+			int call_i16_i(int16_t a) asm("call_i");
+			int call_u16_i(uint16_t a) asm("call_i");
+			
+			int __fastcall fastcall_void(void);
+			int __fastcall fastcall_i(int a);
+			int __fastcall fastcall_ii(int a, int b);
+			int __fastcall fastcall_iii(int a, int b, int c);
+			int64_t __fastcall fastcall_ji(int64_t a, int b);
+			double __fastcall fastcall_dd(double a, double b);
+			int __fastcall fastcall_pp_i(int *a, int *b);
+			
+			int __stdcall stdcall_i(int a);
+			int __stdcall stdcall_ii(int a, int b);
+			double __stdcall stdcall_dd(double a, double b);
+			float __stdcall stdcall_ff(float a, float b);
+			
+	]])
+print("OK")
