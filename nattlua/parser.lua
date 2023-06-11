@@ -1,4 +1,4 @@
-local META = require("nattlua.parser.base")
+local META = loadfile("nattlua/parser/base.lua")()
 local Code = require("nattlua.code").New
 local Lexer = require("nattlua.lexer").New
 local math = _G.math
