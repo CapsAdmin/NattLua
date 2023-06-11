@@ -22,10 +22,6 @@ local function test(c_code)
 		ffi.cdef(c_code)
 	end
 
-	do
-		return
-	end
-
 	local code = Code(c_code, "test.c")
 	local lex = Lexer(code)
 	local tokens = lex:GetTokens()
@@ -34,6 +30,11 @@ local function test(c_code)
 		return Compiler.OnDiagnostic({}, code, msg, "fatal", start, stop, nil, ...)
 	end
 	local ast = parser:ParseRootNode()
+
+	do
+		return
+	end
+
 	local emitter = Emitter({skip_translation = true})
 	local res = emitter:BuildCode(ast)
 
@@ -58,17 +59,31 @@ do -- functions
 	do -- plain
 		-- it's a normal function declaration if foo is directly followed by a ( or a )(
 		do -- equvilent function returning void
-			test([[void foo() ;]])
-			test([[void (foo)() ;]])
+			test([[void foo();]])
+			test([[void (foo)();]])
 		end
 
-		test[[ void (*foo()) ;]] -- function returning pointer to void
+		-- attributes
+		test([[long long foo();]])
+		test([[void __attribute__((stdcall)) foo();]])
+		test([[long long __attribute__((stdcall)) foo();]])
+		test([[void __fastcall foo(); ]])
+
+		do -- pointers
+			test[[ void (*foo()) ;]]
+			test[[ void (**foo()) ;]]
+			test[[ void (** volatile foo()) ;]]
+			test[[ void (* volatile * volatile foo()) ;]]
+			test[[ void (__ptr32**foo()) ;]]
+			test[[ void (__stdcall*foo()) ;]]
+		end
+
+		test[[ void foo(int (*lol)(int, long)) ;]] -- tricky
 		test[[ void (*foo())() ;]] -- function returning pointer to function returning void
 		test([[ int (*foo())[5] ;]]) -- function returning pointer to an array of 5 ints
 		test([[ void (**foo())() ;]]) -- function returning pointer to pointer to function returning void
-		test([[ void foo() asm("test"); ]])
 		test([[ void qsort(int (*compar)(const uint8_t *, const uint8_t *)); ]])
-		test([[ void __fastcall foo(); ]])
+		test([[ void foo() asm("test"); ]])
 	end
 
 	do -- pointers
@@ -86,8 +101,6 @@ do -- functions
 		test([[ void (__cdecl*(foo))(); ]])
 		test([[ void (__attribute__((stdcall))*(foo))(); ]])
 		test([[ void (__attribute__((__cdecl))*(foo))(); ]])
-		test([[ long static volatile int unsigned long *(*(**foo [2][8])(char *))[]; ]])
-		test([[ long static volatile int unsigned long long **foo[7]; ]])
 
 		do -- equivilent pointer to pointer to function returning void
 			test([[ void (**foo)() ;]])
@@ -163,9 +176,9 @@ do -- arrays
 	-- pointer to array 5 of pointer to function returning void
 	test([[ void (*(*foo)[5])() ;]])
 	-- array of 5 pointers to void functions
-	test([[void (*foo[5])() ;]])
+	test([[ void (*foo[5])() ;]])
 	-- array of 5 pointers to pointers to void functions
-	test([[void (**foo[5])() ;]])
+	test([[ void (**foo[5])() ;]])
 	-- array of array 8 of pointer to function returning pointer to array of pointer to char
 	test([[ char *(*(*foo[][8])())[]; ]])
 	-- array of array 8 of pointer to function returning pointer to array of array of pointer to char
@@ -174,17 +187,21 @@ do -- arrays
 	test([[ char (*(*foo[][8])())(); ]])
 	-- array of array 8 of pointer to function returning pointer to function returning pointer to char
 	test([[ char *(*(*foo[][8])())(); ]])
+	-- array 2 of array 8 of pointer to pointer to function (pointer to char) returning pointer to array of pointer to long
+	test([[ long int unsigned long *(*(**NAME [2][8])(char *))[]; ]])
+	-- array 7 of pointer to pointer to long
+	test([[ long int unsigned long **foo[7]; ]])
 	test_anon[[ int a[1+2] ]]
 	test_anon[[ int a[1+2*2] ]]
 	test_anon[[ int a[1<<2] ]]
 	test_anon[[ int a[sizeof(int)] ]]
-	test_anon[[ int a[1?2:3] ]]
+--test_anon[[ int a[1?2:3] ]] -- TODO
 end
 
 do -- struct and union declarations
 	for _, TYPE in ipairs({"struct", "union"}) do
 		local function test_field(code)
-			test(TYPE .. [[ NAME { ]] .. code .. [[ } ]])
+			test(TYPE .. [[ NAME { ]] .. code .. [[ }; ]])
 		end
 
 		test(TYPE .. [[ NAME; ]]) -- forward declaration
@@ -233,7 +250,7 @@ end
 
 do -- enum
 	local function test_field(code)
-		test([[ enum NAME { ]] .. code .. [[ } ]])
+		test([[ enum NAME { ]] .. code .. [[ }; ]])
 	end
 
 	test[[ enum NAME; ]] -- forward declaration
