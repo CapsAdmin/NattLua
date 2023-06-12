@@ -135,16 +135,12 @@ local function test(c_code)
 		end
 	end
 
-	print_node(ast)
-
-	do
-		return
-	end
-
 	local emitter = Emitter({skip_translation = true})
 	local res = emitter:BuildCode(ast)
 
 	if res ~= c_code then
+		print_node(ast)
+
 		print("expected\n", c_code)
 		print("got\n", res)
 		diff(c_code, res)
@@ -155,42 +151,50 @@ end
 if false then
 	--[[
         given the following declaration:
-            unsigned long long *(*(**NAME [1][2])(char *))[3][4];
+            unsigned long long * (* (* *NAME [1][2])(char *))[3][4];
+		
+		it's read in the following order:
 
-        it is humanly read as:
-            NAME = [1][2]**( (*char) => (*[3][4]* unsigned long long) )
+			#                                                           unsigned long long  #                                   
+			#                                                        *  |                   #                 
+			#                                                        |  |                   #                 
+			#                                       (*               |  |                   #                 
+			#                                        |               |  |                   #                 
+			#                        (*              |               |  |                   #                 
+			#                     *   |              |               |  |                   #                 
+			# 1 NAME  2    3      4   5  6           7  8     9     10  11                  #                  
+			#         [1]  |             |              |     |                             #       
+			#              [2]           |              |     |                             #       
+			#                            |              |     |                             #       
+			#                            (char *)))     |     |                             #       
+			#                                           |     |                             #       
+			#                                           [3]   |                             #       
+			#                                                 [4]                           #          
+		-------
+        the above but collapsed in lines:
+            NAME = [1][2]**( function( *char )( *[3][4]* unsigned long long ) )
+		
+		-------
+		array1 of array2 of pointer to pointer to function (pointer to char) returning pointer to array3 of array4 of pointer to unsigned long long
+		human description:
+			array1 of			
+				array2 of 
+					pointer to 
+						pointer to 
+							(function(pointer to char)  
+								pointer to
+									array3 of 
+										array4 of 
+										pointer to 
+										unsigned long long
+							)
 
-        
-        >>
+		
+    ]]
+	
+	local NAME = Array1(Array2(Pointer(Pointer(Function({Pointer(char)},Pointer(Array3(Array4(Pointer("unsigned long long")))))))))
 
-        unsigned long long 
-            * 
-                (
-                    * 
-                        (
-                            *
-                            * 
-                            NAME [1][2]
-                        )
-                        (char *)
-                )
-        [3][4];
-
-        array1 of 
-            array2 of 
-                pointer to 
-                    pointer to 
-                        function 
-                            (pointer to char) 
-                            returning 
-                            pointer to 
-                                array3 of 
-                                    array4 of 
-                                    pointer to 
-                                    unsigned long long
-
-
-    ]] local NAME = Array1(
+	local NAME = Array1(
 		Array2(
 			Pointer(
 				Pointer(
@@ -204,10 +208,7 @@ if false then
 			)
 		)
 	)
-end
 
-do
-	return
 end
 
 local function test_anon(code, ...)

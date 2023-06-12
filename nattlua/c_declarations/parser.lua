@@ -246,7 +246,7 @@ function META:ParseEnum()
 	end
 
 	node.tokens["{"] = self:ExpectTokenValue("{")
-
+	node.fields = {}
 	for i = 1, self:GetLength() do
 		if self:IsTokenValue("}") then break end
 
@@ -258,7 +258,7 @@ function META:ParseEnum()
 			field.expression = self:ParseRuntimeExpression()
 		end
 
-		table.insert(node, self:EndNode(field))
+		table.insert(node.fields, self:EndNode(field))
 
 		if self:IsTokenValue(",") then
 			field.tokens[","] = self:ExpectTokenValue(",")
@@ -272,7 +272,7 @@ end
 for _, type in ipairs({"Struct", "Union"}) do
 	local Type = type
 	local type = type:lower()
-	-- ParseStruct, ParseUnion
+	-- META:ParseStruct, META:ParseUnion
 	META["Parse" .. Type] = function(self)
 		local node = self:StartNode("expression", type)
 		node.tokens[type] = self:ExpectTokenValue(type)
@@ -299,23 +299,24 @@ for _, type in ipairs({"Struct", "Union"}) do
 			end
 
 			if self:IsTokenValue(",") then
-				local lol = {ctype}
-
+				ctype.tokens["first_comma"] = self:ConsumeToken()
+				ctype.multi_values = {}
 				for i = 1, self:GetLength() do
 					if self:IsTokenValue("}") then break end
 
+					local t = self:ParseCType()
+
+					table.insert(ctype.multi_values, t)
+
 					if self:IsTokenValue(",") then
-						table.insert(lol, self:ExpectTokenValue(","))
-						table.insert(lol, self:ParseCType())
+						t.tokens[","] = self:ExpectTokenValue(",")
 					else
 						break
 					end
 				end
-
-				table.insert(fields, lol)
-			else
-				table.insert(fields, ctype)
 			end
+			
+			table.insert(fields, ctype)
 
 			if self:IsTokenValue("=") then
 				ctype.tokens["="] = self:ExpectTokenValue("=")

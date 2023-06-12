@@ -578,6 +578,8 @@ function META:EmitExpression(node--[[#: Node]])
 		emitted_invalid_code = self:EmitInvalidLuaCode("EmitFunctionSignature", node)
 	elseif node.kind == "vararg" then
 		self:EmitVararg(node)
+	elseif self.FFI_DECLARATION_EMITTER and node.kind == "c_type" then
+		self:EmitCType(node)
 	else
 		error("unhandled token type " .. node.kind)
 	end
