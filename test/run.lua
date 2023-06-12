@@ -41,7 +41,7 @@ function _G.diff(input, expect)
 		f:close()
 	end
 
-	os.execute("meld " .. a .. " " .. b)
+	os.execute("git --no-pager diff --no-index " .. a .. " " .. b)
 end
 
 local path = ...
