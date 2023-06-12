@@ -153,9 +153,16 @@ local function test(c_code)
 end
 
 if false then
-	-- array 2 of array 8 of pointer to pointer to function (pointer to char) returning pointer to array 1 of array 1 of pointer to unsigned long long
-	-- unsigned long long *(*(**NAME [1][2])(char *))[3][4];
 	--[[
+        given the following declaration:
+            unsigned long long *(*(**NAME [1][2])(char *))[3][4];
+
+        it is humanly read as:
+            NAME = [1][2]**( (*char) => (*[3][4]* unsigned long long) )
+
+        
+        >>
+
         unsigned long long 
             * 
                 (
@@ -168,6 +175,20 @@ if false then
                         (char *)
                 )
         [3][4];
+
+        array1 of 
+            array2 of 
+                pointer to 
+                    pointer to 
+                        function 
+                            (pointer to char) 
+                            returning 
+                            pointer to 
+                                array3 of 
+                                    array4 of 
+                                    pointer to 
+                                    unsigned long long
+
 
     ]] local NAME = Array1(
 		Array2(
