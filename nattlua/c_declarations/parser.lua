@@ -1,16 +1,15 @@
 local META = loadfile("nattlua/parser.lua")()
+META.FFI_DECLARATION_PARSER = true
 
 function META:ParseRootNode()
 	local node = self:StartNode("statement", "root")
 	node.statements = self:ParseStatements()
 
-	if self:IsTokenType("end_of_file") then
-		local eof = self:StartNode("statement", "end_of_file")
-		eof.tokens["end_of_file"] = self.tokens[#self.tokens]
-		eof = self:EndNode(eof)
-		table.insert(node.statements, eof)
-		node.tokens["eof"] = eof.tokens["end_of_file"]
-	end
+	local eof = self:StartNode("statement", "end_of_file")
+	eof.tokens["end_of_file"] = self.tokens[#self.tokens]
+	eof = self:EndNode(eof)
+	table.insert(node.statements, eof)
+	node.tokens["eof"] = eof.tokens["end_of_file"]
 
 	return self:EndNode(node)
 end
@@ -56,11 +55,41 @@ function META:ConsumeToken()
 	return tk
 end
 
+-- TODO: remove the need for this
+function META:IsInArguments()
+	if self:IsTokenValue("(") then
+		for i = 1, self:GetLength() do
+			-- what happens if we have a function pointer in the arguments?
+			-- void foo(void (*)(int, int))
+			-- I guess it still works as a hacky solution
+			if self:IsTokenValue(",", i) then return true end
+		end
+	end
+
+	return false
+end
+
 function META:ParseCType()
 	local node = self:StartNode("expression", "c_type")
 
 	if self:IsTokenValue("...") then
 		node.tokens["..."] = self:ExpectTokenValue("...")
+		return self:EndNode(node)
+	end
+
+	if self:IsTokenType("string") then
+		local found = {}
+
+		-- char[sizeof("foo" "bar")]
+		for i = 1, self:GetLength() do
+			if self:IsTokenType("string") then
+				table.insert(found, self:ConsumeToken())
+			else
+				break
+			end
+		end
+
+		node.strings = found
 		return self:EndNode(node)
 	end
 
@@ -118,7 +147,10 @@ function META:ParseCType()
 			self:IsTokenValue("*", 1) or
 			(
 				self:IsTokenType("letter", 1) and
-				self:IsTokenValue("*", 2)
+				self:IsTokenValue("*", 2) and
+				-- TODO:
+				-- void foo(char *>>,<< short *)
+				not self:IsInArguments()
 			)
 			or
 			(

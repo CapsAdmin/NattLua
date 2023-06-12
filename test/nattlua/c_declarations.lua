@@ -136,6 +136,7 @@ do -- function arguments
 	test_anon([[ void(*)(int, int), void(*)(int, int) ]])
 	test_anon([[ void(*)(int, int), void(*)(void(*)(int, int), void(*)(int, int)) ]])
 	test_anon([[ int a, ... ]])
+	test_anon([[ char *, short * ]])
 -- test_anon([[ ..., void ]])
 -- test_anon([[ void, void ]])
 end
@@ -213,6 +214,7 @@ do -- arrays
 	test_anon(" char ['\\123'] ")
 	test_anon(" char ['\x4F'] ")
 	test_anon(" char [sizeof(\"aa\" \"bb\")] ")
+	test_anon(" char [15 * sizeof(int) - 4 * sizeof(void * ) - sizeof(size_t)] ")
 --test_anon[[ int a[1?2:3] ]] -- TODO
 end
 
@@ -329,19 +331,17 @@ do -- variable declarations
 end
 
 do
-	-- TODO: cast and struct lookup
+	-- TODO: cast and struct lookup, not standard C
 	local ffi = require("ffi")
 	ffi.cdef[[
-        struct str1 {
-            enum {
-                K_99 = 99
-            };
+        struct STRUCT {
+            enum { K_99 = 99 };
             static const int K_55 = 55;
-        } extk;
+        } VAR;
+        char a[K_99];
+        char b[VAR.K_99];
+        char c[((struct STRUCT)0).K_99];
+        char d[((struct STRUCT *)0)->K_99];
+        char e[VAR.K_55];
     ]]
-	ffi.typeof("char[K_99]")
-	ffi.typeof("char[extk.K_99]")
-	ffi.typeof("char[((struct str1)0).K_99]")
-	ffi.typeof("char[((struct str1 *)0)->K_99]")
-	ffi.typeof("char[extk.K_55]")
 end

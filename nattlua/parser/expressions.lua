@@ -678,7 +678,18 @@ do -- runtime
 			node.type_call = true
 		else
 			node.tokens["call("] = self:ExpectTokenValue("(")
-			node.expressions = self:ParseMultipleValues(nil, self.ParseRuntimeExpression, 0)
+
+			if
+				-- hack for sizeof as it expects a CType expression in the C declaration parser
+				self.FFI_DECLARATION_PARSER and
+				primary_node.kind == "value" and
+				primary_node.value.value == "sizeof"
+			then
+				node.expressions = self:ParseMultipleValues(nil, self.ParseCType, 0)
+			else
+				node.expressions = self:ParseMultipleValues(nil, self.ParseRuntimeExpression, 0)
+			end
+
 			node.tokens["call)"] = self:ExpectTokenValue(")")
 		end
 
