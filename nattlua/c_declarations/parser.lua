@@ -350,8 +350,13 @@ function META:ParsePointers()
 			attrnode.tokens["("] = self:ExpectTokenValue("(")
 			attrnode.expression = self:ParseRuntimeExpression()
 			attrnode.tokens[")"] = self:ExpectTokenValue(")")
-			local ptr = self:ExpectTokenValue("*") -- TODO: __ptr32?
-			table.insert(out, {self:EndNode(attrnode), ptr})
+			local t = {self:EndNode(attrnode)}
+
+			if self:IsTokenValue("*") then
+				t[2] = self:ExpectTokenValue("*") -- TODO: __ptr32?
+			end
+
+			table.insert(out, t)
 		elseif self:IsTokenValue("*") then
 			-- void (>>*volatile<< foo())
 			local ptr = self:ConsumeToken()

@@ -113,6 +113,8 @@ do -- functions
 		test([[ void (*(*foo)())() ;]]) -- pointer to function returning pointer to function returning void
 		test([[ int (*(*foo)())[5] ;]]) -- pointer to function returning pointer to array 5 of int
 		do -- abstract
+			test_anon([[ void (*)() ]])
+
 			do -- function returning pointer to function returning void
 				test_anon([[ void (*())() ]])
 				test_anon([[ void ((*()))() ]])
@@ -195,6 +197,22 @@ do -- arrays
 	test_anon[[ int a[1+2*2] ]]
 	test_anon[[ int a[1<<2] ]]
 	test_anon[[ int a[sizeof(int)] ]]
+	test_anon(" int [10][5] ")
+	test_anon(" int [10][5][3][2][7] ")
+	test_anon(" int ([10])[5] ")
+	test_anon(" int *[10] ")
+	test_anon(" int (*)[10] ")
+	test_anon(" int (*[5])[10] ")
+	test_anon(" struct { int x; char y; } [10] ")
+	test_anon(" volatile int *(* const *[5][10])(void) ")
+	test_anon(" int [] ")
+	test_anon(" int __attribute__((aligned(8))) [10] ")
+	test_anon(" __attribute__((aligned(8))) int [10] ")
+	test_anon(" int [10] __attribute__((aligned(8))) ")
+	test_anon(" char ['a'] ")
+	test_anon(" char ['\\123'] ")
+	test_anon(" char ['\x4F'] ")
+	test_anon(" char [sizeof(\"aa\" \"bb\")] ")
 --test_anon[[ int a[1?2:3] ]] -- TODO
 end
 
@@ -208,6 +226,8 @@ do -- struct and union declarations
 		test(TYPE .. [[ NAME { int FIELD; }; ]]) -- single field
 		test(TYPE .. [[ NAME { int FIELD, FIELD; }; ]]) -- multiple fields of same type
 		test(TYPE .. [[ NAME { int FIELD: 1, FIELD: 1; }; ]]) -- multiple fields of same type with bitfield
+		test(TYPE .. [[ NAME { char FIELD, *FIELD, **FIELD, FIELD: 1; }; ]])
+
 		do -- anonymous
 			test(TYPE .. [[ NAME { ]] .. TYPE .. [[ { int FIELD; }; }; ]])
 			test(TYPE .. [[ NAME { ]] .. TYPE .. [[ { int FIELD; }; int FIELD; }; ]]) -- anonymous
@@ -306,4 +326,22 @@ do -- variable declarations
 	test[[ union NAME { int bar; } *var1, *var2; ]] -- union pointer multiple variables
 	test[[ enum NAME { FIELD } *var; ]] -- enum pointer variable
 	test[[ enum NAME { FIELD } *var1, *var2; ]] -- enum pointer multiple variables
+end
+
+do
+	-- TODO: cast and struct lookup
+	local ffi = require("ffi")
+	ffi.cdef[[
+        struct str1 {
+            enum {
+                K_99 = 99
+            };
+            static const int K_55 = 55;
+        } extk;
+    ]]
+	ffi.typeof("char[K_99]")
+	ffi.typeof("char[extk.K_99]")
+	ffi.typeof("char[((struct str1)0).K_99]")
+	ffi.typeof("char[((struct str1 *)0)->K_99]")
+	ffi.typeof("char[extk.K_55]")
 end
