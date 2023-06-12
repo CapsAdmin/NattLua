@@ -11,9 +11,20 @@ local function parse(code)
 	return assert(nl.Compiler(code):Parse()).Tokens
 end
 
-local function one_token(tokens)
+local function one_token(tokens, error_level)
 	assert(#tokens, 2)
-	equal(tokens[2] and tokens[2].type, "end_of_file", 2)
+
+	if tokens[2] and tokens[2].type ~= "end_of_file" then
+		for i, v in ipairs(tokens) do
+			print(i, v.value, v.type)
+		end
+
+		error(
+			"expected last token to be end_of_file, got " .. tokens[2].value .. " (" .. tokens[2].type .. ")",
+			error_level or 2
+		)
+	end
+
 	return tokens[1]
 end
 
@@ -116,6 +127,34 @@ test("glua", function()
 	equal(runtime_syntax:GetBinaryOperatorInfo(tokenize("a != 1")[2]) ~= nil, true)
 	equal(runtime_syntax:GetBinaryOperatorInfo(tokenize("a && b")[2]) ~= nil, true)
 	equal(runtime_syntax:GetBinaryOperatorInfo(tokenize("a || b")[2]) ~= nil, true)
+end)
+
+test("luajit", function()
+	-- https://github.com/LuaJIT/LuaJIT-test-cleanup/blob/master/test/lib/ffi/ffi_lex_number.lua
+	local function checklex(input)
+		equal(one_token(tokenize(input), 3).type, "number")
+	end
+
+	checklex("0ll")
+	checklex("0LL")
+	checklex("0ull")
+	checklex("0ULl")
+	--checklex("18446744073709551615llu")
+	checklex("0x7fffffffffffffffll")
+	checklex("0x8000000000000000ull")
+	checklex("0x123456789abcdef0ll")
+	checklex("1ll")
+	checklex("1ull")
+	checklex("0x7fffffffffffffffll")
+	checklex("0x8000000000000000ull")
+	checklex("0i")
+	checklex("0I")
+	checklex("12.5i")
+	checklex("0x1234i")
+	--checklex("1e400i")
+	--checklex("1e400i")
+	checklex("12.5i")
+	checklex("0i")
 end)
 
 do
