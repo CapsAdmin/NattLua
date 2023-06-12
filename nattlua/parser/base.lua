@@ -207,6 +207,12 @@ function META:Advance(offset--[[#: number]])
 	self.current_token_index = self.current_token_index + offset
 end
 
+function META:ConsumeToken()
+	local tk = self:GetToken()
+	self:Advance(1)
+	return tk
+end
+
 function META:IsTokenValue(str--[[#: string]], offset--[[#: number | nil]])
 	local tk = self:GetToken(offset)
 

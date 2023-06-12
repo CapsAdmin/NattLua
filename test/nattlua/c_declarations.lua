@@ -8,6 +8,75 @@ local Compiler = require("nattlua.compiler")
 local name_id = 0
 local field_id = 0
 
+do
+	local blacklist = {
+		code_start = true,
+		code_stop = true,
+		parent = true,
+		environment = true,
+		Buffer = true,
+		Code = true,
+	}
+
+	local function write(state, str, index)
+		str = ("\t"):rep(state.level) .. str
+
+		if index then
+			table.insert(state.buffer, index, str)
+		else
+			table.insert(state.buffer, str)
+		end
+	end
+
+	local function print_field(state, tbl, k, v)
+		if blacklist[k] then return end
+
+		write(state, k .. " = " .. tostring(v) .. "\n")
+	end
+
+	local function print_node_internal(state, node, k)
+		if type(node) == "table" then
+			-- token
+			if node.is_whitespace == false then
+				write(state, tostring(node))
+				return
+			end
+
+			if k == "tokens" then
+				local tokens = {}
+
+				for i, v in pairs(node) do
+					table.insert(tokens, tostring(v.value))
+				end
+
+				write(state, table.concat(tokens, " "))
+				return
+			end
+		end
+
+		for k, v in pairs(node) do
+			if type(v) ~= "table" then print_field(state, node, k, v) end
+		end
+
+		for k, v in pairs(node) do
+			if not blacklist[k] and not state.done[v] and type(v) == "table" and next(v) then
+				write(state, k .. ": \n")
+				state.level = state.level + 1
+				state.done[v] = true
+				print_node_internal(state, v, k)
+				state.level = state.level - 1
+				write(state, "\n")
+			end
+		end
+	end
+
+	_G.print_node = function(node)
+		local state = {level = 0, buffer = {}, done = {}}
+		print_node_internal(state, node)
+		print(table.concat(state.buffer))
+	end
+end
+
 local function test(c_code)
 	do
 		local ffi = require("ffi")
@@ -31,6 +100,43 @@ local function test(c_code)
 	end
 	local ast = parser:ParseRootNode()
 
+	do -- check if we stored all tokens into the ast
+		local function find_all_tokens(tbl, out, done)
+			done = done or {}
+
+			for _, v in pairs(tbl) do
+				if type(v) == "table" then
+					if v.is_whitespace == false then
+						out[v] = v
+					else
+						if not done[v] then
+							done[v] = true
+							find_all_tokens(v, out, done)
+						end
+					end
+				end
+			end
+		end
+
+		local found = {}
+		find_all_tokens(ast, found)
+
+		for _, token in ipairs(tokens) do
+			if not found[token] then
+				error(
+					code:BuildSourceCodePointMessage(
+						"token " .. tostring(token) .. " was not consumed anywhere",
+						token.start,
+						token.stop
+					),
+					2
+				)
+			end
+		end
+	end
+
+	print_node(ast)
+
 	do
 		return
 	end
@@ -44,6 +150,43 @@ local function test(c_code)
 		diff(c_code, res)
 		error("UH OH")
 	end
+end
+
+if false then
+	-- array 2 of array 8 of pointer to pointer to function (pointer to char) returning pointer to array 1 of array 1 of pointer to unsigned long long
+	-- unsigned long long *(*(**NAME [1][2])(char *))[3][4];
+	--[[
+        unsigned long long 
+            * 
+                (
+                    * 
+                        (
+                            *
+                            * 
+                            NAME [1][2]
+                        )
+                        (char *)
+                )
+        [3][4];
+
+    ]] local NAME = Array1(
+		Array2(
+			Pointer(
+				Pointer(
+					Function(
+						-- arguments
+						{Pointer(char)},
+						-- return type
+						Pointer(Array3(Array4(Pointer("unsigned long long"))))
+					)
+				)
+			)
+		)
+	)
+end
+
+do
+	return
 end
 
 local function test_anon(code, ...)
@@ -96,6 +239,7 @@ do -- functions
 		test([[ void (__stdcall*foo)(); ]])
 		test([[ void (__cdecl*foo)(); ]])
 		test([[ void (__attribute__((stdcall))*foo)(); ]])
+		test([[ void (__attribute__((stdcall))__ptr32*foo)(); ]])
 		test([[ void (__attribute__((__cdecl))*foo)(); ]])
 		test([[ void (__stdcall*(foo))(); ]])
 		test([[ void (__cdecl*(foo))(); ]])
@@ -124,6 +268,11 @@ do -- functions
 			test_anon([[ void (*(*)())() ]])
 		end
 	end
+end
+
+do -- return types
+	test[[ struct {int a;} const foo(); ]]
+	test[[ struct {int a;} const static foo(); ]]
 end
 
 do -- function arguments
