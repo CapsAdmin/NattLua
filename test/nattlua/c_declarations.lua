@@ -1,158 +1,61 @@
 -- http://unixwiz.net/techtips/reading-cdecl.html
 -- https://eli.thegreenplace.net/2007/11/24/the-context-sensitivity-of-cs-grammar/
-local Lexer = require("nattlua.c_declarations.lexer").New
-local Parser = require("nattlua.c_declarations.parser").New
-local Emitter = require("nattlua.c_declarations.emitter").New
-local Code = require("nattlua.code").New
-local Compiler = require("nattlua.compiler")
-local name_id = 0
-local field_id = 0
+-- http://benno.id.au/blog/2011/03/10/c-declarations
+-- https://c-faq.com/decl/spiral.anderson.html
+-- https://cdecl.org/
 
-do
-	local blacklist = {
-		code_start = true,
-		code_stop = true,
-		parent = true,
-		environment = true,
-		Buffer = true,
-		Code = true,
-	}
+--[[
+	
+lj_cparse.c order of parsing
 
-	local function write(state, str, index)
-		str = ("\t"):rep(state.level) .. str
+	read attributes:
+		const, volatile, restrict, extension, attribute, asm, declspec, ccdecl
+		if first, goto end_decl
 
-		if index then
-			table.insert(state.buffer, index, str)
-		else
-			table.insert(state.buffer, str)
-		end
-	end
+	try read struct
+	try read union
+	try read enum
+	try read identifier
+	try read $
 
-	local function print_field(state, tbl, k, v)
-		if blacklist[k] then return end
+	cp_declarator:
+		try *
+			read attributes:
+		
+		try (
+			if abstract read function
 
-		write(state, k .. " = " .. tostring(v) .. "\n")
-	end
+			cp_declarator
+			expect )
+		
+		try identifier -- direct declarator
+		try 
+		
 
-	local function print_node_internal(state, node, k)
-		if type(node) == "table" then
-			-- token
-			if node.is_whitespace == false then
-				write(state, tostring(node))
-				return
-			end
+]]
 
-			if k == "tokens" then
-				local tokens = {}
-
-				for i, v in pairs(node) do
-					table.insert(tokens, tostring(v.value))
-				end
-
-				write(state, table.concat(tokens, " "))
-				return
-			end
-		end
-
-		for k, v in pairs(node) do
-			if type(v) ~= "table" then print_field(state, node, k, v) end
-		end
-
-		for k, v in pairs(node) do
-			if not blacklist[k] and not state.done[v] and type(v) == "table" and next(v) then
-				write(state, k .. ": \n")
-				state.level = state.level + 1
-				state.done[v] = true
-				print_node_internal(state, v, k)
-				state.level = state.level - 1
-				write(state, "\n")
-			end
-		end
-	end
-
-	_G.print_node = function(node)
-		local state = {level = 0, buffer = {}, done = {}}
-		print_node_internal(state, node)
-		print(table.concat(state.buffer))
-	end
-end
-
-local function test(c_code)
-	do
-		local ffi = require("ffi")
-		c_code = c_code:gsub("NAME", function()
-			name_id = name_id + 1
-			return "foo" .. name_id
-		end)
-		c_code = c_code:gsub("FIELD", function()
-			field_id = field_id + 1
-			return "field" .. field_id
-		end)
-		ffi.cdef(c_code)
-	end
-
-	local code = Code(c_code, "test.c")
-	local lex = Lexer(code)
-	local tokens = lex:GetTokens()
-	local parser = Parser(tokens, code)
-	parser.OnError = function(parser, code, msg, start, stop, ...)
-		return Compiler.OnDiagnostic({}, code, msg, "fatal", start, stop, nil, ...)
-	end
-	local ast = parser:ParseRootNode()
-
-	do -- check if we stored all tokens into the ast
-		local function find_all_tokens(tbl, out, done)
-			done = done or {}
-
-			for _, v in pairs(tbl) do
-				if type(v) == "table" then
-					if v.is_whitespace == false then
-						out[v] = v
-					else
-						if not done[v] then
-							done[v] = true
-							find_all_tokens(v, out, done)
-						end
-					end
-				end
-			end
-		end
-
-		local found = {}
-		find_all_tokens(ast, found)
-
-		for _, token in ipairs(tokens) do
-			if not found[token] then
-				error(
-					code:BuildSourceCodePointMessage(
-						"token " .. tostring(token) .. " was not consumed anywhere",
-						token.start,
-						token.stop
-					),
-					2
-				)
-			end
-		end
-	end
-
-	local emitter = Emitter({skip_translation = true})
-	local res = emitter:BuildCode(ast)
-
-	if res ~= c_code then
-		print_node(ast)
-
-		print("expected\n", c_code)
-		print("got\n", res)
-		diff(c_code, res)
-		error("UH OH")
-	end
-end
 
 if false then
-	--[[
-        given the following declaration:
+	--[=[
             unsigned long long * (* (* *NAME [1][2])(char *))[3][4];
-		
+			|                  | \| \| |NAME is               |  |
+			|                  |  |  | |     [1] array1       |  |      
+			|                  |  |  | |        [2] of array2 |  | 
+			|				   |  |  | * pointer to           |  | 
+			|			       |  |  (* pointer to function(char *) returning
+			|				   | (* a pointer to              |  |
+			|				   |                             [3] array3 of
+			|		           |                                [4] array4 of
+			|				   * pointing to
+			unsigned long long
+									
+			array1 of array2 of pointer to pointer to function (pointer to char) returning pointer to array3 of array4 of pointer to unsigned long long
+
+
+											
+
+			unsigned long long * (* (* *NAME |[1][2])(char *))[3][4];
+											 |array1
 		it's read in the following order:
 
 			#                                                           unsigned long long  #                                   
@@ -190,7 +93,7 @@ if false then
 							)
 
 		
-    ]]
+    ]=]
 	
 	local NAME = Array1(Array2(Pointer(Pointer(Function({Pointer(char)},Pointer(Array3(Array4(Pointer("unsigned long long")))))))))
 
@@ -211,73 +114,272 @@ if false then
 
 end
 
-local function test_anon(code, ...)
-	test([[
-        void foo(
-            ]] .. code .. [[
-        );
-    ]])
+local Lexer = require("nattlua.c_declarations.lexer").New
+local Parser = require("nattlua.c_declarations.parser").New
+local Emitter = require("nattlua.c_declarations.emitter").New
+local Code = require("nattlua.code").New
+local Compiler = require("nattlua.compiler")
+
+
+do
+	local blacklist = {
+		code_start = true,
+		code_stop = true,
+		parent = true,
+		environment = true,
+		Buffer = true,
+		Code = true,
+	}
+
+	local priority = {
+		"tokens",
+		"modifiers",
+		"pointers",
+	}
+
+	local function write(state, str, index)
+		str = ("\t"):rep(state.level) .. str
+
+		if index then
+			table.insert(state.buffer, index, str)
+		else
+			table.insert(state.buffer, str)
+		end
+	end
+
+	local function print_field(state, tbl, k, v)
+		if blacklist[k] then return end
+
+		write(state, k .. " = " .. tostring(v) .. "\n")
+	end
+
+	local print_node_internal
+
+	local function print_kv(state, k,v)
+		if not blacklist[k] and not state.done[v] and type(v) == "table" and next(v) then
+			write(state, k .. ": \n")
+			state.level = state.level + 1
+			state.done[v] = true
+			print_node_internal(state, v, k)
+			state.level = state.level - 1
+			write(state, "\n")
+		end
+	end
+
+	function print_node_internal(state, node, k)
+		if type(node) == "table" then
+			-- token
+			if node.is_whitespace == false then
+				write(state, tostring(node))
+				return
+			end
+
+			if k == "tokens" then
+				local tokens = {}
+
+				for i, v in pairs(node) do
+					table.insert(tokens, i.. "="..tostring(v.value))
+				end
+
+				write(state, table.concat(tokens, " "))
+				return
+			end
+		end
+
+		for k, v in pairs(node) do
+			if type(v) ~= "table" then print_field(state, node, k, v) end
+		end
+
+		for _, key in ipairs(priority) do
+			if node[key] ~= nil then
+				print_kv(state, key, node[key])
+			end
+		end
+
+		for k, v in pairs(node) do
+			print_kv(state, k, v)
+		end
+	end
+
+	_G.print_node = function(node)
+		local state = {level = 0, buffer = {}, done = {}}
+		print_node_internal(state, node)
+		print(table.concat(state.buffer))
+	end
 end
 
--- https://cdecl.org/
+local name_id = 0
+local field_id = 0
+local var_id = 0
+
+local function test(c_code, error_level)
+	error_level = error_level or 2
+	local using_name = false
+	local using_field = false
+	local using_var = false
+
+	c_code = c_code:gsub("NAME", function()
+		name_id = name_id + 1
+		using_name = true
+		return "NAME" .. name_id
+	end)
+	c_code = c_code:gsub("FIELD", function()
+		field_id = field_id + 1
+		using_field = true
+		return "FIELD" .. field_id
+	end)
+	c_code = c_code:gsub("TYPE", function()
+		var_id = var_id + 1
+		using_var = true
+		return "TYPE" .. var_id
+	end)
+
+	do
+		local ffi = require("ffi")
+		ffi.cdef(c_code)
+	end
+
+	local code = Code(c_code, "test.c")
+	local lex = Lexer(code)
+	local tokens = lex:GetTokens()
+	local parser = Parser(tokens, code)
+	parser.OnError = function(parser, code, msg, start, stop, ...)
+		return Compiler.OnDiagnostic({}, code, msg, "fatal", start, stop, nil, ...)
+	end
+	local ast = parser:ParseRootNode()
+
+	if ast.statements[2].kind == "end_of_file" then
+		local node = ast.statements[1]
+
+		if using_name then
+			if not node.tokens["potential_identifier"] then
+				print_node(node)
+				print(c_code)
+				error("unable to find name", error_level)
+			end
+
+			if not node.tokens["potential_identifier"].value:find("NAME") then
+				print_node(node)
+				print(c_code)
+				error("name is not right " .. node.tokens["potential_identifier"].value, error_level)
+			end
+		end
+	end
+
+	do -- check if we stored all tokens into the ast
+		local function find_all_tokens(tbl, out, done)
+			done = done or {}
+
+			for _, v in pairs(tbl) do
+				if type(v) == "table" then
+					if v.is_whitespace == false then
+						out[v] = v
+					else
+						if not done[v] then
+							done[v] = true
+							find_all_tokens(v, out, done)
+						end
+					end
+				end
+			end
+		end
+
+		local found = {}
+		find_all_tokens(ast, found)
+
+		for _, token in ipairs(tokens) do
+			if not found[token] then
+				error(
+					code:BuildSourceCodePointMessage(
+						"token " .. tostring(token) .. " was not consumed anywhere",
+						token.start,
+						token.stop
+					),
+					error_level
+				)
+			end
+		end
+	end
+
+	local emitter = Emitter({skip_translation = true})
+	local res = emitter:BuildCode(ast)
+
+	if res ~= c_code then
+		print_node(ast)
+
+		print("expected\n", c_code)
+		print("got\n", res)
+		diff(c_code, res)
+		error("UH OH", error_level)
+	end
+end
+
+local function test_anon(code, ...)
+	test([[
+        void NAME(
+            ]] .. code .. [[
+        );
+    ]], 3)
+end
+
 do -- functions
 	do -- plain
-		-- it's a normal function declaration if foo is directly followed by a ( or a )(
+		-- it's a normal function declaration if NAME is directly followed by a ( or a )(
 		do -- equvilent function returning void
-			test([[void foo();]])
-			test([[void (foo)();]])
+			test([[void NAME();]])
+			test([[void (NAME)();]])
 		end
 
 		-- attributes
-		test([[long long foo();]])
-		test([[void __attribute__((stdcall)) foo();]])
-		test([[long long __attribute__((stdcall)) foo();]])
-		test([[void __fastcall foo(); ]])
+		test([[long long NAME();]])
+		test([[void __attribute__((stdcall)) NAME();]])
+		test([[long long __attribute__((stdcall)) NAME();]])
+		test([[void __fastcall NAME(); ]])
 
 		do -- pointers
-			test[[ void (*foo()) ;]]
-			test[[ void (**foo()) ;]]
-			test[[ void (** volatile foo()) ;]]
-			test[[ void (* volatile * volatile foo()) ;]]
-			test[[ void (__ptr32**foo()) ;]]
-			test[[ void (__stdcall*foo()) ;]]
+			test[[ void (*NAME()) ;]]
+			test[[ void (**NAME()) ;]]
+			test[[ void (** volatile NAME()) ;]]
+			test[[ void (* volatile * volatile NAME()) ;]]
+			test[[ void (__ptr32**NAME()) ;]]
+			test[[ void (__stdcall*NAME()) ;]]
 		end
 
-		test[[ void foo(int (*lol)(int, long)) ;]] -- tricky
-		test[[ void (*foo())() ;]] -- function returning pointer to function returning void
-		test([[ int (*foo())[5] ;]]) -- function returning pointer to an array of 5 ints
-		test([[ void (**foo())() ;]]) -- function returning pointer to pointer to function returning void
-		test([[ void qsort(int (*compar)(const uint8_t *, const uint8_t *)); ]])
-		test([[ void foo() asm("test"); ]])
+		test[[ void NAME(int (*ARG)(int, long)) ;]] -- tricky
+		test[[ void (*NAME())() ;]] -- function returning pointer to function returning void
+		test([[ int (*NAME())[5] ;]]) -- function returning pointer to an array of 5 ints
+		test([[ void (**NAME())() ;]]) -- function returning pointer to pointer to function returning void
+		test([[ void NAME(int (*ARG)(const uint8_t *, const uint8_t *)); ]])
+		test([[ void NAME() asm("test"); ]])
 	end
 
 	do -- pointers
-		-- it's a function pointer if foo is directly followed by a (* or (KEYWORD*
+		-- it's a function pointer if NAME is directly followed by a (* or (KEYWORD*
 		do -- equivilent pointer to function returning void
-			test([[ void (*foo)() ;]])
-			test([[ void (*(foo))() ;]])
+			test([[ void (*NAME)() ;]])
+			test([[ void (*(NAME))() ;]])
 		end
 
-		test([[ void (__stdcall*foo)(); ]])
-		test([[ void (__cdecl*foo)(); ]])
-		test([[ void (__attribute__((stdcall))*foo)(); ]])
-		test([[ void (__attribute__((stdcall))__ptr32*foo)(); ]])
-		test([[ void (__attribute__((__cdecl))*foo)(); ]])
-		test([[ void (__stdcall*(foo))(); ]])
-		test([[ void (__cdecl*(foo))(); ]])
-		test([[ void (__attribute__((stdcall))*(foo))(); ]])
-		test([[ void (__attribute__((__cdecl))*(foo))(); ]])
+		test([[ void (__stdcall*NAME)(); ]])
+		test([[ void (__cdecl*NAME)(); ]])
+		test([[ void (__attribute__((stdcall))*NAME)(); ]])
+		test([[ void (__attribute__((stdcall))__ptr32*NAME)(); ]])
+		test([[ void (__attribute__((__cdecl))*NAME)(); ]])
+		test([[ void (__stdcall*(NAME))(); ]])
+		test([[ void (__cdecl*(NAME))(); ]])
+		test([[ void (__attribute__((stdcall))*(NAME))(); ]])
+		test([[ void (__attribute__((__cdecl))*(NAME))(); ]])
 
 		do -- equivilent pointer to pointer to function returning void
-			test([[ void (**foo)() ;]])
-			test([[ void (*(*foo))() ;]])
+			test([[ void (**NAME)(); ]])
+			test([[ void (*(*NAME))(); ]])
 		end
 
-		test([[ void (* volatile foo)() ;]]) -- pointer to a volatile void function
-		test([[ void (* volatile * foo)() ;]]) -- pointer to a volatile pointer to a void function
-		test([[ void (__ptr32*__ptr32*foo)() ;]]) -- 32bit pointer to a 32bit pointer to a void function
-		test([[ void (*(*foo)())() ;]]) -- pointer to function returning pointer to function returning void
-		test([[ int (*(*foo)())[5] ;]]) -- pointer to function returning pointer to array 5 of int
+		test([[ void (* volatile NAME)(); ]]) -- pointer to a volatile void function
+		test([[ void (* volatile * NAME)(); ]]) -- pointer to a volatile pointer to a void function
+		test([[ void (__ptr32*__ptr32*NAME)(); ]]) -- 32bit pointer to a 32bit pointer to a void function
+		test([[ void (*(*NAME)())(); ]]) -- pointer to function returning pointer to function returning void
+		test([[ int (*(*NAME)())[5]; ]]) -- pointer to function returning pointer to array 5 of int
 		do -- abstract
 			test_anon([[ void (*)() ]])
 
@@ -293,20 +395,20 @@ do -- functions
 end
 
 do -- return types
-	test[[ struct {int a;} const foo(); ]]
-	test[[ struct {int a;} const static foo(); ]]
+	test[[ struct {int FIELD;} const NAME(); ]]
+	test[[ struct {int FIELD;} const static NAME(); ]]
 end
 
 do -- function arguments
 	test_anon([[ int ]])
 	test_anon([[ int, int ]])
-	test_anon([[ int a ]])
-	test_anon([[ int a, int b ]])
-	test_anon([[ int a, int ]])
+	test_anon([[ int ARG ]])
+	test_anon([[ int ARG, int ARG ]])
+	test_anon([[ int ARG, int ]])
 	test_anon([[ void(*)(), void(*)() ]])
 	test_anon([[ void(*)(int, int), void(*)(int, int) ]])
 	test_anon([[ void(*)(int, int), void(*)(void(*)(int, int), void(*)(int, int)) ]])
-	test_anon([[ int a, ... ]])
+	test_anon([[ int ARG, ... ]])
 	test_anon([[ char *, short * ]])
 -- test_anon([[ ..., void ]])
 -- test_anon([[ void, void ]])
@@ -316,59 +418,59 @@ do -- arrays
 	do -- http://unixwiz.net/techtips/reading-cdecl.html
 		do
 			-- long
-			test([[ long foo; ]])
+			test([[ long NAME; ]])
 			-- array 7 of long
-			test([[ long foo[7]; ]])
+			test([[ long NAME[7]; ]])
 			-- array 7 of pointer to long
-			test[[ long *var[7]; ]]
+			test[[ long *NAME[7]; ]]
 			-- array 7 of pointer to pointer to long
-			test[[ long **var[7]; ]]
+			test[[ long **NAME[7]; ]]
 		end
 
 		do
 			-- char
-			test([[ char foo; ]])
+			test([[ char NAME; ]])
 			-- array of char
-			test([[ char foo[]; ]])
+			test([[ char NAME[]; ]])
 			-- array of array 8 of char
-			test([[ char foo[][8]; ]])
+			test([[ char NAME[][8]; ]])
 			-- array of array 8 of pointer to char
-			test([[ char *foo[][8]; ]])
+			test([[ char *NAME[][8]; ]])
 			-- array of array 8 of pointer to pointer to char
-			test([[ char **foo[][8]; ]])
+			test([[ char **NAME[][8]; ]])
 			-- array of array 8 of pointer to pointer to function returning char
-			test([[ char (**foo[][8])(); ]])
+			test([[ char (**NAME[][8])(); ]])
 			-- array of array 8 of pointer to pointer to function returning pointer to char 
-			test([[ char *(**foo[][8])(); ]])
+			test([[ char *(**NAME[][8])(); ]])
 			-- array of array 8 of pointer to pointer to function returning pointer to array of char 
-			test([[ char (*(**foo[][8])())[]; ]])
+			test([[ char (*(**NAME[][8])())[]; ]])
 			-- array of array 8 of pointer to pointer to function returning pointer to array of pointer to char 
-			test([[ char *(*(**foo[][8])())[]; ]])
+			test([[ char *(*(**NAME[][8])())[]; ]])
 		end
 	end
 
 	-- pointer to array 5 of pointer to function returning void
-	test([[ void (*(*foo)[5])() ;]])
+	test([[ void (*(*NAME)[5])() ;]])
 	-- array of 5 pointers to void functions
-	test([[ void (*foo[5])() ;]])
+	test([[ void (*NAME[5])() ;]])
 	-- array of 5 pointers to pointers to void functions
-	test([[ void (**foo[5])() ;]])
+	test([[ void (**NAME[5])() ;]])
 	-- array of array 8 of pointer to function returning pointer to array of pointer to char
-	test([[ char *(*(*foo[][8])())[]; ]])
+	test([[ char *(*(*NAME[][8])())[]; ]])
 	-- array of array 8 of pointer to function returning pointer to array of array of pointer to char
-	test([[ char *(*(*foo[8][8])())[8][8]; ]])
+	test([[ char *(*(*NAME[][8])())[][8]; ]])
 	-- array of array 8 of pointer to function returning pointer to function returning char
-	test([[ char (*(*foo[][8])())(); ]])
+	test([[ char (*(*NAME[][8])())(); ]])
 	-- array of array 8 of pointer to function returning pointer to function returning pointer to char
-	test([[ char *(*(*foo[][8])())(); ]])
+	test([[ char *(*(*NAME[][8])())(); ]])
 	-- array 2 of array 8 of pointer to pointer to function (pointer to char) returning pointer to array of pointer to long
 	test([[ long int unsigned long *(*(**NAME [2][8])(char *))[]; ]])
 	-- array 7 of pointer to pointer to long
-	test([[ long int unsigned long **foo[7]; ]])
-	test_anon[[ int a[1+2] ]]
-	test_anon[[ int a[1+2*2] ]]
-	test_anon[[ int a[1<<2] ]]
-	test_anon[[ int a[sizeof(int)] ]]
+	test([[ long int unsigned long **NAME[7]; ]])
+	test_anon[[ int ARG[1+2] ]]
+	test_anon[[ int ARG[1+2*2] ]]
+	test_anon[[ int ARG[1<<2] ]]
+	test_anon[[ int ARG[sizeof(int)] ]]
 	test_anon(" int [10][5] ")
 	test_anon(" int [10][5][3][2][7] ")
 	test_anon(" int ([10])[5] ")
@@ -392,22 +494,22 @@ end
 do -- struct and union declarations
 	for _, TYPE in ipairs({"struct", "union"}) do
 		local function test_field(code)
-			test(TYPE .. [[ NAME { ]] .. code .. [[ }; ]])
+			test(TYPE .. [[ TYPE { ]] .. code .. [[ }; ]])
 		end
 
-		test(TYPE .. [[ NAME; ]]) -- forward declaration
-		test(TYPE .. [[ NAME { int FIELD; }; ]]) -- single field
-		test(TYPE .. [[ NAME { int FIELD, FIELD; }; ]]) -- multiple fields of same type
-		test(TYPE .. [[ NAME { int FIELD: 1, FIELD: 1; }; ]]) -- multiple fields of same type with bitfield
-		test(TYPE .. [[ NAME { char FIELD, *FIELD, **FIELD, FIELD: 1; }; ]])
+		test(TYPE .. [[ TYPE; ]]) -- forward declaration
+		test(TYPE .. [[ TYPE { int FIELD; }; ]]) -- single field
+		test(TYPE .. [[ TYPE { int FIELD, FIELD; }; ]]) -- multiple fields of same type
+		test(TYPE .. [[ TYPE { int FIELD: 1, FIELD: 1; }; ]]) -- multiple fields of same type with bitfield
+		test(TYPE .. [[ TYPE { char FIELD, *FIELD, **FIELD, FIELD: 1; }; ]])
 
 		do -- anonymous
-			test(TYPE .. [[ NAME { ]] .. TYPE .. [[ { int FIELD; }; }; ]])
-			test(TYPE .. [[ NAME { ]] .. TYPE .. [[ { int FIELD; }; int FIELD; }; ]]) -- anonymous
-			test(TYPE .. [[ NAME { ]] .. TYPE .. [[ { int FIELD; } FIELD; }; ]]) -- anonymous in field foo
+			test(TYPE .. [[ TYPE { ]] .. TYPE .. [[ { int FIELD; }; }; ]])
+			test(TYPE .. [[ TYPE { ]] .. TYPE .. [[ { int FIELD; }; int FIELD; }; ]]) -- anonymous
+			test(TYPE .. [[ TYPE { ]] .. TYPE .. [[ { int FIELD; } FIELD; }; ]]) -- anonymous in field
 		end
 
-		test(TYPE .. [[ NAME { ]] .. TYPE .. [[ NAME { int FIELD; } FIELD; };  ]]) -- declared in field foo
+		test(TYPE .. [[ TYPE { ]] .. TYPE .. [[ TYPE { int FIELD; } FIELD; };  ]]) -- declared in field
 		do -- complex fields
 			-- repeat the above maybe?
 			test_field[[ char FIELD; ]]
@@ -443,62 +545,65 @@ end
 
 do -- enum
 	local function test_field(code)
-		test([[ enum NAME { ]] .. code .. [[ }; ]])
+		test([[ enum TYPE { ]] .. code .. [[ }; ]])
 	end
 
-	test[[ enum NAME; ]] -- forward declaration
-	test[[ enum NAME { FIELD }; ]] -- single field
-	test[[ enum NAME { FIELD, }; ]] -- single field with trailing comma
-	test[[ enum NAME { FIELD, FIELD }; ]] -- multiple fields
-	test[[ enum NAME { FIELD, FIELD, }; ]] -- multiple fields with trailing comma
+	test[[ enum TYPE; ]] -- forward declaration
+	test[[ enum TYPE { FIELD }; ]] -- single field
+	test[[ enum TYPE { FIELD, }; ]] -- single field with trailing comma
+	test[[ enum TYPE { FIELD, FIELD }; ]] -- multiple fields
+	test[[ enum TYPE { FIELD, FIELD, }; ]] -- multiple fields with trailing comma
 	do -- complex fields
-		test_field[[ FIELD = 17, FIELD = 37, FIELD = 42 ]]
-		test_field[[ FIELD = 17, FIELD, FIELD ]]
-		test_field[[ FIELD = 17, FIELD, FIELD = 42 ]]
-		test_field[[ FIELD = 17, FIELD = 37, FIELD ]]
-		test_field[[ FIELD = 17+1, FIELD = 37+2, FIELD=2*5 ]]
+		test_field[[ FIELD = 17  , FIELD = 37,   FIELD = 42  ]]
+		test_field[[ FIELD = 17  , FIELD, 		 FIELD       ]]
+		test_field[[ FIELD = 17  , FIELD, 		 FIELD = 42  ]]
+		test_field[[ FIELD = 17  , FIELD = 37,   FIELD 		 ]]
+		test_field[[ FIELD = 17+1, FIELD = 37+2, FIELD = 2*5 ]]
 	end
 end
 
 do -- typedef
 	test[[ typedef int NAME; ]] -- NAME becomes int
-	test[[ typedef int NAME, NAME2; ]] -- NAME and NAME2 become int
-	test[[ typedef int NAME, *NAME2; ]] -- NAME becomes int and NAME2 becomes int *
+	test[[ typedef int NAME, NAME; ]] -- NAME and NAME become int
+	test[[ typedef int NAME, *NAME; ]] -- NAME becomes int and NAME becomes int *
 	test[[ typedef int (*NAME)(int); ]] -- NAME becomes int (*)(int)
-	test[[ typedef int (*NAME)(int), NAME2; ]] -- NAME becomes int (*)(int) and NAME2 becomes int
-	test[[ typedef struct NAME { int bar; } NAME; ]] -- struct declaration with typedef, NAME becomes struct NAME
-	test[[ typedef struct NAME { int bar; } NAME, NAME2; ]] -- struct declaration with typedef, NAME and NAME2 become struct NAME
-	test[[ typedef union NAME { int bar; } NAME; ]] -- union declaration with typedef, NAME becomes union NAME
-	test[[ typedef union NAME { int bar; } NAME, NAME2; ]] -- union declaration with typedef, NAME and NAME2 become union NAME
-	test[[ typedef enum NAME { FIELD } NAME; ]] -- enum declaration with typedef, NAME becomes enum NAME
-	test[[ typedef enum NAME { FIELD } NAME, NAME2; ]] -- enum declaration with typedef, NAME and NAME2 become enum NAME
-	test[[ typedef struct NAME NAME; ]] -- struct forward declaration with typedef, NAME becomes struct NAME
-	test[[ typedef union NAME NAME; ]] -- union forward declaration with typedef, NAME becomes union NAME
-	test[[ typedef enum NAME NAME; ]] -- enum forward declaration with typedef, NAME becomes enum NAME
-	test[[ typedef struct NAME NAME, NAME2; ]] -- struct forward declaration with typedef, NAME and NAME2 become struct NAME
-	test[[ typedef union NAME NAME, NAME2; ]] -- union forward declaration with typedef, NAME and NAME2 become union NAME
-	test[[ typedef enum NAME NAME, NAME2; ]] -- enum forward declaration with typedef, NAME and NAME2 become enum NAME
+	test[[ typedef int (*NAME)(int), NAME; ]] -- NAME becomes int (*)(int) and NAME becomes int
+	test[[ typedef struct TYPE { int FIELD; } NAME; ]] -- struct declaration with typedef, NAME becomes struct NAME
+	test[[ typedef struct TYPE { int FIELD; } NAME, NAME; ]] -- struct declaration with typedef, NAME and NAME become struct NAME
+	test[[ typedef union TYPE { int FIELD; } NAME; ]] -- union declaration with typedef, NAME becomes union NAME
+	test[[ typedef union TYPE { int FIELD; } NAME, NAME; ]] -- union declaration with typedef, NAME and NAME become union NAME
+	test[[ typedef enum TYPE { FIELD } NAME; ]] -- enum declaration with typedef, NAME becomes enum NAME
+	test[[ typedef enum TYPE { FIELD } NAME, NAME; ]] -- enum declaration with typedef, NAME and NAME become enum NAME
+	test[[ typedef struct TYPE NAME; ]] -- struct forward declaration with typedef, NAME becomes struct NAME
+	test[[ typedef union TYPE NAME; ]] -- union forward declaration with typedef, NAME becomes union NAME
+	test[[ typedef enum TYPE NAME; ]] -- enum forward declaration with typedef, NAME becomes enum NAME
+	test[[ typedef struct TYPE NAME, NAME; ]] -- struct forward declaration with typedef, NAME and NAME become struct NAME
+	test[[ typedef union TYPE NAME, NAME; ]] -- union forward declaration with typedef, NAME and NAME become union NAME
+	test[[ typedef enum TYPE NAME, NAME; ]] -- enum forward declaration with typedef, NAME and NAME become enum NAME
 end
 
 do -- variable declarations
-	test[[ struct NAME { int bar; } var; ]] -- struct declaration with variable
-	test[[ struct NAME { int bar; } var1, var2; ]] -- struct declaration with multiple variables
-	test[[ union NAME { int bar; } var; ]] -- union declaration with variable
-	test[[ union NAME { int bar; } var1, var2; ]] -- union declaration with multiple variables
-	test[[ enum NAME { FIELD } var; ]] -- enum declaration with variable
-	test[[ enum NAME { FIELD } var1, var2; ]] -- enum declaration with multiple variables
-	test[[ struct NAME var; ]] -- struct variable
-	test[[ struct NAME var1, var2; ]] -- struct multiple variables
-	test[[ union NAME var; ]] -- union variable
-	test[[ union NAME var1, var2; ]] -- union multiple variables
-	test[[ enum NAME var; ]] -- enum variable
-	test[[ enum NAME var1, var2; ]] -- enum multiple variables
-	test[[ struct NAME { int bar; } *var; ]] -- struct pointer variable
-	test[[ struct NAME { int bar; } *var1, *var2; ]] -- struct pointer multiple variables
-	test[[ union NAME { int bar; } *var; ]] -- union pointer variable
-	test[[ union NAME { int bar; } *var1, *var2; ]] -- union pointer multiple variables
-	test[[ enum NAME { FIELD } *var; ]] -- enum pointer variable
-	test[[ enum NAME { FIELD } *var1, *var2; ]] -- enum pointer multiple variables
+	test[[ struct TYPE { int FIELD; } NAME; ]] -- struct declaration with variable
+	test[[ struct TYPE { int FIELD; } NAME, NAME; ]] -- struct declaration with multiple variables
+	test[[ union TYPE { int FIELD; } NAME; ]] -- union declaration with variable
+	test[[ union TYPE { int FIELD; } NAME, NAME; ]] -- union declaration with multiple variables
+	test[[ enum TYPE { FIELD } NAME; ]] -- enum declaration with variable
+	test[[ enum TYPE { FIELD } NAME, NAME; ]] -- enum declaration with multiple variables
+	test[[ struct TYPE NAME; ]] -- struct variable
+	test[[ struct TYPE NAME, NAME; ]] -- struct multiple variables
+	test[[ union TYPE NAME; ]] -- union variable
+	test[[ union TYPE NAME, NAME; ]] -- union multiple variables
+	test[[ enum TYPE NAME; ]] -- enum variable
+	test[[ enum TYPE NAME, NAME; ]] -- enum multiple variables
+	test[[ struct TYPE { int FIELD; } *NAME; ]] -- struct pointer variable
+	test[[ struct TYPE { int FIELD; } *NAME, *NAME; ]] -- struct pointer multiple variables
+	test[[ union TYPE { int FIELD; } *NAME; ]] -- union pointer variable
+	test[[ union TYPE { int FIELD; } *NAME, *NAME; ]] -- union pointer multiple variables
+	test[[ enum TYPE { FIELD } *NAME; ]] -- enum pointer variable
+	test[[ enum TYPE { FIELD } *NAME, *NAME; ]] -- enum pointer multiple variables
+	test([[ int * const NAME; ]])
+	test([[ const int * NAME; ]])
+	test([[ int *NAME, NAME, NAME[1], (*NAME)(void), NAME(void); ]])
 end
 
 do

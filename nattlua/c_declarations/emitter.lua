@@ -9,7 +9,7 @@ end
 function META:EmitStatement(node)
 	if node.kind == "typedef" then
 		self:EmitTypeDef(node)
-	elseif node.kind == "c_type" then
+	elseif node.kind == "c_declaration" then
 		self:EmitCType(node)
 	end
 
@@ -194,6 +194,11 @@ for _, type in ipairs({"Struct", "Union"}) do
 					self:EmitToken(field.tokens["first_comma"])
 					for _, v in ipairs(field.multi_values) do
 						self:EmitCType(v)
+
+						if v.tokens[":"] then
+							self:EmitToken(v.tokens[":"])
+							self:EmitExpression(v.bitfield_expression)
+						end
 
 						if v.tokens[","] then
 							self:EmitToken(v.tokens[","])
