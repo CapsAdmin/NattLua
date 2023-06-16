@@ -51,7 +51,6 @@ if false then
 									
 			array1 of array2 of pointer to pointer to function (pointer to char) returning pointer to array3 of array4 of pointer to unsigned long long
 
-
 											
 
 			unsigned long long * (* (* *NAME |[1][2])(char *))[3][4];
@@ -214,6 +213,16 @@ local var_id = 0
 
 local function test(c_code, error_level)
 	error_level = error_level or 2
+
+	local start, stop = c_code:find("%%%b{}")
+	if start then
+		local pattern = c_code:sub(start, stop):sub(3, -2)
+		for what in (pattern.."|"):gmatch("([^|]-)%|") do
+			test(c_code:sub(1, start-1) .. what .. c_code:sub(stop+1), error_level+1)
+		end
+		return
+	end	
+
 	local using_name = false
 	local using_field = false
 	local using_var = false
@@ -312,6 +321,12 @@ local function test(c_code, error_level)
 		diff(c_code, res)
 		error("UH OH", error_level)
 	end
+
+	if ast.statements[2].kind == "end_of_file" then
+		return ast.statements[1]
+	end	
+
+	return ast
 end
 
 local function test_anon(code, ...)
@@ -331,10 +346,10 @@ do -- functions
 		end
 
 		-- attributes
-		test([[long long NAME();]])
-		test([[void __attribute__((stdcall)) NAME();]])
-		test([[long long __attribute__((stdcall)) NAME();]])
-		test([[void __fastcall NAME(); ]])
+		test([[ long long NAME(); ]])
+		test([[ void __attribute__((stdcall)) NAME(); ]])
+		test([[ long long __attribute__((stdcall)) NAME(); ]])
+		test([[ void __fastcall NAME(); ]])
 
 		do -- pointers
 			test[[ void (*NAME()) ;]]
@@ -492,55 +507,51 @@ do -- arrays
 end
 
 do -- struct and union declarations
-	for _, TYPE in ipairs({"struct", "union"}) do
-		local function test_field(code)
-			test(TYPE .. [[ TYPE { ]] .. code .. [[ }; ]])
-		end
-
-		test(TYPE .. [[ TYPE; ]]) -- forward declaration
-		test(TYPE .. [[ TYPE { int FIELD; }; ]]) -- single field
-		test(TYPE .. [[ TYPE { int FIELD, FIELD; }; ]]) -- multiple fields of same type
-		test(TYPE .. [[ TYPE { int FIELD: 1, FIELD: 1; }; ]]) -- multiple fields of same type with bitfield
-		test(TYPE .. [[ TYPE { char FIELD, *FIELD, **FIELD, FIELD: 1; }; ]])
-
-		do -- anonymous
-			test(TYPE .. [[ TYPE { ]] .. TYPE .. [[ { int FIELD; }; }; ]])
-			test(TYPE .. [[ TYPE { ]] .. TYPE .. [[ { int FIELD; }; int FIELD; }; ]]) -- anonymous
-			test(TYPE .. [[ TYPE { ]] .. TYPE .. [[ { int FIELD; } FIELD; }; ]]) -- anonymous in field
-		end
-
-		test(TYPE .. [[ TYPE { ]] .. TYPE .. [[ TYPE { int FIELD; } FIELD; };  ]]) -- declared in field
-		do -- complex fields
-			-- repeat the above maybe?
-			test_field[[ char FIELD; ]]
-			test_field[[ char FIELD: 1; ]]
-			test_field[[ const int FIELD:8; ]]
-			test_field[[ char FIELD: +1+1; ]]
-
-			if TYPE ~= "union" then test_field[[ char *(*(**FIELD[][8])())[]; ]] end
-
-			test_field[[ long **FIELD[7]; ]]
-			test_field[[ uint8_t __attribute__((mode(__V16QI__))) FIELD; ]]
-			test_field[[ uint8_t __attribute__((mode(__V16QI__))) FIELD[2]; ]]
-			test_field[[ static const int FIELD = 17; ]]
-			test_field[[ enum { FIELD = -37 }; ]] -- doesn't have a meaning
-			test_field[[ enum { FIELD = -37 } FIELD; ]] -- doesn't have a meaning
-			test_field[[ int FIELD[10]; ]]
-			test_field[[ const int FIELD[10]; ]]
-			test_field[[ int FIELD, FIELD; ]]
-			test_field[[ uint8_t __attribute__((mode(__V16QI__))) FIELD; ]]
-			test_field[[ int __attribute__((mode(__V4SI__))) FIELD; ]]
-			test_field[[ double __attribute__((mode(__V2DF__))) FIELD; ]]
-			test_field[[ const int **FIELD; ]]
-			test_field[[ void **FIELD; ]]
-			test_field[[ char *(*FIELD)(char *, const char *); ]]
-			test_field[[ int *__ptr32 FIELD; ]]
-			test_field[[ volatile int *FIELD; ]]
-			test_field[[ int **FIELD; ]]
-		end
-
-		test(TYPE .. [[ NAME(NAME)(]] .. TYPE .. [[ NAME);]])
+	local function test_field(code)
+		test([[ %{struct|union} TYPE { ]] .. code .. [[ }; ]])
 	end
+
+	test([[ %{struct|union} TYPE; ]]) -- forward declaration
+	test([[ %{struct|union} TYPE { int FIELD; }; ]]) -- single field
+	test([[ %{struct|union} TYPE { int FIELD, FIELD; }; ]]) -- multiple fields of same type
+	test([[ %{struct|union} TYPE { int FIELD: 1, FIELD: 1; }; ]]) -- multiple fields of same type with bitfield
+	test([[ %{struct|union} TYPE { char FIELD, *FIELD, **FIELD, FIELD: 1; }; ]])
+
+	do -- anonymous
+		test([[ %{struct|union} TYPE { %{struct|union} { int FIELD; }; }; ]])
+		test([[ %{struct|union} TYPE { %{struct|union} { int FIELD; }; int FIELD; }; ]]) -- anonymous
+		test([[ %{struct|union} TYPE { %{struct|union} { int FIELD; } FIELD; }; ]]) -- anonymous in field
+	end
+
+	test([[ %{struct|union} TYPE { %{struct|union} TYPE { int FIELD; } FIELD; }; ]]) -- declared in field
+	do -- complex fields
+		-- repeat the above maybe?
+		test_field[[ char FIELD; ]]
+		test_field[[ char FIELD: 1; ]]
+		test_field[[ const int FIELD:8; ]]
+		test_field[[ char FIELD: +1+1; ]]
+		test_field[[ long **FIELD[7]; ]]
+		test_field[[ uint8_t __attribute__((mode(__V16QI__))) FIELD; ]]
+		test_field[[ uint8_t __attribute__((mode(__V16QI__))) FIELD[2]; ]]
+		test_field[[ static const int FIELD = 17; ]]
+		test_field[[ enum { FIELD = -37 }; ]] -- doesn't have a meaning
+		test_field[[ enum { FIELD = -37 } FIELD; ]] -- doesn't have a meaning
+		test_field[[ int FIELD[10]; ]]
+		test_field[[ const int FIELD[10]; ]]
+		test_field[[ int FIELD, FIELD; ]]
+		test_field[[ uint8_t __attribute__((mode(__V16QI__))) FIELD; ]]
+		test_field[[ int __attribute__((mode(__V4SI__))) FIELD; ]]
+		test_field[[ double __attribute__((mode(__V2DF__))) FIELD; ]]
+		test_field[[ const int **FIELD; ]]
+		test_field[[ void **FIELD; ]]
+		test_field[[ char *(*FIELD)(char *, const char *); ]]
+		test_field[[ int *__ptr32 FIELD; ]]
+		test_field[[ volatile int *FIELD; ]]
+		test_field[[ int **FIELD; ]]
+	end
+
+	test[[ struct TYPE { char *(*(**FIELD[][8])())[]; }; ]]
+	test([[ %{struct|union} NAME(NAME)(]] .. [[ %{struct|union} NAME);]])
 end
 
 do -- enum
@@ -562,6 +573,31 @@ do -- enum
 	end
 end
 
+do -- typedef and variable declarations
+	test[[ %{typedef|} %{struct|union|enum} TYPE NAME; ]]
+	test[[ %{typedef|} %{struct|union|enum} TYPE NAME, NAME; ]] 
+
+	test[[ %{typedef|} enum TYPE { FIELD } NAME; ]]
+	test[[ %{typedef|} enum TYPE { FIELD } NAME, NAME; ]]
+	test[[ %{typedef|} enum TYPE { FIELD } *NAME; ]] 
+	test[[ %{typedef|} enum TYPE { FIELD } *NAME, *NAME; ]]
+ 	
+	test[[ %{typedef|} %{struct|union} TYPE { int FIELD; } NAME; ]]
+	test[[ %{typedef|} %{struct|union} TYPE { int FIELD; } NAME, NAME; ]]
+	test[[ %{typedef|} %{struct|union} TYPE { int FIELD; } *NAME; ]]
+	test[[ %{typedef|} %{struct|union} TYPE { int FIELD; } *NAME, *NAME; ]]
+	test[[ %{typedef|} int NAME; ]] -- NAME becomes int
+	test[[ %{typedef|} int NAME, NAME; ]] -- NAME and NAME become int
+	test[[ %{typedef|} int NAME, *NAME; ]] -- NAME becomes int and NAME becomes int *
+	test[[ %{typedef|} int (*NAME)(int); ]] -- NAME becomes int (*)(int)
+	test[[ %{typedef|} int (*NAME)(int), NAME; ]] -- NAME becomes int (*)(int) and NAME becomes int
+
+	test[[ %{typedef|} int * const NAME; ]]
+	test[[ %{typedef|} const int * NAME; ]]
+	test[[ int *NAME, NAME, NAME[1], (*NAME)(void), NAME(void); ]]
+	test[[ static const int NAME = 1; ]]
+	test[[ static const int NAME = 1, NAME = 2; ]]
+end
 do -- typedef
 	test[[ typedef int NAME; ]] -- NAME becomes int
 	test[[ typedef int NAME, NAME; ]] -- NAME and NAME become int
@@ -580,7 +616,7 @@ do -- typedef
 	test[[ typedef struct TYPE NAME, NAME; ]] -- struct forward declaration with typedef, NAME and NAME become struct NAME
 	test[[ typedef union TYPE NAME, NAME; ]] -- union forward declaration with typedef, NAME and NAME become union NAME
 	test[[ typedef enum TYPE NAME, NAME; ]] -- enum forward declaration with typedef, NAME and NAME become enum NAME
-end
+	end
 
 do -- variable declarations
 	test[[ struct TYPE { int FIELD; } NAME; ]] -- struct declaration with variable

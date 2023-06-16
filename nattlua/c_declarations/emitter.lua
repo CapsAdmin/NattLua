@@ -13,13 +13,6 @@ function META:EmitStatement(node)
 		self:EmitCType(node)
 	end
 
-	if node.decls then
-		for _, v in ipairs(node.decls) do
-			self:EmitCType(v)
-			if v.tokens[","] then self:EmitToken(v.tokens[","]) end
-		end
-	end
-
 	if node.tokens[";"] then self:EmitToken(node.tokens[";"]) end
 
 	if node.kind == "end_of_file" then
@@ -30,16 +23,10 @@ end
 function META:EmitTypeDef(node)
 	self:EmitToken(node.tokens["typedef"])
 
-	self:EmitCType(node.from)
-	self:EmitCType(node.to)
-
-	if node.more then
-		for _, v in ipairs(node.more) do
-			self:EmitCType(v)
-			if v.tokens[","] then self:EmitToken(v.tokens[","]) end
-		end
+	for _, v in ipairs(node.decls) do
+		self:EmitCType(v)
+		if v.tokens[","] then self:EmitToken(v.tokens[","]) end
 	end
-
 end
 
 function META:EmitCType(node)
@@ -113,15 +100,23 @@ function META:EmitCType(node)
 		self:EmitToken(node.tokens["arguments_)"])
 	end
 
-	if node.array_expression2 then
-		self:EmitArrayExpression(node.array_expression2)
-	end
-
 	if node.tokens["asm"] then
 		self:EmitToken(node.tokens["asm"])
 		self:EmitToken(node.tokens["asm_("])
 		self:EmitToken(node.tokens["asm_string"])
 		self:EmitToken(node.tokens["asm_)"])
+	end
+
+	if node.default_expression then
+		self:EmitToken(node.tokens["="])
+		self:EmitExpression(node.default_expression)
+	end
+
+	if node.decls then
+		for _, v in ipairs(node.decls) do
+			self:EmitCType(v)
+			if v.tokens[","] then self:EmitToken(v.tokens[","]) end
+		end
 	end
 end
 
@@ -168,6 +163,15 @@ function META:EmitAttributeExpression(node)
 	self:EmitToken(node.tokens[")"])
 end
 
+function META:EmitStructField(node)
+	self:EmitCType(node)
+
+	if node.tokens[":"] then
+		self:EmitToken(node.tokens[":"])
+		self:EmitExpression(node.bitfield_expression)
+	end
+end
+
 for _, type in ipairs({"Struct", "Union"}) do
 	local Type = type
 	local type = type:lower()
@@ -183,22 +187,12 @@ for _, type in ipairs({"Struct", "Union"}) do
 			self:EmitToken(node.tokens["{"])
 
 			for _, field in ipairs(node.fields) do
-				self:EmitCType(field)
-
-				if field.tokens[":"] then
-					self:EmitToken(field.tokens[":"])
-					self:EmitExpression(field.bitfield_expression)
-				end
+				self:EmitStructField(field)
 
 				if field.tokens["first_comma"] then
 					self:EmitToken(field.tokens["first_comma"])
 					for _, v in ipairs(field.multi_values) do
-						self:EmitCType(v)
-
-						if v.tokens[":"] then
-							self:EmitToken(v.tokens[":"])
-							self:EmitExpression(v.bitfield_expression)
-						end
+						self:EmitStructField(v)
 
 						if v.tokens[","] then
 							self:EmitToken(v.tokens[","])
@@ -206,16 +200,9 @@ for _, type in ipairs({"Struct", "Union"}) do
 					end
 				end
 
-				if field.tokens["="] then
-					self:EmitToken(field.tokens["="])
-					self:EmitExpression(field.default_expression)
-				end
-
 				if field.tokens[";"] then
 					self:EmitToken(field.tokens[";"])
 				end
-
-				
 			end
 
 			self:EmitToken(node.tokens["}"])
