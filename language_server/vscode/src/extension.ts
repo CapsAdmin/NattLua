@@ -15,6 +15,8 @@ const config = workspace.getConfiguration("nattlua");
 export async function activate(context: ExtensionContext) {
   let serverOutput = window.createOutputChannel("Nattlua Server");
 
+  const executable = resolveVariables(config.get<string>("executable"));
+  const workingDirectory = resolveVariables(config.get<string>("workingDirectory"));
   const path = resolveVariables(config.get<string>("path"));
   const args = config.get<string[]>("arguments")
   for (let i = 0; i < args.length; i++) {
@@ -33,7 +35,7 @@ export async function activate(context: ExtensionContext) {
   client = new LanguageClient(
     "nattlua",
     "NattLua Client",
-    () => startServerConnection({ path, args, client, serverOutput, context }),
+    () => startServerConnection({ executable, workingDirectory, path, args, client, serverOutput, context }),
     clientOptions
   );
 

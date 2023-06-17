@@ -17,7 +17,9 @@ const kill = () => {
 
 export function spawnServer(config:
     {
+        executable: string,
         path: string,
+        workingDirectory: string,
         args: string[],
         output: OutputChannel,
         client: LanguageClient,
@@ -29,10 +31,13 @@ export function spawnServer(config:
         kill();
     }
 
-    const cwd = workspace.workspaceFolders[0].uri.path
+    const args = [...[config.path], ...config.args]
 
-    config.client.outputChannel.appendLine("SPAWN: " + config.path + " " + config.args.join(" "))
-    config.client.outputChannel.appendLine("CWD: " + cwd)
+    config.client.outputChannel.appendLine("spawn: " + JSON.stringify({
+        executable: config.executable,
+        workingDirectory: config.workingDirectory,
+        args: args,
+    }, null, 2))
 
     watchFile(config.path, (curStat, prevStat) => {
         config.client.outputChannel.appendLine(config.path + " changed, reloading")
@@ -41,10 +46,8 @@ export function spawnServer(config:
         unwatchFile(config.path)
     })
 
-    const nattluaDir = dirname(config.path)
-    chdir(nattluaDir)
-    server = spawn(config.path, config.args, { cwd: nattluaDir })
-    chdir(cwd)
+    chdir(config.workingDirectory)
+    server = spawn(config.executable, args, { cwd: config.workingDirectory })
 
     config.context.subscriptions.push({
         dispose: () => {
@@ -75,7 +78,9 @@ export function spawnServer(config:
 }
 
 export const startServerConnection = (config: {
+    executable: string,
     path: string,
+    workingDirectory: string,
     args: string[],
     client: LanguageClient,
     serverOutput: OutputChannel,
@@ -97,7 +102,9 @@ export const startServerConnection = (config: {
         let tryAgain = () => {
             try {
                 spawnServer({
+                    executable: config.executable,
                     path: config.path,
+                    workingDirectory: config.workingDirectory,
                     args: config.args,
                     context: config.context,
                     output: config.serverOutput,

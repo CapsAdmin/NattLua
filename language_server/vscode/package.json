@@ -57,10 +57,20 @@
       "type": "object",
       "title": "nattlua configuration",
       "properties": {
+        "nattlua.executable": {
+          "type": "string",
+          "default": "luajit",
+          "description": "path to executable"
+        },
+        "nattlua.workingDirectory": {
+          "type": "string",
+          "default": "${workspaceFolder}",
+          "description": "path to executable"
+        },
         "nattlua.path": {
           "type": "string",
           "default": "/home/caps/.local/bin/nattlua",
-          "description": "path to executable"
+          "description": "path to script"
         },
         "nattlua.arguments": {
           "type": "array",
