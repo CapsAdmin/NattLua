@@ -417,3 +417,39 @@ end
 analyzer function ffi.gc(ctype: any, callback: Function)
 	return ctype
 end
+
+function FFIArray<|size: number, T: any|>
+	return {
+		@MetaTable = self,
+		[0 .. (size - 1)] = T,
+		__tostring = function(self: ref self)
+			return "Array" .. size .. "(" .. tostring(self[0]) .. ")"
+		end,
+	}
+end
+
+function FFIPointer<|T: any|>
+	return {
+		@MetaTable = self,
+		[0] = T,
+		__tostring = function(self: ref self)
+			return "Pointer(" .. tostring(self[0]) .. ")"
+		end,
+		__index = function(self: ref self, key: ref string)
+			return self[0][key]
+		end,
+		__call = function(self: ref self, ...)
+			return self[0](...)
+		end,
+		__add = function(self: ref self, other: ref self)
+			return self
+		end,
+		__sub = function(self: ref self, other: ref self)
+			return self
+		end,
+	}
+end
+
+function FFIType<|str: string|>
+	return number
+end

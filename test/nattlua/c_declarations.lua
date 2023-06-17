@@ -3,7 +3,6 @@
 -- http://benno.id.au/blog/2011/03/10/c-declarations
 -- https://c-faq.com/decl/spiral.anderson.html
 -- https://cdecl.org/
-
 --[[
 	
 lj_cparse.c order of parsing
@@ -32,10 +31,7 @@ lj_cparse.c order of parsing
 		try 
 		
 
-]]
-
-
-if false then
+]] if false then
 	--[=[
             unsigned long long * (* (* *NAME [1][2])(char *))[3][4];
 			|                  | \| \| |NAME is               |  |
@@ -92,10 +88,13 @@ if false then
 							)
 
 		
-    ]=]
-	
-	local NAME = Array1(Array2(Pointer(Pointer(Function({Pointer(char)},Pointer(Array3(Array4(Pointer("unsigned long long")))))))))
-
+    ]=] local NAME = Array1(
+		Array2(
+			Pointer(
+				Pointer(Function({Pointer(char)}, Pointer(Array3(Array4(Pointer("unsigned long long"))))))
+			)
+		)
+	)
 	local NAME = Array1(
 		Array2(
 			Pointer(
@@ -110,7 +109,6 @@ if false then
 			)
 		)
 	)
-
 end
 
 local Lexer = require("nattlua.c_declarations.lexer").New
@@ -118,7 +116,6 @@ local Parser = require("nattlua.c_declarations.parser").New
 local Emitter = require("nattlua.c_declarations.emitter").New
 local Code = require("nattlua.code").New
 local Compiler = require("nattlua.compiler")
-
 
 do
 	local blacklist = {
@@ -129,7 +126,6 @@ do
 		Buffer = true,
 		Code = true,
 	}
-
 	local priority = {
 		"tokens",
 		"modifiers",
@@ -154,7 +150,7 @@ do
 
 	local print_node_internal
 
-	local function print_kv(state, k,v)
+	local function print_kv(state, k, v)
 		if not blacklist[k] and not state.done[v] and type(v) == "table" and next(v) then
 			write(state, k .. ": \n")
 			state.level = state.level + 1
@@ -177,7 +173,7 @@ do
 				local tokens = {}
 
 				for i, v in pairs(node) do
-					table.insert(tokens, i.. "="..tostring(v.value))
+					table.insert(tokens, i .. "=" .. tostring(v.value))
 				end
 
 				write(state, table.concat(tokens, " "))
@@ -190,9 +186,7 @@ do
 		end
 
 		for _, key in ipairs(priority) do
-			if node[key] ~= nil then
-				print_kv(state, key, node[key])
-			end
+			if node[key] ~= nil then print_kv(state, key, node[key]) end
 		end
 
 		for k, v in pairs(node) do
@@ -213,20 +207,21 @@ local var_id = 0
 
 local function test(c_code, error_level)
 	error_level = error_level or 2
-
 	local start, stop = c_code:find("%%%b{}")
+
 	if start then
 		local pattern = c_code:sub(start, stop):sub(3, -2)
-		for what in (pattern.."|"):gmatch("([^|]-)%|") do
-			test(c_code:sub(1, start-1) .. what .. c_code:sub(stop+1), error_level+1)
+
+		for what in (pattern .. "|"):gmatch("([^|]-)%|") do
+			test(c_code:sub(1, start - 1) .. what .. c_code:sub(stop + 1), error_level + 1)
 		end
+
 		return
-	end	
+	end
 
 	local using_name = false
 	local using_field = false
 	local using_var = false
-
 	c_code = c_code:gsub("NAME", function()
 		name_id = name_id + 1
 		using_name = true
@@ -315,16 +310,13 @@ local function test(c_code, error_level)
 
 	if res ~= c_code then
 		print_node(ast)
-
 		print("expected\n", c_code)
 		print("got\n", res)
 		diff(c_code, res)
 		error("UH OH", error_level)
 	end
 
-	if ast.statements[2].kind == "end_of_file" then
-		return ast.statements[1]
-	end	
+	if ast.statements[2].kind == "end_of_file" then return ast.statements[1] end
 
 	return ast
 end
@@ -335,6 +327,16 @@ local function test_anon(code, ...)
             ]] .. code .. [[
         );
     ]], 3)
+end
+
+local function analyze(code)
+	local node = test(code)
+	local em = Emitter()
+	em:EmitNattluaCDeclaration(node)
+	local nl = require("nattlua")
+	local c = nl.Compiler("return " .. em:Concat())
+	c:Analyze()
+	return c.AnalyzedResult
 end
 
 do -- functions
@@ -575,13 +577,11 @@ end
 
 do -- typedef and variable declarations
 	test[[ %{typedef|} %{struct|union|enum} TYPE NAME; ]]
-	test[[ %{typedef|} %{struct|union|enum} TYPE NAME, NAME; ]] 
-
+	test[[ %{typedef|} %{struct|union|enum} TYPE NAME, NAME; ]]
 	test[[ %{typedef|} enum TYPE { FIELD } NAME; ]]
 	test[[ %{typedef|} enum TYPE { FIELD } NAME, NAME; ]]
-	test[[ %{typedef|} enum TYPE { FIELD } *NAME; ]] 
+	test[[ %{typedef|} enum TYPE { FIELD } *NAME; ]]
 	test[[ %{typedef|} enum TYPE { FIELD } *NAME, *NAME; ]]
- 	
 	test[[ %{typedef|} %{struct|union} TYPE { int FIELD; } NAME; ]]
 	test[[ %{typedef|} %{struct|union} TYPE { int FIELD; } NAME, NAME; ]]
 	test[[ %{typedef|} %{struct|union} TYPE { int FIELD; } *NAME; ]]
@@ -591,55 +591,18 @@ do -- typedef and variable declarations
 	test[[ %{typedef|} int NAME, *NAME; ]] -- NAME becomes int and NAME becomes int *
 	test[[ %{typedef|} int (*NAME)(int); ]] -- NAME becomes int (*)(int)
 	test[[ %{typedef|} int (*NAME)(int), NAME; ]] -- NAME becomes int (*)(int) and NAME becomes int
-
 	test[[ %{typedef|} int * const NAME; ]]
 	test[[ %{typedef|} const int * NAME; ]]
 	test[[ int *NAME, NAME, NAME[1], (*NAME)(void), NAME(void); ]]
 	test[[ static const int NAME = 1; ]]
 	test[[ static const int NAME = 1, NAME = 2; ]]
 end
-do -- typedef
-	test[[ typedef int NAME; ]] -- NAME becomes int
-	test[[ typedef int NAME, NAME; ]] -- NAME and NAME become int
-	test[[ typedef int NAME, *NAME; ]] -- NAME becomes int and NAME becomes int *
-	test[[ typedef int (*NAME)(int); ]] -- NAME becomes int (*)(int)
-	test[[ typedef int (*NAME)(int), NAME; ]] -- NAME becomes int (*)(int) and NAME becomes int
-	test[[ typedef struct TYPE { int FIELD; } NAME; ]] -- struct declaration with typedef, NAME becomes struct NAME
-	test[[ typedef struct TYPE { int FIELD; } NAME, NAME; ]] -- struct declaration with typedef, NAME and NAME become struct NAME
-	test[[ typedef union TYPE { int FIELD; } NAME; ]] -- union declaration with typedef, NAME becomes union NAME
-	test[[ typedef union TYPE { int FIELD; } NAME, NAME; ]] -- union declaration with typedef, NAME and NAME become union NAME
-	test[[ typedef enum TYPE { FIELD } NAME; ]] -- enum declaration with typedef, NAME becomes enum NAME
-	test[[ typedef enum TYPE { FIELD } NAME, NAME; ]] -- enum declaration with typedef, NAME and NAME become enum NAME
-	test[[ typedef struct TYPE NAME; ]] -- struct forward declaration with typedef, NAME becomes struct NAME
-	test[[ typedef union TYPE NAME; ]] -- union forward declaration with typedef, NAME becomes union NAME
-	test[[ typedef enum TYPE NAME; ]] -- enum forward declaration with typedef, NAME becomes enum NAME
-	test[[ typedef struct TYPE NAME, NAME; ]] -- struct forward declaration with typedef, NAME and NAME become struct NAME
-	test[[ typedef union TYPE NAME, NAME; ]] -- union forward declaration with typedef, NAME and NAME become union NAME
-	test[[ typedef enum TYPE NAME, NAME; ]] -- enum forward declaration with typedef, NAME and NAME become enum NAME
-	end
 
-do -- variable declarations
-	test[[ struct TYPE { int FIELD; } NAME; ]] -- struct declaration with variable
-	test[[ struct TYPE { int FIELD; } NAME, NAME; ]] -- struct declaration with multiple variables
-	test[[ union TYPE { int FIELD; } NAME; ]] -- union declaration with variable
-	test[[ union TYPE { int FIELD; } NAME, NAME; ]] -- union declaration with multiple variables
-	test[[ enum TYPE { FIELD } NAME; ]] -- enum declaration with variable
-	test[[ enum TYPE { FIELD } NAME, NAME; ]] -- enum declaration with multiple variables
-	test[[ struct TYPE NAME; ]] -- struct variable
-	test[[ struct TYPE NAME, NAME; ]] -- struct multiple variables
-	test[[ union TYPE NAME; ]] -- union variable
-	test[[ union TYPE NAME, NAME; ]] -- union multiple variables
-	test[[ enum TYPE NAME; ]] -- enum variable
-	test[[ enum TYPE NAME, NAME; ]] -- enum multiple variables
-	test[[ struct TYPE { int FIELD; } *NAME; ]] -- struct pointer variable
-	test[[ struct TYPE { int FIELD; } *NAME, *NAME; ]] -- struct pointer multiple variables
-	test[[ union TYPE { int FIELD; } *NAME; ]] -- union pointer variable
-	test[[ union TYPE { int FIELD; } *NAME, *NAME; ]] -- union pointer multiple variables
-	test[[ enum TYPE { FIELD } *NAME; ]] -- enum pointer variable
-	test[[ enum TYPE { FIELD } *NAME, *NAME; ]] -- enum pointer multiple variables
-	test([[ int * const NAME; ]])
-	test([[ const int * NAME; ]])
-	test([[ int *NAME, NAME, NAME[1], (*NAME)(void), NAME(void); ]])
+do
+
+--local obj = analyze[[ unsigned long long * volatile (* (* *NAME [1][2])(char *))[3][4]; ]]
+--print(obj)
+--print(analyze[[ struct foo {int bar;} bar; ]])
 end
 
 do

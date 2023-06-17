@@ -579,7 +579,7 @@ function META:EmitExpression(node--[[#: Node]])
 	elseif node.kind == "vararg" then
 		self:EmitVararg(node)
 	elseif self.FFI_DECLARATION_EMITTER and node.kind == "c_declaration" then
-		self:EmitCType(node)
+		self:EmitCDeclaration(node)
 	else
 		error("unhandled token type " .. node.kind)
 	end
