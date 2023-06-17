@@ -1,7 +1,6 @@
 local META = loadfile("nattlua/parser.lua")()
 META.FFI_DECLARATION_PARSER = true
 
-
 function META:ParseRootNode()
 	local node = self:StartNode("statement", "root")
 	node.statements = self:ParseStatements()
@@ -95,13 +94,12 @@ function META:ParseCDeclaration()
 	end
 
 	node.tokens["potential_identifier"] = self:FindPotentialIdentifier(node)
-
 	return self:EndNode(node)
 end
 
 function META:ParseDeclarationStatement()
 	local node = self:ParseCDeclaration()
-	
+
 	if self:IsTokenValue("=") then
 		node.tokens["="] = self:ExpectTokenValue("=")
 		node.default_expression = self:ParseRuntimeExpression()
@@ -117,7 +115,7 @@ function META:ParseStructField()
 		node.tokens[":"] = self:ExpectTokenValue(":")
 		node.bitfield_expression = self:ParseRuntimeExpression()
 	end
-	
+
 	if self:IsTokenValue("=") then
 		node.tokens["="] = self:ExpectTokenValue("=")
 		node.default_expression = self:ParseRuntimeExpression()
@@ -139,6 +137,7 @@ function META:FindPotentialIdentifier(node)
 		return node.tokens["identifier"]
 	else
 		local last_pointer = node.pointers and node.pointers[#node.pointers]
+
 		if last_pointer and last_pointer[2] and last_pointer[2].type == "letter" then
 			return last_pointer[2]
 		else
@@ -146,6 +145,7 @@ function META:FindPotentialIdentifier(node)
 				return node.expression.tokens["potential_identifier"]
 			else
 				local last_modifier = node.modifiers[#node.modifiers]
+
 				if last_modifier and last_modifier.type == "letter" then
 					return node.modifiers[#node.modifiers]
 				else
@@ -162,16 +162,16 @@ end
 
 function META:IsEndOfTypeQualifiersAndSpecifiers()
 	return self:IsTokenValue("(") or
-	self:IsTokenValue("*") or
-	self:IsTokenValue("[") or
-	-- void foo(int >>,<< long >>)<<
-	self:IsTokenValue(",") or
-	self:IsTokenValue(")") or
-	-- long foo>>;<<
-	self:IsTokenValue(";") or
-	-- struct and union bit fields
-	self:IsTokenValue(":") or
-	self:IsTokenValue("=")
+		self:IsTokenValue("*") or
+		self:IsTokenValue("[") or
+		-- void foo(int >>,<< long >>)<<
+		self:IsTokenValue(",") or
+		self:IsTokenValue(")") or
+		-- long foo>>;<<
+		self:IsTokenValue(";") or
+		-- struct and union bit fields
+		self:IsTokenValue(":") or
+		self:IsTokenValue("=")
 end
 
 function META:ParseAttributes(node)
@@ -179,15 +179,11 @@ function META:ParseAttributes(node)
 
 	-- long long __attribute__((stdcall)) 
 	for i = 1, self:GetLength() do
-		if self:IsEndOfTypeQualifiersAndSpecifiers() then
-			break
-		end
-		
-		
+		if self:IsEndOfTypeQualifiersAndSpecifiers() then break end
+
 		-- declaration specifier: extern or static
 		-- type specifier: 		  void, char int, short, struct, union, etc
 		-- type qualifier:		  const, volatile
-
 		if self:IsTokenValue("__attribute__") or self:IsTokenValue("__attribute") then
 			table.insert(out, self:ParseAttributeExtension())
 		elseif self:IsTokenValue("struct") then
@@ -210,9 +206,7 @@ function META:ParseCTypeDeclaration(node)
 	-- variable declaration
 	node.pointers = self:ParsePointers()
 
-	if node.pointers[1] then 
-		node.expression = self:ParseCDeclaration() 
-	end
+	if node.pointers[1] then node.expression = self:ParseCDeclaration() end
 
 	node.array_expression = self:ParseArrayIndex()
 end
@@ -243,20 +237,23 @@ function META:ParseCFunctionDeclaration(node)
 		)
 		or
 		(
-			(self:IsTokenValue("__attribute__", 1) or
-			self:IsTokenValue("__attribute", 1)) and  self:HasOpeningParenthesis()
+			(
+				self:IsTokenValue("__attribute__", 1) or
+				self:IsTokenValue("__attribute", 1)
+			) and
+			self:HasOpeningParenthesis()
 		)
 	then
 		node.tokens["("] = self:ExpectTokenValue("(")
 		-- void (>>**foo<<()) or void (>>**foo<<)()
 		node.pointers = self:ParsePointers()
-	
+
 		-- void (* volatile * volatile >>foo<<())
 		if self:IsTokenType("letter") then
 			-- TODO, completely neglecting the name of the declaration
 			node.tokens["identifier"] = self:ExpectTokenType("letter")
 		end
-	
+
 		-- void (*foo>>()<<)()
 		-- TODO: this is just a nested function..
 		if self:IsTokenValue("(") then
@@ -265,20 +262,17 @@ function META:ParseCFunctionDeclaration(node)
 			--node.tokens["inner_)"] = self:ExpectTokenValue(")")
 			node.expression = self:ParseCDeclaration()
 		end
-	
+
 		node.array_expression = self:ParseArrayIndex()
 		-- void (*foo()>>)<<
 		node.tokens[")"] = self:ExpectTokenValue(")")
-	
 	else
 		if
 			self:IsTokenValue("(") and
 			self:IsTokenType("letter", 1) and
 			self:IsTokenValue(")", 2) and
-			
 			-- make sure it's not void foo(int);
 			not self:IsTokenValue(";", 3)
-
 		then
 			-- void >>(foo)<<()
 			node.tokens["identifier_("] = self:ExpectTokenValue("(")
@@ -311,7 +305,6 @@ function META:ParseTypeDef()
 
 	local node = self:StartNode("expression", "typedef")
 	node.tokens["typedef"] = self:ExpectTokenValue("typedef")
-
 	local decls = {}
 
 	for i = 1, self:GetLength() do
@@ -328,7 +321,6 @@ function META:ParseTypeDef()
 	end
 
 	node.tokens["potential_identifier"] = node.decls[1].tokens["potential_identifier"]
-
 	return self:EndNode(node)
 end
 
@@ -346,6 +338,7 @@ function META:ParseEnum()
 
 	node.tokens["{"] = self:ExpectTokenValue("{")
 	node.fields = {}
+
 	for i = 1, self:GetLength() do
 		if self:IsTokenValue("}") then break end
 
@@ -395,20 +388,20 @@ for _, type in ipairs({"Struct", "Union"}) do
 			if self:IsTokenValue(",") then
 				CDeclaration.tokens["first_comma"] = self:ConsumeToken()
 				CDeclaration.multi_values = {}
+
 				for i = 1, self:GetLength() do
-		
 					local t = self:ParseStructField()
-		
+
 					if not self:IsTokenValue(";") then
 						t.tokens[","] = self:ExpectTokenValue(",")
 					end
-		
+
 					table.insert(CDeclaration.multi_values, t)
-		
+
 					if self:IsTokenValue(";") then break end
 				end
 			end
-			
+
 			table.insert(fields, CDeclaration)
 
 			if self:IsTokenValue(";") then
