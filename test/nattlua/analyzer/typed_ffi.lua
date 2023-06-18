@@ -409,3 +409,20 @@ analyze[=[
     local info = {} as AddressInfo
     addrinfo_get_ip(info)  
 ]=]
+analyze[[
+	local x = tostring(_  as FFIArray<|
+		1,
+		FFIArray<|
+			2,
+			FFIPointer<|
+				FFIPointer<|
+					function=(FFIPointer<|FFIType<|"char"|>|>)>(FFIPointer<|FFIArray<|3, FFIArray<|4, FFIPointer<|FFIType<|"unsigned long long"|>|>|>|>|>)
+				|>
+			|>
+		|>
+	|>)
+	attest.equal(
+		x,
+		"Array1(Array2(Pointer(Pointer(function=(Pointer(number),)>(Pointer(Array3(Array4(Pointer(number)))),)))))"
+	)
+]]

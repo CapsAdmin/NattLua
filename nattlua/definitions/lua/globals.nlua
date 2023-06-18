@@ -522,6 +522,8 @@ analyzer function getmetatable(tbl: Table)
 end
 
 analyzer function tostring(val: any)
+	if analyzer:IsTypesystem() then return tostring(val) end
+
 	if val.Type == "function" then return "function: 0x000000000000" end
 
 	if not val:IsLiteral() then return types.String() end
