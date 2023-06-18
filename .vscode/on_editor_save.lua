@@ -4,8 +4,9 @@ local did_something = false
 
 local function run_lua(path, ...)
 	did_something = true
-	print("running ", path, ...)
+	io.write("running ", path, ...)
 	assert(loadfile(path))(...)
+	io.write(" - ok\n")
 end
 
 local function run_nattlua(path)
@@ -117,7 +118,9 @@ if normalized:find("/nattlua/", nil, true) then
 
 	if not is_lua and not is_nattlua then return end
 
-	if normalized:find("c_declarations", nil, true) then
+	if normalized:find("c_declarations/analyzer", nil, true) then
+		run_lua("test/run.lua", "nattlua/c_declarations/analyzer.lua")
+	elseif normalized:find("c_declarations", nil, true) then
 		run_lua("test/run.lua", "test/nattlua/c_declarations.lua")
 	elseif normalized:find("other/coverage", nil, true) then
 		run_lua("test/run.lua", "test/nattlua/coverage.lua")

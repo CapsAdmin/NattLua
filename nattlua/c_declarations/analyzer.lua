@@ -36,34 +36,7 @@ function META:WalkCDeclaration_(node, walk_up)
 				type = "pointer",
 				modifiers = modifiers,
 			}
-			self.cdecl = self.cdecl.of
-		end
-	end
-
-	if node.arguments then
-		local args = {}
-		local old = self.cdecl
-
-		for i, v in ipairs(node.arguments) do
-			self.cdecl = {type = "root"}
-			self:WalkCDeclaration_(v, nil)
-			table.insert(args, self.cdecl.of)
-		end
-
-		self.cdecl = old
-		self.cdecl.of = {
-			type = "function",
-			args = args,
-			rets = {type = "root"},
-		}
-		self.cdecl = self.cdecl.of.rets
-
-		if node.parent.kind == "c_declaration" then
-			local old = self.cdecl
-			self.cdecl = {type = "root"}
-			self:WalkCDeclaration_(node.parent, true)
-			self.cdecl.rets = self.cdecl.of
-			self.cdecl = old
+			self.cdecl = assert(self.cdecl.of)
 		end
 	end
 
@@ -79,23 +52,38 @@ function META:WalkCDeclaration_(node, walk_up)
 				type = "type",
 				modifiers = modifiers,
 			}
-			self.cdecl = self.cdecl.of
+			self.cdecl = assert(self.cdecl.of)
 		end
+	end
+
+	if node.arguments then
+		local args = {}
+		local old = self.cdecl
+
+		for i, v in ipairs(node.arguments) do
+			local t = {type = "root"}
+			self.cdecl = t
+			self:WalkCDeclaration_(v, nil)
+			table.insert(args, t.of)
+		end
+
+		self.cdecl = old
+		self.cdecl.of = {
+			type = "function",
+			args = args,
+			rets = {type = "root"},
+		}
+		self.cdecl = assert(self.cdecl.of.rets)
 	end
 
 	if not walk_up then return end
 
 	if node.parent.kind == "c_declaration" then
-		-- root here
-		self.cdecl = {type = "root"}
 		self:WalkCDeclaration_(node.parent, true)
 	end
 end
 
 function META:WalkCDeclaration(node)
-	local identifier = node.tokens["potential_identifier"]
-	identifier.DONT_WRITE = true
-
 	while node.expression do -- find the inner most expression
 		node = node.expression
 	end
@@ -113,8 +101,9 @@ function META.New(ast, callback)
 	return self
 end
 
-return META--[=[
-
+_G.TEST = nil
+local nl = require("nattlua")
+nl.Compiler([==[
 local analyzer function cdef(str: string)
 	local Lexer = require("nattlua.c_declarations.lexer").New
 	local Parser = require("nattlua.c_declarations.parser").New
@@ -130,14 +119,43 @@ local analyzer function cdef(str: string)
 	local ast = parser:ParseRootNode()
 	local emitter = Emitter({skip_translation = true})
 	local res = emitter:BuildCode(ast)
-	print(res)
+
+	local function cast(node)
+		if node.type == "array" then
+			return (env.typesystem.FFIArray:Call(analyzer, types.Tuple({types.LNumber(tonumber(node.size) or math.huge), cast(assert(node.of))})):Unpack())
+		elseif node.type == "pointer" then
+			if not node.of then table.print(node) end
+			return (env.typesystem.FFIPointer:Call(analyzer, types.Tuple({cast(assert(node.of))})):Unpack())
+		elseif node.type == "type" then
+			return types.Number()
+		elseif node.type == "function" then
+			local args = {}
+			local rets = {}
+
+			for i, v in ipairs(node.args) do
+				table.insert(args, cast(v))
+			end
+
+			return (types.Function(types.Tuple(args), types.Tuple({cast(assert(node.rets))})))
+		elseif node.type == "root" then
+			if not node.of then table.print(node) end
+
+			return cast(assert(node.of))
+		else
+			error("unknown type " .. node.type)
+		end
+	end
 
 	Analyzer(ast, function(node)
-		table.print(node)
+		if node then
+			print(cast(node))
+		end
 	end)
 end
 
 cdef([[
 	unsigned long long * volatile (* (* *NAME [1][2])(char *))[3][4];
 ]])
-]=] 
+
+]==]):Analyze()
+return META
