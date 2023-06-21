@@ -361,7 +361,7 @@ return function(META)
 
 			function scope_meta:__newindex(key, val)
 				self.analyzer:PushAnalyzerEnvironment(self.env)
-				self.analyzer:SetLocalOrGlobalValue(LString(key), LString(val), self.scope)
+				self.analyzer:SetLocalOrGlobalValue(LString(key), val, self.scope)
 				self.analyzer:PopAnalyzerEnvironment()
 			end
 
