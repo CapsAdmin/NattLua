@@ -1,13 +1,8 @@
 {
   "triggerTaskOnSave.tasks": {
     "onsave": [
-      "examples/**/*.lua",
-      "nattlua/**/*.lua",
-      "language_server/**/*.lua",
-      "test/**/*.lua",
+      "**/*.lua",
       "**/*.nlua",
-      "test_focus.nlua",
-      "build.lua"
     ]
   },
   "search.exclude": {

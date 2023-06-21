@@ -12,7 +12,7 @@ end
 local function run_nattlua(path)
 	did_something = true
 
-	if io.open(path, "r"):read("*all"):find("%-%-%s-PLAIN_LUA") then
+	if assert(io.open(path, "r")):read("*all"):find("%-%-%s-PLAIN_LUA") then
 		return assert(loadfile(path))()
 	end
 
@@ -118,8 +118,10 @@ if normalized:find("/nattlua/", nil, true) then
 
 	if not is_lua and not is_nattlua then return end
 
-	if normalized:find("c_declarations/analyzer", nil, true) then
-		run_lua("test/run.lua", "nattlua/c_declarations/analyzer.lua")
+	if normalized:find("test/.+/.+%.nlua") then
+		run_nattlua(path)
+	elseif normalized:find("c_declarations/analyzer", nil, true) then
+		run_lua("test/run.lua", "test/nattlua/c_declarations/cdef.nlua")
 	elseif normalized:find("c_declarations", nil, true) then
 		run_lua("test/run.lua", "test/nattlua/c_declarations.lua")
 	elseif normalized:find("other/coverage", nil, true) then
