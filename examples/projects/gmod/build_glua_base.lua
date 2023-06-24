@@ -15,9 +15,15 @@ local wiki_json = json.decode(blob)
 local _, base_env = BuildBaseEnvironment()
 -- i prefix all types with I to avoid conflicts when defining functions like Entity(entindex) in the typesystem
 local TypeMap = {}
-TypeMap["Color"] = "IColor"
+do
+	TypeMap["Color"] = "IColor"
+	TypeMap["color"] = "IColor"
+end
 TypeMap["VMatrix"] = "IMatrix"
-TypeMap["Vector"] = "IVector"
+do
+	TypeMap["Vector"] = "IVector"
+	TypeMap["vector"] = "IVector"
+end
 TypeMap["Angle"] = "IAngle"
 -- aren't these two the same from lua's point of view?
 TypeMap["Entity"] = "IEntity"
@@ -29,7 +35,10 @@ TypeMap["Weapon"] = "IWeapon"
 TypeMap["Panel"] = "IPanel"
 -- unconventional
 TypeMap["bf_read"] = "IBfRead"
-TypeMap["pixelvis handle t"] = "IPixVis"
+do
+	TypeMap["pixelvis handle t"] = "IPixVis"
+	TypeMap["pixelvis_handle_t"] = "IPixVis"
+end
 TypeMap["sensor"] = "ISensor"
 -- what's the difference?
 TypeMap["File"] = "IFile"
@@ -116,7 +125,8 @@ local function emit_atomic_type(val)
 	end
 
 	if val.TYPE:find("|", nil, true) then
-		local values = {};
+		local values = {}
+		
 		(val.TYPE .. "|"):gsub("([^|]-)|", function(val)
 			table.insert(values, val)
 		end)
@@ -145,7 +155,7 @@ local function emit_atomic_type(val)
 	elseif val.TYPE == "bool" then
 		e("boolean") -- ?
 	-- don't do anything special with these since they are already defined
-	elseif val.TYPE == "number" then
+	elseif val.TYPE == "number" or val.TYPE == "Number" then
 		e(val.TYPE)
 	elseif val.TYPE == "boolean" then
 		e(val.TYPE)
