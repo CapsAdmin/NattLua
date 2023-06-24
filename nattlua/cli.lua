@@ -24,31 +24,40 @@ default["language-server"] = function()
 	require("language_server.server.main")()
 end
 
-local function run_nlconfig()
-	local load_file = _G["load" .. "file"]
+function _G.RUN_CLI(cmd, ...)
+	local nlconfig_path = "./nlconfig.lua"
+	local args = {...}
 
-	if not load_file("./nlconfig.lua") then
-		io.write("No nlconfig.lua found.\n")
-		return
+	if type(cmd) == "string" and cmd:find("nlconfig.lua", nil, true) then
+		nlconfig_path = cmd
+		cmd = args[1]
+		table.remove(args, 1)
 	end
 
-	return assert(load_file("./nlconfig.lua"))()
-end
+	local function run_nlconfig()
+		local load_file = _G["load" .. "file"]
 
-local override = run_nlconfig()
-
-if override then
-	for k, v in pairs(override) do
-		if default[k] then
-			io.write("nlconfig.lua overrides default command ", k, "\n")
+		if not load_file(nlconfig_path) then
+			io.write("No nlconfig.lua found.\n")
+			return
 		end
 
-		default[k] = v
+		return assert(load_file(nlconfig_path))()
 	end
-end
 
-function _G.RUN_CLI(cmd, ...)
+	local override = run_nlconfig()
+
+	if override then
+		for k, v in pairs(override) do
+			if default[k] then
+				io.write("nlconfig.lua overrides default command ", k, "\n")
+			end
+
+			default[k] = v
+		end
+	end
+
 	local func = assert(default[cmd], "Unknown command " .. cmd)
-	io.write("running ", cmd, " with arguments ", table.concat({...}, " "), "\n")
-	func(...)
+	io.write("running ", cmd, " with arguments ", table.concat(args, " "), "\n")
+	func(unpack(args))
 end
