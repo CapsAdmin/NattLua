@@ -17,7 +17,7 @@ end)
 
 function META:GetProjectConfig(what)
 	local get_config = self.ConfigFunction
-	local config = get_config()
+	local config = get_config(path)
 	return config and config[what] and config[what]()
 end
 
@@ -30,8 +30,8 @@ function META.New()
 	return self
 end
 
-function META:GetAanalyzerConfig()
-	local cfg = self:GetProjectConfig("get-analyzer-config") or {}
+function META:GetAanalyzerConfig(path)
+	local cfg = self:GetProjectConfig("get-analyzer-config", path) or {}
 
 	if cfg.type_annotations == nil then cfg.type_annotations = true end
 
@@ -42,8 +42,8 @@ function META:GetAanalyzerConfig()
 	return cfg
 end
 
-function META:GetEmitterConfig()
-	return self:GetProjectConfig("get-emitter-config") or
+function META:GetEmitterConfig(path)
+	return self:GetProjectConfig("get-emitter-config", path) or
 		{
 			preserve_whitespace = false,
 			string_quote = "\"",
@@ -153,7 +153,7 @@ do
 end
 
 function META:Recompile(path)
-	local cfg = self:GetAanalyzerConfig()
+	local cfg = self:GetAanalyzerConfig(path)
 	local entry_point = path or cfg.entry_point
 
 	if not entry_point then return false end
@@ -284,7 +284,7 @@ function META:Initialize()
 end
 
 function META:Format(code, path)
-	local config = self:GetEmitterConfig()
+	local config = self:GetEmitterConfig(path)
 	config.comment_type_annotations = path:sub(-#".lua") == ".lua"
 	config.transpile_extensions = path:sub(-#".lua") == ".lua"
 	local compiler = Compiler(code, "@" .. path, config)
