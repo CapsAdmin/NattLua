@@ -176,9 +176,13 @@ return function(META)
 	end
 
 	function META:ReadFile(path)
-		local code = self.config.on_read_file and self.config.on_read_file(self, path)
+		if self.config.on_read_file then
+			local ok, code = pcall(self.config.on_read_file, self, path)
 
-		if code then return code end
+			if not ok then return nil, code end
+
+			return code
+		end
 
 		local f, err = io.open(path, "rb")
 

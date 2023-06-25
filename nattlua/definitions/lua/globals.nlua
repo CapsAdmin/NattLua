@@ -249,7 +249,7 @@ type loadstring = load
 analyzer function dofile(path: string)
 	if not path:IsLiteral() then return types.Any() end
 
-	local code = analyzer:ReadFile(path:GetData())
+	local code = assert(analyzer:ReadFile(path:GetData()))
 	local compiler = nl.Compiler(code, "@" .. path:GetData())
 	assert(compiler:Lex())
 	assert(compiler:Parse())
@@ -259,7 +259,7 @@ end
 analyzer function loadfile(path: string)
 	if not path:IsLiteral() then return types.Any() end
 
-	local code = analyzer:ReadFile(path:GetData())
+	local code = assert(analyzer:ReadFile(path:GetData()))
 	local compiler = nl.Compiler(code, "@" .. path:GetData())
 	assert(compiler:Lex())
 	assert(compiler:Parse())
