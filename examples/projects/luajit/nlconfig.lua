@@ -36,7 +36,8 @@ config.build = function()
 end
 config["get-analyzer-config"] = function()
 	return {
-		working_directory = "examples/projects/luajit/src/",
+		entry_point = "main.nlua",
+		working_directory = "src/",
 		emit_environment = false,
 	}
 end
