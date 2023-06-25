@@ -72,6 +72,16 @@ function META:NormalizePath(path)
 		path = self.WorkingDirectory .. path
 	end
 
+	-- foo/./bar > foo/bar
+	path = path:gsub("/%./", "/")
+
+	-- foo/bar/../baz > foo/baz
+	while true do
+		local newpath, found = path:gsub("[^/]+/%.%./", "")
+
+		if found > 0 then path = newpath else break end
+	end
+
 	return path
 end
 
