@@ -799,6 +799,8 @@ do -- runtime
 	end
 
 	local function resolve_import_path(self--[[#: META.@Self]], path--[[#: string]])
+		if path:sub(1, 1) == "/" then return path end
+
 		local working_directory = self.config.working_directory or ""
 
 		if path:sub(1, 1) == "~" then

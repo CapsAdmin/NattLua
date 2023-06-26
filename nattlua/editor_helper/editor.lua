@@ -15,7 +15,7 @@ META:GetSet("ConfigFunction", function()
 	return
 end)
 
-function META:GetProjectConfig(what)
+function META:GetProjectConfig(what, path)
 	local get_config = self.ConfigFunction
 	local config = get_config(path)
 	return config and config[what] and config[what]()
@@ -59,36 +59,8 @@ function META:DebugLog(str)
 	if self.debug then print(coroutine.running(), str) end
 end
 
-function META:NormalizePath(path)
-	local start, stop = path:find(self.WorkingDirectory, 1, true)
-
-	if start == 1 and stop then path = path:sub(stop + 1, #path) end
-
-	if path:sub(1, #self.WorkingDirectory) ~= self.WorkingDirectory then
-		if self.WorkingDirectory:sub(#self.WorkingDirectory) ~= "/" then
-			if path:sub(1, 1) ~= "/" then path = "/" .. path end
-		end
-
-		path = self.WorkingDirectory .. path
-	end
-
-	-- foo/./bar > foo/bar
-	path = path:gsub("/%./", "/")
-
-	-- foo/bar/../baz > foo/baz
-	while true do
-		local newpath, found = path:gsub("[^/]+/%.%./", "")
-
-		if found > 0 then path = newpath else break end
-	end
-
-	return path
-end
-
 do
 	function META:GetFile(path)
-		path = self:NormalizePath(path)
-
 		if not self.LoadedFiles[path] then
 			self:DebugLog("[ " .. path .. " ] is not loaded")
 			self:DebugLog("=== these are loaded ===")
@@ -105,7 +77,6 @@ do
 	end
 
 	function META:LoadFile(path, code, tokens)
-		path = self:NormalizePath(path)
 		self:DebugLog("[ " .. path .. " ] loaded with " .. #tokens .. " tokens")
 		self.LoadedFiles[path] = {
 			code = code,
@@ -114,7 +85,6 @@ do
 	end
 
 	function META:UnloadFile(path)
-		path = self:NormalizePath(path)
 		self:DebugLog("[ " .. path .. " ] unloaded")
 		self.LoadedFiles[path] = nil
 	end
@@ -122,8 +92,6 @@ end
 
 do
 	function META:SetFileContent(path, code)
-		path = self:NormalizePath(path)
-
 		if code then
 			self:DebugLog("[ " .. path .. " ] content loaded with " .. #code .. " bytes")
 		else
@@ -134,8 +102,6 @@ do
 	end
 
 	function META:GetFileContent(path)
-		path = self:NormalizePath(path)
-
 		if not self.TempFiles[path] then
 			self:DebugLog("[ " .. path .. " ] content is not loaded")
 			self:DebugLog("=== these are loaded ===")
@@ -158,18 +124,10 @@ function META:Recompile(path)
 
 	if not entry_point then return false end
 
-	if path then path = self:NormalizePath(path) end
-
-	entry_point = self:NormalizePath(entry_point)
 	cfg.inline_require = false
 	cfg.on_read_file = function(parser, path)
 		if not self.TempFiles[path] then
-			local path2 = path
-			local prefix = "file://"
-
-			if path2:sub(1, #prefix) == prefix then path2 = path:sub(#prefix + 1) end
-
-			local f = assert(io.open(path2, "rb"))
+			local f = assert(io.open(path, "rb"))
 			local content = f:read("*all")
 			f:close()
 			self:SetFileContent(path, content)

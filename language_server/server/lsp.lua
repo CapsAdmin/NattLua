@@ -2,6 +2,7 @@
 local b64 = require("nattlua.other.base64")
 local EditorHelper = require("nattlua.editor_helper.editor")
 local formating = require("nattlua.other.formating")
+local path = require("nattlua.other.path")
 local lsp = {}
 lsp.methods = {}
 local TextDocumentSyncKind = {None = 0, Full = 1, Incremental = 2}
@@ -47,8 +48,160 @@ local SemanticTokenModifiers = {
 	"documentation", -- For occurrences of symbols in documentation.
 	"defaultLibrary", -- For symbols that are part of the standard library.
 }
+
+local function get_range(code, start, stop)
+	local data = formating.SubPositionToLinePosition(code:GetString(), start, stop)
+	return {
+		start = {
+			line = data.line_start - 1,
+			character = data.character_start - 1,
+		},
+		["end"] = {
+			line = data.line_stop - 1,
+			character = data.character_stop, -- not sure about this
+		},
+	}
+end
+
+local function find_project_root(url)
+	url = path.RemoveProtocol(url)
+	url = path.Normalize(url)
+
+	while url ~= "" do
+		local dir = url:match("(.+)/")
+
+		if not dir then break end
+
+		local config_path = dir .. "/nlconfig.lua"
+		local f, err = loadfile(config_path)
+
+		if f then return dir .. "/" end
+
+		url = dir
+	end
+
+	return nil
+end
+
 local editor_helper = EditorHelper.New()
 editor_helper.debug = true
+
+local function to_fs_path(url)
+	local wdir = editor_helper:GetWorkingDirectory()
+	url = path.RemoveProtocol(url)
+
+	if url:sub(1, 1) ~= "/" then
+		local start, stop = url:find(wdir, 1, true)
+
+		if start == 1 and stop then url = url:sub(stop + 1, #url) end
+
+		if url:sub(1, #wdir) ~= wdir then
+			if wdir:sub(#wdir) ~= "/" then
+				if url:sub(1, 1) ~= "/" then url = "/" .. url end
+			end
+
+			url = wdir .. url
+		end
+	end
+
+	url = path.Normalize(url)
+	return url
+end
+
+local function to_lsp_path(url)
+	url = "file://" .. url
+	return url
+end
+
+function editor_helper:TranslatePath(url)
+	local wdir = editor_helper:GetWorkingDirectory()
+	print(wdir, url)
+
+	if url:sub(1, 1) ~= "/" then url = wdir .. "/" .. url end
+
+	-- translate relative paths to absolute paths
+	url = path.RemoveProtocol(url)
+	url = path.Normalize(url)
+	return url
+end
+
+do
+	local path = "file:///home/foo/bar/lsp.lua"
+	local fs_path = to_fs_path(path)
+	assert(fs_path == "/home/foo/bar/lsp.lua")
+	local lsp_path = to_lsp_path(fs_path)
+	assert(lsp_path == path)
+	local path = "file:///home/foo/./bar/lsp.lua"
+	local fs_path = to_fs_path(path)
+	assert(fs_path == "/home/foo/bar/lsp.lua")
+	local path = "file:///home/foo/../bar/lsp.lua"
+	local fs_path = to_fs_path(path)
+	assert(fs_path == "/home/bar/lsp.lua")
+	local path = "file:///home/foo/bar/../../lsp.lua"
+	local fs_path = to_fs_path(path)
+	assert(fs_path == "/home/lsp.lua")
+end
+
+editor_helper:SetConfigFunction(function(path)
+	local wdir = editor_helper:GetWorkingDirectory()
+	path = path or wdir
+
+	while path ~= "" do
+		local dir = path:match("(.+)/")
+
+		if not dir then break end
+
+		local config_path = dir .. "/nlconfig.lua"
+		local f, err = loadfile(config_path)
+
+		if f then
+			local ok, err = pcall(f)
+
+			if not ok then print(err) end
+
+			print("config loaded: " .. config_path)
+			err.config_dir = dir
+			return err
+		end
+
+		path = dir
+	end
+end)
+
+function editor_helper:OnRefresh()
+	lsp.Call({method = "workspace/semanticTokens/refresh", params = {}})
+end
+
+function editor_helper:OnDiagnostics(path, data)
+	local DiagnosticSeverity = {
+		error = 1,
+		fatal = 1, -- from lexer and parser
+		warning = 2,
+		information = 3,
+		hint = 4,
+	}
+	local diagnostics = {}
+
+	for i, v in ipairs(data) do
+		local range = get_range(v.code, v.start, v.stop)
+		diagnostics[i] = {
+			severity = DiagnosticSeverity[v.severity],
+			range = range,
+			message = v.message .. "\n" .. v.trace,
+		}
+	end
+
+	lsp.Call(
+		{
+			method = "textDocument/publishDiagnostics",
+			params = {
+				uri = to_lsp_path(path),
+				diagnostics = diagnostics,
+			},
+		}
+	)
+end
+
 lsp.methods["initialize"] = function(params)
 	editor_helper:SetWorkingDirectory(params.workspaceFolders[1].uri)
 	return {
@@ -104,66 +257,13 @@ lsp.methods["initialize"] = function(params)
 			]] },
 	}
 end
-
-local function get_range(code, start, stop)
-	local data = formating.SubPositionToLinePosition(code:GetString(), start, stop)
-	return {
-		start = {
-			line = data.line_start - 1,
-			character = data.character_start - 1,
-		},
-		["end"] = {
-			line = data.line_stop - 1,
-			character = data.character_stop, -- not sure about this
-		},
-	}
-end
-
-local DiagnosticSeverity = {
-	error = 1,
-	fatal = 1, -- from lexer and parser
-	warning = 2,
-	information = 3,
-	hint = 4,
-}
 lsp.methods["initialized"] = function(params)
 	editor_helper:Initialize()
-
-	function editor_helper:OnRefresh()
-		lsp.Call({method = "workspace/semanticTokens/refresh", params = {}})
-	end
-
-	function editor_helper:OnDiagnostics(path, data)
-		local diagnostics = {}
-
-		for i, v in ipairs(data) do
-			local range = get_range(v.code, v.start, v.stop)
-			diagnostics[i] = {
-				severity = DiagnosticSeverity[v.severity],
-				range = range,
-				message = v.message .. "\n" .. v.trace,
-			}
-		end
-
-		lsp.Call(
-			{
-				method = "textDocument/publishDiagnostics",
-				params = {
-					uri = path,
-					diagnostics = diagnostics,
-				},
-			}
-		)
-	end
-
-	--[[#£ parser.dont_hoist_next_import = true]]
-
-	local f, err = loadfile("./nlconfig.lua")
-
-	if f then editor_helper:SetConfigFunction(f) end
 end
 lsp.methods["nattlua/format"] = function(params)
-	return {code = b64.encode(editor_helper:Format(params.code, params.path))}
+	return {
+		code = b64.encode(editor_helper:Format(params.code, to_fs_path(params.path))),
+	}
 end
 lsp.methods["nattlua/syntax"] = function(params)
 	local data = require("nattlua.syntax.monarch_language")
@@ -228,7 +328,7 @@ do
 	end
 
 	lsp.methods["textDocument/semanticTokens/full"] = function(params)
-		local data = editor_helper:GetFile(params.textDocument.uri)
+		local data = editor_helper:GetFile(to_fs_path(params.textDocument.uri))
 		local integers = {}
 		local last_y = 0
 		local last_x = 0
@@ -286,20 +386,20 @@ lsp.methods["workspace/didChangeConfiguration"] = function(params)
 	table.print(params)
 end
 lsp.methods["textDocument/didOpen"] = function(params)
-	editor_helper:OpenFile(params.textDocument.uri, params.textDocument.text)
+	editor_helper:OpenFile(to_fs_path(params.textDocument.uri), params.textDocument.text)
 end
 lsp.methods["textDocument/didClose"] = function(params)
-	editor_helper:CloseFile(params.textDocument.uri)
+	editor_helper:CloseFile(to_fs_path(params.textDocument.uri))
 end
 lsp.methods["textDocument/didChange"] = function(params)
-	editor_helper:UpdateFile(params.textDocument.uri, params.contentChanges[1].text)
+	editor_helper:UpdateFile(to_fs_path(params.textDocument.uri), params.contentChanges[1].text)
 end
 lsp.methods["textDocument/didSave"] = function(params)
-	editor_helper:SaveFile(params.textDocument.uri)
+	editor_helper:SaveFile(to_fs_path(params.textDocument.uri))
 end
 lsp.methods["textDocument/inlineValue"] = function(params)
 	local hints = editor_helper:GetInlayHints(
-		params.textDocument.uri,
+		to_fs_path(params.textDocument.uri),
 		params.start.line,
 		params.start.character,
 		params["end"].line,
@@ -312,7 +412,11 @@ lsp.methods["textDocument/inlineValue"] = function(params)
 		table.insert(
 			result,
 			{
-				range = get_range(editor_helper:GetCode(params.textDocument.uri), v.position.start, v.position.stop),
+				range = get_range(
+					editor_helper:GetCode(to_fs_path(params.textDocument.uri)),
+					v.position.start,
+					v.position.stop
+				),
 				text = v.tooltip,
 			}
 		)
@@ -321,17 +425,20 @@ lsp.methods["textDocument/inlineValue"] = function(params)
 	return result
 end
 lsp.methods["textDocument/references"] = function(params)
-	local nodes = editor_helper:GetReferences(params.textDocument.uri, params.position.line, params.position.character - 1)
+	local nodes = editor_helper:GetReferences(
+		to_fs_path(params.textDocument.uri),
+		params.position.line,
+		params.position.character - 1
+	)
 	local result = {}
 
 	for k, node in pairs(nodes) do
-		local path = node:GetSourcePath()
-		path = editor_helper:NormalizePath(path)
+		local path = node:GetSourcePath() or to_fs_path(path)
 		editor_helper:OpenFile(path, node.Code:GetString())
 		table.insert(
 			result,
 			{
-				uri = path,
+				uri = to_fs_path(path),
 				range = get_range(editor_helper:GetCode(path), node:GetStartStop()),
 			}
 		)
@@ -341,7 +448,7 @@ lsp.methods["textDocument/references"] = function(params)
 end
 lsp.methods["textDocument/inlayHint"] = function(params)
 	local hints = editor_helper:GetInlayHints(
-		params.textDocument.uri,
+		to_fs_path(params.textDocument.uri),
 		params.start.line,
 		params.start.character,
 		params["end"].line,
@@ -353,12 +460,21 @@ lsp.methods["textDocument/rename"] = function(params)
 	local edits = {}
 
 	for _, edit in ipairs(
-		editor_helper:GetRenameInstructions(params.textDocument.uri, params.position.line, params.position.character - 1, params.newName)
+		editor_helper:GetRenameInstructions(
+			to_fs_path(params.textDocument.uri),
+			params.position.line,
+			params.position.character - 1,
+			params.newName
+		)
 	) do
 		table.insert(
 			edits,
 			{
-				range = get_range(editor_helper:GetCode(params.textDocument.uri), edit.start, edit.stop),
+				range = get_range(
+					editor_helper:GetCode(to_fs_path(params.textDocument.uri)),
+					edit.start,
+					edit.stop
+				),
 				newText = edit.to,
 			}
 		)
@@ -366,20 +482,24 @@ lsp.methods["textDocument/rename"] = function(params)
 
 	return {
 		changes = {
-			[params.textDocument.uri] = edits,
+			[to_lsp_path(params.textDocument.uri)] = edits,
 		},
 	}
 end
 lsp.methods["textDocument/definition"] = function(params)
-	local node = editor_helper:GetDefinition(params.textDocument.uri, params.position.line, params.position.character)
+	local node = editor_helper:GetDefinition(
+		to_fs_path(params.textDocument.uri),
+		params.position.line,
+		params.position.character
+	)
 
 	if node then
 		local start, stop = node:GetStartStop()
-		local path = node:GetSourcePath() or params.textDocument.uri
-		path = editor_helper:NormalizePath(path)
+		local path = node:GetSourcePath() or to_fs_path(params.textDocument.uri)
+		path = to_fs_path(path)
 		editor_helper:OpenFile(path, node.Code:GetString())
 		return {
-			uri = path,
+			uri = to_lsp_path(path),
 			range = get_range(editor_helper:GetCode(path), start, stop),
 		}
 	end
@@ -387,7 +507,11 @@ lsp.methods["textDocument/definition"] = function(params)
 	return {}
 end
 lsp.methods["textDocument/hover"] = function(params)
-	local data = editor_helper:GetHover(params.textDocument.uri, params.position.line, params.position.character)
+	local data = editor_helper:GetHover(
+		to_fs_path(params.textDocument.uri),
+		params.position.line,
+		params.position.character
+	)
 
 	if not data then return {} end
 
