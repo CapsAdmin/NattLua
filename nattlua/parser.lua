@@ -260,13 +260,13 @@ local function read_file(self, path)
 end
 
 function META:ParseFile(path--[[#: string]], config--[[#: nil | any]])
-	config = config or {}
-	config.file_path = config.file_path or path
-	config.file_name = config.file_name or path
 	local ok, code = pcall(read_file, self, path)
 
 	if not ok then return ok, code end
 
+	config = config or {}
+	config.file_path = config.file_path or path
+	config.file_name = config.file_name or "@" .. path
 	return self:ParseString(code, config)
 end
 
