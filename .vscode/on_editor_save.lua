@@ -128,10 +128,10 @@ if normalized:find("/nattlua/", nil, true) then
 		run_lua("test/run.lua", "test/nattlua/coverage.lua")
 	elseif normalized:find("nattlua/editor_helper/editor.lua", nil, true) then
 		run_lua("test/run.lua", "test/nattlua/lsp/editor.lua")
-		os.execute("luajit build.lua fast && luajit install.lua")
+		os.execute("luajit nattlua.lua build fast && luajit nattlua.lua install")
 		return
 	elseif normalized:find("language_server/server", nil, true) then
-		os.execute("luajit build.lua fast && luajit install.lua")
+		os.execute("luajit nattlua.lua build fast && luajit nattlua.lua install")
 		return
 	elseif normalized:find("typed_ffi.nlua", nil, true) and has_test_focus() then
 		print("running test focus")
