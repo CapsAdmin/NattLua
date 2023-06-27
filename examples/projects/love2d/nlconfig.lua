@@ -39,4 +39,11 @@ config["run"] = function()
 
 	os.execute("love dist/")
 end
+config["get-analyzer-config"] = function()
+	return {
+		entry_point = "main.nlua",
+		working_directory = "src/",
+		emit_environment = false,
+	}
+end
 return config
