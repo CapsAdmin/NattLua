@@ -1,6 +1,7 @@
 local META = loadfile("nattlua/parser/base.lua")()
 local Code = require("nattlua.code").New
 local Lexer = require("nattlua.lexer").New
+local path_util = require("nattlua.other.path")
 local math = _G.math
 local math_huge = math.huge
 local table_insert = _G.table.insert
@@ -246,10 +247,12 @@ function META:ParseString(str--[[#: string]], config--[[#: nil | any]])
 end
 
 local function read_file(self, path)
-	if self.config.translate_path then
-		path = self.config.translate_path(self, path) or path
-	end
-
+	path = path_util.Resolve(
+		path,
+		self.config.root_directory,
+		self.config.working_directory,
+		self.config.file_path
+	)
 	local code = self.config.on_read_file and self.config.on_read_file(self, path)
 
 	if code then return code end

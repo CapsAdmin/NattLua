@@ -11,11 +11,14 @@ local type ParserConfig = {
 	file_path = string,
 	file_name = string,
 	working_directory = string,
+	root_directory = string,
 	root_statement_override_data = Node,
 	path = string,
 }
 local type AnalyzerConfig = {
 	external_mutation = boolean,
+	working_directory = string,
+	root_directory = string,
 }
 local type TranspilerConfig = {
 	preserve_whitespace = boolean,

@@ -17,6 +17,7 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
 local context = require("nattlua.analyzer.context")
+local path_util = require("nattlua.other.path")
 local table = _G.table
 local math = _G.math
 return function(META)
@@ -176,10 +177,12 @@ return function(META)
 	end
 
 	local function read_file(self, path)
-		if self.config.translate_path then
-			path = self.config.translate_path(self, path) or path
-		end
-
+		path = path_util.Resolve(
+			path,
+			self.config.root_directory,
+			self.config.working_directory,
+			self.config.file_path
+		)
 		local code = self.config.on_read_file and self.config.on_read_file(self, path)
 
 		if code then return code end

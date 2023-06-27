@@ -63,26 +63,6 @@ local function get_range(code, start, stop)
 	}
 end
 
-local function find_project_root(url)
-	url = path.RemoveProtocol(url)
-	url = path.Normalize(url)
-
-	while url ~= "" do
-		local dir = url:match("(.+)/")
-
-		if not dir then break end
-
-		local config_path = dir .. "/nlconfig.lua"
-		local f, err = loadfile(config_path)
-
-		if f then return dir .. "/" end
-
-		url = dir
-	end
-
-	return nil
-end
-
 local editor_helper = EditorHelper.New()
 editor_helper.debug = true
 
@@ -149,7 +129,7 @@ editor_helper:SetConfigFunction(function(path)
 			if not ok then print(err) end
 
 			editor_helper:DebugLog("[ " .. original_path .. " ] loading config " .. config_path)
-			err.config_dir = dir
+			err.config_dir = dir .. "/"
 
 			if editor_helper.debug then table.print(err) end
 

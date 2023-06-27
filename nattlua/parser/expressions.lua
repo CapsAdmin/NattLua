@@ -7,6 +7,7 @@ local io_open = _G.io.open
 local package = _G.package
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
+local path_util = require("nattlua.other.path")
 
 --[[#local type { Node } = import("~/nattlua/parser/nodes.nlua")]]
 
@@ -799,30 +800,12 @@ do -- runtime
 	end
 
 	local function resolve_import_path(self--[[#: META.@Self]], path--[[#: string]])
-		if self.config.translate_path then
-			local new_path = self.config.translate_path(self, path)
-
-			if new_path then return new_path end
-		end
-
-		if path:sub(1, 1) ~= "/" then
-			local working_directory = self.config.working_directory or ""
-
-			if path:sub(1, 1) == "~" then
-				path = path:sub(2)
-
-				if path:sub(1, 1) == "/" then path = path:sub(2) end
-			elseif path:sub(1, 2) == "./" then
-				working_directory = self.config.file_path and
-					self.config.file_path:match("(.+/)") or
-					working_directory
-				path = path:sub(3)
-			end
-
-			path = working_directory .. path
-		end
-
-		return path
+		return path_util.Resolve(
+			path,
+			self.config.root_directory,
+			self.config.working_directory,
+			self.config.file_path
+		)
 	end
 
 	local function resolve_require_path(require_path--[[#: string]])
@@ -853,14 +836,14 @@ do -- runtime
 
 		local path
 
-		if name == "require" then
-			path = resolve_require_path(str)
+		if name == "require" then path = resolve_require_path(str) end
 
-			if path and self.config.translate_path then
-				path = self.config.translate_path(self, path) or path
-			end
-		else
-			path = resolve_import_path(self, str)
+		path = resolve_import_path(self, str)
+
+		if name == "require" then
+			local f = io_open(path, "r")
+
+			if not f then return else f:close() end
 		end
 
 		if not path then return end
@@ -888,7 +871,7 @@ do -- runtime
 					inline_require = not root_node.data_import,
 					on_parsed_node = self.config.on_parsed_node,
 					on_read_file = self.config.on_read_file,
-					translate_path = self.config.translate_path,
+					root_directory = self.config.root_directory,
 				}
 			)
 
@@ -947,7 +930,7 @@ do -- runtime
 						working_directory = self.config.working_directory,
 						on_parsed_node = self.config.on_parsed_node,
 						on_read_file = self.config.on_read_file,
-						translate_path = self.config.translate_path,
+						root_directory = self.config.root_directory,
 					--inline_require = true,
 					}
 				)
