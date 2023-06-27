@@ -175,25 +175,30 @@ return function(META)
 		end
 	end
 
-	function META:ReadFile(path)
-		if self.config.on_read_file then
-			local ok, code = pcall(self.config.on_read_file, self, path)
-
-			if not ok then return nil, code end
-
-			return code
+	local function read_file(self, path)
+		if self.config.translate_path then
+			path = self.config.translate_path(self, path) or path
 		end
 
-		local f, err = io.open(path, "rb")
+		local code = self.config.on_read_file and self.config.on_read_file(self, path)
 
-		if not f then return nil, err end
+		if code then return code end
 
+		local f = assert(io.open(path, "rb"))
 		local code = f:read("*a")
 		f:close()
 
-		if not code then return nil, "file is empty" end
+		if not code then error("file is empty", 2) end
 
 		return code
+	end
+
+	function META:ReadFile(path)
+		local ok, code = pcall(read_file, self, path)
+
+		if ok then return code end
+
+		return nil, code
 	end
 
 	do

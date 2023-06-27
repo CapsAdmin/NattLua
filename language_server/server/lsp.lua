@@ -113,18 +113,6 @@ local function to_lsp_path(url)
 	return url
 end
 
-function editor_helper:TranslatePath(url)
-	local wdir = editor_helper:GetWorkingDirectory()
-	print(wdir, url)
-
-	if url:sub(1, 1) ~= "/" then url = wdir .. "/" .. url end
-
-	-- translate relative paths to absolute paths
-	url = path.RemoveProtocol(url)
-	url = path.Normalize(url)
-	return url
-end
-
 do
 	local path = "file:///home/foo/bar/lsp.lua"
 	local fs_path = to_fs_path(path)
@@ -143,6 +131,7 @@ do
 end
 
 editor_helper:SetConfigFunction(function(path)
+	local original_path = path
 	local wdir = editor_helper:GetWorkingDirectory()
 	path = path or wdir
 
@@ -159,8 +148,11 @@ editor_helper:SetConfigFunction(function(path)
 
 			if not ok then print(err) end
 
-			print("config loaded: " .. config_path)
+			editor_helper:DebugLog("[ " .. original_path .. " ] loading config " .. config_path)
 			err.config_dir = dir
+
+			if editor_helper.debug then table.print(err) end
+
 			return err
 		end
 
@@ -203,7 +195,7 @@ function editor_helper:OnDiagnostics(path, data)
 end
 
 lsp.methods["initialize"] = function(params)
-	editor_helper:SetWorkingDirectory(params.workspaceFolders[1].uri)
+	editor_helper:SetWorkingDirectory(to_fs_path(params.workspaceFolders[1].uri))
 	return {
 		clientInfo = {name = "NattLua", version = "1.0"},
 		capabilities = {

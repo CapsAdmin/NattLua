@@ -246,6 +246,10 @@ function META:ParseString(str--[[#: string]], config--[[#: nil | any]])
 end
 
 local function read_file(self, path)
+	if self.config.translate_path then
+		path = self.config.translate_path(self, path) or path
+	end
+
 	local code = self.config.on_read_file and self.config.on_read_file(self, path)
 
 	if code then return code end

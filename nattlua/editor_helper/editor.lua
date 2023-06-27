@@ -9,7 +9,7 @@ local class = require("nattlua.other.class")
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local runtime_env, typesystem_env = BuildBaseEnvironment()
 local META = class.CreateTemplate("token")
-META:GetSet("WorkingDirectory", "./")
+META:GetSet("WorkingDirectory", ".")
 
 META:GetSet("ConfigFunction", function()
 	return
@@ -18,7 +18,15 @@ end)
 function META:GetProjectConfig(what, path)
 	local get_config = self.ConfigFunction
 	local config = get_config(path)
-	return config and config[what] and config[what]()
+
+	if config then
+		local sub_config = config[what] and config[what]()
+
+		if sub_config then
+			sub_config.config_dir = config.config_dir
+			return sub_config
+		end
+	end
 end
 
 function META.New()
@@ -121,10 +129,56 @@ end
 function META:Recompile(path)
 	local cfg = self:GetAanalyzerConfig(path)
 	local entry_point = path or cfg.entry_point
+	local wdir = cfg.config_dir or self:GetWorkingDirectory()
 
 	if not entry_point then return false end
 
 	cfg.inline_require = false
+	cfg.translate_path = function(parser, path)
+		local opath = path
+
+		if path:sub(1, 1) == "/" then
+			path = path
+		elseif path:sub(1, 1) == "~" then
+			local working_directory = parser.config.working_directory or ""
+			path = path:sub(2)
+
+			if path:sub(1, 1) == "/" then path = path:sub(2) end
+
+			path = wdir .. "/" .. working_directory .. path
+		else
+			if path:sub(1, 2) == "./" then path = path:sub(3) end
+
+			do
+				local working_directory = parser.config.working_directory or ""
+				working_directory = parser.config.file_path and
+					parser.config.file_path:match("(.+/)") or
+					working_directory
+				local f = io.open(working_directory .. path)
+
+				if f then
+					f:close()
+					path = working_directory .. path
+				else
+					path = wdir .. "/" .. path
+				end
+			end
+		end
+
+		if self.debug then
+			local f = io.open(path)
+
+			if not f then
+				self:DebugLog("[ " .. opath .. " ] callback translated to [ " .. path .. " ]")
+				print("workign dir", wdir)
+				print("working dir2", cfg.working_directory)
+			else
+				f:close()
+			end
+		end
+
+		return path
+	end
 	cfg.on_read_file = function(parser, path)
 		if not self.TempFiles[path] then
 			local f = assert(io.open(path, "rb"))
@@ -136,13 +190,18 @@ function META:Recompile(path)
 		return self:GetFileContent(path)
 	end
 	self:DebugLog("[ " .. entry_point .. " ] compiling")
-	local compiler = Compiler([[return import("./]] .. entry_point .. [[")]], entry_point, cfg)
+	local compiler = Compiler([[return import("]] .. entry_point .. [[")]], entry_point, cfg)
 	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
 	local diagnostics = {}
 
 	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
 		local name = code:GetName()
+
+		if severity == "fatal" then
+			self:DebugLog("[ " .. entry_point .. " ] " .. formating.FormatMessage(msg, ...))
+		end
+
 		diagnostics[name] = diagnostics[name] or {}
 		table.insert(
 			diagnostics[name],

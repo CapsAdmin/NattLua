@@ -13,6 +13,7 @@ local function single_file(code)
 		})
 	end
 
+	helper:SetFileContent(path, code)
 	helper:OpenFile(path, code)
 	return helper, diagnostics
 end
@@ -216,7 +217,7 @@ do
 					inline_require = true,
 					entry_point = "./src/bad.nlua",
 				}
-			end
+			end,
 		}
 	end)
 
