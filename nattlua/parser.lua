@@ -240,6 +240,14 @@ function META:ParseString(str--[[#: string]], config--[[#: nil | any]])
 
 	if not ok then return nil, node end
 
+	if self.config.on_parsed_file then
+		self.config.on_parsed_file(config.file_path, {
+			Tokens = tokens,
+			Code = code,
+			SyntaxTree = node,
+		})
+	end
+
 	node.lexer_tokens = tokens
 	node.parser = parser
 	node.code = code
@@ -253,15 +261,23 @@ local function read_file(self, path)
 		self.config.working_directory,
 		self.config.file_path
 	)
-	local code = self.config.on_read_file and self.config.on_read_file(self, path)
 
-	if code then return code end
+	if self.config.pre_read_file then
+		local code = self.config.pre_read_file(self, path)
+
+		if code then return code end
+	end
 
 	local f = assert(io.open(path, "rb"))
 	local code = f:read("*a")
 	f:close()
 
-	if not code then error("file is empty", 2) end
+	if not code then
+		debug.trace()
+		error(path .. " is empty", 2)
+	end
+
+	if self.config.on_read_file then self.config.on_read_file(self, path, code) end
 
 	return code
 end
@@ -269,7 +285,7 @@ end
 function META:ParseFile(path--[[#: string]], config--[[#: nil | any]])
 	local ok, code = pcall(read_file, self, path)
 
-	if not ok then return ok, code end
+	if not ok then return ok, code .. " path: " .. path end
 
 	config = config or {}
 	config.file_path = config.file_path or path

@@ -137,11 +137,45 @@ do
 end
 
 analyzer function include(path: string)
-	local full_path = analyzer:ResolvePath(path:GetData())
-	local compiler = assert(require("nattlua").File(full_path))
+	local function file_exists(path)
+		local f = io.open(path, "r")
+
+		if f then f:close() end
+
+		return f ~= nil
+	end
+
+	local path = path:GetData()
+	local root = analyzer.config.root_directory .. "lua/"
+
+	do
+		analyzer.last_directory = analyzer.last_directory or root
+
+		if file_exists(analyzer.last_directory .. path) then
+			path = analyzer.last_directory .. path
+		elseif file_exists(root .. path) then
+			path = root .. path
+		else
+			path = root .. path
+		end
+
+		analyzer.last_directory = path:match("(.+/)")
+	end
+
+	local code = assert(analyzer:ReadFile(path))
+	local compiler = require("nattlua.compiler").New(code, "@" .. path, {
+		file_path = path,
+		file_name = "@" .. path,
+	})
 	assert(compiler:Lex())
 	assert(compiler:Parse())
+
+	if analyzer.config.on_parsed_file then
+		analyzer.config.on_parsed_file(path, compiler)
+	end
+
 	local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
+	
 	analyzer.loaded = analyzer.loaded or {}
 	analyzer.loaded[path] = res
 	return res

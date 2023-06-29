@@ -145,8 +145,6 @@ if normalized:find("/nattlua/", nil, true) then
 		normalized:find("cparser.lua", nil, true)
 	then
 		run_lua("examples/projects/luajit/build.lua", path)
-	elseif normalized:find("examples/projects/gmod/", nil, true) then
-		run_lua("examples/projects/gmod/nattlua.lua", path)
 	elseif normalized:find("examples/projects/love2d/", nil, true) then
 		run_lua("examples/projects/love2d/nlconfig.lua", path)
 	elseif is_nattlua and not normalized:find("/definitions/", nil, true) then

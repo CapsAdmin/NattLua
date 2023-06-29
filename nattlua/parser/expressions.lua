@@ -838,7 +838,7 @@ do -- runtime
 
 		if name == "require" then path = resolve_require_path(str) end
 
-		path = resolve_import_path(self, str)
+		path = resolve_import_path(self, path or str)
 
 		if name == "require" then
 			local f = io_open(path, "r")
@@ -870,7 +870,9 @@ do -- runtime
 					working_directory = self.config.working_directory,
 					inline_require = not root_node.data_import,
 					on_parsed_node = self.config.on_parsed_node,
+					pre_read_file = self.config.pre_read_file,
 					on_read_file = self.config.on_read_file,
+					on_parsed_file = self.config.on_parsed_file,
 					root_directory = self.config.root_directory,
 				}
 			)
@@ -929,7 +931,9 @@ do -- runtime
 						path = node.path,
 						working_directory = self.config.working_directory,
 						on_parsed_node = self.config.on_parsed_node,
+						pre_read_file = self.config.pre_read_file,
 						on_read_file = self.config.on_read_file,
+						on_parsed_file = self.config.on_parsed_file,
 						root_directory = self.config.root_directory,
 					--inline_require = true,
 					}

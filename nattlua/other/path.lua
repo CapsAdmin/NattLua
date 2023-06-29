@@ -49,11 +49,10 @@ end
 function path.Resolve(path, root_directory, working_directory, file_path)
 	root_directory = root_directory or ""
 	working_directory = working_directory or ""
-	
+
 	if path:sub(1, 1) == "/" then
 		return path
 	elseif path:sub(1, 1) == "~" then
-	
 		path = path:sub(2)
 
 		if path:sub(1, 1) == "/" then path = path:sub(2) end
@@ -63,20 +62,27 @@ function path.Resolve(path, root_directory, working_directory, file_path)
 		if path:sub(1, 2) == "./" then path = path:sub(3) end
 
 		do
-			working_directory = file_path and
-				file_path:match("(.+/)") or
-				working_directory
+			working_directory = file_path and file_path:match("(.+/)") or working_directory
 			local f = io.open(working_directory .. path)
 
 			if f then
 				f:close()
 				return working_directory .. path
 			else
+				if working_directory then
+					local f = io.open(root_directory .. working_directory .. path)
+
+					if f then
+						f:close()
+						return root_directory .. working_directory .. path
+					end
+				end
+
 				return root_directory .. path
 			end
 		end
 	end
-	
+
 	return path
 end
 

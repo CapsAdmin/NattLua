@@ -89,6 +89,8 @@ local function to_fs_path(url)
 end
 
 local function to_lsp_path(url)
+	if url:sub(1, 1) == "@" then url = url:sub(2) end
+
 	url = "file://" .. url
 	return url
 end

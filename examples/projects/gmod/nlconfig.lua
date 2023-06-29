@@ -1,11 +1,9 @@
 -- Some things here are hardcoded for now.
 -- When I'm happy with how things are I'll move general code to NattLua and make this more of a config
 -- so you could just run something like nlc in the directory
-local nl = require("nattlua")
-
 local function GetFilesRecursively(dir, ext)
 	ext = ext or ".lua"
-	local f = assert(io.popen("find " .. dir))
+	local f = assert(io.popen("find " .. dir .. "/ -print0 | xargs -0 realpath"))
 	local lines = f:read("*all")
 	local paths = {}
 
@@ -29,15 +27,9 @@ local function write_file(path, contents)
 	f:close()
 end
 
-local function file_exists(path)
-	local f = io.open(path, "r")
-
-	if f then f:close() end
-
-	return f ~= nil
-end
-
-local function LintCodebase()
+local config = {}
+config.format = function()
+	local nl = require("nattlua")
 	local lua_files = GetFilesRecursively("./lua/", ".lua")
 	local blacklist = {
 		["./lua/entities/gmod_wire_expression2/core/custom/pac.lua"] = true,
@@ -77,73 +69,13 @@ local function LintCodebase()
 		end
 	end
 end
-
-if false then LintCodebase() end
-
-local working_directory = "examples/projects/gmod/"
-local files = {
-	{
-		path = "lua/autorun/client/myaddon.lua",
-		env = {
-			CLIENT = true,
-			SERVER = false,
-			MENU = false,
-		},
-	},
-	{
-		path = "lua/autorun/server/myaddon.lua",
-		env = {
-			CLIENT = false,
-			SERVER = true,
-			MENU = false,
-		},
-	},
-	{
-		path = "lua/autorun/myaddon.lua",
-		env = {
-			CLIENT = true,
-			SERVER = true,
-			MENU = false,
-		},
-	},
-}
-
-for _, info in ipairs(files) do
-	local compiler = assert(
-		nl.File(working_directory .. info.path, {
-			working_directory = working_directory,
-		})
-	)
-	local last_directory = working_directory
-
-	function compiler:OnResolvePath(path)
-		if file_exists(last_directory .. path) then
-			path = last_directory .. path
-		elseif file_exists(working_directory .. "lua/" .. path) then
-			path = working_directory .. "lua/" .. path
-		else
-			path = working_directory .. path
-		end
-
-		last_directory = path:match("(.+/)")
-		return path
-	end
-
-	compiler.Code.Buffer = [[
-		]] .. (
-			function()
-				local s = ""
-
-				for k, v in pairs(info.env) do
-					s = s .. "type " .. k .. " = " .. tostring(v) .. "\n"
-				end
-
-				return s
-			end
-		)() .. [[
-
-		import("~/nattlua/glua.nlua")
-
-	]] .. compiler.Code.Buffer
-	assert(compiler:Analyze())
+config.build = function() -- TODO
 end
+config["get-analyzer-config"] = function()
+	return {
+		-- TODO: need to get the absolute path of this nlconfig.lua file
+		entry_point = GetFilesRecursively("examples/projects/gmod/lua/autorun"),
+		emit_environment = false,
+	}
+end
+return config

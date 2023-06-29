@@ -183,15 +183,22 @@ return function(META)
 			self.config.working_directory,
 			self.config.file_path
 		)
-		local code = self.config.on_read_file and self.config.on_read_file(self, path)
 
-		if code then return code end
+		if self.config.pre_read_file then 
+			local code = self.config.pre_read_file(self, path) 
+			if code then return code end
+		end
 
 		local f = assert(io.open(path, "rb"))
 		local code = f:read("*a")
 		f:close()
 
-		if not code then error("file is empty", 2) end
+		if not code then
+			debug.trace()
+			error(path .. " is empty", 2)
+		end
+
+		if self.config.on_read_file then self.config.on_read_file(self, path, code) end
 
 		return code
 	end
@@ -458,9 +465,6 @@ return function(META)
 			return s
 		end
 
-		function META:ResolvePath(path)
-			return path
-		end
 
 		do
 			function META:GetCurrentAnalyzerEnvironment()

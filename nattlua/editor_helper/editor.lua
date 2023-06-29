@@ -8,8 +8,14 @@ local typesystem_syntax = require("nattlua.syntax.typesystem")
 local class = require("nattlua.other.class")
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local runtime_env, typesystem_env = BuildBaseEnvironment()
+local path_util = require("nattlua.other.path")
 local META = class.CreateTemplate("token")
 META:GetSet("WorkingDirectory", "./")
+
+function META:SetWorkingDirectory(dir)
+	print("setting working directory to " .. dir)
+	self.WorkingDirectory = dir
+end
 
 META:GetSet("ConfigFunction", function()
 	return
@@ -69,6 +75,8 @@ end
 
 do
 	function META:GetFile(path)
+		path = path_util.Normalize(path)
+
 		if not self.LoadedFiles[path] then
 			self:DebugLog("[ " .. path .. " ] is not loaded")
 			self:DebugLog("=== these are loaded ===")
@@ -85,6 +93,7 @@ do
 	end
 
 	function META:LoadFile(path, code, tokens)
+		path = path_util.Normalize(path)
 		self:DebugLog("[ " .. path .. " ] loaded with " .. #tokens .. " tokens")
 		self.LoadedFiles[path] = {
 			code = code,
@@ -93,6 +102,7 @@ do
 	end
 
 	function META:UnloadFile(path)
+		path = path_util.Normalize(path)
 		self:DebugLog("[ " .. path .. " ] unloaded")
 		self.LoadedFiles[path] = nil
 	end
@@ -100,6 +110,8 @@ end
 
 do
 	function META:SetFileContent(path, code)
+		path = path_util.Normalize(path)
+
 		if code then
 			self:DebugLog("[ " .. path .. " ] content loaded with " .. #code .. " bytes")
 		else
@@ -110,6 +122,8 @@ do
 	end
 
 	function META:GetFileContent(path)
+		path = path_util.Normalize(path)
+
 		if not self.TempFiles[path] then
 			self:DebugLog("[ " .. path .. " ] content is not loaded")
 			self:DebugLog("=== these are loaded ===")
@@ -126,29 +140,58 @@ do
 	end
 end
 
-function META:Recompile(path)
+function META:Recompile(path, lol, diagnostics)
 	local cfg = self:GetAanalyzerConfig(path)
-	cfg.root_directory = cfg.root_directory or self:GetWorkingDirectory()
+	diagnostics = diagnostics or {}
+
+	if not lol then
+		if type(cfg.entry_point) == "table" then
+			if self.debug then print("recompiling entry points from: " .. path) end
+
+			for _, path in ipairs(cfg.entry_point) do
+				local new_path = path_util.Resolve(path, cfg.root_directory, cfg.working_directory)
+
+				if self.debug then
+					print(path, "->", new_path)
+					table.print(cfg)
+				end
+
+				self:Recompile(new_path, true, diagnostics)
+			end
+
+			return
+		elseif type(cfg.entry_point) == "string" then
+			local path = path_util.Resolve(cfg.entry_point, cfg.root_directory, cfg.working_directory)
+
+			if self.debug then
+				print("recompiling entry point: " .. path)
+				print(cfg.entry_point, "->", path)
+				table.print(cfg)
+			end
+
+			self:Recompile(path, true, diagnostics)
+			return
+		end
+	end
+
 	local entry_point = path or cfg.entry_point
 
 	if not entry_point then return false end
 
 	cfg.inline_require = false
-	cfg.on_read_file = function(parser, path)
-		if not self.TempFiles[path] then
-			local f = assert(io.open(path, "rb"))
-			local content = f:read("*all")
-			f:close()
-			self:SetFileContent(path, content)
-		end
-
-		return self:GetFileContent(path)
+	cfg.pre_read_file = function(parser, path)
+		if self.TempFiles[path] then return self:GetFileContent(path) end
+	end
+	cfg.on_read_file = function(parser, path, content)
+		if not self.TempFiles[path] then self:SetFileContent(path, content) end
+	end
+	cfg.on_parsed_file = function(path, compiler)
+		self:LoadFile(path, compiler.Code, compiler.Tokens)
 	end
 	self:DebugLog("[ " .. entry_point .. " ] compiling")
 	local compiler = Compiler([[return import("]] .. entry_point .. [[")]], entry_point, cfg)
 	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
-	local diagnostics = {}
 
 	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
 		local name = code:GetName()

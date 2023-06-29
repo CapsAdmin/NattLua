@@ -227,7 +227,6 @@ function META:Analyze(analyzer, ...)
 		analyzer:SetDefaultEnvironment(typesystem_env, "typesystem")
 	end
 
-	analyzer.ResolvePath = self.OnResolvePath
 	local args = {...}
 	local ok, res = xpcall(function()
 		local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))

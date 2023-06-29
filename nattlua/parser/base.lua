@@ -377,9 +377,6 @@ function META:ParseStatements(stop_token--[[#: {[string] = true} | nil]])
 	return out
 end
 
-function META:ResolvePath(path--[[#: string]])
-	return path
-end
 
 function META:ParseMultipleValues(
 	max--[[#: nil | number]],
