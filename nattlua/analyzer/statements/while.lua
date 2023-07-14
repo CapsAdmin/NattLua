@@ -12,8 +12,9 @@ return {
 
 		if obj:IsTruthy() then
 			self:ApplyMutationsInIf(upvalues, tables)
+			local max_iterations = self.max_loop_iterations or 32
 
-			for i = 1, 32 do
+			for i = 1, max_iterations do
 				self:PushConditionalScope(statement, obj:IsTruthy(), obj:IsFalsy())
 				self:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy())
 				self:GetScope():SetLoopScope(true)
@@ -33,7 +34,7 @@ return {
 
 				if obj:IsUncertain() or obj:IsFalsy() then break end
 
-				if i == 32 and self:IsRuntime() then
+				if i == max_iterations and self:IsRuntime() then
 					self:Warning(type_errors.too_many_iterations())
 				end
 			end
