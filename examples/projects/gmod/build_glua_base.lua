@@ -13,17 +13,27 @@ local blob = assert(
 local wiki_json = json.decode(blob)
 -- used for referencing existing types, like if we already have math.pi defined, don't add it
 local _, base_env = BuildBaseEnvironment()
+local BaseTables = {
+	IPlayer = "IEntity",
+	IVehicle = "IEntity",
+	INPC = "IEntity",
+	IWeapon = "IEntity",
+}
 -- i prefix all types with I to avoid conflicts when defining functions like Entity(entindex) in the typesystem
 local TypeMap = {}
+
 do
 	TypeMap["Color"] = "IColor"
 	TypeMap["color"] = "IColor"
 end
+
 TypeMap["VMatrix"] = "IMatrix"
+
 do
 	TypeMap["Vector"] = "IVector"
 	TypeMap["vector"] = "IVector"
 end
+
 TypeMap["Angle"] = "IAngle"
 -- aren't these two the same from lua's point of view?
 TypeMap["Entity"] = "IEntity"
@@ -35,14 +45,19 @@ TypeMap["Weapon"] = "IWeapon"
 TypeMap["Panel"] = "IPanel"
 -- unconventional
 TypeMap["bf_read"] = "IBfRead"
+
 do
 	TypeMap["pixelvis handle t"] = "IPixVis"
 	TypeMap["pixelvis_handle_t"] = "IPixVis"
 end
+
 TypeMap["sensor"] = "ISensor"
--- what's the difference?
-TypeMap["File"] = "IFile"
-TypeMap["file_class"] = "IFile"
+
+do -- what's the difference?
+	TypeMap["File"] = "IFile"
+	TypeMap["file_class"] = "IFile"
+end
+
 TypeMap["IVideoWriter"] = "IVideoWriter"
 TypeMap["IMaterial"] = "IMaterial"
 TypeMap["CMoveData"] = "IMoveData"
@@ -125,8 +140,7 @@ local function emit_atomic_type(val)
 	end
 
 	if val.TYPE:find("|", nil, true) then
-		local values = {}
-		
+		local values = {};
 		(val.TYPE .. "|"):gsub("([^|]-)|", function(val)
 			table.insert(values, val)
 		end)
@@ -156,7 +170,7 @@ local function emit_atomic_type(val)
 		e("boolean") -- ?
 	-- don't do anything special with these since they are already defined
 	elseif val.TYPE == "number" or val.TYPE == "Number" then
-		e(val.TYPE)
+		e("number")
 	elseif val.TYPE == "boolean" then
 		e(val.TYPE)
 	elseif val.TYPE == "string" then
@@ -260,6 +274,8 @@ local function emit(key, val, self_argument)
 		e("{[string] = string}")
 	elseif val.VALUE then
 		e(val.VALUE)
+	elseif val.TYPE then
+		emit_atomic_type({TYPE = val.TYPE})
 	else
 		e("nil -- NYI")
 
@@ -375,6 +391,39 @@ local function binary_operator(a, b, r)
 	}
 end
 
+for struct_name, lib in spairs(wiki_json.STRUCTS) do
+	indent()
+	e("do\n")
+	t = t + 1
+	local original_name = struct_name
+	struct_name = "Struct_" .. struct_name
+	indent()
+	e("type ")
+	e(struct_name)
+	e(" = {}")
+	e("\n")
+
+	for key, val in spairs(lib.MEMBERS) do
+		if val.DESCRIPTION then emit_description(val.DESCRIPTION) end
+
+		indent()
+		e("type ")
+		e(struct_name)
+		e(".")
+		if key == "StructureField (Order)" then
+			key = "StructureField"
+		end
+		e(key)
+		e(" = ")
+		emit(key, val, not val.binary_operator and original_name)
+		e("\n")
+	end
+
+	t = t - 1
+	indent()
+	e("end\n")
+end
+
 for class_name, lib in spairs(wiki_json.CLASSES) do
 	local original_name = class_name
 	class_name = Class(class_name)
@@ -399,6 +448,16 @@ for class_name, lib in spairs(wiki_json.CLASSES) do
 	e(".@MetaTable = ")
 	e(class_name)
 	e("\n")
+
+	if BaseTables[class_name] then
+		indent()
+		e("type ")
+		e(class_name)
+		e(".@BaseTable = ")
+		e(BaseTables[class_name])
+		e("\n")
+	end
+
 	indent()
 	e("type ")
 	e(class_name)
@@ -600,4 +659,4 @@ local f = io.open("examples/projects/gmod/nattlua/glua_base.nlua", "w")
 f:write(code)
 f:close()
 code = "local SERVER = true\nlocal CLIENT = true\n"
-nl.Compiler(code):Analyze()
+print(nl.Compiler(code):Analyze())

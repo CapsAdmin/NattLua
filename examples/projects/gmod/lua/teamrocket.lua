@@ -70,7 +70,7 @@ end
 if SERVER then
 	util.AddNetworkString("teamrocket")
 
-	local function team_rocket_death(victim, attacker, dir)
+	local function team_rocket_death(victim--[[#: IEntity]], attacker--[[#: IEntity]], dir--[[#: IVector]])
 		if not IsValid(victim) or not IsValid(attacker) then return end
 
 		local info = DamageInfo()
@@ -99,7 +99,7 @@ if SERVER then
 			local phys = rag:GetPhysicsObject()
 
 			if phys:IsValid() then
-				rag:AddCallback("PhysicsCollide", function(ent, data)
+				rag:AddCallback("PhysicsCollide", function(ent--[[#: IEntity]], data--[[#: Struct_CollisionData]])
 					if data.HitEntity == Entity(0) then
 						net.Start("teamrocket")
 						net.WriteVector(data.HitPos)
@@ -135,7 +135,7 @@ if SERVER then
 
 	local suppress = false
 
-	hook.Add("EntityTakeDamage", "teamrocket", function(victim, info)
+	hook.Add("EntityTakeDamage", "teamrocket", function(victim--[[#: IEntity]], info--[[#: IDamageInfo]])
 		if suppress or not victim:IsPlayer() then return end
 
 		local force = info:GetDamageForce()
@@ -149,7 +149,7 @@ if SERVER then
 		end
 	end)
 
-	hook.Add("PhysgunThrowPlayer", "teamrocket", function(attacker, victim)
+	hook.Add("PhysgunThrowPlayer", "teamrocket", function(attacker--[[#: IEntity]], victim--[[#: IEntity]])
 		local res = util.TraceLine(
 			{
 				start = victim:GetPos(),
