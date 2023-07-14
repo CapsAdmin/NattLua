@@ -195,7 +195,7 @@ function META:Recompile(path, lol, diagnostics)
 
 	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
 		local name = code:GetName()
-
+		
 		if severity == "fatal" then
 			self:DebugLog("[ " .. entry_point .. " ] " .. formating.FormatMessage(msg, ...))
 		end
@@ -260,7 +260,7 @@ function META:Recompile(path, lol, diagnostics)
 			if not ok then
 				diagnostics[name] = diagnostics[name] or {}
 				table.insert(
-					diagnostics,
+					diagnostics[name],
 					{
 						severity = "fatal",
 						code = compiler:GetCode(),
