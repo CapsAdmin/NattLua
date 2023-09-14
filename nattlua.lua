@@ -1,6 +1,5 @@
 #!/usr/local/bin/luajit
 
-
 require("nattlua.other.lua_compat")
 require("nattlua.other.jit_options")()
 local m = require("nattlua.init")

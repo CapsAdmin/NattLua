@@ -129,7 +129,7 @@ config["get-analyzer-config"] = function()
 	return analyzer_config
 end
 config.check = function()
-	require("nattlua.other.profiler").Start()
+	local nl = require("nattlua.init")
 	local compiler = assert(
 		nl.Compiler(
 			[[return import("]] .. "./nattlua.lua" .. [[")]],
@@ -137,10 +137,6 @@ config.check = function()
 			analyzer_config
 		)
 	)
-
-	if cmd == "check-language-server" then return compiler end
-
 	compiler:Analyze()
-	require("nattlua.other.profiler").Stop()
 end
 return config

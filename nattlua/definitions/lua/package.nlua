@@ -4,4 +4,5 @@ type package = {
 	loadlib = function=(libname: string, funcname: string)>(empty_function | nil),
 	config = "/\n;\n?\n!\n-\n",
 	path = string,
+	loaded = Map<|string, any|>,
 }

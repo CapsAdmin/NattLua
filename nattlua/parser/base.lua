@@ -1,9 +1,9 @@
 --[[# --ANALYZE
 local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
---[[#local type { ExpressionKind, StatementKind, statement, expression, Node } = import("./nodes.nlua")]]
+--[[#local type { ExpressionKind, StatementKind, statement, expression, Node } = import("~/nattlua/parser/nodes.nlua")]]
 
---[[#local type { ParserConfig } = import("./../config.nlua")]]
+--[[#local type { ParserConfig } = import("~/nattlua/config.nlua")]]
 
 --[[#local type { Code } = import<|"~/nattlua/code.lua"|>]]
 
@@ -376,7 +376,6 @@ function META:ParseStatements(stop_token--[[#: {[string] = true} | nil]])
 
 	return out
 end
-
 
 function META:ParseMultipleValues(
 	max--[[#: nil | number]],

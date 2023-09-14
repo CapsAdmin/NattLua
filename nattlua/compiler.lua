@@ -16,7 +16,7 @@ local Analyzer = require("nattlua.analyzer").New
 local Emitter = require("nattlua.transpiler.emitter").New
 local META = class.CreateTemplate("compiler")
 
---[[#local type { CompilerConfig } = import("./config.nlua")]]
+--[[#local type { CompilerConfig } = import("~/nattlua/config.nlua")]]
 
 function META:GetCode()
 	return self.Code

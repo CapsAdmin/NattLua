@@ -14,7 +14,13 @@ local setmetatable = _G.setmetatable
 local B = string.byte
 local META = class.CreateTemplate("emitter")
 
---[[#local type { ParserConfig, TranspilerConfig } = import("./../config.nlua")]]
+--[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]
+
+--[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]
+
+--[[#local type { Node } = import("~/nattlua/parser/nodes.nlua")]]
+
+--[[#local type { ParserConfig, TranspilerConfig } = import("~/nattlua/config.nlua")]]
 
 do -- internal
 	function META:Whitespace(str--[[#: string]], force--[[#: boolean]])
@@ -1822,7 +1828,7 @@ do -- types
 		end
 	end
 
-	function META:EmitInvalidLuaCode(func--[[#: ref keyof<|META|>]], ...--[[#: ref ...any]])
+	function META:EmitInvalidLuaCode(func--[[#: ref keysof<|META|>]], ...--[[#: ref ...any]])
 		if self.config.omit_invalid_code then return true end
 
 		local i = self.i
