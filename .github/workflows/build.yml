@@ -17,7 +17,7 @@ jobs:
           path: luajit
 
       - name: build and install luajit
-        run: cd luajit && make && sudo make install && sudo ln -sf luajit-2.1.0-beta3 /usr/local/bin/luajit && cd ..
+        run: cd luajit && make && sudo make install && cd ..
 
       - name: run nattlua tests
         run: luajit nattlua.lua test
