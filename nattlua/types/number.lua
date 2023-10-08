@@ -205,6 +205,10 @@ function META:GetMaxLiteral()
 	return self.Max and self.Max:GetData()
 end
 
+function META:GetMinLiteral()
+	return self:GetData()
+end
+
 do
 	local operators = {
 		[">"] = function(a--[[#: number]], b--[[#: number]])
@@ -383,11 +387,26 @@ do
 		end,
 	}
 
-	function META.ArithmeticOperator(l--[[#: TNumber]], r--[[#: TNumber]], op--[[#: keysof<|operators|>]])--[[#: TNumber]]
+	function META.ArithmeticOperator(l--[[#: TNumber]], r--[[#: TNumber]], op--[[#: keysof<|operators|>]])
 		local func = operators[op]
 
 		if l:IsLiteral() and r:IsLiteral() then
-			local obj = META.New(func(l:GetData()--[[# as number]], r:GetData()--[[# as number]])):SetLiteral(true)
+			local res = func(l:GetData()--[[# as number]], r:GetData()--[[# as number]])
+			local lcontract = l:GetContract()--[[# as nil | TNumber]]
+
+			if lcontract then
+				if res > lcontract:GetMaxLiteral() and lcontract:GetMaxLiteral() then
+					return false, type_errors.number_overflow(l, r)
+				end
+
+				local min = lcontract:GetMinLiteral()
+
+				if min and min > res then
+					return false, type_errors.number_underflow(l, r)
+				end
+			end
+
+			local obj = META.New(res):SetLiteral(true)
 
 			if r:GetMax() then
 				obj:SetMax(l.ArithmeticOperator(l:GetMax() or l, r:GetMax()--[[# as TNumber]], op))

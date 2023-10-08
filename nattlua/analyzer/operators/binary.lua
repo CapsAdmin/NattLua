@@ -91,7 +91,9 @@ local function operator(self, node, l, r, op, meta_method)
 	if l.Type == "number" and r.Type == "number" then
 		return l:ArithmeticOperator(r, op)
 	else
-		return metatable_function(self, node, meta_method, l, r)
+		local res = metatable_function(self, node, meta_method, l, r)
+
+		if res then return res end
 	end
 
 	return false, type_errors.binary(op, l, r)
@@ -363,57 +365,31 @@ local function Binary(self, node, l, r, op)
 		if op == "." or op == ":" then
 			return self:IndexOperator(l, r)
 		elseif op == "+" then
-			local val = operator(self, node, l, r, op, "__add")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__add")
 		elseif op == "-" then
-			local val = operator(self, node, l, r, op, "__sub")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__sub")
 		elseif op == "*" then
-			local val = operator(self, node, l, r, op, "__mul")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__mul")
 		elseif op == "/" then
-			local val = operator(self, node, l, r, op, "__div")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__div")
 		elseif op == "/idiv/" then
-			local val = operator(self, node, l, r, op, "__idiv")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__idiv")
 		elseif op == "%" then
-			local val = operator(self, node, l, r, op, "__mod")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__mod")
 		elseif op == "^" then
-			local val = operator(self, node, l, r, op, "__pow")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__pow")
 		elseif op == "&" then
-			local val = operator(self, node, l, r, op, "__band")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__band")
 		elseif op == "|" then
-			local val = operator(self, node, l, r, op, "__bor")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__bor")
 		elseif op == "~" then
-			local val = operator(self, node, l, r, op, "__bxor")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__bxor")
 		elseif op == "<<" then
-			local val = operator(self, node, l, r, op, "__lshift")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__lshift")
 		elseif op == ">>" then
-			local val = operator(self, node, l, r, op, "__rshift")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__rshift")
 		elseif op == ".." then
-			local val = operator(self, node, l, r, op, "__concat")
-
-			if val then return val end
+			return operator(self, node, l, r, op, "__concat")
 		end
 	end
 

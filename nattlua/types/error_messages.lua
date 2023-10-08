@@ -183,6 +183,14 @@ do -- operator errors
 	function type_errors.union_contains_non_callable(obj--[[#: any]], v--[[#: any]])--[[#: Reason]]
 		return {"union", obj, "contains uncallable object", v}
 	end
+
+	function type_errors.number_overflow()--[[#: Reason]]
+		return {"number overflow"}
+	end
+
+	function type_errors.number_underflow()--[[#: Reason]]
+		return {"number underflow"}
+	end
 end
 
 function type_errors.mutating_function_argument(obj--[[#: any]], i--[[#: number]])--[[#: Reason]]
