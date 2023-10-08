@@ -105,12 +105,12 @@ function META:__tostring()
 	self.suppress = true
 
 	if self:GetContract() and self:GetContract().Name then -- never called
-		self.suppress = nil
+		self.suppress = false
 		return self:GetContract().Name:GetData()
 	end
 
 	if self.Name then
-		self.suppress = nil
+		self.suppress = false
 		return self.Name:GetData()
 	end
 
@@ -125,7 +125,10 @@ function META:__tostring()
 			if analyzer then
 				local str = func:Call(analyzer, Tuple({self})):GetFirstValue()
 
-				if str and str:IsLiteral() then return str:GetData() end
+				if str and str:IsLiteral() then
+					self.suppress = false
+					return str:GetData()
+				end
 			end
 		end
 	end
