@@ -1,5 +1,12 @@
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("analyzer")
+local Table = require("nattlua.types.table").Table
+local Tuple = require("nattlua.types.tuple").Tuple
+local Function = require("nattlua.types.function").Function
+local Number = require("nattlua.types.number").Number
+local String = require("nattlua.types.string").String
+local LString = require("nattlua.types.string").LString
+local LNumber = require("nattlua.types.number").LNumber
 
 function META:WalkRoot(node)
 	for _, node in ipairs(node.statements) do
@@ -11,8 +18,19 @@ function META:WalkRoot(node)
 	end
 end
 
+function META:WalkTypedef(node)
+	for _, decl in ipairs(node.decls) do
+		self:WalkCDeclaration(decl)
+	end
+end
+
 local function handle_struct(self, node)
-	local struct = {type = "struct", identifier = node.tokens["identifier"].value}
+	local struct = {type = "struct"}
+
+	if node.tokens["identifier"] then
+		struct.identifier = node.tokens["identifier"].value
+	end
+
 	local old = self.cdecl
 
 	if node.fields then
@@ -142,10 +160,152 @@ function META:WalkCDeclaration(node)
 	self.Callback(cdecl.of, real_node)
 end
 
-function META.New(ast, callback)
-	local self = setmetatable({}, META)
-	self.Callback = callback
+local function cast(self, node)
+	local env = self.env
+	local analyzer = self.analyzer
+	local typs = self.typs
+
+	if node.type == "array" then
+		return (
+			env.FFIArray:Call(
+				analyzer,
+				Tuple({LNumber(tonumber(node.size) or math.huge), cast(self, assert(node.of))})
+			):Unpack()
+		)
+	elseif node.type == "pointer" then
+		if not node.of then table.print(node) end
+
+		return (env.FFIPointer:Call(analyzer, Tuple({cast(self, assert(node.of))})):Unpack())
+	elseif node.type == "type" then
+		for _, v in ipairs(node.modifiers) do
+			if type(v) == "table" then
+				if v.type == "struct" or v.type == "union" then
+					local ident = v.identifier
+
+					if not ident and #node.modifiers > 0 then
+						ident = node.modifiers[#node.modifiers]
+					end
+
+					local tbl = typs:Get(LString(ident))
+
+					if not tbl and v.fields then
+						tbl = Table()
+
+						for _, v in ipairs(v.fields) do
+							tbl:Set(LString(ident), cast(self, v))
+						end
+					end
+
+					return tbl
+				elseif v.type == "enum" then
+					-- using enum as type is the same as if it were an int
+					return Number()
+				else
+					error("unknown type " .. v.type)
+				end
+			end
+		end
+
+		return Number()
+	elseif node.type == "function" then
+		local args = {}
+		local rets = {}
+
+		for i, v in ipairs(node.args) do
+			table.insert(args, cast(self, v))
+		end
+
+		return (Function(Tuple(args), Tuple({cast(self, assert(node.rets))})))
+	elseif node.type == "root" then
+		if not node.of then table.print(node) end
+
+		return cast(self, assert(node.of))
+	else
+		error("unknown type " .. node.type)
+	end
+end
+
+local function cast_type(self, node, out)
+	local typs = self.typs
+
+	if node.type == "array" then
+		cast_type(self, node.of, out)
+	elseif node.type == "pointer" then
+		cast_type(self, node.of, out)
+	elseif node.type == "type" then
+		for _, v in ipairs(node.modifiers) do
+			if type(v) == "table" then
+				if v.type == "struct" or v.type == "union" then
+					local tbl
+
+					if v.fields then
+						tbl = Table()
+
+						--tbl:Set(LString("__id"), LString(("%p"):format({})))
+						for _, v in ipairs(v.fields) do
+							tbl:Set(LString(v.identifier), cast(self, v))
+						end
+
+						local ident = v.identifier
+
+						if not ident and #node.modifiers > 0 then
+							ident = node.modifiers[#node.modifiers]
+						end
+
+						table.insert(out, {identifier = ident, obj = tbl})
+					else
+						tbl = typs:Get(LString(v.identifier)) or Table()
+						table.insert(out, {identifier = v.identifier, obj = tbl})
+					end
+				elseif v.type == "enum" then
+					local tbl = Table()
+					local i = 0
+
+					for _, v in ipairs(v.fields) do
+						tbl:Set(LString(v.identifier), LNumber(i))
+						i = i + 1
+					end
+
+					table.insert(out, {identifier = v.identifier, obj = tbl})
+				else
+					error("unknown type " .. v.type)
+				end
+			end
+		end
+	elseif node.type == "function" then
+		for i, v in ipairs(node.args) do
+			cast_type(self, v, out)
+		end
+
+		cast_type(self, node.rets, out)
+	elseif node.type == "root" then
+		return cast_type(self, node.of, out)
+	else
+		error("unknown type " .. node.type)
+	end
+end
+
+function META:AnalyzeRoot(ast)
+	local vars = Table()
+	local typs = Table()
+	self.typs = typs
+	self.Callback = function(node, real_node)
+		local out = {}
+		cast_type(self, node, out)
+
+		for _, typedef in ipairs(out) do
+			typs:Set(LString(assert(typedef.identifier)), typedef.obj)
+		end
+
+		local obj = cast(self, node)
+		vars:Set(LString(real_node.tokens["potential_identifier"].value), obj)
+	end
 	self:WalkRoot(ast)
+	return vars, typs
+end
+
+function META.New()
+	local self = setmetatable({}, META)
 	return self
 end
 

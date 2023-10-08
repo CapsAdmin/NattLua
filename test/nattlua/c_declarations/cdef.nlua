@@ -13,130 +13,10 @@ local analyzer function cdef(str: string)
 	local ast = parser:ParseRootNode()
 	local emitter = Emitter({skip_translation = true})
 	local res = emitter:BuildCode(ast)
-	local vars = types.Table()
-	local typs = types.Table()
-
-	local function cast(node)
-		if node.type == "array" then
-			return (
-				env.typesystem.FFIArray:Call(
-					analyzer,
-					types.Tuple({types.LNumber(tonumber(node.size) or math.huge), cast(assert(node.of))})
-				):Unpack()
-			)
-		elseif node.type == "pointer" then
-			if not node.of then table.print(node) end
-
-			return (env.typesystem.FFIPointer:Call(analyzer, types.Tuple({cast(assert(node.of))})):Unpack())
-		elseif node.type == "type" then
-			for _, v in ipairs(node.modifiers) do
-				if type(v) == "table" then
-					if v.type == "struct" or v.type == "union" then
-						local tbl = typs:Get(types.LString(v.identifier))
-
-						if not tbl and v.fields then
-							tbl = types.Table()
-
-							for _, v in ipairs(v.fields) do
-								tbl:Set(types.LString(v.identifier), cast(v))
-							end
-						end
-
-						return tbl
-					elseif v.type == "enum" then
-						-- using enum as type is the same as if it were an int
-						return types.Number()
-					else
-						error("unknown type " .. v.type)
-					end
-				end
-			end
-
-			return types.Number()
-		elseif node.type == "function" then
-			local args = {}
-			local rets = {}
-
-			for i, v in ipairs(node.args) do
-				table.insert(args, cast(v))
-			end
-
-			return (types.Function(types.Tuple(args), types.Tuple({cast(assert(node.rets))})))
-		elseif node.type == "root" then
-			if not node.of then table.print(node) end
-
-			return cast(assert(node.of))
-		else
-			error("unknown type " .. node.type)
-		end
-	end
-
-	local function cast_type(node, out)
-		if node.type == "array" then
-			cast_type(node.of, out)
-		elseif node.type == "pointer" then
-			cast_type(node.of, out)
-		elseif node.type == "type" then
-			for _, v in ipairs(node.modifiers) do
-				if type(v) == "table" then
-					if v.type == "struct" or v.type == "union" then
-						local tbl
-
-						if v.fields then
-							tbl = types.Table()
-
-							--tbl:Set(types.LString("__id"), types.LString(("%p"):format({})))
-							for _, v in ipairs(v.fields) do
-								tbl:Set(types.LString(v.identifier), cast(v))
-							end
-
-							table.insert(out, {identifier = v.identifier, obj = tbl})
-						else
-							tbl = typs:Get(types.LString(v.identifier))
-
-							if not tbl then error(" uh oh ") end
-						end
-					elseif v.type == "enum" then
-						local tbl = types.Table()
-						local i = 0
-
-						for _, v in ipairs(v.fields) do
-							tbl:Set(types.LString(v.identifier), types.LNumber(i))
-							i = i + 1
-						end
-
-						table.insert(out, {identifier = v.identifier, obj = tbl})
-					else
-						error("unknown type " .. v.type)
-					end
-				end
-			end
-		elseif node.type == "function" then
-			for i, v in ipairs(node.args) do
-				cast_type(v, out)
-			end
-
-			cast_type(node.rets, out)
-		elseif node.type == "root" then
-			return cast_type(node.of, out)
-		else
-			error("unknown type " .. node.type)
-		end
-	end
-
-	Analyzer(ast, function(node, real_node)
-		local out = {}
-		cast_type(node, out)
-
-		for _, typedef in ipairs(out) do
-			typs:Set(types.LString(typedef.identifier), typedef.obj)
-		end
-
-		local obj = cast(node)
-		vars:Set(types.LString(real_node.tokens["potential_identifier"].value), obj)
-	end)
-
-	return vars, typs
+	local a = Analyzer()
+	a.env = env.typesystem
+	a.analyzer = analyzer
+	return a:AnalyzeRoot(ast)
 end
 
 cdef([[
@@ -190,4 +70,30 @@ do
 			)
 		)
 	))
+end
+
+do
+	local vars, typs = cdef[[
+		struct foo;
+		struct foo {
+			int a;
+		};
+	]]
+	attest.equal(vars.foo, _  as {a = number})
+end
+
+do
+	local vars, typs = cdef[[
+		struct foo;
+	]]
+	attest.equal(vars.foo, _  as {})
+end
+
+do
+	local vars, typs = cdef[[
+		typedef struct {
+			int bar;
+		} foo;
+	]]
+	attest.equal(typs.foo, _  as {bar = number})
 end
