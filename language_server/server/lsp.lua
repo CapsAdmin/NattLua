@@ -371,33 +371,6 @@ end
 lsp.methods["textDocument/didSave"] = function(params)
 	editor_helper:SaveFile(to_fs_path(params.textDocument.uri))
 end
-lsp.methods["textDocument/inlineValue"] = function(params)
-	local hints = editor_helper:GetInlayHints(
-		to_fs_path(params.textDocument.uri),
-		params.start.line,
-		params.start.character,
-		params["end"].line,
-		params["end"].character
-	)
-	local result = {}
-	print("INLAY", #hints)
-
-	for k, v in pairs(hints) do
-		table.insert(
-			result,
-			{
-				range = get_range(
-					editor_helper:GetCode(to_fs_path(params.textDocument.uri)),
-					v.position.start,
-					v.position.stop
-				),
-				text = v.tooltip,
-			}
-		)
-	end
-
-	return result
-end
 lsp.methods["textDocument/references"] = function(params)
 	local nodes = editor_helper:GetReferences(
 		to_fs_path(params.textDocument.uri),
@@ -421,14 +394,33 @@ lsp.methods["textDocument/references"] = function(params)
 	return result
 end
 lsp.methods["textDocument/inlayHint"] = function(params)
-	local hints = editor_helper:GetInlayHints(
-		to_fs_path(params.textDocument.uri),
-		params.start.line,
-		params.start.character,
-		params["end"].line,
-		params["end"].character
-	)
-	return {hints = hints}
+	local result = {}
+
+	for _, hint in ipairs(
+		editor_helper:GetInlayHints(
+			to_fs_path(params.textDocument.uri),
+			params.range.start.line + 1,
+			params.range.start.character + 1,
+			params.range["end"].line + 1,
+			params.range["end"].character + 1
+		)
+	) do
+		local range = get_range(
+			editor_helper:GetCode(to_fs_path(params.textDocument.uri)),
+			hint.start,
+			hint.stop
+		)
+		table.insert(
+			result,
+			{
+				type = 1, -- type
+				label = ": " .. hint.label,
+				position = range["end"],
+			}
+		)
+	end
+
+	return result
 end
 lsp.methods["textDocument/rename"] = function(params)
 	local edits = {}

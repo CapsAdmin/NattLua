@@ -62,12 +62,10 @@ export async function activate(context: ExtensionContext) {
     },
   });
 
-  const ref = client.start();
-  context.subscriptions.push(ref);
-  await client.onReady()
+  await client.start();
 }
 
-export async function deactivate() {
+export async function deactivate(): Promise<void> | undefined {
   if (!client) {
     return undefined;
   }

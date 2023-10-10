@@ -195,7 +195,7 @@ function META:Recompile(path, lol, diagnostics)
 
 	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
 		local name = code:GetName()
-		
+
 		if severity == "fatal" then
 			self:DebugLog("[ " .. entry_point .. " ] " .. formating.FormatMessage(msg, ...))
 		end
@@ -398,13 +398,7 @@ do
 	end
 
 	function META:GetInlayHints(path, start_line, start_character, stop_line, stop_character)
-		local tokens = self:FindTokensFromRange(
-			path,
-			start_line - 1,
-			start_character - 1,
-			stop_line - 1,
-			stop_character - 1
-		)
+		local tokens = self:FindTokensFromRange(path, start_line, start_character, stop_line, stop_character)
 		local hints = {}
 		local assignments = find_nodes(tokens, "statement", "local_assignment")
 
@@ -420,26 +414,23 @@ do
 
 						if
 							types and
+							#types > 0 and
 							(
 								assignment.right[i].kind ~= "value" or
 								assignment.right[i].value.value.type == "letter"
 							)
 						then
-							local data = self:GetCode(path):SubPosToLineChar(left:GetStartStop())
-							local label = tostring(Union(types))
+							local start, stop = left:GetStartStop()
+							local label = #types == 1 and tostring(types[1]) or tostring(Union(types))
 
 							if #label > 20 then label = label:sub(1, 20) .. "..." end
 
 							table.insert(
 								hints,
 								{
-									label = ": " .. label,
-									tooltip = label,
-									position = {
-										lineNumber = data.line_stop,
-										column = data.character_stop + 1,
-									},
-									kind = 1, -- type
+									label = label,
+									start = start,
+									stop = stop,
 								}
 							)
 						end

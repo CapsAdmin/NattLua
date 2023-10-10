@@ -99,19 +99,33 @@ const main = async () => {
 					uri: pathFromURI(model.uri),
 					text: model.getValue(),
 				},
-				start: {
-					line: range.getStartPosition().lineNumber - 1,
-					character: range.getStartPosition().column - 1,
-				},
-				end: {
-					line: range.getEndPosition().lineNumber - 1,
-					character: range.getEndPosition().column - 1,
-				},
+				range: {
+					start: {
+						line: range.getStartPosition().lineNumber,
+						character: range.getStartPosition().column,
+					},
+					end: {
+						line: range.getEndPosition().lineNumber,
+						character: range.getEndPosition().column,
+					},
+				}
 			}
 
 			let response = callMethodOnServer("textDocument/inlayHint", request)
 
-			return response
+			return {
+				hints: response.map((hint) => {
+					return {
+						label: hint.label,
+						position: {
+							lineNumber: hint.position.line + 1,
+							column: hint.position.character + 1,
+						},
+						kind: hint.kind,
+					}
+				}),
+				dispose: () => { },
+			}
 		},
 	})
 
