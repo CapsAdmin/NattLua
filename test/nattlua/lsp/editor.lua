@@ -227,3 +227,12 @@ do
 	helper:Recompile()
 	assert(called)
 end
+
+do
+	local helper = single_file([[local x = 10*2]])
+	local hints = helper:GetInlayHints(path, 1, 1, 1, 100)
+	assert(#hints == 1)
+	assert(hints[1].start == 7)
+	assert(hints[1].stop == 7)
+	assert(hints[1].label == "20")
+end
