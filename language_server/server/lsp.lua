@@ -91,7 +91,8 @@ end
 local function to_lsp_path(url)
 	if url:sub(1, 1) == "@" then url = url:sub(2) end
 
-	url = "file://" .. url
+	if url:sub(1, 7) ~= "file://" then url = "file://" .. url end
+
 	return url
 end
 
@@ -423,24 +424,22 @@ lsp.methods["textDocument/inlayHint"] = function(params)
 	return result
 end
 lsp.methods["textDocument/rename"] = function(params)
+	local fs_path = to_fs_path(params.textDocument.uri)
+	local lsp_path = to_lsp_path(params.textDocument.uri)
 	local edits = {}
 
 	for _, edit in ipairs(
 		editor_helper:GetRenameInstructions(
-			to_fs_path(params.textDocument.uri),
-			params.position.line,
-			params.position.character - 1,
+			fs_path,
+			params.position.line + 1,
+			params.position.character + 1,
 			params.newName
 		)
 	) do
 		table.insert(
 			edits,
 			{
-				range = get_range(
-					editor_helper:GetCode(to_fs_path(params.textDocument.uri)),
-					edit.start,
-					edit.stop
-				),
+				range = get_range(editor_helper:GetCode(fs_path), edit.start, edit.stop),
 				newText = edit.to,
 			}
 		)
@@ -448,7 +447,7 @@ lsp.methods["textDocument/rename"] = function(params)
 
 	return {
 		changes = {
-			[to_lsp_path(params.textDocument.uri)] = edits,
+			[lsp_path] = edits,
 		},
 	}
 end
