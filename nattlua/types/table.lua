@@ -699,6 +699,8 @@ function META:CoerceUntypedFunctions(from--[[#: TTable]])
 	for _, kv in ipairs(self:GetData()) do
 		local kv_from, reason = from:FindKeyValReverse(kv.key)
 
+		if not kv_from then return nil, reason end
+
 		if kv.val.Type == "function" and kv_from.val.Type == "function" then
 			kv.val:SetInputSignature(kv_from.val:GetInputSignature())
 			kv.val:SetOutputSignature(kv_from.val:GetOutputSignature())
@@ -707,6 +709,8 @@ function META:CoerceUntypedFunctions(from--[[#: TTable]])
 			kv.val:SetCalled(false)
 		end
 	end
+
+	return true
 end
 
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])

@@ -150,7 +150,7 @@ return {
 
 					if val.Type == "table" and contract.Type == "table" then
 						-- coerce any untyped functions based on contract
-						val:CoerceUntypedFunctions(contract)
+						self:Assert(val:CoerceUntypedFunctions(contract))
 					end
 
 					self.current_expression = exp_key
