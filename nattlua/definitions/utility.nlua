@@ -249,6 +249,10 @@ analyzer function Parameters(func: Function)
 end
 
 analyzer function ReturnType(func: Function)
+	if not func:IsCalled() and not func:IsExplicitOutputSignature() then
+		analyzer:CrawlFunctionWithoutOrigin(func)
+	end
+
 	return {func:GetOutputSignature():Copy():Unpack()}
 end
 

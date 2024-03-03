@@ -112,7 +112,7 @@ return function(META)
 			return tup
 		end
 
-		local function call(self, obj)
+		function META:CrawlFunctionWithoutOrigin(obj)
 			-- use function's arguments in case they have been maniupulated (ie string.gsub)
 			local arguments = obj:GetInputSignature():Copy()
 			arguments = add_potential_self(arguments)
@@ -149,7 +149,7 @@ return function(META)
 					and
 					not done[func]
 				then
-					call(self, func)
+					self:CrawlFunctionWithoutOrigin(func)
 					called_count = called_count + 1
 					done[func] = true
 					func:SetCalled()
@@ -163,7 +163,7 @@ return function(META)
 					and
 					not done[func]
 				then
-					call(self, func)
+					self:CrawlFunctionWithoutOrigin(func)
 					called_count = called_count + 1
 					done[func] = true
 					func:SetCalled()

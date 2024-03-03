@@ -126,6 +126,50 @@ analyze[[
     attest.equal<|ReturnType<|foo|>[1], boolean|>
 ]]
 analyze[[
+    local function foo()
+        if math.random() > 0.5 then
+            return true
+        end
+
+        if math.random() > 0.5 then
+            return false
+        end
+    end
+
+    foo()
+
+    attest.equal<|ReturnType<|foo|>[1], boolean | nil|>
+]]
+analyze[[
+    local function foo()
+        if math.random() > 0.5 then
+            return true
+        end
+
+        if math.random() > 0.5 then
+            return false
+        end
+    end
+
+    attest.equal<|ReturnType<|foo|>[1], boolean | nil|>
+]]
+
+analyze[[
+    local function foo(x)
+        return x
+    end
+
+    attest.equal<|Parameters<|foo|>[1], any|>
+    attest.equal<|ReturnType<|foo|>[1], any|>
+
+    local function foo(x: number)
+        return x
+    end
+
+    attest.equal<|Parameters<|foo|>[1], number|>
+    attest.equal<|ReturnType<|foo|>[1], number|>
+]]
+analyze[[
     attest.equal<|Uppercase<|"foo"|>, "FOO"|>
     attest.equal<|Lowercase<|"FOO"|>, "foo"|>
 
