@@ -632,6 +632,24 @@ function META:Get(key--[[#: TBaseType]])
 		if not found_non_literal then return union end
 	end
 
+	if key.Type == "number" and key:GetMinLiteral() and key:GetMaxLiteral() then
+		local union = Union({})
+		local min, max = key:GetMinLiteral(), key:GetMaxLiteral()
+		local len = math.abs(min - max)
+
+		if len > 100 then return Any() end
+
+		for i = min, max do
+			local res, reason = self:Get(LNumber(i))
+
+			if not res then res = Nil() end
+
+			union:AddType(res)
+		end
+
+		return union
+	end
+
 	local keyval, reason = self:FindKeyValReverse(key)
 
 	if keyval then return keyval.val end

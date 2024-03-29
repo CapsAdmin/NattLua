@@ -2,7 +2,7 @@ local META = {}
 META.__index = META
 
 function META:at(index: ref number)
-	if index < 1 then index = #self.data - index end
+	if index < 1 then index = #self.data - -index end
 
 	return self.data[index]
 end
@@ -61,8 +61,9 @@ end
 
 do
 	local arr = Array<|string, 1 .. 10|>({"hello", "world"})
-	attest.equal<|arr:at(-9), string|>
-	attest.equal<|arr:at(3), string|>
+	attest.equal<|arr:at(1), string|>
+	attest.equal<|arr:at(-9), nil | string|>
+	attest.equal<|arr:at(3), nil | string|>
 	attest.expect_diagnostic<|"error", "not a subset of"|>
 	arr:at(-20)
 	attest.equal<|arr:concat(" "), string|>
