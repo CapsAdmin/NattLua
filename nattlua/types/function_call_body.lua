@@ -320,7 +320,7 @@ local function check_input(self, obj, input)
 	return true
 end
 
-local function check_output(self, output, output_signature)
+local function check_output(self, output, output_signature, function_node)
 	if self:IsTypesystem() then
 		-- in the typesystem we must not unpack tuples when checking
 		local ok, reason, a, b, i = output:IsSubsetOfTupleWithoutExpansion(output_signature)
@@ -363,7 +363,7 @@ local function check_output(self, output, output_signature)
 			end
 
 			-- check each tuple in the union
-			check_output(self, obj, original_contract)
+			check_output(self, obj, original_contract, function_node)
 		end
 	else
 		if output_signature.Type == "union" then
@@ -392,7 +392,11 @@ local function check_output(self, output, output_signature)
 
 			local ok, reason, a, b, i = output:IsSubsetOfTuple(output_signature)
 
-			if not ok then self:Error(reason) end
+			if not ok then
+				self.current_statement = function_node
+				self.current_expression = function_node.return_types and function_node.return_types[i]
+				self:Error(type_errors.return_type_mismatch(function_node, output_signature, output, reason, i))
+			end
 		end
 	end
 end
@@ -555,7 +559,7 @@ return function(self, obj, input)
 	end
 
 	-- check against the function's return type
-	check_output(self, output, output_signature)
+	check_output(self, output, output_signature, function_node)
 
 	if function_node.environment == "typesystem" then return output end
 

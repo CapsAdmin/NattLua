@@ -202,6 +202,13 @@ function type_errors.mutating_function_argument(obj--[[#: any]], i--[[#: number]
 	}
 end
 
+function type_errors.return_type_mismatch(function_node--[[#: any]], output_signature--[[#: any]], output--[[#: any]], reason--[[#: Reason]], i--[[#: number]])
+	return type_errors.context(
+		"expected return type " .. tostring(output_signature) .. ", but found " .. tostring(output) .. " at return #" .. i .. ":",
+		reason
+	)
+end
+
 function type_errors.global_assignment(key--[[#: any]], val--[[#: any]])--[[#: Reason]]
 	return {"_G[\"", key, "\"] = ", val}
 end
