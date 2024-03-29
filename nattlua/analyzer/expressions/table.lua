@@ -12,16 +12,13 @@ local function check_type_against_contract(val, contract)
 	-- Person is not a subset of {name = "harald"} because
 	-- Person is only equal to Person
 	-- so we need to disable this check during assignment
-	local skip_uniqueness = contract:IsUnique() and not val:IsUnique()
-
-	if skip_uniqueness then contract:DisableUniqueness() end
-
-	local ok, reason = val:IsSubsetOf(contract)
-
-	if skip_uniqueness then
+	if contract:IsUnique() and not val:IsUnique() then
+		contract:DisableUniqueness()
 		contract:EnableUniqueness()
 		val:SetUniqueID(contract:GetUniqueID())
 	end
+
+	local ok, reason = val:IsSubsetOf(contract)
 
 	if not ok then return ok, reason end
 
