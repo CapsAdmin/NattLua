@@ -172,18 +172,15 @@ function META.ReadInlineParserDebugCode(self--[[#: Lexer & {comment_escape = str
 end
 
 function META:ReadNumberPowExponent(what--[[#: string]])
-	self:Advance(1)
+	self:Advance(1) -- Consume the 'e' or 'p' character
+	if self:IsString("+") or self:IsString("-") then self:Advance(1) end
 
-	if self:IsString("+") or self:IsString("-") then
-		self:Advance(1)
-
-		if not characters.IsNumber(self:PeekByte()) then
-			self:Error(
-				"malformed " .. what .. " expected number, got " .. string.char(self:PeekByte()),
-				(self:GetPosition()--[[# as number]]) - 2
-			)
-			return false
-		end
+	if not characters.IsNumber(self:PeekByte()) then
+		self:Error(
+			"malformed " .. what .. " expected number, got " .. string.char(self:PeekByte()),
+			(self:GetPosition()--[[# as number]]) - 2
+		)
+		return false
 	end
 
 	while not self:TheEnd() do
