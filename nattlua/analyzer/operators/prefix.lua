@@ -123,7 +123,10 @@ local function Prefix(analyzer, node, r)
 	elseif r.Type == "string" then
 		if op == "#" then
 			local str = r:GetData()
-			return Number(str and #str or nil):SetLiteral(r:IsLiteral())
+
+			if r:IsLiteral() then return LNumber(#str) end
+
+			return LNumber(0):SetMax(LNumber(math.huge))
 		end
 	end
 

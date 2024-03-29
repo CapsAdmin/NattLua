@@ -23,6 +23,10 @@ analyzer function ^string.reverse(str: literal string): string
 end
 
 analyzer function ^string.rep(str: string, n: number, sep: nil | string)
+	if n.Type == "number" and n:GetMax() and n:GetMax():IsInf() then
+		return types.String()
+	end
+
 	if str:IsLiteral() and n:IsLiteral() then
 		if sep and sep:IsLiteral() then
 			return types.LString(string.rep(str:GetData(), n:GetData(), sep:GetData()))

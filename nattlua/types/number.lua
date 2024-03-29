@@ -159,6 +159,11 @@ function META:IsNan()
 	return n ~= n
 end
 
+function META:IsInf()
+	local n = self:GetData()
+	return math.abs(n--[[# as number]]) == math.huge
+end
+
 function META:__tostring()
 	local n = self:GetData()
 	local s--[[#: string]]
