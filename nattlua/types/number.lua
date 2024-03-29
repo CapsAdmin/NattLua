@@ -8,6 +8,7 @@ local type_errors = require("nattlua.types.error_messages")
 local bit = _G.bit32 or _G.bit
 local jit = _G.jit
 local META = dofile("nattlua/types/base.lua")
+local False = require("nattlua.types.symbol").False
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TNumber"]]
 --[[#type TNumber = META.@Self]]
@@ -387,7 +388,7 @@ do
 		end,
 	}
 
-	function META.ArithmeticOperator(l--[[#: TNumber]], r--[[#: TNumber]], op--[[#: keysof<|operators|>]])
+	function META.BinaryOperator(l--[[#: TNumber]], r--[[#: TNumber]], op--[[#: keysof<|operators|>]])
 		local func = operators[op]
 
 		if l:IsLiteral() and r:IsLiteral() then
@@ -409,17 +410,59 @@ do
 			local obj = META.New(res):SetLiteral(true)
 
 			if r:GetMax() then
-				obj:SetMax(l.ArithmeticOperator(l:GetMax() or l, r:GetMax()--[[# as TNumber]], op))
+				obj:SetMax(l.BinaryOperator(l:GetMax() or l, r:GetMax()--[[# as TNumber]], op))
 			end
 
 			if l:GetMax() then
-				obj:SetMax(l.ArithmeticOperator(l:GetMax()--[[# as TNumber]], r:GetMax() or r, op))
+				obj:SetMax(l.BinaryOperator(l:GetMax()--[[# as TNumber]], r:GetMax() or r, op))
 			end
 
 			return obj
 		end
 
 		return META.New()
+	end
+end
+
+do
+	local operators--[[#: {[string] = function=(number)>(number)}]] = {
+		["-"] = function(x)
+			return -x
+		end,
+		["~"] = function(x)
+			return bit.bnot(x)
+		end,
+	}
+
+	function META.PrefixOperator(x--[[#: TNumber]], op--[[#: keysof<|operators|>]])
+		local func = operators[op]
+
+		if op == "not" then return False() end
+
+		if not x:IsLiteral() then return META.New() end
+
+		local res = func(x:GetData()--[[# as number]])
+		local lcontract = x:GetContract()--[[# as nil | TNumber]]
+
+		if lcontract then
+			if res > lcontract:GetMaxLiteral() and lcontract:GetMaxLiteral() then
+				return false, type_errors.number_overflow(x)
+			end
+
+			local min = lcontract:GetMinLiteral()
+
+			if min and min > res then
+				return false, type_errors.number_underflow(x)
+			end
+		end
+
+		local obj = META.New(res):SetLiteral(true)
+
+		if x:GetMax() then
+			obj:SetMax(x.PrefixOperator(x:GetMax() or x--[[# as TNumber]], op))
+		end
+
+		return obj
 	end
 end
 

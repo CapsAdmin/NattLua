@@ -11,6 +11,7 @@ local False = require("nattlua.types.symbol").False
 local True = require("nattlua.types.symbol").True
 local Any = require("nattlua.types.any").Any
 local Tuple = require("nattlua.types.tuple").Tuple
+local LNumber = require("nattlua.types.number").LNumber
 local Number = require("nattlua.types.number").Number
 
 local function metatable_function(analyzer, meta_method, obj, node)
@@ -118,29 +119,7 @@ local function Prefix(analyzer, node, r)
 			return r:GetLength():SetLiteral(r:IsLiteral())
 		end
 	elseif r.Type == "number" then
-		if op == "-" then
-			if r:IsLiteral() then
-				local num = r.New(-r:GetData()):SetLiteral(true)
-				local max = r:GetMax()
-
-				if max then num:SetMax(max:PrefixOperator(op)) end
-
-				return num
-			end
-
-			return r.New(nil)
-		elseif op == "~" then
-			if r:IsLiteral() then
-				local num = r.New(bit.bnot(r:GetData())):SetLiteral(true)
-				local max = r:GetMax()
-
-				if max then num:SetMax(max:PrefixOperator(op)) end
-
-				return num
-			end
-
-			return r.New(nil)
-		end
+		if op == "-" or op == "~" then return r:PrefixOperator(op) end
 	elseif r.Type == "string" then
 		if op == "#" then
 			local str = r:GetData()

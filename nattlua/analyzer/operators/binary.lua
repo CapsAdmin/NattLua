@@ -89,7 +89,7 @@ local function operator(self, node, l, r, op, meta_method)
 	end
 
 	if l.Type == "number" and r.Type == "number" then
-		return l:ArithmeticOperator(r, op)
+		return l:BinaryOperator(r, op)
 	else
 		local res = metatable_function(self, node, meta_method, l, r)
 
