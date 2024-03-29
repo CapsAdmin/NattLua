@@ -35,7 +35,7 @@ end
 
 analyzer function attest.expect_diagnostic(severity: "warning" | "error", msg: string)
 	analyzer.expect_diagnostic = analyzer.expect_diagnostic or {}
-	table.insert(analyzer.expect_diagnostic, {msg = msg:GetData(), severity = severity:GetData()})
+	table.insert(analyzer.expect_diagnostic, 1, {msg = msg:GetData(), severity = severity:GetData()})
 end
 
 analyzer function attest.pcall(callable: Function, ...: ...any)
