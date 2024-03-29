@@ -1652,6 +1652,16 @@ analyze[[
     if a then attest.equal(a, true) end
 ]]
 
+analyze[[
+    local a: nil | 1
+
+    if a or true and a or false then
+        attest.equal(a, _ as 1)
+    end
+
+    attest.equal(a, _ as 1 | nil)
+]]
+
 if false then
 	pending[[
         local MAYBE: boolean
@@ -1680,15 +1690,7 @@ if false then
 
         attest.equal(a, _ as 1 | nil)
     ]]
-	pending[[
-        local a: nil | 1
 
-        if a or true and a or false then
-            attest.equal(a, _ as 1 | 1)
-        end
-
-        attest.equal(a, _ as 1 | nil)
-    ]]
 	pending[[
 
         local x: number
