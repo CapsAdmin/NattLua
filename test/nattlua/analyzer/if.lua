@@ -1651,7 +1651,6 @@ analyze[[
 
     if a then attest.equal(a, true) end
 ]]
-
 analyze[[
     local a: nil | 1
 
@@ -1660,6 +1659,17 @@ analyze[[
     end
 
     attest.equal(a, _ as 1 | nil)
+]]
+analyze[[
+    local type Shape = { kind = "circle", radius = number } | { kind = "square", sideLength = number }
+
+    local function area(shape: Shape)
+        if shape.kind == "circle" then 
+            attest.equal(shape.kind, "circle")
+        else
+            attest.equal(shape.kind, "square")
+        end 
+    end
 ]]
 
 if false then
@@ -1671,17 +1681,6 @@ if false then
         attest.equal(x, 0)
     ]]
 	pending[[
-        local type Shape = { kind = "circle", radius = number } | { kind = "square", sideLength = number }
-
-        local function area(shape: Shape): number
-            if shape.kind == "circle" then 
-                print(shape.radius)
-            else
-                print(shape.sideLength)
-            end 
-        end
-    ]]
-	pending[[
         local a: nil | 1
 
         if not not a then
@@ -1690,9 +1689,7 @@ if false then
 
         attest.equal(a, _ as 1 | nil)
     ]]
-
 	pending[[
-
         local x: number
         
         if x >= 0 and x <= 10 then

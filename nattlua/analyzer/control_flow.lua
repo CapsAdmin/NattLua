@@ -82,9 +82,7 @@ return function(META)
 
 		scope:ClearCertainOutputSignatures()
 
-		if #union:GetData() == 1 then return union:GetData()[1] end
-
-		return union
+		return union:Simplify()
 	end
 
 	function META:ThrowSilentError(assert_expression)

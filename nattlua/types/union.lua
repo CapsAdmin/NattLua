@@ -172,11 +172,7 @@ end
 function META:GetAtIndex(i--[[#: number]])
 	assert(type(i) == "number")
 
-	if not self:HasTuples() then
-		if self:GetLength() == 1 then return self:GetData()[1] end
-
-		return self
-	end
+	if not self:HasTuples() then return self:Simplify() end
 
 	local val--[[#: any]]
 	local errors = {}
@@ -513,6 +509,10 @@ function META:Call(analyzer, input, call_node)
 	end
 
 	return Tuple({new--[[# as any]]})
+end
+
+function META:Simplify()
+	return #self:GetData() == 1 and self:GetData()[1] or self
 end
 
 return {
