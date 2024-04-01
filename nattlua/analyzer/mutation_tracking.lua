@@ -101,6 +101,22 @@ return function(META)
 				end
 			end
 
+			function META:TrackDependentUpvalues(obj)
+				local upvalue = obj:GetUpvalue()
+
+				if not upvalue then return end
+
+				local val = upvalue:GetValue()
+
+				if val.truthy_union and val.truthy_union:GetUpvalue() then
+					self:TrackUpvalueUnion(val.truthy_union:GetUpvalue():GetValue(), val.truthy_union, val.falsy_union)
+				end
+
+				if val.right_source then self:TrackDependentUpvalues(val.right_source) end
+
+				if val.left_source then self:TrackDependentUpvalues(val.left_source) end
+			end
+
 			function META:TrackUpvalueUnion(obj, truthy_union, falsy_union, inverted)
 				local upvalue = obj:GetUpvalue()
 

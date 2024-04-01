@@ -1671,6 +1671,18 @@ analyze[[
         end 
     end
 ]]
+analyze[[
+    local a = _  as 1 | 2
+    local b = a == 1
+
+    if b then attest.equal(a, 1) else attest.equal(a, 2) end
+]]
+analyze[[
+    local a = _  as 1 | 2
+    local b = a ~= 1
+
+    if b then attest.equal(a, 2) else attest.equal(a, 1) end
+]]
 
 if false then
 	pending[[

@@ -12,6 +12,8 @@ local META = class.CreateTemplate("base")
 --[[#type META.Type = string]]
 --[[#type TBaseType.Name = string | nil]]
 --[[#type TBaseType.parent = TBaseType | nil]]
+--[[#type TBaseType.truthy_union = TBaseType | nil]]
+--[[#type TBaseType.falsy_union = TBaseType | nil]]
 META:GetSet("AnalyzerEnvironment", nil--[[# as nil | "runtime" | "typesystem"]])
 
 function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]]) --error("nyi " .. a.Type .. " == " .. b.Type)
@@ -84,6 +86,8 @@ do
 		self:SetTypeOverride(obj:GetTypeOverride())
 		self:SetLiteralArgument(obj:IsLiteralArgument())
 		self:SetReferenceArgument(obj:IsReferenceArgument())
+		self.truthy_union = obj.truthy_union
+		self.falsy_union = obj.falsy_union
 	end
 end
 
