@@ -7,12 +7,12 @@ local function mutation_solver(mutations, scope, obj)
 		--[[
 			remove previous mutations that are in the same scope
 
-			y = val -- remove
+			x = val -- remove
 			x = val -- remove
 			x = val -- remove
 			do
 				x = val -- remove
-				y = val -- keep
+				x = val -- keep
 			end
 			x = val -- keep
 		]] for i = #mutations, 1, -1 do
@@ -22,11 +22,9 @@ local function mutation_solver(mutations, scope, obj)
 				for j = i - 1, 1, -1 do
 					local mut_b = mutations[j]
 
-					if mut_a.scope:Contains(mut_b.scope) then
-						table.remove(mutations, j)
-					else
-						break
-					end
+					if not mut_a.scope:Contains(mut_b.scope) then break end
+
+					table.remove(mutations, j)
 				end
 			end
 		end
