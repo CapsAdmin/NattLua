@@ -1683,6 +1683,34 @@ analyze[[
 
     if b then attest.equal(a, 2) else attest.equal(a, 1) end
 ]]
+analyze[[
+    local x: 1 | "1"
+    local y = type(x) == "number"
+    if y then
+        attest.equal(x, 1)
+    else
+        attest.equal(x, "1")
+    end
+]]
+analyze[[
+    local x: 1 | "1"
+    local y = type(x) ~= "number"
+    if y then
+        attest.equal(x, "1")
+    else
+        attest.equal(x, 1)
+    end
+]]
+analyze[[
+    local x: 1 | "1"
+    local t = "number"
+    local y = type(x) ~= t
+    if y then
+        attest.equal(x, "1")
+    else
+        attest.equal(x, 1)
+    end
+]]
 
 if false then
 	pending[[
@@ -1706,34 +1734,6 @@ if false then
         
         if x >= 0 and x <= 10 then
             attest.equal<|x, 0 .. 10|>
-        end
-    ]]
-	pending[[
-        local x: 1 | "1"
-        local y = type(x) == "number"
-        if y then
-            attest.equal(x, 1)
-        else
-            attest.equal(x, "1")
-        end
-    ]]
-	pending[[
-        local x: 1 | "1"
-        local y = type(x) ~= "number"
-        if y then
-            attest.equal(x, "1")
-        else
-            attest.equal(x, 1)
-        end
-    ]]
-	pending[[
-        local x: 1 | "1"
-        local t = "number"
-        local y = type(x) ~= t
-        if y then
-            attest.equal(x, "1")
-        else
-            attest.equal(x, 1)
         end
     ]]
 end
