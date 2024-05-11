@@ -20,6 +20,57 @@ end
 config.test = function(path)
 	assert(loadfile("test/run.lua"))(path)
 end
+config["build-for-ai"] = function(mode)
+	-- this is just for something like a single file you can paste into gemini 1.5 or chatgpt. gemini's ai studio interface kind of doesn't work with many files, so this is easier.
+	local f = io.open("nattlua_for_ai.lua", "w")
+	local paths = {}
+
+	for path in (
+		io.popen("git ls-tree --full-tree --name-only -r HEAD"):read("*a")
+	):gmatch("(.-)\n") do
+		if path:find("%.lua") or path:find("%.nlua") then
+			table.insert(paths, path)
+		end
+	end
+
+	if mode == "all" then
+
+	elseif mode == "core" then
+		local new_paths = {}
+
+		for _, path in ipairs(paths) do
+			if path:sub(1, #"nattlua/") == "nattlua/" then
+				table.insert(new_paths, path)
+			end
+		end
+
+		paths = new_paths
+	end
+
+	local tokens = {}
+
+	for _, path in ipairs(paths) do
+		local str = io.open(path):read("*a")
+		str = ">>>" .. path .. ">>>\n" .. str .. "\n<<<" .. path .. "<<<\n\n"
+		f:write(str)
+		table.insert(tokens, {path = path, count = #str * 2.88})
+	end
+
+	f:close()
+
+	table.sort(tokens, function(a, b)
+		return a.count < b.count
+	end)
+
+	local total_tokens = 0
+
+	for path, info in ipairs(tokens) do
+		print("added " .. info.path .. ": " .. info.count .. " tokens")
+		total_tokens = total_tokens + info.count
+	end
+
+	print("roughly " .. math.floor(total_tokens / 10000) .. "k tokens")
+end
 config.build = function(mode)
 	local nl = require("nattlua.init")
 	local entry = "./nattlua.lua"
