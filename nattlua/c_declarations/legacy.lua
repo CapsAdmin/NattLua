@@ -4281,6 +4281,16 @@ cparser.parseString = function(cdecl, options, args)
 		end
 
 		local i = 1
+		if type(cdecl) ~= "string" then
+			debug.trace()
+			print("?!?!")
+			print(cdecl)
+			for k, v in pairs(cdecl) do print(k,v)
+			
+				for k, v in pairs(v) do print(k,v) end
+			end
+			print(cdecl.trace)
+		end
 		local temp = cdecl:gsub("%$", function()
 			return "$" .. i .. "$"
 		end)
