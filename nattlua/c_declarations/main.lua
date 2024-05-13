@@ -1,5 +1,4 @@
 local cparser = {}
-local fbcparser = require("nattlua.c_declarations.legacy")
 local table_print = require("nattlua.other.table_print")
 local Function = require("nattlua.types.function").Function
 local LuaTypeFunction = require("nattlua.types.function").LuaTypeFunction
@@ -16,6 +15,20 @@ local Union = require("nattlua.types.union").Union
 local Nilable = require("nattlua.types.union").Nilable
 local Tuple = require("nattlua.types.tuple").Tuple
 local Boolean = require("nattlua.types.union").Boolean
+
+local fbcparser = require("nattlua.c_declarations.legacy")
+local function parse(str, mode, ...)
+	local res = assert(fbcparser.parseString(
+		str, 
+		{
+			typeof = mode == "typeof",
+			ffinew = mode == "ffinew",
+		}, 
+		{...}
+	))
+
+	return res
+end
 
 local function C_DECLARATIONS()
 	local analyzer = assert(
@@ -284,7 +297,7 @@ end
 function cparser.sizeof(cdecl, len)
 	-- TODO: support non string sizeof
 	if jit and cdecl.Type == "string" and cdecl:IsLiteral() then
-		assert(fbcparser.parseString(cdecl:GetData(), {typeof = true})) -- syntax check
+		parse(cdecl:GetData(), "typeof")
 		local ffi = require("ffi")
 		local ok, val = pcall(ffi.sizeof, cdecl:GetData(), len and len:GetData() or nil)
 
@@ -298,7 +311,7 @@ function cparser.cdef(cdecl, ...)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 
-	for _, ctype in ipairs(assert(fbcparser.parseString(cdecl:GetData(), {}, {...}))) do
+	for _, ctype in ipairs(parse(cdecl:GetData(), nil, ...)) do
 		ctype.type.parent = ctype
 		analyzer:NewIndexOperator(C_DECLARATIONS(), LString(ctype.name), cast(ctype.type, {...}))
 	end
@@ -308,7 +321,7 @@ end
 
 function cparser.cast(cdecl, src)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
-	local declarations = assert(fbcparser.parseString(cdecl:GetData(), {typeof = true}))
+	local declarations = parse(cdecl:GetData(), "typeof")
 	local ctype = cast(declarations[#declarations].type)
 
 	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
@@ -340,7 +353,7 @@ function cparser.typeof(cdecl, ...)
 
 	if args[1] and args[1].Type == "tuple" then args = {args[1]:Unpack()} end
 
-	local declarations = assert(fbcparser.parseString(cdecl:GetData(), {typeof = true}, args))
+	local declarations = parse(cdecl:GetData(), "typeof", unpack(args))
 	local ctype = cast(declarations[#declarations].type, args)
 
 	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
@@ -389,13 +402,13 @@ end
 
 function cparser.get_type(cdecl, ...)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-	local declarations = assert(fbcparser.parseString(cdecl:GetData(), {typeof = true}, {...}))
+	local declarations = parse(cdecl:GetData(), "typeof", ...)
 	local ctype = cast(declarations[#declarations].type, {...})
 	return ctype
 end
 
 function cparser.new(cdecl, ...)
-	local declarations = assert(fbcparser.parseString(cdecl:GetData(), {ffinew = true}, {...}))
+	local declarations = parse(cdecl:GetData(), "ffinew", ...)
 	local ctype = cast(declarations[#declarations].type, {...})
 
 	if ctype.is_enum then return ... end
