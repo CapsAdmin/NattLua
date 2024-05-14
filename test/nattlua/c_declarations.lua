@@ -554,6 +554,8 @@ do -- struct and union declarations
 
 	test[[ struct TYPE { char *(*(**FIELD[][8])())[]; }; ]]
 	test([[ %{struct|union} NAME(NAME)(]] .. [[ %{struct|union} NAME);]])
+
+	test[[ struct TYPE { int FIELD; } ]] -- without ;
 end
 
 do -- enum

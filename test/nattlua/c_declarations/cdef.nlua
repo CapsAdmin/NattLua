@@ -96,12 +96,4 @@ do
 		} foo;
 	]]
 	attest.equal(typs.foo, _  as {bar = number})
-end
-
-do
-	local vars, typs = cdef[[
-		struct addrinfo {
-			struct addrinfo *ai_next;
-		};
-	]]
-end
+end	

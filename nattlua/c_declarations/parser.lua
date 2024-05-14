@@ -22,6 +22,11 @@ function META:ParseStatement()
 		return
 	end
 
+	if self:IsTokenType("end_of_file") then 
+		-- it's allowed to have 1 statement without ;
+		return node
+	end
+
 	-- multi declaration
 	-- int foo, *bar;
 	if not self:IsTokenValue(";") then
@@ -192,6 +197,8 @@ function META:ParseAttributes(node)
 			table.insert(out, self:ParseUnion())
 		elseif self:IsTokenValue("enum") then
 			table.insert(out, self:ParseEnum())
+		elseif self:IsTokenType("end_of_file") then
+			break
 		else
 			-- type specifier, typedef name or storage class specifier
 			table.insert(out, self:ExpectTokenType("letter"))
