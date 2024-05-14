@@ -196,17 +196,25 @@ local function cast(self, node)
 						end
 					end
 
-					return tbl
+					if not tbl then
+						local current = self.current_nodes[1]
+						if current.ident == ident then
+							-- recursion
+							tbl = current.tbl
+						end
+					end
+
+					return (tbl)
 				elseif v.type == "enum" then
 					-- using enum as type is the same as if it were an int
-					return Number()
+					return (Number())
 				else
 					error("unknown type " .. v.type)
 				end
 			end
 		end
 
-		return Number()
+		return (Number())
 	elseif node.type == "function" then
 		local args = {}
 		local rets = {}
@@ -219,7 +227,7 @@ local function cast(self, node)
 	elseif node.type == "root" then
 		if not node.of then table.print(node) end
 
-		return cast(self, assert(node.of))
+		return (cast(self, assert(node.of)))
 	else
 		error("unknown type " .. node.type)
 	end
@@ -241,16 +249,22 @@ local function cast_type(self, node, out)
 					if v.fields then
 						tbl = Table()
 
-						--tbl:Set(LString("__id"), LString(("%p"):format({})))
-						for _, v in ipairs(v.fields) do
-							tbl:Set(LString(v.identifier), cast(self, v))
-						end
 
 						local ident = v.identifier
 
 						if not ident and #node.modifiers > 0 then
 							ident = node.modifiers[#node.modifiers]
 						end
+
+						self.current_nodes = self.current_nodes or {}
+						table.insert(self.current_nodes, 1, {ident = ident, tbl = tbl})
+						
+						--tbl:Set(LString("__id"), LString(("%p"):format({})))
+						for _, v in ipairs(v.fields) do
+							tbl:Set(LString(v.identifier), cast(self, v))
+						end
+
+						table.remove(self.current_nodes, 1)
 
 						table.insert(out, {identifier = ident, obj = tbl})
 					else
