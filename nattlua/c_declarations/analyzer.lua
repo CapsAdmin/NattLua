@@ -9,6 +9,8 @@ local LString = require("nattlua.types.string").LString
 local LNumber = require("nattlua.types.number").LNumber
 local Nil = require("nattlua.types.symbol").Nil
 local Boolean = require("nattlua.types.union").Boolean
+local Union = require("nattlua.types.union").Union
+local Any = require("nattlua.types.any").Any
 
 function META:WalkRoot(node)
 	for _, node in ipairs(node.statements) do
@@ -27,7 +29,7 @@ function META:WalkTypedef(node)
 end
 
 local function handle_struct(self, node)
-	local struct = {type = "struct"}
+	local struct = {type = node.kind}
 
 	if node.tokens["identifier"] then
 		struct.identifier = node.tokens["identifier"].value
@@ -69,6 +71,8 @@ local function handle_modifiers(self, node)
 			table.insert(modifiers, handle_struct(self, v))
 		elseif v.kind == "enum" then
 			table.insert(modifiers, handle_enum(self, v))
+		elseif v.kind == "dollar_sign" then
+			table.insert(modifiers, "$")
 		else
 			if not v.DONT_WRITE then table.insert(modifiers, v.value) end
 		end
@@ -175,7 +179,19 @@ local function cast(self, node)
 			):Unpack()
 		)
 	elseif node.type == "pointer" then
-		return (env.FFIPointer:Call(analyzer, Tuple({cast(self, assert(node.of))})):Unpack())
+		if node.of.type == "type" and #node.of.modifiers == 1 and node.of.modifiers[1] == "void" then
+			return Any() -- TODO: is this true?
+		end
+
+		local res = (env.FFIPointer:Call(analyzer, Tuple({cast(self, assert(node.of))})):Unpack())
+		
+		if node.of.type == "type" and node.of.modifiers[1] == "const" and node.of.modifiers[2] == "char" then
+			if self.FUNCTION_ARGUMENT then 
+				return Union({res, String(), Nil()}) 
+			end
+		end
+
+		return Union({res, Nil()})
 	elseif node.type == "type" then
 		for _, v in ipairs(node.modifiers) do
 			if type(v) == "table" then
@@ -192,7 +208,7 @@ local function cast(self, node)
 						tbl = Table()
 
 						for _, v in ipairs(v.fields) do
-							tbl:Set(LString(ident), cast(self, v))
+							tbl:Set(LString(v.identifier), cast(self, v))
 						end
 					end
 
@@ -203,6 +219,7 @@ local function cast(self, node)
 							tbl = current.tbl
 						end
 					end
+
 
 					return (tbl)
 				elseif v.type == "enum" then
@@ -268,6 +285,9 @@ local function cast(self, node)
 			return Boolean()
 		elseif t == "void" then
 			return Nil()
+		elseif t == "$" then
+			local res = table.remove(self.dollar_signs_vars, 1)
+			return res
 		elseif t == "va_list" then
 			return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		end
@@ -277,9 +297,11 @@ local function cast(self, node)
 		local args = {}
 		local rets = {}
 
+		self.FUNCTION_ARGUMENT = true
 		for i, v in ipairs(node.args) do
 			table.insert(args, cast(self, v))
 		end
+		self.FUNCTION_ARGUMENT = false
 
 		return (Function(Tuple(args), Tuple({cast(self, assert(node.rets))})))
 	elseif node.type == "root" then
@@ -342,6 +364,69 @@ local function cast_type(self, node, out)
 				end
 			end
 		end
+
+		local t = node.modifiers[1]
+
+		if
+			t == "double" or
+			t == "float" or
+			t == "int8_t" or
+			t == "uint8_t" or
+			t == "int16_t" or
+			t == "uint16_t" or
+			t == "int32_t" or
+			t == "uint32_t" or
+			t == "char" or
+			t == "signed char" or
+			t == "unsigned char" or
+			t == "short" or
+			t == "short int" or
+			t == "signed short" or
+			t == "signed short int" or
+			t == "unsigned short" or
+			t == "unsigned short int" or
+			t == "int" or
+			t == "signed" or
+			t == "signed int" or
+			t == "unsigned" or
+			t == "unsigned int" or
+			t == "long" or
+			t == "long int" or
+			t == "signed long" or
+			t == "signed long int" or
+			t == "unsigned long" or
+			t == "unsigned long int" or
+			t == "float" or
+			t == "double" or
+			t == "long double" or
+			t == "size_t" or
+			t == "intptr_t" or
+			t == "uintptr_t"
+		then
+			return Number()
+		elseif
+			t == "int64_t" or
+			t == "uint64_t" or
+			t == "long long" or
+			t == "long long int" or
+			t == "signed long long" or
+			t == "signed long long int" or
+			t == "unsigned long long" or
+			t == "unsigned long long int"
+		then
+			return Number()
+		elseif t == "bool" or t == "_Bool" then
+			return Boolean()
+		elseif t == "void" then
+			return Nil()
+		elseif t == "$" then
+			local res = table.remove(self.dollar_signs_typs, 1)
+			return res
+		elseif t == "va_list" then
+			return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+		end
+
+		return (Number())
 	elseif node.type == "function" then
 		for i, v in ipairs(node.args) do
 			cast_type(self, v, out)
@@ -369,6 +454,7 @@ function META:AnalyzeRoot(ast)
 
 		local obj = cast(self, node)
 		vars:Set(LString(real_node.tokens["potential_identifier"].value), obj)
+
 	end
 	self:WalkRoot(ast)
 	return vars, typs

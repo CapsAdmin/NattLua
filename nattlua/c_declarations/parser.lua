@@ -183,13 +183,15 @@ function META:ParseAttributes(node)
 	local out = {}
 
 	-- long long __attribute__((stdcall)) 
-	for i = 1, self:GetLength() do
+	for i = 1, self:GetLength() do	
 		if self:IsEndOfTypeQualifiersAndSpecifiers() then break end
 
 		-- declaration specifier: extern or static
 		-- type specifier: 		  void, char int, short, struct, union, etc
 		-- type qualifier:		  const, volatile
-		if self:IsTokenValue("__attribute__") or self:IsTokenValue("__attribute") then
+		if self:IsTokenValue("$") then
+			table.insert(out, self:ParseDollarSign())
+		elseif self:IsTokenValue("__attribute__") or self:IsTokenValue("__attribute") then
 			table.insert(out, self:ParseAttributeExtension())
 		elseif self:IsTokenValue("struct") then
 			table.insert(out, self:ParseStruct())
@@ -207,6 +209,17 @@ function META:ParseAttributes(node)
 
 	-- TODO, completely neglecting the name of the declaration, may be consumed by modifiers
 	return out
+end
+
+function META:ParseDollarSign()
+	local node = self:StartNode("expression", "dollar_sign")
+	node.tokens["$"] = self:ExpectTokenValue("$")
+	node = self:EndNode(node)
+	
+	self.dollar_signs = self.dollar_signs or {}
+	table.insert(self.dollar_signs, node)
+
+	return node
 end
 
 function META:ParseCTypeDeclaration(node)

@@ -164,6 +164,8 @@ function META:EmitCDeclaration(node)
 			self:EmitStruct(v)
 		elseif v.kind == "union" then
 			self:EmitUnion(v)
+		elseif v.kind == "dollar_sign" then
+			self:EmitDollarSign(v)
 		elseif v.kind == "enum" then
 			self:EmitEnum(v)
 		else
@@ -224,6 +226,10 @@ function META:EmitCDeclaration(node)
 			if v.tokens[","] then self:EmitToken(v.tokens[","]) end
 		end
 	end
+end
+
+function META:EmitDollarSign(node)
+	self:EmitToken(node.tokens["$"])
 end
 
 function META:EmitArguments(args)

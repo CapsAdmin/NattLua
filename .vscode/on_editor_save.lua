@@ -120,9 +120,13 @@ if normalized:find("/nattlua/", nil, true) then
 
 	if normalized:find("test/.+/.+%.nlua") then
 		run_nattlua(path)
-	elseif normalized:find("c_declarations/analyzer", nil, true) then
+	elseif normalized:find("c_declarations/main.lua", nil, true) and not has_test_focus() then
+		--run_lua("test/run.lua", "test/nattlua/c_declarations/cdef.nlua")
+		--run_lua("test/run.lua", "test/nattlua/c_declarations.lua")
+		run_lua("test/run.lua", "test/nattlua/analyzer/typed_ffi.lua")
+	elseif normalized:find("c_declarations/analyzer", nil, true)  and not has_test_focus() then
 		run_lua("test/run.lua", "test/nattlua/c_declarations/cdef.nlua")
-	elseif normalized:find("c_declarations", nil, true) then
+	elseif normalized:find("c_declarations", nil, true)  and not has_test_focus() then
 		run_lua("test/run.lua", "test/nattlua/c_declarations.lua")
 	elseif normalized:find("other/coverage", nil, true) then
 		run_lua("test/run.lua", "test/nattlua/coverage.lua")

@@ -206,7 +206,7 @@ analyze[=[
 
 	local lol = ffi.new("struct in6_addr")
 
-	attest.equal(lol.u6_addr.u6_addr16, _ as {[number] = number})
+	attest.equal(lol.u6_addr.u6_addr16, _ as FFIArray<|8, number|>)
 ]=]
 analyze[=[
 	local ffi = require("ffi")
@@ -296,22 +296,17 @@ analyze[==[
 
 	ffi.cdef([[
 		struct addrinfo {
-			int foo;
+			bool foo;
 			struct addrinfo *ai_next;
 		};
 	]])
 	
 	local addrinfo = ffi.new("struct addrinfo")
 	
-	attest.equal(addrinfo.foo, _ as number)
+	attest.equal(addrinfo.foo, _ as boolean)
 
 	assert(addrinfo.ai_next)
-	attest.equal(addrinfo.ai_next.foo, _ as number)
-	do return end
-	local nxt = addrinfo.ai_next
-	if nxt.ai_next then
-		attest.equal(nxt.ai_next.foo, _ as nil | number)
-	end
+	attest.equal(addrinfo.ai_next.foo, _ as boolean)
 ]==]
 analyze[==[
 	local ffi = require("ffi")

@@ -16,6 +16,44 @@ local Nilable = require("nattlua.types.union").Nilable
 local Tuple = require("nattlua.types.tuple").Tuple
 local Boolean = require("nattlua.types.union").Boolean
 
+
+local function parse2(c_code, env, analyzer, ...)
+	local Lexer = require("nattlua.c_declarations.lexer").New
+	local Parser = require("nattlua.c_declarations.parser").New
+	local Emitter = require("nattlua.c_declarations.emitter").New
+	local Analyzer = require("nattlua.c_declarations.analyzer").New
+	local Code = require("nattlua.code").New
+	local Compiler = require("nattlua.compiler")
+
+	local code = Code(c_code, "test.c")
+	local lex = Lexer(code)
+	local tokens = lex:GetTokens()
+	local parser = Parser(tokens, code)
+	local ast = parser:ParseRootNode()
+	local emitter = Emitter({skip_translation = true})
+	local res = emitter:BuildCode(ast)
+	local a = Analyzer()
+	if parser.dollar_signs then
+		local function gen(...)
+			local new = {}
+			for i, v in ipairs(parser.dollar_signs) do
+				local ct = select(i, ...)
+				if not ct then
+					error("expected ctype at argument #" .. i, 2)
+				end
+				table.insert(new, 1, ct)
+			end
+			return new
+		end
+
+		a.dollar_signs_typs = gen(...)
+		a.dollar_signs_vars = gen(...)
+	end
+	a.env = env.typesystem
+	a.analyzer = analyzer
+	return a:AnalyzeRoot(ast)
+end
+
 local fbcparser = require("nattlua.c_declarations.legacy")
 local function parse(str, mode, ...)
 	local res = assert(fbcparser.parseString(
@@ -248,6 +286,13 @@ local function cast(node, args)
 				return tbl
 			end
 		else
+			if node.n:sub(1, 6) == "struct" then
+				local val = analyzer:IndexOperator(C_DECLARATIONS(), LString(node.n:sub(8)))
+				if val and (val.Type ~= "symbol" or val:GetData() ~= nil) then
+					return val
+				end
+			end
+			
 			local val = analyzer:IndexOperator(C_DECLARATIONS(), LString(node.n))
 
 			if not val or val.Type == "symbol" and val:GetData() == nil then
@@ -311,9 +356,14 @@ function cparser.cdef(cdecl, ...)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 
-	for _, ctype in ipairs(parse(cdecl:GetData(), nil, ...)) do
-		ctype.type.parent = ctype
-		analyzer:NewIndexOperator(C_DECLARATIONS(), LString(ctype.name), cast(ctype.type, {...}))
+	local env = analyzer:GetScopeHelper(analyzer.function_scope)
+	local vars, typs = parse2(cdecl:GetData(), env, analyzer, ...)
+
+	for _, kv in ipairs(typs:GetData()) do
+		analyzer:NewIndexOperator(C_DECLARATIONS(), kv.key, kv.val)
+	end
+	for _, kv in ipairs(vars:GetData()) do
+		analyzer:NewIndexOperator(C_DECLARATIONS(), kv.key, kv.val)
 	end
 
 	return nil

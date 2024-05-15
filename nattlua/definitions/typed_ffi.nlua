@@ -1,4 +1,5 @@
 local type ffi = require("ffi")
+type _G.ffi = ffi
 
 analyzer function ffi.sizeof(cdecl: any, len: nil | number)
 	return require("nattlua.c_declarations.main").sizeof(cdecl, len)
@@ -51,6 +52,9 @@ function FFIArray<|size: number, T: any|>
 end
 
 function FFIPointer<|T: any|>
+	if T == nil then
+		return T
+	end
 	return {
 		@MetaTable = self,
 		[0] = T,
@@ -75,3 +79,5 @@ end
 function FFIType<|str: string|>
 	return number
 end
+
+type ffi.string = function=(cdata | FFIPointer<|number|>, number | nil)>(string)
