@@ -7,6 +7,8 @@ local Number = require("nattlua.types.number").Number
 local String = require("nattlua.types.string").String
 local LString = require("nattlua.types.string").LString
 local LNumber = require("nattlua.types.number").LNumber
+local Nil = require("nattlua.types.symbol").Nil
+local Boolean = require("nattlua.types.union").Boolean
 
 function META:WalkRoot(node)
 	for _, node in ipairs(node.statements) do
@@ -173,8 +175,6 @@ local function cast(self, node)
 			):Unpack()
 		)
 	elseif node.type == "pointer" then
-		if not node.of then table.print(node) end
-
 		return (env.FFIPointer:Call(analyzer, Tuple({cast(self, assert(node.of))})):Unpack())
 	elseif node.type == "type" then
 		for _, v in ipairs(node.modifiers) do
@@ -213,6 +213,64 @@ local function cast(self, node)
 				end
 			end
 		end
+		
+		local t = node.modifiers[1]
+
+		if
+			t == "double" or
+			t == "float" or
+			t == "int8_t" or
+			t == "uint8_t" or
+			t == "int16_t" or
+			t == "uint16_t" or
+			t == "int32_t" or
+			t == "uint32_t" or
+			t == "char" or
+			t == "signed char" or
+			t == "unsigned char" or
+			t == "short" or
+			t == "short int" or
+			t == "signed short" or
+			t == "signed short int" or
+			t == "unsigned short" or
+			t == "unsigned short int" or
+			t == "int" or
+			t == "signed" or
+			t == "signed int" or
+			t == "unsigned" or
+			t == "unsigned int" or
+			t == "long" or
+			t == "long int" or
+			t == "signed long" or
+			t == "signed long int" or
+			t == "unsigned long" or
+			t == "unsigned long int" or
+			t == "float" or
+			t == "double" or
+			t == "long double" or
+			t == "size_t" or
+			t == "intptr_t" or
+			t == "uintptr_t"
+		then
+			return Number()
+		elseif
+			t == "int64_t" or
+			t == "uint64_t" or
+			t == "long long" or
+			t == "long long int" or
+			t == "signed long long" or
+			t == "signed long long int" or
+			t == "unsigned long long" or
+			t == "unsigned long long int"
+		then
+			return Number()
+		elseif t == "bool" or t == "_Bool" then
+			return Boolean()
+		elseif t == "void" then
+			return Nil()
+		elseif t == "va_list" then
+			return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+		end
 
 		return (Number())
 	elseif node.type == "function" then
@@ -225,8 +283,6 @@ local function cast(self, node)
 
 		return (Function(Tuple(args), Tuple({cast(self, assert(node.rets))})))
 	elseif node.type == "root" then
-		if not node.of then table.print(node) end
-
 		return (cast(self, assert(node.of)))
 	else
 		error("unknown type " .. node.type)
