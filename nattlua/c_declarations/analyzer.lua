@@ -170,40 +170,49 @@ local function cast(self, node, out)
 	local env = self.env
 	local analyzer = self.analyzer
 	local typs = self.typs
+	local vars = self.vars
 
 	if node.type == "array" then
+		local size
+
+		if node.size == "?" then
+			size = table.remove(self.dollar_signs_vars, 1)
+		else
+			size = LNumber(tonumber(node.size) or math.huge)
+		end
+
 		return (
-			env.FFIArray:Call(
-				analyzer,
-				Tuple({LNumber(tonumber(node.size) or math.huge), cast(self, assert(node.of), out)})
-			):Unpack()
+			env.FFIArray:Call(analyzer, Tuple({size, cast(self, assert(node.of), out)})):Unpack()
 		)
 	elseif node.type == "pointer" then
-		if node.of.type == "type" and #node.of.modifiers == 1 and node.of.modifiers[1] == "void" then
+		if
+			node.of.type == "type" and
+			#node.of.modifiers == 1 and
+			node.of.modifiers[1] == "void"
+		then
 			return Any() -- TODO: is this true?
 		end
 
 		local res = (env.FFIPointer:Call(analyzer, Tuple({cast(self, assert(node.of), out)})):Unpack())
-		
-		if node.of.type == "type" and node.of.modifiers[1] == "const" and node.of.modifiers[2] == "char" then
-			if self.FUNCTION_ARGUMENT then 
-				return Union({res, String(), Nil()}) 
-			end
+
+		if
+			node.of.type == "type" and
+			node.of.modifiers[1] == "const" and
+			node.of.modifiers[2] == "char"
+		then
+			return Union({res, String(), Nil()})
 		end
 
 		return Union({res, Nil()})
 	elseif node.type == "type" then
 		for _, v in ipairs(node.modifiers) do
 			if type(v) == "table" then
-
 				-- only catch struct, union and enum TYPE declarations
 				if v.type == "struct" or v.type == "union" then
 					local tbl
 
 					if v.fields then
 						tbl = Table()
-
-
 						local ident = v.identifier
 
 						if not ident and #node.modifiers > 0 then
@@ -212,18 +221,29 @@ local function cast(self, node, out)
 
 						self.current_nodes = self.current_nodes or {}
 						table.insert(self.current_nodes, 1, {ident = ident, tbl = tbl})
-						
+
 						--tbl:Set(LString("__id"), LString(("%p"):format({})))
 						for _, v in ipairs(v.fields) do
 							tbl:Set(LString(v.identifier), cast(self, v, out))
 						end
 
 						table.remove(self.current_nodes, 1)
-
 						table.insert(out, {identifier = ident, obj = tbl})
+						self.typs_write:Set(LString(ident), tbl)
 					else
-						tbl = typs:Get(LString(v.identifier)) or Table()
+						local current = self.current_nodes and self.current_nodes[1]
+
+						if current and current.ident == v.identifier then
+							-- recursion
+							tbl = current.tbl
+						else
+							tbl = typs:Get(LString(v.identifier)) or
+								self.typs_write:Get(LString(v.identifier)) or
+								Table()
+						end
+
 						table.insert(out, {identifier = v.identifier, obj = tbl})
+						self.typs_write:Set(LString(v.identifier), tbl)
 					end
 				elseif v.type == "enum" then
 					local tbl = Table()
@@ -235,6 +255,7 @@ local function cast(self, node, out)
 					end
 
 					table.insert(out, {identifier = v.identifier, obj = tbl})
+					self.typs_write:Set(LString(v.identifier), tbl)
 				end
 
 				-- catch variable declarations
@@ -247,22 +268,30 @@ local function cast(self, node, out)
 
 					local tbl = typs:Get(LString(ident))
 
+					if not tbl then tbl = self.typs_write:Get(LString(ident)) end
+
 					if not tbl and v.fields then
 						tbl = Table()
+						self.current_nodes = self.current_nodes or {}
+						table.insert(self.current_nodes, 1, {ident = ident, tbl = tbl})
 
 						for _, v in ipairs(v.fields) do
 							tbl:Set(LString(v.identifier), cast(self, v, out))
 						end
+
+						table.remove(self.current_nodes, 1)
 					end
 
-					if not tbl then
+					if not tbl and self.current_nodes then
 						local current = self.current_nodes[1]
+
 						if current and current.ident == ident then
 							-- recursion
 							tbl = current.tbl
 						end
 					end
 
+					if not tbl then tbl = Table() end
 
 					return (tbl)
 				elseif v.type == "enum" then
@@ -273,7 +302,7 @@ local function cast(self, node, out)
 				end
 			end
 		end
-		
+
 		local t = node.modifiers[1]
 
 		if
@@ -328,7 +357,7 @@ local function cast(self, node, out)
 			return Boolean()
 		elseif t == "void" then
 			return Nil()
-		elseif t == "$" then
+		elseif t == "$" or t == "?" then
 			local res = table.remove(self.dollar_signs_vars, 1)
 			return res
 		elseif t == "va_list" then
@@ -340,11 +369,9 @@ local function cast(self, node, out)
 		local args = {}
 		local rets = {}
 
-		self.FUNCTION_ARGUMENT = true
 		for i, v in ipairs(node.args) do
 			table.insert(args, cast(self, v, out))
 		end
-		self.FUNCTION_ARGUMENT = false
 
 		return (Function(Tuple(args), Tuple({cast(self, assert(node.rets), out)})))
 	elseif node.type == "root" then
@@ -354,28 +381,35 @@ local function cast(self, node, out)
 	end
 end
 
-
 function META:AnalyzeRoot(ast, vars, typs)
-	vars = vars or Table()
-	typs = typs or Table()
-	self.typs = typs
-	self.Callback = function(node, real_node, typedef)		
+	-- new output
+	self.typs = typs or Table()
+	self.vars = vars or Table()
+	local typs = Table()
+	local vars = Table()
+	self.typs_write = typs
+	self.vars_write = vars
+	self.Callback = function(node, real_node, typedef)
 		local out = {}
 		local obj = cast(self, node, out)
-		if typedef then
-			typs:Set(LString(real_node.tokens["potential_identifier"].value), obj)
-		else
-			vars:Set(LString(real_node.tokens["potential_identifier"] and real_node.tokens["potential_identifier"].value or "uhoh"), obj)
+		local ident = real_node.tokens["potential_identifier"] and
+			real_node.tokens["potential_identifier"].value
+
+		if not ident then ident = "uhhoh" end
+
+		if ident then
+			if typedef then
+				typs:Set(LString(ident), obj)
+			else
+				vars:Set(LString(ident), obj)
+			end
 		end
-		
+
 		for _, typedef in ipairs(out) do
 			typs:Set(LString(assert(typedef.identifier)), typedef.obj)
 		end
-		
 	end
 	self:WalkRoot(ast)
-
-	print(vars, typs)
 	return vars, typs
 end
 

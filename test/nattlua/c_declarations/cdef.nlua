@@ -44,7 +44,7 @@ do
 		struct MyStruct faz;
 	]]
 	attest.equal(vars.faz, typs.MyStruct)
-	attest.equal(assert(vars.bar)[0], typs.MyStruct)
+	attest.equal(assert(vars.bar)[0], _  as {a = number})
 end
 
 do
@@ -59,7 +59,17 @@ do
 	local vars, typs = cdef[[
 		unsigned long long * volatile (* (* *NAME [1][2])(char *))[3][4];
 	]]
-	attest.equal(vars.NAME, _  as FFIArray(1, FFIArray(2, FFIPointer(FFIPointer(function=(FFIPointer(number) | nil,)>(FFIPointer(FFIArray(3,FFIArray(4, FFIPointer(number) | nil))) | nil,)) | nil) | nil)))
+	attest.equal(vars.NAME, _  as FFIArray(
+		1,
+		FFIArray(
+			2,
+			FFIPointer(
+					FFIPointer(
+							function=(FFIPointer(number) | nil)>(FFIPointer(FFIArray(3, FFIArray(4, FFIPointer(number) | nil))) | nil)
+						) | nil
+				) | nil
+		)
+	))
 end
 
 do
@@ -69,7 +79,7 @@ do
 			int a;
 		};
 	]]
-	attest.equal(vars.foo, _  as {a = number})
+	attest.equal(typs.foo, _  as {a = number})
 end
 
 do
@@ -96,14 +106,13 @@ do
 		struct MyStruct {int a;} *bar;  // type declaration and variable declaration
 		struct MyStruct2 faz;  // type declaration and variable declaration
 	]]
-
-	attest.equal(vars, _ as {
+	attest.equal(vars, _  as {
 		foo = number,
-		foo2 = function=()>(number,),
-		bar = FFIPointer({ a = number }) | nil
+		foo2 = function=()>(number),
+		bar = FFIPointer({a = number}) | nil,
+		faz = typs.MyStruct2,
 	})
-
-	attest.equal(typs, _ as {
+	attest.equal(typs, _  as {
 		BAR = boolean,
 		MyStruct = {a = number},
 		MyStruct2 = {},

@@ -1,12 +1,11 @@
 local T = require("test.helpers")
 local analyze_old = T.RunCode
+
 local function analyze(c)
-	return analyze_old(
-		[=[
+	return analyze_old([=[
 			local ffi = require("ffi")
 			ffi.C = {}	
-		]=]..c
-	)
+		]=] .. c)
 end
 
 analyze[=[
@@ -97,8 +96,7 @@ analyze[=[
 ]=]
 analyze[=[
 	local ctype = ffi.typeof("struct { const char *foo; }")
-	print(ctype, ffi.typeof)
-	attest.equal(ctype.foo, _ as nil | ffi.typeof<|"const char*"|>)
+	attest.equal(ctype.foo, _ as nil | ffi.get_type<|"const char*"|>)
 ]=]
 analyze[=[
 	local struct
@@ -189,9 +187,6 @@ analyze[=[
 	]])
 
 	local lol = ffi.new("struct in6_addr")
-
-	print(lol)
-	
 	attest.equal(lol.u6_addr.u6_addr16, _ as FFIArray<|8, number|>)
 ]=]
 analyze[=[
@@ -204,10 +199,10 @@ analyze[=[
 ]=]
 analyze[=[
 	local buffer = ffi.new("char[?]", 5)
-	attest.equal<|buffer, {[number] = number}|>
+	attest.equal<|buffer, FFIArray<|5, number|>|>
 
 	local buffer = ffi.new("char[8]")
-	attest.equal<|buffer, {[number] = number}|>
+	attest.equal<|buffer, FFIArray<|8, number|>|>
 ]=]
 analyze[[
 	if _ as boolean then
@@ -251,7 +246,7 @@ analyze[[
 ]]
 analyze[[
 	local newbuf = ffi.new("char [?]", _ as number)
-	attest.equal(newbuf, _ as {[number] = number})
+	attest.equal(newbuf, _ as FFIArray<|number, number|>)
 ]]
 analyze[[
 	local gbuf_n = 1024
@@ -304,7 +299,7 @@ analyze[=[
 	
 	local a = ffi.new("struct sockaddr_in")
 	local b = ffi.cast("struct sockaddr *", a)
-	attest.equal(b, ffi.typeof("struct sockaddr *"))
+	attest.equal<|b | nil,  nil | ffi.typeof("struct sockaddr *")|>
 	
 
 ]=]
@@ -317,14 +312,13 @@ analyze[=[
 	]]
 	
 	local box = ffi.new("struct foo[1]")
+	
 	attest.equal(box[0], _ as {a = number, b = number})
 ]=]
 analyze[[
 	local str_v = ffi.new("const char *[?]", 1)
 
-	attest.equal(str_v, _ as {
-		[number] = ffi.typeof<|"const char*"|> | nil | string
-	})
+	attest.equal(str_v, _ as FFIArray<|1, ffi.typeof<|"const char*"|> | nil | string|>)
 ]]
 analyze[[
 	ffi.cdef([=[

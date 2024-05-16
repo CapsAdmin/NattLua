@@ -46,15 +46,20 @@ function FFIArray<|size: number, T: any|>
 		@MetaTable = self,
 		[0 .. (size - 1)] = T,
 		__tostring = function(self: ref self)
-			return "Array" .. size .. "(" .. tostring(self[0]) .. ")"
+			return "Array" .. tostring(size) .. "(" .. tostring(self[0]) .. ")"
+		end,
+		__add = function(self: ref self, other: ref self | number)
+			return self
+		end,
+		__sub = function(self: ref self, other: ref self | number)
+			return self
 		end,
 	}
 end
 
 function FFIPointer<|T: any|>
-	if T == nil then
-		return T
-	end
+	if T == nil then return T end
+
 	return {
 		@MetaTable = self,
 		[0] = T,
@@ -67,10 +72,10 @@ function FFIPointer<|T: any|>
 		__call = function(self: ref self, ...)
 			return self[0](...)
 		end,
-		__add = function(self: ref self, other: ref self)
+		__add = function(self: ref self, other: ref self | number)
 			return self
 		end,
-		__sub = function(self: ref self, other: ref self)
+		__sub = function(self: ref self, other: ref self | number)
 			return self
 		end,
 	}

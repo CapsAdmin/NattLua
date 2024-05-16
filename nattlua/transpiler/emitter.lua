@@ -588,6 +588,8 @@ function META:EmitExpression(node--[[#: Node]])
 		self:EmitVararg(node)
 	elseif self.FFI_DECLARATION_EMITTER and node.kind == "c_declaration" then
 		self:EmitCDeclaration(node)
+	elseif node.kind == "dollar_sign" then
+		self:EmitToken(node.tokens["$"])
 	else
 		error("unhandled token type " .. node.kind)
 	end

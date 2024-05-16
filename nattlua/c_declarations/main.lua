@@ -1,5 +1,4 @@
 local cparser = {}
-local table_print = require("nattlua.other.table_print")
 local Function = require("nattlua.types.function").Function
 local LuaTypeFunction = require("nattlua.types.function").LuaTypeFunction
 local LNumber = require("nattlua.types.number").LNumber
@@ -16,7 +15,6 @@ local Nilable = require("nattlua.types.union").Nilable
 local Tuple = require("nattlua.types.tuple").Tuple
 local Boolean = require("nattlua.types.union").Boolean
 
-
 local function C_DECLARATIONS()
 	local analyzer = assert(
 		require("nattlua.analyzer.context"):GetCurrentAnalyzer(),
@@ -25,6 +23,16 @@ local function C_DECLARATIONS()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	return env.typesystem.ffi:Get(ConstString("C"))
 end
+
+local function C_DECLARATIONS_RUNTIME()
+	local analyzer = assert(
+		require("nattlua.analyzer.context"):GetCurrentAnalyzer(),
+		"no analyzer in context"
+	)
+	local env = analyzer:GetScopeHelper(analyzer.function_scope)
+	return env.runtime.ffi:Get(ConstString("C"))
+end
+
 local function parse2(c_code, mode, env, analyzer, ...)
 	local Lexer = require("nattlua.c_declarations.lexer").New
 	local Parser = require("nattlua.c_declarations.parser").New
@@ -33,9 +41,9 @@ local function parse2(c_code, mode, env, analyzer, ...)
 	local Code = require("nattlua.code").New
 	local Compiler = require("nattlua.compiler")
 
-	if mode == "typeof" then
-		c_code = "typedef " .. c_code .. " TYPEOF_CDECL;"
-	end
+	if mode == "typeof" then c_code = "typedef " .. c_code .. " TYPEOF_CDECL;" end
+
+	if mode == "ffinew" then c_code = c_code .. " VAR_NAME;" end
 
 	local code = Code(c_code, "test.c")
 	local lex = Lexer(code)
@@ -46,27 +54,30 @@ local function parse2(c_code, mode, env, analyzer, ...)
 	local emitter = Emitter({skip_translation = true})
 	local res = emitter:BuildCode(ast)
 	local a = Analyzer()
+
 	if parser.dollar_signs then
 		local function gen(...)
 			local new = {}
+
 			for i, v in ipairs(parser.dollar_signs) do
 				local ct = select(i, ...)
-				if not ct then
-					error("expected ctype at argument #" .. i, 2)
-				end
+
+				if not ct then error("expected ctype at argument #" .. i, 2) end
+
 				table.insert(new, 1, ct)
 			end
+
 			return new
 		end
 
 		a.dollar_signs_typs = gen(...)
 		a.dollar_signs_vars = gen(...)
 	end
+
 	a.env = env.typesystem
 	a.analyzer = analyzer
-	return a:AnalyzeRoot(ast)
+	return a:AnalyzeRoot(ast, C_DECLARATIONS_RUNTIME(), C_DECLARATIONS())
 end
-
 
 function cparser.sizeof(cdecl, len)
 	-- TODO: support non string sizeof
@@ -74,8 +85,7 @@ function cparser.sizeof(cdecl, len)
 		local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 		local env = analyzer:GetScopeHelper(analyzer.function_scope)
 		local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer)
-		local ctype = vars:GetData()[1].val
-		
+		local ctype = typs:GetData()[1].val
 		local ffi = require("ffi")
 		local ok, val = pcall(ffi.sizeof, cdecl:GetData(), len and len:GetData() or nil)
 
@@ -88,15 +98,15 @@ end
 function cparser.cdef(cdecl, ...)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
-
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = parse2(cdecl:GetData(), "cdef", env, analyzer, ...)
 
 	for _, kv in ipairs(typs:GetData()) do
 		analyzer:NewIndexOperator(C_DECLARATIONS(), kv.key, kv.val)
 	end
+
 	for _, kv in ipairs(vars:GetData()) do
-		analyzer:NewIndexOperator(C_DECLARATIONS(), kv.key, kv.val)
+		analyzer:NewIndexOperator(C_DECLARATIONS_RUNTIME(), kv.key, kv.val)
 	end
 
 	return nil
@@ -104,12 +114,10 @@ end
 
 function cparser.cast(cdecl, src)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
-
-	
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer)
-	local ctype = vars:GetData()[1].val
+	local ctype = typs:GetData()[1].val
 
 	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
 	if ctype.Type == "union" then
@@ -143,7 +151,7 @@ function cparser.typeof(cdecl, ...)
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer, ...)
-	local ctype = vars:GetData()[1].val
+	local ctype = typs:GetData()[1].val
 
 	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
 	if ctype.Type == "union" then
@@ -194,17 +202,15 @@ function cparser.get_type(cdecl, ...)
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer, ...)
-	local ctype = vars:GetData()[1].val
+	local ctype = typs:GetData()[1].val
 	return ctype
 end
 
 function cparser.new(cdecl, ...)
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer, ...)
+	local vars, typs = parse2(cdecl:GetData(), "ffinew", env, analyzer, ...)
 	local ctype = vars:GetData()[1].val
-
-	print(vars, typs)
 
 	if ctype.is_enum then return ... end
 

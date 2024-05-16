@@ -22,7 +22,7 @@ function META:ParseStatement()
 		return
 	end
 
-	if self:IsTokenType("end_of_file") then 
+	if self:IsTokenType("end_of_file") then
 		-- it's allowed to have 1 statement without ;
 		return node
 	end
@@ -183,7 +183,7 @@ function META:ParseAttributes(node)
 	local out = {}
 
 	-- long long __attribute__((stdcall)) 
-	for i = 1, self:GetLength() do	
+	for i = 1, self:GetLength() do
 		if self:IsEndOfTypeQualifiersAndSpecifiers() then break end
 
 		-- declaration specifier: extern or static
@@ -213,12 +213,16 @@ end
 
 function META:ParseDollarSign()
 	local node = self:StartNode("expression", "dollar_sign")
-	node.tokens["$"] = self:ExpectTokenValue("$")
+
+	if self:IsTokenValue("?") then
+		node.tokens["$"] = self:ExpectTokenValue("?")
+	else
+		node.tokens["$"] = self:ExpectTokenValue("$")
+	end
+
 	node = self:EndNode(node)
-	
 	self.dollar_signs = self.dollar_signs or {}
 	table.insert(self.dollar_signs, node)
-
 	return node
 end
 
@@ -442,7 +446,13 @@ function META:ParseArrayIndex()
 		if self:IsTokenValue("[") then
 			local node = self:StartNode("expression", "array")
 			node.tokens["["] = self:ExpectTokenValue("[")
-			node.expression = self:ParseRuntimeExpression()
+
+			if self:IsTokenValue("?") then
+				node.expression = self:ParseDollarSign()
+			else
+				node.expression = self:ParseRuntimeExpression()
+			end
+
 			node.tokens["]"] = self:ExpectTokenValue("]")
 			table.insert(out, self:EndNode(node))
 		else

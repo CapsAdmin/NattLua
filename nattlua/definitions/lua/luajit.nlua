@@ -19,7 +19,7 @@ type Modules["ffi"] = {
 	fill = function=(cdata, number, any)>(nil) | function=(cdata, len: number)>(nil),
 	offsetof = function=(cdata, number)>(number),
 }
-type Modules["ffi"].C.@Name = "FFI_C"
+--type Modules["ffi"].C.@Name = "FFI_C"
 type Modules["jit.vmdef"] = {
 	ffnames = List<|string|>,
 	irfield = List<|string|>,
