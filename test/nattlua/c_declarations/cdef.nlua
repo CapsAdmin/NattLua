@@ -44,7 +44,7 @@ do
 		struct MyStruct faz;
 	]]
 	attest.equal(vars.faz, typs.MyStruct)
-	attest.equal(vars.bar[0], typs.MyStruct)
+	attest.equal(assert(vars.bar)[0], typs.MyStruct)
 end
 
 do
@@ -59,17 +59,7 @@ do
 	local vars, typs = cdef[[
 		unsigned long long * volatile (* (* *NAME [1][2])(char *))[3][4];
 	]]
-	attest.equal(vars.NAME, _  as FFIArray(
-		1,
-		FFIArray(
-			2,
-			FFIPointer(
-				FFIPointer(
-					function=(FFIPointer(number))>(FFIPointer(FFIArray(3, FFIArray(4, FFIPointer(number)))))
-				)
-			)
-		)
-	))
+	attest.equal(vars.NAME, _  as FFIArray(1, FFIArray(2, FFIPointer(FFIPointer(function=(FFIPointer(number) | nil,)>(FFIPointer(FFIArray(3,FFIArray(4, FFIPointer(number) | nil))) | nil,)) | nil) | nil)))
 end
 
 do

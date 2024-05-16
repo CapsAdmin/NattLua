@@ -440,9 +440,9 @@ local function cast_type(self, node, out)
 	end
 end
 
-function META:AnalyzeRoot(ast)
-	local vars = Table()
-	local typs = Table()
+function META:AnalyzeRoot(ast, vars, typs)
+	vars = vars or Table()
+	typs = typs or Table()
 	self.typs = typs
 	self.Callback = function(node, real_node)
 		local out = {}
@@ -451,9 +451,9 @@ function META:AnalyzeRoot(ast)
 		for _, typedef in ipairs(out) do
 			typs:Set(LString(assert(typedef.identifier)), typedef.obj)
 		end
-
+		
 		local obj = cast(self, node)
-		vars:Set(LString(real_node.tokens["potential_identifier"].value), obj)
+		vars:Set(LString(real_node.tokens["potential_identifier"] and real_node.tokens["potential_identifier"].value or "uhoh"), obj)
 
 	end
 	self:WalkRoot(ast)

@@ -17,7 +17,15 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local Boolean = require("nattlua.types.union").Boolean
 
 
-local function parse2(c_code, env, analyzer, ...)
+local function C_DECLARATIONS()
+	local analyzer = assert(
+		require("nattlua.analyzer.context"):GetCurrentAnalyzer(),
+		"no analyzer in context"
+	)
+	local env = analyzer:GetScopeHelper(analyzer.function_scope)
+	return env.typesystem.ffi:Get(ConstString("C"))
+end
+local function parse2(c_code, mode, env, analyzer, ...)
 	local Lexer = require("nattlua.c_declarations.lexer").New
 	local Parser = require("nattlua.c_declarations.parser").New
 	local Emitter = require("nattlua.c_declarations.emitter").New
@@ -25,10 +33,15 @@ local function parse2(c_code, env, analyzer, ...)
 	local Code = require("nattlua.code").New
 	local Compiler = require("nattlua.compiler")
 
+	if mode == "typeof" then
+		c_code = "typedef " .. c_code .. " TYPEOF_CDECL;"
+	end
+
 	local code = Code(c_code, "test.c")
 	local lex = Lexer(code)
 	local tokens = lex:GetTokens()
 	local parser = Parser(tokens, code)
+	parser.CDECL_PARSING_MODE = mode
 	local ast = parser:ParseRootNode()
 	local emitter = Emitter({skip_translation = true})
 	local res = emitter:BuildCode(ast)
@@ -54,295 +67,15 @@ local function parse2(c_code, env, analyzer, ...)
 	return a:AnalyzeRoot(ast)
 end
 
-local fbcparser = require("nattlua.c_declarations.legacy")
-local function parse(str, mode, ...)
-	local res = assert(fbcparser.parseString(
-		str, 
-		{
-			typeof = mode == "typeof",
-			ffinew = mode == "ffinew",
-		}, 
-		{...}
-	))
-
-	return res
-end
-
-local function C_DECLARATIONS()
-	local analyzer = assert(
-		require("nattlua.analyzer.context"):GetCurrentAnalyzer(),
-		"no analyzer in context"
-	)
-	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	return env.typesystem.ffi:Get(ConstString("C"))
-end
-
-local function cdata_metatable(from, const)
-	local analyzer = assert(
-		require("nattlua.analyzer.context"):GetCurrentAnalyzer(),
-		"no analyzer in context"
-	)
-	local meta = Table()
-	meta:Set(
-		ConstString("__index"),
-		LuaTypeFunction(
-			function(self, key)
-				-- i'm not really sure about this
-				-- boxed luajit ctypes seem to just get the metatable from the ctype
-				return analyzer:Assert(analyzer:IndexOperator(from, key))
-			end,
-			{Any(), Any()},
-			{}
-		)
-	)
-
-	if const then
-		meta:Set(
-			ConstString("__newindex"),
-			LuaTypeFunction(
-				function(self, key, value)
-					error("attempt to write to constant location")
-				end,
-				{Any(), Any(), Any()},
-				{}
-			)
-		)
-	end
-
-	meta:Set(
-		ConstString("__add"),
-		LuaTypeFunction(function(self, key)
-			return self
-		end, {Any(), Any()}, {})
-	)
-	meta:Set(
-		ConstString("__sub"),
-		LuaTypeFunction(function(self, key)
-			return self
-		end, {Any(), Any()}, {})
-	)
-	return meta
-end
-
-local function cast(node, args)
-	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
-
-	if node.tag == "Enum" then
-		local tbl = Table()
-		local keys = {}
-
-		for i, node in ipairs(node) do
-			local key = LString(node[1])
-			local val = LNumber(node[2] or i - 1)
-			tbl:Set(key, val)
-			table.insert(keys, key)
-		end
-
-		local key_union = Union(keys)
-		local meta = Table()
-		meta:Set(
-			ConstString("__call"),
-			LuaTypeFunction(
-				function(self, key)
-					return analyzer:Assert(tbl:Get(key))
-				end,
-				{Any(), key_union},
-				{}
-			)
-		)
-		tbl:SetMetaTable(meta)
-		tbl.is_enum = true
-		return tbl
-	elseif node.tag == "Struct" or node.tag == "Union" then
-		local tbl = Table()
-
-		if node.n then
-			tbl.ffi_name = "struct " .. node.n
-			analyzer.current_tables = analyzer.current_tables or {}
-			table.insert(analyzer.current_tables, tbl)
-		end
-
-		for _, node in ipairs(node) do
-			if node.tag == "Pair" then
-				local key = LString(node[2])
-				local val = cast(node[1], args)
-				tbl:Set(key, val)
-			else
-				table_print(node)
-				error("NYI: " .. node.tag)
-			end
-		end
-
-		if node.n then table.remove(analyzer.current_tables) end
-
-		return tbl
-	elseif node.tag == "Function" then
-		local arguments = {}
-
-		for _, arg in ipairs(node) do
-			if arg.ellipsis then
-				table.insert(arguments, Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
-			else
-				_G.FUNCTION_ARGUMENT = true
-				local arg = cast(arg[1], args)
-				_G.FUNCTION_ARGUMENT = nil
-				table.insert(arguments, arg)
-			end
-		end
-
-		local return_type
-
-		if
-			node.t.tag == "Pointer" and
-			node.t.t.tag == "Qualified" and
-			node.t.t.t.n == "char"
-		then
-			local ptr = Table()
-			ptr:Set(Number(), Number())
-			return_type = Union({ptr, Nil()})
-		else
-			return_type = cast(node.t, args)
-		end
-
-		local obj = Function(Tuple(arguments), Tuple({return_type}))
-		return obj
-	elseif node.tag == "Array" then
-		local tbl = Table()
-		-- todo node.size: array length
-		_G.FUNCTION_ARGUMENT = true
-		local t = cast(node.t, args)
-		_G.FUNCTION_ARGUMENT = nil
-		tbl:Set(Number(), t)
-		local meta = cdata_metatable(tbl)
-		tbl:SetContract(tbl)
-		tbl:SetMetaTable(meta)
-		return tbl
-	elseif node.tag == "Type" then
-		if
-			node.n == "double" or
-			node.n == "float" or
-			node.n == "int8_t" or
-			node.n == "uint8_t" or
-			node.n == "int16_t" or
-			node.n == "uint16_t" or
-			node.n == "int32_t" or
-			node.n == "uint32_t" or
-			node.n == "char" or
-			node.n == "signed char" or
-			node.n == "unsigned char" or
-			node.n == "short" or
-			node.n == "short int" or
-			node.n == "signed short" or
-			node.n == "signed short int" or
-			node.n == "unsigned short" or
-			node.n == "unsigned short int" or
-			node.n == "int" or
-			node.n == "signed" or
-			node.n == "signed int" or
-			node.n == "unsigned" or
-			node.n == "unsigned int" or
-			node.n == "long" or
-			node.n == "long int" or
-			node.n == "signed long" or
-			node.n == "signed long int" or
-			node.n == "unsigned long" or
-			node.n == "unsigned long int" or
-			node.n == "float" or
-			node.n == "double" or
-			node.n == "long double" or
-			node.n == "size_t" or
-			node.n == "intptr_t" or
-			node.n == "uintptr_t"
-		then
-			return Number()
-		elseif
-			node.n == "int64_t" or
-			node.n == "uint64_t" or
-			node.n == "long long" or
-			node.n == "long long int" or
-			node.n == "signed long long" or
-			node.n == "signed long long int" or
-			node.n == "unsigned long long" or
-			node.n == "unsigned long long int"
-		then
-			return Number()
-		elseif node.n == "bool" or node.n == "_Bool" then
-			return Boolean()
-		elseif node.n == "void" then
-			return Nil()
-		elseif node.n == "va_list" then
-			return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
-		elseif node.n:find("%$%d+%$") then
-			local val = table.remove(args, 1)
-
-			if not val then error("unable to lookup type $ #" .. (#args + 1), 2) end
-
-			return val
-		elseif node.parent and node.parent.tag == "TypeDef" then
-			if node.n:sub(1, 6) == "struct" then
-				local name = node.n:sub(7)
-				local tbl = Table()
-				tbl:SetName(LString(name))
-				return tbl
-			end
-		else
-			if node.n:sub(1, 6) == "struct" then
-				local val = analyzer:IndexOperator(C_DECLARATIONS(), LString(node.n:sub(8)))
-				if val and (val.Type ~= "symbol" or val:GetData() ~= nil) then
-					return val
-				end
-			end
-			
-			local val = analyzer:IndexOperator(C_DECLARATIONS(), LString(node.n))
-
-			if not val or val.Type == "symbol" and val:GetData() == nil then
-				if analyzer.current_tables then
-					local current_tbl = analyzer.current_tables[#analyzer.current_tables]
-
-					if current_tbl and current_tbl.ffi_name == node.n then return current_tbl end
-				end
-
-				analyzer:Error("cannot find value " .. node.n)
-				return Any()
-			end
-
-			return val
-		end
-	elseif node.tag == "Qualified" then
-		return cast(node.t, args)
-	elseif node.tag == "Pointer" then
-		if node.t.tag == "Type" and node.t.n == "void" then return Any() end
-
-		local ptr = Table()
-		local ctype = cast(node.t, args)
-		ptr:Set(Number(), ctype)
-		local meta = cdata_metatable(ctype, node.t.const)
-		ptr:SetMetaTable(meta)
-
-		if node.t.tag == "Qualified" and node.t.t.n == "char" then
-			ptr:Set(Number(), ctype)
-			ptr:SetName(ConstString("const char*"))
-
-			if _G.FUNCTION_ARGUMENT then return Union({ptr, String(), Nil()}) end
-
-			return ptr
-		end
-
-		if node.t.tag == "Type" and node.t.n:sub(1, 1) ~= "$" then
-			ptr:SetName(LString(node.t.n .. "*"))
-		end
-
-		return Union({ptr, Nil()})
-	else
-		table_print(node)
-		error("NYI: " .. node.tag)
-	end
-end
 
 function cparser.sizeof(cdecl, len)
 	-- TODO: support non string sizeof
 	if jit and cdecl.Type == "string" and cdecl:IsLiteral() then
-		parse(cdecl:GetData(), "typeof")
+		local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
+		local env = analyzer:GetScopeHelper(analyzer.function_scope)
+		local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer)
+		local ctype = vars:GetData()[1].val
+		
 		local ffi = require("ffi")
 		local ok, val = pcall(ffi.sizeof, cdecl:GetData(), len and len:GetData() or nil)
 
@@ -357,7 +90,7 @@ function cparser.cdef(cdecl, ...)
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = parse2(cdecl:GetData(), env, analyzer, ...)
+	local vars, typs = parse2(cdecl:GetData(), "cdef", env, analyzer, ...)
 
 	for _, kv in ipairs(typs:GetData()) do
 		analyzer:NewIndexOperator(C_DECLARATIONS(), kv.key, kv.val)
@@ -371,8 +104,12 @@ end
 
 function cparser.cast(cdecl, src)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
-	local declarations = parse(cdecl:GetData(), "typeof")
-	local ctype = cast(declarations[#declarations].type)
+
+	
+	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
+	local env = analyzer:GetScopeHelper(analyzer.function_scope)
+	local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer)
+	local ctype = vars:GetData()[1].val
 
 	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
 	if ctype.Type == "union" then
@@ -403,8 +140,10 @@ function cparser.typeof(cdecl, ...)
 
 	if args[1] and args[1].Type == "tuple" then args = {args[1]:Unpack()} end
 
-	local declarations = parse(cdecl:GetData(), "typeof", unpack(args))
-	local ctype = cast(declarations[#declarations].type, args)
+	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
+	local env = analyzer:GetScopeHelper(analyzer.function_scope)
+	local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer, ...)
+	local ctype = vars:GetData()[1].val
 
 	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
 	if ctype.Type == "union" then
@@ -452,14 +191,20 @@ end
 
 function cparser.get_type(cdecl, ...)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-	local declarations = parse(cdecl:GetData(), "typeof", ...)
-	local ctype = cast(declarations[#declarations].type, {...})
+	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
+	local env = analyzer:GetScopeHelper(analyzer.function_scope)
+	local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer, ...)
+	local ctype = vars:GetData()[1].val
 	return ctype
 end
 
 function cparser.new(cdecl, ...)
-	local declarations = parse(cdecl:GetData(), "ffinew", ...)
-	local ctype = cast(declarations[#declarations].type, {...})
+	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
+	local env = analyzer:GetScopeHelper(analyzer.function_scope)
+	local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer, ...)
+	local ctype = vars:GetData()[1].val
+
+	print(vars, typs)
 
 	if ctype.is_enum then return ... end
 
