@@ -86,4 +86,26 @@ do
 		} foo;
 	]]
 	attest.equal(typs.foo, _  as {bar = number})
-end	
+end
+
+do
+	local vars, typs = cdef[[
+		int foo;
+		typedef bool BAR; // type declaration
+		int foo2();
+		struct MyStruct {int a;} *bar;  // type declaration and variable declaration
+		struct MyStruct2 faz;  // type declaration and variable declaration
+	]]
+
+	attest.equal(vars, _ as {
+		foo = number,
+		foo2 = function=()>(number,),
+		bar = FFIPointer({ a = number }) | nil
+	})
+
+	attest.equal(typs, _ as {
+		BAR = boolean,
+		MyStruct = {a = number},
+		MyStruct2 = {},
+	})
+end
