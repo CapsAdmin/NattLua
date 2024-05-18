@@ -123,7 +123,7 @@ function META:__tostring()
 			local analyzer = context:GetCurrentAnalyzer()
 
 			if analyzer then
-				local str = func:Call(analyzer, Tuple({self})):GetFirstValue()
+				local str = analyzer:Assert(func:Call(analyzer, Tuple({self}))):GetFirstValue()
 
 				if str and str:IsLiteral() then
 					self.suppress = false

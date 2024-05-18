@@ -44,7 +44,7 @@ do
 		struct MyStruct faz;
 	]]
 	attest.equal(vars.faz, typs.MyStruct)
-	attest.equal(assert(vars.bar)[0], _  as {a = number})
+	attest.equal(assert(vars.bar)[0], _  as nil | {a = number})
 end
 
 do
@@ -117,4 +117,11 @@ do
 		MyStruct = {a = number},
 		MyStruct2 = {},
 	})
+end
+
+do
+	local vars, typs = cdef([[
+		int readdir(void *dirp);
+	]])
+	attest.equal(vars.readdir, _  as function=(any)>(number))
 end

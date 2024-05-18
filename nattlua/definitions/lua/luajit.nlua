@@ -1,3 +1,60 @@
+function FFIPointer<|T: any|>
+	if T == nil then return T end
+
+	-- https://github.com/LuaJIT/LuaJIT/blob/v2.1/src/lj_carith.c#L96-L159
+	return {
+		@MetaTable = self,
+		[number] = T,
+		__tostring = function(self: ref self)
+			return "Pointer(" .. tostring(self[number]) .. ")"
+		end,
+		__index = function(self: ref self, key: ref string)
+			return self[number][key]
+		end,
+		__le = function(self: ref self, other: ref self)
+			return Boolean()
+		end,
+		__lt = function(self: ref self, other: ref self)
+			return Boolean()
+		end,
+		__add = function(self: ref self, other: ref self | number)
+			return FFIPointer<|T|>
+		end,
+		__sub = function(self: ref self, other: ref self | number)
+			return FFIPointer<|T|>
+		end,
+	}
+end
+
+function FFIArray<|size: number, T: any|>
+	if T == nil then return T end
+
+	return {
+		@MetaTable = self,
+		[0 .. (size - 1)] = T,
+		__tostring = function(self: ref self)
+			return "Array" .. tostring(size) .. "(" .. tostring(self[0]) .. ")"
+		end,
+		__index = function(self: ref self, key: ref string)
+			return self[number][key]
+		end,
+		__le = function(self: ref self, other: ref self)
+			return Boolean()
+		end,
+		__lt = function(self: ref self, other: ref self)
+			return Boolean()
+		end,
+		__add = function(self: ref self, other: ref self | number)
+			return FFIPointer<|T|>
+		end,
+		__sub = function(self: ref self, other: ref self | number)
+			return FFIPointer<|T|>
+		end,
+	}
+end
+
+type cdata = FFIPointer<|number|>
+type cdata.@TypeOverride = "cdata"
 type Modules["ffi"] = {
 	errno = function=(nil | number)>(number),
 	os = "Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other",
@@ -136,3 +193,51 @@ type Modules["jit.util"] = {
 	-- Gets a constant at a certain index in a function.
 	funck = function=(func: Function, index: number)>(any),
 }
+local type ffi = require("ffi")
+type _G.ffi = ffi
+
+analyzer function ffi.sizeof(cdecl: any, len: nil | number)
+	return require("nattlua.c_declarations.main").sizeof(cdecl, len)
+end
+
+analyzer function ffi.cdef(cdecl: string, ...: ...any)
+	return require("nattlua.c_declarations.main").cdef(cdecl, ...)
+end
+
+§env.typesystem.ffi:Get(types.ConstString("cdef")):SetPreventInputArgumentExpansion(true)
+
+analyzer function ffi.cast(cdecl: string, src: any)
+	return require("nattlua.c_declarations.main").cast(cdecl, src)
+end
+
+analyzer function ffi.typeof(cdecl: string, ...: ...any)
+	return require("nattlua.c_declarations.main").typeof(cdecl, ...)
+end
+
+§env.typesystem.ffi:Get(types.ConstString("typeof")):SetPreventInputArgumentExpansion(true)
+
+analyzer function ffi.get_type(cdecl: string, ...: ...any)
+	return require("nattlua.c_declarations.main").get_type(cdecl, ...)
+end
+
+analyzer function ffi.new(cdecl: any, ...: ...any)
+	return require("nattlua.c_declarations.main").new(cdecl, ...)
+end
+
+analyzer function ffi.metatype(ctype: any, meta: any)
+	return require("nattlua.c_declarations.main").metatype(ctype, meta)
+end
+
+analyzer function ffi.load(lib: string)
+	return require("nattlua.c_declarations.main").load(lib)
+end
+
+analyzer function ffi.gc(ctype: any, callback: Function)
+	return ctype
+end
+
+function FFIType<|str: string|>
+	return number
+end
+
+type ffi.string = function=(FFIPointer<|number|> | string, number | nil)>(string)

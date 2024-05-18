@@ -353,6 +353,11 @@ analyze[=[
     local info = {} as AddressInfo
     addrinfo_get_ip(info)  
 ]=]
+
+do
+	return
+end
+
 analyze[[
 	local x = tostring(_  as FFIArray<|
 		1,

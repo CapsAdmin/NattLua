@@ -4,8 +4,6 @@ type integer = number
 type Table = {[any] = any} | {}
 type Function = function=(...any)>(...any)
 type userdata = Table
-type cdata = {[number] = any}
-type cdata.@TypeOverride = "cdata"
 type ctype = any
 type thread = Table
 type empty_function = function=(...)>(...any)

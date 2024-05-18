@@ -56,7 +56,7 @@ end
 local gbuf_n = 1024
 local gbuf = ffi.new("char [?]", gbuf_n)
 
-local function buf_grow(len: any, nokeep: boolean | nil)
+local function buf_grow(len: number, nokeep: boolean | nil)
 	if len > gbuf_n then
 		gbuf_n = len
 		local newbuf = ffi.new("char [?]", gbuf_n)

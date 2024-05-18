@@ -358,6 +358,7 @@ do -- functions
 			test[[ void (**NAME()) ;]]
 			test[[ void (** volatile NAME()) ;]]
 			test[[ void (* volatile * volatile NAME()) ;]]
+			test[[ void __ptr32**NAME() ;]]
 			test[[ void (__ptr32**NAME()) ;]]
 			test[[ void (__stdcall*NAME()) ;]]
 		end
@@ -554,7 +555,6 @@ do -- struct and union declarations
 
 	test[[ struct TYPE { char *(*(**FIELD[][8])())[]; }; ]]
 	test([[ %{struct|union} NAME(NAME)(]] .. [[ %{struct|union} NAME);]])
-
 	test[[ struct TYPE { int FIELD; } ]] -- without ;
 end
 

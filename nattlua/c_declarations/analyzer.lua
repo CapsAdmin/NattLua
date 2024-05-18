@@ -146,6 +146,13 @@ function META:WalkCDeclaration_(node, walk_up)
 
 	if node.modifiers then handle_modifiers(self, node) end
 
+	if node.tokens["..."] and node.type == "expression" then
+		self.cdecl.of = {
+			type = "va_list",
+		}
+		self.cdecl = assert(self.cdecl.of)
+	end
+
 	if not walk_up then return end
 
 	if node.parent.kind == "c_declaration" then
@@ -364,7 +371,13 @@ local function cast(self, node, out)
 			return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		end
 
+		local tbl = typs:Get(LString(t)) or self.typs_write:Get(LString(t))
+
+		if tbl then return (tbl) end
+
 		return (Number())
+	elseif node.type == "va_list" then
+		return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 	elseif node.type == "function" then
 		local args = {}
 		local rets = {}

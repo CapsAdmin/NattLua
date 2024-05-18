@@ -58,6 +58,22 @@ function META:IsInArguments()
 			-- void foo(void (*)(int, int))
 			-- I guess it still works as a hacky solution
 			if self:IsTokenValue(",", i) then return true end
+
+			if self:IsTokenValue("(", i) and self:IsTokenValue(")", i + 1) then
+				return false
+			end
+
+			if
+				self:IsTokenValue(")", i) and
+				(
+					self:IsTokenValue(";", i + 1) or
+					self:IsTokenType("end_of_file", i + 1)
+				)
+				and
+				not self:IsTokenValue(")", i - 1)
+			then
+				return true
+			end
 		end
 	end
 
