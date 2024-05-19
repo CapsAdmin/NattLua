@@ -54,7 +54,7 @@ local function handle_struct(self, node)
 end
 
 local function handle_enum(self, node)
-	local struct = {type = "enum", fields = {}, identifier = node.tokens["identifier"].value}
+	local struct = {type = "enum", fields = {}, identifier = node.tokens["identifier"] and node.tokens["identifier"].value}
 
 	for _, field in ipairs(node.fields) do
 		table.insert(struct.fields, {type = "enum_field", identifier = field.tokens["identifier"].value})
