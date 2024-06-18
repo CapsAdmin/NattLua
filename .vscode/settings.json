@@ -1,9 +1,6 @@
 {
   "triggerTaskOnSave.tasks": {
-    "onsave": [
-      "**/*.lua",
-      "**/*.nlua",
-    ]
+    "onsave": ["**/*.lua", "**/*.nlua"]
   },
   "search.exclude": {
     "build_output.lua": true,
@@ -21,9 +18,7 @@
   "nattlua.executable": "luajit",
   "nattlua.workingDirectory": "${workspaceFolder}",
   "nattlua.path": "${workspaceFolder}/nattlua.lua",
-  "nattlua.arguments": [
-    "language-server"
-  ],
+  "nattlua.arguments": ["language-server"],
   "[typescript]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
   },
@@ -42,5 +37,13 @@
     "functions": "#83e6ff",
     "comments": "#ff9797",
     "variables": "#ffffff"
-  }
+  },
+  "runOnSave.statusMessageTimeout": 3000,
+  "runOnSave.commands": [
+    {
+      "globMatch": "**",
+      "command": "cd ${workspaceFolder} && luajit -e \"assert(loadfile('.vscode/on_editor_save.lua'))('${file}','${workspaceFolder}')\"",
+      "runIn": "terminal"
+    }
+  ]
 }
