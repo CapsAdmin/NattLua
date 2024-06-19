@@ -491,22 +491,35 @@ lsp.methods["textDocument/hover"] = function(params)
 	end
 
 	if data.obj then
-		add_code(tostring(data.obj))
+		add_line("main type:")
+		add_code("\t" .. tostring(data.obj))
 		local upvalue = data.obj:GetUpvalue()
 
 		if upvalue then
-			add_code(tostring(upvalue))
+			add_line("upvalue:")
+			add_code("\t" .. tostring(upvalue))
+			local shadow = upvalue:GetShadow()
+
+			if shadow then
+				add_code("\tshadowed:")
+
+				while shadow do
+					add_code("\t\t" .. tostring(shadow))
+					shadow = shadow:GetShadow()
+				end
+			end
 
 			if upvalue:HasMutations() then
 				local code = ""
 
 				for i, mutation in ipairs(upvalue.Mutations) do
-					code = code .. "-- " .. i .. "\n"
-					code = code .. "\tvalue = " .. tostring(mutation.value) .. "\n"
-					code = code .. "\tscope = " .. tostring(mutation.scope) .. "\n"
-					code = code .. "\ttracking = " .. tostring(mutation.from_tracking) .. "\n"
+					code = code .. "\t" .. i .. ":\n"
+					code = code .. "\t\tvalue = " .. tostring(mutation.value) .. "\n"
+					code = code .. "\t\tscope = " .. tostring(mutation.scope) .. "\n"
+					code = code .. "\t\ttracking = " .. tostring(mutation.from_tracking) .. "\n"
 				end
 
+				add_line("\t\tmutations:")
 				add_code(code)
 			end
 		end
@@ -514,17 +527,17 @@ lsp.methods["textDocument/hover"] = function(params)
 
 	do
 		local types, found_parents, scope = data.token:FindType()
-		local str = "-- types --\n"
+		local str = ""
 
 		for _, node in ipairs(found_parents) do
-			str = str .. tostring(node) .. "\n"
+			str = str .. "\t" .. tostring(node) .. "\n"
 
 			for _, obj in ipairs(node:GetAssociatedTypes()) do
-				str = str .. "\t" .. tostring(obj) .. "\n"
+				str = str .. "\t\t" .. tostring(obj) .. "\n"
 			end
 		end
 
-		str = str .. "-----------\n"
+		add_line("associated types:")
 		add_code(str)
 	end
 
@@ -532,6 +545,7 @@ lsp.methods["textDocument/hover"] = function(params)
 	local linepos
 
 	if wtf[1] then
+		add_line("parent nodes:")
 		local min, max = wtf[1]:GetStartStop()
 
 		if min then
@@ -540,13 +554,16 @@ lsp.methods["textDocument/hover"] = function(params)
 
 		for i = 1, #wtf do
 			local min, max = wtf[i]:GetStartStop()
-			add_code(tostring(wtf[i]) .. " len=" .. tostring(max - min))
+			add_code("\t" .. tostring(wtf[i]) .. " len=" .. tostring(max - min))
 		end
 	end
 
 	if not linepos then return {} end
 
-	if data.scope then markdown = markdown .. "\n" .. tostring(data.scope) end
+	if data.scope then
+		add_line("scope:")
+		add_code("\t" .. tostring(data.scope))
+	end
 
 	local limit = 5000
 
