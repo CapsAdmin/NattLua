@@ -17,10 +17,10 @@ function FFIPointer<|T: any|>
 		__lt = function(self: ref self, other: ref self)
 			return Boolean()
 		end,
-		__add = function(self: ref self, other: ref self | number)
+		__add = function(self: ref self, other: ref (self | number))
 			return FFIPointer<|T|>
 		end,
-		__sub = function(self: ref self, other: ref self | number)
+		__sub = function(self: ref self, other: ref (self | number))
 			return FFIPointer<|T|>
 		end,
 	}
