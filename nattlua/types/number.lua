@@ -196,6 +196,10 @@ function META:SetMax(val--[[#: TBaseType | TUnion]])
 		return false, type_errors.subset(val, "number")
 	end
 
+	if self:Equal(val) then
+		return self
+	end
+
 	if val:IsLiteral() then
 		self.Max = val
 	else
