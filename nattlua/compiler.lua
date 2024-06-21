@@ -5,6 +5,7 @@ local tostring = tostring
 local table = _G.table
 local assert = assert
 local formating = require("nattlua.other.formating")
+local stack_trace = require("nattlua.other.stack_trace")
 local debug = _G.debug
 local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
 local setmetatable = _G.setmetatable
@@ -99,23 +100,26 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 	end
 end
 
-local function stack_trace()
+local function check_info(info, level)
+	if info.source:sub(1, 1) == "@" then
+		if info.name == "Error" or info.name == "OnDiagnostic" then return false end
+	end
+	return true
+end
+
+
+local function stack_trace_simple(level, check_info)
 	local s = ""
 
-	for i = 2, 50 do
+	for i = level, 50 do
 		local info = debug.getinfo(i)
 
 		if not info then break end
-
-		if info.source:sub(1, 1) == "@" then
-			if info.name == "Error" or info.name == "OnDiagnostic" then
-
-			else
-				s = s .. info.source:sub(2) .. ":" .. info.currentline .. " - " .. (
-						info.name or
-						"?"
-					) .. "\n"
-			end
+		if check_info(info, level) then
+			s = s .. info.source:sub(2) .. ":" .. info.currentline .. " - " .. (
+					info.name or
+					"?"
+				) .. "\n"
 		end
 	end
 
@@ -127,7 +131,7 @@ local traceback = function(self, obj, msg)
 		local ret = {
 			xpcall(function()
 				msg = msg or "no error"
-				local s = msg .. "\n" .. stack_trace()
+				local s = msg .. "\n" .. stack_trace_simple(2, check_info)
 
 				if self.analyzer then s = s .. self.analyzer:DebugStateToString() end
 
