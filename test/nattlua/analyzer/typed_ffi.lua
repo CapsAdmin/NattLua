@@ -32,7 +32,7 @@ analyze[=[
 
 
 	local box = ffi.typeof("$[1]", ctype)
-
+	
 	local struct = box()
 	
 	attest.subset_of<|{
@@ -318,7 +318,7 @@ analyze[=[
 analyze[[
 	local str_v = ffi.new("const char *[?]", 1)
 
-	attest.equal(str_v, _ as FFIArray<|1, ffi.typeof<|"const char*"|> | nil | string|>)
+	attest.equal(str_v, _ as FFIArray<|1, ffi.typeof<|"const char*"|> | nil|>)
 ]]
 analyze[[
 	ffi.cdef([=[
@@ -354,12 +354,27 @@ analyze[=[
     addrinfo_get_ip(info)  
 ]=]
 
-do
-	return
-end
+
+
+analyze[=[
+	local ffi = require("ffi")
+	ffi.cdef[[
+		struct sockaddr {
+			int foo;
+		};
+		struct sockaddr2 {
+			short a;
+			short b;
+		};
+		int WSAAddressToStringA(struct sockaddr2 *);
+	]]
+	
+	local srcaddr = ffi.new("struct sockaddr")
+	local x = ffi.cast("struct sockaddr2 *", srcaddr)
+]=]
 
 analyze[[
-	local x = tostring(_  as FFIArray<|
+	local type x = tostring<|FFIArray<|
 		1,
 		FFIArray<|
 			2,
@@ -369,9 +384,9 @@ analyze[[
 				|>
 			|>
 		|>
-	|>)
-	attest.equal(
+	|>|>
+	attest.equal<|
 		x,
 		"Array1(Array2(Pointer(Pointer(function=(Pointer(number),)>(Pointer(Array3(Array4(Pointer(number)))),)))))"
-	)
+	|>
 ]]

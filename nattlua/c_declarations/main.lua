@@ -41,11 +41,14 @@ local function parse2(c_code, mode, env, analyzer, ...)
 	local Code = require("nattlua.code").New
 	local Compiler = require("nattlua.compiler")
 
-	if mode == "typeof" then c_code = "typedef " .. c_code .. " TYPEOF_CDECL;" end
-
-	if mode == "ffinew" then c_code = c_code .. " VAR_NAME;" end
+	if mode == "typeof" then 
+		c_code = "typedef void (*TYPEOF_CDECL)(" .. c_code .. ");"
+	elseif mode == "ffinew" then 
+		c_code = "void (*TYPEOF_CDECL)(" .. c_code .. ");" 
+	end
 
 	local code = Code(c_code, "test.c")
+
 	local lex = Lexer(code)
 	local tokens = lex:GetTokens()
 	local parser = Parser(tokens, code)
@@ -76,7 +79,13 @@ local function parse2(c_code, mode, env, analyzer, ...)
 
 	a.env = env.typesystem
 	a.analyzer = analyzer
-	return a:AnalyzeRoot(ast, C_DECLARATIONS_RUNTIME(), C_DECLARATIONS())
+	return a:AnalyzeRoot(ast, C_DECLARATIONS_RUNTIME(), C_DECLARATIONS(), mode)
+end
+
+local function extract_anonymous_type(typs)
+	local ctype = typs:Get(LString("TYPEOF_CDECL"))
+	ctype:RemoveType(Nil())
+	return ctype:GetData()[1]:Get(Number()):GetInputSignature():Get(1)
 end
 
 function cparser.sizeof(cdecl, len)
@@ -85,7 +94,7 @@ function cparser.sizeof(cdecl, len)
 		local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 		local env = analyzer:GetScopeHelper(analyzer.function_scope)
 		local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer)
-		local ctype = typs:GetData()[1].val
+		local ctype = extract_anonymous_type(typs)
 		local ffi = require("ffi")
 		local ok, val = pcall(ffi.sizeof, cdecl:GetData(), len and len:GetData() or nil)
 
@@ -117,8 +126,8 @@ function cparser.cast(cdecl, src)
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer)
-	local ctype = typs:GetData()[1].val
-
+	local ctype = extract_anonymous_type(typs)
+	
 	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
 	if ctype.Type == "union" then
 		for _, v in ipairs(ctype:GetData()) do
@@ -151,7 +160,7 @@ function cparser.typeof(cdecl, ...)
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer, ...)
-	local ctype = typs:GetData()[1].val
+	local ctype = extract_anonymous_type(typs)
 
 	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
 	if ctype.Type == "union" then
@@ -202,7 +211,7 @@ function cparser.get_type(cdecl, ...)
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = parse2(cdecl:GetData(), "typeof", env, analyzer, ...)
-	local ctype = typs:GetData()[1].val
+	local ctype = extract_anonymous_type(typs)
 	return ctype
 end
 
@@ -210,7 +219,7 @@ function cparser.new(cdecl, ...)
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = parse2(cdecl:GetData(), "ffinew", env, analyzer, ...)
-	local ctype = vars:GetData()[1].val
+	local ctype = extract_anonymous_type(vars)
 
 	if ctype.is_enum then return ... end
 

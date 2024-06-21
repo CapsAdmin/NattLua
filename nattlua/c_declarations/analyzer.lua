@@ -12,6 +12,26 @@ local Boolean = require("nattlua.types.union").Boolean
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 
+do
+	local table_insert = table.insert
+	local table_remove = table.remove
+
+	function META:PushContextValue(key--[[#: string]], value--[[#: any]])
+		self.context_values[key] = self.context_values[key] or {}
+		table_insert(self.context_values[key], 1, value)
+	end
+
+	function META:GetContextValue(key--[[#: string]], level--[[#: number | nil]])
+		return self.context_values[key] and self.context_values[key][level or 1]
+	end
+
+	function META:PopContextValue(key--[[#: string]])
+		-- typesystem doesn't know that a value is always inserted before it's popped
+		return (table_remove--[[# as any]])(self.context_values[key], 1)
+	end
+end
+
+
 function META:WalkRoot(node)
 	for _, node in ipairs(node.statements) do
 		if node.kind == "c_declaration" then
@@ -102,10 +122,9 @@ local function handle_function(self, node)
 	local old = self.cdecl
 
 	for i, v in ipairs(node.arguments) do
-		local t = {type = "root"}
-		self.cdecl = t
-		self:WalkCDeclaration_(v, nil)
-		table.insert(args, t.of)
+		v.parent = {type = "root"}
+		local _, cdecl = self:WalkCDeclaration2(v, nil)
+		table.insert(args, cdecl.of)
 	end
 
 	self.cdecl = old
@@ -160,7 +179,7 @@ function META:WalkCDeclaration_(node, walk_up)
 	end
 end
 
-function META:WalkCDeclaration(node, typedef)
+function META:WalkCDeclaration2(node)
 	local real_node = node
 
 	while node.expression do -- find the inner most expression
@@ -170,6 +189,11 @@ function META:WalkCDeclaration(node, typedef)
 	self.cdecl = {type = "root", of = nil}
 	local cdecl = self.cdecl
 	self:WalkCDeclaration_(node, true)
+	return node, cdecl, real_node
+end
+
+function META:WalkCDeclaration(node, typedef)
+	local node, cdecl, real_node = self:WalkCDeclaration2(node)
 	self.Callback(cdecl.of, real_node, typedef)
 end
 
@@ -202,12 +226,14 @@ local function cast(self, node, out)
 
 		local res = (env.FFIPointer:Call(analyzer, Tuple({cast(self, assert(node.of), out)})):Unpack())
 
-		if
-			node.of.type == "type" and
-			node.of.modifiers[1] == "const" and
-			node.of.modifiers[2] == "char"
-		then
-			return Union({res, String(), Nil()})
+		if self:GetContextValue("function_argument") == true then
+			if
+				node.of.type == "type" and
+				node.of.modifiers[1] == "const" and
+				node.of.modifiers[2] == "char"
+			then
+				return Union({res, String(), Nil()})
+			end
 		end
 
 		return Union({res, Nil()})
@@ -223,7 +249,7 @@ local function cast(self, node, out)
 						local ident = v.identifier
 
 						if not ident and #node.modifiers > 0 then
-							ident = node.modifiers[#node.modifiers]
+							ident = node.modifiers[#node.modifiers].identifier or "anon"
 						end
 
 						self.current_nodes = self.current_nodes or {}
@@ -270,7 +296,7 @@ local function cast(self, node, out)
 					local ident = v.identifier
 
 					if not ident and #node.modifiers > 0 then
-						ident = node.modifiers[#node.modifiers]
+						ident = node.modifiers[#node.modifiers].identifier or "anon"
 					end
 
 					local tbl = typs:Get(LString(ident))
@@ -382,8 +408,14 @@ local function cast(self, node, out)
 		local args = {}
 		local rets = {}
 
+		if not self.super_hack then
+			self:PushContextValue("function_argument", true)
+		end
 		for i, v in ipairs(node.args) do
 			table.insert(args, cast(self, v, out))
+		end
+		if not self.super_hack then
+			self:PopContextValue("function_argument")
 		end
 
 		return (Function(Tuple(args), Tuple({cast(self, assert(node.rets), out)})))
@@ -404,9 +436,17 @@ function META:AnalyzeRoot(ast, vars, typs)
 	self.vars_write = vars
 	self.Callback = function(node, real_node, typedef)
 		local out = {}
-		local obj = cast(self, node, out)
+
 		local ident = real_node.tokens["potential_identifier"] and
-			real_node.tokens["potential_identifier"].value
+		real_node.tokens["potential_identifier"].value
+		if ident == "TYPEOF_CDECL" then
+			self.super_hack = true -- TODO
+		end
+		local obj = cast(self, node, out)
+		if ident == "TYPEOF_CDECL" then
+			self.super_hack = false -- TODO
+		end
+		
 
 		if not ident then ident = "uhhoh" end
 
@@ -427,7 +467,7 @@ function META:AnalyzeRoot(ast, vars, typs)
 end
 
 function META.New()
-	local self = setmetatable({}, META)
+	local self = setmetatable({context_values = {}}, META)
 	return self
 end
 
