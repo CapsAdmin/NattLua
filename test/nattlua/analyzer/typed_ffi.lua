@@ -390,3 +390,25 @@ analyze[[
 		"Array1(Array2(Pointer(Pointer(function=(Pointer(number),)>(Pointer(Array3(Array4(Pointer(number)))),)))))"
 	|>
 ]]
+
+analyze[=[
+	local ffi = require("ffi")
+	ffi.cdef[[
+		struct pollfd {
+			short fd;
+			short events;
+			short revents;
+		};
+	]]
+
+	local M = {}
+
+	function M.poll(
+		s: ffi.get_type<|"struct pollfd*"|> ~ nil,
+	)
+		local pfd = {
+			fd = s.fd,
+		}
+		attest.equal(pfd.fd, _ as number)
+	end
+]=]
