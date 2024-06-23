@@ -21,7 +21,7 @@ local function C_DECLARATIONS()
 		"no analyzer in context"
 	)
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	return env.typesystem.ffi:Get(ConstString("C"))
+	return analyzer:Assert(env.typesystem.ffi:Get(ConstString("C")))
 end
 
 local function C_DECLARATIONS_RUNTIME()
@@ -30,7 +30,7 @@ local function C_DECLARATIONS_RUNTIME()
 		"no analyzer in context"
 	)
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	return env.runtime.ffi:Get(ConstString("C"))
+	return analyzer:Assert(env.runtime.ffi:Get(ConstString("C")))
 end
 
 local function parse2(c_code, mode, env, analyzer, ...)
