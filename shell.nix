@@ -3,7 +3,7 @@ let
 
   luajitSrc = nixpkgs.fetchgit {
     url = "https://github.com/LuaJIT/LuaJIT.git";
-    sha256 = "sha256-61cSQhkO8Gd0CgdJtyzd1649etchNVsf0lG//j5au+w=";
+    sha256 = "sha256-pjNZg9W1q7AgLxIrRRMhFVs1y/aWL1asFv2JY6c8dnE=";
   };
 
   luajit = nixpkgs.stdenv.mkDerivation {
