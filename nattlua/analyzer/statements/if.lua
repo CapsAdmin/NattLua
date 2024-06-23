@@ -1,10 +1,9 @@
 local ipairs = _G.ipairs
-local pairs = _G.pairs
 local Union = require("nattlua.types.union").Union
 local type_errors = require("nattlua.types.error_messages")
 
 local function contains_ref_argument(upvalues)
-	for _, v in pairs(upvalues) do
+	for _, v in ipairs(upvalues) do
 		if v.upvalue:GetValue():IsReferenceArgument() or v.upvalue:GetValue().from_for_loop then
 			return true
 		end
