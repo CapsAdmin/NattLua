@@ -279,6 +279,12 @@ local function cast(self, node, out)
 						self.typs_write:Set(LString(v.identifier), tbl)
 					end
 				elseif v.type == "enum" then
+					local ident = v.identifier 
+
+					if not ident and #node.modifiers > 0 then
+						ident = node.modifiers[#node.modifiers].identifier or "anon"
+					end
+					
 					local tbl = Table()
 					local i = 0
 
@@ -287,8 +293,8 @@ local function cast(self, node, out)
 						i = i + 1
 					end
 
-					table.insert(out, {identifier = v.identifier, obj = tbl})
-					self.typs_write:Set(LString(v.identifier), tbl)
+					table.insert(out, {identifier = ident, obj = tbl})
+					self.typs_write:Set(LString(ident), tbl)
 				end
 
 				-- catch variable declarations
