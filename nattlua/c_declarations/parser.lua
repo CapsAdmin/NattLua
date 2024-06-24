@@ -5,7 +5,7 @@ function META:ParseRootNode()
 	local node = self:StartNode("statement", "root")
 	node.statements = self:ParseStatements()
 	local eof = self:StartNode("statement", "end_of_file")
-	eof.tokens["end_of_file"] = self.tokens[#self.tokens]
+	eof.tokens["end_of_file"] = self:ExpectTokenType("end_of_file")
 	eof = self:EndNode(eof)
 	table.insert(node.statements, eof)
 	node.tokens["eof"] = eof.tokens["end_of_file"]

@@ -52,6 +52,10 @@ local function parse2(c_code, mode, env, analyzer, ...)
 	local lex = Lexer(code)
 	local tokens = lex:GetTokens()
 	local parser = Parser(tokens, code)
+	parser.OnError = function(parser, code, msg, start, stop, ...)
+		Compiler.OnDiagnostic({}, code, msg, "fatal", start, stop, nil, ...)
+		error("error parsing")
+	end
 	parser.CDECL_PARSING_MODE = mode
 	local ast = parser:ParseRootNode()
 	local emitter = Emitter({skip_translation = true})
