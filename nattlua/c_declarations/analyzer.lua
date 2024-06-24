@@ -31,7 +31,6 @@ do
 	end
 end
 
-
 function META:WalkRoot(node)
 	for _, node in ipairs(node.statements) do
 		if node.kind == "c_declaration" then
@@ -179,6 +178,11 @@ function META:WalkCDeclaration_(node, walk_up)
 	end
 end
 
+function META:WalkCDeclaration(node, typedef)
+	local node, cdecl, real_node = self:WalkCDeclaration2(node)
+	self.Callback(cdecl.of, real_node, typedef)
+end
+
 function META:WalkCDeclaration2(node)
 	local real_node = node
 
@@ -192,10 +196,6 @@ function META:WalkCDeclaration2(node)
 	return node, cdecl, real_node
 end
 
-function META:WalkCDeclaration(node, typedef)
-	local node, cdecl, real_node = self:WalkCDeclaration2(node)
-	self.Callback(cdecl.of, real_node, typedef)
-end
 
 local function cast(self, node, out)
 	local env = self.env
@@ -365,8 +365,7 @@ local function cast(self, node, out)
 		elseif t == "void" then
 			return Nil()
 		elseif t == "$" or t == "?" then
-			local res = table.remove(self.dollar_signs_vars, 1)
-			return res
+			return table.remove(self.dollar_signs_vars, 1)
 		elseif t == "va_list" then
 			return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		end
