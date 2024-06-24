@@ -264,20 +264,23 @@ local function cast(self, node, out)
 						table.insert(out, {identifier = ident, obj = tbl})
 						self.typs_write:Set(LString(ident), tbl)
 					else
+						local ident = v.identifier
 						local current = self.current_nodes and self.current_nodes[1]
 
 						if current and current.ident == v.identifier then
 							-- recursion
 							tbl = current.tbl
 						else
-							tbl = typs:Get(LString(v.identifier)) or
-								self.typs_write:Get(LString(v.identifier)) or
-								Table()
+							-- previously defined type or new type {}
+							tbl = typs:Get(LString(ident)) or self.typs_write:Get(LString(ident)) or Table()
 						end
 
-						table.insert(out, {identifier = v.identifier, obj = tbl})
-						self.typs_write:Set(LString(v.identifier), tbl)
+						table.insert(out, {identifier = ident, obj = tbl})
+						
+						self.typs_write:Set(LString(ident), tbl)
 					end
+
+					return tbl
 				elseif v.type == "enum" then
 					local ident = v.identifier 
 
@@ -295,49 +298,8 @@ local function cast(self, node, out)
 
 					table.insert(out, {identifier = ident, obj = tbl})
 					self.typs_write:Set(LString(ident), tbl)
-				end
 
-				-- catch variable declarations
-				if v.type == "struct" or v.type == "union" then
-					local ident = v.identifier
-
-					if not ident and #node.modifiers > 0 then
-						ident = node.modifiers[#node.modifiers].identifier or "anon"
-					end
-
-					local tbl = typs:Get(LString(ident))
-
-					if not tbl then tbl = self.typs_write:Get(LString(ident)) end
-
-					if not tbl and v.fields then
-						tbl = Table()
-						self.current_nodes = self.current_nodes or {}
-						table.insert(self.current_nodes, 1, {ident = ident, tbl = tbl})
-
-						for _, v in ipairs(v.fields) do
-							tbl:Set(LString(v.identifier), cast(self, v, out))
-						end
-
-						table.remove(self.current_nodes, 1)
-					end
-
-					if not tbl and self.current_nodes then
-						local current = self.current_nodes[1]
-
-						if current and current.ident == ident then
-							-- recursion
-							tbl = current.tbl
-						end
-					end
-
-					if not tbl then tbl = Table() end
-
-					return (tbl)
-				elseif v.type == "enum" then
-					-- using enum as type is the same as if it were an int
-					return (Number())
-				else
-					error("unknown type " .. v.type)
+					return Number()
 				end
 			end
 		end

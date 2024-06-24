@@ -125,3 +125,16 @@ do
 	]])
 	attest.equal(vars.readdir, _  as function=(any)>(number))
 end
+
+
+do
+	local vars, typs = cdef([[
+		int bar;
+		typedef int foo;
+	]])
+	attest.equal(vars.bar, _ as number)
+	attest.equal(vars.foo, _ as nil)
+
+	attest.equal(typs.foo, _ as number)
+	attest.equal(typs.bar, _ as nil)
+end
