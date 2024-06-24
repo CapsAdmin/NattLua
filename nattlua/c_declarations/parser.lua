@@ -22,7 +22,9 @@ function META:ParseStatement()
 		return
 	end
 
-	if self:IsTokenType("end_of_file") then
+	self.statement_count = (self.statement_count or 0) + 1
+
+	if self.statement_count <= 1 and self:IsTokenType("end_of_file") then
 		-- it's allowed to have 1 statement without ;
 		return node
 	end

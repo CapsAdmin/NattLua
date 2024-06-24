@@ -248,7 +248,9 @@ local function test(c_code, error_level)
 	local tokens = lex:GetTokens()
 	local parser = Parser(tokens, code)
 	parser.OnError = function(parser, code, msg, start, stop, ...)
-		return Compiler.OnDiagnostic({}, code, msg, "fatal", start, stop, nil, ...)
+		_G.TEST = true
+		Compiler.OnDiagnostic({}, code, msg, "fatal", start, stop, nil, ...)
+		_G.TEST = false
 	end
 	local ast = parser:ParseRootNode()
 
@@ -321,7 +323,11 @@ local function test(c_code, error_level)
 	return ast
 end
 
-local function test_anon(code, ...)
+local function test_field(code)
+	test([[ %{struct|union} TYPE { ]] .. code .. [[ }; ]])
+end
+
+local function test_anon(code)
 	test([[
         void NAME(
             ]] .. code .. [[
@@ -329,14 +335,14 @@ local function test_anon(code, ...)
     ]], 3)
 end
 
-local function analyze(code)
-	local node = test(code)
-	local em = Emitter()
-	em:EmitNattluaCDeclaration(node)
-	local nl = require("nattlua")
-	local c = nl.Compiler("return " .. em:Concat())
-	c:Analyze()
-	return c.AnalyzedResult
+local function check_error(func, c_code, expect)
+	local ok, err = pcall(func, c_code)
+	if not ok then
+		if not expect or err:find(expect) then
+			return
+		end
+	end
+	error("expected error", 2)
 end
 
 do -- functions
@@ -510,10 +516,6 @@ do -- arrays
 end
 
 do -- struct and union declarations
-	local function test_field(code)
-		test([[ %{struct|union} TYPE { ]] .. code .. [[ }; ]])
-	end
-
 	test([[ %{struct|union} TYPE; ]]) -- forward declaration
 	test([[ %{struct|union} TYPE { int FIELD; }; ]]) -- single field
 	test([[ %{struct|union} TYPE { int FIELD, FIELD; }; ]]) -- multiple fields of same type
@@ -551,11 +553,14 @@ do -- struct and union declarations
 		test_field[[ int *__ptr32 FIELD; ]]
 		test_field[[ volatile int *FIELD; ]]
 		test_field[[ int **FIELD; ]]
+		
+		check_error(test_field, [[ int FIELD ]], ";")
 	end
 
 	test[[ struct TYPE { char *(*(**FIELD[][8])())[]; }; ]]
-	test([[ %{struct|union} NAME(NAME)(]] .. [[ %{struct|union} NAME);]])
-	test[[ struct TYPE { int FIELD; } ]] -- without ;
+	test([[ %{struct|union} NAME(NAME)( %{struct|union} NAME);]])
+	test[[ int foo ]] -- a single statement is allowed not to have a semicolon
+	check_error(test, [[ int foo; int foo ]], ";") -- but 2 statements and above must all have semicolons 
 end
 
 do -- enum
@@ -598,13 +603,6 @@ do -- typedef and variable declarations
 	test[[ int *NAME, NAME, NAME[1], (*NAME)(void), NAME(void); ]]
 	test[[ static const int NAME = 1; ]]
 	test[[ static const int NAME = 1, NAME = 2; ]]
-end
-
-do
-
---local obj = analyze[[ unsigned long long * volatile (* (* *NAME [1][2])(char *))[3][4]; ]]
---print(obj)
---print(analyze[[ struct foo {int bar;} bar; ]])
 end
 
 do
