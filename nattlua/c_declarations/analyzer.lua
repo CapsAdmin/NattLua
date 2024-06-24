@@ -242,11 +242,11 @@ local function cast(self, node, out)
 			if type(v) == "table" then
 				-- only catch struct, union and enum TYPE declarations
 				if v.type == "struct" or v.type == "union" then
+					local ident = v.identifier
 					local tbl
 
 					if v.fields then
 						tbl = Table()
-						local ident = v.identifier
 
 						if not ident and #node.modifiers > 0 then
 							ident = node.modifiers[#node.modifiers].identifier or "anon"
@@ -261,10 +261,16 @@ local function cast(self, node, out)
 						end
 
 						table.remove(self.current_nodes, 1)
+
+						local existing = self.typs_write:Get(LString(ident))
+
+						if existing and not existing:Equal(tbl) and not existing:IsEmpty() then
+							error("attempt to redeclare type " .. ident .. " = " .. tostring(existing) .. " as " .. tostring(tbl) )
+						end
+
 						table.insert(out, {identifier = ident, obj = tbl})
 						self.typs_write:Set(LString(ident), tbl)
 					else
-						local ident = v.identifier
 						local current = self.current_nodes and self.current_nodes[1]
 
 						if current and current.ident == v.identifier then
@@ -422,10 +428,9 @@ function META:AnalyzeRoot(ast, vars, typs)
 		if ident == "TYPEOF_CDECL" then
 			self.super_hack = false -- TODO
 		end
-		
 
 		if not ident then ident = "uhhoh" end
-
+		
 		if ident then
 			if typedef then
 				typs:Set(LString(ident), obj)
@@ -435,7 +440,8 @@ function META:AnalyzeRoot(ast, vars, typs)
 		end
 
 		for _, typedef in ipairs(out) do
-			typs:Set(LString(assert(typedef.identifier)), typedef.obj)
+			local ident = typedef.identifier
+			typs:Set(LString(ident), typedef.obj)
 		end
 	end
 	self:WalkRoot(ast)

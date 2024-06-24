@@ -4,7 +4,6 @@ local analyzer function cdef(str: string)
 	local Emitter = require("nattlua.c_declarations.emitter").New
 	local Analyzer = require("nattlua.c_declarations.analyzer").New
 	local Code = require("nattlua.code").New
-	local Compiler = require("nattlua.compiler")
 	local c_code = str:GetData()
 	local code = Code(c_code, "test.c")
 	local lex = Lexer(code)
@@ -19,17 +18,41 @@ local analyzer function cdef(str: string)
 	return a:AnalyzeRoot(ast)
 end
 
-cdef([[
-	int foo;
-	void foo();
-	void *foo();
-	unsigned long long * volatile (* (* *NAME [1][2])(char *))[3][4];
-	void (__attribute__((stdcall))__ptr32*NAME)();
-	void NAME(int (*ARG)(const uint8_t *, const uint8_t *));
-	struct foo {int a;} *bar;
-	struct foo faz;
-	enum foo { a } bar;
-]])
+local analyzer function cdef_error(str: string, expect: string)
+	local Lexer = require("nattlua.c_declarations.lexer").New
+	local Parser = require("nattlua.c_declarations.parser").New
+	local Emitter = require("nattlua.c_declarations.emitter").New
+	local Analyzer = require("nattlua.c_declarations.analyzer").New
+	local Code = require("nattlua.code").New
+	local c_code = str:GetData()
+	local code = Code(c_code, "test.c")
+	local lex = Lexer(code)
+	local tokens = lex:GetTokens()
+	local parser = Parser(tokens, code)
+	local ast = parser:ParseRootNode()
+	local emitter = Emitter({skip_translation = true})
+	local res = emitter:BuildCode(ast)
+	local a = Analyzer()
+	a.env = env.typesystem
+	a.analyzer = analyzer
+	local ok, err = pcall(function() return a:AnalyzeRoot(ast) end)
+	assert(ok == false)
+	assert(err:find(expect:GetData()))
+end
+
+do
+	local vars, typs = cdef([[
+		int foo1;
+		void foo2();
+		void *foo3();
+		unsigned long long * volatile (* (* *NAME1 [1][2])(char *))[3][4];
+		void (__attribute__((stdcall))__ptr32*NAME2)();
+		void NAME3(int (*ARG)(const uint8_t *, const uint8_t *));
+		struct foo4 {int a;} *bar;
+		struct foo5 faz;
+		enum foo6 { a } bar;
+	]])
+end
 
 do
 	local vars, typs = cdef[[
@@ -163,4 +186,18 @@ do
 
 	attest.equal(typs.foo, _ as {})
 	attest.equal(typs.bar, _ as nil)
+end
+
+do 
+	cdef_error([[
+		enum foo { a };
+		struct foo {};
+	]], "redeclare")
+end
+
+do
+	cdef_error([[
+		struct foo { int a; };
+    	struct foo { int a; int b; };
+	]], "redeclare")
 end
