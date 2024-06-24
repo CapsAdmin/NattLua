@@ -138,3 +138,29 @@ do
 	attest.equal(typs.foo, _ as number)
 	attest.equal(typs.bar, _ as nil)
 end
+
+
+do
+	local vars, typs = cdef([[
+		typedef struct foo bar;
+	]])
+
+	attest.equal(typs.foo, _ as {})
+	attest.equal(typs.bar, _ as {})
+
+
+	attest.equal(vars.foo, nil)
+	attest.equal(vars.bar, nil)
+end
+
+
+do
+	local vars, typs = cdef([[
+		struct foo bar;
+	]])
+	attest.equal(vars.bar, _ as {})
+	attest.equal(vars.foo, _ as nil)
+
+	attest.equal(typs.foo, _ as {})
+	attest.equal(typs.bar, _ as nil)
+end

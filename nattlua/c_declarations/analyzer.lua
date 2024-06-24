@@ -405,8 +405,16 @@ function META:AnalyzeRoot(ast, vars, typs)
 	self.Callback = function(node, real_node, typedef)
 		local out = {}
 
-		local ident = real_node.tokens["potential_identifier"] and
-		real_node.tokens["potential_identifier"].value
+		local ident = nil 
+		
+		if node.modifiers and node.modifiers[#node.modifiers] and type(node.modifiers[#node.modifiers]) == "string" then
+			ident = node.modifiers[#node.modifiers]
+		end
+		
+		if not ident and real_node.tokens["potential_identifier"] then 
+			ident = real_node.tokens["potential_identifier"].value
+		end
+
 		if ident == "TYPEOF_CDECL" then
 			self.super_hack = true -- TODO
 		end
