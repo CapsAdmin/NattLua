@@ -33,11 +33,6 @@ do
 end
 
 local function cast(self, node, out)
-	local env = self.env
-	local analyzer = self.analyzer
-	local typs = self.typs
-	local vars = self.vars
-
 	if node.type == "array" then
 		local size
 
@@ -48,7 +43,7 @@ local function cast(self, node, out)
 		end
 
 		return (
-			env.FFIArray:Call(analyzer, Tuple({size, cast(self, assert(node.of), out)})):Unpack()
+			self.env.FFIArray:Call(self.analyzer, Tuple({size, cast(self, assert(node.of), out)})):Unpack()
 		)
 	elseif node.type == "pointer" then
 		if
@@ -59,7 +54,7 @@ local function cast(self, node, out)
 			return Any() -- TODO: is this true?
 		end
 
-		local res = (env.FFIPointer:Call(analyzer, Tuple({cast(self, assert(node.of), out)})):Unpack())
+		local res = (self.env.FFIPointer:Call(self.analyzer, Tuple({cast(self, assert(node.of), out)})):Unpack())
 
 		if self:GetContextValue("function_argument") == true then
 			if
@@ -113,7 +108,7 @@ local function cast(self, node, out)
 							tbl = current.tbl
 						else
 							-- previously defined type or new type {}
-							tbl = typs:Get(LString(ident)) or self.typs_write:Get(LString(ident)) or Table()
+							tbl = self.typs_read:Get(LString(ident)) or self.typs_write:Get(LString(ident)) or Table()
 						end
 
 						table.insert(out, {identifier = ident, obj = tbl})
@@ -205,7 +200,7 @@ local function cast(self, node, out)
 			return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		end
 
-		local tbl = typs:Get(LString(t)) or self.typs_write:Get(LString(t))
+		local tbl = self.typs_read:Get(LString(t)) or self.typs_write:Get(LString(t))
 
 		if tbl then return (tbl) end
 
@@ -235,13 +230,10 @@ local function cast(self, node, out)
 end
 
 function META:AnalyzeRoot(ast, vars, typs)
-	-- new output
-	self.typs = typs or Table()
-	self.vars = vars or Table()
-	local typs = Table()
-	local vars = Table()
-	self.typs_write = typs
-	self.vars_write = vars
+	self.typs_read = typs or Table()
+	self.vars_read = vars or Table()
+	self.typs_write = Table()
+	self.vars_write = Table()
 	local function callback(node, real_node, typedef)
 		local out = {}
 
@@ -267,20 +259,20 @@ function META:AnalyzeRoot(ast, vars, typs)
 		
 		if ident then
 			if typedef then
-				typs:Set(LString(ident), obj)
+				self.typs_write:Set(LString(ident), obj)
 			else
-				vars:Set(LString(ident), obj)
+				self.vars_write:Set(LString(ident), obj)
 			end
 		end
 
 		for _, typedef in ipairs(out) do
 			local ident = typedef.identifier
-			typs:Set(LString(ident), typedef.obj)
+			self.typs_write:Set(LString(ident), typedef.obj)
 		end
 	end
 	walk_cdeclarations(ast, callback)
 	
-	return vars, typs
+	return self.vars_write, self.typs_write
 end
 
 function META.New()
