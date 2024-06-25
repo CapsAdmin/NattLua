@@ -11,6 +11,7 @@ local Nil = require("nattlua.types.symbol").Nil
 local Boolean = require("nattlua.types.union").Boolean
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
+local walk_cdeclarations = require("nattlua.c_declarations.ast_walker")
 
 do
 	local table_insert = table.insert
@@ -30,172 +31,6 @@ do
 		return (table_remove--[[# as any]])(self.context_values[key], 1)
 	end
 end
-
-function META:WalkRoot(node)
-	for _, node in ipairs(node.statements) do
-		if node.kind == "c_declaration" then
-			self:WalkCDeclaration(node)
-		elseif node.kind == "typedef" then
-			self:WalkTypedef(node)
-		end
-	end
-end
-
-function META:WalkTypedef(node)
-	for _, decl in ipairs(node.decls) do
-		self:WalkCDeclaration(decl, true)
-	end
-end
-
-local function handle_struct(self, node)
-	local struct = {type = node.kind}
-
-	if node.tokens["identifier"] then
-		struct.identifier = node.tokens["identifier"].value
-	end
-
-	local old = self.cdecl
-
-	if node.fields then
-		struct.fields = {}
-
-		for _, field in ipairs(node.fields) do
-			local t = {type = "root"}
-			self.cdecl = t
-			self:WalkCDeclaration_(field, nil)
-			t.of.identifier = field.tokens["potential_identifier"].value
-			table.insert(struct.fields, t.of)
-		end
-	end
-
-	self.cdecl = old
-	return struct
-end
-
-local function handle_enum(self, node)
-	local struct = {type = "enum", fields = {}, identifier = node.tokens["identifier"] and node.tokens["identifier"].value}
-
-	for _, field in ipairs(node.fields) do
-		table.insert(struct.fields, {type = "enum_field", identifier = field.tokens["identifier"].value})
-	end
-
-	return struct
-end
-
-local function handle_modifiers(self, node)
-	local modifiers = {}
-
-	for k, v in ipairs(node.modifiers) do
-		if v.kind == "struct" or v.kind == "union" then
-			table.insert(modifiers, handle_struct(self, v))
-		elseif v.kind == "enum" then
-			table.insert(modifiers, handle_enum(self, v))
-		elseif v.kind == "dollar_sign" then
-			table.insert(modifiers, "$")
-		else
-			if not v.DONT_WRITE then table.insert(modifiers, v.value) end
-		end
-	end
-
-	if modifiers[1] then
-		self.cdecl.of = {
-			type = "type",
-			modifiers = modifiers,
-		}
-		self.cdecl = assert(self.cdecl.of)
-	end
-end
-
-local function handle_array_expression(self, node)
-	for k, v in ipairs(node.array_expression) do
-		self.cdecl.of = {
-			type = "array",
-			size = v.expression:Render(),
-		}
-		self.cdecl = self.cdecl.of
-	end
-end
-
-local function handle_function(self, node)
-	local args = {}
-	local old = self.cdecl
-
-	for i, v in ipairs(node.arguments) do
-		v.parent = {type = "root"}
-		local _, cdecl = self:WalkCDeclaration2(v, nil)
-		table.insert(args, cdecl.of)
-	end
-
-	self.cdecl = old
-	self.cdecl.of = {
-		type = "function",
-		args = args,
-		rets = {type = "root"},
-	}
-	self.cdecl = assert(self.cdecl.of.rets)
-end
-
-local function handle_pointers(self, node)
-	for k, v in ipairs(node.pointers) do
-		local modifiers = {}
-
-		for i = #v, 1, -1 do
-			local v = v[i]
-
-			if not v.DONT_WRITE then
-				if v.value ~= "*" then table.insert(modifiers, v.value) end
-			end
-		end
-
-		self.cdecl.of = {
-			type = "pointer",
-			modifiers = modifiers,
-		}
-		self.cdecl = assert(self.cdecl.of)
-	end
-end
-
-function META:WalkCDeclaration_(node, walk_up)
-	if node.array_expression then handle_array_expression(self, node) end
-
-	if node.pointers then handle_pointers(self, node) end
-
-	if node.arguments then handle_function(self, node) end
-
-	if node.modifiers then handle_modifiers(self, node) end
-
-	if node.tokens["..."] and node.type == "expression" then
-		self.cdecl.of = {
-			type = "va_list",
-		}
-		self.cdecl = assert(self.cdecl.of)
-	end
-
-	if not walk_up then return end
-
-	if node.parent.kind == "c_declaration" then
-		self:WalkCDeclaration_(node.parent, true)
-	end
-end
-
-function META:WalkCDeclaration(node, typedef)
-	local node, cdecl, real_node = self:WalkCDeclaration2(node)
-	self.Callback(cdecl.of, real_node, typedef)
-end
-
-function META:WalkCDeclaration2(node)
-	local real_node = node
-
-	while node.expression do -- find the inner most expression
-		node = node.expression
-	end
-
-	self.cdecl = {type = "root", of = nil}
-	local cdecl = self.cdecl
-	self:WalkCDeclaration_(node, true)
-	return node, cdecl, real_node
-end
-
 
 local function cast(self, node, out)
 	local env = self.env
@@ -407,7 +242,7 @@ function META:AnalyzeRoot(ast, vars, typs)
 	local vars = Table()
 	self.typs_write = typs
 	self.vars_write = vars
-	self.Callback = function(node, real_node, typedef)
+	local function callback(node, real_node, typedef)
 		local out = {}
 
 		local ident = nil 
@@ -443,7 +278,8 @@ function META:AnalyzeRoot(ast, vars, typs)
 			typs:Set(LString(ident), typedef.obj)
 		end
 	end
-	self:WalkRoot(ast)
+	walk_cdeclarations(ast, callback)
+	
 	return vars, typs
 end
 
