@@ -82,7 +82,15 @@ local function cast(self, node)
 						end
 
 						for _, v in ipairs(v.fields) do
-							tbl:Set(LString(v.identifier), cast(self, v))
+							local obj = cast(self, v)
+
+							if not v.identifier then
+								for _, kv in ipairs(obj:GetData()) do
+									tbl:Set(kv.key, kv.val)
+								end
+							else
+								tbl:Set(LString(v.identifier), obj)
+							end
 						end
 
 						if ident then table.remove(self.current_nodes, 1) end

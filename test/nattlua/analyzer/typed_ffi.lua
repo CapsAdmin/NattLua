@@ -2,11 +2,13 @@ local T = require("test.helpers")
 local analyze_old = T.RunCode
 
 local function analyze(c)
-	return analyze_old([=[
+	return analyze_old(
+		[=[
 			§require("nattlua.c_declarations.main").reset()
 			local ffi = require("ffi")
 			ffi.C = {}
-		]=] .. c)
+		]=] .. c
+	)
 end
 
 analyze[=[
@@ -354,9 +356,6 @@ analyze[=[
     local info = {} as AddressInfo
     addrinfo_get_ip(info)  
 ]=]
-
-
-
 analyze[=[
 	local ffi = require("ffi")
 	ffi.cdef[[
@@ -373,7 +372,6 @@ analyze[=[
 	local srcaddr = ffi.new("struct sockaddr")
 	local x = ffi.cast("struct sockaddr2 *", srcaddr)
 ]=]
-
 analyze[[
 	local type x = tostring<|FFIArray<|
 		1,
@@ -391,7 +389,6 @@ analyze[[
 		"Array1(Array2(Pointer(Pointer(function=(Pointer(number),)>(Pointer(Array3(Array4(Pointer(number)))),)))))"
 	|>
 ]]
-
 analyze[=[
 	local ffi = require("ffi")
 	ffi.cdef[[
@@ -412,4 +409,20 @@ analyze[=[
 		}
 		attest.equal(pfd.fd, _ as number)
 	end
+]=]
+analyze[=[
+	local t = ffi.typeof([[
+		struct {
+			int a;
+			union {
+			  int b;
+			  float c;
+			};
+			int d;
+		  }
+	]])
+	attest.equal(t.a, _ as number)
+	attest.equal(t.b, _ as number)
+	attest.equal(t.c, _ as number)
+	attest.equal(t.d, _ as number)
 ]=]
