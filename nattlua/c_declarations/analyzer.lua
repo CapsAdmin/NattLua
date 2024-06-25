@@ -32,7 +32,7 @@ do
 	end
 end
 
-local function cast(self, node, out)
+local function cast(self, node)
 	if node.type == "array" then
 		local size
 
@@ -42,9 +42,9 @@ local function cast(self, node, out)
 			size = LNumber(tonumber(node.size) or math.huge)
 		end
 
-		return (
-			self.env.FFIArray:Call(self.analyzer, Tuple({size, cast(self, assert(node.of), out)})):Unpack()
-		)
+		local obj = self.env.FFIArray:Call(self.analyzer, Tuple({size, cast(self, assert(node.of))})):Unpack()
+		
+		return obj
 	elseif node.type == "pointer" then
 		if
 			node.of.type == "type" and
@@ -54,7 +54,9 @@ local function cast(self, node, out)
 			return Any() -- TODO: is this true?
 		end
 
-		local res = (self.env.FFIPointer:Call(self.analyzer, Tuple({cast(self, assert(node.of), out)})):Unpack())
+		local res = (self.env.FFIPointer:Call(self.analyzer, Tuple({cast(self, assert(node.of))})):Unpack())
+
+		local obj
 
 		if self:GetContextValue("function_argument") == true then
 			if
@@ -62,45 +64,40 @@ local function cast(self, node, out)
 				node.of.modifiers[1] == "const" and
 				node.of.modifiers[2] == "char"
 			then
-				return Union({res, String(), Nil()})
+				obj = Union({res, String(), Nil()})
 			end
 		end
 
-		return Union({res, Nil()})
+		obj = obj or Union({res, Nil()})
+
+		return obj
+
 	elseif node.type == "type" then
+		local obj
 		for _, v in ipairs(node.modifiers) do
 			if type(v) == "table" then
 				-- only catch struct, union and enum TYPE declarations
 				if v.type == "struct" or v.type == "union" then
 					local ident = v.identifier
+
 					local tbl
 
 					if v.fields then
 						tbl = Table()
 
-						if not ident and #node.modifiers > 0 then
-							ident = node.modifiers[#node.modifiers].identifier or "anon"
+						if ident then
+							self.current_nodes = self.current_nodes or {}
+							table.insert(self.current_nodes, 1, {ident = ident, tbl = tbl})
 						end
 
-						self.current_nodes = self.current_nodes or {}
-						table.insert(self.current_nodes, 1, {ident = ident, tbl = tbl})
-
-						--tbl:Set(LString("__id"), LString(("%p"):format({})))
 						for _, v in ipairs(v.fields) do
-							tbl:Set(LString(v.identifier), cast(self, v, out))
+							tbl:Set(LString(v.identifier), cast(self, v))
+						end						
+
+						if ident then
+							table.remove(self.current_nodes, 1)
 						end
-
-						table.remove(self.current_nodes, 1)
-
-						local existing = self.typs_write:Get(LString(ident))
-
-						if existing and not existing:Equal(tbl) and not existing:IsEmpty() then
-							error("attempt to redeclare type " .. ident .. " = " .. tostring(existing) .. " as " .. tostring(tbl) )
-						end
-
-						table.insert(out, {identifier = ident, obj = tbl})
-						self.typs_write:Set(LString(ident), tbl)
-					else
+					elseif ident then
 						local current = self.current_nodes and self.current_nodes[1]
 
 						if current and current.ident == v.identifier then
@@ -108,21 +105,29 @@ local function cast(self, node, out)
 							tbl = current.tbl
 						else
 							-- previously defined type or new type {}
-							tbl = self.typs_read:Get(LString(ident)) or self.typs_write:Get(LString(ident)) or Table()
+							tbl = self.type_table:Get(LString(ident)) or self.type_table:Get(LString(ident)) or Table()
 						end
-
-						table.insert(out, {identifier = ident, obj = tbl})
-						
-						self.typs_write:Set(LString(ident), tbl)
+					else
+						error("what")
 					end
 
-					return tbl
+					if ident then
+
+						if ERROR_REDECLARE then
+							local existing = self.type_table:Get(LString(ident))
+
+							if existing and not existing:Equal(tbl) and not existing:IsEmpty() then
+								error("attempt to redeclare type " .. ident .. " = " .. tostring(existing) .. " as " .. tostring(tbl) )
+							end
+						end
+						
+						self.type_table:Set(LString(ident), tbl)
+					end
+
+					obj = tbl
+					break
 				elseif v.type == "enum" then
 					local ident = v.identifier 
-
-					if not ident and #node.modifiers > 0 then
-						ident = node.modifiers[#node.modifiers].identifier or "anon"
-					end
 					
 					local tbl = Table()
 					local i = 0
@@ -132,16 +137,32 @@ local function cast(self, node, out)
 						i = i + 1
 					end
 
-					table.insert(out, {identifier = ident, obj = tbl})
-					self.typs_write:Set(LString(ident), tbl)
 
-					return Number()
+					if ident then
+						if ERROR_REDECLARE then
+							local existing = self.type_table:Get(LString(ident))
+
+							if existing and not existing:Equal(tbl) and not existing:IsEmpty() then
+								error("attempt to redeclare type " .. ident .. " = " .. tostring(existing) .. " as " .. tostring(tbl) )
+							end
+						end
+
+						self.type_table:Set(LString(ident), tbl)
+					end
+
+					obj = Number()
+					break
 				end
 			end
 		end
 
-		local t = node.modifiers[1]
+		if obj then
 
+
+			return obj
+		end
+
+		local t = node.modifiers[1]
 		if
 			t == "double" or
 			t == "float" or
@@ -178,7 +199,7 @@ local function cast(self, node, out)
 			t == "intptr_t" or
 			t == "uintptr_t"
 		then
-			return Number()
+			obj = Number()
 		elseif
 			t == "int64_t" or
 			t == "uint64_t" or
@@ -189,24 +210,26 @@ local function cast(self, node, out)
 			t == "unsigned long long" or
 			t == "unsigned long long int"
 		then
-			return Number()
+			obj = Number()
 		elseif t == "bool" or t == "_Bool" then
-			return Boolean()
+			obj = Boolean()
 		elseif t == "void" then
-			return Nil()
+			obj = Nil()
 		elseif t == "$" or t == "?" then
-			return table.remove(self.dollar_signs_vars, 1)
+			obj = table.remove(self.dollar_signs_vars, 1)
 		elseif t == "va_list" then
-			return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+			obj = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+		else
+			obj = self.type_table:Get(LString(t))
 		end
 
-		local tbl = self.typs_read:Get(LString(t)) or self.typs_write:Get(LString(t))
-
-		if tbl then return (tbl) end
-
-		return (Number())
+		obj = obj or Number()
+		
+		return obj
 	elseif node.type == "va_list" then
-		return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+		local obj = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+
+		return obj
 	elseif node.type == "function" then
 		local args = {}
 		local rets = {}
@@ -215,34 +238,32 @@ local function cast(self, node, out)
 			self:PushContextValue("function_argument", true)
 		end
 		for i, v in ipairs(node.args) do
-			table.insert(args, cast(self, v, out))
+			table.insert(args, cast(self, v))
 		end
 		if not self.super_hack then
 			self:PopContextValue("function_argument")
 		end
 
-		return (Function(Tuple(args), Tuple({cast(self, assert(node.rets), out)})))
+		local obj = (Function(Tuple(args), Tuple({cast(self, assert(node.rets))})))
+
+		return obj
 	elseif node.type == "root" then
-		return (cast(self, assert(node.of), out))
+		return (cast(self, assert(node.of)))
 	else
 		error("unknown type " .. node.type)
 	end
 end
 
 function META:AnalyzeRoot(ast, vars, typs)
-	self.typs_read = typs or Table()
-	self.vars_read = vars or Table()
-	self.typs_write = Table()
-	self.vars_write = Table()
+	self.type_table = typs or Table()
+	self.vars_table = vars or Table()
 	local function callback(node, real_node, typedef)
-		local out = {}
-
 		local ident = nil 
-		
+			
 		if node.modifiers and node.modifiers[#node.modifiers] and type(node.modifiers[#node.modifiers]) == "string" then
 			ident = node.modifiers[#node.modifiers]
 		end
-		
+
 		if not ident and real_node.tokens["potential_identifier"] then 
 			ident = real_node.tokens["potential_identifier"].value
 		end
@@ -250,29 +271,23 @@ function META:AnalyzeRoot(ast, vars, typs)
 		if ident == "TYPEOF_CDECL" then
 			self.super_hack = true -- TODO
 		end
-		local obj = cast(self, node, out)
-		if ident == "TYPEOF_CDECL" then
-			self.super_hack = false -- TODO
-		end
+		local obj = cast(self, node)
 
-		if not ident then ident = "uhhoh" end
-		
-		if ident then
+		if type(ident) == "string" then
 			if typedef then
-				self.typs_write:Set(LString(ident), obj)
+				self.type_table:Set(LString(ident), obj)
 			else
-				self.vars_write:Set(LString(ident), obj)
+				self.vars_table:Set(LString(ident), obj)
 			end
 		end
 
-		for _, typedef in ipairs(out) do
-			local ident = typedef.identifier
-			self.typs_write:Set(LString(ident), typedef.obj)
+		if ident == "TYPEOF_CDECL" then
+			self.super_hack = false -- TODO
 		end
 	end
 	walk_cdeclarations(ast, callback)
 	
-	return self.vars_write, self.typs_write
+	return self.vars_table, self.type_table
 end
 
 function META.New()

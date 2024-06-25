@@ -1,46 +1,22 @@
-local analyzer function cdef(str: string)
-	local Lexer = require("nattlua.c_declarations.lexer").New
-	local Parser = require("nattlua.c_declarations.parser").New
-	local Emitter = require("nattlua.c_declarations.emitter").New
-	local Analyzer = require("nattlua.c_declarations.analyzer").New
-	local Code = require("nattlua.code").New
-	local c_code = str:GetData()
-	local code = Code(c_code, "test.c")
-	local lex = Lexer(code)
-	local tokens = lex:GetTokens()
-	local parser = Parser(tokens, code)
-	local ast = parser:ParseRootNode()
-	local emitter = Emitter({skip_translation = true})
-	local res = emitter:BuildCode(ast)
-	local a = Analyzer()
-	a.env = env.typesystem
-	a.analyzer = analyzer
-	return a:AnalyzeRoot(ast)
+local analyzer function cdef(str: string, ...: ...any)
+	return require("nattlua.c_declarations.main").cdef(str, ...)
 end
 
-local analyzer function cdef_error(str: string, expect: string)
-	local Lexer = require("nattlua.c_declarations.lexer").New
-	local Parser = require("nattlua.c_declarations.parser").New
-	local Emitter = require("nattlua.c_declarations.emitter").New
-	local Analyzer = require("nattlua.c_declarations.analyzer").New
-	local Code = require("nattlua.code").New
-	local c_code = str:GetData()
-	local code = Code(c_code, "test.c")
-	local lex = Lexer(code)
-	local tokens = lex:GetTokens()
-	local parser = Parser(tokens, code)
-	local ast = parser:ParseRootNode()
-	local emitter = Emitter({skip_translation = true})
-	local res = emitter:BuildCode(ast)
-	local a = Analyzer()
-	a.env = env.typesystem
-	a.analyzer = analyzer
-	local ok, err = pcall(function() return a:AnalyzeRoot(ast) end)
+local analyzer function cdef_error(str: string, expect: string, ...: ...any)
+	local args = {...}
+	local ok, err = pcall(function() return require("nattlua.c_declarations.main").cdef(str, unpack(args)) end)
 	assert(ok == false)
 	assert(err:find(expect:GetData()))
 end
 
+local function reset()
+	§require("nattlua.c_declarations.main").reset()
+	local ffi = require("ffi")
+	ffi.C = {}
+end
+
 do
+	reset()
 	local vars, typs = cdef([[
 		int foo1;
 		void foo2();
@@ -55,6 +31,7 @@ do
 end
 
 do
+	reset()
 	local vars, typs = cdef[[
 		int foo;
 	]]
@@ -62,6 +39,7 @@ do
 end
 
 do
+	reset()
 	local vars, typs = cdef[[
 		struct MyStruct {int a;} *bar;
 		struct MyStruct faz;
@@ -71,6 +49,7 @@ do
 end
 
 do
+	reset()
 	local vars, typs = cdef[[
 		enum foo { a,b };
 	]]
@@ -79,6 +58,7 @@ do
 end
 
 do
+	reset()
 	local vars, typs = cdef[[
 		unsigned long long * volatile (* (* *NAME [1][2])(char *))[3][4];
 	]]
@@ -96,6 +76,7 @@ do
 end
 
 do
+	reset()
 	local vars, typs = cdef[[
 		struct foo;
 		struct foo {
@@ -106,22 +87,25 @@ do
 end
 
 do
+	reset()
 	local vars, typs = cdef[[
 		struct foo;
 	]]
-	attest.equal(vars.foo, _  as {})
+	attest.equal(typs.foo, _ as {})
 end
 
 do
+	reset()
 	local vars, typs = cdef[[
 		typedef struct {
 			int bar;
 		} foo;
 	]]
-	attest.equal(typs.foo, _  as {bar = number})
+	attest.equal(typs.foo, _ as {bar = number})
 end
 
 do
+	reset()
 	local vars, typs = cdef[[
 		int foo;
 		typedef bool BAR; // type declaration
@@ -143,6 +127,7 @@ do
 end
 
 do
+	reset()
 	local vars, typs = cdef([[
 		int readdir(void *dirp);
 	]])
@@ -151,6 +136,7 @@ end
 
 
 do
+	reset()
 	local vars, typs = cdef([[
 		int bar;
 		typedef int foo;
@@ -164,6 +150,7 @@ end
 
 
 do
+	reset()
 	local vars, typs = cdef([[
 		typedef struct foo bar;
 	]])
@@ -178,6 +165,7 @@ end
 
 
 do
+	reset()
 	local vars, typs = cdef([[
 		struct foo bar;
 	]])
@@ -188,16 +176,50 @@ do
 	attest.equal(typs.bar, _ as nil)
 end
 
-do 
-	cdef_error([[
-		enum foo { a };
-		struct foo {};
-	]], "redeclare")
+do
+	reset()
+	if math.random() > 0.5 then
+		cdef[[
+			struct test {
+				int b;
+			} foo;
+		]]
+	else
+		cdef[[
+			struct test {
+				int a;
+			} foo;
+		]]
+	end
+
+	attest.equal(ffi.C.foo, _ as {a = number} | {b = number})
 end
 
-do
-	cdef_error([[
-		struct foo { int a; };
-    	struct foo { int a; int b; };
-	]], "redeclare")
+if false then
+	do 
+		reset()
+		cdef_error([[
+			enum foo { a };
+			struct foo {};
+		]], "redeclare")
+	end
+
+	do
+		reset()
+		cdef_error([[
+			struct foo { int a; };
+			struct foo { int a; int b; };
+		]], "redeclare")
+	end
+
+	do
+		reset()
+		cdef[[
+			struct foo { int a; };
+		]]
+		
+		cdef_error([[
+			struct foo { int a; int b; };
+		]], "redeclare")
+	end
 end

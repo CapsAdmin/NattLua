@@ -3,8 +3,9 @@ local analyze_old = T.RunCode
 
 local function analyze(c)
 	return analyze_old([=[
+			§require("nattlua.c_declarations.main").reset()
 			local ffi = require("ffi")
-			ffi.C = {}	
+			ffi.C = {}
 		]=] .. c)
 end
 
@@ -52,7 +53,7 @@ analyze[=[
 		int foo(int, bool, lol);
 	]])
 
-	attest.equal<|typeof ffi.C.foo, function=(number, boolean, number)>(number) |>
+	attest.equal(ffi.C.foo, _ as function=(number, boolean, number)>(number))
 ]=]
 analyze[=[
 	local struct
@@ -105,18 +106,18 @@ analyze[=[
 
 	if LINUX then
 		ffi.cdef("void foo(int a);")
-		attest.equal<|typeof ffi.C.foo, function=(number)>((nil)) |>
+		attest.equal(ffi.C.foo, _ as function=(number)>((nil)))
 	else
 		if X64 then
 			ffi.cdef("void foo(const char *a);")
-			attest.equal<|typeof ffi.C.foo, function=(string | nil | ffi.typeof<|"const char*"|>)>((nil)) |>
+			attest.equal(ffi.C.foo, _ as function=(string | nil | ffi.typeof<|"const char*"|>)>((nil)))
 		else
 			ffi.cdef("int foo(int a);")
-			attest.equal<|typeof ffi.C.foo, function=(number)>((number))|>
+			attest.equal(ffi.C.foo, _ as function=(number)>((number)))
 		end	
 	end
 
-	attest.equal<|typeof ffi.C.foo, function=(number)>((nil)) | function=(number)>((number)) | function=(nil | string | ffi.typeof<|"const char*"|>)>((nil)) |>
+	attest.equal(ffi.C.foo, _ as function=(number)>((nil)) | function=(number)>((number)) | function=(nil | string | ffi.typeof<|"const char*"|>)>((nil)))
 ]=]
 analyze[=[
 	ffi.cdef("void foo(void *ptr, int foo, const char *test);")

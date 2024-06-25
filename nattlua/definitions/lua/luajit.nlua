@@ -201,7 +201,7 @@ analyzer function ffi.sizeof(cdecl: any, len: nil | number)
 end
 
 analyzer function ffi.cdef(cdecl: string, ...: ...any)
-	return require("nattlua.c_declarations.main").cdef(cdecl, ...)
+	require("nattlua.c_declarations.main").cdef(cdecl, ...)
 end
 
 §env.typesystem.ffi:Get(types.ConstString("cdef")):SetPreventInputArgumentExpansion(true)
