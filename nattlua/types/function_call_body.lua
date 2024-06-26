@@ -103,7 +103,7 @@ local function check_input(self, obj, input)
 
 			if not ok then
 				return false,
-				type_errors.subset.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+				type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
 			end
 
 			return ok, reason
