@@ -1,3 +1,19 @@
+function FFICtype<|obj: any|>
+	local type t = TType<|obj|>
+
+	if t == "any" then return obj end
+
+	if t == "table" then
+		local type self = obj
+		obj.__call = function(self: ref any, init: ref nil | Partial<|obj|>)
+			return copy<|self|>
+		end
+		obj.@MetaTable = obj
+	end
+
+	return obj
+end
+
 function FFIPointer<|T: any|>
 	if T == nil then return T end
 

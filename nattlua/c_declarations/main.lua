@@ -14,14 +14,12 @@ local Union = require("nattlua.types.union").Union
 local Nilable = require("nattlua.types.union").Nilable
 local Tuple = require("nattlua.types.tuple").Tuple
 local Boolean = require("nattlua.types.union").Boolean
-
 local Lexer = require("nattlua.c_declarations.lexer").New
 local Parser = require("nattlua.c_declarations.parser").New
 local Emitter = require("nattlua.c_declarations.emitter").New
 local Analyzer = require("nattlua.c_declarations.analyzer").New
 local Code = require("nattlua.code").New
 local Compiler = require("nattlua.compiler")
-
 local variables = Table()
 local types = Table()
 
@@ -35,14 +33,13 @@ local function C_DECLARATIONS()
 end
 
 local function analyze(c_code, mode, env, analyzer, ...)
-	if mode == "typeof" then 
+	if mode == "typeof" then
 		c_code = "typedef void (*TYPEOF_CDECL)(" .. c_code .. ");"
-	elseif mode == "ffinew" then 
-		c_code = "void (*TYPEOF_CDECL)(" .. c_code .. ");" 
+	elseif mode == "ffinew" then
+		c_code = "void (*TYPEOF_CDECL)(" .. c_code .. ");"
 	end
 
 	local code = Code(c_code, "test.c")
-
 	local lex = Lexer(code)
 	local tokens = lex:GetTokens()
 	local parser = Parser(tokens, code)
@@ -107,7 +104,6 @@ function cparser.cdef(cdecl, ...)
 	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = analyze(cdecl:GetData(), "cdef", env, analyzer, ...)
-
 	variables = vars
 	types = typs
 
@@ -121,13 +117,11 @@ end
 function cparser.reset()
 	variables = Table()
 	types = Table()
-
 	local analyzer = assert(
 		require("nattlua.analyzer.context"):GetCurrentAnalyzer(),
 		"no analyzer in context"
 	)
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-
 	analyzer:Assert(env.typesystem.ffi:Set(ConstString("C"), Table()))
 	analyzer:Assert(env.runtime.ffi:Set(ConstString("C"), Table()))
 end
@@ -138,8 +132,7 @@ function cparser.cast(cdecl, src)
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = analyze(cdecl:GetData(), "typeof", env, analyzer)
 	local ctype = extract_anonymous_type(typs)
-	
-	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
+
 	if ctype.Type == "union" then
 		for _, v in ipairs(ctype:GetData()) do
 			if v.Type == "table" then
@@ -151,12 +144,6 @@ function cparser.cast(cdecl, src)
 	end
 
 	if ctype.Type == "any" then return ctype end
-
-	local nilable_ctype = ctype:Copy()
-
-	for _, keyval in ipairs(nilable_ctype:GetData()) do
-		keyval.val = Nilable(keyval.val)
-	end
 
 	ctype:SetMetaTable(ctype)
 	return ctype
@@ -184,37 +171,7 @@ function cparser.typeof(cdecl, ...)
 		end
 	end
 
-	if ctype.Type == "any" then return ctype end
-
-	local nilable_ctype = ctype:Copy()
-
-	if ctype.Type == "table" then
-		for _, keyval in ipairs(nilable_ctype:GetData()) do
-			keyval.val = Nilable(keyval.val)
-		end
-	end
-
-	if ctype.is_enum and ctype:GetMetaTable() then return ctype end
-
-	local old = ctype:GetContract()
-	ctype:SetContract()
-	ctype:Set(
-		ConstString("__call"),
-		LuaTypeFunction(
-			function(self, init)
-				local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
-
-				if init then analyzer:Assert(init:IsSubsetOf(nilable_ctype)) end
-
-				return self:Copy()
-			end,
-			{ctype, Nilable(nilable_ctype)},
-			{ctype}
-		)
-	)
-	ctype:SetMetaTable(ctype)
-	ctype:SetContract(old)
-	return ctype
+	return env.typesystem.FFICtype:Call(analyzer, Tuple({ctype}), analyzer.current_expression)
 end
 
 function cparser.get_type(cdecl, ...)

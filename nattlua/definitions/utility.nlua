@@ -114,7 +114,7 @@ analyzer function seal(tbl: Table)
 	tbl:SetContract(tbl)
 end
 
-function nilable<|tbl: {[string] = any}|>
+function nilable<|tbl: {[string | number] = any}|>
 	tbl = copy(tbl)
 
 	for key, val in pairs(tbl) do
@@ -349,4 +349,8 @@ analyzer function LuaVersion()
 	else
 		return "Lua 5.1"
 	end
+end
+
+analyzer function TType(T: any)
+	return T.Type
 end
