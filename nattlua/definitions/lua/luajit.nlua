@@ -12,10 +12,10 @@ function FFIPointer<|T: any|>
 			return self[number][key]
 		end,
 		__le = function(self: ref self, other: ref self)
-			return Boolean()
+			return boolean
 		end,
 		__lt = function(self: ref self, other: ref self)
-			return Boolean()
+			return boolean
 		end,
 		__add = function(self: ref self, other: ref (self | number))
 			return FFIPointer<|T|>
@@ -39,10 +39,10 @@ function FFIArray<|size: number, T: any|>
 			return T --self[number][key]
 		end,
 		__le = function(self: ref self, other: ref self)
-			return Boolean()
+			return boolean
 		end,
 		__lt = function(self: ref self, other: ref self)
-			return Boolean()
+			return boolean
 		end,
 		__add = function(self: ref self, other: ref self | number)
 			return FFIPointer<|T|>
