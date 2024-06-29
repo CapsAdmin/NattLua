@@ -1928,29 +1928,11 @@ do -- extra
 	function META:EmitImportExpression(node--[[#: Node]])
 		if not node.path then
 			self:EmitToken(node.left.value)
-
-			if node.tokens["call("] then
-				self:EmitToken(node.tokens["call("])
-			elseif self.config.force_parenthesis then
-				self:EmitNonSpace("(")
-			end
-
-			self:EmitExpressionList(node.expressions)
-
-			if node.tokens["call)"] then
-				self:EmitToken(node.tokens["call)"])
-			elseif self.config.force_parenthesis then
-				self:EmitNonSpace(")")
-			end
-
-			return
-		end
-
-		if node.left.value.value == "loadfile" then
-			self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")
 		else
 			self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")
+		end
 
+		if node.left.value.value ~= "loadfile" or not node.path then
 			if node.tokens["call("] then
 				self:EmitToken(node.tokens["call("])
 			elseif self.config.force_parenthesis then
