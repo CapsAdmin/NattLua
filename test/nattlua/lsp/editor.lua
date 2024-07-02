@@ -99,6 +99,14 @@ do
 end
 
 do
+	local code = [[local >>aaa = 1]]
+	local code, line_pos, char_pos = get_line_char(code)
+	local editor = single_file(code)
+	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line_pos, char_pos, "foo"))
+	assert(new_code:find("local%s+foo%s+%=") ~= nil)
+end
+
+do
 	local code = [[
         local function foo()
 

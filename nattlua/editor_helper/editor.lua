@@ -328,21 +328,25 @@ function META:SaveFile(path)
 end
 
 function META:FindToken(path, line, char)
+	line = line + 1
+	char = char + 1
 	local data = self:GetFile(path)
-	local sub_pos = data.code:LineCharToSubPos(line + 1, char + 1)
+	local sub_pos = data.code:LineCharToSubPos(line, char)
 
-	for _, token in ipairs(data.tokens) do
-		if sub_pos >= token.start and sub_pos <= token.stop then
+	for i, token in ipairs(data.tokens) do
+		if sub_pos >= token.start and sub_pos <= token.stop + 1 then
 			return token, data
 		end
 	end
 
-	-- fallback  to the last token
-	local token = data.tokens[#data.tokens]
+	for _, token in ipairs(data.tokens) do
+		print(token, token.start, token.stop)
+	end
 
-	if token then return token, data end
-
-	error("cannot find token at " .. path .. ":" .. line .. ":" .. char, 2)
+	error(
+		"cannot find token at " .. path .. ":" .. line .. ":" .. char .. " or sub pos " .. sub_pos,
+		2
+	)
 end
 
 function META:FindTokensFromRange(
@@ -452,6 +456,19 @@ function META:GetRenameInstructions(path, line, character, newName)
 	local token, data = self:FindToken(path, line, character)
 	local upvalue = token:FindUpvalue()
 	local edits = {}
+
+	if not upvalue then
+		table.insert(
+			edits,
+			{
+				start = token.start,
+				stop = token.stop,
+				from = token.value,
+				to = newName,
+			}
+		)
+		return edits
+	end
 
 	for i, v in ipairs(data.tokens) do
 		local u = v:FindUpvalue()
