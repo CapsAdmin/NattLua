@@ -17,6 +17,10 @@ local function get_largest_number(obj)
 			end
 
 			return max
+		elseif obj.Type == "number" then
+			local max = obj:GetMax()
+
+			if max and max:IsLiteral() then return max:GetData() end
 		end
 
 		return obj:GetData()
@@ -88,6 +92,8 @@ return {
 				if max.Type == "number" or (max.Type == "union" and max:IsType("number")) then
 					if not max:IsLiteral() then
 						init:SetMax(LNumber(math.huge))
+					elseif literal_max then
+						init:SetMax(LNumber(literal_max))
 					else
 						init:SetMax(max)
 					end

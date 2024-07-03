@@ -161,3 +161,13 @@ analyze[[
         attest.equal(lol.x, 1)
     end
 ]]
+analyze[[
+    local type called = false
+
+    for i = 1, #(_  as string) do
+        attest.equal(i, _  as 1 .. inf)
+        type called = true
+    end
+
+    attest.equal<|called, true|>
+]]
