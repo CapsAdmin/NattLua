@@ -23,7 +23,7 @@ analyzer function coroutine.resume(thread: any, ...: ...any)
 		error(tostring(thread) .. " is not a thread!", 2)
 	end
 
-	thread.co_func:Call(analyzer, types.Tuple({...}))
+	analyzer:Call(thread.co_func, types.Tuple({...}))
 	return types.Boolean()
 end
 
@@ -35,7 +35,7 @@ end
 
 analyzer function coroutine.wrap(cb: Function)
 	return function(...)
-		cb:Call(analyzer, types.Tuple({...}))
+		analyzer:Call(cb, types.Tuple({...}))
 		local res = analyzer.yielded_results
 
 		if res then

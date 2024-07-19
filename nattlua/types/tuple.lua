@@ -479,10 +479,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 	return self
 end
 
-function META:Call(analyzer, input, call_node)
-	return (self:GetFirstValue()--[[# as any]]):Call(analyzer, input, call_node, true)
-end
-
 return {
 	Tuple = META.New,
 	VarArg = function(t--[[#: TBaseType]])

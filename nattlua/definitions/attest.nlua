@@ -41,7 +41,7 @@ end
 analyzer function attest.pcall(callable: Function, ...: ...any)
 	local diagnostics_index = #analyzer:GetDiagnostics()
 	analyzer:PushProtectedCall()
-	local tuple = analyzer:Assert(callable:Call(analyzer, types.Tuple({...})))
+	local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
 	analyzer:PopProtectedCall()
 	local diagnostics = analyzer:GetDiagnostics()
 

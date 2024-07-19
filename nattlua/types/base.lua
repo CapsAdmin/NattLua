@@ -253,10 +253,6 @@ function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[
 	return false, type_errors.binary(op, l, r)
 end
 
-function META:Call(analyzer, input, call_node)
-	return false, type_errors.invalid_type_call(self.Type, self)
-end
-
 function META.New()
 	return setmetatable({}--[[# as META.@Self]], META)
 end

@@ -19,7 +19,7 @@ local function metatable_function(analyzer, meta_method, obj, node)
 		local func = obj:GetMetaTable():Get(ConstString(meta_method))
 
 		if func then
-			return analyzer:Assert(func:Call(analyzer, Tuple({obj}), node):Get(1))
+			return analyzer:Assert(analyzer:Call(func, Tuple({obj}), node):Get(1))
 		end
 	end
 end

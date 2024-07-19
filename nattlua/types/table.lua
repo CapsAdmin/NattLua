@@ -123,7 +123,7 @@ function META:__tostring()
 			local analyzer = context:GetCurrentAnalyzer()
 
 			if analyzer then
-				local str = analyzer:Assert(func:Call(analyzer, Tuple({self}))):GetFirstValue()
+				local str = analyzer:Assert(analyzer:Call(func, Tuple({self}))):GetFirstValue()
 
 				if str and str:IsLiteral() then
 					self.suppress = false
@@ -1019,28 +1019,6 @@ do
 
 		return out
 	end
-end
-
-function META:Call(analyzer, input, call_node)
-	if not self:GetMetaTable() then
-		return false,
-		type_errors.because(type_errors.table_index(self, "__call"), "it has no metatable")
-	end
-
-	local __call, reason = self:GetMetaTable():Get(ConstString("__call"))
-
-	if __call then
-		local new_input = {self}
-
-		for _, v in ipairs(input:GetData()) do
-			table.insert(new_input, v)
-		end
-
-		return __call:Call(analyzer, Tuple(new_input), call_node, true)
-	end
-
-	return false,
-	type_errors.because(type_errors.table_index(self, "__call"), reason)
 end
 
 function META.New()

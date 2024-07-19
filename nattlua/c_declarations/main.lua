@@ -171,7 +171,7 @@ function cparser.typeof(cdecl, ...)
 		end
 	end
 
-	return env.typesystem.FFICtype:Call(analyzer, Tuple({ctype}), analyzer.current_expression)
+	return analyzer:Call(env.typesystem.FFICtype, Tuple({ctype}), analyzer.current_expression)
 end
 
 function cparser.get_type(cdecl, ...)
@@ -203,7 +203,7 @@ function cparser.metatype(ctype, meta)
 			LuaTypeFunction(
 				function(self, ...)
 					local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
-					local val = analyzer:Assert(new:Call(analyzer, Tuple({ctype, ...}))):Unpack()
+					local val = analyzer:Assert(analyzer:Call(new, Tuple({ctype, ...}))):Unpack()
 
 					if val.Type == "union" then
 						for i, v in ipairs(val:GetData()) do

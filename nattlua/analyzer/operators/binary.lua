@@ -33,7 +33,7 @@ local function metatable_function(self, node, meta_method, l, r)
 
 		if func.Type ~= "function" then return func end
 
-		return self:Assert(func:Call(self, Tuple({l, r}), node)):Get(1)
+		return self:Assert(self:Call(func, Tuple({l, r}), node)):Get(1)
 	end
 end
 

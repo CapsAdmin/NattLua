@@ -124,7 +124,7 @@ return function(META)
 			end
 
 			self:CreateAndPushFunctionScope(obj)
-			self:Assert(obj:Call(self, arguments, obj:GetFunctionBodyNode()))
+			self:Assert(self:Call(obj, arguments, obj:GetFunctionBodyNode()))
 			self:PopScope()
 		end
 
@@ -407,7 +407,7 @@ return function(META)
 				local generics_func = self:GetLocalOrGlobalValue(name)
 				assert(generics_func.Type == "function", "cannot find typesystem function " .. name:GetData())
 				local argument_tuple = Tuple({a, b, c, d, e, f})
-				local returned_tuple = assert(generics_func:Call(self, argument_tuple))
+				local returned_tuple = assert(self:Call(generics_func, argument_tuple))
 				self:PopAnalyzerEnvironment()
 				return returned_tuple:Unpack()
 			end

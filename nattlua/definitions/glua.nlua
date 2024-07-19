@@ -193,13 +193,13 @@ local analyzer function CompileString(code: string, name: string, should_throw: 
 end
 
 local analyzer function isstring(obj: any)
-	local typ = env.typesystem.type:Call(analyzer, types.Tuple({obj}), analyzer.current_expression):Get(1)
+	local typ = analyzer:Call(env.typesystem.type, types.Tuple({obj}), analyzer.current_expression):Get(1)
 	local binary_operator = require("nattlua.analyzer.operators.binary")
 	return binary_operator(analyzer, analyzer.current_expression, typ, types.ConstString("string"), "==")
 end
 
 local analyzer function istable(obj: any)
-	local typ = env.typesystem.type:Call(analyzer, types.Tuple({obj}), analyzer.current_expression):Get(1)
+	local typ = analyzer:Call(env.typesystem.type, types.Tuple({obj}), analyzer.current_expression):Get(1)
 	local binary_operator = require("nattlua.analyzer.operators.binary")
 	return binary_operator(analyzer, analyzer.current_expression, typ, types.ConstString("table"), "==")
 end

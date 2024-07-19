@@ -42,7 +42,7 @@ local function cast(self, node)
 			size = LNumber(tonumber(node.size) or math.huge)
 		end
 
-		return self.env.FFIArray:Call(self.analyzer, Tuple({size, cast(self, assert(node.of))})):Unpack()
+		return self.analyzer:Call(self.env.FFIArray, Tuple({size, cast(self, assert(node.of))})):Unpack()
 	elseif node.type == "pointer" then
 		if
 			node.of.type == "type" and
@@ -52,7 +52,7 @@ local function cast(self, node)
 			return Any() -- TODO: is this true?
 		end
 
-		local res = (self.env.FFIPointer:Call(self.analyzer, Tuple({cast(self, assert(node.of))})):Unpack())
+		local res = (self.analyzer:Call(self.env.FFIPointer, Tuple({cast(self, assert(node.of))})):Unpack())
 
 		if self:GetContextValue("function_argument") == true then
 			if

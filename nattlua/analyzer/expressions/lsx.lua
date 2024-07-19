@@ -35,7 +35,7 @@ return {
 			self:PopCurrentType("table")
 		end
 
-		local ret, err = func:Call(self, Tuple({tbl}), node)
+		local ret, err = self:Call(func, Tuple({tbl}), node)
 		self.current_expression = node
 		self:PopAnalyzerEnvironment()
 
