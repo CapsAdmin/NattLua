@@ -61,7 +61,7 @@ return {
 				local obj = self:Assert(self:AnalyzeExpression(exp_val))
 				self:ClearTracked()
 
-				if obj.Type == "tuple" and obj:GetLength() == 1 then
+				if obj.Type == "tuple" and obj:GetElementCount() == 1 then
 					obj = obj:Get(1)
 				end
 
@@ -135,7 +135,7 @@ return {
 				if right[left_pos] then
 					local contract = contract
 
-					if contract.Type == "tuple" and contract:GetLength() == 1 then
+					if contract.Type == "tuple" and contract:GetElementCount() == 1 then
 						contract = contract:Get(1)
 					end
 
@@ -153,7 +153,7 @@ return {
 					self.current_expression = exp_key
 					self:Assert(check_type_against_contract(val, contract))
 				else
-					if contract.Type == "tuple" and contract:GetLength() == 1 then
+					if contract.Type == "tuple" and contract:GetElementCount() == 1 then
 						contract = contract:Get(1)
 					end
 				end

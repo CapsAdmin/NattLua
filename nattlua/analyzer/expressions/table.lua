@@ -97,7 +97,7 @@ return {
 							end
 
 							if kv.key.Type == "number" then
-								self:NewIndexOperator(tbl, LNumber(tbl:GetLength(self):GetData() + 1), val)
+								self:NewIndexOperator(tbl, LNumber(self:GetArrayLengthFromTable(tbl):GetData() + 1), val)
 							else
 								self:NewIndexOperator(tbl, kv.key, val)
 							end
@@ -115,7 +115,7 @@ return {
 
 					if obj.Type == "tuple" then
 						if tree.children[i + 1] then
-							self:NewIndexOperator(tbl, LNumber(tbl:GetLength(self):GetData() + 1), obj:Get(1))
+							self:NewIndexOperator(tbl, LNumber(self:GetArrayLengthFromTable(tbl):GetData() + 1), obj:Get(1))
 						else
 							for i = 1, obj:GetMinimumLength() do
 								tbl:Set(LNumber(#tbl:GetData() + 1), obj:Get(i))
@@ -123,15 +123,15 @@ return {
 
 							if obj.Remainder then
 								local current_index = LNumber(#tbl:GetData() + 1)
-								local max = LNumber(obj.Remainder:GetLength())
+								local max = LNumber(obj.Remainder:GetElementCount())
 								self:NewIndexOperator(tbl, current_index:SetMax(max), obj.Remainder:Get(1))
 							end
 						end
 					else
 						if node.i then
-							self:NewIndexOperator(tbl, LNumber(tbl:GetLength(self):GetData() + 1), LNumber(obj))
+							self:NewIndexOperator(tbl, LNumber(self:GetArrayLengthFromTable(tbl):GetData() + 1), LNumber(obj))
 						elseif obj then
-							self:NewIndexOperator(tbl, LNumber(tbl:GetLength(self):GetData() + 1), obj)
+							self:NewIndexOperator(tbl, LNumber(self:GetArrayLengthFromTable(tbl):GetData() + 1), obj)
 						end
 					end
 				end

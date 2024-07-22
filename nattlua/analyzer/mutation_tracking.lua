@@ -1,8 +1,50 @@
 local ipairs = ipairs
 local table = _G.table
 local Union = require("nattlua.types.union").Union
+local LNumber = require("nattlua.types.number").LNumber
 local shallow_copy = require("nattlua.other.shallow_copy")
 return function(META)
+	function META:GetArrayLengthFromTable(tbl)
+		local contract = tbl:GetContract()
+
+		if contract and contract ~= tbl then tbl = contract end
+
+		local len = 0
+
+		for _, kv in ipairs(tbl:GetData()) do
+			if tbl:HasMutations() then
+				local val = self:GetMutatedTableValue(tbl, kv.key)
+
+				if val then
+					if val.Type == "union" and val:CanBeNil() then
+						return LNumber(len):SetMax(LNumber(len + 1))
+					end
+
+					if val.Type == "symbol" and val:GetData() == nil then
+						return LNumber(len)
+					end
+				end
+			end
+
+			if kv.key.Type == "number" then
+				if kv.key:IsLiteral() then
+					-- TODO: not very accurate
+					if kv.key:GetMax() then return kv.key:Copy() end
+
+					if len + 1 == kv.key:GetData() then
+						len = kv.key:GetData()
+					else
+						break
+					end
+				else
+					return kv.key
+				end
+			end
+		end
+
+		return LNumber(len)
+	end
+
 	function META:GetMutatedTableValue(tbl, key)
 		return tbl:GetMutatedValue(key, self:GetScope())
 	end
@@ -145,7 +187,7 @@ return function(META)
 				elseif self:IsFalsyExpressionContext() then
 					local union = stack[#stack].falsy
 
-					if union:GetLength() == 0 then
+					if union:GetCardinality() == 0 then
 						union = Union()
 
 						for _, val in ipairs(stack) do

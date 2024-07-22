@@ -337,7 +337,7 @@ local function check_output(self, output, output_signature, function_node)
 	local original_contract = output_signature
 
 	if
-		output_signature:GetLength() == 1 and
+		output_signature:GetElementCount() == 1 and
 		output_signature:Get(1).Type == "union" and
 		output_signature:Get(1):HasType("tuple")
 	then
@@ -346,7 +346,7 @@ local function check_output(self, output, output_signature, function_node)
 
 	if
 		output.Type == "tuple" and
-		output:GetLength() == 1 and
+		output:GetElementCount() == 1 and
 		output:Get(1) and
 		output:Get(1).Type == "union" and
 		output:Get(1):HasType("tuple")
@@ -384,10 +384,10 @@ local function check_output(self, output, output_signature, function_node)
 				self:Error(error.reason)
 			end
 		else
-			if output.Type == "tuple" and output:GetLength() == 1 then
+			if output.Type == "tuple" and output:GetElementCount() == 1 then
 				local val = output:GetFirstValue()
 
-				if val.Type == "union" and val:GetLength() == 0 then return end
+				if val.Type == "union" and val:GetCardinality() == 0 then return end
 			end
 
 			local ok, reason, a, b, i = output:IsSubsetOfTuple(output_signature)

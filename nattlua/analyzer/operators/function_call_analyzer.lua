@@ -109,9 +109,9 @@ return function(analyzer, obj, input)
 		return ret
 	end
 
-	local len = signature_arguments:GetLength()
+	local len = signature_arguments:GetElementCount()
 
-	if len == math.huge and input:GetLength() == math.huge then
+	if len == math.huge and input:GetElementCount() == math.huge then
 		len = math.max(signature_arguments:GetMinimumLength(), input:GetMinimumLength())
 	end
 
@@ -132,13 +132,13 @@ return function(analyzer, obj, input)
 	local ret = Tuple({})
 
 	for _, tuple in ipairs(tuples) do
-		if tuple:GetUnpackable() or tuple:GetLength() == math.huge then
+		if tuple:GetUnpackable() or tuple:GetElementCount() == math.huge then
 			return tuple
 		end
 	end
 
 	for _, tuple in ipairs(tuples) do
-		for i = 1, tuple:GetLength() do
+		for i = 1, tuple:GetElementCount() do
 			local v = tuple:Get(i)
 			local existing = ret:Get(i)
 

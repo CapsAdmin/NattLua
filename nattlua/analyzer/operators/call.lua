@@ -45,7 +45,7 @@ local function union_call(self, analyzer, input, call_node)
 		for _, obj in ipairs(self.Data) do
 			if
 				obj.Type == "function" and
-				input:GetLength() < obj:GetInputSignature():GetMinimumLength()
+				input:GetElementCount() < obj:GetInputSignature():GetMinimumLength()
 			then
 				table.insert(
 					errors,
@@ -74,7 +74,7 @@ local function union_call(self, analyzer, input, call_node)
 		local val = analyzer:Assert(analyzer:Call(obj, input, call_node, true))
 
 		-- TODO
-		if val.Type == "tuple" and val:GetLength() == 1 then
+		if val.Type == "tuple" and val:GetElementCount() == 1 then
 			val = val:Unpack(1)
 		elseif val.Type == "union" and val:GetMinimumLength() == 1 then
 			val = val:GetAtIndex(1)
@@ -224,12 +224,10 @@ local function any_call(self, analyzer, input, call_node)
 			if arg:GetContract() then
 				-- error if we call any with tables that have contracts
 				-- since anything might happen to them in an any call
-				analyzer:Error(
-					{
-						"cannot mutate argument with contract ",
-						arg:GetContract(),
-					}
-				)
+				analyzer:Error({
+					"cannot mutate argument with contract ",
+					arg:GetContract(),
+				})
 			else
 				-- if we pass a table without a contract to an any call, we add any to its key values
 				for _, keyval in ipairs(arg:GetData()) do
@@ -260,5 +258,5 @@ return {
 
 			return base_call(obj, self, input, call_node)
 		end
-	end
+	end,
 }

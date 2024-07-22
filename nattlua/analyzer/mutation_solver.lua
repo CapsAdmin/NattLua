@@ -195,7 +195,7 @@ local function mutation_solver(mutations, scope, obj)
 	then
 		local union = stack[#stack].falsy
 
-		if union:GetLength() == 0 then
+		if union:GetCardinality() == 0 then
 			union = Union()
 
 			for _, val in ipairs(stack) do

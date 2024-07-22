@@ -46,9 +46,9 @@ analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 
 	if not val then
 		val = pos
-		pos = tbl:GetLength(analyzer)
+		pos = analyzer:GetArrayLengthFromTable(tbl)
 	else
-		pos = tbl:GetLength(analyzer)
+		pos = analyzer:GetArrayLengthFromTable(tbl)
 	end
 
 	local contract = tbl:GetContract()
@@ -128,7 +128,7 @@ analyzer function table.sort(tbl: List<|any|>, func: nil | function=(a: any, b: 
 end
 
 analyzer function table.getn(tbl: List<|any|>)
-	return tbl:GetLength()
+	return analyzer:GetArrayLengthFromTable(tbl)
 end
 
 analyzer function table.unpack(tbl: List<|any|>)

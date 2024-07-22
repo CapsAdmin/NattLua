@@ -110,13 +110,7 @@ local function Prefix(analyzer, node, r)
 
 			if res then return res end
 
-			local keys = (r:GetContract() or r):GetData()
-
-			if #keys == 1 and keys[1].key and keys[1].key.Type == "number" then
-				return keys[1].key:Copy()
-			end
-
-			return r:GetLength():SetLiteral(r:IsLiteral())
+			return r:GetArrayLength():SetLiteral(r:IsLiteral())
 		end
 	elseif r.Type == "number" then
 		if op == "-" or op == "~" then return r:PrefixOperator(op) end

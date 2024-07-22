@@ -74,7 +74,9 @@ function META:Merge(tup--[[#: TTuple]])
 	local src = self:GetData()
 	local len = tup:GetMinimumLength()
 
-	if len == 0 and tup:GetLength() ~= math.huge then len = tup:GetLength() end
+	if len == 0 and tup:GetElementCount() ~= math.huge then
+		len = tup:GetElementCount()
+	end
 
 	for i = 1, len do
 		local a = self:Get(i)
@@ -123,7 +125,7 @@ function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#:
 	do
 		local t = a:Get(1)
 
-		if t and t.Type == "any" and b.Type == "tuple" and b:GetLength() == 0 then
+		if t and t.Type == "any" and b.Type == "tuple" and b:GetElementCount() == 0 then
 			return true
 		end
 	end
@@ -286,7 +288,7 @@ function META:Set(i--[[#: number]], val--[[#: TBaseType]])
 		return false, "expected number"
 	end
 
-	if val.Type == "tuple" and val:GetLength() == 1 then val = val:Get(1) end
+	if val.Type == "tuple" and val:GetElementCount() == 1 then val = val:Get(1) end
 
 	self.Data[i] = val
 
@@ -297,7 +299,7 @@ end
 
 function META:IsEmpty()
 	-- never called
-	return self:GetLength() == 0
+	return self:GetElementCount() == 0
 end
 
 function META:IsTruthy()
@@ -316,13 +318,15 @@ function META:IsFalsy()
 	return false
 end
 
-function META:GetLength()--[[#: number]]
+function META:GetElementCount()--[[#: number]]
 	if false--[[# as true]] then
 		-- TODO: recursion
 		return nil--[[# as number]]
 	end
 
-	if self.Remainder then return #self:GetData() + self.Remainder:GetLength() end
+	if self.Remainder then
+		return #self:GetData() + self.Remainder:GetElementCount()
+	end
 
 	if self.Repeat then return #self:GetData() * self.Repeat end
 
@@ -361,9 +365,9 @@ function META:GetMinimumLength()
 end
 
 function META:GetSafeLength(arguments--[[#: TTuple]])
-	local len = self:GetLength()
+	local len = self:GetElementCount()
 
-	if len == math.huge or arguments:GetLength() == math.huge then
+	if len == math.huge or arguments:GetElementCount() == math.huge then
 		return math.max(self:GetMinimumLength(), arguments:GetMinimumLength())
 	end
 
@@ -381,8 +385,8 @@ function META:SetRepeat(amt--[[#: number]])
 end
 
 function META:Unpack(length--[[#: nil | number]])
-	length = length or self:GetLength()
-	length = math.min(length, self:GetLength())
+	length = length or self:GetElementCount()
+	length = math.min(length, self:GetElementCount())
 	assert(length ~= math.huge, "length must be finite")
 	local out = {}
 	local i = 1
@@ -431,7 +435,7 @@ function META:GetFirstValue()
 end
 
 function META:Concat(tup--[[#: TTuple]])
-	local start = self:GetLength()
+	local start = self:GetElementCount()
 
 	for i, v in ipairs(tup:GetData()) do
 		self:Set(start + i, v)

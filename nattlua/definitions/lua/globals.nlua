@@ -560,11 +560,7 @@ analyzer function tostring(val: any)
 			local func = val:GetMetaTable():Get(types.ConstString("__tostring"))
 
 			if func then
-				if func.Type == "function" then
-					return analyzer:Assert(analyzer:Call(func, types.Tuple({val})))
-				else
-					return func
-				end
+				return analyzer:Assert(analyzer:Call(func, types.Tuple({val})))
 			end
 		end
 

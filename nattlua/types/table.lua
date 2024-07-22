@@ -174,32 +174,18 @@ function META:__tostring()
 	return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
 
-function META:GetLength(analyzer--[[#: any]])
+function META:GetArrayLength()
 	local contract = self:GetContract()
 
-	if contract and contract ~= self then return contract:GetLength(analyzer) end
+	if contract and contract ~= self then return contract:GetArrayLength() end
 
 	local len = 0
 
 	for _, kv in ipairs(self:GetData()) do
-		if analyzer and self:HasMutations() then
-			local val = analyzer:GetMutatedTableValue(self, kv.key)
-
-			if val then
-				if val.Type == "union" and val:CanBeNil() then
-					return Number(len):SetLiteral(true):SetMax(Number(len + 1):SetLiteral(true))
-				end
-
-				if val.Type == "symbol" and val:GetData() == nil then
-					return Number(len):SetLiteral(true)
-				end
-			end
-		end
-
 		if kv.key.Type == "number" then
 			if kv.key:IsLiteral() then
 				-- TODO: not very accurate
-				if kv.key:GetMax() then return kv.key end
+				if kv.key:GetMax() then return kv.key:Copy() end
 
 				if len + 1 == kv.key:GetData() then
 					len = kv.key:GetData()
@@ -212,7 +198,7 @@ function META:GetLength(analyzer--[[#: any]])
 		end
 	end
 
-	return Number(len):SetLiteral(true)
+	return LNumber(len)
 end
 
 function META:FollowsContract(contract--[[#: TTable]])
@@ -604,7 +590,7 @@ function META:Get(key--[[#: TBaseType]])
 			end
 		end
 
-		if union:GetLength() == 0 then return false, errors end
+		if union:GetCardinality() == 0 then return false, errors end
 
 		return union
 	end

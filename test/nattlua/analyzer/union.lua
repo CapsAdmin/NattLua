@@ -7,7 +7,7 @@ do -- smoke
 	a:PushAnalyzerEnvironment("typesystem")
 	local union = a:GetLocalOrGlobalValue(String("a"))
 	a:PopAnalyzerEnvironment()
-	equal(2, union:GetLength())
+	equal(2, union:GetCardinality())
 	equal(1337, union:GetData()[1]:GetData())
 	equal(8888, union:GetData()[2]:GetData())
 end
@@ -21,7 +21,7 @@ do -- union operator
 	a:PushAnalyzerEnvironment("typesystem")
 	local union = a:GetLocalOrGlobalValue(String("c"))
 	a:PopAnalyzerEnvironment()
-	equal(4, union:GetLength())
+	equal(4, union:GetCardinality())
 end
 
 analyze[[

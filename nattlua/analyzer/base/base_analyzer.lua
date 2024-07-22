@@ -53,7 +53,7 @@ return function(META)
 		for _, expression in ipairs(expressions) do
 			local obj = self:AnalyzeExpression(expression)
 
-			if obj and obj.Type == "tuple" and obj:GetLength() == 1 then
+			if obj and obj.Type == "tuple" and obj:GetElementCount() == 1 then
 				obj = obj:Get(1)
 			end
 
@@ -184,8 +184,9 @@ return function(META)
 			self.config.file_path
 		)
 
-		if self.config.pre_read_file then 
-			local code = self.config.pre_read_file(self, path) 
+		if self.config.pre_read_file then
+			local code = self.config.pre_read_file(self, path)
+
 			if code then return code end
 		end
 
@@ -464,7 +465,6 @@ return function(META)
 
 			return s
 		end
-
 
 		do
 			function META:GetCurrentAnalyzerEnvironment()

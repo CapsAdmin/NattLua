@@ -133,7 +133,7 @@ function META:GetData()
 	return self.Data
 end
 
-function META:GetLength()
+function META:GetCardinality()
 	return #self.Data
 end
 
@@ -202,7 +202,9 @@ function META:GetAtIndex(i--[[#: number]])
 
 	if not val then return false, errors end
 
-	if val.Type == "union" and val:GetLength() == 1 then return val:GetData()[1] end
+	if val.Type == "union" and val:GetCardinality() == 1 then
+		return val:GetData()[1]
+	end
 
 	return val
 end

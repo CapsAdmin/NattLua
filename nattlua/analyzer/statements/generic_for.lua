@@ -24,7 +24,7 @@ return {
 		for i = 1, 1000 do
 			local values = self:Assert(self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
 
-			if values.Type == "tuple" and values:GetLength() == 1 then
+			if values.Type == "tuple" and values:GetElementCount() == 1 then
 				values = values:Get(1)
 			end
 
@@ -33,8 +33,8 @@ return {
 				local max_length = 0
 
 				for i, v in ipairs(values:GetData()) do
-					if v.Type == "tuple" and v:GetLength() > max_length then
-						max_length = v:GetLength()
+					if v.Type == "tuple" and v:GetElementCount() > max_length then
+						max_length = v:GetElementCount()
 					end
 				end
 

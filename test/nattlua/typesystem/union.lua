@@ -57,7 +57,7 @@ local B = Union(1, 2, 3, 4)
 
 test(tostring(B) .. " should equal the union of " .. tostring(A) .. " and " .. tostring(B), function()
 	assert(B:Equal(A:Union(B)))
-	equal(4, B:GetLength())
+	equal(4, B:GetCardinality())
 	assert(A:IsSubsetOf(B))
 end)
 
