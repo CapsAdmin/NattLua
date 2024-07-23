@@ -158,6 +158,8 @@ do
 		stop--[[#: number]],
 		size--[[#: number]]
 	)
+		if not start then debug.trace() end
+
 		if #lua_code > 500000 then return "code too big: " .. msg end
 
 		do
@@ -222,7 +224,10 @@ do
 				local length_before = data.sub_line_before[2] - data.sub_line_before[1]
 				local length_after = data.sub_line_after[2] - data.sub_line_after[1]
 				local arrow_length = #line - length_before - length_after
-				table.insert(lines, (" "):rep(#prefix + length_before) .. ("^"):rep(arrow_length))
+				table.insert(
+					lines,
+					(" "):rep(#prefix + length_before) .. ("^"):rep(arrow_length--[[# as number]])
+				) -- TODO
 			end
 
 			i = i + 1

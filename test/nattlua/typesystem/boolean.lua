@@ -1,23 +1,20 @@
-local T = require("test.helpers")
-local N = T.Number
-local Symbol = T.Number
-local Union = T.Union
-local yes = Symbol(true)
-local no = Symbol(false)
-local yes_and_no = Union(yes, no)
+local Union = require("nattlua.types.union")
+local True = require("nattlua.types.symbol").True
+local False = require("nattlua.types.symbol").False
+local Boolean = require("nattlua.types.union").Boolean
 
-test(tostring(yes) .. " should be a subset of " .. tostring(yes_and_no), function()
-	assert(yes:IsSubsetOf(yes_and_no))
+test(tostring(True()) .. " should be a subset of " .. tostring(Boolean()), function()
+	assert(True():IsSubsetOf(Boolean()))
 end)
 
-test(tostring(no) .. "  should be a subset of " .. tostring(yes_and_no), function()
-	assert(no:IsSubsetOf(yes_and_no))
+test(tostring(False()) .. "  should be a subset of " .. tostring(Boolean()), function()
+	assert(False():IsSubsetOf(Boolean()))
 end)
 
-test(tostring(yes_and_no) .. " is NOT a subset of " .. tostring(yes), function()
-	assert(not yes_and_no:IsSubsetOf(yes))
+test(tostring(Boolean()) .. " is NOT a subset of " .. tostring(True()), function()
+	assert(not Boolean():IsSubsetOf(True()))
 end)
 
-test(tostring(yes_and_no) .. " is NOT a subset of " .. tostring(no), function()
-	assert(not yes_and_no:IsSubsetOf(no))
+test(tostring(Boolean()) .. " is NOT a subset of " .. tostring(False()), function()
+	assert(not Boolean():IsSubsetOf(False()))
 end)

@@ -32,12 +32,6 @@ function META:__tostring()
 	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
 end
 
-function META:__call(...--[[#: ...any]])
-	local f = self:GetAnalyzerFunction()
-
-	if f then return f(...) end
-end
-
 function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]])
 	return a.Type == b.Type and
 		a:GetInputSignature():Equal(b:GetInputSignature()) and

@@ -124,19 +124,18 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 	end
 
 	if a:IsLiteral() and b:IsLiteral() then
-		local a_num = a:GetData()--[[# as number]]
-		local b_num = b:GetData()--[[# as number]]
+		local a_min = a:GetData()--[[# as number]]
+		local b_min = b:GetData()--[[# as number]]
+		local a_max = a:GetMaxLiteral() or a_min
+		local b_max = b:GetMaxLiteral() or b_min
 
-		-- compare against literals
+		-- Compare against literals
 		if a.Type == "number" and b.Type == "number" then
 			if a:IsNan() and b:IsNan() then return true end
 		end
 
-		if a_num == b_num then return true end
-
-		local max = b:GetMaxLiteral()
-
-		if max then if a_num >= b_num and a_num <= max then return true end end
+		-- Check if a's range is entirely within b's range
+		if a_min >= b_min and a_max <= b_max then return true end
 
 		return false, type_errors.subset(a, b)
 	elseif a:GetData() == nil and b:GetData() == nil then
@@ -196,9 +195,7 @@ function META:SetMax(val--[[#: TBaseType | TUnion]])
 		return false, type_errors.subset(val, "number")
 	end
 
-	if self:Equal(val) then
-		return self
-	end
+	if self:Equal(val) then return self end
 
 	if val:IsLiteral() then
 		self.Max = val
@@ -212,7 +209,7 @@ function META:SetMax(val--[[#: TBaseType | TUnion]])
 end
 
 function META:GetMaxLiteral()
-	return self.Max and self.Max:GetData()
+	return self.Max and self.Max:GetData() or nil
 end
 
 function META:GetMinLiteral()
@@ -293,23 +290,29 @@ do
 			local a_max = a:GetMaxLiteral()
 			local b_max = b:GetMaxLiteral()
 
-			if a_max then
-				if b_max then
-					local res_a = compare(b_val, a_val, b_max, operator)
-					local res_b = not compare(a_val, b_val, a_max, operator)
+			if a_max and b_max then
+				local res_a = compare(b_val, a_val, b_max, operator)
+				local res_b = compare(a_val, b_val, a_max, operator)
 
-					if res_a ~= nil and res_a == res_b then return res_a end
+				if res_b == nil or res_a == nil then return nil end
 
-					return nil
-				end
-			end
+				res_b = not res_b
 
-			if a_max then
+				if res_a ~= nil and res_a == res_b then return res_a end
+
+				return nil
+			elseif a_max then
 				local res = compare(b_val, a_val, a_max, operator)
 
 				if res == nil then return nil end
 
 				return res
+			elseif b_max then
+				local res = compare(a_val, b_val, b_max, operator)
+
+				if res == nil then return nil end
+
+				return not res
 			end
 
 			if operators[operator] then return operators[operator](a_val, b_val) end
@@ -500,6 +503,9 @@ end
 
 return {
 	Number = META.New,
+	LNumberRange = function(from--[[#: number]], to--[[#: number]])
+		return META.New(from):SetLiteral(true):SetMax(META.New(to):SetLiteral(true))
+	end,
 	LNumber = function(num--[[#: number | nil]])
 		return META.New(num):SetLiteral(true)
 	end,
