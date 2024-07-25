@@ -82,3 +82,7 @@ analyze[[
     local x: 1..inf = 2
     attest.equal<|x, 1..inf|>
 ]]
+analyze[[
+    local n = _  as 0 .. 5
+    if n > 1 then attest.equal(n, _  as 2 .. 5) else attest.equal(n, _  as 0 .. 5) end
+]]

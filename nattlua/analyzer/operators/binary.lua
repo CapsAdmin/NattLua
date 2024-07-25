@@ -111,6 +111,24 @@ local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | ni
 	end
 end
 
+local function number_comparison(self, l, r, op, invert)
+	if not l:GetMaxLiteral() and not r:GetMaxLiteral() then return end
+
+	local nl, nr = l.IntersectComparison(l, r, op, invert)
+
+	if nl and not l:Equal(nl) then self:TrackUpvalueUnion(l, nl, nr) end
+
+	if nr and not r:Equal(nr) then self:TrackUpvalueUnion(r, nr, nl) end
+
+	if nl and nr then
+		return logical_cmp_cast(nil)
+	elseif nl then
+		return logical_cmp_cast(true)
+	else
+		return logical_cmp_cast(false)
+	end
+end
+
 local function Binary(self, node, l, r, op)
 	op = op or node.value.value
 	local cur_union
@@ -405,6 +423,12 @@ local function Binary(self, node, l, r, op)
 
 			if l.Type ~= r.Type then return False() end
 
+			if l.Type == "number" and r.Type == "number" then
+				local res = number_comparison(self, l, r, op)
+
+				if res then return res end
+			end
+
 			return logical_cmp_cast(l.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
 		elseif op == "~=" or op == "!=" then
 			local res = metatable_function(self, node, "__eq", l, r)
@@ -417,6 +441,12 @@ local function Binary(self, node, l, r, op)
 
 			if l.Type ~= r.Type then return True() end
 
+			if l.Type == "number" and r.Type == "number" then
+				local res = number_comparison(self, l, r, op, true)
+
+				if res then return res end
+			end
+
 			local val, err = l.LogicalComparison(l, r, "==", self:GetCurrentAnalyzerEnvironment())
 
 			if val ~= nil then val = not val end
@@ -427,11 +457,23 @@ local function Binary(self, node, l, r, op)
 
 			if res then return res end
 
+			if l.Type == "number" and r.Type == "number" then
+				local res = number_comparison(self, l, r, op)
+
+				if res then return res end
+			end
+
 			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == "<=" then
 			local res = metatable_function(self, node, "__le", l, r)
 
 			if res then return res end
+
+			if l.Type == "number" and r.Type == "number" then
+				local res = number_comparison(self, l, r, op)
+
+				if res then return res end
+			end
 
 			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == ">" then
@@ -439,11 +481,23 @@ local function Binary(self, node, l, r, op)
 
 			if res then return res end
 
+			if l.Type == "number" and r.Type == "number" then
+				local res = number_comparison(self, l, r, op)
+
+				if res then return res end
+			end
+
 			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == ">=" then
 			local res = metatable_function(self, node, "__le", l, r)
 
 			if res then return res end
+
+			if l.Type == "number" and r.Type == "number" then
+				local res = number_comparison(self, l, r, op)
+
+				if res then return res end
+			end
 
 			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == "or" or op == "||" then
