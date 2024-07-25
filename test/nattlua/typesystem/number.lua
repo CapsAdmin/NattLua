@@ -132,3 +132,175 @@ test("Non-integer numbers should work correctly", function()
 	assert(LNumber(3.14):IsSubsetOf(LNumberRange(3, 4)))
 	assert(LNumber(2.5):BinaryOperator(LNumber(1.5), "+"):GetData() == 4)
 end)
+
+-- Helper function to check if two ranges are equal
+local function rangesEqual(range1, range2)
+	return range1:GetData() == range2:GetData() and
+		range1:GetMaxLiteral() == range2:GetMaxLiteral()
+end
+
+-- Addition tests
+test("Adding two number ranges", function()
+	local range1 = LNumberRange(1, 5)
+	local range2 = LNumberRange(10, 20)
+	local result = range1:BinaryOperator(range2, "+")
+	assert(rangesEqual(result, LNumberRange(11, 25)))
+end)
+
+test("Adding a number range and a literal number", function()
+	local range = LNumberRange(0, 10)
+	local num = LNumber(5)
+	local result = range:BinaryOperator(num, "+")
+	assert(rangesEqual(result, LNumberRange(5, 15)))
+end)
+
+-- Subtraction tests
+test("Subtracting two number ranges", function()
+	local range1 = LNumberRange(10, 20)
+	local range2 = LNumberRange(1, 5)
+	local result = range1:BinaryOperator(range2, "-")
+	assert(rangesEqual(result, LNumberRange(9, 15)))
+end)
+
+test("Subtracting a literal number from a number range", function()
+	local range = LNumberRange(10, 20)
+	local num = LNumber(5)
+	local result = range:BinaryOperator(num, "-")
+	assert(rangesEqual(result, LNumberRange(5, 15)))
+end)
+
+-- Multiplication tests
+test("Multiplying two positive number ranges", function()
+	local range1 = LNumberRange(2, 4)
+	local range2 = LNumberRange(3, 5)
+	local result = range1:BinaryOperator(range2, "*")
+	assert(rangesEqual(result, LNumberRange(6, 20)))
+end)
+
+test("Multiplying a positive and a negative number range", function()
+	local range1 = LNumberRange(2, 4)
+	local range2 = LNumberRange(-3, -1)
+	local result = range1:BinaryOperator(range2, "*")
+	assert(rangesEqual(result, LNumberRange(-6, -4)))
+end)
+
+-- Division tests
+test("Dividing two positive number ranges", function()
+	local range1 = LNumberRange(10, 20)
+	local range2 = LNumberRange(2, 4)
+	local result = range1:BinaryOperator(range2, "/")
+	assert(rangesEqual(result, LNumberRange(5, 5)))
+end)
+
+-- Edge case tests
+test("Adding a number range to zero", function()
+	local range = LNumberRange(-5, 5)
+	local zero = LNumber(0)
+	local result = range:BinaryOperator(zero, "+")
+	assert(rangesEqual(result, range))
+end)
+
+test("Multiplying a number range by zero", function()
+	local range = LNumberRange(-5, 5)
+	local zero = LNumber(0)
+	local result = range:BinaryOperator(zero, "*")
+	assert(rangesEqual(result, LNumberRange(0, 0)))
+end)
+
+test("Arithmetic with infinite ranges", function()
+	local positiveInf = LNumberRange(0, math.huge)
+	local negativeInf = LNumberRange(-math.huge, 0)
+	local result = positiveInf:BinaryOperator(negativeInf, "+")
+	assert(rangesEqual(result, LNumberRange(-math.huge, math.huge)))
+end)
+
+do
+	local max = math.max
+	local min = math.min
+
+	local function brute_force(a_min, a_max, operator, b_min, b_max)
+		local a_res_min
+		local a_res_max
+		local b_res_min
+		local b_res_max
+		local func = loadstring("local a, b = ... return a " .. operator .. " b")
+
+		for x = a_min, a_max do
+			for y = b_min, b_max do
+				if func(x, y) then
+					if not a_res_min then
+						a_res_min = x
+					else
+						a_res_min = min(a_res_min, x)
+					end
+
+					if not a_res_max then
+						a_res_max = x
+					else
+						a_res_max = max(a_res_max, x)
+					end
+				else
+					if not b_res_min then
+						b_res_min = y
+					else
+						b_res_min = min(b_res_min, y)
+					end
+
+					if not b_res_max then
+						b_res_max = y
+					else
+						b_res_max = max(b_res_max, y)
+					end
+				end
+			end
+		end
+
+		return a_res_min, a_res_max, b_res_min, b_res_max
+	end
+
+	local function range_tostring(a_min, a_max, b_min, b_max)
+		return tostring(a_min) .. ".." .. tostring(a_max) .. ", " .. tostring(b_min) .. ".." .. tostring(b_max)
+	end
+
+	local LNumberRange = require("nattlua.types.number").LNumberRange
+
+	local function intersect(a_min, a_max, op, b_min, b_max)
+		local a = LNumberRange(a_min, a_max)
+		local b = LNumberRange(b_min, b_max)
+		local x, y = a.IntersectComparison(a, b, op)
+		return x and x:GetMinLiteral(),
+		x and x:GetMaxLiteral() or x and x:GetMinLiteral() or nil,
+		y and y:GetMinLiteral(),
+		y and y:GetMaxLiteral() or y and y:GetMinLiteral() or nil
+	end
+
+	local function check(a_min, a_max, op, b_min, b_max)
+		local expect = range_tostring(brute_force(a_min, a_max, op, b_min, b_max))
+		local result = range_tostring(intersect(a_min, a_max, op, b_min, b_max))
+
+		do
+			local input = range_tostring(a_min, a_max, b_min, b_max):gsub(", ", " " .. op .. " ")
+
+			if expect ~= result then
+				error("(" .. input .. ") = (" .. result .. ") - FAIL: expected " .. expect)
+			else
+
+			--print("(" .. input .. ") = (" .. result .. ") - OK")
+			end
+		end
+	end
+
+	local max = 2
+
+	for _, op in ipairs({"<", ">", "<=", ">=", "==", "~="}) do
+		for x = -max, max do
+			for y = x, max do
+				for z = -max, max do
+					for w = z, max do
+						check(x, y, op, z, w)
+					end
+				end
+			end
+		end
+	end
+end

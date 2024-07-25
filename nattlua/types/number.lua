@@ -325,7 +325,87 @@ do
 		return false, type_errors.binary(operator, a, b)
 	end
 
-	function META.LogicalComparison2(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber | nil,TNumber | nil]]
+	local max = math.max
+	local min = math.min
+
+	local function intersect(a_min, a_max, operator, b_min, b_max)
+		if operator == "<" then
+			if a_min < b_min and a_min < b_max and a_max < b_min and a_min < b_max then
+				return min(a_min, b_max), min(a_max, b_max - 1), nil, nil
+			end
+
+			if a_min >= b_min and a_min >= b_max and a_max >= b_min and a_min >= b_max then
+				return nil, nil, min(b_min, a_max), min(b_max, a_max)
+			end
+
+			return min(a_min, b_max),
+			min(a_max, b_max - 1),
+			min(b_min, a_max),
+			min(b_max, a_max)
+		elseif operator == ">" then
+			if a_min > b_min and a_min > b_max and a_max > b_min and a_min > b_max then
+				return max(a_min, b_max), max(a_max, b_max + 1), nil, nil
+			end
+
+			if a_min <= b_min and a_min <= b_max and a_max <= b_min and a_min <= b_max then
+				return nil, nil, max(b_min, a_max), max(b_max, a_max)
+			end
+
+			return max(a_min, b_min + 1),
+			max(a_max, b_min),
+			max(b_min, a_min),
+			max(b_max, b_min)
+		elseif operator == "<=" then
+			if a_min <= b_min and a_min <= b_max and a_max <= b_min and a_min <= b_max then
+				return min(a_min, b_max), min(a_max, b_max), nil, nil
+			end
+
+			if a_min > b_min and a_min > b_max and a_max > b_min and a_min > b_max then
+				return nil, nil, min(b_min, a_max), min(b_max, a_max)
+			end
+
+			return min(a_min, b_max),
+			min(a_max, b_max),
+			min(b_min, a_max),
+			min(b_max, a_max - 1)
+		elseif operator == ">=" then
+			if a_min >= b_min and a_min >= b_max and a_max >= b_min and a_min >= b_max then
+				return max(a_min, b_max), max(a_max, b_max), nil, nil
+			end
+
+			if a_min < b_min and a_min < b_max and a_max < b_min and a_min < b_max then
+				return nil, nil, max(b_min, a_max), max(b_max, a_max)
+			end
+
+			return max(a_min, b_min),
+			max(a_max, b_min),
+			max(b_min, a_min + 1),
+			max(b_max, b_min)
+		elseif operator == "==" then
+			if a_max < b_min or b_max < a_min then return nil, nil, b_min, b_max end
+
+			if a_min == a_max and b_min == b_max and a_min == b_max then
+				return a_min, a_max, nil, nil
+			end
+
+			if a_min <= b_max and b_min <= a_max then
+				if a_min == a_max and min(a_max, b_max) == b_max then
+					return max(a_min, b_min), min(a_max, b_max), b_min, b_max - 1
+				end
+
+				if a_min == a_max and max(a_min, b_min) == b_min then
+					return max(a_min, b_min), min(a_max, b_max), b_min + 1, b_max
+				end
+
+				return max(a_min, b_min), min(a_max, b_max), b_min, b_max
+			end
+		elseif operator == "~=" then
+			local x, y, z, w = intersect(b_min, b_max, "==", a_min, a_max)
+			return z, w, x, y
+		end
+	end
+
+	function META.IntersectComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber | nil,TNumber | nil]]
 		local a_min = a:GetData()
 		local b_min = b:GetData()
 
@@ -333,30 +413,18 @@ do
 
 		if not b_min then return nil end
 
-		local a_max = a:GetMaxLiteral() or a_min
-		local b_max = b:GetMaxLiteral() or b_min
-		local a_min_res = nil--[[# as number]]
-		local b_min_res = nil--[[# as number]]
-		local a_max_res = nil--[[# as number]]
-		local b_max_res = nil--[[# as number]]
+		local a_min_res, a_max_res, b_min_res, b_max_res = intersect(a_min, a:GetMaxLiteral() or a_min, operator, b_min, b:GetMaxLiteral() or b_min)
+		local result_a, result_b
 
-		if operator == "<" then
-			a_min_res = math.min(a_min, b_max)
-			a_max_res = math.min(a_max, b_max - 1)
-			b_min_res = math.max(a_min, b_max)
-			b_max_res = math.max(a_max, b_max)
+		if a_min_res and a_max_res then
+			result_a = META.New(a_min_res):SetLiteral(true):SetMax(META.New(a_max_res):SetLiteral(true))
 		end
 
-		if operator == ">" then
-			a_min_res = math.max(a_min, b_max + 1)
-			a_max_res = math.max(a_max, b_max)
-			b_min_res = math.min(a_min, b_max)
-			b_max_res = math.min(a_max, b_max)
+		if b_min_res and b_max_res then
+			result_b = META.New(b_min_res):SetLiteral(true):SetMax(META.New(b_max_res):SetLiteral(true))
 		end
 
-		local a = META.New(a_min_res):SetLiteral(true):SetMax(META.New(a_max_res):SetLiteral(true))
-		local b = META.New(b_min_res):SetLiteral(true):SetMax(META.New(b_max_res):SetLiteral(true))
-		return a, b
+		return result_a, result_b
 	end
 end
 
