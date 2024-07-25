@@ -215,10 +215,9 @@ test("Arithmetic with infinite ranges", function()
 end)
 
 do
-	local max = math.max
-	local min = math.min
-
-	local function brute_force(a_min, a_max, operator, b_min, b_max)
+	local function brute_force_intersect(a, b, operator)
+		local a_min, a_max = a:UnpackRange()
+		local b_min, b_max = b:UnpackRange()
 		local a_res_min
 		local a_res_max
 		local b_res_min
@@ -231,55 +230,50 @@ do
 					if not a_res_min then
 						a_res_min = x
 					else
-						a_res_min = min(a_res_min, x)
+						a_res_min = math.min(a_res_min, x)
 					end
 
 					if not a_res_max then
 						a_res_max = x
 					else
-						a_res_max = max(a_res_max, x)
+						a_res_max = math.max(a_res_max, x)
 					end
 				else
 					if not b_res_min then
 						b_res_min = y
 					else
-						b_res_min = min(b_res_min, y)
+						b_res_min = math.min(b_res_min, y)
 					end
 
 					if not b_res_max then
 						b_res_max = y
 					else
-						b_res_max = max(b_res_max, y)
+						b_res_max = math.max(b_res_max, y)
 					end
 				end
 			end
 		end
 
-		return a_res_min, a_res_max, b_res_min, b_res_max
+		local new_a
+		local new_b
+
+		if a_res_min then new_a = LNumberRange(a_res_min, a_res_max) end
+
+		if b_res_min then new_b = LNumberRange(b_res_min, b_res_max) end
+
+		return new_a, new_b
 	end
 
-	local function range_tostring(a_min, a_max, b_min, b_max)
-		return tostring(a_min) .. ".." .. tostring(a_max) .. ", " .. tostring(b_min) .. ".." .. tostring(b_max)
+	local function range_tostring(a, b)
+		return tostring(a) .. ", " .. tostring(b)
 	end
 
-	local LNumberRange = require("nattlua.types.number").LNumberRange
-
-	local function intersect(a_min, a_max, op, b_min, b_max)
-		local a = LNumberRange(a_min, a_max)
-		local b = LNumberRange(b_min, b_max)
-		local x, y = a.IntersectComparison(a, b, op)
-		return x and x:GetMinLiteral(),
-		x and x:GetMaxLiteral() or x and x:GetMinLiteral() or nil,
-		y and y:GetMinLiteral(),
-		y and y:GetMaxLiteral() or y and y:GetMinLiteral() or nil
-	end
-
-	local function check(a_min, a_max, op, b_min, b_max)
-		local expect = range_tostring(brute_force(a_min, a_max, op, b_min, b_max))
-		local result = range_tostring(intersect(a_min, a_max, op, b_min, b_max))
+	local function check(a, op, b)
+		local expect = range_tostring(brute_force_intersect(a, b, op))
+		local result = range_tostring(a.IntersectComparison(a, b, op))
 
 		do
-			local input = range_tostring(a_min, a_max, b_min, b_max):gsub(", ", " " .. op .. " ")
+			local input = range_tostring(a, b):gsub(", ", " " .. op .. " ")
 
 			if expect ~= result then
 				error("(" .. input .. ") = (" .. result .. ") - FAIL: expected " .. expect)
@@ -297,7 +291,7 @@ do
 			for y = x, max do
 				for z = -max, max do
 					for w = z, max do
-						check(x, y, op, z, w)
+						check(LNumberRange(x, y), op, LNumberRange(z, w))
 					end
 				end
 			end

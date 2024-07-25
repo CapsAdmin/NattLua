@@ -216,6 +216,10 @@ function META:GetMinLiteral()
 	return self:GetData()
 end
 
+function META:UnpackRange()
+	return self:GetMinLiteral(), self:GetMaxLiteral() or self:GetMinLiteral()
+end
+
 do
 	local operators = {
 		[">"] = function(a--[[#: number]], b--[[#: number]])
