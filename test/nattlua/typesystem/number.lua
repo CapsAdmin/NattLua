@@ -135,8 +135,14 @@ end)
 
 -- Helper function to check if two ranges are equal
 local function rangesEqual(range1, range2)
-	return range1:GetData() == range2:GetData() and
-		range1:GetMaxLiteral() == range2:GetMaxLiteral()
+	local a, b = range1:UnpackRange()
+	local c, d = range2:UnpackRange()
+	local a_is_nan = a ~= a and c ~= c
+	local b_is_nan = b ~= b and c ~= c
+
+	if a == c and b == d then return true end
+
+	return a_is_nan and b_is_nan
 end
 
 -- Addition tests
@@ -296,5 +302,42 @@ do
 				end
 			end
 		end
+	end
+
+	do
+		local a, b = LNumberRange(1, math.huge):IntersectComparison(LNumberRange(5, 10), "<")
+		assert(rangesEqual(a, LNumberRange(1, 9)))
+		assert(rangesEqual(b, LNumberRange(5, 10)))
+	end
+
+	do
+		local a, b = LNumberRange(-math.huge, math.huge):IntersectComparison(LNumberRange(5, 10), "<")
+		assert(rangesEqual(a, LNumberRange(-math.huge, 9)))
+		assert(rangesEqual(b, LNumberRange(5, 10)))
+	end
+
+	do
+		local a, b = LNumberRange(-math.huge, math.huge):IntersectComparison(LNumberRange(5, 10), "<")
+		assert(rangesEqual(a, LNumberRange(-math.huge, 9)))
+		assert(rangesEqual(b, LNumberRange(5, 10)))
+	end
+
+	do
+		local nan = math.huge / math.huge
+		local a, b = LNumberRange(nan, nan):IntersectComparison(LNumberRange(5, 10), "<")
+		assert(rangesEqual(a, LNumberRange(nan, nan)))
+		assert(rangesEqual(b, LNumberRange(5, 10)))
+	end
+
+	do
+		local a, b = LNumber(0):IntersectComparison(LNumberRange(-math.huge, math.huge), "<")
+		assert(a:Equal(LNumber(0)))
+		assert(b:Equal(LNumberRange(-math.huge, 0)))
+	end
+
+	do
+		local a, b = LNumber(0):IntersectComparison(Number(), ">")
+		assert(a:Equal(LNumber(0)))
+		assert(b:Equal(LNumberRange(0, math.huge)))
 	end
 end

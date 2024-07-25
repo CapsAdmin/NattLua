@@ -410,14 +410,15 @@ do
 	end
 
 	function META.IntersectComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: keysof<|operators|>]])--[[#: TNumber | nil,TNumber | nil]]
-		local a_min = a:GetData()
-		local b_min = b:GetData()
+		-- TODO: not sure if this makes sense
+		if a:IsNan() or b:IsNan() then return a, b end
 
-		if not a_min then return nil end
-
-		if not b_min then return nil end
-
-		local a_min_res, a_max_res, b_min_res, b_max_res = intersect(a_min, a:GetMaxLiteral() or a_min, operator, b_min, b:GetMaxLiteral() or b_min)
+		-- if a is a wide "number" then default to -inf..inf so we can narrow it down if b is literal
+		local a_min = a:GetData() or -math.huge
+		local a_max = a:GetMaxLiteral() or not a:GetData() and math.huge or a_min
+		local b_min = b:GetData() or -math.huge
+		local b_max = b:GetMaxLiteral() or not b:GetData() and math.huge or b_min
+		local a_min_res, a_max_res, b_min_res, b_max_res = intersect(a_min, a_max, operator, b_min, b_max)
 		local result_a, result_b
 
 		if a_min_res and a_max_res then
