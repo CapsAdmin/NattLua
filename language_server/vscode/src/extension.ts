@@ -4,13 +4,24 @@ import {
 } from "vscode";
 import {
   LanguageClient,
-  LanguageClientOptions
+  LanguageClientOptions,
 } from "vscode-languageclient/node";
-import { startServerConnection } from "./start-server";
 import { resolveVariables } from "./vscode-variables";
+import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import { unwatchFile, watchFile } from "fs"
+import { chdir } from "process";
 
 let client: LanguageClient;
 const config = workspace.getConfiguration("nattlua");
+let server: ChildProcessWithoutNullStreams;
+
+const kill = () => {
+  if (server) {
+    server.kill("SIGKILL");
+  }
+  server = undefined;
+};
+
 
 export async function activate(context: ExtensionContext) {
   let serverOutput = window.createOutputChannel("Nattlua Server");
@@ -35,7 +46,61 @@ export async function activate(context: ExtensionContext) {
   client = new LanguageClient(
     "nattlua",
     "NattLua Client",
-    () => startServerConnection({ executable, workingDirectory, path, args, client, serverOutput, context }),
+    async () => {
+
+
+      if (server) {
+        kill();
+      }
+
+      const spawnArgs = [path, ...args];
+
+      client.outputChannel.appendLine("spawn: " + JSON.stringify({
+        executable,
+        workingDirectory,
+        args: spawnArgs,
+      }, null, 2));
+
+      watchFile(path, () => {
+        client.outputChannel.appendLine(path + " changed, reloading");
+        kill();
+        unwatchFile(path);
+      });
+
+      chdir(workingDirectory);
+      server = spawn(executable, spawnArgs, { cwd: workingDirectory });
+
+      context.subscriptions.push({
+        dispose: () => {
+          kill();
+        },
+      });
+
+      server.stdout.setEncoding("utf8");
+      server.stderr.setEncoding("utf8");
+
+      server.stdout.on("data", (str: string) => {
+        serverOutput.append(str);
+      });
+      server.stderr.on("data", (str) => {
+        serverOutput.append(str);
+      });
+
+      server.on("error", (err) => {
+        serverOutput.appendLine("ERROR: " + err.toString());
+        kill();
+      });
+
+      process.on("exit", () => {
+        kill();
+      });
+
+      return {
+        reader: server.stderr, // using STDERR explicitly to have a clean communication channel
+        writer: server.stdin
+      };
+
+    },
     clientOptions
   );
 

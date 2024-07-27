@@ -580,6 +580,11 @@ lsp.methods["textDocument/hover"] = function(params)
 	}
 end
 
+lsp.methods["$/setTrace"] = function(params) 
+	local value = params.value
+	print(value)
+end
+
 do
 	local MessageType = {error = 1, warning = 2, info = 3, log = 4}
 
