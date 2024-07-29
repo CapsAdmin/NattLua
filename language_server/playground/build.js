@@ -1,6 +1,8 @@
 const { execSync } = require("child_process")
 const fs = require("fs")
 const path = require("path")
+const { finished } = require("stream/promises")
+const { Readable } = require("stream")
 
 const getAllFiles = function (dirPath, arrayOfFiles) {
 	files = fs.readdirSync(dirPath)
@@ -33,6 +35,16 @@ for (let path of getAllFiles("../../test/nattlua/analyzer/")) {
 }
 
 fs.writeFileSync("src/random.json", JSON.stringify(tests))
+;(async () => {
+	const res = await fetch("https://unpkg.com/wasmoon@1.14.1/dist/glue.wasm")
+	fs.unlink("public/glue.wasm", (err) => {
+		if (err) {
+			console.error(err)
+		}
+	})
+	const fileStream = fs.createWriteStream("public/glue.wasm", { flags: "wx" })
+	await finished(Readable.fromWeb(res.body).pipe(fileStream))
+})()
 
 execSync("cd ../../ && luajit nattlua.lua build fast")
 

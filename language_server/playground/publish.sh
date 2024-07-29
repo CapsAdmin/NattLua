@@ -5,3 +5,4 @@ git checkout -b gh-pages
 git add --all
 git commit -m "Deploy"
 git push -f origin gh-pages
+rm -rf .git
