@@ -8,36 +8,22 @@ import {
 } from "vscode-languageclient/node";
 import { resolveVariables } from "./vscode-variables";
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
-import { unwatchFile, watchFile } from "fs"
 import { chdir } from "process";
 
 let client: LanguageClient;
-const config = workspace.getConfiguration("nattlua");
 let server: ChildProcessWithoutNullStreams;
-
-const kill = () => {
-  if (server) {
-    server.kill("SIGKILL");
-  }
-  server = undefined;
-};
-
+const documentSelector = [{ scheme: 'file', language: 'nattlua' }];
 
 export async function activate(context: ExtensionContext) {
+  const config = workspace.getConfiguration("nattlua");
   let serverOutput = window.createOutputChannel("Nattlua Server");
 
   const executable = resolveVariables(config.get<string>("executable"));
   const workingDirectory = resolveVariables(config.get<string>("workingDirectory"));
-  const path = resolveVariables(config.get<string>("path"));
-  const args = config.get<string[]>("arguments")
-  for (let i = 0; i < args.length; i++) {
-    args[i] = resolveVariables(args[i]);
-  }
-
-  const selector = [{ scheme: 'file', language: 'nattlua' }];
+  const args = [resolveVariables(config.get<string>("path")), ...config.get<string[]>("arguments").map(arg => resolveVariables(arg))]
 
   const clientOptions: LanguageClientOptions = {
-    documentSelector: selector,
+    documentSelector,
     synchronize: {
       configurationSection: "nattlua",
     },
@@ -47,64 +33,38 @@ export async function activate(context: ExtensionContext) {
     "nattlua",
     "NattLua Client",
     async () => {
-
-
-      if (server) {
-        kill();
-      }
-
-      const spawnArgs = [path, ...args];
-
-      client.outputChannel.appendLine("spawn: " + JSON.stringify({
-        executable,
-        workingDirectory,
-        args: spawnArgs,
-      }, null, 2));
-
-      watchFile(path, () => {
-        client.outputChannel.appendLine(path + " changed, reloading");
-        kill();
-        unwatchFile(path);
+      chdir(workingDirectory);
+      server = spawn(executable, args, { cwd: workingDirectory });
+      server.on("error", (err) => {
+        serverOutput.appendLine("ERROR: " + err.toString());
       });
 
-      chdir(workingDirectory);
-      server = spawn(executable, spawnArgs, { cwd: workingDirectory });
+      const reader = server.stderr  // using STDERR explicitly to have a clean communication channel
+      reader.setEncoding("utf8");
+      reader.on("data", (str) => serverOutput.append(str));
+
+      const output = server.stdout
+      output.setEncoding("utf8");
+      output.on("data", (str: string) => serverOutput.append(str));
+
+      const writer = server.stdin
 
       context.subscriptions.push({
         dispose: () => {
-          kill();
+          server.kill("SIGKILL");
         },
-      });
-
-      server.stdout.setEncoding("utf8");
-      server.stderr.setEncoding("utf8");
-
-      server.stdout.on("data", (str: string) => {
-        serverOutput.append(str);
-      });
-      server.stderr.on("data", (str) => {
-        serverOutput.append(str);
-      });
-
-      server.on("error", (err) => {
-        serverOutput.appendLine("ERROR: " + err.toString());
-        kill();
-      });
-
-      process.on("exit", () => {
-        kill();
-      });
+      })
 
       return {
-        reader: server.stderr, // using STDERR explicitly to have a clean communication channel
-        writer: server.stdin
+        reader,
+        writer
       };
 
     },
     clientOptions
   );
 
-  languages.registerDocumentFormattingEditProvider(selector, {
+  languages.registerDocumentFormattingEditProvider(documentSelector, {
     async provideDocumentFormattingEdits(document: TextDocument) {
       try {
         const range = document.validateRange(
