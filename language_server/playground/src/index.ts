@@ -80,7 +80,7 @@ const main = async () => {
 	}
 
 	document.getElementById("random-example").addEventListener("click", () => {
-		tab.setValue(getRandomExample())
+		tab.setValue(prettyPrint(lua, getRandomExample()))
 	})
 
 	document.getElementById("pretty-print").addEventListener("click", () => {
@@ -112,6 +112,13 @@ const main = async () => {
 			}
 
 			let response = callMethodOnServer("textDocument/inlayHint", request)
+			if (!Array.isArray(response)) {
+				return {
+					hints: [],
+					dispose: () => { },
+
+				}
+			}
 
 			return {
 				hints: response.map((hint) => {

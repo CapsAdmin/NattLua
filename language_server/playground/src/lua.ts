@@ -3,7 +3,7 @@ import { registerSyntax } from "./syntax"
 import { loadLuaModule } from "./util"
 
 export const loadLua = async () => {
-	const factory = new LuaFactory("https://unpkg.com/wasmoon@1.14.1/dist/glue.wasm")
+	const factory = new LuaFactory()
 	const lua = await factory.createEngine({
 		openStandardLibs: true,
 	})
@@ -41,6 +41,8 @@ export const loadLua = async () => {
 		end
 
 		_G.lsp = lsp`)
+
+	console.log("OK")
 
 	return lua
 }
