@@ -1,7 +1,6 @@
-local function tostringx(obj)
-	local t = type(obj)
-
-	if t == "function" then
+--ANALYZE
+local function tostringx(obj--[[#: any]])--[[#: string]]
+	if type(obj) == "function" then
 		local info = debug.getinfo(obj)
 
 		if info.source == "=[C]" then
@@ -26,14 +25,14 @@ local function tostringx(obj)
 	return str
 end
 
-local function file_read(path)
+local function file_read(path--[[#: string]])--[[#: string]]
 	local f = assert(io.open(path, "r"))
 	local str = assert(f:read("*all"), "file is empty")
 	f:close()
 	return str
 end
 
-local function line_from_info(info, line)
+local function line_from_info(info--[[#: debug_getinfo]], line--[[#: number]])--[[#: string]]
 	if info.source:sub(1, 1) == "@" then
 		local lua = file_read(info.source:sub(2))
 		local i = 1
@@ -46,7 +45,12 @@ local function line_from_info(info, line)
 	end
 end
 
-local function func_line_from_info(info, line_override, fallback_info, nocomment)
+local function func_line_from_info(
+	info--[[#: debug_getinfo]],
+	line_override--[[#: number]],
+	fallback_info--[[#: string]],
+	nocomment--[[#: boolean]]
+)
 	if info.source then
 		local line = line_from_info(info, line_override or info.linedefined)
 
@@ -93,7 +97,7 @@ local function func_line_from_info(info, line_override, fallback_info, nocomment
 	return str
 end
 
-return function(offset, check_level)
+return function(offset--[[#: number]], check_level--[[#: number]])--[[#: string]]
 	offset = offset or 0
 	local str = ""
 	local max_level = 0
