@@ -162,7 +162,7 @@ function editor_helper:OnDiagnostics(path, data)
 		diagnostics[i] = {
 			severity = DiagnosticSeverity[v.severity],
 			range = range,
-			message = v.message .. "\n" .. v.trace,
+			message = v.message .. "\n" .. (v.trace or "no trace??"),
 		}
 	end
 
