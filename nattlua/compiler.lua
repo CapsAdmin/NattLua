@@ -15,7 +15,9 @@ local Lexer = require("nattlua.lexer").New
 local Parser = require("nattlua.parser").New
 local Analyzer = require("nattlua.analyzer").New
 local Emitter = require("nattlua.transpiler.emitter").New
+local loadstring = require("nattlua.other.loadstring")
 local META = class.CreateTemplate("compiler")
+
 
 --[[#local type { CompilerConfig } = import("~/nattlua/config.nlua")]]
 
@@ -285,5 +287,42 @@ function META.New(
 		META
 	)
 end
+
+function META.FromFile(path, config)
+	config = config or {}
+	config.file_path = config.file_path or path
+	config.file_name = config.file_name or "@" .. path
+	local f, err = io.open(path, "rb")
+
+	if not f then return nil, err end
+
+	local code = f:read("*all")
+	f:close()
+
+	if not code then return nil, path .. " empty file" end
+
+	return META.New(code, config.file_name, config)
+end
+
+function META.Load(code, name, config)
+	config = config or {}
+	config.file_name = config.file_name or name
+	local obj = META.New(code, config.file_name, config)
+	local code, err = obj:Emit()
+
+	if not code then return nil, err end
+
+	return loadstring(code, config.file_name)
+end
+
+function META.LoadFile(path, config)
+	local obj = META.FromFile(path, config)
+	local code, err = obj:Emit()
+
+	if not code then return nil, err end
+
+	return loadstring(code, obj.config.file_name)
+end
+
 
 return META
