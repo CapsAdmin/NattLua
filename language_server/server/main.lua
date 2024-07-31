@@ -24,7 +24,7 @@ end
 OUTPUT:setvbuf("no")
 
 function lsp.Call(params)
-	write_message(res)
+	write_message(params)
 end
 
 while true do
