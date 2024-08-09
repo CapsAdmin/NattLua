@@ -91,18 +91,17 @@ do
 end
 
 do
-	local AnalyzeBinaryOperator = require("nattlua.analyzer.expressions.binary_operator").AnalyzeBinaryOperator
+	local Binary = require("nattlua.analyzer.operators.binary").Binary
+	local Postfix = require("nattlua.analyzer.operators.postfix").Postfix
 	local AnalyzePrefixOperator = require("nattlua.analyzer.expressions.prefix_operator").AnalyzePrefixOperator
-	local AnalyzePostfixOperator = require("nattlua.analyzer.expressions.postfix_operator").AnalyzePostfixOperator
 	local AnalyzePostfixCall = require("nattlua.analyzer.expressions.postfix_call").AnalyzePostfixCall
-	local AnalyzePostfixIndex = require("nattlua.analyzer.expressions.postfix_index").AnalyzePostfixIndex
 	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
 	local AnalyzeTable = require("nattlua.analyzer.expressions.table").AnalyzeTable
 	local AnalyzeAtomicValue = require("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
-	local AnalyzeTuple = require("nattlua.analyzer.expressions.tuple").AnalyzeTuple
-	local AnalyzeVararg = require("nattlua.analyzer.expressions.vararg").AnalyzeVararg
 	local AnalyzeLSX = require("nattlua.analyzer.expressions.lsx").AnalyzeLSX
 	local Union = require("nattlua.types.union").Union
+	local Tuple = require("nattlua.types.tuple").Tuple
+	local VarArg = require("nattlua.types.tuple").VarArg
 
 	function META:AnalyzeRuntimeExpression(node)
 		self.current_expression = node
@@ -110,7 +109,7 @@ do
 		if node.kind == "value" then
 			return AnalyzeAtomicValue(self, node)
 		elseif node.kind == "vararg" then
-			return AnalyzeVararg(self, node)
+			return VarArg(self:AnalyzeExpression(node.value))
 		elseif
 			node.kind == "function" or
 			node.kind == "analyzer_function" or
@@ -121,19 +120,28 @@ do
 		elseif node.kind == "table" or node.kind == "type_table" then
 			return AnalyzeTable(self, node)
 		elseif node.kind == "binary_operator" then
-			return AnalyzeBinaryOperator(self, node)
+			return self:Assert(Binary(self, node))
 		elseif node.kind == "prefix_operator" then
 			return AnalyzePrefixOperator(self, node)
 		elseif node.kind == "postfix_operator" then
-			return AnalyzePostfixOperator(self, node)
+			return self:Assert(Postfix(self, node, self:AnalyzeExpression(node.left)))
 		elseif node.kind == "postfix_expression_index" then
-			return AnalyzePostfixIndex(self, node)
+			return self:Assert(
+				self:IndexOperator(
+					self:AnalyzeExpression(node.left):GetFirstValue(),
+					self:AnalyzeExpression(node.expression):GetFirstValue()
+				)
+			)
 		elseif node.kind == "postfix_call" then
 			return AnalyzePostfixCall(self, node)
 		elseif node.kind == "empty_union" then
 			return Union({})
 		elseif node.kind == "tuple" then
-			return AnalyzeTuple(self, node)
+			local tup = Tuple():SetUnpackable(true)
+			self:PushCurrentType(tup, "tuple")
+			tup:SetTable(self:AnalyzeExpressions(node.expressions))
+			self:PopCurrentType("tuple")
+			return tup
 		elseif node.kind == "lsx" then
 			return AnalyzeLSX(self, node)
 		else
