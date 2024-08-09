@@ -92,8 +92,6 @@ end
 
 do
 	local Binary = require("nattlua.analyzer.operators.binary").Binary
-	local Postfix = require("nattlua.analyzer.operators.postfix").Postfix
-	local AnalyzePrefixOperator = require("nattlua.analyzer.expressions.prefix_operator").AnalyzePrefixOperator
 	local AnalyzePostfixCall = require("nattlua.analyzer.expressions.postfix_call").AnalyzePostfixCall
 	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
 	local AnalyzeTable = require("nattlua.analyzer.expressions.table").AnalyzeTable
@@ -102,6 +100,8 @@ do
 	local Union = require("nattlua.types.union").Union
 	local Tuple = require("nattlua.types.tuple").Tuple
 	local VarArg = require("nattlua.types.tuple").VarArg
+	local Prefix = require("nattlua.analyzer.operators.prefix").Prefix
+	local Node = require("nattlua.parser.node")
 
 	function META:AnalyzeRuntimeExpression(node)
 		self.current_expression = node
@@ -122,9 +122,21 @@ do
 		elseif node.kind == "binary_operator" then
 			return self:Assert(Binary(self, node))
 		elseif node.kind == "prefix_operator" then
-			return AnalyzePrefixOperator(self, node)
+			if node.value.value == "not" then
+				self.inverted_index_tracking = not self.inverted_index_tracking
+			end
+
+			local r = self:AnalyzeExpression(node.right)
+
+			if node.value.value == "not" then self.inverted_index_tracking = nil end
+
+			self.current_expression = node
+			return self:Assert(Prefix(self, node, r))
 		elseif node.kind == "postfix_operator" then
-			return self:Assert(Postfix(self, node, self:AnalyzeExpression(node.left)))
+			if node.value.value == "++" then
+				local r = self:AnalyzeExpression(node.left)
+				return Binary(self, setmetatable({value = {value = "+"}}, Node), r, r)
+			end
 		elseif node.kind == "postfix_expression_index" then
 			return self:Assert(
 				self:IndexOperator(
