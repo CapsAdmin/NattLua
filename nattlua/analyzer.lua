@@ -104,7 +104,7 @@ do
 	local AnalyzeLSX = require("nattlua.analyzer.expressions.lsx").AnalyzeLSX
 	local Union = require("nattlua.types.union").Union
 
-	function META:AnalyzeExpression2(node)
+	function META:AnalyzeRuntimeExpression(node)
 		self.current_expression = node
 
 		if node.kind == "value" then
@@ -142,10 +142,8 @@ do
 	end
 
 	function META:AnalyzeTypeExpression(node, parent_obj)
-		if not node.type_expression then return parent_obj end
-
 		self:PushAnalyzerEnvironment("typesystem")
-		local obj = self:AnalyzeExpression(node.type_expression)
+		local obj = self:AnalyzeExpression(node)
 		self:PopAnalyzerEnvironment()
 
 		if obj.Type == "table" then
@@ -166,8 +164,12 @@ do
 	end
 
 	function META:AnalyzeExpression(node)
-		local obj, err = self:AnalyzeExpression2(node)
-		obj = self:AnalyzeTypeExpression(node, obj)
+		local obj, err = self:AnalyzeRuntimeExpression(node)
+
+		if node.type_expression then
+			obj = self:AnalyzeTypeExpression(node.type_expression, obj)
+		end
+
 		node:AssociateType(obj or err)
 		node.scope = self:GetScope()
 		return obj, err
