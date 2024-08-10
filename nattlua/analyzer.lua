@@ -16,19 +16,13 @@ require("nattlua.analyzer.operators.call").Call(META)
 
 do
 	local AnalyzeDestructureAssignment = require("nattlua.analyzer.statements.destructure_assignment").AnalyzeDestructureAssignment
-	local AnalyzeFunction = require("nattlua.analyzer.statements.function").AnalyzeFunction
 	local AnalyzeIf = require("nattlua.analyzer.statements.if").AnalyzeIf
-	local AnalyzeDo = require("nattlua.analyzer.statements.do").AnalyzeDo
 	local AnalyzeGenericFor = require("nattlua.analyzer.statements.generic_for").AnalyzeGenericFor
-	local AnalyzeCall = require("nattlua.analyzer.statements.call_expression").AnalyzeCall
 	local AnalyzeNumericFor = require("nattlua.analyzer.statements.numeric_for").AnalyzeNumericFor
-	local AnalyzeBreak = require("nattlua.analyzer.statements.break").AnalyzeBreak
-	local AnalyzeContinue = require("nattlua.analyzer.statements.continue").AnalyzeContinue
-	local AnalyzeRepeat = require("nattlua.analyzer.statements.repeat").AnalyzeRepeat
-	local AnalyzeReturn = require("nattlua.analyzer.statements.return").AnalyzeReturn
-	local AnalyzeAnalyzerDebugCode = require("nattlua.analyzer.statements.analyzer_debug_code").AnalyzeAnalyzerDebugCode
 	local AnalyzeWhile = require("nattlua.analyzer.statements.while").AnalyzeWhile
 	local AnalyzeAssignment = require("nattlua.analyzer.statements.assignment").AnalyzeAssignment
+	local NodeToString = require("nattlua.types.string").NodeToString
+	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
 
 	function META:AnalyzeStatement(node)
 		self.current_statement = node
@@ -42,36 +36,62 @@ do
 		then
 			AnalyzeDestructureAssignment(self, node)
 		elseif
-			node.kind == "function" or
-			node.kind == "type_function" or
 			node.kind == "local_function" or
-			node.kind == "local_type_function" or
 			node.kind == "local_analyzer_function" or
-			node.kind == "analyzer_function"
+			node.kind == "local_type_function"
 		then
-			AnalyzeFunction(self, node)
+			self:PushAnalyzerEnvironment(node.kind == "local_function" and "runtime" or "typesystem")
+			self:CreateLocalValue(node.tokens["identifier"].value, AnalyzeFunction(self, node))
+			self:PopAnalyzerEnvironment()
+		elseif
+			node.kind == "function" or
+			node.kind == "analyzer_function" or
+			node.kind == "type_function"
+		then
+			local key = node.expression
+			self:PushAnalyzerEnvironment(node.kind == "function" and "runtime" or "typesystem")
+
+			if key.kind == "binary_operator" then
+				local obj = self:AnalyzeExpression(key.left)
+				local key = self:AnalyzeExpression(key.right)
+				local val = AnalyzeFunction(self, node)
+				self:NewIndexOperator(obj, key, val)
+			else
+				self.current_expression = key
+				local key = NodeToString(key)
+				local val = AnalyzeFunction(self, node)
+				self:SetLocalOrGlobalValue(key, val)
+			end
+
+			self:PopAnalyzerEnvironment()
 		elseif node.kind == "if" then
 			AnalyzeIf(self, node)
 		elseif node.kind == "while" then
 			AnalyzeWhile(self, node)
 		elseif node.kind == "do" then
-			AnalyzeDo(self, node)
+			self:CreateAndPushScope()
+			self:AnalyzeStatements(node.statements)
+			self:PopScope()
 		elseif node.kind == "repeat" then
-			AnalyzeRepeat(self, node)
+			self:CreateAndPushScope()
+			self:AnalyzeStatements(node.statements)
+			self:PopScope()
 		elseif node.kind == "return" then
-			AnalyzeReturn(self, node)
+			local ret = self:AnalyzeExpressions(node.expressions)
+			self:Return(node, ret)
 		elseif node.kind == "break" then
-			AnalyzeBreak(self, node)
+			self:Break()
 		elseif node.kind == "continue" then
-			AnalyzeContinue(self, node)
+			self._continue_ = true
 		elseif node.kind == "call_expression" then
-			AnalyzeCall(self, node)
+			self:AnalyzeExpression(node.value)
 		elseif node.kind == "generic_for" then
 			AnalyzeGenericFor(self, node)
 		elseif node.kind == "numeric_for" then
 			AnalyzeNumericFor(self, node)
 		elseif node.kind == "analyzer_debug_code" then
-			AnalyzeAnalyzerDebugCode(self, node)
+			local code = node.lua_code.value.value:sub(3)
+			self:CallLuaTypeFunction(self:CompileLuaAnalyzerDebugCode(code, node.lua_code), self:GetScope())
 		elseif node.kind == "import" then
 
 		elseif
