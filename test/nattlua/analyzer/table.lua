@@ -530,7 +530,7 @@ analyze[[
         
     end
 
-    §assert(#analyzer.diagnostics == 1)
+    §assert(#analyzer:GetDiagnostics() == 1)
 ]]
 analyze(
 	[[
@@ -812,7 +812,7 @@ analyze[[
 
     attest.equal(operators["-"], _ as function=(number, number)>(number))
 
-    §assert(#analyzer.diagnostics == 0)
+    §assert(#analyzer:GetDiagnostics() == 0)
 ]]
 analyze[[
     local type Lol = {}
@@ -871,8 +871,9 @@ analyze[[
         attest.equal(xx, _  as nil | true)
     end
 ]]
+
 if jit then
-    analyze[[
+	analyze[[
         local tbl = {
             foo = true,
             bar = true,
@@ -882,7 +883,7 @@ if jit then
             attest.equal(xx, _  as nil | true)
         end
     ]]
-    analyze[[
+	analyze[[
         local tbl = {
             [1] = true,
             [2] = true,
@@ -893,6 +894,7 @@ if jit then
         end
     ]]
 end
+
 analyze[[
     local tbl = {}
     tbl["@hello"] = true

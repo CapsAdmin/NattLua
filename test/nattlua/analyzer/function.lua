@@ -481,7 +481,7 @@ analyze[[
         return ""
     end)
 
-    §assert(#analyzer.diagnostics == 0)
+    §assert(#analyzer:GetDiagnostics() == 0)
 ]]
 analyze[[
     local function test(): ref number 
@@ -848,7 +848,7 @@ analyze[[
         attest.equal(d, _ as string)
     end)
 
-    §assert(#analyzer.diagnostics == 0)
+    §assert(#analyzer:GetDiagnostics() == 0)
 ]]
 analyze[[
     local type F = function=(foo: number, ...: (string,)*inf)>(nil)

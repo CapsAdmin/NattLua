@@ -58,20 +58,19 @@ return function(META)
 
 	function META:ReportDiagnostic(
 		msg--[[#: {reasons = {[number] = string}} | {[number] = string}]],
-		severity--[[#: "warning" | "error"]]
+		severity--[[#: "warning" | "error"]],
+		node--[[#: any]],
+		code--[[#: any]],
+		start--[[#: number]],
+		stop--[[#: number]]
 	)
 		if self.SuppressDiagnostics then return end
 
-		local node = self.current_expression or self.current_statement
-
-		if not msg or not severity then
-			io.write("msg = ", tostring(msg), "\n")
-			io.write("severity = ", tostring(severity), "\n")
-			io.write(debug.traceback(), "\n")
-			error("bad call to ReportDiagnostic")
-		end
-
 		local msg_str = self:ErrorMessageToString(msg)
+
+		if self.processing_deferred_calls then
+			msg_str = "DEFERRED CALL: " .. msg_str
+		end
 
 		if
 			self.expect_diagnostic and
@@ -83,23 +82,24 @@ return function(META)
 			return
 		end
 
-		local key = msg_str .. "-" .. tostring(node) .. "-" .. "severity"
-		self.diagnostics_map = self.diagnostics_map or {}
+		do
+			local key = msg_str .. "-" .. "severity"
+			self.diagnostics_map = self.diagnostics_map or {}
 
-		if self.diagnostics_map[key] then return end
+			if self.diagnostics_map[key] then return end
 
-		self.diagnostics_map[key] = true
-		severity = severity or "warning"
-		local start, stop = node:GetStartStop()
+			self.diagnostics_map[key] = true
+		end
 
 		if self.OnDiagnostic and not self:IsTypeProtectedCall() then
-			self:OnDiagnostic(node.Code, msg_str, severity, start, stop, node)
+			self:OnDiagnostic(code, msg_str, severity, start, stop, node)
 		end
 
 		table.insert(
 			self.diagnostics,
 			{
 				node = node,
+				code = code,
 				start = start,
 				stop = stop,
 				msg = msg_str,
@@ -123,11 +123,13 @@ return function(META)
 	end
 
 	function META:Error(msg)
-		return self:ReportDiagnostic(msg, "error")
+		local node = self.current_expression or self.current_statement
+		return self:ReportDiagnostic(msg, "error", node, node.Code, node:GetStartStop())
 	end
 
 	function META:Warning(msg)
-		return self:ReportDiagnostic(msg, "warning")
+		local node = self.current_expression or self.current_statement
+		return self:ReportDiagnostic(msg, "warning", node, node.Code, node:GetStartStop())
 	end
 
 	function META:FatalError(msg)

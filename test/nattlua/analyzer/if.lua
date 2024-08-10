@@ -1303,7 +1303,7 @@ analyze[[
     foo(true)
     foo(false)
     
-    §assert(#analyzer.diagnostics == 0)
+    §assert(#analyzer:GetDiagnostics() == 0)
 ]]
 analyze[[
     --local type print = any
@@ -1337,7 +1337,7 @@ analyze([[
     foo(true)
     foo(false)
 
-    §assert(#analyzer.diagnostics == 0)
+    §assert(#analyzer:GetDiagnostics() == 0)
 ]])
 analyze[[
     local function foo(x: literal ref (nil | boolean))
@@ -1350,7 +1350,7 @@ analyze[[
     foo(true)
     foo(false)
 
-    §assert(#analyzer.diagnostics == 0)
+    §assert(#analyzer:GetDiagnostics() == 0)
 ]]
 analyze[[
     local function foo(x: literal ref (nil | boolean))
@@ -1367,7 +1367,7 @@ analyze[[
     foo(true)
     foo(false)
 
-    §assert(#analyzer.diagnostics == 0)
+    §assert(#analyzer:GetDiagnostics() == 0)
 ]]
 analyze[[
     local test
@@ -1407,7 +1407,7 @@ analyze[[
         end
     end
 
-    §assert(#analyzer.diagnostics == 0)
+    §assert(#analyzer:GetDiagnostics() == 0)
 ]]
 analyze[[
     local tbl = {foo = true, bar = false}
@@ -1417,7 +1417,7 @@ analyze[[
         end
     end
 
-    §assert(#analyzer.diagnostics == 0)
+    §assert(#analyzer:GetDiagnostics() == 0)
 ]]
 analyze[[
     local type AddressInfo = {

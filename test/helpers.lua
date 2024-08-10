@@ -77,7 +77,7 @@ do
 		if expect_warning then
 			local str = ""
 
-			for _, diagnostic in ipairs(compiler.analyzer.diagnostics) do
+			for _, diagnostic in ipairs(compiler.analyzer:GetDiagnostics()) do
 				if diagnostic.msg:find(expect_warning) then return compiler end
 
 				str = str .. diagnostic.msg .. "\n"

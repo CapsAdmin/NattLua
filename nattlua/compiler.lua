@@ -18,7 +18,6 @@ local Emitter = require("nattlua.transpiler.emitter").New
 local loadstring = require("nattlua.other.loadstring")
 local META = class.CreateTemplate("compiler")
 
-
 --[[#local type { CompilerConfig } = import("~/nattlua/config.nlua")]]
 
 function META:GetCode()
@@ -50,10 +49,6 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 	msg = msg:gsub(" because ", repl)
 
 	if t > 0 then msg = "\n" .. msg end
-
-	if self.analyzer and self.analyzer.processing_deferred_calls then
-		msg = "DEFERRED CALL: " .. msg
-	end
 
 	local msg = code:BuildSourceCodePointMessage(formating.FormatMessage(msg, ...), start, stop)
 	local msg2 = ""
@@ -106,9 +101,9 @@ local function check_info(info, level)
 	if info.source:sub(1, 1) == "@" then
 		if info.name == "Error" or info.name == "OnDiagnostic" then return false end
 	end
+
 	return true
 end
-
 
 local function stack_trace_simple(level, check_info)
 	local s = ""
@@ -117,6 +112,7 @@ local function stack_trace_simple(level, check_info)
 		local info = debug.getinfo(i)
 
 		if not info then break end
+
 		if check_info(info, level) then
 			s = s .. info.source:sub(2) .. ":" .. info.currentline .. " - " .. (
 					info.name or
@@ -323,6 +319,5 @@ function META.LoadFile(path, config)
 
 	return loadstring(code, obj.config.file_name)
 end
-
 
 return META
