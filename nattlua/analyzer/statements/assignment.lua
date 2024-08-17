@@ -221,8 +221,9 @@ return {
 					-- index assignment: foo[a] = 1
 					local obj = self:AnalyzeExpression(exp_key.left)
 					self:ClearTracked()
+					local lol = key
 
-					if self:IsRuntime() then key = key:GetFirstValue() end
+					if self:IsRuntime() then key = self:Assert(key:GetFirstValue()) end
 
 					self:Assert(self:NewIndexOperator(obj, key, val))
 				end
