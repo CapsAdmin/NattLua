@@ -97,7 +97,7 @@ function META:CopyLiteralness(num--[[#: TNumber]])
 end
 
 function META:Copy()
-	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
+	local copy = self.New():SetLiteral(self:IsLiteral()):SetData(self:GetData())
 	local max = self.Max
 
 	if max then copy.Max = max:Copy() end
@@ -422,11 +422,11 @@ do
 		local result_a, result_b
 
 		if a_min_res and a_max_res then
-			result_a = META.New(a_min_res):SetLiteral(true):SetMax(META.New(a_max_res):SetLiteral(true))
+			result_a = META.New():SetLiteral(true):SetData(a_min_res):SetMax(META.New():SetLiteral(true):SetData(a_max_res))
 		end
 
 		if b_min_res and b_max_res then
-			result_b = META.New(b_min_res):SetLiteral(true):SetMax(META.New(b_max_res):SetLiteral(true))
+			result_b = META.New():SetLiteral(true):SetData(b_min_res):SetMax(META.New():SetLiteral(true):SetData(b_max_res))
 		end
 
 		return result_a, result_b
@@ -492,7 +492,7 @@ do
 				end
 			end
 
-			local obj = META.New(res):SetLiteral(true)
+			local obj = META.New():SetLiteral(true):SetData(res)
 
 			if r:GetMax() then
 				obj:SetMax(l.BinaryOperator(l:GetMax() or l, r:GetMax()--[[# as TNumber]], op))
@@ -541,7 +541,7 @@ do
 			end
 		end
 
-		local obj = META.New(res):SetLiteral(true)
+		local obj = META.New():SetLiteral(true):SetData(res)
 
 		if x:GetMax() then
 			obj:SetMax(x.PrefixOperator(x:GetMax() or x--[[# as TNumber]], op))
@@ -551,10 +551,10 @@ do
 	end
 end
 
-function META.New(data--[[#: number | nil]])
+function META.New()
 	return setmetatable(
 		{
-			Data = data--[[# as number]],
+			Data = nil,
 			Falsy = false,
 			Truthy = true,
 			Literal = false,
@@ -577,10 +577,10 @@ end
 return {
 	Number = META.New,
 	LNumberRange = function(from--[[#: number]], to--[[#: number]])
-		return META.New(from):SetLiteral(true):SetMax(META.New(to):SetLiteral(true))
+		return META.New():SetData(from):SetLiteral(true):SetMax(META.New():SetData(to):SetLiteral(true))
 	end,
 	LNumber = function(num--[[#: number | nil]])
-		return META.New(num):SetLiteral(true)
+		return META.New():SetData(num):SetLiteral(true)
 	end,
 	LNumberFromString = function(str--[[#: string]])
 		local num = tonumber(str)
@@ -597,7 +597,7 @@ return {
 
 		if not num then return nil end
 
-		return META.New(num):SetLiteral(true)
+		return META.New():SetData(num):SetLiteral(true)
 	end,
 	TNumber = TNumber,
 }

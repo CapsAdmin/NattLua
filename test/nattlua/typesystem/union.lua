@@ -4,7 +4,6 @@ local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
 local cast = require("nattlua.analyzer.cast")
 
-
 test("a union should not contain duplicates", function()
 	assert(Union(cast({"a", "b", "a", "a"})):Equal(Union(cast{"a", "b"})))
 end)

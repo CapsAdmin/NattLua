@@ -760,7 +760,7 @@ analyze[[
     local analyzer function check(func: any, other: any)
         local a = func:GetInputSignature():Get(1)     -- this is being crawled for some reason
         local b = types.Union({
-            types.Number(1),
+            types.LNumber(1),
             types.False(),
             types.True()
         })
