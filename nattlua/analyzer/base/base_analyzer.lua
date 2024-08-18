@@ -528,34 +528,32 @@ return function(META)
 				local tbl = {}
 
 				for i, v in ipairs(tps) do
-					if type(v) == "table" and v.Type ~= nil then
+					local t = type(v)
+
+					if t == "table" and v.Type ~= nil then
 						tbl[i] = v
-					else
-						if type(v) == "function" then
+					elseif t == "function" then
 							local func = Function()
 							func:SetAnalyzerFunction(v)
 							func:SetInputSignature(Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
 							func:SetOutputSignature(Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
 							func:SetLiteral(true)
 							tbl[i] = func
-						else
-							local t = type(v)
-
-							if t == "number" then
+					elseif t == "number" then
 								tbl[i] = LNumber(v)
 							elseif t == "string" then
 								tbl[i] = LString(v)
 							elseif t == "boolean" then
 								tbl[i] = Symbol(v)
 							elseif t == "table" then
-								local tbl = Table()
+						local t = Table()
 
 								for _, val in ipairs(v) do
-									tbl:Insert(val)
+							t:Insert(val)
 								end
 
-								tbl:SetContract(tbl)
-								return tbl
+						t:SetContract(t)
+						tbl[i] = t
 							elseif
 								ffi and
 								t == "cdata" and
@@ -566,8 +564,6 @@ return function(META)
 							else
 								self:Print(t)
 								error(debug.traceback("NYI " .. t))
-							end
-						end
 					end
 				end
 
