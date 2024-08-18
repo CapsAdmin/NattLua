@@ -1,8 +1,10 @@
-local T = require("test"..".helpers")
 local LString = require("nattlua.types.string").LString
+local Union = require("nattlua.types.union").Union
+local cast = require("nattlua.analyzer.cast")
+
 -- boolean is a union
 assert(
-	T.Union(true, false):Equal(analyze("local a: boolean"):GetLocalOrGlobalValue(LString("a")))
+	Union(cast{true, false}):Equal(analyze("local a: boolean"):GetLocalOrGlobalValue(LString("a")))
 )
 -- boolean is truthy and falsy
 local a = analyze("local a: boolean")

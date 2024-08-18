@@ -1,11 +1,11 @@
-local T = require("test"..".helpers")
 local String = require("nattlua.types.string").String
 local Number = require("nattlua.types.number").Number
-local Tuple = T.Tuple
+local Tuple = require("nattlua.types.tuple").Tuple
 local Any = require("nattlua.types.any").Any
-local SN = Tuple(String(), Number())
-local NS = Tuple(Number(), String())
-local SNS = Tuple(String(), Number(), String())
+local SN = Tuple({String(), Number()})
+local NS = Tuple({Number(), String()})
+local SNS = Tuple({String(), Number(), String()})
+local cast = require("nattlua.analyzer.cast")
 
 test(tostring(SN) .. " should not be a subset of " .. tostring(NS), function()
 	assert(not SN:IsSubsetOf(NS))
@@ -24,7 +24,7 @@ test(tostring(SNS) .. " should not be a subset of " .. tostring(SN), function()
 end)
 
 test("remainder", function()
-	local tup = Tuple(
+	local tup = Tuple({
 		String(),
 		Number(),
 		String(),
@@ -35,7 +35,7 @@ test("remainder", function()
 		Number(),
 		String(),
 		Number()
-	):AddRemainder(Tuple(String()):SetRepeat(10))
+	}):AddRemainder(Tuple({String()}):SetRepeat(10))
 	assert(tup:GetElementCount() == 10 + (1 * 10))
 	assert(tup:Get(1).Type == "string")
 	assert(tup:Get(2).Type == "number")
@@ -51,7 +51,7 @@ test("remainder", function()
 end)
 
 test("remainder with repeated tuple structure", function()
-	local tup = Tuple(String()):AddRemainder(Tuple(String(), Number()):SetRepeat(4))
+	local tup = Tuple({String()}):AddRemainder(Tuple({String(), Number()}):SetRepeat(4))
 	assert(tup:GetElementCount() == 1 + (2 * 4))
 	assert(tup:Get(1).Type == "string")
 	assert(tup:Get(2).Type == "string")
@@ -61,7 +61,7 @@ test("remainder with repeated tuple structure", function()
 end)
 
 test("tuple unpack", function()
-	local tup = Tuple(String()):AddRemainder(Tuple(String(), Number()):SetRepeat(4))
+	local tup = Tuple({String()}):AddRemainder(Tuple({String(), Number()}):SetRepeat(4))
 	local tbl = {tup:Unpack()}
 	assert(tup:GetElementCount() == 1 + (2 * 4))
 	assert(tup:GetElementCount() == #tbl)
@@ -73,7 +73,7 @@ test("tuple unpack", function()
 end)
 
 test("tuple unpack", function()
-	local tup = Tuple(String()):AddRemainder(Tuple(String(), Number()):SetRepeat(4))
+	local tup = Tuple({String()}):AddRemainder(Tuple({String(), Number()}):SetRepeat(4))
 	local tbl = {tup:Unpack(3)}
 	assert(#tbl == 3)
 	assert(tbl[1].Type == "string")
@@ -85,7 +85,7 @@ test("tuple unpack", function()
 end)
 
 test("infinite tuple repetition", function()
-	local tup = Tuple(String()):AddRemainder(Tuple(String(), Number()):SetRepeat(math.huge))
+	local tup = Tuple({String()}):AddRemainder(Tuple({String(), Number()}):SetRepeat(math.huge))
 	assert(tup:Get(1).Type == "string")
 	assert(tup:Get(2).Type == "string")
 	assert(tup:Get(10000).Type == "string")
@@ -94,19 +94,19 @@ test("infinite tuple repetition", function()
 end)
 
 test("length subset", function()
-	local A = Tuple(String(), String())
-	local B = Tuple(String(), String(), String())
+	local A = Tuple({String(), String()})
+	local B = Tuple({String(), String(), String()})
 	assert(B:IsSubsetOf(A) == false)
 end)
 
 test("length subset", function()
-	local A = Tuple(String(), String())
-	local B = Tuple(String()):AddRemainder(Tuple(String()):SetRepeat(4))
+	local A = Tuple({String(), String()})
+	local B = Tuple({String()}):AddRemainder(Tuple({String()}):SetRepeat(4))
 	assert(B:IsSubsetOf(A) == true)
 end)
 
 test("initialize with remainder", function()
-	local A = Tuple(String(), Tuple(String()):SetRepeat(2))
+	local A = Tuple({String(), Tuple({String()}):SetRepeat(2)})
 	assert(A:GetElementCount() == 3)
 	assert(A:Get(1).Type == "string")
 	assert(A:Get(2).Type == "string")
@@ -114,15 +114,15 @@ test("initialize with remainder", function()
 end)
 
 test("initialize with remainder", function()
-	local A = Tuple(Tuple(String()):SetRepeat(2), Number())
+	local A = Tuple({Tuple({String()}):SetRepeat(2), Number()})
 	assert(A:GetElementCount() == 2)
 	assert(A:Get(1).Type == "tuple")
 	assert(A:Get(2).Type == "number")
 end)
 
 test("merge tuples", function()
-	local infinite_any = Tuple():AddRemainder(Tuple(Any()):SetRepeat(math.huge))
-	local number_number = Tuple(Number(), Number())
+	local infinite_any = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+	local number_number = Tuple({Number(), Number()})
 	infinite_any:Merge(number_number)
 	assert(infinite_any:GetElementCount() == math.huge)
 	assert(infinite_any:Get(1).Type == "union")
@@ -135,7 +135,7 @@ test("merge tuples", function()
 end)
 
 test("tuple in tuple", function()
-	local T = Tuple(1, 2, 3, Tuple(4, 5, 6))
+	local T = Tuple(cast({1, 2, 3, Tuple(cast({4, 5, 6}))}))
 	assert(T:GetElementCount() == 6)
 
 	for i = 1, 6 do
