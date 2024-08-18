@@ -1,4 +1,4 @@
-local T = require("test.helpers")
+local T = require("test"..".helpers")
 local Union = T.Union
 local Number = require("nattlua.types.number").Number
 local LNumber = require("nattlua.types.number").LNumber

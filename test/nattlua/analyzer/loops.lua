@@ -1,5 +1,5 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
+
 analyze[[
         -- pairs on literal table
         local tbl = {1,2,3}

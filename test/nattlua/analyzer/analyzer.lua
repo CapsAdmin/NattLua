@@ -1,5 +1,4 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
 local LString = require("nattlua.types.string").LString
 -- check that type assert works
 analyze("attest.equal(1, 2)", "expected.-2 got 1")

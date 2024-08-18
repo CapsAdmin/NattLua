@@ -1,5 +1,4 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
 local LString = require("nattlua.types.string").LString
 analyze[[
 local   a,b,c = 1,2,3

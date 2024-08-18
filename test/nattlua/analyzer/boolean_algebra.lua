@@ -1,5 +1,5 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
+
 analyze[[ -- A
     local A = _ as true | false
 

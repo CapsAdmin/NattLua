@@ -1,5 +1,5 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
+
 analyze[[
     local function foo(x: {foo = boolean | nil}) 
         if x.foo and attest.equal(x.foo, true) then end

@@ -1,5 +1,5 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
+
 analyze[[
     £parser.TealCompat = true
     local record tl

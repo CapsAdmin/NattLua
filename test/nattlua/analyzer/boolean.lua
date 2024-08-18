@@ -1,5 +1,4 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+local T = require("test"..".helpers")
 local LString = require("nattlua.types.string").LString
 -- boolean is a union
 assert(

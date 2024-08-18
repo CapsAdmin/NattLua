@@ -1,4 +1,4 @@
-local T = require("test.helpers")
+local T = require("test"..".helpers")
 local Object = T.Object
 local LString = require("nattlua.types.string").LString
 local String = require("nattlua.types.string").String

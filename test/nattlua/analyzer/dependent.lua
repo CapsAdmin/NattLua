@@ -1,5 +1,4 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
 analyze([[
     local type A = {Type = "human"}
     local type B = {Type = "cat"}

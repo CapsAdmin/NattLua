@@ -1,7 +1,7 @@
-local T = require("test.helpers")
+
 local LString = require("nattlua.types.string").LString
 
-local analyze = T.RunCode
+
 local check = function(analyzer, to)
 	equal(
 		to:gsub("%s+", " "),

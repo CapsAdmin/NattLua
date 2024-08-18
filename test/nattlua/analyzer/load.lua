@@ -1,5 +1,5 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
+
 -- load
 analyze[[
         attest.equal(assert(load("attest.equal(1, 1) return 2"))(), 2)

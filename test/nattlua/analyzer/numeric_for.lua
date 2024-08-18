@@ -1,6 +1,5 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
-local transpile = T.Transpile
+
+
 analyze[[
     for i = 1, 10000 do
         attest.equal(i, _ as 1 .. 10000)
@@ -29,7 +28,7 @@ analyze[[
 ]]
 
 if false then
-	local code = transpile([[
+	local code = analyze([[
         local x
         for i = 1, 2 do -- i should be 1 | 2
             x = i == 1 -- x should be true | false
@@ -38,7 +37,7 @@ if false then
         end
         -- x should be false, because i == 2 is the last statement
         local b = x
-    ]])
+    ]]):Emit({type_annotations = true})
 	assert(code:find("i--[[#:1 | 2]] = 1", nil, true) ~= nil)
 	-- if the union sorting algorithm changes, we probably need to change this
 	assert(code:find("local a--[[#:false | true]] = x", nil, true) ~= nil)

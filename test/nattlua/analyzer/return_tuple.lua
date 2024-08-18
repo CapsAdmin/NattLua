@@ -1,5 +1,5 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
+
 analyze[[
         local function test(): ErrorReturn<|{foo = number}|>
             if math.random() > 0.5 then return {foo = 2} end

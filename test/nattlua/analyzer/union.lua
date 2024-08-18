@@ -1,5 +1,5 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
+
 local LString = require("nattlua.types.string").LString
 
 do -- smoke

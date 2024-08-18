@@ -1,8 +1,8 @@
 local ipairs = ipairs
 local pairs = pairs
 local tostring = _G.tostring
-local T = require("test.helpers")
-local analyze = T.RunCode
+
+
 local bit = _G.bit32 or _G.bit
 analyze[[
         local function lt(x, y)

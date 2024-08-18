@@ -1,5 +1,5 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
+
 analyze([[
     local type i = 0
     for k,v in ipairs(_ as any) do 

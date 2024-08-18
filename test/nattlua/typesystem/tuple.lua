@@ -1,4 +1,4 @@
-local T = require("test.helpers")
+local T = require("test"..".helpers")
 local String = require("nattlua.types.string").String
 local Number = require("nattlua.types.number").Number
 local Tuple = T.Tuple

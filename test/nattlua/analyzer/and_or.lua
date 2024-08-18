@@ -1,5 +1,4 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
 analyze[[
         -- order of 'and' expression
         local res = 0

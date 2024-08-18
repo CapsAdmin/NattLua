@@ -1,5 +1,5 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
+
 analyze[[
         local a = "1234"
         attest.equal(string.len(a), 4)

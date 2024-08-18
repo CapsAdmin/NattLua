@@ -1,5 +1,4 @@
-local T = require("test.helpers")
-local analyze = T.RunCode
+
 analyze[[
     local co = coroutine.create(function(a,b,c)
         attest.equal(a, 1)

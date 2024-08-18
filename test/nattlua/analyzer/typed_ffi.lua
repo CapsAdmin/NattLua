@@ -1,5 +1,5 @@
-local T = require("test.helpers")
-local analyze_old = T.RunCode
+
+local analyze_old = _G.analyze
 
 local function analyze(c)
 	return analyze_old(
