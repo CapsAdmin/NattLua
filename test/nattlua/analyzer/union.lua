@@ -1,11 +1,11 @@
 local T = require("test.helpers")
 local analyze = T.RunCode
-local String = T.String
+local LString = require("nattlua.types.string").LString
 
 do -- smoke
 	local a = analyze[[local type a = 1337 | 8888]]
 	a:PushAnalyzerEnvironment("typesystem")
-	local union = a:GetLocalOrGlobalValue(String("a"))
+	local union = a:GetLocalOrGlobalValue(LString("a"))
 	a:PopAnalyzerEnvironment()
 	equal(2, union:GetCardinality())
 	equal(1337, union:GetData()[1]:GetData())
@@ -19,7 +19,7 @@ do -- union operator
         local type c = a | b
     ]]
 	a:PushAnalyzerEnvironment("typesystem")
-	local union = a:GetLocalOrGlobalValue(String("c"))
+	local union = a:GetLocalOrGlobalValue(LString("c"))
 	a:PopAnalyzerEnvironment()
 	equal(4, union:GetCardinality())
 end
@@ -53,7 +53,7 @@ do --is literal
         local type a = 1 | 2 | 3
     ]]
 	a:PushAnalyzerEnvironment("typesystem")
-	assert(a:GetLocalOrGlobalValue(String("a")):IsLiteral() == true)
+	assert(a:GetLocalOrGlobalValue(LString("a")):IsLiteral() == true)
 	a:PopAnalyzerEnvironment()
 end
 
@@ -62,7 +62,7 @@ do -- is not literal
         local type a = 1 | 2 | 3 | string
     ]]
 	a:PushAnalyzerEnvironment("typesystem")
-	assert(a:GetLocalOrGlobalValue(String("a")):IsLiteral() == false)
+	assert(a:GetLocalOrGlobalValue(LString("a")):IsLiteral() == false)
 	a:PopAnalyzerEnvironment()
 end
 

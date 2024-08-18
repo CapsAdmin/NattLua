@@ -1,19 +1,13 @@
 local nl = require("nattlua")
-local Table = require("nattlua.types.table").Table
 local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
 local Number = require("nattlua.types.number").Number
 local LNumber = require("nattlua.types.number").LNumber
 local LString = require("nattlua.types.string").LString
-local Function = require("nattlua.types.function").Function
 local String = require("nattlua.types.string").String
-local Any = require("nattlua.types.any").Any
 local Symbol = require("nattlua.types.symbol").Symbol
+
 local helpers = {}
-helpers.Function = Function
-helpers.Table = Table
-helpers.Any = Any
-helpers.Symbol = Symbol
 
 do
 	local function cast(...)
@@ -44,14 +38,6 @@ do
 	function helpers.Tuple(...)
 		return Tuple(cast(...))
 	end
-end
-
-function helpers.Number(n)
-	return Number(n):SetLiteral(n ~= nil)
-end
-
-function helpers.String(n)
-	return String(n):SetLiteral(n ~= nil)
 end
 
 do

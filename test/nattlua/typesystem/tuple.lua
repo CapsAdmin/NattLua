@@ -1,8 +1,8 @@
 local T = require("test.helpers")
-local String = T.String
-local Number = T.Number
+local String = require("nattlua.types.string").String
+local Number = require("nattlua.types.number").Number
 local Tuple = T.Tuple
-local Any = T.Any
+local Any = require("nattlua.types.any").Any
 local SN = Tuple(String(), Number())
 local NS = Tuple(Number(), String())
 local SNS = Tuple(String(), Number(), String())

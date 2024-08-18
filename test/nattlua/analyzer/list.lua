@@ -1,9 +1,11 @@
 local T = require("test.helpers")
+local LString = require("nattlua.types.string").LString
+
 local analyze = T.RunCode
 local check = function(analyzer, to)
 	equal(
 		to:gsub("%s+", " "),
-		tostring(analyzer:GetLocalOrGlobalValue(T.String("a"))):gsub("%s+", " "),
+		tostring(analyzer:GetLocalOrGlobalValue(LString("a"))):gsub("%s+", " "),
 		2
 	)
 end

@@ -1,6 +1,6 @@
 local T = require("test.helpers")
 local analyze = T.RunCode
-local String = T.String
+local LString = require("nattlua.types.string").LString
 
 do
 	local analyzer = analyze[[
@@ -8,7 +8,7 @@ do
         local t = setmetatable({}, {__index = function(self, key) return 1 end})
         local a = t.lol
     ]]
-	local a = analyzer:GetLocalOrGlobalValue(String("a"))
+	local a = analyzer:GetLocalOrGlobalValue(LString("a"))
 	equal(1, a:GetData())
 end
 
@@ -35,9 +35,9 @@ do -- basic inheritance
         local obj = setmetatable({Bar = 1}, META)
         local a, b = obj:Test(1)
     ]]
-	local obj = analyzer:GetLocalOrGlobalValue(String("obj"))
-	local a = analyzer:GetLocalOrGlobalValue(String("a"))
-	local b = analyzer:GetLocalOrGlobalValue(String("b"))
+	local obj = analyzer:GetLocalOrGlobalValue(LString("obj"))
+	local a = analyzer:GetLocalOrGlobalValue(LString("a"))
+	local b = analyzer:GetLocalOrGlobalValue(LString("b"))
 	equal(2, a:GetData())
 	equal(3, b:GetData())
 end
@@ -55,8 +55,8 @@ do -- __call method
 
         local lol = obj(100,2,3)
     ]]
-	local obj = analyzer:GetLocalOrGlobalValue(String("obj"))
-	equal(105, analyzer:GetLocalOrGlobalValue(String("lol")):GetData())
+	local obj = analyzer:GetLocalOrGlobalValue(LString("obj"))
+	equal(105, analyzer:GetLocalOrGlobalValue(LString("lol")):GetData())
 end
 
 do -- __call method should not mess with scopes
@@ -70,7 +70,7 @@ do -- __call method should not mess with scopes
 
         local a = setmetatable({}, META)(100,2,3)
     ]]
-	local a = analyzer:GetLocalOrGlobalValue(String("a"))
+	local a = analyzer:GetLocalOrGlobalValue(LString("a"))
 	equal(105, a:GetData())
 end
 
@@ -87,7 +87,7 @@ do -- vector test
 
         local v = Vector(123).lol
     ]]
-	local v = analyzer:GetLocalOrGlobalValue(String("v"))
+	local v = analyzer:GetLocalOrGlobalValue(LString("v"))
 	equal(123, v:GetData())
 end
 
@@ -109,9 +109,9 @@ do -- vector test
         local v = Vector(1,2,3) + Vector(100,100,100)
         local x, y, z = v.x, v.y, v.z
     ]]
-	local x = assert(analyzer:GetLocalOrGlobalValue(String("x")))
-	local y = assert(analyzer:GetLocalOrGlobalValue(String("y")))
-	local z = assert(analyzer:GetLocalOrGlobalValue(String("z")))
+	local x = assert(analyzer:GetLocalOrGlobalValue(LString("x")))
+	local y = assert(analyzer:GetLocalOrGlobalValue(LString("y")))
+	local z = assert(analyzer:GetLocalOrGlobalValue(LString("z")))
 	equal(101, x:GetData())
 	equal(102, y:GetData())
 	equal(103, z:GetData())

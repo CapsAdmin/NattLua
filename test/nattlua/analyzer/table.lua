@@ -1,6 +1,6 @@
 local T = require("test.helpers")
 local analyze = T.RunCode
-local String = T.String
+local LString = require("nattlua.types.string").LString
 
 test("reassignment", function()
 	local analyzer = analyze[[
@@ -8,21 +8,21 @@ test("reassignment", function()
         tbl.foo = true
         tbl.foo = false
     ]]
-	local tbl = analyzer:GetLocalOrGlobalValue(String("tbl"))
-	equal(false, tbl:Get(String("foo")):GetData())
+	local tbl = analyzer:GetLocalOrGlobalValue(LString("tbl"))
+	equal(false, tbl:Get(LString("foo")):GetData())
 	local analyzer = analyze[[
         local tbl = {foo = true}
         tbl.foo = false
     ]]
-	local tbl = analyzer:GetLocalOrGlobalValue(String("tbl"))
-	equal(false, tbl:Get(String("foo")):GetData())
+	local tbl = analyzer:GetLocalOrGlobalValue(LString("tbl"))
+	equal(false, tbl:Get(LString("foo")):GetData())
 end)
 
 test("typed field", function()
 	local analyzer = analyze[[
         local tbl: {foo = boolean} = {foo = true}
     ]]
-	equal(true, analyzer:GetLocalOrGlobalValue(String("tbl")):Get(String("foo")):GetData())
+	equal(true, analyzer:GetLocalOrGlobalValue(LString("tbl")):Get(LString("foo")):GetData())
 end)
 
 test("typed table invalid reassignment should error", function()
@@ -42,7 +42,7 @@ test("typed table invalid reassignment should error", function()
         ]],
 		"2 is not a subset of 1"
 	)
-	local v = analyzer:GetLocalOrGlobalValue(String("tbl"))
+	local v = analyzer:GetLocalOrGlobalValue(LString("tbl"))
 	analyze(
 		[[
             local tbl: {foo = {number, number}} = {foo = {1,1}}
@@ -68,8 +68,8 @@ test("self referenced tables should be equal", function()
         local b = {a=true}
         b.foo = {lol = b}
     ]])
-	local a = analyzer:GetLocalOrGlobalValue(String("a"))
-	local b = analyzer:GetLocalOrGlobalValue(String("b"))
+	local a = analyzer:GetLocalOrGlobalValue(LString("a"))
+	local b = analyzer:GetLocalOrGlobalValue(LString("b"))
 	local ok, err = a:IsSubsetOf(b)
 
 	if not ok then error(err) end
@@ -82,8 +82,8 @@ test("indexing nil in a table should be allowed", function()
         local tbl = {foo = true}
         local a = tbl.bar
     ]])
-	equal("symbol", analyzer:GetLocalOrGlobalValue(String("a")).Type)
-	equal(nil, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
+	equal("symbol", analyzer:GetLocalOrGlobalValue(LString("a")).Type)
+	equal(nil, analyzer:GetLocalOrGlobalValue(LString("a")):GetData())
 end)
 
 test("indexing nil in a table with a contract should error", function()
@@ -161,13 +161,13 @@ test("is literal", function()
         local type a = {a = 1, b = 2}
     ]]
 	a:PushAnalyzerEnvironment("typesystem")
-	equal(a:GetLocalOrGlobalValue(String("a")):IsLiteral(), true)
+	equal(a:GetLocalOrGlobalValue(LString("a")):IsLiteral(), true)
 	a:PopAnalyzerEnvironment()
 	local a = analyze[[
         local type a = {a = 1, b = 2, c = {c = true}}
         ]]
 	a:PushAnalyzerEnvironment("typesystem")
-	equal(a:GetLocalOrGlobalValue(String("a")):IsLiteral(), true)
+	equal(a:GetLocalOrGlobalValue(LString("a")):IsLiteral(), true)
 	a:PopAnalyzerEnvironment()
 end)
 
@@ -176,13 +176,13 @@ test("is not literal", function()
         local type a = {a = number, [string] = boolean}
     ]]
 	a:PushAnalyzerEnvironment("typesystem")
-	equal(a:GetLocalOrGlobalValue(String("a")):IsLiteral(), false)
+	equal(a:GetLocalOrGlobalValue(LString("a")):IsLiteral(), false)
 	a:PopAnalyzerEnvironment()
 	local a = analyze[[
         local type a = {a = 1, b = 2, c = {c = boolean}}
     ]]
 	a:PushAnalyzerEnvironment("typesystem")
-	equal(a:GetLocalOrGlobalValue(String("a")):IsLiteral(), false)
+	equal(a:GetLocalOrGlobalValue(LString("a")):IsLiteral(), false)
 	a:PopAnalyzerEnvironment()
 end)
 
@@ -204,8 +204,8 @@ local a = analyze[[
 
         local func = x.Test
     ]]
-equal(a:GetLocalOrGlobalValue(String("func")):GetInputSignature():Get(1):Get(String("GetPos")).Type, "function")
-equal(a:GetLocalOrGlobalValue(String("func")):GetInputSignature():Get(1):Get(String("Test")).Type, "function")
+equal(a:GetLocalOrGlobalValue(LString("func")):GetInputSignature():Get(1):Get(LString("GetPos")).Type, "function")
+equal(a:GetLocalOrGlobalValue(LString("func")):GetInputSignature():Get(1):Get(LString("Test")).Type, "function")
 analyze[[
         local type a = {
             foo = self,
@@ -298,10 +298,10 @@ test("deep nested copy", function()
         local a = {nested = {}}
         a.a = a
         a.nested.a = a
-    ]]):GetLocalOrGlobalValue(String("a"))
-	equal(a:Get(String("nested")):Get(String("a")), a)
-	equal(a:Get(String("a")), a)
-	equal(a:Get(String("a")), a:Get(String("nested")):Get(String("a")))
+    ]]):GetLocalOrGlobalValue(LString("a"))
+	equal(a:Get(LString("nested")):Get(LString("a")), a)
+	equal(a:Get(LString("a")), a)
+	equal(a:Get(LString("a")), a:Get(LString("nested")):Get(LString("a")))
 end)
 
 analyze[[

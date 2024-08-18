@@ -1,7 +1,7 @@
 local T = require("test.helpers")
 local Union = T.Union
-local String = T.String
-local Number = T.Number
+local Number = require("nattlua.types.number").Number
+local LNumber = require("nattlua.types.number").LNumber
 local Tuple = T.Tuple
 
 test("a union should not contain duplicates", function()
@@ -41,7 +41,7 @@ test("a smaller union should be a subset of a tuple containing 1 larger union", 
 end)
 
 test("a number should be a subset of a union with numbers", function()
-	assert(Number(24)):IsSubsetOf(Union(Number(), Number()))
+	assert(LNumber(24)):IsSubsetOf(Union(Number(), Number()))
 end)
 
 test("a smaller union within an empty union should be identical to the smaller union", function()

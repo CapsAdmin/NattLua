@@ -1,6 +1,7 @@
 local T = require("test.helpers")
 local analyze = T.RunCode
-local String = T.String
+local LString = require("nattlua.types.string").LString
+
 
 do
 	local analyzer = analyze([[
@@ -11,9 +12,9 @@ do
 
             local a,b,c = test()
         ]])
-	equal(1, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
-	equal(2, analyzer:GetLocalOrGlobalValue(String("b")):GetData())
-	equal(3, analyzer:GetLocalOrGlobalValue(String("c")):GetData())
+	equal(1, analyzer:GetLocalOrGlobalValue(LString("a")):GetData())
+	equal(2, analyzer:GetLocalOrGlobalValue(LString("b")):GetData())
+	equal(3, analyzer:GetLocalOrGlobalValue(LString("c")):GetData())
 end
 
 analyze(

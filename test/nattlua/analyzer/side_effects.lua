@@ -1,6 +1,6 @@
 local T = require("test.helpers")
 local analyze = T.RunCode
-local String = T.String
+local LString = require("nattlua.types.string").LString
 
 do
 	local foo = analyze([[
@@ -28,7 +28,7 @@ do
         end
 
         foo()
-    ]]):GetLocalOrGlobalValue(String("foo"))
+    ]]):GetLocalOrGlobalValue(LString("foo"))
 	equal(foo:GetCallCount(), 1)
 	equal(#foo:GetSideEffects(), 5)
 end
@@ -39,6 +39,6 @@ do
             return 1 + 2 + x
         end
         
-    ]]):GetLocalOrGlobalValue(String("foo"))
+    ]]):GetLocalOrGlobalValue(LString("foo"))
 	equal(foo:IsPure(), true)
 end

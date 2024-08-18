@@ -1,6 +1,6 @@
 local T = require("test.helpers")
 local analyze = T.RunCode
-local String = T.String
+local LString = require("nattlua.types.string").LString
 analyze[[
 local   a,b,c = 1,2,3
         d,e,f = 4,5,6
@@ -87,14 +87,14 @@ test("runtime reassignment", function()
         do
             a = 2
         end
-    ]]:GetLocalOrGlobalValue(String("a"))
+    ]]:GetLocalOrGlobalValue(LString("a"))
 	equal(v:GetData(), 2)
 	local v = analyze[[
         local a = 1
         if true then
             a = 2
         end
-    ]]:GetLocalOrGlobalValue(String("a"))
+    ]]:GetLocalOrGlobalValue(LString("a"))
 	equal(v:GetData(), 2)
 end)
 

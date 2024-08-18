@@ -1,6 +1,6 @@
 local T = require("test.helpers")
 local analyze = T.RunCode
-local String = T.String
+local LString = require("nattlua.types.string").LString
 -- check that type assert works
 analyze("attest.equal(1, 2)", "expected.-2 got 1")
 analyze("attest.equal(nil as 1|2, 1)", "expected.-1")
@@ -90,7 +90,7 @@ test("escape comments", function()
 end)
 
 test("runtime scopes", function()
-	local v = analyze("local a = 1"):GetLocalOrGlobalValue(String("a"))
+	local v = analyze("local a = 1"):GetLocalOrGlobalValue(LString("a"))
 	equal(true, v.Type == "number")
 end)
 
@@ -107,7 +107,7 @@ end)
 
 test("runtime block scopes", function()
 	local analyzer, syntax_tree = analyze("do local a = 1 end")
-	equal(false, (syntax_tree.environments.runtime:Get(String("a"))))
+	equal(false, (syntax_tree.environments.runtime:Get(LString("a"))))
 	equal(
 		1,
 		analyzer:GetScope():GetChildren()[1]:GetUpvalues("runtime")[1]:GetValue():GetData()
@@ -117,7 +117,7 @@ test("runtime block scopes", function()
         do
             local a = 2
         end
-    ]]:GetLocalOrGlobalValue(String("a"))
+    ]]:GetLocalOrGlobalValue(LString("a"))
 	equal(v:GetData(), 1)
 end)
 
@@ -127,10 +127,10 @@ test("typesystem differs from runtime", function()
         local type a = 2
     ]]
 	analyzer:PushAnalyzerEnvironment("runtime")
-	equal(analyzer:GetLocalOrGlobalValue(String("a")):GetData(), 1)
+	equal(analyzer:GetLocalOrGlobalValue(LString("a")):GetData(), 1)
 	analyzer:PopAnalyzerEnvironment()
 	analyzer:PushAnalyzerEnvironment("typesystem")
-	equal(analyzer:GetLocalOrGlobalValue(String("a")):GetData(), 2)
+	equal(analyzer:GetLocalOrGlobalValue(LString("a")):GetData(), 2)
 	analyzer:PopAnalyzerEnvironment()
 end)
 
@@ -142,7 +142,7 @@ test("global types", function()
         local b: a
         type a = nil
     ]]
-	equal(2, analyzer:GetLocalOrGlobalValue(String("b")):GetData())
+	equal(2, analyzer:GetLocalOrGlobalValue(LString("b")):GetData())
 end)
 
 test("constant types", function()
@@ -150,8 +150,8 @@ test("constant types", function()
         local a: 1
         local b: number
     ]]
-	equal(true, analyzer:GetLocalOrGlobalValue(String("a")):IsLiteral())
-	equal(false, analyzer:GetLocalOrGlobalValue(String("b")):IsLiteral())
+	equal(true, analyzer:GetLocalOrGlobalValue(LString("a")):IsLiteral())
+	equal(false, analyzer:GetLocalOrGlobalValue(LString("b")):IsLiteral())
 end)
 
 -- literal + vague = vague
@@ -161,7 +161,7 @@ test("1 + number = number", function()
         local b: number
         local c = a + b
     ]]
-	local v = analyzer:GetLocalOrGlobalValue(String("c"))
+	local v = analyzer:GetLocalOrGlobalValue(LString("c"))
 	equal(true, v.Type == ("number"))
 	equal(false, v:IsLiteral())
 end)
@@ -172,7 +172,7 @@ test("1 + 2 = 3", function()
         local b = 2
         local c = a + b
     ]]
-	local v = analyzer:GetLocalOrGlobalValue(String("c"))
+	local v = analyzer:GetLocalOrGlobalValue(LString("c"))
 	equal(true, v.Type == ("number"))
 	equal(3, v:GetData())
 end)
@@ -184,7 +184,7 @@ test("function return value", function()
         end
         local a = test()
     ]]
-	local v = analyzer:GetLocalOrGlobalValue(String("a"))
+	local v = analyzer:GetLocalOrGlobalValue(LString("a"))
 	equal(6, v:GetData())
 end)
 
@@ -195,9 +195,9 @@ do -- multiple function return values
         end
         local a,b,c = test()
     ]]
-	equal(1, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
-	equal(2, analyzer:GetLocalOrGlobalValue(String("b")):GetData())
-	equal(3, analyzer:GetLocalOrGlobalValue(String("c")):GetData())
+	equal(1, analyzer:GetLocalOrGlobalValue(LString("a")):GetData())
+	equal(2, analyzer:GetLocalOrGlobalValue(LString("b")):GetData())
+	equal(3, analyzer:GetLocalOrGlobalValue(LString("c")):GetData())
 end
 
 do -- scopes shouldn't leak
@@ -208,7 +208,7 @@ do -- scopes shouldn't leak
         end
         local _, a = a:test(1, 2)
     ]]
-	equal(3, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
+	equal(3, analyzer:GetLocalOrGlobalValue(LString("a")):GetData())
 end
 
 analyze[[
@@ -225,8 +225,8 @@ do -- functions can modify parent scope
         end
         test()
     ]]
-	equal(2, analyzer:GetLocalOrGlobalValue(String("a")):GetData())
-	equal(1, analyzer:GetLocalOrGlobalValue(String("c")):GetData())
+	equal(2, analyzer:GetLocalOrGlobalValue(LString("a")):GetData())
+	equal(1, analyzer:GetLocalOrGlobalValue(LString("c")):GetData())
 end
 
 do -- uncalled functions should be called
@@ -245,27 +245,27 @@ do -- uncalled functions should be called
             return a + b
         end
     ]]
-	local lib = analyzer:GetLocalOrGlobalValue(String("lib"))
+	local lib = analyzer:GetLocalOrGlobalValue(LString("lib"))
 	equal(
 		"number",
-		assert(lib:Get(String("foo1")):GetInputSignature():Get(1):GetType("number")).Type
+		assert(lib:Get(LString("foo1")):GetInputSignature():Get(1):GetType("number")).Type
 	)
 	equal(
 		"number",
-		assert(lib:Get(String("foo1")):GetInputSignature():Get(2):GetType("number")).Type
+		assert(lib:Get(LString("foo1")):GetInputSignature():Get(2):GetType("number")).Type
 	)
-	equal("number", assert(lib:Get(String("foo1")):GetOutputSignature():Get(1)).Type)
+	equal("number", assert(lib:Get(LString("foo1")):GetOutputSignature():Get(1)).Type)
 	equal(
 		"number",
-		lib:Get(String("foo2")):GetInputSignature():Get(1):GetType("number").Type
-	)
-	equal(
-		"number",
-		lib:Get(String("foo2")):GetInputSignature():Get(2):GetType("number").Type
+		lib:Get(LString("foo2")):GetInputSignature():Get(1):GetType("number").Type
 	)
 	equal(
 		"number",
-		lib:Get(String("foo2")):GetOutputSignature():Get(1):GetType("number").Type
+		lib:Get(LString("foo2")):GetInputSignature():Get(2):GetType("number").Type
+	)
+	equal(
+		"number",
+		lib:Get(LString("foo2")):GetOutputSignature():Get(1):GetType("number").Type
 	)
 end
 
