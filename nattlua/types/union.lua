@@ -415,7 +415,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			Falsy = false,
 			Truthy = false,
 			Literal = false,
-			ReferenceArgument = false,
+			ReferenceType = false,
 			suppress = false,
 		},
 		META

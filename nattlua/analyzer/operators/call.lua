@@ -146,7 +146,7 @@ do
 
 					-- TODO: callbacks with ref arguments should not be called
 					-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
-					if not b:IsRefFunction() and func then
+					if not b:HasReferenceTypes() and func then
 						self:Assert(self:Call(b, func:GetInputSignature():Copy(nil, true)))
 					end
 				end
@@ -166,7 +166,7 @@ do
 		if
 			analyzer:IsRuntime() and
 			self:IsCalled() and
-			not self:IsRefFunction()
+			not self:HasReferenceTypes()
 			and
 			self:GetFunctionBodyNode() and
 			self:GetFunctionBodyNode().environment == "runtime" and
@@ -185,7 +185,7 @@ do
 			not analyzer.config.should_crawl_untyped_functions and
 			analyzer:IsRuntime() and
 			self:IsCalled() and
-			not self:IsRefFunction()
+			not self:HasReferenceTypes()
 			and
 			self:GetFunctionBodyNode() and
 			self:GetFunctionBodyNode().environment == "runtime" and

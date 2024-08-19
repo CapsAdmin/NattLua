@@ -32,7 +32,7 @@ local function Prefix(analyzer, node, r)
 	end
 
 	if op == "ref" then
-		r:SetReferenceArgument(true)
+		r:SetReferenceType(true)
 		return r
 	end
 

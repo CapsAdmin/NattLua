@@ -4,7 +4,7 @@ local type_errors = require("nattlua.types.error_messages")
 
 local function contains_ref_argument(upvalues)
 	for _, v in ipairs(upvalues) do
-		if v.upvalue:GetValue():IsReferenceArgument() or v.upvalue:GetValue().from_for_loop then
+		if v.upvalue:GetValue():IsReferenceType() or v.upvalue:GetValue().from_for_loop then
 			return true
 		end
 	end

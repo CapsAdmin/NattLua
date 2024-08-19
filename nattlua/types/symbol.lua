@@ -76,7 +76,7 @@ function META.New(data--[[#: any]])
 			Falsy = false,
 			Truthy = false,
 			Literal = false,
-			ReferenceArgument = false,
+			ReferenceType = false,
 		},
 		META
 	)

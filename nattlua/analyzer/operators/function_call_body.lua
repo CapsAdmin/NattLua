@@ -174,7 +174,7 @@ local function check_input(self, obj, input)
 
 			if
 				contract and
-				contract:IsReferenceArgument() and
+				contract:IsReferenceType() and
 				(
 					contract.Type ~= "function" or
 					arg.Type ~= "function" or
@@ -183,7 +183,7 @@ local function check_input(self, obj, input)
 			then
 				self:CreateLocalValue(identifier, arg)
 				signature_override[i] = arg
-				signature_override[i]:SetReferenceArgument(true)
+				signature_override[i]:SetReferenceType(true)
 				local ok, err = signature_override[i]:IsSubsetOf(contract)
 
 				if not ok then
@@ -216,7 +216,7 @@ local function check_input(self, obj, input)
 				if
 					signature_override[i] and
 					signature_override[i].Type == "union" and
-					not signature_override[i]:IsReferenceArgument()
+					not signature_override[i]:IsReferenceType()
 				then
 					local merged = shrink_union_to_function_signature(signature_override[i])
 
@@ -296,10 +296,10 @@ local function check_input(self, obj, input)
 			arg.Type == "table" and
 			contract.Type == "table" and
 			arg:GetUpvalue() and
-			not contract:IsReferenceArgument()
+			not contract:IsReferenceType()
 		then
 			mutate_type(self, i, arg, contract, input)
-		elseif not contract:IsReferenceArgument() then
+		elseif not contract:IsReferenceType() then
 			local doit = true
 
 			if contract.Type == "union" then
@@ -465,8 +465,8 @@ return function(self, obj, input)
 					val = Nil()
 					local arg = obj:GetInputSignature():Get(argi)
 
-					if arg and arg:IsReferenceArgument() then
-						val:SetReferenceArgument(true)
+					if arg and arg:IsReferenceType() then
+						val:SetReferenceType(true)
 					end
 				end
 
@@ -572,7 +572,7 @@ return function(self, obj, input)
 	-- if a return type is marked with ref, it will pass the ref value back to the caller
 	-- a bit like generics
 	for i, v in ipairs(output_signature:GetData()) do
-		if v:IsReferenceArgument() then contract:Set(i, output:Get(i)) end
+		if v:IsReferenceType() then contract:Set(i, output:Get(i)) end
 	end
 
 	return contract

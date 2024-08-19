@@ -152,7 +152,7 @@ function META.New(data--[[#: string | nil]])
 			Falsy = false,
 			Truthy = true,
 			Literal = false,
-			ReferenceArgument = false,
+			ReferenceType = false,
 		},
 		META
 	)
@@ -186,7 +186,7 @@ return {
 				Falsy = false,
 				Truthy = true,
 				Literal = false,
-				ReferenceArgument = false,
+				ReferenceType = false,
 			},
 			META
 		):SetLiteral(true)

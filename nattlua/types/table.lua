@@ -1015,7 +1015,7 @@ function META.New()
 			Falsy = false,
 			Truthy = false,
 			Literal = false,
-			ReferenceArgument = false,
+			ReferenceType = false,
 			suppress = false,
 		},
 		META

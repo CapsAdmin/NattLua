@@ -65,7 +65,7 @@ local function index_table(analyzer, self, key)
 
 		if not val then return val, err end
 
-		if not self.argument_index or contract:IsReferenceArgument() then
+		if not self.argument_index or contract:IsReferenceType() then
 			local val = self:GetMutatedValue(key, analyzer:GetScope())
 
 			if val then

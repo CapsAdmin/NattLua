@@ -263,7 +263,7 @@ return function(META)
 				self:IsRuntime() and
 				call_node and
 				not not_recursive_call and
-				not obj:IsRefFunction()
+				not obj:HasReferenceTypes()
 			then
 				for _, v in ipairs(self.call_stack) do
 					-- if the callnode is the same, we're doing some infinite recursion

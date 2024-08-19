@@ -650,7 +650,7 @@ analyze[[
                 local constructor = analyzer:Assert(meta:Get(types.ConstString("constructor")))
     
                 local self_arg = types.Any()
-                self_arg:SetReferenceArgument(true)
+                self_arg:SetReferenceType(true)
                 constructor:GetInputSignature():Set(1, self_arg)
             
                 tbl:SetMetaTable(meta)

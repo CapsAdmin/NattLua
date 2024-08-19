@@ -183,13 +183,13 @@ do
 	end
 end
 
-function META:IsRefFunction()
+function META:HasReferenceTypes()
 	for i, v in ipairs(self:GetInputSignature():GetData()) do
-		if v:IsReferenceArgument() then return true end
+		if v:IsReferenceType() then return true end
 	end
 
 	for i, v in ipairs(self:GetOutputSignature():GetData()) do
-		if v:IsReferenceArgument() then return true end
+		if v:IsReferenceType() then return true end
 	end
 
 	return false
@@ -201,7 +201,7 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			Falsy = false,
 			Truthy = true,
 			Literal = false,
-			ReferenceArgument = false,
+			ReferenceType = false,
 			Called = false,
 			ExplicitInputSignature = false,
 			ExplicitOutputSignature = false,

@@ -84,7 +84,7 @@ do
 		self:SetMetaTable(obj:GetMetaTable())
 		self:SetAnalyzerEnvironment(obj:GetAnalyzerEnvironment())
 		self:SetTypeOverride(obj:GetTypeOverride())
-		self:SetReferenceArgument(obj:IsReferenceArgument())
+		self:SetReferenceType(obj:IsReferenceType())
 		self.truthy_union = obj.truthy_union
 		self.falsy_union = obj.falsy_union
 	end
@@ -165,16 +165,16 @@ do
 end
 
 do
-	META:IsSet("ReferenceArgument", false--[[# as boolean]])
+	META:IsSet("ReferenceType", false--[[# as boolean]])
 end
 
 do
 	META:IsSet("Literal", false--[[# as boolean]])
 
 	function META:CopyLiteralness(obj--[[#: TBaseType]])
-		if obj:IsReferenceArgument() then
+		if obj:IsReferenceType() then
 			self:SetLiteral(true)
-			self:SetReferenceArgument(true)
+			self:SetReferenceType(true)
 		else
 			self:SetLiteral(obj:IsLiteral())
 		end
