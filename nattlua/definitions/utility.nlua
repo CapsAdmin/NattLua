@@ -7,6 +7,8 @@ type userdata = Table
 type ctype = any
 type thread = Table
 type empty_function = function=(...)>(...any)
+type LiteralNumber = -inf .. inf | nan
+type LiteralString = $".*"
 
 analyzer function ReturnIfNonLiteral(func: any)
 	func:SetLiteralFunction(true)

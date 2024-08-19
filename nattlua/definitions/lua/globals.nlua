@@ -353,9 +353,8 @@ analyzer function error(msg: string, level: number | nil)
 	end
 end
 
-analyzer function type_error(msg: string, level: number | nil)
+analyzer function type_error(msg: LiteralString, level: number | nil)
 	if analyzer.processing_deferred_calls then return end
-
 	analyzer:ThrowError(msg:GetData(), level and level:GetData() or nil)
 end
 
