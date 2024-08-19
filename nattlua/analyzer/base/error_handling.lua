@@ -40,7 +40,7 @@ return function(META)
 		if type(tbl) == "string" then return tbl end
 
 		local out = {}
-
+		
 		for i, v in ipairs(tbl) do
 			if type(v) == "table" then
 				if v.Type then
@@ -124,12 +124,12 @@ return function(META)
 
 	function META:Error(msg)
 		local node = self.current_expression or self.current_statement
-		return self:ReportDiagnostic(msg, "error", node, node.Code, node:GetStartStop())
+		self:ReportDiagnostic(msg, "error", node, node.Code, node:GetStartStop())
 	end
 
 	function META:Warning(msg)
 		local node = self.current_expression or self.current_statement
-		return self:ReportDiagnostic(msg, "warning", node, node.Code, node:GetStartStop())
+		self:ReportDiagnostic(msg, "warning", node, node.Code, node:GetStartStop())
 	end
 
 	function META:FatalError(msg)
