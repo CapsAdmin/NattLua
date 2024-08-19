@@ -18,9 +18,9 @@ type string = {
 	pack = function=(fmt: string, ...any)>(string),
 }
 
-analyzer function ^string.reverse(str: literal string): string
+type ^string.reverse = ReturnIfNonLiteral<|analyzer function(str: string): string
 	return str:GetData():reverse()
-end
+end|>
 
 analyzer function ^string.rep(str: string, n: number, sep: nil | string)
 	if n.Type == "number" and n:GetMax() and n:GetMax():IsInf() then

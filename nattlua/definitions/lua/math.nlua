@@ -36,29 +36,29 @@ type math.pi = 3.14159265358979323864338327950288
 type math.maxinteger = 0x7FFFFFFFFFFFFFFF
 type math.mininteger = 0x8000000000000000
 
-analyzer function math.type(n: literal number): "float" | "integer" | "nil"
+type math.type = ReturnIfNonLiteral<|analyzer function(n: number): "float" | "integer" | "nil"
 	return "float"
-end
+end|>
 
-analyzer function math.sin(n: literal number): number
+type math.sin = ReturnIfNonLiteral<|analyzer function(n: number): number
 	return math.sin(n:GetData())
-end
+end|>
 
-analyzer function math.abs(n: literal number): number
+type math.abs = ReturnIfNonLiteral<|analyzer function(n: number): number
 	return math.abs(n:GetData())
-end
+end|>
 
-analyzer function math.cos(n: literal number): number
+type math.cos = ReturnIfNonLiteral<|analyzer function(n: number): number
 	return math.cos(n:GetData())
-end
+end|>
 
-analyzer function math.ceil(n: literal number): number
+type math.ceil = ReturnIfNonLiteral<|analyzer function(n: number): number
 	return math.ceil(n:GetData())
-end
+end|>
 
-analyzer function math.floor(n: literal number): number
+type math.floor = ReturnIfNonLiteral<|analyzer function(n:number): number
 	return math.floor(n:GetData())
-end
+end|>
 
 analyzer function math.min(...: ...number)
 	local numbers = {}

@@ -83,16 +83,18 @@ return function(analyzer, obj, input)
 
 	do
 		local ok, reason, a, b, i = input:IsSubsetOfTuple(signature_arguments)
-
+		
 		if not ok then
-			if not output_signature:IsEmpty() then
-				if not a:IsLiteral() and b:IsLiteralArgument() and a.Type == b.Type then
-					return output_signature:Copy()
-				end
-			end
-
 			return false,
 			type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+		end
+	end
+
+	if obj:IsLiteralFunction() then
+		for _, v in ipairs(input:GetData()) do
+			if v.Type ~= "function" and not v:IsLiteral() then
+				return output_signature:Copy()
+			end
 		end
 	end
 

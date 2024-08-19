@@ -84,7 +84,6 @@ do
 		self:SetMetaTable(obj:GetMetaTable())
 		self:SetAnalyzerEnvironment(obj:GetAnalyzerEnvironment())
 		self:SetTypeOverride(obj:GetTypeOverride())
-		self:SetLiteralArgument(obj:IsLiteralArgument())
 		self:SetReferenceArgument(obj:IsReferenceArgument())
 		self.truthy_union = obj.truthy_union
 		self.falsy_union = obj.falsy_union
@@ -166,7 +165,6 @@ do
 end
 
 do
-	META:IsSet("LiteralArgument", false--[[# as boolean]])
 	META:IsSet("ReferenceArgument", false--[[# as boolean]])
 end
 

@@ -353,13 +353,13 @@ analyzer function error(msg: string, level: number | nil)
 	end
 end
 
-analyzer function type_error(msg: literal string, level: literal (number | nil))
+analyzer function type_error(msg: string, level: number | nil)
 	if analyzer.processing_deferred_calls then return end
 
 	analyzer:ThrowError(msg:GetData(), level and level:GetData() or nil)
 end
 
-analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...any)
+type pcall = ReturnIfNonLiteral<|analyzer function(callable: Function, ...: ...any): (boolean, ...any)
 	local diagnostics_index = #analyzer:GetDiagnostics()
 	analyzer:PushProtectedCall()
 	local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
@@ -388,9 +388,9 @@ analyzer function pcall(callable: literal Function, ...: ...any): (boolean, ...a
 	end
 
 	return true, tuple
-end
+end|>
 
-analyzer function xpcall(callable: literal Function, error_cb: function=(any)>(), ...: ...any): (boolean, ...any)
+type xpcall = ReturnIfNonLiteral<|analyzer function(callable: Function, error_cb: function=(any)>(), ...: ...any): (boolean, ...any)
 	local diagnostics_index = #analyzer:GetDiagnostics()
 	analyzer:PushProtectedCall()
 	local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
@@ -420,7 +420,7 @@ analyzer function xpcall(callable: literal Function, error_cb: function=(any)>()
 	end
 
 	return true, tuple
-end
+end|>
 
 analyzer function select(index: 1 .. inf | "#", ...: ...any)
 	return select(index:GetData(), ...)

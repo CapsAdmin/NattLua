@@ -21,10 +21,6 @@ function META.Equal(a--[[#: TString]], b--[[#: TBaseType]])
 
 	local b = b--[[# as TString]]
 
-	if a:IsLiteralArgument() and b:IsLiteralArgument() then return true end
-
-	if b:IsLiteralArgument() and not a:IsLiteral() then return false end
-
 	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
 
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
@@ -65,12 +61,6 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 	if B.Type ~= "string" then return false, type_errors.subset(A, B) end
 
 	local B = B--[[# as TString]]
-
-	if A:IsLiteralArgument() and B:IsLiteralArgument() then return true end
-
-	if B:IsLiteralArgument() and not A:IsLiteral() then
-		return false, type_errors.subset(A, B)
-	end
 
 	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then -- "A" subsetof "B"
 		return true
@@ -113,8 +103,6 @@ function META:__tostring()
 
 		if str then return "\"" .. str .. "\"" end
 	end
-
-	if self:IsLiteralArgument() then return "literal string" end
 
 	return "string"
 end
@@ -164,7 +152,6 @@ function META.New(data--[[#: string | nil]])
 			Falsy = false,
 			Truthy = true,
 			Literal = false,
-			LiteralArgument = false,
 			ReferenceArgument = false,
 		},
 		META
@@ -199,7 +186,6 @@ return {
 				Falsy = false,
 				Truthy = true,
 				Literal = false,
-				LiteralArgument = false,
 				ReferenceArgument = false,
 			},
 			META

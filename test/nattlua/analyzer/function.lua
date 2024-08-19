@@ -733,18 +733,8 @@ analyze[[
     
     attest.equal<|foo, function=(number)>(number, string)|>
 ]]
-analyze(
-	[[
-    local function foo(s: ref literal string)
-        return s
-    end
-    
-    foo(_ as string)    
-]],
-	"string is not a subset of literal string"
-)
 analyze[[
-    local function foo(str: literal ref (nil | string))
+    local function foo(str: ref (nil | string))
         return str
     end
     attest.equal(foo("hello"), "hello")

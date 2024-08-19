@@ -31,11 +31,6 @@ local function Prefix(analyzer, node, r)
 		if r.Type ~= "union" then analyzer:TrackUpvalue(r) end
 	end
 
-	if op == "literal" then
-		r:SetLiteralArgument(true)
-		return r
-	end
-
 	if op == "ref" then
 		r:SetReferenceArgument(true)
 		return r

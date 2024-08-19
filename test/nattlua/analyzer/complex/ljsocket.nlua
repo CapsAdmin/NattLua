@@ -18,10 +18,10 @@ do
 	local M = {}
 
 	local function generic_function(
-		C_name: literal ref string,
-		cdef: literal ref string,
+		C_name: ref string,
+		cdef: ref string,
 		alias: ref (nil | string),
-		size_error_handling: literal ref (nil | boolean)
+		size_error_handling: ref (nil | boolean)
 	)
 		ffi.cdef(cdef)
 		alias = alias or C_name
@@ -813,7 +813,7 @@ end
 
 local function flags_to_table(
 	flags: ref number,
-	valid_flags: ref literal Map<|string, number|>,
+	valid_flags: ref Map<|$".*", -1..inf|>,
 	operation: ref function=(number, number)>(number)
 )
 	operation = operation or bit.band
@@ -828,7 +828,7 @@ end
 
 local function flags_to_list(
 	flags: ref number,
-	valid_flags: ref literal Map<|string, number|>,
+	valid_flags: ref Map<|$".*", -1..inf|>,
 	operation: ref function=(number, number)>(number)
 )
 	operation = operation or bit.band

@@ -543,18 +543,12 @@ analyze[[
     end
 ]]
 analyze[[
-    local type math = {
+    local type math = math & {
         sin = function=(number)>(number)
-    } & math
-
-    local type old = math.cos
-    type math.cos = function=(number)>(number)
+    }
 
     local a = math.sin(1 as number)
-
     attest.equal(a, _ as number)
-
-    type math.cos = old
 ]]
 analyze[[
     local type a = analyzer function()

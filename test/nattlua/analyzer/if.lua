@@ -1294,7 +1294,7 @@ analyze(
 	"else part of if condition is always true"
 )
 analyze[[
-    local function foo(b: literal ref boolean)
+    local function foo(b: ref boolean)
         if b then
 
         end
@@ -1327,7 +1327,7 @@ analyze[[
     end
 ]]
 analyze([[
-    local function foo(x: literal ref (nil | boolean))
+    local function foo(x: ref (nil | boolean))
         if x then
     
         end
@@ -1340,7 +1340,7 @@ analyze([[
     §assert(#analyzer:GetDiagnostics() == 0)
 ]])
 analyze[[
-    local function foo(x: literal ref (nil | boolean))
+    local function foo(x: ref (nil | boolean))
         if x == false then
     
         end
@@ -1353,7 +1353,7 @@ analyze[[
     §assert(#analyzer:GetDiagnostics() == 0)
 ]]
 analyze[[
-    local function foo(x: literal ref (nil | boolean))
+    local function foo(x: ref (nil | boolean))
         if x == false then
     
         elseif x then

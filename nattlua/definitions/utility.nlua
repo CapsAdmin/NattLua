@@ -8,6 +8,11 @@ type ctype = any
 type thread = Table
 type empty_function = function=(...)>(...any)
 
+analyzer function ReturnIfNonLiteral(func: any)
+	func:SetLiteralFunction(true)
+	return func
+end
+
 analyzer function NonLiteral(obj: any)
 	if obj.Type == "symbol" and (obj:GetData() == true or obj:GetData() == false) then
 		return types.Boolean()
@@ -339,7 +344,7 @@ analyzer function PopTypeEnvironment()
 	analyzer:PopGlobalEnvironment("typesystem")
 end
 
-analyzer function CurrentType(what: "table" | "tuple" | "function" | "union", level: literal nil | number)
+analyzer function CurrentType(what: "table" | "tuple" | "function" | "union", level: nil | number)
 	return analyzer:GetCurrentType(what:GetData(), level and level:GetData())
 end
 

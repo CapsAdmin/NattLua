@@ -51,10 +51,6 @@ end
 function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
 
-	if b:IsLiteralArgument() and a:IsLiteralArgument() then return true end
-
-	if b:IsLiteralArgument() and not a:IsLiteral() then return false end
-
 	if not a:IsLiteral() and not b:IsLiteral() then return true end
 
 	if a:IsLiteral() and b:IsLiteral() then
@@ -117,12 +113,6 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 
 	if b.Type ~= "number" then return false, type_errors.subset(a, b) end
 
-	if a:IsLiteralArgument() and b:IsLiteralArgument() then return true end
-
-	if b:IsLiteralArgument() and not a:IsLiteral() then
-		return false, type_errors.subset(a, b)
-	end
-
 	if a:IsLiteral() and b:IsLiteral() then
 		local a_min = a:GetData()--[[# as number]]
 		local b_min = b:GetData()--[[# as number]]
@@ -174,8 +164,6 @@ function META:__tostring()
 	if self:GetMax() then s = s .. ".." .. tostring(self:GetMax()) end
 
 	if self:IsLiteral() then return s end
-
-	if self:IsLiteralArgument() then return "literal number" end
 
 	return "number"
 end
@@ -558,7 +546,6 @@ function META.New()
 			Falsy = false,
 			Truthy = true,
 			Literal = false,
-			LiteralArgument = false,
 			ReferenceArgument = false,
 		},
 		META

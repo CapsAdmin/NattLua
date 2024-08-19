@@ -26,6 +26,7 @@ META:GetSet("UpvaluePosition", nil--[[# as nil | number]])
 META:GetSet("InputIdentifiers", nil--[[# as nil | List<|any|>]])
 META:GetSet("AnalyzerFunction", nil--[[# as nil | Function]])
 META:IsSet("ArgumentsInferred", false)
+META:IsSet("LiteralFunction", false)
 META:GetSet("PreventInputArgumentExpansion", false)
 
 function META:__tostring()
@@ -200,7 +201,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			Falsy = false,
 			Truthy = true,
 			Literal = false,
-			LiteralArgument = false,
 			ReferenceArgument = false,
 			Called = false,
 			ExplicitInputSignature = false,
