@@ -110,7 +110,7 @@ local function Prefix(analyzer, node, r)
 
 			if res then return res end
 
-			return r:GetArrayLength():SetLiteral(r:IsLiteral())
+			return r:GetArrayLength()
 		end
 	elseif r.Type == "number" then
 		if op == "-" or op == "~" then return r:PrefixOperator(op) end

@@ -734,7 +734,6 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	copy:CopyInternalsFrom(self)
 	copy.potential_self = self.potential_self
 	copy.mutable = self.mutable
-	copy:SetLiteral(self:IsLiteral())
 	copy.mutations = self.mutations
 	copy:SetCreationScope(self:GetCreationScope())
 	copy.BaseTable = self.BaseTable

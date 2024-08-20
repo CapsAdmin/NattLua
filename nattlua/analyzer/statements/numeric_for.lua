@@ -2,6 +2,7 @@ local ipairs = ipairs
 local math = math
 local assert = assert
 local True = require("nattlua.types.symbol").True
+local Number = require("nattlua.types.number").Number
 local LNumber = require("nattlua.types.number").LNumber
 local False = require("nattlua.types.symbol").False
 local Union = require("nattlua.types.union").Union
@@ -57,14 +58,16 @@ return {
 		if literal_init and literal_max and literal_step and literal_max < 1000 then
 			for i = literal_init, literal_max, literal_step do
 				self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
-				local i = LNumber(i)
+				
 				local brk = false
 				local uncertain_break = self:DidUncertainBreak()
 
 				if uncertain_break then
 					self:PushUncertainLoop(true)
-					i:SetLiteral(false)
+					i = Number()
 					brk = true
+				else
+					i = LNumber(i)
 				end
 
 				i.from_for_loop = true
@@ -116,7 +119,7 @@ return {
 					end
 				end
 
-				if max.Type == "any" then init:SetLiteral(false) end
+				if max.Type == "any" then init = init:Copy():Widen() end
 			end
 
 			self:PushUncertainLoop(true)

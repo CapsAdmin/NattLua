@@ -38,7 +38,7 @@ end
 
 return {
 	AnalyzeTable = function(self, tree)
-		local tbl = Table():SetLiteral(self:IsTypesystem())
+		local tbl = Table()
 
 		if self:IsRuntime() then tbl:SetReferenceId(tostring(tbl:GetData())) end
 

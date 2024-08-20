@@ -21,9 +21,7 @@ analyzer function NonLiteral(obj: any)
 	end
 
 	if obj.Type == "number" or obj.Type == "string" then
-		obj = obj:Copy()
-		obj:SetLiteral(false)
-		return obj
+		return obj:Copy():Widen()
 	end
 
 	return obj
@@ -78,7 +76,6 @@ analyzer function enum(tbl: Table)
 	end
 
 	analyzer:PopAnalyzerEnvironment()
-	union:SetLiteral(true)
 	return union
 end
 

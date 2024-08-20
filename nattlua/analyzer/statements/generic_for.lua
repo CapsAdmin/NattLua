@@ -76,7 +76,7 @@ return {
 				if obj.Type == "union" then obj:RemoveType(Nil()) end
 
 				if uncertain_break then
-					obj:SetLiteral(false)
+					obj = obj:Copy():Widen()
 					brk = true
 				end
 

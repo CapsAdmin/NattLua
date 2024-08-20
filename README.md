@@ -280,7 +280,7 @@ end
 
 analyzer function math.floor(T: number)
     if T:IsLiteral() then
-        return types.Number(math.floor(T:GetData())):SetLiteral(true)
+        return types.Number(math.floor(T:GetData()))
     end
 
     return types.Number()
