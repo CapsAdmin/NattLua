@@ -10,12 +10,12 @@ META.Type = "symbol"
 META:GetSet("Data", nil--[[# as any]])
 
 function META.Equal(a--[[#: TSymbol]], b--[[#: TBaseType]])
-	return a.Type == b.Type and a:GetData() == b:GetData()
+	return a.Type == b.Type and a.Data == b.Data
 end
 
 function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#: string]])
 	if op == "==" then
-		if l:IsLiteral() and r:IsLiteral() then return l:GetData() == r:GetData() end
+		if l.Literal and r.Literal then return l.Data == r.Data end
 
 		return nil
 	end
@@ -24,11 +24,11 @@ function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#:
 end
 
 function META:GetLuaType()
-	return type(self:GetData())
+	return type(self.Data)
 end
 
 function META:__tostring()
-	return tostring(self:GetData())
+	return tostring(self.Data)
 end
 
 function META:GetHash()
@@ -36,13 +36,13 @@ function META:GetHash()
 end
 
 function META:Copy()
-	local copy = self.New(self:GetData())
+	local copy = self.New(self.Data)
 	copy:CopyInternalsFrom(self)
 	return copy
 end
 
 function META:CanBeNil()
-	return self:GetData() == nil
+	return self.Data == nil
 end
 
 function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
@@ -56,7 +56,7 @@ function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
 
 	local b = b--[[# as TSymbol]]
 
-	if a:GetData() ~= b:GetData() then return false, type_errors.subset(a, b) end
+	if a.Data ~= b.Data then return false, type_errors.subset(a, b) end
 
 	return true
 end

@@ -21,15 +21,15 @@ function META.Equal(a--[[#: TString]], b--[[#: TBaseType]])
 
 	local b = b--[[# as TString]]
 
-	if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
+	if a.Literal and b.Literal then return a.Data == b.Data end
 
-	if not a:IsLiteral() and not b:IsLiteral() then return true end
+	if not a.Literal and not b.Literal then return true end
 
 	return false
 end
 
 function META:GetHash()
-	if self:IsLiteral() then return self.Data end
+	if self.Literal then return self.Data end
 
 	local upvalue = self:GetUpvalue()
 
@@ -45,7 +45,7 @@ function META:GetHash()
 end
 
 function META:Copy()
-	local copy = self.New(self:GetData()):SetLiteral(self:IsLiteral())
+	local copy = self.New(self.Data):SetLiteral(self.Literal)
 	copy:SetPatternContract(self:GetPatternContract())
 	copy:CopyInternalsFrom(self)
 	return copy
@@ -62,22 +62,22 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 
 	local B = B--[[# as TString]]
 
-	if A:IsLiteral() and B:IsLiteral() and A:GetData() == B:GetData() then -- "A" subsetof "B"
+	if A.Literal and B.Literal and A.Data == B.Data then -- "A" subsetof "B"
 		return true
 	end
 
-	if A:IsLiteral() and not B:IsLiteral() then -- "A" subsetof string
+	if A.Literal and not B.Literal then -- "A" subsetof string
 		return true
 	end
 
-	if not A:IsLiteral() and not B:IsLiteral() then -- string subsetof string
+	if not A.Literal and not B.Literal then -- string subsetof string
 		return true
 	end
 
 	if B.PatternContract then
-		local str = A:GetData()
+		local str = A.Data
 
-		if not str then -- TODO: this is not correct, it should be :IsLiteral() but I have not yet decided this behavior yet
+		if not str then -- TODO: this is not correct, it should be .Literal but I have not yet decided this behavior yet
 			return false, type_errors.string_pattern_type_mismatch(A)
 		end
 
@@ -88,7 +88,7 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 		return true
 	end
 
-	if A:IsLiteral() and B:IsLiteral() then
+	if A.Literal and B.Literal then
 		return false, type_errors.subset(A, B)
 	end
 
@@ -98,8 +98,8 @@ end
 function META:__tostring()
 	if self.PatternContract then return "$\"" .. self.PatternContract .. "\"" end
 
-	if self:IsLiteral() then
-		local str = self:GetData()
+	if self.Literal then
+		local str = self.Data
 
 		if str then return "\"" .. str .. "\"" end
 	end
@@ -109,23 +109,23 @@ end
 
 function META.LogicalComparison(a--[[#: TString]], b--[[#: TBaseType]], op--[[#: string]])
 	if op == ">" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() > b:GetData() end
+		if a.Literal and b.Literal then return a.Data > b.Data end
 
 		return nil
 	elseif op == "<" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() < b:GetData() end
+		if a.Literal and b.Literal then return a.Data < b.Data end
 
 		return nil
 	elseif op == "<=" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() <= b:GetData() end
+		if a.Literal and b.Literal then return a.Data <= b.Data end
 
 		return nil
 	elseif op == ">=" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() >= b:GetData() end
+		if a.Literal and b.Literal then return a.Data >= b.Data end
 
 		return nil
 	elseif op == "==" then
-		if a:IsLiteral() and b:IsLiteral() then return a:GetData() == b:GetData() end
+		if a.Literal and b.Literal then return a.Data == b.Data end
 
 		return nil
 	end
