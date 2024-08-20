@@ -1,4 +1,3 @@
-
 local LString = require("nattlua.types.string").LString
 analyze[[
 local   a,b,c = 1,2,3
@@ -79,6 +78,9 @@ analyze(
 ]],
 	"is not the same unique type as"
 )
+analyze([[
+    local type test = unique 1
+]], "must be a table")
 
 test("runtime reassignment", function()
 	local v = analyze[[

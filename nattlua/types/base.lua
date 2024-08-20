@@ -118,50 +118,8 @@ do -- comes from tbl.@TypeOverride = "my name"
 	end
 end
 
-do
-	--[[#type TBaseType.disabled_unique_id = number | nil]]
-	META:GetSet("UniqueID", nil--[[# as nil | number]])
-	local ref = 0
-
-	function META:MakeUnique(b--[[#: boolean]])
-		if b then
-			self.UniqueID = ref
-			ref = ref + 1
-		else
-			self.UniqueID = nil
-		end
-
-		return self
-	end
-
-	function META:IsUnique()
-		return self.UniqueID ~= nil
-	end
-
-	function META:DisableUniqueness()
-		self.disabled_unique_id = self.UniqueID
-		self.UniqueID = nil
-	end
-
-	function META:EnableUniqueness()
-		self.UniqueID = self.disabled_unique_id
-	end
-
-	function META:GetHash()
-		return self.UniqueID
-	end
-
-	function META.IsSameUniqueType(a--[[#: TBaseType]], b--[[#: TBaseType]])
-		if a.UniqueID and not b.UniqueID then
-			return false, type_errors.unique_type_type_mismatch(a, b)
-		end
-
-		if a.UniqueID ~= b.UniqueID then
-			return false, type_errors.unique_type_mismatch(a, b)
-		end
-
-		return true
-	end
+function META:GetHash()
+	return nil
 end
 
 do

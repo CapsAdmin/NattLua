@@ -74,6 +74,10 @@ local function Prefix(analyzer, node, r)
 
 			return obj:GetContract() or obj
 		elseif op == "unique" then
+			if r.Type ~= "table" then
+				return false, type_errors.unique_must_be_table(r)
+			end
+
 			r:MakeUnique(true)
 			return r
 		elseif op == "mutable" then

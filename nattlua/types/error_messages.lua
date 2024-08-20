@@ -69,6 +69,10 @@ do -- modifier errors
 		return {a, "is not the same unique type as", b}
 	end
 
+	function type_errors.unique_must_be_table(a--[[#: any]])--[[#: Reason]]
+		return {a, "must be a table"}
+	end
+
 	function type_errors.not_literal(a--[[#: any]])--[[#: Reason]]
 		return {a, "is not a literal"}
 	end
@@ -202,7 +206,13 @@ function type_errors.mutating_function_argument(obj--[[#: any]], i--[[#: number]
 	}
 end
 
-function type_errors.return_type_mismatch(function_node--[[#: any]], output_signature--[[#: any]], output--[[#: any]], reason--[[#: Reason]], i--[[#: number]])
+function type_errors.return_type_mismatch(
+	function_node--[[#: any]],
+	output_signature--[[#: any]],
+	output--[[#: any]],
+	reason--[[#: Reason]],
+	i--[[#: number]]
+)
 	return type_errors.context(
 		"expected return type " .. tostring(output_signature) .. ", but found " .. tostring(output) .. " at return #" .. i .. ":",
 		reason
