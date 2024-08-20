@@ -14,6 +14,7 @@ local Symbol = require("nattlua.types.symbol").Symbol
 local False = require("nattlua.types.symbol").False
 local Nil = require("nattlua.types.symbol").Nil
 local LNumber = require("nattlua.types.number").LNumber
+local LNumberRange = require("nattlua.types.number").LNumberRange
 local type_errors = require("nattlua.types.error_messages")
 
 local function metatable_function(self, node, meta_method, l, r)
@@ -237,7 +238,11 @@ local function Binary(self, node, l, r, op)
 
 				return false, type_errors.binary(op, l, r)
 			elseif l.Type == "number" and r.Type == "number" then
-				return l:Copy():SetMax(r)
+				if l:IsLiteral() and r:IsLiteral() then
+					return LNumberRange(l:GetData(), r:GetData())
+				end
+				
+				return l:Copy()
 			end
 		elseif op == "*" then
 			if l.Type == "tuple" and r.Type == "number" and r:IsLiteral() then

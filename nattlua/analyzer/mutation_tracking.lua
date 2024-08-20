@@ -2,6 +2,7 @@ local ipairs = ipairs
 local table = _G.table
 local Union = require("nattlua.types.union").Union
 local LNumber = require("nattlua.types.number").LNumber
+local LNumberRange = require("nattlua.types.number").LNumberRange
 local shallow_copy = require("nattlua.other.shallow_copy")
 return function(META)
 	function META:GetArrayLengthFromTable(tbl)
@@ -17,7 +18,7 @@ return function(META)
 
 				if val then
 					if val.Type == "union" and val:CanBeNil() then
-						return LNumber(len):SetMax(LNumber(len + 1))
+						return LNumberRange(len, len + 1)
 					end
 
 					if val.Type == "symbol" and val:GetData() == nil then

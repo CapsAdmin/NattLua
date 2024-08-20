@@ -568,7 +568,7 @@ end
 return {
 	Number = META.New,
 	LNumberRange = function(from--[[#: number]], to--[[#: number]])
-		return META.New():SetData(from):SetLiteral(true):SetMax(META.New():SetData(to):SetLiteral(true))
+		return META.New():SetData(from):SetLiteral(from ~= nil):SetMax(META.New():SetData(to):SetLiteral(to ~= nil))
 	end,
 	LNumber = function(num--[[#: number | nil]])
 		return META.New():SetData(num):SetLiteral(true)

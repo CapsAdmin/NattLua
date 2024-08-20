@@ -95,7 +95,7 @@ end
 analyzer function math.random(n: nil | number, m: nil | number)
 	if not analyzer.enable_random_functions then
 		if n and n:IsLiteral() and m and m:IsLiteral() then
-			return types.LNumber(n:GetData()):SetMax(m)
+			return types.LNumberRange(n:GetData(), m:GetData())
 		end
 
 		return types.Number()

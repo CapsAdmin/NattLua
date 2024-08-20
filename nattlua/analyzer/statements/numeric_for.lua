@@ -6,6 +6,7 @@ local LNumber = require("nattlua.types.number").LNumber
 local False = require("nattlua.types.symbol").False
 local Union = require("nattlua.types.union").Union
 local Binary = require("nattlua.analyzer.operators.binary").Binary
+local LNumberRange = require("nattlua.types.number").LNumberRange
 
 local function get_largest_number(obj)
 	if obj:IsLiteral() then
@@ -86,18 +87,19 @@ return {
 			end
 		else
 			if literal_init then
-				init = LNumber(literal_init)
-				init.dont_widen = true
-
 				if max.Type == "number" or (max.Type == "union" and max:IsType("number")) then
 					if not max:IsLiteral() then
-						init:SetMax(LNumber(math.huge))
+						init = LNumberRange(literal_init, math.huge)
 					elseif literal_max then
-						init:SetMax(LNumber(literal_max))
+						init = LNumberRange(literal_init, literal_max)
 					else
-						init:SetMax(max)
+						init = LNumberRange(literal_init, max)
 					end
+				else
+					init = LNumber(literal_init)
 				end
+
+				init.dont_widen = true
 			else
 				if
 					init.Type == "number" and
@@ -109,7 +111,9 @@ return {
 						)
 					)
 				then
-					init = self:Assert(init:SetMax(max))
+					if init:IsLiteral() and max:IsLiteral() then
+						init = LNumberRange(init:GetData(), max:GetData())
+					end
 				end
 
 				if max.Type == "any" then init:SetLiteral(false) end

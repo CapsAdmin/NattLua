@@ -1,6 +1,7 @@
 local tostring = tostring
 local ipairs = ipairs
 local LNumber = require("nattlua.types.number").LNumber
+local LNumberRange = require("nattlua.types.number").LNumberRange
 local LString = require("nattlua.types.string").LString
 local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
@@ -124,9 +125,8 @@ return {
 							end
 
 							if obj.Remainder then
-								local current_index = LNumber(#tbl:GetData() + 1)
-								local max = LNumber(obj.Remainder:GetElementCount())
-								self:NewIndexOperator(tbl, current_index:SetMax(max), obj.Remainder:Get(1))
+								local current_index = LNumberRange(#tbl:GetData() + 1, obj.Remainder:GetElementCount())
+								self:NewIndexOperator(tbl, current_index, obj.Remainder:Get(1))
 							end
 						end
 					else

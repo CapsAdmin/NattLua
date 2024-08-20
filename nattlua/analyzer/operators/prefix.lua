@@ -13,6 +13,7 @@ local Any = require("nattlua.types.any").Any
 local Tuple = require("nattlua.types.tuple").Tuple
 local LNumber = require("nattlua.types.number").LNumber
 local Number = require("nattlua.types.number").Number
+local LNumberRange = require("nattlua.types.number").LNumberRange
 
 local function metatable_function(analyzer, meta_method, obj, node)
 	if obj:GetMetaTable() then
@@ -119,7 +120,7 @@ local function Prefix(analyzer, node, r)
 
 			if r:IsLiteral() then return LNumber(#str) end
 
-			return LNumber(0):SetMax(LNumber(math.huge))
+			return LNumberRange(0, math.huge)
 		end
 	end
 

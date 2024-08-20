@@ -1,5 +1,3 @@
-
-
 analyze[[
     local function test(a,b): nil
 
@@ -536,7 +534,7 @@ analyze[[
 ]]
 analyze[[
     local a = math.cos(_ as number)
-    attest.equal(a, nil as number)
+    attest.equal(a, _ as number)
 
     if a is number then
         attest.equal(a, _ as number)

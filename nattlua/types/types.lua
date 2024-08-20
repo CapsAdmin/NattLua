@@ -8,6 +8,7 @@ function types.Initialize()
 	types.VarArg = require("nattlua.types.tuple").VarArg
 	types.Number = require("nattlua.types.number").Number
 	types.LNumber = require("nattlua.types.number").LNumber
+	types.LNumberRange = require("nattlua.types.number").LNumberRange
 	types.Function = require("nattlua.types.function").Function
 	types.AnyFunction = require("nattlua.types.function").AnyFunction
 	types.LuaTypeFunction = require("nattlua.types.function").LuaTypeFunction
