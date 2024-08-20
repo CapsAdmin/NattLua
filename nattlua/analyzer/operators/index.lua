@@ -132,7 +132,7 @@ local function index_union(analyzer, obj, key)
 end
 
 local function index_string(analyzer, obj, key)
-	local index = obj:GetMetaTable():Get(String("__index"):SetLiteral(true))
+	local index = obj:GetMetaTable():Get(ConstString("__index"))
 
 	if index:HasKey(key) then return analyzer:IndexOperator(index, key) end
 
