@@ -21,7 +21,6 @@ local function cast_lua_types_to_types(tps)
             func:SetAnalyzerFunction(v)
             func:SetInputSignature(Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
             func:SetOutputSignature(Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
-            func:SetLiteral(true)
             tbl[i] = func
         elseif t == "number" then
             tbl[i] = LNumber(v)
