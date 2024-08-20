@@ -59,12 +59,9 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 		return a.Data == b.Data
 	end
 
-	local a_max = a.Max
-	local b_max = b.Max
+	if a.Max then if b.Max then if a.Max:Equal(b.Max) then return true end end end
 
-	if a_max then if b_max then if a_max:Equal(b_max) then return true end end end
-
-	if a_max or b_max then return false end
+	if a.Max or b.Max then return false end
 
 	if not a.Literal and not b.Literal then return true end
 
@@ -72,7 +69,14 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 end
 
 function META:CopyLiteralness(num--[[#: TNumber]])
-	if num.Type == "number" and num:GetMax() then
+	if num.Type ~= "number" then
+		if num:IsReferenceType() then
+			self:SetLiteral(true)
+			self:SetReferenceType(true)
+		else
+			self:SetLiteral(num:IsLiteral())
+		end
+	elseif num:GetMax() then
 		if self:IsSubsetOf(num) then
 			if num:IsReferenceType() then
 				self:SetLiteral(true)
@@ -87,7 +91,7 @@ function META:CopyLiteralness(num--[[#: TNumber]])
 			self:SetLiteral(true)
 			self:SetReferenceType(true)
 		else
-			self:SetLiteral(num:IsLiteral())
+			self:SetLiteral(num.Literal)
 		end
 	end
 end
