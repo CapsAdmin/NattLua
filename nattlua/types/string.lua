@@ -16,16 +16,8 @@ META.Type = "string"
 META:GetSet("Data", nil--[[# as string | nil]])
 META:GetSet("PatternContract", nil--[[# as nil | string]])
 
-function META.Equal(a--[[#: TString]], b--[[#: TBaseType]])
-	if a.Type ~= b.Type then return false end
-
-	local b = b--[[# as TString]]
-
-	if a.Data and b.Data then return a.Data == b.Data end
-
-	if not a.Data and not b.Data then return true end
-
-	return false
+function META.Equal(a--[[#: TString]], b--[[#: TString]])
+	return a.Type == b.Type and a.Data == b.Data
 end
 
 function META:GetHash()
@@ -34,14 +26,10 @@ function META:GetHash()
 	local upvalue = self:GetUpvalue()
 
 	if upvalue then
-		return "__@type@__" .. upvalue:GetHash() .. "_" .. self.Type
+		return upvalue:GetHash()
 	end
 
-	if not jit then
-		return "__@type@__" .. self.Type .. ("_%s"):format(tostring(self))
-	end
-
-	return "__@type@__" .. self.Type .. ("_%p"):format(self)
+	return self
 end
 
 function META:Copy()
@@ -62,15 +50,11 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 
 	local B = B--[[# as TString]]
 
-	if A.Data and B.Data and A.Data == B.Data then -- "A" subsetof "B"
+	if A.Data == B.Data then -- "A" subsetof "B" or string subsetof string
 		return true
 	end
 
 	if A.Data and not B.Data then -- "A" subsetof string
-		return true
-	end
-
-	if not A.Data and not B.Data then -- string subsetof string
 		return true
 	end
 
@@ -88,10 +72,6 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 		return true
 	end
 
-	if A.Data and B.Data then
-		return false, type_errors.subset(A, B)
-	end
-
 	return false, type_errors.subset(A, B)
 end
 
@@ -99,35 +79,25 @@ function META:__tostring()
 	if self.PatternContract then return "$\"" .. self.PatternContract .. "\"" end
 
 	if self.Data then
-		local str = self.Data
-
-		if str then return "\"" .. str .. "\"" end
+		return "\"" .. self.Data .. "\""
 	end
 
 	return "string"
 end
 
 function META.LogicalComparison(a--[[#: TString]], b--[[#: TBaseType]], op--[[#: string]])
+	if not a.Data or not b.Data then return nil end -- undefined comparison, nil is the same as true | false
+
 	if op == ">" then
-		if a.Data and b.Data then return a.Data > b.Data end
-
-		return nil
+		return a.Data > b.Data
 	elseif op == "<" then
-		if a.Data and b.Data then return a.Data < b.Data end
-
-		return nil
+		return a.Data < b.Data
 	elseif op == "<=" then
-		if a.Data and b.Data then return a.Data <= b.Data end
-
-		return nil
+		return a.Data <= b.Data
 	elseif op == ">=" then
-		if a.Data and b.Data then return a.Data >= b.Data end
-
-		return nil
+		return a.Data >= b.Data
 	elseif op == "==" then
-		if a.Data and b.Data then return a.Data == b.Data end
-
-		return nil
+		return a.Data == b.Data
 	end
 
 	return false, type_errors.binary(op, a, b)

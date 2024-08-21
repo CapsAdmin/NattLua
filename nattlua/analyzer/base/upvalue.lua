@@ -7,7 +7,6 @@ local table_insert = _G.table.insert
 local setmetatable = _G.setmetatable
 local META = class.CreateTemplate("upvalue")
 META:GetSet("Value")
-META:GetSet("Hash")
 META:GetSet("Key")
 META:IsSet("Immutable")
 META:GetSet("Node")
@@ -18,6 +17,10 @@ META:GetSet("Mutations")
 
 function META:__tostring()
 	return "[" .. tostring(self.Scope) .. ":" .. tostring(self.Position) .. ":" .. tostring(self.key) .. ":" .. tostring(self.value) .. "]"
+end
+
+function META:GetHash()
+	return self
 end
 
 function META:SetValue(value)
@@ -65,7 +68,6 @@ local id = 0
 
 function META.New(obj)
 	local self = setmetatable({}, META)
-	self:SetHash(tostring(id))
 	id = id + 1
 	self:SetValue(obj)
 	return self

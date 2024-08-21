@@ -905,18 +905,26 @@ do
 	end
 
 	function META:GetMutatedValue(key, scope)
-		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
+		local hash = key:GetHash()
 
-		if not hash then return end
+		if hash == nil then
+			hash = key:GetUpvalue() and key:GetUpvalue():GetKey()
+			if not hash then return end
+			return 
+		end
 
 		initialize_table_mutation_tracker(self, scope, key, hash)
 		return mutation_solver(shallow_copy(self.mutations[hash]), scope, self)
 	end
 
 	function META:Mutate(key, val, scope, from_tracking)
-		local hash = key:GetHash() or key:GetUpvalue() and key:GetUpvalue():GetKey()
+		local hash = key:GetHash()
 
-		if not hash then return end
+		if hash == nil then
+			hash = key:GetUpvalue() and key:GetUpvalue():GetKey()
+			if not hash then return end
+			return 
+		end
 
 		initialize_table_mutation_tracker(self, scope, key, hash)
 		table.insert(self.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking, key = key})

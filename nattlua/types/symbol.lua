@@ -30,7 +30,7 @@ function META:__tostring()
 end
 
 function META:GetHash()
-	return tostring(self.Data)
+	return self.Data
 end
 
 function META:Copy()

@@ -27,8 +27,8 @@ function META:GetHash()
 		if self.Max then
 			local hash = self.Max:GetHash()
 
-			if hash and self.Data then
-				return "__@type@__" .. self.Type .. self.Data .. ".." .. hash
+			if hash ~= nil and self.Data then
+				return tostring(self.Data) .. "-" .. tostring(self.Max)
 			end
 		end
 
@@ -38,14 +38,10 @@ function META:GetHash()
 	local upvalue = self:GetUpvalue()
 
 	if upvalue then
-		return "__@type@__" .. upvalue:GetHash() .. "_" .. self.Type
+		return upvalue:GetHash()
 	end
 
-	if not jit then
-		return "__@type@__" .. self.Type .. ("_%s"):format(tostring(self))
-	end
-
-	return "__@type@__" .. self.Type .. ("_%p"):format(self)
+	return self
 end
 
 function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])

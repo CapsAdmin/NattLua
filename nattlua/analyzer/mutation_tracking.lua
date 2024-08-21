@@ -240,10 +240,6 @@ return function(META)
 
 		do
 			function META:TrackTableIndex(tbl, key, val)
-				local hash = key:GetHash()
-
-				if not hash then return end
-
 				val.parent_table = tbl
 				val.parent_key = key
 				local truthy_union = val:GetTruthy()
@@ -254,7 +250,7 @@ return function(META)
 			function META:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, inverted, truthy_falsy)
 				local hash = key:GetHash()
 
-				if not hash then return end
+				if hash == nil then return end
 
 				tbl.tracked_stack = tbl.tracked_stack or {}
 				tbl.tracked_stack[hash] = tbl.tracked_stack[hash] or {}
@@ -302,8 +298,8 @@ return function(META)
 
 				local hash = key:GetHash()
 
-				if not hash then return end
-
+				if hash == nil then return end
+				
 				local stack = tbl.tracked_stack[hash]
 
 				if not stack then return end

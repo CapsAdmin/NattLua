@@ -21,6 +21,10 @@ function META.IsSubsetOf(A--[[#: TAny]], B--[[#: TBaseType]])
 	return true
 end
 
+function META:GetHash()
+	return self
+end
+
 function META:__tostring()
 	return "any"
 end
