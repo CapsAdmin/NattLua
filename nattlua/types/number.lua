@@ -77,8 +77,10 @@ function META:IsLiteral()
 end
 
 function META:CopyLiteralness(num--[[#: TNumber]])
+	if self.ReferenceType == num.ReferenceType and self.Data == num.Data then return self end
+
 	local self = self:Copy()
-	if num.Type ~= "number" then
+	if num.Type ~= "number" or not num:GetMax() then
 		if num:IsReferenceType() then
 			self:SetReferenceType(true)
 		else
@@ -86,7 +88,7 @@ function META:CopyLiteralness(num--[[#: TNumber]])
 				self.Data = nil
 			end
 		end
-	elseif num:GetMax() then
+	else
 		if self:IsSubsetOf(num) then
 			if num:IsReferenceType() then
 				self:SetReferenceType(true)
@@ -95,15 +97,8 @@ function META:CopyLiteralness(num--[[#: TNumber]])
 			self:SetData(num.Data)
 			self:SetMax(num:GetMax())
 		end
-	else
-		if num:IsReferenceType() then
-			self:SetReferenceType(true)
-		else
-			if not num:IsLiteral() then
-				self.Data = nil
-			end
-		end
 	end
+	
 	return self
 end
 

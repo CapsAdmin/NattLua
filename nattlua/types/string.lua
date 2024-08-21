@@ -174,6 +174,7 @@ function META:IsLiteral()
 end
 
 function META:CopyLiteralness(obj--[[#: TBaseType]])
+	if self.ReferenceType == obj.ReferenceType and self.Data == obj.Data then return self end
 	local self = self:Copy()
 	if obj:IsReferenceType() then
 		self:SetReferenceType(true)
