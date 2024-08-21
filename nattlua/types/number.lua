@@ -20,8 +20,27 @@ META:GetSet("Data", nil--[[# as number | nil]])
 	GetLargestNumber = function=(self)>(TNumber | nil, nil | any),
 }]]
 
+function META.New(min, max)
+	return setmetatable(
+		{
+			Data = min,
+			Max = max,
+			Falsy = false,
+			Truthy = true,
+			ReferenceType = false,
+		},
+		META
+	)
+end
+
+local function Number() return META.New() end
+
 local function LNumber(num--[[#: number | nil]])
-	return META.New():SetData(num)
+	return META.New(num)
+end
+
+local function LNumberRange(from--[[#: number]], to--[[#: number]])
+	return META.New(from, to)
 end
 
 function META:GetHash()
@@ -69,7 +88,7 @@ function META:IsLiteral()
 end
 
 function META:Widen(num--[[#: TNumber | nil]])
-	if not num then return META.New() end
+	if not num then return Number() end
 
 	if self.ReferenceType == num.ReferenceType and self.Data == num.Data then
 		return self
@@ -96,8 +115,7 @@ function META:Widen(num--[[#: TNumber | nil]])
 end
 
 function META:Copy()
-	local copy = self.New():SetData(self.Data)
-	copy.Max = self.Max
+	local copy = self.New(self.Data, self.Max)
 	copy:CopyInternalsFrom(self)
 	return copy--[[# as any]] -- TODO: figure out inheritance
 end
@@ -116,13 +134,14 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 	if a.Data and b.Data then
 		local a_min = a.Data--[[# as number]]
 		local b_min = b.Data--[[# as number]]
-		local a_max = a:GetMax() or a_min
-		local b_max = b:GetMax() or b_min
 
 		-- Compare against literals
 		if a.Type == "number" and b.Type == "number" then
 			if a:IsNan() and b:IsNan() then return true end
 		end
+
+		local a_max = a.Max or a_min
+		local b_max = b.Max or b_min
 
 		-- Check if a's range is entirely within b's range
 		if a_min >= b_min and a_max <= b_max then return true end
@@ -192,7 +211,7 @@ function META:GetMin()
 end
 
 function META:UnpackRange()
-	return self:GetMin(), self:GetMax() or self:GetMin()
+	return self.Data, self.Max or self.Data
 end
 
 do
@@ -260,16 +279,10 @@ do
 			return nil
 		end
 
-		local a_val = a.Data
-		local b_val = b.Data
-
-		if a_val and b_val then
-			local a_max = a:GetMax()
-			local b_max = b:GetMax()
-
-			if a_max and b_max then
-				local res_a = compare(b_val, a_val, b_max, operator)
-				local res_b = compare(a_val, b_val, a_max, operator)
+		if a.Data and b.Data then
+			if a.Max and b.Max then
+				local res_a = compare(b.Data, a.Data, b.Max, operator)
+				local res_b = compare(a.Data, b.Data, a.Max, operator)
 
 				if res_b == nil or res_a == nil then return nil end
 
@@ -278,21 +291,21 @@ do
 				if res_a ~= nil and res_a == res_b then return res_a end
 
 				return nil
-			elseif a_max then
-				local res = compare(b_val, a_val, a_max, operator)
+			elseif a.Max then
+				local res = compare(b.Data, a.Data, a.Max, operator)
 
 				if res == nil then return nil end
 
 				return res
-			elseif b_max then
-				local res = compare(a_val, b_val, b_max, operator)
+			elseif b.Max then
+				local res = compare(a.Data, b.Data, b.Max, operator)
 
 				if res == nil then return nil end
 
 				return not res
 			end
 
-			if operators[operator] then return operators[operator](a_val, b_val) end
+			if operators[operator] then return operators[operator](a.Data, b.Data) end
 		else
 			return nil
 		end
@@ -388,18 +401,18 @@ do
 
 		-- if a is a wide "number" then default to -inf..inf so we can narrow it down if b is literal
 		local a_min = a.Data or -math.huge
-		local a_max = a:GetMax() or not a.Data and math.huge or a_min
+		local a_max = a.Max or not a.Data and math.huge or a_min
 		local b_min = b.Data or -math.huge
-		local b_max = b:GetMax() or not b.Data and math.huge or b_min
+		local b_max = b.Max or not b.Data and math.huge or b_min
 		local a_min_res, a_max_res, b_min_res, b_max_res = intersect(a_min, a_max, operator, b_min, b_max)
 		local result_a, result_b
 
 		if a_min_res and a_max_res then
-			result_a = META.New():SetData(a_min_res):SetMax(a_max_res)
+			result_a = LNumberRange(a_min_res, a_max_res)
 		end
 
 		if b_min_res and b_max_res then
-			result_b = META.New():SetData(b_min_res):SetMax(b_max_res)
+			result_b = LNumberRange(b_min_res, b_max_res)
 		end
 
 		return result_a, result_b
@@ -454,27 +467,27 @@ do
 			local lcontract = l:GetContract()--[[# as nil | TNumber]]
 
 			if lcontract then
-				if res > lcontract:GetMax() and lcontract:GetMax() then
+				if res > lcontract.Max and lcontract.Max then
 					return false, type_errors.number_overflow(l, r)
 				end
 
-				local min = lcontract:GetMin()
+				local min = lcontract.Data
 
 				if min and min > res then
 					return false, type_errors.number_underflow(l, r)
 				end
 			end
 
-			local obj = META.New():SetData(res)
+			local obj = LNumber(res)
 
-			if r.Max then obj:SetMax(func(l.Max or l.Data, r.Max)) end
+			if r.Max then obj.Max = func(l.Max or l.Data, r.Max) end
 
-			if l.Max then obj:SetMax(func(l.Max, r.Max or r.Data)) end
+			if l.Max then obj.Max = func(l.Max, r.Max or r.Data) end
 
 			return obj
 		end
 
-		return META.New()
+		return Number()
 	end
 end
 
@@ -493,24 +506,24 @@ do
 
 		if op == "not" then return False() end
 
-		if not x.Data then return META.New() end
+		if not x.Data then return Number() end
 
 		local res = func(x.Data--[[# as number]])
 		local lcontract = x:GetContract()--[[# as nil | TNumber]]
 
 		if lcontract then
-			if res > lcontract:GetMax() and lcontract:GetMax() then
+			if res > lcontract.Max and lcontract.Max then
 				return false, type_errors.number_overflow(x)
 			end
 
-			local min = lcontract:GetMin()
+			local min = lcontract.Data
 
 			if min and min > res then
 				return false, type_errors.number_underflow(x)
 			end
 		end
 
-		local obj = META.New():SetData(res)
+		local obj = LNumber(res)
 
 		if x.Max then obj:SetMax(func(x.Max or x.Data)) end
 
@@ -518,17 +531,6 @@ do
 	end
 end
 
-function META.New()
-	return setmetatable(
-		{
-			Data = nil,
-			Falsy = false,
-			Truthy = true,
-			ReferenceType = false,
-		},
-		META
-	)
-end
 
 local function string_to_integer(str--[[#: string]])
 	if not jit and _VERSION == "Lua 5.1" then
@@ -540,13 +542,9 @@ local function string_to_integer(str--[[#: string]])
 end
 
 return {
-	Number = META.New,
-	LNumberRange = function(from--[[#: number]], to--[[#: number]])
-		return META.New():SetData(from):SetMax(to)
-	end,
-	LNumber = function(num--[[#: number | nil]])
-		return META.New():SetData(num)
-	end,
+	Number = Number,
+	LNumberRange = LNumberRange,
+	LNumber = LNumber,
 	LNumberFromString = function(str--[[#: string]])
 		local num = tonumber(str)
 
@@ -562,7 +560,7 @@ return {
 
 		if not num then return nil end
 
-		return META.New():SetData(num)
+		return LNumber(num)
 	end,
 	TNumber = TNumber,
 }
