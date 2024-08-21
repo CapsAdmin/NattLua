@@ -22,7 +22,7 @@ local function get_largest_number(obj)
 		elseif obj.Type == "number" then
 			local max = obj:GetMax()
 
-			if max and max:IsLiteral() then return max:GetData() end
+			if max then return max end
 		end
 
 		return obj:GetData()
@@ -58,7 +58,6 @@ return {
 		if literal_init and literal_max and literal_step and literal_max < 1000 then
 			for i = literal_init, literal_max, literal_step do
 				self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
-				
 				local brk = false
 				local uncertain_break = self:DidUncertainBreak()
 

@@ -23,7 +23,7 @@ type ^string.reverse = ReturnIfNonLiteral<|analyzer function(str: string): strin
 end|>
 
 analyzer function ^string.rep(str: string, n: number, sep: nil | string)
-	if n.Type == "number" and n:GetMax() and n:GetMax():IsInf() then
+	if n.Type == "number" and n:GetMax() and n:GetMax() > 1000 then
 		return types.String()
 	end
 

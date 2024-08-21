@@ -20,14 +20,16 @@ META:GetSet("Data", nil--[[# as number | nil]])
 	GetLargestNumber = function=(self)>(TNumber | nil, nil | any),
 }]]
 
+local function LNumber(num--[[#: number | nil]])
+	return META.New():SetData(num)
+end
+
 function META:GetHash()
 	if self:IsNan() then return nil end
 
 	if self.Data then
 		if self.Max then
-			local hash = self.Max:GetHash()
-
-			if hash ~= nil and self.Data then
+			if self.Max ~= nil and self.Data then
 				return tostring(self.Data) .. "-" .. tostring(self.Max)
 			end
 		end
@@ -37,9 +39,7 @@ function META:GetHash()
 
 	local upvalue = self:GetUpvalue()
 
-	if upvalue then
-		return upvalue:GetHash()
-	end
+	if upvalue then return upvalue:GetHash() end
 
 	return self
 end
@@ -55,7 +55,7 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 		return a.Data == b.Data
 	end
 
-	if a.Max then if b.Max then if a.Max:Equal(b.Max) then return true end end end
+	if a.Max and a.Max == b.Max then return true end
 
 	if a.Max or b.Max then return false end
 
@@ -70,37 +70,34 @@ end
 
 function META:Widen(num--[[#: TNumber | nil]])
 	if not num then return META.New() end
-	if self.ReferenceType == num.ReferenceType and self.Data == num.Data then return self end
+
+	if self.ReferenceType == num.ReferenceType and self.Data == num.Data then
+		return self
+	end
 
 	local self = self:Copy()
-	if num.Type ~= "number" or not num:GetMax() then
+
+	if num.Type ~= "number" or not num.Max then
 		if num:IsReferenceType() then
 			self:SetReferenceType(true)
 		else
-			if not num:IsLiteral() then
-				self.Data = nil
-			end
+			if not num:IsLiteral() then self.Data = nil end
 		end
 	else
 		if self:IsSubsetOf(num) then
-			if num:IsReferenceType() then
-				self:SetReferenceType(true)
-			end
+			if num:IsReferenceType() then self:SetReferenceType(true) end
 
 			self:SetData(num.Data)
-			self:SetMax(num:GetMax())
+			self:SetMax(num.Max)
 		end
 	end
-	
+
 	return self
 end
 
 function META:Copy()
 	local copy = self.New():SetData(self.Data)
-	local max = self.Max
-
-	if max then copy.Max = max:Copy() end
-
+	copy.Max = self.Max
 	copy:CopyInternalsFrom(self)
 	return copy--[[# as any]] -- TODO: figure out inheritance
 end
@@ -164,31 +161,19 @@ function META:__tostring()
 
 	s = tostring(n)
 
-	if self:GetMax() then s = s .. ".." .. tostring(self:GetMax()) end
+	if self.Max then s = s .. ".." .. tostring(self.Max) end
 
 	if self.Data then return s end
 
 	return "number"
 end
 
-META:GetSet("Max", nil--[[# as TNumber | nil]])
+META:GetSet("Max", nil--[[# as number | nil]])
 
-function META:SetMax(val--[[#: TBaseType | TUnion]])
-	local err
+function META:SetMax(val--[[#: number]])
+	if self.Data == val then return self end
 
-	if val.Type == "union" then
-		val, err = (val--[[# as any]]):GetLargestNumber()
-
-		if not val then return val, err end
-	end
-
-	if val.Type ~= "number" then
-		return false, type_errors.subset(val, "number")
-	end
-
-	if self:Equal(val) then return self end
-
-	if val.Data then
+	if val then
 		self.Max = val
 	else
 		self.Data = nil
@@ -199,7 +184,7 @@ function META:SetMax(val--[[#: TBaseType | TUnion]])
 end
 
 function META:GetMaxLiteral()
-	return self.Max and self.Max.Data or nil
+	return self.Max
 end
 
 function META:GetMinLiteral()
@@ -251,8 +236,7 @@ do
 			local b_val = b.Data
 
 			if b_val then
-				local max = a:GetMax()
-				local max = max and max.Data
+				local max = a.Max
 
 				if max and a_val then
 					if b_val >= a_val and b_val <= max then return nil end
@@ -262,8 +246,7 @@ do
 			end
 
 			if a_val then
-				local max = b:GetMax()
-				local max = max and max.Data
+				local max = b.Max
 
 				if max and b_val then
 					if a_val >= b_val and a_val <= max then return nil end
@@ -412,11 +395,11 @@ do
 		local result_a, result_b
 
 		if a_min_res and a_max_res then
-			result_a = META.New():SetData(a_min_res):SetMax(META.New():SetData(a_max_res))
+			result_a = META.New():SetData(a_min_res):SetMax(a_max_res)
 		end
 
 		if b_min_res and b_max_res then
-			result_b = META.New():SetData(b_min_res):SetMax(META.New():SetData(b_max_res))
+			result_b = META.New():SetData(b_min_res):SetMax(b_max_res)
 		end
 
 		return result_a, result_b
@@ -484,13 +467,9 @@ do
 
 			local obj = META.New():SetData(res)
 
-			if r:GetMax() then
-				obj:SetMax(l.BinaryOperator(l:GetMax() or l, r:GetMax()--[[# as TNumber]], op))
-			end
+			if r.Max then obj:SetMax(func(l.Max or l.Data, r.Max)) end
 
-			if l:GetMax() then
-				obj:SetMax(l.BinaryOperator(l:GetMax()--[[# as TNumber]], r:GetMax() or r, op))
-			end
+			if l.Max then obj:SetMax(func(l.Max, r.Max or r.Data)) end
 
 			return obj
 		end
@@ -533,9 +512,7 @@ do
 
 		local obj = META.New():SetData(res)
 
-		if x:GetMax() then
-			obj:SetMax(x.PrefixOperator(x:GetMax() or x--[[# as TNumber]], op))
-		end
+		if x.Max then obj:SetMax(func(x.Max or x.Data)) end
 
 		return obj
 	end
@@ -565,7 +542,7 @@ end
 return {
 	Number = META.New,
 	LNumberRange = function(from--[[#: number]], to--[[#: number]])
-		return META.New():SetData(from):SetMax(META.New():SetData(to))
+		return META.New():SetData(from):SetMax(to)
 	end,
 	LNumber = function(num--[[#: number | nil]])
 		return META.New():SetData(num)
