@@ -669,17 +669,8 @@ function META:Widen(from)
 		local keyval, reason = self:FindKeyVal(keyval_from.key)
 
 		if keyval then 
-			if keyval_from.key.Type == "table" then
-				keyval.key = keyval.key:Widen(keyval_from.key)
-			else
-				keyval.key = keyval.key:Widen(keyval_from.key)
-			end
-
-			if keyval_from.val.Type == "table" then
-				keyval.val = keyval.val:Widen(keyval_from.val)
-			else
-				keyval.val = keyval.val:Widen(keyval_from.val)
-			end
+			keyval.key = keyval.key:Widen(keyval_from.key)
+			keyval.val = keyval.val:Widen(keyval_from.val)
 		end
 	end
 
