@@ -203,7 +203,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 		{
 			Falsy = false,
 			Truthy = true,
-			Literal = false,
 			ReferenceType = false,
 			Called = false,
 			ExplicitInputSignature = false,

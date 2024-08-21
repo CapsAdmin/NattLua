@@ -78,7 +78,6 @@ do
 	end
 
 	function META:CopyInternalsFrom(obj--[[#: mutable TBaseType]])
-		self:SetLiteral(obj:IsLiteral())
 		self:SetContract(obj:GetContract())
 		self:SetName(obj:GetName())
 		self:SetMetaTable(obj:GetMetaTable())
@@ -127,7 +126,9 @@ do
 end
 
 do
-	META:IsSet("Literal", false--[[# as boolean]])
+	function META:IsLiteral()
+		return false
+	end
 
 	function META:CopyLiteralness()
 		return self

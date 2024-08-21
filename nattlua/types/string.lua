@@ -151,7 +151,6 @@ function META.New(data--[[#: string | nil]])
 			Data = data,
 			Falsy = false,
 			Truthy = true,
-			Literal = false,
 			ReferenceType = false,
 		},
 		META
@@ -205,7 +204,6 @@ return {
 				Data = data,
 				Falsy = false,
 				Truthy = true,
-				Literal = false,
 				ReferenceType = false,
 			},
 			META

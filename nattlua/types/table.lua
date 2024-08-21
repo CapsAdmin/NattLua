@@ -1039,7 +1039,6 @@ function META.New()
 			Contracts = {},
 			Falsy = false,
 			Truthy = false,
-			Literal = false,
 			ReferenceType = false,
 			suppress = false,
 		},

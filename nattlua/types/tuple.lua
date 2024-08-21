@@ -473,7 +473,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			Data = {},
 			Falsy = false,
 			Truthy = false,
-			Literal = false,
 			ReferenceType = false,
 			Unpackable = false,
 			suppress = false,

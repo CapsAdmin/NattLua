@@ -559,7 +559,6 @@ function META.New()
 			Data = nil,
 			Falsy = false,
 			Truthy = true,
-			Literal = false,
 			ReferenceType = false,
 		},
 		META
