@@ -176,7 +176,7 @@ end
 
 local cache--[[#: Map<|string, TBaseType|>]] = {}
 return {
-	String = META.New,
+	String = function(data) return META.New() end,
 	LString = function(str--[[#: string]])
 		return META.New(str):SetLiteral(true)
 	end,
