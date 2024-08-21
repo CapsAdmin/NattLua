@@ -656,7 +656,7 @@ analyze[[
                 tbl:SetMetaTable(meta)
                 analyzer:Assert(analyzer:Call(constructor, types.Tuple({tbl, ...})))
                 analyzer:Assert(tbl:FollowsContract(data))
-                tbl:CopyLiteralness(data)
+                tbl = tbl:CopyLiteralness(data)
             
                 return tbl
             end

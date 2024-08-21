@@ -69,6 +69,7 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 end
 
 function META:CopyLiteralness(num--[[#: TNumber]])
+	local self = self:Copy()
 	if num.Type ~= "number" then
 		if num:IsReferenceType() then
 			self:SetLiteral(true)
@@ -94,6 +95,7 @@ function META:CopyLiteralness(num--[[#: TNumber]])
 			self:SetLiteral(num.Literal)
 		end
 	end
+	return self
 end
 
 function META:Copy()

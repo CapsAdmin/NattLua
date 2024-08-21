@@ -660,41 +660,29 @@ function META:IsNumericallyIndexed()
 end
 
 function META:CopyLiteralness(from)
-	if self.suppress then return end
+	if self:Equal(from) then return self end
+	if from.Type ~= "table" then return self end
+	local self = self:Copy()
 
-	assert(from.Type == "table" or from.Type == "any" or from.Type == "union")
+	for _, keyval_from in ipairs(from:GetData()) do
+		local keyval, reason = self:FindKeyVal(keyval_from.key)
 
-	if from.Type == "any" then return end
-
-	if not from:GetData() then return false end
-
-	if self:Equal(from) then return true end
-
-	if from.Type == "table" then
-		for _, keyval_from in ipairs(from:GetData()) do
-			local keyval, reason = self:FindKeyVal(keyval_from.key)
-
-			if not keyval then return false, reason end
-
+		if keyval then 
 			if keyval_from.key.Type == "table" then
-				self.suppress = true
-				keyval.key:CopyLiteralness(keyval_from.key) -- TODO: never called
-				self.suppress = false
+				keyval.key = keyval.key:CopyLiteralness(keyval_from.key)
 			else
-				keyval.key:CopyLiteralness(keyval_from.key)
+				keyval.key = keyval.key:CopyLiteralness(keyval_from.key)
 			end
 
 			if keyval_from.val.Type == "table" then
-				self.suppress = true
-				keyval.val:CopyLiteralness(keyval_from.val)
-				self.suppress = false
+				keyval.val = keyval.val:CopyLiteralness(keyval_from.val)
 			else
-				keyval.val:CopyLiteralness(keyval_from.val)
+				keyval.val = keyval.val:CopyLiteralness(keyval_from.val)
 			end
 		end
 	end
 
-	return true
+	return self
 end
 
 function META:CoerceUntypedFunctions(from--[[#: TTable]])
@@ -737,6 +725,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	copy.mutations = self.mutations
 	copy:SetCreationScope(self:GetCreationScope())
 	copy.BaseTable = self.BaseTable
+	copy.UniqueID = self.UniqueID
 
 	--[[
 		

@@ -810,7 +810,7 @@ analyze[[
         end,
     }
 
-    attest.equal(operators["-"], _ as function=(number, number)>(number))
+    attest.equal<|operators["-"], function=(number, number)>(number)|>
 
     §assert(#analyzer:GetDiagnostics() == 0)
 ]]
