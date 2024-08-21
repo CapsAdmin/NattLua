@@ -23,7 +23,7 @@ META:GetSet("Data", nil--[[# as number | nil]])
 function META:GetHash()
 	if self:IsNan() then return nil end
 
-	if self.Literal then
+	if self.Data then
 		if self.Max then
 			local hash = self.Max:GetHash()
 
@@ -51,9 +51,9 @@ end
 function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
 
-	if not a.Literal and not b.Literal then return true end
+	if not a.Data and not b.Data then return true end
 
-	if a.Literal and b.Literal then
+	if a.Data and b.Data then
 		if a:IsNan() and b:IsNan() then return true end
 
 		return a.Data == b.Data
@@ -63,7 +63,7 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 
 	if a.Max or b.Max then return false end
 
-	if not a.Literal and not b.Literal then return true end
+	if not a.Data and not b.Data then return true end
 
 	return false
 end
@@ -80,15 +80,15 @@ function META:CopyLiteralness(num--[[#: TNumber]])
 	local self = self:Copy()
 	if num.Type ~= "number" then
 		if num:IsReferenceType() then
-			self:SetLiteral(true)
 			self:SetReferenceType(true)
 		else
-			self:SetLiteral(num:IsLiteral())
+			if not num:IsLiteral() then
+				self.Data = nil
+			end
 		end
 	elseif num:GetMax() then
 		if self:IsSubsetOf(num) then
 			if num:IsReferenceType() then
-				self:SetLiteral(true)
 				self:SetReferenceType(true)
 			end
 
@@ -97,17 +97,18 @@ function META:CopyLiteralness(num--[[#: TNumber]])
 		end
 	else
 		if num:IsReferenceType() then
-			self:SetLiteral(true)
 			self:SetReferenceType(true)
 		else
-			self:SetLiteral(num.Literal)
+			if not num:IsLiteral() then
+				self.Data = nil
+			end
 		end
 	end
 	return self
 end
 
 function META:Copy()
-	local copy = self.New():SetLiteral(self.Literal):SetData(self.Data)
+	local copy = self.New():SetData(self.Data)
 	local max = self.Max
 
 	if max then copy.Max = max:Copy() end
@@ -127,7 +128,7 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 
 	if b.Type ~= "number" then return false, type_errors.subset(a, b) end
 
-	if a.Literal and b.Literal then
+	if a.Data and b.Data then
 		local a_min = a.Data--[[# as number]]
 		local b_min = b.Data--[[# as number]]
 		local a_max = a:GetMaxLiteral() or a_min
@@ -145,10 +146,10 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 	elseif a.Data == nil and b.Data == nil then
 		-- number contains number
 		return true
-	elseif a.Literal and not b.Literal then
+	elseif a.Data and not b.Data then
 		-- 42 subset of number?
 		return true
-	elseif not a.Literal and b.Literal then
+	elseif not a.Data and b.Data then
 		-- number subset of 42 ?
 		return false, type_errors.subset(a, b)
 	end
@@ -177,7 +178,7 @@ function META:__tostring()
 
 	if self:GetMax() then s = s .. ".." .. tostring(self:GetMax()) end
 
-	if self.Literal then return s end
+	if self.Data then return s end
 
 	return "number"
 end
@@ -199,11 +200,10 @@ function META:SetMax(val--[[#: TBaseType | TUnion]])
 
 	if self:Equal(val) then return self end
 
-	if val.Literal then
+	if val.Data then
 		self.Max = val
 	else
-		self:SetLiteral(false)
-		self:SetData(nil)
+		self.Data = nil
 		self.Max = nil
 	end
 
@@ -256,7 +256,7 @@ do
 	end
 
 	function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: "=="]])--[[#: boolean | nil]]
-		if not a.Literal or not b.Literal then return nil end
+		if not a.Data or not b.Data then return nil end
 
 		if operator == "==" then
 			local a_val = a.Data
@@ -424,11 +424,11 @@ do
 		local result_a, result_b
 
 		if a_min_res and a_max_res then
-			result_a = META.New():SetLiteral(true):SetData(a_min_res):SetMax(META.New():SetLiteral(true):SetData(a_max_res))
+			result_a = META.New():SetData(a_min_res):SetMax(META.New():SetData(a_max_res))
 		end
 
 		if b_min_res and b_max_res then
-			result_b = META.New():SetLiteral(true):SetData(b_min_res):SetMax(META.New():SetLiteral(true):SetData(b_max_res))
+			result_b = META.New():SetData(b_min_res):SetMax(META.New():SetData(b_max_res))
 		end
 
 		return result_a, result_b
@@ -478,7 +478,7 @@ do
 	function META.BinaryOperator(l--[[#: TNumber]], r--[[#: TNumber]], op--[[#: keysof<|operators|>]])
 		local func = operators[op]
 
-		if l.Literal and r.Literal then
+		if l.Data and r.Data then
 			local res = func(l.Data--[[# as number]], r.Data--[[# as number]])
 			local lcontract = l:GetContract()--[[# as nil | TNumber]]
 
@@ -494,7 +494,7 @@ do
 				end
 			end
 
-			local obj = META.New():SetLiteral(true):SetData(res)
+			local obj = META.New():SetData(res)
 
 			if r:GetMax() then
 				obj:SetMax(l.BinaryOperator(l:GetMax() or l, r:GetMax()--[[# as TNumber]], op))
@@ -526,7 +526,7 @@ do
 
 		if op == "not" then return False() end
 
-		if not x.Literal then return META.New() end
+		if not x.Data then return META.New() end
 
 		local res = func(x.Data--[[# as number]])
 		local lcontract = x:GetContract()--[[# as nil | TNumber]]
@@ -543,7 +543,7 @@ do
 			end
 		end
 
-		local obj = META.New():SetLiteral(true):SetData(res)
+		local obj = META.New():SetData(res)
 
 		if x:GetMax() then
 			obj:SetMax(x.PrefixOperator(x:GetMax() or x--[[# as TNumber]], op))
@@ -578,10 +578,10 @@ end
 return {
 	Number = META.New,
 	LNumberRange = function(from--[[#: number]], to--[[#: number]])
-		return META.New():SetData(from):SetLiteral(true):SetMax(META.New():SetData(to):SetLiteral(true))
+		return META.New():SetData(from):SetMax(META.New():SetData(to))
 	end,
 	LNumber = function(num--[[#: number | nil]])
-		return META.New():SetData(num):SetLiteral(true)
+		return META.New():SetData(num)
 	end,
 	LNumberFromString = function(str--[[#: string]])
 		local num = tonumber(str)
@@ -598,7 +598,7 @@ return {
 
 		if not num then return nil end
 
-		return META.New():SetData(num):SetLiteral(true)
+		return META.New():SetData(num)
 	end,
 	TNumber = TNumber,
 }
