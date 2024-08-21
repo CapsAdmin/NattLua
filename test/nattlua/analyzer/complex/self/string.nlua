@@ -1,4 +1,4 @@
-local type { String } = require("nattlua.types.string")
+local type { LString } = require("nattlua.types.string")
 
-local str = String("hello world")
+local str = LString("hello world")
 attest.equal(str:GetData(), _  as nil | string)
