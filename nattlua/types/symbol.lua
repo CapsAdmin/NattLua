@@ -15,9 +15,7 @@ end
 
 function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#: string]])
 	if op == "==" then
-		if l.Literal and r.Literal then return l.Data == r.Data end
-
-		return nil
+		return l.Data == r.Data
 	end
 
 	return false, type_errors.binary(op, l, r)
@@ -69,18 +67,21 @@ function META:IsTruthy()
 	return not not self.Data
 end
 
+function META:IsLiteral()
+	return true
+end
+
 function META.New(data--[[#: any]])
 	local self = setmetatable(
 		{
 			Data = data,
 			Falsy = false,
 			Truthy = false,
-			Literal = false,
 			ReferenceType = false,
+			Literal = true,
 		},
 		META
 	)
-	self:SetLiteral(true)
 	return self
 end
 

@@ -49,7 +49,6 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	copy:SetUpvaluePosition(self:GetUpvaluePosition())
 	copy:SetAnalyzerFunction(self:GetAnalyzerFunction())
 	copy:SetScope(self:GetScope())
-	copy:SetLiteral(self:IsLiteral())
 	copy:CopyInternalsFrom(self)
 	copy:SetFunctionBodyNode(self:GetFunctionBodyNode())
 	copy:SetInputIdentifiers(self:GetInputIdentifiers())

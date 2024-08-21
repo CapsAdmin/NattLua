@@ -198,7 +198,6 @@ do
 end
 
 function META:Widen()
-	self:SetLiteral(false)
 	return self
 end
 

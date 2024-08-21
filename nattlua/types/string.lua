@@ -166,6 +166,10 @@ function META.New(data--[[#: string | nil]])
 	return self
 end
 
+function META:Widen()
+	return META.New()
+end
+
 local cache--[[#: Map<|string, TBaseType|>]] = {}
 return {
 	String = META.New,
