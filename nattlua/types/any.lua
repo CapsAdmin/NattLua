@@ -48,6 +48,10 @@ function META.LogicalComparison(l--[[#: TAny]], r--[[#: TBaseType]], op--[[#: st
 	return false, type_errors.binary(op, l, r)
 end
 
+function META:IsLiteral()
+	return false
+end
+
 return {
 	Any = function()
 		return META.New()

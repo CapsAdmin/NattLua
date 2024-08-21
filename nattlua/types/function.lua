@@ -33,6 +33,10 @@ function META:__tostring()
 	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
 end
 
+function META:IsLiteral()
+	return true
+end
+
 function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]])
 	return a.Type == b.Type and
 		a:GetInputSignature():Equal(b:GetInputSignature()) and

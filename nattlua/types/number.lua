@@ -72,6 +72,10 @@ function META:Widen()
 	return META.New()
 end
 
+function META:IsLiteral()
+	return self.Data ~= nil
+end
+
 function META:CopyLiteralness(num--[[#: TNumber]])
 	local self = self:Copy()
 	if num.Type ~= "number" then

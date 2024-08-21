@@ -170,6 +170,10 @@ function META:Widen()
 	return META.New()
 end
 
+function META:IsLiteral()
+	return self.Data ~= nil
+end
+
 local cache--[[#: Map<|string, TBaseType|>]] = {}
 return {
 	String = META.New,

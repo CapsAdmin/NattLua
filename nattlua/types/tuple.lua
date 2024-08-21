@@ -272,6 +272,10 @@ function META:Get(key--[[#: number | TBaseType]])
 	if key:IsLiteral() then return self:GetWithNumber(key:GetData()) end
 end
 
+function META:IsLiteral()
+	return false
+end
+
 function META:GetWithoutExpansion(i--[[#: number]])
 	local val = self:GetData()[i]
 
