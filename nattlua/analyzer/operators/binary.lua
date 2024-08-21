@@ -439,7 +439,9 @@ local function Binary(self, node, l, r, op)
 			local res = metatable_function(self, node, "__eq", l, r)
 
 			if res then
-				if res:IsLiteral() then res:SetData(not res:GetData()) end
+				if res:IsLiteral() then 
+					res = not res:GetData() and True() or False()
+				end
 
 				return res
 			end

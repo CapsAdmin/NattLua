@@ -415,15 +415,13 @@ function META:Slice(start--[[#: number]], stop--[[#: number]])
 	-- TODO: not accurate yet
 	start = start or 1
 	stop = stop or #self:GetData()
-	local copy = self:Copy()
 	local data = {}
 
 	for i = start, stop do
 		table.insert(data, (self:GetData()--[[# as TBaseType]])[i])
 	end
 
-	copy:SetData(data)
-	return copy
+	return self:Copy():SetData(data)
 end
 
 function META:GetFirstValue()

@@ -476,9 +476,9 @@ function META:FindKeyValReverseEqual(key--[[#: TBaseType]])
 end
 
 function META:Insert(val--[[#: TBaseType]])
-	self.size = self.size or LNumber(1)
-	self:Set(self.size:Copy(), val)
-	self.size:SetData(self.size:GetData() + 1)
+	self.size = self.size or 1
+	self:Set(LNumber(self.size), val)
+	self.size = self.size + 1
 end
 
 function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete--[[#: boolean | nil]])
