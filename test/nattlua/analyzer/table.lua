@@ -179,7 +179,7 @@ test("is not literal", function()
 	equal(a:GetLocalOrGlobalValue(LString("a")):IsLiteral(), false)
 	a:PopAnalyzerEnvironment()
 	local a = analyze[[
-        local type a = {a = 1, b = 2, c = {c = boolean}}
+        local type a = {a = 1, b = 2, c = {c = any}}
     ]]
 	a:PushAnalyzerEnvironment("typesystem")
 	equal(a:GetLocalOrGlobalValue(LString("a")):IsLiteral(), false)

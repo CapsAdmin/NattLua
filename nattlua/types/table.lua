@@ -663,7 +663,7 @@ function META:CopyLiteralness(from)
 	if self:Equal(from) then return self end
 	if from.Type ~= "table" then return self end
 	local self = self:Copy()
-
+	
 	for _, keyval_from in ipairs(from:GetData()) do
 		local keyval, reason = self:FindKeyVal(keyval_from.key)
 
@@ -795,11 +795,6 @@ function META:IsLiteral()
 			v.val.Type ~= "function" and
 			v.key.Type ~= "function"
 		then
-			if v.key.Type == "union" then
-				return false,
-				type_errors.because(type_errors.context("the key", type_errors.not_literal(v.val)), "it's a union")
-			end
-
 			self.suppress = true
 			local ok, reason = v.key:IsLiteral()
 			self.suppress = false
@@ -807,11 +802,6 @@ function META:IsLiteral()
 			if not ok then
 				return false,
 				type_errors.because(type_errors.context("the key", type_errors.not_literal(v.key)), reason)
-			end
-
-			if v.val.Type == "union" then
-				return false,
-				type_errors.because(type_errors.context("the value", type_errors.not_literal(v.val)), "it's a union")
 			end
 
 			self.suppress = true

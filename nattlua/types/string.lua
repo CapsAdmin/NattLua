@@ -21,15 +21,15 @@ function META.Equal(a--[[#: TString]], b--[[#: TBaseType]])
 
 	local b = b--[[# as TString]]
 
-	if a.Literal and b.Literal then return a.Data == b.Data end
+	if a.Data and b.Data then return a.Data == b.Data end
 
-	if not a.Literal and not b.Literal then return true end
+	if not a.Data and not b.Data then return true end
 
 	return false
 end
 
 function META:GetHash()
-	if self.Literal then return self.Data end
+	if self.Data then return self.Data end
 
 	local upvalue = self:GetUpvalue()
 
@@ -45,7 +45,7 @@ function META:GetHash()
 end
 
 function META:Copy()
-	local copy = self.New(self.Data):SetLiteral(self.Literal)
+	local copy = self.New(self.Data)
 	copy:SetPatternContract(self:GetPatternContract())
 	copy:CopyInternalsFrom(self)
 	return copy
@@ -62,22 +62,22 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 
 	local B = B--[[# as TString]]
 
-	if A.Literal and B.Literal and A.Data == B.Data then -- "A" subsetof "B"
+	if A.Data and B.Data and A.Data == B.Data then -- "A" subsetof "B"
 		return true
 	end
 
-	if A.Literal and not B.Literal then -- "A" subsetof string
+	if A.Data and not B.Data then -- "A" subsetof string
 		return true
 	end
 
-	if not A.Literal and not B.Literal then -- string subsetof string
+	if not A.Data and not B.Data then -- string subsetof string
 		return true
 	end
 
 	if B.PatternContract then
 		local str = A.Data
 
-		if not str then -- TODO: this is not correct, it should be .Literal but I have not yet decided this behavior yet
+		if not str then -- TODO: this is not correct, it should be .Data but I have not yet decided this behavior yet
 			return false, type_errors.string_pattern_type_mismatch(A)
 		end
 
@@ -88,7 +88,7 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 		return true
 	end
 
-	if A.Literal and B.Literal then
+	if A.Data and B.Data then
 		return false, type_errors.subset(A, B)
 	end
 
@@ -98,7 +98,7 @@ end
 function META:__tostring()
 	if self.PatternContract then return "$\"" .. self.PatternContract .. "\"" end
 
-	if self.Literal then
+	if self.Data then
 		local str = self.Data
 
 		if str then return "\"" .. str .. "\"" end
@@ -109,23 +109,23 @@ end
 
 function META.LogicalComparison(a--[[#: TString]], b--[[#: TBaseType]], op--[[#: string]])
 	if op == ">" then
-		if a.Literal and b.Literal then return a.Data > b.Data end
+		if a.Data and b.Data then return a.Data > b.Data end
 
 		return nil
 	elseif op == "<" then
-		if a.Literal and b.Literal then return a.Data < b.Data end
+		if a.Data and b.Data then return a.Data < b.Data end
 
 		return nil
 	elseif op == "<=" then
-		if a.Literal and b.Literal then return a.Data <= b.Data end
+		if a.Data and b.Data then return a.Data <= b.Data end
 
 		return nil
 	elseif op == ">=" then
-		if a.Literal and b.Literal then return a.Data >= b.Data end
+		if a.Data and b.Data then return a.Data >= b.Data end
 
 		return nil
 	elseif op == "==" then
-		if a.Literal and b.Literal then return a.Data == b.Data end
+		if a.Data and b.Data then return a.Data == b.Data end
 
 		return nil
 	end
@@ -177,10 +177,11 @@ end
 function META:CopyLiteralness(obj--[[#: TBaseType]])
 	local self = self:Copy()
 	if obj:IsReferenceType() then
-		self:SetLiteral(true)
 		self:SetReferenceType(true)
 	else
-		self:SetLiteral(obj:IsLiteral())
+		if not obj:IsLiteral() then
+			self.Data = nil
+		end
 	end
 	return self
 end
@@ -189,12 +190,12 @@ local cache--[[#: Map<|string, TBaseType|>]] = {}
 return {
 	String = function(data) return META.New() end,
 	LString = function(str--[[#: string]])
-		return META.New(str):SetLiteral(true)
+		return META.New(str)
 	end,
 	ConstString = function(str--[[#: string]])
 		if cache[str] then return cache[str] end
 
-		local obj = META.New(str):SetLiteral(true)
+		local obj = META.New(str)
 		cache[str] = obj
 		return obj
 	end,
@@ -208,9 +209,9 @@ return {
 				ReferenceType = false,
 			},
 			META
-		):SetLiteral(true)
+		)
 	end,
 	NodeToString = function(node--[[#: expression["value"] ]], is_local--[[#: boolean | nil]])
-		return META.New(node.value.value):SetLiteral(true)
+		return META.New(node.value.value)
 	end,
 }
