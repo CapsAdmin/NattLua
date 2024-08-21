@@ -116,8 +116,8 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 	if a.Data and b.Data then
 		local a_min = a.Data--[[# as number]]
 		local b_min = b.Data--[[# as number]]
-		local a_max = a:GetMaxLiteral() or a_min
-		local b_max = b:GetMaxLiteral() or b_min
+		local a_max = a:GetMax() or a_min
+		local b_max = b:GetMax() or b_min
 
 		-- Compare against literals
 		if a.Type == "number" and b.Type == "number" then
@@ -183,16 +183,16 @@ function META:SetMax(val--[[#: number]])
 	return self
 end
 
-function META:GetMaxLiteral()
+function META:GetMax()
 	return self.Max
 end
 
-function META:GetMinLiteral()
+function META:GetMin()
 	return self.Data
 end
 
 function META:UnpackRange()
-	return self:GetMinLiteral(), self:GetMaxLiteral() or self:GetMinLiteral()
+	return self:GetMin(), self:GetMax() or self:GetMin()
 end
 
 do
@@ -264,8 +264,8 @@ do
 		local b_val = b.Data
 
 		if a_val and b_val then
-			local a_max = a:GetMaxLiteral()
-			local b_max = b:GetMaxLiteral()
+			local a_max = a:GetMax()
+			local b_max = b:GetMax()
 
 			if a_max and b_max then
 				local res_a = compare(b_val, a_val, b_max, operator)
@@ -388,9 +388,9 @@ do
 
 		-- if a is a wide "number" then default to -inf..inf so we can narrow it down if b is literal
 		local a_min = a.Data or -math.huge
-		local a_max = a:GetMaxLiteral() or not a.Data and math.huge or a_min
+		local a_max = a:GetMax() or not a.Data and math.huge or a_min
 		local b_min = b.Data or -math.huge
-		local b_max = b:GetMaxLiteral() or not b.Data and math.huge or b_min
+		local b_max = b:GetMax() or not b.Data and math.huge or b_min
 		local a_min_res, a_max_res, b_min_res, b_max_res = intersect(a_min, a_max, operator, b_min, b_max)
 		local result_a, result_b
 
@@ -454,11 +454,11 @@ do
 			local lcontract = l:GetContract()--[[# as nil | TNumber]]
 
 			if lcontract then
-				if res > lcontract:GetMaxLiteral() and lcontract:GetMaxLiteral() then
+				if res > lcontract:GetMax() and lcontract:GetMax() then
 					return false, type_errors.number_overflow(l, r)
 				end
 
-				local min = lcontract:GetMinLiteral()
+				local min = lcontract:GetMin()
 
 				if min and min > res then
 					return false, type_errors.number_underflow(l, r)
@@ -499,11 +499,11 @@ do
 		local lcontract = x:GetContract()--[[# as nil | TNumber]]
 
 		if lcontract then
-			if res > lcontract:GetMaxLiteral() and lcontract:GetMaxLiteral() then
+			if res > lcontract:GetMax() and lcontract:GetMax() then
 				return false, type_errors.number_overflow(x)
 			end
 
-			local min = lcontract:GetMinLiteral()
+			local min = lcontract:GetMin()
 
 			if min and min > res then
 				return false, type_errors.number_underflow(x)

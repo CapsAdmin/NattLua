@@ -618,9 +618,9 @@ function META:Get(key--[[#: TBaseType]])
 		if not found_non_literal then return union end
 	end
 
-	if key.Type == "number" and key:GetMinLiteral() and key:GetMaxLiteral() then
+	if key.Type == "number" and key:GetMin() and key:GetMax() then
 		local union = Union({})
-		local min, max = key:GetMinLiteral(), key:GetMaxLiteral()
+		local min, max = key:GetMin(), key:GetMax()
 		local len = math.abs(min - max)
 
 		if len > 100 then return Any() end
@@ -662,13 +662,15 @@ end
 function META:Widen(from)
 	if not from then return self end -- TODO
 	if self:Equal(from) then return self end
+
 	if from.Type ~= "table" then return self end
+
 	local self = self:Copy()
-	
+
 	for _, keyval_from in ipairs(from:GetData()) do
 		local keyval, reason = self:FindKeyVal(keyval_from.key)
 
-		if keyval then 
+		if keyval then
 			keyval.key = keyval.key:Widen(keyval_from.key)
 			keyval.val = keyval.val:Widen(keyval_from.val)
 		end
@@ -909,8 +911,10 @@ do
 
 		if hash == nil then
 			hash = key:GetUpvalue() and key:GetUpvalue():GetKey()
+
 			if not hash then return end
-			return 
+
+			return
 		end
 
 		initialize_table_mutation_tracker(self, scope, key, hash)
@@ -922,8 +926,10 @@ do
 
 		if hash == nil then
 			hash = key:GetUpvalue() and key:GetUpvalue():GetKey()
+
 			if not hash then return end
-			return 
+
+			return
 		end
 
 		initialize_table_mutation_tracker(self, scope, key, hash)
@@ -984,7 +990,6 @@ do
 		return out
 	end
 end
-
 
 do
 	--[[#type TTable.disabled_unique_id = number | nil]]

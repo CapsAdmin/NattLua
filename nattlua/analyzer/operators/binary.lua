@@ -113,7 +113,7 @@ local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | ni
 end
 
 local function number_comparison(self, l, r, op, invert)
-	if not l:GetMaxLiteral() and not r:GetMaxLiteral() then return end
+	if not l:GetMax() and not r:GetMax() then return end
 
 	local nl, nr = l.IntersectComparison(l, r, op, invert)
 
@@ -241,7 +241,7 @@ local function Binary(self, node, l, r, op)
 				if l:IsLiteral() and r:IsLiteral() then
 					return LNumberRange(l:GetData(), r:GetData())
 				end
-				
+
 				return l:Copy()
 			end
 		elseif op == "*" then
@@ -439,7 +439,7 @@ local function Binary(self, node, l, r, op)
 			local res = metatable_function(self, node, "__eq", l, r)
 
 			if res then
-				if res:IsLiteral() then 
+				if res:IsLiteral() then
 					res = not res:GetData() and True() or False()
 				end
 
