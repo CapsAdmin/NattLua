@@ -129,14 +129,7 @@ end
 do
 	META:IsSet("Literal", false--[[# as boolean]])
 
-	function META:CopyLiteralness(obj--[[#: TBaseType]])
-		local self = self:Copy()
-		if obj:IsReferenceType() then
-			self:SetLiteral(true)
-			self:SetReferenceType(true)
-		else
-			self:SetLiteral(obj:IsLiteral())
-		end
+	function META:CopyLiteralness()
 		return self
 	end
 end

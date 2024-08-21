@@ -174,6 +174,17 @@ function META:IsLiteral()
 	return self.Data ~= nil
 end
 
+function META:CopyLiteralness(obj--[[#: TBaseType]])
+	local self = self:Copy()
+	if obj:IsReferenceType() then
+		self:SetLiteral(true)
+		self:SetReferenceType(true)
+	else
+		self:SetLiteral(obj:IsLiteral())
+	end
+	return self
+end
+
 local cache--[[#: Map<|string, TBaseType|>]] = {}
 return {
 	String = function(data) return META.New() end,
