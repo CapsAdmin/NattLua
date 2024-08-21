@@ -659,7 +659,8 @@ function META:IsNumericallyIndexed()
 	return true
 end
 
-function META:CopyLiteralness(from)
+function META:Widen(from)
+	if not from then return self end -- TODO
 	if self:Equal(from) then return self end
 	if from.Type ~= "table" then return self end
 	local self = self:Copy()
@@ -669,15 +670,15 @@ function META:CopyLiteralness(from)
 
 		if keyval then 
 			if keyval_from.key.Type == "table" then
-				keyval.key = keyval.key:CopyLiteralness(keyval_from.key)
+				keyval.key = keyval.key:Widen(keyval_from.key)
 			else
-				keyval.key = keyval.key:CopyLiteralness(keyval_from.key)
+				keyval.key = keyval.key:Widen(keyval_from.key)
 			end
 
 			if keyval_from.val.Type == "table" then
-				keyval.val = keyval.val:CopyLiteralness(keyval_from.val)
+				keyval.val = keyval.val:Widen(keyval_from.val)
 			else
-				keyval.val = keyval.val:CopyLiteralness(keyval_from.val)
+				keyval.val = keyval.val:Widen(keyval_from.val)
 			end
 		end
 	end

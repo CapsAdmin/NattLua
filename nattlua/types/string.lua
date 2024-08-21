@@ -165,15 +165,12 @@ function META.New(data--[[#: string | nil]])
 	return self
 end
 
-function META:Widen()
-	return META.New()
-end
-
 function META:IsLiteral()
 	return self.Data ~= nil
 end
 
-function META:CopyLiteralness(obj--[[#: TBaseType]])
+function META:Widen(obj--[[#: TBaseType | nil]])
+	if not obj then return META.New() end
 	if self.ReferenceType == obj.ReferenceType and self.Data == obj.Data then return self end
 	local self = self:Copy()
 	if obj:IsReferenceType() then

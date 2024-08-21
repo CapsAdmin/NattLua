@@ -130,7 +130,7 @@ do
 		return false
 	end
 
-	function META:CopyLiteralness()
+	function META:Widen()
 		return self
 	end
 end
@@ -189,10 +189,6 @@ do
 
 		return self.MetaTable
 	end
-end
-
-function META:Widen()
-	return self
 end
 
 function META:GetFirstValue()

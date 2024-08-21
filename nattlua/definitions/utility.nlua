@@ -21,7 +21,7 @@ analyzer function NonLiteral(obj: any)
 	end
 
 	if obj.Type == "number" or obj.Type == "string" then
-		return obj:Copy():Widen()
+		return obj:Widen()
 	end
 
 	return obj
@@ -40,7 +40,7 @@ function ErrorReturn<|...: ...any|>
 end
 
 analyzer function Widen(val: any)
-	return val:Copy():Widen()
+	return val:Widen()
 end
 
 analyzer function return_type(func: Function, i: number | nil)

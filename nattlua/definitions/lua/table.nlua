@@ -68,7 +68,7 @@ analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 		if max then max:SetData(max:GetData() + 1) end
 	end
 
-	if analyzer:IsInUncertainLoop() then pos = pos:Copy():Widen() end
+	if analyzer:IsInUncertainLoop() then pos = pos:Widen() end
 
 	assert(type(pos) ~= "number")
 	analyzer:NewIndexOperator(tbl, pos, val)

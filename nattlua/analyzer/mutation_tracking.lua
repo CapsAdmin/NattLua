@@ -57,7 +57,7 @@ return function(META)
 			if val.dont_widen or scope:Contains(tbl:GetCreationScope()) then
 				val = val:Copy()
 			else
-				val = val:Copy():Widen()
+				val = val:Widen()
 			end
 		end
 
@@ -75,7 +75,7 @@ return function(META)
 			if val.dont_widen or scope:Contains(upvalue:GetScope()) then
 				val = val:Copy()
 			else
-				val = val:Copy():Widen()
+				val = val:Widen()
 			end
 		end
 

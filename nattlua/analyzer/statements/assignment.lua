@@ -145,7 +145,7 @@ return {
 					-- local a: number = 1
 					-- becomes
 					-- local a: number = number
-					val = val:CopyLiteralness(contract)
+					val = val:Widen(contract)
 
 					if val.Type == "table" and contract.Type == "table" then
 						-- coerce any untyped functions based on contract
@@ -201,7 +201,7 @@ return {
 							end
 
 							if contract then
-								val = val:CopyLiteralness(contract)
+								val = val:Widen(contract)
 								self:Assert(check_type_against_contract(val, contract))
 								val:SetContract(contract)
 							end

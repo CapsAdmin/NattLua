@@ -119,7 +119,7 @@ return {
 					end
 				end
 
-				if max.Type == "any" then init = init:Copy():Widen() end
+				if max.Type == "any" then init = init:Widen() end
 			end
 
 			self:PushUncertainLoop(true)

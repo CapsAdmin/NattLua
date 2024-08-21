@@ -495,7 +495,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 	if meta.Type == "table" then
 		if meta.Self then
 			analyzer:Assert(tbl:FollowsContract(meta.Self))
-			tbl = tbl:CopyLiteralness(meta.Self)
+			tbl = tbl:Widen(meta.Self)
 			tbl:SetContract(meta.Self)
 			-- clear mutations so that when looking up values in the table they won't return their initial value
 			tbl:ClearMutations()

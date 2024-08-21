@@ -68,15 +68,12 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	return false
 end
 
-function META:Widen()
-	return META.New()
-end
-
 function META:IsLiteral()
 	return self.Data ~= nil
 end
 
-function META:CopyLiteralness(num--[[#: TNumber]])
+function META:Widen(num--[[#: TNumber | nil]])
+	if not num then return META.New() end
 	if self.ReferenceType == num.ReferenceType and self.Data == num.Data then return self end
 
 	local self = self:Copy()
