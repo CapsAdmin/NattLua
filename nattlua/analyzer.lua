@@ -21,7 +21,7 @@ do
 	local AnalyzeNumericFor = require("nattlua.analyzer.statements.numeric_for").AnalyzeNumericFor
 	local AnalyzeWhile = require("nattlua.analyzer.statements.while").AnalyzeWhile
 	local AnalyzeAssignment = require("nattlua.analyzer.statements.assignment").AnalyzeAssignment
-	local NodeToString = require("nattlua.types.string").NodeToString
+	local ConstString = require("nattlua.types.string").ConstString
 	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
 
 	function META:AnalyzeStatement(node)
@@ -58,7 +58,7 @@ do
 				self:NewIndexOperator(obj, key, val)
 			else
 				self.current_expression = key
-				local key = NodeToString(key)
+				local key = ConstString(key.value.value)
 				local val = AnalyzeFunction(self, node)
 				self:SetLocalOrGlobalValue(key, val)
 			end

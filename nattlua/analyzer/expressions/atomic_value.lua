@@ -1,5 +1,5 @@
 local runtime_syntax = require("nattlua.syntax.runtime")
-local NodeToString = require("nattlua.types.string").NodeToString
+local ConstString = require("nattlua.types.string").ConstString
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberFromString = require("nattlua.types.number").LNumberFromString
 local Any = require("nattlua.types.any").Any
@@ -15,7 +15,7 @@ local type_errors = require("nattlua.types.error_messages")
 
 local function lookup_value(self, node)
 	local errors = {}
-	local key = NodeToString(node)
+	local key = ConstString(node.value.value)
 	local obj, err = self:GetLocalOrGlobalValue(key)
 
 	if self:IsTypesystem() then
@@ -128,7 +128,7 @@ return {
 		elseif type == "string" then
 			return LString(node.value.string_value)
 		elseif type == "letter" then
-			return LString(value)
+			return ConstString(value)
 		end
 
 		self:FatalError("unhandled value type " .. type .. " " .. node:Render())

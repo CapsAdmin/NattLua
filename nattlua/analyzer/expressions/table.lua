@@ -3,6 +3,7 @@ local ipairs = ipairs
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.number").LNumberRange
 local LString = require("nattlua.types.string").LString
+local ConstString = require("nattlua.types.string").ConstString
 local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
 local table = _G.table
@@ -47,7 +48,7 @@ return {
 
 		for i, node in ipairs(tree.children) do
 			if node.kind == "table_key_value" then
-				local key = LString(node.tokens["identifier"].value)
+				local key = ConstString(node.tokens["identifier"].value)
 
 				if node.type_expression then
 					self:PushAnalyzerEnvironment("typesystem")

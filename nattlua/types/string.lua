@@ -177,7 +177,4 @@ return {
 			META
 		)
 	end,
-	NodeToString = function(node--[[#: expression["value"] ]], is_local--[[#: boolean | nil]])
-		return META.New(node.value.value)
-	end,
 }

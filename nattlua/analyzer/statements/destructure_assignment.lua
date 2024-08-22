@@ -1,6 +1,6 @@
 local tostring = tostring
 local ipairs = ipairs
-local NodeToString = require("nattlua.types.string").NodeToString
+local ConstString = require("nattlua.types.string").ConstString
 local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
 return {
@@ -20,12 +20,12 @@ return {
 			if statement.kind == "local_destructure_assignment" then
 				self:CreateLocalValue(statement.default.value.value, obj):SetNode(statement.default)
 			elseif statement.kind == "destructure_assignment" then
-				self:SetLocalOrGlobalValue(NodeToString(statement.default), obj)
+				self:SetLocalOrGlobalValue(ConstString(statement.default.value.value), obj)
 			end
 		end
 
 		for _, node in ipairs(statement.left) do
-			local obj = node.value and obj:Get(NodeToString(node))
+			local obj = node.value and obj:Get(ConstString(node.value.value))
 
 			if not obj then
 				if self:IsRuntime() then
@@ -38,7 +38,7 @@ return {
 			if statement.kind == "local_destructure_assignment" then
 				self:CreateLocalValue(node.value.value, obj):SetNode(node.value)
 			elseif statement.kind == "destructure_assignment" then
-				self:SetLocalOrGlobalValue(NodeToString(node), obj)
+				self:SetLocalOrGlobalValue(ConstString(node.value.value), obj)
 			end
 		end
 	end,

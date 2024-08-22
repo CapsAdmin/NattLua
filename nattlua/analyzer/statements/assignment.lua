@@ -1,7 +1,7 @@
 local ipairs = ipairs
 local tostring = tostring
 local table = _G.table
-local NodeToString = require("nattlua.types.string").NodeToString
+local ConstString = require("nattlua.types.string").ConstString
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 
@@ -43,7 +43,7 @@ return {
 		for left_pos, exp_key in ipairs(statement.left) do
 			if exp_key.kind == "value" then
 				-- local foo, bar = *
-				left[left_pos] = NodeToString(exp_key, true)
+				left[left_pos] = ConstString(exp_key.value.value)
 			elseif exp_key.kind == "postfix_expression_index" then
 				-- foo[bar] = *
 				left[left_pos] = self:AnalyzeExpression(exp_key.expression)
