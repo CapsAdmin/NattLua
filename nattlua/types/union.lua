@@ -203,7 +203,7 @@ function META:GetAtIndex(i--[[#: number]])
 	if not val then return false, errors end
 
 	if val.Type == "union" and val:GetCardinality() == 1 then
-		return val:GetData()[1]
+		return val.Data[1]
 	end
 
 	return val
@@ -311,7 +311,7 @@ end
 function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 	local errors = {}
 
-	for _, obj in ipairs(self:GetData()) do
+	for _, obj in ipairs(self.Data) do
 		local ok, reason = target:IsSubsetOf(obj)
 
 		if ok then return true end
@@ -401,7 +401,7 @@ function META:IsFalsy()
 end
 
 function META:IsLiteral()
-	for _, obj in ipairs(self:GetData()) do
+	for _, obj in ipairs(self.Data) do
 		if not obj:IsLiteral() then return false end
 	end
 
@@ -428,7 +428,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 end
 
 function META:Simplify()
-	return #self:GetData() == 1 and self:GetData()[1] or self
+	return #self.Data == 1 and self.Data[1] or self
 end
 
 return {
