@@ -25,9 +25,7 @@ function META:GetHash()
 
 	local upvalue = self:GetUpvalue()
 
-	if upvalue then
-		return upvalue:GetHash()
-	end
+	if upvalue then return upvalue:GetHash() end
 
 	return self
 end
@@ -55,8 +53,7 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 	end
 
 	if A.Data and not B.Data then -- "A" subsetof string
-		return true
-	end
+	return true end
 
 	if B.PatternContract then
 		local str = A.Data
@@ -78,16 +75,13 @@ end
 function META:__tostring()
 	if self.PatternContract then return "$\"" .. self.PatternContract .. "\"" end
 
-	if self.Data then
-		return "\"" .. self.Data .. "\""
-	end
+	if self.Data then return "\"" .. self.Data .. "\"" end
 
 	return "string"
 end
 
 function META.LogicalComparison(a--[[#: TString]], b--[[#: TBaseType]], op--[[#: string]])
 	if not a.Data or not b.Data then return nil end -- undefined comparison, nil is the same as true | false
-
 	if op == ">" then
 		return a.Data > b.Data
 	elseif op == "<" then
@@ -141,21 +135,27 @@ end
 
 function META:Widen(obj--[[#: TBaseType | nil]])
 	if not obj then return META.New() end
-	if self.ReferenceType == obj.ReferenceType and self.Data == obj.Data then return self end
+
+	if self.ReferenceType == obj.ReferenceType and self.Data == obj.Data then
+		return self
+	end
+
 	local self = self:Copy()
+
 	if obj:IsReferenceType() then
 		self:SetReferenceType(true)
 	else
-		if not obj:IsLiteral() then
-			self.Data = nil
-		end
+		if not obj:IsLiteral() then self.Data = nil end
 	end
+
 	return self
 end
 
 local cache--[[#: Map<|string, TBaseType|>]] = {}
 return {
-	String = function(data) return META.New() end,
+	String = function(data)
+		return META.New()
+	end,
 	LString = function(str--[[#: string]])
 		return META.New(str)
 	end,
