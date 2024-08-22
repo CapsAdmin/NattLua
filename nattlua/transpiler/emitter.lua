@@ -508,6 +508,8 @@ function META:EmitExpression(node--[[#: Node]])
 	local emitted_invalid_code = false
 	local newlines = self:IsLineBreaking()
 
+	if node.tokens["^"] then self:EmitToken(node.tokens["^"]) end
+
 	if node.tokens["("] then
 		for i = #node.tokens["("], 1, -1 do
 			self:EmitToken(node.tokens["("][i])
@@ -1665,59 +1667,13 @@ do -- types
 
 		if node.tokens["^"] then self:EmitToken(node.tokens["^"]) end
 
-		self:EmitToken(node.tokens["arguments("])
-
-		for i, exp in ipairs(node.identifiers) do
-			if not self.config.type_annotations and node.statements then
-				if exp.identifier then
-					self:EmitToken(exp.identifier)
-				else
-					self:EmitTypeExpression(exp)
-				end
-			else
-				if exp.identifier then
-					self:EmitToken(exp.identifier)
-					self:EmitToken(exp.tokens[":"])
-					self:Whitespace(" ")
-				end
-
-				self:EmitTypeExpression(exp)
-			end
-
-			if i ~= #node.identifiers then
-				if exp.tokens[","] then
-					self:EmitToken(exp.tokens[","])
-					self:Whitespace(" ")
-				end
-			end
-		end
-
-		self:EmitToken(node.tokens["arguments)"])
-
-		if node.tokens[":"] then
-			self:EmitToken(node.tokens[":"])
-			self:Whitespace(" ")
-
-			for i, exp in ipairs(node.return_types) do
-				self:EmitTypeExpression(exp)
-
-				if i ~= #node.return_types then
-					self:EmitToken(exp.tokens[","])
-					self:Whitespace(" ")
-				end
-			end
-		end
-
-		if node.statements then
-			self:Whitespace("\n")
-			self:EmitBlock(node.statements)
-			self:Whitespace("\n")
-			self:Whitespace("\t")
-			self:EmitToken(node.tokens["end"])
-		end
+		self:EmitFunctionBody(node)
+		self:EmitToken(node.tokens["end"])
 	end
 
 	function META:EmitTypeExpression(node--[[#: Node]])
+		if node.tokens["^"] then self:EmitToken(node.tokens["^"]) end
+
 		if node.tokens["("] then
 			for i = #node.tokens["("], 1, -1 do
 				self:EmitToken(node.tokens["("][i])

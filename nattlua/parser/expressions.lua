@@ -397,8 +397,7 @@ do -- typesystem
 		local force_upvalue
 
 		if self:IsTokenValue("^") then
-			force_upvalue = true
-			self:Advance(1)
+			force_upvalue = self:ExpectTokenValue("^")
 		end
 
 		node = self:ParseParenthesisOrTupleTypeExpression() or
@@ -425,7 +424,11 @@ do -- typesystem
 				)
 			then
 				first.standalone_letter = node
-				first.force_upvalue = force_upvalue
+
+				if force_upvalue then
+					first.force_upvalue = true
+					first.tokens["^"] = force_upvalue
+				end
 			end
 		end
 
