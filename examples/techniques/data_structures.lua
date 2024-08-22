@@ -327,8 +327,6 @@ function HashTableType(key_type, val_type)
 
 	function META:Set(key, val)
 		local hash = self:Hash(key)
-
-		
 		local index = hash % #self.array
 		local keyval_array = self.array:Get(index)
 

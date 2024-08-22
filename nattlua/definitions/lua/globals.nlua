@@ -355,71 +355,77 @@ end
 
 analyzer function type_error(msg: LiteralString, level: number | nil)
 	if analyzer.processing_deferred_calls then return end
+
 	analyzer:ThrowError(msg:GetData(), level and level:GetData() or nil)
 end
 
-type pcall = ReturnIfNonLiteral<|analyzer function(callable: Function, ...: ...any): (boolean, ...any)
-	local diagnostics_index = #analyzer:GetDiagnostics()
-	analyzer:PushProtectedCall()
-	local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
-	analyzer:PopProtectedCall()
-	local diagnostics = analyzer:GetDiagnostics()
+type pcall = ReturnIfNonLiteral<|
+	analyzer function(callable: Function, ...: ...any): (boolean,
+	...any)
+		local diagnostics_index = #analyzer:GetDiagnostics()
+		analyzer:PushProtectedCall()
+		local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
+		analyzer:PopProtectedCall()
+		local diagnostics = analyzer:GetDiagnostics()
 
-	do
-		local errors = {}
+		do
+			local errors = {}
 
-		for i = math.max(diagnostics_index, 1), #diagnostics do
-			local d = diagnostics[i]
+			for i = math.max(diagnostics_index, 1), #diagnostics do
+				local d = diagnostics[i]
 
-			if d.severity == "error" then
-				return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
+				if d.severity == "error" then
+					return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
+				end
 			end
 		end
+
+		if
+			callable.Type ~= "function" or
+			not callable:GetFunctionBodyNode()
+			or
+			not callable:GetFunctionBodyNode()
+		then
+			return types.Boolean(), tuple
+		end
+
+		return true, tuple
 	end
+|>
+type xpcall = ReturnIfNonLiteral<|
+	analyzer function(callable: Function, error_cb: function=(any)>(), ...: ...any): (boolean,
+	...any)
+		local diagnostics_index = #analyzer:GetDiagnostics()
+		analyzer:PushProtectedCall()
+		local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
+		analyzer:PopProtectedCall()
+		local diagnostics = analyzer:GetDiagnostics()
 
-	if
-		callable.Type ~= "function" or
-		not callable:GetFunctionBodyNode()
-		or
-		not callable:GetFunctionBodyNode()
-	then
-		return types.Boolean(), tuple
-	end
+		do
+			local errors = {}
 
-	return true, tuple
-end|>
+			for i = math.max(diagnostics_index, 1), #diagnostics do
+				local d = diagnostics[i]
 
-type xpcall = ReturnIfNonLiteral<|analyzer function(callable: Function, error_cb: function=(any)>(), ...: ...any): (boolean, ...any)
-	local diagnostics_index = #analyzer:GetDiagnostics()
-	analyzer:PushProtectedCall()
-	local tuple = analyzer:Assert(analyzer:Call(callable, types.Tuple({...})))
-	analyzer:PopProtectedCall()
-	local diagnostics = analyzer:GetDiagnostics()
-
-	do
-		local errors = {}
-
-		for i = math.max(diagnostics_index, 1), #diagnostics do
-			local d = diagnostics[i]
-
-			if d.severity == "error" then
-				analyzer:Assert(analyzer:Call(callable, types.Union({types.LString(d.msg)})))
-				return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
+				if d.severity == "error" then
+					analyzer:Assert(analyzer:Call(callable, types.Union({types.LString(d.msg)})))
+					return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
+				end
 			end
 		end
-	end
 
-	if
-		callable.Type ~= "function" or
-		not callable:GetFunctionBodyNode()
-		or
-		not callable:GetFunctionBodyNode()
-	then
-		return types.Boolean(), tuple
-	end
+		if
+			callable.Type ~= "function" or
+			not callable:GetFunctionBodyNode()
+			or
+			not callable:GetFunctionBodyNode()
+		then
+			return types.Boolean(), tuple
+		end
 
-	return true, tuple
-end|>
+		return true, tuple
+	end
+|>
 
 analyzer function select(index: 1 .. inf | "#", ...: ...any)
 	return select(index:GetData(), ...)

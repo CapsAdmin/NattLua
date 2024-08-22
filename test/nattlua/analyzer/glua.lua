@@ -1,5 +1,3 @@
-
-
 analyze[[
     import("~/nattlua/definitions/glua.nlua")    
     attest.equal(string.Split("1|2|3", "|"), {"1","2","3"})

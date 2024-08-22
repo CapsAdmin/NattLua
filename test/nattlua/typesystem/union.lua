@@ -5,12 +5,12 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local cast = require("nattlua.analyzer.cast")
 
 test("a union should not contain duplicates", function()
-	assert(Union(cast({"a", "b", "a", "a"})):Equal(Union(cast{"a", "b"})))
+	assert(Union(cast({"a", "b", "a", "a"})):Equal(Union(cast({"a", "b"}))))
 end)
 
-local larger = Union(cast{"a", "b", "c"})
-local smaller = Union(cast{"a", "b"})
-local different = Union(cast{"b", "x", "y"})
+local larger = Union(cast({"a", "b", "c"}))
+local smaller = Union(cast({"a", "b"}))
+local different = Union(cast({"b", "x", "y"}))
 
 test("a union should be a subset of an identical union", function()
 	assert(smaller:IsSubsetOf(smaller))

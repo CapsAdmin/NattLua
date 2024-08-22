@@ -114,11 +114,12 @@ faz]]
 	)
 end
 
-
 do
 	local test = ("x"):rep(500) .. "FROM---TO" .. ("x"):rep(500)
 	local start, stop = test:find("FROM.-TO")
-	equal(formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2), [[    _______________________________________________________________________________________________________________________________
+	equal(
+		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
+		[[    _______________________________________________________________________________________________________________________________
  2 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
  3 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
  4 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxFROM---T
@@ -129,7 +130,8 @@ do
  7 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     -------------------------------------------------------------------------------------------------------------------------------
 -> | script.txt:4:384
--> | hello world]])
+-> | hello world]]
+	)
 end
 
 do

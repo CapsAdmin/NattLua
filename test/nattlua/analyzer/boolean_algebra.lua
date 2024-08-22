@@ -1,5 +1,3 @@
-
-
 analyze[[ -- A
     local A = _ as true | false
 

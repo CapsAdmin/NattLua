@@ -1,5 +1,3 @@
-
-
 analyze[[
     local x = _  as {foo = true, bar = 1337} | {foo = false, bar = 777}
 

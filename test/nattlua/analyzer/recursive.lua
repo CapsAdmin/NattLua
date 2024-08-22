@@ -1,5 +1,3 @@
-
-
 analyze[[
     local function foo(): number, number
         if math.random() > 0.5 then

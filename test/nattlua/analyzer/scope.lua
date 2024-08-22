@@ -1,5 +1,3 @@
-
-
 analyze[[
     local lol
     do

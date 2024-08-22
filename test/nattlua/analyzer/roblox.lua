@@ -1,5 +1,3 @@
-
-
 analyze[[
 local x = 2
 x*=2

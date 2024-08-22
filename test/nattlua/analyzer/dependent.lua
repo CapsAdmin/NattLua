@@ -1,4 +1,3 @@
-
 analyze([[
     local type A = {Type = "human"}
     local type B = {Type = "cat"}

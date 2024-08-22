@@ -86,7 +86,8 @@ init_CTState = function()
 	-- We then work backwards looking for something resembling ctype_state.
 	repeat
 		i = i - 1
-		CTState = ffi.cast("CTState*", G[i])	until ffi.cast(uintgc_ptr, CTState.g) == G
+		CTState = ffi.cast("CTState*", G[i])	
+	until ffi.cast(uintgc_ptr, CTState.g) == G
 
 	return CTState
 end
@@ -368,7 +369,8 @@ local function sib_iter(s, refct)
 
 		if not ctype.sib then return end
 
-		refct = refct_from_id(ctype.sib)	until refct.what ~= "attrib" -- Pure attribs are skipped.
+		refct = refct_from_id(ctype.sib)	
+	until refct.what ~= "attrib" -- Pure attribs are skipped.
 	return refct
 end
 

@@ -1,5 +1,3 @@
-
-
 analyze[[
     local func = function() 
         attest.equal(foo, 1337)

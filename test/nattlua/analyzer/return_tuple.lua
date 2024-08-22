@@ -1,5 +1,3 @@
-
-
 analyze[[
         local function test(): ErrorReturn<|{foo = number}|>
             if math.random() > 0.5 then return {foo = 2} end

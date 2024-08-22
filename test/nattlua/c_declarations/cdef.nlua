@@ -4,13 +4,16 @@ end
 
 local analyzer function cdef_error(str: string, expect: string, ...: ...any)
 	local args = {...}
-	local ok, err = pcall(function() return require("nattlua.c_declarations.main").cdef(str, unpack(args)) end)
+	local ok, err = pcall(function()
+		return require("nattlua.c_declarations.main").cdef(str, unpack(args))
+	end)
 	assert(ok == false)
 	assert(err:find(expect:GetData()))
 end
 
 local function reset()
 	§require("nattlua.c_declarations.main").reset()
+
 	local ffi = require("ffi")
 	ffi.C = {}
 end
@@ -91,7 +94,7 @@ do
 	local vars, typs = cdef[[
 		struct foo;
 	]]
-	attest.equal(typs.foo, _ as {})
+	attest.equal(typs.foo, _  as {})
 end
 
 do
@@ -101,7 +104,7 @@ do
 			int bar;
 		} foo;
 	]]
-	attest.equal(typs.foo, _ as {bar = number})
+	attest.equal(typs.foo, _  as {bar = number})
 end
 
 do
@@ -134,50 +137,43 @@ do
 	attest.equal(vars.readdir, _  as function=(any)>(number))
 end
 
-
 do
 	reset()
 	local vars, typs = cdef([[
 		int bar;
 		typedef int foo;
 	]])
-	attest.equal(vars.bar, _ as number)
-	attest.equal(vars.foo, _ as nil)
-
-	attest.equal(typs.foo, _ as number)
-	attest.equal(typs.bar, _ as nil)
+	attest.equal(vars.bar, _  as number)
+	attest.equal(vars.foo, _  as nil)
+	attest.equal(typs.foo, _  as number)
+	attest.equal(typs.bar, _  as nil)
 end
-
 
 do
 	reset()
 	local vars, typs = cdef([[
 		typedef struct foo bar;
 	]])
-
-	attest.equal(typs.foo, _ as {})
-	attest.equal(typs.bar, _ as {})
-
-
+	attest.equal(typs.foo, _  as {})
+	attest.equal(typs.bar, _  as {})
 	attest.equal(vars.foo, nil)
 	attest.equal(vars.bar, nil)
 end
-
 
 do
 	reset()
 	local vars, typs = cdef([[
 		struct foo bar;
 	]])
-	attest.equal(vars.bar, _ as {})
-	attest.equal(vars.foo, _ as nil)
-
-	attest.equal(typs.foo, _ as {})
-	attest.equal(typs.bar, _ as nil)
+	attest.equal(vars.bar, _  as {})
+	attest.equal(vars.foo, _  as nil)
+	attest.equal(typs.foo, _  as {})
+	attest.equal(typs.bar, _  as nil)
 end
 
 do
 	reset()
+
 	if math.random() > 0.5 then
 		cdef[[
 			struct test {
@@ -192,11 +188,11 @@ do
 		]]
 	end
 
-	attest.equal(ffi.C.foo, _ as {a = number} | {b = number})
+	attest.equal(ffi.C.foo, _  as {a = number} | {b = number})
 end
 
 if false then
-	do 
+	do
 		reset()
 		cdef_error([[
 			enum foo { a };
@@ -217,7 +213,6 @@ if false then
 		cdef[[
 			struct foo { int a; };
 		]]
-		
 		cdef_error([[
 			struct foo { int a; int b; };
 		]], "redeclare")

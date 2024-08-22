@@ -1,5 +1,3 @@
-
-
 -- load
 analyze[[
         attest.equal(assert(load("attest.equal(1, 1) return 2"))(), 2)

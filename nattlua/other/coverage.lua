@@ -2,14 +2,13 @@ local coverage = {}
 _G.__COVERAGE = _G.__COVERAGE or {}
 coverage.collected = {}
 local nl = require("nattlua")
-
 local FUNC_NAME = "__CLCT"
 
 function coverage.Preprocess(code, key)
 	local expressions = {}
 
 	local function inject_call_expression(parser, node, start, stop)
-		local call_expression = parser:ParseString(" "..FUNC_NAME.."(" .. start .. "," .. stop .. ") ").statements[1].value
+		local call_expression = parser:ParseString(" " .. FUNC_NAME .. "(" .. start .. "," .. stop .. ") ").statements[1].value
 
 		if node.kind == "postfix_call" and not node.tokens["call("] then
 			node.tokens["call("] = parser:NewToken("symbol", "(")
@@ -76,7 +75,7 @@ function coverage.Preprocess(code, key)
 	local lua = compiler:Emit()
 	lua = [[
 local called = _G.__COVERAGE["]] .. key .. [["].called
-local function ]]..FUNC_NAME..[[(start, stop, ...)
+local function ]] .. FUNC_NAME .. [[(start, stop, ...)
 	local key = start..", "..stop
 	called[key] = called[key] or {start, stop, 0}
 	called[key][3] = called[key][3] + 1

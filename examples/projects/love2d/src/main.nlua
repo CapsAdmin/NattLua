@@ -1,13 +1,10 @@
 -- declare love as global so it will be available for all the other imports
 type love = import("./love_api.nlua")
-
 -- these imports will be bundled
 local Maze = import("./maze.nlua")
 local Vec2 = import("./vec2.nlua")
-
 -- not sure about this, Vec2 the metatable and which doubles as a constructor and NOT the type Vec2
 local type Vec2 = Vec2.@Self
-
 local type Node = {
 	pos = Vec2,
 	wall = boolean,
@@ -16,15 +13,13 @@ local type Node = {
 	visited = boolean,
 	direction = nil | Vec2,
 }
-
 local maze_width = 13
 local maze_height = 13
 local cell_size = 30
-local grid = {} as {[1..maze_height] = {[1..maze_width] = Node}}
+local grid = {} as {[1 .. maze_height] = {[1 .. maze_width] = Node}}
 
 do
 	local maze = Maze(maze_width, maze_height)
-
 	maze:Build(3)
 	local neighbours = {Vec2(-1, 0), Vec2(0, -1), Vec2(1, 0), Vec2(0, 1)}
 
@@ -45,15 +40,14 @@ do
 
 	for y = 1, maze.height do
 		grid[y] = grid[y] or {}
+
 		for x = 1, maze.width do
 			local state = {
 				pos = Vec2(x, y),
 				wall = maze:Get(x - 1, y - 1) == 1,
 			}
 
-			if x > 1 and y > 5 and x < 10 and y < 8 then
-				state.wall = false
-			end
+			if x > 1 and y > 5 and x < 10 and y < 8 then state.wall = false end
 
 			if x == maze.width and y == maze.height then
 				stop = state
@@ -108,7 +102,11 @@ do
 end
 
 function love.load()
-	love.window.setMode(cell_size * maze_width, cell_size * maze_height, {resizable = true, vsync = true, x = 0, y = 0})
+	love.window.setMode(
+		cell_size * maze_width,
+		cell_size * maze_height,
+		{resizable = true, vsync = true, x = 0, y = 0}
+	)
 end
 
 local function draw_arrow(x1: number, y1: number, x2: number, y2: number, arrlen: number, angle: number)
@@ -148,37 +146,30 @@ function love.draw()
 		for x = 1, #grid[y] do
 			local cell = grid[y][x]
 			local dir = cell.direction
+
 			if dir then
 				local s = cell_size / 2
 				local pixel_pos = cell2pix(cell.pos)
-				
-				local start = pixel_pos - dir * s/2
-				local stop = pixel_pos + dir * s/2
-				
+				local start = pixel_pos - dir * s / 2
+				local stop = pixel_pos + dir * s / 2
 				-- center the arrow
 				start = start + Vec2(s, s)
 				stop = stop + Vec2(s, s)
-
 				love.graphics.setColor(0.5, 0.5, 0.5, 1)
-				draw_arrow(
-					start.x,
-					start.y,
-					stop.x,
-					stop.y,
-					cell_size / 10,
-					math.pi / 4
-				)
+				draw_arrow(start.x, start.y, stop.x, stop.y, cell_size / 10, math.pi / 4)
 			end
 		end
 	end
 end
 
-
 _G.hot_reload_last_modified = os.time() + 1
+
 function love.update()
 	local info = love.filesystem.getInfo("main.lua")
+
 	if info and _G.hot_reload_last_modified < info.modtime then
 		£ parser.dont_hoist_next_import = true
+
 		assert(love.filesystem.load("main.lua"))()
 		print("RELOAD")
 	end

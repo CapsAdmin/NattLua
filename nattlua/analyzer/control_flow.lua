@@ -81,7 +81,6 @@ return function(META)
 		end
 
 		scope:ClearCertainOutputSignatures()
-
 		return union:Simplify()
 	end
 

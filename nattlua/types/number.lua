@@ -33,7 +33,9 @@ function META.New(min, max)
 	)
 end
 
-local function Number() return META.New() end
+local function Number()
+	return META.New()
+end
 
 local function LNumber(num--[[#: number | nil]])
 	return META.New(num)
@@ -530,7 +532,6 @@ do
 		return obj
 	end
 end
-
 
 local function string_to_integer(str--[[#: string]])
 	if not jit and _VERSION == "Lua 5.1" then

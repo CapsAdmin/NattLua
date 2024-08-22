@@ -1,4 +1,3 @@
-
 analyze[[
         -- order of 'and' expression
         local res = 0

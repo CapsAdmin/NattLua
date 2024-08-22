@@ -6,14 +6,19 @@ local Symbol = require("nattlua.types.symbol").Symbol
 local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
 local cast = require("nattlua.analyzer.cast")
-
-local overloads = Union({
-	Function(Tuple{Number(), String()}, Tuple{Symbol("ROFL")}),
-	Function(Tuple{String(), Number()}, Tuple{Symbol("LOL")})
-})
+local overloads = Union(
+	{
+		Function(Tuple({Number(), String()}), Tuple({Symbol("ROFL")})),
+		Function(Tuple({String(), Number()}), Tuple({Symbol("LOL")})),
+	}
+)
 
 test("overload", function()
 	local a = require("nattlua.analyzer").New()
-	assert(assert(a:Call(overloads, Tuple(cast({String(), Number()})))):Get(1):GetData() == "LOL")
-	assert(assert(a:Call(overloads, Tuple(cast({LNumber(5), String()})))):Get(1):GetData() == "ROFL")
+	assert(
+		assert(a:Call(overloads, Tuple(cast({String(), Number()})))):Get(1):GetData() == "LOL"
+	)
+	assert(
+		assert(a:Call(overloads, Tuple(cast({LNumber(5), String()})))):Get(1):GetData() == "ROFL"
+	)
 end)

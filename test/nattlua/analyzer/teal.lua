@@ -1,5 +1,3 @@
-
-
 analyze[[
     £parser.TealCompat = true
     local record tl

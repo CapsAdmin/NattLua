@@ -126,9 +126,9 @@ if normalized:find("/nattlua/", nil, true) then
 		run_lua("test/run.lua", "test/nattlua/analyzer/typed_ffi.lua")
 		run_lua("examples/projects/luajit/build.lua", path)
 		run_lua("examples/projects/love2d/nlconfig.lua", path)
-	elseif normalized:find("c_declarations/analyzer", nil, true)  and not has_test_focus() then
+	elseif normalized:find("c_declarations/analyzer", nil, true) and not has_test_focus() then
 		run_lua("test/run.lua", "test/nattlua/c_declarations/cdef.nlua")
-	elseif normalized:find("c_declarations", nil, true)  and not has_test_focus() then
+	elseif normalized:find("c_declarations", nil, true) and not has_test_focus() then
 		run_lua("test/run.lua", "test/nattlua/c_declarations.lua")
 	elseif normalized:find("other/coverage", nil, true) then
 		run_lua("test/run.lua", "test/nattlua/coverage.lua")

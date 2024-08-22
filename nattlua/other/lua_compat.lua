@@ -8,9 +8,7 @@ if not _G.jit and _G._VERSION == "Lua 5.1" then
 	end
 end
 
-if not _G.bit then
-    _G.bit = require("nattlua.other.bit32").bit32
-end
+if not _G.bit then _G.bit = require("nattlua.other.bit32").bit32 end
 
 if not table.unpack and _G.unpack then table.unpack = _G.unpack end
 

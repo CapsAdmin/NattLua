@@ -1,5 +1,4 @@
 --PwLAIN_LUA
-
 if LuaVersion() ~= "LuaJIT" then return end
 
 local undef = nil
@@ -23,7 +22,7 @@ end
 
 do --- smoke band
 	assert(tostring(band(1ll, 1, 1ll, -1)) == "1LL")
-	--assert(tostring(band(1ll, 1, 1ull, -1)) == "0ULL")
+--assert(tostring(band(1ll, 1, 1ull, -1)) == "0ULL")
 end
 
 do --- smoke shl

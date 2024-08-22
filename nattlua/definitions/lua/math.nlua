@@ -35,28 +35,22 @@ type math.huge = inf
 type math.pi = 3.14159265358979323864338327950288
 type math.maxinteger = 0x7FFFFFFFFFFFFFFF
 type math.mininteger = 0x8000000000000000
-
 type math.type = ReturnIfNonLiteral<|analyzer function(n: number): "float" | "integer" | "nil"
 	return "float"
 end|>
-
 type math.sin = ReturnIfNonLiteral<|analyzer function(n: number): number
 	return math.sin(n:GetData())
 end|>
-
 type math.abs = ReturnIfNonLiteral<|analyzer function(n: number): number
 	return math.abs(n:GetData())
 end|>
-
 type math.cos = ReturnIfNonLiteral<|analyzer function(n: number): number
 	return math.cos(n:GetData())
 end|>
-
 type math.ceil = ReturnIfNonLiteral<|analyzer function(n: number): number
 	return math.ceil(n:GetData())
 end|>
-
-type math.floor = ReturnIfNonLiteral<|analyzer function(n:number): number
+type math.floor = ReturnIfNonLiteral<|analyzer function(n: number): number
 	return math.floor(n:GetData())
 end|>
 

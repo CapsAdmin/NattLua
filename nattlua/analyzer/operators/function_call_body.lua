@@ -465,9 +465,7 @@ return function(self, obj, input)
 					val = Nil()
 					local arg = obj:GetInputSignature():Get(argi)
 
-					if arg and arg:IsReferenceType() then
-						val:SetReferenceType(true)
-					end
+					if arg and arg:IsReferenceType() then val:SetReferenceType(true) end
 				end
 
 				self:CreateLocalValue(identifier.value.value, val)

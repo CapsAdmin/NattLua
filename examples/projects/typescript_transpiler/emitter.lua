@@ -155,7 +155,11 @@ do
 		self:EmitToken(node.tokens["arguments)"])
 		self:Emit(" => {")
 
-		if self.config.type_annotations and node:GetLastAssociatedType() and not analyzer_function then
+		if
+			self.config.type_annotations and
+			node:GetLastAssociatedType() and
+			not analyzer_function
+		then
 			--self:Emit(" --[[ : ")
 			local str = {}
 			-- this iterates the first return tuple
@@ -270,7 +274,8 @@ end
 function META:EmitTable(tree)
 	if tree.spread then self:Emit("table.mergetables") end
 
-	local is_array = tree:GetLastAssociatedType() and tree:GetLastAssociatedType():IsNumericallyIndexed()
+	local is_array = tree:GetLastAssociatedType() and
+		tree:GetLastAssociatedType():IsNumericallyIndexed()
 	local during_spread = false
 
 	if is_array then
@@ -758,7 +763,9 @@ function META:EmitIdentifier(node)
 			self:EmitTypeExpression(node.type_expression)
 		elseif node:GetLastAssociatedType() then
 			self:Emit(": ")
-			self:Emit(tostring((node:GetLastAssociatedType():GetContract() or node:GetLastAssociatedType())))
+			self:Emit(
+				tostring((node:GetLastAssociatedType():GetContract() or node:GetLastAssociatedType()))
+			)
 		end
 	end
 end

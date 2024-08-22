@@ -1,5 +1,3 @@
-
-
 analyze[[
     for i = 1, 10000 do
         attest.equal(i, _ as 1 .. 10000)

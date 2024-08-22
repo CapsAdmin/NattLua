@@ -1,5 +1,3 @@
-
-
 analyze[[
         -- pairs on literal table
         local tbl = {1,2,3}

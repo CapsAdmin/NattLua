@@ -1,5 +1,3 @@
-
-
 local LString = require("nattlua.types.string").LString
 
 test("reassignment", function()
@@ -22,7 +20,10 @@ test("typed field", function()
 	local analyzer = analyze[[
         local tbl: {foo = boolean} = {foo = true}
     ]]
-	equal(true, analyzer:GetLocalOrGlobalValue(LString("tbl")):Get(LString("foo")):GetData())
+	equal(
+		true,
+		analyzer:GetLocalOrGlobalValue(LString("tbl")):Get(LString("foo")):GetData()
+	)
 end)
 
 test("typed table invalid reassignment should error", function()

@@ -1,5 +1,3 @@
-
-
 local LString = require("nattlua.types.string").LString
 
 do

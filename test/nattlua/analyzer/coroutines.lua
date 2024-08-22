@@ -1,4 +1,3 @@
-
 analyze[[
     local co = coroutine.create(function(a,b,c)
         attest.equal(a, 1)

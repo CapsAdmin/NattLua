@@ -1,5 +1,3 @@
-
-
 analyze[[
     local i = 1
 

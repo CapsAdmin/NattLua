@@ -15,6 +15,7 @@ local code = nl.Compiler(
 local tokens = util.Measure("code:Lex()", function()
 	return assert(code:Lex()).Tokens
 end)
+
 --require("nattlua.other.debug").EnableJITDumper()
 util.Measure("code:Parse()", function()
 	assert(code:Parse())

@@ -1,5 +1,3 @@
-
-
 analyze(
 	[[
     local x: {foo = boolean} = {foo = true}

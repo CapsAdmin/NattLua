@@ -17,7 +17,6 @@ type string = {
 	format = function=(string, ...any)>(string),
 	pack = function=(fmt: string, ...any)>(string),
 }
-
 type ^string.reverse = ReturnIfNonLiteral<|analyzer function(str: string): string
 	return str:GetData():reverse()
 end|>

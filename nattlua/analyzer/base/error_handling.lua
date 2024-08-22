@@ -40,7 +40,7 @@ return function(META)
 		if type(tbl) == "string" then return tbl end
 
 		local out = {}
-		
+
 		for i, v in ipairs(tbl) do
 			if type(v) == "table" then
 				if v.Type then

@@ -299,7 +299,7 @@ return function(META)
 				local hash = key:GetHash()
 
 				if hash == nil then return end
-				
+
 				local stack = tbl.tracked_stack[hash]
 
 				if not stack then return end

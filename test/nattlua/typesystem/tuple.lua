@@ -24,18 +24,20 @@ test(tostring(SNS) .. " should not be a subset of " .. tostring(SN), function()
 end)
 
 test("remainder", function()
-	local tup = Tuple({
-		String(),
-		Number(),
-		String(),
-		Number(),
-		String(),
-		Number(),
-		String(),
-		Number(),
-		String(),
-		Number()
-	}):AddRemainder(Tuple({String()}):SetRepeat(10))
+	local tup = Tuple(
+		{
+			String(),
+			Number(),
+			String(),
+			Number(),
+			String(),
+			Number(),
+			String(),
+			Number(),
+			String(),
+			Number(),
+		}
+	):AddRemainder(Tuple({String()}):SetRepeat(10))
 	assert(tup:GetElementCount() == 10 + (1 * 10))
 	assert(tup:Get(1).Type == "string")
 	assert(tup:Get(2).Type == "number")

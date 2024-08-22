@@ -43,6 +43,7 @@ local blacklist = {
 	"test_focus_result%.lua",
 	"test_focus%.lua",
 	"build_output%.lua",
+	"nattlua_for_ai%.lua",
 	"nattlua/other/cparser%.lua",
 	"nattlua/other/json%.lua",
 	"examples/benchmarks/temp/10mb%.lua",

@@ -6,9 +6,7 @@ local io_write = _G.ON_EDITOR_SAVE and function(...) end or io.write
 local pcall = _G.pcall
 profiler.Start()
 
-
 --require("nattlua.other.debug").GlobalLookup()
-
 function _G.test(name, cb)
 	cb()
 end
@@ -45,7 +43,6 @@ function _G.diff(input, expect)
 
 	os.execute("git --no-pager diff --no-index " .. a .. " " .. b)
 end
-
 
 do
 	-- reuse an existing environment to speed up tests
@@ -156,9 +153,8 @@ local function find_tests(path)
 			table.insert(found, path)
 		end
 	end
-	
-	table.sort(found)
 
+	table.sort(found)
 	return found
 end
 

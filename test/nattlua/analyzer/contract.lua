@@ -1,4 +1,3 @@
-
 analyze(
 	[[
     local type contract = {}

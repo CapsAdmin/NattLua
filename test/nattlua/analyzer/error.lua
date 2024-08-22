@@ -1,5 +1,3 @@
-
-
 analyze[[
     local function foo()
         local x = _ as boolean

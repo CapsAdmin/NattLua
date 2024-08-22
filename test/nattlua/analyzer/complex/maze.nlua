@@ -96,15 +96,15 @@ local maze = Maze(13, 13)
 maze:Build(3)
 local str = maze:__tostring()
 
-if str:find("Maze 13x13", nil , true) == nil then
+if str:find("Maze 13x13", nil, true) == nil then
 	error("Maze 13x13 not found")
 end
 
-if str:find(".█.█████████.", nil , true) == nil then
+if str:find(".█.█████████.", nil, true) == nil then
 	error("start of maze not found")
 end
 
-if str:find(".█████████.█.", nil , true) == nil then
+if str:find(".█████████.█.", nil, true) == nil then
 	error("end of maze not found")
 end
 

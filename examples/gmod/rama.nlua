@@ -188,7 +188,8 @@ function GetBoneMeshes(ent: Entity, phys_bone: number)
 								break
 							end
 
-							parent_bone = temp:GetBoneParent(parent_bone)						until (parent_bone == -1)
+							parent_bone = temp:GetBoneParent(parent_bone)						
+						until (parent_bone == -1)
 
 						if (parent_bone ~= -1) then
 							local weight_bone_matrix = temp:GetBoneMatrix(weight.bone)
@@ -219,7 +220,8 @@ function GetBoneMeshes(ent: Entity, phys_bone: number)
 									break
 								end
 
-								parent_bone = temp:GetBoneParent(parent_bone)							until (parent_bone == -1)
+								parent_bone = temp:GetBoneParent(parent_bone)							
+							until (parent_bone == -1)
 
 							if (parent_bone ~= -1 and (not high_weight or high_weight < weight.weight)) then
 								high_bone = weight.bone

@@ -1,5 +1,3 @@
-
-
 analyze[=[
     -- without literal event_name
 

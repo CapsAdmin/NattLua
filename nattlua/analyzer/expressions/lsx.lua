@@ -3,7 +3,6 @@ local Table = require("nattlua.types.table").Table
 local Tuple = require("nattlua.types.tuple").Tuple
 local LString = require("nattlua.types.string").LString
 local ConstString = require("nattlua.types.string").ConstString
-
 return {
 	AnalyzeLSX = function(self, node)
 		self:PushAnalyzerEnvironment("runtime")

@@ -140,8 +140,7 @@ local function emit_atomic_type(val)
 	end
 
 	if val.TYPE:find("|", nil, true) then
-		local values = {};
-		(val.TYPE .. "|"):gsub("([^|]-)|", function(val)
+		local values = {}(val.TYPE .. "|"):gsub("([^|]-)|", function(val)
 			table.insert(values, val)
 		end)
 
@@ -410,9 +409,9 @@ for struct_name, lib in spairs(wiki_json.STRUCTS) do
 		e("type ")
 		e(struct_name)
 		e(".")
-		if key == "StructureField (Order)" then
-			key = "StructureField"
-		end
+
+		if key == "StructureField (Order)" then key = "StructureField" end
+
 		e(key)
 		e(" = ")
 		emit(key, val, not val.binary_operator and original_name)

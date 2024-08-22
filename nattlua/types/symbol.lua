@@ -14,9 +14,7 @@ function META.Equal(a--[[#: TSymbol]], b--[[#: TBaseType]])
 end
 
 function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#: string]])
-	if op == "==" then
-		return l.Data == r.Data
-	end
+	if op == "==" then return l.Data == r.Data end
 
 	return false, type_errors.binary(op, l, r)
 end

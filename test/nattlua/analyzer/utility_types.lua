@@ -1,5 +1,3 @@
-
-
 analyze[[
 
     attest.equal<|
@@ -153,7 +151,6 @@ analyze[[
 
     attest.equal<|ReturnType<|foo|>[1], boolean | nil|>
 ]]
-
 analyze[[
     local function foo(x)
         return x

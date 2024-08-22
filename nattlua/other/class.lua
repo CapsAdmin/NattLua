@@ -35,7 +35,9 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 
 	local function get_line()
 		local info = debug.getinfo(3)
+
 		if not info then return "**unknown line**" end
+
 		return info.source:sub(2) .. ":" .. info.currentline
 	end
 

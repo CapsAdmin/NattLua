@@ -175,7 +175,6 @@ analyzer function include(path: string)
 	end
 
 	local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-	
 	analyzer.loaded = analyzer.loaded or {}
 	analyzer.loaded[path] = res
 	return res

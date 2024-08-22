@@ -459,7 +459,7 @@ end
 
 function META:ParseArrayIndex()
 	local out = {}
-	
+
 	for i = 1, self:GetLength() do
 		if self:IsTokenValue("[") then
 			local node = self:StartNode("expression", "array")
@@ -478,10 +478,8 @@ function META:ParseArrayIndex()
 		end
 	end
 
-	if not out[1] then
-		return nil
-	end
-	
+	if not out[1] then return nil end
+
 	return out
 end
 

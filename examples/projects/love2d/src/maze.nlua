@@ -1,10 +1,9 @@
 local Maze = {}
 Maze.__index = Maze
-
 type Maze.@Self = {
 	width = number,
 	height = number,
-	grid = {[0..inf] = number},
+	grid = {[0 .. inf] = number},
 }
 
 function Maze:__tostring()
@@ -76,11 +75,14 @@ function Maze:Build(seed: number)
 end
 
 local function constructor(_, width: number, height: number)
-	local self = setmetatable({
-		grid = {} as Maze.@Self.grid, --[[ lie to the typesystem since we're just about to fill the grid with numbers ]]
-		width = width, 
-		height = height, 
-	}, Maze)
+	local self = setmetatable(
+		{
+			grid = {} as Maze.@Self.grid,
+			--[[ lie to the typesystem since we're just about to fill the grid with numbers ]] width = width,
+			height = height,
+		},
+		Maze
+	)
 
 	for y = 0, height - 1 do
 		for x = 0, width - 1 do

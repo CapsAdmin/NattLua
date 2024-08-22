@@ -1,6 +1,6 @@
 local type attest = {}
 
-analyzer function attest.equal(A: any, B: any, level: nil | 0..inf)
+analyzer function attest.equal(A: any, B: any, level: nil | 0 .. inf)
 	if not A:Equal(B) then
 		analyzer:ThrowError(
 			"expected " .. tostring(B) .. " got " .. tostring(A),

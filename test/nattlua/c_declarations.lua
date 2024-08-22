@@ -337,11 +337,9 @@ end
 
 local function check_error(func, c_code, expect)
 	local ok, err = pcall(func, c_code)
-	if not ok then
-		if not expect or err:find(expect) then
-			return
-		end
-	end
+
+	if not ok then if not expect or err:find(expect) then return end end
+
 	error("expected error", 2)
 end
 
@@ -553,7 +551,6 @@ do -- struct and union declarations
 		test_field[[ int *__ptr32 FIELD; ]]
 		test_field[[ volatile int *FIELD; ]]
 		test_field[[ int **FIELD; ]]
-		
 		check_error(test_field, [[ int FIELD ]], ";")
 	end
 

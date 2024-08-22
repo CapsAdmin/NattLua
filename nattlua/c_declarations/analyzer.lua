@@ -52,7 +52,9 @@ local function cast(self, node)
 			return Any() -- TODO: is this true?
 		end
 
-		local res = (self.analyzer:Call(self.env.FFIPointer, Tuple({cast(self, assert(node.of))})):Unpack())
+		local res = (
+			self.analyzer:Call(self.env.FFIPointer, Tuple({cast(self, assert(node.of))})):Unpack()
+		)
 
 		if self:GetContextValue("function_argument") == true then
 			if

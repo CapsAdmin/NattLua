@@ -1,5 +1,3 @@
-
-
 analyze([[
     local a = 1
     local function b(lol)

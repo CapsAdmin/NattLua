@@ -1,7 +1,6 @@
 local LString = require("nattlua.types.string").LString
 local String = require("nattlua.types.string").String
 local Any = require("nattlua.types.any").Any
-
 local any = Any()
 local foo = LString("foo")
 local all_letters = String()

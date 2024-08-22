@@ -1,5 +1,3 @@
-
-
 analyze[[
         local function test(...)
 

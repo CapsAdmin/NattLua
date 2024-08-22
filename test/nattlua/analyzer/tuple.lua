@@ -1,5 +1,3 @@
-
-
 analyze[[
     local type A = (1,2)
     local type B = (3,4)

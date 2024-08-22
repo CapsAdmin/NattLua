@@ -1,5 +1,4 @@
 local type print = any
-
 local type LAPIType = {
 	@Name = "LAPIType",
 	type = string,
@@ -10,21 +9,21 @@ local type LAPIType = {
 	supertypes = nil | List<|string|>,
 	table = nil | List<|self|>,
 	functions = any,
-	table = nil | List<|self|>
+	table = nil | List<|self|>,
 }
-
 local type LAPIFunction = {
 	@Name = "LAPIFunction",
 	name = string,
 	description = string,
-	variants = List<|{
-		@Name = "Variant",
-		description = nil | string,
-		returns = nil | List<|LAPIType|>,
-		arguments = nil | List<|LAPIType|>,
-	}|>
+	variants = List<|
+		{
+			@Name = "Variant",
+			description = nil | string,
+			returns = nil | List<|LAPIType|>,
+			arguments = nil | List<|LAPIType|>,
+		}
+	|>,
 }
-
 local type LAPIEnum = {
 	@Name = "LAPIEnum",
 	name = string,
@@ -32,35 +31,31 @@ local type LAPIEnum = {
 	constants = List<|{
 		name = string,
 		description = string,
-	}|>
+	}|>,
 }
-
 local type LAPIModule = {
 	@Name = "LAPIModule",
 	name = string,
 	description = string,
 	types = List<|LAPIType|>,
 	functions = List<|LAPIFunction|>,
-	enums = List<|LAPIEnum|>
+	enums = List<|LAPIEnum|>,
 }
-
 local type LAPITable = LAPIType
-
 local type LoveApi = {
-    version = string,
-    functions = List<|LAPIFunction|>,
-    modules = List<|LAPIModule|>,
-    types = List<|LAPIType|>,
-    callbacks = List<|LAPIFunction|>,
+	version = string,
+	functions = List<|LAPIFunction|>,
+	modules = List<|LAPIModule|>,
+	types = List<|LAPIType|>,
+	callbacks = List<|LAPIFunction|>,
 }
 
 if io.open("love-api/love_api.lua", "r") then
 	os.execute("git -C love-api pull")
 else
-	os.execute(
-		"git clone git@github.com:love2d-community/love-api.git love-api"
-	)
+	os.execute("git clone git@github.com:love2d-community/love-api.git love-api")
 end
+
 local love_api: LoveApi = require("love-api.love_api")
 type love_api = LoveApi
 
@@ -93,7 +88,6 @@ local e = function(str: string)
 	code[i] = str
 	i = i + 1
 end
-
 e("local type love = {}\n")
 local known_types: Map<|string, true|> = {}
 local emit_type
@@ -121,19 +115,19 @@ function emit_type(t: LAPIType): nil
 	elseif t.type == "tables and strings" then -- TODO
 		e("(Table | string)")
 	elseif t.name == "..." then
-		e("...")
-		;(emit_type as any)({ type = t.type })
+		e("...")(emit_type  as any)({type = t.type})
 	elseif t.type:find(" or ", nil, true) then
 		local tbl = string_split(t.type, " or ")
 
 		for i, v in ipairs(tbl) do
-			(emit_type as any)({
+			(emit_type  as any)({
 				type = v,
 			})
 
 			if i ~= #tbl then e(" | ") end
 		end
-	elseif t.type == "number" or
+	elseif
+		t.type == "number" or
 		t.type == "string" or
 		t.type == "boolean" or
 		t.type == "nil" or
@@ -146,11 +140,8 @@ function emit_type(t: LAPIType): nil
 		e("Table") -- TODO
 	elseif t.type == "table" then
 		local TYPE_TODO = t.table
-		if TYPE_TODO then
-			emit_table(TYPE_TODO)
-		else
-			e("Table")
-		end
+
+		if TYPE_TODO then emit_table(TYPE_TODO) else e("Table") end
 	elseif t.type == "cdata" then
 		e("cdata")
 	elseif t.type == "function" then
@@ -195,6 +186,7 @@ end
 
 local function emit_function(func_info: LAPIFunction, self: nil | string)
 	local variants = func_info.variants
+
 	for i, variant in ipairs(func_info.variants) do
 		emit_function_variant(variant, self)
 
@@ -214,8 +206,10 @@ end
 
 local function emit_type_body(info: LAPIType)
 	local supertypes = info.supertypes
+
 	if supertypes then
 		local TYPE_TODO = supertypes[1]
+
 		if TYPE_TODO then
 			e("type " .. info.name .. ".@BaseTable = " .. TYPE_TODO .. "\n")
 		end

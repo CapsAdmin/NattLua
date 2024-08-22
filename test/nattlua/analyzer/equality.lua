@@ -1,4 +1,3 @@
-
 analyze[[
     -- this should be true | false because it might actually also be the same table
     local type get_a_table = function=()>({})

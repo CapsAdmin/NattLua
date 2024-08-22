@@ -1,7 +1,4 @@
-
 local LString = require("nattlua.types.string").LString
-
-
 local check = function(analyzer, to)
 	equal(
 		to:gsub("%s+", " "),

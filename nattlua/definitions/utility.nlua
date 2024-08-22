@@ -20,9 +20,7 @@ analyzer function NonLiteral(obj: any)
 		return types.Boolean()
 	end
 
-	if obj.Type == "number" or obj.Type == "string" then
-		return obj:Widen()
-	end
+	if obj.Type == "number" or obj.Type == "string" then return obj:Widen() end
 
 	return obj
 end

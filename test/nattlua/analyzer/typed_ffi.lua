@@ -1,4 +1,3 @@
-
 local analyze_old = _G.analyze
 
 local function analyze(c)
