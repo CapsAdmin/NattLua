@@ -156,6 +156,8 @@ local function find_tests(path)
 			table.insert(found, path)
 		end
 	end
+	
+	table.sort(found)
 
 	return found
 end
