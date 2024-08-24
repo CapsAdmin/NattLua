@@ -480,6 +480,14 @@ analyze[[
     attest.equal({Unknown(), 1}, _ as {any, 1})
 ]]
 analyze[[
+    local ipv4 = {(_  as string):match("^(%d+)%.(%d+)%.(%d+)%.(%d+)$")}
+    attest.equal(ipv4[1], _ as string | nil)
+    attest.equal(ipv4[2], _ as string | nil)
+    attest.equal(ipv4[3], _ as string | nil)
+    attest.equal(ipv4[4], _ as string | nil)
+    attest.equal(ipv4[5], _ as nil)
+]]
+analyze[[
 
     local function test(tbl: ref {
         Foo = boolean,

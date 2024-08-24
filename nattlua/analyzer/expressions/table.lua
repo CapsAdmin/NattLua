@@ -111,8 +111,12 @@ return {
 					local obj = self:AnalyzeExpression(node.value_expression)
 
 					if
-						node.value_expression.kind ~= "value" or
-						node.value_expression.value.value ~= "..."
+						(
+							node.value_expression.kind ~= "value" or
+							node.value_expression.value.value ~= "..."
+						)
+						and
+						node.value_expression.kind ~= "postfix_call"
 					then
 						obj = obj:GetFirstValue()
 					end
@@ -121,8 +125,14 @@ return {
 						if tree.children[i + 1] then
 							self:NewIndexOperator(tbl, LNumber(self:GetArrayLengthFromTable(tbl):GetData() + 1), obj:Get(1))
 						else
-							for i = 1, obj:GetMinimumLength() do
-								tbl:Set(LNumber(#tbl:GetData() + 1), obj:Get(i))
+							if obj:GetElementCount() ~= math.huge then
+								for i = 1, obj:GetElementCount() do
+									tbl:Set(LNumber(#tbl:GetData() + 1), obj:Get(i))
+								end
+							else
+								for i = 1, obj:GetMinimumLength() do
+									tbl:Set(LNumber(#tbl:GetData() + 1), obj:Get(i))
+								end
 							end
 
 							if obj.Remainder then

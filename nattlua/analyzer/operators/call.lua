@@ -238,7 +238,7 @@ local function any_call(self, analyzer, input, call_node)
 		end
 	end
 
-	return Tuple({Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))})
+	return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 end
 
 return {
