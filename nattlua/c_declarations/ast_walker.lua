@@ -33,8 +33,10 @@ local function handle_enum(state, node)
 		identifier = node.tokens["identifier"] and node.tokens["identifier"].value,
 	}
 
-	for _, field in ipairs(node.fields) do
-		table.insert(struct.fields, {type = "enum_field", identifier = field.tokens["identifier"].value})
+	if node.fields then
+		for _, field in ipairs(node.fields) do
+			table.insert(struct.fields, {type = "enum_field", identifier = field.tokens["identifier"].value})
+		end
 	end
 
 	return struct
