@@ -158,21 +158,25 @@ analyzer function ^string.match(str: string, pattern: string, start_position: nu
 		start_position:GetData() or
 		1
 
-	if not str or not pattern then
-		return types.Tuple({types.Union({types.String(), types.Nil()})}):SetRepeat(math.huge)
-	end
+	if str and pattern then
+		local res = {str:match(pattern, start_position)}
 
-	local res = {str:match(pattern, start_position)}
-
-	for i, v in ipairs(res) do
-		if type(v) == "string" then
-			res[i] = types.LString(v)
-		else
-			res[i] = types.LNumber(v)
+		for i, v in ipairs(res) do
+			if type(v) == "string" then
+				res[i] = types.LString(v)
+			else
+				res[i] = types.LNumber(v)
+			end
 		end
+
+		return table.unpack(res)
 	end
 
-	return table.unpack(res)
+	local len = math.huge
+
+	if pattern then len = select(2, pattern:gsub("%b()", "")) end
+
+	return types.Tuple({}):AddRemainder(types.Tuple({types.Union({types.String(), types.Nil()})}):SetRepeat(len))
 end
 
 analyzer function ^string.find(str: string, pattern: string, start_position: number | nil, no_pattern: boolean | nil)
