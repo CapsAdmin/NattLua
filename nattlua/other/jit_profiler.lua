@@ -70,7 +70,19 @@ function profiler.EnableStatisticalProfiling(b--[[#: boolean]])
 		local dumpstack = jit_profiler.dumpstack
 		local data = profiler.raw_statistical
 
-		jit_profiler.start("li2", function(thread, samples, vmstate)
+		--[[
+			f — Profile with precision down to the function level.
+			l — Profile with precision down to the line level.
+			i<number> — Sampling interval in milliseconds (default 10ms).
+		]]
+		jit_profiler.start("li10", function(thread, samples, vmstate)
+			--[[
+				p — Preserve the full path for module names. Otherwise, only the file name is used.
+				f — Dump the function name if it can be derived. Otherwise, use module:line.
+				F — Ditto, but dump module:name.
+				l — Dump module:line.
+				Z — Zap the following characters for the last dumped frame.
+			]]
 			data[i] = {dumpstack(thread, "pl\n", 1000), samples, vmstate}
 			i = i + 1
 		end)
@@ -290,9 +302,9 @@ do
 		["NYI: return to lower frame"] = true,
 		["inner loop in root trace"] = true,
 		["leaving loop in root trace"] = true,
-		["blacklisted"] = true,
 		["too many spill slots"] = true,
 		["down-recursion, restarting"] = true,
+		["error thrown or hook called during recording"] = true,
 	}
 
 	local function parse_raw_trace_abort_data(raw_data--[[#: any]])

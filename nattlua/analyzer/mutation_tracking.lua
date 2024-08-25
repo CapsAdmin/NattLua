@@ -294,6 +294,8 @@ return function(META)
 			end
 
 			function META:GetTrackedTableWithKey(tbl, key)
+				print(tbl, tbl.tracked_stack, key)
+
 				if not tbl.tracked_stack then return end
 
 				local hash = key:GetHash()
@@ -336,6 +338,8 @@ return function(META)
 
 			function META:ClearTrackedTables()
 				if self.tracked_tables then
+					debug.trace()
+
 					for _, tbl in ipairs(self.tracked_tables) do
 						tbl.tracked_stack = nil
 					end

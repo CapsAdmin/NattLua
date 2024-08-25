@@ -61,8 +61,8 @@ return {
 				-- use context?
 				self.left_assigned = left[right_pos]
 				local obj = self:Assert(self:AnalyzeExpression(exp_val))
-				self:ClearTracked()
 
+				--self:ClearTracked()
 				if obj.Type == "tuple" and obj:GetElementCount() == 1 then
 					obj = obj:Get(1)
 				end
