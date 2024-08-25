@@ -1709,6 +1709,24 @@ analyze[[
         attest.equal(x, 1)
     end
 ]]
+analyze[[
+    local ipv4 = {[1] = _  as string | nil, [2] = _  as string | nil}
+
+    if ipv4[1] and ipv4[2] then
+        local a = assert(tonumber(ipv4[1]))
+        attest.equal(ipv4[1], _  as string)
+        attest.equal(ipv4[2], _  as string)
+        attest.equal(a, _  as number)
+    end
+]]
+analyze[[
+local ipv4 = {["test"] = _  as string | nil}
+
+if ipv4.test then
+	local a = assert(tonumber(ipv4.test))
+    attest.equal(ipv4.test, _  as string)
+    attest.equal(a, _ as number)
+end]]
 
 if false then
 	pending[[
