@@ -45,7 +45,7 @@ return {
 
 		self:PushCurrentType(tbl, "table")
 		tbl:SetCreationScope(self:GetScope())
-		local numerical_index = 1
+		local numerical_index = 0
 
 		for _, node in ipairs(tree.children) do
 			if node.kind == "table_key_value" then
@@ -102,7 +102,7 @@ return {
 							end
 
 							if kv.key.Type == "number" then
-								self:NewIndexOperator(tbl, LNumber(self:GetArrayLengthFromTable(tbl):GetData() + 1), val)
+								self:NewIndexOperator(tbl, LNumber(numerical_index + 1), val)
 							else
 								self:NewIndexOperator(tbl, kv.key, val)
 							end
@@ -125,35 +125,36 @@ return {
 					end
 
 					if obj.Type == "tuple" then
-						if tree.children[numerical_index + 1] then
-							self:NewIndexOperator(tbl, LNumber(self:GetArrayLengthFromTable(tbl):GetData() + 1), obj:Get(1))
+						if tree.children[numerical_index + 1 + 1] then
+							self:NewIndexOperator(tbl, LNumber(numerical_index + 1), obj:Get(1))
+							numerical_index = numerical_index + 1
 						else
-							if obj:GetElementCount() ~= math.huge then
-								for i = 1, obj:GetElementCount() do
-									tbl:Set(LNumber(#tbl:GetData() + 1), obj:Get(i))
-								end
-							else
-								for i = 1, obj:GetMinimumLength() do
-									tbl:Set(LNumber(#tbl:GetData() + 1), obj:Get(i))
-								end
+							local len = obj:GetElementCount()
+
+							if len == math.huge then len = obj:GetMinimumLength() end
+
+							for i = 1, len do
+								self:NewIndexOperator(tbl, LNumber(numerical_index + 1), obj:Get(i))
+								numerical_index = numerical_index + 1
 							end
 
 							if obj.Remainder then
-								local current_index = LNumberRange(#tbl:GetData() + 1, obj.Remainder:GetElementCount())
-								self:NewIndexOperator(tbl, current_index, obj.Remainder:Get(1))
+								local max = obj.Remainder:GetElementCount()
+								self:NewIndexOperator(tbl, LNumberRange(numerical_index + 1, max), obj.Remainder:Get(1))
+								numerical_index = max + 1
 							end
 						end
 					elseif obj then
-						self:NewIndexOperator(tbl, LNumber(numerical_index), obj)
+						self:NewIndexOperator(tbl, LNumber(numerical_index + 1), obj)
+						numerical_index = numerical_index + 1
 					end
-
-					numerical_index = numerical_index + 1
 				end
 			end
 
 			self:ClearTracked()
 		end
 
+		tbl:RemoveRedundantNilValues()
 		self:PopCurrentType("table")
 		return tbl
 	end,

@@ -486,6 +486,24 @@ analyze[[
     attest.equal({Unknown(), 1}, _ as {any, 1})
 ]]
 analyze[[
+    local x = {nil, 1, nil, nil}
+    attest.equal(#x, 2)
+    attest.equal(x[1], nil)
+    attest.equal(x[2], 1)
+    attest.equal(x[3], nil)
+]]
+analyze[[
+    local x = {1, nil, nil}
+    attest.equal(#x, 1)
+    attest.equal(x[1], 1)
+    attest.equal(x[2], nil)
+    attest.equal(x[3], nil)
+]]
+analyze[[
+    local x = {nil, nil, nil}
+    attest.equal(#x, 0)
+]]
+analyze[[
     local ipv4 = {(_  as string):match("^(%d+)%.(%d+)%.(%d+)%.(%d+)$")}
     attest.equal(ipv4[1], _ as string | nil)
     attest.equal(ipv4[2], _ as string | nil)

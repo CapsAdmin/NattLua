@@ -371,6 +371,24 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 	return true
 end
 
+function META:RemoveRedundantNilValues()
+	for i = #self.Data, 1, -1 do
+		local keyval = self.Data[i]
+
+		if
+			keyval.key.Type == "number" and
+			keyval.val.Type == "symbol" and
+			keyval.val.Data == nil
+		then
+			keyval.val:SetParent()
+			keyval.key:SetParent()
+			table.remove(self:GetData(), i)
+		else
+			break
+		end
+	end
+end
+
 function META:Delete(key--[[#: TBaseType]])
 	local data = self:GetData()
 
