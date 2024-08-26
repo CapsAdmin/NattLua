@@ -106,6 +106,11 @@ local function index_table(analyzer, self, key)
 		return val
 	end
 
+	local obj = self:Get(key)
+	if obj then
+		return obj
+	end
+
 	return Nil()
 end
 
