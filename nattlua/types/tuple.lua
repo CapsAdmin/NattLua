@@ -82,7 +82,7 @@ function META:Merge(tup--[[#: TTuple]])
 		local a = self:Get(i)
 		local b = tup:Get(i)
 
-		if a then src[i] = Union({a, b}) elseif b then src[i] = b:Copy() end
+		if a and b then src[i] = Union({a, b}) elseif b then src[i] = b:Copy() end
 	end
 
 	self.Remainder = tup.Remainder or self.Remainder
