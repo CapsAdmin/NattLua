@@ -45,8 +45,9 @@ return {
 
 		self:PushCurrentType(tbl, "table")
 		tbl:SetCreationScope(self:GetScope())
+		local numerical_index = 1
 
-		for i, node in ipairs(tree.children) do
+		for _, node in ipairs(tree.children) do
 			if node.kind == "table_key_value" then
 				local key = ConstString(node.tokens["identifier"].value)
 
@@ -105,6 +106,8 @@ return {
 							else
 								self:NewIndexOperator(tbl, kv.key, val)
 							end
+
+							numerical_index = numerical_index + 1
 						end
 					end
 				else
@@ -122,7 +125,7 @@ return {
 					end
 
 					if obj.Type == "tuple" then
-						if tree.children[i + 1] then
+						if tree.children[numerical_index + 1] then
 							self:NewIndexOperator(tbl, LNumber(self:GetArrayLengthFromTable(tbl):GetData() + 1), obj:Get(1))
 						else
 							if obj:GetElementCount() ~= math.huge then
@@ -140,13 +143,11 @@ return {
 								self:NewIndexOperator(tbl, current_index, obj.Remainder:Get(1))
 							end
 						end
-					else
-						if node.i then
-							self:NewIndexOperator(tbl, LNumber(self:GetArrayLengthFromTable(tbl):GetData() + 1), LNumber(obj))
-						elseif obj then
-							self:NewIndexOperator(tbl, LNumber(self:GetArrayLengthFromTable(tbl):GetData() + 1), obj)
-						end
+					elseif obj then
+						self:NewIndexOperator(tbl, LNumber(numerical_index), obj)
 					end
+
+					numerical_index = numerical_index + 1
 				end
 			end
 

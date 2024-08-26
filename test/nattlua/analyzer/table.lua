@@ -293,6 +293,12 @@ analyze[[
     attest.equal(a[2], 2)
     attest.equal(a[3], 3)
 ]]
+analyze[[
+    local x = {nil, ""}
+    attest.equal(#x, 2)
+    attest.equal(x[1], nil)
+    attest.equal(x[2], "")
+]]
 
 test("deep nested copy", function()
 	local a = analyze([[
