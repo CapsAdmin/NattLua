@@ -1,0 +1,127 @@
+--https://github.com/antibot-ai/validate-hostname-rock/blob/master/test/validation.lua
+--- Валидация имени хоста
+--
+-- @module validateHostname
+local utf8 = require("utf8")
+local validateHostname
+local RU_LETTERS = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"
+
+--- Проверяет на корректность имени хоста
+--
+-- @param hostname (string) Строка имя хоста
+-- @return valid Корректен ли хост
+-- @usage
+-- local valid = validateHostname('antibot.ru')
+-- print(valid) -- true
+function validateHostname(hostname: ref string)
+	if type(hostname) ~= "string" or utf8.len(hostname) >= 255 then
+		return false
+	end
+
+	hostname = utf8.lower(hostname)
+
+	if string.find(hostname, ":") then
+		-- Если это адресс ipv6
+		local ipv6 = hostname:match("^ipv6:(.+)$")
+
+		if ipv6 then
+			local re = "^([a-f0-9]+):([a-f0-9]+):([a-f0-9]+):([a-f0-9]+):([a-f0-9]+):([a-f0-9]+):([a-f0-9]+):([a-f0-9]+)$"
+
+			if ipv6:find(re) then return true end
+		end
+
+		return false
+	elseif not string.find(hostname, "^[a-z" .. RU_LETTERS .. "0-9%-%.]+$") then
+		-- Если хост содержит недопустимые символы
+		return false
+	end
+
+	-- Если хостнейм содержит два дефиса подряд
+	-- и две точки подряд
+	if string.find(hostname, "%-%-") or string.find(hostname, "%.%.") then
+		return false
+	end
+
+	-- Если хостнейм начинается или заканчивается дефисом
+	-- или точкой
+	if string.find(hostname, "^[%-%.]") or string.find(hostname, "[%-%.]$") then
+		return false
+	end
+
+	-- Если это адрес ipv4
+	if string.find(hostname, "^%d+") and string.find(hostname, "%d+$") then
+		local ipv4 = {hostname:match("^(%d+)%.(%d+)%.(%d+)%.(%d+)$")}
+
+		if not ipv4[1] and not ipv4[2] and not ipv4[3] and not ipv4[4] then
+			return false
+		end
+
+		local a = assert(tonumber(ipv4[1])) < 256
+		local b = assert(tonumber(ipv4[2])) < 256
+		local c = assert(tonumber(ipv4[3])) < 256
+		local d = assert(tonumber(ipv4[4])) < 256
+
+		if not (a and b and c and d) then return false end
+	end
+
+	return true
+end
+
+do
+	local validHosts = {
+		"москва.рф",
+		"example.com",
+		"123.example.com",
+		"example.com.123",
+		"123.com",
+		"foo.bar.baz",
+		"foo.bar.baz.123-123.zaz",
+		"a-b.c.d.123.fun",
+		"FOO.BAR",
+		"foo.bar.baz",
+		"foo.123.en.com",
+		"127.0.0.255",
+		"123.123.123.abc",
+		"IPv6:2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+	}
+
+	for i = 1, #validHosts do
+		-- Ожидаем, что хост будет валидным
+		attest.equal(validateHostname(validHosts[i]), true)
+	end
+end
+
+do
+	local validHosts = {
+		".",
+		"-",
+		"-example.com",
+		".example.com",
+		"example--minus.com",
+		"example.com-",
+		"example.com.",
+		".123.123.123.123",
+		"123.123.123.123.",
+		"123.123.123",
+		"123.123.123.123-",
+		"-123.123.123.123",
+		"123..123.123.123",
+		"123.123.-123.123",
+		"123.--123.123.123",
+		"256.123.123.123",
+		"123.123.123.-1",
+		"12345",
+		"123.123",
+		"foo.a:b.com",
+		"my example.com",
+		[[longlabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelnamelonglabelname.com]],
+		"IPv4:2001:0db8:85a3:0000:0000",
+		"IPv4:123.123.123.123",
+		"IPv6:2001:0db8:85a3:0000:0000",
+	}
+
+	for i = 1, #validHosts do
+		-- Ожидаем, что хост будет валидным
+		attest.equal(validateHostname(validHosts[i]), false)
+	end
+end
