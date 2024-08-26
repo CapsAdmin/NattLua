@@ -1,0 +1,182 @@
+--- Валидация адреса электронной почты
+--
+-- @module validateEmail
+local validateEmail
+local RU_LETTERS = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"
+local utf8 = require("utf8")
+
+--- Проверяет адрес электронной почты на корректность
+--
+-- @param email (string) Строка адреса электройнной почты
+-- @return valid Корректен ли переданный адрес
+-- @usage
+-- local valid = validateEmail('admin@antibot.ru')
+-- print(valid) -- true
+function validateEmail(email: ref string)
+	-- Захват локальной и доменной части
+	--
+	local localPart, domainPart = utf8.lower(email):match(
+		"^([" .. RU_LETTERS .. "a-z0-9%.!#%$%%&\'%*%+%-/=%?%^_`{|}~ \"]+)@([" .. RU_LETTERS .. "a-z0-9%-%.:%[%]]+)$"
+	)
+
+	if not localPart or not domainPart then return false end
+
+	if localPart:len() > 64 or domainPart:len() > 255 then return false end
+
+	-- Захват и проверка локальной части в кавычках
+	--
+	local localPartInQuotes = localPart:match("^\"(.+)\"$")
+
+	if localPartInQuotes then
+		if
+			localPartInQuotes:match("[^" .. RU_LETTERS .. "a-z0-9!#%$%%&\'%*%+%-/=?^_ `{|}~%.]")
+		then
+			return false
+		end
+	else
+		§_G.LOL = true
+
+		localPart:find("\"")
+
+		§_G.LOL = false 
+
+		if localPart:find("\"") then return false end
+	end
+
+	-- Начало и конец локальной части не должны содержать точку
+	if localPart:sub(1, 1) == "." or localPart:sub(-1) == "." then
+		return false
+	end
+
+	-- Проверка доменной части
+	--
+	local hostname = domainPart:match("^([" .. RU_LETTERS .. "%d%a%-%.]+)$")
+
+	if hostname then
+		-- Проверяем домен верхнего уровня на недопустимые символы
+		if not hostname:match("%.([a-z" .. RU_LETTERS .. "]+)$") then
+			return false
+		end
+
+		-- Доменная часть не должна начинаться и заканчиваться с точки,
+		-- а так же не должно быть две и более точек подряд
+		if
+			domainPart:sub(0, 1) == "." or
+			domainPart:sub(-1) == "." or
+			domainPart:find("%.%.")
+		then
+			return false
+		end
+	end
+
+	-- Проверка доменной части на ip адрес
+	--
+	local ip = domainPart:match("^%[(.+)%]$")
+
+	if ip then
+		local isIp = false
+		-- Если доменная часть это адрес ipv4
+		--
+		local ipv4 = {ip:match("^(%d+)%.(%d+)%.(%d+)%.(%d+)$")}
+
+		if ipv4[1] and ipv4[2] and ipv4[3] and ipv4[4] then
+			local a = assert(tonumber(ipv4[1]))
+			local b = assert(tonumber(ipv4[2]))
+			local c = assert(tonumber(ipv4[3]))
+			local d = assert(tonumber(ipv4[4]))
+
+			if not ((a < 256) and (b < 256) and (c < 256) and (d < 256)) then
+				return false
+			end
+
+			isIp = true
+		end
+
+		-- Если доменная часть это адрес ipv6
+		--
+		local ipv6 = ip:match("^ipv6:(.+)$")
+
+		if ipv6 then
+			local re = "^([a-f0-9]+):([a-f0-9]+):([a-f0-9]+):([a-f0-9]+):([a-f0-9]+):([a-f0-9]+):([a-f0-9]+):([a-f0-9]+)$"
+
+			if not ipv6:find(re) then return false end
+
+			isIp = true
+		end
+
+		if not isIp then return false end
+	end
+
+	return true
+end
+
+do
+	local validEmails = {
+		"админ@сайт.рф",
+		"админ.сайта@сайт.рф",
+		"admin@сайт.рф",
+		"appdurov@domainPart.co.tk",
+		"other.email-with-hyphen@example.com",
+		"x@example.com",
+		"example-indeed@strange-example.com",
+		"test/test@test.com",
+		"disposable.style.email.with+symbol@example.com",
+		"very.common@example.com",
+		"\"Hello World!\"@gmail.com",
+		"\" \"@example.org",
+		"\"john..doe\"@example.org",
+		"mailhost!username@example.org",
+		"user%example.com@example.or",
+		"user-@example.org",
+		"simple@[127.0.0.255]",
+		"Москва@[127.0.0.1]",
+		"postmaster@[IPv6:2001:0db8:85a3:0000:0000:8a2e:0370:7334]",
+		"Москва@[IPv6:2001:0db8:85a3:0000:0000:8a2e:0370:7334]",
+	}
+
+	for i = 1, #validEmails do
+		-- Ожидаем, что адрес электронной почты будет валидным
+		attest.equal(validateEmail(validEmails[i]), true)
+	end
+end
+
+do
+	local invalidEmails = {
+		".",
+		"123.123..",
+		"123.123.123.123",
+		"123",
+		"blablabla",
+		"   John@gmail.com ",
+		".John.Doe@example.com",
+		"John.Doe.@example.com",
+		"Abc.example.com",
+		"A@b@c@example.com",
+		"a\"b(c)d,e:f;g<h>i[j\\k]l@example.com",
+		"just\"not\"right@example.com",
+		"this is\"not\allowed@example.com",
+		"this\\ still\\\"not\\allowed@example.com",
+		"1234567890123456789012345678901234567890123456789012345678901234+x@example.com",
+		"i_like_underscore@but_its_not_allowed_in_this_part.example.com",
+		"QA[icon]CHOCOLATE[icon]@test.com",
+		"[]!@#$%^&@gmail.com",
+		"postmaster(coment)@domainPart.lol",
+		"postmaster@(comment)domainPart.lol",
+		"админ.сайта@сайт.-рф",
+		"админ.сайта@сайт.123",
+		"а@дмин@сайт.рф",
+		"postmaster@[IPv4:2001:0db8:85a3:0000:0000]",
+		"postmaster@[IPv4:123.123.123.123]",
+		"postmaster@[IPv6:2001:0db8:85a3:0000:0000]",
+		"simple@[256.256.256.256]",
+		"simple@[256.256.256.-1]",
+		"simple@[foo.123.123.123]",
+		"foo@[bar]",
+		"",
+	}
+
+	for i = 1, #invalidEmails do
+		-- Ожидаем, что адрес электронной почты будет невалидным
+		attest.equal(validateEmail(invalidEmails[i]), false)
+	end
+end

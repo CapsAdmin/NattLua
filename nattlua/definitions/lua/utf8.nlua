@@ -1,0 +1,13 @@
+type utf8 = {
+	char = function=(...: ...number)>(string),
+	charpattern = string;
+	codepoint = function=(str: string, i: nil | number, j: nil | number)>(List<|number|>),
+	codes = function=(str: string)>(function=(str: string, i: nil | number)>({number, number})),
+	len = function=(str: string, i: number, j: number)>(number),
+	offset = function=(str: string, n: number, i: number)>(number),
+    lower = function=(str: string)>(string),
+}
+
+type utf8.lower = ReturnIfNonLiteral<|analyzer function(str: string): string
+    return require("nattlua.other.utf8").lower(str:GetData())
+end|>
