@@ -160,7 +160,7 @@ do
 	)
 		if not start then debug.trace() end
 
-		if #lua_code > 500000 then return "code too big: " .. msg end
+		if #lua_code > 500000 then return "*cannot point to source code, too big*: " .. msg end
 
 		do
 			local new_str = ""
