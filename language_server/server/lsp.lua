@@ -303,7 +303,9 @@ do
 	end
 
 	lsp.methods["textDocument/semanticTokens/full"] = function(params)
-		local data = editor_helper:GetFile(to_fs_path(params.textDocument.uri))
+		local path = to_fs_path(params.textDocument.uri)
+		if not editor_helper:IsLoaded(path) then return {} end
+		local data = editor_helper:GetFile(path)
 		local integers = {}
 		local last_y = 0
 		local last_x = 0
@@ -373,8 +375,13 @@ lsp.methods["textDocument/didSave"] = function(params)
 	editor_helper:SaveFile(to_fs_path(params.textDocument.uri))
 end
 lsp.methods["textDocument/references"] = function(params)
+	local path = to_fs_path(params.textDocument.uri)
+	if not editor_helper:IsLoaded(path) then return {} end
+	
+	local data = editor_helper:GetFile(path)
+
 	local nodes = editor_helper:GetReferences(
-		to_fs_path(params.textDocument.uri),
+		path,
 		params.position.line,
 		params.position.character - 1
 	)
@@ -395,11 +402,14 @@ lsp.methods["textDocument/references"] = function(params)
 	return result
 end
 lsp.methods["textDocument/inlayHint"] = function(params)
+	local path = to_fs_path(params.textDocument.uri)
+	if not editor_helper:IsLoaded(path) then return {} end
+
 	local result = {}
 
 	for _, hint in ipairs(
 		editor_helper:GetInlayHints(
-			to_fs_path(params.textDocument.uri),
+			path,
 			params.range.start.line + 1,
 			params.range.start.character + 1,
 			params.range["end"].line + 1,
@@ -407,7 +417,7 @@ lsp.methods["textDocument/inlayHint"] = function(params)
 		)
 	) do
 		local range = get_range(
-			editor_helper:GetCode(to_fs_path(params.textDocument.uri)),
+			editor_helper:GetCode(path),
 			hint.start,
 			hint.stop
 		)
@@ -425,6 +435,8 @@ lsp.methods["textDocument/inlayHint"] = function(params)
 end
 lsp.methods["textDocument/rename"] = function(params)
 	local fs_path = to_fs_path(params.textDocument.uri)
+	if not editor_helper:IsLoaded(fs_path) then return {} end
+
 	local lsp_path = to_lsp_path(params.textDocument.uri)
 	local edits = {}
 
@@ -447,15 +459,18 @@ lsp.methods["textDocument/rename"] = function(params)
 	}
 end
 lsp.methods["textDocument/definition"] = function(params)
+	local path = to_fs_path(params.textDocument.uri)
+	if not editor_helper:IsLoaded(path) then return {} end
+
 	local node = editor_helper:GetDefinition(
-		to_fs_path(params.textDocument.uri),
+		path,
 		params.position.line,
 		params.position.character
 	)
 
 	if node then
 		local start, stop = node:GetStartStop()
-		local path = node:GetSourcePath() or to_fs_path(params.textDocument.uri)
+		local path = node:GetSourcePath() or path
 		path = to_fs_path(path)
 		editor_helper:OpenFile(path, node.Code:GetString())
 		return {
@@ -467,8 +482,11 @@ lsp.methods["textDocument/definition"] = function(params)
 	return {}
 end
 lsp.methods["textDocument/hover"] = function(params)
+	local path = to_fs_path(params.textDocument.uri)
+	if not editor_helper:IsLoaded(path) then return {} end
+
 	local data = editor_helper:GetHover(
-		to_fs_path(params.textDocument.uri),
+		path,
 		params.position.line,
 		params.position.character
 	)
