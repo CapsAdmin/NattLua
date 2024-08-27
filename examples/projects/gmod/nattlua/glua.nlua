@@ -12,6 +12,7 @@ type NULL = INULL
 
 analyzer function hook.Add(eventName: string, obj: any, callback: ref function=(...any)>(...any))
 	local event_callback = env.typesystem.EventCallbacks:Get(eventName)
+	if not event_callback then error("hook " .. tostring(eventName) .. " does not exist", 2) end
 	callback:SetOutputSignature(event_callback:GetOutputSignature())
 	callback:SetExplicitOutputSignature(true)
 	callback:SetInputSignature(event_callback:GetInputSignature())

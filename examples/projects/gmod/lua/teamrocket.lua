@@ -81,7 +81,7 @@ if SERVER then
 		info:SetInflictor(game.GetWorld())
 		info:SetDamageForce(Vector(0, 0, 0))
 		victim:TakeDamageInfo(info)
-		local rag = victim:GetNWEntity("serverside_ragdoll")
+		local rag = victim:GetNWEntity("serverside_ragdoll")--[[# as IEntity]]
 
 		if rag:IsValid() then
 			local path
@@ -135,8 +135,8 @@ if SERVER then
 
 	local suppress = false
 
-	hook.Add("EntityTakeDamage", "teamrocket", function(victim--[[#: IEntity]], info--[[#: IDamageInfo]])
-		if suppress or not victim:IsPlayer() then return end
+	hook.Add("EntityTakeDamage", "teamrocket", function(victim--[[#: IEntity]], info--[[#: ITakeDamageInfo]])
+		if suppress or not victim:IsPlayer() then return false end
 
 		local force = info:GetDamageForce()
 		local res = util.TraceLine({start = victim:GetPos(), endpos = victim:GetPos() + force, filter = victim})
@@ -147,6 +147,8 @@ if SERVER then
 			team_rocket_death(victim, info:GetAttacker(), force:GetNormalized())
 			suppress = false
 		end
+
+		return true
 	end)
 
 	hook.Add("PhysgunThrowPlayer", "teamrocket", function(attacker--[[#: IEntity]], victim--[[#: IEntity]])
