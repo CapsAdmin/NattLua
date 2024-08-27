@@ -5,6 +5,8 @@ local json = require("nattlua.other.json")
 local rpc_util = require("nattlua.other.jsonrpc")
 local INPUT = io.stdin
 local OUTPUT = io.stderr -- using STDERR explcitly to have a clean channel
+local session = io.open("lsp_session.rpc", "w")
+
 local function read_message()
 	local line = INPUT:read("*l")
 
@@ -15,10 +17,20 @@ local function read_message()
 	return INPUT:read(content_length)
 end
 
+-- Without this, it seems like vscode will error as the body length deviates from content-length with unicode characters
+-- I initially thought utf8.length would work, but that doesn't seem to be it.
+local function escape_unicode(c)
+	return string.format("\\u%04x", c:byte())
+end
+
 local function write_message(message)
 	local encoded = json.encode(message)
-	OUTPUT:write(string.format("Content-Length: %d\r\n\r\n%s", #encoded, encoded))
-	io.flush()
+	encoded = encoded:gsub("([\x80-\xff])", escape_unicode)
+	local data = string.format("Content-Length: %d\r\n\r\n%s", #encoded, encoded)
+	OUTPUT:write(data)
+	OUTPUT:flush()
+	session:write(data)
+	session:flush()
 end
 
 OUTPUT:setvbuf("no")
