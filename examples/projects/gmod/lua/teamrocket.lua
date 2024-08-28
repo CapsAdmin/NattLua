@@ -1,3 +1,10 @@
+if SERVER then
+	--[[#type EventCallbacks.PhysgunThrowPlayer = function=(attacker: IEntity, victim: IEntity)>(nil)]]
+end
+
+--[[#type jrpg = {}]]
+--[[#type jrpg.GetGender = function=(IEntity)>("male" | "female")]]
+
 if CLIENT then
 	net.Receive("teamrocket", function(len)
 		if not LocalPlayer():IsValid() then return end
@@ -135,7 +142,7 @@ if SERVER then
 
 	local suppress = false
 
-	hook.Add("EntityTakeDamage", "teamrocket", function(victim--[[#: IEntity]], info--[[#: ITakeDamageInfo]])
+	hook.Add("EntityTakeDamage", "teamrocket", function(victim, info)
 		if suppress or not victim:IsPlayer() then return false end
 
 		local force = info:GetDamageForce()
@@ -151,7 +158,7 @@ if SERVER then
 		return true
 	end)
 
-	hook.Add("PhysgunThrowPlayer", "teamrocket", function(attacker--[[#: IEntity]], victim--[[#: IEntity]])
+	hook.Add("PhysgunThrowPlayer", "teamrocket", function(attacker, victim)
 		local res = util.TraceLine(
 			{
 				start = victim:GetPos(),
