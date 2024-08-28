@@ -429,12 +429,21 @@ function META:FindKeyVal(key--[[#: TBaseType]])
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
+		if keyval.key:Equal(key) then return keyval end
+	end
+	
+	if key:IsLiteral() then
+		return false, type_errors.table_index(self, key)
+	end
+
+	for _, keyval in ipairs(self:GetData()) do
 		local ok, reason = keyval.key:IsSubsetOf(key)
 
 		if ok then return keyval end
 
 		table.insert(reasons, reason)
 	end
+
 
 	if not reasons[1] then
 		reasons[1] = type_errors.because(type_errors.table_index(self, key), "table is empty")
@@ -447,9 +456,7 @@ function META:FindKeyValReverse(key--[[#: TBaseType]])
 	local reasons = {}
 
 	for _, keyval in ipairs(self:GetData()) do
-		local ok, reason = key:Equal(keyval.key)
-
-		if ok then return keyval end
+		if key:Equal(keyval.key) then return keyval end
 	end
 
 	for _, keyval in ipairs(self:GetData()) do
