@@ -40,7 +40,7 @@ return {
 
 				if max_length ~= math.huge then
 					for i = 1, max_length do
-						tup:Set(i, values:GetAtIndex(i))
+						tup:Set(i, values:GetAtTupleIndex(i))
 					end
 
 					values = tup

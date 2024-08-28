@@ -77,7 +77,7 @@ local function union_call(self, analyzer, input, call_node)
 		if val.Type == "tuple" and val:GetElementCount() == 1 then
 			val = val:Unpack(1)
 		elseif val.Type == "union" and val:GetMinimumLength() == 1 then
-			val = val:GetAtIndex(1)
+			val = val:GetAtTupleIndex(1)
 		end
 
 		new:AddType(val)

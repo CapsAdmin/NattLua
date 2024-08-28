@@ -97,7 +97,7 @@ return {
 							-- unpack unions with tuples
 							-- ⦗false, string, 2⦘ | ⦗true, 1⦘ at first index would be true | false
 							local index = right_pos + i - 1
-							right[index] = obj:GetAtIndex(index)
+							right[index] = obj:GetAtTupleIndex(index)
 						end
 					end
 				else

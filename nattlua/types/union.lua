@@ -2,7 +2,6 @@
 local tostring = tostring
 local setmetatable = _G.setmetatable
 local table = _G.table
-local assert = _G.assert
 local type = _G.type
 local ipairs = _G.ipairs
 local Nil = require("nattlua.types.symbol").Nil
@@ -34,8 +33,6 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
 
 	local b = b--[[# as TUnion]]
-
-	if a:IsEmpty() and b:IsEmpty() then return true end
 
 	if #a.Data ~= #b.Data then return false end
 
@@ -88,6 +85,20 @@ function META:__tostring()
 	return table.concat(s, " | ")
 end
 
+local function is_literal(obj)
+	return (
+			(
+				obj.Type == "number" and
+				not obj.Max and
+				not obj:IsNan()
+			)
+			or
+			obj.Type == "string"
+		)
+		and
+		obj.Data ~= nil
+end
+
 function META:AddType(e--[[#: TBaseType]])
 	if e.Type == "union" then
 		for _, v in ipairs(e.Data) do
@@ -125,6 +136,7 @@ function META:AddType(e--[[#: TBaseType]])
 		end
 	end
 
+	--if is_literal(e) then self.LiteralDataCache[e.Data] = true end
 	table.insert(self.Data, e)
 	return self
 end
@@ -169,9 +181,7 @@ function META:HasTuples()
 	return false
 end
 
-function META:GetAtIndex(i--[[#: number]])
-	assert(type(i) == "number")
-
+function META:GetAtTupleIndex(i--[[#: number]])
 	if not self:HasTuples() then return self:Simplify() end
 
 	local val--[[#: any]]
@@ -212,12 +222,12 @@ end
 function META:Get(key--[[#: TBaseType]])
 	local errors = {}
 
-	for _, obj in ipairs(self.Data) do
+	for i, obj in ipairs(self.Data) do
 		local ok, reason = key:IsSubsetOf(obj)
 
 		if ok then return obj end
 
-		table.insert(errors, reason)
+		errors[i] = reason
 	end
 
 	return false, errors
@@ -258,8 +268,6 @@ function META:GetFalsy()
 end
 
 function META:IsType(typ--[[#: string]])
-	assert(type(typ) == "string")
-
 	if self:IsEmpty() then return false end
 
 	for _, obj in ipairs(self.Data) do
@@ -270,8 +278,6 @@ function META:IsType(typ--[[#: string]])
 end
 
 function META:IsTypeExceptNil(typ--[[#: string]])
-	assert(type(typ) == "string")
-
 	if self:IsEmpty() then return false end
 
 	for _, obj in ipairs(self.Data) do
@@ -286,7 +292,6 @@ function META:IsTypeExceptNil(typ--[[#: string]])
 end
 
 function META:HasType(typ--[[#: string]])
-	assert(type(typ) == "string")
 	return self:GetType(typ) ~= false
 end
 
@@ -299,8 +304,6 @@ function META:CanBeNil()
 end
 
 function META:GetType(typ--[[#: string]])
-	assert(type(typ) == "string")
-
 	for _, obj in ipairs(self.Data) do
 		if obj.Type == typ then return obj end
 	end
@@ -311,12 +314,12 @@ end
 function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 	local errors = {}
 
-	for _, obj in ipairs(self.Data) do
+	for i, obj in ipairs(self.Data) do
 		local ok, reason = target:IsSubsetOf(obj)
 
 		if ok then return true end
 
-		table.insert(errors, reason)
+		errors[i] = reason
 	end
 
 	return false, type_errors.subset(target, self, errors)
@@ -325,15 +328,11 @@ end
 function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
 	if b.Type == "tuple" then b = b:Get(1) end
 
-	if b.Type ~= "union" then return a:IsSubsetOf(META.New({b})) end
+	if b.Type == "any" then return true end
 
-	for _, a_val in ipairs(a.Data) do
-		if a_val.Type == "any" then return true end
-	end
+	if b.Type ~= "union" then b = META.New({b}) end
 
-	for _, b_val in ipairs(b.Data) do
-		if b_val.Type == "any" then return true end
-	end
+	if a:HasType("any") then return true end
 
 	if a:IsEmpty() then
 		return false, type_errors.because(type_errors.subset(a, b), "union is empty")
@@ -357,7 +356,6 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
 end
 
 function META:Union(union--[[#: TUnion]])
-	assert(union.Type == "union")
 	local copy = self:Copy()
 
 	for _, e in ipairs(union.Data) do
@@ -412,6 +410,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 	local self = setmetatable(
 		{
 			Data = {},
+			--LiteralDataCache = {},
 			Falsy = false,
 			Truthy = false,
 			ReferenceType = false,

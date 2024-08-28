@@ -15,6 +15,7 @@ type loadfile = function=(filename: string, mode: string, env: Table)>(empty_fun
 type dofile = function=(filename: string)>(...) | function=()>(...)
 type ipairs = function=(t: Table)>(empty_function, Table, number)
 type tonumber = function=(e: number | string, base: number | nil)>(number | nil)
+type _ = any
 _G.arg = _  as List<|any|>
 
 analyzer function setfenv(val: Function, table: Table)
