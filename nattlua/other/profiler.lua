@@ -2,17 +2,15 @@ local has_jit, jit_profiler = pcall(require, "nattlua.other.jit_profiler")
 local profiler = {}
 local should_run = true
 
-if _G.ON_EDITOR_SAVE or not has_jit then should_run = false end
-
 function profiler.Start()
-	if not should_run then return end
+	if not has_jit then return end
 
 	jit_profiler.EnableStatisticalProfiling(true)
 	jit_profiler.EnableTraceAbortLogging(true)
 end
 
 function profiler.Stop()
-	if not should_run then return end
+	if not has_jit then return end
 
 	local stats_filter = {
 		{title = "all", filter = nil},

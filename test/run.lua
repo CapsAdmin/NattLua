@@ -4,7 +4,8 @@ local profiler = require("nattlua.other.profiler")
 local io = require("io")
 local io_write = _G.ON_EDITOR_SAVE and function(...) end or io.write
 local pcall = _G.pcall
-profiler.Start()
+
+if not _G.ON_EDITOR_SAVE then profiler.Start() end
 
 --require("nattlua.other.debug").GlobalLookup()
 function _G.test(name, cb)
@@ -207,4 +208,4 @@ if is_coverage then
 	end
 end
 
-profiler.Stop()
+if not _G.ON_EDITOR_SAVE then profiler.Stop() end
