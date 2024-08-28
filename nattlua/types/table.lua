@@ -371,6 +371,27 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 	return true
 end
 
+local function is_literal(obj)
+	return ((obj.Type == "number" and not obj.Max) or obj.Type == "string") and obj.Data ~= nil
+end
+
+local function AddKey(self, keyval, key, val)
+	if not keyval then
+		val:SetParent(self)
+		key:SetParent(self)
+		local keyval = {key = key, val = val}
+		table.insert(self.Data, keyval)
+
+		if is_literal(key) then self.LiteralDataCache[key.Data] = keyval end
+	else
+		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
+			keyval.val = val
+		else
+			keyval.val = Union({keyval.val, val})
+		end
+	end
+end
+
 function META:RemoveRedundantNilValues()
 	for i = #self.Data, 1, -1 do
 		local keyval = self.Data[i]
@@ -382,7 +403,11 @@ function META:RemoveRedundantNilValues()
 		then
 			keyval.val:SetParent()
 			keyval.key:SetParent()
-			table.remove(self:GetData(), i)
+			table.remove(self.Data, i)
+
+			if is_literal(keyval.key) then
+				self.LiteralDataCache[keyval.key.Data] = nil
+			end
 		else
 			break
 		end
@@ -390,15 +415,17 @@ function META:RemoveRedundantNilValues()
 end
 
 function META:Delete(key--[[#: TBaseType]])
-	local data = self:GetData()
-
-	for i = #data, 1, -1 do
-		local keyval = data[i]
+	for i = #self.Data, 1, -1 do
+		local keyval = self.Data[i]
 
 		if key:Equal(keyval.key) then
 			keyval.val:SetParent()
 			keyval.key:SetParent()
-			table.remove(self:GetData(), i)
+			table.remove(self.Data, i)
+
+			if is_literal(keyval.key) then
+				self.LiteralDataCache[keyval.key.Data] = nil
+			end
 		end
 	end
 
@@ -408,7 +435,7 @@ end
 function META:GetValueUnion()
 	local union = Union()
 
-	for _, keyval in ipairs(self:GetData()) do
+	for _, keyval in ipairs(self.Data) do
 		union:AddType(keyval.val:Copy())
 	end
 
@@ -425,21 +452,33 @@ function META:IsEmpty()
 	return self:GetData()[1] == nil
 end
 
-function META:FindKeyVal(key--[[#: TBaseType]])
-	local reasons = {}
+function META:CachedKeyEqual(key)
+	return self.CachedKeyValues[key.Data]
+end
 
-	for _, keyval in ipairs(self:GetData()) do
+function META:FindKeyVal(key--[[#: TBaseType]])
+	if is_literal(key) then
+		local keyval = self.LiteralDataCache[key.Data]
+
+		if keyval then return keyval end
+
+		return false, type_errors.table_index(self, key)
+	end
+
+	for _, keyval in ipairs(self.Data) do
 		if keyval.key:Equal(key) then return keyval end
 	end
 
 	if key:IsLiteral() then return false, type_errors.table_index(self, key) end
 
-	for _, keyval in ipairs(self:GetData()) do
+	local reasons = {}
+
+	for i, keyval in ipairs(self.Data) do
 		local ok, reason = keyval.key:IsSubsetOf(key)
 
 		if ok then return keyval end
 
-		table.insert(reasons, reason)
+		reasons[i] = reason
 	end
 
 	if not reasons[1] then
@@ -450,19 +489,25 @@ function META:FindKeyVal(key--[[#: TBaseType]])
 end
 
 function META:FindKeyValReverse(key--[[#: TBaseType]])
-	local reasons = {}
+	if is_literal(key) and self.LiteralDataCache[key.Data] then
+		return self.LiteralDataCache[key.Data]
+	end
 
-	for _, keyval in ipairs(self:GetData()) do
+	for _, keyval in ipairs(self.Data) do
 		if key:Equal(keyval.key) then return keyval end
 	end
 
-	for _, keyval in ipairs(self:GetData()) do
+	local reasons = {}
+
+	for i, keyval in ipairs(self.Data) do
 		local ok, reason = key:IsSubsetOf(keyval.key)
 
 		if ok then return keyval end
 
-		table.insert(reasons, reason)
+		if i <= 20 then reasons[i] = reason end
 	end
+
+	if #reasons > 20 then reasons = {type_errors.table_index(self, key)} end
 
 	if self.BaseTable then
 		local ok, reason = self.BaseTable:FindKeyValReverse(key)
@@ -480,21 +525,22 @@ function META:FindKeyValReverse(key--[[#: TBaseType]])
 end
 
 function META:FindKeyValReverseEqual(key--[[#: TBaseType]])
-	local reasons = {}
+	if is_literal(key) then
+		local keyval = self.LiteralDataCache[key.Data]
 
-	for _, keyval in ipairs(self:GetData()) do
-		local ok, reason = key:Equal(keyval.key)
+		if keyval then return keyval end
+
+		return false, type_errors.table_index(self, key)
+	end
+
+	for i, keyval in ipairs(self.Data) do
+		local ok = key:Equal(keyval.key)
 
 		if ok then return keyval end
-
-		table.insert(reasons, reason)
 	end
 
-	if not reasons[1] then
-		reasons[1] = type_errors.because(type_errors.table_index(self, key), "table is empty")
-	end
-
-	return false, type_errors.because(type_errors.table_index(self, key), reasons)
+	return false,
+	type_errors.because(type_errors.table_index(self, key), "table is empty")
 end
 
 function META:Insert(val--[[#: TBaseType]])
@@ -541,19 +587,7 @@ function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete-
 
 	-- if the key exists, check if we can replace it and maybe the value
 	local keyval, reason = self:FindKeyValReverse(key)
-
-	if not keyval then
-		val:SetParent(self)
-		key:SetParent(self)
-		table.insert(self.Data, {key = key, val = val})
-	else
-		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
-			keyval.val = val
-		else
-			keyval.val = Union({keyval.val, val})
-		end
-	end
-
+	AddKey(self, keyval, key, val)
 	return true
 end
 
@@ -569,19 +603,7 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 
 	-- if the key exists, check if we can replace it and maybe the value
 	local keyval, reason = self:FindKeyValReverseEqual(key)
-
-	if not keyval then
-		val:SetParent(self)
-		key:SetParent(self)
-		table.insert(self.Data, {key = key, val = val})
-	else
-		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
-			keyval.val = val
-		else
-			keyval.val = Union({keyval.val, val})
-		end
-	end
-
+	AddKey(self, keyval, key, val)
 	return true
 end
 
@@ -726,13 +748,15 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	local copy = META.New()
 	map[self] = map[self] or copy
 
-	for i, keyval in ipairs(self:GetData()) do
+	for i, keyval in ipairs(self.Data) do
 		local k, v = keyval.key, keyval.val
 		k = map[keyval.key] or k:Copy(map, copy_tables)
 		map[keyval.key] = map[keyval.key] or k
 		v = map[keyval.val] or v:Copy(map, copy_tables)
 		map[keyval.val] = map[keyval.val] or v
-		copy:GetData()[i] = {key = k, val = v}
+		copy.Data[i] = {key = k, val = v}
+
+		if is_literal(k) then copy.LiteralDataCache[k.Data] = copy.Data[i] end
 	end
 
 	copy:CopyInternalsFrom(self)
@@ -1063,6 +1087,7 @@ function META.New()
 	return setmetatable(
 		{
 			Data = {},
+			LiteralDataCache = {},
 			Contracts = {},
 			Falsy = false,
 			Truthy = false,
