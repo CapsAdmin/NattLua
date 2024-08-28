@@ -2,6 +2,7 @@
 local table = _G.table
 local type = _G.type
 local ipairs = _G.ipairs
+local table_insert = table.insert
 local type_errors = {}
 --[[#local type Reason = string | {[number] = any | string}]]
 
@@ -11,8 +12,8 @@ function type_errors.because(msg--[[#: Reason]], reason--[[#: nil | Reason]])--[
 	if reason then
 		if type(reason) ~= "table" then reason = {reason} end
 
-		table.insert(msg, "because")
-		table.insert(msg, reason)
+		table_insert(msg, "because")
+		table_insert(msg, reason)
 	end
 
 	return msg
@@ -23,7 +24,7 @@ function type_errors.context(context--[[#: Reason]], reason--[[#: Reason]])--[[#
 
 	if type(reason) ~= "table" then reason = {reason} end
 
-	table.insert(reason, 1, context)
+	table_insert(reason, 1, context)
 	return reason
 end
 
