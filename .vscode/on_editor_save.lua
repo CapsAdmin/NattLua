@@ -120,6 +120,11 @@ if normalized:find("/nattlua/", nil, true) then
 
 	if normalized:find("test/.+/.+%.nlua") then
 		run_nattlua(path)
+	elseif
+		normalized:find("jit_trace_track", nil, true) or
+		normalized:find("test/performance/analyzer.lua", nil, true)
+	then
+		run_lua("test/performance/analyzer.lua")
 	elseif normalized:find("c_declarations/main.lua", nil, true) and not has_test_focus() then
 		run_lua("test/run.lua", "test/nattlua/c_declarations/cdef.nlua")
 		run_lua("test/run.lua", "test/nattlua/c_declarations.lua")
