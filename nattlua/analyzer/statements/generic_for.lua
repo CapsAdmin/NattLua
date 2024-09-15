@@ -103,7 +103,6 @@ return {
 				self:Error("too many iterations")
 			end
 
-			assert(values.Type == "tuple")
 			table.insert(values:GetData(), 1, args[1])
 			args = values:GetData()
 

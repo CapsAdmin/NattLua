@@ -115,10 +115,11 @@ end
 local function_call
 
 do
+	local call_analyzer = require("nattlua.analyzer.operators.function_call_analyzer")
+	local call_body = require("nattlua.analyzer.operators.function_call_body")
+	local call_function_signature = require("nattlua.analyzer.operators.function_call_function_signature")
+
 	local function call_function_internal(self, obj, input)
-		local call_analyzer = require("nattlua.analyzer.operators.function_call_analyzer")
-		local call_body = require("nattlua.analyzer.operators.function_call_body")
-		local call_function_signature = require("nattlua.analyzer.operators.function_call_function_signature")
 		-- mark the object as called so the unreachable code step won't call it
 		obj:SetCalled(true)
 

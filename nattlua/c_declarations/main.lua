@@ -22,12 +22,11 @@ local Code = require("nattlua.code").New
 local Compiler = require("nattlua.compiler")
 local variables = Table()
 local types = Table()
+local ffi = require("ffi")
+local analyzer_context = require("nattlua.analyzer.context")
 
 local function C_DECLARATIONS()
-	local analyzer = assert(
-		require("nattlua.analyzer.context"):GetCurrentAnalyzer(),
-		"no analyzer in context"
-	)
+	local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	return analyzer:Assert(env.runtime.ffi:Get(ConstString("C")))
 end
@@ -86,11 +85,10 @@ end
 function cparser.sizeof(cdecl, len)
 	-- TODO: support non string sizeof
 	if jit and cdecl.Type == "string" and cdecl:IsLiteral() then
-		local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
+		local analyzer = analyzer_context:GetCurrentAnalyzer()
 		local env = analyzer:GetScopeHelper(analyzer.function_scope)
 		local vars, typs = analyze(cdecl:GetData(), "typeof", env, analyzer)
 		local ctype = extract_anonymous_type(typs)
-		local ffi = require("ffi")
 		local ok, val = pcall(ffi.sizeof, cdecl:GetData(), len and len:GetData() or nil)
 
 		if ok then return val end
@@ -101,7 +99,7 @@ end
 
 function cparser.cdef(cdecl, ...)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
-	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = analyze(cdecl:GetData(), "cdef", env, analyzer, ...)
 	variables = vars
@@ -117,10 +115,7 @@ end
 function cparser.reset()
 	variables = Table()
 	types = Table()
-	local analyzer = assert(
-		require("nattlua.analyzer.context"):GetCurrentAnalyzer(),
-		"no analyzer in context"
-	)
+	local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	analyzer:Assert(env.typesystem.ffi:Set(ConstString("C"), Table()))
 	analyzer:Assert(env.runtime.ffi:Set(ConstString("C"), Table()))
@@ -128,7 +123,7 @@ end
 
 function cparser.cast(cdecl, src)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
-	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = analyze(cdecl:GetData(), "typeof", env, analyzer)
 	local ctype = extract_anonymous_type(typs)
@@ -155,7 +150,7 @@ function cparser.typeof(cdecl, ...)
 
 	if args[1] and args[1].Type == "tuple" then args = {args[1]:Unpack()} end
 
-	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = analyze(cdecl:GetData(), "typeof", env, analyzer, ...)
 	local ctype = extract_anonymous_type(typs)
@@ -176,7 +171,7 @@ end
 
 function cparser.get_type(cdecl, ...)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = analyze(cdecl:GetData(), "typeof", env, analyzer, ...)
 	local ctype = extract_anonymous_type(typs)
@@ -184,7 +179,7 @@ function cparser.get_type(cdecl, ...)
 end
 
 function cparser.new(cdecl, ...)
-	local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = analyze(cdecl:GetData(), "ffinew", env, analyzer, ...)
 	local ctype = extract_anonymous_type(vars)
@@ -202,7 +197,7 @@ function cparser.metatype(ctype, meta)
 			ConstString("__call"),
 			LuaTypeFunction(
 				function(self, ...)
-					local analyzer = require("nattlua.analyzer.context"):GetCurrentAnalyzer()
+					local analyzer = analyzer_context:GetCurrentAnalyzer()
 					local val = analyzer:Assert(analyzer:Call(new, Tuple({ctype, ...}))):Unpack()
 
 					if val.Type == "union" then

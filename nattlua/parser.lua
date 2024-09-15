@@ -300,15 +300,15 @@ function META:ParseRootNode()
 	local node = self:StartNode("statement", "root")
 	self.RootStatement = self.config and self.config.root_statement_override or node
 	local shebang
+	local statements = {}
 
 	if self:IsTokenType("shebang") then
 		shebang = self:StartNode("statement", "shebang")
 		shebang.tokens["shebang"] = self:ExpectTokenType("shebang")
 		shebang = self:EndNode(shebang)
 		node.tokens["shebang"] = shebang.tokens["shebang"]
+		table_insert(statements, shebang)
 	end
-
-	local import_tree
 
 	if self.config.emit_environment then
 		if not imported_index then
@@ -323,26 +323,21 @@ function META:ParseRootNode()
 				table_insert(self.RootStatement.imports, import)
 			end
 
-			import_tree = imported_index
+			table_insert(statements, imported_index.statements[1])
 		end
 	end
 
-	node.statements = self:ParseStatements()
-
-	if shebang then table_insert(node.statements, 1, shebang) end
-
-	if import_tree then
-		table_insert(node.statements, 1, import_tree.statements[1])
-	end
+	self:ParseStatements(nil, statements)
 
 	if self:IsTokenType("end_of_file") then
 		local eof = self:StartNode("statement", "end_of_file")
 		eof.tokens["end_of_file"] = self.tokens[#self.tokens]
 		eof = self:EndNode(eof)
-		table_insert(node.statements, eof)
+		table_insert(statements, eof)
 		node.tokens["eof"] = eof.tokens["end_of_file"]
 	end
 
+	node.statements = statements
 	node = self:EndNode(node)
 	collectgarbage("restart")
 	return node

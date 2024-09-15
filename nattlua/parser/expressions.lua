@@ -811,13 +811,15 @@ do -- runtime
 		)
 	end
 
+	local stringx = require("nattlua.other.string")
+
 	local function resolve_require_path(require_path--[[#: string]])
 		local paths = package.path .. ";"
 		paths = paths .. "./?/init.lua;"
-		require_path = require_path:gsub("%.", "/")
+		require_path = stringx.replace(require_path, ".", "/")
 
-		for package_path in paths:gmatch("(.-);") do
-			local lua_path = package_path:gsub("%?", require_path)
+		for _, package_path in ipairs(stringx.split(paths, ";")) do
+			local lua_path = stringx.replace(package_path, "?", require_path)
 			local f = io_open(lua_path, "r")
 
 			if f then

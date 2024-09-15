@@ -1,6 +1,6 @@
 --ANALYZE
 return function(META--[[#: ref any]])
-	--[[#type META.@Self.context_values = Map<|string, List<|any|>|>]]
+	--[[#type META.@Self.context_values = Map<|string, {i = number, [number] = any}|>]]
 	--[[#type META.@Self.context_ref = Map<|string, number|>]]
 
 	table.insert(META.OnInitialize, function(self--[[#: ref any]])
@@ -9,21 +9,34 @@ return function(META--[[#: ref any]])
 	end)
 
 	do
-		local table_insert = table.insert
-		local table_remove = table.remove
+		local NIL = {}
 
 		function META:PushContextValue(key--[[#: string]], value--[[#: any]])
-			self.context_values[key] = self.context_values[key] or {}
-			table_insert(self.context_values[key], 1, value)
+			if value == nil then value = NIL end
+
+			self.context_values[key] = self.context_values[key] or {i = 0}
+			self.context_values[key].i = self.context_values[key].i + 1
+			self.context_values[key][self.context_values[key].i] = value
 		end
 
 		function META:GetContextValue(key--[[#: string]], level--[[#: number | nil]])
-			return self.context_values[key] and self.context_values[key][level or 1]
+			local val = self.context_values[key] and
+				self.context_values[key][self.context_values[key].i - (
+					level or
+					1
+				) + 1]
+
+			if val == NIL then val = nil end
+
+			return val
 		end
 
 		function META:PopContextValue(key--[[#: string]])
 			-- typesystem doesn't know that a value is always inserted before it's popped
-			return (table_remove--[[# as any]])(self.context_values[key], 1)
+			if false--[[# as true]] then return end
+
+			self.context_values[key][self.context_values[key].i] = nil
+			self.context_values[key].i = self.context_values[key].i - 1
 		end
 	end
 

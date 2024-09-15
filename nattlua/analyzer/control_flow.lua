@@ -92,7 +92,7 @@ return function(META)
 
 			if not assert_expression or assert_expression:IsCertainlyTrue() then
 				function_scope.lua_silent_error = function_scope.lua_silent_error or {}
-				table_insert(function_scope.lua_silent_error, 1, self:GetScope())
+				table_insert(function_scope.lua_silent_error, self:GetScope())
 				frame.scope:UncertainReturn()
 			end
 
@@ -215,7 +215,7 @@ return function(META)
 		local thrown = false
 
 		if function_scope.lua_silent_error then
-			local errored_scope = table_remove(function_scope.lua_silent_error)
+			local errored_scope = function_scope.lua_silent_error[1]
 
 			if
 				errored_scope and
@@ -249,9 +249,7 @@ return function(META)
 		end
 
 		function META:GetCallFrame(level)
-			local stack = self:GetCallStack()
-			local frame = level and stack[#stack - level] or stack[#stack]
-			return frame
+			return self:GetCallStack()[level or 1]
 		end
 
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
@@ -283,7 +281,6 @@ return function(META)
 
 			table_insert(
 				self.call_stack,
-				1,
 				{
 					obj = obj,
 					call_node = call_node,
@@ -296,7 +293,7 @@ return function(META)
 			end]] end
 
 		function META:PopCallFrame()
-			table_remove(self.call_stack, 1)
+			table_remove(self.call_stack)
 		end
 	end
 

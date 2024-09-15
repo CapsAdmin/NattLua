@@ -22,6 +22,21 @@ function stringx.split(self--[[#: string]], separator--[[#: string]])
 	return tbl
 end
 
+function stringx.replace(self--[[#: string]], old--[[#: string]], new--[[#: string]])
+    if old == "" then
+        return self
+    end
+
+    local parts = stringx.split(self, old)
+
+    if #parts == 1 then
+        return self
+    end
+
+    return table.concat(parts, new)
+end
+
+
 function stringx.trim(self--[[#: string]])
 	local char = "%s*"
 	local _, start = self:find(char, 0)

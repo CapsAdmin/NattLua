@@ -132,7 +132,7 @@ return function(META)
 
 		function META:AddToUnreachableCodeAnalysis(obj)
 			self.deferred_calls = self.deferred_calls or {}
-			table_insert(self.deferred_calls, 1, obj)
+			table_insert(self.deferred_calls, obj)
 		end
 
 		function META:AnalyzeUnreachableCode()
@@ -144,7 +144,9 @@ return function(META)
 			local called_count = 0
 			local done = {}
 
-			for _, func in ipairs(self.deferred_calls) do
+			for i = total, 1, -1 do
+				local func = self.deferred_calls[i]
+
 				if
 					func:IsExplicitInputSignature() and
 					not func:IsCalled()
@@ -158,7 +160,9 @@ return function(META)
 				end
 			end
 
-			for _, func in ipairs(self.deferred_calls) do
+			for i = total, 1, -1 do
+				local func = self.deferred_calls[i]
+
 				if
 					not func:IsExplicitInputSignature() and
 					not func:IsCalled()
@@ -282,6 +286,7 @@ return function(META)
 		local runtime_injection = [[
 			local analyzer = assert(context:GetCurrentAnalyzer(), "no analyzer in context")
 			local env = analyzer:GetScopeHelper(analyzer.function_scope)
+			local cdecl_parser = require("nattlua.c_declarations.main")
 		]]
 		runtime_injection = runtime_injection:gsub("\n", ";")
 
@@ -497,11 +502,11 @@ return function(META)
 			end
 
 			function META:PushUncertainLoop(b)
-				return self:PushContextValue("uncertain_loop", b and self:GetScope():GetNearestLoopScope())
+				self:PushContextValue("uncertain_loop", b and self:GetScope():GetNearestLoopScope())
 			end
 
 			function META:PopUncertainLoop()
-				return self:PopContextValue("uncertain_loop")
+				self:PopContextValue("uncertain_loop")
 			end
 		end
 

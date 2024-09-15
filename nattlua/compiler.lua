@@ -16,6 +16,7 @@ local Parser = require("nattlua.parser").New
 local Analyzer = require("nattlua.analyzer").New
 local Emitter = require("nattlua.transpiler.emitter").New
 local loadstring = require("nattlua.other.loadstring")
+local stringx = require("nattlua.other.string")
 local META = class.CreateTemplate("compiler")
 
 --[[#local type { CompilerConfig } = import("~/nattlua/config.nlua")]]
@@ -39,21 +40,17 @@ function META:__tostring()
 	return str
 end
 
-local repl = function()
-	return "\nbecause "
-end
-
 function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 	local level = 0
 	local t = 0
-	msg = msg:gsub(" because ", repl)
+	msg = stringx.replace(msg, " because ", "\nbecause ")
 
 	if t > 0 then msg = "\n" .. msg end
 
 	local msg = code:BuildSourceCodePointMessage(formating.FormatMessage(msg, ...), start, stop)
 	local msg2 = ""
 
-	for line in (msg .. "\n"):gmatch("(.-)\n") do
+	for _, line in ipairs(stringx.split(msg, "\n")) do
 		msg2 = msg2 .. (" "):rep(4 - level * 2) .. line .. "\n"
 	end
 

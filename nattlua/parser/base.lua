@@ -348,9 +348,9 @@ function META:ParseValues(
 	return self:ParseToken()
 end
 
-function META:ParseStatements(stop_token--[[#: {[string] = true} | nil]])
-	local out = {}
-	local i = 1
+function META:ParseStatements(stop_token--[[#: {[string] = true} | nil]], out--[[#: List<|any|>]])
+	out = out or {}
+	local i = #out
 
 	for _ = 1, self:GetLength() do
 		local tk = self:GetToken()
@@ -364,12 +364,12 @@ function META:ParseStatements(stop_token--[[#: {[string] = true} | nil]])
 		if not node then break end
 
 		if node.type then
-			out[i] = node
 			i = i + 1
+			out[i] = node
 		else
 			for _, v in ipairs(node) do
-				out[i] = v
 				i = i + 1
+				out[i] = v
 			end
 		end
 	end
