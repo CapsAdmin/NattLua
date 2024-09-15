@@ -12,25 +12,8 @@ local Boolean = require("nattlua.types.union").Boolean
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 local walk_cdeclarations = require("nattlua.c_declarations.ast_walker")
-
-do
-	local table_insert = table.insert
-	local table_remove = table.remove
-
-	function META:PushContextValue(key--[[#: string]], value--[[#: any]])
-		self.context_values[key] = self.context_values[key] or {}
-		table_insert(self.context_values[key], 1, value)
-	end
-
-	function META:GetContextValue(key--[[#: string]], level--[[#: number | nil]])
-		return self.context_values[key] and self.context_values[key][level or 1]
-	end
-
-	function META:PopContextValue(key--[[#: string]])
-		-- typesystem doesn't know that a value is always inserted before it's popped
-		return (table_remove--[[# as any]])(self.context_values[key], 1)
-	end
-end
+META.OnInitialize = {}
+require("nattlua.other.context_mixin")(META)
 
 local function cast(self, node)
 	if node.type == "array" then
@@ -56,7 +39,7 @@ local function cast(self, node)
 			self.analyzer:Call(self.env.FFIPointer, Tuple({cast(self, assert(node.of))})):Unpack()
 		)
 
-		if self:GetContextValue("function_argument") == true then
+		if self:GetContextRef("function_argument") == true then
 			if
 				node.of.type == "type" and
 				node.of.modifiers[1] == "const" and
@@ -215,15 +198,13 @@ local function cast(self, node)
 		local args = {}
 		local rets = {}
 
-		if not self.super_hack then
-			self:PushContextValue("function_argument", true)
-		end
+		if not self.super_hack then self:PushContextRef("function_argument") end
 
 		for i, v in ipairs(node.args) do
 			table.insert(args, cast(self, v))
 		end
 
-		if not self.super_hack then self:PopContextValue("function_argument") end
+		if not self.super_hack then self:PopContextRef("function_argument") end
 
 		return (Function(Tuple(args), Tuple({cast(self, assert(node.rets))})))
 	elseif node.type == "root" then
@@ -275,6 +256,11 @@ end
 
 function META.New()
 	local self = setmetatable({context_values = {}}, META)
+
+	for i, v in ipairs(META.OnInitialize) do
+		v(self)
+	end
+
 	return self
 end
 

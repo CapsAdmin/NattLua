@@ -1,18 +1,24 @@
-local table_insert = _G.table.insert
-local table_remove = _G.table.remove
-local current_analyzer--[[#: List<|any|>]] = {}
-local CONTEXT = {}
+local class = require("nattlua.other.class")
+local META = class.CreateTemplate("analyzer_context")
+META.OnInitialize = {}
+require("nattlua.other.context_mixin")(META)
 
-function CONTEXT:GetCurrentAnalyzer()
-	return current_analyzer[1]
+function META:GetCurrentAnalyzer()
+	return self:GetContextValue("analyzer")
 end
 
-function CONTEXT:PushCurrentAnalyzer(b)
-	table_insert(current_analyzer, 1, b)
+function META:PushCurrentAnalyzer(a)
+	self:PushContextValue("analyzer", a)
 end
 
-function CONTEXT:PopCurrentAnalyzer()
-	table_remove(current_analyzer, 1)
+function META:PopCurrentAnalyzer()
+	self:PopContextValue("analyzer")
 end
 
-return CONTEXT
+local self = setmetatable({context_values = {}, context_ref = {}}, META)
+
+for i, v in ipairs(META.OnInitialize) do
+	v(self)
+end
+
+return self

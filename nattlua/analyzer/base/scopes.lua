@@ -5,19 +5,25 @@ local LexicalScope = require("nattlua.analyzer.base.lexical_scope").New
 local Table = require("nattlua.types.table").Table
 local LString = require("nattlua.types.string").LString
 local table = _G.table
+local table_remove = _G.table.remove
+local table_insert = _G.table.insert
 local type_errors = require("nattlua.types.error_messages")
 return function(META)
-	table.insert(META.OnInitialize, function(self)
+	require("nattlua.other.context_mixin")(META)
+
+	table_insert(META.OnInitialize, function(self)
 		self.default_environment = {
 			runtime = Table(),
 			typesystem = Table(),
 		}
 		self.environments = {runtime = {}, typesystem = {}}
+		self.environments_head = {runtime = {}, typesystem = {}}
 		self.scope_stack = {}
+		self.environment_nodes = {}
 	end)
 
 	function META:PushScope(scope)
-		table.insert(self.scope_stack, self.scope)
+		table_insert(self.scope_stack, self.scope)
 		self.scope = scope
 		return scope
 	end
@@ -35,7 +41,7 @@ return function(META)
 	end
 
 	function META:PopScope()
-		local new = table.remove(self.scope_stack)
+		local new = table_remove(self.scope_stack)
 		local old = self.scope
 
 		if new then self.scope = new end
@@ -54,7 +60,7 @@ return function(META)
 	function META:CloneCurrentScope()
 		local scope_copy = self:GetScope():Copy(true)
 		local g = self:GetGlobalEnvironment("runtime"):Copy()
-		local last_node = self.environment_nodes[#self.environment_nodes]
+		local last_node = self:GetContextValue("global_environment_nodes")
 		self:PopScope()
 		self:PopGlobalEnvironment("runtime")
 		scope_copy:SetParent(scope_copy:GetParent() or self:GetScope())
@@ -144,48 +150,51 @@ return function(META)
 	end
 
 	do -- environment
-		function META:SetEnvironmentOverride(node, obj, env)
-			node.environments_override = node.environments_override or {}
-			node.environments_override[env] = obj
-		end
-
-		function META:GetGlobalEnvironmentOverride(node, env)
-			if node.environments_override then return node.environments_override[env] end
-		end
-
-		function META:SetDefaultEnvironment(obj, env)
-			self.default_environment[env] = obj
-		end
-
-		function META:GetDefaultEnvironment(env)
-			return self.default_environment[env]
-		end
-
-		function META:PushGlobalEnvironment(node, obj, env)
-			table.insert(self.environments[env], 1, obj)
-			node.environments = node.environments or {}
-			node.environments[env] = obj
-			self.environment_nodes = self.environment_nodes or {}
-			table.insert(self.environment_nodes, 1, node)
-		end
-
-		function META:PopGlobalEnvironment(env)
-			table.remove(self.environment_nodes, 1)
-			table.remove(self.environments[env], 1)
-		end
-
-		function META:GetGlobalEnvironment(env)
-			local g = self.environments[env][1] or self:GetDefaultEnvironment(env)
-
-			if
-				self.environment_nodes[1] and
-				self.environment_nodes[1].environments_override and
-				self.environment_nodes[1].environments_override[env]
-			then
-				g = self.environment_nodes[1].environments_override[env]
+		do
+			function META:SetEnvironmentOverride(node, obj, env)
+				node.environments_override = node.environments_override or {}
+				node.environments_override[env] = obj
 			end
 
-			return g
+			function META:GetGlobalEnvironmentOverride(node, env)
+				if node.environments_override then return node.environments_override[env] end
+			end
+		end
+
+		do
+			function META:SetDefaultEnvironment(obj, env)
+				self.default_environment[env] = obj
+			end
+
+			function META:GetDefaultEnvironment(env)
+				return self.default_environment[env]
+			end
+		end
+
+		do
+			function META:PushGlobalEnvironment(node, obj, env)
+				node.environments = node.environments or {}
+				node.environments[env] = obj
+				self:PushContextValue("global_environment_" .. env, obj)
+				self:PushContextValue("global_environment_nodes", node)
+			end
+
+			function META:PopGlobalEnvironment(env)
+				self:PopContextValue("global_environment_" .. env)
+				self:PopContextValue("global_environment_nodes")
+			end
+
+			function META:GetGlobalEnvironment(env)
+				local g = self:GetContextValue("global_environment_" .. env) or
+					self:GetDefaultEnvironment(env)
+				local node = self:GetContextValue("global_environment_nodes")
+
+				if node and node.environments_override and node.environments_override[env] then
+					g = node.environments_override[env]
+				end
+
+				return g
+			end
 		end
 	end
 end

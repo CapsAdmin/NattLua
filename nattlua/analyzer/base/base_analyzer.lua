@@ -19,6 +19,8 @@ local Any = require("nattlua.types.any").Any
 local context = require("nattlua.analyzer.context")
 local path_util = require("nattlua.other.path")
 local table = _G.table
+local table_insert = table.insert
+local table_remove = table.remove
 local math = _G.math
 return function(META)
 	require("nattlua.analyzer.base.scopes")(META)
@@ -57,7 +59,7 @@ return function(META)
 				obj = obj:Get(1)
 			end
 
-			table.insert(out, obj)
+			table_insert(out, obj)
 		end
 
 		return out
@@ -130,7 +132,7 @@ return function(META)
 
 		function META:AddToUnreachableCodeAnalysis(obj)
 			self.deferred_calls = self.deferred_calls or {}
-			table.insert(self.deferred_calls, 1, obj)
+			table_insert(self.deferred_calls, 1, obj)
 		end
 
 		function META:AnalyzeUnreachableCode()
@@ -334,7 +336,7 @@ return function(META)
 		function META:CallLuaTypeFunction(func, scope, ...)
 			self.function_scope = scope
 			local res = {pcall(func, ...)}
-			local ok = table.remove(res, 1)
+			local ok = table_remove(res, 1)
 
 			if not ok then
 				local msg = tostring(res[1])
