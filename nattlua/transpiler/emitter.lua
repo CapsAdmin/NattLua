@@ -747,7 +747,7 @@ function META:EmitCall(node--[[#: Node]])
 end
 
 do
-	function META:EmitFunctionBody(node--[[#: Node]])
+	function META:EmitFunctionBody(node--[[#: Node]], inject_analyzer_function_code)
 		if node.identifiers_typesystem and not self.config.omit_invalid_code then
 			local emitted = self:StartEmittingInvalidLuaCode()
 			self:EmitToken(node.tokens["arguments_typesystem("])
@@ -762,9 +762,14 @@ do
 		self:EmitFunctionReturnAnnotation(node)
 
 		if #node.statements == 0 then
+			if inject_analyzer_function_code then self:Emit("__REPLACE_ME__") end
+
 			self:Whitespace(" ")
 		else
 			self:Whitespace("\n")
+
+			if inject_analyzer_function_code then self:Emit("__REPLACE_ME__") end
+
 			self:EmitBlock(node.statements)
 			self:Whitespace("\n")
 			self:Whitespace("\t")
@@ -806,7 +811,7 @@ do
 		self:EmitToken(node.tokens["function"])
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["identifier"])
-		self:EmitFunctionBody(node, true)
+		self:EmitFunctionBody(node)
 		self:EmitToken(node.tokens["end"])
 	end
 

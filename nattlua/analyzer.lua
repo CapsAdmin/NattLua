@@ -91,7 +91,7 @@ do
 			AnalyzeNumericFor(self, node)
 		elseif node.kind == "analyzer_debug_code" then
 			local code = node.lua_code.value.value:sub(3)
-			self:CallLuaTypeFunction(self:CompileLuaAnalyzerDebugCode(code, node.lua_code), self:GetScope())
+			self:CallLuaTypeFunction(node.compiled_function, self:GetScope())
 		elseif node.kind == "import" then
 
 		elseif

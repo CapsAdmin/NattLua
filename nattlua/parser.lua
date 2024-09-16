@@ -1,6 +1,7 @@
 local META = loadfile("nattlua/parser/base.lua")()
 local Code = require("nattlua.code").New
 local Lexer = require("nattlua.lexer").New
+local Emitter = require("nattlua.transpiler.emitter").New
 local path_util = require("nattlua.other.path")
 local math = _G.math
 local math_huge = math.huge
@@ -209,6 +210,15 @@ function META:ParseAnalyzerFunctionBody(
 	end
 
 	self:PopParserEnvironment()
+
+	do
+		local em = Emitter({type_annotations = false})
+		em:EmitFunctionBody(node, true)
+		em:EmitToken(node.tokens["end"])
+		local func, code = self:CompileLuaAnalyzerDebugCode("return function " .. em:Concat(), node)
+		node.compiled_function = func()
+	end
+
 	return node
 end
 

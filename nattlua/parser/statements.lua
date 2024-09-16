@@ -418,10 +418,110 @@ function META:ParseContinueStatement()
 	return node
 end
 
+do
+	local formating = require("nattlua.other.formating")
+	local loadstring = require("nattlua.other.loadstring")
+	local locals = ""
+	locals = locals .. "local bit=bit32 or _G.bit;"
+
+	if _G.BUNDLE then
+		locals = locals .. "local nl=IMPORTS[\"nattlua.init\"]();"
+		locals = locals .. "local types=IMPORTS[\"nattlua.types.types\"]();"
+		locals = locals .. "local context=IMPORTS[\"nattlua.analyzer.context\"]();"
+		locals = locals .. "local cdecl_parser = IMPORTS[\"nattlua.c_declarations.main\"];"
+	else
+		locals = locals .. "local nl=require(\"nattlua.init\");"
+		locals = locals .. "local types=require(\"nattlua.types.types\");"
+		locals = locals .. "local context=require(\"nattlua.analyzer.context\");"
+		locals = locals .. "local cdecl_parser=require(\"nattlua.c_declarations.main\");"
+	end
+
+	local globals = {
+		"loadstring",
+		"dofile",
+		"gcinfo",
+		"collectgarbage",
+		"newproxy",
+		"print",
+		"_VERSION",
+		"coroutine",
+		"debug",
+		"package",
+		"os",
+		"bit",
+		"_G",
+		"module",
+		"require",
+		"assert",
+		"string",
+		"arg",
+		"jit",
+		"math",
+		"table",
+		"io",
+		"type",
+		"next",
+		"pairs",
+		"ipairs",
+		"getmetatable",
+		"setmetatable",
+		"getfenv",
+		"setfenv",
+		"rawget",
+		"rawset",
+		"rawequal",
+		"unpack",
+		"select",
+		"tonumber",
+		"tostring",
+		"error",
+		"pcall",
+		"xpcall",
+		"loadfile",
+		"load",
+	}
+
+	for _, key in ipairs(globals) do
+		locals = locals .. "local " .. tostring(key) .. "=_G." .. key .. ";"
+	end
+
+	local runtime_injection = {
+		[[local analyzer = assert(context:GetCurrentAnalyzer(), "no analyzer in context")]],
+		[[local env = analyzer:GetScopeHelper(assert(analyzer.function_scope, "no function scope in context"))]],
+	}
+	runtime_injection = table.concat(runtime_injection, ";") .. ";"
+
+	function META:CompileLuaAnalyzerDebugCode(code, node)
+		local start, stop = code:find("__REPLACE_ME__", nil, true)
+
+		if start and stop then
+			local before_function = code:sub(1, start - 1)
+			local after_function = code:sub(stop + 1, #code)
+			code = before_function .. runtime_injection .. after_function
+		else
+			code = runtime_injection .. code
+		end
+
+		code = locals .. code
+		-- append newlines so that potential runtime line errors are correct
+		local lua_code = node.Code:GetString()
+		local line
+
+		if lua_code then
+			local start, stop = node:GetStartStop()
+			line = formating.SubPositionToLinePosition(lua_code, start, stop).line_start
+			code = ("\n"):rep(line - 1) .. code
+		end
+
+		return assert(loadstring(code, node.Code:GetName() .. ":" .. line)), code
+	end
+end
+
 function META:ParseDebugCodeStatement()
 	if self:IsTokenType("analyzer_debug_code") then
 		local node = self:StartNode("statement", "analyzer_debug_code")
 		node.lua_code = self:ParseValueExpressionType("analyzer_debug_code")
+		node.compiled_function = self:CompileLuaAnalyzerDebugCode(node.lua_code.value.value:sub(3), node)
 		node = self:EndNode(node)
 		return node
 	elseif self:IsTokenType("parser_debug_code") then

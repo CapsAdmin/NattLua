@@ -177,10 +177,7 @@ return {
 		self:PopCurrentType("function")
 
 		if node.kind == "analyzer_function" or node.kind == "local_analyzer_function" then
-			local em = Emitter({type_annotations = false})
-			em:EmitFunctionBody(node)
-			em:EmitToken(node.tokens["end"])
-			obj:SetAnalyzerFunction(self:CompileLuaAnalyzerDebugCode("return function " .. em:Concat(), node)())
+			obj:SetAnalyzerFunction(node.compiled_function)
 		end
 
 		if node.statements then obj:SetFunctionBodyNode(node) end
