@@ -46,6 +46,31 @@ function path.Normalize(str--[[#: string]])
 	return str
 end
 
+local function exists(path)
+	local f = io.open(path)
+
+	if f then
+		f:close()
+		return true
+	end
+
+	return false
+end
+
+local ok, fs = pcall(require, "nattlua.other.fs")
+
+if ok then exists = function(path)
+	return fs.get_type(path) == "file"
+end end
+
+local function directory_from_path(path)
+	for i = #path, 1, -1 do
+		if path:sub(i, i) == "/" then return path:sub(1, i) end
+	end
+
+	return nil
+end
+
 function path.Resolve(path, root_directory, working_directory, file_path)
 	root_directory = root_directory or ""
 	working_directory = working_directory or ""
@@ -62,18 +87,13 @@ function path.Resolve(path, root_directory, working_directory, file_path)
 		if path:sub(1, 2) == "./" then path = path:sub(3) end
 
 		do
-			working_directory = file_path and file_path:match("(.+/)") or working_directory
-			local f = io.open(working_directory .. path)
+			working_directory = file_path and directory_from_path(file_path) or working_directory
 
-			if f then
-				f:close()
+			if exists(working_directory .. path) then
 				return working_directory .. path
 			else
 				if working_directory then
-					local f = io.open(root_directory .. working_directory .. path)
-
-					if f then
-						f:close()
+					if exists(root_directory .. working_directory .. path) then
 						return root_directory .. working_directory .. path
 					end
 				end
