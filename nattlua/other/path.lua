@@ -1,3 +1,4 @@
+local stringx = require("nattlua.other.string")
 local path = {}
 
 function path.RemoveProtocol(str--[[#: string]])
@@ -104,6 +105,20 @@ function path.Resolve(path, root_directory, working_directory, file_path)
 	end
 
 	return path
+end
+
+function path.ResolveRequire(str)
+	local paths = package.path .. ";"
+	paths = paths .. "./?/init.lua;"
+	require_path = stringx.replace(str, ".", "/")
+
+	for _, package_path in ipairs(stringx.split(paths, ";")) do
+		local lua_path = stringx.replace(package_path, "?", require_path)
+
+		if exists(lua_path) then return lua_path end
+	end
+
+	return nil
 end
 
 return path

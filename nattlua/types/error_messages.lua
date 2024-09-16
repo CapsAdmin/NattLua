@@ -22,9 +22,12 @@ end
 function type_errors.context(context--[[#: Reason]], reason--[[#: Reason]])--[[#: Reason]]
 	if type(context) ~= "table" then context = {context} end
 
-	if type(reason) ~= "table" then reason = {reason} end
+	if type(reason) ~= "table" then
+		reason = {context, reason}
+	else
+		reason = {context, table.unpack(reason)}
+	end
 
-	table_insert(reason, 1, context)
 	return reason
 end
 

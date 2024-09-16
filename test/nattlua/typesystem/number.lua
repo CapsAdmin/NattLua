@@ -2,6 +2,7 @@ local LNumberRange = require("nattlua.types.number").LNumberRange
 local LNumber = require("nattlua.types.number").LNumber
 local Number = require("nattlua.types.number").Number
 local Any = require("nattlua.types.any").Any
+local stringx = require("nattlua.other.string")
 
 test("a literal number should be contained within all numbers", function()
 	assert(LNumber(42):IsSubsetOf(Number()))
@@ -279,7 +280,7 @@ do
 		local result = range_tostring(a.IntersectComparison(a, b, op))
 
 		do
-			local input = range_tostring(a, b):gsub(", ", " " .. op .. " ")
+			local input = stringx.replace(range_tostring(a, b), ", ", " " .. op .. " ")
 
 			if expect ~= result then
 				error("(" .. input .. ") = (" .. result .. ") - FAIL: expected " .. expect)

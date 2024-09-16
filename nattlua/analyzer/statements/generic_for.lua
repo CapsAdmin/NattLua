@@ -99,16 +99,18 @@ return {
 				self:ClearBreak()
 			end
 
+			if one_loop then break end
+
+			if brk then break end
+
 			if i == (self.max_iterations or 1000) and self:IsRuntime() then
 				self:Error("too many iterations")
 			end
 
-			table.insert(values:GetData(), 1, args[1])
-			args = values:GetData()
-
-			if one_loop then break end
-
-			if brk then break end
+			if args[1] and false then
+				table.insert(values:GetData(), 1, args[1])
+				args = values:GetData()
+			end
 		end
 
 		if returned_key then

@@ -1,8 +1,9 @@
 local nl = require("nattlua")
+local stringx = require("nattlua.other.string")
 
 local function check(config, input, expect)
 	expect = expect or input
-	expect = expect:gsub("    ", "\t")
+	expect = stringx.replace(expect, "    ", "\t")
 	config = config or {}
 
 	if config.comment_type_annotations == nil then

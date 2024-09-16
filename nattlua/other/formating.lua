@@ -114,21 +114,19 @@ function formating.SubPositionToLinePosition(code--[[#: string]], start--[[#: nu
 end
 
 do
-	-- TODO: wtf am i doing here?
-	local args--[[#: List<|string | List<|string|>|>]]
-	local fmt = function(str--[[#: string]])
-		local num = tonumber(str)
-
-		if not num then error("invalid format argument " .. str) end
-
-		if type(args[num]) == "table" then return formating.QuoteTokens(args[num]) end
-
-		return formating.QuoteToken(args[num] or "?")
-	end
-
 	function formating.FormatMessage(msg--[[#: string]], ...)
-		args = {...}
-		msg = msg:gsub("$(%d)", fmt)
+		for i = 1, select("#", ...) do
+			local arg = select(i, ...)--[[# as string | List<|string|>]]
+
+			if type(arg) == "table" then
+				arg = formating.QuoteTokens(arg)
+			else
+				arg = formating.QuoteToken(arg or "?")
+			end
+
+			msg = stringx.replace(msg, "$" .. i, arg)
+		end
+
 		return msg
 	end
 end
@@ -160,7 +158,9 @@ do
 	)
 		if not start then debug.trace() end
 
-		if #lua_code > 500000 then return "*cannot point to source code, too big*: " .. msg end
+		if #lua_code > 500000 then
+			return "*cannot point to source code, too big*: " .. msg
+		end
 
 		do
 			local new_str = ""
@@ -245,13 +245,14 @@ do
 		end
 
 		longest_line = math.min(longest_line, MAX_WIDTH)
+		local lines2 = {(" "):rep(number_length + 3) .. ("_"):rep(longest_line - number_length + 1)}
+
+		for i, v in ipairs(lines) do
+			lines2[i + 1] = v
+		end
+
 		table.insert(
-			lines,
-			1,
-			(" "):rep(number_length + 3) .. ("_"):rep(longest_line - number_length + 1)
-		)
-		table.insert(
-			lines,
+			lines2,
 			(" "):rep(number_length + 3) .. ("-"):rep(longest_line - number_length + 1)
 		)
 
@@ -259,12 +260,12 @@ do
 			if path:sub(1, 1) == "@" then path = path:sub(2) end
 
 			local msg = path .. ":" .. data.line_start .. ":" .. data.character_start
-			table.insert(lines, stringx.pad_left("->", number_length, " ") .. " | " .. msg)
+			table.insert(lines2, stringx.pad_left("->", number_length, " ") .. " | " .. msg)
 		end
 
-		table.insert(lines, stringx.pad_left("->", number_length, " ") .. " | " .. msg)
-		local str = table.concat(lines, "\n")
-		str = str:gsub("\t", " ")
+		table.insert(lines2, stringx.pad_left("->", number_length, " ") .. " | " .. msg)
+		local str = table.concat(lines2, "\n")
+		str = stringx.replace(str, "\t", " ")
 		return str
 	end
 end

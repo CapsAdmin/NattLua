@@ -802,35 +802,6 @@ do -- runtime
 		return self:ParseValueExpressionToken()
 	end
 
-	local function resolve_import_path(self--[[#: META.@Self]], path--[[#: string]])
-		return path_util.Resolve(
-			path,
-			self.config.root_directory,
-			self.config.working_directory,
-			self.config.file_path
-		)
-	end
-
-	local stringx = require("nattlua.other.string")
-
-	local function resolve_require_path(require_path--[[#: string]])
-		local paths = package.path .. ";"
-		paths = paths .. "./?/init.lua;"
-		require_path = stringx.replace(require_path, ".", "/")
-
-		for _, package_path in ipairs(stringx.split(paths, ";")) do
-			local lua_path = stringx.replace(package_path, "?", require_path)
-			local f = io_open(lua_path, "r")
-
-			if f then
-				f:close()
-				return lua_path
-			end
-		end
-
-		return nil
-	end
-
 	function META:HandleImportExpression(node--[[#: Node]], name--[[#: string]], str--[[#: string]], start--[[#: number]])
 		if self.config.skip_import then return end
 
@@ -841,9 +812,14 @@ do -- runtime
 
 		local path
 
-		if name == "require" then path = resolve_require_path(str) end
+		if name == "require" then path = path_util.ResolveRequire(str) end
 
-		path = resolve_import_path(self, path or str)
+		path = path_util.Resolve(
+			path or str,
+			self.config.root_directory,
+			self.config.working_directory,
+			self.config.file_path
+		)
 
 		if name == "require" then
 			local f = io_open(path, "r")
@@ -912,7 +888,12 @@ do -- runtime
 		if self.config.skip_import then return end
 
 		node.import_expression = true
-		node.path = resolve_import_path(self, path)
+		node.path = path_util.Resolve(
+			path,
+			self.config.root_directory,
+			self.config.working_directory,
+			self.config.file_path
+		)
 		self.imported = self.imported or {}
 		local key = "DATA_" .. node.path
 		node.key = key

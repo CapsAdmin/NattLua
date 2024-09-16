@@ -34,14 +34,22 @@ return function()
 		-- this should be 32 or 64 or something, but setting it to the same as maxmcode seems to work much better
 		params.sizemcode = params.maxmcode
 	else
-		params.maxrecord = 4000
-		params.maxirconst = 1500
-		params.maxsnap = 1500
-		params.minstitch = 3
+	
 		params.maxmcode = 128000
 		params.sizemcode = params.maxmcode
-		params.loopunroll = 3
-		params.recunroll = 2
+		
+		
+		params.maxrecord = 100
+		params.maxirconst = 500
+		params.maxside = 5000
+		params.maxsnap = 500
+		params.hotloop = 20
+		params.hotexit = 1
+		params.tryside = 20
+		params.instunroll = 1000
+		params.loopunroll = 1000
+		params.callunroll = 1000
+		params.recunroll = 0
 	end
 
 	local flags = {

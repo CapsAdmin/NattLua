@@ -8,6 +8,10 @@ local Nil = require("nattlua.types.symbol").Nil
 local True = require("nattlua.types.symbol").True
 local False = require("nattlua.types.symbol").False
 local type_errors = require("nattlua.types.error_messages")
+local table_concat = _G.table.concat
+local table_insert = _G.table.insert
+local table_remove = _G.table.remove
+local table_sort = require("nattlua.other.sort")
 
 --[[#local type { TNumber } = require("nattlua.types.number")]]
 
@@ -68,8 +72,8 @@ function META:__tostring()
 	local s = {}
 	self.suppress = true
 
-	for _, v in ipairs(self.Data) do
-		table.insert(s, tostring(v))
+	for i, v in ipairs(self.Data) do
+		s[i] = tostring(v)
 	end
 
 	if not s[1] then
@@ -79,10 +83,10 @@ function META:__tostring()
 
 	self.suppress = false
 
-	if #s == 1 then return s[1] .. "|" end
+	if #s == 1 then return (s[1]--[[# as string]]) .. "|" end
 
-	table.sort(s, sort)
-	return table.concat(s, " | ")
+	table_sort(s, sort)
+	return table_concat(s, " | ")
 end
 
 local function is_literal(obj)
@@ -131,13 +135,13 @@ function META:AddType(e--[[#: TBaseType]])
 		for i = #self.Data, 1, -1 do
 			local sub = self.Data[i]--[[# as TBaseType]] -- TODO, prove that the for loop will always yield TBaseType?
 			if sub.Type == sup.Type then
-				if sub:IsSubsetOf(sup) then table.remove(self.Data, i) end
+				if sub:IsSubsetOf(sup) then self.Data[#self.Data] = nil end
 			end
 		end
 	end
 
 	--if is_literal(e) then self.LiteralDataCache[e.Data] = true end
-	table.insert(self.Data, e)
+	self.Data[#self.Data + 1] = e
 	return self
 end
 
@@ -160,7 +164,7 @@ function META:RemoveType(e--[[#: TBaseType]])
 
 	for i, v in ipairs(self.Data) do
 		if v:Equal(e) then
-			table.remove(self.Data, i)
+			table_remove(self.Data, i)
 
 			break
 		end
@@ -196,7 +200,7 @@ function META:GetAtTupleIndex(i--[[#: number]])
 			else
 				if val then val = self.New({val, Nil()}) else val = Nil() end
 
-				table.insert(errors, err)
+				table_insert(errors, err)
 			end
 		else
 			if val then

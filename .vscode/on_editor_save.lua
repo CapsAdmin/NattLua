@@ -118,7 +118,9 @@ if normalized:find("/nattlua/", nil, true) then
 
 	if not is_lua and not is_nattlua then return end
 
-	if normalized:find("test/.+/.+%.nlua") then
+	if normalized:find("jit_options", nil, true) then
+		run_lua("test/performance/tests.lua")
+	elseif normalized:find("test/.+/.+%.nlua") then
 		run_nattlua(path)
 	elseif
 		normalized:find("jit_trace_track", nil, true) or
