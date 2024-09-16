@@ -55,7 +55,15 @@ local function abort(id, func, pc, code, reason)
 end
 
 local function flush()
-	error("TODO")
+	local count = 0
+
+	for i, v in pairs(traces) do
+		count = count + 1
+	end
+
+	print("too many traces, flushing " .. count .. " traces")
+	traces = {}
+	aborted = {}
 end
 
 local function record(tr, func, pc, depth)
@@ -69,6 +77,7 @@ local on_record_event = nil
 function trace_track.Start()
 	assert(on_trace_event == nil)
 	traces = {}
+	aborted = {}
 	on_trace_event = function(what, tr, func, pc, otr, oex)
 		if what == "start" then
 			start(tr, func, pc, otr, oex)
@@ -134,7 +143,9 @@ function trace_track.Stop()
 	return traces, aborted
 end
 
-local function format_func_info(fi)
+local function find_function() end
+
+local function format_func_info(fi, func)
 	if fi.loc then
 		local source = fi.source
 
@@ -144,7 +155,7 @@ local function format_func_info(fi)
 	elseif fi.ffid then
 		return vmdef.ffnames[fi.ffid]
 	elseif fi.addr then
-		return string.format("C:%x", fi.addr)
+		return string.format("C:%x, %s", fi.addr, tostring(func))
 	else
 		return "(?)"
 	end
@@ -166,18 +177,34 @@ local function format_error(err, arg)
 	return string.format(fmt, arg)
 end
 
-local function tostring_trace(v, tab)
+local function tostring_trace(v, tab, stop_lines_only)
 	tab = tab or ""
 	local done = {}
 	local start_location = {}
 
 	do
-		for i, v in ipairs(v.pc_lines) do
-			local line = format_func_info(jutil.funcinfo(v.func, v.pc))
+		if stop_lines_only then
+			local start_depth = v.pc_lines[#v.pc_lines].depth
 
-			if not done[line] then
-				table.insert(start_location, (i == 1 and "" or tab) .. (" "):rep(v.depth) .. line)
-				done[line] = true
+			for i = #v.pc_lines, 1, -1 do
+				local v = v.pc_lines[i]
+				local line = format_func_info(jutil.funcinfo(v.func, v.pc), v.func)
+
+				if not done[line] then
+					table.insert(start_location, 1, line)
+					done[line] = true
+
+					if v.depth ~= start_depth then break end
+				end
+			end
+		else
+			for i, v in ipairs(v.pc_lines) do
+				local line = format_func_info(jutil.funcinfo(v.func, v.pc), v.func)
+
+				if not done[line] then
+					table.insert(start_location, (i == 1 and "" or tab) .. (" "):rep(v.depth) .. line)
+					done[line] = true
+				end
 			end
 		end
 
@@ -185,7 +212,9 @@ local function tostring_trace(v, tab)
 	end
 
 	local str = ""
-	str = str .. "[" .. v.id .. "] "
+
+	if not stop_lines_only then str = str .. "[" .. v.id .. "] " end
+
 	local link = v.trace_info.linktype
 
 	if link == "root" then
@@ -203,9 +232,9 @@ local function tostring_trace(v, tab)
 
 	if v.aborted then
 		str = str .. "ABORTED: " .. format_error(v.aborted.code, v.aborted.reason)
+		str = str .. " - "
 	end
 
-	str = str .. " - "
 	str = str .. start_location
 	return str
 end
@@ -250,16 +279,34 @@ function trace_track.DumpTraceTree(traces)
 end
 
 function trace_track.DumpProblematicTraces(traces, aborted)
-	local out = {}
+	local map = {}
 
 	for k, v in pairs(traces) do
 		if v.trace_info.linktype == "stitch" then
-			table.insert(out, tostring_trace(v))
+			local res = tostring_trace(v, nil, true)
+			map[res] = (map[res] or 0) + 1
 		end
 	end
 
 	for k, v in pairs(aborted) do
-		table.insert(out, tostring_trace(v))
+		local res = tostring_trace(v, nil, true)
+		map[res] = (map[res] or 0) + 1
+	end
+
+	local sorted = {}
+
+	for k, v in pairs(map) do
+		table.insert(sorted, {line = k, count = v})
+	end
+
+	table.sort(sorted, function(a, b)
+		return a.count < b.count
+	end)
+
+	local out = {}
+
+	for i, v in ipairs(sorted) do
+		out[i] = "x" .. v.count .. " :" .. v.line
 	end
 
 	print(table.concat(out, "\n"))

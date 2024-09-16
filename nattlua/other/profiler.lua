@@ -1,31 +1,31 @@
 local has_jit, jit_profiler = pcall(require, "nattlua.other.jit_profiler")
+local has_jit, trace_tracker = pcall(require, "nattlua.other.jit_trace_track")
 local profiler = {}
 local should_run = true
 
 function profiler.Start()
 	if not has_jit then return end
 
-	jit_profiler.EnableStatisticalProfiling(true)
-	jit_profiler.EnableTraceAbortLogging(true)
+	jit_profiler.Start(
+		{
+			sampling_rate = 1,
+			depth = 2, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
+		}
+	)
+	trace_tracker.Start()
 end
 
 function profiler.Stop()
 	if not has_jit then return end
 
-	local stats_filter = {
-		{title = "all", filter = nil},
-		{title = "lexer", filter = "nattlua/lexer"},
-		{title = "parser", filter = "nattlua/parser"},
-		{title = "types", filter = "nattlua/types"},
-		{title = "analyzer", filter = "nattlua/analyzer"},
-	}
-	jit_profiler.EnableTraceAbortLogging(false)
-	jit_profiler.EnableStatisticalProfiling(false)
-	jit_profiler.PrintTraceAborts(500)
-
-	for i, v in ipairs(stats_filter) do
-		jit_profiler.PrintStatistical(500, v.title, v.filter)
-	end
+	local traces, aborted = trace_tracker.Stop()
+	print("\nluajit traces that were aborted and stitched:")
+	trace_tracker.DumpProblematicTraces(traces, aborted)
+	print("\nprofiler statistics:")
+	print(
+		"I = interpreter, G = garbage collection, J = busy tracing, N = native / tracing completed:"
+	)
+	print(jit_profiler.Stop())
 end
 
 return profiler

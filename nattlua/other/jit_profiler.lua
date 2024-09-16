@@ -3,376 +3,195 @@ local jit = require("jit")
 local jit_profiler = require("jit.profile")
 local jit_vmdef = require("jit.vmdef")
 local jit_util = require("jit.util")
-local logf = function(f, ...)
-	io.write((f):format(...))
-end
-local wlog = print
-local logn = print
-local log = io.write
-local error = _G.error
-local xpcall = _G.xpcall
-local assert = _G.assert
-local table_insert = _G.table.insert
-local stringx = require("nattlua.other.string")
-local mathx = require("nattlua.other.math")
-local formating = require("nattlua.other.formating")
-local get_time = os.clock
-
-local function read_file(path--[[#: string]])
-	local f, err = io.open(path)
-
-	if not f then return nil, err end
-
-	local s, err = f:read("*a")
-
-	if not s then return nil, "empty file" end
-
-	return s
-end
-
+local dumpstack = jit_profiler.dumpstack
 local profiler = {}
-profiler.sections = {}
-profiler.raw_trace_aborts = {}
-profiler.raw_statistical = {}
-local blacklist = {
-	["leaving loop in root trace"] = true,
-	["error thrown or hook fed during recording"] = true,
-	["too many spill slots"] = true,
-}
+--[[#local type VMState = "I" | "G" | "N" | "J" | "C"]]
+local raw_samples--[[#: List<|{
+	stack = string,
+	sample_count = number,
+	vm_state = VMState,
+}|>]]
 
-function profiler.EnableTraceAbortLogging(b--[[#: ]]--[[boolean]] )
-	if b then
-		profiler.raw_trace_aborts = {}
-		local i = 1
-		local funcinfo = jit_util.funcinfo
-		local data = profiler.raw_trace_aborts
+local function starts_with(str--[[#: string]], what--[[#: string]])
+	return str:sub(1, #what) == what
+end
 
-		jit.attach(
-			function(what, trace_id, func, pc, trace_error_id, trace_error_arg)
-				if what == "abort" then
-					data[i] = {funcinfo(func, pc), trace_error_id, trace_error_arg}
-					i = i + 1
+function profiler.Start(config--[[#: {
+	depth = number | nil,
+	sampling_rate = number | nil,
+} | nil]])
+	config = config or {}
+	config.depth = config.depth or 1
+	config.sampling_rate = config.sampling_rate or 10
+	raw_samples = {}
+	local i = 1
+
+	jit_profiler.start("li" .. config.sampling_rate, function(thread, sample_count--[[#: number]], vmstate--[[#: VMState]])
+		raw_samples[i] = {
+			stack = dumpstack(thread, "pl\n", config.depth),
+			sample_count = sample_count,
+			vm_state = vmstate,
+		}
+		i = i + 1
+	end)
+end
+
+function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
+	config = config or {}
+	config.sample_threshold = config.sample_threshold or 50
+	jit_profiler.stop()
+	local processed_samples--[[#: Map<|
+		string,
+		{
+			sample_count = number,
+			vm_states = Map<|VMState, number|>,
+			children = Map<|
+				number,
+				{
+					sample_count = number,
+					vm_states = Map<|VMState, number|>,
+				}
+			|>,
+		}
+	|>]] = {}
+
+	for _, sample in ipairs(raw_samples) do
+		local stack = {}
+
+		for line in sample.stack:gmatch("(.-)\n") do
+			if
+				starts_with(line, "[builtin") or
+				starts_with(line, "(command line)") or
+				starts_with(line, "@0x")
+			then
+
+			-- these can safely be ignored
+			else
+				local path, line_number = line:match("(.+):(.+)")
+
+				if not path or not line_number then error("uh oh") end
+
+				local line_number = assert(tonumber(line_number))
+
+				do
+					local parent = processed_samples[path] or {children = {}, sample_count = 0, vm_states = {}}
+					parent.sample_count = parent.sample_count + sample.sample_count
+					parent.vm_states[sample.vm_state] = (parent.vm_states[sample.vm_state] or 0) + 1
+					processed_samples[path] = parent
 				end
-			end,
-			"trace"
-		)
-	else
-		jit.attach(function() end)
+
+				do
+					local child = processed_samples[path].children[line_number] or
+						{sample_count = 0, vm_states = {}}
+					child.sample_count = child.sample_count + sample.sample_count
+					child.vm_states[sample.vm_state] = (child.vm_states[sample.vm_state] or 0) + 1
+					processed_samples[path].children[line_number] = child
+				end
+			end
+		end
 	end
-end
 
-function profiler.EnableStatisticalProfiling(b--[[#: boolean]])
-	i = 1
+	local sorted_samples = {}
 
-	if b then
-		profiler.raw_statistical = {}
-		local i = 1
-		local dumpstack = jit_profiler.dumpstack
-		local data = profiler.raw_statistical
+	do
+		for path, data in pairs(processed_samples) do
+			local lines = {}
 
-		jit_profiler.start("li2", function(thread, samples, vmstate)
-			data[i] = {dumpstack(thread, "pl\n", 1000), samples, vmstate}
-			i = i + 1
+			for line_number, data in pairs(data.children) do
+				table.insert(
+					lines,
+					{
+						path = path .. ":" .. line_number,
+						sample_count = data.sample_count,
+						vm_states = data.vm_states,
+					}
+				)
+			end
+
+			table.sort(lines, function(a, b)
+				return a.sample_count < b.sample_count
+			end)
+
+			table.insert(
+				sorted_samples,
+				{
+					path = path,
+					vm_states = data.vm_states,
+					lines = lines,
+					sample_count = data.sample_count,
+				}
+			)
+		end
+
+		table.sort(sorted_samples, function(a, b)
+			return a.sample_count < b.sample_count
 		end)
-	else
-		jit_profiler.stop()
 	end
-end
 
-do
-	local function parse_raw_statistical_data(raw_data--[[#: List<|{string, number, string}|>]])
-		local data = {}
+	local vm_state_name_order = {"I", "G", "N", "J", "C"}
 
-		for i = #raw_data, 1, -1 do
-			local args = assert(raw_data[i])
-			local str, samples, vmstate = args[1], args[2], args[3]
-			local children = {}
+	local function stacked_barchart(vm_states--[[#: Map<|VMState, number|>]], sample_count--[[#: number]])
+		local len = 20
+		local states = {}
+		local sum = 0
 
-			for line in str:gmatch("(.-)\n") do
-				local path, line_number = line:match("(.+):(%d+)")
+		for _, v in pairs(vm_state_name_order) do
+			states[v] = math.floor(((vm_states[v] or 0) / sample_count) * len)
+			sum = sum + states[v]
+		end
 
-				if not path and not line_number then
-					line = line:gsub("%[builtin#(%d+)%]", function(x)
-						return jit_vmdef.ffnames[tonumber(x)]
-					end)
-					table_insert(children, {name = line or -1, external_function = true})
-				else
-					table_insert(
-						children,
-						{path = path, line = tonumber(line_number) or -1, external_function = false}
+		local diff = len - sum
+
+		for i = 1, diff do
+			local max_val = 0
+			local max_index = nil
+
+			for k, v in pairs(states) do
+				if v >= max_val then
+					max_val = v
+					max_index = k
+				end
+			end
+
+			states[max_index] = states[max_index] + 1
+		end
+
+		local result = ""
+
+		for _, name in ipairs(vm_state_name_order) do
+			result = result .. string.rep(name, states[name])
+		end
+
+		return result
+	end
+
+	local out = {}
+
+	for _, data in ipairs(sorted_samples) do
+		local str = {}
+
+		if data.sample_count > config.sample_threshold then
+			for _, data in ipairs(data.lines) do
+				if data.sample_count > config.sample_threshold then
+					table.insert(
+						str,
+						stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. data.path .. "\n"
 					)
 				end
 			end
 
-			local info = children[#children]
-			table.remove(children, #children)
-			local path = info.path or info.name
-			local line = tonumber(info.line) or -1
-			data[path] = data[path] or {}
-			data[path][line] = data[path][line] or
-				{
-					total_time = 0,
-					samples = 0,
-					children = {},
-					parents = {},
-					ready = false,
-					func_name = path,
-					vmstate = {},
-				}
-			data[path][line].samples = data[path][line].samples + samples
-			data[path][line].start_time = data[path][line].start_time or get_time()
-			data[path][line].vmstate[vmstate] = (data[path][line].vmstate[vmstate] or 0) + 1
-			local parent = data[path][line]
-
-			for _, info in ipairs(children) do
-				local path = info.path or info.name
-				local line = tonumber(info.line) or -1
-				data[path] = data[path] or {}
-				data[path][line] = data[path][line] or
-					{
-						total_time = 0,
-						samples = 0,
-						children = {},
-						parents = {},
-						ready = false,
-						func_name = path,
-						vmstate = {},
-					}
-				data[path][line].samples = data[path][line].samples + samples
-				data[path][line].start_time = data[path][line].start_time or get_time()
-				data[path][line].vmstate[vmstate] = (data[path][line].vmstate[vmstate] or 0) + 1
-				data[path][line].parents[tostring(parent)] = parent
-				parent.children[tostring(data[path][line])] = data[path][line]
+			if str[1] then
+				table.insert(
+					str,
+					stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. " < total" .. "\n\n"
+				)
 			end
 		end
 
-		return data
+		if str[1] then table.insert(out, table.concat(str)) end
 	end
 
-	function profiler.GetBenchmark(file--[[#: nil | string]])
-		local out = {}
-
-		for path, lines in pairs(parse_raw_statistical_data(profiler.raw_statistical)) do
-			if path:sub(1, 1) == "@" then path = path:sub(2) end
-
-			if not file or path:find(file) then
-				for line, data in pairs(lines) do
-					line = tonumber(line) or line
-					local name = "unknown(file not found)"
-					local debug_info
-
-					if data.func then
-						debug_info = debug.getinfo(data.func)
-						-- remove some useless fields
-						debug_info.source = nil
-						debug_info.short_src = nil
-						debug_info.currentline = nil
-						debug_info.func = nil
-					end
-
-					if data.func then
-						name = ("%s(%s)"):format(data.func_name, table.concat(debug.getparams(data.func), ", "))
-					else
-						local full_path = path
-						name = full_path .. ":" .. line
-					end
-
-					if data.section_name then
-						data.section_name = data.section_name:match(".+lua/(.+)") or data.section_name
-					end
-
-					if name:find("\n", 1, true) then
-						name = name:gsub("\n", "")
-						name = name:sub(0, 50)
-					end
-
-					name = stringx.trim(name)
-					data.path = path
-					data.file_name = path:match(".+/(.+)%.") or path
-					data.line = line
-					data.name = name
-					data.debug_info = debug_info
-					data.ready = true
-
-					if data.total_time then
-						data.average_time = data.total_time / data.samples
-					--data.total_time = data.average_time * data.samples
-					end
-
-					data.start_time = data.start_time or 0
-					data.samples = data.samples or 0
-					data.sample_duration = get_time() - data.start_time
-					data.times_called = data.samples
-					table_insert(out, data)
-				end
-			end
-		end
-
-		return out
-	end
-
-	function profiler.PrintStatistical(
-		min_samples--[[#: nil | number]],
-		title--[[#: nil | string]],
-		file_filter--[[#: nil | string]]
-	)
-		min_samples = min_samples or 100
-		local tr = {
-			{from = "N", to = "native"},
-			{from = "I", to = "interpreted"},
-			{from = "G", to = "garbage collection"},
-			{from = "J", to = "compiling"},
-			{from = "C", to = "C code"},
-		}
-		local vmstate_friendly = {}
-
-		for k, v in pairs(tr) do
-			table.insert(vmstate_friendly, v.from .. " = " .. v.to)
-		end
-
-		vmstate_friendly = table.concat(vmstate_friendly, ", ")
-		log(
-			formating.TableToColumns(
-				title or "statistical",
-				profiler.GetBenchmark(file_filter),
-				{
-					{key = "name"},
-					{
-						key = "times_called",
-						friendly = "percent",
-						tostring = function(val, column, columns)
-							return mathx.round((val / columns[#columns].val.times_called) * 100, 2)
-						end,
-					},
-					{
-						key = "vmstate",
-						friendly = vmstate_friendly,
-						tostring = function(vmstatemap--[[#: Map<|string, number|>]])
-							local str = {}
-							local total_count = 0
-
-							for state, count in pairs(vmstatemap) do
-								total_count = total_count + count
-							end
-
-							for _, tr in pairs(tr) do
-								vmstatemap[tr.from] = vmstatemap[tr.from] or 0
-
-								for state, count in pairs(vmstatemap) do
-									if tr.from == state then
-										--table.insert(str, string.format("%s %02d%%", state, (count / total_count) * 100))
-										table.insert(str, state:rep(math.floor(count / total_count * (#vmstate_friendly - 3))))
-									end
-								end
-							end
-
-							return table.concat(str, "")
-						end,
-					},
-					{
-						key = "samples",
-						tostring = function(val)
-							return val
-						end,
-					},
-				},
-				function(a)
-					return a.name and a.times_called > min_samples
-				end,
-				function(a, b)
-					return a.times_called < b.times_called
-				end
-			)
-		)
-	end
-
-	local blacklist = {
-		["NYI: return to lower frame"] = true,
-		["inner loop in root trace"] = true,
-		["leaving loop in root trace"] = true,
-		["blacklisted"] = true,
-		["too many spill slots"] = true,
-		["down-recursion, restarting"] = true,
-	}
-
-	local function parse_raw_trace_abort_data(raw_data--[[#: any]])
-		local data = {}
-
-		for i = #raw_data, 1, -1 do
-			local args = raw_data[i]
-			local info = args[1]
-			local trace_error_id = args[2]
-			local trace_error_arg = args[3]
-			local reason = jit_vmdef.traceerr[trace_error_id]
-
-			if not blacklist[reason] then
-				if type(trace_error_arg) == "number" and reason:find("bytecode") then
-					trace_error_arg = string.sub(jit_vmdef.bcnames, trace_error_arg * 6 + 1, trace_error_arg * 6 + 6)
-					reason = reason:gsub("(%%d)", "%%s")
-				end
-
-				reason = reason:format(trace_error_arg)
-				local path = info.source
-				local line = info.currentline or info.linedefined
-				data[path] = data[path] or {}
-				data[path][line] = data[path][line] or {}
-				data[path][line][reason] = (data[path][line][reason] or 0) + 1
-			end
-		end
-
-		return data
-	end
-
-	function profiler.PrintTraceAborts(min_samples--[[#: nil | number]])
-		min_samples = min_samples or 500
-		logn(
-			"trace abort reasons for functions that were sampled by the profiler more than ",
-			min_samples,
-			" times:"
-		)
-		local blacklist = {
-			["NYI: return to lower frame"] = true,
-			["inner loop in root trace"] = true,
-			["blacklisted"] = true,
-		}
-		local s = parse_raw_statistical_data(profiler.raw_statistical)
-
-		for path, lines in pairs(parse_raw_trace_abort_data(profiler.raw_trace_aborts)) do
-			path = path:sub(2)
-
-			if s[path] or not next(s) then
-				local full_path = path
-				local temp = {}
-
-				for line, reasons in pairs(lines) do
-					if not next(s) or s[path][line] and s[path][line].samples > min_samples then
-						local str = "unknown line"
-						local content, err = read_file(path)
-
-						if content then
-							local lines = stringx.split(content, "\n")
-							str = lines[line] or "unknown line"
-							str = "\"" .. stringx.trim(str) .. "\""
-						else
-							str = err
-						end
-
-						for reason, count in pairs(reasons) do
-							if not blacklist[reason] then
-								table_insert(temp, "\t\t" .. stringx.trim(reason) .. " (x" .. count .. ")")
-								table_insert(temp, "\t\t\t" .. line .. ": " .. str)
-							end
-						end
-					end
-				end
-
-				if #temp > 0 then
-					logn("\t", full_path)
-					logn(table.concat(temp, "\n"))
-				end
-			end
-		end
-	end
+	return table.concat(out)
 end
 
 return profiler
