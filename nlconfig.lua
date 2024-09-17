@@ -92,6 +92,7 @@ config.build = function(mode)
 			require("nattlua.c_declarations.parser")
 			require("nattlua.c_declarations.emitter")
 			require("nattlua.c_declarations.analyzer")
+			require("nattlua.c_declarations.main")
 
             return require("nattlua")
         ]],

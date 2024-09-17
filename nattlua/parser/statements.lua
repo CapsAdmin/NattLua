@@ -428,7 +428,7 @@ do
 		locals = locals .. "local nl=IMPORTS[\"nattlua.init\"]();"
 		locals = locals .. "local types=IMPORTS[\"nattlua.types.types\"]();"
 		locals = locals .. "local context=IMPORTS[\"nattlua.analyzer.context\"]();"
-		locals = locals .. "local cdecl_parser = IMPORTS[\"nattlua.c_declarations.main\"];"
+		locals = locals .. "local cdecl_parser = IMPORTS[\"nattlua.c_declarations.main\"]();"
 	else
 		locals = locals .. "local nl=require(\"nattlua.init\");"
 		locals = locals .. "local types=require(\"nattlua.types.types\");"
