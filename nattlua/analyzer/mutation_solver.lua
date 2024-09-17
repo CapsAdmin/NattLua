@@ -1,5 +1,6 @@
 local ipairs = ipairs
 local table = _G.table
+local table_remove = _G.table.remove
 local Union = require("nattlua.types.union").Union
 
 local function mutation_solver(mutations, scope, obj)
@@ -24,7 +25,7 @@ local function mutation_solver(mutations, scope, obj)
 
 					if not mut_a.scope:Contains(mut_b.scope) then break end
 
-					table.remove(mutations, j)
+					table_remove(mutations, j)
 				end
 			end
 		end
@@ -59,7 +60,7 @@ local function mutation_solver(mutations, scope, obj)
 					)
 				)
 			then
-				table.remove(mutations, i)
+				table_remove(mutations, i)
 			end
 		end
 
@@ -77,7 +78,7 @@ local function mutation_solver(mutations, scope, obj)
 						for i = i, 1, -1 do
 							if mutations[i].scope:IsCertainFromScope(scope) then
 								-- redudant mutation before else part of if statement
-								table.remove(mutations, i)
+								table_remove(mutations, i)
 							end
 						end
 

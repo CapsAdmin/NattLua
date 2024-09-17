@@ -41,17 +41,31 @@ function META:SetParent(parent)
 	self.Parent = parent
 
 	if parent then table_insert(parent:GetChildren(), self) end
+
+	self:BuildParentCache()
+end
+
+function META:BuildParentCache()
+	local list = {}
+	local map = {}
+	local parent = self
+
+	for i = 1, 1000 do
+		if not parent then break end
+
+		list[i] = parent
+		map[parent] = parent
+		parent = parent.Parent
+	end
+
+	self.ParentList = list
+	self.ParentMap = map
+	self.Root = parent
 end
 
 function META:GetMemberInParents(what)
-	local scope = self
-
-	while true do
+	for _, scope in ipairs(self.ParentList) do
 		if scope[what] ~= nil then return scope[what], scope end
-
-		scope = scope:GetParent()
-
-		if not scope then break end
 	end
 
 	return nil
@@ -67,6 +81,15 @@ function META:AddDependency(val)
 	self.dependencies = self.dependencies or {}
 	self.dependencies[val] = val
 end
+
+function META:Contains(scope)
+	return scope.ParentMap[self] ~= nil
+end
+
+function META:GetRoot()
+	return self.Root
+end
+
 
 function META:GetDependencies()
 	local out = {}
@@ -85,15 +108,11 @@ function META:FindUpvalue(key, env)
 		key = key:GetData()
 	end
 
-	local scope = self
-	local prev_scope
-
-	for _ = 1, 1000 do
-		if not scope then return end
-
+	for i, scope in ipairs(self.ParentList) do
 		local upvalue = scope.upvalues[env].map[key]
 
 		if upvalue then
+			local prev_scope = self.ParentList[i - 1]
 			local upvalue_position = prev_scope and prev_scope.upvalue_position
 
 			if upvalue_position then
@@ -110,12 +129,7 @@ function META:FindUpvalue(key, env)
 
 			return upvalue
 		end
-
-		prev_scope = scope
-		scope = scope:GetParent()
 	end
-
-	error("this should never happen")
 end
 
 function META:CreateUpvalue(key, obj, env)
@@ -187,9 +201,7 @@ function META:TracksSameAs(scope, obj)
 end
 
 function META:FindResponsibleConditionalScopeFromUpvalue(upvalue)
-	local scope = self
-
-	while true do
+	for _, scope in ipairs(self.ParentList) do
 		local upvalues = scope:GetTrackedUpvalues()
 
 		if upvalues then
@@ -202,7 +214,7 @@ function META:FindResponsibleConditionalScopeFromUpvalue(upvalue)
 		-- ideally when cloning a scope, the new scope should be 
 		-- inside of the returned scope, then we wouldn't need this code
 		for _, child in ipairs(scope:GetChildren()) do
-			if child ~= scope and self:BelongsToIfStatement(child) then
+			if self:BelongsToIfStatement(child) then
 				local upvalues = child:GetTrackedUpvalues()
 
 				if upvalues then
@@ -212,10 +224,6 @@ function META:FindResponsibleConditionalScopeFromUpvalue(upvalue)
 				end
 			end
 		end
-
-		scope = scope:GetParent()
-
-		if not scope then return end
 	end
 
 	return nil
@@ -257,34 +265,6 @@ function META:FindFirstConditionalScope()
 	return scope
 end
 
-function META:Contains(scope)
-	if scope == self then return true end
-
-	local parent = scope
-
-	for i = 1, 1000 do
-		if not parent then break end
-
-		if parent == self then return true end
-
-		parent = parent:GetParent()
-	end
-
-	return false
-end
-
-function META:GetRoot()
-	local parent = self
-
-	for i = 1, 1000 do
-		if not parent:GetParent() then break end
-
-		parent = parent:GetParent()
-	end
-
-	return parent
-end
-
 do
 	function META:MakeFunctionScope(node)
 		self.returns = {}
@@ -308,16 +288,10 @@ do
 	end
 
 	function META:CertainReturn()
-		local scope = self
-
-		while true do
+		for _, scope in ipairs(self.ParentList) do
 			scope.certain_return = true
 
 			if scope.returns then break end
-
-			scope = scope:GetParent()
-
-			if not scope then break end
 		end
 	end
 
@@ -356,11 +330,9 @@ do
 	function META:IsUncertainFromScope(from)
 		if from == self then return false end
 
-		local scope = self
-
 		if self:BelongsToIfStatement(from) then return true end
 
-		while true do
+		for _, scope in ipairs(self.ParentList) do
 			if scope == from then break end
 
 			if scope:IsFunctionScope() then
@@ -379,10 +351,6 @@ do
 
 				return true, scope
 			end
-
-			scope = scope:GetParent()
-
-			if not scope then break end
 		end
 
 		return false
@@ -390,17 +358,7 @@ do
 end
 
 function META:__tostring()
-	local x = 1
-
-	do
-		local scope = self
-
-		while scope:GetParent() do
-			x = x + 1
-			scope = scope:GetParent()
-		end
-	end
-
+	local x = #self.ParentList
 	local y = 1
 
 	if self:GetParent() then

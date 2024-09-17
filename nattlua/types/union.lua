@@ -112,22 +112,22 @@ function META:AddType(e--[[#: TBaseType]])
 		return self
 	end
 
-	for _, v in ipairs(self.Data) do
+	if (e.Type == "string" or e.Type == "number") and not e:IsLiteral() then
+		for i = #self.Data, 1, -1 do
+			local sub = self.Data[i]--[[# as TBaseType]] -- TODO, prove that the for loop will always yield TBaseType?
+			if sub.Type == e.Type then self.Data[#self.Data] = nil end
+		end
+
+		self.Data[#self.Data + 1] = e
+		return self
+	end
+
+	for i = 1, #self.Data do
+		local v = self.Data[i]--[[# as TBaseType]]
+
 		if v:Equal(e) then return self end
 	end
 
-	if e.Type == "string" or e.Type == "number" then
-		local sup = e
-
-		for i = #self.Data, 1, -1 do
-			local sub = self.Data[i]--[[# as TBaseType]] -- TODO, prove that the for loop will always yield TBaseType?
-			if sub.Type == sup.Type then
-				if sub:IsSubsetOf(sup) then self.Data[#self.Data] = nil end
-			end
-		end
-	end
-
-	--if is_literal(e) then self.LiteralDataCache[e.Data] = true end
 	self.Data[#self.Data + 1] = e
 	return self
 end
@@ -162,6 +162,14 @@ end
 
 function META:Clear()
 	self.Data = {}
+end
+
+local has_clear, table_clear = pcall(require, "table.clear")
+
+if has_clear then
+	function META:Clear()
+		(table_clear--[[# as any]])(self.Data)
+	end
 end
 
 function META:HasTuples()
@@ -211,13 +219,14 @@ function META:GetAtTupleIndex(i--[[#: number]])
 end
 
 function META:Get(key--[[#: TBaseType]])
-	local errors = {}
+	local errors
 
 	for i, obj in ipairs(self.Data) do
 		local ok, reason = key:IsSubsetOf(obj)
 
 		if ok then return obj end
 
+		errors = errors or {}
 		errors[i] = reason
 	end
 
@@ -229,30 +238,30 @@ function META:IsEmpty()
 end
 
 function META:RemoveCertainlyFalsy()
-	local copy = self:Copy()
+	local copy = META.New()
 
-	for _, v in ipairs(self.Data) do
-		if v:IsCertainlyFalse() then copy:RemoveType(v) end
+	for _, obj in ipairs(self.Data) do
+		if not obj:IsCertainlyFalse() then copy.Data[#copy.Data + 1] = obj end
 	end
 
 	return copy
 end
 
 function META:GetTruthy()
-	local copy = self:Copy()
+	local copy = META.New()
 
 	for _, obj in ipairs(self.Data) do
-		if not obj:IsTruthy() then copy:RemoveType(obj) end
+		if obj:IsTruthy() then copy.Data[#copy.Data + 1] = obj end
 	end
 
 	return copy
 end
 
 function META:GetFalsy()
-	local copy = self:Copy()
+	local copy = META.New()
 
 	for _, obj in ipairs(self.Data) do
-		if not obj:IsFalsy() then copy:RemoveType(obj) end
+		if obj:IsFalsy() then copy.Data[#copy.Data + 1] = obj end
 	end
 
 	return copy
