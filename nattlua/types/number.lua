@@ -547,16 +547,14 @@ return {
 	LNumberRange = LNumberRange,
 	LNumber = LNumber,
 	LNumberFromString = function(str--[[#: string]])
-		local num = tonumber(str)
-
-		if not num then
-			if str:sub(1, 2) == "0b" then
-				num = tonumber(str:sub(3), 2)
-			elseif str:lower():sub(-3) == "ull" then
-				num = string_to_integer(str)
-			elseif str:lower():sub(-2) == "ll" then
-				num = string_to_integer(str)
-			end
+		if str:sub(1, 2) == "0b" then
+			num = tonumber(str:sub(3), 2)
+		elseif str:lower():sub(-3) == "ull" then
+			num = string_to_integer(str)
+		elseif str:lower():sub(-2) == "ll" then
+			num = string_to_integer(str)
+		else
+			num = tonumber(str)
 		end
 
 		if not num then return nil end

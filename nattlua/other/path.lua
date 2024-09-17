@@ -30,16 +30,14 @@ function path.WalkParentDirectory(str--[[#: string]])
 end
 
 function path.Normalize(str--[[#: string]])
-	str = string.gsub(str, "\\", "/")
-	str = string.gsub(str, "/+", "/")
-	str = str:gsub("/%./", "/")
+	str = stringx.replace(str, "\\", "/") 
+	str = stringx.replace(str, "/../", "/")
+	str = stringx.replace(str, "/./", "/")
 
 	while true do
-		local found, count = str:gsub("[^/]+/%.%./", "")
-
-		if count == 0 then break end
-
-		str = found
+		local new = stringx.replace(str, "//", "/")
+		if new == str then break end
+		str = new
 	end
 
 	if str:sub(1, 2) == "./" then str = str:sub(3) end
@@ -63,6 +61,8 @@ local ok, fs = pcall(require, "nattlua.other.fs")
 if ok then exists = function(path)
 	return fs.get_type(path) == "file"
 end end
+
+path.Exists = exists
 
 local function directory_from_path(path)
 	for i = #path, 1, -1 do

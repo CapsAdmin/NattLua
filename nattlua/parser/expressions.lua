@@ -822,9 +822,9 @@ do -- runtime
 		)
 
 		if name == "require" then
-			local f = io_open(path, "r")
-
-			if not f then return else f:close() end
+			if not path_util.Exists(path) then
+				return
+			end
 		end
 
 		if not path then return end
