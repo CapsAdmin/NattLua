@@ -47,10 +47,10 @@ return function(META)
 		return analyzed_return
 	end
 
-	function META:AnalyzeExpressions(expressions)
+	function META:AnalyzeExpressions(expressions, out)
 		if not expressions then return end
 
-		local out = {}
+		out = out or {}
 
 		for _, expression in ipairs(expressions) do
 			local obj = self:AnalyzeExpression(expression)

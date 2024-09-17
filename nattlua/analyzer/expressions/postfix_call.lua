@@ -31,9 +31,8 @@ return {
 			self_arg = table.remove(self.self_arg_stack)
 		end
 
-		local types = self:AnalyzeExpressions(node.expressions)
-
-		if self_arg then table.insert(types, 1, self_arg) end
+		local types = {self_arg}
+		self:AnalyzeExpressions(node.expressions, types)
 
 		local arguments
 
