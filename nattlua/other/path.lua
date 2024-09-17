@@ -5,40 +5,54 @@ function path.RemoveProtocol(str--[[#: string]])
 	return (string.gsub(str, "^.+://", ""))
 end
 
-function path.RemoveFilename(str--[[#: string]])
-	return (string.match(str, "^(.+/)"))
-end
+function path.UrlSchemeToPath(url, wdir)
+	url = path.RemoveProtocol(url)
 
-function path.GetParentDirectory(str--[[#: string]], level--[[#: number]])
-	level = level or 1
-	str = path.RemoveFilename(str)
+	if url:sub(1, 1) ~= "/" then
+		local start, stop = url:find(wdir, 1, true)
 
-	for i = 1, level do
-		str = str:match("(.+/)")
+		if start == 1 and stop then url = url:sub(stop + 1, #url) end
+
+		if url:sub(1, #wdir) ~= wdir then
+			if wdir:sub(#wdir) ~= "/" then
+				if url:sub(1, 1) ~= "/" then url = "/" .. url end
+			end
+
+			url = wdir .. url
+		end
 	end
 
-	return str
+	url = path.Normalize(url)
+	return url
 end
 
-function path.WalkParentDirectory(str--[[#: string]])
-	local i = 1
-	return function()
-		local dir = path.GetParentDirectory(str, i)
-		i = i + 1
-		return dir
-	end
+function path.PathToUrlScheme(path)
+	if path:sub(1, 1) == "@" then path = path:sub(2) end
+
+	if path:sub(1, 7) ~= "file://" then path = "file://" .. path end
+
+	return path
 end
 
 function path.Normalize(str--[[#: string]])
-	str = stringx.replace(str, "\\", "/") 
-	str = stringx.replace(str, "/../", "/")
+	str = stringx.replace(str, "\\", "/")
 	str = stringx.replace(str, "/./", "/")
 
 	while true do
 		local new = stringx.replace(str, "//", "/")
+
 		if new == str then break end
+
 		str = new
 	end
+
+	local new = {}
+
+	for i, v in ipairs(stringx.split(str, "/")) do
+		if v == ".." then new[#new] = nil else new[#new + 1] = v end
+	end
+
+	str = table.concat(new, "/")
 
 	if str:sub(1, 2) == "./" then str = str:sub(3) end
 

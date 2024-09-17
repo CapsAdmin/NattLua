@@ -67,50 +67,11 @@ local editor_helper = EditorHelper.New()
 editor_helper.debug = true
 
 local function to_fs_path(url)
-	local wdir = editor_helper:GetWorkingDirectory()
-	url = path.RemoveProtocol(url)
-
-	if url:sub(1, 1) ~= "/" then
-		local start, stop = url:find(wdir, 1, true)
-
-		if start == 1 and stop then url = url:sub(stop + 1, #url) end
-
-		if url:sub(1, #wdir) ~= wdir then
-			if wdir:sub(#wdir) ~= "/" then
-				if url:sub(1, 1) ~= "/" then url = "/" .. url end
-			end
-
-			url = wdir .. url
-		end
-	end
-
-	url = path.Normalize(url)
-	return url
+	return path.UrlSchemeToPath(url, editor_helper:GetWorkingDirectory())
 end
 
 local function to_lsp_path(url)
-	if url:sub(1, 1) == "@" then url = url:sub(2) end
-
-	if url:sub(1, 7) ~= "file://" then url = "file://" .. url end
-
-	return url
-end
-
-do
-	local path = "file:///home/foo/bar/lsp.lua"
-	local fs_path = to_fs_path(path)
-	assert(fs_path == "/home/foo/bar/lsp.lua")
-	local lsp_path = to_lsp_path(fs_path)
-	assert(lsp_path == path)
-	local path = "file:///home/foo/./bar/lsp.lua"
-	local fs_path = to_fs_path(path)
-	assert(fs_path == "/home/foo/bar/lsp.lua")
-	local path = "file:///home/foo/../bar/lsp.lua"
-	local fs_path = to_fs_path(path)
-	assert(fs_path == "/home/bar/lsp.lua")
-	local path = "file:///home/foo/bar/../../lsp.lua"
-	local fs_path = to_fs_path(path)
-	assert(fs_path == "/home/lsp.lua")
+	return path.PathToUrlScheme(url)
 end
 
 editor_helper:SetConfigFunction(function(path)
@@ -304,7 +265,9 @@ do
 
 	lsp.methods["textDocument/semanticTokens/full"] = function(params)
 		local path = to_fs_path(params.textDocument.uri)
+
 		if not editor_helper:IsLoaded(path) then return {} end
+
 		local data = editor_helper:GetFile(path)
 		local integers = {}
 		local last_y = 0
@@ -376,15 +339,11 @@ lsp.methods["textDocument/didSave"] = function(params)
 end
 lsp.methods["textDocument/references"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
-	if not editor_helper:IsLoaded(path) then return {} end
-	
-	local data = editor_helper:GetFile(path)
 
-	local nodes = editor_helper:GetReferences(
-		path,
-		params.position.line,
-		params.position.character - 1
-	)
+	if not editor_helper:IsLoaded(path) then return {} end
+
+	local data = editor_helper:GetFile(path)
+	local nodes = editor_helper:GetReferences(path, params.position.line, params.position.character - 1)
 	local result = {}
 
 	for k, node in pairs(nodes) do
@@ -403,6 +362,7 @@ lsp.methods["textDocument/references"] = function(params)
 end
 lsp.methods["textDocument/inlayHint"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
+
 	if not editor_helper:IsLoaded(path) then return {} end
 
 	local result = {}
@@ -416,11 +376,7 @@ lsp.methods["textDocument/inlayHint"] = function(params)
 			params.range["end"].character + 1
 		)
 	) do
-		local range = get_range(
-			editor_helper:GetCode(path),
-			hint.start,
-			hint.stop
-		)
+		local range = get_range(editor_helper:GetCode(path), hint.start, hint.stop)
 		table.insert(
 			result,
 			{
@@ -435,6 +391,7 @@ lsp.methods["textDocument/inlayHint"] = function(params)
 end
 lsp.methods["textDocument/rename"] = function(params)
 	local fs_path = to_fs_path(params.textDocument.uri)
+
 	if not editor_helper:IsLoaded(fs_path) then return {} end
 
 	local lsp_path = to_lsp_path(params.textDocument.uri)
@@ -460,13 +417,10 @@ lsp.methods["textDocument/rename"] = function(params)
 end
 lsp.methods["textDocument/definition"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
+
 	if not editor_helper:IsLoaded(path) then return {} end
 
-	local node = editor_helper:GetDefinition(
-		path,
-		params.position.line,
-		params.position.character
-	)
+	local node = editor_helper:GetDefinition(path, params.position.line, params.position.character)
 
 	if node then
 		local start, stop = node:GetStartStop()
@@ -483,13 +437,10 @@ lsp.methods["textDocument/definition"] = function(params)
 end
 lsp.methods["textDocument/hover"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
+
 	if not editor_helper:IsLoaded(path) then return {} end
 
-	local data = editor_helper:GetHover(
-		path,
-		params.position.line,
-		params.position.character
-	)
+	local data = editor_helper:GetHover(path, params.position.line, params.position.character)
 
 	if not data then return {} end
 
