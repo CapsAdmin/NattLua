@@ -40,7 +40,16 @@ end
 function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]])
 	return a.Type == b.Type and
 		a:GetInputSignature():Equal(b:GetInputSignature()) and
-		a:GetOutputSignature():Equal(b:GetOutputSignature())
+		a:GetOutputSignature():Equal(b:GetOutputSignature()) and
+		(
+			not (
+				b:GetFunctionBodyNode() and
+				a:GetFunctionBodyNode()
+			) or
+			(
+				b:GetFunctionBodyNode() == a:GetFunctionBodyNode()
+			)
+		)
 end
 
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])

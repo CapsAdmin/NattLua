@@ -113,20 +113,7 @@ function META:AddType(e--[[#: TBaseType]])
 	end
 
 	for _, v in ipairs(self.Data) do
-		if v:Equal(e) then
-			if
-				e.Type ~= "function" or
-				e:GetContract() or
-				(
-					e:GetFunctionBodyNode() and
-					(
-						e:GetFunctionBodyNode() == v:GetFunctionBodyNode()
-					)
-				)
-			then
-				return self
-			end
-		end
+		if v:Equal(e) then return self end
 	end
 
 	if e.Type == "string" or e.Type == "number" then
