@@ -57,7 +57,7 @@ local function union_call(self, analyzer, input, call_node)
 					}
 				)
 			else
-				local res, reason = analyzer:Call(obj, input, call_node, true)
+				local res, reason = analyzer:Call(obj, input:Copy(), call_node, true)
 
 				if res then return res end
 
@@ -71,7 +71,7 @@ local function union_call(self, analyzer, input, call_node)
 	local new = Union({})
 
 	for _, obj in ipairs(self:GetData()) do
-		local val = analyzer:Assert(analyzer:Call(obj, input, call_node, true))
+		local val = analyzer:Assert(analyzer:Call(obj, input:Copy(), call_node, true))
 
 		-- TODO
 		if val.Type == "tuple" and val:GetElementCount() == 1 then
