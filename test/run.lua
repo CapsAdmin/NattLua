@@ -48,7 +48,17 @@ local function find_tests(path)
 	local path = "test/" .. ((what and what .. "/") or "nattlua/")
 	local found = {}
 
-	for path in io.popen("find " .. path):lines() do
+	local cmd = "find"
+
+	if jit and jit.os == "Windows" then
+		cmd = "dir /s /b"
+		path = path:gsub("/", "\\")
+	end
+
+	for path in io.popen(cmd .. " " .. path):lines() do
+		if jit and jit.os == "Windows" then
+			path = path:gsub("\\", "/")
+		end
 		path = path:gsub("//", "/")
 
 		if not path:find("/file_importing/", nil, true) then
@@ -93,6 +103,8 @@ else
 			io_write(" ", format_time(os.clock() - time), " seconds\n")
 		end
 	end
+
+	print("DONE")
 end
 
 if is_coverage then
