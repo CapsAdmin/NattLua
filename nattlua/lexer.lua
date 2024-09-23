@@ -16,17 +16,15 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 local formating = require("nattlua.other.formating")
 
 function META:ReadSpace()--[[#: TokenReturnType]]
-	if characters.IsSpace(self:PeekByte()) then
-		while not self:TheEnd() do
-			self:Advance(1)
+	if not characters.IsSpace(self:PeekByte()) then return false end
+	
+	while not self:TheEnd() do
+		self:Advance(1)
 
-			if not characters.IsSpace(self:PeekByte()) then break end
-		end
-
-		return "space"
+		if not characters.IsSpace(self:PeekByte()) then break end
 	end
 
-	return false
+	return "space"
 end
 
 function META:ReadLetter()--[[#: TokenReturnType]]
@@ -438,8 +436,9 @@ do
 	META.ReadSingleQuoteString = build_string_reader("single", "'")
 end
 
+local symbols = runtime_syntax:GetSymbols()
 function META:ReadSymbol()--[[#: TokenReturnType]]
-	if self:ReadFirstFromArray(runtime_syntax:GetSymbols()) then return "symbol" end
+	if self:ReadFirstFromArray(symbols) then return "symbol" end
 
 	return false
 end

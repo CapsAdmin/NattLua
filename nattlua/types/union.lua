@@ -37,14 +37,15 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
 
 	local b = b--[[# as TUnion]]
+	local len = #a.Data
 
-	if #a.Data ~= #b.Data then return false end
+	if len ~= #b.Data then return false end
 
-	for i = 1, #a.Data do
-		local ok = false
+	for i = 1, len do
 		local a = a.Data[i]--[[# as TBaseType]]
+		local ok = false
 
-		for i = 1, #b.Data do
+		for i = 1, len do
 			local b = b.Data[i]--[[# as TBaseType]]
 			a.suppress = true--[[# as boolean]]
 			ok = a:Equal(b)
@@ -53,10 +54,7 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 			if ok then break end
 		end
 
-		if not ok then
-			a.suppress = false--[[# as boolean]]
-			return false
-		end
+		if not ok then return false end
 	end
 
 	return true
