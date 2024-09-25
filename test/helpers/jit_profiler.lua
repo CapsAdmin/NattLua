@@ -77,13 +77,13 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 					if not processed_samples[path] then
 						processed_samples[path] = {lines = {}}
 					end
+
 					if not processed_samples[path].lines[line_number] then
 						processed_samples[path].lines[line_number] = {}
 					end
 
 					local vm_states = processed_samples[path].lines[line_number]
-
-					vm_states[sample.vm_state] = (vm_states[sample.vm_state] or 0) + sample.sample_count					
+					vm_states[sample.vm_state] = (vm_states[sample.vm_state] or 0) + sample.sample_count
 				end
 			end
 		end
@@ -91,19 +91,21 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 
 	local function get_samples(vm_states)
 		local count = 0
-		for k,v in pairs(vm_states) do
+
+		for k, v in pairs(vm_states) do
 			count = count + v
 		end
+
 		return count
 	end
 
 	local sorted_samples = {}
 
 	do
-
 		for path, data in pairs(processed_samples) do
 			local new_lines = {}
 			local other_lines = {}
+
 			for line_number, vm_states in pairs(data.lines) do
 				if get_samples(vm_states) < config.sample_threshold then
 					other_lines[line_number] = vm_states
@@ -111,16 +113,17 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 					new_lines[line_number] = vm_states
 				end
 			end
+
 			data.lines = new_lines
 			data.other_lines = other_lines
 		end
+
 		for path, data in pairs(processed_samples) do
 			local lines = {}
 			local total_sample_count = 0
 			local total_vm_states = {}
 
 			do
-
 				for line_number, vm_states in pairs(data.lines) do
 					local samples = get_samples(vm_states)
 					table.insert(
@@ -132,7 +135,7 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 						}
 					)
 
-					for k,v in pairs(vm_states) do
+					for k, v in pairs(vm_states) do
 						total_vm_states[k] = (total_vm_states[k] or 0) + v
 						total_sample_count = total_sample_count + v
 					end
@@ -145,7 +148,7 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 				local new_vm_states = {}
 
 				for line_number, vm_states in pairs(data.other_lines) do
-					for k,v in pairs(vm_states) do
+					for k, v in pairs(vm_states) do
 						new_vm_states[k] = (new_vm_states[k] or 0) + v
 						sample_count = sample_count + v
 					end
@@ -206,9 +209,7 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 				end
 			end
 
-			if max_index then
-				states[max_index] = states[max_index] + 1
-			end
+			if max_index then states[max_index] = states[max_index] + 1 end
 		end
 
 		local result = ""

@@ -1,9 +1,6 @@
-
 local has_ffi, ffi = pcall(require, "ffi")
 
-if not has_ffi then
-    return os.clock
-end
+if not has_ffi then return os.clock end
 
 if ffi.os == "OSX" then
 	ffi.cdef([[
@@ -19,14 +16,13 @@ if ffi.os == "OSX" then
 	local orwl_timebase = tb.numer
 	local orwl_timebase = tb.denom
 	local orwl_timestart = ffi.C.mach_absolute_time()
-
 	return function()
 		local diff = (ffi.C.mach_absolute_time() - orwl_timestart) * orwl_timebase
 		diff = tonumber(diff) / 1000000000
 		return diff
 	end
 elseif ffi.os == "Windows" then
-    ffi.cdef([[
+	ffi.cdef([[
 		int QueryPerformanceFrequency(int64_t *lpFrequency);
 		int QueryPerformanceCounter(int64_t *lpPerformanceCount);
 	]])
@@ -53,7 +49,6 @@ else
 	local ts = ffi.new("struct timespec")
 	local enum = 1
 	local func = ffi.C.clock_gettime
-
 	return function()
 		func(enum, ts)
 		return tonumber(ts.tv_sec) + tonumber(ts.tv_nsec) * 0.000000001

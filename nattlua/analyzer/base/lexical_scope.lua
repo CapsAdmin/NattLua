@@ -58,7 +58,6 @@ function META:BuildParentCache()
 		parent = parent.Parent
 	end
 
-	
 	self.ParentList = list
 	self.ParentMap = map
 	self.Root = parent
@@ -90,7 +89,6 @@ end
 function META:GetRoot()
 	return self.Root
 end
-
 
 function META:GetDependencies()
 	local out = {}

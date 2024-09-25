@@ -17,7 +17,7 @@ local formating = require("nattlua.other.formating")
 
 function META:ReadSpace()--[[#: TokenReturnType]]
 	if not characters.IsSpace(self:PeekByte()) then return false end
-	
+
 	while not self:TheEnd() do
 		self:Advance(1)
 
@@ -437,6 +437,7 @@ do
 end
 
 local symbols = runtime_syntax:GetSymbols()
+
 function META:ReadSymbol()--[[#: TokenReturnType]]
 	if self:ReadFirstFromArray(symbols) then return "symbol" end
 

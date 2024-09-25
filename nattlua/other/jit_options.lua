@@ -34,11 +34,8 @@ return function()
 		-- this should be 32 or 64 or something, but setting it to the same as maxmcode seems to work much better
 		params.sizemcode = params.maxmcode
 	else
-	
 		params.maxmcode = 128000
 		params.sizemcode = params.maxmcode
-		
-		
 		params.maxrecord = 100
 		params.maxirconst = 500
 		params.maxside = 5000

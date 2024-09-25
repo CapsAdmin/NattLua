@@ -23,19 +23,14 @@ function stringx.split(self--[[#: string]], separator--[[#: string]])
 end
 
 function stringx.replace(self--[[#: string]], old--[[#: string]], new--[[#: string]])
-    if old == "" then
-        return self
-    end
+	if old == "" then return self end
 
-    local parts = stringx.split(self, old)
+	local parts = stringx.split(self, old)
 
-    if #parts == 1 then
-        return self
-    end
+	if #parts == 1 then return self end
 
-    return table.concat(parts, new)
+	return table.concat(parts, new)
 end
-
 
 function stringx.trim(self--[[#: string]])
 	local char = "%s*"

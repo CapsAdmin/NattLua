@@ -821,11 +821,7 @@ do -- runtime
 			self.config.file_path
 		)
 
-		if name == "require" then
-			if not path_util.Exists(path) then
-				return
-			end
-		end
+		if name == "require" then if not path_util.Exists(path) then return end end
 
 		if not path then return end
 

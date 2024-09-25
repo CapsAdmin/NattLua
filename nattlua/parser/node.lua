@@ -14,7 +14,7 @@ local META = class.CreateTemplate("node")
 --[[#type META.@Name = "Node"]]
 --[[#type META.@Self = Node]]
 
-function META.New(init--[[#: Omit<|META.@Self, "id" | "tokens" | "inferred_types" |>]])--[[#: Node]]
+function META.New(init--[[#: Omit<|META.@Self, "id" | "tokens" | "inferred_types"|>]])--[[#: Node]]
 	init.tokens = {}
 	init.inferred_types = {}
 	return setmetatable(init--[[# as META.@Self]], META)

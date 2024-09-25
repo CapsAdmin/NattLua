@@ -33,7 +33,6 @@ return {
 
 		local types = {self_arg}
 		self:AnalyzeExpressions(node.expressions, types)
-
 		local arguments
 
 		if self:IsTypesystem() then

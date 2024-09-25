@@ -430,8 +430,8 @@ for class_name, lib in spairs(wiki_json.CLASSES) do
 	if class_name == "IVector" or class_name == "IAngle" then
 		lib.MEMBERS.__add = binary_operator(original_name, original_name, original_name)
 		lib.MEMBERS.__sub = binary_operator(original_name, original_name, original_name)
-		lib.MEMBERS.__mul = binary_operator(original_name, original_name.."|number", original_name)
-		lib.MEMBERS.__div = binary_operator(original_name, original_name.."|number", original_name)
+		lib.MEMBERS.__mul = binary_operator(original_name, original_name .. "|number", original_name)
+		lib.MEMBERS.__div = binary_operator(original_name, original_name .. "|number", original_name)
 	end
 
 	if class_name == "IMatrix" then
@@ -512,7 +512,6 @@ for class_name, lib in spairs(wiki_json.CLASSES) do
 			if class_name == "IPlayer" and key == "SetRenderAngles" then
 
 			else
-
 				indent()
 				e("type ")
 				e(class_name)

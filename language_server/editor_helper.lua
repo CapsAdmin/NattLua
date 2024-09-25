@@ -249,7 +249,8 @@ function META:Recompile(path, lol, diagnostics)
 
 		if cfg then
 			if entry_point then
-				should_analyze = self.TempFiles[entry_point] and self:IsLoaded(entry_point) and
+				should_analyze = self.TempFiles[entry_point] and
+					self:IsLoaded(entry_point) and
 					self:GetFileContent(entry_point):find("-" .. "-ANALYZE", nil, true)
 			end
 
