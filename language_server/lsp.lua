@@ -1,5 +1,5 @@
 --DONT_ANALYZE
-local b64 = require("nattlua.other.base64")
+local b64 = require("language_server.base64")
 local EditorHelper = require("language_server.editor_helper")
 local formating = require("nattlua.other.formating")
 local path = require("nattlua.other.path")

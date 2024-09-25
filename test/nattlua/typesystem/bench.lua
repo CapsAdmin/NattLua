@@ -4,7 +4,7 @@ end
 
 local Union = require("nattlua.types.union").Union
 local LNumber = require("nattlua.types.number").LNumber
-local profiler = require("nattlua.other.profiler")
+local profiler = require("test.helpers.profiler")
 local u = Union()
 profiler.Start()
 

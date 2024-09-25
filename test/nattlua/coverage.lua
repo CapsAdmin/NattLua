@@ -1,4 +1,4 @@
-local coverage = require("nattlua.other.coverage")
+local coverage = require("test.helpers.coverage")
 
 local function collect(code)
 	assert(loadstring(coverage.Preprocess(code, "test")))()

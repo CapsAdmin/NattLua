@@ -16,7 +16,7 @@ local tokens = util.Measure("code:Lex()", function()
 	return assert(code:Lex()).Tokens
 end)
 
---require("nattlua.other.debug").EnableJITDumper()
+--require("test.helpers.debug").EnableJITDumper()
 util.Measure("code:Parse()", function()
 	assert(code:Parse())
 end) -- should take around 1.2 seconds

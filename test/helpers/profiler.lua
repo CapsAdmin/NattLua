@@ -1,5 +1,5 @@
-local has_jit, jit_profiler = pcall(require, "nattlua.other.jit_profiler")
-local has_jit, trace_tracker = pcall(require, "nattlua.other.jit_trace_track")
+local has_jit, jit_profiler = pcall(require, "test.helpers.jit_profiler")
+local has_jit, trace_tracker = pcall(require, "test.helpers.jit_trace_track")
 local profiler = {}
 local should_run = true
 

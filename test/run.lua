@@ -1,7 +1,7 @@
-local preprocess = require("nattlua.other.preprocess")
-local coverage = require("nattlua.other.coverage")
-local profiler = require("nattlua.other.profiler")
-local get_time = require("nattlua.other.get_time")
+local preprocess = require("test.helpers.preprocess")
+local coverage = require("test.helpers.coverage")
+local profiler = require("test.helpers.profiler")
+local get_time = require("test.helpers.get_time")
 local io = require("io")
 local io_write = _G.ON_EDITOR_SAVE and function(...) end or io.write
 local pcall = _G.pcall
@@ -48,7 +48,6 @@ local function find_tests(path)
 	local what = path
 	local path = "test/" .. ((what and what .. "/") or "nattlua/")
 	local found = {}
-
 	local cmd = "find"
 
 	if jit and jit.os == "Windows" then
@@ -57,9 +56,8 @@ local function find_tests(path)
 	end
 
 	for path in io.popen(cmd .. " " .. path):lines() do
-		if jit and jit.os == "Windows" then
-			path = path:gsub("\\", "/")
-		end
+		if jit and jit.os == "Windows" then path = path:gsub("\\", "/") end
+
 		path = path:gsub("//", "/")
 
 		if not path:find("/file_importing/", nil, true) then

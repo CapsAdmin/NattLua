@@ -1,5 +1,5 @@
 local nl = require("nattlua")
-require("nattlua.other.profiler").Start()
+require("test.helpers.profiler").Start()
 
 for full_path in io.popen("locate .lua"):read("*all"):gmatch("(.-)\n") do
 	if full_path:sub(-4) == ".lua" then
@@ -18,4 +18,4 @@ for full_path in io.popen("locate .lua"):read("*all"):gmatch("(.-)\n") do
 	end
 end
 
-require("nattlua.other.profiler").Stop()
+require("test.helpers.profiler").Stop()

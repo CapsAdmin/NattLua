@@ -1,5 +1,5 @@
-local rpc_util = require("nattlua.other.jsonrpc")
-local json = require("nattlua.other.json")
+local rpc_util = require("language_server.jsonrpc")
+local json = require("language_server.json")
 local receive_json = rpc_util.ReceiveJSON
 
 do

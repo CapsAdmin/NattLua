@@ -1,6 +1,6 @@
 require("nattlua.other.jit_options")()
 require("test.environment")
-local profiler = require("nattlua.other.profiler")
+local profiler = require("test.helpers.profiler")
 local io_write = io.write
 
 local function format_time(seconds)

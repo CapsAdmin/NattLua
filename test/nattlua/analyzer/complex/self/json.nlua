@@ -1,1 +1,1 @@
-local json = require("nattlua.other.json")
+local json = require("language_server.json")

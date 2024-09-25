@@ -1,8 +1,8 @@
 -- Redirect print function to stderr for debug output
 local ffi = require("ffi")
 local lsp = require("language_server.lsp")
-local json = require("nattlua.other.json")
-local rpc_util = require("nattlua.other.jsonrpc")
+local json = require("language_server.json")
+local rpc_util = require("language_server.jsonrpc")
 local INPUT = io.stdin
 local OUTPUT = io.stderr -- using STDERR explcitly to have a clean channel
 local session = io.open("lsp_session.rpc", "w")
