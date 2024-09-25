@@ -22,7 +22,7 @@ const getAllFiles = function (dirPath, arrayOfFiles) {
 
 let tests = []
 
-for (let path of getAllFiles("../../test/nattlua/analyzer/")) {
+for (let path of getAllFiles("../test/nattlua/analyzer/")) {
 	if (path.endsWith(".nlua")) {
 		tests.push(fs.readFileSync(path).toString())
 	} else {
@@ -46,7 +46,7 @@ fs.writeFileSync("src/random.json", JSON.stringify(tests))
 	await finished(Readable.fromWeb(res.body).pipe(fileStream))
 })()
 
-execSync("cd ../../ && luajit nattlua.lua build fast")
+execSync("cd ../ && luajit nattlua.lua build fast")
 
 require("esbuild")
 	.build({

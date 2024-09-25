@@ -5,7 +5,7 @@ local analyzer_config = {
 local config = {}
 config["build:vscode"] = function()
 	os.execute(
-		"cd language_server/vscode && yarn && yarn build && code --install-extension nattlua-0.0.1.vsix"
+		"cd vscode_extension && yarn && yarn build && code --install-extension nattlua-0.0.1.vsix"
 	)
 end
 config.install = function()

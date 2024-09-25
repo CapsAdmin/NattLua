@@ -1,4 +1,4 @@
-local EditorHelper = require("nattlua.editor_helper.editor")
+local EditorHelper = require("language_server.editor_helper")
 local path = "./test.nlua"
 
 local function single_file(code)

@@ -1,6 +1,6 @@
 --DONT_ANALYZE
 local b64 = require("nattlua.other.base64")
-local EditorHelper = require("nattlua.editor_helper.editor")
+local EditorHelper = require("language_server.editor_helper")
 local formating = require("nattlua.other.formating")
 local path = require("nattlua.other.path")
 local lsp = {}

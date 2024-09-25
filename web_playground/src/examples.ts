@@ -1,7 +1,7 @@
 // prettier-ignore
 export const assortedExamples = {
-ffi:
-`local ffi = require("ffi")
+	ffi:
+		`local ffi = require("ffi")
 ffi.cdef[[
     unsigned long compressBound(unsigned long sourceLen);
     int compress2(char *dest, unsigned long *destLen, const char *source, unsigned long sourceLen, int level);
@@ -33,8 +33,8 @@ local c = compress(txt)
 print("Compressed size: ", #c)
 local txt2 = uncompress(c, #txt)
 assert(txt2 == txt)`,
-string_parse: 
-`local cfg = [[
+	string_parse:
+		`local cfg = [[
     name=Lua
     cycle=123
     debug=yes
@@ -51,8 +51,8 @@ end
 local tbl = parse(cfg) -- hover me`,
 
 
-type_assert: 
-`local function assert_whole_number<|T: number|>
+	type_assert:
+		`local function assert_whole_number<|T: number|>
 	if math.floor(T) ~= T then
 		type_error("Expected whole number", 2)
 		return any
@@ -64,16 +64,16 @@ end
 local x = assert_whole_number<|5.5|>`,
 
 
-array:
-`local function Array<|T: any, L: number|>
+	array:
+		`local function Array<|T: any, L: number|>
 	return {[1..L] = T}
 end
 
 local list: Array<|number, 3|> = {1, 2, 3, 4}`,
 
 
-list_generic: 
-`function List<|T: any|>
+	list_generic:
+		`function List<|T: any|>
 	return {[1..inf] = T | nil}
 end
 
@@ -83,8 +83,8 @@ names[2] = "bar"
 names[-1] = "faz"`,
 
 
-load_evaluation:
-`local function build_summary_function(tbl)
+	load_evaluation:
+		`local function build_summary_function(tbl)
 	local lua = {}
 	table.insert(lua, "local sum = 0")
 	table.insert(lua, "for i = " .. tbl.init .. ", " .. tbl.max .. " do")
@@ -102,8 +102,8 @@ local func = build_summary_function({
 })`,
 
 
-anagram_proof:
-`local bytes = {}
+	anagram_proof:
+		`local bytes = {}
 for i,v in ipairs({
     "P", "S", "E", "L", "E",
 }) do
@@ -115,10 +115,10 @@ local anagram = string.char(all_letters, all_letters, all_letters, all_letters, 
 assert(anagram == "SLEEP")
 print<|anagram|> -- see console or hover me`,
 
-base64: import("../../../test/nattlua/analyzer/complex/base64.nlua"),
-typescript: import("../../../test/nattlua/analyzer/complex/typescript.nlua"),
-spritemanager: import("../../../test/nattlua/analyzer/complex/spritemanager.nlua"),
-brainfudge: import("../../../test/nattlua/analyzer/complex/brainfudge.nlua"),
-["js-array"]: import("../../../test/nattlua/analyzer/complex/array.nlua"),
-["maze"]: import("../../../test/nattlua/analyzer/complex/maze.nlua"),
+	base64: import("../../test/nattlua/analyzer/complex/base64.nlua"),
+	typescript: import("../../test/nattlua/analyzer/complex/typescript.nlua"),
+	spritemanager: import("../../test/nattlua/analyzer/complex/spritemanager.nlua"),
+	brainfudge: import("../../test/nattlua/analyzer/complex/brainfudge.nlua"),
+	["js-array"]: import("../../test/nattlua/analyzer/complex/array.nlua"),
+	["maze"]: import("../../test/nattlua/analyzer/complex/maze.nlua"),
 }

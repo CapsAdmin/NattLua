@@ -1,6 +1,6 @@
 -- Redirect print function to stderr for debug output
 local ffi = require("ffi")
-local lsp = require("language_server.server.lsp")
+local lsp = require("language_server.lsp")
 local json = require("nattlua.other.json")
 local rpc_util = require("nattlua.other.jsonrpc")
 local INPUT = io.stdin

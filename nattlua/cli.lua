@@ -21,7 +21,7 @@ default.build = function(path, path_to)
 	f:close()
 end
 default["language-server"] = function()
-	require("language_server.server.main")()
+	require("language_server.main")()
 end
 
 function _G.RUN_CLI(cmd, ...)

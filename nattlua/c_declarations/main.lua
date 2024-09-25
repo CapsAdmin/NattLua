@@ -22,7 +22,6 @@ local Code = require("nattlua.code").New
 local Compiler = require("nattlua.compiler")
 local variables = Table()
 local types = Table()
-local ffi = require("ffi")
 local analyzer_context = require("nattlua.analyzer.context")
 
 local function C_DECLARATIONS()
@@ -85,6 +84,7 @@ end
 function cparser.sizeof(cdecl, len)
 	-- TODO: support non string sizeof
 	if jit and cdecl.Type == "string" and cdecl:IsLiteral() then
+		local ffi = require("ffi")
 		local analyzer = analyzer_context:GetCurrentAnalyzer()
 		local env = analyzer:GetScopeHelper(analyzer.function_scope)
 		local vars, typs = analyze(cdecl:GetData(), "typeof", env, analyzer)
