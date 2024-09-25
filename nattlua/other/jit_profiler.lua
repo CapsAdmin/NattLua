@@ -74,36 +74,89 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 				local line_number = assert(tonumber(line_number))
 
 				do
-					local parent = processed_samples[path] or {children = {}, sample_count = 0, vm_states = {}}
-					parent.sample_count = parent.sample_count + sample.sample_count
-					parent.vm_states[sample.vm_state] = (parent.vm_states[sample.vm_state] or 0) + 1
-					processed_samples[path] = parent
-				end
+					if not processed_samples[path] then
+						processed_samples[path] = {lines = {}}
+					end
+					if not processed_samples[path].lines[line_number] then
+						processed_samples[path].lines[line_number] = {}
+					end
 
-				do
-					local child = processed_samples[path].children[line_number] or
-						{sample_count = 0, vm_states = {}}
-					child.sample_count = child.sample_count + sample.sample_count
-					child.vm_states[sample.vm_state] = (child.vm_states[sample.vm_state] or 0) + 1
-					processed_samples[path].children[line_number] = child
+					local vm_states = processed_samples[path].lines[line_number]
+
+					vm_states[sample.vm_state] = (vm_states[sample.vm_state] or 0) + sample.sample_count					
 				end
 			end
 		end
 	end
 
+	local function get_samples(vm_states)
+		local count = 0
+		for k,v in pairs(vm_states) do
+			count = count + v
+		end
+		return count
+	end
+
 	local sorted_samples = {}
 
 	do
+
+		for path, data in pairs(processed_samples) do
+			local new_lines = {}
+			local other_lines = {}
+			for line_number, vm_states in pairs(data.lines) do
+				if get_samples(vm_states) < config.sample_threshold then
+					other_lines[line_number] = vm_states
+				else
+					new_lines[line_number] = vm_states
+				end
+			end
+			data.lines = new_lines
+			data.other_lines = other_lines
+		end
 		for path, data in pairs(processed_samples) do
 			local lines = {}
+			local total_sample_count = 0
+			local total_vm_states = {}
 
-			for line_number, data in pairs(data.children) do
+			do
+
+				for line_number, vm_states in pairs(data.lines) do
+					local samples = get_samples(vm_states)
+					table.insert(
+						lines,
+						{
+							path = path .. ":" .. line_number,
+							sample_count = samples,
+							vm_states = vm_states,
+						}
+					)
+
+					for k,v in pairs(vm_states) do
+						total_vm_states[k] = (total_vm_states[k] or 0) + v
+						total_sample_count = total_sample_count + v
+					end
+				end
+			end
+
+			do
+				local path = "other"
+				local sample_count = 0
+				local new_vm_states = {}
+
+				for line_number, vm_states in pairs(data.other_lines) do
+					for k,v in pairs(vm_states) do
+						new_vm_states[k] = (new_vm_states[k] or 0) + v
+						sample_count = sample_count + v
+					end
+				end
+
 				table.insert(
 					lines,
 					{
-						path = path .. ":" .. line_number,
-						sample_count = data.sample_count,
-						vm_states = data.vm_states,
+						path = "other",
+						sample_count = sample_count,
+						vm_states = new_vm_states,
 					}
 				)
 			end
@@ -116,9 +169,9 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 				sorted_samples,
 				{
 					path = path,
-					vm_states = data.vm_states,
+					vm_states = total_vm_states,
 					lines = lines,
-					sample_count = data.sample_count,
+					sample_count = total_sample_count,
 				}
 			)
 		end
@@ -153,7 +206,9 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 				end
 			end
 
-			states[max_index] = states[max_index] + 1
+			if max_index then
+				states[max_index] = states[max_index] + 1
+			end
 		end
 
 		local result = ""
@@ -170,22 +225,18 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 	for _, data in ipairs(sorted_samples) do
 		local str = {}
 
-		if data.sample_count > config.sample_threshold then
-			for _, data in ipairs(data.lines) do
-				if data.sample_count > config.sample_threshold then
-					table.insert(
-						str,
-						stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. data.path .. "\n"
-					)
-				end
-			end
+		for _, data in ipairs(data.lines) do
+			table.insert(
+				str,
+				stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. data.path .. "\n"
+			)
+		end
 
-			if str[1] then
-				table.insert(
-					str,
-					stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. " < total" .. "\n\n"
-				)
-			end
+		if str[1] then
+			table.insert(
+				str,
+				stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. " < total" .. "\n\n"
+			)
 		end
 
 		if str[1] then table.insert(out, table.concat(str)) end
