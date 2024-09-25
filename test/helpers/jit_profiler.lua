@@ -71,6 +71,10 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 
 				if not path or not line_number then error("uh oh") end
 
+				if path:sub(1, 2) == "./" then
+					path = path:sub(3)
+				end
+
 				local line_number = assert(tonumber(line_number))
 
 				do

@@ -151,6 +151,10 @@ local function format_func_info(fi, func)
 
 		if source:sub(1, 1) == "@" then source = source:sub(2) end
 
+		if source:sub(1, 2) == "./" then
+			source = source:sub(3)
+		end
+
 		return source .. ":" .. fi.currentline
 	elseif fi.ffid then
 		return vmdef.ffnames[fi.ffid]
