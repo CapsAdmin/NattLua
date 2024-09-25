@@ -14,8 +14,9 @@ local META = class.CreateTemplate("node")
 --[[#type META.@Name = "Node"]]
 --[[#type META.@Self = Node]]
 
-function META.New(init--[[#: Omit<|META.@Self, "id" | "tokens"|>]])--[[#: Node]]
+function META.New(init--[[#: Omit<|META.@Self, "id" | "tokens" | "inferred_types" |>]])--[[#: Node]]
 	init.tokens = {}
+	init.inferred_types = {}
 	return setmetatable(init--[[# as META.@Self]], META)
 end
 
@@ -159,16 +160,15 @@ function META:HasNodes()
 end
 
 function META:AssociateType(obj)
-	self.inferred_types = self.inferred_types or {}
-	table.insert(self.inferred_types, obj)
+	self.inferred_types[#self.inferred_types + 1] = obj
 end
 
 function META:GetAssociatedTypes()
-	return self.inferred_types or {}
+	return self.inferred_types
 end
 
 function META:GetLastAssociatedType()
-	return self.inferred_types and self.inferred_types[#self.inferred_types]
+	return self.inferred_types[#self.inferred_types]
 end
 
 local function find_by_type(

@@ -11,6 +11,7 @@ local type Node = {
 	id = number,
 	Code = Code,
 	tokens = Map<|string, Token | List<|Token|>|>,
+	inferred_types = List<|any|>,
 	environment = "typesystem" | "runtime",
 	parent = nil | self,
 	code_start = number,
@@ -19,7 +20,6 @@ local type Node = {
 	statements = nil | List<|any|>,
 	value = nil | Token,
 	inferred_type = nil | any,
-	inferred_types = nil | List<|any|>,
 	-- TODO: type and move these to appropriate nodes
 	is_identifier = any,
 	left = any,

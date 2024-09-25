@@ -15,7 +15,7 @@ local setmetatable = _G.setmetatable
 	is_whitespace = boolean | nil,
 	string_value = nil | string,
 	inferred_type = nil | any,
-	inferred_types = nil | List<|any|>,
+	inferred_types = List<|any|>,
 	parent = nil | any,
 	whitespace = false | nil | List<|CurrentType<|"table", 1|>|>,
 }]]
@@ -32,16 +32,15 @@ function META:__tostring()
 end
 
 function META:AssociateType(obj)
-	self.inferred_types = self.inferred_types or {}
-	table.insert(self.inferred_types, obj)
+	self.inferred_types[#self.inferred_types + 1] = obj
 end
 
 function META:GetAssociatedTypes()
-	return self.inferred_types or {}
+	return self.inferred_types
 end
 
 function META:GetLastAssociatedType()
-	return self.inferred_types and self.inferred_types[#self.inferred_types]
+	return self.inferred_types[#self.inferred_types]
 end
 
 function META:FindType()
@@ -283,6 +282,7 @@ if jit and jit.arch == "arm64" then
 				whitespace = false,
 				start = 0,
 				stop = 0,
+				inferred_types = {},
 			}--[[# as META.@Self]]
 			return x
 		end,
@@ -297,6 +297,7 @@ else
 				whitespace = false,
 				start = 0,
 				stop = 0,
+				inferred_types = {},
 			}--[[# as META.@Self]]
 			return x
 		end,

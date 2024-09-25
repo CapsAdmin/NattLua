@@ -58,6 +58,7 @@ function META:BuildParentCache()
 		parent = parent.Parent
 	end
 
+	
 	self.ParentList = list
 	self.ParentMap = map
 	self.Root = parent
@@ -135,7 +136,7 @@ end
 function META:CreateUpvalue(key, obj, env)
 	local shadow
 
-	if key ~= "..." and env == "runtime" then
+	if env == "runtime" and key ~= "..." then
 		shadow = self.upvalues[env].map[key]
 	end
 
@@ -400,13 +401,9 @@ function META:DumpScope()
 	return table.concat(s, "\n")
 end
 
-local ref = 0
-
 function META.New(parent, upvalue_position, obj)
-	ref = ref + 1
 	local scope = {
 		obj = obj,
-		ref = ref,
 		Children = {},
 		upvalue_position = upvalue_position,
 		upvalues = {
