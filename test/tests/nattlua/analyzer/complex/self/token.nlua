@@ -1,1 +1,1 @@
-require("nattlua.lexer.token")
+require("nattlua.token")

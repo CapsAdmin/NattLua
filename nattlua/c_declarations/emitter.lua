@@ -1,4 +1,4 @@
-local META = loadfile("nattlua/transpiler/emitter.lua")()
+local META = loadfile("nattlua/emitter.lua")()
 META.FFI_DECLARATION_EMITTER = true
 
 do

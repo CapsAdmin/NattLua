@@ -1,5 +1,5 @@
 --[[# --ANALYZE
-local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
+local type { Token, TokenType } = import("~/nattlua/token.lua")]]
 
 --[[#local type { ExpressionKind, StatementKind, statement, expression, Node } = import("~/nattlua/parser/nodes.nlua")]]
 

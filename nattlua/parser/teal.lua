@@ -2,7 +2,7 @@ local META = ...
 
 --[[#local type { Node, statement } = import("~/nattlua/parser/nodes.nlua")]]
 
---[[#local type { TokenType } = import("~/nattlua/lexer/token.lua")]]
+--[[#local type { TokenType } = import("~/nattlua/token.lua")]]
 
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")

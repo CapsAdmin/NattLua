@@ -14,9 +14,9 @@ local setmetatable = _G.setmetatable
 local B = string.byte
 local META = class.CreateTemplate("emitter")
 
---[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]
+--[[#local type { Token } = import("~/nattlua/token.lua")]]
 
---[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]
+--[[#local type { Token } = import("~/nattlua/token.lua")]]
 
 --[[#local type { Node } = import("~/nattlua/parser/nodes.nlua")]]
 

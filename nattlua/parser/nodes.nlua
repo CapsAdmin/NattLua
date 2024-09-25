@@ -1,4 +1,4 @@
-local type { Token } = import("~/nattlua/lexer/token.lua")
+local type { Token } = import("~/nattlua/token.lua")
 
 local type { Code } = import("~/nattlua/code.lua")
 

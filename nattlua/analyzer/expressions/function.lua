@@ -5,7 +5,7 @@ local Function = require("nattlua.types.function").Function
 local Any = require("nattlua.types.any").Any
 local VarArg = require("nattlua.types.tuple").VarArg
 local ipairs = _G.ipairs
-local Emitter = require("nattlua.transpiler.emitter").New
+local Emitter = require("nattlua.emitter").New
 
 local function analyze_arguments(self, node)
 	local args = {}

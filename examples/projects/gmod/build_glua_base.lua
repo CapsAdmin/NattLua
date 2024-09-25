@@ -1,4 +1,4 @@
-local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
+local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
 local json = require("nattlua.other.json")
 local tprint = require("nattlua.other.table_print")
 local util = require("examples.util")

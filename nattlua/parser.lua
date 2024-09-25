@@ -1,7 +1,7 @@
 local META = loadfile("nattlua/parser/base.lua")()
 local Code = require("nattlua.code").New
 local Lexer = require("nattlua.lexer").New
-local Emitter = require("nattlua.transpiler.emitter").New
+local Emitter = require("nattlua.emitter").New
 local path_util = require("nattlua.other.path")
 local math = _G.math
 local math_huge = math.huge
@@ -13,7 +13,7 @@ local assert = _G.assert
 local debug = _G.debug
 local io = _G.io
 
---[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
+--[[#local type { Token, TokenType } = import("~/nattlua/token.lua")]]
 
 --[[#local type { ExpressionKind, StatementKind, statement, expression } = import("./parser/nodes.nlua")]]
 

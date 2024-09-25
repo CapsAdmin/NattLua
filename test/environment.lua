@@ -40,7 +40,7 @@ end
 
 do
 	-- reuse an existing environment to speed up tests
-	local BuildBaseEnvironment = require("nattlua.runtime.base_environment").BuildBaseEnvironment
+	local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
 	local runtime_env, typesystem_env = BuildBaseEnvironment()
 	local nl = require("nattlua")
 

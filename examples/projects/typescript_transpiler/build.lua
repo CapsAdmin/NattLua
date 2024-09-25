@@ -1,5 +1,5 @@
 local nl = require("nattlua")
-local Emitter = require("examples.projects.typescript_transpiler.emitter").New
+local Emitter = require("examples.projects.typescript_emitter").New
 local code = assert(io.open("examples/projects/typescript_transpiler/input.lua")):read("*all")
 local ast = assert(assert(nl.Compiler(code):Parse()):Analyze()).SyntaxTree
 local em = Emitter()

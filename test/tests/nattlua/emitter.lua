@@ -409,7 +409,7 @@ identical([[setmetatable(
 		Emitter = config and
 			config.js and
 			requirew("nattlua.transpiler.javascript_emitter") or
-			requirew("nattlua.transpiler.emitter"),
+			requirew("nattlua.emitter"),
 	},
 	META
 )]])

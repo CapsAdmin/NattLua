@@ -1,4 +1,4 @@
---[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]
+--[[#local type { Token } = import("~/nattlua/token.lua")]]
 
 --[[#local type { ExpressionKind, StatementKind, Node } = import("~/nattlua/parser/nodes.nlua")]]
 
@@ -62,17 +62,17 @@ function META:Render(config)
 	local emitter
 
 	do
-		--[[#-- we have to do this because nattlua.transpiler.emitter is not yet typed
+		--[[#-- we have to do this because nattlua.emitter is not yet typed
 		-- so if it's hoisted the self/nodes.nlua will fail
 		attest.expect_diagnostic<|"warning", "always false"|>]]
 		--[[#attest.expect_diagnostic<|"warning", "always true"|>]]
 
 		if _G.IMPORTS--[[# as false]] then
-			emitter = IMPORTS["nattlua.transpiler.emitter"]()
+			emitter = IMPORTS["nattlua.emitter"]()
 		else
 			--[[#£ parser.dont_hoist_next_import = true]]
 
-			emitter = require("nattlua.transpiler.emitter"--[[# as string]])
+			emitter = require("nattlua.emitter"--[[# as string]])
 		end
 	end
 

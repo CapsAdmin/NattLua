@@ -1,7 +1,7 @@
 local runtime_syntax = require("nattlua.syntax.runtime")
 local ipairs = ipairs
 local assert = assert
-local META = loadfile("nattlua/transpiler/emitter.lua")()
+local META = loadfile("nattlua/emitter.lua")()
 
 function META:EmitExpression(node)
 	if node.tokens["("] then
