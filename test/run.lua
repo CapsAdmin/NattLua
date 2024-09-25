@@ -47,7 +47,6 @@ local function find_tests(path)
 
 	local what = path
 	local path = "test/" .. ((what and what .. "/") or "tests/")
-	local found = {}
 	local cmd = "find"
 
 	if jit and jit.os == "Windows" then
@@ -55,17 +54,55 @@ local function find_tests(path)
 		path = path:gsub("/", "\\")
 	end
 
+	local analyzer = {}
+	local analyzer_complex = {}
+	local types = {}
+	local other = {}
+
 	for path in io.popen(cmd .. " " .. path):lines() do
 		if jit and jit.os == "Windows" then path = path:gsub("\\", "/") end
 
 		path = path:gsub("//", "/")
 
 		if not path:find("/file_importing/", nil, true) then
-			table.insert(found, path)
+			if path:find("nattlua/project.lua", nil, true) then
+				table.insert(analyzer_complex, path)
+			elseif path:find("nattlua/analyzer/", nil, true) then
+				if path:find("analyzer/complex", nil, true) then
+					table.insert(analyzer_complex, path)
+				else
+					table.insert(analyzer, path)
+				end
+			elseif path:find("nattlua/types/", nil, true) then
+				table.insert(types, path)
+			else
+				table.insert(other, path)
+			end
 		end
 	end
 
-	table.sort(found)
+	table.sort(analyzer)
+	table.sort(analyzer_complex)
+	table.sort(types)
+	table.sort(other)
+	local found = {}
+
+	for i, v in ipairs(other) do
+		table.insert(found, v)
+	end
+
+	for i, v in ipairs(types) do
+		table.insert(found, v)
+	end
+
+	for i, v in ipairs(analyzer) do
+		table.insert(found, v)
+	end
+
+	for i, v in ipairs(analyzer_complex) do
+		table.insert(found, v)
+	end
+
 	return found
 end
 
@@ -87,8 +124,8 @@ else
 
 	for _, path in ipairs(tests) do
 		if path:sub(-4) == ".lua" then
+			io_write((path:gsub("test/tests/", "")), " ")
 			local func = assert(loadfile(path))
-			io_write(path, " ")
 			local time = get_time()
 			func()
 			io_write(" ", format_time(get_time() - time), " seconds\n")
@@ -97,12 +134,12 @@ else
 
 	for _, path in ipairs(tests) do
 		if path:sub(-5) == ".nlua" then
-			io_write(path, " ")
+			io_write((path:gsub("test/tests/", "")), " ")
 			local f = assert(io.open(path, "r"))
-			local str = f:read("*all")
+			local str = assert(f:read("*all"))
+			f:close()
 			local time = get_time()
 			analyze(str)
-			f:close()
 			io_write(" ", format_time(get_time() - time), " seconds\n")
 		end
 	end
