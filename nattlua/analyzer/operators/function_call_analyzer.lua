@@ -131,7 +131,7 @@ return function(analyzer, obj, input)
 		)
 	end
 
-	local ret = Tuple({})
+	local ret = Tuple()
 
 	for _, tuple in ipairs(tuples) do
 		if tuple:GetUnpackable() or tuple:GetElementCount() == math.huge then

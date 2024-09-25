@@ -144,10 +144,10 @@ analyzer function ^string.byte(str: string, from: number | nil, to: number | nil
 	end
 
 	if from and from:IsLiteral() and to and to:IsLiteral() then
-		return types.Tuple({}):AddRemainder(types.Tuple({types.Number()}):SetRepeat(to:GetData() - from:GetData() + 1))
+		return types.Tuple():AddRemainder(types.Tuple({types.Number()}):SetRepeat(to:GetData() - from:GetData() + 1))
 	end
 
-	return types.Tuple({}):AddRemainder(types.Tuple({types.Number()}):SetRepeat(math.huge))
+	return types.Tuple():AddRemainder(types.Tuple({types.Number()}):SetRepeat(math.huge))
 end
 
 analyzer function ^string.match(str: string, pattern: string, start_position: number | nil)
@@ -176,7 +176,7 @@ analyzer function ^string.match(str: string, pattern: string, start_position: nu
 
 	if pattern then len = select(2, pattern:gsub("%b()", "")) end
 
-	return types.Tuple({}):AddRemainder(types.Tuple({types.Union({types.String(), types.Nil()})}):SetRepeat(len))
+	return types.Tuple():AddRemainder(types.Tuple({types.Union({types.String(), types.Nil()})}):SetRepeat(len))
 end
 
 analyzer function ^string.find(str: string, pattern: string, start_position: number | nil, no_pattern: boolean | nil)

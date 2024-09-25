@@ -621,7 +621,7 @@ function META:Get(key--[[#: TBaseType]])
 	if key.Type == "union" then
 		if key:IsEmpty() then return false, type_errors.union_key_empty() end
 
-		local union = Union({})
+		local union = Union()
 		local errors = {}
 
 		for _, k in ipairs(key:GetData()) do
@@ -663,7 +663,7 @@ function META:Get(key--[[#: TBaseType]])
 	end
 
 	if key.Type == "number" and key:GetMin() and key:GetMax() then
-		local union = Union({})
+		local union = Union()
 		local min, max = key:GetMin(), key:GetMax()
 		local len = math.abs(min - max)
 

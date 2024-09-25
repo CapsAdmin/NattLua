@@ -167,7 +167,7 @@ do
 		elseif node.kind == "postfix_call" then
 			return AnalyzePostfixCall(self, node)
 		elseif node.kind == "empty_union" then
-			return Union({})
+			return Union()
 		elseif node.kind == "tuple" then
 			local tup = Tuple():SetUnpackable(true)
 			self:PushCurrentType(tup, "tuple")

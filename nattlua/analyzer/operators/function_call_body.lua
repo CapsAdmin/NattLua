@@ -33,8 +33,8 @@ local function restore_mutated_types(self)
 end
 
 local function shrink_union_to_function_signature(obj)
-	local arg = Tuple({})
-	local ret = Tuple({})
+	local arg = Tuple()
+	local ret = Tuple()
 
 	for _, func in ipairs(obj:GetData()) do
 		if func.Type ~= "function" then return false end
@@ -233,7 +233,7 @@ local function check_input(self, obj, input)
 
 						if contract then
 							if contract.Type == "union" then
-								local tup = Tuple({})
+								local tup = Tuple()
 
 								for _, func in ipairs(contract:GetData()) do
 									tup:Merge(func:GetInputSignature())
@@ -253,7 +253,7 @@ local function check_input(self, obj, input)
 
 						if contract then
 							if contract.Type == "union" then
-								local tup = Tuple({})
+								local tup = Tuple()
 
 								for _, func in ipairs(contract:GetData()) do
 									tup:Merge(func:GetOutputSignature())

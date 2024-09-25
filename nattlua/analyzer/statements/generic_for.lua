@@ -29,7 +29,7 @@ return {
 			end
 
 			if values.Type == "union" then
-				local tup = Tuple({})
+				local tup = Tuple()
 				local max_length = 0
 
 				for i, v in ipairs(values:GetData()) do

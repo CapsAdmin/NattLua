@@ -107,15 +107,14 @@ local function index_table(analyzer, self, key)
 	end
 
 	local obj = self:Get(key)
-	if obj then
-		return obj
-	end
+
+	if obj then return obj end
 
 	return Nil()
 end
 
 local function index_union(analyzer, obj, key)
-	local union = Union({})
+	local union = Union()
 
 	for _, obj in ipairs(obj:GetData()) do
 		if obj.Type == "tuple" then obj = analyzer:IndexOperator(obj, key) end

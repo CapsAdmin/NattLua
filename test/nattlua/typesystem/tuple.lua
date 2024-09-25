@@ -123,7 +123,7 @@ test("initialize with remainder", function()
 end)
 
 test("merge tuples", function()
-	local infinite_any = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+	local infinite_any = Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 	local number_number = Tuple({Number(), Number()})
 	infinite_any:Merge(number_number)
 	assert(infinite_any:GetElementCount() == math.huge)

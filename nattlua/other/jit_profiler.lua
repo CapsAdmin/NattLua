@@ -139,7 +139,7 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 				end
 			end
 
-			do
+			if false then
 				local path = "other"
 				local sample_count = 0
 				local new_vm_states = {}

@@ -66,7 +66,7 @@ return function(META)
 			self:Return(statement, {Nil()})
 		end
 
-		local union = Union({})
+		local union = Union()
 
 		for _, ret in ipairs(scope:GetOutputSignature()) do
 			if #ret.types == 1 then
@@ -272,7 +272,7 @@ return function(META)
 						else
 							-- if not we sadly have to resort to any
 							-- TODO: error?
-							obj.recursively_called = Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+							obj.recursively_called = Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 							return obj.recursively_called
 						end
 					end

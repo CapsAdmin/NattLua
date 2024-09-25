@@ -107,8 +107,8 @@ analyze(
 )
 analyze([[
     local analyzer function test(a: any, b: any)
-        local arg = types.Tuple({})
-        local ret = types.Tuple({})
+        local arg = types.Tuple()
+        local ret = types.Tuple()
     
         for _, func in ipairs(a:GetData()) do
             if func.Type ~= "function" then return false end

@@ -25,7 +25,7 @@ function profiler.Stop()
 	print(
 		"I = interpreter, G = garbage collection, J = busy tracing, N = native / tracing completed:"
 	)
-	print(jit_profiler.Stop())
+	print(jit_profiler.Stop({sample_threshold = 200}))
 end
 
 return profiler

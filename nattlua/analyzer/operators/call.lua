@@ -68,7 +68,7 @@ local function union_call(self, analyzer, input, call_node)
 		return false, errors
 	end
 
-	local new = Union({})
+	local new = Union()
 
 	for _, obj in ipairs(self:GetData()) do
 		local val = analyzer:Assert(analyzer:Call(obj, input:Copy(), call_node, true))
@@ -239,7 +239,7 @@ local function any_call(self, analyzer, input, call_node)
 		end
 	end
 
-	return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+	return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 end
 
 return {

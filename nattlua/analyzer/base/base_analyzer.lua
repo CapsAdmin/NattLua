@@ -75,7 +75,7 @@ return function(META)
 
 			if tbl.Self then
 				local self = tbl.Self
-				local new_tup = Tuple({})
+				local new_tup = Tuple()
 
 				for i, obj in ipairs(tup:GetData()) do
 					if i == 1 then
@@ -98,7 +98,7 @@ return function(META)
 					self:SetMetaTable(meta)
 				end
 
-				local new_tup = Tuple({})
+				local new_tup = Tuple()
 
 				for i, obj in ipairs(tup:GetData()) do
 					if i == 1 then

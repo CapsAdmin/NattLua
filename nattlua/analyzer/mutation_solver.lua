@@ -112,7 +112,7 @@ local function mutation_solver(mutations, scope, obj)
 		end
 	end
 
-	local union = Union({})
+	local union = Union()
 
 	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 

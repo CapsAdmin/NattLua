@@ -184,7 +184,7 @@ local function cast(self, node)
 		elseif t == "$" or t == "?" then
 			return table.remove(self.dollar_signs_vars, 1)
 		elseif t == "va_list" then
-			return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+			return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		else
 			local obj = self.type_table:Get(LString(t))
 
@@ -193,7 +193,7 @@ local function cast(self, node)
 
 		return Number()
 	elseif node.type == "va_list" then
-		return Tuple({}):AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+		return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 	elseif node.type == "function" then
 		local args = {}
 		local rets = {}
