@@ -115,10 +115,10 @@ local anagram = string.char(all_letters, all_letters, all_letters, all_letters, 
 assert(anagram == "SLEEP")
 print<|anagram|> -- see console or hover me`,
 
-	base64: import("../../test/nattlua/analyzer/complex/base64.nlua"),
-	typescript: import("../../test/nattlua/analyzer/complex/typescript.nlua"),
-	spritemanager: import("../../test/nattlua/analyzer/complex/spritemanager.nlua"),
-	brainfudge: import("../../test/nattlua/analyzer/complex/brainfudge.nlua"),
-	["js-array"]: import("../../test/nattlua/analyzer/complex/array.nlua"),
-	["maze"]: import("../../test/nattlua/analyzer/complex/maze.nlua"),
+	base64: import("../../test/tests/nattlua/analyzer/complex/base64.nlua"),
+	typescript: import("../../test/tests/nattlua/analyzer/complex/typescript.nlua"),
+	spritemanager: import("../../test/tests/nattlua/analyzer/complex/spritemanager.nlua"),
+	brainfudge: import("../../test/tests/nattlua/analyzer/complex/brainfudge.nlua"),
+	["js-array"]: import("../../test/tests/nattlua/analyzer/complex/array.nlua"),
+	["maze"]: import("../../test/tests/nattlua/analyzer/complex/maze.nlua"),
 }

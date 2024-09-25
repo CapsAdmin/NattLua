@@ -44,12 +44,11 @@ local blacklist = {
 	"test_focus%.lua",
 	"build_output%.lua",
 	"nattlua_for_ai%.lua",
-	"nattlua/other/cparser%.lua",
-	"nattlua/other/json%.lua",
+	"language_server/json%.lua",
 	"examples/benchmarks/temp/10mb%.lua",
 	"examples/projects/luajit/out%.lua",
-	"test/nattlua/analyzer/file_importing/deep_error/.*",
 	"examples/projects/love2d/love%-api/.*",
+	"test/tests/nattlua/analyzer/file_importing/deep_error/.*",
 }
 
 local function is_blacklisted(path)

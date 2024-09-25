@@ -1,0 +1,4 @@
+if true then
+	-- ERROR2
+	require("test.tests.nattlua.analyzer.file_importing.deep_error.deep_error.foo")
+end

@@ -82,7 +82,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 
 				if not info then break end
 
-				if info.source:find("@test/nattlua", nil, true) then
+				if info.source:find("@test/tests", nil, true) then
 					level = i
 
 					break

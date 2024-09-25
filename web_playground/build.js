@@ -22,7 +22,7 @@ const getAllFiles = function (dirPath, arrayOfFiles) {
 
 let tests = []
 
-for (let path of getAllFiles("../test/nattlua/analyzer/")) {
+for (let path of getAllFiles("../test/tests/nattlua/analyzer/")) {
 	if (path.endsWith(".nlua")) {
 		tests.push(fs.readFileSync(path).toString())
 	} else {

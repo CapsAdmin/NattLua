@@ -46,7 +46,7 @@ do
 
 	function _G.analyze(code, expect_error, expect_warning)
 		local info = debug.getinfo(2)
-		local name = info.source:match("(test/nattlua/.+)") or info.source
+		local name = info.source:match("(test/tests/.+)") or info.source
 
 		if not _G.ON_EDITOR_SAVE then
 			io.write(".")

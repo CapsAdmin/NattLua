@@ -198,7 +198,7 @@ do
 			local path = info.source
 
 			if path:sub(1, 1) == "@" then
-				if path:sub(2):find("test/nattlua/analyzer") then
+				if path:sub(2):find("test/tests/nattlua/analyzer") then
 					print(info.source:sub(2) .. ":" .. info.currentline)
 				end
 			end

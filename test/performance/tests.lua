@@ -16,18 +16,18 @@ local time = os.clock()
 
 do
 	local tests = {
-		"test/nattlua/lsp/editor.lua",
-		"test/nattlua/luajit_project.lua",
-		"test/nattlua/analyzer/complex/self/tuple.nlua",
-		"test/nattlua/analyzer/complex/self/union.nlua",
-		"test/nattlua/c_declarations/cdef.nlua",
-		"test/nattlua/analyzer/complex/self/string.nlua",
-		"test/nattlua/analyzer/complex/self/lexer.nlua",
-		"test/nattlua/analyzer/complex/self/base_parser.nlua",
-		"test/nattlua/analyzer/complex/ljsocket.nlua",
-		"test/nattlua/analyzer/complex/cdata.nlua",
-		"test/nattlua/analyzer/load.lua",
-		"test/nattlua/analyzer/lua.lua",
+		"test/tests/editor_helper.lua",
+		"test/tests/nattlua/project.lua",
+		"test/tests/nattlua/analyzer/complex/self/tuple.nlua",
+		"test/tests/nattlua/analyzer/complex/self/union.nlua",
+		"test/tests/nattlua/c_declarations/cdef.nlua",
+		"test/tests/nattlua/analyzer/complex/self/string.nlua",
+		"test/tests/nattlua/analyzer/complex/self/lexer.nlua",
+		"test/tests/nattlua/analyzer/complex/self/base_parser.nlua",
+		"test/tests/nattlua/analyzer/complex/ljsocket.nlua",
+		"test/tests/nattlua/analyzer/complex/cdata.nlua",
+		"test/tests/nattlua/analyzer/load.lua",
+		"test/tests/nattlua/analyzer/lua.lua",
 	}
 
 	for _, path in ipairs(tests) do

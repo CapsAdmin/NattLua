@@ -128,19 +128,19 @@ if normalized:find("/nattlua/", nil, true) then
 	then
 		run_lua("test/performance/analyzer.lua")
 	elseif normalized:find("c_declarations/main.lua", nil, true) and not has_test_focus() then
-		run_lua("test/run.lua", "test/nattlua/c_declarations/cdef.nlua")
-		run_lua("test/run.lua", "test/nattlua/c_declarations.lua")
-		run_lua("test/run.lua", "test/nattlua/analyzer/typed_ffi.lua")
+		run_lua("test/run.lua", "test/tests/c_declarations/cdef.nlua")
+		run_lua("test/run.lua", "test/tests/c_declarations.lua")
+		run_lua("test/run.lua", "test/tests/nattlua/analyzer/typed_ffi.lua")
 		run_lua("examples/projects/luajit/build.lua", path)
 		run_lua("examples/projects/love2d/nlconfig.lua", path)
 	elseif normalized:find("c_declarations/analyzer", nil, true) and not has_test_focus() then
-		run_lua("test/run.lua", "test/nattlua/c_declarations/cdef.nlua")
+		run_lua("test/run.lua", "test/tests/c_declarations/cdef.nlua")
 	elseif normalized:find("c_declarations", nil, true) and not has_test_focus() then
-		run_lua("test/run.lua", "test/nattlua/c_declarations.lua")
+		run_lua("test/run.lua", "test/tests/c_declarations.lua")
 	elseif normalized:find("other/coverage", nil, true) then
-		run_lua("test/run.lua", "test/nattlua/coverage.lua")
+		run_lua("test/run.lua", "test/tests/coverage.lua")
 	elseif normalized:find("nattlua/editor_helper/editor.lua", nil, true) then
-		run_lua("test/run.lua", "test/nattlua/lsp/editor.lua")
+		run_lua("test/run.lua", "test/tests/lsp/editor.lua")
 		os.execute("luajit nattlua.lua build fast && luajit nattlua.lua install")
 		return
 	elseif normalized:find("language_server/server", nil, true) then
@@ -163,7 +163,7 @@ if normalized:find("/nattlua/", nil, true) then
 	elseif is_nattlua and not normalized:find("/definitions/", nil, true) then
 		run_nattlua(path)
 	elseif normalized:find("formating.lua", nil, true) then
-		run_lua("test/run.lua", "test/nattlua/helper_test.lua")
+		run_lua("test/run.lua", "test/tests/helper_test.lua")
 	elseif normalized:find("test/", nil, true) then
 		run_lua("test/run.lua", path)
 	elseif normalized:find("javascript_emitter") then
@@ -181,10 +181,10 @@ if normalized:find("/nattlua/", nil, true) then
 		not normalized:find("nattlua/other")
 	then
 		if normalized:find("lexer.lua", nil, true) then
-			run_lua("test/run.lua", "test/nattlua/lexer.lua")
+			run_lua("test/run.lua", "test/tests/lexer.lua")
 			run_lua("test/run.lua", "test/performance/lexer.lua")
 		elseif normalized:find("parser.lua", nil, true) and false then
-			run_lua("test/run.lua", "test/nattlua/parser.lua")
+			run_lua("test/run.lua", "test/tests/parser.lua")
 			run_lua("test/run.lua", "test/performance/parser.lua")
 		else
 			run_lua("test/run.lua")
