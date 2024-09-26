@@ -61,11 +61,19 @@ function META:BuildParentCache()
 	self.ParentList = list
 	self.ParentMap = map
 	self.Root = parent
+	self.MemberInParentsCache = {}
 end
 
 function META:GetMemberInParents(what)
+	if self.MemberInParentsCache[what] then
+		return self.MemberInParentsCache[what][1], self.MemberInParentsCache[what][2]
+	end
+
 	for _, scope in ipairs(self.ParentList) do
-		if scope[what] ~= nil then return scope[what], scope end
+		if scope[what] ~= nil then
+			self.MemberInParentsCache[what] = {scope[what], scope}
+			return self.MemberInParentsCache[what][1], self.MemberInParentsCache[what][2]
+		end
 	end
 
 	return nil
