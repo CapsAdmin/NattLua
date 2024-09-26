@@ -1,4 +1,4 @@
-require("nattlua.other.jit_options")()
+require("nattlua.other.jit_options").SetOptimized()
 local nl = require("nattlua")
 local util = require("examples.util")
 local load = loadstring or load

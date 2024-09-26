@@ -61,7 +61,10 @@ local function flush()
 		count = count + 1
 	end
 
-	print("too many traces, flushing " .. count .. " traces")
+	if count > 0 then
+		print("too many traces, flushing " .. count .. " traces")
+	end
+
 	traces = {}
 	aborted = {}
 end
@@ -151,9 +154,7 @@ local function format_func_info(fi, func)
 
 		if source:sub(1, 1) == "@" then source = source:sub(2) end
 
-		if source:sub(1, 2) == "./" then
-			source = source:sub(3)
-		end
+		if source:sub(1, 2) == "./" then source = source:sub(3) end
 
 		return source .. ":" .. fi.currentline
 	elseif fi.ffid then
@@ -243,7 +244,7 @@ local function tostring_trace(v, tab, stop_lines_only)
 	return str
 end
 
-function trace_track.DumpTraceTree(traces)
+function trace_track.ToStringTraceTree(traces)
 	local out = {}
 
 	local function dump(v, depth)
@@ -279,10 +280,10 @@ function trace_track.DumpTraceTree(traces)
 		end)
 	end
 
-	print(str)
+	return str
 end
 
-function trace_track.DumpProblematicTraces(traces, aborted)
+function trace_track.ToStringProblematicTraces(traces, aborted)
 	local map = {}
 
 	for k, v in pairs(traces) do
@@ -313,7 +314,7 @@ function trace_track.DumpProblematicTraces(traces, aborted)
 		out[i] = "x" .. v.count .. " :" .. v.line
 	end
 
-	print(table.concat(out, "\n"))
+	return table.concat(out, "\n")
 end
 
 return trace_track

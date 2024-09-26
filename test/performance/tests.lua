@@ -1,4 +1,4 @@
-require("nattlua.other.jit_options")()
+require("nattlua.other.jit_options").SetOptimized()
 require("test.environment")
 local profiler = require("test.helpers.profiler")
 local io_write = io.write

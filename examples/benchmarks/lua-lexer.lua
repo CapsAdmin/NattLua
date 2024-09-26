@@ -1,4 +1,4 @@
-require("nattlua.other.jit_options")()
+require("nattlua.other.jit_options").SetOptimized()
 local util = require("examples.util")
 local Code = require("nattlua.code").New
 local lua_code = assert(

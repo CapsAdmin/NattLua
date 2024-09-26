@@ -394,12 +394,13 @@ function META:Unpack(length--[[#: nil | number]])
 	length = length or self:GetElementCount()
 	length = math.min(length, self:GetElementCount())
 	assert(length ~= math.huge, "length must be finite")
-	local out = {}
-	local i = 1
 
-	for _ = 1, length do
+	if length == 1 then return (self:Get(1)) end
+
+	local out = {}
+
+	for i = 1, length do
 		out[i] = self:Get(i)
-		i = i + 1
 	end
 
 	return table.unpack(out)

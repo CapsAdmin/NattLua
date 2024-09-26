@@ -1,7 +1,7 @@
 #!/usr/local/bin/luajit
 
 require("nattlua.other.lua_compat")
-require("nattlua.other.jit_options")()
+require("nattlua.other.jit_options").SetOptimized()
 local m = require("nattlua.init")
 package.loaded.nattlua = m
 
