@@ -20,7 +20,7 @@ local function cast(self, node)
 		local size
 
 		if node.size == "?" then
-			size = table.remove(self.dollar_signs_vars, 1)
+			size = table.remove(self.dollar_signs_vars)
 		else
 			size = LNumber(tonumber(node.size) or math.huge)
 		end
@@ -63,7 +63,7 @@ local function cast(self, node)
 
 						if ident then
 							self.current_nodes = self.current_nodes or {}
-							table.insert(self.current_nodes, 1, {ident = ident, tbl = tbl})
+							table.insert(self.current_nodes, {ident = ident, tbl = tbl})
 						end
 
 						for _, v in ipairs(v.fields) do
@@ -78,9 +78,9 @@ local function cast(self, node)
 							end
 						end
 
-						if ident then table.remove(self.current_nodes, 1) end
+						if ident then table.remove(self.current_nodes) end
 					elseif ident then
-						local current = self.current_nodes and self.current_nodes[1]
+						local current = self.current_nodes and self.current_nodes[#self.current_nodes]
 
 						if current and current.ident == v.identifier then
 							-- recursion
@@ -182,7 +182,7 @@ local function cast(self, node)
 		elseif t == "void" then
 			return Nil()
 		elseif t == "$" or t == "?" then
-			return table.remove(self.dollar_signs_vars, 1)
+			return table.remove(self.dollar_signs_vars)
 		elseif t == "va_list" then
 			return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		else

@@ -88,13 +88,10 @@ do -- typesystem
 
 			if self:IsTokenValue(",") then
 				first_expression.tokens[","] = self:ExpectTokenValue(",")
-				node.expressions = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+				node.expressions = {first_expression}
+				self:ParseMultipleValuesAppend(nil, self.ParseTypeExpression, node.expressions, 0)
 			else
-				node.expressions = {}
-			end
-
-			if first_expression then
-				table_insert(node.expressions, 1, first_expression)
+				node.expressions = {first_expression}
 			end
 
 			node.tokens["("] = pleft
@@ -960,23 +957,25 @@ do -- runtime
 	end
 
 	function META:check_integer_division_operator(node--[[#: Node]])
-		if node and not node.idiv_resolved then
-			for i, token in ipairs(node.whitespace) do
-				if token.value:find("\n", nil, true) then break end
+		if not node.potential_idiv then return end
 
-				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
-					table_remove(node.whitespace, i)
-					local tokens = self:LexString("/idiv" .. token.value:sub(2))
+		if not node or node.idiv_resolved then return end
 
-					for _, token in ipairs(tokens) do
-						self:check_integer_division_operator(token)
-					end
+		for i, token in ipairs(node.whitespace) do
+			if token.value:find("\n", nil, true) then break end
 
-					self:AddTokens(tokens)
-					node.idiv_resolved = true
+			if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
+				table_remove(node.whitespace, i)
+				local tokens = self:LexString("/idiv" .. token.value:sub(2))
 
-					break
+				for _, token in ipairs(tokens) do
+					self:check_integer_division_operator(token)
 				end
+
+				self:AddTokens(tokens)
+				node.idiv_resolved = true
+
+				break
 			end
 		end
 	end

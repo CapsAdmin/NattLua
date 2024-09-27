@@ -15,6 +15,7 @@ local assert = _G.assert
 local setmetatable = _G.setmetatable
 local type = _G.type
 local table = _G.table
+local math_min = math.min
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("parser")
 META.OnInitialize = {}
@@ -197,6 +198,10 @@ function META:OnError(
 
 function META:GetToken(offset--[[#: number | nil]])
 	return self.tokens[self.current_token_index + (offset or 0)]
+end
+
+function META:GetPosition()
+	return self.current_token_index
 end
 
 function META:GetLength()
@@ -386,7 +391,30 @@ function META:ParseMultipleValues(
 )
 	local out = {}
 
-	for i = 1, max or self:GetLength() do
+	for i = 1, math_min(max or self:GetLength(), 20) do
+		local node = reader(self, a, b, c)
+
+		if not node then break end
+
+		out[i] = node
+
+		if not self:IsTokenValue(",") then break end
+
+		(node.tokens--[[# as any]])[","] = self:ExpectTokenValue(",")
+	end
+
+	return out
+end
+
+function META:ParseMultipleValuesAppend(
+	max--[[#: nil | number]],
+	reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (nil | Node))]],
+	out--[[#: List<|Node|>]],
+	a--[[#: ref any]],
+	b--[[#: ref any]],
+	c--[[#: ref any]]
+)
+	for i = #out + 1, math_min(max or self:GetLength(), 20) do
 		local node = reader(self, a, b, c)
 
 		if not node then break end

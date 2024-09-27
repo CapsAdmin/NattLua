@@ -16,6 +16,7 @@ local setmetatable = _G.setmetatable
 	string_value = nil | string,
 	inferred_type = nil | any,
 	inferred_types = List<|any|>,
+	potential_idiv = nil | true,
 	parent = nil | any,
 	whitespace = false | nil | List<|CurrentType<|"table", 1|>|>,
 }]]

@@ -684,7 +684,7 @@ function META:Get(key--[[#: TBaseType]])
 
 	if keyval then return keyval.val end
 
-	if not keyval and self:GetContract() then
+	if self:GetContract() then
 		local keyval, reason = self:GetContract():FindKeyValReverse(key)
 
 		if keyval then return keyval.val end

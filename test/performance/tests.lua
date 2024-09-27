@@ -16,18 +16,12 @@ local time = os.clock()
 
 do
 	local tests = {
-		"test/tests/editor_helper.lua",
 		"test/tests/nattlua/project.lua",
-		"test/tests/nattlua/analyzer/complex/self/tuple.nlua",
-		"test/tests/nattlua/analyzer/complex/self/union.nlua",
-		"test/tests/nattlua/c_declarations/cdef.nlua",
-		"test/tests/nattlua/analyzer/complex/self/string.nlua",
-		"test/tests/nattlua/analyzer/complex/self/lexer.nlua",
-		"test/tests/nattlua/analyzer/complex/self/base_parser.nlua",
-		"test/tests/nattlua/analyzer/complex/ljsocket.nlua",
-		"test/tests/nattlua/analyzer/complex/cdata.nlua",
-		"test/tests/nattlua/analyzer/load.lua",
-		"test/tests/nattlua/analyzer/lua.lua",
+		"test/tests/nattlua/project.lua",
+		"test/tests/nattlua/project.lua",
+		"test/tests/nattlua/project.lua",
+		"test/tests/nattlua/project.lua",
+		"test/tests/nattlua/project.lua",
 	}
 
 	for _, path in ipairs(tests) do

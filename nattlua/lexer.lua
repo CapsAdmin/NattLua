@@ -180,17 +180,23 @@ do
 
 		local whitespace = {token}
 		local whitespace_i = 2
+		local potential_idiv = nil
 
 		for i = self.Position, self:GetLength() + 1 do
 			local token = self:ReadToken()
 
 			if not token.is_whitespace then
 				token.whitespace = whitespace
+				token.potential_idiv = potential_idiv
 				return token
 			end
 
 			whitespace[whitespace_i] = token
 			whitespace_i = whitespace_i + 1
+
+			if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
+				potential_idiv = true
+			end
 		end
 	end
 end

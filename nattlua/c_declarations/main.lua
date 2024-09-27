@@ -30,6 +30,20 @@ local function C_DECLARATIONS()
 	return analyzer:Assert(env.runtime.ffi:Get(ConstString("C")))
 end
 
+local function gen(parser, ...)
+	local new = {}
+
+	for i, v in ipairs(parser.dollar_signs) do
+		local ct = select(i, ...)
+
+		if not ct then error("expected ctype at argument #" .. i, 2) end
+
+		table.insert(new, ct)
+	end
+
+	return new
+end
+
 local function analyze(c_code, mode, env, analyzer, ...)
 	if mode == "typeof" then
 		c_code = "typedef void (*TYPEOF_CDECL)(" .. c_code .. ");"
@@ -52,22 +66,8 @@ local function analyze(c_code, mode, env, analyzer, ...)
 	local a = Analyzer()
 
 	if parser.dollar_signs then
-		local function gen(...)
-			local new = {}
-
-			for i, v in ipairs(parser.dollar_signs) do
-				local ct = select(i, ...)
-
-				if not ct then error("expected ctype at argument #" .. i, 2) end
-
-				table.insert(new, 1, ct)
-			end
-
-			return new
-		end
-
-		a.dollar_signs_typs = gen(...)
-		a.dollar_signs_vars = gen(...)
+		a.dollar_signs_typs = gen(parser, ...)
+		a.dollar_signs_vars = gen(parser, ...)
 	end
 
 	a.env = env.typesystem
