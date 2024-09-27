@@ -62,7 +62,7 @@ return {
 						}
 					)
 
-					if obj:IsCertainlyTrue() and self:IsRuntime() then
+					if self:IsRuntime() and obj:IsCertainlyTrue() then
 						if not contains_ref_argument(upvalues) then
 							self:Warning(type_errors.if_always_true())
 						end
@@ -71,13 +71,13 @@ return {
 					if not obj:IsFalsy() then break end
 				end
 
-				if obj:IsCertainlyFalse() and self:IsRuntime() then
+				if self:IsRuntime() and obj:IsCertainlyFalse() then
 					if not contains_ref_argument(self:GetTrackedUpvalues()) then
 						self:Warning(type_errors.if_always_false())
 					end
 				end
 			else
-				if prev_expression:IsCertainlyFalse() and self:IsRuntime() then
+				if self:IsRuntime() and prev_expression:IsCertainlyFalse() then
 					if not contains_ref_argument(self:GetTrackedUpvalues()) then
 						self:Warning(type_errors.if_else_always_true())
 					end

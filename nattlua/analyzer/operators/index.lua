@@ -45,7 +45,10 @@ local function index_table(analyzer, self, key)
 						val:RemoveType(Nil())
 					end
 
-					analyzer:TrackTableIndex(real_obj, key, val)
+					if val.Type == "union" then
+						analyzer:TrackTableIndex(real_obj, key, val)
+					end
+
 					return val
 				end
 			end
@@ -73,7 +76,8 @@ local function index_table(analyzer, self, key)
 
 				if not val:GetContract() then val:SetContract(val) end
 
-				analyzer:TrackTableIndex(self, key, val)
+				if val.Type == "union" then analyzer:TrackTableIndex(self, key, val) end
+
 				return val
 			end
 		end
@@ -87,7 +91,8 @@ local function index_table(analyzer, self, key)
 			if tracked then val = tracked end
 		end
 
-		analyzer:TrackTableIndex(self, key, val)
+		if val.Type == "union" then analyzer:TrackTableIndex(self, key, val) end
+
 		return val
 	end
 
@@ -102,7 +107,8 @@ local function index_table(analyzer, self, key)
 	end
 
 	if val then
-		analyzer:TrackTableIndex(self, key, val)
+		if val.Type == "union" then analyzer:TrackTableIndex(self, key, val) end
+
 		return val
 	end
 

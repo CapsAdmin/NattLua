@@ -240,6 +240,8 @@ return function(META)
 
 		do
 			function META:TrackTableIndex(tbl, key, val)
+				if val.Type ~= "union" then error("only union needs to be tracked") end
+
 				val.parent_table = tbl
 				val.parent_key = key
 				local truthy_union = val:GetTruthy()
@@ -361,15 +363,19 @@ return function(META)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
 					if data.stack then
-						local union = Union()
+						local t = {}
 
 						for _, v in ipairs(data.stack) do
-							if v.truthy then union:AddType(v.truthy) end
+							if v.truthy then table.insert(t, v.truthy) end
 						end
 
-						if not union:IsEmpty() then
-							union:SetUpvalue(data.upvalue)
-							self:MutateUpvalue(data.upvalue, union, true)
+						if t[1] then
+							local obj
+
+							if t[2] then obj = Union(t) else obj = t[1] end
+
+							obj:SetUpvalue(data.upvalue)
+							self:MutateUpvalue(data.upvalue, obj, true)
 						end
 					end
 				end
@@ -377,14 +383,18 @@ return function(META)
 
 			if tables then
 				for _, data in ipairs(tables) do
-					local union = Union()
+					local t = {}
 
 					for _, v in ipairs(data.stack) do
-						if v.truthy then union:AddType(v.truthy) end
+						if v.truthy then table.insert(t, v.truthy) end
 					end
 
-					if not union:IsEmpty() then
-						self:MutateTable(data.obj, data.key, union, true)
+					if t[1] then
+						local obj
+
+						if t[2] then obj = Union(t) else obj = t[1] end
+
+						self:MutateTable(data.obj, data.key, obj, true)
 					end
 				end
 			end
