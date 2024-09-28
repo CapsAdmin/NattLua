@@ -15,6 +15,15 @@ local B = string.byte
 local characters = require("nattlua.syntax.characters")
 local runtime_syntax = require("nattlua.syntax.runtime")
 local formating = require("nattlua.other.formating")
+local IsSpace = characters.IsSpace
+local IsNumber = characters.IsNumber
+local IsHex = characters.IsHex
+local IsDuringLetter = characters.IsDuringLetter
+local IsLetter = characters.IsLetter
+local IsKeyword = characters.IsKeyword
+local IsSymbol = characters.IsSymbol
+local symbols = runtime_syntax:GetSymbols()
+local number_annotations = runtime_syntax:GetNumberAnnotations()
 local META = class.CreateTemplate("lexer")
 --[[#type META.@Name = "Lexer"]]
 --[[#type META.@Self = {
@@ -202,9 +211,9 @@ do
 end
 
 function META:ReadFirstFromArray(strings--[[#: List<|string|>]])--[[#: boolean]]
-	for _, str in ipairs(strings) do
-		if self:IsString(str) then
-			self:Advance(#str)
+	for i = 1, #strings do
+		if self:IsString(strings[i]) then
+			self:Advance(#strings[i])
 			return true
 		end
 	end
@@ -245,24 +254,24 @@ function META:GetTokens()
 end
 
 function META:ReadSpace()--[[#: TokenReturnType]]
-	if not characters.IsSpace(self:PeekByte()) then return false end
+	if not IsSpace(self:PeekByte()) then return false end
 
-	while not self:TheEnd() do
+	for _ = self:GetPosition(), self:GetLength() do
 		self:Advance(1)
 
-		if not characters.IsSpace(self:PeekByte()) then break end
+		if not IsSpace(self:PeekByte()) then break end
 	end
 
 	return "space"
 end
 
 function META:ReadLetter()--[[#: TokenReturnType]]
-	if not characters.IsLetter(self:PeekByte()) then return false end
+	if not IsLetter(self:PeekByte()) then return false end
 
-	while not self:TheEnd() do
+	for _ = self:GetPosition(), self:GetLength() do
 		self:Advance(1)
 
-		if not characters.IsDuringLetter(self:PeekByte()) then break end
+		if not IsDuringLetter(self:PeekByte()) then break end
 	end
 
 	return "letter"
@@ -274,7 +283,7 @@ function META:ReadMultilineCComment()--[[#: TokenReturnType]]
 	local start = self:GetPosition()
 	self:Advance(2)
 
-	while not self:TheEnd() do
+	for _ = self:GetPosition(), self:GetLength() do
 		if self:IsString("*/") then
 			self:Advance(2)
 			return "multiline_comment"
@@ -292,7 +301,7 @@ function META:ReadLineCComment()--[[#: TokenReturnType]]
 
 	self:Advance(2)
 
-	while not self:TheEnd() do
+	for _ = self:GetPosition(), self:GetLength() do
 		if self:IsString("\n") then break end
 
 		self:Advance(1)
@@ -306,7 +315,7 @@ function META:ReadLineComment()--[[#: TokenReturnType]]
 
 	self:Advance(2)
 
-	while not self:TheEnd() do
+	for _ = self:GetPosition(), self:GetLength() do
 		if self:IsString("\n") then break end
 
 		self:Advance(1)
@@ -359,7 +368,7 @@ function META.ReadInlineAnalyzerDebugCode(self--[[#: Lexer & {comment_escape = s
 
 	self:Advance(#"§")
 
-	while not self:TheEnd() do
+	for _ = self:GetPosition(), self:GetLength() do
 		if
 			self:IsString("\n") or
 			(
@@ -381,7 +390,7 @@ function META.ReadInlineParserDebugCode(self--[[#: Lexer & {comment_escape = str
 
 	self:Advance(#"£")
 
-	while not self:TheEnd() do
+	for _ = self:GetPosition(), self:GetLength() do
 		if
 			self:IsString("\n") or
 			(
@@ -402,7 +411,7 @@ function META:ReadNumberPowExponent(what--[[#: string]])
 	self:Advance(1) -- Consume the 'e' or 'p' character
 	if self:IsString("+") or self:IsString("-") then self:Advance(1) end
 
-	if not characters.IsNumber(self:PeekByte()) then
+	if not IsNumber(self:PeekByte()) then
 		self:Error(
 			"malformed " .. what .. " expected number, got " .. string.char(self:PeekByte()),
 			(self:GetPosition()--[[# as number]]) - 2
@@ -410,8 +419,8 @@ function META:ReadNumberPowExponent(what--[[#: string]])
 		return false
 	end
 
-	while not self:TheEnd() do
-		if not characters.IsNumber(self:PeekByte()) then break end
+	for _ = self:GetPosition(), self:GetLength() do
+		if not IsNumber(self:PeekByte()) then break end
 
 		self:Advance(1)
 	end
@@ -433,7 +442,7 @@ function META:ReadHexNumber()
 	self:Advance(2)
 	local has_dot = false
 
-	while not self:TheEnd() do
+	for _ = self:GetPosition(), self:GetLength() do
 		if self:IsString("_") then self:Advance(1) end
 
 		if not has_dot and self:IsString(".") then
@@ -445,20 +454,16 @@ function META:ReadHexNumber()
 			self:Advance(1)
 		end
 
-		if characters.IsHex(self:PeekByte()) then
+		if IsHex(self:PeekByte()) then
 			self:Advance(1)
 		else
-			if characters.IsSpace(self:PeekByte()) or characters.IsSymbol(self:PeekByte()) then
-				break
-			end
+			if IsSpace(self:PeekByte()) or IsSymbol(self:PeekByte()) then break end
 
 			if self:IsString("p") or self:IsString("P") then
 				if self:ReadNumberPowExponent("pow") then break end
 			end
 
-			if self:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then
-				break
-			end
+			if self:ReadFirstLowercaseFromArray(number_annotations) then break end
 
 			self:Error(
 				"malformed hex number, got " .. string.char(self:PeekByte()),
@@ -486,15 +491,13 @@ function META:ReadBinaryNumber()
 	-- skip past 0b
 	self:Advance(2)
 
-	while not self:TheEnd() do
+	for _ = self:GetPosition(), self:GetLength() do
 		if self:IsString("_") then self:Advance(1) end
 
 		if self:IsString("1") or self:IsString("0") then
 			self:Advance(1)
 		else
-			if characters.IsSpace(self:PeekByte()) or characters.IsSymbol(self:PeekByte()) then
-				break
-			end
+			if IsSpace(self:PeekByte()) or IsSymbol(self:PeekByte()) then break end
 
 			if self:IsString("e") or self:IsString("E") then
 				if self:ReadNumberPowExponent("exponent") then break end
@@ -518,10 +521,10 @@ end
 
 function META:ReadDecimalNumber()
 	if
-		not characters.IsNumber(self:PeekByte()) and
+		not IsNumber(self:PeekByte()) and
 		(
 			not self:IsString(".") or
-			not characters.IsNumber(self:PeekByte(1))
+			not IsNumber(self:PeekByte(1))
 		)
 	then
 		return false
@@ -536,7 +539,7 @@ function META:ReadDecimalNumber()
 		self:Advance(1)
 	end
 
-	while not self:TheEnd() do
+	for _ = self:GetPosition(), self:GetLength() do
 		if self:IsString("_") then self:Advance(1) end
 
 		if not has_dot and self:IsString(".") then
@@ -548,20 +551,16 @@ function META:ReadDecimalNumber()
 			self:Advance(1)
 		end
 
-		if characters.IsNumber(self:PeekByte()) then
+		if IsNumber(self:PeekByte()) then
 			self:Advance(1)
 		else
-			if characters.IsSpace(self:PeekByte()) or characters.IsSymbol(self:PeekByte()) then
-				break
-			end
+			if IsSpace(self:PeekByte()) or IsSymbol(self:PeekByte()) then break end
 
 			if self:IsString("e") or self:IsString("E") then
 				if self:ReadNumberPowExponent("exponent") then break end
 			end
 
-			if self:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then
-				break
-			end
+			if self:ReadFirstLowercaseFromArray(number_annotations) then break end
 
 			self:Error(
 				"malformed number, got " .. string.char(self:PeekByte()) .. " in decimal notation",
@@ -590,7 +589,7 @@ function META:ReadMultilineString()--[[#: TokenReturnType]]
 	self:Advance(1)
 
 	if self:IsString("=") then
-		while not self:TheEnd() do
+		for _ = self:GetPosition(), self:GetLength() do
 			self:Advance(1)
 
 			if not self:IsString("=") then break end
@@ -634,7 +633,7 @@ do
 			local start = self:GetPosition()
 			self:Advance(1)
 
-			while not self:TheEnd() do
+			for _ = self:GetPosition(), self:GetLength() do
 				local char = self:ReadByte()
 
 				if char == escape_character then
@@ -664,8 +663,6 @@ do
 	META.ReadDoubleQuoteString = build_string_reader("double", "\"")
 	META.ReadSingleQuoteString = build_string_reader("single", "'")
 end
-
-local symbols = runtime_syntax:GetSymbols()
 
 function META:ReadSymbol()--[[#: TokenReturnType]]
 	if self:ReadFirstFromArray(symbols) then return "symbol" end
