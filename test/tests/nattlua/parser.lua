@@ -1,4 +1,5 @@
 local nl = require("nattlua")
+local Code = require("nattlua.code").New
 
 local function parse(code)
 	return assert(assert(nl.Compiler(code)):Parse())
@@ -203,7 +204,7 @@ test("operator precedence", function()
 
 	local function check(compiler, expect)
 		-- turn the expression into a statement to make the code valid
-		compiler.Code.Buffer = "a = " .. compiler.Code.Buffer
+		compiler.Code = Code("a = " .. compiler.Code:GetString(), compiler.Code:GetName())
 		local ast = assert(compiler:Parse()).SyntaxTree
 		local expr = ast:FindNodesByType("assignment")[1].right[1]
 		local res = dump_precedence(expr)
