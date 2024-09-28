@@ -144,7 +144,7 @@ function META:ParseTealTable()
 	else
 		local i = 1
 
-		while true do
+		for _ = self:GetPosition(), self:GetLength() do
 			local kv = self:StartNode("sub_statement", "table_expression_value")
 			kv.tokens["["] = self:NewToken("symbol", "[")
 			local key = self:StartNode("expression", "value")
@@ -199,7 +199,7 @@ function META:ParseTealCallSubExpression()
 end
 
 function META:ParseTealSubExpression(node--[[#: Node]])
-	for _ = 1, self:GetLength() do
+	for _ = self:GetPosition(), self:GetLength() do
 		local left_node = node
 		local found = self:ParseIndexSubExpression() or
 			--self:ParseSelfCallSubExpression() or
@@ -249,10 +249,16 @@ function META:ParseTealExpression(priority--[[#: number]])
 		return node
 	end
 
-	while
-		typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()) and
-		typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
-	do
+	for _ = self:GetPosition(), self:GetLength() do
+		if
+			not (
+				typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()) and
+				typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
+			)
+		then
+			break
+		end
+
 		local left_node = node
 		node = self:StartNode("expression", "binary_operator")
 		node.value = self:ParseToken()
@@ -357,7 +363,7 @@ local function ParseRecordBody(
 		self:ParseString("PushTypeEnvironment<|" .. name .. "|>").statements[1]
 	)
 
-	while true do
+	for _ = self:GetPosition(), self:GetLength() do
 		local node = self:ParseTealEnumStatement() or
 			self:ParseTealAssignment() or
 			self:ParseTealRecord() or
@@ -435,7 +441,9 @@ do
 		assignment.tokens["="] = self:NewToken("symbol", "=")
 		local bnode = self:ParseValueExpressionType("string")
 
-		while not self:IsTokenValue("end") do
+		for _ = self:GetPosition(), self:GetLength() do
+			if self:IsTokenValue("end") then break end
+
 			local left = bnode
 			bnode = self:StartNode("expression", "binary_operator")
 			bnode.value = self:NewToken("symbol", "|")

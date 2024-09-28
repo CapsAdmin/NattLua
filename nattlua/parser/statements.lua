@@ -85,7 +85,9 @@ do
 		local first = node
 		first.standalone_letter = node
 
-		while self:IsTokenValue(".") or self:IsTokenValue(":") do
+		for _ = self:GetPosition(), self:GetLength() do
+			if not (self:IsTokenValue(".") or self:IsTokenValue(":")) then break end
+
 			local left = node
 			local self_call = self:IsTokenValue(":")
 			node = self:StartNode("expression", "binary_operator")
@@ -281,8 +283,9 @@ function META:ParseIfStatement()
 	node.statements = {}
 	node.tokens["if/else/elseif"] = {}
 	node.tokens["then"] = {}
+	local i = 1
 
-	for i = 1, self:GetLength() do
+	for _ = self:GetPosition(), self:GetLength() do
 		local token
 
 		if i == 1 then
@@ -310,6 +313,8 @@ function META:ParseIfStatement()
 		})
 
 		if self:IsTokenValue("end") then break end
+
+		i = i + 1
 	end
 
 	node.tokens["end"] = self:ExpectTokenValue("end")

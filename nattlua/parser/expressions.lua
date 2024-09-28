@@ -243,8 +243,9 @@ do -- typesystem
 			tree.tokens["{"] = self:ExpectTokenValue("{")
 			tree.children = {}
 			tree.tokens["separators"] = {}
+			local i = 1
 
-			for i = 1, math_huge do
+			for _ = self:GetPosition(), self:GetLength() do
 				if self:IsTokenValue("}") then break end
 
 				local entry = self:read_type_table_entry(i)
@@ -273,6 +274,8 @@ do -- typesystem
 				if not self:IsTokenValue("}") then
 					tree.tokens["separators"][i] = self:ParseToken()
 				end
+
+				i = i + 1
 			end
 
 			tree.tokens["}"] = self:ExpectTokenValue("}")
@@ -365,7 +368,7 @@ do -- typesystem
 	end
 
 	function META:ParseTypeSubExpression(node--[[#: Node]])
-		for _ = 1, self:GetLength() do
+		for _ = self:GetPosition(), self:GetLength() do
 			local left_node = node
 			local found = self:ParseIndexSubExpression(left_node) or
 				self:ParseSelfCallSubExpression(left_node) or
@@ -429,10 +432,16 @@ do -- typesystem
 			end
 		end
 
-		while
-			typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()) and
-			typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
-		do
+		for _ = self:GetPosition(), self:GetLength() do
+			if
+				not (
+					typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()) and
+					typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
+				)
+			then
+				break
+			end
+
 			local left_node = node
 			node = self:StartNode("expression", "binary_operator", left_node)
 			node.value = self:ParseToken()
@@ -584,8 +593,9 @@ do -- runtime
 			tree.tokens["{"] = self:ExpectTokenValue("{")
 			tree.children = {}
 			tree.tokens["separators"] = {}
+			local i = 1
 
-			for i = 1, self:GetLength() do
+			for _ = self:GetPosition(), self:GetLength() do
 				if self:IsTokenValue("}") then break end
 
 				local entry = self:read_table_entry(i)
@@ -622,6 +632,8 @@ do -- runtime
 				if not self:IsTokenValue("}") then
 					tree.tokens["separators"][i] = self:ParseToken()
 				end
+
+				i = i + 1
 			end
 
 			tree.tokens["}"] = self:ExpectTokenValue("}")
@@ -732,7 +744,7 @@ do -- runtime
 	end
 
 	function META:ParseSubExpression(node--[[#: Node]])
-		for _ = 1, self:GetLength() do
+		for _ = self:GetPosition(), self:GetLength() do
 			local left_node = node
 
 			if
@@ -1011,14 +1023,20 @@ do -- runtime
 
 		self:check_integer_division_operator(self:GetToken())
 
-		while
-			(
-				runtime_syntax:GetBinaryOperatorInfo(self:GetToken()) and
-				not self:IsTokenValue("=", 1)
-			)
-			and
-			runtime_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
-		do
+		for _ = self:GetPosition(), self:GetLength() do
+			if
+				not (
+					(
+						runtime_syntax:GetBinaryOperatorInfo(self:GetToken()) and
+						not self:IsTokenValue("=", 1)
+					)
+					and
+					runtime_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
+				)
+			then
+				break
+			end
+
 			local left_node = node
 			node = self:StartNode("expression", "binary_operator", left_node)
 			node.value = self:ParseToken()

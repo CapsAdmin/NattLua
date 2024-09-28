@@ -17,7 +17,7 @@ function META:ParseLSXExpression()
 	node.props = {}
 	node.children = {}
 
-	for i = 1, self:GetLength() do
+	for _ = self:GetPosition(), self:GetLength() do
 		if self:IsTokenValue("{") and self:IsTokenValue("...", 1) then
 			local left = self:ExpectTokenValue("{")
 			local spread = self:read_table_spread()
@@ -65,7 +65,7 @@ function META:ParseLSXExpression()
 
 	node.tokens[">"] = self:ExpectTokenValue(">")
 
-	for i = 1, self:GetLength() do
+	for _ = self:GetPosition(), self:GetLength() do
 		if self:IsTokenValue("{") then
 			local left = self:ExpectTokenValue("{")
 			local child = self:ExpectRuntimeExpression()
@@ -74,7 +74,7 @@ function META:ParseLSXExpression()
 			child.tokens["lsx}"] = self:ExpectTokenValue("}")
 		end
 
-		for i = 1, self:GetLength() do
+		for _ = self:GetPosition(), self:GetLength() do
 			if self:IsTokenValue("<") and self:IsTokenType("letter", 1) then
 				table.insert(node.children, self:ParseLSXExpression())
 			else

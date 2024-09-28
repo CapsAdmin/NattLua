@@ -357,7 +357,7 @@ function META:ParseStatements(stop_token--[[#: {[string] = true} | nil]], out--[
 	out = out or {}
 	local i = #out
 
-	for _ = 1, self:GetLength() do
+	for _ = self:GetPosition(), self:GetLength() do
 		local tk = self:GetToken()
 
 		if not tk then break end
