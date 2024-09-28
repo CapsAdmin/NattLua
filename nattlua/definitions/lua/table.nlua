@@ -9,6 +9,7 @@ type table = {
 	pack = function=(...)>(Table),
 }
 type Modules["table.new"] = function=(number, number)>({[number] = any})
+type Modules["table.clear"] = function=(Table)>()
 
 analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
 	if not tbl:IsLiteral() then return types.String() end
