@@ -1,3 +1,4 @@
+--ANALYZE
 local setmetatable = _G.setmetatable
 local formating = require("nattlua.other.formating")
 local class = require("nattlua.other.class")
@@ -7,52 +8,6 @@ local META = class.CreateTemplate("code")
 	Buffer = string,
 	Name = string,
 }]]
-
-function META:GetString()
-	return self.Buffer
-end
-
-function META:GetName()
-	return self.Name
-end
-
-function META:GetByteSize()
-	return #self.Buffer
-end
-
-function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
-	return self.Buffer:sub(start, stop)
-end
-
-if jit then
-	-- this is faster in luajit than the else block
-	function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
-		for i = 1, #str do
-			local a = self.Buffer:byte(start + i - 1)
-			local b = str:byte(i)
-
-			if a ~= b then return false end
-		end
-
-		return true
-	end
-else
-	function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
-		return self.Buffer:sub(start, stop) == str
-	end
-end
-
-function META:GetByte(pos--[[#: number]])
-	return self.Buffer:byte(pos) or 0
-end
-
-function META:FindNearest(str--[[#: string]], start--[[#: number]])
-	local _, pos = self.Buffer:find(str, start, true)
-
-	if not pos then return nil end
-
-	return pos + 1
-end
 
 function META:LineCharToSubPos(line, char)
 	return formating.LinePositionToSubPosition(self:GetString(), line, char)
@@ -93,15 +48,145 @@ function META:BuildSourceCodePointMessage(
 	return formating.BuildSourceCodePointMessage(self:GetString(), self:GetName(), msg, start, stop, size)
 end
 
-function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
-	local self = setmetatable(
-		{
-			Buffer = remove_bom_header(lua_code),
-			Name = name or get_default_name(),
-		},
+local has_ffi, ffi = pcall(require, "ffi")
+
+if has_ffi and (true--[[# as false]]) then
+	--[[#-- todo, ffimetatype inference
+	type META.@Self = {
+		Buffer = string,
+		buffer_len = number,
+		Name = string,
+		name_len = number,
+	}]]
+
+	function META:GetString()
+		return ffi.string(self.Buffer, self.buffer_len)
+	end
+
+	function META:GetName()
+		return ffi.string(self.Name, self.name_length)
+	end
+
+	function META:GetByteSize()
+		return self.buffer_len
+	end
+
+	function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
+		if start > self.buffer_len then return "" end
+
+		if start == stop then return ffi.string(self.Buffer + start - 1, 1) end
+
+		return ffi.string(self.Buffer + start - 1, (stop - start) + 1)
+	end
+
+	function META:GetByte(pos--[[#: number]])
+		return self.Buffer[pos - 1]
+	end
+
+	function META:FindNearest(str--[[#: string]], start--[[#: number]])
+		local len = #str
+
+		for i = start, self.buffer_len - 1 do
+			if self:IsStringSlice(i, len, str) then return i + len end
+		end
+	end
+
+	-- this is faster in luajit than the else block
+	function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
+		for i = 1, #str do
+			local a = self.Buffer[start + (i - 2)]
+			local b = str:byte(i)
+
+			if a ~= b then return false end
+		end
+
+		return true
+	end
+
+	local ctype
+
+	function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
+		lua_code = remove_bom_header(lua_code)
+		name = name or get_default_name()
+		local self = ctype(
+			{
+				Buffer = lua_code,
+				buffer_len = #lua_code,
+				Name = name,
+				name_length = #name,
+			}
+		)
+		return self
+	end
+
+	ctype = ffi.metatype(
+		ffi.typeof([[
+			struct { 
+				const uint8_t * Buffer; 
+				uint32_t buffer_len; 
+				const char * Name; 
+				uint32_t name_length;
+			}
+			]]),
 		META
 	)
-	return self
+else
+	function META:GetString()
+		return self.Buffer
+	end
+
+	function META:GetName()
+		return self.Name
+	end
+
+	function META:GetByteSize()
+		return #self.Buffer
+	end
+
+	function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
+		return self.Buffer:sub(start, stop)
+	end
+
+	function META:GetByte(pos--[[#: number]])
+		return self.Buffer:byte(pos) or 0
+	end
+
+	function META:FindNearest(str--[[#: string]], start--[[#: number]])
+		local _, pos = self.Buffer:find(str, start, true)
+
+		if not pos then return nil end
+
+		return pos + 1
+	end
+
+	if jit then
+		-- this is faster in luajit than the else block
+		function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
+			for i = 1, #str do
+				local a = self.Buffer:byte(start + i - 1)
+				local b = str:byte(i)
+
+				if a ~= b then return false end
+			end
+
+			return true
+		end
+	else
+		function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
+			return self.Buffer:sub(start, stop) == str
+		end
+	end
+
+	function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
+		local self = setmetatable(
+			{
+				Buffer = remove_bom_header(lua_code),
+				Name = name or get_default_name(),
+			},
+			META
+		)
+		return self
+	end
 end
 
 --[[#type META.Code = META.@Self]]
