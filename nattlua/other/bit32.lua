@@ -260,8 +260,12 @@ end
 M.bxor = make_bitop({[0] = {[0] = 0, [1] = 1}, [1] = {[0] = 1, [1] = 0}, n = 4})
 local bxor = M.bxor
 
-function M.bnot(a)
-	return MODM - a
+function M.bnot(x)
+	local result = MODM - x
+
+	if result >= 0x80000000 then result = result - MOD end
+
+	return result
 end
 
 local bnot = M.bnot

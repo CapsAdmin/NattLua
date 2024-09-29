@@ -1,4 +1,14 @@
 local jit = _G.jit--[[# as jit | nil]]
+local jit_options = {}
+
+if not jit then
+	function jit_options.Set() end
+
+	function jit_options.SetOptimized() end
+
+	return jit_options
+end
+
 local GC64 = #tostring({}) == 19
 -- https://github.com/LuaJIT/LuaJIT/blob/v2.1/src/lj_jit.h#L116-L137
 local default_options = {
@@ -46,7 +56,6 @@ local default_flags = {
 			numerical accuracy (higher)
 	]] fma = false,
 }
-local jit_options = {}
 
 function jit_options.Set(options, flags)
 	if not jit then return end

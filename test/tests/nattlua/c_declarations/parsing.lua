@@ -238,7 +238,7 @@ local function test(c_code, error_level)
 		return "TYPE" .. var_id
 	end)
 
-	do
+	if jit then
 		local ffi = require("ffi")
 		ffi.cdef(c_code)
 	end
@@ -602,7 +602,7 @@ do -- typedef and variable declarations
 	test[[ static const int NAME = 1, NAME = 2; ]]
 end
 
-do
+if jit then
 	-- TODO: cast and struct lookup, not standard C
 	local ffi = require("ffi")
 	ffi.cdef[[

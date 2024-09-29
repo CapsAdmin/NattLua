@@ -503,6 +503,16 @@ do
 		end,
 	}
 
+	if bit == _G.bit32 then
+		operators["~"] = function(x)
+			local result = bit32.bnot(x)
+
+			if result > 0x7FFFFFFF then return result - 0x100000000 end
+
+			return result
+		end
+	end
+
 	function META.PrefixOperator(x--[[#: TNumber]], op--[[#: keysof<|operators|>]])
 		local func = operators[op]
 
@@ -534,7 +544,7 @@ do
 end
 
 local function string_to_integer(str--[[#: string]])
-	if not jit and _VERSION == "Lua 5.1" then
+	if not jit and (_VERSION == "Lua 5.1" or _VERSION == "Lua 5.2") then
 		str = str:lower():gsub("ull", "")
 		str = str:gsub("ll", "")
 	end

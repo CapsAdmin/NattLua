@@ -77,27 +77,27 @@ test("a literal number just outside the upper bound of a range should not be a s
 end)
 
 test("LogicalComparison of two literal numbers should work correctly", function()
-	assert(LNumber(10):LogicalComparison(LNumber(5), ">") == true)
-	assert(LNumber(5):LogicalComparison(LNumber(10), "<") == true)
-	assert(LNumber(10):LogicalComparison(LNumber(10), "==") == true)
-	assert(LNumber(10):LogicalComparison(LNumber(5), "<=") == false)
+	equal(LNumber(10):LogicalComparison(LNumber(5), ">"), true)
+	equal(LNumber(5):LogicalComparison(LNumber(10), "<"), true)
+	equal(LNumber(10):LogicalComparison(LNumber(10), "=="), true)
+	equal(LNumber(10):LogicalComparison(LNumber(5), "<="), false)
 end)
 
 test("LogicalComparison of a literal number and a number range should work correctly", function()
-	assert(LNumber(20):LogicalComparison(LNumberRange(0, 10), ">") == true)
-	assert(LNumber(5):LogicalComparison(LNumberRange(0, 10), "<") == nil) -- Indeterminate
-	assert(LNumber(15):LogicalComparison(LNumberRange(0, 10), "==") == false)
+	equal(LNumber(20):LogicalComparison(LNumberRange(0, 10), ">"), true)
+	equal(LNumber(5):LogicalComparison(LNumberRange(0, 10), "<"), nil) -- Indeterminate
+	equal(LNumber(15):LogicalComparison(LNumberRange(0, 10), "=="), false)
 end)
 
 test("BinaryOperator should work correctly for literal numbers", function()
-	assert(LNumber(5):BinaryOperator(LNumber(3), "+"):GetData() == 8)
-	assert(LNumber(10):BinaryOperator(LNumber(2), "*"):GetData() == 20)
-	assert(LNumber(15):BinaryOperator(LNumber(3), "/"):GetData() == 5)
+	equal(LNumber(5):BinaryOperator(LNumber(3), "+"):GetData(), 8)
+	equal(LNumber(10):BinaryOperator(LNumber(2), "*"):GetData(), 20)
+	equal(LNumber(15):BinaryOperator(LNumber(3), "/"):GetData(), 5)
 end)
 
 test("PrefixOperator should work correctly for literal numbers", function()
-	assert(LNumber(5):PrefixOperator("-"):GetData() == -5)
-	assert(LNumber(5):PrefixOperator("~"):GetData() == -6) -- Bitwise NOT
+	equal(LNumber(5):PrefixOperator("-"):GetData(), -5)
+	equal(LNumber(5):PrefixOperator("~"):GetData(), -6) -- Bitwise NOT
 end)
 
 test("Overlapping ranges should not be subsets of each other", function()
