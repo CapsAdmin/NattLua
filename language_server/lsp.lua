@@ -197,8 +197,13 @@ lsp.methods["initialized"] = function(params)
 	editor_helper:Initialize()
 end
 lsp.methods["nattlua/format"] = function(params)
+	local code = editor_helper:Format(params.code, to_fs_path(params.path))
+	if code:sub(#code, #code) ~= "\n" then
+		code = code .. "\n"
+	end
+
 	return {
-		code = b64.encode(editor_helper:Format(params.code, to_fs_path(params.path))),
+		code = b64.encode(code),
 	}
 end
 lsp.methods["nattlua/syntax"] = function(params)
