@@ -64,21 +64,6 @@ function META:BuildParentCache()
 	self.MemberInParentsCache = {}
 end
 
-function META:GetMemberInParents(what)
-	if self.MemberInParentsCache[what] then
-		return self.MemberInParentsCache[what][1], self.MemberInParentsCache[what][2]
-	end
-
-	for _, scope in ipairs(self.ParentList) do
-		if scope[what] ~= nil then
-			self.MemberInParentsCache[what] = {scope[what], scope}
-			return self.MemberInParentsCache[what][1], self.MemberInParentsCache[what][2]
-		end
-	end
-
-	return nil
-end
-
 function META:AddTrackedObject(val)
 	local scope = self:GetNearestFunctionScope()
 	scope.TrackedObjects = scope.TrackedObjects or {}
@@ -119,14 +104,15 @@ function META:FindUpvalue(key, env)
 		local upvalue = scope.upvalues[env].map[key]
 
 		if upvalue then
-			local prev_scope = self.ParentList[i - 1]
-			local upvalue_position = prev_scope and prev_scope.upvalue_position
+			local upvalue_position = self.ParentList[i - 1] and self.ParentList[i - 1].upvalue_position
 
 			if upvalue_position then
 				if upvalue:GetPosition() >= upvalue_position then
 					local upvalue = upvalue:GetShadow()
 
-					while upvalue do
+					for _ = 1, 30 do
+						if not upvalue then break end
+
 						if upvalue:GetPosition() <= upvalue_position then return upvalue end
 
 						upvalue = upvalue:GetShadow()
@@ -176,7 +162,6 @@ function META:Copy()
 	end
 
 	copy.returns = self.returns
-	copy:SetParent(self:GetParent())
 	copy:SetConditionalScope(self:IsConditionalScope())
 	return copy
 end
@@ -249,6 +234,12 @@ function META:SetLoopIteration(i)
 	self.loop_iteration = i
 end
 
+function META:FindLoopIteration()
+	for _, scope in ipairs(self.ParentList) do
+		if scope.loop_iteration ~= nil then return scope.loop_iteration end
+	end
+end
+
 function META:GetStatementType()
 	return self.statement and self.statement.kind
 end
@@ -259,8 +250,8 @@ function META.BelongsToIfStatement(a, b)
 		a.statement == b.statement
 
 	if yes then
-		local a_iteration = a:GetMemberInParents("loop_iteration")
-		local b_iteration = b:GetMemberInParents("loop_iteration")
+		local a_iteration = a:FindLoopIteration()
+		local b_iteration = b:FindLoopIteration()
 		return a_iteration == b_iteration
 	end
 
@@ -268,8 +259,9 @@ function META.BelongsToIfStatement(a, b)
 end
 
 function META:FindFirstConditionalScope()
-	local obj, scope = self:GetMemberInParents("ConditionalScope")
-	return scope
+	for _, scope in ipairs(self.ParentList) do
+		if scope.ConditionalScope ~= nil then return scope end
+	end
 end
 
 do
@@ -307,17 +299,22 @@ do
 	end
 
 	function META:GetNearestFunctionScope()
-		local ok, scope = self:GetMemberInParents("returns")
-
-		if ok then return scope end
+		for _, scope in ipairs(self.ParentList) do
+			if scope.returns then return scope end
+		end
 
 		return self
 	end
 
 	function META:GetNearestLoopScope()
-		local ok, scope = self:GetMemberInParents("LoopScope")
+		if self.CachedLoopScope then return self.CachedLoopScope end
 
-		if ok then return scope end
+		for _, scope in ipairs(self.ParentList) do
+			if scope.LoopScope then
+				self.CachedLoopScope = scope
+				return scope
+			end
+		end
 
 		return self
 	end

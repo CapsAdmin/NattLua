@@ -64,7 +64,7 @@ return {
 					returned_key = Union({Nil(), returned_key})
 				end
 
-				self:PushConditionalScope(statement, returned_key:IsTruthy(), returned_key:IsFalsy())
+				self:PushConditionalScope(statement, returned_key:IsTruthy(), returned_key:IsFalsy()):SetLoopScope(true)
 				self:PushUncertainLoop(false)
 			end
 

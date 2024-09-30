@@ -8,6 +8,7 @@ function profiler.Start()
 
 	jit_profiler.Start(
 		{
+			mode = "line",
 			sampling_rate = 1,
 			depth = 2, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
 		}
@@ -25,7 +26,7 @@ function profiler.Stop()
 	print(
 		"I = interpreter, G = garbage collection, J = busy tracing, N = native / tracing completed:"
 	)
-	print(jit_profiler.Stop({sample_threshold = 200}))
+	print(jit_profiler.Stop({sample_threshold = 100}))
 end
 
 return profiler

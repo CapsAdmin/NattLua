@@ -306,7 +306,6 @@ end
 local imported_index = nil
 
 function META:ParseRootNode()
-	collectgarbage("stop")
 	local node = self:StartNode("statement", "root")
 	self.RootStatement = self.config and self.config.root_statement_override or node
 	local shebang
@@ -349,7 +348,6 @@ function META:ParseRootNode()
 
 	node.statements = statements
 	node = self:EndNode(node)
-	collectgarbage("restart")
 	return node
 end
 

@@ -1,13 +1,10 @@
+local get_time = require("test.helpers.get_time")
 local preprocess = require("test.helpers.preprocess")
 local coverage = require("test.helpers.coverage")
 local profiler = require("test.helpers.profiler")
-local get_time = require("test.helpers.get_time")
 local io = require("io")
 local io_write = _G.ON_EDITOR_SAVE and function(...) end or io.write
 local pcall = _G.pcall
-
-if not _G.ON_EDITOR_SAVE then profiler.Start() end
-
 require("test.environment")
 local path = ...
 local is_coverage = path == "coverage"
@@ -114,6 +111,17 @@ local function format_time(seconds)
 	return str
 end
 
+local total = 0
+local time_taken_before_tests = os.clock()
+
+if STARTUP_PROFILE then
+	io_write("== startup profiling == :")
+	profiler.Stop()
+	io_write("== == :")
+end
+
+if not _G.ON_EDITOR_SAVE then profiler.Start() end
+
 if path and path:sub(-4) == ".lua" then
 	io_write(path, " ")
 	local time = get_time()
@@ -128,7 +136,9 @@ else
 			local func = assert(loadfile(path))
 			local time = get_time()
 			func()
-			io_write(" ", format_time(get_time() - time), " seconds\n")
+			local diff = get_time() - time
+			total = total + diff
+			io_write(" ", format_time(diff), " seconds\n")
 		end
 	end
 
@@ -140,11 +150,11 @@ else
 			f:close()
 			local time = get_time()
 			analyze(str)
-			io_write(" ", format_time(get_time() - time), " seconds\n")
+			local diff = get_time() - time
+			total = total + diff
+			io_write(" ", format_time(diff), " seconds\n")
 		end
 	end
-
-	print("DONE")
 end
 
 if is_coverage then
@@ -162,3 +172,14 @@ if is_coverage then
 end
 
 if not _G.ON_EDITOR_SAVE then profiler.Stop() end
+
+if total > 0 then
+	io_write("all tests together took ", format_time(total), " seconds\n")
+	io_write(
+		"startup time (from program start to first tests run) took ",
+		format_time(time_taken_before_tests),
+		" seconds\n"
+	)
+end
+
+os.exit() -- no need to wait for gc to complete

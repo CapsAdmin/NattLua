@@ -1,5 +1,10 @@
 #!/usr/local/bin/luajit
 
+if ... == "test" then
+	STARTUP_PROFILE = true
+	require("test.helpers.profiler").Start()
+end
+
 require("nattlua.other.lua_compat")
 require("nattlua.other.jit_options").SetOptimized()
 local m = require("nattlua.init")

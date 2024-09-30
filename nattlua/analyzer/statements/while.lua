@@ -15,9 +15,9 @@ return {
 			local max_iterations = self.max_loop_iterations or 32
 
 			for i = 1, max_iterations do
-				self:PushConditionalScope(statement, obj:IsTruthy(), obj:IsFalsy())
-				self:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy())
-				self:GetScope():SetLoopScope(true)
+				local loop_scope = self:PushConditionalScope(statement, obj:IsTruthy(), obj:IsFalsy())
+				loop_scope:SetLoopScope(true)
+				self:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy() and loop_scope or false)
 				self:AnalyzeStatements(statement.statements)
 				self:PopUncertainLoop()
 				self:PopConditionalScope()

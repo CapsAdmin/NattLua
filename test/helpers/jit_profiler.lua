@@ -17,16 +17,18 @@ local function starts_with(str--[[#: string]], what--[[#: string]])
 end
 
 function profiler.Start(config--[[#: {
+	mode = "function" | "line" | nil,
 	depth = number | nil,
-	sampling_rate = number | nil,
+	sampling_rate = 1..inf | nil,
 } | nil]])
 	config = config or {}
+	config.mode = config.mode or "line"
 	config.depth = config.depth or 1
 	config.sampling_rate = config.sampling_rate or 10
 	raw_samples = {}
 	local i = 1
 
-	jit_profiler.start("li" .. config.sampling_rate, function(thread, sample_count--[[#: number]], vmstate--[[#: VMState]])
+	jit_profiler.start((config.mode == "line" and "l" or "f") .. "i" .. config.sampling_rate, function(thread, sample_count--[[#: number]], vmstate--[[#: VMState]])
 		raw_samples[i] = {
 			stack = dumpstack(thread, "pl\n", config.depth),
 			sample_count = sample_count,

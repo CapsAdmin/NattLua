@@ -1,5 +1,4 @@
 --[[#local type { TokenType } = import("./token.lua")]]
-
 local reverse_escape_string = require("nattlua.other.reverse_escape_string")
 local Token = require("nattlua.token").New
 local class = require("nattlua.other.class")
@@ -233,7 +232,6 @@ function META:ReadFirstLowercaseFromArray(strings--[[#: List<|string|>]])--[[#: 
 end
 
 function META:GetTokens()
-	collectgarbage("stop")
 	self:ResetState()
 	local tokens = {}
 	local tokens_i = 1
@@ -249,7 +247,6 @@ function META:GetTokens()
 		if token.type == "end_of_file" then break end
 	end
 
-	collectgarbage("restart")
 	return tokens
 end
 

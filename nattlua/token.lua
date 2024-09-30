@@ -272,39 +272,21 @@ function META:GetSemanticType()
 	return "comment"
 end
 
-local new_token
-
-if jit and jit.arch == "arm64" then
-	new_token = table_pool(
-		function()
-			local x = {
-				type = "unknown",
-				value = "",
-				whitespace = false,
-				start = 0,
-				stop = 0,
-				inferred_types = {},
-			}--[[# as META.@Self]]
-			return x
-		end,
-		100000
-	)
-else
-	new_token = table_pool(
-		function()
-			local x = {
-				type = "unknown",
-				value = "",
-				whitespace = false,
-				start = 0,
-				stop = 0,
-				inferred_types = {},
-			}--[[# as META.@Self]]
-			return x
-		end,
-		3105585
-	)
-end
+local new_token = table_pool(
+	function()
+		local x = {
+			type = "unknown",
+			value = "",
+			is_whitespace = false,
+			whitespace = false,
+			start = 0,
+			stop = 0,
+			inferred_types = {},
+		}--[[# as META.@Self]]
+		return x
+	end,
+	jit and jit.arch == "arm64" and 100000 or 3105585
+)
 
 function META.New(
 	type--[[#: META.TokenType]],

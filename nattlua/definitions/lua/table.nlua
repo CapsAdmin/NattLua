@@ -70,7 +70,7 @@ analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 		end
 	end
 
-	if analyzer:IsInUncertainLoop() then pos = pos:Widen() end
+	if analyzer:IsInUncertainLoop(analyzer:GetScope()) then pos = pos:Widen() end
 
 	assert(type(pos) ~= "number")
 	analyzer:NewIndexOperator(tbl, pos, val)

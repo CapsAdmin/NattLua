@@ -52,8 +52,8 @@ return {
 			condition:AddType(False())
 		end
 
-		self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
-		self:GetScope():SetLoopScope(true)
+		local loop_scope = self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
+		loop_scope:SetLoopScope(true)
 
 		if literal_init and literal_max and literal_step and literal_max < 1000 then
 			for i = literal_init, literal_max, literal_step do
@@ -62,7 +62,7 @@ return {
 				local uncertain_break = self:DidUncertainBreak()
 
 				if uncertain_break then
-					self:PushUncertainLoop(true)
+					self:PushUncertainLoop(loop_scope)
 					i = Number()
 					brk = true
 				else
@@ -121,7 +121,7 @@ return {
 				if max.Type == "any" then init = init:Widen() end
 			end
 
-			self:PushUncertainLoop(true)
+			self:PushUncertainLoop(loop_scope)
 			local range = self:Assert(init)
 			self:CreateLocalValue(statement.identifiers[1].value.value, range)
 			self:AnalyzeStatements(statement.statements)

@@ -58,7 +58,7 @@ return function(META)
 	end
 
 	function META:CloneCurrentScope()
-		local scope_copy = self:GetScope():Copy(true)
+		local scope_copy = self:GetScope():Copy()
 		local g = self:GetGlobalEnvironment("runtime"):Copy()
 		local last_node = self:GetContextValue("global_environment_nodes")
 		self:PopScope()
