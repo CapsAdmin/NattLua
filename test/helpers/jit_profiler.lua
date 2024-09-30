@@ -16,11 +16,13 @@ local function starts_with(str--[[#: string]], what--[[#: string]])
 	return str:sub(1, #what) == what
 end
 
-function profiler.Start(config--[[#: {
-	mode = "function" | "line" | nil,
-	depth = number | nil,
-	sampling_rate = 1..inf | nil,
-} | nil]])
+function profiler.Start(
+	config--[[#: {
+		mode = "function" | "line" | nil,
+		depth = number | nil,
+		sampling_rate = 1 .. inf | nil,
+	} | nil]]
+)
 	config = config or {}
 	config.mode = config.mode or "line"
 	config.depth = config.depth or 1
@@ -73,9 +75,7 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 
 				if not path or not line_number then error("uh oh") end
 
-				if path:sub(1, 2) == "./" then
-					path = path:sub(3)
-				end
+				if path:sub(1, 2) == "./" then path = path:sub(3) end
 
 				local line_number = assert(tonumber(line_number))
 

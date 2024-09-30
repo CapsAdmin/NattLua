@@ -1,4 +1,5 @@
 --[[#local type { TokenType } = import("./token.lua")]]
+
 local reverse_escape_string = require("nattlua.other.reverse_escape_string")
 local Token = require("nattlua.token").New
 local class = require("nattlua.other.class")
