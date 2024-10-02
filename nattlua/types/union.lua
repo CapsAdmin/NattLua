@@ -427,7 +427,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			parent_table = false,
 			parent_key = false,
 			dont_widen = false,
-			Self = false,
 			is_enum = false,
 		},
 		META

@@ -120,7 +120,6 @@ function META.New(data--[[#: string | nil]])
 			falsy_union = false,
 			suppress = false,
 			potential_self = false,
-			Self = false,
 			parent_table = false,
 			dont_widen = false,
 			left_source = false,

@@ -16,7 +16,7 @@ local function analyze_arguments(self, node)
 		self:PopAnalyzerEnvironment()
 
 		if val then
-			if val:GetContract() or val.Self or self:IsTypesystem() then
+			if self:IsTypesystem() or val:GetContract() or val.Self then
 				args[1] = val.Self or val
 			else
 				args[1] = Union({Any(), val})
