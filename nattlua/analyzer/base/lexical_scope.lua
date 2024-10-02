@@ -126,7 +126,7 @@ function META:FindUpvalue(key, env)
 end
 
 function META:CreateUpvalue(key, obj, env)
-	local shadow
+	local shadow = false
 
 	if env == "runtime" and key ~= "..." then
 		shadow = self.upvalues[env].map[key]
@@ -166,8 +166,8 @@ function META:Copy()
 	return copy
 end
 
-META:GetSet("TrackedUpvalues")
-META:GetSet("TrackedTables")
+META:GetSet("TrackedUpvalues", false)
+META:GetSet("TrackedTables", false)
 
 function META:TracksSameAs(scope, obj)
 	local upvalues_a, tables_a = self:GetTrackedUpvalues(), self:GetTrackedTables()
@@ -428,6 +428,18 @@ function META.New(parent, upvalue_position, obj)
 		MemberInParentsCache = false,
 		dependencies = false,
 		throws = false,
+		ElseConditionalScope = false,
+		ConditionalScope = false,
+		TrackedUpvalues = false,
+		TrackedTables = false,
+		Truthy = false,
+		Falsy = false,
+		Parent = false,
+		LoopScope = false,
+		NextConditionalSibling = false,
+		PreviousConditionalSibling = false,
+		TrackedUpvalues = false,
+		TrackedTables = false,
 		upvalues = {
 			runtime = {
 				list = {},
@@ -440,7 +452,7 @@ function META.New(parent, upvalue_position, obj)
 		},
 	}
 	setmetatable(scope, META)
-	scope:SetParent(parent)
+	scope:SetParent(parent or false)
 	return scope
 end
 

@@ -76,7 +76,20 @@ end
 local id = 0
 
 function META.New(obj)
-	local self = setmetatable({tracked_stack = false, truthy_falsy_union = false}, META)
+	local self = setmetatable({
+		Type = "upvalue",
+		tracked_stack = false, 
+		truthy_falsy_union = false,
+		Node = false,
+		Value = false,
+		Key = false,
+		FromForLoop = false,
+		Immutable = false,
+		Shadow = false,
+		Position = false,
+		Scope = false,
+		Mutations = false,
+	}, META)
 	id = id + 1
 	self:SetValue(obj)
 	return self

@@ -484,7 +484,7 @@ end
 
 analyzer function setmetatable(tbl: Table, meta: Table | nil)
 	if not meta or meta.Type == "symbol" and meta:IsFalse() then
-		tbl:SetMetaTable()
+		tbl:SetMetaTable(false)
 		return tbl
 	end
 

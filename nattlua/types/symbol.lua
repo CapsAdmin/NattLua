@@ -141,6 +141,7 @@ function META.New(data--[[#: any]])
 			Parent = false,
 			Contract = false,
 			MetaTable = false,
+			UniqueID = false,
 		},
 		META
 	)

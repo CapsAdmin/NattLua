@@ -17,13 +17,13 @@ META.Falsy = false
 META:IsSet("Called", false)
 META:IsSet("ExplicitInputSignature", false)
 META:IsSet("ExplicitOutputSignature", false)
-META:GetSet("InputSignature", nil--[[# as TTuple]])
-META:GetSet("OutputSignature", nil--[[# as TTuple]])
-META:GetSet("FunctionBodyNode", nil--[[# as nil | any]])
-META:GetSet("Scope", nil--[[# as nil | any]])
-META:GetSet("UpvaluePosition", nil--[[# as nil | number]])
-META:GetSet("InputIdentifiers", nil--[[# as nil | List<|any|>]])
-META:GetSet("AnalyzerFunction", nil--[[# as nil | Function]])
+META:GetSet("InputSignature", false--[[# as TTuple]])
+META:GetSet("OutputSignature", false--[[# as TTuple]])
+META:GetSet("FunctionBodyNode", false--[[# as nil | any]])
+META:GetSet("Scope", false--[[# as nil | any]])
+META:GetSet("UpvaluePosition", false--[[# as nil | number]])
+META:GetSet("InputIdentifiers", false--[[# as nil | List<|any|>]])
+META:GetSet("AnalyzerFunction", false--[[# as nil | Function]])
 META:IsSet("ArgumentsInferred", false)
 META:IsSet("LiteralFunction", false)
 META:GetSet("PreventInputArgumentExpansion", false)
@@ -211,9 +211,13 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 		{
 			Type = "function",
 			Falsy = false,
+			Called = false,
+			Contract = false,
+			Name = false,
+			MetaTable = false,
+			TypeOverride = false,
 			Truthy = true,
 			ReferenceType = false,
-			Called = false,
 			ExplicitInputSignature = false,
 			ExplicitOutputSignature = false,
 			ArgumentsInferred = false,
@@ -224,6 +228,16 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			scope = false,
 			recursively_called = false,
 			UniqueID = false,
+			AnalyzerFunction = false,
+			FunctionBodyNode = false,
+			Upvalue = false,
+			UpvaluePosition = false,
+			InputIdentifiers = false,
+			AnalyzerEnvironment = false,
+			LiteralFunction = false,
+			Node = false,
+			Scope = false,
+			Parent = false,
 		},
 		META
 	)

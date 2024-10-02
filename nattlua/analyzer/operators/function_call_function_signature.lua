@@ -25,7 +25,7 @@ return function(self, obj, input)
 
 	-- clear any reference id from the returned arguments
 	for _, v in ipairs(ret:GetData()) do
-		if v.Type == "table" then v:SetReferenceId(nil) end
+		if v.Type == "table" then v:SetReferenceId(false) end
 	end
 
 	return ret

@@ -125,7 +125,7 @@ return {
 				if arg and arg.Type == "table" and not arg:GetContract() and not arg.Self and not self:IsTypesystem() then
 					val:SetCalled(true)
 					val = val:Copy()
-					val:SetCalled(nil)
+					val:SetCalled(false)
 					val:GetInputSignature():Set(1, Union({Any(), obj}))
 					self:AddToUnreachableCodeAnalysis(val, val:GetInputSignature(), val:GetFunctionBodyNode(), true)
 				end

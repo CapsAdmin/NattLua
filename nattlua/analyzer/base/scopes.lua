@@ -81,7 +81,7 @@ return function(META)
 	function META:CreateLocalValue(key, obj, const)
 		local upvalue = self:GetScope():CreateUpvalue(key, obj, self:GetCurrentAnalyzerEnvironment())
 		self:MutateUpvalue(upvalue, obj)
-		upvalue:SetImmutable(const)
+		upvalue:SetImmutable(const or false)
 		return upvalue
 	end
 

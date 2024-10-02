@@ -131,7 +131,7 @@ analyzer function copy(obj: any)
 	copy:ClearMutations()
 
 	if copy.Type == "table" then 
-		copy:SetCreationScope(nil) 
+		copy:SetCreationScope(false) 
 		copy.PotentialSelf = false
 	end
 

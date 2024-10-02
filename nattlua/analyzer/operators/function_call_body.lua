@@ -564,7 +564,7 @@ return function(self, obj, input)
 	local contract = output_signature:Copy()
 
 	for _, v in ipairs(contract:GetData()) do
-		if v.Type == "table" then v:SetReferenceId(nil) end
+		if v.Type == "table" then v:SetReferenceId(false) end
 	end
 
 	-- if a return type is marked with ref, it will pass the ref value back to the caller

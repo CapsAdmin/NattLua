@@ -877,7 +877,7 @@ function META.Extend(a--[[#: TTable]], b--[[#: TTable]])
 
 	if a:GetContract() then
 		if a == a:GetContract() then
-			a:SetContract()
+			a:SetContract(false)
 			a = a:Copy()
 			a:SetContract(a)
 		end
@@ -1098,9 +1098,17 @@ function META.New()
 		{
 			Type = "table",
 			Data = {},
+			CreationScope = false,
+			AnalyzerEnvironment = false,
+			Parent = false,
+			Upvalue = false,
+			UniqueID = false,
+			Name = false,
+			Self = false,
 			LiteralDataCache = {},
 			Contracts = {},
 			Falsy = false,
+			TypeOverride = false,
 			Truthy = false,
 			ReferenceType = false,
 			suppress = false,
@@ -1114,6 +1122,11 @@ function META.New()
 			disabled_unique_id = false,
 			co_func = false,
 			func = false,
+			BaseTable = false,
+			ReferenceId = false,
+			MetaTable = false,
+			Node = false,
+			Contract = false,
 		},
 		META
 	)

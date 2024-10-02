@@ -156,7 +156,7 @@ return function(META)
 					self:CrawlFunctionWithoutOrigin(func)
 					called_count = called_count + 1
 					done[func] = true
-					func:SetCalled()
+					func:SetCalled(false)
 				end
 			end
 
@@ -172,7 +172,7 @@ return function(META)
 					self:CrawlFunctionWithoutOrigin(func)
 					called_count = called_count + 1
 					done[func] = true
-					func:SetCalled()
+					func:SetCalled(false)
 				end
 			end
 
