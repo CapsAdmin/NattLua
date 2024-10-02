@@ -19,7 +19,7 @@ util.LoadGithub(
 
 local function lang_toolkit_error(msg)
 	if string.sub(msg, 1, 9) == "LLT-ERROR" then
-		return false, "luajit-lang-toolkit: " .. string.sub(msg, 10)
+		error("luajit-lang-toolkit: " .. string.sub(msg, 10))
 	else
 		error(msg)
 	end
@@ -31,10 +31,10 @@ local lua_ast = require("lang.lua_ast")
 local reader = require("lang.reader")
 local generator = require("lang.luacode_generator")
 local sec = util.MeasureFunction(function()
-	local ls = lex_setup(reader.string(lua_code), "10mb")
-	local ast_builder = lua_ast.New()
-
 	util.Measure("luajit langtools lex and parse", function()
+		local ls = lex_setup(reader.string(lua_code), "10mb")
+		local ast_builder = lua_ast.New()
+
 		local parse_success, ast_tree = pcall(parse, ast_builder, ls)
 
 		if not parse_success then return lang_toolkit_error(ast_tree) end
