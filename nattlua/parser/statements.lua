@@ -38,7 +38,7 @@ do -- destructure statement
 			end
 
 			node.tokens["{"] = self:ExpectTokenValue("{")
-			node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
+			node.left = self:ParseMultipleValues(self.ParseIdentifier)
 			node.tokens["}"] = self:ExpectTokenValue("}")
 			node.tokens["="] = self:ExpectTokenValue("=")
 			node.right = self:ExpectRuntimeExpression(0)
@@ -66,7 +66,7 @@ do -- destructure statement
 			end
 
 			node.tokens["{"] = self:ExpectTokenValue("{")
-			node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
+			node.left = self:ParseMultipleValues(self.ParseIdentifier)
 			node.tokens["}"] = self:ExpectTokenValue("}")
 			node.tokens["="] = self:ExpectTokenValue("=")
 			node.right = self:ExpectRuntimeExpression(0)
@@ -242,9 +242,9 @@ function META:ParseGenericForStatement()
 
 	local node = self:StartNode("statement", "generic_for")
 	node.tokens["for"] = self:ExpectTokenValue("for")
-	node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier)
+	node.identifiers = self:ParseMultipleValues(self.ParseIdentifier)
 	node.tokens["in"] = self:ExpectTokenValue("in")
-	node.expressions = self:ParseMultipleValues(math_huge, self.ExpectRuntimeExpression, 0)
+	node.expressions = self:ParseMultipleValues(self.ExpectRuntimeExpression, 0)
 	node.tokens["do"] = self:ExpectTokenValue("do")
 	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
@@ -329,11 +329,11 @@ function META:ParseLocalAssignmentStatement()
 	node.tokens["local"] = self:ExpectTokenValue("local")
 
 	if self.TealCompat and self:IsTokenValue(",", 1) then
-		node.left = self:ParseMultipleValues(nil, self.ParseIdentifier, false)
+		node.left = self:ParseMultipleValues(self.ParseIdentifier, false)
 
 		if self:IsTokenValue(":") then
 			self:Advance(1)
-			local expressions = self:ParseMultipleValues(nil, self.ParseTealExpression, 0)
+			local expressions = self:ParseMultipleValues(self.ParseTealExpression, 0)
 
 			for i, v in ipairs(node.left) do
 				v.type_expression = expressions[i]
@@ -341,12 +341,12 @@ function META:ParseLocalAssignmentStatement()
 			end
 		end
 	else
-		node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
+		node.left = self:ParseMultipleValues(self.ParseIdentifier)
 	end
 
 	if self:IsTokenValue("=") then
 		node.tokens["="] = self:ExpectTokenValue("=")
-		node.right = self:ParseMultipleValues(nil, self.ExpectRuntimeExpression, 0)
+		node.right = self:ParseMultipleValues(self.ExpectRuntimeExpression, 0)
 	end
 
 	node = self:EndNode(node)
@@ -360,9 +360,9 @@ function META:ParseNumericForStatement()
 
 	local node = self:StartNode("statement", "numeric_for")
 	node.tokens["for"] = self:ExpectTokenValue("for")
-	node.identifiers = self:ParseMultipleValues(1, self.ParseIdentifier)
+	node.identifiers = self:ParseFixedMultipleValues(1, self.ParseIdentifier)
 	node.tokens["="] = self:ExpectTokenValue("=")
-	node.expressions = self:ParseMultipleValues(3, self.ExpectRuntimeExpression, 0)
+	node.expressions = self:ParseFixedMultipleValues(3, self.ExpectRuntimeExpression, 0)
 	node.tokens["do"] = self:ExpectTokenValue("do")
 	node.statements = self:ParseStatements({["end"] = true})
 	node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
@@ -396,7 +396,7 @@ function META:ParseReturnStatement()
 
 	local node = self:StartNode("statement", "return")
 	node.tokens["return"] = self:ExpectTokenValue("return")
-	node.expressions = self:ParseMultipleValues(nil, self.ParseRuntimeExpression, 0)
+	node.expressions = self:ParseMultipleValues(self.ParseRuntimeExpression, 0)
 	node = self:EndNode(node)
 	return node
 end
@@ -556,13 +556,13 @@ function META:ParseLocalTypeAssignmentStatement()
 	local node = self:StartNode("statement", "local_assignment")
 	node.tokens["local"] = self:ExpectTokenValue("local")
 	node.tokens["type"] = self:ExpectTokenValue("type")
-	node.left = self:ParseMultipleValues(nil, self.ParseIdentifier)
+	node.left = self:ParseMultipleValues(self.ParseIdentifier)
 	node.environment = "typesystem"
 
 	if self:IsTokenValue("=") then
 		node.tokens["="] = self:ExpectTokenValue("=")
 		self:PushParserEnvironment("typesystem")
-		node.right = self:ParseMultipleValues(nil, self.ExpectTypeExpression, 0)
+		node.right = self:ParseMultipleValues(self.ExpectTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
@@ -585,13 +585,13 @@ function META:ParseTypeAssignmentStatement()
 
 	local node = self:StartNode("statement", "assignment")
 	node.tokens["type"] = self:ExpectTokenValue("type")
-	node.left = self:ParseMultipleValues(nil, self.ExpectTypeExpression, 0)
+	node.left = self:ParseMultipleValues(self.ExpectTypeExpression, 0)
 	node.environment = "typesystem"
 
 	if self:IsTokenValue("=") then
 		node.tokens["="] = self:ExpectTokenValue("=")
 		self:PushParserEnvironment("typesystem")
-		node.right = self:ParseMultipleValues(nil, self.ExpectTypeExpression, 0)
+		node.right = self:ParseMultipleValues(self.ExpectTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
@@ -602,7 +602,7 @@ end
 function META:ParseCallOrAssignmentStatement()
 	local start = self:GetToken()
 	self:SuppressOnNode()
-	local left = self:ParseMultipleValues(math_huge, self.ExpectRuntimeExpression, 0)
+	local left = self:ParseMultipleValues(self.ExpectRuntimeExpression, 0)
 
 	if
 		(
@@ -647,7 +647,7 @@ function META:ParseCallOrAssignmentStatement()
 			v.is_left_assignment = true
 		end
 
-		node.right = self:ParseMultipleValues(math_huge, self.ExpectRuntimeExpression, 0)
+		node.right = self:ParseMultipleValues(self.ExpectRuntimeExpression, 0)
 		self:ReRunOnNode(node.left)
 		node = self:EndNode(node)
 		return node

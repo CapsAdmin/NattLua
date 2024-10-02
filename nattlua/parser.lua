@@ -73,19 +73,19 @@ function META:ParseFunctionBody(
 	if self.TealCompat then
 		if self:IsTokenValue("<") then
 			node.tokens["arguments_typesystem("] = self:ExpectTokenValue("<")
-			node.identifiers_typesystem = self:ParseMultipleValues(nil, self.ParseIdentifier)
+			node.identifiers_typesystem = self:ParseMultipleValues(self.ParseIdentifier)
 			node.tokens["arguments_typesystem)"] = self:ExpectTokenValue(">")
 		end
 	end
 
 	node.tokens["arguments("] = self:ExpectTokenValue("(")
-	node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier)
+	node.identifiers = self:ParseMultipleValues(self.ParseIdentifier)
 	node.tokens["arguments)"] = self:ExpectTokenValue(")", node.tokens["arguments("])
 
 	if self:IsTokenValue(":") then
 		node.tokens["return:"] = self:ExpectTokenValue(":")
 		self:PushParserEnvironment("typesystem")
-		node.return_types = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+		node.return_types = self:ParseMultipleValues(self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
@@ -100,7 +100,7 @@ function META:ParseTypeFunctionBody(
 	if self:IsTokenValue("!") then
 		node.tokens["!"] = self:ExpectTokenValue("!")
 		node.tokens["arguments("] = self:ExpectTokenValue("(")
-		node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier, true)
+		node.identifiers = self:ParseMultipleValues(self.ParseIdentifier, true)
 
 		if self:IsTokenValue("...") then
 			table_insert(node.identifiers, self:ParseValueExpressionToken("..."))
@@ -109,7 +109,7 @@ function META:ParseTypeFunctionBody(
 		node.tokens["arguments)"] = self:ExpectTokenValue(")")
 	else
 		node.tokens["arguments("] = self:ExpectTokenValue("<|")
-		node.identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier, true)
+		node.identifiers = self:ParseMultipleValues(self.ParseIdentifier, true)
 
 		if self:IsTokenValue("...") then
 			table_insert(node.identifiers, self:ParseValueExpressionToken("..."))
@@ -119,7 +119,7 @@ function META:ParseTypeFunctionBody(
 
 		if self:IsTokenValue("(") then
 			local lparen = self:ExpectTokenValue("(")
-			local identifiers = self:ParseMultipleValues(nil, self.ParseIdentifier, true)
+			local identifiers = self:ParseMultipleValues(self.ParseIdentifier, true)
 			local rparen = self:ExpectTokenValue(")")
 			node.identifiers_typesystem = node.identifiers
 			node.identifiers = identifiers
@@ -133,7 +133,7 @@ function META:ParseTypeFunctionBody(
 	if self:IsTokenValue(":") then
 		node.tokens["return:"] = self:ExpectTokenValue(":")
 		self:PushParserEnvironment("typesystem")
-		node.return_types = self:ParseMultipleValues(math.huge, self.ExpectTypeExpression, 0)
+		node.return_types = self:ParseMultipleValues(self.ExpectTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
@@ -175,7 +175,7 @@ function META:ParseAnalyzerFunctionBody(
 )
 	self:PushParserEnvironment("runtime")
 	node.tokens["arguments("] = self:ExpectTokenValue("(")
-	node.identifiers = self:ParseMultipleValues(math_huge, self.ParseTypeFunctionArgument, type_args)
+	node.identifiers = self:ParseMultipleValues(self.ParseTypeFunctionArgument, type_args)
 
 	if self:IsTokenValue("...") then
 		local vararg = self:StartNode("expression", "value")
@@ -199,7 +199,7 @@ function META:ParseAnalyzerFunctionBody(
 	if self:IsTokenValue(":") then
 		node.tokens["return:"] = self:ExpectTokenValue(":")
 		self:PushParserEnvironment("typesystem")
-		node.return_types = self:ParseMultipleValues(math.huge, self.ParseTypeExpression, 0)
+		node.return_types = self:ParseMultipleValues(self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1

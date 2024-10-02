@@ -415,7 +415,6 @@ function META:ParseStatements(stop_token--[[#: {[string] = true} | nil]], out--[
 end
 
 function META:ParseMultipleValues(
-	max--[[#: nil | number]],
 	reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (nil | Node))]],
 	a--[[#: ref any]],
 	b--[[#: ref any]],
@@ -423,7 +422,7 @@ function META:ParseMultipleValues(
 )
 	local out = {}
 
-	for i = 1, math_min(max or self:GetLength(), 20) do
+	for i = 1, math_min(self:GetLength(), 20) do
 		local node = reader(self, a, b, c)
 
 		if not node then break end
@@ -438,15 +437,40 @@ function META:ParseMultipleValues(
 	return out
 end
 
+
+function META:ParseFixedMultipleValues(
+	max--[[#: number]],
+	reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (nil | Node))]],
+	a--[[#: ref any]],
+	b--[[#: ref any]],
+	c--[[#: ref any]]
+)
+	local out = {}
+
+	for i = 1, max do
+		local node = reader(self, a, b, c)
+
+		if not node then break end
+
+		out[i] = node
+
+		if not self:IsTokenValue(",") then break end
+
+		(node.tokens--[[# as any]])[","] = self:ExpectTokenValue(",")
+	end
+
+	return out
+end
+
+
 function META:ParseMultipleValuesAppend(
-	max--[[#: nil | number]],
 	reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (nil | Node))]],
 	out--[[#: List<|Node|>]],
 	a--[[#: ref any]],
 	b--[[#: ref any]],
 	c--[[#: ref any]]
 )
-	for i = #out + 1, math_min(max or self:GetLength(), 20) do
+	for i = #out + 1, math_min(self:GetLength(), 20) do
 		local node = reader(self, a, b, c)
 
 		if not node then break end

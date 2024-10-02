@@ -89,7 +89,7 @@ do -- typesystem
 			if self:IsTokenValue(",") then
 				first_expression.tokens[","] = self:ExpectTokenValue(",")
 				node.expressions = {first_expression}
-				self:ParseMultipleValuesAppend(nil, self.ParseTypeExpression, node.expressions, 0)
+				self:ParseMultipleValuesAppend(self.ParseTypeExpression, node.expressions, 0)
 			else
 				node.expressions = {first_expression}
 			end
@@ -171,11 +171,11 @@ do -- typesystem
 		node.tokens["function"] = self:ExpectTokenValue("function")
 		node.tokens["="] = self:ExpectTokenValue("=")
 		node.tokens["arguments("] = self:ExpectTokenValue("(")
-		node.identifiers = self:ParseMultipleValues(nil, self.ParseTypeSignatureFunctionArgument)
+		node.identifiers = self:ParseMultipleValues(self.ParseTypeSignatureFunctionArgument)
 		node.tokens["arguments)"] = self:ExpectTokenValue(")")
 		node.tokens[">"] = self:ExpectTokenValue(">")
 		node.tokens["return("] = self:ExpectTokenValue("(")
-		node.return_types = self:ParseMultipleValues(nil, self.ParseTypeSignatureFunctionArgument)
+		node.return_types = self:ParseMultipleValues(self.ParseTypeSignatureFunctionArgument)
 		node.tokens["return)"] = self:ExpectTokenValue(")")
 		node = self:EndNode(node)
 		return node
@@ -331,11 +331,11 @@ do -- typesystem
 			node.expressions = {self:ParseValueExpressionToken()}
 		elseif self:IsTokenValue("<|") then
 			node.tokens["call("] = self:ExpectTokenValue("<|")
-			node.expressions = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+			node.expressions = self:ParseMultipleValues(self.ParseTypeExpression, 0)
 			node.tokens["call)"] = self:ExpectTokenValue("|>")
 		else
 			node.tokens["call("] = self:ExpectTokenValue("(")
-			node.expressions = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+			node.expressions = self:ParseMultipleValues(self.ParseTypeExpression, 0)
 			node.tokens["call)"] = self:ExpectTokenValue(")")
 		end
 
@@ -668,13 +668,13 @@ do -- runtime
 			node.expressions = {self:ParseValueExpressionToken()}
 		elseif self:IsTokenValue("<|") then
 			node.tokens["call("] = self:ExpectTokenValue("<|")
-			node.expressions = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+			node.expressions = self:ParseMultipleValues(self.ParseTypeExpression, 0)
 			node.tokens["call)"] = self:ExpectTokenValue("|>")
 			node.type_call = true
 
 			if self:IsTokenValue("(") then
 				local lparen = self:ExpectTokenValue("(")
-				local expressions = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+				local expressions = self:ParseMultipleValues(self.ParseTypeExpression, 0)
 				local rparen = self:ExpectTokenValue(")")
 				node.expressions_typesystem = node.expressions
 				node.expressions = expressions
@@ -686,7 +686,7 @@ do -- runtime
 		elseif self:IsTokenValue("!") then
 			node.tokens["!"] = self:ExpectTokenValue("!")
 			node.tokens["call("] = self:ExpectTokenValue("(")
-			node.expressions = self:ParseMultipleValues(nil, self.ParseTypeExpression, 0)
+			node.expressions = self:ParseMultipleValues(self.ParseTypeExpression, 0)
 			node.tokens["call)"] = self:ExpectTokenValue(")")
 			node.type_call = true
 		else
@@ -698,9 +698,9 @@ do -- runtime
 				primary_node.kind == "value" and
 				primary_node.value.value == "sizeof"
 			then
-				node.expressions = self:ParseMultipleValues(nil, self.ParseCDeclaration, 0)
+				node.expressions = self:ParseMultipleValues(self.ParseCDeclaration, 0)
 			else
-				node.expressions = self:ParseMultipleValues(nil, self.ParseRuntimeExpression, 0)
+				node.expressions = self:ParseMultipleValues(self.ParseRuntimeExpression, 0)
 			end
 
 			node.tokens["call)"] = self:ExpectTokenValue(")")

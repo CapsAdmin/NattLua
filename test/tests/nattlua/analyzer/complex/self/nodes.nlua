@@ -4,7 +4,7 @@ local META = require("nattlua.parser.base")
 local Code = require("nattlua.code").New
 local self = META.New({}, Code("dawwad", "asassa"), {})
 local node = self:StartNode("statement", "do")
-local tbl = self:ParseMultipleValues(
+local tbl = self:ParseFixedMultipleValues(
 	1,
 	function(self, a, b, c)
 		attest.equal(a, 1)

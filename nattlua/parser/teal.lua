@@ -45,20 +45,20 @@ function META:ParseTealFunctionSignature()
 
 	if self:IsTokenValue("<") then
 		node.tokens["<"] = self:ExpectTokenValue("<")
-		node.identifiers_typesystem = self:ParseMultipleValues(math_huge, self.ParseTealFunctionArgument, false)
+		node.identifiers_typesystem = self:ParseMultipleValues(self.ParseTealFunctionArgument, false)
 		node.tokens[">"] = self:ExpectTokenValue(">")
 	end
 
 	node.tokens["="] = self:NewToken("symbol", "=")
 	node.tokens["arguments("] = self:ExpectTokenValue("(")
-	node.identifiers = self:ParseMultipleValues(nil, self.ParseTealFunctionArgument)
+	node.identifiers = self:ParseMultipleValues(self.ParseTealFunctionArgument)
 	node.tokens["arguments)"] = self:ExpectTokenValue(")")
 	node.tokens[">"] = self:NewToken("symbol", ">")
 	node.tokens["return("] = self:NewToken("symbol", "(")
 
 	if self:IsTokenValue(":") then
 		node.tokens[":"] = self:ExpectTokenValue(":")
-		node.return_types = self:ParseMultipleValues(nil, self.ParseTealExpression, 0)
+		node.return_types = self:ParseMultipleValues(self.ParseTealExpression, 0)
 	else
 		node.tokens[":"] = self:NewToken("symbol", ":")
 		node.return_types = {}
@@ -180,7 +180,7 @@ function META:ParseTealTuple()
 
 	local node = self:StartNode("expression", "tuple")
 	node.tokens["("] = self:ExpectTokenValue("(")
-	node.expressions = self:ParseMultipleValues(nil, self.ParseTealExpression, 0)
+	node.expressions = self:ParseMultipleValues(self.ParseTealExpression, 0)
 	node.tokens[")"] = self:ExpectTokenValue(")")
 	node = self:EndNode(node)
 	return node
@@ -191,7 +191,7 @@ function META:ParseTealCallSubExpression()
 
 	local node = self:StartNode("expression", "postfix_call")
 	node.tokens["call("] = self:ExpectValueTranslate("<", "<|")
-	node.expressions = self:ParseMultipleValues(nil, self.ParseTealExpression, 0)
+	node.expressions = self:ParseMultipleValues(self.ParseTealExpression, 0)
 	node.tokens["call)"] = self:ExpectValueTranslate(">", "|>")
 	node.type_call = true
 	node = self:EndNode(node)
@@ -341,7 +341,7 @@ local function ParseRecordBody(
 		func.tokens["identifier"] = assignment.left[1].value
 		func.tokens["function"] = self:NewToken("letter", "function")
 		func.tokens["arguments("] = self:ExpectValueTranslate("<", "<|")
-		func.identifiers = self:ParseMultipleValues(nil, self.ParseValueExpressionToken)
+		func.identifiers = self:ParseMultipleValues(self.ParseValueExpressionToken)
 		func.tokens["arguments)"] = self:ExpectValueTranslate(">", "|>")
 		func.statements = {}
 	end
