@@ -151,8 +151,9 @@ return function(META)
 
 				local val = upvalue:GetValue()
 
-				if val.truthy_union and val.truthy_union:GetUpvalue() then
-					self:TrackUpvalueUnion(val.truthy_union:GetUpvalue():GetValue(), val.truthy_union, val.falsy_union)
+				local truthy_falsy = upvalue:GetTruthyFalsyUnion()
+				if truthy_falsy then
+					self:TrackUpvalueUnion(upvalue:GetValue(), truthy_falsy.truthy, truthy_falsy.falsy)
 				end
 
 				if val.right_source then self:TrackDependentUpvalues(val.right_source) end

@@ -10,8 +10,6 @@ local META = class.CreateTemplate("base")
 	suppress = any,
 	Self = any,
 	parent_table = any,
-	truthy_union = any,
-	falsy_union = any,
 	right_source = any,
 	left_source = any,
 	Name = string | false,
@@ -88,8 +86,6 @@ do
 		self:SetAnalyzerEnvironment(obj:GetAnalyzerEnvironment())
 		self:SetTypeOverride(obj:GetTypeOverride())
 		self:SetReferenceType(obj:IsReferenceType())
-		self.truthy_union = obj.truthy_union
-		self.falsy_union = obj.falsy_union
 	end
 end
 

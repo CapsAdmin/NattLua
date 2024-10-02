@@ -265,6 +265,7 @@ local function Binary(self, node, l, r, op)
 	end
 
 	do -- union unpacking
+		local upvalue = l:GetUpvalue()
 		local original_l = l
 		local original_r = r
 
@@ -275,8 +276,8 @@ local function Binary(self, node, l, r, op)
 
 		if l.Type == "union" and r.Type == "union" then
 			local new_union = Union()
-			local truthy_union = Union():SetUpvalue(l:GetUpvalue())
-			local falsy_union = Union():SetUpvalue(l:GetUpvalue())
+			local truthy_union = Union():SetUpvalue(upvalue)
+			local falsy_union = Union():SetUpvalue(upvalue)
 			truthy_union.left_source = l
 			truthy_union.right_source = r
 			falsy_union.left_source = l
@@ -342,8 +343,8 @@ local function Binary(self, node, l, r, op)
 					local key = l.right_source
 					local union = l.left_source
 					local expected = r
-					local truthy_union = Union():SetUpvalue(l:GetUpvalue())
-					local falsy_union = Union():SetUpvalue(l:GetUpvalue())
+					local truthy_union = Union():SetUpvalue(upvalue)
+					local falsy_union = Union():SetUpvalue(upvalue)
 
 					for k, v in ipairs(union.Data) do
 						local val = v:Get(key)
@@ -378,8 +379,9 @@ local function Binary(self, node, l, r, op)
 				self:TrackUpvalueUnion(r, truthy_union, falsy_union, op == "~=")
 			end
 
-			new_union.truthy_union = truthy_union
-			new_union.falsy_union = falsy_union
+			if upvalue then
+				upvalue:SetTruthyFalsyUnion(truthy_union, falsy_union)
+			end
 			return new_union
 		end
 	end

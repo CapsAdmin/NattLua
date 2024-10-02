@@ -1106,8 +1106,6 @@ function META.New()
 			mutations = false,
 			tracked_stack = false,
 			PotentialSelf = false,
-			falsy_union = false,
-			truthy_union = false,
 			mutable = false,
 			string_metatable = false,
 			argument_index = false,

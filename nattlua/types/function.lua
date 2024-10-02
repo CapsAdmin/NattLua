@@ -220,8 +220,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			scopes = {},
 			InputSignature = input,
 			OutputSignature = output,
-			truthy_union = false,
-			falsy_union = false,
 			scope = false,
 			right_source = false,
 			left_source = false,

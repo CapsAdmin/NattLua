@@ -60,14 +60,13 @@ function META.New()
 	return setmetatable(
 		{
 			parent_table = false,
-			truthy_union = false,
+			
 			right_source = false,
 			left_source = false,
+
 			TypeOverride = false,
 			Falsy = false,
 			Truthy = false,
-			falsy_union = false,
-			right_source = false,
 			Data = nil,
             Name = false,
             AnalyzerEnvironment = false,

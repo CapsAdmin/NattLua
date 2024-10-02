@@ -16,6 +16,14 @@ META:GetSet("Scope")
 META:GetSet("Mutations")
 META:IsSet("FromForLoop")
 
+function META:SetTruthyFalsyUnion(t, f)
+	self.truthy_falsy_union = {truthy = t, falsy = f}
+end
+
+function META:GetTruthyFalsyUnion()
+	return self.truthy_falsy_union
+end	
+
 function META:__tostring()
 	return "[" .. tostring(self.Scope) .. ":" .. tostring(self.Position) .. ":" .. tostring(self.key) .. ":" .. tostring(self.value) .. "]"
 end
@@ -68,7 +76,7 @@ end
 local id = 0
 
 function META.New(obj)
-	local self = setmetatable({tracked_stack = false}, META)
+	local self = setmetatable({tracked_stack = false, truthy_falsy_union = false}, META)
 	id = id + 1
 	self:SetValue(obj)
 	return self
