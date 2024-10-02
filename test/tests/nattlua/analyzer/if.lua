@@ -1254,7 +1254,7 @@ analyze[[
         error("uh oh")
     end
     
-    attest.equal(val, _ as any | {[number] = number})
+    attest.equal(val, _ as any | ffi.get_type("int[1]"))
 ]]
 analyze(
 	[[

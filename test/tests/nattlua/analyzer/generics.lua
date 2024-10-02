@@ -51,7 +51,7 @@ analyze[=[
 
     function events.AddListener(event_name: ref (keysof<|declared|>), listener: declared[event_name])
         attest.equal(event_name, _ as "message")
-        attest.equal(listener, _ as (function=(string)>((boolean, string) | (nil,))))
+        attest.equal(listener, _ as (function=(string)>((boolean, string) | (number,))))
     end
 
     events.AddListener("message", function(data) attest.equal(data, _ as string) return 1337 end)

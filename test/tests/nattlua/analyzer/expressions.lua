@@ -249,7 +249,7 @@ analyze[[
     if type(args[x]) == "string" then
         attest.equal(args[x], _ as string)
     else
-        attest.equal(args[x], _ as nil | {[number | nil] = string})
+        attest.equal(args[x], _ as nil | {[number] = nil | string})
     end
 ]]
 pending[[
