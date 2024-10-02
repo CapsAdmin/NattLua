@@ -235,7 +235,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			LiteralFunction = false,
 			Node = false,
 			Scope = false,
-			Parent = false,
 		},
 		META
 	)

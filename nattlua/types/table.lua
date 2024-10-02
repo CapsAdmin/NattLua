@@ -388,10 +388,9 @@ local function is_literal(obj)
 	return ((obj.Type == "number" and obj.Max == false) or obj.Type == "string") and obj.Data ~= false
 end
 
+
 local function AddKey(self, keyval, key, val)
 	if not keyval then
-		val:SetParent(self)
-		key:SetParent(self)
 		local keyval = {key = key, val = val}
 		table.insert(self.Data, keyval)
 
@@ -414,8 +413,6 @@ function META:RemoveRedundantNilValues()
 			keyval.val.Type == "symbol" and
 			keyval.val:IsNil()
 		then
-			keyval.val:SetParent()
-			keyval.key:SetParent()
 			table.remove(self.Data, i)
 
 			if is_literal(keyval.key) then
@@ -432,8 +429,6 @@ function META:Delete(key--[[#: TBaseType]])
 		local keyval = self.Data[i]
 
 		if key:Equal(keyval.key) then
-			keyval.val:SetParent()
-			keyval.key:SetParent()
 			table.remove(self.Data, i)
 
 			if is_literal(keyval.key) then
@@ -1115,7 +1110,6 @@ function META.New()
 			Data = {},
 			CreationScope = false,
 			AnalyzerEnvironment = false,
-			Parent = false,
 			Upvalue = false,
 			UniqueID = false,
 			Name = false,

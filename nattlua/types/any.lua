@@ -68,7 +68,6 @@ function META.New()
             Upvalue = false,
             Node = false,
             ReferenceType = false,
-            Parent = false,
             Contract = false,
 			UniqueID = false,
 		},
