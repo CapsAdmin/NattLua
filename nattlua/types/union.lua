@@ -417,6 +417,14 @@ function META:GetLeftRightSource()
 	return self.left_right_source
 end
 
+function META:SetParentTable(tbl, key)
+	self.parent_table = {table = tbl, key = key}
+end
+
+function META:GetParentTable()
+	return self.parent_table
+end
+
 function META.New(data--[[#: nil | List<|TBaseType|>]])
 	local self = setmetatable(
 		{
@@ -429,7 +437,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			left_right_source = false,
 			UniqueID = false,
 			parent_table = false,
-			parent_key = false,
 		},
 		META
 	)

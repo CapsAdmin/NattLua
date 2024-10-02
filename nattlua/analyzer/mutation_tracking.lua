@@ -247,8 +247,7 @@ return function(META)
 			function META:TrackTableIndex(tbl, key, val)
 				if val.Type ~= "union" then error("only union needs to be tracked") end
 
-				val.parent_table = tbl
-				val.parent_key = key
+				val:SetParentTable(tbl, key)
 				local truthy_union = val:GetTruthy()
 				local falsy_union = val:GetFalsy()
 				self:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, self.inverted_index_tracking, true)
@@ -263,13 +262,11 @@ return function(META)
 				tbl.tracked_stack[hash] = tbl.tracked_stack[hash] or {}
 
 				if falsy_union then
-					falsy_union.parent_table = tbl
-					falsy_union.parent_key = key
+					falsy_union:SetParentTable(tbl, key)
 				end
 
 				if truthy_union then
-					truthy_union.parent_table = tbl
-					truthy_union.parent_key = key
+					truthy_union:SetParentTable(tbl, key)
 				end
 
 				for i = #tbl.tracked_stack[hash], 1, -1 do

@@ -9,7 +9,6 @@ local META = class.CreateTemplate("base")
 --[[#type META.@Self = {
 	suppress = any,
 	Self = any,
-	parent_table = any,
 	Name = string | false,
 	Parent = any,
 	UniqueID = any,

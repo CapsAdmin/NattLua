@@ -59,8 +59,6 @@ end
 function META.New()
 	return setmetatable(
 		{
-			parent_table = false,
-			
 			TypeOverride = false,
 			Falsy = false,
 			Truthy = false,

@@ -1110,7 +1110,6 @@ function META.New()
 			string_metatable = false,
 			argument_index = false,
 			size = false,
-			parent_table = false,
 			disabled_unique_id = false,
 			co_func = false,
 			func = false,

@@ -322,15 +322,17 @@ local function Binary(self, node, l, r, op)
 			end
 
 			if op ~= "or" and op ~= "and" then
-				local parent_table = l.parent_table or type_checked and type_checked.parent_table
-				local parent_key = l.parent_key or type_checked and type_checked.parent_key
+				local tbl_key = l:GetParentTable() or type_checked and type_checked:GetParentTable()
 
-				if parent_table then
-					self:TrackTableIndexUnion(parent_table, parent_key, truthy_union, falsy_union)
+				if tbl_key then
+					self:TrackTableIndexUnion(tbl_key.table, tbl_key.key, truthy_union, falsy_union)
 				elseif l.Type == "union" then
 					for _, l in ipairs(l:GetData()) do
-						if l.parent_table then
-							self:TrackTableIndexUnion(l.parent_table, l.parent_key, truthy_union, falsy_union)
+						if l.Type == "union" then
+							local tbl_key = l:GetParentTable()
+							if tbl_key then
+								self:TrackTableIndexUnion(tbl_key.table, tbl_key.key, truthy_union, falsy_union)
+							end
 						end
 					end
 				end
