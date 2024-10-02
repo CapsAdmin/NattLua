@@ -59,7 +59,6 @@ end
 function META.New()
 	return setmetatable(
 		{
-			suppress = false,
 			parent_table = false,
 			truthy_union = false,
 			right_source = false,

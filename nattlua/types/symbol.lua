@@ -79,7 +79,6 @@ function META.New(data--[[#: any]])
 			left_source = false,
 			right_source = false,
 			truthy_union = false,
-			suppress = false,
 			falsy_union = false,
 			parent_table = false,
 			TypeOverride = false,
