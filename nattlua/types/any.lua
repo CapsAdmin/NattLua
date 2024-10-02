@@ -65,7 +65,6 @@ function META.New()
 			Truthy = false,
 			Data = false,
             Name = false,
-            AnalyzerEnvironment = false,
             Upvalue = false,
             Node = false,
             ReferenceType = false,

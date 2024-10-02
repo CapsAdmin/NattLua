@@ -26,6 +26,7 @@ META:GetSet("ReferenceId", nil--[[# as string | nil]])
 META:GetSet("Self", nil--[[# as nil | TTable]])
 META:GetSet("Contracts", nil--[[# as List<|TTable|>]])
 META:GetSet("CreationScope", nil--[[# as any]])
+META:GetSet("AnalyzerEnvironment", false--[[# as false | "runtime" | "typesystem"]])
 
 function META:GetName()
 	if not self.Name then
@@ -760,6 +761,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	end
 
 	copy:CopyInternalsFrom(self)
+	copy:SetAnalyzerEnvironment(self:GetAnalyzerEnvironment())
 	copy.PotentialSelf = self.PotentialSelf
 	copy.mutable = self.mutable
 	copy.mutations = self.mutations or false

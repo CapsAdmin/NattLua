@@ -233,7 +233,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			Upvalue = false,
 			UpvaluePosition = false,
 			InputIdentifiers = false,
-			AnalyzerEnvironment = false,
 			LiteralFunction = false,
 			Node = false,
 			Scope = false,

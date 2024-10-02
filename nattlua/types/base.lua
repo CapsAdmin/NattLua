@@ -18,7 +18,7 @@ local META = class.CreateTemplate("base")
 --[[#type META.TBaseType = TBaseType]] --copy<|META|>.@Self
 
 --[[#type META.Type = string]]
-META:GetSet("AnalyzerEnvironment", false--[[# as false | "runtime" | "typesystem"]])
+
 
 function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]]) --error("nyi " .. a.Type .. " == " .. b.Type)
 end
@@ -80,7 +80,6 @@ do
 		self:SetContract(obj:GetContract())
 		self:SetName(obj:GetName())
 		self:SetMetaTable(obj:GetMetaTable())
-		self:SetAnalyzerEnvironment(obj:GetAnalyzerEnvironment())
 		self:SetTypeOverride(obj:GetTypeOverride())
 		self:SetReferenceType(obj:IsReferenceType())
 	end

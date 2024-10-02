@@ -123,7 +123,6 @@ local function new(data--[[#: string | nil]])
 			UniqueID = false,
 			Name = false,
 			Parent = false,
-			AnalyzerEnvironment = false,
 			Upvalue = false,
 			Node = false,
 			Parent = false,

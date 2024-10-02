@@ -174,7 +174,9 @@ return {
 
 			-- used by the emitter
 			exp_key:AssociateType(val)
-			val:SetAnalyzerEnvironment(self:GetCurrentAnalyzerEnvironment())
+			if val.Type == "table" then
+				val:SetAnalyzerEnvironment(self:GetCurrentAnalyzerEnvironment())
+			end
 
 			-- if all is well, create or mutate the value
 			if statement.kind == "local_assignment" then
