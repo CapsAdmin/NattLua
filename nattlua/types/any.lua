@@ -61,9 +61,6 @@ function META.New()
 		{
 			parent_table = false,
 			
-			right_source = false,
-			left_source = false,
-
 			TypeOverride = false,
 			Falsy = false,
 			Truthy = false,

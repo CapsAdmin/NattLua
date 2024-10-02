@@ -276,14 +276,10 @@ local function Binary(self, node, l, r, op)
 
 		if l.Type == "union" and r.Type == "union" then
 			local new_union = Union()
+			new_union:SetLeftRightSource(l, r)
+
 			local truthy_union = Union():SetUpvalue(upvalue)
 			local falsy_union = Union():SetUpvalue(upvalue)
-			truthy_union.left_source = l
-			truthy_union.right_source = r
-			falsy_union.left_source = l
-			falsy_union.right_source = r
-			new_union.left_source = l
-			new_union.right_source = r
 			local type_checked = self.type_checked
 
 			-- the return value from type(x)
@@ -339,9 +335,10 @@ local function Binary(self, node, l, r, op)
 					end
 				end
 
-				if (op == "==" or op == "~=") and l.left_source and l.right_source then
-					local key = l.right_source
-					local union = l.left_source
+				local left_right = l:GetLeftRightSource()
+				if (op == "==" or op == "~=") and left_right then
+					local key = left_right.right
+					local union = left_right.left
 					local expected = r
 					local truthy_union = Union():SetUpvalue(upvalue)
 					local falsy_union = Union():SetUpvalue(upvalue)

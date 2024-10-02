@@ -221,8 +221,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			InputSignature = input,
 			OutputSignature = output,
 			scope = false,
-			right_source = false,
-			left_source = false,
 			recursively_called = false,
 			UniqueID = false,
 		},

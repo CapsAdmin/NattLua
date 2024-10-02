@@ -156,9 +156,13 @@ return function(META)
 					self:TrackUpvalueUnion(upvalue:GetValue(), truthy_falsy.truthy, truthy_falsy.falsy)
 				end
 
-				if val.right_source then self:TrackDependentUpvalues(val.right_source) end
-
-				if val.left_source then self:TrackDependentUpvalues(val.left_source) end
+				if val.Type == "union" then
+					local left_right = val:GetLeftRightSource()
+					if left_right then
+						self:TrackDependentUpvalues(left_right.left)
+						self:TrackDependentUpvalues(left_right.right)
+					end
+				end
 			end
 
 			function META:TrackUpvalueUnion(obj, truthy_union, falsy_union, inverted)

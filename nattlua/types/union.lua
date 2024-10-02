@@ -409,6 +409,14 @@ function META:IsLiteral()
 	return true
 end
 
+function META:SetLeftRightSource(l, r)
+	self.left_right_source = {left = l, right = r}
+end
+
+function META:GetLeftRightSource()
+	return self.left_right_source
+end
+
 function META.New(data--[[#: nil | List<|TBaseType|>]])
 	local self = setmetatable(
 		{
@@ -418,8 +426,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			Truthy = false,
 			ReferenceType = false,
 			suppress = false,
-			right_source = false,
-			left_source = false,
+			left_right_source = false,
 			UniqueID = false,
 			parent_table = false,
 			parent_key = false,
