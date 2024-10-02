@@ -86,9 +86,9 @@ return function(META)
 				end
 
 				return new_tup
-			elseif tbl.potential_self then
+			elseif tbl.PotentialSelf then
 				local meta = tbl
-				local self = tbl.potential_self:Copy()
+				local self = tbl.PotentialSelf:Copy()
 
 				if self.Type == "union" then
 					for _, obj in ipairs(self:GetData()) do

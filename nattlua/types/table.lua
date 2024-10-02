@@ -760,7 +760,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	end
 
 	copy:CopyInternalsFrom(self)
-	copy.potential_self = self.potential_self
+	copy.PotentialSelf = self.PotentialSelf
 	copy.mutable = self.mutable
 	copy.mutations = self.mutations or false
 	copy:SetCreationScope(self:GetCreationScope())
@@ -1097,7 +1097,7 @@ function META.New()
 			suppress = false,
 			mutations = false,
 			tracked_stack = false,
-			potential_self = false,
+			PotentialSelf = false,
 			falsy_union = false,
 			truthy_union = false,
 			mutable = false,

@@ -130,9 +130,11 @@ analyzer function copy(obj: any)
 	local copy = obj:Copy()
 	copy:ClearMutations()
 
-	if copy.Type == "table" then copy:SetCreationScope(nil) end
+	if copy.Type == "table" then 
+		copy:SetCreationScope(nil) 
+		copy.PotentialSelf = false
+	end
 
-	copy.potential_self = false
 	return copy
 end
 

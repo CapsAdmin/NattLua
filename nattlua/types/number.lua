@@ -32,7 +32,6 @@ function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 			suppress = false,
 			falsy_union = false,
 			truthy_union = false,
-			potential_self = false,
 			parent_table = false,
 			left_source = false,
 			right_source = false,

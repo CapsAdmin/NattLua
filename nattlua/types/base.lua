@@ -9,7 +9,6 @@ local META = class.CreateTemplate("base")
 --[[#type META.@Self = {
 	suppress = any,
 	Self = any,
-	potential_self = any,
 	parent_table = any,
 	truthy_union = any,
 	falsy_union = any,
