@@ -110,8 +110,8 @@ return {
 			end
 
 			last_scope = scope
-			scope:SetTrackedUpvalues(block.upvalues)
-			scope:SetTrackedTables(block.tables)
+			scope:SetTrackedUpvalues(block.upvalues or false)
+			scope:SetTrackedTables(block.tables or false)
 
 			if block.is_else then
 				scope:SetElseConditionalScope(true)

@@ -2111,6 +2111,7 @@ function META.New(config--[[#: TranspilerConfig]])
 			tracking_indents = false,
 			toggled_indents = false,
 			done = false,
+			FFI_DECLARATION_EMITTER = false,
 		},
 		META
 	)

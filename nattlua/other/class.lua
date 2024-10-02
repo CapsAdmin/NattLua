@@ -35,6 +35,11 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 
 		if not info then return "**unknown line**" end
 
+		if info.source:find("class.lua", nil, true) then
+			info = debug.getinfo(4)
+			if not info then return "**unknown line**" end
+		end
+
 		return info.source:sub(2) .. ":" .. info.currentline
 	end
 
@@ -48,11 +53,11 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 
 	local done = {}
 
-	function meta:DebugPropertyAccess(filter)
+	function meta:DebugPropertyAccess()
 		if false--[[# as true]] then return end
 
 		meta.__index = function(self, key)
-			if (not filter or key:find(filter, nil, true)) and (meta[key] == nil or type(meta[key]) ~= "function") then
+			if meta[key] == nil or type(meta[key]) ~= "function" then
 				local line = get_line()
 				local hash = key .. "-" .. line
 
@@ -65,12 +70,12 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 			return meta[key]
 		end
 		meta.__newindex = function(self, key, val)
-			if not filter or key:find(filter, nil, true) then
+			if meta[key] == nil or type(meta[key]) ~= "function" then
 				local line = get_line()
-				local hash = key .. "-" .. line
+				local hash = key .. "-" .. line .. "-" .. type(val)
 
 				if not done[hash] then
-					print(get_constructor(), "SET " .. key, line)
+					print(get_constructor(), "SET " .. key .. " = " .. type(val), line)
 					done[hash] = true
 				end
 			end

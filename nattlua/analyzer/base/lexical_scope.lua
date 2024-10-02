@@ -126,7 +126,7 @@ function META:FindUpvalue(key, env)
 end
 
 function META:CreateUpvalue(key, obj, env)
-	local shadow = false
+	local shadow
 
 	if env == "runtime" and key ~= "..." then
 		shadow = self.upvalues[env].map[key]
@@ -134,7 +134,7 @@ function META:CreateUpvalue(key, obj, env)
 
 	local upvalue = Upvalue(obj)
 	upvalue:SetKey(key)
-	upvalue:SetShadow(shadow)
+	upvalue:SetShadow(shadow or false)
 	upvalue:SetPosition(#self.upvalues[env].list)
 	upvalue:SetScope(self)
 	table_insert(self.upvalues[env].list, upvalue)
@@ -438,8 +438,6 @@ function META.New(parent, upvalue_position, obj)
 		LoopScope = false,
 		NextConditionalSibling = false,
 		PreviousConditionalSibling = false,
-		TrackedUpvalues = false,
-		TrackedTables = false,
 		upvalues = {
 			runtime = {
 				list = {},

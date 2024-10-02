@@ -33,9 +33,10 @@ META.OnInitialize = {}
 	imported = any,
 	statement_count = any,
 	dollar_signs = any,
-	CDECL_PARSING_MODE = any,
 	value = any,
 	context_values = any,
+	FFI_DECLARATION_PARSER = boolean,
+	CDECL_PARSING_MODE = "typeof" | "ffinew" | false,
 }]]
 --[[#type META.@Name = "Parser"]]
 require("nattlua.other.context_mixin")(META)
@@ -63,12 +64,12 @@ function META.New(
 		RootStatement = false,
 		TealCompat = false,
 		dont_hoist_next_import = false,
-		--FFI_DECLARATION_PARSER = false,
 		imported = false,
 		statement_count = false,
 		dollar_signs = false,
 		CDECL_PARSING_MODE = false,
 		value = false,
+		FFI_DECLARATION_PARSER = false,
 	}
 
 	for _, func in ipairs(META.OnInitialize) do

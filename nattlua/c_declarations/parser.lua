@@ -1,5 +1,11 @@
 local META = loadfile("nattlua/parser.lua")()
-META.FFI_DECLARATION_PARSER = true
+
+local old_new = META.New
+function META.New(...)
+	local self = old_new(...)
+	self.FFI_DECLARATION_PARSER = true
+	return self
+end
 
 function META:ParseRootNode()
 	local node = self:StartNode("statement", "root")
