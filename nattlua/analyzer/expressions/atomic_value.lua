@@ -126,7 +126,7 @@ return {
 
 			return num
 		elseif type == "string" then
-			return LString(node.value.string_value)
+			return LString(node.value:GetStringValue())
 		elseif type == "letter" then
 			return ConstString(value)
 		end

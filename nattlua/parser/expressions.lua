@@ -343,9 +343,9 @@ do -- typesystem
 			local name = primary_node.value.value
 
 			if name == "import" then
-				self:HandleImportExpression(node, name, node.expressions[1].value.string_value, start)
+				self:HandleImportExpression(node, name, node.expressions[1].value:GetStringValue(), start)
 			elseif name == "import_data" then
-				self:HandleImportDataExpression(node, node.expressions[1].value.string_value, start)
+				self:HandleImportDataExpression(node, node.expressions[1].value:GetStringValue(), start)
 			end
 		end
 
@@ -710,7 +710,7 @@ do -- runtime
 			primary_node.kind == "value" and
 			node.expressions[1] and
 			node.expressions[1].value and
-			node.expressions[1].value.string_value
+			node.expressions[1].value:GetStringValue()
 		then
 			local name = primary_node.value.value
 
@@ -720,9 +720,9 @@ do -- runtime
 				name == "loadfile" or
 				name == "require"
 			then
-				self:HandleImportExpression(node, name, node.expressions[1].value.string_value, start)
+				self:HandleImportExpression(node, name, node.expressions[1].value:GetStringValue(), start)
 			elseif name == "import_data" then
-				self:HandleImportDataExpression(node, node.expressions[1].value.string_value, start)
+				self:HandleImportDataExpression(node, node.expressions[1].value:GetStringValue(), start)
 			end
 		end
 

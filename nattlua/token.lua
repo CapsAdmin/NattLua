@@ -273,31 +273,34 @@ function META:GetSemanticType()
 	return "comment"
 end
 
+function META:GetStringValue()
+	if self.string_value then return self.string_value end
+	if self.type == "string" then
+		local value = self.value
+
+		if value:sub(1, 1) == [["]] or value:sub(1, 1) == [[']] then
+			self.string_value = reverse_escape_string(value:sub(2, #value - 1))
+			return self.string_value
+		elseif value:sub(1, 1) == "[" then
+			local start = value:find("[", 2, true)
+
+			if not start then error("start not found") end
+
+			self.string_value = value:sub(start + 1, -start - 1)
+			return self.string_value
+		end
+	end
+end
+
 function META.New(
 	type--[[#: META.TokenType]],
 	value--[[#: string]],
 	start--[[#: number]],
 	stop--[[#: number]]
 )--[[#: META.@Self]]
-
-	local string_value
-
-	if type == "string" then
-		if value:sub(1, 1) == [["]] or value:sub(1, 1) == [[']] then
-			string_value = reverse_escape_string(value:sub(2, #value - 1))
-		elseif value:sub(1, 1) == "[" then
-			local start = value:find("[", 2, true)
-
-			if not start then error("start not found") end
-
-			string_value = value:sub(start + 1, -start - 1)
-		end
-	end
-
 	return setmetatable(
 		{
 			type = type,
-			string_value = string_value,
 			value = value,
 			start = start,
 			stop = stop,
