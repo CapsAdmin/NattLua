@@ -70,7 +70,6 @@ function META.New()
             ReferenceType = false,
             Parent = false,
             Contract = false,
-            MetaTable = false,
 			UniqueID = false,
 		},
 		META

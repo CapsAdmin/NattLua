@@ -79,7 +79,6 @@ do
 	function META:CopyInternalsFrom(obj--[[#: mutable TBaseType]])
 		self:SetContract(obj:GetContract())
 		self:SetName(obj:GetName())
-		self:SetMetaTable(obj:GetMetaTable())
 		self:SetTypeOverride(obj:GetTypeOverride())
 		self:SetReferenceType(obj:IsReferenceType())
 	end
@@ -173,18 +172,6 @@ do -- contract
 	end
 
 	META:GetSet("Contract", false--[[# as TBaseType | false]])
-end
-
-do
-	META:GetSet("MetaTable", false--[[# as TBaseType | false]])
-
-	function META:GetMetaTable()
-		local contract = self:GetContract()
-
-		if contract and contract.MetaTable then return contract.MetaTable end
-
-		return self.MetaTable
-	end
 end
 
 function META:GetFirstValue()

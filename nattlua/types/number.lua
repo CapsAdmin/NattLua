@@ -36,7 +36,6 @@ function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 			Node = false,
 			Parent = false,
 			Contract = false,
-			MetaTable = false,
 			DontWiden = false,
 			UniqueID = false,
 		},

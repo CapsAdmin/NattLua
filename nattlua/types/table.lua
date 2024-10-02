@@ -38,6 +38,18 @@ function META:GetName()
 	return self.Name
 end
 
+do
+	META:GetSet("MetaTable", false--[[# as TBaseType | false]])
+
+	function META:GetMetaTable()
+		local contract = self:GetContract()
+
+		if contract and contract.MetaTable then return contract.MetaTable end
+
+		return self.MetaTable
+	end
+end
+
 function META:SetSelf(tbl)
 	tbl:SetMetaTable(self)
 	tbl.mutable = true
@@ -761,6 +773,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	end
 
 	copy:CopyInternalsFrom(self)
+	copy:SetMetaTable(self:GetMetaTable())
 	copy:SetAnalyzerEnvironment(self:GetAnalyzerEnvironment())
 	copy.PotentialSelf = self.PotentialSelf
 	copy.mutable = self.mutable

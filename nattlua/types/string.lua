@@ -33,6 +33,7 @@ end
 function META:Copy()
 	local copy = self.New(self.Data)
 	copy:SetPatternContract(self:GetPatternContract())
+	copy:SetMetaTable(self:GetMetaTable())
 	copy:CopyInternalsFrom(self)
 	return copy
 end
@@ -127,11 +128,23 @@ local function new(data--[[#: string | nil]])
 			Node = false,
 			Parent = false,
 			Contract = false,
-			MetaTable = false,
 			TypeOverride = false,
+			MetaTable = false,
 		},
 		META
 	)
+end
+
+do
+	META:GetSet("MetaTable", false--[[# as TBaseType | false]])
+
+	function META:GetMetaTable()
+		local contract = self:GetContract()
+
+		if contract and contract.MetaTable then return contract.MetaTable end
+
+		return self.MetaTable
+	end
 end
 
 function META.New(data--[[#: string | nil]])

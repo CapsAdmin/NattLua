@@ -19,15 +19,14 @@ local type_errors = require("nattlua.types.error_messages")
 
 local function metatable_function(self, node, meta_method, l, r)
 	meta_method = ConstString(meta_method)
-
-	if r:GetMetaTable() or l:GetMetaTable() then
+	local r_metatable = (r.Type == "table" or r.Type == "string") and r:GetMetaTable()
+	local l_metatable = (l.Type == "table" or l.Type == "string") and l:GetMetaTable()
+	if r_metatable or l_metatable then
 		local func = (
-				l:GetMetaTable() and
-				l:GetMetaTable():Get(meta_method)
+			l_metatable and l_metatable:Get(meta_method)
 			) or
 			(
-				r:GetMetaTable() and
-				r:GetMetaTable():Get(meta_method)
+				r_metatable and r_metatable:Get(meta_method)
 			)
 
 		if not func then return end
