@@ -174,6 +174,7 @@ return {
 
 			-- used by the emitter
 			exp_key:AssociateType(val)
+
 			if val.Type == "table" then
 				val:SetAnalyzerEnvironment(self:GetCurrentAnalyzerEnvironment())
 			end

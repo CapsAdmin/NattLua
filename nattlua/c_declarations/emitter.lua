@@ -1,13 +1,12 @@
 local META = loadfile("nattlua/emitter.lua")()
-
 local old_new = META.New
+
 function META.New(...)
 	local self = old_new(...)
 	self.FFI_DECLARATION_EMITTER = true
 	self.skip_emit = {}
 	return self
 end
-
 
 do
 	local function hmmm(node, walk_up, out)

@@ -1,4 +1,7 @@
-do return end
+do
+	return
+end
+
 local type { Union } = require("nattlua.types.union")
 
 local obj = Union({1, 2, 3})

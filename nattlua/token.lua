@@ -278,12 +278,15 @@ function META.New(
 	start--[[#: number]],
 	stop--[[#: number]]
 )--[[#: META.@Self]]
-	return setmetatable({
-		type = type,
-		value = value,
-		start = start,
-		stop = stop,
-	}--[[# as META.@Self]], META)
+	return setmetatable(
+		{
+			type = type,
+			value = value,
+			start = start,
+			stop = stop,
+		}--[[# as META.@Self]],
+		META
+	)
 end
 
 return META

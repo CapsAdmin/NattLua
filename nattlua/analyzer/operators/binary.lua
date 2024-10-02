@@ -21,12 +21,15 @@ local function metatable_function(self, node, meta_method, l, r)
 	meta_method = ConstString(meta_method)
 	local r_metatable = (r.Type == "table" or r.Type == "string") and r:GetMetaTable()
 	local l_metatable = (l.Type == "table" or l.Type == "string") and l:GetMetaTable()
+
 	if r_metatable or l_metatable then
 		local func = (
-			l_metatable and l_metatable:Get(meta_method)
+				l_metatable and
+				l_metatable:Get(meta_method)
 			) or
 			(
-				r_metatable and r_metatable:Get(meta_method)
+				r_metatable and
+				r_metatable:Get(meta_method)
 			)
 
 		if not func then return end
@@ -276,7 +279,6 @@ local function Binary(self, node, l, r, op)
 		if l.Type == "union" and r.Type == "union" then
 			local new_union = Union()
 			new_union:SetLeftRightSource(l, r)
-
 			local truthy_union = Union():SetUpvalue(upvalue)
 			local falsy_union = Union():SetUpvalue(upvalue)
 			local type_checked = self.type_checked
@@ -329,6 +331,7 @@ local function Binary(self, node, l, r, op)
 					for _, l in ipairs(l:GetData()) do
 						if l.Type == "union" then
 							local tbl_key = l:GetParentTable()
+
 							if tbl_key then
 								self:TrackTableIndexUnion(tbl_key.table, tbl_key.key, truthy_union, falsy_union)
 							end
@@ -337,6 +340,7 @@ local function Binary(self, node, l, r, op)
 				end
 
 				local left_right = l:GetLeftRightSource()
+
 				if (op == "==" or op == "~=") and left_right then
 					local key = left_right.right
 					local union = left_right.left
@@ -377,9 +381,8 @@ local function Binary(self, node, l, r, op)
 				self:TrackUpvalueUnion(r, truthy_union, falsy_union, op == "~=")
 			end
 
-			if upvalue then
-				upvalue:SetTruthyFalsyUnion(truthy_union, falsy_union)
-			end
+			if upvalue then upvalue:SetTruthyFalsyUnion(truthy_union, falsy_union) end
+
 			return new_union
 		end
 	end

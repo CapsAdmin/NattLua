@@ -37,6 +37,7 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 
 		if info.source:find("class.lua", nil, true) then
 			info = debug.getinfo(4)
+
 			if not info then return "**unknown line**" end
 		end
 

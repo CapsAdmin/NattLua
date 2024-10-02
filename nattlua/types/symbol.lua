@@ -3,23 +3,19 @@ local tostring = tostring
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
-
 local TRUE = {}
 local FALSE = {}
 local NIL = {}
-
 local symbol_to_type = {
 	[TRUE] = "boolean",
 	[FALSE] = "boolean",
 	[NIL] = "nil",
 }
-
 local unpack_symbol = {
-	 [TRUE] = true,
-	 [FALSE] = false,
-	 [NIL] = nil,
+	[TRUE] = true,
+	[FALSE] = false,
+	[NIL] = nil,
 }
-
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TSymbol"]]
 --[[#type TSymbol = META.@Self]]
@@ -27,16 +23,11 @@ META.Type = "symbol"
 META:GetSet("Data", false--[[# as any]])
 
 function META:GetData()
-	if self.Data == NIL then
-		return nil
-	end
-	if self.Data == TRUE then
-		return true
-	end
+	if self.Data == NIL then return nil end
 
-	if self.Data == FALSE then
-		return false
-	end
+	if self.Data == TRUE then return true end
+
+	if self.Data == FALSE then return false end
 
 	return self.Data
 end
@@ -86,7 +77,8 @@ function META:IsFalse()
 end
 
 function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
-	if false --[[#as true]] then return false end
+	if false--[[# as true]] then return false end
+
 	if b.Type == "tuple" then b = b:Get(1) end
 
 	if b.Type == "any" then return true end
@@ -104,7 +96,9 @@ end
 
 function META:IsFalsy()
 	if self.Data == TRUE then return false end
+
 	if self.Data == FALSE then return true end
+
 	if self.Data == NIL then return true end
 
 	return not self.Data
@@ -112,7 +106,9 @@ end
 
 function META:IsTruthy()
 	if self.Data == TRUE then return true end
+
 	if self.Data == FALSE then return false end
+
 	if self.Data == NIL then return false end
 
 	return not not self.Data
@@ -124,8 +120,11 @@ end
 
 function META.New(data--[[#: any]])
 	if data == nil then data = NIL end
+
 	if data == true then data = TRUE end
+
 	if data == false then data = FALSE end
+
 	local self = setmetatable(
 		{
 			Type = "symbol",

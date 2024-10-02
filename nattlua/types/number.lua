@@ -259,7 +259,9 @@ do
 
 	function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: "=="]])--[[#: boolean | nil]]
 		if a.Type ~= "number" then return nil end
+
 		if b.Type ~= "number" then return nil end
+
 		if not a.Data or not b.Data then return nil end
 
 		if operator == "==" then
@@ -568,6 +570,7 @@ return {
 	LNumber = LNumber,
 	LNumberFromString = function(str--[[#: string]])
 		local num
+
 		if str:sub(1, 2) == "0b" then
 			num = tonumber(str:sub(3), 2)
 		elseif str:lower():sub(-3) == "ull" then

@@ -17,7 +17,6 @@ local META = dofile("nattlua/types/base.lua")
 META.Type = "tuple"
 --[[#type META.@Name = "TTuple"]]
 --[[#type TTuple = META.@Self]]
-
 META:GetSet("Data", nil--[[# as List<|TBaseType|>]])
 META:GetSet("Unpackable", false--[[# as boolean]])
 

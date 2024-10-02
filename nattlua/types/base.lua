@@ -13,11 +13,9 @@ local META = class.CreateTemplate("base")
 	Parent = any,
 }]]
 --[[#local type TBaseType = META.@Self]]
-
---[[#type META.TBaseType = TBaseType]] --copy<|META|>.@Self
-
---[[#type META.Type = string]]
-
+--[[#type META.TBaseType = TBaseType]]
+--[[#--copy<|META|>.@Self
+type META.Type = string]]
 
 function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]]) --error("nyi " .. a.Type .. " == " .. b.Type)
 end

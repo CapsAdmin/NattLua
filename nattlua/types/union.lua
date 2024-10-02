@@ -49,13 +49,14 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
 		if a.Type == "union" or a.Type == "table" then
 			a.suppress = true--[[# as boolean]]
 		end
+
 		for i = 1, len do
 			local b = b.Data[i]--[[# as TBaseType]]
-			
 			ok = a:Equal(b)
-			
+
 			if ok then break end
 		end
+
 		if a.Type == "union" or a.Type == "table" then
 			a.suppress = false--[[# as boolean]]
 		end
@@ -205,7 +206,7 @@ function META:Get(key--[[#: TBaseType]])
 
 	for i, obj in ipairs(self.Data) do
 		local ok, reason = key:IsSubsetOf(obj)
-		
+
 		if ok then return obj end
 
 		errors = errors or {}
@@ -326,6 +327,7 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
 		a.suppress = true
 		local b_val, reason = b:Get(a_val)
 		a.suppress = false
+
 		if not b_val then
 			return false, type_errors.because(type_errors.table_index(b, a_val), reason)
 		end

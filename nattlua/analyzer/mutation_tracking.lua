@@ -21,9 +21,7 @@ return function(META)
 						return LNumberRange(len, len + 1)
 					end
 
-					if val.Type == "symbol" and val:IsNil() then
-						return LNumber(len)
-					end
+					if val.Type == "symbol" and val:IsNil() then return LNumber(len) end
 				end
 			end
 
@@ -54,7 +52,13 @@ return function(META)
 		local scope = self:GetScope()
 
 		if self:IsInUncertainLoop(scope) and tbl:GetCreationScope() then
-			if (val.Type == "number" and val:IsDontWiden()) or scope:Contains(tbl:GetCreationScope()) then
+			if
+				(
+					val.Type == "number" and
+					val:IsDontWiden()
+				) or
+				scope:Contains(tbl:GetCreationScope())
+			then
 				val = val:Copy()
 			else
 				val = val:Widen()
@@ -150,14 +154,15 @@ return function(META)
 				if not upvalue then return end
 
 				local val = upvalue:GetValue()
-
 				local truthy_falsy = upvalue:GetTruthyFalsyUnion()
+
 				if truthy_falsy then
 					self:TrackUpvalueUnion(upvalue:GetValue(), truthy_falsy.truthy, truthy_falsy.falsy)
 				end
 
 				if val.Type == "union" then
 					local left_right = val:GetLeftRightSource()
+
 					if left_right then
 						self:TrackDependentUpvalues(left_right.left)
 						self:TrackDependentUpvalues(left_right.right)
@@ -261,13 +266,9 @@ return function(META)
 				tbl.tracked_stack = tbl.tracked_stack or {}
 				tbl.tracked_stack[hash] = tbl.tracked_stack[hash] or {}
 
-				if falsy_union then
-					falsy_union:SetParentTable(tbl, key)
-				end
+				if falsy_union then falsy_union:SetParentTable(tbl, key) end
 
-				if truthy_union then
-					truthy_union:SetParentTable(tbl, key)
-				end
+				if truthy_union then truthy_union:SetParentTable(tbl, key) end
 
 				for i = #tbl.tracked_stack[hash], 1, -1 do
 					local tracked = tbl.tracked_stack[hash][i]

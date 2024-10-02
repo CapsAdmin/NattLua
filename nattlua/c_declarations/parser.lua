@@ -1,6 +1,6 @@
 local META = loadfile("nattlua/parser.lua")()
-
 local old_new = META.New
+
 function META.New(...)
 	local self = old_new(...)
 	self.FFI_DECLARATION_PARSER = true

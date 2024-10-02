@@ -181,6 +181,7 @@ if total > 0 then
 		" seconds\n"
 	)
 end
+
 --[=[
 if ALL_NODES then
 
@@ -240,5 +241,4 @@ if ALL_NODES then
 	lua = lua .. "}\n"
 	print(lua)
 end
-]=]
-os.exit() -- no need to wait for gc to complete
+]=] os.exit() -- no need to wait for gc to complete

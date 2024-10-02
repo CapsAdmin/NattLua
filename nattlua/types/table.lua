@@ -283,12 +283,11 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 
 	if b.Type == "table" then
 		if a == b then return true, "same type" end
-		
+
 		local ok, err = a:IsSameUniqueType(b)
 
 		if not ok then return ok, err end
 	end
-
 
 	if b.Type == "table" then
 		if b:GetMetaTable() and b:GetMetaTable() == a then
@@ -313,7 +312,10 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 			not a:GetData()[1] and
 			(
 				not a:GetContract() or
-				(a:GetContract():GetData() and not a:GetContract():GetData()[1])
+				(
+					a:GetContract():GetData() and
+					not a:GetContract():GetData()[1]
+				)
 			)
 		then
 			if can_be_empty then
@@ -366,8 +368,7 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 					(
 						keyval.val.Type == "symbol" and
 						keyval.val:IsNil()
-					)
-					or
+					) or
 					(
 						keyval.val.Type == "union" and
 						keyval.val:IsNil()
@@ -388,9 +389,17 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 end
 
 local function is_literal(obj)
-	return ((obj.Type == "number" and obj.Max == false) or obj.Type == "string") and obj.Data ~= false
+	return (
+			(
+				obj.Type == "number" and
+				obj.Max == false
+			)
+			or
+			obj.Type == "string"
+		)
+		and
+		obj.Data ~= false
 end
-
 
 local function AddKey(self, keyval, key, val)
 	if not keyval then

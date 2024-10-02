@@ -538,7 +538,7 @@ end
 
 analyzer function getmetatable(tbl: Table)
 	if tbl.Type ~= "table" then return nil end
-	 
+
 	local meta = tbl:GetMetaTable()
 
 	if meta then

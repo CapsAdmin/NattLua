@@ -183,7 +183,6 @@ function cparser.new(cdecl, ...)
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local vars, typs = analyze(cdecl:GetData(), "ffinew", env, analyzer, ...)
 	local ctype = extract_anonymous_type(vars)
-
 	return ctype
 end
 

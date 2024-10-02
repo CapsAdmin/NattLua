@@ -223,7 +223,6 @@ function META:Analyze(analyzer, ...)
 	local ok, res = xpcall(function()
 		local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))
 		analyzer:AnalyzeUnreachableCode()
-
 		return res
 	end, function(msg)
 		return traceback(self, analyzer, msg)

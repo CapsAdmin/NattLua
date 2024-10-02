@@ -9,7 +9,6 @@ return function(alloc--[[#: ref (function=()>({[string] = any}))]], size--[[#: n
 	end
 
 	local pool = table_new(size, 0)--[[# as {[number] = nil | return_type<|alloc|>[1]}]]
-
 	local i = 1
 
 	for i = 1, size do
@@ -19,6 +18,7 @@ return function(alloc--[[#: ref (function=()>({[string] = any}))]], size--[[#: n
 	local function refill()
 		i = 1
 		table_clear(pool)
+
 		for i = 1, size do
 			pool[i] = table_new(0, records)
 		end

@@ -39,7 +39,7 @@ function META:Copy()
 end
 
 function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
-	if false --[[#as true]] then return false end
+	if false--[[# as true]] then return false end
 
 	if B.Type == "tuple" then B = B:Get(1) end
 

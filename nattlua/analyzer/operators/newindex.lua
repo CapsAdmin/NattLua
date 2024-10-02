@@ -122,7 +122,14 @@ return {
 			then
 				local arg = val:GetInputSignature():Get(1)
 
-				if arg and arg.Type == "table" and not arg:GetContract() and not arg.Self and not self:IsTypesystem() then
+				if
+					arg and
+					arg.Type == "table" and
+					not arg:GetContract()
+					and
+					not arg.Self and
+					not self:IsTypesystem()
+				then
 					val:SetCalled(true)
 					val = val:Copy()
 					val:SetCalled(false)

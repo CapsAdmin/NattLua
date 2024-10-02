@@ -16,9 +16,7 @@ analyzer function ReturnIfNonLiteral(func: any)
 end
 
 analyzer function NonLiteral(obj: any)
-	if obj.Type == "symbol" and obj:IsBoolean() then
-		return types.Boolean()
-	end
+	if obj.Type == "symbol" and obj:IsBoolean() then return types.Boolean() end
 
 	if obj.Type == "number" or obj.Type == "string" then return obj:Widen() end
 
@@ -130,8 +128,8 @@ analyzer function copy(obj: any)
 	local copy = obj:Copy()
 	copy:ClearMutations()
 
-	if copy.Type == "table" then 
-		copy:SetCreationScope(false) 
+	if copy.Type == "table" then
+		copy:SetCreationScope(false)
 		copy.PotentialSelf = false
 	end
 

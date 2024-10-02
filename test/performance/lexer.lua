@@ -9,11 +9,8 @@ local lua_code = assert(
 	)
 )
 local lexer = Lexer(Code(lua_code, "10mb.lua"))
-
 local profiler = require("test.helpers.profiler")
-
 profiler.Start()
-
 
 do
 	-- should take around 1.2 seconds
