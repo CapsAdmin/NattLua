@@ -478,7 +478,7 @@ function META:ParseArrayIndex()
 		end
 	end
 
-	if not out[1] then return nil end
+	if not out[1] then return false end
 
 	return out
 end

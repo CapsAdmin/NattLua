@@ -1,4 +1,3 @@
-local META = loadfile("nattlua/parser/base.lua")()
 local Code = require("nattlua.code").New
 local Lexer = require("nattlua.lexer").New
 local Emitter = require("nattlua.emitter").New
@@ -16,6 +15,12 @@ local io = _G.io
 --[[#local type { Token, TokenType } = import("~/nattlua/token.lua")]]
 
 --[[#local type { ExpressionKind, StatementKind, statement, expression } = import("./parser/nodes.nlua")]]
+
+local META = loadfile("nattlua/parser/base.lua")()
+assert(loadfile("nattlua/parser/expressions.lua"))(META)
+assert(loadfile("nattlua/parser/statements.lua"))(META)
+assert(loadfile("nattlua/parser/teal.lua"))(META)
+assert(loadfile("nattlua/parser/lsx.lua"))(META)
 
 function META:ParseIdentifier(expect_type--[[#: nil | boolean]])
 	if not self:IsTokenType("letter") and not self:IsTokenValue("...") then
@@ -221,11 +226,6 @@ function META:ParseAnalyzerFunctionBody(
 
 	return node
 end
-
-assert(loadfile("nattlua/parser/expressions.lua"))(META)
-assert(loadfile("nattlua/parser/statements.lua"))(META)
-assert(loadfile("nattlua/parser/teal.lua"))(META)
-assert(loadfile("nattlua/parser/lsx.lua"))(META)
 
 function META:LexString(str--[[#: string]], config--[[#: nil | any]])
 	config = config or {}

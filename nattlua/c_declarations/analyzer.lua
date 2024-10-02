@@ -255,7 +255,22 @@ function META:AnalyzeRoot(ast, vars, typs)
 end
 
 function META.New()
-	local self = setmetatable({context_values = {}}, META)
+	local self = setmetatable(
+		{
+			context_values = {},
+			type_table = false,
+			vars_table = false,
+			analyzer = false,
+			context_ref = false,
+			super_hack = false,
+			env = false,
+			curent_nodes = false,
+			dollar_signs_vars = false,
+			dollar_signs_typs = false,
+			current_nodes = false,
+		},
+		META
+	)
 
 	for i, v in ipairs(META.OnInitialize) do
 		v(self)

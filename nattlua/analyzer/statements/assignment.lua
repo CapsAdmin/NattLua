@@ -59,7 +59,7 @@ return {
 			for right_pos, exp_val in ipairs(statement.right) do
 				-- when "self" is looked up in the typesystem in analyzer:AnalyzeExpression, we refer left[right_pos]
 				-- use context?
-				self.left_assigned = left[right_pos]
+				self.left_assigned = left[right_pos] or false
 				local obj = self:Assert(self:AnalyzeExpression(exp_val))
 				self:ClearTracked()
 

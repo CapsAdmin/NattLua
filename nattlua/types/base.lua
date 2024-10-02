@@ -6,15 +6,29 @@ local type_errors = require("nattlua.types.error_messages")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("base")
 --[[#type META.Type = string]]
---[[#type META.@Self = {}]]
+--[[#type META.@Self = {
+	suppress = any,
+	Self = any,
+	potential_self = any,
+	from_for_loop = any,
+	parent_table = any,
+	dont_widen = any,
+	truthy_union = any,
+	falsy_union = any,
+	right_source = any,
+	left_source = any,
+	Name = string | false,
+	parent = any | false,
+	Parent = any,
+	is_enum = any,
+	UniqueID = any,
+}]]
 --[[#local type TBaseType = META.@Self]]
---[[#type TBaseType.@Name = "TBaseType"]]
+
+--[[#type META.TBaseType = TBaseType]] --copy<|META|>.@Self
+
 --[[#type META.Type = string]]
---[[#type TBaseType.Name = string | nil]]
---[[#type TBaseType.parent = TBaseType | nil]]
---[[#type TBaseType.truthy_union = TBaseType | nil]]
---[[#type TBaseType.falsy_union = TBaseType | nil]]
-META:GetSet("AnalyzerEnvironment", nil--[[# as nil | "runtime" | "typesystem"]])
+META:GetSet("AnalyzerEnvironment", false--[[# as false | "runtime" | "typesystem"]])
 
 function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]]) --error("nyi " .. a.Type .. " == " .. b.Type)
 end
@@ -28,19 +42,14 @@ META:GetSet("Data", nil--[[# as nil | any]])
 function META:GetLuaType()
 	local contract = self:GetContract()
 
-	if
-		contract and
-		contract.TypeOverride and
-		contract.TypeOverride.Type == "string" and
-		contract.TypeOverride.Data
-	then
-		return contract.TypeOverride.Data
+	if contract then
+		local to = contract.TypeOverride
+
+		if to and to.Type == "string" and to.Data then return to.Data end
 	end
 
-	return self.TypeOverride and
-		self.TypeOverride.Type == "string" and
-		self.TypeOverride.Data or
-		self.Type
+	local to = self.TypeOverride
+	return to and to.Type == "string" and to.Data or self.Type
 end
 
 do
@@ -90,19 +99,19 @@ do
 end
 
 do -- token, expression and statement association
-	META:GetSet("Upvalue", nil--[[# as nil | any]])
-	META:GetSet("Node", nil--[[# as nil | any]])
+	META:GetSet("Upvalue", false--[[# as false | any]])
+	META:GetSet("Node", false--[[# as false | any]])
 
-	function META:SetNode(node--[[#: nil | any]], is_local--[[#: nil | boolean]])
+	function META:SetNode(node--[[#: false | any]], is_local--[[#: nil | boolean]])
 		self.Node = node
 		return self
 	end
 end
 
 do -- comes from tbl.@Name = "my name"
-	META:GetSet("Name", nil--[[# as nil | TBaseType]])
+	META:GetSet("Name", false--[[# as false | TBaseType]])
 
-	function META:SetName(name--[[#: TBaseType | nil]])
+	function META:SetName(name--[[#: TBaseType | false]])
 		if name then assert(name:IsLiteral()) end
 
 		self.Name = name
@@ -110,9 +119,9 @@ do -- comes from tbl.@Name = "my name"
 end
 
 do -- comes from tbl.@TypeOverride = "my name"
-	META:GetSet("TypeOverride", nil--[[# as nil | TBaseType]])
+	META:GetSet("TypeOverride", false--[[# as false | TBaseType]])
 
-	function META:SetTypeOverride(name--[[#: nil | TBaseType]])
+	function META:SetTypeOverride(name--[[#: false | TBaseType]])
 		self.TypeOverride = name
 	end
 end
@@ -146,13 +155,13 @@ do -- operators
 end
 
 do
-	META:GetSet("Parent", nil--[[# as TBaseType | nil]])
+	META:GetSet("Parent", false--[[# as TBaseType | false]])
 
-	function META:SetParent(parent--[[#: TBaseType | nil]])
+	function META:SetParent(parent--[[#: TBaseType | false | nil]])
 		if parent then
 			if parent ~= self then self.Parent = parent end
 		else
-			self.Parent = nil
+			self.Parent = false
 		end
 	end
 
@@ -176,11 +185,11 @@ do -- contract
 		self:SetContract(self:GetContract() or self:Copy())
 	end
 
-	META:GetSet("Contract", nil--[[# as TBaseType | nil]])
+	META:GetSet("Contract", false--[[# as TBaseType | false]])
 end
 
 do
-	META:GetSet("MetaTable", nil--[[# as TBaseType | nil]])
+	META:GetSet("MetaTable", false--[[# as TBaseType | false]])
 
 	function META:GetMetaTable()
 		local contract = self:GetContract()
@@ -201,8 +210,36 @@ function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[
 end
 
 function META.New()
-	return setmetatable({}--[[# as META.@Self]], META)
+	return setmetatable(
+		{
+			suppress = false,
+			Self = false,
+			potential_self = false,
+			from_for_loop = false,
+			parent_table = false,
+			dont_widen = false,
+			truthy_union = false,
+			right_source = false,
+			left_source = false,
+			TypeOverride = false,
+			Falsy = false,
+			Truthy = false,
+			falsy_union = false,
+			right_source = false,
+			Data = nil,
+            Name = false,
+            parent = false,
+            AnalyzerEnvironment = false,
+            Upvalue = false,
+            Node = false,
+            ReferenceType = false,
+            Parent = false,
+            Contract = false,
+            MetaTable = false,
+			is_enum = false,
+			UniqueID = false,
+		},
+		META
+	)
 end
-
---[[#type META.TBaseType = any]] --copy<|META|>.@Self
 return META

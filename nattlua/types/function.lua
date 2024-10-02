@@ -222,6 +222,17 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			InputSignature = input,
 			OutputSignature = output,
 			suppress = false,
+			potential_self = false,
+			Self = false,
+			truthy_union = false,
+			falsy_union = false,
+			scope = false,
+			from_for_loop = false,
+			right_source = false,
+			left_source = false,
+			recursively_called = false,
+			dont_widen = false,
+			UniqueID = false,
 		},
 		META
 	)

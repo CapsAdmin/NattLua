@@ -29,6 +29,7 @@ local META = class.CreateTemplate("lexer")
 --[[#type META.@Self = {
 	Code = Code,
 	Position = number,
+	comment_escape = false | string,
 }]]
 --[[#local type Lexer = META.@Self]]
 
@@ -56,7 +57,7 @@ function META:ReadByte()--[[#: number]]
 end
 
 function META:ResetState()
-	self.Position = 1
+	self.Position = 1 --[[# as  number]]
 end
 
 function META:Advance(len--[[#: number]])
@@ -189,7 +190,7 @@ do
 
 		local whitespace = {token}
 		local whitespace_i = 2
-		local potential_idiv = nil
+		local potential_idiv = false
 
 		for i = self.Position, self:GetLength() + 1 do
 			local token = self:ReadToken()
@@ -361,7 +362,7 @@ function META:ReadMultilineComment()--[[#: TokenReturnType]]
 	return false
 end
 
-function META.ReadInlineAnalyzerDebugCode(self--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
+function META.ReadInlineAnalyzerDebugCode(self--[[#: Lexer]])--[[#: TokenReturnType]]
 	if not self:IsString("§") then return false end
 
 	self:Advance(#"§")
@@ -383,7 +384,7 @@ function META.ReadInlineAnalyzerDebugCode(self--[[#: Lexer & {comment_escape = s
 	return "analyzer_debug_code"
 end
 
-function META.ReadInlineParserDebugCode(self--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
+function META.ReadInlineParserDebugCode(self--[[#: Lexer]])--[[#: TokenReturnType]]
 	if not self:IsString("£") then return false end
 
 	self:Advance(#"£")
@@ -668,7 +669,7 @@ function META:ReadSymbol()--[[#: TokenReturnType]]
 	return false
 end
 
-function META.ReadCommentEscape(self--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
+function META.ReadCommentEscape(self--[[#: Lexer]])--[[#: TokenReturnType]]
 	if self:IsString("--[[#") then
 		self:Advance(5)
 		self.comment_escape = "]]"
@@ -682,10 +683,10 @@ function META.ReadCommentEscape(self--[[#: Lexer & {comment_escape = string | ni
 	return false
 end
 
-function META.ReadRemainingCommentEscape(self--[[#: Lexer & {comment_escape = string | nil}]])--[[#: TokenReturnType]]
+function META.ReadRemainingCommentEscape(self--[[#: Lexer]])--[[#: TokenReturnType]]
 	if self.comment_escape and self:IsString(self.comment_escape--[[# as string]]) then
-		self:Advance(#self.comment_escape--[[# as string]])
-		self.comment_escape = nil
+		self:Advance(#(self.comment_escape--[[# as string]]))
+		self.comment_escape = false
 		return "comment_escape"
 	end
 
@@ -726,6 +727,7 @@ function META.New(code--[[#: Code]])
 	local self = setmetatable({
 		Code = code,
 		Position = 1,
+		comment_escape = false,
 	}, META)
 	self:ResetState()
 	return self

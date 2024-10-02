@@ -299,13 +299,11 @@ analyzer function loadfile(path: string)
 end
 
 analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
-	analyzer:Assert(tbl:Set(key, val, true))
+	analyzer:Assert(analyzer:NewIndexOperator(tbl, key, val, true))
 end
 
 analyzer function rawget(tbl: {[any] = any} | {}, key: any)
-	local t, err = tbl:Get(key, true)
-
-	if t then return t end
+	return analyzer:Assert(analyzer:IndexOperator(tbl, key, true))
 end
 
 analyzer function assert(obj: any, msg: string | nil, level: number | nil)

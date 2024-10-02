@@ -45,7 +45,7 @@ return {
 					end
 				end
 
-				self.current_if_statement = nil
+				self.current_if_statement = false
 				prev_expression = obj
 
 				if obj:IsTruthy() then

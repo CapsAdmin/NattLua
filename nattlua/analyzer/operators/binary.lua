@@ -286,7 +286,7 @@ local function Binary(self, node, l, r, op)
 			local type_checked = self.type_checked
 
 			-- the return value from type(x)
-			if type_checked then self.type_checked = nil end
+			if type_checked then self.type_checked = false end
 
 			for _, l in ipairs(l:GetData()) do
 				for _, r in ipairs(r:GetData()) do

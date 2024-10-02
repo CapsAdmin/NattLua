@@ -128,15 +128,15 @@ if normalized:find("/nattlua/", nil, true) then
 	then
 		run_lua("test/performance/analyzer.lua")
 	elseif normalized:find("c_declarations/main.lua", nil, true) and not has_test_focus() then
-		run_lua("test/run.lua", "test/tests/c_declarations/cdef.nlua")
-		run_lua("test/run.lua", "test/tests/c_declarations.lua")
+		run_lua("test/run.lua", "test/tests/nattlua/c_declarations/cdef.nlua")
+		run_lua("test/run.lua", "test/tests/nattlua/c_declarations/parsing.lua")
 		run_lua("test/run.lua", "test/tests/nattlua/analyzer/typed_ffi.lua")
 		run_lua("examples/projects/luajit/build.lua", path)
 		run_lua("examples/projects/love2d/nlconfig.lua", path)
 	elseif normalized:find("c_declarations/analyzer", nil, true) and not has_test_focus() then
-		run_lua("test/run.lua", "test/tests/c_declarations/cdef.nlua")
+		run_lua("test/run.lua", "test/tests/nattlua/c_declarations/cdef.nlua")
 	elseif normalized:find("c_declarations", nil, true) and not has_test_focus() then
-		run_lua("test/run.lua", "test/tests/c_declarations.lua")
+		run_lua("test/run.lua", "test/tests/nattlua/c_declarations/parsing.lua")
 	elseif normalized:find("other/coverage", nil, true) then
 		run_lua("test/run.lua", "test/tests/coverage.lua")
 	elseif normalized:find("nattlua/editor_helper/editor.lua", nil, true) then

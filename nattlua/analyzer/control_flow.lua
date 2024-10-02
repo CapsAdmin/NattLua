@@ -54,7 +54,7 @@ return function(META)
 	end
 
 	function META:ClearBreak()
-		self.break_out_scope = nil
+		self.break_out_scope = false
 	end
 
 	function META:AnalyzeStatementsAndCollectOutputSignatures(statement)

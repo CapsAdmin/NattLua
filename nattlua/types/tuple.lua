@@ -14,13 +14,11 @@ local ipairs = _G.ipairs
 local type = _G.type
 local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
+META.Type = "tuple"
 --[[#type META.@Name = "TTuple"]]
 --[[#type TTuple = META.@Self]]
---[[#type TTuple.Remainder = nil | TTuple]]
---[[#type TTuple.Repeat = nil | number]]
---[[#type TTuple.suppress = boolean]]
+
 META:GetSet("Data", nil--[[# as List<|TBaseType|>]])
-META.Type = "tuple"
 META:GetSet("Unpackable", false--[[# as boolean]])
 
 function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]])
@@ -477,6 +475,27 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			ReferenceType = false,
 			Unpackable = false,
 			suppress = false,
+			Remainder = false,
+			Repeat = false,
+			truthy_union = false,
+			falsy_union = false,
+			parent_table = false,
+
+			from_for_loop = false,
+			Self = false,
+			potential_self = false,
+			dont_widen = false,
+			left_source = false,
+			right_source = false,
+			Name = false,
+			parent = false,
+			TypeOverride = false,
+			AnalyzerEnvironment = false,
+			Upvalue = false,
+			Node = false,
+			Parent = false,
+			Contract = false,
+			MetaTable = false,
 		},
 		META
 	)

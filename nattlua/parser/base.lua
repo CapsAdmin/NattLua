@@ -8,7 +8,7 @@ local type { Token, TokenType } = import("~/nattlua/token.lua")]]
 --[[#local type { Code } = import<|"~/nattlua/code.lua"|>]]
 
 --[[#local type NodeType = "expression" | "statement"]]
-local CreateNode = require("nattlua.parser.node").New
+local NewNode = require("nattlua.parser.node").New
 local ipairs = _G.ipairs
 local pairs = _G.pairs
 local assert = _G.assert
@@ -17,6 +17,7 @@ local type = _G.type
 local table = _G.table
 local math_min = math.min
 local class = require("nattlua.other.class")
+local Token = require("nattlua.token").New
 local META = class.CreateTemplate("parser")
 META.OnInitialize = {}
 --[[#type META.@Self = {
@@ -25,13 +26,24 @@ META.OnInitialize = {}
 	Code = Code,
 	tokens = List<|Token|>,
 	current_token_index = number,
-	OnPreCreateNode = nil | function=(self, Node)>(nil),
-	OnParsedNode = nil | function=(self, Node)>(nil),
-	suppress_on_parsed_node = nil | {parent = Node, node_stack = List<|Node|>},
+	suppress_on_parsed_node = false | {parent = Node, node_stack = List<|Node|>},
+	RootStatement = false | Node,
+	TealCompat = any,
+	dont_hoist_next_import = any,
+	imported = any,
+	statement_count = any,
+	dollar_signs = any,
+	CDECL_PARSING_MODE = any,
+	value = any,
+	context_values = any,
 }]]
 --[[#type META.@Name = "Parser"]]
 require("nattlua.other.context_mixin")(META)
 --[[#local type Parser = META.@Self]]
+
+function META:OnPreCreateNode(node--[[#: Node]]) end
+
+function META:OnParsedNode(node--[[#: Node]]) end
 
 function META.New(
 	tokens--[[#: List<|Token|>]],
@@ -47,6 +59,16 @@ function META.New(
 		Code = code,
 		current_token_index = 1,
 		tokens = tokens,
+		suppress_on_parsed_node = false,
+		RootStatement = false,
+		TealCompat = false,
+		dont_hoist_next_import = false,
+		--FFI_DECLARATION_PARSER = false,
+		imported = false,
+		statement_count = false,
+		dollar_signs = false,
+		CDECL_PARSING_MODE = false,
+		value = false,
 	}
 
 	for _, func in ipairs(META.OnInitialize) do
@@ -76,7 +98,7 @@ do
 	end
 
 	function META:GetParentNode(level)
-		return self:GetContextValue("parent_node", level)--[[# as Node | nil]]
+		return self:GetContextValue("parent_node", level) or false--[[# as Node | false]]
 	end
 
 	function META:PopParentNode()
@@ -91,20 +113,16 @@ function META:StartNode(
 )--[[#: ref Node]]
 	--[[#local type T = node_type == "statement" and statement[kind] or expression[kind] ]]
 	local code_start = start_node and start_node.code_start or assert(self:GetToken()).start
-	local node = CreateNode(
-		{
-			type = node_type,
-			kind = kind,
-			environment = self:GetCurrentParserEnvironment(),
-			Code = self.Code,
-			code_start = code_start,
-			code_stop = code_start,
-			parent = self:GetParentNode(),
-		}
-	)
-
-	if self.OnPreCreateNode then self:OnPreCreateNode(node) end
-
+	local node = NewNode(
+		node_type,
+		kind,
+		self:GetCurrentParserEnvironment(),
+		self.Code,
+		code_start,
+		code_start,
+		self:GetParentNode()
+	)--[[# as T]]
+	self:OnPreCreateNode(node)
 	self:PushParentNode(node)
 	return node--[[# as T]]
 end
@@ -121,16 +139,15 @@ function META:EndNode(node--[[#: Node]])
 	end
 
 	self:PopParentNode()
-
-	if self.OnParsedNode then self:OnParsedNode(node) end
+	self:OnParsedNode(node)
 
 	if self.config.on_parsed_node then
 		if
-			self.suppress_on_parsed_node and
 			node.type == "expression" and
+			self.suppress_on_parsed_node and
 			self.suppress_on_parsed_node.parent == self:GetParentNode()
 		then
-			table.insert(self.suppress_on_parsed_node.node_stack, node)
+			table.insert((self.suppress_on_parsed_node--[[# as any]]).node_stack, node)
 		else
 			local new_node = self.config.on_parsed_node(self, node)
 
@@ -164,7 +181,7 @@ function META:ReRunOnNode(node_stack--[[#: List<|Node|>]])
 		end
 	end
 
-	self.suppress_on_parsed_node = nil
+	self.suppress_on_parsed_node = false
 end
 
 function META:Error(
@@ -320,9 +337,7 @@ do
 	end
 
 	function META:NewToken(type--[[#: TokenType]], value--[[#: string]])
-		local tk = {}
-		tk.type = type
-		tk.is_whitespace = false
+		local tk = Token(type, false, 0, 0)
 		tk.value = value
 		return tk
 	end
@@ -402,6 +417,8 @@ function META:ParseMultipleValues(
 
 		(node.tokens--[[# as any]])[","] = self:ExpectTokenValue(",")
 	end
+
+	if #out > 1 then assert(out[#out - 1].tokens[","]) end
 
 	return out
 end

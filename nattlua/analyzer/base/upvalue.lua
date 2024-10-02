@@ -46,11 +46,11 @@ do
 	end
 
 	function META:ClearMutations()
-		self.Mutations = nil
+		self.Mutations = false
 	end
 
 	function META:HasMutations()
-		return self.Mutations ~= nil
+		return self.Mutations ~= false
 	end
 
 	function META:ClearTrackedMutations()
@@ -67,7 +67,7 @@ end
 local id = 0
 
 function META.New(obj)
-	local self = setmetatable({}, META)
+	local self = setmetatable({tracked_stack = false}, META)
 	id = id + 1
 	self:SetValue(obj)
 	return self

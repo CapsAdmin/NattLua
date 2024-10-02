@@ -221,7 +221,7 @@ function META:Get(key--[[#: TBaseType]])
 
 	for i, obj in ipairs(self.Data) do
 		local ok, reason = key:IsSubsetOf(obj)
-
+		
 		if ok then return obj end
 
 		errors = errors or {}
@@ -324,6 +324,8 @@ function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 end
 
 function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
+	if a.suppress then return true, "suppressed" end
+
 	if b.Type == "tuple" then b = b:Get(1) end
 
 	if b.Type == "any" then return true end
@@ -337,13 +339,16 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
 	end
 
 	for _, a_val in ipairs(a.Data) do
+		a.suppress = true
 		local b_val, reason = b:Get(a_val)
-
+		a.suppress = false
 		if not b_val then
 			return false, type_errors.because(type_errors.table_index(b, a_val), reason)
 		end
 
+		a.suppress = true
 		local ok, reason = a_val:IsSubsetOf(b_val)
+		a.suppress = false
 
 		if not ok then
 			return false, type_errors.because(type_errors.subset(a_val, b_val), reason)
@@ -413,6 +418,18 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			Truthy = false,
 			ReferenceType = false,
 			suppress = false,
+			right_source = false,
+			left_source = false,
+			falsy_union = false,
+			truthy_union = false,
+			from_for_loop = false,
+			mutations = false,
+			UniqueID = false,
+			parent_table = false,
+			parent_key = false,
+			dont_widen = false,
+			Self = false,
+			is_enum = false,
 		},
 		META
 	)

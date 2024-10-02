@@ -12,13 +12,17 @@ local setmetatable = _G.setmetatable
 	value = string,
 	start = number,
 	stop = number,
-	is_whitespace = boolean | nil,
-	string_value = nil | string,
-	inferred_type = nil | any,
+	is_whitespace = boolean,
+	string_value = false | string,
+	inferred_type = false | any,
 	inferred_types = List<|any|>,
-	potential_idiv = nil | true,
-	parent = nil | any,
-	whitespace = false | nil | List<|CurrentType<|"table", 1|>|>,
+	potential_idiv = boolean,
+	parent = any,
+	is_identifier = boolean,
+	kind = any,
+	whitespace = false | List<|CurrentType<|"table", 1|>|>,
+	idiv_resolved = any,
+	DONT_WRITE = any,
 }]]
 --[[#type META.Token = META.@Self]]
 
@@ -274,7 +278,7 @@ end
 
 local new_token = table_pool(
 	function()
-		local x = {
+		return {
 			type = "unknown",
 			value = "",
 			is_whitespace = false,
@@ -282,8 +286,11 @@ local new_token = table_pool(
 			start = 0,
 			stop = 0,
 			inferred_types = {},
+			potential_idiv = false,
+			parent = false,
+			is_identifier = false,
+			string_value = false,
 		}--[[# as META.@Self]]
-		return x
 	end,
 	jit and jit.arch == "arm64" and 100000 or 3105585
 )
@@ -295,10 +302,20 @@ function META.New(
 	stop--[[#: number]]
 )--[[#: META.@Self]]
 	local tk = new_token()
+	tk.value = ""
+	tk.whitespace = {}
+	tk.potential_idiv = false
 	tk.type = type
 	tk.is_whitespace = is_whitespace
 	tk.start = start
 	tk.stop = stop
+	tk.parent = false
+	tk.string_value = false
+	tk.is_identifier = false
+	tk.kind = false
+	tk.inferred_types = {}
+	tk.idiv_resolved = false
+	tk.DONT_WRITE = false
 	setmetatable(tk, META)
 	return tk
 end

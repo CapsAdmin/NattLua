@@ -28,8 +28,8 @@ end
 function META:__tostring()
 	local str = ""
 
-	if self.parent_name then
-		str = str .. "[" .. self.parent_name .. ":" .. self.parent_line .. "] "
+	if self.ParentSourceName then
+		str = str .. "[" .. self.ParentSourceName .. ":" .. self.ParentSourceLine .. "] "
 	end
 
 	local lua_code = self.Code:GetString()
@@ -145,9 +145,7 @@ local traceback = function(self, obj, msg)
 end
 
 function META:Lex()
-	local lexer = self.Lexer(self:GetCode())
-	lexer.name = self.name
-	self.lexer = lexer
+	local lexer = Lexer(self.Code)
 	lexer.OnError = function(lexer, code, msg, start, stop, ...)
 		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, ...)
 	end
@@ -170,18 +168,13 @@ function META:Parse()
 		if not ok then return ok, err end
 	end
 
-	local parser = self.Parser(self.Tokens, self.Code, self.config)
-	self.parser = parser
+	local parser = Parser(self.Tokens, self.Code, self.Config)
 	parser.OnError = function(parser, code, msg, start, stop, ...)
 		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, ...)
 	end
-
-	if self.OnPreCreateNode then
-		parser.OnPreCreateNode = function(_, node)
-			self:OnPreCreateNode(node)
-		end
+	parser.OnPreCreateNode = function(_, node)
+		self:OnPreCreateNode(node)
 	end
-
 	local ok, res = xpcall(function()
 		return parser:ParseRootNode()
 	end, function(msg)
@@ -210,9 +203,9 @@ function META:Analyze(analyzer, ...)
 		end
 	end
 
-	local analyzer = analyzer or self.Analyzer(self.config)
-	self.analyzer = analyzer
+	analyzer = analyzer or Analyzer(self.Config)
 	analyzer.compiler = self
+	self.analyzer = analyzer
 	analyzer.OnDiagnostic = function(analyzer, ...)
 		self:OnDiagnostic(...)
 	end
@@ -220,7 +213,7 @@ function META:Analyze(analyzer, ...)
 	if self.default_environment then
 		analyzer:SetDefaultEnvironment(self.default_environment["runtime"], "runtime")
 		analyzer:SetDefaultEnvironment(self.default_environment["typesystem"], "typesystem")
-	elseif self.default_environment ~= false then
+	else
 		local runtime_env, typesystem_env = BuildBaseEnvironment()
 		analyzer:SetDefaultEnvironment(runtime_env, "runtime")
 		analyzer:SetDefaultEnvironment(typesystem_env, "typesystem")
@@ -230,8 +223,6 @@ function META:Analyze(analyzer, ...)
 	local ok, res = xpcall(function()
 		local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))
 		analyzer:AnalyzeUnreachableCode()
-
-		if analyzer.OnFinish then analyzer:OnFinish() end
 
 		return res
 	end, function(msg)
@@ -251,10 +242,11 @@ function META:Emit(cfg)
 		if not ok then return ok, err end
 	end
 
-	local emitter = self.Emitter(cfg or self.config)
-	self.emitter = emitter
+	local emitter = Emitter(cfg or self.Config)
 	return emitter:BuildCode(self.SyntaxTree)
 end
+
+function META:OnPreCreateNode(node) end
 
 function META.New(
 	lua_code--[[#: string]],
@@ -269,13 +261,15 @@ function META.New(
 	return setmetatable(
 		{
 			Code = Code(lua_code, name),
-			parent_line = parent_line,
-			parent_name = parent_name,
-			config = config,
-			Lexer = Lexer,
-			Parser = Parser,
-			Analyzer = Analyzer,
-			Emitter = Emitter,
+			ParentSourceLine = parent_line,
+			ParentSourceName = parent_name,
+			Config = config or false,
+			Tokens = false,
+			SyntaxTree = false,
+			default_environment = false,
+			analyzer = false,
+			AnalyzedResult = false,
+			debug = false,
 		},
 		META
 	)

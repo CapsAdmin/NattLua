@@ -199,9 +199,7 @@ do -- internal
 			end
 		end
 
-		if self.TranslateToken then
-			translate = self:TranslateToken(node) or translate
-		end
+		translate = self:TranslateToken(node) or translate
 
 		if translate then
 			if type(translate) == "table" then
@@ -2081,16 +2079,41 @@ do
 	end
 end
 
-function META.New(config--[[#: TranspilerConfig]])
-	local self = setmetatable({}, META)
-	self.config = config or {}
-	self.config.max_argument_length = self.config.max_argument_length or 5
-	self.config.max_line_length = self.config.max_line_length or 80
+function META:TranslateToken(token)
+	return nil
+end
 
-	if self.config.comment_type_annotations == nil then
-		self.config.comment_type_annotations = true
+function META.New(config--[[#: TranspilerConfig]])
+	config = config or {}
+	config.max_argument_length = config.max_argument_length or 5
+	config.max_line_length = config.max_line_length or 80
+
+	if config.comment_type_annotations == nil then
+		config.comment_type_annotations = true
 	end
 
+	local self = setmetatable(
+		{
+			level = 0,
+			out = {},
+			i = 1,
+			config = config,
+			last_non_space_index = false,
+			force_newlines = false,
+			during_comment_type = false,
+			during_comment_type = false,
+			is_call_expression = false,
+			inside_call_expression = false,
+			OnEmitStatement = false,
+			loop_nodes = false,
+			last_indent_index = false,
+			last_newline_index = false,
+			tracking_indents = false,
+			toggled_indents = false,
+			done = false,
+		},
+		META
+	)
 	self:Initialize()
 	return self
 end

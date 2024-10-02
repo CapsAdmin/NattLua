@@ -148,7 +148,7 @@ do
 
 			local r = self:AnalyzeExpression(node.right)
 
-			if node.value.value == "not" then self.inverted_index_tracking = nil end
+			if node.value.value == "not" then self.inverted_index_tracking = false end
 
 			self.current_expression = node
 			return self:Assert(Prefix(self, node, r))
@@ -216,6 +216,8 @@ do
 	end
 end
 
+function META:OnDiagnostic() end
+
 function META.New(config)
 	config = config or {}
 
@@ -223,12 +225,50 @@ function META.New(config)
 		config.should_crawl_untyped_functions = true
 	end
 
-	local self = setmetatable({config = config}, META)
+	local init = {
+		config = config,
+		compiler = false,
+		processing_deferred_calls = false,
+		SuppressDiagnostics = false,
+		expect_diagnostic = false,
+		diagnostics_map = false,
+		type_checked = false,
+		max_iterations = false,
+		break_out_scope = false,
+		_continue_ = false,
+		tracked_tables = false,
+		inverted_index_tracking = false,
+		current_if_statement = false,
+		deferred_calls = false,
+		function_scope = false,
+		call_stack = false,
+		self_arg_stack = false,
+		tracked_upvalues_done = false,
+		tracked_upvalues = false,
+		tracked_tables_done = false,
+		scope = false,
+		current_statement = false,
+		left_assigned = false,
+		current_expression = false,
+		lua_error_thrown = false,
+		max_loop_iterations = false,
+		enable_random_functions = false,
+		yielded_results = false,
+		inverted_index_tracking = false,
+		vars_table = false,
+		type_table = false,
+		analyzer = false,
+		super_hack = false,
+		stem_types = false,
+		TealCompat = false,
+		lua_assert_error_thrown = false,
+	}
 
 	for _, func in ipairs(META.OnInitialize) do
-		func(self)
+		func(init)
 	end
 
+	local self = setmetatable(init, META)
 	self.context_values = {}
 	self.context_ref = {}
 	return self

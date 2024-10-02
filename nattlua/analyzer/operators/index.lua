@@ -7,8 +7,8 @@ local Union = require("nattlua.types.union").Union
 local type_errors = require("nattlua.types.error_messages")
 local ConstString = require("nattlua.types.string").ConstString
 
-local function index_table(analyzer, self, key)
-	if self:GetMetaTable() and not self:HasKey(key) then
+local function index_table(analyzer, self, key, raw)
+	if not raw and self:GetMetaTable() and not self:HasKey(key) then
 		local index = self:GetMetaTable():Get(ConstString("__index"))
 
 		if index then
@@ -157,13 +157,13 @@ end
 
 return {
 	Index = function(META)
-		function META:IndexOperator(obj, key)
+		function META:IndexOperator(obj, key, raw)
 			if obj.Type == "union" then
 				return index_union(self, obj, key)
 			elseif obj.Type == "tuple" then
 				return index_tuple(self, obj, key)
 			elseif obj.Type == "table" then
-				return index_table(self, obj, key)
+				return index_table(self, obj, key, raw)
 			elseif obj.Type == "string" then
 				return index_string(self, obj, key)
 			end

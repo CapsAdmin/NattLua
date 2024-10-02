@@ -373,7 +373,7 @@ local function ParseRecordBody(
 
 		if not node then break end
 
-		if node[1] then
+		if #node > 0 then
 			for _, node in ipairs(node) do
 				table.insert(block.statements, node)
 			end

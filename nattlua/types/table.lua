@@ -762,7 +762,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	copy:CopyInternalsFrom(self)
 	copy.potential_self = self.potential_self
 	copy.mutable = self.mutable
-	copy.mutations = self.mutations
+	copy.mutations = self.mutations or false
 	copy:SetCreationScope(self:GetCreationScope())
 	copy.BaseTable = self.BaseTable
 	copy.UniqueID = self.UniqueID
@@ -985,11 +985,11 @@ do
 	end
 
 	function META:ClearMutations()
-		self.mutations = nil
+		self.mutations = false
 	end
 
 	function META:HasMutations()
-		return self.mutations ~= nil
+		return self.mutations ~= false
 	end
 
 	function META:GetMutatedFromScope(scope, done)
@@ -1039,7 +1039,7 @@ end
 
 do
 	--[[#type TTable.disabled_unique_id = number | nil]]
-	META:GetSet("UniqueID", nil--[[# as nil | number]])
+	META:GetSet("UniqueID", false--[[# as false | number]])
 	local ref = 0
 
 	function META:MakeUnique(b--[[#: boolean]])
@@ -1047,19 +1047,19 @@ do
 			self.UniqueID = ref
 			ref = ref + 1
 		else
-			self.UniqueID = nil
+			self.UniqueID = false
 		end
 
 		return self
 	end
 
 	function META:IsUnique()
-		return self.UniqueID ~= nil
+		return self.UniqueID ~= false
 	end
 
 	function META:DisableUniqueness()
 		self.disabled_unique_id = self.UniqueID
-		self.UniqueID = nil
+		self.UniqueID = false
 	end
 
 	function META:EnableUniqueness()
@@ -1067,7 +1067,9 @@ do
 	end
 
 	function META:GetHash()
-		return self.UniqueID
+		if self.UniqueID ~= false then return self.UniqueID end
+
+		return nil
 	end
 
 	function META.IsSameUniqueType(a--[[#: TTable]], b--[[#: TTable]])
@@ -1093,6 +1095,24 @@ function META.New()
 			Truthy = false,
 			ReferenceType = false,
 			suppress = false,
+			mutations = false,
+			tracked_stack = false,
+			potential_self = false,
+			falsy_union = false,
+			truthy_union = false,
+			mutable = false,
+			string_metatable = false,
+			argument_index = false,
+			size = false,
+			parent_table = false,
+			disabled_unique_id = false,
+			co_func = false,
+			from_for_loop = false,
+			is_enum = false,
+			dont_widen = false,
+			right_source = false,
+			left_source = false,
+			func = false,
 		},
 		META
 	)

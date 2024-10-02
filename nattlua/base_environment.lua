@@ -1,6 +1,7 @@
 local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
 local LStringNoMeta = require("nattlua.types.string").LStringNoMeta
+local Analyzer = require("nattlua.analyzer").New
 
 if not _G.IMPORTS then
 	_G.IMPORTS = setmetatable(
@@ -50,7 +51,7 @@ return {
 		local typesystem_env = Table()
 		typesystem_env.string_metatable = Table()
 		compiler:SetEnvironments(runtime_env, typesystem_env)
-		local base = compiler.Analyzer()
+		local base = Analyzer()
 		assert(compiler:Analyze(base))
 		typesystem_env.string_metatable:Set(
 			LStringNoMeta("__index"),

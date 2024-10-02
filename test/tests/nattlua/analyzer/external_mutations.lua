@@ -267,7 +267,7 @@ analyze[[
     end
     
     do
-        META:GetSet("UniqueID", nil  as nil | number)
+        META:GetSet("UniqueID", false as false | number)
         local ref = 0
     
         function META:MakeUnique(b: boolean)
@@ -276,14 +276,14 @@ analyze[[
                 self.UniqueID = ref
                 ref = ref + 1
             else
-                self.UniqueID = nil
+                self.UniqueID = false
             end
     
             return self
         end
     
         function META:DisableUniqueness()
-            self.UniqueID = nil
+            self.UniqueID = false
         end
     end
 ]]

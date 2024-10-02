@@ -815,7 +815,7 @@ do -- runtime
 		if self.config.skip_import then return end
 
 		if self.dont_hoist_next_import then
-			self.dont_hoist_next_import = nil
+			self.dont_hoist_next_import = false
 			return
 		end
 
@@ -1005,7 +1005,7 @@ do -- runtime
 			self:ParseValueExpression() or
 			self:ParseTableExpression() or
 			self:ParseLSXExpression()
-		local first = node
+		local first = node or false
 
 		if node then
 			node = self:ParseSubExpression(node)
@@ -1037,7 +1037,7 @@ do -- runtime
 				break
 			end
 
-			local left_node = node
+			local left_node = node or false
 			node = self:StartNode("expression", "binary_operator", left_node)
 			node.value = self:ParseToken()
 			node.left = left_node
@@ -1055,13 +1055,13 @@ do -- runtime
 					nil,
 					token and token.value ~= "" and token.value or token.type
 				)
-				return
+				return false
 			end
 		end
 
 		if node then node.first_node = first end
 
-		return node
+		return node or false
 	end
 
 	function META:IsRuntimeExpression()

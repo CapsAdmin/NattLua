@@ -196,8 +196,8 @@ do -- operator errors
 		return {"number overflow"}
 	end
 
-	function type_errors.number_underflow()--[[#: Reason]]
-		return {"number underflow"}
+	function type_errors.number_underflow(l--[[#: any]], r--[[#: any]])--[[#: Reason]]
+		return {"number underflow", l, r}
 	end
 end
 

@@ -7,8 +7,8 @@ local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local bit = _G.bit32 or _G.bit
 local jit = _G.jit
-local META = dofile("nattlua/types/base.lua")
 local False = require("nattlua.types.symbol").False
+local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TNumber"]]
 --[[#type TNumber = META.@Self]]
@@ -20,17 +20,37 @@ META:GetSet("Data", nil--[[# as number | nil]])
 	GetLargestNumber = function=(self)>(TNumber | nil, nil | any),
 }]]
 
-function META.New(min, max)
-	return setmetatable(
+function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
+	local s = setmetatable(
 		{
 			Data = min,
 			Max = max,
 			Falsy = false,
 			Truthy = true,
 			ReferenceType = false,
+			suppress = false,
+			falsy_union = false,
+			truthy_union = false,
+			from_for_loop = false,
+			Self = false,
+			potential_self = false,
+			parent_table = false,
+			dont_widen = false,
+			left_source = false,
+			right_source = false,
+			Name = false,
+			parent = false,
+			TypeOverride = false,
+			AnalyzerEnvironment = false,
+			Upvalue = false,
+			Node = false,
+			Parent = false,
+			Contract = false,
+			MetaTable = false,
 		},
 		META
 	)
+	return s
 end
 
 local function Number()
@@ -117,9 +137,9 @@ function META:Widen(num--[[#: TNumber | nil]])
 end
 
 function META:Copy()
-	local copy = self.New(self.Data, self.Max)
-	copy:CopyInternalsFrom(self)
-	return copy--[[# as any]] -- TODO: figure out inheritance
+	local copy = self.New(self.Data, self.Max)--[[# as any]] -- TODO: figure out inheritance
+	copy:CopyInternalsFrom(self--[[# as any]])
+	return copy
 end
 
 function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
@@ -469,13 +489,13 @@ do
 			local lcontract = l:GetContract()--[[# as nil | TNumber]]
 
 			if lcontract then
-				if res > lcontract.Max and lcontract.Max then
+				if lcontract.Max and (res > lcontract.Max) then
 					return false, type_errors.number_overflow(l, r)
 				end
 
 				local min = lcontract.Data
 
-				if min and min > res then
+				if min and (min > res) then
 					return false, type_errors.number_underflow(l, r)
 				end
 			end
@@ -524,7 +544,7 @@ do
 		local lcontract = x:GetContract()--[[# as nil | TNumber]]
 
 		if lcontract then
-			if res > lcontract.Max and lcontract.Max then
+			if lcontract.Max and res > lcontract.Max then
 				return false, type_errors.number_overflow(x)
 			end
 
@@ -557,6 +577,7 @@ return {
 	LNumberRange = LNumberRange,
 	LNumber = LNumber,
 	LNumberFromString = function(str--[[#: string]])
+		local num
 		if str:sub(1, 2) == "0b" then
 			num = tonumber(str:sub(3), 2)
 		elseif str:lower():sub(-3) == "ull" then

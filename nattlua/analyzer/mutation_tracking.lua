@@ -229,11 +229,11 @@ return function(META)
 			function META:ClearTrackedUpvalues()
 				if self.tracked_upvalues then
 					for _, upvalue in ipairs(self.tracked_upvalues) do
-						upvalue.tracked_stack = nil
+						upvalue.tracked_stack = false
 					end
 
-					self.tracked_upvalues_done = nil
-					self.tracked_upvalues = nil
+					self.tracked_upvalues_done = false
+					self.tracked_upvalues = false
 				end
 			end
 		end
@@ -339,11 +339,11 @@ return function(META)
 			function META:ClearTrackedTables()
 				if self.tracked_tables then
 					for _, tbl in ipairs(self.tracked_tables) do
-						tbl.tracked_stack = nil
+						tbl.tracked_stack = false
 					end
 
-					self.tracked_tables_done = nil
-					self.tracked_tables = nil
+					self.tracked_tables_done = false
+					self.tracked_tables = false
 				end
 			end
 		end

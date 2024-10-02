@@ -39,6 +39,7 @@ function META.New()
 	local self = {
 		TempFiles = {},
 		LoadedFiles = {},
+		debug = false,
 	}
 	setmetatable(self, META)
 	return self

@@ -132,7 +132,7 @@ analyzer function copy(obj: any)
 
 	if copy.Type == "table" then copy:SetCreationScope(nil) end
 
-	copy.potential_self = nil
+	copy.potential_self = false
 	return copy
 end
 

@@ -60,7 +60,7 @@ function META:BuildParentCache()
 
 	self.ParentList = list
 	self.ParentMap = map
-	self.Root = parent
+	self.Root = parent or self
 	self.MemberInParentsCache = {}
 end
 
@@ -231,12 +231,12 @@ function META:SetStatement(statement)
 end
 
 function META:SetLoopIteration(i)
-	self.loop_iteration = i
+	self.loop_iteration = i or false
 end
 
 function META:FindLoopIteration()
 	for _, scope in ipairs(self.ParentList) do
-		if scope.loop_iteration ~= nil then return scope.loop_iteration end
+		if scope.loop_iteration ~= false then return scope.loop_iteration end
 	end
 end
 
@@ -279,11 +279,11 @@ do
 	end
 
 	function META:DidCertainReturn()
-		return self.certain_return ~= nil
+		return self.certain_return ~= false
 	end
 
 	function META:ClearCertainReturn()
-		self.certain_return = nil
+		self.certain_return = false
 	end
 
 	function META:CertainReturn()
@@ -407,8 +407,27 @@ end
 function META.New(parent, upvalue_position, obj)
 	local scope = {
 		obj = obj,
+		CachedLoopScope = false,
 		Children = {},
-		upvalue_position = upvalue_position,
+		upvalue_position = upvalue_position or false,
+		uncertain_function_return = false,
+		TrackedObjects = false,
+		loop_iteration = false,
+		returns = false,
+		statement = false,
+		node = false,
+		scope_helper = false,
+		missing_return = false,
+		missing_types = false,
+		lua_silent_error = false,
+		certain_return = false,
+		mutated_types = false,
+		ParentList = false,
+		ParentMap = false,
+		Root = false,
+		MemberInParentsCache = false,
+		dependencies = false,
+		throws = false,
 		upvalues = {
 			runtime = {
 				list = {},

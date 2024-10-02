@@ -16,8 +16,8 @@ return {
 			return true
 		end
 
-		local function newindex_table(analyzer, obj, key, val)
-			if obj:GetMetaTable() then
+		local function newindex_table(analyzer, obj, key, val, raw)
+			if not raw and obj:GetMetaTable() then
 				local func = obj:GetMetaTable():Get(ConstString("__newindex"))
 
 				if func then
@@ -114,7 +114,7 @@ return {
 			return true
 		end
 
-		function META:NewIndexOperator(obj, key, val)
+		function META:NewIndexOperator(obj, key, val, raw)
 			if
 				val.Type == "function" and
 				val:GetFunctionBodyNode() and
@@ -134,7 +134,7 @@ return {
 			if obj.Type == "union" then
 				return self:Assert(newindex_union(self, obj, key, val))
 			elseif obj.Type == "table" then
-				return self:Assert(newindex_table(self, obj, key, val))
+				return self:Assert(newindex_table(self, obj, key, val, raw))
 			elseif obj.Type == "any" then
 				return true
 			end

@@ -177,7 +177,7 @@ return function(META)
 			end
 
 			self.processing_deferred_calls = false
-			self.deferred_calls = nil
+			self.deferred_calls = false
 			context:PopCurrentAnalyzer()
 		end
 	end
