@@ -72,7 +72,6 @@ function META.New()
 			right_source = false,
 			Data = nil,
             Name = false,
-            parent = false,
             AnalyzerEnvironment = false,
             Upvalue = false,
             Node = false,

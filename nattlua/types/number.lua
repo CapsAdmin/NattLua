@@ -37,7 +37,6 @@ function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 			left_source = false,
 			right_source = false,
 			Name = false,
-			parent = false,
 			TypeOverride = false,
 			AnalyzerEnvironment = false,
 			Upvalue = false,

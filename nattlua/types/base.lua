@@ -16,7 +16,6 @@ local META = class.CreateTemplate("base")
 	right_source = any,
 	left_source = any,
 	Name = string | false,
-	parent = any | false,
 	Parent = any,
 	UniqueID = any,
 }]]

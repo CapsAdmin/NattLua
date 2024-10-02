@@ -85,7 +85,6 @@ function META.New(data--[[#: any]])
 			parent_table = false,
 			TypeOverride = false,
 			Name = false,
-			parent = false,
 			AnalyzerEnvironment = false,
 			Upvalue = false,
 			Node = false,
