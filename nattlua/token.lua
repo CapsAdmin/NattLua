@@ -1,6 +1,7 @@
 local formating = require("nattlua.other.formating")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("token")
+local reverse_escape_string = require("nattlua.other.reverse_escape_string")
 local setmetatable = _G.setmetatable
 --[[#type META.@Name = "Token"]]
 --[[#type META.TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
@@ -278,9 +279,25 @@ function META.New(
 	start--[[#: number]],
 	stop--[[#: number]]
 )--[[#: META.@Self]]
+
+	local string_value
+
+	if type == "string" then
+		if value:sub(1, 1) == [["]] or value:sub(1, 1) == [[']] then
+			string_value = reverse_escape_string(value:sub(2, #value - 1))
+		elseif value:sub(1, 1) == "[" then
+			local start = value:find("[", 2, true)
+
+			if not start then error("start not found") end
+
+			string_value = value:sub(start + 1, -start - 1)
+		end
+	end
+
 	return setmetatable(
 		{
 			type = type,
+			string_value = string_value,
 			value = value,
 			start = start,
 			stop = stop,

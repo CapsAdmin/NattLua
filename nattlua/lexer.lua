@@ -1,6 +1,5 @@
 --[[#local type { TokenType } = import("./token.lua")]]
 
-local reverse_escape_string = require("nattlua.other.reverse_escape_string")
 local Token = require("nattlua.token").New
 local class = require("nattlua.other.class")
 local setmetatable = _G.setmetatable
@@ -150,19 +149,6 @@ do
 		local type, is_whitespace, start, stop = self:ReadSimple() -- TODO: unpack not working
 		local value = self:GetStringSlice(start, stop)
 		local tk = Token(type, value, start, stop)
-
-		if type == "string" then
-			if value:sub(1, 1) == [["]] or value:sub(1, 1) == [[']] then
-				tk.string_value = reverse_escape_string(value:sub(2, #value - 1))
-			elseif value:sub(1, 1) == "[" then
-				local start = value:find("[", 2, true)
-
-				if not start then error("start not found") end
-
-				tk.string_value = value:sub(start + 1, -start - 1)
-			end
-		end
-
 		return tk, is_whitespace
 	end
 
@@ -188,43 +174,6 @@ do
 			whitespace_i = whitespace_i + 1
 
 			if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
-				potential_idiv = true
-			end
-		end
-	end
-
-	function META:ReadNonWhitespaceToken2()
-		local whitespace = {}
-		local whitespace_i = 1
-		local potential_idiv = false
-
-		for i = self.Position, self:GetLength() + 1 do
-			local type, is_whitespace, start, stop = self:ReadSimple()
-			local value = self:GetStringSlice(start, stop)
-			local token = Token(type, value, start, stop)
-
-			if type == "string" then
-				if value:sub(1, 1) == "\"" or value:sub(1, 1) == "'" then
-					token.string_value = reverse_escape_string(value:sub(2, -2))
-				elseif value:sub(1, 1) == "[" then
-					local start = value:find("[", 2, true)
-
-					if not start then error("start not found") end
-
-					token.string_value = value:sub(start + 1, -start - 1)
-				end
-			end
-
-			if not is_whitespace then
-				token.whitespace = whitespace
-				token.potential_idiv = potential_idiv
-				return token
-			end
-
-			whitespace[whitespace_i] = token
-			whitespace_i = whitespace_i + 1
-
-			if type == "line_comment" and value:sub(1, 2) == "//" then
 				potential_idiv = true
 			end
 		end
