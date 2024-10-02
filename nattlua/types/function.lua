@@ -160,7 +160,6 @@ end
 
 do
 	function META:AddScope(arguments--[[#: TTuple]], return_result--[[#: TTuple]], scope--[[#: any]])
-		self.scopes = self.scopes or {}
 		table.insert(
 			self.scopes,
 			{
@@ -224,7 +223,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			scopes = {},
 			InputSignature = input or false,
 			OutputSignature = output or false,
-			scope = false,
 			recursively_called = false,
 			AnalyzerFunction = false,
 			FunctionBodyNode = false,

@@ -12,6 +12,7 @@ local table_concat = _G.table.concat
 local table_insert = _G.table.insert
 local table_remove = _G.table.remove
 local table_sort = require("nattlua.other.sort")
+local table_clear = require("nattlua.other.table_clear")
 
 --[[#local type { TNumber } = require("nattlua.types.number")]]
 
@@ -150,15 +151,7 @@ function META:RemoveType(e--[[#: TBaseType]])
 end
 
 function META:Clear()
-	self.Data = {}
-end
-
-local has_clear, table_clear = pcall(require, "table.clear")
-
-if has_clear then
-	function META:Clear()
-		(table_clear--[[# as any]])(self.Data)
-	end
+	(table_clear--[[# as any]])(self.Data)
 end
 
 function META:HasTuples()
@@ -431,7 +424,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			Contract = false,
 			Name = false,
 			TypeOverride = false,
-			BaseTable = false,
 			Upvalue = false,
 			Node = false,
 		},

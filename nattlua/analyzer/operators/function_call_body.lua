@@ -6,10 +6,10 @@ local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
 local Function = require("nattlua.types.function").Function
+local table_clear = require("nattlua.other.table_clear")
 
 local function mutate_type(self, i, arg, contract, arguments)
 	local env = self:GetScope():GetNearestFunctionScope()
-	env.mutated_types = env.mutated_types or {}
 	arg:PushContract(contract)
 	arg.argument_index = i
 	arg:ClearMutations()
@@ -20,7 +20,7 @@ end
 local function restore_mutated_types(self)
 	local env = self:GetScope():GetNearestFunctionScope()
 
-	if not env.mutated_types or not env.mutated_types[1] then return end
+	if not env.mutated_types[1] then return end
 
 	for _, data in ipairs(env.mutated_types) do
 		data.arg:PopContract()
@@ -29,7 +29,7 @@ local function restore_mutated_types(self)
 		self:MutateUpvalue(data.arg:GetUpvalue(), data.arg)
 	end
 
-	env.mutated_types = {}
+	table_clear(env.mutated_types)
 end
 
 local function shrink_union_to_function_signature(obj)

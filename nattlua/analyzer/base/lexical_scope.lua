@@ -46,32 +46,25 @@ function META:SetParent(parent)
 end
 
 function META:BuildParentCache()
-	local list = {}
-	local map = {}
 	local parent = self
 
 	for i = 1, 1000 do
 		if not parent then break end
 
-		list[i] = parent
-		map[parent] = parent
+		self.ParentList[i] = parent
+		self.ParentMap[parent] = parent
 		parent = parent.Parent
 	end
 
-	self.ParentList = list
-	self.ParentMap = map
 	self.Root = parent or self
-	self.MemberInParentsCache = {}
 end
 
 function META:AddTrackedObject(val)
 	local scope = self:GetNearestFunctionScope()
-	scope.TrackedObjects = scope.TrackedObjects or {}
 	table.insert(scope.TrackedObjects, val)
 end
 
 function META:AddDependency(val)
-	self.dependencies = self.dependencies or {}
 	self.dependencies[val] = val
 end
 
@@ -411,7 +404,7 @@ function META.New(parent, upvalue_position, obj)
 		Children = {},
 		upvalue_position = upvalue_position or false,
 		uncertain_function_return = false,
-		TrackedObjects = false,
+		TrackedObjects = {},
 		loop_iteration = false,
 		returns = false,
 		statement = false,
@@ -421,12 +414,11 @@ function META.New(parent, upvalue_position, obj)
 		missing_types = false,
 		lua_silent_error = false,
 		certain_return = false,
-		mutated_types = false,
-		ParentList = false,
-		ParentMap = false,
+		mutated_types = {},
+		ParentList = {},
+		ParentMap = {},
 		Root = false,
-		MemberInParentsCache = false,
-		dependencies = false,
+		dependencies = {},
 		throws = false,
 		ElseConditionalScope = false,
 		ConditionalScope = false,
