@@ -48,7 +48,7 @@ analyzer function next(t: Map<|any, any|>, k: any)
 	if t.Type == "any" then return types.Any(), types.Any() end
 
 	if t:IsLiteral() then
-		if k and not (k.Type == "symbol" and k:GetData() == nil) then
+		if k and not (k.Type == "symbol" and k:IsNil()) then
 			for i, kv in ipairs(t:GetData()) do
 				if kv.key:IsSubsetOf(k) then
 					local kv = t:GetData()[i + 1]
@@ -483,7 +483,7 @@ function MetaTableFunctions<|T: any|>
 end
 
 analyzer function setmetatable(tbl: Table, meta: Table | nil)
-	if not meta or meta.Type == "symbol" then
+	if not meta or meta.Type == "symbol" and meta:IsFalse() then
 		tbl:SetMetaTable()
 		return tbl
 	end

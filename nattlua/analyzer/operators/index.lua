@@ -40,8 +40,8 @@ local function index_table(analyzer, self, key, raw)
 
 				local val = obj:Get(1)
 
-				if val and (val.Type ~= "symbol" or val:GetData() ~= nil) then
-					if val.Type == "union" and val:CanBeNil() then
+				if val and (val.Type ~= "symbol" or not val:IsNil()) then
+					if val.Type == "union" and val:IsNil() then
 						val:RemoveType(Nil())
 					end
 

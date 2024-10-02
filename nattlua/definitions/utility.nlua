@@ -16,7 +16,7 @@ analyzer function ReturnIfNonLiteral(func: any)
 end
 
 analyzer function NonLiteral(obj: any)
-	if obj.Type == "symbol" and (obj:GetData() == true or obj:GetData() == false) then
+	if obj.Type == "symbol" and obj:IsBoolean() then
 		return types.Boolean()
 	end
 

@@ -22,7 +22,7 @@ local function should_expand(arg, contract)
 
 	if contract.Type == "union" then b = false end
 
-	if arg.Type == "union" and contract.Type == "union" and contract:CanBeNil() then
+	if arg.Type == "union" and contract.Type == "union" and contract:IsNil() then
 		b = true
 	end
 

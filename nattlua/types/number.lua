@@ -261,6 +261,8 @@ do
 	end
 
 	function META.LogicalComparison(a--[[#: TNumber]], b--[[#: TNumber]], operator--[[#: "=="]])--[[#: boolean | nil]]
+		if a.Type ~= "number" then return nil end
+		if b.Type ~= "number" then return nil end
 		if not a.Data or not b.Data then return nil end
 
 		if operator == "==" then

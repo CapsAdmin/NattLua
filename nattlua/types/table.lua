@@ -211,7 +211,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 			contract.suppress = true
 
 			for _, keyval in ipairs(contract:GetData()) do
-				if not keyval.val:CanBeNil() then
+				if not keyval.val:IsNil() then
 					can_be_empty = false
 
 					break
@@ -231,7 +231,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 			res, err = self:GetMetaTable():FindKeyVal(keyval.key)
 		end
 
-		if not keyval.val:CanBeNil() then
+		if not keyval.val:IsNil() then
 			if not res then return res, err end
 
 			local ok, err = res.val:IsSubsetOf(keyval.val)
@@ -246,7 +246,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 	for _, keyval in ipairs(self:GetData()) do
 		local res, err = contract:FindKeyValReverse(keyval.key)
 
-		if not keyval.val:CanBeNil() then
+		if not keyval.val:IsNil() then
 			if not res then return res, err end
 
 			local ok, err = keyval.val:IsSubsetOf(res.val)
@@ -284,7 +284,7 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 		a.suppress = true
 
 		for _, keyval in ipairs(b:GetData()) do
-			if not keyval.val:CanBeNil() then
+			if not keyval.val:IsNil() then
 				can_be_empty = false
 
 				break
@@ -297,7 +297,7 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 			not a:GetData()[1] and
 			(
 				not a:GetContract() or
-				not a:GetContract():GetData()[1]
+				(a:GetContract():GetData() and not a:GetContract():GetData()[1])
 			)
 		then
 			if can_be_empty then
@@ -310,7 +310,7 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 		for _, akeyval in ipairs(a:GetData()) do
 			local bkeyval, reason = b:FindKeyValReverse(akeyval.key)
 
-			if not akeyval.val:CanBeNil() then
+			if not akeyval.val:IsNil() then
 				if not bkeyval then
 					if a.BaseTable and a.BaseTable == b then
 						bkeyval = akeyval
@@ -349,12 +349,12 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 				if
 					(
 						keyval.val.Type == "symbol" and
-						keyval.val:GetData() == nil
+						keyval.val:IsNil()
 					)
 					or
 					(
 						keyval.val.Type == "union" and
-						keyval.val:CanBeNil()
+						keyval.val:IsNil()
 					)
 					or
 					keyval.val.Type == "any"
@@ -399,7 +399,7 @@ function META:RemoveRedundantNilValues()
 		if
 			keyval.key.Type == "number" and
 			keyval.val.Type == "symbol" and
-			keyval.val.Data == nil
+			keyval.val:IsNil()
 		then
 			keyval.val:SetParent()
 			keyval.key:SetParent()
@@ -560,7 +560,7 @@ function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete-
 		end
 	end
 
-	if key.Type == "symbol" and key:GetData() == nil then
+	if key.Type == "symbol" and key:IsNil() then
 		return false, type_errors.invalid_table_index(key)
 	end
 
@@ -570,7 +570,7 @@ function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete-
 
 	-- delete entry
 	if not no_delete and not self:GetContract() then
-		if (not val or (val.Type == "symbol" and val:GetData() == nil)) then
+		if (not val or (val.Type == "symbol" and val:IsNil())) then
 			return self:Delete(key)
 		end
 	end
@@ -597,7 +597,7 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 		return true
 	end
 
-	if key.Type == "symbol" and key:GetData() == nil then
+	if key.Type == "symbol" and key:IsNil() then
 		return false, type_errors.key_nil()
 	end
 

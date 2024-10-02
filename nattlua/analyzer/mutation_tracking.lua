@@ -17,11 +17,11 @@ return function(META)
 				local val = self:GetMutatedTableValue(tbl, kv.key)
 
 				if val then
-					if val.Type == "union" and val:CanBeNil() then
+					if val.Type == "union" and val:IsNil() then
 						return LNumberRange(len, len + 1)
 					end
 
-					if val.Type == "symbol" and val:GetData() == nil then
+					if val.Type == "symbol" and val:IsNil() then
 						return LNumber(len)
 					end
 				end

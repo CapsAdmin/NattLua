@@ -92,20 +92,6 @@ function META:__tostring()
 	return table_concat(s, " | ")
 end
 
-local function is_literal(obj)
-	return (
-			(
-				obj.Type == "number" and
-				not obj.Max and
-				not obj:IsNan()
-			)
-			or
-			obj.Type == "string"
-		)
-		and
-		obj.Data ~= nil
-end
-
 function META:AddType(e--[[#: TBaseType]])
 	if e.Type == "union" then
 		for _, v in ipairs(e.Data) do
@@ -284,7 +270,7 @@ function META:IsTypeExceptNil(typ--[[#: string]])
 	if self:IsEmpty() then return false end
 
 	for _, obj in ipairs(self.Data) do
-		if obj.Type == "symbol" and obj.Data == nil then
+		if obj.Type == "symbol" and obj:IsNil() then
 
 		else
 			if obj.Type ~= typ then return false end
@@ -298,9 +284,9 @@ function META:HasType(typ--[[#: string]])
 	return self:GetType(typ) ~= false
 end
 
-function META:CanBeNil()
+function META:IsNil()
 	for _, obj in ipairs(self.Data) do
-		if obj.Type == "symbol" and obj:GetData() == nil then return true end
+		if obj.Type == "symbol" and obj:IsNil() then return true end
 	end
 
 	return false

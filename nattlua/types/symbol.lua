@@ -3,11 +3,43 @@ local tostring = tostring
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
+
+local TRUE = {}
+local FALSE = {}
+local NIL = {}
+
+local symbol_to_type = {
+	[TRUE] = "boolean",
+	[FALSE] = "boolean",
+	[NIL] = "nil",
+}
+
+local unpack_symbol = {
+	 [TRUE] = true,
+	 [FALSE] = false,
+	 [NIL] = nil,
+}
+
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TSymbol"]]
 --[[#type TSymbol = META.@Self]]
 META.Type = "symbol"
-META:GetSet("Data", nil--[[# as any]])
+META:GetSet("Data", false--[[# as any]])
+
+function META:GetData()
+	if self.Data == NIL then
+		return nil
+	end
+	if self.Data == TRUE then
+		return true
+	end
+
+	if self.Data == FALSE then
+		return false
+	end
+
+	return self.Data
+end
 
 function META.Equal(a--[[#: TSymbol]], b--[[#: TBaseType]])
 	return a.Type == b.Type and a.Data == b.Data
@@ -20,11 +52,11 @@ function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#:
 end
 
 function META:GetLuaType()
-	return type(self.Data)
+	return symbol_to_type[self.Data] or type(self.Data)
 end
 
 function META:__tostring()
-	return tostring(self.Data)
+	return tostring(self:GetData())
 end
 
 function META:GetHash()
@@ -37,8 +69,20 @@ function META:Copy()
 	return copy
 end
 
-function META:CanBeNil()
-	return self.Data == nil
+function META:IsNil()
+	return self.Data == NIL
+end
+
+function META:IsBoolean()
+	return self.Data == TRUE or self.Data == FALSE
+end
+
+function META:IsTrue()
+	return self.Data == TRUE
+end
+
+function META:IsFalse()
+	return self.Data == FALSE
 end
 
 function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
@@ -59,10 +103,18 @@ function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
 end
 
 function META:IsFalsy()
+	if self.Data == TRUE then return false end
+	if self.Data == FALSE then return true end
+	if self.Data == NIL then return true end
+
 	return not self.Data
 end
 
 function META:IsTruthy()
+	if self.Data == TRUE then return true end
+	if self.Data == FALSE then return false end
+	if self.Data == NIL then return false end
+
 	return not not self.Data
 end
 
@@ -71,6 +123,9 @@ function META:IsLiteral()
 end
 
 function META.New(data--[[#: any]])
+	if data == nil then data = NIL end
+	if data == true then data = TRUE end
+	if data == false then data = FALSE end
 	local self = setmetatable(
 		{
 			Type = "symbol",
@@ -96,12 +151,12 @@ local Symbol = META.New
 return {
 	Symbol = Symbol,
 	Nil = function()
-		return Symbol(nil)
+		return Symbol(NIL)
 	end,
 	True = function()
-		return Symbol(true)
+		return Symbol(TRUE)
 	end,
 	False = function()
-		return Symbol(false)
+		return Symbol(FALSE)
 	end,
 }

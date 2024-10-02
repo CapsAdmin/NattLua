@@ -22,7 +22,7 @@ analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
 		)
 		and
 		not separator.Type ~= "symbol" and
-		separator:GetData() ~= nil
+		separator:IsBoolean()
 	then
 		return types.String()
 	end

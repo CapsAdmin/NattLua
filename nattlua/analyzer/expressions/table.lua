@@ -97,7 +97,7 @@ return {
 						for _, kv in ipairs(val:GetData()) do
 							local val = kv.val
 
-							if val.Type == "union" and val:CanBeNil() then
+							if val.Type == "union" and val:IsNil() then
 								val = val:Copy():RemoveType(Nil())
 							end
 

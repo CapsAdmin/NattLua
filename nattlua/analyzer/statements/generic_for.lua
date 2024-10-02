@@ -52,7 +52,7 @@ return {
 			if
 				not values:Get(1) or
 				values:Get(1).Type == "symbol" and
-				values:Get(1):GetData() == nil
+				values:Get(1):IsNil()
 			then
 				break
 			end

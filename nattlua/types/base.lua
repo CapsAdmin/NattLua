@@ -23,7 +23,7 @@ META:GetSet("AnalyzerEnvironment", false--[[# as false | "runtime" | "typesystem
 function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]]) --error("nyi " .. a.Type .. " == " .. b.Type)
 end
 
-function META:CanBeNil()
+function META:IsNil()
 	return false
 end
 

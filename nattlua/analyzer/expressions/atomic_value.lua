@@ -36,7 +36,7 @@ local function lookup_value(self, node)
 			return Nil()
 		end
 	else
-		if not obj or (obj.Type == "symbol" and obj:GetData() == nil) then
+		if not obj or (obj.Type == "symbol" and obj:IsNil()) then
 			self:PushAnalyzerEnvironment("typesystem")
 			local objt, errt = self:GetLocalOrGlobalValue(key)
 			self:PopAnalyzerEnvironment()

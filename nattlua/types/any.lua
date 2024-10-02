@@ -37,7 +37,7 @@ function META:IsTruthy()
 	return true
 end
 
-function META:CanBeNil()
+function META:IsNil()
 	return true
 end
 
@@ -63,7 +63,7 @@ function META.New()
 			TypeOverride = false,
 			Falsy = false,
 			Truthy = false,
-			Data = nil,
+			Data = false,
             Name = false,
             AnalyzerEnvironment = false,
             Upvalue = false,

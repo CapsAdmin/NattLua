@@ -98,7 +98,7 @@ return {
 			end
 
 			if analyzer:IsTypesystem() then
-				if val.Type ~= "symbol" or val.Data ~= nil then
+				if val.Type ~= "symbol" or not val:IsNil() then
 					return obj:SetExplicit(key, val)
 				else
 					return obj:Set(key, val)

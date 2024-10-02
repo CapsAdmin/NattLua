@@ -349,11 +349,11 @@ function META:GetMinimumLength()
 		if
 			(
 				obj.Type == "union" and
-				obj:CanBeNil()
+				obj:IsNil()
 			) or
 			(
 				obj.Type == "symbol" and
-				obj:GetData() == nil
+				obj:IsNil()
 			)
 		then
 			found_nil = true
