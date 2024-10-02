@@ -988,6 +988,14 @@ do
 		self.mutations = false
 	end
 
+	function META:SetMutations(tbl)
+		self.mutations = tbl
+	end
+
+	function META:GetMutations()
+		return self.mutations
+	end
+
 	function META:HasMutations()
 		return self.mutations ~= false
 	end

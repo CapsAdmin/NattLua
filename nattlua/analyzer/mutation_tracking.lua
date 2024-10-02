@@ -87,8 +87,8 @@ return function(META)
 			for _, obj in ipairs(scope.TrackedObjects) do
 				if obj.Type == "upvalue" then
 					obj:ClearTrackedMutations()
-				elseif obj.mutations then
-					for _, mutations in pairs(obj.mutations) do
+				elseif obj:HasMutations() then
+					for _, mutations in pairs(obj:GetMutations()) do
 						for i = #mutations, 1, -1 do
 							local mut = mutations[i]
 

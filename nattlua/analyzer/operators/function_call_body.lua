@@ -12,8 +12,8 @@ local function mutate_type(self, i, arg, contract, arguments)
 	env.mutated_types = env.mutated_types or {}
 	arg:PushContract(contract)
 	arg.argument_index = i
-	arg.mutations = false
-	table.insert(env.mutated_types, {arg = arg, mutations = arg.mutations})
+	arg:ClearMutations()
+	table.insert(env.mutated_types, {arg = arg, mutations = arg:GetMutations()})
 	arguments:Set(i, arg)
 end
 
@@ -25,7 +25,7 @@ local function restore_mutated_types(self)
 	for _, data in ipairs(env.mutated_types) do
 		data.arg:PopContract()
 		data.arg.argument_index = false
-		data.arg.mutations = data.mutations
+		data.arg:SetMutations(data.mutations)
 		self:MutateUpvalue(data.arg:GetUpvalue(), data.arg)
 	end
 
