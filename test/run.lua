@@ -181,5 +181,64 @@ if total > 0 then
 		" seconds\n"
 	)
 end
+--[=[
+if ALL_NODES then
 
+	for _, nodes in pairs(ALL_NODES) do
+		for type_kind, fields in pairs(nodes) do
+			for field, types in pairs(fields) do
+				if field ~= "tokens" then
+					local count = 0
+					for type in pairs(types) do
+						count = count + 1
+					end
+					if count == 1 then
+						fields[field] = next(types)
+					end
+				end
+			end
+			fields.environment = nil
+			fields.Code = nil
+			fields.code_start = nil
+			fields.code_stop = nil
+			fields.type = nil
+			fields.kind = nil
+			fields.parent = nil
+			fields.inferred_types = nil
+		end
+	end
+
+	
+	local lua = "local nodes = {\n"
+	for type, nodes in pairs(ALL_NODES) do
+		lua = lua .. type .. " = {\n"
+		for kind, node in pairs(nodes) do
+			lua = lua .. "[\"" .. kind .. "\"] = function(type, kind, environment, code, code_start, code_stop, parent)\n"
+			lua = lua .. "\t return {\n"
+			lua = lua .. "\ttype = type,\n"
+			lua = lua .. "\tkind = kind,\n"
+			lua = lua .. "\tenvironment = environment,\n"
+			lua = lua .. "\tcode = code,\n"
+			lua = lua .. "\tcode_start = code_start,\n"
+			lua = lua .. "\tcode_stop = code_stop,\n"
+			lua = lua .. "\tparent = parent,\n"
+			for k,v in pairs(node) do
+				if k ~= "tokens" then
+					lua = lua .. "\t" .. k .. " = false,\n"
+				end
+			end 
+			lua = lua .. "\ttokens = {\n"
+			for k,v in pairs(node.tokens) do
+				lua = lua .. "\t[\"" .. k .. "\"] = false,\n"
+			end 
+			lua = lua .. "},\n"
+			lua = lua .. "}\n"
+			lua = lua .. "end,\n"
+		end
+		lua = lua .. "},\n"
+	end
+	lua = lua .. "}\n"
+	print(lua)
+end
+]=]
 os.exit() -- no need to wait for gc to complete
