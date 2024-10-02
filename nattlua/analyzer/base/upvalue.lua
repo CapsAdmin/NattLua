@@ -14,6 +14,7 @@ META:GetSet("Position")
 META:GetSet("Shadow")
 META:GetSet("Scope")
 META:GetSet("Mutations")
+META:IsSet("FromForLoop")
 
 function META:__tostring()
 	return "[" .. tostring(self.Scope) .. ":" .. tostring(self.Position) .. ":" .. tostring(self.key) .. ":" .. tostring(self.value) .. "]"

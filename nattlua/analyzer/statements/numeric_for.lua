@@ -69,8 +69,8 @@ return {
 					i = LNumber(i)
 				end
 
-				i.from_for_loop = true
-				self:CreateLocalValue(statement.identifiers[1].value.value, i)
+				local upvalue = self:CreateLocalValue(statement.identifiers[1].value.value, i)
+				upvalue:SetFromForLoop(true)
 				self:AnalyzeStatements(statement.statements)
 
 				if self._continue_ then self._continue_ = nil end

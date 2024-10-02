@@ -80,8 +80,8 @@ return {
 					brk = true
 				end
 
-				obj.from_for_loop = true
-				self:CreateLocalValue(identifier.value.value, obj)
+				local upvalue = self:CreateLocalValue(identifier.value.value, obj)
+				upvalue:SetFromForLoop(true)
 				identifier:AssociateType(obj)
 			end
 
