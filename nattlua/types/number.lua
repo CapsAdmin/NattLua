@@ -24,6 +24,7 @@ META:GetSet("Data", nil--[[# as number | nil]])
 function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 	local s = setmetatable(
 		{
+			Type = "number",
 			Data = min,
 			Max = max,
 			Falsy = false,

@@ -38,6 +38,8 @@ function META:Copy()
 end
 
 function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
+	if false --[[#as true]] then return false end
+
 	if B.Type == "tuple" then B = B:Get(1) end
 
 	if B.Type == "any" then return true end
@@ -109,9 +111,10 @@ function META:Get()
 	return false, type_errors.index_string_attempt()
 end
 
-function META.New(data--[[#: string | nil]])
-	local self = setmetatable(
+local function new(data--[[#: string | nil]])
+	return setmetatable(
 		{
+			Type = "string",
 			Data = data,
 			Falsy = false,
 			Truthy = true,
@@ -129,6 +132,10 @@ function META.New(data--[[#: string | nil]])
 		},
 		META
 	)
+end
+
+function META.New(data--[[#: string | nil]])
+	local self = new(data)
 	-- analyzer might be nil when strings are made outside of the analyzer, like during tests
 	local analyzer = context:GetCurrentAnalyzer()
 
@@ -177,24 +184,6 @@ return {
 		return obj
 	end,
 	LStringNoMeta = function(data--[[#: string]])
-		return setmetatable(
-			{
-				Data = data,
-				Falsy = false,
-				Truthy = true,
-				ReferenceType = false,
-				UniqueID = false,
-				Name = false,
-				Parent = false,
-				AnalyzerEnvironment = false,
-				Upvalue = false,
-				Node = false,
-				Parent = false,
-				Contract = false,
-				MetaTable = false,
-				TypeOverride = false,
-			},
-			META
-		)
+		return new(data)
 	end,
 }

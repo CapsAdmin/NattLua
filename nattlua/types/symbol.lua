@@ -42,6 +42,7 @@ function META:CanBeNil()
 end
 
 function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
+	if false --[[#as true]] then return false end
 	if b.Type == "tuple" then b = b:Get(1) end
 
 	if b.Type == "any" then return true end
@@ -72,6 +73,7 @@ end
 function META.New(data--[[#: any]])
 	local self = setmetatable(
 		{
+			Type = "symbol",
 			Data = data,
 			Falsy = false,
 			Truthy = false,

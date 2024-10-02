@@ -433,6 +433,7 @@ end
 function META.New(data--[[#: nil | List<|TBaseType|>]])
 	local self = setmetatable(
 		{
+			Type = "union",
 			Data = {},
 			--LiteralDataCache = {},
 			Falsy = false,

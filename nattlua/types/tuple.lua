@@ -469,6 +469,7 @@ end
 function META.New(data--[[#: nil | List<|TBaseType|>]])
 	local self = setmetatable(
 		{
+			Type = "tuple",
 			Data = {},
 			Falsy = false,
 			Truthy = false,

@@ -209,6 +209,7 @@ end
 function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 	local self = setmetatable(
 		{
+			Type = "function",
 			Falsy = false,
 			Truthy = true,
 			ReferenceType = false,

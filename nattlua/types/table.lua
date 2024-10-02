@@ -1096,6 +1096,7 @@ end
 function META.New()
 	return setmetatable(
 		{
+			Type = "table",
 			Data = {},
 			LiteralDataCache = {},
 			Contracts = {},

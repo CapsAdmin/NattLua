@@ -59,6 +59,7 @@ end
 function META.New()
 	return setmetatable(
 		{
+			Type = "any",
 			TypeOverride = false,
 			Falsy = false,
 			Truthy = false,
