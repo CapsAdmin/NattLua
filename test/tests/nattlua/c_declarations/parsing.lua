@@ -278,7 +278,7 @@ local function test(c_code, error_level)
 
 			for _, v in pairs(tbl) do
 				if type(v) == "table" then
-					if v.type ~= "statement" and v.type ~= "expression" and v.is_whitespace == false then
+					if v.type ~= "statement" and v.type ~= "expression" and v.value then
 						out[v] = v
 					else
 						if not done[v] then

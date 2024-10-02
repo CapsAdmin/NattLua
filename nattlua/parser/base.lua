@@ -338,9 +338,7 @@ do
 	end
 
 	function META:NewToken(type--[[#: TokenType]], value--[[#: string]])
-		local tk = Token(type, false, 0, 0)
-		tk.value = value
-		return tk
+		return Token(type, value, 0, 0)
 	end
 end
 

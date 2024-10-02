@@ -4,6 +4,7 @@ local old_new = META.New
 function META.New(...)
 	local self = old_new(...)
 	self.FFI_DECLARATION_EMITTER = true
+	self.skip_emit = {}
 	return self
 end
 
@@ -25,9 +26,7 @@ do
 				for i = #v, 1, -1 do
 					local v = v[i]
 
-					if not v.DONT_WRITE then
-						if v.value ~= "*" then table.insert(modifiers, v.value) end
-					end
+					if v.value ~= "*" then table.insert(modifiers, v.value) end
 				end
 
 				table.insert(out, {type = "pointer", modifiers = modifiers})
@@ -53,7 +52,7 @@ do
 			local modifiers = {}
 
 			for k, v in ipairs(node.modifiers) do
-				if not v.DONT_WRITE then table.insert(modifiers, v.value) end
+				if not self.skip_emit[v.value] then table.insert(modifiers, v.value) end
 			end
 
 			if modifiers[1] then
@@ -67,7 +66,7 @@ do
 	end
 
 	function META:EmitNattluaCDeclaration(node)
-		node.tokens["potential_identifier"].DONT_WRITE = true
+		self.skip_emit[node.tokens["potential_identifier"]] = true
 
 		while node.expression do -- find the inner most expression
 			node = node.expression

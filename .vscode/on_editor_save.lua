@@ -181,10 +181,10 @@ if normalized:find("/nattlua/", nil, true) then
 		not normalized:find("nattlua/other")
 	then
 		if normalized:find("lexer.lua", nil, true) then
-			run_lua("test/run.lua", "test/tests/lexer.lua")
+			run_lua("test/run.lua", "test/tests/nattlua/lexer.lua")
 			run_lua("test/run.lua", "test/performance/lexer.lua")
 		elseif normalized:find("parser.lua", nil, true) and false then
-			run_lua("test/run.lua", "test/tests/parser.lua")
+			run_lua("test/run.lua", "test/tests/nattlua/parser.lua")
 			run_lua("test/run.lua", "test/performance/parser.lua")
 		else
 			run_lua("test/run.lua")

@@ -57,7 +57,7 @@ function META:ReadByte()--[[#: number]]
 end
 
 function META:ResetState()
-	self.Position = 1 --[[# as  number]]
+	self.Position = 1--[[# as number]]
 end
 
 function META:Advance(len--[[#: number]])
@@ -125,10 +125,6 @@ function META:ReadUnknown()
 	return "unknown", false
 end
 
-function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
-	return nil, nil
-end
-
 function META:ReadSimple()--[[#: (TokenType, boolean, number, number)]]
 	if self:ReadShebang() then return "shebang", false, 1, self.Position - 1 end
 
@@ -141,61 +137,48 @@ function META:ReadSimple()--[[#: (TokenType, boolean, number, number)]]
 		if self:ReadEndOfFile() then
 			type = "end_of_file"
 			is_whitespace = false
+		else
+			type, is_whitespace = self:ReadUnknown()
 		end
 	end
 
-	if not type then type, is_whitespace = self:ReadUnknown() end
-
-	is_whitespace = is_whitespace or false
 	return type, is_whitespace, start, self.Position - 1
-end
-
-function META:NewToken(
-	type--[[#: TokenType]],
-	is_whitespace--[[#: boolean]],
-	start--[[#: number]],
-	stop--[[#: number]]
-)
-	return Token(type, is_whitespace, start, stop)
 end
 
 do
 	function META:ReadToken()
 		local type, is_whitespace, start, stop = self:ReadSimple() -- TODO: unpack not working
-		local token = self:NewToken(type, is_whitespace, start, stop)
-		token.value = self:GetStringSlice(token.start, token.stop)
+		local value = self:GetStringSlice(start, stop)
+		local tk = Token(type, value, start, stop)
 
-		if token.type == "string" then
-			if token.value:sub(1, 1) == [["]] or token.value:sub(1, 1) == [[']] then
-				token.string_value = reverse_escape_string(token.value:sub(2, #token.value - 1))
-			elseif token.value:sub(1, 1) == "[" then
-				local start = token.value:find("[", 2, true)
+		if type == "string" then
+			if value:sub(1, 1) == [["]] or value:sub(1, 1) == [[']] then
+				tk.string_value = reverse_escape_string(value:sub(2, #value - 1))
+			elseif value:sub(1, 1) == "[" then
+				local start = value:find("[", 2, true)
 
 				if not start then error("start not found") end
 
-				token.string_value = token.value:sub(start + 1, -start - 1)
+				tk.string_value = value:sub(start + 1, -start - 1)
 			end
 		end
 
-		return token
+		return tk, is_whitespace
 	end
 
 	function META:ReadNonWhitespaceToken()
-		local token = self:ReadToken()
+		local token, is_whitespace = self:ReadToken()
 
-		if not token.is_whitespace then
-			token.whitespace = {}
-			return token
-		end
+		if not is_whitespace then return token end
 
 		local whitespace = {token}
 		local whitespace_i = 2
 		local potential_idiv = false
 
 		for i = self.Position, self:GetLength() + 1 do
-			local token = self:ReadToken()
+			local token, is_whitespace = self:ReadToken()
 
-			if not token.is_whitespace then
+			if not is_whitespace then
 				token.whitespace = whitespace
 				token.potential_idiv = potential_idiv
 				return token
@@ -205,6 +188,43 @@ do
 			whitespace_i = whitespace_i + 1
 
 			if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
+				potential_idiv = true
+			end
+		end
+	end
+
+	function META:ReadNonWhitespaceToken2()
+		local whitespace = {}
+		local whitespace_i = 1
+		local potential_idiv = false
+
+		for i = self.Position, self:GetLength() + 1 do
+			local type, is_whitespace, start, stop = self:ReadSimple()
+			local value = self:GetStringSlice(start, stop)
+			local token = Token(type, value, start, stop)
+
+			if type == "string" then
+				if value:sub(1, 1) == "\"" or value:sub(1, 1) == "'" then
+					token.string_value = reverse_escape_string(value:sub(2, -2))
+				elseif value:sub(1, 1) == "[" then
+					local start = value:find("[", 2, true)
+
+					if not start then error("start not found") end
+
+					token.string_value = value:sub(start + 1, -start - 1)
+				end
+			end
+
+			if not is_whitespace then
+				token.whitespace = whitespace
+				token.potential_idiv = potential_idiv
+				return token
+			end
+
+			whitespace[whitespace_i] = token
+			whitespace_i = whitespace_i + 1
+
+			if type == "line_comment" and value:sub(1, 2) == "//" then
 				potential_idiv = true
 			end
 		end
@@ -694,7 +714,7 @@ function META.ReadRemainingCommentEscape(self--[[#: Lexer]])--[[#: TokenReturnTy
 end
 
 function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
-	if self:ReadRemainingCommentEscape() then return "discard", false end
+	if self:ReadRemainingCommentEscape() then return "comment_escape", true end
 
 	do
 		local name = self:ReadSpace() or
@@ -721,6 +741,10 @@ function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
 
 		if name then return name, false end
 	end
+
+	if self:ReadEndOfFile() then return "end_of_file", false end
+
+	return self:ReadUnknown()
 end
 
 function META.New(code--[[#: Code]])

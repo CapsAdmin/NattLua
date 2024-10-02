@@ -53,7 +53,7 @@ local function handle_modifiers(state, node)
 		elseif v.kind == "dollar_sign" then
 			table.insert(modifiers, "$")
 		else
-			if not v.DONT_WRITE then table.insert(modifiers, v.value) end
+			table.insert(modifiers, v.value)
 		end
 	end
 
@@ -102,9 +102,7 @@ local function handle_pointers(state, node)
 		for i = #v, 1, -1 do
 			local v = v[i]
 
-			if not v.DONT_WRITE then
-				if v.value ~= "*" then table.insert(modifiers, v.value) end
-			end
+			if v.value ~= "*" then table.insert(modifiers, v.value) end
 		end
 
 		state.cdecl.of = {

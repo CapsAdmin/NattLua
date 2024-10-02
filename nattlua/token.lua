@@ -1,4 +1,3 @@
-local table_pool = require("nattlua.other.table_pool")
 local formating = require("nattlua.other.formating")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("token")
@@ -12,17 +11,11 @@ local setmetatable = _G.setmetatable
 	value = string,
 	start = number,
 	stop = number,
-	is_whitespace = boolean,
-	string_value = false | string,
-	inferred_type = false | any,
-	inferred_types = List<|any|>,
-	potential_idiv = boolean,
-	parent = any,
-	is_identifier = boolean,
-	kind = any,
-	whitespace = false | List<|CurrentType<|"table", 1|>|>,
-	idiv_resolved = any,
-	DONT_WRITE = any,
+	string_value = nil | string,
+	inferred_types = nil | List<|any|>,
+	potential_idiv = nil | boolean,
+	parent = nil | any,
+	whitespace = nil | List<|CurrentType<|"table", 1|>|>,
 }]]
 --[[#type META.Token = META.@Self]]
 
@@ -37,14 +30,17 @@ function META:__tostring()
 end
 
 function META:AssociateType(obj)
+	self.inferred_types = self.inferred_types or {}
 	self.inferred_types[#self.inferred_types + 1] = obj
 end
 
 function META:GetAssociatedTypes()
+	self.inferred_types = self.inferred_types or {}
 	return self.inferred_types
 end
 
 function META:GetLastAssociatedType()
+	self.inferred_types = self.inferred_types or {}
 	return self.inferred_types[#self.inferred_types]
 end
 
@@ -276,48 +272,18 @@ function META:GetSemanticType()
 	return "comment"
 end
 
-local new_token = table_pool(
-	function()
-		return {
-			type = "unknown",
-			value = "",
-			is_whitespace = false,
-			whitespace = false,
-			start = 0,
-			stop = 0,
-			inferred_types = {},
-			potential_idiv = false,
-			parent = false,
-			is_identifier = false,
-			string_value = false,
-		}--[[# as META.@Self]]
-	end,
-	jit and jit.arch == "arm64" and 100000 or 3105585
-)
-
 function META.New(
 	type--[[#: META.TokenType]],
-	is_whitespace--[[#: boolean]],
+	value--[[#: string]],
 	start--[[#: number]],
 	stop--[[#: number]]
 )--[[#: META.@Self]]
-	local tk = new_token()
-	tk.value = ""
-	tk.whitespace = {}
-	tk.potential_idiv = false
-	tk.type = type
-	tk.is_whitespace = is_whitespace
-	tk.start = start
-	tk.stop = stop
-	tk.parent = false
-	tk.string_value = false
-	tk.is_identifier = false
-	tk.kind = false
-	tk.inferred_types = {}
-	tk.idiv_resolved = false
-	tk.DONT_WRITE = false
-	setmetatable(tk, META)
-	return tk
+	return setmetatable({
+		type = type,
+		value = value,
+		start = start,
+		stop = stop,
+	}--[[# as META.@Self]], META)
 end
 
 return META

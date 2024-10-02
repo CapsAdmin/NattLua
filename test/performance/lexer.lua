@@ -10,6 +10,11 @@ local lua_code = assert(
 )
 local lexer = Lexer(Code(lua_code, "10mb.lua"))
 
+local profiler = require("test.helpers.profiler")
+
+profiler.Start()
+
+
 do
 	-- should take around 1.2 seconds
 	local tokens = util.Measure("lexer:GetTokens() reading contents of token and parsing strings", function()
@@ -29,3 +34,5 @@ do
 		end
 	end)
 end
+
+profiler.Stop()

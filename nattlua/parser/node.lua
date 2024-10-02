@@ -86,7 +86,6 @@ function META.New(
 		modifiers = false,
 		props = false,
 		default = false,
-		DONT_WRITE = false,
 		default_comma = false,
 		--ffi
 		strings = false,

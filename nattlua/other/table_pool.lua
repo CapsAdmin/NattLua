@@ -1,5 +1,6 @@
 local pairs = _G.pairs
 local table_new = require("nattlua.other.table_new")
+local table_clear = require("nattlua.other.table_clear")
 return function(alloc--[[#: ref (function=()>({[string] = any}))]], size--[[#: number]])
 	local records = 0
 
@@ -7,18 +8,22 @@ return function(alloc--[[#: ref (function=()>({[string] = any}))]], size--[[#: n
 		records = records + 1
 	end
 
-	local i
-	local pool = table_new(size, records)--[[# as {[number] = nil | return_type<|alloc|>[1]}]]
+	local pool = table_new(size, 0)--[[# as {[number] = nil | return_type<|alloc|>[1]}]]
+
+	local i = 1
+
+	for i = 1, size do
+		pool[i] = table_new(0, records)
+	end
 
 	local function refill()
 		i = 1
-
+		table_clear(pool)
 		for i = 1, size do
-			pool[i] = alloc()
+			pool[i] = table_new(0, records)
 		end
 	end
 
-	refill()
 	return function()
 		local tbl = pool[i]
 

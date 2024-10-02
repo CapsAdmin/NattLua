@@ -94,10 +94,7 @@ if has_ffi and (true--[[# as false]]) then
 	-- this is faster in luajit than the else block
 	function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
 		for i = 1, #str do
-			local a = self.Buffer[start + (i - 2)]
-			local b = str:byte(i)
-
-			if a ~= b then return false end
+			if self.Buffer[start + (i - 2)] ~= str:byte(i) then return false end
 		end
 
 		return true
