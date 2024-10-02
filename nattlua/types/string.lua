@@ -13,8 +13,8 @@ local META = dofile("nattlua/types/base.lua")
 META.Type = "string"
 --[[#type META.@Name = "TString"]]
 --[[#type TString = META.@Self]]
-META:GetSet("Data", nil--[[# as string | nil]])
-META:GetSet("PatternContract", nil--[[# as nil | string]])
+META:GetSet("Data", false--[[# as string | false]])
+META:GetSet("PatternContract", false--[[# as false | string]])
 
 function META.Equal(a--[[#: TString]], b--[[#: TString]])
 	return a.Type == b.Type and a.Data == b.Data
@@ -115,7 +115,8 @@ local function new(data--[[#: string | nil]])
 	return setmetatable(
 		{
 			Type = "string",
-			Data = data,
+			Data = data or false,
+			PatternContract = false,
 			Falsy = false,
 			Truthy = true,
 			ReferenceType = false,
@@ -147,7 +148,7 @@ function META.New(data--[[#: string | nil]])
 end
 
 function META:IsLiteral()
-	return self.Data ~= nil
+	return self.Data ~= false
 end
 
 function META:Widen(obj--[[#: TBaseType | nil]])
@@ -162,7 +163,7 @@ function META:Widen(obj--[[#: TBaseType | nil]])
 	if obj:IsReferenceType() then
 		self:SetReferenceType(true)
 	else
-		if not obj:IsLiteral() then self.Data = nil end
+		if not obj:IsLiteral() then self.Data = false end
 	end
 
 	return self

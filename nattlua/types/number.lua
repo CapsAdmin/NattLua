@@ -14,7 +14,7 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TNumber = META.@Self]]
 --[[#type TNumber.DontWiden = boolean]]
 META.Type = "number"
-META:GetSet("Data", nil--[[# as number | nil]])
+META:GetSet("Data", false--[[# as number | false]])
 --[[#local type TUnion = {
 	@Name = "TUnion",
 	Type = "union",
@@ -25,8 +25,8 @@ function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 	local s = setmetatable(
 		{
 			Type = "number",
-			Data = min,
-			Max = max,
+			Data = min or false,
+			Max = max or false,
 			Falsy = false,
 			Truthy = true,
 			ReferenceType = false,
@@ -62,7 +62,7 @@ function META:GetHash()
 
 	if self.Data then
 		if self.Max then
-			if self.Max ~= nil and self.Data then
+			if self.Max ~= false and self.Data then
 				return tostring(self.Data) .. "-" .. tostring(self.Max)
 			end
 		end
@@ -92,13 +92,11 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 
 	if a.Max or b.Max then return false end
 
-	if not a.Data and not b.Data then return true end
-
 	return false
 end
 
 function META:IsLiteral()
-	return self.Data ~= nil
+	return self.Data ~= false
 end
 
 META:IsSet("DontWiden", false)
@@ -116,7 +114,7 @@ function META:Widen(num--[[#: TNumber | nil]])
 		if num:IsReferenceType() then
 			self:SetReferenceType(true)
 		else
-			if not num:IsLiteral() then self.Data = nil end
+			if not num:IsLiteral() then self.Data = false end
 		end
 	else
 		if self:IsSubsetOf(num) then
@@ -163,7 +161,7 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 		if a_min >= b_min and a_max <= b_max then return true end
 
 		return false, type_errors.subset(a, b)
-	elseif a.Data == nil and b.Data == nil then
+	elseif a.Data == false and b.Data == false then
 		-- number contains number
 		return true
 	elseif a.Data and not b.Data then
@@ -179,8 +177,7 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 end
 
 function META:IsNan()
-	local n = self.Data
-	return n ~= n
+	return self.Data ~= self.Data
 end
 
 function META:IsInf()
@@ -203,16 +200,16 @@ function META:__tostring()
 	return "number"
 end
 
-META:GetSet("Max", nil--[[# as number | nil]])
+META:GetSet("Max", false--[[# as number | false]])
 
 function META:SetMax(val--[[#: number]])
-	if self.Data == val then return self end
+	if self.Data == (val or false) then return self end
 
 	if val then
 		self.Max = val
 	else
-		self.Data = nil
-		self.Max = nil
+		self.Data = false
+		self.Max = false
 	end
 
 	return self
@@ -535,7 +532,7 @@ do
 		if not x.Data then return Number() end
 
 		local res = func(x.Data--[[# as number]])
-		local lcontract = x:GetContract()--[[# as nil | TNumber]]
+		local lcontract = x:GetContract()--[[# as false | TNumber]]
 
 		if lcontract then
 			if lcontract.Max and res > lcontract.Max then
