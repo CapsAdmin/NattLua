@@ -88,7 +88,7 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 		end
 	end
 
-	meta:DebugPropertyAccess()
+	--meta:DebugPropertyAccess()
 	return meta
 end
 
