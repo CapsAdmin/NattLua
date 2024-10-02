@@ -435,8 +435,6 @@ function META:ParseMultipleValues(
 		(node.tokens--[[# as any]])[","] = self:ExpectTokenValue(",")
 	end
 
-	if #out > 1 then assert(out[#out - 1].tokens[","]) end
-
 	return out
 end
 
