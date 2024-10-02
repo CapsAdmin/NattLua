@@ -69,7 +69,6 @@ function META.New()
             Node = false,
             ReferenceType = false,
             Contract = false,
-			UniqueID = false,
 		},
 		META
 	)

@@ -226,7 +226,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			OutputSignature = output or false,
 			scope = false,
 			recursively_called = false,
-			UniqueID = false,
 			AnalyzerFunction = false,
 			FunctionBodyNode = false,
 			Upvalue = false,

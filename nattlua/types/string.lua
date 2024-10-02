@@ -121,7 +121,6 @@ local function new(data--[[#: string | nil]])
 			Falsy = false,
 			Truthy = true,
 			ReferenceType = false,
-			UniqueID = false,
 			Name = false,
 			Upvalue = false,
 			Node = false,

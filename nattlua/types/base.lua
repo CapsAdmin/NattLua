@@ -11,7 +11,6 @@ local META = class.CreateTemplate("base")
 	Self = any,
 	Name = string | false,
 	Parent = any,
-	UniqueID = any,
 }]]
 --[[#local type TBaseType = META.@Self]]
 

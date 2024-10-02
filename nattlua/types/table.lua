@@ -281,11 +281,14 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 
 	if b.Type == "any" then return true, "b is any " end
 
-	local ok, err = a:IsSameUniqueType(b)
+	if b.Type == "table" then
+		if a == b then return true, "same type" end
+		
+		local ok, err = a:IsSameUniqueType(b)
 
-	if not ok then return ok, err end
+		if not ok then return ok, err end
+	end
 
-	if a == b then return true, "same type" end
 
 	if b.Type == "table" then
 		if b:GetMetaTable() and b:GetMetaTable() == a then
@@ -1091,6 +1094,8 @@ do
 	end
 
 	function META.IsSameUniqueType(a--[[#: TTable]], b--[[#: TTable]])
+		if b.Type ~= "table" then return false end
+
 		if a.UniqueID and not b.UniqueID then
 			return false, type_errors.unique_type_type_mismatch(a, b)
 		end
