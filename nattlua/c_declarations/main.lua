@@ -184,8 +184,6 @@ function cparser.new(cdecl, ...)
 	local vars, typs = analyze(cdecl:GetData(), "ffinew", env, analyzer, ...)
 	local ctype = extract_anonymous_type(vars)
 
-	if ctype.is_enum then return ... end
-
 	return ctype
 end
 

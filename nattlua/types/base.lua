@@ -19,7 +19,6 @@ local META = class.CreateTemplate("base")
 	Name = string | false,
 	parent = any | false,
 	Parent = any,
-	is_enum = any,
 	UniqueID = any,
 }]]
 --[[#local type TBaseType = META.@Self]]
@@ -212,7 +211,6 @@ function META.New()
 	return setmetatable(
 		{
 			suppress = false,
-			Self = false,
 			potential_self = false,
 			parent_table = false,
 			dont_widen = false,
@@ -234,7 +232,6 @@ function META.New()
             Parent = false,
             Contract = false,
             MetaTable = false,
-			is_enum = false,
 			UniqueID = false,
 		},
 		META

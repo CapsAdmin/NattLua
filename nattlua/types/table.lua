@@ -1107,7 +1107,6 @@ function META.New()
 			parent_table = false,
 			disabled_unique_id = false,
 			co_func = false,
-			is_enum = false,
 			dont_widen = false,
 			right_source = false,
 			left_source = false,
