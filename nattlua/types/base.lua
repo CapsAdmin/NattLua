@@ -137,6 +137,32 @@ do -- operators
 	end
 end
 
+do
+	META:GetSet("Parent", false--[[# as TBaseType | false]])
+
+	function META:SetParent(parent--[[#: TBaseType | false | nil]])
+		if parent then
+			if parent ~= self then self.Parent = parent end
+		else
+			self.Parent = false
+		end
+	end
+
+	function META:GetRoot()
+		local parent = self
+		local done = {}
+
+		while true do
+			if not parent.Parent or done[parent] then break end
+
+			done[parent] = true
+			parent = parent.Parent--[[# as any]]
+		end
+
+		return parent
+	end
+end
+
 do -- contract
 	function META:Seal()
 		self:SetContract(self:GetContract() or self:Copy())

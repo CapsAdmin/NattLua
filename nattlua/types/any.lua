@@ -69,6 +69,7 @@ function META.New()
 			Node = false,
 			ReferenceType = false,
 			Contract = false,
+			Parent = false,
 		},
 		META
 	)
