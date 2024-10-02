@@ -11,7 +11,6 @@ local META = class.CreateTemplate("base")
 	Self = any,
 	potential_self = any,
 	parent_table = any,
-	dont_widen = any,
 	truthy_union = any,
 	falsy_union = any,
 	right_source = any,
@@ -207,34 +206,4 @@ function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[
 	return false, type_errors.binary(op, l, r)
 end
 
-function META.New()
-	return setmetatable(
-		{
-			suppress = false,
-			potential_self = false,
-			parent_table = false,
-			dont_widen = false,
-			truthy_union = false,
-			right_source = false,
-			left_source = false,
-			TypeOverride = false,
-			Falsy = false,
-			Truthy = false,
-			falsy_union = false,
-			right_source = false,
-			Data = nil,
-            Name = false,
-            parent = false,
-            AnalyzerEnvironment = false,
-            Upvalue = false,
-            Node = false,
-            ReferenceType = false,
-            Parent = false,
-            Contract = false,
-            MetaTable = false,
-			UniqueID = false,
-		},
-		META
-	)
-end
 return META

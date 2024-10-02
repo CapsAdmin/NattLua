@@ -229,7 +229,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			right_source = false,
 			left_source = false,
 			recursively_called = false,
-			dont_widen = false,
 			UniqueID = false,
 		},
 		META

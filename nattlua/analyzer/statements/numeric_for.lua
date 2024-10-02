@@ -101,7 +101,7 @@ return {
 					init = LNumber(literal_init)
 				end
 
-				init.dont_widen = true
+				init:SetDontWiden(true)
 			else
 				if
 					init.Type == "number" and

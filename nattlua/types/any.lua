@@ -56,6 +56,36 @@ function META:IsLiteral()
 	return false
 end
 
+function META.New()
+	return setmetatable(
+		{
+			suppress = false,
+			potential_self = false,
+			parent_table = false,
+			truthy_union = false,
+			right_source = false,
+			left_source = false,
+			TypeOverride = false,
+			Falsy = false,
+			Truthy = false,
+			falsy_union = false,
+			right_source = false,
+			Data = nil,
+            Name = false,
+            parent = false,
+            AnalyzerEnvironment = false,
+            Upvalue = false,
+            Node = false,
+            ReferenceType = false,
+            Parent = false,
+            Contract = false,
+            MetaTable = false,
+			UniqueID = false,
+		},
+		META
+	)
+end
+
 return {
 	Any = function()
 		return META.New()

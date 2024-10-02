@@ -54,7 +54,7 @@ return function(META)
 		local scope = self:GetScope()
 
 		if self:IsInUncertainLoop(scope) and tbl:GetCreationScope() then
-			if val.dont_widen or scope:Contains(tbl:GetCreationScope()) then
+			if (val.Type == "number" and val:IsDontWiden()) or scope:Contains(tbl:GetCreationScope()) then
 				val = val:Copy()
 			else
 				val = val:Widen()
@@ -72,7 +72,7 @@ return function(META)
 		local scope = self:GetScope()
 
 		if self:IsInUncertainLoop(scope) and upvalue:GetScope() then
-			if val.dont_widen or scope:Contains(upvalue:GetScope()) then
+			if (val.Type == "number" and val:IsDontWiden()) or scope:Contains(upvalue:GetScope()) then
 				val = val:Copy()
 			else
 				val = val:Widen()

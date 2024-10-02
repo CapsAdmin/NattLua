@@ -12,6 +12,7 @@ local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TNumber"]]
 --[[#type TNumber = META.@Self]]
+--[[#type TNumber.DontWiden = boolean]]
 META.Type = "number"
 META:GetSet("Data", nil--[[# as number | nil]])
 --[[#local type TUnion = {
@@ -33,7 +34,6 @@ function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 			truthy_union = false,
 			potential_self = false,
 			parent_table = false,
-			dont_widen = false,
 			left_source = false,
 			right_source = false,
 			Name = false,
@@ -45,6 +45,7 @@ function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 			Parent = false,
 			Contract = false,
 			MetaTable = false,
+			DontWiden = false,
 		},
 		META
 	)
@@ -106,6 +107,8 @@ end
 function META:IsLiteral()
 	return self.Data ~= nil
 end
+
+META:IsSet("DontWiden", false)
 
 function META:Widen(num--[[#: TNumber | nil]])
 	if not num then return Number() end

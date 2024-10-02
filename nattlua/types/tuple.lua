@@ -481,7 +481,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			falsy_union = false,
 			parent_table = false,
 			potential_self = false,
-			dont_widen = false,
 			left_source = false,
 			right_source = false,
 			Name = false,
