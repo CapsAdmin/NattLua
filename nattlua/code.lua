@@ -76,7 +76,8 @@ if has_ffi and (true--[[# as false]]) then
 	function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
 		start = start - 1
 		stop = stop - 1
-		if stop >= self.buffer_len then return "" end
+
+		if start >= self.buffer_len then return "" end
 
 		return ffi_string(self.Buffer + start, (stop - start) + 1)
 	end
@@ -104,6 +105,7 @@ if has_ffi and (true--[[# as false]]) then
 	end
 
 	local ctype
+	local refs = setmetatable({}, {_mode = "kv"})
 
 	function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
 		lua_code = remove_bom_header(lua_code)
@@ -116,6 +118,7 @@ if has_ffi and (true--[[# as false]]) then
 				name_length = #name,
 			}
 		)
+		refs[self] = lua_code
 		return self
 	end
 
