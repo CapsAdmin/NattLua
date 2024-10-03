@@ -74,11 +74,11 @@ if has_ffi and (true--[[# as false]]) then
 	local ffi_string = ffi.string
 
 	function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
-		if stop > self.buffer_len then return "" end
+		start = start - 1
+		stop = stop - 1
+		if stop >= self.buffer_len then return "" end
 
-		if start == stop then return ffi_string(self.Buffer + start - 1, 1) end
-
-		return ffi_string(self.Buffer + start - 1, (stop - start) + 1)
+		return ffi_string(self.Buffer + start, (stop - start) + 1)
 	end
 
 	function META:GetByte(pos--[[#: number]])
