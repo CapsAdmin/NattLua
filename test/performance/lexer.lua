@@ -11,6 +11,7 @@ local lua_code = assert(
 local lexer = Lexer(Code(lua_code, "10mb.lua"))
 local profiler = require("test.helpers.profiler")
 profiler.Start()
+collectgarbage("stop")
 
 do
 	-- should take around 1.2 seconds
@@ -25,7 +26,7 @@ do
 		lexer:ResetState()
 
 		while true do
-			local type, start, stop, is_whitespace = lexer:ReadSimple()
+			local type = lexer:ReadSimple()
 
 			if type == "end_of_file" then break end
 		end

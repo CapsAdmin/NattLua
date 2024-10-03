@@ -21,8 +21,6 @@ local IsDuringLetter = characters.IsDuringLetter
 local IsLetter = characters.IsLetter
 local IsKeyword = characters.IsKeyword
 local IsSymbol = characters.IsSymbol
-local symbols = runtime_syntax:GetSymbols()
-local number_annotations = runtime_syntax:GetNumberAnnotations()
 local META = class.CreateTemplate("lexer")
 --[[#type META.@Name = "Lexer"]]
 --[[#type META.@Self = {
@@ -165,26 +163,63 @@ do
 	end
 end
 
-function META:ReadFirstFromArray(strings--[[#: List<|string|>]])--[[#: boolean]]
-	for i = 1, #strings do
-		if self:IsString(strings[i]) then
-			self:Advance(#strings[i])
-			return true
+local function BuildTrieReader(list, lowercase)
+	local bit_bor = bit.bor
+	local longest = 0
+	local min_byte = math.huge
+	local max_byte = 0
+	local map = {}
+
+	for _, v in ipairs(list) do
+		if #v > longest then longest = #v end
+
+		local node = map
+
+		for i = 1, #v do
+			local b = v:byte(i)
+
+			if lowercase then b = bit_bor(b, 32) end
+
+			if b < min_byte then min_byte = b end
+
+			if b > max_byte then max_byte = b end
+
+			node[b] = node[b] or {}
+			node = node[b]
+
+			if i == #v then node.END = v end
 		end
 	end
 
-	return false
-end
+	return function(self)
+		local b = self:PeekByte()
 
-function META:ReadFirstLowercaseFromArray(strings--[[#: List<|string|>]])--[[#: boolean]]
-	for _, str in ipairs(strings) do
-		if self:IsStringLower(str) then
-			self:Advance(#str)
+		if lowercase then b = bit_bor(b, 32) end
+
+		if b < min_byte or b > max_byte then return false end
+
+		local node = map
+		local last_match = nil
+
+		for i = 1, longest do
+			local b = self:PeekByte(i - 1)
+
+			if lowercase then b = bit_bor(b, 32) end
+
+			if not node[b] then break end
+
+			node = node[b]
+
+			if node.END then last_match = i end
+		end
+
+		if last_match then
+			self:Advance(last_match)
 			return true
 		end
-	end
 
-	return false
+		return false
+	end
 end
 
 function META:GetTokens()
@@ -381,6 +416,8 @@ function META:ReadNumberPowExponent(what--[[#: string]])
 	return true
 end
 
+local ReadNumberAnnotations = BuildTrieReader(runtime_syntax:GetNumberAnnotations(), true)
+
 function META:ReadHexNumber()
 	if
 		not self:IsString("0") or
@@ -416,7 +453,7 @@ function META:ReadHexNumber()
 				if self:ReadNumberPowExponent("pow") then break end
 			end
 
-			if self:ReadFirstLowercaseFromArray(number_annotations) then break end
+			if ReadNumberAnnotations(self) then break end
 
 			self:Error(
 				"malformed hex number, got " .. string.char(self:PeekByte()),
@@ -456,9 +493,7 @@ function META:ReadBinaryNumber()
 				if self:ReadNumberPowExponent("exponent") then break end
 			end
 
-			if self:ReadFirstLowercaseFromArray(runtime_syntax:GetNumberAnnotations()) then
-				break
-			end
+			if ReadNumberAnnotations(self) then break end
 
 			self:Error(
 				"malformed binary number, got " .. string.char(self:PeekByte()),
@@ -513,7 +548,7 @@ function META:ReadDecimalNumber()
 				if self:ReadNumberPowExponent("exponent") then break end
 			end
 
-			if self:ReadFirstLowercaseFromArray(number_annotations) then break end
+			if ReadNumberAnnotations(self) then break end
 
 			self:Error(
 				"malformed number, got " .. string.char(self:PeekByte()) .. " in decimal notation",
@@ -617,8 +652,10 @@ do
 	META.ReadSingleQuoteString = build_string_reader("single", "'")
 end
 
-function META:ReadSymbol()--[[#: TokenReturnType]]
-	if self:ReadFirstFromArray(symbols) then return "symbol" end
+local ReadSymbolFromTrie = BuildTrieReader(runtime_syntax:GetSymbols())
+
+function META:ReadSymbol()
+	if ReadSymbolFromTrie(self) then return "symbol" end
 
 	return false
 end
