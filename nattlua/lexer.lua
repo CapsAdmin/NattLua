@@ -125,30 +125,15 @@ function META:ReadUnknown()
 end
 
 function META:ReadSimple()--[[#: (TokenType, boolean, number, number)]]
-	if self:ReadShebang() then return "shebang", false, 1, self.Position - 1 end
-
 	local start = self.Position
 	local type, is_whitespace = self:Read()
-
-	if type == "discard" then return self:ReadSimple() end
-
-	if not type then
-		if self:ReadEndOfFile() then
-			type = "end_of_file"
-			is_whitespace = false
-		else
-			type, is_whitespace = self:ReadUnknown()
-		end
-	end
-
 	return type, is_whitespace, start, self.Position - 1
 end
 
 do
 	function META:ReadToken()
-		local type, is_whitespace, start, stop = self:ReadSimple() -- TODO: unpack not working
-		local value = self:GetStringSlice(start, stop)
-		local tk = Token(type, value, start, stop)
+		local type, is_whitespace, start, stop = self:ReadSimple()
+		local tk = Token(type, self:GetStringSlice(start, stop), start, stop)
 		return tk, is_whitespace
 	end
 
@@ -663,6 +648,8 @@ function META.ReadRemainingCommentEscape(self--[[#: Lexer]])--[[#: TokenReturnTy
 end
 
 function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
+	if self:ReadShebang() then return "shebang", false end
+
 	if self:ReadRemainingCommentEscape() then return "comment_escape", true end
 
 	do

@@ -13,10 +13,12 @@ local lexer = Lexer(Code(lua_code, "10mb.lua"))
 local profiler = require("test.helpers.profiler")
 profiler.Start()
 collectgarbage("stop")
+
 do
-	-- should take around 1.2 seconds
+	-- should take around 1.35 seconds
 	local tokens = util.Measure("lexer:GetTokens() reading contents of token and parsing strings", function()
 		Parser(lexer:GetTokens(), code):ParseRootNode()
 	end)
 end
+
 profiler.Stop()

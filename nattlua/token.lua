@@ -5,7 +5,7 @@ local reverse_escape_string = require("nattlua.other.reverse_escape_string")
 local setmetatable = _G.setmetatable
 --[[#type META.@Name = "Token"]]
 --[[#type META.TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
---[[#type META.TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "discard" | "unknown" | META.TokenWhitespaceType]]
+--[[#type META.TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "unknown" | META.TokenWhitespaceType]]
 --[[#type META.@Self = {
 	@Name = "Token",
 	type = META.TokenType,
@@ -275,6 +275,7 @@ end
 
 function META:GetStringValue()
 	if self.string_value then return self.string_value end
+
 	if self.type == "string" then
 		local value = self.value
 

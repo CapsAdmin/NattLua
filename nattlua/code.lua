@@ -71,12 +71,14 @@ if has_ffi and (true--[[# as false]]) then
 		return self.buffer_len
 	end
 
+	local ffi_string = ffi.string
+
 	function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
-		if start > self.buffer_len then return "" end
+		if stop > self.buffer_len then return "" end
 
-		if start == stop then return ffi.string(self.Buffer + start - 1, 1) end
+		if start == stop then return ffi_string(self.Buffer + start - 1, 1) end
 
-		return ffi.string(self.Buffer + start - 1, (stop - start) + 1)
+		return ffi_string(self.Buffer + start - 1, (stop - start) + 1)
 	end
 
 	function META:GetByte(pos--[[#: number]])
@@ -91,10 +93,11 @@ if has_ffi and (true--[[# as false]]) then
 		end
 	end
 
-	-- this is faster in luajit than the else block
 	function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
+		start = start - 2
+
 		for i = 1, #str do
-			if self.Buffer[start + (i - 2)] ~= str:byte(i) then return false end
+			if self.Buffer[start + i] ~= str:byte(i) then return false end
 		end
 
 		return true
