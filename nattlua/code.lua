@@ -50,7 +50,7 @@ end
 
 local has_ffi, ffi = pcall(require, "ffi")
 
-if has_ffi and (true--[[# as false]]) then
+if has_ffi--[[# as false]] then
 	--[[#-- todo, ffimetatype inference
 	type META.@Self = {
 		Buffer = string,
