@@ -134,6 +134,7 @@ function jit_options.SetOptimized()
 		{
 			maxtrace = 65535,
 			maxmcode = 128000,
+			sizemcode = jit.arch == "arm64" and 50000 or nil,
 			minstitch = 3,
 			maxrecord = 2000,
 			maxirconst = 8000,
