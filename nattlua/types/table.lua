@@ -1012,8 +1012,23 @@ do
 		if from_tracking then scope:AddTrackedObject(self) end
 	end
 
-	function META:ClearMutations()
-		self.mutations = false
+	function META:ClearMutations(scope)
+		if self.mutations then
+			if not scope then
+				self.mutations = false
+				return
+			end
+
+			for key, stack in pairs(self.mutations) do
+				for i = #stack, 1, -1 do
+					local val = stack[i]
+
+					if scope == val.scope then table.remove(stack, i) end
+				end
+			end
+
+			if not next(self.mutations) then self.mutations = false end
+		end
 	end
 
 	function META:SetMutations(tbl)

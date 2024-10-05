@@ -12,7 +12,7 @@ local function mutate_type(self, i, arg, contract, arguments)
 	local env = self:GetScope():GetNearestFunctionScope()
 	arg:PushContract(contract)
 	arg.argument_index = i
-	arg:ClearMutations()
+	arg:ClearMutations(self:GetScope())
 	table.insert(env.mutated_types, {arg = arg, mutations = arg:GetMutations()})
 	arguments:Set(i, arg)
 end

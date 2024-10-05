@@ -182,6 +182,7 @@ return function(META)
 						truthy = truthy_union,
 						falsy = falsy_union,
 						inverted = inverted,
+						scope = self:GetScope(),
 					}
 				)
 				self:TrackUpvalue(obj)
@@ -237,11 +238,37 @@ return function(META)
 			end
 
 			function META:ClearTrackedUpvalues()
-				if self.tracked_upvalues then
+				if not self.tracked_upvalues then return end
+				if false then
 					for _, upvalue in ipairs(self.tracked_upvalues) do
 						upvalue.tracked_stack = false
 					end
 
+					self.tracked_upvalues_done = false
+					self.tracked_upvalues = false
+					return
+				end
+				local scope = self:GetScope()
+
+				for i = #self.tracked_upvalues, 1, -1 do
+					local upvalue = self.tracked_upvalues[i]
+					if upvalue.tracked_stack then
+						for i = #upvalue.tracked_stack, 1, -1 do
+							local val = upvalue.tracked_stack[i]
+
+							if val.scope == scope then
+								table.remove(upvalue.tracked_stack, i)
+							end
+						end
+
+						if not upvalue.tracked_stack[1] then
+							upvalue.tracked_stack = false
+							table.remove(self.tracked_upvalues, i)
+						end
+					end
+				end
+
+				if not self.tracked_upvalues[1] then
 					self.tracked_upvalues_done = false
 					self.tracked_upvalues = false
 				end
@@ -281,12 +308,12 @@ return function(META)
 				table.insert(
 					tbl.tracked_stack[hash],
 					{
-						contract = tbl:GetContract(),
 						key = key,
 						truthy = truthy_union,
 						falsy = falsy_union,
 						inverted = inverted,
 						truthy_falsy = truthy_falsy,
+						scope = self:GetScope(),
 					}
 				)
 				self.tracked_tables = self.tracked_tables or {}
@@ -340,11 +367,35 @@ return function(META)
 			end
 
 			function META:ClearTrackedTables()
-				if self.tracked_tables then
+				if not self.tracked_tables then return end
+				if false then
 					for _, tbl in ipairs(self.tracked_tables) do
 						tbl.tracked_stack = false
 					end
 
+					self.tracked_tables_done = false
+					self.tracked_tables = false
+					return
+				end
+				local scope = self:GetScope()
+
+				for i = #self.tracked_tables, 1, -1 do
+					local tbl = self.tracked_tables[i]
+
+					for key, stack in pairs(tbl.tracked_stack) do
+						for i = #stack, 1, -1 do
+							local val = stack[i]
+
+							if scope == val.scope then table.remove(stack, i) end
+						end
+
+						if not stack[1] then tbl.tracked_stack[key] = nil end
+					end
+
+					if not next(tbl.tracked_stack) then tbl.tracked_stack = false table.remove(tbl.tracked_stack, i) end
+				end
+
+				if not self.tracked_tables[1] then
 					self.tracked_tables_done = false
 					self.tracked_tables = false
 				end

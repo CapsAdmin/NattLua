@@ -121,7 +121,7 @@ return function(META)
 
 			for _, obj in ipairs(arguments:GetData()) do
 				if obj.Type == "upvalue" or obj.Type == "table" then
-					obj:ClearMutations()
+					obj:ClearMutations(self:GetScope())
 				end
 			end
 

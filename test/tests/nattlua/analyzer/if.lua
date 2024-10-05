@@ -1727,6 +1727,67 @@ if ipv4.test then
     attest.equal(ipv4.test, _  as string)
     attest.equal(a, _ as number)
 end]]
+analyze[[
+local function IsString(offset: number | nil)
+	offset = 1
+	return true
+end
+
+local self = _  as {comment_escape = false | string, test = string}
+
+if self.comment_escape and IsString() then local x = #self.comment_escape end
+]]
+analyze[[
+local META = {}
+
+function META:__index(key)
+	return META[key]
+end
+
+type META.@Self = {
+	comment_escape = false | string,
+}
+
+function META:IsString(str: string, offset: number | nil): boolean
+	offset = offset or 0
+	return _  as boolean
+end
+
+function META:ReadRemainingCommentEscape()
+	if self.comment_escape and self:IsString(self.comment_escape) then
+		local x = #self.comment_escape
+	end
+
+	return false
+end
+]]
+analyze[[
+local function IsString(offset: number | nil)
+	offset = 1
+	return true
+end
+
+local comment_escape = _  as false | string
+
+if comment_escape and IsString() then local x = #comment_escape end
+
+]]
+analyze[[
+local META = {}
+META.__index = META
+type META.@Self = {
+	comment_escape = false | string,
+}
+
+function META:IsString(str: number) end
+
+local self = _  as META.@Self
+assert(self.comment_escape)
+self:IsString(1)
+assert(self.comment_escape)
+
+
+]]
 
 if false then
 	pending[[

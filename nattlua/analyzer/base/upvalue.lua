@@ -54,8 +54,19 @@ do
 		if from_tracking then scope:AddTrackedObject(self) end
 	end
 
-	function META:ClearMutations()
-		self.Mutations = false
+	function META:ClearMutations(scope)
+		if self.Mutations then
+			if not scope then
+				self.Mutations = false
+				return
+			end
+
+			for i = #self.Mutations, 1, -1 do
+				if scope == self.Mutations[i].scope then table.remove(self.Mutations, i) end
+			end
+
+			if not self.Mutations[1] then self.Mutations = false end
+		end
 	end
 
 	function META:HasMutations()

@@ -362,7 +362,7 @@ analyze[[
     })
 
     local newvector = Vector(1,2,3) + Vector(100,100,100)
-    attest.equal(newvector, _ as {x = number, y = number, z = number})
+    attest.equal(newvector, _ as {x = 101, y = 102, z = 103})
 ]]
 analyze(
 	[[

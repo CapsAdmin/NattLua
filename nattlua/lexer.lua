@@ -675,8 +675,8 @@ function META.ReadCommentEscape(self--[[#: Lexer]])--[[#: TokenReturnType]]
 end
 
 function META.ReadRemainingCommentEscape(self--[[#: Lexer]])--[[#: TokenReturnType]]
-	if self.comment_escape and self:IsString(self.comment_escape--[[# as string]]) then
-		self:Advance(#(self.comment_escape--[[# as string]]))
+	if self.comment_escape and self:IsString(self.comment_escape) then
+		self:Advance(#self.comment_escape)
 		self.comment_escape = false
 		return "comment_escape"
 	end

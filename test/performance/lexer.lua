@@ -8,6 +8,15 @@ local lua_code = assert(
 		"https://gist.githubusercontent.com/CapsAdmin/0bc3fce0624a72d83ff0667226511ecd/raw/b84b097b0382da524c4db36e644ee8948dd4fb20/10mb.lua"
 	)
 )
+local all = {lua_code}
+
+for line in io.popen("find ."):lines() do
+	if line:find(".lua", nil, true) or line:find(".nlua", nil, true) then
+		table.insert(all, "do " .. io.open(line):read("*all") .. "end ")
+	end
+end
+
+lua_code = table.concat(all)
 local lexer = Lexer(Code(lua_code, "10mb.lua"))
 local profiler = require("test.helpers.profiler")
 profiler.Start()

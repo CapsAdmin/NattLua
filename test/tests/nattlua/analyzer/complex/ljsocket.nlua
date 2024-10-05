@@ -1420,7 +1420,7 @@ function M.bind(host: string, service: string)
 	server:set_socket_option("rcvbuf", 65536)
 	return server
 end
-
+do return end
 local type TEST = true
 
 if TEST then
