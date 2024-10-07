@@ -63,6 +63,10 @@ return {
 				local obj = self:Assert(self:AnalyzeExpression(exp_val))
 				self:ClearTracked()
 
+				if obj.Type == "union" and obj:GetCardinality() == 1 then
+					obj = obj:GetData()[1]
+				end
+
 				if obj.Type == "tuple" and obj:GetElementCount() == 1 then
 					obj = obj:Get(1)
 				end
