@@ -18,16 +18,6 @@ analyze([[
     
     local foo = 666
 ]])
-analyze([[
-    -- test shadow upvalues
-    local foo = 1337
-
-    function test()
-        attest.equal(foo, 1337)
-    end
-    
-    local foo = 666
-]])
 analyze[[
     local foo = 1337
 
