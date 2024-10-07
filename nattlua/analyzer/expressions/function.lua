@@ -164,7 +164,7 @@ end
 return {
 	AnalyzeFunction = function(self, node)
 		local obj = Function()
-		obj:SetUpvaluePosition(#self:GetScope():GetUpvalues("runtime"))
+		obj:SetUpvaluePosition(self:IncrementUpvaluePosition())
 		obj:SetScope(self:GetScope())
 		obj:SetInputIdentifiers(node.identifiers)
 		self:PushCurrentType(obj, "function")

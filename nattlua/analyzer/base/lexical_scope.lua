@@ -118,6 +118,8 @@ function META:FindUpvalue(key, env)
 	end
 end
 
+local pos = 0
+
 function META:CreateUpvalue(key, obj, env)
 	local shadow
 
@@ -128,10 +130,11 @@ function META:CreateUpvalue(key, obj, env)
 	local upvalue = Upvalue(obj)
 	upvalue:SetKey(key)
 	upvalue:SetShadow(shadow or false)
-	upvalue:SetPosition(#self.upvalues[env].list)
 	upvalue:SetScope(self)
 	table_insert(self.upvalues[env].list, upvalue)
 	self.upvalues[env].map[key] = upvalue
+	upvalue:SetPosition(pos)
+	pos = pos + 1
 	return upvalue
 end
 
@@ -402,7 +405,7 @@ function META.New(parent, upvalue_position, obj)
 		obj = obj,
 		CachedLoopScope = false,
 		Children = {},
-		upvalue_position = upvalue_position or false,
+		upvalue_position = upvalue_position or pos,
 		uncertain_function_return = false,
 		TrackedObjects = {},
 		loop_iteration = false,
@@ -443,6 +446,7 @@ function META.New(parent, upvalue_position, obj)
 	}
 	setmetatable(scope, META)
 	scope:SetParent(parent or false)
+	pos = pos + 1
 	return scope
 end
 

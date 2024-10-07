@@ -29,15 +29,21 @@ return function(META)
 	end
 
 	function META:CreateAndPushFunctionScope(obj)
-		return self:PushScope(LexicalScope(obj:GetScope() or self:GetScope(), obj:GetUpvaluePosition(), obj))
+		local scope = self:PushScope(LexicalScope(obj:GetScope() or self:GetScope(), obj))
+		scope.upvalue_position = obj:GetUpvaluePosition() or self:IncrementUpvaluePosition()
+		return scope
 	end
 
 	function META:CreateAndPushModuleScope()
-		return self:PushScope(LexicalScope())
+		local scope = self:PushScope(LexicalScope())
+		scope.upvalue_position = self:IncrementUpvaluePosition()
+		return scope
 	end
 
 	function META:CreateAndPushScope()
-		return self:PushScope(LexicalScope(self:GetScope()))
+		local scope = self:PushScope(LexicalScope(self:GetScope()))
+		scope.upvalue_position = self:IncrementUpvaluePosition()
+		return scope
 	end
 
 	function META:PopScope()
@@ -78,8 +84,14 @@ return function(META)
 		return scope_copy
 	end
 
+	function META:IncrementUpvaluePosition()
+		self.upvalue_position = (self.upvalue_position or 0) + 1
+		return self.upvalue_position
+	end
+
 	function META:CreateLocalValue(key, obj, const)
 		local upvalue = self:GetScope():CreateUpvalue(key, obj, self:GetCurrentAnalyzerEnvironment())
+		upvalue:SetPosition(self:IncrementUpvaluePosition())
 		self:MutateUpvalue(upvalue, obj)
 		upvalue:SetImmutable(const or false)
 		return upvalue

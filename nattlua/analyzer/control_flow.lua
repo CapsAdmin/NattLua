@@ -122,7 +122,7 @@ return function(META)
 					end
 				end
 
-				self:ApplyMutationsAfterReturn(frame.scope, frame.scope, assert_expression:GetUpvalue() ~= nil, upvalues, tables)
+				self:ApplyMutationsAfterReturn(frame.scope, frame.scope, false, upvalues, tables)
 				return
 			end
 
