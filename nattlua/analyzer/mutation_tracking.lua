@@ -142,10 +142,14 @@ return function(META)
 				self.tracked_upvalues = self.tracked_upvalues or {}
 				self.tracked_upvalues_done = self.tracked_upvalues_done or {}
 
-				if not self.tracked_upvalues_done[upvalue] then
-					table.insert(self.tracked_upvalues, upvalue)
-					self.tracked_upvalues_done[upvalue] = true
+				if self.tracked_upvalues_done[upvalue] then
+					return self.tracked_upvalues_done[upvalue]
 				end
+
+				local data = {upvalue = upvalue}
+				table.insert(self.tracked_upvalues, data)
+				self.tracked_upvalues_done[upvalue] = data
+				return data
 			end
 
 			function META:TrackDependentUpvalues(obj)
@@ -175,21 +179,28 @@ return function(META)
 
 				if not upvalue then return end
 
-				upvalue.tracked_stack = upvalue.tracked_stack or {}
+				local scope = self:GetScope()
+
+				if not scope then return end
+
+				local data = self:TrackUpvalue(obj)
+				data.stack = data.stack or {}
 				table.insert(
-					upvalue.tracked_stack,
+					data.stack,
 					{
 						truthy = truthy_union,
 						falsy = falsy_union,
 						inverted = inverted,
+						scope = scope,
 					}
 				)
-				self:TrackUpvalue(obj)
 			end
 
 			function META:GetTrackedUpvalue(obj)
 				local upvalue = obj:GetUpvalue()
-				local stack = upvalue and upvalue.tracked_stack
+				local stack = self.tracked_upvalues_done and
+					self.tracked_upvalues_done[upvalue] and
+					self.tracked_upvalues_done[upvalue].stack
 
 				if not stack then return end
 
@@ -214,22 +225,28 @@ return function(META)
 			function META:GetTrackedUpvalues(old_upvalues)
 				local upvalues = {}
 				local translate = {}
+				local scope = self:GetScope()
 
 				if old_upvalues then
-					for i, upvalue in ipairs(self:GetScope().upvalues.runtime.list) do
+					for i, upvalue in ipairs(scope.upvalues.runtime.list) do
 						local old = old_upvalues[i]
 						translate[old] = upvalue
-						upvalue.tracked_stack = old.tracked_stack
 					end
 				end
 
 				if self.tracked_upvalues then
-					for _, upvalue in ipairs(self.tracked_upvalues) do
-						local stack = upvalue.tracked_stack
+					for _, data in ipairs(self.tracked_upvalues) do
+						local stack = data.stack
+						local upvalue = data.upvalue
 
 						if old_upvalues then upvalue = translate[upvalue] end
 
-						table.insert(upvalues, {upvalue = upvalue, stack = stack and shallow_copy(stack)})
+						-- stack is needed to simply track upvalues used, even if they were not mutated for warnings
+						if upvalue then
+							--if upvalue and (not upvalue.scope or scope:Contains(upvalue.scope)) then
+							table.insert(upvalues, {upvalue = upvalue, stack = stack and shallow_copy(stack)})
+						end
+					--end
 					end
 				end
 
@@ -238,10 +255,6 @@ return function(META)
 
 			function META:ClearTrackedUpvalues()
 				if self.tracked_upvalues then
-					for _, upvalue in ipairs(self.tracked_upvalues) do
-						upvalue.tracked_stack = false
-					end
-
 					self.tracked_upvalues_done = false
 					self.tracked_upvalues = false
 				end
@@ -263,49 +276,58 @@ return function(META)
 
 				if hash == nil then return end
 
-				tbl.tracked_stack = tbl.tracked_stack or {}
-				tbl.tracked_stack[hash] = tbl.tracked_stack[hash] or {}
+				local scope = self:GetScope()
+
+				if not scope then return end
+
+				self.tracked_tables = self.tracked_tables or {}
+				self.tracked_tables_done = self.tracked_tables_done or {}
+				local data
+
+				if self.tracked_tables_done[tbl] then
+					data = self.tracked_tables_done[tbl]
+				else
+					data = {tbl = tbl}
+					table.insert(self.tracked_tables, data)
+					self.tracked_tables_done[tbl] = data
+				end
+
+				data.stack = data.stack or {}
+				data.stack[hash] = data.stack[hash] or {}
 
 				if falsy_union then falsy_union:SetParentTable(tbl, key) end
 
 				if truthy_union then truthy_union:SetParentTable(tbl, key) end
 
-				for i = #tbl.tracked_stack[hash], 1, -1 do
-					local tracked = tbl.tracked_stack[hash][i]
+				for i = #data.stack[hash], 1, -1 do
+					local tracked = data.stack[hash][i]
 
-					if tracked.truthy_falsy then
-						table.remove(tbl.tracked_stack[hash], i)
-					end
+					if tracked.truthy_falsy then table.remove(data.stack[hash], i) end
 				end
 
 				table.insert(
-					tbl.tracked_stack[hash],
+					data.stack[hash],
 					{
-						contract = tbl:GetContract(),
 						key = key,
 						truthy = truthy_union,
 						falsy = falsy_union,
 						inverted = inverted,
 						truthy_falsy = truthy_falsy,
+						scope = scope,
 					}
 				)
-				self.tracked_tables = self.tracked_tables or {}
-				self.tracked_tables_done = self.tracked_tables_done or {}
-
-				if not self.tracked_tables_done[tbl] then
-					table.insert(self.tracked_tables, tbl)
-					self.tracked_tables_done[tbl] = true
-				end
 			end
 
 			function META:GetTrackedTableWithKey(tbl, key)
-				if not tbl.tracked_stack then return end
-
 				local hash = key:GetHash()
 
 				if hash == nil then return end
 
-				local stack = tbl.tracked_stack[hash]
+				local data = self.tracked_tables_done and self.tracked_tables_done[tbl]
+
+				if not data then return end
+
+				local stack = data.stack and data.stack[hash]
 
 				if not stack then return end
 
@@ -320,15 +342,23 @@ return function(META)
 				local tables = {}
 
 				if self.tracked_tables then
-					for _, tbl in ipairs(self.tracked_tables) do
-						if tbl.tracked_stack then
-							for _, stack in pairs(tbl.tracked_stack) do
+					local scope = self:GetScope()
+
+					for _, data in ipairs(self.tracked_tables) do
+						if data.stack then
+							for _, stack in pairs(data.stack) do
+								local new_stack = {}
+
+								for i, v in ipairs(stack) do
+									table.insert(new_stack, v)
+								end
+
 								table.insert(
 									tables,
 									{
-										obj = tbl,
+										obj = data.tbl,
 										key = stack[#stack].key,
-										stack = shallow_copy(stack),
+										stack = new_stack,
 									}
 								)
 							end
@@ -341,10 +371,6 @@ return function(META)
 
 			function META:ClearTrackedTables()
 				if self.tracked_tables then
-					for _, tbl in ipairs(self.tracked_tables) do
-						tbl.tracked_stack = false
-					end
-
 					self.tracked_tables_done = false
 					self.tracked_tables = false
 				end
@@ -354,6 +380,27 @@ return function(META)
 		function META:ClearTracked()
 			self:ClearTrackedUpvalues()
 			self:ClearTrackedTables()
+		end
+
+		function META:StashTrackedChanges()
+			self.track_stash = self.track_stash or {}
+			table.insert(
+				self.track_stash,
+				{
+					self.tracked_tables,
+					self.tracked_tables_done,
+					self.tracked_upvalues,
+					self.tracked_upvalues_done,
+				}
+			)
+		end
+
+		function META:PopStashedTrackedChanges()
+			local tt, ttd, tu, tud = table.unpack(table.remove(self.track_stash))
+			self.tracked_tables = tt
+			self.tracked_tables_done = ttd
+			self.tracked_upvalues = tu
+			self.tracked_upvalues_done = tud
 		end
 
 		--[[

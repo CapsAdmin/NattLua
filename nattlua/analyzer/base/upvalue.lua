@@ -79,7 +79,6 @@ function META.New(obj)
 	local self = setmetatable(
 		{
 			Type = "upvalue",
-			tracked_stack = false,
 			truthy_falsy_union = false,
 			Node = false,
 			Value = false,

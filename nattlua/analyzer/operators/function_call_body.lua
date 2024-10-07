@@ -415,6 +415,7 @@ return function(self, obj, input)
 	-- crawl the function with the new arguments
 	-- return_result is either a union of tuples or a single tuple
 	local scope = self:CreateAndPushFunctionScope(obj)
+	self:StashTrackedChanges()
 	function_node.scope = scope
 	obj.scope = scope
 	self:PushTruthyExpressionContext(false)
@@ -493,6 +494,7 @@ return function(self, obj, input)
 	self:PopFalsyExpressionContext()
 	self:PopTruthyExpressionContext()
 	self:ClearScopedTrackedObjects(scope)
+	self:PopStashedTrackedChanges()
 
 	if output.Type ~= "tuple" then output = Tuple({output}) end
 

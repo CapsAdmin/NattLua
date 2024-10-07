@@ -1143,7 +1143,6 @@ function META.New()
 			ReferenceType = false,
 			suppress = false,
 			mutations = false,
-			tracked_stack = false,
 			PotentialSelf = false,
 			mutable = false,
 			string_metatable = false,
