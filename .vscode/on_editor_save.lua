@@ -124,7 +124,7 @@ if full_path:lower():find("/nattlua/", nil, true) == nil and is_lua then
 	return
 end
 
-if is_nattlua then
+if is_nattlua and not test_focus then
 	run_nattlua(full_path)
 	return
 end
