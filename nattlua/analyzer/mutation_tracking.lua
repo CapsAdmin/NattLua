@@ -243,10 +243,8 @@ return function(META)
 
 						-- stack is needed to simply track upvalues used, even if they were not mutated for warnings
 						if upvalue then
-							--if upvalue and (not upvalue.scope or scope:Contains(upvalue.scope)) then
 							table.insert(upvalues, {upvalue = upvalue, stack = stack and shallow_copy(stack)})
 						end
-					--end
 					end
 				end
 
