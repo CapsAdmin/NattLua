@@ -36,12 +36,7 @@ local function cast_lua_types_to_types(tps)
 
 			t:SetContract(t)
 			tbl[i] = t
-		elseif
-			ffi and
-			t == "cdata" and
-			tostring(ffi.typeof(v)):sub(1, 10) == "ctype<uint" or
-			tostring(ffi.typeof(v)):sub(1, 9) == "ctype<int"
-		then
+		elseif t == "cdata" and tonumber(v) then
 			tbl[i] = LNumber(v)
 		else
 			self:Print(t)

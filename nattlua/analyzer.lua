@@ -271,6 +271,7 @@ function META.New(config)
 		TealCompat = false,
 		lua_assert_error_thrown = false,
 		type_to_node = {},
+		track_stash = {},
 	}
 
 	for _, func in ipairs(META.OnInitialize) do

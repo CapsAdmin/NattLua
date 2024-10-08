@@ -381,24 +381,23 @@ return function(META)
 		end
 
 		function META:StashTrackedChanges()
-			self.track_stash = self.track_stash or {}
-			table.insert(
-				self.track_stash,
+			self.track_stash[#self.track_stash + 1] = 
 				{
 					self.tracked_tables,
 					self.tracked_tables_done,
 					self.tracked_upvalues,
 					self.tracked_upvalues_done,
 				}
-			)
 		end
 
 		function META:PopStashedTrackedChanges()
-			local tt, ttd, tu, tud = table.unpack(table.remove(self.track_stash))
-			self.tracked_tables = tt
-			self.tracked_tables_done = ttd
-			self.tracked_upvalues = tu
-			self.tracked_upvalues_done = tud
+			local tip = #self.track_stash
+			local t = self.track_stash[tip]
+			self.track_stash[tip] = nil
+			self.tracked_tables = t[1]
+			self.tracked_tables_done = t[2]
+			self.tracked_upvalues = t[3]
+			self.tracked_upvalues_done = t[4]
 		end
 
 		--[[
