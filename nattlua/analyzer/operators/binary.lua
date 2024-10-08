@@ -296,7 +296,7 @@ local function Binary(self, node, l, r, op)
 						if res:IsTruthy() then
 							if type_checked then
 								for _, t in ipairs(type_checked:GetData()) do
-									if t.GetLuaType and t:GetLuaType() == l:GetData() then
+									if t:GetLuaType() == l:GetData() then
 										truthy_union:AddType(t)
 									end
 								end
@@ -308,7 +308,7 @@ local function Binary(self, node, l, r, op)
 						if res:IsFalsy() then
 							if type_checked then
 								for _, t in ipairs(type_checked:GetData()) do
-									if t.GetLuaType and t:GetLuaType() == l:GetData() then
+									if t:GetLuaType() == l:GetData() then
 										falsy_union:AddType(t)
 									end
 								end

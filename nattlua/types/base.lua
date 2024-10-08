@@ -22,20 +22,12 @@ function META:IsNil()
 	return false
 end
 
-META:GetSet("Data", nil--[[# as nil | any]])
-
 function META:GetLuaType()
-	local contract = self:GetContract()
-
-	if contract then
-		local to = contract.TypeOverride
-
-		if to and to.Type == "string" and to.Data then return to.Data end
-	end
-
-	local to = self.TypeOverride
-	return to and to.Type == "string" and to.Data or self.Type
+	return self.Type
 end
+
+
+META:GetSet("Data", nil--[[# as nil | any]])
 
 do
 	function META:IsUncertain()
@@ -73,7 +65,6 @@ do
 
 	function META:CopyInternalsFrom(obj--[[#: mutable TBaseType]])
 		self:SetContract(obj:GetContract())
-		self:SetTypeOverride(obj:GetTypeOverride())
 		self:SetReferenceType(obj:IsReferenceType())
 	end
 end
@@ -82,13 +73,6 @@ do -- token, expression and statement association
 	META:GetSet("Upvalue", false--[[# as false | any]])
 end
 
-do -- comes from tbl.@TypeOverride = "my name"
-	META:GetSet("TypeOverride", false--[[# as false | TBaseType]])
-
-	function META:SetTypeOverride(name--[[#: false | TBaseType]])
-		self.TypeOverride = name
-	end
-end
 
 function META:GetHash()
 	return nil

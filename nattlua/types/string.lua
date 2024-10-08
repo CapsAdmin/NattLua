@@ -125,7 +125,6 @@ local function new(data--[[#: string | nil]])
 			Upvalue = false,
 			Parent = false,
 			Contract = false,
-			TypeOverride = false,
 			MetaTable = false,
 		},
 		META

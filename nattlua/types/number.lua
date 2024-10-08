@@ -30,7 +30,6 @@ function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 			Falsy = false,
 			Truthy = true,
 			ReferenceType = false,
-			TypeOverride = false,
 			Upvalue = false,
 			Parent = false,
 			Contract = false,
@@ -39,6 +38,11 @@ function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 		META
 	)
 	return s
+end
+
+function META:GetLuaType()
+	if type(self.Data) == "cdata" then return "cdata" end
+	return self.Type
 end
 
 local function Number()

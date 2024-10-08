@@ -431,25 +431,21 @@ analyzer function select(index: 1 .. inf | "#", ...: ...any)
 end
 
 analyzer function type(obj: any)
+	if obj.Type == "any" then return types.String() end
+
 	if obj.Type == "union" then
 		analyzer.type_checked = obj
 		local copy = types.Union()
 		copy:SetUpvalue(obj:GetUpvalue())
 
 		for _, v in ipairs(obj:GetData()) do
-			if v.GetLuaType then copy:AddType(types.LString(v:GetLuaType())) end
+			copy:AddType(types.LString(v:GetLuaType())) 
 		end
 
 		return copy
 	end
 
-	if obj.Type == "any" then return types.String() end
-
-	if obj.Type == "number" and type(obj.Data) == "cdata" then return "cdata" end
-
-	if obj.GetLuaType then return obj:GetLuaType() end
-
-	return types.String()
+	return obj:GetLuaType()
 end
 
 function MetaTableFunctions<|T: any|>

@@ -805,6 +805,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	copy.BaseTable = self.BaseTable
 	copy.UniqueID = self.UniqueID
 	copy:SetName(self:GetName())
+	copy:SetTypeOverride(self:GetTypeOverride())
 
 	--[[
 		
@@ -1132,6 +1133,27 @@ do
 
 		return true
 	end
+end
+
+do -- comes from tbl.@TypeOverride = "my name"
+	META:GetSet("TypeOverride", false--[[# as false | TBaseType]])
+
+	function META:SetTypeOverride(name--[[#: false | TBaseType]])
+		self.TypeOverride = name
+	end
+end
+
+function META:GetLuaType()
+	local contract = self:GetContract()
+
+	if contract then
+		local to = contract.TypeOverride
+
+		if to and to.Type == "string" and to.Data then return to.Data end
+	end
+
+	local to = self.TypeOverride
+	return to and to.Type == "string" and to.Data or self.Type
 end
 
 function META.New()
