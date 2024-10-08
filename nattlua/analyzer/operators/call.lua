@@ -207,7 +207,19 @@ do
 
 		if ok then return ok end
 
+		local function_node = self:GetFunctionBodyNode()
+		local is_type_function = function_node and
+			(
+				function_node.kind == "local_type_function" or
+				function_node.kind == "type_function"
+			)
+
+		if is_type_function then analyzer:PushAnalyzerEnvironment("typesystem") end
+
 		local ok, err = call_function_internal(analyzer, self, input)
+
+		if is_type_function then analyzer:PopAnalyzerEnvironment() end
+
 		analyzer:PopCallFrame()
 		return ok, err
 	end

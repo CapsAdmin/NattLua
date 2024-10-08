@@ -25,9 +25,7 @@ local function cast(self, node)
 			size = LNumber(tonumber(node.size) or math.huge)
 		end
 
-		self.analyzer:PushAnalyzerEnvironment("typesystem")
 		local tup = self.analyzer:Call(self.env.FFIArray, Tuple({size, cast(self, assert(node.of))}))
-		self.analyzer:PopAnalyzerEnvironment()
 		return tup:Unpack()
 	elseif node.type == "pointer" then
 		if
@@ -38,12 +36,9 @@ local function cast(self, node)
 			return Any() -- TODO: is this true?
 		end
 
-
-		self.analyzer:PushAnalyzerEnvironment("typesystem")
 		local res = (
 			self.analyzer:Call(self.env.FFIPointer, Tuple({cast(self, assert(node.of))})):Unpack()
 		)
-		self.analyzer:PopAnalyzerEnvironment()
 
 		if self:GetContextRef("function_argument") == true then
 			if
