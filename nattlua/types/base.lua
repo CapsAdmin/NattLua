@@ -8,7 +8,6 @@ local META = class.CreateTemplate("base")
 --[[#type META.Type = string]]
 --[[#type META.@Self = {
 	Type = string,
-	Self = any,
 	Parent = any,
 }]]
 --[[#local type TBaseType = META.@Self]]
