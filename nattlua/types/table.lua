@@ -1154,7 +1154,6 @@ function META.New()
 			BaseTable = false,
 			ReferenceId = false,
 			MetaTable = false,
-			Node = false,
 			Contract = false,
 		},
 		META

@@ -192,7 +192,7 @@ return {
 				end
 
 				-- local assignment: local a = 1
-				self:CreateLocalValue(exp_key.value.value, val, immutable):SetNode(exp_key)
+				self:MapTypeToNode(self:CreateLocalValue(exp_key.value.value, val, immutable), exp_key)
 			elseif statement.kind == "assignment" then
 				local key = left[left_pos]
 

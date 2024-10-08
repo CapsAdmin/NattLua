@@ -40,9 +40,14 @@ function META.New()
 		TempFiles = {},
 		LoadedFiles = {},
 		debug = false,
+		node_to_type = {},
 	}
 	setmetatable(self, META)
 	return self
+end
+
+function META:NodeToType(typ)
+	return self.node_to_type[typ]
 end
 
 function META:GetAanalyzerConfig(path)
@@ -278,6 +283,11 @@ function META:Recompile(path, lol, diagnostics)
 				)
 			end
 
+
+			for typ, node in pairs( compiler.analyzer:GetTypeToNodeMap()) do
+				self.node_to_type[node] = typ
+			end
+
 			self:DebugLog(
 				"[ " .. entry_point .. " ] analyzed with " .. (
 						diagnostics[name] and
@@ -504,7 +514,7 @@ function META:GetDefinition(path, line, character)
 
 	if types[1] then
 		if types[1]:GetUpvalue() then
-			local node = types[1]:GetUpvalue():GetNode()
+			local node = self:NodeToType(types[1]:GetUpvalue())
 			return node
 		end
 
@@ -513,10 +523,7 @@ function META:GetDefinition(path, line, character)
 			return node
 		end
 
-		if types[1].GetNode and types[1]:GetNode() then
-			local node = types[1]:GetNode()
-			return node
-		end
+		return self:NodeToType(types[1])
 	end
 end
 
@@ -550,11 +557,11 @@ function META:GetReferences(path, line, character)
 		local node
 
 		if obj:GetUpvalue() then
-			node = obj:GetUpvalue():GetNode()
+			node = self:NodeToType(obj:GetUpvalue())
 		elseif obj.GetFunctionBodyNode and obj:GetFunctionBodyNode() then
 			node = obj:GetFunctionBodyNode()
-		elseif obj:GetNode() then
-			node = obj:GetNode()
+		elseif self:NodeToType(obj) then
+			node = self:NodeToType(obj)
 		end
 
 		if node then table.insert(references, node) end

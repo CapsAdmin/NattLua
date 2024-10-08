@@ -124,7 +124,6 @@ local function new(data--[[#: string | nil]])
 			Name = false,
 			Parent = false,
 			Upvalue = false,
-			Node = false,
 			Parent = false,
 			Contract = false,
 			TypeOverride = false,

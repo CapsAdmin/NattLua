@@ -218,6 +218,14 @@ end
 
 function META:OnDiagnostic() end
 
+function META:MapTypeToNode(typ, node)
+	self.type_to_node[typ] = node
+end
+
+function META:GetTypeToNodeMap()
+	return self.type_to_node
+end
+
 function META.New(config)
 	config = config or {}
 
@@ -262,6 +270,7 @@ function META.New(config)
 		stem_types = false,
 		TealCompat = false,
 		lua_assert_error_thrown = false,
+		type_to_node = {},
 	}
 
 	for _, func in ipairs(META.OnInitialize) do

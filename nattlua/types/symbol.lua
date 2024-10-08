@@ -135,7 +135,6 @@ function META.New(data--[[#: any]])
 			TypeOverride = false,
 			Name = false,
 			Upvalue = false,
-			Node = false,
 			Parent = false,
 			Contract = false,
 		},

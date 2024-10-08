@@ -429,7 +429,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			Parent = false,
 			Upvalue = false,
 			Parent = false,
-			Node = false,
 		},
 		META
 	)

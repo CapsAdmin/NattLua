@@ -9,7 +9,6 @@ local META = class.CreateTemplate("upvalue")
 META:GetSet("Value")
 META:GetSet("Key")
 META:IsSet("Immutable")
-META:GetSet("Node")
 META:GetSet("Position")
 META:GetSet("Shadow")
 META:GetSet("Scope")
@@ -80,7 +79,6 @@ function META.New(obj)
 		{
 			Type = "upvalue",
 			truthy_falsy_union = false,
-			Node = false,
 			Value = false,
 			Key = false,
 			FromForLoop = false,

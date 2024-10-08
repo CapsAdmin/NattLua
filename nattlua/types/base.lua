@@ -83,12 +83,6 @@ end
 
 do -- token, expression and statement association
 	META:GetSet("Upvalue", false--[[# as false | any]])
-	META:GetSet("Node", false--[[# as false | any]])
-
-	function META:SetNode(node--[[#: false | any]], is_local--[[#: nil | boolean]])
-		self.Node = node
-		return self
-	end
 end
 
 do -- comes from tbl.@Name = "my name"

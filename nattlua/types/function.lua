@@ -230,7 +230,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			UpvaluePosition = false,
 			InputIdentifiers = false,
 			LiteralFunction = false,
-			Node = false,
 			Scope = false,
 			Parent = false,
 		},
