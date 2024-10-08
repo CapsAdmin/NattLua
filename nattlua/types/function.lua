@@ -212,7 +212,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			Falsy = false,
 			Called = false,
 			Contract = false,
-			Name = false,
 			TypeOverride = false,
 			Truthy = true,
 			ReferenceType = false,

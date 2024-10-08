@@ -477,7 +477,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			suppress = false,
 			Remainder = false,
 			Repeat = false,
-			Name = false,
 			TypeOverride = false,
 			Upvalue = false,
 			Parent = false,

@@ -9,7 +9,6 @@ local META = class.CreateTemplate("base")
 --[[#type META.@Self = {
 	Type = string,
 	Self = any,
-	Name = string | false,
 	Parent = any,
 }]]
 --[[#local type TBaseType = META.@Self]]
@@ -75,7 +74,6 @@ do
 
 	function META:CopyInternalsFrom(obj--[[#: mutable TBaseType]])
 		self:SetContract(obj:GetContract())
-		self:SetName(obj:GetName())
 		self:SetTypeOverride(obj:GetTypeOverride())
 		self:SetReferenceType(obj:IsReferenceType())
 	end
@@ -83,16 +81,6 @@ end
 
 do -- token, expression and statement association
 	META:GetSet("Upvalue", false--[[# as false | any]])
-end
-
-do -- comes from tbl.@Name = "my name"
-	META:GetSet("Name", false--[[# as false | TBaseType]])
-
-	function META:SetName(name--[[#: TBaseType | false]])
-		if name then assert(name:IsLiteral()) end
-
-		self.Name = name
-	end
 end
 
 do -- comes from tbl.@TypeOverride = "my name"

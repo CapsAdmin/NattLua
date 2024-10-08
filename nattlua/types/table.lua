@@ -28,6 +28,16 @@ META:GetSet("Contracts", nil--[[# as List<|TTable|>]])
 META:GetSet("CreationScope", nil--[[# as any]])
 META:GetSet("AnalyzerEnvironment", false--[[# as false | "runtime" | "typesystem"]])
 
+do -- comes from tbl.@Name = "my name"
+	META:GetSet("Name", false--[[# as false | TBaseType]])
+
+	function META:SetName(name--[[#: TBaseType | false]])
+		if name then assert(name:IsLiteral()) end
+
+		self.Name = name
+	end
+end
+
 function META:GetName()
 	if not self.Name then
 		local meta = self:GetMetaTable()
@@ -794,6 +804,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	copy:SetCreationScope(self:GetCreationScope())
 	copy.BaseTable = self.BaseTable
 	copy.UniqueID = self.UniqueID
+	copy:SetName(self:GetName())
 
 	--[[
 		
