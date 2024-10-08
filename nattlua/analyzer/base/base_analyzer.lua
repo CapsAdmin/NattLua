@@ -27,6 +27,9 @@ return function(META)
 	require("nattlua.analyzer.base.error_handling")(META)
 
 	function META:AnalyzeRootStatement(statement, a, b, c, d, e, f)
+		--if not a and self.analyzed_root_statements[statement] then
+			--return self.analyzed_root_statements[statement]:Copy({}, true)
+		--end
 		context:PushCurrentAnalyzer(self)
 		local argument_tuple = a and
 			Tuple({a, b, c, d, e, f}) or
@@ -44,6 +47,7 @@ return function(META)
 		self:PopGlobalEnvironment("typesystem")
 		self:PopScope()
 		context:PopCurrentAnalyzer()
+		self.analyzed_root_statements[statement] = analyzed_return
 		return analyzed_return
 	end
 
@@ -216,6 +220,33 @@ return function(META)
 		if ok then return code end
 
 		return nil, code
+	end
+
+	function META:ParseFile(path)
+		local imported = self.compiler and self.compiler.SyntaxTree and self.compiler.SyntaxTree.imported
+
+		if not path then debug.trace() end
+		if imported then
+			local path = path
+
+			if path:sub(1, 2) == "./" then path = path:sub(3) end
+
+			if imported[path] then return imported[path] end
+		end
+
+		local code = assert(self:ReadFile(path))
+		local compiler = require("nattlua.compiler").New(
+			code,
+			"@" .. path,
+			{
+				root_statement_override = self.compiler and self.compiler.SyntaxTree,
+				file_path = path,
+				file_name = "@" .. path,
+			}
+		)
+		assert(compiler:Lex())
+		assert(compiler:Parse())
+		return compiler.SyntaxTree
 	end
 
 	do

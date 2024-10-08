@@ -844,14 +844,16 @@ do -- runtime
 		root_node.imported = root_node.imported or {}
 		local imported = root_node.imported
 		node.key = key
+		local key = path
+
+		if key:sub(1, 2) == "./" then key = key:sub(3) end
 
 		if imported[key] == nil then
 			imported[key] = node
 			local root, err = self:ParseFile(
 				path,
 				{
-					root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
-					root_statement_override = self.RootStatement,
+					root_statement_override = root_node,
 					path = node.path,
 					working_directory = self.config.working_directory,
 					inline_require = not root_node.data_import,
@@ -867,6 +869,7 @@ do -- runtime
 				self:Error("error importing file: $1", start, start, err)
 			end
 
+			imported[key] = root
 			node.RootStatement = root
 		else
 			-- ugly way of dealing with recursive require
@@ -902,14 +905,15 @@ do -- runtime
 		self.imported = self.imported or {}
 		local key = "DATA_" .. node.path
 		node.key = key
-		local root_node = self.config.root_statement_override_data or
-			self.config.root_statement_override or
-			self.RootStatement
+		local root_node = self.config.root_statement_override or self.RootStatement
 		root_node.imported = root_node.imported or {}
 		local imported = root_node.imported
 		root_node.data_import = true
 		local data
 		local err
+		local key = path
+
+		if key:sub(1, 2) == "./" then key = key:sub(3) end
 
 		if imported[key] == nil then
 			imported[key] = node
@@ -918,7 +922,7 @@ do -- runtime
 				local root, err = self:ParseFile(
 					node.path,
 					{
-						root_statement_override_data = self.config.root_statement_override_data or self.RootStatement,
+						root_statement_override = root_node,
 						path = node.path,
 						working_directory = self.config.working_directory,
 						on_parsed_node = self.config.on_parsed_node,
@@ -934,6 +938,7 @@ do -- runtime
 					self:Error("error importing file: $1", start, start, err .. ": " .. node.path)
 				end
 
+				imported[key] = root
 				data = root:Render(
 					{
 						preserve_whitespace = false,

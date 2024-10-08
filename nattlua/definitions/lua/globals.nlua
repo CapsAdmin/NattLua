@@ -195,31 +195,7 @@ analyzer function require(name: string)
 
 				if path:sub(1, 1) == "@" then
 					local path = path:sub(2)
-
-					if analyzer.loaded and analyzer.loaded[path] then
-						return analyzer.loaded[path]
-					end
-
-					local code = assert(analyzer:ReadFile(path))
-					local compiler = require("nattlua.compiler").New(
-						code,
-						"@" .. path,
-						{
-							file_path = path,
-							file_name = "@" .. path,
-						}
-					)
-					assert(compiler:Lex())
-					assert(compiler:Parse())
-
-					if analyzer.config.on_parsed_file then
-						analyzer.config.on_parsed_file(path, compiler)
-					end
-
-					local res = analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
-					analyzer.loaded = analyzer.loaded or {}
-					analyzer.loaded[path] = res
-					return res
+					return analyzer:AnalyzeRootStatement(analyzer:ParseFile(path))
 				end
 			end
 		end
@@ -263,36 +239,18 @@ type loadstring = load
 analyzer function dofile(path: string)
 	if not path:IsLiteral() then return types.Any() end
 
-	path = path:GetData()
-	local code = assert(analyzer:ReadFile(path))
-	local compiler = nl.Compiler(code, "@" .. path)
-	assert(compiler:Lex())
-	assert(compiler:Parse())
-
-	if analyzer.config.on_parsed_file then
-		analyzer.config.on_parsed_file(path, compiler)
-	end
-
-	return analyzer:AnalyzeRootStatement(compiler.SyntaxTree)
+	return analyzer:AnalyzeRootStatement(analyzer:ParseFile(path:GetData()))
 end
 
 analyzer function loadfile(path: string)
 	if not path:IsLiteral() then return types.Any() end
 
 	path = path:GetData()
-	local code = assert(analyzer:ReadFile(path))
-	local compiler = nl.Compiler(code, "@" .. path)
-	assert(compiler:Lex())
-	assert(compiler:Parse())
-
-	if analyzer.config.on_parsed_file then
-		analyzer.config.on_parsed_file(path, compiler)
-	end
-
+	local root = analyzer:ParseFile(path)
 	local f = types.AnyFunction()
 
 	f:SetAnalyzerFunction(function(a, b, c, d, e, f)
-		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, a, b, c, d, e, f)
+		return analyzer:AnalyzeRootStatement(root, a, b, c, d, e, f)
 	end)
 
 	return f

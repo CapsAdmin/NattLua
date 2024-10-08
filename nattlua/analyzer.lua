@@ -272,6 +272,7 @@ function META.New(config)
 		lua_assert_error_thrown = false,
 		type_to_node = {},
 		track_stash = {},
+		analyzed_root_statements = {},
 	}
 
 	for _, func in ipairs(META.OnInitialize) do

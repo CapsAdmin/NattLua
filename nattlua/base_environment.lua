@@ -29,12 +29,13 @@ local function import_data(path)
 	return code
 end
 
-local function load_definitions()
+local function load_definitions(root_node)
 	local path = "nattlua/definitions/index.nlua"
 	local config = {}
 	config.file_path = config.file_path or path
 	config.file_name = config.file_name or "@" .. path
 	config.comment_type_annotations = false
+	config.root_statement_override = root_node
 	-- import_data will be transformed on build and the local function will not be used
 	-- we canot use the upvalue path here either since this happens at parse time
 	local code = assert(import_data("nattlua/definitions/index.nlua"))
@@ -43,8 +44,8 @@ local function load_definitions()
 end
 
 return {
-	BuildBaseEnvironment = function()
-		local compiler = load_definitions()
+	BuildBaseEnvironment = function(root_node)
+		local compiler = load_definitions(root_node)
 		assert(compiler:Lex())
 		assert(compiler:Parse())
 		local runtime_env = Table()

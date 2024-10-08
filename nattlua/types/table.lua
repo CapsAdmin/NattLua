@@ -812,9 +812,11 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 		copy.argument_index = self.argument_index
 		copy.parent = self.parent
 		copy.reference_id = self.reference_id
-		]] if self.Self then copy:SetSelf(self.Self:Copy()) end
-
-	if self.MetaTable then copy:SetMetaTable(self.MetaTable) end
+		]] 
+		
+		
+		if self.Self then copy.Self = self.Self:Copy(map, copy_tables) end
+		if self.Contract then copy.Contract = self.Contract end
 
 	return copy
 end

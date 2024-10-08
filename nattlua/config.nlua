@@ -12,7 +12,6 @@ local type ParserConfig = {
 	file_name = string,
 	working_directory = string,
 	root_directory = string,
-	root_statement_override_data = Node,
 	path = string,
 }
 local type AnalyzerConfig = {

@@ -62,7 +62,10 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 		msg = "\x1b[0;33m" .. msg .. "\x1b[0m"
 	end
 
-	if not _G.TEST then io.write(msg) end
+	if not _G.TEST then
+		io.write(msg)
+		io.flush()
+	end
 
 	if
 		severity == "fatal" or
@@ -214,7 +217,7 @@ function META:Analyze(analyzer, ...)
 		analyzer:SetDefaultEnvironment(self.default_environment["runtime"], "runtime")
 		analyzer:SetDefaultEnvironment(self.default_environment["typesystem"], "typesystem")
 	else
-		local runtime_env, typesystem_env = BuildBaseEnvironment()
+		local runtime_env, typesystem_env = BuildBaseEnvironment(self.SyntaxTree)
 		analyzer:SetDefaultEnvironment(runtime_env, "runtime")
 		analyzer:SetDefaultEnvironment(typesystem_env, "typesystem")
 	end

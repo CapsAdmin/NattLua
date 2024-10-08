@@ -181,6 +181,7 @@ config["get-analyzer-config"] = function()
 	return analyzer_config
 end
 config.check = function()
+	require("test.helpers.profiler").Start()
 	local nl = require("nattlua.init")
 	local compiler = assert(
 		nl.Compiler(
@@ -189,6 +190,31 @@ config.check = function()
 			analyzer_config
 		)
 	)
+	print("parsing")
+	compiler:Parse()
+
+	for k, v in pairs(compiler.SyntaxTree.imported) do
+		print(k)
+	end
+
+	print("analyzing")
 	compiler:Analyze()
+
+	for node, res in pairs(compiler.analyzer.analyzed_root_statements) do
+		local found = false
+
+		for path, node2 in pairs(compiler.SyntaxTree.imported) do
+			if node == node2 then
+				print("analyzed " .. path)
+				found = true
+
+				break
+			end
+		end
+
+		if not found then print("cannot find ", node.path) end
+	end
+
+	require("test.helpers.profiler").Stop()
 end
 return config
