@@ -514,7 +514,7 @@ function META:FindKeyVal(key--[[#: TBaseType]])
 
 		if ok then return keyval end
 
-		reasons[i] = reason
+		if i <= 20 then reasons[i] = reason end
 	end
 
 	if not reasons[1] then
@@ -529,13 +529,11 @@ function META:FindKeyValReverse(key--[[#: TBaseType]])
 		return self.LiteralDataCache[key.Data]
 	end
 
-	for _, keyval in ipairs(self.Data) do
-		if key:Equal(keyval.key) then return keyval end
-	end
-
 	local reasons = {}
 
 	for i, keyval in ipairs(self.Data) do
+		if key:Equal(keyval.key) then return keyval end
+
 		local ok, reason = key:IsSubsetOf(keyval.key)
 
 		if ok then return keyval end
