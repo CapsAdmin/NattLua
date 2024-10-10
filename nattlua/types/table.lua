@@ -779,26 +779,51 @@ function META:CoerceUntypedFunctions(from--[[#: TTable]])
 	return true
 end
 
-function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])
+local function copy_val(val, map, copy_tables)
+	if not val then return val end
+	
+	if map[val] then
+		-- if the specific reference is already copied, just return it
+		return map[val]
+	end
+
+	map[val] = val:Copy(map, copy_tables)
+
+	return map[val]
+end
+
+function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	map = map or {}
+	if map[self] then return map[self] end
 	local copy = META.New()
-	map[self] = map[self] or copy
+	map[self] = copy -- map any lua references from self to this new copy
 
 	for i, keyval in ipairs(self.Data) do
-		local k, v = keyval.key, keyval.val
-		k = map[keyval.key] or k:Copy(map, copy_tables)
-		map[keyval.key] = map[keyval.key] or k
-		v = map[keyval.val] or v:Copy(map, copy_tables)
-		map[keyval.val] = map[keyval.val] or v
+
+		local k = copy_val(keyval.key, map, copy_tables)
+		local v = copy_val(keyval.val, map, copy_tables)
+		
 		copy.Data[i] = {key = k, val = v}
 
 		if is_literal(k) then copy.LiteralDataCache[k.Data] = copy.Data[i] end
 	end
 
 	copy:CopyInternalsFrom(self)
-	copy:SetMetaTable(self:GetMetaTable())
+
+	if self.Self then
+		local tbl = self.Self
+		local m, c = tbl.MetaTable, tbl.Contract
+		tbl.MetaTable = nil
+		tbl.Contract = nil
+		local tbl_copy = copy_val(self.Self, map, copy_tables)
+		tbl.MetaTable = m
+		tbl.Contract = c
+		copy:SetSelf(tbl_copy)
+	end
+	copy.MetaTable = self.MetaTable --copy_val(self.MetaTable, map, copy_tables)
+	copy.Contract = self:GetContract() --copy_val(self.Contract, map, copy_tables)
 	copy:SetAnalyzerEnvironment(self:GetAnalyzerEnvironment())
-	copy.PotentialSelf = self.PotentialSelf
+	copy.PotentialSelf = copy_val(self.PotentialSelf, map, copy_tables)
 	copy.mutable = self.mutable
 	copy.mutations = self.mutations or false
 	copy:SetCreationScope(self:GetCreationScope())
@@ -806,17 +831,6 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	copy.UniqueID = self.UniqueID
 	copy:SetName(self:GetName())
 	copy:SetTypeOverride(self:GetTypeOverride())
-
-	--[[
-		
-		copy.argument_index = self.argument_index
-		copy.parent = self.parent
-		copy.reference_id = self.reference_id
-		]] 
-		
-		
-		if self.Self then copy.Self = self.Self:Copy(map, copy_tables) end
-		if self.Contract then copy.Contract = self.Contract end
 
 	return copy
 end
@@ -915,29 +929,19 @@ end
 
 function META.Extend(a--[[#: TTable]], b--[[#: TTable]])
 	assert(b.Type == "table")
-	local map = {}
 
-	if a:GetContract() then
-		if a == a:GetContract() then
-			a:SetContract(false)
-			a = a:Copy()
-			a:SetContract(a)
-		end
-
-		a = a:GetContract()
-	else
-		a = a:Copy(map)
-	end
-
-	map[b] = a
-	b = b:Copy(map)
-
+	a = a:Copy()
+	b = b:Copy()
+	local ref_map = {[b] = a}
+	
 	for _, keyval in ipairs(b:GetData()) do
-		local ok, reason = a:SetExplicit(unpack_keyval(keyval))
+		local key, val = keyval.key:Copy(ref_map), keyval.val:Copy(ref_map)
 
+		local ok, reason = a:SetExplicit(key, val)
+		
 		if not ok then return ok, reason end
 	end
-
+	
 	return a
 end
 

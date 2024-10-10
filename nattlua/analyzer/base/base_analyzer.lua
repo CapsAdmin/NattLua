@@ -15,6 +15,7 @@ local LString = require("nattlua.types.string").LString
 local ConstString = require("nattlua.types.string").ConstString
 local Tuple = require("nattlua.types.tuple").Tuple
 local Nil = require("nattlua.types.symbol").Nil
+local Table = require("nattlua.types.table").Table
 local Any = require("nattlua.types.any").Any
 local context = require("nattlua.analyzer.context")
 local path_util = require("nattlua.other.path")
@@ -78,7 +79,7 @@ return function(META)
 			if not tbl or tbl.Type ~= "table" then return tup end
 
 			if tbl.Self then
-				local self = tbl.Self
+				local self = tbl.Self:Copy()
 				local new_tup = Tuple()
 
 				for i, obj in ipairs(tup:GetData()) do
@@ -92,8 +93,8 @@ return function(META)
 				return new_tup
 			elseif tbl.PotentialSelf then
 				local meta = tbl
-				local self = tbl.PotentialSelf:Copy()
-
+				local self = tbl.PotentialSelf
+				
 				if self.Type == "union" then
 					for _, obj in ipairs(self:GetData()) do
 						obj:SetMetaTable(meta)

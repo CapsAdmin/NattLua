@@ -753,6 +753,23 @@ analyze[[
     end
 ]]
 analyze[[
+    local META = {}
+    META.__index = META
+    type META.@Self = {}
+
+    function META.GetSet<|allowed: any|>(name: ref string, default: ref any)
+        META[name] = default as allowed
+        type META.@Self[name] = allowed
+    end
+
+    META.GetSet<|nil | META.@Self|>("Name", nil)
+    META.GetSet<|boolean|>("Literal", false)
+
+    function META:SetName(name: META.@Self)
+        self.Name = name
+    end
+]]
+analyze[[
     local type T = {
         foo = Table,
     }
@@ -995,3 +1012,82 @@ analyze(
 ]],
 	".-is not a subset of.-number"
 )
+analyze[[
+local META = {}
+META.__index = META
+type META.@Self = {
+    Foo = boolean,
+    Bar = boolean,
+}
+
+local function get_base()
+    return copy<|META|>
+end
+
+do
+    local META = get_base()
+    type META.@Self.Test = number
+    type META.@Self.tbl = nil | List<|number|>
+
+    local function New()
+        return setmetatable({Foo = true, Bar = false, Test = 1}, META)
+    end
+
+    function META:Test()
+        self.tbl = self.tbl or {}
+        --attest.equal(self.tbl, _ as {} | List<|number|>)
+    end
+
+    function META:Test2()
+        if self.tbl then return self.tbl end
+        -- this shouldn't cause self.tbl to become nil, although it technically is below the return statement
+        -- the contract should allow .tbl to be assigned to List<|number|> or nil
+        self.tbl = {}
+    end
+
+
+    local obj = New()
+    attest.equal<|obj, {
+        Foo = boolean,
+        Bar = boolean,
+        Test = number,
+        tbl = nil | List<|number|>,
+    }|>
+end
+
+do
+    local META = get_base()
+    type META.@Self.Baz = number
+
+    local function New()
+        return setmetatable({Foo = true, Bar = false, Baz = 1}, META)
+    end
+
+    local obj = New()
+    attest.equal<|obj, {
+        Foo = boolean,
+        Bar = boolean,
+        Baz = number,
+    }|>
+end
+]]
+
+analyze[[
+
+local type X = {
+    foo = true | false | self,
+    func = function=()>((self, CurrentType<|"tuple"|>)),
+    bar = {x = 1, ref = CurrentType<|"table"|>},
+    ref = function=(CurrentType<|"table"|>)>(nil),
+ }
+ 
+ local analyzer function test(x: any)
+    local copy = x:Copy()
+    assert(copy ~= x)
+    assert(tostring(copy) == tostring(x))
+    assert(copy:Equal(x))
+    assert(x:Equal(copy))
+ end
+
+ test(X)
+]]

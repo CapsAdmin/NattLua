@@ -51,13 +51,28 @@ function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]])
 		)
 end
 
-function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])
+local function copy_val(val, map, copy_tables)
+	if not val then return val end
+	
+	-- if it's already copied
+	if map[val] then
+		return map[val]
+	end
+
+	map[val] = val:Copy(map, copy_tables)
+
+	return map[val]
+end
+
+
+function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	map = map or {}
-	local copy = self.New(
-		self:GetInputSignature():Copy(map, copy_tables),
-		self:GetOutputSignature():Copy(map, copy_tables)
-	)
-	map[self] = map[self] or copy
+	if map[self] then return map[self] end
+	local copy = META.New()
+	map[self] = copy
+
+	copy.InputSignature = copy_val(self.InputSignature, map, copy_tables)
+	copy.OutputSignature = copy_val(self.OutputSignature, map, copy_tables)
 	copy:SetUpvaluePosition(self:GetUpvaluePosition())
 	copy:SetAnalyzerFunction(self:GetAnalyzerFunction())
 	copy:SetScope(self:GetScope())

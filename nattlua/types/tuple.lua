@@ -87,20 +87,31 @@ function META:Merge(tup--[[#: TTuple]])
 	return self
 end
 
-function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])
-	map = map or {}
-	local copy = self.New({})
-	map[self] = map[self] or copy
-
-	for i, v in ipairs(self:GetData()) do
-		v = map[v] or v:Copy(map, copy_tables)
-		map[v] = map[v] or v
-		copy:Set(i, v)
+local function copy_val(val, map, copy_tables)
+	if not val then return val end
+	
+	-- if it's already copied
+	if map[val] then
+		return map[val]
 	end
 
-	if self.Remainder then copy.Remainder = self.Remainder:Copy(nil, copy_tables) end
+	map[val] = val:Copy(map, copy_tables)
+
+	return map[val]
+end
+
+function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
+	map = map or {}
+	if map[self] then return map[self] end
+	local copy = META.New({})
+	map[self] = copy
+
+	for i, v in ipairs(self:GetData()) do
+		copy.Data[i] = copy_val(v, map, copy_tables)
+	end
 
 	copy.Repeat = self.Repeat
+	copy.Remainder = copy_val(self.Remainder, map, copy_tables)
 	copy.Unpackable = self.Unpackable
 	copy:CopyInternalsFrom(self)
 	return copy

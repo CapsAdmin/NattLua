@@ -1,5 +1,6 @@
 local tostring = tostring
 local Union = require("nattlua.types.union").Union
+local Table = require("nattlua.types.table").Table
 local Tuple = require("nattlua.types.tuple").Tuple
 local Function = require("nattlua.types.function").Function
 local Any = require("nattlua.types.any").Any
@@ -16,8 +17,10 @@ local function analyze_arguments(self, node)
 		self:PopAnalyzerEnvironment()
 
 		if val then
-			if self:IsTypesystem() or val:GetContract() or val.Self then
-				args[1] = val.Self or val
+			if val.Self then
+				args[1] = val.Self
+			elseif val:GetContract() then
+				args[1] = val
 			else
 				args[1] = Union({Any(), val})
 			end

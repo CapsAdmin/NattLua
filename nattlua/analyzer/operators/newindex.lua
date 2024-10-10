@@ -54,6 +54,7 @@ return {
 
 					if obj == contract then
 						if obj.mutable and obj:GetMetaTable() and obj:GetMetaTable().Self == obj then
+							analyzer:MutateTable(obj, key, val)
 							return obj:SetExplicit(key, val)
 						else
 							existing = obj:GetMutatedValue(key, analyzer:GetScope())
