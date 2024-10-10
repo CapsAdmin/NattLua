@@ -283,8 +283,7 @@ function META:Recompile(path, lol, diagnostics)
 				)
 			end
 
-
-			for typ, node in pairs( compiler.analyzer:GetTypeToNodeMap()) do
+			for typ, node in pairs(compiler.analyzer:GetTypeToNodeMap()) do
 				self.node_to_type[node] = typ
 			end
 

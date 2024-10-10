@@ -397,7 +397,7 @@ analyzer function type(obj: any)
 		copy:SetUpvalue(obj:GetUpvalue())
 
 		for _, v in ipairs(obj:GetData()) do
-			copy:AddType(types.LString(v:GetLuaType())) 
+			copy:AddType(types.LString(v:GetLuaType()))
 		end
 
 		return copy

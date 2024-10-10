@@ -26,7 +26,6 @@ function META:GetLuaType()
 	return self.Type
 end
 
-
 META:GetSet("Data", nil--[[# as nil | any]])
 
 do
@@ -60,7 +59,6 @@ end
 do -- token, expression and statement association
 	META:GetSet("Upvalue", false--[[# as false | any]])
 end
-
 
 function META:GetHash()
 	return nil

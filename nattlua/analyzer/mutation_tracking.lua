@@ -381,13 +381,12 @@ return function(META)
 		end
 
 		function META:StashTrackedChanges()
-			self.track_stash[#self.track_stash + 1] = 
-				{
-					self.tracked_tables,
-					self.tracked_tables_done,
-					self.tracked_upvalues,
-					self.tracked_upvalues_done,
-				}
+			self.track_stash[#self.track_stash + 1] = {
+				self.tracked_tables,
+				self.tracked_tables_done,
+				self.tracked_upvalues,
+				self.tracked_upvalues_done,
+			}
 		end
 
 		function META:PopStashedTrackedChanges()

@@ -89,20 +89,19 @@ end
 
 local function copy_val(val, map, copy_tables)
 	if not val then return val end
-	
+
 	-- if it's already copied
-	if map[val] then
-		return map[val]
-	end
+	if map[val] then return map[val] end
 
 	map[val] = val:Copy(map, copy_tables)
-
 	return map[val]
 end
 
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	map = map or {}
+
 	if map[self] then return map[self] end
+
 	local copy = META.New({})
 	map[self] = copy
 

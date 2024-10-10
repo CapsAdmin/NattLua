@@ -29,7 +29,7 @@ return function(META)
 
 	function META:AnalyzeRootStatement(statement, a, b, c, d, e, f)
 		--if not a and self.analyzed_root_statements[statement] then
-			--return self.analyzed_root_statements[statement]:Copy({}, true)
+		--return self.analyzed_root_statements[statement]:Copy({}, true)
 		--end
 		context:PushCurrentAnalyzer(self)
 		local argument_tuple = a and
@@ -94,7 +94,7 @@ return function(META)
 			elseif tbl.PotentialSelf then
 				local meta = tbl
 				local self = tbl.PotentialSelf
-				
+
 				if self.Type == "union" then
 					for _, obj in ipairs(self:GetData()) do
 						obj:SetMetaTable(meta)
@@ -227,6 +227,7 @@ return function(META)
 		local imported = self.compiler and self.compiler.SyntaxTree and self.compiler.SyntaxTree.imported
 
 		if not path then debug.trace() end
+
 		if imported then
 			local path = path
 

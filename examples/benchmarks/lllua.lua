@@ -11,10 +11,10 @@ local lua_code = assert(
 	)
 )
 
-
 util.Measure("LexerSetup", function()
 	local lex = Lexer.Setup(lua_code)
 	local EOF = -1
+
 	while lex.c ~= EOF do
 		Lexer.Next(lex)
 	end

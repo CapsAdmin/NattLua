@@ -42,6 +42,7 @@ end
 
 function META:GetLuaType()
 	if type(self.Data) == "cdata" then return "cdata" end
+
 	return self.Type
 end
 

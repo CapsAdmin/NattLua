@@ -1071,7 +1071,6 @@ do
     }|>
 end
 ]]
-
 analyze[[
 
 local type X = {

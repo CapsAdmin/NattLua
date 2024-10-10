@@ -781,28 +781,26 @@ end
 
 local function copy_val(val, map, copy_tables)
 	if not val then return val end
-	
+
 	if map[val] then
 		-- if the specific reference is already copied, just return it
 		return map[val]
 	end
 
 	map[val] = val:Copy(map, copy_tables)
-
 	return map[val]
 end
 
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	map = map or {}
+
 	if map[self] then return map[self] end
+
 	local copy = META.New()
 	map[self] = copy -- map any lua references from self to this new copy
-
 	for i, keyval in ipairs(self.Data) do
-
 		local k = copy_val(keyval.key, map, copy_tables)
 		local v = copy_val(keyval.val, map, copy_tables)
-		
 		copy.Data[i] = {key = k, val = v}
 
 		if is_literal(k) then copy.LiteralDataCache[k.Data] = copy.Data[i] end
@@ -820,6 +818,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 		tbl.Contract = c
 		copy:SetSelf(tbl_copy)
 	end
+
 	copy.MetaTable = self.MetaTable --copy_val(self.MetaTable, map, copy_tables)
 	copy.Contract = self:GetContract() --copy_val(self.Contract, map, copy_tables)
 	copy:SetAnalyzerEnvironment(self:GetAnalyzerEnvironment())
@@ -831,7 +830,6 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	copy.UniqueID = self.UniqueID
 	copy:SetName(self:GetName())
 	copy:SetTypeOverride(self:GetTypeOverride())
-
 	return copy
 end
 
@@ -929,19 +927,17 @@ end
 
 function META.Extend(a--[[#: TTable]], b--[[#: TTable]])
 	assert(b.Type == "table")
-
 	a = a:Copy()
 	b = b:Copy()
 	local ref_map = {[b] = a}
-	
+
 	for _, keyval in ipairs(b:GetData()) do
 		local key, val = keyval.key:Copy(ref_map), keyval.val:Copy(ref_map)
-
 		local ok, reason = a:SetExplicit(key, val)
-		
+
 		if not ok then return ok, reason end
 	end
-	
+
 	return a
 end
 

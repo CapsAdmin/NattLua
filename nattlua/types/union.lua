@@ -354,14 +354,11 @@ function META:Union(union--[[#: TUnion]])
 	return copy
 end
 
-
 local function copy_val(val, map, copy_tables)
 	if not val then return val end
-	
+
 	-- if it's already copied
-	if map[val] then
-		return map[val]
-	end
+	if map[val] then return map[val] end
 
 	if val.Type == "table" and not copy_tables then
 		return val
@@ -374,7 +371,9 @@ end
 
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])
 	map = map or {}
+
 	if map[self] then return map[self] end
+
 	local copy = META.New()
 	map[self] = copy
 

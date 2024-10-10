@@ -34,7 +34,6 @@ local sec = util.MeasureFunction(function()
 	util.Measure("luajit langtools lex and parse", function()
 		local ls = lex_setup(reader.string(lua_code), "10mb")
 		local ast_builder = lua_ast.New()
-
 		local parse_success, ast_tree = pcall(parse, ast_builder, ls)
 
 		if not parse_success then return lang_toolkit_error(ast_tree) end
