@@ -1,7 +1,7 @@
 local ipairs = ipairs
 local pairs = pairs
 local tostring = _G.tostring
-local bit = _G.bit32 or _G.bit
+local bit = require("nattlua.other.bit")
 analyze[[
         local function lt(x, y)
             if x < y then return true else return false end

@@ -1,3 +1,4 @@
+local ipairs = _G.ipairs
 local META = loadfile("nattlua/emitter.lua")()
 local old_new = META.New
 

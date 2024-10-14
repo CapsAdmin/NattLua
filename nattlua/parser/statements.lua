@@ -3,6 +3,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 local math_huge = _G.math.huge
 local ipairs = _G.ipairs
+local tostring = _G.tostring
 
 do -- destructure statement
 	function META:IsDestructureStatement(offset--[[#: number]])
@@ -427,7 +428,7 @@ do
 	local formating = require("nattlua.other.formating")
 	local loadstring = require("nattlua.other.loadstring")
 	local locals = ""
-	locals = locals .. "local bit=bit32 or _G.bit;"
+	locals = locals .. "local bit=IMPORTS[\"nattlua.other.bit\"]();"
 
 	if _G.BUNDLE then
 		locals = locals .. "local nl=IMPORTS[\"nattlua.init\"]();"

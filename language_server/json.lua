@@ -9,6 +9,7 @@ local table = _G.table
 local tostring = _G.tostring
 local select = _G.select
 local tonumber = _G.tonumber
+local math = _G.math
 local json = {}
 -------------------------------------------------------------------------------
 -- Encode

@@ -1,10 +1,15 @@
+local assert = _G.assert
+local loadfile = _G.loadfile
 local get_time = require("test.helpers.get_time")
 local preprocess = require("test.helpers.preprocess")
 local coverage = require("test.helpers.coverage")
 local profiler = require("test.helpers.profiler")
+local jit = _G.jit
+local ipairs = _G.ipairs
 local io = require("io")
 local io_write = _G.ON_EDITOR_SAVE and function(...) end or io.write
 local pcall = _G.pcall
+local table = _G.table
 require("test.environment")
 local path = ...
 local is_coverage = path == "coverage"

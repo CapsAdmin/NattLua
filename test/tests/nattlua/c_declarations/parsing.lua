@@ -116,6 +116,8 @@ local Parser = require("nattlua.c_declarations.parser").New
 local Emitter = require("nattlua.c_declarations.emitter").New
 local Code = require("nattlua.code").New
 local Compiler = require("nattlua.compiler")
+local type = _G.type
+local pairs = _G.pairs
 
 do
 	local blacklist = {

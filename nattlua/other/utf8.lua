@@ -1,6 +1,8 @@
+local ipairs = _G.ipairs
+local table = _G.table
 local stringx = require("nattlua.other.string")
 local utf8 = {}
-local math_floor = math.floor
+local math_floor = _G.math.floor
 
 function utf8.uint32(char, offset)
 	if char == "" then return -1 end
@@ -123,7 +125,7 @@ local function utf8replace(str, mapping)
 	local out = {}
 
 	for i, char in ipairs(utf8.to_list(str)) do
-		table.insert(out, mapping[char] or char)
+		out[i] = mapping[char] or char
 	end
 
 	return table.concat(out)

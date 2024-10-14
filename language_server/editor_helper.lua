@@ -1,4 +1,11 @@
 --DONT_ANALYZE
+local pairs = _G.pairs
+local ipairs = _G.ipairs
+local type = _G.type
+local table = _G.table
+local setmetatable = _G.setmetatable
+local pcall = _G.pcall
+local debug = _G.debug
 local Compiler = require("nattlua.compiler").New
 local formating = require("nattlua.other.formating")
 local Union = require("nattlua.types.union").Union

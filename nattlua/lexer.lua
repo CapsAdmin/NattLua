@@ -164,6 +164,7 @@ do
 end
 
 local function BuildTrieReader(list, lowercase)
+	local bit = require("nattlua.other.bit")
 	local bit_bor = bit.bor
 	local longest = 0
 	local min_byte = math.huge

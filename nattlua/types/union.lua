@@ -107,10 +107,9 @@ function META:AddType(e--[[#: TBaseType]])
 		for i = #self.Data, 1, -1 do
 			local sub = self.Data[i]--[[# as TBaseType]] -- TODO, prove that the for loop will always yield TBaseType?
 			if sub.Type == e.Type then
-				if not sub:IsLiteral() then
-					return self
-				end
-				table.remove(self.Data, i) 
+				if not sub:IsLiteral() then return self end
+
+				table.remove(self.Data, i)
 			end
 		end
 
@@ -359,14 +358,11 @@ function META:Union(union--[[#: TUnion]])
 	return copy
 end
 
-
 local function copy_val(val, map, copy_tables)
 	if not val then return val end
-	
+
 	-- if it's already copied
-	if map[val] then
-		return map[val]
-	end
+	if map[val] then return map[val] end
 
 	if val.Type == "table" and not copy_tables then
 		return val
@@ -379,7 +375,9 @@ end
 
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])
 	map = map or {}
+
 	if map[self] then return map[self] end
+
 	local copy = META.New()
 	map[self] = copy
 

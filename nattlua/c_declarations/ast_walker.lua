@@ -1,3 +1,6 @@
+local ipairs = _G.ipairs
+local table = _G.table
+local assert = _G.assert
 -- this sort of unpacks and normalizes the C declaration AST to make it easier to work with
 local walk_cdecl
 
