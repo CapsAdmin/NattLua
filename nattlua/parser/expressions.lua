@@ -905,6 +905,9 @@ do -- runtime
 		self.imported = self.imported or {}
 		local key = "DATA_" .. node.path
 		node.key = key
+		local root_node = self.config.root_statement_override_data or
+			self.config.root_statement_override or
+			self.RootStatement
 		local root_node = self.config.root_statement_override or self.RootStatement
 		root_node.imported = root_node.imported or {}
 		local imported = root_node.imported
@@ -922,7 +925,7 @@ do -- runtime
 				local root, err = self:ParseFile(
 					node.path,
 					{
-						root_statement_override = root_node,
+						root_statement_override_data = root_node,
 						path = node.path,
 						working_directory = self.config.working_directory,
 						on_parsed_node = self.config.on_parsed_node,
