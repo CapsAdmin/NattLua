@@ -66,14 +66,14 @@ faz]]
 	local start, stop = test:find("FROM.-TO")
 	equal(
 		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
-		[[    ________________________________________________________
+		[[    ____________________________________________________
  3 | 111111E
  4 |     waddwa
  5 |     FROM>baradwadwwda HERE awd wdadwa<TOwawaddawdaw
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  6 |     22222E
  7 | new
-    --------------------------------------------------------
+    ----------------------------------------------------
 -> | script.txt:5:5
 -> | hello world]]
 	)
@@ -95,41 +95,35 @@ faz]]
 	local start, stop = test:find("FROM.-TO")
 	equal(
 		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
-		[[    _________________________________________
- 3 | 111111E
- 4 |     waddwa
- 5 |     FROM>baradwadwwda HE
-         ^^^^^^^^^^^^^^^^^^^^
- 6 |     
-     ^^^^
- 7 |     
-     ^^^^
- 8 |     RE awd wdadwa<TOwawaddawdawafter
-     ^^^^^^^^^^^^^^^^^^^^
- 9 |     22222E
-10 | new
-    -----------------------------------------
--> | script.txt:5:27
--> | hello world]]
+		[[     _____________________________________
+  3 | 111111E
+  4 |     waddwa
+  5 |     FROM>baradwadwwda HE
+          ^^^^^^^^^^^^^^^^^^^^
+  6 |     
+      ^^^^
+  7 |     
+      ^^^^
+  8 |     RE awd wdadwa<TOwawaddawdawafter
+      ^^^^^^^^^^^^^^^^^^^^
+  9 |     22222E
+ 10 | new
+     -------------------------------------
+ -> | script.txt:5:5
+ -> | hello world]]
 	)
 end
 
 do
-	local test = ("x"):rep(500) .. "FROM---TO" .. ("x"):rep(500)
+	local test = ("x"):rep(50) .. "FROM---TO" .. ("x"):rep(50)
 	local start, stop = test:find("FROM.-TO")
 	equal(
 		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
-		[[    _______________________________________________________________________________________________________________________________
- 2 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
- 3 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
- 4 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxFROM---T
-                                                                                                                            ^^^^^^^^
- 5 | Oxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-     ^
- 6 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
- 7 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    -------------------------------------------------------------------------------------------------------------------------------
--> | script.txt:4:384
+		[[    ______________________________________________________________________________________________________________
+ 1 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxFROM---TOxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+                                                       ^^^^^^^^^
+    --------------------------------------------------------------------------------------------------------------
+-> | script.txt:1:51
 -> | hello world]]
 	)
 end
@@ -174,4 +168,49 @@ dwdwadw
 	local start = pos
 	local stop = pos + #"FOO" - 1
 	equal(test:sub(start, stop), "FOO")
+end
+
+do
+	local test = "\tfoo\n\tbar"
+	local C = function(l, c)
+		local pos = formating.LinePositionToSubPosition(test, l, c)
+		return test:sub(pos, pos)
+	end
+	equal(C(1, 1), "\t")
+	equal(C(1, 2), "f")
+	equal(C(1, 3), "o")
+	equal(C(1, 4), "o")
+	equal(C(1, 5), "o") -- don't go above the newline
+	equal(C(2, 1), "\t")
+	equal(C(2, 2), "b")
+	equal(C(2, 3), "a")
+	equal(C(2, 4), "r")
+	equal(C(2, 5), "r") -- don't go above the newline
+end
+
+do
+	local str = ""
+
+	for i = 1, 100 do
+		if i == 50 then
+			str = str .. "\t\t\t\t\t\t\t\t\tFROM---TO\n"
+		else
+			str = str .. "\t\tfoo\n"
+		end
+	end
+
+	local start, stop = str:find("FROM.-TO")
+	equal(
+		formating.BuildSourceCodePointMessage(str, "script.txt", "hello world", start, stop, 2),
+		[[     ___________________
+ 48 |   foo
+ 49 |   foo
+ 50 |          FROM---TO
+               ^^^^^^^^^
+ 51 |   foo
+ 52 |   foo
+     -------------------
+ -> | script.txt:50:10
+ -> | hello world]]
+	)
 end

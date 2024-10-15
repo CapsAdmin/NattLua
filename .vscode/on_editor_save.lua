@@ -164,7 +164,7 @@ elseif find("examples/projects/love2d/") then
 elseif is_nattlua and not find("/definitions/") then
 	run_nattlua(full_path)
 elseif find("formating.lua") then
-	run_test("test/tests/helper_test.lua")
+	run_test("test/tests/nattlua/code_pointing.lua")
 elseif find("test/") then
 	run_test(full_path)
 elseif find("javascript_emitter") then
