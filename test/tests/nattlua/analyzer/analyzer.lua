@@ -388,16 +388,12 @@ test("forward declare types", function()
 end)
 
 analyze([[type_error("hey over here")]], "hey over here")
-analyze(
-	[[
+analyze([[
 local a    
 local b    
 §error("LOL")
 local c    
-
-]],
-	[[3 | §error%("LOL"%)]]
-)
+]], [[§error%("LOL"%)]])
 analyze(
 	[[
     local foo = function() return "hello" end
