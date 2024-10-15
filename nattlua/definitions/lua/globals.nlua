@@ -383,9 +383,11 @@ type xpcall = ReturnIfNonLiteral<|
 		return true, tuple
 	end
 |>
-type select = ReturnIfNonLiteral<|function(index: 1 .. inf | "#", ...: ...any): ...any
-	return select(index:GetData(), ...)
-end|>
+type select = ReturnIfNonLiteral<|
+	analyzer function(index: 1 .. inf | "#", ...: ...any): ...any
+		return select(index:GetData(), ...)
+	end
+|>
 
 analyzer function type(obj: any)
 	if obj.Type == "any" then return types.String() end
