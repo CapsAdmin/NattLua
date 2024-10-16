@@ -27,6 +27,7 @@ local META = class.CreateTemplate("lexer")
 	Code = Code,
 	Position = number,
 	comment_escape = false | string,
+	OnError = nil | function=(msg: string, start: number, stop: number)>(),
 }]]
 --[[#local type Lexer = META.@Self]]
 

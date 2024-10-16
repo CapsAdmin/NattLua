@@ -21,6 +21,19 @@ local META = class.CreateTemplate("compiler")
 
 --[[#local type { CompilerConfig } = import("~/nattlua/config.nlua")]]
 
+--[[#type META.@Self = {
+	Code = any,
+	ParentSourceLine = string,
+	ParentSourceName = string,
+	Config = CompilerConfig | false,
+	Tokens = any,
+	SyntaxTree = any,
+	default_environment = any,
+	analyzer = any,
+	AnalyzedResult = any,
+	debug = any,
+}]]
+
 function META:GetCode()
 	return self.Code
 end
@@ -257,7 +270,7 @@ function META.New(
 	level--[[#: number | nil]]
 )
 	local info = debug.getinfo(level or 2)
-	local parent_line = info and info.currentline or "unknown line"
+	local parent_line = info and tostring(info.currentline) or "unknown line"
 	local parent_name = info and info.source:sub(2) or "unknown name"
 	name = name or (parent_name .. ":" .. parent_line)
 	return setmetatable(

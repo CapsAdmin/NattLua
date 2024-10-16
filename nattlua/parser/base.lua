@@ -37,6 +37,14 @@ META.OnInitialize = {}
 	context_values = any,
 	FFI_DECLARATION_PARSER = boolean,
 	CDECL_PARSING_MODE = "typeof" | "ffinew" | false,
+	OnPreCreateNode = nil | function=(self: any, node: Node)>(),
+	OnError = nil | function=(
+		code: Code,
+		message: string,
+		start: number,
+		stop: number,
+		...: ...any
+	)>(),
 }]]
 --[[#type META.@Name = "Parser"]]
 require("nattlua.other.context_mixin")(META)
@@ -49,7 +57,7 @@ function META:OnParsedNode(node--[[#: Node]]) end
 function META.New(
 	tokens--[[#: List<|Token|>]],
 	code--[[#: Code]],
-	config--[[#: nil | {
+	config--[[#: nil | false | {
 		root = nil | Node,
 		on_parsed_node = nil | function=(Parser, Node)>(Node),
 		path = nil | string,
