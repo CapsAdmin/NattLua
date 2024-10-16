@@ -285,7 +285,7 @@ function META.FromFile(path, config)
 
 	if not f then return nil, err end
 
-	local code = f:read("*all")
+	local code = f:read("*a")
 	f:close()
 
 	if not code then return nil, path .. " empty file" end
