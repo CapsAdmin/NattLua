@@ -1,15 +1,35 @@
+--ANALYZE
 local jit = require("jit")
 local jutil = require("jit.util")
 local jbc = require("jit.bc")
 local vmdef = require("jit.vmdef")
-local traces = {}
+--[[#local type Trace = {
+	pc_lines = List<|{func = Function, depth = number, pc = number}|>,
+	id = number,
+	exit_id = number,
+	parent_id = number,
+	parent = nil | self,
+	DEAD = nil | true,
+	stopped = nil | true,
+	aborted = nil | {code = number, reason = number},
+	children = nil | Map<|number, self|>,
+	trace_info = ReturnType<|jutil.traceinfo|>[1],
+}]]
+local traces--[[#: Map<|number, Trace|>]] = {}
 local aborted = {}
 
-local function start(id, func, pc, parent_id, exit_id)
+local function start(
+	id--[[#: number]],
+	func--[[#: Function]],
+	pc--[[#: number]],
+	parent_id--[[#: nil | number]],
+	exit_id--[[#: nil | number]]
+)
 	if parent_id == nil then assert(exit_id == nil) end
 
 	if exit_id == nil then assert(parent_id == nil) end
 
+	-- TODO, both should be nil here
 	local tr = {
 		pc_lines = {{func = func, pc = pc, depth = 0}},
 		id = id,
@@ -30,12 +50,20 @@ local function start(id, func, pc, parent_id, exit_id)
 	traces[id] = tr
 end
 
-local function stop(id, func)
+local function stop(id--[[#: number]], func--[[#: Function]])
+	assert(traces[id])
 	assert(traces[id].aborted == nil)
 	traces[id].trace_info = jutil.traceinfo(id)
 end
 
-local function abort(id, func, pc, code, reason)
+local function abort(
+	id--[[#: number]],
+	func--[[#: Function]],
+	pc--[[#: number]],
+	code--[[#: number]],
+	reason--[[#: number]]
+)
+	assert(traces[id])
 	assert(traces[id].stopped == nil)
 	traces[id].trace_info = jutil.traceinfo(id)
 	traces[id].aborted = {
@@ -45,7 +73,7 @@ local function abort(id, func, pc, code, reason)
 	table.insert(traces[id].pc_lines, {func = func, pc = pc, depth = 0})
 	aborted[id] = traces[id]
 
-	if traces[id] and traces[id].parent then
+	if traces[id] and traces[id].parent and traces[id].parent.children then
 		traces[id].parent.children[id] = nil
 	end
 
@@ -69,12 +97,13 @@ local function flush()
 	aborted = {}
 end
 
-local function record(tr, func, pc, depth)
+local function record(tr--[[#: number]], func--[[#: Function]], pc--[[#: number]], depth--[[#: number]])
+	assert(traces[tr])
 	table.insert(traces[tr].pc_lines, {func = func, pc = pc, depth = depth})
 end
 
 local trace_track = {}
-local on_trace_event = nil
+local on_trace_event--[[#: jit_attach_trace | nil]] = nil
 local on_record_event = nil
 
 function trace_track.Start()
@@ -93,18 +122,18 @@ function trace_track.Start()
 		else
 			error("unknown trace event " .. what)
 		end
-	end
+	end--[[# as jit_attach_trace]]
 	on_record_event = function(tr, func, pc, depth)
 		record(tr, func, pc, depth)
-	end
+	end--[[# as jit_attach_record]]
 	jit.attach(on_trace_event, "trace")
 	jit.attach(on_record_event, "record")
 end
 
 function trace_track.Stop()
-	assert(on_trace_event)
-	jit.attach(on_trace_event)
-	jit.attach(on_record_event)
+	assert(on_trace_event--[[# as any]])
+	jit.attach(on_trace_event--[[# as any]]) -- todo, assert doesn't make on_trace_event non-nil
+	jit.attach(on_record_event--[[# as any]])
 	on_trace_event = nil
 
 	for what, traces in pairs({traces = traces, aborted = aborted}) do
@@ -148,7 +177,7 @@ end
 
 local function find_function() end
 
-local function format_func_info(fi, func)
+local function format_func_info(fi--[[#: ReturnType<|jutil.funcinfo|>[1] ]], func--[[#: Function]])
 	if fi.loc then
 		local source = fi.source
 
@@ -166,7 +195,7 @@ local function format_func_info(fi, func)
 	end
 end
 
-local function format_error(err, arg)
+local function format_error(err--[[#: number]], arg--[[#: number | nil]])
 	local fmt = vmdef.traceerr[err]
 
 	if not fmt then return "unknown error: " .. err end
@@ -182,17 +211,17 @@ local function format_error(err, arg)
 	return string.format(fmt, arg)
 end
 
-local function tostring_trace(v, tab, stop_lines_only)
+local function tostring_trace(v--[[#: Trace]], tab--[[#: nil | string]], stop_lines_only--[[#: nil | true]])
 	tab = tab or ""
-	local done = {}
+	local done--[[#: Map<|string, nil | true|>]] = {}
 	local start_location = {}
 
 	do
 		if stop_lines_only then
-			local start_depth = v.pc_lines[#v.pc_lines].depth
+			local start_depth = assert(v.pc_lines[#v.pc_lines]).depth
 
 			for i = #v.pc_lines, 1, -1 do
-				local v = v.pc_lines[i]
+				local v = assert(v.pc_lines[i])
 				local line = format_func_info(jutil.funcinfo(v.func, v.pc), v.func)
 
 				if not done[line] then
@@ -244,11 +273,21 @@ local function tostring_trace(v, tab, stop_lines_only)
 	return str
 end
 
-function trace_track.ToStringTraceTree(traces)
+local count_table = function(t--[[#: Table]])
+	local count = 0
+
+	for k, v in pairs(t) do
+		count = count + 1
+	end
+
+	return count
+end
+
+function trace_track.ToStringTraceTree(traces--[[#: Map<|number, Trace|>]])
 	local out = {}
 
-	local function dump(v, depth)
-		local has_one_child = v.children and #v.children == 1
+	local function dump(v--[[#: Trace]], depth--[[#: number]])
+		local has_one_child = v.children and count_table(v.children) == 1
 		local tab = ("    "):rep(depth)
 
 		if depth > 0 and has_one_child then depth = depth - 1 end
@@ -256,7 +295,7 @@ function trace_track.ToStringTraceTree(traces)
 		table.insert(out, tab .. tostring_trace(v, tab))
 
 		if v.children then
-			for i, v in ipairs(v.children) do
+			for i, v in pairs(v.children) do
 				dump(v, depth + 1)
 			end
 		end
@@ -283,7 +322,7 @@ function trace_track.ToStringTraceTree(traces)
 	return str
 end
 
-function trace_track.ToStringProblematicTraces(traces, aborted)
+function trace_track.ToStringProblematicTraces(traces--[[#: Map<|number, Trace|>]], aborted--[[#: Map<|number, Trace|>]])
 	local map = {}
 
 	for k, v in pairs(traces) do

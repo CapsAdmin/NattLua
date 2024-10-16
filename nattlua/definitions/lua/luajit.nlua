@@ -105,8 +105,8 @@ type Modules["jit.vmdef"] = {
 type Modules["jit.opt"] = {
 	start = function=(...string)>(nil),
 }
-local type jit_attach_bc = function=(func: Function--[[the function that's just been recorded]] )>(nil)
-local type jit_attach_trace = function=(
+type jit_attach_bc = function=(func: Function--[[the function that's just been recorded]] )>(nil)
+type jit_attach_trace = function=(
 	what: "flush" | "start" | "stop" | "abort", -- a description of the trace event
 	tr: number, -- the trace number, not available for flush
 	func: Function, -- the function being traced, available for start and abort
@@ -114,13 +114,13 @@ local type jit_attach_trace = function=(
 	otr: number, -- start: the parent trace number if this is a side trace, abort: abort code
 	oex: number | string -- start: the exit number for the parent trace, abort: abort reason (string)
 )>(nil)
-local type jit_attach_record = function=(
+type jit_attach_record = function=(
 	tr: number, -- the trace number, not available for flush
 	func: Function, -- the function being traced, available for start and abort
 	pc: number, -- the program counter - the bytecode number of the function being recorded (if this a Lua function), available for start and abort
 	depth: number -- the depth of the inlining of the current bytecode
 )>(nil)
-local type jit_attach_texit = function=(
+type jit_attach_texit = function=(
 	tr: number, -- the trace number, not available for flush
 	ex: number, -- the exit number
 	ngpr: number, -- the number of general-purpose and floating point registers that are active at the exit
