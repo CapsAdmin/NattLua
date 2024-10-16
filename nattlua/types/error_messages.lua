@@ -224,7 +224,7 @@ function type_errors.return_type_mismatch(
 end
 
 function type_errors.global_assignment(key--[[#: any]], val--[[#: any]])--[[#: Reason]]
-	return {"_G[\"", key, "\"] = ", val}
+	return {"_G[", key, "] = ", val}
 end
 
 function type_errors.if_always_false()--[[#: Reason]]

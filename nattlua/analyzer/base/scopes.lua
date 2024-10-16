@@ -154,7 +154,7 @@ return function(META)
 		end
 
 		if self:IsRuntime() then
-			self:Warning(type_errors.global_assignment(key, val))
+			self:Warning(type_errors.global_assignment(key, val), self.current_statement)
 		end
 
 		self:Assert(self:NewIndexOperator(g, key, val))

@@ -122,13 +122,13 @@ return function(META)
 		return self:GetContextRef("type_protected_call")
 	end
 
-	function META:Error(msg)
-		local node = self.current_expression or self.current_statement
+	function META:Error(msg, node)
+		node = node or self.current_expression or self.current_statement
 		self:ReportDiagnostic(msg, "error", node, node.Code, node:GetStartStop())
 	end
 
-	function META:Warning(msg)
-		local node = self.current_expression or self.current_statement
+	function META:Warning(msg, node)
+		node = node or self.current_expression or self.current_statement
 		self:ReportDiagnostic(msg, "warning", node, node.Code, node:GetStartStop())
 	end
 
