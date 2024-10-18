@@ -140,7 +140,7 @@ do
 		elseif node.kind == "table" or node.kind == "type_table" then
 			return AnalyzeTable(self, node)
 		elseif node.kind == "binary_operator" then
-			return self:Assert(Binary(self, node))
+			return self:AssertWithNode(node, Binary(self, node))
 		elseif node.kind == "prefix_operator" then
 			if node.value.value == "not" then
 				self.inverted_index_tracking = not self.inverted_index_tracking

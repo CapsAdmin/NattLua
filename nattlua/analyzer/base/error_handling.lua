@@ -32,6 +32,16 @@ return function(META)
 		return ok, err, ...
 	end
 
+	function META:AssertWithNode(node, ok, err, ...)
+		if ok == nil or ok == false then
+			err = err or "assertion failed!"
+			self:Error(err, node)
+			return Any()
+		end
+
+		return ok, err, ...
+	end
+
 	function META:ErrorAssert(ok, err)
 		if not ok then error(self:ErrorMessageToString(err or "assertion failed!")) end
 	end

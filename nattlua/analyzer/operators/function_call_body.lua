@@ -510,13 +510,13 @@ return function(self, obj, input)
 					local node = function_node.identifiers[i + 1]
 
 					if node and not node.type_expression then
-						self:Warning(type_errors.untyped_argument())
+						self:Warning(type_errors.untyped_argument(), node.type_expression)
 					end
 				elseif
 					function_node.identifiers[i] and
 					not function_node.identifiers[i].type_expression
 				then
-					self:Warning(type_errors.untyped_argument())
+					self:Warning(type_errors.untyped_argument(), function_node.identifiers[i])
 				end
 			end
 		end
