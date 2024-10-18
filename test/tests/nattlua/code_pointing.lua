@@ -67,12 +67,14 @@ faz]]
 	equal(
 		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
 		[[    ____________________________________________________
+ 2 | wad
  3 | 111111E
  4 |     waddwa
  5 |     FROM>baradwadwwda HERE awd wdadwa<TOwawaddawdaw
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  6 |     22222E
  7 | new
+ 8 | ewww
     ----------------------------------------------------
 -> | script.txt:5:5
 -> | hello world]]
@@ -96,6 +98,7 @@ faz]]
 	equal(
 		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
 		[[     _____________________________________
+  2 | wad
   3 | 111111E
   4 |     waddwa
   5 |     FROM>baradwadwwda HE
@@ -108,6 +111,7 @@ faz]]
       ^^^^^^^^^^^^^^^^^^^^
   9 |     22222E
  10 | new
+ 11 | ewww
      -------------------------------------
  -> | script.txt:5:5
  -> | hello world]]
@@ -203,14 +207,40 @@ do
 	equal(
 		formating.BuildSourceCodePointMessage(str, "script.txt", "hello world", start, stop, 2),
 		[[     ___________________
+ 47 |   foo
  48 |   foo
  49 |   foo
  50 |          FROM---TO
                ^^^^^^^^^
  51 |   foo
  52 |   foo
+ 53 |   foo
      -------------------
  -> | script.txt:50:10
  -> | hello world]]
+	)
+end
+
+do
+	local str = [[local function foo(a, b)
+	return a + b
+end
+
+local function deferred_func()
+	foo()
+end
+]]
+	equal(
+		formating.BuildSourceCodePointMessage(str, "test", "aaa", 34, 38, nil),
+		[[    _______________________________
+ 1 | local function foo(a, b)
+ 2 |  return a + b
+             ^^^^^
+ 3 | end
+ 4 | 
+ 5 | local function deferred_func()
+    -------------------------------
+-> | test:2:9
+-> | aaa]]
 	)
 end

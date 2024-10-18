@@ -149,7 +149,7 @@ local function find_all(
 	local source_code_char_stop = 1
 
 	do -- find the line start
-		local line_count = 1
+		local line_count = 0
 
 		for i = 1, start do
 			local c = lua_code:sub(i, i)
@@ -161,7 +161,7 @@ local function find_all(
 	end
 
 	do -- find the line start
-		local line_count = 1
+		local line_count = 0
 
 		for i = 1, stop do
 			local c = lua_code:sub(i, i)
@@ -173,7 +173,7 @@ local function find_all(
 	end
 
 	do -- find the line stop
-		local line_count = 1
+		local line_count = 0
 
 		for i = 1, stop do
 			local c = lua_code:sub(i, i)
@@ -185,7 +185,7 @@ local function find_all(
 	end
 
 	do
-		local line_count = 1
+		local line_count = 0
 
 		for i = start, 1, -1 do
 			local c = lua_code:sub(i, i)
@@ -202,7 +202,7 @@ local function find_all(
 	end
 
 	do
-		local line_count = 1
+		local line_count = 0
 
 		for i = stop, #lua_code do
 			local c = lua_code:sub(i, i)
@@ -219,7 +219,6 @@ local function find_all(
 
 	do
 		source_code_char_start = 0
-		local line_count = 1
 
 		for i = 1, start do
 			local c = lua_code:sub(i, i)
@@ -272,15 +271,15 @@ local function find_all(
 	end
 
 	return {
-		source_code_line_start = source_code_line_start,
-		source_code_line_stop = source_code_line_stop,
+		source_code_line_start = source_code_line_start + 1,
+		source_code_line_stop = source_code_line_stop + 1,
 		source_code_char_start = source_code_char_start,
 		source_code_char_stop = source_code_char_stop,
 		before_sub = before_sub,
 		after_sub = after_sub,
-		line_pos = source_code_line_start - line_start + 1,
-		line_start = source_code_line_start - line_start + 1,
-		line_stop = source_code_line_start + line_stop - 1,
+		line_pos = math.max((source_code_line_start - line_start) + 1, 1),
+		line_start = math.max((source_code_line_start - line_start) + 1, 1),
+		line_stop = math.max((source_code_line_start + line_stop) + 1, 1),
 	}
 end
 
