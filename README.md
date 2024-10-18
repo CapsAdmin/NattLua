@@ -1,8 +1,8 @@
 # About
 
-NattLua is a superset of LuaJIT that adds a structural typesystem. It's geared towards doing accurate analysis/inference with the ability to constrain with contracts.
+NattLua is a superset of LuaJIT that introduces a typesystem. The typesystem aims to provide, by default, precise code analysis, while allowing you to optionally constrain variables with types.
 
-The typesystem itself follows the same philosophy as Lua and feels similar to Lua. It has a few powerful mechanisms that the rest of the typesystem and default environment is built on top of.
+The typesystem itself follows the same philosophy and feel as Lua; built on simple primitives that can be extended with type functions.
 
 There is a [playground](https://capsadmin.github.io/NattLua/) you can try. It supports hover type information and other diagnostics.
 
@@ -10,17 +10,18 @@ Complex type structures, such as array-like tables, map-like tables, metatables,
 
 ```lua
 local list: {[number] = string | nil} = {} -- -1 index is alllowed
+local list: {[number] = string} | {} = {} -- same as the above, but expressed differently
 local list: {[1..inf] = string | nil} = {} -- only 1..inf index is allowed
 
-local map: {[string] = string | nil} = {} -- any string is allowed
-local map: {foo = string, bar = string} = {foo = "hello", bar = "world"} -- only foo and bar is allowed as keys, but value can be any string type
+local map: {[string] = string | nil} = {} -- any string index is allowed
+local map: {foo = string, bar = string} = {foo = "hello", bar = "world"} -- only foo and bar is allowed as keys, but value can be of any string type
 
--- note that we add | nil so we can start with an empty table
-
-local a = "fo"
-local b = string.char(string.byte("o"))
+local a = "fo" -- a is literally "fo", and not string, because we don't specify a contract
+local b = string.char(string.byte("o")) -- these are type functions that take in literal and non literal types
+local map = {}
 map[a..b] = "hello"
---"fo" and "o" are literals and will be treated as such by the type inference
+-- this print call is a typesystem call, this will be ommitted when transpiling back to LuaJIT
+print<|map|> -- >> {foo = "hello"}
 ```
 
 ```lua
@@ -50,13 +51,13 @@ setmetatable(Vec3, {
 local new_vector = Vector(1,2,3) + Vector(100,100,100) -- OK
 ```
 
-It aims to be compatible with luajit, 5.1, 5.2, 5.3, 5.4 and Garry's Mod Lua (a variant of Lua 5.1).
+It aims to be compatible with LuaJIT as a frst class citizen, but also 5.1, 5.2, 5.3, 5.4 and Garry's Mod Lua (a variant of Lua 5.1).
 
-The `build_output.lua` file is a bundle of this project that can be required in your project. It also works in garry's mod.
+The `build_output.lua` file is a bundle of this project that can be required in your project. It also should work in garry's mod.
 
 # Code analysis and typesystem
 
-The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level and can take take multiple branches if its not sure about if conditions, loops and so on. If everything is known about a program and you did not add any types to generalize types you may get its actual output at type-check time.
+The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level, and can take take multiple branches if its not sure about if conditions, loops and so on. If everything is known about a program and you didn't add any types, you may get the actual output at type-check time.
 
 ```lua
 local cfg = [[
@@ -85,9 +86,9 @@ print<|tbl|>
 ]]
 ```
 
-The ref keyword here means that the `cfg` variable would be passed in as a type reference. In this context it's similar to how type arguments in a generic function is passed to the function itself. If we removed the ref keyword, the output of the function would be inferred to `{ string = string }` because str would become a non literal string.
+The `ref` keyword means that the `cfg` variable should be passed in as a type reference. This is similar to how type arguments in a generic function is passed to the function itself. If we removed the `ref` keyword, the output of the function is be inferred to be `{ string = string }` because `str` would become a non literal string.
 
-We can also enforce the output type of parse by writing `parse(str: ref string): {[string] = string}`, but if you don't it will be inferred.
+We can also add a return type to `parse` by writing `parse(str: ref string): {[string] = string}`, but if you don't it will be inferred.
 
 When the analyzer detects an error, it will try to recover from the error and continue. For example:
 
@@ -97,7 +98,7 @@ local x = obj()
 local y = x + 1
 ```
 
-This code will report an error about potentially calling a nil value. Internally the analyzer would duplicate the scope, remove nil from the union `nil | (function(): number)` so that `obj` contains all the values that are valid in a call operation.
+This code will report an error about potentially calling a nil value. Internally the analyzer would duplicate the current state, remove nil from the union `nil | (function(): number)` and continue.
 
 # Current status and goals
 
