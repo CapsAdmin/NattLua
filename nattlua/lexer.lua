@@ -27,7 +27,7 @@ local META = class.CreateTemplate("lexer")
 	Code = Code,
 	Position = number,
 	comment_escape = false | string,
-	OnError = nil | function=(msg: string, start: number, stop: number)>(),
+	OnError = function=(self: self, code: Code, msg: string, start: number | nil, stop: number | nil)>(),
 }]]
 --[[#local type Lexer = META.@Self]]
 
@@ -723,11 +723,15 @@ function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
 end
 
 function META.New(code--[[#: Code]])
-	local self = setmetatable({
-		Code = code,
-		Position = 1,
-		comment_escape = false,
-	}, META)
+	local self = setmetatable(
+		{
+			Code = code,
+			Position = 1,
+			comment_escape = false,
+			OnError = META.OnError,
+		},
+		META
+	)
 	self:ResetState()
 	return self
 end

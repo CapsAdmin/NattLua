@@ -37,8 +37,9 @@ META.OnInitialize = {}
 	context_values = any,
 	FFI_DECLARATION_PARSER = boolean,
 	CDECL_PARSING_MODE = "typeof" | "ffinew" | false,
-	OnPreCreateNode = nil | function=(self: any, node: Node)>(),
-	OnError = nil | function=(
+	OnPreCreateNode = function=(self: any, node: Node)>(),
+	OnError = function=(
+		self: self,
 		code: Code,
 		message: string,
 		start: number,
@@ -78,6 +79,8 @@ function META.New(
 		CDECL_PARSING_MODE = false,
 		value = false,
 		FFI_DECLARATION_PARSER = false,
+		OnPreCreateNode = META.OnPreCreateNode,
+		OnError = META.OnError,
 	}
 
 	for _, func in ipairs(META.OnInitialize) do
