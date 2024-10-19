@@ -28,6 +28,12 @@ META:IsSet("ArgumentsInferred", false)
 META:IsSet("LiteralFunction", false)
 META:GetSet("PreventInputArgumentExpansion", false)
 
+function META.LogicalComparison(l--[[#: TFunction]], r--[[#: TFunction]], op--[[#: string]])
+	if op == "==" then return l:Equal(r) end
+
+	return false, type_errors.binary(op, l, r)
+end
+
 function META:__tostring()
 	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
 end
