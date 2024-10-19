@@ -133,15 +133,15 @@ analyzer function table.getn(tbl: List<|any|>)
 	return analyzer:GetArrayLengthFromTable(tbl)
 end
 
-analyzer function table.unpack(tbl: List<|any|>)
+analyzer function table.unpack(tbl: List<|any|>, from: number | nil, to: number | nil)
 	local t = {}
 
-	for i = 1, 32 do
+	for i = from and from:GetData() or 1, to and to:GetData() or 32 do
 		local v = tbl:Get(types.LNumber(i))
 
 		if not v then break end
 
-		t[i] = v
+		table.insert(t, v)
 	end
 
 	return table.unpack(t)
