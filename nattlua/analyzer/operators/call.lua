@@ -18,6 +18,10 @@ local function union_call(self, analyzer, input, call_node)
 		local truthy_union = Union()
 
 		for _, v in ipairs(self.Data) do
+			if analyzer:IsRuntime() then
+				if v.Type == "tuple" then v = v:GetFirstValue() end
+			end
+
 			if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
 				analyzer:ErrorAndCloneCurrentScope(type_errors.union_contains_non_callable(self, v), self--[[# as any]])
 			else
@@ -215,7 +219,6 @@ do
 			)
 
 		if is_type_function then analyzer:PushAnalyzerEnvironment("typesystem") end
-
 		local ok, err = call_function_internal(analyzer, self, input)
 
 		if is_type_function then analyzer:PopAnalyzerEnvironment() end
