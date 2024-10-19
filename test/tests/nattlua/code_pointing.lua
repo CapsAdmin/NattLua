@@ -65,7 +65,7 @@ ewww
 faz]]
 	local start, stop = test:find("FROM.-TO")
 	equal(
-		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
+		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 3),
 		[[    ____________________________________________________
  2 | wad
  3 | 111111E
@@ -96,7 +96,7 @@ ewww
 faz]]
 	local start, stop = test:find("FROM.-TO")
 	equal(
-		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
+		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 3),
 		[[     _____________________________________
   2 | wad
   3 | 111111E
@@ -205,17 +205,17 @@ do
 
 	local start, stop = str:find("FROM.-TO")
 	equal(
-		formating.BuildSourceCodePointMessage(str, "script.txt", "hello world", start, stop, 2),
-		[[     ___________________
- 47 |   foo
- 48 |   foo
- 49 |   foo
- 50 |          FROM---TO
-               ^^^^^^^^^
- 51 |   foo
- 52 |   foo
- 53 |   foo
-     -------------------
+		formating.BuildSourceCodePointMessage(str, "script.txt", "hello world", start, stop, 3),
+		[[     ______________________________________________
+ 47 |         foo
+ 48 |         foo
+ 49 |         foo
+ 50 |                                     FROM---TO
+                                          ^^^^^^^^^
+ 51 |         foo
+ 52 |         foo
+ 53 |         foo
+     ----------------------------------------------
  -> | script.txt:50:10
  -> | hello world]]
 	)
@@ -231,11 +231,11 @@ local function deferred_func()
 end
 ]]
 	equal(
-		formating.BuildSourceCodePointMessage(str, "test", "aaa", 34, 38, nil),
+		formating.BuildSourceCodePointMessage(str, "test", "aaa", 34, 38, 3),
 		[[    _______________________________
  1 | local function foo(a, b)
- 2 |  return a + b
-             ^^^^^
+ 2 |     return a + b
+                ^^^^^
  3 | end
  4 | 
  5 | local function deferred_func()

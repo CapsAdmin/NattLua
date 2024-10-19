@@ -133,158 +133,170 @@ do
 	end
 end
 
-local function find_all(
-	lua_code--[[#: string]],
-	start--[[#: number]],
-	stop--[[#: number]],
-	line_context--[[#: number]]
-)
-	local source_code_line_start = 1
-	local source_code_line_stop = 1
-	local line_stop = 1
-	local line_start = 1
-	local before_sub = 1
-	local after_sub = #lua_code
-	local source_code_char_start = 1
-	local source_code_char_stop = 1
-
-	do -- find the line start
-		local line_count = 0
-
-		for i = 1, start do
-			local c = lua_code:sub(i, i)
-
-			if c == "\n" then line_count = line_count + 1 end
-		end
-
-		source_code_line_start = line_count
-	end
-
-	do -- find the line start
-		local line_count = 0
-
-		for i = 1, stop do
-			local c = lua_code:sub(i, i)
-
-			if c == "\n" then line_count = line_count + 1 end
-		end
-
-		source_code_line_stop = line_count
-	end
-
-	do -- find the line stop
-		local line_count = 0
-
-		for i = 1, stop do
-			local c = lua_code:sub(i, i)
-
-			if c == "\n" then line_count = line_count + 1 end
-		end
-
-		line_stop = line_count
-	end
-
-	do
-		local line_count = 0
-
-		for i = start, 1, -1 do
-			local c = lua_code:sub(i, i)
-
-			if c == "\n" then line_count = line_count + 1 end
-
-			if line_count >= line_context then
-				before_sub = i + 1
-				line_start = line_count - 1
-
-				break
-			end
-		end
-	end
-
-	do
-		local line_count = 0
-
-		for i = stop, #lua_code do
-			local c = lua_code:sub(i, i)
-
-			if c == "\n" then line_count = line_count + 1 end
-
-			if line_count >= line_context then
-				after_sub = i
-
-				break
-			end
-		end
-	end
-
-	do
-		source_code_char_start = 0
-
-		for i = 1, start do
-			local c = lua_code:sub(i, i)
-
-			if c == "\n" then
-				source_code_char_start = 0
-			else
-				source_code_char_start = source_code_char_start + 1
-			end
-		end
-
-		source_code_char_start = source_code_char_start - 1
-	end
-
-	do
-		source_code_char_stop = 0
-
-		for i = start, #lua_code do
-			local c = lua_code:sub(i, i)
-
-			if c == "\n" then
-				source_code_char_stop = 0
-
-				break
-			else
-				source_code_char_stop = source_code_char_stop + 1
-			end
-		end
-	end
-
-	local char_stop = 0
-	local char_count = 0
-
-	for i = before_sub, after_sub do
-		if i > stop then char_stop = char_stop + 1 end
-
-		local c = lua_code:sub(i, i)
-
-		if c == "\n" or i == after_sub then
-			if char_stop > 0 then
-				source_code_char_stop = char_count - char_stop
-
-				break
-			end
-
-			char_count = 0
-		else
-			char_count = char_count + 1
-		end
-	end
-
-	return {
-		source_code_line_start = source_code_line_start + 1,
-		source_code_line_stop = source_code_line_stop + 1,
-		source_code_char_start = source_code_char_start,
-		source_code_char_stop = source_code_char_stop,
-		before_sub = before_sub,
-		after_sub = after_sub,
-		line_pos = math.max((source_code_line_start - line_start) + 1, 1),
-		line_start = math.max((source_code_line_start - line_start) + 1, 1),
-		line_stop = math.max((source_code_line_start + line_stop) + 1, 1),
-	}
-end
-
 local SEPARATOR = " | "
 local ARROW = "->"
+local TAB_WIDTH = (" "):rep(4)
+
+function formating.BuildSourceCodePointMessage2(
+	code--[[#: string]],
+	start--[[#: number]],
+	stop--[[#: number]],
+	config--[[#: nil | {
+		path = nil | string,
+		messages = nil | List<|string|>,
+		surrounding_line_count = nil | number,
+		show_line_numbers = nil | boolean,
+		show_box = nil | boolean,
+	}]]
+)
+	config = config or {}
+	config.surrounding_line_count = config.surrounding_line_count or 3
+
+	if config.show_line_numbers == nil then config.show_line_numbers = true end
+
+	if config.show_box == nil then config.show_box = true end
+
+	start = mathx.clamp(start or 1, 1, #code)
+	stop = mathx.clamp(stop or 1, 1, #code)
+
+	if stop < start then start, stop = stop, start end
+
+	local lines = {}
+	local line = {}
+	local line_start--[[#: number]]
+	local line_stop--[[#: number]]
+	local char_start--[[#: number]]
+	local char_stop--[[#: number]]
+	local source_code_char_start--[[#: number]]
+	local source_code_char_stop--[[#: number]]
+
+	for i = 1, #code do
+		local char = code:sub(i, i)
+
+		if i >= start then
+			if not line_start then line_start = #lines + 1 end
+
+			if not char_start then
+				source_code_char_start = #line + 1
+				char_start = #table.concat(line):gsub("\t", TAB_WIDTH) + 1
+			end
+		end
+
+		if i >= stop then
+			if not line_stop then line_stop = #lines + 1 end
+
+			if not char_stop then
+				source_code_char_stop = #line + 1
+				char_stop = #table.concat(line):gsub("\t", TAB_WIDTH) + 1
+			end
+		end
+
+		if char == "\n" or i == #code then
+			if i == #code then table.insert(line, char) end
+
+			table.insert(lines, table.concat(line))
+			line = {}
+		else
+			table.insert(line, char)
+		end
+	end
+
+	local start_line_context = math.max(line_start - config.surrounding_line_count, 1)
+	local stop_line_context = math.min(line_stop + config.surrounding_line_count, #lines)
+	local number_length = #tostring(stop_line_context)
+	local annotated = {}
+
+	for line_pos = start_line_context, stop_line_context do
+		local line = lines[line_pos]:gsub("\t", TAB_WIDTH)
+		local header = config.show_line_numbers == false and
+			"" or
+			stringx.pad_left(tostring(line_pos), number_length, " ") .. SEPARATOR
+
+		if line_pos == line_start and line_pos == line_stop then
+			-- only spans one line
+			local before = line:sub(1, char_start - 1)
+			local between = line:sub(char_start, char_stop)
+			local after = line:sub(char_stop + 1, #line)
+
+			if char_start > #line then between = between .. "\\n" end
+
+			before = header .. before
+			table.insert(annotated, before .. between .. after)
+			table.insert(annotated, (" "):rep(#before) .. ("^"):rep(#between))
+		elseif line_pos == line_start then
+			-- multiple line span, first line
+			local before = line:sub(1, char_start - 1)
+			local after = line:sub(char_start, #line)
+
+			-- newline
+			if char_start > #line then after = "\\n" end
+
+			before = header .. before
+			table.insert(annotated, before .. after)
+			table.insert(annotated, (" "):rep(#before) .. ("^"):rep(#after))
+		elseif line_pos == line_stop then
+			-- multiple line span, last line
+			local before = line:sub(1, char_stop)
+			local after = line:sub(char_stop + 1, #line)
+			table.insert(annotated, header .. before .. after)
+			table.insert(annotated, (" "):rep(#header) .. ("^"):rep(#before))
+		elseif line_pos > line_start and line_pos < line_stop then
+			-- multiple line span, in between start and stop lines
+			local after = line
+			table.insert(annotated, header .. after)
+			table.insert(annotated, (" "):rep(#header) .. ("^"):rep(#after))
+		else
+			table.insert(annotated, header .. line)
+		end
+	end
+
+	if config.show_box then
+		local longest_line = 0
+
+		for i, v in ipairs(annotated) do
+			if #v > longest_line then longest_line = #v end
+		end
+
+		table.insert(
+			annotated,
+			1,
+			(
+					" "
+				):rep(number_length + #SEPARATOR) .. (
+					"_"
+				):rep(longest_line - number_length - #SEPARATOR)
+		)
+		table.insert(
+			annotated,
+			(
+					" "
+				):rep(number_length + #SEPARATOR) .. (
+					"-"
+				):rep(longest_line - number_length - #SEPARATOR)
+		)
+	end
+
+	local header = config.show_line_numbers == false and
+		"" or
+		stringx.pad_left(ARROW, number_length, " ") .. SEPARATOR
+
+	if config.path then
+		local path = config.path
+
+		if path:sub(1, 1) == "@" then path = path:sub(2) end
+
+		local msg = path .. ":" .. line_start .. ":" .. source_code_char_start
+		table.insert(annotated, header .. msg)
+	end
+
+	if config.messages then
+		for _, msg in ipairs(config.messages) do
+			table.insert(annotated, header .. msg)
+		end
+	end
+
+	return table.concat(annotated, "\n"):gsub("\t", TAB_WIDTH)
+end
 
 function formating.BuildSourceCodePointMessage(
 	lua_code--[[#: string]],
@@ -294,108 +306,17 @@ function formating.BuildSourceCodePointMessage(
 	stop--[[#: number]],
 	line_context--[[#: number]]
 )
-	if #lua_code > 500000 then
-		return "*cannot point to source code, too big*: " .. msg
-	end
-
-	if not lua_code:find("\n", nil, true) then
-		-- this simplifies the below logic a lot..	
-		lua_code = lua_code .. "\n"
-	end
-
-	line_context = (line_context or 2) * 2
-	start = mathx.clamp(start or 1, 1, #lua_code)
-	stop = mathx.clamp(stop or 1, 1, #lua_code)
-	local data = find_all(lua_code, start, stop, line_context)
-	local number_length = #tostring(data.line_stop)
-	local line_pos = data.line_pos
-	local lines = {}
-
-	do
-		local chars = {}
-
-		for i = data.before_sub, data.after_sub do
-			local char = lua_code:sub(i, i)
-
-			if char == "\n" or i == data.after_sub then
-				local line = table.concat(chars)
-				local inside = i >= start and i <= stop
-				local header = stringx.pad_left(tostring(line_pos), number_length, " ") .. SEPARATOR
-
-				if
-					data.source_code_line_start == line_pos and
-					data.source_code_line_stop == line_pos
-				then
-					-- only spans one line
-					local before = header .. line:sub(1, data.source_code_char_start)
-					local between = line:sub(data.source_code_char_start + 1, data.source_code_char_stop)
-					local after = line:sub(data.source_code_char_stop + 1, #line)
-					table.insert(lines, before .. between .. after)
-					table.insert(lines, (" "):rep(#before) .. ("^"):rep(#between + 1))
-				elseif data.source_code_line_start == line_pos then
-					-- multiple line span, first line
-					local before = header .. line:sub(1, data.source_code_char_start)
-					local after = line:sub(data.source_code_char_start + 1, #line)
-					table.insert(lines, before .. after)
-					table.insert(lines, (" "):rep(#before) .. ("^"):rep(#after))
-				elseif data.source_code_line_stop == line_pos then
-					-- multiple line span, last line
-					local before = line:sub(1, data.source_code_char_stop)
-					local after = line:sub(data.source_code_char_stop + 1, #line)
-					table.insert(lines, header .. before .. after)
-					table.insert(lines, (" "):rep(#header) .. ("^"):rep(#before + 1))
-				elseif inside then
-					-- multiple line span, in between start and stop lines
-					local after = line
-					table.insert(lines, header .. after)
-					table.insert(lines, (" "):rep(#header) .. ("^"):rep(#after))
-				else
-					table.insert(lines, header .. line)
-				end
-
-				chars = {}
-				line_pos = line_pos + 1
-			else
-				table.insert(chars, char)
-			end
-		end
-	end
-
-	local longest_line = 0
-
-	for i, v in ipairs(lines) do
-		if #v > longest_line then longest_line = #v end
-	end
-
-	table.insert(
-		lines,
-		1,
-		(
-				" "
-			):rep(number_length + #SEPARATOR) .. (
-				"_"
-			):rep(longest_line - number_length - #SEPARATOR)
+	line_context = line_context or 4
+	return formating.BuildSourceCodePointMessage2(
+		lua_code,
+		start,
+		stop,
+		{
+			path = path,
+			messages = {msg},
+			surrounding_line_count = line_context,
+		}
 	)
-	table.insert(
-		lines,
-		(
-				" "
-			):rep(number_length + #SEPARATOR) .. (
-				"-"
-			):rep(longest_line - number_length - #SEPARATOR)
-	)
-
-	if path then
-		if path:sub(1, 1) == "@" then path = path:sub(2) end
-
-		local msg = path .. ":" .. data.source_code_line_start .. ":" .. (
-				data.source_code_char_start + 1
-			)
-		table.insert(lines, stringx.pad_left(ARROW, number_length, " ") .. SEPARATOR .. msg)
-	end
-
-	table.insert(lines, stringx.pad_left(ARROW, number_length, " ") .. SEPARATOR .. msg)
-	return stringx.replace(table.concat(lines, "\n"), "\t", " ")
 end
 
 return formating
