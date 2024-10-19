@@ -4,6 +4,7 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
+local type_errors = require("nattlua.types.error_messages")
 return {
 	AnalyzeGenericFor = function(self, statement)
 		local args = self:AnalyzeExpressions(statement.expressions)
@@ -18,7 +19,10 @@ return {
 		end
 
 		local returned_key = nil
-		local one_loop = callable_iterator and callable_iterator.Type == "any"
+		local one_loop = callable_iterator and
+			callable_iterator.Type == "any" or
+			args[1] and
+			args[1].Type == "any"
 		local uncertain_break = nil
 
 		for i = 1, 1000 do
@@ -104,7 +108,7 @@ return {
 			if brk then break end
 
 			if i == (self.max_iterations or 1000) and self:IsRuntime() then
-				self:Error("too many iterations")
+				self:Error(type_errors.too_many_iterations())
 			end
 
 			if args[1] and false then
