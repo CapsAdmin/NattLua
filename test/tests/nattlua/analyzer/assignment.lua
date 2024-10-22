@@ -103,3 +103,47 @@ analyze([[
     local x <const> = 1
     x = 2
 ]], "cannot assign to const variable")
+analyze[[
+local analyzer function normalize(obj: any)
+	local temp = {}
+
+	for i = 1, 10 do
+		local v = obj:GetAtTupleIndex2(i)
+
+		if not v then break end
+
+		temp[i] = v
+	end
+
+	return types.Tuple(temp)
+end
+
+attest.equal<|
+	normalize<|(1, 2, 3, (nil, false, "foo") | 1337) | (nil, false, "bar")|>,
+	(1 | nil, 2 | false, "bar" | 3, 1337 | nil, false | nil, "foo" | nil)
+|>
+attest.equal<|normalize<|((1, nil, 2))|>, (1, nil, 2)|>
+attest.equal<|normalize<|((1, number, 2) | (string,))|>, (1 | string, nil | number, 2 | nil)|>
+attest.equal<|normalize<|((1, 2) | (string,))|>, (1 | string, nil | 2)|>
+attest.equal<|normalize<|((1, 2) | string)|>, (1 | string, nil | 2)|>
+attest.equal<|normalize<|((1, 2) | (nil, nil))|>, (1 | nil, nil | 2)|>
+attest.equal<|normalize<|((1, 2, 3) | (nil, nil))|>, (1 | nil, nil | 2, 3 | nil)|>
+attest.equal<|normalize<|((1) | (2))|>, (1 | 2)|>
+attest.equal<|normalize<|((1) | ())|>, (1 | nil)|>
+attest.equal<|normalize<|(() | ())|>, ()|>
+attest.equal<|normalize<|(1 | (2) | (3))|>, (1 | 2 | 3)|>
+attest.equal<|normalize<|(1 | (2 | (3, 4)) | (3))|>, (1 | 2 | 3, nil | 4)|>
+attest.equal<|normalize<|()|>, ()|>
+attest.equal<|normalize<|((1, 2) * 2)|>, (1, 2, 1, 2)|>
+attest.equal<|normalize<|(1, 2, (number,) * 2)|>, (1, 2, number, number)|>
+]]
+
+analyze[[
+local function foo(...)
+	attest.equal<|..., (1,2,((any,)*inf,))|>
+end
+
+local function bar(...)
+	foo(1,2,...)
+end
+]]

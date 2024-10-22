@@ -1553,8 +1553,8 @@ if TEST then
 			function update_server()
 				local data, addr = server:receive_from()
 
-				if data and type(addr) == "table" then
-					assert(server:send_to(addr, "hello from server " .. os.clock()))
+				if data and type(addr) == "table" and addr then
+					assert(server:send_to(addr as AddressInfo, "hello from server " .. os.clock()))
 				elseif addr ~= "timeout" then
 
 				--error(addr)
@@ -1575,8 +1575,8 @@ if TEST then
 
 				local data, addr = client:receive_from(address)
 
-				if data and type(addr) == "table" then
-					print(data, addr:get_ip(), addr:get_port())
+				if data and addr and type(addr) == "table" then
+					--print(data, addr:get_ip(), addr:get_port())
 				elseif addr ~= "timeout" then
 
 				--error(addr)

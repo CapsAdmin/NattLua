@@ -167,6 +167,85 @@ function META:HasTuples()
 	return false
 end
 
+function META:GetTupleLength()
+	local len = 0
+
+	for _, obj in ipairs(self.Data) do
+		if obj.Type == "union" or obj.Type == "tuple" then
+			len = math.max(len, obj:GetTupleLength())
+		else
+			len = math.max(len, 1)
+		end
+	end
+
+	return len
+end
+
+function META:GetAtTupleIndex2(i)
+	if i > self:GetTupleLength() then return nil end
+
+	local obj = self:GetAtTupleIndex3(i)
+
+	if obj then
+		if obj.Type == "union" then
+			return obj:GetAtTupleIndex3(i)
+		elseif obj.Type == "tuple" then
+			return obj:GetWithNumber(i)
+		end
+	end
+
+	return obj
+end
+
+function META:GetAtTupleIndex3(i--[[#: number]])
+	if not self:HasTuples() then return self:Simplify() end
+
+	local val--[[#: any]]
+	local errors = {}
+	
+	for _, obj in ipairs(self.Data) do
+		if obj.Type == "tuple" then
+			local found, err = obj:GetWithNumber(i)
+
+			if found then
+				if found.Type == "union" then
+					found, err = found:GetAtTupleIndex3(1)
+				elseif found.Type == "tuple" then
+					found, err = found:GetAtTupleIndex2(1)
+				end
+			end
+
+			if found then
+				if val then val = self.New({val, found}) else val = found end
+			else
+				if val then val = self.New({val, Nil()}) else val = Nil() end
+			end
+		elseif i == 1 then
+			if val then val = self.New({val, obj}) else val = obj end
+		else
+			if val then val = self.New({val, Nil()}) else val = Nil() end
+		end
+	end
+
+	if
+		(
+			val.Type == "symbol" or
+			val.Type == "union" and
+			val:GetCardinality() == 1
+		)
+		and
+		val:IsNil()
+	then
+		return nil
+	end
+
+	if not val then return false, errors end
+
+	if val.Type == "union" and val:GetCardinality() == 1 then return val.Data[1] end
+
+	return val
+end
+
 function META:GetAtTupleIndex(i--[[#: number]])
 	if not self:HasTuples() then return self:Simplify() end
 

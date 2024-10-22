@@ -144,7 +144,7 @@ analyze[[
     
     local type t = | 
     
-    attest.expect_diagnostic("error", "union is empty")
+    attest.expect_diagnostic("error", "nil is not a subset of string")
     test(t)
 ]]
 analyze[[

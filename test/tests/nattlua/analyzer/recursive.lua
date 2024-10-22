@@ -5,8 +5,9 @@ analyze[[
         end
         return 2, 1
     end
-    
-    attest.equal(foo(), _ as (number, number))
+    local x, y = foo()
+    attest.equal(x, _ as number)
+    attest.equal(y, _ as number)
 ]]
 analyze(
 	[[

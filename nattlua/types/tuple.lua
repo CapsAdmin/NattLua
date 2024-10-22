@@ -236,6 +236,76 @@ function META:HasTuples()
 	return false
 end
 
+function META:GetElementCount2()--[[#: number]]
+	if false--[[# as true]] then
+		-- TODO: recursion
+		return nil--[[# as number]]
+	end
+
+	local len = 0
+
+	for i, v in ipairs(self:GetData()) do
+		if v.Type == "tuple" then
+			len = len + v:GetElementCount2()
+		elseif v.Type == "union" then
+			local length = 0
+
+			for i, v in ipairs(v:GetData()) do
+				if v.Type == "tuple" then
+					length = math.max(length, v:GetElementCount2())
+				else
+					length = math.max(length, 1)
+				end
+			end
+
+			len = len + length
+		else
+			len = len + 1
+		end
+	end
+
+	if self.Remainder then return len + self.Remainder:GetElementCount2() end
+
+	if self.Repeat then return len * self.Repeat end
+
+	return len
+end
+
+function META:GetTupleLength()
+	local len = self:GetElementCount2()
+
+	for _, obj in ipairs(self.Data) do
+		if obj.Type == "union" or obj.Type == "tuple" then
+			len = math.max(len, obj:GetTupleLength())
+		else
+			len = math.max(len, 1)
+		end
+	end
+
+	return len
+end
+
+function META:IsInfinite()
+	return self.Remainder and self.Remainder.Repeat == math.huge
+end
+
+function META:GetAtTupleIndex2(i)
+	if i > self:GetTupleLength() then return nil end
+
+	local obj = self:GetWithNumber(i)
+	if obj then
+		if obj.Type == "union" then
+			return obj:GetAtTupleIndex3(i)
+		elseif obj.Type == "tuple" then
+			if obj:IsInfinite() then return obj end
+
+			return obj:GetWithNumber(i)
+		end
+	end
+
+	return obj
+end
+
 function META:GetWithNumber(i--[[#: number]])
 	local val = self:GetData()[i]
 
@@ -250,8 +320,35 @@ function META:GetWithNumber(i--[[#: number]])
 	if not val then
 		local last = self:GetData()[#self:GetData()]
 
-		if last and last.Type == "tuple" and (last.Repeat or last.Remainder) then
-			return last:Get(i)
+		if last then
+			if last.Type == "tuple" and (last.Repeat or last.Remainder) then
+				return last:GetWithNumber(i)
+			end
+
+			if last.Repeat == math.huge then return last end
+
+			if last.Type == "union" and last:HasTuples() then
+				local i = i - #self:GetData() + 1
+				local found = Union()
+
+				for _, v in ipairs(last:GetData()) do
+					if v.Type == "tuple" then
+						local obj = v:GetWithNumber(i)
+
+						if obj then found:AddType(obj) end
+					elseif v.Type == "union" then
+						if i == 1 then
+							local obj = v:GetAtTupleIndex3(i)
+
+							if obj then found:AddType(obj) end
+						end
+					end
+				end
+
+				if found:GetCardinality() == 1 then return found:GetData()[1] end
+
+				return found
+			end
 		end
 	end
 
@@ -519,13 +616,32 @@ return {
 					if i == #types then
 						table.insert(temp, v)
 					else
-						local obj = v:Get(1)
+						local obj = v:GetWithNumber(1)
 
 						if obj then table.insert(temp, obj) end
 					end
 				else
 					table.insert(temp, v)
 				end
+			end
+
+			local old_temp = temp
+			arguments = META.New(temp)
+			local temp = {}
+
+			for i = 1, 128 do
+				local v = arguments:GetAtTupleIndex2(i)
+
+				if v and v.Type == "tuple" then
+					-- inf tuple
+					temp[i] = v
+
+					break
+				end
+
+				if not v then break end
+
+				temp[i] = v
 			end
 
 			arguments = META.New(temp)
