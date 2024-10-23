@@ -746,6 +746,7 @@ function META.New(
 	init.parent = parent
 	init.Code = code
 	init.inferred_types = {}
+	init.inferred_types_done = {}
 	return setmetatable(init--[[# as META.@Self]], META)
 end
 
@@ -885,8 +886,31 @@ end
 function META:HasNodes()
 	return self.statements ~= nil
 end
-
+local STRING_TYPE = {}
+local NUMBER_TYPE = {}
+local NAN_TYPE = {}
+local ANY_TYPE = {}
 function META:AssociateType(obj)
+	do
+		local t = obj.Type
+		local hash = obj
+		if hash.Type == "symbol" then
+			hash = obj.Data
+		elseif obj.Type == "string" then
+			hash = obj.Data or STRING_TYPE
+		elseif obj.Type == "number" then
+			hash = obj.Data or NUMBER_TYPE
+			if hash ~= hash then
+				hash = NAN_TYPE
+			end
+		elseif obj.Type == "any" then
+			hash = ANY_TYPE
+		end
+
+		if self.inferred_types_done[hash] then return end
+		self.inferred_types_done[hash] = true
+	end
+
 	self.inferred_types[#self.inferred_types + 1] = obj
 end
 

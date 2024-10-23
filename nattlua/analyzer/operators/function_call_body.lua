@@ -527,7 +527,10 @@ return function(self, obj, input)
 	do -- this is for the emitter
 		if function_node.identifiers then
 			for i, node in ipairs(function_node.identifiers) do
-				node:AssociateType(obj:GetInputSignature():Get(i))
+				local obj = obj:GetInputSignature():Get(i)
+				if obj then
+					node:AssociateType(obj)
+				end
 			end
 		end
 

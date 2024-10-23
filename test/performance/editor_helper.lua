@@ -20,6 +20,11 @@ end
 
 local helper = single_file(io.open("test/tests/nattlua/analyzer/complex/ljsocket.nlua"):read("*a"))
 local profiler = require("test.helpers.profiler")
+local util = require("examples.util")
 profiler.Start()
-print(helper:GetSemanticTokens(path))
+
+util.Measure("semantic", function()
+	helper:GetSemanticTokens(path)
+end)
+
 profiler.Stop()

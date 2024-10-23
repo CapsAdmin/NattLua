@@ -39,9 +39,24 @@ function lsp.Call(params)
 	write_message(params)
 end
 
+local has_jit, jit_profiler = pcall(require, "test.helpers.jit_profiler")
+
 while true do
 	local body = read_message()
+
+	if jit_profiler then
+		jit_profiler.Start(
+			{
+				mode = "line",
+				sampling_rate = 1,
+				depth = 2, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
+			}
+		)
+	end
+
 	local res = rpc_util.ReceiveJSON(body, lsp.methods)
+
+	if jit_profiler then print(jit_profiler.Stop({sample_threshold = 100})) end
 
 	if res then
 		if res.error then error(res.error.message) end

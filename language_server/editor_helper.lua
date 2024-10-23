@@ -362,10 +362,6 @@ function META:FindToken(path, line, char)
 		end
 	end
 
-	for _, token in ipairs(data.tokens) do
-		print(token, token.start, token.stop)
-	end
-
 	error(
 		"cannot find token at " .. path .. ":" .. line .. ":" .. char .. " or sub pos " .. sub_pos,
 		2

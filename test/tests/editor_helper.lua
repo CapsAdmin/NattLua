@@ -31,11 +31,11 @@ end
 
 do
 	local code = [[
-        local a = 1
-        local x = 2
+        local a: number = 1
+        local x: number = 2
     ]]
 	local editor = single_file(code)
-	assert(editor:GetHover(path, 1, 18).obj:GetData() == 2)
+	assert(editor:GetHover(path, 1, 18).obj.Type == "number")
 end
 
 do

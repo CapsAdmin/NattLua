@@ -400,6 +400,8 @@ lsp.methods["textDocument/hover"] = function(params)
 			str = str .. "\t" .. tostring(node) .. "\n"
 
 			for _, obj in ipairs(node:GetAssociatedTypes()) do
+				if obj.Type == "table" then obj = obj:GetMutatedFromScope(scope) end
+
 				str = str .. "\t\t" .. tostring(obj) .. "\n"
 			end
 		end

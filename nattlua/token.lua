@@ -75,14 +75,30 @@ function META:FindType()
 		local found = false
 
 		for _, obj in ipairs(node:GetAssociatedTypes()) do
-			if type(obj) ~= "table" then
-				print("UH OH", obj, node, "BAD VALUE IN GET TYPES")
+			if obj.Type == "string" and obj:GetData() == self.value then
+
+			elseif obj.Type == "number" and tostring(obj:GetData()) == self.value then
+
 			else
-				if obj.Type == "string" and obj:GetData() == self.value then
+				local exists = false
 
-				else
-					if obj.Type == "table" then obj = obj:GetMutatedFromScope(scope) end
+				-- duplicates of these have been taken care of already
+				if
+					obj.Type ~= "string" and
+					obj.Type ~= "number" and
+					obj.Type ~= "symbol" and
+					obj.Type ~= "any"
+				then
+					for i, v in ipairs(types) do
+						if v:Equal(obj) then
+							exists = true
 
+							break
+						end
+					end
+				end
+
+				if not exists then
 					table.insert(types, obj)
 					found = true
 				end
@@ -159,8 +175,8 @@ function META:GetSemanticType()
 	end
 
 	if
-		runtime_syntax:GetTokenType(token):find("operator") or
-		typesystem_syntax:GetTokenType(token):find("operator")
+		runtime_syntax:GetTokenType(token):find("operator", nil, true) or
+		typesystem_syntax:GetTokenType(token):find("operator", nil, true)
 	then
 		return "operator"
 	end

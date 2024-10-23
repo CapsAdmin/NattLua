@@ -12,6 +12,7 @@ local type Node = {
 	Code = Code,
 	tokens = Map<|string, Token | List<|Token|>|>,
 	inferred_types = List<|any|>,
+	inferred_types_done = Map<|any, any|>,
 	environment = "typesystem" | "runtime",
 	parent = false | self,
 	code_start = number,
