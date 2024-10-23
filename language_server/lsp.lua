@@ -50,7 +50,7 @@ local SemanticTokenModifiers = {
 }
 
 local function get_range(code, start, stop)
-	local data = formating.SubPositionToLinePosition(code:GetString(), start, stop)
+	local data = code:SubPosToLineChar(start, stop)
 	return {
 		start = {
 			line = data.line_start - 1,
@@ -210,10 +210,8 @@ lsp.methods["shutdown"] = function(params)
 end
 
 do
-	
 	lsp.methods["textDocument/semanticTokens/full"] = function(params)
 		local path = to_fs_path(params.textDocument.uri)
-
 		return {data = editor_helper:GetSemanticTokens(path)}
 	end
 end
@@ -417,9 +415,7 @@ lsp.methods["textDocument/hover"] = function(params)
 		add_line("parent nodes:")
 		local min, max = wtf[1]:GetStartStop()
 
-		if min then
-			linepos = formating.SubPositionToLinePosition(wtf[1].Code:GetString(), min, max)
-		end
+		if min then linepos = wtf[1].Code:SubPosToLineChar(min, max) end
 
 		for i = 1, #wtf do
 			local min, max = wtf[i]:GetStartStop()

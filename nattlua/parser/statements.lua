@@ -510,12 +510,10 @@ do
 
 		code = locals .. code
 		-- append newlines so that potential runtime line errors are correct
-		local lua_code = node.Code:GetString()
 		local line
 
-		if lua_code then
-			local start, stop = node:GetStartStop()
-			line = formating.SubPositionToLinePosition(lua_code, start, stop).line_start
+		if node.Code:GetString() then
+			line = node.Code:SubPosToLineChar(node:GetStartStop()).line_start
 			code = ("\n"):rep(line - 1) .. code
 		end
 

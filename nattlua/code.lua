@@ -10,11 +10,11 @@ local META = class.CreateTemplate("code")
 }]]
 
 function META:LineCharToSubPos(line, char)
-	return formating.LinePositionToSubPosition(self:GetString(), line, char)
+	return formating.LineCharToSubPos(self:GetString(), line, char)
 end
 
 function META:SubPosToLineChar(start, stop)
-	return formating.SubPositionToLinePosition(self:GetString(), start, stop)
+	return formating.SubPosToLineChar(self:GetString(), start, stop)
 end
 
 local function remove_bom_header(str--[[#: string]])--[[#: string]]

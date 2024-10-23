@@ -269,7 +269,7 @@ return function(META)
 						if f then
 							local code = f:read("*all")
 							f:close()
-							local start = formating.LinePositionToSubPosition(code, tonumber(line), 0)
+							local start = formating.LineCharToSubPos(code, tonumber(line), 0)
 							local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
 							msg = self.current_expression.Code:BuildSourceCodePointMessage(rest, start, stop)
 						end

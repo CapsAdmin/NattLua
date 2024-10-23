@@ -60,32 +60,35 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 	if t > 0 then msg = "\n" .. msg end
 
 	local messages = {}
+
 	if self.analyzer then
 		for i, v in ipairs(self.analyzer:GetCallStack()) do
 			if i > 1 then
 				local node = v.call_node or v.obj:GetFunctionBodyNode()
+
 				if node then
-					local info = formating.SubPositionToLinePosition(node.Code:GetString(), node:GetStartStop())
+					local info = node.Code:SubPosToLineChar(node:GetStartStop())
 					local path = node.Code:GetName()
-					if path:sub(1, 1) == "@" then
-						path = path:sub(2)
-					end
+
+					if path:sub(1, 1) == "@" then path = path:sub(2) end
+
 					table.insert(messages, 1, path .. ":" .. info.line_start .. ":" .. info.character_start)
 				else
-					for k,v in pairs(v.obj) do print(k,v) end
+					for k, v in pairs(v.obj) do
+						print(k, v)
+					end
 				end
 			end
 		end
 	end
+
 	table.insert(messages, formating.FormatMessage(msg, ...))
 	local msg = formating.BuildSourceCodePointMessage2(
-		code:GetString(),
-		start, stop,
-		{
-			path = code:GetName(),
-			messages = messages
-		}
-	).. "\n" 
+			code:GetString(),
+			start,
+			stop,
+			{path = code:GetName(), messages = messages}
+		) .. "\n"
 
 	if severity == "error" then
 		msg = "\x1b[0;31m" .. msg .. "\x1b[0m"

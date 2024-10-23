@@ -30,7 +30,7 @@ function formating.QuoteTokens(var--[[#: List<|string|>]])--[[#: string]]
 	return str
 end
 
-function formating.LinePositionToSubPosition(code--[[#: string]], line--[[#: number]], character--[[#: number]])--[[#: number]]
+function formating.LineCharToSubPos(code--[[#: string]], line--[[#: number]], character--[[#: number]])--[[#: number]]
 	line = math.max(line, 1)
 	character = math.max(character, 1)
 	local line_pos = 1
@@ -60,7 +60,7 @@ function formating.LinePositionToSubPosition(code--[[#: string]], line--[[#: num
 	return #code
 end
 
-function formating.SubPositionToLinePosition(code--[[#: string]], start--[[#: number]], stop--[[#: number]])
+function formating.SubPosToLineChar(code--[[#: string]], start--[[#: number]], stop--[[#: number]])
 	local line = 1
 	local line_start = 1
 	local line_stop = nil

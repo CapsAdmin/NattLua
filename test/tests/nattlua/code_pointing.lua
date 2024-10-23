@@ -2,7 +2,7 @@ local formating = require("nattlua.other.formating")
 
 do
 	local test = [[1]]
-	local data = formating.SubPositionToLinePosition(test, 1, 1)
+	local data = formating.SubPosToLineChar(test, 1, 1)
 	equal(data.line_start, 1)
 	equal(data.line_stop, 1)
 	equal(data.character_start, 1)
@@ -16,7 +16,7 @@ do
 bar
 faz]]
 	local start, stop = test:find("bar")
-	local data = formating.SubPositionToLinePosition(test, start, stop)
+	local data = formating.SubPosToLineChar(test, start, stop)
 	equal(data.line_start, 2)
 	equal(data.line_stop, 2)
 	equal(data.character_start, 1)
@@ -29,7 +29,7 @@ do
 	local test = [[foo
 bar
 faz]]
-	local data = formating.SubPositionToLinePosition(test, 1, #test)
+	local data = formating.SubPosToLineChar(test, 1, #test)
 	equal(data.line_start, 1)
 	equal(data.line_stop, 3)
 	equal(data.character_start, 1)
@@ -44,7 +44,7 @@ bar
 faz]]
 	local start, stop = test:find("faz")
 	equal(test:sub(start, stop), "faz")
-	local data = formating.SubPositionToLinePosition(test, start, stop)
+	local data = formating.SubPosToLineChar(test, start, stop)
 	equal(data.line_start, 3)
 	equal(data.line_stop, 3)
 	equal(data.character_start, 1)
@@ -134,31 +134,31 @@ end
 
 do
 	local test = [[]]
-	local pos = formating.LinePositionToSubPosition(test, 2, 6)
+	local pos = formating.LineCharToSubPos(test, 2, 6)
 	equal(pos, #test)
 end
 
 do
 	local test = [[foo]]
-	local pos = formating.LinePositionToSubPosition(test, 2, 6)
+	local pos = formating.LineCharToSubPos(test, 2, 6)
 	equal(pos, #test)
 end
 
 do
 	local test = [[foo]]
-	local pos = formating.LinePositionToSubPosition(test, 1, 1)
+	local pos = formating.LineCharToSubPos(test, 1, 1)
 	equal(pos, 1)
 end
 
 do
 	local test = [[foo]]
-	local pos = formating.LinePositionToSubPosition(test, 0, 0)
+	local pos = formating.LineCharToSubPos(test, 0, 0)
 	equal(pos, 1)
 end
 
 do
 	local test = [[foo]]
-	local pos = formating.LinePositionToSubPosition(test, 1, 2)
+	local pos = formating.LineCharToSubPos(test, 1, 2)
 	equal(pos, 2)
 end
 
@@ -168,7 +168,7 @@ wddwaFOOdawdaw
 dwadawadwdaw
 dwdwadw
 ]]
-	local pos = formating.LinePositionToSubPosition(test, 2, 6)
+	local pos = formating.LineCharToSubPos(test, 2, 6)
 	local start = pos
 	local stop = pos + #"FOO" - 1
 	equal(test:sub(start, stop), "FOO")
@@ -177,7 +177,7 @@ end
 do
 	local test = "\tfoo\n\tbar"
 	local C = function(l, c)
-		local pos = formating.LinePositionToSubPosition(test, l, c)
+		local pos = formating.LineCharToSubPos(test, l, c)
 		return test:sub(pos, pos)
 	end
 	equal(C(1, 1), "\t")
