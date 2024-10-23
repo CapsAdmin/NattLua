@@ -518,18 +518,24 @@ function META:GetDefinition(path, line, character)
 	local token, data = self:FindToken(path, line, character)
 	local types = token:FindType()
 
-	if types[1] then
-		if types[1]:GetUpvalue() then
-			local node = self:NodeToType(types[1]:GetUpvalue())
-			return node
+	if not types[1] then return end
+
+	for i, typ in ipairs(types) do
+		if typ:GetUpvalue() then
+			local node = self:NodeToType(typ:GetUpvalue())
+
+			if node then return node end
 		end
 
-		if types[1].GetFunctionBodyNode and types[1]:GetFunctionBodyNode() then
-			local node = types[1]:GetFunctionBodyNode()
-			return node
+		if typ.GetFunctionBodyNode and typ:GetFunctionBodyNode() then
+			local node = typ:GetFunctionBodyNode()
+
+			if node then return node end
 		end
 
-		return self:NodeToType(types[1])
+		local node = self:NodeToType(typ)
+
+		if node then return node end
 	end
 end
 
@@ -574,6 +580,108 @@ function META:GetReferences(path, line, character)
 	end
 
 	return references
+end
+
+do
+	local tokenTypeMap = {}
+	local tokenModifiersMap = {}
+	local SemanticTokenTypes = {
+		-- identifiers or reference
+		"class", -- a class type. maybe META or Meta?
+		"typeParameter", -- local type >foo< = true
+		"parameter", -- function argument: function foo(>a<)
+		"variable", -- a local or global variable.
+		"property", -- a member property, member field, or member variable.
+		"enumMember", -- an enumeration property, constant, or member. uppercase variables and global non tables? local FOO = true ?
+		"event", --  an event property.
+		"function", -- local or global function: local function >foo<
+		"method", --  a member function or method: string.>bar<()
+		"type", -- misc type
+		-- tokens
+		"comment", -- 
+		"string", -- 
+		"keyword", -- 
+		"number", -- 
+		"regexp", -- regular expression literal.
+		"operator", --
+		"decorator", -- decorator syntax, maybe for @Foo in tables, $ and §
+		-- other identifiers or references
+		"namespace", -- namespace, module, or package.
+		"enum", -- 
+		"interface", --
+		"struct", -- 
+		"decorator", -- decorators and annotations.
+		"macro", --  a macro.
+		"label", --  a label. ??
+	}
+	local SemanticTokenModifiers = {
+		"declaration", -- For declarations of symbols.
+		"definition", -- For definitions of symbols, for example, in header files.
+		"readonly", -- For readonly variables and member fields (constants).
+		"static", -- For class members (static members).
+		"private", -- For class members (static members).
+		"deprecated", -- For symbols that should no longer be used.
+		"abstract", -- For types and member functions that are abstract.
+		"async", -- For functions that are marked async.
+		"modification", -- For variable references where the variable is assigned to.
+		"documentation", -- For occurrences of symbols in documentation.
+		"defaultLibrary", -- For symbols that are part of the standard library.
+	}
+
+	for i, v in ipairs(SemanticTokenTypes) do
+		tokenTypeMap[v] = i - 1
+	end
+
+	for i, v in ipairs(SemanticTokenModifiers) do
+		tokenModifiersMap[v] = i - 1
+	end
+
+	function META:GetSemanticTokens(path)
+		if not self:IsLoaded(path) then return {} end
+
+		local data = self:GetFile(path)
+		local integers = {}
+		local last_y = 0
+		local last_x = 0
+
+		for _, token in ipairs(data.tokens) do
+			if token.type ~= "end_of_file" then
+				local type, modifiers = token:GetSemanticType()
+
+				if type then
+					local data = data.code:SubPosToLineChar(token.start, token.stop)
+					local len = #token.value
+					local y = (data.line_start - 1) - last_y
+					local x = (data.character_start - 1) - last_x
+
+					-- x is not relative when there's a new line
+					if y ~= 0 then x = data.character_start - 1 end
+
+					if x >= 0 and y >= 0 then
+						table.insert(integers, y)
+						table.insert(integers, x)
+						table.insert(integers, len)
+						assert(tokenTypeMap[type], "invalid type " .. type)
+						table.insert(integers, tokenTypeMap[type])
+						local result = 0
+
+						if modifiers then
+							for _, mod in ipairs(modifiers) do
+								assert(tokenModifiersMap[mod], "invalid modifier " .. mod)
+								result = bit.bor(result, bit.lshift(1, tokenModifiersMap[mod])) -- TODO, doesn't seem to be working
+							end
+						end
+
+						table.insert(integers, result)
+						last_y = data.line_start - 1
+						last_x = data.character_start - 1
+					end
+				end
+			end
+		end
+
+		return integers
+	end
 end
 
 return META

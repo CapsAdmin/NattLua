@@ -244,3 +244,9 @@ do
 	assert(hints[1].stop == 7)
 	assert(hints[1].label == "20")
 end
+
+do
+	local helper = single_file([[local x]])
+	local integers = helper:GetSemanticTokens(path)
+	assert((#integers / 5) == 2)
+end
