@@ -1,58 +1,50 @@
 local formating = require("nattlua.other.formating")
-
-do
-	local test = [[1]]
-	local data = formating.SubPosToLineChar(test, 1, 1)
-	equal(data.line_start, 1)
-	equal(data.line_stop, 1)
-	equal(data.character_start, 1)
-	equal(data.character_stop, 1)
-	equal(test:sub(unpack(data.sub_line_before)), "")
-	equal(test:sub(unpack(data.sub_line_after)), "")
-end
-
-do
-	local test = [[foo
+for _, formating_SubPosToLineChar in ipairs({formating.SubPosToLineChar, formating.SubPosToLineCharCached}) do  
+	do
+		local test = [[1]]
+		local data = formating_SubPosToLineChar(test, 1, 1)
+		equal(data.line_start, 1)
+		equal(data.line_stop, 1)
+		equal(data.character_start, 1)
+		equal(data.character_stop, 1)
+	end
+	
+	do
+		local test = [[foo
 bar
 faz]]
-	local start, stop = test:find("bar")
-	local data = formating.SubPosToLineChar(test, start, stop)
-	equal(data.line_start, 2)
-	equal(data.line_stop, 2)
-	equal(data.character_start, 1)
-	equal(data.character_stop, 3)
-	equal(test:sub(unpack(data.sub_line_before)), "\n")
-	equal(test:sub(unpack(data.sub_line_after)), "\n")
-end
+		local start, stop = test:find("bar")
+		local data = formating_SubPosToLineChar(test, start, stop)
+		equal(data.line_start, 2)
+		equal(data.line_stop, 2)
+		equal(data.character_start, 1)
+		equal(data.character_stop, 3)
+	end
 
-do
-	local test = [[foo
+	do
+		local test = [[foo
 bar
 faz]]
-	local data = formating.SubPosToLineChar(test, 1, #test)
-	equal(data.line_start, 1)
-	equal(data.line_stop, 3)
-	equal(data.character_start, 1)
-	equal(data.character_stop, #test)
-	equal(test:sub(unpack(data.sub_line_before)), "")
-	equal(test:sub(unpack(data.sub_line_after)), "")
-end
+		local data = formating_SubPosToLineChar(test, 1, #test)
+		equal(data.line_start, 1)
+		equal(data.line_stop, 3)
+		equal(data.character_start, 1)
+		equal(data.character_stop, 3)
+	end
 
-do
-	local test = [[foo
+	do
+		local test = [[foo
 bar
 faz]]
-	local start, stop = test:find("faz")
-	equal(test:sub(start, stop), "faz")
-	local data = formating.SubPosToLineChar(test, start, stop)
-	equal(data.line_start, 3)
-	equal(data.line_stop, 3)
-	equal(data.character_start, 1)
-	equal(data.character_stop, 3)
-	equal(test:sub(unpack(data.sub_line_before)), "\n")
-	equal(test:sub(unpack(data.sub_line_after)), "")
+		local start, stop = test:find("faz")
+		equal(test:sub(start, stop), "faz")
+		local data = formating_SubPosToLineChar(test, start, stop)
+		equal(data.line_start, 3)
+		equal(data.line_stop, 3)
+		equal(data.character_start, 1)
+		equal(data.character_stop, 3)
+	end
 end
-
 do
 	local test = [[foo
 wad

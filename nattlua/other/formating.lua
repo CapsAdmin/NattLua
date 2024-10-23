@@ -60,58 +60,83 @@ function formating.LineCharToSubPos(code--[[#: string]], line--[[#: number]], ch
 	return #code
 end
 
-function formating.SubPosToLineChar(code--[[#: string]], start--[[#: number]], stop--[[#: number]])
-	local line = 1
-	local line_start = 1
-	local line_stop = nil
-	local within_start = 1
-	local within_stop = #code
-	local character_start = 1
-	local character_stop = 1
-	local line_pos = 1
-	local char_pos = 1
+do
+	local sub_to_linechar--[[#: Map<|string, Map<|number, {number, number}|>|>]] = {}
+	local linechar_to_sub--[[#: Map<|string, Map<|number, Map<|number, number|>|>|>]] = {}
 
-	for i = 1, #code do
-		local char = code:sub(i, i)
+	local function get_cache(code)
+		if not sub_to_linechar[code] then
+			sub_to_linechar[code] = {}--[[# as any]]
+			linechar_to_sub[code] = {}--[[# as any]]
+			local line = 1
+			local char = 1
 
-		if i == stop then
-			line_stop = line
-			character_stop = char_pos
-		end
+			for i = 1, #code do
+				local c = code:sub(i, i)
+				sub_to_linechar[code][i] = {line, char}
+				linechar_to_sub[code][line] = linechar_to_sub[code][line] or {}
+				linechar_to_sub[code][line][char] = i
 
-		if i == start then
-			line_start = line
-			within_start = line_pos
-			character_start = char_pos
-		end
-
-		if char == "\n" then
-			if line_stop then
-				within_stop = i
-
-				break
+				if c == "\n" then
+					line = line + 1
+					char = 1
+				else
+					char = char + 1
+				end
 			end
+		end
 
+		return sub_to_linechar[code], linechar_to_sub[code]
+	end
+
+	function formating.SubPosToLineCharCached(code--[[#: string]], start--[[#: number]], stop--[[#: number]])
+		local cache = get_cache(code)--[[# as (any, any)]]
+		local line_start, char_start = assert(cache[start][1]), assert(cache[start][2])
+		local line_stop, char_stop = assert(cache[stop][1]), assert(cache[stop][2])
+		return {
+			character_start = char_start,
+			character_stop = char_stop,
+			line_start = line_start,
+			line_stop = line_stop,
+		}
+	end
+
+	function formating.LineCharToSubPosCached(code--[[#: string]], line--[[#: number]], character--[[#: number]])--[[#: number]]
+		local _, cache = get_cache(code)--[[# as (any, any)]]
+		
+		line = math.min(math.max(1, line), #cache)
+		character = math.min(math.max(1, character), #cache[line])
+
+		return assert(cache[line][character])
+	end
+end
+
+local function sub_pos_to_line_char(str, pos)
+	local line = 1
+	local char = 1
+
+	for i = 1, pos do
+		local c = str:sub(i, i)
+
+		if i == pos then return line, char end
+
+		if c == "\n" then
 			line = line + 1
-			line_pos = i
-			char_pos = 1
+			char = 1
 		else
-			char_pos = char_pos + 1
+			char = char + 1
 		end
 	end
+end
 
-	if line_start ~= line_stop then
-		character_start = within_start
-		character_stop = within_stop
-	end
-
+function formating.SubPosToLineChar(code--[[#: string]], start--[[#: number]], stop--[[#: number]])
+	local line_start, char_start = sub_pos_to_line_char(code, start)
+	local line_stop, char_stop = sub_pos_to_line_char(code, stop)
 	return {
-		character_start = character_start,
-		character_stop = character_stop,
+		character_start = char_start,
+		character_stop = char_stop,
 		line_start = line_start,
-		line_stop = line_stop or line_start,
-		sub_line_before = {within_start, start - 1},
-		sub_line_after = {stop + 1, within_stop},
+		line_stop = line_stop,
 	}
 end
 
