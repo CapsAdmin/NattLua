@@ -67,25 +67,38 @@ export async function activate(context: ExtensionContext) {
   languages.registerDocumentFormattingEditProvider(documentSelector, {
     async provideDocumentFormattingEdits(document: TextDocument) {
       try {
-        const range = document.validateRange(
-          new Range(0, 0, Infinity, Infinity)
-        );
-        const params = await client.sendRequest<{ code: string }>(
-          "nattlua/format",
-          { code: document.getText(), path: document.uri.path }
-        );
-        return [
-          new TextEdit(
-            range,
-            Buffer.from(params.code, "base64").toString("utf8")
-          ),
-        ];
+        const timeout = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Formatting timeout: operation took longer than 500 ms'));
+          }, 500);
+        });
+
+        const formatOperation = async () => {
+          const range = document.validateRange(
+            new Range(0, 0, Infinity, Infinity)
+          );
+          const params = await client.sendRequest<{ code: string }>(
+            "nattlua/format",
+            { code: document.getText(), path: document.uri.path }
+          );
+          return [
+            new TextEdit(
+              range,
+              Buffer.from(params.code, "base64").toString("utf8")
+            ),
+          ];
+        };
+
+        return await Promise.race([formatOperation(), timeout]);
       } catch (err) {
-        serverOutput.appendLine(`NattLua Format error : ${err.message}`);
+        // Handle both timeout and formatting errors
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        serverOutput.appendLine(`NattLua Format error: ${errorMessage}`);
+        return [];
       }
-      return [];
     },
   });
+
 
   await client.start();
 }
