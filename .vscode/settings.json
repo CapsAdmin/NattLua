@@ -1,7 +1,4 @@
 {
-  "triggerTaskOnSave.tasks": {
-    "onsave": ["**/*.lua", "**/*.nlua"]
-  },
   "search.exclude": {
     "build_output.lua": true,
     "examples/projects/luajit/out.lua": true,
@@ -22,8 +19,6 @@
   "[typescript]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
   },
-  //"nattlua.trace.client": "verbose",
-  //"nattlua.trace.server": "verbose",
   "editor.semanticHighlighting.enabled": true,
   "editor.inlayHints.enabled": "on",
   "workbench.colorCustomizations": {
