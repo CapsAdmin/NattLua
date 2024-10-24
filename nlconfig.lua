@@ -35,7 +35,7 @@ config["build-for-ai"] = function(mode)
 
 	if mode == "all" then
 
-	elseif mode == "core" then
+	elseif mode == "core" or mode == "minimal" then
 		local new_paths = {}
 
 		for _, path in ipairs(paths) do
@@ -47,13 +47,48 @@ config["build-for-ai"] = function(mode)
 		paths = new_paths
 	end
 
+	local summarize = {
+		["other/fs.lua"] = "a file system library, very similar to lua's io library",
+		["other/utf8.lua"] = "a polyfill utf8 library",
+		["other/bit32.lua"] = "a polyfill bit library",
+		["other/bit.lua"] = "a polyfill bit library",
+		["nattlua/parser/teal.lua"] = "parser code for dealing with teal syntax, not very relevant",
+		["nattlua/definitions/glua.nlua"] = "garry's mode lua type defintions, not very relevant",
+		["nattlua/other/table_clear.lua"] = "polyfill for table.clear",
+		["nattlua/other/table_new.lua"] = "polyfill for table.new",
+		["nattlua/other/shallow_copy.lua"] = "helper function to shalow copy a table",
+		["nattlua/other/table_pool.lua"] = "unused",
+		["nattlua/cli.lua"] = "code for handling command line arguments, not very relevant",
+		["nattlua/lexer.lua"] = "tokenizes the code into a table",
+		["nattlua/emitter.lua"] = "emits a root node back to lua code",
+		["nattlua/parser/"] = "parses lua code into an AST",
+		["nattlua/parser.lua"] = "parses lua code into an AST",
+	}
 	local tokens = {}
 
 	for _, path in ipairs(paths) do
-		local str = io.open(path):read("*a")
-		str = ">>>" .. path .. ">>>\n" .. str .. "\n<<<" .. path .. "<<<\n\n"
+		local str
+
+		if mode == "minimal" then
+			for k, v in pairs(summarize) do
+				if path:find(k, nil, true) then
+					str = v
+
+					break
+				end
+			end
+		end
+
+		if not str then
+			str = io.open(path):read("*a")
+			str = str:gsub("\n+", "\n")
+			str = str:gsub("\t", " ")
+		end
+
+		local ext = path:match(".+%.(.+)")
+		str = "### " .. path .. " ###\n" .. "```" .. ext .. "\n" .. str .. "\n```\n"
 		f:write(str)
-		table.insert(tokens, {path = path, count = #str * 2.88})
+		table.insert(tokens, {path = path, count = #str / 2.5})
 	end
 
 	f:close()
@@ -69,7 +104,7 @@ config["build-for-ai"] = function(mode)
 		total_tokens = total_tokens + info.count
 	end
 
-	print("roughly " .. math.floor(total_tokens / 10000) .. "k tokens")
+	print("roughly " .. math.floor(total_tokens) .. "k tokens")
 end
 config.build = function(mode)
 	local nl = require("nattlua.init")
