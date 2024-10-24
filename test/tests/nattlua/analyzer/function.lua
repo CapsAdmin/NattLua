@@ -362,7 +362,7 @@ analyze[[
 ]]
 analyze[[
     local x = (" "):rep(#tostring(_ as string))
-    attest.equal(x, _ as string)
+    attest.equal(x, _ as string | "")
 ]]
 analyze[[
     local function foo()
@@ -874,4 +874,127 @@ analyze[[
     attest.expect_diagnostic<|"error", "is not a subset of"|>
     local x = foo("hello")
     attest.equal(x, _ as string)
+]]
+analyze[[
+do
+	local function length_split(str: ref string, len: ref (1 .. inf))
+		assert(len > 0)
+		local str_len = #str
+		attest.equal(str_len, 3)
+
+		if str_len >= len then
+			local tbl = {}
+			local max = math.floor(str_len / len)
+			attest.equal(max, 3)
+
+			for i = 0, max do
+				local left = i * len + 1
+				local right = left + len - 1
+				local res = str:sub(left, right)
+
+				if res == "" then break end
+
+				table.insert(tbl, res)
+			end
+
+			return tbl
+		end
+
+		return {str}
+	end
+
+	attest.equal(length_split("abc", 1), {"a", "b", "c"})
+end
+
+do
+	local function length_split(str: ref string, len: ref (1 .. inf))
+		assert(len > 0)
+		local str_len = #str
+
+		if str_len >= len then
+			local tbl = {}
+			local max = math.floor(str_len / len)
+			attest.equal(max, 1)
+
+			for i = 0, max do
+				local left = i * len + 1
+				local right = left + len - 1
+				local res = str:sub(left, right)
+
+				if res == "" then break end
+
+				table.insert(tbl, res)
+			end
+
+			return tbl
+		end
+
+		return {str}
+	end
+
+	attest.equal(length_split("abc", 2), {"ab", "c"})
+end
+
+do
+	local function length_split(str: ref string, len: ref (1 .. inf))
+		assert(len > 0)
+		local str_len = #str
+
+		if str_len >= len then
+			local tbl = {}
+			local max = math.floor(str_len / len)
+
+			for i = 0, max do
+				local left = i * len + 1
+				local right = left + len - 1
+				local res = str:sub(left, right)
+
+				if res == "" then break end
+
+				table.insert(tbl, res)
+			end
+
+			return tbl
+		end
+
+		return {str}
+	end
+
+	attest.equal(length_split("abc", 3), {"abc"})
+end
+
+do
+	local function length_split(str: string, len: (1 .. inf))
+		assert(len > 0)
+		local str_len = #str
+		attest.equal(str_len, _  as 0 .. inf)
+
+		if str_len >= len then
+			local tbl = {}
+			local max = math.floor(str_len / len)
+			attest.equal(str_len, _  as 1 .. inf)
+
+			for i = 0, max do
+				attest.equal(i, _  as 0 .. inf)
+				local left = i * len + 1
+				local right = left + len - 1
+				attest.equal(left, _  as 1 .. inf)
+				attest.equal(right, _  as 1 .. inf)
+				local res = str:sub(left, right)
+				attest.equal(res, _  as string)
+
+				if res == "" then break end
+
+				table.insert(tbl, res)
+			end
+
+			return tbl
+		end
+
+		return {str}
+	end
+
+	attest.equal(length_split("abc", 3), _  as {[1] = string} | {[number] = string})
+end
+
 ]]

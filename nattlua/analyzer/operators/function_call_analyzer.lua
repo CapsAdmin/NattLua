@@ -12,6 +12,7 @@ local Any = require("nattlua.types.any").Any
 local Function = require("nattlua.types.function").Function
 local LString = require("nattlua.types.string").LString
 local LNumber = require("nattlua.types.number").LNumber
+local LNumberRange = require("nattlua.types.number").LNumberRange
 local Symbol = require("nattlua.types.symbol").Symbol
 local type_errors = require("nattlua.types.error_messages")
 
@@ -25,6 +26,8 @@ local function should_expand(arg, contract)
 	if arg.Type == "union" and contract.Type == "union" and contract:IsNil() then
 		b = true
 	end
+
+	if arg.Type == "number" and arg:GetMax() then b = true end
 
 	return b
 end
@@ -42,7 +45,12 @@ local function unpack_union_tuples(obj, input)
 			not obj:GetPreventInputArgumentExpansion() and
 			should_expand(val, input_signature:Get(i))
 		then
-			lengths[i] = #val:GetData()
+			if val.Type == "number" then
+				lengths[i] = 2 -- min max
+			else
+				lengths[i] = #val:GetData()
+			end
+
 			max = max * lengths[i]
 		else
 			lengths[i] = 0
@@ -53,12 +61,17 @@ local function unpack_union_tuples(obj, input)
 
 	for i = 1, max do
 		local args = {}
+		local sub_index = i
 
 		for i, val in ipairs(input) do
 			if lengths[i] == 0 then
 				args[i] = val
 			else
-				args[i] = val:GetData()[ys[i]]
+				if val.Type == "number" then
+					args[i] = sub_index == 1 and LNumber(val:GetData()) or LNumber(val:GetMax())
+				else
+					args[i] = val:GetData()[ys[i]]
+				end
 			end
 		end
 
@@ -145,10 +158,23 @@ return function(analyzer, obj, input)
 			local existing = ret:Get(i)
 
 			if existing then
-				if existing.Type == "union" then
-					existing:AddType(v)
-				else
-					ret:Set(i, Union({v, existing}))
+				local handled = false
+
+				if existing.Type == "number" and v.Type == "number" then
+					local range = input:Get(i)
+
+					if range and range.Type == "number" and range:GetMax() then
+						ret:Set(i, LNumberRange(existing:GetData(), v:GetData()))
+						handled = true
+					end
+				end
+
+				if not handled then
+					if existing.Type == "union" then
+						existing:AddType(v)
+					else
+						ret:Set(i, Union({v, existing}))
+					end
 				end
 			else
 				ret:Set(i, v)

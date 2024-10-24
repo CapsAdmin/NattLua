@@ -38,9 +38,13 @@ analyzer function type_print(...: ...any)
 	print(...)
 end
 
+§env.typesystem.type_print:SetPreventInputArgumentExpansion(true)
+
 analyzer function print(...: ...any)
 	print(...)
 end
+
+§env.typesystem.print:SetPreventInputArgumentExpansion(true)
 
 type tostring = function=(val: any)>(string)
 

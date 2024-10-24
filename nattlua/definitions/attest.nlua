@@ -12,6 +12,8 @@ analyzer function attest.equal(A: any, B: any, level: nil | 0 .. inf)
 	return A
 end
 
+§env.typesystem.attest:Get(types.ConstString("equal")):SetPreventInputArgumentExpansion(true)
+
 analyzer function attest.literal(A: any)
 	analyzer:ErrorAssert(A:IsLiteral())
 	return A
