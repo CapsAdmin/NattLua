@@ -61,13 +61,46 @@ function formating.LineCharToSubPos(code--[[#: string]], line--[[#: number]], ch
 end
 
 do
+	local function sub_pos_to_line_char(str--[[#: string]], pos--[[#: number]])--[[#: number,number]]
+		local line = 1
+		local char = 1
+
+		for i = 1, pos do
+			local c = str:sub(i, i)
+
+			if i == pos then return line, char end
+
+			if c == "\n" then
+				line = line + 1
+				char = 1
+			else
+				char = char + 1
+			end
+		end
+
+		return line, char
+	end
+
+	function formating.SubPosToLineChar(code--[[#: string]], start--[[#: number]], stop--[[#: number]])
+		local line_start, char_start = sub_pos_to_line_char(code, start)
+		local line_stop, char_stop = sub_pos_to_line_char(code, stop)
+		return {
+			character_start = char_start,
+			character_stop = char_stop,
+			line_start = line_start,
+			line_stop = line_stop,
+		}
+	end
+end
+
+do
 	local sub_to_linechar--[[#: Map<|string, Map<|number, {number, number}|>|>]] = {}
 	local linechar_to_sub--[[#: Map<|string, Map<|number, Map<|number, number|>|>|>]] = {}
 
-	local function get_cache(code)
+	local function get_cache(code--[[#: string]])
 		if not sub_to_linechar[code] then
-			sub_to_linechar[code] = {}--[[# as any]]
-			linechar_to_sub[code] = {}--[[# as any]]
+			sub_to_linechar[code] = {}--[[# as sub_to_linechar[string] ~ nil]] -- TODO
+			linechar_to_sub[code] = {}--[[# as linechar_to_sub[string] ~ nil]]
 			local line = 1
 			local char = 1
 
@@ -90,58 +123,30 @@ do
 	end
 
 	function formating.SubPosToLineCharCached(code--[[#: string]], start--[[#: number]], stop--[[#: number]])
-		local cache = get_cache(code)--[[# as (any, any)]]
-		local line_start, char_start = assert(cache[start][1]), assert(cache[start][2])
-		local line_stop, char_stop = assert(cache[stop][1]), assert(cache[stop][2])
+		start = math.min(math.max(1, start), #code)
+		stop = math.min(math.max(1, stop), #code)
+		local cache = get_cache(code)
+		local start = assert(cache[start])
+		local stop = assert(cache[stop])
 		return {
-			character_start = char_start,
-			character_stop = char_stop,
-			line_start = line_start,
-			line_stop = line_stop,
+			character_start = assert(start[2]),
+			character_stop = assert(stop[2]),
+			line_start = assert(start[1]),
+			line_stop = assert(stop[1]),
 		}
 	end
 
 	function formating.LineCharToSubPosCached(code--[[#: string]], line--[[#: number]], character--[[#: number]])--[[#: number]]
-		local _, cache = get_cache(code)--[[# as (any, any)]]
-		
+		local _, cache = get_cache(code)
 		line = math.min(math.max(1, line), #cache)
+		assert(cache[line])
 		character = math.min(math.max(1, character), #cache[line])
-
 		return assert(cache[line][character])
 	end
 end
 
-local function sub_pos_to_line_char(str, pos)
-	local line = 1
-	local char = 1
-
-	for i = 1, pos do
-		local c = str:sub(i, i)
-
-		if i == pos then return line, char end
-
-		if c == "\n" then
-			line = line + 1
-			char = 1
-		else
-			char = char + 1
-		end
-	end
-end
-
-function formating.SubPosToLineChar(code--[[#: string]], start--[[#: number]], stop--[[#: number]])
-	local line_start, char_start = sub_pos_to_line_char(code, start)
-	local line_stop, char_stop = sub_pos_to_line_char(code, stop)
-	return {
-		character_start = char_start,
-		character_stop = char_stop,
-		line_start = line_start,
-		line_stop = line_stop,
-	}
-end
-
 do
-	function formating.FormatMessage(msg--[[#: string]], ...)
+	function formating.FormatMessage(msg--[[#: string]], ...--[[#: ...any]])
 		for i = 1, select("#", ...) do
 			local arg = select(i, ...)
 
@@ -188,12 +193,12 @@ function formating.BuildSourceCodePointMessage2(
 
 	local lines = {}
 	local line = {}
-	local line_start--[[#: number]]
-	local line_stop--[[#: number]]
-	local char_start--[[#: number]]
-	local char_stop--[[#: number]]
-	local source_code_char_start--[[#: number]]
-	local source_code_char_stop--[[#: number]]
+	local line_start--[[#: number | nil]]
+	local line_stop--[[#: number | nil]]
+	local char_start--[[#: number | nil]]
+	local char_stop--[[#: number | nil]]
+	local source_code_char_start--[[#: number | nil]]
+	local source_code_char_stop--[[#: number | nil]]
 
 	for i = 1, #code do
 		local char = code:sub(i, i)
