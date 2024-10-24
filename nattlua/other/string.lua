@@ -1,3 +1,4 @@
+--ANALYZE
 local stringx = {}
 
 function stringx.split(self--[[#: string]], separator--[[#: string]])
@@ -54,7 +55,7 @@ function stringx.pad_left(str--[[#: string]], len--[[#: number]], char--[[#: str
 	return str
 end
 
-function stringx.length_split(str, len)
+function stringx.length_split(str--[[#: string]], len--[[#: 1 .. inf]])
 	if #str > len then
 		local tbl = {}
 		local max = math.floor(#str / len)
