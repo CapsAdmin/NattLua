@@ -284,7 +284,7 @@ lsp.methods["textDocument/inlayHint"] = function(params)
 			result,
 			{
 				type = 1, -- type
-				label = ": " .. hint.label,
+				label = ": " .. hint.label:gsub("%s+", " "),
 				position = range["end"],
 			}
 		)
