@@ -405,21 +405,29 @@ return function(META)
 			if x == 1 then
 				assert(x == 1)
 			end
-		]] function META:ApplyMutationsInIf(upvalues, tables)
+		]] local function collect_truthy_values(stack)
+			if not stack then return end
+
+			local values = {}
+
+			for _, entry in ipairs(stack) do
+				if entry.truthy then table.insert(values, entry.truthy) end
+			end
+
+			if #values == 0 then return end
+
+			if #values == 1 then return values[1] end
+
+			return Union(values)
+		end
+
+		function META:ApplyMutationsInIf(upvalues, tables)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
 					if data.stack then
-						local t = {}
+						local obj = collect_truthy_values(data.stack)
 
-						for _, v in ipairs(data.stack) do
-							if v.truthy then table.insert(t, v.truthy) end
-						end
-
-						if t[1] then
-							local obj
-
-							if t[2] then obj = Union(t) else obj = t[1] end
-
+						if obj then
 							obj:SetUpvalue(data.upvalue)
 							self:MutateUpvalue(data.upvalue, obj, true)
 						end
@@ -429,19 +437,9 @@ return function(META)
 
 			if tables then
 				for _, data in ipairs(tables) do
-					local t = {}
+					local obj = collect_truthy_values(data.stack)
 
-					for _, v in ipairs(data.stack) do
-						if v.truthy then table.insert(t, v.truthy) end
-					end
-
-					if t[1] then
-						local obj
-
-						if t[2] then obj = Union(t) else obj = t[1] end
-
-						self:MutateTable(data.obj, data.key, obj, true)
-					end
+					if obj then self:MutateTable(data.obj, data.key, obj, true) end
 				end
 			end
 		end
