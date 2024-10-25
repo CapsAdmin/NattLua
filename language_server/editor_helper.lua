@@ -470,7 +470,7 @@ end
 
 function META:GetRenameInstructions(path, line, character, newName)
 	local token, data = self:FindToken(path, line, character)
-	if not token then return {} end
+	if not token then return end
 	local upvalue = token:FindUpvalue()
 	local edits = {}
 
@@ -536,7 +536,7 @@ end
 
 function META:GetHover(path, line, character)
 	local token = self:FindToken(path, line, character)
-	if not token then return {} end
+	if not token then return end
 
 	local types, found_parents, scope = token:FindType()
 	local obj
@@ -553,7 +553,7 @@ end
 
 function META:GetReferences(path, line, character)
 	local token = self:FindToken(path, line, character)
-	if not token then return {} end
+	if not token then return end
 	local types = token:FindType()
 	local references = {}
 
