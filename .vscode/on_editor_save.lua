@@ -133,6 +133,8 @@ if find("jit_options") then
 	run_lua("test/performance/tests.lua")
 elseif find("jit_trace_track") or find("test/performance/analyzer.lua") then
 	run_lua("test/performance/analyzer.lua")
+elseif find("nattlua/analyzer/mutation_solver.lua") and not test_focus then
+	run_lua("test/tests/nattlua/analyzer/mutation_solver.lua")
 elseif find("c_declarations/main.lua") and not test_focus then
 	run_test("test/tests/nattlua/c_declarations/cdef.nlua")
 	run_test("test/tests/nattlua/c_declarations/parsing.lua")
