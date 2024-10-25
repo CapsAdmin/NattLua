@@ -510,7 +510,7 @@ end
 
 function META:GetDefinition(path, line, character)
 	local token = self:FindToken(path, line, character)
-	if not token then return {} end
+	if not token then return end
 	local types = token:FindType()
 
 	if not types[1] then return end
