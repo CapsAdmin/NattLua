@@ -72,17 +72,14 @@ function coverage.Preprocess(code, key)
 		}
 	)
 	assert(compiler:Parse())
-	local lua = compiler:Emit()
-	lua = [[
-local called = _G.__COVERAGE["]] .. key .. [["].called
-local function ]] .. FUNC_NAME .. [[(start, stop, ...)
-	local key = start..", "..stop
-	called[key] = called[key] or {start, stop, 0}
-	called[key][3] = called[key][3] + 1
-	return ...
-end
-------------------------------------------------------
-]] .. lua
+	local lua = [[local called = _G.__COVERAGE["]] .. key .. [["].called;]]
+	lua = lua .. [[local function ]] .. FUNC_NAME .. [[(start, stop, ...) ]]
+	lua = lua .. [[local key = start..", "..stop;]]
+	lua = lua .. [[called[key] = called[key] or {start, stop, 0};]]
+	lua = lua .. [[called[key][3] = called[key][3] + 1;]]
+	lua = lua .. [[return ...;]]
+	lua = lua .. [[end; ]]
+	lua = lua .. compiler:Emit()
 	_G.__COVERAGE[key] = _G.__COVERAGE[key] or
 		{called = {}, expressions = expressions, compiler = compiler, preprocesed = lua}
 	return lua
