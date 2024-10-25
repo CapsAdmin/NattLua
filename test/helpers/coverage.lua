@@ -92,6 +92,10 @@ function coverage.GetAll()
 	return _G.__COVERAGE
 end
 
+function coverage.Clear(key)
+	_G.__COVERAGE[key] = nil
+end
+
 local MASK = " "
 
 function coverage.Collect(key)
