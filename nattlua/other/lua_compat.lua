@@ -27,11 +27,12 @@ end
 
 do -- these are just helpers for print debugging
 	table.print = require("nattlua.other.table_print")
-	debug.trace = function(...)
+	debug.trace = function(max_level)
+		max_level = max_level or math.huge
 		local level = 1
 
-		while true do
-			local info = debug.getinfo(level, "Sln")
+		while level <= max_level do
+			local info = debug.getinfo(level + 2, "Sln")
 
 			if (not info) then break end
 
