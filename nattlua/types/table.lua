@@ -128,12 +128,12 @@ function META:__tostring()
 
 	if self:GetContract() and self:GetContract().Name then -- never called
 		self.suppress = false
-		return self:GetContract().Name:GetData()
+		return tostring(self:GetContract().Name:GetData())
 	end
 
 	if self.Name then
 		self.suppress = false
-		return self.Name:GetData()
+		return tostring(self.Name:GetData())
 	end
 
 	local meta = self:GetMetaTable()
@@ -147,9 +147,9 @@ function META:__tostring()
 			if analyzer then
 				local str = analyzer:Assert(analyzer:Call(func, Tuple({self}))):GetFirstValue()
 
-				if str and str:IsLiteral() then
+				if str and str.Type == "string" and str:IsLiteral() then
 					self.suppress = false
-					return str:GetData()
+					return tostring(str:GetData())
 				end
 			end
 		end
