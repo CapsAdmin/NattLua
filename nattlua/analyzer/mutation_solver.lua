@@ -2,8 +2,11 @@ local ipairs = ipairs
 local table = _G.table
 local table_remove = _G.table.remove
 local Union = require("nattlua.types.union").Union
+local shallow_copy = require("nattlua.other.shallow_copy")
 
-local function mutation_solver(mutations, scope, obj)
+local function remove_redundant(mutations, scope)
+	mutations = shallow_copy(mutations)
+
 	do
 		--[[
 			remove previous mutations that are in the same scope
@@ -90,6 +93,12 @@ local function mutation_solver(mutations, scope, obj)
 			end
 		end
 	end
+
+	return mutations
+end
+
+local function mutation_solver(mutations, scope, obj)
+	mutations = remove_redundant(mutations, scope)
 
 	if not mutations[1] then return end
 

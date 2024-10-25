@@ -1,5 +1,4 @@
 local class = require("nattlua.other.class")
-local shallow_copy = require("nattlua.other.shallow_copy")
 local mutation_solver = require("nattlua.analyzer.mutation_solver")
 local tostring = _G.tostring
 local assert = _G.assert
@@ -42,7 +41,7 @@ end
 do
 	function META:GetMutatedValue(scope)
 		self.Mutations = self.Mutations or {}
-		return mutation_solver(shallow_copy(self.Mutations), scope, self)
+		return mutation_solver(self.Mutations, scope, self)
 	end
 
 	function META:Mutate(val, scope, from_tracking)

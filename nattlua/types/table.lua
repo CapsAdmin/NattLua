@@ -13,7 +13,6 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
 local context = require("nattlua.analyzer.context")
-local shallow_copy = require("nattlua.other.shallow_copy")
 local mutation_solver = require("nattlua.analyzer.mutation_solver")
 local Any = require("nattlua.types.any").Any
 META.Type = "table"
@@ -1004,7 +1003,7 @@ do
 		end
 
 		initialize_table_mutation_tracker(self, scope, key, hash)
-		return mutation_solver(shallow_copy(self.mutations[hash]), scope, self)
+		return mutation_solver(self.mutations[hash], scope, self)
 	end
 
 	function META:Mutate(key, val, scope, from_tracking)

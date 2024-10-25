@@ -1,10 +1,8 @@
-local ipairs = _G.ipairs
-
 local function shallow_copy(tbl)
 	local copy = {}
 
-	for i, val in ipairs(tbl) do
-		copy[i] = val
+	for i = 1, #tbl do
+		copy[i] = tbl[i]
 	end
 
 	return copy
