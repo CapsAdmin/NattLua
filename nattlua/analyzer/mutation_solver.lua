@@ -4,128 +4,121 @@ local table_remove = _G.table.remove
 local Union = require("nattlua.types.union").Union
 local shallow_copy = require("nattlua.other.shallow_copy")
 
-local function remove_redundant(mutations, scope)
-	mutations = shallow_copy(mutations)
+local function is_part_of_sibling_scope(mut, scope)
+	if scope == mut.scope then return false end
 
-	do
-		--[[
-			remove previous mutations that are in the same scope
+	if scope:BelongsToIfStatement(mut.scope) then return true end
 
-			x = val -- remove
-			x = val -- remove
-			x = val -- remove
-			do
-				x = val -- remove
-				x = val -- keep
-			end
-			x = val -- keep
-		]] for i = #mutations, 1, -1 do
-			local mut_a = mutations[i]
+	return mut.from_tracking and not mut.scope:Contains(scope)
+end
 
-			if mut_a then
-				for j = i - 1, 1, -1 do
-					local mut_b = mutations[j]
+local function certain_override(mut, scope, obj, test_scope_a)
+	if mut.scope == scope then return false end
 
-					if not mut_a.scope:Contains(mut_b.scope) then break end
+	local test_scope_b = mut.scope:FindFirstConditionalScope()
+	return test_scope_b and
+		test_scope_b ~= test_scope_a and
+		obj.Type ~= "table" and
+		test_scope_a:TracksSameAs(test_scope_b, obj)
+end
 
-					table_remove(mutations, j)
+local function remove_redundant_mutations(mutations, scope, obj)
+	if #mutations <= 1 then return mutations end
+
+	-- First pass: Filter out sibling scope mutations and contained scopes
+	local result = {}
+
+	for i = 1, #mutations do
+		local mut = mutations[i]
+
+		if not is_part_of_sibling_scope(mut, scope) then
+			local should_keep = true
+
+			-- Check if this mutation is contained in later mutations' scopes
+			for j = i + 1, #mutations do
+				if mutations[j].scope:Contains(mut.scope) then
+					should_keep = false
+
+					break
 				end
 			end
-		end
 
-		for i = #mutations, 1, -1 do
-			local mut_a = mutations[i]
+			if should_keep then table.insert(result, mut) end
+		end
+	end
+
+	if #result == 0 then return end
+
+	local temp = {}
+
+	-- Handle else conditional cases
+	for i = #result, 1, -1 do
+		local mut = result[i]
+
+		if mut.scope:IsElseConditionalScope() then
+			-- Find first non-certain mutation before else
+			for j = i - 1, 1, -1 do
+				local prev_mut = result[j]
+
+				if
+					not prev_mut.scope:BelongsToIfStatement(scope) and
+					not prev_mut.scope:IsCertainFromScope(scope)
+				then
+					-- Remove redundant certain mutations
+					for k = j, 1, -1 do
+						if result[k].scope:IsCertainFromScope(scope) then
+							table.remove(result, k)
+						end
+					end
+
+					break
+				end
+			end
+
+			break
+		end
+	end
+
+	if #result == 0 then return end
+
+	-- Final pass: Check for certain overrides
+	local test_scope_a = scope:FindFirstConditionalScope()
+
+	if test_scope_a then
+		for i = #result, 1, -1 do
+			local mut = result[i]
 
 			if
-				scope ~= mut_a.scope and
-				(
-					--[[
-						-- remove mutations that occur in a sibling scope of an if statement
-						local x = val
-						if y then
-							x = val
-							-- if x is resolved here we remove the below mutation
-						else
-							x = val
-							-- if x is resolved here, we remove the above mutation
-						end
-					]] scope:BelongsToIfStatement(mut_a.scope) or
-					(
-						-- we do the same for tracked if statements scopes
-						--[[
-							if foo.bar then
-								-- here foo.bar is tracked to be at least truthy
-							else
-								-- here foo.bar is tracked to be at least falsy
-							end
-						]] mut_a.from_tracking and
-						not mut_a.scope:Contains(scope)
-					)
-				)
+				certain_override(mut, scope, obj, test_scope_a) or
+				mut.scope:IsCertainFromScope(scope)
 			then
-				table_remove(mutations, i)
-			end
-		end
+				local new = {}
+				local new_i = 1
 
-		for i = #mutations, 1, -1 do
-			local mut = mutations[i]
-
-			if mut.scope:IsElseConditionalScope() then
-				for i = i - 1, 1, -1 do
-					local mut = mutations[i]
-
-					if
-						not mut.scope:BelongsToIfStatement(scope) and
-						not mut.scope:IsCertainFromScope(scope)
-					then
-						for i = i, 1, -1 do
-							if mutations[i].scope:IsCertainFromScope(scope) then
-								-- redudant mutation before else part of if statement
-								table_remove(mutations, i)
-							end
-						end
-
-						break
-					end
+				for i = i, #result do
+					new[new_i] = result[i]
+					new_i = new_i + 1
 				end
 
-				break
+				return new
 			end
 		end
 	end
 
-	return mutations
+	return result
 end
 
 local function mutation_solver(mutations, scope, obj)
-	mutations = remove_redundant(mutations, scope)
+	local mutations = remove_redundant_mutations(mutations, scope, obj)
 
-	if not mutations[1] then return end
-
-	do
-		local test_scope_a = scope:FindFirstConditionalScope()
-
-		if test_scope_a then
-			for _, mut in ipairs(mutations) do
-				if mut.scope ~= scope then
-					local test_scope_b = mut.scope:FindFirstConditionalScope()
-
-					if test_scope_b and test_scope_b ~= test_scope_a and obj.Type ~= "table" then
-						if test_scope_a:TracksSameAs(test_scope_b, obj) then
-							-- forcing scope certainty because this scope is using the same test condition
-							mut.certain_override = true
-						end
-					end
-				end
-			end
-		end
-	end
+	if not mutations then return end
 
 	local union = Union()
 
 	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 
-	for _, mut in ipairs(mutations) do
+	for i = 1, #mutations do
+		local mut = mutations[i]
 		local value = mut.value
 
 		if value.Type == "union" and #value:GetData() == 1 then
@@ -156,22 +149,17 @@ local function mutation_solver(mutations, scope, obj)
 			end
 		end
 
-		-- IsCertain isn't really accurate and seems to be used as a last resort in case the above logic doesn't work
-		if mut.certain_override or mut.scope:IsCertainFromScope(scope) then
-			union:Clear()
-		end
-
 		if
-			union:Get(value) and
 			value.Type ~= "any" and
 			mutations[1].value.Type ~= "union" and
 			mutations[1].value.Type ~= "function" and
-			mutations[1].value.Type ~= "any"
+			mutations[1].value.Type ~= "any" and
+			union:Get(value)
 		then
 			union:RemoveType(mutations[1].value)
 		end
 
-		if _ == 1 and value.Type == "union" then
+		if i == 1 and value.Type == "union" then
 			union = value:Copy()
 
 			if obj.Type == "upvalue" then union:SetUpvalue(obj) end

@@ -548,6 +548,4 @@ local function test_mutation_solver()
 	end
 end
 
-test_mutation_solver()
-
-if ON_EDITOR_SAVE then print(coverage.Collect("mutation_solver")) end
+test_mutation_solver()--if ON_EDITOR_SAVE then print(coverage.Collect("mutation_solver")) end
