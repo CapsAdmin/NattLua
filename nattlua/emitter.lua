@@ -1541,7 +1541,6 @@ function META:EmitAnnotationExpression(node--[[#: Node]])
 end
 
 function META:EmitAsAnnotationExpression(node--[[#: Node]])
-	self:OptionalWhitespace()
 	self:Whitespace(" ")
 	self:EmitToken(node.tokens["as"])
 	self:Whitespace(" ")
