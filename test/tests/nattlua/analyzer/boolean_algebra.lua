@@ -178,4 +178,4 @@ analyze[[ -- (A and B) or (C and D)
     A and B or A and (B or C) or B and (B or C)
     (A and B) or (A and (B or C)) or B
 
-]] 
+]]

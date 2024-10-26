@@ -202,7 +202,7 @@ function META:GetAtTupleIndex3(i--[[#: number]])
 
 	local val--[[#: any]]
 	local errors = {}
-	
+
 	for _, obj in ipairs(self.Data) do
 		if obj.Type == "tuple" then
 			local found, err = obj:GetWithNumber(i)
@@ -541,7 +541,7 @@ end
 
 return {
 	Union = META.New,
-	Nilable = function(typ--[[: TBaseType]] )
+	Nilable = function(typ--[[#: TBaseType]])
 		return META.New({typ, Nil()})
 	end,
 	Boolean = function()

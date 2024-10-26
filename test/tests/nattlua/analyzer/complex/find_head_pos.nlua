@@ -35,11 +35,11 @@ local function FindHeadPosition(ent: Entity & HeadPos)
 	end
 
 	if ent.findheadpos_head_bone then
-		attest.equal(ent.findheadpos_head_bone, _  as number)
+		attest.equal(ent.findheadpos_head_bone, _ as number)
 		local m = ent:GetBoneMatrix(ent.findheadpos_head_bone)
 
 		if m then
-			attest.equal(m  as m | m, _  as Matrix)
+			attest.equal(m as m | m, _ as Matrix)
 			local pos = m:GetTranslation()
 
 			if pos ~= ent:GetPos() then return pos, m:GetAngles() end
@@ -50,13 +50,13 @@ local function FindHeadPosition(ent: Entity & HeadPos)
 		if not ent.findheadpos_head_attachment then
 			ent.findheadpos_head_attachment = get_first_attachment_by_name(ent, "eyes") or
 				get_first_attachment_by_name(ent, "forward")
-			attest.equal(ent.findheadpos_head_attachment, _  as nil | number)
+			attest.equal(ent.findheadpos_head_attachment, _ as nil | number)
 		end
 
-		attest.equal(ent.findheadpos_head_attachment, _  as nil | number)
+		attest.equal(ent.findheadpos_head_attachment, _ as nil | number)
 
 		if ent.findheadpos_head_attachment then
-			attest.equal(ent.findheadpos_head_attachment, _  as number)
+			attest.equal(ent.findheadpos_head_attachment, _ as number)
 			local angpos = ent:GetAttachment(ent.findheadpos_head_attachment)
 			return angpos.Pos, angpos.Ang
 		end
@@ -65,5 +65,5 @@ local function FindHeadPosition(ent: Entity & HeadPos)
 	return ent:EyePos(), ent:EyeAngles()
 end
 
-FindHeadPosition(_  as Entity & HeadPos)
+FindHeadPosition(_ as Entity & HeadPos)
 attest.equal<|return_type<|FindHeadPosition|>[1], (Vector, Angle)|>

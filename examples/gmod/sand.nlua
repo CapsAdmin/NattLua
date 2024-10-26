@@ -125,7 +125,8 @@ local replace = {
 	["maps/metastruct_2/tile/tileroof004b_-9035_13056_-13188"] = true,
 	["maps/metastruct_2/metastruct_2/road_-9035_13056_-13188"] = true,
 	["maps/metastruct_2/tile/tileroof004a_-6332_11456_-13184"] = true,
-	["maps/metastruct_2/tile/tileroof004b_6120_8680_-12944"] = true,	 ]] }
+	["maps/metastruct_2/tile/tileroof004b_6120_8680_-12944"] = true,	 ]]
+}
 
 do
 	materials = materials or {}

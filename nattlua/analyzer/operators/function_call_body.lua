@@ -528,9 +528,8 @@ return function(self, obj, input)
 		if function_node.identifiers then
 			for i, node in ipairs(function_node.identifiers) do
 				local obj = obj:GetInputSignature():Get(i)
-				if obj then
-					node:AssociateType(obj)
-				end
+
+				if obj then node:AssociateType(obj) end
 			end
 		end
 

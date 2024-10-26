@@ -92,4 +92,4 @@ local v = Vec2(0, 0)
 local dot = v:Copy():GetDot(v)
 v = v / dot
 v = v + Vec2(1, 1) + Vec2(2, 0):GetReflected(Vec2(1, 1)) - v * v * 2
-attest.equal(v, Vec2(_  as number, _  as number))
+attest.equal(v, Vec2(_ as number, _ as number))

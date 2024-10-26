@@ -131,7 +131,7 @@ end
 function mngr:drawSprite(x: number, y: number, width: number, height: number, index: number)
 	if not self.loading then
 		index = math.round(index)
-		local cols, rows, swidth, sheight = self.columns, self.rows, self.swidth  as number, self.sheight  as number -- indexing self.swidth and self.sheight might return nil
+		local cols, rows, swidth, sheight = self.columns, self.rows, self.swidth as number, self.sheight as number -- indexing self.swidth and self.sheight might return nil
 		local sprites = cols * rows
 		render.setMaterial(self.mats[math.ceil(index / sprites)] as Material) -- indexing self.mats might return nil
 		index = (index - 1) % sprites + 1

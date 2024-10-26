@@ -219,6 +219,7 @@ do
 			)
 
 		if is_type_function then analyzer:PushAnalyzerEnvironment("typesystem") end
+
 		local ok, err = call_function_internal(analyzer, self, input)
 
 		if is_type_function then analyzer:PopAnalyzerEnvironment() end

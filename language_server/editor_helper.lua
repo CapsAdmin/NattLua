@@ -362,7 +362,9 @@ function META:FindToken(path, line, char)
 		end
 	end
 
-	print("cannot find token at " .. path .. ":" .. line .. ":" .. char .. " or sub pos " .. sub_pos)
+	print(
+		"cannot find token at " .. path .. ":" .. line .. ":" .. char .. " or sub pos " .. sub_pos
+	)
 end
 
 function META:FindTokensFromRange(
@@ -470,7 +472,9 @@ end
 
 function META:GetRenameInstructions(path, line, character, newName)
 	local token, data = self:FindToken(path, line, character)
+
 	if not token then return end
+
 	local upvalue = token:FindUpvalue()
 	local edits = {}
 
@@ -510,7 +514,9 @@ end
 
 function META:GetDefinition(path, line, character)
 	local token = self:FindToken(path, line, character)
+
 	if not token then return end
+
 	local types = token:FindType()
 
 	if not types[1] then return end
@@ -536,6 +542,7 @@ end
 
 function META:GetHover(path, line, character)
 	local token = self:FindToken(path, line, character)
+
 	if not token then return end
 
 	local types, found_parents, scope = token:FindType()
@@ -553,7 +560,9 @@ end
 
 function META:GetReferences(path, line, character)
 	local token = self:FindToken(path, line, character)
+
 	if not token then return end
+
 	local types = token:FindType()
 	local references = {}
 

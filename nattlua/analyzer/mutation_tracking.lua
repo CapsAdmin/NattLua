@@ -405,7 +405,8 @@ return function(META)
 			if x == 1 then
 				assert(x == 1)
 			end
-		]] local function collect_truthy_values(stack)
+		]]
+		local function collect_truthy_values(stack)
 			if not stack then return end
 
 			local values = {}
@@ -452,7 +453,8 @@ return function(META)
 				-- we get the original value and remove the truthy values (x == 1) and end up with 2 | 3
 				assert(x == 2 | 3)
 			end
-		]] function META:ApplyMutationsInIfElse(blocks)
+		]]
+		function META:ApplyMutationsInIfElse(blocks)
 			for i, block in ipairs(blocks) do
 				if block.upvalues then
 					for _, data in ipairs(block.upvalues) do
@@ -496,19 +498,22 @@ return function(META)
 			if x == 1 then return end
 
 			assert(x == 2 | 3)
-		]] --[[
+		]]
+		--[[
 			local x: 1 | 2 | 3
 
 			if x == 1 then else return end
 
 			assert(x == 1)
-		]] --[[
+		]]
+		--[[
 			local x: 1 | 2 | 3
 
 			if x == 1 then error("!") end
 
 			assert(x == 2 | 3)
-		]] local function solve(data, scope, negate)
+		]]
+		local function solve(data, scope, negate)
 			local stack = data.stack
 
 			if stack then

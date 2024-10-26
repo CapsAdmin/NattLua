@@ -272,12 +272,13 @@ end
 
 local function firstPassOptimization(instList: mutable InstructionList)
 	--[[
-	while data[i] ~= 0 do
-		data[i] = data[i] -+ 1
-	end
-	vvvvvvvvvvvvvvvvvvvvvv
-	data[i] = 0 
-]] local i = 1
+		while data[i] ~= 0 do
+			data[i] = data[i] -+ 1
+		end
+		vvvvvvvvvvvvvvvvvvvvvv
+		data[i] = 0 
+	]]
+	local i = 1
 	local max = #instList
 	local optimizationCount = 0
 
@@ -349,7 +350,8 @@ local function secondPassMemset(instList: InstructionList)
 	ffi.fill(data + i,  9, 0)
 	i = i + 9
 	it also might automerge with second i+i instruction and remove if sum is zero
-]] local i = 1
+]]
+	local i = 1
 	local minimumAssignations = 2
 	local max = #instList
 	local currentFindSize = 0
@@ -489,7 +491,8 @@ local function thirdPassUnRolledAssignation(instList: InstructionList)
 			i = i + 6
 		end
 
-]] local optimizationCount = 0
+]]
+	local optimizationCount = 0
 	local i = 1
 	local max = #instList
 

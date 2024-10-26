@@ -509,7 +509,8 @@ analyze[[
             attest.equal(v, _ as "LOL")
         end
     end
-]] analyze[[
+]]
+analyze[[
     local a = {
         foo = true,
         bar = false,

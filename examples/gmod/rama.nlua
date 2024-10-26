@@ -85,7 +85,8 @@ type WorldToLocal = function=(TVector, TAngle, TVector, TAngle)>(TVector, TAngle
     loops aren't crawled properly
     if statements kind of don't work because variables are by default literal
     local a = 0 while true do a = a + 1 end should turn a into a number
-]] local vec_zero = Vector(0, 0, 0)
+]]
+local vec_zero = Vector(0, 0, 0)
 local ang_zero = Angle(0, 0, 0)
 local CACHE = {}
 

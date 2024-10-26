@@ -190,7 +190,8 @@ lsp.methods["initialize"] = function(params)
 				moreTriggerCharacter = { "end" },
 			},
 			renameProvider = true,
-			]] },
+			]]
+		},
 	}
 end
 lsp.methods["initialized"] = function(params)
@@ -247,7 +248,9 @@ lsp.methods["textDocument/references"] = function(params)
 
 	local data = editor_helper:GetFile(path)
 	local nodes = editor_helper:GetReferences(path, params.position.line, params.position.character - 1)
+
 	if not nodes then return {} end
+
 	local result = {}
 
 	for k, node in pairs(nodes) do
@@ -301,10 +304,10 @@ lsp.methods["textDocument/rename"] = function(params)
 	local lsp_path = to_lsp_path(params.textDocument.uri)
 	local edits = {}
 	local instructions = editor_helper:GetRenameInstructions(fs_path, params.position.line, params.position.character, params.newName)
+
 	if not instructions then return edits end
-	for _, edit in ipairs(
-		instructions
-	) do
+
+	for _, edit in ipairs(instructions) do
 		table.insert(
 			edits,
 			{

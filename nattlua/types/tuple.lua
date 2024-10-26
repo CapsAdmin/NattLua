@@ -293,6 +293,7 @@ function META:GetAtTupleIndex2(i)
 	if i > self:GetTupleLength() then return nil end
 
 	local obj = self:GetWithNumber(i)
+
 	if obj then
 		if obj.Type == "union" then
 			return obj:GetAtTupleIndex3(i)

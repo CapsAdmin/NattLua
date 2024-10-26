@@ -78,7 +78,8 @@ local function constructor(_, width: number, height: number)
 	local self = setmetatable(
 		{
 			grid = {} as Maze.@Self.grid,
-			--[[ lie to the typesystem since we're just about to fill the grid with numbers ]] width = width,
+			--[[ lie to the typesystem since we're just about to fill the grid with numbers ]]
+			width = width,
 			height = height,
 		},
 		Maze

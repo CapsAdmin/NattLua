@@ -22,7 +22,8 @@ equal(
 			assert(err:find("ERROR" .. i, nil, true), "cannot find stack trace " .. i)
 		end
 	end)
-]=] analyze([[
+]=]
+analyze([[
     attest.equal(loadfile("test/tests/nattlua/analyzer/file_importing/complex/main.nlua")(), 14)
 ]])
 analyze[[
@@ -51,6 +52,7 @@ analyze[[
     analyze[[
         require("test.tests.nattlua.analyzer.file_importing.env_leak.main")
     ]]
-]=] analyze[[
+]=]
+analyze[[
     loadfile("test/tests/nattlua/analyzer/file_importing/require_cache/main.nlua")()
 ]]

@@ -2,9 +2,9 @@ local coverage = require("test.helpers.coverage")
 
 local function collect(code)
 	assert(loadstring(coverage.Preprocess(code, "test")))()
-    local res = coverage.Collect("test")
-    coverage.Clear("test")
-    return res
+	local res = coverage.Collect("test")
+	coverage.Clear("test")
+	return res
 end
 
 collect([[
@@ -40,9 +40,11 @@ collect[[
 
     end
 ]]
-assert(collect[[
+assert(
+	collect[[
 local x = 1
 local y = 2
-local z = x + y or true]]==[=[local x = --[[1]]1
+local z = x + y or true]] == [=[local x = --[[1]]1
 local y = --[[1]]2
-local z = --[[1]]--[[1]]--[[1]]x + --[[1]]y or true]=])
+local z = --[[1]]--[[1]]--[[1]]x + --[[1]]y or true]=]
+)

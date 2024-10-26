@@ -169,7 +169,8 @@ local type Gesture = {
 	UseReferencePose = boolean,
 	PreCallback = function=(any, string, self, number, FrameData, number)>(boolean),
 	ShouldPlay = function=(
-		any--[[Entity TODO, pac_animations depend on Gesture type]] ,
+		any--[[Entity TODO, pac_animations depend on Gesture type]]
+		,
 		string,
 		self,
 		number,

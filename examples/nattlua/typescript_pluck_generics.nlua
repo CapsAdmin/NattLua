@@ -4,7 +4,8 @@
     the above link is the source code to the original code
     behaviorally it should be identical, but once difference is 
     that NattLua will error inside of the pluck function instead of at the caller
-]] local function keysof<|tbl: {[any] = any}|>
+]]
+local function keysof<|tbl: {[any] = any}|>
 	local union = types.Union()
 
 	for _, keyval in ipairs(tbl:GetData()) do
@@ -40,5 +41,5 @@ local makeAndModel = pluck(taxi, {"manufacturerLOL", "model"})
 -- If we try to pluck model and year, we get an
 -- array of a union type: (string | number)[]
 local modelYear = pluck(taxi, {"model", "year"})
-attest.equal(makeAndModel, {_  as string, _  as string})
-attest.equal(modelYear, {_  as string, _  as number})
+attest.equal(makeAndModel, {_ as string, _ as string})
+attest.equal(modelYear, {_ as string, _ as number})

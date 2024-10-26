@@ -26,4 +26,4 @@ function META:Foo()
 end
 
 local self = setmetatable({}, META)
-attest.equal(self:Foo(), _  as number)
+attest.equal(self:Foo(), _ as number)

@@ -54,7 +54,8 @@ local default_flags = {
 			performance (higher)
 			determinism (lower) 
 			numerical accuracy (higher)
-	]] fma = false,
+	]]
+	fma = false,
 }
 
 function jit_options.Set(options, flags)

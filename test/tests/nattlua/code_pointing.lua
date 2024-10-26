@@ -1,5 +1,6 @@
 local formating = require("nattlua.other.formating")
-for _, formating_SubPosToLineChar in ipairs({formating.SubPosToLineChar, formating.SubPosToLineCharCached}) do  
+
+for _, formating_SubPosToLineChar in ipairs({formating.SubPosToLineChar, formating.SubPosToLineCharCached}) do
 	do
 		local test = [[1]]
 		local data = formating_SubPosToLineChar(test, 1, 1)
@@ -8,7 +9,7 @@ for _, formating_SubPosToLineChar in ipairs({formating.SubPosToLineChar, formati
 		equal(data.character_start, 1)
 		equal(data.character_stop, 1)
 	end
-	
+
 	do
 		local test = [[foo
 bar
@@ -45,6 +46,7 @@ faz]]
 		equal(data.character_stop, 3)
 	end
 end
+
 do
 	local test = [[foo
 wad

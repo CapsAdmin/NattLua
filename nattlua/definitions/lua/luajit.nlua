@@ -105,7 +105,8 @@ type Modules["jit.vmdef"] = {
 type Modules["jit.opt"] = {
 	start = function=(...string)>(nil),
 }
-type jit_attach_bc = function=(func: Function--[[the function that's just been recorded]] )>(nil)
+type jit_attach_bc = function=(func: Function--[[the function that's just been recorded]]
+)>(nil)
 type jit_attach_trace = function=(
 	what: "flush" | "start" | "stop" | "abort", -- a description of the trace event
 	tr: number, -- the trace number, not available for flush
@@ -197,7 +198,8 @@ type Modules["jit.util"] = {
 			1 (nslots) (number): the number of valid slots
 			all indexes except first 2 and last (there might not be any of these): the snapshot map
 			last index in table (number): -16777216 (255 << 24)
-	]] tracesnap = function=(trace: number, sn: number | nil)>(List<|number|>),
+	]]
+	tracesnap = function=(trace: number, sn: number | nil)>(List<|number|>),
 	-- Returns the exit number to retrieve exit stub address from (gotten via jit.attach with the texit event)
 	traceexitstub = function=(exitno: number)>(number),
 	-- Gets the address of a function from a list of functions

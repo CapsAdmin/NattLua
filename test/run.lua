@@ -246,4 +246,5 @@ if ALL_NODES then
 	lua = lua .. "}\n"
 	print(lua)
 end
-]=] os.exit() -- no need to wait for gc to complete
+]=]
+os.exit() -- no need to wait for gc to complete

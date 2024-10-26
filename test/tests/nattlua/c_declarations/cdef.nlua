@@ -38,7 +38,7 @@ do
 	local vars, typs = cdef[[
 		int foo;
 	]]
-	attest.equal(vars.foo, _  as number)
+	attest.equal(vars.foo, _ as number)
 end
 
 do
@@ -48,7 +48,7 @@ do
 		struct MyStruct faz;
 	]]
 	attest.equal(vars.faz, typs.MyStruct)
-	attest.equal(assert(vars.bar)[0], _  as nil | {a = number})
+	attest.equal(assert(vars.bar)[0], _ as nil | {a = number})
 end
 
 do
@@ -65,7 +65,7 @@ do
 	local vars, typs = cdef[[
 		unsigned long long * volatile (* (* *NAME [1][2])(char *))[3][4];
 	]]
-	attest.equal(vars.NAME, _  as FFIArray(
+	attest.equal(vars.NAME, _ as FFIArray(
 		1,
 		FFIArray(
 			2,
@@ -86,7 +86,7 @@ do
 			int a;
 		};
 	]]
-	attest.equal(typs.foo, _  as {a = number})
+	attest.equal(typs.foo, _ as {a = number})
 end
 
 do
@@ -94,7 +94,7 @@ do
 	local vars, typs = cdef[[
 		struct foo;
 	]]
-	attest.equal(typs.foo, _  as {})
+	attest.equal(typs.foo, _ as {})
 end
 
 do
@@ -104,7 +104,7 @@ do
 			int bar;
 		} foo;
 	]]
-	attest.equal(typs.foo, _  as {bar = number})
+	attest.equal(typs.foo, _ as {bar = number})
 end
 
 do
@@ -116,13 +116,13 @@ do
 		struct MyStruct {int a;} *bar;  // type declaration and variable declaration
 		struct MyStruct2 faz;  // type declaration and variable declaration
 	]]
-	attest.equal(vars, _  as {
+	attest.equal(vars, _ as {
 		foo = number,
 		foo2 = function=()>(number),
 		bar = FFIPointer({a = number}) | nil,
 		faz = typs.MyStruct2,
 	})
-	attest.equal(typs, _  as {
+	attest.equal(typs, _ as {
 		BAR = boolean,
 		MyStruct = {a = number},
 		MyStruct2 = {},
@@ -134,7 +134,7 @@ do
 	local vars, typs = cdef([[
 		int readdir(void *dirp);
 	]])
-	attest.equal(vars.readdir, _  as function=(any)>(number))
+	attest.equal(vars.readdir, _ as function=(any)>(number))
 end
 
 do
@@ -143,10 +143,10 @@ do
 		int bar;
 		typedef int foo;
 	]])
-	attest.equal(vars.bar, _  as number)
-	attest.equal(vars.foo, _  as nil)
-	attest.equal(typs.foo, _  as number)
-	attest.equal(typs.bar, _  as nil)
+	attest.equal(vars.bar, _ as number)
+	attest.equal(vars.foo, _ as nil)
+	attest.equal(typs.foo, _ as number)
+	attest.equal(typs.bar, _ as nil)
 end
 
 do
@@ -154,8 +154,8 @@ do
 	local vars, typs = cdef([[
 		typedef struct foo bar;
 	]])
-	attest.equal(typs.foo, _  as {})
-	attest.equal(typs.bar, _  as {})
+	attest.equal(typs.foo, _ as {})
+	attest.equal(typs.bar, _ as {})
 	attest.equal(vars.foo, nil)
 	attest.equal(vars.bar, nil)
 end
@@ -165,10 +165,10 @@ do
 	local vars, typs = cdef([[
 		struct foo bar;
 	]])
-	attest.equal(vars.bar, _  as {})
-	attest.equal(vars.foo, _  as nil)
-	attest.equal(typs.foo, _  as {})
-	attest.equal(typs.bar, _  as nil)
+	attest.equal(vars.bar, _ as {})
+	attest.equal(vars.foo, _ as nil)
+	attest.equal(typs.foo, _ as {})
+	attest.equal(typs.bar, _ as nil)
 end
 
 do
@@ -188,7 +188,7 @@ do
 		]]
 	end
 
-	attest.equal(ffi.C.foo, _  as {a = number} | {b = number})
+	attest.equal(ffi.C.foo, _ as {a = number} | {b = number})
 end
 
 if false then

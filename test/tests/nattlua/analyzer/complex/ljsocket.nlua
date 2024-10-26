@@ -1576,7 +1576,8 @@ if TEST then
 				local data, addr = client:receive_from(address)
 
 				if data and addr and type(addr) == "table" then
-					--print(data, addr:get_ip(), addr:get_port())
+
+				--print(data, addr:get_ip(), addr:get_port())
 				elseif addr ~= "timeout" then
 
 				--error(addr)

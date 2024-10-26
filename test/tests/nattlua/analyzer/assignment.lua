@@ -137,7 +137,6 @@ attest.equal<|normalize<|()|>, ()|>
 attest.equal<|normalize<|((1, 2) * 2)|>, (1, 2, 1, 2)|>
 attest.equal<|normalize<|(1, 2, (number,) * 2)|>, (1, 2, number, number)|>
 ]]
-
 analyze[[
 local function foo(...)
 	attest.equal<|..., (1,2,((any,)*inf,))|>

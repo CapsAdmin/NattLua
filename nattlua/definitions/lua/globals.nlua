@@ -16,7 +16,7 @@ type dofile = function=(filename: string)>(...) | function=()>(...)
 type ipairs = function=(t: Table)>(empty_function, Table, number)
 type tonumber = function=(e: number | string, base: number | nil)>(number | nil)
 type _ = any
-_G.arg = _  as List<|any|>
+_G.arg = _ as List<|any|>
 
 analyzer function setfenv(val: Function, table: Table)
 	if val and (val:IsLiteral() or val.Type == "function") then

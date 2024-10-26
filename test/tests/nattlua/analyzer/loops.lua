@@ -30,7 +30,8 @@ analyze[[
     attest.equal(key_sum, _ as number | 0)
     attest.equal(val_sum, _ as number | 0)
 ]]
-]=] analyze[[
+]=]
+analyze[[
     -- pairs on non literal table
 
     local tbl:{[number] = number} = {1,2,3}

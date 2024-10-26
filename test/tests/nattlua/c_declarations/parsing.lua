@@ -31,7 +31,8 @@ lj_cparse.c order of parsing
 		try 
 		
 
-]] if false then
+]]
+if false then
 	--[=[
             unsigned long long * (* (* *NAME [1][2])(char *))[3][4];
 			|                  | \| \| |NAME is               |  |
@@ -88,7 +89,8 @@ lj_cparse.c order of parsing
 							)
 
 		
-    ]=] local NAME = Array1(
+    ]=]
+	local NAME = Array1(
 		Array2(
 			Pointer(
 				Pointer(Function({Pointer(char)}, Pointer(Array3(Array4(Pointer("unsigned long long"))))))

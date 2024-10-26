@@ -115,12 +115,12 @@ function emit_type(t: LAPIType): nil
 	elseif t.type == "tables and strings" then -- TODO
 		e("(Table | string)")
 	elseif t.name == "..." then
-		e("...")(emit_type  as any)({type = t.type})
+		e("...")(emit_type as any)({type = t.type})
 	elseif t.type:find(" or ", nil, true) then
 		local tbl = string_split(t.type, " or ")
 
 		for i, v in ipairs(tbl) do
-			(emit_type  as any)({
+			(emit_type as any)({
 				type = v,
 			})
 

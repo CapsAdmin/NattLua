@@ -136,7 +136,8 @@ local function dump_fields(node)
 		NODE.tokens[k] = true
 	end
 end
-]=] function META:StartNode(
+]=]
+function META:StartNode(
 	node_type--[[#: ref ("statement" | "expression")]],
 	kind--[[#: ref (StatementKind | ExpressionKind)]],
 	start_node--[[#: nil | Node]]

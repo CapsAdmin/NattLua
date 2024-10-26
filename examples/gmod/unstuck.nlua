@@ -32,7 +32,8 @@ end
 --[[
 	Purpose: Unstucks player ,
 	Note: Very expensive to call, you have been warned!
-]] local forward = Vector(1, 0, 0)
+]]
+local forward = Vector(1, 0, 0)
 local right = Vector(0, 1, 0)
 local up = Vector(0, 0, 1)
 

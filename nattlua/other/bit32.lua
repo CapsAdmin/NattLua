@@ -205,7 +205,8 @@ LICENSE
   THE SOFTWARE.
   (end license)
 
---]] local M = {_TYPE = "module", _NAME = "bit.numberlua", _VERSION = "0.3.1.20120131"}
+--]]
+local M = {_TYPE = "module", _NAME = "bit.numberlua", _VERSION = "0.3.1.20120131"}
 local floor = math.floor
 local MOD = 2 ^ 32
 local MODM = MOD - 1

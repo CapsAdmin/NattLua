@@ -18,5 +18,5 @@ local tbl = self:ParseFixedMultipleValues(
 	2,
 	3
 )
-attest.equal(tbl, _  as {[1 .. inf] = {} as statement["do"]})
+attest.equal(tbl, _ as {[1 .. inf] = {} as statement["do"]})
 self:EndNode(node)

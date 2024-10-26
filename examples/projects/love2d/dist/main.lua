@@ -78,7 +78,8 @@ IMPORTS["src/maze.nlua"] = function()
 		local self = setmetatable(
 			{
 				grid = {},
-				--[[ lie to the typesystem since we're just about to fill the grid with numbers ]] width = width,
+				--[[ lie to the typesystem since we're just about to fill the grid with numbers ]]
+				width = width,
 				height = height,
 			},
 			Maze
