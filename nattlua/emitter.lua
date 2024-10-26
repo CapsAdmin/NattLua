@@ -189,7 +189,11 @@ do -- internal
 						end
 					elseif token.type == "multiline_comment" then
 						self:EmitToken(token)
-						self:Whitespace(" ")
+
+						if node.whitespace[i + 1] then
+							self:Whitespace("\n")
+							self:Whitespace("\t")
+						end
 					end
 				end
 			else
