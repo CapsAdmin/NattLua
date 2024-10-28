@@ -236,7 +236,7 @@ function META:HasTuples()
 	return false
 end
 
-function META:GetElementCount2()--[[#: number]]
+function META:GetUnpackedElementCount()--[[#: number]]
 	if false--[[# as true]] then
 		-- TODO: recursion
 		return nil--[[# as number]]
@@ -246,13 +246,13 @@ function META:GetElementCount2()--[[#: number]]
 
 	for i, v in ipairs(self:GetData()) do
 		if v.Type == "tuple" then
-			len = len + v:GetElementCount2()
+			len = len + v:GetUnpackedElementCount()
 		elseif v.Type == "union" then
 			local length = 0
 
 			for i, v in ipairs(v:GetData()) do
 				if v.Type == "tuple" then
-					length = math.max(length, v:GetElementCount2())
+					length = math.max(length, v:GetUnpackedElementCount())
 				else
 					length = math.max(length, 1)
 				end
@@ -264,15 +264,14 @@ function META:GetElementCount2()--[[#: number]]
 		end
 	end
 
-	if self.Remainder then return len + self.Remainder:GetElementCount2() end
-
-	if self.Repeat then return len * self.Repeat end
-
-	return len
+	local remainder = self.Remainder and self.Remainder:GetUnpackedElementCount() or 0
+	local rep = self.Repeat or 1
+	
+	return (len + remainder) * rep
 end
 
 function META:GetTupleLength()
-	local len = self:GetElementCount2()
+	local len = self:GetUnpackedElementCount()
 
 	for _, obj in ipairs(self.Data) do
 		if obj.Type == "union" or obj.Type == "tuple" then
@@ -435,13 +434,10 @@ function META:GetElementCount()--[[#: number]]
 		return nil--[[# as number]]
 	end
 
-	if self.Remainder then
-		return #self:GetData() + self.Remainder:GetElementCount()
-	end
-
-	if self.Repeat then return #self:GetData() * self.Repeat end
-
-	return #self:GetData()
+	local remainder = self.Remainder and self.Remainder:GetElementCount() or 0
+	local rep = self.Repeat or 1
+	
+	return (#self:GetData() + remainder) * rep
 end
 
 function META:GetMinimumLength()
