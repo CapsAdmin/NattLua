@@ -154,7 +154,7 @@ local function mutation_solver(mutations, scope, obj)
 			mutations[1].value.Type ~= "union" and
 			mutations[1].value.Type ~= "function" and
 			mutations[1].value.Type ~= "any" and
-			union:Get(value)
+			union:HasTypeObject(value)
 		then
 			union:RemoveType(mutations[1].value)
 		end

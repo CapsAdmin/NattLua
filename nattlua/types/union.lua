@@ -9,7 +9,6 @@ local True = require("nattlua.types.symbol").True
 local False = require("nattlua.types.symbol").False
 local type_errors = require("nattlua.types.error_messages")
 local table_concat = _G.table.concat
-local table_insert = _G.table.insert
 local table_remove = _G.table.remove
 local table_sort = require("nattlua.other.sort")
 local table_clear = require("nattlua.other.table_clear")
@@ -94,6 +93,24 @@ function META:__tostring()
 	return table_concat(s, " | ")
 end
 
+local function add(self, obj)
+	self.Data[#self.Data + 1] = obj
+end
+
+local function remove(self, index)
+	table_remove(self.Data, index)
+end
+
+local function find_index(self, obj)
+	for i = 1, #self.Data do
+		local v = self.Data[i]--[[# as TBaseType]]
+
+		if v:Equal(obj) then return i end
+	end
+
+	return nil
+end
+
 function META:AddType(e--[[#: TBaseType]])
 	if e.Type == "union" then
 		for _, v in ipairs(e.Data) do
@@ -103,13 +120,9 @@ function META:AddType(e--[[#: TBaseType]])
 		return self
 	end
 
-	for i = 1, #self.Data do
-		local v = self.Data[i]--[[# as TBaseType]]
+	if find_index(self, e) then return self end
 
-		if v:Equal(e) then return self end
-	end
-
-	self.Data[#self.Data + 1] = e
+	add(self, e)
 	return self
 end
 
@@ -130,13 +143,9 @@ function META:RemoveType(e--[[#: TBaseType]])
 		return self
 	end
 
-	for i, v in ipairs(self.Data) do
-		if v:Equal(e) then
-			table_remove(self.Data, i)
+	local index = find_index(self, e)
 
-			break
-		end
-	end
+	if index then remove(self, index) end
 
 	return self
 end
@@ -232,11 +241,11 @@ function META:GetAtTupleIndexUnion(i--[[#: number]])
 	return val
 end
 
-function META:Get(key--[[#: TBaseType]])
+function META:IsTypeObjectSubsetOf(typ--[[#: TBaseType]])
 	local errors
 
 	for i, obj in ipairs(self.Data) do
-		local ok, reason = key:IsSubsetOf(obj)
+		local ok, reason = typ:IsSubsetOf(obj)
 
 		if ok then return obj end
 
@@ -245,6 +254,16 @@ function META:Get(key--[[#: TBaseType]])
 	end
 
 	return false, errors
+end
+
+function META:HasTypeObject(obj--[[#: TBaseType]])
+	for i, v in ipairs(self.Data) do
+		local ok, reason = obj:IsSubsetOf(v)
+
+		if ok then return v end
+	end
+
+	return false
 end
 
 function META:IsEmpty()
@@ -346,8 +365,6 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
 
 	if b.Type == "any" then return true end
 
-	if b.Type ~= "union" then b = META.New({b}) end
-
 	if a:HasType("any") then return true end
 
 	if a:IsEmpty() then
@@ -356,7 +373,21 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
 
 	for _, a_val in ipairs(a.Data) do
 		a.suppress = true
-		local b_val, reason = b:Get(a_val)
+		local b_val, reason
+
+		if b.Type == "union" then
+			b_val, reason = b:IsTypeObjectSubsetOf(a_val)
+		else
+			local ok, reason = a_val:IsSubsetOf(b)
+
+			if ok then
+				b_val = b
+			else
+				b_val = false
+				reason = reason
+			end
+		end
+
 		a.suppress = false
 
 		if not b_val then
