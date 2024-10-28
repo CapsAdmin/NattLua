@@ -93,12 +93,44 @@ function META:__tostring()
 	return table_concat(s, " | ")
 end
 
+local ANY_TYPE = {}
+local STRING_TYPE = {}
+local NUMBER_TYPE = {}
+
+local function hash(obj)
+	if not obj then debug.trace() end
+
+	if obj.Type == "number" then
+		if obj.Max ~= false then return false end
+
+		if obj:IsNan() then return false end
+
+		return obj.Data or NUMBER_TYPE
+	elseif obj.Type == "string" then
+		return obj.Data or STRING_TYPE
+	elseif obj.Type == "symbol" then
+		return obj:GetHash()
+	elseif obj.Type == "any" then
+		return ANY_TYPE
+	end
+
+	return false
+end
+
 local function add(self, obj)
+	local s = hash(obj)
+
+	if s then self.LiteralDataCache[s] = obj end
+
 	self.Data[#self.Data + 1] = obj
 end
 
 local function remove(self, index)
+	local obj = assert(self.Data[index])
 	table_remove(self.Data, index)
+
+	local s = hash(obj)
+	if s then self.LiteralDataCache[s] = nil end
 end
 
 local function find_index(self, obj)
@@ -118,6 +150,14 @@ function META:AddType(e--[[#: TBaseType]])
 		end
 
 		return self
+	end
+
+	do
+		local s = hash(e)
+
+		if s and self.LiteralDataCache[s] then
+			return self
+		end
 	end
 
 	if find_index(self, e) then return self end
@@ -151,7 +191,13 @@ function META:RemoveType(e--[[#: TBaseType]])
 end
 
 function META:Clear()
-	(table_clear--[[# as any]])(self.Data)
+	do
+		(table_clear--[[# as any]])(self.Data)
+	end
+
+	do
+		(table_clear--[[# as any]])(self.LiteralDataCache)
+	end
 end
 
 function META:HasTuples()
@@ -274,7 +320,7 @@ function META:RemoveCertainlyFalsy()
 	local copy = META.New()
 
 	for _, obj in ipairs(self.Data) do
-		if not obj:IsCertainlyFalse() then copy.Data[#copy.Data + 1] = obj end
+		if not obj:IsCertainlyFalse() then add(copy, obj) end
 	end
 
 	return copy
@@ -284,7 +330,7 @@ function META:GetTruthy()
 	local copy = META.New()
 
 	for _, obj in ipairs(self.Data) do
-		if obj:IsTruthy() then copy.Data[#copy.Data + 1] = obj end
+		if obj:IsTruthy() then add(copy, obj) end
 	end
 
 	return copy
@@ -294,7 +340,7 @@ function META:GetFalsy()
 	local copy = META.New()
 
 	for _, obj in ipairs(self.Data) do
-		if obj:IsFalsy() then copy.Data[#copy.Data + 1] = obj end
+		if obj:IsFalsy() then add(copy, obj) end
 	end
 
 	return copy
@@ -440,7 +486,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	map[self] = copy
 
 	for i, obj in ipairs(self.Data) do
-		copy.Data[i] = copy_val(obj, map, copy_tables)
+		add(copy, copy_val(obj, map, copy_tables))
 	end
 
 	copy:CopyInternalsFrom(self)
@@ -492,7 +538,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 		{
 			Type = "union",
 			Data = {},
-			--LiteralDataCache = {},
+			LiteralDataCache = {},
 			Falsy = false,
 			Truthy = false,
 			ReferenceType = false,
