@@ -9,7 +9,7 @@ return {
 
 		if obj.Type == "union" then obj = obj:GetData()[1] end
 
-		if obj.Type == "tuple" then obj = obj:Get(1) end
+		if obj.Type == "tuple" then obj = obj:GetWithNumber(1) end
 
 		if obj.Type ~= "table" then
 			self:Error(type_errors.destructure_assignment(obj.Type))

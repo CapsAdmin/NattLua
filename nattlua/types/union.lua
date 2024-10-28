@@ -167,14 +167,14 @@ function META:GetTupleLength()
 	return len
 end
 
-function META:GetAtTupleIndex2(i)
+function META:GetAtTupleIndex(i)
 	if i > self:GetTupleLength() then return nil end
 
-	local obj = self:GetAtTupleIndex3(i)
+	local obj = self:GetAtTupleIndexUnion(i)
 
 	if obj then
 		if obj.Type == "union" then
-			return obj:GetAtTupleIndex3(i)
+			return obj:GetAtTupleIndexUnion(i)
 		elseif obj.Type == "tuple" then
 			return obj:GetWithNumber(i)
 		end
@@ -183,7 +183,7 @@ function META:GetAtTupleIndex2(i)
 	return obj
 end
 
-function META:GetAtTupleIndex3(i--[[#: number]])
+function META:GetAtTupleIndexUnion(i--[[#: number]])
 	if not self:HasTuples() then return self:Simplify() end
 
 	local val--[[#: any]]
@@ -195,9 +195,9 @@ function META:GetAtTupleIndex3(i--[[#: number]])
 
 			if found then
 				if found.Type == "union" then
-					found, err = found:GetAtTupleIndex3(1)
+					found, err = found:GetAtTupleIndexUnion(1)
 				elseif found.Type == "tuple" then
-					found, err = found:GetAtTupleIndex2(1)
+					found, err = found:GetAtTupleIndex(1)
 				end
 			end
 
@@ -228,44 +228,6 @@ function META:GetAtTupleIndex3(i--[[#: number]])
 	if not val then return false, errors end
 
 	if val.Type == "union" and val:GetCardinality() == 1 then return val.Data[1] end
-
-	return val
-end
-
-function META:GetAtTupleIndex(i--[[#: number]])
-	if not self:HasTuples() then return self:Simplify() end
-
-	local val--[[#: any]]
-	local errors = {}
-
-	for _, obj in ipairs(self.Data) do
-		if obj.Type == "tuple" then
-			local found, err = obj:Get(i)
-
-			if found then
-				if val then val = self.New({val, found}) else val = found end
-			else
-				if val then val = self.New({val, Nil()}) else val = Nil() end
-
-				table_insert(errors, err)
-			end
-		else
-			if val then
-				-- a non tuple in the union would be treated as a tuple with the value repeated
-				val = self.New({val--[[# as any]], obj})
-			elseif i == 1 then
-				val = obj
-			else
-				val = Nil()
-			end
-		end
-	end
-
-	if not val then return false, errors end
-
-	if val.Type == "union" and val:GetCardinality() == 1 then
-		return val.Data[1]
-	end
 
 	return val
 end
@@ -380,7 +342,7 @@ end
 function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
 	if a.suppress then return true, "suppressed" end
 
-	if b.Type == "tuple" then b = b:Get(1) end
+	if b.Type == "tuple" then b = b:GetWithNumber(1) end
 
 	if b.Type == "any" then return true end
 

@@ -136,7 +136,7 @@ function META:Copy()
 end
 
 function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
-	if b.Type == "tuple" then b = (b--[[# as any]]):Get(1) end
+	if b.Type == "tuple" then b = (b--[[# as any]]):GetWithNumber(1) end
 
 	if b.Type == "any" then return true end
 

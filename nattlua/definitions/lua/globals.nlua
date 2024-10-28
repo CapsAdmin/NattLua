@@ -279,7 +279,7 @@ analyzer function assert(obj: any, msg: string | nil, level: number | nil)
 
 	if obj.Type == "union" then
 		for _, tup in ipairs(obj:GetData()) do
-			if tup.Type == "tuple" and tup:Get(1):IsTruthy() then return tup end
+			if tup.Type == "tuple" and tup:GetWithNumber(1):IsTruthy() then return tup end
 		end
 	end
 

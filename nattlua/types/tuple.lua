@@ -76,8 +76,8 @@ function META:Merge(tup--[[#: TTuple]])
 	end
 
 	for i = 1, len do
-		local a = self:Get(i)
-		local b = tup:Get(i)
+		local a = self:GetWithNumber(i)
+		local b = tup:GetWithNumber(i)
 
 		if a and b then src[i] = Union({a, b}) elseif b then src[i] = b:Copy() end
 	end
@@ -122,7 +122,7 @@ function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#:
 	if a.suppress then return true end
 
 	if a.Remainder then
-		local t = a:Get(1)
+		local t = a:GetWithNumber(1)
 
 		if t and t.Type == "any" and #a:GetData() == 0 then return true end
 	end
@@ -130,7 +130,7 @@ function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#:
 	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 
 	do
-		local t = a:Get(1)
+		local t = a:GetWithNumber(1)
 
 		if t and t.Type == "any" and b.Type == "tuple" and b:GetElementCount() == 0 then
 			return true
@@ -150,11 +150,11 @@ function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#:
 	max_length = max_length or math.max(a:GetMinimumLength(), b:GetMinimumLength())
 
 	for i = 1, max_length do
-		local a_val, err = a:Get(i)
+		local a_val, err = a:GetWithNumber(i)
 
 		if not a_val then return false, type_errors.subset(a, b, err) end
 
-		local b_val, err = b:Get(i)
+		local b_val, err = b:GetWithNumber(i)
 
 		if not b_val and a_val.Type == "any" then break end
 
@@ -189,15 +189,15 @@ function META.IsSubsetOfTuple(a--[[#: TTuple]], b--[[#: TBaseType]])
 	if a:Equal(b) then return true end
 
 	for i = 1, math.max(a:GetMinimumLength(), b:GetMinimumLength()) do
-		local a_val, a_err = a:Get(i)
-		local b_val, b_err = b:Get(i)
+		local a_val, a_err = a:GetWithNumber(i)
+		local b_val, b_err = b:GetWithNumber(i)
 
 		if a_val and a_val.Type == "union" then
-			a_val, a_err = a_val:GetAtTupleIndex(i)
+			a_val, a_err = a_val:GetAtTupleIndex(1)
 		end
 
 		if b_val and b_val.Type == "union" then
-			b_val, b_err = b_val:GetAtTupleIndex(i)
+			b_val, b_err = b_val:GetAtTupleIndex(1)
 		end
 
 		if not a_val then
@@ -211,7 +211,7 @@ function META.IsSubsetOfTuple(a--[[#: TTuple]], b--[[#: TBaseType]])
 		if not b_val then return b_val, b_err, a_val or Nil(), b_val, i end
 
 		if b_val.Type == "tuple" then
-			b_val = b_val:Get(1)
+			b_val = b_val:GetWithNumber(1)
 
 			if not b_val then break end
 		end
@@ -289,14 +289,14 @@ function META:IsInfinite()
 	return self.Remainder and self.Remainder.Repeat == math.huge
 end
 
-function META:GetAtTupleIndex2(i)
+function META:GetAtTupleIndex(i)
 	if i > self:GetTupleLength() then return nil end
 
 	local obj = self:GetWithNumber(i)
 
 	if obj then
 		if obj.Type == "union" then
-			return obj:GetAtTupleIndex3(i)
+			return obj:GetAtTupleIndexUnion(i)
 		elseif obj.Type == "tuple" then
 			if obj:IsInfinite() then return obj end
 
@@ -315,7 +315,7 @@ function META:GetWithNumber(i--[[#: number]])
 	end
 
 	if not val and self.Remainder then
-		return self.Remainder:Get(i - #self:GetData())
+		return self.Remainder:GetWithNumber(i - #self:GetData())
 	end
 
 	if not val then
@@ -339,7 +339,7 @@ function META:GetWithNumber(i--[[#: number]])
 						if obj then found:AddType(obj) end
 					elseif v.Type == "union" then
 						if i == 1 then
-							local obj = v:GetAtTupleIndex3(i)
+							local obj = v:GetAtTupleIndexUnion(i)
 
 							if obj then found:AddType(obj) end
 						end
@@ -358,9 +358,7 @@ function META:GetWithNumber(i--[[#: number]])
 	return val
 end
 
-function META:Get(key--[[#: number | TBaseType]])
-	if type(key) == "number" then return self:GetWithNumber(key) end
-
+function META:Get(key--[[#: TBaseType]])
 	if key.Type == "union" then
 		local union = Union()
 
@@ -399,7 +397,9 @@ function META:Set(i--[[#: number]], val--[[#: TBaseType]])
 		return false, "expected number"
 	end
 
-	if val.Type == "tuple" and val:GetElementCount() == 1 then val = val:Get(1) end
+	if val.Type == "tuple" and val:GetElementCount() == 1 then
+		val = val:GetWithNumber(1)
+	end
 
 	self.Data[i] = val
 
@@ -414,7 +414,7 @@ function META:IsEmpty()
 end
 
 function META:IsTruthy()
-	local obj = self:Get(1)
+	local obj = self:GetWithNumber(1)
 
 	if obj then return obj:IsTruthy() end
 
@@ -422,7 +422,7 @@ function META:IsTruthy()
 end
 
 function META:IsFalsy()
-	local obj = self:Get(1)
+	local obj = self:GetWithNumber(1)
 
 	if obj then return obj:IsFalsy() end
 
@@ -500,12 +500,12 @@ function META:Unpack(length--[[#: nil | number]])
 	length = math.min(length, self:GetElementCount())
 	assert(length ~= math.huge, "length must be finite")
 
-	if length == 1 then return (self:Get(1)) end
+	if length == 1 then return (self:GetWithNumber(1)) end
 
 	local out = {}
 
 	for i = 1, length do
-		out[i] = self:Get(i)
+		out[i] = self:GetWithNumber(i)
 	end
 
 	return table.unpack(out)
@@ -535,7 +535,7 @@ end
 function META:GetFirstValue()
 	if self.Remainder then return self.Remainder:GetFirstValue() end
 
-	local first, err = self:Get(1)
+	local first, err = self:GetWithNumber(1)
 
 	if not first then return first, err end
 
@@ -631,7 +631,7 @@ return {
 			local temp = {}
 
 			for i = 1, 128 do
-				local v = arguments:GetAtTupleIndex2(i)
+				local v = arguments:GetAtTupleIndex(i)
 
 				if v and v.Type == "tuple" then
 					-- inf tuple

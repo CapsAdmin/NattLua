@@ -68,7 +68,7 @@ return {
 				end
 
 				if obj.Type == "tuple" and obj:GetElementCount() == 1 then
-					obj = obj:Get(1)
+					obj = obj:GetWithNumber(1)
 				end
 
 				if obj.Type == "tuple" then
@@ -76,7 +76,7 @@ return {
 						-- at runtime unpack the tuple
 						for i = 1, #statement.left do
 							local index = right_pos + i - 1
-							right[index] = obj:Get(i)
+							right[index] = obj:GetWithNumber(i)
 						end
 					end
 
@@ -142,7 +142,7 @@ return {
 					local contract = contract
 
 					if contract.Type == "tuple" and contract:GetElementCount() == 1 then
-						contract = contract:Get(1)
+						contract = contract:GetWithNumber(1)
 					end
 
 					-- we copy the literalness of the contract so that
@@ -160,7 +160,7 @@ return {
 					self:Assert(check_type_against_contract(val, contract))
 				else
 					if contract.Type == "tuple" and contract:GetElementCount() == 1 then
-						contract = contract:Get(1)
+						contract = contract:GetWithNumber(1)
 					end
 				end
 

@@ -529,7 +529,7 @@ check(
 		comment_type_annotations = true,
 		type_annotations = true,
 	},
-	[=[if B.Type == "tuple" then B = (B--[[# as any]]):Get(1) end]=]
+	[=[if B.Type == "tuple" then B = (B--[[# as any]]):GetWithNumber(1) end]=]
 )
 check(
 	{

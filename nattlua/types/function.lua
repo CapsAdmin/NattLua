@@ -91,7 +91,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 end
 
 function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
-	if b.Type == "tuple" then b = b:Get(1) end
+	if b.Type == "tuple" then b = b:GetWithNumber(1) end
 
 	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 
@@ -134,7 +134,7 @@ function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 end
 
 function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
-	if b.Type == "tuple" then b = b:Get(1) end
+	if b.Type == "tuple" then b = b:GetWithNumber(1) end
 
 	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 

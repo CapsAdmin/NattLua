@@ -126,7 +126,7 @@ return {
 
 					if obj.Type == "tuple" then
 						if tree.children[numerical_index + 1 + 1] then
-							self:NewIndexOperator(tbl, LNumber(numerical_index + 1), obj:Get(1))
+							self:NewIndexOperator(tbl, LNumber(numerical_index + 1), obj:GetWithNumber(1))
 							numerical_index = numerical_index + 1
 						else
 							local len = obj:GetElementCount()
@@ -134,13 +134,13 @@ return {
 							if len == math.huge then len = obj:GetMinimumLength() end
 
 							for i = 1, len do
-								self:NewIndexOperator(tbl, LNumber(numerical_index + 1), obj:Get(i))
+								self:NewIndexOperator(tbl, LNumber(numerical_index + 1), obj:GetWithNumber(i))
 								numerical_index = numerical_index + 1
 							end
 
 							if obj.Remainder then
 								local max = obj.Remainder:GetElementCount()
-								self:NewIndexOperator(tbl, LNumberRange(numerical_index + 1, max), obj.Remainder:Get(1))
+								self:NewIndexOperator(tbl, LNumberRange(numerical_index + 1, max), obj.Remainder:GetWithNumber(1))
 								numerical_index = max + 1
 							end
 						end

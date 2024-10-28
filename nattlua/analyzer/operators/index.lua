@@ -38,7 +38,7 @@ local function index_table(analyzer, self, key, raw)
 
 				if not obj then return obj, err end
 
-				local val = obj:Get(1)
+				local val = obj:GetWithNumber(1)
 
 				if val and (val.Type ~= "symbol" or not val:IsNil()) then
 					if val.Type == "union" and val:IsNil() then val:RemoveType(Nil()) end

@@ -84,7 +84,7 @@ end
 local function extract_anonymous_type(typs)
 	local ctype = typs:Get(LString("TYPEOF_CDECL"))
 	ctype:RemoveType(Nil())
-	return ctype:GetData()[1]:Get(Number()):GetInputSignature():Get(1)
+	return ctype:GetData()[1]:Get(Number()):GetInputSignature():GetWithNumber(1)
 end
 
 function cparser.sizeof(cdecl, len)

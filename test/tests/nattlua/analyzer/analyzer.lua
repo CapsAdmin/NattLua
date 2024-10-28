@@ -76,7 +76,6 @@ test("escape comments", function()
             b --[[#: number]], 
             c --[[#: string]]) 
         end
-         
         attest.equal<|argument_type<|foo, 1|>[1], string|>
         attest.equal<|argument_type<|foo, 2|>[1], number|>
         attest.equal<|argument_type<|foo, 3|>[1], string|>
@@ -246,24 +245,24 @@ do -- uncalled functions should be called
 	local lib = analyzer:GetLocalOrGlobalValue(LString("lib"))
 	equal(
 		"number",
-		assert(lib:Get(LString("foo1")):GetInputSignature():Get(1):GetType("number")).Type
+		assert(lib:Get(LString("foo1")):GetInputSignature():GetWithNumber(1):GetType("number")).Type
 	)
 	equal(
 		"number",
-		assert(lib:Get(LString("foo1")):GetInputSignature():Get(2):GetType("number")).Type
+		assert(lib:Get(LString("foo1")):GetInputSignature():GetWithNumber(2):GetType("number")).Type
 	)
-	equal("number", assert(lib:Get(LString("foo1")):GetOutputSignature():Get(1)).Type)
+	equal("number", assert(lib:Get(LString("foo1")):GetOutputSignature():GetWithNumber(1)).Type)
 	equal(
 		"number",
-		lib:Get(LString("foo2")):GetInputSignature():Get(1):GetType("number").Type
-	)
-	equal(
-		"number",
-		lib:Get(LString("foo2")):GetInputSignature():Get(2):GetType("number").Type
+		lib:Get(LString("foo2")):GetInputSignature():GetWithNumber(1):GetType("number").Type
 	)
 	equal(
 		"number",
-		lib:Get(LString("foo2")):GetOutputSignature():Get(1):GetType("number").Type
+		lib:Get(LString("foo2")):GetInputSignature():GetWithNumber(2):GetType("number").Type
+	)
+	equal(
+		"number",
+		lib:Get(LString("foo2")):GetOutputSignature():GetWithNumber(1):GetType("number").Type
 	)
 end
 

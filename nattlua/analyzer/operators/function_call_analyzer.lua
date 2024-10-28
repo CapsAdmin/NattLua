@@ -43,7 +43,7 @@ local function unpack_union_tuples(obj, input)
 	for i, val in ipairs(input) do
 		if
 			not obj:GetPreventInputArgumentExpansion() and
-			should_expand(val, input_signature:Get(i))
+			should_expand(val, input_signature:GetWithNumber(i))
 		then
 			if val.Type == "number" then
 				lengths[i] = 2 -- min max
@@ -154,14 +154,14 @@ return function(analyzer, obj, input)
 
 	for _, tuple in ipairs(tuples) do
 		for i = 1, tuple:GetElementCount() do
-			local v = tuple:Get(i)
-			local existing = ret:Get(i)
+			local v = tuple:GetWithNumber(i)
+			local existing = ret:GetWithNumber(i)
 
 			if existing then
 				local handled = false
 
 				if existing.Type == "number" and v.Type == "number" then
-					local range = input:Get(i)
+					local range = input:GetWithNumber(i)
 
 					if range and range.Type == "number" and range:GetMax() then
 						ret:Set(i, LNumberRange(existing:GetData(), v:GetData()))

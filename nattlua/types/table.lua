@@ -286,7 +286,7 @@ end
 function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 	if a.suppress then return true, "suppressed" end
 
-	if b.Type == "tuple" then b = b:Get(1) end
+	if b.Type == "tuple" then b = b:GetWithNumber(1) end
 
 	if b.Type == "any" then return true, "b is any " end
 

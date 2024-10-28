@@ -121,7 +121,7 @@ return {
 				val:GetFunctionBodyNode() and
 				val:GetFunctionBodyNode().self_call
 			then
-				local arg = val:GetInputSignature():Get(1)
+				local arg = val:GetInputSignature():GetWithNumber(1)
 
 				if
 					arg and

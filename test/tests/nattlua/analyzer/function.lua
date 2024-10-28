@@ -19,11 +19,11 @@ test("arguments should get annotated", function()
         test(1,"",3)
     ]]
 	local args = analyzer:GetLocalOrGlobalValue(LString("test")):GetInputSignature()
-	equal("number", args:Get(1):GetType("number").Type)
-	equal("string", args:Get(2):GetType("string").Type)
-	equal("number", args:Get(3):GetType("number").Type)
+	equal("number", args:GetWithNumber(1):GetType("number").Type)
+	equal("string", args:GetWithNumber(2):GetType("string").Type)
+	equal("number", args:GetWithNumber(3):GetType("number").Type)
 	local rets = analyzer:GetLocalOrGlobalValue(LString("test")):GetOutputSignature()
-	equal("number", rets:Get(1).Type)
+	equal("number", rets:GetWithNumber(1).Type)
 end)
 
 test("arguments and return types are volatile", function()
@@ -37,11 +37,11 @@ test("arguments and return types are volatile", function()
     ]]
 	local func = analyzer:GetLocalOrGlobalValue(LString("test"))
 	local args = func:GetInputSignature()
-	equal(true, args:Get(1):HasType("number"))
-	equal(true, args:Get(1):HasType("string"))
+	equal(true, args:GetWithNumber(1):HasType("number"))
+	equal(true, args:GetWithNumber(1):HasType("string"))
 	local rets = func:GetOutputSignature()
-	equal(true, rets:Get(1):HasType("number"))
-	equal(true, rets:Get(1):HasType("string"))
+	equal(true, rets:GetWithNumber(1):HasType("number"))
+	equal(true, rets:GetWithNumber(1):HasType("string"))
 end)
 
 test("which is not explicitly annotated should not dictate return values", function()
@@ -114,7 +114,7 @@ test("self argument should be volatile", function()
         end
         local a = meta.Foo
     ]])
-	local self = analyzer:GetLocalOrGlobalValue(LString("a")):GetInputSignature():Get(1):GetType("table")
+	local self = analyzer:GetLocalOrGlobalValue(LString("a")):GetInputSignature():GetWithNumber(1):GetType("table")
 	equal("table", self.Type)
 end)
 
@@ -171,8 +171,8 @@ test("arguments that are not explicitly typed should be volatile", function()
             test(1,"a")
         ]]
 		local args = analyzer:GetLocalOrGlobalValue(LString("test")):GetInputSignature()
-		local a = args:Get(1)
-		local b = args:Get(2)
+		local a = args:GetWithNumber(1)
+		local b = args:GetWithNumber(2)
 		equal("number", a:GetType("number").Type)
 		equal(1, a:GetType("number"):GetData())
 		equal("string", b:GetType("string").Type)
@@ -189,8 +189,8 @@ test("arguments that are not explicitly typed should be volatile", function()
             test("a",1)
         ]]
 		local args = analyzer:GetLocalOrGlobalValue(LString("test")):GetInputSignature()
-		local a = args:Get(1)
-		local b = args:Get(2)
+		local a = args:GetWithNumber(1)
+		local b = args:GetWithNumber(2)
 		assert(a:Equal(b))
 	end
 
@@ -205,8 +205,8 @@ test("arguments that are not explicitly typed should be volatile", function()
             test(4,4)
         ]]
 		local args = analyzer:GetLocalOrGlobalValue(LString("test")):GetInputSignature()
-		local a = args:Get(1)
-		local b = args:Get(2)
+		local a = args:GetWithNumber(1)
+		local b = args:GetWithNumber(2)
 		assert(a:Equal(b))
 	end
 
@@ -340,7 +340,7 @@ test("make sure analyzer return flags dont leak over to deferred calls", functio
         
         return nil
     ]]):GetLocalOrGlobalValue(LString("foo"))
-	equal(foo:GetOutputSignature():Get(1):GetData(), true)
+	equal(foo:GetOutputSignature():GetWithNumber(1):GetData(), true)
 end)
 
 analyze[[

@@ -130,7 +130,7 @@ do
 		-- infer any uncalled functions in the arguments to get their return type
 		for i, b in ipairs(input:GetData()) do
 			if b.Type == "function" and not b:IsCalled() and not b:IsExplicitOutputSignature() then
-				local a = obj:GetInputSignature():Get(i)
+				local a = obj:GetInputSignature():GetWithNumber(i)
 
 				if
 					a and

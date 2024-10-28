@@ -13,7 +13,7 @@ return {
 		if not callable_iterator then return end
 
 		if callable_iterator.Type == "tuple" then
-			callable_iterator = callable_iterator:Get(1)
+			callable_iterator = callable_iterator:GetWithNumber(1)
 
 			if not callable_iterator then return end
 		end
@@ -29,7 +29,7 @@ return {
 			local values = self:Assert(self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
 
 			if values.Type == "tuple" and values:GetElementCount() == 1 then
-				values = values:Get(1)
+				values = values:GetWithNumber(1)
 			end
 
 			if values.Type == "union" then
@@ -53,16 +53,14 @@ return {
 
 			if values.Type ~= "tuple" then values = Tuple({values}) end
 
-			if
-				not values:Get(1) or
-				values:Get(1).Type == "symbol" and
-				values:Get(1):IsNil()
-			then
+			local first_val = values:GetWithNumber(1)
+
+			if not first_val or first_val.Type == "symbol" and first_val:IsNil() then
 				break
 			end
 
 			if i == 1 then
-				returned_key = values:Get(1)
+				returned_key = first_val
 
 				if not returned_key:IsLiteral() then
 					returned_key = Union({Nil(), returned_key})
@@ -75,7 +73,7 @@ return {
 			local brk = false
 
 			for i, identifier in ipairs(statement.identifiers) do
-				local obj = self:Assert(values:Get(i))
+				local obj = self:Assert(values:GetWithNumber(i))
 
 				if obj.Type == "union" then obj:RemoveType(Nil()) end
 

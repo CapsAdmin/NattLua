@@ -79,7 +79,7 @@ end
 function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
 	if false--[[# as true]] then return false end
 
-	if b.Type == "tuple" then b = b:Get(1) end
+	if b.Type == "tuple" then b = b:GetWithNumber(1) end
 
 	if b.Type == "any" then return true end
 

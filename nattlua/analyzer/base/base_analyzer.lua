@@ -61,7 +61,7 @@ return function(META)
 			local obj = self:AnalyzeExpression(expression)
 
 			if obj and obj.Type == "tuple" and obj:GetElementCount() == 1 then
-				obj = obj:Get(1)
+				obj = obj:GetWithNumber(1)
 			end
 
 			table_insert(out, obj)
@@ -72,7 +72,7 @@ return function(META)
 
 	do
 		local function add_potential_self(tup)
-			local tbl = tup:Get(1)
+			local tbl = tup:GetWithNumber(1)
 
 			if tbl and tbl.Type == "union" then tbl = tbl:GetType("table") end
 

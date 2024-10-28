@@ -108,7 +108,7 @@ local analyzer function normalize(obj: any)
 	local temp = {}
 
 	for i = 1, 10 do
-		local v = obj:GetAtTupleIndex2(i)
+		local v = obj:GetAtTupleIndex(i)
 
 		if not v then break end
 

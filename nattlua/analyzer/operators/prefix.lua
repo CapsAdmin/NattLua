@@ -20,7 +20,7 @@ local function metatable_function(analyzer, meta_method, obj, node)
 		local func = obj:GetMetaTable():Get(ConstString(meta_method))
 
 		if func then
-			return analyzer:Assert(analyzer:Call(func, Tuple({obj}), node):Get(1))
+			return analyzer:Assert(analyzer:Call(func, Tuple({obj}), node):GetWithNumber(1))
 		end
 	end
 end
@@ -37,7 +37,7 @@ local function Prefix(analyzer, node, r)
 		return r
 	end
 
-	if r.Type == "tuple" then r = r:Get(1) or Nil() end
+	if r.Type == "tuple" then r = r:GetWithNumber(1) or Nil() end
 
 	if r.Type == "union" then
 		local new_union = Union()

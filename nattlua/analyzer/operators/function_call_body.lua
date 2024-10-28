@@ -162,10 +162,10 @@ local function check_input(self, obj, input)
 			if identifier == "..." then
 				contract = input_signature:GetWithoutExpansion(i)
 			else
-				contract = input_signature:Get(i)
+				contract = input_signature:GetWithNumber(i)
 			end
 
-			local arg = input:Get(i)
+			local arg = input:GetWithNumber(i)
 
 			if not arg then
 				arg = Nil()
@@ -193,7 +193,7 @@ local function check_input(self, obj, input)
 				end
 			elseif type_expression then
 				if function_node.self_call and i == 1 then
-					signature_override[i] = input_signature:Get(1)
+					signature_override[i] = input_signature:GetWithNumber(1)
 				else
 					signature_override[i] = self:Assert(self:AnalyzeExpression(type_expression)):GetFirstValue()
 				end
@@ -208,7 +208,7 @@ local function check_input(self, obj, input)
 
 	do -- coerce untyped functions to contract callbacks
 		for i = 1, input_signature_length do
-			local arg = input:Get(i)
+			local arg = input:GetWithNumber(i)
 
 			if arg.Type == "function" then
 				local func = arg
@@ -275,8 +275,8 @@ local function check_input(self, obj, input)
 
 	-- finally check the input against the generated signature
 	for i = 1, input_signature_length do
-		local arg = input:Get(i)
-		local contract = signature_override[i] or input_signature:Get(i)
+		local arg = input:GetWithNumber(i)
+		local contract = signature_override[i] or input_signature:GetWithNumber(i)
 
 		if contract.Type == "union" then
 			local shrunk = shrink_union_to_function_signature(contract)
@@ -338,20 +338,18 @@ local function check_output(self, output, output_signature, function_node)
 
 	if
 		output_signature:GetElementCount() == 1 and
-		output_signature:Get(1).Type == "union" and
-		output_signature:Get(1):HasType("tuple")
+		output_signature:GetWithNumber(1).Type == "union" and
+		output_signature:GetWithNumber(1):HasType("tuple")
 	then
-		output_signature = output_signature:Get(1)
+		output_signature = output_signature:GetWithNumber(1)
 	end
 
-	if
-		output.Type == "tuple" and
-		output:GetElementCount() == 1 and
-		output:Get(1) and
-		output:Get(1).Type == "union" and
-		output:Get(1):HasType("tuple")
-	then
-		output = output:Get(1)
+	if output.Type == "tuple" and output:GetElementCount() == 1 then
+		local first_val = output:GetWithNumber(1)
+
+		if first_val and first_val.Type == "union" and first_val:HasType("tuple") then
+			output = output:GetWithNumber(1)
+		end
 	end
 
 	if output.Type == "union" then
@@ -427,7 +425,7 @@ return function(self, obj, input)
 	)
 
 	if function_node.self_call then
-		self:CreateLocalValue("self", input:Get(1) or Nil())
+		self:CreateLocalValue("self", input:GetWithNumber(1) or Nil())
 	end
 
 	-- first setup runtime generics type arguments if any
@@ -460,11 +458,11 @@ return function(self, obj, input)
 				self:CreateLocalValue(identifier.value.value, input:Slice(argi))
 			else
 				local val
-				val = val or input:Get(argi)
+				val = val or input:GetWithNumber(argi)
 
 				if not val then
 					val = Nil()
-					local arg = obj:GetInputSignature():Get(argi)
+					local arg = obj:GetInputSignature():GetWithNumber(argi)
 
 					if arg and arg:IsReferenceType() then val:SetReferenceType(true) end
 				end
@@ -527,7 +525,7 @@ return function(self, obj, input)
 	do -- this is for the emitter
 		if function_node.identifiers then
 			for i, node in ipairs(function_node.identifiers) do
-				local obj = obj:GetInputSignature():Get(i)
+				local obj = obj:GetInputSignature():GetWithNumber(i)
 
 				if obj then node:AssociateType(obj) end
 			end
@@ -574,7 +572,7 @@ return function(self, obj, input)
 	-- if a return type is marked with ref, it will pass the ref value back to the caller
 	-- a bit like generics
 	for i, v in ipairs(output_signature:GetData()) do
-		if v:IsReferenceType() then contract:Set(i, output:Get(i)) end
+		if v:IsReferenceType() then contract:Set(i, output:GetWithNumber(i)) end
 	end
 
 	return contract
