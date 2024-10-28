@@ -71,7 +71,7 @@ function META:Merge(tup--[[#: TTuple]])
 	local src = self:GetData()
 	local len = tup:GetMinimumLength()
 
-	if len == 0 and tup:GetElementCount() ~= math.huge then
+	if len == 0 and not tup:HasInfiniteValues() then
 		len = tup:GetElementCount()
 	end
 
@@ -132,7 +132,7 @@ function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#:
 	do
 		local t = a:GetWithNumber(1)
 
-		if t and t.Type == "any" and b.Type == "tuple" and b:GetElementCount() == 0 then
+		if t and t.Type == "any" and b.Type == "tuple" and b:IsEmpty() then
 			return true
 		end
 	end
@@ -266,7 +266,6 @@ function META:GetUnpackedElementCount()--[[#: number]]
 
 	local remainder = self.Remainder and self.Remainder:GetUnpackedElementCount() or 0
 	local rep = self.Repeat or 1
-	
 	return (len + remainder) * rep
 end
 
@@ -396,7 +395,7 @@ function META:Set(i--[[#: number]], val--[[#: TBaseType]])
 		return false, "expected number"
 	end
 
-	if val.Type == "tuple" and val:GetElementCount() == 1 then
+	if val.Type == "tuple" and val:HasOneValue() then
 		val = val:GetWithNumber(1)
 	end
 
@@ -408,8 +407,15 @@ function META:Set(i--[[#: number]], val--[[#: TBaseType]])
 end
 
 function META:IsEmpty()
-	-- never called
 	return self:GetElementCount() == 0
+end
+
+function META:HasInfiniteValues()
+	return self:GetElementCount() == math.huge
+end
+
+function META:HasOneValue()
+	return self:GetElementCount() == 1
 end
 
 function META:IsTruthy()
@@ -436,7 +442,6 @@ function META:GetElementCount()--[[#: number]]
 
 	local remainder = self.Remainder and self.Remainder:GetElementCount() or 0
 	local rep = self.Repeat or 1
-	
 	return (#self:GetData() + remainder) * rep
 end
 
@@ -471,12 +476,20 @@ function META:GetMinimumLength()
 	return len
 end
 
-function META:GetSafeLength(arguments--[[#: TTuple]])
+function META:GetSafeLength(arguments--[[#: TTuple | nil]])
+	if arguments then
+		local len = self:GetElementCount()
+
+		if len == math.huge or arguments:GetElementCount() == math.huge then
+			return math.max(self:GetMinimumLength(), arguments:GetMinimumLength())
+		end
+
+		return len
+	end
+
 	local len = self:GetElementCount()
 
-	if len == math.huge or arguments:GetElementCount() == math.huge then
-		return math.max(self:GetMinimumLength(), arguments:GetMinimumLength())
-	end
+	if len == math.huge then return self:GetMinimumLength() end
 
 	return len
 end

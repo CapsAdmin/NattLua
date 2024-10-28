@@ -63,7 +63,7 @@ return {
 		end
 
 		if self:IsTypesystem() then
-			if returned_tuple.Type == "tuple" and returned_tuple:GetElementCount() == 1 then
+			if returned_tuple.Type == "tuple" and returned_tuple:HasOneValue() then
 				returned_tuple = returned_tuple:GetWithNumber(1)
 			end
 		end

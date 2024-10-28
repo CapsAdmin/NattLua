@@ -129,11 +129,7 @@ return {
 							self:NewIndexOperator(tbl, LNumber(numerical_index + 1), obj:GetWithNumber(1))
 							numerical_index = numerical_index + 1
 						else
-							local len = obj:GetElementCount()
-
-							if len == math.huge then len = obj:GetMinimumLength() end
-
-							for i = 1, len do
+							for i = 1, obj:GetSafeLength() do
 								self:NewIndexOperator(tbl, LNumber(numerical_index + 1), obj:GetWithNumber(i))
 								numerical_index = numerical_index + 1
 							end

@@ -337,14 +337,14 @@ local function check_output(self, output, output_signature, function_node)
 	local original_contract = output_signature
 
 	if
-		output_signature:GetElementCount() == 1 and
+		output_signature:HasOneValue() and
 		output_signature:GetWithNumber(1).Type == "union" and
 		output_signature:GetWithNumber(1):HasType("tuple")
 	then
 		output_signature = output_signature:GetWithNumber(1)
 	end
 
-	if output.Type == "tuple" and output:GetElementCount() == 1 then
+	if output.Type == "tuple" and output:HasOneValue() then
 		local first_val = output:GetWithNumber(1)
 
 		if first_val and first_val.Type == "union" and first_val:HasType("tuple") then
@@ -382,7 +382,7 @@ local function check_output(self, output, output_signature, function_node)
 				self:Error(error.reason)
 			end
 		else
-			if output.Type == "tuple" and output:GetElementCount() == 1 then
+			if output.Type == "tuple" and output:HasOneValue() then
 				local val = output:GetFirstValue()
 
 				if val.Type == "union" and val:GetCardinality() == 0 then return end

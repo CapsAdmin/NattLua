@@ -60,7 +60,7 @@ return function(META)
 		for _, expression in ipairs(expressions) do
 			local obj = self:AnalyzeExpression(expression)
 
-			if obj and obj.Type == "tuple" and obj:GetElementCount() == 1 then
+			if obj and obj.Type == "tuple" and obj:HasOneValue() then
 				obj = obj:GetWithNumber(1)
 			end
 

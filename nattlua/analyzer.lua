@@ -190,7 +190,7 @@ do
 			if parent_obj.Type == "table" then
 				parent_obj:SetContract(obj)
 				return parent_obj
-			elseif parent_obj.Type == "tuple" and parent_obj:GetElementCount() == 1 then
+			elseif parent_obj.Type == "tuple" and parent_obj:HasOneValue() then
 				local first = parent_obj:GetData()[1]
 
 				if first.Type == "table" then

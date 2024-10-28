@@ -124,12 +124,7 @@ return function(analyzer, obj, input)
 		return ret
 	end
 
-	local len = signature_arguments:GetElementCount()
-
-	if len == math.huge and input:GetElementCount() == math.huge then
-		len = math.max(signature_arguments:GetMinimumLength(), input:GetMinimumLength())
-	end
-
+	local len = signature_arguments:GetSafeLength(input)
 	local tuples = {}
 
 	for i, arguments in ipairs(unpack_union_tuples(obj, {input:Unpack(len)})) do
@@ -147,9 +142,7 @@ return function(analyzer, obj, input)
 	local ret = Tuple()
 
 	for _, tuple in ipairs(tuples) do
-		if tuple:GetUnpackable() or tuple:GetElementCount() == math.huge then
-			return tuple
-		end
+		if tuple:GetUnpackable() or tuple:HasInfiniteValues() then return tuple end
 	end
 
 	for _, tuple in ipairs(tuples) do

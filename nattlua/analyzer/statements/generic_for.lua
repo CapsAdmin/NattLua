@@ -28,7 +28,7 @@ return {
 		for i = 1, 1000 do
 			local values = self:Assert(self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
 
-			if values.Type == "tuple" and values:GetElementCount() == 1 then
+			if values.Type == "tuple" and values:HasOneValue() then
 				values = values:GetWithNumber(1)
 			end
 
