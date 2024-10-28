@@ -53,7 +53,7 @@ analyze[[
     while _ as boolean do
         a = a + 1
     end
-    attest.equal(a, _ as number)
+    attest.equal(a, _ as number | 0)
 
 ]]
 analyze[[

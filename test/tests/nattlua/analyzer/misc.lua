@@ -321,7 +321,7 @@ analyze[[
             break
         end
     end
-    attest.equal(a, _ as number)
+    attest.equal(a, _ as number | 1337)
 ]]
 analyze[[
     local function lol(a, ...)

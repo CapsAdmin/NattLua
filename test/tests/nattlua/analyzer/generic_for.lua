@@ -102,7 +102,7 @@ analyze[[
     }
     
     for k, v in sorted_pairs(t) do
-        attest.equal(k, _ as string)
+        attest.equal(k, _ as string | "PixelVisHandle")
         attest.equal(v, _ as {["functions"] = {}, ["members"] = {}})
     end
 ]]

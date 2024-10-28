@@ -15,14 +15,14 @@ analyze[[
         attest.equal(i, _ as 1..inf)
         a = 1
     end
-    attest.equal(a, _ as number)
+    attest.equal(a, _ as 0 | number)
 ]]
 analyze[[
     local a = 0
     for i = 1, _ as number do
         a = a + 1
     end
-    attest.equal(a, _ as number)
+    attest.equal(a, _ as number | 0)
 ]]
 
 if false then

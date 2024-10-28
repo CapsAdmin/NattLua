@@ -103,20 +103,6 @@ function META:AddType(e--[[#: TBaseType]])
 		return self
 	end
 
-	if (e.Type == "string" or e.Type == "number") and not e:IsLiteral() then
-		for i = #self.Data, 1, -1 do
-			local sub = self.Data[i]--[[# as TBaseType]] -- TODO, prove that the for loop will always yield TBaseType?
-			if sub.Type == e.Type then
-				if not sub:IsLiteral() then return self end
-
-				table.remove(self.Data, i)
-			end
-		end
-
-		self.Data[#self.Data + 1] = e
-		return self
-	end
-
 	for i = 1, #self.Data do
 		local v = self.Data[i]--[[# as TBaseType]]
 
