@@ -117,6 +117,22 @@ local function get_value(mut)
 end
 
 local function mutation_solver(mutations, scope, obj)
+	-- common case early exit, if the last mutation was done in the same scope
+	if mutations[#mutations] and mutations[#mutations].scope == scope then
+		local first = get_value(mutations[#mutations])
+		local union
+
+		if first.Type == "union" then
+			union = first:Copy()
+		else
+			union = Union({first})
+		end
+
+		if obj.Type == "upvalue" then union:SetUpvalue(obj) end
+
+		return union:Simplify()
+	end
+
 	local mutations = remove_redundant_mutations(mutations, scope, obj)
 
 	if not mutations then return end
@@ -138,18 +154,16 @@ local function mutation_solver(mutations, scope, obj)
 
 		if i > 1 then
 			if obj.Type == "upvalue" then -- upvalue
-				local data = mut.scope:FindTrackedUpvalue(obj)
+				if mut.scope:GetStatementType() == "if" then
+					local data = mut.scope:FindTrackedUpvalue(obj)
 
-				if data then
-					local stack = data.stack
-
-					if stack then
+					if data and data.stack then
 						local val
 
 						if mut.scope:IsElseConditionalScope() then
-							val = stack[#stack].falsy
+							val = data.stack[#data.stack].falsy
 						else
-							val = stack[#stack].truthy
+							val = data.stack[#data.stack].truthy
 						end
 
 						if val and (val.Type ~= "union" or not val:IsEmpty()) then
@@ -171,16 +185,9 @@ local function mutation_solver(mutations, scope, obj)
 		union:AddType(value)
 	end
 
-	local value = union
+	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 
-	if obj.Type == "upvalue" then value:SetUpvalue(obj) end
-
-	if #value:GetData() == 1 then
-		value = value:GetData()[1]
-		return value
-	end
-
-	return value
+	return union:Simplify()
 end
 
 return mutation_solver
