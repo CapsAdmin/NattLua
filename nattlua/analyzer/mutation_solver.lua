@@ -108,28 +108,73 @@ local function remove_redundant_mutations(mutations, scope, obj)
 	return result
 end
 
+local function get_value(mut)
+	if mut.value.Type == "union" and #mut.value:GetData() == 1 then
+		return mut.value:GetData()[1]
+	end
+
+	return mut.value
+end
+
+local function get_stack_mutations(scope, obj)
+	local found_scope, data = scope:FindResponsibleConditionalScopeFromUpvalue(obj)
+
+	if not found_scope or not data.stack then return false end
+
+	if
+		found_scope:IsElseConditionalScope() or
+		(
+			found_scope ~= scope and
+			scope:BelongsToIfStatement(found_scope)
+		)
+	then
+		local union = data.stack[#data.stack].falsy
+
+		if union:GetCardinality() == 0 then
+			union = Union()
+
+			for _, val in ipairs(data.stack) do
+				union:AddType(val.falsy)
+			end
+		end
+
+		return union:Simplify()
+	end
+
+	local union = Union()
+
+	for _, val in ipairs(data.stack) do
+		union:AddType(val.truthy)
+	end
+
+	return union:Simplify()
+end
+
 local function mutation_solver(mutations, scope, obj)
 	local mutations = remove_redundant_mutations(mutations, scope, obj)
 
 	if not mutations then return end
 
-	local union = Union()
+	local union
+	local start = 1
+	local first = get_value(mutations[1])
 
-	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
+	if first.Type == "union" then
+		union = first:Copy()
+		start = 2
+	else
+		union = Union()
+	end
 
-	for i = 1, #mutations do
+	for i = start, #mutations do
 		local mut = mutations[i]
-		local value = mut.value
+		local value = get_value(mut)
 
-		if value.Type == "union" and #value:GetData() == 1 then
-			value = value:GetData()[1]
-		end
+		if i > 1 then
+			if obj.Type == "upvalue" then -- upvalue
+				local data = mut.scope:FindTrackedUpvalue(obj)
 
-		do
-			local upvalues = mut.scope:GetTrackedUpvalues()
-
-			if upvalues then
-				for _, data in ipairs(upvalues) do
+				if data then
 					local stack = data.stack
 
 					if stack then
@@ -146,75 +191,39 @@ local function mutation_solver(mutations, scope, obj)
 						end
 					end
 				end
+			elseif -- table
+				value.Type ~= "any" and
+				mutations[1].value.Type ~= "union" and
+				mutations[1].value.Type ~= "function" and
+				mutations[1].value.Type ~= "any" and
+				union:HasTypeObject(value)
+			then
+				union:RemoveType(mutations[1].value)
 			end
 		end
 
-		if
-			value.Type ~= "any" and
-			mutations[1].value.Type ~= "union" and
-			mutations[1].value.Type ~= "function" and
-			mutations[1].value.Type ~= "any" and
-			union:HasTypeObject(value)
-		then
-			union:RemoveType(mutations[1].value)
-		end
-
-		if i == 1 and value.Type == "union" then
-			union = value:Copy()
-
-			if obj.Type == "upvalue" then union:SetUpvalue(obj) end
-		else
-			union:AddType(value)
-		end
+		union:AddType(value)
 	end
 
 	local value = union
 
-	if #union:GetData() == 1 then
-		value = union:GetData()[1]
+	if obj.Type == "upvalue" then value:SetUpvalue(obj) end
 
-		if obj.Type == "upvalue" then value:SetUpvalue(obj) end
-
+	if #value:GetData() == 1 then
+		value = value:GetData()[1]
 		return value
 	end
 
-	local found_scope, data = scope:FindResponsibleConditionalScopeFromUpvalue(obj)
+	if obj.Type == "upvalue" then
+		local value = get_stack_mutations(scope, obj)
 
-	if not found_scope or not data.stack then return value end
-
-	local stack = data.stack
-
-	if
-		found_scope:IsElseConditionalScope() or
-		(
-			found_scope ~= scope and
-			scope:BelongsToIfStatement(found_scope)
-		)
-	then
-		local union = stack[#stack].falsy
-
-		if union:GetCardinality() == 0 then
-			union = Union()
-
-			for _, val in ipairs(stack) do
-				union:AddType(val.falsy)
-			end
+		if value then
+			value:SetUpvalue(obj)
+			return value
 		end
-
-		if obj.Type == "upvalue" then union:SetUpvalue(obj) end
-
-		return union
 	end
 
-	local union = Union()
-
-	for _, val in ipairs(stack) do
-		union:AddType(val.truthy)
-	end
-
-	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
-
-	return union
+	return value
 end
 
 return mutation_solver

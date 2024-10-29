@@ -165,6 +165,16 @@ end
 META:GetSet("TrackedUpvalues", false)
 META:GetSet("TrackedTables", false)
 
+function META:FindTrackedUpvalue(upvalue)
+	local upvalues = self:GetTrackedUpvalues()
+
+	if not upvalues then return false end
+
+	for _, data in ipairs(upvalues) do
+		if data.upvalue == upvalue then return data end
+	end
+end
+
 function META:TracksSameAs(scope, obj)
 	local upvalues_a, tables_a = self:GetTrackedUpvalues(), self:GetTrackedTables()
 	local upvalues_b, tables_b = scope:GetTrackedUpvalues(), scope:GetTrackedTables()
@@ -189,27 +199,23 @@ function META:TracksSameAs(scope, obj)
 end
 
 function META:FindResponsibleConditionalScopeFromUpvalue(upvalue)
-	for _, scope in ipairs(self.ParentList) do
-		local upvalues = scope:GetTrackedUpvalues()
+	if self:GetStatementType() ~= "if" then return end
 
-		if upvalues then
-			for i, data in ipairs(upvalues) do
-				if data.upvalue == upvalue then return scope, data end
-			end
-		end
+	for _, scope in ipairs(self.ParentList) do
+		local data = scope:FindTrackedUpvalue(upvalue)
+
+		if data then return scope, data end
 
 		-- find in siblings too, if they have returned
 		-- ideally when cloning a scope, the new scope should be 
 		-- inside of the returned scope, then we wouldn't need this code
 		for _, child in ipairs(scope:GetChildren()) do
-			if self:BelongsToIfStatement(child) then
-				local upvalues = child:GetTrackedUpvalues()
+			if (child == scope) then error("!") end
 
-				if upvalues then
-					for i, data in ipairs(upvalues) do
-						if data.upvalue == upvalue then return child, data end
-					end
-				end
+			if self:BelongsToIfStatement(child) then
+				local data = child:FindTrackedUpvalue(upvalue)
+
+				if data then return child, data end
 			end
 		end
 	end

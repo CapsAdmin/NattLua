@@ -231,6 +231,8 @@ function formating.BuildSourceCodePointMessage2(
 		end
 	end
 
+	assert(source_code_char_start)
+	assert(source_code_char_stop)
 	local start_line_context = math.max(line_start - config.surrounding_line_count, 1)
 	local stop_line_context = math.min(line_stop + config.surrounding_line_count, #lines)
 	local number_length = #tostring(stop_line_context)
