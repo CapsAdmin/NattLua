@@ -198,31 +198,6 @@ function META:TracksSameAs(scope, obj)
 	return false
 end
 
-function META:FindResponsibleConditionalScopeFromUpvalue(upvalue)
-	if self:GetStatementType() ~= "if" then return end
-
-	for _, scope in ipairs(self.ParentList) do
-		local data = scope:FindTrackedUpvalue(upvalue)
-
-		if data then return scope, data end
-
-		-- find in siblings too, if they have returned
-		-- ideally when cloning a scope, the new scope should be 
-		-- inside of the returned scope, then we wouldn't need this code
-		for _, child in ipairs(scope:GetChildren()) do
-			if (child == scope) then error("!") end
-
-			if self:BelongsToIfStatement(child) then
-				local data = child:FindTrackedUpvalue(upvalue)
-
-				if data then return child, data end
-			end
-		end
-	end
-
-	return nil
-end
-
 META:GetSet("PreviousConditionalSibling")
 META:GetSet("NextConditionalSibling")
 META:IsSet("ElseConditionalScope")

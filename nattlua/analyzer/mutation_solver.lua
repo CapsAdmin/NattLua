@@ -116,40 +116,6 @@ local function get_value(mut)
 	return mut.value
 end
 
-local function get_stack_mutations(scope, obj)
-	local found_scope, data = scope:FindResponsibleConditionalScopeFromUpvalue(obj)
-
-	if not found_scope or not data.stack then return false end
-
-	if
-		found_scope:IsElseConditionalScope() or
-		(
-			found_scope ~= scope and
-			scope:BelongsToIfStatement(found_scope)
-		)
-	then
-		local union = data.stack[#data.stack].falsy
-
-		if union:GetCardinality() == 0 then
-			union = Union()
-
-			for _, val in ipairs(data.stack) do
-				union:AddType(val.falsy)
-			end
-		end
-
-		return union:Simplify()
-	end
-
-	local union = Union()
-
-	for _, val in ipairs(data.stack) do
-		union:AddType(val.truthy)
-	end
-
-	return union:Simplify()
-end
-
 local function mutation_solver(mutations, scope, obj)
 	local mutations = remove_redundant_mutations(mutations, scope, obj)
 
@@ -212,15 +178,6 @@ local function mutation_solver(mutations, scope, obj)
 	if #value:GetData() == 1 then
 		value = value:GetData()[1]
 		return value
-	end
-
-	if obj.Type == "upvalue" then
-		local value = get_stack_mutations(scope, obj)
-
-		if value then
-			value:SetUpvalue(obj)
-			return value
-		end
 	end
 
 	return value

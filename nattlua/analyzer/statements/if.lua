@@ -117,6 +117,16 @@ return {
 				scope:SetElseConditionalScope(true)
 				self:ApplyMutationsInIfElse(blocks)
 			else
+				if blocks[i - 1] then
+					local prev = {}
+
+					for i = 1, i do
+						table.insert(prev, blocks[i])
+					end
+
+					self:ApplyMutationsInIfElse(prev)
+				end
+
 				self:ApplyMutationsInIf(block.upvalues, block.tables)
 			end
 

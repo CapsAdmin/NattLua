@@ -1788,6 +1788,35 @@ assert(self.comment_escape)
 
 
 ]]
+analyze[[
+    local A = _ as true | false
+    local B = _ as true | false
+    local C = _ as true | false
+
+    if A then
+        attest.equal(A, true)
+        attest.equal(B, _ as true | false)
+        attest.equal(C, _ as true | false)
+    elseif B then
+        attest.equal(A, false)
+        attest.equal(B, true)
+        attest.equal(C, _ as true | false)
+    elseif C then
+        attest.equal(A, false)
+        attest.equal(B, false)
+        attest.equal(C, true)
+    end
+
+    §assert(env.runtime.A:GetUpvalue():GetMutations()[1].value:Equal(types.Boolean()))
+
+    §assert(env.runtime.A:GetUpvalue():GetMutations()[2].value:Equal(types.True()))
+
+    §assert(env.runtime.A:GetUpvalue():GetMutations()[3].value:Equal(types.False()))
+
+    §assert(env.runtime.A:GetUpvalue():GetMutations()[4].value:Equal(types.False()))
+
+    §assert(env.runtime.A:GetUpvalue():GetMutations()[5] == nil)
+]]
 
 if false then
 	pending[[
