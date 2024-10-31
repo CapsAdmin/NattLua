@@ -129,6 +129,7 @@ return {
 					not arg:GetContract()
 					and
 					not arg.Self and
+					obj.Self2 ~= arg and
 					not self:IsTypesystem()
 				then
 					val:SetCalled(true)

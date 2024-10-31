@@ -66,6 +66,14 @@ function META:SetSelf(tbl)
 	self.Self = tbl
 end
 
+function META:SetSelf2(tbl)
+	self.Self2 = tbl
+end
+
+function META:GetSelf2()
+	return self.Self2
+end
+
 function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false end
 
@@ -834,6 +842,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 		copy:SetSelf(tbl_copy)
 	end
 
+	copy.Self2 = self.Self2
 	copy.MetaTable = self.MetaTable --copy_val(self.MetaTable, map, copy_tables)
 	copy.Contract = self:GetContract() --copy_val(self.Contract, map, copy_tables)
 	copy:SetAnalyzerEnvironment(self:GetAnalyzerEnvironment())

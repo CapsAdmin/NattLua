@@ -987,3 +987,110 @@ analyze[[
     local s = setmetatable({type = 1}, meta)
     attest.equal(s:lol(1), _  as number)
 ]]
+analyze[[
+type Player = nil
+type Entity = nil
+type Enemy = nil
+
+
+local Entity = {}
+type Entity.@Self2 = ref {x = number, y = number, id = string}
+Entity.__index = Entity
+
+function Entity.New(x: number, y: number)
+	local self: Entity.@Self2 = {x = x, y = y, id = tostring({})}
+	setmetatable2(self, Entity)
+	return self
+end
+
+function Entity:GetPosition(): (number, number)
+	return self.x, self.y
+end
+
+function Entity:Move(dx: number, dy: number)
+	self.x = self.x + dx
+	self.y = self.y + dy
+end
+
+function Entity:GetID(): string
+	return self.id
+end
+
+-- Player class deriving from Entity
+local Player = {}
+type Player.@Self2 = Entity.@Self2 & {
+	health = number,
+	name = string,
+}
+
+function Player:__index(key)
+	if Player[key] ~= nil then return Player[key] end
+
+	if Entity[key] ~= nil then return Entity[key] end
+end
+
+function Player.New(x: number, y: number, name: string)
+	local self: Player.@Self2 = {x = x, y = y, id = tostring({}), health = 100, name = name}
+	setmetatable2(self, Player)
+	return self
+end
+
+function Player:GetHealth(): number
+	return self.health
+end
+
+function Player:SetHealth(health: number)
+	self.health = health
+end
+
+function Player:GetName(): string
+	return self.name
+end
+
+-- Enemy class deriving from Entity
+local Enemy = {}
+type Enemy.@Self2 = Entity.@Self2 & {
+	damage = number,
+	enemy_type = string,
+}
+
+function Enemy:__index(key)
+	if Enemy[key] ~= nil then return Enemy[key] end
+
+	if Entity[key] ~= nil then return Entity[key] end
+end
+
+function Enemy.New(x: number, y: number, enemy_type: string)
+	local self: Enemy.@Self2 = {x = x, y = y, id = tostring({}), damage = 10, enemy_type = enemy_type}
+	setmetatable2(self, Enemy)
+	return self
+end
+
+function Enemy:GetDamage(): number
+	return self.damage
+end
+
+function Enemy:SetDamage(damage: number)
+	self.damage = damage
+end
+
+function Enemy:GetEnemyType(): string
+	return self.enemy_type
+end
+
+-- Example usage:
+do
+	local player = Player.New(0, 0, "Hero")
+	player:Move(5, 5)
+	local enemy = Enemy.New(10, 10, "Goblin")
+	enemy:Move(-2, 3)
+	attest.equal(player:GetName(), _ as string) -- Hero
+	attest.equal(player:GetHealth(), _ as number) -- 100
+	attest.equal(player:GetID(), _ as string) -- unique id
+	attest.equal(enemy:GetEnemyType(), _ as string) -- Goblin 
+	attest.equal(enemy:GetDamage(), _ as number) -- 10
+	attest.equal(enemy:GetID(), _ as string) -- unique id
+end
+
+
+]]

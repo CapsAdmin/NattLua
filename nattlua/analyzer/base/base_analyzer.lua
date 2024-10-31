@@ -91,6 +91,19 @@ return function(META)
 				end
 
 				return new_tup
+			elseif tbl.Self2 then
+				local self = tbl.Self2
+				local new_tup = Tuple()
+
+				for i, obj in ipairs(tup:GetData()) do
+					if i == 1 then
+						new_tup:Set(i, self)
+					else
+						new_tup:Set(i, obj)
+					end
+				end
+
+				return new_tup
 			elseif tbl.PotentialSelf then
 				local meta = tbl
 				local self = tbl.PotentialSelf

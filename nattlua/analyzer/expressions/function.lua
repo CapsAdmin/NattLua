@@ -19,6 +19,8 @@ local function analyze_arguments(self, node)
 		if val then
 			if val.Self then
 				args[1] = val.Self
+			elseif val.Self2 then
+				args[1] = val.Self2
 			elseif val:GetContract() then
 				args[1] = val
 			else
