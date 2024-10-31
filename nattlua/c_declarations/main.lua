@@ -62,8 +62,7 @@ local function analyze(c_code, mode, env, analyzer, ...)
 	local tokens = lex:GetTokens()
 	local parser = Parser(tokens, code)
 	parser.OnError = function(parser, code, msg, start, stop, ...)
-		Compiler.OnDiagnostic({}, code, msg, "fatal", start, stop, nil, ...)
-		error("error parsing")
+		Compiler.OnDiagnostic({}, code, msg, "error", start, stop, nil, ...)
 	end
 	parser.CDECL_PARSING_MODE = mode
 	local ast = parser:ParseRootNode()

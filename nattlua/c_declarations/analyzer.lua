@@ -21,6 +21,50 @@ local Any = require("nattlua.types.any").Any
 local walk_cdeclarations = require("nattlua.c_declarations.ast_walker")
 META.OnInitialize = {}
 require("nattlua.other.context_mixin")(META)
+local valid_qualifiers = {
+	["double"] = true,
+	["float"] = true,
+	["int8_t"] = true,
+	["uint8_t"] = true,
+	["int16_t"] = true,
+	["uint16_t"] = true,
+	["int32_t"] = true,
+	["uint32_t"] = true,
+	["char"] = true,
+	["signed char"] = true,
+	["unsigned char"] = true,
+	["short"] = true,
+	["short int"] = true,
+	["signed short"] = true,
+	["signed short int"] = true,
+	["unsigned short"] = true,
+	["unsigned short int"] = true,
+	["int"] = true,
+	["signed"] = true,
+	["signed int"] = true,
+	["unsigned"] = true,
+	["unsigned int"] = true,
+	["long"] = true,
+	["long int"] = true,
+	["signed long"] = true,
+	["signed long int"] = true,
+	["unsigned long"] = true,
+	["unsigned long int"] = true,
+	["float"] = true,
+	["double"] = true,
+	["long double"] = true,
+	["size_t"] = true,
+	["intptr_t"] = true,
+	["uintptr_t"] = true,
+	["int64_t"] = true,
+	["uint64_t"] = true,
+	["long long"] = true,
+	["long long int"] = true,
+	["signed long long"] = true,
+	["signed long long int"] = true,
+	["unsigned long long"] = true,
+	["unsigned long long int"] = true,
+}
 
 local function cast(self, node)
 	if node.type == "array" then
@@ -137,53 +181,11 @@ local function cast(self, node)
 
 		local t = node.modifiers[1]
 
-		if
-			t == "double" or
-			t == "float" or
-			t == "int8_t" or
-			t == "uint8_t" or
-			t == "int16_t" or
-			t == "uint16_t" or
-			t == "int32_t" or
-			t == "uint32_t" or
-			t == "char" or
-			t == "signed char" or
-			t == "unsigned char" or
-			t == "short" or
-			t == "short int" or
-			t == "signed short" or
-			t == "signed short int" or
-			t == "unsigned short" or
-			t == "unsigned short int" or
-			t == "int" or
-			t == "signed" or
-			t == "signed int" or
-			t == "unsigned" or
-			t == "unsigned int" or
-			t == "long" or
-			t == "long int" or
-			t == "signed long" or
-			t == "signed long int" or
-			t == "unsigned long" or
-			t == "unsigned long int" or
-			t == "float" or
-			t == "double" or
-			t == "long double" or
-			t == "size_t" or
-			t == "intptr_t" or
-			t == "uintptr_t"
-		then
-			return Number()
-		elseif
-			t == "int64_t" or
-			t == "uint64_t" or
-			t == "long long" or
-			t == "long long int" or
-			t == "signed long long" or
-			t == "signed long long int" or
-			t == "unsigned long long" or
-			t == "unsigned long long int"
-		then
+		if t == "const" then
+			t = assert(node.modifiers[2])
+		end
+
+		if valid_qualifiers[t] then
 			return Number()
 		elseif t == "bool" or t == "_Bool" then
 			return Boolean()
@@ -194,7 +196,10 @@ local function cast(self, node)
 		elseif t == "va_list" then
 			return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 		else
-			local obj = self.type_table:Get(LString(t))
+			local s = LString(t)
+			local obj, err = self.type_table:Get(s)
+
+			if not obj then error(tostring(s) .. " is not a declared type") end
 
 			if obj then return obj end
 		end
