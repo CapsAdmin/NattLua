@@ -583,3 +583,14 @@ analyze[[
     local range = math.random(1, 5)
     attest.equal(range, _  as 1 .. 5)
 ]]
+analyze[[
+
+local analyzer function test(...: ...any)
+    assert(select("#", ...) == 3)
+end 
+    local x = _ as nil | true
+    local y = _ as nil | true
+    local z = _ as nil | true
+
+    test(x, y, z)
+]]

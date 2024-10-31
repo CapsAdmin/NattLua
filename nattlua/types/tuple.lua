@@ -479,9 +479,14 @@ end
 function META:GetSafeLength(arguments--[[#: TTuple | nil]])
 	if arguments then
 		local len = self:GetElementCount()
+		local arg_len = arguments:GetElementCount()
 
-		if len == math.huge or arguments:GetElementCount() == math.huge then
-			return math.max(self:GetMinimumLength(), arguments:GetMinimumLength())
+		if len == math.huge or arg_len == math.huge then
+			if arg_len == math.huge then
+				return math.max(self:GetMinimumLength(), arguments:GetMinimumLength())
+			else
+				return math.max(self:GetMinimumLength(), arguments:GetMinimumLength(), arg_len)
+			end
 		end
 
 		return len
