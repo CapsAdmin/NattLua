@@ -1843,3 +1843,12 @@ if false then
         end
     ]]
 end
+
+analyze[[
+local value
+local x = _ as 1 | 2 | 3
+
+if x == 1 then value = "1" elseif x == 2 then value = "2" end
+
+if x == 1 then attest.equal(value, _ as "1" | "2") end
+]]

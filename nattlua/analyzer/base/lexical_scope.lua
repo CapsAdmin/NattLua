@@ -185,7 +185,16 @@ function META:TracksSameAs(scope, obj)
 
 	for i, data_a in ipairs(upvalues_a) do
 		for i, data_b in ipairs(upvalues_b) do
-			if data_a.upvalue == data_b.upvalue then return true end
+			if data_a.upvalue == data_b.upvalue then
+				if data_a.stack and data_b.stack then
+					local a = data_a.stack[#data_a.stack].truthy
+					local b = data_b.stack[#data_b.stack].truthy
+
+					if a:Equal(b) then return true end
+				else
+					return true
+				end
+			end
 		end
 	end
 
