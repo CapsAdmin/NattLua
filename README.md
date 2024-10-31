@@ -312,7 +312,8 @@ local function assert_whole_number<|T: number|>
 end
 
 local x = assert_whole_number<|5.5|>
-          ^^^^^^^^^^^^^^^^^^^: assertion failed!
+          ^^^^^^^^^^^^^^^^^^^
+Expected whole number
 ```
 
 `<|` `|>` here means that we are writing a type function that only exist in the type system. Unlike `analyzer` functions, its content is actually analyzed.
@@ -360,7 +361,9 @@ names[-1] = "faz"
 ^^^^^^^^^: -1 is not a subset of 1 .. inf
 ```
 
-## ffi.cdef errors in the compiler
+## ffi.cdef parse errors to type errors
+
+ffi functions including cdef are already typed, but to showcase how we might throw parsing errors to the type system we can do the following:
 
 ```lua
 analyzer function ffi.cdef(c_declaration: string)
@@ -448,7 +451,9 @@ print<|anagram|> -- >> "SLEEP"
 
 This is true because `anagram` becomes a union of all possible letter combinations which contains the string "SLEEP".
 
-It's arguably also false as it contains all the other combinations, but since we use assert to check the result at runtime, it's not a problem.
+It's also false as it contains all the other combinations, but since we use assert to check the result at runtime, it will silently "error" and mutate anagram to become "SLEEP" after the assertion.
+
+If we did assert<|anagram == "SLEEP"|> (a type call) it would error, because the typesystem operates more literally.
 
 # Parsing and transpiling
 
