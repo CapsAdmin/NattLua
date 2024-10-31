@@ -128,8 +128,8 @@ end
 local function remove(self, index)
 	local obj = assert(self.Data[index])
 	table_remove(self.Data, index)
-
 	local s = hash(obj)
+
 	if s then self.LiteralDataCache[s] = nil end
 end
 
@@ -155,9 +155,7 @@ function META:AddType(e--[[#: TBaseType]])
 	do
 		local s = hash(e)
 
-		if s and self.LiteralDataCache[s] then
-			return self
-		end
+		if s and self.LiteralDataCache[s] then return self end
 	end
 
 	if find_index(self, e) then return self end

@@ -251,7 +251,10 @@ do -- uncalled functions should be called
 		"number",
 		assert(lib:Get(LString("foo1")):GetInputSignature():GetWithNumber(2):GetType("number")).Type
 	)
-	equal("number", assert(lib:Get(LString("foo1")):GetOutputSignature():GetWithNumber(1)).Type)
+	equal(
+		"number",
+		assert(lib:Get(LString("foo1")):GetOutputSignature():GetWithNumber(1)).Type
+	)
 	equal(
 		"number",
 		lib:Get(LString("foo2")):GetInputSignature():GetWithNumber(1):GetType("number").Type
