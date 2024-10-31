@@ -223,59 +223,77 @@ function META:GetArrayLength()
 	return LNumber(len)
 end
 
+function META:CanBeEmpty()
+	for _, keyval in ipairs(self:GetData()) do
+		if not keyval.val:IsNil() then return false end
+	end
+
+	return true
+end
+
 function META:FollowsContract(contract--[[#: TTable]])
+	if self.suppress then return true end
+
 	if self:GetContract() == contract then return true end
 
-	do -- todo
-		-- i don't think this belongs here
-		if not self:GetData()[1] then
-			local can_be_empty = true
-			contract.suppress = true
+	if not self:GetData()[1] and contract:CanBeEmpty() then return true end
 
-			for _, keyval in ipairs(contract:GetData()) do
-				if not keyval.val:IsNil() then
-					can_be_empty = false
+	for _, keyval in ipairs(contract:GetData()) do
+		local required_key = keyval.key
 
-					break
+		if required_key:IsLiteral() then
+			if not keyval.val:IsNil() then
+				local res, err = self:FindKeyVal(required_key)
+
+				if not res and self:GetMetaTable() then
+					res, err = self:GetMetaTable():FindKeyVal(required_key)
+				end
+
+				if not res then return res, err end
+
+				local ok, err = res.val:IsSubsetOf(keyval.val)
+
+				if not ok then
+					return false,
+					type_errors.because(type_errors.context("the key", type_errors.subset(res.key, keyval.key)), err)
+				end
+			end
+		else
+			local found_anything = false
+
+			for _, keyval2 in ipairs(self:GetData()) do
+				if keyval2.key:IsSubsetOf(required_key) then
+					self.suppress = true
+					local ok, err = keyval2.val:IsSubsetOf(keyval.val)
+					self.suppress = false
+					found_anything = true
+
+					if not ok then
+						return false,
+						type_errors.because(type_errors.context("the key", type_errors.subset(keyval2.key, keyval.key)), err)
+					end
 				end
 			end
 
-			contract.suppress = false
-
-			if can_be_empty then return true end
-		end
-	end
-
-	for _, keyval in ipairs(contract:GetData()) do
-		local res, err = self:FindKeyVal(keyval.key)
-
-		if not res and self:GetMetaTable() then
-			res, err = self:GetMetaTable():FindKeyVal(keyval.key)
-		end
-
-		if not keyval.val:IsNil() then
-			if not res then return res, err end
-
-			local ok, err = res.val:IsSubsetOf(keyval.val)
-
-			if not ok then
-				return false,
-				type_errors.because(type_errors.context("the key", type_errors.subset(res.key, keyval.key)), err)
+			if not found_anything then
+				return false, type_errors.table_index(self, required_key)
 			end
 		end
 	end
 
 	for _, keyval in ipairs(self:GetData()) do
-		local res, err = contract:FindKeyValReverse(keyval.key)
-
 		if not keyval.val:IsNil() then
-			if not res then return res, err end
+			local res, err = contract:FindKeyVal(keyval.key)
 
-			local ok, err = keyval.val:IsSubsetOf(res.val)
+			-- it's ok if the key is not found, as we're doing structural checking
+			if res then
+				-- if it is found, we make sure its type matches
+				local ok, err = keyval.val:IsSubsetOf(res.val)
 
-			if not ok then
-				return false,
-				type_errors.because(type_errors.context("the value", type_errors.subset(res.val, keyval.val)), err)
+				if not ok then
+					return false,
+					type_errors.because(type_errors.context("the value", type_errors.subset(res.val, keyval.val)), err)
+				end
 			end
 		end
 	end

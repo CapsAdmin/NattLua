@@ -184,7 +184,7 @@ local function check_input(self, obj, input)
 				self:CreateLocalValue(identifier, arg)
 				signature_override[i] = arg
 				signature_override[i]:SetReferenceType(true)
-				local ok, err = signature_override[i]:IsSubsetOf(contract)
+				local ok, err = check_argument_against_contract(signature_override[i], contract, i)
 
 				if not ok then
 					self:PopAnalyzerEnvironment()
@@ -229,7 +229,7 @@ local function check_input(self, obj, input)
 					end
 				else
 					if not func:IsExplicitInputSignature() then
-						local contract = signature_override[i] or obj:GetInputSignature():Get(i)
+						local contract = signature_override[i] or obj:GetInputSignature():GetWithNumber(i)
 
 						if contract then
 							if contract.Type == "union" then
@@ -249,7 +249,7 @@ local function check_input(self, obj, input)
 					end
 
 					if not func:IsExplicitOutputSignature() then
-						local contract = signature_override[i] or obj:GetOutputSignature():Get(i)
+						local contract = signature_override[i] or obj:GetOutputSignature():GetWithNumber(i)
 
 						if contract then
 							if contract.Type == "union" then

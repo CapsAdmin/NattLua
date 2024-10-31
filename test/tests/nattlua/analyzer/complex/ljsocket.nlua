@@ -849,7 +849,7 @@ timeout_messages[errno.EWOULDBLOCK] = true
 
 function M.poll(
 	s: ffi.get_type<|"struct pollfd*"|> ~ nil,
-	flags: List<|string|>,
+	flags: {[1 .. inf] = keysof<|POLL.lookup|> | nil},
 	timeout: nil | number
 )
 	local pfd = ffi.new(
