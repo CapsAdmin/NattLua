@@ -25,6 +25,8 @@ if not io or not io.write then
 	end
 end
 
+_G.bit = _G.bit or require("nattlua.other.bit")
+
 do -- these are just helpers for print debugging
 	table.print = require("nattlua.other.table_print")
 	debug.trace = function(max_level)

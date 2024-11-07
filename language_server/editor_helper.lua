@@ -12,6 +12,7 @@ local Union = require("nattlua.types.union").Union
 local Table = require("nattlua.types.table").Table
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
+local bit = require("nattlua.other.bit")
 local class = require("nattlua.other.class")
 local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
 local runtime_env, typesystem_env = BuildBaseEnvironment()

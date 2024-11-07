@@ -8,16 +8,15 @@ function coverage.Preprocess(code, key)
 	local expressions = {}
 
 	local function inject_call_expression(parser, node, start, stop)
-		local call_expression = parser:ParseString(" " .. FUNC_NAME .. "(" .. start .. "," .. stop .. ") ").statements[1].value
+		local call_expression = parser:ParseString(" " .. FUNC_NAME .. "(" .. start .. "," .. stop .. ",x)").statements[1].value
 
 		if node.kind == "postfix_call" and not node.tokens["call("] then
 			node.tokens["call("] = parser:NewToken("symbol", "(")
 			node.tokens["call)"] = parser:NewToken("symbol", ")")
 		end
 
-		-- add comma to last expression since we're adding a new one
-		call_expression.expressions[#call_expression.expressions].tokens[","] = parser:NewToken("symbol", ",")
-		table.insert(call_expression.expressions, node)
+		-- replace "x" with the new node
+		call_expression.expressions[3] = node
 
 		if node.right then call_expression.right = node.right end
 
@@ -30,7 +29,7 @@ function coverage.Preprocess(code, key)
 
 	local compiler = nl.Compiler(
 		code,
-		"lol",
+		key,
 		{
 			on_parsed_node = function(parser, node)
 				if node.type == "statement" then
@@ -79,7 +78,47 @@ function coverage.Preprocess(code, key)
 	lua = lua .. [[called[key][3] = called[key][3] + 1;]]
 	lua = lua .. [[return ...;]]
 	lua = lua .. [[end; ]]
-	lua = lua .. compiler:Emit()
+
+	local gen = compiler:Emit()
+
+	if code:find("clock_gettime", nil, true) then
+
+		function _G.diff(input, expect)
+			local a = os.tmpname()
+			local b = os.tmpname()
+		
+			do
+				local f = assert(io.open(a, "w"))
+				f:write(input)
+				f:close()
+			end
+		
+			do
+				local f = assert(io.open(b, "w"))
+				f:write(expect)
+				f:close()
+			end
+		
+			os.execute("meld " .. a .. " " .. b)
+		end
+		
+
+		local old = code
+		local new = gen
+
+		for i = 1, 100 do
+			local temp, count = new:gsub(" __CLCT%b()", function(str) 
+				return str:match("^ __CLCT%(%d+,%d+,(.+)%)")
+			end)
+			if count == 0 then break end
+
+			new = temp
+		end
+
+		diff(new, old)
+	end
+
+	lua = lua .. gen
 	_G.__COVERAGE[key] = _G.__COVERAGE[key] or
 		{called = {}, expressions = expressions, compiler = compiler, preprocesed = lua}
 	return lua
