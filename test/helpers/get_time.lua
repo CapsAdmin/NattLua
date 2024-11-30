@@ -13,8 +13,7 @@ if ffi.os == "OSX" then
 	]])
 	local tb = ffi.new("struct mach_timebase_info")
 	ffi.C.mach_timebase_info(tb)
-	local orwl_timebase = tb.numer
-	local orwl_timebase = tb.denom
+	local orwl_timebase = tb.numer / tb.denom
 	local orwl_timestart = ffi.C.mach_absolute_time()
 	return function()
 		local diff = (ffi.C.mach_absolute_time() - orwl_timestart) * orwl_timebase
