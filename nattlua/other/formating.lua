@@ -173,6 +173,8 @@ local function calculate_text_positions(
 	stop--[[#: number]],
 	context_line_count--[[#: number]]
 )
+	local local_start = start
+	local local_stop
 	local before
 	local after
 	local mid = str:sub(start, stop)
@@ -180,7 +182,14 @@ local function calculate_text_positions(
 	local line_start = 1
 	local line_stop = 1
 	local context_start
-	local context_stop
+	local lines = {}
+	local line = {}
+	local char_start
+	local char_stop
+	local source_code_char_start
+	local source_code_char_stop
+	local line_pos = 1
+	local source_char_pos = 0
 
 	do
 		local line_pos = -1
@@ -193,6 +202,11 @@ local function calculate_text_positions(
 
 			if line_pos == context_line_count then
 				context_start = i
+				local_start = start - context_start
+
+				for i = 1, context_start do
+					if str:byte(i) == 10 then line_offset = line_offset + 1 end
+				end
 
 				break
 			end
@@ -201,14 +215,6 @@ local function calculate_text_positions(
 		end
 
 		before = table.concat(before):reverse()
-	end
-
-	if context_start then
-		for i = 1, context_start do
-			local c = str:sub(i, i)
-
-			if c == "\n" then line_offset = line_offset + 1 end
-		end
 	end
 
 	do
@@ -220,11 +226,7 @@ local function calculate_text_positions(
 
 			if c == "\n" or c == #str then line_pos = line_pos + 1 end
 
-			if line_pos == context_line_count then
-				context_stop = i
-
-				break
-			end
+			if line_pos == context_line_count then break end
 
 			after[i - stop] = c
 		end
@@ -232,17 +234,8 @@ local function calculate_text_positions(
 		after = table.concat(after)
 	end
 
-	local lines = {}
-	local line = {}
 	local local_str = before .. mid .. after
-	local local_start = context_start and (start - (context_start--[[# as number]])) or start
 	local local_stop = local_start + (stop - start)
-	local char_start = 0
-	local char_stop = 0
-	local source_code_char_start = 0
-	local source_code_char_stop = 0
-	local line_pos = 1
-	local lol = 0
 
 	for i = 1, #local_str do
 		local c = local_str:sub(i, i)
@@ -256,38 +249,38 @@ local function calculate_text_positions(
 				table.insert(line, c)
 			end
 
-			lol = lol + 1
+			source_char_pos = source_char_pos + 1
 		end
 
 		if c == "\n" or i == #local_str then
-			table.insert(lines, (table.concat(line)))
+			table.insert(lines, table.concat(line))
 			line_pos = line_pos + 1
 			line = {}
-			lol = 0
+			source_char_pos = 0
 		end
 
 		if i == local_start then
 			line_start = line_pos
-			source_code_char_start = lol
+			source_code_char_start = source_char_pos
 			char_start = #line
 		end
 
 		if i == local_stop then
 			line_stop = line_pos
 			char_stop = #line
-			source_code_char_stop = lol
+			source_code_char_stop = source_char_pos
 		end
 	end
 
 	return {
 		lines = lines,
-		line_offset = line_offset,
-		line_start = line_start,
-		line_stop = line_stop,
-		char_start = char_start,
-		char_stop = char_stop,
-		source_code_char_start = source_code_char_start,
-		source_code_char_stop = source_code_char_stop,
+		line_offset = assert(line_offset),
+		line_start = assert(line_start),
+		line_stop = assert(line_stop),
+		char_start = assert(char_start),
+		char_stop = assert(char_stop),
+		source_code_char_start = assert(source_code_char_start),
+		source_code_char_stop = assert(source_code_char_stop),
 	}
 end
 
