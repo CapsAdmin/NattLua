@@ -147,7 +147,10 @@ return function(analyzer, obj, input)
 
 	for _, tuple in ipairs(tuples) do
 		for i = 1, tuple:GetElementCount() do
-			local v = tuple:GetWithNumber(i)
+			local v, err = tuple:GetWithNumber(i)
+
+			if not v then return v, err end
+
 			local existing = ret:GetWithNumber(i)
 
 			if existing then
