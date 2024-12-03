@@ -22,7 +22,6 @@ config.test = function(path)
 end
 config["build-for-ai"] = function(mode)
 	-- this is just for something like a single file you can paste into gemini 1.5 or chatgpt. gemini's ai studio interface kind of doesn't work with many files, so this is easier.
-	local f = io.open("nattlua_for_ai.lua", "w")
 	local paths = {}
 
 	for path in (
@@ -40,6 +39,16 @@ config["build-for-ai"] = function(mode)
 
 		for _, path in ipairs(paths) do
 			if path:sub(1, #"nattlua/") == "nattlua/" then
+				table.insert(new_paths, path)
+			end
+		end
+
+		paths = new_paths
+	elseif mode == "tests" then
+		local new_paths = {}
+
+		for _, path in ipairs(paths) do
+			if path:sub(1, #"test/tests/nattlua/analyzer/") == "test/tests/nattlua/analyzer/" then
 				table.insert(new_paths, path)
 			end
 		end
@@ -65,6 +74,8 @@ config["build-for-ai"] = function(mode)
 		["nattlua/parser.lua"] = "parses lua code into an AST",
 	}
 	local tokens = {}
+
+	local f = io.open("nattlua_for_ai.lua", "w")
 
 	for _, path in ipairs(paths) do
 		local str
