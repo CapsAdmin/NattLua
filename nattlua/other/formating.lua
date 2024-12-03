@@ -167,6 +167,130 @@ local SEPARATOR = " | "
 local ARROW = "->"
 local TAB_WIDTH = (" "):rep(4)
 
+local function calculate_text_positions(
+	str--[[#: string]],
+	start--[[#: number]],
+	stop--[[#: number]],
+	context_line_count--[[#: number]]
+)
+	local before
+	local after
+	local mid = str:sub(start, stop)
+	local line_offset = 0
+	local line_start = 1
+	local line_stop = 1
+	local context_start
+	local context_stop
+
+	do
+		local line_pos = -1
+		before = {}
+
+		for i = start - 1, 1, -1 do
+			local c = str:sub(i, i)
+
+			if c == "\n" or c == 1 then line_pos = line_pos + 1 end
+
+			if line_pos == context_line_count then
+				context_start = i
+
+				break
+			end
+
+			before[-i + start] = c
+		end
+
+		before = table.concat(before):reverse()
+	end
+
+	if context_start then
+		for i = 1, context_start do
+			local c = str:sub(i, i)
+
+			if c == "\n" then line_offset = line_offset + 1 end
+		end
+	end
+
+	do
+		local line_pos = -1
+		after = {}
+
+		for i = stop + 1, #str do
+			local c = str:sub(i, i)
+
+			if c == "\n" or c == #str then line_pos = line_pos + 1 end
+
+			if line_pos == context_line_count then
+				context_stop = i
+
+				break
+			end
+
+			after[i - stop] = c
+		end
+
+		after = table.concat(after)
+	end
+
+	local lines = {}
+	local line = {}
+	local local_str = before .. mid .. after
+	local local_start = context_start and (start - (context_start--[[# as number]])) or start
+	local local_stop = local_start + (stop - start)
+	local char_start = 0
+	local char_stop = 0
+	local source_code_char_start = 0
+	local source_code_char_stop = 0
+	local line_pos = 1
+	local lol = 0
+
+	for i = 1, #local_str do
+		local c = local_str:sub(i, i)
+
+		if c ~= "\n" then
+			if c == "\t" then
+				for i = 1, #TAB_WIDTH do
+					table.insert(line, " ")
+				end
+			else
+				table.insert(line, c)
+			end
+
+			lol = lol + 1
+		end
+
+		if c == "\n" or i == #local_str then
+			table.insert(lines, (table.concat(line)))
+			line_pos = line_pos + 1
+			line = {}
+			lol = 0
+		end
+
+		if i == local_start then
+			line_start = line_pos
+			source_code_char_start = lol
+			char_start = #line
+		end
+
+		if i == local_stop then
+			line_stop = line_pos
+			char_stop = #line
+			source_code_char_stop = lol
+		end
+	end
+
+	return {
+		lines = lines,
+		line_offset = line_offset,
+		line_start = line_start,
+		line_stop = line_stop,
+		char_start = char_start,
+		char_stop = char_stop,
+		source_code_char_start = source_code_char_start,
+		source_code_char_stop = source_code_char_stop,
+	}
+end
+
 function formating.BuildSourceCodePointMessage2(
 	code--[[#: string]],
 	start--[[#: number]],
@@ -191,88 +315,44 @@ function formating.BuildSourceCodePointMessage2(
 
 	if stop < start then start, stop = stop, start end
 
-	local lines = {}
-	local line = {}
-	local line_start--[[#: number | nil]]
-	local line_stop--[[#: number | nil]]
-	local char_start--[[#: number | nil]]
-	local char_stop--[[#: number | nil]]
-	local source_code_char_start--[[#: number | nil]]
-	local source_code_char_stop--[[#: number | nil]]
-
-	for i = 1, #code do
-		local char = code:sub(i, i)
-
-		if i >= start then
-			if not line_start then line_start = #lines + 1 end
-
-			if not char_start then
-				source_code_char_start = #line + 1
-				char_start = #table.concat(line):gsub("\t", TAB_WIDTH) + 1
-			end
-		end
-
-		if i >= stop then
-			if not line_stop then line_stop = #lines + 1 end
-
-			if not char_stop then
-				source_code_char_stop = #line + 1
-				char_stop = #table.concat(line):gsub("\t", TAB_WIDTH) + 1
-			end
-		end
-
-		if char == "\n" or i == #code then
-			if i == #code then table.insert(line, char) end
-
-			table.insert(lines, table.concat(line))
-			line = {}
-		else
-			table.insert(line, char)
-		end
-	end
-
-	assert(source_code_char_start)
-	assert(source_code_char_stop)
-	local start_line_context = math.max(line_start - config.surrounding_line_count, 1)
-	local stop_line_context = math.min(line_stop + config.surrounding_line_count, #lines)
-	local number_length = #tostring(stop_line_context)
+	local d = calculate_text_positions(code, start, stop, config.surrounding_line_count)
+	local number_length = #tostring(d.line_offset + #d.lines)
 	local annotated = {}
 
-	for line_pos = start_line_context, stop_line_context do
-		local line = lines[line_pos]:gsub("\t", TAB_WIDTH)
+	for i, line in ipairs(d.lines) do
 		local header = config.show_line_numbers == false and
 			"" or
-			stringx.pad_left(tostring(line_pos), number_length, " ") .. SEPARATOR
+			stringx.pad_left(tostring(i + d.line_offset), number_length, " ") .. SEPARATOR
 
-		if line_pos == line_start and line_pos == line_stop then
+		if i == d.line_start and i == d.line_stop then
 			-- only spans one line
-			local before = line:sub(1, char_start - 1)
-			local between = line:sub(char_start, char_stop)
-			local after = line:sub(char_stop + 1, #line)
+			local before = line:sub(1, d.char_start - 1)
+			local between = line:sub(d.char_start, d.char_stop)
+			local after = line:sub(d.char_stop + 1, #line)
 
-			if char_start > #line then between = between .. "\\n" end
+			if d.char_start > #line then between = between .. "\\n" end
 
 			before = header .. before
 			table.insert(annotated, before .. between .. after)
 			table.insert(annotated, (" "):rep(#before) .. ("^"):rep(#between))
-		elseif line_pos == line_start then
+		elseif i == d.line_start then
 			-- multiple line span, first line
-			local before = line:sub(1, char_start - 1)
-			local after = line:sub(char_start, #line)
+			local before = line:sub(1, d.char_start - 1)
+			local after = line:sub(d.char_start, #line)
 
 			-- newline
-			if char_start > #line then after = "\\n" end
+			if d.char_start > #line then after = "\\n" end
 
 			before = header .. before
 			table.insert(annotated, before .. after)
 			table.insert(annotated, (" "):rep(#before) .. ("^"):rep(#after))
-		elseif line_pos == line_stop then
+		elseif i == d.line_stop then
 			-- multiple line span, last line
-			local before = line:sub(1, char_stop)
-			local after = line:sub(char_stop + 1, #line)
+			local before = line:sub(1, d.char_stop)
+			local after = line:sub(d.char_stop + 1, #line)
 			table.insert(annotated, header .. before .. after)
 			table.insert(annotated, (" "):rep(#header) .. ("^"):rep(#before))
-		elseif line_pos > line_start and line_pos < line_stop then
+		elseif i > d.line_start and i < d.line_stop then
 			-- multiple line span, in between start and stop lines
 			local after = line
 			table.insert(annotated, header .. after)
@@ -317,7 +397,7 @@ function formating.BuildSourceCodePointMessage2(
 
 		if path:sub(1, 1) == "@" then path = path:sub(2) end
 
-		local msg = path .. ":" .. line_start .. ":" .. source_code_char_start
+		local msg = path .. ":" .. (d.line_start + d.line_offset) .. ":" .. d.source_code_char_start
 		table.insert(annotated, header .. msg)
 	end
 

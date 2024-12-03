@@ -216,6 +216,31 @@ do
 end
 
 do
+	local str = ""
+
+	for i = 1, 100 do
+		if i == 50 then
+			str = str .. "\t\t\t\t\t\t\t\t\tFROM---TO\n"
+		else
+			str = str .. "\t\tfoo\n"
+		end
+	end
+
+	local start, stop = str:find("FROM.-TO")
+	equal(
+		formating.BuildSourceCodePointMessage(str, "script.txt", "hello world", start, stop, 1),
+		[[     ______________________________________________
+ 49 |         foo
+ 50 |                                     FROM---TO
+                                          ^^^^^^^^^
+ 51 |         foo
+     ----------------------------------------------
+ -> | script.txt:50:10
+ -> | hello world]]
+	)
+end
+
+do
 	local str = [[local function foo(a, b)
 	return a + b
 end
