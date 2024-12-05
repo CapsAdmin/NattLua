@@ -1,8 +1,12 @@
 --ANALYZE
-local jit = require("jit")
-local jutil = require("jit.util")
-local jbc = require("jit.bc")
-local vmdef = require("jit.vmdef")
+local attach = _G.jit and _G.jit.attach
+local ok, jutil = pcall(require, "jit.util")
+local traceinfo = ok and jutil.traceinfo
+local funcinfo = ok and jutil.funcinfo
+local ok, vmdef = pcall(require, "jit.vmdef")
+local ffnames = ok and vmdef.ffnames
+local traceerr = ok and vmdef.traceerr
+local bcnames = ok and vmdef.bcnames
 --[[#local type Trace = {
 	pc_lines = List<|{func = Function, depth = number, pc = number}|>,
 	id = number,
@@ -13,7 +17,7 @@ local vmdef = require("jit.vmdef")
 	stopped = nil | true,
 	aborted = nil | {code = number, reason = number},
 	children = nil | Map<|number, self|>,
-	trace_info = ReturnType<|jutil.traceinfo|>[1],
+	trace_info = ReturnType<|traceinfo|>[1],
 }]]
 local traces--[[#: Map<|number, Trace|>]] = {}
 local aborted = {}
@@ -53,7 +57,7 @@ end
 local function stop(id--[[#: number]], func--[[#: Function]])
 	assert(traces[id])
 	assert(traces[id].aborted == nil)
-	traces[id].trace_info = jutil.traceinfo(id)
+	traces[id].trace_info = traceinfo(id)
 end
 
 local function abort(
@@ -65,7 +69,7 @@ local function abort(
 )
 	assert(traces[id])
 	assert(traces[id].stopped == nil)
-	traces[id].trace_info = jutil.traceinfo(id)
+	traces[id].trace_info = traceinfo(id)
 	traces[id].aborted = {
 		code = code,
 		reason = reason,
@@ -103,14 +107,13 @@ local function record(tr--[[#: number]], func--[[#: Function]], pc--[[#: number]
 end
 
 local trace_track = {}
-local on_trace_event--[[#: jit_attach_trace | nil]] = nil
-local on_record_event = nil
 
 function trace_track.Start()
-	assert(on_trace_event == nil)
-	traces = {}
-	aborted = {}
-	on_trace_event = function(what, tr, func, pc, otr, oex)
+	if not attach or not funcinfo or not traceinfo then return nil end
+
+	local traces = {}
+	local aborted = {}
+	local on_trace_event = function(what, tr, func, pc, otr, oex)
 		if what == "start" then
 			start(tr, func, pc, otr, oex)
 		elseif what == "stop" then
@@ -123,61 +126,56 @@ function trace_track.Start()
 			error("unknown trace event " .. what)
 		end
 	end--[[# as jit_attach_trace]]
-	on_record_event = function(tr, func, pc, depth)
+	attach(on_trace_event, "trace")
+	local on_record_event = function(tr, func, pc, depth)
 		record(tr, func, pc, depth)
 	end--[[# as jit_attach_record]]
-	jit.attach(on_trace_event, "trace")
-	jit.attach(on_record_event, "record")
-end
+	attach(on_record_event, "record")
+	return function()
+		attach(on_trace_event)
+		attach(on_record_event)
 
-function trace_track.Stop()
-	assert(on_trace_event--[[# as any]])
-	jit.attach(on_trace_event--[[# as any]]) -- todo, assert doesn't make on_trace_event non-nil
-	jit.attach(on_record_event--[[# as any]])
-	on_trace_event = nil
+		for what, traces in pairs({traces = traces, aborted = aborted}) do
+			for k, v in pairs(traces) do
+				if not v.pc_lines then table.print(v) end
 
-	for what, traces in pairs({traces = traces, aborted = aborted}) do
-		for k, v in pairs(traces) do
-			if not v.pc_lines then table.print(v) end
+				assert(v.pc_lines)
 
-			assert(v.pc_lines)
-
-			do
-				if what == "aborted" then
-					assert(v.stopped == nil)
-					assert(v.DEAD)
-				elseif what == "traces" then
-					assert(v.aborted == nil)
-				end
-			end
-
-			if v.children then
-				local new = {}
-
-				for k, v in pairs(v.children) do
-					table.insert(new, v)
+				do
+					if what == "aborted" then
+						assert(v.stopped == nil)
+						assert(v.DEAD)
+					elseif what == "traces" then
+						assert(v.aborted == nil)
+					end
 				end
 
-				table.sort(new, function(a, b)
-					return a.exit_id < b.exit_id
-				end)
+				if v.children then
+					local new = {}
 
-				v.children = new
+					for k, v in pairs(v.children) do
+						table.insert(new, v)
+					end
+
+					table.sort(new, function(a, b)
+						return a.exit_id < b.exit_id
+					end)
+
+					v.children = new
+				end
 			end
 		end
-	end
 
-	-- remove aborted traces that were eventually succesfully traced
-	for id in pairs(aborted) do
-		if traces[id] then aborted[id] = nil end
-	end
+		-- remove aborted traces that were eventually succesfully traced
+		for id in pairs(aborted) do
+			if traces[id] then aborted[id] = nil end
+		end
 
-	return traces, aborted
+		return traces, aborted
+	end
 end
 
-local function find_function() end
-
-local function format_func_info(fi--[[#: ReturnType<|jutil.funcinfo|>[1] ]], func--[[#: Function]])
+local function format_func_info(fi--[[#: ReturnType<|funcinfo|>[1] ]], func--[[#: Function]])
 	if fi.loc then
 		local source = fi.source
 
@@ -187,7 +185,7 @@ local function format_func_info(fi--[[#: ReturnType<|jutil.funcinfo|>[1] ]], fun
 
 		return source .. ":" .. fi.currentline
 	elseif fi.ffid then
-		return vmdef.ffnames[fi.ffid]
+		return ffnames[fi.ffid]
 	elseif fi.addr then
 		return string.format("C:%x, %s", fi.addr, tostring(func))
 	else
@@ -196,7 +194,7 @@ local function format_func_info(fi--[[#: ReturnType<|jutil.funcinfo|>[1] ]], fun
 end
 
 local function format_error(err--[[#: number]], arg--[[#: number | nil]])
-	local fmt = vmdef.traceerr[err]
+	local fmt = traceerr[err]
 
 	if not fmt then return "unknown error: " .. err end
 
@@ -204,7 +202,7 @@ local function format_error(err--[[#: number]], arg--[[#: number | nil]])
 
 	if fmt:sub(1, #"NYI: bytecode") == "NYI: bytecode" then
 		local oidx = 6 * arg
-		arg = vmdef.bcnames:sub(oidx + 1, oidx + 6)
+		arg = bcnames:sub(oidx + 1, oidx + 6)
 		fmt = "NYI bytecode %s"
 	end
 
@@ -222,7 +220,7 @@ local function tostring_trace(v--[[#: Trace]], tab--[[#: nil | string]], stop_li
 
 			for i = #v.pc_lines, 1, -1 do
 				local v = assert(v.pc_lines[i])
-				local line = format_func_info(jutil.funcinfo(v.func, v.pc), v.func)
+				local line = format_func_info(funcinfo(v.func, v.pc), v.func)
 
 				if not done[line] then
 					table.insert(start_location, 1, line)
@@ -233,7 +231,7 @@ local function tostring_trace(v--[[#: Trace]], tab--[[#: nil | string]], stop_li
 			end
 		else
 			for i, v in ipairs(v.pc_lines) do
-				local line = format_func_info(jutil.funcinfo(v.func, v.pc), v.func)
+				local line = format_func_info(funcinfo(v.func, v.pc), v.func)
 
 				if not done[line] then
 					table.insert(start_location, (i == 1 and "" or tab) .. (" "):rep(v.depth) .. line)

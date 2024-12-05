@@ -8,10 +8,10 @@ local jit_options = require("nattlua.other.jit_options")
 
 local function test(opt, func)
 	jit_options.Set(opt)
-	trace_track.Start()
+	local stop = trace_track.Start()
 	jit.flush(true, true)
 	func()
-	local traces, aborted = trace_track.Stop()
+	local traces, aborted = stop()
 	jit.flush(true, true)
 	jit_options.Set()
 	return traces, aborted

@@ -1,49 +1,25 @@
 --ANALYZE
-local jit = require("jit")
-local jit_profiler = require("jit.profile")
-local jit_vmdef = require("jit.vmdef")
-local jit_util = require("jit.util")
-local dumpstack = jit_profiler.dumpstack
 local profiler = {}
 --[[#local type VMState = "I" | "G" | "N" | "J" | "C"]]
-local raw_samples--[[#: List<|{
-	stack = string,
-	sample_count = number,
-	vm_state = VMState,
-}|>]]
+--[[#local type Config = {
+	mode = "function" | "line" | nil,
+	depth = number | nil,
+	sampling_rate = 1 .. inf | nil,
+	sample_threshold = number | nil,
+}]]
 
 local function starts_with(str--[[#: string]], what--[[#: string]])
 	return str:sub(1, #what) == what
 end
 
-function profiler.Start(
-	config--[[#: {
-		mode = "function" | "line" | nil,
-		depth = number | nil,
-		sampling_rate = 1 .. inf | nil,
-	} | nil]]
+local function process(
+	config--[[#: Config]],
+	raw_samples--[[#: List<|{
+		stack = string,
+		sample_count = number,
+		vm_state = VMState,
+	}|>]]
 )
-	config = config or {}
-	config.mode = config.mode or "line"
-	config.depth = config.depth or 1
-	config.sampling_rate = config.sampling_rate or 10
-	raw_samples = {}
-	local i = 1
-
-	jit_profiler.start((config.mode == "line" and "l" or "f") .. "i" .. config.sampling_rate, function(thread, sample_count--[[#: number]], vmstate--[[#: VMState]])
-		raw_samples[i] = {
-			stack = dumpstack(thread, "pl\n", config.depth),
-			sample_count = sample_count,
-			vm_state = vmstate,
-		}
-		i = i + 1
-	end)
-end
-
-function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
-	config = config or {}
-	config.sample_threshold = config.sample_threshold or 50
-	jit_profiler.stop()
 	local processed_samples--[[#: Map<|
 		string,
 		{
@@ -250,6 +226,40 @@ function profiler.Stop(config--[[#: {sample_threshold = number | nil} | nil]])
 	end
 
 	return table.concat(out)
+end
+
+function profiler.Start(config--[[#: Config | nil]])
+	config = config or {}
+	config.mode = config.mode or "line"
+	config.depth = config.depth or 1
+	config.sampling_rate = config.sampling_rate or 10
+	config.sample_threshold = config.sample_threshold or 50
+
+	local raw_samples--[[#: List<|{
+		stack = string,
+		sample_count = number,
+		vm_state = VMState,
+	}|>]] = {}
+	local ok, jit_profiler = pcall(require, "jit.profile")
+
+	if not ok then return nil, jit_profiler end
+
+	local dumpstack = jit_profiler.dumpstack
+	local i = 1
+
+	jit_profiler.start((config.mode == "line" and "l" or "f") .. "i" .. config.sampling_rate, function(thread, sample_count--[[#: number]], vmstate--[[#: VMState]])
+		raw_samples[i] = {
+			stack = dumpstack(thread, "pl\n", config.depth),
+			sample_count = sample_count,
+			vm_state = vmstate,
+		}
+		i = i + 1
+	end)
+
+	return function()
+		jit_profiler.stop()
+		return process(config, raw_samples)
+	end
 end
 
 return profiler
