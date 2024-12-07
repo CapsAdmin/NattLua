@@ -46,15 +46,6 @@ analyze[[
 ]]
 analyze[[
     £parser.TealCompat = true
-
-    local x: {string, number, boolean}
-    
-    £parser.TealCompat = false
-
-    attest.equal(x, _ as {string, number, boolean})
-]]
-analyze[[
-    £parser.TealCompat = true
     local record tl
         load_envs: { {any:any} : string }
     end

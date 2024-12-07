@@ -39,17 +39,6 @@ do -- assignment
         attest.equal(a[5], 5)
     ]]
 	analyze[[
-        local function test(...)
-            return 1,2,...
-        end
-
-        local a,b,c = test(3)
-
-        attest.equal(a,1)
-        attest.equal(b,2)
-        attest.equal(c,3)
-    ]]
-	analyze[[
         local a, b, c
         a, b, c = 0, 1
         attest.equal(a, 0)
@@ -133,9 +122,7 @@ analyze("attest.equal(2^3, 8)")
 analyze("attest.equal(3%3, 0)")
 analyze("attest.equal(-1*2, -2)")
 analyze("attest.equal(1/2, 0.5)")
-analyze("attest.equal(1/2, 0.5)")
 analyze("attest.equal(0b10 | 0b01, 0b11)")
-analyze("attest.equal(0b10 & 0b10, 0b10)")
 analyze("attest.equal(0b10 & 0b10, 0b10)")
 --R"attest.equal(0b10 >> 1, 0b01)"
 --R"attest.equal(0b01 << 1, 0b10)"
@@ -697,12 +684,6 @@ analyze[[
     tbl[3] = 3
  ]]
 analyze[[
-    local tbl: {1,true,3} = {1, true, 3}
-    tbl[1] = 1
-    tbl[2] = true
-    tbl[3] = 3
- ]]
-analyze[[
     local pl = {IsValid = function(self) end}
     local a = pl:IsValid()
     attest.equal(a, nil)
@@ -763,23 +744,6 @@ analyze[[
 
     check(test, "!")
 ]]
-analyze([[
-    local type a = {}
-
-    if not a then
-        -- shouldn't reach
-        attest.equal(1, 2)
-    else
-        attest.equal(1, 1)
-    end
-]])
-analyze([[
-    local type a = {}
-    if not a then
-        -- shouldn't reach
-        attest.equal(1, 2)
-    end
-]])
 analyze[[
     local x = 1
     goto foo

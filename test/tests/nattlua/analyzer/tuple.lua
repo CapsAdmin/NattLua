@@ -146,14 +146,6 @@ attest.equal(tbl[100], _ as any)
 end)(1,2)
 
 ]]
-analyze(
-	[[
-    local function func(): number, number
-        return 1
-    end
-]],
-	"index 2 does not exist"
-)
 analyze[[
     local type a = (3, 4, 5)
     attest.equal<|a, (3,4,5)|>

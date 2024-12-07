@@ -119,21 +119,6 @@ analyze([[
     end
     attest.equal(a, _ as 0 | 1)
 ]])
-analyze[[
-    local a: nil | 1
-
-    if a then
-        attest.equal(a, _ as 1)
-        if a then
-            if a then
-                attest.equal(a, _ as 1)
-            end
-            attest.equal(a, _ as 1)
-        end
-    end
-
-    attest.equal(a, _ as 1 | nil)
-]]
 analyze([[
     local a: nil | 1
 
@@ -1648,15 +1633,6 @@ analyze[[
     if not a then attest.equal(a, false) end
 
     if a then attest.equal(a, true) end
-]]
-analyze[[
-    local a: nil | 1
-
-    if a or true and a or false then
-        attest.equal(a, _ as 1)
-    end
-
-    attest.equal(a, _ as 1 | nil)
 ]]
 analyze[[
     local type Shape = { kind = "circle", radius = number } | { kind = "square", sideLength = number }

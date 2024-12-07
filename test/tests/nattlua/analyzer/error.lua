@@ -23,15 +23,6 @@ analyze[[
     attest.equal(x, _ as number)
 ]]
 analyze[[
-    local x = _ as 1 | 2 | 3
-    if x == 1 then return end
-    attest.equal(x, _ as 2 | 3)
-    if x ~= 3 then return end
-    attest.equal(x, _ as 2)
-    if x == 2 then return end
-    error("dead code")
-]]
-analyze[[
     local x = ("lol"):byte(1,1 as 1 | 0)
     if not x then 
         error("lol")

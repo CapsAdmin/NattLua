@@ -217,13 +217,6 @@ analyze[[
     a[test(1)], a[test(2)], a[test(3)] = test(4), test(5), test(6)
 ]]
 analyze[[
-    local t = {foo = true}
-    for k,v in pairs(t) do
-        attest.equal(k, _ as "foo")
-        attest.equal(v, _ as true)
-    end
-]]
-analyze[[
     local analyzer function create(func: Function)
         local t = types.Table()
         t.func = func

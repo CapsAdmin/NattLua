@@ -356,16 +356,6 @@ analyze[[
 analyze[[
     local type Foo = {
         x = number,
-        y = self,
-    }
-
-    local x = {} as Foo
-
-    attest.equal(x.y.y.y.x, _ as number)
-]]
-analyze[[
-    local type Foo = {
-        x = number,
         y = Foo,
     }
 

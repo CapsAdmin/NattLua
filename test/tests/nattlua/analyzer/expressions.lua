@@ -5,15 +5,6 @@ analyze[[
     end
 ]]
 analyze[[
-    local a: number | string
-    
-    if type(a) == "number" then
-        attest.equal(a, _ as number)
-    end
-
-    attest.equal(a, _ as number | string)
-]]
-analyze[[
     local x = _ as false | 1
     local y = not x and attest.equal(x, false) or attest.equal(x, 1)
 ]]

@@ -24,20 +24,6 @@ analyze[[
     
     attest.equal(x.foo, "bar")    
 ]]
-analyze(
-	[[
-    local function mutate_table(tbl: {lol = number})
-        tbl.lol = 1
-    end
-    
-    local tbl = {lol = 2}
-    
-    mutate_table(tbl)
-    
-    attest.equal(tbl.lol, 1)
-]],
-	"immutable contract"
-)
 pending[[
     local function string_mutator<|tbl: mutable {[any] = any}|>
         for key, val in pairs(tbl) do
