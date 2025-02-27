@@ -6,8 +6,6 @@ local stop_profiler
 local stop_tracing
 
 function profiler.Start()
-	if not has_jit then return end
-
 	stop_profiler = jit_profiler.Start(
 		{
 			mode = "line",
@@ -20,8 +18,6 @@ function profiler.Start()
 end
 
 function profiler.Stop()
-	if not has_jit then return end
-
 	if stop_tracer then
 		local traces, aborted = stop_tracer()
 		print("\nluajit traces that were aborted and stitched:")
