@@ -75,35 +75,37 @@ function META:GetSelf2()
 end
 
 function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]])
-	if a.Type ~= b.Type then return false end
+	if a.Type ~= b.Type then return false, "type mismatch" end
 
-	if a:IsUnique() then return a:GetUniqueID() == b:GetUniqueID() end
+	if a:IsUnique() then return a:GetUniqueID() == b:GetUniqueID(), "uid eq/neq" end
 
 	if a:GetContract() and a:GetContract().Name then
 		if not b:GetContract() or not b:GetContract().Name then
 			a.suppress = false
-			return false
+			return false,
+			"a has contract .Name but b does not have contract or contract .Name"
 		end
 
 		-- never called
 		a.suppress = false
-		return a:GetContract().Name:GetData() == b:GetContract().Name:GetData()
+		return a:GetContract().Name:GetData() == b:GetContract().Name:GetData(),
+		".Name mismatch"
 	end
 
 	if a.Name then
 		a.suppress = false
 
-		if not b.Name then return false end
+		if not b.Name then return false, "a has .Name but b does not have .Name" end
 
 		return a.Name:GetData() == b.Name:GetData()
 	end
 
-	if a.suppress then return true end
+	if a.suppress then return true, "suppress" end
 
 	local adata = a:GetData()
 	local bdata = b:GetData()
 
-	if #adata ~= #bdata then return false end
+	if #adata ~= #bdata then return false, "#.Data mismatch" end
 
 	for i = 1, #adata do
 		local akv = adata[i]
@@ -120,11 +122,33 @@ function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]])
 
 		if not ok then
 			a.suppress = false
-			return false
+			return false, "value mismatch "
 		end
 	end
 
-	return true
+	return true, "all is ok"
+end
+
+local old = META.Equal
+local hash_type = require("nattlua.hash_type")--[[# as any]]
+
+function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]])
+	local b1, reason = old(a, b)
+	local b2 = hash_type(a) == hash_type(b)
+
+	if b1 ~= b2 then
+		print("================")
+		print("tables should " .. (b1 and "be equal" or "NOT be equal") .. " :")
+		print(reason)
+		print("\t", hash_type(a), " != ", hash_type(b))
+		print("A:")
+		print("\t", a, a:GetContract(), a:GetName(), a:GetUniqueID(), #a.Data, a.suppress)
+		print("B:")
+		print("\t", b, b:GetContract(), b:GetName(), b:GetUniqueID(), #b.Data, b.suppress)
+		print("================")
+	end
+
+	return b1
 end
 
 local level = 0
