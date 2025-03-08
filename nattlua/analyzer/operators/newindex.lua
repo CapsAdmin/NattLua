@@ -16,6 +16,14 @@ return {
 			return true
 		end
 
+		local function newindex_tuple(analyzer, obj, key, val)
+			if analyzer:IsRuntime() then
+				analyzer:NewIndexOperator(obj:GetFirstValue(), key, val)
+			end
+
+			return obj:Set(key, val)
+		end
+
 		local function newindex_table(analyzer, obj, key, val, raw)
 			if not raw and obj:GetMetaTable() then
 				local func = obj:GetMetaTable():Get(ConstString("__newindex"))
@@ -142,6 +150,8 @@ return {
 
 			if obj.Type == "union" then
 				return self:Assert(newindex_union(self, obj, key, val))
+			elseif obj.Type == "tuple" then
+				return self:Assert(newindex_tuple(self, obj, key, val))
 			elseif obj.Type == "table" then
 				return self:Assert(newindex_table(self, obj, key, val, raw))
 			elseif obj.Type == "any" then

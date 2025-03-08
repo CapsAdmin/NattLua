@@ -671,3 +671,12 @@ analyze(
 ]],
 	"string must be a string literal"
 )
+analyze([[
+local type a = (1, 2, 3, 4)
+type a[4] = a
+attest.equal<|a, (1, 2, 3, CurrentType<|"tuple"|>)|>
+
+local type b = (1, 2, 3, 4)
+attest.equal<|b[4], 4|>
+
+]])

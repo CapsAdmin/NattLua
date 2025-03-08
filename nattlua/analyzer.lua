@@ -158,12 +158,18 @@ do
 				return Binary(self, setmetatable({value = {value = "+"}}, Node), r, r)
 			end
 		elseif node.kind == "postfix_expression_index" then
-			return self:Assert(
-				self:IndexOperator(
-					self:AnalyzeExpression(node.left):GetFirstValue(),
-					self:AnalyzeExpression(node.expression):GetFirstValue()
+			if self:IsTypesystem() then
+				return self:Assert(
+					self:IndexOperator(self:AnalyzeExpression(node.left), self:AnalyzeExpression(node.expression))
 				)
-			)
+			else
+				return self:Assert(
+					self:IndexOperator(
+						self:AnalyzeExpression(node.left):GetFirstValue(),
+						self:AnalyzeExpression(node.expression):GetFirstValue()
+					)
+				)
+			end
 		elseif node.kind == "postfix_call" then
 			return AnalyzePostfixCall(self, node)
 		elseif node.kind == "empty_union" then

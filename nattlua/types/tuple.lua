@@ -389,10 +389,14 @@ function META:GetWithoutExpansion(i--[[#: number]])
 	return val
 end
 
+-- TODO, this should really be SetWithNumber, and Set should take a number object
 function META:Set(i--[[#: number]], val--[[#: TBaseType]])
 	if type(i) == "table" then
+		if i.Type ~= "number" then
+			return false, "expected number"
+		end
+
 		i = i:GetData()
-		return false, "expected number"
 	end
 
 	if val.Type == "tuple" and val:HasOneValue() then
