@@ -259,3 +259,4 @@ function FFIType<|str: string|>
 end
 
 type ffi.string = function=(FFIPointer<|number|> | string, number | nil)>(string)
+type ffi.C = ffi.load("")
