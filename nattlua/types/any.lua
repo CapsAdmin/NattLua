@@ -42,7 +42,7 @@ function META:IsNil()
 end
 
 function META.Equal(a--[[#: TAny]], b--[[#: TBaseType]])
-	return a.Type == b.Type
+	return a.Type == b.Type, "any types match"
 end
 
 function META.LogicalComparison(l--[[#: TAny]], r--[[#: TBaseType]], op--[[#: string]])

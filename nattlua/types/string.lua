@@ -17,7 +17,9 @@ META:GetSet("Data", false--[[# as string | false]])
 META:GetSet("PatternContract", false--[[# as false | string]])
 
 function META.Equal(a--[[#: TString]], b--[[#: TString]])
-	return a.Type == b.Type and a.Data == b.Data
+	if a.Type ~= b.Type then return false, "types differ" end
+
+	return a.Data == b.Data, "string values are equal"
 end
 
 function META:GetHash()

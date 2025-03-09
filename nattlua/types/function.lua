@@ -42,19 +42,29 @@ function META:IsLiteral()
 	return true
 end
 
-function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]])
-	return a.Type == b.Type and
-		a:GetInputSignature():Equal(b:GetInputSignature()) and
-		a:GetOutputSignature():Equal(b:GetOutputSignature()) and
-		(
-			not (
-				b:GetFunctionBodyNode() and
-				a:GetFunctionBodyNode()
-			) or
-			(
-				b:GetFunctionBodyNode() == a:GetFunctionBodyNode()
-			)
-		)
+function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]], visited--[[#: any]])
+	if a.Type ~= b.Type then return false, "types differ" end
+
+	local ok, reason = a:GetInputSignature():Equal(b:GetInputSignature(), visited)
+
+	if not ok then return false, "input signature mismatch: " .. reason end
+
+	local ok, reason = a:GetOutputSignature():Equal(b:GetOutputSignature(), visited)
+
+	if not ok then return false, "output signature mismatch: " .. reason end
+
+	-- TODO: this seems wrong
+	if
+		not (
+			a:GetFunctionBodyNode() and
+			b:GetFunctionBodyNode()
+		) or
+		a:GetFunctionBodyNode() == b:GetFunctionBodyNode()
+	then
+		return true, "function bodies match or are nil"
+	end
+
+	return false, "function bodies mismatch"
 end
 
 local function copy_val(val, map, copy_tables)

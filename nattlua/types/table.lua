@@ -74,57 +74,62 @@ function META:GetSelf2()
 	return self.Self2
 end
 
-function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]])
-	if a.Type ~= b.Type then return false end
+function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: Map<|TBaseType, boolean|>]])
+	if a.Type ~= b.Type then return false, "types differ" end
 
-	if a:IsUnique() then return a:GetUniqueID() == b:GetUniqueID() end
+	if a:IsUnique() then
+		return a:GetUniqueID() == b:GetUniqueID(), "unique ids match"
+	end
 
 	if a:GetContract() and a:GetContract().Name then
 		if not b:GetContract() or not b:GetContract().Name then
-			a.suppress = false
-			return false
+			return false, "contract name mismatch"
 		end
 
 		-- never called
-		a.suppress = false
-		return a:GetContract().Name:GetData() == b:GetContract().Name:GetData()
+		return a:GetContract().Name:GetData() == b:GetContract().Name:GetData(),
+		"contract names match"
 	end
 
 	if a.Name then
-		a.suppress = false
+		if not b.Name then return false, "name property mismatch" end
 
-		if not b.Name then return false end
-
-		return a.Name:GetData() == b.Name:GetData()
+		return a.Name:GetData() == b.Name:GetData(), "names match"
 	end
 
-	if a.suppress then return true end
+	visited = visited or {}
 
+	if visited[a] then return true, "circular reference detected" end
+
+	visited[a] = true
 	local adata = a:GetData()
 	local bdata = b:GetData()
 
-	if #adata ~= #bdata then return false end
+	if #adata ~= #bdata then return false, "table size mismatch" end
+
+	local matched = {}
 
 	for i = 1, #adata do
 		local akv = adata[i]
 		local ok = false
 
 		for i = 1, #bdata do
-			local bkv = bdata[i]
-			a.suppress = true
-			ok = akv.key:Equal(bkv.key) and akv.val:Equal(bkv.val)
-			a.suppress = false
+			if not matched[i] then -- Skip already matched entries
+				local bkv = bdata[i]
+				ok = akv.key:Equal(bkv.key, visited) and akv.val:Equal(bkv.val, visited)
 
-			if ok then break end
+				if ok then
+					matched[i] = true
+
+					break
+				end
+			end
 		end
 
-		if not ok then
-			a.suppress = false
-			return false
-		end
+		if not ok then return false, "table key-value mismatch" end
 	end
 
-	return true
+	return true, "all table entries match"
 end
 
 local level = 0

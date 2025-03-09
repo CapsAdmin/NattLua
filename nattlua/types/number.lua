@@ -79,21 +79,23 @@ function META:GetHash()
 end
 
 function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
-	if a.Type ~= b.Type then return false end
+	if a.Type ~= b.Type then return false, "types differ" end
 
-	if not a.Data and not b.Data then return true end
-
-	if a.Data and b.Data then
-		if a:IsNan() and b:IsNan() then return true end
-
-		return a.Data == b.Data
+	if not a.Data and not b.Data then
+		return true, "no literal data in either value"
 	end
 
-	if a.Max and a.Max == b.Max then return true end
+	if a.Data and b.Data then
+		if a:IsNan() and b:IsNan() then return true, "both values are nan" end
 
-	if a.Max or b.Max then return false end
+		return a.Data == b.Data, "literal values are equal"
+	end
 
-	return false
+	if a.Max and a.Max == b.Max then return true, "max values are equal" end
+
+	if a.Max or b.Max then return false, "max value mismatch" end
+
+	return false, "values are not equal"
 end
 
 function META:IsLiteral()

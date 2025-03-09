@@ -27,43 +27,46 @@ function META:GetHash()
 	return tostring(self)
 end
 
-function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]])
-	if a.suppress then return true end
+function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]], visited--[[#: Map<|TBaseType, boolean|>]])
+	visited = visited or {}
+
+	if visited[a] then return true, "circular reference detected" end
 
 	if b.Type ~= "union" and #a.Data == 1 and a.Data[1] then
-		return a.Data[1]:Equal(b)
+		return a.Data[1]:Equal(b, visited)
 	end
 
-	if a.Type ~= b.Type then return false end
+	if a.Type ~= b.Type then return false, "types differ" end
 
-	local b = b--[[# as TUnion]]
+	local b = b
 	local len = #a.Data
 
-	if len ~= #b.Data then return false end
+	if len ~= #b.Data then return false, "length mismatch" end
 
 	for i = 1, len do
-		local a = a.Data[i]--[[# as TBaseType]]
+		local a = a.Data[i]
 		local ok = false
 
-		if a.Type == "union" or a.Type == "table" then
-			a.suppress = true--[[# as boolean]]
-		end
+		if a.Type == "union" or a.Type == "table" then visited[a] = true end
+
+		local reasons = {}
 
 		for i = 1, len do
-			local b = b.Data[i]--[[# as TBaseType]]
-			ok = a:Equal(b)
+			local b = b.Data[i]
+			local reason
+			ok, reason = a:Equal(b, visited)
 
 			if ok then break end
+
+			table.insert(reasons, reason)
 		end
 
-		if a.Type == "union" or a.Type == "table" then
-			a.suppress = false--[[# as boolean]]
+		if not ok then
+			return false, "union value mismatch: " .. table.concat(reasons, "\n")
 		end
-
-		if not ok then return false end
 	end
 
-	return true
+	return true, "all union values match"
 end
 
 local sort = function(a--[[#: string]], b--[[#: string]])

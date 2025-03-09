@@ -20,23 +20,25 @@ META.Type = "tuple"
 META:GetSet("Data", nil--[[# as List<|TBaseType|>]])
 META:GetSet("Unpackable", false--[[# as boolean]])
 
-function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]])
-	if a.Type ~= b.Type then return false end
+function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]], visited--[[#: Map<|TBaseType, boolean|>]])
+	if a.Type ~= b.Type then return false, "types differ" end
 
-	if a.suppress then return true end
+	visited = visited or {}
 
-	if #a.Data ~= #b.Data then return false end
+	if visited[a] then return true, "circular reference detected" end
+
+	if #a.Data ~= #b.Data then return false, "length mismatch" end
+
+	local ok, reason = true, "all match"
+	visited[a] = true
 
 	for i = 1, #a.Data do
-		local val = a.Data[i]--[[# as TBaseType]]
-		a.suppress = true
-		local ok = val:Equal(b.Data[i])
-		a.suppress = false
+		ok, reason = a.Data[i]:Equal(b.Data[i], visited)
 
-		if not ok then return false end
+		if not ok then break end
 	end
 
-	return true
+	return ok, reason
 end
 
 function META:__tostring()
@@ -392,9 +394,7 @@ end
 -- TODO, this should really be SetWithNumber, and Set should take a number object
 function META:Set(i--[[#: number]], val--[[#: TBaseType]])
 	if type(i) == "table" then
-		if i.Type ~= "number" then
-			return false, "expected number"
-		end
+		if i.Type ~= "number" then return false, "expected number" end
 
 		i = i:GetData()
 	end

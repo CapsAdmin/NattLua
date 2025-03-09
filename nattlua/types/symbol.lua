@@ -33,7 +33,11 @@ function META:GetData()
 end
 
 function META.Equal(a--[[#: TSymbol]], b--[[#: TBaseType]])
-	return a.Type == b.Type and a.Data == b.Data
+	if a.Type ~= b.Type then return false, "types differ" end
+
+	if a.Data == b.Data then return true, "symbol values match" end
+
+	return false, "values are not equal"
 end
 
 function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#: string]])
