@@ -332,13 +332,13 @@ do
 
 	do
 		local a, b = LNumber(0):IntersectComparison(LNumberRange(-math.huge, math.huge), "<")
-		assert(a:Equal(LNumber(0)))
+		assert(not a:Equal(LNumber(0)))
 		assert(b:Equal(LNumberRange(-math.huge, 0)))
 	end
 
 	do
 		local a, b = LNumber(0):IntersectComparison(Number(), ">")
-		assert(a:Equal(LNumber(0)))
+		assert(not a:Equal(LNumber(0)))
 		assert(b:Equal(LNumberRange(0, math.huge)))
 	end
 end

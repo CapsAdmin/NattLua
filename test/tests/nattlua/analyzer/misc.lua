@@ -302,7 +302,7 @@ analyze[[
 analyze[[
     local a = 1337
     for i = 1, a do
-        attest.equal(i, 1)
+        attest.equal(i, _ as 1..1337)
         if i == 15 then
             a = 7777
             break
