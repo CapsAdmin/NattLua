@@ -38,7 +38,7 @@ analyze([[local a: {[number] = any} = {foo = 1}]], [[has no key "foo"]])
 -- {[1 .. inf]: any}
 check(
 	analyze[[local a: {[1 .. inf] = any} = {[1234] = 1}]],
-	"{ [1..inf] = number as any }"
+	"{ [1234 as 1..inf] = number as any }"
 )
 
 check(analyze([[local a: {["a" | "b" | "c"] = 1 | 2 | 3} = {a = 2}]]), [[{ ["a" as "a" | "b" | "c"] = 2 as 1 | 2 | 3 }]])

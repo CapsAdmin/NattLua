@@ -99,7 +99,7 @@ local function index_table(analyzer, self, key, raw)
 	if key:IsLiteral() then
 		local found_key = self:FindKeyValReverse(key)
 
-		if found_key and not found_key.key:IsLiteral() then
+		if found_key and not found_key.key:IsLiteral() and not (found_key.key.Max) then
 			val = Union({Nil(), val})
 		end
 	end

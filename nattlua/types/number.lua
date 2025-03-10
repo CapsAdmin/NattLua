@@ -99,7 +99,7 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 end
 
 function META:IsLiteral()
-	return self.Data ~= false
+	return self.Data ~= false and self.Max == false
 end
 
 META:IsSet("DontWiden", false)
@@ -108,25 +108,28 @@ function META:Widen()
 	return Number()
 end
 
-function META:CopyLiteralness(num--[[#: TBaseType]])
-	if self.ReferenceType == num.ReferenceType and self.Data == num.Data then
+function META:CopyLiteralness(obj--[[#: TBaseType]])
+	if self.ReferenceType == obj.ReferenceType and self.Data == obj.Data then
 		return self
 	end
 
 	local self = self:Copy()
 
-	if num.Type ~= "number" or not num.Max then
-		if num:IsReferenceType() then
-			self:SetReferenceType(true)
-		else
-			if not num:IsLiteral() then self.Data = false end
-		end
+	if obj:IsReferenceType() then
+		self:SetReferenceType(true)
 	else
-		if self:IsSubsetOf(num) then
-			if num:IsReferenceType() then self:SetReferenceType(true) end
+		if  obj.Max then
 
-			self:SetData(num.Data)
-			self:SetMax(num.Max)
+		else
+			if obj.Type == "union" then
+				local x = (obj --[[#as any]]):GetType("number")
+
+				if x then
+					if x.Max then return self end
+				end
+			end
+
+			if not obj:IsLiteral() then self.Data = false end
 		end
 	end
 
