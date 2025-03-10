@@ -161,9 +161,11 @@ function META:IsLiteral()
 	return self.Data ~= false
 end
 
-function META:Widen(obj--[[#: TBaseType | nil]])
-	if not obj then return META.New() end
+function META:Widen()
+	return META.New()
+end
 
+function META:CopyLiteralness(obj--[[#: TBaseType]])
 	if self.ReferenceType == obj.ReferenceType and self.Data == obj.Data then
 		return self
 	end

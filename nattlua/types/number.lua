@@ -104,9 +104,11 @@ end
 
 META:IsSet("DontWiden", false)
 
-function META:Widen(num--[[#: TNumber | nil]])
-	if not num then return Number() end
+function META:Widen()
+	return Number()
+end
 
+function META:CopyLiteralness(num--[[#: TBaseType]])
 	if self.ReferenceType == num.ReferenceType and self.Data == num.Data then
 		return self
 	end

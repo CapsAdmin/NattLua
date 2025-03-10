@@ -76,6 +76,10 @@ do
 	function META:Widen()
 		return self
 	end
+
+	function META:CopyLiteralness()
+		return self
+	end
 end
 
 do -- operators

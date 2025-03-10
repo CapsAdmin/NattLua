@@ -767,8 +767,7 @@ function META:IsNumericallyIndexed()
 	return true
 end
 
-function META:Widen(from)
-	if not from then return self end -- TODO
+function META:CopyLiteralness(from)
 	if self:Equal(from) then return self end
 
 	if from.Type ~= "table" then return self end
@@ -779,8 +778,8 @@ function META:Widen(from)
 		local keyval, reason = self:FindKeyVal(keyval_from.key)
 
 		if keyval then
-			keyval.key = keyval.key:Widen(keyval_from.key)
-			keyval.val = keyval.val:Widen(keyval_from.val)
+			keyval.key = keyval.key:CopyLiteralness(keyval_from.key)
+			keyval.val = keyval.val:CopyLiteralness(keyval_from.val)
 		end
 	end
 
