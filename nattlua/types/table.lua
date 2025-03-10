@@ -429,16 +429,7 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 end
 
 local function is_literal(obj)
-	return (
-			(
-				obj.Type == "number" and
-				obj.Max == false
-			)
-			or
-			obj.Type == "string"
-		)
-		and
-		obj.Data ~= false
+	return (obj.Type == "number" or obj.Type == "string") and obj:IsLiteral()
 end
 
 local function AddKey(self, keyval, key, val)
