@@ -7,10 +7,10 @@ jobs:
 
     steps:
       - name: checkout the project
-        uses: actions/checkout@master
+        uses: actions/checkout@v4
 
       - name: checkout latest luajit 2.1
-        uses: actions/checkout@master
+        uses: actions/checkout@v4
         with:
           repository: LuaJIT/LuaJIT
           ref: v2.1
@@ -29,7 +29,7 @@ jobs:
         run: rm nattlua.lua && mv build_output.lua nattlua.lua
 
       - name: upload nattlua.lua
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: nattlua          
           path: nattlua.lua
