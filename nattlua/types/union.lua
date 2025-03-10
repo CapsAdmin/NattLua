@@ -32,7 +32,7 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]], visited--[[#: Map<|TB
 
 	if visited[a] then return true, "circular reference detected" end
 
-	if b.Type ~= "union" and #a.Data == 1 and a.Data[1] then
+	if b.Type ~= "union" and a:GetCardinality() == 1 then
 		return a.Data[1]:Equal(b, visited)
 	end
 
@@ -47,7 +47,7 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]], visited--[[#: Map<|TB
 		local a = a.Data[i]
 		local ok = false
 
-		if a.Type == "union" or a.Type == "table" then visited[a] = true end
+		if a.Type == "table" then visited[a] = true end
 
 		local reasons = {}
 
