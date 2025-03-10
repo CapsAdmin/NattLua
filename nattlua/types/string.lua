@@ -23,11 +23,21 @@ function META.Equal(a--[[#: TString]], b--[[#: TString]])
 end
 
 function META:GetHash()
+	if self.PatternContract then
+		return "$" .. self.PatternContract
+	elseif self.Data then
+		return "\"" .. self.Data .. "\""
+	end
+
+	return "S"
+end
+
+function META:GetHashForMutationTracking()
 	if self.Data then return self.Data end
 
 	local upvalue = self:GetUpvalue()
 
-	if upvalue then return upvalue:GetHash() end
+	if upvalue then return upvalue:GetHashForMutationTracking() end
 
 	return self
 end
@@ -53,7 +63,6 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 
 	local B = B--[[# as TString]]
 
-	
 	if not A.Data and B.PatternContract then
 		if A.PatternContract == B.PatternContract then return true end
 
@@ -65,7 +74,8 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 	end
 
 	if A.Data and not B.Data and not B.PatternContract then -- "A" subsetof string
-	return true end
+		return true
+	end
 
 	if B.PatternContract then
 		local str = A.Data
@@ -182,15 +192,13 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 	if obj:IsReferenceType() then
 		self:SetReferenceType(true)
 	else
-		if  obj.PatternContract then
+		if obj.PatternContract then
 
 		else
 			if obj.Type == "union" then
-				local str = (obj --[[#as any]]):GetType("string")
+				local str = (obj--[[# as any]]):GetType("string")
 
-				if str then
-					if str.PatternContract then return self end
-				end
+				if str then if str.PatternContract then return self end end
 			end
 
 			if not obj:IsLiteral() then self.Data = false end

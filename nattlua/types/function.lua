@@ -53,18 +53,32 @@ function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]], visited--[[#: any]
 
 	if not ok then return false, "output signature mismatch: " .. reason end
 
-	-- TODO: this seems wrong
-	if
-		not (
-			a:GetFunctionBodyNode() and
-			b:GetFunctionBodyNode()
-		) or
-		a:GetFunctionBodyNode() == b:GetFunctionBodyNode()
-	then
-		return true, "function bodies match or are nil"
+	return true, "ok"
+end
+
+function META:GetHash(visited)
+	visited = visited or {}
+
+	if visited[self] then return visited[self] end
+
+	visited[self] = "*circular*"
+	local result = "("
+
+	-- Add hash for input signature
+	if self:GetInputSignature() then
+		result = result .. self:GetInputSignature():GetHash(visited)
 	end
 
-	return false, "function bodies mismatch"
+	result = result .. ")=>("
+
+	-- Add hash for output signature
+	if self:GetOutputSignature() then
+		result = result .. self:GetOutputSignature():GetHash(visited)
+	end
+
+	result = result .. ")"
+	visited[self] = result
+	return visited[self]
 end
 
 local function copy_val(val, map, copy_tables)

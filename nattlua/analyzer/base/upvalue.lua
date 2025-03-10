@@ -26,7 +26,7 @@ function META:__tostring()
 	return "[" .. tostring(self.Scope) .. ":" .. tostring(self.Position) .. ":" .. tostring(self.key) .. ":" .. tostring(self.value) .. "]"
 end
 
-function META:GetHash()
+function META:GetHashForMutationTracking()
 	return self
 end
 

@@ -1,9 +1,10 @@
 local type attest = {}
 
 analyzer function attest.equal(A: any, B: any, level: nil | 0 .. inf)
-	if not A:Equal(B) then
+	local ok, reason = A:Equal(B)
+	if not ok then
 		analyzer:ThrowError(
-			"expected " .. tostring(B) .. " got " .. tostring(A),
+			"expected " .. tostring(B) .. " got " .. tostring(A) .. ": " .. tostring(reason),
 			level and level:GetData() or 2
 		)
 		return

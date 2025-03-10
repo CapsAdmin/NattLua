@@ -40,6 +40,10 @@ function META.Equal(a--[[#: TSymbol]], b--[[#: TBaseType]])
 	return false, "values are not equal"
 end
 
+function META:GetHash()
+	return "Z" .. "-" .. tostring(self:GetData())
+end
+
 function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#: string]])
 	if op == "==" then return l.Data == r.Data end
 
@@ -54,7 +58,7 @@ function META:__tostring()
 	return tostring(self:GetData())
 end
 
-function META:GetHash()
+function META:GetHashForMutationTracking()
 	return self.Data
 end
 

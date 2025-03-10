@@ -58,7 +58,7 @@ local function LNumberRange(from--[[#: number]], to--[[#: number]])
 	return META.New(from, to)
 end
 
-function META:GetHash()
+function META:GetHashForMutationTracking()
 	if self:IsNan() then return nil end
 
 	if self.Data then
@@ -73,7 +73,7 @@ function META:GetHash()
 
 	local upvalue = self:GetUpvalue()
 
-	if upvalue then return upvalue:GetHash() end
+	if upvalue then return upvalue:GetHashForMutationTracking() end
 
 	return self
 end
@@ -96,6 +96,16 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	return false, "values are not equal"
 end
 
+function META:GetHash()
+	if self.Max then
+		return tostring(tonumber(self.Data--[[# as any]])) .. ".." .. tostring(tonumber(self.Max--[[# as any]]))
+	elseif self.Data then
+		return tostring(tonumber(self.Data--[[# as any]]))
+	end
+
+	return "N"
+end
+
 function META:IsLiteral()
 	return self.Data ~= false and self.Max == false
 end
@@ -116,15 +126,13 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 	if obj:IsReferenceType() then
 		self:SetReferenceType(true)
 	else
-		if  obj.Max then
+		if obj.Max then
 
 		else
 			if obj.Type == "union" then
-				local x = (obj --[[#as any]]):GetType("number")
+				local x = (obj--[[# as any]]):GetType("number")
 
-				if x then
-					if x.Max then return self end
-				end
+				if x then if x.Max then return self end end
 			end
 
 			if not obj:IsLiteral() then self.Data = false end

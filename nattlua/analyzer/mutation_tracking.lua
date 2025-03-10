@@ -270,7 +270,7 @@ return function(META)
 			end
 
 			function META:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, inverted, truthy_falsy)
-				local hash = key:GetHash()
+				local hash = key:GetHashForMutationTracking()
 
 				if hash == nil then return end
 
@@ -317,7 +317,7 @@ return function(META)
 			end
 
 			function META:GetTrackedTableWithKey(tbl, key)
-				local hash = key:GetHash()
+				local hash = key:GetHashForMutationTracking()
 
 				if hash == nil then return end
 

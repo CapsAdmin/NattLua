@@ -23,7 +23,7 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TUnion.suppress = boolean]]
 META.Type = "union"
 
-function META:GetHash()
+function META:GetHashForMutationTracking()
 	return tostring(self)
 end
 
@@ -69,6 +69,25 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]], visited--[[#: Map<|TB
 	return true, "all union values match"
 end
 
+function META:GetHash(visited)
+	if self:GetCardinality() == 1 then return self.Data[1]:GetHash() end
+
+	visited = visited or {}
+
+	if visited[self] then return visited[self] end
+
+	visited[self] = "*circular*"
+	local types = {}
+
+	for i, v in ipairs(self.Data) do
+		types[i] = v:GetHash(visited)
+	end
+
+	table.sort(types)
+	visited[self] = table.concat(types, "|")
+	return visited[self]
+end
+
 local sort = function(a--[[#: string]], b--[[#: string]])
 	return a < b
 end
@@ -112,7 +131,7 @@ local function hash(obj)
 	elseif obj.Type == "string" then
 		return obj.Data or STRING_TYPE
 	elseif obj.Type == "symbol" then
-		return obj:GetHash()
+		return obj:GetHashForMutationTracking()
 	elseif obj.Type == "any" then
 		return ANY_TYPE
 	end
@@ -140,7 +159,11 @@ local function find_index(self, obj)
 	for i = 1, #self.Data do
 		local v = self.Data[i]--[[# as TBaseType]]
 
-		if v:Equal(obj) then return i end
+		if v:Equal(obj) then
+			if v.Type ~= "function" or v:GetFunctionBodyNode() == obj:GetFunctionBodyNode() then
+				return i
+			end
+		end
 	end
 
 	return nil

@@ -132,6 +132,32 @@ function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: Map<
 	return true, "all table entries match"
 end
 
+function META:GetHash(visited)
+	if self:IsUnique() then return "{*" .. self:GetUniqueID() .. "*}" end
+
+	if self:GetContract() and self:GetContract().Name then
+		return "{*" .. self:GetContract().Name:GetData() .. "*}"
+	end
+
+	if self.Name then return "{*" .. self.Name:GetData() .. "*}" end
+
+	visited = visited or {}
+
+	if visited[self] then return visited[self] end
+
+	visited[self] = "*circular*"
+	local data = self:GetData()
+	local entries = {}
+
+	for i = 1, #data do
+		table.insert(entries, data[i].key:GetHash(visited) .. "=" .. data[i].val:GetHash(visited))
+	end
+
+	table.sort(entries)
+	visited[self] = "{" .. table.concat(entries, ",") .. "}"
+	return visited[self]
+end
+
 local level = 0
 
 function META:__tostring()
@@ -761,11 +787,7 @@ end
 function META:CopyLiteralness(from)
 	if from.Type ~= self.Type then return self end
 
-
-	if self:Equal(from) then
-		return self
-	end
-
+	if self:Equal(from) then return self end
 
 	local self = self:Copy()
 
@@ -1018,7 +1040,7 @@ do
 	end
 
 	function META:GetMutatedValue(key, scope)
-		local hash = key:GetHash()
+		local hash = key:GetHashForMutationTracking()
 
 		if hash == nil then
 			hash = key:GetUpvalue() and key:GetUpvalue():GetKey()
@@ -1033,7 +1055,7 @@ do
 	end
 
 	function META:Mutate(key, val, scope, from_tracking)
-		local hash = key:GetHash()
+		local hash = key:GetHashForMutationTracking()
 
 		if hash == nil then
 			hash = key:GetUpvalue() and key:GetUpvalue():GetKey()
@@ -1139,7 +1161,7 @@ do
 		self.UniqueID = self.disabled_unique_id
 	end
 
-	function META:GetHash()
+	function META:GetHashForMutationTracking()
 		if self.UniqueID ~= false then return self.UniqueID end
 
 		return nil

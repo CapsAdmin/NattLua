@@ -41,6 +41,22 @@ function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]], visited--[[#: Map<|TB
 	return ok, reason
 end
 
+function META:GetHash(visited)
+	visited = visited or {}
+
+	if visited[self] then return visited[self] end
+
+	visited[self] = "*circular*"
+	local types = {}
+
+	for i, v in ipairs(self.Data) do
+		types[i] = v:GetHash(visited)
+	end
+
+	visited[self] = table.concat(types, ",")
+	return visited[self]
+end
+
 function META:__tostring()
 	if self.suppress then return "current_tuple" end
 

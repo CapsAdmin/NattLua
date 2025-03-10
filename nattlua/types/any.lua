@@ -21,7 +21,7 @@ function META.IsSubsetOf(A--[[#: TAny]], B--[[#: TBaseType]])
 	return true
 end
 
-function META:GetHash()
+function META:GetHashForMutationTracking()
 	return self
 end
 
@@ -43,6 +43,10 @@ end
 
 function META.Equal(a--[[#: TAny]], b--[[#: TBaseType]])
 	return a.Type == b.Type, "any types match"
+end
+
+function META:GetHash()
+	return "?"
 end
 
 function META.LogicalComparison(l--[[#: TAny]], r--[[#: TBaseType]], op--[[#: string]])

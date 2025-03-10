@@ -60,7 +60,7 @@ do -- token, expression and statement association
 	META:GetSet("Upvalue", false--[[# as false | any]])
 end
 
-function META:GetHash()
+function META:GetHashForMutationTracking()
 	return nil
 end
 
