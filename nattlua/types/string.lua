@@ -158,7 +158,7 @@ function META.New(data--[[#: string | nil]])
 end
 
 function META:IsLiteral()
-	return self.Data ~= false
+	return self.Data ~= false and self.PatternContract == false
 end
 
 function META:Widen()
@@ -175,7 +175,19 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 	if obj:IsReferenceType() then
 		self:SetReferenceType(true)
 	else
-		if not obj:IsLiteral() then self.Data = false end
+		if  obj.PatternContract then
+
+		else
+			if obj.Type == "union" then
+				local str = (obj --[[#as any]]):GetType("string")
+
+				if str then
+					if str.PatternContract then return self end
+				end
+			end
+
+			if not obj:IsLiteral() then self.Data = false end
+		end
 	end
 
 	return self
