@@ -53,11 +53,18 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 
 	local B = B--[[# as TString]]
 
-	if A.Data == B.Data then -- "A" subsetof "B" or string subsetof string
+	
+	if not A.Data and B.PatternContract then
+		if A.PatternContract == B.PatternContract then return true end
+
+		return false, type_errors.string_pattern_type_mismatch(A)
+	end
+
+	if A.Data == B.Data and not B.PatternContract then -- "A" subsetof "B" or string subsetof string
 		return true
 	end
 
-	if A.Data and not B.Data then -- "A" subsetof string
+	if A.Data and not B.Data and not B.PatternContract then -- "A" subsetof string
 	return true end
 
 	if B.PatternContract then

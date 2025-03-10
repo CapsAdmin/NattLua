@@ -90,6 +90,7 @@ local function Prefix(analyzer, node, r)
 			end
 
 			r:SetPatternContract(r:GetData())
+			r:SetData(false)
 			return r
 		end
 	end
