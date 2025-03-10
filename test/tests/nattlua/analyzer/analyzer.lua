@@ -680,3 +680,8 @@ local type b = (1, 2, 3, 4)
 attest.equal<|b[4], 4|>
 
 ]])
+
+
+analyze[[
+local x: {["a" | "b" | "c"] = 1 | 2 | 3} = {a = 2}
+]]

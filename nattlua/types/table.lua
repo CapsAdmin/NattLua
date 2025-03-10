@@ -535,7 +535,7 @@ function META:FindKeyVal(key--[[#: TBaseType]])
 		if keyval.key:Equal(key) then return keyval end
 	end
 
-	if key:IsLiteral() then return false, type_errors.table_index(self, key) end
+	if is_literal(key) then return false, type_errors.table_index(self, key) end
 
 	local reasons = {}
 
@@ -768,9 +768,13 @@ function META:IsNumericallyIndexed()
 end
 
 function META:CopyLiteralness(from)
-	if self:Equal(from) then return self end
+	if from.Type ~= self.Type then return self end
 
-	if from.Type ~= "table" then return self end
+
+	if self:Equal(from) then
+		return self
+	end
+
 
 	local self = self:Copy()
 
