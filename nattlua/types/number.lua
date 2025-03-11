@@ -81,7 +81,9 @@ end
 function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false, "types differ" end
 
-	if a.Max and a.Max == b.Max then return true, "max values are equal" end
+	if a.Max and a.Max == b.Max and a.Data == b.Data then
+		return true, "max values are equal"
+	end
 
 	if a.Max or b.Max then return false, "max value mismatch" end
 

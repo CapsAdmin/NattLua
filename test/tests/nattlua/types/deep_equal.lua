@@ -20,6 +20,12 @@ do
 		local b = X("{1, 2, 3}")
 		assert(a:Equal(b))
 	end)
+	test("number ranges", function()
+		local a = X("_ as 0..inf")
+		local b = X("_ as 1..inf")
+		local ok, reason = a:Equal(b)
+		assert(not ok, reason)
+	end)
 
 	test("different table values", function()
 		local a = X("{1, 2, 3}")
