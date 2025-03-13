@@ -120,23 +120,9 @@ local STRING_TYPE = {}
 local NUMBER_TYPE = {}
 
 local function hash(obj)
-	if not obj then debug.trace() end
-
-	if obj.Type == "number" then
-		if obj.Max ~= false then return false end
-
-		if obj:IsNan() then return false end
-
-		return obj.Data or NUMBER_TYPE
-	elseif obj.Type == "string" then
-		return obj.Data or STRING_TYPE
-	elseif obj.Type == "symbol" then
-		return obj:GetHashForMutationTracking()
-	elseif obj.Type == "any" then
-		return ANY_TYPE
+	if obj.Type ~= "table" and obj.Type ~= "function" and obj.Type ~= "tuple" then
+		return obj:GetHash()
 	end
-
-	return false
 end
 
 local function add(self, obj)

@@ -455,8 +455,8 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 end
 
 local function get_hash(key)
-	if (key.Type == "number" or key.Type == "string") and key:IsLiteral() then
-		return key.Data
+	if key.Type ~= "table" and key.Type ~= "function" and key.Type ~= "tuple" then
+		return key:GetHash()
 	end
 
 	return nil
@@ -559,13 +559,7 @@ end
 function META:FindKeyVal(key--[[#: TBaseType]])
 	local keyval, reason = read_cache(self, key)
 
-	if keyval ~= nil then return keyval, reason end
-
-	for _, keyval in ipairs(self.Data) do
-		if keyval.key:Equal(key) then return keyval end
-	end
-
-	if keyval == false then return keyval, reason end
+	if keyval then return keyval, reason end
 
 	local reasons = {}
 
@@ -622,12 +616,6 @@ function META:FindKeyValReverseEqual(key--[[#: TBaseType]])
 	local keyval, reason = read_cache(self, key)
 
 	if keyval ~= nil then return keyval, reason end
-
-	for i, keyval in ipairs(self.Data) do
-		local ok = key:Equal(keyval.key)
-
-		if ok then return keyval end
-	end
 
 	return false,
 	type_errors.because(type_errors.table_index(self, key), "table is empty")

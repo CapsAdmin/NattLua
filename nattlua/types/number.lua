@@ -15,11 +15,30 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TNumber.DontWiden = boolean]]
 META.Type = "number"
 META:GetSet("Data", false--[[# as number | false]])
+
+function META:SetData()
+	if false--[[# as true]] then return end
+
+	error("cannot mutate data")
+end
+
 --[[#local type TUnion = {
 	@Name = "TUnion",
 	Type = "union",
 	GetLargestNumber = function=(self)>(TNumber | nil, nil | any),
 }]]
+
+local function compute_hash(min--[[#: any]], max--[[#: any]])
+	if max then
+		return tostring(tonumber(min)) .. ".." .. tostring(tonumber(max))
+	elseif min then
+		return tostring(tonumber(min))
+	end
+
+	return "N"
+end
+
+META:GetSet("Hash", ""--[[# as string]])
 
 function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 	local s = setmetatable(
@@ -34,6 +53,7 @@ function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 			Parent = false,
 			Contract = false,
 			DontWiden = false,
+			Hash = compute_hash(min, max),
 		},
 		META
 	)
@@ -61,13 +81,9 @@ end
 function META:GetHashForMutationTracking()
 	if self:IsNan() then return nil end
 
-	if self.Data then
-		if self.Max then
-			if self.Max ~= false and self.Data then
-				return tostring(self.Data) .. "-" .. tostring(self.Max)
-			end
-		end
-
+	if self.Max and self.Data then
+		return self.Hash
+	elseif self.Data then
 		return self.Data
 	end
 
@@ -80,6 +96,8 @@ end
 
 function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false, "types differ" end
+
+	do return a.Hash == b.Hash end
 
 	if a.Max and a.Max == b.Max and a.Data == b.Data then
 		return true, "max values are equal"
@@ -96,16 +114,6 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	end
 
 	return false, "values are not equal"
-end
-
-function META:GetHash()
-	if self.Max then
-		return tostring(tonumber(self.Data--[[# as any]])) .. ".." .. tostring(tonumber(self.Max--[[# as any]]))
-	elseif self.Data then
-		return tostring(tonumber(self.Data--[[# as any]]))
-	end
-
-	return "N"
 end
 
 function META:IsLiteral()
@@ -137,7 +145,7 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 				if x then if x.Max then return self end end
 			end
 
-			if not obj:IsLiteral() then self.Data = false end
+			if not obj:IsLiteral() then self.Data = false self.Hash = "N" end
 		end
 	end
 
@@ -219,16 +227,9 @@ end
 META:GetSet("Max", false--[[# as number | false]])
 
 function META:SetMax(val--[[#: number]])
-	if self.Data == (val or false) then return self end
+	if false--[[# as true]] then return end
 
-	if val then
-		self.Max = val
-	else
-		self.Data = false
-		self.Max = false
-	end
-
-	return self
+	error("cannot mutate data")
 end
 
 function META:GetMax()
@@ -536,6 +537,8 @@ do
 
 			if l.Max then obj.Max = func(l.Max, r.Max or r.Data) end
 
+			obj.Hash = compute_hash(obj.Data, obj.Max)
+
 			return obj
 		end
 
@@ -585,11 +588,9 @@ do
 			end
 		end
 
-		local obj = LNumber(res)
+		if x.Max then return LNumberRange(res, func(x.Max or x.Data)) end
 
-		if x.Max then obj:SetMax(func(x.Max or x.Data)) end
-
-		return obj
+		return LNumber(res)
 	end
 end
 

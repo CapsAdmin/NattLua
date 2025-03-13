@@ -16,7 +16,19 @@ end
 local function equal(a, b)
 	local ok1 = a:GetHash() == b:GetHash()
 	local ok2, reason = a:Equal(b)
-	assert(ok1 == ok2)
+
+	if ok1 ~= ok2 then
+		print("hash mismatch with equal:")
+		print("a b hash:")
+		print(a:GetHash())
+		print(b:GetHash())
+		print("a b types:")
+		print(a)
+		print(b)
+		print("a == b ? ", ok2, reason)
+		error("")
+	end
+
 	return ok1
 end
 

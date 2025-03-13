@@ -21,6 +21,13 @@ local unpack_symbol = {
 --[[#type TSymbol = META.@Self]]
 META.Type = "symbol"
 META:GetSet("Data", false--[[# as any]])
+META:GetSet("Hash", ""--[[# as string]])
+
+function META:SetData()
+	if false--[[# as true]] then return end
+
+	error("cannot mutate data")
+end
 
 function META:GetData()
 	if self.Data == NIL then return nil end
@@ -38,10 +45,6 @@ function META.Equal(a--[[#: TSymbol]], b--[[#: TBaseType]])
 	if a.Data == b.Data then return true, "symbol values match" end
 
 	return false, "values are not equal"
-end
-
-function META:GetHash()
-	return "Z" .. "-" .. tostring(self:GetData())
 end
 
 function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#: string]])
@@ -143,9 +146,11 @@ function META.New(data--[[#: any]])
 			Upvalue = false,
 			Parent = false,
 			Contract = false,
+			Hash = "",
 		},
 		META
 	)
+	self.Hash = tostring(self)
 	return self
 end
 

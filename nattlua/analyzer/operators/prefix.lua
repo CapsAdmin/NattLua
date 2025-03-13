@@ -5,6 +5,7 @@ local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
 local LString = require("nattlua.types.string").LString
+local StringPattern = require("nattlua.types.string").StringPattern
 local ConstString = require("nattlua.types.string").ConstString
 local Boolean = require("nattlua.types.union").Boolean
 local False = require("nattlua.types.symbol").False
@@ -89,9 +90,7 @@ local function Prefix(analyzer, node, r)
 				return false, type_errors.string_pattern_invalid_construction(r)
 			end
 
-			r:SetPatternContract(r:GetData())
-			r:SetData(false)
-			return r
+			return StringPattern(r:GetData())
 		end
 	end
 
