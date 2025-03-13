@@ -97,7 +97,7 @@ local function index_table(analyzer, self, key, raw)
 	local val = self:GetMutatedValue(key, analyzer:GetScope())
 
 	if key:IsLiteral() then
-		local found_key = self:FindKeyValReverse(key)
+		local found_key = self:FindKeyValWide(key)
 
 		if found_key and not found_key.key:IsLiteral() and not (found_key.key.Max) then
 			val = Union({Nil(), val})

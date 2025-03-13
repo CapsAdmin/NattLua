@@ -282,10 +282,10 @@ function META:FollowsContract(contract--[[#: TTable]])
 
 		if required_key:IsLiteral() then
 			if not keyval.val:IsNil() then
-				local res, err = self:FindKeyVal(required_key)
+				local res, err = self:FindKeyValExact(required_key)
 
 				if not res and self:GetMetaTable() then
-					res, err = self:GetMetaTable():FindKeyVal(required_key)
+					res, err = self:GetMetaTable():FindKeyValExact(required_key)
 				end
 
 				if not res then return res, err end
@@ -322,7 +322,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 
 	for _, keyval in ipairs(self:GetData()) do
 		if not keyval.val:IsNil() then
-			local res, err = contract:FindKeyVal(keyval.key)
+			local res, err = contract:FindKeyValExact(keyval.key)
 
 			-- it's ok if the key is not found, as we're doing structural checking
 			if res then
@@ -392,7 +392,7 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 		end
 
 		for _, akeyval in ipairs(a:GetData()) do
-			local bkeyval, reason = b:FindKeyValReverse(akeyval.key)
+			local bkeyval, reason = b:FindKeyValWide(akeyval.key)
 
 			if not akeyval.val:IsNil() then
 				if not bkeyval then
@@ -427,7 +427,7 @@ end
 function META:ContainsAllKeysIn(contract--[[#: TTable]])
 	for _, keyval in ipairs(contract:GetData()) do
 		if keyval.key:IsLiteral() then
-			local ok, err = self:FindKeyVal(keyval.key)
+			local ok, err = self:FindKeyValExact(keyval.key)
 
 			if not ok then
 				if
@@ -553,7 +553,7 @@ function META:GetValueUnion()
 end
 
 function META:HasKey(key--[[#: TBaseType]])
-	return self:FindKeyValReverse(key)
+	return self:FindKeyValWide(key)
 end
 
 function META:IsEmpty()
@@ -566,7 +566,7 @@ function META:CachedKeyEqual(key)
 	return self.CachedKeyValues[key.Data]
 end
 
-function META:FindKeyVal(key--[[#: TBaseType]])
+function META:FindKeyValExact(key--[[#: TBaseType]])
 	local keyval, reason = read_cache(self, key)
 
 	if keyval then return keyval, reason end
@@ -588,7 +588,7 @@ function META:FindKeyVal(key--[[#: TBaseType]])
 	return false, type_errors.because(type_errors.table_index(self, key), reasons)
 end
 
-function META:FindKeyValReverse(key--[[#: TBaseType]])
+function META:FindKeyValWide(key--[[#: TBaseType]])
 	local keyval = read_cache(self, key)
 
 	if keyval then return keyval end
@@ -608,7 +608,7 @@ function META:FindKeyValReverse(key--[[#: TBaseType]])
 	if #reasons > 20 then reasons = {type_errors.table_index(self, key)} end
 
 	if self.BaseTable then
-		local ok, reason = self.BaseTable:FindKeyValReverse(key)
+		local ok, reason = self.BaseTable:FindKeyValWide(key)
 
 		if ok then return ok end
 
@@ -656,7 +656,7 @@ function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete-
 	end
 
 	if self:GetContract() and self:GetContract().Type == "table" then -- TODO
-		local keyval, reason = self:GetContract():FindKeyValReverse(key)
+		local keyval, reason = self:GetContract():FindKeyValWide(key)
 
 		if not keyval then return keyval, reason end
 
@@ -666,7 +666,7 @@ function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete-
 	end
 
 	-- if the key exists, check if we can replace it and maybe the value
-	local keyval, reason = self:FindKeyValReverse(key)
+	local keyval, reason = self:FindKeyValWide(key)
 	AddKey(self, keyval, key, val)
 	return true
 end
@@ -760,12 +760,12 @@ function META:Get(key--[[#: TBaseType]])
 		return union
 	end
 
-	local keyval, reason = self:FindKeyValReverse(key)
+	local keyval, reason = self:FindKeyValWide(key)
 
 	if keyval then return keyval.val end
 
 	if self:GetContract() then
-		local keyval, reason = self:GetContract():FindKeyValReverse(key)
+		local keyval, reason = self:GetContract():FindKeyValWide(key)
 
 		if keyval then return keyval.val end
 
@@ -791,7 +791,7 @@ function META:CopyLiteralness(from)
 	local self = self:Copy()
 
 	for _, keyval_from in ipairs(from:GetData()) do
-		local keyval, reason = self:FindKeyVal(keyval_from.key)
+		local keyval, reason = self:FindKeyValExact(keyval_from.key)
 
 		if keyval then
 			keyval.key = keyval.key:CopyLiteralness(keyval_from.key)
@@ -806,7 +806,7 @@ function META:CoerceUntypedFunctions(from--[[#: TTable]])
 	assert(from.Type == "table")
 
 	for _, kv in ipairs(self:GetData()) do
-		local kv_from, reason = from:FindKeyValReverse(kv.key)
+		local kv_from, reason = from:FindKeyValWide(kv.key)
 
 		if not kv_from then return nil, reason end
 
