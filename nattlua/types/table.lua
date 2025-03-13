@@ -482,6 +482,16 @@ local function read_cache(self, key)
 	return nil
 end
 
+local function read_cache_no_error(self, key)
+	local hash = get_hash(key)
+
+	if hash then
+		return self.LiteralDataCache[hash]
+	end
+
+	return nil
+end
+
 local function AddKey(self, keyval, key, val)
 	if not keyval then
 		val:SetParent(self)
@@ -612,14 +622,6 @@ function META:FindKeyValReverse(key--[[#: TBaseType]])
 	return false, type_errors.because(type_errors.table_index(self, key), reasons)
 end
 
-function META:FindKeyValReverseEqual(key--[[#: TBaseType]])
-	local keyval, reason = read_cache(self, key)
-
-	if keyval ~= nil then return keyval, reason end
-
-	return false,
-	type_errors.because(type_errors.table_index(self, key), "table is empty")
-end
 
 function META:Insert(val--[[#: TBaseType]])
 	self.size = self.size or 1
@@ -680,8 +682,8 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 	end
 
 	-- if the key exists, check if we can replace it and maybe the value
-	local keyval, reason = self:FindKeyValReverseEqual(key)
-	AddKey(self, keyval, key, val)
+	AddKey(self, read_cache_no_error(self, key), key, val)
+	
 	return true
 end
 
