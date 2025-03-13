@@ -454,8 +454,32 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 	return true
 end
 
-local function is_literal(obj)
-	return (obj.Type == "number" or obj.Type == "string") and obj:IsLiteral()
+local function get_hash(key)
+	if (key.Type == "number" or key.Type == "string") and key:IsLiteral() then
+		return key.Data
+	end
+
+	return nil
+end
+
+local function write_cache(self, key, val)
+	local hash = get_hash(key)
+
+	if hash then self.LiteralDataCache[hash] = val end
+end
+
+local function read_cache(self, key)
+	local hash = get_hash(key)
+
+	if hash then
+		local val = self.LiteralDataCache[hash]
+
+		if val then return val end
+
+		return false, type_errors.table_index(self, key)
+	end
+
+	return nil
 end
 
 local function AddKey(self, keyval, key, val)
@@ -464,8 +488,7 @@ local function AddKey(self, keyval, key, val)
 		key:SetParent(self)
 		local keyval = {key = key, val = val}
 		table.insert(self.Data, keyval)
-
-		if is_literal(key) then self.LiteralDataCache[key.Data] = keyval end
+		write_cache(self, key, keyval)
 	else
 		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
 			keyval.val = val
@@ -487,10 +510,7 @@ function META:RemoveRedundantNilValues()
 			keyval.val:SetParent()
 			keyval.key:SetParent()
 			table.remove(self.Data, i)
-
-			if is_literal(keyval.key) then
-				self.LiteralDataCache[keyval.key.Data] = nil
-			end
+			write_cache(self, keyval.key, nil)
 		else
 			break
 		end
@@ -505,10 +525,7 @@ function META:Delete(key--[[#: TBaseType]])
 			keyval.val:SetParent()
 			keyval.key:SetParent()
 			table.remove(self.Data, i)
-
-			if is_literal(keyval.key) then
-				self.LiteralDataCache[keyval.key.Data] = nil
-			end
+			write_cache(self, keyval.key, nil)
 		end
 	end
 
@@ -540,19 +557,15 @@ function META:CachedKeyEqual(key)
 end
 
 function META:FindKeyVal(key--[[#: TBaseType]])
-	if is_literal(key) then
-		local keyval = self.LiteralDataCache[key.Data]
+	local keyval, reason = read_cache(self, key)
 
-		if keyval then return keyval end
-
-		return false, type_errors.table_index(self, key)
-	end
+	if keyval ~= nil then return keyval, reason end
 
 	for _, keyval in ipairs(self.Data) do
 		if keyval.key:Equal(key) then return keyval end
 	end
 
-	if is_literal(key) then return false, type_errors.table_index(self, key) end
+	if keyval == false then return keyval, reason end
 
 	local reasons = {}
 
@@ -572,9 +585,9 @@ function META:FindKeyVal(key--[[#: TBaseType]])
 end
 
 function META:FindKeyValReverse(key--[[#: TBaseType]])
-	if is_literal(key) and self.LiteralDataCache[key.Data] then
-		return self.LiteralDataCache[key.Data]
-	end
+	local keyval = read_cache(self, key)
+
+	if keyval then return keyval end
 
 	local reasons = {}
 
@@ -606,13 +619,9 @@ function META:FindKeyValReverse(key--[[#: TBaseType]])
 end
 
 function META:FindKeyValReverseEqual(key--[[#: TBaseType]])
-	if is_literal(key) then
-		local keyval = self.LiteralDataCache[key.Data]
+	local keyval, reason = read_cache(self, key)
 
-		if keyval then return keyval end
-
-		return false, type_errors.table_index(self, key)
-	end
+	if keyval ~= nil then return keyval, reason end
 
 	for i, keyval in ipairs(self.Data) do
 		local ok = key:Equal(keyval.key)
@@ -846,8 +855,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 		local k = copy_val(keyval.key, map, copy_tables)
 		local v = copy_val(keyval.val, map, copy_tables)
 		copy.Data[i] = {key = k, val = v}
-
-		if is_literal(k) then copy.LiteralDataCache[k.Data] = copy.Data[i] end
+		write_cache(copy, k, copy.Data[i])
 	end
 
 	copy:CopyInternalsFrom(self)
