@@ -2,6 +2,7 @@ local type attest = {}
 
 analyzer function attest.equal(A: any, B: any, level: nil | 0 .. inf)
 	local ok, reason = A:Equal(B)
+
 	if not ok then
 		analyzer:ThrowError(
 			"expected " .. tostring(B) .. " got " .. tostring(A) .. ": " .. tostring(reason),

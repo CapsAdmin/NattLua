@@ -40,13 +40,14 @@ collect[[
 
     end
 ]]
-
-assert(collect[[
+assert(
+	collect[[
 local x = 1
 local y = 2
 local z = x + y or true]] == [=[local x = --[[1]]1
 local y = --[[1]]2
-local z = --[[1]]--[[1]]--[[1]]x + --[[1]]y or true]=])
+local z = --[[1]]--[[1]]--[[1]]x + --[[1]]y or true]=]
+)
 collect([=[
 --ANALYZE
 local setmetatable = _G.setmetatable

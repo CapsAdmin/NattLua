@@ -43,7 +43,6 @@ local jit_profiler = require("test.helpers.jit_profiler")
 
 while true do
 	local body = read_message()
-
 	local stop_profiler = jit_profiler.Start(
 		{
 			mode = "line",
@@ -52,7 +51,6 @@ while true do
 			sample_threshold = 100,
 		}
 	)
-
 	local res = rpc_util.ReceiveJSON(body, lsp.methods)
 
 	if stop_profiler then print(stop_profiler()) end

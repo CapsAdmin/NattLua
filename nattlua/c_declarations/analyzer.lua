@@ -181,9 +181,7 @@ local function cast(self, node)
 
 		local t = node.modifiers[1]
 
-		if t == "const" then
-			t = assert(node.modifiers[2])
-		end
+		if t == "const" then t = assert(node.modifiers[2]) end
 
 		if valid_qualifiers[t] then
 			return Number()

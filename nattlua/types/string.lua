@@ -19,20 +19,18 @@ META:GetSet("PatternContract", false--[[# as false | string]])
 
 function META.Equal(a--[[#: TString]], b--[[#: TString]])
 	if a.Type ~= b.Type then return false, "types differ" end
+
 	return a.Hash == b.Hash, "string values are equal"
 end
 
 local STRING_ID = "string"
 
 local function compute_hash(data, pattern)
-	if pattern then
-		return pattern
-	elseif data then
-		return data
-	end
+	if pattern then return pattern elseif data then return data end
 
 	return STRING_ID
 end
+
 function META:GetHashForMutationTracking()
 	if self.Data then return self.Hash end
 
@@ -147,7 +145,7 @@ local function new(data--[[#: string | nil]], pattern--[[#: string | nil]])
 			Parent = false,
 			Contract = false,
 			MetaTable = false,
-			Hash = compute_hash(data, pattern)
+			Hash = compute_hash(data, pattern),
 		},
 		META
 	)
@@ -183,6 +181,7 @@ end
 
 function META:Widen()
 	if self.PatternContract then return self end
+
 	return META.New()
 end
 
@@ -205,9 +204,9 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 				if str then if str.PatternContract then return self end end
 			end
 
-			if not obj:IsLiteral() then 
-				self.Data = false 
-				self.Hash = compute_hash(self.Data, self.PatternContract) 
+			if not obj:IsLiteral() then
+				self.Data = false
+				self.Hash = compute_hash(self.Data, self.PatternContract)
 			end
 		end
 	end

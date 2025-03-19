@@ -183,7 +183,7 @@ do
 
 	local dot = string.byte(".")
 
-	local function is_dots(ptr: {[number] = number})--FFIArray<|3, number|>)
+	local function is_dots(ptr: {[number] = number}) --FFIArray<|3, number|>)
 		if ptr[0] == dot then
 			if ptr[1] == dot and ptr[2] == 0 then return true end
 

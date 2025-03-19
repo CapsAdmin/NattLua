@@ -78,38 +78,36 @@ function coverage.Preprocess(code, key)
 	lua = lua .. [[called[key][3] = called[key][3] + 1;]]
 	lua = lua .. [[return ...;]]
 	lua = lua .. [[end; ]]
-
 	local gen = compiler:Emit()
 
 	if code:find("clock_gettime", nil, true) then
-
 		function _G.diff(input, expect)
 			local a = os.tmpname()
 			local b = os.tmpname()
-		
+
 			do
 				local f = assert(io.open(a, "w"))
 				f:write(input)
 				f:close()
 			end
-		
+
 			do
 				local f = assert(io.open(b, "w"))
 				f:write(expect)
 				f:close()
 			end
-		
+
 			os.execute("meld " .. a .. " " .. b)
 		end
-		
 
 		local old = code
 		local new = gen
 
 		for i = 1, 100 do
-			local temp, count = new:gsub(" __CLCT%b()", function(str) 
+			local temp, count = new:gsub(" __CLCT%b()", function(str)
 				return str:match("^ __CLCT%(%d+,%d+,(.+)%)")
 			end)
+
 			if count == 0 then break end
 
 			new = temp

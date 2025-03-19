@@ -234,7 +234,6 @@ function profiler.Start(config--[[#: Config | nil]])
 	config.depth = config.depth or 1
 	config.sampling_rate = config.sampling_rate or 10
 	config.sample_threshold = config.sample_threshold or 50
-
 	local raw_samples--[[#: List<|{
 		stack = string,
 		sample_count = number,

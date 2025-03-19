@@ -485,9 +485,7 @@ end
 local function read_cache_no_error(self, key)
 	local hash = get_hash(key)
 
-	if hash then
-		return self.LiteralDataCache[hash]
-	end
+	if hash then return self.LiteralDataCache[hash] end
 
 	return nil
 end
@@ -622,7 +620,6 @@ function META:FindKeyValWide(key--[[#: TBaseType]])
 	return false, type_errors.because(type_errors.table_index(self, key), reasons)
 end
 
-
 function META:Insert(val--[[#: TBaseType]])
 	self.size = self.size or 1
 	self:Set(LNumber(self.size), val)
@@ -683,7 +680,6 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 
 	-- if the key exists, check if we can replace it and maybe the value
 	AddKey(self, read_cache_no_error(self, key), key, val)
-	
 	return true
 end
 

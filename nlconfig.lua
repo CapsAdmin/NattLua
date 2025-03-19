@@ -74,7 +74,6 @@ config["build-for-ai"] = function(mode)
 		["nattlua/parser.lua"] = "parses lua code into an AST",
 	}
 	local tokens = {}
-
 	local f = io.open("nattlua_for_ai.lua", "w")
 
 	for _, path in ipairs(paths) do
