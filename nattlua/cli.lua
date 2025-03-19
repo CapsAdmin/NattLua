@@ -59,5 +59,5 @@ function _G.RUN_CLI(cmd, ...)
 
 	local func = assert(default[cmd], "Unknown command " .. cmd)
 	io.write("running ", cmd, " with arguments ", table.concat(args, " "), "\n")
-	func(unpack(args))
+	func(table.unpack(args))
 end

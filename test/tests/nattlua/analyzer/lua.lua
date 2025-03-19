@@ -295,7 +295,7 @@ do --- allcases
 	analyze(table.concat(code))
 end
 
-if bit.tobit then
+if jit and bit.tobit then
 	analyze[[
             -- bit operations
             for i=1,100 do

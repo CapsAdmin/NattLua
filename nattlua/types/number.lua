@@ -28,11 +28,26 @@ end
 	GetLargestNumber = function=(self)>(TNumber | nil, nil | any),
 }]]
 
+local VERSION = jit and "LUAJIT" or _VERSION
+
+local function tostring_number(num)
+	local s = tostring(tonumber(num))
+	if VERSION == "LUAJIT" then return s end
+
+	if s == "-nan" then return "nan" end
+
+	if s:sub(-2) == ".0" then
+		s = s:sub(1, -3)
+	end
+
+	return s
+end
+
 local function compute_hash(min--[[#: any]], max--[[#: any]])
 	if max then
-		return tostring(tonumber(min)) .. ".." .. tostring(tonumber(max))
+		return tostring_number(min) .. ".." .. tostring_number(min)
 	elseif min then
-		return tostring(tonumber(min))
+		return tostring_number(min)
 	end
 
 	return "N"
@@ -97,7 +112,9 @@ end
 function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false, "types differ" end
 
-	do return a.Hash == b.Hash end
+	do
+		return a.Hash == b.Hash
+	end
 
 	if a.Max and a.Max == b.Max and a.Data == b.Data then
 		return true, "max values are equal"
@@ -145,7 +162,10 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 				if x then if x.Max then return self end end
 			end
 
-			if not obj:IsLiteral() then self.Data = false self.Hash = "N" end
+			if not obj:IsLiteral() then
+				self.Data = false
+				self.Hash = "N"
+			end
 		end
 	end
 
@@ -538,7 +558,6 @@ do
 			if l.Max then obj.Max = func(l.Max, r.Max or r.Data) end
 
 			obj.Hash = compute_hash(obj.Data, obj.Max)
-
 			return obj
 		end
 
@@ -595,12 +614,16 @@ do
 end
 
 local function string_to_integer(str--[[#: string]])
-	if not jit and (_VERSION == "Lua 5.1" or _VERSION == "Lua 5.2") then
-		str = str:lower():gsub("ull", "")
-		str = str:gsub("ll", "")
+	if not jit and (_VERSION == "Lua 5.1" or _VERSION == "Lua 5.2" or _VERSION == "Lua 5.3" or _VERSION == "Lua 5.4") then
+		str = str:lower():sub(-3)
+		if str == "ull" then
+			str = str:sub(1, -4)
+		elseif str:sub(-2) == "ll" then
+			str = str:sub(1, -3)
+		end
 	end
 
-	return assert(loadstring("return " .. str))()--[[# as number]]
+	return assert(load("return " .. str))()--[[# as number]]
 end
 
 return {

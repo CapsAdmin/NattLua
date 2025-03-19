@@ -25,7 +25,7 @@ local ARGS = _G.ARGS or {...}
 
 if ARGS[1] and ARGS[1] ~= "nattlua" and ARGS[1] ~= "temp_build_output" then
 	require("nattlua.cli")
-	_G.RUN_CLI(unpack(ARGS))
+	_G.RUN_CLI(table.unpack(ARGS))
 end
 
 return m

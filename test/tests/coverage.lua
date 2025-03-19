@@ -1,7 +1,7 @@
 local coverage = require("test.helpers.coverage")
 
 local function collect(code)
-	assert(loadstring(coverage.Preprocess(code, "test")))()
+	assert(load(coverage.Preprocess(code, "test")))()
 	local res = coverage.Collect("test")
 	coverage.Clear("test")
 	return res

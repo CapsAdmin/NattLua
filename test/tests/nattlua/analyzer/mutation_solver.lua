@@ -6,7 +6,7 @@ local function covered_mutation_solver()
 	local code = assert(f:read("*all"))
 	f:close()
 	return assert(
-		loadstring(coverage.Preprocess(code, "mutation_solver"), "@nattlua/analyzer/mutation_solver.lua")
+		load(coverage.Preprocess(code, "mutation_solver"), "@nattlua/analyzer/mutation_solver.lua")
 	)()
 end
 

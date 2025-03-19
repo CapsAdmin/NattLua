@@ -229,7 +229,7 @@ do
 		local a_res_max
 		local b_res_min
 		local b_res_max
-		local func = loadstring("local a, b = ... return a " .. operator .. " b")
+		local func = load("local a, b = ... return a " .. operator .. " b")
 
 		for x = a_min, a_max do
 			for y = b_min, b_max do
