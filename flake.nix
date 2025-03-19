@@ -17,7 +17,7 @@
 
         luajitSrc = pkgs.fetchgit {
           url = "https://github.com/LuaJIT/LuaJIT.git";
-          sha256 = "sha256-oMq/Ep1a4NolTrMXriitDNSjwQmwxXfKX0YrmaCQdVc=";
+          sha256 = "sha256-NfxPe0MlE7X7YzVeN7jeHeOJ0j9NOUbQv7y3rcyc1Nk=";
         };
 
         luajit = pkgs.stdenv.mkDerivation {
@@ -30,7 +30,7 @@
 
           installPhase = ''
             make install PREFIX=$out
-            ln -sf $out/bin/luajit-2.1.0-beta3 $out/bin/luajit
+            ln -sf $out/bin/luajit-2.1.ROLLING $out/bin/luajit
           '';
         };
       in {

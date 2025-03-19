@@ -9,27 +9,25 @@ jobs:
       - name: checkout the project
         uses: actions/checkout@v4
 
-      - name: checkout latest luajit 2.1
-        uses: actions/checkout@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
         with:
-          repository: LuaJIT/LuaJIT
-          ref: v2.1
-          path: luajit
+          nix_path: nixpkgs=channel:nixpkgs-unstable
 
-      - name: build and install luajit
-        run: cd luajit && make && sudo make install && cd ..
+      - name: Build LuaJIT 
+        run: |
+          nix develop --command bash -c "which luajit && luajit -v"
+      
+      - name: Run nattlua tests
+        run: |
+          nix develop --command bash -c "luajit nattlua.lua test"
+      
+      - name: Build nattlua
+        run: |
+          nix develop --command bash -c "luajit nattlua.lua build"
 
-      - name: run nattlua tests
-        run: luajit nattlua.lua test
-
-      - name: build nattlua to build_output.lua and run tests with it
-        run: luajit nattlua.lua build
-
-      - name: replace nattlua.lua with build_output.lua for upload
-        run: rm nattlua.lua && mv build_output.lua nattlua.lua
-
-      - name: upload nattlua.lua
+      - name: Upload nattlua.lua
         uses: actions/upload-artifact@v4
         with:
           name: nattlua          
-          path: nattlua.lua
+          path: build_output.lua
