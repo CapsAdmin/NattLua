@@ -25,9 +25,13 @@ jobs:
       - name: Build nattlua
         run: |
           nix develop --command bash -c "luajit nattlua.lua build"
+          # Rename to nattlua.lua
+          rm nattlua.lua # remove the original nattlua.lua file first
+          mv build_output.lua nattlua.lua
+
 
       - name: Upload nattlua.lua
         uses: actions/upload-artifact@v4
         with:
           name: nattlua          
-          path: build_output.lua
+          path: nattlua.lua
