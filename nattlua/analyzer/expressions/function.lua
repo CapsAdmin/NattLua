@@ -163,7 +163,7 @@ local function has_explicit_arguments(node)
 	return false
 end
 
-local function has_expicit_return_type(node)
+local function has_explicit_return_type(node)
 	if node.return_types then return true end
 
 	return false
@@ -191,7 +191,7 @@ return {
 		if node.statements then obj:SetFunctionBodyNode(node) end
 
 		obj:SetExplicitInputSignature(has_explicit_arguments(node))
-		obj:SetExplicitOutputSignature(has_expicit_return_type(node))
+		obj:SetExplicitOutputSignature(has_explicit_return_type(node))
 
 		if self:IsRuntime() then self:AddToUnreachableCodeAnalysis(obj) end
 
