@@ -345,7 +345,7 @@ end)
 
 analyze[[
     local a = function()
-        if maybe then
+        if Any() then
             -- the return value here sneaks into val
             return ""
         end
@@ -432,7 +432,7 @@ analyze[[
         attest.equal(d, _ as any)
     end
     
-    something(function(...)
+    Any()(function(...)
         foo(1,2,...)
     end)
 ]]
@@ -462,7 +462,7 @@ analyze[[
 ]]
 analyze[[
     local function test()
-        if MAYBE then
+        if Any() then
             return true
         end
     end

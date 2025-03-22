@@ -67,7 +67,7 @@ analyze[[
 analyze[[
     local a = true
 
-    if MAYBE then
+    if Any() then
         error("!")
     end
 
@@ -166,7 +166,7 @@ analyze[[
         end
 
         local function test()
-            if MAYBE then return 1 end 
+            if Any() then return 1 end 
             foo()
             return 2
         end

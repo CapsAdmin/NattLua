@@ -49,6 +49,7 @@ analyze[[
 analyze[[
     local x = 0
     local MAYBE: true | false
+    local MAYBE2 = Any()
 
     if MAYBE then
         x = 1
@@ -114,7 +115,7 @@ analyze([[
 analyze([[
     local a = 0
 
-    if MAYBE then
+    if Any() then
         a = 1
     end
     attest.equal(a, _ as 0 | 1)
@@ -213,7 +214,7 @@ analyze[[
 
     attest.equal(a, false)
 
-    if maybe then
+    if Any() then
         a = true
         attest.equal(a, true)
     end
@@ -294,7 +295,7 @@ analyze[[
 analyze[[
     local c = 0
 
-    if maybe then
+    if Any() then
         c = c + 1
     else
         c = c - 1
@@ -315,7 +316,7 @@ analyze([[
 analyze[[
     local a = true
 
-    while maybe do
+    while Any() do
         a = false
     end
 
@@ -455,15 +456,15 @@ analyze[[
     end
 ]]
 analyze[[
-    local MAYBE: function=()>(boolean)
+    local maybe: function=()>(boolean)
     local x = 0
-    if MAYBE() then x = x + 1 end -- 1
-    if MAYBE() then x = x - 1 end -- -1 | 0
+    if maybe() then x = x + 1 end -- 1
+    if maybe() then x = x - 1 end -- -1 | 0
     attest.equal(x, _ as -1 | 0 | 1)
 ]]
 analyze[[
     local x = 0
-    if MAYBE then
+    if Any() then
         x = 1
     else
         x = -1
@@ -472,7 +473,7 @@ analyze[[
 ]]
 analyze[[
     local x = 0
-    if MAYBE then
+    if Any() then
         x = 1
     end
     attest.equal(x, _ as 0 | 1)
@@ -480,11 +481,11 @@ analyze[[
 analyze[[
     x = 1
 
-    if MAYBE then
+    if Any() then
         x = 2
     end
 
-    if MAYBE then
+    if Any() then
         x = 3
     end
 
@@ -495,7 +496,7 @@ analyze[[
 analyze[[
     local foo = false
 
-    if MAYBE then
+    if Any() then
         foo = true
     end
 
@@ -508,7 +509,7 @@ analyze[[
 analyze[[
     local x = 1
 
-    if MAYBE then
+    if Any() then
         if true then
             x = 2
         end
@@ -530,11 +531,11 @@ analyze[[
 analyze[[
     local x = 1
 
-    if MAYBE then
+    if Any() then
         x = 2
     end
 
-    if MAYBE then
+    if Any() then
         x = 3
     end
 
@@ -545,15 +546,15 @@ analyze[[
 
     local x = 1
 
-    if MAYBE then
+    if Any() then
         attest.equal<|x, 1|>
         x = 2
         attest.equal<|x, 2|>
-    elseif MAYBE then
+    elseif Any() then
         attest.equal<|x, 1|>
         x = 3
         attest.equal<|x, 3|>
-    elseif MAYBE then
+    elseif Any() then
         attest.equal<|x, 1|>
         x = 4
         attest.equal<|x, 4|>
@@ -564,7 +565,7 @@ analyze[[
 analyze[[
     local foo = false
 
-    if MAYBE then
+    if Any() then
         foo = true
     end
     if not foo then
@@ -597,14 +598,14 @@ analyze[[
 ]]
 analyze[[
     local x = 1
-    if MAYBE then
+    if Any() then
         x = 2
     end
     attest.equal<|x, 1 | 2|>
 ]]
 analyze[[
     local x = 1
-    if MAYBE then
+    if Any() then
         attest.equal<|x, 1|>
         x = 2
         attest.equal<|x, 2|>
@@ -639,11 +640,11 @@ analyze[[
 analyze[[
     local x = 1
 
-    if MAYBE then
+    if Any() then
         x = 2
-    elseif MAYBE then
+    elseif Any() then
         x = 3
-    elseif MAYBE then
+    elseif Any() then
         x = 4
     else
         x = 5
@@ -704,7 +705,7 @@ analyze[[
 ]]
 analyze[[
     local a = {}
-    if MAYBE then
+    if Any() then
         a.lol = true
         attest.equal(a.lol, true)
     end
@@ -730,7 +731,7 @@ analyze[[
 analyze[[
     local tbl = {foo = 1}
 
-    if MAYBE then
+    if Any() then
         tbl.foo = 2
         attest.equal(tbl.foo, 2)
     end
@@ -740,7 +741,7 @@ analyze[[
 analyze[[
     local tbl = {foo = {bar = 1}}
 
-    if MAYBE then
+    if Any() then
         tbl.foo.bar = 2
         attest.equal(tbl.foo.bar, 2)
     end
@@ -752,7 +753,7 @@ analyze[[
         field = number | nil,
     } = {}
     
-    if MAYBE then
+    if Any() then
         x.field = nil
         attest.equal(x.field, nil)
     end
@@ -761,14 +762,14 @@ analyze[[
 analyze[[
     local x = { lol = _ as false | 1 }
     if not x.lol then
-        if MAYBE then
+        if Any() then
             x.lol = 1 
         end
     end
     attest.equal(x.lol, _ as false | 1)
 ]]
 analyze[[
-    assert(maybe)
+    assert(Any())
 
     local y = 1
 
@@ -781,7 +782,7 @@ analyze[[
 ]]
 analyze[[
     local function lol()
-        if MAYBE then
+        if Any() then
             return 1
         end
     end
@@ -802,7 +803,7 @@ analyze[[
 
     local function FindHeadPosition(ent: mutable HeadPos)
         
-        if MAYBE then
+        if Any() then
             ent.findheadpos_head_bone = false
         end
         
@@ -819,7 +820,7 @@ analyze[[
 ]]
 analyze[[
     local function test()
-        if MAYBE then
+        if Any() then
             return "test"
         else
             return "foo"
@@ -993,15 +994,15 @@ analyze[[
 
 ]]
 analyze[[
-    local MAYBE: boolean
+    local maybe: boolean
 
     x = 1
 
-    if MAYBE then
+    if maybe then
         x = 2
     end
 
-    if MAYBE then
+    if maybe then
         x = 3
     end
 
@@ -1555,19 +1556,19 @@ analyze[[
 analyze[[
 
     local x = 1
-    local MAYBE = math.random() > 0.5
+    local maybe = math.random() > 0.5
     
-    if MAYBE then
+    if maybe then
         attest.equal<|x, 1|>
         x = 1.5
         attest.equal<|x, 1.5|>
         x = 1.75
         attest.equal<|x, 1.75|>
     
-        if MAYBE then
+        if maybe then
             x = 2
     
-            if MAYBE then x = 2.5 end
+            if maybe then x = 2.5 end
     
             attest.equal<|x, 2.5|>
         end
@@ -1611,15 +1612,15 @@ analyze[[
 analyze[[
     local x = 1
 
-    if MAYBE then
+    if Any() then
         x = 2
 
-        if MAYBE then x = 1337 end
+        if Any() then x = 1337 end
 
         x = 0 -- the last one counts
-    elseif MAYBE then
+    elseif Any() then
         x = 3
-    elseif MAYBE then
+    elseif Any() then
         x = 4
     end
 
@@ -1796,10 +1797,10 @@ analyze[[
 
 if false then
 	pending[[
-        local MAYBE: boolean
+        local Any(): boolean
         local x = 0
-        if MAYBE then x = x + 1 end -- 1
-        if MAYBE then x = x - 1 end -- 0
+        if Any() then x = x + 1 end -- 1
+        if Any() then x = x - 1 end -- 0
         attest.equal(x, 0)
     ]]
 	pending[[

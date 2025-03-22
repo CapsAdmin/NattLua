@@ -41,7 +41,7 @@ do
 	end)
 
 	test("", function()
-		local a = X("{[any] = any}")
+		local a = X("{[Any()] = Any()}")
 		local b = X("{}")
 		assert(not equal(a, b))
 	end)

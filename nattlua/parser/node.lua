@@ -768,7 +768,7 @@ function META:__tostring()
 		if self.kind == "postfix_call" and self.Code then
 			local name = self.Code:GetName()
 
-			if name and lua_code and (name:sub(-4) == ".lua" or name:sub(-5) == ".nlua") then
+			if name and self.lua_code and (name:sub(-4) == ".lua" or name:sub(-5) == ".nlua") then
 				local data = self.Code:SubPosToLineChar(self:GetStartStop())
 				local name = name
 

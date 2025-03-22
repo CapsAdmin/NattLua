@@ -18,9 +18,9 @@ analyze[[
         end
 
         local a,b,c = test(), 3
-        assert_type(a, 1)
-        assert_type(b, 3)
-        assert_type(c, nil)
+        attest.equal(a, 1)
+        attest.equal(b, 3)
+        attest.equal(c, nil)
     ]]
 analyze[[
         local function test(...)
@@ -46,8 +46,6 @@ analyze[[
     ]]
 analyze[[
         -- var arg in table and return
-        local a,b,c = test(1,2,3)
-
         local function test(...)
             local a = {...}
             return a[1], a[2], a[3]
@@ -99,7 +97,8 @@ analyze[[
     end)(1,2)
 ]]
 analyze[[
-    local a,b,c = unknown()
+    local a,b,c = Any()
+    print(a,b,c)
     attest.equal(a, _ as any)
     attest.equal(b, _ as any)
     attest.equal(c, _ as any)

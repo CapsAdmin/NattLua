@@ -65,10 +65,9 @@ end)
 
 test("escape comments", function()
 	analyze[=[
-        local a = --[[# 1  ^ ]] --[[# -1]] * 3 --[[# * 1]]
+        local a = --[[# 1 ^ ]] --[[# -1]] * 3 + 1 --[[# * 1]]
         local b = 1 ^ -1 * 3 + 1 * 1
-        
-        type_expect(a, b)
+        attest.equal(a, b)
     ]=]
 	analyze([=[
         local function foo(
@@ -421,7 +420,7 @@ analyze[[
             return bar(2)+x
         end
     
-        type_expect(faz(1), 12)
+        attest.equal(faz(1), 9)
     end
 ]]
 analyze[[

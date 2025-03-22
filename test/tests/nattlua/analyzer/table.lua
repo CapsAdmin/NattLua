@@ -482,8 +482,10 @@ analyze[[
     end
 ]]
 analyze[[
-    attest.equal({Unknown()}, _ as {[1 .. inf] = any})
-    attest.equal({Unknown(), 1}, _ as {any, 1})
+    §analyzer.config.allow_global_lookup = true
+    attest.equal({UnknownGlobal()}, _ as {[1 .. inf] = any})
+    attest.equal({UnknownGlobal(), 1}, _ as {any, 1})
+    §analyzer.config.allow_global_lookup = false
 ]]
 analyze[[
     local x = {nil, 1, nil, nil}

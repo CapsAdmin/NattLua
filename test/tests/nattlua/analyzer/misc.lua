@@ -556,13 +556,13 @@ analyze[[
 ]]
 assert(_G.LOL == nil)
 analyze[[
-    a: number = (lol as function=()>(number))()
+    a: number = (Any() as function=()>(number))()
 
     attest.equal(a, nil as number)
 ]]
 analyze[[
     local a = {}
-    a.b: boolean, a.c: number = LOL as any, LOL2 as any
+    a.b: boolean, a.c: number = Any() as any, Any() as any
 ]]
 analyze[[
     local type test = {
@@ -623,7 +623,7 @@ analyze[[
     --attest.equal(TOTAL_STRANGER_STRING, _ as string)
 ]]
 analyze[[
-    local a = b as any
+    local a = Any() as any
     local b = 2
     attest.equal(a, _ as any)
 ]]
@@ -639,7 +639,8 @@ pending[[
     end
 ]]
 analyze[[
-    local a = {a = self}
+    local a = {a = Any() as self}
+    attest.equal(a.a, a)
 ]]
 analyze[[
     local meta = {} as {num = number, __index = self}

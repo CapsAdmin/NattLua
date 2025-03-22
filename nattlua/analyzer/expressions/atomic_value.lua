@@ -45,7 +45,12 @@ local function lookup_value(self, node)
 		end
 
 		if not obj then
-			self:Warning(err)
+			if self.config.allow_global_lookup == true then
+				self:Warning(err)
+			else
+				self:Error(err)
+			end
+
 			obj = Any()
 		end
 	end

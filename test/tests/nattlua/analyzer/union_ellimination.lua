@@ -1,6 +1,6 @@
 analyze[[
     local function test() 
-        if MAYBE then
+        if Any() then
             return nil
         end
         return 2

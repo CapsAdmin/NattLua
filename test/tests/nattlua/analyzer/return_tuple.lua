@@ -24,7 +24,7 @@ analyze[[
 
     local function test(): ErrorReturn<|{foo = number}|>
         if math.random() > 0.5 then
-            return {foo = number}
+            return {foo = _ as number}
         end
         return nil, last_error()
     end    

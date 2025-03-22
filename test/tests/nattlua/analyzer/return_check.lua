@@ -33,7 +33,7 @@ analyze(
 analyze(
 	[[
     local function func(): number, number
-        if MAYBE then
+        if Any() then
             return 1, 2
         end
 
@@ -43,15 +43,15 @@ analyze(
 	"index 2 does not exist"
 )
 analyze[[
-    local MAYBE: boolean
+    local maybe: boolean
 
     local function ReadLiteralString(multiline_comment : boolean): (true,) | (false, string)
-        if MAYBE then
+        if maybe then
             if multiline_comment then return false, "multiline comment not allowed" end
             return false, "a string"
         end
     
-        if MAYBE then
+        if maybe then
             return true
         end
     

@@ -45,7 +45,7 @@ analyze[[
         -- pairs on any should at least make k,v any
         local key, val
 
-        for k,v in pairs(unknown) do
+        for k,v in pairs(Any()) do
             key = k
             val = v
         end
@@ -74,7 +74,7 @@ analyze[[
     local x = 0
     for i = 1, 10 do
         x = x + i
-        if i == maybe then
+        if i == Any() then
             break
         end
     end

@@ -356,3 +356,9 @@ end
 analyzer function TType(T: any)
 	return T.Type
 end
+
+analyzer function Any()
+	return types.Any()
+end
+
+type Any = Any()

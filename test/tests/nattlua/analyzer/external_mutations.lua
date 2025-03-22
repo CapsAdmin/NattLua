@@ -2,14 +2,14 @@ analyze(
 	[[
     local x: {foo = boolean} = {foo = true}
 
-    unknown(x)
+    Any()(x)
 ]],
 	"cannot mutate argument"
 )
 analyze([[
     local x = {foo = true}
 
-    unknown(x)
+    Any()(x)
 
     attest.equal<|x.foo, any | true|>
 ]])
