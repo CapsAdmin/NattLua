@@ -1,5 +1,5 @@
 local ipairs = _G.ipairs
-local META = loadfile("nattlua/emitter.lua")()
+local META = loadfile("nattlua/emitter/emitter.lua")()
 local old_new = META.New
 
 function META.New(...)

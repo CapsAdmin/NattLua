@@ -1,9 +1,9 @@
 --[[# --ANALYZE
-local type { Token, TokenType } = import("~/nattlua/token.lua")]]
+local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type { ExpressionKind, StatementKind, statement, expression, Node } = import("~/nattlua/parser/nodes.nlua")]]
 
---[[#local type { ParserConfig } = import("~/nattlua/config.nlua")]]
+--[[#local type ParserConfig = import("~/nattlua/parser/config.nlua")]]
 
 --[[#local type { Code } = import<|"~/nattlua/code.lua"|>]]
 
@@ -17,7 +17,7 @@ local type = _G.type
 local table = _G.table
 local math_min = math.min
 local class = require("nattlua.other.class")
-local Token = require("nattlua.token").New
+local Token = require("nattlua.lexer.token").New
 local META = class.CreateTemplate("parser")
 META.OnInitialize = {}
 --[[#type META.@Self = {

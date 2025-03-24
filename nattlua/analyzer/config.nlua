@@ -1,0 +1,6 @@
+local type AnalyzerConfig = {
+	external_mutation = boolean,
+	working_directory = string,
+	root_directory = string,
+}
+return AnalyzerConfig

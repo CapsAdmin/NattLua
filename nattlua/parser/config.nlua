@@ -1,0 +1,16 @@
+local type { Node } = import("./nodes.nlua")
+
+local type ParserConfig = {
+	root = Node,
+	on_parsed_node = function=(ref Table, ref Node)>(ref Node),
+	path = string,
+	skip_import = boolean,
+	emit_environment = boolean,
+	inline_require = boolean,
+	file_path = string,
+	file_name = string,
+	working_directory = string,
+	root_directory = string,
+	path = string,
+}
+return Partial<|ParserConfig|>

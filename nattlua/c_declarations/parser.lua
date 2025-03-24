@@ -1,4 +1,4 @@
-local META = loadfile("nattlua/parser.lua")()
+local META = loadfile("nattlua/parser/parser.lua")()
 local table = _G.table
 local ipairs = _G.ipairs
 local old_new = META.New
