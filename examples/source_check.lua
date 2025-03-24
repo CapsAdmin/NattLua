@@ -1,5 +1,5 @@
 local nl = require("nattlua")
-local table_print = require("nattlua.other.table_print")
+local table_print = require("nattlua.other.table_print").print
 local util = require("examples.util")
 local paths = util.GetFilesRecursively("./nattlua")
 local stats = {

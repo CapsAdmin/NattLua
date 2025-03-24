@@ -28,7 +28,7 @@ end
 _G.bit = _G.bit or require("nattlua.other.bit")
 
 do -- these are just helpers for print debugging
-	table.print = require("nattlua.other.table_print")
+	table.print = require("nattlua.other.table_print").print
 	debug.trace = function(max_level)
 		max_level = max_level or math.huge
 		local level = 1

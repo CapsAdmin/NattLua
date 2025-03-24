@@ -302,7 +302,7 @@ luadata.SetModifier("table", function(tbl, context)
 	return table.concat(str, "")
 end)
 
-return function(...)
+local function tostring(...)
 	local tbl = {...}
 	local max_level
 
@@ -317,3 +317,12 @@ return function(...)
 
 	io.write(luadata.ToString(tbl, {tab = -1, tab_limit = max_level, done = {}}):sub(0, -2))
 end
+
+local function print(...)
+	return io.write(tostring(...))
+end
+
+return {
+	print = print,
+	tostring = tostring,
+}

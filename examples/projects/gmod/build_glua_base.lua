@@ -1,6 +1,6 @@
 local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
 local json = require("nattlua.other.json")
-local tprint = require("nattlua.other.table_print")
+local tprint = require("nattlua.other.table_print").print
 local util = require("examples.util")
 local LString = require("nattlua.types.string").LString
 local nl = require("nattlua")
