@@ -135,4 +135,19 @@ function path.ResolveRequire(str)
 	return nil
 end
 
+function path.Join(...)
+	local segments = {...}
+	local result = ""
+
+	for i, segment in ipairs(segments) do
+		if i > 1 and result:sub(-1) ~= "/" and segment:sub(1, 1) ~= "/" then
+			result = result .. "/"
+		end
+
+		result = result .. segment
+	end
+
+	return path.Normalize(result)
+end
+
 return path

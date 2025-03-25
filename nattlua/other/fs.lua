@@ -1,5 +1,5 @@
-local ffi = require("ffi")
 local fs = {}
+local ffi = require("ffi")
 
 if ffi.arch ~= "Windows" then
 	ffi.cdef([[
@@ -365,7 +365,7 @@ if ffi.arch ~= "Windows" then
 			end
 
 			function fs.get_files_recursive(path, can_traverse)
-				if not path:sub(-1) ~= "/" then path = path .. "/" end
+				if path:sub(-1) ~= "/" then path = path .. "/" end
 
 				local out = {}
 				local errors = {}
@@ -871,8 +871,87 @@ int feof(void *stream);
 
 		return true
 	end
+end
 
-	return fs
+function fs.is_directory(path)
+	local type = fs.get_type(path)
+	return type == "directory"
+end
+
+function fs.is_file(path)
+	local type = fs.get_type(path)
+	return type == "file"
+end
+
+function fs.exists(path)
+	local type = fs.get_type(path)
+	return type ~= nil
+end
+
+do
+	local old = fs.remove_directory
+
+	function fs.remove_directory(path, recursive)
+		if not recursive then return old(path) end
+
+		-- For recursive removal, get all files/dirs and remove them
+		local files = fs.get_files_recursive(path)
+
+		if files then
+			for i = #files, 1, -1 do
+				local file_path = files[i]
+				local type = fs.get_type(file_path)
+
+				if type == "file" then
+					fs.remove_file(file_path)
+				elseif type == "directory" then
+					old(file_path)
+				end
+			end
+		end
+
+		return fs.remove_directory(path)
+	end
+end
+
+function fs.read(path)
+	local f, err = io.open(path, "rb")
+
+	if not f then return nil, err end
+
+	local content = f:read("*all")
+
+	if content == nil then return nil, "file is empty" end
+
+	f:close()
+	return content
+end
+
+function fs.write(path, content)
+	local f = io.open(path, "wb")
+
+	if not f then return nil, "Failed to open file for writing" end
+
+	f:write(content)
+	f:close()
+	return true
+end
+
+function fs.iterate(dir, pattern)
+	local files = fs.get_files and fs.get_files(dir) or {}
+	local i = 0
+	local n = #files
+	return function()
+		i = i + 1
+
+		while i <= n do
+			local file = files[i]
+
+			if not pattern or file:match(pattern) then return dir .. "/" .. file end
+
+			i = i + 1
+		end
+	end
 end
 
 return fs

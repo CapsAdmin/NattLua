@@ -319,7 +319,7 @@ local function tostring(...)
 end
 
 local function print(...)
-	return io.write(tostring(...))
+	return io.write((tostring--[[# as any]])(...))
 end
 
 return {

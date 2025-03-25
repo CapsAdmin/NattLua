@@ -475,9 +475,9 @@ To run tests run `luajit nattlua.lua test`
 
 To build run `luajit nattlua.lua build`
 
-To format the codebase with NattLua run `luajit nattlua.lua format`
+To format the codebase with NattLua run `luajit nattlua.lua fmt`
 
-To build vscode extension run `luajit nattlua.lua build:vscode`
+To build vscode extension run `luajit nattlua.lua build-vscode`
 
 To install run `luajit nattlua.lua install`
 

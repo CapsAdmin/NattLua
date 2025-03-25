@@ -19,7 +19,9 @@ local loadstring = require("nattlua.other.loadstring")
 local stringx = require("nattlua.other.string")
 local META = class.CreateTemplate("compiler")
 
---[[#local type { CompilerConfig } = Partial<|import("~/nattlua/parser/config.nlua") & import("~/nattlua/analyzer/config.nlua") & import("~/nattlua/emitter/config.nlua")|>]]
+--[[#local type { CompilerConfig } = Partial<|
+	import("~/nattlua/parser/config.nlua") & import("~/nattlua/analyzer/config.nlua") & import("~/nattlua/emitter/config.nlua")
+|>]]
 
 --[[#type META.@Self = {
 	Code = any,
@@ -344,7 +346,7 @@ function META.LoadFile(path, config)
 
 	if not code then return nil, err end
 
-	return loadstring(code, obj.config.file_name)
+	return loadstring(code, obj.Config.file_name)
 end
 
 return META

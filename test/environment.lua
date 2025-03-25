@@ -1,8 +1,27 @@
 local io = require("io")
 local pcall = _G.pcall
 
-function _G.test(name, cb)
-	cb()
+function _G.test(name, cb, start, stop)
+    if start and stop then
+        local ok_start, err_start = xpcall(start, debug.traceback)
+        local ok_cb, err_cb = xpcall(cb, debug.traceback)
+        local ok_stop, err_stop = xpcall(stop, debug.traceback)
+        
+        -- Report errors in priority order, but only after all functions have run
+        if not ok_start then
+            error(string.format("Test '%s' setup failed: %s", name, err_start), 2)
+        elseif not ok_cb then
+            error(string.format("Test '%s' failed: %s", name, err_cb), 2)
+        elseif not ok_stop then
+            error(string.format("Test '%s' teardown failed: %s", name, err_stop), 2)
+        end
+    else
+        -- If setup/teardown not provided, just run the test
+        local ok_cb, err_cb = xpcall(cb, debug.traceback)
+        if not ok_cb then
+            error(string.format("Test '%s' failed: %s", name, err_cb), 2)
+        end
+    end
 end
 
 function _G.pending(...) end

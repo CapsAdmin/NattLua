@@ -424,7 +424,13 @@ function META:BuildCode(block)
 	end
 
 	self:EmitStatements(block.statements)
-	return self:Concat()
+	local str = self:Concat()
+
+	if self.config.trailing_newline and str:find("\n", nil, true) then
+		if str:sub(#str, #str) ~= "\n" then str = str .. "\n" end
+	end
+
+	return str
 end
 
 function META:OptionalWhitespace()

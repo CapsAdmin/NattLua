@@ -90,7 +90,7 @@ editor_helper:SetConfigFunction(function(path)
 		if f then
 			local ok, err = pcall(f)
 
-			if not ok then print(err) end
+			if not ok then error(err) end
 
 			editor_helper:DebugLog("[ " .. original_path .. " ] loading config " .. config_path)
 			err.config_dir = dir .. "/"
