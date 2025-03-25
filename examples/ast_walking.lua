@@ -1,9 +1,9 @@
 local nl = require("nattlua")
-local ast = assert(nl.Compiler(assert(io.open("nattlua/parser.lua")):read("*all")):Parse()).SyntaxTree
+local ast = assert(nl.File("nattlua.lua"):Parse()).SyntaxTree
 print("==================================================")
-print("all while statements:")
+print("all if statements:")
 
-for i, v in ipairs(ast:FindNodesByType("while")) do
+for i, v in ipairs(ast:FindNodesByType("if")) do
 	print(i, v:Render())
 end
 

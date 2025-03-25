@@ -5,8 +5,7 @@ config.build = function()
 		nl.File(
 			"examples/projects/luajit/src/main.nlua",
 			{
-				working_directory = "examples/projects/luajit/src/",
-				emit_environment = false,
+				parser = {working_directory = "examples/projects/luajit/src/", emit_environment = false,},
 			}
 		)
 	)
@@ -34,11 +33,11 @@ config.build = function()
 	print("===RUNNING CODE===")
 	require("examples/projects.luajit.out")
 end
-config["get-analyzer-config"] = function()
+config["get-compiler-config"] = function()
 	return {
-		entry_point = "main.nlua",
-		working_directory = "src/",
-		emit_environment = false,
+		lsp = {entry_point = "main.nlua"},
+		parser = {working_directory = "src/", emit_environment = false},
+		analyzer = {working_directory = "src/"},
 	}
 end
 return config

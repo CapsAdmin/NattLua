@@ -10,7 +10,7 @@ local function check(config, input, expect)
 		config.comment_type_annotations = false
 	end
 
-	local new_lua_code = assert(nl.Compiler(input, nil, config):Emit())
+	local new_lua_code = assert(nl.Compiler(input, nil, {emitter = config}):Emit())
 
 	if new_lua_code ~= expect then diff(new_lua_code, expect) end
 

@@ -13,13 +13,13 @@ local function single_file(code)
 		})
 	end
 
-	helper:SetFileContent(path, code)
 	helper:OpenFile(path, code)
 	return helper, diagnostics
 end
 
 do
 	local editor = single_file([[local a = 1]])
+	table.print(editor:GetHover(path, 0, 6), 1)
 	assert(editor:GetHover(path, 0, 6).obj:GetData() == 1)
 end
 
@@ -190,10 +190,10 @@ do
 	helper:SetConfigFunction(function(...)
 		local cmd = ...
 
-		if cmd == "get-analyzer-config" then
+		if cmd == "get-compiler-config" then
 			return {
-				inline_require = true,
-				entry_point = "./src/main.nlua",
+				parser = {inline_require = true},
+				lsp = {entry_point = "./src/main.nlua"},
 			}
 		end
 	end)
@@ -220,10 +220,12 @@ do
 
 	helper:SetConfigFunction(function(...)
 		return {
-			["get-analyzer-config"] = function()
+			["get-compiler-config"] = function()
 				return {
-					inline_require = true,
-					entry_point = "./src/bad.nlua",
+					parser = {
+						inline_require = true,
+					},
+					lsp = {entry_point = "./src/bad.nlua"},
 				}
 			end,
 		}

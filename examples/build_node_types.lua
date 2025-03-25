@@ -97,11 +97,13 @@ local compiler = assert(
 	nl.File(
 		"nattlua/parser.lua",
 		{
-			inline_require = true,
-			preserve_whitespace = false,
-			on_parsed_node = function(self, node)
-				if node.type == "statement" then crawl_statement(node) end
-			end,
+			emitter = {preserve_whitespace = false,},
+			parser = {
+				inline_require = true,
+				on_parsed_node = function(self, node)
+					if node.type == "statement" then crawl_statement(node) end
+				end
+			}
 		}
 	):Parse()
 )
@@ -145,5 +147,5 @@ for _, v in sorted_pairs(found) do
 	code = code .. "}\n"
 end
 
-local res = nl.Compiler(code, "", {preserve_whitespace = false, comment_type_annotations = false}):Emit()
+local res = nl.Compiler(code, "", {emitter = {preserve_whitespace = false, comment_type_annotations = false}}):Emit()
 print(res, #res)

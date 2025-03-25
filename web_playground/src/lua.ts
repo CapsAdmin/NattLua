@@ -52,14 +52,17 @@ export const prettyPrint = (lua: LuaEngine, code: string) => {
 		function _G.prettyPrint(code)
 			local nl = require("nattlua")
 			local compiler = nl.Compiler(code, "temp", {
-				preserve_whitespace = false,
-				string_quote = "\\"",
-				no_semicolon = true,
-				comment_type_annotations = true,
-				type_annotations = "explicit",
-				force_parenthesis = true,
-				skip_import = true,
-				comment_type_annotations = false,
+				emitter = {
+					preserve_whitespace = false,
+					string_quote = "\\"",
+					no_semicolon = true,
+					type_annotations = "explicit",
+					force_parenthesis = true,
+					comment_type_annotations = false,
+				},
+				parser = {
+					skip_import = true,
+				}
 			})
 			return assert(compiler:Emit())
 		end    

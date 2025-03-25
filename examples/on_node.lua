@@ -4,9 +4,9 @@ local lua = assert(
 	nl.File(
 		"build_output.lua",
 		{
-			on_parsed_node = function(parser, node)
+			parser = {on_parsed_node = function(parser, node)
 				print(node:Render())
-			end,
+			end},
 		}
 	):Parse()
 )

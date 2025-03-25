@@ -11,7 +11,7 @@ local stats = {
 }
 
 for _, path in ipairs(paths) do
-	local c = nl.File(path)
+	local c = nl.File(path, {skip_import = false})
 	local tokens = c:Lex().Tokens
 	stats.tokens = stats.tokens + #tokens
 

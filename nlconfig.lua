@@ -28,12 +28,6 @@ do -- custom commands specific for nattlua
 			os.execute("chmod +x ~/.local/bin/nattlua")
 		end,
 	}
-	config.commands["get-analyzer-config"] = {
-		cb = function()
-			local analyzer_config = {}
-			return analyzer_config
-		end,
-	}
 	config.commands["test"] = {
 		cb = function(args)
 			assert(loadfile("test/run.lua"))(args[1])
@@ -170,9 +164,13 @@ do -- these override existing commands and should probably be made more generic
 				]],
 					"nattlua",
 					{
-						type_annotations = false,
-						inline_require = true,
-						emit_environment = true,
+						emitter = {
+							type_annotations = false,
+						},
+						parser = {
+							inline_require = true,
+							emit_environment = true,
+						},
 					}
 				)
 			)

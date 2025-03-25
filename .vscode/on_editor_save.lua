@@ -28,9 +28,9 @@ local function run_nattlua(path)
 		nl.File(
 			path,
 			{
-				type_annotations = true,
-			--inline_require = lua_code:find("%-%-%s-INLINE_REQUIRE") ~= nil,
-			--emit_environment = true,
+				emitter = {type_annotations = true},
+				--inline_require = lua_code:find("%-%-%s-INLINE_REQUIRE") ~= nil,
+				--emit_environment = true,
 			}
 		)
 	)

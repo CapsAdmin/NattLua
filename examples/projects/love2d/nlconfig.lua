@@ -8,8 +8,10 @@ config["build"] = function()
 		nl.File(
 			"src/main.nlua",
 			{
-				working_directory = "src/",
-				inline_require = true,
+				parser = {
+					working_directory = "src/", 
+					inline_require = true
+				},
 			}
 		)
 	)
@@ -39,11 +41,11 @@ config["run"] = function()
 
 	os.execute("love dist/")
 end
-config["get-analyzer-config"] = function()
+config["get-compiler-config"] = function()
 	return {
-		entry_point = "main.nlua",
-		working_directory = "src/",
-		emit_environment = false,
+		lsp = {entry_point = "main.nlua"},
+		parser = {working_directory = "src/", emit_environment = false},
+		analyzer = {working_directory = "src/"},
 	}
 end
 return config

@@ -35,23 +35,25 @@ config.format = function()
 		["./lua/entities/gmod_wire_expression2/core/custom/pac.lua"] = true,
 	}
 	local config = {
-		preserve_whitespace = false,
-		string_quote = "\"",
-		no_semicolon = true,
-		force_parenthesis = true,
-		extra_indent = {
-			StartStorableVars = {
-				to = "EndStorableVars",
+		emitter = {
+			preserve_whitespace = false,
+			string_quote = "\"",
+			no_semicolon = true,
+			force_parenthesis = true,
+			extra_indent = {
+				StartStorableVars = {
+					to = "EndStorableVars",
+				},
+				Start2D = {to = "End2D"},
+				Start3D = {to = "End3D"},
+				Start3D2D = {to = "End3D2D"},
+				-- in case it's localized
+				cam_Start2D = {to = "cam_End2D"},
+				cam_Start3D = {to = "cam_End3D"},
+				cam_Start3D2D = {to = "cam_End3D2D"},
+				cam_Start = {to = "cam_End"},
+				SetPropertyGroup = "toggle",
 			},
-			Start2D = {to = "End2D"},
-			Start3D = {to = "End3D"},
-			Start3D2D = {to = "End3D2D"},
-			-- in case it's localized
-			cam_Start2D = {to = "cam_End2D"},
-			cam_Start3D = {to = "cam_End3D"},
-			cam_Start3D2D = {to = "cam_End3D2D"},
-			cam_Start = {to = "cam_End"},
-			SetPropertyGroup = "toggle",
 		},
 	}
 
@@ -71,11 +73,11 @@ config.format = function()
 end
 config.build = function() -- TODO
 end
-config["get-analyzer-config"] = function()
+config["get-compiler-config"] = function()
 	return {
 		-- TODO: need to get the absolute path of this nlconfig.lua file
-		entry_point = GetFilesRecursively("examples/projects/gmod/lua/autorun"),
-		emit_environment = false,
+		lsp = {entry_point = GetFilesRecursively("examples/projects/gmod/lua/autorun")},
+		parser = {emit_environment = false},
 	}
 end
 return config

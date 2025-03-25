@@ -58,29 +58,22 @@ function META:NodeToType(typ)
 	return self.node_to_type[typ]
 end
 
-function META:GetAanalyzerConfig(path)
-	local cfg = self:GetProjectConfig("get-analyzer-config", path) or {}
+function META:GetCompilerConfig(path)
+	local cfg = self:GetProjectConfig("get-compiler-config", path) or {}
+	cfg.emitter = cfg.emitter or {}
+	cfg.analyzer = cfg.analyzer or {}
+	cfg.lsp = cfg.lsp or {}
+	cfg.parser = cfg.parser or {}
 
-	if cfg.type_annotations == nil then cfg.type_annotations = true end
+	if cfg.emitter.type_annotations == nil then
+		cfg.emitter.type_annotations = true
+	end
 
-	if cfg.should_crawl_untyped_functions == nil then
-		cfg.should_crawl_untyped_functions = false
+	if cfg.analyzer.should_crawl_untyped_functions == nil then
+		cfg.analyzer.should_crawl_untyped_functions = false
 	end
 
 	return cfg
-end
-
-function META:GetEmitterConfig(path)
-	return self:GetProjectConfig("get-emitter-config", path) or
-		{
-			preserve_whitespace = false,
-			string_quote = "\"",
-			no_semicolon = true,
-			comment_type_annotations = true,
-			type_annotations = "explicit",
-			force_parenthesis = true,
-			skip_import = true,
-		}
 end
 
 function META:DebugLog(str)
@@ -160,15 +153,15 @@ do
 end
 
 function META:Recompile(path, lol, diagnostics)
-	local cfg = self:GetAanalyzerConfig(path)
+	local cfg = self:GetCompilerConfig(path)
 	diagnostics = diagnostics or {}
 
 	if not lol then
-		if type(cfg.entry_point) == "table" then
+		if type(cfg.lsp.entry_point) == "table" then
 			if self.debug then print("recompiling entry points from: " .. path) end
 
-			for _, path in ipairs(cfg.entry_point) do
-				local new_path = path_util.Resolve(path, cfg.root_directory, cfg.working_directory)
+			for _, path in ipairs(cfg.lsp.entry_point) do
+				local new_path = path_util.Resolve(path, cfg.parser.root_directory, cfg.parser.working_directory)
 
 				if self.debug then
 					print(path, "->", new_path)
@@ -179,12 +172,12 @@ function META:Recompile(path, lol, diagnostics)
 			end
 
 			return
-		elseif type(cfg.entry_point) == "string" then
-			local path = path_util.Resolve(cfg.entry_point, cfg.root_directory, cfg.working_directory)
+		elseif type(cfg.lsp.entry_point) == "string" then
+			local path = path_util.Resolve(cfg.lsp.entry_point, cfg.parser.root_directory, cfg.parser.working_directory)
 
 			if self.debug then
 				print("recompiling entry point: " .. path)
-				print(cfg.entry_point, "->", path)
+				print(cfg.lsp.entry_point, "->", path)
 				table.print(cfg)
 			end
 
@@ -193,20 +186,26 @@ function META:Recompile(path, lol, diagnostics)
 		end
 	end
 
-	local entry_point = path or cfg.entry_point
+	local entry_point = path or cfg.lsp.entry_point
 
 	if not entry_point then return false end
 
-	cfg.inline_require = false
-	cfg.pre_read_file = function(parser, path)
+	cfg.parser.pre_read_file = function(parser, path)
 		if self.TempFiles[path] then return self:GetFileContent(path) end
 	end
-	cfg.on_read_file = function(parser, path, content)
+	cfg.analyzer.pre_read_file = function(parser, path)
+		if self.TempFiles[path] then return self:GetFileContent(path) end
+	end
+	cfg.analyzer.on_read_file = function(parser, path, content)
 		if not self.TempFiles[path] then self:SetFileContent(path, content) end
 	end
-	cfg.on_parsed_file = function(path, compiler)
+	cfg.analyzer.on_read_file = function(parser, path, content)
+		if not self.TempFiles[path] then self:SetFileContent(path, content) end
+	end
+	cfg.parser.on_parsed_file = function(path, compiler)
 		self:LoadFile(path, compiler.Code, compiler.Tokens)
 	end
+	cfg.parser.inline_require = true
 	self:DebugLog("[ " .. entry_point .. " ] compiling")
 	local compiler = Compiler([[return import("]] .. entry_point .. [[")]], entry_point, cfg)
 	compiler.debug = true
@@ -274,7 +273,7 @@ function META:Recompile(path, lol, diagnostics)
 		end
 
 		if should_analyze then
-			local ok, err = compiler:Analyze(nil, cfg)
+			local ok, err = compiler:Analyze(nil, cfg.analyzer)
 			local name = compiler:GetCode():GetName()
 
 			if not ok then
@@ -323,9 +322,18 @@ function META:Initialize()
 end
 
 function META:Format(code, path)
-	local config = self:GetEmitterConfig(path)
-	config.comment_type_annotations = path:sub(-#".lua") == ".lua"
-	config.transpile_extensions = path:sub(-#".lua") == ".lua"
+	local config = self:GetCompilerConfig(path)
+	config.emitter = {
+		preserve_whitespace = false,
+		string_quote = "\"",
+		no_semicolon = true,
+		comment_type_annotations = true,
+		type_annotations = "explicit",
+		force_parenthesis = true,
+	}
+	config.parser = {skip_import = true}
+	config.emitter.comment_type_annotations = path:sub(-#".lua") == ".lua"
+	config.emitter.transpile_extensions = path:sub(-#".lua") == ".lua"
 	local compiler = Compiler(code, "@" .. path, config)
 	local code, err = compiler:Emit()
 	return code

@@ -31,43 +31,45 @@ function coverage.Preprocess(code, key)
 		code,
 		key,
 		{
-			on_parsed_node = function(parser, node)
-				if node.type == "statement" then
-					if node.kind == "call_expression" then
+			parser = {
+				on_parsed_node = function(parser, node)
+					if node.type == "statement" then
+						if node.kind == "call_expression" then
+							local start, stop = node:GetStartStop()
+							node.value = inject_call_expression(parser, node.value, start, stop)
+						end
+					elseif node.type == "expression" then
 						local start, stop = node:GetStartStop()
-						node.value = inject_call_expression(parser, node.value, start, stop)
-					end
-				elseif node.type == "expression" then
-					local start, stop = node:GetStartStop()
 
-					if
-						node.is_left_assignment or
-						node.is_identifier or
-						node:GetStatement().kind == "function" or
-						(
-							node.kind == "binary_operator" and
+						if
+							node.is_left_assignment or
+							node.is_identifier or
+							node:GetStatement().kind == "function" or
 							(
-								node.value.value == "." or
-								node.value.value == ":"
+								node.kind == "binary_operator" and
+								(
+									node.value.value == "." or
+									node.value.value == ":"
+								)
 							)
-						)
-						or
-						(
-							node.parent and
-							node.parent.kind == "binary_operator" and
+							or
 							(
-								node.parent.value.value == "." or
-								node.parent.value.value == ":"
+								node.parent and
+								node.parent.kind == "binary_operator" and
+								(
+									node.parent.value.value == "." or
+									node.parent.value.value == ":"
+								)
 							)
-						)
-					then
-						return
-					end
+						then
+							return
+						end
 
-					return inject_call_expression(parser, node, start, stop)
-				end
-			end,
-			skip_import = true,
+						return inject_call_expression(parser, node, start, stop)
+					end
+				end,
+				skip_import = true,
+			},
 		}
 	)
 	assert(compiler:Parse())

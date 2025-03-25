@@ -34,8 +34,10 @@ local function load_definitions(root_node)
 	local config = {}
 	config.file_path = config.file_path or path
 	config.file_name = config.file_name or "@" .. path
-	config.comment_type_annotations = false
-	config.root_statement_override = root_node
+	config.emitter = {
+		comment_type_annotations = false,
+	}
+	config.parser = {root_statement_override = root_node}
 	-- import_data will be transformed on build and the local function will not be used
 	-- we canot use the upvalue path here either since this happens at parse time
 	local code = assert(import_data("nattlua/definitions/index.nlua"))

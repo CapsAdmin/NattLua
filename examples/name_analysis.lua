@@ -169,7 +169,7 @@ end
 
 for _, path in ipairs(paths) do
 	if not is_blacklisted(path) then
-		local code = assert(assert(nl.File(path)):Parse())
+		local code = assert(assert(nl.File(path, {parser = {skip_import = false}})):Parse())
 		local tokens = code.Tokens
 
 		for _, token in ipairs(tokens) do

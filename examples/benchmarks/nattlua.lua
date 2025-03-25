@@ -9,9 +9,9 @@ local lua_code = assert(
 	)
 )
 local sec = util.MeasureFunction(function()
-	local compiler = nl.Compiler(lua_code, "10mb.lua", {
+	local compiler = nl.Compiler(lua_code, "10mb.lua", {parser = {
 		skip_import = true,
-	})
+	}})
 	local tokens = util.Measure("compiler:Lex()", function()
 		return assert(compiler:Lex()).Tokens
 	end)

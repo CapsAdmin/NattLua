@@ -3,7 +3,7 @@ local builder = assert(
 	nl.File(
 		"examples/projects/luajit/src/test.nlua",
 		{
-			working_directory = "examples/projects/luajit/src/",
+			parser = {working_directory = "examples/projects/luajit/src/"},
 		}
 	)
 )

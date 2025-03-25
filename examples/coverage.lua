@@ -136,7 +136,7 @@ local compiler = nl.Compiler(
     
 ]],
 	"lol",
-	{
+	{parser = {
 		on_parsed_node = function(parser, node)
 			if
 				node.type == "expression" and
@@ -158,7 +158,7 @@ local compiler = nl.Compiler(
 			end
 		end,
 		skip_import = true,
-	}
+	}}
 )
 assert(compiler:Parse())
 local original = compiler.Code:GetString()

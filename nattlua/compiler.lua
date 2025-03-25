@@ -18,11 +18,15 @@ local Emitter = require("nattlua.emitter").New
 local loadstring = require("nattlua.other.loadstring")
 local stringx = require("nattlua.other.string")
 local META = class.CreateTemplate("compiler")
-
---[[#local type { CompilerConfig } = Partial<|
-	import("~/nattlua/parser/config.nlua") & import("~/nattlua/analyzer/config.nlua") & import("~/nattlua/emitter/config.nlua")
+--[[#local type CompilerConfig = Partial<|
+	{
+		file_path = string | nil,
+		file_name = string | nil,
+		parser = Partial<|import("~/nattlua/parser/config.nlua")|>,
+		analyzer = Partial<|import("~/nattlua/analyzer/config.nlua")|>,
+		emitter = Partial<|import("~/nattlua/emitter/config.nlua")|>,
+	}
 |>]]
-
 --[[#type META.@Self = {
 	Code = any,
 	ParentSourceLine = string,
@@ -184,7 +188,7 @@ local traceback = function(self, obj, msg)
 end
 
 function META:Lex()
-	local lexer = Lexer(self.Code)
+	local lexer = Lexer(self.Code, self.Config and self.Config.lexer)
 	lexer.OnError = function(lexer, code, msg, start, stop, ...)
 		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, ...)
 	end
@@ -207,7 +211,7 @@ function META:Parse()
 		if not ok then return ok, err end
 	end
 
-	local parser = Parser(self.Tokens, self.Code, self.Config)
+	local parser = Parser(self.Tokens, self.Code, self.Config and self.Config.parser)
 	parser.OnError = function(parser, code, msg, start, stop, ...)
 		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, ...)
 	end
@@ -242,7 +246,7 @@ function META:Analyze(analyzer, ...)
 		end
 	end
 
-	analyzer = analyzer or Analyzer(self.Config)
+	analyzer = analyzer or Analyzer(self.Config and self.Config.analyzer)
 	analyzer.compiler = self
 	self.analyzer = analyzer
 	analyzer.OnDiagnostic = function(analyzer, ...)
@@ -280,7 +284,7 @@ function META:Emit(cfg)
 		if not ok then return ok, err end
 	end
 
-	local emitter = Emitter(cfg or self.Config)
+	local emitter = Emitter(cfg or self.Config and self.Config.emitter)
 	return emitter:BuildCode(self.SyntaxTree)
 end
 
@@ -296,6 +300,16 @@ function META.New(
 	local parent_line = info and tostring(info.currentline) or "unknown line"
 	local parent_name = info and info.source:sub(2) or "unknown name"
 	name = name or (parent_name .. ":" .. parent_line)
+
+	if config then
+		for _, v in ipairs({"emitter", "parser", "analyzer"}) do
+			if config[v] then
+				config[v].file_path = config[v].file_path or config.file_path
+				config[v].file_name = config[v].file_name or config.file_name
+			end
+		end
+	end
+
 	return setmetatable(
 		{
 			Code = Code(lua_code, name),

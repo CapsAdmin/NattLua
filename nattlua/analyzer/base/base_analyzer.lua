@@ -254,7 +254,7 @@ return function(META)
 			code,
 			"@" .. path,
 			{
-				root_statement_override = self.compiler and self.compiler.SyntaxTree,
+				parser = {root_statement_override = self.compiler and self.compiler.SyntaxTree},
 				file_path = path,
 				file_name = "@" .. path,
 			}

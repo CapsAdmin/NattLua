@@ -103,12 +103,12 @@ config.commands["check"] = {
 
 		if #args == 1 and args[1] == "-" then
 			local input = io.read("*all")
-			io.write(assert(nl.Compiler(input, "stdin-", config.emitter):Analyze()))
+			io.write(assert(nl.Compiler(input, "stdin-", config):Analyze()))
 		else
 			for _, path in ipairs(
 				cli.get_files({path = args, blacklist = config.ignorefiles, ext = {".lua", ".nlua"}})
 			) do
-				assert(nl.File(path, config.emitter):Analyze())
+				assert(nl.File(path, config):Analyze())
 			end
 		end
 
@@ -133,9 +133,8 @@ config.commands["build"] = {
 			os.exit(1)
 		end
 
-		local compiler_config = get_compiler_config(config)
-		compiler_config.skip_import = false
-		local lua_code = assert(nattlua.File(input_path, compiler_config)):Emit()
+		config.parser.skip_import = false
+		local lua_code = assert(nattlua.File(input_path, config)):Emit()
 		local file, err = io.open(output_path, "w")
 
 		if not file then
@@ -161,19 +160,38 @@ config.commands["fmt"] = {
 
 		if #args == 1 and args[1] == "-" then
 			local input = io.read("*all")
-			io.write(assert(nl.Compiler(input, "stdin-", config.emitter):Emit()))
+			io.write(assert(nl.Compiler(input, "stdin-", config):Emit()))
 		else
 			for _, path in ipairs(
 				cli.get_files({path = args, blacklist = config.ignorefiles, ext = {".lua", ".nlua"}})
 			) do
 				local old = config.emitter.comment_type_annotations
-				config.emitter.comment_type_annotations = config.comment_type_annotations_in_lua_files and path:sub(-#".lua") == ".lua"
-				local new_lua_code = assert(nl.File(path, config.emitter):Emit())
+				config.emitter.comment_type_annotations = config.emitter.comment_type_annotations_in_lua_files and
+					path:sub(-#".lua") == ".lua"
+				local new_lua_code = assert(nl.File(path, config):Emit())
 				config.emitter.comment_type_annotations = old
 
 				if options.check then
-					if new_lua_code ~= fs.read(path) then
-						print(path, " is not formated")
+					local A = new_lua_code
+					local B = fs.read(path)
+
+					if A ~= B then
+						local a = os.tmpname()
+						local b = os.tmpname()
+
+						do
+							local f = assert(io.open(a, "w"))
+							f:write(A)
+							f:close()
+						end
+
+						do
+							local f = assert(io.open(b, "w"))
+							f:write(B)
+							f:close()
+						end
+
+						os.execute("git --no-pager diff --no-index " .. a .. " " .. b)
 					end
 				else
 

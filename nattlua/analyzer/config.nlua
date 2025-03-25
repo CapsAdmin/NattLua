@@ -2,5 +2,10 @@ local type AnalyzerConfig = {
 	external_mutation = boolean,
 	working_directory = string,
 	root_directory = string,
+	file_path = string,
+	pre_read_file = function=(Any, string)>(string | nil),
+	on_read_file = function=(Any, string, string)>(),
+	allow_global_lookup = boolean,
+	should_crawl_untyped_functions = boolean,
 }
-return AnalyzerConfig
+return Partial<|AnalyzerConfig|>

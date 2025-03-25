@@ -2,8 +2,9 @@ local type { Node } = import("./nodes.nlua")
 
 local type ParserConfig = {
 	root = Node,
+	root_statement_override_data = Node,
+	root_statement_override = Node,
 	on_parsed_node = function=(ref Table, ref Node)>(ref Node),
-	path = string,
 	skip_import = boolean,
 	emit_environment = boolean,
 	inline_require = boolean,
@@ -11,6 +12,8 @@ local type ParserConfig = {
 	file_name = string,
 	working_directory = string,
 	root_directory = string,
-	path = string,
+	on_parsed_file = function=(ref Table, ref Table, ref Table)>(),
+	pre_read_file = function=(ref Any, ref string)>(string | nil),
+	on_read_file = function=(ref Any, ref string, ref string)>(),
 }
 return Partial<|ParserConfig|>
