@@ -12,10 +12,12 @@
   },
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "unpublished.nattlua",
+
   "nattlua.executable": "luajit",
   "nattlua.workingDirectory": "${workspaceFolder}",
   "nattlua.path": "${workspaceFolder}/nattlua.lua",
-  "nattlua.arguments": ["language-server"],
+  "nattlua.arguments": ["lsp"],
+
   "[typescript]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
   },

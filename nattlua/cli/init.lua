@@ -304,9 +304,9 @@ config.commands["init"] = {
 		io.write("  3. Run your code with: nattlua run " .. main_file .. "\n")
 	end,
 }
-config.commands["language-server"] = {
+config.commands["lsp"] = {
 	description = "Start the NattLua language server",
-	usage = "nattlua language-server",
+	usage = "nattlua lsp",
 	options = {
 		{name = "stdio", description = "Use stdio for communication"},
 		{name = "port", description = "TCP port to listen on", arg = "number"},

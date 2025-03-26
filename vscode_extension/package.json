@@ -24,7 +24,7 @@
     "url": "https://github.com/Microsoft/vscode-extension-samples"
   },
   "engines": {
-    "vscode": "^1.83.0"
+    "vscode": "^1.98.2"
   },
   "main": "./out/extension",
   "contributes": {
@@ -75,7 +75,7 @@
         "nattlua.arguments": {
           "type": "array",
           "default": [
-            "language-server"
+            "lsp"
           ],
           "items": {
             "type": "string"
@@ -94,13 +94,13 @@
   },
   "dependencies": {
     "concat-map": "^0.0.2",
-    "semver": "^7.5.4",
+    "semver": "^7.7.1",
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
-    "@types/node": "^20.8.4",
-    "@types/vscode": "^1.83.0",
-    "typescript": "^5.2.2",
+    "@types/node": "^22.13.13",
+    "@types/vscode": "^1.98.0",
+    "typescript": "^5.8.2",
     "vsce": "^2.15.0"
   }
 }
