@@ -19,7 +19,6 @@ end
 
 do
 	local editor = single_file([[local a = 1]])
-	table.print(editor:GetHover(path, 0, 6), 1)
 	assert(editor:GetHover(path, 0, 6).obj:GetData() == 1)
 end
 
