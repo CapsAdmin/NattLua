@@ -796,11 +796,11 @@ function META:Render(config)
 		--[[#attest.expect_diagnostic<|"warning", "always true"|>]]
 
 		if _G.IMPORTS--[[# as false]] then
-			emitter = IMPORTS["nattlua.emitter"]()
+			emitter = IMPORTS["nattlua.emitter.emitter"]()
 		else
 			--[[#£ parser.dont_hoist_next_import = true]]
 
-			emitter = require("nattlua.emitter"--[[# as string]])
+			emitter = require("nattlua.emitter.emitter"--[[# as string]])
 		end
 	end
 

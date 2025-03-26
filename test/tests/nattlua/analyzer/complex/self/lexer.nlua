@@ -1,1 +1,1 @@
-local Lexer = require("nattlua.lexer")
+local Lexer = require("nattlua.lexer.lexer")

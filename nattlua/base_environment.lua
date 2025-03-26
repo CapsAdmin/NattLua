@@ -1,7 +1,7 @@
 local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
 local LStringNoMeta = require("nattlua.types.string").LStringNoMeta
-local Analyzer = require("nattlua.analyzer").New
+local Analyzer = require("nattlua.analyzer.analyzer").New
 
 if not _G.IMPORTS then
 	_G.IMPORTS = setmetatable(

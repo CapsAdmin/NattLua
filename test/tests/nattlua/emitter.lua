@@ -403,13 +403,13 @@ identical([[setmetatable(
 		parent_line = parent_line,
 		parent_name = parent_name,
 		config = config,
-		Lexer = requirew("nattlua.lexer"),
-		Parser = requirew("nattlua.parser"),
-		Analyzer = requirew("nattlua.analyzer"),
+		Lexer = requirew("nattlua.lexer.lexer"),
+		Parser = requirew("nattlua.parser.parser"),
+		Analyzer = requirew("nattlua.analyzer.analyzer"),
 		Emitter = config and
 			config.js and
 			requirew("nattlua.transpiler.javascript_emitter") or
-			requirew("nattlua.emitter"),
+			requirew("nattlua.emitter.emitter"),
 	},
 	META
 )]])

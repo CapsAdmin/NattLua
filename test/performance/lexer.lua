@@ -1,5 +1,5 @@
 require("nattlua.other.jit_options").SetOptimized()
-local Lexer = require("nattlua.lexer").New
+local Lexer = require("nattlua.lexer.lexer").New
 local Code = require("nattlua.code").New
 local util = require("examples.util")
 local lua_code = assert(
