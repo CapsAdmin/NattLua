@@ -303,10 +303,9 @@ function META.New(
 
 	if config then
 		for _, v in ipairs({"emitter", "parser", "analyzer"}) do
-			if config[v] then
-				config[v].file_path = config[v].file_path or config.file_path
-				config[v].file_name = config[v].file_name or config.file_name
-			end
+			config[v] = config[v] or {}
+			config[v].file_path = config[v].file_path or config.file_path
+			config[v].file_name = config[v].file_name or config.file_name
 		end
 	end
 

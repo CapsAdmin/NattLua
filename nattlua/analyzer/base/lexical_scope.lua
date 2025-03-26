@@ -390,6 +390,28 @@ function META:DumpScope()
 	return table.concat(s, "\n")
 end
 
+function META:FindUnusedUpvalues(unused)
+	unused = unused or {}
+
+	for _, upvalue in ipairs(self.upvalues.runtime.list) do
+		if upvalue:GetUseCount() == 0 and upvalue:GetKey() ~= "..." then
+			table.insert(unused, upvalue)
+		end
+	end
+
+	for _, upvalue in ipairs(self.upvalues.typesystem.list) do
+		if upvalue:GetUseCount() == 0 and upvalue:GetKey() ~= "..." then
+			table.insert(unused, upvalue)
+		end
+	end
+
+	for _, child in ipairs(self:GetChildren()) do
+		child:FindUnusedUpvalues(unused)
+	end
+
+	return unused
+end
+
 function META.New(parent, upvalue_position, obj)
 	local scope = {
 		obj = obj,

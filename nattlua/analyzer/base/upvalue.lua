@@ -12,6 +12,7 @@ META:GetSet("Position")
 META:GetSet("Shadow")
 META:GetSet("Scope")
 META:GetSet("Mutations")
+META:GetSet("UseCount", 0)
 META:IsSet("FromForLoop")
 
 function META:SetTruthyFalsyUnion(t, f)
@@ -32,15 +33,18 @@ end
 
 function META:SetValue(value)
 	self.Value = value
-
-	if not value then debug.trace() end
-
 	value:SetUpvalue(self)
+end
+
+function META:GetValue()
+	self.UseCount = self.UseCount + 1
+	return self.Value
 end
 
 do
 	function META:GetMutatedValue(scope)
 		self.Mutations = self.Mutations or {}
+		self.UseCount = self.UseCount + 1
 		return mutation_solver(self.Mutations, scope, self)
 	end
 
@@ -86,6 +90,7 @@ function META.New(obj)
 			Position = false,
 			Scope = false,
 			Mutations = false,
+			UseCount = 0,
 		},
 		META
 	)
