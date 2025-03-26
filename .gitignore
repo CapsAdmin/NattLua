@@ -4,5 +4,5 @@ test_focus.nlua
 test_focus_result.lua
 temp_build_output.lua
 build_output.lua
-nattlua_for_ai.lua
+nattlua.md
 lsp_session.rpc

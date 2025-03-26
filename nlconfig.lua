@@ -74,7 +74,6 @@ do -- custom commands specific for nattlua
 			local summarize = {
 				["other/fs.lua"] = "a file system library, very similar to lua's io library",
 				["other/utf8.lua"] = "a polyfill utf8 library",
-				["other/bit32.lua"] = "a polyfill bit library",
 				["other/bit.lua"] = "a polyfill bit library",
 				["nattlua/parser/teal.lua"] = "parser code for dealing with teal syntax, not very relevant",
 				["nattlua/definitions/glua.nlua"] = "garry's mode lua type defintions, not very relevant",
@@ -82,14 +81,13 @@ do -- custom commands specific for nattlua
 				["nattlua/other/table_new.lua"] = "polyfill for table.new",
 				["nattlua/other/shallow_copy.lua"] = "helper function to shalow copy a table",
 				["nattlua/other/table_pool.lua"] = "unused",
-				["nattlua/cli.lua"] = "code for handling command line arguments, not very relevant",
-				["nattlua/lexer.lua"] = "tokenizes the code into a table",
-				["nattlua/emitter.lua"] = "emits a root node back to lua code",
+				["nattlua/cli/"] = "code for handling command line arguments, not very relevant",
+				["nattlua/lexer/"] = "tokenizes the code into a table",
+				["nattlua/emitter/"] = "emits a root node back to lua code",
 				["nattlua/parser/"] = "parses lua code into an AST",
-				["nattlua/parser.lua"] = "parses lua code into an AST",
 			}
 			local tokens = {}
-			local f = io.open("nattlua_for_ai.lua", "w")
+			local f = io.open("nattlua.md", "w")
 
 			for _, path in ipairs(paths) do
 				local str
@@ -129,7 +127,7 @@ do -- custom commands specific for nattlua
 				total_tokens = total_tokens + info.count
 			end
 
-			print("roughly " .. math.floor(total_tokens) .. "k tokens")
+			print("roughly " .. math.floor(total_tokens) .. "k tokens for claude")
 		end,
 	}
 end
