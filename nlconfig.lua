@@ -138,11 +138,11 @@ do -- these override existing commands and should probably be made more generic
 	config.commands["build"] = {
 		cb = function(args)
 			local mode = args[1]
-			local nl = require("nattlua.init")
+			local Compiler = require("nattlua.compiler")
 			local entry = "./nattlua.lua"
 			io.write("parsing " .. entry)
 			local c = assert(
-				nl.Compiler(
+				Compiler.New(
 					[[
 					_G.ARGS = {...}
 		
@@ -203,7 +203,7 @@ do -- these override existing commands and should probably be made more generic
 				local f = io.open("temp_build_output.lua", "w")
 				f:write(lua_code)
 				f:close()
-				nl.File("temp_build_output.lua"):Parse()
+				Compiler.FromFile("temp_build_output.lua"):Parse()
 				return
 			end
 

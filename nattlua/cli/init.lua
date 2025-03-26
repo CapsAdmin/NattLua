@@ -1,8 +1,7 @@
-local nattlua = require("nattlua.init")
+local Compiler = require("nattlua.compiler")
 local fs = require("nattlua.other.fs")
 local path = require("nattlua.other.path")
 local colors = require("nattlua.cli.colors")
-local table_tostring = require("nattlua.other.table_print").tostring
 local version = "forever pre alpha"
 local DEFAULT_CONFIG_NAME = "nlconfig.lua"
 local config_path = "./" .. DEFAULT_CONFIG_NAME
@@ -89,7 +88,7 @@ config.commands["run"] = {
 	usage = "nattlua run <file> [args...]",
 	options = {},
 	cb = function(args)
-		assert(nattlua.loadfile(args[1]))(table.unpack(args, 2))
+		assert(Compiler.LoadFile(args[1]))(table.unpack(args, 2))
 	end,
 }
 config.commands["check"] = {
@@ -97,18 +96,16 @@ config.commands["check"] = {
 	usage = "nattlua check <file>",
 	cb = function(args, options, config, cli)
 		require("test.helpers.profiler").Start()
-		local nl = require("nattlua")
-		local fs = require("nattlua.other.fs")
 		args[1] = args[1] or "./*"
 
 		if #args == 1 and args[1] == "-" then
 			local input = io.read("*all")
-			io.write(assert(nl.Compiler(input, "stdin-", config):Analyze()))
+			io.write(assert(Compiler.New(input, "stdin-", config):Analyze()))
 		else
 			for _, path in ipairs(
 				cli.get_files({path = args, blacklist = config.ignorefiles, ext = {".lua", ".nlua"}})
 			) do
-				assert(nl.File(path, config):Analyze())
+				assert(Compiler.FromFile(path, config):Analyze())
 			end
 		end
 
@@ -134,7 +131,7 @@ config.commands["build"] = {
 		end
 
 		config.parser.skip_import = false
-		local lua_code = assert(nattlua.File(input_path, config)):Emit()
+		local lua_code = assert(Compiler.FromFile(input_path, config)):Emit()
 		local file, err = io.open(output_path, "w")
 
 		if not file then
@@ -154,13 +151,11 @@ config.commands["fmt"] = {
 		{name = "check", description = "checks if the files are formated"},
 	},
 	cb = function(args, options, config, cli)
-		local nl = require("nattlua")
-		local fs = require("nattlua.other.fs")
 		args[1] = args[1] or "./*"
 
 		if #args == 1 and args[1] == "-" then
 			local input = io.read("*all")
-			io.write(assert(nl.Compiler(input, "stdin-", config):Emit()))
+			io.write(assert(Compiler.New(input, "stdin-", config):Emit()))
 		else
 			for _, path in ipairs(
 				cli.get_files({path = args, blacklist = config.ignorefiles, ext = {".lua", ".nlua"}})
@@ -168,7 +163,7 @@ config.commands["fmt"] = {
 				local old = config.emitter.comment_type_annotations
 				config.emitter.comment_type_annotations = config.emitter.comment_type_annotations_in_lua_files and
 					path:sub(-#".lua") == ".lua"
-				local new_lua_code = assert(nl.File(path, config):Emit())
+				local new_lua_code = assert(Compiler.FromFile(path, config):Emit())
 				config.emitter.comment_type_annotations = old
 
 				if options.check then
@@ -194,8 +189,7 @@ config.commands["fmt"] = {
 						os.execute("git --no-pager diff --no-index " .. a .. " " .. b)
 					end
 				else
-
-				--fs.write(path, new_lua_code)
+					fs.write(path, new_lua_code)
 				end
 			end
 		end
@@ -496,7 +490,6 @@ function cli.main(...)
 end
 
 function cli.get_files(tbl)
-	local fs = require("nattlua.other.fs")
 	local out = {}
 
 	if type(tbl.path) == "table" then
