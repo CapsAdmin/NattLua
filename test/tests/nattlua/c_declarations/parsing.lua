@@ -113,7 +113,7 @@ if false then
 	)
 end
 
-local Lexer = require("nattlua.c_declarations.lexer").New
+local Lexer = require("nattlua.lexer.lexer").New
 local Parser = require("nattlua.c_declarations.parser").New
 local Emitter = require("nattlua.c_declarations.emitter").New
 local Code = require("nattlua.code").New

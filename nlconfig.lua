@@ -153,8 +153,7 @@ do -- these override existing commands and should probably be made more generic
 				
 						package.preload.nattlua = package.preload["nattlua.init"]
 					end
-		
-					require("nattlua.c_declarations.lexer")
+					
 					require("nattlua.c_declarations.parser")
 					require("nattlua.c_declarations.emitter")
 					require("nattlua.c_declarations.analyzer")
