@@ -98,7 +98,6 @@ analyze[[
 ]]
 analyze[[
     local a,b,c = Any()
-    print(a,b,c)
     attest.equal(a, _ as any)
     attest.equal(b, _ as any)
     attest.equal(c, _ as any)

@@ -453,17 +453,9 @@ analyze[[
 
     local x,y,z = t.foo(a, b)
     
-    local analyzer function test(a: any, b: any)
-        print("")
-        print(a:GetHash())
-        print(b:GetHash())
-    end
-
-    test(x, _ as Any)
-
-    --attest.equal(x, _ as Any)
-    --attest.equal(y, _ as Any)
-    --attest.equal(z, _ as Any)
+    attest.equal(x, _ as Any)
+    attest.equal(y, _ as Any)
+    attest.equal(z, _ as Any)
 ]]
 analyze[[
     -- we should be able to initialize with no value if the value can be nil
