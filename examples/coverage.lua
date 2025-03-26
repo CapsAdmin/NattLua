@@ -136,29 +136,31 @@ local compiler = nl.Compiler(
     
 ]],
 	"lol",
-	{parser = {
-		on_parsed_node = function(parser, node)
-			if
-				node.type == "expression" and
-				not node.is_left_assignment and
-				not node.is_identifier
-			then
-				if node.parent.kind == "binary_operator" then return end
+	{
+		parser = {
+			on_parsed_node = function(parser, node)
+				if
+					node.type == "expression" and
+					not node.is_left_assignment and
+					not node.is_identifier
+				then
+					if node.parent.kind == "binary_operator" then return end
 
-				local start, stop = node:GetStartStop()
-				not_called[start .. "," .. stop] = {start, stop}
-				local call_expression = parser:ParseString(" Æ('" .. start .. "," .. stop .. "') ").statements[1].value
-				-- add comma to last expression since we're adding a new one
-				call_expression.expressions[#call_expression.expressions].tokens[","] = parser:NewToken("symbol", ",")
-				table.insert(call_expression.expressions, node)
+					local start, stop = node:GetStartStop()
+					not_called[start .. "," .. stop] = {start, stop}
+					local call_expression = parser:ParseString(" Æ('" .. start .. "," .. stop .. "') ").statements[1].value
+					-- add comma to last expression since we're adding a new one
+					call_expression.expressions[#call_expression.expressions].tokens[","] = parser:NewToken("symbol", ",")
+					table.insert(call_expression.expressions, node)
 
-				if node.right then call_expression.right = node.right end
+					if node.right then call_expression.right = node.right end
 
-				return call_expression
-			end
-		end,
-		skip_import = true,
-	}}
+					return call_expression
+				end
+			end,
+			skip_import = true,
+		},
+	}
 )
 assert(compiler:Parse())
 local original = compiler.Code:GetString()

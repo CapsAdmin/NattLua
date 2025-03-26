@@ -5,7 +5,10 @@ config.build = function()
 		nl.File(
 			"examples/projects/luajit/src/main.nlua",
 			{
-				parser = {working_directory = "examples/projects/luajit/src/", emit_environment = false,},
+				parser = {
+					working_directory = "examples/projects/luajit/src/",
+					emit_environment = false,
+				},
 			}
 		)
 	)

@@ -8,10 +8,7 @@ config["build"] = function()
 		nl.File(
 			"src/main.nlua",
 			{
-				parser = {
-					working_directory = "src/", 
-					inline_require = true
-				},
+				parser = {working_directory = "src/", inline_require = true},
 			}
 		)
 	)
