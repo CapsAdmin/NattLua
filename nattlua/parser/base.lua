@@ -434,7 +434,7 @@ function META:ParseMultipleValues(
 )
 	local out = {}
 
-	for i = 1, math_min(self:GetLength(), 20) do
+	for i = 1, math_min(self:GetLength(), 200) do
 		local node = reader(self, a, b, c)
 
 		if not node then break end
