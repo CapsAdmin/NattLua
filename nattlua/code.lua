@@ -9,22 +9,12 @@ local META = class.CreateTemplate("code")
 	Name = string,
 }]]
 
-function META:LineCharToSubPos(line, char)
+function META:LineCharToSubPos(line--[[#: number]], char--[[[#: number]])
 	return formating.LineCharToSubPosCached(self:GetString(), line, char)
 end
 
-function META:SubPosToLineChar(start, stop)
+function META:SubPosToLineChar(start--[[#: number]], stop--[[#: number]])
 	return formating.SubPosToLineCharCached(self:GetString(), start, stop)
-end
-
-local function remove_bom_header(str--[[#: string]])--[[#: string]]
-	if str:sub(1, 2) == "\xFE\xFF" then
-		return str:sub(3)
-	elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
-		return str:sub(4)
-	end
-
-	return str
 end
 
 local function get_default_name()
@@ -108,7 +98,6 @@ if has_ffi--[[# as false]] then
 	local refs = setmetatable({}, {_mode = "kv"})
 
 	function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
-		lua_code = remove_bom_header(lua_code)
 		name = name or get_default_name()
 		local self = ctype(
 			{
@@ -118,6 +107,15 @@ if has_ffi--[[# as false]] then
 				name_length = #name,
 			}
 		)
+
+		if lua_code:sub(1, 2) == "\xFE\xFF" then
+			self.Buffer = self.Buffer + 2
+			self.buffer_len = self.buffer_len - 2
+		elseif lua_code:sub(1, 3) == "\xEF\xBB\xBF" then
+			self.Buffer = self.Buffer + 3
+			self.buffer_len = self.buffer_len - 3
+		end
+
 		refs[self] = {lua_code, name}
 		return self
 	end
@@ -178,6 +176,16 @@ else
 		function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
 			return self.Buffer:sub(start, stop) == str
 		end
+	end
+
+	local function remove_bom_header(str--[[#: string]])--[[#: string]]
+		if str:sub(1, 2) == "\xFE\xFF" then
+			return str:sub(3)
+		elseif str:sub(1, 3) == "\xEF\xBB\xBF" then
+			return str:sub(4)
+		end
+
+		return str
 	end
 
 	function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
