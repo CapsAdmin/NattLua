@@ -118,7 +118,7 @@ if has_ffi--[[# as false]] then
 				name_length = #name,
 			}
 		)
-		refs[self] = lua_code
+		refs[self] = {lua_code, name}
 		return self
 	end
 
