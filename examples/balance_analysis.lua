@@ -199,6 +199,4 @@ local code = [[
     end))
 ]]
 local compiler = assert(nl.Compiler(code):Lex())
-local time = os.clock()
 check_tokens(compiler.Tokens, compiler.Code)
-print(os.clock() - time)
