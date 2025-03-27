@@ -15,14 +15,12 @@
       system: let
         pkgs = import nixpkgs {inherit system;};
 
-        luajitSrc = pkgs.fetchgit {
-          url = "https://github.com/LuaJIT/LuaJIT.git";
-          sha256 = "sha256-NfxPe0MlE7X7YzVeN7jeHeOJ0j9NOUbQv7y3rcyc1Nk=";
-        };
-
         luajit = pkgs.stdenv.mkDerivation {
           name = "luajit";
-          src = luajitSrc;
+          src = pkgs.fetchgit {
+            url = "https://github.com/LuaJIT/LuaJIT.git";
+            sha256 = "sha256-NfxPe0MlE7X7YzVeN7jeHeOJ0j9NOUbQv7y3rcyc1Nk=";
+          };
 
           buildInputs = [pkgs.makeWrapper];
 
