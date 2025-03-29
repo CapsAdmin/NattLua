@@ -75,7 +75,7 @@ return {
 						if val.Type == "function" and existing.Type == "function" then
 							for i, v in ipairs(val:GetInputIdentifiers()) do
 								if not existing:GetInputIdentifiers()[i] then
-									analyzer:Error("too many arguments")
+									analyzer:Error(type_errors.too_many_arguments())
 
 									break
 								end

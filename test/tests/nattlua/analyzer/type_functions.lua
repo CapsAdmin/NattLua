@@ -507,9 +507,11 @@ analyze[[
     attest.equal(type(x), "cdata")
 ]]
 analyze[[
-    local ok, table_new = pcall(require, "foo")
+    local ok, err = pcall(require, "foo")
     attest.equal(ok, _ as true | false)
-    attest.equal(table_new, _ as "module 'foo' not found" | any)
+    if type(err) == "string" then
+        attest.equal(err:sub(-9), "not found")
+    end
 ]]
 analyze[[
     local a, b = load("" as string)

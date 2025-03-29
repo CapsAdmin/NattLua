@@ -114,7 +114,7 @@ analyzer function table.sort(tbl: List<|any|>, func: nil | function=(a: any, b: 
 				if b:IsCertainlyTrue() or b:IsCertainlyFalse() then
 					return b:IsCertainlyTrue()
 				else
-					analyzer:Error("cannot sort literal table with function that returns an uncertain boolean")
+					error("cannot sort literal table with function that returns an uncertain boolean")
 				end
 			end)
 		else

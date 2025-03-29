@@ -23,8 +23,7 @@ return function(META)
 	end)
 
 	function META:Assert(ok, err, ...)
-		if ok == nil or ok == false then
-			err = err or "assertion failed!"
+		if not ok then
 			self:Error(err)
 			return Any()
 		end
@@ -33,8 +32,7 @@ return function(META)
 	end
 
 	function META:AssertWithNode(node, ok, err, ...)
-		if ok == nil or ok == false then
-			err = err or "assertion failed!"
+		if not ok then
 			self:Error(err, node)
 			return Any()
 		end
@@ -47,8 +45,6 @@ return function(META)
 	end
 
 	function META:ErrorMessageToString(tbl)
-		if type(tbl) == "string" then return tbl end
-
 		local out = {}
 
 		for i, v in ipairs(tbl) do

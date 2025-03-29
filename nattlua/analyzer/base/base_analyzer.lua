@@ -19,6 +19,7 @@ local Table = require("nattlua.types.table").Table
 local Any = require("nattlua.types.any").Any
 local context = require("nattlua.analyzer.context")
 local path_util = require("nattlua.other.path")
+local type_errors = require("nattlua.types.error_messages")
 local table = _G.table
 local table_insert = table.insert
 local table_remove = table.remove
@@ -295,7 +296,7 @@ return function(META)
 					self.current_expression = self:GetCallStack()[1].call_node
 				end
 
-				self:Error(msg)
+				self:Error(type_errors.plain_error(msg))
 			end
 
 			if res[1] == nil then res[1] = Nil() end

@@ -428,18 +428,21 @@ do
 	local formating = require("nattlua.other.formating")
 	local loadstring = require("nattlua.other.loadstring")
 	local locals = ""
-	locals = locals .. "local bit=IMPORTS[\"nattlua.other.bit\"]();"
 
 	if _G.BUNDLE then
+		locals = locals .. "local bit=IMPORTS[\"nattlua.other.bit\"]();"
 		locals = locals .. "local nl=IMPORTS[\"nattlua.init\"]();"
 		locals = locals .. "local types=IMPORTS[\"nattlua.types.types\"]();"
 		locals = locals .. "local context=IMPORTS[\"nattlua.analyzer.context\"]();"
-		locals = locals .. "local cdecl_parser = IMPORTS[\"nattlua.c_declarations.main\"]();"
+		locals = locals .. "local cdecl_parser=IMPORTS[\"nattlua.c_declarations.main\"]();"
+		locals = locals .. "local type_errors=IMPORTS[\"nattlua.types.error_messages\"]();"
 	else
+		locals = locals .. "local bit=require(\"nattlua.other.bit\");"
 		locals = locals .. "local nl=require(\"nattlua.init\");"
 		locals = locals .. "local types=require(\"nattlua.types.types\");"
 		locals = locals .. "local context=require(\"nattlua.analyzer.context\");"
 		locals = locals .. "local cdecl_parser=require(\"nattlua.c_declarations.main\");"
+		locals = locals .. "local type_errors=require(\"nattlua.types.error_messages\");"
 	end
 
 	local globals = {

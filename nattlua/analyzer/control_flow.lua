@@ -5,6 +5,7 @@ local Any = require("nattlua.types.any").Any
 local Nil = require("nattlua.types.symbol").Nil
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
+local type_errors = require("nattlua.types.error_messages")
 -- this turns out to be really hard so I'm trying 
 -- naive approaches while writing tests
 return function(META)
@@ -178,7 +179,7 @@ return function(META)
 	function META:ThrowError(msg, obj, level)
 		self.lua_error_thrown = msg
 		self.current_expression = self:GetCallFrame(level).call_node
-		self:Error(msg)
+		self:Error(type_errors.plain_error(msg))
 	end
 
 	function META:GetThrownErrorMessage()

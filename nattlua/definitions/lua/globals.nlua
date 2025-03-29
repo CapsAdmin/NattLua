@@ -205,7 +205,7 @@ analyzer function require(name: string)
 		end
 	end
 
-	analyzer:Error("module '" .. str:GetData() .. "' not found")
+	error("module '" .. str:GetData() .. "' not found")
 	return types.Any
 end
 
@@ -290,7 +290,7 @@ analyzer function assert(obj: any, msg: string | nil, level: number | nil)
 	if obj:IsFalsy() then
 		analyzer:AssertError(
 			obj,
-			msg and msg:GetData() or "assertion failed!",
+			type_errors.plain_error(msg and msg:GetData() or "assertion failed!"),
 			level and level:GetData() or nil,
 			obj:IsTruthy()
 		)

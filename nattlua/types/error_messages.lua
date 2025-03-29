@@ -264,6 +264,10 @@ function type_errors.too_many_iterations()--[[#: Reason]]
 	return {"too many iterations"}
 end
 
+function type_errors.too_many_arguments()--[[#: Reason]]
+	return {"too many iterations"}
+end
+
 function type_errors.untyped_argument()--[[#: Reason]]
 	return {"argument is untyped"}
 end
@@ -286,6 +290,10 @@ end
 
 function type_errors.typeof_lookup_missing(type_name--[[#: string]])--[[#: Reason]]
 	return {"cannot find '" .. type_name .. "' in the current typesystem scope"}
+end
+
+function type_errors.plain_error(msg--[[#: any]])--[[#: Reason]]
+	return {msg}
 end
 
 return type_errors
