@@ -353,6 +353,12 @@ analyzer function LuaVersion()
 	end
 end
 
+analyzer function LuaJITVersion()
+	if _G.misc and _G.misc.getmetrics then return "tarantool" end
+
+	return "luajit"
+end
+
 analyzer function TType(T: any)
 	return T.Type
 end

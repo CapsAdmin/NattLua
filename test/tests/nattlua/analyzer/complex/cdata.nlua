@@ -22,7 +22,10 @@ end
 
 do --- smoke band
 	attest.equal(tostring(band(1ll, 1, 1ll, -1)), "1LL")
-	attest.equal(tostring(band(1ll, 1, 1ull, -1)), "0ULL")
+
+	if LuaJITVersion() ~= "tarantool" then
+		attest.equal(tostring(band(1ll, 1, 1ull, -1)), "0ULL")
+	end
 end
 
 do --- smoke shl
