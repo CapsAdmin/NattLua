@@ -32,6 +32,22 @@
           '';
         };
 
+        luajit_openresty = pkgs.stdenv.mkDerivation {
+          name = "luajit-openresty";
+          src = pkgs.fetchgit {
+            url = "https://github.com/openresty/luajit2.git";
+            rev = "bee99fc60394fb85963c38af9106d3d144eb73e5";
+            sha256 = "sha256-JH9Iqmk8U0f4NxiTUC8wrR5KlxM4w/hXyrTSGYZHsQw=";
+          };
+
+          buildInputs = [pkgs.makeWrapper];
+
+          installPhase = ''
+            make install PREFIX=$out
+            ln -sf $out/bin/luajit-2.1.ROLLING $out/bin/luajit_openresty
+          '';
+        };
+
         luajit_tarantool = pkgs.stdenv.mkDerivation {
           name = "luajit-tarantool";
           src = pkgs.fetchgit {
@@ -99,7 +115,7 @@
         };
 
         devShells.default = pkgs.mkShell {
-          buildInputs = [luajit luajit_tarantool];
+          buildInputs = [luajit luajit_tarantool luajit_openresty];
         };
       }
     );
