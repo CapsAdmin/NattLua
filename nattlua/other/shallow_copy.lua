@@ -1,3 +1,7 @@
+local ok, clone = pcall(require, "table.clone")
+
+if ok then return clone end
+
 local function shallow_copy(tbl)
 	local copy = {}
 
