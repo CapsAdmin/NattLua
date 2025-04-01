@@ -20,7 +20,11 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type META.@Name = "TUnion"]]
 --[[#type TUnion = META.@Self]]
 --[[#type TUnion.Data = List<|TBaseType|>]]
+--[[#type TUnion.Hash = nil | string]]
+--[[#type TUnion.LiteralDataCache = Map<|string, TBaseType|>]]
 --[[#type TUnion.suppress = boolean]]
+--[[#type TUnion.left_right_source = {left = TBaseType, right = TBaseType} | false]]
+--[[#type TUnion.parent_table = {table = TBaseType, key = string} | false]]
 META.Type = "union"
 
 function META:GetHashForMutationTracking()
@@ -69,7 +73,7 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]], visited--[[#: Map<|TB
 	return true, "all union values match"
 end
 
-function META:GetHash(visited)
+function META:GetHash(visited)--[[#: string]]
 	if self:GetCardinality() == 1 then return self.Data[1]:GetHash() end
 
 	visited = visited or {}
@@ -235,7 +239,7 @@ end
 function META:GetAtTupleIndex(i)
 	if i > self:GetTupleLength() then return nil end
 
-	local obj = self:GetAtTupleIndexUnion(i)
+	local obj = self:GetAtTupleIndexUnion(i) --[[# as any ]]
 
 	if obj then
 		if obj.Type == "union" then
@@ -414,7 +418,7 @@ function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 	return false, type_errors.subset(target, self, errors)
 end
 
-function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: TBaseType]])
+function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: any]])
 	if a.suppress then return true, "suppressed" end
 
 	if b.Type == "tuple" then b = b:GetWithNumber(1) end
