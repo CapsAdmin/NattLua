@@ -274,3 +274,6 @@ analyze[[
     local info = level == 1 and (level + 10) or level
     attest.equal(info, _ as 11|2)
 ]]
+analyze[[
+(_ as string):gsub("^%s*", ""):reverse()
+]]

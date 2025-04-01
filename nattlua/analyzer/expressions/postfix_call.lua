@@ -29,6 +29,8 @@ return {
 			node.left.value.value == ":"
 		then
 			self_arg = table.remove(self.self_arg_stack)
+
+			if self:IsRuntime() then self_arg = self_arg:GetFirstValue() end
 		end
 
 		local types = {self_arg}
