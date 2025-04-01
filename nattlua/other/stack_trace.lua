@@ -3,7 +3,7 @@ local function tostringx(obj--[[#: any]])--[[#: string]]
 	if type(obj) == "function" then
 		local info = debug.getinfo(obj)
 
-		if info.source == "=[C]" then
+		if info and info.source == "=[C]" then
 			return "function() end -- C function"
 		else
 			local params = {}
@@ -27,12 +27,12 @@ end
 
 local function file_read(path--[[#: string]])--[[#: string]]
 	local f = assert(io.open(path, "r"))
-	local str = assert(f:read("*all"), "file is empty")
+	local str = assert(f:read("*a"), "file is empty")
 	f:close()
 	return str
 end
 
-local function line_from_info(info--[[#: debug_getinfo]], line--[[#: number]])--[[#: string]]
+local function line_from_info(info--[[#: debug_getinfo]], line--[[#: number]])--[[#: string | nil]]
 	if info.source:sub(1, 1) == "@" then
 		local lua = file_read(info.source:sub(2))
 		local i = 1
@@ -47,9 +47,9 @@ end
 
 local function func_line_from_info(
 	info--[[#: debug_getinfo]],
-	line_override--[[#: number]],
-	fallback_info--[[#: string]],
-	nocomment--[[#: boolean]]
+	line_override--[[#: number | nil]],
+	fallback_info--[[#: string | nil]],
+	nocomment--[[#: boolean | nil]]
 )
 	if info.source then
 		local line = line_from_info(info, line_override or info.linedefined)
@@ -97,7 +97,10 @@ local function func_line_from_info(
 	return str
 end
 
-return function(offset--[[#: number]], check_level--[[#: number]])--[[#: string]]
+return function(
+	offset--[[#: number]],
+	check_level--[[#: nil | function=(debug_getinfo, number)>(nil | boolean)]]
+)--[[#: string]]
 	offset = offset or 0
 	local str = ""
 	local max_level = 0

@@ -146,14 +146,14 @@ do
 end
 
 do
-	function formating.FormatMessage(msg--[[#: string]], ...--[[#: ...any]])
+	function formating.FormatMessage(msg--[[#: string]], ...--[[#: ...(string | List<|string|>)]])
 		for i = 1, select("#", ...) do
-			local arg = select(i, ...)
+			local arg = select(i, ...)--[[# as string | List<|string|>]]
 
 			if type(arg) == "table" then
 				arg = formating.QuoteTokens(arg)
 			else
-				arg = formating.QuoteToken(arg or "?")
+				arg = formating.QuoteToken(tostring(arg or "?"))
 			end
 
 			msg = stringx.replace(msg, "$" .. i, arg)
