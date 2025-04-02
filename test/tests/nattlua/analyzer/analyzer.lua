@@ -682,3 +682,10 @@ attest.equal<|b[4], 4|>
 analyze[[
 local x: {["a" | "b" | "c"] = 1 | 2 | 3} = {a = 2}
 ]]
+analyze[[
+local analyzer function test()
+	return {1, 2, 3}
+end
+
+attest.equal(test()[2], 2)
+]]

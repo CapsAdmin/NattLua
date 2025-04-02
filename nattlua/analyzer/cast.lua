@@ -7,41 +7,45 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local Any = require("nattlua.types.any").Any
 local LString = require("nattlua.types.string").LString
 
+local function cast_lua_type_to_type(v)
+	local t = type(v)
+
+	if t == "table" and v.Type ~= nil then
+		return v
+	elseif t == "function" then
+		local func = Function()
+		func:SetAnalyzerFunction(v)
+		func:SetInputSignature(Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
+		func:SetOutputSignature(Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
+		return func
+	elseif t == "number" then
+		return LNumber(v)
+	elseif t == "string" then
+		return LString(v)
+	elseif t == "boolean" then
+		return Symbol(v)
+	elseif t == "table" then
+		local t = Table()
+
+		for _, val in ipairs(v) do
+			t:Insert(cast_lua_type_to_type(val))
+		end
+
+		t:SetContract(t)
+		return t
+	elseif t == "cdata" and tonumber(v) then
+		return LNumber(v)
+	end
+
+	self:Print(tostring(v))
+	error(debug.traceback("NYI " .. tostring(t)))
+end
+
 local function cast_lua_types_to_types(tps)
 	local tbl = {}
 
 	for i, v in ipairs(tps) do
-		local t = type(v)
-
-		if t == "table" and v.Type ~= nil then
-			tbl[i] = v
-		elseif t == "function" then
-			local func = Function()
-			func:SetAnalyzerFunction(v)
-			func:SetInputSignature(Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
-			func:SetOutputSignature(Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
-			tbl[i] = func
-		elseif t == "number" then
-			tbl[i] = LNumber(v)
-		elseif t == "string" then
-			tbl[i] = LString(v)
-		elseif t == "boolean" then
-			tbl[i] = Symbol(v)
-		elseif t == "table" then
-			local t = Table()
-
-			for _, val in ipairs(v) do
-				t:Insert(val)
-			end
-
-			t:SetContract(t)
-			tbl[i] = t
-		elseif t == "cdata" and tonumber(v) then
-			tbl[i] = LNumber(v)
-		else
-			self:Print(t)
-			error(debug.traceback("NYI " .. t))
-		end
+		tbl[i] = cast_lua_type_to_type(v)
 	end
 
 	return tbl
