@@ -31,12 +31,16 @@ function META:GetHashForMutationTracking()
 	return tostring(self)
 end
 
-function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]], visited--[[#: Map<|TBaseType, boolean|>]])
+function META.Equal(
+	a--[[#: TUnion]],
+	b--[[#: TBaseType]],
+	visited--[[#: nil | Map<|TBaseType, boolean|>]]
+)
 	visited = visited or {}
 
 	if visited[a] then return true, "circular reference detected" end
 
-	if b.Type ~= "union" and a:GetCardinality() == 1 then
+	if b.Type ~= "union" and a:GetCardinality() == 1 and a.Data[1] then
 		return a.Data[1]:Equal(b, visited)
 	end
 
@@ -74,7 +78,9 @@ function META.Equal(a--[[#: TUnion]], b--[[#: TBaseType]], visited--[[#: Map<|TB
 end
 
 function META:GetHash(visited)--[[#: string]]
-	if self:GetCardinality() == 1 then return self.Data[1]:GetHash() end
+	if self:GetCardinality() == 1 then
+		return (self.Data[1]--[[# as any]]):GetHash()
+	end
 
 	visited = visited or {}
 
@@ -129,7 +135,7 @@ local function hash(obj)
 	end
 end
 
-local function add(self, obj)
+local function add(self--[[#: TUnion]], obj--[[#: any]])
 	local s = hash(obj)
 
 	if s then self.LiteralDataCache[s] = obj end
@@ -137,7 +143,7 @@ local function add(self, obj)
 	self.Data[#self.Data + 1] = obj
 end
 
-local function remove(self, index)
+local function remove(self--[[#: TUnion]], index--[[#: number]])
 	local obj = assert(self.Data[index])
 	table_remove(self.Data, index)
 	local s = hash(obj)
@@ -145,9 +151,9 @@ local function remove(self, index)
 	if s then self.LiteralDataCache[s] = nil end
 end
 
-local function find_index(self, obj)
+local function find_index(self--[[#: TUnion]], obj--[[#: any]])
 	for i = 1, #self.Data do
-		local v = self.Data[i]--[[# as TBaseType]]
+		local v = self.Data[i]--[[# as any]]
 
 		if v:Equal(obj) then
 			if v.Type ~= "function" or v:GetFunctionBodyNode() == obj:GetFunctionBodyNode() then
@@ -239,7 +245,7 @@ end
 function META:GetAtTupleIndex(i)
 	if i > self:GetTupleLength() then return nil end
 
-	local obj = self:GetAtTupleIndexUnion(i) --[[# as any ]]
+	local obj = self:GetAtTupleIndexUnion(i)--[[# as any]]
 
 	if obj then
 		if obj.Type == "union" then
@@ -260,7 +266,7 @@ function META:GetAtTupleIndexUnion(i--[[#: number]])
 
 	for _, obj in ipairs(self.Data) do
 		if obj.Type == "tuple" then
-			local found, err = obj:GetWithNumber(i)
+			local found, err = (obj--[[# as any]]):GetWithNumber(i)
 
 			if found then
 				if found.Type == "union" then
@@ -476,7 +482,11 @@ function META:Union(union--[[#: TUnion]])
 	return copy
 end
 
-local function copy_val(val, map, copy_tables)
+local function copy_val(
+	val--[[#: TBaseType]],
+	map--[[#: Map<|any, any|>]],
+	copy_tables--[[#: nil | boolean]]
+)
 	if not val then return val end
 
 	-- if it's already copied
@@ -491,7 +501,7 @@ local function copy_val(val, map, copy_tables)
 	return map[val]
 end
 
-function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])
+function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])--[[#: TUnion]]
 	map = map or {}
 
 	if map[self] then return map[self] end
