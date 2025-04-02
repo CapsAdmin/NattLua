@@ -385,13 +385,13 @@ end
 do
 	_G.TEST_DISABLE_ERROR_PRINT = true
 	analyze[[
-        local ok, table_new = pcall(require, "lol")
+        local ok, test = pcall(require, "lol")
         if not ok then
-            table_new = "ok"
+            test = "ok"
         end
 
         attest.equal(ok, false)
-        attest.equal(table_new, "ok")
+        attest.equal(test, "ok")
     ]]
 	analyze[[
         local ok, err = pcall(function() assert(false, "LOL") end)

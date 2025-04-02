@@ -6,7 +6,7 @@ local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
 local Function = require("nattlua.types.function").Function
-local table_clear = require("nattlua.other.table_clear")
+local table_clear = require("nattlua.other.tablex").clear
 
 local function mutate_type(self, i, arg, contract, arguments)
 	local env = self:GetScope():GetNearestFunctionScope()

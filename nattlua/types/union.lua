@@ -11,7 +11,7 @@ local type_errors = require("nattlua.types.error_messages")
 local table_concat = _G.table.concat
 local table_remove = _G.table.remove
 local table_sort = require("nattlua.other.sort")
-local table_clear = require("nattlua.other.table_clear")
+local table_clear = require("nattlua.other.tablex").clear
 
 --[[#local type { TNumber } = require("nattlua.types.number")]]
 

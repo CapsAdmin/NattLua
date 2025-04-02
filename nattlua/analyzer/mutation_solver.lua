@@ -2,7 +2,7 @@ local ipairs = ipairs
 local table = _G.table
 local table_remove = _G.table.remove
 local Union = require("nattlua.types.union").Union
-local shallow_copy = require("nattlua.other.shallow_copy")
+local shallow_copy = require("nattlua.other.tablex").copy
 
 local function is_part_of_sibling_scope(mut, scope)
 	if scope == mut.scope then return false end

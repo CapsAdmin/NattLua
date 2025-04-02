@@ -3,7 +3,7 @@ local table = _G.table
 local Union = require("nattlua.types.union").Union
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.number").LNumberRange
-local shallow_copy = require("nattlua.other.shallow_copy")
+local shallow_copy = require("nattlua.other.tablex").copy
 return function(META)
 	function META:GetArrayLengthFromTable(tbl)
 		local contract = tbl:GetContract()
