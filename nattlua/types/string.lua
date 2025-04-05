@@ -195,7 +195,7 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 	if obj:IsReferenceType() then
 		self:SetReferenceType(true)
 	else
-		if obj.PatternContract then
+		if obj.Type == "string" and obj.PatternContract then
 
 		else
 			if obj.Type == "union" then

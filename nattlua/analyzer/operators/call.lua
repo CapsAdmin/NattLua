@@ -151,7 +151,7 @@ do
 
 					-- TODO: callbacks with ref arguments should not be called
 					-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
-					if not b:HasReferenceTypes() and func then
+					if func.Type == "function" and not b:HasReferenceTypes() and func then
 						self:Assert(self:Call(b, func:GetInputSignature():Copy(nil, true)))
 					end
 				end

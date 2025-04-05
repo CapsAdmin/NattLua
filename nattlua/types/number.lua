@@ -151,7 +151,7 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 	if obj:IsReferenceType() then
 		self:SetReferenceType(true)
 	else
-		if obj.Max then
+		if obj.Type == "number" and obj.Max then
 
 		else
 			if obj.Type == "union" then

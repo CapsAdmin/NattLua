@@ -1,3 +1,4 @@
+--ANALYZE
 local setmetatable = _G.setmetatable
 local table = _G.table
 local ipairs = _G.ipairs
@@ -19,10 +20,18 @@ META.Type = "table"
 --[[#type META.@Name = "TTable"]]
 --[[#type TTable = META.@Self]]
 --[[#local type TBaseType = META.TBaseType]]
+--[[#type TTable.suppress = boolean]]
+--[[#type TTable.mutable = boolean]]
+--[[#type TTable.mutations = Map<|
+		TBaseType,
+		List<|{scope = TBaseType, value = TBaseType, contract = TBaseType, key = TBaseType}|>
+	|> | false]]
+--[[#type TTable.LiteralDataCache = Map<|TBaseType, TBaseType|>]]
+--[[#type TTable.PotentialSelf = TBaseType | false]]
 META:GetSet("Data", nil--[[# as List<|{key = TBaseType, val = TBaseType}|>]])
-META:GetSet("BaseTable", nil--[[# as TTable | nil]])
-META:GetSet("ReferenceId", nil--[[# as string | nil]])
-META:GetSet("Self", nil--[[# as nil | TTable]])
+META:GetSet("BaseTable", nil--[[# as TTable | false]])
+META:GetSet("ReferenceId", nil--[[# as string | false]])
+META:GetSet("Self", nil--[[# as false | TTable]])
 META:GetSet("Contracts", nil--[[# as List<|TTable|>]])
 META:GetSet("CreationScope", nil--[[# as any]])
 META:GetSet("AnalyzerEnvironment", false--[[# as false | "runtime" | "typesystem"]])
@@ -53,13 +62,15 @@ do
 	function META:GetMetaTable()
 		local contract = self:GetContract()
 
-		if contract and contract.MetaTable then return contract.MetaTable end
+		if contract and contract.Type == "table" and contract.MetaTable then
+			return contract.MetaTable
+		end
 
 		return self.MetaTable
 	end
 end
 
-function META:SetSelf(tbl)
+function META:SetSelf(tbl--[[#: TTable]])
 	tbl:SetMetaTable(self)
 	tbl.mutable = true
 	tbl:SetContract(tbl)
@@ -81,14 +92,18 @@ function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: Map<
 		return a:GetUniqueID() == b:GetUniqueID(), "unique ids match"
 	end
 
-	if a:GetContract() and a:GetContract().Name then
-		if not b:GetContract() or not b:GetContract().Name then
-			return false, "contract name mismatch"
-		end
+	do
+		local contract = a:GetContract()
 
-		-- never called
-		return a:GetContract().Name:GetData() == b:GetContract().Name:GetData(),
-		"contract names match"
+		if contract and contract.Type == "table" and contract.Name then
+			if not b:GetContract() or not b:GetContract().Name then
+				return false, "contract name mismatch"
+			end
+
+			-- never called
+			return contract.Name:GetData() == b:GetContract().Name:GetData(),
+			"contract names match"
+		end
 	end
 
 	if a.Name then
@@ -135,8 +150,10 @@ end
 function META:GetHash(visited)
 	if self:IsUnique() then return "{*" .. self:GetUniqueID() .. "*}" end
 
-	if self:GetContract() and self:GetContract().Name then
-		return "{*" .. self:GetContract().Name:GetData() .. "*}"
+	local contract = self:GetContract()
+
+	if contract and contract.Type == "table" and contract.Name then
+		return "{*" .. contract.Name:GetData() .. "*}"
 	end
 
 	if self.Name then return "{*" .. self.Name:GetData() .. "*}" end
@@ -165,9 +182,13 @@ function META:__tostring()
 
 	self.suppress = true
 
-	if self:GetContract() and self:GetContract().Name then -- never called
-		self.suppress = false
-		return tostring(self:GetContract().Name:GetData())
+	do
+		local contract = self:GetContract()
+
+		if contract and contract.Name then -- never called
+			self.suppress = false
+			return tostring(contract.Name:GetData())
+		end
 	end
 
 	if self.Name then
@@ -560,10 +581,6 @@ function META:IsEmpty()
 	return self:GetData()[1] == nil
 end
 
-function META:CachedKeyEqual(key)
-	return self.CachedKeyValues[key.Data]
-end
-
 function META:FindKeyValExact(key--[[#: TBaseType]])
 	local keyval, reason = read_cache(self, key)
 
@@ -683,7 +700,7 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 	return true
 end
 
-function META:Get(key--[[#: TBaseType]])
+function META:Get(key--[[#: TBaseType | TString]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		if
 			context:GetCurrentAnalyzer() and
@@ -849,8 +866,8 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	if self.Self then
 		local tbl = self.Self
 		local m, c = tbl.MetaTable, tbl.Contract
-		tbl.MetaTable = nil
-		tbl.Contract = nil
+		tbl.MetaTable = false
+		tbl.Contract = false
 		local tbl_copy = copy_val(self.Self, map, copy_tables)
 		tbl.MetaTable = m
 		tbl.Contract = c
@@ -883,8 +900,6 @@ end
 function META:PopContract()
 	table.remove(self.Contracts)
 end
-
---[[#type META.@Self.suppress = boolean]]
 
 function META:HasLiteralKeys()
 	if self.suppress then return true end
@@ -1127,7 +1142,7 @@ do
 end
 
 do
-	--[[#type TTable.disabled_unique_id = number | nil]]
+	--[[#type TTable.disabled_unique_id = number | false]]
 	META:GetSet("UniqueID", false--[[# as false | number]])
 	local ref = 0
 
@@ -1209,6 +1224,7 @@ function META.New()
 			UniqueID = false,
 			Name = false,
 			Self = false,
+			Self2 = false,
 			LiteralDataCache = {},
 			Contracts = {},
 			Falsy = false,

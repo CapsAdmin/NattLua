@@ -11,6 +11,7 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type META.@Name = "TFunction"]]
 --[[#type TFunction = META.@Self]]
 --[[#type TFunction.scopes = List<|any|>]]
+--[[#type TFunction.scope = any]]
 META.Type = "function"
 META.Truthy = true
 META.Falsy = false
@@ -261,6 +262,7 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			ArgumentsInferred = false,
 			PreventInputArgumentExpansion = false,
 			scopes = {},
+			scope = false,
 			InputSignature = input or false,
 			OutputSignature = output or false,
 			recursively_called = false,

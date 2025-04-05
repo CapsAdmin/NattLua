@@ -99,7 +99,15 @@ local function index_table(analyzer, self, key, raw)
 	if key:IsLiteral() then
 		local found_key = self:FindKeyValWide(key)
 
-		if found_key and not found_key.key:IsLiteral() and not (found_key.key.Max) then
+		if
+			found_key and
+			not found_key.key:IsLiteral()
+			and
+			(
+				found_key.key.Type == "number" and
+				not found_key.key.Max
+			)
+		then
 			val = Union({Nil(), val})
 		end
 	end
