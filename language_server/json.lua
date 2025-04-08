@@ -182,10 +182,10 @@ local function decode_error(str--[[#: string]], idx--[[#: number]], msg--[[#: st
 	error(string.format("%s at line %d col %d", msg, line_count, col_count))
 end
 
-local function codepoint_to_utf8(n--[[#: number]])--[[#: string]]
-	-- http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-appendixa
-	local f = math.floor
+local f = math.floor
 
+local function codepoint_to_utf8(n--[[#: any]])--[[#: string]]
+	-- http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-appendixa
 	if n <= 0x7f then
 		return string.char(n)
 	elseif n <= 0x7ff then

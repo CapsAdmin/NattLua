@@ -135,4 +135,8 @@ function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[
 	return false, type_errors.binary(op, l, r)
 end
 
+function META:IsNumeric()
+	return false
+end
+
 return META

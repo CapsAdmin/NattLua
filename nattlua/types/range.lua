@@ -4,17 +4,17 @@ local error = _G.error
 local tostring = _G.tostring
 local tonumber = _G.tonumber
 local setmetatable = _G.setmetatable
+local type = _G.type
 local type_errors = require("nattlua.types.error_messages")
 local bit = require("nattlua.other.bit")
 local jit = _G.jit
 local False = require("nattlua.types.symbol").False
-local LNumberRange = require("nattlua.types"..".range" --[[#as any]]).LNumberRange
 local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
---[[#type META.@Name = "TNumber"]]
---[[#type TNumber = META.@Self]]
---[[#type TNumber.DontWiden = boolean]]
-META.Type = "number"
+--[[#type META.@Name = "TRange"]]
+--[[#type TRange = META.@Self]]
+--[[#type TRange.DontWiden = boolean]]
+META.Type = "range"
 META:GetSet("Data", false--[[# as number | false]])
 
 function META:SetData()
@@ -26,7 +26,7 @@ end
 --[[#local type TUnion = {
 	@Name = "TUnion",
 	Type = "union",
-	GetLargestNumber = function=(self)>(TNumber | nil, nil | any),
+	GetLargestNumber = function=(self)>(TRange | nil, nil | any),
 }]]
 local VERSION = jit and "LUAJIT" or _VERSION
 
@@ -42,19 +42,24 @@ local function tostring_number(num)
 	return s
 end
 
-local function compute_hash(min--[[#: any]])
-	if min then return tostring_number(min) end
+local function compute_hash(min--[[#: any]], max--[[#: any]])
+	if max then
+		return tostring_number(min) .. ".." .. tostring_number(min)
+	elseif min then
+		return tostring_number(min)
+	end
 
 	return "N"
 end
 
 META:GetSet("Hash", ""--[[# as string]])
 
-function META.New(min--[[#: number | nil]])
+function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 	local s = setmetatable(
 		{
-			Type = "number",
+			Type = META.Type,
 			Data = min or false,
+			Max = max or false,
 			Falsy = false,
 			Truthy = true,
 			ReferenceType = false,
@@ -62,7 +67,7 @@ function META.New(min--[[#: number | nil]])
 			Parent = false,
 			Contract = false,
 			DontWiden = false,
-			Hash = compute_hash(min),
+			Hash = compute_hash(min, max),
 		},
 		META
 	)
@@ -83,10 +88,18 @@ local function LNumber(num--[[#: number | nil]])
 	return META.New(num)
 end
 
+local function LNumberRange(from--[[#: number]], to--[[#: number]])
+	return META.New(from, to)
+end
+
 function META:GetHashForMutationTracking()
 	if self:IsNan() then return nil end
 
-	if self.Data then return self.Data end
+	if self.Max and self.Data then
+		return self.Hash
+	elseif self.Data then
+		return self.Data
+	end
 
 	local upvalue = self:GetUpvalue()
 
@@ -95,14 +108,18 @@ function META:GetHashForMutationTracking()
 	return self
 end
 
-function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
+function META.Equal(a--[[#: TRange]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false, "types differ" end
 
 	do
 		return a.Hash == b.Hash
 	end
 
-	if a.Data == b.Data then return true, "max values are equal" end
+	if a.Max and a.Max == b.Max and a.Data == b.Data then
+		return true, "max values are equal"
+	end
+
+	if a.Max or b.Max then return false, "max value mismatch" end
 
 	if not a.Data and not b.Data then
 		return true, "no literal data in either value"
@@ -116,7 +133,7 @@ function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 end
 
 function META:IsLiteral()
-	return self.Data ~= false
+	return self.Data ~= false and self.Max == false
 end
 
 META:IsSet("DontWiden", false)
@@ -155,12 +172,12 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 end
 
 function META:Copy()
-	local copy = self.New(self.Data)--[[# as any]] -- TODO: figure out inheritance
+	local copy = self.New(self.Data, self.Max)--[[# as any]] -- TODO: figure out inheritance
 	copy:CopyInternalsFrom(self--[[# as any]])
 	return copy
 end
 
-function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: any]])
+function META.IsSubsetOf(a--[[#: TRange]], b--[[#: TBaseType]])
 	if b.Type == "tuple" then b = (b--[[# as any]]):GetWithNumber(1) end
 
 	if b.Type == "any" then return true end
@@ -169,30 +186,13 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: any]])
 		return (b--[[# as any]]):IsTargetSubsetOfChild(a--[[# as any]])
 	end
 
-	if b.Type == "range" then
-		if a.Data and a.Data >= b:GetMin() and a.Data <= b:GetMax() then
-			return true
-		end
+	if b.Type == "number" and not b.Data then return true end
 
-		return false, type_errors.subset(a, b)
-	end
-
-	if b.Type ~= "number" then return false, type_errors.subset(a, b) end
+	if b.Type ~= "range" then return false, type_errors.subset(a, b) end
 
 	if a.Data and b.Data then
-		if a:IsNan() and b:IsNan() then return true end
+		if a:GetMin() >= b:GetMin() and a:GetMax() <= b:GetMax() then return true end
 
-		if a.Data == b.Data then return true end
-
-		return false, type_errors.subset(a, b)
-	elseif a.Data == false and b.Data == false then
-		-- number contains number
-		return true
-	elseif a.Data and not b.Data then
-		-- 42 subset of number?
-		return true
-	elseif not a.Data and b.Data then
-		-- number subset of 42 ?
 		return false, type_errors.subset(a, b)
 	end
 
@@ -217,13 +217,31 @@ function META:__tostring()
 
 	s = tostring(n)
 
+	if self.Max then s = s .. ".." .. tostring(self.Max) end
+
 	if self.Data then return s end
 
 	return "number"
 end
 
+META:GetSet("Max", false--[[# as number | false]])
+
+function META:SetMax(val--[[#: number]])
+	if false--[[# as true]] then return end
+
+	error("cannot mutate data")
+end
+
+function META:GetMax()
+	return self.Max
+end
+
+function META:GetMin()
+	return self.Data
+end
+
 function META:UnpackRange()
-	return self.Data, self.Data
+	return self.Data, self.Max or self.Data
 end
 
 do
@@ -259,7 +277,7 @@ do
 		return nil
 	end
 
-	function META.LogicalComparison(a--[[#: TNumber]], b--[[#: any]], operator--[[#: "=="]])--[[#: boolean | nil]]
+	function META.LogicalComparison(a--[[#: TRange]], b--[[#: TRange]], operator--[[#: "=="]])--[[#: boolean | nil]]
 		if a.Type ~= "number" and a.Type ~= "range" then return nil end
 
 		if b.Type ~= "number" and b.Type ~= "range" then return nil end
@@ -272,7 +290,7 @@ do
 
 			if b_val then
 				if a.Type == "range" and a_val then
-					if b_val >= a_val and b_val <= a:GetData() then return nil end
+					if b_val >= a_val and b_val <= a:GetMax() then return nil end
 
 					return false
 				end
@@ -280,13 +298,11 @@ do
 
 			if a_val then
 				if b.Type == "range" and b_val then
-					if a_val >= b_val and a_val <= b:GetData() then return nil end
+					if a_val >= b_val and a_val <= b:GetMax() then return nil end
 
 					return false
 				end
 			end
-
-			if a:IsNan() and b:IsNan() then return true end
 
 			if a_val and b_val then return a_val == b_val end
 
@@ -409,13 +425,13 @@ do
 		end
 	end
 
-	function META.IntersectComparison(a--[[#: TNumber]], b--[[#: any]], operator--[[#: keysof<|operators|>]])--[[#: TNumber | nil,TNumber | nil]]
+	function META.IntersectComparison(a--[[#: TRange]], b--[[#: TRange]], operator--[[#: keysof<|operators|>]])--[[#: TRange | nil,TRange | nil]]
 		-- TODO: not sure if this makes sense
 		if a:IsNan() or b:IsNan() then return a, b end
 
 		-- if a is a wide "number" then default to -inf..inf so we can narrow it down if b is literal
 		local a_min = a.Data or -math.huge
-		local a_max = not a.Data and math.huge or a_min
+		local a_max = a.Max or not a.Data and math.huge or a_min
 		local b_min = b.Data or -math.huge
 		local b_max = b.Max or not b.Data and math.huge or b_min
 		local a_min_res, a_max_res, b_min_res, b_max_res = intersect(a_min, a_max, operator, b_min, b_max)
@@ -500,14 +516,18 @@ do
 		end,
 	}
 
-	function META.BinaryOperator(l--[[#: TNumber]], r--[[#: any]], op--[[#: keysof<|operators|>]])
+	function META.BinaryOperator(l--[[#: TRange]], r--[[#: TRange]], op--[[#: keysof<|operators|>]])
 		local func = operators[op]
 
 		if l.Data and r.Data then
 			local res = func(l.Data--[[# as number]], r.Data--[[# as number]])
-			local lcontract = l:GetContract()--[[# as nil | TNumber]]
+			local lcontract = l:GetContract()--[[# as nil | TRange]]
 
 			if lcontract then
+				if lcontract.Max and (res > lcontract.Max) then
+					return false, type_errors.number_overflow(l, r)
+				end
+
 				local min = lcontract.Data
 
 				if min and (min > res) then
@@ -516,7 +536,12 @@ do
 			end
 
 			local obj = LNumber(res)
-			obj.Hash = compute_hash(obj.Data)
+
+			if r.Max then obj.Max = func(l.Max or l.Data, r.Max) end
+
+			if l.Max then obj.Max = func(l.Max, r.Max or r.Data) end
+
+			obj.Hash = compute_hash(obj.Data, obj.Max)
 			return obj
 		end
 
@@ -544,7 +569,7 @@ do
 		end
 	end
 
-	function META.PrefixOperator(x--[[#: TNumber]], op--[[#: keysof<|operators|>]])
+	function META.PrefixOperator(x--[[#: TRange]], op--[[#: keysof<|operators|>]])
 		local func = operators[op]
 
 		if op == "not" then return False() end
@@ -552,9 +577,13 @@ do
 		if not x.Data then return Number() end
 
 		local res = func(x.Data--[[# as number]])
-		local lcontract = x:GetContract()--[[# as false | TNumber]]
+		local lcontract = x:GetContract()--[[# as false | TRange]]
 
 		if lcontract then
+			if lcontract.Max and res > lcontract.Max then
+				return false, type_errors.number_overflow(x)
+			end
+
 			local min = lcontract.Data
 
 			if min and min > res then
@@ -562,11 +591,9 @@ do
 			end
 		end
 
-		return LNumber(res)
+		return LNumberRange(res, func(x.Max or x.Data))
 	end
 end
-
-local _VERSION = _G._VERSION
 
 local function string_to_integer(str--[[#: string]])
 	if
@@ -591,11 +618,12 @@ local function string_to_integer(str--[[#: string]])
 end
 
 function META:IsNumeric()
-	return true
+	return type(self.Data) == "number" and type(self.Max) == "number"
 end
 
 return {
 	Number = Number,
+	LNumberRange = LNumberRange,
 	LNumber = LNumber,
 	LNumberFromString = function(str--[[#: string]])
 		local num
@@ -614,5 +642,5 @@ return {
 
 		return LNumber(num)
 	end,
-	TNumber = TNumber,
+	TRange = TRange,
 }

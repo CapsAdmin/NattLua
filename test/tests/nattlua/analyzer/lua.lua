@@ -412,6 +412,7 @@ analyze[[
         assert(mz == z)
         --assert(1/mz < 0 and 0 < 1/z)
         local NaN <const> = _ as nan
+        print(NaN ~= NaN)
         assert(NaN ~= NaN)
         assert(not (NaN < NaN))
         assert(not (NaN <= NaN))

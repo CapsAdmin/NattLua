@@ -1034,7 +1034,7 @@ do
 		timeout_connected = nil | {string | AddressInfo, string},
 		on_close = nil | function=(self)>(),
 		on_connect = nil | function=(self, string | AddressInfo, string)>(),
-		on_send = nil | function=(self, string, number)>(),
+		on_send = nil | function=(self, string, number)>(nil|number, nil | string, nil | number),
 		on_receive = nil | function=(self, cdata, number, nil | number)>(),
 		debug = true | nil,
 	}

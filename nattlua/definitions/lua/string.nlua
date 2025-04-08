@@ -45,7 +45,7 @@ analyzer function ^string.char(...: ...number)
 
 		out[i] = num:GetData()
 
-		if out[i] < 0 or out[i] > 255 then error("out of range", 2) end
+		if out[i] < 0 or out[i] > 255 then error("character " .. out[i] .. " at index " .. i .. " is out of range", 2) end
 	end
 
 	return string.char(table.unpack(out))

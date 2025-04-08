@@ -588,6 +588,14 @@ function META:Simplify()
 	return #self.Data == 1 and self.Data[1] or self
 end
 
+function META:IsNumeric()
+	for _, obj in ipairs(self.Data) do
+		if not obj:IsNumeric() then return false end
+	end
+
+	return true
+end
+
 return {
 	Union = META.New,
 	Nilable = function(typ--[[#: TBaseType]])

@@ -125,7 +125,7 @@ do
 
 	function META:AnalyzeRuntimeExpression(node)
 		self.current_expression = node
-
+		if not node then debug.trace() end
 		if node.kind == "value" then
 			return AnalyzeAtomicValue(self, node)
 		elseif node.kind == "vararg" then

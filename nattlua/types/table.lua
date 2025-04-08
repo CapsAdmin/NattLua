@@ -264,10 +264,10 @@ function META:GetArrayLength()
 	local len = 0
 
 	for _, kv in ipairs(self:GetData()) do
-		if kv.key.Type == "number" then
+		if kv.key:IsNumeric() then
 			if kv.key:IsLiteral() then
 				-- TODO: not very accurate
-				if kv.key:GetMax() then return kv.key:Copy() end
+				if kv.key.Type == "range" then return kv.key:Copy() end
 
 				if len + 1 == kv.key:GetData() then
 					len = kv.key:GetData()
@@ -755,7 +755,7 @@ function META:Get(key--[[#: TBaseType | TString]])
 		if not found_non_literal then return union end
 	end
 
-	if key.Type == "number" and key:GetMin() and key:GetMax() then
+	if key.Type == "range" then
 		local union = Union()
 		local min, max = key:GetMin(), key:GetMax()
 		local len = math.abs(min - max)
@@ -790,7 +790,7 @@ end
 
 function META:IsNumericallyIndexed()
 	for _, keyval in ipairs(self:GetData()) do
-		if keyval.key.Type ~= "number" then return false end
+		if not keyval.key:IsNumeric() then return false end -- TODO, check if there are holes?
 	end
 
 	return true

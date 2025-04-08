@@ -277,7 +277,7 @@ analyze[[
 ]]
 analyze[[
     local analyzer function foo(a: any)
-        assert(a == nil)
+        assert(a.Type == "any")
     end
 
     foo()

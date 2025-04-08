@@ -30,7 +30,9 @@ end
 local bytemarkers = {{0x7FF, 192}, {0xFFFF, 224}, {0x1FFFFF, 240}}
 
 local function unicode_escape(decimal--[[#: number]])
-	if decimal < 128 then return string.char(decimal) end
+	if decimal > 0 and decimal < 128 then
+		return string.char(decimal --[[#: 1..127]])  -- TODO, 
+	end
 
 	local charbytes = {}
 
@@ -71,7 +73,6 @@ local function reverse_escape_string(str--[[#: string]])
 				end
 
 				local hex = tonumber(str:sub(start + 3, stop + len - 1), 16)
-
 				if hex then
 					str = str:sub(1, start - 1) .. unicode_escape(hex) .. str:sub(stop + len + 1)
 				end

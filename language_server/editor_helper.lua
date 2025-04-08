@@ -716,6 +716,8 @@ do
 
 				if obj.Type == "number" then
 					return "number", mods
+				elseif obj.Type == "range" then
+					return "number", mods
 				elseif obj.Type == "string" then
 					return "string", mods
 				elseif obj.Type == "tuple" or obj.Type == "symbol" then

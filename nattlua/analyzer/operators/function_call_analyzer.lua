@@ -12,7 +12,7 @@ local Any = require("nattlua.types.any").Any
 local Function = require("nattlua.types.function").Function
 local LString = require("nattlua.types.string").LString
 local LNumber = require("nattlua.types.number").LNumber
-local LNumberRange = require("nattlua.types.number").LNumberRange
+local LNumberRange = require("nattlua.types.range").LNumberRange
 local Symbol = require("nattlua.types.symbol").Symbol
 local type_errors = require("nattlua.types.error_messages")
 
@@ -27,7 +27,7 @@ local function should_expand(arg, contract)
 		b = true
 	end
 
-	if arg.Type == "number" and arg:GetMax() then b = true end
+	if arg.Type == "range" then b = true end
 
 	return b
 end
@@ -45,7 +45,7 @@ local function unpack_union_tuples(obj, input)
 			not obj:GetPreventInputArgumentExpansion() and
 			should_expand(val, input_signature:GetWithNumber(i))
 		then
-			if val.Type == "number" then
+			if val.Type == "number" or val.Type == "range" then
 				lengths[i] = 2 -- min max
 			else
 				lengths[i] = #val:GetData()
@@ -67,8 +67,12 @@ local function unpack_union_tuples(obj, input)
 			if lengths[i] == 0 then
 				args[i] = val
 			else
-				if val.Type == "number" then
-					args[i] = sub_index == 1 and LNumber(val:GetData()) or LNumber(val:GetMax())
+				if val.Type == "range" then
+					if sub_index == 1 then
+						args[i] = LNumber(val:GetMin())
+					else
+						args[i] = LNumber(val:GetMax())
+					end
 				else
 					args[i] = val:GetData()[ys[i]]
 				end
@@ -112,7 +116,7 @@ return function(analyzer, obj, input)
 	end
 
 	if analyzer:IsTypesystem() then
-		local ret = analyzer:LuaTypesToTuple(
+		return analyzer:LuaTypesToTuple(
 			{
 				analyzer:CallLuaTypeFunction(
 					obj:GetAnalyzerFunction(),
@@ -121,13 +125,19 @@ return function(analyzer, obj, input)
 				),
 			}
 		)
-		return ret
 	end
 
 	local len = signature_arguments:GetSafeLength(input)
+	local packed_args = {input:Unpack(len)}
+	if #packed_args == 0 and len == 1 then
+		local first = signature_arguments:GetFirstValue()
+		if first and first.Type == "any" or first.Type == "nil" then
+			packed_args = {first:Copy()}
+		end
+	end
 	local tuples = {}
 
-	for i, arguments in ipairs(unpack_union_tuples(obj, {input:Unpack(len)})) do
+	for i, arguments in ipairs(unpack_union_tuples(obj, packed_args)) do
 		tuples[i] = analyzer:LuaTypesToTuple(
 			{
 				analyzer:CallLuaTypeFunction(
@@ -159,7 +169,7 @@ return function(analyzer, obj, input)
 				if existing.Type == "number" and v.Type == "number" then
 					local range = input:GetWithNumber(i)
 
-					if range and range.Type == "number" and range:GetMax() then
+					if range and range.Type == "range" then
 						ret:Set(i, LNumberRange(existing:GetData(), v:GetData()))
 						handled = true
 					end

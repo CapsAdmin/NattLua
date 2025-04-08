@@ -63,8 +63,8 @@ analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 	if not tbl:HasLiteralKeys() then return end
 
 	if pos and pos:IsLiteral() then
-		if pos:GetMax() then
-			pos = types.LNumberRange(pos:GetData() + 1, pos:GetMax() + 1)
+		if pos.Type == "range" then
+			pos = types.LNumberRange(pos:GetMin() + 1, pos:GetMax() + 1)
 		else
 			pos = types.LNumber(pos:GetData() + 1)
 		end

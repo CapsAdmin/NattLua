@@ -14,7 +14,7 @@ local Any = require("nattlua.types.any").Any
 local Tuple = require("nattlua.types.tuple").Tuple
 local LNumber = require("nattlua.types.number").LNumber
 local Number = require("nattlua.types.number").Number
-local LNumberRange = require("nattlua.types.number").LNumberRange
+local LNumberRange = require("nattlua.types.range").LNumberRange
 
 local function metatable_function(analyzer, meta_method, obj, node)
 	if obj:GetMetaTable() then
@@ -107,12 +107,12 @@ local function Prefix(analyzer, node, r)
 			if res then return res end
 		elseif op == "#" then
 			local res = metatable_function(analyzer, "__len", r, node)
-
+			
 			if res then return res end
 
 			return r:GetArrayLength()
 		end
-	elseif r.Type == "number" then
+	elseif r:IsNumeric() then
 		if op == "-" or op == "~" then return r:PrefixOperator(op) end
 	elseif r.Type == "string" then
 		if op == "#" then

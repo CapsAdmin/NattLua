@@ -2,7 +2,7 @@ local ipairs = ipairs
 local table = _G.table
 local Union = require("nattlua.types.union").Union
 local LNumber = require("nattlua.types.number").LNumber
-local LNumberRange = require("nattlua.types.number").LNumberRange
+local LNumberRange = require("nattlua.types.range").LNumberRange
 local shallow_copy = require("nattlua.other.tablex").copy
 return function(META)
 	function META:GetArrayLengthFromTable(tbl)
@@ -25,10 +25,10 @@ return function(META)
 				end
 			end
 
-			if kv.key.Type == "number" then
+			if kv.key:IsNumeric() then
 				if kv.key:IsLiteral() then
 					-- TODO: not very accurate
-					if kv.key:GetMax() then return kv.key:Copy() end
+					if kv.key.Type == "range" then return kv.key:Copy() end
 
 					if len + 1 == kv.key:GetData() then
 						len = kv.key:GetData()
@@ -209,7 +209,7 @@ return function(META)
 				elseif self:IsFalsyExpressionContext() then
 					local union = stack[#stack].falsy
 
-					if union:GetCardinality() == 0 then
+					if union.Type == "union" and union:GetCardinality() == 0 then
 						union = Union()
 
 						for _, val in ipairs(stack) do
