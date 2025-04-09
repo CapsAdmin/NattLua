@@ -135,8 +135,10 @@ local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | ni
 	end
 end
 
+local intersect_comparison = require("nattlua.analyzer.intersect_comparison")
+
 local function number_comparison(self, l, r, op, invert)
-	local nl, nr = l.IntersectComparison(l, r, op, invert)
+	local nl, nr = intersect_comparison(l, r, op, invert)
 
 	if nl and not l:Equal(nl) then self:TrackUpvalueUnion(l, nl, nr) end
 
@@ -454,19 +456,7 @@ local function Binary(self, node, l, r, op)
 
 			if res then return res end
 
-			if l:IsLiteral() and l == r then return True() end
-
-			if
-				(
-					l.Type == "number" or
-					l.Type == "range"
-				)
-				and
-				(
-					r.Type == "number" or
-					r.Type == "range"
-				)
-			then
+			if l:IsNumeric() and r:IsNumeric() then
 				local res = number_comparison(self, l, r, op)
 
 				if res then return res end
@@ -486,23 +476,13 @@ local function Binary(self, node, l, r, op)
 				return res
 			end
 
-			if l.Type ~= r.Type then return True() end
-
-			if
-				(
-					l.Type == "number" or
-					l.Type == "range"
-				)
-				and
-				(
-					r.Type == "number" or
-					r.Type == "range"
-				)
-			then
+			if l:IsNumeric() and r:IsNumeric() then
 				local res = number_comparison(self, l, r, op, true)
 
 				if res then return res end
 			end
+
+			if l.Type ~= r.Type then return True() end
 
 			local val, err = l.LogicalComparison(l, r, "==", self:GetCurrentAnalyzerEnvironment())
 
@@ -514,17 +494,7 @@ local function Binary(self, node, l, r, op)
 
 			if res then return res end
 
-			if
-				(
-					l.Type == "number" or
-					l.Type == "range"
-				)
-				and
-				(
-					r.Type == "number" or
-					r.Type == "range"
-				)
-			then
+			if l:IsNumeric() and r:IsNumeric() then
 				local res = number_comparison(self, l, r, op)
 
 				if res then return res end
@@ -536,17 +506,7 @@ local function Binary(self, node, l, r, op)
 
 			if res then return res end
 
-			if
-				(
-					l.Type == "number" or
-					l.Type == "range"
-				)
-				and
-				(
-					r.Type == "number" or
-					r.Type == "range"
-				)
-			then
+			if l:IsNumeric() and r:IsNumeric() then
 				local res = number_comparison(self, l, r, op)
 
 				if res then return res end
@@ -558,17 +518,7 @@ local function Binary(self, node, l, r, op)
 
 			if res then return res end
 
-			if
-				(
-					l.Type == "number" or
-					l.Type == "range"
-				)
-				and
-				(
-					r.Type == "number" or
-					r.Type == "range"
-				)
-			then
+			if l:IsNumeric() and r:IsNumeric() then
 				local res = number_comparison(self, l, r, op)
 
 				if res then return res end
@@ -580,17 +530,7 @@ local function Binary(self, node, l, r, op)
 
 			if res then return res end
 
-			if
-				(
-					l.Type == "number" or
-					l.Type == "range"
-				)
-				and
-				(
-					r.Type == "number" or
-					r.Type == "range"
-				)
-			then
+			if l:IsNumeric() and r:IsNumeric() then
 				local res = number_comparison(self, l, r, op)
 
 				if res then return res end

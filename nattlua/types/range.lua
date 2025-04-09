@@ -81,11 +81,11 @@ function META:GetLuaType()
 end
 
 local function Number()
-	return META.New()
+	return require("nattlua.types.number").Number()
 end
 
 local function LNumber(num--[[#: number | nil]])
-	return META.New(num)
+	return require("nattlua.types.number").LNumber(num)
 end
 
 local function LNumberRange(from--[[#: number]], to--[[#: number]])
@@ -344,117 +344,6 @@ do
 
 		return false, type_errors.binary(operator, a, b)
 	end
-
-	local max = math.max
-	local min = math.min
-
-	local function intersect(a_min, a_max, operator, b_min, b_max)
-		if operator == "<" then
-			if a_min < b_min and a_min < b_max and a_max < b_min and a_min < b_max then
-				return min(a_min, b_max), min(a_max, b_max - 1), nil, nil
-			end
-
-			if a_min >= b_min and a_min >= b_max and a_max >= b_min and a_min >= b_max then
-				return nil, nil, min(b_min, a_max), min(b_max, a_max)
-			end
-
-			return min(a_min, b_max),
-			min(a_max, b_max - 1),
-			min(b_min, a_max),
-			min(b_max, a_max)
-		elseif operator == ">" then
-			if a_min > b_min and a_min > b_max and a_max > b_min and a_min > b_max then
-				return max(a_min, b_max), max(a_max, b_max + 1), nil, nil
-			end
-
-			if a_min <= b_min and a_min <= b_max and a_max <= b_min and a_min <= b_max then
-				return nil, nil, max(b_min, a_max), max(b_max, a_max)
-			end
-
-			return max(a_min, b_min + 1),
-			max(a_max, b_min),
-			max(b_min, a_min),
-			max(b_max, b_min)
-		elseif operator == "<=" then
-			if a_min <= b_min and a_min <= b_max and a_max <= b_min and a_min <= b_max then
-				return min(a_min, b_max), min(a_max, b_max), nil, nil
-			end
-
-			if a_min > b_min and a_min > b_max and a_max > b_min and a_min > b_max then
-				return nil, nil, min(b_min, a_max), min(b_max, a_max)
-			end
-
-			return min(a_min, b_max),
-			min(a_max, b_max),
-			min(b_min, a_max),
-			min(b_max, a_max - 1)
-		elseif operator == ">=" then
-			if a_min >= b_min and a_min >= b_max and a_max >= b_min and a_min >= b_max then
-				return max(a_min, b_max), max(a_max, b_max), nil, nil
-			end
-
-			if a_min < b_min and a_min < b_max and a_max < b_min and a_min < b_max then
-				return nil, nil, max(b_min, a_max), max(b_max, a_max)
-			end
-
-			return max(a_min, b_min),
-			max(a_max, b_min),
-			max(b_min, a_min + 1),
-			max(b_max, b_min)
-		elseif operator == "==" then
-			if a_max < b_min or b_max < a_min then return nil, nil, b_min, b_max end
-
-			if a_min == a_max and b_min == b_max and a_min == b_max then
-				return a_min, a_max, nil, nil
-			end
-
-			if a_min <= b_max and b_min <= a_max then
-				if a_min == a_max and min(a_max, b_max) == b_max then
-					return max(a_min, b_min), min(a_max, b_max), b_min, b_max - 1
-				end
-
-				if a_min == a_max and max(a_min, b_min) == b_min then
-					return max(a_min, b_min), min(a_max, b_max), b_min + 1, b_max
-				end
-
-				return max(a_min, b_min), min(a_max, b_max), b_min, b_max
-			end
-		elseif operator == "~=" then
-			local x, y, z, w = intersect(b_min, b_max, "==", a_min, a_max)
-			return z, w, x, y
-		end
-	end
-
-	function META.IntersectComparison(a--[[#: TRange]], b--[[#: TRange]], operator--[[#: keysof<|operators|>]])--[[#: TRange | nil,TRange | nil]]
-		-- TODO: not sure if this makes sense
-		if a:IsNan() or b:IsNan() then return a, b end
-
-		-- if a is a wide "number" then default to -inf..inf so we can narrow it down if b is literal
-		local a_min = a.Data or -math.huge
-		local a_max = a.Max or not a.Data and math.huge or a_min
-		local b_min = b.Data or -math.huge
-		local b_max = b.Max or not b.Data and math.huge or b_min
-		local a_min_res, a_max_res, b_min_res, b_max_res = intersect(a_min, a_max, operator, b_min, b_max)
-		local result_a, result_b
-
-		if a_min_res and a_max_res then
-			if a_min_res == a_max_res then
-				result_a = LNumber(a_min_res)
-			else
-				result_a = LNumberRange(a_min_res, a_max_res)
-			end
-		end
-
-		if b_min_res and b_max_res then
-			if b_min_res == b_max_res then
-				result_b = LNumber(b_min_res)
-			else
-				result_b = LNumberRange(b_min_res, b_max_res)
-			end
-		end
-
-		return result_a, result_b
-	end
 end
 
 do
@@ -516,36 +405,22 @@ do
 		end,
 	}
 
-	function META.BinaryOperator(l--[[#: TRange]], r--[[#: TRange]], op--[[#: keysof<|operators|>]])
+	function META.BinaryOperator(l--[[#: TRange]], r--[[#: any]], op--[[#: keysof<|operators|>]])
 		local func = operators[op]
 
-		if l.Data and r.Data then
-			local res = func(l.Data--[[# as number]], r.Data--[[# as number]])
-			local lcontract = l:GetContract()--[[# as nil | TRange]]
+		if not func then return nil, type_errors.binary(op, l, r) end
 
-			if lcontract then
-				if lcontract.Max and (res > lcontract.Max) then
-					return false, type_errors.number_overflow(l, r)
-				end
+		local l_min = l.Data--[[# as number]]
+		local l_max = l.Max--[[# as number]]
+		local r_min = r.Data--[[# as number]]
+		local r_max = (r.Type == "range" and r.Max or r.Data)--[[# as number]]
 
-				local min = lcontract.Data
-
-				if min and (min > res) then
-					return false, type_errors.number_underflow(l, r)
-				end
-			end
-
-			local obj = LNumber(res)
-
-			if r.Max then obj.Max = func(l.Max or l.Data, r.Max) end
-
-			if l.Max then obj.Max = func(l.Max, r.Max or r.Data) end
-
-			obj.Hash = compute_hash(obj.Data, obj.Max)
-			return obj
+		if r_max == false then
+			r_min = -math.huge
+			r_max = math.huge
 		end
 
-		return Number()
+		return LNumberRange(func(l_min, r_min), func(l_max, r_max))
 	end
 end
 
@@ -570,28 +445,13 @@ do
 	end
 
 	function META.PrefixOperator(x--[[#: TRange]], op--[[#: keysof<|operators|>]])
-		local func = operators[op]
-
 		if op == "not" then return False() end
 
-		if not x.Data then return Number() end
+		local func = operators[op]
 
-		local res = func(x.Data--[[# as number]])
-		local lcontract = x:GetContract()--[[# as false | TRange]]
+		if not func then return nil, type_errors.prefix(op, x) end
 
-		if lcontract then
-			if lcontract.Max and res > lcontract.Max then
-				return false, type_errors.number_overflow(x)
-			end
-
-			local min = lcontract.Data
-
-			if min and min > res then
-				return false, type_errors.number_underflow(x)
-			end
-		end
-
-		return LNumberRange(res, func(x.Max or x.Data))
+		return LNumberRange(func(x.Data--[[# as number]]), func(x.Max--[[# as number]]))
 	end
 end
 
@@ -622,25 +482,6 @@ function META:IsNumeric()
 end
 
 return {
-	Number = Number,
 	LNumberRange = LNumberRange,
-	LNumber = LNumber,
-	LNumberFromString = function(str--[[#: string]])
-		local num
-
-		if str:sub(1, 2) == "0b" then
-			num = tonumber(str:sub(3), 2)
-		elseif str:lower():sub(-3) == "ull" then
-			num = string_to_integer(str)
-		elseif str:lower():sub(-2) == "ll" then
-			num = string_to_integer(str)
-		else
-			num = tonumber(str)
-		end
-
-		if not num then return nil end
-
-		return LNumber(num)
-	end,
 	TRange = TRange,
 }

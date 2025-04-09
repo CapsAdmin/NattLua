@@ -8,7 +8,7 @@ local type_errors = require("nattlua.types.error_messages")
 local bit = require("nattlua.other.bit")
 local jit = _G.jit
 local False = require("nattlua.types.symbol").False
-local LNumberRange = require("nattlua.types"..".range" --[[#as any]]).LNumberRange
+local LNumberRange = require("nattlua.types" .. ".range"--[[# as any]]).LNumberRange
 local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TNumber"]]
@@ -328,117 +328,6 @@ do
 
 		return false, type_errors.binary(operator, a, b)
 	end
-
-	local max = math.max
-	local min = math.min
-
-	local function intersect(a_min, a_max, operator, b_min, b_max)
-		if operator == "<" then
-			if a_min < b_min and a_min < b_max and a_max < b_min and a_min < b_max then
-				return min(a_min, b_max), min(a_max, b_max - 1), nil, nil
-			end
-
-			if a_min >= b_min and a_min >= b_max and a_max >= b_min and a_min >= b_max then
-				return nil, nil, min(b_min, a_max), min(b_max, a_max)
-			end
-
-			return min(a_min, b_max),
-			min(a_max, b_max - 1),
-			min(b_min, a_max),
-			min(b_max, a_max)
-		elseif operator == ">" then
-			if a_min > b_min and a_min > b_max and a_max > b_min and a_min > b_max then
-				return max(a_min, b_max), max(a_max, b_max + 1), nil, nil
-			end
-
-			if a_min <= b_min and a_min <= b_max and a_max <= b_min and a_min <= b_max then
-				return nil, nil, max(b_min, a_max), max(b_max, a_max)
-			end
-
-			return max(a_min, b_min + 1),
-			max(a_max, b_min),
-			max(b_min, a_min),
-			max(b_max, b_min)
-		elseif operator == "<=" then
-			if a_min <= b_min and a_min <= b_max and a_max <= b_min and a_min <= b_max then
-				return min(a_min, b_max), min(a_max, b_max), nil, nil
-			end
-
-			if a_min > b_min and a_min > b_max and a_max > b_min and a_min > b_max then
-				return nil, nil, min(b_min, a_max), min(b_max, a_max)
-			end
-
-			return min(a_min, b_max),
-			min(a_max, b_max),
-			min(b_min, a_max),
-			min(b_max, a_max - 1)
-		elseif operator == ">=" then
-			if a_min >= b_min and a_min >= b_max and a_max >= b_min and a_min >= b_max then
-				return max(a_min, b_max), max(a_max, b_max), nil, nil
-			end
-
-			if a_min < b_min and a_min < b_max and a_max < b_min and a_min < b_max then
-				return nil, nil, max(b_min, a_max), max(b_max, a_max)
-			end
-
-			return max(a_min, b_min),
-			max(a_max, b_min),
-			max(b_min, a_min + 1),
-			max(b_max, b_min)
-		elseif operator == "==" then
-			if a_max < b_min or b_max < a_min then return nil, nil, b_min, b_max end
-
-			if a_min == a_max and b_min == b_max and a_min == b_max then
-				return a_min, a_max, nil, nil
-			end
-
-			if a_min <= b_max and b_min <= a_max then
-				if a_min == a_max and min(a_max, b_max) == b_max then
-					return max(a_min, b_min), min(a_max, b_max), b_min, b_max - 1
-				end
-
-				if a_min == a_max and max(a_min, b_min) == b_min then
-					return max(a_min, b_min), min(a_max, b_max), b_min + 1, b_max
-				end
-
-				return max(a_min, b_min), min(a_max, b_max), b_min, b_max
-			end
-		elseif operator == "~=" then
-			local x, y, z, w = intersect(b_min, b_max, "==", a_min, a_max)
-			return z, w, x, y
-		end
-	end
-
-	function META.IntersectComparison(a--[[#: TNumber]], b--[[#: any]], operator--[[#: keysof<|operators|>]])--[[#: TNumber | nil,TNumber | nil]]
-		-- TODO: not sure if this makes sense
-		if a:IsNan() or b:IsNan() then return a, b end
-
-		-- if a is a wide "number" then default to -inf..inf so we can narrow it down if b is literal
-		local a_min = a.Data or -math.huge
-		local a_max = not a.Data and math.huge or a_min
-		local b_min = b.Data or -math.huge
-		local b_max = b.Max or not b.Data and math.huge or b_min
-		local a_min_res, a_max_res, b_min_res, b_max_res = intersect(a_min, a_max, operator, b_min, b_max)
-		local result_a, result_b
-
-		if a_min_res and a_max_res then
-			if a_min_res == a_max_res then
-				result_a = LNumber(a_min_res)
-			else
-				result_a = LNumberRange(a_min_res, a_max_res)
-			end
-		end
-
-		if b_min_res and b_max_res then
-			if b_min_res == b_max_res then
-				result_b = LNumber(b_min_res)
-			else
-				result_b = LNumberRange(b_min_res, b_max_res)
-			end
-		end
-
-		return result_a, result_b
-	end
 end
 
 do
@@ -503,24 +392,25 @@ do
 	function META.BinaryOperator(l--[[#: TNumber]], r--[[#: any]], op--[[#: keysof<|operators|>]])
 		local func = operators[op]
 
-		if l.Data and r.Data then
-			local res = func(l.Data--[[# as number]], r.Data--[[# as number]])
-			local lcontract = l:GetContract()--[[# as nil | TNumber]]
+		if not func then return nil, type_errors.binary(op, l, r) end
 
-			if lcontract then
-				local min = lcontract.Data
+		if l.Data == false then return Number() end
 
-				if min and (min > res) then
-					return false, type_errors.number_underflow(l, r)
-				end
-			end
-
-			local obj = LNumber(res)
-			obj.Hash = compute_hash(obj.Data)
-			return obj
+		if r.Type == "range" then
+			local l_min = l.Data--[[# as number]]
+			local l_max = l.Data--[[# as number]]
+			local r_min = r.Data--[[# as number]]
+			local r_max = r.Max--[[# as number]]
+			return LNumberRange(func(l_min, r_min), func(l_max, r_max))
 		end
 
-		return Number()
+		if r.Data == false then return Number() end
+
+		local l_min = l.Data
+		local l_max = l.Data
+		local r_min = r.Data
+		local r_max = r.Data
+		return LNumber(func(l_min, r_min))
 	end
 end
 
