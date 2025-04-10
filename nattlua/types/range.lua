@@ -42,10 +42,6 @@ end
 
 META:GetSet("Hash", ""--[[# as string]])
 
-local function Number()
-	return require("nattlua.types.number").Number()
-end
-
 local function LNumber(num--[[#: number | nil]])
 	return require("nattlua.types.number").LNumber(num)
 end
