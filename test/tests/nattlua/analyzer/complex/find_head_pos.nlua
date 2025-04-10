@@ -35,7 +35,7 @@ local function FindHeadPosition(ent: Entity & HeadPos)
 	end
 
 	if ent.findheadpos_head_bone then
-		attest.equal(ent.findheadpos_head_bone, _ as number)
+		attest.equal(ent.findheadpos_head_bone, _ as 0 .. inf | number)
 		local m = ent:GetBoneMatrix(ent.findheadpos_head_bone)
 
 		if m then

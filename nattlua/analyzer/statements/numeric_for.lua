@@ -99,7 +99,7 @@ return {
 					init = LNumber(literal_init)
 				end
 
-				init:SetDontWiden(true)
+				if init.Type == "number" then init:SetDontWiden(true) end
 			else
 				if init:IsNumeric() and max:IsNumeric() then
 					if init:IsLiteral() and max:IsLiteral() then

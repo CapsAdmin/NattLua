@@ -43,13 +43,7 @@ local function tostring_number(num)
 end
 
 local function compute_hash(min--[[#: any]], max--[[#: any]])
-	if max then
-		return tostring_number(min) .. ".." .. tostring_number(min)
-	elseif min then
-		return tostring_number(min)
-	end
-
-	return "N"
+	return tostring_number(min) .. ".." .. tostring_number(min)
 end
 
 META:GetSet("Hash", ""--[[# as string]])
@@ -95,51 +89,15 @@ end
 function META:GetHashForMutationTracking()
 	if self:IsNan() then return nil end
 
-	if self.Max and self.Data then
-		return self.Hash
-	elseif self.Data then
-		return self.Data
-	end
-
-	local upvalue = self:GetUpvalue()
-
-	if upvalue then return upvalue:GetHashForMutationTracking() end
-
-	return self
+	return self.Hash
 end
 
 function META.Equal(a--[[#: TRange]], b--[[#: TBaseType]])
-	if a.Type ~= b.Type then return false, "types differ" end
-
-	do
-		return a.Hash == b.Hash
-	end
-
-	if a.Max and a.Max == b.Max and a.Data == b.Data then
-		return true, "max values are equal"
-	end
-
-	if a.Max or b.Max then return false, "max value mismatch" end
-
-	if not a.Data and not b.Data then
-		return true, "no literal data in either value"
-	else
-		if a:IsNan() and b:IsNan() then return true, "both values are nan" end
-
-		return a.Data == b.Data, "literal values are equal"
-	end
-
-	return false, "values are not equal"
+	return a.Hash == b.Hash
 end
 
 function META:IsLiteral()
-	return self.Data ~= false and self.Max == false
-end
-
-META:IsSet("DontWiden", false)
-
-function META:Widen()
-	return Number()
+	return true
 end
 
 function META:CopyLiteralness(obj--[[#: TBaseType]])
@@ -191,37 +149,16 @@ function META.IsSubsetOf(a--[[#: TRange]], b--[[#: TBaseType]])
 	if b.Type ~= "range" then return false, type_errors.subset(a, b) end
 
 	if a.Data and b.Data then
-		if a:GetMin() >= b:GetMin() and a:GetMax() <= b:GetMax() then return true end
+		if a.Data >= b.Data and a.Max <= b.Max then return true end
 
 		return false, type_errors.subset(a, b)
 	end
 
-	-- number == number
-	return true
-end
-
-function META:IsNan()
-	return self.Data ~= self.Data
-end
-
-function META:IsInf()
-	local n = self.Data
-	return math.abs(n--[[# as number]]) == math.huge
+	error("NYI: range subset check")
 end
 
 function META:__tostring()
-	local n = self.Data
-	local s--[[#: string]]
-
-	if self:IsNan() then s = "nan" end
-
-	s = tostring(n)
-
-	if self.Max then s = s .. ".." .. tostring(self.Max) end
-
-	if self.Data then return s end
-
-	return "number"
+	return tostring(self.Data) .. ".." .. tostring(self.Max)
 end
 
 META:GetSet("Max", false--[[# as number | false]])
@@ -241,7 +178,11 @@ function META:GetMin()
 end
 
 function META:UnpackRange()
-	return self.Data, self.Max or self.Data
+	return self.Data, self.Max
+end
+
+function META:IsNan()
+	return self.Data ~= self.Data or self.Max ~= self.Max
 end
 
 do
