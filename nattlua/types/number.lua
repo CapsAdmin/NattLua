@@ -295,18 +295,14 @@ do
 		if r.Type == "range" then
 			local l_min = l.Data--[[# as number]]
 			local l_max = l.Data--[[# as number]]
-			local r_min = r.Data--[[# as number]]
+			local r_min = r.Min--[[# as number]]
 			local r_max = r.Max--[[# as number]]
 			return LNumberRange(func(l_min, r_min), func(l_max, r_max))
 		end
 
 		if r.Data == false then return Number() end
 
-		local l_min = l.Data
-		local l_max = l.Data
-		local r_min = r.Data
-		local r_max = r.Data
-		return LNumber(func(l_min, r_min))
+		return LNumber(func(l.Data, r.Data))
 	end
 end
 

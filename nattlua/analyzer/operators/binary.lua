@@ -75,7 +75,15 @@ local function operator(self, node, l, r, op, meta_method)
 			)
 		then
 			if l:IsLiteral() and r:IsLiteral() then
-				return LString(l:GetData() .. r:GetData())
+				if l.Type == "range" and r.Type == "range" then
+					return LString(l:GetMin() .. r:GetMax())
+				elseif l.Type == "range" then
+					return LString(l:GetMin() .. r:GetData())
+				elseif r.Type == "range" then
+					return LString(l:GetData() .. r:GetMax())
+				else
+					return LString(l:GetData() .. r:GetData())
+				end
 			end
 
 			return String()

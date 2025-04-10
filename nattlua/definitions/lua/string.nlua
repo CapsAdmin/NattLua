@@ -26,7 +26,7 @@ analyzer function ^string.rep(str: string, n: number, sep: nil | string)
 		return types.String()
 	end
 
-	if str:IsLiteral() and n:IsLiteral() then
+	if str:IsLiteral() and n:IsLiteral() and n.Type ~= "range" then
 		if sep and sep:IsLiteral() then
 			return types.LString(string.rep(str:GetData(), n:GetData(), sep:GetData()))
 		end
@@ -45,7 +45,9 @@ analyzer function ^string.char(...: ...number)
 
 		out[i] = num:GetData()
 
-		if out[i] < 0 or out[i] > 255 then error("character " .. out[i] .. " at index " .. i .. " is out of range", 2) end
+		if out[i] < 0 or out[i] > 255 then
+			error("character " .. out[i] .. " at index " .. i .. " is out of range", 2)
+		end
 	end
 
 	return string.char(table.unpack(out))

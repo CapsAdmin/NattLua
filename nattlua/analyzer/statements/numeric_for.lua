@@ -15,7 +15,13 @@ local function get_largest_number(obj)
 			local max = -math.huge
 
 			for _, v in ipairs(obj:GetData()) do
-				max = math.max(max, v:GetData())
+				if v:IsNumeric() then
+					if v.Type == "range" then
+						max = math.max(max, v:GetMax())
+					else
+						max = math.max(max, v:GetData())
+					end
+				end
 			end
 
 			return max

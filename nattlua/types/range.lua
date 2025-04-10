@@ -15,7 +15,7 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TRange = META.@Self]]
 --[[#type TRange.DontWiden = boolean]]
 META.Type = "range"
-META:GetSet("Data", false--[[# as number | false]])
+META:GetSet("Min", false--[[# as number | false]])
 
 function META:SetData()
 	if false--[[# as true]] then return end
@@ -52,7 +52,7 @@ function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 	local s = setmetatable(
 		{
 			Type = META.Type,
-			Data = min or false,
+			Min = min or false,
 			Max = max or false,
 			Falsy = false,
 			Truthy = true,
@@ -69,7 +69,7 @@ function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 end
 
 function META:GetLuaType()
-	if type(self.Data) == "cdata" then return "cdata" end
+	if type(self.Min) == "cdata" then return "cdata" end
 
 	return self.Type
 end
@@ -101,7 +101,7 @@ function META:IsLiteral()
 end
 
 function META:CopyLiteralness(obj--[[#: TBaseType]])
-	if self.ReferenceType == obj.ReferenceType and self.Data == obj.Data then
+	if self.ReferenceType == obj.ReferenceType and self.Min == obj.Min then
 		return self
 	end
 
@@ -120,7 +120,7 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 			end
 
 			if not obj:IsLiteral() then
-				self.Data = false
+				self.Min = false
 				self.Hash = "N"
 			end
 		end
@@ -130,7 +130,7 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 end
 
 function META:Copy()
-	local copy = self.New(self.Data, self.Max)--[[# as any]] -- TODO: figure out inheritance
+	local copy = self.New(self.Min, self.Max)--[[# as any]] -- TODO: figure out inheritance
 	copy:CopyInternalsFrom(self--[[# as any]])
 	return copy
 end
@@ -148,17 +148,13 @@ function META.IsSubsetOf(a--[[#: TRange]], b--[[#: TBaseType]])
 
 	if b.Type ~= "range" then return false, type_errors.subset(a, b) end
 
-	if a.Data and b.Data then
-		if a.Data >= b.Data and a.Max <= b.Max then return true end
+	if a.Min >= b.Min and a.Max <= b.Max then return true end
 
-		return false, type_errors.subset(a, b)
-	end
-
-	error("NYI: range subset check")
+	return false, type_errors.subset(a, b)
 end
 
 function META:__tostring()
-	return tostring(self.Data) .. ".." .. tostring(self.Max)
+	return tostring(self.Min) .. ".." .. tostring(self.Max)
 end
 
 META:GetSet("Max", false--[[# as number | false]])
@@ -174,15 +170,15 @@ function META:GetMax()
 end
 
 function META:GetMin()
-	return self.Data
+	return self.Min
 end
 
 function META:UnpackRange()
-	return self.Data, self.Max
+	return self.Min, self.Max
 end
 
 function META:IsNan()
-	return self.Data ~= self.Data or self.Max ~= self.Max
+	return self.Min ~= self.Min or self.Max ~= self.Max
 end
 
 do
@@ -249,9 +245,9 @@ do
 
 		if not func then return nil, type_errors.binary(op, l, r) end
 
-		local l_min = l.Data--[[# as number]]
+		local l_min = l.Min--[[# as number]]
 		local l_max = l.Max--[[# as number]]
-		local r_min = r.Data--[[# as number]]
+		local r_min = (r.Type == "range" and r.Min or r.Data)--[[# as number]]
 		local r_max = (r.Type == "range" and r.Max or r.Data)--[[# as number]]
 
 		if r_max == false then
@@ -290,7 +286,7 @@ do
 
 		if not func then return nil, type_errors.prefix(op, x) end
 
-		return LNumberRange(func(x.Data--[[# as number]]), func(x.Max--[[# as number]]))
+		return LNumberRange(func(x.Min--[[# as number]]), func(x.Max--[[# as number]]))
 	end
 end
 
@@ -317,7 +313,7 @@ local function string_to_integer(str--[[#: string]])
 end
 
 function META:IsNumeric()
-	return type(self.Data) == "number" and type(self.Max) == "number"
+	return type(self.Min) == "number" and type(self.Max) == "number"
 end
 
 return {

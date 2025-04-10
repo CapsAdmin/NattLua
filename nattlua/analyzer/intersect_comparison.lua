@@ -100,9 +100,9 @@ local function intersect_comparison(a--[[#: NumericType]], b--[[#: NumericType]]
 	if a:IsNan() or b:IsNan() then return a, b end
 
 	-- if a is a wide "number" then default to -inf..inf so we can narrow it down if b is literal
-	local a_min = a.Data or -math.huge
+	local a_min = a.Min or a.Data or -math.huge
 	local a_max = a.Max or not a.Data and math.huge or a_min
-	local b_min = b.Data or -math.huge
+	local b_min = b.Min or b.Data or -math.huge
 	local b_max = b.Max or not b.Data and math.huge or b_min
 	local a_min_res, a_max_res, b_min_res, b_max_res = intersect(a_min, a_max, operator, b_min, b_max)
 	local result_a, result_b
