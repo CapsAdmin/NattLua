@@ -342,7 +342,7 @@ function META:GetWithNumber(i--[[#: number]])
 				return last:GetWithNumber(i)
 			end
 
-			if last.Type == "tuple"  and last.Repeat == math.huge then return last end
+			if last.Type == "tuple" and last.Repeat == math.huge then return last end
 
 			if last.Type == "union" and last:HasTuples() then
 				local i = i - #self:GetData() + 1

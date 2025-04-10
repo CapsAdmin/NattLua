@@ -107,7 +107,7 @@ local function Prefix(analyzer, node, r)
 			if res then return res end
 		elseif op == "#" then
 			local res = metatable_function(analyzer, "__len", r, node)
-			
+
 			if res then return res end
 
 			return r:GetArrayLength()

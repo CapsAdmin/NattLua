@@ -129,12 +129,15 @@ return function(analyzer, obj, input)
 
 	local len = signature_arguments:GetSafeLength(input)
 	local packed_args = {input:Unpack(len)}
+
 	if #packed_args == 0 and len == 1 then
 		local first = signature_arguments:GetFirstValue()
+
 		if first and first.Type == "any" or first.Type == "nil" then
 			packed_args = {first:Copy()}
 		end
 	end
+
 	local tuples = {}
 
 	for i, arguments in ipairs(unpack_union_tuples(obj, packed_args)) do

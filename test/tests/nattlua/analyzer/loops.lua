@@ -92,7 +92,7 @@ analyze[[
     end
     attest.equal(a, _ as number | 0)
     attest.equal(b, _ as number | 0)
-]]    
+]]
 analyze[[
     local t = {foo = true}
     for k,v in pairs(t) do
