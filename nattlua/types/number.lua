@@ -50,11 +50,11 @@ end
 
 META:GetSet("Hash", ""--[[# as string]])
 
-function META.New(min--[[#: number | nil]])
-	local s = setmetatable(
+function META.New(data--[[#: number | nil]])
+	return setmetatable(
 		{
-			Type = "number",
-			Data = min or false,
+			Type = META.Type,
+			Data = data or false,
 			Falsy = false,
 			Truthy = true,
 			ReferenceType = false,
@@ -62,11 +62,10 @@ function META.New(min--[[#: number | nil]])
 			Parent = false,
 			Contract = false,
 			DontWiden = false,
-			Hash = compute_hash(min),
+			Hash = compute_hash(data),
 		},
 		META
 	)
-	return s
 end
 
 function META:GetLuaType()
@@ -295,8 +294,8 @@ do
 		if r.Type == "range" then
 			local l_min = l.Data--[[# as number]]
 			local l_max = l.Data--[[# as number]]
-			local r_min = r.Min--[[# as number]]
-			local r_max = r.Max--[[# as number]]
+			local r_min = r:GetMin()--[[# as number]]
+			local r_max = r:GetMax()--[[# as number]]
 			return LNumberRange(func(l_min, r_min), func(l_max, r_max))
 		end
 

@@ -17,12 +17,6 @@ local META = dofile("nattlua/types/base.lua")
 META.Type = "range"
 META:GetSet("Min", false--[[# as number | false]])
 
-function META:SetData()
-	if false--[[# as true]] then return end
-
-	error("cannot mutate data")
-end
-
 --[[#local type TUnion = {
 	@Name = "TUnion",
 	Type = "union",
@@ -48,38 +42,36 @@ end
 
 META:GetSet("Hash", ""--[[# as string]])
 
-function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
-	local s = setmetatable(
-		{
-			Type = META.Type,
-			Min = min or false,
-			Max = max or false,
-			Falsy = false,
-			Truthy = true,
-			ReferenceType = false,
-			Upvalue = false,
-			Parent = false,
-			Contract = false,
-			DontWiden = false,
-			Hash = compute_hash(min, max),
-		},
-		META
-	)
-	return s
-end
-
-function META:GetLuaType()
-	if type(self.Min) == "cdata" then return "cdata" end
-
-	return self.Type
-end
-
 local function Number()
 	return require("nattlua.types.number").Number()
 end
 
 local function LNumber(num--[[#: number | nil]])
 	return require("nattlua.types.number").LNumber(num)
+end
+
+function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
+	return setmetatable(
+		{
+			Type = META.Type,
+			Min = LNumber(min),
+			Max = LNumber(max),
+			Falsy = false,
+			Truthy = true,
+			ReferenceType = false,
+			Upvalue = false,
+			Parent = false,
+			Contract = false,
+			Hash = compute_hash(min, max),
+		},
+		META
+	)
+end
+
+function META:GetLuaType()
+	if type(self:GetMin()) == "cdata" then return "cdata" end
+
+	return self.Type
 end
 
 local function LNumberRange(from--[[#: number]], to--[[#: number]])
@@ -101,7 +93,7 @@ function META:IsLiteral()
 end
 
 function META:CopyLiteralness(obj--[[#: TBaseType]])
-	if self.ReferenceType == obj.ReferenceType and self.Min == obj.Min then
+	if self.ReferenceType == obj.ReferenceType and self:Equal(obj) then
 		return self
 	end
 
@@ -118,11 +110,6 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 
 				if x then return self end
 			end
-
-			if not obj:IsLiteral() then
-				self.Min = false
-				self.Hash = "N"
-			end
 		end
 	end
 
@@ -130,7 +117,7 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 end
 
 function META:Copy()
-	local copy = self.New(self.Min, self.Max)--[[# as any]] -- TODO: figure out inheritance
+	local copy = self.New(self:GetMin(), self:GetMax())--[[# as any]] -- TODO: figure out inheritance
 	copy:CopyInternalsFrom(self--[[# as any]])
 	return copy
 end
@@ -148,13 +135,13 @@ function META.IsSubsetOf(a--[[#: TRange]], b--[[#: TBaseType]])
 
 	if b.Type ~= "range" then return false, type_errors.subset(a, b) end
 
-	if a.Min >= b.Min and a.Max <= b.Max then return true end
+	if a:GetMin() >= b:GetMin() and a:GetMax() <= b:GetMax() then return true end
 
 	return false, type_errors.subset(a, b)
 end
 
 function META:__tostring()
-	return tostring(self.Min) .. ".." .. tostring(self.Max)
+	return tostring(self:GetMin()) .. ".." .. tostring(self:GetMax())
 end
 
 META:GetSet("Max", false--[[# as number | false]])
@@ -166,19 +153,19 @@ function META:SetMax(val--[[#: number]])
 end
 
 function META:GetMax()
-	return self.Max
+	return self.Max.Data
 end
 
 function META:GetMin()
-	return self.Min
+	return self.Min.Data
 end
 
 function META:UnpackRange()
-	return self.Min, self.Max
+	return self:GetMin(), self:GetMax()
 end
 
 function META:IsNan()
-	return self.Min ~= self.Min or self.Max ~= self.Max
+	return self:GetMin() ~= self:GetMin() or self:GetMax() ~= self:GetMax()
 end
 
 do
@@ -245,10 +232,10 @@ do
 
 		if not func then return nil, type_errors.binary(op, l, r) end
 
-		local l_min = l.Min--[[# as number]]
-		local l_max = l.Max--[[# as number]]
-		local r_min = (r.Type == "range" and r.Min or r.Data)--[[# as number]]
-		local r_max = (r.Type == "range" and r.Max or r.Data)--[[# as number]]
+		local l_min = l:GetMin()--[[# as number]]
+		local l_max = l:GetMax()--[[# as number]]
+		local r_min = (r.Type == "range" and r:GetMin() or r.Data)--[[# as number]]
+		local r_max = (r.Type == "range" and r:GetMax() or r.Data)--[[# as number]]
 
 		if r_max == false then
 			r_min = -math.huge
@@ -286,7 +273,7 @@ do
 
 		if not func then return nil, type_errors.prefix(op, x) end
 
-		return LNumberRange(func(x.Min--[[# as number]]), func(x.Max--[[# as number]]))
+		return LNumberRange(func(x:GetMin()--[[# as number]]), func(x:GetMax()--[[# as number]]))
 	end
 end
 
@@ -313,7 +300,7 @@ local function string_to_integer(str--[[#: string]])
 end
 
 function META:IsNumeric()
-	return type(self.Min) == "number" and type(self.Max) == "number"
+	return type(self:GetMin()) == "number" and type(self:GetMax()) == "number"
 end
 
 return {

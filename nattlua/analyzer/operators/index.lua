@@ -105,7 +105,7 @@ local function index_table(analyzer, self, key, raw)
 			and
 			(
 				found_key.key.Type == "number" and
-				not found_key.key.Max
+				not found_key.key:GetData()
 			)
 		then
 			val = Union({Nil(), val})
