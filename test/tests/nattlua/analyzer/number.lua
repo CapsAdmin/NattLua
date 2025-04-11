@@ -97,7 +97,6 @@ if n > 0 then
 	if n < 10 then attest.equal(n, _ as 1 .. 9) end
 end
 ]]
-
 analyze[[
 local n = _ as number
 

@@ -266,10 +266,11 @@ do
 		end,
 	}
 
-	for k,v in pairs(operators) do
-		operators[k] = function(l, r) 
+	for k, v in pairs(operators) do
+		operators[k] = function(l, r)
 			if l == inf or r == inf then return inf end
-			return v(l, r) 
+
+			return v(l, r)
 		end
 	end
 

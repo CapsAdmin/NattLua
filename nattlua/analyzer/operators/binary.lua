@@ -147,10 +147,8 @@ local intersect_comparison = require("nattlua.analyzer.intersect_comparison")
 
 local function number_comparison(self, l, r, op, invert)
 	local nl, nr, nl2, nr2 = intersect_comparison(l, r, op, invert)
-	
-	if nl and nr then 
-		self:TrackUpvalueUnion(l, nl, nr) 
-	end
+
+	if nl and nr then self:TrackUpvalueUnion(l, nl, nr) end
 
 	if nl2 and nr2 then self:TrackUpvalueUnion(r, nl2, nr2) end
 

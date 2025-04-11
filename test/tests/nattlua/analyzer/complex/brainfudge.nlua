@@ -408,9 +408,11 @@ local function secondPassMemset(instList: InstructionList)
 						max = max - (currentFindSize + 1) * 2
 					else
 						if movingDirection == 1 then
-							--table.insert(instList, i, {MEMSET, 1, currentFindSize, currentAssignation})
+
+						--table.insert(instList, i, {MEMSET, 1, currentFindSize, currentAssignation})
 						else
-							--table.insert(instList, i, {MEMSET, -currentFindSize - 1, currentFindSize, currentAssignation}) -- TODO
+
+						--table.insert(instList, i, {MEMSET, -currentFindSize - 1, currentFindSize, currentAssignation}) -- TODO
 						end
 
 						max = max - (currentFindSize * 2 - 1)

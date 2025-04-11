@@ -354,7 +354,7 @@ do
 
 	do
 		local nan = math.huge / math.huge
-		local at, af, bt, bf =  intersect_comparison(LNumberRange(nan, nan), LNumberRange(5, 10), "<")
+		local at, af, bt, bf = intersect_comparison(LNumberRange(nan, nan), LNumberRange(5, 10), "<")
 		assert(rangesEqual(at, LNumberRange(nan, nan)))
 		assert(rangesEqual(af, LNumberRange(5, 10)))
 	end
