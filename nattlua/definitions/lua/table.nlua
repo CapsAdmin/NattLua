@@ -51,7 +51,6 @@ analyzer function table.insert(tbl: List<|any|>, ...: ...any)
 	else
 		pos = analyzer:GetArrayLengthFromTable(tbl)
 	end
-
 	local contract = tbl:GetContract()
 
 	if contract then

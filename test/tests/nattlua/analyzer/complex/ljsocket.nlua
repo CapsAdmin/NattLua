@@ -1520,7 +1520,7 @@ if TEST then
 						str = str .. chunk
 
 						if not total_length then
-							total_length = tonumber(assert(str:match("Content%-Length: (%d+)"), "no content length"))
+							total_length = assert(tonumber(assert(str:match("Content%-Length: (%d+)"), "no content length")))
 						end
 
 						if #str >= total_length then

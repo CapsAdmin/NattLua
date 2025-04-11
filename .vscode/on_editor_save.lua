@@ -129,7 +129,9 @@ if is_nattlua and not test_focus then
 	return
 end
 
-if find("jit_options") then
+if find("intersect_comparison") then
+	run_test("test/tests/nattlua/types/number.lua")
+elseif find("jit_options") then
 	run_lua("test/performance/tests.lua")
 elseif find("jit_trace_track") or find("test/performance/analyzer.lua") then
 	run_lua("test/performance/analyzer.lua")

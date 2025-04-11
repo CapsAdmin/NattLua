@@ -232,57 +232,46 @@ do
 			return l + r
 		end,
 		["-"] = function(l, r)
-			if l == inf or r == inf then return inf end
-
 			return l - r
 		end,
 		["*"] = function(l, r)
 			return l * r
 		end,
 		["/"] = function(l, r)
-			if l == inf or r == inf then return inf end
-
 			return l / r
 		end,
 		["/idiv/"] = function(l, r)
-			if l == inf or r == inf then return inf end
-
 			return (math.modf(l / r))
 		end,
 		["%"] = function(l, r)
-			if l == inf or r == inf then return inf end
-
 			return l % r
 		end,
 		["^"] = function(l, r)
 			return l ^ r
 		end,
 		["&"] = function(l, r)
-			if l == inf or r == inf then return inf end
-
 			return bit.band(l, r)
 		end,
 		["|"] = function(l, r)
-			if l == inf or r == inf then return inf end
-
 			return bit.bor(l, r)
 		end,
 		["~"] = function(l, r)
-			if l == inf or r == inf then return inf end
-
 			return bit.bxor(l, r)
 		end,
 		["<<"] = function(l, r)
-			if l == inf or r == inf then return inf end
-
 			return bit.lshift(l, r)
 		end,
 		[">>"] = function(l, r)
-			if l == inf or r == inf then return inf end
-
 			return bit.rshift(l, r)
 		end,
 	}
+
+	for k,v in pairs(operators) do
+		operators[k] = function(l, r) 
+			if l == inf or r == inf then return inf end
+			return v(l, r) 
+		end
+	end
 
 	function META.BinaryOperator(l--[[#: TNumber]], r--[[#: any]], op--[[#: keysof<|operators|>]])
 		local func = operators[op]

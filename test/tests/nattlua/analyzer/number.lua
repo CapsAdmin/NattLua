@@ -88,3 +88,12 @@ analyze[[
     local a = _ as 1 .. 2
     attest.equal(5 + a, _ as 6 .. 7)
 ]]
+analyze[[
+local n = _ as number
+
+if n > 0 then
+	attest.equal(n, _ as 1 .. inf)
+
+	if n < 10 then attest.equal(n, _ as 1 .. 9) end
+end
+]]

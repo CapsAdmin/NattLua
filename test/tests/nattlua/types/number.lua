@@ -274,10 +274,23 @@ do
 		local new_a
 		local new_b
 
-		if a_res_min then new_a = LNumberRange(a_res_min, a_res_max) end
+		if a_res_min then
+			if a_res_min == a_res_max then
+				new_a = LNumber(a_res_min)
+			else
+				new_a = LNumberRange(a_res_min, a_res_max)
+			end
+		end
 
-		if b_res_min then new_b = LNumberRange(b_res_min, b_res_max) end
+		if b_res_min then
+			if b_res_min == b_res_max then
+				new_b = LNumber(b_res_min)
+			else
+				new_b = LNumberRange(b_res_min, b_res_max)
+			end
+		end
 
+		print(new_a, new_b)
 		return new_a, new_b
 	end
 
@@ -287,9 +300,11 @@ do
 		return tostring(a) .. ", " .. tostring(b)
 	end
 
+	local intersect_comparison = require("nattlua.analyzer.intersect_comparison")
+
 	local function check(a, op, b)
 		local expect = range_tostring(brute_force_intersect(a, b, op))
-		local result = range_tostring(a.IntersectComparison(a, b, op))
+		local result = range_tostring(intersect_comparison(a, b, op))
 
 		do
 			local input = stringx.replace(range_tostring(a, b), ", ", " " .. op .. " ")
@@ -319,42 +334,44 @@ do
 		end
 	end
 
-	local intersect_comparison = require("nattlua.analyzer.intersect_comparison")
-
 	do
-		local a, b = intersect_comparison(LNumberRange(1, math.huge), LNumberRange(5, 10), "<")
-		assert(rangesEqual(a, LNumberRange(1, 9)))
-		assert(rangesEqual(b, LNumberRange(5, 10)))
+		local at, af, bt, bf = intersect_comparison(LNumberRange(-math.huge, math.huge), LNumberRange(-5, 5), ">")
+		assert(rangesEqual(at, LNumberRange(-4, math.huge)))
+		assert(rangesEqual(af, LNumberRange(-math.huge, 5)))
 	end
 
 	do
-		local a, b = intersect_comparison(LNumberRange(-math.huge, math.huge), LNumberRange(5, 10), "<")
-		assert(rangesEqual(a, LNumberRange(-math.huge, 9)))
-		assert(rangesEqual(b, LNumberRange(5, 10)))
+		local at, af, bt, bf = intersect_comparison(LNumberRange(1, math.huge), LNumberRange(5, 10), "<")
+		assert(rangesEqual(at, LNumberRange(1, 9)))
+		assert(rangesEqual(af, LNumberRange(5, math.huge)))
 	end
 
 	do
-		local a, b = intersect_comparison(LNumberRange(-math.huge, math.huge), LNumberRange(5, 10), "<")
-		assert(rangesEqual(a, LNumberRange(-math.huge, 9)))
-		assert(rangesEqual(b, LNumberRange(5, 10)))
+		local at, af, bt, bf = intersect_comparison(LNumberRange(-math.huge, math.huge), LNumberRange(5, 10), "<")
+		assert(rangesEqual(at, LNumberRange(-math.huge, 9)))
+		assert(rangesEqual(af, LNumberRange(5, math.huge)))
 	end
 
 	do
 		local nan = math.huge / math.huge
-		local a, b = intersect_comparison(LNumberRange(nan, nan), LNumberRange(5, 10), "<")
-		assert(rangesEqual(a, LNumberRange(nan, nan)))
-		assert(rangesEqual(b, LNumberRange(5, 10)))
+		local at, af, bt, bf =  intersect_comparison(LNumberRange(nan, nan), LNumberRange(5, 10), "<")
+		assert(rangesEqual(at, LNumberRange(nan, nan)))
+		assert(rangesEqual(af, LNumberRange(5, 10)))
 	end
 
 	do
-		local a, b = intersect_comparison(LNumber(0), LNumberRange(-math.huge, math.huge), "<")
-		assert(a:Equal(LNumber(0)))
-		assert(b:Equal(LNumberRange(-math.huge, 0)))
+		local at, af, bt, bf = intersect_comparison(LNumber(0), LNumberRange(-math.huge, math.huge), "<")
+		assert(at:Equal(LNumber(0)))
+		assert(af:Equal(LNumber(0)))
+		assert(rangesEqual(bt, LNumberRange(1, math.huge)))
+		assert(rangesEqual(bf, LNumberRange(-math.huge, 0)))
 	end
 
 	do
-		local a, b = intersect_comparison(LNumber(0), Number(), ">")
-		assert(a:Equal(LNumber(0)))
-		assert(b:Equal(LNumberRange(0, math.huge)))
+		local at, af, bt, bf = intersect_comparison(LNumber(0), Number(), ">")
+		assert(at:Equal(LNumber(0)))
+		assert(af:Equal(LNumber(0)))
+		assert(rangesEqual(bt, LNumberRange(-math.huge, -1)))
+		assert(rangesEqual(bf, LNumberRange(0, math.huge)))
 	end
 end

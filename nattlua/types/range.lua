@@ -16,7 +16,6 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TRange.DontWiden = boolean]]
 META.Type = "range"
 META:GetSet("Min", false--[[# as number | false]])
-
 --[[#local type TUnion = {
 	@Name = "TUnion",
 	Type = "union",
@@ -25,7 +24,7 @@ META:GetSet("Min", false--[[# as number | false]])
 local VERSION = jit and "LUAJIT" or _VERSION
 
 local function compute_hash(min--[[#: any]], max--[[#: any]])
-	return min:GetHash() .. ".." .. min:GetHash()
+	return min:GetHash() .. ".." .. max:GetHash()
 end
 
 META:GetSet("Hash", ""--[[# as string]])
@@ -156,13 +155,14 @@ function META.BinaryOperator(l--[[#: TRange]], r--[[#: any]], op--[[#: keysof<|o
 	if r.Type == "range" then
 		return META.New(l.Min:BinaryOperator(r.Min, op), l.Max:BinaryOperator(r.Max, op))
 	elseif r.Type == "number" then
-
 		local r_min = r
 		local r_max = r
+
 		if not r:IsLiteral() then
 			r_min = LNumber(-math.huge)
 			r_max = LNumber(math.huge)
 		end
+
 		return META.New(l.Min:BinaryOperator(r_min, op), l.Max:BinaryOperator(r_max, op))
 	end
 
@@ -171,10 +171,9 @@ end
 
 function META.PrefixOperator(x--[[#: TRange]], op--[[#: keysof<|operators|>]])
 	if op == "not" then return False() end
-	
+
 	return META.New(x.Min:PrefixOperator(op), x.Max:PrefixOperator(op))
 end
-
 
 function META:IsNumeric()
 	return type(self:GetMin()) == "number" and type(self:GetMax()) == "number"

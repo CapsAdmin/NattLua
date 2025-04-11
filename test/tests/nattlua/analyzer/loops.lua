@@ -90,7 +90,7 @@ analyze[[
             b = 1
         end
     end
-    attest.equal(a, _ as number | 0)
+    attest.equal(a, _ as number)
     attest.equal(b, _ as number | 0)
 ]]
 analyze[[

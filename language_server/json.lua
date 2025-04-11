@@ -226,7 +226,7 @@ local function parse_string(str--[[#: string]], i--[[#: number]])--[[#: string,n
 	local last--[[#: number | nil]]
 
 	for j = i + 1, #str do
-		local x = str:byte(j)
+		local x = str:byte(j) --[[# as 0..255]]
 
 		if x < 32 then decode_error(str, j, "control character in string") end
 
