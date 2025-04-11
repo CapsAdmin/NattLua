@@ -412,8 +412,28 @@ return function(META)
 
 			local values = {}
 
+			if stack[#stack].truthy and stack[#stack].truthy.Type == "range" then
+				values[1] = stack[#stack].truthy:Copy()
+			else
+				for _, entry in ipairs(stack) do
+					if entry.truthy then table.insert(values, entry.truthy) end
+				end
+			end
+
+			if #values == 0 then return end
+
+			if #values == 1 then return values[1] end
+
+			return Union(values)
+		end
+
+		local function collect_falsy_values(stack)
+			if not stack then return end
+
+			local values = {}
+
 			for _, entry in ipairs(stack) do
-				if entry.truthy then table.insert(values, entry.truthy) end
+				if entry.falsy then table.insert(values, entry.falsy) end
 			end
 
 			if #values == 0 then return end
@@ -426,13 +446,11 @@ return function(META)
 		function META:ApplyMutationsInIf(upvalues, tables)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
-					if data.stack then
-						local obj = collect_truthy_values(data.stack)
+					local obj = collect_truthy_values(data.stack)
 
-						if obj then
-							obj:SetUpvalue(data.upvalue)
-							self:MutateUpvalue(data.upvalue, obj, true)
-						end
+					if obj then
+						obj:SetUpvalue(data.upvalue)
+						self:MutateUpvalue(data.upvalue, obj, true)
 					end
 				end
 			end
@@ -470,8 +488,8 @@ return function(META)
 								union:SetUpvalue(data.upvalue)
 							end
 								
-							if data.stack[#data.stack] and data.stack[#data.stack].falsy and data.stack[#data.stack].falsy.Type == "range" then								
-								self:MutateUpvalue(data.upvalue, data.stack[#data.stack].falsy:Copy(), true)
+							if data.stack[#data.stack] and data.stack[#data.stack].falsy and data.stack[#data.stack].falsy.Type == "range" then				
+								self:MutateUpvalue(data.upvalue, collect_falsy_values(data.stack), true)
 							else
 								self:MutateUpvalue(data.upvalue, union, true)
 							end

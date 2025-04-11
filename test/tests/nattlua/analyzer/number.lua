@@ -97,3 +97,13 @@ if n > 0 then
 	if n < 10 then attest.equal(n, _ as 1 .. 9) end
 end
 ]]
+
+analyze[[
+local n = _ as number
+
+if n > 1 and n < 15 then 
+    attest.equal(n, _ as 2..14)
+else 
+    attest.equal(n, _ as -inf..1 | 15..inf )
+end
+]]
