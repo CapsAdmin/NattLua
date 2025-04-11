@@ -82,7 +82,7 @@ analyze[[
 ]]
 analyze[[
     local n = _  as 0 .. 5
-    if n > 1 then attest.equal(n, _  as 2 .. 5) else attest.equal(n, _  as 0 .. 5) end
+    if n > 1 then attest.equal(n, _  as 2 .. 5) else attest.equal(n, _  as 0 .. 1) end
 ]]
 analyze[[
     local a = _ as 1 .. 2

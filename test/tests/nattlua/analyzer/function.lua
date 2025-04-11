@@ -979,7 +979,7 @@ do
 				local left = i * len + 1
 				local right = left + len - 1
 				attest.equal(left, _  as 1 .. inf)
-				attest.equal(right, _  as 0 .. inf)
+				attest.equal(right, _  as 1 .. inf)
 				local res = str:sub(left, right)
 				attest.equal(res, _  as string)
 

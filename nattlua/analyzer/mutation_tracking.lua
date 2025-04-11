@@ -175,6 +175,7 @@ return function(META)
 			end
 
 			function META:TrackUpvalueUnion(obj, truthy_union, falsy_union, inverted)
+				if not truthy_union or not falsy_union then debug.trace() error() end
 				local upvalue = obj:GetUpvalue()
 
 				if not upvalue then return end
@@ -468,8 +469,12 @@ return function(META)
 
 								union:SetUpvalue(data.upvalue)
 							end
-
-							self:MutateUpvalue(data.upvalue, union, true)
+								
+							if data.stack[#data.stack] and data.stack[#data.stack].falsy and data.stack[#data.stack].falsy.Type == "range" then								
+								self:MutateUpvalue(data.upvalue, data.stack[#data.stack].falsy:Copy(), true)
+							else
+								self:MutateUpvalue(data.upvalue, union, true)
+							end
 						end
 					end
 				end
