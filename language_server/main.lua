@@ -25,7 +25,6 @@ end
 
 local function write_message(message)
 	local encoded = json.encode(message)
-	encoded = encoded:gsub("([\x80-\xff])", escape_unicode)
 	local data = string.format("Content-Length: %d\r\n\r\n%s", #encoded, encoded)
 	OUTPUT:write(data)
 	OUTPUT:flush()

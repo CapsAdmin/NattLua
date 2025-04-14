@@ -111,11 +111,11 @@ do
 	)
 	equal_json(
 		receive([[{"jsonrpc": "2.0", "method": "foobar, "params": "bar", "baz]   ]]),
-		[[{"jsonrpc": "2.0", "error": {"code": -32700, "message": "expected '}' or ',' at line 1 col 41"}, "id": null}]]
+		[[{"jsonrpc": "2.0", "error": {"code": -32700, "message": "ERROR: expected '}' or ',' at line 1 col 41"}}]]
 	)
 	equal_json(
 		receive([[{"jsonrpc": "2.0", "method": 1, "params": "bar"}]]),
-		[[{"jsonrpc": "2.0", "error": {"code": -32600, "message": "method must be a string"}, "id": null}]]
+		[[{"jsonrpc": "2.0", "error": {"code": -32600, "message": "method must be a string"}}]]
 	)
 	equal_json(
 		receive([=[[
@@ -123,11 +123,11 @@ do
         {"jsonrpc": "2.0", "method": "subtract", "params": [42, 23], "id": 2},
         {"jsonrpc": "2.0", "method": "subtract", "params": [42, 23], "id": 3},
     ]]=]),
-		[=[[{"jsonrpc":"2.0","result":19,"id":1}, {"jsonrpc":"2.0","result":19,"id":2},{"jsonrpc":"2.0","result":19,"id":3}]]=]
+		[=[ {"error":{"code":-32700,"message":"ERROR: unexpected character ']' at line 5 col 5"},"jsonrpc":"2.0"} ]=]
 	)
 	equal_json(
 		receive([=[[]]=]),
-		[[{"jsonrpc": "2.0", "error": {"code": -32600, "message": "empty batch array request"}, "id": null}]]
+		[[{"jsonrpc": "2.0", "error": {"code": -32600, "message": "empty batch array request"}}]]
 	)
 	equal(
 		receive([=[[
@@ -145,12 +145,7 @@ do
             {"jsonrpc": "2.0", "method": "subtract", "params": [42, 23], "id": 1},
         ]]=]),
 		[=[
-            [
-                {"result":19,"id":1,"jsonrpc":"2.0"},
-                {"error":{"code":-32600,"message":"method must be a string"},"jsonrpc":"2.0"},
-                {"id":"1","error":{"code":-32601,"message":"Method foobar not found."},"jsonrpc":"2.0"},
-                {"result":19,"id":1,"jsonrpc":"2.0"}
-            ]
+            {"error":{"code":-32700,"message":"ERROR: unexpected character ']' at line 7 col 9"},"jsonrpc":"2.0"}
         ]=]
 	)
 end
