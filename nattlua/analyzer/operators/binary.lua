@@ -36,7 +36,11 @@ local function metatable_function(self, node, meta_method, l, r)
 
 		if func.Type ~= "function" then return func end
 
-		return self:Assert(self:Call(func, Tuple({l, r}), node)):GetWithNumber(1)
+		local tup, err = self:Call(func, Tuple({l, r}), node)
+
+		if tup then return tup:GetWithNumber(1) end
+
+		return self:Assert(tup, err)
 	end
 end
 
@@ -132,7 +136,7 @@ local function operator(self, node, l, r, op, meta_method)
 end
 
 local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | nil]])
-	if err then return val, err end
+	if not val and err then return val, type_errors.plain_error(err) end
 
 	if val == nil then
 		return Boolean()
@@ -328,8 +332,18 @@ local function Binary(self, node, l, r, op)
 					local res, err = Binary(self, node, l, r, op)
 
 					if not res then
+						if type(err) == "string" then
+							print(node, l,r,op)
+							print(res, err, "?!?!!!")
+						end
 						self:ErrorAndCloneCurrentScope(err, l) -- TODO, only left side?
 					else
+						if type(res) ~= "table" then
+							print(res, err, l,op, r)
+							debug.trace()
+							error("HUH")
+						end
+						
 						if res:IsTruthy() then
 							if type_checked then
 								for _, t in ipairs(type_checked:GetData()) do

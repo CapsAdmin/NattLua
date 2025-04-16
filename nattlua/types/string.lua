@@ -103,6 +103,10 @@ function META:__tostring()
 end
 
 function META.LogicalComparison(a--[[#: TString]], b--[[#: TBaseType]], op--[[#: string]])
+	if b.Type ~= "string" then
+		return false, type_errors.binary(op, a, b)
+	end
+
 	if not a.Data or not b.Data then return nil end -- undefined comparison, nil is the same as true | false
 	if op == ">" then
 		return a.Data > b.Data
