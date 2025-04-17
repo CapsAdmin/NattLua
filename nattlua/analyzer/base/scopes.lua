@@ -28,20 +28,33 @@ return function(META)
 		return scope
 	end
 
+	local function store_scope(self, scope)
+		if self.current_statement then
+			self.current_statement.scopes = self.current_statement.scopes or {}
+			table.insert(self.current_statement.scopes, scope)
+		end
+	end
+
 	function META:CreateAndPushFunctionScope(obj)
-		local scope = self:PushScope(LexicalScope(obj:GetScope() or self:GetScope(), obj))
+		local scope = LexicalScope(obj:GetScope() or self:GetScope(), obj)
+		store_scope(self, scope)
+		self:PushScope(scope)
 		scope.upvalue_position = obj:GetUpvaluePosition() or self:IncrementUpvaluePosition()
 		return scope
 	end
 
 	function META:CreateAndPushModuleScope()
-		local scope = self:PushScope(LexicalScope())
+		local scope = LexicalScope()
+		store_scope(self, scope)
+		self:PushScope(scope)
 		scope.upvalue_position = self:IncrementUpvaluePosition()
 		return scope
 	end
 
 	function META:CreateAndPushScope()
-		local scope = self:PushScope(LexicalScope(self:GetScope()))
+		local scope = LexicalScope(self:GetScope())
+		store_scope(self, scope)
+		self:PushScope(scope)
 		scope.upvalue_position = self:IncrementUpvaluePosition()
 		return scope
 	end
@@ -91,6 +104,7 @@ return function(META)
 
 	function META:CreateLocalValue(key, obj, const)
 		local upvalue = self:GetScope():CreateUpvalue(key, obj, self:GetCurrentAnalyzerEnvironment())
+		upvalue.statement = self.current_statement
 		upvalue:SetPosition(self:IncrementUpvaluePosition())
 		self:MutateUpvalue(upvalue, obj)
 		upvalue:SetImmutable(const or false)

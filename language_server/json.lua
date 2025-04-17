@@ -106,11 +106,17 @@ for i = 0, 31 do
 end
 
 local function encode(v--[[#: any]])
-	local res = encode_map[type(v)](v)
+	local t = type(v)
+	if not encode_map[t] then error("unexpected type '" .. t .. "'", 2) end
+	local res = encode_map[t](v)
 	statusBuilder[#statusBuilder + 1] = res
 end
 
 encode_map["nil"] = function(v)
+	return "null"
+end
+
+encode_map["cdata"] = function(v)
 	return "null"
 end
 

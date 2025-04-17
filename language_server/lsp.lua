@@ -166,8 +166,11 @@ lsp.methods["initialize"] = function(params)
 			definitionProvider = true,
 			inlineValueProvider = true,
 			referencesProvider = true,
+			--[[codeLensProvider = {
+				resolveProvider = true,
+			},]]
+			documentSymbolProvider = true,
 		-- for symbols like all functions within a file
-		-- documentSymbolProvider = {label = "NattLua"},
 		-- highlighting equal upvalues
 		-- documentHighlightProvider = true, 
 		--[[completionProvider = {
@@ -180,9 +183,6 @@ lsp.methods["initialize"] = function(params)
 			
 			workspaceSymbolProvider = true,
 			codeActionProvider = true,
-			codeLensProvider = {
-				resolveProvider = true,
-			},
 			documentFormattingProvider = true,
 			documentRangeFormattingProvider = true,
 			documentOnTypeFormattingProvider = {
@@ -296,6 +296,110 @@ lsp.methods["textDocument/inlayHint"] = function(params)
 
 	return result
 end
+
+do
+	local symbol_kind = {
+		File = 1,
+		Module = 2,
+		Namespace = 3,
+		Package = 4,
+		Class = 5,
+		Method = 6,
+		Property = 7,
+		Field = 8,
+		Constructor = 9,
+		Enum = 10,
+		Interface = 11,
+		Function = 12,
+		Variable = 13,
+		Constant = 14,
+		String = 15,
+		Number = 16,
+		Boolean = 17,
+		Array = 18,
+		Object = 19,
+		Key = 20,
+		Null = 21,
+		EnumMember = 22,
+		Struct = 23,
+		Event = 24,
+		Operator = 25,
+		TypeParameter = 26,
+	}
+
+	local function translate(node, path)
+		node.kind = symbol_kind[node.kind] or node.kind
+		if node.node then
+			node.range = get_range(editor_helper:GetCode(path), node.node:GetStartStop())
+			node.selectionRange = get_range(editor_helper:GetCode(path), node.node:GetStartStop())
+			node.node = nil
+			
+			if node.children then
+				for _, child in ipairs(node.children) do
+					translate(child, path)
+				end
+			end
+		end
+	end
+
+	lsp.methods["textDocument/documentSymbol"] = function(params)
+		local path = to_fs_path(params.textDocument.uri)
+
+		if not editor_helper:IsLoaded(path) then return {} end
+
+		local nodes = editor_helper:GetSymbolTree(path)
+		for _, node in ipairs(nodes) do
+			translate(node, path)
+		end
+		return nodes
+	end
+end
+
+if false then
+	-- Also implement the resolve method if you want to defer loading the details
+	lsp.methods["codeLens/resolve"] = function(params)
+		-- This can be used to lazily load more detailed information when the user
+		-- interacts with the code lens
+		return params
+	end
+	lsp.methods["textDocument/codeLens"] = function(params)
+		do
+			return {}
+		end
+
+		local path = to_fs_path(params.textDocument.uri)
+
+		if not editor_helper:IsLoaded(path) then return {} end
+
+		local result = {}
+
+		-- This would be replaced with your actual logic to find block scopes/functions
+		for _, item in ipairs(editor_helper:GetScopes(path)) do
+			local start, stop = item.statement:GetStartStop()
+			local range = get_range(code, start, stop)
+			-- Only set the start position for the lens (typically at the beginning of the block)
+			range["end"] = range.start
+			table.insert(
+				result,
+				{
+					range = range,
+					command = {
+						title = "📊 View Block Types",
+						command = "nattlua.viewBlockTypes",
+						arguments = {
+							uri = to_lsp_path(path),
+							position = range.start,
+							scopeId = scope.id, -- Some identifier for the scope
+						},
+					},
+				}
+			)
+		end
+
+		return result
+	end
+end
+
 lsp.methods["textDocument/rename"] = function(params)
 	local fs_path = to_fs_path(params.textDocument.uri)
 

@@ -359,6 +359,11 @@ function META:SaveFile(path)
 	self:Recompile(path)
 end
 
+function META:GetAllTokens(path)
+	local data = self:GetFile(path)
+	return data.tokens
+end
+
 function META:FindToken(path, line, char)
 	line = line + 1
 	char = char + 1
@@ -398,13 +403,17 @@ function META:FindTokensFromRange(
 end
 
 do
-	local function find_parent(token, type, kind)
+	local function find_parent(token, typ, kind)
 		local node = token.parent
 
 		if not node then return nil end
 
 		while node.parent do
-			if node.type == type and node.kind == kind then return node end
+			if type(typ) == "function" then
+				if typ(node) then return node end
+			else
+				if node.type == typ and node.kind == kind then return node end
+			end
 
 			node = node.parent
 		end
@@ -471,6 +480,22 @@ do
 		end
 
 		return hints
+	end
+
+	function META:GetScopes(path)
+		local tokens = self:GetAllTokens(path)
+		local statements = find_nodes(tokens, function(node)
+			if node.scopes then return node end
+		end)
+		local scopes = {}
+
+		for _, statement in ipairs(statements) do
+			for i, scope in ipairs(statement.scopes) do
+				table.insert(scopes, {scope = scope, statement = statement})
+			end
+		end
+
+		return scopes
 	end
 end
 
@@ -590,6 +615,308 @@ function META:GetReferences(path, line, character)
 	end
 
 	return references
+end
+
+do
+
+
+	local function build_ast(self, path, node, done)
+		done = done or {}
+
+		if done[node] then return end
+
+		done[node] = true
+
+		if type(node) ~= "table" or not node.type or not node.kind then return end
+
+		local root = {
+			name = node.type .. "-" .. node.kind,
+			detail = tostring(node),
+			kind = "Variable",
+			children = {},
+		}
+
+		for k, v in pairs(node) do
+			if type(v) == "table" then
+				local child = build(self, path, v, done)
+
+				if child then
+					table.insert(root.children, child)
+				else
+					for i, v in ipairs(v) do
+						if type(node) ~= "table" or not node.type or not node.kind then
+
+						else
+							local child = build(self, path, v, done)
+
+							if child then table.insert(root.children, child) end
+						end
+					end
+				end
+			end
+		end
+
+		return root
+	end
+
+	local function build_types(self, path, node, obj, env, done)
+		done = done or {}
+
+		if done[obj] then
+			return {
+				name = "*recursive*",
+				
+				kind = "Variable",
+				
+				children = {},
+			}
+		end
+
+		done[obj] = true
+
+		if obj.Type == "lexical_scope" then
+			local root = {
+				name = tostring(obj),
+				
+				kind = "Module",
+				
+				children = {},
+			}
+
+			for _, upvalue in ipairs(obj.upvalues.runtime.list) do
+				table.insert(root.children, build(self, path, node, upvalue, "runtime", done))
+			end
+
+			for _, upvalue in ipairs(obj.upvalues.typesystem.list) do
+				table.insert(root.children, build(self, path, node, upvalue, "typesystem", done))
+			end
+
+			for _, obj in ipairs(obj:GetChildren()) do
+				table.insert(root.children, build(self, path, node, obj, env, done))
+			end
+
+			return root
+		elseif obj.Type == "upvalue" then
+			local val = obj:GetMutatedValue(obj:GetScope())
+			local node2 = obj.statement or node
+			local root = {
+				name = obj.Key,
+				
+				kind = env == "runtime" and "Variable" or "TypeParameter",
+				
+				children = {build(self, path, node, val, env, done)},
+			}
+			return root
+		elseif obj.Type == "symbol" then
+			local node2 = obj.statement or node
+			local root = {
+				name = tostring(obj),
+				
+				kind = "Enum",
+				
+				children = {},
+			}
+			return root
+		elseif obj.Type == "union" then
+			local node2 = obj.statement or node
+			local root = {
+				name = tostring(obj),
+				
+				kind = "Namespace",
+				
+				children = {},
+			}
+
+			for _, obj in ipairs(obj:GetData()) do
+				table.insert(root.children, build(self, path, node, obj, env, done))
+			end
+
+			return root
+		elseif obj.Type == "tuple" then
+			local node2 = obj.statement or node
+			local root = {
+				name = tostring(obj),
+				
+				kind = "Array",
+				
+				children = {},
+			}
+
+			for _, obj in ipairs(obj:GetData()) do
+				table.insert(root.children, build(self, path, node, obj, env, done))
+			end
+
+			return root
+		elseif obj.Type == "table" then
+			local node2 = obj.statement or node
+			local root = {
+				name = tostring(obj),
+				
+				kind = "Array",
+				
+				children = {},
+			}
+
+			for _, kv in ipairs(obj:GetData()) do
+				local field = {
+					name = tostring(kv.key) .. " = " .. tostring(kv.val),
+					detail = tostring(node),
+					kind = "Variable",
+					
+					children = {
+						build(self, path, node, kv.key, env, done),
+						build(self, path, node, kv.val, env, done),
+					},
+				}
+				table.insert(root.children, field)
+			end
+
+			return root
+		elseif obj.Type == "number" then
+			local node2 = obj.statement or node
+			local root = {
+				name = tostring(obj),
+				
+				kind = "Number",
+				
+				children = {},
+			}
+			return root
+		elseif obj.Type == "range" then
+			local node2 = obj.statement or node
+			local root = {
+				name = tostring(obj),
+				
+				kind = "Number",
+				
+				children = {},
+			}
+			return root
+		elseif obj.Type == "string" then
+			local node2 = obj.statement or node
+			local root = {
+				name = tostring(obj),
+				
+				kind = "String",
+				
+				children = {},
+			}
+			return root
+		elseif obj.Type == "any" then
+			local node2 = obj.statement or node
+			local root = {
+				name = tostring(obj),
+				
+				kind = "TypeParameter",
+				children = {},
+			}
+			return root
+		elseif obj.Type == "function" then
+			local node2 = obj.statement or node
+			local root = {
+				name = tostring(obj),
+				
+				kind = "Function",
+				children = {},
+			}
+			table.insert(root.children, build(self, path, node, obj:GetInputSignature(), env, done))
+			table.insert(root.children, build(self, path, node, obj:GetOutputSignature(), env, done))
+			return root
+		else
+			error("nyi type: " .. obj.Type)
+		end
+	end
+
+	local function build_scopes(self, path, node, obj, env)
+		if obj.Type == "lexical_scope" then
+			local root = {
+				name = tostring(obj),
+				
+				kind = "Module",
+				
+				range = get_range(self:GetCode(path), (obj.node or node):GetStartStop()),
+				selectionRange = get_range(self:GetCode(path), (obj.node or node):GetStartStop()),
+				children = {},
+			}
+
+			for _, upvalue in ipairs(obj.upvalues.runtime.list) do
+				table.insert(root.children, build_scopes(self, path, node, upvalue, "runtime", done))
+			end
+
+			for _, upvalue in ipairs(obj.upvalues.typesystem.list) do
+				table.insert(root.children, build_scopes(self, path, node, upvalue, "typesystem", done))
+			end
+
+			for _, obj in ipairs(obj:GetChildren()) do
+				table.insert(root.children, build_scopes(self, path, node, obj, env, done))
+			end
+
+			return root
+		elseif obj.Type == "upvalue" then
+			local val = obj:GetMutatedValue(obj:GetScope())
+			local node2 = obj.statement or node
+			local root = {
+				name = obj.Key .. " = " .. tostring(val),
+				kind = env == "runtime" and "Variable" or "TypeParameter",
+				
+				children = {},
+			}
+			return root
+		else
+			error("nyi type: " .. obj.Type)
+		end
+	end
+
+	local function build_nodes(self, path, node)
+		if node.type == "statement" then
+			if node.kind == "root" then
+				local scope = node.scopes and node.scopes[#node.scopes]
+				local str = "\n" .. tostring(scope) .. "\n"
+				local root = {
+					name = tostring(node) .. str,
+					kind = "Module",
+					children = {},
+					node = node,
+				}
+		
+				if scope then
+					for _, upvalue in ipairs(scope.upvalues.runtime.list) do
+						table.insert(root.children, build_scopes(self, path, node, upvalue, "runtime", done))
+					end
+		
+					for _, upvalue in ipairs(scope.upvalues.typesystem.list) do
+						table.insert(root.children, build_scopes(self, path, node, upvalue, "typesystem", done))
+					end
+				end
+
+				return root
+			else
+
+			--error("nyi type: " .. obj.Type)
+			end
+		end
+	end
+
+	function META:GetSymbolTree(path)
+		local tokens = self:GetAllTokens(path)
+
+		if not tokens then return {} end
+
+		local root_node
+		local node = tokens[1]
+
+		if node then
+			while node.parent do
+				node = node.parent
+			end
+
+			root_node = node
+		end
+
+		return {
+			build_nodes(self, path, root_node),
+		}
+	end
 end
 
 do
