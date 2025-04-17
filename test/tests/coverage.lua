@@ -40,6 +40,11 @@ collect[[
 
     end
 ]]
+
+collect[=[
+--[[# print<|1|> ]]
+]=]
+
 assert(
 	collect[[
 local x = 1

@@ -1,36 +1,22 @@
-local assert = _G.assert
-local loadfile = _G.loadfile
-local get_time = require("test.helpers.get_time")
+local path = ...
 local preprocess = require("test.helpers.preprocess")
 local coverage = require("test.helpers.coverage")
-local profiler = require("test.helpers.profiler")
-local jit = _G.jit
-local ipairs = _G.ipairs
-local io = require("io")
-local io_write = _G.ON_EDITOR_SAVE and function(...) end or io.write
-local pcall = _G.pcall
-local table = _G.table
-require("test.environment")
-local path = ...
+
 local is_coverage = path == "coverage"
 
 if is_coverage then path = nil end
-
-if path == "remove_coverage" then
-	local util = require("examples.util")
-	local paths = util.GetFilesRecursively("./", "lua.coverage")
-
-	for _, path in ipairs(paths) do
-		os.remove(path)
-	end
-
-	return
-end
-
 local covered = {}
 
 if is_coverage then
-	preprocess.Init()
+	preprocess.Init((function()
+		local tbl = {}
+		for k, v in pairs(package.loaded) do
+			if k:find("nattlua") then
+				table.insert(tbl, k)
+			end
+		end
+		return tbl
+	end)())
 
 	function preprocess.Preprocess(code, name, path, from)
 		if from == "package" then
@@ -43,6 +29,31 @@ if is_coverage then
 		return code
 	end
 end
+
+local assert = _G.assert
+local loadfile = _G.loadfile
+local get_time = require("test.helpers.get_time")
+local profiler = require("test.helpers.profiler")
+local jit = _G.jit
+local ipairs = _G.ipairs
+local io = require("io")
+local io_write = _G.ON_EDITOR_SAVE and function(...) end or io.write
+local pcall = _G.pcall
+local table = _G.table
+require("test.environment")
+
+if path == "remove_coverage" then
+	local util = require("examples.util")
+	local paths = util.GetFilesRecursively("./", "lua.coverage")
+
+	for _, path in ipairs(paths) do
+		os.remove(path)
+	end
+
+	return
+end
+
+
 
 local function find_tests(path)
 	if path and path:sub(-5) == ".nlua" then return {path} end

@@ -3,11 +3,15 @@ _G.__COVERAGE = _G.__COVERAGE or {}
 coverage.collected = {}
 local nl = require("nattlua")
 local FUNC_NAME = "__CLCT"
+local loadstring = loadstring or load
 
 function coverage.Preprocess(code, key)
 	local expressions = {}
 
 	local function inject_call_expression(parser, node, start, stop)
+		if node.environment == "typesystem" or node.type_call then
+			return node
+		end
 		local call_expression = parser:ParseString(" " .. FUNC_NAME .. "(" .. start .. "," .. stop .. ",x)").statements[1].value
 
 		if node.kind == "postfix_call" and not node.tokens["call("] then
@@ -81,8 +85,9 @@ function coverage.Preprocess(code, key)
 	lua = lua .. [[return ...;]]
 	lua = lua .. [[end; ]]
 	local gen = compiler:Emit()
+	lua = lua .. gen
 
-	if code:find("clock_gettime", nil, true) then
+	if not loadstring(gen) then
 		function _G.diff(input, expect)
 			local a = os.tmpname()
 			local b = os.tmpname()
@@ -104,21 +109,9 @@ function coverage.Preprocess(code, key)
 
 		local old = code
 		local new = gen
-
-		for i = 1, 100 do
-			local temp, count = new:gsub(" __CLCT%b()", function(str)
-				return str:match("^ __CLCT%(%d+,%d+,(.+)%)")
-			end)
-
-			if count == 0 then break end
-
-			new = temp
-		end
-
 		diff(new, old)
 	end
 
-	lua = lua .. gen
 	_G.__COVERAGE[key] = _G.__COVERAGE[key] or
 		{called = {}, expressions = expressions, compiler = compiler, preprocesed = lua}
 	return lua

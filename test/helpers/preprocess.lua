@@ -1,6 +1,6 @@
 local preprocess = {}
 
-function preprocess.Init()
+function preprocess.Init(unload_list)
 	if _G.load then
 		_G.old_preprocess_load = _G.old_preprocess_load or _G.load
 		local old_preprocess_load = _G.old_preprocess_load
@@ -70,8 +70,8 @@ function preprocess.Init()
 			table.insert(package.loaders, 1, preprocess.package_load)
 		end
 
-		for k, v in pairs(package.loaded) do
-			if _G[k] ~= v then package.loaded[k] = nil end
+		for k, v in ipairs(unload_list) do
+			package.loaded[v] = nil
 		end
 	end
 end
