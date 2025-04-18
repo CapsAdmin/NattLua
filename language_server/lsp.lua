@@ -104,10 +104,6 @@ editor_helper:SetConfigFunction(function(path)
 	end
 end)
 
-function editor_helper:OnRefresh()
-	lsp.Call({method = "workspace/semanticTokens/refresh", params = {}})
-end
-
 function editor_helper:OnDiagnostics(path, data)
 	local DiagnosticSeverity = {
 		error = 1,
@@ -198,7 +194,8 @@ lsp.methods["initialized"] = function(params)
 	editor_helper:Initialize()
 end
 lsp.methods["nattlua/format"] = function(params)
-	local code = editor_helper:Format(params.code, to_fs_path(params.path))
+	local path = to_fs_path(params.textDocument.uri)
+	local code = editor_helper:Format(params.code, path)
 
 	if code:sub(#code, #code) ~= "\n" then code = code .. "\n" end
 
@@ -209,14 +206,12 @@ end
 lsp.methods["shutdown"] = function(params)
 	table.print(params)
 end
-
-do
-	lsp.methods["textDocument/semanticTokens/full"] = function(params)
-		local path = to_fs_path(params.textDocument.uri)
-		return {data = editor_helper:GetSemanticTokens(path)}
-	end
+lsp.methods["textDocument/semanticTokens/full"] = function(params)
+	local path = to_fs_path(params.textDocument.uri)
+	-- this is not the right place to do this I guess, but it's more reliable and simple
+	lsp.PublishDecorations(path)
+	return {data = editor_helper:GetSemanticTokens(path)}
 end
-
 lsp.methods["$/cancelRequest"] = function(params)
 	do
 		return
@@ -230,7 +225,8 @@ lsp.methods["workspace/didChangeConfiguration"] = function(params)
 	table.print(params)
 end
 lsp.methods["textDocument/didOpen"] = function(params)
-	editor_helper:OpenFile(to_fs_path(params.textDocument.uri), params.textDocument.text)
+	local path = to_fs_path(params.textDocument.uri)
+	editor_helper:OpenFile(path, params.textDocument.text)
 end
 lsp.methods["textDocument/didClose"] = function(params)
 	editor_helper:CloseFile(to_fs_path(params.textDocument.uri))
@@ -329,11 +325,12 @@ do
 
 	local function translate(node, path)
 		node.kind = symbol_kind[node.kind] or node.kind
+
 		if node.node then
 			node.range = get_range(editor_helper:GetCode(path), node.node:GetStartStop())
 			node.selectionRange = get_range(editor_helper:GetCode(path), node.node:GetStartStop())
 			node.node = nil
-			
+
 			if node.children then
 				for _, child in ipairs(node.children) do
 					translate(child, path)
@@ -348,9 +345,11 @@ do
 		if not editor_helper:IsLoaded(path) then return {} end
 
 		local nodes = editor_helper:GetSymbolTree(path)
+
 		for _, node in ipairs(nodes) do
 			translate(node, path)
 		end
+
 		return nodes
 	end
 end
@@ -587,6 +586,34 @@ do
 				params = {
 					type = assert(MessageType[type]),
 					message = msg,
+				},
+			}
+		)
+	end
+
+	function lsp.PublishDecorations(path)
+		local highlights = editor_helper:GetHighlightRanges(path)
+		if not highlights then return end
+		local decorations = {}
+
+		for _, highlight in ipairs(highlights) do
+			table.insert(
+				decorations,
+				{
+					range = get_range(editor_helper:GetCode(path), highlight.start, highlight.stop),
+					renderOptions = {
+						backgroundColor = highlight.backgroundColor,
+					},
+				}
+			)
+		end
+
+		lsp.Call(
+			{
+				method = "nattlua/textDecoration",
+				params = {
+					uri = to_lsp_path(path),
+					decorations = decorations,
 				},
 			}
 		)

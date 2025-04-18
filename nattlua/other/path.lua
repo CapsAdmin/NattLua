@@ -150,4 +150,24 @@ function path.Join(...)
 	return path.Normalize(result)
 end
 
+function path.GetDirectory(path)
+	local last_slash = path:find("/[^/]*$")
+
+	if last_slash then return path:sub(1, last_slash - 1) else return "" end
+end
+
+function path.GetFileName(path, no_extension)
+	local last_slash = path:find("/[^/]*$")
+
+	if last_slash then path = path:sub(last_slash + 1) else path = path end
+
+	if no_extension then
+		local last_dot = path:find("%.[^%.]*$")
+
+		if last_dot then return path:sub(1, last_dot - 1) else return path end
+	end
+	return path
+
+end
+
 return path

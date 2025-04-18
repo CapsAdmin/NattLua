@@ -85,15 +85,6 @@ return function(META)
 		scope_copy:SetParent(scope_copy:GetParent() or self:GetScope())
 		self:PushGlobalEnvironment(last_node, g, "runtime")
 		self:PushScope(scope_copy)
-
-		for _, keyval in ipairs(g:GetData()) do
-			self:MutateTable(g, keyval.key, keyval.val)
-		end
-
-		for _, upvalue in ipairs(scope_copy:GetUpvalues("runtime")) do
-			self:MutateUpvalue(upvalue, upvalue:GetValue())
-		end
-
 		return scope_copy
 	end
 

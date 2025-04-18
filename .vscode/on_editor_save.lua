@@ -147,7 +147,7 @@ elseif find("c_declarations/analyzer") and not test_focus then
 	run_test("test/tests/nattlua/c_declarations/cdef.nlua")
 elseif find("c_declarations") and not test_focus then
 	run_test("test/tests/nattlua/c_declarations/parsing.lua")
-elseif find("other/coverage") then
+elseif find("coverage") then
 	run_test("test/tests/coverage.lua")
 elseif find("nattlua/editor_helper/editor.lua") then
 	run_test("test/tests/lsp/editor.lua")

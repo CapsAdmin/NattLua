@@ -1,11 +1,56 @@
 local coverage = require("test.helpers.coverage")
 
 local function collect(code)
-	assert(load(coverage.Preprocess(code, "test")))()
+	local new_code = coverage.Preprocess(code, "test")
+	assert(load(new_code))()
 	local res = coverage.Collect("test")
 	coverage.Clear("test")
 	return res
 end
+
+
+local function annotate(code)
+	local data = loadstring(collect(code))()
+	local buffer = {}
+
+	for i, v in ipairs(data) do
+		local start, stop, count = v[1], v[2], v[3]
+		if count > 0 then
+			table.insert(buffer, code:sub(start, stop))
+		end
+	end
+
+	return table.concat(buffer)
+end
+
+
+local map = {}
+for i = 0, 9 do
+	map[i] = tostring(i)
+end
+
+local i = 10
+for b = string.byte("a"), string.byte("z") do
+	map[i] = string.char(b)
+	i = i + 1
+end
+
+local function get_count_string(code)
+	local data = loadstring(collect(code))()
+	local buffer = ""
+
+	for i, v in ipairs(data) do
+		local start, stop, count = v[1], v[2], v[3]
+		buffer = buffer .. map[count]:rep(stop - start + 1)
+	end
+
+	return buffer
+end
+
+local function annotate_equal(code)
+	equal(annotate(code), code)
+end
+
 
 collect([[
 
@@ -40,19 +85,9 @@ collect[[
 
     end
 ]]
-
 collect[=[
 --[[# print<|1|> ]]
 ]=]
-
-assert(
-	collect[[
-local x = 1
-local y = 2
-local z = x + y or true]] == [=[local x = --[[1]]1
-local y = --[[1]]2
-local z = --[[1]]--[[1]]--[[1]]x + --[[1]]y or true]=]
-)
 collect([=[
 --ANALYZE
 local setmetatable = _G.setmetatable
@@ -256,3 +291,21 @@ local code = META.New([[
 
 
 ]=])
+
+
+equal(annotate("local x = 1"), "1")
+equal(annotate("do return end"), "return")
+equal(
+	annotate("local x = {foo={bar={baz=true}}} local y = x.foo.bar.baz"),
+	"{foo={bar={baz=true}}}x.foo.bar.baz"
+)
+equal(
+	annotate("if true then local x = 1 else local y = 1 end"),
+	"true1"
+)
+
+
+equal(get_count_string("local x = 1"), "1")
+equal(get_count_string("local x = package.loaded.table"), "11111111111111111111")
+equal(get_count_string("for i = 1+0, 8+0 do local x = 1 if i > 5 then local y = i end if i > 15 then local y = 1 end local x = 1 end"), "111001110000000000000080000888880000000000000000300000000888888000000000000000000000000000000008")
+equal(get_count_string("local x = function() if false then local x = true end local x = 1 end x()"), "111111110000001111100000000000000000000000000000000000100000111")

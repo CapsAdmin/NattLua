@@ -9,9 +9,14 @@ function coverage.Preprocess(code, key)
 	local expressions = {}
 
 	local function inject_call_expression(parser, node, start, stop)
-		if node.environment == "typesystem" or node.type_call then
-			return node
+		if node.environment == "typesystem" or node.type_call then return node end
+		
+		
+		if node.kind == "function" then
+			-- don't mark the funciton body as being called
+			start, stop = node.tokens["function"].start, node.tokens["function"].stop
 		end
+		
 		local call_expression = parser:ParseString(" " .. FUNC_NAME .. "(" .. start .. "," .. stop .. ",x)").statements[1].value
 
 		if node.kind == "postfix_call" and not node.tokens["call("] then
@@ -19,7 +24,6 @@ function coverage.Preprocess(code, key)
 			node.tokens["call)"] = parser:NewToken("symbol", ")")
 		end
 
-		-- replace "x" with the new node
 		call_expression.expressions[3] = node
 
 		if node.right then call_expression.right = node.right end
@@ -31,6 +35,10 @@ function coverage.Preprocess(code, key)
 		return call_expression
 	end
 
+	local function inject_token(token)
+		token.value = " " .. FUNC_NAME .. "(" .. token.start .. "," .. token.stop .. ",x) " .. token.value
+	end
+
 	local compiler = nl.Compiler(
 		code,
 		key,
@@ -38,7 +46,10 @@ function coverage.Preprocess(code, key)
 			parser = {
 				on_parsed_node = function(parser, node)
 					if node.type == "statement" then
-						if node.kind == "call_expression" then
+						if node.kind == "return" or node.kind == "break" or node.kind == "continue" then
+							-- inject a call right before the token itself which uses the token for range
+							inject_token(node.tokens[node.kind])
+						elseif node.kind == "call_expression" then
 							local start, stop = node:GetStartStop()
 							node.value = inject_call_expression(parser, node.value, start, stop)
 						end
@@ -51,10 +62,7 @@ function coverage.Preprocess(code, key)
 							node:GetStatement().kind == "function" or
 							(
 								node.kind == "binary_operator" and
-								(
-									node.value.value == "." or
 									node.value.value == ":"
-								)
 							)
 							or
 							(
@@ -125,41 +133,97 @@ function coverage.Clear(key)
 	_G.__COVERAGE[key] = nil
 end
 
-local MASK = " "
+local function normalizeRanges(ranges)
+	local start, stop = ranges[1][1], ranges[#ranges][2]
+	local new_list = {}
+	local last = 0
+	local last_index = start
+	local i = start
+
+	while i <= stop do
+		local count = 0
+
+		for _, range in ipairs(ranges) do
+			if i >= range[1] and i <= range[2] then count = count + range[3] end
+		end
+
+		if count ~= last then
+			table.insert(new_list, {last_index, i, count})
+			i = i + 1
+			last = count
+			last_index = i
+		end
+
+		i = i + 1
+	end
+
+	return new_list
+end
+
+local function normalizeRanges(ranges)
+    local map = {}
+    local minVal = math.huge
+    local maxVal = -math.huge
+    
+    for _, range in ipairs(ranges) do
+        local start, finish, count = range[1], range[2], range[3]
+        minVal = math.min(minVal, start)
+        maxVal = math.max(maxVal, finish)
+        
+        for i = start, finish do
+            map[i] = count
+        end
+    end
+    
+    local result = {}
+    local currentStart = minVal
+    local currentCount = map[minVal] or 0
+    
+    for i = minVal + 1, maxVal + 1 do
+        local nextCount = map[i] or 0
+        if nextCount ~= currentCount then
+            table.insert(result, {currentStart, i - 1, currentCount})
+            currentStart = i
+            currentCount = nextCount
+        end
+    end
+    
+    return result
+end
 
 function coverage.Collect(key)
 	local data = _G.__COVERAGE[key]
 
 	if not data then return end
 
-	local called = data.called
-	local expressions = data.expressions
-	local compiler = data.compiler
-	local original = compiler.Code:GetString()
 	local buffer = {}
+	local list = {}
 
-	for i = 1, #original do
-		buffer[i] = original:sub(i, i)
+	for _, item in pairs(data.called) do
+		table.insert(list, item)
 	end
 
-	local not_called = {}
+	table.sort(list, function(a, b)
+		return a[1] < b[1]
+	end)
 
-	for _, exp in ipairs(expressions) do
-		local start, stop = exp:GetStartStop()
+	list = normalizeRanges(list)
 
-		if not called[start .. ", " .. stop] then
-			for i = start, stop do
-				not_called[i] = true
-			end
-		end
+	for _, item in ipairs(list) do
+		table.insert(
+			buffer,
+			"{" .. table.concat(
+					{
+						tostring(item[1]),
+						tostring(item[2]),
+						tostring(item[3]),
+					},
+					","
+				) .. "}"
+		)
 	end
 
-	for _, start_stop in pairs(called) do
-		local start, stop, count = start_stop[1], start_stop[2], start_stop[3]
-		buffer[start] = "--[[" .. count .. "]]" .. buffer[start]
-	end
-
-	return table.concat(buffer)
+	return "return {" .. table.concat(buffer, ",") .. "}"
 end
 
 return coverage

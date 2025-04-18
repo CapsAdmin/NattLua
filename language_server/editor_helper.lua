@@ -14,6 +14,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 local bit = require("nattlua.other.bit")
 local class = require("nattlua.other.class")
+local fs = require("nattlua.other.fs")
 local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
 local runtime_env, typesystem_env = BuildBaseEnvironment()
 local path_util = require("nattlua.other.path")
@@ -106,7 +107,6 @@ do
 
 	function META:LoadFile(path, code, tokens)
 		path = path_util.Normalize(path)
-		self:DebugLog("[ " .. path .. " ] loaded with " .. #tokens .. " tokens")
 		self.LoadedFiles[path] = {
 			code = code,
 			tokens = tokens,
@@ -115,7 +115,6 @@ do
 
 	function META:UnloadFile(path)
 		path = path_util.Normalize(path)
-		self:DebugLog("[ " .. path .. " ] unloaded")
 		self.LoadedFiles[path] = nil
 	end
 end
@@ -123,13 +122,6 @@ end
 do
 	function META:SetFileContent(path, code)
 		path = path_util.Normalize(path)
-
-		if code then
-			self:DebugLog("[ " .. path .. " ] content loaded with " .. #code .. " bytes")
-		else
-			self:DebugLog("[ " .. path .. " ] content unloaded")
-		end
-
 		self.TempFiles[path] = code
 	end
 
@@ -314,8 +306,6 @@ end
 function META:OnDiagnostics(name, data) end
 
 function META:OnResponse(response) end
-
-function META:OnRefresh() end
 
 function META:Initialize()
 	self:Recompile()
@@ -574,6 +564,45 @@ function META:GetDefinition(path, line, character)
 	end
 end
 
+function META:GetHighlightRanges(path)
+	-- find the .coverage file
+	local directory = path_util.GetDirectory(path)
+	local name = path_util.GetFileName(path)
+	local coverage_file = path_util.Join(directory, name .. ".coverage")
+
+	if not fs.is_file(coverage_file) then return end
+
+	local data = loadstring(fs.read(coverage_file))()
+	local max_count = 1
+
+	for _, item in ipairs(data) do
+		max_count = math.max(max_count, item[3] or 1)
+	end
+
+	local ranges = {}
+
+	for _, item in ipairs(data) do
+		local count = item[3]
+		if count > 0 then
+			local normalized = count / max_count
+			local r = math.floor(normalized * 255)
+			local g = math.floor((1 - normalized) * 255)
+			local b = 0
+			local color = string.format("#%02x%02x%02x1A", r, g, b)
+			table.insert(
+				ranges,
+				{
+					start = item[1],
+					stop = item[2],
+					backgroundColor = color,
+				}
+			)
+		end
+	end
+
+	return ranges
+end
+
 function META:GetHover(path, line, character)
 	local token = self:FindToken(path, line, character)
 
@@ -618,8 +647,6 @@ function META:GetReferences(path, line, character)
 end
 
 do
-
-
 	local function build_ast(self, path, node, done)
 		done = done or {}
 
@@ -665,9 +692,7 @@ do
 		if done[obj] then
 			return {
 				name = "*recursive*",
-				
 				kind = "Variable",
-				
 				children = {},
 			}
 		end
@@ -677,9 +702,7 @@ do
 		if obj.Type == "lexical_scope" then
 			local root = {
 				name = tostring(obj),
-				
 				kind = "Module",
-				
 				children = {},
 			}
 
@@ -701,9 +724,7 @@ do
 			local node2 = obj.statement or node
 			local root = {
 				name = obj.Key,
-				
 				kind = env == "runtime" and "Variable" or "TypeParameter",
-				
 				children = {build(self, path, node, val, env, done)},
 			}
 			return root
@@ -711,9 +732,7 @@ do
 			local node2 = obj.statement or node
 			local root = {
 				name = tostring(obj),
-				
 				kind = "Enum",
-				
 				children = {},
 			}
 			return root
@@ -721,9 +740,7 @@ do
 			local node2 = obj.statement or node
 			local root = {
 				name = tostring(obj),
-				
 				kind = "Namespace",
-				
 				children = {},
 			}
 
@@ -736,9 +753,7 @@ do
 			local node2 = obj.statement or node
 			local root = {
 				name = tostring(obj),
-				
 				kind = "Array",
-				
 				children = {},
 			}
 
@@ -751,9 +766,7 @@ do
 			local node2 = obj.statement or node
 			local root = {
 				name = tostring(obj),
-				
 				kind = "Array",
-				
 				children = {},
 			}
 
@@ -762,7 +775,6 @@ do
 					name = tostring(kv.key) .. " = " .. tostring(kv.val),
 					detail = tostring(node),
 					kind = "Variable",
-					
 					children = {
 						build(self, path, node, kv.key, env, done),
 						build(self, path, node, kv.val, env, done),
@@ -776,9 +788,7 @@ do
 			local node2 = obj.statement or node
 			local root = {
 				name = tostring(obj),
-				
 				kind = "Number",
-				
 				children = {},
 			}
 			return root
@@ -786,9 +796,7 @@ do
 			local node2 = obj.statement or node
 			local root = {
 				name = tostring(obj),
-				
 				kind = "Number",
-				
 				children = {},
 			}
 			return root
@@ -796,9 +804,7 @@ do
 			local node2 = obj.statement or node
 			local root = {
 				name = tostring(obj),
-				
 				kind = "String",
-				
 				children = {},
 			}
 			return root
@@ -806,7 +812,6 @@ do
 			local node2 = obj.statement or node
 			local root = {
 				name = tostring(obj),
-				
 				kind = "TypeParameter",
 				children = {},
 			}
@@ -815,7 +820,6 @@ do
 			local node2 = obj.statement or node
 			local root = {
 				name = tostring(obj),
-				
 				kind = "Function",
 				children = {},
 			}
@@ -831,9 +835,7 @@ do
 		if obj.Type == "lexical_scope" then
 			local root = {
 				name = tostring(obj),
-				
 				kind = "Module",
-				
 				range = get_range(self:GetCode(path), (obj.node or node):GetStartStop()),
 				selectionRange = get_range(self:GetCode(path), (obj.node or node):GetStartStop()),
 				children = {},
@@ -858,7 +860,6 @@ do
 			local root = {
 				name = obj.Key .. " = " .. tostring(val),
 				kind = env == "runtime" and "Variable" or "TypeParameter",
-				
 				children = {},
 			}
 			return root
@@ -878,12 +879,12 @@ do
 					children = {},
 					node = node,
 				}
-		
+
 				if scope then
 					for _, upvalue in ipairs(scope.upvalues.runtime.list) do
 						table.insert(root.children, build_scopes(self, path, node, upvalue, "runtime", done))
 					end
-		
+
 					for _, upvalue in ipairs(scope.upvalues.typesystem.list) do
 						table.insert(root.children, build_scopes(self, path, node, upvalue, "typesystem", done))
 					end

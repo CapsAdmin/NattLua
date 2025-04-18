@@ -1,22 +1,26 @@
 local path = ...
 local preprocess = require("test.helpers.preprocess")
 local coverage = require("test.helpers.coverage")
-
 local is_coverage = path == "coverage"
 
 if is_coverage then path = nil end
+
 local covered = {}
 
 if is_coverage then
-	preprocess.Init((function()
-		local tbl = {}
-		for k, v in pairs(package.loaded) do
-			if k:find("nattlua") then
-				table.insert(tbl, k)
+	preprocess.Init(
+		(
+			function()
+				local tbl = {}
+
+				for k, v in pairs(package.loaded) do
+					if k:find("nattlua") then table.insert(tbl, k) end
+				end
+
+				return tbl
 			end
-		end
-		return tbl
-	end)())
+		)()
+	)
 
 	function preprocess.Preprocess(code, name, path, from)
 		if from == "package" then
@@ -52,8 +56,6 @@ if path == "remove_coverage" then
 
 	return
 end
-
-
 
 local function find_tests(path)
 	if path and path:sub(-5) == ".nlua" then return {path} end
@@ -174,12 +176,14 @@ else
 end
 
 if is_coverage then
-	for name, path in pairs(covered) do
-		local coverage = coverage.Collect(name)
+	local fs = require("nattlua.other.fs")
 
-		if coverage then
+	for name, path in pairs(covered) do
+		local content = coverage.Collect(name)
+
+		if content then
 			local f = assert(io.open(path .. ".coverage", "w"))
-			f:write(coverage)
+			f:write(content)
 			f:close()
 		else
 			print("unable to find coverage information for " .. name)
