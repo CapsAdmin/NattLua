@@ -689,3 +689,20 @@ end
 
 attest.equal(test()[2], 2)
 ]]
+analyze[[
+local x = setmetatable({}, {
+	__unm = function(self: any)
+		return 42
+	end,
+    __bxor = function(self: any)
+		return 43
+	end,
+    __len = function(self: any)
+		return 44
+	end,
+})
+
+attest.equal(-x, 42)
+attest.equal(~x, 43)
+attest.equal(#x, 44)
+]]
