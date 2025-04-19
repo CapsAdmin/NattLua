@@ -71,17 +71,9 @@ function META:GetPosition()
 	return self.Position
 end
 
-function META:TheEnd()--[[#: boolean]]
-	return self.Position > self:GetLength()
-end
-
 function META:IsString(str--[[#: string]], offset--[[#: number | nil]])--[[#: boolean]]
 	offset = offset or 0
 	return self.Code:IsStringSlice(self.Position + offset, self.Position + offset + #str - 1, str)
-end
-
-function META:IsStringLower(str--[[#: string]])--[[#: boolean]]
-	return self.Code:GetStringSlice(self.Position, self.Position + #str - 1):lower() == str
 end
 
 function META:OnError(

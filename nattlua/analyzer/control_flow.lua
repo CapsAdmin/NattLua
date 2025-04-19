@@ -182,17 +182,6 @@ return function(META)
 		self:Error(type_errors.plain_error(msg))
 	end
 
-	function META:GetThrownErrorMessage()
-		return self.lua_error_thrown or
-			self.lua_assert_error_thrown and
-			self.lua_assert_error_thrown.msg
-	end
-
-	function META:ClearError()
-		self.lua_error_thrown = nil
-		self.lua_assert_error_thrown = nil
-	end
-
 	function META:Return(node, types)
 		local scope = self:GetScope()
 		local function_scope = scope:GetNearestFunctionScope()
@@ -353,10 +342,6 @@ return function(META)
 		end
 
 		return true
-	end
-
-	function META:UncertainReturn()
-		self.call_stack[1].scope:UncertainReturn()
 	end
 
 	function META:Print(...)
