@@ -108,11 +108,6 @@ return {
 			if i == (self.max_iterations or 1000) and self:IsRuntime() then
 				self:Error(type_errors.too_many_iterations())
 			end
-
-			if args[1] and false then
-				table.insert(values:GetData(), 1, args[1])
-				args = values:GetData()
-			end
 		end
 
 		if returned_key then
