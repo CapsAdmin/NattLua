@@ -332,18 +332,8 @@ local function Binary(self, node, l, r, op)
 					local res, err = Binary(self, node, l, r, op)
 
 					if not res then
-						if type(err) == "string" then
-							print(node, l,r,op)
-							print(res, err, "?!?!!!")
-						end
-						self:ErrorAndCloneCurrentScope(err, l) -- TODO, only left side?
+						self:Error(err)
 					else
-						if type(res) ~= "table" then
-							print(res, err, l,op, r)
-							debug.trace()
-							error("HUH")
-						end
-						
 						if res:IsTruthy() then
 							if type_checked then
 								for _, t in ipairs(type_checked:GetData()) do

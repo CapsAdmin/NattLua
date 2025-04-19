@@ -76,18 +76,6 @@ return function(META)
 		return self.scope_stack
 	end
 
-	function META:CloneCurrentScope()
-		local scope_copy = self:GetScope():Copy()
-		local g = self:GetGlobalEnvironment("runtime"):Copy()
-		local last_node = self:GetContextValue("global_environment_nodes")
-		self:PopScope()
-		self:PopGlobalEnvironment("runtime")
-		scope_copy:SetParent(scope_copy:GetParent() or self:GetScope())
-		self:PushGlobalEnvironment(last_node, g, "runtime")
-		self:PushScope(scope_copy)
-		return scope_copy
-	end
-
 	function META:IncrementUpvaluePosition()
 		self.upvalue_position = (self.upvalue_position or 0) + 1
 		return self.upvalue_position

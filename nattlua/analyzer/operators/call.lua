@@ -23,7 +23,7 @@ local function union_call(self, analyzer, input, call_node)
 			end
 
 			if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-				analyzer:ErrorAndCloneCurrentScope(type_errors.union_contains_non_callable(self, v), self--[[# as any]])
+				analyzer:Error(type_errors.union_contains_non_callable(self, v))
 			else
 				truthy_union:AddType(v)
 			end

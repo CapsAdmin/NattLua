@@ -376,12 +376,6 @@ return function(META)
 		return scope
 	end
 
-	function META:ErrorAndCloneCurrentScope(err)
-		self:Error(err)
-		self:CloneCurrentScope()
-		self:GetScope():SetConditionalScope(true)
-	end
-
 	function META:PopConditionalScope()
 		self:PopScope()
 	end

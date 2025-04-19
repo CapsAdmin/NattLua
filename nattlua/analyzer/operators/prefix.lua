@@ -49,8 +49,7 @@ local function Prefix(analyzer, node, r)
 			local res, err = Prefix(analyzer, node, r)
 
 			if not res then
-				analyzer:ErrorAndCloneCurrentScope(err, r)
-				falsy_union:AddType(r)
+				analyzer:Error(err)
 			else
 				new_union:AddType(res)
 
