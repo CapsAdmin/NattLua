@@ -10,13 +10,16 @@ function coverage.Preprocess(code, key)
 
 	local function inject_call_expression(parser, node, start, stop)
 		if node.environment == "typesystem" or node.type_call then return node end
-		
-		
+
 		if node.kind == "function" then
 			-- don't mark the funciton body as being called
 			start, stop = node.tokens["function"].start, node.tokens["function"].stop
 		end
-		
+		if node.kind == "table" then
+			-- don't mark the funciton body as being called
+			start, stop = node.tokens["{"].start, node.tokens["{"].stop
+		end
+
 		local call_expression = parser:ParseString(" " .. FUNC_NAME .. "(" .. start .. "," .. stop .. ",x)").statements[1].value
 
 		if node.kind == "postfix_call" and not node.tokens["call("] then
@@ -62,7 +65,7 @@ function coverage.Preprocess(code, key)
 							node:GetStatement().kind == "function" or
 							(
 								node.kind == "binary_operator" and
-									node.value.value == ":"
+								node.value.value == ":"
 							)
 							or
 							(
@@ -161,34 +164,35 @@ local function normalizeRanges(ranges)
 end
 
 local function normalizeRanges(ranges)
-    local map = {}
-    local minVal = math.huge
-    local maxVal = -math.huge
-    
-    for _, range in ipairs(ranges) do
-        local start, finish, count = range[1], range[2], range[3]
-        minVal = math.min(minVal, start)
-        maxVal = math.max(maxVal, finish)
-        
-        for i = start, finish do
-            map[i] = count
-        end
-    end
-    
-    local result = {}
-    local currentStart = minVal
-    local currentCount = map[minVal] or 0
-    
-    for i = minVal + 1, maxVal + 1 do
-        local nextCount = map[i] or 0
-        if nextCount ~= currentCount then
-            table.insert(result, {currentStart, i - 1, currentCount})
-            currentStart = i
-            currentCount = nextCount
-        end
-    end
-    
-    return result
+	local map = {}
+	local minVal = math.huge
+	local maxVal = -math.huge
+
+	for _, range in ipairs(ranges) do
+		local start, finish, count = range[1], range[2], range[3]
+		minVal = math.min(minVal, start)
+		maxVal = math.max(maxVal, finish)
+
+		for i = start, finish do
+			map[i] = count
+		end
+	end
+
+	local result = {}
+	local currentStart = minVal
+	local currentCount = map[minVal] or 0
+
+	for i = minVal + 1, maxVal + 1 do
+		local nextCount = map[i] or 0
+
+		if nextCount ~= currentCount then
+			table.insert(result, {currentStart, i - 1, currentCount})
+			currentStart = i
+			currentCount = nextCount
+		end
+	end
+
+	return result
 end
 
 function coverage.Collect(key)
