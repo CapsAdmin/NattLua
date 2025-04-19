@@ -52,13 +52,13 @@ if ffi.arch ~= "Windows" then
                 uint32_t st_uid;
                 uint32_t st_gid;
                 uint32_t st_rdev;
-                time_t st_atime;
+                size_t st_atime;
                 long st_atime_nsec;
-                time_t st_mtime;
+                size_t st_mtime;
                 long st_mtime_nsec;
-                time_t st_ctime;
+                size_t st_ctime;
                 long st_ctime_nsec;
-                time_t st_btime; 
+                size_t st_btime; 
                 long st_btime_nsec;
                 int64_t st_size;
                 int64_t st_blocks;
@@ -672,64 +672,63 @@ function fs.iterate(dir, pattern)
 end
 
 function fs.get_parent_directory(path)
-    -- Normalize path separators to forward slash
-    path = path:gsub("\\", "/")
-    
-    -- Remove trailing slash if present
-    if path:sub(-1) == "/" and path ~= "/" then
-        path = path:sub(1, -2)
-    end
-    
-    -- Extract parent directory
-    local parent = path:match("(.+)/[^/]+$")
-    
-    -- Handle special cases
-    if not parent then
-        if path == "/" then
-            return nil -- Root has no parent
-        else
-            return "." -- Current directory is parent
-        end
-    end
-    
-    -- Return the parent directory
-    return parent
+	-- Normalize path separators to forward slash
+	path = path:gsub("\\", "/")
+
+	-- Remove trailing slash if present
+	if path:sub(-1) == "/" and path ~= "/" then
+		path = path:sub(1, -2)
+	end
+
+	-- Extract parent directory
+	local parent = path:match("(.+)/[^/]+$")
+
+	-- Handle special cases
+	if not parent then
+		if path == "/" then
+			return nil -- Root has no parent
+		else
+			return "." -- Current directory is parent
+		end
+	end
+
+	-- Return the parent directory
+	return parent
 end
 
 function fs.create_directory_recursive(path)
-    -- Handle empty or root path
-    if path == "" or path == "/" then return true end
-    
-    -- Normalize path separators to forward slash
-    path = path:gsub("\\", "/")
-    
-    -- Remove trailing slash if present
-    if path:sub(-1) == "/" then
-        path = path:sub(1, -2)
-    end
-    
-    -- Check if directory already exists
-    if fs.exists(path) then
-        if fs.is_directory(path) then
-            return true -- Already exists as directory
-        else
-            return nil, "Path exists but is not a directory" -- Path exists as a file
-        end
-    end
-    
-    -- Get parent directory
-    local parent = path:match("(.+)/[^/]+$") or ""
-    
-    -- If parent directory doesn't exist, create it first
-    if parent ~= "" and not fs.exists(parent) then
-        local ok, err = fs.create_directory_recursive(parent)
-        if not ok then
-            return nil, "Failed to create parent directory: " .. (err or "unknown error")
-        end
-    end
-    
-    -- Create the directory
-    return fs.create_directory(path)
+	-- Handle empty or root path
+	if path == "" or path == "/" then return true end
+
+	-- Normalize path separators to forward slash
+	path = path:gsub("\\", "/")
+
+	-- Remove trailing slash if present
+	if path:sub(-1) == "/" then path = path:sub(1, -2) end
+
+	-- Check if directory already exists
+	if fs.exists(path) then
+		if fs.is_directory(path) then
+			return true -- Already exists as directory
+		else
+			return nil, "Path exists but is not a directory" -- Path exists as a file
+		end
+	end
+
+	-- Get parent directory
+	local parent = path:match("(.+)/[^/]+$") or ""
+
+	-- If parent directory doesn't exist, create it first
+	if parent ~= "" and not fs.exists(parent) then
+		local ok, err = fs.create_directory_recursive(parent)
+
+		if not ok then
+			return nil, "Failed to create parent directory: " .. (err or "unknown error")
+		end
+	end
+
+	-- Create the directory
+	return fs.create_directory(path)
 end
 
 return fs
