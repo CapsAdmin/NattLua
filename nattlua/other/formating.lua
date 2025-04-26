@@ -7,7 +7,6 @@ local tostring = _G.tostring
 local error = _G.error
 local ipairs = _G.ipairs
 local stringx = require("nattlua.other.string")
-local mathx = require("nattlua.other.math")
 local formating = {}
 
 function formating.QuoteToken(str--[[#: string]])--[[#: string]]
@@ -284,6 +283,10 @@ local function calculate_text_positions(
 	}
 end
 
+local function clamp(num--[[#: number]], min--[[#: number]], max--[[#: number]])
+	return math.min(math.max(num, min), max)
+end
+
 function formating.BuildSourceCodePointMessage2(
 	code--[[#: string]],
 	start--[[#: number]],
@@ -303,8 +306,8 @@ function formating.BuildSourceCodePointMessage2(
 
 	if config.show_box == nil then config.show_box = true end
 
-	start = mathx.clamp(start or 1, 1, #code)
-	stop = mathx.clamp(stop or 1, 1, #code)
+	start = clamp(start or 1, 1, #code)
+	stop = clamp(stop or 1, 1, #code)
 
 	if stop < start then start, stop = stop, start end
 

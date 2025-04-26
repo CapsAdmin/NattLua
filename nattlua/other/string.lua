@@ -33,22 +33,6 @@ function stringx.replace(self--[[#: string]], old--[[#: string]], new--[[#: stri
 	return table.concat(parts, new)
 end
 
-function stringx.trim(self--[[#: string]])
-	local char = "%s*"
-	local _, start = self:find(char, 0)
-	local end_start, end_stop = self:reverse():find(char, 0)
-
-	if start and end_start and end_stop then
-		return self:sub(start + 1, (end_start - end_stop) - 2)
-	elseif start then
-		return self:sub(start + 1)
-	elseif end_start and end_stop then
-		return self:sub(0, (end_start - end_stop) - 2)
-	end
-
-	return self
-end
-
 function stringx.pad_left(str--[[#: string]], len--[[#: number]], char--[[#: string]])
 	if #str < len + 1 then return char:rep(len - #str + 1) .. str end
 

@@ -24,7 +24,7 @@ if is_coverage then
 
 	function preprocess.Preprocess(code, name, path, from)
 		if from == "package" then
-			if path and path:find("^nattlua/") and not path:find("^nattlua/other") then
+			if path and path:find("^nattlua/") then
 				covered[name] = path
 				return coverage.Preprocess(code, name)
 			end

@@ -51,7 +51,6 @@ local function annotate_equal(code)
 	equal(annotate(code), code)
 end
 
-
 collect([[
 
     local foo = {
@@ -291,6 +290,11 @@ local code = META.New([[
 
 
 ]=])
+
+
+coverage.Preprocess([==[
+	--[[#local type x = tbl[name] ]]
+]==], "test")
 
 
 equal(annotate("local x = 1"), "1")

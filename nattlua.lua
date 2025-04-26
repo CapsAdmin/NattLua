@@ -1,6 +1,7 @@
 #!/usr/local/bin/luajit
 
 if ... == "test" then
+	require("test.helpers.preprocess")
 	STARTUP_PROFILE = true
 	require("test.helpers.profiler").Start()
 end

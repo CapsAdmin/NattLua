@@ -166,8 +166,8 @@ function path.GetFileName(path, no_extension)
 
 		if last_dot then return path:sub(1, last_dot - 1) else return path end
 	end
-	return path
 
+	return path
 end
 
 return path

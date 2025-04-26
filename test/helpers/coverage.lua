@@ -15,6 +15,7 @@ function coverage.Preprocess(code, key)
 			-- don't mark the funciton body as being called
 			start, stop = node.tokens["function"].start, node.tokens["function"].stop
 		end
+
 		if node.kind == "table" then
 			-- don't mark the funciton body as being called
 			start, stop = node.tokens["{"].start, node.tokens["{"].stop
@@ -134,33 +135,6 @@ end
 
 function coverage.Clear(key)
 	_G.__COVERAGE[key] = nil
-end
-
-local function normalizeRanges(ranges)
-	local start, stop = ranges[1][1], ranges[#ranges][2]
-	local new_list = {}
-	local last = 0
-	local last_index = start
-	local i = start
-
-	while i <= stop do
-		local count = 0
-
-		for _, range in ipairs(ranges) do
-			if i >= range[1] and i <= range[2] then count = count + range[3] end
-		end
-
-		if count ~= last then
-			table.insert(new_list, {last_index, i, count})
-			i = i + 1
-			last = count
-			last_index = i
-		end
-
-		i = i + 1
-	end
-
-	return new_list
 end
 
 local function normalizeRanges(ranges)
