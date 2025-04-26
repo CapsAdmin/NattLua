@@ -1772,7 +1772,7 @@ do -- types
 
 	function META:StopEmittingInvalidLuaCode(emitted--[[#: boolean]])
 		if emitted then
-			if self:GetPrevChar() == B("]") then self:Whitespace(" ") end
+			if self:GetPrevChar() == B("]") then self:Emit(" ") end
 
 			local needs_escape = false
 
