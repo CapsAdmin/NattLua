@@ -3,6 +3,9 @@
 	<head>
 		<link rel="stylesheet" href="app.bundle.css" />
 		<meta charset="utf-8" />
+		<!-- Add the lua scripts as modules, loaded before the main bundle -->
+		<script type="module" src="js/lua-5.4.7-with-ffi.js"></script>
+		<script type="module" src="js/lua-interop.js"></script>
 	</head>
 	<style>
 		* {

@@ -1,7 +1,7 @@
 import { editor, editor as MonacoEditor, IRange, languages, MarkerSeverity, Uri } from "monaco-editor"
 import { PublishDiagnosticsParams, Range, DidChangeTextDocumentParams, Position, URI } from "vscode-languageserver"
 import { createEditor } from "./editor"
-import { loadLua, prettyPrint } from "./lua"
+import { loadLuaWasmoon, loadLuaInterop } from "./lua"
 import { registerSyntax } from "./syntax"
 import randomExamples from "./random.json"
 import { assortedExamples } from "./examples"
@@ -15,15 +15,8 @@ const pathFromURI = (uri: Uri) => {
 }
 
 const main = async () => {
-	const lua = await loadLua()
-
-	await lua.doString(`
-	_G.syntax_typesystem = require("nattlua.syntax.typesystem")
-	_G.syntax_runtime = require("nattlua.syntax.runtime")
-  `)
-
-	const syntax_typesystem = lua.global.get("syntax_typesystem")
-	const syntax_runtime = lua.global.get("syntax_runtime")
+	const { syntax_runtime, syntax_typesystem, lsp, prettyPrint } = await loadLuaWasmoon()
+	//const { syntax_runtime, syntax_typesystem, lsp, prettyPrint } = await loadLuaInterop()
 
 	await registerSyntax(syntax_runtime, syntax_typesystem)
 
@@ -35,8 +28,6 @@ const main = async () => {
 	select.addEventListener("change", () => {
 		tab.setValue(select.value)
 	})
-
-	const lsp = lua.global.get("lsp")
 
 	const callMethodOnServer = (method: string, params: any) => {
 		console.log("calling", method, params)
@@ -89,11 +80,11 @@ const main = async () => {
 	}
 
 	document.getElementById("random-example").addEventListener("click", () => {
-		tab.setValue(prettyPrint(lua, getRandomExample()))
+		tab.setValue(prettyPrint(getRandomExample()))
 	})
 
 	document.getElementById("pretty-print").addEventListener("click", () => {
-		tab.setValue(prettyPrint(lua, tab.getValue()))
+		tab.setValue(prettyPrint(tab.getValue()))
 	})
 
 
