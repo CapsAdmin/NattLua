@@ -1,13 +1,6 @@
 import { languages } from "monaco-editor"
 import { arrayUnion, escapeRegex, mapsToArray } from "./util"
 
-const uniqueCharacters = (str: string) => {
-	const unique = new Set<string>()
-	for (const char of str) {
-		unique.add(char)
-	}
-	return Array.from(unique).join("")
-}
 
 export const registerSyntax = async (syntax_runtime: any, syntax_typesystem: any) => {
 
@@ -35,7 +28,6 @@ export const registerSyntax = async (syntax_runtime: any, syntax_typesystem: any
 			syntax_typesystem.PrimaryBinaryOperators,
 		]),
 
-		//symbols: new RegExp("[" + escapeRegex(uniqueCharacters(arrayUnion(syntax_runtime.Symbols, syntax_typesystem.Symbols).join(""))) + "]+"),
 		symbols: /[=><!~?:&|+\-*\/\^%]+/,
 
 		escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
