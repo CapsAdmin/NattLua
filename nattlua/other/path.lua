@@ -72,7 +72,7 @@ end
 
 local ok, fs = pcall(require, "nattlua.other.fs")
 
-if ok then exists = function(path)
+if ok and fs.get_type then exists = function(path)
 	return fs.get_type(path) == "file"
 end end
 

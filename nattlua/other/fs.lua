@@ -1,7 +1,8 @@
 local fs = {}
-local ffi = require("ffi")
 
-if ffi.arch ~= "Windows" then
+if not jit then
+elseif jit.arch ~= "Windows" then
+	local ffi = require("ffi")
 	ffi.cdef("char *strerror(int);")
 
 	function fs.last_error()
@@ -10,6 +11,8 @@ if ffi.arch ~= "Windows" then
 		return err == "" and tostring(num) or err
 	end
 else
+	local ffi = require("ffi")
+
 	ffi.cdef("uint32_t GetLastError();")
 	ffi.cdef[[
 		uint32_t FormatMessageA(
@@ -38,7 +41,10 @@ else
 	end
 end
 
-if ffi.arch ~= "Windows" then
+if not jit then
+elseif jit.arch ~= "Windows" then
+	local ffi = require("ffi")
+
 	do -- attributes
 		local stat_struct
 
@@ -353,6 +359,8 @@ if ffi.arch ~= "Windows" then
 		end
 	end
 else
+	local ffi = require("ffi")
+
 	local DIRECTORY = 0x10
 	local time_struct = ffi.typeof([[
 		struct {
@@ -459,7 +467,7 @@ else
 
 		local ffi_cast = ffi.cast
 		local ffi_string = ffi.string
-		local INVALID_FILE = ffi.cast("void *", 0xffffffffffffffffULL)
+		local INVALID_FILE = ffi.cast("void *", -1)
 		local data_box = ffi.typeof("$[1]", find_data_struct)
 		local data = data_box()
 
