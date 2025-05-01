@@ -1,5 +1,3 @@
-import { LuaEngine } from "wasmoon"
-
 export const mapsToArray = (maps: { [key: string]: unknown }[]) => {
 	const set = new Set<string>()
 	for (const map of maps) {
@@ -36,7 +34,7 @@ function chunkSubstr(str: string, size: number) {
 	return chunks
 }
 
-export const loadLuaModule = async (lua: LuaEngine, p: Promise<{ default: string }>, moduleName: string, chunkName?: string) => {
+export const loadLuaModule = async (doString: (luaCode: string) => void, p: Promise<{ default: string }>, moduleName: string, chunkName?: string) => {
 	let { default: code } = await p
 
 	if (code.startsWith("#")) {
@@ -59,19 +57,19 @@ export const loadLuaModule = async (lua: LuaEngine, p: Promise<{ default: string
 		bytesStringIndex++
 		if (bytesStringIndex > 8000) {
 			let str = `CHUNKS = CHUNKS or {};CHUNKS[#CHUNKS + 1] = "${bytesString.join("")}"`
-			lua.doStringSync(str)
+			doString(str)
 			bytesString = []
 			bytesStringIndex = 0
 		}
 	}
 	{
 		let str = `CHUNKS = CHUNKS or {};CHUNKS[#CHUNKS + 1] = "${bytesString.join("")}"`
-		lua.doStringSync(str)
+		doString(str)
 	}
 
 	let str = `
 	local code = "package.preload['${moduleName}'] = function(...) " .. table.concat(CHUNKS) .. " end"
 	assert(load(code, "${chunkName}"))(...); CHUNKS = nil
 	`
-	lua.doStringSync(str)
+	doString(str)
 }

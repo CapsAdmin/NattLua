@@ -3,3 +3,4 @@ node_modules
 *.bundle.*
 yarn.lock
 public/glue.wasm
+public/js

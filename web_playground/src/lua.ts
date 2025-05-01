@@ -1,5 +1,4 @@
 import { LuaEngine, LuaFactory } from "wasmoon"
-import { registerSyntax } from "./syntax"
 import { loadLuaModule } from "./util"
 
 export const loadLua = async () => {
@@ -8,9 +7,9 @@ export const loadLua = async () => {
 		openStandardLibs: true,
 	})
 
-	await loadLuaModule(lua, import("./../../build_output.lua"), "nattlua")
+	await loadLuaModule((str) => lua.doStringSync(str), import("./../../build_output.lua"), "nattlua")
 	await lua.doString("for k, v in pairs(package.preload) do print(k,v) end require('nattlua') for k,v in pairs(IMPORTS) do package.preload[k] = v end")
-	await loadLuaModule(lua, import("./../../language_server/lsp.lua"), "lsp", "@language_server/lsp.lua")
+	await loadLuaModule((str) => lua.doStringSync(str), import("./../../language_server/lsp.lua"), "lsp", "@language_server/lsp.lua")
 
 	await lua.doString(`
 		local lsp = require("lsp")
@@ -18,9 +17,8 @@ export const loadLua = async () => {
 		local listeners = {}
 
 		function lsp.Call(data)
-			if listeners[data.method] then
-				listeners[data.method](data.params)
-			end
+			assert(data.method, "missing method")
+			listeners[data.method](data.params)
 		end
 
 		function lsp.On(method, callback)

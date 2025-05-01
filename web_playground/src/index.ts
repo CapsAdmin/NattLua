@@ -16,7 +16,16 @@ const pathFromURI = (uri: Uri) => {
 
 const main = async () => {
 	const lua = await loadLua()
-	await registerSyntax(lua)
+
+	await lua.doString(`
+	_G.syntax_typesystem = require("nattlua.syntax.typesystem")
+	_G.syntax_runtime = require("nattlua.syntax.runtime")
+  `)
+
+	const syntax_typesystem = lua.global.get("syntax_typesystem")
+	const syntax_runtime = lua.global.get("syntax_runtime")
+
+	await registerSyntax(syntax_runtime, syntax_typesystem)
 
 	const editor = createEditor()
 	const tab = MonacoEditor.createModel("local x = 1337", "nattlua")

@@ -1,5 +1,4 @@
 import { languages } from "monaco-editor"
-import { LuaEngine } from "wasmoon"
 import { arrayUnion, escapeRegex, mapsToArray } from "./util"
 
 const uniqueCharacters = (str: string) => {
@@ -10,14 +9,8 @@ const uniqueCharacters = (str: string) => {
 	return Array.from(unique).join("")
 }
 
-export const registerSyntax = async (lua: LuaEngine) => {
-	await lua.doString(`
-    _G.syntax_typesystem = require("nattlua.syntax.typesystem")
-    _G.syntax_runtime = require("nattlua.syntax.runtime")
-  `)
+export const registerSyntax = async (syntax_runtime: any, syntax_typesystem: any) => {
 
-	const syntax_typesystem = lua.global.get("syntax_typesystem")
-	const syntax_runtime = lua.global.get("syntax_runtime")
 	const syntax: languages.IMonarchLanguage = {
 		defaultToken: "",
 		tokenPostfix: ".nl",
