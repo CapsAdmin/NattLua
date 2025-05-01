@@ -151,6 +151,8 @@ function META:Recompile(path, lol, diagnostics)
 	if not lol then
 		if type(cfg.lsp.entry_point) == "table" then
 			if self.debug then print("recompiling entry points from: " .. path) end
+			local ok = true
+			local reasons = {}
 
 			for _, path in ipairs(cfg.lsp.entry_point) do
 				local new_path = path_util.Resolve(path, cfg.parser.root_directory, cfg.parser.working_directory)
@@ -160,10 +162,14 @@ function META:Recompile(path, lol, diagnostics)
 					table.print(cfg)
 				end
 
-				self:Recompile(new_path, true, diagnostics)
+				local b, reason = self:Recompile(new_path, true, diagnostics)
+				if not b then
+					ok = false
+					table.insert(reasons, reason)
+				end
 			end
 
-			return
+			return ok, table.concat(reasons, "\n")
 		elseif type(cfg.lsp.entry_point) == "string" then
 			local path = path_util.Resolve(cfg.lsp.entry_point, cfg.parser.root_directory, cfg.parser.working_directory)
 
@@ -172,15 +178,14 @@ function META:Recompile(path, lol, diagnostics)
 				print(cfg.lsp.entry_point, "->", path)
 				table.print(cfg)
 			end
-
-			self:Recompile(path, true, diagnostics)
-			return
+			
+			return self:Recompile(path, true, diagnostics)
 		end
 	end
 
 	local entry_point = path or cfg.lsp.entry_point
 
-	if not entry_point then return false end
+	if not entry_point then return false, "no entry point" end
 
 	cfg.parser.pre_read_file = function(parser, path)
 		if self.TempFiles[path] then return self:GetFileContent(path) end
@@ -202,14 +207,14 @@ function META:Recompile(path, lol, diagnostics)
 	local compiler = Compiler([[return import("]] .. entry_point .. [[")]], entry_point, cfg)
 	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
-
+	print(path, "COMPILER CREATED")
 	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
+		print("ON DIAGNOSTIC", name, code, msg, severity, start, stop, node, ...)
 		local name = code:GetName()
-
+		
 		if severity == "fatal" then
 			self:DebugLog("[ " .. entry_point .. " ] " .. formating.FormatMessage(msg, ...))
 		end
-
 		diagnostics[name] = diagnostics[name] or {}
 		table.insert(
 			diagnostics[name],
@@ -224,7 +229,11 @@ function META:Recompile(path, lol, diagnostics)
 		)
 	end
 
-	if compiler:Parse() then
+	local ok, err = compiler:Parse()
+	if not ok then
+		print("FAILED TO PARSE", path, err)
+	end
+	if ok then
 		self:DebugLog("[ " .. entry_point .. " ] parsed with " .. #compiler.Tokens .. " tokens")
 
 		if compiler.SyntaxTree.imports then
@@ -301,6 +310,8 @@ function META:Recompile(path, lol, diagnostics)
 	for name, data in pairs(diagnostics) do
 		self:OnDiagnostics(name, data)
 	end
+
+	return true
 end
 
 function META:OnDiagnostics(name, data) end
@@ -308,7 +319,10 @@ function META:OnDiagnostics(name, data) end
 function META:OnResponse(response) end
 
 function META:Initialize()
-	self:Recompile()
+	local ok, reason = self:Recompile()
+	if not ok then
+		print("failed to recompile without path: " .. reason)
+	end
 end
 
 function META:Format(code, path)
@@ -331,7 +345,7 @@ end
 
 function META:OpenFile(path, code)
 	self:SetFileContent(path, code)
-	self:Recompile(path)
+	assert(self:Recompile(path))
 end
 
 function META:CloseFile(path)
@@ -341,12 +355,12 @@ end
 
 function META:UpdateFile(path, code)
 	self:SetFileContent(path, code)
-	self:Recompile(path)
+	assert(self:Recompile(path))
 end
 
 function META:SaveFile(path)
 	self:SetFileContent(path, nil)
-	self:Recompile(path)
+	assert(self:Recompile(path))
 end
 
 function META:GetAllTokens(path)
