@@ -4,7 +4,7 @@ const path = require("path")
 const { finished } = require("stream/promises")
 const { Readable } = require("stream")
 
-async function downloadFile(url, outputPath) {
+async function downloadFile(url, outputPath, cbPreprocess) {
 	const response = await fetch(url)
 
 	if (!response.ok) {
@@ -14,7 +14,14 @@ async function downloadFile(url, outputPath) {
 	const directory = path.dirname(outputPath)
 
 	fs.mkdirSync(directory, { recursive: true })
-	fs.writeFileSync(outputPath, Buffer.from(await response.arrayBuffer()))
+	const buf = Buffer.from(await response.arrayBuffer())
+	if (cbPreprocess) {
+		const code = buf.toString()
+		const processedCode = cbPreprocess(code)
+		fs.writeFileSync(outputPath, processedCode)
+	} else {
+		fs.writeFileSync(outputPath, buf)
+	}
 }
 
 function getAllFiles(dirPath, arrayOfFiles) {
@@ -50,21 +57,11 @@ for (let path of getAllFiles("../test/tests/nattlua/analyzer/")) {
 fs.writeFileSync("src/random.json", JSON.stringify(tests))
 
 async function downloadLua() {
-	let baseUrl = "https://raw.githubusercontent.com/thenumbernine/js-util/630b456a151c411b8ddb595d0cdfeb8d03b27fe4/"
+	let baseUrl = "https://raw.githubusercontent.com/thenumbernine/js-util/e858eb39cc7a4f2f279f8742a377a53393a8e07f/"
 
-	await downloadFile(baseUrl + "lua-5.4.7-with-ffi.wasm", "public/js/lua-5.4.7-with-ffi.wasm")
-	await downloadFile(baseUrl + "lua-interop.js", "public/js/lua-interop.js")
-	await downloadFile(baseUrl + "lua-5.4.7-with-ffi.js", "public/js/lua-5.4.7-with-ffi.js")
-	;(async () => {
-		const res = await fetch("https://unpkg.com/wasmoon@1.14.1/dist/glue.wasm")
-		fs.unlink("public/glue.wasm", (err) => {
-			if (err) {
-				console.error(err)
-			}
-		})
-		const fileStream = fs.createWriteStream("public/glue.wasm", { flags: "wx" })
-		await finished(Readable.fromWeb(res.body).pipe(fileStream))
-	})()
+	await downloadFile(baseUrl + "lua-5.4.7-with-ffi.wasm", "public/lua-5.4.7-with-ffi.wasm")
+	await downloadFile(baseUrl + "lua-interop.js", "public/lua-interop.js")
+	await downloadFile(baseUrl + "lua-5.4.7-with-ffi.js", "public/lua-5.4.7-with-ffi.js")
 }
 
 downloadLua()

@@ -1,7 +1,52 @@
-import { LuaEngine, LuaFactory } from "wasmoon"
-import { getLuaInterop } from "./lua-utils/luaInterop"
+interface LuaInterop {
+	newState: () => void;
+	doString: (s: string, ...any) => any;
+}
 
-const loadLuaModule = async (doString: (luaCode: string) => void, p: Promise<{ default: string }>, moduleName: string, chunkName?: string) => {
+type NewLuaFunc = (args?: Record<string, any>) => Promise<LuaInterop>;
+
+let newLuaPromise: Promise<{ newLua: NewLuaFunc }> | null = null;
+
+async function getLuaInterop(): Promise<{ newLua: NewLuaFunc }> {
+	if (!newLuaPromise) {
+		newLuaPromise = new Promise((resolve, reject) => {
+			const script = document.createElement('script');
+			script.src = window.location.href + '/lua-interop.js';
+			script.type = 'module';
+
+			script.onload = () => {
+				if (window.newLua) {
+					resolve({ newLua: window.newLua });
+				} else {
+					import(window.location.href + '/lua-interop.js' as string)
+						.then(module => {
+							resolve(module);
+						})
+						.catch(error => {
+							reject(new Error(`Failed to import lua-interop.js: ${error.message}`));
+						});
+				}
+			};
+
+			script.onerror = () => {
+				reject(new Error('Failed to load lua-interop.js'));
+			};
+
+			document.head.appendChild(script);
+		});
+	}
+
+	return newLuaPromise;
+}
+
+declare global {
+	interface Window {
+		newLua?: NewLuaFunc;
+	}
+}
+
+
+const loadLuaModule = async (lua: LuaInterop, p: Promise<{ default: string }>, moduleName: string, chunkName?: string) => {
 	let { default: code } = await p
 
 	if (code.startsWith("#")) {
@@ -23,107 +68,27 @@ const loadLuaModule = async (doString: (luaCode: string) => void, p: Promise<{ d
 		bytesString[bytesStringIndex] = `\\${code}`
 		bytesStringIndex++
 		if (bytesStringIndex > 8000) {
-			let str = `CHUNKS = CHUNKS or {};CHUNKS[#CHUNKS + 1] = "${bytesString.join("")}"`
-			doString(str)
+			lua.doString(`CHUNKS = CHUNKS or {};CHUNKS[#CHUNKS + 1] = "${bytesString.join("")}"`)
 			bytesString = []
 			bytesStringIndex = 0
 		}
 	}
 	{
-		let str = `CHUNKS = CHUNKS or {};CHUNKS[#CHUNKS + 1] = "${bytesString.join("")}"`
-		doString(str)
+		lua.doString(`CHUNKS = CHUNKS or {};CHUNKS[#CHUNKS + 1] = "${bytesString.join("")}"`)
 	}
 
-	let str = `
-	local code = "package.preload['${moduleName}'] = function(...) " .. table.concat(CHUNKS) .. " end"
-	assert(load(code, "${chunkName}"))(...); CHUNKS = nil
-	`
-	doString(str)
-}
-
-export const loadLuaWasmoon = async () => {
-
-
-	const factory = new LuaFactory()
-	const lua = await factory.createEngine({
-		openStandardLibs: true,
-	})
-
-	await loadLuaModule((str) => lua.doStringSync(str), import("./../../build_output.lua"), "nattlua")
-	await lua.doString("for k, v in pairs(package.preload) do print(k,v) end require('nattlua') for k,v in pairs(IMPORTS) do package.preload[k] = v end")
-	await loadLuaModule((str) => lua.doStringSync(str), import("./../../language_server/lsp.lua"), "lsp", "@language_server/lsp.lua")
-
-	await lua.doString(`
-		local lsp = require("lsp")
-
-		local listeners = {}
-
-		function lsp.Call(data)
-			assert(data.method, "missing method")
-			listeners[data.method](data.params)
-		end
-
-		function lsp.On(method, callback)
-			listeners[method] = callback
-		end
-
-		for k,v in pairs(lsp.methods) do
-			lsp.methods[k] = function(params)
-				print("calling on server", k)
-				local ok, res = xpcall(function()
-					return v(params)
-				end, debug.traceback)
-				if not ok then
-					error(res, 2)
-				end
-				return res
-			end
-		end
-
-		_G.lsp = lsp`)
-
-
-	await lua.doString(`
-	_G.syntax_typesystem = require("nattlua.syntax.typesystem")
-	_G.syntax_runtime = require("nattlua.syntax.runtime")
-  `)
-
-	const syntax_typesystem = lua.global.get("syntax_typesystem")
-	const syntax_runtime = lua.global.get("syntax_runtime")
-	const lsp = lua.global.get("lsp")
-	console.log("Lua engine initialized successfully")
-	await lua.doString(`
-		function _G.prettyPrint(code)
-			local nl = require("nattlua")
-			local compiler = nl.Compiler(code, "temp", {
-				emitter = {
-					preserve_whitespace = false,
-					string_quote = "\\"",
-					no_semicolon = true,
-					type_annotations = "explicit",
-					force_parenthesis = true,
-					comment_type_annotations = false,
-				},
-				parser = {
-					skip_import = true,
-				}
-			})
-			return assert(compiler:Emit())
-		end    
+	lua.doString(`
+		local code = "package.preload['${moduleName}'] = function(...) " .. table.concat(CHUNKS) .. " end"
+		assert(load(code, "${chunkName}"))(...)
+		CHUNKS = nil
 	`)
-	const prettyPrintFunc = lua.global.get("prettyPrint") as (code: string) => string
-	return {
-		syntax_typesystem,
-		syntax_runtime,
-		lsp,
-		prettyPrint: prettyPrintFunc,
-
-	}
 }
 
 export const loadLuaInterop = async () => {
 	const { newLua } = await getLuaInterop();
 	let lua = await newLua({
+		luaJSPath: window.location.href + "/lua-5.4.7-with-ffi.js",
+		locateFile: () => window.location.href + "/lua-5.4.7-with-ffi.wasm",
 		print: s => {
 			console.log('>', s);
 		},
@@ -136,10 +101,10 @@ export const loadLuaInterop = async () => {
 
 	globalThis.lua = lua
 
-	await loadLuaModule((str) => lua.doString(str), import("./../../build_output.lua"), "nattlua")
+	await loadLuaModule(lua, import("./../../build_output.lua"), "nattlua")
 	await lua.doString("for k, v in pairs(package.preload) do print(k,v) end require('nattlua') for k,v in pairs(IMPORTS) do package.preload[k] = v end")
-	await loadLuaModule((str) => lua.doString(str), import("./../../language_server/lsp.lua"), "lsp", "@language_server/lsp.lua")
-	await loadLuaModule((str) => lua.doString(str), import("./../../language_server/json.lua"), "json", "@language_server/json.lua")
+	await loadLuaModule(lua, import("./../../language_server/lsp.lua"), "lsp", "@language_server/lsp.lua")
+	await loadLuaModule(lua, import("./../../language_server/json.lua"), "json", "@language_server/json.lua")
 
 	const [lsp] = await lua.doString(`
 		local lsp = require("lsp")

@@ -1,7 +1,7 @@
 import { editor, editor as MonacoEditor, IRange, languages, MarkerSeverity, Uri } from "monaco-editor"
 import { PublishDiagnosticsParams, Range, DidChangeTextDocumentParams, Position, URI } from "vscode-languageserver"
 import { createEditor } from "./editor"
-import { loadLuaWasmoon, loadLuaInterop } from "./lua"
+import { loadLuaInterop } from "./lua"
 import { registerSyntax } from "./syntax"
 import randomExamples from "./random.json"
 import { assortedExamples } from "./examples"
