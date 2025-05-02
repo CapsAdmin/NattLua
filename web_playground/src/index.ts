@@ -15,8 +15,8 @@ const pathFromURI = (uri: Uri) => {
 }
 
 const main = async () => {
-	const { syntax_runtime, syntax_typesystem, lsp, prettyPrint } = await loadLuaWasmoon()
-	//const { syntax_runtime, syntax_typesystem, lsp, prettyPrint } = await loadLuaInterop()
+	//const { syntax_runtime, syntax_typesystem, lsp, prettyPrint } = await loadLuaWasmoon()
+	const { syntax_runtime, syntax_typesystem, lsp, prettyPrint } = await loadLuaInterop()
 
 	await registerSyntax(syntax_runtime, syntax_typesystem)
 
@@ -30,14 +30,15 @@ const main = async () => {
 	})
 
 	const callMethodOnServer = (method: string, params: any) => {
-		console.log("calling", method, params)
-		let response = lsp.methods[method](params)
+		console.log("lsp.methods['", method, "'](", params, ")")
+		let [response] = lsp.methods[method](JSON.stringify(params))
 		console.log("\tgot", response)
 		return response
 	}
 
 	const onMessageFromServer = (method: string, callback: (params: any) => void) => {
 		lsp.On(method, (params) => {
+			params = JSON.parse(params)
 			console.log("received", method, params)
 			callback(params)
 		})

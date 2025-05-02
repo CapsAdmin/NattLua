@@ -1,6 +1,6 @@
 export interface LuaInterop {
   newState: () => void;
-  doString: (s: string) => void;
+  doString: (s: string, ...any) => any;
   L: any;
   lib: any;
   push_js: (L: any, jsValue: any, isArrow?: boolean) => number;

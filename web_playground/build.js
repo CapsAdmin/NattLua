@@ -50,7 +50,7 @@ for (let path of getAllFiles("../test/tests/nattlua/analyzer/")) {
 fs.writeFileSync("src/random.json", JSON.stringify(tests))
 
 async function downloadLua() {
-	let baseUrl = "https://raw.githubusercontent.com/thenumbernine/js-util/7865018a985074f558b4337226d07e18fe5f9452/"
+	let baseUrl = "https://raw.githubusercontent.com/thenumbernine/js-util/630b456a151c411b8ddb595d0cdfeb8d03b27fe4/"
 
 	await downloadFile(baseUrl + "lua-5.4.7-with-ffi.wasm", "public/js/lua-5.4.7-with-ffi.wasm")
 	await downloadFile(baseUrl + "lua-interop.js", "public/js/lua-interop.js")

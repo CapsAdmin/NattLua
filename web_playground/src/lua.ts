@@ -92,33 +92,31 @@ export const loadLuaWasmoon = async () => {
 	const syntax_runtime = lua.global.get("syntax_runtime")
 	const lsp = lua.global.get("lsp")
 	console.log("Lua engine initialized successfully")
+	await lua.doString(`
+		function _G.prettyPrint(code)
+			local nl = require("nattlua")
+			local compiler = nl.Compiler(code, "temp", {
+				emitter = {
+					preserve_whitespace = false,
+					string_quote = "\\"",
+					no_semicolon = true,
+					type_annotations = "explicit",
+					force_parenthesis = true,
+					comment_type_annotations = false,
+				},
+				parser = {
+					skip_import = true,
+				}
+			})
+			return assert(compiler:Emit())
+		end    
+	`)
+	const prettyPrintFunc = lua.global.get("prettyPrint") as (code: string) => string
 	return {
 		syntax_typesystem,
 		syntax_runtime,
 		lsp,
-		prettyPrint: (lua: LuaEngine, code: string) => {
-			lua.doStringSync(`
-				function _G.prettyPrint(code)
-					local nl = require("nattlua")
-					local compiler = nl.Compiler(code, "temp", {
-						emitter = {
-							preserve_whitespace = false,
-							string_quote = "\\"",
-							no_semicolon = true,
-							type_annotations = "explicit",
-							force_parenthesis = true,
-							comment_type_annotations = false,
-						},
-						parser = {
-							skip_import = true,
-						}
-					})
-					return assert(compiler:Emit())
-				end    
-			`)
-
-			return lua.global.get("prettyPrint")(code) as string
-		}
+		prettyPrint: prettyPrintFunc,
 
 	}
 }
@@ -138,21 +136,14 @@ export const loadLuaInterop = async () => {
 
 	globalThis.lua = lua
 
-	let lsp: any
-	globalThis.loadLSP = (obj) => lsp = obj
-
-	let syntax_runtime: any
-	globalThis.loadSyntaxRuntime = (obj) => syntax_runtime = obj
-
-	let syntax_typesystem: any
-	globalThis.loadSyntaxTypesystem = (obj) => syntax_typesystem = obj
-
 	await loadLuaModule((str) => lua.doString(str), import("./../../build_output.lua"), "nattlua")
 	await lua.doString("for k, v in pairs(package.preload) do print(k,v) end require('nattlua') for k,v in pairs(IMPORTS) do package.preload[k] = v end")
 	await loadLuaModule((str) => lua.doString(str), import("./../../language_server/lsp.lua"), "lsp", "@language_server/lsp.lua")
+	await loadLuaModule((str) => lua.doString(str), import("./../../language_server/json.lua"), "json", "@language_server/json.lua")
 
-	await lua.doString(`
+	const [lsp] = await lua.doString(`
 		local lsp = require("lsp")
+		local json = require("json")
 
 		local listeners = {}
 
@@ -162,12 +153,17 @@ export const loadLuaInterop = async () => {
 		end
 
 		function lsp.On(method, callback)
-			listeners[method] = callback
+			-- callback is js function, first argument is "this"
+			listeners[method] = function(params) 
+				params = json.encode(params)
+ 				return callback(nil, params) 
+			end 
 		end
 
 		for k,v in pairs(lsp.methods) do
 			lsp.methods[k] = function(params)
-				print("calling on server", k)
+				params = json.decode(params)
+				print("calling on server", k, params)
 				local ok, res = xpcall(function()
 					return v(params)
 				end, debug.traceback)
@@ -177,47 +173,39 @@ export const loadLuaInterop = async () => {
 				return res
 			end
 		end
+		return lsp
+	`)
 
-		jsToLua[0].loadLSP(lsp)`)
 
-
-	await lua.doString(`
-		jsToLua[0].loadSyntaxRuntime(require("nattlua.syntax.typesystem"))
-		jsToLua[0].loadSyntaxTypesystem(require("nattlua.syntax.runtime"))
-  `)
-
-	globalThis.syntax_typesystem = syntax_typesystem
-	globalThis.syntax_runtime = syntax_runtime
-	globalThis.lsp = lsp
-
+	const [syntax_runtime_json] = await lua.doString(`return require("json").encode(require("nattlua.syntax.runtime"))`)
+	const [syntax_typesystem_json] = await lua.doString(`return require("json").encode(require("nattlua.syntax.typesystem"))`)
+	const syntax_runtime = JSON.parse(syntax_runtime_json)
+	const syntax_typesystem = JSON.parse(syntax_typesystem_json)
+	const [prettyPrintFunc] = await lua.doString(`
+		return function(code)
+			local nl = require("nattlua")
+			local compiler = nl.Compiler(code, "temp", {
+				emitter = {
+					preserve_whitespace = false,
+					string_quote = "\\"",
+					no_semicolon = true,
+					type_annotations = "explicit",
+					force_parenthesis = true,
+					comment_type_annotations = false,
+				},
+				parser = {
+					skip_import = true,
+				}
+			})
+			return assert(compiler:Emit())
+		end    
+	`)
 	console.log("Lua interop initialized successfully")
 	return {
 		syntax_typesystem,
 		syntax_runtime,
 		lsp,
-		prettyPrint: (lua: LuaEngine, code: string) => {
-			lua.doStringSync(`
-				function _G.prettyPrint(code)
-					local nl = require("nattlua")
-					local compiler = nl.Compiler(code, "temp", {
-						emitter = {
-							preserve_whitespace = false,
-							string_quote = "\\"",
-							no_semicolon = true,
-							type_annotations = "explicit",
-							force_parenthesis = true,
-							comment_type_annotations = false,
-						},
-						parser = {
-							skip_import = true,
-						}
-					})
-					return assert(compiler:Emit())
-				end    
-			`)
-
-			return lua.global.get("prettyPrint")(code) as string
-		}
+		prettyPrint: (code: string) => prettyPrintFunc(code)[0] as string,
 
 	}
 
