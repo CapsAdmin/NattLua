@@ -1,7 +1,7 @@
 import { editor, editor as MonacoEditor, IRange, languages, MarkerSeverity, Uri } from "monaco-editor"
 import { PublishDiagnosticsParams, Range, DidChangeTextDocumentParams, Position, URI } from "vscode-languageserver"
 import { createEditor } from "./editor"
-import { loadLuaInterop } from "./lua"
+import { startLanguageServer } from "./language_server"
 import { registerSyntax } from "./syntax"
 import randomExamples from "./random.json"
 import { assortedExamples } from "./examples"
@@ -16,9 +16,9 @@ const pathFromURI = (uri: Uri) => {
 
 const main = async () => {
 	//const { syntax_runtime, syntax_typesystem, lsp, prettyPrint } = await loadLuaWasmoon()
-	const { syntax_runtime, syntax_typesystem, lsp, prettyPrint } = await loadLuaInterop()
+	const { syntax, callFunction, onMessage, formatLuaCode } = await startLanguageServer()
 
-	await registerSyntax(syntax_runtime, syntax_typesystem)
+	await registerSyntax(syntax)
 
 	const editor = createEditor()
 	const tab = MonacoEditor.createModel("local x = 1337", "nattlua")
@@ -28,21 +28,6 @@ const main = async () => {
 	select.addEventListener("change", () => {
 		tab.setValue(select.value)
 	})
-
-	const callMethodOnServer = (method: string, params: any) => {
-		console.log("lsp.methods['", method, "'](", params, ")")
-		let [response] = lsp.methods[method](JSON.stringify(params))
-		console.log("\tgot", response)
-		return response
-	}
-
-	const onMessageFromServer = (method: string, callback: (params: any) => void) => {
-		lsp.On(method, (params) => {
-			params = JSON.parse(params)
-			console.log("received", method, params)
-			callback(params)
-		})
-	}
 
 	const recompile = () => {
 		let request: DidChangeTextDocumentParams = {
@@ -57,7 +42,7 @@ const main = async () => {
 		}
 
 		MonacoEditor.setModelMarkers(tab, "owner", [])
-		callMethodOnServer("textDocument/didChange", request)
+		callFunction("textDocument/didChange", request)
 	}
 
 
@@ -81,11 +66,11 @@ const main = async () => {
 	}
 
 	document.getElementById("random-example").addEventListener("click", () => {
-		tab.setValue(prettyPrint(getRandomExample()))
+		tab.setValue(formatLuaCode(getRandomExample()))
 	})
 
 	document.getElementById("pretty-print").addEventListener("click", () => {
-		tab.setValue(prettyPrint(tab.getValue()))
+		tab.setValue(formatLuaCode(tab.getValue()))
 	})
 
 
@@ -112,7 +97,7 @@ const main = async () => {
 				}
 			}
 
-			let response = callMethodOnServer("textDocument/inlayHint", request)
+			let response = callFunction("textDocument/inlayHint", request)
 			if (!Array.isArray(response)) {
 				return {
 					hints: [],
@@ -151,7 +136,7 @@ const main = async () => {
 				newName,
 			}
 
-			let response = callMethodOnServer("textDocument/rename", request) as {
+			let response = callFunction("textDocument/rename", request) as {
 				changes: {
 					[uri: string]: Array<{
 						range: { start: Position; end: Position }
@@ -200,7 +185,7 @@ const main = async () => {
 				},
 			}
 
-			let response = callMethodOnServer("textDocument/hover", request) as
+			let response = callFunction("textDocument/hover", request) as
 				| undefined
 				| {
 					range: Range
@@ -236,7 +221,7 @@ const main = async () => {
 		},
 	})
 
-	onMessageFromServer("textDocument/publishDiagnostics", (params) => {
+	onMessage("textDocument/publishDiagnostics", (params) => {
 		const { diagnostics } = params as PublishDiagnosticsParams
 		const markers: MonacoEditor.IMarkerData[] = []
 		for (const diag of diagnostics) {
@@ -267,7 +252,7 @@ const main = async () => {
 
 	editor.setModel(tab)
 
-	callMethodOnServer("initialized", {})
+	callFunction("initialized", {})
 
 	recompile()
 }

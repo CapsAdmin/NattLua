@@ -1,32 +1,27 @@
 import { languages } from "monaco-editor"
-import { arrayUnion, escapeRegex, mapsToArray } from "./util"
+import { mapsToArray } from "./util"
 
-
-export const registerSyntax = async (syntax_runtime: any, syntax_typesystem: any) => {
+export const registerSyntax = async (additionalSyntax: {
+	keywords: string[];
+	typeKeywords: string[];
+	operators: string[];
+	brackets: [string, string][]
+	autoClosingPairs: { open: string, close: string }[]
+	surroundingPairs: { open: string, close: string }[]
+}) => {
 
 	const syntax: languages.IMonarchLanguage = {
 		defaultToken: "",
 		tokenPostfix: ".nl",
-
-		keywords: mapsToArray([syntax_runtime.Keywords, syntax_runtime.NonStandardKeywords]),
-		typeKeywords: mapsToArray([syntax_typesystem.Keywords, syntax_typesystem.NonStandardKeywords]).concat(["string", "any", "nil", "boolean", "number"]),
 
 		brackets: [
 			{ token: "delimiter.bracket", open: "{", close: "}" },
 			{ token: "delimiter.array", open: "[", close: "]" },
 			{ token: "delimiter.parenthesis", open: "(", close: ")" },
 		],
-
-		operators: mapsToArray([
-			syntax_runtime.PrefixOperators,
-			syntax_runtime.BinaryOperators,
-			syntax_runtime.PostfixOperators,
-			syntax_runtime.PrimaryBinaryOperators,
-			syntax_typesystem.PrefixOperators,
-			syntax_typesystem.BinaryOperators,
-			syntax_typesystem.PostfixOperators,
-			syntax_typesystem.PrimaryBinaryOperators,
-		]),
+		keywords: additionalSyntax.keywords,
+		typeKeywords: additionalSyntax.typeKeywords,
+		operators: additionalSyntax.operators,
 
 		symbols: /[=><!~?:&|+\-*\/\^%]+/,
 
@@ -113,23 +108,15 @@ export const registerSyntax = async (syntax_runtime: any, syntax_typesystem: any
 		},
 	}
 
-	const syntaxBrackets: languages.LanguageConfiguration = {
+	languages.register({ id: "nattlua", extensions: [".lua", ".nl"] })
+	languages.setMonarchTokensProvider("nattlua", syntax)
+	languages.setLanguageConfiguration("nattlua", {
 		comments: {
 			lineComment: "--",
 			blockComment: ["--[[", "]]"],
 		},
-		brackets: [],
-		autoClosingPairs: [],
-		surroundingPairs: [],
-	}
-
-	for (let [l, r] of Object.entries(syntax_runtime.SymbolPairs as { [key: string]: string })) {
-		syntaxBrackets.brackets.push([l, r])
-		syntaxBrackets.autoClosingPairs.push({ open: l, close: r })
-		syntaxBrackets.surroundingPairs.push({ open: l, close: r })
-	}
-
-	languages.register({ id: "nattlua", extensions: [".lua", ".nl"] })
-	languages.setMonarchTokensProvider("nattlua", syntax)
-	languages.setLanguageConfiguration("nattlua", syntaxBrackets)
+		brackets: additionalSyntax.brackets,
+		autoClosingPairs: additionalSyntax.autoClosingPairs,
+		surroundingPairs: additionalSyntax.surroundingPairs,
+	})
 }
