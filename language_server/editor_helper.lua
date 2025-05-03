@@ -207,9 +207,7 @@ function META:Recompile(path, lol, diagnostics)
 	local compiler = Compiler([[return import("]] .. entry_point .. [[")]], entry_point, cfg)
 	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
-	print(path, "COMPILER CREATED")
 	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
-		print("ON DIAGNOSTIC", name, code, msg, severity, start, stop, node, ...)
 		local name = code:GetName()
 		
 		if severity == "fatal" then
@@ -321,7 +319,9 @@ function META:OnResponse(response) end
 function META:Initialize()
 	local ok, reason = self:Recompile()
 	if not ok then
-		print("failed to recompile without path: " .. reason)
+		if not _G.TEST then
+			print("failed to recompile without path: " .. reason)
+		end
 	end
 end
 

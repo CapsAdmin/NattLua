@@ -1,3 +1,4 @@
+_G.TEST = true
 local EditorHelper = require("language_server.editor_helper")
 local path = "./test.nlua"
 
@@ -251,3 +252,4 @@ do
 	local integers = helper:GetSemanticTokens(path)
 	assert((#integers / 5) == 2)
 end
+_G.TEST = false
