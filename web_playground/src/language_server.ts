@@ -142,7 +142,7 @@ export const startLanguageServer = async () => {
 				params = json.decode(params)
 				print("calling on server", k, params)
 				local ok, res = xpcall(function()
-					return v(params)
+					return json.encode(v(params))
 				end, debug.traceback)
 				if not ok then
 					error(res, 2)
@@ -208,6 +208,7 @@ export const startLanguageServer = async () => {
 	const callFunction = (method: string, params: any) => {
 		console.log("lsp.methods['", method, "'](", params, ")")
 		let [response] = lsp.methods[method](JSON.stringify(params))
+		response = JSON.parse(response)
 		console.log("\tgot", response)
 		return response
 	}
