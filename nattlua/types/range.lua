@@ -151,7 +151,7 @@ function META:IsNan()
 	return self:GetMin() ~= self:GetMin() or self:GetMax() ~= self:GetMax()
 end
 
-function META.BinaryOperator(l--[[#: TRange]], r--[[#: any]], op--[[#: keysof<|operators|>]])
+function META.BinaryOperator(l--[[#: TRange]], r--[[#: any]], op--[[#: string]])
 	if r.Type == "range" then
 		return META.New(l.Min:BinaryOperator(r.Min, op), l.Max:BinaryOperator(r.Max, op))
 	elseif r.Type == "number" then
@@ -169,7 +169,7 @@ function META.BinaryOperator(l--[[#: TRange]], r--[[#: any]], op--[[#: keysof<|o
 	error("NYI")
 end
 
-function META.PrefixOperator(x--[[#: TRange]], op--[[#: keysof<|operators|>]])
+function META.PrefixOperator(x--[[#: TRange]], op--[[#: string]])
 	if op == "not" then return False() end
 
 	return META.New(x.Min:PrefixOperator(op), x.Max:PrefixOperator(op))

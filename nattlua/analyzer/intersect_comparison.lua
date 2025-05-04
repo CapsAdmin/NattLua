@@ -208,7 +208,7 @@ local function intersect(a_min, a_max, operator, b_min, b_max)
 	end
 end
 
-local function intersect_comparison(a--[[#: NumericType]], b--[[#: NumericType]], operator--[[#: string]])--[[#: NumericType | nil,NumericType | nil]]
+local function intersect_comparison(a--[[#: any]], b--[[#: any]], operator--[[#: string]])--[[#: any | nil,any | nil]]
 	-- TODO: not sure if this makes sense
 	if a:IsNan() or b:IsNan() then return a, b end
 
