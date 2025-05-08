@@ -1,269 +1,298 @@
-local c = [==[/*
- * C Preprocessor Macros Test Suite
- * 
- * This file contains a comprehensive set of C preprocessor macro examples
- * to test all aspects of a C preprocessor implementation.
- */
+local Code = require("nattlua.code").New
+local Lexer = require("nattlua.lexer.lexer").New
+local Parser = nil
 
-#include <stdio.h>
+do
+	local META = loadfile("nattlua/parser/base.lua")()
+	local old = META.New
 
-/* ========== Basic Object-like Macros ========== */
+	function META.New(...)
+		local obj = old(...)
+		obj.defines = {}
+		return obj
+	end
 
-// Simple replacement
-#define PI 3.14159
-#define MAX_BUFFER_SIZE 1024
-#define PROGRAM_NAME "MacroTester"
-#define TRUE 1
-#define FALSE 0
+	function META:IsWhitespace(str, offset)
+		local tk = self:GetToken(offset)
 
-// Empty macro
-#define EMPTY
+		if tk.whitespace then
+			for _, whitespace in ipairs(tk.whitespace) do
+				if whitespace.value:find(str, nil, true) then return true end
+			end
+		end
 
-// Macro with spaces and special characters
-#define COMPLEX_TEXT This is a (somewhat) "complex" macro \ with backslash!
+		return false
+	end
 
-/* ========== Function-like Macros ========== */
+	function META:IsMultiWhitespace(str, offset)
+		local tk = self:GetToken(offset)
 
-// Basic function-like macro
-#define SQUARE(x) ((x) * (x))
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
+		if tk and tk.whitespace then
+			for _, whitespace in ipairs(tk.whitespace) do
+				local count = 0
 
-// Nested macro usage
-#define ABS(x) ((x) < 0 ? -(x) : (x))
-#define CLAMP(x, min, max) (MIN(MAX((x), (min)), (max)))
+				for i = 1, #whitespace.value do
+					if whitespace.value:sub(i, i) == str then count = count + 1 end
+				end
 
-// Multiple uses of same parameter
-#define MULTIPLY_BY_ITSELF(x) ((x) * (x))
+				if count and count > 1 then return true end
+			end
+		end
 
-/* ========== Stringification (#) ========== */
+		return false
+	end
 
-// Basic stringification
-#define STRINGIFY(x) #x
+	local function tostring_tokens(tokens)
+		if not tokens then return "" end
 
-// Stringification with parameters containing commas and quotes
-#define STRING_COMPLEX(x) #x
+		local str = ""
 
-/* ========== Token Concatenation (##) ========== */
+		for _, tk in ipairs(tokens) do
+			str = str .. " " .. tk.value
+		end
 
-// Basic concatenation
-#define CONCAT(a, b) a##b
+		return str
+	end
 
-// Concatenation in identifiers
-#define MAKE_FUNCTION(name) void func_##name() { printf("Function: " #name "\n"); }
+	function META:Define(identifier, args, tokens)
+		print("DEFINE:", identifier)
+		print("\targs:", tostring_tokens(args))
+		print("\ttokens:", tostring_tokens(tokens))
+		self.defines[identifier] = {args = args, tokens = tokens}
+	end
 
-// Combine concatenation and stringification
-#define DECLARE_VARIABLE(type, name) type g_##name; const char* name##_name = #name
+	function META:Undefine(identifier)
+		self.defines[identifier] = nil
+	end
 
-/* ========== Variadic Macros ========== */
+	function META:CaptureTokens()
+		local tks = {}
 
-// Basic variadic macro
-#define DEBUG_PRINT(fmt, ...) printf("DEBUG: " fmt, __VA_ARGS__)
+		for _ = self:GetPosition(), self:GetLength() do
+			if
+				self:IsWhitespace("\n") and
+				not self:IsTokenValue("\\", -1)
+				or
+				self:IsMultiWhitespace("\n")
+			then
+				break
+			end
 
-// Variadic macro with empty __VA_ARGS__ handling
-#define LOG(level, fmt, ...) printf("[%s] " fmt, level, ##__VA_ARGS__)
+			local tk = self:ConsumeToken()
 
-// Count the number of arguments
-#define COUNT_ARGS(...) COUNT_ARGS_IMPL(__VA_ARGS__, 5, 4, 3, 2, 1, 0)
-#define COUNT_ARGS_IMPL(_1, _2, _3, _4, _5, N, ...) N
+			if not tk then break end
 
-/* ========== Recursive Macros ========== */
+			if tk then if tk.value ~= "\\" then table.insert(tks, tk) end end
+		end
 
-// Simple recursion through multiple definitions
-#define A(x) B(x)
-#define B(x) C(x)
-#define C(x) (x + 3)
+		return tks
+	end
 
-// Indirect self-recursion
-#define FIRST(a, b) a
-#define REST(a, b) b
-#define EXPAND_1(x) x
-#define EXPAND_2(x, y) EXPAND_1(x), EXPAND_1(y)
-#define EXPAND_3(x, y, z) EXPAND_1(x), EXPAND_2(y, z)
+	function META:CaptureArgs()
+		self:ExpectTokenValue("(")
+		local args = {}
 
-/* ========== Conditional Compilation ========== */
+		for _ = self:GetPosition(), self:GetLength() do
+			if self:IsTokenValue(")") then break end
 
-// Define for conditional tests
-#define TEST_FEATURE
-#define VERSION 2
-#define DEBUG_LEVEL 3
+			local tokens = {}
 
-// Basic conditionals
-#ifdef TEST_FEATURE
-    #define FEATURE_ENABLED 1
-#else
-    #define FEATURE_ENABLED 0
-#endif
+			for _ = self:GetPosition(), self:GetLength() do
+				if self:IsTokenValue(",") then break end
 
-// Nested conditionals
-#if VERSION > 1
-    #if DEBUG_LEVEL > 2
-        #define LOG_LEVEL "VERBOSE"
-    #else
-        #define LOG_LEVEL "NORMAL"
-    #endif
-#else
-    #define LOG_LEVEL "MINIMAL"
-#endif
+				if self:IsTokenValue(")") then break end
 
-// Complex expressions
-#if defined(TEST_FEATURE) && (VERSION > 1 || DEBUG_LEVEL > 0)
-    #define COMPLEX_CONDITION 1
-#else
-    #define COMPLEX_CONDITION 0
-#endif
+				table.insert(tokens, self:ConsumeToken())
+			end
 
-// Undef and redefine test
-#undef VERSION
-#define VERSION 3
+			table.insert(args, tokens)
 
-#if VERSION == 3
-    #define VERSION_STRING "Version 3"
-#endif
+			if self:IsTokenValue(",") then self:ExpectTokenValue(",") end
+		end
 
-/* ========== Multi-line Macros ========== */
+		self:ExpectTokenValue(")")
+		return args
+	end
 
-// Multi-line macro with continuation character
-#define MULTI_LINE_FUNC(x, y) \
-    do { \
-        int temp = (x) + (y); \
-        printf("Sum: %d\n", temp); \
-        temp = (x) * (y); \
-        printf("Product: %d\n", temp); \
-    } while(0)
+	function META:ParseIdentifier()
+		local tk = self:ConsumeToken()
 
-/* ========== Advanced Examples ========== */
+		if tk.type == "letter" then return tk end
 
-// Macro that expands to a compile-time error message
-#define STATIC_ASSERT(condition, message) \
-    typedef char static_assertion_##message[(condition) ? 1 : -1]
+		error("Expected identifier, got " .. tk.type)
+	end
 
-// Macro to generate a unique identifier (using __LINE__)
-#define UNIQUE_ID(prefix) prefix##_##__LINE__
+	local math_min = math.min
 
-// Function overloading through macros
-#define OVERLOAD_1_ARG(func, x) func##_1(x)
-#define OVERLOAD_2_ARGS(func, x, y) func##_2(x, y)
-#define OVERLOAD_3_ARGS(func, x, y, z) func##_3(x, y, z)
+	function META:ParseMultipleValues(
+		reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (nil | Node))]],
+		a--[[#: ref any]],
+		b--[[#: ref any]],
+		c--[[#: ref any]]
+	)
+		local out = {}
 
-#define GET_MACRO(_1, _2, _3, NAME, ...) NAME
-#define OVERLOAD(func, ...) \
-    GET_MACRO(__VA_ARGS__, OVERLOAD_3_ARGS, OVERLOAD_2_ARGS, OVERLOAD_1_ARG)(func, __VA_ARGS__)
+		for i = 1, math_min(self:GetLength(), 200) do
+			local node = reader(self, a, b, c)
 
-// X-Macros pattern
-#define LIST_OF_COLORS \
-    X(red, 0xFF0000) \
-    X(green, 0x00FF00) \
-    X(blue, 0x0000FF) \
+			if not node then break end
 
-#define X(name, value) COLOR_##name = value,
-enum Colors {
-    LIST_OF_COLORS
-};
-#undef X
+			out[i] = node
 
-#define X(name, value) #name,
-const char* color_names[] = {
-    LIST_OF_COLORS
-};
-#undef X
+			if not self:IsTokenValue(",") then break end
 
-/* ========== Edge Cases ========== */
+			self:ExpectTokenValue(",")
+		end
 
-// Empty macro arguments
-#define HANDLE_EMPTY() "Empty args handled"
-#define HANDLE_COMMAS(a, b, c) "Got arguments with commas"
+		return out
+	end
 
-// Space between macro name and parentheses
-#define SPACED_MACRO (x) "Should not be treated as function-like macro"
+	local function replace_tokens(self)
+		for _ = self:GetPosition(), self:GetLength() do
+			local tk = self:GetToken()
 
-// Comments inside macro definition
-#define COMMENTED_MACRO(x) /* Comment in the middle */ (x) * 2
+			if self:IsTokenValue("#") then break end
 
-// Multiple adjacent stringifications and concatenations
-#define COMPLEX_OP(a, b, c) a##b##c #a#b#c
+			if not tk then break end
 
-// Macro with non-identifier character in name (implementation-defined)
-#define $SPECIAL_MACRO 123
+			local def = self.defines[tk.value]
 
-/* ========== Usage Examples for Testing ========== */
+			if def then
+				print("REPLACE:", tk.value)
 
-// Temporary macro for the test function
-#define TEST(name, expr) printf("Test %-30s: %s\n", name, (expr) ? "PASS" : "FAIL");
+				if def.args then
+					local start = self:GetPosition()
+					self:ExpectTokenType("letter") -- consume the identifier
+					local args = self:CaptureArgs() -- capture all tokens separated by commas
+					local stop = self:GetPosition()
+					self:AddTokens(def.tokens)
 
-int main() {
-    printf("===== C Preprocessor Macro Test Suite =====\n\n");
-    
-    // Basic macros
-    printf("PI: %f\n", PI);
-    printf("MAX_BUFFER_SIZE: %d\n", MAX_BUFFER_SIZE);
-    printf("PROGRAM_NAME: %s\n", PROGRAM_NAME);
-    
-    // Function-like macros
-    int a = 5, b = 10;
-    printf("SQUARE(5): %d\n", SQUARE(5));
-    printf("SQUARE(a+1): %d\n", SQUARE(a+1));  // Tests proper parenthesization
-    printf("MAX(a,b): %d\n", MAX(a, b));
-    printf("CLAMP(15, 0, 10): %d\n", CLAMP(15, 0, 10));
-    
-    // Stringification
-    printf("STRINGIFY(Hello World): %s\n", STRINGIFY(Hello World));
-    //printf("STRING_COMPLEX(a,b,c): %s\n", STRING_COMPLEX(a,b,c));
-    printf("STRING_COMPLEX(\"quoted\"): %s\n", STRING_COMPLEX("quoted"));
-    
-    // Concatenation
-    printf("CONCAT(abc, 123): %s\n", CONCAT(abc, 123));
-    MAKE_FUNCTION(test);
-    func_test();
-    
-    // Variadic macros
-    DEBUG_PRINT("Value: %d\n", 42);
-    LOG("INFO", "Simple message\n");
-    LOG("DEBUG", "Message with args: %d %s\n", 123, "test");
-    
-    // Recursive macros
-    printf("A(10): %d\n", A(10));
-    
-    // Conditional compilation results
-    printf("FEATURE_ENABLED: %d\n", FEATURE_ENABLED);
-    printf("LOG_LEVEL: %s\n", LOG_LEVEL);
-    printf("COMPLEX_CONDITION: %d\n", COMPLEX_CONDITION);
-    printf("VERSION_STRING: %s\n", VERSION_STRING);
-    
-    // Multi-line macros
-    MULTI_LINE_FUNC(5, 7);
-    
-    // Unique identifiers
-    int UNIQUE_ID(counter) = 0;
-    printf("Unique ID created\n");
-    
-    // X-Macros
-    printf("COLOR_red: 0x%06X\n", COLOR_red);
-    printf("color_names[0]: %s\n", color_names[0]);
-    
-    return 0;
-}
+					for i = stop - 1, start, -1 do
+						self:RemoveToken(i)
+						stop = stop - 1
+					end
 
-/* 
- * Expected preprocessor output would expand all macros,
- * resolve all conditionals, and remove all preprocessor directives,
- * resulting in standard C code ready for compilation.
- */
-]==]
+					self.current_token_index = stop
 
-local function gcc_preprocess(code)
-	local temp_filename = os.tmpname() .. ".c"
-	local output_filename = os.tmpname() .. ".i"
-	local file = assert(io.open(temp_filename, "w"))
-	file:write(code)
-	file:close()
-	os.execute("gcc -E -v " .. temp_filename .. " -o " .. output_filename .. " 2>&1")
-	local file = assert(io.open(output_filename, "r"))
-	local output = file:read("*all")
-	file:close()
-	os.remove(temp_filename)
-	os.remove(output_filename)
-	return output
+					for i, tokens in ipairs(args) do
+						local key = def.args[i]
+						self:Define(key.value, nil, tokens)
+					end
+
+					replace_tokens(self)
+
+					for i, tokens in ipairs(args) do
+						local key = def.args[i]
+						self:Undefine(key.value)
+					end
+				else
+					self:RemoveToken(self:GetPosition()) -- remove the token we replace
+					self:AddTokens(def.tokens)
+				end
+			else
+				self:Advance(1)
+			end
+		end
+	end
+
+	function META:Parse()
+		for _ = self:GetPosition(), self:GetLength() do
+			while self:IsTokenValue("#") do
+				local hashtag = self:ExpectTokenValue("#")
+				local directive = self:ExpectTokenType("letter")
+				local t = directive.value
+
+				if t == "define" then
+					local identifier = self:ExpectTokenType("letter")
+					local args = nil
+
+					if self:IsTokenValue("(") then
+						self:ExpectTokenValue("(")
+						args = self:ParseMultipleValues(self.ParseIdentifier)
+						self:ExpectTokenValue(")")
+					end
+
+					self:Define(identifier.value, args, self:CaptureTokens())
+				elseif t == "undef" then
+					local identifier = self:ExpectTokenType("letter")
+					self:Undefine(identifier.value)
+				else
+					error("Unknown preprocessor directive: " .. t)
+				end
+			end
+
+			replace_tokens(self, tokens)
+		end
+
+		local output = ""
+
+		for _, tk in ipairs(self.tokens) do
+			if tk.whitespace then
+				for _, whitespace in ipairs(tk.whitespace) do
+					output = output .. whitespace.value
+				end
+			end
+
+			output = output .. tk.value
+		end
+
+		return output
+	end
+
+	Parser = META.New
 end
 
-print(gcc_preprocess(c))
+local function lex(code)
+	local lexer = Lexer(code)
+	lexer.ReadShebang = function()
+		return false
+	end
+	return lexer:GetTokens()
+end
+
+local function preprocess(code, defines)
+	local code = Code(code, "test.c")
+	local tokens = lex(code)
+	local parser = Parser(tokens, code)
+	return parser:Parse()
+end
+
+assert(
+	preprocess([[
+#define TEST 1
+#define TEST2 2
+static int test = TEST + TEST2;
+]]):find("static int test = 1 + 2;", nil, true)
+)
+assert(
+	preprocess([[
+#define TEST(x) x*x
+static int test = TEST(2);
+]]):find("static int test =2*2;", nil, true)
+)
+assert(
+	preprocess([[
+#define TEST(x,y) x*y
+static int test = TEST(2,4);
+]]):find("static int test =2*4;", nil, true)
+)
+assert(
+	preprocess([[
+#define TEST 1
+#undef TEST
+static int test = TEST;
+]]):find("static int test = TEST;", nil, true)
+)
+assert(
+	preprocess([[
+#define MY_LIST \
+X(Item1, "This is a description of item 1") \
+X(Item2, "This is a description of item 2") \
+X(Item3, "This is a description of item 3")
+
+#define X(name, desc) name,
+enum ListItemType { MY_LIST }
+#undef X
+
+]]):find("enum ListItemType {Item1,Item2,Item3, }", nil, true)
+)
