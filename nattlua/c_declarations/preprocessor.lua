@@ -9,6 +9,7 @@ do
 	function META.New(...)
 		local obj = old(...)
 		obj.defines = {}
+		obj.define_stack = {}
 		return obj
 	end
 
@@ -42,27 +43,78 @@ do
 		return false
 	end
 
-	local function tostring_tokens(tokens)
+	local function tostring_tokens(tokens, pos)
 		if not tokens then return "" end
 
 		local str = ""
+		local str_point = ""
 
-		for _, tk in ipairs(tokens) do
+		for i, tk in ipairs(tokens) do
 			str = str .. " " .. tk.value
+			str_point = str_point .. " " .. (i == pos and "^" or (" "):rep(#tk.value))
 		end
 
-		return str
+		return str .. "\n" .. str_point
 	end
 
-	function META:Define(identifier, args, tokens)
-		print("DEFINE:", identifier)
-		print("\targs:", tostring_tokens(args))
-		print("\ttokens:", tostring_tokens(tokens))
-		self.defines[identifier] = {args = args, tokens = tokens}
+	do -- for normal define, can be overriden
+		function META:Define(identifier, args, tokens)
+			local new_tokens = {}
+
+			for i, v in ipairs(tokens) do
+				new_tokens[i] = {
+					value = v.value,
+					type = v.type,
+					stringify = v.stringify,
+					whitespace = {
+						{value = " ", type = "space"},
+					},
+				}
+			end
+
+			self.defines[identifier] = {args = args, tokens = new_tokens}
+		end
+
+		function META:Undefine(identifier)
+			self.defines[identifier] = nil
+		end
 	end
 
-	function META:Undefine(identifier)
-		self.defines[identifier] = nil
+	do -- for arguments
+		function META:PushDefine(identifier, args, tokens)
+			local new_tokens = {}
+
+			for i, v in ipairs(tokens) do
+				new_tokens[i] = {
+					value = v.value,
+					type = v.type,
+					stringify = v.stringify,
+					whitespace = {
+						{value = " ", type = "space"},
+					},
+				}
+			end
+
+			self.define_stack[identifier] = self.define_stack[identifier] or {}
+			table.insert(self.define_stack[identifier], 1, {args = args, tokens = new_tokens})
+		end
+
+		function META:PushUndefine(identifier)
+			self.define_stack[identifier] = self.define_stack[identifier] or {}
+			table.remove(self.define_stack[identifier], 1)
+
+			if not self.define_stack[identifier][1] then
+				self.define_stack[identifier] = nil
+			end
+		end
+	end
+
+	function META:GetDefinition(identifier)
+		if self.define_stack[identifier] then
+			return self.define_stack[identifier][1]
+		end
+
+		return self.defines[identifier]
 	end
 
 	function META:CaptureTokens()
@@ -96,13 +148,50 @@ do
 			if self:IsTokenValue(")") then break end
 
 			local tokens = {}
-
+			local paren_depth = 0 -- Track the parenthesis nesting level
 			for _ = self:GetPosition(), self:GetLength() do
-				if self:IsTokenValue(",") then break end
+				-- Only break on comma if we're at the top level (paren_depth == 0)
+				if self:IsTokenValue(",") and paren_depth == 0 then break end
 
-				if self:IsTokenValue(")") then break end
+				-- Break on closing parenthesis only at the top level
+				if self:IsTokenValue(")") and paren_depth == 0 then break end
 
-				table.insert(tokens, self:ConsumeToken())
+				local tk = self:ConsumeToken()
+
+				-- Update parenthesis depth based on the token we just consumed
+				if tk.value == "(" then
+					paren_depth = paren_depth + 1
+				elseif tk.value == ")" then
+					paren_depth = paren_depth - 1
+				end
+
+				local def = self:GetDefinition(tk.value)
+
+				if def then
+					if def.args then
+						local start = self:GetPosition()
+						self:ExpectTokenType("letter") -- consume the identifier
+						local args = self:CaptureArgs() -- capture all tokens separated by commas
+						local stop = self:GetPosition()
+
+						for i = stop - 1, start, -1 do
+							self:RemoveToken(i)
+						end
+
+						self.current_token_index = start
+						self:AddTokens(def.tokens)
+
+						for i, tokens in ipairs(args) do
+							table.insert(tokens, 1, def.args[i].value)
+						end
+					else
+						for i, v in ipairs(def.tokens) do
+							table.insert(tokens, v)
+						end
+					end
+				else
+					table.insert(tokens, tk)
+				end
 			end
 
 			table.insert(args, tokens)
@@ -114,119 +203,177 @@ do
 		return args
 	end
 
-	function META:ParseIdentifier()
-		local tk = self:ConsumeToken()
+	function META:CaptureArgsOld()
+		self:ExpectTokenValue("(")
+		local args = {}
 
-		if tk.type == "letter" then return tk end
-
-		error("Expected identifier, got " .. tk.type)
-	end
-
-	local math_min = math.min
-
-	function META:ParseMultipleValues(
-		reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (nil | Node))]],
-		a--[[#: ref any]],
-		b--[[#: ref any]],
-		c--[[#: ref any]]
-	)
-		local out = {}
-
-		for i = 1, math_min(self:GetLength(), 200) do
-			local node = reader(self, a, b, c)
-
-			if not node then break end
-
-			out[i] = node
-
-			if not self:IsTokenValue(",") then break end
-
-			self:ExpectTokenValue(",")
-		end
-
-		return out
-	end
-
-	local function replace_tokens(self)
 		for _ = self:GetPosition(), self:GetLength() do
-			local tk = self:GetToken()
+			if self:IsTokenValue(")") then break end
 
-			if self:IsTokenValue("#") then break end
+			local tokens = {}
 
-			if not tk then break end
+			for _ = self:GetPosition(), self:GetLength() do
+				if self:IsTokenValue(",") then break end
 
-			local def = self.defines[tk.value]
+				if self:IsTokenValue(")") then break end
 
-			if def then
-				print("REPLACE:", tk.value)
+				local tk = self:ConsumeToken()
+				local def = self:GetDefinition(tk.value)
 
-				if def.args then
-					local start = self:GetPosition()
-					self:ExpectTokenType("letter") -- consume the identifier
-					local args = self:CaptureArgs() -- capture all tokens separated by commas
-					local stop = self:GetPosition()
-					self:AddTokens(def.tokens)
+				if def then
+					if def.args then
+						local start = self:GetPosition()
+						self:ExpectTokenType("letter") -- consume the identifier
+						local args = self:CaptureArgs() -- capture all tokens separated by commas
+						local stop = self:GetPosition()
 
-					for i = stop - 1, start, -1 do
-						self:RemoveToken(i)
-						stop = stop - 1
-					end
+						for i = stop - 1, start, -1 do
+							self:RemoveToken(i)
+						end
 
-					self.current_token_index = stop
+						self.current_token_index = start
+						self:AddTokens(def.tokens)
 
-					for i, tokens in ipairs(args) do
-						local key = def.args[i]
-						self:Define(key.value, nil, tokens)
-					end
-
-					replace_tokens(self)
-
-					for i, tokens in ipairs(args) do
-						local key = def.args[i]
-						self:Undefine(key.value)
+						for i, tokens in ipairs(args) do
+							table.insert(tokens, 1, def.args[i].value)
+						end
+					else
+						for i, v in ipairs(def.tokens) do
+							table.insert(tokens, v)
+						end
 					end
 				else
-					self:RemoveToken(self:GetPosition()) -- remove the token we replace
-					self:AddTokens(def.tokens)
+					table.insert(tokens, tk)
 				end
-			else
-				self:Advance(1)
 			end
+
+			table.insert(args, tokens)
+
+			if self:IsTokenValue(",") then self:ExpectTokenValue(",") end
 		end
+
+		table.print(args, 2)
+		self:ExpectTokenValue(")")
+		return args
+	end
+
+	function META:PrintState()
+		print("\n" .. tostring_tokens(self.tokens, self:GetPosition()))
 	end
 
 	function META:Parse()
 		for _ = self:GetPosition(), self:GetLength() do
-			while self:IsTokenValue("#") do
+			if self:IsTokenValue("#") then
 				local hashtag = self:ExpectTokenValue("#")
-				local directive = self:ExpectTokenType("letter")
-				local t = directive.value
 
-				if t == "define" then
+				if self:IsTokenValue("define") then
+					self:Advance(1)
 					local identifier = self:ExpectTokenType("letter")
 					local args = nil
 
 					if self:IsTokenValue("(") then
 						self:ExpectTokenValue("(")
-						args = self:ParseMultipleValues(self.ParseIdentifier)
+						args = {}
+
+						for i = 1, self:GetLength() do
+							local node = self:ExpectTokenType("letter")
+
+							if not node then break end
+
+							args[i] = node
+
+							if not self:IsTokenValue(",") then break end
+
+							self:ExpectTokenValue(",")
+						end
+
 						self:ExpectTokenValue(")")
 					end
 
 					self:Define(identifier.value, args, self:CaptureTokens())
-				elseif t == "undef" then
+				elseif self:IsTokenValue("undef") then
+					self:Advance(1)
 					local identifier = self:ExpectTokenType("letter")
 					self:Undefine(identifier.value)
 				else
-					error("Unknown preprocessor directive: " .. t)
+
+				--	error("Unknown preprocessor directive: " .. t)
+				end
+			else
+				local tk = self:GetToken()
+
+				if not tk then break end
+
+				local def = self:GetDefinition(tk.value)
+
+				if def then
+					if def.args then
+						local start = self:GetPosition()
+						self:ExpectTokenType("letter") -- consume the identifier
+						local args = self:CaptureArgs() -- capture all tokens separated by commas
+						local stop = self:GetPosition()
+
+						for i = stop - 1, start, -1 do
+							self:RemoveToken(i)
+						end
+
+						self.current_token_index = start
+						self:AddTokens(def.tokens)
+						assert(#args == #def.args, "Argument count mismatch")
+
+						for i, tokens in ipairs(args) do
+							self:PushDefine(def.args[i].value, nil, tokens)
+						end
+
+						self:Parse()
+
+						for i, tokens in ipairs(args) do
+							self:PushUndefine(def.args[i].value)
+						end
+					else
+						self:RemoveToken(self:GetPosition()) -- remove the token we replace
+						local tk
+
+						if self:GetToken(-1).value == "#" then
+							local output = ""
+
+							for i, tk in ipairs(def.tokens) do
+								output = output .. tk.value
+							end
+
+							tk = {
+								value = output,
+								type = "string",
+								stringify = true,
+								whitespace = {
+									{value = " ", type = "space"},
+								},
+							}
+							tk.type = "string"
+							tk.value = "\"" .. output .. "\""
+							self:AddTokens({tk})
+							self:RemoveToken(self:GetPosition() - 1)
+						else
+							self:AddTokens(def.tokens)
+							tk = self:GetToken()
+						end
+
+						if self:GetDefinition(tk.value) then
+
+						-- TODO
+						else
+							self:Advance(#def.tokens)
+						end
+					end
+				else
+					self:Advance(1)
 				end
 			end
-
-			replace_tokens(self, tokens)
 		end
 
 		local output = ""
 
-		for _, tk in ipairs(self.tokens) do
+		for i, tk in ipairs(self.tokens) do
 			if tk.whitespace then
 				for _, whitespace in ipairs(tk.whitespace) do
 					output = output .. whitespace.value
@@ -257,34 +404,106 @@ local function preprocess(code, defines)
 	return parser:Parse()
 end
 
-assert(
-	preprocess([[
+local function assert_find(code, find)
+	code = preprocess(code)
+	local start, stop = code:find(find, nil, true)
+
+	if start and stop then return end
+
+	error("Could not find " .. find .. " in " .. code)
+end
+
+assert_find([[
+#define X(x) x
+#define Y X(1)
+
+>Y<
+
+]], "> 1<")
+assert_find([[
+#define X(x) x
+#define Y(x) X(x)
+
+>Y(1)<
+
+]], "> 1<")
+assert_find(
+	[[
+	#define REPEAT_5(x) x x x x x
+	#define REPEAT_25(x) REPEAT_5(x)
+    >REPEAT_25(1)<
+]],
+	">" .. (" 1"):rep(5) .. "<"
+)
+assert_find(
+	[[
+	#define REPEAT_5(x) x x x x x
+	#define REPEAT_25(x) REPEAT_5(x) REPEAT_5(x)
+    >REPEAT_25(1)<
+]],
+	">" .. (" 1"):rep(10) .. "<"
+)
+assert_find(
+	[[
+	#define REPEAT_5(x) x x x x x
+	#define REPEAT_25(x) REPEAT_5(REPEAT_5(x)) 
+    >REPEAT_25(1)<
+]],
+	">" .. (" 1"):rep(25) .. "<"
+)
+assert_find([[
+	#define REPEAT(x) x
+    >REPEAT(1)<
+]], "> 1<")
+assert_find([[
+	#define REPEAT(x) x x
+    >REPEAT(1)<
+]], "> 1 1<")
+assert_find([[
+	#define REPEAT(x) x x x
+    >REPEAT(1)<
+]], "> 1 1 1<")
+assert_find([[
+	#define REPEAT(x) x x x x
+    >REPEAT(1)<
+]], "> 1 1 1 1<")
+assert_find(
+	[[
+	#define REPEAT_5(x) x x x x x
+	#define REPEAT_25(x) REPEAT_5(x)
+    >REPEAT_25(1)<
+]],
+	"> 1 1 1 1 1<"
+)
+assert_find(
+	[[
 #define TEST 1
 #define TEST2 2
 static int test = TEST + TEST2;
-]]):find("static int test = 1 + 2;", nil, true)
+]],
+	"static int test = 1 + 2;"
 )
-assert(
-	preprocess([[
+assert_find([[
 #define TEST(x) x*x
 static int test = TEST(2);
-]]):find("static int test =2*2;", nil, true)
-)
-assert(
-	preprocess([[
+]], "static int test = 2 * 2;")
+assert_find(
+	[[
 #define TEST(x,y) x*y
 static int test = TEST(2,4);
-]]):find("static int test =2*4;", nil, true)
+]],
+	"static int test = 2 * 4;"
 )
-assert(
-	preprocess([[
+assert_find(
+	[[
 #define TEST 1
 #undef TEST
 static int test = TEST;
-]]):find("static int test = TEST;", nil, true)
+]],
+	"static int test = TEST;"
 )
-assert(
-	preprocess([[
+assert_find(
+	[[
 #define MY_LIST \
 X(Item1, "This is a description of item 1") \
 X(Item2, "This is a description of item 2") \
@@ -294,5 +513,20 @@ X(Item3, "This is a description of item 3")
 enum ListItemType { MY_LIST }
 #undef X
 
-]]):find("enum ListItemType {Item1,Item2,Item3, }", nil, true)
+]],
+	"enum ListItemType { Item1 , Item2 , Item3 , }"
 )
+assert_find(
+	"#define max(a,b) ((a)>(b)?(a):(b)) \nint x = max(1,2);",
+	"( ( 1 ) > ( 2 ) ? ( 1 ) : ( 2 ) );"
+)
+assert_find(
+	"#define max(a,b) ((a)>(b)?(a):(b)) \nint x = max(1,2);",
+	"( ( 1 ) > ( 2 ) ? ( 1 ) : ( 2 ) );"
+)
+assert_find(
+	"#define STRINGIFY(a,b,c,d) #a #b #c #d \nSTRINGIFY(1,2,3,4);",
+	"\"1\" \"2\" \"3\" \"4\""
+)
+assert_find("#define STRINGIFY(a) #a \nSTRINGIFY(1);", "\"1\"")
+assert_find("#define STRINGIFY(a) #a \nSTRINGIFY((a,b,c));", "\"(a,b,c)\"")
