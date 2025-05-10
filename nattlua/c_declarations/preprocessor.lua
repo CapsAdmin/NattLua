@@ -203,60 +203,6 @@ do
 		return args
 	end
 
-	function META:CaptureArgsOld()
-		self:ExpectTokenValue("(")
-		local args = {}
-
-		for _ = self:GetPosition(), self:GetLength() do
-			if self:IsTokenValue(")") then break end
-
-			local tokens = {}
-
-			for _ = self:GetPosition(), self:GetLength() do
-				if self:IsTokenValue(",") then break end
-
-				if self:IsTokenValue(")") then break end
-
-				local tk = self:ConsumeToken()
-				local def = self:GetDefinition(tk.value)
-
-				if def then
-					if def.args then
-						local start = self:GetPosition()
-						self:ExpectTokenType("letter") -- consume the identifier
-						local args = self:CaptureArgs() -- capture all tokens separated by commas
-						local stop = self:GetPosition()
-
-						for i = stop - 1, start, -1 do
-							self:RemoveToken(i)
-						end
-
-						self.current_token_index = start
-						self:AddTokens(def.tokens)
-
-						for i, tokens in ipairs(args) do
-							table.insert(tokens, 1, def.args[i].value)
-						end
-					else
-						for i, v in ipairs(def.tokens) do
-							table.insert(tokens, v)
-						end
-					end
-				else
-					table.insert(tokens, tk)
-				end
-			end
-
-			table.insert(args, tokens)
-
-			if self:IsTokenValue(",") then self:ExpectTokenValue(",") end
-		end
-
-		table.print(args, 2)
-		self:ExpectTokenValue(")")
-		return args
-	end
-
 	function META:PrintState()
 		print("\n" .. tostring_tokens(self.tokens, self:GetPosition()))
 	end
@@ -318,17 +264,136 @@ do
 						end
 
 						self.current_token_index = start
-						self:AddTokens(def.tokens)
-						assert(#args == #def.args, "Argument count mismatch")
 
-						for i, tokens in ipairs(args) do
-							self:PushDefine(def.args[i].value, nil, tokens)
+						if tk.value == "__VA_OPT__" then
+							local va = self:GetDefinition("__VA_ARGS__")
+
+							if not va or #va.tokens == 0 or va.tokens[1].value == "" then
+
+							else
+								self:AddTokens(def.tokens)
+							end
+						else
+							self:AddTokens(def.tokens)
+						end
+
+						local has_var_arg = def.args[1] and def.args[#def.args].value == "..."
+
+						if has_var_arg then
+							if #args < #def.args - 1 then error("Argument count mismatch") end
+						else
+							assert(#args == #def.args, "Argument count mismatch")
+						end
+
+						if #args == 0 then
+							if def.args[#def.args].value == "..." then
+								self:PushDefine(
+									"__VA_ARGS__",
+									nil,
+									{
+										{
+											value = "",
+											type = "symbol",
+											whitespace = {
+												{value = " ", type = "space"},
+											},
+										},
+									}
+								)
+								self:PushDefine(
+									"__VA_OPT__",
+									{
+										{
+											value = "arg",
+											type = "letter",
+											whitespace = {
+												{value = " ", type = "space"},
+											},
+										},
+									},
+									{
+										{
+											value = ",",
+											type = "symbol",
+											whitespace = {
+												{value = " ", type = "space"},
+											},
+										},
+									}
+								)
+							end
+						else
+							for i, tokens in ipairs(args) do
+								if def.args[i].value == "..." then
+									local remaining = {}
+
+									for j = i, #args do
+										for _, token in ipairs(args[j]) do
+											if j ~= i then
+												table.insert(
+													remaining,
+													{
+														value = ",",
+														type = "symbol",
+														whitespace = {
+															{value = " ", type = "space"},
+														},
+													}
+												)
+											end
+
+											table.insert(remaining, token)
+										end
+									end
+
+									self:PushDefine("__VA_ARGS__", nil, remaining)
+									self:PushDefine(
+										"__VA_OPT__",
+										{
+											{
+												value = "arg",
+												type = "letter",
+												whitespace = {
+													{value = " ", type = "space"},
+												},
+											},
+										},
+										{
+											{
+												value = ",",
+												type = "symbol",
+												whitespace = {
+													{value = " ", type = "space"},
+												},
+											},
+										}
+									)
+
+									break
+								else
+									self:PushDefine(def.args[i].value, nil, tokens)
+								end
+							end
 						end
 
 						self:Parse()
 
-						for i, tokens in ipairs(args) do
-							self:PushUndefine(def.args[i].value)
+						if #args == 0 then
+							if def.args[#def.args].value == "..." then
+								self:PushUndefine("__VA_ARGS__")
+								self:PushUndefine("__VA_OPT__")
+							end
+						else
+							for i, tokens in ipairs(args) do
+								if def.args[i].value == "..." then
+									self:PushUndefine("__VA_ARGS__")
+									self:PushUndefine("__VA_OPT__")
+
+									break
+								else
+									self:PushUndefine(def.args[i].value)
+								end
+							end
 						end
 					else
 						self:RemoveToken(self:GetPosition()) -- remove the token we replace
@@ -413,6 +478,8 @@ local function assert_find(code, find)
 	error("Could not find " .. find .. " in " .. code)
 end
 
+assert_find("#define F(...) >__VA_ARGS__<\nF(0)", "> 0 <")
+assert_find("#define F(...) >__VA_ARGS__<\nF()", ">  <")
 assert_find([[
 #define X(x) x
 #define Y X(1)
@@ -530,3 +597,6 @@ assert_find(
 )
 assert_find("#define STRINGIFY(a) #a \nSTRINGIFY(1);", "\"1\"")
 assert_find("#define STRINGIFY(a) #a \nSTRINGIFY((a,b,c));", "\"(a,b,c)\"")
+assert_find("#define F(...) >__VA_ARGS__<\nF(1,2,3)", "> 1 , 2 , 3 <")
+assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF(1)", "f ( 0 , 1 )")
+assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF()", "f ( 0  )")
