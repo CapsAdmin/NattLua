@@ -57,6 +57,10 @@ do
 		return str .. "\n" .. str_point
 	end
 
+	local function is_stringinfy(self)
+		return self:GetToken(-1).value == "#" and self:GetToken(-2).value ~= "#"
+	end
+
 	do -- for normal define, can be overriden
 		function META:Define(identifier, args, tokens)
 			local new_tokens = {}
@@ -252,7 +256,27 @@ do
 
 				local def = self:GetDefinition(tk.value)
 
-				if def then
+				if is_stringinfy(self) then
+					local output = ""
+
+					for i, tk in ipairs(def.tokens) do
+						output = output .. tk.value
+					end
+
+					tk = {
+						value = output,
+						type = "string",
+						stringify = true,
+						whitespace = {
+							{value = " ", type = "space"},
+						},
+					}
+					tk.type = "string"
+					tk.value = "\"" .. output .. "\""
+					self:AddTokens({tk})
+					self:RemoveToken(self:GetPosition() - 1)
+					self:PrintState()
+				elseif def then
 					if def.args then
 						local start = self:GetPosition()
 						self:ExpectTokenType("letter") -- consume the identifier
@@ -400,39 +424,22 @@ do
 						local tk
 
 						if self:GetToken(-1).value == "#" and self:GetToken(-2).value == "#" then
-							if true then
-								local pos = self:GetPosition()
-								self:AddTokens(def.tokens)
-								tk = {
-									value = self.tokens[self:GetPosition() - 3].value .. self.tokens[self:GetPosition()].value,
-									type = "letter",
-									stringify = true,
-									whitespace = {
-										{value = "", type = "space"},
-									},
-								}
-								self:RemoveToken(pos)
-								self:RemoveToken(pos - 1)
-								self:RemoveToken(pos - 2)
-								self:RemoveToken(pos - 3)
-								self.current_token_index = pos - 3
-								self:AddTokens({tk})
-							else
-								tk = {
-									value = self.tokens[self:GetPosition() - 3].value .. self.tokens[self:GetPosition()].value,
-									type = "letter",
-									stringify = true,
-									whitespace = {
-										{value = " ", type = "space"},
-									},
-								}
-								print(tk.value)
-								tk.type = "string"
-								tk.value = output
-								self:AddTokens({tk})
-								self:RemoveToken(self:GetPosition() - 1)
-								self:RemoveToken(self:GetPosition() - 1)
-							end
+							local pos = self:GetPosition()
+							self:AddTokens(def.tokens)
+							tk = {
+								value = self.tokens[self:GetPosition() - 3].value .. self.tokens[self:GetPosition()].value,
+								type = "letter",
+								stringify = true,
+								whitespace = {
+									{value = "", type = "space"},
+								},
+							}
+							self:RemoveToken(pos)
+							self:RemoveToken(pos - 1)
+							self:RemoveToken(pos - 2)
+							self:RemoveToken(pos - 3)
+							self.current_token_index = pos - 3
+							self:AddTokens({tk})
 						elseif self:GetToken(-1).value == "#" then
 							local output = ""
 
@@ -509,7 +516,13 @@ local function assert_find(code, find)
 
 	if start and stop then return end
 
-	error("Could not find " .. find .. " in " .. code)
+	error("Could not find " .. find .. " in " .. code, 2)
+end
+
+assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
+
+do
+	return
 end
 
 assert_find("#define F(...) >__VA_ARGS__<\nF(0)", "> 0 <")
@@ -635,3 +648,41 @@ assert_find("#define F(...) >__VA_ARGS__<\nF(1,2,3)", "> 1 , 2 , 3 <")
 assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF(1)", "f ( 0 , 1 )")
 assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF()", "f ( 0  )")
 assert_find("#define F(a, b) >a##b<\nF(1,2)", ">12 <")
+assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
+
+do
+	return
+end
+
+assert_find(
+	"#define PREFIX(x) pre_##x\n#define SUFFIX(x) x##_post\nPREFIX(fix) SUFFIX(fix)",
+	"pre_fix fix_post"
+)
+
+do
+	return
+end
+
+-- Test redefinition of a macro
+assert_find("#define X 1\n#define X 2\nX", "2")
+-- Test empty macro definition
+assert_find("#define EMPTY\nEMPTY", "")
+-- Test multiple macro replacements on a single line
+assert_find("#define A 1\n#define B 2\nA + B + A", "1 + 2 + 1")
+-- Test empty arguments
+--assert_find("#define F(x,y) x and y\nF(,)", " and ")
+-- Test nested function calls
+assert_find("#define F(x) (2*x)\n#define G(y) F(y+1)\nG(5)", "( 2 * 5 + 1 )")
+-- Test complex expressions as arguments
+assert_find(
+	"#define MAX(a,b) ((a)>(b)?(a):(b))\nMAX(1+2,3*4)",
+	"( ( 1 + 2 ) > ( 3 * 4 ) ? ( 1 + 2 ) : ( 3 * 4 ) )"
+)
+-- Test reusing parameters
+assert_find("#define TRIPLE(x) x x x\nTRIPLE(abc)", "abc abc abc")
+-- Test stringification with spaces
+--assert_find("#define STR(x) #x\nSTR(  hello  world  )", "\"  hello  world  \"")
+-- Test stringification of a macro
+assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
+-- Test stringification of expressions
+assert_find("#define STR(x) #x\nSTR(a + b)", "\"a + b\"")
