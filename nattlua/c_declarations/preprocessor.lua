@@ -399,7 +399,41 @@ do
 						self:RemoveToken(self:GetPosition()) -- remove the token we replace
 						local tk
 
-						if self:GetToken(-1).value == "#" then
+						if self:GetToken(-1).value == "#" and self:GetToken(-2).value == "#" then
+							if true then
+								local pos = self:GetPosition()
+								self:AddTokens(def.tokens)
+								tk = {
+									value = self.tokens[self:GetPosition() - 3].value .. self.tokens[self:GetPosition()].value,
+									type = "letter",
+									stringify = true,
+									whitespace = {
+										{value = "", type = "space"},
+									},
+								}
+								self:RemoveToken(pos)
+								self:RemoveToken(pos - 1)
+								self:RemoveToken(pos - 2)
+								self:RemoveToken(pos - 3)
+								self.current_token_index = pos - 3
+								self:AddTokens({tk})
+							else
+								tk = {
+									value = self.tokens[self:GetPosition() - 3].value .. self.tokens[self:GetPosition()].value,
+									type = "letter",
+									stringify = true,
+									whitespace = {
+										{value = " ", type = "space"},
+									},
+								}
+								print(tk.value)
+								tk.type = "string"
+								tk.value = output
+								self:AddTokens({tk})
+								self:RemoveToken(self:GetPosition() - 1)
+								self:RemoveToken(self:GetPosition() - 1)
+							end
+						elseif self:GetToken(-1).value == "#" then
 							local output = ""
 
 							for i, tk in ipairs(def.tokens) do
@@ -600,3 +634,4 @@ assert_find("#define STRINGIFY(a) #a \nSTRINGIFY((a,b,c));", "\"(a,b,c)\"")
 assert_find("#define F(...) >__VA_ARGS__<\nF(1,2,3)", "> 1 , 2 , 3 <")
 assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF(1)", "f ( 0 , 1 )")
 assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF()", "f ( 0  )")
+assert_find("#define F(a, b) >a##b<\nF(1,2)", ">12 <")
