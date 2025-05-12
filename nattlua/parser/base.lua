@@ -252,6 +252,10 @@ function META:GetPosition()
 	return self.current_token_index
 end
 
+function META:SetPosition(pos--[[#: number]])
+	self.current_token_index = pos
+end
+
 function META:GetLength()
 	return #self.tokens
 end

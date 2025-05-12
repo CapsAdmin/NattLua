@@ -168,7 +168,7 @@ do
 							self:RemoveToken(i)
 						end
 
-						self.current_token_index = start
+						self:SetPosition(start)
 						self:AddTokens(def.tokens)
 
 						for i, tokens in ipairs(args) do
@@ -263,23 +263,20 @@ do
 		if not (def and self:IsTokenValue("(", 1)) then return false end
 
 		local start = self:GetPosition()
-		self:ExpectTokenType("letter") -- consume the identifier
-		local args = self:CaptureArgs() -- capture all tokens separated by commas
+		self:ExpectTokenType("letter")
+		local args = self:CaptureArgs()
 		local stop = self:GetPosition()
 
 		for i = stop - 1, start, -1 do
 			self:RemoveToken(i)
 		end
 
-		self.current_token_index = start
+		self:SetPosition(start)
 
 		if def.identifier == "__VA_OPT__" then
 			local va = self:GetDefinition("__VA_ARGS__")
 
-			if not va or #va.tokens == 0 or va.tokens[1].value == "" then
-
-			-- Empty __VA_ARGS__, do nothing
-			else
+			if va and #va.tokens > 0 and va.tokens[1].value ~= "" then
 				self:AddTokens(def.tokens)
 			end
 		else
@@ -294,13 +291,10 @@ do
 			assert(#args == #def.args, "Argument count mismatch")
 		end
 
-		-- Process all parameters from the definition
 		for i, param in ipairs(def.args) do
 			if param.value == "..." then
-				-- Handle variadic parameter
 				local remaining = {}
 
-				-- Gather remaining arguments (if any)
 				for j = i, #args do
 					for _, token in ipairs(args[j] or {}) do
 						if j ~= i then
@@ -311,7 +305,6 @@ do
 					end
 				end
 
-				-- If no tokens were collected, use an empty token
 				if #remaining == 0 then remaining = {self:NewToken("symbol", "")} end
 
 				self:PushDefine("__VA_ARGS__", nil, remaining)
@@ -327,9 +320,7 @@ do
 
 				break
 			else
-				-- Handle normal parameter
-				local tokens = args[i] or {}
-				self:PushDefine(param.value, nil, tokens)
+				self:PushDefine(param.value, nil, args[i] or {})
 			end
 		end
 
@@ -444,13 +435,7 @@ do
 					self:ExpandMacro()
 				)
 			then
-				local tk = self:GetToken()
-
-				if not tk then break end
-
-				local def = self:GetDefinition(tk.value)
-
-				if not def then self:Advance(1) end
+				if not self:GetDefinition() then self:Advance(1) end
 			end
 
 			if not self:GetToken() then break end
@@ -611,21 +596,20 @@ assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF(1)", "f ( 0 , 1 )"
 assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF()", "f ( 0  )")
 assert_find("#define F(a, b) >a##b<\nF(1,2)", ">12 <")
 
+-- WIP, not working yet
 if false then
-	--assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
-	do
-		return
-	end
-
+	assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
 	assert_find(
 		"#define PREFIX(x) pre_##x\n#define SUFFIX(x) x##_post\nPREFIX(fix) SUFFIX(fix)",
 		"pre_fix fix_post"
 	)
-
-	do
-		return
-	end
-
+	assert_find("#define EMPTY_ARG(a, b) a##b\nEMPTY_ARG(test, )", "test")
+	assert_find("#define EMPTY_ARG(a, b) a##b\nEMPTY_ARG(, test)", "test")
+	assert_find("#define STRINGIFY(a) #a\nSTRINGIFY(hello world)", "\"hello world\"")
+	assert_find(
+		"#define WHITESPACE(a) a\nWHITESPACE(  spaced   argument  )",
+		"  spaced   argument  "
+	)
 	-- Test redefinition of a macro
 	assert_find("#define X 1\n#define X 2\nX", "2")
 	-- Test empty macro definition
@@ -678,9 +662,6 @@ assert_find(
 	"#define DEBUG(...) printf(\"Debug: \" __VA_ARGS__)\nDEBUG(\"Value: %d\", x)",
 	"printf ( \"Debug: \" \"Value: %d\" , x )"
 )
--- Edge cases
---assert_find("#define EMPTY_ARG(a, b) a##b\nEMPTY_ARG(test, )", "test")
---assert_find("#define EMPTY_ARG(a, b) a##b\nEMPTY_ARG(, test)", "test")
 assert_find("#define EMPTY() nothing\nEMPTY()", "nothing")
 -- Complex expression arguments
 assert_find("#define COMPLEX(a) a*a\nCOMPLEX(1+2)", "1 + 2 * 1 + 2")
@@ -707,8 +688,5 @@ assert_find("#define COMMA(...) __VA_OPT__(,)__VA_ARGS__\nCOMMA(x)", ", x")
 assert_find("#define FUNC(a) a\nFUNC((1+2))", "( 1 + 2 )")
 -- Test macro with arguments that expand to another macro
 assert_find("#define X 10\n#define EXPAND(a) a\nEXPAND(X)", "10")
--- Test stringification of arguments
---assert_find("#define STRINGIFY(a) #a\nSTRINGIFY(hello world)", "\"hello world\"")
 -- Test concatenation with arguments
 assert_find("#define JOIN(a, b) a##b\nJOIN(pre, post)", "prepost") -- Test handling of whitespace in arguments
---assert_find("#define WHITESPACE(a) a\nWHITESPACE(  spaced   argument  )","  spaced   argument  ")
