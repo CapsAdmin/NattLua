@@ -43,39 +43,19 @@ do
 		return false
 	end
 
-	local function tostring_tokens(tokens, pos)
-		if not tokens then return "" end
-
-		local str = ""
-		local str_point = ""
-
-		for i, tk in ipairs(tokens) do
-			str = str .. " " .. tk.value
-			str_point = str_point .. " " .. (i == pos and "^" or (" "):rep(#tk.value))
-		end
-
-		return str .. "\n" .. str_point
-	end
-
-	local function is_stringinfy(self)
-		return self:GetToken(-1).value == "#" and self:GetToken(-2).value ~= "#"
-	end
-
 	do -- for normal define, can be overriden
 		function META:Define(identifier, args, tokens)
 			local new_tokens = {}
 
 			for i, v in ipairs(tokens) do
-				new_tokens[i] = {
-					value = v.value,
-					type = v.type,
-					whitespace = {
-						{value = " ", type = "space"},
-					},
+				local tk = self:NewToken(v.type, v.value)
+				tk.whitespace = {
+					{value = " ", type = "space"},
 				}
+				new_tokens[i] = tk
 			end
 
-			self.defines[identifier] = {args = args, tokens = new_tokens}
+			self.defines[identifier] = {args = args, tokens = new_tokens, identifier = identifier}
 		end
 
 		function META:Undefine(identifier)
@@ -88,17 +68,15 @@ do
 			local new_tokens = {}
 
 			for i, v in ipairs(tokens) do
-				new_tokens[i] = {
-					value = v.value,
-					type = v.type,
-					whitespace = {
-						{value = " ", type = "space"},
-					},
+				local tk = self:NewToken(v.type, v.value)
+				tk.whitespace = {
+					{value = " ", type = "space"},
 				}
+				new_tokens[i] = tk
 			end
 
 			self.define_stack[identifier] = self.define_stack[identifier] or {}
-			table.insert(self.define_stack[identifier], 1, {args = args, tokens = new_tokens})
+			table.insert(self.define_stack[identifier], 1, {args = args, tokens = new_tokens, identifier = identifier})
 		end
 
 		function META:PushUndefine(identifier)
@@ -111,7 +89,17 @@ do
 		end
 	end
 
-	function META:GetDefinition(identifier)
+	function META:GetDefinition(identifier, offset)
+		if not identifier then
+			local tk = self:GetToken(offset)
+
+			if not tk then return false end
+
+			if tk.type ~= "letter" then return false end
+
+			identifier = tk.value
+		end
+
 		if self.define_stack[identifier] then
 			return self.define_stack[identifier][1]
 		end
@@ -205,8 +193,21 @@ do
 		return args
 	end
 
-	function META:PrintState()
-		print("\n" .. tostring_tokens(self.tokens, self:GetPosition()))
+	function META:PrintState(tokens, pos)
+		pos = pos or self:GetPosition()
+
+		if not tokens then return "" end
+
+		local str = ""
+		local str_point = ""
+
+		for i, tk in ipairs(tokens) do
+			str = str .. " " .. tk.value
+			str_point = str_point .. " " .. (i == pos and "^" or (" "):rep(#tk.value))
+		end
+
+		str = str .. "\n" .. str_point
+		print("\n" .. str)
 	end
 
 	function META:ReadDefine()
@@ -255,11 +256,7 @@ do
 	end
 
 	function META:ExpandMacroCall()
-		local tk = self:GetToken()
-
-		if not tk then return false end
-
-		local def = self:GetDefinition(tk.value)
+		local def = self:GetDefinition()
 
 		if not (def and self:IsTokenValue("(", 1)) then return false end
 
@@ -274,7 +271,7 @@ do
 
 		self.current_token_index = start
 
-		if tk.value == "__VA_OPT__" then
+		if def.identifier == "__VA_OPT__" then
 			local va = self:GetDefinition("__VA_ARGS__")
 
 			if not va or #va.tokens == 0 or va.tokens[1].value == "" then
@@ -368,13 +365,11 @@ do
 			return false
 		end
 
-		local tk_left = self:GetToken()
-		local def_left = self:GetDefinition(tk_left.value)
+		local def_left = self:GetDefinition()
 
 		if not def_left then return false end
 
-		local tk_right = self:GetToken(3)
-		local def_right = self:GetDefinition(tk_right.value)
+		local def_right = self:GetDefinition(nil, 3)
 
 		if not def_right then return false end
 
@@ -396,11 +391,7 @@ do
 	function META:ExpandMacroString()
 		if not self:IsTokenValue("#") then return false end
 
-		local tk = self:GetToken(1)
-
-		if not tk then return false end
-
-		local def = self:GetDefinition(tk.value)
+		local def = self:GetDefinition(nil, 1)
 
 		if not def then return false end
 
@@ -411,7 +402,7 @@ do
 			output = output .. tk.value
 		end
 
-		tk = self:NewToken("string", "\"" .. output .. "\"")
+		local tk = self:NewToken("string", "\"" .. output .. "\"")
 		tk.whitespace = {
 			{value = " ", type = "space"},
 		}
@@ -422,11 +413,7 @@ do
 	end
 
 	function META:ExpandMacro()
-		local tk = self:GetToken()
-
-		if not tk then return false end
-
-		local def = self:GetDefinition(tk.value)
+		local def = self:GetDefinition()
 
 		if not def then return false end
 
