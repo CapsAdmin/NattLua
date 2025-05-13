@@ -48,11 +48,8 @@ do
 			local new_tokens = {}
 
 			for i, v in ipairs(tokens) do
-				local tk = self:NewToken(v.type, v.value)
-				tk.whitespace = {
-					{value = " ", type = "space"},
-				}
-				new_tokens[i] = tk
+				new_tokens[i] = self:NewToken(v.type, v.value)
+				new_tokens[i].whitespace = v.whitespace
 			end
 
 			self.defines[identifier] = {args = args, tokens = new_tokens, identifier = identifier}
@@ -68,11 +65,8 @@ do
 			local new_tokens = {}
 
 			for i, v in ipairs(tokens) do
-				local tk = self:NewToken(v.type, v.value)
-				tk.whitespace = {
-					{value = " ", type = "space"},
-				}
-				new_tokens[i] = tk
+				new_tokens[i] = self:NewToken(v.type, v.value)
+				new_tokens[i].whitespace = v.whitespace
 			end
 
 			self.define_stack[identifier] = self.define_stack[identifier] or {}
@@ -130,57 +124,93 @@ do
 		return tks
 	end
 
-	function META:CaptureArgs()
+	function META:CaptureArgumentDefinition()
+		self:ExpectTokenValue("(")
+		local args = {}
+
+		for i = 1, self:GetLength() do
+			if self:IsTokenValue(")") then break end
+
+			local node = self:ExpectTokenType("letter")
+
+			if not node then break end
+
+			args[i] = node
+
+			if not self:IsTokenValue(",") then break end
+
+			self:ExpectTokenValue(",")
+		end
+
+		self:ExpectTokenValue(")")
+		return args
+	end
+
+	function META:CaptureArgs(def)
+		local is_va_opt = def and def.identifier == "__VA_OPT__"
 		self:ExpectTokenValue("(")
 		local args = {}
 
 		for _ = self:GetPosition(), self:GetLength() do
-			if self:IsTokenValue(")") then break end
-
-			local tokens = {}
-			local paren_depth = 0 -- Track the parenthesis nesting level
-			for _ = self:GetPosition(), self:GetLength() do
-				-- Only break on comma if we're at the top level (paren_depth == 0)
-				if self:IsTokenValue(",") and paren_depth == 0 then break end
-
-				-- Break on closing parenthesis only at the top level
-				if self:IsTokenValue(")") and paren_depth == 0 then break end
-
-				local tk = self:ConsumeToken()
-
-				-- Update parenthesis depth based on the token we just consumed
-				if tk.value == "(" then
-					paren_depth = paren_depth + 1
-				elseif tk.value == ")" then
-					paren_depth = paren_depth - 1
+			if self:IsTokenValue(")") then
+				if not is_va_opt and self:IsTokenValue(",", -1) then
+					local tokens = {}
+					table.insert(tokens, self:NewToken("symbol", ""))
+					table.insert(args, tokens)
 				end
 
-				local def = self:GetDefinition(tk.value)
+				break
+			end
 
-				if def then
-					if def.args then
-						local start = self:GetPosition()
-						self:ExpectTokenType("letter") -- consume the identifier
-						local args = self:CaptureArgs() -- capture all tokens separated by commas
-						local stop = self:GetPosition()
+			local tokens = {}
 
-						for i = stop - 1, start, -1 do
-							self:RemoveToken(i)
-						end
+			if not is_va_opt and self:IsTokenValue(",") then
+				table.insert(tokens, self:NewToken("symbol", ""))
+			else
+				local paren_depth = 0 -- Track the parenthesis nesting level
+				for _ = self:GetPosition(), self:GetLength() do
+					-- Only break on comma if we're at the top level (paren_depth == 0)
+					if self:IsTokenValue(",") and paren_depth == 0 then break end
 
-						self:SetPosition(start)
-						self:AddTokens(def.tokens)
+					-- Break on closing parenthesis only at the top level
+					if self:IsTokenValue(")") and paren_depth == 0 then break end
 
-						for i, tokens in ipairs(args) do
-							table.insert(tokens, 1, def.args[i].value)
+					local tk = self:ConsumeToken()
+
+					-- Update parenthesis depth based on the token we just consumed
+					if tk.value == "(" then
+						paren_depth = paren_depth + 1
+					elseif tk.value == ")" then
+						paren_depth = paren_depth - 1
+					end
+
+					local def = self:GetDefinition(tk.value)
+
+					if def then
+						if def.args then
+							local start = self:GetPosition()
+							self:ExpectTokenType("letter") -- consume the identifier
+							local args = self:CaptureArgs() -- capture all tokens separated by commas
+							local stop = self:GetPosition()
+
+							for i = stop - 1, start, -1 do
+								self:RemoveToken(i)
+							end
+
+							self:SetPosition(start)
+							self:AddTokens(def.tokens)
+
+							for i, tokens in ipairs(args) do
+								table.insert(tokens, 1, def.args[i].value)
+							end
+						else
+							for i, v in ipairs(def.tokens) do
+								table.insert(tokens, v)
+							end
 						end
 					else
-						for i, v in ipairs(def.tokens) do
-							table.insert(tokens, v)
-						end
+						table.insert(tokens, tk)
 					end
-				else
-					table.insert(tokens, tk)
 				end
 			end
 
@@ -190,10 +220,34 @@ do
 		end
 
 		self:ExpectTokenValue(")")
+
+		for i, tokens in ipairs(args) do
+			if i == 1 then
+				for i, tk in ipairs(tokens) do
+					if tk.whitespace then
+						tk.whitespace = {
+							self:NewToken("whitespace", " "),
+						}
+					end
+				end
+
+				if tokens[1] then tokens[1].whitespace = nil end
+			else
+				for _, tk in ipairs(tokens) do
+					if tk.whitespace then
+						tk.whitespace = {
+							self:NewToken("whitespace", " "),
+						}
+					end
+				end
+			end
+		end
+
 		return args
 	end
 
 	function META:PrintState(tokens, pos)
+		tokens = tokens or self.tokens
 		pos = pos or self:GetPosition()
 
 		if not tokens then return "" end
@@ -218,29 +272,7 @@ do
 		local hashtag = self:ExpectTokenValue("#")
 		local directive = self:ExpectTokenValue("define")
 		local identifier = self:ExpectTokenType("letter")
-		local args = nil
-
-		if self:IsTokenValue("(") then
-			self:ExpectTokenValue("(")
-			args = {}
-
-			for i = 1, self:GetLength() do
-				if self:IsTokenValue(")") then break end
-
-				local node = self:ExpectTokenType("letter")
-
-				if not node then break end
-
-				args[i] = node
-
-				if not self:IsTokenValue(",") then break end
-
-				self:ExpectTokenValue(",")
-			end
-
-			self:ExpectTokenValue(")")
-		end
-
+		local args = self:IsTokenValue("(") and self:CaptureArgumentDefinition() or nil
 		self:Define(identifier.value, args, self:CaptureTokens())
 		return true
 	end
@@ -264,7 +296,7 @@ do
 
 		local start = self:GetPosition()
 		self:ExpectTokenType("letter")
-		local args = self:CaptureArgs()
+		local args = self:CaptureArgs(def)
 		local stop = self:GetPosition()
 
 		for i = stop - 1, start, -1 do
@@ -377,16 +409,7 @@ do
 		if not def then return false end
 
 		self:RemoveToken(self:GetPosition())
-		local output = ""
-
-		for i, tk in ipairs(def.tokens) do
-			output = output .. tk.value
-		end
-
-		local tk = self:NewToken("string", "\"" .. output .. "\"")
-		tk.whitespace = {
-			{value = " ", type = "space"},
-		}
+		local tk = self:NewToken("string", "\"" .. self:ToString(def.tokens, true) .. "\"")
 		self:RemoveToken(self:GetPosition())
 		self:AddTokens({tk})
 		self:Advance(#def.tokens)
@@ -408,12 +431,19 @@ do
 	end
 
 	function META:ToString(tokens, skip_whitespace)
+		tokens = tokens or self.tokens
 		local output = ""
 
-		for i, tk in ipairs(tokens or self.tokens) do
-			if not skip_whitespace and tk.whitespace then
-				for _, whitespace in ipairs(tk.whitespace) do
-					output = output .. whitespace.value
+		for i, tk in ipairs(tokens) do
+			if not skip_whitespace then
+				if tk.whitespace then
+					for _, whitespace in ipairs(tk.whitespace) do
+						output = output .. whitespace.value
+					end
+				else
+					if tokens[i - 1] and (tk.type ~= "symbol") and tk.type == tokens[i - 1].type then
+						output = output .. " "
+					end
 				end
 			end
 
@@ -469,32 +499,59 @@ local function assert_find(code, find)
 
 	if start and stop then return end
 
-	error("Could not find " .. find .. " in " .. code, 2)
+	error("Could not find:\n" .. find .. "\nin:\n" .. code, 2)
 end
 
-assert_find("#define F(...) >__VA_ARGS__<\nF(0)", "> 0 <")
-assert_find("#define F(...) >__VA_ARGS__<\nF()", ">  <")
+local function ones(count)
+	local str = {}
+
+	for i = 1, count do
+		str[i] = "1"
+	end
+
+	return table.concat(str, " ")
+end
+
+assert_find("#define S(a) a\nX(S(spaced-argument))", "X(spaced-argument)")
+assert_find("#define S(a) a\nX(S(spaced - argument))", "X(spaced - argument)")
+assert_find("#define S(a) a\nX(S( spaced - argument ))", "X(spaced - argument)")
+assert_find("#define S(a) a\nX(S( spaced-    argument ))", "X(spaced- argument)")
+assert_find("#define S(a) a\nX(S( spaced -argument ))", "X(spaced -argument)")
+assert_find("#define F(x,y) x and y\nF(,)", " and ")
+assert_find("#define F(...) >__VA_ARGS__<\nF(0)", ">0<")
+assert_find("#define F(...) >__VA_ARGS__<\nF()", "><")
 assert_find([[
 #define X(x) x
 #define Y X(1)
 
 >Y<
 
-]], "> 1<")
+]], ">1<")
 assert_find([[
 #define X(x) x
 #define Y(x) X(x)
 
 >Y(1)<
 
-]], "> 1<")
+]], ">1<")
+
+local function ones(count)
+	local str = {}
+
+	for i = 1, count do
+		str[i] = "1"
+	end
+
+	return table.concat(str, " ")
+end
+
 assert_find(
 	[[
 	#define REPEAT_5(x) x x x x x
 	#define REPEAT_25(x) REPEAT_5(x)
     >REPEAT_25(1)<
 ]],
-	">" .. (" 1"):rep(5) .. "<"
+	">" .. ones(5) .. "<"
 )
 assert_find(
 	[[
@@ -502,7 +559,7 @@ assert_find(
 	#define REPEAT_25(x) REPEAT_5(x) REPEAT_5(x)
     >REPEAT_25(1)<
 ]],
-	">" .. (" 1"):rep(10) .. "<"
+	">" .. ones(10) .. "<"
 )
 assert_find(
 	[[
@@ -510,31 +567,31 @@ assert_find(
 	#define REPEAT_25(x) REPEAT_5(REPEAT_5(x)) 
     >REPEAT_25(1)<
 ]],
-	">" .. (" 1"):rep(25) .. "<"
+	">" .. ones(25) .. "<"
 )
 assert_find([[
 	#define REPEAT(x) x
     >REPEAT(1)<
-]], "> 1<")
+]], ">1<")
 assert_find([[
 	#define REPEAT(x) x x
     >REPEAT(1)<
-]], "> 1 1<")
+]], ">1 1<")
 assert_find([[
 	#define REPEAT(x) x x x
     >REPEAT(1)<
-]], "> 1 1 1<")
+]], ">1 1 1<")
 assert_find([[
 	#define REPEAT(x) x x x x
     >REPEAT(1)<
-]], "> 1 1 1 1<")
+]], ">1 1 1 1<")
 assert_find(
 	[[
 	#define REPEAT_5(x) x x x x x
 	#define REPEAT_25(x) REPEAT_5(x)
     >REPEAT_25(1)<
 ]],
-	"> 1 1 1 1 1<"
+	">1 1 1 1 1<"
 )
 assert_find(
 	[[
@@ -547,13 +604,13 @@ static int test = TEST + TEST2;
 assert_find([[
 #define TEST(x) x*x
 static int test = TEST(2);
-]], "static int test = 2 * 2;")
+]], "static int test =2*2;")
 assert_find(
 	[[
 #define TEST(x,y) x*y
 static int test = TEST(2,4);
 ]],
-	"static int test = 2 * 4;"
+	"static int test =2*4;"
 )
 assert_find(
 	[[
@@ -575,69 +632,46 @@ enum ListItemType { MY_LIST }
 #undef X
 
 ]],
-	"enum ListItemType { Item1 , Item2 , Item3 , }"
+	"enum ListItemType {Item1,Item2,Item3, }"
 )
-assert_find(
-	"#define max(a,b) ((a)>(b)?(a):(b)) \nint x = max(1,2);",
-	"( ( 1 ) > ( 2 ) ? ( 1 ) : ( 2 ) );"
-)
-assert_find(
-	"#define max(a,b) ((a)>(b)?(a):(b)) \nint x = max(1,2);",
-	"( ( 1 ) > ( 2 ) ? ( 1 ) : ( 2 ) );"
-)
+assert_find("#define max(a,b) ((a)>(b)?(a):(b)) \nint x = max(1,2);", "((1)>(2)?(1):(2));")
+assert_find("#define max(a,b) ((a)>(b)?(a):(b)) \nint x = max(1,2);", "((1)>(2)?(1):(2));")
 assert_find(
 	"#define STRINGIFY(a,b,c,d) #a #b #c #d \nSTRINGIFY(1,2,3,4);",
 	"\"1\" \"2\" \"3\" \"4\""
 )
 assert_find("#define STRINGIFY(a) #a \nSTRINGIFY(1);", "\"1\"")
 assert_find("#define STRINGIFY(a) #a \nSTRINGIFY((a,b,c));", "\"(a,b,c)\"")
-assert_find("#define F(...) >__VA_ARGS__<\nF(1,2,3)", "> 1 , 2 , 3 <")
-assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF(1)", "f ( 0 , 1 )")
-assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF()", "f ( 0  )")
-assert_find("#define F(a, b) >a##b<\nF(1,2)", ">12 <")
+assert_find("#define F(...) >__VA_ARGS__<\nF(1,2,3)", ">1,2,3<")
+assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF(1)", "f(0,1)")
+assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF()", "f(0)")
+assert_find("#define F(a, b) >a##b<\nF(1,2)", ">12<")
+assert_find(
+	"#define MAX(a,b) ((a)>(b)?(a):(b))\nMAX(1+2,3*4)",
+	"((a)>(b)?(a):(b)) ((1+2)>(3*4)?(1+2):(3*4))"
+)
+assert_find("#define X 1\n#define X 2\nX", "2")
+assert_find("#define F(x) (2*x)\n#define G(y) F(y+1)\nG(5)", "(2*5+1)")
+assert_find("#define F(x,y) x and y\nF(,)", " and ")
+assert_find("#define EMPTY_ARG(a, b) a##b\nEMPTY_ARG(test, )", "test")
+assert_find("#define EMPTY_ARG(a, b) a##b\nEMPTY_ARG(, test)", "test")
+assert_find("#define EMPTY\nEMPTY", "")
+assert_find("#define A 1\n#define B 2\nA + B + A", "1 + 2 + 1")
+assert_find("#define TRIPLE(x) x x x\nTRIPLE(abc)", "abc abc abc")
+assert_find("#define PLUS(a, b) a + b\nPLUS(1, 2)", "1 + 2")
+assert_find("#define MULT(a, b) a * b\nMULT(3, 4)", "3 * 4")
 
--- WIP, not working yet
 if false then
-	assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
+	assert_find("#define STR(x) #x\nSTR(  hello  world  )", "\"hello world\"")
+	assert_find("#define A value\n#define (x) #x\nSTR(A)", "\"A\"")
 	assert_find(
 		"#define PREFIX(x) pre_##x\n#define SUFFIX(x) x##_post\nPREFIX(fix) SUFFIX(fix)",
 		"pre_fix fix_post"
 	)
-	assert_find("#define EMPTY_ARG(a, b) a##b\nEMPTY_ARG(test, )", "test")
-	assert_find("#define EMPTY_ARG(a, b) a##b\nEMPTY_ARG(, test)", "test")
 	assert_find("#define STRINGIFY(a) #a\nSTRINGIFY(hello world)", "\"hello world\"")
-	assert_find(
-		"#define WHITESPACE(a) a\nWHITESPACE(  spaced   argument  )",
-		"  spaced   argument  "
-	)
-	-- Test redefinition of a macro
-	assert_find("#define X 1\n#define X 2\nX", "2")
-	-- Test empty macro definition
-	assert_find("#define EMPTY\nEMPTY", "")
-	-- Test multiple macro replacements on a single line
-	assert_find("#define A 1\n#define B 2\nA + B + A", "1 + 2 + 1")
-	-- Test empty arguments
-	--assert_find("#define F(x,y) x and y\nF(,)", " and ")
-	-- Test nested function calls
-	assert_find("#define F(x) (2*x)\n#define G(y) F(y+1)\nG(5)", "( 2 * 5 + 1 )")
-	-- Test complex expressions as arguments
-	assert_find(
-		"#define MAX(a,b) ((a)>(b)?(a):(b))\nMAX(1+2,3*4)",
-		"( ( 1 + 2 ) > ( 3 * 4 ) ? ( 1 + 2 ) : ( 3 * 4 ) )"
-	)
-	-- Test reusing parameters
-	assert_find("#define TRIPLE(x) x x x\nTRIPLE(abc)", "abc abc abc")
-	-- Test stringification with spaces
-	--assert_find("#define STR(x) #x\nSTR(  hello  world  )", "\"  hello  world  \"")
-	-- Test stringification of a macro
 	assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
-	-- Test stringification of expressions
 	assert_find("#define STR(x) #x\nSTR(a + b)", "\"a + b\"")
 end
-
--- Basic argument tests
-assert_find("#define PLUS(a, b) a + b\nPLUS(1, 2)", "1 + 2")
-assert_find("#define MULT(a, b) a * b\nMULT(3, 4)", "3 * 4")
 
 -- Test argument error cases
 local function assert_error(code, error_msg)
@@ -650,43 +684,31 @@ end
 
 assert_error("#define FUNC(a, b) a + b\nFUNC(1)", "Argument count mismatch")
 assert_error("#define FUNC(a, b, c) a + b + c\nFUNC(1, 2)", "Argument count mismatch")
--- Test too many arguments
 assert_error("#define FUNC(a, b) a + b\nFUNC(1, 2, 3)", "Argument count mismatch")
--- Variadic argument tests
 assert_find(
 	"#define VARIADIC(a, ...) a __VA_ARGS__\nVARIADIC(first, second, third)",
-	"first second , third"
+	"first second, third"
 )
 assert_find("#define VARIADIC(a, ...) a __VA_ARGS__\nVARIADIC(only)", "only")
 assert_find(
 	"#define DEBUG(...) printf(\"Debug: \" __VA_ARGS__)\nDEBUG(\"Value: %d\", x)",
-	"printf ( \"Debug: \" \"Value: %d\" , x )"
+	"printf(\"Debug: \" \"Value: %d\", x)"
 )
 assert_find("#define EMPTY() nothing\nEMPTY()", "nothing")
--- Complex expression arguments
-assert_find("#define COMPLEX(a) a*a\nCOMPLEX(1+2)", "1 + 2 * 1 + 2")
-assert_find("#define PAREN(a) (a)\nPAREN(1+2*3)", "( 1 + 2 * 3 )")
--- Nested macro calls
-assert_find("#define INNER(x) x+x\n#define OUTER(y) INNER(y)\nOUTER(5)", "5 + 5")
-assert_find(
-	"#define A(x) x+1\n#define B(y) A(y*2)\n#define C(z) B(z-1)\nC(5)",
-	"5 - 1 * 2 + 1"
-)
--- Testing with empty variadic arguments
+assert_find("#define COMPLEX(a) a*a\nCOMPLEX(1+2)", "1+2*1+2")
+assert_find("#define PAREN(a) (a)\nPAREN(1+2*3)", "(1+2*3)")
+assert_find("#define INNER(x) x+x\n#define OUTER(y) INNER(y)\nOUTER(5)", "5+5")
+assert_find("#define A(x) x+1\n#define B(y) A(y*2)\n#define C(z) B(z-1)\nC(5)", "5-1*2+1")
 assert_find(
 	"#define LOG(fmt, ...) printf(fmt __VA_OPT__(,) __VA_ARGS__)\nLOG(\"Hello\")",
-	"printf ( \"Hello\"  )"
+	"printf(\"Hello\")"
 )
 assert_find(
 	"#define LOG(fmt, ...) printf(fmt __VA_OPT__(,) __VA_ARGS__)\nLOG(\"Hello\", \"World\")",
-	"printf ( \"Hello\" , \"World\" )"
+	"printf(\"Hello\", \"World\")"
 )
--- Test comma placement in variadic macros
 assert_find("#define COMMA(...) __VA_OPT__(,)__VA_ARGS__\nCOMMA()", "")
-assert_find("#define COMMA(...) __VA_OPT__(,)__VA_ARGS__\nCOMMA(x)", ", x")
--- Test with parenthesized arguments
-assert_find("#define FUNC(a) a\nFUNC((1+2))", "( 1 + 2 )")
--- Test macro with arguments that expand to another macro
+assert_find("#define COMMA(...) __VA_OPT__(,)__VA_ARGS__\nCOMMA(x)", ",x")
+assert_find("#define FUNC(a) a\nFUNC((1+2))", "(1+2)")
 assert_find("#define X 10\n#define EXPAND(a) a\nEXPAND(X)", "10")
--- Test concatenation with arguments
-assert_find("#define JOIN(a, b) a##b\nJOIN(pre, post)", "prepost") -- Test handling of whitespace in arguments
+assert_find("#define JOIN(a, b) a##b\nJOIN(pre, post)", "prepost")
