@@ -421,11 +421,7 @@ do
 
 		self:RemoveToken(self:GetPosition())
 		self:AddTokens(def.tokens)
-
-		-- if the first token is another macro, we need to process it
-		if not self:GetDefinition(self:GetToken().value) then
-			self:Advance(#def.tokens)
-		end
+		return true
 	end
 
 	function META:ToString(tokens, skip_whitespace)
@@ -451,8 +447,20 @@ do
 		return output
 	end
 
+	function META:NextToken()
+		if not self:GetDefinition() then
+			self:Advance(1)
+
+			if not self:GetToken() then return false end
+
+			return true
+		end
+
+		return false
+	end
+
 	function META:Parse()
-		for _ = self:GetPosition(), self:GetLength() do
+		while true do
 			if
 				not (
 					self:ReadDefine() or
@@ -460,16 +468,13 @@ do
 					self:ExpandMacroCall() or
 					self:ExpandMacroConcatenation() or
 					self:ExpandMacroString() or
-					self:ExpandMacro()
+					self:ExpandMacro() or
+					self:NextToken()
 				)
 			then
-				if not self:GetDefinition() then self:Advance(1) end
+				break
 			end
-
-			if not self:GetToken() then break end
 		end
-
-		return output
 	end
 
 	Parser = META.New
@@ -514,7 +519,6 @@ do -- tests
 		return table.concat(str, " ")
 	end
 
-	--assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
 	assert_find("#define STR(a) #a\nSTR(hello world)", "\"hello world\"")
 	assert_find("#define STR(x) #x\nSTR(  hello  world  )", "\"hello world\"")
 	assert_find("#define S(a) a\nX(S(spaced-argument))", "X(spaced-argument)")
