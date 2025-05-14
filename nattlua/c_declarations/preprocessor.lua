@@ -165,50 +165,32 @@ do
 			if not is_va_opt and self:IsTokenValue(",") then
 				table.insert(tokens, self:NewToken("symbol", ""))
 			else
-				local paren_depth = 0 -- Track the parenthesis nesting level
-				for _ = self:GetPosition(), self:GetLength() do
-					-- Only break on comma if we're at the top level (paren_depth == 0)
-					if self:IsTokenValue(",") and paren_depth == 0 then break end
+				local paren_depth = 0
 
-					-- Break on closing parenthesis only at the top level
-					if self:IsTokenValue(")") and paren_depth == 0 then break end
+				for _ = self:GetPosition(), self:GetLength() do
+					if paren_depth == 0 then
+						if self:IsTokenValue(",") then break end
+
+						if self:IsTokenValue(")") then break end
+					end
+
+					local pos = self:GetPosition()
+
+					if self:ExpandMacroCall() then self:SetPosition(pos) end
+
+					pos = self:GetPosition()
+
+					if self:ExpandMacro() then self:SetPosition(pos) end
 
 					local tk = self:ConsumeToken()
 
-					-- Update parenthesis depth based on the token we just consumed
 					if tk.value == "(" then
 						paren_depth = paren_depth + 1
 					elseif tk.value == ")" then
 						paren_depth = paren_depth - 1
 					end
 
-					local def = self:GetDefinition(tk.value)
-
-					if def then
-						if def.args then
-							local start = self:GetPosition()
-							self:ExpectTokenType("letter") -- consume the identifier
-							local args = self:CaptureArgs() -- capture all tokens separated by commas
-							local stop = self:GetPosition()
-
-							for i = stop - 1, start, -1 do
-								self:RemoveToken(i)
-							end
-
-							self:SetPosition(start)
-							self:AddTokens(def.tokens)
-
-							for i, tokens in ipairs(args) do
-								table.insert(tokens, 1, def.args[i].value)
-							end
-						else
-							for i, v in ipairs(def.tokens) do
-								table.insert(tokens, v)
-							end
-						end
-					else
-						table.insert(tokens, tk)
-					end
+					table.insert(tokens, tk)
 				end
 			end
 
