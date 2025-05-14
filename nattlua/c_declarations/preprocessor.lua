@@ -1,5 +1,3 @@
-local Code = require("nattlua.code").New
-local Lexer = require("nattlua.lexer.lexer").New
 local Parser = nil
 
 do
@@ -477,153 +475,147 @@ do
 	Parser = META.New
 end
 
-local function lex(code)
-	local lexer = Lexer(code)
-	lexer.ReadShebang = function()
-		return false
-	end
-	return lexer:GetTokens()
-end
+do -- tests
+	local Code = require("nattlua.code").New
+	local Lexer = require("nattlua.lexer.lexer").New
 
-local function preprocess(code, defines)
-	local code = Code(code, "test.c")
-	local tokens = lex(code)
-	local parser = Parser(tokens, code)
-	parser:Parse()
-	return parser:ToString()
-end
-
-local function assert_find(code, find)
-	code = preprocess(code)
-	local start, stop = code:find(find, nil, true)
-
-	if start and stop then return end
-
-	error("Could not find:\n" .. find .. "\nin:\n" .. code, 2)
-end
-
-local function ones(count)
-	local str = {}
-
-	for i = 1, count do
-		str[i] = "1"
+	local function lex(code)
+		local lexer = Lexer(code)
+		lexer.ReadShebang = function()
+			return false
+		end
+		return lexer:GetTokens()
 	end
 
-	return table.concat(str, " ")
-end
+	local function preprocess(code, defines)
+		local code = Code(code, "test.c")
+		local tokens = lex(code)
+		local parser = Parser(tokens, code)
+		parser:Parse()
+		return parser:ToString()
+	end
 
-assert_find("#define STR(a) #a\nSTR(hello world)", "\"hello world\"")
-assert_find("#define STR(x) #x\nSTR(  hello  world  )", "\"hello world\"")
-assert_find("#define S(a) a\nX(S(spaced-argument))", "X(spaced-argument)")
-assert_find("#define S(a) a\nX(S(spaced - argument))", "X(spaced - argument)")
-assert_find("#define S(a) a\nX(S( spaced - argument ))", "X(spaced - argument)")
-assert_find("#define S(a) a\nX(S( spaced-    argument ))", "X(spaced- argument)")
-assert_find("#define S(a) a\nX(S( spaced -argument ))", "X(spaced -argument)")
-assert_find("#define F(x,y) x and y\nF(,)", " and ")
-assert_find("#define F(...) >__VA_ARGS__<\nF(0)", ">0<")
-assert_find("#define F(...) >__VA_ARGS__<\nF()", "><")
-assert_find([[
+	local function assert_find(code, find)
+		code = preprocess(code)
+		local start, stop = code:find(find, nil, true)
+
+		if start and stop then return end
+
+		error("Could not find:\n" .. find .. "\nin:\n" .. code, 2)
+	end
+
+	local function ones(count)
+		local str = {}
+
+		for i = 1, count do
+			str[i] = "1"
+		end
+
+		return table.concat(str, " ")
+	end
+
+	--assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
+	assert_find("#define STR(a) #a\nSTR(hello world)", "\"hello world\"")
+	assert_find("#define STR(x) #x\nSTR(  hello  world  )", "\"hello world\"")
+	assert_find("#define S(a) a\nX(S(spaced-argument))", "X(spaced-argument)")
+	assert_find("#define S(a) a\nX(S(spaced - argument))", "X(spaced - argument)")
+	assert_find("#define S(a) a\nX(S( spaced - argument ))", "X(spaced - argument)")
+	assert_find("#define S(a) a\nX(S( spaced-    argument ))", "X(spaced- argument)")
+	assert_find("#define S(a) a\nX(S( spaced -argument ))", "X(spaced -argument)")
+	assert_find("#define F(x,y) x and y\nF(,)", " and ")
+	assert_find("#define F(...) >__VA_ARGS__<\nF(0)", ">0<")
+	assert_find("#define F(...) >__VA_ARGS__<\nF()", "><")
+	assert_find([[
 #define X(x) x
 #define Y X(1)
 
 >Y<
 
 ]], ">1<")
-assert_find([[
+	assert_find([[
 #define X(x) x
 #define Y(x) X(x)
 
 >Y(1)<
 
 ]], ">1<")
-
-local function ones(count)
-	local str = {}
-
-	for i = 1, count do
-		str[i] = "1"
-	end
-
-	return table.concat(str, " ")
-end
-
-assert_find(
-	[[
+	assert_find(
+		[[
 	#define REPEAT_5(x) x x x x x
 	#define REPEAT_25(x) REPEAT_5(x)
     >REPEAT_25(1)<
 ]],
-	">" .. ones(5) .. "<"
-)
-assert_find(
-	[[
+		">" .. ones(5) .. "<"
+	)
+	assert_find(
+		[[
 	#define REPEAT_5(x) x x x x x
 	#define REPEAT_25(x) REPEAT_5(x) REPEAT_5(x)
     >REPEAT_25(1)<
 ]],
-	">" .. ones(10) .. "<"
-)
-assert_find(
-	[[
+		">" .. ones(10) .. "<"
+	)
+	assert_find(
+		[[
 	#define REPEAT_5(x) x x x x x
 	#define REPEAT_25(x) REPEAT_5(REPEAT_5(x)) 
     >REPEAT_25(1)<
 ]],
-	">" .. ones(25) .. "<"
-)
-assert_find([[
+		">" .. ones(25) .. "<"
+	)
+	assert_find([[
 	#define REPEAT(x) x
     >REPEAT(1)<
 ]], ">1<")
-assert_find([[
+	assert_find([[
 	#define REPEAT(x) x x
     >REPEAT(1)<
 ]], ">1 1<")
-assert_find([[
+	assert_find([[
 	#define REPEAT(x) x x x
     >REPEAT(1)<
 ]], ">1 1 1<")
-assert_find([[
+	assert_find([[
 	#define REPEAT(x) x x x x
     >REPEAT(1)<
 ]], ">1 1 1 1<")
-assert_find(
-	[[
+	assert_find(
+		[[
 	#define REPEAT_5(x) x x x x x
 	#define REPEAT_25(x) REPEAT_5(x)
     >REPEAT_25(1)<
 ]],
-	">1 1 1 1 1<"
-)
-assert_find(
-	[[
+		">1 1 1 1 1<"
+	)
+	assert_find(
+		[[
 #define TEST 1
 #define TEST2 2
 static int test = TEST + TEST2;
 ]],
-	"static int test = 1 + 2;"
-)
-assert_find([[
+		"static int test = 1 + 2;"
+	)
+	assert_find([[
 #define TEST(x) x*x
 static int test = TEST(2);
 ]], "static int test =2*2;")
-assert_find(
-	[[
+	assert_find(
+		[[
 #define TEST(x,y) x*y
 static int test = TEST(2,4);
 ]],
-	"static int test =2*4;"
-)
-assert_find(
-	[[
+		"static int test =2*4;"
+	)
+	assert_find(
+		[[
 #define TEST 1
 #undef TEST
 static int test = TEST;
 ]],
-	"static int test = TEST;"
-)
-assert_find(
-	[[
+		"static int test = TEST;"
+	)
+	assert_find(
+		[[
 #define MY_LIST \
 X(Item1, "This is a description of item 1") \
 X(Item2, "This is a description of item 2") \
@@ -634,82 +626,82 @@ enum ListItemType { MY_LIST }
 #undef X
 
 ]],
-	"enum ListItemType {Item1,Item2,Item3, }"
-)
-assert_find("#define max(a,b) ((a)>(b)?(a):(b)) \nint x = max(1,2);", "((1)>(2)?(1):(2));")
-assert_find("#define max(a,b) ((a)>(b)?(a):(b)) \nint x = max(1,2);", "((1)>(2)?(1):(2));")
-assert_find(
-	"#define STRINGIFY(a,b,c,d) #a #b #c #d \nSTRINGIFY(1,2,3,4);",
-	"\"1\" \"2\" \"3\" \"4\""
-)
-assert_find("#define STRINGIFY(a) #a \nSTRINGIFY(1);", "\"1\"")
-assert_find("#define STRINGIFY(a) #a \nSTRINGIFY((a,b,c));", "\"(a,b,c)\"")
-assert_find("#define F(...) >__VA_ARGS__<\nF(1,2,3)", ">1,2,3<")
-assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF(1)", "f(0,1)")
-assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF()", "f(0)")
-assert_find("#define F(a, b) >a##b<\nF(1,2)", ">12<")
-assert_find(
-	"#define MAX(a,b) ((a)>(b)?(a):(b))\nMAX(1+2,3*4)",
-	"((a)>(b)?(a):(b)) ((1+2)>(3*4)?(1+2):(3*4))"
-)
-assert_find("#define X 1\n#define X 2\nX", "2")
-assert_find("#define F(x) (2*x)\n#define G(y) F(y+1)\nG(5)", "(2*5+1)")
-assert_find("#define F(x,y) x and y\nF(,)", " and ")
-assert_find("#define EMPTY_ARG(a, b) a##b\nEMPTY_ARG(test, )", "test")
-assert_find("#define EMPTY_ARG(a, b) a##b\nEMPTY_ARG(, test)", "test")
-assert_find("#define EMPTY\nEMPTY", "")
-assert_find("#define A 1\n#define B 2\nA + B + A", "1 + 2 + 1")
-assert_find("#define TRIPLE(x) x x x\nTRIPLE(abc)", "abc abc abc")
-assert_find("#define PLUS(a, b) a + b\nPLUS(1, 2)", "1 + 2")
-assert_find("#define MULT(a, b) a * b\nMULT(3, 4)", "3 * 4")
-assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
-
-if false then
-	assert_find(
-		"#define PREFIX(x) pre_##x\n#define SUFFIX(x) x##_post\nPREFIX(fix) SUFFIX(fix)",
-		"pre_fix fix_post"
+		"enum ListItemType {Item1,Item2,Item3, }"
 	)
-	assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
+	assert_find("#define max(a,b) ((a)>(b)?(a):(b)) \nint x = max(1,2);", "((1)>(2)?(1):(2));")
+	assert_find("#define max(a,b) ((a)>(b)?(a):(b)) \nint x = max(1,2);", "((1)>(2)?(1):(2));")
+	assert_find(
+		"#define STRINGIFY(a,b,c,d) #a #b #c #d \nSTRINGIFY(1,2,3,4);",
+		"\"1\" \"2\" \"3\" \"4\""
+	)
+	assert_find("#define STRINGIFY(a) #a \nSTRINGIFY(1);", "\"1\"")
+	assert_find("#define STRINGIFY(a) #a \nSTRINGIFY((a,b,c));", "\"(a,b,c)\"")
+	assert_find("#define F(...) >__VA_ARGS__<\nF(1,2,3)", ">1,2,3<")
+	assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF(1)", "f(0,1)")
+	assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__)\nF()", "f(0)")
+	assert_find("#define F(a, b) >a##b<\nF(1,2)", ">12<")
+	assert_find(
+		"#define MAX(a,b) ((a)>(b)?(a):(b))\nMAX(1+2,3*4)",
+		"((a)>(b)?(a):(b)) ((1+2)>(3*4)?(1+2):(3*4))"
+	)
+	assert_find("#define X 1\n#define X 2\nX", "2")
+	assert_find("#define F(x) (2*x)\n#define G(y) F(y+1)\nG(5)", "(2*5+1)")
+	assert_find("#define F(x,y) x and y\nF(,)", " and ")
+	assert_find("#define EMPTY_ARG(a, b) a##b\nEMPTY_ARG(test, )", "test")
+	assert_find("#define EMPTY_ARG(a, b) a##b\nEMPTY_ARG(, test)", "test")
+	assert_find("#define EMPTY\nEMPTY", "")
+	assert_find("#define A 1\n#define B 2\nA + B + A", "1 + 2 + 1")
+	assert_find("#define TRIPLE(x) x x x\nTRIPLE(abc)", "abc abc abc")
+	assert_find("#define PLUS(a, b) a + b\nPLUS(1, 2)", "1 + 2")
+	assert_find("#define MULT(a, b) a * b\nMULT(3, 4)", "3 * 4")
+
+	if false then
+		assert_find(
+			"#define PREFIX(x) pre_##x\n#define SUFFIX(x) x##_post\nPREFIX(fix) SUFFIX(fix)",
+			"pre_fix fix_post"
+		)
+		assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
+	end
+
+	assert_find("#define STR(x) #x\nSTR(a + b)", "\"a + b\"")
+
+	-- Test argument error cases
+	local function assert_error(code, error_msg)
+		local success, err = pcall(function()
+			preprocess(code)
+		end)
+		assert(not success, "Expected an error but none was thrown")
+		assert(err:find(error_msg, nil, true), "Error message doesn't match: " .. err)
+	end
+
+	assert_error("#define FUNC(a, b) a + b\nFUNC(1)", "Argument count mismatch")
+	assert_error("#define FUNC(a, b, c) a + b + c\nFUNC(1, 2)", "Argument count mismatch")
+	assert_error("#define FUNC(a, b) a + b\nFUNC(1, 2, 3)", "Argument count mismatch")
+	assert_find(
+		"#define VARIADIC(a, ...) a __VA_ARGS__\nVARIADIC(first, second, third)",
+		"first second, third"
+	)
+	assert_find("#define VARIADIC(a, ...) a __VA_ARGS__\nVARIADIC(only)", "only")
+	assert_find(
+		"#define DEBUG(...) printf(\"Debug: \" __VA_ARGS__)\nDEBUG(\"Value: %d\", x)",
+		"printf(\"Debug: \" \"Value: %d\", x)"
+	)
+	assert_find("#define EMPTY() nothing\nEMPTY()", "nothing")
+	assert_find("#define COMPLEX(a) a*a\nCOMPLEX(1+2)", "1+2*1+2")
+	assert_find("#define PAREN(a) (a)\nPAREN(1+2*3)", "(1+2*3)")
+	assert_find("#define INNER(x) x+x\n#define OUTER(y) INNER(y)\nOUTER(5)", "5+5")
+	assert_find("#define A(x) x+1\n#define B(y) A(y*2)\n#define C(z) B(z-1)\nC(5)", "5-1*2+1")
+	assert_find(
+		"#define LOG(fmt, ...) printf(fmt __VA_OPT__(,) __VA_ARGS__)\nLOG(\"Hello\")",
+		"printf(\"Hello\")"
+	)
+	assert_find(
+		"#define LOG(fmt, ...) printf(fmt __VA_OPT__(,) __VA_ARGS__)\nLOG(\"Hello\", \"World\")",
+		"printf(\"Hello\", \"World\")"
+	)
+	assert_find("#define COMMA(...) __VA_OPT__(,)__VA_ARGS__\nCOMMA()", "")
+	assert_find("#define COMMA(...) __VA_OPT__(,)__VA_ARGS__\nCOMMA(x)", ",x")
+	assert_find("#define FUNC(a) a\nFUNC((1+2))", "(1+2)")
+	assert_find("#define X 10\n#define EXPAND(a) a\nEXPAND(X)", "10")
+	assert_find("#define JOIN(a, b) a##b\nJOIN(pre, post)", "prepost")
 end
-
-assert_find("#define STR(x) #x\nSTR(a + b)", "\"a + b\"")
-
--- Test argument error cases
-local function assert_error(code, error_msg)
-	local success, err = pcall(function()
-		preprocess(code)
-	end)
-	assert(not success, "Expected an error but none was thrown")
-	assert(err:find(error_msg, nil, true), "Error message doesn't match: " .. err)
-end
-
-assert_error("#define FUNC(a, b) a + b\nFUNC(1)", "Argument count mismatch")
-assert_error("#define FUNC(a, b, c) a + b + c\nFUNC(1, 2)", "Argument count mismatch")
-assert_error("#define FUNC(a, b) a + b\nFUNC(1, 2, 3)", "Argument count mismatch")
-assert_find(
-	"#define VARIADIC(a, ...) a __VA_ARGS__\nVARIADIC(first, second, third)",
-	"first second, third"
-)
-assert_find("#define VARIADIC(a, ...) a __VA_ARGS__\nVARIADIC(only)", "only")
-assert_find(
-	"#define DEBUG(...) printf(\"Debug: \" __VA_ARGS__)\nDEBUG(\"Value: %d\", x)",
-	"printf(\"Debug: \" \"Value: %d\", x)"
-)
-assert_find("#define EMPTY() nothing\nEMPTY()", "nothing")
-assert_find("#define COMPLEX(a) a*a\nCOMPLEX(1+2)", "1+2*1+2")
-assert_find("#define PAREN(a) (a)\nPAREN(1+2*3)", "(1+2*3)")
-assert_find("#define INNER(x) x+x\n#define OUTER(y) INNER(y)\nOUTER(5)", "5+5")
-assert_find("#define A(x) x+1\n#define B(y) A(y*2)\n#define C(z) B(z-1)\nC(5)", "5-1*2+1")
-assert_find(
-	"#define LOG(fmt, ...) printf(fmt __VA_OPT__(,) __VA_ARGS__)\nLOG(\"Hello\")",
-	"printf(\"Hello\")"
-)
-assert_find(
-	"#define LOG(fmt, ...) printf(fmt __VA_OPT__(,) __VA_ARGS__)\nLOG(\"Hello\", \"World\")",
-	"printf(\"Hello\", \"World\")"
-)
-assert_find("#define COMMA(...) __VA_OPT__(,)__VA_ARGS__\nCOMMA()", "")
-assert_find("#define COMMA(...) __VA_OPT__(,)__VA_ARGS__\nCOMMA(x)", ",x")
-assert_find("#define FUNC(a) a\nFUNC((1+2))", "(1+2)")
-assert_find("#define X 10\n#define EXPAND(a) a\nEXPAND(X)", "10")
-assert_find("#define JOIN(a, b) a##b\nJOIN(pre, post)", "prepost")
