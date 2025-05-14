@@ -409,7 +409,7 @@ do
 		if not def then return false end
 
 		self:RemoveToken(self:GetPosition())
-		local tk = self:NewToken("string", "\"" .. self:ToString(def.tokens, true) .. "\"")
+		local tk = self:NewToken("string", "\"" .. self:ToString(def.tokens) .. "\"")
 		self:RemoveToken(self:GetPosition())
 		self:AddTokens({tk})
 		self:Advance(#def.tokens)
@@ -512,6 +512,8 @@ local function ones(count)
 	return table.concat(str, " ")
 end
 
+assert_find("#define STR(a) #a\nSTR(hello world)", "\"hello world\"")
+assert_find("#define STR(x) #x\nSTR(  hello  world  )", "\"hello world\"")
 assert_find("#define S(a) a\nX(S(spaced-argument))", "X(spaced-argument)")
 assert_find("#define S(a) a\nX(S(spaced - argument))", "X(spaced - argument)")
 assert_find("#define S(a) a\nX(S( spaced - argument ))", "X(spaced - argument)")
@@ -660,18 +662,17 @@ assert_find("#define A 1\n#define B 2\nA + B + A", "1 + 2 + 1")
 assert_find("#define TRIPLE(x) x x x\nTRIPLE(abc)", "abc abc abc")
 assert_find("#define PLUS(a, b) a + b\nPLUS(1, 2)", "1 + 2")
 assert_find("#define MULT(a, b) a * b\nMULT(3, 4)", "3 * 4")
+assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
 
 if false then
-	assert_find("#define STR(x) #x\nSTR(  hello  world  )", "\"hello world\"")
-	assert_find("#define A value\n#define (x) #x\nSTR(A)", "\"A\"")
 	assert_find(
 		"#define PREFIX(x) pre_##x\n#define SUFFIX(x) x##_post\nPREFIX(fix) SUFFIX(fix)",
 		"pre_fix fix_post"
 	)
-	assert_find("#define STRINGIFY(a) #a\nSTRINGIFY(hello world)", "\"hello world\"")
 	assert_find("#define A value\n#define STR(x) #x\nSTR(A)", "\"A\"")
-	assert_find("#define STR(x) #x\nSTR(a + b)", "\"a + b\"")
 end
+
+assert_find("#define STR(x) #x\nSTR(a + b)", "\"a + b\"")
 
 -- Test argument error cases
 local function assert_error(code, error_msg)
