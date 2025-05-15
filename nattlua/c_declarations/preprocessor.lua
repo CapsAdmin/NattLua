@@ -2,6 +2,17 @@ local Parser = nil
 
 do
 	local META = loadfile("nattlua/parser/base.lua")()
+
+	local function copy_tokens(tokens)
+		local new_tokens = {}
+
+		for i, token in ipairs(tokens) do
+			new_tokens[i] = token:Copy()
+		end
+
+		return new_tokens
+	end
+
 	local old = META.New
 
 	function META.New(...)
@@ -43,14 +54,7 @@ do
 
 	do -- for normal define, can be overriden
 		function META:Define(identifier, args, tokens)
-			local new_tokens = {}
-
-			for i, v in ipairs(tokens) do
-				new_tokens[i] = self:NewToken(v.type, v.value)
-				new_tokens[i].whitespace = v.whitespace
-			end
-
-			self.defines[identifier] = {args = args, tokens = new_tokens, identifier = identifier}
+			self.defines[identifier] = {args = args, tokens = copy_tokens(tokens), identifier = identifier}
 		end
 
 		function META:Undefine(identifier)
@@ -60,15 +64,12 @@ do
 
 	do -- for arguments
 		function META:PushDefine(identifier, args, tokens)
-			local new_tokens = {}
-
-			for i, v in ipairs(tokens) do
-				new_tokens[i] = self:NewToken(v.type, v.value)
-				new_tokens[i].whitespace = v.whitespace
-			end
-
 			self.define_stack[identifier] = self.define_stack[identifier] or {}
-			table.insert(self.define_stack[identifier], 1, {args = args, tokens = new_tokens, identifier = identifier})
+			table.insert(
+				self.define_stack[identifier],
+				1,
+				{args = args, tokens = copy_tokens(tokens), identifier = identifier}
+			)
 		end
 
 		function META:PushUndefine(identifier)
@@ -197,6 +198,9 @@ do
 		self:ExpectTokenValue(")")
 
 		for i, tokens in ipairs(args) do
+			tokens = copy_tokens(tokens)
+			args[i] = tokens
+
 			if i == 1 then
 				for i, tk in ipairs(tokens) do
 					if tk.whitespace then
@@ -269,6 +273,9 @@ do
 
 		if not (def and self:IsTokenValue("(", 1)) then return false end
 
+		local whitespace = self:GetToken():Copy().whitespace
+		local tokens = copy_tokens(def.tokens)
+		tokens[1].whitespace = whitespace
 		local start = self:GetPosition()
 		self:ExpectTokenType("letter")
 		local args = self:CaptureArgs(def)
@@ -284,10 +291,10 @@ do
 			local va = self:GetDefinition("__VA_ARGS__")
 
 			if va and #va.tokens > 0 and va.tokens[1].value ~= "" then
-				self:AddTokens(def.tokens)
+				self:AddTokens(tokens)
 			end
 		else
-			self:AddTokens(def.tokens)
+			self:AddTokens(tokens)
 		end
 
 		local has_var_arg = def.args[1] and def.args[#def.args].value == "..."
@@ -396,12 +403,20 @@ do
 
 		if not def then return false end
 
-		if def.tokens[1] and def.tokens[1].value == self:GetToken().value then
+		local tokens = def.tokens
+
+		if tokens[1] and tokens[1].value == self:GetToken().value then
 			return false
 		end
 
+		if tokens[1] then
+			local tk = self:GetToken():Copy()
+			tokens = copy_tokens(tokens)
+			tokens[1].whitespace = tk.whitespace
+		end
+
 		self:RemoveToken(self:GetPosition())
-		self:AddTokens(def.tokens)
+		self:AddTokens(tokens)
 		return true
 	end
 
@@ -544,21 +559,30 @@ do -- tests
 		assert(err:find(error_msg, nil, true), "Error message doesn't match: " .. err)
 	end
 
+	do -- whitespace
+		assert_find("#define M z \n >x=\nM<", "x=\nz")
+		assert_find("#define S(a) a \n >X(S(spaced-argument))<", "X(spaced-argument)")
+		assert_find("#define S(a) a \n >X(S(spaced - argument))<", "X(spaced - argument)")
+		assert_find("#define S(a) a \n >X(S( spaced - argument ))<", "X(spaced - argument)")
+		assert_find("#define S(a) a \n >X(S( spaced-    argument ))<", "X(spaced- argument)")
+		assert_find("#define S(a) a \n >X(S( spaced -argument ))<", "X(spaced -argument)")
+	end
+
 	do -- basic macro expansion
 		assert_find("#define REPEAT(x) x \n >REPEAT(1)<", "1")
 		assert_find("#define REPEAT(x) x x \n >REPEAT(1)<", "1 1")
 		assert_find("#define REPEAT(x) x x x \n >REPEAT(1)<", "1 1 1")
 		assert_find("#define REPEAT(x) x x x x \n >REPEAT(1)<", "1 1 1 1")
-		assert_find("#define TEST 1 \n #define TEST2 2 \n >TEST + TEST2<", " 1 + 2")
+		assert_find("#define TEST 1 \n #define TEST2 2 \n >TEST + TEST2<", "1 + 2")
 		assert_find("#define TEST(x) x*x \n >TEST(2)<", "2*2")
 		assert_find("#define TEST(x,y) x*y \n >TEST(2,4)<", "2*4")
-		assert_find("#define X 1 \n #define X 2 \n >X<", " 2")
-		assert_find("#define A 1 \n #define B 2 \n >A + B + A<", " 1 + 2 + 1")
+		assert_find("#define X 1 \n #define X 2 \n >X<", "2")
+		assert_find("#define A 1 \n #define B 2 \n >A + B + A<", "1 + 2 + 1")
 		assert_find("#define TRIPLE(x) x x x \n >TRIPLE(abc)<", "abc abc abc")
 		assert_find("#define PLUS(a, b) a + b \n >PLUS(1, 2)<", "1 + 2")
 		assert_find("#define MULT(a, b) a * b \n >MULT(3, 4)<", "3 * 4")
 		assert_find("#define EMPTY \n >EMPTY<", "")
-		assert_find("#define EMPTY() nothing \n >EMPTY()<", " nothing")
+		assert_find("#define EMPTY() nothing \n >EMPTY()<", "nothing")
 		assert_find("#define TEST 1 \n #undef TEST \n >TEST<", "TEST")
 	end
 
@@ -592,37 +616,32 @@ do -- tests
 		assert_find("#define JOIN(a, b) a##b \n >JOIN(pre, post)<", "prepost")
 	end
 
-	do -- whitespace and arguments handling
-		assert_find("#define S(a) a \n >X(S(spaced-argument))<", "X(spaced-argument)")
-		assert_find("#define S(a) a \n >X(S(spaced - argument))<", "X(spaced - argument)")
-		assert_find("#define S(a) a \n >X(S( spaced - argument ))<", "X(spaced - argument)")
-		assert_find("#define S(a) a \n >X(S( spaced-    argument ))<", "X(spaced- argument)")
-		assert_find("#define S(a) a \n >X(S( spaced -argument ))<", "X(spaced -argument)")
-		assert_find("#define F(x,y) x and y \n >F(,)<", " and")
+	do -- empty arguments
+		assert_find("#define F(x,y) x and y \n >F(,)<", " and ")
 	end
 
 	do -- variadic macros and VA_ARGS
 		assert_find("#define F(...) __VA_ARGS__ \n >F(0)<", "0")
 		assert_find("#define F(...) __VA_ARGS__ \n >F()<", "")
 		assert_find("#define F(...) __VA_ARGS__ \n >F(1,2,3)<", "1,2,3")
-		assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__) \n >F(1)<", " f(0,1)")
-		assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__) \n >F()<", " f(0)")
+		assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__) \n >F(1)<", "f(0 , 1)")
+		assert_find("#define F(...) f(0 __VA_OPT__(,) __VA_ARGS__) \n >F()<", "f(0 )")
 		assert_find(
 			"#define VARIADIC(a, ...) a __VA_ARGS__ \n >VARIADIC(first, second, third)<",
 			"first second, third"
 		)
-		assert_find("#define VARIADIC(a, ...) a __VA_ARGS__ \n >VARIADIC(only)<", "only")
+		assert_find("#define VARIADIC(a, ...) a __VA_ARGS__ \n >VARIADIC(only)<", "only ")
 		assert_find(
 			"#define DEBUG(...) printf(\"Debug: \" __VA_ARGS__) \n >DEBUG(\"Value: %d\", x)<",
-			" printf(\"Debug: \" \"Value: %d\", x)"
+			"printf(\"Debug: \" \"Value: %d\", x)"
 		)
 		assert_find(
 			"#define LOG(fmt, ...) printf(fmt __VA_OPT__(,) __VA_ARGS__) \n >LOG(\"Hello\")<",
-			" printf(\"Hello\")"
+			"printf(\"Hello\" )"
 		)
 		assert_find(
 			"#define LOG(fmt, ...) printf(fmt __VA_OPT__(,) __VA_ARGS__) \n >LOG(\"Hello\", \"World\")<",
-			" printf(\"Hello\", \"World\")"
+			"printf(\"Hello\" , \"World\")"
 		)
 		assert_find("#define COMMA(...) __VA_OPT__(,)__VA_ARGS__ \n >COMMA()<", "")
 		assert_find("#define COMMA(...) __VA_OPT__(,)__VA_ARGS__ \n >COMMA(x)<", ",x")
@@ -647,7 +666,7 @@ do -- tests
 			"#define REPEAT_5(x) x x x x x \n #define REPEAT_25(x) REPEAT_5(x) \n >REPEAT_25(1)<",
 			"1 1 1 1 1"
 		)
-		assert_find("#define F(x) (2*x) \n #define G(y) F(y+1) \n >G(5)<", " (2*5+1)")
+		assert_find("#define F(x) (2*x) \n #define G(y) F(y+1) \n >G(5)<", "(2*5+1)")
 		assert_find("#define INNER(x) x+x \n #define OUTER(y) INNER(y) \n >OUTER(5)<", "5+5")
 		assert_find(
 			"#define A(x) x+1 \n #define B(y) A(y*2) \n #define C(z) B(z-1) \n >C(5)<",
@@ -658,14 +677,14 @@ do -- tests
 	do -- complex expressions and ternary operators
 		assert_find(
 			"#define max(a,b) ((a)^(b)?(a):(b))  \n int x = >max(1,2)<",
-			" ((1)^(2)?(1):(2))"
+			"((1)^(2)?(1):(2))"
 		)
 		assert_find(
 			"#define MAX(a,b) ((a)^(b)?(a):(b)) \n >MAX(1+2,3*4)<",
-			" ((1+2)^(3*4)?(1+2):(3*4))"
+			"((1+2)^(3*4)?(1+2):(3*4))"
 		)
 		assert_find("#define COMPLEX(a) a*a \n >COMPLEX(1+2)<", "1+2*1+2")
-		assert_find("#define PAREN(a) (a) \n >PAREN(1+2*3)<", " (1+2*3)")
+		assert_find("#define PAREN(a) (a) \n >PAREN(1+2*3)<", "(1+2*3)")
 		assert_find("#define FUNC(a) a \n >FUNC((1+2))<", "(1+2)")
 		assert_find("#define X 10 \n #define EXPAND(a) a \n >EXPAND(X)<", "10")
 	end
@@ -673,15 +692,15 @@ do -- tests
 	do -- multi-line macros
 		assert_find(
 			[[
-	#define MY_LIST \
-	X(Item1, "This is a description of item 1") \
-	X(Item2, "This is a description of item 2") \
-	X(Item3, "This is a description of item 3")
-	
-	#define X(name, desc) name,
-	>enum ListItemType { MY_LIST }<
-	#undef X]],
-			"enum ListItemType {Item1,Item2,Item3, }"
+#define MY_LIST \
+X(Item1, "This is a description of item 1") \
+X(Item2, "This is a description of item 2") \
+X(Item3, "This is a description of item 3")
+
+#define X(name, desc) name,
+>enum ListItemType { MY_LIST }<
+#undef X]],
+			"enum ListItemType { Item1,\nItem2,\nItem3, }"
 		)
 	end
 

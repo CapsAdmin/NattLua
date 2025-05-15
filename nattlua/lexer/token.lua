@@ -26,6 +26,32 @@ function META:GetRoot()
 	return self
 end
 
+function META:Copy()
+	local copy = META.New(self.type, self.value, self.start, self.stop)
+
+	if self.string_value then copy.string_value = self.string_value end
+
+	if self.inferred_types then
+		copy.inferred_types = {}
+
+		for i, v in ipairs(self.inferred_types) do
+			copy.inferred_types[i] = v
+		end
+	end
+
+	if self.potential_idiv then copy.potential_idiv = self.potential_idiv end
+
+	if self.whitespace then
+		copy.whitespace = {}
+
+		for i, v in ipairs(self.whitespace) do
+			copy.whitespace[i] = v:Copy()
+		end
+	end
+
+	return copy
+end
+
 function META:__tostring()
 	return "[token - " .. self.type .. " - " .. formating.QuoteToken(self.value) .. "]"
 end
