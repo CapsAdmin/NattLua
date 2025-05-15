@@ -276,6 +276,13 @@ do
 		local whitespace = self:GetToken():Copy().whitespace
 		local tokens = copy_tokens(def.tokens)
 		tokens[1].whitespace = whitespace
+
+		if tokens[1].whitespace then
+			for k, v in ipairs(tokens[1].whitespace) do
+				v.value = v.value:gsub("\n", "")
+			end
+		end
+
 		local start = self:GetPosition()
 		self:ExpectTokenType("letter")
 		local args = self:CaptureArgs(def)
@@ -413,6 +420,12 @@ do
 			local tk = self:GetToken():Copy()
 			tokens = copy_tokens(tokens)
 			tokens[1].whitespace = tk.whitespace
+
+			if tokens[1].whitespace and false then
+				for k, v in ipairs(tokens[1].whitespace) do
+					v.value = v.value:gsub("\n", "")
+				end
+			end
 		end
 
 		self:RemoveToken(self:GetPosition())
@@ -561,11 +574,12 @@ do -- tests
 
 	do -- whitespace
 		assert_find("#define M z \n >x=\nM<", "x=\nz")
-		assert_find("#define S(a) a \n >X(S(spaced-argument))<", "X(spaced-argument)")
-		assert_find("#define S(a) a \n >X(S(spaced - argument))<", "X(spaced - argument)")
-		assert_find("#define S(a) a \n >X(S( spaced - argument ))<", "X(spaced - argument)")
-		assert_find("#define S(a) a \n >X(S( spaced-    argument ))<", "X(spaced- argument)")
-		assert_find("#define S(a) a \n >X(S( spaced -argument ))<", "X(spaced -argument)")
+		assert_find("#define M \\\n z \n >x=M<", "x=z")
+		assert_find("#define S(a) a \n >S(x-y)<", "x-y")
+		assert_find("#define S(a) a \n >S(x - y)<", "x - y")
+		assert_find("#define S(a) a \n >S( x - y )<", "x - y")
+		assert_find("#define S(a) a \n >S( x-    y )<", "x- y")
+		assert_find("#define S(a) a \n >S( x -y )<", "x -y")
 	end
 
 	do -- basic macro expansion
@@ -700,7 +714,7 @@ X(Item3, "This is a description of item 3")
 #define X(name, desc) name,
 >enum ListItemType { MY_LIST }<
 #undef X]],
-			"enum ListItemType { Item1,\nItem2,\nItem3, }"
+			"enum ListItemType { Item1,Item2,Item3, }"
 		)
 	end
 
