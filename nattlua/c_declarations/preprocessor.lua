@@ -201,25 +201,15 @@ do
 			tokens = copy_tokens(tokens)
 			args[i] = tokens
 
-			if i == 1 then
-				for i, tk in ipairs(tokens) do
-					if tk.whitespace then
-						tk.whitespace = {
-							self:NewToken("whitespace", " "),
-						}
-					end
-				end
-
-				if tokens[1] then tokens[1].whitespace = nil end
-			else
-				for _, tk in ipairs(tokens) do
-					if tk.whitespace then
-						tk.whitespace = {
-							self:NewToken("whitespace", " "),
-						}
-					end
+			for _, tk in ipairs(tokens) do
+				if tk.whitespace then
+					tk.whitespace = {
+						self:NewToken("space", " "),
+					}
 				end
 			end
+
+			if i == 1 then if tokens[1] then tokens[1].whitespace = nil end end
 		end
 
 		return args
@@ -367,26 +357,29 @@ do
 			return false
 		end
 
-		local def_left = self:GetDefinition()
 
-		if not def_left then return false end
-
-		local def_right = self:GetDefinition(nil, 3)
-
-		if not def_right then return false end
-
-		for i = 1, 4 do
-			self:RemoveToken(self:GetPosition())
+		local tk_left = self:GetToken()
+		local pos = self:GetPosition()
+		self:Advance(3)
+		if self:GetDefinition() then
+			self:Parse()
 		end
+		self:SetPosition(pos)
+		
 
 		self:AddTokens(
 			{
 				self:NewToken(
 					"letter",
-					self:ToString(def_left.tokens, true) .. self:ToString(def_right.tokens, true)
+					tk_left.value .. self:GetToken(3).value
 				),
 			}
 		)
+		self:Advance(1)
+		for i = 1, 4 do
+			self:RemoveToken(self:GetPosition())
+		end
+
 		return true
 	end
 
@@ -479,9 +472,9 @@ do
 					self:ReadDefine() or
 					self:ReadUndefine() or
 					self:ExpandMacroCall() or
+					self:ExpandMacro() or
 					self:ExpandMacroConcatenation() or
 					self:ExpandMacroString() or
-					self:ExpandMacro() or
 					self:NextToken()
 				)
 			then
@@ -617,12 +610,10 @@ do -- tests
 	end
 
 	do -- token concatenation (##)
-		if false then
-			assert_find(
-				"#define PREFIX(x) pre_##x \n #define SUFFIX(x) x##_post \n >PREFIX(fix) SUFFIX(fix)<",
-				"pre_fix fix_post<"
-			)
-		end
+		assert_find(
+			"#define PREFIX(x) pre_##x \n #define SUFFIX(x) x##_post \n >PREFIX(fix) SUFFIX(fix)<",
+			"pre_fix fix_post"
+		)
 
 		assert_find("#define F(a, b) a##b \n >F(1,2)<", "12")
 		assert_find("#define EMPTY_ARG(a, b) a##b \n >EMPTY_ARG(test, )<", "test")
