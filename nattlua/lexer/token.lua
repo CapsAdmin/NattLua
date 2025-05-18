@@ -49,6 +49,8 @@ function META:Copy()
 		end
 	end
 
+	if self.parent then copy.parent = self.parent end
+
 	return copy
 end
 

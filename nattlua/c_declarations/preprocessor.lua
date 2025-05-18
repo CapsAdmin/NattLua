@@ -176,6 +176,7 @@ do
 					end
 
 					local pos = self:GetPosition()
+					local parent = self:GetToken()
 					self:Parse()
 					self:SetPosition(pos)
 					local tk = self:ConsumeToken()
@@ -186,6 +187,7 @@ do
 						paren_depth = paren_depth - 1
 					end
 
+					tk.parent = parent
 					table.insert(tokens, tk)
 				end
 			end
@@ -207,9 +209,21 @@ do
 						self:NewToken("space", " "),
 					}
 				end
+
+				if tk.parent then
+					if tk.parent.whitespace then
+						tk.parent.whitespace = {
+							self:NewToken("space", " "),
+						}
+					end
+				end
 			end
 
 			if i == 1 then if tokens[1] then tokens[1].whitespace = nil end end
+
+			if i == 1 then
+				if tokens[1] and tokens[1].parent then tokens[1].parent.whitespace = nil end
+			end
 		end
 
 		return args
@@ -357,25 +371,18 @@ do
 			return false
 		end
 
-
 		local tk_left = self:GetToken()
 		local pos = self:GetPosition()
 		self:Advance(3)
-		if self:GetDefinition() then
-			self:Parse()
-		end
-		self:SetPosition(pos)
-		
 
-		self:AddTokens(
-			{
-				self:NewToken(
-					"letter",
-					tk_left.value .. self:GetToken(3).value
-				),
-			}
-		)
+		if self:GetDefinition() then self:Parse() end
+
+		self:SetPosition(pos)
+		self:AddTokens({
+			self:NewToken("letter", tk_left.value .. self:GetToken(3).value),
+		})
 		self:Advance(1)
+
 		for i = 1, 4 do
 			self:RemoveToken(self:GetPosition())
 		end
@@ -390,8 +397,14 @@ do
 
 		if not def then return false end
 
+		local original_tokens = {}
+
+		for i, v in pairs(def.tokens) do
+			original_tokens[i] = v.parent
+		end
+
 		self:RemoveToken(self:GetPosition())
-		local tk = self:NewToken("string", "\"" .. self:ToString(def.tokens) .. "\"")
+		local tk = self:NewToken("string", "\"" .. self:ToString(original_tokens) .. "\"")
 		self:RemoveToken(self:GetPosition())
 		self:AddTokens({tk})
 		self:Advance(#def.tokens)
@@ -603,10 +616,7 @@ do -- tests
 		assert_find("#define STRINGIFY(a) #a  \n >STRINGIFY(1)<", "\"1\"")
 		assert_find("#define STRINGIFY(a) #a  \n >STRINGIFY((a,b,c))<", "\"(a,b,c)\"")
 		assert_find("#define STR(x) #x \n >STR(a + b)<", "\"a + b\"")
-
-		if false then
-			assert_find("#define A value \n #define STR(x) #x \n >STR(A)<", "\"A\"")
-		end
+		assert_find("#define A value \n #define STR(x) #x \n >STR(A)<", "\"A\"")
 	end
 
 	do -- token concatenation (##)
@@ -614,7 +624,6 @@ do -- tests
 			"#define PREFIX(x) pre_##x \n #define SUFFIX(x) x##_post \n >PREFIX(fix) SUFFIX(fix)<",
 			"pre_fix fix_post"
 		)
-
 		assert_find("#define F(a, b) a##b \n >F(1,2)<", "12")
 		assert_find("#define EMPTY_ARG(a, b) a##b \n >EMPTY_ARG(test, )<", "test")
 		assert_find("#define EMPTY_ARG(a, b) a##b \n >EMPTY_ARG(, test)<", "test")
