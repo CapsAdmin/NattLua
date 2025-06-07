@@ -27,6 +27,7 @@ function META:GetRoot()
 end
 
 function META:Copy()
+	if false --[[# as true]] then return --[[# _ as  META.Token]] end -- TODO
 	local copy = META.New(self.type, self.value, self.start, self.stop)
 
 	if self.string_value then copy.string_value = self.string_value end
