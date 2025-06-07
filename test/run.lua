@@ -1,39 +1,4 @@
 local path = ...
-local preprocess = require("test.helpers.preprocess")
-local coverage = require("test.helpers.coverage")
-local is_coverage = path == "coverage"
-
-if is_coverage then path = nil end
-
-local covered = {}
-
-if is_coverage then
-	preprocess.Init(
-		(
-			function()
-				local tbl = {}
-
-				for k, v in pairs(package.loaded) do
-					if k:find("nattlua") then table.insert(tbl, k) end
-				end
-
-				return tbl
-			end
-		)()
-	)
-
-	function preprocess.Preprocess(code, name, path, from)
-		if from == "package" then
-			if path and path:find("^nattlua/") then
-				covered[name] = path
-				return coverage.Preprocess(code, name)
-			end
-		end
-
-		return code
-	end
-end
-
 local assert = _G.assert
 local loadfile = _G.loadfile
 local get_time = require("test.helpers.get_time")
@@ -45,17 +10,6 @@ local io_write = _G.ON_EDITOR_SAVE and function(...) end or io.write
 local pcall = _G.pcall
 local table = _G.table
 require("test.environment")
-
-if path == "remove_coverage" then
-	local util = require("examples.util")
-	local paths = util.GetFilesRecursively("./", "lua.coverage")
-
-	for _, path in ipairs(paths) do
-		os.remove(path)
-	end
-
-	return
-end
 
 local function find_tests(path)
 	if path and path:sub(-5) == ".nlua" then return {path} end
@@ -175,22 +129,6 @@ else
 	end
 end
 
-if is_coverage then
-	local fs = require("nattlua.other.fs")
-
-	for name, path in pairs(covered) do
-		local content = coverage.Collect(name)
-
-		if content then
-			local f = assert(io.open(path .. ".coverage", "w"))
-			f:write(content)
-			f:close()
-		else
-			print("unable to find coverage information for " .. name)
-		end
-	end
-end
-
 if not _G.ON_EDITOR_SAVE then profiler.Stop() end
 
 if total > 0 then
@@ -200,9 +138,7 @@ if total > 0 then
 		format_time(time_taken_before_tests),
 		" seconds\n"
 	)
-end
-
---[=[
+end--[=[
 if ALL_NODES then
 
 	for _, nodes in pairs(ALL_NODES) do
@@ -262,4 +198,3 @@ if ALL_NODES then
 	print(lua)
 end
 ]=]
-os.exit() -- no need to wait for gc to complete

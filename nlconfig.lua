@@ -14,6 +14,7 @@ config.commands = {}
 
 do -- custom commands specific for nattlua
 	config.commands["build-vscode"] = {
+		description = "Build and install the NattLua VSCode extension",
 		cb = function()
 			os.execute(
 				"cd vscode_extension && yarn && yarn build && code --install-extension nattlua-0.0.1.vsix"
@@ -21,6 +22,7 @@ do -- custom commands specific for nattlua
 		end,
 	}
 	config.commands["install"] = {
+		description = "Install NattLua binary to ~/.local/bin (Linux only)",
 		cb = function()
 			-- only linux for now
 			os.execute("mkdir -p ~/.local/bin")
@@ -29,11 +31,72 @@ do -- custom commands specific for nattlua
 		end,
 	}
 	config.commands["test"] = {
+		description = "Run NattLua test suite with optional test filter",
 		cb = function(args)
 			assert(loadfile("test/run.lua"))(args[1])
+			os.exit() -- no need to wait for gc to complete
+		end,
+	}
+	config.commands["remove-coverage"] = {
+		description = "Remove all .coverage files from the project directory",
+		cb = function(args)
+			local util = require("examples.util")
+			local paths = util.GetFilesRecursively("./", "lua.coverage")
+
+			for _, path in ipairs(paths) do
+				os.remove(path)
+			end
+		end,
+	}
+	config.commands["coverage"] = {
+		description = "Generate code coverage reports by running tests with instrumentation",
+		cb = function(args)
+			local covered = {}
+			local fs = require("nattlua.other.fs")
+			local preprocess = require("test.helpers.preprocess")
+			local coverage = require("test.helpers.coverage")
+			preprocess.Init(
+				(
+					function()
+						local tbl = {}
+
+						for k, v in pairs(package.loaded) do
+							if k:find("nattlua") then table.insert(tbl, k) end
+						end
+
+						return tbl
+					end
+				)()
+			)
+
+			function preprocess.Preprocess(code, name, path, from)
+				if from == "package" then
+					if path and path:find("^nattlua/") then
+						covered[name] = path
+						return coverage.Preprocess(code, name)
+					end
+				end
+
+				return code
+			end
+
+			assert(loadfile("test/run.lua"))()
+
+			for name, path in pairs(covered) do
+				local content = coverage.Collect(name)
+
+				if content then
+					local f = assert(io.open(path .. ".coverage", "w"))
+					f:write(content)
+					f:close()
+				else
+					print("unable to find coverage information for " .. name)
+				end
+			end
 		end,
 	}
 	config.commands["build-markdown"] = {
+		description = "Generate markdown documentation for AI assistants (modes: all, core, minimal, tests)",
 		cb = function(args)
 			local mode = args[1]
 			-- this is just for something like a single file you can paste into gemini 1.5 or chatgpt. gemini's ai studio interface kind of doesn't work with many files, so this is easier.
@@ -130,6 +193,7 @@ end
 
 do -- these override existing commands and should probably be made more generic
 	config.commands["build"] = {
+		description = "Build NattLua into a single distributable Lua file with optional modes (fast)",
 		cb = function(args)
 			local mode = args[1]
 			local Compiler = require("nattlua.compiler")

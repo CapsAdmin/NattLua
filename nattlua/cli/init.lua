@@ -331,6 +331,22 @@ function cli.version()
 	io.write("LuaJIT " .. jit.version .. "\n")
 end
 
+local function sorted_pairs(tbl)
+	local keys = {}
+
+	for k in pairs(tbl) do
+		table.insert(keys, k)
+	end
+
+	table.sort(keys)
+	local i = 0
+	return function()
+		i = i + 1
+
+		if keys[i] then return keys[i], tbl[keys[i]] end
+	end
+end
+
 function cli.help(command)
 	local commands = cli.get_config().commands
 
@@ -359,7 +375,7 @@ function cli.help(command)
 		io.write("\n" .. colors.bold("Usage:") .. "\n  nattlua <command> [options]\n\n")
 		io.write(colors.bold("Commands:") .. "\n")
 
-		for name, cmd in pairs(commands) do
+		for name, cmd in sorted_pairs(commands) do
 			io.write(
 				"  " .. colors.yellow(name) .. "\n    " .. (
 						cmd.description or
