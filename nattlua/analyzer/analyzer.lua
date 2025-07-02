@@ -235,6 +235,10 @@ function META:GetTypeToNodeMap()
 	return self.type_to_node
 end
 
+function META:__tostring()
+	return ("analyzer[%p][%s]"):format(self, self.config.file_path or self.config.file_name)
+end
+
 function META.New(config)
 	config = config or {}
 
