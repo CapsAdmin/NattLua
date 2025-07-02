@@ -97,16 +97,22 @@ config.commands["check"] = {
 	cb = function(args, options, config, cli)
 		require("test.helpers.profiler").Start()
 		args[1] = args[1] or "./*"
+		local cmp = {}
 
 		if #args == 1 and args[1] == "-" then
-			local input = io.read("*all")
-			io.write(assert(Compiler.New(input, "stdin-", config):Analyze()))
+			cmp[1] = Compiler.New(assert(io.read("*all")), "stdin-", config)
+		elseif config.entry_point then
+			cmp[1] = Compiler.FromFile(config.entry_point, config)
 		else
-			for _, path in ipairs(
+			for i, path in ipairs(
 				cli.get_files({path = args, blacklist = config.ignorefiles, ext = {".lua", ".nlua"}})
 			) do
-				assert(Compiler.FromFile(path, config):Analyze())
+				cmp[i] = Compiler.FromFile(path, config)
 			end
+		end
+
+		for _, cmp in ipairs(cmp) do
+			cmp:Analyze()
 		end
 
 		require("test.helpers.profiler").Stop()
