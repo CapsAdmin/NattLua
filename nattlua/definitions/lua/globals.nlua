@@ -198,8 +198,12 @@ analyzer function require(name: string)
 				local path = debug.getinfo(loader).source
 
 				if path:sub(1, 1) == "@" then
-					local path = path:sub(2)
-					return analyzer:AnalyzeRootStatement(analyzer:ParseFile(path))
+					path = path:sub(2)
+					if analyzer.loaded_modules[path] then return analyzer.loaded_modules[path] end
+
+					local res = analyzer:AnalyzeRootStatement(analyzer:ParseFile(path))
+					analyzer.loaded_modules[path] = res
+					return res
 				end
 			end
 		end

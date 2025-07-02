@@ -10,7 +10,7 @@ return {
 			node.left.value.value ~= "dofile" and
 			node.left.value.value ~= "loadfile"
 		then
-			return AnalyzeImport(self, node)
+			return AnalyzeImport(self, node, node.left.value.value == "require" and node.path)
 		end
 
 		local is_type_call = node.type_call or

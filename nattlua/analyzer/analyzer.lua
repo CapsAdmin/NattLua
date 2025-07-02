@@ -286,6 +286,7 @@ function META.New(config)
 		type_to_node = {},
 		track_stash = {},
 		analyzed_root_statements = {},
+		loaded_modules = {},
 	}
 
 	for _, func in ipairs(META.OnInitialize) do
