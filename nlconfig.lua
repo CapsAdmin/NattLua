@@ -1,4 +1,5 @@
 local config = {}
+config.entry_point = "./nattlua.lua"
 config.ignorefiles = {
 	"test_focus_result%.lua",
 	"test_focus%.lua",
@@ -197,8 +198,7 @@ do -- these override existing commands and should probably be made more generic
 		cb = function(args)
 			local mode = args[1]
 			local Compiler = require("nattlua.compiler")
-			local entry = "./nattlua.lua"
-			io.write("parsing " .. entry)
+			io.write("parsing " .. config.entry_point)
 			local c = assert(
 				Compiler.New(
 					[[
