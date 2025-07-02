@@ -229,14 +229,6 @@ return function(META)
 		return code
 	end
 
-	function META:ReadFile(path)
-		local ok, code = pcall(read_file, self, path)
-
-		if ok then return code end
-
-		return nil, code
-	end
-
 	function META:ParseFile(path)
 		local imported = self.compiler and self.compiler.SyntaxTree and self.compiler.SyntaxTree.imported
 
@@ -250,7 +242,7 @@ return function(META)
 			if imported[path] then return imported[path] end
 		end
 
-		local code = assert(self:ReadFile(path))
+		local code = read_file(self, path)
 		local compiler = require("nattlua.compiler").New(
 			code,
 			"@" .. path,
