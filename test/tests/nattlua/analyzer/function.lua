@@ -665,8 +665,8 @@ analyze[[
         return "code" as string
     end
     
-    (function(arg: {[number] = string})
-        local code = foo(arg[1])
+    (function(arg: List<|string|>)
+        local code = foo(assert(arg[1]))
         attest.equal(code, _ as string)
     end)(arg)
 ]]

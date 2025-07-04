@@ -431,8 +431,6 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: any]])
 
 	if b.Type == "any" then return true end
 
-	if a:HasType("any") then return true end
-
 	if a:IsEmpty() then
 		return false, type_errors.because(type_errors.subset(a, b), "union is empty")
 	end

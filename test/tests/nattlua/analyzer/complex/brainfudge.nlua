@@ -811,13 +811,15 @@ end
 
 	return code
 end
-(function(arg: {[number] = string})
+(function(arg: List<|string|>)
 	if #arg == 0 then
 		print("usage : fast_brainfudge.lua brainfudgeFile.b [optionnal output.lua]")
 		return
 	end
 
-	local f = assert(io.open(arg[1]))
+	local path = assert(arg[1])
+
+	local f = assert(io.open(path))
 	local text = assert(f:read("*a"))
 	f:close()
 	local code = brainfudge(text)

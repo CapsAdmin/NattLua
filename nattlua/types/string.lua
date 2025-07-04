@@ -13,7 +13,7 @@ local META = dofile("nattlua/types/base.lua")
 META.Type = "string"
 --[[#type META.@Name = "TString"]]
 --[[#type TString = META.@Self]]
-META:GetSet("Data", false--[[# as string | false]])
+META:GetSet("Data", false--[[# as string | false | nil]])
 META:GetSet("Hash", false--[[# as string | false]])
 META:GetSet("PatternContract", false--[[# as false | string]])
 

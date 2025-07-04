@@ -201,7 +201,6 @@ function cparser.metatype(ctype, meta)
 				function(self, ...)
 					local analyzer = analyzer_context:GetCurrentAnalyzer()
 					local val = analyzer:Assert(analyzer:Call(new, Tuple({ctype, ...}))):Unpack()
-
 					if val.Type == "union" then
 						for i, v in ipairs(val:GetData()) do
 							if v.Type == "table" then v:SetMetaTable(meta) end
@@ -219,6 +218,19 @@ function cparser.metatype(ctype, meta)
 	end
 
 	ctype:SetMetaTable(meta)
+
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
+
+	if meta.Self then
+		analyzer:Assert(ctype:FollowsContract(meta.Self))
+		ctype = ctype:CopyLiteralness(meta.Self)
+		ctype:SetContract(meta.Self)
+		-- clear mutations so that when looking up values in the table they won't return their initial value
+		ctype:ClearMutations()
+	elseif analyzer:IsRuntime() then
+		meta.PotentialSelf = meta.PotentialSelf or Union()
+		meta.PotentialSelf:AddType(ctype)
+	end
 end
 
 function cparser.load(lib--[[#: string]])

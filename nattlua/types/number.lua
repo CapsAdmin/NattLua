@@ -15,7 +15,7 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TNumber = META.@Self]]
 --[[#type TNumber.DontWiden = boolean]]
 META.Type = "number"
-META:GetSet("Data", false--[[# as number | false]])
+META:GetSet("Data", false--[[# as number | false | nil]])
 
 function META:SetData()
 	if false--[[# as true]] then return end
@@ -291,7 +291,7 @@ do
 
 		if r.Data == false then return Number() end
 
-		return LNumber(func(l.Data, r.Data))
+		return LNumber(func(assert(l.Data), assert(r.Data)))
 	end
 end
 

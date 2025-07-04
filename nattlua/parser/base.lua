@@ -26,7 +26,7 @@ META.OnInitialize = {}
 	Code = Code,
 	tokens = List<|Token|>,
 	current_token_index = number,
-	suppress_on_parsed_node = false | {parent = Node, node_stack = List<|Node|>},
+	suppress_on_parsed_node = false | {parent = Node | false, node_stack = List<|Node|>},
 	RootStatement = false | Node,
 	TealCompat = any,
 	dont_hoist_next_import = any,
