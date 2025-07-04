@@ -20,6 +20,7 @@ local Any = require("nattlua.types.any").Any
 local context = require("nattlua.analyzer.context")
 local path_util = require("nattlua.other.path")
 local type_errors = require("nattlua.types.error_messages")
+local formating = require("nattlua.other.formating")
 local table = _G.table
 local table_insert = table.insert
 local table_remove = table.remove
