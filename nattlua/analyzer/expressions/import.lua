@@ -8,6 +8,10 @@ return {
 		if root and root.kind ~= "root" then root = root.RootStatement end
 
 		if cache then
+			if cache:sub(1, 2) == "./" then cache = cache:sub(3) end
+
+			self.parsed_paths[cache] = true
+
 			if self.loaded_modules[cache] then return self.loaded_modules[cache] end
 
 			if root then

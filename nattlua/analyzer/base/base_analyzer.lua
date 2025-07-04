@@ -230,9 +230,8 @@ return function(META)
 	end
 
 	function META:ParseFile(path)
+		self.parsed_paths[path] = true
 		local imported = self.compiler and self.compiler.SyntaxTree and self.compiler.SyntaxTree.imported
-
-		if not path then debug.trace() end
 
 		if imported then
 			local path = path

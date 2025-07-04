@@ -199,6 +199,9 @@ analyzer function require(name: string)
 
 				if path:sub(1, 1) == "@" then
 					path = path:sub(2)
+
+					if path:sub(1, 2) == "./" then path = path:sub(3) end
+
 					if analyzer.loaded_modules[path] then return analyzer.loaded_modules[path] end
 
 					local res = analyzer:AnalyzeRootStatement(analyzer:ParseFile(path))

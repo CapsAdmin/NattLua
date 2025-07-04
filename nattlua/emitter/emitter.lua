@@ -1,3 +1,4 @@
+--ANALYZE
 local runtime_syntax = require("nattlua.syntax.runtime")
 local characters = require("nattlua.syntax.characters")
 local class = require("nattlua.other.class")
@@ -22,6 +23,24 @@ local META = class.CreateTemplate("emitter")
 
 --[[#local type ParserConfig = import("~/nattlua/parser/config.nlua")]]
 --[[#local type EmitterConfig = import("~/nattlua/emitter/config.nlua")]]
+--[[#type META.@Self.toggled_indents = Map<|string, true | nil|>]]
+--[[#type META.@Self.last_indent_index = nil | number]]
+--[[#type META.@Self.level = number]]
+--[[#type META.@Self.out = List<|string|>]]
+--[[#type META.@Self.i = number]]
+--[[#type META.@Self.config = EmitterConfig]]
+--[[#type META.@Self.last_non_space_index = false | number]]
+--[[#type META.@Self.last_newline_index = nil | number]]
+--[[#type META.@Self.force_newlines = nil | List<|boolean|>]]
+--[[#type META.@Self.during_comment_type = false | number]]
+--[[#type META.@Self.is_call_expression = boolean]]
+--[[#type META.@Self.inside_call_expression = boolean]]
+--[[#type META.@Self.OnEmitStatement = false | Function]]
+--[[#type META.@Self.loop_nodes = false | List<|Node|>]]
+--[[#type META.@Self.tracking_indents = nil | Map<|string, List<|{info = any, level = number}|>|>]]
+--[[#type META.@Self.done = nil | Map<|string, true|>]]
+--[[#type META.@Self.FFI_DECLARATION_EMITTER = false | any]]
+--[[#type META.@Self.pre_toggle_level = nil | number]]
 
 do -- internal
 	function META:Whitespace(str--[[#: string]], force--[[#: boolean]])
@@ -111,7 +130,7 @@ do -- internal
 					table.insert(self.tracking_indents[info.to], {info = info, level = self.level})
 				end
 			elseif self.tracking_indents[node.value] then
-				for _, info in ipairs(self.tracking_indents[node.value]) do
+				for _, info in ipairs(assert(self.tracking_indents[node.value])) do
 					if info.level == self.level or info.level == self.pre_toggle_level then
 						self:Outdent()
 						local info = self.tracking_indents[node.value]
@@ -160,7 +179,9 @@ do -- internal
 						local start = i
 
 						for i = self.i - 1, 1, -1 do
-							if not self.out[i]:find("^%s+") then
+							local val = assert(self.out[i])
+
+							if not val:find("^%s+") then
 								local found_newline = false
 
 								for i = start, 1, -1 do
@@ -265,6 +286,7 @@ do -- newline breaking
 		end
 
 		function META:PopForcedLineBreaking()
+			assert(self.force_newlines)
 			table.remove(self.force_newlines)
 		end
 

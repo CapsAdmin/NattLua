@@ -51,7 +51,7 @@ do
 			self:AnalyzeExpression(node.value)
 		elseif node.kind == "continue" then
 			self._continue_ = true
-		elseif 
+		elseif
 			node.kind == "destructure_assignment" or
 			node.kind == "local_destructure_assignment"
 		then
@@ -156,10 +156,7 @@ do
 					)
 				)
 			end
-		elseif 
-			node.kind == "table" or 
-			node.kind == "type_table" 
-		then
+		elseif node.kind == "table" or node.kind == "type_table" then
 			return AnalyzeTable(self, node)
 		elseif
 			node.kind == "function" or
@@ -287,6 +284,7 @@ function META.New(config)
 		track_stash = {},
 		analyzed_root_statements = {},
 		loaded_modules = {},
+		parsed_paths = {},
 	}
 
 	for _, func in ipairs(META.OnInitialize) do
