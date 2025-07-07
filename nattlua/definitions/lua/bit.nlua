@@ -1,19 +1,4 @@
-type bit32 = {
-	lrotate = function=(x: number, disp: number)>(number),
-	bor = function=(...)>(number),
-	rshift = function=(x: number, disp: number)>(number),
-	band = function=(...)>(number),
-	lshift = function=(x: number, disp: number)>(number),
-	rrotate = function=(x: number, disp: number)>(number),
-	replace = function=(n: number, v: number, field: number, width: number)>(number) | function=(n: number, v: number, field: number)>(number),
-	bxor = function=(...)>(number),
-	arshift = function=(x: number, disp: number)>(number),
-	extract = function=(n: number, field: number, width: number)>(number) | function=(n: number, field: number)>(number),
-	bnot = function=(x: number)>(number),
-	btest = function=(...)>(boolean),
-	tobit = function=(...)>(number),
-}
-type bit = bit32
+local type bit = {}
 
 do
 	analyzer function bit.bor(...: ...number): number
@@ -104,19 +89,76 @@ do
 		return types.Number()
 	end
 
-	analyzer function bit.rol(x: number, n: number): number
-		if x:IsLiteral() and n:IsLiteral() then
-			return bit.rol(x:GetData(), n:GetData())
+	do
+		analyzer function bit.rol(x: number, n: number): number
+			if x:IsLiteral() and n:IsLiteral() then
+				return bit.rol(x:GetData(), n:GetData())
+			end
+
+			return types.Number()
+		end
+
+		analyzer function bit.ror(x: number, n: number): number
+			if x:IsLiteral() and n:IsLiteral() then
+				return bit.ror(x:GetData(), n:GetData())
+			end
+
+			return types.Number()
+		end
+
+		analyzer function bit.lrotate(x: number, disp: number): number
+			if x:IsLiteral() and disp:IsLiteral() then
+				return bit.lrotate(x:GetData(), disp:GetData())
+			end
+
+			return types.Number()
+		end
+
+		analyzer function bit.rrotate(x: number, disp: number): number
+			if x:IsLiteral() and disp:IsLiteral() then
+				return bit.rrotate(x:GetData(), disp:GetData())
+			end
+
+			return types.Number()
+		end
+	end
+
+	analyzer function bit.extract(n: number, field: number, width: nil | number): number
+		if n:IsLiteral() and field:IsLiteral() then
+			if width and width:IsLiteral() then
+				return bit.extract(n:GetData(), field:GetData(), width:GetData())
+			else
+				return bit.extract(n:GetData(), field:GetData())
+			end
 		end
 
 		return types.Number()
 	end
 
-	analyzer function bit.ror(x: number, n: number): number
-		if x:IsLiteral() and n:IsLiteral() then
-			return bit.ror(x:GetData(), n:GetData())
+	analyzer function bit.replace(n: number, v: number, field: number, width: nil | number): number
+		if n:IsLiteral() and v:IsLiteral() and field:IsLiteral() then
+			if width and width:IsLiteral() then
+				return bit.replace(n:GetData(), v:GetData(), field:GetData(), width:GetData())
+			else
+				return bit.replace(n:GetData(), v:GetData(), field:GetData())
+			end
 		end
 
 		return types.Number()
+	end
+
+	analyzer function bit.btest(...: ...number): boolean
+		local out = {}
+
+		for i, num in ipairs({...}) do
+			if not num:IsLiteral() then return types.Boolean() end
+
+			out[i] = num:GetData()
+		end
+
+		return bit.btest(table.unpack(out))
 	end
 end
+
+type bit32 = bit
+type _G.bit = bit
