@@ -127,13 +127,15 @@ do -- typesystem
 	end
 
 	function META:ParseValueTypeExpression()
-		if not (self:IsTokenValue("...") and self:IsTokenType("letter", 1)) then
+		if not self:IsTokenValue("...") then
 			return
 		end
 
 		local node = self:StartNode("expression", "vararg")
 		node.tokens["..."] = self:ExpectTokenValue("...")
-		node.value = self:ParseTypeExpression(0)
+		if not self:GetToken().whitespace then
+			node.value = self:ParseTypeExpression(0)
+		end
 		node = self:EndNode(node)
 		return node
 	end

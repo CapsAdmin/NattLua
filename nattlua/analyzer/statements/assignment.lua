@@ -88,8 +88,16 @@ return {
 								right[index] = obj:GetWithoutExpansion(i)
 							end
 						else
-							-- otherwise plainly assign it
-							right[right_pos] = obj
+							if #statement.left > 1 then
+								-- at runtime unpack the tuple
+								for i = 1, #statement.left do
+									local index = right_pos + i - 1
+									right[index] = obj:GetWithNumber(i)
+								end
+							else
+								-- otherwise plainly assign it
+								right[right_pos] = obj
+							end
 						end
 					end
 				elseif obj.Type == "union" then

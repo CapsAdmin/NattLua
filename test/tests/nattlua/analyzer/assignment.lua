@@ -106,7 +106,6 @@ analyze([[
 analyze[[
 local analyzer function normalize(obj: any)
 	local temp = {}
-
 	for i = 1, 10 do
 		local v = obj:GetAtTupleIndex(i)
 

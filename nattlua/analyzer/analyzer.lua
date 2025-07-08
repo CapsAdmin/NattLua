@@ -116,6 +116,7 @@ do
 	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
 	local AnalyzeTable = require("nattlua.analyzer.expressions.table").AnalyzeTable
 	local AnalyzeAtomicValue = require("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
+	local LookupValue = require("nattlua.analyzer.expressions.atomic_value").LookupValue
 	local AnalyzeLSX = require("nattlua.analyzer.expressions.lsx").AnalyzeLSX
 	local Union = require("nattlua.types.union").Union
 	local Tuple = require("nattlua.types.tuple").Tuple
@@ -166,7 +167,11 @@ do
 		then
 			return AnalyzeFunction(self, node)
 		elseif node.kind == "vararg" then
-			return VarArg(self:AnalyzeExpression(node.value))
+			if node.value then
+				return VarArg(self:AnalyzeExpression(node.value))
+			else
+				return LookupValue(self, "...")
+			end
 		elseif node.kind == "postfix_operator" then
 			if node.value.value == "++" then
 				local r = self:AnalyzeExpression(node.left)

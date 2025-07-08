@@ -596,3 +596,97 @@ end
 
     test(x, y, z)
 ]]
+analyze([[
+
+	local function read<|a: any|> end
+
+	read(1, 2)
+]], "2 is not a subset of")
+analyze(
+	[[
+
+	local function read<|...: number|>
+		print(...)
+	end
+
+	read(1, 2)
+]],
+	"2 does not exist"
+)
+analyze[[
+
+	local function read<|...: ...number|>
+		local x, y = ...
+		attest.equal(x, 1)
+		attest.equal(y, 2)
+		local z = ...
+		attest.equal(z, _ as (1, 2))
+	end
+
+	read(1, 2)
+]]
+
+analyze[[
+    local function read<|...: ...$"%**[Lanl].*" | number|>
+        local out = {}
+
+        for i = 1, select("#", ...) do
+            local v = ...[i]
+
+            if type(v) == "number" then
+                out[i] = number
+            else
+                out[i] = string
+            end
+        end
+
+        return table.unpack(out)
+    end
+
+    local x, y, z, w = read("line", 1, 2, "all")
+    attest.equal(x, _ as string)
+    attest.equal(y, _ as number)
+    attest.equal(z, _ as number)
+    attest.equal(w, _ as string)
+]]
+    analyze[[
+    
+    local function read2<|...: ...$"%**[Lanl].*" | number|>
+	§print(env.typesystem["..."].tr)
+	local out = {}
+
+	for i = 1, select("#", ...) do
+		local v = ...[i]
+
+		if type(v) == "number" then
+			out[i] = number
+		else
+			out[i] = string
+		end
+	end
+
+	return table.unpack(out)
+end
+
+local function read<|...: ...any|>
+	return read2<|...|>
+end
+
+local x, y, z, w = read("line", 1, 2, "all")
+attest.equal(x, _ as string)
+attest.equal(y, _ as number)
+attest.equal(z, _ as number)
+attest.equal(w, _ as string)
+    ]]
+
+analyze[[
+    
+    local f = assert(io.open("test", "r"))
+
+attest.equal(f:read("*no"), _ as nil | number)
+attest.equal(f:read("n"), _ as nil | number)
+attest.equal(f:read("number"), _ as nil | number)
+
+attest.expect_diagnostic("error", "NOPE.+is not a subset of")
+f:read("NOPE")
+]]

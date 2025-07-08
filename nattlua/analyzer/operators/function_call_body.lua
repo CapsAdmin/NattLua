@@ -449,8 +449,14 @@ return function(self, obj, input)
 	for i, identifier in ipairs(function_node.identifiers) do
 		local argi = function_node.self_call and (i + 1) or i
 
+
 		if self:IsTypesystem() then
-			self:CreateLocalValue(identifier.value.value, self:Assert(input:GetWithoutExpansion(argi)))
+			if identifier.value.value == "..." then
+				if input.tr and input.Data[1] and input.Data[1].tr then print(input.Data[1].tr) end
+				self:CreateLocalValue(identifier.value.value, input:Slice(argi))
+			else
+				self:CreateLocalValue(identifier.value.value, self:Assert(input:GetWithoutExpansion(argi)))
+			end
 		end
 
 		if self:IsRuntime() then
@@ -484,7 +490,6 @@ return function(self, obj, input)
 	if is_type_function then self:PushAnalyzerEnvironment("typesystem") end
 
 	local output = self:AnalyzeStatementsAndCollectOutputSignatures(function_node)
-
 	if is_type_function then self:PopAnalyzerEnvironment() end
 
 	self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())

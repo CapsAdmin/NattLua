@@ -1,11 +1,23 @@
+local function check_read_args<|...: ...$"%**[Lanl].*" | number|>
+	local out = {}
+
+	for i = 1, select<|"#", ...|> do
+		local v = ...[i]
+
+		if v:sub(1, 1) == "n" or v:sub(1, 2) == "*n" then
+			out[i] = number | nil
+		else
+			out[i] = string | nil
+		end
+	end
+
+	return table.unpack<|out|>
+end
+
 type io = {
 	write = function=(...string)>(nil),
 	flush = function=()>(boolean | nil, string | nil),
-	read = function <|s: "*n" | "*a" | "*l" | "n" | "a" | "l" | "L" | number | nil|>
-		if s == "*n" or s == "n" then return nil | number end
-
-		return nil | string
-	end,
+	read = check_read_args,
 	lines = function=()>(Function),
 	setvbuf = function=(mode: "no" | "full" | "line", size: number | nil)>(boolean | nil, string | nil),
 	seek = function=(mode: "set" | "cur" | "end", offset: number | nil)>(number | nil, string | nil),
@@ -14,10 +26,8 @@ type File = {
 	close = function=(self)>(boolean | nil, string, number | nil),
 	write = function=(self, ...(number | string))>(self | nil, string | nil),
 	flush = function=(self)>(boolean | nil, string | nil),
-	read = function <|self: File, s: "*n" | "*a" | "*l" | "n" | "a" | "l" | "L" | number | nil|>
-		if s == "*n" or s == "n" then return nil | number end
-
-		return nil | string
+	read = function <|self: File, ...: ...any|>
+		return check_read_args<|...|>
 	end,
 	lines = function=(self)>(Function),
 	setvbuf = function=(self, mode: "no" | "full" | "line", size: number | nil)>(boolean | nil, string | nil),

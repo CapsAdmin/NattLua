@@ -955,7 +955,9 @@ end
 
 function META:EmitVararg(node--[[#: Node]])
 	self:EmitToken(node.tokens["..."])
-	self:EmitExpression(node.value)
+	if node.value then
+		self:EmitExpression(node.value)
+	end
 end
 
 function META:EmitTable(tree--[[#: Node]])

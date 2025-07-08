@@ -13,9 +13,9 @@ local Boolean = require("nattlua.types.union").Boolean
 local table = _G.table
 local type_errors = require("nattlua.types.error_messages")
 
-local function lookup_value(self, node)
+local function lookup_value(self, ident)
 	local errors = {}
-	local key = ConstString(node.value.value)
+	local key = ConstString(ident)
 	local obj, err = self:GetLocalOrGlobalValue(key)
 
 	if self:IsTypesystem() then
@@ -72,6 +72,7 @@ local function is_primitive(val)
 end
 
 return {
+	LookupValue = lookup_value,
 	AnalyzeAtomicValue = function(self, node)
 		local value = node.value.value
 		local type = runtime_syntax:GetTokenType(node.value)
@@ -85,9 +86,9 @@ return {
 				return False()
 			end
 		elseif node.force_upvalue then
-			return lookup_value(self, node)
+			return lookup_value(self, node.value.value)
 		elseif value == "..." then
-			return lookup_value(self, node)
+			return lookup_value(self, node.value.value)
 		elseif type == "letter" and node.standalone_letter then
 			-- standalone_letter means it's the first part of something, either >true<, >foo<.bar, >foo<()
 			if self:IsTypesystem() then
@@ -120,7 +121,7 @@ return {
 				end
 			end
 
-			return lookup_value(self, node)
+			return lookup_value(self, node.value.value)
 		elseif type == "number" then
 			local num = LNumberFromString(value)
 
