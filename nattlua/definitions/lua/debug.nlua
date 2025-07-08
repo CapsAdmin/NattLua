@@ -1,38 +1,57 @@
-type debug_getinfo = {
-	name = string,
-	namewhat = string,
+local type DebugHookCallback = function=(event: "call" | "return" | "tail call" | "count" | "line", line: number | nil)>(nil)
+local type DebugHookMask = "c" | "r" | "l" | "cr" | "cl" | "rl" | "crl"
+local type LineNumber = -1 .. inf
+type DebugGetInfo = {
+	name = string | nil,
+	namewhat = "global" | "local" | "method" | "field" | "upvalue" | "",
 	source = string,
 	short_src = string,
-	linedefined = number,
-	lastlinedefined = number,
-	what = string,
-	currentline = number,
+	linedefined = LineNumber,
+	lastlinedefined = LineNumber,
+	what = "Lua" | "C" | "main" | "tail",
+	currentline = LineNumber,
 	istailcall = boolean,
-	nups = number,
-	nparams = number,
+	nups = 0 .. inf,
+	nparams = 0 .. inf,
 	isvararg = boolean,
-	func = any,
-	activelines = {[number] = boolean},
+	func = AnyFunction | nil,
+	activelines = {[LineNumber] = boolean} | nil,
 }
+-- Main debug library interface
 type debug = {
-	sethook = function=(thread: thread, hook: empty_function, mask: string, count: number)>(nil) | function=(thread: thread, hook: empty_function, mask: string)>(nil) | function=(hook: empty_function, mask: string)>(nil),
-	getregistry = function=()>(nil),
-	traceback = function=(thread: thread, message: any, level: number)>(string) | function=(thread: thread, message: any)>(string) | function=(thread: thread)>(string) | function=()>(string),
-	setlocal = function=(thread: thread, level: number, local_: number, value: any)>(string | nil) | function=(level: number, local_: number, value: any)>(string | nil),
-	getinfo = function=(thread: thread, f: empty_function | number, what: nil | string)>(debug_getinfo | nil) | function=(thread: thread, f: empty_function | number, what: nil | string)>(debug_getinfo | nil) | function=(f: empty_function | number, what: nil | string)>(debug_getinfo | nil),
-	upvalueid = function=(f: empty_function, n: number)>(userdata),
-	setupvalue = function=(f: empty_function, up: number, value: any)>(string | nil),
-	getlocal = function=(thread: thread, f: number | empty_function, local_: number)>(string | nil, any) | function=(f: number | empty_function, local_: number)>(string | nil, any),
-	upvaluejoin = function=(f1: empty_function, n1: number, f2: empty_function, n2: number)>(nil),
-	getupvalue = function=(f: empty_function, up: number)>(string | nil, any),
-	getmetatable = function=(value: any)>(Table | nil),
-	setmetatable = function=(value: any, Table: Table | nil)>(any),
-	gethook = function=(thread: thread)>(empty_function, string, number) | function=()>(empty_function, string, number),
-	getuservalue = function=(u: userdata)>(Table | nil),
 	debug = function=()>(nil),
-	getfenv = function=(o: any)>(Table),
-	setfenv = function=(object: any, Table: Table)>(any),
-	setuservalue = function=(udata: userdata, value: Table | nil)>(userdata),
+	gethook = function=()>((DebugHookCallback | nil, DebugHookMask | nil, number | nil)),
+	sethook = function=(hook: DebugHookCallback | nil, mask: DebugHookMask | nil, count: number | nil)>(nil),
+	getinfo = function=(f: AnyFunction | 1 .. inf, what: $"^[nSltufL]+$" | nil)>(DebugGetInfo | nil),
+	getlocal = function=(level: 1 .. inf | Function, local_idx: 1 .. inf)>((string, any) | (nil)),
+	setlocal = function=(level: 1 .. inf | Function, local_idx: 1 .. inf, value: any)>(string | nil),
+	getmetatable = function=(value: any)>(AnyTable | nil),
+	setmetatable = function=(value: any, metatable: AnyTable | nil)>(any),
+	getregistry = function=()>(AnyTable),
+	getupvalue = function=(f: AnyFunction, up_idx: 1 .. inf)>((string, any) | (nil)),
+	setupvalue = function=(f: AnyFunction, up_idx: 1 .. inf, value: any)>(),
+	upvalueid = function=(f: AnyFunction, n: 1 .. inf)>(userdata),
+	upvaluejoin = function=(f1: AnyFunction, n1: 1 .. inf, f2: AnyFunction, n2: 1 .. inf)>(nil),
+	getuservalue = function=(u: userdata)>(any),
+	setuservalue = function=(udata: userdata, value: any)>(userdata),
+	traceback = function=(message: any | nil, level: 1 .. inf | nil)>(string),
 }
-type debug.getfenv = getfenv
-type debug.setfenv = setfenv
+
+analyzer function debug.setfenv(val: Function, table: Table)
+	if val and (val:IsLiteral() or val.Type == "function") then
+		if val.Type == "number" then
+			analyzer:SetEnvironmentOverride(analyzer.environment_nodes[val:GetData()], table, "runtime")
+		elseif val:GetFunctionBodyNode() then
+			analyzer:SetEnvironmentOverride(val:GetFunctionBodyNode(), table, "runtime")
+		end
+	end
+end
+
+analyzer function debug.getfenv(func: Function | nil)
+	if not func then return analyzer:GetDefaultEnvironment("typesystem") end
+
+	return analyzer:GetGlobalEnvironmentOverride(func:GetFunctionBodyNode() or func, "runtime")
+end
+
+type getfenv = debug.getfenv
+type setfenv = debug.setfenv

@@ -1,7 +1,7 @@
 type package = {
-	searchpath = function=(name: string, path: string, sep: string, rep: string)>(string | nil, string | nil) | function=(name: string, path: string, sep: string)>(string | nil, string | nil) | function=(name: string, path: string)>(string | nil, string | nil),
+	searchpath = function=(name: string, path: string, sep: string | nil, rep: string | nil)>(string | nil, string | nil),
 	seeall = function=(module: Table)>(nil),
-	loadlib = function=(libname: string, funcname: string)>(empty_function | nil),
+	loadlib = function=(libname: string, funcname: string)>(AnyFunction | nil),
 	config = "/\n;\n?\n!\n-\n",
 	path = string,
 	loaded = Map<|string, any|>,

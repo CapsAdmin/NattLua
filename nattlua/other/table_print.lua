@@ -85,7 +85,7 @@ do
 	end
 end
 
-local function getprettysource(level--[[#: number | Function]], append_line--[[#: boolean | nil]])
+local function getprettysource(level--[[#: 1 .. inf | Function]], append_line--[[#: boolean | nil]])
 	local info = debug.getinfo(type(level) == "number" and (level + 1) or level)
 
 	if info then

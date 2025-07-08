@@ -26,7 +26,7 @@ type File = {
 	close = function=(self)>(boolean | nil, string, number | nil),
 	write = function=(self, ...(number | string))>(self | nil, string | nil),
 	flush = function=(self)>(boolean | nil, string | nil),
-	read = function <|self: File, ...: ...any|>
+	read = function <|self: File, ...: ...$"%**[Lanl].*" | number|>
 		return check_read_args<|...|>
 	end,
 	lines = function=(self)>(Function),
@@ -36,21 +36,10 @@ type File = {
 type io.open = function=(string, string | nil)>(nil | File)
 type io.popen = function=(string, string | nil)>(nil | File)
 type io.output = function=()>(File)
+type io.type = function=(File)>("file" | "closed file" | nil)
 type io.stdout = File
 type io.stdin = File
 type io.stderr = File
-
-analyzer function io.type(obj: any)
-	local flags = types.Union()
-	flags:AddType(types.ConstString("file"))
-	flags:AddType(types.ConstString("closed file"))
-	print(("%p"):format(obj), ("%p"):format(env.typesystem.File))
-
-	if false and obj:IsSubsetOf(env.typesystem.File) then return flags end
-
-	flags:AddType(types.Nil())
-	return flags
-end
 
 analyzer function io.write(...: ...string)
 	for i, v in ipairs({...}) do

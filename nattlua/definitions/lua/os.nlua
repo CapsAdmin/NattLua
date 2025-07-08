@@ -1,13 +1,38 @@
+local type DateStruct = {
+	year = number,
+	month = number,
+	day = number,
+	hour = number,
+	min = number,
+	sec = number,
+	wday = number,
+	yday = number,
+	isdst = boolean,
+}
 type os = {
 	execute = function=(command: string)>(boolean | nil, string, number | nil) | function=()>(boolean | nil, string, number | nil),
 	rename = function=(oldname: string, newname: string)>(boolean | nil, string, number | nil),
 	getenv = function=(varname: string)>(string | nil),
-	difftime = function=(t2: number, t1: number)>(number),
 	exit = function=(code: boolean | number, close: boolean)>(nil) | function=(code: boolean | number)>(nil) | function=()>(nil),
 	remove = function=(filename: string)>(boolean | nil, string, number | nil),
-	setlocale = function=(local_e: string, category: string)>(string | nil) | function=(local_e: string)>(string | nil),
-	date = function=(format: string, time: number)>(string | Table) | function=(format: string)>(string | Table) | function=()>(string | Table),
-	time = function=(table: Table)>(number) | function=()>(number),
-	clock = function=()>(number),
+	setlocale = function=(locale: string, category: string)>(string | nil) | function=(locale: string)>(string | nil),
+	date = function=(format: "*t", time: number)>(DateStruct) | function=(format: "*t")>(DateStruct) | function=(format: string, time: number)>(string) | function=(format: string)>(string) | function=()>(string),
+	time = function=(date_table: DateStruct)>(number) | function=()>(number),
 	tmpname = function=()>(string),
 }
+
+do -- Simple functions using ReturnIfNonLiteral
+	type os.clock = ReturnIfNonLiteral<|analyzer function(): number
+		return os.clock()
+	end|>
+	type os.difftime = ReturnIfNonLiteral<|
+		analyzer function(t2: number, t1: number): number
+			return t2:GetData() - t1:GetData()
+		end
+	|>
+	type os.tmpname = ReturnIfNonLiteral<|
+		analyzer function(): string
+			return "/tmp/lua_" .. tostring(math.random(100000, 999999))
+		end
+	|>
+end

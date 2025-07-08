@@ -339,7 +339,7 @@ function cli.version()
 	io.write("LuaJIT " .. jit.version .. "\n")
 end
 
-local function sorted_pairs(tbl)
+local function sorted_pairs(tbl--[[#: AnyTable]])
 	local keys = {}
 
 	for k in pairs(tbl) do
@@ -398,7 +398,7 @@ function cli.help(command)
 	end
 end
 
-local function copy_and_deep_merge(a, b)
+local function copy_and_deep_merge(a--[[#: AnyTable]], b--[[#: AnyTable]])--[[#: AnyTable]]
 	local result = {}
 
 	for k, v in pairs(a) do

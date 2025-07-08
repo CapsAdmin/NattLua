@@ -1,38 +1,9 @@
-type @Name = "_G"
-type setmetatable = function=(table: Table, metatable: Table | nil)>(Table)
-type select = function=(index: number | string, ...)>(...)
-type rawlen = function=(v: Table | string)>(number)
-type unpack = function=(list: Table, i: number, j: number)>(...) | function=(list: Table, i: number)>(...) | function=(list: Table)>(...)
-type require = function=(modname: string)>(any)
-type rawset = function=(table: Table, index: any, value: any)>(Table)
-type getmetatable = function=(object: any)>(Table | nil)
-type type = function=(v: any)>(string)
-type collectgarbage = function=(opt: string, arg: number)>(...) | function=(opt: string)>(...) | function=()>(...)
-type getfenv = function=(f: empty_function | number)>(Table) | function=()>(Table)
-type pairs = function=(t: Table)>(empty_function, Table, nil)
-type rawequal = function=(v1: any, v2: any)>(boolean)
-type loadfile = function=(filename: string, mode: string, env: Table)>(empty_function | nil, string | nil) | function=(filename: string, mode: string)>(empty_function | nil, string | nil) | function=(filename: string)>(empty_function | nil, string | nil) | function=()>(empty_function | nil, string | nil)
-type dofile = function=(filename: string)>(...) | function=()>(...)
-type ipairs = function=(t: Table)>(empty_function, Table, number)
-type tonumber = function=(e: number | string, base: number | nil)>(number | nil)
-type _ = any
 _G.arg = _ as List<|any|>
-
-analyzer function setfenv(val: Function, table: Table)
-	if val and (val:IsLiteral() or val.Type == "function") then
-		if val.Type == "number" then
-			analyzer:SetEnvironmentOverride(analyzer.environment_nodes[val:GetData()], table, "runtime")
-		elseif val:GetFunctionBodyNode() then
-			analyzer:SetEnvironmentOverride(val:GetFunctionBodyNode(), table, "runtime")
-		end
-	end
-end
-
-analyzer function getfenv(func: Function | nil)
-	if not func then return analyzer:GetDefaultEnvironment("typesystem") end
-
-	return analyzer:GetGlobalEnvironmentOverride(func:GetFunctionBodyNode() or func, "runtime")
-end
+type _ = any
+type @Name = "_G"
+type rawlen = function=(v: Table | string)>(number)
+type rawequal = function=(v1: any, v2: any)>(boolean)
+type collectgarbage = function=(opt: string, arg: number)>(...) | function=(opt: string)>(...) | function=()>(...)
 
 analyzer function type_print(...: ...any)
 	print(...)

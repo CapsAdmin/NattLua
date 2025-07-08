@@ -1,109 +1,189 @@
 type math = {
-	ceil = function=(x: number)>(number),
-	tan = function=(x: number)>(number),
-	log10 = function=(x: number)>(number),
-	sinh = function=(x: number)>(number),
-	ldexp = function=(m: number, e: number)>(number),
-	tointeger = function=(x: number)>(number),
-	cosh = function=(x: number)>(number),
-	min = function=(x: number, ...)>(number),
-	fmod = function=(x: number, y: number)>(number),
-	exp = function=(x: number)>(number),
-	random = function=(m: number, n: number)>(number) | function=(m: number)>(number) | function=()>(number),
-	rad = function=(x: number)>(number),
-	log = function=(x: number, base: number)>(number) | function=(x: number)>(number),
-	cos = function=(x: number)>(number),
-	randomseed = function=(x: number)>(nil),
-	floor = function=(x: number)>(number),
-	tanh = function=(x: number)>(number),
-	max = function=(x: number, ...)>(number),
-	pow = function=(x: number, y: number)>(number),
-	ult = function=(m: number, n: number)>(boolean),
-	acos = function=(x: number)>(number),
-	type = function=(x: number)>(string),
-	abs = function=(x: number)>(number),
-	frexp = function=(x: number)>(number, number),
-	deg = function=(x: number)>(number),
-	modf = function=(x: number)>(number, number),
-	atan2 = function=(y: number, x: number)>(number),
-	asin = function=(x: number)>(number),
-	atan = function=(x: number)>(number),
-	sqrt = function=(x: number)>(number),
-	sin = function=(x: number)>(number),
+	huge = inf,
+	pi = 3.14159265358979323864338327950288,
+	maxinteger = 0x7FFFFFFFFFFFFFFF,
+	mininteger = 0x8000000000000000,
 }
-type math.huge = inf
-type math.pi = 3.14159265358979323864338327950288
-type math.maxinteger = 0x7FFFFFFFFFFFFFFF
-type math.mininteger = 0x8000000000000000
 type math.type = ReturnIfNonLiteral<|analyzer function(n: number): "float" | "integer" | "nil"
 	return "float"
 end|>
-type math.sin = ReturnIfNonLiteral<|analyzer function(n: number): number
-	return math.sin(n:GetData())
-end|>
-type math.abs = ReturnIfNonLiteral<|analyzer function(n: number): number
-	return math.abs(n:GetData())
-end|>
-type math.cos = ReturnIfNonLiteral<|analyzer function(n: number): number
-	return math.cos(n:GetData())
-end|>
-type math.ceil = ReturnIfNonLiteral<|analyzer function(n: number): number
-	return math.ceil(n:GetData())
-end|>
-type math.floor = ReturnIfNonLiteral<|analyzer function(n: number): number
-	return math.floor(n:GetData())
-end|>
 
-analyzer function math.min(...: ...number)
-	local numbers = {}
+do -- basic arithmetic functions
+	type math.abs = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.abs(n:GetData())
+	end|>
+	type math.ceil = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.ceil(n:GetData())
+	end|>
+	type math.floor = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.floor(n:GetData())
+	end|>
 
-	for i = 1, select("#", ...) do
-		local obj = select(i, ...)
+	analyzer function math.min(...: ...number)
+		local numbers = {}
 
-		if not obj:IsLiteral() then
-			return types.Number()
+		for i = 1, select("#", ...) do
+			local obj = select(i, ...)
+
+			if not obj:IsLiteral() then
+				return types.Number()
+			else
+				numbers[i] = obj:GetData()
+			end
+		end
+
+		return math.min(table.unpack(numbers))
+	end
+
+	analyzer function math.max(...: ...number)
+		local numbers = {}
+
+		for i = 1, select("#", ...) do
+			local obj = select(i, ...)
+
+			if not obj:IsLiteral() then
+				return types.Number()
+			else
+				numbers[i] = obj:GetData()
+			end
+		end
+
+		return math.max(table.unpack(numbers))
+	end
+end
+
+do -- trigonometric functions
+	type math.sin = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.sin(n:GetData())
+	end|>
+	type math.cos = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.cos(n:GetData())
+	end|>
+	type math.tan = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.tan(n:GetData())
+	end|>
+	type math.acos = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.acos(n:GetData())
+	end|>
+	type math.asin = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.asin(n:GetData())
+	end|>
+	type math.atan = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.atan(n:GetData())
+	end|>
+	type math.atan2 = ReturnIfNonLiteral<|
+		analyzer function(y: number, x: number): number
+			return math.atan2(y:GetData(), x:GetData())
+		end
+	|>
+end
+
+do -- hyperbolic functions
+	type math.sinh = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.sinh(n:GetData())
+	end|>
+	type math.cosh = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.cosh(n:GetData())
+	end|>
+	type math.tanh = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.tanh(n:GetData())
+	end|>
+end
+
+do -- logarithmic and exponential functions
+	type math.log10 = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.log10(n:GetData())
+	end|>
+	type math.exp = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.exp(n:GetData())
+	end|>
+	type math.sqrt = ReturnIfNonLiteral<|analyzer function(n: number): number
+		return math.sqrt(n:GetData())
+	end|>
+	type math.pow = ReturnIfNonLiteral<|
+		analyzer function(x: number, y: number): number
+			return math.pow(x:GetData(), y:GetData())
+		end
+	|>
+
+	analyzer function math.log(x: number, base: nil | number)
+		if not x:IsLiteral() then return types.Number() end
+
+		if base then
+			if not base:IsLiteral() then return types.Number() end
+
+			return math.log(x:GetData(), base:GetData())
 		else
-			numbers[i] = obj:GetData()
+			return math.log(x:GetData())
 		end
 	end
-
-	return math.min(table.unpack(numbers))
 end
 
-analyzer function math.max(...: ...number)
-	local numbers = {}
+do -- number manipulation functions
+	type math.fmod = ReturnIfNonLiteral<|
+		analyzer function(x: number, y: number): number
+			return math.fmod(x:GetData(), y:GetData())
+		end
+	|>
+	type math.ldexp = ReturnIfNonLiteral<|
+		analyzer function(m: number, e: number): number
+			return math.ldexp(m:GetData(), e:GetData())
+		end
+	|>
+	type math.frexp = ReturnIfNonLiteral<|
+		analyzer function(x: number): number,number
+			local m, e = math.frexp(x:GetData())
+			return m, e
+		end
+	|>
+	type math.modf = ReturnIfNonLiteral<|
+		analyzer function(x: number): number,number
+			local i, f = math.modf(x:GetData())
+			return i, f
+		end
+	|>
+end
 
-	for i = 1, select("#", ...) do
-		local obj = select(i, ...)
+do -- angle conversion functions
+	type math.deg = ReturnIfNonLiteral<|analyzer function(x: number): number
+		return math.deg(x:GetData())
+	end|>
+	type math.rad = ReturnIfNonLiteral<|analyzer function(x: number): number
+		return math.rad(x:GetData())
+	end|>
+end
 
-		if not obj:IsLiteral() then
+do -- integer functions
+	type math.tointeger = ReturnIfNonLiteral<|analyzer function(x: number): number
+		return math.tointeger(x:GetData())
+	end|>
+	type math.ult = ReturnIfNonLiteral<|
+		analyzer function(m: number, n: number): boolean
+			return math.ult(m:GetData(), n:GetData())
+		end
+	|>
+end
+
+do -- random functions
+	analyzer function math.random(n: nil | number, m: nil | number)
+		if not analyzer.enable_random_functions then
+			if n and n:IsLiteral() and m and m:IsLiteral() then
+				return types.LNumberRange(n:GetData(), m:GetData())
+			end
+
 			return types.Number()
-		else
-			numbers[i] = obj:GetData()
-		end
-	end
-
-	return math.max(table.unpack(numbers))
-end
-
-analyzer function math.random(n: nil | number, m: nil | number)
-	if not analyzer.enable_random_functions then
-		if n and n:IsLiteral() and m and m:IsLiteral() then
-			return types.LNumberRange(n:GetData(), m:GetData())
 		end
 
-		return types.Number()
+		if n and m then return math.random(n:GetData(), m:GetData()) end
+
+		if n then return math.random(n:GetData()) end
+
+		return math.random()
 	end
 
-	if n and m then return math.random(n:GetData(), m:GetData()) end
+	analyzer function math.randomseed(n: number)
+		if not analyzer.enable_random_functions then return end
 
-	if n then return math.random(n and n:GetData()) end
-
-	return math.random()
-end
-
-analyzer function math.randomseed(n: number)
-	if not analyzer.enable_random_functions then return end
-
-	return math.randomseed(n:GetData())
+		return math.randomseed(n:GetData())
+	end
 end

@@ -3,12 +3,21 @@ type boolean = true | false
 type integer = number
 type Table = {[any] = any} | {}
 type Function = function=(...any)>(...any)
+type AnyFunction = function=(...any)>(...any)
+type AnyTable = {[any] = any} | {}
 type userdata = Table
 type ctype = any
 type thread = Table
-type empty_function = function=(...)>(...any)
 type LiteralNumber = -inf .. inf | nan
 type LiteralString = $".*"
+
+function BooleanResult<|success: any, error: any|>
+	return (true, success) | (false, error)
+end
+
+function ValueOrError<|value: any, error: any|>
+	return value | (false, error)
+end
 
 analyzer function ReturnIfNonLiteral(func: any)
 	func:SetLiteralFunction(true)

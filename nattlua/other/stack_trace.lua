@@ -32,7 +32,7 @@ local function file_read(path--[[#: string]])--[[#: string]]
 	return str
 end
 
-local function line_from_info(info--[[#: debug_getinfo]], line--[[#: number]])--[[#: string | nil]]
+local function line_from_info(info--[[#: DebugGetInfo]], line--[[#: number]])--[[#: string | nil]]
 	if info.source:sub(1, 1) == "@" then
 		local lua = file_read(info.source:sub(2))
 		local i = 1
@@ -46,7 +46,7 @@ local function line_from_info(info--[[#: debug_getinfo]], line--[[#: number]])--
 end
 
 local function func_line_from_info(
-	info--[[#: debug_getinfo]],
+	info--[[#: DebugGetInfo]],
 	line_override--[[#: number | nil]],
 	fallback_info--[[#: string | nil]],
 	nocomment--[[#: boolean | nil]]
@@ -99,7 +99,7 @@ end
 
 return function(
 	offset--[[#: number]],
-	check_level--[[#: nil | function=(debug_getinfo, number)>(nil | boolean)]]
+	check_level--[[#: nil | function=(DebugGetInfo, number)>(nil | boolean)]]
 )--[[#: string]]
 	offset = offset or 0
 	local str = ""

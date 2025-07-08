@@ -625,7 +625,6 @@ analyze[[
 
 	read(1, 2)
 ]]
-
 analyze[[
     local function read<|...: ...$"%**[Lanl].*" | number|>
         local out = {}
@@ -649,7 +648,7 @@ analyze[[
     attest.equal(z, _ as number)
     attest.equal(w, _ as string)
 ]]
-    analyze[[
+analyze[[
     
     local function read2<|...: ...$"%**[Lanl].*" | number|>
 	§print(env.typesystem["..."].tr)
@@ -678,7 +677,6 @@ attest.equal(y, _ as number)
 attest.equal(z, _ as number)
 attest.equal(w, _ as string)
     ]]
-
 analyze[[
     
     local f = assert(io.open("test", "r"))
@@ -689,4 +687,24 @@ attest.equal(f:read("number"), _ as nil | number)
 
 attest.expect_diagnostic("error", "NOPE.+is not a subset of")
 f:read("NOPE")
+]]
+analyze[[
+
+local function BooleanResult<|success: any, error: any|>
+	return (true, success) | (false, error)
+end
+
+local function ValueOrError<|value: any, error: any|>
+	return value | (false, error)
+end
+
+local type testA = function=()>(BooleanResult<|number, string|>)
+local x, y = testA()
+attest.equal(x, true as boolean)
+attest.equal(y, 42 as number | string)
+local type testC = function=()>(ValueOrError<|number, string|>)
+local x, y = testC()
+attest.equal(x, 42 as number | false)
+attest.equal(y, "error" as string | nil)
+
 ]]
