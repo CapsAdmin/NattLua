@@ -75,7 +75,13 @@ local function union_call(self, analyzer, input, call_node)
 	local new = Union()
 
 	for _, obj in ipairs(self:GetData()) do
-		local val = analyzer:Assert(analyzer:Call(obj, input:Copy(), call_node, true))
+		-- TODO, probably is better to have a push pop system for "current nodes"
+		-- when we call type functions we might analyze type code which will set .current_expression, 
+		-- causing any errors to appear away from the callee
+		local old = analyzer.current_expression
+		local ok, err = analyzer:Call(obj, input:Copy(), call_node, true)
+		analyzer.current_expression = old
+		local val = analyzer:Assert(ok, err)
 
 		-- TODO
 		if val.Type == "tuple" and val:HasOneValue() then

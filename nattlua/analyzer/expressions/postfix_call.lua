@@ -38,7 +38,11 @@ return {
 		local arguments
 
 		if self:IsTypesystem() then
-			if #types == 1 and types[1].Type == "tuple" and callable:GetInputSignature():GetTupleLength() == math.huge then
+			if
+				#types == 1 and
+				types[1].Type == "tuple" and
+				callable:GetInputSignature():GetTupleLength() == math.huge
+			then
 				arguments = types[1]
 			else
 				arguments = Tuple(types)

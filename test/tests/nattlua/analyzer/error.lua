@@ -283,3 +283,19 @@ end
 ]],
 	"test%(%).+%s+^^^^^^%s+.+test throw error"
 )
+analyze(
+	[[
+local utf8_char
+
+if _ as boolean then
+	function utf8_char(c: number) end
+else
+	function utf8_char(c: number) end
+end
+
+local function decode_unicode_escape(s: string): string
+	return utf8_char(tonumber(s, 16))
+end
+]],
+	"tonumber.+%s+^^^^^^^^^^^^^^^%s+11"
+)
