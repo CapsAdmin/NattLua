@@ -60,7 +60,7 @@ local function analyze_arguments(self, node)
 			for i, generic_type in ipairs(node.identifiers_typesystem) do
 				if generic_type.identifier and generic_type.identifier.value ~= "..." then
 					self:MapTypeToNode(
-						self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(generic_type):GetFirstValue()),
+						self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(generic_type):GetFirstValue() or Nil()),
 						generic_type
 					)
 				elseif generic_type.type_expression then

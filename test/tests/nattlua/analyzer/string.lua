@@ -51,3 +51,9 @@ analyze[[
     attest.equal("\u{01F698}", "🚘")
     attest.equal("\xFF", "\xfF")
 ]]
+analyze(
+	[[
+local x = string.match(_ as string, "^[^ \t\r\n%]},]*", _ as number) .. "'"
+]],
+	"nil .. \"'\" is not a valid binary operation"
+)

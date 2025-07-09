@@ -302,9 +302,9 @@ local function Binary(self, node, l, r, op)
 
 	-- adding two tuples at runtime in lua will basically do this
 	if self:IsRuntime() then
-		if l.Type == "tuple" then l = self:Assert(l:GetFirstValue()) end
+		if l.Type == "tuple" then l = l:GetFirstValue() or Nil() end
 
-		if r.Type == "tuple" then r = self:Assert(r:GetFirstValue()) end
+		if r.Type == "tuple" then r = r:GetFirstValue() or Nil() end
 	end
 
 	do -- union unpacking

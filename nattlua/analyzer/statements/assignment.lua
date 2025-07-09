@@ -240,7 +240,7 @@ return {
 					self:ClearTracked()
 					local lol = key
 
-					if self:IsRuntime() then key = self:Assert(key:GetFirstValue()) end
+					if self:IsRuntime() then key = key:GetFirstValue() or Nil() end
 
 					self:Assert(self:NewIndexOperator(obj, key, val))
 				end
