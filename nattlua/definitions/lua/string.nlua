@@ -150,6 +150,7 @@ do -- Pattern matching functions
 
 		if pattern then len = select(2, pattern:gsub("%b()", "")) end
 
+		len = math.max(len, 1)
 		return types.Tuple():AddRemainder(types.Tuple({types.Union({types.String(), types.Nil()})}):SetRepeat(len))
 	end
 

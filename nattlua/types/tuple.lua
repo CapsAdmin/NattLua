@@ -528,6 +528,7 @@ function META:AddRemainder(obj--[[#: TBaseType]])
 end
 
 function META:SetRepeat(amt--[[#: number]])
+	assert(amt > 0)
 	self.Repeat = amt
 	return self
 end
