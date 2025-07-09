@@ -266,3 +266,20 @@ analyze[[
         attest.equal(x, 3)
     end
 ]]
+analyze(
+	[[
+local analyzer function test()
+	---
+	--
+	--
+	error("test throw error")
+end
+
+local function utf8_char(c: number)
+	if c <= 0x7f then attest.equal(test(), nil) end
+end
+
+
+]],
+	"test%(%).+%s+^^^^^^%s+.+test throw error"
+)

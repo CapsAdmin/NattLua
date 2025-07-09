@@ -258,37 +258,44 @@ return function(META)
 	end
 
 	do
+		local analyzer_context = require("nattlua.analyzer.context")
+
+		local function on_error(msg)
+			local info = debug.getinfo(3)
+			local source = info.source
+
+			if source:sub(1, 1) == "@" then
+				local test = source:match("^(.+):%d+$")
+
+				if test then source = test end
+
+				local f, err = io.open(source:sub(2), "r")
+
+				if f then
+					local code = f:read("*all")
+					f:close()
+					local start = formating.LineCharToSubPos(code, tonumber(info.currentline), 0)
+					local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
+					msg = msg:sub(#source)
+					msg = msg:match("^:%d+:%d+:%s*(.+)") or msg:match("^:%d+%s*(.+)") or msg
+					return analyzer_context:GetCurrentAnalyzer().current_expression.Code:BuildSourceCodePointMessage(msg, start, stop)
+				end
+			end
+
+			return tostring(msg)
+		end
+
 		function META:CallLuaTypeFunction(func, scope, ...)
 			self.function_scope = scope
-			local res = {pcall(func, ...)}
-			local ok = table_remove(res, 1)
+			local res = {xpcall(func, on_error, ...)}
 
-			if not ok then
-				local msg = tostring(res[1])
-				local name = debug.getinfo(func).source
+			if not table_remove(res, 1) then
+				local stack = self:GetCallStack()
 
-				if name:sub(1, 1) == "@" then -- is this a name that is a location?
-					local line, rest = msg:sub(#name):match("^:(%d+):(.+)") -- remove the file name and grab the line number
-					if line then
-						local f, err = io.open(name:sub(2), "r")
+				if stack[1] then self.current_expression = stack[#stack].call_node end
 
-						if f then
-							local code = f:read("*all")
-							f:close()
-							local start = formating.LineCharToSubPos(code, tonumber(line), 0)
-							local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
-							msg = self.current_expression.Code:BuildSourceCodePointMessage(rest, start, stop)
-						end
-					end
-				end
-
-				local frame = self:GetCallStack()[1]
-
-				if frame then
-					self.current_expression = self:GetCallStack()[1].call_node
-				end
-
-				self:Error(type_errors.plain_error(msg))
+				self:Error(type_errors.plain_error(res[1]))
+				return Nil()
 			end
 
 			if res[1] == nil then res[1] = Nil() end
