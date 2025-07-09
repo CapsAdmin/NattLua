@@ -1,4 +1,5 @@
 _G.arg = _ as List<|any|>
+type _VERSION = string
 type _ = any
 type @Name = "_G"
 type rawlen = function=(v: Table | string)>(number)
