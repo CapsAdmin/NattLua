@@ -1,1 +1,1 @@
---local json = require("language_server.json") TODO
+local json = require("language_server.json")

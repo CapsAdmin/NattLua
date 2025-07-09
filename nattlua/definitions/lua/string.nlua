@@ -76,10 +76,10 @@ do -- Character conversion functions
 		end
 
 		if from and from:IsLiteral() and to and to:IsLiteral() then
-			return types.Tuple():AddRemainder(types.Tuple({types.Number()}):SetRepeat(to:GetData() - from:GetData() + 1))
+			return types.Tuple():AddRemainder(types.Tuple({types.LNumberRange(0, 255)}):SetRepeat(to:GetData() - from:GetData() + 1))
 		end
 
-		return types.Tuple():AddRemainder(types.Tuple({types.Number()}):SetRepeat(math.huge))
+		return types.Tuple():AddRemainder(types.Tuple({types.LNumberRange(0, 255)}):SetRepeat(math.huge))
 	end
 end
 

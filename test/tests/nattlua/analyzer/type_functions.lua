@@ -475,10 +475,10 @@ analyze[[
 analyze[[
     local a,b,c,d =  string.byte(_ as string, _ as number, _ as number)
     
-    attest.equal<|a, number|>
-    attest.equal<|b, number|>
-    attest.equal<|c, number|>
-    attest.equal<|d, number|>
+    attest.equal<|a, 0..255|>
+    attest.equal<|b, 0..255|>
+    attest.equal<|c, 0..255|>
+    attest.equal<|d, 0..255|>
 ]]
 analyze[[
     local a,b,c,d =  string.byte("foo", 1, 2)
@@ -488,8 +488,8 @@ analyze[[
 ]]
 analyze[[
     local a,b,c,d =  string.byte(_ as string, 1, 2)
-    attest.equal(a, _ as number)
-    attest.equal(b, _ as number)
+    attest.equal(a, _ as 0..255)
+    attest.equal(b, _ as 0..255)
     attest.equal(c, nil)
     attest.equal(d, nil)
 ]]

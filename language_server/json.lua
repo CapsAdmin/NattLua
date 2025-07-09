@@ -22,7 +22,7 @@ local math_type
 if _VERSION == "Lua 5.1" or _VERSION == "Lua 5.2" then
 	local math_floor = math.floor
 
-	function utf8_char(c--[[#: number]])--[[#: string]]
+	function utf8_char(c--[[#: 0 .. inf]])--[[#: string]]
 		if c <= 0x7f then
 			return string_char(c)
 		elseif c <= 0x7ff then
@@ -305,15 +305,16 @@ local function find_line()--[[#: (number, number)]]
 	end
 end
 
-local function decode_error(msg--[[#: ref string]])
-	error(string_format("ERROR: %s at line %d col %d", msg, find_line()), 2)
+local function decode_error(msg--[[#: string]])
+	local a, b = find_line()
+	error(string_format("ERROR: %s at line %d col %d", msg, a, b), 2)
 end
 
-local function get_word()
-	return string_match(statusBuf, "^[^ \t\r\n%]},]*", statusPos)
+local function get_word()--[[#: string]]
+	return assert(string_match(statusBuf, "^[^ \t\r\n%]},]*", statusPos))
 end
 
-local function next_byte()
+local function next_byte()--[[#: -1 .. 255]]
 	local pos = string_find(statusBuf, "[^ \t\r\n]", statusPos)
 
 	if pos then
@@ -354,7 +355,7 @@ local function decode_unicode_surrogate(s1--[[#: string]], s2--[[#: string]])--[
 end
 
 local function decode_unicode_escape(s--[[#: string]])--[[#: string]]
-	return utf8_char(tonumber(s, 16))
+	return utf8_char(assert(tonumber(s, 16))--[[# as 0 .. inf]])
 end
 
 local function decode_string()--[[#: string]]

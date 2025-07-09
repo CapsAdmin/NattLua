@@ -155,7 +155,7 @@ function _M.mask(automate: ac_t, str: string, p: string, ignore_case: boolean)
 	local str_n = ffi.new("unsigned int", #str)
 	local compare_str
 	local compare_str_p = str_p
-	local pmark = p:byte()
+	local pmark = p:byte() as number
 
 	if ignore_case then
 		compare_str = string.lower(str)
