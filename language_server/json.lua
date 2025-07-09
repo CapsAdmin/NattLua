@@ -18,12 +18,11 @@ local huge = math.huge
 local tiny = -huge
 local utf8_char
 local math_type
---[[#local type _VERSION = string]]
 
 if _VERSION == "Lua 5.1" or _VERSION == "Lua 5.2" then
 	local math_floor = math.floor
 
-	function utf8_char(c--[[#: any]])
+	function utf8_char(c--[[#: number]])--[[#: string]]
 		if c <= 0x7f then
 			return string_char(c)
 		elseif c <= 0x7ff then
@@ -107,7 +106,9 @@ end
 
 local function encode(v--[[#: any]])
 	local t = type(v)
+
 	if not encode_map[t] then error("unexpected type '" .. t .. "'", 2) end
+
 	local res = encode_map[t](v)
 	statusBuilder[#statusBuilder + 1] = res
 end
@@ -115,7 +116,6 @@ end
 encode_map["nil"] = function(v)
 	return "null"
 end
-
 encode_map["cdata"] = function(v)
 	return "null"
 end
@@ -287,9 +287,9 @@ local statusTop--[[#: number]]
 local statusAry = {}
 local statusRef = {}
 
-local function find_line()
-	local line = 1
-	local pos = 1
+local function find_line()--[[#: (number, number)]]
+	local line = 1--[[# as number]]
+	local pos = 1--[[# as number]]
 
 	while true do
 		local f, _, nl1, nl2 = string_find(statusBuf, "([\n\r])([\n\r]?)", pos)
@@ -305,7 +305,7 @@ local function find_line()
 	end
 end
 
-local function decode_error(msg--[[#: string]])
+local function decode_error(msg--[[#: ref string]])
 	error(string_format("ERROR: %s at line %d col %d", msg, find_line()), 2)
 end
 
@@ -324,7 +324,7 @@ local function next_byte()
 	return -1
 end
 
-local function consume_byte(c--[[#: number]])
+local function consume_byte(c--[[#: string]])
 	local _, pos = string_find(statusBuf, c, statusPos)
 
 	if pos then
@@ -333,17 +333,17 @@ local function consume_byte(c--[[#: number]])
 	end
 end
 
-local function expect_byte(c--[[#: number]])
+local function expect_byte(c--[[#: string]])
 	local _, pos = string_find(statusBuf, c, statusPos)
 
 	if not pos then
 		decode_error(string_format("expected '%s'", string_sub(c, #c)))
 	end
 
-	statusPos = pos
+	statusPos = assert(pos)
 end
 
-local function decode_unicode_surrogate(s1--[[#: string]], s2--[[#: string]])
+local function decode_unicode_surrogate(s1--[[#: string]], s2--[[#: string]])--[[#: string]]
 	return utf8_char(
 		0x10000 + (
 				assert(tonumber(s1, 16)) - 0xd800
@@ -353,24 +353,24 @@ local function decode_unicode_surrogate(s1--[[#: string]], s2--[[#: string]])
 	)
 end
 
-local function decode_unicode_escape(s--[[#: string]])
+local function decode_unicode_escape(s--[[#: string]])--[[#: string]]
 	return utf8_char(tonumber(s, 16))
 end
 
-local function decode_string()
+local function decode_string()--[[#: string]]
 	local has_unicode_escape = false
 	local has_escape = false
 	local i = statusPos + 1
 
 	while true do
-		i = string_find(statusBuf, "[%z\1-\31\\\"]", i)
+		i = string_find(statusBuf, "[%z\1-\31\\\"]", i)--[[# as number]]
 
 		if not i then decode_error("expected closing quote for string") end
 
 		local x = string_byte(statusBuf, i)
 
 		if x < 32 then
-			statusPos = i
+			statusPos = assert(i)
 			decode_error("control character in string")
 		end
 
@@ -420,7 +420,7 @@ local function decode_string()
 	end
 end
 
-local function decode_number()
+local function decode_number()--[[#: number]]
 	local num, c = string_match(statusBuf, "^([0-9]+%.?[0-9]*)([eE]?)", statusPos)
 
 	if not num or string_byte(num, -1) == 0x2E --[[ "." ]]
@@ -434,14 +434,14 @@ local function decode_number()
 		if not num then decode_error("invalid number '" .. get_word() .. "'") end
 	end
 
-	statusPos = statusPos + #num
-
 	if not num then decode_error("invalid number '" .. get_word() .. "'") end
 
-	return tonumber(num)
+	num = assert(num)
+	statusPos = statusPos + #num
+	return assert(tonumber(assert(num)))
 end
 
-local function decode_number_zero()
+local function decode_number_zero()--[[#: number]]
 	local num, c = string_match(statusBuf, "^(.%.?[0-9]*)([eE]?)", statusPos)
 
 	if
@@ -459,14 +459,14 @@ local function decode_number_zero()
 		if not num then decode_error("invalid number '" .. get_word() .. "'") end
 	end
 
-	statusPos = statusPos + #num
-
 	if not num then decode_error("invalid number '" .. get_word() .. "'") end
 
-	return tonumber(assert(num))
+	num = assert(num)
+	statusPos = statusPos + #num
+	return assert(tonumber(assert(num)))
 end
 
-local function decode_number_negative()
+local function decode_number_negative()--[[#: number]]
 	statusPos = statusPos + 1
 	local c = string_byte(statusBuf, statusPos)
 
@@ -481,7 +481,7 @@ local function decode_number_negative()
 	decode_error("invalid number '" .. get_word() .. "'")
 end
 
-local function decode_true()
+local function decode_true()--[[#: true]]
 	if string_sub(statusBuf, statusPos, statusPos + 3) ~= "true" then
 		decode_error("invalid literal '" .. get_word() .. "'")
 	end
@@ -490,7 +490,7 @@ local function decode_true()
 	return true
 end
 
-local function decode_false()
+local function decode_false()--[[#: false]]
 	if string_sub(statusBuf, statusPos, statusPos + 4) ~= "false" then
 		decode_error("invalid literal '" .. get_word() .. "'")
 	end
@@ -508,7 +508,7 @@ local function decode_null()
 	return json.null
 end
 
-local function decode_array()
+local function decode_array()--[[#: List<|any|>]]
 	statusPos = statusPos + 1
 
 	if consume_byte("^[ \t\r\n]*%]") then return {} end
@@ -520,7 +520,7 @@ local function decode_array()
 	return res
 end
 
-local function decode_object()
+local function decode_object()--[[#: Map<|string, any|>]]
 	statusPos = statusPos + 1
 
 	if consume_byte("^[ \t\r\n]*}") then return json.createEmptyObject() end
@@ -574,13 +574,13 @@ end
 
 local function decode_item()
 	local top = statusTop
-	local ref = statusRef[top]
+	local ref = statusRef[top]--[[# as Map<|string, any|>]]
 
 	if statusAry[top] then
 		ref[#ref + 1] = decode()
 	else
 		expect_byte("^[ \t\r\n]*\"")
-		local key = decode_string()
+		local key = assert(decode_string())
 		expect_byte("^[ \t\r\n]*:")
 		statusPos = statusPos + 1
 		ref[key] = decode()
