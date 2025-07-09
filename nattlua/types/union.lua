@@ -455,7 +455,7 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: any]])
 		a.suppress = false
 
 		if not b_val then
-			return false, type_errors.because(type_errors.table_index(b, a_val), reason)
+			return false, type_errors.because(type_errors.subset(b, a_val), reason)
 		end
 
 		a.suppress = true
