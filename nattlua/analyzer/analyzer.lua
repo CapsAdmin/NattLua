@@ -25,7 +25,7 @@ do
 	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
 
 	function META:AnalyzeStatement(node)
-		self.current_statement = node
+		self:PushCurrentStatement(node)
 		self:PushAnalyzerEnvironment(node.environment or "runtime")
 
 		if node.kind == "assignment" or node.kind == "local_assignment" then
@@ -78,7 +78,6 @@ do
 				local val = AnalyzeFunction(self, node)
 				self:NewIndexOperator(obj, key, val)
 			else
-				self.current_expression = key
 				local key = ConstString(key.value.value)
 				local val = AnalyzeFunction(self, node)
 				self:SetLocalOrGlobalValue(key, val)
@@ -107,6 +106,7 @@ do
 
 		node.scope = self:GetScope()
 		self:PopAnalyzerEnvironment()
+		self:PopCurrentStatement()
 	end
 end
 
@@ -125,8 +125,6 @@ do
 	local Node = require("nattlua.parser.node")
 
 	function META:AnalyzeRuntimeExpression(node)
-		self.current_expression = node
-
 		if node.kind == "value" then
 			return AnalyzeAtomicValue(self, node)
 		elseif node.kind == "binary_operator" then
@@ -140,7 +138,6 @@ do
 
 			if node.value.value == "not" then self.inverted_index_tracking = false end
 
-			self.current_expression = node
 			return self:Assert(Prefix(self, node, r))
 		elseif node.kind == "postfix_call" then
 			return AnalyzePostfixCall(self, node)
@@ -215,10 +212,14 @@ do
 	end
 
 	function META:AnalyzeExpression(node)
+		self:PushCurrentExpression(node)
 		local obj, err = self:AnalyzeRuntimeExpression(node)
+		self:PopCurrentExpression()
 
 		if node.type_expression then
+			self:PushCurrentExpression(node.type_expression)
 			obj = self:AnalyzeTypeExpression(node.type_expression, obj)
+			self:PopCurrentExpression()
 		end
 
 		node:AssociateType(obj or err)

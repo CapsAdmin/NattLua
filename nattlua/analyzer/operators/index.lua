@@ -33,7 +33,7 @@ local function index_table(analyzer, self, key, raw)
 			if index.Type == "function" then
 				local real_obj = self
 				analyzer:PushCurrentType(nil, "table")
-				local obj, err = analyzer:Call(index, Tuple({self, key}), analyzer.current_statement)
+				local obj, err = analyzer:Call(index, Tuple({self, key}), analyzer:GetCurrentStatement())
 				analyzer:PopCurrentType("table")
 
 				if not obj then return obj, err end

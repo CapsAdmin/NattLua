@@ -21,6 +21,7 @@ return {
 			if statement.expressions[i] then
 				self.current_if_statement = statement
 				local exp = statement.expressions[i]
+				self:PushCurrentExpression(exp)
 				local no_operator_expression = exp.kind ~= "binary_operator" and
 					exp.kind ~= "prefix_operator" or
 					(
@@ -32,7 +33,6 @@ return {
 
 				local obj = self:AnalyzeExpression(exp)
 				self:TrackDependentUpvalues(obj)
-				self.current_expression = exp
 
 				if no_operator_expression then self:PopTruthyExpressionContext() end
 
@@ -46,6 +46,7 @@ return {
 				end
 
 				self.current_if_statement = false
+				self:PopCurrentExpression()
 				prev_expression = obj
 
 				if obj:IsTruthy() then

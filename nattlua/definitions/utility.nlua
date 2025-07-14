@@ -341,7 +341,7 @@ analyzer function PushTypeEnvironment(obj: any)
 		)
 	)
 	tbl:SetMetaTable(tbl)
-	analyzer:PushGlobalEnvironment(analyzer.current_statement, tbl, "typesystem")
+	analyzer:PushGlobalEnvironment(analyzer:GetCurrentStatement(), tbl, "typesystem")
 	analyzer:PushAnalyzerEnvironment("typesystem")
 end
 

@@ -75,12 +75,7 @@ local function union_call(self, analyzer, input, call_node)
 	local new = Union()
 
 	for _, obj in ipairs(self:GetData()) do
-		-- TODO, probably is better to have a push pop system for "current nodes"
-		-- when we call type functions we might analyze type code which will set .current_expression, 
-		-- causing any errors to appear away from the callee
-		local old = analyzer.current_expression
 		local ok, err = analyzer:Call(obj, input:Copy(), call_node, true)
-		analyzer.current_expression = old
 		local val = analyzer:Assert(ok, err)
 
 		-- TODO
@@ -211,11 +206,9 @@ do
 			return self:GetOutputSignature():Copy()
 		end
 
-		local ok, err = analyzer:PushCallFrame(self, call_node, not_recursive_call)
+		local recursively_called = analyzer:PushCallFrame(self, call_node, not_recursive_call)
 
-		if not ok == false then return ok, err end
-
-		if ok then return ok end
+		if recursively_called then return recursively_called end
 
 		local function_node = self:GetFunctionBodyNode()
 		local is_type_function = function_node and
@@ -264,22 +257,29 @@ local function any_call(self, analyzer, input, call_node)
 	return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 end
 
+local function call(self, obj, input, call_node, not_recursive_call)
+	if obj.Type == "any" then
+		return any_call(obj, self, input, call_node)
+	elseif obj.Type == "function" then
+		return function_call(obj, self, input, call_node, not_recursive_call)
+	elseif obj.Type == "tuple" then
+		return tuple_call(obj, self, input, call_node)
+	elseif obj.Type == "union" then
+		return union_call(obj, self, input, call_node)
+	elseif obj.Type == "table" then
+		return table_call(obj, self, input, call_node)
+	end
+
+	return base_call(obj, self, input, call_node)
+end
+
 return {
 	Call = function(META)
 		function META:Call(obj, input, call_node, not_recursive_call)
-			if obj.Type == "any" then
-				return any_call(obj, self, input, call_node)
-			elseif obj.Type == "function" then
-				return function_call(obj, self, input, call_node, not_recursive_call)
-			elseif obj.Type == "tuple" then
-				return tuple_call(obj, self, input, call_node)
-			elseif obj.Type == "union" then
-				return union_call(obj, self, input, call_node)
-			elseif obj.Type == "table" then
-				return table_call(obj, self, input, call_node)
-			end
-
-			return base_call(obj, self, input, call_node)
+			self:PushCurrentExpression(call_node)
+			local ret, err = call(self, obj, input, call_node, not_recursive_call)
+			self:PopCurrentExpression()
+			return ret, err
 		end
 	end,
 }

@@ -171,7 +171,7 @@ function cparser.typeof(cdecl, ...)
 		end
 	end
 
-	return analyzer:Call(env.typesystem.FFICtype, Tuple({ctype}), analyzer.current_expression)
+	return analyzer:Call(env.typesystem.FFICtype, Tuple({ctype}), analyzer:GetCurrentStatement())
 end
 
 function cparser.get_type(cdecl, ...)
@@ -201,6 +201,7 @@ function cparser.metatype(ctype, meta)
 				function(self, ...)
 					local analyzer = analyzer_context:GetCurrentAnalyzer()
 					local val = analyzer:Assert(analyzer:Call(new, Tuple({ctype, ...}))):Unpack()
+
 					if val.Type == "union" then
 						for i, v in ipairs(val:GetData()) do
 							if v.Type == "table" then v:SetMetaTable(meta) end
@@ -218,7 +219,6 @@ function cparser.metatype(ctype, meta)
 	end
 
 	ctype:SetMetaTable(meta)
-
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 
 	if meta.Self then

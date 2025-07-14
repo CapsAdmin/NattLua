@@ -33,6 +33,7 @@ return function(META)
 		--if not a and self.analyzed_root_statements[statement] then
 		--return self.analyzed_root_statements[statement]:Copy({}, true)
 		--end
+		self:PushCurrentStatement(statement)
 		context:PushCurrentAnalyzer(self)
 		local argument_tuple = a and
 			Tuple({a, b, c, d, e, f}) or
@@ -51,6 +52,7 @@ return function(META)
 		self:PopScope()
 		context:PopCurrentAnalyzer()
 		self.analyzed_root_statements[statement] = analyzed_return
+		self:PopCurrentStatement()
 		return analyzed_return
 	end
 
@@ -146,7 +148,9 @@ return function(META)
 			end
 
 			self:CreateAndPushFunctionScope(obj)
+			self:PushCurrentStatement(obj:GetFunctionBodyNode())
 			self:Assert(self:Call(obj, arguments, obj:GetFunctionBodyNode()))
+			self:PopCurrentStatement()
 			self:PopScope()
 		end
 
@@ -278,7 +282,7 @@ return function(META)
 					local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
 					msg = msg:sub(#source)
 					msg = msg:match("^:%d+:%d+:%s*(.+)") or msg:match("^:%d+%s*(.+)") or msg
-					return analyzer_context:GetCurrentAnalyzer().current_expression.Code:BuildSourceCodePointMessage(msg, start, stop)
+					return analyzer_context:GetCurrentAnalyzer():GetCurrentExpression().Code:BuildSourceCodePointMessage(msg, start, stop)
 				end
 			end
 
@@ -292,9 +296,12 @@ return function(META)
 			if not table_remove(res, 1) then
 				local stack = self:GetCallStack()
 
-				if stack[1] then self.current_expression = stack[#stack].call_node end
+				if stack[1] then self:PushCurrentExpression(stack[#stack].call_node) end
 
 				self:Error(type_errors.plain_error(res[1]))
+
+				if stack[1] then self:PopCurrentExpression() end
+
 				return Nil()
 			end
 
@@ -337,8 +344,6 @@ return function(META)
 
 			function META:CallTypesystemUpvalue(name, a, b, c, d, e, f)
 				-- TODO
-				local old_statement = self.current_statement
-				local old_expression = self.current_expression
 				-- this is very internal-ish code
 				-- not sure what a nice interface for this really should be yet
 				self:PushAnalyzerEnvironment("typesystem")
@@ -346,16 +351,12 @@ return function(META)
 
 				if generics_func.Type ~= "function" then
 					self:PopAnalyzerEnvironment()
-					self.current_statement = old_statement
-					self.current_expression = old_expression
 					error("cannot find typesystem function " .. name:GetData())
 				end
 
 				local argument_tuple = Tuple({a, b, c, d, e, f})
 				local returned_tuple, err = self:Call(generics_func, argument_tuple)
 				self:PopAnalyzerEnvironment()
-				self.current_statement = old_statement
-				self.current_expression = old_expression
 
 				if not returned_tuple then error(err) end
 
@@ -396,16 +397,24 @@ return function(META)
 		function META:DebugStateToString()
 			local s = ""
 
-			if self.current_statement and self.current_statement.Render then
-				s = s .. "======== statement =======\n"
-				s = s .. attempt_render(self.current_statement)
-				s = s .. "==========================\n"
+			do
+				local node = self:GetCurrentStatement()
+
+				if node and node.Render then
+					s = s .. "======== statement =======\n"
+					s = s .. attempt_render(node)
+					s = s .. "==========================\n"
+				end
 			end
 
-			if self.current_expression and self.current_expression.Render then
-				s = s .. "======== expression =======\n"
-				s = s .. attempt_render(self.current_expression)
-				s = s .. "===========================\n"
+			do
+				local node = self:GetCurrentExpression()
+
+				if node and node.Render then
+					s = s .. "======== expression =======\n"
+					s = s .. attempt_render(node)
+					s = s .. "===========================\n"
+				end
 			end
 
 			pcall(function()
@@ -466,6 +475,34 @@ return function(META)
 
 			function META:GetCurrentType(type, offset)
 				return self:GetContextValue("current_type_" .. type, offset)
+			end
+		end
+
+		do
+			function META:PushCurrentStatement(node)
+				self:PushContextValue("current_statement", node)
+			end
+
+			function META:PopCurrentStatement()
+				self:PopContextValue("current_statement")
+			end
+
+			function META:GetCurrentStatement(offset)
+				return self:GetContextValue("current_statement", offset)
+			end
+		end
+
+		do
+			function META:PushCurrentExpression(node)
+				self:PushContextValue("current_expression", node)
+			end
+
+			function META:PopCurrentExpression()
+				self:PopContextValue("current_expression")
+			end
+
+			function META:GetCurrentExpression(offset)
+				return self:GetContextValue("current_expression", offset)
 			end
 		end
 

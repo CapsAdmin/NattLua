@@ -391,9 +391,11 @@ local function check_output(self, output, output_signature, function_node)
 			local ok, reason, a, b, i = output:IsSubsetOfTuple(output_signature)
 
 			if not ok then
-				self.current_statement = function_node
-				self.current_expression = function_node.return_types and function_node.return_types[i]
+				self:PushCurrentStatement(function_node)
+				self:PushCurrentExpression(function_node.return_types and function_node.return_types[i])
 				self:Error(type_errors.return_type_mismatch(function_node, output_signature, output, reason, i))
+				self:PopCurrentExpression()
+				self:PopCurrentStatement()
 			end
 		end
 	end

@@ -34,7 +34,7 @@ do -- these are just helpers for print debugging
 		local level = 1
 
 		while level <= max_level do
-			local info = debug.getinfo(level + 2, "Sln")
+			local info = debug.getinfo(level + 1, "Sln")
 
 			if (not info) then break end
 

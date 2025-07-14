@@ -29,9 +29,11 @@ return function(META)
 	end
 
 	local function store_scope(self, scope)
-		if self.current_statement then
-			self.current_statement.scopes = self.current_statement.scopes or {}
-			table.insert(self.current_statement.scopes, scope)
+		local node = self:GetCurrentStatement()
+
+		if node then
+			node.scopes = node.scopes or {}
+			table.insert(node.scopes, scope)
 		end
 	end
 
@@ -83,7 +85,7 @@ return function(META)
 
 	function META:CreateLocalValue(key, obj, const)
 		local upvalue = self:GetScope():CreateUpvalue(key, obj, self:GetCurrentAnalyzerEnvironment())
-		upvalue.statement = self.current_statement
+		upvalue.statement = self:GetCurrentStatement()
 		upvalue:SetPosition(self:IncrementUpvaluePosition())
 		self:MutateUpvalue(upvalue, obj)
 		upvalue:SetImmutable(const or false)
@@ -147,7 +149,7 @@ return function(META)
 		end
 
 		if self:IsRuntime() then
-			self:Warning(type_errors.global_assignment(key, val), self.current_statement)
+			self:Warning(type_errors.global_assignment(key, val), self:GetCurrentStatement())
 		end
 
 		self:Assert(self:NewIndexOperator(g, key, val))

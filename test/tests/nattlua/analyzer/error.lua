@@ -297,5 +297,5 @@ local function decode_unicode_escape(s: string): string
 	return utf8_char(tonumber(s, 16))
 end
 ]],
-	"tonumber.+%s+^^^^^^^^^^^^^^^%s+11"
+	"tonumber.+%s+^^^^^^^^^^^^^^^^^^^^^^^^^^%s+11"
 )

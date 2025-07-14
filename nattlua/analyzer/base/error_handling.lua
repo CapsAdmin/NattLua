@@ -129,12 +129,12 @@ return function(META)
 	end
 
 	function META:Error(msg, node)
-		node = node or self.current_expression or self.current_statement
+		node = node or self:GetCurrentExpression() or self:GetCurrentStatement()
 		self:ReportDiagnostic(msg, "error", node, node.Code, node:GetStartStop())
 	end
 
 	function META:Warning(msg, node)
-		node = node or self.current_expression or self.current_statement
+		node = node or self:GetCurrentExpression() or self:GetCurrentStatement()
 		self:ReportDiagnostic(msg, "warning", node, node.Code, node:GetStartStop())
 	end
 

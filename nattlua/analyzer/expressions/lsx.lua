@@ -34,8 +34,9 @@ return {
 			self:PopCurrentType("table")
 		end
 
+		self:PushCurrentExpression(node)
 		local ret, err = self:Call(func, Tuple({tbl}), node)
-		self.current_expression = node
+		self:PopCurrentExpression()
 		self:PopAnalyzerEnvironment()
 
 		if not ret then

@@ -164,8 +164,9 @@ return {
 						self:Assert(val:CoerceUntypedFunctions(contract))
 					end
 
-					self.current_expression = exp_key
+					self:PushCurrentExpression(exp_key)
 					self:Assert(check_type_against_contract(val, contract))
+					self:PopCurrentExpression()
 				else
 					if contract.Type == "tuple" and contract:HasOneValue() then
 						contract = contract:GetWithNumber(1)

@@ -51,8 +51,9 @@ return {
 			arguments = NormalizeTuples(types)
 		end
 
+		self:PushCurrentExpression(node)
 		local ret, err = self:Call(callable, arguments, node)
-		self.current_expression = node
+		self:PopCurrentExpression()
 		local returned_tuple
 
 		if not ret then

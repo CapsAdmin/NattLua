@@ -289,7 +289,7 @@ analyzer function error(msg: string, level: number | nil)
 	if msg:IsLiteral() then
 		analyzer:ThrowError(msg:GetData(), level and level:GetData() or nil)
 	else
-		analyzer:ThrowError("error thrown from expression " .. tostring(analyzer.current_expression))
+		analyzer:ThrowError("error thrown from expression " .. tostring(analyzer:GetCurrentExpression()))
 	end
 end
 

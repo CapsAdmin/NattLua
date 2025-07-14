@@ -32,7 +32,7 @@ return {
 					if func.Type == "table" then return func:Set(key, val) end
 
 					if func.Type == "function" then
-						return analyzer:Call(func, Tuple({obj, key, val}), analyzer.current_statement)
+						return analyzer:Call(func, Tuple({obj, key, val}), analyzer:GetCurrentStatement())
 					end
 				end
 			end

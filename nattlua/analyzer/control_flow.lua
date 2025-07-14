@@ -171,15 +171,17 @@ return function(META)
 		)
 
 		if not no_report then
-			self.current_expression = self:GetCallFrame(level).call_node
+			self:PushCurrentExpression(self:GetCallFrame(level).call_node)
 			self:Error(msg)
+			self:PopCurrentExpression()
 		end
 	end
 
 	function META:ThrowError(msg, obj, level)
 		self.lua_error_thrown = msg
-		self.current_expression = self:GetCallFrame(level).call_node
+		self:PushCurrentExpression(self:GetCallFrame(level).call_node)
 		self:Error(type_errors.plain_error(msg))
+		self:PopCurrentExpression()
 	end
 
 	function META:Return(node, types)
@@ -345,11 +347,11 @@ return function(META)
 	end
 
 	function META:Print(...)
-		local node = self.current_expression
+		local node = self:GetCurrentExpression()
 		local start, stop = node:GetStartStop()
 
 		do
-			local node = self.current_statement
+			local node = self:GetCurrentStatement()
 			local start2, stop2 = node:GetStartStop()
 
 			if start2 > start then
