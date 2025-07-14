@@ -336,14 +336,29 @@ return function(META)
 			end
 
 			function META:CallTypesystemUpvalue(name, a, b, c, d, e, f)
+				-- TODO
+				local old_statement = self.current_statement
+				local old_expression = self.current_expression
 				-- this is very internal-ish code
 				-- not sure what a nice interface for this really should be yet
 				self:PushAnalyzerEnvironment("typesystem")
 				local generics_func = self:GetLocalOrGlobalValue(name)
-				assert(generics_func.Type == "function", "cannot find typesystem function " .. name:GetData())
+
+				if generics_func.Type ~= "function" then
+					self:PopAnalyzerEnvironment()
+					self.current_statement = old_statement
+					self.current_expression = old_expression
+					error("cannot find typesystem function " .. name:GetData())
+				end
+
 				local argument_tuple = Tuple({a, b, c, d, e, f})
-				local returned_tuple = assert(self:Call(generics_func, argument_tuple))
+				local returned_tuple, err = self:Call(generics_func, argument_tuple)
 				self:PopAnalyzerEnvironment()
+				self.current_statement = old_statement
+				self.current_expression = old_expression
+
+				if not returned_tuple then error(err) end
+
 				return returned_tuple:Unpack()
 			end
 		end
