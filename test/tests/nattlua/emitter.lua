@@ -454,7 +454,7 @@ identical([=[local type {
 	FunctionStatement,
 	FunctionLocalAnalyzerStatement,
 	ValueExpression
- } = importawd("~/nattlua/parser/nodes.nlua")]=])
+ } = importawd("~/nattlua/parser/node.lua")]=])
 check(
 	{
 		preserve_whitespace = false,

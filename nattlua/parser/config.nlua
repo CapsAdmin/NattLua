@@ -1,4 +1,4 @@
-local type { Node } = import("./nodes.nlua")
+local type { Node } = import("./node.lua")
 
 local type ParserConfig = {
 	root = Node,

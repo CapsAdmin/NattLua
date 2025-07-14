@@ -493,7 +493,7 @@ local function copy_val(
 	if val.Type == "table" and not copy_tables then
 		return val
 	else
-		map[val] = val:Copy(map, copy_tables)
+		map[val] = (val--[[# as any]]):Copy(map, copy_tables)
 	end
 
 	return map[val]

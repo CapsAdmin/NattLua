@@ -14,7 +14,7 @@ local io = _G.io
 
 --[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
---[[#local type { ExpressionKind, StatementKind, statement, expression } = import("./nodes.nlua")]]
+--[[#local type { ExpressionKind, StatementKind, statement, expression } = import("./node.lua")]]
 
 local META = loadfile("nattlua/parser/base.lua")()
 assert(loadfile("nattlua/parser/expressions.lua"))(META)
@@ -73,7 +73,7 @@ function META:ParseFunctionBody(
 	if self.TealCompat then
 		if self:IsTokenValue("<") then
 			node.tokens["arguments_typesystem("] = self:ExpectTokenValue("<")
-			node.identifiers_typesystem = self:ParseMultipleValues(self.ParseIdentifier)
+			node.identifiers_typesystem = self:ParseMultipleValues(self.ParseIdentifier) or false
 			node.tokens["arguments_typesystem)"] = self:ExpectTokenValue(">")
 		end
 	end
@@ -121,7 +121,7 @@ function META:ParseTypeFunctionBody(
 			local lparen = self:ExpectTokenValue("(")
 			local identifiers = self:ParseMultipleValues(self.ParseIdentifier, true)
 			local rparen = self:ExpectTokenValue(")")
-			node.identifiers_typesystem = node.identifiers
+			node.identifiers_typesystem = node.identifiers or false
 			node.identifiers = identifiers
 			node.tokens["arguments_typesystem("] = node.tokens["arguments("]
 			node.tokens["arguments_typesystem)"] = node.tokens["arguments)"]

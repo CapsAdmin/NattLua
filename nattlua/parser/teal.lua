@@ -1,6 +1,6 @@
 local META = ...
 
---[[#local type { Node, statement } = import("~/nattlua/parser/nodes.nlua")]]
+--[[#local type { Node, statement } = import("~/nattlua/parser/node.lua")]]
 
 --[[#local type { TokenType } = import("~/nattlua/lexer/token.lua")]]
 
@@ -45,7 +45,7 @@ function META:ParseTealFunctionSignature()
 
 	if self:IsTokenValue("<") then
 		node.tokens["<"] = self:ExpectTokenValue("<")
-		node.identifiers_typesystem = self:ParseMultipleValues(self.ParseTealFunctionArgument, false)
+		node.identifiers_typesystem = self:ParseMultipleValues(self.ParseTealFunctionArgument, false) or false
 		node.tokens[">"] = self:ExpectTokenValue(">")
 	end
 

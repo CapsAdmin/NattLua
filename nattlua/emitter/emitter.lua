@@ -17,7 +17,7 @@ local META = class.CreateTemplate("emitter")
 
 --[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]
 
---[[#local type { Node } = import("~/nattlua/parser/nodes.nlua")]]
+--[[#local type { Node } = import("~/nattlua/parser/node.lua")]]
 
 --[[#local type ParserConfig = import("~/nattlua/parser/config.nlua")]]
 --[[#local type EmitterConfig = import("~/nattlua/emitter/config.nlua")]]

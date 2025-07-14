@@ -1,6 +1,7 @@
---[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]
+--[[# --ANALYZE
+local type { Token } = import("~/nattlua/lexer/token.lua")]]
 
---[[#local type { ExpressionKind, StatementKind, Node } = import("~/nattlua/parser/nodes.nlua")]]
+--[[#local type { Code } = import("~/nattlua/code.lua")]]
 
 --[[#local type NodeType = "expression" | "statement"]]
 local ipairs = _G.ipairs
@@ -12,7 +13,33 @@ local formating = require("nattlua.other.formating")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("node")
 --[[#type META.@Name = "Node"]]
---[[#type META.@Self = Node]]
+--[[#type META.@Self = {
+	@Name = "Node",
+	type = "expression" | "statement",
+	kind = string,
+	id = number,
+	Code = Code,
+	tokens = Map<|string, false | Token | List<|Token|>|>,
+	inferred_types = List<|any|>,
+	inferred_types_done = Map<|any, any|>,
+	environment = "typesystem" | "runtime",
+	parent = false | self,
+	code_start = number,
+	code_stop = number,
+	first_node = false | self,
+	statements = false | List<|any|>,
+	value = false | Token,
+	lua_code = any,
+	--
+	scope = any,
+	scopes = any,
+	type_expression = any,
+	identifier = any,
+	first_node = any,
+	environments = any,
+	identifiers_typesystem = any,
+}]]
+--[[#type Node = META.@Self]]
 local all_nodes = {
 	sub_statement = {
 		["table_expression_value"] = function()
@@ -134,6 +161,7 @@ local all_nodes = {
 			return {
 				left = false,
 				expression = false,
+				is_left_assignment = false,
 				tokens = {
 					["]"] = false,
 					["["] = false,
@@ -146,6 +174,7 @@ local all_nodes = {
 				return_types = false,
 				statements = false,
 				identifiers = false,
+				environments_override = false,
 				tokens = {
 					["function"] = false,
 					["end"] = false,
@@ -169,6 +198,7 @@ local all_nodes = {
 				left = false,
 				expressions = false,
 				path = false,
+				parser_call = false,
 				tokens = {
 					["call)"] = false,
 					["call_typesystem("] = false,
@@ -185,6 +215,9 @@ local all_nodes = {
 				is_identifier = false,
 				type_expression = false,
 				value = false,
+				self_call = false,
+				is_left_assignment = false,
+				force_upvalue = false,
 				tokens = {
 					[">"] = false,
 					["<"] = false,
@@ -236,6 +269,7 @@ local all_nodes = {
 			return {
 				statements = false,
 				identifiers = false,
+				identifiers_typesystem = false,
 				tokens = {
 					["function"] = false,
 					["arguments)"] = false,
@@ -357,6 +391,10 @@ local all_nodes = {
 				expression = false,
 				array_expression = false,
 				modifiers = false,
+				decls = false,
+				default_expression = false,
+				multi_values = false,
+				bitfield_expression = false,
 				tokens = {
 					["identifier_("] = false,
 					["identifier_)"] = false,
@@ -714,10 +752,13 @@ local all_nodes = {
 		end,
 		["root"] = function()
 			return {
+				parser = false,
+				code = false,
 				imports = false,
 				data_import = false,
 				statements = false,
 				imported = false,
+				lexer_tokens = false,
 				tokens = {
 					["shebang"] = false,
 					["eof"] = false,
@@ -727,16 +768,18 @@ local all_nodes = {
 		end,
 	},
 }
+--[[#local type StatementKind = keysof<|all_nodes.statement|> | keysof<|all_nodes.sub_statement|>]]
+--[[#local type ExpressionKind = keysof<|all_nodes.expression|>]]
 
 function META.New(
-	type--[[#: "expression" | "statement"]],
-	kind--[[#: StatementKind | ExpressionKind]],
-	environment--[[#: any]],
-	code--[[#: any]],
+	type--[[#: ref (keysof<|all_nodes|>)]],
+	kind--[[#: ref (StatementKind | ExpressionKind)]],
+	environment--[[#: "typesystem" | "runtime"]],
+	code--[[#: Code]],
 	code_start--[[#: number]],
 	code_stop--[[#: number]],
 	parent--[[#: any]]
-)--[[#: Node]]
+)
 	local init = all_nodes[type][kind]()
 	init.type = type
 	init.kind = kind
@@ -747,6 +790,15 @@ function META.New(
 	init.Code = code
 	init.inferred_types = {}
 	init.inferred_types_done = {}
+	--
+	init.scope = false
+	init.scopes = false
+	init.type_expression = false
+	init.identifier = false
+	init.first_node = false
+	--
+	init.environments = false
+	init.identifiers_typesystem = false
 	return setmetatable(init--[[# as META.@Self]], META)
 end
 
@@ -791,7 +843,7 @@ function META:Render(config)
 
 	do
 		--[[#-- we have to do this because nattlua.emitter is not yet typed
-		-- so if it's hoisted the self/nodes.nlua will fail
+		-- so if it's hoisted the self/node.lua will fail
 		attest.expect_diagnostic<|"warning", "always false"|>]]
 		--[[#attest.expect_diagnostic<|"warning", "always true"|>]]
 
@@ -807,8 +859,10 @@ function META:Render(config)
 	local em = emitter.New(config or {preserve_whitespace = false, no_newlines = true})
 
 	if self.type == "expression" then
+		--[[#attest.expect_diagnostic<|"error", "mutate argument"|>]]
 		em:EmitExpression(self)
 	elseif self.type == "statement" then
+		--[[#attest.expect_diagnostic<|"error", "mutate argument"|>]]
 		em:EmitStatement(self)
 	end
 
@@ -832,20 +886,20 @@ end
 function META:GetStatement()
 	if self.type == "statement" then return self end
 
-	if self.parent then return self.parent:GetStatement() end
+	if self.parent then return (self.parent--[[# as any]]):GetStatement() end
 
 	return self
 end
 
 function META:GetRoot()
-	if self.parent then return self.parent:GetRoot() end
+	if self.parent then return (self.parent--[[# as any]]):GetRoot() end
 
 	return self
 end
 
 function META:GetRootExpression()
 	if self.parent and self.parent.type == "expression" then
-		return self.parent:GetRootExpression()
+		return (self.parent--[[# as any]]):GetRootExpression()
 	end
 
 	return self
@@ -928,15 +982,15 @@ end
 local function find_by_type(
 	node--[[#: META.@Self]],
 	what--[[#: StatementKind | ExpressionKind]],
-	out--[[#: List<|META.@Name|>]]
-)
+	out--[[#: ref mutable List<|Node|>]]
+)--[[#: mutable List<|Node|>]]
 	out = out or {}
 
 	for _, child in ipairs(node:GetNodes()) do
 		if child.kind == what then
 			table.insert(out, child)
 		elseif child:GetNodes() then
-			find_by_type(child, what, out)
+			(find_by_type--[[# as any]])(child, what, out)
 		end
 	end
 
@@ -947,4 +1001,8 @@ function META:FindNodesByType(what--[[#: StatementKind | ExpressionKind]])
 	return find_by_type(self, what, {})
 end
 
+--[[#type META.ExpressionKind = ExpressionKind]]
+--[[#type META.StatementKind = StatementKind]]
+--[[#type META.Node = Node]]
+--[[#type META.Nodes = all_nodes]]
 return META

@@ -9,7 +9,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 local path_util = require("nattlua.other.path")
 
---[[#local type { Node } = import("~/nattlua/parser/nodes.nlua")]]
+--[[#local type { Node } = import("~/nattlua/parser/node.lua")]]
 
 function META:ParseAnalyzerFunctionExpression()
 	if not (self:IsTokenValue("analyzer") and self:IsTokenValue("function", 1)) then

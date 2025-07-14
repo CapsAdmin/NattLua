@@ -243,7 +243,7 @@ function type_errors.destructure_assignment(type_name--[[#: string]])--[[#: Reas
 	return {"expected a table on the right hand side, got", type_name}
 end
 
-function type_errors.destructure_assignment_missing(name--[[#: any]])--[[#: Reason]]
+function type_errors.destructure_assignment_missing(name--[[#: string]])--[[#: Reason]]
 	return {"field", name, "does not exist"}
 end
 

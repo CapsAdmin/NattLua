@@ -1,4 +1,4 @@
-local type { statement } = import("~/nattlua/parser/nodes.nlua")
+local type { Nodes } = import("~/nattlua/parser/node.lua")
 
 local META = require("nattlua.parser.base")
 local Code = require("nattlua.code").New
@@ -11,12 +11,11 @@ local tbl = self:ParseFixedMultipleValues(
 		attest.equal(b, 2)
 		attest.equal(c, 3)
 		local node = self:StartNode("statement", "do")
-		self:EndNode(node)
+		self:EndNode(node as any)
 		return node
 	end,
 	1,
 	2,
 	3
 )
-attest.equal(tbl, _ as {[1 .. inf] = {} as statement["do"]})
-self:EndNode(node)
+attest.equal(tbl, _ as {[1 .. inf] = Node})

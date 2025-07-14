@@ -1,7 +1,7 @@
 --[[# --ANALYZE
 local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
---[[#local type { ExpressionKind, StatementKind, statement, expression, Node } = import("~/nattlua/parser/nodes.nlua")]]
+--[[#local type { ExpressionKind, StatementKind, Nodes, Node } = import("~/nattlua/parser/node.lua")]]
 
 --[[#local type ParserConfig = import("~/nattlua/parser/config.nlua")]]
 
@@ -37,7 +37,7 @@ META.OnInitialize = {}
 	context_values = any,
 	FFI_DECLARATION_PARSER = boolean,
 	CDECL_PARSING_MODE = "typeof" | "ffinew" | false,
-	OnPreCreateNode = function=(self: any, node: Node)>(),
+	OnPreCreateNode = function=(self: any, node: any)>(),
 	OnError = function=(
 		self: self,
 		code: Code,
@@ -51,9 +51,9 @@ META.OnInitialize = {}
 require("nattlua.other.context_mixin")(META)
 --[[#local type Parser = META.@Self]]
 
-function META:OnPreCreateNode(node--[[#: Node]]) end
+function META:OnPreCreateNode(node--[[#: any]]) end
 
-function META:OnParsedNode(node--[[#: Node]]) end
+function META:OnParsedNode(node--[[#: any]]) end
 
 function META.New(
 	tokens--[[#: List<|Token|>]],
@@ -105,7 +105,7 @@ do
 end
 
 do
-	function META:PushParentNode(node--[[#: Node]])
+	function META:PushParentNode(node--[[#: any]])
 		self:PushContextValue("parent_node", node)
 	end
 
@@ -138,11 +138,10 @@ local function dump_fields(node)
 end
 ]=]
 function META:StartNode(
-	node_type--[[#: ref ("statement" | "expression")]],
+	node_type--[[#: ref (keysof<|Nodes|>)]],
 	kind--[[#: ref (StatementKind | ExpressionKind)]],
 	start_node--[[#: nil | Node]]
-)--[[#: ref Node]]
-	--[[#local type T = node_type == "statement" and statement[kind] or expression[kind] ]]
+)--[[#: ref any]]
 	local code_start = start_node and start_node.code_start or assert(self:GetToken()).start
 	local node = NewNode(
 		node_type,
@@ -152,10 +151,10 @@ function META:StartNode(
 		code_start,
 		code_start,
 		self:GetParentNode()
-	)--[[# as T]]
+	)
 	self:OnPreCreateNode(node)
 	self:PushParentNode(node)
-	return node--[[# as T]]
+	return node
 end
 
 function META:EndNode(node--[[#: Node]])
@@ -455,7 +454,7 @@ end
 
 function META:ParseFixedMultipleValues(
 	max--[[#: number]],
-	reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (nil | Node))]],
+	reader--[[#: ref function=(Parser, ...: ref ...any)>(ref (any))]],
 	a--[[#: ref any]],
 	b--[[#: ref any]],
 	c--[[#: ref any]]
