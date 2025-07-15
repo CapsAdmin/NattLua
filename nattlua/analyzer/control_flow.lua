@@ -237,24 +237,21 @@ return function(META)
 
 	do
 		function META:GetCallStack()
-			return self.call_stack or {}
+			return self:GetContextStack("call_stack") or {}
 		end
 
 		function META:GetCallFrame(level)
-			return self:GetCallStack()[level or 1]
+			return self:GetContextValue("call_stack", level)
 		end
 
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
-			-- setup and track the callstack to avoid infinite loops or callstacks that are too big
-			self.call_stack = self.call_stack or {}
-
 			if
 				self:IsRuntime() and
 				call_node and
 				not not_recursive_call and
 				not obj:HasReferenceTypes()
 			then
-				for _, v in ipairs(self.call_stack) do
+				for _, v in ipairs(self:GetCallStack()) do
 					-- if the callnode is the same, we're doing some infinite recursion
 					if v.call_node == call_node then
 						if obj:IsExplicitOutputSignature() then
@@ -271,22 +268,18 @@ return function(META)
 				end
 			end
 
-			table_insert(
-				self.call_stack,
+			self:PushContextValue(
+				"call_stack",
 				{
 					obj = obj,
 					call_node = call_node,
 					scope = self:GetScope(),
 				}
 			)
-		--[[for i, frame in ipairs(self.call_stack) do
-				print(("\t"):rep(i - 1) .. tostring(frame.call_node))
-				print(("\t"):rep(i - 1) .. tostring(frame.obj:GetFunctionBodyNode() or frame.obj))
-			end]]
 		end
 
 		function META:PopCallFrame()
-			table_remove(self.call_stack)
+			self:PopContextValue("call_stack")
 		end
 	end
 

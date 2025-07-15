@@ -38,6 +38,10 @@ return function(META--[[#: ref any]])
 			self.context_values[key][self.context_values[key].i] = nil
 			self.context_values[key].i = self.context_values[key].i - 1
 		end
+
+		function META:GetContextStack(key)
+			return self.context_values[key]
+		end
 	end
 
 	do
