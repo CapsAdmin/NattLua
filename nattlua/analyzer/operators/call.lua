@@ -75,6 +75,14 @@ local function union_call(self, analyzer, input, call_node)
 	local new = Union()
 
 	for _, obj in ipairs(self:GetData()) do
+		--
+		local recursively_called = obj.Type == "function" and analyzer:PushCallFrame(obj, call_node)
+
+		if recursively_called then
+			analyzer:PopCallFrame()
+			return recursively_called
+		end
+
 		local ok, err = analyzer:Call(obj, input:Copy(), call_node, true)
 		local val = analyzer:Assert(ok, err)
 
@@ -86,6 +94,8 @@ local function union_call(self, analyzer, input, call_node)
 		end
 
 		new:AddType(val)
+
+		if obj.Type == "function" then analyzer:PopCallFrame() end
 	end
 
 	return Tuple({new--[[# as any]]})
@@ -148,12 +158,14 @@ do
 
 					if func.Type == "union" then func = a:GetType("function") end
 
-					b:SetArgumentsInferred(true)
+					if func then
+						b:SetArgumentsInferred(true)
 
-					-- TODO: callbacks with ref arguments should not be called
-					-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
-					if func.Type == "function" and not b:HasReferenceTypes() and func then
-						self:Assert(self:Call(b, func:GetInputSignature():Copy(nil, true)))
+						-- TODO: callbacks with ref arguments should not be called
+						-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
+						if func.Type == "function" and not b:HasReferenceTypes() and func then
+							self:Assert(self:Call(b, func:GetInputSignature():Copy(nil, true)))
+						end
 					end
 				end
 			end
@@ -208,7 +220,10 @@ do
 
 		local recursively_called = analyzer:PushCallFrame(self, call_node, not_recursive_call)
 
-		if recursively_called then return recursively_called end
+		if recursively_called then
+			analyzer:PopCallFrame()
+			return recursively_called
+		end
 
 		local function_node = self:GetFunctionBodyNode()
 		local is_type_function = function_node and

@@ -998,3 +998,13 @@ do
 end
 
 ]]
+analyze(
+	[[
+local tbl = {}
+tbl.test = function()
+	local f = tbl[_ as string]
+	return f()
+end
+]],
+	"contains uncallable object nil"
+)
