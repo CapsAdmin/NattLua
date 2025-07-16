@@ -1066,13 +1066,7 @@ do
 	function META:Mutate(key, val, scope, from_tracking)
 		local hash = key:GetHashForMutationTracking()
 
-		if hash == nil then
-			hash = key:GetUpvalue() and key:GetUpvalue():GetKey()
-
-			if not hash then return end
-
-			return
-		end
+		if hash == nil then return end
 
 		initialize_table_mutation_tracker(self, scope, key, hash)
 		table.insert(self.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking, key = key})
