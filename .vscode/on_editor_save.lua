@@ -1,4 +1,5 @@
 local nl = require("nattlua")
+local profiler = require("test.helpers.profiler")
 _G.ON_EDITOR_SAVE = true
 local path = ...
 
@@ -37,7 +38,7 @@ local function run_nattlua(path)
 	c.debug = has_flag("VERBOSE_STACKTRACE")
 	_G.DISABLE_BASE_ENV = has_flag("DISABLE_BASE_ENV")
 
-	if has_flag("PROFILE") then require("jit.p").start("Flp") end
+	if has_flag("PROFILE") then profiler.Start() end
 
 	local ok, err
 
@@ -45,7 +46,7 @@ local function run_nattlua(path)
 
 	if _G.DISABLE_BASE_ENV then _G.DISABLE_BASE_ENV = nil end
 
-	if has_flag("PROFILE") then require("jit.p").stop() end
+	if has_flag("PROFILE") then profiler.Stop() end
 
 	if not ok and err then
 		error(err)
