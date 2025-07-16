@@ -268,6 +268,13 @@ return function(META)
 				end
 			end
 
+			if #self:GetCallStack() > 100 or debug.getinfo(500, "") then
+				local len = 501
+				while debug.getinfo(len, "") do len = len + 1 end
+				self:Error(type_errors.analyzer_callstack_too_deep(#self:GetCallStack(), len))
+				return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+			end
+
 			self:PushContextValue(
 				"call_stack",
 				{

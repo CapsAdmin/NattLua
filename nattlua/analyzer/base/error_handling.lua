@@ -30,6 +30,15 @@ return function(META)
 
 		return ok, err, ...
 	end
+	
+	function META:AssertWarning(ok, err, ...)
+		if not ok then
+			self:Warning(err)
+			return Any()
+		end
+
+		return ok, err, ...
+	end
 
 	function META:AssertWithNode(node, ok, err, ...)
 		if not ok then

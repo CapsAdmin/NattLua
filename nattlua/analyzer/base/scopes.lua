@@ -137,7 +137,9 @@ return function(META)
 				return self:Error(type_errors.const_assignment(key))
 			end
 
-			if not self:MutateUpvalue(upvalue, val) then upvalue:SetValue(val) end
+			self:MutateUpvalue(upvalue, val)
+			
+			upvalue:SetValue(val)
 
 			return upvalue
 		end

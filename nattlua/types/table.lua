@@ -1065,13 +1065,17 @@ do
 
 	function META:Mutate(key, val, scope, from_tracking)
 		local hash = key:GetHashForMutationTracking()
-
-		if hash == nil then return end
+		if hash == nil then return true end
 
 		initialize_table_mutation_tracker(self, scope, key, hash)
+
+		if #self.mutations[hash] > 100 then return false, type_errors.too_many_mutations() end
+
 		table.insert(self.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking, key = key})
 
 		if from_tracking then scope:AddTrackedObject(self) end
+
+		return true
 	end
 
 	function META:ClearMutations()

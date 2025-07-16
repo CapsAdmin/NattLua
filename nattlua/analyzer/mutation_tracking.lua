@@ -65,7 +65,7 @@ return function(META)
 			end
 		end
 
-		tbl:Mutate(key, val, scope, from_tracking)
+		self:AssertWarning(tbl:Mutate(key, val, scope, from_tracking))
 	end
 
 	function META:GetMutatedUpvalue(upvalue)
@@ -83,7 +83,7 @@ return function(META)
 			end
 		end
 
-		upvalue:Mutate(val, scope, from_tracking)
+		self:AssertWarning(upvalue:Mutate(val, scope, from_tracking))
 	end
 
 	function META:ClearScopedTrackedObjects(scope)
