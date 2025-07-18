@@ -299,3 +299,12 @@ end
 ]],
 	"tonumber.+%s+^^^^^^^^^^^^^^^^^^^^^^^^^^%s+11"
 )
+
+analyze[[
+local m = function()
+	return _ as false | 1
+end
+local x = m() or error("never")
+local y = x + 1
+attest.equal(y, 2)
+]]

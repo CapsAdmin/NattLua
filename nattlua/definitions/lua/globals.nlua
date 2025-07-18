@@ -283,6 +283,11 @@ end
 analyzer function error(msg: string, level: number | nil)
 	if not analyzer:IsDefinetlyReachable() then
 		analyzer:ThrowSilentError()
+
+		if analyzer.LEFT_SIDE_OR then
+			return analyzer.LEFT_SIDE_OR:GetFirstValue():GetTruthy()
+		end
+
 		return
 	end
 

@@ -291,6 +291,16 @@ return function(META)
 	end
 
 	function META:IsDefinetlyReachable()
+
+		do
+			local obj = self.LEFT_SIDE_OR
+			if obj then
+				if obj:IsUncertain() then
+					return false, "left side or is uncertain"
+				end
+			end
+		end
+
 		local scope = self:GetScope()
 		local function_scope = scope:GetNearestFunctionScope()
 

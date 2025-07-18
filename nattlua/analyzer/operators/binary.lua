@@ -223,9 +223,11 @@ local function Binary(self, node, l, r, op)
 				r = Nil()
 			else
 				-- right hand side of or is the "false" part
+				self.LEFT_SIDE_OR = l
 				self:PushFalsyExpressionContext(true)
 				r = self:AnalyzeExpression(node.right)
 				self:PopFalsyExpressionContext()
+				self.LEFT_SIDE_OR = nil
 
 				if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
 					if r.Type == "union" then
