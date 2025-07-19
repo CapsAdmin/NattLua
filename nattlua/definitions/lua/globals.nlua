@@ -285,7 +285,10 @@ analyzer function error(msg: string, level: number | nil)
 		analyzer:ThrowSilentError()
 
 		if analyzer.LEFT_SIDE_OR then
-			return analyzer.LEFT_SIDE_OR:GetFirstValue():GetTruthy()
+			local obj = analyzer.LEFT_SIDE_OR:GetFirstValue()
+			if obj.Type == "union" then
+				return obj:GetTruthy()
+			end
 		end
 
 		return
