@@ -112,6 +112,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	copy:SetExplicitOutputSignature(self:IsExplicitOutputSignature())
 	copy:SetArgumentsInferred(self:IsArgumentsInferred())
 	copy:SetPreventInputArgumentExpansion(self:GetPreventInputArgumentExpansion())
+	copy:SetLiteralFunction(self:IsLiteralFunction())
 	return copy
 end
 

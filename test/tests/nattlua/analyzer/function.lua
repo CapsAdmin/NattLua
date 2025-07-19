@@ -1008,3 +1008,6 @@ end
 ]],
 	"contains uncallable object nil"
 )
+analyze[[
+(math.floor or math.ceil)(_ as number)
+]]
