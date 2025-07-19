@@ -170,6 +170,18 @@ do -- Array manipulation functions
 	end
 
 	analyzer function table.unpack(tbl: List<|any|>, from: number | nil, to: number | nil)
+		if tbl.Type == "any" then
+			return types.Tuple():AddRemainder(types.Tuple({tbl:Get(len)}):SetRepeat(math.huge))
+		end
+
+		local len = tbl:GetArrayLength()
+
+		if len.Type == "union" then len = len:Simplify() end
+
+		if len.Type == "number" and not len:IsLiteral() then
+			return types.Tuple():AddRemainder(types.Tuple({tbl:Get(len)}):SetRepeat(math.huge))
+		end
+
 		local t = {}
 
 		for i = from and from:GetData() or 1, to and to:GetData() or 32 do
