@@ -80,13 +80,17 @@ local function unpack_union_tuples(obj, input)
 		end
 
 		out[i] = args
+		local carry = true
 
-		for i = arg_length, 2, -1 do
-			if i == arg_length then ys[i] = ys[i] + 1 end
+		for arg_index = arg_length, 1, -1 do
+			if carry and lengths[arg_index] > 0 then
+				ys[arg_index] = ys[arg_index] + 1
 
-			if ys[i] > lengths[i] then
-				ys[i] = 1
-				ys[i - 1] = ys[i - 1] + 1
+				if ys[arg_index] <= lengths[arg_index] then
+					carry = false
+				else
+					ys[arg_index] = 1
+				end
 			end
 		end
 	end

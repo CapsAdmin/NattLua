@@ -145,6 +145,14 @@ analyze[[
         attest.equal(lol:sub(_ as 2 | 3), _ as "ar" | "o" | "oo" | "r")
     ]]
 
+analyze[[
+    local analyzer function F(a: string, b: string, c: nil | number, d: false | nil | true)
+        assert(a ~= nil)
+    end
+
+
+    F(_ as "1976-W01-1 12:12:12.123" | string, _ as any, _ as 24 | number)
+]]
 do
 	_G.test_var = 0
 	analyze[[
