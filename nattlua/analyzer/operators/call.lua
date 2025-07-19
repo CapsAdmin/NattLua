@@ -75,12 +75,10 @@ local function union_call(self, analyzer, input, call_node)
 	local new = Union()
 
 	for _, obj in ipairs(self:GetData()) do
-		--
-		local recursively_called = obj.Type == "function" and analyzer:PushCallFrame(obj, call_node)
+		if obj.Type == "function" then
+			local recursively_called = analyzer:PushCallFrame(obj, call_node)
 
-		if recursively_called then
-			analyzer:PopCallFrame()
-			return recursively_called
+			if recursively_called then return recursively_called end
 		end
 
 		local ok, err = analyzer:Call(obj, input:Copy(), call_node, true)
@@ -220,10 +218,7 @@ do
 
 		local recursively_called = analyzer:PushCallFrame(self, call_node, not_recursive_call)
 
-		if recursively_called then
-			analyzer:PopCallFrame()
-			return recursively_called
-		end
+		if recursively_called then return recursively_called end
 
 		local function_node = self:GetFunctionBodyNode()
 		local is_type_function = function_node and
