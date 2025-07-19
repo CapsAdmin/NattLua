@@ -90,13 +90,18 @@ do -- Formatting functions
 		local ret = {...}
 
 		for i, v in ipairs(ret) do
-			if v:IsLiteral() then
-				ret[i] = v:GetData()
-
-				if v.Type == "function" then ret[i] = v.GetData end
-			else
+			if
+				not (
+					v.Type == "string" or
+					v.Type == "number" or
+					v.Type == "symbol"
+				) or
+				not v:IsLiteral()
+			then
 				return types.String()
 			end
+
+			ret[i] = v:GetData()
 		end
 
 		return string.format(s:GetData(), table.unpack(ret))

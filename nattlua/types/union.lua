@@ -343,7 +343,7 @@ function META:RemoveCertainlyFalsy()
 		if not obj:IsCertainlyFalse() then add(copy, obj) end
 	end
 
-	return copy
+	return copy:Simplify()
 end
 
 function META:GetTruthy()
