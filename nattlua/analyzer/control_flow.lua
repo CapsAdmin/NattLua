@@ -270,7 +270,11 @@ return function(META)
 
 			if #self:GetCallStack() > 100 or debug.getinfo(500, "") then
 				local len = 501
-				while debug.getinfo(len, "") do len = len + 1 end
+
+				while debug.getinfo(len, "") do
+					len = len + 1
+				end
+
 				self:Error(type_errors.analyzer_callstack_too_deep(#self:GetCallStack(), len))
 				return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 			end
@@ -291,13 +295,11 @@ return function(META)
 	end
 
 	function META:IsDefinetlyReachable()
-
 		do
 			local obj = self.LEFT_SIDE_OR
+
 			if obj then
-				if obj:IsUncertain() then
-					return false, "left side or is uncertain"
-				end
+				if obj:IsUncertain() then return false, "left side or is uncertain" end
 			end
 		end
 
