@@ -456,13 +456,16 @@ return function(self, obj, input)
 				self:CreateLocalValue(identifier.value.value, self:Assert(input:Slice(argi)))
 			else
 				local val, err = input:GetWithoutExpansion(argi)
+
 				if not val then
 					local t = obj:GetInputSignature():GetWithoutExpansion(argi)
+
 					if t and t:IsNil() then
 						err = nil
 						val = Nil()
 					end
 				end
+
 				self:CreateLocalValue(identifier.value.value, self:Assert(val, err))
 			end
 		end
@@ -471,8 +474,7 @@ return function(self, obj, input)
 			if identifier.value.value == "..." then
 				self:CreateLocalValue(identifier.value.value, input:Slice(argi))
 			else
-				local val
-				val = val or input:GetWithNumber(argi)
+				local val, err = input:GetWithNumber(argi)
 
 				if not val then
 					val = Nil()
@@ -481,7 +483,24 @@ return function(self, obj, input)
 					if arg and arg:IsReferenceType() then val:SetReferenceType(true) end
 				end
 
-				self:CreateLocalValue(identifier.value.value, val)
+				self:CreateLocalValue(identifier.value.value, self:Assert(val, err))
+			end
+		end
+	end
+
+	do
+		local len = #function_node.identifiers
+
+		if
+			function_node.identifiers[#function_node.identifiers] and
+			function_node.identifiers[#function_node.identifiers].value.value == "..."
+		then
+
+		else
+			if function_node.self_call then len = len + 1 end
+
+			if #input:GetData() > len then
+				self:Error(type_errors.missing_index(len + 1))
 			end
 		end
 	end

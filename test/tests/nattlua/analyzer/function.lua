@@ -656,7 +656,7 @@ analyze[[
 
     end
     
-    foo(function(x: number)
+    foo(function(x: number, y: string)
         attest.equal(x, _ as number)
     end)
 ]]

@@ -213,7 +213,7 @@ function luadata.SetModifier(
 	if func_name then env[func_name] = func end
 end
 
-luadata.SetModifier("cdata", function(var--[[#: any]])
+luadata.SetModifier("cdata", function(var, context)
 	return tostring(var)
 end)
 

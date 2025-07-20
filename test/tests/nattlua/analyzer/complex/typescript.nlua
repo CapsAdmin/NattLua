@@ -60,7 +60,7 @@ do
 		setmetatable<|
 			copy,
 			{
-				__newindex = function(_, key: ref string)
+				__newindex = function(_, key: ref string, val: ref any)
 					error("Cannot assign to '" .. key .. "' because it is a read-only property.", 2)
 				end,
 			}

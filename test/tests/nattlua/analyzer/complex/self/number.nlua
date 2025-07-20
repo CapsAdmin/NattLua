@@ -1,6 +1,6 @@
-local type { Number } = require("nattlua.types.number")
+local type { LNumber } = require("nattlua.types.number")
 
 §analyzer:AnalyzeUnreachableCode()
 
-local num = Number(1337)
+local num = LNumber(1337)
 attest.equal(num:GetData(), _ as false | number | nil)

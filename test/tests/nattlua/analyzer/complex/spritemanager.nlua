@@ -170,7 +170,7 @@ sprite_sheet:appendURL(
 	"https://cdn.discordapp.com/attachments/607371740540305424/871456772580335737/3.png"
 )
 
-sprite_sheet:setCallback(function()
+sprite_sheet:setCallback(function(sprite)
 	hook.add("render", "", function()
 		sprite_sheet:drawSprite(0, 0, 512, 512, math.floor(timer.systime() / delay) % frameCount + 1)
 	end)
