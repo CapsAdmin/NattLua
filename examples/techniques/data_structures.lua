@@ -202,7 +202,7 @@ do
 	view_slice:Set(1, 666)
 	assert(view_slice:Get(1) == 666)
 	assert(arr:Get(6) == 666)
-	local slice = arr:Slice(5, 7)
+	local slice = assert(arr:Slice(5, 7))
 	assert(slice:Get(0) == 1)
 	assert(slice:Get(1) == 666)
 	assert(slice:Get(2) == 3)

@@ -564,10 +564,19 @@ function META:Slice(start--[[#: number]], stop--[[#: number]])
 	local data = {}
 
 	for i = start, stop do
-		table.insert(data, (self:GetData()--[[# as TBaseType]])[i])
+		local val, err = self:GetWithNumber(i)
+
+		if not val then return val, err end
+
+		table.insert(data, val)
 	end
 
-	return self:Copy():SetData(data)
+	local copy = META.New(data)
+	copy.Repeat = self.Repeat
+	copy.Remainder = self.Remainder and self.Remainder:Copy() or false
+	copy.Unpackable = self.Unpackable
+	copy:CopyInternalsFrom(self)
+	return copy
 end
 
 function META:GetFirstValue()

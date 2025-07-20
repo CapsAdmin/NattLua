@@ -647,7 +647,7 @@ do
 	META.ReadSingleQuoteString = build_string_reader("single", "'")
 end
 
-local ReadSymbolFromTrie = BuildTrieReader(runtime_syntax:GetSymbols())
+local ReadSymbolFromTrie = BuildTrieReader(runtime_syntax:GetSymbols(), false)
 
 function META:ReadSymbol()
 	if ReadSymbolFromTrie(self) then return "symbol" end

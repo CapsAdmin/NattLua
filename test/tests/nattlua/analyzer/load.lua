@@ -6,7 +6,7 @@ analyze[[
         attest.equal(assert(load("return " .. 2))(), 2)
     ]]
 analyze[[
-    attest.equal(require("test.tests.nattlua.analyzer.file_importing.expect_5")(5), 1337)
+    attest.equal(require("test.tests.nattlua.analyzer.file_importing.expect_5")(5, nil, nil, nil), 1337)
 ]]
 -- file import
 equal(
@@ -24,7 +24,7 @@ equal(
 	end)
 ]=]
 analyze([[
-    attest.equal(loadfile("test/tests/nattlua/analyzer/file_importing/complex/main.nlua")(), 14)
+    attest.equal(loadfile("test/tests/nattlua/analyzer/file_importing/complex/main.nlua")(1), 14)
 ]])
 analyze[[
     attest.equal(require("test.tests.nattlua.analyzer.file_importing.complex.adapter"), 14)

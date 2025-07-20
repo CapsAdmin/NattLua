@@ -366,24 +366,24 @@ analyze[[
 ]]
 analyze[[
     local type F = function=(foo: number, ...: ...string)>(nil)
-    attest.equal<|argument_type<|F, 2|>[1], ((string,)*inf,)|>
+    attest.equal<|select_type<|2, argument_type<|F, 2|>[1]|>, ((string,)*inf,)|>
 ]]
 analyze[[
     local type F = function=(foo: number, ...: (string,)*inf)>(nil)
-    attest.equal<|argument_type<|F, 2|>[1], ((string,)*inf,)|>
+    attest.equal<|select_type<|2, argument_type<|F, 2|>[1]|>, ((string,)*inf,)|>
 ]]
 analyze[[
     local function foo(a: string, b: function=(number, ...: ...string)>(nil))
 
     end
     
-    attest.equal<|argument_type<|argument_type<|foo, 2|>[1], 2|>[1], ((number,)*inf,)|>
+    attest.equal<|select_type<|2, argument_type<|argument_type<|foo, 2|>[1], 2|>[1]|>, ((string,)*inf,)|>
 ]]
 analyze[[
     local function foo(a: string, b: function=(number, ...: (string,)*inf)>(nil))
 
     end
-    attest.equal<|argument_type<|argument_type<|foo, 2|>[1], 2|>[1], ((number,)*inf,)|>
+    attest.equal<|select_type<|2, argument_type<|argument_type<|foo, 2|>[1], 2|>[1]|>, ((string,)*inf,)|>
 ]]
 analyze[[
     local type F = function=(foo: number, ...: (string,)*inf)>(nil)

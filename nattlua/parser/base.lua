@@ -109,7 +109,7 @@ do
 		self:PushContextValue("parent_node", node)
 	end
 
-	function META:GetParentNode(level)
+	function META:GetParentNode(level--[[#: nil | number]])
 		return self:GetContextValue("parent_node", level) or false--[[# as Node | false]]
 	end
 

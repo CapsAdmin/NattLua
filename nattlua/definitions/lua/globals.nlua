@@ -376,7 +376,6 @@ type xpcall = ReturnIfNonLiteral<|
 type select = ReturnIfNonLiteral<|
 	analyzer function(index: 1 .. inf | "#", ...: ...any): ...any
 		local x = ...
-
 		if x and x.Type == "tuple" then
 			return select(index:GetData(), x:Unpack())
 		end
@@ -384,6 +383,15 @@ type select = ReturnIfNonLiteral<|
 		return select(index:GetData(), ...)
 	end
 |>
+
+type select_type = analyzer function(index: 1 .. inf | "#", ...: ...any): ...any
+	local x = ...
+	if x and x.Type == "tuple" then
+		return x:Slice(index:GetData())
+	end
+
+	return select(index:GetData(), ...)
+end
 
 analyzer function type(obj: any)
 	if obj.Type == "any" then return types.String() end

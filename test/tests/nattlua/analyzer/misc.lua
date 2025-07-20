@@ -344,7 +344,7 @@ analyze[[
         return 1,2,3
     end
 
-    a()
+    a(false)
     a(true)
 
 ]]

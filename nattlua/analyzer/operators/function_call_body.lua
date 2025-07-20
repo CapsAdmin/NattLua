@@ -472,7 +472,7 @@ return function(self, obj, input)
 
 		if self:IsRuntime() then
 			if identifier.value.value == "..." then
-				self:CreateLocalValue(identifier.value.value, input:Slice(argi))
+				self:CreateLocalValue(identifier.value.value, self:Assert(input:Slice(argi)))
 			else
 				local val, err = input:GetWithNumber(argi)
 
@@ -552,7 +552,7 @@ return function(self, obj, input)
 			end
 		end
 
-		obj:GetInputSignature():Merge(input:Slice(1, obj:GetInputSignature():GetMinimumLength()))
+		obj:GetInputSignature():Merge(self:Assert(input:Slice(1, obj:GetInputSignature():GetMinimumLength())))
 	end
 
 	do -- this is for the emitter

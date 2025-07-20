@@ -124,7 +124,7 @@ do
 	local code, line_pos, char_pos = get_line_char(code)
 	local editor = single_file(code)
 	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line_pos, char_pos, "LOL"))
-	assert(code:gsub("foo", "LOL") == new_code)
+	equal(code:gsub("foo", "LOL"), new_code)
 end
 
 do
@@ -252,4 +252,5 @@ do
 	local integers = helper:GetSemanticTokens(path)
 	assert((#integers / 5) == 2)
 end
+
 _G.TEST = false
