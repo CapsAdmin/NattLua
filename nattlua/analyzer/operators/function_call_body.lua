@@ -453,9 +453,17 @@ return function(self, obj, input)
 
 		if self:IsTypesystem() then
 			if identifier.value.value == "..." then
-				self:CreateLocalValue(identifier.value.value, input:Slice(argi))
+				self:CreateLocalValue(identifier.value.value, self:Assert(input:Slice(argi)))
 			else
-				self:CreateLocalValue(identifier.value.value, self:Assert(input:GetWithoutExpansion(argi)))
+				local val, err = input:GetWithoutExpansion(argi)
+				if not val then
+					local t = obj:GetInputSignature():GetWithoutExpansion(argi)
+					if t and t:IsNil() then
+						err = nil
+						val = Nil()
+					end
+				end
+				self:CreateLocalValue(identifier.value.value, self:Assert(val, err))
 			end
 		end
 

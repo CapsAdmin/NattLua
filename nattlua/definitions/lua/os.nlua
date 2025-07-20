@@ -16,7 +16,13 @@ type os = {
 	exit = function=(code: boolean | number, close: boolean)>(nil) | function=(code: boolean | number)>(nil) | function=()>(nil),
 	remove = function=(filename: string)>(boolean | nil, string, number | nil),
 	setlocale = function=(locale: string, category: string)>(string | nil) | function=(locale: string)>(string | nil),
-	date = function=(format: "*t", time: number)>(DateStruct) | function=(format: "*t")>(DateStruct) | function=(format: string, time: number)>(string) | function=(format: string)>(string) | function=()>(string),
+	date = function <|format: nil | string, time: nil | number|>
+		if format == nil or format == "*t" or format == "!*t" then
+			return DateStruct
+		end
+
+		return string
+	end,
 	time = function=(date_table: DateStruct)>(number) | function=()>(number),
 	tmpname = function=()>(string),
 }
