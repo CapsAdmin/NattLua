@@ -134,7 +134,7 @@ local function countIRInsWeight(IRList: InstructionList)
 end
 
 -- find the next good candidate of loop that can be extracted of the main code, size between subFunctionMinimumSize and subFunctionMaxSize
-local function nextCandidateWhileLoop(IRList: InstructionList, curPos: number, maxPos: number)
+local function nextCandidateWhileLoop(IRList: InstructionList, curPos: number, maxPos: number): (number, InstructionList)
 	while (curPos <= maxPos) do
 		local checkPoint = -1
 		local shouldStopSearching = false
@@ -145,7 +145,7 @@ local function nextCandidateWhileLoop(IRList: InstructionList, curPos: number, m
 		local ifDepth = 0
 
 		while (loopStart + i <= maxPos) do
-			local curIR = IRList[loopStart + i][1]
+			local curIR = assert(IRList[loopStart + i])[1]
 
 			if curIR == LOOPSTART then
 				whileDepth = whileDepth + 1
@@ -157,7 +157,7 @@ local function nextCandidateWhileLoop(IRList: InstructionList, curPos: number, m
 				ifDepth = ifDepth - 1
 			end
 
-			curWeight = curWeight + IRWeightUpValue[curIR]
+			curWeight = curWeight + assert(IRWeightUpValue[curIR])
 
 			if whileDepth == 0 and ifDepth == 0 and curWeight > subFunctionMinimumSize then
 				if curWeight <= subFunctionMaxSize then
@@ -234,7 +234,7 @@ local function replaceIRs(
 				(
 					i + needleI
 				) <= max and
-				IREqual(haystack[i + needleI], needle[needleI + 1])
+				IREqual(assert(haystack[i + needleI]), assert(needle[needleI + 1]))
 			)
 		do
 			needleI = needleI + 1
@@ -360,18 +360,18 @@ local function secondPassMemset(instList: InstructionList)
 
 	while (i <= max - 2) do
 		if
-			instList[i][1] == MOVE and
+			assert(instList[i])[1] == MOVE and
 			math.abs(instList[i][2]) == 1 and
-			instList[i + 1][1] == ASSIGNATION
+			assert(instList[i + 1])[1] == ASSIGNATION
 		then
-			local movingDirection = assert(instList[i][2])
+			local movingDirection = assert(assert(instList[i])[2])
 			currentFindSize = 1
-			currentAssignation = instList[i + 1][2]
+			currentAssignation = assert(instList[i + 1])[2]
 			local i2 = i + 2
 
 			while (i2 <= max) do
-				local ptsShiftCandidate = instList[i2]
-				local dataAssignationCandidate = instList[i2 + 1]
+				local ptsShiftCandidate = assert(instList[i2])
+				local dataAssignationCandidate = assert(instList[i2 + 1])
 
 				if
 					ptsShiftCandidate[1] ~= MOVE or
@@ -395,7 +395,13 @@ local function secondPassMemset(instList: InstructionList)
 
 					-- the assignation row may not have started with a pointer shift for some reasons, so let's cover this case
 					-- we handle the possible ptr+1 or just ptr as starting mem pos
-					if instList[i - 1][1] == ASSIGNATION and instList[i - 1][2] == currentAssignation then
+					if
+						instList[i - 1] and
+						(
+							instList[i - 1][1] == ASSIGNATION and
+							instList[i - 1][2] == currentAssignation
+						)
+					then
 						i = i - 1
 						table.remove(instList, i)
 
@@ -418,7 +424,7 @@ local function secondPassMemset(instList: InstructionList)
 						max = max - (currentFindSize * 2 - 1)
 					end
 
-					local nextIns = instList[i + 1]
+					local nextIns = assert(instList[i + 1])
 
 					-- folding with next possible ptr ins
 					if nextIns[1] == MOVE then
@@ -818,7 +824,6 @@ end
 	end
 
 	local path = assert(arg[1])
-
 	local f = assert(io.open(path))
 	local text = assert(f:read("*a"))
 	f:close()

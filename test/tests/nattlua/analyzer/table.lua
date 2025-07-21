@@ -1093,3 +1093,19 @@ local type X = {
 
  test(X)
 ]]
+analyze[[
+    local tbl = {1, 2}
+    local x = tbl[_ as any]
+    attest.equal(x, _ as 1 | 2 | nil)
+]]
+analyze[[
+
+local type Instruction = {[number] = number}
+local type InstructionList = {[number] = Instruction}
+local IRList = _ as InstructionList
+local loopStart = _ as -inf .. inf
+local i = 0
+local curIR = assert(IRList[loopStart + i])[1]
+attest.equal(curIR, _ as nil | number)
+
+]]

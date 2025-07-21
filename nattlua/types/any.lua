@@ -21,9 +21,7 @@ function META.IsSubsetOf(A--[[#: TAny]], B--[[#: TBaseType]])
 	return true
 end
 
-function META:GetHashForMutationTracking()
-	return self
-end
+function META:GetHashForMutationTracking() end
 
 function META:__tostring()
 	return "any"

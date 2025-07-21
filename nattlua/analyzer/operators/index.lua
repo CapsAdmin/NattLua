@@ -118,11 +118,8 @@ local function index_table(analyzer, self, key, raw)
 		return val
 	end
 
-	local obj = self:Get(key)
-
-	if obj then return obj end
-
-	return Nil()
+	val = self:Get(key)
+	return val or Nil()
 end
 
 local function index_union(analyzer, obj, key)

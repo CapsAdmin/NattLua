@@ -35,7 +35,7 @@ aowl.ArgumentTypes = {
 }
 
 function aowl.StringToType(type, ...)
-	return aowl.ArgumentTypes[type](...)
+	return assert(aowl.ArgumentTypes[type])(...)
 end
 
 function aowl.AddCommand(command)

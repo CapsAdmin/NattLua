@@ -760,6 +760,17 @@ function META:Get(key--[[#: TBaseType | TString]])
 		local min, max = key:GetMin(), key:GetMax()
 		local len = math.abs(min - max)
 
+		if len == math.huge or len == -math.huge then
+			union:AddType(Nil())
+			for _, keyval in ipairs(self:GetData()) do
+				if keyval.key.Type == "number" then
+					union:AddType(keyval.val)
+				end
+			end
+
+			return union
+		end
+
 		if len > 100 then return Any() end
 
 		for i = min, max do
@@ -770,6 +781,14 @@ function META:Get(key--[[#: TBaseType | TString]])
 			union:AddType(res)
 		end
 
+		return union
+	end
+
+	if key.Type == "any" then
+		local union = Union({Nil()})
+		for _, keyval in ipairs(self:GetData()) do
+			union:AddType(keyval.val)
+		end
 		return union
 	end
 
