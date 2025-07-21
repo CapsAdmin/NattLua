@@ -716,3 +716,16 @@ attest.equal(x, 42 as number | false)
 attest.equal(y, "error" as string | nil)
 
 ]]
+
+analyze[[
+local luadata = {}
+luadata.Types = {}
+
+function luadata.SetModifier(type: string, callback: function=(string, number)>(string))
+	luadata.Types[type] = callback
+end
+luadata.SetModifier("test", function(x)
+	attest.equal(x, _ as string)
+	return tostring(x)
+end)
+]]

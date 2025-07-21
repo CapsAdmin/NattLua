@@ -38,6 +38,10 @@ function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]], visited--[[#: Map<|TB
 		if not ok then break end
 	end
 
+	if not ok then
+		reason = reason or "unknown reason"
+	end
+
 	return ok, reason
 end
 

@@ -137,6 +137,8 @@ do
 		obj:SetCalled(true)
 
 		-- infer any uncalled functions in the arguments to get their return type
+		if not input then debug.trace() end
+
 		for i, b in ipairs(input:GetData()) do
 			if b.Type == "function" and not b:IsCalled() and not b:IsExplicitOutputSignature() then
 				local a = obj:GetInputSignature():GetWithNumber(i)
@@ -162,7 +164,19 @@ do
 						-- TODO: callbacks with ref arguments should not be called
 						-- mixed ref args make no sense, maybe ref should be a keyword for the function instead?
 						if func.Type == "function" and not b:HasReferenceTypes() and func then
-							self:Assert(self:Call(b, func:GetInputSignature():Copy(nil, true)))
+							local len = b:GetInputSignature():GetTupleLength()
+							local new = func:GetInputSignature():Copy(nil, true)
+							local err
+
+							if not func:GetInputSignature():IsInfinite() then
+								new, err = new:Slice(1, len)
+							end
+
+							if not new then
+								self:Assert(new, err)
+							else
+								self:Assert(self:Call(b, new))
+							end
 						end
 					end
 				end

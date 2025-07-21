@@ -241,7 +241,19 @@ local function check_input(self, obj, input)
 
 								func:SetInputSignature(tup)
 							elseif contract.Type == "function" then
-								func:SetInputSignature(contract:GetInputSignature():Copy(nil, true)) -- force copy tables so we don't mutate the contract
+								local len = func:GetInputSignature():GetTupleLength()
+								local new = contract:GetInputSignature():Copy(nil, true)
+								local err
+
+								if not contract:GetInputSignature():IsInfinite() then
+									new, err = new:Slice(1, len)
+								end
+
+								if not new then
+									self:Assert(new, err)
+								else
+									func:SetInputSignature(new) -- force copy tables so we don't mutate the contract
+								end
 							end
 
 							func:SetCalled(false)
@@ -552,7 +564,13 @@ return function(self, obj, input)
 			end
 		end
 
-		obj:GetInputSignature():Merge(self:Assert(input:Slice(1, obj:GetInputSignature():GetMinimumLength())))
+		local tup, err = input:Slice(1, obj:GetInputSignature():GetMinimumLength())
+
+		if not tup then
+			self:Assert(tup, err)
+		else
+			obj:GetInputSignature():Merge(tup)
+		end
 	end
 
 	do -- this is for the emitter
