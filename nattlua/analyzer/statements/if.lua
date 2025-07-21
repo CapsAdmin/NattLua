@@ -46,7 +46,6 @@ return {
 				end
 
 				self.current_if_statement = false
-				self:PopCurrentExpression()
 				prev_expression = obj
 
 				if obj:IsTruthy() then
@@ -69,7 +68,11 @@ return {
 						end
 					end
 
-					if not obj:IsFalsy() then break end
+					if not obj:IsFalsy() then
+						self:PopCurrentExpression()
+
+						break
+					end
 				end
 
 				if self:IsRuntime() and obj:IsCertainlyFalse() then
@@ -77,6 +80,8 @@ return {
 						self:Warning(type_errors.if_always_false())
 					end
 				end
+
+				self:PopCurrentExpression()
 			else
 				if self:IsRuntime() and prev_expression:IsCertainlyFalse() then
 					if not contains_ref_argument(self:GetTrackedUpvalues()) then
