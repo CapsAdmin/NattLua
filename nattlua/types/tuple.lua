@@ -38,9 +38,7 @@ function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]], visited--[[#: Map<|TB
 		if not ok then break end
 	end
 
-	if not ok then
-		reason = reason or "unknown reason"
-	end
+	if not ok then reason = reason or "unknown reason" end
 
 	return ok, reason
 end
@@ -398,6 +396,14 @@ function META:Get(key--[[#: TBaseType]])
 	assert(key.Type == "number")
 
 	if key:IsLiteral() then return self:GetWithNumber(key:GetData()) end
+
+	local union = Union()
+
+	for i = 1, self:GetMinimumLength() do
+		union:AddType(self:GetWithNumber(i))
+	end
+
+	return union
 end
 
 function META:IsLiteral()
