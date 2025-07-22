@@ -158,12 +158,23 @@ function META.BinaryOperator(l--[[#: TRange]], r--[[#: any]], op--[[#: string]])
 		local r_min = r
 		local r_max = r
 
-		if not r:IsLiteral() then
-			r_min = LNumber(-math.huge)
-			r_max = LNumber(math.huge)
-		end
+		if op == "%" then
+			if not r:IsLiteral() then
+				r_min = LNumber(-math.huge)
+				r_max = LNumber(math.huge)
+			else
+				r_max = LNumber(r:GetData() - 1)
+			end
 
-		return META.New(l.Min:BinaryOperator(r_min, op), l.Max:BinaryOperator(r_max, op))
+			return META.New(l.Min:BinaryOperator(r_min, op), r_max)
+		else
+			if not r:IsLiteral() then
+				r_min = LNumber(-math.huge)
+				r_max = LNumber(math.huge)
+			end
+
+			return META.New(l.Min:BinaryOperator(r_min, op), l.Max:BinaryOperator(r_max, op))
+		end
 	end
 
 	error("NYI")

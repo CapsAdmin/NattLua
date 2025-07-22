@@ -106,3 +106,8 @@ else
     attest.equal(n, _ as -inf..1 | 15..inf )
 end
 ]]
+analyze[[
+local data = _ as string
+local x = #data % 3 + 1
+attest.equal(x, _ as 1..3)
+]]
