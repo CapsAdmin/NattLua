@@ -157,7 +157,7 @@ analyzer function require(name: string)
 
 		if val then return val end
 	end
-
+	
 	if analyzer:GetLocalOrGlobalValue(str) then
 		return analyzer:GetLocalOrGlobalValue(str)
 	end
@@ -185,7 +185,7 @@ analyzer function require(name: string)
 	end
 
 	error("module '" .. str:GetData() .. "' not found")
-	return types.Any
+	return types.Any()
 end
 
 analyzer function type_error(str: string, level: number | nil)

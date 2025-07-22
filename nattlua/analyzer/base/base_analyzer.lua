@@ -280,18 +280,37 @@ return function(META)
 					f:close()
 					local start = formating.LineCharToSubPos(code, tonumber(info.currentline), 0)
 					local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
-					msg = msg:sub(#source)
-					msg = msg:match("^:%d+:%d+:%s*(.+)") or msg:match("^:%d+%s*(.+)") or msg
-					return analyzer_context:GetCurrentAnalyzer():GetCurrentExpression().Code:BuildSourceCodePointMessage(msg, start, stop)
+					
+					if msg:sub(1, #source) == source then
+						msg = msg:sub(#source)
+						msg = msg:match("^:%d+:%d+:%s*(.+)") or msg:match("^:%d+%s*(.+)") or msg
+					end
+					local analyzer = analyzer_context:GetCurrentAnalyzer()
+					local node = analyzer:GetCurrentExpression() or analyzer:GetCurrentStatement() 
+					return node.Code:BuildSourceCodePointMessage(msg, start, stop)
 				end
 			end
 
 			return tostring(msg)
 		end
 
+		local function on_error_safe(msg)
+			local ok, ret = pcall(on_error, msg)
+			
+			if not ok then 
+				print("fatal error in error handling:")
+				print("=============================")
+				print(ret)
+				print("=============================")
+				return "error in nattlua error handling"
+			end
+
+			return ret
+		end
+
 		function META:CallLuaTypeFunction(func, scope, ...)
 			self.function_scope = scope
-			local res = {xpcall(func, on_error, ...)}
+			local res = {xpcall(func, on_error_safe, ...)}
 
 			if not table_remove(res, 1) then
 				local stack = self:GetCallStack()

@@ -449,7 +449,6 @@ analyze[[
     assert(0Xabcdef.0 == 0x.ABCDEFp+24)
 ]]
 analyze[[
-
     local undef = nil
     local type assert = attest.truthy
     local type pcall = attest.pcall
@@ -461,7 +460,7 @@ analyze[[
     local function checkerror (msg: ref string, f: ref Function, ...: ref ...any)
       local s, err = pcall(f, ...)
       if not (not s and string.find(err, msg)) then
-        error("assertion failed", 2)
+        error("assertion failed, got error: " .. err, 2)
       end
     end
     
@@ -546,9 +545,9 @@ analyze[[
     assert(string.char(string.byte("\xe4l\0�u", -10, 100)) == "\xe4l\0�u")
     
     checkerror("out of range", string.char, 256)
-    --checkerror("out of range", string.char, -1)
-    --checkerror("out of range", string.char, math.maxinteger)
-    --checkerror("out of range", string.char, math.mininteger)
+    checkerror("out of range", string.char, -1)
+    checkerror("out of range", string.char, math.maxinteger)
+    checkerror("out of range", string.char, math.mininteger)
     
     
     assert(string.upper("ab\0c") == "AB\0C")
