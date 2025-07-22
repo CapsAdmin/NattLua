@@ -395,7 +395,7 @@ function META:BuildCode(block)
 			if not self.done[node.key] then
 				if node.data then
 					self:Emit(
-						"IMPORTS['" .. node.key .. "'] = function() return [===" .. "===[ " .. node.data .. " ]===" .. "===] end\n"
+						"IMPORTS['" .. node.key .. "'] = function(...) return [===" .. "===[ " .. node.data .. " ]===" .. "===] end\n"
 					)
 				else
 					-- ugly way of dealing with recursive import
@@ -425,11 +425,11 @@ function META:BuildCode(block)
 									) .. ")(...) return __M end end\n"
 							)
 						elseif self.config.inside_data_import then
-							self:Emit("IMPORTS['" .. node.key .. "'] = function() " .. content .. " end\n")
+							self:Emit("IMPORTS['" .. node.key .. "'] = function(...) " .. content .. " end\n")
 						else
 							self:Emit(
 								"IMPORTS['" .. node.key .. "'] = " .. encapsulate_module(
-										"function() " .. content .. " end",
+										"function(...) " .. content .. " end",
 										"@" .. node.path,
 										self.config.module_encapsulation_method
 									) .. "\n"
