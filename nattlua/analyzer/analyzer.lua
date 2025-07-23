@@ -142,18 +142,14 @@ do
 		elseif node.kind == "postfix_call" then
 			return AnalyzePostfixCall(self, node)
 		elseif node.kind == "postfix_expression_index" then
-			if self:IsTypesystem() then
-				return self:Assert(
-					self:IndexOperator(self:AnalyzeExpression(node.left), self:AnalyzeExpression(node.expression))
-				)
-			else
-				return self:Assert(
-					self:IndexOperator(
-						self:AnalyzeExpression(node.left):GetFirstValue(),
-						self:AnalyzeExpression(node.expression):GetFirstValue()
-					)
-				)
+			local val = self:Assert(self:AnalyzeExpression(node.left))
+			local obj = self:Assert(self:AnalyzeExpression(node.expression))
+			if not self:IsTypesystem() then
+				val = val:GetFirstValue()
+				obj = obj:GetFirstValue()
 			end
+
+			return self:Assert(self:IndexOperator(val, obj))
 		elseif node.kind == "table" or node.kind == "type_table" then
 			return AnalyzeTable(self, node)
 		elseif
