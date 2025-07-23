@@ -395,7 +395,7 @@ local function check_output(self, output, output_signature, function_node)
 			end
 		else
 			if output.Type == "tuple" and output:HasOneValue() then
-				local val = output:GetFirstValue()
+				local val = self:Assert(output:GetFirstValue())
 
 				if val.Type == "union" and val:GetCardinality() == 0 then return end
 			end

@@ -86,7 +86,7 @@ return {
 
 					self:NewIndexOperator(tbl, key, contract)
 				else
-					local val = self:AnalyzeExpression(node.value_expression):GetFirstValue()
+					local val = self:Assert(self:AnalyzeExpression(node.value_expression):GetFirstValue())
 					self:NewIndexOperator(tbl, key, val)
 				end
 			elseif node.kind == "table_index_value" then

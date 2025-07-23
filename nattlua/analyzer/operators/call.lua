@@ -87,9 +87,9 @@ local function union_call(self, analyzer, input, call_node)
 			analyzer:Error(err)
 		else
 			if val.Type == "tuple" and val:HasOneValue() then
-				val = val:Unpack(1)
+				val = analyzer:Assert(val:Unpack(1))
 			elseif val.Type == "union" and val:GetMinimumLength() == 1 then
-				val = val:GetAtTupleIndex(1)
+				val = analyzer:Assert(val:GetAtTupleIndex(1))
 			end
 
 			new:AddType(val)
