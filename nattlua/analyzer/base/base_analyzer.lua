@@ -62,7 +62,9 @@ return function(META)
 		out = out or {}
 
 		for _, expression in ipairs(expressions) do
-			local obj = self:AnalyzeExpression(expression)
+			local obj, err = self:AnalyzeExpression(expression)
+			if not obj then self:Error(err) obj = Any() end
+
 
 			if obj and obj.Type == "tuple" and obj:HasOneValue() then
 				obj = obj:GetWithNumber(1)
