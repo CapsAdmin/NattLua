@@ -205,14 +205,11 @@ function META:__tostring()
 			local analyzer = context:GetCurrentAnalyzer()
 
 			if analyzer then
-				local str = analyzer:Call(func, Tuple({self}))
+				local str = analyzer:GetFirstValue(analyzer:Call(func, Tuple({self})))
 
-				if str then 
-					str = str:GetFirstValue()
-					if str and str.Type == "string" and str:IsLiteral() then
-						self.suppress = false
-						return tostring(str:GetData())
-					end
+				if str and str.Type == "string" and str:IsLiteral() then
+					self.suppress = false
+					return tostring(str:GetData())
 				end
 			end
 		end

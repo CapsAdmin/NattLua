@@ -14,7 +14,7 @@ local function analyze_arguments(self, node)
 
 	if node.self_call and node.expression then
 		self:PushAnalyzerEnvironment("runtime")
-		local val = self:AnalyzeExpression(node.expression.left):GetFirstValue()
+		local val = self:GetFirstValue(self:AnalyzeExpression(node.expression.left))
 		self:PopAnalyzerEnvironment()
 
 		if val then
@@ -61,7 +61,7 @@ local function analyze_arguments(self, node)
 			for i, generic_type in ipairs(node.identifiers_typesystem) do
 				if generic_type.identifier and generic_type.identifier.value ~= "..." then
 					self:MapTypeToNode(
-						self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(generic_type):GetFirstValue() or Nil()),
+						self:GetFirstValue(self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(generic_type)) or Nil()),
 						generic_type
 					)
 				elseif generic_type.type_expression then
@@ -74,7 +74,7 @@ local function analyze_arguments(self, node)
 			if node.self_call then i = i + 1 end
 
 			if key.identifier and key.identifier.value ~= "..." then
-				args[i] = self:AnalyzeExpression(key):GetFirstValue()
+				args[i] = self:GetFirstValue(self:AnalyzeExpression(key))
 				self:MapTypeToNode(self:CreateLocalValue(key.identifier.value, args[i]), key)
 			elseif key.kind == "vararg" then
 				args[i] = self:AnalyzeExpression(key)

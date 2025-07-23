@@ -26,6 +26,13 @@ return function(META)
 		return self:AssertFallback(Any(), ok, err, ...)
 	end
 
+	function META:GetFirstValue(obj, err)
+		if not obj then self:Error(err) return nil end
+		local val, err = obj:GetFirstValue()
+		if not val then self:Error(err) return obj end
+		return val
+	end
+
 	function META:ErrorIfFalse(ok, err, ...)
 		if not ok then
 			self:Error(err)

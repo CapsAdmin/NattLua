@@ -201,13 +201,7 @@ local function check_input(self, obj, input)
 						return false, type_errors.context("argument #" .. i, err)
 					end
 				else
-					val, err = self:AnalyzeExpression(type_expression)
-					if not val then
-						self:PopAnalyzerEnvironment()
-						self:PopScope()
-						return false, type_errors.context("argument #" .. i, err)
-					end
-					val, err = val:GetFirstValue()
+					val, err = self:GetFirstValue(self:AnalyzeExpression(type_expression))
 					if not val then
 						self:PopAnalyzerEnvironment()
 						self:PopScope()
@@ -414,7 +408,7 @@ local function check_output(self, output, output_signature, function_node)
 			end
 		else
 			if output.Type == "tuple" and output:HasOneValue() then
-				local val = self:Assert(output:GetFirstValue())
+				local val = self:GetFirstValue(output) or Nil()
 
 				if val.Type == "union" and val:GetCardinality() == 0 then return end
 			end

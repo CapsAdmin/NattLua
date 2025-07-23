@@ -135,7 +135,7 @@ return function(analyzer, obj, input)
 	local packed_args = {input:Unpack(len)}
 
 	if #packed_args == 0 and len == 1 then
-		local first = signature_arguments:GetFirstValue()
+		local first = analyzer:GetFirstValue(signature_arguments)
 
 		if first and first.Type == "any" or first.Type == "nil" then
 			packed_args = {first:Copy()}

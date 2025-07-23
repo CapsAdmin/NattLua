@@ -287,7 +287,7 @@ analyzer function error(msg: string, level: number | nil)
 		if analyzer.LEFT_SIDE_OR then
 			local obj = analyzer.LEFT_SIDE_OR:GetFirstValue()
 
-			if obj.Type == "union" then return obj:GetTruthy() end
+			if obj and obj.Type == "union" then return obj:GetTruthy() end
 		end
 
 		return

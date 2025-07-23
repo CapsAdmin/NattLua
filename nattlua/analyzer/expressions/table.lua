@@ -53,45 +53,43 @@ return {
 
 				if node.type_expression then
 					self:PushAnalyzerEnvironment("typesystem")
-					local contract = self:AnalyzeExpression(node.type_expression):GetFirstValue() or Nil()
+					local contract = self:GetFirstValue(self:AnalyzeExpression(node.type_expression)) or Nil()
 					self:PopAnalyzerEnvironment()
 
 					if node.value_expression then
-						local val = node.value_expression and
-							self:AnalyzeExpression(node.value_expression):GetFirstValue() or
-							Nil()
+						local val = node.value_expression and self:GetFirstValue(self:AnalyzeExpression(node.value_expression)) or Nil()
 						self:ErrorIfFalse(check_type_against_contract(val, contract))
 					end
 
 					self:NewIndexOperator(tbl, key, contract)
 				else
-					local val = self:AnalyzeExpression(node.value_expression):GetFirstValue() or Nil()
+					local val = self:GetFirstValue(self:AnalyzeExpression(node.value_expression)) or Nil()
 					self:MapTypeToNode(val, node.value_expression)
 					self:NewIndexOperator(tbl, key, val)
 				end
 			elseif node.kind == "table_expression_value" then
-				local key = self:AnalyzeExpression(node.key_expression):GetFirstValue()
+				local key = self:GetFirstValue(self:AnalyzeExpression(node.key_expression))
 
 				if node.type_expression then
 					self:PushAnalyzerEnvironment("typesystem")
-					local contract = self:AnalyzeExpression(node.type_expression):GetFirstValue() or Nil()
+					local contract = self:GetFirstValue(self:AnalyzeExpression(node.type_expression)) or Nil()
 					self:PopAnalyzerEnvironment()
 
 					if node.value_expression then
 						local val = node.value_expression and
-							self:AnalyzeExpression(node.value_expression):GetFirstValue() or
+							self:GetFirstValue(self:AnalyzeExpression(node.value_expression)) or
 							Nil()
 						self:ErrorIfFalse(check_type_against_contract(val, contract))
 					end
 
 					self:NewIndexOperator(tbl, key, contract)
 				else
-					local val = self:Assert(self:AnalyzeExpression(node.value_expression):GetFirstValue())
+					local val = self:Assert(self:GetFirstValue(self:AnalyzeExpression(node.value_expression)))
 					self:NewIndexOperator(tbl, key, val)
 				end
 			elseif node.kind == "table_index_value" then
 				if node.spread then
-					local val = self:AnalyzeExpression(node.spread.expression):GetFirstValue()
+					local val = self:GetFirstValue(self:AnalyzeExpression(node.spread.expression))
 
 					if val.Type == "table" then
 						for _, kv in ipairs(val:GetData()) do
@@ -121,7 +119,7 @@ return {
 						and
 						node.value_expression.kind ~= "postfix_call"
 					then
-						obj = obj:GetFirstValue()
+						obj = self:GetFirstValue(obj)
 					end
 
 					if obj.Type == "tuple" then

@@ -152,7 +152,7 @@ local function index_string(analyzer, obj, key)
 end
 
 local function index_tuple(analyzer, obj, key)
-	if analyzer:IsRuntime() then analyzer:IndexOperator(obj:GetFirstValue(), key) end
+	if analyzer:IsRuntime() then analyzer:IndexOperator(analyzer:GetFirstValue(obj), key) end
 
 	return obj:Get(key)
 end

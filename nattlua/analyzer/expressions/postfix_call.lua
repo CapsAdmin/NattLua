@@ -68,7 +68,7 @@ return {
 		then
 			self_arg = table.remove(self.self_arg_stack)
 
-			if self:IsRuntime() then self_arg = self_arg:GetFirstValue() end
+			if self:IsRuntime() then self_arg = self:GetFirstValue(self_arg) end
 		end
 		local returned_tuple
 
@@ -77,7 +77,7 @@ return {
 				local tup = postfix_call(self, self_arg, node, callable)
 
 				if tup then
-					local s = tup:GetFirstValue()
+					local s = self:GetFirstValue(tup)
 					if s and not s:IsEmpty() then
 						if returned_tuple then
 							returned_tuple:AddType(s)

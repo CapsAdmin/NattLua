@@ -19,7 +19,7 @@ local function union_call(self, analyzer, input, call_node)
 
 		for _, v in ipairs(self.Data) do
 			if analyzer:IsRuntime() then
-				if v.Type == "tuple" then v = v:GetFirstValue() end
+				if v.Type == "tuple" then v = self:GetFirstValue(v) end
 			end
 
 			if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
@@ -106,7 +106,7 @@ local function union_call(self, analyzer, input, call_node)
 end
 
 local function tuple_call(self, analyzer, input, call_node)
-	return analyzer:Call((self:GetFirstValue()--[[# as any]]), input, call_node, true)
+	return analyzer:Call((analyzer:GetFirstValue(self)--[[# as any]]), input, call_node, true)
 end
 
 local function table_call(self, analyzer, input, call_node)

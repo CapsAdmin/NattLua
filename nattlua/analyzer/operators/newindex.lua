@@ -18,7 +18,7 @@ return {
 
 		local function newindex_tuple(analyzer, obj, key, val)
 			if analyzer:IsRuntime() then
-				analyzer:NewIndexOperator(obj:GetFirstValue(), key, val)
+				analyzer:NewIndexOperator(analyzer:GetFirstValue(obj), key, val)
 			end
 
 			return obj:Set(key, val)

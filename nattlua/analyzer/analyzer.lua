@@ -145,8 +145,8 @@ do
 			local val = self:Assert(self:AnalyzeExpression(node.left))
 			local obj = self:Assert(self:AnalyzeExpression(node.expression))
 			if not self:IsTypesystem() then
-				val = val:GetFirstValue()
-				obj = obj:GetFirstValue()
+				val = self:GetFirstValue(val)
+				obj = self:GetFirstValue(obj)
 			end
 
 			return self:Assert(self:IndexOperator(val, obj))

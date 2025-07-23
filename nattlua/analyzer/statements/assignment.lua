@@ -213,7 +213,7 @@ return {
 
 						if contract then
 							if contract.Type == "tuple" then
-								contract = contract:GetFirstValue()
+								contract = self:GetFirstValue(contract)
 							end
 
 							if contract then
@@ -241,7 +241,7 @@ return {
 					self:ClearTracked()
 					local lol = key
 
-					if self:IsRuntime() then key = key:GetFirstValue() or Nil() end
+					if self:IsRuntime() then key = self:GetFirstValue(key) or Nil() end
 
 					self:NewIndexOperator(obj, key, val)
 				end

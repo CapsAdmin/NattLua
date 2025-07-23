@@ -35,10 +35,10 @@ end
 
 return {
 	AnalyzeNumericFor = function(self, statement)
-		local init = self:AnalyzeExpression(statement.expressions[1]):GetFirstValue()
-		local max = self:AnalyzeExpression(statement.expressions[2]):GetFirstValue()
+		local init = self:GetFirstValue(self:AnalyzeExpression(statement.expressions[1]))
+		local max = self:GetFirstValue(self:AnalyzeExpression(statement.expressions[2]))
 		local step = statement.expressions[3] and
-			self:AnalyzeExpression(statement.expressions[3]):GetFirstValue() or
+			self:GetFirstValue(self:AnalyzeExpression(statement.expressions[3])) or
 			nil
 
 		if step then assert(step:IsNumeric()) end
