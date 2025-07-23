@@ -81,17 +81,19 @@ local function union_call(self, analyzer, input, call_node)
 			if recursively_called then return recursively_called end
 		end
 
-		local ok, err = analyzer:Call(obj, input:Copy(), call_node, true)
-		local val = analyzer:Assert(ok, err)
+		local val, err = analyzer:Call(obj, input:Copy(), call_node, true)
 
-		-- TODO
-		if val.Type == "tuple" and val:HasOneValue() then
-			val = val:Unpack(1)
-		elseif val.Type == "union" and val:GetMinimumLength() == 1 then
-			val = val:GetAtTupleIndex(1)
+		if not val then
+			analyzer:Error(err)
+		else
+			if val.Type == "tuple" and val:HasOneValue() then
+				val = val:Unpack(1)
+			elseif val.Type == "union" and val:GetMinimumLength() == 1 then
+				val = val:GetAtTupleIndex(1)
+			end
+
+			new:AddType(val)
 		end
-
-		new:AddType(val)
 
 		if obj.Type == "function" then analyzer:PopCallFrame() end
 	end

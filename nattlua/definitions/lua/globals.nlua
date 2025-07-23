@@ -4,7 +4,7 @@ type _ = any
 type @Name = "_G"
 type rawlen = function=(v: Table | string)>(number)
 type rawequal = function=(v1: any, v2: any)>(boolean)
-type collectgarbage = function=(opt: string, arg: number)>(...) | function=(opt: string)>(...) | function=()>(...)
+type collectgarbage = function=(opt: string, arg: number)>(...: any) | function=(opt: string)>(...: any) | function=()>(...: any)
 
 analyzer function type_print(...: ...any)
 	print(...)

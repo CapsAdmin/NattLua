@@ -706,3 +706,31 @@ attest.equal(-x, 42)
 attest.equal(~x, 43)
 attest.equal(#x, 44)
 ]]
+analyze[[
+local x = _ as nil | function=()>(1)
+attest.expect_diagnostic<|"error", "uncallable object nil"|>
+local res = x()
+attest.equal(res, 1)
+]]
+analyze[[
+
+local x = _ as {foo = nil | function=()>(1)}
+attest.expect_diagnostic<|"error", "uncallable object nil"|>
+local res = x.foo()
+attest.equal(res, 1)
+
+]]
+analyze[[
+
+local x = _ as {foo = nil | function=(self: self)>(1)}
+attest.expect_diagnostic<|"error", "uncallable object nil"|>
+local res = x:foo()
+attest.equal(res, 1)
+]]
+analyze[[
+local x = io.popen("")
+attest.expect_diagnostic("error", "nil is not a subset of")
+attest.expect_diagnostic("error", "on type symbol")
+local y = x:read("*all")
+attest.equal(y, _ as nil | string)
+]]

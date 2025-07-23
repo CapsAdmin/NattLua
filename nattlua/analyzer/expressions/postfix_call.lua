@@ -1,8 +1,45 @@
 local table = _G.table
 local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
+local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
 local Nil = require("nattlua.types.symbol").Nil
 local AnalyzeImport = require("nattlua.analyzer.expressions.import").AnalyzeImport
+
+local function postfix_call(self, self_arg, node, callable)
+	local types = {self_arg}
+	self:AnalyzeExpressions(node.expressions, types)
+
+	local arguments
+
+	if self:IsTypesystem() then
+		if
+			#types == 1 and
+			types[1].Type == "tuple" and
+			callable:GetInputSignature():GetTupleLength() == math.huge
+		then
+			arguments = types[1]
+		else
+			arguments = Tuple(types)
+		end
+	else
+		arguments = NormalizeTuples(types)
+	end
+
+	self:PushCurrentExpression(node)
+	local ret, err = self:Call(callable, arguments, node)
+	self:PopCurrentExpression()
+
+	if not ret then
+		self:Error(err)
+
+		if callable.Type == "function" and callable:IsExplicitOutputSignature() then
+			return callable:GetOutputSignature():Copy()
+		end
+	end
+
+	return ret, err
+end
+
 return {
 	AnalyzePostfixCall = function(self, node)
 		if
@@ -12,6 +49,7 @@ return {
 		then
 			return AnalyzeImport(self, node, node.left.value.value == "require" and node.path)
 		end
+
 
 		local is_type_call = node.type_call or
 			node.left and
@@ -32,41 +70,32 @@ return {
 
 			if self:IsRuntime() then self_arg = self_arg:GetFirstValue() end
 		end
-
-		local types = {self_arg}
-		self:AnalyzeExpressions(node.expressions, types)
-		local arguments
-
-		if self:IsTypesystem() then
-			if
-				#types == 1 and
-				types[1].Type == "tuple" and
-				callable:GetInputSignature():GetTupleLength() == math.huge
-			then
-				arguments = types[1]
-			else
-				arguments = Tuple(types)
-			end
-		else
-			arguments = NormalizeTuples(types)
-		end
-
-		self:PushCurrentExpression(node)
-		local ret, err = self:Call(callable, arguments, node)
-		self:PopCurrentExpression()
 		local returned_tuple
 
-		if not ret then
-			self:Error(err)
+		if self_arg and self_arg.Type == "union" then
+			for _, self_arg in ipairs(self_arg:GetData()) do
+				local tup = postfix_call(self, self_arg, node, callable)
 
-			if callable.Type == "function" and callable:IsExplicitOutputSignature() then
-				returned_tuple = callable:GetOutputSignature():Copy()
-			else
-				returned_tuple = Tuple({Nil()})
+				if tup then
+					local s = tup:GetFirstValue()
+					if s and not s:IsEmpty() then
+						if returned_tuple then
+							returned_tuple:AddType(s)
+						end
+						returned_tuple = returned_tuple or Union({s})
+					end
+				end
 			end
-		else
-			returned_tuple = ret
 		end
+
+		if not returned_tuple then
+			local val, err = postfix_call(self, self_arg, node, callable)
+			if not val then
+				return val, err
+			end
+			returned_tuple = val
+		end
+		self:PopAnalyzerEnvironment()
 
 		-- TUPLE UNPACK MESS
 		if node.tokens["("] and node.tokens[")"] and returned_tuple.Type == "tuple" then
@@ -74,12 +103,11 @@ return {
 		end
 
 		if self:IsTypesystem() then
-			if returned_tuple.Type == "tuple" and returned_tuple:HasOneValue() then
+			if returned_tuple and returned_tuple.Type == "tuple" and returned_tuple:HasOneValue() then
 				returned_tuple = returned_tuple:GetWithNumber(1)
 			end
 		end
 
-		self:PopAnalyzerEnvironment()
 		return returned_tuple
 	end,
 }
