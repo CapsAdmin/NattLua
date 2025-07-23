@@ -23,9 +23,20 @@ return function(META)
 	end)
 
 	function META:Assert(ok, err, ...)
+		return self:AssertFallback(Any(), ok, err, ...)
+	end
+
+	function META:ErrorIfFalse(ok, err, ...)
 		if not ok then
 			self:Error(err)
-			return Any()
+		end
+		return ok, err, ...
+	end
+
+	function META:AssertFallback(obj, ok, err, ...)
+		if not ok then
+			self:Error(err)
+			return obj
 		end
 
 		return ok, err, ...

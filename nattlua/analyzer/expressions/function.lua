@@ -1,6 +1,7 @@
 local tostring = tostring
 local Union = require("nattlua.types.union").Union
 local Table = require("nattlua.types.table").Table
+local Nil = require("nattlua.types.symbol").Nil
 local Tuple = require("nattlua.types.tuple").Tuple
 local Function = require("nattlua.types.function").Function
 local Any = require("nattlua.types.any").Any
@@ -40,7 +41,7 @@ local function analyze_arguments(self, node)
 			self:MapTypeToNode(self:CreateLocalValue(key.value.value, Any()), key)
 
 			if key.type_expression then
-				args[i] = self:Assert(self:AnalyzeExpression(key.type_expression)) or Any()
+				args[i] = self:AssertFallback(Nil(), self:AnalyzeExpression(key.type_expression))
 			elseif key.value.value == "..." then
 				args[i] = VarArg(Any())
 			else
@@ -89,10 +90,8 @@ local function analyze_arguments(self, node)
 						-- function(mytuple): string
 						return obj
 					else
-						local val = self:Assert(obj)
-
 						-- in case the tuple is empty
-						if val then args[i] = val end
+						args[i] = obj or Any() -- TODO?
 					end
 				else
 					args[i] = Any()

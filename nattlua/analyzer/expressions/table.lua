@@ -60,7 +60,7 @@ return {
 						local val = node.value_expression and
 							self:AnalyzeExpression(node.value_expression):GetFirstValue() or
 							Nil()
-						self:Assert(check_type_against_contract(val, contract))
+						self:ErrorIfFalse(check_type_against_contract(val, contract))
 					end
 
 					self:NewIndexOperator(tbl, key, contract)
@@ -81,7 +81,7 @@ return {
 						local val = node.value_expression and
 							self:AnalyzeExpression(node.value_expression):GetFirstValue() or
 							Nil()
-						self:Assert(check_type_against_contract(val, contract))
+						self:ErrorIfFalse(check_type_against_contract(val, contract))
 					end
 
 					self:NewIndexOperator(tbl, key, contract)

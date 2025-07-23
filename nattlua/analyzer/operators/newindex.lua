@@ -148,17 +148,21 @@ return {
 				end
 			end
 
+			local ok, err
+
 			if obj.Type == "union" then
-				return self:Assert(newindex_union(self, obj, key, val))
+				ok, err = newindex_union(self, obj, key, val)
 			elseif obj.Type == "tuple" then
-				return self:Assert(newindex_tuple(self, obj, key, val))
+				ok, err = newindex_tuple(self, obj, key, val)
 			elseif obj.Type == "table" then
-				return self:Assert(newindex_table(self, obj, key, val, raw))
+				ok, err = newindex_table(self, obj, key, val, raw)
 			elseif obj.Type == "any" then
 				return true
+			else
+				ok, err = obj:Set(key, val)
 			end
 
-			return self:Assert(obj:Set(key, val))
+			if not ok then self:Error(err) end
 		end
 	end,
 }

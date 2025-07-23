@@ -33,7 +33,12 @@ local analyzer_context = require("nattlua.analyzer.context")
 local function C_DECLARATIONS()
 	local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	return analyzer:Assert(env.runtime.ffi:Get(ConstString("C")))
+	local C, err = env.runtime.ffi:Get(ConstString("C"))
+	if not C then
+		print(err)
+		analyzer:FatalError("cannot find C declarations")
+	end
+	return C
 end
 
 local function gen(parser, ...)
@@ -122,8 +127,8 @@ function cparser.reset()
 	types = Table()
 	local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	analyzer:Assert(env.typesystem.ffi:Set(ConstString("C"), Table()))
-	analyzer:Assert(env.runtime.ffi:Set(ConstString("C"), Table()))
+	analyzer:ErrorIfFalse(env.typesystem.ffi:Set(ConstString("C"), Table()))
+	analyzer:ErrorIfFalse(env.runtime.ffi:Set(ConstString("C"), Table()))
 end
 
 function cparser.cast(cdecl, src)
@@ -222,7 +227,7 @@ function cparser.metatype(ctype, meta)
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 
 	if meta.Self then
-		analyzer:Assert(ctype:FollowsContract(meta.Self))
+		analyzer:ErrorIfFalse(ctype:FollowsContract(meta.Self))
 		ctype = ctype:CopyLiteralness(meta.Self)
 		ctype:SetContract(meta.Self)
 		-- clear mutations so that when looking up values in the table they won't return their initial value

@@ -151,7 +151,7 @@ return function(META)
 
 			self:CreateAndPushFunctionScope(obj)
 			self:PushCurrentStatement(obj:GetFunctionBodyNode())
-			self:Assert(self:Call(obj, arguments, obj:GetFunctionBodyNode()))
+			self:ErrorIfFalse(self:Call(obj, arguments, obj:GetFunctionBodyNode()))
 			self:PopCurrentStatement()
 			self:PopScope()
 		end

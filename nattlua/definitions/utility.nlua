@@ -50,7 +50,7 @@ end
 
 analyzer function return_type(func: Function, i: number | nil)
 	local i = i and i:GetData() or nil
-	return {analyzer:Assert(func:GetOutputSignature():Slice(i, i))}
+	return {analyzer:AssertFallback(types.Nil(), func:GetOutputSignature():Slice(i, i))}
 end
 
 analyzer function set_return_type(func: Function, tup: any)
@@ -61,7 +61,7 @@ end
 
 analyzer function argument_type(func: Function, i: number | nil)
 	local i = i and i:GetData() or nil
-	return {analyzer:Assert(func:GetInputSignature():Slice(i, i))}
+	return {analyzer:AssertFallback(types.Nil(), func:GetInputSignature():Slice(i, i))}
 end
 
 analyzer function exclude(T: any, U: any)

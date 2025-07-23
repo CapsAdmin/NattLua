@@ -649,7 +649,7 @@ analyze[[
 ]]
 analyze[[
     local analyzer function test(a: any, b: any)
-        analyzer:Assert(b:IsSubsetOf(a))
+        analyzer:ErrorIfFalse(b:IsSubsetOf(a))
     end
     
     test(_ as {foo = number}, _ as {foo = number, bar = nil | number})

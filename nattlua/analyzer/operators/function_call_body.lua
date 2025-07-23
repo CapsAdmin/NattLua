@@ -192,11 +192,30 @@ local function check_input(self, obj, input)
 					return false, type_errors.context("argument #" .. i, err)
 				end
 			elseif type_expression then
+				local val, err
 				if function_node.self_call and i == 1 then
-					signature_override[i] = input_signature:GetWithNumber(1)
+					val, err = input_signature:GetWithNumber(1)
+					if not val then
+						self:PopAnalyzerEnvironment()
+						self:PopScope()
+						return false, type_errors.context("argument #" .. i, err)
+					end
 				else
-					signature_override[i] = self:Assert(self:AnalyzeExpression(type_expression)):GetFirstValue()
+					val, err = self:AnalyzeExpression(type_expression)
+					if not val then
+						self:PopAnalyzerEnvironment()
+						self:PopScope()
+						return false, type_errors.context("argument #" .. i, err)
+					end
+					val, err = val:GetFirstValue()
+					if not val then
+						self:PopAnalyzerEnvironment()
+						self:PopScope()
+						return false, type_errors.context("argument #" .. i, err)
+					end
 				end
+
+				signature_override[i] = val
 
 				self:CreateLocalValue(identifier, signature_override[i])
 			end
@@ -250,7 +269,7 @@ local function check_input(self, obj, input)
 								end
 
 								if not new then
-									self:Assert(new, err)
+									self:Error(err)
 								else
 									func:SetInputSignature(new) -- force copy tables so we don't mutate the contract
 								end
@@ -465,7 +484,9 @@ return function(self, obj, input)
 
 		if self:IsTypesystem() then
 			if identifier.value.value == "..." then
-				self:CreateLocalValue(identifier.value.value, self:Assert(input:Slice(argi)))
+				local val, err = input:Slice(argi)
+				if not val then return val, err end
+				self:CreateLocalValue(identifier.value.value, val)
 			else
 				local val, err = input:GetWithoutExpansion(argi)
 
@@ -478,13 +499,20 @@ return function(self, obj, input)
 					end
 				end
 
-				self:CreateLocalValue(identifier.value.value, self:Assert(val, err))
+				if not val then
+					self:Error(err)
+					val = Nil()
+				end
+
+				self:CreateLocalValue(identifier.value.value, val)
 			end
 		end
 
 		if self:IsRuntime() then
 			if identifier.value.value == "..." then
-				self:CreateLocalValue(identifier.value.value, self:Assert(input:Slice(argi)))
+				local val, err = input:Slice(argi)
+				if not val then return val, err end
+				self:CreateLocalValue(identifier.value.value, val)
 			else
 				local val, err = input:GetWithNumber(argi)
 
@@ -495,7 +523,12 @@ return function(self, obj, input)
 					if arg and arg:IsReferenceType() then val:SetReferenceType(true) end
 				end
 
-				self:CreateLocalValue(identifier.value.value, self:Assert(val, err))
+				if not val then
+					self:Error(err)
+					val = Any()
+				end
+
+				self:CreateLocalValue(identifier.value.value, val)
 			end
 		end
 	end
@@ -567,7 +600,7 @@ return function(self, obj, input)
 		local tup, err = input:Slice(1, obj:GetInputSignature():GetMinimumLength())
 
 		if not tup then
-			self:Assert(tup, err)
+			self:Error(err)
 		else
 			obj:GetInputSignature():Merge(tup)
 		end

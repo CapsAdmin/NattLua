@@ -240,11 +240,11 @@ analyzer function loadfile(path: string)
 end
 
 analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
-	analyzer:Assert(analyzer:NewIndexOperator(tbl, key, val, true))
+	analyzer:NewIndexOperator(tbl, key, val, true)
 end
 
 analyzer function rawget(tbl: {[any] = any} | {}, key: any)
-	return analyzer:Assert(analyzer:IndexOperator(tbl, key, true))
+	return analyzer:AssertFallback(types.Nil(), analyzer:IndexOperator(tbl, key, true))
 end
 
 analyzer function assert(obj: any, msg: string | nil, level: number | nil)
@@ -355,7 +355,7 @@ type xpcall = ReturnIfNonLiteral<|
 				local d = diagnostics[i]
 
 				if d.severity == "error" then
-					analyzer:Assert(analyzer:Call(callable, types.Union({types.LString(d.msg)})))
+					analyzer:ErrorIfFalse(analyzer:Call(callable, types.Union({types.LString(d.msg)})))
 					return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
 				end
 			end
@@ -458,7 +458,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 
 	if meta.Type == "table" then
 		if meta.Self then
-			analyzer:Assert(tbl:FollowsContract(meta.Self))
+			analyzer:ErrorIfFalse(tbl:FollowsContract(meta.Self))
 			tbl = tbl:CopyLiteralness(meta.Self)
 			tbl:SetContract(meta.Self)
 			-- clear mutations so that when looking up values in the table they won't return their initial value

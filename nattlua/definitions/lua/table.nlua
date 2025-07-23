@@ -49,7 +49,7 @@ do -- Basic table manipulation functions
 		if contract then
 			local values = contract:GetValueUnion()
 			values:RemoveType(types.Nil())
-			analyzer:Assert(val:IsSubsetOf(values))
+			analyzer:ErrorIfFalse(val:IsSubsetOf(values))
 		end
 
 		if not tbl:HasLiteralKeys() then return end

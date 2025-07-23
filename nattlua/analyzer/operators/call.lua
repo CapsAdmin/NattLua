@@ -87,12 +87,16 @@ local function union_call(self, analyzer, input, call_node)
 			analyzer:Error(err)
 		else
 			if val.Type == "tuple" and val:HasOneValue() then
-				val = analyzer:Assert(val:Unpack(1))
+				val, err = val:Unpack(1)
 			elseif val.Type == "union" and val:GetMinimumLength() == 1 then
-				val = analyzer:Assert(val:GetAtTupleIndex(1))
+				val, err = val:GetAtTupleIndex(1)
 			end
 
-			new:AddType(val)
+			if val then
+				new:AddType(val)
+			else
+				analyzer:Error(err)
+			end
 		end
 
 		if obj.Type == "function" then analyzer:PopCallFrame() end
@@ -137,10 +141,7 @@ do
 	local function call_function_internal(self, obj, input)
 		-- mark the object as called so the unreachable code step won't call it
 		obj:SetCalled(true)
-
 		-- infer any uncalled functions in the arguments to get their return type
-		if not input then debug.trace() end
-
 		for i, b in ipairs(input:GetData()) do
 			if b.Type == "function" and not b:IsCalled() and not b:IsExplicitOutputSignature() then
 				local a = obj:GetInputSignature():GetWithNumber(i)
@@ -168,17 +169,17 @@ do
 						if func.Type == "function" and not b:HasReferenceTypes() and func then
 							local len = b:GetInputSignature():GetTupleLength()
 							local new = func:GetInputSignature():Copy(nil, true)
-							local err
 
 							if not func:GetInputSignature():IsInfinite() then
-								new, err = new:Slice(1, len)
+								local val, err = new:Slice(1, len)
+								if not new then
+									self:Error(err)
+								else
+									new = val
+								end
 							end
 
-							if not new then
-								self:Assert(new, err)
-							else
-								self:Assert(self:Call(b, new))
-							end
+							self:ErrorIfFalse(self:Call(b, new))
 						end
 					end
 				end

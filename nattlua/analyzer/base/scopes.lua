@@ -154,7 +154,7 @@ return function(META)
 			self:Warning(type_errors.global_assignment(key, val), self:GetCurrentStatement())
 		end
 
-		self:Assert(self:NewIndexOperator(g, key, val))
+		self:NewIndexOperator(g, key, val)
 		return val
 	end
 

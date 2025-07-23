@@ -645,15 +645,15 @@ analyze[[
     
                 local data = meta:Get(types.ConstString("Data"))
                 
-                local constructor = analyzer:Assert(meta:Get(types.ConstString("constructor")))
+                local constructor = analyzer:AssertFallback(types.Nil(), meta:Get(types.ConstString("constructor")))
     
                 local self_arg = types.Any()
                 self_arg:SetReferenceType(true)
                 constructor:GetInputSignature():Set(1, self_arg)
             
                 tbl:SetMetaTable(meta)
-                analyzer:Assert(analyzer:Call(constructor, types.Tuple({tbl, ...})))
-                analyzer:Assert(tbl:FollowsContract(data))
+                analyzer:ErrorIfFalse(analyzer:Call(constructor, types.Tuple({tbl, ...})))
+                analyzer:ErrorIfFalse(tbl:FollowsContract(data))
                 tbl = tbl:CopyLiteralness(data)
             
                 return tbl

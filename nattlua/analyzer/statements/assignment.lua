@@ -161,11 +161,11 @@ return {
 
 					if val.Type == "table" and contract.Type == "table" then
 						-- coerce any untyped functions based on contract
-						self:Assert(val:CoerceUntypedFunctions(contract))
+						self:ErrorIfFalse(val:CoerceUntypedFunctions(contract))
 					end
 
 					self:PushCurrentExpression(exp_key)
-					self:Assert(check_type_against_contract(val, contract))
+					self:ErrorIfFalse(check_type_against_contract(val, contract))
 					self:PopCurrentExpression()
 				else
 					if contract.Type == "tuple" and contract:HasOneValue() then
@@ -218,7 +218,7 @@ return {
 
 							if contract then
 								val = val:CopyLiteralness(contract)
-								self:Assert(check_type_against_contract(val, contract))
+								self:ErrorIfFalse(check_type_against_contract(val, contract))
 								val:SetContract(contract)
 							end
 						end
@@ -243,7 +243,7 @@ return {
 
 					if self:IsRuntime() then key = key:GetFirstValue() or Nil() end
 
-					self:Assert(self:NewIndexOperator(obj, key, val))
+					self:NewIndexOperator(obj, key, val)
 				end
 			end
 		end

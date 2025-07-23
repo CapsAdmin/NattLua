@@ -58,7 +58,7 @@ return {
 		assert(compiler:Analyze(base))
 		typesystem_env.string_metatable:Set(
 			LStringNoMeta("__index"),
-			base:Assert(typesystem_env:Get(LStringNoMeta("string")))
+			assert(typesystem_env:Get(LStringNoMeta("string")), "failed to find string table")
 		)
 		return runtime_env, typesystem_env
 	end,
