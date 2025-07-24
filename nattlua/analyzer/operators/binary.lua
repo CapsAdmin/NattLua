@@ -238,10 +238,9 @@ local function Binary(self, node, l, r, op)
 				end
 			end
 		else
-			l = self:AnalyzeExpression(node.left)
-			r = self:AnalyzeExpression(node.right)
+			l = self:Assert(self:AnalyzeExpression(node.left))
+			r = self:Assert(self:AnalyzeExpression(node.right))
 		end
-
 		self:TrackUpvalue(l)
 		self:TrackUpvalue(r)
 

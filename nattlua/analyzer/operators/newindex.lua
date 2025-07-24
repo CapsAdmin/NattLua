@@ -124,6 +124,10 @@ return {
 		end
 
 		function META:NewIndexOperator(obj, key, val, raw)
+			if obj.Type == "any" then
+				return true
+			end
+
 			if
 				val.Type == "function" and
 				val:GetFunctionBodyNode() and
@@ -156,13 +160,13 @@ return {
 				ok, err = newindex_tuple(self, obj, key, val)
 			elseif obj.Type == "table" then
 				ok, err = newindex_table(self, obj, key, val, raw)
-			elseif obj.Type == "any" then
-				return true
 			else
 				ok, err = obj:Set(key, val)
 			end
 
-			if not ok then self:Error(err) end
+			if not ok then 
+				self:Error(err) 
+			end
 		end
 	end,
 }

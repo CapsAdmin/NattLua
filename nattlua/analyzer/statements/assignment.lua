@@ -239,11 +239,12 @@ return {
 					-- index assignment: foo[a] = 1
 					local obj = self:AnalyzeExpression(exp_key.left)
 					self:ClearTracked()
-					local lol = key
 
 					if self:IsRuntime() then key = self:GetFirstValue(key) or Nil() end
 
+					self:PushCurrentExpression(exp_key)
 					self:NewIndexOperator(obj, key, val)
+					self:PopCurrentExpression()
 				end
 			end
 		end

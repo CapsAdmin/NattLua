@@ -442,6 +442,7 @@ function MetaTableFunctions<|T: any|>
 end
 
 analyzer function setmetatable(tbl: Table, meta: Table | nil)
+	if tbl.Type == "any" then return tbl end
 	if not meta or meta.Type == "symbol" and meta:IsFalse() then
 		tbl:SetMetaTable(false)
 		return tbl
