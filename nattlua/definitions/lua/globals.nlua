@@ -247,13 +247,15 @@ analyzer function rawget(tbl: {[any] = any} | {}, key: any)
 	return analyzer:AssertFallback(types.Nil(), analyzer:IndexOperator(tbl, key, true))
 end
 
-analyzer function assert(obj: any, msg: string | nil, level: number | nil)
+analyzer function assert(...: ...any)
+	local obj = select(1, ...)
+	local potential_msg = select(2, ...)
 	if not analyzer:IsDefinetlyReachable() then
 		analyzer:ThrowSilentError(obj)
 
-		if obj.Type == "union" then return obj:RemoveCertainlyFalsy() end
+		if obj.Type == "union" then return obj:RemoveCertainlyFalsy(), select(2, ...) end
 
-		return obj
+		return ...
 	end
 
 	if obj.Type == "union" then
@@ -263,21 +265,21 @@ analyzer function assert(obj: any, msg: string | nil, level: number | nil)
 	end
 
 	if obj:IsTruthy() and not obj:IsFalsy() then
-		if obj.Type == "union" then return obj:RemoveCertainlyFalsy() end
+		if obj.Type == "union" then return obj:RemoveCertainlyFalsy(), select(2, ...) end
 	end
 
 	if obj:IsFalsy() then
 		analyzer:AssertError(
 			obj,
-			type_errors.plain_error(msg and msg:GetData() or "assertion failed!"),
-			level and level:GetData() or nil,
+			type_errors.plain_error(potential_msg and potential_msg:GetData() or "assertion failed!"),
+			nil,
 			obj:IsTruthy()
 		)
 
-		if obj.Type == "union" then return obj:RemoveCertainlyFalsy() end
+		if obj.Type == "union" then return obj:RemoveCertainlyFalsy(), select(2, ...) end
 	end
 
-	return obj
+	return ...
 end
 
 analyzer function error(msg: string, level: number | nil)

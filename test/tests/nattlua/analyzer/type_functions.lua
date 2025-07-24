@@ -729,3 +729,48 @@ luadata.SetModifier("test", function(x)
 	return tostring(x)
 end)
 ]]
+
+analyze[[
+attest.expect_diagnostic("error", "assertion failed!")
+local a = assert(false)
+error("NEVER")
+]]
+
+analyze[[
+attest.expect_diagnostic("error", "hello")
+local a, b, c = assert(false, "hello", 3)
+error("NEVER")
+]]
+analyze[[
+local a, b, c = assert(1, 2, 3)
+attest.equal(a, 1)
+attest.equal(b, 2)
+attest.equal(c, 3)
+]]
+
+analyze[[
+local a, b, c = assert(_ as boolean, 2, 3)
+attest.equal(a, true)
+attest.equal(b, 2)
+attest.equal(c, 3)
+]]
+
+analyze[[
+local a, b, c = assert(_ as boolean, 2, 3)
+attest.equal(a, true)
+attest.equal(b, 2)
+attest.equal(c, 3)
+]]
+
+analyze[[
+local analyzer function test(...: ...any)  
+    local a,b,c = ...
+    assert(a.Type == "any")
+    assert(not b)
+    assert(not c)
+end
+
+local type F = function=()>(...any)
+
+test(F())
+]]

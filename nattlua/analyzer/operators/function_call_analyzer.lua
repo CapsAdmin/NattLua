@@ -131,6 +131,14 @@ return function(analyzer, obj, input)
 		)
 	end
 
+	-- if you call print(SOMEFUNCTION()), SOMEFUNCTION is not defined and thus returns any, which when called
+	-- results in ((any,)*inf,)
+	-- when the input signature is also ((TYPE,)*inf,) both will result in safe length being 0
+	-- so no arguments are passed. This feels wrong, maybe at least 1 argument? (however technically this is also wrong?)
+	if input:GetElementCount() == math.huge and signature_arguments:GetElementCount() == math.huge then
+		input = Tuple({input:GetWithNumber(1)})
+	end
+
 	local len = signature_arguments:GetSafeLength(input)
 	local packed_args = {input:Unpack(len)}
 
