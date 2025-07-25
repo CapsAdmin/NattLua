@@ -144,6 +144,7 @@ do
 		elseif node.kind == "postfix_expression_index" then
 			local val = self:Assert(self:AnalyzeExpression(node.left))
 			local obj = self:Assert(self:AnalyzeExpression(node.expression))
+
 			if not self:IsTypesystem() then
 				val = self:GetFirstValue(val)
 				obj = self:GetFirstValue(obj)
@@ -209,6 +210,7 @@ do
 
 	function META:AnalyzeExpression(node)
 		self:PushCurrentExpression(node)
+		self:CheckTimeout()
 		local obj, err = self:AnalyzeRuntimeExpression(node)
 		self:PopCurrentExpression()
 
@@ -221,6 +223,37 @@ do
 		node:AssociateType(obj or err)
 		node.scope = self:GetScope()
 		return obj, err
+	end
+
+	function META:CheckTimeout()
+		self.check_count = (self.check_count or 0) + 1
+		local count = self.check_count
+
+		if count < 90000 then return end
+
+		self.timeout = self.timeout or {}
+		local node = self:GetCurrentStatement() or self:GetCurrentExpression()
+		self.timeout[node] = (self.timeout[node] or 0) + 1
+
+		if count < 100000 then return end
+
+		local top = {}
+
+		for node, count in pairs(self.timeout) do
+			if count > 5 then table.insert(top, {node = node, count = count}) end
+		end
+
+		table.sort(top, function(a, b)
+			return a.count > b.count
+		end)
+
+		for i, info in ipairs(top) do
+			if i > 10 then break end
+
+			self:Warning({info.node, " was crawled ", info.count, " times"})
+		end
+
+		self:FatalError("too many iterations, stopping execution")
 	end
 end
 

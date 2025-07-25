@@ -124,9 +124,7 @@ return {
 		end
 
 		function META:NewIndexOperator(obj, key, val, raw)
-			if obj.Type == "any" then
-				return true
-			end
+			if obj.Type == "any" then return true end
 
 			if
 				val.Type == "function" and
@@ -164,9 +162,7 @@ return {
 				ok, err = obj:Set(key, val)
 			end
 
-			if not ok then 
-				self:Error(err) 
-			end
+			if not ok then self:Error(err) end
 		end
 	end,
 }

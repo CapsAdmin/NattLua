@@ -100,6 +100,8 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 		msg = "\x1b[0;31m" .. msg .. "\x1b[0m"
 	elseif severity == "warning" then
 		msg = "\x1b[0;33m" .. msg .. "\x1b[0m"
+	elseif severity == "fatal" then
+		msg = "\x1b[0;35m" .. msg .. "\x1b[0m"
 	end
 
 	if not _G.TEST then

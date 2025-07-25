@@ -241,6 +241,7 @@ local function Binary(self, node, l, r, op)
 			l = self:Assert(self:AnalyzeExpression(node.left))
 			r = self:Assert(self:AnalyzeExpression(node.right))
 		end
+
 		self:TrackUpvalue(l)
 		self:TrackUpvalue(r)
 

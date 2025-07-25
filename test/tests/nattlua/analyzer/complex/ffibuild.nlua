@@ -1,4 +1,6 @@
-do return end
+do
+	return
+end
 
 do
 	_G[jit.os:upper()] = true

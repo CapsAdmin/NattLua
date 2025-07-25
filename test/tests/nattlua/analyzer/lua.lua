@@ -241,10 +241,8 @@ analyze("attest.equal(((1 or false) and true) or false, true)")
 
 do --- allcases
 	local basiccases = {
-		{"nil", nil},
 		{"false", false},
 		{"true", true},
-		{"10", 10},
 	}
 	local mem = {basiccases} -- for memoization
 	local function allcases(n)

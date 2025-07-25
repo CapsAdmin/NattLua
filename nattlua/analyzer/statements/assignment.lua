@@ -143,7 +143,7 @@ return {
 			-- local a: >>number<< = 1
 			if exp_key.type_expression then
 				self:PushAnalyzerEnvironment("typesystem")
-				local contract = self:AnalyzeExpression(exp_key.type_expression)
+				local contract = self:Assert(self:AnalyzeExpression(exp_key.type_expression))
 				self:PopAnalyzerEnvironment()
 
 				if right[left_pos] then
@@ -237,7 +237,7 @@ return {
 				else
 					-- TODO: refactor out to mutation assignment?
 					-- index assignment: foo[a] = 1
-					local obj = self:AnalyzeExpression(exp_key.left)
+					local obj = self:Assert(self:AnalyzeExpression(exp_key.left))
 					self:ClearTracked()
 
 					if self:IsRuntime() then key = self:GetFirstValue(key) or Nil() end
