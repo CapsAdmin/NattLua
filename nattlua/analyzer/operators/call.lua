@@ -92,11 +92,7 @@ local function union_call(self, analyzer, input, call_node)
 				val, err = val:GetAtTupleIndex(1)
 			end
 
-			if val then
-				new:AddType(val)
-			else
-				analyzer:Error(err)
-			end
+			if val then new:AddType(val) else analyzer:Error(err) end
 		end
 
 		if obj.Type == "function" then analyzer:PopCallFrame() end
@@ -141,6 +137,7 @@ do
 	local function call_function_internal(self, obj, input)
 		-- mark the object as called so the unreachable code step won't call it
 		obj:SetCalled(true)
+
 		-- infer any uncalled functions in the arguments to get their return type
 		for i, b in ipairs(input:GetData()) do
 			if b.Type == "function" and not b:IsCalled() and not b:IsExplicitOutputSignature() then
@@ -172,6 +169,7 @@ do
 
 							if not func:GetInputSignature():IsInfinite() then
 								local val, err = new:Slice(1, len)
+
 								if not new then
 									self:Error(err)
 								else

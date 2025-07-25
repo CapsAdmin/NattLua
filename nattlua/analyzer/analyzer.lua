@@ -104,6 +104,7 @@ do
 			self:FatalError("unhandled statement: " .. tostring(node))
 		end
 
+		self:CheckTimeout()
 		node.scope = self:GetScope()
 		self:PopAnalyzerEnvironment()
 		self:PopCurrentStatement()
@@ -210,7 +211,6 @@ do
 
 	function META:AnalyzeExpression(node)
 		self:PushCurrentExpression(node)
-		self:CheckTimeout()
 		local obj, err = self:AnalyzeRuntimeExpression(node)
 		self:PopCurrentExpression()
 
@@ -225,17 +225,18 @@ do
 		return obj, err
 	end
 
+	local max_iterations = 10000
+
 	function META:CheckTimeout()
 		self.check_count = (self.check_count or 0) + 1
 		local count = self.check_count
-
-		if count < 90000 then return end
+		if count < max_iterations - (max_iterations * 0.1) then return end
 
 		self.timeout = self.timeout or {}
-		local node = self:GetCurrentStatement() or self:GetCurrentExpression()
+		local node = self:GetCurrentStatement()
 		self.timeout[node] = (self.timeout[node] or 0) + 1
 
-		if count < 100000 then return end
+		if count < max_iterations then return end
 
 		local top = {}
 
@@ -253,7 +254,7 @@ do
 			self:Warning({info.node, " was crawled ", info.count, " times"})
 		end
 
-		self:FatalError("too many iterations, stopping execution")
+		self:FatalError("too many iterations (" .. count .. "), stopping execution")
 	end
 end
 

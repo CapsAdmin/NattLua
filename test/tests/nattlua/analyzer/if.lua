@@ -1829,3 +1829,25 @@ if x == 1 then value = "1" elseif x == 2 then value = "2" end
 
 if x == 1 then attest.equal(value, _ as "1" | "2") end
 ]]
+
+local a =analyze[[
+local t = {}
+local type keys
+
+for i = 1, 10 do
+	t[i] = function()
+		for i = 1, _ as number do
+			t[keys]()
+			t[keys]()
+			t[keys]()
+			t[keys]()
+		end
+	end
+end
+
+type keys = keysof<|t|>
+
+§analyzer:AnalyzeUnreachableCode()
+
+§ print(analyzer.check_count < 100)
+]]

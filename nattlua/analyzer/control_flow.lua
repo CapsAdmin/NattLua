@@ -245,6 +245,7 @@ return function(META)
 		end
 
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
+			if obj.recursively_called then return obj.recursively_called end
 			if
 				self:IsRuntime() and
 				call_node and
