@@ -245,26 +245,27 @@ return function(META)
 		end
 
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
+			self.call_stack_map = self.call_stack_map or {}
+
 			if obj.recursively_called then return obj.recursively_called end
+
 			if
 				self:IsRuntime() and
 				call_node and
 				not not_recursive_call and
 				not obj:HasReferenceTypes()
 			then
-				for _, v in ipairs(self:GetCallStack()) do
-					-- if the callnode is the same, we're doing some infinite recursion
-					if v.call_node == call_node then
-						if obj:IsExplicitOutputSignature() then
-							-- so if we have explicit return types, just return those
-							obj.recursively_called = obj:GetOutputSignature():Copy()
-							return obj.recursively_called
-						else
-							-- if not we sadly have to resort to any
-							-- TODO: error?
-							obj.recursively_called = Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
-							return obj.recursively_called
-						end
+				-- if the callnode is the same, we're doing some infinite recursion
+				if self.call_stack_map[call_node] then
+					if obj:IsExplicitOutputSignature() then
+						-- so if we have explicit return types, just return those
+						obj.recursively_called = obj:GetOutputSignature():Copy()
+						return obj.recursively_called
+					else
+						-- if not we sadly have to resort to any
+						-- TODO: error?
+						obj.recursively_called = Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+						return obj.recursively_called
 					end
 				end
 			end
@@ -280,18 +281,22 @@ return function(META)
 				return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 			end
 
-			self:PushContextValue(
-				"call_stack",
-				{
-					obj = obj,
-					call_node = call_node,
-					scope = self:GetScope(),
-				}
-			)
+			local val = {
+				obj = obj,
+				call_node = call_node,
+				scope = self:GetScope(),
+			}
+
+			if call_node then self.call_stack_map[call_node] = val end
+
+			self:PushContextValue("call_stack", val)
 		end
 
 		function META:PopCallFrame()
+			local val = self:GetCallFrame()
 			self:PopContextValue("call_stack")
+
+			if val.call_node then self.call_stack_map[val.call_node] = nil end
 		end
 	end
 
