@@ -4,7 +4,7 @@ type _ = any
 type @Name = "_G"
 type rawlen = function=(v: Table | string)>(number)
 type rawequal = function=(v1: any, v2: any)>(boolean)
-type collectgarbage = function=(opt: string, arg: number)>(...: any) | function=(opt: string)>(...: any) | function=()>(...: any)
+type collectgarbage = function=(opt: string, arg: number)>(...any) | function=(opt: string)>(...any) | function=()>(...any)
 
 analyzer function type_print(...: ...any)
 	print(...)
@@ -157,7 +157,7 @@ analyzer function require(name: string)
 
 		if val then return val end
 	end
-	
+
 	if analyzer:GetLocalOrGlobalValue(str) then
 		return analyzer:GetLocalOrGlobalValue(str)
 	end
@@ -250,6 +250,7 @@ end
 analyzer function assert(...: ...any)
 	local obj = select(1, ...)
 	local potential_msg = select(2, ...)
+
 	if not analyzer:IsDefinetlyReachable() then
 		analyzer:ThrowSilentError(obj)
 
@@ -378,6 +379,7 @@ type xpcall = ReturnIfNonLiteral<|
 type select = ReturnIfNonLiteral<|
 	analyzer function(index: 1 .. inf | "#", ...: ...any): ...any
 		local x = ...
+
 		if x and x.Type == "tuple" then
 			return select(index:GetData(), x:Unpack())
 		end
@@ -385,12 +387,10 @@ type select = ReturnIfNonLiteral<|
 		return select(index:GetData(), ...)
 	end
 |>
-
 type select_type = analyzer function(index: 1 .. inf | "#", ...: ...any): ...any
 	local x = ...
-	if x and x.Type == "tuple" then
-		return x:Slice(index:GetData())
-	end
+
+	if x and x.Type == "tuple" then return x:Slice(index:GetData()) end
 
 	return select(index:GetData(), ...)
 end
@@ -445,6 +445,7 @@ end
 
 analyzer function setmetatable(tbl: Table, meta: Table | nil)
 	if tbl.Type == "any" then return tbl end
+
 	if not meta or meta.Type == "symbol" and meta:IsFalse() then
 		tbl:SetMetaTable(false)
 		return tbl

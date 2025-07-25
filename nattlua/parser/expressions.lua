@@ -127,15 +127,15 @@ do -- typesystem
 	end
 
 	function META:ParseValueTypeExpression()
-		if not self:IsTokenValue("...") then
-			return
-		end
+		if not self:IsTokenValue("...") then return end
 
 		local node = self:StartNode("expression", "vararg")
 		node.tokens["..."] = self:ExpectTokenValue("...")
+
 		if not self:GetToken().whitespace then
 			node.value = self:ParseTypeExpression(0)
 		end
+
 		node = self:EndNode(node)
 		return node
 	end
@@ -487,7 +487,20 @@ do -- typesystem
 			return
 		end
 
-		return self:ParseTypeExpression(priority)
+		local exp = self:ParseTypeExpression(priority)
+
+		if not exp then
+			local token = self:GetToken()
+			self:Error(
+				"faiiled to parse type expression, got $1",
+				nil,
+				nil,
+				token and token.value ~= "" and token.value or token.type
+			)
+			return
+		end
+
+		return exp
 	end
 end
 
