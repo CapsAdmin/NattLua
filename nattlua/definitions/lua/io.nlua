@@ -1,4 +1,6 @@
-local function check_read_args<|...: ...$"%**[Lanl].*" | number|>
+local type pattern = $"%**[Lanl].*" | number
+
+local function check_read_args<|...: ...pattern|>
 	local out = {}
 
 	for i = 1, select<|"#", ...|> do
@@ -26,7 +28,7 @@ type File = {
 	close = function=(self)>(boolean | nil, string, number | nil),
 	write = function=(self, ...(number | string))>(self | nil, string | nil),
 	flush = function=(self)>(boolean | nil, string | nil),
-	read = function <|self: File, ...: ...$"%**[Lanl].*" | number|>
+	read = function <|self: File, ...: ...pattern|>
 		return check_read_args<|...|>
 	end,
 	lines = function=(self)>(Function),
