@@ -370,6 +370,14 @@ analyzer function LuaJITVersion()
 	return "luajit"
 end
 
+analyzer function LuaJITOS()
+	return jit and jit.os or "unknown"
+end
+
+analyzer function LuaJITArch()
+	return jit and jit.arch or "unknown"
+end
+
 analyzer function TType(T: any)
 	return T.Type
 end

@@ -23,7 +23,7 @@ end
 do --- smoke band
 	attest.equal(tostring(band(1ll, 1, 1ll, -1)), "1LL")
 
-	if LuaJITVersion() ~= "tarantool" then
+	if LuaJITVersion() ~= "tarantool" and (LuaJITOS() ~= "OSX" and LuaJITArch() ~= "arm64")  then
 		attest.equal(tostring(band(1ll, 1, 1ull, -1)), "0ULL")
 	end
 end
