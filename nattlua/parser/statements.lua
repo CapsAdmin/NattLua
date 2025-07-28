@@ -427,25 +427,27 @@ end
 do
 	local formating = require("nattlua.other.formating")
 	local loadstring = require("nattlua.other.loadstring")
-	
 	local needed = {
 		{key = "bit", path = "nattlua.other.bit"},
 		{key = "nl", path = "nattlua.init"},
 		{key = "types", path = "nattlua.types.types"},
 		{key = "context", path = "nattlua.analyzer.context"},
 		{key = "cdecl_parser", path = "nattlua.c_declarations.main"},
-		{key = "type_errors", path = "nattlua.types.error_messages",}	
+		{
+			key = "type_errors",
+			path = "nattlua.types.error_messages",
+		},
 	}
 	local locals = ""
 
 	for _, mod in ipairs(needed) do
 		if _G.BUNDLE then
-			locals = locals .. "local "..mod.key.."=IMPORTS[\""..mod.path.."\"](\""..mod.path.."\");"
+			locals = locals .. "local " .. mod.key .. "=IMPORTS[\"" .. mod.path .. "\"](\"" .. mod.path .. "\");"
 		else
-			locals = locals .. "local "..mod.key.."=require(\""..mod.path.."\");"
+			locals = locals .. "local " .. mod.key .. "=require(\"" .. mod.path .. "\");"
 		end
 	end
-		
+
 	local globals = {
 		"loadstring",
 		"dofile",

@@ -6,7 +6,6 @@ local type_errors = require("nattlua.types.error_messages")
 local Number = require("nattlua.types.number").Number
 local context = require("nattlua.analyzer.context")
 local META = dofile("nattlua/types/base.lua")
-
 --[[#local type TBaseType = META.TBaseType]]
 META.Type = "string"
 --[[#type META.@Name = "TString"]]

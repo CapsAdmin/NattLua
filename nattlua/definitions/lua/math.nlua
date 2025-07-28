@@ -154,9 +154,11 @@ do -- angle conversion functions
 end
 
 do -- integer functions
-	type math.tointeger = ReturnIfNonLiteral<|analyzer function(x: number): number
-		return (math.tointeger or math.floor)(x:GetData())
-	end|>
+	type math.tointeger = ReturnIfNonLiteral<|
+		analyzer function(x: number): number
+			return (math.tointeger or math.floor)(x:GetData())
+		end
+	|>
 	type math.ult = ReturnIfNonLiteral<|
 		analyzer function(m: number, n: number): boolean
 			return math.ult(m:GetData(), n:GetData())

@@ -34,10 +34,12 @@ local function C_DECLARATIONS()
 	local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
 	local C, err = env.runtime.ffi:Get(ConstString("C"))
+
 	if not C then
 		print(err)
 		analyzer:FatalError("cannot find C declarations")
 	end
+
 	return C
 end
 

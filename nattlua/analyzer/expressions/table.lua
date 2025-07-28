@@ -57,7 +57,9 @@ return {
 					self:PopAnalyzerEnvironment()
 
 					if node.value_expression then
-						local val = node.value_expression and self:GetFirstValue(self:AnalyzeExpression(node.value_expression)) or Nil()
+						local val = node.value_expression and
+							self:GetFirstValue(self:AnalyzeExpression(node.value_expression)) or
+							Nil()
 						self:ErrorIfFalse(check_type_against_contract(val, contract))
 					end
 

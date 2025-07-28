@@ -144,7 +144,6 @@ analyze[[
         attest.equal(lol:sub(1,1), _ as "f" | "b")
         attest.equal(lol:sub(_ as 2 | 3), _ as "ar" | "o" | "oo" | "r")
     ]]
-
 analyze[[
     local analyzer function F(a: string, b: string, c: nil | number, d: false | nil | true)
         assert(a ~= nil)
@@ -153,6 +152,7 @@ analyze[[
 
     F(_ as "1976-W01-1 12:12:12.123" | string, _ as any, _ as 24 | number)
 ]]
+
 do
 	_G.test_var = 0
 	analyze[[
@@ -716,7 +716,6 @@ attest.equal(x, 42 as number | false)
 attest.equal(y, "error" as string | nil)
 
 ]]
-
 analyze[[
 local luadata = {}
 luadata.Types = {}
@@ -729,13 +728,11 @@ luadata.SetModifier("test", function(x)
 	return tostring(x)
 end)
 ]]
-
 analyze[[
 attest.expect_diagnostic("error", "assertion failed!")
 local a = assert(false)
 error("NEVER")
 ]]
-
 analyze[[
 attest.expect_diagnostic("error", "hello")
 local a, b, c = assert(false, "hello", 3)
@@ -747,21 +744,18 @@ attest.equal(a, 1)
 attest.equal(b, 2)
 attest.equal(c, 3)
 ]]
-
 analyze[[
 local a, b, c = assert(_ as boolean, 2, 3)
 attest.equal(a, true)
 attest.equal(b, 2)
 attest.equal(c, 3)
 ]]
-
 analyze[[
 local a, b, c = assert(_ as boolean, 2, 3)
 attest.equal(a, true)
 attest.equal(b, 2)
 attest.equal(c, 3)
 ]]
-
 analyze[[
 local analyzer function test(...: ...any)  
     local a,b,c = ...

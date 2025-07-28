@@ -193,8 +193,10 @@ local function check_input(self, obj, input)
 				end
 			elseif type_expression then
 				local val, err
+
 				if function_node.self_call and i == 1 then
 					val, err = input_signature:GetWithNumber(1)
+
 					if not val then
 						self:PopAnalyzerEnvironment()
 						self:PopScope()
@@ -202,6 +204,7 @@ local function check_input(self, obj, input)
 					end
 				else
 					val, err = self:GetFirstValue(self:AnalyzeExpression(type_expression))
+
 					if not val then
 						self:PopAnalyzerEnvironment()
 						self:PopScope()
@@ -210,7 +213,6 @@ local function check_input(self, obj, input)
 				end
 
 				signature_override[i] = val
-
 				self:CreateLocalValue(identifier, signature_override[i])
 			end
 		end
@@ -479,7 +481,9 @@ return function(self, obj, input)
 		if self:IsTypesystem() then
 			if identifier.value.value == "..." then
 				local val, err = input:Slice(argi)
+
 				if not val then return val, err end
+
 				self:CreateLocalValue(identifier.value.value, val)
 			else
 				local val, err = input:GetWithoutExpansion(argi)
@@ -505,7 +509,9 @@ return function(self, obj, input)
 		if self:IsRuntime() then
 			if identifier.value.value == "..." then
 				local val, err = input:Slice(argi)
+
 				if not val then return val, err end
+
 				self:CreateLocalValue(identifier.value.value, val)
 			else
 				local val, err = input:GetWithNumber(argi)

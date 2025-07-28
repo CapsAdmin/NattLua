@@ -151,6 +151,7 @@ function META:Recompile(path, lol, diagnostics)
 	if not lol then
 		if type(cfg.lsp.entry_point) == "table" then
 			if self.debug then print("recompiling entry points from: " .. path) end
+
 			local ok = true
 			local reasons = {}
 
@@ -163,6 +164,7 @@ function META:Recompile(path, lol, diagnostics)
 				end
 
 				local b, reason = self:Recompile(new_path, true, diagnostics)
+
 				if not b then
 					ok = false
 					table.insert(reasons, reason)
@@ -178,7 +180,7 @@ function META:Recompile(path, lol, diagnostics)
 				print(cfg.lsp.entry_point, "->", path)
 				table.print(cfg)
 			end
-			
+
 			return self:Recompile(path, true, diagnostics)
 		end
 	end
@@ -207,12 +209,14 @@ function META:Recompile(path, lol, diagnostics)
 	local compiler = Compiler([[return import("]] .. entry_point .. [[")]], entry_point, cfg)
 	compiler.debug = true
 	compiler:SetEnvironments(runtime_env, typesystem_env)
+
 	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
 		local name = code:GetName()
-		
+
 		if severity == "fatal" then
 			self:DebugLog("[ " .. entry_point .. " ] " .. formating.FormatMessage(msg, ...))
 		end
+
 		diagnostics[name] = diagnostics[name] or {}
 		table.insert(
 			diagnostics[name],
@@ -228,9 +232,9 @@ function META:Recompile(path, lol, diagnostics)
 	end
 
 	local ok, err = compiler:Parse()
-	if not ok then
-		print("FAILED TO PARSE", path, err)
-	end
+
+	if not ok then print("FAILED TO PARSE", path, err) end
+
 	if ok then
 		self:DebugLog("[ " .. entry_point .. " ] parsed with " .. #compiler.Tokens .. " tokens")
 
@@ -318,6 +322,7 @@ function META:OnResponse(response) end
 
 function META:Initialize()
 	local ok, reason = self:Recompile()
+
 	if not ok then
 		if not _G.TEST then
 			print("failed to recompile without path: " .. reason)
@@ -597,6 +602,7 @@ function META:GetHighlightRanges(path)
 
 	for _, item in ipairs(data) do
 		local count = item[3]
+
 		if count > 0 then
 			local normalized = count / max_count
 			local r = math.floor(normalized * 255)

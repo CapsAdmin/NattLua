@@ -135,7 +135,6 @@ local function index_union(analyzer, obj, key)
 		else
 			local val, err = analyzer:IndexOperator(obj, key)
 
-
 			if not val then analyzer:Error(err) else union:AddType(val) end
 		end
 	end

@@ -63,8 +63,11 @@ return function(META)
 
 		for _, expression in ipairs(expressions) do
 			local obj, err = self:AnalyzeExpression(expression)
-			if not obj then self:Error(err) obj = Any() end
 
+			if not obj then
+				self:Error(err)
+				obj = Any()
+			end
 
 			if obj and obj.Type == "tuple" and obj:HasOneValue() then
 				obj = obj:GetWithNumber(1)
@@ -282,13 +285,14 @@ return function(META)
 					f:close()
 					local start = formating.LineCharToSubPos(code, tonumber(info.currentline), 0)
 					local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
-					
+
 					if msg:sub(1, #source) == source then
 						msg = msg:sub(#source)
 						msg = msg:match("^:%d+:%d+:%s*(.+)") or msg:match("^:%d+%s*(.+)") or msg
 					end
+
 					local analyzer = analyzer_context:GetCurrentAnalyzer()
-					local node = analyzer:GetCurrentExpression() or analyzer:GetCurrentStatement() 
+					local node = analyzer:GetCurrentExpression() or analyzer:GetCurrentStatement()
 					return node.Code:BuildSourceCodePointMessage(msg, start, stop)
 				end
 			end
@@ -298,8 +302,8 @@ return function(META)
 
 		local function on_error_safe(msg)
 			local ok, ret = pcall(on_error, msg)
-			
-			if not ok then 
+
+			if not ok then
 				print("fatal error in error handling:")
 				print("=============================")
 				print(ret)

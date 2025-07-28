@@ -8,7 +8,6 @@ local AnalyzeImport = require("nattlua.analyzer.expressions.import").AnalyzeImpo
 local function postfix_call(self, self_arg, node, callable)
 	local types = {self_arg}
 	self:AnalyzeExpressions(node.expressions, types)
-
 	local arguments
 
 	if self:IsTypesystem() then
@@ -50,7 +49,6 @@ return {
 			return AnalyzeImport(self, node, node.left.value.value == "require" and node.path)
 		end
 
-
 		local is_type_call = node.type_call or
 			node.left and
 			(
@@ -70,6 +68,7 @@ return {
 
 			if self:IsRuntime() then self_arg = self:GetFirstValue(self_arg) end
 		end
+
 		local returned_tuple
 
 		if self_arg and self_arg.Type == "union" then
@@ -78,10 +77,10 @@ return {
 
 				if tup then
 					local s = self:GetFirstValue(tup)
+
 					if s and not s:IsEmpty() then
-						if returned_tuple then
-							returned_tuple:AddType(s)
-						end
+						if returned_tuple then returned_tuple:AddType(s) end
+
 						returned_tuple = returned_tuple or Union({s})
 					end
 				end
@@ -90,11 +89,12 @@ return {
 
 		if not returned_tuple then
 			local val, err = postfix_call(self, self_arg, node, callable)
-			if not val then
-				return val, err
-			end
+
+			if not val then return val, err end
+
 			returned_tuple = val
 		end
+
 		self:PopAnalyzerEnvironment()
 
 		-- TUPLE UNPACK MESS
@@ -103,7 +103,11 @@ return {
 		end
 
 		if self:IsTypesystem() then
-			if returned_tuple and returned_tuple.Type == "tuple" and returned_tuple:HasOneValue() then
+			if
+				returned_tuple and
+				returned_tuple.Type == "tuple" and
+				returned_tuple:HasOneValue()
+			then
 				returned_tuple = returned_tuple:GetWithNumber(1)
 			end
 		end

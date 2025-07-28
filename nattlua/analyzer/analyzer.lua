@@ -230,6 +230,7 @@ do
 	function META:CheckTimeout()
 		self.check_count = (self.check_count or 0) + 1
 		local count = self.check_count
+
 		if count < max_iterations - (max_iterations * 0.1) then return end
 
 		self.timeout = self.timeout or {}

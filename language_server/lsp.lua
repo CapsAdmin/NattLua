@@ -593,7 +593,9 @@ do
 
 	function lsp.PublishDecorations(path)
 		local highlights = editor_helper:GetHighlightRanges(path)
+
 		if not highlights then return end
+
 		local decorations = {}
 
 		for _, highlight in ipairs(highlights) do

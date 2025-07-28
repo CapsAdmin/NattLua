@@ -299,7 +299,6 @@ end
 ]],
 	"tonumber.+%s+^^^^^^^^^^^^^^^^^^^^^^^^^^%s+11"
 )
-
 analyze[[
 local m = function()
 	return _ as false | 1

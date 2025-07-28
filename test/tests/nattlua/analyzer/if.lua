@@ -1829,8 +1829,7 @@ if x == 1 then value = "1" elseif x == 2 then value = "2" end
 
 if x == 1 then attest.equal(value, _ as "1" | "2") end
 ]]
-
-local a =analyze[[
+local a = analyze[[
 local t = {}
 local type keys
 

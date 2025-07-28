@@ -138,9 +138,7 @@ return function(META)
 			end
 
 			self:MutateUpvalue(upvalue, val)
-			
 			upvalue:SetValue(val)
-
 			return upvalue
 		end
 

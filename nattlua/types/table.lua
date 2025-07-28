@@ -762,10 +762,9 @@ function META:Get(key--[[#: TBaseType | TString]])
 
 		if len == math.huge or len == -math.huge then
 			union:AddType(Nil())
+
 			for _, keyval in ipairs(self:GetData()) do
-				if keyval.key.Type == "number" then
-					union:AddType(keyval.val)
-				end
+				if keyval.key.Type == "number" then union:AddType(keyval.val) end
 			end
 
 			return union
@@ -786,9 +785,11 @@ function META:Get(key--[[#: TBaseType | TString]])
 
 	if key.Type == "any" then
 		local union = Union({Nil()})
+
 		for _, keyval in ipairs(self:GetData()) do
 			union:AddType(keyval.val)
 		end
+
 		return union
 	end
 
@@ -1084,11 +1085,14 @@ do
 
 	function META:Mutate(key, val, scope, from_tracking)
 		local hash = key:GetHashForMutationTracking()
+
 		if hash == nil then return true end
 
 		initialize_table_mutation_tracker(self, scope, key, hash)
 
-		if #self.mutations[hash] > 100 then return false, type_errors.too_many_mutations() end
+		if #self.mutations[hash] > 100 then
+			return false, type_errors.too_many_mutations()
+		end
 
 		table.insert(self.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking, key = key})
 

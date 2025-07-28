@@ -110,7 +110,13 @@ analyzer function seal(tbl: Table)
 	for _, keyval in ipairs(tbl:GetData()) do
 		if keyval.val.Type == "function" then
 			local first_arg = keyval.val:GetInputSignature():GetWithNumber(1)
-			if first_arg and first_arg.Type == "union" and first_arg:GetType(tbl) and first_arg:GetType(types.Any()) then
+
+			if
+				first_arg and
+				first_arg.Type == "union" and
+				first_arg:GetType(tbl) and
+				first_arg:GetType(types.Any())
+			then
 				keyval.val:GetInputSignature():Set(1, tbl)
 			end
 		end

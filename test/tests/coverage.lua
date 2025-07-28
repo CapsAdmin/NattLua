@@ -8,28 +8,27 @@ local function collect(code)
 	return res
 end
 
-
 local function annotate(code)
 	local data = loadstring(collect(code))()
 	local buffer = {}
 
 	for i, v in ipairs(data) do
 		local start, stop, count = v[1], v[2], v[3]
-		if count > 0 then
-			table.insert(buffer, code:sub(start, stop))
-		end
+
+		if count > 0 then table.insert(buffer, code:sub(start, stop)) end
 	end
 
 	return table.concat(buffer)
 end
 
-
 local map = {}
+
 for i = 0, 9 do
 	map[i] = tostring(i)
 end
 
 local i = 10
+
 for b = string.byte("a"), string.byte("z") do
 	map[i] = string.char(b)
 	i = i + 1
@@ -290,27 +289,26 @@ local code = META.New([[
 
 
 ]=])
-
-
 coverage.Preprocess([==[
 	--[[#local type x = tbl[name] ]]
 ]==], "test")
-
-
 equal(annotate("local x = 1"), "1")
 equal(annotate("do return end"), "return")
 equal(
 	annotate("local x = {foo={bar={baz=true}}} local y = x.foo.bar.baz"),
 	"{{{truex.foo.bar.baz"
 )
-equal(
-	annotate("if true then local x = 1 else local y = 1 end"),
-	"true1"
-)
-
-
+equal(annotate("if true then local x = 1 else local y = 1 end"), "true1")
 equal(get_count_string("local x = 1"), "1")
 equal(get_count_string("local x = package.loaded.table"), "11111111111111111111")
-equal(get_count_string("for i = 1+0, 8+0 do local x = 1 if i > 5 then local y = i end if i > 15 then local y = 1 end local x = 1 end"), "111001110000000000000080000888880000000000000000300000000888888000000000000000000000000000000008")
-equal(get_count_string("local x = function() if false then local x = true end local x = 1 end x()"), "111111110000001111100000000000000000000000000000000000100000111")
+equal(
+	get_count_string(
+		"for i = 1+0, 8+0 do local x = 1 if i > 5 then local y = i end if i > 15 then local y = 1 end local x = 1 end"
+	),
+	"111001110000000000000080000888880000000000000000300000000888888000000000000000000000000000000008"
+)
+equal(
+	get_count_string("local x = function() if false then local x = true end local x = 1 end x()"),
+	"111111110000001111100000000000000000000000000000000000100000111"
+)
 equal(get_count_string("local x = {x = function() local y = 1 end}"), "1000011111111")

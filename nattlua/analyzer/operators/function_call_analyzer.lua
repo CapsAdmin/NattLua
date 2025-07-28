@@ -135,7 +135,10 @@ return function(analyzer, obj, input)
 	-- results in ((any,)*inf,)
 	-- when the input signature is also ((TYPE,)*inf,) both will result in safe length being 0
 	-- so no arguments are passed. This feels wrong, maybe at least 1 argument? (however technically this is also wrong?)
-	if input:GetElementCount() == math.huge and signature_arguments:GetElementCount() == math.huge then
+	if
+		input:GetElementCount() == math.huge and
+		signature_arguments:GetElementCount() == math.huge
+	then
 		input = Tuple({input:GetWithNumber(1)})
 	end
 

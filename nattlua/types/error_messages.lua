@@ -298,11 +298,18 @@ end
 
 do
 	function type_errors.analyzer_callstack_too_deep(len1, len2)
-		return {"call stack is too deep. ", len1, " analyzer call frames and ", len2, " lua call stack frames "}
+		return {
+			"call stack is too deep. ",
+			len1,
+			" analyzer call frames and ",
+			len2,
+			" lua call stack frames ",
+		}
 	end
 
 	function type_errors.too_many_mutations()
 		return {"too many mutations"}
 	end
 end
+
 return type_errors
