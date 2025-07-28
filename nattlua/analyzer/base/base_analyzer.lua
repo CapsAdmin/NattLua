@@ -308,10 +308,10 @@ return function(META)
 				print("=============================")
 				print(ret)
 				print("=============================")
-				return "error in nattlua error handling"
+				ret = "error in nattlua error handling"
 			end
 
-			return ret
+			return ret, debug.traceback()
 		end
 
 		function META:CallLuaTypeFunction(func, scope, ...)
@@ -319,11 +319,13 @@ return function(META)
 			local res = {xpcall(func, on_error_safe, ...)}
 
 			if not table_remove(res, 1) then
+				local err = res[1]
+				local trace = res[2]
 				local stack = self:GetCallStack()
 
 				if stack[1] then self:PushCurrentExpression(stack[#stack].call_node) end
 
-				self:Error(type_errors.plain_error(res[1]))
+				self:Error(type_errors.analyzer_error(err, trace))
 
 				if stack[1] then self:PopCurrentExpression() end
 

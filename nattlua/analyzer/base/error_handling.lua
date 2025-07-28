@@ -107,6 +107,16 @@ return function(META)
 	)
 		if self.SuppressDiagnostics then return end
 
+		if math.abs(start - stop) > 10000 then
+			start = 0
+			stop = 0
+			print("WARNING: Diagnostic start/stop is too large, resetting to 0")
+			print("EXPRESSION: ", self:GetCurrentExpression())
+			print("STATEMENT: ", self:GetCurrentStatement())
+			print("NODE: ", node)
+			print(debug.traceback())
+		end
+
 		local msg_str = self:ErrorMessageToString(msg)
 
 		if self.processing_deferred_calls then

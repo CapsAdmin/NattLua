@@ -83,6 +83,9 @@ return {
 
 				self:PopCurrentExpression()
 			else
+				local exp = statement.expressions[i-1]
+				self:PushCurrentExpression(exp)
+
 				if self:IsRuntime() and prev_expression:IsCertainlyFalse() then
 					if not contains_ref_argument(self:GetTrackedUpvalues()) then
 						self:Warning(type_errors.if_else_always_true())
@@ -101,6 +104,8 @@ return {
 						}
 					)
 				end
+
+				self:PopCurrentExpression()
 			end
 		end
 

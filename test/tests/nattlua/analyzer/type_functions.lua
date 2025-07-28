@@ -518,7 +518,7 @@ analyze[[
     local ok, err = pcall(require, "foo")
     attest.equal(ok, _ as true | false)
     if type(err) == "string" then
-        attest.equal(err:sub(-9), "not found")
+        attest.equal(not not err:find("not found"), true)
     end
 ]]
 analyze[[

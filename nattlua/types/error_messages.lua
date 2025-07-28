@@ -296,6 +296,10 @@ function type_errors.plain_error(msg--[[#: any]])--[[#: Reason]]
 	return {msg}
 end
 
+function type_errors.analyzer_error(msg, trace)--[[#: Reason]]
+	return {msg, " at ", trace or debug.traceback()}
+end
+
 do
 	function type_errors.analyzer_callstack_too_deep(len1, len2)
 		return {
