@@ -1,14 +1,12 @@
+do return end
 do
-	return
-end
-
-do
-	_G[jit.os:upper()] = true
+	_G[jit.os:upper()] = true as true | nil
 	_G.OS = jit.os:lower()
 	_G[jit.arch:upper()] = true
 	_G.ARCH = jit.arch:lower()
-	UNIX = not WINDOWS
+	_G.UNIX = not _G.WINDOWS
 	local ffi = require("ffi")
+	local powershell
 
 	if WINDOWS then
 		function powershell(str: string, no_return: nil | boolean)
@@ -20,18 +18,18 @@ do
 				return
 			end
 
-			local p = io.popen(ps)
-			local out = p:read("*all")
+			local p = assert(io.popen(ps))
+			local out = assert(p:read("*all"))
 			p:close()
 			return out
 		end
 	end
 
-	function os.readexecute(cmd)
+	function os.readexecute(cmd: string)
 		return assert(assert(io.popen(cmd)):read("*all"))
 	end
 
-	function os.checkexecute(cmd)
+	function os.checkexecute(cmd: string)
 		local code
 
 		if UNIX then
@@ -46,7 +44,7 @@ do
 	do
 		local cache = {}
 
-		function os.iscmd(cmd)
+		function os.iscmd(cmd: string)
 			if cache[cmd] ~= nil then return cache[cmd] end
 
 			local res
@@ -62,7 +60,7 @@ do
 		end
 	end
 
-	function os.checkcmds(...)
+	function os.checkcmds(...: ...string)
 		local err = ""
 
 		for i, v in ipairs({...}) do
@@ -121,27 +119,27 @@ do
 	if UNIX then
 		ffi.cdef("int setenv(const char *name, const char *value, int overwrite);")
 
-		function os.setenv(key, val)
+		function os.setenv(key: string, val: string)
 			ffi.C.setenv(key, val, 0)
 		end
 	else
 		ffi.cdef("int _putenv_s(const char *var_name, const char *new_value);")
 
-		function os.setenv(key, val)
+		function os.setenv(key: string, val: string)
 			ffi.C._putenv_s(key, val)
 		end
 	end
 
-	function os.appendenv(key, val)
+	function os.appendenv(key: string, val: string)
 		os.setenv(key, (os.getenv(key) or "") .. val)
 	end
 
-	function os.prependenv(key, val)
+	function os.prependenv(key: string, val: string)
 		os.setenv(key, val .. (os.getenv(key) or ""))
 	end
 
 	if UNIX then
-		function os.pathtype(path)
+		function os.pathtype(path: string)
 			if os.readexecute("[ -d \"" .. path .. "\" ] && printf \"1\"") == "1" then
 				return "directory"
 			elseif os.readexecute("[ -f \"" .. path .. "\" ] && printf \"1\"") == "1" then
@@ -295,7 +293,7 @@ do
 		f:close()
 	end
 
-	function os.extract(from: string, to: string, move_out: boolean)
+	function os.extract(from: string, to: string, move_out: string)
 		if to:sub(#to, #to) ~= "/" then to = to .. "/" end
 
 		os.makedir(to)
@@ -345,7 +343,7 @@ do
 						if os.isdir(left .. v) then return left .. v .. right end
 					end
 				end)
-				move_out = str			
+				move_out = str as string		
 			until count == 0
 
 			repeat
