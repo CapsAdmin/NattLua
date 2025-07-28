@@ -1,6 +1,7 @@
 local fs = {}
 
 if not jit then
+
 elseif jit.arch ~= "Windows" then
 	local ffi = require("ffi")
 	ffi.cdef("char *strerror(int);")
@@ -12,7 +13,6 @@ elseif jit.arch ~= "Windows" then
 	end
 else
 	local ffi = require("ffi")
-
 	ffi.cdef("uint32_t GetLastError();")
 	ffi.cdef[[
 		uint32_t FormatMessageA(
@@ -42,6 +42,7 @@ else
 end
 
 if not jit then
+
 elseif jit.arch ~= "Windows" then
 	local ffi = require("ffi")
 
@@ -208,17 +209,31 @@ elseif jit.arch ~= "Windows" then
 		local dirent_struct
 
 		if jit.os == "OSX" then
-			dirent_struct = ffi.typeof([[
-				struct {
+			if jit.arch == "arm64" then
+				dirent_struct = ffi.typeof([[
+					struct {
 					uint64_t d_ino;
 					uint64_t d_seekoff;
 					uint16_t d_reclen;
 					uint16_t d_namlen;
 					uint8_t d_type;
 					char d_name[1024];
-				}
-			]])
-			ffi.cdef([[$ *readdir(void *dirp) asm("readdir$INODE64");]], dirent_struct)
+					}
+				]])
+				ffi.cdef([[$ *readdir(void *dirp);]], dirent_struct)
+			else
+				dirent_struct = ffi.typeof([[
+					struct {
+						uint64_t d_ino;
+						uint64_t d_seekoff;
+						uint16_t d_reclen;
+						uint16_t d_namlen;
+						uint8_t d_type;
+						char d_name[1024];
+					}
+				]])
+				ffi.cdef([[$ *readdir(void *dirp) asm("readdir$INODE64");]], dirent_struct)
+			end
 		else
 			dirent_struct = ffi.typeof([[
 				struct {
@@ -360,7 +375,6 @@ elseif jit.arch ~= "Windows" then
 	end
 else
 	local ffi = require("ffi")
-
 	local DIRECTORY = 0x10
 	local time_struct = ffi.typeof([[
 		struct {
@@ -684,9 +698,7 @@ function fs.get_parent_directory(path)
 	path = path:gsub("\\", "/")
 
 	-- Remove trailing slash if present
-	if path:sub(-1) == "/" and path ~= "/" then
-		path = path:sub(1, -2)
-	end
+	if path:sub(-1) == "/" and path ~= "/" then path = path:sub(1, -2) end
 
 	-- Extract parent directory
 	local parent = path:match("(.+)/[^/]+$")
