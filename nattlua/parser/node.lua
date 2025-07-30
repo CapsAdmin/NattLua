@@ -838,6 +838,8 @@ function META:__tostring()
 	return str .. "]"
 end
 
+META:IsSet("Unreachable", false)
+
 function META:Render(config)
 	local emitter
 

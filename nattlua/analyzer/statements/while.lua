@@ -8,6 +8,10 @@ return {
 
 		if obj:IsCertainlyFalse() then
 			self:Warning(type_errors.loop_always_false())
+
+			for _, statement in ipairs(statement.statements) do
+				statement:SetUnreachable(true)
+			end
 		end
 
 		if obj:IsTruthy() then

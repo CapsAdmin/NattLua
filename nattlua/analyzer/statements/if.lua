@@ -78,12 +78,16 @@ return {
 				if self:IsRuntime() and obj:IsCertainlyFalse() then
 					if not contains_ref_argument(self:GetTrackedUpvalues()) then
 						self:Warning(type_errors.if_always_false())
+
+						for _, statement in ipairs(statements) do
+							statement:SetUnreachable(true)
+						end
 					end
 				end
 
 				self:PopCurrentExpression()
 			else
-				local exp = statement.expressions[i-1]
+				local exp = statement.expressions[i - 1]
 				self:PushCurrentExpression(exp)
 
 				if self:IsRuntime() and prev_expression:IsCertainlyFalse() then

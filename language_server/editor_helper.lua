@@ -571,7 +571,7 @@ function META:GetDefinition(path, line, character)
 			if node then return node end
 		end
 
-		if typ.GetFunctionBodyNode and typ:GetFunctionBodyNode() then
+		if typ.Type == "function" then
 			local node = typ:GetFunctionBodyNode()
 
 			if node then return node end
@@ -996,6 +996,16 @@ do
 
 	local function get_semantic_type(token)
 		if token.parent then
+			do
+				local parent = token.parent
+
+				while parent do
+					if parent:IsUnreachable() then return "keyword", {"deprecated"} end
+
+					parent = parent.parent
+				end
+			end
+
 			if token.type == "symbol" and token.parent.kind == "function_signature" then
 				return "keyword"
 			end
