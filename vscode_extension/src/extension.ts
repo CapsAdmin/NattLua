@@ -16,7 +16,6 @@ import { resolve } from "path";
 let client: LanguageClient;
 let server: ChildProcessWithoutNullStreams;
 const documentSelector = [{ scheme: 'file', language: 'nattlua' }];
-const isRightDocument = (document: TextDocument) => documentSelector.some(selector => selector.language === document.languageId && selector.scheme === document.uri.scheme)
 
 export async function activate(context: ExtensionContext) {
   const config = workspace.getConfiguration("nattlua");
@@ -55,6 +54,7 @@ export async function activate(context: ExtensionContext) {
       output.on("data", (str: string) => serverOutput.append(str));
 
       const writer = server.stdin
+
 
       {
         const originalWrite = writer._write;
