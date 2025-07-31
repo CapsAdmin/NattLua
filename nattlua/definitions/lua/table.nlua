@@ -32,10 +32,10 @@ do -- Basic table manipulation functions
 		return table.concat(out, separator and separator:GetData() or nil)
 	end
 
-	analyzer function table.insert(tbl: List<|any|>, ...: ...any)
+	analyzer function table.insert(tbl: List<|any|>, pos_val: AllTypesUnion ~ nil, val_: AllTypesUnion)
 		if tbl.Type == "any" then return end
 
-		local pos, val = ...
+		local pos, val = pos_val, val_
 
 		if not val then
 			val = pos
