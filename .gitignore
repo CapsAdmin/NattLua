@@ -6,3 +6,5 @@ temp_build_output.lua
 build_output.lua
 nattlua.md
 lsp_session.rpc
+lsp_session_in.rpc
+lsp_session_out.rpc

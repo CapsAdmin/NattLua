@@ -5,7 +5,10 @@ local json = require("language_server.json")
 local rpc_util = require("language_server.jsonrpc")
 local INPUT = io.stdin
 local OUTPUT = io.stderr -- using STDERR explcitly to have a clean channel
-local session = io.open("lsp_session.rpc", "w")
+local session_output = io.open("lsp_session_out.rpc", "w")
+local session_input = io.open("lsp_session_in.rpc", "w")
+
+io.stdout:setvbuf("no")
 
 local function read_message()
 	local line = INPUT:read("*l")
@@ -14,8 +17,12 @@ local function read_message()
 
 	local content_length = tonumber(line:match("Content%-Length: (%d+)"))
 	INPUT:read("*l") -- Read the empty line
-	return INPUT:read(content_length)
+	local str = INPUT:read(content_length)
+	session_input:write(str, "\n\n")
+	session_input:flush()
+	return str
 end
+
 
 -- Without this, it seems like vscode will error as the body length deviates from content-length with unicode characters
 -- I initially thought utf8.length would work, but that doesn't seem to be it.
@@ -28,8 +35,8 @@ local function write_message(message)
 	local data = string.format("Content-Length: %d\r\n\r\n%s", #encoded, encoded)
 	OUTPUT:write(data)
 	OUTPUT:flush()
-	session:write(data)
-	session:flush()
+	session_output:write(data)
+	session_output:flush()
 end
 
 OUTPUT:setvbuf("no")
@@ -40,7 +47,7 @@ end
 
 local jit_profiler = require("test.helpers.jit_profiler")
 
-while true do
+local function update() 
 	local body = read_message()
 	local stop_profiler = jit_profiler.Start(
 		{
@@ -56,7 +63,11 @@ while true do
 
 	if res then
 		if res.error then error(res.error.message) end
-
 		write_message(res)
 	end
+end
+
+while true do
+	local ok, err = pcall(update)
+	if not ok then print(err) end
 end
