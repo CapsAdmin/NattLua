@@ -178,7 +178,7 @@ local function nextCandidateWhileLoop(IRList: InstructionList, curPos: number, m
 					local IRListOUTPUT = {}
 
 					while loopStart <= loopEnd do
-						table.insert(IRListOUTPUT, IRList[loopStart])
+						table.insert(IRListOUTPUT, assert(IRList[loopStart]))
 						loopStart = loopStart + 1
 					end
 

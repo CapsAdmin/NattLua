@@ -118,7 +118,7 @@ do
 			end
 		end
 
-		return sub_to_linechar[code], linechar_to_sub[code]
+		return assert(sub_to_linechar[code]), assert(linechar_to_sub[code])
 	end
 
 	function formating.SubPosToLineCharCached(code--[[#: string]], start--[[#: number]], stop--[[#: number]])

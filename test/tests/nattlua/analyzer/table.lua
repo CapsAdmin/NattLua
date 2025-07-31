@@ -1109,3 +1109,23 @@ local curIR = assert(IRList[loopStart + i])[1]
 attest.equal(curIR, _ as nil | number)
 
 ]]
+analyze[[
+local analyzer function test(tbl: List<|any|>, pos_val: AllTypesUnion ~ nil, val_: AllTypesUnion) -- as a side effect, this also tests if AllTypesUnion ~ nil creates a new AllTypesUnion and doesn't mutate it
+	print(tbl, pos_val, val_)
+end
+
+local function SplitHeader(header: string, ...: ...string)
+	header = header:gsub("/%*.-%*/", "")
+	local found = {}
+
+	for _, what in ipairs({...}) do
+		local _, stop_pos = header:find(".-" .. what)
+
+		if stop_pos then
+			stop_pos = stop_pos - #what
+			test(found, stop_pos)
+		end
+	end
+end
+
+]]
