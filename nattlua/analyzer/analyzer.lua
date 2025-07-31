@@ -25,6 +25,7 @@ do
 	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
 
 	function META:AnalyzeStatement(node)
+		self:CheckTimeout()
 		self:PushCurrentStatement(node)
 		self:PushAnalyzerEnvironment(node.environment or "runtime")
 
@@ -104,7 +105,6 @@ do
 			self:FatalError("unhandled statement: " .. tostring(node))
 		end
 
-		self:CheckTimeout()
 		node.scope = self:GetScope()
 		self:PopAnalyzerEnvironment()
 		self:PopCurrentStatement()
@@ -225,7 +225,7 @@ do
 		return obj, err
 	end
 
-	local max_iterations = 10000
+	local max_iterations = 20000
 
 	function META:CheckTimeout()
 		self.check_count = (self.check_count or 0) + 1
@@ -253,6 +253,7 @@ do
 			if i > 10 then break end
 
 			self:Warning({info.node, " was crawled ", info.count, " times"})
+			print(info.node, " was crawled ", info.count, " times")
 		end
 
 		self:FatalError("too many iterations (" .. count .. "), stopping execution")

@@ -161,6 +161,8 @@ end
 return {
 	Index = function(META)
 		function META:IndexOperator(obj, key, raw)
+			self:CheckTimeout()
+
 			if obj.Type == "union" then
 				return index_union(self, obj, key)
 			elseif obj.Type == "tuple" then
