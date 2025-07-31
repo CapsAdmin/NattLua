@@ -1,15 +1,17 @@
 type _ = any
 type boolean = true | false
-type integer = number
-type Table = {[any] = any} | {}
-type Function = function=(...any)>(...any)
-type AnyFunction = function=(...any)>(...any)
 type AnyTable = {[any] = any} | {}
-type userdata = Table
+type AnyFunction = function=(...any)>(...any)
+type userdata = AnyTable
 type ctype = any
-type thread = Table
+type thread = AnyTable
 type LiteralNumber = -inf .. inf | nan
 type LiteralString = $".*"
+type AllTypesUnion = boolean | nil | number | string | AnyTable | AnyFunction
+-- aliases
+type Table = AnyTable
+type Function = AnyFunction
+type integer = number
 
 function BooleanResult<|success: any, error: any|>
 	return (true, success) | (false, error)
