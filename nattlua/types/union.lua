@@ -263,12 +263,15 @@ function META:GetAtTupleIndexUnion(i--[[#: number]])
 
 	local val--[[#: any]]
 	local errors = {}
+	local is_inf = false
 
 	for _, obj in ipairs(self.Data) do
 		if obj.Type == "tuple" then
 			local found, err = (obj--[[# as any]]):GetWithNumber(i)
 
 			if found then
+				if (obj--[[# as any]]):GetElementCount() == math.huge then is_inf = true end
+
 				if found.Type == "union" then
 					found, err = found:GetAtTupleIndexUnion(1)
 				elseif found.Type == "tuple" then
@@ -304,7 +307,7 @@ function META:GetAtTupleIndexUnion(i--[[#: number]])
 
 	if val.Type == "union" and val:GetCardinality() == 1 then return val.Data[1] end
 
-	return val
+	return val, is_inf
 end
 
 function META:IsTypeObjectSubsetOf(typ--[[#: TBaseType]])

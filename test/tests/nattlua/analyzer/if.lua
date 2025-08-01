@@ -1850,3 +1850,11 @@ type keys = keysof<|t|>
 
 § print(analyzer.check_count < 100)
 ]]
+analyze[[
+
+local x = _ as {type = "number"} | {type = "symbol"}
+
+if x.type ~= "number" then return end
+
+attest.equal(x.type, "number")
+]]

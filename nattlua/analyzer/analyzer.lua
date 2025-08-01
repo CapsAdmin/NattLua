@@ -135,7 +135,7 @@ do
 				self.inverted_index_tracking = not self.inverted_index_tracking
 			end
 
-			local r = self:AnalyzeExpression(node.right)
+			local r = self:Assert(self:AnalyzeExpression(node.right))
 
 			if node.value.value == "not" then self.inverted_index_tracking = false end
 

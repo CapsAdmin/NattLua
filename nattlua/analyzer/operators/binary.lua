@@ -182,7 +182,7 @@ local function Binary(self, node, l, r, op)
 
 	if not l and not r then
 		if node.value.value == "and" then
-			l = self:AnalyzeExpression(node.left)
+			l = self:Assert(self:AnalyzeExpression(node.left))
 
 			if l:IsCertainlyFalse() then
 				r = Nil()
@@ -199,7 +199,7 @@ local function Binary(self, node, l, r, op)
 
 				-- right hand side of and is the "true" part
 				self:PushTruthyExpressionContext(true)
-				r = self:AnalyzeExpression(node.right)
+				r = self:Assert(self:AnalyzeExpression(node.right))
 				self:PopTruthyExpressionContext()
 
 				if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
@@ -212,12 +212,12 @@ local function Binary(self, node, l, r, op)
 			end
 		elseif node.value.value == "or" then
 			self:PushFalsyExpressionContext(true)
-			l = self:AnalyzeExpression(node.left)
+			l = self:Assert(self:AnalyzeExpression(node.left))
 			self:PopFalsyExpressionContext()
 
 			if l:IsCertainlyFalse() then
 				self:PushFalsyExpressionContext(true)
-				r = self:AnalyzeExpression(node.right)
+				r = self:Assert(self:AnalyzeExpression(node.right))
 				self:PopFalsyExpressionContext()
 			elseif l:IsCertainlyTrue() then
 				r = Nil()
@@ -225,7 +225,7 @@ local function Binary(self, node, l, r, op)
 				-- right hand side of or is the "false" part
 				self.LEFT_SIDE_OR = l
 				self:PushFalsyExpressionContext(true)
-				r = self:AnalyzeExpression(node.right)
+				r = self:Assert(self:AnalyzeExpression(node.right))
 				self:PopFalsyExpressionContext()
 				self.LEFT_SIDE_OR = nil
 
@@ -404,7 +404,7 @@ local function Binary(self, node, l, r, op)
 					end
 
 					if not truthy_union:IsEmpty() or not falsy_union:IsEmpty() then
-						self:TrackUpvalueUnion(union, truthy_union, falsy_union, op == "~=")
+						self:TrackUpvalueUnion(union, truthy_union, falsy_union, op == "==")
 						return new_union
 					end
 				end

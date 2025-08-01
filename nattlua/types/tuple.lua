@@ -319,7 +319,7 @@ function META:GetAtTupleIndex(i)
 		if obj.Type == "union" then
 			return obj:GetAtTupleIndexUnion(i)
 		elseif obj.Type == "tuple" then
-			if obj:IsInfinite() then return obj end
+			if obj:IsInfinite() then return obj, true end
 
 			return obj:GetWithNumber(i)
 		end
@@ -688,9 +688,9 @@ return {
 			local temp = {}
 
 			for i = 1, 128 do
-				local v = arguments:GetAtTupleIndex(i)
+				local v, is_inf = arguments:GetAtTupleIndex(i)
 
-				if v and v.Type == "tuple" then
+				if v and v.Type == "tuple" or is_inf then
 					-- inf tuple
 					temp[i] = v
 

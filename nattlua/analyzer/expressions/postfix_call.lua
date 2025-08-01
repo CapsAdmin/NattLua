@@ -78,7 +78,7 @@ return {
 				if tup then
 					local s = self:GetFirstValue(tup)
 
-					if s and not s:IsEmpty() then
+					if s and s.IsEmpty and not s:IsEmpty() then
 						if returned_tuple then returned_tuple:AddType(s) end
 
 						returned_tuple = returned_tuple or Union({s})
