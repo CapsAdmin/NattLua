@@ -92,7 +92,7 @@ do
 	end
 
 	if UNIX then
-		function os.ls(path: string)
+		function os.ls(path: string): List<|string|>
 			if path:sub(#path, #path) ~= "/" then path = path .. "/" end
 
 			local out = {}
@@ -104,7 +104,7 @@ do
 			return out
 		end
 	else
-		function os.ls(path: string)
+		function os.ls(path: string): List<|string|>
 			if path:sub(#path, #path) ~= "/" then path = path .. "/" end
 
 			path = os.getcd() .. "\\" .. path
@@ -188,7 +188,7 @@ do
 			virtual = 0x10000, -- This value is reserved for system use.
 		}
 
-		function os.pathtype(path: string)
+		function os.pathtype(path: string): "file" | "directory"
 			path = os.getcd() .. "\\" .. path
 			path = path:gsub("/", "\\")
 			local info = ffi.new("goluwa_file_attributes[1]")
@@ -208,7 +208,7 @@ do
 		end
 	end
 
-	function os.isdir(dir: string)
+	function os.isdir(dir: string): boolean
 		return os.pathtype(dir) == "directory"
 	end
 
@@ -230,7 +230,7 @@ do
 	end
 
 	function os.download(url: string, to: string)
-		if WINDOWS then
+		if powershell then
 			if to then
 				to = os.getcd() .. "\\" .. to
 				return powershell("(New-Object System.Net.WebClient).DownloadFile('" .. url .. "', '" .. to .. "')") == ""
@@ -342,8 +342,12 @@ do
 
 			repeat
 				local str, count = move_out:gsub("(.-/)(%*)(/.*)", function(left, star, right)
-					for k, v in ipairs(os.ls(left)) do
-						if os.isdir(left .. v) then return left .. v .. right end
+					local tbl = os.ls(left)
+
+					for k, v in ipairs(tbl) do
+						local is_dir = os.isdir(left .. v)
+
+						if is_dir then return left .. v .. right end
 					end
 				end)
 				move_out = str as string			
@@ -367,7 +371,7 @@ do
 				if dir and os.isdir(to .. dir) then
 					os.execute("rm -rf " .. to .. dir)
 				end
-			else
+			elseif powershell then
 				powershell(
 					"Move-Item -Confirm:$false -Force -Path " .. move_out .. "* -Destination " .. to,
 					true
@@ -381,7 +385,7 @@ end
 
 local ffibuild = {}
 
-function ffibuild.Clone(str: string, dir: string)
+function ffibuild.Clone(str: string, dir: nil | string)
 	dir = dir or "repo"
 
 	if str:find("%.git$") then
@@ -410,7 +414,7 @@ function ffibuild.Clone(str: string, dir: string)
 	end
 end
 
-function ffibuild.ManualBuild(name: string, clone: string, build: string, copy: string)
+function ffibuild.ManualBuild(name: string, clone: string, build: string, copy: nil | string)
 	--os.execute("git --git-dir=./repo/.git pull")
 	local ext = jit.os == "OSX" and ".dylib" or ".so"
 	local f = io.open("lib" .. name .. ext, "r")
@@ -485,7 +489,7 @@ function ffibuild.NixBuild(
 		lib_name = data.library_name
 	else
 		lib_name = "lib" .. data.package_name
-		lib_name = lib_name .. "." .. (OSX and "dylib" or UNIX and "so" or WINDOWS and "dll")
+		lib_name = lib_name .. "." .. assert(OSX and "dylib" or UNIX and "so" or WINDOWS and "dll", "unknown os")
 	end
 
 	-- temporary default.nix file
@@ -558,9 +562,10 @@ function ffibuild.SplitHeader(header: string, ...: ...string)
 	for _, what in ipairs({...}) do
 		local _, stop_pos = header:find(".-" .. what)
 
-		if stop_pos then stop_pos = stop_pos - #what end
-
-		table.insert(found, stop_pos)
+		if stop_pos then
+			stop_pos = stop_pos - #what
+			table.insert(found, stop_pos)
+		end
 	end
 
 	table.sort(found, function(a, b)
@@ -610,7 +615,7 @@ function ffibuild.GetMetaData(header: string)
 		header = header:gsub("('%S+')", function(val)
 			return assert(loadstring("return (" .. val .. "):byte()"))()
 		end) as string
-		header = header:gsub("' '", string.byte(" ")) as string
+		header = header:gsub("' '", tostring(string.byte(" ")))
 		-- remove comments
 		header = header:gsub("/%*.-%*/", "")
 		-- TODO: remove things like #pragma
@@ -622,10 +627,10 @@ function ffibuild.GetMetaData(header: string)
 		header = header:gsub(";", ";\n")
 		-- this will explode structs and and whatnot so make sure we remove newlines inside {} and ()
 		header = header:gsub("%b{}", function(s)
-			return s:gsub("%s+", " ")
+			return (s:gsub("%s+", " "))
 		end) as string
 		header = header:gsub("%b()", function(s)
-			return s:gsub("%s+", " ")
+			return (s:gsub("%s+", " "))
 		end) as string
 		--TODO
 		-- remove compiler __attribute__
@@ -657,7 +662,7 @@ function ffibuild.GetMetaData(header: string)
 				local tag, huh = statement:match("^typedef (%a- [%a%d_]+) %b{} .+,(.+);$")
 
 				if tag and huh then
-					return statement:match("(typedef %a- [%a%d_]+ %b{} .-),") .. ";\n" .. "typedef " .. tag .. huh .. ";"
+					return assert(statement:match("(typedef %a- [%a%d_]+ %b{} .-),")) .. ";\n" .. "typedef " .. tag .. huh .. ";"
 				end
 			end
 		end)
@@ -2039,13 +2044,13 @@ do -- lua helper functions
 	end
 
 	function ffibuild.BuildLuaFunction(
-		real_name,
-		func_type,
-		call_translate,
-		return_translate,
-		meta_data,
+		real_name: string,
+		func_type: any,
+		call_translate: Function,
+		return_translate: Function,
+		meta_data: AnyTable,
 		first_argument_self,
-		clib
+		clib: string
 	)
 		clib = clib or "CLIB"
 		local s = ""
@@ -2086,6 +2091,9 @@ do -- lua helper functions
 		local temp = assert(io.open(file))
 		local raw_header = temp:read("*all")
 		temp:close()
+
+		if not raw_header then error("file is empty") end
+
 		local temp_enums = {}
 		local s = ""
 		raw_header = raw_header:gsub("/%*.-%*/", "")
@@ -2093,9 +2101,9 @@ do -- lua helper functions
 		raw_header:gsub("#define%s-(.-)[\n\r]", function(chunk)
 			-- process all single quote strings
 			chunk = chunk:gsub("('%S+')", function(val)
-				return assert(loadstring("return (" .. val .. "):byte()"))()
+				return (assert(loadstring("return (" .. val .. "):byte()"))())
 			end)
-			chunk = chunk:gsub("' '", string.byte(" "))
+			chunk = chunk:gsub("' '", tostring(string.byte(" ")))
 			-- handle *INT*_C macros
 			-- UINT64_C needs to append ULL to the number
 			chunk = chunk:gsub("UINT64_C%((.-)%)", "%1ULL")
@@ -2130,7 +2138,7 @@ do -- lua helper functions
 
 			key = matched_key
 
-			if key then
+			if key and val then
 				-- if the prefix has been stripped the key might start with a number
 				if key:find("^%d") then
 					print("enum " .. key .. " starts with a number. prepending _")
@@ -2159,6 +2167,8 @@ do -- lua helper functions
 					print("unable to parse define enum: ", chunk)
 				end
 			end
+
+			return ""
 		end)
 
 		return s
@@ -2167,7 +2177,7 @@ do -- lua helper functions
 	function ffibuild.EndLibrary(lua, header)
 		lua = lua .. "library.clib = CLIB\n"
 		lua = lua .. "return library\n"
-		local file = io.open("./" .. ffibuild.GetBuildName() .. ".lua", "wb")
+		local file = assert(io.open("./" .. ffibuild.GetBuildName() .. ".lua", "wb"))
 		file:write(lua)
 		file:close()
 		-- check if this works if possible
@@ -2199,7 +2209,7 @@ do -- lua helper functions
 
 		if not ok and not errored then
 			print(err)
-			local line = tonumber(err:match("line (%d+)"))
+			local line = tonumber(err:match("line (%d+)") or "")
 
 			if line then
 				local i = 1
@@ -2213,21 +2223,21 @@ do -- lua helper functions
 		end
 	end
 
-	function ffibuild.SetBuildName(name)
+	function ffibuild.SetBuildName(name: string)
 		ffibuild.lib_name = name
 	end
 
-	function ffibuild.GetBuildName()
-		return ffibuild.lib_name or os.getcd():match(".+/(.+)")
+	function ffibuild.GetBuildName(): string
+		return assert(ffibuild.lib_name or os.getcd():match(".+/(.+)"))
 	end
 
 	do
-		local function execute(str)
+		local function execute(str: string)
 			print(str)
 			os.execute(str)
 		end
 
-		function ffibuild.CopyLibraries(path)
+		function ffibuild.CopyLibraries(path: string)
 			path = path:gsub("{OS}", OS)
 			path = path:gsub("{ARCH}", ARCH)
 			local ext = (OS == "osx" and "dylib" or OS == "windows" and "dll") or "so"

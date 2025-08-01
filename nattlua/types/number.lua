@@ -1,3 +1,4 @@
+--ANALYZE
 local math = math
 local assert = assert
 local error = _G.error
@@ -14,6 +15,7 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type META.@Name = "TNumber"]]
 --[[#type TNumber = META.@Self]]
 --[[#type TNumber.DontWiden = boolean]]
+--[[#type TNumber.Type = "number"]]
 META.Type = "number"
 META:GetSet("Data", false--[[# as number | false | nil]])
 

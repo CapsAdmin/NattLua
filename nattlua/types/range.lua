@@ -1,3 +1,4 @@
+--ANALYZE
 local math = math
 local assert = assert
 local error = _G.error
@@ -9,13 +10,19 @@ local type_errors = require("nattlua.types.error_messages")
 local bit = require("nattlua.other.bit")
 local jit = _G.jit
 local False = require("nattlua.types.symbol").False
+
+--[[#local type { TNumber } = require("nattlua.types.number")]]
+
 local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TRange"]]
 --[[#type TRange = META.@Self]]
 --[[#type TRange.DontWiden = boolean]]
+--[[#type TRange.Type = "range"]]
 META.Type = "range"
-META:GetSet("Min", false--[[# as number | false]])
+META:GetSet("Min", false--[[# as TNumber]])
+META:GetSet("Max", false--[[# as TNumber]])
+META:GetSet("Hash", ""--[[# as string]])
 --[[#local type TUnion = {
 	@Name = "TUnion",
 	Type = "union",
@@ -23,17 +30,15 @@ META:GetSet("Min", false--[[# as number | false]])
 }]]
 local VERSION = jit and "LUAJIT" or _VERSION
 
-local function compute_hash(min--[[#: any]], max--[[#: any]])
+local function compute_hash(min--[[#: TNumber]], max--[[#: TNumber]])
 	return min:GetHash() .. ".." .. max:GetHash()
 end
-
-META:GetSet("Hash", ""--[[# as string]])
 
 local function LNumber(num--[[#: number | nil]])
 	return require("nattlua.types.number").LNumber(num)
 end
 
-function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
+function META.New(min--[[#: TNumber]], max--[[#: TNumber]])
 	return setmetatable(
 		{
 			Type = META.Type,
@@ -46,6 +51,7 @@ function META.New(min--[[#: number | nil]], max--[[#: number | nil]])
 			Parent = false,
 			Contract = false,
 			Hash = compute_hash(min, max),
+			DontWiden = false,
 		},
 		META
 	)
@@ -100,7 +106,7 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 end
 
 function META:Copy()
-	local copy = LNumberRange(self:GetMin(), self:GetMax())--[[# as any]] -- TODO: figure out inheritance
+	local copy = LNumberRange(self:GetMin(), self:GetMax())
 	copy:CopyInternalsFrom(self--[[# as any]])
 	return copy
 end
@@ -127,8 +133,6 @@ function META:__tostring()
 	return tostring(self:GetMin()) .. ".." .. tostring(self:GetMax())
 end
 
-META:GetSet("Max", false--[[# as number | false]])
-
 function META:SetMax(val--[[#: number]])
 	if false--[[# as true]] then return end
 
@@ -136,11 +140,11 @@ function META:SetMax(val--[[#: number]])
 end
 
 function META:GetMax()
-	return self.Max.Data
+	return self.Max.Data--[[# as number]]
 end
 
 function META:GetMin()
-	return self.Min.Data
+	return self.Min.Data--[[# as number]]
 end
 
 function META:UnpackRange()
@@ -153,7 +157,7 @@ end
 
 function META.BinaryOperator(l--[[#: TRange]], r--[[#: any]], op--[[#: string]])
 	if r.Type == "range" then
-		return META.New(l.Min:BinaryOperator(r.Min, op), l.Max:BinaryOperator(r.Max, op))
+		return META.New(assert(l.Min:BinaryOperator(r.Min, op)), assert(l.Max:BinaryOperator(r.Max, op)))
 	elseif r.Type == "number" then
 		local r_min = r
 		local r_max = r
@@ -166,14 +170,14 @@ function META.BinaryOperator(l--[[#: TRange]], r--[[#: any]], op--[[#: string]])
 				r_max = LNumber(r:GetData() - 1)
 			end
 
-			return META.New(l.Min:BinaryOperator(r_min, op), r_max)
+			return META.New(assert(l.Min:BinaryOperator(r_min, op)), r_max)
 		else
 			if not r:IsLiteral() then
 				r_min = LNumber(-math.huge)
 				r_max = LNumber(math.huge)
 			end
 
-			return META.New(l.Min:BinaryOperator(r_min, op), l.Max:BinaryOperator(r_max, op))
+			return META.New(assert(l.Min:BinaryOperator(r_min, op)), assert(l.Max:BinaryOperator(r_max, op)))
 		end
 	end
 
@@ -183,7 +187,14 @@ end
 function META.PrefixOperator(x--[[#: TRange]], op--[[#: string]])
 	if op == "not" then return False() end
 
-	return META.New(x.Min:PrefixOperator(op), x.Max:PrefixOperator(op))
+	local min = assert(x.Min:PrefixOperator(op))
+	local max = assert(x.Max:PrefixOperator(op))
+
+	if min.Type ~= "number" then return False() end
+
+	if max.Type ~= "number" then return False() end
+
+	return META.New(min--[[# as TNumber]], max--[[# as TNumber]])
 end
 
 function META:IsNumeric()

@@ -3,6 +3,7 @@ local tostring = tostring
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
+--[[#local type TBaseType = META.TBaseType]]
 local TRUE = {}
 local FALSE = {}
 local NIL = {}
@@ -16,9 +17,9 @@ local unpack_symbol = {
 	[FALSE] = false,
 	[NIL] = nil,
 }
---[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TSymbol"]]
 --[[#type TSymbol = META.@Self]]
+--[[#type TSymbol.Type = "symbol"]]
 META.Type = "symbol"
 META:GetSet("Data", false--[[# as any]])
 META:GetSet("Hash", ""--[[# as string]])
@@ -138,7 +139,7 @@ function META.New(data--[[#: any]])
 
 	local self = setmetatable(
 		{
-			Type = "symbol",
+			Type = META.Type,
 			Data = data,
 			Falsy = false,
 			Truthy = false,
@@ -166,4 +167,5 @@ return {
 	False = function()
 		return Symbol(FALSE)
 	end,
+	TSymbol = TSymbol,
 }

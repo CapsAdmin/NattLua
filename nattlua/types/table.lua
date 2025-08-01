@@ -16,10 +16,9 @@ local META = dofile("nattlua/types/base.lua")
 local context = require("nattlua.analyzer.context")
 local mutation_solver = require("nattlua.analyzer.mutation_solver")
 local Any = require("nattlua.types.any").Any
-META.Type = "table"
---[[#type META.@Name = "TTable"]]
---[[#type TTable = META.@Self]]
 --[[#local type TBaseType = META.TBaseType]]
+
+--[[#type TTable = META.@Self]]
 --[[#type TTable.suppress = boolean]]
 --[[#type TTable.mutable = boolean]]
 --[[#type TTable.mutations = Map<|
@@ -28,6 +27,8 @@ META.Type = "table"
 	|> | false]]
 --[[#type TTable.LiteralDataCache = Map<|TBaseType, TBaseType|>]]
 --[[#type TTable.PotentialSelf = TBaseType | false]]
+--[[#type META.@Name = "TTable"]]
+META.Type = "table"
 META:GetSet("Data", nil--[[# as List<|{key = TBaseType, val = TBaseType}|>]])
 META:GetSet("BaseTable", nil--[[# as TTable | false]])
 META:GetSet("ReferenceId", nil--[[# as string | false]])

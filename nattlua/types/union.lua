@@ -13,19 +13,20 @@ local table_remove = _G.table.remove
 local table_sort = require("nattlua.other.sort")
 local table_clear = require("nattlua.other.tablex").clear
 
+--[[#local type { TSymbol } = require("nattlua.types.symbol")]]
+
 --[[#local type { TNumber } = require("nattlua.types.number")]]
 
 local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TUnion"]]
 --[[#type TUnion = META.@Self]]
---[[#type TUnion.Data = List<|TBaseType|>]]
---[[#type TUnion.Hash = nil | string]]
 --[[#type TUnion.LiteralDataCache = Map<|string, TBaseType|>]]
 --[[#type TUnion.suppress = boolean]]
 --[[#type TUnion.left_right_source = {left = TBaseType, right = TBaseType} | false]]
 --[[#type TUnion.parent_table = {table = TBaseType, key = string} | false]]
 META.Type = "union"
+META:GetSet("Data", false--[[# as List<|TBaseType|>]])
 
 function META:GetHashForMutationTracking()
 	return tostring(self)
@@ -52,7 +53,7 @@ function META.Equal(
 	if len ~= #b.Data then return false, "length mismatch" end
 
 	for i = 1, len do
-		local a = a.Data[i]
+		local a = assert(a.Data[i])
 		local ok = false
 
 		if a.Type == "table" then visited[a] = true end
@@ -66,7 +67,7 @@ function META.Equal(
 
 			if ok then break end
 
-			table.insert(reasons, reason)
+			table.insert(reasons, reason--[[# as string]])
 		end
 
 		if not ok then
@@ -84,7 +85,7 @@ function META:GetHash(visited)--[[#: string]]
 
 	visited = visited or {}
 
-	if visited[self] then return visited[self] end
+	if visited[self] then return visited[self]--[[# as string]] end
 
 	visited[self] = "*circular*"
 	local types = {}
@@ -95,7 +96,7 @@ function META:GetHash(visited)--[[#: string]]
 
 	table.sort(types)
 	visited[self] = table.concat(types, "|")
-	return visited[self]
+	return visited[self]--[[# as string]]
 end
 
 local sort = function(a--[[#: string]], b--[[#: string]])
@@ -131,7 +132,7 @@ local NUMBER_TYPE = {}
 
 local function hash(obj)
 	if obj.Type ~= "table" and obj.Type ~= "function" and obj.Type ~= "tuple" then
-		return obj:GetHash()
+		return obj:GetHash(nil)
 	end
 end
 
@@ -242,7 +243,7 @@ function META:GetTupleLength()
 	return len
 end
 
-function META:GetAtTupleIndex(i)
+function META:GetAtTupleIndex(i--[[#: number]])
 	if i > self:GetTupleLength() then return nil end
 
 	local obj = self:GetAtTupleIndexUnion(i)--[[# as any]]
@@ -399,7 +400,7 @@ end
 
 function META:IsNil()
 	for _, obj in ipairs(self.Data) do
-		if obj.Type == "symbol" and obj:IsNil() then return true end
+		if obj.Type == "symbol" and (obj--[[# as TSymbol]]):IsNil() then return true end
 	end
 
 	return false
@@ -505,8 +506,7 @@ end
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])--[[#: TUnion]]
 	map = map or {}
 
-	if map[self] then return map[self] end
-
+	if map[self] then return map[self]--[[# as TUnion]] end -- TODO map[self] doesn't make return map[self] not nil
 	local copy = META.New()
 	map[self] = copy
 
@@ -519,7 +519,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 end
 
 function META:IsTruthy()
-	for _, v in ipairs(self.Data) do
+	for _, v in ipairs(self.Data--[[# as List<|TBaseType|>]]) do
 		if v:IsTruthy() then return true end
 	end
 
@@ -527,7 +527,7 @@ function META:IsTruthy()
 end
 
 function META:IsFalsy()
-	for _, v in ipairs(self.Data) do
+	for _, v in ipairs(self.Data--[[# as List<|TBaseType|>]]) do
 		if v:IsFalsy() then return true end
 	end
 
@@ -535,7 +535,7 @@ function META:IsFalsy()
 end
 
 function META:IsLiteral()
-	for _, obj in ipairs(self.Data) do
+	for _, obj in ipairs(self.Data--[[# as List<|TBaseType|>]]) do
 		if not obj:IsLiteral() then return false end
 	end
 
@@ -590,7 +590,7 @@ function META:Simplify()
 end
 
 function META:IsNumeric()
-	for _, obj in ipairs(self.Data) do
+	for _, obj in ipairs(self.Data--[[# as List<|TBaseType|>]]) do
 		if not obj:IsNumeric() then return false end
 	end
 
