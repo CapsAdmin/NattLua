@@ -14,10 +14,11 @@ local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TNumber"]]
 --[[#type TNumber = META.@Self]]
---[[#type TNumber.DontWiden = boolean]]
 --[[#type TNumber.Type = "number"]]
 META.Type = "number"
 META:GetSet("Data", false--[[# as number | false | nil]])
+META:GetSet("Hash", "")
+META:IsSet("DontWiden", false)
 
 function META:SetData()
 	if false--[[# as true]] then return end
@@ -32,7 +33,9 @@ end
 }]]
 local VERSION = jit and "LUAJIT" or _VERSION
 
-local function tostring_number(num)
+local function compute_hash(num--[[#: nil | number]])
+	if not num then return "N" end
+
 	local s = tostring(tonumber(num))
 
 	if VERSION == "LUAJIT" then return s end
@@ -43,14 +46,6 @@ local function tostring_number(num)
 
 	return s
 end
-
-local function compute_hash(min--[[#: any]])
-	if min then return tostring_number(min) end
-
-	return "N"
-end
-
-META:GetSet("Hash", ""--[[# as string]])
 
 function META.New(data--[[#: number | nil]])
 	return setmetatable(
@@ -119,8 +114,6 @@ end
 function META:IsLiteral()
 	return self.Data ~= false
 end
-
-META:IsSet("DontWiden", false)
 
 function META:Widen()
 	return Number()
