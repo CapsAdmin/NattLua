@@ -1,7 +1,6 @@
 do
 	return
 end
-
 do
 	_G[jit.os:upper()] = true as true | nil
 	_G.OS = jit.os:lower()
@@ -748,8 +747,7 @@ function ffibuild.GetMetaData(header: string)
 					local array_size
 
 					if line and line:find("%b[]") then
-						content, alias, arr = line:match("^(.+) ([%a%d_]+) (%b[])")
-						array_size = arr
+						content, alias, array_size = line:match("^(.+) ([%a%d_]+) (%b[])")
 					end
 
 					meta_data.typedefs[alias] = create_type("type", content, array_size)
@@ -786,7 +784,7 @@ function ffibuild.GetMetaData(header: string)
 					table.insert(meta_data.global_enums, create_type("enums", content, meta_data))
 				end
 			elseif line:find("^struct") or line:find("^union") then
-				local keyword = line:match("^([%a%d_]+)")
+				local keyword = assert(line:match("^([%a%d_]+)"))
 				local tag, content = line:match("(" .. keyword .. " [%a%d_]+) ({.+})")
 
 				if not tag then
@@ -1089,7 +1087,7 @@ function ffibuild.GetMetaData(header: string)
 	return meta_data
 end
 
-function ffibuild.ChangeCase(str, from, to)
+function ffibuild.ChangeCase(str: string, from: string, to: string): string
 	if from == "fooBar" then
 		if to == "FooBar" then
 			return str:sub(1, 1):upper() .. str:sub(2)
@@ -1106,9 +1104,9 @@ function ffibuild.ChangeCase(str, from, to)
 		end
 	elseif from == "foo_bar" then
 		if to == "FooBar" then
-			return ("_" .. str):gsub("_(%l)", function(s)
+			return (("_" .. str):gsub("_(%l)", function(s)
 				return s:upper()
-			end)
+			end))
 		elseif to == "fooBar" then
 			return ffibuild.ChangeCase(ffibuild.ChangeCase(str, "foo_bar", "FooBar"), "FooBar", "fooBar")
 		end
@@ -1134,7 +1132,7 @@ do -- type metatables
 
 		function META:GetCopy() end
 
-		function META:GetBasicType() end
+		function META:GetBasicType(): string end
 
 		function META:GetSubType()
 			return self:GetBasicType()
@@ -1148,7 +1146,7 @@ do -- type metatables
 		metatables[name] = META
 	end
 
-	function ffibuild.CreateType(type, ...)
+	function ffibuild.CreateType(type: "function"|"struct"|"type"|"var_arg"|"enums", ...)
 		return setmetatable(metatables[type]:Create(...), metatables[type])
 	end
 
@@ -1188,7 +1186,7 @@ do -- type metatables
 		LR(">>", "rshift")
 		L("~", "bnot")
 
-		local function parse_bit_declaration(expression, original_expression)
+		local function parse_bit_declaration(expression: string, original_expression: string)
 			expression = expression:gsub("([%dxXabcdefABCDEF]+)", "(%1)")
 			expression = expression:gsub("u", "")
 
@@ -1207,7 +1205,9 @@ do -- type metatables
 				error(original_expression .. "\n\nunable to run '" .. expression .. "' : " .. msg)
 			end
 
-			error(original_expression .. "\n\nunable to parse '" .. expression .. "': " .. err)
+			error(
+				original_expression .. "\n\nunable to parse '" .. expression .. "': " .. assert(err)
+			)
 		end
 
 		local function find_enum(current_meta_data, out, what)
