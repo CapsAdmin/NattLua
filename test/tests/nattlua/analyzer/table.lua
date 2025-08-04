@@ -975,16 +975,15 @@ analyze[[
 
     attest.equal(tbl, {3, 2, 1})
 ]]
-analyze(
-	[[
-    local tbl = {1, 2, 3}
+analyze[[
+    local tbl = {1, 3, 2}
 
     table.sort(tbl, function(a, b)
         return _ as boolean
     end)
-]],
-	"cannot sort literal table"
-)
+
+    attest.equal(tbl, {1, 3, 2})
+]]
 analyze([[
     local x = {
         foo: string,

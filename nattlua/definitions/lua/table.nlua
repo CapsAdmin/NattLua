@@ -67,6 +67,7 @@ do -- Basic table manipulation functions
 		end
 
 		assert(type(pos) ~= "number")
+		assert(val)
 		analyzer:NewIndexOperator(tbl, pos, val)
 	end
 
@@ -151,11 +152,10 @@ do -- Array manipulation functions
 				table.sort(tbl:GetData(), function(a, b)
 					local b = analyzer:Call(func, types.Tuple({a.val, b.val})):GetWithNumber(1)
 
-					if b:IsCertainlyTrue() or b:IsCertainlyFalse() then
-						return b:IsCertainlyTrue()
-					else
-						error("cannot sort literal table with function that returns an uncertain boolean")
-					end
+					if b:IsCertainlyTrue() then return true end
+
+					if b:IsCertainlyFalse() then return false end
+				--error("cannot sort literal table with function that returns an uncertain boolean")
 				end)
 			else
 				table.sort(tbl:GetData(), function(a, b)
