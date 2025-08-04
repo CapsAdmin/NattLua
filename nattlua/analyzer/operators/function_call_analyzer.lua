@@ -103,12 +103,24 @@ return function(analyzer, obj, input)
 	local output_signature = obj:GetOutputSignature()
 
 	do
-		local ok, reason, a, b, i = input:IsSubsetOfTuple(signature_arguments)
+		local new_tup, errors
 
-		if not ok then
-			return false,
-			type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+		if analyzer:IsTypesystem() then
+			new_tup, errors = input:SubsetOrFallbackWithTuple(signature_arguments)
+		else
+			new_tup, errors = input:SubsetWithoutExpansionOrFallbackWithTuple(signature_arguments)
 		end
+
+		if errors then
+			for _, error in ipairs(errors) do
+				local reason, a, b, i = table.unpack(error)
+				analyzer:Error(
+					type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+				)
+			end
+		end
+
+		input = new_tup
 	end
 
 	if obj:IsLiteralFunction() then
@@ -207,9 +219,18 @@ return function(analyzer, obj, input)
 	end
 
 	if not output_signature:IsEmpty() then
-		local ok, err = ret:IsSubsetOfTuple(output_signature)
+		local new_tup, err = ret:SubsetOrFallbackWithTuple(output_signature)
 
-		if not ok then return ok, err end
+		if err then
+			for i, v in ipairs(err) do
+				local reason, a, b, i = table.unpack(v)
+				analyzer:Error(
+					type_errors.context("return #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+				)
+			end
+		end
+
+		ret = new_tup
 	end
 
 	return ret

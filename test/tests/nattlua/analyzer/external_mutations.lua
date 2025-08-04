@@ -230,6 +230,19 @@ analyze[[
     
     string_mutator(a)
     
+    attest.equal<|a.foo, true|>
+]]
+analyze[[
+    local function string_mutator<|tbl: ref mutable {[any] = any}|>
+        for key, val in pairs(tbl) do
+            tbl[key] = nil
+        end
+
+        tbl[string] = string
+    end
+
+    local a = {foo = true}
+    string_mutator(a)
     attest.equal<|a.foo, string|>
     attest.equal<|a.bar, string|>
 ]]

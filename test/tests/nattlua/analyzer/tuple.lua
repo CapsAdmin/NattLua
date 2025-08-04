@@ -168,7 +168,7 @@ analyze[[
     test<|a,a|>
 ]]
 analyze[[
-    local function test2<|a: (number, number, number), b: (number, number, number)|>: (number, number, number)
+    local function test2<|a: (number, number, number), b: (number, number, number)|>: ((number, number, number), (number, number, number))
         attest.equal<|a, (1,2,3)|>
         attest.equal<|b, (1,2,3)|>
         return a, b

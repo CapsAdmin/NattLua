@@ -403,7 +403,7 @@ analyze(
         local foo = 1
     end
 ]],
-	"expected return type %(number, string%), but found %(nil,%) at return #1: nil is not a subset of number"
+	"nil is not a subset of number"
 )
 analyze[[
     return function()

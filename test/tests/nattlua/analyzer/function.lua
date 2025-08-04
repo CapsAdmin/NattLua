@@ -1011,3 +1011,27 @@ end
 analyze[[
 (math.floor or math.ceil)(_ as number)
 ]]
+analyze[[
+	local type f = function=(x: number)>(number)
+	attest.expect_diagnostic<|"error", "nil is not a subset of number"|>
+	local x = f(nil)
+	attest.equal(x, _ as number)
+]]
+analyze[[
+	local analyzer function f(x: number)
+		return types.Number()
+	end
+
+	attest.expect_diagnostic<|"error", "nil is not a subset of number"|>
+	local x = f(nil)
+	attest.equal(x, _ as number)
+]]
+analyze[[
+	local function f<|x: number|>
+		return number
+	end
+
+	attest.expect_diagnostic<|"error", "nil is not a subset of number"|>
+	local x = f(nil)
+	attest.equal(x, _ as number)
+]]

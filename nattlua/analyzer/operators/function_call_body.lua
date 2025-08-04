@@ -46,7 +46,7 @@ local function shrink_union_to_function_signature(obj)
 	return Function(arg, ret)
 end
 
-local function check_argument_against_contract(arg, contract, i)
+local function check_argument_against_contract(self, arg, contract, i)
 	local ok, reason
 
 	if not arg then
@@ -77,7 +77,7 @@ end
 local function check_input(self, obj, input)
 	if not obj:IsExplicitInputSignature() then
 		-- if this function is completely untyped we don't check any input
-		return true
+		return input
 	end
 
 	local function_node = obj:GetFunctionBodyNode()
@@ -89,24 +89,33 @@ local function check_input(self, obj, input)
 		function_node.kind == "type_function"
 	then
 		if not function_node.identifiers_typesystem and obj:IsExplicitInputSignature() then
-			-- if this is a type function we just do a simple check and arguments are passed as is
-			local ok, reason, a, b, i
-
 			if self:IsTypesystem() then
-				ok, reason, a, b, i = input:IsSubsetOfTupleWithoutExpansion(obj:GetInputSignature())
+				local new_tup, err = input:SubsetWithoutExpansionOrFallbackWithTuple(obj:GetInputSignature())
+
+				if err then
+					for i, v in ipairs(err) do
+						local reason, a, b, i = table.unpack(v)
+						self:Error(
+							type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+						)
+					end
+				end
+
+				input = new_tup
 			else
-				ok, reason, a, b, i = input:IsSubsetOfTuple(obj:GetInputSignature())
+				local new_tup, err = input:SubsetOrFallbackWithTuple(obj:GetInputSignature())
+
+				if err then
+					for i, v in ipairs(err) do
+						local reason, a, b, i = table.unpack(v)
+						self:Error(
+							type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+						)
+					end
+				end
+
+				input = new_tup
 			end
-
-			self:PopAnalyzerEnvironment()
-			self:PopScope()
-
-			if not ok then
-				return false,
-				type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
-			end
-
-			return ok, reason
 		end
 
 		if function_node.identifiers_typesystem then
@@ -159,7 +168,7 @@ local function check_input(self, obj, input)
 			self:CreateLocalValue(identifier, Any())
 			local contract
 
-			if identifier == "..." then
+			if identifier == "..." or self:IsTypesystem() then
 				contract = input_signature:GetWithoutExpansion(i)
 			else
 				contract = input_signature:GetWithNumber(i)
@@ -184,12 +193,10 @@ local function check_input(self, obj, input)
 				self:CreateLocalValue(identifier, arg)
 				signature_override[i] = arg
 				signature_override[i]:SetReferenceType(true)
-				local ok, err = check_argument_against_contract(signature_override[i], contract, i)
+				local ok, err = check_argument_against_contract(self, signature_override[i], contract, i)
 
 				if not ok then
-					self:PopAnalyzerEnvironment()
-					self:PopScope()
-					return false, type_errors.context("argument #" .. i, err)
+					self:Error(type_errors.context("argument #" .. i, err))
 				end
 			elseif type_expression then
 				local val, err
@@ -198,17 +205,18 @@ local function check_input(self, obj, input)
 					val, err = input_signature:GetWithNumber(1)
 
 					if not val then
-						self:PopAnalyzerEnvironment()
-						self:PopScope()
-						return false, type_errors.context("argument #" .. i, err)
+						self:Error(type_errors.context("argument #" .. i, err))
 					end
 				else
-					val, err = self:GetFirstValue(self:AnalyzeExpression(type_expression))
+					val, err = self:AnalyzeExpression(type_expression)
+
+					if not function_node.identifiers_typesystem then
+
+					--val, err = self:GetFirstValue(val)
+					end
 
 					if not val then
-						self:PopAnalyzerEnvironment()
-						self:PopScope()
-						return false, type_errors.context("argument #" .. i, err)
+						self:Error(type_errors.context("argument #" .. i, err))
 					end
 				end
 
@@ -302,8 +310,17 @@ local function check_input(self, obj, input)
 
 	-- finally check the input against the generated signature
 	for i = 1, input_signature_length do
-		local arg = input:GetWithNumber(i)
-		local contract = signature_override[i] or input_signature:GetWithNumber(i)
+		local arg, contract
+
+		if self:IsTypesystem() then
+			arg = input:GetWithoutExpansion(i)
+			contract = signature_override[i] or input_signature:GetWithoutExpansion(i)
+		end
+
+		if self:IsRuntime() then
+			arg = input:GetWithNumber(i)
+			contract = signature_override[i] or input_signature:GetWithNumber(i)
+		end
 
 		if contract.Type == "union" then
 			local shrunk = shrink_union_to_function_signature(contract)
@@ -311,12 +328,9 @@ local function check_input(self, obj, input)
 			if shrunk then contract = shrunk end
 		end
 
-		local ok, reason = check_argument_against_contract(arg, contract, i)
+		local ok, reason = check_argument_against_contract(self, arg, contract, i)
 
-		if not ok then
-			restore_mutated_types(self)
-			return ok, reason
-		end
+		if not ok then self:Error(reason) end
 
 		if
 			arg and
@@ -327,7 +341,9 @@ local function check_input(self, obj, input)
 		then
 			mutate_type(self, i, arg, contract, input)
 		elseif not contract:IsReferenceType() then
-			local doit = true
+			local doit = self:IsRuntime()
+
+			if function_node.identifiers_typesystem then doit = true end
 
 			if contract.Type == "union" then
 				local t = contract:GetType("table")
@@ -337,28 +353,31 @@ local function check_input(self, obj, input)
 
 			if doit then
 				-- if it's a ref argument we pass the incoming value
-				local t = contract:Copy()
+				local t = contract:GetFirstValue():Copy()
 				t:SetContract(contract)
 				input:Set(i, t)
 			end
 		end
 	end
 
-	return true
+	return input
 end
 
 local function check_output(self, output, output_signature, function_node)
 	if self:IsTypesystem() then
 		-- in the typesystem we must not unpack tuples when checking
-		local ok, reason, a, b, i = output:IsSubsetOfTupleWithoutExpansion(output_signature)
+		local new_tup, err = output:SubsetWithoutExpansionOrFallbackWithTuple(output_signature)
 
-		if not ok then
-			self:Error(
-				type_errors.context("return #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
-			)
+		if err then
+			for i, v in ipairs(err) do
+				local reason, a, b, i = table.unpack(v)
+				analyzer:Error(
+					type_errors.context("return #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+				)
+			end
 		end
 
-		return
+		output = new_tup
 	end
 
 	local original_contract = output_signature
@@ -415,14 +434,19 @@ local function check_output(self, output, output_signature, function_node)
 				if val.Type == "union" and val:GetCardinality() == 0 then return end
 			end
 
-			local ok, reason, a, b, i = output:IsSubsetOfTuple(output_signature)
+			local _, err = output:SubsetOrFallbackWithTuple(output_signature)
 
-			if not ok then
-				self:PushCurrentStatement(function_node)
-				self:PushCurrentExpression(function_node.return_types and function_node.return_types[i])
-				self:Error(type_errors.return_type_mismatch(function_node, output_signature, output, reason, i))
-				self:PopCurrentExpression()
-				self:PopCurrentStatement()
+			if err then
+				for i, v in ipairs(err) do
+					local reason, a, b, i = table.unpack(v)
+					self:PushCurrentStatement(function_node)
+					self:PushCurrentExpression(function_node.return_types and function_node.return_types[i])
+					self:Error(
+						type_errors.context("return #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+					)
+					self:PopCurrentExpression()
+					self:PopCurrentStatement()
+				end
 			end
 		end
 	end
@@ -432,13 +456,7 @@ return function(self, obj, input)
 	local function_node = obj:GetFunctionBodyNode()
 	local is_type_function = function_node.kind == "local_type_function" or
 		function_node.kind == "type_function"
-
-	do
-		local ok, err = check_input(self, obj, input)
-
-		if not ok then return ok, err end
-	end
-
+	input = check_input(self, obj, input)
 	-- crawl the function with the new arguments
 	-- return_result is either a union of tuples or a single tuple
 	local scope = self:CreateAndPushFunctionScope(obj)

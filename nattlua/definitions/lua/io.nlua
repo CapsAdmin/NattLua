@@ -6,7 +6,7 @@ local function check_read_args<|...: ...pattern|>
 	for i = 1, select<|"#", ...|> do
 		local v = ...[i]
 
-		if v:sub(1, 1) == "n" or v:sub(1, 2) == "*n" then
+		if type(v) == "string" and (v:sub(1, 1) == "n" or v:sub(1, 2) == "*n") then
 			out[i] = number | nil
 		else
 			out[i] = string | nil

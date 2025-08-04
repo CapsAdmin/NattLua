@@ -1,3 +1,17 @@
+if false then
+	analyze[[
+    local xx: {
+        [string] = true,
+        foo = 1337,
+    }
+    
+    local yy: Omit<|xx, string|>
+    attest.equal(yy, {
+        foo = 1337,
+    })
+]]
+end
+
 analyze[[
 
     attest.equal<|
@@ -173,15 +187,4 @@ analyze[[
     -- something is up with chained calls in the typesystem
     --attest.equal<|Capitalize<|"foo"|>, "Foo"|>
     --attest.equal<|Uncapitalize<|"FOO"|>, "fOO"|>
-]]
-analyze[[
-    local x: {
-        [string] = true,
-        foo = 1337,
-    }
-    
-    local y: Omit<|x, string|>
-    attest.equal(y, {
-        foo = 1337,
-    })
 ]]

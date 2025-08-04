@@ -208,45 +208,103 @@ function META.IsSubsetOfTupleWithoutExpansion(a--[[#: TTuple]], b--[[#: TBaseTyp
 	return true
 end
 
-function META.IsSubsetOfTuple(a--[[#: TTuple]], b--[[#: TBaseType]])
+function META.IsSubsetOfTupleAtIndexWithoutExpansion(a--[[#: TTuple]], b--[[#: TTuple]], i--[[#: number]])
+	local a_val = assert(a:GetData()[i])
+	local b_val, err = b:GetWithoutExpansion(i)
+
+	if not b_val then return false, err, a_val, Nil(), i end
+
+	local ok, err = a_val:IsSubsetOf(b_val)
+
+	if not ok then return false, err, a_val, b_val or Nil(), i end
+
+	return true
+end
+
+function META.IsSubsetOfTupleAtIndex(a--[[#: TTuple]], b--[[#: TTuple]], i--[[#: number]])
+	local a_val, a_err = a:GetWithNumber(i)
+	local b_val, b_err = b:GetWithNumber(i)
+
+	if a_val and a_val.Type == "union" then
+		a_val, a_err = a_val:GetAtTupleIndex(1)
+	end
+
+	if b_val and b_val.Type == "union" then
+		b_val, b_err = b_val:GetAtTupleIndex(1)
+	end
+
+	if not a_val then
+		if b_val and b_val.Type == "any" then
+			a_val = Any()
+		else
+			return false, a_err, a_val or Nil(), b_val or Nil(), i
+		end
+	end
+
+	if not b_val then return false, b_err, a_val or Nil(), b_val or Nil(), i end
+
+	if b_val.Type == "tuple" then
+		b_val, b_err = b_val:GetWithNumber(1)
+
+		if not b_val then return false, b_err, a_val or Nil(), b_val or Nil(), i end
+	end
+
+	a_val = a_val or Nil()
+	b_val = b_val or Nil()
+	local ok, reason = a_val:IsSubsetOf(b_val)
+
+	if not ok then return false, reason, a_val, b_val or Nil(), i end
+
+	return true
+end
+
+function META.IsSubsetOfTuple(a--[[#: TTuple]], b--[[#: TTuple]])
 	if a:Equal(b) then return true end
 
 	for i = 1, math.max(a:GetMinimumLength(), b:GetMinimumLength()) do
-		local a_val, a_err = a:GetWithNumber(i)
-		local b_val, b_err = b:GetWithNumber(i)
-
-		if a_val and a_val.Type == "union" then
-			a_val, a_err = a_val:GetAtTupleIndex(1)
-		end
-
-		if b_val and b_val.Type == "union" then
-			b_val, b_err = b_val:GetAtTupleIndex(1)
-		end
-
-		if not a_val then
-			if b_val and b_val.Type == "any" then
-				a_val = Any()
-			else
-				return a_val, a_err, a_val or Nil(), b_val, i
-			end
-		end
-
-		if not b_val then return b_val, b_err, a_val or Nil(), b_val, i end
-
-		if b_val.Type == "tuple" then
-			b_val = b_val:GetWithNumber(1)
-
-			if not b_val then break end
-		end
-
-		a_val = a_val or Nil()
-		b_val = b_val or Nil()
-		local ok, reason = a_val:IsSubsetOf(b_val)
+		local ok, reason, a_val, b_val, i = a.IsSubsetOfTupleAtIndex(a, b, i)
 
 		if not ok then return ok, reason, a_val, b_val, i end
 	end
 
 	return true
+end
+
+function META.SubsetOrFallbackWithTuple(a--[[#: TTuple]], b--[[#: TTuple]])
+	if a:Equal(b) then return a end
+
+	local errors = {}
+
+	for i = 1, math.max(a:GetMinimumLength(), b:GetMinimumLength()) do
+		local ok, reason, a_val, b_val, offset = a.IsSubsetOfTupleAtIndex(a, b, i)
+
+		if not ok then
+			if not errors[1] then a = a:Copy() end
+			a:Set(i, b_val)
+			table.insert(errors, {reason, a_val, b_val, offset})
+		end
+	end
+
+	return a, errors
+end
+
+function META.SubsetWithoutExpansionOrFallbackWithTuple(a--[[#: TTuple]], b--[[#: TTuple]])
+	if a:Equal(b) then return a end
+
+	local errors = {}
+
+	for i, a_val in ipairs(a:GetData()) do
+		local ok, reason, a_val, b_val, offset = a.IsSubsetOfTupleAtIndexWithoutExpansion(a, b, i)
+
+		if not ok then
+			if not errors[1] then a = a:Copy() end
+
+			a:Set(i, b_val)
+			table.insert(errors, {reason, a_val, b_val, offset})
+		end
+	end
+
+	return a, errors
 end
 
 function META:HasTuples()
@@ -393,7 +451,9 @@ function META:Get(key--[[#: TBaseType]])
 		return union--[[# as TBaseType]]
 	end
 
-	assert(key.Type == "number")
+	if key.Type ~= "number" then
+		return false, {"attempt to index tuple with", key.Type}
+	end
 
 	if key:IsLiteral() then return self:GetWithNumber(key:GetData()) end
 
