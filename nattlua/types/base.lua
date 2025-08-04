@@ -26,7 +26,7 @@ function META:GetLuaType()
 	return self.Type
 end
 
-META:GetSet("Data", nil--[[# as nil | any]])
+META:GetSet("Data", false--[[# as any]])
 
 do
 	function META:IsUncertain()

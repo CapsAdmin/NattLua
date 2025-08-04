@@ -20,8 +20,8 @@ local META = dofile("nattlua/types/base.lua")
 --[[#type TRange.DontWiden = boolean]]
 --[[#type TRange.Type = "range"]]
 META.Type = "range"
-META:GetSet("Min", false--[[# as TNumber]])
-META:GetSet("Max", false--[[# as TNumber]])
+META:GetSet("MinNumber", false--[[# as TNumber]])
+META:GetSet("MaxNumber", false--[[# as TNumber]])
 META:GetSet("Hash", ""--[[# as string]])
 --[[#local type TUnion = {
 	@Name = "TUnion",
@@ -42,8 +42,8 @@ function META.New(min--[[#: TNumber]], max--[[#: TNumber]])
 	return setmetatable(
 		{
 			Type = META.Type,
-			Min = min,
-			Max = max,
+			MinNumber = min,
+			MaxNumber = max,
 			Falsy = false,
 			Truthy = true,
 			ReferenceType = false,
@@ -95,7 +95,7 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 
 		else
 			if obj.Type == "union" then
-				local x = (obj--[[# as any]]):GetType("range")
+				local x = obj:GetType("range")
 
 				if x then return self end
 			end
@@ -107,18 +107,16 @@ end
 
 function META:Copy()
 	local copy = LNumberRange(self:GetMin(), self:GetMax())
-	copy:CopyInternalsFrom(self--[[# as any]])
+	copy:CopyInternalsFrom(self)
 	return copy
 end
 
 function META.IsSubsetOf(a--[[#: TRange]], b--[[#: TBaseType]])
-	if b.Type == "tuple" then b = (b--[[# as any]]):GetWithNumber(1) end
+	if b.Type == "tuple" then b = b:GetWithNumber(1) end
 
 	if b.Type == "any" then return true end
 
-	if b.Type == "union" then
-		return (b--[[# as any]]):IsTargetSubsetOfChild(a--[[# as any]])
-	end
+	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 
 	if b.Type == "number" and not b.Data then return true end
 
@@ -133,18 +131,12 @@ function META:__tostring()
 	return tostring(self:GetMin()) .. ".." .. tostring(self:GetMax())
 end
 
-function META:SetMax(val--[[#: number]])
-	if false--[[# as true]] then return end
-
-	error("cannot mutate data")
+function META:GetMax()--[[#: number]]
+	return self.MaxNumber.Data--[[# as number]] -- always literal numbers
 end
 
-function META:GetMax()
-	return self.Max.Data--[[# as number]]
-end
-
-function META:GetMin()
-	return self.Min.Data--[[# as number]]
+function META:GetMin()--[[#: number]]
+	return self.MinNumber.Data--[[# as number]] -- always literal numbers
 end
 
 function META:UnpackRange()
@@ -155,29 +147,36 @@ function META:IsNan()
 	return self:GetMin() ~= self:GetMin() or self:GetMax() ~= self:GetMax()
 end
 
-function META.BinaryOperator(l--[[#: TRange]], r--[[#: any]], op--[[#: string]])
+function META.BinaryOperator(l--[[#: TRange]], r--[[#: TRange | TNumber]], op--[[#: string]])
 	if r.Type == "range" then
-		return META.New(assert(l.Min:BinaryOperator(r.Min, op)), assert(l.Max:BinaryOperator(r.Max, op)))
+		return META.New(
+			assert(l.MinNumber:BinaryOperator(r.MinNumber, op)),
+			assert(l.MaxNumber:BinaryOperator(r.MaxNumber, op))
+		)
 	elseif r.Type == "number" then
 		local r_min = r
 		local r_max = r
+		local num = r:GetData()
 
 		if op == "%" then
-			if not r:IsLiteral() then
+			if not num then
 				r_min = LNumber(-math.huge)
 				r_max = LNumber(math.huge)
 			else
-				r_max = LNumber(r:GetData() - 1)
+				r_max = LNumber(num - 1)
 			end
 
-			return META.New(assert(l.Min:BinaryOperator(r_min, op)), r_max)
+			return META.New(assert(l.MinNumber:BinaryOperator(r_min, op)), r_max)
 		else
-			if not r:IsLiteral() then
+			if not num then
 				r_min = LNumber(-math.huge)
 				r_max = LNumber(math.huge)
 			end
 
-			return META.New(assert(l.Min:BinaryOperator(r_min, op)), assert(l.Max:BinaryOperator(r_max, op)))
+			return META.New(
+				assert(l.MinNumber:BinaryOperator(r_min, op)),
+				assert(l.MaxNumber:BinaryOperator(r_max, op))
+			)
 		end
 	end
 
@@ -187,14 +186,14 @@ end
 function META.PrefixOperator(x--[[#: TRange]], op--[[#: string]])
 	if op == "not" then return False() end
 
-	local min = assert(x.Min:PrefixOperator(op))
-	local max = assert(x.Max:PrefixOperator(op))
+	local min = assert(x.MinNumber:PrefixOperator(op))
+	local max = assert(x.MaxNumber:PrefixOperator(op))
 
 	if min.Type ~= "number" then return False() end
 
 	if max.Type ~= "number" then return False() end
 
-	return META.New(min--[[# as TNumber]], max--[[# as TNumber]])
+	return META.New(min, max)
 end
 
 function META:IsNumeric()

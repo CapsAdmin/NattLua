@@ -9,16 +9,15 @@ local type_errors = require("nattlua.types.error_messages")
 local bit = require("nattlua.other.bit")
 local jit = _G.jit
 local False = require("nattlua.types.symbol").False
-local LNumberRange = require("nattlua.types" .. ".range"--[[# as any]]).LNumberRange
 local META = dofile("nattlua/types/base.lua")
---[[#local type TBaseType = META.TBaseType]]
---[[#type META.@Name = "TNumber"]]
 --[[#type TNumber = META.@Self]]
 --[[#type TNumber.Type = "number"]]
+--[[#local type TBaseType = TNumber]]
 META.Type = "number"
-META:GetSet("Data", false--[[# as number | false | nil]])
+META:GetSet("Data", false--[[# as number | false]])
 META:GetSet("Hash", "")
 META:IsSet("DontWiden", false)
+local LNumberRange = require("nattlua.types" .. ".range"--[[# as any]]).LNumberRange--[[# as function=(TNumber, TNumber)>(TBaseType)]]
 
 function META:SetData()
 	if false--[[# as true]] then return end
@@ -31,7 +30,7 @@ end
 	Type = "union",
 	GetLargestNumber = function=(self)>(TNumber | nil, nil | any),
 }]]
-local VERSION = jit and "LUAJIT" or _VERSION
+local VERSION--[[#: string]] = jit and "LUAJIT" or _VERSION
 
 local function compute_hash(num--[[#: nil | number]])
 	if not num then return "N" end
@@ -119,7 +118,7 @@ function META:Widen()
 	return Number()
 end
 
-function META:CopyLiteralness(obj--[[#: TBaseType]])
+function META:CopyLiteralness(obj--[[#: TNumber]])
 	if self.ReferenceType == obj.ReferenceType and self.Data == obj.Data then
 		return self
 	end
@@ -133,7 +132,7 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 
 		else
 			if obj.Type == "union" then
-				local x = (obj--[[# as any]]):GetType("range")
+				local x = obj:GetType("range")
 
 				if x then return self end
 			end
@@ -148,20 +147,18 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 	return self
 end
 
-function META:Copy()
-	local copy = self.New(self.Data)--[[# as any]] -- TODO: figure out inheritance
-	copy:CopyInternalsFrom(self--[[# as any]])
+function META:Copy()--[[#: TNumber]]
+	local copy = self.New(self.Data)
+	copy:CopyInternalsFrom(self)
 	return copy
 end
 
-function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: any]])
-	if b.Type == "tuple" then b = (b--[[# as any]]):GetWithNumber(1) end
+function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
+	if b.Type == "tuple" then b = b:GetWithNumber(1) end
 
 	if b.Type == "any" then return true end
 
-	if b.Type == "union" then
-		return (b--[[# as any]]):IsTargetSubsetOfChild(a--[[# as any]])
-	end
+	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 
 	if b.Type == "range" then
 		if a.Data and a.Data >= b:GetMin() and a.Data <= b:GetMax() then
@@ -194,24 +191,20 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: any]])
 	return true
 end
 
-function META:IsNan()
+function META:IsNan()--[[#: boolean]]
 	return self.Data ~= self.Data
 end
 
-function META:IsInf()
-	local n = self.Data
-	return math.abs(n--[[# as number]]) == math.huge
+function META:IsInf()--[[#: boolean]]
+	return self.Data and math.abs(self.Data) == math.huge
 end
 
-function META:__tostring()
+function META:__tostring()--[[#: string]]
 	local n = self.Data
-	local s--[[#: string]]
 
-	if self:IsNan() then s = "nan" end
+	if self:IsNan() then return "nan" end
 
-	s = tostring(n)
-
-	if self.Data then return s end
+	if self.Data then return tostring(self.Data) end
 
 	return "number"
 end
@@ -269,18 +262,19 @@ do
 		end
 	end
 
-	function META.BinaryOperator(l--[[#: TNumber]], r--[[#: any]], op--[[#: keysof<|operators|>]])
+	function META.BinaryOperator(l--[[#: TNumber]], r--[[#: TBaseType]], op--[[#: keysof<|operators|>]])
 		local func = operators[op]
 
 		if not func then return nil, type_errors.binary(op, l, r) end
 
 		if l.Data == false then return Number() end
 
+		r = r--[[# as TBaseType]] --?
 		if r.Type == "range" then
-			local l_min = l.Data--[[# as number]]
-			local l_max = l.Data--[[# as number]]
-			local r_min = r:GetMin()--[[# as number]]
-			local r_max = r:GetMax()--[[# as number]]
+			local l_min = l.Data
+			local l_max = l.Data
+			local r_min = r:GetMin()
+			local r_max = r:GetMax()
 			return LNumberRange(func(l_min, r_min), func(l_max, r_max))
 		end
 
@@ -317,8 +311,8 @@ do
 
 		if not x.Data then return Number() end
 
-		local res = func(x.Data--[[# as number]])
-		local lcontract = x:GetContract()--[[# as false | TNumber]]
+		local res = func(x.Data)
+		local lcontract = x:GetContract()
 
 		if lcontract then
 			local min = lcontract.Data
@@ -332,10 +326,7 @@ do
 	end
 end
 
-local _VERSION = _G._VERSION
-
-local function string_to_integer(str--[[#: string]])
-	if
+local strip_integer = (
 		not jit and
 		(
 			_VERSION == "Lua 5.1" or
@@ -343,7 +334,10 @@ local function string_to_integer(str--[[#: string]])
 			_VERSION == "Lua 5.3" or
 			_VERSION == "Lua 5.4"
 		)
-	then
+	)--[[# as boolean]]
+
+local function string_to_integer(str--[[#: string]])--[[#: number]]
+	if strip_integer then
 		str = str:lower():sub(-3)
 
 		if str == "ull" then
@@ -353,7 +347,7 @@ local function string_to_integer(str--[[#: string]])
 		end
 	end
 
-	return assert(load("return " .. str))()--[[# as number]]
+	return assert(load("return " .. str))()
 end
 
 function META:IsNumeric()
