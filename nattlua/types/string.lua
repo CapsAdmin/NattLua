@@ -10,8 +10,9 @@ local META = dofile("nattlua/types/base.lua")
 META.Type = "string"
 --[[#type META.@Name = "TString"]]
 --[[#type TString = META.@Self]]
-META:GetSet("Data", false--[[# as string | false | nil]])
-META:GetSet("Hash", false--[[# as string | false]])
+--[[#type TString.Type = "string"]]
+META:GetSet("Data", false--[[# as string | false]])
+META:GetSet("Hash", false--[[# as string]])
 META:GetSet("PatternContract", false--[[# as false | string]])
 
 function META.Equal(a--[[#: TString]], b--[[#: TString]])
@@ -22,7 +23,7 @@ end
 
 local STRING_ID = "string"
 
-local function compute_hash(data, pattern)
+local function compute_hash(data--[[#: nil | string]], pattern--[[#: nil | string]])--[[#: string]]
 	if pattern then return pattern elseif data then return data end
 
 	return STRING_ID
@@ -47,9 +48,7 @@ function META:Copy()
 	return copy
 end
 
-function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
-	if false--[[# as true]] then return false end
-
+function META.IsSubsetOf(A--[[#: TString]], B--[[#: TString | TBaseType]])
 	if B.Type == "tuple" then B = B:GetWithNumber(1) end
 
 	if B.Type == "any" then return true end
@@ -57,8 +56,6 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TBaseType]])
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 
 	if B.Type ~= "string" then return false, type_errors.subset(A, B) end
-
-	local B = B--[[# as TString]]
 
 	if not A.Data and B.PatternContract then
 		if A.PatternContract == B.PatternContract then return true end
@@ -198,7 +195,7 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 
 		else
 			if obj.Type == "union" then
-				local str = (obj--[[# as any]]):GetType("string")
+				local str = obj:GetType("string")
 
 				if str then if str.PatternContract then return self end end
 			end

@@ -1,12 +1,13 @@
+--ANALYZE
 local type = type
 local tostring = tostring
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local META = dofile("nattlua/types/base.lua")
 --[[#local type TBaseType = META.TBaseType]]
-local TRUE = {}
-local FALSE = {}
-local NIL = {}
+local TRUE = {"true"}
+local FALSE = {"false"}
+local NIL = {"nil"}
 local symbol_to_type = {
 	[TRUE] = "boolean",
 	[FALSE] = "boolean",
@@ -21,7 +22,7 @@ local unpack_symbol = {
 --[[#type TSymbol = META.@Self]]
 --[[#type TSymbol.Type = "symbol"]]
 META.Type = "symbol"
-META:GetSet("Data", false--[[# as any]])
+META:GetSet("Data", false--[[# as TRUE | FALSE | NIL | {}]])
 META:GetSet("Hash", ""--[[# as string]])
 
 function META:SetData()
@@ -37,7 +38,7 @@ function META:GetData()
 
 	if self.Data == FALSE then return false end
 
-	return self.Data
+	return self.Data--[[# as {}]]
 end
 
 function META.Equal(a--[[#: TSymbol]], b--[[#: TBaseType]])
@@ -89,8 +90,6 @@ function META:IsFalse()
 end
 
 function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
-	if false--[[# as true]] then return false end
-
 	if b.Type == "tuple" then b = b:GetWithNumber(1) end
 
 	if b.Type == "any" then return true end
@@ -98,8 +97,6 @@ function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
 	if b.Type == "union" then return b:IsTargetSubsetOfChild(a--[[# as any]]) end
 
 	if b.Type ~= "symbol" then return false, type_errors.subset(a, b) end
-
-	local b = b--[[# as TSymbol]]
 
 	if a.Data ~= b.Data then return false, type_errors.subset(a, b) end
 
@@ -130,7 +127,7 @@ function META:IsLiteral()
 	return true
 end
 
-function META.New(data--[[#: any]])
+function META.New(data--[[#: true | false | nil | TSymbol.Data]])
 	if data == nil then data = NIL end
 
 	if data == true then data = TRUE end
