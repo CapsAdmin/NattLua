@@ -674,5 +674,13 @@ function META:ParseCallOrAssignmentStatement()
 		self:GetToken().type,
 		self:GetToken().value
 	)
+
+	if left and left[1] and left[1].kind ~= "postfix_call" then
+		local node = self:StartNode("statement", "call_expression", left[1])
+		node.value = left[1]
+		node = self:EndNode(node)
+		return node
+	end
+
 	return self:ErrorStatement()
 end

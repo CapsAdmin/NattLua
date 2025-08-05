@@ -162,6 +162,10 @@ lsp.methods["initialize"] = function(params)
 			definitionProvider = true,
 			inlineValueProvider = true,
 			referencesProvider = true,
+			completionProvider = {
+				resolveProvider = false,
+				triggerCharacters = {".", ":"},
+			},
 			--[[codeLensProvider = {
 				resolveProvider = true,
 			},]]
@@ -169,10 +173,7 @@ lsp.methods["initialize"] = function(params)
 		-- for symbols like all functions within a file
 		-- highlighting equal upvalues
 		-- documentHighlightProvider = true, 
-		--[[completionProvider = {
-				resolveProvider = true,
-				triggerCharacters = { ".", ":" },
-			},
+		--[[
 			signatureHelpProvider = {
 				triggerCharacters = { "(" },
 			},
@@ -263,6 +264,72 @@ lsp.methods["textDocument/references"] = function(params)
 
 	return result
 end
+
+do
+	local item_kind = {
+		text = 1, -- Plain text
+		method = 2, -- obj:method()
+		["function"] = 3, -- function()
+		constructor = 4, -- new Class()
+		field = 5, -- obj.field (simple field)
+		variable = 6, -- local var
+		class = 7, -- class definition
+		interface = 8, -- interface
+		module = 9, -- module/namespace
+		property = 10, -- obj.property (complex property)
+		unit = 11, -- measurement unit
+		value = 12, -- literal value
+		enum = 13, -- enum type
+		keyword = 14, -- language keyword
+		snippet = 15, -- code snippet
+		color = 16, -- color value
+		file = 17, -- file reference
+		reference = 18, -- reference to something
+		folder = 19, -- folder reference
+		enum_member = 20, -- enum.MEMBER
+		constant = 21, -- CONSTANT value
+		struct = 22, -- struct type
+		event = 23, -- event
+		operator = 24, -- operator
+		type_parameter = 25, -- generic type parameter
+	}
+	lsp.methods["textDocument/completion"] = function(params)
+		local path = to_fs_path(params.textDocument.uri)
+
+		if not editor_helper:IsLoaded(path) then
+			return {isIncomplete = false, items = {}}
+		end
+
+		local keyvalues = editor_helper:GetKeyValuesForCompletion(path, params.position.line, params.position.character - 1)
+		local items = {}
+
+		if keyvalues then
+			for _, kv in ipairs(keyvalues) do
+				local kind = "property"
+				local key = kv.key
+				local val = kv.val
+				local t = kv.obj.Type
+
+				if t == "function" then
+					kind = "function"
+				elseif t == "table" then
+					kind = "struct"
+					val = "table"
+				end
+
+				local item = {label = key, detail = val, kind = assert(item_kind[kind])}
+
+				-- If key is numeric, use textEdit to replace with bracket notation
+				if tonumber(key) then item.label = "[" .. key .. "]" end
+
+				table.insert(items, item)
+			end
+		end
+
+		return {isIncomplete = false, items = items}
+	end
+end
+
 lsp.methods["textDocument/inlayHint"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 

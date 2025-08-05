@@ -316,6 +316,10 @@ function META:Recompile(path, lol, diagnostics)
 	return true
 end
 
+function META:GetEnvironment()
+	return runtime_env, typesystem_env
+end
+
 function META:OnDiagnostics(name, data) end
 
 function META:OnResponse(response) end
@@ -639,6 +643,101 @@ function META:GetHover(path, line, character)
 		found_parents = found_parents,
 		token = token,
 	}
+end
+
+do
+	local LString = require("nattlua.types.string").LString
+
+	local function tostring_key(obj)
+		if obj.Type == "string" and obj:IsLiteral() then return obj:GetData() end
+
+		return tostring(obj)
+	end
+
+	local function tostring_val(obj)
+		local str = tostring(obj)
+
+		if #str > 100 then return str:sub(1, 100) .. "..." end
+
+		return str
+	end
+
+	local function get_key_values(self, obj, runtime)
+		if not obj then
+			local r, t = self:GetEnvironment()
+			return get_key_values(self, runtime and r or t)
+		end
+
+		if obj.Type == "table" then
+			local out = {}
+			local done = {}
+
+			for _, kv in ipairs(obj:GetData()) do
+				local key = tostring_key(kv.key)
+				local val = tostring_val(kv.val)
+
+				if not done[key] then
+					done[key] = true
+					table.insert(out, {key = key, val = val, obj = kv.val})
+				end
+			end
+
+			if obj:GetContract() and obj:GetContract() ~= obj then
+				for _, kv in ipairs(obj:GetContract():GetData()) do
+					local key = tostring_key(kv.key)
+					local val = tostring_val(kv.val)
+
+					if not done[key] then
+						done[key] = true
+						table.insert(out, {key = key, val = val, obj = kv.val})
+					end
+				end
+			end
+
+			if obj:GetMetaTable() then
+				local t = obj:GetMetaTable():Get(LString("__index"))
+
+				if t and t.Type == "table" and t ~= obj then
+					for _, kv in ipairs(t:GetData()) do
+						local key = tostring_key(kv.key)
+						local val = tostring_val(kv.val)
+
+						if not done[key] then
+							done[key] = true
+							table.insert(out, {key = key, val = val, obj = kv.val})
+						end
+					end
+				end
+			end
+
+			return out
+		elseif obj.Type == "string" then
+			return get_key_values(self, obj:GetMetaTable():Get(LString("__index")), runtime)
+		elseif obj.Type == "tuple" then
+			if runtime then return get_key_values(self, obj:GetFirstValue(), runtime) end
+		elseif obj.Type == "union" then
+			local out = {}
+			local done = {}
+
+			for _, obj in ipairs(obj:GetData()) do
+				for _, kv in ipairs(get_key_values(self, obj, runtime)) do
+					if not done[kv.key] then
+						done[kv.key] = true
+						table.insert(out, kv)
+					end
+				end
+			end
+
+			return out
+		end
+
+		return nil
+	end
+
+	function META:GetKeyValuesForCompletion(path, line, character)
+		local data = self:GetHover(path, line, character)
+		return get_key_values(self, data and data.obj)
+	end
 end
 
 function META:GetReferences(path, line, character)
