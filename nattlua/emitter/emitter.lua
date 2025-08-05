@@ -621,6 +621,8 @@ function META:EmitExpression(node--[[#: Node]])
 		self:EmitCDeclaration(node)
 	elseif node.kind == "dollar_sign" then
 		self:EmitToken(node.tokens["$"])
+	elseif node.kind == "error" then
+
 	else
 		error("unhandled token type " .. node.kind)
 	end
@@ -1412,6 +1414,9 @@ function META:EmitStatement(node--[[#: Node]])
 		self:EmitInvalidLuaCode("EmitExpression", node.lua_code)
 	elseif node.kind == "parser_debug_code" then
 		self:EmitInvalidLuaCode("EmitExpression", node.lua_code)
+	elseif node.kind == "error" then
+
+	-- do nothing
 	elseif node.kind then
 		error("unhandled statement: " .. node.kind)
 	else

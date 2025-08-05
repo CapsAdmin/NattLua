@@ -244,7 +244,11 @@ function META:OnError(
 ) end
 
 function META:GetToken(offset--[[#: number | nil]])
-	return self.tokens[self.current_token_index + (offset or 0)]
+	return self.tokens[self.current_token_index + (
+			offset or
+			0
+		)] or
+		self:NewToken("end_of_file", "")
 end
 
 function META:GetPosition()
@@ -338,6 +342,7 @@ do
 	function META:ExpectTokenValue(str--[[#: string]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])--[[#: Token]]
 		if not self:IsTokenValue(str) then
 			error_expect(self, str, "value", error_start, error_stop)
+			return self:NewToken("letter", str)
 		end
 
 		return self:ParseToken()--[[# as Token]]
@@ -351,6 +356,7 @@ do
 	)--[[#: Token]]
 		if not self:IsTokenValue(str) then
 			error_expect(self, str, "value", error_start, error_stop)
+			return self:NewToken("value", str)
 		end
 
 		local tk = self:ParseToken()--[[# as Token]]
@@ -365,6 +371,7 @@ do
 	)--[[#: Token]]
 		if not self:IsTokenType(str) then
 			error_expect(self, str, "type", error_start, error_stop)
+			return self:NewToken(str, "")
 		end
 
 		return self:ParseToken()--[[# as Token]]
@@ -496,6 +503,18 @@ function META:ParseMultipleValuesAppend(
 	end
 
 	return out
+end
+
+function META:ErrorExpression()
+	local node = self:StartNode("expression", "error")--[[# as any]]
+	node = self:EndNode(node)
+	return node
+end
+
+function META:ErrorStatement()
+	local node = self:StartNode("statement", "error")--[[# as any]]
+	node = self:EndNode(node)
+	return node
 end
 
 return META

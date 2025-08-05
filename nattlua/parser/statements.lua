@@ -674,4 +674,5 @@ function META:ParseCallOrAssignmentStatement()
 		self:GetToken().type,
 		self:GetToken().value
 	)
+	return self:ErrorStatement()
 end

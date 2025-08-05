@@ -1,3 +1,4 @@
+--ANALYZE
 local class = require("nattlua.other.class")
 
 --[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]

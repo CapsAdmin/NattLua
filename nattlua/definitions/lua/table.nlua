@@ -142,6 +142,7 @@ do -- Array manipulation functions
 		end
 
 		if func then
+			union = union:RemoveType(types.Nil())
 			func:GetInputSignature():GetData()[1] = union
 			func:GetInputSignature():GetData()[2] = union
 			func:SetArgumentsInferred(true)

@@ -847,7 +847,7 @@ analyze(
     local y = x + 2
 
 ]],
-	"x %+ 2.+attempt to perform arithmetic on"
+	"attempt to perform arithmetic on"
 )
 analyze[[
     local type meta = {}

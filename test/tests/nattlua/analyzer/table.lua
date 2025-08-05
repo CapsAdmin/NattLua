@@ -661,7 +661,7 @@ analyze(
     }
     t.foo["test"] = true
 ]],
-	".-is not a subset of.-foo"
+	"is not a subset of nil"
 )
 analyze[[
     local META =  {}
@@ -1110,7 +1110,7 @@ attest.equal(curIR, _ as nil | number)
 ]]
 analyze[[
 local analyzer function test(tbl: List<|any|>, pos_val: AllTypesUnion ~ nil, val_: AllTypesUnion) -- as a side effect, this also tests if AllTypesUnion ~ nil creates a new AllTypesUnion and doesn't mutate it
-	print(tbl, pos_val, val_)
+	
 end
 
 local function SplitHeader(header: string, ...: ...string)

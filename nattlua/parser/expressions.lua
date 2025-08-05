@@ -269,12 +269,11 @@ do -- typesystem
 						{",", ";", "}"},
 						(self:GetToken() and self:GetToken().value) or "no token"
 					)
-
-					break
-				end
-
-				if not self:IsTokenValue("}") then
-					tree.tokens["separators"][i] = self:ParseToken()
+					tree.tokens["separators"][i] = self:NewToken(",")
+				else
+					if not self:IsTokenValue("}") then
+						tree.tokens["separators"][i] = self:ParseToken()
+					end
 				end
 
 				i = i + 1
@@ -484,7 +483,7 @@ do -- typesystem
 				nil,
 				token and token.value ~= "" and token.value or token.type
 			)
-			return
+			return self:ErrorExpression()
 		end
 
 		local exp = self:ParseTypeExpression(priority)
@@ -497,7 +496,7 @@ do -- typesystem
 				nil,
 				token and token.value ~= "" and token.value or token.type
 			)
-			return
+			return self:ErrorExpression()
 		end
 
 		return exp
@@ -640,12 +639,11 @@ do -- runtime
 						{",", ";", "}"},
 						(self:GetToken() and self:GetToken().value) or "no token"
 					)
-
-					break
-				end
-
-				if not self:IsTokenValue("}") then
-					tree.tokens["separators"][i] = self:ParseToken()
+					tree.tokens["separators"][i] = self:NewToken(",")
+				else
+					if not self:IsTokenValue("}") then
+						tree.tokens["separators"][i] = self:ParseToken()
+					end
 				end
 
 				i = i + 1
@@ -954,6 +952,7 @@ do -- runtime
 
 				if not root then
 					self:Error("error importing file: $1", start, start, err .. ": " .. node.path)
+					data = self:ErrorExpression()
 				end
 
 				imported[key] = root
@@ -977,6 +976,7 @@ do -- runtime
 
 			if not data then
 				self:Error("error importing file: $1", start, start, err .. ": " .. node.path)
+				data = self:ErrorExpression()
 			end
 
 			node.data = data
@@ -1078,7 +1078,7 @@ do -- runtime
 					nil,
 					token and token.value ~= "" and token.value or token.type
 				)
-				return false
+				return self:ErrorExpression()
 			end
 		end
 
@@ -1118,7 +1118,7 @@ do -- runtime
 				nil,
 				token and token.value ~= "" and token.value or token.type
 			)
-			return
+			return self:ErrorExpression()
 		end
 
 		return self:ParseRuntimeExpression(priority)

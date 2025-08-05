@@ -20,7 +20,7 @@ analyze(
         return 3 -- HERE
     end
 ]],
-	"return 3 %-%- HERE"
+	"because index 2 does not exist"
 )
 analyze(
 	[[

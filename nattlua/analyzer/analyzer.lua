@@ -100,7 +100,8 @@ do
 			node.kind ~= "shebang" and
 			node.kind ~= "goto_label" and
 			node.kind ~= "parser_debug_code" and
-			node.kind ~= "goto"
+			node.kind ~= "goto" and
+			node.kind ~= "error"
 		then
 			self:FatalError("unhandled statement: " .. tostring(node))
 		end
@@ -124,6 +125,7 @@ do
 	local VarArg = require("nattlua.types.tuple").VarArg
 	local Prefix = require("nattlua.analyzer.operators.prefix").Prefix
 	local Node = require("nattlua.parser.node")
+	local Any = require("nattlua.types.any").Any
 
 	function META:AnalyzeRuntimeExpression(node)
 		if node.kind == "value" then
@@ -182,6 +184,9 @@ do
 			return tup
 		elseif node.kind == "lsx" then
 			return AnalyzeLSX(self, node)
+		elseif node.kind == "error" then
+
+		-- do nothing with error nodes, they are just placeholders for the parser to be able to continue
 		else
 			self:FatalError("unhandled expression " .. node.kind)
 		end
@@ -210,22 +215,26 @@ do
 	end
 
 	function META:AnalyzeExpression(node)
+		if node.error_node then return Any() end
+
 		self:PushCurrentExpression(node)
 		local obj, err = self:AnalyzeRuntimeExpression(node)
-		if not obj then self:Error(err) end
-		self:PopCurrentExpression()
 
+		if not obj then self:Error(err) end
+
+		self:PopCurrentExpression()
 
 		if obj and node.type_expression then
 			self:PushCurrentExpression(node.type_expression)
 			obj, err = self:AnalyzeTypeExpression(node.type_expression, obj)
+
 			if not obj then self:Error(err) end
+
 			self:PopCurrentExpression()
 		end
 
-		if obj then
-			node:AssociateType(obj)
-		end
+		if obj then node:AssociateType(obj) end
+
 		node.scope = self:GetScope()
 		return obj, err
 	end

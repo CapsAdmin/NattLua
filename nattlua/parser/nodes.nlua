@@ -159,6 +159,10 @@ type expression["empty_union"] = Node & { -- [statement - local_assignment @ nat
 			["|"] = Token,
 		},
 	}
+type expression["error"] = Node & {
+	tokens = {},
+	error_node = true,
+}
 type statement["local_assignment"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:314]
 		tokens = {
 			["type"] = Token,
@@ -534,6 +538,10 @@ type statement["if"] = Node & { -- [statement - local_assignment @ nattlua/parse
 		expressions = any,
 		statements = any,
 	}
+type statement["error"] = Node & {
+	tokens = {},
+	error_node = true,
+}
 type statement["local_destructure_assignment"] = Node & { -- [statement - local_assignment @ nattlua/parser/statements.lua:52]
 		tokens = {
 			["}"] = Token,

@@ -24,7 +24,7 @@ function META:ParseLSXExpression()
 
 			if not spread then
 				self:Error("expected table spread")
-				return
+				return self:ErrorExpression()
 			end
 
 			local right = self:ExpectTokenValue("}")
@@ -50,6 +50,12 @@ function META:ParseLSXExpression()
 				table.insert(node.props, keyval)
 			else
 				self:Error("expected = { or = string or = number got " .. self:GetToken(3).type)
+				local keyval = self:StartNode("sub_statement", "table_key_value")
+				keyval.tokens["identifier"] = self:NewToken("letter", "_")
+				keyval.tokens["="] = self:NewToken("symbol", "=")
+				keyval.value_expression = self:ErrorExpression()
+				keyval = self:EndNode(keyval)
+				table.insert(node.props, keyval)
 			end
 		else
 			break

@@ -38,6 +38,7 @@ local META = class.CreateTemplate("node")
 	first_node = any,
 	environments = any,
 	identifiers_typesystem = any,
+	error_node = boolean,
 }]]
 --[[#type Node = META.@Self]]
 local all_nodes = {
@@ -119,6 +120,12 @@ local all_nodes = {
 					["|"] = false,
 					["table"] = false,
 				},
+			}
+		end,
+		["error"] = function()
+			return {
+				error_node = true,
+				tokens = {},
 			}
 		end,
 		["type_table"] = function()
@@ -750,6 +757,12 @@ local all_nodes = {
 				},
 			}
 		end,
+		["error"] = function()
+			return {
+				error_node = true,
+				tokens = {},
+			}
+		end,
 		["root"] = function()
 			return {
 				parser = false,
@@ -799,6 +812,7 @@ function META.New(
 	--
 	init.environments = false
 	init.identifiers_typesystem = false
+	init.error_node = false
 	return setmetatable(init--[[# as META.@Self]], META)
 end
 

@@ -38,6 +38,7 @@ local META = class.CreateTemplate("compiler")
 	analyzer = any,
 	AnalyzedResult = any,
 	debug = any,
+	errors = List<|string|>,
 }]]
 
 function META:GetCode()
@@ -135,7 +136,9 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 			end
 		end
 
-		error(msg, level)
+		if not _G.TEST then print(msg) end
+
+		table.insert(self.errors, msg)
 	end
 end
 
@@ -228,6 +231,8 @@ function META:Parse()
 
 	if not ok then return nil, res end
 
+	if self.errors[1] then return nil, table.concat(self.errors, "\n") end
+
 	self.SyntaxTree = res
 	return self
 end
@@ -276,6 +281,8 @@ function META:Analyze(analyzer, ...)
 
 	if not ok then return nil, res end
 
+	if self.errors[1] then return nil, table.concat(self.errors, "\n") end
+
 	return self
 end
 
@@ -323,6 +330,7 @@ function META.New(
 			analyzer = false,
 			AnalyzedResult = false,
 			debug = false,
+			errors = {},
 		},
 		META
 	)
