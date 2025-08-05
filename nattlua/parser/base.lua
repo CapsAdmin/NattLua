@@ -508,12 +508,14 @@ end
 function META:ErrorExpression()
 	local node = self:StartNode("expression", "error")--[[# as any]]
 	node = self:EndNode(node)
+	self:Advance(1)
 	return node
 end
 
 function META:ErrorStatement()
 	local node = self:StartNode("statement", "error")--[[# as any]]
 	node = self:EndNode(node)
+	self:Advance(1)
 	return node
 end
 
