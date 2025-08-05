@@ -212,15 +212,20 @@ do
 	function META:AnalyzeExpression(node)
 		self:PushCurrentExpression(node)
 		local obj, err = self:AnalyzeRuntimeExpression(node)
+		if not obj then self:Error(err) end
 		self:PopCurrentExpression()
 
-		if node.type_expression then
+
+		if obj and node.type_expression then
 			self:PushCurrentExpression(node.type_expression)
-			obj = self:AnalyzeTypeExpression(node.type_expression, obj)
+			obj, err = self:AnalyzeTypeExpression(node.type_expression, obj)
+			if not obj then self:Error(err) end
 			self:PopCurrentExpression()
 		end
 
-		node:AssociateType(obj or err)
+		if obj then
+			node:AssociateType(obj)
+		end
 		node.scope = self:GetScope()
 		return obj, err
 	end
