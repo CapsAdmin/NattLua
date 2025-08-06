@@ -80,8 +80,6 @@ return function(META)
 	end
 
 	function META:ErrorMessageToString(tbl)
-		if not tbl then debug.trace() end
-
 		local out = {}
 
 		for i, v in ipairs(tbl) do

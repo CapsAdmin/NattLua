@@ -185,8 +185,8 @@ do
 		elseif node.kind == "lsx" then
 			return AnalyzeLSX(self, node)
 		elseif node.kind == "error" then
-
-		-- do nothing with error nodes, they are just placeholders for the parser to be able to continue
+			-- do nothing with error nodes, they are just placeholders for the parser to be able to continue
+			return Any()
 		else
 			self:FatalError("unhandled expression " .. node.kind)
 		end

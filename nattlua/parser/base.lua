@@ -232,6 +232,10 @@ function META:Error(
 
 	if stop_token then stop = stop_token.stop elseif tk then stop = tk.stop end
 
+	for i = 1, select("#", ...) do
+		if select(i, ...) == "see previous parser error" then return end
+	end
+
 	self:OnError(self.Code, msg, start, stop, ...)
 end
 
@@ -248,7 +252,7 @@ function META:GetToken(offset--[[#: number | nil]])
 			offset or
 			0
 		)] or
-		self:NewToken("end_of_file", "")
+		self:NewToken("end_of_file", "see previous parser error")
 end
 
 function META:GetPosition()
