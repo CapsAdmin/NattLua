@@ -766,6 +766,9 @@ do -- runtime
 					not self:IsTokenType("letter", 1) or
 					not self:IsCallExpression(2)
 				)
+				and
+				-- special case for autocompletion to work while typing and : is the last character of the code
+				not self:IsTokenType("end_of_file", 2) 
 			then
 				node.tokens[":"] = self:ExpectTokenValue(":")
 				node.type_expression = self:ExpectTypeExpression(0)

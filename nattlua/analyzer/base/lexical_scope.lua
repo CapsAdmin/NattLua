@@ -412,6 +412,26 @@ function META:FindUnusedUpvalues(unused)
 	return unused
 end
 
+function META:GetAllVisibleUpvalues()
+	local upvalues = {}
+
+	for _, scope in ipairs(self.ParentList) do
+		for _, upvalue in ipairs(scope.upvalues.runtime.list) do
+			if not upvalues[upvalue:GetKey()] then
+				upvalues[upvalue:GetKey()] = upvalue
+			end
+		end
+
+		for _, upvalue in ipairs(scope.upvalues.typesystem.list) do
+			if not upvalues[upvalue:GetKey()] then
+				upvalues[upvalue:GetKey()] = upvalue
+			end
+		end
+	end
+
+	return upvalues
+end
+
 function META.New(parent, upvalue_position, obj)
 	local scope = {
 		obj = obj,

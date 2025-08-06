@@ -646,6 +646,7 @@ function META:GetHover(path, line, character)
 end
 
 do
+	local runtime_syntax = require("nattlua.syntax.runtime")
 	local LString = require("nattlua.types.string").LString
 
 	local function tostring_key(obj)
@@ -662,35 +663,54 @@ do
 		return str
 	end
 
-	local function get_key_values(self, obj, runtime)
-		if not obj then
+	local function get_key_values(self, obj, scope, runtime)
+		if not obj or obj.Type == "any" then
 			local r, t = self:GetEnvironment()
-			return get_key_values(self, runtime and r or t)
+			local tbl = {}
+
+			for key, data in pairs(get_key_values(self, r, scope, runtime)) do
+				tbl[key] = data
+			end
+
+			for key, data in pairs(get_key_values(self, t, scope, runtime)) do
+				tbl[key] = data
+			end
+
+			for keyword in pairs(runtime_syntax.Keywords) do
+				tbl[keyword] = {val = keyword, obj = "keyword"}
+			end
+
+			for keyword in pairs(runtime_syntax.NonStandardKeywords) do
+				tbl[keyword] = {val = keyword, obj = "keyword"}
+			end
+
+			if scope then
+				for key, upvalue in pairs(scope:GetAllVisibleUpvalues()) do
+					tbl[key] = {val = key, obj = upvalue}
+				end
+			end
+
+			for _, typ in ipairs({"string", "number", "any", "true", "nil", "false"}) do
+				tbl[typ] = {val = typ, obj = "keyword"}
+			end
+
+			return tbl
 		end
 
 		if obj.Type == "table" then
 			local out = {}
-			local done = {}
 
 			for _, kv in ipairs(obj:GetData()) do
 				local key = tostring_key(kv.key)
 				local val = tostring_val(kv.val)
-
-				if not done[key] then
-					done[key] = true
-					table.insert(out, {key = key, val = val, obj = kv.val})
-				end
+				out[key] = {val = val, obj = kv.val}
 			end
 
 			if obj:GetContract() and obj:GetContract() ~= obj then
 				for _, kv in ipairs(obj:GetContract():GetData()) do
 					local key = tostring_key(kv.key)
 					local val = tostring_val(kv.val)
-
-					if not done[key] then
-						done[key] = true
-						table.insert(out, {key = key, val = val, obj = kv.val})
-					end
+					out[key] = {val = val, obj = kv.val}
 				end
 			end
 
@@ -701,30 +721,24 @@ do
 					for _, kv in ipairs(t:GetData()) do
 						local key = tostring_key(kv.key)
 						local val = tostring_val(kv.val)
-
-						if not done[key] then
-							done[key] = true
-							table.insert(out, {key = key, val = val, obj = kv.val})
-						end
+						out[key] = {val = val, obj = kv.val}
 					end
 				end
 			end
 
 			return out
 		elseif obj.Type == "string" then
-			return get_key_values(self, obj:GetMetaTable():Get(LString("__index")), runtime)
+			return get_key_values(self, obj:GetMetaTable():Get(LString("__index")), scope, runtime)
 		elseif obj.Type == "tuple" then
-			if runtime then return get_key_values(self, obj:GetFirstValue(), runtime) end
+			if runtime then
+				return get_key_values(self, obj:GetFirstValue(), scope, runtime)
+			end
 		elseif obj.Type == "union" then
 			local out = {}
-			local done = {}
 
 			for _, obj in ipairs(obj:GetData()) do
-				for _, kv in ipairs(get_key_values(self, obj, runtime)) do
-					if not done[kv.key] then
-						done[kv.key] = true
-						table.insert(out, kv)
-					end
+				for key, data in pairs(get_key_values(self, obj, scope, runtime)) do
+					out[key] = data
 				end
 			end
 
@@ -736,7 +750,8 @@ do
 
 	function META:GetKeyValuesForCompletion(path, line, character)
 		local data = self:GetHover(path, line, character)
-		return get_key_values(self, data and data.obj)
+		print(data.token, data.obj, "<< autocompleting")
+		return get_key_values(self, data and data.obj, data.scope, false), data
 	end
 end
 

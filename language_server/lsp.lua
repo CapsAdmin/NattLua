@@ -64,7 +64,7 @@ local function get_range(code, start, stop)
 end
 
 local editor_helper = EditorHelper.New()
-editor_helper.debug = true
+editor_helper.debug = false
 
 local function to_fs_path(url)
 	return path.UrlSchemeToPath(url, editor_helper:GetWorkingDirectory())
@@ -300,21 +300,26 @@ do
 			return {isIncomplete = false, items = {}}
 		end
 
-		local keyvalues = editor_helper:GetKeyValuesForCompletion(path, params.position.line, params.position.character - 1)
+		local keyvalues, data = editor_helper:GetKeyValuesForCompletion(path, params.position.line, params.position.character - 1)
 		local items = {}
 
 		if keyvalues then
-			for _, kv in ipairs(keyvalues) do
+			for key, data in pairs(keyvalues) do
 				local kind = "property"
-				local key = kv.key
-				local val = kv.val
-				local t = kv.obj.Type
+				local key = key
+				local val = data.val
+				local t = type(data.obj) == "string" and data.obj or data.obj.Type
 
 				if t == "function" then
 					kind = "function"
 				elseif t == "table" then
 					kind = "struct"
 					val = "table"
+				elseif t == "keyword" then
+					kind = "keyword"
+				elseif t == "upvalue" then
+					kind = "variable"
+					val = "upvalue"
 				end
 
 				local item = {label = key, detail = val, kind = assert(item_kind[kind])}
