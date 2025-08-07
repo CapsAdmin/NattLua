@@ -364,7 +364,10 @@ function META.Load(code, name, config)
 end
 
 function META.LoadFile(path, config)
-	local obj = META.FromFile(path, config)
+	local obj, err = META.FromFile(path, config)
+
+	if not obj then return nil, err end
+
 	local code, err = obj:Emit()
 
 	if not code then return nil, err end
