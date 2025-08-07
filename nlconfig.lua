@@ -25,7 +25,7 @@ do -- custom commands specific for nattlua
 	config.commands["install"] = {
 		description = "Install NattLua binary to ~/.local/bin (Linux only)",
 		cb = function()
-			-- only linux for now
+			config.commands.build.cb({"fast"})
 			os.execute("mkdir -p ~/.local/bin")
 			os.execute("cp build_output.lua ~/.local/bin/nattlua")
 			os.execute("chmod +x ~/.local/bin/nattlua")
@@ -296,7 +296,7 @@ do -- these override existing commands and should probably be made more generic
 
 			io.write("writing build_output.lua")
 			local f = assert(io.open("build_output.lua", "w"))
-			local shebang = "#!/usr/local/bin/luajit\n"
+			local shebang = "#!/usr/bin/env luajit\n"
 			f:write(shebang .. lua_code)
 			f:close()
 			os.execute("chmod +x ./build_output.lua")

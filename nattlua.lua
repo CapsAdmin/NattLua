@@ -1,4 +1,4 @@
-#!/usr/local/bin/luajit
+#!/usr/bin/env luajit
 
 if ... == "test" then
 	require("test.helpers.preprocess")
