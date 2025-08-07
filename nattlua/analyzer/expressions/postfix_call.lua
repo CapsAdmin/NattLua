@@ -56,7 +56,7 @@ return {
 				node.left.kind == "generics_type_function"
 			)
 		self:PushAnalyzerEnvironment(is_type_call and "typesystem" or "runtime")
-		local callable = self:AnalyzeExpression(node.left)
+		local callable = self:Assert(self:AnalyzeExpression(node.left))
 		local self_arg
 
 		if

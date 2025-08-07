@@ -8,7 +8,7 @@ local type LAPIType = {
 	default = nil | string,
 	supertypes = nil | List<|string|>,
 	table = nil | List<|self|>,
-	functions = any,
+	functions = nil,
 	table = nil | List<|self|>,
 }
 local type LAPIFunction = {
@@ -49,6 +49,7 @@ local type LoveApi = {
 	types = List<|LAPIType|>,
 	callbacks = List<|LAPIFunction|>,
 }
+type LAPIType.functions = nil | List<|LAPIFunction|>
 
 if io.open("love-api/love_api.lua", "r") then
 	os.execute("git -C love-api pull")
@@ -115,12 +116,13 @@ function emit_type(t: LAPIType): nil
 	elseif t.type == "tables and strings" then -- TODO
 		e("(Table | string)")
 	elseif t.name == "..." then
-		e("...")(emit_type as any)({type = t.type})
+		e("...") --
+		emit_type({type = t.type})
 	elseif t.type:find(" or ", nil, true) then
 		local tbl = string_split(t.type, " or ")
 
 		for i, v in ipairs(tbl) do
-			(emit_type as any)({
+			emit_type({
 				type = v,
 			})
 

@@ -1,9 +1,9 @@
 local Maze = {}
 Maze.__index = Maze
 type Maze.@Self = {
-	width = number,
-	height = number,
-	grid = {[0 .. inf] = number},
+	width = 0 .. inf,
+	height = 0 .. inf,
+	grid = {[0 .. inf] = 1 | 0},
 }
 
 function Maze:__tostring()
@@ -25,18 +25,18 @@ function Maze:__tostring()
 	return table.concat(out)
 end
 
-function Maze:Get(x: number, y: number)
+function Maze:Get(x: -inf .. inf, y: -inf .. inf)
 	return self.grid[y * self.width + x]
 end
 
-function Maze:Set(x: number, y: number, v: 1 | 0)
+function Maze:Set(x: -inf .. inf, y: -inf .. inf, v: 1 | 0)
 	self.grid[y * self.width + x] = v
 end
 
 function Maze:Build(seed: number)
 	math.randomseed(seed)
 
-	local function build(x: number, y: number)
+	local function build(x: -inf .. inf, y: -inf .. inf)
 		local r = math.random(0, 3)
 		self:Set(x, y, 0)
 
@@ -74,7 +74,7 @@ function Maze:Build(seed: number)
 	self.grid[(self.height - 2) * self.width + self.width - 3] = 0
 end
 
-local function constructor(_, width: number, height: number)
+local function constructor(_, width: 0 .. inf, height: 0 .. inf)
 	local self = setmetatable(
 		{
 			grid = {} as Maze.@Self.grid,
