@@ -92,7 +92,7 @@ editor_helper:SetConfigFunction(function(path)
 
 			if not ok then error(err) end
 
-			editor_helper:DebugLog("[ " .. original_path .. " ] loading config " .. config_path)
+			editor_helper:DebugLog("[ " .. (original_path or wdir) .. " ] loading config " .. config_path)
 			err.config_dir = dir .. "/"
 
 			if editor_helper.debug then table.print(err) end

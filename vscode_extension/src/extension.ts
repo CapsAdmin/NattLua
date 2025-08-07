@@ -25,7 +25,7 @@ export async function activate(context: ExtensionContext) {
 
   const executable = resolveVariables(config.get<string>("executable"));
   const workingDirectory = resolveVariables(config.get<string>("workingDirectory"));
-  const args = [resolveVariables(config.get<string>("path")), ...config.get<string[]>("arguments").map(arg => resolveVariables(arg))]
+  const args = config.get<string[]>("arguments").map(arg => resolveVariables(arg))
 
   const clientOptions: LanguageClientOptions = {
     documentSelector,

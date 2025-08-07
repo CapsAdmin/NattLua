@@ -59,18 +59,13 @@
       "properties": {
         "nattlua.executable": {
           "type": "string",
-          "default": "luajit",
-          "description": "path to executable"
+          "default": "nattlua",
+          "description": "path to or name of executable, assumes you have 'nattlua' installed and available"
         },
         "nattlua.workingDirectory": {
           "type": "string",
           "default": "${workspaceFolder}",
-          "description": "path to executable"
-        },
-        "nattlua.path": {
-          "type": "string",
-          "default": "/home/caps/.local/bin/nattlua",
-          "description": "path to script"
+          "description": "working directory of the executable"
         },
         "nattlua.arguments": {
           "type": "array",
