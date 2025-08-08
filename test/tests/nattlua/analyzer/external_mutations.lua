@@ -230,7 +230,8 @@ analyze[[
     
     string_mutator(a)
     
-    attest.equal<|a.foo, true|>
+    attest.equal<|a.foo, string|>
+    attest.equal(a.foo, true)
 ]]
 analyze[[
     local function string_mutator<|tbl: ref mutable {[any] = any}|>

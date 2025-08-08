@@ -768,3 +768,14 @@ local type F = function=()>(...any)
 
 test(F())
 ]]
+analyze[[
+local function bar<|foo: List<|number|>|>
+	attest.equal(foo, {1, 2, 3})
+end
+
+local function test<|foo: List<|number|>|>
+	bar(foo)
+end
+
+test<|{1, 2, 3}|>
+]]

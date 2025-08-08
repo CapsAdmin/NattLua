@@ -332,7 +332,24 @@ local function check_input(self, obj, input)
 
 		if not ok then self:Error(reason) end
 
-		if
+		if self:IsTypesystem() then
+			local doit = self:IsRuntime()
+
+			if function_node.identifiers_typesystem then doit = true end
+
+			if contract.Type == "union" then
+				local t = contract:GetType("table")
+
+				if t and t.PotentialSelf then doit = false end
+			end
+
+			if doit then
+				-- if it's a ref argument we pass the incoming value
+				local t = contract:GetFirstValue():Copy()
+				t:SetContract(contract)
+				input:Set(i, t)
+			end
+		elseif
 			arg and
 			arg.Type == "table" and
 			contract.Type == "table" and
