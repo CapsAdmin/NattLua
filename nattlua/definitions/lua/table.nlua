@@ -78,8 +78,7 @@ do -- Basic table manipulation functions
 
 		if index and not index:IsLiteral() then return tbl:Get(types.Number()) end
 
-		index = index or 1
-		return table.remove(tbl:GetData(), index:GetData())
+		return tbl:Remove(index)
 	end
 
 	analyzer function table.move(a1: Table, f: any, e: any, t: any, a2: Table | nil)

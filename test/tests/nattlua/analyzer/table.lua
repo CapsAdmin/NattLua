@@ -1128,3 +1128,10 @@ local function SplitHeader(header: string, ...: ...string)
 end
 
 ]]
+
+analyze[[
+local tbl = {"foo","bar","faz"}
+attest.equal(#tbl, 3)
+attest.equal(table.remove(tbl, 2), "bar")
+attest.equal(tbl, {"foo", "faz"})
+]]

@@ -562,6 +562,55 @@ function META:Delete(key--[[#: TBaseType]])
 	return true
 end
 
+function META:Remove(index--[[#: TBaseType]])
+	local index_num = index:GetData()
+	local removed_val = nil
+	local found_index = nil
+	
+	for i = #self.Data, 1, -1 do
+		local keyval = self.Data[i]
+		
+		if keyval.key.Type == "number" and keyval.key:IsLiteral() then
+			local key_num = keyval.key:GetData()
+			
+			if key_num == index_num then
+				removed_val = keyval.val
+				found_index = i
+				
+				keyval.val:SetParent()
+				keyval.key:SetParent()
+				table.remove(self.Data, i)
+				write_cache(self, keyval.key, nil)
+				break
+			end
+		end
+	end
+
+	if not found_index then
+		return false, type_errors.table_index(self, index)
+	end
+	
+	for i, keyval in ipairs(self.Data) do
+		if keyval.key.Type == "number" and keyval.key:IsLiteral() then
+			local key_num = keyval.key:GetData()
+			
+			if key_num > index_num then
+				write_cache(self, keyval.key, nil)
+				local new_key = LNumber(key_num - 1)
+				new_key:SetParent(self)
+				keyval.key = new_key
+				write_cache(self, new_key, keyval)
+			end
+		end
+	end
+	
+	if self.size and self.size > index_num then
+		self.size = self.size - 1
+	end
+
+	return removed_val
+end
+
 function META:GetValueUnion()
 	local union = Union()
 
