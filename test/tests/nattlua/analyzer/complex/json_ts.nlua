@@ -1,0 +1,378 @@
+-- https://github.com/samzhangjy/ts-json-parser
+local type ToNumber = {}
+
+for i = 0, 9 do
+	ToNumber[tostring(i)] = i
+end
+
+local type LBrace = "{"
+local type RBrace = "}"
+local type LBracket = "["
+local type RBracket = "]"
+local type String = "\""
+local type Comma = ","
+local type Colon = ":"
+local type Alpha = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z"
+local type Number = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+local type Keyword = "true" | "false" | "null"
+local type Escape = {
+	["\""] = "\"", -- \" becomes quote
+	["\\"] = "\\", -- \\ becomes backslash
+	["n"] = "\n", -- \n becomes newline
+	["r"] = "\r", -- \r becomes carriage return
+	["t"] = "\t", -- \t becomes tab
+}
+local type TokenType = LBrace | RBrace | LBracket | RBracket | String | Colon | Comma | Alpha | Keyword | Number
+local type NULL = {}
+local type IToken = {
+	type = TokenType,
+	val = NULL | string | number | nil,
+}
+
+local function Token<|T: TokenType, V: (nil | any)|>: IToken
+	return {
+		type = T,
+		val = V or nil,
+	}
+end
+
+-- recursively widen a table
+local function ToPrimitive<|T: AnyTable|>
+	local out = {}
+
+	for key, val in pairs(T) do
+		if type(val) == "table" then
+			out[key] = ToPrimitive<|val|>
+		else
+			out[key] = Widen<|val|>
+		end
+	end
+
+	return out
+end
+
+local function GetStringContent<|T: string, C: string | nil|>
+	C = C or ""
+	local U, V = T:match("(.)(.*)")
+
+	if not U then return nil end
+
+	if U == "\\" then
+		local R, F = V:match("(.)(.*)")
+
+		if Escape[R] then return GetStringContent<|F, C .. Escape[R]|> end
+
+		return nil
+	elseif U == String then
+		return {Token<|String, C|>, V}
+	end
+
+	return GetStringContent<|V, C .. U|>
+end
+
+attest.equal<|GetStringContent<|[[hello"]]|>, {Token<|String, "hello"|>, ""}|>
+attest.equal<|GetStringContent<|[[he\tllo"]]|>, {Token<|String, "he\tllo"|>, ""}|>
+attest.equal<|GetStringContent<|[[he\nllo"]]|>, {Token<|String, "he\nllo"|>, ""}|>
+attest.equal<|GetStringContent<|[[he\"llo"]]|>, {Token<|String, "he\"llo"|>, ""}|>
+attest.equal<|GetStringContent<|[[he\\llo"]]|>, {Token<|String, "he\\llo"|>, ""}|>
+
+local function GetKeywordContent<|T: string, C: (nil | string)|>
+	C = C or ""
+	local U, V = T:match("(.)(.*)")
+
+	if not U then
+		if C ~= "" then return {Token<|Keyword, C|>, T} end
+
+		return nil
+	end
+
+	if U subsetof Alpha then
+		return GetKeywordContent<|V, C .. U|>
+	elseif C ~= "" then
+		return {Token<|Keyword, C|>, T}
+	end
+
+	if C ~= "" then return {Token<|Keyword, C|>, T} end
+
+	return nil
+end
+
+local function GetNumberContent<|T: string, C: (nil | number)|>
+	C = C or 0
+	local U, V = T:match("(.)(.*)")
+
+	if not U then
+		if C ~= "" then return {Token<|Number, C|>, T} end
+
+		return nil
+	end
+
+	if U subsetof Number then
+		return GetNumberContent<|V, C * 10 + ToNumber[U]|>
+	end
+
+	if C ~= "" then return {Token<|Number, C|>, T} end
+
+	error("never")
+end
+
+local function Tokenize<|T: string, C: (nil | List<|IToken|>)|>
+	C = C or {}
+	local U, V = T:match("(.)(.*)")
+
+	if U subsetof ("\n" | "\r" | "\t" | " ") then
+		return Tokenize<|V, C|>
+	elseif U == LBrace then
+		return Tokenize<|V, {...C, Token<|LBrace|>}|>
+	elseif U == RBrace then
+		return Tokenize<|V, {...C, Token<|RBrace|>}|>
+	elseif U == LBracket then
+		return Tokenize<|V, {...C, Token<|LBracket|>}|>
+	elseif U == RBracket then
+		return Tokenize<|V, {...C, Token<|RBracket|>}|>
+	elseif U == Comma then
+		return Tokenize<|V, {...C, Token<|Comma|>}|>
+	elseif U == Colon then
+		return Tokenize<|V, {...C, Token<|Colon|>}|>
+	elseif U == String then
+		local str = GetStringContent<|V|>
+
+		if not str then return nil end
+
+		return Tokenize<|str[2], {...C, str[1]}|>
+	elseif U subsetof Alpha then
+		local token = GetKeywordContent<|T|>
+		return Tokenize<|token[2], {...C, token[1]}|>
+	elseif U subsetof Number then
+		local token = GetNumberContent<|T|>
+		return Tokenize<|token[2], {...C, token[1]}|>
+	end
+
+	--	error("invalid character '" .. U .. "'")
+	return C
+end
+
+local function TableSub(tbl: List<|IToken|>, offset: number)
+	local type copy = copy<|tbl|>
+	table.remove<|copy, offset|>
+	return copy
+end
+
+local function GetFirstToken<|T: List<|IToken|>|>
+	if #T == 0 then return nil end
+
+	local type U = T[1]
+	local type V = TableSub<|T, 1|>
+	return {U, V}
+end
+
+local type ParseLiteral
+local type ParseRoot
+
+local function ParseString<|T: List<|IToken|>|>
+	local type res = GetFirstToken<|T|>
+
+	if not res then return nil end
+
+	if res[1].type == String then return {res[1].val, res[2]} end
+end
+
+local function ParseKeyword<|T: List<|IToken|>|>
+	local type first = GetFirstToken<|T|>
+
+	if first[1].type == Keyword then
+		local type val = first[1].val
+
+		if val == "true" then
+			return {true, first[2]}
+		elseif val == "false" then
+			return {false, first[2]}
+		elseif val == "null" then
+			return {NULL, first[2]} -- TODO, when this is nil it messes up the table making it become {first[2]} as opposed to {nil, first[2]} ?
+		end
+	end
+end
+
+local function ParseNumber<|T: List<|IToken|>|>
+	local type first = GetFirstToken<|T|>
+
+	if first[1].type == Number then return {first[1].val, first[2]} end
+
+	return nil
+end
+
+local function SetProperty<|obj: AnyTable, key: any, rest: any|>
+	obj[key[1]] = key[2]
+	return {obj, rest}
+end
+
+local function ParseKeyValuePair<|T: List<|IToken|>|>
+	local type tokens = ParseString<|T|>
+
+	if not tokens then return nil end
+
+	local type first = GetFirstToken<|tokens[2]|>
+
+	if not first then return nil end
+
+	if first[1].type == Colon then
+		local type res = ParseLiteral<|first[2]|>
+		return {{tokens[1], res[1]}, res[2]}
+	end
+end
+
+local function ParseObjectImpl<|T: List<|IToken|>, C: AnyTable|>
+	local type kvp = ParseKeyValuePair<|T|>
+
+	if not kvp then return nil end
+
+	local type first = GetFirstToken<|kvp[2]|>
+
+	if not first then return nil end
+
+	C[kvp[1][1]] = kvp[1][2]
+
+	if first[1].type == RBrace then
+		return {C, first[2]}
+	elseif first[1].type == Comma then
+		return ParseObjectImpl<|first[2], C|>
+	end
+end
+
+local function ParseObject<|T: List<|IToken|>|>
+	if T[1].type == RBrace then
+		local type t = TableSub<|T, 1|> -- TODO
+		return {{}, t}
+	end
+
+	return ParseObjectImpl<|T, {}|>
+end
+
+local function ParseArrayImpl<|T: List<|IToken|>, C: List<|any|>|>
+	local type val = ParseLiteral<|T|>
+
+	if not val then return nil end
+
+	local type first = GetFirstToken<|val[2]|>
+
+	if not first then return nil end
+
+	table.insert(C, val[1])
+
+	if first[1].type == Comma then
+		return ParseArrayImpl<|first[2], C|>
+	elseif first[1].type == RBracket then
+		return {C, first[2]}
+	end
+end
+
+local function ParseArray<|T: List<|IToken|>|>
+	if T[1].type == RBracket then
+		local type t = TableSub<|T, 1|> -- TODO
+		return {{}, t}
+	end
+
+	return ParseArrayImpl<|T, {}|>
+end
+
+type ParseRoot = function <|T: List<|IToken|>|>
+	local type res = GetFirstToken<|T|>
+
+	if res[1].type == LBrace then
+		return ParseObject<|res[2]|>
+	elseif res[1].type == LBracket then
+		return ParseArray<|res[2]|>
+	end
+end
+type ParseLiteral = function <|T: List<|IToken|>|>
+	return ParseRoot<|T|> or ParseString<|T|> or ParseKeyword<|T|> or ParseNumber<|T|>
+end
+
+local function JSON<|T: string|>
+	return ParseLiteral<|Tokenize<|T|>|>[1]
+end
+
+local function JSONPrimitive<|T: string|>
+	return ToPrimitive<|JSON<|T|>|>
+end
+
+attest.equal<|Tokenize<|"hello\""|>, nil|>
+attest.equal<|Tokenize<|"\"hello"|>, nil|>
+--
+attest.equal<|ParseNumber<|Tokenize<|"1"|>|>[1], 1|>
+attest.equal<|ParseNumber<|Tokenize<|"1337"|>|>[1], 1337|>
+attest.equal<|ParseNumber<|Tokenize<|"a"|>|>, nil|>
+attest.equal<|ParseKeyword<|Tokenize<|"true"|>|>[1], true|>
+attest.equal<|ParseKeyword<|Tokenize<|"false"|>|>[1], false|>
+attest.equal<|ParseKeyword<|Tokenize<|"null"|>|>[1], NULL|>
+attest.equal<|ParseString<|Tokenize<|"\"hello\""|>|>[1], "hello"|>
+attest.equal<|ParseString<|Tokenize<|"\"hel\\tlo\""|>|>[1], "hel\tlo"|>
+attest.equal<|Token<|LBrace|>, {type = "{", val = nil}|>
+
+do
+	attest.expect_diagnostic<|"error", "1 is not a subset of"|>
+	ToPrimitive<|1|>
+end
+
+do
+	attest.equal<|
+		ToPrimitive<|
+			{
+				foo = true,
+				bar = {
+					num = 1337,
+					aaa = 555,
+					faz = {some_string = "hello"},
+				},
+			}
+		|>,
+		{
+			foo = boolean,
+			bar = {
+				num = number,
+				aaa = number,
+				faz = {some_string = string},
+			},
+		}
+	|>
+	attest.equal<|GetStringContent<|[[hello"]]|>, {Token<|String, "hello"|>, ""}|>
+	attest.equal<|GetKeywordContent<|"true"|>, {Token<|Keyword, "true"|>, ""}|>
+	attest.equal<|GetNumberContent<|"1337"|>, {Token<|Number, 1337|>, ""}|>
+	attest.equal<|
+		Tokenize<|[[{"name": 1, "foo": "bar"}]]|>,
+		{
+			{["type"] = "{"},
+			{["type"] = "\"", ["val"] = "name"},
+			{["type"] = ":"},
+			{
+				["type"] = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9",
+				["val"] = 1,
+			},
+			{["type"] = ","},
+			{["type"] = "\"", ["val"] = "foo"},
+			{["type"] = ":"},
+			{["type"] = "\"", ["val"] = "bar"},
+			{["type"] = "}"},
+		}
+	|>
+end
+
+if false then
+	attest.equal<|
+		GetFirstToken<|{Token<|"1", 1|>, Token<|"2", 2|>, Token<|"3", 3|>}|>,
+		{Token<|"1", 1|>, {Token<|"2", 2|>, Token<|"3", 3|>}}
+	|>
+	attest.equal<|
+		ParseKeyValuePair<|{Token<|String, "hello"|>, Token<|Colon, ":"|>, Token<|String, "world"|>}|>,
+		{{"hello", "world"}, {}}
+	|>
+	attest.equal<|ParseObject<|Tokenize<|[["hello": true, "foo": 1}]]|>|>[1], {hello = true, foo = 1}|>
+	attest.equal<|
+		JSON<|[[{"name": 1, "foo": "bar", "nested": {"foo": 1337, "arr": [1,2,3]}}]]|>,
+		{
+			["name"] = 1,
+			["foo"] = "bar",
+			["nested"] = {["foo"] = 1337, ["arr"] = {1, 2, 3}},
+		}
+	|>
+end
