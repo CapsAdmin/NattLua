@@ -47,6 +47,10 @@ function ErrorReturn<|...: ...any|>
 end
 
 analyzer function Widen(val: any)
+	if val.Type == "symbol" and val:IsBoolean() then
+		return types.Boolean() -- special case, return union instead
+	end
+
 	return val:Widen()
 end
 
@@ -139,7 +143,8 @@ end
 
 analyzer function copy(obj: any)
 	local copy = obj:Copy()
-	copy:ClearMutations()
+
+	if obj.ClearMutations then copy:ClearMutations() end
 
 	if copy.Type == "table" then
 		copy:SetCreationScope(false)
