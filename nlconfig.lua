@@ -216,6 +216,7 @@ do -- these override existing commands and should probably be made more generic
 					require("nattlua.c_declarations.emitter")
 					require("nattlua.c_declarations.analyzer")
 					require("nattlua.c_declarations.main")
+					require("examples.util")
 		
 					return require("nattlua")
 				]],

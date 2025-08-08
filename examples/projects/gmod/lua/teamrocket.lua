@@ -1,3 +1,11 @@
+--ANALYZE
+do
+	--[[#type CLIENT = true]]
+	--[[#type SERVER = true]]
+	--[[#type MENU = false]]
+	--[[#import<|"~/nattlua/glua.nlua"|>]]
+end
+
 if SERVER then
 	--[[#type EventCallbacks.PhysgunThrowPlayer = function=(attacker: IEntity, victim: IEntity)>(nil)]]
 end

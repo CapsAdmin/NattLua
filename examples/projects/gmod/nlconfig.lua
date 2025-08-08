@@ -14,70 +14,77 @@ local function GetFilesRecursively(dir, ext)
 	return paths
 end
 
-local function read_file(path)
-	local f = assert(io.open(path, "r"))
-	local contents = f:read("*all")
-	f:close()
-	return contents
-end
+local config = {commands = {}}
+config.commands["build-api"] = {
+	cb = function()
+		os.execute("nattlua run build_glua_base.lua")
+	end,
+}
+config.commands["fmt"] = {
+	cb = function()
+		local nl = require("nattlua")
 
-local function write_file(path, contents)
-	local f = assert(io.open(path, "w"))
-	f:write(contents)
-	f:close()
-end
-
-local config = {}
-config.format = function()
-	local nl = require("nattlua")
-	local lua_files = GetFilesRecursively("./lua/", ".lua")
-	local blacklist = {
-		["./lua/entities/gmod_wire_expression2/core/custom/pac.lua"] = true,
-	}
-	local config = {
-		emitter = {
-			preserve_whitespace = false,
-			string_quote = "\"",
-			no_semicolon = true,
-			force_parenthesis = true,
-			extra_indent = {
-				StartStorableVars = {
-					to = "EndStorableVars",
-				},
-				Start2D = {to = "End2D"},
-				Start3D = {to = "End3D"},
-				Start3D2D = {to = "End3D2D"},
-				-- in case it's localized
-				cam_Start2D = {to = "cam_End2D"},
-				cam_Start3D = {to = "cam_End3D"},
-				cam_Start3D2D = {to = "cam_End3D2D"},
-				cam_Start = {to = "cam_End"},
-				SetPropertyGroup = "toggle",
-			},
-		},
-	}
-
-	for _, path in ipairs(lua_files) do
-		if not blacklist[path] then
-			local lua_code = read_file(path)
-			local new_lua_code = assert(nl.Compiler(lua_code, "@" .. path, config)):Emit()
-
-			if new_lua_code:sub(#new_lua_code, #new_lua_code) ~= "\n" then
-				new_lua_code = new_lua_code .. "\n"
-			end
-
-			--assert(loadstring(new_lua_code, "@" .. path))
-			write_file(path, new_lua_code)
+		local function read_file(path)
+			local f = assert(io.open(path, "r"))
+			local contents = f:read("*all")
+			f:close()
+			return contents
 		end
-	end
-end
-config.build = function() -- TODO
-end
-config["get-compiler-config"] = function()
-	return {
-		-- TODO: need to get the absolute path of this nlconfig.lua file
-		lsp = {entry_point = GetFilesRecursively("examples/projects/gmod/lua/autorun")},
-		parser = {emit_environment = false},
-	}
-end
+
+		local function write_file(path, contents)
+			local f = assert(io.open(path, "w"))
+			f:write(contents)
+			f:close()
+		end
+
+		local lua_files = GetFilesRecursively("./lua/", ".lua")
+		local blacklist = {
+			["./lua/entities/gmod_wire_expression2/core/custom/pac.lua"] = true,
+		}
+		local config = {
+			emitter = {
+				preserve_whitespace = false,
+				string_quote = "\"",
+				no_semicolon = true,
+				force_parenthesis = true,
+				extra_indent = {
+					StartStorableVars = {
+						to = "EndStorableVars",
+					},
+					Start2D = {to = "End2D"},
+					Start3D = {to = "End3D"},
+					Start3D2D = {to = "End3D2D"},
+					-- in case it's localized
+					cam_Start2D = {to = "cam_End2D"},
+					cam_Start3D = {to = "cam_End3D"},
+					cam_Start3D2D = {to = "cam_End3D2D"},
+					cam_Start = {to = "cam_End"},
+					SetPropertyGroup = "toggle",
+				},
+			},
+		}
+
+		for _, path in ipairs(lua_files) do
+			if not blacklist[path] then
+				local lua_code = read_file(path)
+				local new_lua_code = assert(nl.Compiler(lua_code, "@" .. path, config)):Emit()
+
+				if new_lua_code:sub(#new_lua_code, #new_lua_code) ~= "\n" then
+					new_lua_code = new_lua_code .. "\n"
+				end
+
+				--assert(loadstring(new_lua_code, "@" .. path))
+				write_file(path, new_lua_code)
+			end
+		end
+	end,
+}
+config.commands["get-compiler-config"] = {
+	cb = function()
+		return {
+			lsp = {entry_point = GetFilesRecursively("examples/projects/gmod/lua/autorun")},
+			parser = {emit_environment = false},
+		}
+	end,
+}
 return config
