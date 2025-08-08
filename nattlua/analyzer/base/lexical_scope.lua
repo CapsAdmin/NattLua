@@ -376,11 +376,11 @@ function META:DumpScope()
 	local s = {}
 
 	for i, v in ipairs(self.upvalues.runtime.list) do
-		table.insert(s, "local " .. tostring(v.key) .. " = " .. tostring(v))
+		table.insert(s, "local " .. tostring(v:GetKey()) .. " = " .. tostring(v:GetValue()))
 	end
 
 	for i, v in ipairs(self.upvalues.typesystem.list) do
-		table.insert(s, "local type " .. tostring(v.key) .. " = " .. tostring(v))
+		table.insert(s, "local type " .. tostring(v:GetKey()) .. " = " .. tostring(v:GetValue()))
 	end
 
 	for i, v in ipairs(self:GetChildren()) do
