@@ -371,7 +371,7 @@ local function check_output(self, output, output_signature, function_node)
 		if err then
 			for i, v in ipairs(err) do
 				local reason, a, b, i = table.unpack(v)
-				analyzer:Error(
+				self:Error(
 					type_errors.context("return #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
 				)
 			end
