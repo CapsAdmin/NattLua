@@ -61,16 +61,16 @@ foo()
 
 attest.equal<|unpack<|ReturnType<|foo|>|>, (2,true,1)|>
 
-local function test()
+local function test333()
     if math.random() > 0.5 then
         return 1, 2
     end
     return 1, (function() return 2 end)()
 end
 
-test()
+test333()
 
-attest.equal<|unpack<|ReturnType<|test|>|>, (1, 2)|>
+attest.equal<|unpack<|ReturnType<|test333|>|>, (1, 2)|>
 
 
 local a = function()

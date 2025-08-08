@@ -30,8 +30,8 @@ analyze[[
 
     local lib = {} as contract
 
-    function lib.test(lol) 
-        attest.equal<|lol, number|>
+    function lib.test(lol)
+        attest.equal(lol, _ as number)
         return "test"
     end
 ]]

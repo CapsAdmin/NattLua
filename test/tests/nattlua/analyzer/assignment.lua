@@ -145,3 +145,18 @@ local function bar(...)
 	foo(1,2,...)
 end
 ]]
+analyze[[
+local type IToken = {type = string}
+
+analyzer function test(x: any) end
+
+analyzer function lol(x: any) end
+
+local function Token<||>
+	local x = IToken
+	attest.equal<|x, {type = string}|>
+	attest.equal<|IToken, {type = string}|>
+end
+
+test<|{Token<||>}|>
+]]
