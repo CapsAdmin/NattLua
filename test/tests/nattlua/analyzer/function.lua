@@ -1035,3 +1035,16 @@ analyze[[
 	local x = f(nil)
 	attest.equal(x, _ as number)
 ]]
+analyze[[
+local x = {1, 2}
+local type AnyTable = {[any] = any} | {}
+
+local function foo(x: AnyTable)
+	attest.strict_equal(x, _ as {[any] = any} | {})
+	table.insert(x, 1)
+end
+
+foo(x)
+attest.strict_equal(x, {1, 2})
+attest.strict_equal<|AnyTable, {[any] = any} | {}|>
+]]

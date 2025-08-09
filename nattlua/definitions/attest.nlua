@@ -14,6 +14,18 @@ analyzer function attest.equal(A: any, B: any, level: nil | 0 .. inf)
 	return A
 end
 
+analyzer function attest.strict_equal(A: any, B: any, level: nil | 0 .. inf)
+	if A:GetHash() ~= B:GetHash() then
+		analyzer:ThrowError(
+			"hashes A and B are not equal:\n" .. tostring(A:GetHash()) .. "\n" .. tostring(B:GetHash()),
+			level and level:GetData() or 2
+		)
+		return
+	end
+
+	return A
+end
+
 §env.typesystem.attest:Get(types.ConstString("equal")):SetPreventInputArgumentExpansion(true)
 
 analyzer function attest.literal(A: any)
@@ -64,4 +76,4 @@ analyzer function attest.pcall(callable: Function, ...: ...any)
 	return true, tuple:Unpack()
 end
 
-_G.attest = attest
+type _G.attest = attest

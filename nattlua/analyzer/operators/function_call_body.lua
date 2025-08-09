@@ -345,7 +345,7 @@ local function check_input(self, obj, input)
 
 			if doit then
 				-- if it's a ref argument we pass the incoming value
-				local t = contract:GetFirstValue():Copy()
+				local t = contract:GetFirstValue():Copy(nil, true)
 				t:SetContract(contract)
 				input:Set(i, t)
 			end
@@ -370,7 +370,7 @@ local function check_input(self, obj, input)
 
 			if doit then
 				-- if it's a ref argument we pass the incoming value
-				local t = contract:GetFirstValue():Copy()
+				local t = contract:GetFirstValue():Copy(nil, true)
 				t:SetContract(contract)
 				input:Set(i, t)
 			end
