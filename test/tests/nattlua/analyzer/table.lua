@@ -1128,7 +1128,6 @@ local function SplitHeader(header: string, ...: ...string)
 end
 
 ]]
-
 analyze[[
 local tbl = {"foo","bar","faz"}
 attest.equal(#tbl, 3)

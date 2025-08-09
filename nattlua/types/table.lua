@@ -9,6 +9,7 @@ local Nil = require("nattlua.types.symbol").Nil
 local Number = require("nattlua.types.number").Number
 local LNumber = require("nattlua.types.number").LNumber
 local LString = require("nattlua.types.string").LString
+local String = require("nattlua.types.string").String
 local ConstString = require("nattlua.types.string").ConstString
 local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
@@ -17,7 +18,6 @@ local context = require("nattlua.analyzer.context")
 local mutation_solver = require("nattlua.analyzer.mutation_solver")
 local Any = require("nattlua.types.any").Any
 --[[#local type TBaseType = META.TBaseType]]
-
 --[[#type TTable = META.@Self]]
 --[[#type TTable.suppress = boolean]]
 --[[#type TTable.mutable = boolean]]
@@ -562,53 +562,88 @@ function META:Delete(key--[[#: TBaseType]])
 	return true
 end
 
-function META:Remove(index--[[#: TBaseType]])
-	local index_num = index:GetData()
-	local removed_val = nil
-	local found_index = nil
-	
-	for i = #self.Data, 1, -1 do
-		local keyval = self.Data[i]
-		
-		if keyval.key.Type == "number" and keyval.key:IsLiteral() then
-			local key_num = keyval.key:GetData()
-			
-			if key_num == index_num then
-				removed_val = keyval.val
-				found_index = i
-				
-				keyval.val:SetParent()
-				keyval.key:SetParent()
-				table.remove(self.Data, i)
-				write_cache(self, keyval.key, nil)
-				break
-			end
-		end
+do
+	function META:Insert(val--[[#: TBaseType]])
+		self.size = self.size or 1
+		self:Set(LNumber(self.size), val)
+		self.size = self.size + 1
 	end
 
-	if not found_index then
-		return false, type_errors.table_index(self, index)
-	end
-	
-	for i, keyval in ipairs(self.Data) do
-		if keyval.key.Type == "number" and keyval.key:IsLiteral() then
-			local key_num = keyval.key:GetData()
-			
-			if key_num > index_num then
-				write_cache(self, keyval.key, nil)
-				local new_key = LNumber(key_num - 1)
-				new_key:SetParent(self)
-				keyval.key = new_key
-				write_cache(self, new_key, keyval)
-			end
+	function META:Concat(separator--[[#: TBaseType]])
+		if not self:IsLiteral() then return String() end
+
+		if
+			separator and
+			(
+				separator.Type ~= "string" or
+				not separator:IsLiteral()
+			)
+			and
+			not separator.Type ~= "symbol" and
+			separator:IsBoolean()
+		then
+			return String()
 		end
-	end
-	
-	if self.size and self.size > index_num then
-		self.size = self.size - 1
+
+		local out = {}
+
+		for i, keyval in ipairs(self:GetData()) do
+			if not keyval.val:IsLiteral() or keyval.val.Type == "union" then
+				return String()
+			end
+
+			out[i] = keyval.val:GetData()
+		end
+
+		return table.concat(out, separator and separator:GetData() or nil)
 	end
 
-	return removed_val
+	function META:Remove(index--[[#: TBaseType]])
+		local index_num = index:GetData()
+		local removed_val = nil
+		local found_index = nil
+
+		for i = #self.Data, 1, -1 do
+			local keyval = self.Data[i]
+
+			if keyval.key.Type == "number" and keyval.key:IsLiteral() then
+				local key_num = keyval.key:GetData()
+
+				if key_num == index_num then
+					removed_val = keyval.val
+					found_index = i
+					keyval.val:SetParent()
+					keyval.key:SetParent()
+					table.remove(self.Data, i)
+					write_cache(self, keyval.key, nil)
+
+					break
+				end
+			end
+		end
+
+		if not found_index then
+			return false, type_errors.table_index(self, index)
+		end
+
+		for i, keyval in ipairs(self.Data) do
+			if keyval.key.Type == "number" and keyval.key:IsLiteral() then
+				local key_num = keyval.key:GetData()
+
+				if key_num > index_num then
+					write_cache(self, keyval.key, nil)
+					local new_key = LNumber(key_num - 1)
+					new_key:SetParent(self)
+					keyval.key = new_key
+					write_cache(self, new_key, keyval)
+				end
+			end
+		end
+
+		if self.size and self.size > index_num then self.size = self.size - 1 end
+
+		return removed_val
+	end
 end
 
 function META:GetValueUnion()
@@ -685,12 +720,6 @@ function META:FindKeyValWide(key--[[#: TBaseType]])
 	end
 
 	return false, type_errors.because(type_errors.table_index(self, key), reasons)
-end
-
-function META:Insert(val--[[#: TBaseType]])
-	self.size = self.size or 1
-	self:Set(LNumber(self.size), val)
-	self.size = self.size + 1
 end
 
 function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete--[[#: boolean | nil]])

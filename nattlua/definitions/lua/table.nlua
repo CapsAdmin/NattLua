@@ -4,32 +4,7 @@ type Modules["table.clear"] = function=(Table)>()
 
 do -- Basic table manipulation functions
 	analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
-		if not tbl:IsLiteral() then return types.String() end
-
-		if
-			separator and
-			(
-				separator.Type ~= "string" or
-				not separator:IsLiteral()
-			)
-			and
-			not separator.Type ~= "symbol" and
-			separator:IsBoolean()
-		then
-			return types.String()
-		end
-
-		local out = {}
-
-		for i, keyval in ipairs(tbl:GetData()) do
-			if not keyval.val:IsLiteral() or keyval.val.Type == "union" then
-				return types.String()
-			end
-
-			out[i] = keyval.val:GetData()
-		end
-
-		return table.concat(out, separator and separator:GetData() or nil)
+		return tbl:Concat(separator)
 	end
 
 	analyzer function table.insert(tbl: List<|any|>, pos_val: AllTypesUnion ~ nil, val_: AllTypesUnion)
