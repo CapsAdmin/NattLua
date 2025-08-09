@@ -781,7 +781,7 @@ analyze[[
     
     x.foo.lol = true
     
-    attest.equal(Table, _ as {[any] = any} | {})
+    attest.equal(Table, _ as {[any] = any} )
 ]]
 analyze[[
     
@@ -797,7 +797,7 @@ analyze[[
     luadata.SetModifier("table", function(tbl, context)
         context.done[tbl] = true
     
-        attest.equal(Table, _ as {[any] = any} | {})
+        attest.equal(Table, _ as {[any] = any})
     end)
 ]]
 analyze[[

@@ -1,5 +1,5 @@
 function FFICtype<|obj: any|>
-	local type t = TType<|obj|>
+	local type t = TypeName<|obj|>
 
 	if t == "any" then return obj end
 

@@ -41,8 +41,6 @@ do -- Basic table manipulation functions
 			pos = pos:Widen()
 		end
 
-		assert(type(pos) ~= "number")
-		assert(val)
 		analyzer:NewIndexOperator(tbl, pos, val)
 	end
 

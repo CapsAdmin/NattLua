@@ -1,6 +1,6 @@
 type _ = any
 type boolean = true | false
-type AnyTable = {[any] = any} | {}
+type AnyTable = {[any] = any}
 type AnyFunction = function=(...any)>(...any)
 type userdata = AnyTable
 type ctype = any
@@ -385,12 +385,6 @@ analyzer function LuaJITArch()
 	return jit and jit.arch or "unknown"
 end
 
-analyzer function TType(T: any)
-	return T.Type
-end
-
-analyzer function Any()
+type Any = (analyzer function()
 	return types.Any()
-end
-
-type Any = Any()
+end)()
