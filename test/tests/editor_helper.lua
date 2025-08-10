@@ -239,18 +239,125 @@ do
 end
 
 do
-	local helper = single_file([[local x = 10*2]])
-	local hints = helper:GetInlayHints(path, 1, 1, 1, 100)
-	assert(#hints == 1)
-	assert(hints[1].start == 7)
-	assert(hints[1].stop == 7)
-	assert(hints[1].label == "20")
-end
+	local SemanticTokenTypes = {
+		-- identifiers or reference
+		"class", -- a class type. maybe META or Meta?
+		"typeParameter", -- local type >foo< = true
+		"parameter", -- function argument: function foo(>a<)
+		"variable", -- a local or global variable.
+		"property", -- a member property, member field, or member variable.
+		"enumMember", -- an enumeration property, constant, or member. uppercase variables and global non tables? local FOO = true ?
+		"event", --  an event property.
+		"function", -- local or global function: local function >foo<
+		"method", --  a member function or method: string.>bar<()
+		"type", -- misc type
+		-- tokens
+		"comment", -- 
+		"string", -- 
+		"keyword", -- 
+		"number", -- 
+		"regexp", -- regular expression literal.
+		"operator", --
+		"decorator", -- decorator syntax, maybe for @Foo in tables, $ and §
+		-- other identifiers or references
+		"namespace", -- namespace, module, or package.
+		"enum", -- 
+		"interface", --
+		"struct", -- 
+		"decorator", -- decorators and annotations.
+		"macro", --  a macro.
+		"label", --  a label. ??
+	}
 
-do
-	local helper = single_file([[local x]])
-	local integers = helper:GetSemanticTokens(path)
-	assert((#integers / 5) == 2)
+	local function convert_semantic_tokens_to_tokens(integers, source_code)
+		local tokens = {}
+		local current_line = 1
+		local current_char = 1
+		-- Split source code into lines for easier position tracking
+		local lines = {}
+
+		for line in source_code:gmatch("([^\n]*)\n?") do
+			table.insert(lines, line)
+		end
+
+		for i = 1, #integers, 5 do
+			local delta_line = integers[i]
+			local delta_start = integers[i + 1]
+			local length = integers[i + 2]
+			local token_type = integers[i + 3]
+			local modifiers = integers[i + 4]
+			-- Update current position based on deltas
+			current_line = current_line + delta_line
+
+			if delta_line == 0 then
+				-- Same line, relative to previous token
+				current_char = current_char + delta_start
+			else
+				-- New line, absolute position
+				current_char = delta_start + 1
+			end
+
+			-- Extract the token text from source code
+			local token_text = ""
+
+			if current_line <= #lines then
+				local line = lines[current_line]
+
+				if current_char <= #line then
+					token_text = line:sub(current_char, current_char + length - 1)
+				end
+			end
+
+			-- Create token info
+			local token_info = {
+				line = current_line,
+				character = current_char,
+				length = length,
+				text = token_text,
+				token_type = SemanticTokenTypes[token_type + 1],
+				modifiers = modifiers,
+				-- Additional computed info
+				start_pos = current_char,
+				end_pos = current_char + length - 1,
+			}
+			table.insert(tokens, token_info)
+		-- Update current_char for next iteration (but don't advance line)
+		-- The next token's delta will be relative to this position
+		end
+
+		return tokens
+	end
+
+	do
+		local helper = single_file([[local x = 10*2]])
+		local hints = helper:GetInlayHints(path, 1, 1, 1, 100)
+		assert(#hints == 1)
+		assert(hints[1].start == 7)
+		assert(hints[1].stop == 7)
+		assert(hints[1].label == "20")
+	end
+
+	do
+		local helper = single_file([[local x]])
+		local integers = helper:GetSemanticTokens(path)
+		assert((#integers / 5) == 2)
+	end
+
+	do
+		local str = [[local x = loadstring("local y = 1 return y")]]
+		local helper = single_file(str)
+		local integers = helper:GetSemanticTokens(path)
+		local tokens = convert_semantic_tokens_to_tokens(integers, str)
+		equal(#tokens, 14)
+	end
+
+	do
+		local str = [[local x = analyze("local y = 1 return y")]]
+		local helper = single_file(str)
+		local integers = helper:GetSemanticTokens(path)
+		local tokens = convert_semantic_tokens_to_tokens(integers, str)
+		equal(#tokens, 14)
+	end
 end
 
 _G.TEST = false

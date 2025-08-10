@@ -1109,12 +1109,20 @@ do
 	end
 
 	local function get_semantic_type(token)
+		if token.type == "end_of_file" then return end
+
+		if token.type == "space" then return end
+
+		if token.type == "multiline_comment" or token.type == "line_comment" then
+			return "comment"
+		end
+
 		if token.parent then
 			do
 				local parent = token.parent
 
 				while parent do
-					if parent:IsUnreachable() then return "keyword", {"deprecated"} end
+					if parent.IsUnreachable and parent:IsUnreachable() then return "keyword", {"deprecated"} end
 
 					parent = parent.parent
 				end
@@ -1163,7 +1171,7 @@ do
 
 		if token.type == "symbol" then return "keyword" end
 
-		do
+		if token.FindType then
 			local obj
 			local types = token:FindType()
 
@@ -1268,7 +1276,7 @@ do
 			end
 		end
 
-		return "comment"
+		return "type"
 	end
 
 	function META:GetSemanticTokens(path)
@@ -1279,39 +1287,164 @@ do
 		local last_y = 0
 		local last_x = 0
 
-		for _, token in ipairs(data.tokens) do
-			if token.type ~= "end_of_file" then
-				local type, modifiers = get_semantic_type(token)
+		local function process_token(token)
+			local type, modifiers = get_semantic_type(token)
 
-				if type then
-					local data = data.code:SubPosToLineChar(token.start, token.stop)
-					local len = #token.value
-					local y = (data.line_start - 1) - last_y
-					local x = (data.character_start - 1) - last_x
+			if not type then return end
 
-					-- x is not relative when there's a new line
-					if y ~= 0 then x = data.character_start - 1 end
+			assert(tokenTypeMap[type], "invalid type " .. type)
+			local pos_data = data.code:SubPosToLineChar(token.start, token.stop)
+			local modifier_result = 0
 
-					if x >= 0 and y >= 0 then
-						table.insert(integers, y)
-						table.insert(integers, x)
-						table.insert(integers, len)
-						assert(tokenTypeMap[type], "invalid type " .. type)
-						table.insert(integers, tokenTypeMap[type])
-						local result = 0
+			if modifiers then
+				for _, mod in ipairs(modifiers) do
+					assert(tokenModifiersMap[mod], "invalid modifier " .. mod)
+					modifier_result = bit.bor(modifier_result, bit.lshift(1, tokenModifiersMap[mod]))
+				end
+			end
 
-						if modifiers then
-							for _, mod in ipairs(modifiers) do
-								assert(tokenModifiersMap[mod], "invalid modifier " .. mod)
-								result = bit.bor(result, bit.lshift(1, tokenModifiersMap[mod])) -- TODO, doesn't seem to be working
-							end
-						end
+			local lines = {}
 
-						table.insert(integers, result)
-						last_y = data.line_start - 1
-						last_x = data.character_start - 1
+			for line in token.value:gmatch("([^\n]*)\n?") do
+				if #line > 0 or #lines == 0 then table.insert(lines, line) end
+			end
+
+			local line_start = pos_data.line_start - 1
+			local line_stop = pos_data.line_stop - 1
+			local char_start = pos_data.character_start - 1
+			local char_stop = pos_data.character_stop - 1
+
+			-- Process each line
+			for i = 1, #lines do
+				local current_line = line_start + (i - 1)
+
+				if current_line > line_stop then break end
+
+				local y = current_line - last_y
+				local x, len
+
+				if i == 1 then
+					x = char_start - last_x
+
+					if y ~= 0 then x = char_start end
+
+					len = #lines[i]
+				else
+					x = 0
+					len = #lines[i]
+				end
+
+				if x >= 0 and y >= 0 then
+					table.insert(integers, y)
+					table.insert(integers, x)
+					table.insert(integers, len)
+					table.insert(integers, tokenTypeMap[type])
+					table.insert(integers, modifier_result)
+
+					if i == 1 then
+						last_y = line_start
+						last_x = char_start
+					else
+						last_y = current_line
+						last_x = len
 					end
 				end
+			end
+		end
+
+		for i, token in ipairs(data.tokens) do
+			if token.whitespace then
+				for _, token in ipairs(token.whitespace) do
+					process_token(token)
+				end
+			end
+
+			local prev = data.tokens[i - 1]
+			local types = token:FindType()
+
+			if
+				token.type == "string" and
+				(
+					(
+						data.tokens[i - 1].value == "loadstring" or
+						data.tokens[i - 2].value == "loadstring"
+					)
+					or
+					(
+						data.tokens[i - 1].value == "analyze" or
+						data.tokens[i - 2].value == "analyze"
+					)
+					or
+					(
+						data.tokens[i - 1].value == "cdef" or
+						data.tokens[i - 2].value == "cdef"
+					)
+					or
+					types[1] and
+					types[1].Type == "string" and
+					types[1].lua_compiler
+				)
+			then
+				local func_kind = data.tokens[i - 1].value or data.tokens[i - 2].value
+				local start
+				local stop
+				local t = token.value:sub(1, 1)
+
+				if t == "\"" then
+					start = t
+					stop = t
+				elseif t == "'" then
+					start = t
+					stop = t
+				elseif t == "[" then
+					start = token.value:match("^%[[=]*%[")
+					stop = start:gsub("%[", "]")
+				else
+					error("what? " .. token.value)
+				end
+
+				process_token(
+					{
+						type = "string",
+						value = start,
+						start = token.start,
+						stop = token.start + #start,
+					}
+				)
+				local offset = token.start + #start - 1
+				local tokens
+
+				if types[1] and types[1].c_tokens then
+					tokens = types[1].c_tokens
+				elseif types[1] and types[1].lua_compiler then
+					tokens = types[1].lua_compiler.Tokens
+				else
+					tokens = Compiler(token.value:sub(#start + 1, -#stop - 1), "temp"):Lex().Tokens
+				end
+
+				for i, token in ipairs(tokens) do
+					token.start = token.start + offset
+					token.stop = token.stop + offset
+
+					if token.whitespace then
+						for _, token in ipairs(token.whitespace) do
+							process_token(token)
+						end
+					end
+
+					process_token(token)
+				end
+
+				process_token(
+					{
+						type = "string",
+						value = start,
+						start = token.stop,
+						stop = token.stop + #start,
+					}
+				)
+			else
+				process_token(token)
 			end
 		end
 

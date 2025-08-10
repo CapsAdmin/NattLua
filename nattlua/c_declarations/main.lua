@@ -58,6 +58,9 @@ local function gen(parser, ...)
 end
 
 local function analyze(c_code, mode, env, analyzer, ...)
+	local c_code_string_obj = c_code
+	c_code = c_code:GetData()
+
 	if mode == "typeof" then
 		c_code = "typedef void (*TYPEOF_CDECL)(" .. c_code .. ");"
 	elseif mode == "ffinew" then
@@ -67,6 +70,7 @@ local function analyze(c_code, mode, env, analyzer, ...)
 	local code = Code(c_code, "test.c")
 	local lex = Lexer(code)
 	local tokens = lex:GetTokens()
+	c_code_string_obj.c_tokens = tokens
 	local parser = Parser(tokens, code)
 	parser.OnError = function(parser, code, msg, start, stop, ...)
 		Compiler.OnDiagnostic({}, code, msg, "error", start, stop, nil, ...)
@@ -99,7 +103,7 @@ function cparser.sizeof(cdecl, len)
 		local ffi = require("ffi")
 		local analyzer = analyzer_context:GetCurrentAnalyzer()
 		local env = analyzer:GetScopeHelper(analyzer.function_scope)
-		local vars, typs = analyze(cdecl:GetData(), "typeof", env, analyzer)
+		local vars, typs = analyze(cdecl, "typeof", env, analyzer)
 		local ctype = extract_anonymous_type(typs)
 		local ok, val = pcall(ffi.sizeof, cdecl:GetData(), len and len:GetData() or nil)
 
@@ -113,7 +117,7 @@ function cparser.cdef(cdecl, ...)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = analyze(cdecl:GetData(), "cdef", env, analyzer, ...)
+	local vars, typs = analyze(cdecl, "cdef", env, analyzer, ...)
 	variables = vars
 	types = typs
 
@@ -137,7 +141,7 @@ function cparser.cast(cdecl, src)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = analyze(cdecl:GetData(), "typeof", env, analyzer)
+	local vars, typs = analyze(cdecl, "typeof", env, analyzer)
 	local ctype = extract_anonymous_type(typs)
 
 	if ctype.Type == "union" then
@@ -164,7 +168,7 @@ function cparser.typeof(cdecl, ...)
 
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = analyze(cdecl:GetData(), "typeof", env, analyzer, ...)
+	local vars, typs = analyze(cdecl, "typeof", env, analyzer, ...)
 	local ctype = extract_anonymous_type(typs)
 
 	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
@@ -185,7 +189,7 @@ function cparser.get_type(cdecl, ...)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = analyze(cdecl:GetData(), "typeof", env, analyzer, ...)
+	local vars, typs = analyze(cdecl, "typeof", env, analyzer, ...)
 	local ctype = extract_anonymous_type(typs)
 	return ctype
 end
@@ -193,7 +197,7 @@ end
 function cparser.new(cdecl, ...)
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = analyze(cdecl:GetData(), "ffinew", env, analyzer, ...)
+	local vars, typs = analyze(cdecl, "ffinew", env, analyzer, ...)
 	local ctype = extract_anonymous_type(vars)
 	return ctype
 end

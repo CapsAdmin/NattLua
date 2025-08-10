@@ -150,9 +150,9 @@ elseif find("c_declarations") and not test_focus then
 	run_test("test/tests/nattlua/c_declarations/parsing.lua")
 elseif find("coverage") then
 	run_test("test/tests/coverage.lua")
-elseif find("nattlua/editor_helper/editor.lua") then
-	run_test("test/tests/lsp/editor.lua")
-	os.execute("luajit nattlua.lua build fast && luajit nattlua.lua install")
+elseif find("language_server/editor_helper.lua") then
+	run_test("test/tests/editor_helper.lua")
+--os.execute("luajit nattlua.lua build fast && luajit nattlua.lua install")
 elseif find("language_server/server") then
 	os.execute("luajit nattlua.lua build fast && luajit nattlua.lua install")
 elseif find("typed_ffi.nlua") and test_focus then

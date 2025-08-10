@@ -207,6 +207,7 @@ analyzer function load(code: string | function=()>(string | nil), chunk_name: st
 	assert(compiler:Lex())
 	assert(compiler:Parse())
 	local f = types.Function()
+	code.lua_compiler = compiler
 
 	f:SetAnalyzerFunction(function(...)
 		return analyzer:AnalyzeRootStatement(compiler.SyntaxTree, ...)
