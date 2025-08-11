@@ -261,7 +261,7 @@ end
 function META.IsSubsetOfTuple(a--[[#: TTuple]], b--[[#: TTuple]])
 	if a:Equal(b) then return true end
 
-	for i = 1, math.max(a:GetMinimumLength(), b:GetMinimumLength()) do
+	for i = 1, math.max(a:GetMinimumLength2(), b:GetMinimumLength2()) do
 		local ok, reason, a_val, b_val, i = a.IsSubsetOfTupleAtIndex(a, b, i)
 
 		if not ok then return ok, reason, a_val, b_val, i end
@@ -275,11 +275,12 @@ function META.SubsetOrFallbackWithTuple(a--[[#: TTuple]], b--[[#: TTuple]])
 
 	local errors = {}
 
-	for i = 1, math.max(a:GetMinimumLength(), b:GetMinimumLength()) do
+	for i = 1, math.max(a:GetMinimumLength2(), b:GetMinimumLength2()) do
 		local ok, reason, a_val, b_val, offset = a.IsSubsetOfTupleAtIndex(a, b, i)
 
 		if not ok then
 			if not errors[1] then a = a:Copy() end
+
 			a:Set(i, b_val)
 			table.insert(errors, {reason, a_val, b_val, offset})
 		end
@@ -536,6 +537,21 @@ function META:GetElementCount()--[[#: number]]
 	local remainder = self.Remainder and self.Remainder:GetElementCount() or 0
 	local rep = self.Repeat or 1
 	return (#self:GetData() + remainder) * rep
+end
+
+function META:GetMinimumLength2()
+	if self.Repeat == math.huge or self.Repeat == 0 then return 0 end
+
+	local len = #self:GetData()
+	local found_nil--[[#: boolean]] = false
+
+	for i = #self:GetData(), 1, -1 do
+		local obj = self:GetData()[i]--[[# as TBaseType]]
+
+		if not obj:IsNil() then return len else len = len - 1 end
+	end
+
+	return len
 end
 
 function META:GetMinimumLength()

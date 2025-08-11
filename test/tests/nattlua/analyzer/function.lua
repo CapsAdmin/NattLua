@@ -1048,3 +1048,23 @@ foo(x)
 attest.strict_equal(x, {1, 2})
 attest.strict_equal<|AnyTable, {[any] = any} | {}|>
 ]]
+analyze(
+	[[
+local function lasterror(): string,number
+	return _ as string, _ as number
+end
+
+local function blocking(): boolean | nil,string,number
+	local ret = _ as number
+
+	if ret < 0 then return nil, lasterror() end
+
+	if _ as boolean then return true end
+
+	return false
+end
+
+local a, b, c = blocking()
+]],
+	"index 2 does not exist.+index 3 does not exist"
+)

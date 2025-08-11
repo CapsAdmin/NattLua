@@ -3,6 +3,7 @@ local table = _G.table
 local type_errors = require("nattlua.types.error_messages")
 local Tuple = require("nattlua.types.tuple").Tuple
 local Table = require("nattlua.types.table").Table
+local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
 local Function = require("nattlua.types.function").Function
@@ -410,8 +411,12 @@ local function check_output(self, output, output_signature, function_node)
 	if output.Type == "tuple" and output:HasOneValue() then
 		local first_val = output:GetWithNumber(1)
 
-		if first_val and first_val.Type == "union" and first_val:HasType("tuple") then
-			output = output:GetWithNumber(1)
+		if first_val then
+			if first_val.Type == "union" and first_val:HasType("tuple") then
+				output = output:GetWithNumber(1)
+			elseif first_val.Type == "tuple" then
+				output = first_val
+			end
 		end
 	end
 
@@ -596,7 +601,32 @@ return function(self, obj, input)
 
 	if is_type_function then self:PushAnalyzerEnvironment("typesystem") end
 
-	local output = self:AnalyzeStatementsAndCollectOutputSignatures(function_node)
+	local returns = self:AnalyzeStatementsAndCollectOutputSignatures(function_node)
+	local outputs = {}
+	local output
+
+	do
+		local union = Union()
+
+		for _, ret in ipairs(returns) do
+			if #ret.types == 1 then
+				union:AddType(ret.types[1])
+				table.insert(outputs, {obj = Tuple(ret.types), node = ret.node})
+			elseif #ret.types == 0 then
+				local tup = Tuple({Nil()})
+				table.insert(outputs, {obj = tup, node = ret.node})
+				union:AddType(tup)
+			else
+				local tup = Tuple(ret.types)
+				union:AddType(tup)
+				table.insert(outputs, {obj = tup, node = ret.node})
+			end
+		end
+
+		output = union:Simplify()
+
+		if output.Type ~= "tuple" then output = Tuple({output}) end
+	end
 
 	if is_type_function then self:PopAnalyzerEnvironment() end
 
@@ -606,9 +636,6 @@ return function(self, obj, input)
 	self:PopTruthyExpressionContext()
 	self:ClearScopedTrackedObjects(scope)
 	self:PopStashedTrackedChanges()
-
-	if output.Type ~= "tuple" then output = Tuple({output}) end
-
 	restore_mutated_types(self)
 	-- used for analyzing side effects
 	obj:AddScope(input, output, scope)
@@ -678,8 +705,11 @@ return function(self, obj, input)
 	end
 
 	-- check against the function's return type
-	check_output(self, output, output_signature, function_node)
+	for _, output in ipairs(outputs) do
+		check_output(self, output.obj, output_signature, output.node)
+	end
 
+	--check_output(self, output, output_signature, function_node)
 	if function_node.environment == "typesystem" then return output end
 
 	local contract = output_signature:Copy()

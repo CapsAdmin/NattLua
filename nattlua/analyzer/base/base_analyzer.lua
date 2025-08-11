@@ -16,6 +16,7 @@ local ConstString = require("nattlua.types.string").ConstString
 local Tuple = require("nattlua.types.tuple").Tuple
 local Nil = require("nattlua.types.symbol").Nil
 local Table = require("nattlua.types.table").Table
+local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 local context = require("nattlua.analyzer.context")
 local path_util = require("nattlua.other.path")
@@ -45,7 +46,22 @@ return function(META)
 		g:Set(ConstString("_G"), g)
 		self:PushAnalyzerEnvironment("runtime")
 		self:CreateLocalValue("...", argument_tuple)
-		local analyzed_return = self:AnalyzeStatementsAndCollectOutputSignatures(statement)
+		local ret = self:AnalyzeStatementsAndCollectOutputSignatures(statement)
+		local union = Union()
+
+		for _, ret in ipairs(ret) do
+			if #ret.types == 1 then
+				union:AddType(ret.types[1])
+			elseif #ret.types == 0 then
+				local tup = Tuple({Nil()})
+				union:AddType(tup)
+			else
+				local tup = Tuple(ret.types)
+				union:AddType(tup)
+			end
+		end
+
+		local analyzed_return =  union:Simplify()
 		self:PopAnalyzerEnvironment()
 		self:PopGlobalEnvironment("runtime")
 		self:PopGlobalEnvironment("typesystem")
@@ -54,7 +70,7 @@ return function(META)
 		self.analyzed_root_statements[statement] = analyzed_return
 		self:PopCurrentStatement()
 		return analyzed_return
-	end
+	end	
 
 	function META:AnalyzeExpressions(expressions, out)
 		if not expressions then return end

@@ -20,6 +20,8 @@ analyze[[
         if math.random() > 0.5 then
             return _ as string
         end
+
+        return "no error"
     end
 
     local function test(): ErrorReturn<|{foo = number}|>

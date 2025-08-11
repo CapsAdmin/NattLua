@@ -67,22 +67,14 @@ return function(META)
 			self:Return(statement, {Nil()})
 		end
 
-		local union = Union()
+		local out = {}
 
-		for _, ret in ipairs(scope:GetOutputSignature()) do
-			if #ret.types == 1 then
-				union:AddType(ret.types[1])
-			elseif #ret.types == 0 then
-				local tup = Tuple({Nil()})
-				union:AddType(tup)
-			else
-				local tup = Tuple(ret.types)
-				union:AddType(tup)
-			end
+		for i, ret in ipairs(scope:GetOutputSignature()) do
+			out[i] = ret
 		end
 
 		scope:ClearCertainOutputSignatures()
-		return union:Simplify()
+		return out
 	end
 
 	function META:ThrowSilentError(assert_expression)
