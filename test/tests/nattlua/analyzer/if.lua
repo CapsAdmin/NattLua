@@ -1858,3 +1858,17 @@ if x.type ~= "number" then return end
 
 attest.equal(x.type, "number")
 ]]
+analyze[[
+local function check()
+	return _ as boolean or error("hello")
+end
+
+local function test()
+	local x = 1
+	check()
+	return x
+end
+
+local y = test()
+attest.equal(y, 1)
+]]

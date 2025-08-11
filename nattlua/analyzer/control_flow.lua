@@ -84,9 +84,11 @@ return function(META)
 			local function_scope = frame.scope:GetNearestFunctionScope()
 
 			if not assert_expression or assert_expression:IsCertainlyTrue() then
-				function_scope.lua_silent_error = function_scope.lua_silent_error or {}
-				table_insert(function_scope.lua_silent_error, self:GetScope())
-				frame.scope:UncertainReturn()
+				if not self.LEFT_SIDE_OR or self.LEFT_SIDE_OR:IsCertainlyTrue() then
+					function_scope.lua_silent_error = function_scope.lua_silent_error or {}
+					table_insert(function_scope.lua_silent_error, self:GetScope())
+					frame.scope:UncertainReturn()
+				end
 			end
 
 			if assert_expression and assert_expression:IsTruthy() then
