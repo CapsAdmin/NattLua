@@ -249,6 +249,7 @@ do
 
 		self.timeout = self.timeout or {}
 		local node = self:GetCurrentStatement()
+		if not node then return end
 		self.timeout[node] = (self.timeout[node] or 0) + 1
 
 		if count < max_iterations then return end

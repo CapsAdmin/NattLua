@@ -1,7 +1,10 @@
+--ANALYZE
 local formating = require("nattlua.other.formating")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("token")
 local reverse_escape_string = require("nattlua.other.reverse_escape_string")
+local runtime_syntax = require("nattlua." .. "syntax.runtime"--[[# as any]]) -- TODO infinite require token.lua recursion
+local typesystem_syntax = require("nattlua." .. "syntax.typesystem"--[[# as any]])
 local setmetatable = _G.setmetatable
 --[[#type META.@Name = "Token"]]
 --[[#type META.TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
@@ -17,6 +20,7 @@ local setmetatable = _G.setmetatable
 	potential_idiv = nil | boolean,
 	parent = nil | any,
 	whitespace = nil | List<|CurrentType<|"table", 1|>|>,
+	c_keyword = nil | true,
 }]]
 --[[#type META.Token = META.@Self]]
 
@@ -75,8 +79,6 @@ function META:GetLastAssociatedType()
 end
 
 function META:FindType()
-	if false--[[# as true]] then return end
-
 	local found_parents = {}
 
 	do
@@ -104,33 +106,18 @@ function META:FindType()
 		local found = false
 
 		for _, obj in ipairs(node:GetAssociatedTypes()) do
-			if obj.Type == "string" and obj:GetData() == self.value then
-
-			elseif obj.Type == "number" and tostring(obj:GetData()) == self.value then
+			if
+				(
+					obj.Type == "string" or
+					obj.Type == "number"
+				)
+				and
+				tostring(obj:GetData()) == self.value
+			then
 
 			else
-				local exists = false
-
-				-- duplicates of these have been taken care of already
-				if
-					obj.Type ~= "string" and
-					obj.Type ~= "number" and
-					obj.Type ~= "symbol" and
-					obj.Type ~= "any"
-				then
-					for i, v in ipairs(types) do
-						if v:Equal(obj) then
-							exists = true
-
-							break
-						end
-					end
-				end
-
-				if not exists then
-					table.insert(types, obj)
-					found = true
-				end
+				table.insert(types, obj)
+				found = true
 			end
 		end
 
@@ -141,9 +128,7 @@ function META:FindType()
 end
 
 function META:FindUpvalue()
-	if false--[[# as true]] then return end
-
-	local node = self
+	local node = self--[[# as any]]
 
 	while node do
 		local types = node:GetAssociatedTypes()
@@ -177,6 +162,253 @@ function META:GetStringValue()
 			self.string_value = value:sub(start + 1, -start - 1)
 			return self.string_value
 		end
+	end
+end
+
+function META:IsUnreachable()--[[#: boolean]]
+	local parent = self.parent--[[# as any]]
+
+	while parent do
+		if parent.IsUnreachable and parent:IsUnreachable() then return true end
+
+		parent = parent.parent
+	end
+
+	return false
+end
+
+do
+	function META:GetMainType()--[[#: any]]
+		if self.FindType then
+			local types = self:FindType()
+			local obj = types[1]
+
+			if not obj then return end
+
+			if obj.Type == "tuple" and obj:HasOneValue() then
+				obj = obj:GetFirstValue()
+			elseif obj.Type == "union" and obj:GetCardinality() == 1 then
+				obj = obj:GetData()[1]
+			end
+
+			return obj
+		end
+	end
+
+	function META:IsKeyword()--[[#: boolean]]
+		local self = self--[[# as any]]
+
+		if self.c_keyword then return true end
+
+		if
+			self.parent and
+			(
+				runtime_syntax:IsNonStandardKeyword(self) or
+				typesystem_syntax:IsNonStandardKeyword(self)
+			)
+			and
+			-- check if it's used in a statement, because foo.>>continue<< = true should not highlight as a keyword
+			self.parent.type == "statement"
+		then
+			return true
+		end
+
+		if runtime_syntax:IsKeyword(self) or typesystem_syntax:IsKeyword(self) then
+			return true
+		end
+
+		if self.parent then
+			if
+				self.parent.kind == "value" and
+				self.parent.parent.kind == "binary_operator" and
+				(
+					self.parent.parent.value and
+					self.parent.parent.value.value == "." or
+					self.parent.parent.value.value == ":"
+				)
+			then
+				if self.value:sub(1, 1) == "@" then return true end
+			end
+		end
+
+		return false
+	end
+
+	function META:IsKeywordValue()--[[#: boolean]]
+		local self = self--[[# as any]]
+
+		if runtime_syntax:IsKeywordValue(self) or typesystem_syntax:IsKeywordValue(self) then
+			return true
+		end
+
+		return false
+	end
+
+	function META:IsSymbol()--[[#: boolean]]
+		local self = self--[[# as any]]
+
+		-- true, false, nil
+		if runtime_syntax:IsKeywordValue(self) or typesystem_syntax:IsKeywordValue(self) then
+			return true
+		end
+
+		local obj = self:GetMainType()
+
+		if obj then
+			if obj.Type == "symbol" then return true end
+
+			if obj.Type == "union" and obj:IsTypeExceptNil("symbol") then
+				return true
+			end
+		end
+
+		return false
+	end
+
+	function META:IsOperator()--[[#: boolean]]
+		local self = self--[[# as any]]
+
+		if
+			self.value == "." or
+			self.value == ":" or
+			self.value == "=" or
+			self.value == "or" or
+			self.value == "and" or
+			self.value == "not" or
+			runtime_syntax:GetTokenType(self):find("operator", nil, true) or
+			typesystem_syntax:GetTokenType(self):find("operator", nil, true)
+		then
+			return true
+		end
+
+		return false
+	end
+
+	function META:IsNumber()--[[#: boolean]]
+		if self.type == "number" then return true end
+
+		local obj = self:GetMainType()
+
+		if obj then
+			if obj.Type == "number" or obj.Type == "range" then return true end
+
+			if
+				obj.Type == "union" and
+				(
+					obj:IsTypeExceptNil("number") or
+					obj:IsTypeExceptNil("range")
+				)
+			then
+				return true
+			end
+		end
+
+		return false
+	end
+
+	function META:IsString()--[[#: boolean]]
+		if self.type == "string" then return true end
+
+		local obj = self:GetMainType()
+
+		if obj then
+			if obj.Type == "string" then return true end
+
+			if obj.Type == "union" and obj:IsTypeExceptNil("string") then
+				return true
+			end
+		end
+
+		return false
+	end
+
+	function META:IsAny()--[[#: boolean]]
+		local obj = self:GetMainType()
+
+		if obj and obj.Type == "any" then return true end
+
+		return false
+	end
+
+	function META:IsFunction()--[[#: boolean]]
+		if
+			self.type == "letter" and
+			self.parent and
+			self.parent.kind:find("function", nil, true)
+		then
+
+		--return true
+		end
+
+		local obj = self:GetMainType()
+
+		if obj then
+			if obj.Type == "function" then return true end
+
+			if obj.Type == "union" and obj:IsTypeExceptNil("function") then
+				return true
+			end
+
+			local parent = obj:GetParent()
+
+			if parent then if obj.Type == "function" then return true -- ?
+			end end
+		end
+
+		return false
+	end
+
+	function META:IsTable()--[[#: boolean]]
+		local obj = self:GetMainType()
+
+		if obj and obj.Type == "table" then return true end
+
+		return false
+	end
+
+	function META:IsOtherType()--[[#: boolean]]
+		if self.parent and self.parent.standalone_letter then
+			if self.parent.environment == "typesystem" then return true end
+
+			return false
+		end
+
+		if self.parent and self.parent.is_identifier then
+			if self.parent.environment == "typesystem" then return true end
+
+			return false
+		end
+
+		local obj = self:GetMainType()
+
+		if obj and (obj.Type == "tuple" or (obj.Type == "union" and obj:IsEmpty())) then
+			return true
+		end
+
+		return false
+	end
+
+	function META:DecomposeString()--[[#: string | nil,string | nil,string | nil]]
+		if self.type ~= "string" then return end
+
+		local start = ""
+		local stop = ""
+		local t = self.value:sub(1, 1)
+
+		if t == "\"" then
+			start = t
+			stop = t
+		elseif t == "'" then
+			start = t
+			stop = t
+		elseif t == "[" then
+			start = assert(self.value:match("^%[[=]*%["))
+			stop = start:gsub("%[", "]")
+		else
+			error("what? " .. self.value)
+		end
+
+		return self.value:sub(#start + 1, -#stop - 1), start, stop
 	end
 end
 

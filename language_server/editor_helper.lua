@@ -1108,175 +1108,54 @@ do
 		tokenModifiersMap[v] = i - 1
 	end
 
-	local function get_semantic_type(token)
-		if token.type == "end_of_file" then return end
+	local types = {
+		keyword = "keyword",
+		comment = "comment",
+		operator = "keyword",
+		type = "type",
+		symbol = "enumMember",
+		number = "number",
+		string = "string",
+		variable = "variable",
+		any = "regexp",
+		table = "class",
+		func = "function",
+	}
 
-		if token.type == "space" then return end
+	local function get_semantic_type(token)
+		if token.fake then return token.type end
+
+		if token.type == "end_of_file" or token.type == "space" then return end
 
 		if token.type == "multiline_comment" or token.type == "line_comment" then
-			return "comment"
+			return types.comment
 		end
 
-		if token.parent then
-			do
-				local parent = token.parent
+		if token:IsKeywordValue() then return types.symbol end
 
-				while parent do
-					if parent.IsUnreachable and parent:IsUnreachable() then return "keyword", {"deprecated"} end
+		if token:IsKeyword() then return types.keyword end
 
-					parent = parent.parent
-				end
-			end
+		if token:IsUnreachable() then return types.any, {"deprecated"} end
 
-			if token.type == "symbol" and token.parent.kind == "function_signature" then
-				return "keyword"
-			end
+		if token:IsOperator() then return types.operator end
 
-			if
-				runtime_syntax:IsNonStandardKeyword(token) or
-				typesystem_syntax:IsNonStandardKeyword(token)
-			then
-				-- check if it's used in a statement, because foo.type should not highlight
-				if token.parent and token.parent.type == "statement" then
-					return "keyword"
-				end
-			end
+		if token:IsString() then
+			return types.string
+		elseif token:IsNumber() then
+			return types.number
+		elseif token:IsTable() then
+			return types.table
+		elseif token:IsFunction() then
+			return types.func
+		elseif token:IsSymbol() then
+			return types.symbol
+		elseif token:IsOtherType() then
+			return types.type
+		elseif token:IsAny() then
+			return types.any
 		end
 
-		if runtime_syntax:IsKeywordValue(token) or typesystem_syntax:IsKeywordValue(token) then
-			return "type"
-		end
-
-		if
-			token.value == "." or
-			token.value == ":" or
-			token.value == "=" or
-			token.value == "or" or
-			token.value == "and" or
-			token.value == "not"
-		then
-			return "operator"
-		end
-
-		if runtime_syntax:IsKeyword(token) or typesystem_syntax:IsKeyword(token) then
-			return "keyword"
-		end
-
-		if
-			runtime_syntax:GetTokenType(token):find("operator", nil, true) or
-			typesystem_syntax:GetTokenType(token):find("operator", nil, true)
-		then
-			return "operator"
-		end
-
-		if token.type == "symbol" then return "keyword" end
-
-		if token.FindType then
-			local obj
-			local types = token:FindType()
-
-			if #types == 1 then obj = types[1] elseif #types > 1 then obj = Union(types) end
-
-			if obj then
-				local mods = {}
-
-				if obj:IsLiteral() then table.insert(mods, "readonly") end
-
-				if obj.Type == "union" then
-					if obj:IsTypeExceptNil("number") then
-						return "number", mods
-					elseif obj:IsTypeExceptNil("string") then
-						return "string", mods
-					elseif obj:IsTypeExceptNil("symbol") then
-						return "enumMember", mods
-					end
-
-					return "event"
-				end
-
-				if obj.Type == "number" then
-					return "number", mods
-				elseif obj.Type == "range" then
-					return "number", mods
-				elseif obj.Type == "string" then
-					return "string", mods
-				elseif obj.Type == "tuple" or obj.Type == "symbol" then
-					return "enumMember", mods
-				elseif obj.Type == "any" then
-					return "regexp", mods
-				end
-
-				if obj.Type == "function" then return "function", mods end
-
-				local parent = obj:GetParent()
-
-				if parent then
-					if obj.Type == "function" then
-						return "macro", mods
-					else
-						if obj.Type == "table" then return "class", mods end
-
-						return "property", mods
-					end
-				end
-
-				if obj.Type == "table" then return "class", mods end
-			end
-		end
-
-		if token.type == "number" then
-			return "number"
-		elseif token.type == "string" then
-			return "string"
-		end
-
-		if token.parent then
-			if
-				token.parent.kind == "value" and
-				token.parent.parent.kind == "binary_operator" and
-				(
-					token.parent.parent.value and
-					token.parent.parent.value.value == "." or
-					token.parent.parent.value.value == ":"
-				)
-			then
-				if token.value:sub(1, 1) == "@" then return "decorator" end
-			end
-
-			if token.type == "letter" and token.parent.kind:find("function", nil, true) then
-				return "function"
-			end
-
-			if
-				token.parent.kind == "value" and
-				token.parent.parent.kind == "binary_operator" and
-				(
-					token.parent.parent.value and
-					token.parent.parent.value.value == "." or
-					token.parent.parent.value.value == ":"
-				)
-			then
-				return "property"
-			end
-
-			if token.parent.kind == "table_key_value" then return "property" end
-
-			if token.parent.standalone_letter then
-				if token.parent.environment == "typesystem" then return "type" end
-
-				if _G[token.value] then return "namespace" end
-
-				return "variable"
-			end
-
-			if token.parent.is_identifier then
-				if token.parent.environment == "typesystem" then return "typeParameter" end
-
-				return "variable"
-			end
-		end
-
-		return "type"
+		return types.variable
 	end
 
 	function META:GetSemanticTokens(path)
@@ -1286,6 +1165,18 @@ do
 		local integers = {}
 		local last_y = 0
 		local last_x = 0
+
+		local function is_lua(str)
+			if str:find("return%s", nil) then return true end
+
+			if str:find("local%s", nil) then return true end
+
+			if str:find("%s=%s", nil) then return true end
+
+			if str:find(";", nil, true) then return true end
+
+			return false
+		end
 
 		local function process_token(token)
 			local type, modifiers = get_semantic_type(token)
@@ -1371,47 +1262,18 @@ do
 					)
 					or
 					(
-						data.tokens[i - 1].value == "analyze" or
-						data.tokens[i - 2].value == "analyze"
-					)
-					or
-					(
 						data.tokens[i - 1].value == "cdef" or
 						data.tokens[i - 2].value == "cdef"
 					)
 					or
 					types[1] and
 					types[1].Type == "string" and
-					types[1].lua_compiler
+					types[1].lua_compiler or
+					is_lua(token.value)
 				)
 			then
 				local func_kind = data.tokens[i - 1].value or data.tokens[i - 2].value
-				local start
-				local stop
-				local t = token.value:sub(1, 1)
-
-				if t == "\"" then
-					start = t
-					stop = t
-				elseif t == "'" then
-					start = t
-					stop = t
-				elseif t == "[" then
-					start = token.value:match("^%[[=]*%[")
-					stop = start:gsub("%[", "]")
-				else
-					error("what? " .. token.value)
-				end
-
-				process_token(
-					{
-						type = "string",
-						value = start,
-						start = token.start,
-						stop = token.start + #start,
-					}
-				)
-				local offset = token.start + #start - 1
+				local str, start = token:DecomposeString()
 				local tokens
 
 				if types[1] and types[1].c_tokens then
@@ -1419,30 +1281,50 @@ do
 				elseif types[1] and types[1].lua_compiler then
 					tokens = types[1].lua_compiler.Tokens
 				else
-					tokens = Compiler(token.value:sub(#start + 1, -#stop - 1), "temp"):Lex().Tokens
+					local compiler = Compiler(str, "temp")
+					compiler.OnDiagnostic = function() end
+					local ok, err = compiler:Lex()
+
+					if ok then tokens = compiler.Tokens end
 				end
 
-				for i, token in ipairs(tokens) do
-					token.start = token.start + offset
-					token.stop = token.stop + offset
+				if tokens then
+					process_token(
+						{
+							fake = true,
+							type = "string",
+							value = start,
+							start = token.start,
+							stop = token.start + #start,
+						}
+					)
+					local offset = token.start + #start - 1
 
-					if token.whitespace then
-						for _, token in ipairs(token.whitespace) do
-							process_token(token)
+					for i, token in ipairs(tokens) do
+						token.start = token.start + offset
+						token.stop = token.stop + offset
+
+						if token.whitespace then
+							for _, token in ipairs(token.whitespace) do
+								process_token(token)
+							end
 						end
+
+						process_token(token)
 					end
 
+					process_token(
+						{
+							fake = true,
+							type = "string",
+							value = start,
+							start = token.stop,
+							stop = token.stop + #start,
+						}
+					)
+				else
 					process_token(token)
 				end
-
-				process_token(
-					{
-						type = "string",
-						value = start,
-						start = token.stop,
-						stop = token.stop + #start,
-					}
-				)
 			else
 				process_token(token)
 			end

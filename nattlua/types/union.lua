@@ -386,12 +386,12 @@ function META:IsTypeExceptNil(typ--[[#: string]])
 	for _, obj in ipairs(self.Data) do
 		if obj.Type == "symbol" and obj:IsNil() then
 
-		else
-			if obj.Type ~= typ then return false end
+		elseif obj.Type == typ then
+			return true
 		end
 	end
 
-	return true
+	return false
 end
 
 function META:HasType(typ--[[#: string]])
