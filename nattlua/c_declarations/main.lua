@@ -239,6 +239,8 @@ function cparser.new(cdecl, ...)
 end
 
 function cparser.metatype(ctype, meta)
+	if ctype.Type == "string" then ctype = cparser.get_type(ctype) end
+
 	local new = meta:Get(ConstString("__new"))
 
 	if new then
@@ -278,6 +280,8 @@ function cparser.metatype(ctype, meta)
 		meta.PotentialSelf = meta.PotentialSelf or Union()
 		meta.PotentialSelf:AddType(ctype)
 	end
+
+	return ctype
 end
 
 function cparser.load(lib--[[#: string]])

@@ -3,7 +3,7 @@ type boolean = true | false
 type AnyTable = {[any] = any}
 type AnyFunction = function=(...any)>(...any)
 type userdata = AnyTable
-type ctype = any
+type ctype = AnyTable
 type thread = AnyTable
 type LiteralNumber = -inf .. inf | nan
 type LiteralString = $".*"

@@ -250,7 +250,7 @@ analyzer function ffi.load(lib: string)
 	return cdecl_parser.load(lib)
 end
 
-analyzer function ffi.gc(ctype: any, callback: Function)
+analyzer function ffi.gc(ctype: ctype, callback: Function): ctype
 	return ctype
 end
 
