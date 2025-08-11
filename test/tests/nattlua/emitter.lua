@@ -508,6 +508,16 @@ identical([[return function(config)
 
 	return self
 end]])
+check(
+	{
+		preserve_whitespace = false,
+		comment_type_annotations = false,
+		type_annotations = true,
+	},
+	[[local function lasterror(): string, number
+	return "", 0
+end]]
+)
 identical([[
 local name = ReadSpace(self) or
 	ReadCommentEscape(self) or

@@ -1536,7 +1536,10 @@ function META:EmitFunctionReturnAnnotationExpression(node, analyzer_function)
 		for i, exp in ipairs(node.return_types) do
 			self:EmitTypeExpression(exp)
 
-			if i ~= #node.return_types then self:EmitToken(exp.tokens[","]) end
+			if i ~= #node.return_types then
+				self:EmitToken(exp.tokens[","])
+				self:Whitespace(" ")
+			end
 		end
 	elseif node:GetLastAssociatedType() and self.config.type_annotations ~= "explicit" then
 		local str = {}
