@@ -31,7 +31,7 @@ return {
 
 				if no_operator_expression then self:PushTruthyExpressionContext(true) end
 
-				local obj = self:AnalyzeExpression(exp)
+				local obj = self:Assert(self:AnalyzeExpression(exp))
 				self:TrackDependentUpvalues(obj)
 
 				if no_operator_expression then self:PopTruthyExpressionContext() end
