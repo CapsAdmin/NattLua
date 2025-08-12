@@ -1,7 +1,17 @@
-local old = package.loaded["nattlua.parser.parser"]
-package.loaded["nattlua.parser.parser"] = nil
-local META = require("nattlua.parser.parser")
-package.loaded["nattlua.parser.parser"] = old
+local META = require("nattlua.parser.base")()
+require("nattlua.parser.expressions")(META)
+
+function META:ParseValueExpressionToken(expect_value--[[#: nil | string]])
+	local node = self:StartNode("expression", "value")
+	node.value = expect_value and self:ExpectTokenValue(expect_value) or self:ParseToken()
+	node = self:EndNode(node)
+	return node
+end
+
+function META:ParseLSXExpression()
+	return nil
+end
+
 local table = _G.table
 local ipairs = _G.ipairs
 local old_new = META.New
