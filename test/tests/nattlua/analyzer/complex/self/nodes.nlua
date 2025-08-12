@@ -1,6 +1,6 @@
 local type { Nodes } = import("~/nattlua/parser/node.lua")
 
-local META = require("nattlua.parser.base")
+local META = require("nattlua.parser.base")()
 local Code = require("nattlua.code").New
 local self = META.New({}, Code("dawwad", "asassa"), {})
 local node = self:StartNode("statement", "do")

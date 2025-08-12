@@ -19,11 +19,11 @@ local io = _G.io
 
 --[[#local type expression = Nodes.expression]]
 --[[#local type statement = Nodes.statement]]
-local META = loadfile("nattlua/parser/base.lua")()
-assert(loadfile("nattlua/parser/expressions.lua"))(META)
-assert(loadfile("nattlua/parser/statements.lua"))(META)
-assert(loadfile("nattlua/parser/teal.lua"))(META)
-assert(loadfile("nattlua/parser/lsx.lua"))(META)
+local META = require("nattlua.parser.base")()
+require("nattlua.parser.expressions")(META)
+require("nattlua.parser.statements")(META)
+require("nattlua.parser.teal")(META)
+require("nattlua.parser.lsx")(META)
 
 function META:ParseIdentifier(expect_type--[[#: nil | boolean]])
 	if not self:IsTokenType("letter") and not self:IsTokenValue("...") then

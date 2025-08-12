@@ -1,4 +1,7 @@
-local META = loadfile("nattlua/parser/parser.lua")()
+local old = package.loaded["nattlua.parser.parser"]
+package.loaded["nattlua.parser.parser"] = nil
+local META = require("nattlua.parser.parser")
+package.loaded["nattlua.parser.parser"] = old
 local table = _G.table
 local ipairs = _G.ipairs
 local old_new = META.New

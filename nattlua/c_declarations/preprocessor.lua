@@ -1,7 +1,7 @@
 local Parser = nil
 
 do
-	local META = loadfile("nattlua/parser/base.lua")()
+	local META = require("nattlua.parser.base")()
 
 	local function copy_tokens(tokens)
 		local new_tokens = {}

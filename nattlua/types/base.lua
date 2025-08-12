@@ -4,139 +4,141 @@ local tostring = _G.tostring
 local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local class = require("nattlua.other.class")
-local META = class.CreateTemplate("base")
---[[#type META.Type = string]]
---[[#type META.@Self = {
-	Type = string,
-	Parent = any,
-}]]
---[[#local type TBaseType = META.@Self]]
---[[#type META.TBaseType = TBaseType]]
---[[#--copy<|META|>.@Self
-type META.Type = string]]
+return function()
+	local META = class.CreateTemplate("base")
+	--[[#type META.Type = string]]
+	--[[#type META.@Self = {
+		Type = string,
+		Parent = any,
+	}]]
+	--[[#local type TBaseType = META.@Self]]
+	--[[#type META.TBaseType = TBaseType]]
+	--[[#--copy<|META|>.@Self
+	type META.Type = string]]
 
-function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]]) --error("nyi " .. a.Type .. " == " .. b.Type)
-end
-
-function META:IsNil()
-	return false
-end
-
-function META:GetLuaType()
-	return self.Type
-end
-
-META:GetSet("Data", false--[[# as any]])
-
-do
-	function META:IsUncertain()
-		return self:IsTruthy() and self:IsFalsy()
+	function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]]) --error("nyi " .. a.Type .. " == " .. b.Type)
 	end
 
-	function META:IsCertainlyFalse()
-		return self:IsFalsy() and not self:IsTruthy()
-	end
-
-	function META:IsCertainlyTrue()
-		return self:IsTruthy() and not self:IsFalsy()
-	end
-
-	META:IsSet("Falsy", false--[[# as boolean]])
-	META:IsSet("Truthy", false--[[# as boolean]])
-end
-
-do
-	function META:Copy()
-		return self
-	end
-
-	function META:CopyInternalsFrom(obj--[[#: mutable TBaseType]])
-		self:SetContract(obj:GetContract())
-		self:SetReferenceType(obj:IsReferenceType())
-	end
-end
-
-do -- token, expression and statement association
-	META:GetSet("Upvalue", false--[[# as false | any]])
-end
-
-function META:GetHashForMutationTracking()
-	return nil
-end
-
-do
-	META:IsSet("ReferenceType", false--[[# as boolean]])
-end
-
-do
-	function META:IsLiteral()
+	function META:IsNil()
 		return false
 	end
 
-	function META:Widen()
-		return self
+	function META:GetLuaType()
+		return self.Type
 	end
 
-	function META:CopyLiteralness()
-		return self
+	META:GetSet("Data", false--[[# as any]])
+
+	do
+		function META:IsUncertain()
+			return self:IsTruthy() and self:IsFalsy()
+		end
+
+		function META:IsCertainlyFalse()
+			return self:IsFalsy() and not self:IsTruthy()
+		end
+
+		function META:IsCertainlyTrue()
+			return self:IsTruthy() and not self:IsFalsy()
+		end
+
+		META:IsSet("Falsy", false--[[# as boolean]])
+		META:IsSet("Truthy", false--[[# as boolean]])
 	end
-end
 
-do -- operators
-	function META:Set(key--[[#: TBaseType | nil]], val--[[#: TBaseType | nil]])
-		return false, type_errors.undefined_set(self, key, val, self.Type)
-	end
+	do
+		function META:Copy()
+			return self
+		end
 
-	function META:Get(key--[[#: boolean]])
-		return false, type_errors.undefined_get(self, key, self.Type)
-	end
-end
-
-do
-	META:GetSet("Parent", false--[[# as TBaseType | false]])
-
-	function META:SetParent(parent--[[#: TBaseType | false | nil]])
-		if parent then
-			if parent ~= self then self.Parent = parent end
-		else
-			self.Parent = false
+		function META:CopyInternalsFrom(obj--[[#: mutable TBaseType]])
+			self:SetContract(obj:GetContract())
+			self:SetReferenceType(obj:IsReferenceType())
 		end
 	end
 
-	function META:GetRoot()
-		local parent = self
-		local done = {}
+	do -- token, expression and statement association
+		META:GetSet("Upvalue", false--[[# as false | any]])
+	end
 
-		while true do
-			if not parent.Parent or done[parent] then break end
+	function META:GetHashForMutationTracking()
+		return nil
+	end
 
-			done[parent] = true
-			parent = parent.Parent--[[# as any]]
+	do
+		META:IsSet("ReferenceType", false--[[# as boolean]])
+	end
+
+	do
+		function META:IsLiteral()
+			return false
 		end
 
-		return parent
+		function META:Widen()
+			return self
+		end
+
+		function META:CopyLiteralness()
+			return self
+		end
 	end
-end
 
-do -- contract
-	function META:Seal()
-		self:SetContract(self:GetContract() or self:Copy())
+	do -- operators
+		function META:Set(key--[[#: TBaseType | nil]], val--[[#: TBaseType | nil]])
+			return false, type_errors.undefined_set(self, key, val, self.Type)
+		end
+
+		function META:Get(key--[[#: boolean]])
+			return false, type_errors.undefined_get(self, key, self.Type)
+		end
 	end
 
-	META:GetSet("Contract", false--[[# as TBaseType | false]])
-end
+	do
+		META:GetSet("Parent", false--[[# as TBaseType | false]])
 
-function META:GetFirstValue()
-	-- for tuples, this would return the first value in the tuple
-	return self
-end
+		function META:SetParent(parent--[[#: TBaseType | false | nil]])
+			if parent then
+				if parent ~= self then self.Parent = parent end
+			else
+				self.Parent = false
+			end
+		end
 
-function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[#: string]])
-	return false, type_errors.binary(op, l, r)
-end
+		function META:GetRoot()
+			local parent = self
+			local done = {}
 
-function META:IsNumeric()
-	return false
-end
+			while true do
+				if not parent.Parent or done[parent] then break end
 
-return META
+				done[parent] = true
+				parent = parent.Parent--[[# as any]]
+			end
+
+			return parent
+		end
+	end
+
+	do -- contract
+		function META:Seal()
+			self:SetContract(self:GetContract() or self:Copy())
+		end
+
+		META:GetSet("Contract", false--[[# as TBaseType | false]])
+	end
+
+	function META:GetFirstValue()
+		-- for tuples, this would return the first value in the tuple
+		return self
+	end
+
+	function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[#: string]])
+		return false, type_errors.binary(op, l, r)
+	end
+
+	function META:IsNumeric()
+		return false
+	end
+
+	return META
+end

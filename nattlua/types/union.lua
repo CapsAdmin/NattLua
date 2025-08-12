@@ -17,7 +17,7 @@ local table_clear = require("nattlua.other.tablex").clear
 
 --[[#local type { TNumber } = require("nattlua.types.number")]]
 
-local META = dofile("nattlua/types/base.lua")
+local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TUnion"]]
 --[[#type TUnion = META.@Self]]

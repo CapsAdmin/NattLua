@@ -1,4 +1,4 @@
-local base = require("nattlua.types.base")
+local base = require("nattlua.types.base")()
 
 §analyzer:AnalyzeUnreachableCode()
 

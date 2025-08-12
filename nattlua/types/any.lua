@@ -1,5 +1,5 @@
 local type_errors = require("nattlua.types.error_messages")
-local META = dofile("nattlua/types/base.lua")
+local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TAny"]]
 --[[#type TAny = META.@Self]]

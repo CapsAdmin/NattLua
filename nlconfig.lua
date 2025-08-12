@@ -34,7 +34,7 @@ do -- custom commands specific for nattlua
 	config.commands["test"] = {
 		description = "Run NattLua test suite with optional test filter",
 		cb = function(args)
-			assert(loadfile("test/run.lua"))(args[1])
+			require("test.run")(args[1])
 			os.exit() -- no need to wait for gc to complete
 		end,
 	}
@@ -81,7 +81,7 @@ do -- custom commands specific for nattlua
 				return code
 			end
 
-			assert(loadfile("test/run.lua"))()
+			require("test.run")()
 
 			for name, path in pairs(covered) do
 				local content = coverage.Collect(name)
@@ -275,7 +275,7 @@ do -- these override existing commands and should probably be made more generic
 				f:close()
 				io.write("running tests with temp_build_output.lua ")
 				io.flush()
-				local exit_code = os.execute("luajit -e 'require(\"temp_build_output\") assert(loadfile(\"test/run.lua\"))()'")
+				local exit_code = os.execute("luajit -e 'require(\"temp_build_output\") require(\"test.run\")()'")
 
 				if exit_code ~= 0 then
 					io.write(" - FAIL\n")
