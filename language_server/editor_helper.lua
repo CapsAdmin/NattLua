@@ -1158,6 +1158,26 @@ do
 		return types.variable
 	end
 
+	local function is_probably_lua(str)
+		local possible_statements = {
+			"%s*local%s",
+			"%s*return%s",
+			"%s*while%s",
+			"%s*repeat%s",
+			"%s*function%s",
+			"%s*do%s",
+			"%s*if%s",
+			"%s*for%s",
+			"%s*[a-Z][a-Z0-9]*%s*=",
+		}
+		for _, word in ipairs(possible_statements) do
+			if str:find(word, 0) then
+				return true
+			end
+		end
+		return false
+	end
+
 	function META:GetSemanticTokens(path)
 		if not self:IsLoaded(path) then return {} end
 
@@ -1280,7 +1300,7 @@ do
 					tokens = types[1].c_tokens
 				elseif types[1] and types[1].lua_compiler then
 					tokens = types[1].lua_compiler.Tokens
-				else
+				elseif is_probably_lua(str) then
 					local compiler = Compiler(str, "temp")
 					compiler.OnDiagnostic = function() end
 					local ok, err = compiler:Lex()
