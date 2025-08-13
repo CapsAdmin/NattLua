@@ -9,8 +9,8 @@ local full_path = path
 path = path:lower():gsub("\\", "/")
 
 local function run_lua(path, ...)
-	io.write("running ", path, ...)
-	assert(loadfile(path))(...)
+	io.write("running " .. path .. " with ", ...)
+	assert(loadfile(path))()(...)
 	io.write(" - ok\n")
 end
 
@@ -23,7 +23,7 @@ local function run_nattlua(path)
 		return lua_code:find("--" .. flag .. "\n", nil, true) ~= nil
 	end
 
-	if has_flag("PLAIN_LUA") then return assert(loadfile(path))() end
+	if has_flag("PLAIN_LUA") then return assert(loadfile(path))()() end
 
 	local c = assert(
 		nl.File(
@@ -163,9 +163,9 @@ elseif find("lint.lua") then
 elseif find("build_glua_base.lua") then
 	run_lua(full_path)
 elseif find("examples/projects/luajit/") or find("cparser.lua") then
-	run_lua("examples/projects/luajit/build.lua", full_path)
+	os.execute("cd examples/projects/luajit && nattlua build")
 elseif find("examples/projects/love2d/") then
-	run_lua("examples/projects/love2d/nlconfig.lua", full_path)
+	os.execute("cd examples/projects/love2d && nattlua build")
 elseif is_nattlua and not find("/definitions/") then
 	run_nattlua(full_path)
 elseif find("formating.lua") then
