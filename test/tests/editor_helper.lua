@@ -358,6 +358,22 @@ do
 		local tokens = convert_semantic_tokens_to_tokens(integers, str)
 		equal(#tokens, 14)
 	end
+
+	do
+		local str = [===[local t = 
+ffi.typeof([[struct {
+    uint32_t st_dev;
+    // lol
+    uint16_t st_mode;
+}]]) --test
+local x --
+loadstring("local x = 'hello'")
+--]===]
+		local helper = single_file(str)
+		local integers = helper:GetSemanticTokens(path)
+		local tokens = convert_semantic_tokens_to_tokens(integers, str)
+		equal(#tokens, 34)
+	end
 end
 
 _G.TEST = false

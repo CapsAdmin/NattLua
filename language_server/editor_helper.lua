@@ -1170,11 +1170,11 @@ do
 			"%s*for%s",
 			"%s*[a-Z][a-Z0-9]*%s*=",
 		}
+
 		for _, word in ipairs(possible_statements) do
-			if str:find(word, 0) then
-				return true
-			end
+			if str:find(word, 0) then return true end
 		end
+
 		return false
 	end
 
@@ -1198,6 +1198,8 @@ do
 			return false
 		end
 
+		local stringx = require("nattlua.other.string")
+
 		local function process_token(token)
 			local type, modifiers = get_semantic_type(token)
 
@@ -1214,36 +1216,23 @@ do
 				end
 			end
 
-			local lines = {}
-
-			for line in token.value:gmatch("([^\n]*)\n?") do
-				if #line > 0 or #lines == 0 then table.insert(lines, line) end
-			end
-
+			local lines = stringx.split(token.value, "\n")
 			local line_start = pos_data.line_start - 1
 			local line_stop = pos_data.line_stop - 1
 			local char_start = pos_data.character_start - 1
 			local char_stop = pos_data.character_stop - 1
+			--
+			local start_line = table.remove(lines, 1)
+			local middle_lines
 
-			-- Process each line
-			for i = 1, #lines do
-				local current_line = line_start + (i - 1)
+			if #lines > 1 then middle_lines = lines end
 
-				if current_line > line_stop then break end
+			if start_line then
+				local len = #start_line
+				local y = line_start - last_y
+				local x = char_start - last_x
 
-				local y = current_line - last_y
-				local x, len
-
-				if i == 1 then
-					x = char_start - last_x
-
-					if y ~= 0 then x = char_start end
-
-					len = #lines[i]
-				else
-					x = 0
-					len = #lines[i]
-				end
+				if y ~= 0 then x = char_start end
 
 				if x >= 0 and y >= 0 then
 					table.insert(integers, y)
@@ -1251,13 +1240,26 @@ do
 					table.insert(integers, len)
 					table.insert(integers, tokenTypeMap[type])
 					table.insert(integers, modifier_result)
+					last_y = line_start
+					last_x = char_start
+				end
+			end
 
-					if i == 1 then
-						last_y = line_start
-						last_x = char_start
-					else
-						last_y = current_line
-						last_x = len
+			if middle_lines then
+				for i, line in ipairs(middle_lines) do
+					print(i, line)
+					local len = #line
+					local y = line_start - last_y + i
+					local x = 0
+
+					if x >= 0 and y >= 0 then
+						table.insert(integers, y)
+						table.insert(integers, x)
+						table.insert(integers, len)
+						table.insert(integers, tokenTypeMap[type])
+						table.insert(integers, modifier_result)
+						last_y = last_y + 1
+						last_x = 0
 					end
 				end
 			end
@@ -1295,9 +1297,28 @@ do
 				local func_kind = data.tokens[i - 1].value or data.tokens[i - 2].value
 				local str, start = token:DecomposeString()
 				local tokens
+				local offset = token.start + #start - 1
 
 				if types[1] and types[1].c_tokens then
 					tokens = types[1].c_tokens
+					local new_tokens = {}
+
+					for i, token in ipairs(tokens) do
+						if token.value == "TYPEOF_CDECL" then
+							local offset = tokens[i + 2].stop
+
+							for i = i + 3, #tokens - 3 do
+								local token = tokens[i]
+								token.start = token.start - offset
+								token.stop = token.stop - offset
+								table.insert(new_tokens, token)
+							end
+
+							break
+						end
+					end
+
+					if new_tokens[1] then tokens = new_tokens end
 				elseif types[1] and types[1].lua_compiler then
 					tokens = types[1].lua_compiler.Tokens
 				elseif is_probably_lua(str) then
@@ -1318,7 +1339,6 @@ do
 							stop = token.start + #start,
 						}
 					)
-					local offset = token.start + #start - 1
 
 					for i, token in ipairs(tokens) do
 						token.start = token.start + offset

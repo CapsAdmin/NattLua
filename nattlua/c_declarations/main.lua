@@ -80,6 +80,7 @@ local function fixup_tokens(tokens)
 		["size_t"] = true,
 		["intptr_t"] = true,
 		["uintptr_t"] = true,
+		["uint64_t"] = true,
 		["int64_t"] = true,
 		["void"] = true,
 		["const"] = true,
