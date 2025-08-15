@@ -23,7 +23,7 @@ local function run_nattlua(path)
 		return lua_code:find("--" .. flag .. "\n", nil, true) ~= nil
 	end
 
-	if has_flag("PLAIN_LUA") then return assert(loadfile(path))()() end
+	if has_flag("PLAIN_LUA") then return assert(loadfile(path))() end
 
 	local c = assert(
 		nl.File(
