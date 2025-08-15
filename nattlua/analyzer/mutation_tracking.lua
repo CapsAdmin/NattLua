@@ -566,9 +566,7 @@ return function(META)
 			end
 		end
 
-		function META:ApplyMutationsAfterReturn(scope, scope_override, negate, upvalues, tables)
-			self:PushScope(scope_override)
-
+		function META:ApplyMutationsAfterStatement(scope, negate, upvalues, tables)
 			if upvalues then
 				for _, data in ipairs(upvalues) do
 					local val = solve(data, scope, negate)
@@ -587,8 +585,6 @@ return function(META)
 					if val then self:MutateTable(data.obj, data.key, val, true) end
 				end
 			end
-
-			self:PopScope()
 		end
 	end
 end

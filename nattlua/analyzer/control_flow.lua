@@ -37,13 +37,9 @@ return function(META)
 	function META:Break()
 		local scope = self:GetScope()
 		self.break_out_scope = scope
-		self:ApplyMutationsAfterReturn(
-			scope,
-			scope:GetNearestFunctionScope(),
-			true,
-			scope:GetTrackedUpvalues(),
-			scope:GetTrackedTables()
-		)
+		self:PushScope(scope:GetNearestFunctionScope())
+		self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
+		self:PopScope()
 	end
 
 	function META:DidCertainBreak()
@@ -117,17 +113,20 @@ return function(META)
 					end
 				end
 
-				self:ApplyMutationsAfterReturn(frame.scope, frame.scope, false, upvalues, tables)
+				self:PushScope(frame.scope)
+				self:ApplyMutationsAfterStatement(frame.scope, false, upvalues, tables)
+				self:PopScope()
 				return
 			end
 
-			self:ApplyMutationsAfterReturn(
+			self:PushScope(function_scope)
+			self:ApplyMutationsAfterStatement(
 				frame.scope,
-				function_scope,
 				true,
 				frame.scope:GetTrackedUpvalues(),
 				frame.scope:GetTrackedTables()
 			)
+			self:PopScope()
 		end
 	end
 
@@ -156,13 +155,11 @@ return function(META)
 			old[i] = upvalue
 		end
 
-		self:ApplyMutationsAfterReturn(
-			self:GetScope(),
-			self:GetScope():GetNearestFunctionScope(),
-			false,
-			self:GetTrackedUpvalues(old),
-			self:GetTrackedTables()
-		)
+		local scope = self:GetScope()
+		local u, t = self:GetTrackedUpvalues(old), self:GetTrackedTables()
+		self:PushScope(self:GetScope():GetNearestFunctionScope())
+		self:ApplyMutationsAfterStatement(scope, false, u, t)
+		self:PopScope()
 
 		if not no_report then
 			self:PushCurrentExpression(self:GetCallFrame(level).call_node)
@@ -226,7 +223,9 @@ return function(META)
 			scope:CertainReturn(self)
 		end
 
-		self:ApplyMutationsAfterReturn(scope, function_scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
+		self:PushScope(function_scope)
+		self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
+		self:PopScope()
 	end
 
 	do
