@@ -1,8 +1,8 @@
 _G.IMPORTS = _G.IMPORTS or {}
-IMPORTS['examples/projects/luajit/src/platforms/filesystem.nlua'] = function() 
+IMPORTS['src/platforms/windows/../filesystem.nlua'] = function(...) 
 
 return fs_contract end
-IMPORTS['examples/projects/luajit/src/platforms/windows/filesystem.nlua'] = function() 
+IMPORTS['src/platforms/windows/filesystem.nlua'] = function(...) 
 local ffi = require("ffi")
 local OSX = ffi.os == "OSX"
 local X64 = ffi.arch == "x64"
@@ -126,7 +126,7 @@ do
 	)
 	local dot = string.byte(".")
 
-	local function is_dots(ptr)
+	local function is_dots(ptr) -- todo: maybe FFIArray<|12, number|> should be ok to pass when the argument contract is FFIArray<|3, number|> , because it's at least 3 in length
 		if ptr[0] == dot then
 			if ptr[1] == dot and ptr[2] == 0 then return true end
 
@@ -161,7 +161,7 @@ do
 			end		
 		until ffi.C.FindNextFileA(handle, data) == 0
 
-		if ffi.C.FindClose(handle) == 0 then return nil, last_error() end
+		if ffi.C.FindClose(assert(handle)) == 0 then return nil, last_error() end
 
 		return out
 	end
@@ -188,24 +188,27 @@ do
 end
 
 return fs end
-IMPORTS['examples/projects/luajit/src/platforms/unix/filesystem.nlua'] = function() 
+IMPORTS['src/platforms/unix/../filesystem.nlua'] = function(...) 
+
+return fs_contract end
+IMPORTS['src/platforms/unix/filesystem.nlua'] = function(...) 
 local ffi = require("ffi")
 local OSX = ffi.os == "OSX"
 local X64 = ffi.arch == "x64"
 local fs = {}
-ffi.cdef([[
-	const char *strerror(int);
-	unsigned long syscall(int number, ...);
-]])
+local last_error
 
-local function last_error(num)
-	num = num or ffi.errno()
-	local ptr = ffi.C.strerror(num)
+do
+	ffi.cdef([[const char *strerror(int);]])
+	last_error = function(num)
+		num = num or ffi.errno()
+		local ptr = ffi.C.strerror(num)
 
-	if not ptr then return "strerror returns null" end
+		if not ptr then return "strerror returns null" end
 
-	local err = ffi.string(ptr)
-	return err == "" and tostring(num) or err
+		local err = ffi.string(ptr)
+		return err == "" and tostring(num) or err
+	end
 end
 
 do
@@ -292,51 +295,33 @@ do
 		end
 	end
 
-	local statbox = ffi.typeof("$[1]", stat_struct)
-	local stat
-	local stat_link
-
-	if OSX then
-		ffi.cdef([[
-			int stat64(const char *path, void *buf);
-			int lstat64(const char *path, void *buf);
-		]])
-		stat = ffi.C.stat64
-		stat_link = ffi.C.lstat64
-	else
-		local STAT_SYSCALL = 195
-		local STAT_LINK_SYSCALL = 196
-
-		if X64 then
-			STAT_SYSCALL = 4
-			STAT_LINK_SYSCALL = 6
-		end
-
-		stat = function(path, buff)
-			return ffi.C.syscall(STAT_SYSCALL, path, buff)
-		end
-		stat_link = function(path, buff)
-			return ffi.C.syscall(STAT_LINK_SYSCALL, path, buff)
-		end
-	end
-
+	ffi.cdef([[
+		int stat64(const char *path, void *buf);
+		int lstat64(const char *path, void *buf);
+	]])
+	local stat = ffi.C.stat64
+	local stat_link = ffi.C.lstat64
 	local DIRECTORY = 0x4000
 
-	function fs.get_attributes(path, follow_link)
-		local buff = statbox()
-		local ret = follow_link and stat_link(path, buff) or stat(path, buff)
+	do
+		local statbox = ffi.typeof("$[1]", stat_struct)
 
-		if ret == 0 then
-			return {
-				last_accessed = tonumber(buff[0].st_atime),
-				last_changed = tonumber(buff[0].st_ctime),
-				last_modified = tonumber(buff[0].st_mtime),
-				size = tonumber(buff[0].st_size),
-				type = bit.band(buff[0].st_mode, DIRECTORY) ~= 0 and "directory" or "file",
-			}
+		function fs.get_attributes(path, follow_link)
+			local buff = statbox()
+			local ret = follow_link and stat_link(path, buff) or stat(path, buff)
+
+			if ret == 0 then
+				return {
+					last_accessed = tonumber(buff[0].st_atime),
+					last_changed = tonumber(buff[0].st_ctime),
+					last_modified = tonumber(buff[0].st_mtime),
+					size = tonumber(buff[0].st_size),
+					type = bit.band(buff[0].st_mode, DIRECTORY) ~= 0 and "directory" or "file",
+				}
+			end
+
+			return nil, last_error()
 		end
-
-		return nil, last_error()
 	end
 end
 
@@ -367,13 +352,13 @@ do
 				unsigned char   d_type;
 				char            d_name[256];
 			};
-			struct dirent *readdir(void *dirp) asm("readdir64");
+			struct dirent *readdir(void *dirp);
 		]])
 	end
 
 	local dot = string.byte(".")
 
-	local function is_dots(ptr)
+	local function is_dots(ptr) --FFIArray<|3, number|>)
 		if ptr[0] == dot then
 			if ptr[1] == dot and ptr[2] == 0 then return true end
 
@@ -431,22 +416,22 @@ do
 end
 
 return fs end
-IMPORTS['examples/projects/luajit/src/filesystem.nlua'] = function() if jit.os == "Windows" then
-	return IMPORTS['examples/projects/luajit/src/platforms/windows/filesystem.nlua']("./platforms/windows/filesystem.nlua")
+IMPORTS['src/filesystem.nlua'] = function(...) if jit.os == "Windows" then
+	return IMPORTS['src/platforms/windows/filesystem.nlua']("./platforms/windows/filesystem.nlua")
 else
-	return IMPORTS['examples/projects/luajit/src/platforms/unix/filesystem.nlua']("./platforms/unix/filesystem.nlua")
+	return IMPORTS['src/platforms/unix/filesystem.nlua']("./platforms/unix/filesystem.nlua")
 end
 
 error("unknown platform") end
-local fs = IMPORTS['examples/projects/luajit/src/filesystem.nlua']("./filesystem.nlua")
+local fs = IMPORTS['src/filesystem.nlua']("./filesystem.nlua")
 print("get files: ", assert(fs.get_files(".")))
 
-for k, v in ipairs(assert(fs.get_files("."))) do
+for k, v in ipairs((assert(fs.get_files(".")))) do
 	print(k, v)
 end
 
 print(assert(fs.get_current_directory()))
 
-for k, v in pairs(assert(fs.get_attributes("README.md"))) do
+for k, v in pairs((assert(fs.get_attributes("nlconfig.lua")))) do
 	print(k, v)
 end
