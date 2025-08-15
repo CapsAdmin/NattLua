@@ -20,7 +20,7 @@ type io = {
 	write = function=(...string)>(nil),
 	flush = function=()>(boolean | nil, string | nil),
 	read = check_read_args,
-	lines = function=()>(Function),
+	lines = function=()>(function=()>(string)),
 	setvbuf = function=(mode: "no" | "full" | "line", size: number | nil)>(boolean | nil, string | nil),
 	seek = function=(mode: "set" | "cur" | "end", offset: number | nil)>(number | nil, string | nil),
 }
@@ -31,7 +31,7 @@ type File = {
 	read = function <|self: File, ...: ...pattern|>
 		return check_read_args<|...|>
 	end,
-	lines = function=(self)>(Function),
+	lines = function=(self)>(function=()>(string)),
 	setvbuf = function=(self, mode: "no" | "full" | "line", size: number | nil)>(boolean | nil, string | nil),
 	seek = function=(self, mode: "set" | "cur" | "end", offset: number | nil)>(number | nil, string | nil),
 }

@@ -175,51 +175,65 @@ function cparser.reset()
 end
 
 function cparser.cast(cdecl, src)
-	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
-	local analyzer = analyzer_context:GetCurrentAnalyzer()
-	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = analyze(cdecl, "typeof", env, analyzer)
-	local ctype = extract_anonymous_type(typs)
+	if cdecl.Type == "string" and cdecl:IsLiteral() then
+		local analyzer = analyzer_context:GetCurrentAnalyzer()
+		local env = analyzer:GetScopeHelper(analyzer.function_scope)
+		local vars, typs = analyze(cdecl, "typeof", env, analyzer)
+		local ctype = extract_anonymous_type(typs)
 
-	if ctype.Type == "union" then
-		for _, v in ipairs(ctype:GetData()) do
-			if v.Type == "table" then
-				ctype = v
+		if ctype.Type == "union" then
+			for _, v in ipairs(ctype:GetData()) do
+				if v.Type == "table" then
+					ctype = v
 
-				break
+					break
+				end
 			end
 		end
+
+		if ctype.Type == "any" then return ctype end
+
+		ctype:SetMetaTable(ctype)
+		return ctype
+	elseif cdecl.Type == "function" then
+		local vars, typs = analyze(LString("void(*)()"), "typeof", env, analyzer)
+		local ctype = extract_anonymous_type(typs)
+		return ctype
+	elseif cdecl.Type == "table" then
+		return src:Copy()
 	end
-
-	if ctype.Type == "any" then return ctype end
-
-	ctype:SetMetaTable(ctype)
-	return ctype
 end
 
 function cparser.typeof(cdecl, ...)
-	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-	local args = {...}
+	if cdecl.Type == "string" and cdecl:IsLiteral() then
+		local args = {...}
 
-	if args[1] and args[1].Type == "tuple" then args = {args[1]:Unpack()} end
+		if args[1] and args[1].Type == "tuple" then args = {args[1]:Unpack()} end
+
+		local analyzer = analyzer_context:GetCurrentAnalyzer()
+		local env = analyzer:GetScopeHelper(analyzer.function_scope)
+		local vars, typs = analyze(cdecl, "typeof", env, analyzer, ...)
+		local ctype = extract_anonymous_type(typs)
+
+		-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
+		if ctype.Type == "union" then
+			for _, v in ipairs(ctype:GetData()) do
+				if v.Type == "table" then
+					ctype = v
+
+					break
+				end
+			end
+		end
+
+		return analyzer:Call(env.typesystem.FFICtype, Tuple({ctype}), analyzer:GetCurrentStatement())
+	end
 
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = analyze(cdecl, "typeof", env, analyzer, ...)
+	local vars, typs = analyze(LString("void *"), "typeof", env, analyzer)
 	local ctype = extract_anonymous_type(typs)
-
-	-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
-	if ctype.Type == "union" then
-		for _, v in ipairs(ctype:GetData()) do
-			if v.Type == "table" then
-				ctype = v
-
-				break
-			end
-		end
-	end
-
-	return analyzer:Call(env.typesystem.FFICtype, Tuple({ctype}), analyzer:GetCurrentStatement())
+	return ctype
 end
 
 function cparser.get_type(cdecl, ...)

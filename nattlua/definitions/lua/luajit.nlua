@@ -39,6 +39,10 @@ function FFIPointer<|T: any|>
 		__sub = function(self: ref self, other: ref (self | number))
 			return FFIPointer<|T|>
 		end,
+		free = function(self: ref self)
+			return nil
+		end,
+		__call = function=(self: ref self, ...: ...any)>(...any),
 	}
 end
 
@@ -224,11 +228,11 @@ end
 
 §env.typesystem.ffi:Get(types.ConstString("cdef")):SetPreventInputArgumentExpansion(true)
 
-analyzer function ffi.cast(cdecl: string, src: any)
+analyzer function ffi.cast(cdecl: string | FFICtype<|any|>, src: any)
 	return cdecl_parser.cast(cdecl, src)
 end
 
-analyzer function ffi.typeof(cdecl: string, ...: ...any)
+analyzer function ffi.typeof(cdecl: string | FFICtype<|any|>, ...: ...any)
 	return cdecl_parser.typeof(cdecl, ...)
 end
 
