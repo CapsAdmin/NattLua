@@ -35,9 +35,16 @@ local function filter_non_contained_mutations(mutations, scope)
 			-- Check if this mutation is contained in later mutations' scopes
 			for j = i + 1, #mutations do
 				if mutations[j].scope:Contains(mut.scope) then
-					should_keep = false
+					if
+						not mut.scope:IsLoopScope() or
+						(
+							mut.scope:GetNearestLoopScope() == scope:GetNearestLoopScope()
+						)
+					then
+						should_keep = false
 
-					break
+						break
+					end
 				end
 			end
 

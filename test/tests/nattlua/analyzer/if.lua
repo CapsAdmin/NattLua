@@ -1872,3 +1872,35 @@ end
 local y = test()
 attest.equal(y, 1)
 ]]
+analyze[[
+	local path
+
+	if _ as boolean then
+		path = _ as nil | string
+
+		if path then
+			attest.equal(path, _ as string)
+			return
+		end
+
+		attest.equal(path, _ as nil)
+	end
+
+	attest.equal(path, _ as nil)
+]]
+analyze[[
+	local path
+
+	while _ as boolean do
+		path = _ as nil | string
+
+		if path then
+			attest.equal(path, _ as string)
+			break
+		end
+
+		attest.equal(path, _ as nil)
+	end
+
+	attest.equal(path, _ as nil | string)
+]]

@@ -37,7 +37,7 @@ return function(META)
 	function META:Break()
 		local scope = self:GetScope()
 		self.break_out_scope = scope
-		self:PushScope(scope:GetNearestFunctionScope())
+		self:PushScope(scope:GetNearestLoopScope())
 		self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
 		self:PopScope()
 	end
