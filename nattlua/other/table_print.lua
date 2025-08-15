@@ -56,7 +56,7 @@ do
 		end)
 
 		if #tmp > 0 and tmp[1] then
-			str = str .. "[" .. tmp[1].k:gsub("!/%.%./", "") .. "]"
+			str = str .. "[" .. assert(tmp[1].k):gsub("!/%.%./", "") .. "]"
 		end
 
 		return str

@@ -69,40 +69,58 @@ analyze[[
     end
 ]]
 analyze[[
-    local function sort(a: ref Table, b: ref Table)
-        return a.key > b.key
-    end
-    
-    local function to_list(map: ref Table)
-        local list = {}
-    
-        for k, v in pairs(map) do
-            table.insert(list, {key = k, val = v})
-        end
-    
-        table.sort(list, sort)
-        return list
-    end
-    
-    local function sorted_pairs(map: ref Table)
-        local list = to_list(map)
-        local i = 0
-        return function()
-            i = i + 1
-    
-            if not list[i] then return end
-    
-            return list[i].key, list[i].val
-        end
-    end
-    
-    local t = _  as {
-        ["PixelVisHandle"] = {["functions"] = {}, ["members"] = {}},
-        [string] = {["members"] = {}, ["functions"] = {}},
-    }
-    
-    for k, v in sorted_pairs(t) do
-        attest.equal(k, _ as string | "PixelVisHandle")
-        attest.equal(v, _ as {["functions"] = {}, ["members"] = {}})
-    end
+local function find_real_path_from_ld_script(err: string)
+	local header = "/* GNU ld script"
+	local path
+
+	for _, _ in pairs(_ as {[string] = string}) do
+		--for i = _ as number, _ as number do
+		local line = _ as string
+		path = line:match("GROUP %( (.-) ") or line:match("INPUT %( (.-) ")
+
+		if path then break end
+	end
+
+	attest.equal(path, _ as nil | string)
+	return path
+end
+
+]]
+analyze[[
+   local function sort(a: ref any, b: ref any)
+	return assert(a.key) > assert(b.key)
+end
+
+local function to_list(map: ref Table)
+	local list = {}
+
+	for k, v in pairs(map) do
+		table.insert(list, {key = k, val = v})
+	end
+
+	table.sort(list, sort)
+	return list
+end
+
+local function sorted_pairs(map: ref Table)
+	local list = to_list(map)
+	local i = 0
+	return function()
+		i = i + 1
+
+		if not list[i] then return end
+
+		return list[i].key, list[i].val
+	end
+end
+
+local t = _ as {
+	["PixelVisHandle"] = {["functions"] = {}, ["members"] = {}},
+	[string] = {["members"] = {}, ["functions"] = {}},
+}
+
+for k, v in sorted_pairs(t) do
+	attest.equal(k, _ as string | "PixelVisHandle")
+	attest.equal(v, _ as {["functions"] = {}, ["members"] = {}})
+end
 ]]

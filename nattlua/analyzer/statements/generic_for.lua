@@ -87,7 +87,9 @@ return {
 				identifier:AssociateType(obj)
 			end
 
-			self:CreateAndPushScope():SetLoopIteration(i)
+			local inner_scope = self:CreateAndPushScope()
+			inner_scope:SetLoopIteration(i)
+			inner_scope:SetLoopScope(true)
 			self:AnalyzeStatements(statement.statements)
 			self:PopScope()
 
