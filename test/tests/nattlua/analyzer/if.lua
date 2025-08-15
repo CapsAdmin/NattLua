@@ -1904,3 +1904,34 @@ analyze[[
 
 	attest.equal(path, _ as nil | string)
 ]]
+analyze[[
+
+local x
+
+while _ as boolean do
+	while _ as boolean do
+		x = _ as string
+
+		if x then
+			attest.equal(x, _ as string)
+
+			break
+		end
+
+		attest.equal(x, _ as nil)
+	end
+
+	attest.equal(x, _ as nil | string)
+
+	if x then
+		attest.equal(x, _ as string)
+
+		break
+	end
+
+	attest.equal(x, _ as nil)
+end
+
+attest.equal(x, _ as nil | string)
+
+]]
