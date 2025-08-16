@@ -51,6 +51,7 @@ return {
 		assert(compiler:Lex())
 		assert(compiler:Parse())
 		local runtime_env = Table()
+		runtime_env:SetMutationLimit(math.huge)
 		local typesystem_env = Table()
 		typesystem_env.string_metatable = Table()
 		compiler:SetEnvironments(runtime_env, typesystem_env)

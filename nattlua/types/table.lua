@@ -36,6 +36,7 @@ META:GetSet("Self", nil--[[# as false | TTable]])
 META:GetSet("Contracts", nil--[[# as List<|TTable|>]])
 META:GetSet("CreationScope", nil--[[# as any]])
 META:GetSet("AnalyzerEnvironment", false--[[# as false | "runtime" | "typesystem"]])
+META:GetSet("MutationLimit", 100)
 
 do -- comes from tbl.@Name = "my name"
 	META:GetSet("Name", false--[[# as false | TBaseType]])
@@ -1169,7 +1170,7 @@ do
 
 		initialize_table_mutation_tracker(self, scope, key, hash)
 
-		if #self.mutations[hash] > 100 then
+		if #self.mutations[hash] > self:GetMutationLimit() then
 			return false, type_errors.too_many_mutations()
 		end
 

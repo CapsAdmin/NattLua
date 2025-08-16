@@ -264,3 +264,5 @@ end
 
 type ffi.string = function=(FFIPointer<|number|> | string, number | nil)>(string)
 type ffi.C = ffi.load("")
+
+§ env.runtime.ffi:Get(types.LString("C")):SetMutationLimit(math.huge)
