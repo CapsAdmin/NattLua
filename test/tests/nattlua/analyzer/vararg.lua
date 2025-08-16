@@ -260,7 +260,14 @@ analyze[[
 analyze(
 	[[
     ;(function(...: ...number) 
-        print("!", ...)
+        local x,y,w,h,z,lol = ...
+        attest.equal(x, _ as number)
+        attest.equal(y, _ as number)
+        attest.equal(w, _ as number)
+        attest.equal(h, _ as number)
+        attest.equal(z, _ as number)
+        attest.equal(select("#", ...), 5)
+        attest.equal(lol, nil)
     end)(1,2,"foo",4,5)
 ]],
 	"foo.-is not a subset of.-number"

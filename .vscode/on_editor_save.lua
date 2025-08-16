@@ -129,7 +129,6 @@ if is_nattlua and not test_focus then
 	run_nattlua(full_path)
 	return
 end
-
 if find("intersect_comparison") then
 	run_test("test/tests/nattlua/types/number.lua")
 elseif find("jit_options") then

@@ -6,18 +6,33 @@ type rawlen = function=(v: Table | string)>(number)
 type rawequal = function=(v1: any, v2: any)>(boolean)
 type collectgarbage = function=(opt: string, arg: number)>(...any) | function=(opt: string)>(...any) | function=()>(...any)
 
-analyzer function type_print(...: ...any)
-	print(...)
-end
-
-§env.typesystem.type_print:SetPreventInputArgumentExpansion(true)
-
 analyzer function print(...: ...any)
-	print(...)
+	local str = {}
+
+	for i = 1, select("#", ...) do
+		local v = select(i, ...)
+		str[i] = tostring(v)
+	end
+
+	str = table.concat(str, "\t") .. "\n"
+	local tr = analyzer:GetCallInfo(1)
+
+	if tr then
+		local name = tr.source
+		local line = tr.line
+		local col = tr.col
+
+		if name:sub(1, 1) == "@" then name = name:sub(2) end
+
+		str = string.format("%s:%d:%d: %s", name, line, col, str)
+	end
+
+	io.write(require("nattlua.cli.colors").green(str))
 end
 
 §env.typesystem.print:SetPreventInputArgumentExpansion(true)
 
+type type_print = print
 type tostring = function=(val: any)>(string)
 
 analyzer function next(t: Map<|any, any|>, k: any)

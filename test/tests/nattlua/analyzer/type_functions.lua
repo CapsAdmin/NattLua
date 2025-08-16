@@ -614,7 +614,7 @@ analyze(
 	[[
 
 	local function read<|...: number|>
-		print(...)
+		attest.equal(..., _ as (1, 2))
 	end
 
 	read(1, 2)

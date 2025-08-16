@@ -139,7 +139,6 @@ analyze[[
 ]]
 analyze[[
     local function test(foo: string)
-        print(foo)
     end
     
     local type t = | 

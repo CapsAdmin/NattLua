@@ -61,7 +61,7 @@ return function(META)
 			end
 		end
 
-		local analyzed_return =  union:Simplify()
+		local analyzed_return = union:Simplify()
 		self:PopAnalyzerEnvironment()
 		self:PopGlobalEnvironment("runtime")
 		self:PopGlobalEnvironment("typesystem")
@@ -70,7 +70,7 @@ return function(META)
 		self.analyzed_root_statements[statement] = analyzed_return
 		self:PopCurrentStatement()
 		return analyzed_return
-	end	
+	end
 
 	function META:AnalyzeExpressions(expressions, out)
 		if not expressions then return end
@@ -407,21 +407,46 @@ return function(META)
 			end
 		end
 
+		function META:GetCallInfo(level)
+			level = level or 1
+			local stack = self:GetCallStack()
+
+			if not stack[level] then return end
+
+			local call_info = stack[level]
+			local node = call_info.call_node
+
+			if not node then return end
+
+			local start, stop = node:GetStartStop()
+			local info = self.compiler:GetCode():SubPosToLineChar(start, stop)
+			return {
+				source = self.compiler:GetCode():GetName(),
+				line = info.line_start,
+				col = info.character_start,
+				start = start,
+				stop = stop,
+				obj = call_info.obj,
+				scope = call_info.scope,
+			}
+		end
+
 		function META:TypeTraceback(from)
-			local str = ""
+			from = from or 1
+			local out = {}
 
 			for i, v in ipairs(self:GetCallStack()) do
-				if v.call_node and (not from or i > from) then
+				if v.call_node and i >= from then
 					local start, stop = v.call_node:GetStartStop()
 
 					if start and stop then
 						local part = self.compiler:GetCode():BuildSourceCodePointMessage("", start, stop, 1)
-						str = str .. part .. "#" .. tostring(i) .. ": " .. self.compiler:GetCode():GetName()
+						table.insert(out, part .. "#" .. tostring(i) .. ": " .. self.compiler:GetCode():GetName())
 					end
 				end
 			end
 
-			return str
+			return out
 		end
 
 		local function attempt_render(node)
@@ -461,7 +486,7 @@ return function(META)
 			end
 
 			pcall(function()
-				s = s .. self:TypeTraceback()
+				s = s .. table.concat(self:TypeTraceback(), "\n")
 			end)
 
 			return s

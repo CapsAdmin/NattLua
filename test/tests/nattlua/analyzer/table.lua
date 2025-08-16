@@ -295,7 +295,6 @@ analyze[[
 ]]
 analyze[[
     local x = {nil, ""}
-    print(#x)
     attest.equal(#x, 2)
     attest.equal(x[1], nil)
     attest.equal(x[2], "")

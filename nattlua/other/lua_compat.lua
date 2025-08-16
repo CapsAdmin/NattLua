@@ -51,4 +51,25 @@ do -- these are just helpers for print debugging
 
 		io.write("\n")
 	end
+
+	do
+		local old = print
+		print = function(...)
+			local str = {}
+
+			for i = 1, select("#", ...) do
+				local v = select(i, ...)
+				str[i] = tostring(v)
+			end
+
+			str = table.concat(str, "\t") .. "\n"
+			local info = debug.getinfo(2)
+
+			if info and info.what ~= "C" then
+				str = string.format("%s:%d: %s", info.short_src, info.currentline, str)
+			end
+
+			io.write(str)
+		end
+	end
 end

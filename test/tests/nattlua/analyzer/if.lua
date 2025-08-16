@@ -1847,8 +1847,7 @@ end
 type keys = keysof<|t|>
 
 §analyzer:AnalyzeUnreachableCode()
-
-§ print(analyzer.check_count < 100)
+--§ assert(analyzer.check_count < 100)
 ]]
 analyze[[
 
