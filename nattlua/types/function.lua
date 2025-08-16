@@ -12,6 +12,7 @@ local META = require("nattlua.types.base")()
 --[[#type TFunction = META.@Self]]
 --[[#type TFunction.scopes = List<|any|>]]
 --[[#type TFunction.scope = any]]
+--[[#type TFunction.suppress = boolean]]
 META.Type = "function"
 META.Truthy = true
 META.Falsy = false
@@ -36,7 +37,12 @@ function META.LogicalComparison(l--[[#: TFunction]], r--[[#: TFunction]], op--[[
 end
 
 function META:__tostring()
-	return "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
+	if self.suppress then return "current_function" end
+
+	self.suppress = true
+	local s = "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
+	self.suppress = false
+	return s
 end
 
 function META:IsLiteral()
@@ -275,6 +281,7 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			LiteralFunction = false,
 			Scope = false,
 			Parent = false,
+			suppress = false,
 		},
 		META
 	)
