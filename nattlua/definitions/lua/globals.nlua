@@ -560,6 +560,8 @@ analyzer function tostring(val: any)
 end
 
 analyzer function tonumber(val: string | number, base: number | nil)
+	if val.Type == "number" and not val:IsLiteral() then return types.Number() end
+
 	if not val:IsLiteral() or base and not base:IsLiteral() then
 		return types.Union({types.Nil(), types.Number()})
 	end
