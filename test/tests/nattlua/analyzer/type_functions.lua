@@ -659,7 +659,6 @@ analyze[[
 analyze[[
     
     local function read2<|...: ...$"%**[Lanl].*" | number|>
-	§print(env.typesystem["..."].tr)
 	local out = {}
 
 	for i = 1, select("#", ...) do
