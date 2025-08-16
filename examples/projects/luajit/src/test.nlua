@@ -3,6 +3,7 @@ local attr = assert(fs.get_attributes("README.md"))
 attest.equal<|
 	attr,
 	{
+		creation_time = number,
 		last_accessed = number,
 		last_changed = number,
 		last_modified = number,

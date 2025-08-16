@@ -1,4 +1,5 @@
 local type FileStat = {
+	creation_time = number,
 	last_accessed = number,
 	last_changed = number,
 	last_modified = number,

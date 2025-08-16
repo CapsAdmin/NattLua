@@ -352,7 +352,7 @@ do
 				unsigned char   d_type;
 				char            d_name[256];
 			};
-			struct dirent *readdir(void *dirp);
+			struct dirent *readdir(void *dirp) asm("readdir64");
 		]])
 	end
 
