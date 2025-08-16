@@ -250,6 +250,9 @@ end
 
 analyzer function assert(...: ...any)
 	local obj = select(1, ...)
+
+	if obj:IsCertainlyFalse() then analyzer:Warning({"redundant assertion"}) end
+
 	local potential_msg = select(2, ...)
 
 	if not analyzer:IsDefinetlyReachable() then
