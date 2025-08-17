@@ -54,6 +54,7 @@ do -- these are just helpers for print debugging
 
 	do
 		local old = print
+		local context = require("nattlua.analyzer.context")
 		print = function(...)
 			local str = {}
 
@@ -67,6 +68,14 @@ do -- these are just helpers for print debugging
 
 			if info and info.what ~= "C" then
 				str = string.format("%s:%d: %s", info.short_src, info.currentline, str)
+			end
+
+			do -- dim the color if the print comes from the base environment as we're likely not print debugging that
+				local a = context:GetCurrentAnalyzer()
+
+				if a and a.compiler and a.compiler.is_base_environment then
+					str = require("nattlua.cli.colors").dim(str)
+				end
 			end
 
 			io.write(str)

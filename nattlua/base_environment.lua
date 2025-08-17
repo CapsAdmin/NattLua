@@ -48,6 +48,8 @@ end
 return {
 	BuildBaseEnvironment = function(root_node)
 		local compiler = load_definitions(root_node)
+		-- for debugging
+		compiler.is_base_environment = true
 		assert(compiler:Lex())
 		assert(compiler:Parse())
 		local runtime_env = Table()
