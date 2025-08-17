@@ -1,328 +1,259 @@
---ANALYZE
-local pairs = _G.pairs
-local tostring = _G.tostring
-local type = _G.type
-local debug = _G.debug
-local table = _G.table
-local tonumber = _G.tonumber
-local pcall = _G.pcall
-local assert = _G.assert
-local load = _G.load
-local setfenv = _G.setfenv
-local io = _G.io
-local luadata = {}
-local encode_table
-local loadstring = require("nattlua.other.loadstring")
+--[[# --ANALYZE
+local type State = {
+	depth = 0 .. inf,
+	max_depth = 1 .. inf,
+	expand_metatables = boolean,
+	done = Map<|any, string | nil | true|>,
+}]]
 
-local function count(tbl--[[#: Table]])
-	local i = 0
+local function escape_string(str--[[#: string]], quote--[[#: string]])
+	local new_str = {}
+	local escape_map = {
+		["\n"] = "\\n",
+		["\t"] = "\\t",
+		["\r"] = "\\r",
+		["\b"] = "\\b",
+		["\f"] = "\\f",
+		["\v"] = "\\v",
+		["\a"] = "\\a",
+		["\\"] = "\\\\",
+		[quote] = "\\" .. quote,
+	}
+	local i = 1
 
-	for _ in pairs(tbl) do
-		i = i + 1
-	end
+	while i <= #str do
+		local c = str:sub(i, i)
 
-	return i
-end
-
-local tostringx
-
-do
-	local pretty_prints = {}
-	pretty_prints.table = function(t--[[#: Table]])
-		local str = tostring(t)
-		str = str .. " [" .. count(t) .. " subtables]"
-		-- guessing the location of a library
-		local sources = {}
-
-		for _, v in pairs(t) do
-			if type(v) == "function" then
-				local info = debug.getinfo(v)
-
-				if info then
-					local src = info.source
-					sources[src] = (sources[src] or 0) + 1
-				end
-			end
-		end
-
-		local tmp = {}
-
-		for k, v in pairs(sources) do
-			table.insert(tmp, {k = k, v = v})
-		end
-
-		table.sort(tmp, function(a, b)
-			return a.v > b.v
-		end)
-
-		if #tmp > 0 and tmp[1] then
-			str = str .. "[" .. assert(tmp[1].k):gsub("!/%.%./", "") .. "]"
-		end
-
-		return str
-	end
-	pretty_prints["function"] = function(self--[[#: Function]])
-		if debug.getprettysource then
-			return (
-				"function[%p][%s](%s)"
-			):format(
-				self,
-				debug.getprettysource(self, true),
-				table.concat(debug.getparams(self), ", ")
-			)
-		end
-
-		return tostring(self)
-	end
-
-	function tostringx(val--[[#: any]])
-		local t = type(val)
-		local f = pretty_prints[t]
-
-		if f then return f(val) end
-
-		return tostring(val)
-	end
-end
-
-local function getprettysource(level--[[#: 1 .. inf | Function]], append_line--[[#: boolean | nil]])
-	local info = debug.getinfo(type(level) == "number" and (level + 1) or level)
-
-	if info then
-		if info.source == "=[C]" and type(level) == "number" then
-			info = debug.getinfo(type(level) == "number" and (level + 2) or level)
-		end
-	end
-
-	local pretty_source = "debug.getinfo = nil"
-
-	if info then
-		if info.source:sub(1, 1) == "@" then
-			pretty_source = info.source:sub(2)
-
-			if append_line then
-				local line = info.currentline
-
-				if line == -1 then line = info.linedefined end
-
-				pretty_source = pretty_source .. ":" .. line
-			end
+		if c == "\\" and i < #str then
+			local next_c = str:sub(i + 1, i + 1)
+			new_str[#new_str + 1] = c .. next_c
+			i = i + 2
+		elseif escape_map[c] then
+			new_str[#new_str + 1] = escape_map[c]
+			i = i + 1
+		elseif string.byte(c) < 32 or string.byte(c) > 126 then
+			new_str[#new_str + 1] = string.format("\\x%02X", string.byte(c))
+			i = i + 1
 		else
-			pretty_source = info.source:sub(0, 25)
-
-			if pretty_source ~= info.source then
-				pretty_source = pretty_source .. "...(+" .. #info.source - #pretty_source .. " chars)"
-			end
-
-			if pretty_source == "=[C]" and jit.vmdef then
-				local num = tonumber(tostring(info.func):match("#(%d+)") or "")
-
-				if num then pretty_source = jit.vmdef.ffnames[num] end
-			end
+			new_str[#new_str + 1] = c
+			i = i + 1
 		end
 	end
 
-	return pretty_source
+	return table.concat(new_str)
 end
 
-local function getparams(func--[[#: Function]])
-	local params = {}
+local tostring_object_
 
-	for i = 1, math.huge do
-		local key = debug.getlocal(func, i)
+local function sort_keys(a, b)
+	local type_a, type_b = type(a.raw_key), type(b.raw_key)
 
-		if key then table.insert(params, key) else break end
+	if type_a ~= type_b then
+		local type_order = {number = 1, string = 2, boolean = 3}
+		local order_a = type_order[type_a] or 4
+		local order_b = type_order[type_b] or 4
+		return order_a < order_b
 	end
 
-	return params
-end
-
-local function isarray(t--[[#: Table]])
-	local i = 0
-
-	for _ in pairs(t) do
-		i = i + 1
-
-		if t[i] == nil then return false end
-	end
-
-	return true
-end
-
-local env = {}
-luadata.Types = {}
---[[#type luadata.Types = Map<|string, function=(any)>(string) | nil|>]]
-local idx = function(var--[[#: any]])
-	return var.LuaDataType
-end
-
-function luadata.Type(var--[[#: any]])
-	local t = type(var)
-
-	if t == "table" then
-		local ok, res = pcall(idx, var)
-
-		if ok and res then return res end
-	end
-
-	return t
-end
-
---[[#local type Context = {tab = number, tab_limit = number, done = Table}]]
-
-function luadata.ToString(var, context--[[#: nil | Context]])
-	context = context or {tab = -1}
-	local func = luadata.Types[luadata.Type(var)]
-
-	if func then return func(var, context) end
-
-	if luadata.Types.fallback then return luadata.Types.fallback(var, context) end
-end
-
-function luadata.FromString(str--[[#: string]])
-	local func = assert(loadstring("return " .. str), "luadata")
-	setfenv(func, env)
-	return func()
-end
-
-function luadata.Encode(tbl--[[#: Table]])
-	return luadata.ToString(tbl)
-end
-
-function luadata.Decode(str--[[#: string]])
-	local func, err = loadstring("return {\n" .. str .. "\n}", "luadata")
-
-	if not func then return func, err end
-
-	setfenv(func, env)
-	local ok, err = pcall(func)
-
-	if not ok then return func, err end
-
-	return err
-end
-
-function luadata.SetModifier(
-	type--[[#: string]],
-	callback--[[#: function=(any, Context)>(string)]],
-	func--[[#: nil]],
-	func_name--[[#: nil | string]]
-)
-	luadata.Types[type] = callback
-
-	if func_name then env[func_name] = func end
-end
-
-luadata.SetModifier("cdata", function(var, context)
-	return tostring(var)
-end)
-
-luadata.SetModifier("number", function(var--[[#: number]])
-	return ("%s"):format(var)
-end)
-
-luadata.SetModifier("string", function(var--[[#: string]])
-	return ("%q"):format(var)
-end)
-
-luadata.SetModifier("boolean", function(var--[[#: boolean]])
-	return var and "true" or "false"
-end)
-
-luadata.SetModifier("function", function(var--[[#: Function]])
-	return (
-		"function(%s) --[==[ptr: %p    src: %s]==] end"
-	):format(table.concat(getparams(var), ", "), var, getprettysource(var, true))
-end)
-
-luadata.SetModifier("fallback", function(var--[[#: any]])
-	return "--[==[  " .. tostringx(var) .. "  ]==]"
-end)
-
-luadata.SetModifier("table", function(tbl, context)
-	local str--[[#: List<|string|>]] = {}
-
-	if context.tab_limit and context.tab >= context.tab_limit then
-		return "{--[[ " .. tostringx(tbl) .. " (tab limit reached)]]}"
-	end
-
-	if context.done then
-		if context.done[tbl] then
-			return ("{--[=[%s already serialized]=]}"):format(tostring(tbl))
-		end
-
-		context.done[tbl] = true
-	end
-
-	context.tab = context.tab + 1
-
-	if context.tab == 0 then str = {} else str = {"{\n"} end
-
-	if isarray(tbl) then
-		if #tbl == 0 then
-			str = {"{"}
-		else
-			for i = 1, #tbl do
-				str[#str + 1] = ("%s%s,\n"):format(("\t"):rep(context.tab), luadata.ToString(tbl[i], context))
-			end
-		end
+	if type_a == "number" or type_a == "string" then
+		return a.raw_key < b.raw_key
+	elseif type_a == "boolean" then
+		return tostring(a.raw_key) < tostring(b.raw_key)
 	else
-		for key, value in pairs(tbl) do
-			value = luadata.ToString(value, context)
+		return a.k < b.k
+	end
+end
 
-			if value then
-				if type(key) == "string" and key:find("^[%w_]+$") and not tonumber(key) then
-					str[#str + 1] = ("%s%s = %s,\n"):format(("\t"):rep(context.tab), key, value)
+local function tostring_table_sorted(tbl--[[#: Table]], state--[[#: State]])--[[#: List<|{k = string, v = string, raw_key = any}|>]]
+	local sorted = {}
+
+	if state.depth >= state.max_depth then return sorted end
+
+	for k, v in pairs(tbl) do
+		local raw_key = k
+		local key_str
+
+		if type(k) == "string" then
+			if k:match("^[%a_][%w_]*$") then
+				key_str = k
+			else
+				key_str = "[\"" .. escape_string(k, "\"") .. "\"]"
+			end
+		elseif type(k) == "number" then
+			key_str = "[" .. tostring(k) .. "]"
+		else
+			key_str = "[" .. ((tostring_object_--[[# as any]])(k, state)--[[# as string]]) .. "]"
+		end
+
+		local vobj = v
+
+		if type(v) == "number" and v ~= v then
+			v = "nan"
+		else
+			v = ((tostring_object_--[[# as any]])(v, state)--[[# as string]])
+		end
+
+		if type(vobj) == "table" then state.done[vobj] = "*" .. key_str .. "*" end
+
+		table.insert(sorted, {k = key_str, v = v, raw_key = raw_key})
+	end
+
+	table.sort(sorted, sort_keys)
+	return sorted
+end
+
+function tostring_object_(obj--[[#: any]], state--[[#: State]])--[[#: string]]
+	local T = type(obj)
+
+	if T == "table" then
+		if state.done[obj] == true then return "*self*" end
+
+		if state.done[obj] then return state.done[obj]--[[# as string]] end
+
+		state.done[obj] = true
+		local meta = getmetatable(obj)
+
+		if meta and meta.__tostring and not state.expand_metatables then
+			return (tostring--[[# as any]])(obj)
+		end
+
+		if state.depth >= state.max_depth then return "{...}" end
+
+		local s = {"{\n"}
+		state.depth = state.depth + 1
+
+		for _, kv in ipairs(tostring_table_sorted(obj, state)) do
+			table.insert(s, ("%s%s = %s,\n"):format(("\t"):rep(state.depth), kv.k, kv.v))
+		end
+
+		if state.expand_metatables and meta then
+			local meta_str = (tostring_object_--[[# as any]])(meta, state)--[[# as string]]
+			table.insert(s, ("%s[METATABLE] = %s,\n"):format(("\t"):rep(state.depth), meta_str))
+		end
+
+		state.depth = (state.depth - 1)--[[# as 1 .. inf]]
+		table.insert(s, ("\t"):rep(state.depth) .. "}")
+		return table.concat(s)
+	elseif T == "string" then
+		return "\"" .. escape_string(obj, "\"") .. "\""
+	elseif T == "number" then
+		if obj ~= obj then
+			return "nan"
+		elseif obj == math.huge then
+			return "inf"
+		elseif obj == -math.huge then
+			return "-inf"
+		else
+			return tostring(obj)
+		end
+	elseif T == "function" then
+		local pretty_source = "unknown"
+
+		if debug and debug.getinfo then
+			local info = debug.getinfo(obj)
+
+			if info then
+				if info.source:sub(1, 1) == "@" then
+					pretty_source = info.source:sub(2)
+					local line = info.currentline
+
+					if line == -1 then line = info.linedefined end
+
+					pretty_source = pretty_source .. ":" .. line
 				else
-					key = luadata.ToString(key, context)
+					pretty_source = info.source:sub(1, 25)
 
-					if key then
-						str[#str + 1] = ("%s[%s] = %s,\n"):format(("\t"):rep(context.tab), key, value)
+					if pretty_source ~= info.source then
+						pretty_source = pretty_source .. "...(+" .. (#info.source - #pretty_source) .. " chars)"
+					end
+
+					if pretty_source == "=[C]" and jit and jit.vmdef then
+						local num = tonumber(tostring(obj):match("#(%d+)") or "")
+
+						if num and jit.vmdef.ffnames[num] then
+							pretty_source = jit.vmdef.ffnames[num]
+						end
 					end
 				end
 			end
 		end
-	end
 
-	if context.tab == 0 then
-		if str[1] == "{" then
-			str[#str + 1] = "}" -- empty table
+		local params = {}
+
+		if debug and debug.getlocal then
+			for i = 1, math.huge do
+				local key = debug.getlocal(obj, i)
+
+				if key then
+					if not key:match("^%(") then table.insert(params, key) end
+				else
+					break
+				end
+			end
+		end
+
+		local has_varargs = false
+
+		if debug and debug.getinfo then
+			local info = debug.getinfo(obj)
+
+			if info and info.isvararg then has_varargs = true end
+		end
+
+		local param_str = table.concat(params, ", ")
+
+		if has_varargs then
+			if #params > 0 then
+				param_str = param_str .. ", ..."
+			else
+				param_str = "..."
+			end
+		end
+
+		return string.format("function(%s) --[[ %s @ %p ]]", param_str, pretty_source, obj)
+	elseif T == "boolean" or T == "nil" then
+		return tostring(obj)
+	elseif T == "thread" then
+		return string.format("thread: %p", obj)
+	elseif T == "userdata" then
+		local meta = getmetatable(obj)
+
+		if meta and meta.__tostring then
+			return tostring(obj)
 		else
-			str[#str + 1] = "\n"
+			return string.format("userdata: %p", obj)
 		end
 	else
-		if str[1] == "{" then
-			str[#str + 1] = "}" -- empty table
-		else
-			str[#str + 1] = ("%s}"):format(("\t"):rep(context.tab - 1))
-		end
+		return string.format("%s: %s", T, tostring(obj))
 	end
-
-	context.tab = context.tab - 1
-	return table.concat(str, "")
-end)
-
-local function tostring(...)
-	local tbl = {...}
-	local max_level
-
-	if
-		type(tbl[1]) == "table" and
-		type(tbl[2]) == "number" and
-		type(tbl[3]) == "nil"
-	then
-		max_level = tbl[2]
-		tbl[2] = nil
-	end
-
-	io.write(luadata.ToString(tbl, {tab = -1, tab_limit = max_level, done = {}}):sub(0, -2))
 end
 
-local function print(...)
-	return io.write((tostring--[[# as any]])(...))
+local function tostring_object(obj--[[#: any]], state--[[#: nil | Partial<|State|>]])--[[#: string]]
+	state = state or {}
+	state.depth = state.depth or 0
+	state.max_depth = state.max_depth or math.huge
+
+	if state.expand_metatables == nil then state.expand_metatables = false end
+
+	state.done = state.done or {}
+	return tostring_object_(obj, state)
 end
 
 return {
-	print = print,
-	tostring = tostring,
+	tostring = tostring_object,
+	print = function(
+		tbl--[[#: Table]],
+		max_depth--[[#: 1 .. inf | nil]],
+		expand_metatables--[[#: boolean | nil]]
+	)
+		print(
+			tostring_object(
+				tbl,
+				{
+					max_depth = max_depth,
+					expand_metatables = expand_metatables,
+				}
+			)
+		)
+	end,
 }

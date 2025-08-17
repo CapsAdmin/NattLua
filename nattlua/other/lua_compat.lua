@@ -66,6 +66,10 @@ do -- these are just helpers for print debugging
 			str = table.concat(str, "\t") .. "\n"
 			local info = debug.getinfo(2)
 
+			if info and info.short_src and info.short_src:find("table_print") then
+				info = debug.getinfo(3)
+			end
+
 			if info and info.what ~= "C" then
 				str = string.format("%s:%d: %s", info.short_src, info.currentline, str)
 			end
