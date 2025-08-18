@@ -149,4 +149,16 @@ local function Prefix(analyzer, node, r)
 	return false, type_errors.no_operator(op, r)
 end
 
-return {Prefix = Prefix}
+return {
+	Prefix = function(analyzer, node)
+		if node.value.value == "not" then
+			analyzer.inverted_index_tracking = not analyzer.inverted_index_tracking
+		end
+
+		local r = analyzer:Assert(analyzer:AnalyzeExpression(node.right))
+
+		if node.value.value == "not" then analyzer.inverted_index_tracking = false end
+
+		return Prefix(analyzer, node, r)
+	end,
+}

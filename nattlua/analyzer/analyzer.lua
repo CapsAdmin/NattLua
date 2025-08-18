@@ -133,15 +133,7 @@ do
 		elseif node.kind == "binary_operator" then
 			return self:AssertWithNode(node, Binary(self, node))
 		elseif node.kind == "prefix_operator" then
-			if node.value.value == "not" then
-				self.inverted_index_tracking = not self.inverted_index_tracking
-			end
-
-			local r = self:Assert(self:AnalyzeExpression(node.right))
-
-			if node.value.value == "not" then self.inverted_index_tracking = false end
-
-			return self:Assert(Prefix(self, node, r))
+			return self:Assert(Prefix(self, node))
 		elseif node.kind == "postfix_call" then
 			return AnalyzePostfixCall(self, node)
 		elseif node.kind == "postfix_expression_index" then
@@ -249,7 +241,9 @@ do
 
 		self.timeout = self.timeout or {}
 		local node = self:GetCurrentStatement()
+
 		if not node then return end
+
 		self.timeout[node] = (self.timeout[node] or 0) + 1
 
 		if count < max_iterations then return end
@@ -325,7 +319,6 @@ function META.New(config)
 		max_loop_iterations = false,
 		enable_random_functions = false,
 		yielded_results = false,
-		inverted_index_tracking = false,
 		vars_table = false,
 		type_table = false,
 		analyzer = false,

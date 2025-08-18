@@ -175,11 +175,6 @@ return function(META)
 			end
 
 			function META:TrackUpvalueUnion(obj, truthy_union, falsy_union, inverted)
-				if not truthy_union or not falsy_union then
-					debug.trace()
-					error()
-				end
-
 				local upvalue = obj:GetUpvalue()
 
 				if not upvalue then return end
@@ -199,6 +194,28 @@ return function(META)
 						scope = scope,
 					}
 				)
+			end
+
+			function META:DumpUpvalueTracking(obj)
+				local upvalue = obj:GetUpvalue()
+
+				if not upvalue then return "no upvalue" end
+
+				if not self.tracked_upvalues_done or not self.tracked_upvalues_done[upvalue] then
+					return "no upvalues done"
+				end
+
+				local data = self.tracked_upvalues_done[upvalue]
+
+				if not data.stack then return "no stack" end
+
+				local str = tostring(data.upvalue) .. "\n"
+
+				for i, v in ipairs(data.stack) do
+					str = str .. "T=" .. tostring(v.truthy:Simplify()) .. " F=" .. tostring(v.falsy:Simplify()) .. "\n"
+				end
+
+				print(str)
 			end
 
 			function META:GetTrackedUpvalue(obj)
