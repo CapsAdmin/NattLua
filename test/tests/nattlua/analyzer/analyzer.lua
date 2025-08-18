@@ -694,7 +694,7 @@ local x = setmetatable({}, {
 	__unm = function(self: any)
 		return 42
 	end,
-    __bxor = function(self: any)
+    __bnot = function(self: any)
 		return 43
 	end,
     __len = function(self: any)

@@ -29,10 +29,6 @@ end
 local function Prefix(analyzer, node, r)
 	local op = node.value.value
 
-	if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
-		if r.Type ~= "union" then analyzer:TrackUpvalue(r) end
-	end
-
 	if op == "ref" then
 		r:SetReferenceType(true)
 		return r
@@ -61,6 +57,17 @@ local function Prefix(analyzer, node, r)
 
 		analyzer:TrackUpvalueUnion(r, truthy_union, falsy_union)
 		return new_union
+	end
+
+	if
+		(
+			node.right.kind ~= "binary_operator" or
+			node.right.value.value ~= "."
+		)
+		and
+		r.Type ~= "union"
+	then
+		analyzer:TrackUpvalue(r)
 	end
 
 	if analyzer:IsTypesystem() then
@@ -93,36 +100,6 @@ local function Prefix(analyzer, node, r)
 		end
 	end
 
-	if r.Type == "any" then
-		return r
-	elseif r.Type == "table" then
-		if op == "-" then
-			local res = metatable_function(analyzer, "__unm", r, node)
-
-			if res then return res end
-		elseif op == "~" then
-			local res = metatable_function(analyzer, "__bxor", r, node)
-
-			if res then return res end
-		elseif op == "#" then
-			local res = metatable_function(analyzer, "__len", r, node)
-
-			if res then return res end
-
-			return r:GetArrayLength()
-		end
-	elseif r:IsNumeric() then
-		if op == "-" or op == "~" then return r:PrefixOperator(op) end
-	elseif r.Type == "string" then
-		if op == "#" then
-			local str = r:GetData()
-
-			if r:IsLiteral() then return LNumber(#str) end
-
-			return LNumberRange(0, math.huge)
-		end
-	end
-
 	if op == "not" or op == "!" then
 		if r:IsTruthy() and r:IsFalsy() then
 			return Boolean()
@@ -130,6 +107,42 @@ local function Prefix(analyzer, node, r)
 			return False()
 		elseif r:IsFalsy() then
 			return True()
+		end
+	elseif op == "-" then
+		if r.Type == "table" then
+			local res = metatable_function(analyzer, "__unm", r, node)
+
+			if res then return res end
+		elseif r:IsNumeric() then
+			return r:PrefixOperator(op)
+		elseif r.Type == "any" then
+			return r
+		end
+	elseif op == "~" then
+		if r.Type == "table" then
+			local res = metatable_function(analyzer, "__bnot", r, node)
+
+			if res then return res end
+		elseif r:IsNumeric() then
+			return r:PrefixOperator(op)
+		elseif r.Type == "any" then
+			return r
+		end
+	elseif op == "#" then
+		if r.Type == "table" then
+			local res = metatable_function(analyzer, "__len", r, node)
+
+			if res then return res end
+
+			return r:GetArrayLength()
+		elseif r.Type == "string" then
+			local str = r:GetData()
+
+			if r:IsLiteral() then return LNumber(#str) end
+
+			return LNumberRange(0, math.huge)
+		elseif r.Type == "any" then
+			return r
 		end
 	end
 
