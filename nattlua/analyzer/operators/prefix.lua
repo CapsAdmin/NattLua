@@ -29,46 +29,7 @@ end
 local function Prefix(analyzer, node, r)
 	local op = node.value.value
 
-	if op == "ref" then
-		r:SetReferenceType(true)
-		return r
-	end
-
 	if r.Type == "tuple" then r = r:GetWithNumber(1) or Nil() end
-
-	if r.Type == "union" then
-		local new_union = Union()
-		local truthy_union = Union():SetUpvalue(r:GetUpvalue())
-		local falsy_union = Union():SetUpvalue(r:GetUpvalue())
-
-		for _, r in ipairs(r:GetData()) do
-			local res, err = Prefix(analyzer, node, r)
-
-			if not res then
-				analyzer:Error(err)
-			else
-				new_union:AddType(res)
-
-				if res:IsTruthy() then truthy_union:AddType(r) end
-
-				if res:IsFalsy() then falsy_union:AddType(r) end
-			end
-		end
-
-		analyzer:TrackUpvalueUnion(r, truthy_union, falsy_union)
-		return new_union
-	end
-
-	if
-		(
-			node.right.kind ~= "binary_operator" or
-			node.right.value.value ~= "."
-		)
-		and
-		r.Type ~= "union"
-	then
-		analyzer:TrackUpvalue(r)
-	end
 
 	if analyzer:IsTypesystem() then
 		if op == "typeof" then
@@ -156,8 +117,37 @@ return {
 		end
 
 		local r = analyzer:Assert(analyzer:AnalyzeExpression(node.right))
+		analyzer:TrackUpvalue(r)
 
 		if node.value.value == "not" then analyzer.inverted_index_tracking = false end
+
+		if node.value.value == "ref" then
+			r:SetReferenceType(true)
+			return r
+		end
+
+		if r.Type == "union" then
+			local new_union = Union()
+			local truthy_union = Union():SetUpvalue(r:GetUpvalue())
+			local falsy_union = Union():SetUpvalue(r:GetUpvalue())
+
+			for _, r in ipairs(r:GetData()) do
+				local res, err = Prefix(analyzer, node, r)
+
+				if not res then
+					analyzer:Error(err)
+				else
+					new_union:AddType(res)
+
+					if res:IsTruthy() then truthy_union:AddType(r) end
+
+					if res:IsFalsy() then falsy_union:AddType(r) end
+				end
+			end
+
+			analyzer:TrackUpvalueUnion(r, truthy_union, falsy_union)
+			return new_union
+		end
 
 		return Prefix(analyzer, node, r)
 	end,
