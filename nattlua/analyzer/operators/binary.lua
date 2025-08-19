@@ -16,6 +16,27 @@ local Nil = require("nattlua.types.symbol").Nil
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange
 local type_errors = require("nattlua.types.error_messages")
+local ARITHMETIC_OPS = {
+	["+"] = "__add",
+	["-"] = "__sub",
+	["*"] = "__mul",
+	["/"] = "__div",
+	["/idiv/"] = "__idiv",
+	["%"] = "__mod",
+	["^"] = "__pow",
+	["&"] = "__band",
+	["|"] = "__bor",
+	["~"] = "__bxor",
+	["<<"] = "__lshift",
+	[">>"] = "__rshift",
+	[".."] = "__concat",
+}
+local COMPARISON_OPS = {
+	["<"] = {meta = "__lt", invert = false},
+	["<="] = {meta = "__le", invert = false},
+	[">"] = {meta = "__lt", invert = true},
+	[">="] = {meta = "__le", invert = true},
+}
 
 local function metatable_function(self, node, meta_method, l, r)
 	meta_method = ConstString(meta_method)
@@ -171,17 +192,43 @@ local function number_comparison(self, l, r, op, invert)
 	return logical_cmp_cast(false)
 end
 
-local function Binary(self, node, l, r, op)
-	op = op or node.value.value
-	local cur_union
+-- Unified comparison handler
+local function handle_comparison(self, node, l, r, op)
+	local config = COMPARISON_OPS[op]
 
+	if not config then return end
+
+	local res = metatable_function(self, node, config.meta, l, r)
+
+	if res then return res end
+
+	if l:IsNumeric() and r:IsNumeric() then
+		local res = number_comparison(self, l, r, op, config.invert)
+
+		if res then return res end
+	end
+
+	return logical_cmp_cast(l.LogicalComparison(l, r, op))
+end
+
+local function Binary(self, node, l, r, op)
 	if op == "|" and self:IsTypesystem() then
-		cur_union = Union()
+		local cur_union = Union()
 		self:PushCurrentType(cur_union, "union")
+		l = self:Assert(self:AnalyzeExpression(node.left))
+		r = self:Assert(self:AnalyzeExpression(node.right))
+		self:TrackUpvalue(l)
+		self:TrackUpvalue(r)
+
+		if cur_union then self:PopCurrentType("union") end
+
+		cur_union:AddType(l)
+		cur_union:AddType(r)
+		return cur_union
 	end
 
 	if not l and not r then
-		if node.value.value == "and" then
+		if op == "and" then
 			l = self:Assert(self:AnalyzeExpression(node.left))
 
 			if l:IsCertainlyFalse() then
@@ -210,7 +257,7 @@ local function Binary(self, node, l, r, op)
 					end
 				end
 			end
-		elseif node.value.value == "or" then
+		elseif op == "or" then
 			self:PushFalsyExpressionContext(true)
 			l = self:Assert(self:AnalyzeExpression(node.left))
 			self:PopFalsyExpressionContext()
@@ -252,14 +299,8 @@ local function Binary(self, node, l, r, op)
 		end
 	end
 
-	if cur_union then self:PopCurrentType("union") end
-
 	if self:IsTypesystem() then
-		if op == "|" then
-			cur_union:AddType(l)
-			cur_union:AddType(r)
-			return cur_union
-		elseif op == "==" then
+		if op == "==" then
 			return l:Equal(r) and True() or False()
 		elseif op == "~" then
 			if l.Type == "union" then return l:Copy():RemoveType(r) end
@@ -433,57 +474,24 @@ local function Binary(self, node, l, r, op)
 	if l.Type == "any" or r.Type == "any" then return Any() end
 
 	do -- arithmetic operators
-		if op == "." or op == ":" then
-			return self:IndexOperator(l, r)
-		elseif op == "+" then
-			return operator(self, node, l, r, op, "__add")
-		elseif op == "-" then
-			return operator(self, node, l, r, op, "__sub")
-		elseif op == "*" then
-			return operator(self, node, l, r, op, "__mul")
-		elseif op == "/" then
-			return operator(self, node, l, r, op, "__div")
-		elseif op == "/idiv/" then
-			return operator(self, node, l, r, op, "__idiv")
-		elseif op == "%" then
-			return operator(self, node, l, r, op, "__mod")
-		elseif op == "^" then
-			return operator(self, node, l, r, op, "__pow")
-		elseif op == "&" then
-			return operator(self, node, l, r, op, "__band")
-		elseif op == "|" then
-			return operator(self, node, l, r, op, "__bor")
-		elseif op == "~" then
-			return operator(self, node, l, r, op, "__bxor")
-		elseif op == "<<" then
-			return operator(self, node, l, r, op, "__lshift")
-		elseif op == ">>" then
-			return operator(self, node, l, r, op, "__rshift")
-		elseif op == ".." then
-			return operator(self, node, l, r, op, "__concat")
+		if op == "." or op == ":" then return self:IndexOperator(l, r) end
+
+		if ARITHMETIC_OPS[op] then
+			return operator(self, node, l, r, op, ARITHMETIC_OPS[op])
 		end
 	end
 
 	do -- logical operators
-		if op == "==" then
-			local res = metatable_function(self, node, "__eq", l, r)
+		-- Handle comparison operators
+		if COMPARISON_OPS[op] then return handle_comparison(self, node, l, r, op) end
 
-			if res then return res end
-
-			if l:IsNumeric() and r:IsNumeric() then
-				local res = number_comparison(self, l, r, op)
-
-				if res then return res end
-			end
-
-			if l.Type ~= r.Type then return False() end
-
-			return logical_cmp_cast(l.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
-		elseif op == "~=" or op == "!=" then
-			local res = metatable_function(self, node, "__eq", l, r)
+		if op == "==" or op == "~=" or op == "!=" then
+			local is_not_equal = op == "~=" or op == "!="
+			local meta_method = "__eq"
+			local res = metatable_function(self, node, meta_method, l, r)
 
 			if res then
-				if res:IsLiteral() then
+				if is_not_equal and res:IsLiteral() then
 					res = not res:GetData() and True() or False()
 				end
 
@@ -491,66 +499,22 @@ local function Binary(self, node, l, r, op)
 			end
 
 			if l:IsNumeric() and r:IsNumeric() then
-				local res = number_comparison(self, l, r, op, true)
+				local res = number_comparison(self, l, r, op, is_not_equal)
 
 				if res then return res end
 			end
 
-			if l.Type ~= r.Type then return True() end
+			if l.Type ~= r.Type then return is_not_equal and True() or False() end
 
-			local val, err = l.LogicalComparison(l, r, "==", self:GetCurrentAnalyzerEnvironment())
+			if is_not_equal then
+				local val, err = l.LogicalComparison(l, r, "==", self:GetCurrentAnalyzerEnvironment())
 
-			if val ~= nil then val = not val end
+				if val ~= nil then val = not val end
 
-			return logical_cmp_cast(val, err)
-		elseif op == "<" then
-			local res = metatable_function(self, node, "__lt", l, r)
-
-			if res then return res end
-
-			if l:IsNumeric() and r:IsNumeric() then
-				local res = number_comparison(self, l, r, op)
-
-				if res then return res end
+				return logical_cmp_cast(val, err)
+			else
+				return logical_cmp_cast(l.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
 			end
-
-			return logical_cmp_cast(l.LogicalComparison(l, r, op))
-		elseif op == "<=" then
-			local res = metatable_function(self, node, "__le", l, r)
-
-			if res then return res end
-
-			if l:IsNumeric() and r:IsNumeric() then
-				local res = number_comparison(self, l, r, op)
-
-				if res then return res end
-			end
-
-			return logical_cmp_cast(l.LogicalComparison(l, r, op))
-		elseif op == ">" then
-			local res = metatable_function(self, node, "__lt", l, r)
-
-			if res then return res end
-
-			if l:IsNumeric() and r:IsNumeric() then
-				local res = number_comparison(self, l, r, op)
-
-				if res then return res end
-			end
-
-			return logical_cmp_cast(l.LogicalComparison(l, r, op))
-		elseif op == ">=" then
-			local res = metatable_function(self, node, "__le", l, r)
-
-			if res then return res end
-
-			if l:IsNumeric() and r:IsNumeric() then
-				local res = number_comparison(self, l, r, op)
-
-				if res then return res end
-			end
-
-			return logical_cmp_cast(l.LogicalComparison(l, r, op))
 		elseif op == "or" or op == "||" then
 			-- boolean or boolean
 			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}) end
@@ -563,35 +527,29 @@ local function Binary(self, node, l, r, op)
 
 			return r:Copy()
 		elseif op == "and" or op == "&&" then
-			-- true and false
-			if l:IsTruthy() and r:IsFalsy() then
-				if l:IsFalsy() or r:IsTruthy() then return Union({l, r}) end
+			-- boolean and boolean
+			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}) end
 
-				return r:Copy()
-			end
+			-- true and false
+			if l:IsTruthy() and r:IsFalsy() then return r:Copy() end
 
 			-- false and true
-			if l:IsFalsy() and r:IsTruthy() then
-				if l:IsTruthy() or r:IsFalsy() then return Union({l, r}) end
-
-				return l:Copy()
-			end
+			if l:IsFalsy() and r:IsTruthy() then return l:Copy() end
 
 			-- true and true
-			if l:IsTruthy() and r:IsTruthy() then
-				if l:IsFalsy() and r:IsFalsy() then return Union({l, r}) end
+			if l:IsTruthy() and r:IsTruthy() then return r:Copy() end
 
-				return r:Copy()
-			else
-				-- false and false
-				if l:IsTruthy() and r:IsTruthy() then return Union({l, r}) end
-
-				return l:Copy()
-			end
+			-- false and false
+			return l:Copy()
 		end
 	end
 
 	return false, type_errors.binary(op, l, r)
 end
 
-return {Binary = Binary}
+return {
+	Binary = function(self, node, l, r, op)
+		op = op or node.value.value
+		return Binary(self, node, l, r, op)
+	end,
+}
