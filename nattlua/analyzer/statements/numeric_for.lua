@@ -6,7 +6,7 @@ local Number = require("nattlua.types.number").Number
 local LNumber = require("nattlua.types.number").LNumber
 local False = require("nattlua.types.symbol").False
 local Union = require("nattlua.types.union").Union
-local Binary = require("nattlua.analyzer.operators.binary").Binary
+local BinaryCustom = require("nattlua.analyzer.operators.binary").BinaryCustom
 local LNumberRange = require("nattlua.types.range").LNumberRange
 
 local function get_largest_number(obj)
@@ -50,7 +50,7 @@ return {
 
 		if literal_init and literal_max then
 			-- also check step
-			condition:AddType(Binary(self, statement, init, max, "<="))
+			condition:AddType(BinaryCustom(self, statement, init, max, "<="))
 		else
 			condition:AddType(True())
 			condition:AddType(False())

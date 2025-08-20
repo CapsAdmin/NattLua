@@ -113,6 +113,7 @@ do
 end
 
 do
+	local BinaryCustom = require("nattlua.analyzer.operators.binary").BinaryCustom
 	local Binary = require("nattlua.analyzer.operators.binary").Binary
 	local AnalyzePostfixCall = require("nattlua.analyzer.expressions.postfix_call").AnalyzePostfixCall
 	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
@@ -164,7 +165,7 @@ do
 		elseif node.kind == "postfix_operator" then
 			if node.value.value == "++" then
 				local r = self:AnalyzeExpression(node.left)
-				return Binary(self, setmetatable({value = {value = "+"}}, Node), r, r)
+				return BinaryCustom(self, setmetatable({value = {value = "+"}}, Node), r, r, "+")
 			end
 		elseif node.kind == "empty_union" then
 			return Union()

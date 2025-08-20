@@ -29,21 +29,20 @@ local ARITHMETIC_OPS = {
 	["~"] = "__bxor",
 	["<<"] = "__lshift",
 	[">>"] = "__rshift",
-	[".."] = "__concat",
 }
 local COMPARISON_OPS = {
-	["<"] = {meta = "__lt", invert = false},
-	["<="] = {meta = "__le", invert = false},
-	[">"] = {meta = "__lt", invert = true},
-	[">="] = {meta = "__le", invert = true},
+	["<"] = "__lt",
+	["<="] = "__le",
+	[">"] = "__lt",
+	[">="] = "__le",
 }
 
 local function metatable_function(self, node, meta_method, l, r)
-	meta_method = ConstString(meta_method)
 	local r_metatable = (r.Type == "table" or r.Type == "string") and r:GetMetaTable()
 	local l_metatable = (l.Type == "table" or l.Type == "string") and l:GetMetaTable()
 
 	if r_metatable or l_metatable then
+		meta_method = ConstString(meta_method)
 		local func = (
 				l_metatable and
 				l_metatable:Get(meta_method)
@@ -65,8 +64,131 @@ local function metatable_function(self, node, meta_method, l, r)
 	end
 end
 
-local function operator(self, node, l, r, op, meta_method)
-	if op == ".." then
+local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | nil]])
+	if not val and err then return val, type_errors.plain_error(err) end
+
+	if val == nil then
+		return Boolean()
+	elseif val == true then
+		return True()
+	elseif val == false then
+		return False()
+	end
+end
+
+local intersect_comparison = require("nattlua.analyzer.intersect_comparison")
+
+local function number_comparison(self, l, r, op)
+	local invert = op == "~=" or op == "!=" or op == ">" or op == ">="
+	local nl, nr, nl2, nr2 = intersect_comparison(l, r, op, invert)
+
+	if nl and nr then self:TrackUpvalueUnion(l, nl, nr) end
+
+	if nl2 and nr2 then self:TrackUpvalueUnion(r, nl2, nr2) end
+
+	if nl and nr then
+		if nl:IsNan() or nr:IsNan() then
+			if op == "~=" then return logical_cmp_cast(true) end
+
+			return logical_cmp_cast(false)
+		end
+
+		return logical_cmp_cast(nil)
+	elseif nl then
+		return logical_cmp_cast(true)
+	end
+
+	return logical_cmp_cast(false)
+end
+
+local Binary
+
+local function coerce_number(l, r)
+	if l:IsLiteral() and r:IsLiteral() then
+		if (l.Type == "number" or l.Type == "range") and r.Type == "string" then
+			local num = tonumber(r:GetData())
+
+			if num then r = LNumber(num) end
+		elseif l.Type == "string" and (r.Type == "number" or r.Type == "range") then
+			local num = tonumber(l:GetData())
+
+			if num then l = LNumber(num) end
+		elseif l.Type == "string" and r.Type == "string" then
+			local lnum = tonumber(l:GetData())
+			local rnum = tonumber(r:GetData())
+
+			if lnum and rnum then
+				l = LNumber(lnum)
+				r = LNumber(rnum)
+			end
+		end
+	end
+
+	return l, r
+end
+
+function Binary(self, node, l, r, op)
+	if l.Type == "any" or r.Type == "any" then return Any() end
+
+	if op == "and" then
+		-- boolean and boolean
+		if l:IsUncertain() or r:IsUncertain() then return Union({l, r}) end
+
+		-- true and false
+		if l:IsTruthy() and r:IsFalsy() then return r:Copy() end
+
+		-- false and true
+		if l:IsFalsy() and r:IsTruthy() then return l:Copy() end
+
+		-- true and true
+		if l:IsTruthy() and r:IsTruthy() then return r:Copy() end
+
+		-- false and false
+		return l:Copy()
+	elseif op == "or" then
+		-- boolean or boolean
+		if l:IsUncertain() or r:IsUncertain() then return Union({l, r}) end
+
+		-- true or boolean
+		if l:IsTruthy() then return l:Copy() end
+
+		-- false or true
+		if r:IsTruthy() then return r:Copy() end
+
+		return r:Copy()
+	elseif op == "==" or op == "!=" or op == "~=" then
+		local is_not_equal = op == "~=" or op == "!="
+		local meta_method = "__eq"
+		local res = metatable_function(self, node, meta_method, l, r)
+
+		if res then
+			if is_not_equal and res:IsLiteral() then
+				res = not res:GetData() and True() or False()
+			end
+
+			return res
+		end
+
+		if l:IsNumeric() and r:IsNumeric() then
+			local res = number_comparison(self, l, r, op)
+
+			if res then return res end
+		end
+
+		if l.Type ~= r.Type then return is_not_equal and True() or False() end
+
+		if is_not_equal then
+			local val, err = l.LogicalComparison(l, r, "==", self:GetCurrentAnalyzerEnvironment())
+
+			if val ~= nil then val = not val end
+
+			return logical_cmp_cast(val, err)
+		end
+
+		return logical_cmp_cast(l.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
+	elseif op == "." or op == ":" then
+		return self:IndexOperator(l, r)
+	elseif op == ".." then
 		if
 			(
 				l.Type == "string" and
@@ -113,121 +235,253 @@ local function operator(self, node, l, r, op, meta_method)
 
 			return String()
 		end
-	end
 
-	if l:IsLiteral() and r:IsLiteral() then
-		if (l.Type == "number" or l.Type == "range") and r.Type == "string" then
-			local num = tonumber(r:GetData())
-
-			if num then r = LNumber(num) end
-		elseif l.Type == "string" and (r.Type == "number" or r.Type == "range") then
-			local num = tonumber(l:GetData())
-
-			if num then l = LNumber(num) end
-		elseif l.Type == "string" and r.Type == "string" then
-			local lnum = tonumber(l:GetData())
-			local rnum = tonumber(r:GetData())
-
-			if lnum and rnum then
-				l = LNumber(lnum)
-				r = LNumber(rnum)
-			end
-		end
-	end
-
-	if
-		(
-			l.Type == "number" or
-			l.Type == "range"
-		)
-		and
-		(
-			r.Type == "number" or
-			r.Type == "range"
-		)
-	then
-		return l:BinaryOperator(r, op)
-	else
-		local res = metatable_function(self, node, meta_method, l, r)
+		local res = metatable_function(self, node, "__concat", l, r)
 
 		if res then return res end
+	elseif ARITHMETIC_OPS[op] then
+		do -- arithmetic can be coerced to a number
+			local nl, nr = coerce_number(l, r)
+
+			if nl:IsNumeric() and nr:IsNumeric() then return nl:BinaryOperator(nr, op) end
+		end
+
+		local res = metatable_function(self, node, ARITHMETIC_OPS[op], l, r)
+
+		if res then return res end
+	elseif COMPARISON_OPS[op] then
+		if l:IsNumeric() and r:IsNumeric() then
+			local res = number_comparison(self, l, r, op)
+
+			if res then return res end
+		end
+
+		local res = metatable_function(self, node, COMPARISON_OPS[op], l, r)
+
+		if res then return res end
+
+		return logical_cmp_cast(l.LogicalComparison(l, r, op))
 	end
 
 	return false, type_errors.binary(op, l, r)
 end
 
-local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | nil]])
-	if not val and err then return val, type_errors.plain_error(err) end
-
-	if val == nil then
-		return Boolean()
-	elseif val == true then
-		return True()
-	elseif val == false then
-		return False()
-	end
+local function get_lr(self, node)
+	local l = self:Assert(self:AnalyzeExpression(node.left))
+	local r = self:Assert(self:AnalyzeExpression(node.right))
+	self:TrackUpvalue(l)
+	self:TrackUpvalue(r)
+	return l, r
 end
 
-local intersect_comparison = require("nattlua.analyzer.intersect_comparison")
+local function BinaryWithUnion(self, node, l, r, op)
+	if l.Type == "any" or r.Type == "any" then return Any() end
 
-local function number_comparison(self, l, r, op, invert)
-	local nl, nr, nl2, nr2 = intersect_comparison(l, r, op, invert)
+	if self:IsTypesystem() then
+		if op == "==" then
+			return l:Equal(r) and True() or False()
+		elseif op == "~" then
+			if l.Type == "union" then return l:Copy():RemoveType(r) end
 
-	if nl and nr then self:TrackUpvalueUnion(l, nl, nr) end
+			return l
+		elseif op == "&" or op == "extends" then
+			if l.Type ~= "table" then
+				return false, "type " .. tostring(l) .. " cannot be extended"
+			end
 
-	if nl2 and nr2 then self:TrackUpvalueUnion(r, nl2, nr2) end
+			return l:Extend(r)
+		elseif op == ">" or op == "supersetof" then
+			return Symbol((r:IsSubsetOf(l)))
+		elseif op == "<" or op == "subsetof" then
+			return Symbol((l:IsSubsetOf(r)))
+		elseif op == ".." then
+			if l.Type == "tuple" and r.Type == "tuple" then
+				return l:Copy():Concat(r)
+			elseif l.Type == "string" and r.Type == "string" then
+				if l:IsLiteral() and r:IsLiteral() then
+					return LString(l:GetData() .. r:GetData())
+				end
 
-	if nl and nr then
-		if nl:IsNan() or nr:IsNan() then
-			if op == "~=" then return logical_cmp_cast(true) end
+				return false, type_errors.binary(op, l, r)
+			elseif l.Type == "number" and r.Type == "number" then
+				if l:IsLiteral() and r:IsLiteral() then
+					if l:GetData() == r:GetData() then return LNumber(l:GetData()) end
 
-			return logical_cmp_cast(false)
+					return LNumberRange(l:GetData(), r:GetData())
+				end
+
+				return l:Copy()
+			end
+		elseif op == "*" then
+			if l.Type == "tuple" and r.Type == "number" and r:IsLiteral() then
+				return l:Copy():SetRepeat(r:GetData())
+			end
+		elseif op == "+" then
+			if l.Type == "table" and r.Type == "table" then return l:Union(r) end
+		end
+	end
+
+	if l.Type == "union" or r.Type == "union" then
+		local upvalue = l:GetUpvalue()
+		local original_l = l
+		local original_r = r
+
+		-- normalize l and r to be both unions to reduce complexity
+		if l.Type ~= "union" and r.Type == "union" then l = Union({l}) end
+
+		if l.Type == "union" and r.Type ~= "union" then r = Union({r}) end
+
+		if l.Type == "union" and r.Type == "union" then
+			local new_union = Union()
+			new_union:SetLeftRightSource(l, r)
+			local truthy_union = Union():SetUpvalue(upvalue)
+			local falsy_union = Union():SetUpvalue(upvalue)
+
+			if upvalue then upvalue:SetTruthyFalsyUnion(truthy_union, falsy_union) end
+
+			-- special case for type(x) ==/~=
+			if self.type_checked and (op == "==" or op == "!=" or op == "~=") then
+				local type_checked = self.type_checked
+				self.type_checked = false
+
+				for _, l_elem in ipairs(l:GetData()) do
+					for _, r_elem in ipairs(r:GetData()) do
+						local res, err = Binary(self, node, l_elem, r_elem, op)
+
+						if not res then
+							self:Error(err)
+						else
+							if res:IsTruthy() then
+								for _, t in ipairs(type_checked:GetData()) do
+									if t:GetLuaType() == l_elem:GetData() then
+										truthy_union:AddType(t)
+									end
+								end
+							end
+
+							if res:IsFalsy() then
+								for _, t in ipairs(type_checked:GetData()) do
+									if t:GetLuaType() == l_elem:GetData() then falsy_union:AddType(t) end
+								end
+							end
+
+							new_union:AddType(res)
+						end
+					end
+				end
+
+				local tbl_key = type_checked:GetParentTable()
+
+				if tbl_key then
+					self:TrackTableIndexUnion(tbl_key.table, tbl_key.key, truthy_union, falsy_union)
+				end
+			else
+				self.type_checked = false -- this could happen with something like print(type("foo")) so clear it in case
+				for _, l_elem in ipairs(l:GetData()) do
+					for _, r_elem in ipairs(r:GetData()) do
+						local res, err = Binary(self, node, l_elem, r_elem, op)
+
+						if not res then
+							self:Error(err)
+						else
+							if res:IsTruthy() then truthy_union:AddType(l_elem) end
+
+							if res:IsFalsy() then falsy_union:AddType(l_elem) end
+
+							new_union:AddType(res)
+						end
+					end
+				end
+			end
+
+			-- Operator-specific union handling
+			if op == "and" or op == "or" then
+				return new_union
+			elseif op == "==" or op == "!=" or op == "~=" then
+				local tbl_key = l:GetParentTable()
+
+				if tbl_key then
+					self:TrackTableIndexUnion(tbl_key.table, tbl_key.key, truthy_union, falsy_union)
+				end
+
+				local left_right = l:GetLeftRightSource()
+
+				if left_right then
+					local key = left_right.right
+					key = key.Type == "union" and key:Simplify() or key
+					local union = left_right.left
+					local expected = original_r
+					local truthy_union_lr = Union():SetUpvalue(upvalue)
+					local falsy_union_lr = Union():SetUpvalue(upvalue)
+
+					for k, v in ipairs(union:GetData()) do
+						local val, err = v:Get(key)
+
+						if val then
+							local l = val
+							local r = expected
+							local res = BinaryWithUnion(self, node, l, r, op)
+
+							if res:IsTruthy() then truthy_union_lr:AddType(v) end
+
+							if res:IsFalsy() then falsy_union_lr:AddType(v) end
+						end
+					end
+
+					self:TrackUpvalueUnion(union, truthy_union_lr, falsy_union_lr, op == "==")
+					return new_union
+				end
+
+				self:TrackUpvalueUnion(l, truthy_union, falsy_union, op ~= "==")
+				self:TrackUpvalueUnion(r, truthy_union, falsy_union, op ~= "==")
+				return new_union
+			else
+				-- General handling for other operators with unions
+				local tbl_key = l:GetParentTable()
+
+				if tbl_key then
+					self:TrackTableIndexUnion(tbl_key.table, tbl_key.key, truthy_union, falsy_union)
+				end
+
+				if
+					node.parent.kind ~= "binary_operator" or
+					(
+						node.parent.value.value ~= "==" and
+						node.parent.value.value ~= "~="
+					)
+				then
+					self:TrackUpvalueUnion(l, truthy_union, falsy_union)
+				end
+
+				self:TrackUpvalueUnion(r, truthy_union, falsy_union)
+				return new_union
+			end
+		end
+	end
+
+	-- No unions detected, use regular binary operation
+	return Binary(self, node, l, r, op)
+end
+
+return {
+	BinaryCustom = BinaryWithUnion,
+	Binary = function(self, node)
+		local op = node.value.value
+		local l = nil
+		local r = nil
+
+		if op == "|" and self:IsTypesystem() then
+			local cur_union = Union()
+			self:PushCurrentType(cur_union, "union")
+			local l, r = get_lr(self, node)
+
+			if cur_union then self:PopCurrentType("union") end
+
+			cur_union:AddType(l)
+			cur_union:AddType(r)
+			return cur_union
 		end
 
-		return logical_cmp_cast(nil)
-	elseif nl then
-		return logical_cmp_cast(true)
-	end
-
-	return logical_cmp_cast(false)
-end
-
--- Unified comparison handler
-local function handle_comparison(self, node, l, r, op)
-	local config = COMPARISON_OPS[op]
-
-	if not config then return end
-
-	local res = metatable_function(self, node, config.meta, l, r)
-
-	if res then return res end
-
-	if l:IsNumeric() and r:IsNumeric() then
-		local res = number_comparison(self, l, r, op, config.invert)
-
-		if res then return res end
-	end
-
-	return logical_cmp_cast(l.LogicalComparison(l, r, op))
-end
-
-local function Binary(self, node, l, r, op)
-	if op == "|" and self:IsTypesystem() then
-		local cur_union = Union()
-		self:PushCurrentType(cur_union, "union")
-		l = self:Assert(self:AnalyzeExpression(node.left))
-		r = self:Assert(self:AnalyzeExpression(node.right))
-		self:TrackUpvalue(l)
-		self:TrackUpvalue(r)
-
-		if cur_union then self:PopCurrentType("union") end
-
-		cur_union:AddType(l)
-		cur_union:AddType(r)
-		return cur_union
-	end
-
-	if not l and not r then
 		if op == "and" then
 			l = self:Assert(self:AnalyzeExpression(node.left))
 
@@ -285,271 +539,23 @@ local function Binary(self, node, l, r, op)
 				end
 			end
 		else
-			l = self:Assert(self:AnalyzeExpression(node.left))
-			r = self:Assert(self:AnalyzeExpression(node.right))
+			l, r = get_lr(self, node)
+
+			-- TODO: more elegant way of dealing with self?
+			if op == ":" then
+				self.self_arg_stack = self.self_arg_stack or {}
+				table.insert(self.self_arg_stack, l)
+			end
+		end
+
+		if self:IsRuntime() then
+			if l.Type == "tuple" then l = self:GetFirstValue(l) or Nil() end
+
+			if r.Type == "tuple" then r = self:GetFirstValue(r) or Nil() end
 		end
 
 		self:TrackUpvalue(l)
 		self:TrackUpvalue(r)
-
-		-- TODO: more elegant way of dealing with self?
-		if op == ":" then
-			self.self_arg_stack = self.self_arg_stack or {}
-			table.insert(self.self_arg_stack, l)
-		end
-	end
-
-	if self:IsTypesystem() then
-		if op == "==" then
-			return l:Equal(r) and True() or False()
-		elseif op == "~" then
-			if l.Type == "union" then return l:Copy():RemoveType(r) end
-
-			return l
-		elseif op == "&" or op == "extends" then
-			if l.Type ~= "table" then
-				return false, "type " .. tostring(l) .. " cannot be extended"
-			end
-
-			return l:Extend(r)
-		elseif op == ".." then
-			if l.Type == "tuple" and r.Type == "tuple" then
-				return l:Copy():Concat(r)
-			elseif l.Type == "string" and r.Type == "string" then
-				if l:IsLiteral() and r:IsLiteral() then
-					return LString(l:GetData() .. r:GetData())
-				end
-
-				return false, type_errors.binary(op, l, r)
-			elseif l.Type == "number" and r.Type == "number" then
-				if l:IsLiteral() and r:IsLiteral() then
-					if l:GetData() == r:GetData() then return LNumber(l:GetData()) end
-
-					return LNumberRange(l:GetData(), r:GetData())
-				end
-
-				return l:Copy()
-			end
-		elseif op == "*" then
-			if l.Type == "tuple" and r.Type == "number" and r:IsLiteral() then
-				return l:Copy():SetRepeat(r:GetData())
-			end
-		elseif op == ">" or op == "supersetof" then
-			return Symbol((r:IsSubsetOf(l)))
-		elseif op == "<" or op == "subsetof" then
-			return Symbol((l:IsSubsetOf(r)))
-		elseif op == "+" then
-			if l.Type == "table" and r.Type == "table" then return l:Union(r) end
-		end
-	end
-
-	-- adding two tuples at runtime in lua will basically do this
-	if self:IsRuntime() then
-		if l.Type == "tuple" then l = self:GetFirstValue(l) or Nil() end
-
-		if r.Type == "tuple" then r = self:GetFirstValue(r) or Nil() end
-	end
-
-	do -- union unpacking
-		local upvalue = l:GetUpvalue()
-		local original_l = l
-		local original_r = r
-
-		-- normalize l and r to be both unions to reduce complexity
-		if l.Type ~= "union" and r.Type == "union" then l = Union({l}) end
-
-		if l.Type == "union" and r.Type ~= "union" then r = Union({r}) end
-
-		if l.Type == "union" and r.Type == "union" then
-			local new_union = Union()
-			new_union:SetLeftRightSource(l, r)
-			local truthy_union = Union():SetUpvalue(upvalue)
-			local falsy_union = Union():SetUpvalue(upvalue)
-			local type_checked = self.type_checked
-
-			-- the return value from type(x)
-			if type_checked then self.type_checked = false end
-
-			for _, l in ipairs(l:GetData()) do
-				for _, r in ipairs(r:GetData()) do
-					local res, err = Binary(self, node, l, r, op)
-
-					if not res then
-						self:Error(err)
-					else
-						if res:IsTruthy() then
-							if type_checked then
-								for _, t in ipairs(type_checked:GetData()) do
-									if t:GetLuaType() == l:GetData() then
-										truthy_union:AddType(t)
-									end
-								end
-							else
-								truthy_union:AddType(l)
-							end
-						end
-
-						if res:IsFalsy() then
-							if type_checked then
-								for _, t in ipairs(type_checked:GetData()) do
-									if t:GetLuaType() == l:GetData() then
-										falsy_union:AddType(t)
-									end
-								end
-							else
-								falsy_union:AddType(l)
-							end
-						end
-
-						new_union:AddType(res)
-					end
-				end
-			end
-
-			if op ~= "or" and op ~= "and" then
-				local tbl_key = l:GetParentTable() or type_checked and type_checked:GetParentTable()
-
-				if tbl_key then
-					self:TrackTableIndexUnion(tbl_key.table, tbl_key.key, truthy_union, falsy_union)
-				elseif l.Type == "union" then
-					for _, l in ipairs(l:GetData()) do
-						if l.Type == "union" then
-							local tbl_key = l:GetParentTable()
-
-							if tbl_key then
-								self:TrackTableIndexUnion(tbl_key.table, tbl_key.key, truthy_union, falsy_union)
-							end
-						end
-					end
-				end
-
-				local left_right = l:GetLeftRightSource()
-
-				if (op == "==" or op == "~=") and left_right then
-					local key = left_right.right
-					local union = left_right.left
-					local expected = r
-					local truthy_union = Union():SetUpvalue(upvalue)
-					local falsy_union = Union():SetUpvalue(upvalue)
-
-					for k, v in ipairs(union.Data) do
-						local val = v:Get(key)
-
-						if val then
-							local res = Binary(self, node, val, expected, op)
-
-							if res:IsTruthy() then truthy_union:AddType(v) end
-
-							if res:IsFalsy() then falsy_union:AddType(v) end
-						end
-					end
-
-					if not truthy_union:IsEmpty() or not falsy_union:IsEmpty() then
-						self:TrackUpvalueUnion(union, truthy_union, falsy_union, op == "==")
-						return new_union
-					end
-				end
-
-				if
-					node.parent.kind == "binary_operator" and
-					(
-						node.parent.value.value == "==" or
-						node.parent.value.value == "~="
-					)
-				then
-
-				else
-					self:TrackUpvalueUnion(l, truthy_union, falsy_union, op == "~=")
-				end
-
-				self:TrackUpvalueUnion(r, truthy_union, falsy_union, op == "~=")
-			end
-
-			if upvalue then upvalue:SetTruthyFalsyUnion(truthy_union, falsy_union) end
-
-			return new_union
-		end
-	end
-
-	if l.Type == "any" or r.Type == "any" then return Any() end
-
-	do -- arithmetic operators
-		if op == "." or op == ":" then return self:IndexOperator(l, r) end
-
-		if ARITHMETIC_OPS[op] then
-			return operator(self, node, l, r, op, ARITHMETIC_OPS[op])
-		end
-	end
-
-	do -- logical operators
-		-- Handle comparison operators
-		if COMPARISON_OPS[op] then return handle_comparison(self, node, l, r, op) end
-
-		if op == "==" or op == "~=" or op == "!=" then
-			local is_not_equal = op == "~=" or op == "!="
-			local meta_method = "__eq"
-			local res = metatable_function(self, node, meta_method, l, r)
-
-			if res then
-				if is_not_equal and res:IsLiteral() then
-					res = not res:GetData() and True() or False()
-				end
-
-				return res
-			end
-
-			if l:IsNumeric() and r:IsNumeric() then
-				local res = number_comparison(self, l, r, op, is_not_equal)
-
-				if res then return res end
-			end
-
-			if l.Type ~= r.Type then return is_not_equal and True() or False() end
-
-			if is_not_equal then
-				local val, err = l.LogicalComparison(l, r, "==", self:GetCurrentAnalyzerEnvironment())
-
-				if val ~= nil then val = not val end
-
-				return logical_cmp_cast(val, err)
-			else
-				return logical_cmp_cast(l.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
-			end
-		elseif op == "or" or op == "||" then
-			-- boolean or boolean
-			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}) end
-
-			-- true or boolean
-			if l:IsTruthy() then return l:Copy() end
-
-			-- false or true
-			if r:IsTruthy() then return r:Copy() end
-
-			return r:Copy()
-		elseif op == "and" or op == "&&" then
-			-- boolean and boolean
-			if l:IsUncertain() or r:IsUncertain() then return Union({l, r}) end
-
-			-- true and false
-			if l:IsTruthy() and r:IsFalsy() then return r:Copy() end
-
-			-- false and true
-			if l:IsFalsy() and r:IsTruthy() then return l:Copy() end
-
-			-- true and true
-			if l:IsTruthy() and r:IsTruthy() then return r:Copy() end
-
-			-- false and false
-			return l:Copy()
-		end
-	end
-
-	return false, type_errors.binary(op, l, r)
-end
-
-return {
-	Binary = function(self, node, l, r, op)
-		op = op or node.value.value
-		return Binary(self, node, l, r, op)
+		return BinaryWithUnion(self, node, l, r, op)
 	end,
 }
