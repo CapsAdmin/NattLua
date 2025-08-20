@@ -106,30 +106,30 @@ return function(META)
 
 	do
 		do
-			function META:PushTruthyExpressionContext(b)
-				self:PushContextValue("truthy_expression_context", b)
+			function META:PushTruthyExpressionContext()
+				self:PushContextRef("truthy_expression_context", b)
 			end
 
 			function META:PopTruthyExpressionContext()
-				self:PopContextValue("truthy_expression_context")
+				self:PopContextRef("truthy_expression_context")
 			end
 
 			function META:IsTruthyExpressionContext()
-				return self:GetContextValue("truthy_expression_context") == true
+				return self:GetContextRef("truthy_expression_context") 
 			end
 		end
 
 		do
-			function META:PushFalsyExpressionContext(b)
-				self:PushContextValue("falsy_expression_context", b)
+			function META:PushFalsyExpressionContext()
+				self:PushContextRef("falsy_expression_context", b)
 			end
 
 			function META:PopFalsyExpressionContext()
-				self:PopContextValue("falsy_expression_context")
+				self:PopContextRef("falsy_expression_context")
 			end
 
 			function META:IsFalsyExpressionContext()
-				return self:GetContextValue("falsy_expression_context") == true
+				return self:GetContextRef("falsy_expression_context")
 			end
 		end
 
@@ -288,7 +288,7 @@ return function(META)
 				val:SetParentTable(tbl, key)
 				local truthy_union = val:GetTruthy()
 				local falsy_union = val:GetFalsy()
-				self:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, self.inverted_index_tracking, true)
+				self:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, self:IsFalsyExpressionContext(), true)
 			end
 
 			function META:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, inverted, truthy_falsy)

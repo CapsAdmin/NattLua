@@ -29,7 +29,7 @@ return {
 						exp.value.value == "."
 					)
 
-				if no_operator_expression then self:PushTruthyExpressionContext(true) end
+				if no_operator_expression then self:PushTruthyExpressionContext() end
 
 				local obj = self:Assert(self:AnalyzeExpression(exp))
 				self:TrackDependentUpvalues(obj)

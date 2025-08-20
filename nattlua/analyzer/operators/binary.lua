@@ -492,7 +492,7 @@ return {
 				r = Nil()
 			else
 				-- right hand side of and is the "true" part
-				self:PushTruthyExpressionContext(true)
+				self:PushTruthyExpressionContext()
 				r = self:Assert(self:AnalyzeExpression(node.right))
 				self:PopTruthyExpressionContext()
 
@@ -501,12 +501,12 @@ return {
 				end
 			end
 		elseif op == "or" then
-			self:PushFalsyExpressionContext(true)
+			self:PushFalsyExpressionContext()
 			l = self:Assert(self:AnalyzeExpression(node.left))
 			self:PopFalsyExpressionContext()
 
 			if l:IsCertainlyFalse() then
-				self:PushFalsyExpressionContext(true)
+				self:PushFalsyExpressionContext()
 				r = self:Assert(self:AnalyzeExpression(node.right))
 				self:PopFalsyExpressionContext()
 			elseif l:IsCertainlyTrue() then
@@ -514,7 +514,7 @@ return {
 			else
 				-- right hand side of or is the "false" part
 				self.LEFT_SIDE_OR = l
-				self:PushFalsyExpressionContext(true)
+				self:PushFalsyExpressionContext()
 				r = self:Assert(self:AnalyzeExpression(node.right))
 				self:PopFalsyExpressionContext()
 				self.LEFT_SIDE_OR = nil

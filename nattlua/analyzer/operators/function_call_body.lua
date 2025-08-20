@@ -485,8 +485,6 @@ return function(self, obj, input)
 	self:StashTrackedChanges()
 	function_node.scope = scope
 	obj.scope = scope
-	self:PushTruthyExpressionContext(false)
-	self:PushFalsyExpressionContext(false)
 	self:PushGlobalEnvironment(
 		function_node,
 		self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
@@ -632,8 +630,6 @@ return function(self, obj, input)
 
 	self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
 	self:PopScope()
-	self:PopFalsyExpressionContext()
-	self:PopTruthyExpressionContext()
 	self:ClearScopedTrackedObjects(scope)
 	self:PopStashedTrackedChanges()
 	restore_mutated_types(self)

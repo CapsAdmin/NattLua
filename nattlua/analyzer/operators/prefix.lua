@@ -112,15 +112,11 @@ end
 
 return {
 	Prefix = function(analyzer, node)
-		if node.value.value == "not" then
-			analyzer.inverted_index_tracking = not analyzer.inverted_index_tracking
-		end
+		if node.value.value == "not" then analyzer:PushFalsyExpressionContext() end
 
 		local r = analyzer:Assert(analyzer:AnalyzeExpression(node.right))
 
-		if r.Type == "union" then analyzer:TrackUpvalue(r) end
-
-		if node.value.value == "not" then analyzer.inverted_index_tracking = false end
+		if node.value.value == "not" then analyzer:PopFalsyExpressionContext() end
 
 		if node.value.value == "ref" then
 			r:SetReferenceType(true)
