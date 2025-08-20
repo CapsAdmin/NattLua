@@ -40,8 +40,6 @@ return {
 					-- track "if x then" which has no binary or prefix operators
 					if obj.Type == "union" then
 						self:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
-					else
-						self:TrackUpvalue(obj)
 					end
 				end
 
@@ -61,10 +59,15 @@ return {
 							expression = obj,
 						}
 					)
+					local upvalue = obj:GetUpvalue()
 
-					if self:IsRuntime() and obj:IsCertainlyTrue() then
-						if not contains_ref_argument(upvalues) then
-							self:Warning(type_errors.if_always_true())
+					if upvalue and (upvalue:GetValue():IsReferenceType() or upvalue:IsFromForLoop()) then
+
+					else
+						if self:IsRuntime() and obj:IsCertainlyTrue() then
+							if not contains_ref_argument(upvalues) then
+								self:Warning(type_errors.if_always_true())
+							end
 						end
 					end
 
@@ -76,11 +79,17 @@ return {
 				end
 
 				if self:IsRuntime() and obj:IsCertainlyFalse() then
-					if not contains_ref_argument(self:GetTrackedUpvalues()) then
-						self:Warning(type_errors.if_always_false())
+					local upvalue = obj:GetUpvalue()
 
-						for _, statement in ipairs(statements) do
-							statement:SetUnreachable(true)
+					if upvalue and (upvalue:GetValue():IsReferenceType() or upvalue:IsFromForLoop()) then
+
+					else
+						if not contains_ref_argument(self:GetTrackedUpvalues()) then
+							self:Warning(type_errors.if_always_false())
+
+							for _, statement in ipairs(statements) do
+								statement:SetUnreachable(true)
+							end
 						end
 					end
 				end
