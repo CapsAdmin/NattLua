@@ -116,7 +116,7 @@ analyze[[
             break
         end
         lol = lol + 1
-        
+
         local function check<||>
             if i == 1 then
                 attest.equal(lol, 1)
@@ -127,6 +127,8 @@ analyze[[
 
         check<||>
     end
+
+    print(lol)
     
     attest.equal(lol, _ as number)
 

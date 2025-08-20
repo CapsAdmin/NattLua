@@ -12,6 +12,30 @@ local function contains_ref_argument(upvalues)
 	return false
 end
 
+local function should_warn(self, obj)
+	if contains_ref_argument(self:GetTrackedUpvalues()) then return false end
+
+	local upvalue = obj:GetUpvalue()
+
+	if upvalue and (upvalue:GetValue():IsReferenceType() or upvalue:IsFromForLoop()) then
+		return false
+	end
+
+	if
+		self:GetScope():IsLoopScope() or
+		self:GetScope():GetParent() and
+		self:GetScope():GetParent():IsLoopScope()
+	then
+		return false
+	end
+
+	local caller = self:GetCallFrame(1)
+
+	if caller and caller.obj:HasReferenceTypes() then return false end
+
+	return true
+end
+
 return {
 	AnalyzeIf = function(self, statement)
 		local prev_expression
@@ -59,15 +83,10 @@ return {
 							expression = obj,
 						}
 					)
-					local upvalue = obj:GetUpvalue()
 
-					if upvalue and (upvalue:GetValue():IsReferenceType() or upvalue:IsFromForLoop()) then
-
-					else
-						if self:IsRuntime() and obj:IsCertainlyTrue() then
-							if not contains_ref_argument(upvalues) then
-								self:Warning(type_errors.if_always_true())
-							end
+					if self:IsRuntime() and obj:IsCertainlyTrue() then
+						if should_warn(self, obj) then
+							self:Warning(type_errors.if_always_true())
 						end
 					end
 
@@ -79,17 +98,11 @@ return {
 				end
 
 				if self:IsRuntime() and obj:IsCertainlyFalse() then
-					local upvalue = obj:GetUpvalue()
+					if should_warn(self, obj) then
+						self:Warning(type_errors.if_always_false())
 
-					if upvalue and (upvalue:GetValue():IsReferenceType() or upvalue:IsFromForLoop()) then
-
-					else
-						if not contains_ref_argument(self:GetTrackedUpvalues()) then
-							self:Warning(type_errors.if_always_false())
-
-							for _, statement in ipairs(statements) do
-								statement:SetUnreachable(true)
-							end
+						for _, statement in ipairs(statements) do
+							statement:SetUnreachable(true)
 						end
 					end
 				end
@@ -98,9 +111,10 @@ return {
 			else
 				local exp = statement.expressions[i - 1]
 				self:PushCurrentExpression(exp)
+				local caller = self:GetCallFrame(1)
 
 				if self:IsRuntime() and prev_expression:IsCertainlyFalse() then
-					if not contains_ref_argument(self:GetTrackedUpvalues()) then
+					if should_warn(self, prev_expression) then
 						self:Warning(type_errors.if_else_always_true())
 					end
 				end

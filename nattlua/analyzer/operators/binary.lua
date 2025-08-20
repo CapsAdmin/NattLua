@@ -537,9 +537,6 @@ return {
 			if l.Type == "tuple" then l = self:GetFirstValue(l) or Nil() end
 
 			if r.Type == "tuple" then r = self:GetFirstValue(r) or Nil() end
-
-			self:TrackUpvalue(l)
-			self:TrackUpvalue(r)
 		end
 
 		return BinaryWithUnion(self, node, l, r, op)
