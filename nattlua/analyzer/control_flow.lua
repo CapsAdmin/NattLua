@@ -134,8 +134,6 @@ return function(META)
 		-- track "if x then" which has no binary or prefix operators
 		if obj.Type == "union" then
 			self:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
-		else
-			self:TrackUpvalue(obj)
 		end
 
 		self.lua_assert_error_thrown = {

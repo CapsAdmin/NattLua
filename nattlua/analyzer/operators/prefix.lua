@@ -117,7 +117,8 @@ return {
 		end
 
 		local r = analyzer:Assert(analyzer:AnalyzeExpression(node.right))
-		analyzer:TrackUpvalue(r)
+
+		if r.Type == "union" then analyzer:TrackUpvalue(r) end
 
 		if node.value.value == "not" then analyzer.inverted_index_tracking = false end
 

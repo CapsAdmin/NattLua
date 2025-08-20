@@ -269,8 +269,6 @@ end
 local function get_lr(self, node)
 	local l = self:Assert(self:AnalyzeExpression(node.left))
 	local r = self:Assert(self:AnalyzeExpression(node.right))
-	self:TrackUpvalue(l)
-	self:TrackUpvalue(r)
 	return l, r
 end
 
@@ -485,30 +483,21 @@ return {
 		if op == "and" then
 			l = self:Assert(self:AnalyzeExpression(node.left))
 
+			if l.Type == "union" then
+				self:TrackUpvalueUnion(l, l:GetTruthy(), l:GetFalsy())
+			end
+
+			-- attest.equal(nil and 1, nil)
 			if l:IsCertainlyFalse() then
 				r = Nil()
 			else
-				-- if a and a.foo then
-				-- ^ no binary operator means that it was just checked simply if it was truthy
-				if node.left.kind ~= "binary_operator" or node.left.value.value ~= "." then
-					if l.Type == "union" then
-						self:TrackUpvalueUnion(l, l:GetTruthy(), l:GetFalsy())
-					else
-						self:TrackUpvalue(l)
-					end
-				end
-
 				-- right hand side of and is the "true" part
 				self:PushTruthyExpressionContext(true)
 				r = self:Assert(self:AnalyzeExpression(node.right))
 				self:PopTruthyExpressionContext()
 
-				if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
-					if r.Type == "union" then
-						self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
-					else
-						self:TrackUpvalue(r)
-					end
+				if r.Type == "union" then
+					self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
 				end
 			end
 		elseif op == "or" then
@@ -530,12 +519,8 @@ return {
 				self:PopFalsyExpressionContext()
 				self.LEFT_SIDE_OR = nil
 
-				if node.right.kind ~= "binary_operator" or node.right.value.value ~= "." then
-					if r.Type == "union" then
-						self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
-					else
-						self:TrackUpvalue(r)
-					end
+				if r.Type == "union" then
+					self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
 				end
 			end
 		else
