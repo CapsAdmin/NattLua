@@ -128,8 +128,6 @@ analyze[[
         check<||>
     end
 
-    print(lol)
-    
     attest.equal(lol, _ as number)
 
 ]]

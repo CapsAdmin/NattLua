@@ -239,6 +239,7 @@ local function tostring_object(obj--[[#: any]], state--[[#: nil | Partial<|State
 	return tostring_object_(obj, state)
 end
 
+--[[#local type print = function=(any)>()]]
 return {
 	tostring = tostring_object,
 	print = function(

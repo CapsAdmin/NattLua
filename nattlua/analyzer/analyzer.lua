@@ -157,11 +157,9 @@ do
 		then
 			return AnalyzeFunction(self, node)
 		elseif node.kind == "vararg" then
-			if node.value then
-				return VarArg(self:AnalyzeExpression(node.value))
-			else
-				return LookupValue(self, "...")
-			end
+			if node.value then return VarArg(self:AnalyzeExpression(node.value)) end
+
+			return LookupValue(self, "...")
 		elseif node.kind == "postfix_operator" then
 			if node.value.value == "++" then
 				local r = self:AnalyzeExpression(node.left)
@@ -180,9 +178,9 @@ do
 		elseif node.kind == "error" then
 			-- do nothing with error nodes, they are just placeholders for the parser to be able to continue
 			return Any()
-		else
-			self:FatalError("unhandled expression " .. node.kind)
 		end
+
+		self:FatalError("unhandled expression " .. node.kind)
 	end
 
 	function META:AnalyzeTypeExpression(node, parent_obj)
