@@ -20,6 +20,7 @@ return function(META)
 
 	table.insert(META.OnInitialize, function(self)
 		self.diagnostics = {}
+		self.constant_expression_warnings = {}
 	end)
 
 	function META:Assert(ok, err, ...)
@@ -189,5 +190,25 @@ return function(META)
 
 	function META:GetDiagnostics()
 		return self.diagnostics
+	end
+
+	function META:ConstantIfExpressionWarning(msg, extra_key)
+		local node = self:GetCurrentExpression() or self:GetCurrentStatement()
+		assert(node)
+		local key = extra_key or node
+
+		if self.constant_expression_warnings[key] then
+			self.constant_expression_warnings[key] = false
+		end
+
+		if self.constant_expression_warnings[key] == false then return end
+
+		self.constant_expression_warnings[key] = {msg = msg, node = node}
+	end
+
+	function META:ReportConstantIfExpressions()
+		for _, info in pairs(self.constant_expression_warnings) do
+			if info ~= false and info.msg then self:Warning(info.msg, info.node) end
+		end
 	end
 end

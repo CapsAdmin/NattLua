@@ -88,7 +88,7 @@ do
 				str = str .. diagnostic.msg .. "\n"
 			end
 
-			if str == "" then error("expected warning, got\n\n\n" .. str, 3) end
+			if str == "" then error("expected warning, got\n\n\n" .. str, 2) end
 
 			error("expected warning '" .. expect_warning .. "' got:\n>>\n" .. str .. "\n<<", 3)
 		end

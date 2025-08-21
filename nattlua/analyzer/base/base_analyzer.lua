@@ -223,6 +223,7 @@ return function(META)
 
 			self.processing_deferred_calls = false
 			self.deferred_calls = false
+			self:ReportConstantIfExpressions()
 			context:PopCurrentAnalyzer()
 		end
 	end

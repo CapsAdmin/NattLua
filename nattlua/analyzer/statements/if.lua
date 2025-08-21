@@ -1,45 +1,11 @@
 local ipairs = _G.ipairs
 local Union = require("nattlua.types.union").Union
 local type_errors = require("nattlua.types.error_messages")
-
-local function contains_ref_argument(upvalues)
-	for _, v in ipairs(upvalues) do
-		if v.upvalue:GetValue():IsReferenceType() or v.upvalue:IsFromForLoop() then
-			return true
-		end
-	end
-
-	return false
-end
-
-local function should_warn(self, obj)
-	if contains_ref_argument(self:GetTrackedUpvalues()) then return false end
-
-	local upvalue = obj:GetUpvalue()
-
-	if upvalue and (upvalue:GetValue():IsReferenceType() or upvalue:IsFromForLoop()) then
-		return false
-	end
-
-	if
-		self:GetScope():IsLoopScope() or
-		self:GetScope():GetParent() and
-		self:GetScope():GetParent():IsLoopScope()
-	then
-		return false
-	end
-
-	local caller = self:GetCallFrame(1)
-
-	if caller and caller.obj:HasReferenceTypes() then return false end
-
-	return true
-end
-
 return {
 	AnalyzeIf = function(self, statement)
 		local prev_expression
 		local blocks = {}
+		local og_statement = statement
 
 		for i, statements in ipairs(statement.statements) do
 			if statement.expressions[i] then
@@ -83,39 +49,35 @@ return {
 							expression = obj,
 						}
 					)
-
-					if self:IsRuntime() and obj:IsCertainlyTrue() then
-						if should_warn(self, obj) then
-							self:Warning(type_errors.if_always_true())
-						end
-					end
-
-					if not obj:IsFalsy() then
-						self:PopCurrentExpression()
-
-						break
-					end
 				end
 
-				if self:IsRuntime() and obj:IsCertainlyFalse() then
-					if should_warn(self, obj) then
-						self:Warning(type_errors.if_always_false())
+				if self:IsRuntime() then
+					if obj:IsCertainlyFalse() then
+						self:ConstantIfExpressionWarning(type_errors.if_always_false())
 
 						for _, statement in ipairs(statements) do
 							statement:SetUnreachable(true)
 						end
+					elseif obj:IsCertainlyTrue() then
+						self:ConstantIfExpressionWarning(type_errors.if_always_true())
+					else
+						self:ConstantIfExpressionWarning()
 					end
 				end
 
 				self:PopCurrentExpression()
+
+				if obj:IsCertainlyTrue() then break end
 			else
 				local exp = statement.expressions[i - 1]
 				self:PushCurrentExpression(exp)
 				local caller = self:GetCallFrame(1)
 
-				if self:IsRuntime() and prev_expression:IsCertainlyFalse() then
-					if should_warn(self, prev_expression) then
-						self:Warning(type_errors.if_else_always_true())
+				if self:IsRuntime() then
+					if prev_expression:IsUncertain() then
+						self:ConstantIfExpressionWarning(nil, og_statement.tokens["if/else/elseif"][i])
+					elseif prev_expression:IsCertainlyFalse() then
+						self:ConstantIfExpressionWarning(type_errors.if_else_always_true(), og_statement.tokens["if/else/elseif"][i])
 					end
 				end
 

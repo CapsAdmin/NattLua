@@ -1249,6 +1249,7 @@ analyze(
     
         end
     end
+    §analyzer:AnalyzeUnreachableCode()
 ]],
 	nil,
 	"if condition is always true"
@@ -1260,6 +1261,7 @@ analyze(
     
         end
     end
+    §analyzer:AnalyzeUnreachableCode()
 ]],
 	nil,
 	"if condition is always false"
@@ -1273,6 +1275,7 @@ analyze(
     
         end
     end
+    §analyzer:AnalyzeUnreachableCode()
 ]],
 	nil,
 	"else part of if condition is always true"

@@ -564,6 +564,7 @@ analyze[[
     if not META["Foo"] then
         
     end
+    §analyzer:AnalyzeUnreachableCode()
 
     §assert(#analyzer:GetDiagnostics() == 1)
 ]]
