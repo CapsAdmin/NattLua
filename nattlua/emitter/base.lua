@@ -589,16 +589,12 @@ return function()
 		elseif node.kind == "postfix_expression_index" then
 			self:EmitExpressionIndex(node)
 		elseif node.kind == "value" then
-			if node.tokens["is"] then
-				self:EmitToken(node.value, tostring(node.result_is))
+			if node.value.type == "string" then
+				self:EmitStringToken(node.value)
+			elseif node.value.type == "number" then
+				self:EmitNumberToken(node.value)
 			else
-				if node.value.type == "string" then
-					self:EmitStringToken(node.value)
-				elseif node.value.type == "number" then
-					self:EmitNumberToken(node.value)
-				else
-					self:EmitToken(node.value)
-				end
+				self:EmitToken(node.value)
 			end
 		elseif node.kind == "require" then
 			self:EmitRequireExpression(node)

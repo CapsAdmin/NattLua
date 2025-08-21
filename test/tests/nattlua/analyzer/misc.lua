@@ -513,30 +513,6 @@ analyze[[
     attest.equal(a, _G.string)
 ]]
 analyze[[
-    local a = ""
-
-    if a is string then
-        attest.equal(a, _ as "")
-    end
-
-]]
-analyze[[
-    local a = math.cos(_ as number)
-    attest.equal(a, _ as number)
-
-    if a is number then
-        attest.equal(a, _ as number)
-    end
-]]
-analyze[[
-    local type math = math & {
-        sin = function=(number)>(number)
-    }
-
-    local a = math.sin(1 as number)
-    attest.equal(a, _ as number)
-]]
-analyze[[
     local type a = analyzer function()
         _G.LOL = true
     end

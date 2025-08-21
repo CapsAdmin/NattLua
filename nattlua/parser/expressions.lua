@@ -775,9 +775,6 @@ return function(META)
 				elseif self:IsTokenValue("as") then
 					node.tokens["as"] = self:ExpectTokenValue("as")
 					node.type_expression = self:ExpectTypeExpression(0)
-				elseif self:IsTokenValue("is") then
-					node.tokens["is"] = self:ExpectTokenValue("is")
-					node.type_expression = self:ExpectTypeExpression(0)
 				end
 
 				local found = self:ParseIndexSubExpression(left_node) or
