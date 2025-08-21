@@ -301,7 +301,6 @@ function META.New(config)
 		_continue_ = false,
 		tracked_tables = false,
 		inverted_index_tracking = false,
-		current_if_statement = false,
 		deferred_calls = false,
 		function_scope = false,
 		call_stack = false,

@@ -3,13 +3,12 @@ local Union = require("nattlua.types.union").Union
 local type_errors = require("nattlua.types.error_messages")
 return {
 	AnalyzeIf = function(self, statement)
-		local prev_expression
+		local prev_obj
 		local blocks = {}
 		local og_statement = statement
 
 		for i, statements in ipairs(statement.statements) do
 			if statement.expressions[i] then
-				self.current_if_statement = statement
 				local exp = statement.expressions[i]
 				self:PushCurrentExpression(exp)
 				local no_operator_expression = exp.kind ~= "binary_operator" and
@@ -33,8 +32,7 @@ return {
 					end
 				end
 
-				self.current_if_statement = false
-				prev_expression = obj
+				prev_obj = obj
 
 				if obj:IsTruthy() then
 					local upvalues = self:GetTrackedUpvalues()
@@ -69,26 +67,24 @@ return {
 
 				if obj:IsCertainlyTrue() then break end
 			else
-				local exp = statement.expressions[i - 1]
-				self:PushCurrentExpression(exp)
-				local caller = self:GetCallFrame(1)
+				self:PushCurrentExpression(statement.expressions[i - 1])
 
 				if self:IsRuntime() then
-					if prev_expression:IsUncertain() then
+					if prev_obj:IsUncertain() then
 						self:ConstantIfExpressionWarning(nil, og_statement.tokens["if/else/elseif"][i])
-					elseif prev_expression:IsCertainlyFalse() then
+					elseif prev_obj:IsCertainlyFalse() then
 						self:ConstantIfExpressionWarning(type_errors.if_else_always_true(), og_statement.tokens["if/else/elseif"][i])
 					end
 				end
 
-				if prev_expression:IsFalsy() then
+				if prev_obj:IsFalsy() then
 					table.insert(
 						blocks,
 						{
 							statements = statements,
 							upvalues = blocks[#blocks] and blocks[#blocks].upvalues,
 							tables = blocks[#blocks] and blocks[#blocks].tables,
-							expression = prev_expression,
+							expression = prev_obj,
 							is_else = true,
 						}
 					)
