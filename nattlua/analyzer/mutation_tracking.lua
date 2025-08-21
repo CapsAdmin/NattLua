@@ -5,6 +5,11 @@ local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange
 local shallow_copy = require("nattlua.other.tablex").copy
 return function(META)
+	table.insert(META.OnInitialize, function(self)
+		self.tracked_upvalues = {}
+		self.tracked_upvalues_done = {}
+	end)
+
 	function META:GetArrayLengthFromTable(tbl)
 		local contract = tbl:GetContract()
 
@@ -115,7 +120,7 @@ return function(META)
 			end
 
 			function META:IsTruthyExpressionContext()
-				return self:GetContextRef("truthy_expression_context") 
+				return self:GetContextRef("truthy_expression_context")
 			end
 		end
 
@@ -134,24 +139,6 @@ return function(META)
 		end
 
 		do
-			function META:TrackUpvalue(obj)
-				local upvalue = obj:GetUpvalue()
-
-				if not upvalue then return end
-
-				self.tracked_upvalues = self.tracked_upvalues or {}
-				self.tracked_upvalues_done = self.tracked_upvalues_done or {}
-
-				if self.tracked_upvalues_done[upvalue] then
-					return self.tracked_upvalues_done[upvalue]
-				end
-
-				local data = {upvalue = upvalue}
-				table.insert(self.tracked_upvalues, data)
-				self.tracked_upvalues_done[upvalue] = data
-				return data
-			end
-
 			function META:TrackDependentUpvalues(obj)
 				local upvalue = obj:GetUpvalue()
 
@@ -183,8 +170,14 @@ return function(META)
 
 				if not scope then return end
 
-				local data = self:TrackUpvalue(obj)
-				data.stack = data.stack or {}
+				local data = self.tracked_upvalues_done[upvalue]
+
+				if not data then
+					data = {upvalue = upvalue, stack = {}}
+					table.insert(self.tracked_upvalues, data)
+					self.tracked_upvalues_done[upvalue] = data
+				end
+
 				table.insert(
 					data.stack,
 					{
@@ -275,8 +268,8 @@ return function(META)
 
 			function META:ClearTrackedUpvalues()
 				if self.tracked_upvalues then
-					self.tracked_upvalues_done = false
-					self.tracked_upvalues = false
+					self.tracked_upvalues_done = {}
+					self.tracked_upvalues = {}
 				end
 			end
 		end

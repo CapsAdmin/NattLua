@@ -266,12 +266,6 @@ function Binary(self, node, l, r, op)
 	return false, type_errors.binary(op, l, r)
 end
 
-local function get_lr(self, node)
-	local l = self:Assert(self:AnalyzeExpression(node.left))
-	local r = self:Assert(self:AnalyzeExpression(node.right))
-	return l, r
-end
-
 local function BinaryWithUnion(self, node, l, r, op)
 	if l.Type == "any" or r.Type == "any" then return Any() end
 
@@ -471,7 +465,8 @@ return {
 		if op == "|" and self:IsTypesystem() then
 			local cur_union = Union()
 			self:PushCurrentType(cur_union, "union")
-			local l, r = get_lr(self, node)
+			local l = self:Assert(self:AnalyzeExpression(node.left))
+			local r = self:Assert(self:AnalyzeExpression(node.right))
 
 			if cur_union then self:PopCurrentType("union") end
 
@@ -524,7 +519,8 @@ return {
 				end
 			end
 		else
-			l, r = get_lr(self, node)
+			l = self:Assert(self:AnalyzeExpression(node.left))
+			r = self:Assert(self:AnalyzeExpression(node.right))
 
 			-- TODO: more elegant way of dealing with self?
 			if op == ":" then
