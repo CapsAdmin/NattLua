@@ -1289,8 +1289,8 @@ analyze[[
 
     foo(true)
     foo(false)
-    
-    §assert(#analyzer:GetDiagnostics() == 0)
+
+    §analyzer:TestFunctionAssertDiagnosticCount()
 ]]
 analyze[[
     --local type print = any
@@ -1313,6 +1313,20 @@ analyze[[
         attest.equal(ffi.os == "Windows", _ as true | false)
     end
 ]]
+analyze[[
+    local function generic_function(size_error_handling: ref (nil | boolean))
+        if size_error_handling == false then
+        elseif size_error_handling then
+        else
+        end
+    end
+
+    generic_function(false)
+    generic_function(true)
+    generic_function()
+
+    §analyzer:TestFunctionAssertDiagnosticCount()
+]]
 analyze([[
     local function foo(x: ref (nil | boolean))
         if x then
@@ -1324,7 +1338,7 @@ analyze([[
     foo(true)
     foo(false)
 
-    §assert(#analyzer:GetDiagnostics() == 0)
+    §analyzer:TestFunctionAssertDiagnosticCount()
 ]])
 analyze[[
     local function foo(x: ref (nil | boolean))
@@ -1337,7 +1351,7 @@ analyze[[
     foo(true)
     foo(false)
 
-    §assert(#analyzer:GetDiagnostics() == 0)
+    §analyzer:TestFunctionAssertDiagnosticCount()
 ]]
 analyze[[
     local function foo(x: ref (nil | boolean))
@@ -1354,7 +1368,7 @@ analyze[[
     foo(true)
     foo(false)
 
-    §assert(#analyzer:GetDiagnostics() == 0)
+    §analyzer:TestFunctionAssertDiagnosticCount()
 ]]
 analyze[[
     local test
@@ -1394,7 +1408,7 @@ analyze[[
         end
     end
 
-    §assert(#analyzer:GetDiagnostics() == 0)
+    §analyzer:TestFunctionAssertDiagnosticCount()
 ]]
 analyze[[
     local tbl = {foo = true, bar = false}
@@ -1404,7 +1418,7 @@ analyze[[
         end
     end
 
-    §assert(#analyzer:GetDiagnostics() == 0)
+    §analyzer:TestFunctionAssertDiagnosticCount()
 ]]
 analyze[[
     local type AddressInfo = {

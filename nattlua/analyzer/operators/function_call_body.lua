@@ -280,6 +280,7 @@ local function check_input(self, obj, input)
 								end
 							end
 
+							func:SetInputArgumentsInferred(true)
 							func:SetCalled(false)
 						end
 					end
@@ -650,7 +651,9 @@ return function(self, obj, input)
 					function_node.identifiers[i] and
 					not function_node.identifiers[i].type_expression
 				then
-					self:Warning(type_errors.untyped_argument(), function_node.identifiers[i])
+					if not obj:IsInputArgumentsInferred() then
+						self:Warning(type_errors.untyped_argument(), function_node.identifiers[i])
+					end
 				end
 			end
 		end

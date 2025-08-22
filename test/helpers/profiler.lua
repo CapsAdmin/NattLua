@@ -20,14 +20,14 @@ end
 function profiler.Stop()
 	if stop_tracer then
 		local traces, aborted = stop_tracer()
-		print("\nluajit traces that were aborted and stitched:")
-		print(trace_tracker.ToStringProblematicTraces(traces, aborted))
+		io.write("\nluajit traces that were aborted and stitched:\n")
+		io.write(trace_tracker.ToStringProblematicTraces(traces, aborted), "\n")
 	end
 
 	if stop_profiler then
-		print("\nprofiler statistics:")
-		print(
-			"I = interpreter, G = garbage collection, J = busy tracing, N = native / tracing completed:"
+		io.write("\nprofiler statistics:\n")
+		io.write(
+			"I = interpreter, G = garbage collection, J = busy tracing, N = native / tracing completed:\n"
 		)
 		print(stop_profiler())
 	end

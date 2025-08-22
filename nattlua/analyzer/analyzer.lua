@@ -227,6 +227,14 @@ do
 		return obj, err
 	end
 
+	function META:TestFunctionAssertDiagnosticCount(count)
+		count = count or 0
+		self:AnalyzeUnreachableCode()
+		if #self:GetDiagnostics() ~= count then
+			error("expected no diagnostics reported", 2)
+		end
+	end
+
 	function META:AnalyzeConditionalExpression(exp)
 		self:PushCurrentExpression(exp)
 		local no_operator_expression = exp.kind ~= "binary_operator" and

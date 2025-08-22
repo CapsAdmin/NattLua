@@ -29,6 +29,7 @@ META:GetSet("AnalyzerFunction", false--[[# as nil | Function]])
 META:IsSet("ArgumentsInferred", false)
 META:IsSet("LiteralFunction", false)
 META:GetSet("PreventInputArgumentExpansion", false)
+META:IsSet("InputArgumentsInferred", false)
 
 function META.LogicalComparison(l--[[#: TFunction]], r--[[#: TFunction]], op--[[#: string]])
 	if op == "==" then return l:Equal(r) end
@@ -119,6 +120,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	copy:SetArgumentsInferred(self:IsArgumentsInferred())
 	copy:SetPreventInputArgumentExpansion(self:GetPreventInputArgumentExpansion())
 	copy:SetLiteralFunction(self:IsLiteralFunction())
+	copy:SetInputArgumentsInferred(self:IsInputArgumentsInferred())
 	return copy
 end
 

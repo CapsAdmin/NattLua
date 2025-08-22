@@ -10,21 +10,20 @@ return {
 		for i, statements in ipairs(statement.statements) do
 			if statement.expressions[i] then
 				local exp = statement.expressions[i]
+				self:PushCurrentExpression(exp)
 				local obj = self:AnalyzeConditionalExpression(exp)
 
 				if obj:IsTruthy() then
-					local upvalues = self:GetTrackedUpvalues()
-					local tables = self:GetTrackedTables()
-					self:ClearTracked()
 					table.insert(
 						blocks,
 						{
 							statements = statements,
-							upvalues = upvalues,
-							tables = tables,
+							upvalues = self:GetTrackedUpvalues(),
+							tables = self:GetTrackedTables(),
 							obj = obj,
 						}
 					)
+					self:ClearTracked()
 				end
 
 				if self:IsRuntime() then
@@ -36,6 +35,24 @@ return {
 						end
 					elseif obj:IsCertainlyTrue() then
 						self:ConstantIfExpressionWarning(type_errors.if_always_true())
+						local ii = i
+
+						for i, statements in ipairs(statement.statements) do
+							if i ~= ii then
+								local exp = statement.expressions[i]
+
+								if exp then
+									self:PushCurrentExpression(exp)
+									self:ConstantIfExpressionWarning()
+									self:PopCurrentExpression()
+								else
+									local exp = statement.expressions[i - 1]
+									self:PushCurrentExpression(exp)
+									self:ConstantIfExpressionWarning(nil, og_statement.tokens["if/else/elseif"][i])
+									self:PopCurrentExpression()
+								end
+							end
+						end
 					else
 						self:ConstantIfExpressionWarning()
 					end

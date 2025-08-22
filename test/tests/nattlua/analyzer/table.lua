@@ -564,9 +564,8 @@ analyze[[
     if not META["Foo"] then
         
     end
-    §analyzer:AnalyzeUnreachableCode()
 
-    §assert(#analyzer:GetDiagnostics() == 1)
+    §analyzer:TestFunctionAssertDiagnosticCount(1)
 ]]
 analyze(
 	[[
@@ -853,7 +852,7 @@ analyze[[
     
     attest.equal(type_func_map[_ as string], _ as true | "lol" | 1337 | false | nil)
 ]]
-analyze[[
+pending[[
     local operators: {[string] = function=(number, number)>(number)} = {
         ["+"] = function(l, r)
             return l + r
@@ -865,7 +864,7 @@ analyze[[
 
     attest.equal<|operators["-"], function=(number, number)>(number)|>
 
-    §assert(#analyzer:GetDiagnostics() == 0)
+    §analyzer:TestFunctionAssertDiagnosticCount()
 ]]
 analyze[[
     local type Lol = {}

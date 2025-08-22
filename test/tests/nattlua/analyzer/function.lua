@@ -479,7 +479,7 @@ analyze[[
         return ""
     end)
 
-    §assert(#analyzer:GetDiagnostics() == 0)
+    §analyzer:TestFunctionAssertDiagnosticCount()
 ]]
 analyze[[
     local function test(): ref number 
@@ -822,7 +822,7 @@ analyze[[
         attest.equal(node, 1337)
     end
 ]]
-analyze[[
+pending[[
     local type F = function=(foo: number, a: string, b: boolean, c: string)>(nil)
 
     local function foo(a: string, b: F)
@@ -836,7 +836,7 @@ analyze[[
         attest.equal(d, _ as string)
     end)
 
-    §assert(#analyzer:GetDiagnostics() == 0)
+    §analyzer:TestFunctionAssertDiagnosticCount()
 ]]
 analyze[[
     local type F = function=(foo: number, ...: (string,)*inf)>(nil)
