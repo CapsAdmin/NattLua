@@ -10,29 +10,7 @@ return {
 		for i, statements in ipairs(statement.statements) do
 			if statement.expressions[i] then
 				local exp = statement.expressions[i]
-				self:PushCurrentExpression(exp)
-				local no_operator_expression = exp.kind ~= "binary_operator" and
-					exp.kind ~= "prefix_operator" or
-					(
-						exp.kind == "binary_operator" and
-						exp.value.value == "."
-					)
-
-				if no_operator_expression then self:PushTruthyExpressionContext() end
-
-				local obj = self:Assert(self:AnalyzeExpression(exp))
-				self:TrackDependentUpvalues(obj)
-
-				if no_operator_expression then self:PopTruthyExpressionContext() end
-
-				if no_operator_expression then
-					-- track "if x then" which has no binary or prefix operators
-					if obj.Type == "union" then
-						self:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
-					end
-				end
-
-				prev_obj = obj
+				local obj = self:AnalyzeConditionalExpression(exp)
 
 				if obj:IsTruthy() then
 					local upvalues = self:GetTrackedUpvalues()
@@ -44,7 +22,7 @@ return {
 							statements = statements,
 							upvalues = upvalues,
 							tables = tables,
-							expression = obj,
+							obj = obj,
 						}
 					)
 				end
@@ -64,6 +42,7 @@ return {
 				end
 
 				self:PopCurrentExpression()
+				prev_obj = obj
 
 				if obj:IsCertainlyTrue() then break end
 			else
@@ -84,7 +63,7 @@ return {
 							statements = statements,
 							upvalues = blocks[#blocks] and blocks[#blocks].upvalues,
 							tables = blocks[#blocks] and blocks[#blocks].tables,
-							expression = prev_obj,
+							obj = prev_obj,
 							is_else = true,
 						}
 					)
@@ -98,7 +77,7 @@ return {
 
 		for i, block in ipairs(blocks) do
 			block.scope = self:GetScope()
-			local scope = self:PushConditionalScope(statement, block.expression:IsTruthy(), block.expression:IsFalsy())
+			local scope = self:PushConditionalScope(statement, block.obj:IsTruthy(), block.obj:IsFalsy())
 
 			if last_scope then
 				last_scope:SetNextConditionalSibling(scope)

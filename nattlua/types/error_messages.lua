@@ -264,6 +264,10 @@ function type_errors.too_many_iterations()--[[#: Reason]]
 	return {"too many iterations"}
 end
 
+function type_errors.useless_while_loop()--[[#: Reason]]
+	return {"while loop only executed once"}
+end
+
 function type_errors.too_many_arguments()--[[#: Reason]]
 	return {"too many iterations"}
 end

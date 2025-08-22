@@ -154,9 +154,7 @@ do
 		then
 			return AnalyzeFunction(self, node)
 		elseif node.kind == "vararg" then
-			if node.value then
-				return VarArg(self:AnalyzeExpression(node.value))
-			end
+			if node.value then return VarArg(self:AnalyzeExpression(node.value)) end
 
 			return LookupValue(self, "...")
 		elseif node.kind == "postfix_operator" then
@@ -227,6 +225,32 @@ do
 
 		node.scope = self:GetScope()
 		return obj, err
+	end
+
+	function META:AnalyzeConditionalExpression(exp)
+		self:PushCurrentExpression(exp)
+		local no_operator_expression = exp.kind ~= "binary_operator" and
+			exp.kind ~= "prefix_operator" or
+			(
+				exp.kind == "binary_operator" and
+				exp.value.value == "."
+			)
+
+		if no_operator_expression then self:PushTruthyExpressionContext() end
+
+		local obj = self:Assert(self:AnalyzeExpression(exp))
+		self:TrackDependentUpvalues(obj)
+
+		if no_operator_expression then self:PopTruthyExpressionContext() end
+
+		-- Union tracking
+		if no_operator_expression and obj.Type == "union" then
+			self:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
+		end
+
+		self:PopCurrentExpression()
+		self:TrackDependentUpvalues(obj)
+		return obj
 	end
 
 	local max_iterations = 20000

@@ -181,7 +181,10 @@ return function(META)
 		end
 
 		function META:AnalyzeUnreachableCode()
-			if not self.deferred_calls then return end
+			if not self.deferred_calls then
+				self:ReportConstantIfExpressions()
+				return
+			end
 
 			context:PushCurrentAnalyzer(self)
 			local total = #self.deferred_calls

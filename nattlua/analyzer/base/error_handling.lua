@@ -127,9 +127,14 @@ return function(META)
 		if
 			self.expect_diagnostic and
 			self.expect_diagnostic[1] and
-			self.expect_diagnostic[1].severity == severity and
-			msg_str:find(self.expect_diagnostic[1].msg)
+			self.expect_diagnostic[1].severity == severity
 		then
+			if not msg_str:find(self.expect_diagnostic[1].msg) then
+				error(
+					"expected to find diagnostic: " .. self.expect_diagnostic[1].msg .. "\ngot: \n" .. msg_str
+				)
+			end
+
 			table.remove(self.expect_diagnostic, 1)
 			return
 		end

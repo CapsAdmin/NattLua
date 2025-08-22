@@ -67,3 +67,38 @@ analyze[[
         if x > 10 then break end
     end
 ]]
+analyze[[
+do
+	attest.expect_diagnostic<|"warning", "always false"|>
+
+	while false do
+
+	end
+end
+
+do
+	attest.expect_diagnostic<|"warning", "while loop only executed once"|>
+
+	while true do
+		return
+	end
+end
+
+do
+	attest.expect_diagnostic<|"warning", "while loop only executed once"|>
+
+	while true do
+		break
+	end
+end
+
+do
+	attest.expect_diagnostic<|"warning", "while loop only executed once"|>
+	local i = 0
+
+	while true do
+		if i == 0 then break end
+	end
+end
+
+]]
