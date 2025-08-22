@@ -68,37 +68,51 @@ analyze[[
     end
 ]]
 analyze[[
-do
 	attest.expect_diagnostic<|"warning", "always false"|>
 
 	while false do
 
 	end
-end
+]]
+analyze[[
 
-do
-	attest.expect_diagnostic<|"warning", "while loop only executed once"|>
-
-	while true do
-		return
-	end
-end
-
-do
 	attest.expect_diagnostic<|"warning", "while loop only executed once"|>
 
 	while true do
 		break
 	end
-end
-
-do
+]]
+analyze[[
 	attest.expect_diagnostic<|"warning", "while loop only executed once"|>
+	attest.expect_diagnostic<|"warning", "if condition is always true"|>
 	local i = 0
 
 	while true do
 		if i == 0 then break end
 	end
+]]
+analyze[[
+
+    attest.expect_diagnostic<|"warning", "while loop only executed once"|>
+
+    local x = 1
+
+    while x > 0 do
+        x = 0
+    end
+]]
+analyze[[
+	attest.expect_diagnostic<|"warning", "while loop only executed once"|>
+
+	while true do
+		return
+	end
+]]
+analyze[[
+local arr = {1, 2, 3}
+
+while #arr > 0 do
+	arr = {} 
 end
 
 ]]

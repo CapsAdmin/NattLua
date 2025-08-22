@@ -8,7 +8,9 @@ return {
 				statement:SetUnreachable(true)
 			end
 
-			self:Warning(type_errors.loop_always_false())
+			self:PushCurrentExpression(statement.expression)
+			self:ConstantIfExpressionWarning(type_errors.loop_always_false())
+			self:PopCurrentExpression()
 			return
 		end
 
@@ -63,6 +65,16 @@ return {
 
 			-- Re-analyze with same context as initial analysis
 			obj = self:AnalyzeConditionalExpression(statement.expression)
+
+			if obj:IsCertainlyFalse() then
+				if self:IsRuntime() and count == 0 then
+					self:PushCurrentExpression(statement.expression)
+					self:ConstantIfExpressionWarning(type_errors.useless_while_loop())
+					self:PopCurrentExpression()
+				end
+
+				return
+			end
 
 			if obj:IsUncertain() or obj:IsFalsy() then break end
 
