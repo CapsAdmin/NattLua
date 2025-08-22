@@ -21,6 +21,7 @@ return function(META)
 	table.insert(META.OnInitialize, function(self)
 		self.diagnostics = {}
 		self.constant_expression_warnings = {}
+		self.constant_expression_warnings_ordered = {}
 	end)
 
 	function META:Assert(ok, err, ...)
@@ -204,15 +205,24 @@ return function(META)
 
 		if self.constant_expression_warnings[key] then
 			self.constant_expression_warnings[key] = false
+
+			for i = #self.constant_expression_warnings_ordered, 1, -1 do
+				if self.constant_expression_warnings_ordered[i].key == key then
+					table.remove(self.constant_expression_warnings_ordered, i)
+
+					break
+				end
+			end
 		end
 
 		if self.constant_expression_warnings[key] == false then return end
 
-		self.constant_expression_warnings[key] = {msg = msg, node = node}
+		self.constant_expression_warnings[key] = {msg = msg, node = node, key = key}
+		table.insert(self.constant_expression_warnings_ordered, self.constant_expression_warnings[key])
 	end
 
 	function META:ReportConstantIfExpressions()
-		for _, info in pairs(self.constant_expression_warnings) do
+		for _, info in pairs(self.constant_expression_warnings_ordered) do
 			if info ~= false and info.msg then self:Warning(info.msg, info.node) end
 		end
 	end
