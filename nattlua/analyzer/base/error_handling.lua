@@ -141,7 +141,7 @@ return function(META)
 		end
 
 		do
-			local key = msg_str .. "-" .. "severity"
+			local key = msg_str .. "-" .. "severity" .. start .. "-" .. stop
 			self.diagnostics_map = self.diagnostics_map or {}
 
 			if self.diagnostics_map[key] then return end
