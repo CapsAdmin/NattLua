@@ -15,8 +15,6 @@ do
 		C = ffi.C
 	end
 
-	local M = {}
-
 	local function generic_function(
 		C_name: ref string,
 		cdef: ref string,
@@ -341,13 +339,20 @@ do
             };
 
             int poll(struct pollfd *fds, unsigned long nfds, int timeout);
+
+            typedef long time_t;
+
+            typedef struct timeval {
+                time_t tv_sec;
+                time_t tv_usec;
+            } timeval;
         ]]
 
 		do
 			local cache: Map<|number, string|> = {}
 
 			function socket.lasterror(num: nil | number)
-				num = num or ffi.errno()
+				num = num or ffi.C.GetLastError()
 
 				if not cache[num] then
 					local cstr = ffi.C.strerror(num)
@@ -441,7 +446,7 @@ do
 
 		if ret == 0 then return true end
 
-		return nil, socket.lasterror(ret)
+		return nil, ffi.string(socket.lasterror(ret))
 	end
 
 	do
@@ -504,6 +509,9 @@ do
 	generic_function("getsockname", "int getsockname(SOCKET s, struct sockaddr *, unsigned int *);")
 	socket.inet_ntoa = C.inet_ntoa
 	socket.ntohs = C.ntohs
+
+	function socket.poll(fds: ffi.get_type<|"struct pollfd*"|>, ndfs: number, timeout: number) end
+
 	e = {
 		TCP_NODELAY = 1,
 		TCP_MAXSEG = 2,
@@ -703,9 +711,11 @@ do
 	errno = {
 		EAGAIN = 11,
 		EWOULDBLOCK = 11, -- is errno.EAGAIN
+		EINVAL = 22,
 		ENOTSOCK = 88,
 		ECONNRESET = 104,
 		EINPROGRESS = 115,
+		ETIMEDOUT = 60,
 	}
 
 	if ffi.os == "Windows" then
@@ -736,11 +746,13 @@ do
 		e.POLLRDNORM = 256
 		e.SO_DONTROUTE = 16
 		e.SO_RCVLOWAT = 4100
+		errno.EINVAL = 10022
 		errno.EAGAIN = 10035 -- Note: Does not exist on Windows
 		errno.EWOULDBLOCK = 10035
 		errno.EINPROGRESS = 10036
 		errno.ENOTSOCK = 10038
 		errno.ECONNRESET = 10054
+		errno.ETIMEDOUT = 10060
 	end
 
 	if ffi.os == "OSX" then
@@ -751,19 +763,21 @@ do
 		e.SO_KEEPALIVE = 0x0008
 		e.SO_DONTROUTE = 0x0010
 		e.SO_BROADCAST = 0x0020
+		errno.EINVAL = 22
 		errno.EAGAIN = 35
 		errno.EWOULDBLOCK = errno.EAGAIN
 		errno.EINPROGRESS = 36
 		errno.ENOTSOCK = 38
 		errno.ECONNRESET = 54
+		errno.ETIMEDOUT = 60
 	end
 
 	if socket.initialize then assert(socket.initialize()) end
 end
 
 local function capture_flags(what: ref string)
-	local flags = {unknown = -1}
-	local reverse = {[-1] = "unknown"}
+	local flags = {}
+	local reverse = {}
 
 	for k, v in pairs(e) do
 		if k:sub(0, #what) == what then
@@ -777,9 +791,21 @@ local function capture_flags(what: ref string)
 		lookup = flags,
 		reverse = reverse,
 		strict_reverse = function(key: ref keysof<|reverse|>)
+			if not key then error("invalid " .. what:sub(0, -2) .. " flag: nil") end
+
+			if not reverse[key] then
+				error("invalid " .. what:sub(0, -2) .. " flag: " .. key, 2)
+			end
+
 			return reverse[key]
 		end,
 		strict_lookup = function(key: ref keysof<|flags|>)
+			if not key then error("invalid " .. what:sub(0, -2) .. " flag: nil") end
+
+			if not flags[key] then
+				error("invalid " .. what:sub(0, -2) .. " flag: " .. key, 2)
+			end
+
 			return flags[key]
 		end,
 	}
@@ -816,6 +842,8 @@ local function flags_to_table(
 	valid_flags: ref Map<|LiteralString, LiteralNumber|>,
 	operation: ref function=(number, number)>(number)
 )
+	if not flags then return valid_flags.default_valid_flag end
+
 	operation = operation or bit.band
 	local out = {}
 
@@ -826,30 +854,16 @@ local function flags_to_table(
 	return out
 end
 
-local function flags_to_list(
-	flags: ref number,
-	valid_flags: ref Map<|LiteralString, LiteralNumber|>,
-	operation: ref function=(number, number)>(number)
-)
-	operation = operation or bit.band
-	local list = {}
-
-	for k, v in pairs(valid_flags) do
-		if operation(flags, v) > 0 then table.insert(list, k) end
-	end
-
-	return list
-end
-
 local M = {}
 local timeout_messages = {}
 timeout_messages[errno.EINPROGRESS] = true
 timeout_messages[errno.EAGAIN] = true
 timeout_messages[errno.EWOULDBLOCK] = true
+timeout_messages[errno.ETIMEDOUT] = true
 
 function M.poll(
 	s: ffi.get_type<|"struct pollfd*"|> ~ nil,
-	flags: {[1 .. inf] = keysof<|POLL.lookup|> | nil},
+	flags: List<|keysof<|POLL.lookup|>|>,
 	timeout: nil | number
 )
 	local pfd = ffi.new(
@@ -885,7 +899,12 @@ local function addrinfo_get_ip(self: AddressInfo)
 
 	local str = ffi.new("char[256]")
 	local addr = assert(
-		socket.inet_ntop(AF.lookup[self.family], self.addrinfo.ai_addr.sa_data, str, ffi.sizeof(str))
+		socket.inet_ntop(
+			AF.lookup[self.family],
+			ffi.cast("struct sockaddr_in*", self.addrinfo.ai_addr).sin_addr,
+			str,
+			ffi.sizeof(str)
+		)
 	)
 	return ffi.string(addr)
 end
@@ -894,9 +913,9 @@ local function addrinfo_get_port(self: AddressInfo)
 	if self.addrinfo.ai_addr == nil then return nil end
 
 	if self.family == "inet" then
-		return ffi.cast("struct sockaddr_in*", self.addrinfo.ai_addr).sin_port
+		return socket.ntohs(ffi.cast("struct sockaddr_in*", self.addrinfo.ai_addr).sin_port)
 	elseif self.family == "inet6" then
-		return ffi.cast("struct sockaddr_in6*", self.addrinfo.ai_addr).sin6_port
+		return socket.ntohs(ffi.cast("struct sockaddr_in6*", self.addrinfo.ai_addr).sin6_port)
 	end
 
 	return nil, "unknown family " .. tostring(self.family)
@@ -906,10 +925,25 @@ type AddressInfo.get_port = addrinfo_get_port
 type AddressInfo.get_ip = addrinfo_get_ip
 type AddressInfo.@Name = "AddressInfo"
 
+local function flags_to_list(
+	flags: ref number,
+	valid_flags: ref Map<|LiteralString, LiteralNumber|>,
+	operation: ref function=(number, number)>(number)
+)
+	operation = operation or bit.band
+	local list = {}
+
+	for k, v in pairs(valid_flags) do
+		if operation(flags, v) > 0 then table.insert(list, k) end
+	end
+
+	return list
+end
+
 local function addrinfo_to_table(
 	res: ffi.get_type<|"struct addrinfo *"|> ~ nil,
 	host: nil | string,
-	service: nil | string
+	service: nil | string | number
 ): AddressInfo
 	local info = {}
 
@@ -932,7 +966,7 @@ end
 function M.get_address_info(
 	data: {
 		host = nil | string,
-		service = nil | string,
+		service = nil | string | number,
 		socket_type = keysof<|SOCK.lookup|> | nil,
 		family = keysof<|AF.lookup|> | nil,
 		flags = List<|keysof<|AI.lookup|>|> | nil,
@@ -943,14 +977,12 @@ function M.get_address_info(
 
 	if data.socket_type or data.protocol or data.flags or data.family then
 		hints = ffi.new(
-			"struct addrinfo[1]",
+			"struct addrinfo[1]", -- TODO: [1] is not in the original code?
 			{
-				{
-					ai_family = data.family and AF.strict_lookup(data.family) or nil,
-					ai_socktype = data.socket_type and SOCK.strict_lookup(data.socket_type) or nil,
-					ai_protocol = data.protocol and IPPROTO.strict_lookup(data.protocol) or nil,
-					ai_flags = data.flags and table_to_flags(AI.lookup, data.flags, bit.bor) or nil,
-				},
+				ai_family = data.family and AF.strict_lookup(data.family) or nil,
+				ai_socktype = data.socket_type and SOCK.strict_lookup(data.socket_type) or nil,
+				ai_protocol = data.protocol and IPPROTO.strict_lookup(data.protocol) or nil,
+				ai_flags = data.flags and table_to_flags(AI.lookup, data.flags, bit.bor) or nil,
 			}
 		)
 	end
@@ -979,7 +1011,7 @@ end
 
 function M.find_first_address(
 	host: nil | string,
-	service: nil | string,
+	service: nil | number | string,
 	options: nil | {
 		socket_type = nil | keysof<|SOCK.lookup|>,
 		family = nil | keysof<|AF.lookup|>,
@@ -1027,9 +1059,9 @@ do
 	meta.__index = meta
 	type meta.@Self = {
 		fd = Socket,
-		family = keysof<|AF.lookup|>,
-		socket_type = keysof<|SOCK.lookup|>,
-		protocol = keysof<|IPPROTO.lookup|>,
+		family = keysof<|AF.lookup|> | "unknown",
+		socket_type = keysof<|SOCK.lookup|> | "unknown",
+		protocol = keysof<|IPPROTO.lookup|> | "unknown",
 		blocking = boolean,
 		timeout_connected = nil | {string | AddressInfo, string},
 		on_close = nil | function=(self)>(),
@@ -1083,11 +1115,60 @@ do
 		return ok, err, num
 	end
 
+	--[[
+	function meta:set_option(
+		key: keysof<|SO.lookup|> | keysof<|TCP.lookup|>,
+		val: boolean | number | cdata,
+		level: "tcp" | "udp"
+	)
+		level = level or "socket"
+
+		if key:lower() == "rcvtimeo" then
+			if ffi.os == "Windows" then
+				val = ffi.new("int[1]", val)
+			else
+				local usec = val * 1000
+				val = ffi.new("struct timeval")
+				val.tv_usec = usec
+			end
+		else
+			if type(val) == "boolean" then
+				val = ffi.new("int[1]", val and 1 or 0)
+			elseif type(val) == "number" then
+				val = ffi.new("int[1]", val)
+			elseif type(val) ~= "cdata" then
+				error("unknown value type: " .. type(val))
+			end
+		end
+
+		local env = SO
+
+		if level == "tcp" then env = TCP end
+
+		return socket.setsockopt(
+			self.fd,
+			SOL.strict_lookup(level),
+			env.strict_lookup(key),
+			ffi.cast("void *", val),
+			ffi.sizeof(val)
+		)
+	end
+	]]
 	do
-		local function cast_value(val: boolean | number | cdata)
+		local function cast_value(val: boolean | number | cdata, key: string)
 			if type(val) == "boolean" then
 				return ffi.new("int[1]", val and 1 or 0)
 			elseif type(val) == "number" then
+				local n = val -- TODO
+				if key:lower() == "rcvtimeo" then
+					if ffi.os ~= "Windows" then
+						local usec = n * 1000 -- TODO
+						local tval = ffi.new("struct timeval")
+						tval.tv_usec = usec
+						return tval
+					end
+				end
+
 				return ffi.new("int[1]", val)
 			elseif type(val) == "cdata" then
 				return val
@@ -1097,7 +1178,7 @@ do
 		end
 
 		function meta:set_socket_option(key: keysof<|SO.lookup|>, val: boolean | number | cdata)
-			local val = cast_value(val)
+			local val = cast_value(val, key)
 			return socket.setsockopt(
 				self.fd,
 				SOL.strict_lookup("socket"),
@@ -1108,7 +1189,7 @@ do
 		end
 
 		function meta:set_tcp_option(key: keysof<|TCP.lookup|>, val: boolean | number | cdata)
-			local val = cast_value(val)
+			local val = cast_value(val, key)
 			return socket.setsockopt(
 				self.fd,
 				SOL.strict_lookup("tcp"),
@@ -1117,6 +1198,10 @@ do
 				ffi.sizeof(val)
 			)
 		end
+	end
+
+	function meta:settimeout(t: number)
+		self:set_socket_option("rcvtimeo", t)
 	end
 
 	function meta:connect(host: string | AddressInfo, service: string)
@@ -1142,7 +1227,7 @@ do
 
 		local ok, err, num = socket.connect(self.fd, res.addrinfo.ai_addr, res.addrinfo.ai_addrlen)
 
-		if not ok and not self.blocking then
+		if not ok and self.blocking then
 			if timeout_messages[num] then
 				self.timeout_connected = {host, service}
 				return true
@@ -1157,8 +1242,7 @@ do
 	end
 
 	function meta:poll_connect()
-		-- TODO, moving self:is_connected() to the end of the expression errors
-		if self:is_connected() and self.on_connect and self.timeout_connected then
+		if self.on_connect and self.timeout_connected and self:is_connected() then
 			local ok, err, num = self:on_connect(unpack(self.timeout_connected))
 			self.timeout_connected = nil
 			return ok, err, num
@@ -1202,7 +1286,7 @@ do
 
 	function meta:accept()
 		local address = ffi.new("struct sockaddr_in[1]")
-		local fd, err = socket.accept(
+		local fd, _ = socket.accept(
 			self.fd,
 			ffi.cast("struct sockaddr *", address),
 			ffi.new("unsigned int[1]", ffi.sizeof(address))
@@ -1229,7 +1313,7 @@ do
 
 		local err, num = socket.lasterror()
 
-		if not self.blocking and timeout_messages[num] then
+		if self.blocking and timeout_messages[num] then
 			return nil, "timeout", num
 		end
 
@@ -1242,7 +1326,7 @@ do
 
 	function meta:is_connected()
 		local ip, service, num = self:get_peer_name()
-		local ip2, service2, num2 = self:get_name()
+		local ip2, service2, _ = self:get_name()
 
 		if not ip and (num == errno.ECONNRESET or num == errno.ENOTSOCK) then
 			return false, service, num
@@ -1262,11 +1346,7 @@ do
 
 		if not ok then return ok, err, num end
 
-		local cstr = socket.inet_ntoa(data.sin_addr)
-
-		if not cstr then return false, socket.lasterror() end
-
-		return ffi.string(cstr), socket.ntohs(data.sin_port)
+		return ffi.string(socket.inet_ntoa(data.sin_addr)), socket.ntohs(data.sin_port)
 	end
 
 	function meta:get_name()
@@ -1276,11 +1356,7 @@ do
 
 		if not ok then return ok, err, num end
 
-		local cstr = socket.inet_ntoa(data.sin_addr)
-
-		if not cstr then return false, socket.lasterror() end
-
-		return ffi.string(cstr), socket.ntohs(data.sin_port)
+		return ffi.string(socket.inet_ntoa(data.sin_addr)), socket.ntohs(data.sin_port)
 	end
 
 	local default_flags = 0
@@ -1361,7 +1437,7 @@ do
 		end
 
 		if not len then
-			if not self.blocking and timeout_messages[num] then
+			if self.blocking and timeout_messages[num] then
 				return nil, "timeout", num
 			end
 
@@ -1374,16 +1450,16 @@ do
 			if self.debug then print(tostring(self), ": received ", len, " bytes") end
 
 			if src_address then
-				local address_info = {
+				return ffi.string(buff, len),
+				{
 					addrinfo = {
 						ai_addr = ffi.cast("struct sockaddr *", src_address),
 						ai_addrlen = len_res[0],
-					} as ffi.get_type<|"struct addrinfo*"|> ~ nil, -- TODO: nested as not working?
+					},
 					family = self.family,
 					get_port = addrinfo_get_port,
 					get_ip = addrinfo_get_ip,
 				} as AddressInfo -- this is a lie, but need to restructure the code to avoid it
-				return ffi.string(buff, len), address_info
 			end
 
 			return ffi.string(buff, len)
@@ -1407,12 +1483,14 @@ function M.bind(host: string, service: string)
 
 	if not info then return info, err end
 
-	local server, err, num = M.create(info.family, info.socket_type, info.protocol)
+	local server, num
+	server, err, num = M.create(info.family, info.socket_type, info.protocol)
 
 	if not server then return server, err, num end
 
 	server:set_socket_option("reuseaddr", 1)
-	local ok, err, num = server:bind(info)
+	local ok
+	ok, err, num = server:bind(info)
 
 	if not ok then return ok, err, num end
 
@@ -1456,42 +1534,49 @@ if TEST then
 	end
 
 	do -- blocking server
-		local host = nil
-		local port = "5001"
-		local info = assert(
-			socket.find_first_address(
-				"*",
-				port,
-				{
-					socket_type = "stream",
-					family = "inet",
-					flags = {"passive"}, -- fill in ip
-					protocol = "tcp",
-				}
+		print("goto http://127.0.0.1:5001")
+
+		do -- server
+			local host = nil
+			local port = 5001
+			local info = assert(
+				socket.find_first_address(
+					"*",
+					port,
+					{
+						family = "inet",
+						socket_type = "stream",
+						protocol = "tcp",
+						flags = {"passive"}, -- fill in ip
+					}
+				)
 			)
-		)
-		-- Create a SOCKET for connecting to server
-		local server = assert(socket.create(info.family, info.socket_type, info.protocol))
-		server:set_socket_option("reuseaddr", 1)
-		assert(server:bind(info))
-		assert(server:listen())
-		local body = "<html><body><h1>hello world</h1></body></html>"
-		local header = "[HTTP/1.1 200 OK\r\n" .. "Server: masrv/0.1.0\r\n" .. "Date: Thu, 28 Mar 2013 22:16:09 GMT\r\n" .. "Content-Type: text/html\r\n" .. "Connection: Keep-Alive\r\n" .. "Content-Length: " .. #body .. "\r\n" .. "Last-Modified: Wed, 21 Sep 2011 14:34:51 GMT\r\n" .. "Accept-Ranges: bytes\r\n" .. "\r\n"
-		local content = header .. body
+			-- Create a SOCKET for connecting to server
+			local server = assert(socket.create(info.family, info.socket_type, info.protocol))
+			server:set_socket_option("reuseaddr", 1)
+			assert(server:bind(info))
+			assert(server:listen())
+			local body = "<html><body><h1>hello world</h1></body></html>"
+			local header = "[HTTP/1.1 200 OK\r\n" .. "Server: masrv/0.1.0\r\n" .. "Date: Thu, 28 Mar 2013 22:16:09 GMT\r\n" .. "Content-Type: text/html\r\n" .. "Connection: Keep-Alive\r\n" .. "Content-Length: " .. #body .. "\r\n" .. "Last-Modified: Wed, 21 Sep 2011 14:34:51 GMT\r\n" .. "Accept-Ranges: bytes\r\n" .. "\r\n"
+			local content = header .. body
 
-		do
-			local client, err = server:accept()
+			while true do
+				local client, err = server:accept()
 
-			if client then
-				assert(client:send(content))
-				local str, err = client:receive()
+				if client then
+					assert(client:send(content))
+					print("client connected ", tostring(client))
+					local str, err = client:receive()
 
-				if str then
-					print(str)
-					client:close()
-				elseif err == "closed" then
-					client:close()
+					if str then
+						print(str)
+						client:close()
+					elseif err == "closed" then
+						client:close()
+					end
 				end
+
+				break
 			end
 		end
 	end
@@ -1499,10 +1584,10 @@ if TEST then
 	do -- non blocking client
 		local host = "www.freebsd.no"
 		local socket = assert(socket.create("inet", "stream", "tcp"))
-		assert(socket:set_blocking(false))
 		assert(socket:connect(host, "http"))
+		assert(socket:set_blocking(false))
 
-		do
+		while true do
 			if socket:is_connected() then
 				assert(
 					socket:send(
@@ -1513,14 +1598,14 @@ if TEST then
 				local str = ""
 				local total_length
 
-				do
+				while true do
 					local chunk, err = socket:receive()
 
 					if chunk then
 						str = str .. chunk
 
 						if not total_length then
-							total_length = assert(tonumber((assert(str:match("Content%-Length: (%d+)"), "no content length"))))
+							total_length = assert(tonumber(assert(str:match("Content%-Length: (%d+)"))))
 						end
 
 						if #str >= total_length then
@@ -1528,21 +1613,23 @@ if TEST then
 							return
 						end
 					elseif err ~= "timeout" then
-
-					--error(err)
+						if type(err) == "string" then error(err) end
 					end
+
+					break
 				end
 			else
 				socket:poll_connect()
 			end
+
+			break
 		end
 	end
 
 	do
-		local update_server
-		local update_client
-		local port = "8080"
-		local address = assert(socket.find_first_address("*", port), "cannot find address")
+		local update_server, update_client
+		local port = 8080
+		local address = assert(socket.find_first_address("*", port))
 
 		do -- server
 			local server = assert(socket.create("inet", "dgram", "udp"))
@@ -1553,11 +1640,12 @@ if TEST then
 			function update_server()
 				local data, addr = server:receive_from()
 
-				if data and type(addr) == "table" and addr then
-					assert(server:send_to(addr as AddressInfo, "hello from server " .. os.clock()))
+				if data then
+					if type(addr) == "table" then
+						assert(server:send_to(addr, "hello from server " .. os.clock()))
+					end
 				elseif addr ~= "timeout" then
-
-				--error(addr)
+					if type(addr) == "string" then error(addr) end
 				end
 			end
 		end
@@ -1575,19 +1663,19 @@ if TEST then
 
 				local data, addr = client:receive_from(address)
 
-				if data and addr and type(addr) == "table" then
-
-				--print(data, addr:get_ip(), addr:get_port())
-				elseif addr ~= "timeout" then
-
-				--error(addr)
+				if data then
+					if type(addr) == "table" then print(data, addr:get_ip(), addr:get_port()) end
+				elseif type(addr) == "string" and addr ~= "timeout" then
+					error(addr)
 				end
 			end
 		end
 
-		do
+		while true do
 			update_server()
 			update_client()
+
+			break
 		end
 	end
 end
