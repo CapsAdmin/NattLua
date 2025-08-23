@@ -25,14 +25,12 @@ type os = {
 	end,
 	time = function=(date_table: DateStruct)>(number) | function=()>(number),
 	tmpname = function=()>(string),
+	clock = function=()>(0 .. inf),
 }
 
 do -- Simple functions using ReturnIfNonLiteral
-	type os.clock = ReturnIfNonLiteral<|analyzer function(): number
-		return os.clock()
-	end|>
 	type os.difftime = ReturnIfNonLiteral<|
-		analyzer function(t2: number, t1: number): number
+		analyzer function(t2: number, t1: number): (-inf .. inf)
 			return t2:GetData() - t1:GetData()
 		end
 	|>
