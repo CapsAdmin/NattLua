@@ -70,6 +70,10 @@ analyzer function argument_type(func: Function, i: number | nil)
 	return {analyzer:AssertFallback(types.Nil(), func:GetInputSignature():Slice(i, i))}
 end
 
+analyzer function SetPreventInputExpansionOnFunction(func: AnyFunction, b: boolean)
+	func:SetPreventInputArgumentExpansion(b:IsTrue())
+end
+
 analyzer function exclude(T: any, U: any)
 	T = T:Copy()
 	T:RemoveType(U)

@@ -207,7 +207,7 @@ analyzer function ffi.cdef(cdecl: string, ...: ...any)
 	cdecl_parser.cdef(cdecl, ...)
 end
 
-§env.typesystem.ffi:Get(types.ConstString("cdef")):SetPreventInputArgumentExpansion(true)
+SetPreventInputExpansionOnFunction<|ffi.cdef, true|>
 
 analyzer function ffi.cast(cdecl: string | FFICtype<|any|>, src: any)
 	return cdecl_parser.cast(cdecl, src)
@@ -217,7 +217,7 @@ analyzer function ffi.typeof(cdecl: string | FFICtype<|any|>, ...: ...any)
 	return cdecl_parser.typeof(cdecl, ...)
 end
 
-§env.typesystem.ffi:Get(types.ConstString("typeof")):SetPreventInputArgumentExpansion(true)
+SetPreventInputExpansionOnFunction<|ffi.typeof, true|>
 
 analyzer function ffi.get_type(cdecl: string, ...: ...any)
 	return cdecl_parser.get_type(cdecl, ...)

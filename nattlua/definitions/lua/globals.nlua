@@ -30,8 +30,7 @@ analyzer function print(...: ...any)
 	io.write(require("nattlua.cli.colors").green(str))
 end
 
-§env.typesystem.print:SetPreventInputArgumentExpansion(true)
-
+SetPreventInputExpansionOnFunction<|print, true|>
 type type_print = print
 type tostring = function=(val: any)>(string)
 

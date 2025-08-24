@@ -26,7 +26,7 @@ analyzer function attest.strict_equal(A: any, B: any, level: nil | 0 .. inf)
 	return A
 end
 
-§env.typesystem.attest:Get(types.ConstString("equal")):SetPreventInputArgumentExpansion(true)
+SetPreventInputExpansionOnFunction<|attest.equal, true|>
 
 analyzer function attest.literal(A: any)
 	analyzer:ErrorAssert(A:IsLiteral())

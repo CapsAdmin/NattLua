@@ -32,18 +32,20 @@ local function should_expand(arg, contract)
 	return b
 end
 
-local function unpack_union_tuples(analyzer, obj, input)
+local function unpack_union_tuples(obj, input)
 	local input_signature = obj:GetInputSignature()
 	local len = input_signature:GetSafeLength(input)
 	local packed_args = input:ToTable(len)
 
 	if #packed_args == 0 and len == 1 then
-		local first = analyzer:GetFirstValue(input_signature)
+		local first = assert(input_signature:GetFirstValue())
 
 		if first and first.Type == "any" or first.Type == "nil" then
 			packed_args = {first:Copy()}
 		end
 	end
+
+	if obj:GetPreventInputArgumentExpansion() then return {packed_args} end
 
 	local out = {}
 	local lengths = {}
@@ -52,10 +54,7 @@ local function unpack_union_tuples(analyzer, obj, input)
 	local arg_length = #packed_args
 
 	for i, val in ipairs(packed_args) do
-		if
-			not obj:GetPreventInputArgumentExpansion() and
-			should_expand(val, input_signature:GetWithNumber(i))
-		then
+		if should_expand(val, input_signature:GetWithNumber(i)) then
 			if val.Type == "number" or val.Type == "range" then
 				lengths[i] = 2 -- min max
 			else
@@ -167,7 +166,7 @@ return function(analyzer, obj, input)
 
 	local ret = Tuple()
 
-	for i, arguments in ipairs(unpack_union_tuples(analyzer, obj, input)) do
+	for i, arguments in ipairs(unpack_union_tuples(obj, input)) do
 		local tuple = analyzer:LuaTypesToTuple(
 			{
 				analyzer:CallLuaTypeFunction(obj:GetAnalyzerFunction(), obj:GetScope() or analyzer:GetScope(), arguments),
