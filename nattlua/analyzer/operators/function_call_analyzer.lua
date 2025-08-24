@@ -17,19 +17,49 @@ local Symbol = require("nattlua.types.symbol").Symbol
 local type_errors = require("nattlua.types.error_messages")
 
 local function should_expand(arg, contract)
-	local b = arg.Type == "union"
+	-- ranges are expanded, so with 1..5, the function is called with 1 and 5 respectively
+	if arg.Type == "range" then return true end
 
-	if contract.Type == "any" then b = false end
+	if arg.Type == "union" then
+		if contract.Type == "union" then return contract:IsNil() end
 
-	if contract.Type == "union" then b = false end
-
-	if arg.Type == "union" and contract.Type == "union" and contract:IsNil() then
-		b = true
+		return contract.Type ~= "any"
 	end
 
-	if arg.Type == "range" then b = true end
+	return false
+end
 
-	return b
+-- Helper to extract all possible values for an argument
+local function get_all_values(val)
+	if val.Type == "range" then
+		return {val:GetMinNumber(), val:GetMaxNumber()}
+	else
+		return val:GetData()
+	end
+end
+
+-- Generate Cartesian product recursively
+local function generate_combinations(packed_args, argument_options, arg_index)
+	if arg_index > #packed_args then
+		return {{}} -- Base case: one empty combination
+	end
+
+	local rest_combinations = generate_combinations(packed_args, argument_options, arg_index + 1)
+	local all_combinations = {}
+
+	for _, value in ipairs(argument_options[arg_index]) do
+		for _, rest in ipairs(rest_combinations) do
+			local combination = {value}
+
+			for _, v in ipairs(rest) do
+				table.insert(combination, v)
+			end
+
+			table.insert(all_combinations, combination)
+		end
+	end
+
+	return all_combinations
 end
 
 local function unpack_union_tuples(obj, input)
@@ -47,65 +77,23 @@ local function unpack_union_tuples(obj, input)
 
 	if obj:GetPreventInputArgumentExpansion() then return {packed_args} end
 
-	local out = {}
-	local lengths = {}
-	local max = 1
-	local ys = {}
-	local arg_length = #packed_args
+	-- Build a list of all possible values for each argument
+	local argument_options = {}
+	local has_expandable_args = false
 
 	for i, val in ipairs(packed_args) do
 		if should_expand(val, input_signature:GetWithNumber(i)) then
-			if val.Type == "number" or val.Type == "range" then
-				lengths[i] = 2 -- min max
-			else
-				lengths[i] = #val:GetData()
-			end
-
-			max = max * lengths[i]
+			argument_options[i] = get_all_values(val)
+			has_expandable_args = true
 		else
-			lengths[i] = 0
-		end
-
-		ys[i] = 1
-	end
-
-	for i = 1, max do
-		local args = {}
-		local sub_index = i
-
-		for i, val in ipairs(packed_args) do
-			if lengths[i] == 0 then
-				args[i] = val
-			else
-				if val.Type == "range" then
-					if sub_index == 1 then
-						args[i] = LNumber(val:GetMin())
-					else
-						args[i] = LNumber(val:GetMax())
-					end
-				else
-					args[i] = val:GetData()[ys[i]]
-				end
-			end
-		end
-
-		out[i] = args
-		local carry = true
-
-		for arg_index = arg_length, 1, -1 do
-			if carry and lengths[arg_index] > 0 then
-				ys[arg_index] = ys[arg_index] + 1
-
-				if ys[arg_index] <= lengths[arg_index] then
-					carry = false
-				else
-					ys[arg_index] = 1
-				end
-			end
+			argument_options[i] = {val} -- Single option for non-expandable args
 		end
 	end
 
-	return out
+	-- If nothing needs expansion, return original arguments
+	if not has_expandable_args then return {packed_args} end
+
+	return generate_combinations(packed_args, argument_options, 1)
 end
 
 return function(analyzer, obj, input)
@@ -185,9 +173,17 @@ return function(analyzer, obj, input)
 				if existing.Type == "number" and v.Type == "number" then
 					local range = input:GetWithNumber(i)
 
-					if range and range.Type == "range" then
-						ret:Set(i, LNumberRange(existing:GetData(), v:GetData()))
-						handled = true
+					if range then
+						if range.Type == "range" then
+							ret:Set(i, LNumberRange(existing:GetData(), v:GetData()))
+							handled = true
+						elseif range.Type == "union" and range:HasType("range") then
+							print(range, i, v)
+							ret:Set(i, LNumberRange(existing:GetData(), v:GetData()))
+							handled = false
+						end
+					else
+
 					end
 				end
 
