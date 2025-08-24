@@ -91,7 +91,7 @@ do
 			AnalyzeNumericFor(self, node)
 		elseif node.kind == "analyzer_debug_code" then
 			local code = node.lua_code.value.value:sub(3)
-			self:CallLuaTypeFunction(node.compiled_function, self:GetScope())
+			self:CallLuaTypeFunction(node.compiled_function, self:GetScope(), {})
 		elseif node.kind == "import" then
 
 		elseif
@@ -230,6 +230,7 @@ do
 	function META:TestFunctionAssertDiagnosticCount(count)
 		count = count or 0
 		self:AnalyzeUnreachableCode()
+
 		if #self:GetDiagnostics() ~= count then
 			error("expected no diagnostics reported", 2)
 		end

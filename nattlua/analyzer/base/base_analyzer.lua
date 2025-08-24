@@ -347,10 +347,10 @@ return function(META)
 			return ret, debug.traceback()
 		end
 
-		function META:CallLuaTypeFunction(func, scope, ...)
+		function META:CallLuaTypeFunction(func, scope, args)
 			self.function_scope = scope
 			current_func = func
-			local res = {xpcall(func, on_error_safe, ...)}
+			local res = {xpcall(func, on_error_safe, table.unpack(args))}
 			current_func = nil
 
 			if not table_remove(res, 1) then

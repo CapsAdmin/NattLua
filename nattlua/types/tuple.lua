@@ -635,12 +635,16 @@ function META:Unpack(length--[[#: nil | number]])
 	return table.unpack(out)
 end
 
-function META:UnpackWithoutExpansion()
-	local tbl = {table.unpack(self.Data)}
+function META:ToTableWithoutExpansion()
+	local tbl = {}
+
+	for i = 1, #self.Data do
+		tbl[i] = self.Data[i]
+	end
 
 	if self.Remainder then table.insert(tbl, self.Remainder) end
 
-	return table.unpack(tbl)
+	return tbl
 end
 
 function META:Slice(start--[[#: number]], stop--[[#: number]])

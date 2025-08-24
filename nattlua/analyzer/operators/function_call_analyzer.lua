@@ -32,15 +32,26 @@ local function should_expand(arg, contract)
 	return b
 end
 
-local function unpack_union_tuples(obj, input)
+local function unpack_union_tuples(analyzer, obj, input)
 	local input_signature = obj:GetInputSignature()
+	local len = input_signature:GetSafeLength(input)
+	local packed_args = {input:Unpack(len)}
+
+	if #packed_args == 0 and len == 1 then
+		local first = analyzer:GetFirstValue(input_signature)
+
+		if first and first.Type == "any" or first.Type == "nil" then
+			packed_args = {first:Copy()}
+		end
+	end
+
 	local out = {}
 	local lengths = {}
 	local max = 1
 	local ys = {}
-	local arg_length = #input
+	local arg_length = #packed_args
 
-	for i, val in ipairs(input) do
+	for i, val in ipairs(packed_args) do
 		if
 			not obj:GetPreventInputArgumentExpansion() and
 			should_expand(val, input_signature:GetWithNumber(i))
@@ -63,7 +74,7 @@ local function unpack_union_tuples(obj, input)
 		local args = {}
 		local sub_index = i
 
-		for i, val in ipairs(input) do
+		for i, val in ipairs(packed_args) do
 			if lengths[i] == 0 then
 				args[i] = val
 			else
@@ -99,16 +110,16 @@ local function unpack_union_tuples(obj, input)
 end
 
 return function(analyzer, obj, input)
-	local signature_arguments = obj:GetInputSignature()
+	local input_signature = obj:GetInputSignature()
 	local output_signature = obj:GetOutputSignature()
 
 	do
 		local new_tup, errors
 
 		if analyzer:IsTypesystem() then
-			new_tup, errors = input:SubsetOrFallbackWithTuple(signature_arguments)
+			new_tup, errors = input:SubsetOrFallbackWithTuple(input_signature)
 		else
-			new_tup, errors = input:SubsetWithoutExpansionOrFallbackWithTuple(signature_arguments)
+			new_tup, errors = input:SubsetWithoutExpansionOrFallbackWithTuple(input_signature)
 		end
 
 		if errors then
@@ -137,7 +148,7 @@ return function(analyzer, obj, input)
 				analyzer:CallLuaTypeFunction(
 					obj:GetAnalyzerFunction(),
 					obj:GetScope() or analyzer:GetScope(),
-					input:UnpackWithoutExpansion()
+					input:ToTableWithoutExpansion()
 				),
 			}
 		)
@@ -149,48 +160,28 @@ return function(analyzer, obj, input)
 	-- so no arguments are passed. This feels wrong, maybe at least 1 argument? (however technically this is also wrong?)
 	if
 		input:GetElementCount() == math.huge and
-		signature_arguments:GetElementCount() == math.huge
+		input_signature:GetElementCount() == math.huge
 	then
 		input = Tuple({input:GetWithNumber(1)})
 	end
 
-	local len = signature_arguments:GetSafeLength(input)
-	local packed_args = {input:Unpack(len)}
+	local ret = Tuple()
 
-	if #packed_args == 0 and len == 1 then
-		local first = analyzer:GetFirstValue(signature_arguments)
-
-		if first and first.Type == "any" or first.Type == "nil" then
-			packed_args = {first:Copy()}
-		end
-	end
-
-	local tuples = {}
-
-	for i, arguments in ipairs(unpack_union_tuples(obj, packed_args)) do
-		tuples[i] = analyzer:LuaTypesToTuple(
+	for i, arguments in ipairs(unpack_union_tuples(analyzer, obj, input)) do
+		local tuple = analyzer:LuaTypesToTuple(
 			{
 				analyzer:CallLuaTypeFunction(
 					obj:GetAnalyzerFunction(),
 					obj:GetScope() or analyzer:GetScope(),
-					table.unpack(arguments)
+					arguments
 				),
 			}
 		)
-	end
 
-	local ret = Tuple()
+		if tuple:HasInfiniteValues() then return tuple end
 
-	for _, tuple in ipairs(tuples) do
-		if tuple:GetUnpackable() or tuple:HasInfiniteValues() then return tuple end
-	end
-
-	for _, tuple in ipairs(tuples) do
 		for i = 1, tuple:GetElementCount() do
-			local v, err = tuple:GetWithNumber(i)
-
-			if not v then return v, err end
-
+			local v = assert(tuple:GetWithNumber(i))
 			local existing = ret:GetWithNumber(i)
 
 			if existing then
