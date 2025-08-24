@@ -287,23 +287,36 @@ return function(META)
 	end
 
 	do
+		local current_func
 		local analyzer_context = require("nattlua.analyzer.context")
 
 		local function on_error(msg)
 			local info = debug.getinfo(3)
 			local source = info.source
+			local line = info.currentline
 
-			if source:sub(1, 1) == "@" then
+			if source == "@./nattlua/analyzer/base/base_analyzer.lua" and current_func then
+				info = debug.getinfo(current_func)
+				source = info.source
+				local test, test_line = source:match("^(.+):(%d+)$")
+
+				if test then
+					source = test
+					line = test_line
+				end
+			elseif source:sub(1, 1) == "@" then
 				local test = source:match("^(.+):%d+$")
 
-				if test then source = test end
+				if test then source = test:sub(2) end
+			end
 
-				local f, err = io.open(source:sub(2), "r")
+			if source then
+				local f, err = io.open(source, "r")
 
 				if f then
 					local code = f:read("*all")
 					f:close()
-					local start = formating.LineCharToSubPos(code, tonumber(info.currentline), 0)
+					local start = formating.LineCharToSubPos(code, tonumber(line), 0)
 					local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
 
 					if msg:sub(1, #source) == source then
@@ -313,7 +326,7 @@ return function(META)
 
 					local analyzer = analyzer_context:GetCurrentAnalyzer()
 					local node = analyzer:GetCurrentExpression() or analyzer:GetCurrentStatement()
-					return node.Code:BuildSourceCodePointMessage(msg, start, stop)
+					return formating.BuildSourceCodePointMessage(code, source, msg, start, stop)
 				end
 			end
 
@@ -336,7 +349,9 @@ return function(META)
 
 		function META:CallLuaTypeFunction(func, scope, ...)
 			self.function_scope = scope
+			current_func = func
 			local res = {xpcall(func, on_error_safe, ...)}
+			current_func = nil
 
 			if not table_remove(res, 1) then
 				local err = res[1]
