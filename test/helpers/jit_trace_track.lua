@@ -17,7 +17,7 @@ local bcnames = ok and vmdef.bcnames
 	stopped = nil | true,
 	aborted = nil | {code = number, reason = number},
 	children = nil | Map<|number, self|>,
-	trace_info = ReturnType<|traceinfo|>[1],
+	trace_info = ReturnType<|traceinfo|>[1] ~ nil,
 }]]
 local traces--[[#: Map<|number, Trace|>]] = {}
 local aborted = {}
@@ -57,7 +57,7 @@ end
 local function stop(id--[[#: number]], func--[[#: Function]])
 	assert(traces[id])
 	assert(traces[id].aborted == nil)
-	traces[id].trace_info = traceinfo(id)
+	traces[id].trace_info = assert(traceinfo(id), "invalid trace id: " .. id)
 end
 
 local function abort(
@@ -69,7 +69,7 @@ local function abort(
 )
 	assert(traces[id])
 	assert(traces[id].stopped == nil)
-	traces[id].trace_info = traceinfo(id)
+	traces[id].trace_info = assert(traceinfo(id), "invalid trace id: " .. id)
 	traces[id].aborted = {
 		code = code,
 		reason = reason,
@@ -335,7 +335,7 @@ function trace_track.ToStringProblematicTraces(traces--[[#: Map<|number, Trace|>
 		map[res] = (map[res] or 0) + 1
 	end
 
-	local sorted = {}
+	local sorted--[[#: List<|{line = string, count = number}|>]] = {}
 
 	for k, v in pairs(map) do
 		table.insert(sorted, {line = k, count = v})
