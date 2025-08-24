@@ -263,7 +263,7 @@ function Extract<|a: any, b: any|>
 end
 
 analyzer function Parameters(func: Function)
-	return {func:GetInputSignature():Copy():Unpack()}
+	return func:GetInputSignature():Copy():ToTable()
 end
 
 analyzer function ReturnType(func: Function)
@@ -271,7 +271,7 @@ analyzer function ReturnType(func: Function)
 		analyzer:CrawlFunctionWithoutOrigin(func)
 	end
 
-	return {func:GetOutputSignature():Copy():Unpack()}
+	return func:GetOutputSignature():Copy():ToTable()
 end
 
 function Uppercase<|val: ref string|>

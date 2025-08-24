@@ -35,7 +35,7 @@ end
 local function unpack_union_tuples(analyzer, obj, input)
 	local input_signature = obj:GetInputSignature()
 	local len = input_signature:GetSafeLength(input)
-	local packed_args = {input:Unpack(len)}
+	local packed_args = input:ToTable(len)
 
 	if #packed_args == 0 and len == 1 then
 		local first = analyzer:GetFirstValue(input_signature)
@@ -170,11 +170,7 @@ return function(analyzer, obj, input)
 	for i, arguments in ipairs(unpack_union_tuples(analyzer, obj, input)) do
 		local tuple = analyzer:LuaTypesToTuple(
 			{
-				analyzer:CallLuaTypeFunction(
-					obj:GetAnalyzerFunction(),
-					obj:GetScope() or analyzer:GetScope(),
-					arguments
-				),
+				analyzer:CallLuaTypeFunction(obj:GetAnalyzerFunction(), obj:GetScope() or analyzer:GetScope(), arguments),
 			}
 		)
 

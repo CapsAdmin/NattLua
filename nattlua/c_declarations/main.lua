@@ -208,7 +208,7 @@ function cparser.typeof(cdecl, ...)
 	if cdecl.Type == "string" and cdecl:IsLiteral() then
 		local args = {...}
 
-		if args[1] and args[1].Type == "tuple" then args = {args[1]:Unpack()} end
+		if args[1] and args[1].Type == "tuple" then args = args[1]:ToTable() end
 
 		local analyzer = analyzer_context:GetCurrentAnalyzer()
 		local env = analyzer:GetScopeHelper(analyzer.function_scope)

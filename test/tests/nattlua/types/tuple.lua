@@ -64,7 +64,7 @@ end)
 
 test("tuple unpack", function()
 	local tup = Tuple({String()}):AddRemainder(Tuple({String(), Number()}):SetRepeat(4))
-	local tbl = {tup:Unpack()}
+	local tbl = tup:ToTable()
 	assert(tup:GetElementCount() == 1 + (2 * 4))
 	assert(tup:GetElementCount() == #tbl)
 	assert(tbl[1].Type == "string")
@@ -76,12 +76,12 @@ end)
 
 test("tuple unpack", function()
 	local tup = Tuple({String()}):AddRemainder(Tuple({String(), Number()}):SetRepeat(4))
-	local tbl = {tup:Unpack(3)}
+	local tbl = tup:ToTable(3)
 	assert(#tbl == 3)
 	assert(tbl[1].Type == "string")
 	assert(tbl[2].Type == "string")
 	assert(tbl[3].Type == "number")
-	local tbl = {tup:Unpack(1)}
+	local tbl = tup:ToTable(1)
 	assert(#tbl == 1)
 	assert(tbl[1].Type == "string")
 end)

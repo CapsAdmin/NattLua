@@ -619,12 +619,12 @@ function META:SetRepeat(amt--[[#: number]])
 	return self
 end
 
-function META:Unpack(length--[[#: nil | number]])
+function META:ToTable(length--[[#: nil | number]])
 	length = length or self:GetElementCount()
 	length = math.min(length, self:GetElementCount())
 	assert(length ~= math.huge, "length must be finite")
 
-	if length == 1 then return (self:GetWithNumber(1)) end
+	if length == 1 then return {(self:GetWithNumber(1))} end
 
 	local out = {}
 
@@ -632,7 +632,11 @@ function META:Unpack(length--[[#: nil | number]])
 		out[i] = self:GetWithNumber(i)
 	end
 
-	return table.unpack(out)
+	return out
+end
+
+function META:Unpack(length--[[#: nil | number]])
+	return table.unpack(self:ToTable(length))
 end
 
 function META:ToTableWithoutExpansion()
