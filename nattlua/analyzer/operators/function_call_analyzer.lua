@@ -21,7 +21,7 @@ local function should_expand(arg, contract)
 	if arg.Type == "range" then return true end
 
 	if arg.Type == "union" then
-		if contract.Type == "union" then return contract:IsNil() end
+		if contract.Type == "union" and contract:IsNil() then return true end
 
 		return contract.Type ~= "any"
 	end

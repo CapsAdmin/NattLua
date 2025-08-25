@@ -734,3 +734,6 @@ attest.expect_diagnostic("error", "on type symbol")
 local y = x:read("*all")
 attest.equal(y, _ as nil | string)
 ]]
+analyze[[
+attest.equal(bit.tohex(_ as 1 | 2 | 3 | "4", 2), _ as "01" | "02" | "03" | "04")
+]]
