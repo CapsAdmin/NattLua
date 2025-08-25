@@ -1951,3 +1951,21 @@ end
 attest.equal(x, _ as nil | string)
 
 ]]
+analyze[[
+local function disass_ins()
+	local opat = _ as nil | string
+	assert(opat)
+	attest.equal(opat, _ as string)
+	local name, pat = string.match(opat, "^([a-z0-9]*)(.*)")
+	assert(name)
+	assert(pat)
+	attest.equal(name, _ as string)
+	attest.equal(pat, _ as string)
+	attest.equal(string.sub(pat, 1, 1), _ as string)
+end
+
+while _ as boolean do
+	disass_ins()
+end
+
+]]

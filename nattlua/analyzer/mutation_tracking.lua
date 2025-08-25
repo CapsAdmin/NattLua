@@ -164,11 +164,11 @@ return function(META)
 			function META:TrackUpvalueUnion(obj, truthy_union, falsy_union, inverted)
 				local upvalue = obj:GetUpvalue()
 
-				if not upvalue then return end
+				if not upvalue then return false, "no upvalue" end
 
 				local scope = self:GetScope()
 
-				if not scope then return end
+				if not scope then return false, "no scope" end
 
 				local data = self.tracked_upvalues_done[upvalue]
 
@@ -187,6 +187,7 @@ return function(META)
 						scope = scope,
 					}
 				)
+				return true
 			end
 
 			function META:DumpUpvalueTracking(obj)
@@ -194,7 +195,7 @@ return function(META)
 
 				if not upvalue then return "no upvalue" end
 
-				if not self.tracked_upvalues_done or not self.tracked_upvalues_done[upvalue] then
+				if not self.tracked_upvalues_done[upvalue] then
 					return "no upvalues done"
 				end
 
@@ -213,8 +214,7 @@ return function(META)
 
 			function META:GetTrackedUpvalue(obj)
 				local upvalue = obj:GetUpvalue()
-				local stack = self.tracked_upvalues_done and
-					self.tracked_upvalues_done[upvalue] and
+				local stack = self.tracked_upvalues_done[upvalue] and
 					self.tracked_upvalues_done[upvalue].stack
 
 				if not stack then return end
@@ -237,10 +237,10 @@ return function(META)
 				end
 			end
 
-			function META:GetTrackedUpvalues(old_upvalues)
+			function META:GetTrackedUpvalues(old_upvalues, scope)
 				local upvalues = {}
 				local translate = {}
-				local scope = self:GetScope()
+				scope = scope or self:GetScope()
 
 				if old_upvalues then
 					for i, upvalue in ipairs(scope.upvalues.runtime.list) do
@@ -249,17 +249,15 @@ return function(META)
 					end
 				end
 
-				if self.tracked_upvalues then
-					for _, data in ipairs(self.tracked_upvalues) do
-						local stack = data.stack
-						local upvalue = data.upvalue
+				for _, data in ipairs(self.tracked_upvalues) do
+					local stack = data.stack
+					local upvalue = data.upvalue
 
-						if old_upvalues then upvalue = translate[upvalue] end
+					if old_upvalues then upvalue = translate[upvalue] end
 
-						-- stack is needed to simply track upvalues used, even if they were not mutated for warnings
-						if upvalue then
-							table.insert(upvalues, {upvalue = upvalue, stack = stack and shallow_copy(stack)})
-						end
+					-- stack is needed to simply track upvalues used, even if they were not mutated for warnings
+					if upvalue then
+						table.insert(upvalues, {upvalue = upvalue, stack = stack and shallow_copy(stack)})
 					end
 				end
 
@@ -267,10 +265,8 @@ return function(META)
 			end
 
 			function META:ClearTrackedUpvalues()
-				if self.tracked_upvalues then
-					self.tracked_upvalues_done = {}
-					self.tracked_upvalues = {}
-				end
+				self.tracked_upvalues_done = {}
+				self.tracked_upvalues = {}
 			end
 		end
 
@@ -351,11 +347,11 @@ return function(META)
 				end
 			end
 
-			function META:GetTrackedTables()
+			function META:GetTrackedTables(scope)
 				local tables = {}
 
 				if self.tracked_tables then
-					local scope = self:GetScope()
+					scope = scope or self:GetScope()
 
 					for _, data in ipairs(self.tracked_tables) do
 						if data.stack then

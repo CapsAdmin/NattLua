@@ -239,17 +239,34 @@ return function(analyzer, obj, input)
 			local max_num = max:GetWithNumber(index)
 
 			if min_num and max_num then
-				local v = LNumberRange(min_num:GetData(), max_num:GetData())
-				local existing = ret:GetWithNumber(index)
+				if min_num.Type == "number" and max_num.Type == "number" and min_num:IsLiteral() and max_num:IsLiteral() then
+					local v = LNumberRange(min_num:GetData(), max_num:GetData())
+					local existing = ret:GetWithNumber(index)
 
-				if existing then
-					if existing.Type == "union" then
-						existing:AddType(v)
+					if existing then
+						if existing.Type == "union" then
+							existing:AddType(v)
+						else
+							ret:Set(index, Union({v, existing}))
+						end
 					else
-						ret:Set(index, Union({v, existing}))
+						ret:Set(index, v)
 					end
 				else
-					ret:Set(index, v)
+					local existing = ret:GetWithNumber(index)
+					local min = min_num:Copy():Widen()
+					local max = max_num:Copy():Widen()
+
+					if existing then
+						if existing.Type == "union" then
+							existing:AddType(min)
+							existing:AddType(max)
+						else
+							ret:Set(index, Union({min, max, existing}))
+						end
+					else
+						ret:Set(index, Union({min, max}))
+					end
 				end
 			else
 				local t = call_and_collect(analyzer, obj, input, arguments, ret)

@@ -269,9 +269,13 @@ analyzer function assert(...: ...any)
 
 	local potential_msg = select(2, ...)
 
-	if not analyzer:IsDefinetlyReachable() then
-		analyzer:ThrowSilentError(obj)
+	if obj.Type == "union" then
+		analyzer:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
+	end
 
+	analyzer:ThrowSilentError(obj)
+
+	if not analyzer:IsDefinetlyReachable() then
 		if obj.Type == "union" then return obj:RemoveCertainlyFalsy(), select(2, ...) end
 
 		return ...

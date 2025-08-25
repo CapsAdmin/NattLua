@@ -64,6 +64,8 @@ function META:GetLuaType()
 end
 
 local function LNumberRange(from--[[#: number]], to--[[#: number]])
+	assert(type(from) == "number", debug.traceback())
+	assert(type(to) == "number")
 	return META.New(LNumber(from), LNumber(to))
 end
 

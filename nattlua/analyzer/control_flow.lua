@@ -90,11 +90,12 @@ return function(META)
 			if assert_expression and assert_expression:IsTruthy() then
 				-- track the assertion expression
 				local upvalues
+				local tracked = self:GetTrackedUpvalues(nil, frame.scope)
 
-				if frame.scope:GetTrackedUpvalues() then
+				if tracked[1] then
 					upvalues = {}
 
-					for _, a in ipairs(frame.scope:GetTrackedUpvalues()) do
+					for _, a in ipairs(tracked) do
 						for _, b in ipairs(self:GetTrackedUpvalues()) do
 							if a.upvalue == b.upvalue then table_insert(upvalues, a) end
 						end
@@ -102,18 +103,19 @@ return function(META)
 				end
 
 				local tables
+				local tracked = self:GetTrackedTables(nil, frame.scope)
 
-				if frame.scope:GetTrackedTables() then
+				if tracked[1] then
 					tables = {}
 
-					for _, a in ipairs(frame.scope:GetTrackedTables()) do
+					for _, a in ipairs(tracked) do
 						for _, b in ipairs(self:GetTrackedTables()) do
 							if a.obj == b.obj then table_insert(tables, a) end
 						end
 					end
 				end
 
-				self:PushScope(frame.scope)
+				self:PushScope(function_scope)
 				self:ApplyMutationsAfterStatement(frame.scope, false, upvalues, tables)
 				self:PopScope()
 				return
