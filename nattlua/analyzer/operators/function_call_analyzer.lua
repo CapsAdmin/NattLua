@@ -96,6 +96,44 @@ local function unpack_union_tuples(obj, input)
 	return generate_combinations(packed_args, argument_options, 1)
 end
 
+local function call_and_collect(analyzer, obj, input, arguments, ret)
+	local tuple = analyzer:LuaTypesToTuple(
+		{
+			analyzer:CallLuaTypeFunction(obj:GetAnalyzerFunction(), obj:GetScope() or analyzer:GetScope(), arguments),
+		}
+	)
+
+	if tuple:HasInfiniteValues() then return tuple end
+
+	for i = 1, tuple:GetElementCount() do
+		local v = assert(tuple:GetWithNumber(i))
+		local existing = ret:GetWithNumber(i)
+
+		if existing then
+			local handled = false
+
+			if existing.Type == "number" and v.Type == "number" then
+				local range = input:GetWithNumber(i)
+
+				if range and range.Type == "range" then
+					ret:Set(i, LNumberRange(existing:GetData(), v:GetData()))
+					handled = true
+				end
+			end
+
+			if not handled then
+				if existing.Type == "union" then
+					existing:AddType(v)
+				else
+					ret:Set(i, Union({v, existing}))
+				end
+			end
+		else
+			ret:Set(i, v)
+		end
+	end
+end
+
 return function(analyzer, obj, input)
 	local input_signature = obj:GetInputSignature()
 	local output_signature = obj:GetOutputSignature()
@@ -155,48 +193,73 @@ return function(analyzer, obj, input)
 	local ret = Tuple()
 
 	for i, arguments in ipairs(unpack_union_tuples(obj, input)) do
-		local tuple = analyzer:LuaTypesToTuple(
-			{
-				analyzer:CallLuaTypeFunction(obj:GetAnalyzerFunction(), obj:GetScope() or analyzer:GetScope(), arguments),
-			}
-		)
+		local range_deal = false
 
-		if tuple:HasInfiniteValues() then return tuple end
+		for i, v in ipairs(arguments) do
+			if v.Type == "range" then
+				range_deal = true
 
-		for i = 1, tuple:GetElementCount() do
-			local v = assert(tuple:GetWithNumber(i))
-			local existing = ret:GetWithNumber(i)
+				break
+			end
+		end
 
-			if existing then
-				local handled = false
+		if range_deal then
+			local min_args = {}
+			local max_args = {}
+			local index = nil
 
-				if existing.Type == "number" and v.Type == "number" then
-					local range = input:GetWithNumber(i)
-
-					if range then
-						if range.Type == "range" then
-							ret:Set(i, LNumberRange(existing:GetData(), v:GetData()))
-							handled = true
-						elseif range.Type == "union" and range:HasType("range") then
-							print(range, i, v)
-							ret:Set(i, LNumberRange(existing:GetData(), v:GetData()))
-							handled = false
-						end
-					else
-
-					end
+			for i, v in ipairs(arguments) do
+				if v.Type == "range" then
+					index = index or i
+					table.insert(min_args, v:GetMinNumber())
+				else
+					table.insert(min_args, v)
 				end
+			end
 
-				if not handled then
+			local min = Tuple()
+			local t = call_and_collect(analyzer, obj, input, min_args, min)
+
+			if t then return t end
+
+			for i, v in ipairs(arguments) do
+				if v.Type == "range" then
+					table.insert(max_args, v:GetMaxNumber())
+				else
+					table.insert(max_args, v)
+				end
+			end
+
+			local max = Tuple()
+			local t = call_and_collect(analyzer, obj, input, max_args, max)
+
+			if t then return t end
+
+			local min_num = min:GetWithNumber(index)
+			local max_num = max:GetWithNumber(index)
+
+			if min_num and max_num then
+				local v = LNumberRange(min_num:GetData(), max_num:GetData())
+				local existing = ret:GetWithNumber(index)
+
+				if existing then
 					if existing.Type == "union" then
 						existing:AddType(v)
 					else
-						ret:Set(i, Union({v, existing}))
+						ret:Set(index, Union({v, existing}))
 					end
+				else
+					ret:Set(index, v)
 				end
 			else
-				ret:Set(i, v)
+				local t = call_and_collect(analyzer, obj, input, arguments, ret)
+
+				if t then return t end
 			end
+		else
+			local t = call_and_collect(analyzer, obj, input, arguments, ret)
+
+			if t then return t end
 		end
 	end
 

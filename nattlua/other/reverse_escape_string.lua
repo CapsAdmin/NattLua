@@ -44,7 +44,8 @@ local function unicode_escape(decimal--[[#: number]])
 				charbytes[b] = string.char(128 + mod)
 			end
 
-			charbytes[1] = string.char(vals[2] + decimal)
+			local b = vals[2] + decimal
+			charbytes[1] = string.char(b--[[# as 0..255]]) -- TODO
 
 			break
 		end
