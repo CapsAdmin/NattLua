@@ -112,11 +112,11 @@ end
 
 return {
 	Prefix = function(analyzer, node)
-		if node.value.value == "not" then analyzer:PushFalsyExpressionContext() end
+		if node.value.value == "not" then analyzer:PushInvertedExpressionContext() end
 
 		local r = analyzer:Assert(analyzer:AnalyzeExpression(node.right))
 
-		if node.value.value == "not" then analyzer:PopFalsyExpressionContext() end
+		if node.value.value == "not" then analyzer:PopInvertedExpressionContext() end
 
 		if node.value.value == "ref" then
 			r:SetReferenceType(true)

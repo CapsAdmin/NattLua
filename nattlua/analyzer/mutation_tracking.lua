@@ -112,7 +112,7 @@ return function(META)
 	do
 		do
 			function META:PushTruthyExpressionContext()
-				self:PushContextRef("truthy_expression_context", b)
+				self:PushContextRef("truthy_expression_context")
 			end
 
 			function META:PopTruthyExpressionContext()
@@ -126,7 +126,7 @@ return function(META)
 
 		do
 			function META:PushFalsyExpressionContext()
-				self:PushContextRef("falsy_expression_context", b)
+				self:PushContextRef("falsy_expression_context")
 			end
 
 			function META:PopFalsyExpressionContext()
@@ -135,6 +135,20 @@ return function(META)
 
 			function META:IsFalsyExpressionContext()
 				return self:GetContextRef("falsy_expression_context")
+			end
+		end
+
+		do
+			function META:PushInvertedExpressionContext()
+				self:PushContextRef("inverted_expression_context")
+			end
+
+			function META:PopInvertedExpressionContext()
+				self:PopContextRef("inverted_expression_context")
+			end
+
+			function META:IsInvertedExpressionContext()
+				return self:GetContextRef("inverted_expression_context")
 			end
 		end
 
@@ -219,21 +233,40 @@ return function(META)
 
 				if not stack then return end
 
-				if self:IsTruthyExpressionContext() then
-					return stack[#stack].truthy:SetUpvalue(upvalue)
-				elseif self:IsFalsyExpressionContext() then
-					local union = stack[#stack].falsy
+				if self:IsInvertedExpressionContext() then
+					if self:IsFalsyExpressionContext() then
+						return stack[#stack].falsy:SetUpvalue(upvalue)
+					elseif self:IsTruthyExpressionContext() then
+						local union = stack[#stack].truthy
 
-					if union.Type == "union" and union:GetCardinality() == 0 then
-						union = Union()
+						if union.Type == "union" and union:GetCardinality() == 0 then
+							union = Union()
 
-						for _, val in ipairs(stack) do
-							union:AddType(val.falsy)
+							for _, val in ipairs(stack) do
+								union:AddType(val.truthy)
+							end
 						end
-					end
 
-					union:SetUpvalue(upvalue)
-					return union
+						union:SetUpvalue(upvalue)
+						return union
+					end
+				else
+					if self:IsTruthyExpressionContext() then
+						return stack[#stack].truthy:SetUpvalue(upvalue)
+					elseif self:IsFalsyExpressionContext() then
+						local union = stack[#stack].falsy
+
+						if union.Type == "union" and union:GetCardinality() == 0 then
+							union = Union()
+
+							for _, val in ipairs(stack) do
+								union:AddType(val.falsy)
+							end
+						end
+
+						union:SetUpvalue(upvalue)
+						return union
+					end
 				end
 			end
 
@@ -277,7 +310,7 @@ return function(META)
 				val:SetParentTable(tbl, key)
 				local truthy_union = val:GetTruthy()
 				local falsy_union = val:GetFalsy()
-				self:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, self:IsFalsyExpressionContext(), true)
+				self:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, self:IsInvertedExpressionContext(), true)
 			end
 
 			function META:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, inverted, truthy_falsy)
@@ -340,10 +373,18 @@ return function(META)
 
 				if not stack then return end
 
-				if self:IsTruthyExpressionContext() then
-					return stack[#stack].truthy
-				elseif self:IsFalsyExpressionContext() then
-					return stack[#stack].falsy
+				if self:IsInvertedExpressionContext() then
+					if self:IsTruthyExpressionContext() then
+						return stack[#stack].falsy
+					elseif self:IsFalsyExpressionContext() then
+						return stack[#stack].truthy
+					end
+				else
+					if self:IsTruthyExpressionContext() then
+						return stack[#stack].truthy
+					elseif self:IsFalsyExpressionContext() then
+						return stack[#stack].falsy
+					end
 				end
 			end
 
