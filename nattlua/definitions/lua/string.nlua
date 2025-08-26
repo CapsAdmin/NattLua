@@ -182,6 +182,9 @@ do -- Pattern matching functions
 				if done then return end
 
 				done = true
+
+				if count == 0 then return types.String() end
+
 				return types.Tuple({types.String()}):SetRepeat(count)
 			end
 		end
