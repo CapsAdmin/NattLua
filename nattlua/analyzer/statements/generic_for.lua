@@ -103,7 +103,8 @@ return {
 				self:ClearBreak()
 			end
 
-			if one_loop then break end
+			-- actually, loop twice so that all upvalues have the chance to get bound
+			if one_loop and i == 3 then break end
 
 			if brk then break end
 

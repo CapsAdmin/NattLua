@@ -177,11 +177,11 @@ do -- Pattern matching functions
 
 		if pattern:IsLiteral() then
 			local _, count = pattern:GetData():gsub("%b()", "")
-			local done = false
+			local done = 0
 			return function()
-				if done then return end
+				if done == 2 then return end
 
-				done = true
+				done = done + 1
 
 				if count == 0 then return types.String() end
 
@@ -189,11 +189,11 @@ do -- Pattern matching functions
 			end
 		end
 
-		local done = false
+		local done = 0
 		return function()
-			if done then return end
+			if done == 2 then return end
 
-			done = true
+			done = done + 1
 			return types.String()
 		end
 	end

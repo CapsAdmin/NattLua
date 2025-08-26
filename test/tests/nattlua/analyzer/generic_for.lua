@@ -3,12 +3,11 @@ analyze([[
     for k,v in ipairs(_ as any) do 
         attest.equal(k, _ as any)
         attest.equal(v, _ as any)
-        attest.equal<|i, 0|>
     
         type i = i + 1
     end
     
-    attest.equal<|i, 1|>
+    attest.equal<|i, 2|>
 ]])
 analyze[[
     local tbl: {[number] = {

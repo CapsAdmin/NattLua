@@ -101,14 +101,14 @@ analyzer function pairs(tbl: Table)
 	local next = analyzer:GetLocalOrGlobalValue(types.ConstString("next"))
 	analyzer:PopAnalyzerEnvironment()
 	local k, v = analyzer:CallLuaTypeFunction(next:GetAnalyzerFunction(), analyzer:GetScope(), {tbl})
-	local done = false
+	local done = 1
 
 	if v and v.Type == "union" then v:RemoveType(types.Symbol(nil)) end
 
 	return function()
-		if done then return nil end
+		if done == 3 then return nil end
 
-		done = true
+		done = done + 1
 		return k, v
 	end
 end
@@ -128,11 +128,11 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 
 	if tbl.Type == "table" and not tbl:IsNumericallyIndexed() then
 		analyzer:Warning({tbl, " is not numerically indexed"})
-		local done = false
+		local done = 1
 		return function()
-			if done then return nil end
+			if done == 3 then return nil end
 
-			done = true
+			done = done + 1
 			return types.Any(), types.Any()
 		end
 	end
@@ -141,11 +141,11 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 	local next = analyzer:GetLocalOrGlobalValue(types.ConstString("next"))
 	analyzer:PopAnalyzerEnvironment()
 	local k, v = analyzer:CallLuaTypeFunction(next:GetAnalyzerFunction(), analyzer:GetScope(), {tbl})
-	local done = false
+	local done = 1
 	return function()
-		if done then return nil end
+		if done == 3 then return nil end
 
-		done = true
+		done = done + 1
 
 		-- v must never be nil here
 		if v.Type == "union" then v = v:Copy():RemoveType(types.Symbol(nil)) end

@@ -100,3 +100,62 @@ analyze[[
         attest.equal(v, _ as true)
     end
 ]]
+analyze[[
+local vr = nil
+local type i = 1
+
+for p in string.gmatch(_ as string, ".") do
+	if p == "n" then
+		if i == 1 then
+			attest.equal(vr, _ as nil)
+		elseif i == 2 then
+			attest.equal(vr, _ as "s" | nil)
+		end
+	elseif p == "F" then
+		vr = "s"
+	end
+
+	type i = i + 1
+end
+attest.equal<|i, 3|>
+]]
+analyze[[
+local vr = nil
+local type i = 1
+
+for p, v in pairs(_ as {[string] = number}) do
+	if p == "n" then
+		if i == 1 then
+			attest.equal(vr, _ as nil)
+		elseif i == 2 then
+			attest.equal(vr, _ as "s" | nil)
+		end
+	elseif p == "F" then
+		vr = "s"
+	end
+
+	type i = i + 1
+end
+
+attest.equal<|i, 3|>
+]]
+analyze[[
+local vr = nil
+local type i = 1
+
+for p, v in ipairs(_ as {[number] = number}) do
+	if p == "n" then
+		if i == 1 then
+			attest.equal(vr, _ as nil)
+		elseif i == 2 then
+			attest.equal(vr, _ as "s" | nil)
+		end
+	elseif p == "F" then
+		vr = "s"
+	end
+
+	type i = i + 1
+end
+
+attest.equal<|i, 3|>
+]]
