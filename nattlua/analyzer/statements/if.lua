@@ -31,10 +31,17 @@ return {
 						self:ConstantIfExpressionWarning(type_errors.if_always_false())
 
 						for _, statement in ipairs(statements) do
-							statement:SetUnreachable(true)
+							if statement.Unreachable == nil then
+								statement:SetUnreachable(true)
+							end
 						end
 					elseif obj:IsCertainlyTrue() then
 						self:ConstantIfExpressionWarning(type_errors.if_always_true())
+
+						for _, statement in ipairs(statements) do
+							statement:SetUnreachable(false)
+						end
+
 						local ii = i
 
 						for i, statements in ipairs(statement.statements) do
@@ -55,6 +62,10 @@ return {
 						end
 					else
 						self:ConstantIfExpressionWarning()
+
+						for _, statement in ipairs(statements) do
+							statement:SetUnreachable(false)
+						end
 					end
 				end
 

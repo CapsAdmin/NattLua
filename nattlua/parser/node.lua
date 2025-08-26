@@ -852,7 +852,7 @@ function META:__tostring()
 	return str .. "]"
 end
 
-META:IsSet("Unreachable", false)
+META:IsSet("Unreachable", nil --[[# as boolean | nil]])
 
 function META:Render(config)
 	local emitter

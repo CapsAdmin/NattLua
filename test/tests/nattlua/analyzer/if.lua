@@ -1969,3 +1969,49 @@ while _ as boolean do
 end
 
 ]]
+
+do
+	local _, ast, _, _ = analyze[[
+local s = nil
+
+for i = 1, 2 do
+	if i == 2 then
+		local xxx = s
+		print(s)
+	end
+
+	if i == 1 then s = "lol" end
+end
+]]
+
+	for i = 1, 2 do
+		for _, statements in ipairs(ast.statements[2].statements[i].statements) do
+			for _, node in ipairs(statements) do
+				assert(node:IsUnreachable() == false)
+			end
+		end
+	end
+end
+
+do
+	local _, ast, _, _ = analyze[[
+local s = nil
+
+for i = 1, 2 do
+	if i == 11 then
+		local xxx = s
+		print(s)
+	end
+
+	if i == 11 then s = "lol" end
+end
+]]
+
+	for i = 1, 2 do
+		for _, statements in ipairs(ast.statements[2].statements[i].statements) do
+			for _, node in ipairs(statements) do
+				assert(node:IsUnreachable() == true)
+			end
+		end
+	end
+end
