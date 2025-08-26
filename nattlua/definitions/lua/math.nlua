@@ -131,13 +131,13 @@ do -- number manipulation functions
 		end
 	|>
 	type math.frexp = ReturnIfNonLiteral<|
-		analyzer function(x: number): number,number
+		analyzer function(x: number): number, number
 			local m, e = math.frexp(x:GetData())
 			return m, e
 		end
 	|>
 	type math.modf = ReturnIfNonLiteral<|
-		analyzer function(x: number): number,number
+		analyzer function(x: number): number, number
 			local i, f = math.modf(x:GetData())
 			return i, f
 		end

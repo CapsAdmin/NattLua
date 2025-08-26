@@ -80,7 +80,7 @@ function META.Equal(a--[[#: TRange]], b--[[#: TBaseType]])
 end
 
 function META:IsLiteral()
-	return true
+	return false
 end
 
 function META:CopyLiteralness(obj--[[#: TBaseType]])

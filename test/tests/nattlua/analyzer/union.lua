@@ -150,32 +150,28 @@ analyze[[
     local type s = _  as string | string
     string.reverse(s)
 ]]
-
-
 analyze[[
 table.remove(_ as {[number] = number}, _ as (-inf .. 2) | 1)
 ]]
-
 analyze[[
 table.remove(_ as {[number] = number}, _ as (-inf .. 2) | 1)
 ]]
-
 analyze[[
 local analyzer function test(x: number, b: boolean, x2: number)
-	return math.abs(x:GetData()), not b, math.abs(x2:GetData())
+    
+	return x:IsLiteral() and math.abs(x:GetData()) or types.Number(), not b, x2:IsLiteral() and math.abs(x2:GetData()) or types.Number()
 end
 
 local x = _ as 1337 | 666 | (-10 .. -5)
 local a, b, c = test(x, true, _ as x)
-attest.equal(a, _ as 10 .. 5 | 1337 | 666)
+attest.equal(a, _ as 10 | 1337 | 5 | 666 | number)
 attest.equal(b, false)
 attest.equal(c, a)
 ]]
-
 analyze[[
 local pos = _ as number
 local b0, b1, b2, b3 = string.byte(_ as string, pos + 1, pos + 4)
 local op = bit.bor(bit.lshift(b3, 24), bit.lshift(b2, 16), bit.lshift(b1, 8), b0)
 local cond = bit.rshift(op, 28)
-attest.equal(cond <= 15, true)
+attest.equal(cond <= 15, _ as boolean)
 ]]

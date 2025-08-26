@@ -737,11 +737,9 @@ attest.equal(y, _ as nil | string)
 analyze[[
 attest.equal(bit.tohex(_ as 1 | 2 | 3 | "4", 2), _ as "01" | "02" | "03" | "04")
 ]]
-
 analyze[[
-attest.equal(bit.tohex(_ as -65536 | 0 .. 255), _ as string | "ffff0000")
+attest.equal(bit.tohex(_ as -65536 | 0 .. 255), _ as  "00000000" | "000000ff" | "ffff0000" | string)
 ]]
-
 analyze[[
 local name, pat = string.match(_ as string, "^([a-z0-9]*)(.*)")
 assert(name)

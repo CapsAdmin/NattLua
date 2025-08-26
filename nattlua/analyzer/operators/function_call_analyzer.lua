@@ -12,12 +12,13 @@ local Any = require("nattlua.types.any").Any
 local Function = require("nattlua.types.function").Function
 local LString = require("nattlua.types.string").LString
 local LNumber = require("nattlua.types.number").LNumber
+local Number = require("nattlua.types.number").Number
 local LNumberRange = require("nattlua.types.range").LNumberRange
 local Symbol = require("nattlua.types.symbol").Symbol
 local type_errors = require("nattlua.types.error_messages")
 
 local function should_expand(arg, contract)
-	-- ranges are expanded, so with 1..5, the function is called with 1 and 5 respectively
+	-- ranges are expanded into their min/max values
 	if arg.Type == "range" then return true end
 
 	if arg.Type == "union" then
@@ -32,9 +33,24 @@ end
 -- Helper to extract all possible values for an argument
 local function get_all_values(val)
 	if val.Type == "range" then
-		return {val:GetMinNumber(), val:GetMaxNumber()}
+		-- extract min and max as separate values like a union, not as a range
+		-- TODO: also include Number, because we have no idea what's between the range
+		return {val:GetMinNumber(), val:GetMaxNumber(), Number()}
 	else
-		return val:GetData()
+		local out = {}
+
+		for i, v in ipairs(val:GetData()) do
+			if v.Type == "range" then
+				table.insert(out, v:GetMinNumber())
+				table.insert(out, v:GetMaxNumber())
+				-- this is important. we cannot assume the output of the funciton given a numeric range corresponds linearly to that range
+				table.insert(out, Number())
+			else
+				table.insert(out, v)
+			end
+		end
+
+		return out
 	end
 end
 
@@ -96,10 +112,14 @@ local function unpack_union_tuples(obj, input)
 	return generate_combinations(packed_args, argument_options, 1)
 end
 
-local function call_and_collect(analyzer, obj, input, arguments, ret)
+local function call_and_collect(analyzer, obj, arguments, ret)
 	local tuple = analyzer:LuaTypesToTuple(
 		{
-			analyzer:CallLuaTypeFunction(obj:GetAnalyzerFunction(), obj:GetScope() or analyzer:GetScope(), arguments),
+			analyzer:CallLuaTypeFunction(
+				obj:GetAnalyzerFunction(),
+				obj:GetScope() or analyzer:GetScope(),
+				arguments
+			),
 		}
 	)
 
@@ -110,23 +130,10 @@ local function call_and_collect(analyzer, obj, input, arguments, ret)
 		local existing = ret:GetWithNumber(i)
 
 		if existing then
-			local handled = false
-
-			if existing.Type == "number" and v.Type == "number" then
-				local range = input:GetWithNumber(i)
-
-				if range and range.Type == "range" then
-					ret:Set(i, LNumberRange(existing:GetData(), v:GetData()))
-					handled = true
-				end
-			end
-
-			if not handled then
-				if existing.Type == "union" then
-					existing:AddType(v)
-				else
-					ret:Set(i, Union({v, existing}))
-				end
+			if existing.Type == "union" then
+				existing:AddType(v)
+			else
+				ret:Set(i, Union({v, existing}))
 			end
 		else
 			ret:Set(i, v)
@@ -151,7 +158,10 @@ return function(analyzer, obj, input)
 			for _, error in ipairs(errors) do
 				local reason, a, b, i = table.unpack(error)
 				analyzer:Error(
-					type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+					type_errors.context(
+						"argument #" .. i .. ":",
+						type_errors.because(type_errors.subset(a, b), reason)
+					)
 				)
 			end
 		end
@@ -179,10 +189,7 @@ return function(analyzer, obj, input)
 		)
 	end
 
-	-- if you call print(SOMEFUNCTION()), SOMEFUNCTION is not defined and thus returns any, which when called
-	-- results in ((any,)*inf,)
-	-- when the input signature is also ((TYPE,)*inf,) both will result in safe length being 0
-	-- so no arguments are passed. This feels wrong, maybe at least 1 argument? (however technically this is also wrong?)
+	-- Handle infinite tuples
 	if
 		input:GetElementCount() == math.huge and
 		input_signature:GetElementCount() == math.huge
@@ -192,94 +199,13 @@ return function(analyzer, obj, input)
 
 	local ret = Tuple()
 
-	for i, arguments in ipairs(unpack_union_tuples(obj, input)) do
-		local range_deal = false
+	for _, arguments in ipairs(unpack_union_tuples(obj, input)) do
+		local t = call_and_collect(analyzer, obj, arguments, ret)
 
-		for i, v in ipairs(arguments) do
-			if v.Type == "range" then
-				range_deal = true
-
-				break
-			end
-		end
-
-		if range_deal then
-			local min_args = {}
-			local max_args = {}
-			local index = nil
-
-			for i, v in ipairs(arguments) do
-				if v.Type == "range" then
-					index = index or i
-					table.insert(min_args, v:GetMinNumber())
-				else
-					table.insert(min_args, v)
-				end
-			end
-
-			local min = Tuple()
-			local t = call_and_collect(analyzer, obj, input, min_args, min)
-
-			if t then return t end
-
-			for i, v in ipairs(arguments) do
-				if v.Type == "range" then
-					table.insert(max_args, v:GetMaxNumber())
-				else
-					table.insert(max_args, v)
-				end
-			end
-
-			local max = Tuple()
-			local t = call_and_collect(analyzer, obj, input, max_args, max)
-
-			if t then return t end
-
-			local min_num = min:GetWithNumber(index)
-			local max_num = max:GetWithNumber(index)
-
-			if min_num and max_num then
-				if min_num.Type == "number" and max_num.Type == "number" and min_num:IsLiteral() and max_num:IsLiteral() then
-					local v = LNumberRange(min_num:GetData(), max_num:GetData())
-					local existing = ret:GetWithNumber(index)
-
-					if existing then
-						if existing.Type == "union" then
-							existing:AddType(v)
-						else
-							ret:Set(index, Union({v, existing}))
-						end
-					else
-						ret:Set(index, v)
-					end
-				else
-					local existing = ret:GetWithNumber(index)
-					local min = min_num:Copy():Widen()
-					local max = max_num:Copy():Widen()
-
-					if existing then
-						if existing.Type == "union" then
-							existing:AddType(min)
-							existing:AddType(max)
-						else
-							ret:Set(index, Union({min, max, existing}))
-						end
-					else
-						ret:Set(index, Union({min, max}))
-					end
-				end
-			else
-				local t = call_and_collect(analyzer, obj, input, arguments, ret)
-
-				if t then return t end
-			end
-		else
-			local t = call_and_collect(analyzer, obj, input, arguments, ret)
-
-			if t then return t end
-		end
+		if t then return t end
 	end
 
+	-- Check against output signature
 	if not output_signature:IsEmpty() then
 		local new_tup, err = ret:SubsetOrFallbackWithTuple(output_signature)
 
@@ -287,7 +213,10 @@ return function(analyzer, obj, input)
 			for i, v in ipairs(err) do
 				local reason, a, b, i = table.unpack(v)
 				analyzer:Error(
-					type_errors.context("return #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+					type_errors.context(
+						"return #" .. i .. ":",
+						type_errors.because(type_errors.subset(a, b), reason)
+					)
 				)
 			end
 		end
