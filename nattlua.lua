@@ -1,6 +1,6 @@
 #!/usr/bin/env luajit
 
-if not pcall(require, "nattlua.cli.init") then
+if jit and not pcall(require, "nattlua.cli.init") then
 	local current_path
 	local ffi = require("ffi")
 

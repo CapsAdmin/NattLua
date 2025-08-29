@@ -1,3 +1,5 @@
+if _G.load then return _G.load end
+
 if _G.loadstring then return _G.loadstring end
 
 if _G.CompileString then
