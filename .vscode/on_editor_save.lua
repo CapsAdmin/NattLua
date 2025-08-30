@@ -53,10 +53,16 @@ local function run_nattlua(path)
 		return
 	end
 
+	local preserve_whitespace = nil
+	
+	if has_flag("PRETTY_PRINT") then
+		preserve_whitespace = false
+	end
+
 	local res = assert(
 		c:Emit(
 			{
-				preserve_whitespace = has_flag("PRETTY_PRINT") and false or nil,
+				preserve_whitespace = preserve_whitespace,
 				string_quote = "\"",
 				no_semicolon = true,
 				transpile_extensions = has_flag("TRANSPILE_EXTENSIONS"),
