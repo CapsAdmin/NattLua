@@ -388,7 +388,7 @@ do
 		return false
 	end
 
-	function META:DecomposeString()--[[#: string | nil,string | nil,string | nil]]
+	function META:DecomposeString()--[[#: string | nil, string | nil, string | nil]]
 		if self.type ~= "string" then return end
 
 		local start = ""

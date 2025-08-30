@@ -54,10 +54,8 @@ local function run_nattlua(path)
 	end
 
 	local preserve_whitespace = nil
-	
-	if has_flag("PRETTY_PRINT") then
-		preserve_whitespace = false
-	end
+
+	if has_flag("PRETTY_PRINT") then preserve_whitespace = false end
 
 	local res = assert(
 		c:Emit(
@@ -135,6 +133,7 @@ if is_nattlua and not test_focus then
 	run_nattlua(full_path)
 	return
 end
+
 if find("intersect_comparison") then
 	run_test("test/tests/nattlua/types/number.lua")
 elseif find("jit_options") then

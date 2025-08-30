@@ -164,6 +164,6 @@ local function test_boolean_logic(values, ...)
 end
 
 analyze(test_boolean_logic({a = {true, false}}, "a"))
-analyze(test_boolean_logic({a = {true, false}}, "not a"))--
+analyze(test_boolean_logic({a = {true, false}}, "not a")) --
 --analyze(test_boolean_logic({a = {true, false}}, "not not a"))
 --analyze(test_boolean_logic({a = {1, 2, 3}, b = {true, false}}, "b and a == 1"))

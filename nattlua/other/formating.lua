@@ -60,7 +60,7 @@ function formating.LineCharToSubPos(code--[[#: string]], line--[[#: number]], ch
 end
 
 do
-	local function sub_pos_to_line_char(str--[[#: string]], pos--[[#: number]])--[[#: number,number]]
+	local function sub_pos_to_line_char(str--[[#: string]], pos--[[#: number]])--[[#: number, number]]
 		local line = 1
 		local char = 1
 

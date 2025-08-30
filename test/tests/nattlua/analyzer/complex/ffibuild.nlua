@@ -1,6 +1,7 @@
 do
 	return
 end
+
 do
 	_G[jit.os:upper()] = true as true | nil
 	_G.OS = jit.os:lower()
@@ -1146,7 +1147,7 @@ do -- type metatables
 		metatables[name] = META
 	end
 
-	function ffibuild.CreateType(type: "function"|"struct"|"type"|"var_arg"|"enums", ...)
+	function ffibuild.CreateType(type: "function" | "struct" | "type" | "var_arg" | "enums", ...)
 		return setmetatable(metatables[type]:Create(...), metatables[type])
 	end
 
