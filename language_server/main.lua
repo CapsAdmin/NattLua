@@ -7,7 +7,6 @@ local INPUT = io.stdin
 local OUTPUT = io.stderr -- using STDERR explcitly to have a clean channel
 local session_output = io.open("lsp_session_out.rpc", "w")
 local session_input = io.open("lsp_session_in.rpc", "w")
-
 io.stdout:setvbuf("no")
 
 local function read_message()
@@ -22,7 +21,6 @@ local function read_message()
 	session_input:flush()
 	return str
 end
-
 
 -- Without this, it seems like vscode will error as the body length deviates from content-length with unicode characters
 -- I initially thought utf8.length would work, but that doesn't seem to be it.
@@ -47,7 +45,7 @@ end
 
 local jit_profiler = require("test.helpers.jit_profiler")
 
-local function update() 
+local function update()
 	local body = read_message()
 	local stop_profiler = jit_profiler.Start(
 		{
@@ -59,15 +57,24 @@ local function update()
 	)
 	local res = rpc_util.ReceiveJSON(body, lsp.methods)
 
-	if stop_profiler then print(stop_profiler()) end
+	if stop_profiler then
+		local res = stop_profiler()
+
+		if res and res ~= "" then print(res) end
+	end
 
 	if res then
-		if res.error then error(res.error.message) end
+		if res.error then
+			table.print(res)
+			error(res.error.message)
+		end
+
 		write_message(res)
 	end
 end
 
 while true do
 	local ok, err = pcall(update)
+
 	if not ok then print(err) end
 end
