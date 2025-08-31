@@ -1068,3 +1068,18 @@ local a, b, c = blocking()
 ]],
 	"index 2 does not exist.+index 3 does not exist"
 )
+
+do
+	local a = analyze[[
+    local type i = 0
+	return function(n: string)
+        type i = i + 1
+        local function foo(n: number)
+            type i = i + 1
+        end
+    end
+]]
+	a:AnalyzeUnreachableCode()
+	local i = a:GetLocalOrGlobalValue(LString("i"))
+	equal(i:GetData(), 2)
+end

@@ -187,40 +187,53 @@ return function(META)
 			end
 
 			context:PushCurrentAnalyzer(self)
-			local total = #self.deferred_calls
 			self.processing_deferred_calls = true
 			local called_count = 0
 			local done = {}
 
-			for i = total, 1, -1 do
-				local func = self.deferred_calls[i]
+			while true do
+				local total = #self.deferred_calls
 
-				if
-					func:IsExplicitInputSignature() and
-					not func:IsCalled()
-					and
-					not done[func]
-				then
-					self:CrawlFunctionWithoutOrigin(func)
-					called_count = called_count + 1
-					done[func] = true
-					func:SetCalled(false)
+				if total == 0 then break end
+
+				for i = total, 1, -1 do
+					local func = self.deferred_calls[i]
+
+					if func then
+						if
+							func:IsExplicitInputSignature() and
+							not func:IsCalled()
+							and
+							not done[func]
+						then
+							self:CrawlFunctionWithoutOrigin(func)
+							called_count = called_count + 1
+							done[func] = true
+							func:SetCalled(false)
+						end
+					end
 				end
-			end
 
-			for i = total, 1, -1 do
-				local func = self.deferred_calls[i]
+				for i = total, 1, -1 do
+					local func = self.deferred_calls[i]
 
-				if
-					not func:IsExplicitInputSignature() and
-					not func:IsCalled()
-					and
-					not done[func]
-				then
-					self:CrawlFunctionWithoutOrigin(func)
-					called_count = called_count + 1
-					done[func] = true
-					func:SetCalled(false)
+					if func then
+						if
+							not func:IsExplicitInputSignature() and
+							not func:IsCalled()
+							and
+							not done[func]
+						then
+							self:CrawlFunctionWithoutOrigin(func)
+							called_count = called_count + 1
+							done[func] = true
+							func:SetCalled(false)
+						end
+					end
+				end
+
+				for i = total, 1, -1 do
+					self.deferred_calls[i] = nil
 				end
 			end
 
