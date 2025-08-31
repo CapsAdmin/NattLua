@@ -100,28 +100,10 @@ function coverage.Preprocess(code, key)
 	lua = lua .. gen
 
 	if not loadstring(gen) then
-		function _G.diff(input, expect)
-			local a = os.tmpname()
-			local b = os.tmpname()
-
-			do
-				local f = assert(io.open(a, "w"))
-				f:write(input)
-				f:close()
-			end
-
-			do
-				local f = assert(io.open(b, "w"))
-				f:write(expect)
-				f:close()
-			end
-
-			os.execute("meld " .. a .. " " .. b)
-		end
-
+		local diff = require("nattlua.other.diff")
 		local old = code
 		local new = gen
-		diff(new, old)
+		assert(diff.assert_equal(old, new))
 	end
 
 	_G.__COVERAGE[key] = _G.__COVERAGE[key] or

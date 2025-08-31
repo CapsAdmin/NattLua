@@ -12,7 +12,7 @@ local function check(config, input, expect)
 
 	local new_lua_code = assert(nl.Compiler(input, nil, {emitter = config}):Emit())
 
-	if new_lua_code ~= expect then diff(new_lua_code, expect) end
+	if new_lua_code ~= expect then print(diff(new_lua_code, expect)) end
 
 	equal(new_lua_code, expect, 2)
 end

@@ -1,4 +1,5 @@
 local io = require("io")
+local diff = require("nattlua.other.diff")
 local pcall = _G.pcall
 
 function _G.test(name, cb, start, stop)
@@ -39,23 +40,9 @@ function _G.equal(a, b, level)
 	end
 end
 
+
 function _G.diff(input, expect)
-	local a = os.tmpname()
-	local b = os.tmpname()
-
-	do
-		local f = assert(io.open(a, "w"))
-		f:write(input)
-		f:close()
-	end
-
-	do
-		local f = assert(io.open(b, "w"))
-		f:write(expect)
-		f:close()
-	end
-
-	os.execute("git --no-pager diff --no-index " .. a .. " " .. b)
+	print(diff.diff(input, expect))
 end
 
 do
