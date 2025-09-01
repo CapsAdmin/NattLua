@@ -57,3 +57,17 @@ local x = string.match(_ as string, "^[^ \t\r\n%]},]*", _ as number) .. "'"
 ]],
 	"nil .. \"'\" is not a valid binary operation"
 )
+analyze([[
+   local x = "hello world"
+x = x:gsub(" ", function(s)
+	return "_" as string
+end)
+attest.equal(x, _ as string)
+]])
+analyze([[
+   local x = "hello world"
+x = x:gsub(" ", function(s)
+	return "_"
+end)
+attest.equal(x, "hello_world")
+]])

@@ -201,7 +201,7 @@ do -- Pattern matching functions
 	analyzer function ^string.gsub(
 		str: string,
 		pattern: string,
-		replacement: (ref function=(...string)>((...string))) | string | {[string] = string},
+		replacement: ref function=(...string)>(...string) | string | {[string] = string},
 		max_replacements: number | nil
 	)
 		str = str:IsLiteral() and str:GetData()
@@ -227,7 +227,8 @@ do -- Pattern matching functions
 				end
 
 				replacement:SetCalled(false)
-				return string.gsub(
+				local widen = false
+				local str, count = string.gsub(
 					str,
 					pattern,
 					function(...)
@@ -235,7 +236,10 @@ do -- Pattern matching functions
 						local out = {}
 
 						for _, val in ipairs(ret:GetData()) do
-							if not val:IsLiteral() then return nil end
+							if not val:IsLiteral() then
+								widen = true
+								return nil
+							end
 
 							table.insert(out, val:GetData())
 						end
@@ -244,6 +248,8 @@ do -- Pattern matching functions
 					end,
 					max_replacements
 				)
+
+				if not widen then return str, count end
 			end
 		end
 
