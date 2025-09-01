@@ -778,3 +778,9 @@ end
 
 test<|{1, 2, 3}|>
 ]]
+analyze[[
+local analyzer function test(str: string, pattern: string) end
+
+attest.expect_diagnostic("error", "index 2 does not exist")
+test("foo", "o")
+]]

@@ -209,7 +209,12 @@ function META.IsSubsetOfTupleWithoutExpansion(a--[[#: TTuple]], b--[[#: TBaseTyp
 end
 
 function META.IsSubsetOfTupleAtIndexWithoutExpansion(a--[[#: TTuple]], b--[[#: TTuple]], i--[[#: number]])
-	local a_val = assert(a:GetData()[i])
+	local a_val = a:GetWithNumber(i)
+
+	if not a_val then
+		return false, type_errors.missing_index(i), Nil(), b:GetWithoutExpansion(i), i
+	end
+
 	local b_val, err = b:GetWithoutExpansion(i)
 
 	if not b_val then return false, err, a_val, Nil(), i end
@@ -294,7 +299,7 @@ function META.SubsetWithoutExpansionOrFallbackWithTuple(a--[[#: TTuple]], b--[[#
 
 	local errors = {}
 
-	for i, a_val in ipairs(a:GetData()) do
+	for i = 1, math.max(a:GetMinimumLength2(), b:GetMinimumLength2()) do
 		local ok, reason, a_val, b_val, offset = a.IsSubsetOfTupleAtIndexWithoutExpansion(a, b, i)
 
 		if not ok then
