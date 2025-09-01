@@ -535,7 +535,7 @@ return function(META)
 			return node
 		elseif self:IsTokenType("parser_debug_code") then
 			local token = self:ExpectTokenType("parser_debug_code")
-			assert(load("local parser = ...;" .. token.value:sub(3)))(self)
+			assert(loadstring("local parser = ...;" .. token.value:sub(3)))(self)
 			local node = self:StartNode("statement", "parser_debug_code")
 			local code = self:StartNode("expression", "value")
 			code.value = token
