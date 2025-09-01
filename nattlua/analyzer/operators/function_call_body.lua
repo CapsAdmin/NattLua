@@ -572,23 +572,6 @@ return function(self, obj, input)
 		end
 	end
 
-	do
-		local len = #function_node.identifiers
-
-		if
-			function_node.identifiers[#function_node.identifiers] and
-			function_node.identifiers[#function_node.identifiers].value.value == "..."
-		then
-
-		else
-			if function_node.self_call then len = len + 1 end
-
-			if #input:GetData() > len then
-				self:Error(type_errors.missing_index(len + 1))
-			end
-		end
-	end
-
 	-- if we have a return type we must also set this up for this call
 	local output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
 

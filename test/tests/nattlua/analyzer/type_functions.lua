@@ -784,3 +784,15 @@ local analyzer function test(str: string, pattern: string) end
 attest.expect_diagnostic("error", "index 2 does not exist")
 test("foo", "o")
 ]]
+analyze[[
+    local x = ("foo"):gsub("foo", function(x)
+        return "bar"
+    end)
+    attest.equal(x, "bar")
+]]
+analyze[[
+    local x = ("foo"):gsub("foo", function()
+        return "bar"
+    end)
+    attest.equal(x, "bar")
+]]

@@ -201,7 +201,7 @@ do -- Pattern matching functions
 	analyzer function ^string.gsub(
 		str: string,
 		pattern: string,
-		replacement: ref function=(...string)>(...string) | string | {[string] = string},
+		replacement: function=(...string)>(...string) | string | {[string] = string},
 		max_replacements: number | nil
 	)
 		str = str:IsLiteral() and str:GetData()
