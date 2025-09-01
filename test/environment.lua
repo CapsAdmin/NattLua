@@ -36,10 +36,9 @@ function _G.equal(a, b, level)
 
 		if type(b) == "string" then b = string.format("%q", b) end
 
-		error(tostring(a) .. " ~= " .. tostring(b), level + 1)
+		error("\n" .. tostring(a) .. "\n~=\n" .. tostring(b), level + 1)
 	end
 end
-
 
 function _G.diff(input, expect)
 	print(diff.diff(input, expect))
