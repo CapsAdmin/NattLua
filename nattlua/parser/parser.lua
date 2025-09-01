@@ -313,6 +313,7 @@ function META:ParseRootNode()
 	self.RootStatement = self.config and self.config.root_statement_override or node
 	local shebang
 	local statements = {}
+	node.statements = statements
 
 	if self:IsTokenType("shebang") then
 		shebang = self:StartNode("statement", "shebang")
@@ -349,7 +350,6 @@ function META:ParseRootNode()
 		node.tokens["eof"] = eof.tokens["end_of_file"]
 	end
 
-	node.statements = statements
 	node = self:EndNode(node)
 	return node
 end
