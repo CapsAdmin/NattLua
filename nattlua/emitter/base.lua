@@ -295,6 +295,8 @@ return function()
 		end
 
 		function META:ShouldLineBreakNode(node--[[#: Node]])
+			if self.config.preserve_whitespace ~= false then return false end
+
 			if node.kind == "table" or node.kind == "type_table" then
 				for _, exp in ipairs(node.children) do
 					if exp.value_expression and exp.value_expression.kind == "function" then
@@ -1475,19 +1477,17 @@ return function()
 	end
 
 	function META:ShouldBreakExpressionList(tbl--[[#: List<|Node|>]])
-		if self.config.preserve_whitespace == false then
-			if #tbl == 0 then return false end
+		if self.config.preserve_whitespace ~= false then return true end
 
-			local first_node = tbl[1]
-			local last_node = tbl[#tbl]
-			--first_node = first_node:GetStatement()
-			--last_node = last_node:GetStatement()
-			local start = first_node.code_start
-			local stop = last_node.code_stop
-			return (stop - start) > self.config.max_line_length
-		end
+		if #tbl == 0 then return false end
 
-		return false
+		local first_node = tbl[1]
+		local last_node = tbl[#tbl]
+		--first_node = first_node:GetStatement()
+		--last_node = last_node:GetStatement()
+		local start = first_node.code_start
+		local stop = last_node.code_stop
+		return (stop - start) > self.config.max_line_length
 	end
 
 	function META:EmitNodeList(tbl--[[#: List<|Node|>]], func--[[#: Function]])
