@@ -1977,7 +1977,6 @@ local s = nil
 for i = 1, 2 do
 	if i == 2 then
 		local xxx = s
-		print(s)
 	end
 
 	if i == 1 then s = "lol" end
