@@ -3,14 +3,13 @@ local table = _G.table
 local assert = _G.assert
 -- this sort of unpacks and normalizes the C declaration AST to make it easier to work with
 local walk_cdecl
-
 local map = {
-expression_struct = "struct",
-expression_union = "union",
-expression_enum = "enum",
-expression_dollar_sign = "dollar_sign",
-expression_c_declaration = "c_declaration",
-expression_typedef = "typedef",
+	expression_struct = "struct",
+	expression_union = "union",
+	expression_enum = "enum",
+	expression_dollar_sign = "dollar_sign",
+	expression_c_declaration = "c_declaration",
+	expression_typedef = "typedef",
 }
 
 local function handle_struct(state, node)

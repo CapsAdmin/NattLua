@@ -92,10 +92,13 @@ do -- these are just helpers for print debugging
 
 		function print_once(...)
 			local tbl = {}
+
 			for i = 1, select("#", ...) do
 				tbl[i] = tostring((select(i, ...)))
 			end
+
 			local hash = table.concat(tbl, "\t")
+
 			if not done[hash] then
 				old(hash)
 				done[hash] = true

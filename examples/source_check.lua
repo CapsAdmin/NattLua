@@ -28,7 +28,9 @@ for _, path in ipairs(paths) do
 	c:Parse()
 
 	for _, node in ipairs(list) do
-		if node.Type == "statement_local_function" then stats.locals = stats.locals + 1 end
+		if node.Type == "statement_local_function" then
+			stats.locals = stats.locals + 1
+		end
 
 		if node.Type == "statement_local_assignment" then
 			stats.locals = stats.locals + #node.left

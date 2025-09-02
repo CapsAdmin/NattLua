@@ -62,7 +62,9 @@ do
 
 		if not walk_up then return end
 
-		if node.parent.Type == "expression_c_declaration" then hmmm(node.parent, true, out) end
+		if node.parent.Type == "expression_c_declaration" then
+			hmmm(node.parent, true, out)
+		end
 	end
 
 	function META:EmitNattluaCDeclaration(node)

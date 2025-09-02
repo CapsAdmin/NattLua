@@ -189,12 +189,16 @@ function META:FindPotentialIdentifier(node)
 				return node.expression.tokens["potential_identifier"]
 			else
 				local last_modifier = node.modifiers[#node.modifiers]
-				
+
 				if last_modifier and last_modifier.is_token and last_modifier.type == "letter" then
 					return node.modifiers[#node.modifiers]
 				else
 					for _, modifier in ipairs(node.modifiers) do
-						if modifier.Type == "expression_struct" or modifier.Type == "expression_union" or modifier.Type == "expression_enum" then
+						if
+							modifier.Type == "expression_struct" or
+							modifier.Type == "expression_union" or
+							modifier.Type == "expression_enum"
+						then
 							return modifier.tokens["identifier"]
 						end
 					end

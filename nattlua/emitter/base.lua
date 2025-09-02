@@ -850,11 +850,9 @@ return function()
 			self:Whitespace(" ")
 
 			if node.Type == "expression_type_function" then
-				if node.expression then
-					self:EmitExpression(node.expression)
-				end
+				if node.expression then self:EmitExpression(node.expression) end
 			end
-			
+
 			self:EmitFunctionBody(node)
 			self:EmitToken(node.tokens["end"])
 		end
@@ -1450,7 +1448,11 @@ return function()
 
 	function META:EmitStatements(tbl--[[#: List<|Node|>]])
 		for i, node in ipairs(tbl) do
-			if i > 1 and general_kind(self, node) == "other" and node.Type ~= "statement_end_of_file" then
+			if
+				i > 1 and
+				general_kind(self, node) == "other" and
+				node.Type ~= "statement_end_of_file"
+			then
 				self:Whitespace("\n")
 			end
 

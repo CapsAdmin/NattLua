@@ -93,775 +93,774 @@ local all_nodes = {
 			},
 		}
 	end,
-		["expression_function"] = function()
-			return {
-				is_expression = true,
-				return_types = false,
-				statements = false,
-				identifiers = false,
-				environments_override = false,
-				self_call = false,
-				tokens = {
-					["function"] = false,
-					["end"] = false,
-					["arguments)"] = false,
-					["return:"] = false,
-					["arguments("] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_analyzer_function"] = function()
-			return {
-				is_expression = true,
-				return_types = false,
-				statements = false,
-				compiled_function = false,
-				identifiers = false,
-				environments_override = false,
-				self_call = false,
-				tokens = {
-					["analyzer"] = false,
-					["function"] = false,
-					["arguments)"] = false,
-					["table"] = false,
-					["return:"] = false,
-					["arguments("] = false,
-					["end"] = false,
-				},
-			}
-		end,
-		["expression_type_function"] = function()
-			return {
-				is_expression = true,
-				statements = false,
-				identifiers = false,
-				identifiers_typesystem = false,
-				environments_override = false,
-				self_call = false,
-				return_types = false,
-				tokens = {
-					["function"] = false,
-					["arguments)"] = false,
-					["end"] = false,
-					["arguments("] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_function_signature"] = function()
-			return {
-				is_expression = true,
-				return_types = false,
-				identifiers = false,
-				tokens = {
-					["="] = false,
-					["arguments("] = false,
-					["arguments)"] = false,
-					[">"] = false,
-					["return)"] = false,
-					["function"] = false,
-					[":"] = false,
-					["table"] = false,
-					["return("] = false,
-				},
-			}
-		end,
-		["expression_attribute_expression"] = function()
-			return {
-				is_expression = true,
-				expression = false,
-				tokens = {
-					[")"] = false,
-					["__attribute__"] = false,
-					["("] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_tuple"] = function()
-			return {
-				is_expression = true,
-				expressions = false,
-				tokens = {
-					[")"] = false,
-					["("] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_vararg"] = function()
-			return {
-				is_expression = true,
-				value = false,
-				tokens = {
-					["..."] = false,
-					[":"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_empty_union"] = function()
-			return {
-				is_expression = true,
-				tokens = {
-					["|"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_error"] = function()
-			return {
-				is_expression = true,
-				error_node = true,
-				tokens = {},
-			}
-		end,
-		["expression_type_table"] = function()
-			return {
-				is_expression = true,
-				children = false,
-				spread = false,
-				tokens = {
-					["}"] = false,
-					["separators"] = false,
-					["{"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_prefix_operator"] = function()
-			return {
-				is_expression = true,
-				value = false,
-				right = false,
-				tokens = {
-					["1"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_table"] = function()
-			return {
-				is_expression = true,
-				is_array = false,
-				children = false,
-				spread = false,
-				is_dictionary = false,
-				tokens = {
-					["}"] = false,
-					["separators"] = false,
-					["{"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_postfix_expression_index"] = function()
-			return {
-				is_expression = true,
-				left = false,
-				expression = false,
-				is_left_assignment = false,
-				tokens = {
-					["]"] = false,
-					["["] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_postfix_call"] = function()
-			return {
-				is_expression = true,
-				RootStatement = false,
-				key = false,
-				import_expression = false,
-				type_call = false,
-				data = false,
-				right = false,
-				first_node = false,
-				expressions_typesystem = false,
-				require_expression = false,
-				left = false,
-				expressions = false,
-				path = false,
-				parser_call = false,
-				tokens = {
-					["call)"] = false,
-					["call_typesystem("] = false,
-					["call_typesystem)"] = false,
-					["table"] = false,
-					["call("] = false,
-				},
-			}
-		end,
-		["expression_value"] = function()
-			return {
-				is_expression = true,
-				standalone_letter = false,
-				attribute = false,
-				is_identifier = false,
-				type_expression = false,
-				value = false,
-				self_call = false,
-				is_left_assignment = false,
-				force_upvalue = false,
-				tokens = {
-					[">"] = false,
-					["<"] = false,
-					[":"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_union"] = function()
-			return {
-				is_expression = true,
-				fields = false,
-				tokens = {
-					["{"] = false,
-					["}"] = false,
-					["union"] = false,
-					["identifier"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_typedef"] = function()
-			return {
-				is_expression = true,
-				decls = false,
-				tokens = {
-					["potential_identifier"] = false,
-					["typedef"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_binary_operator"] = function()
-			return {
-				is_expression = true,
-				is_left_assignment = false,
-				value = false,
-				left = false,
-				right = false,
-				tokens = {
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_dollar_sign"] = function()
-			return {
-				is_expression = true,
-				tokens = {
-					["$"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_lsx"] = function()
-			return {
-				is_expression = true,
-				children = false,
-				tag = false,
-				props = false,
-				tokens = {
-					[">"] = false,
-					["<"] = false,
-					["/"] = false,
-					["<2"] = false,
-					["type2"] = false,
-					[">2"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_postfix_operator"] = function()
-			return {
-				is_expression = true,
-				left = false,
-				value = false,
-				tokens = {
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_table_spread"] = function()
-			return {
-				is_expression = true,
-				expression = false,
-				tokens = {
-					["..."] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_enum_field"] = function()
-			return {
-				is_expression = true,
-				expression = false,
-				tokens = {
-					["="] = false,
-					["identifier"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_enum"] = function()
-			return {
-				is_expression = true,
-				fields = false,
-				tokens = {
-					["enum"] = false,
-					["{"] = false,
-					["}"] = false,
-					["identifier"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_struct"] = function()
-			return {
-				is_expression = true,
-				fields = false,
-				tokens = {
-					["struct"] = false,
-					["{"] = false,
-					["}"] = false,
-					["identifier"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["expression_c_declaration"] = function()
-			return {
-				is_expression = true,
-				pointers = false,
-				arguments = false,
-				strings = false,
-				expression = false,
-				array_expression = false,
-				modifiers = false,
-				decls = false,
-				default_expression = false,
-				multi_values = false,
-				bitfield_expression = false,
-				tokens = {
-					["identifier_("] = false,
-					["identifier_)"] = false,
-					["arguments_("] = false,
-					["arguments_)"] = false,
-					["..."] = false,
-					["asm"] = false,
-					["table"] = false,
-					["asm_)"] = false,
-					["asm_string"] = false,
-					["asm_("] = false,
-					[")"] = false,
-					["potential_identifier"] = false,
-					["identifier"] = false,
-					["("] = false,
-				},
-			}
-		end,
-		["expression_array"] = function()
-			return {
-				is_expression = true,
-				expression = false,
-				tokens = {
-					["]"] = false,
-					["["] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_call_expression"] = function()
-			return {
-				is_statement = true,
-				value = false,
-				tokens = {
-					["call)"] = false,
-					["call_typesystem("] = false,
-					["call_typesystem)"] = false,
-					["table"] = false,
-					["call("] = false,
-				},
-			}
-		end,
-		["statement_generic_for"] = function()
-			return {
-				is_statement = true,
-				statements = false,
-				expressions = false,
-				identifiers = false,
-				on_pop = false,
-				tokens = {
-					["for"] = false,
-					["end"] = false,
-					["in"] = false,
-					["do"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_numeric_for"] = function()
-			return {
-				is_statement = true,
-				statements = false,
-				expressions = false,
-				identifiers = false,
-				on_pop = false,
-				tokens = {
-					["for"] = false,
-					["="] = false,
-					["end"] = false,
-					["do"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_assignment"] = function()
-			return {
-				is_statement = true,
-				left = false,
-				right = false,
-				tokens = {
-					["type"] = false,
-					["table"] = false,
-					["="] = false,
-				},
-			}
-		end,
-		["statement_local_assignment"] = function()
-			return {
-				is_statement = true,
-				left = false,
-				right = false,
-				tokens = {
-					["="] = false,
-					["type"] = false,
-					["local"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_local_destructure_assignment"] = function()
-			return {
-				is_statement = true,
-				default = false,
-				default_comma = false,
-				left = false,
-				right = false,
-				tokens = {
-					["type"] = false,
-					["{"] = false,
-					["}"] = false,
-					["="] = false,
-					["local"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_if"] = function()
-			return {
-				is_statement = true,
-				statements = false,
-				expressions = false,
-				tokens = {
-					["then"] = false,
-					["if/else/elseif"] = false,
-					["end"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_break"] = function()
-			return {
-				is_statement = true,
-				tokens = {
-					["break"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_do"] = function()
-			return {
-				is_statement = true,
-				statements = false,
-				tokens = {
-					["end"] = false,
-					["do"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_shebang"] = function()
-			return {
-				is_statement = true,
-				tokens = {
-					["shebang"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_repeat"] = function()
-			return {
-				is_statement = true,
-				statements = false,
-				expression = false,
-				on_pop = false,
-				tokens = {
-					["until"] = false,
-					["repeat"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_return"] = function()
-			return {
-				is_statement = true,
-				expressions = false,
-				tokens = {
-					["return"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_goto_label"] = function()
-			return {
-				is_statement = true,
-				tokens = {
-					["::"] = false,
-					["identifier"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_while"] = function()
-			return {
-				is_statement = true,
-				statements = false,
-				expression = false,
-				on_pop = false,
-				tokens = {
-					["while"] = false,
-					["table"] = false,
-					["do"] = false,
-					["end"] = false,
-				},
-			}
-		end,
-		["statement_goto"] = function()
-			return {
-				is_statement = true,
-				tokens = {
-					["goto"] = false,
-					["identifier"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_destructure_assignment"] = function()
-			return {
-				is_statement = true,
-				default = false,
-				left = false,
-				right = false,
-				default_comma = false,
-				tokens = {
-					["}"] = false,
-					["table"] = false,
-					["{"] = false,
-					["="] = false,
-				},
-			}
-		end,
-		["statement_semicolon"] = function()
-			return {
-				is_statement = true,
-				tokens = {
-					[";"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_analyzer_debug_code"] = function()
-			return {
-				is_statement = true,
-				lua_code = false,
-				compiled_function = false,
-				tokens = {
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_parser_debug_code"] = function()
-			return {
-				is_statement = true,
-				lua_code = false,
-				tokens = {
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_end_of_file"] = function()
-			return {
-				is_statement = true,
-				tokens = {
-					["end_of_file"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_error"] = function()
-			return {
-				is_statement = true,
-				error_node = true,
-				tokens = {},
-			}
-		end,
-		["statement_root"] = function()
-			return {
-				is_statement = true,
-				parser = false,
-				code = false,
-				imports = false,
-				data_import = false,
-				statements = false,
-				imported = false,
-				lexer_tokens = false,
-				environments_override = false,
-				tokens = {
-					["shebang"] = false,
-					["eof"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_local_analyzer_function"] = function()
-			return {
-				is_statement = true,
-				return_types = false,
-				statements = false,
-				compiled_function = false,
-				identifiers = false,
-				environments_override = false,
-				tokens = {
-					["return:"] = false,
-					["arguments("] = false,
-					["arguments)"] = false,
-					["analyzer"] = false,
-					["function"] = false,
-					["end"] = false,
-					["local"] = false,
-					["identifier"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_local_function"] = function()
-			return {
-				is_statement = true,
-				return_types = false,
-				statements = false,
-				identifiers = false,
-				environments_override = false,
-				tokens = {
-					["table"] = false,
-					["arguments)"] = false,
-					["function"] = false,
-					["arguments("] = false,
-					["local"] = false,
-					["return:"] = false,
-					["identifier"] = false,
-					["end"] = false,
-				},
-			}
-		end,
-		["statement_function"] = function()
-			return {
-				is_statement = true,
-				return_types = false,
-				self_call = false,
-				statements = false,
-				expression = false,
-				identifiers = false,
-				environments_override = false,
-				tokens = {
-					["function"] = false,
-					["end"] = false,
-					["arguments)"] = false,
-					["return:"] = false,
-					["arguments("] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_local_type_function"] = function()
-			return {
-				is_statement = true,
-				return_types = false,
-				identifiers_typesystem = false,
-				statements = false,
-				identifiers = false,
-				environments_override = false,
-				tokens = {
-					["arguments_typesystem("] = false,
-					["arguments_typesystem)"] = false,
-					["return:"] = false,
-					["arguments("] = false,
-					["arguments)"] = false,
-					["function"] = false,
-					["end"] = false,
-					["identifier"] = false,
-					["local"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["statement_analyzer_function"] = function()
-			return {
-				is_statement = true,
-				return_types = false,
-				self_call = false,
-				statements = false,
-				compiled_function = false,
-				environments_override = false,
-				expression = false,
-				identifiers = false,
-				tokens = {
-					["^"] = false,
-					["analyzer"] = false,
-					["function"] = false,
-					["table"] = false,
-					["arguments)"] = false,
-					["return:"] = false,
-					["arguments("] = false,
-					["end"] = false,
-				},
-			}
-		end,
-		["statement_type_function"] = function()
-			return {
-				is_statement = true,
-				self_call = false,
-				identifiers_typesystem = false,
-				statements = false,
-				expression = false,
-				identifiers = false,
-				environments_override = false,
-				tokens = {
-					["arguments)"] = false,
-					["function"] = false,
-					["arguments_typesystem("] = false,
-					["arguments_typesystem)"] = false,
-					["end"] = false,
-					["arguments("] = false,
-					["table"] = false,
-				},
-			}
-		end,
+	["expression_function"] = function()
+		return {
+			is_expression = true,
+			return_types = false,
+			statements = false,
+			identifiers = false,
+			environments_override = false,
+			self_call = false,
+			tokens = {
+				["function"] = false,
+				["end"] = false,
+				["arguments)"] = false,
+				["return:"] = false,
+				["arguments("] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_analyzer_function"] = function()
+		return {
+			is_expression = true,
+			return_types = false,
+			statements = false,
+			compiled_function = false,
+			identifiers = false,
+			environments_override = false,
+			self_call = false,
+			tokens = {
+				["analyzer"] = false,
+				["function"] = false,
+				["arguments)"] = false,
+				["table"] = false,
+				["return:"] = false,
+				["arguments("] = false,
+				["end"] = false,
+			},
+		}
+	end,
+	["expression_type_function"] = function()
+		return {
+			is_expression = true,
+			statements = false,
+			identifiers = false,
+			identifiers_typesystem = false,
+			environments_override = false,
+			self_call = false,
+			return_types = false,
+			tokens = {
+				["function"] = false,
+				["arguments)"] = false,
+				["end"] = false,
+				["arguments("] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_function_signature"] = function()
+		return {
+			is_expression = true,
+			return_types = false,
+			identifiers = false,
+			tokens = {
+				["="] = false,
+				["arguments("] = false,
+				["arguments)"] = false,
+				[">"] = false,
+				["return)"] = false,
+				["function"] = false,
+				[":"] = false,
+				["table"] = false,
+				["return("] = false,
+			},
+		}
+	end,
+	["expression_attribute_expression"] = function()
+		return {
+			is_expression = true,
+			expression = false,
+			tokens = {
+				[")"] = false,
+				["__attribute__"] = false,
+				["("] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_tuple"] = function()
+		return {
+			is_expression = true,
+			expressions = false,
+			tokens = {
+				[")"] = false,
+				["("] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_vararg"] = function()
+		return {
+			is_expression = true,
+			value = false,
+			tokens = {
+				["..."] = false,
+				[":"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_empty_union"] = function()
+		return {
+			is_expression = true,
+			tokens = {
+				["|"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_error"] = function()
+		return {
+			is_expression = true,
+			error_node = true,
+			tokens = {},
+		}
+	end,
+	["expression_type_table"] = function()
+		return {
+			is_expression = true,
+			children = false,
+			spread = false,
+			tokens = {
+				["}"] = false,
+				["separators"] = false,
+				["{"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_prefix_operator"] = function()
+		return {
+			is_expression = true,
+			value = false,
+			right = false,
+			tokens = {
+				["1"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_table"] = function()
+		return {
+			is_expression = true,
+			is_array = false,
+			children = false,
+			spread = false,
+			is_dictionary = false,
+			tokens = {
+				["}"] = false,
+				["separators"] = false,
+				["{"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_postfix_expression_index"] = function()
+		return {
+			is_expression = true,
+			left = false,
+			expression = false,
+			is_left_assignment = false,
+			tokens = {
+				["]"] = false,
+				["["] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_postfix_call"] = function()
+		return {
+			is_expression = true,
+			RootStatement = false,
+			key = false,
+			import_expression = false,
+			type_call = false,
+			data = false,
+			right = false,
+			first_node = false,
+			expressions_typesystem = false,
+			require_expression = false,
+			left = false,
+			expressions = false,
+			path = false,
+			parser_call = false,
+			tokens = {
+				["call)"] = false,
+				["call_typesystem("] = false,
+				["call_typesystem)"] = false,
+				["table"] = false,
+				["call("] = false,
+			},
+		}
+	end,
+	["expression_value"] = function()
+		return {
+			is_expression = true,
+			standalone_letter = false,
+			attribute = false,
+			is_identifier = false,
+			type_expression = false,
+			value = false,
+			self_call = false,
+			is_left_assignment = false,
+			force_upvalue = false,
+			tokens = {
+				[">"] = false,
+				["<"] = false,
+				[":"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_union"] = function()
+		return {
+			is_expression = true,
+			fields = false,
+			tokens = {
+				["{"] = false,
+				["}"] = false,
+				["union"] = false,
+				["identifier"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_typedef"] = function()
+		return {
+			is_expression = true,
+			decls = false,
+			tokens = {
+				["potential_identifier"] = false,
+				["typedef"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_binary_operator"] = function()
+		return {
+			is_expression = true,
+			is_left_assignment = false,
+			value = false,
+			left = false,
+			right = false,
+			tokens = {
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_dollar_sign"] = function()
+		return {
+			is_expression = true,
+			tokens = {
+				["$"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_lsx"] = function()
+		return {
+			is_expression = true,
+			children = false,
+			tag = false,
+			props = false,
+			tokens = {
+				[">"] = false,
+				["<"] = false,
+				["/"] = false,
+				["<2"] = false,
+				["type2"] = false,
+				[">2"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_postfix_operator"] = function()
+		return {
+			is_expression = true,
+			left = false,
+			value = false,
+			tokens = {
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_table_spread"] = function()
+		return {
+			is_expression = true,
+			expression = false,
+			tokens = {
+				["..."] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_enum_field"] = function()
+		return {
+			is_expression = true,
+			expression = false,
+			tokens = {
+				["="] = false,
+				["identifier"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_enum"] = function()
+		return {
+			is_expression = true,
+			fields = false,
+			tokens = {
+				["enum"] = false,
+				["{"] = false,
+				["}"] = false,
+				["identifier"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_struct"] = function()
+		return {
+			is_expression = true,
+			fields = false,
+			tokens = {
+				["struct"] = false,
+				["{"] = false,
+				["}"] = false,
+				["identifier"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["expression_c_declaration"] = function()
+		return {
+			is_expression = true,
+			pointers = false,
+			arguments = false,
+			strings = false,
+			expression = false,
+			array_expression = false,
+			modifiers = false,
+			decls = false,
+			default_expression = false,
+			multi_values = false,
+			bitfield_expression = false,
+			tokens = {
+				["identifier_("] = false,
+				["identifier_)"] = false,
+				["arguments_("] = false,
+				["arguments_)"] = false,
+				["..."] = false,
+				["asm"] = false,
+				["table"] = false,
+				["asm_)"] = false,
+				["asm_string"] = false,
+				["asm_("] = false,
+				[")"] = false,
+				["potential_identifier"] = false,
+				["identifier"] = false,
+				["("] = false,
+			},
+		}
+	end,
+	["expression_array"] = function()
+		return {
+			is_expression = true,
+			expression = false,
+			tokens = {
+				["]"] = false,
+				["["] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_call_expression"] = function()
+		return {
+			is_statement = true,
+			value = false,
+			tokens = {
+				["call)"] = false,
+				["call_typesystem("] = false,
+				["call_typesystem)"] = false,
+				["table"] = false,
+				["call("] = false,
+			},
+		}
+	end,
+	["statement_generic_for"] = function()
+		return {
+			is_statement = true,
+			statements = false,
+			expressions = false,
+			identifiers = false,
+			on_pop = false,
+			tokens = {
+				["for"] = false,
+				["end"] = false,
+				["in"] = false,
+				["do"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_numeric_for"] = function()
+		return {
+			is_statement = true,
+			statements = false,
+			expressions = false,
+			identifiers = false,
+			on_pop = false,
+			tokens = {
+				["for"] = false,
+				["="] = false,
+				["end"] = false,
+				["do"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_assignment"] = function()
+		return {
+			is_statement = true,
+			left = false,
+			right = false,
+			tokens = {
+				["type"] = false,
+				["table"] = false,
+				["="] = false,
+			},
+		}
+	end,
+	["statement_local_assignment"] = function()
+		return {
+			is_statement = true,
+			left = false,
+			right = false,
+			tokens = {
+				["="] = false,
+				["type"] = false,
+				["local"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_local_destructure_assignment"] = function()
+		return {
+			is_statement = true,
+			default = false,
+			default_comma = false,
+			left = false,
+			right = false,
+			tokens = {
+				["type"] = false,
+				["{"] = false,
+				["}"] = false,
+				["="] = false,
+				["local"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_if"] = function()
+		return {
+			is_statement = true,
+			statements = false,
+			expressions = false,
+			tokens = {
+				["then"] = false,
+				["if/else/elseif"] = false,
+				["end"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_break"] = function()
+		return {
+			is_statement = true,
+			tokens = {
+				["break"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_do"] = function()
+		return {
+			is_statement = true,
+			statements = false,
+			tokens = {
+				["end"] = false,
+				["do"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_shebang"] = function()
+		return {
+			is_statement = true,
+			tokens = {
+				["shebang"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_repeat"] = function()
+		return {
+			is_statement = true,
+			statements = false,
+			expression = false,
+			on_pop = false,
+			tokens = {
+				["until"] = false,
+				["repeat"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_return"] = function()
+		return {
+			is_statement = true,
+			expressions = false,
+			tokens = {
+				["return"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_goto_label"] = function()
+		return {
+			is_statement = true,
+			tokens = {
+				["::"] = false,
+				["identifier"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_while"] = function()
+		return {
+			is_statement = true,
+			statements = false,
+			expression = false,
+			on_pop = false,
+			tokens = {
+				["while"] = false,
+				["table"] = false,
+				["do"] = false,
+				["end"] = false,
+			},
+		}
+	end,
+	["statement_goto"] = function()
+		return {
+			is_statement = true,
+			tokens = {
+				["goto"] = false,
+				["identifier"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_destructure_assignment"] = function()
+		return {
+			is_statement = true,
+			default = false,
+			left = false,
+			right = false,
+			default_comma = false,
+			tokens = {
+				["}"] = false,
+				["table"] = false,
+				["{"] = false,
+				["="] = false,
+			},
+		}
+	end,
+	["statement_semicolon"] = function()
+		return {
+			is_statement = true,
+			tokens = {
+				[";"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_analyzer_debug_code"] = function()
+		return {
+			is_statement = true,
+			lua_code = false,
+			compiled_function = false,
+			tokens = {
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_parser_debug_code"] = function()
+		return {
+			is_statement = true,
+			lua_code = false,
+			tokens = {
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_end_of_file"] = function()
+		return {
+			is_statement = true,
+			tokens = {
+				["end_of_file"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_error"] = function()
+		return {
+			is_statement = true,
+			error_node = true,
+			tokens = {},
+		}
+	end,
+	["statement_root"] = function()
+		return {
+			is_statement = true,
+			parser = false,
+			code = false,
+			imports = false,
+			data_import = false,
+			statements = false,
+			imported = false,
+			lexer_tokens = false,
+			environments_override = false,
+			tokens = {
+				["shebang"] = false,
+				["eof"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_local_analyzer_function"] = function()
+		return {
+			is_statement = true,
+			return_types = false,
+			statements = false,
+			compiled_function = false,
+			identifiers = false,
+			environments_override = false,
+			tokens = {
+				["return:"] = false,
+				["arguments("] = false,
+				["arguments)"] = false,
+				["analyzer"] = false,
+				["function"] = false,
+				["end"] = false,
+				["local"] = false,
+				["identifier"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_local_function"] = function()
+		return {
+			is_statement = true,
+			return_types = false,
+			statements = false,
+			identifiers = false,
+			environments_override = false,
+			tokens = {
+				["table"] = false,
+				["arguments)"] = false,
+				["function"] = false,
+				["arguments("] = false,
+				["local"] = false,
+				["return:"] = false,
+				["identifier"] = false,
+				["end"] = false,
+			},
+		}
+	end,
+	["statement_function"] = function()
+		return {
+			is_statement = true,
+			return_types = false,
+			self_call = false,
+			statements = false,
+			expression = false,
+			identifiers = false,
+			environments_override = false,
+			tokens = {
+				["function"] = false,
+				["end"] = false,
+				["arguments)"] = false,
+				["return:"] = false,
+				["arguments("] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_local_type_function"] = function()
+		return {
+			is_statement = true,
+			return_types = false,
+			identifiers_typesystem = false,
+			statements = false,
+			identifiers = false,
+			environments_override = false,
+			tokens = {
+				["arguments_typesystem("] = false,
+				["arguments_typesystem)"] = false,
+				["return:"] = false,
+				["arguments("] = false,
+				["arguments)"] = false,
+				["function"] = false,
+				["end"] = false,
+				["identifier"] = false,
+				["local"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["statement_analyzer_function"] = function()
+		return {
+			is_statement = true,
+			return_types = false,
+			self_call = false,
+			statements = false,
+			compiled_function = false,
+			environments_override = false,
+			expression = false,
+			identifiers = false,
+			tokens = {
+				["^"] = false,
+				["analyzer"] = false,
+				["function"] = false,
+				["table"] = false,
+				["arguments)"] = false,
+				["return:"] = false,
+				["arguments("] = false,
+				["end"] = false,
+			},
+		}
+	end,
+	["statement_type_function"] = function()
+		return {
+			is_statement = true,
+			self_call = false,
+			identifiers_typesystem = false,
+			statements = false,
+			expression = false,
+			identifiers = false,
+			environments_override = false,
+			tokens = {
+				["arguments)"] = false,
+				["function"] = false,
+				["arguments_typesystem("] = false,
+				["arguments_typesystem)"] = false,
+				["end"] = false,
+				["arguments("] = false,
+				["table"] = false,
+			},
+		}
+	end,
 }
-
 --[[#local type NodeKind = keysof<|all_nodes|>]]
 
 -- TODO, replace this with META.New_type_kind()

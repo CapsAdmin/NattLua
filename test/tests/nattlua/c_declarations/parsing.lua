@@ -322,7 +322,9 @@ local function test(c_code, error_level)
 		error("UH OH", error_level)
 	end
 
-	if ast.statements[2].Type == "statement_end_of_file" then return ast.statements[1] end
+	if ast.statements[2].Type == "statement_end_of_file" then
+		return ast.statements[1]
+	end
 
 	return ast
 end

@@ -130,7 +130,7 @@ test("types", function()
 	check("function foo(a: number): number end", "function foo(a) end")
 	check("function foo:bar(a: number): number end", "function foo:bar(a) end")
 	check("function foo.bar(a: number): number end", "function foo.bar(a) end")
---	check("function foo<||> end", "--[[#function foo<||> end]]")
+	--	check("function foo<||> end", "--[[#function foo<||> end]]")
 	check("local function foo<||> end", "--[[#local function foo<||> end]]")
 	check("local analyzer function foo() end", "--[[#local analyzer function foo() end]]")
 end)
@@ -157,7 +157,10 @@ end)
 
 test("operator precedence", function()
 	local function expand(node, tbl)
-		if node.Type == "expression_prefix_operator" or node.Type == "expression_postfix_operator" then
+		if
+			node.Type == "expression_prefix_operator" or
+			node.Type == "expression_postfix_operator"
+		then
 			table.insert(tbl, node.value.value)
 			table.insert(tbl, "(")
 			expand(node.right or node.left, tbl)
@@ -234,6 +237,7 @@ test("operator precedence", function()
 		[[or(or(or(a, and(true, false)), 4), and(5, 5))]]
 	)
 end)
+
 test("parser errors", function()
 	local function check(tbl)
 		for i, v in ipairs(tbl) do
@@ -331,8 +335,6 @@ do
 	assert(_G.LOL == nil)
 end
 
-
-
 parse[=[
 
 	--[[#type integer = number]]
@@ -341,7 +343,6 @@ parse[=[
 	end
 	
 ]=]
-
 local p = parse[=[
 
 local x = <View style={styles.container} foo={1} bar={"aa"}/>

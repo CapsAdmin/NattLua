@@ -32,7 +32,9 @@ function coverage.Preprocess(code, key)
 
 		call_expression.expressions[3] = node
 
-		if node.Type == "expression_binary_operator" and node.right then call_expression.right = node.right end
+		if node.Type == "expression_binary_operator" and node.right then
+			call_expression.right = node.right
+		end
 
 		table.insert(expressions, node)
 		-- to prevent start stop messing up from previous injections
@@ -53,9 +55,9 @@ function coverage.Preprocess(code, key)
 				on_parsed_node = function(parser, node)
 					if node.is_statement then
 						-- inject a call right before the token itself which uses the token for range
-						if node.Type == "statement_return"then
+						if node.Type == "statement_return" then
 							inject_token(node.tokens["return"])
-						elseif node.Type == "statement_break"  then
+						elseif node.Type == "statement_break" then
 							inject_token(node.tokens["break"])
 						elseif node.Type == "statement_continue" then
 							inject_token(node.tokens["continue"])
@@ -65,11 +67,15 @@ function coverage.Preprocess(code, key)
 						end
 					elseif node.is_expression then
 						local start, stop = node:GetStartStop()
+
 						if
 							node.is_left_assignment or
 							node.is_identifier or
-							(node:GetStatement().Type == "statement_function" or
-							node:GetStatement().Type == "statement_type_function") or
+							(
+								node:GetStatement().Type == "statement_function" or
+								node:GetStatement().Type == "statement_type_function"
+							)
+							or
 							(
 								node.Type == "expression_binary_operator" and
 								node.value.value == ":"

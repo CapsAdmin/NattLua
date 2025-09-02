@@ -138,10 +138,7 @@ local function dump_fields(node)
 	end
 end
 ]=]
-	function META:StartNode(
-		node_type--[[#: ref NodeKind]],
-		start_node--[[#: nil | Node]]
-	)--[[#: ref any]]
+	function META:StartNode(node_type--[[#: ref NodeKind]], start_node--[[#: nil | Node]])--[[#: ref any]]
 		local code_start = start_node and start_node.code_start or assert(self:GetToken()).start
 		local node = NewNode(
 			node_type,
