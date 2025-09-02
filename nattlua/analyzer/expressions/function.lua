@@ -12,8 +12,14 @@ local Emitter = require("nattlua.emitter.emitter").New
 local function analyze_arguments(self, node)
 	local args = {}
 
-
-	if (node.kind == "function" or node.kind == "type_function" or node.kind == "analyzer_function") and node.self_call and node.expression then
+	if (
+		node.Type == "statement_function" or
+		node.Type == "statement_type_function" or
+		node.Type == "statement_analyzer_function" or 
+		node.Type == "expression_analyzer_function" or 
+		node.Type == "expression_type_function" or 
+		node.Type == "expression_function") 
+		and node.self_call and node.expression then
 		self:PushAnalyzerEnvironment("runtime")
 		local val = self:GetFirstValue(self:AnalyzeExpression(node.expression.left))
 		self:PopAnalyzerEnvironment()
@@ -33,7 +39,7 @@ local function analyze_arguments(self, node)
 		end
 	end
 
-	if node.kind == "function" or node.kind == "local_function" then
+	if node.Type == "expression_function" or node.Type == "statement_function" or node.Type == "statement_local_function" then
 		for i, key in ipairs(node.identifiers) do
 			if node.self_call then i = i + 1 end
 
@@ -52,11 +58,13 @@ local function analyze_arguments(self, node)
 			self:MapTypeToNode(self:CreateLocalValue(key.value.value, assert(args[i])), key)
 		end
 	elseif
-		node.kind == "analyzer_function" or
-		node.kind == "local_analyzer_function" or
-		node.kind == "local_type_function" or
-		node.kind == "type_function" or
-		node.kind == "function_signature"
+		node.Type == "statement_analyzer_function" or
+		node.Type == "expression_analyzer_function" or
+		node.Type == "expression_type_function" or
+		node.Type == "statement_type_function" or
+		node.Type == "statement_local_analyzer_function" or
+		node.Type == "statement_local_type_function" or
+		node.Type == "expression_function_signature"
 	then
 		if node.identifiers_typesystem then
 			for i, generic_type in ipairs(node.identifiers_typesystem) do
@@ -75,20 +83,28 @@ local function analyze_arguments(self, node)
 		end
 
 		for i, key in ipairs(node.identifiers) do
-			if node.kind == "function" or node.kind == "type_function" or node.kind == "analyzer_function" then
+			if 
+				node.Type == "statement_function" or 
+				node.Type == "statement_type_function" or 
+				node.Type == "expression_function" or 
+				node.Type == "expression_type_function" or 
+				node.Type == "statement_type_function" or 
+				node.Type == "statement_analyzer_function" or
+				node.Type == "expression_analyzer_function" 
+			then
 				if node.self_call then i = i + 1 end
 			end
 
 			if key.identifier and key.identifier.value ~= "..." then
 				args[i] = self:GetFirstValue(self:AnalyzeExpression(key))
 				self:MapTypeToNode(self:CreateLocalValue(key.identifier.value, args[i]), key)
-			elseif key.kind == "vararg" then
+			elseif key.Type == "expression_vararg" then
 				args[i] = self:AnalyzeExpression(key)
 			elseif key.type_expression then
 				self:MapTypeToNode(self:CreateLocalValue(key.value.value, Any(), i), key)
 				args[i] = self:AnalyzeExpression(key.type_expression)
-			elseif key.kind == "value" then
-				if node.kind == "function_signature" then
+			elseif key.Type == "expression_value" then
+				if node.Type == "expression_function_signature" then
 					local obj = self:AnalyzeExpression(key)
 
 					if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
@@ -150,16 +166,23 @@ end
 
 local function has_explicit_arguments(node)
 	if
-		node.kind == "analyzer_function" or
-		node.kind == "local_analyzer_function" or
-		node.kind == "local_type_function" or
-		node.kind == "type_function" or
-		node.kind == "function_signature"
+		node.Type == "expression_analyzer_function" or
+		node.Type == "statement_analyzer_function" or
+		node.Type == "statement_local_analyzer_function" or
+		node.Type == "statement_local_type_function" or
+		node.Type == "expression_type_function" or
+		node.Type == "expression_function_signature"
 	then
 		return true
 	end
 
-	if node.kind == "function" or node.kind == "local_function" then
+	if 
+		node.Type == "statement_function" or
+		node.Type == "statement_type_function" or
+		node.Type == "expression_function" or
+		node.Type == "statement_local_function" or
+		node.Type == "expression_type_function" or
+		node.Type == "statement_local_type_function" then
 		for i, key in ipairs(node.identifiers) do
 			if key.type_expression then return true end
 		end
@@ -189,11 +212,11 @@ return {
 		self:PopScope()
 		self:PopCurrentType("function")
 
-		if node.kind == "analyzer_function" or node.kind == "local_analyzer_function" then
+		if node.Type == "expression_analyzer_function" or node.Type == "statement_analyzer_function" or node.Type == "statement_local_analyzer_function" then
 			obj:SetAnalyzerFunction(node.compiled_function)
 		end
 
-		if node.kind ~= "function_signature" then obj:SetFunctionBodyNode(node) end
+		if node.Type ~= "expression_function_signature" then obj:SetFunctionBodyNode(node) end
 
 		obj:SetExplicitInputSignature(has_explicit_arguments(node))
 		obj:SetExplicitOutputSignature(has_explicit_return_type(node))

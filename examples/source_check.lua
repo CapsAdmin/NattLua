@@ -28,22 +28,22 @@ for _, path in ipairs(paths) do
 	c:Parse()
 
 	for _, node in ipairs(list) do
-		if node.kind == "local_function" then stats.locals = stats.locals + 1 end
+		if node.Type == "statement_local_function" then stats.locals = stats.locals + 1 end
 
-		if node.kind == "local_assignment" then
+		if node.Type == "statement_local_assignment" then
 			stats.locals = stats.locals + #node.left
 		end
 
-		if node.kind == "generic_for" then
+		if node.Type == "statement_generic_for" then
 			stats.locals = stats.locals + #node.identifiers
 		end
 
-		if node.kind == "numeric_for" then stats.locals = stats.locals + 1 end
+		if node.Type == "statement_numeric_for" then stats.locals = stats.locals + 1 end
 
-		if node.type == "expression" then
-			stats.expressions[node.kind] = (stats.expressions[node.kind] or 0) + 1
+		if node.is_expression then
+			stats.expressions[node.Type] = (stats.expressions[node.Type] or 0) + 1
 		else
-			stats.statements[node.kind] = (stats.statements[node.kind] or 0) + 1
+			stats.statements[node.Type] = (stats.statements[node.Type] or 0) + 1
 		end
 	end
 end

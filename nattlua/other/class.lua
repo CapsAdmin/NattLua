@@ -60,10 +60,6 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 		local function tostring_obj(obj)
 			if rawget(obj, "Type") then return obj.Type end
 
-			if rawget(obj, "type") and rawget(obj, "kind") then
-				return obj.type .. " - " .. obj.kind
-			end
-
 			return tostring(obj)
 		end
 

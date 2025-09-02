@@ -16,7 +16,7 @@ return function(META)
 			self:IsTokenValue(":", 1)
 		then
 			if self:IsTokenValue("...") then
-				local node = self:StartNode("expression", "vararg")
+				local node = self:StartNode("expression_vararg")
 				node.tokens["..."] = self:ExpectTokenValue("...")
 				node.tokens[":"] = self:ExpectTokenValue(":")
 				node.value = self:ParseValueExpressionType("letter")
@@ -38,7 +38,7 @@ return function(META)
 	function META:ParseTealFunctionSignature()
 		if not self:IsTokenValue("function") then return nil end
 
-		local node = self:StartNode("expression", "function_signature")
+		local node = self:StartNode("expression_function_signature")
 		node.tokens["function"] = self:ExpectTokenValue("function")
 
 		if self:IsTokenValue("<") then
@@ -74,7 +74,7 @@ return function(META)
 
 		if not typesystem_syntax:IsValue(token) then return end
 
-		local node = self:StartNode("expression", "value")
+		local node = self:StartNode("expression_value")
 		node.value = self:ParseToken()
 		node = self:EndNode(node)
 		return node
@@ -85,7 +85,7 @@ return function(META)
 			return
 		end
 
-		local node = self:StartNode("expression", "vararg")
+		local node = self:StartNode("expression_vararg")
 		node.value = self:ParseValueExpressionType("letter")
 		node.tokens["..."] = self:ExpectTokenValue("...")
 		node = self:EndNode(node)
@@ -95,7 +95,7 @@ return function(META)
 	function META:ParseTealTable()
 		if not self:IsTokenValue("{") then return nil end
 
-		local node = self:StartNode("expression", "type_table")
+		local node = self:StartNode("expression_type_table")
 		node.tokens["{"] = self:ExpectTokenValue("{")
 		node.tokens["separators"] = {}
 		node.children = {}
@@ -109,7 +109,7 @@ return function(META)
 				self:IsTokenValue(":", 5)
 			)
 		then
-			local kv = self:StartNode("sub_statement", "table_expression_value")
+			local kv = self:StartNode("sub_statement_table_expression_value")
 
 			if self:IsTokenValue("(") then
 				kv.tokens["["] = self:ExpectValueTranslate("(", "[")
@@ -143,9 +143,9 @@ return function(META)
 			local i = 1
 
 			for _ = self:GetPosition(), self:GetLength() do
-				local kv = self:StartNode("sub_statement", "table_expression_value")
+				local kv = self:StartNode("sub_statement_table_expression_value")
 				kv.tokens["["] = self:NewToken("symbol", "[")
-				local key = self:StartNode("expression", "value")
+				local key = self:StartNode("expression_value")
 				key.value = self:NewToken("letter", "number")
 				key.standalone_letter = key
 				key = self:EndNode(key)
@@ -176,7 +176,7 @@ return function(META)
 	function META:ParseTealTuple()
 		if not self:IsTokenValue("(") then return nil end
 
-		local node = self:StartNode("expression", "tuple")
+		local node = self:StartNode("expression_tuple")
 		node.tokens["("] = self:ExpectTokenValue("(")
 		node.expressions = self:ParseMultipleValues(self.ParseTealExpression, 0)
 		node.tokens[")"] = self:ExpectTokenValue(")")
@@ -187,7 +187,7 @@ return function(META)
 	function META:ParseTealCallSubExpression()
 		if not self:IsTokenValue("<") then return end
 
-		local node = self:StartNode("expression", "postfix_call")
+		local node = self:StartNode("expression_postfix_call")
 		node.tokens["call("] = self:ExpectValueTranslate("<", "<|")
 		node.expressions = self:ParseMultipleValues(self.ParseTealExpression, 0)
 		node.tokens["call)"] = self:ExpectValueTranslate(">", "|>")
@@ -232,7 +232,7 @@ return function(META)
 			node = self:ParseTealSubExpression(node)
 
 			if
-				first.kind == "value" and
+				first.Type == "expression_value" and
 				(
 					first.value.type == "letter" or
 					first.value.value == "..."
@@ -258,7 +258,7 @@ return function(META)
 			end
 
 			local left_node = node
-			node = self:StartNode("expression", "binary_operator")
+			node = self:StartNode("expression_binary_operator")
 			node.value = self:ParseToken()
 			node.left = left_node
 			node.right = self:ParseTealExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
@@ -274,7 +274,7 @@ return function(META)
 			return nil
 		end
 
-		local kv = self:StartNode("statement", "assignment")
+		local kv = self:StartNode("statement_assignment")
 		kv.tokens["type"] = self:ExpectTokenValue("type")
 		kv.left = {self:ParseValueExpressionToken()}
 		kv.tokens["="] = self:ExpectTokenValue("=")
@@ -288,7 +288,7 @@ return function(META)
 			return nil
 		end
 
-		local kv = self:StartNode("statement", "assignment")
+		local kv = self:StartNode("statement_assignment")
 		kv.tokens["type"] = self:NewToken("letter", "type")
 		kv.left = {self:ParseValueExpressionToken()}
 		kv.tokens["="] = self:ExpectValueTranslate(":", "=")
@@ -299,7 +299,7 @@ return function(META)
 	function META:ParseTealRecordArray()
 		if not self:IsTokenValue("{") then return nil end
 
-		local kv = self:StartNode("statement", "assignment")
+		local kv = self:StartNode("statement_assignment")
 		kv.tokens["type"] = self:ExpectValueTranslate("{", "type")
 		kv.left = {self:ParseString("_G[number] = 1").statements[1].left[1]}
 		kv.tokens["="] = self:NewToken("symbol", "=")
@@ -319,7 +319,7 @@ return function(META)
 			return nil
 		end
 
-		local kv = self:StartNode("statement", "assignment")
+		local kv = self:StartNode("statement_assignment")
 		kv.tokens["type"] = self:ExpectValueTranslate("metamethod", "type")
 		kv.left = {self:ParseValueExpressionToken()}
 		kv.tokens["="] = self:ExpectValueTranslate(":", "=")
@@ -334,7 +334,7 @@ return function(META)
 		local func
 
 		if self:IsTokenValue("<") then
-			func = self:StartNode("statement", "local_type_function")
+			func = self:StartNode("statement_local_type_function")
 			func.tokens["local"] = self:NewToken("letter", "local")
 			func.tokens["identifier"] = assignment.left[1].value
 			func.tokens["function"] = self:NewToken("letter", "function")
@@ -346,14 +346,14 @@ return function(META)
 
 		local name = func and "__env" or assignment.left[1].value.value
 		assignment.left[1].value = self:NewToken("letter", name)
-		local tbl = self:StartNode("expression", "type_table")
+		local tbl = self:StartNode("expression_type_table")
 		tbl.tokens["{"] = self:NewToken("symbol", "{")
 		tbl.tokens["}"] = self:NewToken("symbol", "}")
 		tbl.children = {}
 		tbl = self:EndNode(tbl)
 		assignment.right = {tbl}
 		assignment = self:EndNode(assignment)
-		local block = self:StartNode("statement", "do")
+		local block = self:StartNode("statement_do")
 		block.tokens["do"] = self:NewToken("letter", "do")
 		block.statements = {}
 		table.insert(
@@ -403,7 +403,7 @@ return function(META)
 		end
 
 		self:PushParserEnvironment("typesystem")
-		local assignment = self:StartNode("statement", "assignment")
+		local assignment = self:StartNode("statement_assignment")
 		assignment.tokens["type"] = self:ExpectValueTranslate("record", "type")
 		assignment.tokens["="] = self:NewToken("symbol", "=")
 		assignment.left = {self:ParseValueExpressionToken()}
@@ -421,7 +421,7 @@ return function(META)
 		end
 
 		self:PushParserEnvironment("typesystem")
-		local assignment = self:StartNode("statement", "local_assignment")
+		local assignment = self:StartNode("statement_local_assignment")
 		assignment.tokens["local"] = self:ExpectTokenValue("local")
 		assignment.tokens["type"] = self:ExpectValueTranslate("record", "type")
 		assignment.tokens["="] = self:NewToken("symbol", "=")
@@ -443,7 +443,7 @@ return function(META)
 				if self:IsTokenValue("end") then break end
 
 				local left = bnode
-				bnode = self:StartNode("expression", "binary_operator")
+				bnode = self:StartNode("expression_binary_operator")
 				bnode.value = self:NewToken("symbol", "|")
 				bnode.right = self:ParseValueExpressionType("string")
 				bnode.left = left
@@ -460,7 +460,7 @@ return function(META)
 			end
 
 			self:PushParserEnvironment("typesystem")
-			local assignment = self:StartNode("statement", "assignment")
+			local assignment = self:StartNode("statement_assignment")
 			ParseBody(self, assignment)
 			assignment = self:EndNode(assignment)
 			self:PopParserEnvironment()
@@ -478,7 +478,7 @@ return function(META)
 			end
 
 			self:PushParserEnvironment("typesystem")
-			local assignment = self:StartNode("statement", "local_assignment")
+			local assignment = self:StartNode("statement_local_assignment")
 			assignment.tokens["local"] = self:ExpectTokenValue("local")
 			ParseBody(self, assignment)
 			assignment = self:EndNode(assignment)

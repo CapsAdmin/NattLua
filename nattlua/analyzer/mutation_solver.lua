@@ -180,7 +180,7 @@ local function mutation_solver(mutations, scope, obj)
 
 		if i > 1 then
 			if obj.Type == "upvalue" then -- upvalue
-				if mut.scope:GetStatementType() == "if" then
+				if mut.scope:GetStatementType() == "statement_if" then
 					local data = mut.scope:FindTrackedUpvalue(obj)
 
 					if data and data.stack then

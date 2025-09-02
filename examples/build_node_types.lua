@@ -103,7 +103,7 @@ local compiler = assert(
 			parser = {
 				inline_require = true,
 				on_parsed_node = function(self, node)
-					if node.type == "statement" then crawl_statement(node) end
+					if node.is_statement then crawl_statement(node) end
 				end,
 			},
 		}

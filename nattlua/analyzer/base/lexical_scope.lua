@@ -227,12 +227,12 @@ function META:FindLoopIteration()
 end
 
 function META:GetStatementType()
-	return self.statement and self.statement.kind
+	return self.statement and self.statement.Type
 end
 
 function META.BelongsToIfStatement(a, b)
-	local yes = a:GetStatementType() == "if" and
-		b:GetStatementType() == "if" and
+	local yes = a:GetStatementType() == "statement_if" and
+		b:GetStatementType() == "statement_if" and
 		a.statement == b.statement
 
 	if yes then

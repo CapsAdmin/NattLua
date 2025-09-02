@@ -2,7 +2,7 @@ local META = require("nattlua.parser.base")()
 require("nattlua.parser.expressions")(META)
 
 function META:ParseValueExpressionToken(expect_value--[[#: nil | string]])
-	local node = self:StartNode("expression", "value")
+	local node = self:StartNode("expression_value")
 	node.value = expect_value and self:ExpectTokenValue(expect_value) or self:ParseToken()
 	node = self:EndNode(node)
 	return node
@@ -23,9 +23,9 @@ function META.New(...)
 end
 
 function META:ParseRootNode()
-	local node = self:StartNode("statement", "root")
+	local node = self:StartNode("statement_root")
 	node.statements = self:ParseStatements()
-	local eof = self:StartNode("statement", "end_of_file")
+	local eof = self:StartNode("statement_end_of_file")
 	eof.tokens["end_of_file"] = self:ExpectTokenType("end_of_file")
 	eof = self:EndNode(eof)
 	table.insert(node.statements, eof)
@@ -104,7 +104,7 @@ function META:IsInArguments()
 end
 
 function META:ParseCDeclaration()
-	local node = self:StartNode("expression", "c_declaration")
+	local node = self:StartNode("expression_c_declaration")
 
 	if self:IsTokenValue("...") then
 		node.tokens["..."] = self:ExpectTokenValue("...")
@@ -189,12 +189,12 @@ function META:FindPotentialIdentifier(node)
 				return node.expression.tokens["potential_identifier"]
 			else
 				local last_modifier = node.modifiers[#node.modifiers]
-
-				if last_modifier and last_modifier.type == "letter" then
+				
+				if last_modifier and last_modifier.is_token and last_modifier.type == "letter" then
 					return node.modifiers[#node.modifiers]
 				else
 					for _, modifier in ipairs(node.modifiers) do
-						if modifier.kind == "struct" or modifier.kind == "union" or modifier.kind == "enum" then
+						if modifier.Type == "expression_struct" or modifier.Type == "expression_union" or modifier.Type == "expression_enum" then
 							return modifier.tokens["identifier"]
 						end
 					end
@@ -251,7 +251,7 @@ function META:ParseAttributes(node)
 end
 
 function META:ParseDollarSign()
-	local node = self:StartNode("expression", "dollar_sign")
+	local node = self:StartNode("expression_dollar_sign")
 
 	if self:IsTokenValue("?") then
 		node.tokens["$"] = self:ExpectTokenValue("?")
@@ -366,7 +366,7 @@ end
 function META:ParseTypeDef()
 	if not self:IsTokenValue("typedef") then return end
 
-	local node = self:StartNode("expression", "typedef")
+	local node = self:StartNode("expression_typedef")
 	node.tokens["typedef"] = self:ExpectTokenValue("typedef")
 	local decls = {}
 
@@ -388,7 +388,7 @@ function META:ParseTypeDef()
 end
 
 function META:ParseEnum()
-	local node = self:StartNode("expression", "enum")
+	local node = self:StartNode("expression_enum")
 	node.tokens["enum"] = self:ExpectTokenValue("enum")
 
 	if self:IsTokenType("letter") then
@@ -405,7 +405,7 @@ function META:ParseEnum()
 	for i = 1, self:GetLength() do
 		if self:IsTokenValue("}") then break end
 
-		local field = self:StartNode("expression", "enum_field")
+		local field = self:StartNode("expression_enum_field")
 		field.tokens["identifier"] = self:ExpectTokenType("letter")
 
 		if self:IsTokenValue("=") then
@@ -429,7 +429,7 @@ for _, type in ipairs({"Struct", "Union"}) do
 	local type = type:lower()
 	-- META:ParseStruct, META:ParseUnion
 	META["Parse" .. Type] = function(self)
-		local node = self:StartNode("expression", type)
+		local node = self:StartNode("expression_" .. type)
 		node.tokens[type] = self:ExpectTokenValue(type)
 
 		if self:IsTokenType("letter") then
@@ -483,7 +483,7 @@ function META:ParseArrayIndex()
 
 	for i = 1, self:GetLength() do
 		if self:IsTokenValue("[") then
-			local node = self:StartNode("expression", "array")
+			local node = self:StartNode("expression_array")
 			node.tokens["["] = self:ExpectTokenValue("[")
 
 			if self:IsTokenValue("?") then
@@ -541,7 +541,7 @@ function META:ParsePointers()
 end
 
 function META:ParseAttributeExtension()
-	local node = self:StartNode("expression", "attribute_expression")
+	local node = self:StartNode("expression_attribute_expression")
 	node.tokens["__attribute__"] = self:ExpectTokenType("letter")
 	node.tokens["("] = self:ExpectTokenValue("(")
 	node.expression = self:ParseRuntimeExpression()

@@ -238,8 +238,9 @@ do
 		local function_node = self:GetFunctionBodyNode()
 		local is_type_function = function_node and
 			(
-				function_node.kind == "local_type_function" or
-				function_node.kind == "type_function"
+				function_node.Type == "statement_local_type_function" or
+				function_node.Type == "statement_type_function" or 
+				function_node.Type == "expression_type_function"
 			)
 
 		if is_type_function then analyzer:PushAnalyzerEnvironment("typesystem") end

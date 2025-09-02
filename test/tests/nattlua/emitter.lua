@@ -313,7 +313,7 @@ end]])
 identical([[function META:IsShortIfStatement(node)
 	return #node.statements == 1 and
 		node.statements[1][1] and
-		is_short_statement(node.statements[1][1].kind) and
+		is_short_statement(node.statements[1][1].Type) and
 		not self:ShouldBreakExpressionList({node.expressions[1]})
 end]])
 identical([[local x = val == "string" or

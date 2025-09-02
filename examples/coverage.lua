@@ -140,11 +140,11 @@ local compiler = nl.Compiler(
 		parser = {
 			on_parsed_node = function(parser, node)
 				if
-					node.type == "expression" and
+					node.is_expression and
 					not node.is_left_assignment and
 					not node.is_identifier
 				then
-					if node.parent.kind == "binary_operator" then return end
+					if node.parent.Type == "expression_binary_operator" then return end
 
 					local start, stop = node:GetStartStop()
 					not_called[start .. "," .. stop] = {start, stop}

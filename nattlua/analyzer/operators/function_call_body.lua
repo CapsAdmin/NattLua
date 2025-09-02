@@ -86,8 +86,9 @@ local function check_input(self, obj, input)
 	self:PushAnalyzerEnvironment("typesystem")
 
 	if
-		function_node.kind == "local_type_function" or
-		function_node.kind == "type_function"
+		function_node.Type == "statement_local_type_function" or
+		function_node.Type == "statement_type_function" or 
+		function_node.Type == "expression_type_function"
 	then
 		if not function_node.identifiers_typesystem and obj:IsExplicitInputSignature() then
 			if self:IsTypesystem() then
@@ -477,8 +478,8 @@ end
 
 return function(self, obj, input)
 	local function_node = obj:GetFunctionBodyNode()
-	local is_type_function = function_node.kind == "local_type_function" or
-		function_node.kind == "type_function"
+	local is_type_function = function_node.Type == "statement_local_type_function" or
+		function_node.Type == "statement_type_function" or function_node.Type == "expression_type_function"
 	input = check_input(self, obj, input)
 	-- crawl the function with the new arguments
 	-- return_result is either a union of tuples or a single tuple

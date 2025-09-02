@@ -297,9 +297,9 @@ return function()
 		function META:ShouldLineBreakNode(node--[[#: Node]])
 			if self.config.preserve_whitespace ~= false then return false end
 
-			if node.kind == "table" or node.kind == "type_table" then
+			if node.Type == "expression_table" or node.Type == "expression_type_table" then
 				for _, exp in ipairs(node.children) do
-					if exp.value_expression and exp.value_expression.kind == "function" then
+					if exp.value_expression and exp.value_expression.Type == "expression_function" then
 						return true
 					end
 				end
@@ -309,9 +309,9 @@ return function()
 				end
 			end
 
-			if node.kind == "function" then return #node.statements > 1 end
+			if node.Type == "expression_function" then return #node.statements > 1 end
 
-			if node.kind == "if" then
+			if node.Type == "statement_if" then
 				for i = 1, #node.statements do
 					if #node.statements[i] > 1 then return true end
 				end
@@ -404,7 +404,7 @@ return function()
 						-- ugly way of dealing with recursive import
 						local root = node.RootStatement
 
-						if root and root.kind ~= "root" then root = root.RootStatement end
+						if root and root.Type ~= "statement_root" then root = root.RootStatement end
 
 						if root then
 							local content = root:Render(self.config or {})
@@ -554,25 +554,25 @@ return function()
 			end
 		end
 
-		if node.kind == "lsx" then
+		if node.Type == "expression_lsx" then
 			if self.config.transpile_extensions then
 				self:EmitTranspiledLSXExpression(node)
 			else
 				self:EmitLSXExpression(node)
 			end
-		elseif node.kind == "binary_operator" then
+		elseif node.Type == "expression_binary_operator" then
 			self:EmitBinaryOperator(node)
-		elseif node.kind == "function" then
+		elseif node.Type == "expression_function" then
 			self:EmitAnonymousFunction(node)
-		elseif node.kind == "analyzer_function" then
+		elseif node.Type == "expression_analyzer_function" then
 			emitted_invalid_code = self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
-		elseif node.kind == "table" then
+		elseif node.Type == "expression_table" then
 			self:EmitTable(node)
-		elseif node.kind == "prefix_operator" then
+		elseif node.Type == "expression_prefix_operator" then
 			self:EmitPrefixOperator(node)
-		elseif node.kind == "postfix_operator" then
+		elseif node.Type == "expression_postfix_operator" then
 			self:EmitPostfixOperator(node)
-		elseif node.kind == "postfix_call" then
+		elseif node.Type == "expression_postfix_call" then
 			if node.import_expression then
 				if not node.path or node.type_call then
 					emitted_invalid_code = self:EmitInvalidLuaCode("EmitImportExpression", node)
@@ -588,9 +588,9 @@ return function()
 			else
 				self:EmitCall(node)
 			end
-		elseif node.kind == "postfix_expression_index" then
+		elseif node.Type == "expression_postfix_expression_index" then
 			self:EmitExpressionIndex(node)
-		elseif node.kind == "value" then
+		elseif node.Type == "expression_value" then
 			if node.value.type == "string" then
 				self:EmitStringToken(node.value)
 			elseif node.value.type == "number" then
@@ -598,32 +598,32 @@ return function()
 			else
 				self:EmitToken(node.value)
 			end
-		elseif node.kind == "require" then
+		elseif node.Type == "expression_require" then
 			self:EmitRequireExpression(node)
-		elseif node.kind == "type_table" then
+		elseif node.Type == "expression_type_table" then
 			self:EmitTableType(node)
-		elseif node.kind == "table_expression_value" then
+		elseif node.Type == "expression_table_expression_value" then
 			self:EmitTableExpressionValue(node)
-		elseif node.kind == "table_key_value" then
+		elseif node.Type == "sub_statement_table_key_value" then
 			self:EmitTableKeyValue(node)
-		elseif node.kind == "empty_union" then
+		elseif node.Type == "expression_empty_union" then
 			self:EmitEmptyUnion(node)
-		elseif node.kind == "tuple" then
+		elseif node.Type == "expression_tuple" then
 			self:EmitTuple(node)
-		elseif node.kind == "type_function" then
+		elseif node.Type == "expression_type_function" then
 			emitted_invalid_code = self:EmitInvalidLuaCode("EmitTypeFunction", node)
-		elseif node.kind == "function_signature" then
+		elseif node.Type == "expression_function_signature" then
 			emitted_invalid_code = self:EmitInvalidLuaCode("EmitFunctionSignature", node)
-		elseif node.kind == "vararg" then
+		elseif node.Type == "expression_vararg" then
 			self:EmitVararg(node)
-		elseif self.FFI_DECLARATION_EMITTER and node.kind == "c_declaration" then
+		elseif self.FFI_DECLARATION_EMITTER and node.Type == "expression_c_declaration" then
 			self:EmitCDeclaration(node)
-		elseif node.kind == "dollar_sign" then
+		elseif node.Type == "expression_dollar_sign" then
 			self:EmitToken(node.tokens["$"])
-		elseif node.kind == "error" then
+		elseif node.Type == "expression_error" then
 
 		else
-			error("unhandled token type " .. node.kind)
+			error("unhandled expression " .. node.Type)
 		end
 
 		if node.tokens[")"] and newlines then
@@ -709,7 +709,7 @@ return function()
 	function META:EmitCall(node--[[#: Node]])
 		local multiline_string = false
 
-		if #node.expressions == 1 and node.expressions[1].kind == "value" then
+		if #node.expressions == 1 and node.expressions[1].Type == "expression_value" then
 			multiline_string = node.expressions[1].value.value:sub(1, 1) == "["
 		end
 
@@ -739,7 +739,7 @@ return function()
 
 		local last = node.expressions[#node.expressions]
 
-		if last and last.kind == "function" and #node.expressions < 4 then
+		if last and last.Type == "expression_function" and #node.expressions < 4 then
 			newlines = false
 		end
 
@@ -849,7 +849,7 @@ return function()
 			self:EmitToken(node.tokens["function"])
 			self:Whitespace(" ")
 
-			if node.kind == "type_function" then
+			if node.Type == "expression_type_function" then
 				if node.expression then
 					self:EmitExpression(node.expression)
 				end
@@ -922,7 +922,7 @@ return function()
 			self:Whitespace(" ")
 			self:EmitToken(node.tokens["="])
 			self:Whitespace(" ")
-			local break_binary = node.value_expression.kind == "binary_operator" and
+			local break_binary = node.value_expression.Type == "expression_binary_operator" and
 				self:ShouldLineBreakNode(node.value_expression)
 
 			if break_binary then self:Indent() end
@@ -980,7 +980,7 @@ return function()
 			for i, node in ipairs(tree.children) do
 				if newline then self:Whitespace("\t") end
 
-				if node.kind == "table_index_value" then
+				if node.Type == "sub_statement_table_index_value" then
 					if node.spread then
 						if not self.config.omit_invalid_code then
 							self:EmitToken(node.spread.tokens["..."])
@@ -996,14 +996,14 @@ return function()
 					else
 						self:EmitExpression(node.value_expression)
 					end
-				elseif node.kind == "table_key_value" then
+				elseif node.Type == "sub_statement_table_key_value" then
 					if self.config.omit_invalid_code and tree.spread and not during_spread then
 						during_spread = true
 						self:EmitNonSpace("{")
 					end
 
 					self:EmitTableKeyValue(node)
-				elseif node.kind == "table_expression_value" then
+				elseif node.Type == "sub_statement_table_expression_value" then
 					self:EmitTableExpressionValue(node)
 				end
 
@@ -1090,10 +1090,10 @@ return function()
 				if special_break and self:IsLineBreaking() then
 					if
 						self:GetPrevChar() == B(")") and
-						node.left.kind ~= "postfix_call" and
+						node.left.Type ~= "expression_postfix_call" and
 						(
-							node.left.kind == "binary_operator" and
-							node.left.right.kind ~= "postfix_call"
+							node.left.Type == "expression_binary_operator" and
+							node.left.right.Type ~= "expression_postfix_call"
 						)
 					then
 						self:Whitespace("\n")
@@ -1336,45 +1336,47 @@ return function()
 	end
 
 	function META:EmitStatement(node--[[#: Node]])
-		if node.kind == "if" then
+		if node.Type == "statement_if" then
 			self:EmitIfStatement(node)
-		elseif node.kind == "goto" then
+		elseif node.Type == "statement_goto" then
 			self:EmitGotoStatement(node)
-		elseif node.kind == "goto_label" then
+		elseif node.Type == "statement_goto_label" then
 			self:EmitLabelStatement(node)
-		elseif node.kind == "while" then
+		elseif node.Type == "statement_while" then
 			self:EmitWhileStatement(node)
-		elseif node.kind == "repeat" then
+		elseif node.Type == "statement_repeat" then
 			self:EmitRepeatStatement(node)
-		elseif node.kind == "break" then
+		elseif node.Type == "statement_break" then
 			self:EmitBreakStatement(node)
-		elseif node.kind == "return" then
+		elseif node.Type == "statement_return" then
 			self:EmitReturnStatement(node)
-		elseif node.kind == "numeric_for" then
+		elseif node.Type == "statement_numeric_for" then
 			self:EmitNumericForStatement(node)
-		elseif node.kind == "generic_for" then
+		elseif node.Type == "statement_generic_for" then
 			self:EmitGenericForStatement(node)
-		elseif node.kind == "do" then
+		elseif node.Type == "statement_do" then
 			self:EmitDoStatement(node)
-		elseif node.kind == "analyzer_function" then
+		elseif node.Type == "statement_analyzer_function" then
 			self:EmitInvalidLuaCode("EmitAnalyzerFunctionStatement", node)
-		elseif node.kind == "function" then
+		elseif node.Type == "statement_function" then
 			self:EmitFunction(node)
-		elseif node.kind == "local_function" then
+		elseif node.Type == "statement_type_function" then
+			self:EmitInvalidLuaCode("EmitFunction", node)
+		elseif node.Type == "statement_local_function" then
 			self:EmitLocalFunction(node)
-		elseif node.kind == "local_analyzer_function" then
+		elseif node.Type == "statement_local_analyzer_function" then
 			self:EmitInvalidLuaCode("EmitLocalAnalyzerFunction", node)
-		elseif node.kind == "local_type_function" then
+		elseif node.Type == "statement_local_type_function" then
 			if node.identifiers_typesystem then
 				self:EmitLocalTypeFunction(node)
 			else
 				self:EmitInvalidLuaCode("EmitLocalTypeFunction", node)
 			end
-		elseif node.kind == "type_function" then
+		elseif node.Type == "statement_type_function" then
 			self:EmitInvalidLuaCode("EmitTypeFunction", node)
 		elseif
-			node.kind == "destructure_assignment" or
-			node.kind == "local_destructure_assignment"
+			node.Type == "statement_destructure_assignment" or
+			node.Type == "statement_local_destructure_assignment"
 		then
 			if self.config.comment_type_annotations or node.environment == "typesystem" then
 				self:EmitInvalidLuaCode("EmitDestructureAssignment", node)
@@ -1383,23 +1385,23 @@ return function()
 			else
 				self:EmitDestructureAssignment(node)
 			end
-		elseif node.kind == "assignment" or node.kind == "local_assignment" then
+		elseif node.Type == "statement_assignment" or node.Type == "statement_local_assignment" then
 			if node.environment == "typesystem" and self.config.comment_type_annotations then
 				self:EmitInvalidLuaCode("EmitAssignment", node)
 			else
 				self:EmitAssignment(node)
 
-				if node.kind == "assignment" then self:Emit_ENVFromAssignment(node) end
+				if node.Type == "statement_assignment" then self:Emit_ENVFromAssignment(node) end
 			end
-		elseif node.kind == "call_expression" then
+		elseif node.Type == "statement_call_expression" then
 			self.is_call_expression = true
 			self:EmitExpression(node.value)
 			self.is_call_expression = false
-		elseif node.kind == "shebang" then
+		elseif node.Type == "statement_shebang" then
 			self:EmitToken(node.tokens["shebang"])
-		elseif node.kind == "continue" then
+		elseif node.Type == "statement_continue" then
 			self:EmitContinueStatement(node)
-		elseif node.kind == "semicolon" then
+		elseif node.Type == "statement_semicolon" then
 			self:EmitSemicolonStatement(node)
 
 			if self.config.preserve_whitespace == false then
@@ -1407,44 +1409,38 @@ return function()
 					self.out[self.i - 2] = ""
 				end
 			end
-		elseif node.kind == "end_of_file" then
+		elseif node.Type == "statement_end_of_file" then
 			self:EmitToken(node.tokens["end_of_file"])
-		elseif node.kind == "root" then
+		elseif node.Type == "statement_root" then
 			self:BuildCode(node)
-		elseif node.kind == "analyzer_debug_code" then
+		elseif node.Type == "statement_analyzer_debug_code" then
 			self:EmitInvalidLuaCode("EmitExpression", node.lua_code)
-		elseif node.kind == "parser_debug_code" then
+		elseif node.Type == "statement_parser_debug_code" then
 			self:EmitInvalidLuaCode("EmitExpression", node.lua_code)
-		elseif node.kind == "error" then
+		elseif node.Type == "statement_error" then
 
 		-- do nothing
-		elseif node.kind then
-			error("unhandled statement: " .. node.kind)
 		else
-			for k, v in pairs(node) do
-				print(k, v)
-			end
-
-			error("invalid statement: " .. tostring(node))
+			error("unhandled statement: " .. node.Type)
 		end
 
 		if self.OnEmitStatement then
-			if node.kind ~= "end_of_file" then self:OnEmitStatement() end
+			if node.Type ~= "statement_end_of_file" then self:OnEmitStatement() end
 		end
 	end
 
 	local function general_kind(self--[[#: META.@Self]], node--[[#: Node]])
-		if node.kind == "call_expression" then
+		if node.Type == "statement_call_expression" then
 			for i, v in ipairs(node.value.expressions) do
-				if v.kind == "function" then return "other" end
+				if v.Type == "expression_function" then return "other" end
 			end
 		end
 
 		if
-			node.kind == "call_expression" or
-			node.kind == "local_assignment" or
-			node.kind == "assignment" or
-			node.kind == "return"
+			node.Type == "statement_call_expression" or
+			node.Type == "statement_local_assignment" or
+			node.Type == "statement_assignment" or
+			node.Type == "statement_return"
 		then
 			return "expression_statement"
 		end
@@ -1454,7 +1450,7 @@ return function()
 
 	function META:EmitStatements(tbl--[[#: List<|Node|>]])
 		for i, node in ipairs(tbl) do
-			if i > 1 and general_kind(self, node) == "other" and node.kind ~= "end_of_file" then
+			if i > 1 and general_kind(self, node) == "other" and node.Type ~= "statement_end_of_file" then
 				self:Whitespace("\n")
 			end
 
@@ -1462,10 +1458,10 @@ return function()
 			self:EmitStatement(node)
 
 			if
-				node.kind ~= "semicolon" and
-				node.kind ~= "end_of_file" and
+				node.Type ~= "statement_semicolon" and
+				node.Type ~= "statement_end_of_file" and
 				tbl[i + 1] and
-				tbl[i + 1].kind ~= "end_of_file"
+				tbl[i + 1].Type ~= "statement_end_of_file"
 			then
 				self:Whitespace("\n")
 			end
@@ -1495,7 +1491,7 @@ return function()
 	function META:EmitNodeList(tbl--[[#: List<|Node|>]], func--[[#: Function]])
 		for i = 1, #tbl do
 			self:PushForcedLineBreaking(self:ShouldLineBreakNode(tbl[i]))
-			local break_binary = self:IsLineBreaking() and tbl[i].kind == "binary_operator"
+			local break_binary = self:IsLineBreaking() and tbl[i].Type == "expression_binary_operator"
 
 			if break_binary then self:Indent() end
 
@@ -1653,20 +1649,20 @@ return function()
 				for i, node in ipairs(tree.children) do
 					if newline then self:Whitespace("\t") end
 
-					if node.kind == "table_index_value" then
+					if node.Type == "sub_statement_table_index_value" then
 						if node.spread then
 							self:EmitToken(node.spread.tokens["..."])
 							self:EmitExpression(node.spread.expression)
 						else
 							self:EmitTypeExpression(node.value_expression)
 						end
-					elseif node.kind == "table_key_value" then
+					elseif node.Type == "sub_statement_table_key_value" then
 						self:EmitToken(node.tokens["identifier"])
 						self:Whitespace(" ")
 						self:EmitToken(node.tokens["="])
 						self:Whitespace(" ")
 						self:EmitTypeExpression(node.value_expression)
-					elseif node.kind == "table_expression_value" then
+					elseif node.Type == "sub_statement_table_expression_value" then
 						self:EmitToken(node.tokens["["])
 						self:EmitTypeExpression(node.key_expression)
 						self:EmitToken(node.tokens["]"])
@@ -1721,42 +1717,42 @@ return function()
 				end
 			end
 
-			if node.kind == "binary_operator" then
+			if node.Type == "expression_binary_operator" then
 				self:EmitTypeBinaryOperator(node)
-			elseif node.kind == "analyzer_function" then
+			elseif node.Type == "expression_analyzer_function" then
 				self:EmitAnalyzerFunction(node)
-			elseif node.kind == "table" then
+			elseif node.Type == "expression_table" then
 				self:EmitTable(node)
-			elseif node.kind == "prefix_operator" then
+			elseif node.Type == "expression_prefix_operator" then
 				self:EmitPrefixOperator(node)
-			elseif node.kind == "postfix_operator" then
+			elseif node.Type == "expression_postfix_operator" then
 				self:EmitPostfixOperator(node)
-			elseif node.kind == "postfix_call" then
+			elseif node.Type == "expression_postfix_call" then
 				self:EmitCall(node)
-			elseif node.kind == "postfix_expression_index" then
+			elseif node.Type == "expression_postfix_expression_index" then
 				self:EmitExpressionIndex(node)
-			elseif node.kind == "value" then
+			elseif node.Type == "expression_value" then
 				self:EmitToken(node.value)
-			elseif node.kind == "type_table" then
+			elseif node.Type == "expression_type_table" then
 				self:EmitTableType(node)
-			elseif node.kind == "table_expression_value" then
+			elseif node.Type == "expression_table_expression_value" then
 				self:EmitTableExpressionValue(node)
-			elseif node.kind == "table_key_value" then
+			elseif node.Type == "expression_table_key_value" then
 				self:EmitTableKeyValue(node)
-			elseif node.kind == "empty_union" then
+			elseif node.Type == "expression_empty_union" then
 				self:EmitEmptyUnion(node)
-			elseif node.kind == "tuple" then
+			elseif node.Type == "expression_tuple" then
 				self:EmitTuple(node)
-			elseif node.kind == "type_function" then
+			elseif node.Type == "expression_type_function" then
 				self:EmitTypeFunction(node)
-			elseif node.kind == "function" then
+			elseif node.Type == "expression_function" then
 				self:EmitAnonymousFunction(node)
-			elseif node.kind == "function_signature" then
+			elseif node.Type == "expression_function_signature" then
 				self:EmitFunctionSignature(node)
-			elseif node.kind == "vararg" then
+			elseif node.Type == "expression_vararg" then
 				self:EmitVararg(node)
 			else
-				error("unhandled token type " .. node.kind)
+				error("unhandled expression: " .. node.Type)
 			end
 
 			if node.tokens["as"] then
@@ -1912,7 +1908,7 @@ return function()
 
 		function META:Emit_ENVFromAssignment(node--[[#: Node]])
 			for i, v in ipairs(node.left) do
-				if v.kind == "value" and v.value.value == "_ENV" then
+				if v.Type == "expression_value" and v.value.value == "_ENV" then
 					if node.right[i] then
 						local key = node.left[i]
 						local val = node.right[i]
@@ -1974,7 +1970,7 @@ return function()
 					self:Whitespace("\t")
 				end
 
-				if prop.kind == "table_spread" then
+				if prop.Type == "expression_table_spread" then
 					if not line_break then self:Whitespace(" ") end
 
 					self:EmitToken(prop.tokens["{"])
@@ -2011,9 +2007,9 @@ return function()
 				self:Whitespace("\t")
 
 				for i, child in ipairs(node.children) do
-					if child.kind == "value" then
+					if child.Type == "expression_value" then
 						self:EmitExpression(child)
-					elseif child.type == "expression" and child.kind == "lsx" then
+					elseif child.is_expression and child.Type == "expression_lsx" then
 						self:EmitLSXExpression(child)
 					else
 						self:EmitToken(child.tokens["lsx{"])
@@ -2052,7 +2048,7 @@ return function()
 			self:Emit("{")
 
 			for i, prop in ipairs(node.props) do
-				if prop.kind == "table_spread" then
+				if prop.Type == "expression_table_spread" then
 					self:Whitespace(" ")
 					self:EmitToken(prop.tokens["{"])
 					self:EmitToken(prop.tokens["..."])
@@ -2088,9 +2084,9 @@ return function()
 				self:Whitespace("\t")
 
 				for i, child in ipairs(node.children) do
-					if child.kind == "value" then
+					if child.Type == "expression_value" then
 						self:EmitExpression(child)
-					elseif child.type == "expression" and child.kind == "lsx" then
+					elseif child.is_expression and child.Type == "expression_lsx" then
 						self:EmitTranspiledLSXExpression(child)
 					else
 						self:EmitToken(child.tokens["lsx{"], "")

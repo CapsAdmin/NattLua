@@ -17,9 +17,9 @@ return {
 		end
 
 		if statement.default then
-			if statement.kind == "local_destructure_assignment" then
+			if statement.Type == "statement_local_destructure_assignment" then
 				self:MapTypeToNode(self:CreateLocalValue(statement.default.value.value, obj), statement.default)
-			elseif statement.kind == "destructure_assignment" then
+			elseif statement.Type == "statement_destructure_assignment" then
 				self:SetLocalOrGlobalValue(ConstString(statement.default.value.value), obj)
 			end
 		end
@@ -36,9 +36,9 @@ return {
 			end
 
 			if obj then
-				if statement.kind == "local_destructure_assignment" then
+				if statement.Type == "statement_local_destructure_assignment" then
 					self:MapTypeToNode(self:CreateLocalValue(node.value.value, obj), node.value)
-				elseif statement.kind == "destructure_assignment" then
+				elseif statement.Type == "statement_destructure_assignment" then
 					self:SetLocalOrGlobalValue(ConstString(node.value.value), obj)
 				end
 			end

@@ -29,7 +29,7 @@ return function(META)
 		function META:ParseDestructureAssignmentStatement()
 			if not self:IsDestructureStatement() then return false end
 
-			local node = self:StartNode("statement", "destructure_assignment")
+			local node = self:StartNode("statement_destructure_assignment")
 
 			do
 				if self:IsTokenType("letter") then
@@ -51,7 +51,7 @@ return function(META)
 		function META:ParseLocalDestructureAssignmentStatement()
 			if not self:IsLocalDestructureAssignmentStatement() then return false end
 
-			local node = self:StartNode("statement", "local_destructure_assignment")
+			local node = self:StartNode("statement_local_destructure_assignment")
 			node.tokens["local"] = self:ExpectTokenValue("local")
 
 			if self:IsTokenValue("type") then
@@ -90,7 +90,7 @@ return function(META)
 
 				local left = node
 				local self_call = self:IsTokenValue(":")
-				node = self:StartNode("expression", "binary_operator")
+				node = self:StartNode("expression_binary_operator")
 				node.value = self:ParseToken()
 				node.right = self:ParseValueExpressionType("letter")
 				node.left = left
@@ -105,16 +105,16 @@ return function(META)
 		function META:ParseFunctionStatement()
 			if not self:IsTokenValue("function") then return false end
 
-			local node = self:StartNode("statement", "function")
+			local node = self:StartNode("statement_function")
 			node.tokens["function"] = self:ExpectTokenValue("function")
 			node.expression = self:ParseFunctionNameIndex()
 
-			if node.expression and node.expression.kind == "binary_operator" then
+			if node.expression and node.expression.Type == "expression_binary_operator" then
 				node.self_call = node.expression.right.self_call or false
 			end
 
 			if self:IsTokenValue("<|") then
-				node.kind = "type_function"
+				node.Type = "statement_type_function"
 				self:ParseTypeFunctionBody(node)
 			else
 				self:ParseFunctionBody(node)
@@ -129,7 +129,7 @@ return function(META)
 				return false
 			end
 
-			local node = self:StartNode("statement", "analyzer_function")
+			local node = self:StartNode("statement_analyzer_function")
 			node.tokens["analyzer"] = self:ExpectTokenValue("analyzer")
 			node.tokens["function"] = self:ExpectTokenValue("function")
 			local force_upvalue = false
@@ -142,7 +142,7 @@ return function(META)
 			node.expression = self:ParseFunctionNameIndex()
 
 			do -- hacky
-				if node.expression.kind == "binary_operator" and node.expression.left then
+				if node.expression.Type == "expression_binary_operator" and node.expression.left then
 					node.expression.left.standalone_letter = node
 					node.expression.left.force_upvalue = force_upvalue
 				else
@@ -164,7 +164,7 @@ return function(META)
 			return false
 		end
 
-		local node = self:StartNode("statement", "local_function")
+		local node = self:StartNode("statement_local_function")
 		node.tokens["local"] = self:ExpectTokenValue("local")
 		node.tokens["function"] = self:ExpectTokenValue("function")
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
@@ -184,7 +184,7 @@ return function(META)
 			return false
 		end
 
-		local node = self:StartNode("statement", "local_analyzer_function")
+		local node = self:StartNode("statement_local_analyzer_function")
 		node.tokens["local"] = self:ExpectTokenValue("local")
 		node.tokens["analyzer"] = self:ExpectTokenValue("analyzer")
 		node.tokens["function"] = self:ExpectTokenValue("function")
@@ -208,7 +208,7 @@ return function(META)
 			return false
 		end
 
-		local node = self:StartNode("statement", "local_type_function")
+		local node = self:StartNode("statement_local_type_function")
 		node.tokens["local"] = self:ExpectTokenValue("local")
 		node.tokens["function"] = self:ExpectTokenValue("function")
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
@@ -220,7 +220,7 @@ return function(META)
 	function META:ParseBreakStatement()
 		if not self:IsTokenValue("break") then return false end
 
-		local node = self:StartNode("statement", "break")
+		local node = self:StartNode("statement_break")
 		node.tokens["break"] = self:ExpectTokenValue("break")
 		node = self:EndNode(node)
 		return node
@@ -229,7 +229,7 @@ return function(META)
 	function META:ParseDoStatement()
 		if not self:IsTokenValue("do") then return false end
 
-		local node = self:StartNode("statement", "do")
+		local node = self:StartNode("statement_do")
 		node.tokens["do"] = self:ExpectTokenValue("do")
 		node.statements = self:ParseStatements({["end"] = true})
 		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
@@ -240,7 +240,7 @@ return function(META)
 	function META:ParseGenericForStatement()
 		if not self:IsTokenValue("for") then return false end
 
-		local node = self:StartNode("statement", "generic_for")
+		local node = self:StartNode("statement_generic_for")
 		node.tokens["for"] = self:ExpectTokenValue("for")
 		node.identifiers = self:ParseMultipleValues(self.ParseIdentifier)
 		node.tokens["in"] = self:ExpectTokenValue("in")
@@ -255,7 +255,7 @@ return function(META)
 	function META:ParseGotoLabelStatement()
 		if not self:IsTokenValue("::") then return false end
 
-		local node = self:StartNode("statement", "goto_label")
+		local node = self:StartNode("statement_goto_label")
 		node.tokens["::"] = self:ExpectTokenValue("::")
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
 		node.tokens["::"] = self:ExpectTokenValue("::")
@@ -268,7 +268,7 @@ return function(META)
 			return false
 		end
 
-		local node = self:StartNode("statement", "goto")
+		local node = self:StartNode("statement_goto")
 		node.tokens["goto"] = self:ExpectTokenValue("goto")
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
 		node = self:EndNode(node)
@@ -278,7 +278,7 @@ return function(META)
 	function META:ParseIfStatement()
 		if not self:IsTokenValue("if") then return false end
 
-		local node = self:StartNode("statement", "if")
+		local node = self:StartNode("statement_if")
 		node.expressions = {}
 		node.statements = {}
 		node.tokens["if/else/elseif"] = {}
@@ -325,7 +325,7 @@ return function(META)
 	function META:ParseLocalAssignmentStatement()
 		if not self:IsTokenValue("local") then return false end
 
-		local node = self:StartNode("statement", "local_assignment")
+		local node = self:StartNode("statement_local_assignment")
 		node.tokens["local"] = self:ExpectTokenValue("local")
 
 		if self.TealCompat and self:IsTokenValue(",", 1) then
@@ -358,7 +358,7 @@ return function(META)
 			return false
 		end
 
-		local node = self:StartNode("statement", "numeric_for")
+		local node = self:StartNode("statement_numeric_for")
 		node.tokens["for"] = self:ExpectTokenValue("for")
 		node.identifiers = self:ParseFixedMultipleValues(1, self.ParseIdentifier)
 		node.tokens["="] = self:ExpectTokenValue("=")
@@ -373,7 +373,7 @@ return function(META)
 	function META:ParseRepeatStatement()
 		if not self:IsTokenValue("repeat") then return false end
 
-		local node = self:StartNode("statement", "repeat")
+		local node = self:StartNode("statement_repeat")
 		node.tokens["repeat"] = self:ExpectTokenValue("repeat")
 		node.statements = self:ParseStatements({["until"] = true})
 		node.tokens["until"] = self:ExpectTokenValue("until")
@@ -385,7 +385,7 @@ return function(META)
 	function META:ParseSemicolonStatement()
 		if not self:IsTokenValue(";") then return false end
 
-		local node = self:StartNode("statement", "semicolon")
+		local node = self:StartNode("statement_semicolon")
 		node.tokens[";"] = self:ExpectTokenValue(";")
 		node = self:EndNode(node)
 		return node
@@ -394,7 +394,7 @@ return function(META)
 	function META:ParseReturnStatement()
 		if not self:IsTokenValue("return") then return false end
 
-		local node = self:StartNode("statement", "return")
+		local node = self:StartNode("statement_return")
 		node.tokens["return"] = self:ExpectTokenValue("return")
 		node.expressions = self:ParseMultipleValues(self.ParseRuntimeExpression, 0)
 		node = self:EndNode(node)
@@ -404,7 +404,7 @@ return function(META)
 	function META:ParseWhileStatement()
 		if not self:IsTokenValue("while") then return false end
 
-		local node = self:StartNode("statement", "while")
+		local node = self:StartNode("statement_while")
 		node.tokens["while"] = self:ExpectTokenValue("while")
 		node.expression = self:ExpectRuntimeExpression()
 		node.tokens["do"] = self:ExpectTokenValue("do")
@@ -417,7 +417,7 @@ return function(META)
 	function META:ParseContinueStatement()
 		if not self:IsTokenValue("continue") then return false end
 
-		local node = self:StartNode("statement", "continue")
+		local node = self:StartNode("statement_continue")
 		node.tokens["continue"] = self:ExpectTokenValue("continue")
 		node = self:EndNode(node)
 		return node
@@ -528,7 +528,7 @@ return function(META)
 
 	function META:ParseDebugCodeStatement()
 		if self:IsTokenType("analyzer_debug_code") then
-			local node = self:StartNode("statement", "analyzer_debug_code")
+			local node = self:StartNode("statement_analyzer_debug_code")
 			node.lua_code = self:ParseValueExpressionType("analyzer_debug_code")
 			node.compiled_function = self:CompileLuaAnalyzerDebugCode(node.lua_code.value.value:sub(3), node)
 			node = self:EndNode(node)
@@ -536,8 +536,8 @@ return function(META)
 		elseif self:IsTokenType("parser_debug_code") then
 			local token = self:ExpectTokenType("parser_debug_code")
 			assert(loadstring("local parser = ...;" .. token.value:sub(3)))(self)
-			local node = self:StartNode("statement", "parser_debug_code")
-			local code = self:StartNode("expression", "value")
+			local node = self:StartNode("statement_parser_debug_code")
+			local code = self:StartNode("expression_value")
 			code.value = token
 			code = self:EndNode(code)
 			node.lua_code = code
@@ -557,7 +557,7 @@ return function(META)
 			return
 		end
 
-		local node = self:StartNode("statement", "local_assignment")
+		local node = self:StartNode("statement_local_assignment")
 		node.tokens["local"] = self:ExpectTokenValue("local")
 		node.tokens["type"] = self:ExpectTokenValue("type")
 		node.left = self:ParseMultipleValues(self.ParseIdentifier)
@@ -587,7 +587,7 @@ return function(META)
 			return
 		end
 
-		local node = self:StartNode("statement", "assignment")
+		local node = self:StartNode("statement_assignment")
 		node.tokens["type"] = self:ExpectTokenValue("type")
 		node.left = self:ParseMultipleValues(self.ExpectTypeExpression, 0)
 		node.environment = "typesystem"
@@ -623,12 +623,12 @@ return function(META)
 			-- roblox compound assignment
 			local op_token = self:ParseToken()
 			local eq_token = self:ParseToken()
-			local bop = self:StartNode("expression", "binary_operator")
+			local bop = self:StartNode("expression_binary_operator")
 			bop.left = left[1]
 			bop.value = op_token
 			bop.right = self:ExpectRuntimeExpression(0)
 			self:EndNode(bop)
-			local node = self:StartNode("statement", "assignment", left[1])
+			local node = self:StartNode("statement_assignment", left[1])
 			node.tokens["="] = eq_token
 			node.left = left
 
@@ -643,7 +643,7 @@ return function(META)
 		end
 
 		if self:IsTokenValue("=") then
-			local node = self:StartNode("statement", "assignment", left[1])
+			local node = self:StartNode("statement_assignment", left[1])
 			node.tokens["="] = self:ExpectTokenValue("=")
 			node.left = left
 
@@ -657,8 +657,8 @@ return function(META)
 			return node
 		end
 
-		if left[1] and (left[1].kind == "postfix_call") and not left[2] then
-			local node = self:StartNode("statement", "call_expression", left[1])
+		if left[1] and (left[1].Type == "expression_postfix_call") and not left[2] then
+			local node = self:StartNode("statement_call_expression", left[1])
 			node.value = left[1]
 			node.tokens = left[1].tokens
 			self:ReRunOnNode(left)
@@ -674,8 +674,8 @@ return function(META)
 			self:GetToken().value
 		)
 
-		if left and left[1] and left[1].kind ~= "postfix_call" then
-			local node = self:StartNode("statement", "call_expression", left[1])
+		if left and left[1] and left[1].Type ~= "expression_postfix_call" then
+			local node = self:StartNode("statement_call_expression", left[1])
 			node.value = left[1]
 			node = self:EndNode(node)
 			return node

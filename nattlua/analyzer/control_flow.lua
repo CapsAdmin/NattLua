@@ -28,7 +28,7 @@ return function(META)
 		end
 
 		if statements[1] then
-			self:GetScope().missing_return = statements[#statements].kind ~= "return"
+			self:GetScope().missing_return = statements[#statements].Type ~= "statement_return"
 		else
 			self:GetScope().missing_return = true
 		end

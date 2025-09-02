@@ -41,13 +41,13 @@ return {
 
 		-- first we evaluate the left hand side
 		for left_pos, exp_key in ipairs(statement.left) do
-			if exp_key.kind == "value" then
+			if exp_key.Type == "expression_value" then
 				-- local foo, bar = *
 				left[left_pos] = ConstString(exp_key.value.value)
-			elseif exp_key.kind == "postfix_expression_index" then
+			elseif exp_key.Type == "expression_postfix_expression_index" then
 				-- foo[bar] = *
 				left[left_pos] = self:AnalyzeExpression(exp_key.expression)
-			elseif exp_key.kind == "binary_operator" then
+			elseif exp_key.Type == "expression_binary_operator" then
 				-- foo.bar = *
 				left[left_pos] = self:AnalyzeExpression(exp_key.right)
 			else
@@ -130,7 +130,7 @@ return {
 			-- c should be nil
 			local last = statement.right[#statement.right]
 
-			if last.kind == "value" and last.value.value ~= "..." then
+			if last.Type == "expression_value" and last.value.value ~= "..." then
 				for _ = 1, #right - #statement.right do
 					table.remove(right, #right)
 				end
@@ -195,7 +195,7 @@ return {
 			end
 
 			-- if all is well, create or mutate the value
-			if statement.kind == "local_assignment" then
+			if statement.Type == "statement_local_assignment" then
 				local immutable = false
 
 				if exp_key.attribute then
@@ -204,11 +204,11 @@ return {
 
 				-- local assignment: local a = 1
 				self:MapTypeToNode(self:CreateLocalValue(exp_key.value.value, val, immutable), exp_key)
-			elseif statement.kind == "assignment" then
+			elseif statement.Type == "statement_assignment" then
 				local key = left[left_pos]
 
 				-- plain assignment: a = 1
-				if exp_key.kind == "value" then
+				if exp_key.Type == "expression_value" then
 					if self:IsRuntime() then -- check for any previous upvalues
 						local existing_value = self:GetLocalOrGlobalValue(key)
 						local contract = existing_value and existing_value:GetContract()

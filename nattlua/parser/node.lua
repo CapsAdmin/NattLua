@@ -16,7 +16,10 @@ local META = class.CreateTemplate("node")
 --[[#type META.@Self = {
 	@Name = "Node",
 	type = "expression" | "statement",
+	_type = "expression" | "statement",
 	kind = string,
+	_kind = string,
+	Type = string,
 	id = number,
 	Code = Code,
 	tokens = Map<|string, false | Token | List<|Token|>|>,
@@ -41,54 +44,58 @@ local META = class.CreateTemplate("node")
 	error_node = boolean,
 	is_identifier = boolean,
 	is_left_assignment = boolean,
+	is_expression = boolean,
+	is_statement = boolean,
+	is_sub_statement = boolean,
 }]]
 --[[#type Node = META.@Self]]
 local all_nodes = {
-	sub_statement = {
-		["table_expression_value"] = function()
+	["sub_statement_table_expression_value"] = function()
+		return {
+			is_sub_statement = true,
+			value_expression = false,
+			type_expression = false,
+			key_expression = false,
+			spread = false,
+			tokens = {
+				["]"] = false,
+				["="] = false,
+				[":"] = false,
+				["["] = false,
+				["table"] = false,
+			},
+		}
+	end,
+	["sub_statement_table_index_value"] = function()
+		return {
+			is_sub_statement = true,
+			value_expression = false,
+			spread = false,
+			key = false,
+			tokens = {
+				["table"] = false,
+			},
+		}
+	end,
+	["sub_statement_table_key_value"] = function()
+		return {
+			is_sub_statement = true,
+			value_expression = false,
+			type_expression = false,
+			spread = false,
+			tokens = {
+				["{"] = false,
+				["}"] = false,
+				[":"] = false,
+				["="] = false,
+				["identifier"] = false,
+				["table"] = false,
+			},
+		}
+	end,
+		["expression_function"] = function()
 			return {
-				value_expression = false,
-				type_expression = false,
-				key_expression = false,
-				spread = false,
-				tokens = {
-					["]"] = false,
-					["="] = false,
-					[":"] = false,
-					["["] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["table_index_value"] = function()
-			return {
-				value_expression = false,
-				spread = false,
-				key = false,
-				tokens = {
-					["table"] = false,
-				},
-			}
-		end,
-		["table_key_value"] = function()
-			return {
-				value_expression = false,
-				type_expression = false,
-				spread = false,
-				tokens = {
-					["{"] = false,
-					["}"] = false,
-					[":"] = false,
-					["="] = false,
-					["identifier"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-	},
-	expression = {
-		["function"] = function()
-			return {
+				is_expression = true,
 				return_types = false,
 				statements = false,
 				identifiers = false,
@@ -104,8 +111,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["analyzer_function"] = function()
+		["expression_analyzer_function"] = function()
 			return {
+				is_expression = true,
 				return_types = false,
 				statements = false,
 				compiled_function = false,
@@ -123,8 +131,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["type_function"] = function()
+		["expression_type_function"] = function()
 			return {
+				is_expression = true,
 				statements = false,
 				identifiers = false,
 				identifiers_typesystem = false,
@@ -140,8 +149,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["function_signature"] = function()
+		["expression_function_signature"] = function()
 			return {
+				is_expression = true,
 				return_types = false,
 				identifiers = false,
 				tokens = {
@@ -157,8 +167,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["attribute_expression"] = function()
+		["expression_attribute_expression"] = function()
 			return {
+				is_expression = true,
 				expression = false,
 				tokens = {
 					[")"] = false,
@@ -168,8 +179,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["tuple"] = function()
+		["expression_tuple"] = function()
 			return {
+				is_expression = true,
 				expressions = false,
 				tokens = {
 					[")"] = false,
@@ -178,8 +190,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["vararg"] = function()
+		["expression_vararg"] = function()
 			return {
+				is_expression = true,
 				value = false,
 				tokens = {
 					["..."] = false,
@@ -188,22 +201,25 @@ local all_nodes = {
 				},
 			}
 		end,
-		["empty_union"] = function()
+		["expression_empty_union"] = function()
 			return {
+				is_expression = true,
 				tokens = {
 					["|"] = false,
 					["table"] = false,
 				},
 			}
 		end,
-		["error"] = function()
+		["expression_error"] = function()
 			return {
+				is_expression = true,
 				error_node = true,
 				tokens = {},
 			}
 		end,
-		["type_table"] = function()
+		["expression_type_table"] = function()
 			return {
+				is_expression = true,
 				children = false,
 				spread = false,
 				tokens = {
@@ -214,8 +230,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["prefix_operator"] = function()
+		["expression_prefix_operator"] = function()
 			return {
+				is_expression = true,
 				value = false,
 				right = false,
 				tokens = {
@@ -224,8 +241,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["table"] = function()
+		["expression_table"] = function()
 			return {
+				is_expression = true,
 				is_array = false,
 				children = false,
 				spread = false,
@@ -238,8 +256,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["postfix_expression_index"] = function()
+		["expression_postfix_expression_index"] = function()
 			return {
+				is_expression = true,
 				left = false,
 				expression = false,
 				is_left_assignment = false,
@@ -250,8 +269,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["postfix_call"] = function()
+		["expression_postfix_call"] = function()
 			return {
+				is_expression = true,
 				RootStatement = false,
 				key = false,
 				import_expression = false,
@@ -274,8 +294,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["value"] = function()
+		["expression_value"] = function()
 			return {
+				is_expression = true,
 				standalone_letter = false,
 				attribute = false,
 				is_identifier = false,
@@ -292,8 +313,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["union"] = function()
+		["expression_union"] = function()
 			return {
+				is_expression = true,
 				fields = false,
 				tokens = {
 					["{"] = false,
@@ -304,8 +326,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["typedef"] = function()
+		["expression_typedef"] = function()
 			return {
+				is_expression = true,
 				decls = false,
 				tokens = {
 					["potential_identifier"] = false,
@@ -314,8 +337,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["binary_operator"] = function()
+		["expression_binary_operator"] = function()
 			return {
+				is_expression = true,
 				is_left_assignment = false,
 				value = false,
 				left = false,
@@ -325,16 +349,18 @@ local all_nodes = {
 				},
 			}
 		end,
-		["dollar_sign"] = function()
+		["expression_dollar_sign"] = function()
 			return {
+				is_expression = true,
 				tokens = {
 					["$"] = false,
 					["table"] = false,
 				},
 			}
 		end,
-		["lsx"] = function()
+		["expression_lsx"] = function()
 			return {
+				is_expression = true,
 				children = false,
 				tag = false,
 				props = false,
@@ -349,8 +375,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["postfix_operator"] = function()
+		["expression_postfix_operator"] = function()
 			return {
+				is_expression = true,
 				left = false,
 				value = false,
 				tokens = {
@@ -358,8 +385,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["table_spread"] = function()
+		["expression_table_spread"] = function()
 			return {
+				is_expression = true,
 				expression = false,
 				tokens = {
 					["..."] = false,
@@ -367,8 +395,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["enum_field"] = function()
+		["expression_enum_field"] = function()
 			return {
+				is_expression = true,
 				expression = false,
 				tokens = {
 					["="] = false,
@@ -377,8 +406,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["enum"] = function()
+		["expression_enum"] = function()
 			return {
+				is_expression = true,
 				fields = false,
 				tokens = {
 					["enum"] = false,
@@ -389,8 +419,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["struct"] = function()
+		["expression_struct"] = function()
 			return {
+				is_expression = true,
 				fields = false,
 				tokens = {
 					["struct"] = false,
@@ -401,8 +432,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["c_declaration"] = function()
+		["expression_c_declaration"] = function()
 			return {
+				is_expression = true,
 				pointers = false,
 				arguments = false,
 				strings = false,
@@ -431,8 +463,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["array"] = function()
+		["expression_array"] = function()
 			return {
+				is_expression = true,
 				expression = false,
 				tokens = {
 					["]"] = false,
@@ -441,10 +474,9 @@ local all_nodes = {
 				},
 			}
 		end,
-	},
-	statement = {
-		["call_expression"] = function()
+		["statement_call_expression"] = function()
 			return {
+				is_statement = true,
 				value = false,
 				tokens = {
 					["call)"] = false,
@@ -455,8 +487,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["generic_for"] = function()
+		["statement_generic_for"] = function()
 			return {
+				is_statement = true,
 				statements = false,
 				expressions = false,
 				identifiers = false,
@@ -470,8 +503,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["numeric_for"] = function()
+		["statement_numeric_for"] = function()
 			return {
+				is_statement = true,
 				statements = false,
 				expressions = false,
 				identifiers = false,
@@ -485,8 +519,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["assignment"] = function()
+		["statement_assignment"] = function()
 			return {
+				is_statement = true,
 				left = false,
 				right = false,
 				tokens = {
@@ -496,8 +531,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["local_assignment"] = function()
+		["statement_local_assignment"] = function()
 			return {
+				is_statement = true,
 				left = false,
 				right = false,
 				tokens = {
@@ -508,8 +544,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["local_destructure_assignment"] = function()
+		["statement_local_destructure_assignment"] = function()
 			return {
+				is_statement = true,
 				default = false,
 				default_comma = false,
 				left = false,
@@ -524,8 +561,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["if"] = function()
+		["statement_if"] = function()
 			return {
+				is_statement = true,
 				statements = false,
 				expressions = false,
 				tokens = {
@@ -536,16 +574,18 @@ local all_nodes = {
 				},
 			}
 		end,
-		["break"] = function()
+		["statement_break"] = function()
 			return {
+				is_statement = true,
 				tokens = {
 					["break"] = false,
 					["table"] = false,
 				},
 			}
 		end,
-		["do"] = function()
+		["statement_do"] = function()
 			return {
+				is_statement = true,
 				statements = false,
 				tokens = {
 					["end"] = false,
@@ -554,16 +594,18 @@ local all_nodes = {
 				},
 			}
 		end,
-		["shebang"] = function()
+		["statement_shebang"] = function()
 			return {
+				is_statement = true,
 				tokens = {
 					["shebang"] = false,
 					["table"] = false,
 				},
 			}
 		end,
-		["repeat"] = function()
+		["statement_repeat"] = function()
 			return {
+				is_statement = true,
 				statements = false,
 				expression = false,
 				on_pop = false,
@@ -574,8 +616,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["return"] = function()
+		["statement_return"] = function()
 			return {
+				is_statement = true,
 				expressions = false,
 				tokens = {
 					["return"] = false,
@@ -583,8 +626,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["goto_label"] = function()
+		["statement_goto_label"] = function()
 			return {
+				is_statement = true,
 				tokens = {
 					["::"] = false,
 					["identifier"] = false,
@@ -592,8 +636,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["while"] = function()
+		["statement_while"] = function()
 			return {
+				is_statement = true,
 				statements = false,
 				expression = false,
 				on_pop = false,
@@ -605,8 +650,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["goto"] = function()
+		["statement_goto"] = function()
 			return {
+				is_statement = true,
 				tokens = {
 					["goto"] = false,
 					["identifier"] = false,
@@ -614,8 +660,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["destructure_assignment"] = function()
+		["statement_destructure_assignment"] = function()
 			return {
+				is_statement = true,
 				default = false,
 				left = false,
 				right = false,
@@ -628,16 +675,18 @@ local all_nodes = {
 				},
 			}
 		end,
-		["semicolon"] = function()
+		["statement_semicolon"] = function()
 			return {
+				is_statement = true,
 				tokens = {
 					[";"] = false,
 					["table"] = false,
 				},
 			}
 		end,
-		["analyzer_debug_code"] = function()
+		["statement_analyzer_debug_code"] = function()
 			return {
+				is_statement = true,
 				lua_code = false,
 				compiled_function = false,
 				tokens = {
@@ -645,30 +694,34 @@ local all_nodes = {
 				},
 			}
 		end,
-		["parser_debug_code"] = function()
+		["statement_parser_debug_code"] = function()
 			return {
+				is_statement = true,
 				lua_code = false,
 				tokens = {
 					["table"] = false,
 				},
 			}
 		end,
-		["end_of_file"] = function()
+		["statement_end_of_file"] = function()
 			return {
+				is_statement = true,
 				tokens = {
 					["end_of_file"] = false,
 					["table"] = false,
 				},
 			}
 		end,
-		["error"] = function()
+		["statement_error"] = function()
 			return {
+				is_statement = true,
 				error_node = true,
 				tokens = {},
 			}
 		end,
-		["root"] = function()
+		["statement_root"] = function()
 			return {
+				is_statement = true,
 				parser = false,
 				code = false,
 				imports = false,
@@ -684,8 +737,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["local_analyzer_function"] = function()
+		["statement_local_analyzer_function"] = function()
 			return {
+				is_statement = true,
 				return_types = false,
 				statements = false,
 				compiled_function = false,
@@ -704,8 +758,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["local_function"] = function()
+		["statement_local_function"] = function()
 			return {
+				is_statement = true,
 				return_types = false,
 				statements = false,
 				identifiers = false,
@@ -722,8 +777,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["function"] = function()
+		["statement_function"] = function()
 			return {
+				is_statement = true,
 				return_types = false,
 				self_call = false,
 				statements = false,
@@ -740,8 +796,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["local_type_function"] = function()
+		["statement_local_type_function"] = function()
 			return {
+				is_statement = true,
 				return_types = false,
 				identifiers_typesystem = false,
 				statements = false,
@@ -761,8 +818,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["analyzer_function"] = function()
+		["statement_analyzer_function"] = function()
 			return {
+				is_statement = true,
 				return_types = false,
 				self_call = false,
 				statements = false,
@@ -782,8 +840,9 @@ local all_nodes = {
 				},
 			}
 		end,
-		["type_function"] = function()
+		["statement_type_function"] = function()
 			return {
+				is_statement = true,
 				self_call = false,
 				identifiers_typesystem = false,
 				statements = false,
@@ -801,25 +860,22 @@ local all_nodes = {
 				},
 			}
 		end,
-	},
 }
---[[#local type StatementKind = keysof<|all_nodes.statement|> | keysof<|all_nodes.sub_statement|>]]
---[[#local type ExpressionKind = keysof<|all_nodes.expression|>]]
+
+--[[#local type NodeKind = keysof<|all_nodes|>]]
 
 -- TODO, replace this with META.New_type_kind()
 -- TODO, replace type-kind with .Type
 function META.New(
-	type--[[#: ref (keysof<|all_nodes|>)]],
-	kind--[[#: ref (StatementKind | ExpressionKind)]],
+	type--[[#: ref NodeKind]],
 	environment--[[#: "typesystem" | "runtime"]],
 	code--[[#: Code]],
 	code_start--[[#: number]],
 	code_stop--[[#: number]],
 	parent--[[#: any]]
 )
-	local init = all_nodes[type][kind]()
-	init.type = type
-	init.kind = kind
+	local init = all_nodes[type]()
+	init.Type = type
 	init.environment = environment
 	init.code_start = code_start
 	init.code_stop = code_stop
@@ -843,9 +899,9 @@ function META.New(
 end
 
 function META:__tostring()
-	local str = "[" .. self.type .. " - " .. self.kind
+	local str = "[" .. self.Type
 
-	if self.type == "statement" then
+	if self.is_statement then
 		local name = self.Code:GetName()
 
 		if name:sub(-4) == ".lua" or name:sub(-5) == ".nlua" then
@@ -856,8 +912,8 @@ function META:__tostring()
 
 			str = str .. " @ " .. name .. ":" .. data.line_start
 		end
-	elseif self.type == "expression" then
-		if self.kind == "postfix_call" and self.Code then
+	elseif self.is_expression then
+		if self.Type == "expression_postfix_call" and self.Code then
 			local name = self.Code:GetName()
 
 			if name and self.lua_code and (name:sub(-4) == ".lua" or name:sub(-5) == ".nlua") then
@@ -884,11 +940,8 @@ function META:Render(config)
 	local emitter
 
 	do
-		--[[#-- we have to do this because nattlua.emitter is not yet typed
+		-- we have to do this because nattlua.emitter is not yet typed
 		-- so if it's hoisted the self/node.lua will fail
-		attest.expect_diagnostic<|"warning", "always false"|>]]
-		--[[#attest.expect_diagnostic<|"warning", "always true"|>]]
-
 		if _G.IMPORTS--[[# as false]] then
 			emitter = IMPORTS["nattlua.emitter.emitter"]()
 		else
@@ -900,10 +953,10 @@ function META:Render(config)
 
 	local em = emitter.New(config or {preserve_whitespace = false, no_newlines = true})
 
-	if self.type == "expression" then
+	if self.is_expression then
 		--[[#attest.expect_diagnostic<|"error", "mutate argument"|>]]
 		em:EmitExpression(self)
-	elseif self.type == "statement" then
+	elseif self.is_statement then
 		--[[#attest.expect_diagnostic<|"error", "mutate argument"|>]]
 		em:EmitStatement(self)
 	end
@@ -926,7 +979,7 @@ function META:GetStartStop()
 end
 
 function META:GetStatement()
-	if self.type == "statement" then return self end
+	if self.is_statement then return self end
 
 	if self.parent then return (self.parent--[[# as any]]):GetStatement() end
 
@@ -940,7 +993,7 @@ function META:GetRoot()
 end
 
 function META:GetRootExpression()
-	if self.parent and self.parent.type == "expression" then
+	if self.parent and self.parent.is_expression then
 		return (self.parent--[[# as any]]):GetRootExpression()
 	end
 
@@ -964,7 +1017,7 @@ end
 function META:GetNodes()--[[#: List<|any|>]]
 	local statements = self.statements--[[# as any]]
 
-	if self.kind == "if" then
+	if self.Type == "statement_if" then
 		local flat--[[#: List<|any|>]] = {}
 
 		for _, statements in ipairs(assert(statements)) do
@@ -1023,13 +1076,13 @@ end
 
 local function find_by_type(
 	node--[[#: META.@Self]],
-	what--[[#: StatementKind | ExpressionKind]],
+	what--[[#: NodeKind]],
 	out--[[#: ref mutable List<|Node|>]]
 )--[[#: mutable List<|Node|>]]
 	out = out or {}
 
 	for _, child in ipairs(node:GetNodes()) do
-		if child.kind == what then
+		if child.Type == what then
 			table.insert(out, child)
 		elseif child:GetNodes() then
 			(find_by_type--[[# as any]])(child, what, out)
@@ -1039,12 +1092,11 @@ local function find_by_type(
 	return out
 end
 
-function META:FindNodesByType(what--[[#: StatementKind | ExpressionKind]])
+function META:FindNodesByType(what--[[#: NodeKind]])
 	return find_by_type(self, what, {})
 end
 
---[[#type META.ExpressionKind = ExpressionKind]]
---[[#type META.StatementKind = StatementKind]]
+--[[#type META.NodeKind = NodeKind]]
 --[[#type META.Node = Node]]
 --[[#type META.Nodes = all_nodes]]
 return META

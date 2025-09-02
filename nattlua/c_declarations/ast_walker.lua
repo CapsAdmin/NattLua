@@ -4,8 +4,17 @@ local assert = _G.assert
 -- this sort of unpacks and normalizes the C declaration AST to make it easier to work with
 local walk_cdecl
 
+local map = {
+expression_struct = "struct",
+expression_union = "union",
+expression_enum = "enum",
+expression_dollar_sign = "dollar_sign",
+expression_c_declaration = "c_declaration",
+expression_typedef = "typedef",
+}
+
 local function handle_struct(state, node)
-	local struct = {type = node.kind}
+	local struct = {type = map[node.Type]}
 
 	if node.tokens["identifier"] then
 		struct.identifier = node.tokens["identifier"].value
@@ -49,11 +58,11 @@ local function handle_modifiers(state, node)
 	local modifiers = {}
 
 	for k, v in ipairs(node.modifiers) do
-		if v.kind == "struct" or v.kind == "union" then
+		if v.Type == "expression_struct" or v.Type == "expression_union" then
 			table.insert(modifiers, handle_struct(state, v))
-		elseif v.kind == "enum" then
+		elseif v.Type == "expression_enum" then
 			table.insert(modifiers, handle_enum(state, v))
-		elseif v.kind == "dollar_sign" then
+		elseif v.Type == "expression_dollar_sign" then
 			table.insert(modifiers, "$")
 		else
 			table.insert(modifiers, v.value)
@@ -135,14 +144,14 @@ function walk_cdecl(state, node)
 
 		if node.modifiers then handle_modifiers(state, node) end
 
-		if node.tokens["..."] and node.type == "expression" then
+		if node.tokens["..."] and node.is_expression then
 			state.cdecl.of = {
 				type = "va_list",
 			}
 			state.cdecl = assert(state.cdecl.of)
 		end
 
-		if node.parent.kind ~= "c_declaration" then break end
+		if node.parent.Type ~= "expression_c_declaration" then break end
 
 		node = node.parent
 	end
@@ -154,10 +163,10 @@ local function walk_cdeclarations(node, callback)
 	local state = {}
 
 	for _, node in ipairs(node.statements) do
-		if node.kind == "c_declaration" then
+		if node.Type == "expression_c_declaration" then
 			local node, cdecl, real_node = walk_cdecl(state, node)
 			callback(cdecl.of, real_node, false)
-		elseif node.kind == "typedef" then
+		elseif node.Type == "expression_typedef" then
 			for _, node in ipairs(node.decls) do
 				local node, cdecl, real_node = walk_cdecl(state, node)
 				callback(cdecl.of, real_node, true)

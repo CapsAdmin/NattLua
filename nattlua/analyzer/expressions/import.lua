@@ -5,7 +5,7 @@ return {
 		-- ugly way of dealing with recursive import
 		local root = node.RootStatement
 
-		if root and root.kind ~= "root" then root = root.RootStatement end
+		if root and root.Type ~= "statement_root" then root = root.RootStatement end
 
 		if cache then
 			if cache:sub(1, 2) == "./" then cache = cache:sub(3) end

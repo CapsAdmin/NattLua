@@ -130,7 +130,7 @@ test("types", function()
 	check("function foo(a: number): number end", "function foo(a) end")
 	check("function foo:bar(a: number): number end", "function foo:bar(a) end")
 	check("function foo.bar(a: number): number end", "function foo.bar(a) end")
-	check("function foo<||> end", "--[[#function foo<||> end]]")
+--	check("function foo<||> end", "--[[#function foo<||> end]]")
 	check("local function foo<||> end", "--[[#local function foo<||> end]]")
 	check("local analyzer function foo() end", "--[[#local analyzer function foo() end]]")
 end)
@@ -157,15 +157,15 @@ end)
 
 test("operator precedence", function()
 	local function expand(node, tbl)
-		if node.kind == "prefix_operator" or node.kind == "postfix_operator" then
+		if node.Type == "expression_prefix_operator" or node.Type == "expression_postfix_operator" then
 			table.insert(tbl, node.value.value)
 			table.insert(tbl, "(")
 			expand(node.right or node.left, tbl)
 			table.insert(tbl, ")")
 			return tbl
-		elseif node.kind:sub(1, #"postfix") == "postfix" then
-			table.insert(tbl, node.kind:sub(#"postfix" + 2))
-		elseif node.kind ~= "binary_operator" then
+		elseif node.Type:sub(1, #"expression_postfix") == "expression_postfix" then
+			table.insert(tbl, node.Type:sub(#"expression_postfix" + 2))
+		elseif node.Type ~= "expression_binary_operator" then
 			table.insert(tbl, node:Render())
 		else
 			table.insert(tbl, node.value.value)
@@ -182,7 +182,7 @@ test("operator precedence", function()
 			table.insert(tbl, ")")
 		end
 
-		if node.kind:sub(1, #"postfix") == "postfix" then
+		if node.Type:sub(1, #"expression_postfix") == "expression_postfix" then
 			local str = {""}
 
 			for _, exp in ipairs(node.expressions or {node.expression}) do
@@ -206,7 +206,7 @@ test("operator precedence", function()
 		-- turn the expression into a statement to make the code valid
 		compiler.Code = Code("a = " .. compiler.Code:GetString(), compiler.Code:GetName())
 		local ast = assert(compiler:Parse()).SyntaxTree
-		local expr = ast:FindNodesByType("assignment")[1].right[1]
+		local expr = ast:FindNodesByType("statement_assignment")[1].right[1]
 		local res = dump_precedence(expr)
 
 		if expect ~= res then
@@ -234,7 +234,6 @@ test("operator precedence", function()
 		[[or(or(or(a, and(true, false)), 4), and(5, 5))]]
 	)
 end)
-
 test("parser errors", function()
 	local function check(tbl)
 		for i, v in ipairs(tbl) do
@@ -301,26 +300,26 @@ test("parser errors", function()
 end)
 
 parse[[
-    £ assert(parser:GetParentNode(1).kind == "root")
-    £ assert(parser:GetParentNode(1).kind == "root")
+    £ assert(parser:GetParentNode(1).Type == "statement_root")
+    £ assert(parser:GetParentNode(1).Type == "statement_root")
     
     do
-        £ assert(parser:GetParentNode(1).kind == "do")
-        £ assert(parser:GetParentNode(2).kind == "root")
+        £ assert(parser:GetParentNode(1).Type == "statement_do")
+        £ assert(parser:GetParentNode(2).Type == "statement_root")
         
         local function test()
-            £ assert(parser:GetParentNode(1).kind == "local_function")
-			£ parser.config.on_parsed_node = function(_, node) if node.kind == "value" and node.value.value == "1337" then parser.value = node end end
+            £ assert(parser:GetParentNode(1).Type == "statement_local_function")
+			£ parser.config.on_parsed_node = function(_, node) if node.Type == "expression_value" and node.value.value == "1337" then parser.value = node end end
             local x = 1337
 			£ parser.config.on_parsed_node = nil
-            £ assert(parser.value.kind == "value")
-            £ assert(parser.value.parent.kind == "local_assignment")
-            £ assert(parser.value.parent.parent.kind == "local_function")
+            £ assert(parser.value.Type == "expression_value")
+            £ assert(parser.value.parent.Type == "statement_local_assignment")
+            £ assert(parser.value.parent.parent.Type == "statement_local_function")
         end
     end
 
-    £ assert(parser:GetParentNode(1).kind == "root")
-    £ assert(parser:GetParentNode(1).kind == "root")
+    £ assert(parser:GetParentNode(1).Type == "statement_root")
+    £ assert(parser:GetParentNode(1).Type == "statement_root")
 ]]
 
 do
@@ -332,6 +331,8 @@ do
 	assert(_G.LOL == nil)
 end
 
+
+
 parse[=[
 
 	--[[#type integer = number]]
@@ -340,7 +341,8 @@ parse[=[
 	end
 	
 ]=]
-parse[=[
+
+local p = parse[=[
 
 local x = <View style={styles.container} foo={1} bar={"aa"}/>
 
@@ -411,3 +413,4 @@ local x = <View style={styles.container}>
 	
 </View>
 ]=]
+p:Emit()

@@ -1,7 +1,7 @@
 --[[# --ANALYZE
 local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
---[[#local type { ExpressionKind, StatementKind, Nodes, Node } = import("~/nattlua/parser/node.lua")]]
+--[[#local type { NodeKind, Nodes, Node } = import("~/nattlua/parser/node.lua")]]
 
 --[[#local type ParserConfig = import("~/nattlua/parser/config.nlua")]]
 
@@ -139,14 +139,12 @@ local function dump_fields(node)
 end
 ]=]
 	function META:StartNode(
-		node_type--[[#: ref (keysof<|Nodes|>)]],
-		kind--[[#: ref (StatementKind | ExpressionKind)]],
+		node_type--[[#: ref NodeKind]],
 		start_node--[[#: nil | Node]]
 	)--[[#: ref any]]
 		local code_start = start_node and start_node.code_start or assert(self:GetToken()).start
 		local node = NewNode(
 			node_type,
-			kind,
 			self:GetCurrentParserEnvironment(),
 			self.Code,
 			code_start,
@@ -174,7 +172,7 @@ end
 
 		if self.config.on_parsed_node then
 			if
-				node.type == "expression" and
+				node.is_expression and
 				self.suppress_on_parsed_node and
 				self.suppress_on_parsed_node.parent == self:GetParentNode()
 			then
@@ -328,7 +326,7 @@ end
 		)
 			local tk = self:GetToken()
 			local node = self:GetParentNode()
-			local kind = node and node.kind or "unknown"
+			local kind = node and node.Type or "unknown"
 
 			if not tk then
 				self:Error(
@@ -427,7 +425,7 @@ end
 
 			if not node then break end
 
-			if node.type then
+			if node.Type then
 				i = i + 1
 				out[i] = node
 			else
@@ -511,14 +509,14 @@ end
 	end
 
 	function META:ErrorExpression()
-		local node = self:StartNode("expression", "error")--[[# as any]]
+		local node = self:StartNode("expression_error")--[[# as any]]
 		node = self:EndNode(node)
 		self:Advance(1)
 		return node
 	end
 
 	function META:ErrorStatement()
-		local node = self:StartNode("statement", "error")--[[# as any]]
+		local node = self:StartNode("statement_error")--[[# as any]]
 		node = self:EndNode(node)
 		self:Advance(1)
 		return node

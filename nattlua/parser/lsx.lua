@@ -10,7 +10,7 @@ return function(META)
 			return
 		end
 
-		local node = self:StartNode("expression", "lsx")
+		local node = self:StartNode("expression_lsx")
 		node.tokens["<"] = self:ExpectTokenValue("<")
 		node.tag = self:ParseFunctionNameIndex()
 		node.props = {}
@@ -32,7 +32,7 @@ return function(META)
 				table.insert(node.props, spread)
 			elseif self:IsTokenType("letter") and self:IsTokenValue("=", 1) then
 				if self:IsTokenValue("{", 2) then
-					local keyval = self:StartNode("sub_statement", "table_key_value")
+					local keyval = self:StartNode("sub_statement_table_key_value")
 					keyval.tokens["identifier"] = self:ExpectTokenType("letter")
 					keyval.tokens["="] = self:ExpectTokenValue("=")
 					keyval.tokens["{"] = self:ExpectTokenValue("{")
@@ -41,7 +41,7 @@ return function(META)
 					keyval = self:EndNode(keyval)
 					table.insert(node.props, keyval)
 				elseif self:IsTokenType("string", 2) or self:IsTokenType("number", 2) then
-					local keyval = self:StartNode("sub_statement", "table_key_value")
+					local keyval = self:StartNode("sub_statement_table_key_value")
 					keyval.tokens["identifier"] = self:ExpectTokenType("letter")
 					keyval.tokens["="] = self:ExpectTokenValue("=")
 					keyval.value_expression = self:ParseKeywordValueTypeExpression()
@@ -49,7 +49,7 @@ return function(META)
 					table.insert(node.props, keyval)
 				else
 					self:Error("expected = { or = string or = number got " .. self:GetToken(3).type)
-					local keyval = self:StartNode("sub_statement", "table_key_value")
+					local keyval = self:StartNode("sub_statement_table_key_value")
 					keyval.tokens["identifier"] = self:NewToken("letter", "_")
 					keyval.tokens["="] = self:NewToken("symbol", "=")
 					keyval.value_expression = self:ErrorExpression()
@@ -90,7 +90,7 @@ return function(META)
 			if self:IsTokenValue("<") and self:IsTokenValue("/", 1) then break end
 
 			do
-				local string_node = self:StartNode("expression", "value")
+				local string_node = self:StartNode("expression_value")
 				string_node.value = self:ExpectTokenType("string")
 				string_node = self:EndNode(string_node)
 				table.insert(node.children, string_node)

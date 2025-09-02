@@ -16,7 +16,7 @@ return function(META)
 			return
 		end
 
-		local node = self:StartNode("expression", "analyzer_function")
+		local node = self:StartNode("expression_analyzer_function")
 		node.tokens["analyzer"] = self:ExpectTokenValue("analyzer")
 		node.tokens["function"] = self:ExpectTokenValue("function")
 		self:ParseAnalyzerFunctionBody(node)
@@ -27,7 +27,7 @@ return function(META)
 	function META:ParseFunctionExpression()
 		if not self:IsTokenValue("function") then return end
 
-		local node = self:StartNode("expression", "function")
+		local node = self:StartNode("expression_function")
 		node.tokens["function"] = self:ExpectTokenValue("function")
 		self:ParseFunctionBody(node)
 		node = self:EndNode(node)
@@ -37,7 +37,7 @@ return function(META)
 	function META:ParseIndexSubExpression(left_node--[[#: Node]])
 		if not (self:IsTokenValue(".") and self:IsTokenType("letter", 1)) then return end
 
-		local node = self:StartNode("expression", "binary_operator")
+		local node = self:StartNode("expression_binary_operator")
 		node.value = self:ParseToken()
 		node.right = self:ParseValueExpressionType("letter")
 		node.left = left_node
@@ -67,7 +67,7 @@ return function(META)
 			return
 		end
 
-		local node = self:StartNode("expression", "binary_operator", left_node)
+		local node = self:StartNode("expression_binary_operator", left_node)
 		node.value = self:ParseToken()
 		node.right = self:ParseValueExpressionType("letter")
 		node.left = left_node
@@ -84,7 +84,7 @@ return function(META)
 
 			if not node or self:IsTokenValue(",") then
 				local first_expression = node
-				local node = self:StartNode("expression", "tuple", first_expression)
+				local node = self:StartNode("expression_tuple", first_expression)
 
 				if self:IsTokenValue(",") then
 					first_expression.tokens[","] = self:ExpectTokenValue(",")
@@ -110,7 +110,7 @@ return function(META)
 		function META:ParsePrefixOperatorTypeExpression()
 			if not typesystem_syntax:IsPrefixOperator(self:GetToken()) then return end
 
-			local node = self:StartNode("expression", "prefix_operator")
+			local node = self:StartNode("expression_prefix_operator")
 			node.value = self:ParseToken()
 			node.tokens[1] = node.value
 
@@ -129,7 +129,7 @@ return function(META)
 		function META:ParseValueTypeExpression()
 			if not self:IsTokenValue("...") then return end
 
-			local node = self:StartNode("expression", "vararg")
+			local node = self:StartNode("expression_vararg")
 			node.tokens["..."] = self:ExpectTokenValue("...")
 
 			if not self:GetToken().whitespace then
@@ -169,7 +169,7 @@ return function(META)
 				return
 			end
 
-			local node = self:StartNode("expression", "function_signature")
+			local node = self:StartNode("expression_function_signature")
 			node.tokens["function"] = self:ExpectTokenValue("function")
 			node.tokens["="] = self:ExpectTokenValue("=")
 			node.tokens["arguments("] = self:ExpectTokenValue("(")
@@ -188,7 +188,7 @@ return function(META)
 				return
 			end
 
-			local node = self:StartNode("expression", "type_function")
+			local node = self:StartNode("expression_type_function")
 			node.tokens["function"] = self:ExpectTokenValue("function")
 			self:ParseTypeFunctionBody(node)
 			node = self:EndNode(node)
@@ -198,7 +198,7 @@ return function(META)
 		function META:ParseKeywordValueTypeExpression()
 			if not typesystem_syntax:IsValue(self:GetToken()) then return end
 
-			local node = self:StartNode("expression", "value")
+			local node = self:StartNode("expression_value")
 			node.value = self:ParseToken()
 			node = self:EndNode(node)
 			return node
@@ -207,7 +207,7 @@ return function(META)
 		do
 			function META:read_type_table_entry(i--[[#: number]])
 				if self:IsTokenValue("[") then
-					local node = self:StartNode("sub_statement", "table_expression_value")
+					local node = self:StartNode("sub_statement_table_expression_value")
 					node.tokens["["] = self:ExpectTokenValue("[")
 					node.key_expression = self:ParseTypeExpression(0)
 					node.tokens["]"] = self:ExpectTokenValue("]")
@@ -216,7 +216,7 @@ return function(META)
 					node = self:EndNode(node)
 					return node
 				elseif self:IsTokenType("letter") and self:IsTokenValue("=", 1) then
-					local node = self:StartNode("sub_statement", "table_key_value")
+					local node = self:StartNode("sub_statement_table_key_value")
 					node.tokens["identifier"] = self:ExpectTokenType("letter")
 					node.tokens["="] = self:ExpectTokenValue("=")
 					node.value_expression = self:ParseTypeExpression(0)
@@ -224,7 +224,7 @@ return function(META)
 					return node
 				end
 
-				local node = self:StartNode("sub_statement", "table_index_value")
+				local node = self:StartNode("sub_statement_table_index_value")
 				local spread = self:read_table_spread()
 
 				if spread then
@@ -241,7 +241,7 @@ return function(META)
 			function META:ParseTableTypeExpression()
 				if not self:IsTokenValue("{") then return end
 
-				local tree = self:StartNode("expression", "type_table")
+				local tree = self:StartNode("expression_type_table")
 				tree.tokens["{"] = self:ExpectTokenValue("{")
 				tree.children = {}
 				tree.tokens["separators"] = {}
@@ -288,7 +288,7 @@ return function(META)
 		function META:ParseStringTypeExpression()
 			if not (self:IsTokenType("$") and self:IsTokenType("string", 1)) then return end
 
-			local node = self:StartNode("expression", "type_string")
+			local node = self:StartNode("expression_type_string")
 			node.tokens["$"] = self:ParseToken("...")
 			node.value = self:ExpectTokenType("string")
 			return node
@@ -297,7 +297,7 @@ return function(META)
 		function META:ParseEmptyUnionTypeExpression()
 			if not self:IsTokenValue("|") then return end
 
-			local node = self:StartNode("expression", "empty_union")
+			local node = self:StartNode("expression_empty_union")
 			node.tokens["|"] = self:ParseToken("|")
 			node = self:EndNode(node)
 			return node
@@ -313,7 +313,7 @@ return function(META)
 		function META:ParsePostfixTypeOperatorSubExpression(left_node--[[#: Node]])
 			if not typesystem_syntax:IsPostfixOperator(self:GetToken()) then return end
 
-			local node = self:StartNode("expression", "postfix_operator")
+			local node = self:StartNode("expression_postfix_operator")
 			node.value = self:ParseToken()
 			node.left = left_node
 			node = self:EndNode(node)
@@ -323,7 +323,7 @@ return function(META)
 		function META:ParseTypeCallSubExpression(left_node--[[#: Node]], primary_node--[[#: Node]])
 			if not self:IsCallExpression(0) then return end
 
-			local node = self:StartNode("expression", "postfix_call")
+			local node = self:StartNode("expression_postfix_call")
 			local start = self:GetToken()
 
 			if self:IsTokenValue("{") then
@@ -340,7 +340,7 @@ return function(META)
 				node.tokens["call)"] = self:ExpectTokenValue(")")
 			end
 
-			if primary_node.kind == "value" then
+			if primary_node.Type == "expression_value" then
 				local name = primary_node.value.value
 
 				if name == "import" then
@@ -359,7 +359,7 @@ return function(META)
 		function META:ParsePostfixTypeIndexExpressionSubExpression(left_node--[[#: Node]])
 			if not self:IsTokenValue("[") then return end
 
-			local node = self:StartNode("expression", "postfix_expression_index")
+			local node = self:StartNode("expression_postfix_expression_index")
 			node.tokens["["] = self:ExpectTokenValue("[")
 			node.expression = self:ExpectTypeExpression(0)
 			node.tokens["]"] = self:ExpectTokenValue("]")
@@ -380,7 +380,7 @@ return function(META)
 
 				if not found then break end
 
-				if left_node.kind == "binary_operator" and left_node.value.value == ":" then
+				if left_node.Type == "expression_binary_operator" and left_node.value.value == ":" then
 					found.parser_call = true
 				end
 
@@ -418,7 +418,7 @@ return function(META)
 				node = self:ParseTypeSubExpression(node)
 
 				if
-					first.kind == "value" and
+					first.Type == "expression_value" and
 					(
 						first.value.type == "letter" or
 						first.value.value == "..."
@@ -444,7 +444,7 @@ return function(META)
 				end
 
 				local left_node = node
-				node = self:StartNode("expression", "binary_operator", left_node)
+				node = self:StartNode("expression_binary_operator", left_node)
 				node.value = self:ParseToken()
 				node.left = left_node
 				node.right = self:ParseTypeExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
@@ -521,7 +521,7 @@ return function(META)
 					return
 				end
 
-				local node = self:StartNode("expression", "table_spread")
+				local node = self:StartNode("expression_table_spread")
 				node.tokens["..."] = self:ExpectTokenValue("...")
 				node.expression = self:ExpectRuntimeExpression()
 				node = self:EndNode(node)
@@ -530,7 +530,7 @@ return function(META)
 
 			function META:read_table_entry(i--[[#: number]])
 				if self:IsTokenValue("[") then
-					local node = self:StartNode("sub_statement", "table_expression_value")
+					local node = self:StartNode("sub_statement_table_expression_value")
 					node.tokens["["] = self:ExpectTokenValue("[")
 					node.key_expression = self:ExpectRuntimeExpression(0)
 					node.tokens["]"] = self:ExpectTokenValue("]")
@@ -548,7 +548,7 @@ return function(META)
 					node = self:EndNode(node)
 					return node
 				elseif self:IsTokenType("letter") and self:IsTokenValue("=", 1) then
-					local node = self:StartNode("sub_statement", "table_key_value")
+					local node = self:StartNode("sub_statement_table_key_value")
 					node.tokens["identifier"] = self:ExpectTokenType("letter")
 					node.tokens["="] = self:ExpectTokenValue("=")
 					local spread = self:read_table_spread()
@@ -566,7 +566,7 @@ return function(META)
 					self:IsTokenValue(":", 1) and
 					not self:IsTokenValue("(", 3)
 				then
-					local node = self:StartNode("sub_statement", "table_key_value")
+					local node = self:StartNode("sub_statement_table_key_value")
 					node.tokens["identifier"] = self:ExpectTokenType("letter")
 					node.tokens[":"] = self:ExpectTokenValue(":")
 					node.type_expression = self:ExpectTypeExpression(0)
@@ -586,7 +586,7 @@ return function(META)
 					return node
 				end
 
-				local node = self:StartNode("sub_statement", "table_index_value")
+				local node = self:StartNode("sub_statement_table_index_value")
 				local spread = self:read_table_spread()
 
 				if spread then
@@ -603,7 +603,7 @@ return function(META)
 			function META:ParseTableExpression()
 				if not self:IsTokenValue("{") then return end
 
-				local tree = self:StartNode("expression", "table")
+				local tree = self:StartNode("expression_table")
 				tree.tokens["{"] = self:ExpectTokenValue("{")
 				tree.children = {}
 				tree.tokens["separators"] = {}
@@ -614,13 +614,13 @@ return function(META)
 
 					local entry = self:read_table_entry(i)
 
-					if entry.kind == "table_index_value" then
+					if entry.Type == "sub_statement_table_index_value" then
 						tree.is_array = true
 					else
 						tree.is_dictionary = true
 					end
 
-					if entry.kind == "table_index_value" and entry.spread then
+					if entry.Type == "sub_statement_table_index_value" and entry.spread then
 						tree.spread = true
 					end
 
@@ -658,7 +658,7 @@ return function(META)
 		function META:ParsePostfixOperatorSubExpression(left_node--[[#: Node]])
 			if not runtime_syntax:IsPostfixOperator(self:GetToken()) then return end
 
-			local node = self:StartNode("expression", "postfix_operator")
+			local node = self:StartNode("expression_postfix_operator")
 			node.value = self:ParseToken()
 			node.left = left_node
 			node = self:EndNode(node)
@@ -668,11 +668,11 @@ return function(META)
 		function META:ParseCallSubExpression(left_node--[[#: Node]], primary_node--[[#: Node]])
 			if not self:IsCallExpression(0) then return end
 
-			if primary_node and primary_node.kind == "function" then
+			if primary_node and primary_node.Type == "expression_function" then
 				if not primary_node.tokens[")"] then return end
 			end
 
-			local node = self:StartNode("expression", "postfix_call", left_node)
+			local node = self:StartNode("expression_postfix_call", left_node)
 			local start = self:GetToken()
 
 			if self:IsTokenValue("{") then
@@ -708,7 +708,7 @@ return function(META)
 				if
 					-- hack for sizeof as it expects a c declaration expression in the C declaration parser
 					self.FFI_DECLARATION_PARSER and
-					primary_node.kind == "value" and
+					primary_node.Type == "expression_value" and
 					primary_node.value.value == "sizeof"
 				then
 					node.expressions = self:ParseMultipleValues(self.ParseCDeclaration, 0)
@@ -720,9 +720,9 @@ return function(META)
 			end
 
 			if
-				primary_node.kind == "value" and
+				primary_node.Type == "expression_value" and
 				node.expressions[1] and
-				node.expressions[1].kind == "value" and
+				node.expressions[1].Type == "expression_value" and
 				node.expressions[1].value and
 				node.expressions[1].value:GetStringValue()
 			then
@@ -748,7 +748,7 @@ return function(META)
 		function META:ParsePostfixIndexExpressionSubExpression(left_node--[[#: Node]])
 			if not self:IsTokenValue("[") then return end
 
-			local node = self:StartNode("expression", "postfix_expression_index")
+			local node = self:StartNode("expression_postfix_expression_index")
 			node.tokens["["] = self:ExpectTokenValue("[")
 			node.expression = self:ExpectRuntimeExpression()
 			node.tokens["]"] = self:ExpectTokenValue("]")
@@ -786,7 +786,7 @@ return function(META)
 
 				if not found then break end
 
-				if left_node.kind == "value" and left_node.value.value == ":" then
+				if left_node.Type == "expression_value" and left_node.value.value == ":" then
 					found.parser_call = true
 				end
 
@@ -799,7 +799,7 @@ return function(META)
 		function META:ParsePrefixOperatorExpression()
 			if not runtime_syntax:IsPrefixOperator(self:GetToken()) then return end
 
-			local node = self:StartNode("expression", "prefix_operator")
+			local node = self:StartNode("expression_prefix_operator")
 			node.value = self:ParseToken()
 			node.tokens[1] = node.value
 			node.right = self:ExpectRuntimeExpression(math_huge)
@@ -1035,7 +1035,7 @@ return function(META)
 				node = self:ParseSubExpression(node)
 
 				if
-					first.kind == "value" and
+					first.Type == "expression_value" and
 					(
 						first.value.type == "letter" or
 						first.value.value == "..."
@@ -1062,7 +1062,7 @@ return function(META)
 				end
 
 				local left_node = node or false
-				node = self:StartNode("expression", "binary_operator", left_node)
+				node = self:StartNode("expression_binary_operator", left_node)
 				node.value = self:ParseToken()
 				node.left = left_node
 

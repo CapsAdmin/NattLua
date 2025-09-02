@@ -436,7 +436,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 				end
 
 				if
-					node.parent.kind ~= "binary_operator" or
+					node.parent.Type ~= "expression_binary_operator" or
 					(
 						node.parent.value.value ~= "==" and
 						node.parent.value.value ~= "~="

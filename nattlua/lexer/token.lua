@@ -21,6 +21,7 @@ local setmetatable = _G.setmetatable
 	parent = false | any,
 	whitespace = false | List<|CurrentType<|"table", 1|>|>,
 	c_keyword = false | true,
+	is_token = true,
 }]]
 --[[#type META.Token = META.@Self]]
 
@@ -208,7 +209,7 @@ do
 			)
 			and
 			-- check if it's used in a statement, because foo.>>continue<< = true should not highlight as a keyword
-			self.parent.type == "statement"
+			self.parent.is_statement
 		then
 			return true
 		end
@@ -219,8 +220,8 @@ do
 
 		if self.parent then
 			if
-				self.parent.kind == "value" and
-				self.parent.parent.kind == "binary_operator" and
+				self.parent.Type == "expression_value" and
+				self.parent.parent.Type == "expression_binary_operator" and
 				(
 					self.parent.parent.value and
 					self.parent.parent.value.value == "." or
@@ -334,7 +335,7 @@ do
 		if
 			self.type == "letter" and
 			self.parent and
-			self.parent.kind:find("function", nil, true)
+			self.parent.Type:find("function", nil, true)
 		then
 
 		--return true
@@ -420,6 +421,7 @@ function META.New(
 )--[[#: META.@Self]]
 	return setmetatable(
 		{
+			is_token = true,
 			type = type,
 			value = value,
 			start = start,

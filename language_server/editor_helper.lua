@@ -416,7 +416,7 @@ function META:FindTokensFromRange(
 end
 
 do
-	local function find_parent(token, typ, kind)
+	local function find_parent(token, typ)
 		local node = token.parent
 
 		if not node then return nil end
@@ -425,7 +425,7 @@ do
 			if type(typ) == "function" then
 				if typ(node) then return node end
 			else
-				if node.type == typ and node.kind == kind then return node end
+				if node.Type == typ then return node end
 			end
 
 			node = node.parent
@@ -434,12 +434,12 @@ do
 		return nil
 	end
 
-	local function find_nodes(tokens, type, kind)
+	local function find_nodes(tokens, type)
 		local nodes = {}
 		local done = {}
 
 		for _, token in ipairs(tokens) do
-			local node = find_parent(token, type, kind)
+			local node = find_parent(token, type)
 
 			if node and not done[node] then
 				table.insert(nodes, node)
@@ -453,9 +453,9 @@ do
 	function META:GetInlayHints(path, start_line, start_character, stop_line, stop_character)
 		local tokens = self:FindTokensFromRange(path, start_line, start_character, stop_line, stop_character)
 		local hints = {}
-		local assignments = find_nodes(tokens, "statement", "local_assignment")
+		local assignments = find_nodes(tokens, "statement_local_assignment")
 
-		for _, assingment in ipairs(find_nodes(tokens, "statement", "assignment")) do
+		for _, assingment in ipairs(find_nodes(tokens, "statement_assignment")) do
 			table.insert(assignments, assingment)
 		end
 
@@ -469,7 +469,7 @@ do
 							types and
 							#types > 0 and
 							(
-								assignment.right[i].kind ~= "value" or
+								assignment.right[i].Type ~= "expression_value" or
 								assignment.right[i].value.value.type == "letter"
 							)
 						then
@@ -788,10 +788,10 @@ do
 
 		done[node] = true
 
-		if type(node) ~= "table" or not node.type or not node.kind then return end
+		if type(node) ~= "table" or not node.Type then return end
 
 		local root = {
-			name = node.type .. "-" .. node.kind,
+			name = node.Type,
 			detail = tostring(node),
 			kind = "Variable",
 			children = {},
@@ -805,7 +805,7 @@ do
 					table.insert(root.children, child)
 				else
 					for i, v in ipairs(v) do
-						if type(node) ~= "table" or not node.type or not node.kind then
+						if type(node) ~= "table" or not node.Type then
 
 						else
 							local child = build(self, path, v, done)
@@ -1003,8 +1003,8 @@ do
 	end
 
 	local function build_nodes(self, path, node)
-		if node.type == "statement" then
-			if node.kind == "root" then
+		if node.is_statement then
+			if node.Type == "statement_root" then
 				local scope = node.scopes and node.scopes[#node.scopes]
 				local str = "\n" .. tostring(scope) .. "\n"
 				local root = {

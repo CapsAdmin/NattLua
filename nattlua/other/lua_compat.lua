@@ -85,4 +85,21 @@ do -- these are just helpers for print debugging
 			io.write(str)
 		end
 	end
+
+	do
+		local old = print
+		local done = {}
+
+		function print_once(...)
+			local tbl = {}
+			for i = 1, select("#", ...) do
+				tbl[i] = tostring((select(i, ...)))
+			end
+			local hash = table.concat(tbl, "\t")
+			if not done[hash] then
+				old(hash)
+				done[hash] = true
+			end
+		end
+	end
 end

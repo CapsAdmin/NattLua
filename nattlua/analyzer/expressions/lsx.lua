@@ -17,7 +17,7 @@ return {
 			tbl:SetCreationScope(self:GetScope())
 
 			for _, node in ipairs(node.props) do
-				if node.kind == "table_key_value" then
+				if node.Type == "sub_statement_table_key_value" then
 					local key = LString(node.tokens["identifier"].value)
 					local val = self:GetFirstValue(self:AnalyzeExpression(node.value_expression)) or Nil()
 					self:NewIndexOperator(tbl, key, val)

@@ -10,7 +10,7 @@ function META:EmitExpression(node)
 		end
 	end
 
-	if node.kind == "binary_operator" then
+	if node.Type == "expression_binary_operator" then
 		self:EmitBinaryOperator(node)
 	elseif node.kind == "function" then
 		self:EmitAnonymousFunction(node)
@@ -302,7 +302,7 @@ function META:EmitTable(tree)
 				else
 					self:EmitExpression(node.value_expression)
 				end
-			elseif node.kind == "table_key_value" then
+			elseif node.Type == "sub_statement_table_key_value" then
 				if tree.spread and not during_spread then
 					during_spread = true
 					self:Emit("{")
@@ -618,11 +618,11 @@ function META:EmitAssignment(node)
 	for i, left in ipairs(node.left) do
 		local right = node.right[i]
 
-		if left.kind == "binary_operator" then
+		if left.Type == "expression_binary_operator" then
 			self:Emit("OP['='](")
 
 			if
-				left.kind == "binary_operator" and
+				left.Type == "expression_binary_operator" and
 				(
 					left.value.value == "." or
 					left.value.value == ":"
@@ -690,7 +690,7 @@ function META:EmitStatement(node)
 		self:EmitFunction(node)
 	elseif node.kind == "local_function" then
 		self:EmitLocalFunction(node)
-	elseif node.kind == "local_analyzer_function" then
+	elseif node.Type == "statement_local_analyzer_function" then
 		self:EmitLocalTypeFunction(node)
 	elseif node.kind == "destructure_assignment" then
 		self:EmitDestructureAssignment(node)
@@ -836,13 +836,13 @@ do -- types
 			for i, node in ipairs(node.children) do
 				self:Whitespace("\t")
 
-				if node.kind == "table_index_value" then
+				if node.Type == "sub_statement_table_index_value" then
 					self:EmitTypeExpression(node.value_expression)
-				elseif node.kind == "table_key_value" then
+				elseif node.Type == "sub_statement_table_key_value" then
 					self:EmitToken(node.tokens["identifier"])
 					self:EmitToken(node.tokens["="], ":")
 					self:EmitTypeExpression(node.value_expression)
-				elseif node.kind == "table_expression_value" then
+				elseif node.Type == "sub_statement_table_expression_value" then
 					self:EmitToken(node.tokens["["])
 					self:Whitespace("(")
 					self:EmitTypeExpression(node.key_expression)
@@ -919,7 +919,7 @@ do -- types
 			end
 		end
 
-		if node.kind == "binary_operator" then
+		if node.Type == "expression_binary_operator" then
 			self:EmitTypeBinaryOperator(node)
 		elseif node.kind == "analyzer_function" then
 			self:EmitTypeFunction(node)

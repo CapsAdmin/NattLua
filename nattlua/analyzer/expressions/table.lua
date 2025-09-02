@@ -48,7 +48,7 @@ return {
 		local numerical_index = 0
 
 		for _, node in ipairs(tree.children) do
-			if node.kind == "table_key_value" then
+			if node.Type == "sub_statement_table_key_value" then
 				local key = ConstString(node.tokens["identifier"].value)
 
 				if node.type_expression then
@@ -69,7 +69,7 @@ return {
 					self:MapTypeToNode(val, node.value_expression)
 					self:NewIndexOperator(tbl, key, val)
 				end
-			elseif node.kind == "table_expression_value" then
+			elseif node.Type == "sub_statement_table_expression_value" then
 				local key = self:GetFirstValue(self:AnalyzeExpression(node.key_expression))
 
 				if node.type_expression then
@@ -89,7 +89,7 @@ return {
 					local val = self:Assert(self:GetFirstValue(self:AnalyzeExpression(node.value_expression)))
 					self:NewIndexOperator(tbl, key, val)
 				end
-			elseif node.kind == "table_index_value" then
+			elseif node.Type == "sub_statement_table_index_value" then
 				if node.spread then
 					local val = self:GetFirstValue(self:AnalyzeExpression(node.spread.expression))
 
@@ -115,11 +115,11 @@ return {
 
 					if
 						(
-							node.value_expression.kind ~= "value" or
+							node.value_expression.Type ~= "expression_value" or
 							node.value_expression.value.value ~= "..."
 						)
 						and
-						node.value_expression.kind ~= "postfix_call"
+						node.value_expression.Type ~= "expression_postfix_call"
 					then
 						obj = self:GetFirstValue(obj)
 					end

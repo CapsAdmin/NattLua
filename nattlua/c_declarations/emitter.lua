@@ -42,7 +42,7 @@ do
 
 			table.insert(out, {type = "function", args = args})
 
-			if node.parent.kind == "c_declaration" then
+			if node.parent.Type == "expression_c_declaration" then
 				hmmm(node.parent, true, out)
 				return
 			end
@@ -62,7 +62,7 @@ do
 
 		if not walk_up then return end
 
-		if node.parent.kind == "c_declaration" then hmmm(node.parent, true, out) end
+		if node.parent.Type == "expression_c_declaration" then hmmm(node.parent, true, out) end
 	end
 
 	function META:EmitNattluaCDeclaration(node)
@@ -124,15 +124,15 @@ function META:BuildCode(block)
 end
 
 function META:EmitStatement(node)
-	if node.kind == "typedef" then
+	if node.Type == "expression_typedef" then
 		self:EmitTypeDef(node)
-	elseif node.kind == "c_declaration" then
+	elseif node.Type == "expression_c_declaration" then
 		self:EmitCDeclaration(node)
 	end
 
 	if node.tokens[";"] then self:EmitToken(node.tokens[";"]) end
 
-	if node.kind == "end_of_file" then
+	if node.Type == "statement_end_of_file" then
 		self:EmitToken(node.tokens["end_of_file"])
 	end
 end
@@ -162,15 +162,15 @@ function META:EmitCDeclaration(node)
 	end
 
 	for i, v in ipairs(node.modifiers) do
-		if v.kind == "attribute_expression" then
+		if v.Type == "expression_attribute_expression" then
 			self:EmitAttributeExpression(v)
-		elseif v.kind == "struct" then
+		elseif v.Type == "expression_struct" then
 			self:EmitStruct(v)
-		elseif v.kind == "union" then
+		elseif v.Type == "expression_union" then
 			self:EmitUnion(v)
-		elseif v.kind == "dollar_sign" then
+		elseif v.Type == "expression_dollar_sign" then
 			self:EmitDollarSign(v)
-		elseif v.kind == "enum" then
+		elseif v.Type == "expression_enum" then
 			self:EmitEnum(v)
 		else
 			self:EmitToken(v)
@@ -248,7 +248,7 @@ function META:EmitPointers(pointers)
 	for i, v in ipairs(pointers) do
 		local a, b = v[1], v[2]
 
-		if a.kind == "attribute_expression" then
+		if a.Type == "expression_attribute_expression" then
 			self:EmitAttributeExpression(a)
 		else
 			self:EmitToken(a)

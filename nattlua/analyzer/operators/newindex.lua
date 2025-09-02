@@ -132,9 +132,12 @@ return {
 				if
 					node and
 					(
-						node.kind == "function" or
-						node.kind == "type_function" or
-						node.kind == "analyzer_function"
+						node.Type == "expression_function" or
+						node.Type == "expression_type_function" or
+						node.Type == "expression_analyzer_function" or
+						node.Type == "statement_function" or
+						node.Type == "statement_type_function" or
+						node.Type == "statement_analyzer_function"
 					)
 					and
 					node.self_call

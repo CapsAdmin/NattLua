@@ -49,19 +49,13 @@ return {
 			return AnalyzeImport(self, node, node.left.value.value == "require" and node.path)
 		end
 
-		local is_type_call = node.type_call or
-			node.left and
-			(
-				node.left.kind == "local_generics_type_function" or
-				node.left.kind == "generics_type_function"
-			)
-		self:PushAnalyzerEnvironment(is_type_call and "typesystem" or "runtime")
+		self:PushAnalyzerEnvironment(node.type_call and "typesystem" or "runtime")
 		local callable = self:Assert(self:AnalyzeExpression(node.left))
 		local self_arg
 
 		if
 			self.self_arg_stack and
-			node.left.kind == "binary_operator" and
+			node.left.Type == "expression_binary_operator" and
 			node.left.value.value == ":"
 		then
 			self_arg = table.remove(self.self_arg_stack)

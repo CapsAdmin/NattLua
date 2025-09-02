@@ -30,7 +30,7 @@ function META:ParseIdentifier(expect_type--[[#: nil | boolean]])
 		return
 	end
 
-	local node = self:StartNode("expression", "value") -- as ValueExpression ]]
+	local node = self:StartNode("expression_value") -- as ValueExpression ]]
 	node.is_identifier = true
 
 	if self:IsTokenValue("...") then
@@ -57,14 +57,14 @@ function META:ParseIdentifier(expect_type--[[#: nil | boolean]])
 end
 
 function META:ParseValueExpressionToken(expect_value--[[#: nil | string]])
-	local node = self:StartNode("expression", "value")
+	local node = self:StartNode("expression_value")
 	node.value = expect_value and self:ExpectTokenValue(expect_value) or self:ParseToken()
 	node = self:EndNode(node)
 	return node
 end
 
 function META:ParseValueExpressionType(expect_value--[[#: TokenType]])
-	local node = self:StartNode("expression", "value")
+	local node = self:StartNode("expression_value")
 	node.value = self:ExpectTokenType(expect_value)
 	node = self:EndNode(node)
 	return node
@@ -181,7 +181,7 @@ function META:ParseAnalyzerFunctionBody(
 	node.identifiers = self:ParseMultipleValues(self.ParseTypeFunctionArgument, type_args)
 
 	if self:IsTokenValue("...") then
-		local vararg = self:StartNode("expression", "value")
+		local vararg = self:StartNode("expression_value")
 		vararg.value = self:ExpectTokenValue("...")
 
 		if self:IsTokenValue(":") or type_args then
@@ -309,14 +309,14 @@ end
 local imported_index = nil
 
 function META:ParseRootNode()
-	local node = self:StartNode("statement", "root")
+	local node = self:StartNode("statement_root")
 	self.RootStatement = self.config and self.config.root_statement_override or node
 	local shebang
 	local statements = {}
 	node.statements = statements
 
 	if self:IsTokenType("shebang") then
-		shebang = self:StartNode("statement", "shebang")
+		shebang = self:StartNode("statement_shebang")
 		shebang.tokens["shebang"] = self:ExpectTokenType("shebang")
 		shebang = self:EndNode(shebang)
 		node.tokens["shebang"] = shebang.tokens["shebang"]
@@ -343,7 +343,7 @@ function META:ParseRootNode()
 	self:ParseStatements(nil, statements)
 
 	if self:IsTokenType("end_of_file") then
-		local eof = self:StartNode("statement", "end_of_file")
+		local eof = self:StartNode("statement_end_of_file")
 		eof.tokens["end_of_file"] = self.tokens[#self.tokens]
 		eof = self:EndNode(eof)
 		table_insert(statements, eof)

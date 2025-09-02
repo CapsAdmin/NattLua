@@ -258,7 +258,7 @@ local function test(c_code, error_level)
 	end
 	local ast = parser:ParseRootNode()
 
-	if ast.statements[2].kind == "end_of_file" then
+	if ast.statements[2].Type == "statement_end_of_file" then
 		local node = ast.statements[1]
 
 		if using_name then
@@ -282,7 +282,7 @@ local function test(c_code, error_level)
 
 			for _, v in pairs(tbl) do
 				if type(v) == "table" then
-					if v.type ~= "statement" and v.type ~= "expression" and v.value then
+					if not v.is_statement and not v.is_expression and v.value then
 						out[v] = v
 					else
 						if not done[v] then
@@ -322,7 +322,7 @@ local function test(c_code, error_level)
 		error("UH OH", error_level)
 	end
 
-	if ast.statements[2].kind == "end_of_file" then return ast.statements[1] end
+	if ast.statements[2].Type == "statement_end_of_file" then return ast.statements[1] end
 
 	return ast
 end
