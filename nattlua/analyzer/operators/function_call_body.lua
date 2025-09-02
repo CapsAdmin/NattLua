@@ -494,8 +494,13 @@ return function(self, obj, input)
 		self:GetCurrentAnalyzerEnvironment()
 	)
 
-	if function_node.self_call then
-		self:CreateLocalValue("self", input:GetWithNumber(1) or Nil())
+	if function_node.Type == "statement_function" or
+		function_node.Type == "statement_analyzer_function" or
+		function_node.Type == "statement_type_function"
+	then
+		if function_node.self_call then
+			self:CreateLocalValue("self", input:GetWithNumber(1) or Nil())
+		end
 	end
 
 	-- first setup runtime generics type arguments if any

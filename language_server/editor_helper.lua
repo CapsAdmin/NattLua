@@ -1123,7 +1123,7 @@ do
 	}
 
 	local function get_semantic_type(token)
-		if token.fake then return token.type end
+		if token.type == "fake" then return "string" end
 
 		if token.type == "end_of_file" or token.type == "space" then return end
 
@@ -1332,8 +1332,7 @@ do
 				if tokens then
 					process_token(
 						{
-							fake = true,
-							type = "string",
+							type = "fake",
 							value = start,
 							start = token.start,
 							stop = token.start + #start,
@@ -1355,8 +1354,7 @@ do
 
 					process_token(
 						{
-							fake = true,
-							type = "string",
+							type = "fake",
 							value = start,
 							start = token.stop,
 							stop = token.stop + #start,

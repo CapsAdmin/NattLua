@@ -46,13 +46,12 @@ local META = class.CreateTemplate("node")
 	is_left_assignment = boolean,
 	is_expression = boolean,
 	is_statement = boolean,
-	is_sub_statement = boolean,
 }]]
 --[[#type Node = META.@Self]]
 local all_nodes = {
 	["sub_statement_table_expression_value"] = function()
 		return {
-			is_sub_statement = true,
+			is_statement = true,
 			value_expression = false,
 			type_expression = false,
 			key_expression = false,
@@ -68,7 +67,7 @@ local all_nodes = {
 	end,
 	["sub_statement_table_index_value"] = function()
 		return {
-			is_sub_statement = true,
+			is_statement = true,
 			value_expression = false,
 			spread = false,
 			key = false,
@@ -79,7 +78,7 @@ local all_nodes = {
 	end,
 	["sub_statement_table_key_value"] = function()
 		return {
-			is_sub_statement = true,
+			is_statement = true,
 			value_expression = false,
 			type_expression = false,
 			spread = false,
@@ -874,6 +873,14 @@ function META.New(
 	parent--[[#: any]]
 )
 	local init = all_nodes[type]()
+
+	if init.is_expression then
+		init.is_statement = false
+	else
+		init.is_expression = false
+	end
+
+
 	init.Type = type
 	init.environment = environment
 	init.code_start = code_start

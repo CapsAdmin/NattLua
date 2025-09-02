@@ -94,8 +94,6 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 			rawset(self--[[# as any]], key, val)
 		end
 	end
-
-	--meta:DebugPropertyAccess()
 	return meta
 end
 

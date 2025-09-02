@@ -11,6 +11,7 @@ META.Type = "string"
 --[[#type META.@Name = "TString"]]
 --[[#type TString = META.@Self]]
 --[[#type TString.Type = "string"]]
+--[[#type TString.lua_compiler = false|string]]
 META:GetSet("Data", false--[[# as string | false]])
 META:GetSet("Hash", false--[[# as string]])
 META:GetSet("PatternContract", false--[[# as false | string]])
@@ -142,6 +143,7 @@ local function new(data--[[#: string | nil]], pattern--[[#: string | nil]])
 			Contract = false,
 			MetaTable = false,
 			Hash = compute_hash(data, pattern),
+			lua_compiler = false,
 		},
 		META
 	)
