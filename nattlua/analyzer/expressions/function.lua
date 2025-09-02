@@ -12,7 +12,8 @@ local Emitter = require("nattlua.emitter.emitter").New
 local function analyze_arguments(self, node)
 	local args = {}
 
-	if node.self_call and node.expression then
+
+	if (node.kind == "function" or node.kind == "type_function" or node.kind == "analyzer_function") and node.self_call and node.expression then
 		self:PushAnalyzerEnvironment("runtime")
 		local val = self:GetFirstValue(self:AnalyzeExpression(node.expression.left))
 		self:PopAnalyzerEnvironment()
@@ -74,7 +75,9 @@ local function analyze_arguments(self, node)
 		end
 
 		for i, key in ipairs(node.identifiers) do
-			if node.self_call then i = i + 1 end
+			if node.kind == "function" or node.kind == "type_function" or node.kind == "analyzer_function" then
+				if node.self_call then i = i + 1 end
+			end
 
 			if key.identifier and key.identifier.value ~= "..." then
 				args[i] = self:GetFirstValue(self:AnalyzeExpression(key))
@@ -85,7 +88,7 @@ local function analyze_arguments(self, node)
 				self:MapTypeToNode(self:CreateLocalValue(key.value.value, Any(), i), key)
 				args[i] = self:AnalyzeExpression(key.type_expression)
 			elseif key.kind == "value" then
-				if not node.statements then
+				if node.kind == "function_signature" then
 					local obj = self:AnalyzeExpression(key)
 
 					if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 then
@@ -190,7 +193,7 @@ return {
 			obj:SetAnalyzerFunction(node.compiled_function)
 		end
 
-		if node.statements then obj:SetFunctionBodyNode(node) end
+		if node.kind ~= "function_signature" then obj:SetFunctionBodyNode(node) end
 
 		obj:SetExplicitInputSignature(has_explicit_arguments(node))
 		obj:SetExplicitOutputSignature(has_explicit_return_type(node))

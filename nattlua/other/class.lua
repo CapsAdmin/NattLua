@@ -57,13 +57,25 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 	function meta:DebugPropertyAccess()
 		if false--[[# as true]] then return end
 
+		local function tostring_obj(obj)
+			if rawget(obj, "Type") then return obj.Type end
+
+			if rawget(obj, "type") and rawget(obj, "kind") then
+				return obj.type .. " - " .. obj.kind
+			end
+
+			return tostring(obj)
+		end
+
 		meta.__index = function(self, key)
 			if meta[key] == nil or type(meta[key]) ~= "function" then
 				local line = get_line()
 				local hash = key .. "-" .. line
 
 				if not done[hash] then
-					print(get_constructor(), "GET " .. key, get_line())
+					io.write(tostring_obj(self), " - ", get_constructor(), "\n")
+					io.write("\t", line, "\n")
+					io.write("\tGET " .. key, "\n")
 					done[hash] = true
 				end
 			end
@@ -71,12 +83,14 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 			return meta[key]
 		end
 		meta.__newindex = function(self, key, val)
-			if meta[key] == nil or type(meta[key]) ~= "function" then
+			if val == nil or meta[key] == nil or type(meta[key]) ~= "function" then
 				local line = get_line()
 				local hash = key .. "-" .. line .. "-" .. type(val)
 
 				if not done[hash] then
-					print(get_constructor(), "SET " .. key .. " = " .. type(val), line)
+					io.write(tostring_obj(self), " - ", get_constructor(), "\n")
+					io.write("\t", line, "\n")
+					io.write("\tSET " .. key .. " = " .. type(val), "\n")
 					done[hash] = true
 				end
 			end

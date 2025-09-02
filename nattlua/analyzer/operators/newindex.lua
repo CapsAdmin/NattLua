@@ -126,27 +126,36 @@ return {
 		function META:NewIndexOperator(obj, key, val, raw)
 			if obj.Type == "any" then return true end
 
-			if
-				val.Type == "function" and
-				val:GetFunctionBodyNode() and
-				val:GetFunctionBodyNode().self_call
-			then
-				local arg = val:GetInputSignature():GetWithNumber(1)
+			if val.Type == "function" then
+				local node = val:GetFunctionBodyNode()
 
 				if
-					arg and
-					arg.Type == "table" and
-					not arg:GetContract()
+					node and
+					(
+						node.kind == "function" or
+						node.kind == "type_function" or
+						node.kind == "analyzer_function"
+					)
 					and
-					not arg.Self and
-					obj.Self2 ~= arg and
-					not self:IsTypesystem()
+					node.self_call
 				then
-					val:SetCalled(true)
-					val = val:Copy()
-					val:SetCalled(false)
-					val:GetInputSignature():Set(1, Union({Any(), obj}))
-					self:AddToUnreachableCodeAnalysis(val, val:GetInputSignature(), val:GetFunctionBodyNode(), true)
+					local arg = val:GetInputSignature():GetWithNumber(1)
+
+					if
+						arg and
+						arg.Type == "table" and
+						not arg:GetContract()
+						and
+						not arg.Self and
+						obj.Self2 ~= arg and
+						not self:IsTypesystem()
+					then
+						val:SetCalled(true)
+						val = val:Copy()
+						val:SetCalled(false)
+						val:GetInputSignature():Set(1, Union({Any(), obj}))
+						self:AddToUnreachableCodeAnalysis(val, val:GetInputSignature(), node, true)
+					end
 				end
 			end
 

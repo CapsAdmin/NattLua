@@ -264,6 +264,7 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			Falsy = false,
 			Called = false,
 			Contract = false,
+			Hash = false,
 			Truthy = true,
 			ReferenceType = false,
 			ExplicitInputSignature = false,
@@ -284,6 +285,7 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			Scope = false,
 			Parent = false,
 			suppress = false,
+			InputArgumentsInferred = false,
 		},
 		META
 	)

@@ -39,6 +39,8 @@ local META = class.CreateTemplate("node")
 	environments = any,
 	identifiers_typesystem = any,
 	error_node = boolean,
+	is_identifier = boolean,
+	is_left_assignment = boolean,
 }]]
 --[[#type Node = META.@Self]]
 local all_nodes = {
@@ -48,6 +50,7 @@ local all_nodes = {
 				value_expression = false,
 				type_expression = false,
 				key_expression = false,
+				spread = false,
 				tokens = {
 					["]"] = false,
 					["="] = false,
@@ -71,6 +74,7 @@ local all_nodes = {
 			return {
 				value_expression = false,
 				type_expression = false,
+				spread = false,
 				tokens = {
 					["{"] = false,
 					["}"] = false,
@@ -83,6 +87,76 @@ local all_nodes = {
 		end,
 	},
 	expression = {
+		["function"] = function()
+			return {
+				return_types = false,
+				statements = false,
+				identifiers = false,
+				environments_override = false,
+				self_call = false,
+				tokens = {
+					["function"] = false,
+					["end"] = false,
+					["arguments)"] = false,
+					["return:"] = false,
+					["arguments("] = false,
+					["table"] = false,
+				},
+			}
+		end,
+		["analyzer_function"] = function()
+			return {
+				return_types = false,
+				statements = false,
+				compiled_function = false,
+				identifiers = false,
+				environments_override = false,
+				self_call = false,
+				tokens = {
+					["analyzer"] = false,
+					["function"] = false,
+					["arguments)"] = false,
+					["table"] = false,
+					["return:"] = false,
+					["arguments("] = false,
+					["end"] = false,
+				},
+			}
+		end,
+		["type_function"] = function()
+			return {
+				statements = false,
+				identifiers = false,
+				identifiers_typesystem = false,
+				environments_override = false,
+				self_call = false,
+				return_types = false,
+				tokens = {
+					["function"] = false,
+					["arguments)"] = false,
+					["end"] = false,
+					["arguments("] = false,
+					["table"] = false,
+				},
+			}
+		end,
+		["function_signature"] = function()
+			return {
+				return_types = false,
+				identifiers = false,
+				tokens = {
+					["="] = false,
+					["arguments("] = false,
+					["arguments)"] = false,
+					[">"] = false,
+					["return)"] = false,
+					["function"] = false,
+					[":"] = false,
+					["table"] = false,
+					["return("] = false,
+				},
+			}
+		end,
 		["attribute_expression"] = function()
 			return {
 				expression = false,
@@ -176,22 +250,6 @@ local all_nodes = {
 				},
 			}
 		end,
-		["function"] = function()
-			return {
-				return_types = false,
-				statements = false,
-				identifiers = false,
-				environments_override = false,
-				tokens = {
-					["function"] = false,
-					["end"] = false,
-					["arguments)"] = false,
-					["return:"] = false,
-					["arguments("] = false,
-					["table"] = false,
-				},
-			}
-		end,
 		["postfix_call"] = function()
 			return {
 				RootStatement = false,
@@ -202,6 +260,7 @@ local all_nodes = {
 				right = false,
 				first_node = false,
 				expressions_typesystem = false,
+				require_expression = false,
 				left = false,
 				expressions = false,
 				path = false,
@@ -251,37 +310,6 @@ local all_nodes = {
 				tokens = {
 					["potential_identifier"] = false,
 					["typedef"] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["analyzer_function"] = function()
-			return {
-				return_types = false,
-				statements = false,
-				compiled_function = false,
-				identifiers = false,
-				tokens = {
-					["analyzer"] = false,
-					["function"] = false,
-					["arguments)"] = false,
-					["table"] = false,
-					["return:"] = false,
-					["arguments("] = false,
-					["end"] = false,
-				},
-			}
-		end,
-		["type_function"] = function()
-			return {
-				statements = false,
-				identifiers = false,
-				identifiers_typesystem = false,
-				tokens = {
-					["function"] = false,
-					["arguments)"] = false,
-					["end"] = false,
-					["arguments("] = false,
 					["table"] = false,
 				},
 			}
@@ -373,23 +401,6 @@ local all_nodes = {
 				},
 			}
 		end,
-		["function_signature"] = function()
-			return {
-				return_types = false,
-				identifiers = false,
-				tokens = {
-					["="] = false,
-					["arguments("] = false,
-					["arguments)"] = false,
-					[">"] = false,
-					["return)"] = false,
-					["function"] = false,
-					[":"] = false,
-					["table"] = false,
-					["return("] = false,
-				},
-			}
-		end,
 		["c_declaration"] = function()
 			return {
 				pointers = false,
@@ -449,6 +460,7 @@ local all_nodes = {
 				statements = false,
 				expressions = false,
 				identifiers = false,
+				on_pop = false,
 				tokens = {
 					["for"] = false,
 					["end"] = false,
@@ -463,6 +475,7 @@ local all_nodes = {
 				statements = false,
 				expressions = false,
 				identifiers = false,
+				on_pop = false,
 				tokens = {
 					["for"] = false,
 					["="] = false,
@@ -511,60 +524,6 @@ local all_nodes = {
 				},
 			}
 		end,
-		["local_function"] = function()
-			return {
-				return_types = false,
-				statements = false,
-				identifiers = false,
-				tokens = {
-					["table"] = false,
-					["arguments)"] = false,
-					["function"] = false,
-					["arguments("] = false,
-					["local"] = false,
-					["return:"] = false,
-					["identifier"] = false,
-					["end"] = false,
-				},
-			}
-		end,
-		["function"] = function()
-			return {
-				return_types = false,
-				self_call = false,
-				statements = false,
-				expression = false,
-				identifiers = false,
-				tokens = {
-					["function"] = false,
-					["end"] = false,
-					["arguments)"] = false,
-					["return:"] = false,
-					["arguments("] = false,
-					["table"] = false,
-				},
-			}
-		end,
-		["local_type_function"] = function()
-			return {
-				return_types = false,
-				identifiers_typesystem = false,
-				statements = false,
-				identifiers = false,
-				tokens = {
-					["arguments_typesystem("] = false,
-					["arguments_typesystem)"] = false,
-					["return:"] = false,
-					["arguments("] = false,
-					["arguments)"] = false,
-					["function"] = false,
-					["end"] = false,
-					["identifier"] = false,
-					["local"] = false,
-					["table"] = false,
-				},
-			}
-		end,
 		["if"] = function()
 			return {
 				statements = false,
@@ -603,48 +562,11 @@ local all_nodes = {
 				},
 			}
 		end,
-		["analyzer_function"] = function()
-			return {
-				return_types = false,
-				self_call = false,
-				statements = false,
-				compiled_function = false,
-				expression = false,
-				identifiers = false,
-				tokens = {
-					["^"] = false,
-					["analyzer"] = false,
-					["function"] = false,
-					["table"] = false,
-					["arguments)"] = false,
-					["return:"] = false,
-					["arguments("] = false,
-					["end"] = false,
-				},
-			}
-		end,
-		["type_function"] = function()
-			return {
-				self_call = false,
-				identifiers_typesystem = false,
-				statements = false,
-				expression = false,
-				identifiers = false,
-				tokens = {
-					["arguments)"] = false,
-					["function"] = false,
-					["arguments_typesystem("] = false,
-					["arguments_typesystem)"] = false,
-					["end"] = false,
-					["arguments("] = false,
-					["table"] = false,
-				},
-			}
-		end,
 		["repeat"] = function()
 			return {
 				statements = false,
 				expression = false,
+				on_pop = false,
 				tokens = {
 					["until"] = false,
 					["repeat"] = false,
@@ -674,6 +596,7 @@ local all_nodes = {
 			return {
 				statements = false,
 				expression = false,
+				on_pop = false,
 				tokens = {
 					["while"] = false,
 					["table"] = false,
@@ -702,25 +625,6 @@ local all_nodes = {
 					["table"] = false,
 					["{"] = false,
 					["="] = false,
-				},
-			}
-		end,
-		["local_analyzer_function"] = function()
-			return {
-				return_types = false,
-				statements = false,
-				compiled_function = false,
-				identifiers = false,
-				tokens = {
-					["return:"] = false,
-					["arguments("] = false,
-					["arguments)"] = false,
-					["analyzer"] = false,
-					["function"] = false,
-					["end"] = false,
-					["local"] = false,
-					["identifier"] = false,
-					["table"] = false,
 				},
 			}
 		end,
@@ -772,9 +676,127 @@ local all_nodes = {
 				statements = false,
 				imported = false,
 				lexer_tokens = false,
+				environments_override = false,
 				tokens = {
 					["shebang"] = false,
 					["eof"] = false,
+					["table"] = false,
+				},
+			}
+		end,
+		["local_analyzer_function"] = function()
+			return {
+				return_types = false,
+				statements = false,
+				compiled_function = false,
+				identifiers = false,
+				environments_override = false,
+				tokens = {
+					["return:"] = false,
+					["arguments("] = false,
+					["arguments)"] = false,
+					["analyzer"] = false,
+					["function"] = false,
+					["end"] = false,
+					["local"] = false,
+					["identifier"] = false,
+					["table"] = false,
+				},
+			}
+		end,
+		["local_function"] = function()
+			return {
+				return_types = false,
+				statements = false,
+				identifiers = false,
+				environments_override = false,
+				tokens = {
+					["table"] = false,
+					["arguments)"] = false,
+					["function"] = false,
+					["arguments("] = false,
+					["local"] = false,
+					["return:"] = false,
+					["identifier"] = false,
+					["end"] = false,
+				},
+			}
+		end,
+		["function"] = function()
+			return {
+				return_types = false,
+				self_call = false,
+				statements = false,
+				expression = false,
+				identifiers = false,
+				environments_override = false,
+				tokens = {
+					["function"] = false,
+					["end"] = false,
+					["arguments)"] = false,
+					["return:"] = false,
+					["arguments("] = false,
+					["table"] = false,
+				},
+			}
+		end,
+		["local_type_function"] = function()
+			return {
+				return_types = false,
+				identifiers_typesystem = false,
+				statements = false,
+				identifiers = false,
+				environments_override = false,
+				tokens = {
+					["arguments_typesystem("] = false,
+					["arguments_typesystem)"] = false,
+					["return:"] = false,
+					["arguments("] = false,
+					["arguments)"] = false,
+					["function"] = false,
+					["end"] = false,
+					["identifier"] = false,
+					["local"] = false,
+					["table"] = false,
+				},
+			}
+		end,
+		["analyzer_function"] = function()
+			return {
+				return_types = false,
+				self_call = false,
+				statements = false,
+				compiled_function = false,
+				environments_override = false,
+				expression = false,
+				identifiers = false,
+				tokens = {
+					["^"] = false,
+					["analyzer"] = false,
+					["function"] = false,
+					["table"] = false,
+					["arguments)"] = false,
+					["return:"] = false,
+					["arguments("] = false,
+					["end"] = false,
+				},
+			}
+		end,
+		["type_function"] = function()
+			return {
+				self_call = false,
+				identifiers_typesystem = false,
+				statements = false,
+				expression = false,
+				identifiers = false,
+				environments_override = false,
+				tokens = {
+					["arguments)"] = false,
+					["function"] = false,
+					["arguments_typesystem("] = false,
+					["arguments_typesystem)"] = false,
+					["end"] = false,
+					["arguments("] = false,
 					["table"] = false,
 				},
 			}
@@ -784,6 +806,8 @@ local all_nodes = {
 --[[#local type StatementKind = keysof<|all_nodes.statement|> | keysof<|all_nodes.sub_statement|>]]
 --[[#local type ExpressionKind = keysof<|all_nodes.expression|>]]
 
+-- TODO, replace this with META.New_type_kind()
+-- TODO, replace type-kind with .Type
 function META.New(
 	type--[[#: ref (keysof<|all_nodes|>)]],
 	kind--[[#: ref (StatementKind | ExpressionKind)]],
@@ -813,6 +837,8 @@ function META.New(
 	init.environments = false
 	init.identifiers_typesystem = false
 	init.error_node = false
+	init.is_identifier = false
+	init.is_left_assignment = false
 	return setmetatable(init--[[# as META.@Self]], META)
 end
 

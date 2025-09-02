@@ -15,12 +15,12 @@ local setmetatable = _G.setmetatable
 	value = string,
 	start = number,
 	stop = number,
-	string_value = nil | string,
-	inferred_types = nil | List<|any|>,
-	potential_idiv = nil | boolean,
-	parent = nil | any,
-	whitespace = nil | List<|CurrentType<|"table", 1|>|>,
-	c_keyword = nil | true,
+	string_value = false | string,
+	inferred_types = false | List<|any|>,
+	potential_idiv = false | boolean,
+	parent = false | any,
+	whitespace = false | List<|CurrentType<|"table", 1|>|>,
+	c_keyword = false | true,
 }]]
 --[[#type META.Token = META.@Self]]
 
@@ -424,6 +424,13 @@ function META.New(
 			value = value,
 			start = start,
 			stop = stop,
+			whitespace = false,
+			string_value = false,
+			inferred_types = false,
+			potential_idiv = false,
+			parent = false,
+			whitespace = false,
+			c_keyword = false,
 		}--[[# as META.@Self]],
 		META
 	)

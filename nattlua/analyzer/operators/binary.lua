@@ -512,7 +512,7 @@ return {
 				self:PushFalsyExpressionContext()
 				r = self:Assert(self:AnalyzeExpression(node.right))
 				self:PopFalsyExpressionContext()
-				self.LEFT_SIDE_OR = nil
+				self.LEFT_SIDE_OR = false
 
 				if r.Type == "union" then
 					self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())

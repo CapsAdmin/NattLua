@@ -1346,6 +1346,7 @@ function META.New()
 			ReferenceId = false,
 			MetaTable = false,
 			Contract = false,
+			MutationLimit = 100,
 		},
 		META
 	)

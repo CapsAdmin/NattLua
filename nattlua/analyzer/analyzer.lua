@@ -361,6 +361,9 @@ function META.New(config)
 		analyzed_root_statements = {},
 		loaded_modules = {},
 		parsed_paths = {},
+		check_count = 0,
+		call_stack_map = {},
+		LEFT_SIDE_OR = false,
 	}
 
 	for _, func in ipairs(META.OnInitialize) do

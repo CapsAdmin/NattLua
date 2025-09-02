@@ -142,7 +142,7 @@ return function(META)
 			node.expression = self:ParseFunctionNameIndex()
 
 			do -- hacky
-				if node.expression.left then
+				if node.expression.kind == "binary_operator" and node.expression.left then
 					node.expression.left.standalone_letter = node
 					node.expression.left.force_upvalue = force_upvalue
 				else

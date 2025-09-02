@@ -20,6 +20,7 @@ return function(META)
 		self.environments_head = {runtime = {}, typesystem = {}}
 		self.scope_stack = {}
 		self.environment_nodes = {}
+		self.upvalue_position = 0
 	end)
 
 	function META:PushScope(scope)
@@ -41,7 +42,7 @@ return function(META)
 		local scope = LexicalScope(obj:GetScope() or self:GetScope(), obj)
 		store_scope(self, scope)
 		self:PushScope(scope)
-		scope.upvalue_position = obj:GetUpvaluePosition() or self:IncrementUpvaluePosition()
+		scope.upvalue_position = obj:GetUpvaluePosition() or self:IncrementUpvaluePosition() or 0
 		return scope
 	end
 
@@ -49,7 +50,7 @@ return function(META)
 		local scope = LexicalScope()
 		store_scope(self, scope)
 		self:PushScope(scope)
-		scope.upvalue_position = self:IncrementUpvaluePosition()
+		scope.upvalue_position = self:IncrementUpvaluePosition() or 0
 		return scope
 	end
 
@@ -79,7 +80,7 @@ return function(META)
 	end
 
 	function META:IncrementUpvaluePosition()
-		self.upvalue_position = (self.upvalue_position or 0) + 1
+		self.upvalue_position = self.upvalue_position + 1
 		return self.upvalue_position
 	end
 

@@ -849,10 +849,12 @@ return function()
 			self:EmitToken(node.tokens["function"])
 			self:Whitespace(" ")
 
-			if node.expression or node.identifier then
-				self:EmitExpression(node.expression or node.identifier)
+			if node.kind == "type_function" then
+				if node.expression then
+					self:EmitExpression(node.expression)
+				end
 			end
-
+			
 			self:EmitFunctionBody(node)
 			self:EmitToken(node.tokens["end"])
 		end

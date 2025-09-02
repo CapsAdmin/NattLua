@@ -97,6 +97,7 @@ function META.New(obj)
 			Scope = false,
 			Mutations = false,
 			UseCount = 0,
+			statement = false,
 		},
 		META
 	)

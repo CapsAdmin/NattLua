@@ -330,6 +330,7 @@ function META.New(
 			analyzer = false,
 			AnalyzedResult = false,
 			debug = false,
+			is_base_environment = false,
 			errors = {},
 		},
 		META

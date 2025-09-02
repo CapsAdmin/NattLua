@@ -9,7 +9,9 @@ function coverage.Preprocess(code, key)
 	local expressions = {}
 
 	local function inject_call_expression(parser, node, start, stop)
-		if node.environment == "typesystem" or node.type_call then return node end
+		if node.environment == "typesystem" then return node end
+
+		if node.kind == "postfix_call" and node.type_call then return node end
 
 		if node.kind == "function" then
 			-- don't mark the funciton body as being called
@@ -30,7 +32,7 @@ function coverage.Preprocess(code, key)
 
 		call_expression.expressions[3] = node
 
-		if node.right then call_expression.right = node.right end
+		if node.kind == "binary_operator" and node.right then call_expression.right = node.right end
 
 		table.insert(expressions, node)
 		-- to prevent start stop messing up from previous injections
@@ -59,7 +61,6 @@ function coverage.Preprocess(code, key)
 						end
 					elseif node.type == "expression" then
 						local start, stop = node:GetStartStop()
-
 						if
 							node.is_left_assignment or
 							node.is_identifier or

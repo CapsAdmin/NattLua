@@ -133,7 +133,7 @@ return function(META)
 			node.tokens["..."] = self:ExpectTokenValue("...")
 
 			if not self:GetToken().whitespace then
-				node.value = self:ParseTypeExpression(0)
+				node.value = self:ParseTypeExpression(0) or false
 			end
 
 			node = self:EndNode(node)
@@ -380,7 +380,7 @@ return function(META)
 
 				if not found then break end
 
-				if left_node.value and left_node.value.value == ":" then
+				if left_node.kind == "binary_operator" and left_node.value.value == ":" then
 					found.parser_call = true
 				end
 
@@ -722,6 +722,7 @@ return function(META)
 			if
 				primary_node.kind == "value" and
 				node.expressions[1] and
+				node.expressions[1].kind == "value" and
 				node.expressions[1].value and
 				node.expressions[1].value:GetStringValue()
 			then
