@@ -66,7 +66,7 @@ do -- these are just helpers for print debugging
 			str = table.concat(str, "\t") .. "\n"
 			local info = debug.getinfo(2)
 
-			if info and info.short_src and info.short_src:find("table_print") then
+			if info and info.short_src and (info.short_src:find("table_print") or info.short_src:find("lua_compat")) then
 				info = debug.getinfo(3)
 			end
 
