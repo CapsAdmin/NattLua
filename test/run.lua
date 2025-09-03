@@ -7,7 +7,7 @@ return function(...)
 	local jit = _G.jit
 	local ipairs = _G.ipairs
 	local io = require("io")
-	local io_write = _G.ON_EDITOR_SAVE and function(...) end or io.write
+	local io_write = _G.HOTRELOAD and function(...) end or io.write
 	local pcall = _G.pcall
 	local table = _G.table
 	require("test.environment")
@@ -93,7 +93,7 @@ return function(...)
 		io_write("== == :")
 	end
 
-	if not _G.ON_EDITOR_SAVE then profiler.Start() end
+	if not _G.HOTRELOAD then profiler.Start() end
 
 	if path and path:sub(-4) == ".lua" then
 		io_write(path, " ")
@@ -130,7 +130,7 @@ return function(...)
 		end
 	end
 
-	if not _G.ON_EDITOR_SAVE then profiler.Stop() end
+	if not _G.HOTRELOAD then profiler.Stop() end
 
 	if total > 0 then
 		io_write("all tests together took ", format_time(total), " seconds\n")

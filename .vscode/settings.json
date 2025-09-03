@@ -38,7 +38,7 @@
   "runOnSave.commands": [
     {
       "globMatch": "**",
-      "command": "cd ${workspaceFolder} && luajit -e \"assert(loadfile('.vscode/on_editor_save.lua'))('${file}','${workspaceFolder}')\"",
+      "command": "cd ${workspaceFolder} && luajit .vscode/on_editor_save.lua '${file}'",
       "runIn": "terminal"
     }
   ]

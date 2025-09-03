@@ -1,23 +1,53 @@
-local nl = require("nattlua")
-local profiler = require("test.helpers.profiler")
-_G.ON_EDITOR_SAVE = true
 local path = ...
+assert(type(path) == "string", "expected path string")
+local is_lua = path:sub(-4) == ".lua"
+local is_nattlua = path:sub(-5) == ".nlua"
 
-if not path then error("no path") end
+if not is_lua and not is_nattlua then return end
 
-local full_path = path
-path = path:lower():gsub("\\", "/")
+local function read_file(path)
+	local f, err = io.open(path, "r")
 
-local function run_lua(path, ...)
-	io.write("running " .. path .. " with ", ...)
-	assert(loadfile(path))()(...)
-	io.write(" - ok\n")
+	if not f then return nil, err end
+
+	local str = f:read("*all")
+
+	if not str then return nil, "empty file" end
+
+	f:close()
+	return str
 end
 
-local function run_nattlua(path)
-	local f = assert(io.open(path, "r"))
-	local lua_code = f:read("*all")
-	f:close()
+local code, err = read_file(path)
+
+if not code then
+	io.write("failed to read file:", err, "\n")
+	return
+end
+
+if
+	path:find("on_editor_save.lua", nil, true) or
+	path:find("hotreload.lua", nil, true)
+then
+	-- just check if it compiles
+	assert(load(code))
+	return
+end
+
+_G.HOTRELOAD = true
+_G.path = path
+_G.code = code
+local nl = require("nattlua")
+local profiler = require("test.helpers.profiler")
+
+function _G.run_lua(path, ...)
+	io.write("running lua: ", path, "\n")
+	assert(loadfile(path))(...)
+end
+
+function _G.run_nlua(path)
+	io.write("running nattlua: ", path, "\n")
+	local lua_code = assert(read_file(path))
 
 	local function has_flag(flag)
 		return lua_code:find("--" .. flag .. "\n", nil, true) ~= nil
@@ -92,103 +122,75 @@ local function run_nattlua(path)
 	if has_flag("RUN_CODE") then assert(load(res))() end
 end
 
-local function has_test_focus()
-	local f = io.open("test_focus.nlua")
+function _G.run_test_focus()
+	local str = read_file("test_focus.nlua")
 
-	if not f then return false end
+	if not str then return false end
 
-	local str = f:read("*all")
 	str = str:gsub("%s+", "")
-	f:close()
 
 	if str == "" then return false end
 
+	_G.run_nlua("test_focus.nlua")
 	return true
 end
 
-local function run_test(path)
-	return run_lua("test/run.lua", path)
+function _G.run_test(path)
+	if path then
+		io.write("running single test ", path)
+	else
+		io.write("running all tests")
+	end
+	assert(loadfile("test/run.lua"))()(path)
+	io.write(" - ok\n")
 end
 
-local function find(str)
-	return path:find(str, nil, true) ~= nil
+function _G.run_fallback()
+	if is_nattlua then _G.run_nlua(path) else _G.run_lua(path) end
 end
 
-if find("on_editor_save.lua") then return end
+if _G.run_test_focus() then return end
 
-local is_lua = full_path:sub(-4) == ".lua"
-local is_nattlua = full_path:sub(-5) == ".nlua"
-local test_focus = has_test_focus()
+local function run_hotreload_config()
+	local function run_hotreload_code(code)
+		local func, err = load(code)
 
-if not is_lua and not is_nattlua then return end
+		if not func then
+			io.write("failed to load hotreload code:", err, "\n")
+			return false
+		end
 
-if full_path:lower():find("/nattlua/", nil, true) == nil and is_lua then
-	print("not sure how to run (/nattlua/ not found in path) " .. full_path)
-	print("running as normal lua")
-	run_lua(full_path)
-	return
+		local trimmed = code:match("^%s*(.-)%s*$")
+
+		io.write("running hotreload code:\n", trimmed, "\n")
+		func()
+		return true
+	end
+
+	local code = code:match("%-%-%[%[HOTRELOAD(.-)%]%]")
+
+	if code then return run_hotreload_code(code) end
+
+	local dir = path:match("(.+)/")
+	if not dir:find("/NattLua/", 1, true) then
+		io.write("not the /NattLua/ directory, refusing to find hotreload config\n")
+		return false
+	end
+	while dir do
+		if not dir:find("/NattLua/", 1, true) then break end
+
+		local hotreload_path = dir .. "/hotreload.lua"
+		local code = read_file(hotreload_path)
+
+		if code then
+			io.write("found hotreload code in ", hotreload_path, "\n")
+			return run_hotreload_code(code)
+		end
+
+		dir = dir:match("(.+)/")
+	end
+
+	return false
 end
 
-if is_nattlua and not test_focus then
-	run_nattlua(full_path)
-	return
-end
-
-if find("intersect_comparison") then
-	run_test("test/tests/nattlua/types/number.lua")
-elseif find("jit_options") then
-	run_lua("test/performance/tests.lua")
-elseif find("jit_trace_track") or find("test/performance/analyzer.lua") then
-	run_lua("test/performance/analyzer.lua")
-elseif find("nattlua/analyzer/mutation_solver.lua") and not test_focus then
-	run_lua("test/tests/nattlua/analyzer/mutation_solver.lua")
-elseif find("c_declarations/main.lua") and not test_focus then
-	run_test("test/tests/nattlua/c_declarations/cdef.nlua")
-	run_test("test/tests/nattlua/c_declarations/parsing.lua")
-	run_test("test/tests/nattlua/analyzer/typed_ffi.lua")
-	run_lua("examples/projects/luajit/build.lua", full_path)
-	run_lua("examples/projects/love2d/nlconfig.lua", full_path)
-elseif find("c_declarations/analyzer") and not test_focus then
-	run_test("test/tests/nattlua/c_declarations/cdef.nlua")
-elseif find("c_declarations") and not test_focus then
-	run_test("test/tests/nattlua/c_declarations/parsing.lua")
-elseif find("coverage") then
-	run_test("test/tests/coverage.lua")
-elseif find("language_server/editor_helper.lua") then
-	run_test("test/tests/editor_helper.lua")
---os.execute("luajit nattlua.lua build fast && luajit nattlua.lua install")
-elseif find("language_server/server") then
-	os.execute("luajit nattlua.lua build fast && luajit nattlua.lua install")
-elseif find("typed_ffi.nlua") and test_focus then
-	print("running test focus")
-	run_nattlua("./test_focus.nlua")
-elseif find("lint.lua") then
-	run_lua(full_path)
-elseif find("build_glua_base.lua") then
-	run_lua(full_path)
-elseif find("examples/projects/luajit/") or find("cparser.lua") then
-	os.execute("cd examples/projects/luajit && nattlua build")
-elseif find("examples/projects/love2d/") then
-	os.execute("cd examples/projects/love2d && nattlua build")
-elseif is_nattlua and not find("/definitions/") then
-	run_nattlua(full_path)
-elseif find("formating.lua") then
-	run_test("test/tests/nattlua/code_pointing.lua")
-elseif find("test/") then
-	run_test(full_path)
-elseif find("javascript_emitter") then
-	run_lua("./examples/lua_to_js.lua")
-elseif find("examples/") then
-	run_lua(full_path)
-elseif test_focus then
-	print("running test focus")
-	run_nattlua("./test_focus.nlua")
-elseif find("lexer.lua") then
-	run_test("test/tests/nattlua/lexer.lua")
-	run_test("test/performance/lexer.lua")
-elseif find("parser.lua") then
-	run_test("test/tests/nattlua/parser.lua")
-	run_test("test/performance/parser.lua")
-else
-	run_lua("test/run.lua")
-end
+if not run_hotreload_config(code) then _G.run_fallback() end

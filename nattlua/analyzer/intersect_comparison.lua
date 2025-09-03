@@ -1,3 +1,6 @@
+--[[HOTRELOAD 
+run_test("test/tests/nattlua/types/number.lua")
+]]
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange
 local max = math.max

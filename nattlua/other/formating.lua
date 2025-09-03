@@ -1,3 +1,6 @@
+--[[HOTRELOAD
+	run_test("test/tests/nattlua/code_pointing.lua")
+]]
 --ANALYZE
 local math = _G.math
 local table = _G.table

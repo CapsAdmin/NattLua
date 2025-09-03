@@ -1,3 +1,4 @@
+--[[HOTRELOAD run_test("test/performance/parser.lua") ]]
 --ANALYZE
 local attach = _G.jit and _G.jit.attach
 local ok, jutil = pcall(require, "jit.util")

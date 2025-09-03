@@ -1,3 +1,7 @@
+--[[HOTRELOAD
+	run_test("test/tests/nattlua/lexer.lua")
+	run_test("test/performance/lexer.lua")
+]]
 --[[#local type { TokenType } = import("./token.lua")]]
 
 local Token = require("nattlua.lexer.token").New

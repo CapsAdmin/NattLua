@@ -1,3 +1,6 @@
+--[[HOTRELOAD
+	run_test("test/tests/jsonrpc.lua")
+]]
 --ANALYZE
 local type = _G.type
 local ipairs = _G.ipairs

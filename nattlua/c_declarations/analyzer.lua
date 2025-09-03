@@ -1,3 +1,7 @@
+--[[HOTRELOAD
+	run_test("test/tests/nattlua/c_declarations/cdef.nlua")
+]]
+
 local math = _G.math
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs

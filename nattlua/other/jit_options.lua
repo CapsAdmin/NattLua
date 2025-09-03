@@ -1,3 +1,6 @@
+--[[HOTRELOAD
+run_lua("test/performance/tests.lua")
+]]
 local jit = _G.jit--[[# as jit | nil]]
 local jit_options = {}
 

@@ -1,0 +1,1 @@
+os.execute("cd examples/projects/luajit && nattlua build")

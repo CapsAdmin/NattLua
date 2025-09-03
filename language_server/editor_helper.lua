@@ -1,4 +1,8 @@
 --DONT_ANALYZE
+--[[HOTRELOAD
+	run_test("test/tests/editor_helper.lua")
+	--os.execute("luajit nattlua.lua build fast && luajit nattlua.lua install")
+]]
 local pairs = _G.pairs
 local ipairs = _G.ipairs
 local type = _G.type

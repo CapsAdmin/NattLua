@@ -1,3 +1,7 @@
+--[[HOTRELOAD
+	run_test("test/tests/coverage.lua")
+]]
+
 local coverage = {}
 _G.__COVERAGE = _G.__COVERAGE or {}
 coverage.collected = {}

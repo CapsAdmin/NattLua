@@ -880,7 +880,6 @@ function META.New(
 		init.is_expression = false
 	end
 
-
 	init.Type = type
 	init.environment = environment
 	init.code_start = code_start

@@ -1,3 +1,6 @@
+--[[HOTRELOAD 
+run_test("test/tests/nattlua/analyzer/mutation_solver.lua")
+]]
 local ipairs = ipairs
 local table = _G.table
 local table_remove = _G.table.remove

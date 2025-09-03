@@ -54,7 +54,7 @@ do
 		local info = debug.getinfo(2)
 		local name = info.source:match("(test/tests/.+)") or info.source
 
-		if not _G.ON_EDITOR_SAVE then
+		if not _G.HOTRELOAD then
 			io.write(".")
 			io.flush()
 		end

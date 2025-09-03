@@ -1,3 +1,13 @@
+--[[HOTRELOAD
+
+run_test("test/tests/nattlua/c_declarations/cdef.nlua")
+run_test("test/tests/nattlua/c_declarations/parsing.lua")
+run_test("test/tests/nattlua/analyzer/typed_ffi.lua")
+run_lua("examples/projects/luajit/build.lua", path)
+run_lua("examples/projects/love2d/nlconfig.lua", path)
+
+]]
+
 local pcall = _G.pcall
 local assert = _G.assert
 local ipairs = _G.ipairs
