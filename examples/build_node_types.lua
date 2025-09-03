@@ -3,7 +3,7 @@ local in_node = {}
 local found = {}
 
 local function read_statement(node)
-	local str = node:Render({preserve_whitespace = false})
+	local str = node:Render({pretty_print = true})
 
 	if str:find("StartNode") and node.kind ~= "root" then
 		local local_name, type, kind = str:match("(%S-) = self:StartNode%(\"(.-)\", \"(.-)\"%)")
@@ -98,7 +98,7 @@ local compiler = assert(
 		"nattlua/parser/parser.lua",
 		{
 			emitter = {
-				preserve_whitespace = false,
+				pretty_print = true,
 			},
 			parser = {
 				inline_require = true,
@@ -152,6 +152,6 @@ end
 local res = nl.Compiler(
 	code,
 	"",
-	{emitter = {preserve_whitespace = false, comment_type_annotations = false}}
+	{emitter = {pretty_print = true, comment_type_annotations = false}}
 ):Emit()
 print(res, #res)

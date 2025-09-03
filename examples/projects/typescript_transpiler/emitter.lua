@@ -714,7 +714,7 @@ function META:EmitStatement(node)
 	elseif node.kind == "semicolon" then
 		self:EmitSemicolonStatement(node)
 
-		if self.config.preserve_whitespace == false then
+		if self.config.pretty_print == true then
 			if self.out[self.i - 2] and self.out[self.i - 2] == "\n" then
 				self.out[self.i - 2] = ""
 			end

@@ -17,7 +17,7 @@ config.commands["build"] = {
 		)
 		local code = compiler:Emit(
 			{
-				preserve_whitespace = false,
+				pretty_print = true,
 				string_quote = "\"",
 				no_semicolon = true,
 				omit_invalid_code = true,

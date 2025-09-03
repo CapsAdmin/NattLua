@@ -959,7 +959,7 @@ return function(META)
 					imported[key] = root
 					data = root:Render(
 						{
-							preserve_whitespace = false,
+							pretty_print = true,
 							comment_type_annotations = false,
 							type_annotations = true,
 							inside_data_import = true,

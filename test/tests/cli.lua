@@ -38,7 +38,7 @@ config.compiler = {
 }
 
 config.emit = {
-    preserve_whitespace = true,
+    pretty_print = false,
 }
 
 config.commands = {

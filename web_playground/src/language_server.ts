@@ -187,7 +187,7 @@ export const startLanguageServer = async () => {
 		return function(code)
 			local compiler = nl.Compiler(code, "temp", {
 				emitter = {
-					preserve_whitespace = false,
+					pretty_print = true,
 					string_quote = "\\"",
 					no_semicolon = true,
 					type_annotations = "explicit",

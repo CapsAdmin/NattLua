@@ -19,7 +19,7 @@ config.commands["build"] = {
 		assert(builder:Analyze())
 		local code, err = builder:Emit(
 			{
-				preserve_whitespace = false,
+				pretty_print = true,
 				string_quote = "\"",
 				no_semicolon = true,
 				omit_invalid_code = true,

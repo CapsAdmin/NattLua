@@ -956,7 +956,7 @@ function META:Render(config)
 		end
 	end
 
-	local em = emitter.New(config or {preserve_whitespace = false, no_newlines = true})
+	local em = emitter.New(config or {pretty_print = true, no_newlines = true})
 
 	if self.is_expression then
 		--[[#attest.expect_diagnostic<|"error", "mutate argument"|>]]

@@ -234,7 +234,7 @@ do -- these override existing commands and should probably be made more generic
 			)
 			local lua_code = c:Emit(
 				{
-					preserve_whitespace = false,
+					pretty_print = true,
 					string_quote = "\"",
 					no_semicolon = true,
 					omit_invalid_code = true,

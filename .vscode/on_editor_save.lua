@@ -83,14 +83,14 @@ function _G.run_nlua(path)
 		return
 	end
 
-	local preserve_whitespace = nil
+	local pretty_print = nil
 
-	if has_flag("PRETTY_PRINT") then preserve_whitespace = false end
+	if has_flag("PRETTY_PRINT") then pretty_print = true end
 
 	local res = assert(
 		c:Emit(
 			{
-				preserve_whitespace = preserve_whitespace,
+				pretty_print = pretty_print,
 				string_quote = "\"",
 				no_semicolon = true,
 				transpile_extensions = has_flag("TRANSPILE_EXTENSIONS"),

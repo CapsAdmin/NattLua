@@ -341,7 +341,7 @@ end
 function META:Format(code, path)
 	local config = self:GetCompilerConfig(path)
 	config.emitter = {
-		preserve_whitespace = false,
+		pretty_print = true,
 		string_quote = "\"",
 		no_semicolon = true,
 		comment_type_annotations = true,

@@ -73,7 +73,7 @@ config.parser = {
 }
 config.lexer = {}
 config.emitter = {
-	preserve_whitespace = false,
+	pretty_print = true,
 	string_quote = "\"",
 	no_semicolon = true,
 	type_annotations = "explicit",
@@ -241,7 +241,7 @@ config.commands["init"] = {
 
 	config.emitter = {
 		type_annotations = true,
-        preserve_whitespace = true,
+        pretty_print = true,
         string_quote = "\"",
         no_semicolon = true,
         force_parenthesis = true,

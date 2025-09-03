@@ -18,31 +18,31 @@ local function check(config, input, expect)
 end
 
 local function identical(str)
-	check({preserve_whitespace = false}, str)
+	check({pretty_print = true}, str)
 end
 
 check(
-	{preserve_whitespace = false, force_parenthesis = true, string_quote = "\""},
+	{pretty_print = true, force_parenthesis = true, string_quote = "\""},
 	[[local foo = aaa 'aaa'-- dawdwa
 local x = 1]],
 	[[local foo = aaa("aaa") -- dawdwa
 local x = 1]]
 )
-check({preserve_whitespace = false, string_quote = "\""}, [[local x = "'"]])
-check({preserve_whitespace = false, string_quote = "'"}, [[local x = '"']])
+check({pretty_print = true, string_quote = "\""}, [[local x = "'"]])
+check({pretty_print = true, string_quote = "'"}, [[local x = '"']])
 identical([[x = "" -- foo]])
 identical([[new_str[i] = "\\" .. c]])
 identical([[local x = "\xFE\xFF\n\u{1F602}\t\t1"]])
 check(
-	{preserve_whitespace = false, comment_type_annotations = true},
+	{pretty_print = true, comment_type_annotations = true},
 	[[local type x = ""]],
 	[=[--[[#local type x = ""]]]=]
 )
 check({string_quote = "'"}, [[x = "foo"]], [[x = 'foo']])
 check({string_quote = "\""}, [[x = 'foo']], [[x = "foo"]])
-check({string_quote = "\"", preserve_whitespace = false}, [[x = '\"']], [[x = "\""]])
+check({string_quote = "\"", pretty_print = true}, [[x = '\"']], [[x = "\""]])
 check({string_quote = "\""}, [[x = '"foo"']], [[x = "\"foo\""]])
-check({preserve_whitespace = false}, [[x         = 
+check({pretty_print = true}, [[x         = 
 	
 	1]], [[x = 1]])
 check({no_semicolon = true}, [[x = 1;]], [[x = 1]])
@@ -62,7 +62,7 @@ x = 3
 check(
 	{
 		extra_indent = {StartSomething = {to = "EndSomething"}},
-		preserve_whitespace = false,
+		pretty_print = true,
 	},
 	[[
 x = 1
@@ -83,7 +83,7 @@ x = 4]]
 check(
 	{
 		extra_indent = {StartSomething = {to = "EndSomething"}},
-		preserve_whitespace = false,
+		pretty_print = true,
 	},
 	[[
 x = 1
@@ -103,7 +103,7 @@ x = 4]]
 )
 identical([==[local x = {[ [[foo]] ] = "bar"}]==])
 check(
-	{preserve_whitespace = false},
+	{pretty_print = true},
 	[==[local x = a && b || c && a != c || !c]==],
 	[==[local x = a and b or c and a ~= c or not c]==]
 )
@@ -137,21 +137,21 @@ identical([[pos, ang = LocalToWorld(
 )]])
 identical([[if not ply.pac_cameras then return end]])
 check(
-	{preserve_whitespace = false, comment_type_annotations = true},
+	{pretty_print = true, comment_type_annotations = true},
 	[=[--[[#type Vector.__mul = function=(Vector, number | Vector)>(Vector)]]]=]
 )
 check(
-	{preserve_whitespace = false, comment_type_annotations = true},
+	{pretty_print = true, comment_type_annotations = true},
 	[=[--[[#type start = function=(...string)>(nil)]]]=]
 )
 check(
-	{preserve_whitespace = false, comment_type_annotations = true},
+	{pretty_print = true, comment_type_annotations = true},
 	[[return {lol = Partial<|{foo = true}|>}]],
 	[=[return {lol = --[[#Partial<|{foo = true}|>]]nil}]=]
 )
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		omit_invalid_code = true,
 	},
@@ -160,7 +160,7 @@ check(
 )
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		omit_invalid_code = true,
 	},
@@ -169,7 +169,7 @@ check(
 )
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		omit_invalid_code = true,
 	},
@@ -178,7 +178,7 @@ check(
 )
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		omit_invalid_code = true,
 	},
@@ -187,7 +187,7 @@ check(
 )
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		omit_invalid_code = false,
 	},
@@ -196,7 +196,7 @@ check(
 )
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		omit_invalid_code = true,
 	},
@@ -204,12 +204,12 @@ check(
 	[[]]
 )
 check(
-	{preserve_whitespace = false, type_annotations = true},
+	{pretty_print = true, type_annotations = true},
 	[=[local type x = (...,)]=]
 )
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		type_annotations = true,
 	},
@@ -217,7 +217,7 @@ check(
 )
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		type_annotations = true,
 	},
@@ -225,7 +225,7 @@ check(
 )
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		type_annotations = true,
 	},
@@ -457,7 +457,7 @@ identical([=[local type {
  } = importawd("~/nattlua/parser/node.lua")]=])
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		type_annotations = true,
 	},
@@ -476,7 +476,7 @@ identical([[local type Context = {
 }]])
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		type_annotations = true,
 	},
@@ -510,7 +510,7 @@ identical([[return function(config)
 end]])
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = false,
 		type_annotations = true,
 	},
@@ -535,7 +535,7 @@ identical([[do
 end]])
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		type_annotations = true,
 	},
@@ -543,7 +543,7 @@ check(
 )
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		type_annotations = true,
 	},
@@ -553,7 +553,7 @@ return ffi.string(A, (B--[[# as number]]))]=]
 )
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		type_annotations = true,
 	},
@@ -608,7 +608,7 @@ check(
 )
 check(
 	{
-		preserve_whitespace = false,
+		pretty_print = true,
 		comment_type_annotations = true,
 		type_annotations = true,
 	},

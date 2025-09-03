@@ -1,7 +1,7 @@
 local nl = require("nattlua")
 local LuaEmitter = require("nattlua.emitter.emitter").New
 local ast = assert(nl.File("nattlua/parser/parser.lua"):Parse()).SyntaxTree
-local em = LuaEmitter({preserve_whitespace = false})
+local em = LuaEmitter({pretty_print = true})
 
 function em:OnEmitStatement()
 	self:Emit(";")

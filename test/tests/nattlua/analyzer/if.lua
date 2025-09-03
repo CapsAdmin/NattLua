@@ -1069,7 +1069,7 @@ analyze[[
             extra_indent = nil | {
                 [string] = "toggle"|{to=string},
             },
-            preserve_whitespace = boolean | nil,
+            pretty_print = boolean | nil,
         }
     }
 

@@ -1,5 +1,5 @@
 local type EmitterConfig = {
-	preserve_whitespace = boolean,
+	pretty_print = boolean,
 	no_newlines = boolean,
 	extra_indent = {
 		[string] = {to = string} | string,

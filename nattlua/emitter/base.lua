@@ -43,7 +43,7 @@ return function()
 
 	do -- internal
 		function META:Whitespace(str--[[#: string]], force--[[#: boolean]])
-			if self.config.preserve_whitespace == nil and not force then return end
+			if self.config.pretty_print == nil and not force then return end
 
 			if str == "\t" then
 				if self.config.no_newlines then
@@ -95,7 +95,7 @@ return function()
 		end
 
 		function META:EmitWhitespace(token--[[#: Token]])
-			if self.config.preserve_whitespace == false and token.type == "space" then
+			if self.config.pretty_print == true and token.type == "space" then
 				return
 			end
 
@@ -110,7 +110,7 @@ return function()
 		function META:EmitToken(token--[[#: Token]], translate--[[#: any]])
 			if
 				self.config.extra_indent and
-				self.config.preserve_whitespace == false and
+				self.config.pretty_print == true and
 				self.inside_call_expression
 			then
 				self.tracking_indents = self.tracking_indents or {}
@@ -172,7 +172,7 @@ return function()
 			end
 
 			if token.whitespace then
-				if self.config.preserve_whitespace == false then
+				if self.config.pretty_print == true then
 					for i, wtoken in ipairs(token.whitespace) do
 						if wtoken.type == "line_comment" then
 							local start = i
@@ -295,7 +295,7 @@ return function()
 		end
 
 		function META:ShouldLineBreakNode(node--[[#: Node]])
-			if self.config.preserve_whitespace ~= false then return false end
+			if self.config.pretty_print ~= true then return false end
 
 			if node.Type == "expression_table" or node.Type == "expression_type_table" then
 				for _, exp in ipairs(node.children) do
@@ -457,7 +457,7 @@ return function()
 	end
 
 	function META:OptionalWhitespace()
-		if self.config.preserve_whitespace == nil then return end
+		if self.config.pretty_print == nil then return end
 
 		if
 			characters.IsLetter(self:GetPrevChar()) or
@@ -1402,7 +1402,7 @@ return function()
 		elseif node.Type == "statement_semicolon" then
 			self:EmitSemicolonStatement(node)
 
-			if self.config.preserve_whitespace == false then
+			if self.config.pretty_print == true then
 				if self.out[self.i - 2] and self.out[self.i - 2] == "\n" then
 					self.out[self.i - 2] = ""
 				end
@@ -1477,7 +1477,7 @@ return function()
 	end
 
 	function META:ShouldBreakExpressionList(tbl--[[#: List<|Node|>]])
-		if self.config.preserve_whitespace ~= false then return true end
+		if self.config.pretty_print ~= true then return true end
 
 		if #tbl == 0 then return false end
 

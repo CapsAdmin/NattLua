@@ -43,7 +43,7 @@ config.commands["fmt"] = {
 		}
 		local config = {
 			emitter = {
-				preserve_whitespace = false,
+				pretty_print = true,
 				string_quote = "\"",
 				no_semicolon = true,
 				force_parenthesis = true,
