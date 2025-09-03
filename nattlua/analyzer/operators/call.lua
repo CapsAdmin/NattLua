@@ -170,7 +170,7 @@ do
 							if not func:GetInputSignature():IsInfinite() then
 								local val, err = new:Slice(1, len)
 
-								if not new then
+								if not val then
 									self:Error(err)
 								else
 									new = val
