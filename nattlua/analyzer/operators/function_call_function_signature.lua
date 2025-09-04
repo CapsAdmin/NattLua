@@ -4,7 +4,7 @@ return function(analyzer, obj, input)
 	do
 		local new_tup, errors = input:SubsetOrFallbackWithTuple(obj:GetInputSignature())
 
-		if err then
+		if errors then
 			for _, error in ipairs(errors) do
 				local reason, a, b, i = table.unpack(error)
 				analyzer:Error(

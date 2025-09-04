@@ -204,7 +204,7 @@ do
                 uint32_t dwLanguageId,
                 char* lpBuffer,
                 uint32_t nSize,
-                va_list *Arguments
+                void *Arguments
             );
         ]]
 
@@ -278,7 +278,7 @@ do
 		end
 
 		if jit.arch ~= "x64" then -- xp or something
-			ffi.cdef[[int WSAAddressToStringA(struct sockaddr *, unsigned long, void *, char *, unsigned long *);]]
+			ffi.cdef[[int WSAAddressToStringA(struct sockaddr *, unsigned long, void *, const char *, unsigned long *);]]
 
 			function socket.inet_ntop(
 				family: number,
@@ -416,7 +416,7 @@ do
         int getnameinfo(const struct sockaddr* sa, uint32_t salen, char* host, size_t hostlen, char* serv, size_t servlen, int flags);
         void freeaddrinfo(struct addrinfo *ai);
         const char *gai_strerror(int errcode);
-        char *inet_ntoa(struct in_addr in);
+        const char *inet_ntoa(struct in_addr in);
         uint16_t ntohs(uint16_t netshort);
     ]]
 
@@ -446,7 +446,7 @@ do
 
 		if ret == 0 then return true end
 
-		return nil, ffi.string(socket.lasterror(ret))
+		return nil, socket.lasterror(ret)
 	end
 
 	do
@@ -1067,7 +1067,7 @@ do
 		on_close = nil | function=(self)>(),
 		on_connect = nil | function=(self, string | AddressInfo, string)>(),
 		on_send = nil | function=(self, string, number)>(nil | number, nil | string, nil | number),
-		on_receive = nil | function=(self, cdata, number, nil | number)>(),
+		on_receive = nil | function=(self, any, number, nil | number)>(),
 		debug = true | nil,
 	}
 	type meta.@Self.@Name = "TSocket"
@@ -1346,7 +1346,8 @@ do
 
 		if not ok then return ok, err, num end
 
-		return ffi.string(socket.inet_ntoa(data.sin_addr)), socket.ntohs(data.sin_port)
+		return ffi.string(assert(socket.inet_ntoa(data.sin_addr))),
+		socket.ntohs(data.sin_port)
 	end
 
 	function meta:get_name()
@@ -1356,7 +1357,8 @@ do
 
 		if not ok then return ok, err, num end
 
-		return ffi.string(socket.inet_ntoa(data.sin_addr)), socket.ntohs(data.sin_port)
+		return ffi.string(assert(socket.inet_ntoa(data.sin_addr))),
+		socket.ntohs(data.sin_port)
 	end
 
 	local default_flags = 0
@@ -1407,7 +1409,7 @@ do
 		address_len: nil | number
 	)
 		size = size or 64000
-		local buff = ffi.new("char[?]", size)
+		local buff = ffi.new("char[?]", size) as any
 
 		if self.on_receive then return self:on_receive(buff, size, flags) end
 

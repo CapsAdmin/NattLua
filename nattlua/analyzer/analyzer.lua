@@ -214,7 +214,14 @@ do
 
 		if obj and node.type_expression then
 			self:PushCurrentExpression(node.type_expression)
+			local old = obj
 			obj, err = self:AnalyzeTypeExpression(node.type_expression, obj)
+
+			if old.Type == "function" and obj.Type == "function" then
+				old:SetInputSignature(obj:GetInputSignature():Copy())
+				old:SetOutputSignature(obj:GetOutputSignature():Copy())
+				old:SetArgumentsInferred(true)
+			end
 
 			if not obj then self:Error(err) end
 

@@ -61,11 +61,13 @@ local function union_call(self, analyzer, input, call_node)
 					}
 				)
 			else
-				local res, reason = analyzer:Call(obj, input:Copy(), call_node, true)
+				if input:IsSubsetOfTuple(obj:GetInputSignature()) then
+					local res, reason = analyzer:Call(obj, input:Copy(), call_node, true)
 
-				if res then return res end
+					if res then return res end
 
-				table.insert(errors, reason)
+					table.insert(errors, reason)
+				end
 			end
 		end
 

@@ -796,3 +796,24 @@ analyze[[
     end)
     attest.equal(x, "bar")
 ]]
+analyze[[
+    local type signature = function=(string, boolean, number)>(string)
+    local funca = function(a, b, c)
+        attest.equal(a, _ as string)
+        attest.equal(b, _ as boolean)
+        attest.equal(c, _ as number)
+    end as signature
+]]
+analyze[[
+    local type signature = function=(string, boolean, number)>(string)
+    local funca: signature = function(a, b, c)
+        attest.equal(a, _ as string)
+        attest.equal(b, _ as boolean)
+        attest.equal(c, _ as number)
+    end
+]]
+analyze[[
+local type overloads = function=(number, string)>("ROFL") | function=(string, number)>("LOL")
+attest.equal(overloads(1, ""), "ROFL")
+attest.equal(overloads("", 1), "LOL")
+]]

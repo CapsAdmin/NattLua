@@ -1,11 +1,12 @@
-local path = ...
+--ANALYZE
+local path = ...--[[# as string | nil]]
 assert(type(path) == "string", "expected path string")
 local is_lua = path:sub(-4) == ".lua"
 local is_nattlua = path:sub(-5) == ".nlua"
 
 if not is_lua and not is_nattlua then return end
 
-local function read_file(path)
+local function read_file(path--[[#: string]])
 	local f, err = io.open(path, "r")
 
 	if not f then return nil, err end
@@ -20,7 +21,7 @@ end
 
 local code, err = read_file(path)
 
-if not code then
+if not code and err then
 	io.write("failed to read file:", err, "\n")
 	return
 end
@@ -37,10 +38,10 @@ end
 _G.HOTRELOAD = true
 _G.path = path
 _G.code = code
-local nl = require("nattlua")
+local nl = (require--[[# as any]])("nattlua")
 local profiler = require("test.helpers.profiler")
 
-function _G.run_lua(path, ...)
+function _G.run_lua(path--[[#: string]], ...)
 	io.write("running lua: ", path, "\n")
 	assert(loadfile(path))(...)
 end
@@ -84,6 +85,8 @@ function _G.run_nlua(path)
 	end
 
 	local pretty_print = nil
+
+	if has_flag("DISABLE_PRETTY_PRINT") then pretty_print = false end
 
 	if has_flag("PRETTY_PRINT") then pretty_print = true end
 
@@ -141,6 +144,7 @@ function _G.run_test(path)
 	else
 		io.write("running all tests")
 	end
+
 	assert(loadfile("test/run.lua"))()(path)
 	io.write(" - ok\n")
 end
@@ -149,7 +153,9 @@ function _G.run_fallback()
 	if is_nattlua then _G.run_nlua(path) else _G.run_lua(path) end
 end
 
-if _G.run_test_focus() then return end
+if not path:find("/NattLua/test/", 1, true) then
+	if _G.run_test_focus() then return end
+end
 
 local function run_hotreload_config()
 	local function run_hotreload_code(code)
@@ -161,7 +167,6 @@ local function run_hotreload_config()
 		end
 
 		local trimmed = code:match("^%s*(.-)%s*$")
-
 		io.write("running hotreload code:\n", trimmed, "\n")
 		func()
 		return true
@@ -172,10 +177,12 @@ local function run_hotreload_config()
 	if code then return run_hotreload_code(code) end
 
 	local dir = path:match("(.+)/")
+
 	if not dir:find("/NattLua/", 1, true) then
 		io.write("not the /NattLua/ directory, refusing to find hotreload config\n")
 		return false
 	end
+
 	while dir do
 		if not dir:find("/NattLua/", 1, true) then break end
 

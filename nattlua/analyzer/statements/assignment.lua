@@ -166,6 +166,14 @@ return {
 						self:ErrorIfFalse(val:CoerceUntypedFunctions(contract))
 					end
 
+					if val.Type == "function" and contract.Type == "function" then
+						if val:IsCallbackSubsetOf(contract) then
+							val:SetInputSignature(contract:GetInputSignature():Copy())
+							val:SetOutputSignature(contract:GetOutputSignature():Copy())
+							val:SetArgumentsInferred(true)
+						end
+					end
+
 					self:PushCurrentExpression(exp_key)
 					self:ErrorIfFalse(check_type_against_contract(val, contract))
 					self:PopCurrentExpression()

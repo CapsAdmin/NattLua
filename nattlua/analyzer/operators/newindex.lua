@@ -73,12 +73,16 @@ return {
 
 					if existing then
 						if val.Type == "function" and existing.Type == "function" then
-							for i, v in ipairs(val:GetInputIdentifiers()) do
-								if not existing:GetInputIdentifiers()[i] then
-									analyzer:Error(type_errors.too_many_arguments())
+							if val:GetInputIdentifiers() then
+								for i, v in ipairs(val:GetInputIdentifiers()) do
+									if not existing:GetInputIdentifiers()[i] then
+										analyzer:Error(type_errors.too_many_arguments())
 
-									break
+										break
+									end
 								end
+							else
+								analyzer:Error(type_errors.too_few_arguments())
 							end
 
 							val:SetInputSignature(existing:GetInputSignature())
@@ -157,7 +161,7 @@ return {
 						val = val:Copy()
 						val:SetCalled(false)
 						val:GetInputSignature():Set(1, Union({Any(), obj}))
-						self:AddToUnreachableCodeAnalysis(val, val:GetInputSignature(), node, true)
+						self:AddToUnreachableCodeAnalysis(val)
 					end
 				end
 			end

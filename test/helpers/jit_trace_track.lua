@@ -1,4 +1,3 @@
---[[HOTRELOAD run_test("test/performance/parser.lua") ]]
 --ANALYZE
 local attach = _G.jit and _G.jit.attach
 local ok, jutil = pcall(require, "jit.util")
@@ -56,9 +55,9 @@ local function start(
 end
 
 local function stop(id--[[#: number]], func--[[#: Function]])
-	assert(traces[id])
-	assert(traces[id].aborted == nil)
-	traces[id].trace_info = assert(traceinfo(id), "invalid trace id: " .. id)
+	local trace = assert(traces[id])
+	assert(trace.aborted == nil)
+	trace.trace_info = assert(traceinfo(id), "invalid trace id: " .. id)
 end
 
 local function abort(
@@ -68,22 +67,21 @@ local function abort(
 	code--[[#: number]],
 	reason--[[#: number]]
 )
-	assert(traces[id])
-	assert(traces[id].stopped == nil)
-	traces[id].trace_info = assert(traceinfo(id), "invalid trace id: " .. id)
-	traces[id].aborted = {
+	local trace = assert(traces[id])
+	assert(trace.stopped == nil)
+	trace.trace_info = assert(traceinfo(id), "invalid trace id: " .. id)
+	trace.aborted = {
 		code = code,
 		reason = reason,
 	}
-	table.insert(traces[id].pc_lines, {func = func, pc = pc, depth = 0})
-	aborted[id] = traces[id]
+	table.insert(trace.pc_lines, {func = func, pc = pc, depth = 0})
+	aborted[id] = trace
 
-	if traces[id] and traces[id].parent and traces[id].parent.children then
-		traces[id].parent.children[id] = nil
+	if trace.parent and trace.parent.children then
+		trace.parent.children[id] = nil
 	end
 
-	if traces[id] then traces[id].DEAD = true end
-
+	trace.DEAD = true
 	traces[id] = nil
 end
 
@@ -114,7 +112,7 @@ function trace_track.Start()
 
 	local traces = {}
 	local aborted = {}
-	local on_trace_event = function(what, tr, func, pc, otr, oex)
+	local on_trace_event--[[#: jit_attach_trace]] = function(what, tr, func, pc, otr, oex)
 		if what == "start" then
 			start(tr, func, pc, otr, oex)
 		elseif what == "stop" then
@@ -126,11 +124,11 @@ function trace_track.Start()
 		else
 			error("unknown trace event " .. what)
 		end
-	end--[[# as jit_attach_trace]]
+	end
 	attach(on_trace_event, "trace")
-	local on_record_event = function(tr, func, pc, depth)
+	local on_record_event--[[#: jit_attach_record]] = function(tr, func, pc, depth)
 		record(tr, func, pc, depth)
-	end--[[# as jit_attach_record]]
+	end
 	attach(on_record_event, "record")
 	return function()
 		attach(on_trace_event)

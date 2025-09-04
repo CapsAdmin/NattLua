@@ -275,7 +275,7 @@ analyze[==[
 	ffi.cdef([[
 		uint32_t FormatMessageA(
 			uint32_t dwFlags,
-			va_list *Arguments
+			...
 		);
 	]])
 	
@@ -423,4 +423,74 @@ analyze[=[
 	attest.equal(t.b, _ as number)
 	attest.equal(t.c, _ as number)
 	attest.equal(t.d, _ as number)
+]=]
+analyze[=[
+	local meta = {}
+	meta.__index = meta
+	ffi.cdef[[
+	struct foo {
+		int x;
+	};
+
+	struct foo foo_new();
+	]]
+
+	function meta:__new()
+		local self = ffi.C.foo_new()
+		self.x = 10
+		return self
+	end
+
+	function meta:test()
+		return self.x
+	end
+
+	meta = ffi.metatype("struct foo", meta)
+	local x = meta() --ffi.new("struct foo")
+	attest.equal(x:test(), 10)
+
+]=]
+analyze[=[
+	local ffi = require("ffi")
+	ffi.cdef[[
+	struct OpusEncoder { int dummy; };
+	struct OpusEncoder *opus_encoder_create();
+	int opus_encoder_ctl(struct OpusEncoder *st);
+	]]
+	local Encoder = {}
+	Encoder.__index = Encoder
+
+	function Encoder:__new()
+		local state = assert(ffi.C.opus_encoder_create())
+		return state
+	end
+
+	function Encoder:get(id: number)
+		ffi.C.opus_encoder_ctl(self)
+	end
+
+	local Encoder = ffi.metatype("OpusEncoder", Encoder)
+	local test = Encoder()
+]=]
+analyze[=[
+	local ffi = require("ffi")
+	ffi.cdef[[
+	struct OpusEncoder { int dummy; };
+	struct OpusEncoder *opus_encoder_create();
+	int opus_encode(struct OpusEncoder *st);
+	]]
+	local Encoder = {}
+	Encoder.__index = Encoder
+
+	function Encoder:__new()
+		return assert(ffi.C.opus_encoder_create())
+	end
+
+	function Encoder:encode()
+		attest.equal(assert(self[0]).dummy, _ as number)
+		return ffi.C.opus_encode(self)
+	end
+
+	local Encoder = ffi.metatype("OpusEncoder", Encoder)
+
 ]=]

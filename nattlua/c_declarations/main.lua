@@ -7,7 +7,6 @@ run_lua("examples/projects/luajit/build.lua", path)
 run_lua("examples/projects/love2d/nlconfig.lua", path)
 
 ]]
-
 local pcall = _G.pcall
 local assert = _G.assert
 local ipairs = _G.ipairs
@@ -267,33 +266,37 @@ function cparser.metatype(ctype, meta)
 	if ctype.Type == "string" then ctype = cparser.get_type(ctype) end
 
 	local new = meta:Get(ConstString("__new"))
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
 
 	if new then
-		meta:Set(
-			ConstString("__call"),
-			LuaTypeFunction(
-				function(self, ...)
-					local analyzer = analyzer_context:GetCurrentAnalyzer()
-					local val = analyzer:Assert(analyzer:Call(new, Tuple({ctype, ...}))):Unpack()
+		local new_func = LuaTypeFunction(
+			function(self, ...)
+				local analyzer = analyzer_context:GetCurrentAnalyzer()
+				local val = analyzer:Assert(analyzer:Call(new, Tuple({ctype, ...}))):Unpack()
 
-					if val.Type == "union" then
-						for i, v in ipairs(val:GetData()) do
-							if v.Type == "table" then v:SetMetaTable(meta) end
-						end
-					else
-						val:SetMetaTable(meta)
+				if val.Type == "union" then
+					for i, v in ipairs(val:GetData()) do
+						if v.Type == "table" then v:SetMetaTable(meta) end
 					end
+				else
+					val:SetMetaTable(meta)
+				end
 
-					return val
-				end,
-				new:GetInputSignature():GetData(),
-				new:GetOutputSignature():GetData()
-			)
+				if analyzer:IsRuntime() then
+					meta.PotentialSelf = meta.PotentialSelf or Union()
+					meta.PotentialSelf:AddType(val)
+				end
+
+				return val
+			end,
+			new:GetInputSignature():GetData(),
+			new:GetOutputSignature():GetData()
 		)
+		meta:Set(ConstString("__call"), new_func)
+		analyzer:AddToUnreachableCodeAnalysis(new_func)
 	end
 
 	ctype:SetMetaTable(meta)
-	local analyzer = analyzer_context:GetCurrentAnalyzer()
 
 	if meta.Self then
 		analyzer:ErrorIfFalse(ctype:FollowsContract(meta.Self))
@@ -301,7 +304,7 @@ function cparser.metatype(ctype, meta)
 		ctype:SetContract(meta.Self)
 		-- clear mutations so that when looking up values in the table they won't return their initial value
 		ctype:ClearMutations()
-	elseif analyzer:IsRuntime() then
+	elseif not new and analyzer:IsRuntime() then
 		meta.PotentialSelf = meta.PotentialSelf or Union()
 		meta.PotentialSelf:AddType(ctype)
 	end
