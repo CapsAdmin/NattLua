@@ -494,3 +494,36 @@ analyze[=[
 	local Encoder = ffi.metatype("OpusEncoder", Encoder)
 
 ]=]
+analyze[=[
+local function cdata<|CType: number | {[string | number] = number | string | self}|>
+	-- pointers are indexed by numbers, arrays are indexed by 0 .. n
+	local type is_pointer = type(CType) == "table" and keysof<|CType|> == number
+	return {
+		@MetaTable = self,
+		__tostring = function(self: ref self)
+			return "cdata<" .. tostring(CType) .. (is_pointer and " *" or "") .. ">"
+		end,
+		__index = function(self: ref self, key: ref (string | number))
+			if is_pointer then
+				if type(key) == "string" then return CType[number][key] end
+
+				if type(key) == "number" then return cdata<|CType[key]|> end
+			end
+
+			return CType[key]
+		end,
+	}
+end
+
+local function get_cdata<|anon_cdef: string|>
+	return cdata<|ffi.get_type2<|anon_cdef|>|>
+end
+
+attest.equal<|get_cdata<|"struct {int i;}"|>.i, number|>
+attest.equal<|get_cdata<|"struct {int i;}[1]"|>[0].i, number|>
+attest.equal<|get_cdata<|"struct {int i;}*"|>[0].i, number|>
+attest.equal<|get_cdata<|"struct {int i;}*"|>[14].i, number|>
+attest.expect_diagnostic<|"error", "1 is not a subset of 0"|>
+local x = get_cdata<|"struct {int i;}[1]"|>[1]
+
+]=]

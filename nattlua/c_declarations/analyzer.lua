@@ -1,7 +1,6 @@
 --[[HOTRELOAD
 	run_test("test/tests/nattlua/c_declarations/cdef.nlua")
 ]]
-
 local math = _G.math
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
@@ -15,6 +14,7 @@ local Table = require("nattlua.types.table").Table
 local Tuple = require("nattlua.types.tuple").Tuple
 local Function = require("nattlua.types.function").Function
 local Number = require("nattlua.types.number").Number
+local LNumberRange = require("nattlua.types.range").LNumberRange
 local String = require("nattlua.types.string").String
 local LString = require("nattlua.types.string").LString
 local LNumber = require("nattlua.types.number").LNumber
@@ -80,6 +80,12 @@ local function cast(self, node)
 			size = LNumber(tonumber(node.size) or math.huge)
 		end
 
+		if _G.FFI2 then
+			local arr = Table()
+			arr:Set(size:GetData() == 0 and LNumber(0) or LNumberRange(0, size:GetData() - 1), cast(self, assert(node.of)))
+			return arr
+		end
+
 		local tup = self.analyzer:Call(self.env.FFIArray, Tuple({size, cast(self, assert(node.of))}))
 		return tup:Unpack()
 	elseif node.type == "pointer" then
@@ -89,6 +95,12 @@ local function cast(self, node)
 			node.of.modifiers[1] == "void"
 		then
 			return Any() -- TODO: is this true?
+		end
+
+		if _G.FFI2 then
+			local arr = Table()
+			arr:Set(Number(), cast(self, assert(node.of)))
+			return arr
 		end
 
 		local res = (

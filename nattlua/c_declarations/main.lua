@@ -139,6 +139,8 @@ end
 
 local function extract_anonymous_type(typs)
 	local ctype = typs:Get(LString("TYPEOF_CDECL"))
+	if _G.FFI2 then return ctype:Get(Number()):GetInputSignature():GetWithNumber(1) end
+
 	ctype:RemoveType(Nil())
 	return ctype:GetData()[1]:Get(Number()):GetInputSignature():GetWithNumber(1)
 end

@@ -223,6 +223,13 @@ analyzer function ffi.get_type(cdecl: string, ...: ...any)
 	return cdecl_parser.get_type(cdecl, ...)
 end
 
+analyzer function ffi.get_type2(cdecl: string, ...: ...any)
+	_G.FFI2 = true
+	local obj = cdecl_parser.get_type(cdecl, ...)
+	_G.FFI2 = nil
+	return obj
+end
+
 analyzer function ffi.new(cdecl: any, ...: ...any)
 	return cdecl_parser.new(cdecl, ...)
 end
