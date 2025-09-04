@@ -41,6 +41,51 @@ _G.code = code
 local nl = (require--[[# as any]])("nattlua")
 local profiler = require("test.helpers.profiler")
 
+
+local function run_hotreload_config()
+	local function run_hotreload_code(code)
+		local func, err = load(code)
+
+		if not func then
+			io.write("failed to load hotreload code:", err, "\n")
+			return false
+		end
+
+		local trimmed = code:match("^%s*(.-)%s*$")
+		io.write("running hotreload code:\n", trimmed, "\n")
+		func()
+		return true
+	end
+
+	local code = code:match("%-%-%[%[HOTRELOAD(.-)%]%]")
+
+	if code then return run_hotreload_code(code) end
+
+	local dir = path:match("(.+)/")
+
+	if not dir:find("/NattLua/", 1, true) then
+		io.write("not the /NattLua/ directory, refusing to find hotreload config\n")
+		return false
+	end
+
+	while dir do
+		if not dir:find("/NattLua/", 1, true) then break end
+
+		local hotreload_path = dir .. "/hotreload.lua"
+		local code = read_file(hotreload_path)
+
+		if code then
+			io.write("found hotreload code in ", hotreload_path, "\n")
+			return run_hotreload_code(code)
+		end
+
+		dir = dir:match("(.+)/")
+	end
+
+	return false
+end
+
+
 function _G.run_lua(path--[[#: string]], ...)
 	io.write("running lua: ", path, "\n")
 	assert(loadfile(path))(...)
@@ -133,7 +178,7 @@ function _G.run_test_focus()
 	str = str:gsub("%s+", "")
 
 	if str == "" then return false end
-
+	run_hotreload_config(code)
 	_G.run_nlua("test_focus.nlua")
 	return true
 end
@@ -155,49 +200,6 @@ end
 
 if not path:find("/NattLua/test/", 1, true) then
 	if _G.run_test_focus() then return end
-end
-
-local function run_hotreload_config()
-	local function run_hotreload_code(code)
-		local func, err = load(code)
-
-		if not func then
-			io.write("failed to load hotreload code:", err, "\n")
-			return false
-		end
-
-		local trimmed = code:match("^%s*(.-)%s*$")
-		io.write("running hotreload code:\n", trimmed, "\n")
-		func()
-		return true
-	end
-
-	local code = code:match("%-%-%[%[HOTRELOAD(.-)%]%]")
-
-	if code then return run_hotreload_code(code) end
-
-	local dir = path:match("(.+)/")
-
-	if not dir:find("/NattLua/", 1, true) then
-		io.write("not the /NattLua/ directory, refusing to find hotreload config\n")
-		return false
-	end
-
-	while dir do
-		if not dir:find("/NattLua/", 1, true) then break end
-
-		local hotreload_path = dir .. "/hotreload.lua"
-		local code = read_file(hotreload_path)
-
-		if code then
-			io.write("found hotreload code in ", hotreload_path, "\n")
-			return run_hotreload_code(code)
-		end
-
-		dir = dir:match("(.+)/")
-	end
-
-	return false
 end
 
 if not run_hotreload_config(code) then _G.run_fallback() end
