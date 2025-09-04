@@ -494,7 +494,8 @@ return function(self, obj, input)
 		self:GetCurrentAnalyzerEnvironment()
 	)
 
-	if function_node.Type == "statement_function" or
+	if
+		function_node.Type == "statement_function" or
 		function_node.Type == "statement_analyzer_function" or
 		function_node.Type == "statement_type_function"
 	then
