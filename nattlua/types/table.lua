@@ -1,4 +1,3 @@
---ANALYZE
 local setmetatable = _G.setmetatable
 local table = _G.table
 local ipairs = _G.ipairs
@@ -363,6 +362,10 @@ function META:FollowsContract(contract--[[#: TTable]])
 	return true
 end
 
+local function can_be_nil(obj)
+	return obj:IsNil() or (obj.Type == "union" and obj:HasType("any")) or obj.Type == "any"
+end
+
 function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 	if a.suppress then return true, "suppressed" end
 
@@ -388,7 +391,7 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 		a.suppress = true
 
 		for _, keyval in ipairs(b:GetData()) do
-			if not keyval.val:IsNil() then
+			if not can_be_nil(keyval.val) then
 				can_be_empty = false
 
 				break
@@ -414,15 +417,15 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 			end
 		end
 
-		for _, akeyval in ipairs(a:GetData()) do
-			local bkeyval, reason = b:FindKeyValWide(akeyval.key)
+		for _, bkeyval in ipairs(b:GetData()) do
+			local akeyval, reason = a:FindKeyValWideReverse(bkeyval.key)
 
-			if not akeyval.val:IsNil() then
-				if not bkeyval then
-					if a.BaseTable and a.BaseTable == b then
-						bkeyval = akeyval
+			if not can_be_nil(bkeyval.val) then
+				if not akeyval then
+					if b.BaseTable and b.BaseTable == a then
+						akeyval = bkeyval
 					else
-						return bkeyval, reason
+						return akeyval, reason
 					end
 				end
 
@@ -432,16 +435,24 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 
 				if not ok then
 					return false,
-					type_errors.because(type_errors.table_subset(akeyval.key, bkeyval.key, akeyval.val, bkeyval.val), err)
+					type_errors.because(type_errors.table_subset(bkeyval.key, akeyval.key, bkeyval.val, akeyval.val), err)
 				end
 			end
 		end
 
+		if b:IsNumericallyIndexed() and not a:IsNumericallyIndexed() then
+			return false, type_errors.subset(a, b)
+		end
+
 		return true, "all is equal"
 	elseif b.Type == "union" then
-		local u = Union({a})
-		local ok, err = u:IsSubsetOf(b)
-		return ok, err or "is subset of b"
+		for _, obj in ipairs(b.Data) do
+			local ok, err = a:IsSubsetOf(obj)
+
+			if ok then return true, "a is subset of one in the union" end
+		end
+
+		return false, type_errors.subset(a, b)
 	end
 
 	return false, type_errors.subset(a, b)
@@ -700,6 +711,40 @@ function META:FindKeyValWide(key--[[#: TBaseType]])
 		if key:Equal(keyval.key) then return keyval end
 
 		local ok, reason = key:IsSubsetOf(keyval.key)
+
+		if ok then return keyval end
+
+		if i <= 20 then reasons[i] = reason end
+	end
+
+	if #reasons > 20 then reasons = {type_errors.table_index(self, key)} end
+
+	if self.BaseTable then
+		local ok, reason = self.BaseTable:FindKeyValWide(key)
+
+		if ok then return ok end
+
+		table.insert(reasons, reason)
+	end
+
+	if not reasons[1] then
+		reasons[1] = type_errors.because(type_errors.table_index(self, key), "table is empty")
+	end
+
+	return false, type_errors.because(type_errors.table_index(self, key), reasons)
+end
+
+function META:FindKeyValWideReverse(key--[[#: TBaseType]])
+	local keyval = read_cache(self, key)
+
+	if keyval then return keyval end
+
+	local reasons = {}
+
+	for i, keyval in ipairs(self.Data) do
+		if key:Equal(keyval.key) then return keyval end
+
+		local ok, reason = keyval.key:IsSubsetOf(key)
 
 		if ok then return keyval end
 

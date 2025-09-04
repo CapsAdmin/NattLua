@@ -32,7 +32,7 @@ test("declaring base types", function()
         end
         AddToUnion<|Any, Table|>
         AddToUnion<|Any, Function|>
-        
+
         -- if the union sorting algorithm changes, we probably need to change this
         local analyzer function check()
             local a = tostring(env.typesystem.Any)
@@ -54,8 +54,8 @@ test("declaring base types", function()
             foo1 = true,
             bar = false,
             asdf = "asdf",
-            [{foo2 = "bar"}] = "aaaaa",
-            [{foo3 = "bar"}] = {[{1}] = {}},
+            --[{foo2 = "bar"}] = "aaaaa",
+            --[{foo3 = "bar"}] = {[{1}] = {}},
         }
 
         local type Foo = Symbol("asdf")

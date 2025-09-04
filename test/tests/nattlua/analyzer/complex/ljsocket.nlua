@@ -884,9 +884,9 @@ function M.poll(
 end
 
 local type AddressInfo = {
-	canonical_name = string,
-	host = string,
-	service = string,
+	canonical_name = string | nil,
+	host = string | nil,
+	service = string | nil | number,
 	family = keysof<|AF.lookup|>,
 	socket_type = keysof<|SOCK.lookup|>,
 	protocol = keysof<|IPPROTO.lookup|>,
@@ -953,9 +953,9 @@ local function addrinfo_to_table(
 
 	info.host = host ~= "*" and host or nil
 	info.service = service
-	info.family = AF.reverse[res.ai_family]
-	info.socket_type = SOCK.reverse[res.ai_socktype]
-	info.protocol = IPPROTO.reverse[res.ai_protocol]
+	info.family = assert(AF.reverse[res.ai_family])
+	info.socket_type = assert(SOCK.reverse[res.ai_socktype])
+	info.protocol = assert(IPPROTO.reverse[res.ai_protocol])
 	info.flags = flags_to_list(res.ai_flags, AI.lookup, bit.band)
 	info.addrinfo = res
 	info.get_ip = addrinfo_get_ip

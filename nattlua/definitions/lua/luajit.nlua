@@ -70,6 +70,10 @@ function FFIArray<|size: number, T: any|>
 		__sub = function(self: ref self, other: ref self | number)
 			return FFIPointer<|T|>
 		end,
+		free = function(self: ref self)
+			return nil
+		end,
+		__call = function=(self: ref self, ...: ...any)>(...any),
 	}
 end
 

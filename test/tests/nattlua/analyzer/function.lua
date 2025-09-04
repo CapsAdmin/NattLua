@@ -628,7 +628,9 @@ analyze[[
     tk.foo = "bar"
     attest.equal<|tk.foo, Type|>
 ]]
-analyze(
+-- because the value is any, and thus potentially nil, this effectively means that the table is empty
+-- this makes {[777] = 777} assignable to {}. this follows the same logic as tables with optional keys
+pending(
 	[[
     local table_pool = function(alloc: (function=()>({[string] = any})))
         local pool = {} as {[number] = return_type<|alloc|>[1]}
@@ -1041,7 +1043,7 @@ local type AnyTable = {[any] = any} | {}
 
 local function foo(x: AnyTable)
 	attest.strict_equal(x, _ as {[any] = any} | {})
-	table.insert(x, 1)
+	x[1]= 1
 end
 
 foo(x)

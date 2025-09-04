@@ -89,7 +89,7 @@ analyze[[
     end
     local type DirectGraph = {Color:{BagData}}
     local function parse_line(_line: string) : Color, {BagData}
-        return "teal", {} as {BagData}
+        return "teal", {BagData}
     end
     local M = {}
     function M.parse_input() : DirectGraph

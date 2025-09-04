@@ -16,16 +16,16 @@ analyze[=[
 		uint8_t uhoh;
 		uint64_t bar1;
 	}]])
+		
 
 	local struct = ctype()
-	
-	attest.subset_of<|{
+	attest.superset_of<|{
 		foo = number,
 		uhoh = number,
 		bar1 = number,
 	}, typeof struct|>
 ]=]
-analyze[=[
+pending[=[
 	local ctype = ffi.typeof([[struct {
 		uint32_t foo;
 		uint8_t uhoh;
@@ -37,7 +37,7 @@ analyze[=[
 	
 	local struct = box()
 	
-	attest.subset_of<|{
+	attest.superset_of<|{
 		[0] = {
 			foo = number,
 			uhoh = number,

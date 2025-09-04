@@ -1088,9 +1088,9 @@ local function find_by_type(
 
 	for _, child in ipairs(node:GetNodes()) do
 		if child.Type == what then
-			table.insert(out, child)
+			table.insert(out--[[# as List<|Node|>]], child)
 		elseif child:GetNodes() then
-			(find_by_type--[[# as any]])(child, what, out)
+			(find_by_type--[[# as any]])(child, what, out--[[# as any]])
 		end
 	end
 

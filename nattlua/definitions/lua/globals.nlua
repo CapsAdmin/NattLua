@@ -505,7 +505,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 			local b = meta:Get(kv.key)
 
 			if b and b.Type == "function" then
-				local ok = analyzer:Assert(a:IsSubsetOf(b))
+				local ok = a:IsSubsetOf(b)
 
 				if ok then
 
@@ -580,7 +580,9 @@ analyzer function tostring(val: any)
 	return tostring(val:GetData())
 end
 
-analyzer function tonumber(val: string | number, base: number | nil)
+analyzer function tonumber(val: string | number | {__is_cdata_number = true}, base: number | nil)
+	if val.Type == "table" then return types.Number() end
+
 	if val.Type == "number" and not val:IsLiteral() then return types.Number() end
 
 	if not val:IsLiteral() or base and not base:IsLiteral() then

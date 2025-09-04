@@ -50,7 +50,7 @@ analyze(
 
     local a: Foo = { a = 1 }    
 ]],
-	" is missing from "
+	" is not a subset of "
 )
 analyze(
 	[[

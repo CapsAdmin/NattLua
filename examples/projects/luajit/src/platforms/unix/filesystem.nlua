@@ -122,6 +122,7 @@ do
 					last_accessed = tonumber(buff[0].st_atime),
 					last_changed = tonumber(buff[0].st_ctime),
 					last_modified = tonumber(buff[0].st_mtime),
+					creation_time = tonumber(buff[0].st_mtime),
 					size = tonumber(buff[0].st_size),
 					type = bit.band(buff[0].st_mode, DIRECTORY) ~= 0 and "directory" or "file",
 				}

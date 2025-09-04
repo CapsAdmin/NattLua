@@ -27,7 +27,7 @@ end
 
 do
 	local function IsGabriel<|U: Table|>
-		return U supersetof {name = "Gabriel", team = {name = "dataviz"}} and true or false
+		return U subsetof {name = "Gabriel", team = {name = "dataviz"}}
 	end
 
 	attest.equal<|IsGabriel<|{name = "Gabriel", team = {name = "dataviz"}}|>, true|>

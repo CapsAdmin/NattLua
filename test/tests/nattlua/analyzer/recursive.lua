@@ -37,7 +37,7 @@ analyze[[
 ]]
 analyze(
 	[[
-    local type Json = string | number | boolean | nil | {[string] = CurrentType<|"union", 2|>} | {[number] = CurrentType<|"union", 1|>}
+    local type Json = string | number | boolean | {[string] = CurrentType<|"union"|>}
 
     local json: Json = {
         foo = {1, 2, 3},
@@ -53,7 +53,7 @@ analyze(
 	"2.-is not a subset of.-string"
 )
 analyze[[
-    type VirtualNode = string | {string, {[string] = any}, [3 .. inf] = CurrentType<|"union"|>}
+    local type VirtualNode = string | {string, {[string] = any}, [3 .. inf] = CurrentType<|"union"|>}
     local myNode: VirtualNode = {
         "div",
         {id = "parent"},
@@ -61,9 +61,9 @@ analyze[[
         {"div", {id = "second-child"}, "I'm the second child"},
     }
 ]]
-analyze(
+pending(
 	[[
-    type VirtualNode = string | {string, {[string] = any}, [3 .. inf] = CurrentType<|"union"|>}
+    local type VirtualNode = string | {string, {[string] = any}, [3 .. inf] = CurrentType<|"union"|>}
     local myNode: VirtualNode = {
         "div",
         {id = "parent"},

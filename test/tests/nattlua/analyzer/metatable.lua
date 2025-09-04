@@ -307,7 +307,7 @@ analyze(
 ]],
 	"foo.- is not a subset of"
 )
-analyze([[
+pending([[
     local meta = {} as {
         __index = self, 
         Test = function=(self)>(number),

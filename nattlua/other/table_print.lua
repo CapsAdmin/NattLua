@@ -236,7 +236,7 @@ local function tostring_object(obj--[[#: any]], state--[[#: nil | Partial<|State
 	if state.expand_metatables == nil then state.expand_metatables = false end
 
 	state.done = state.done or {}
-	return tostring_object_(obj, state)
+	return tostring_object_(obj, state--[[# as State]])
 end
 
 --[[#local type print = function=(any)>()]]

@@ -178,7 +178,6 @@ function _G.run_test_focus()
 	str = str:gsub("%s+", "")
 
 	if str == "" then return false end
-	run_hotreload_config(code)
 	_G.run_nlua("test_focus.nlua")
 	return true
 end

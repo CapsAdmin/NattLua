@@ -171,7 +171,7 @@ end
 local type Context = {tab = number, tab_limit = number, done = Table}
 
 function luadata.ToString(var, context: nil | Context)
-	context = context or {tab = -1}
+	context = context or {tab = -1, tab_limit = 5, done = {}}
 	local func = luadata.Types[luadata.Type(var)]
 
 	if func then return func(var, context) end
