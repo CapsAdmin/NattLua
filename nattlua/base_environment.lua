@@ -47,6 +47,8 @@ end
 
 return {
 	BuildBaseEnvironment = function(root_node)
+		if _G.DISABLE_BASE_ENV then return Table(), Table() end
+
 		local compiler = load_definitions(root_node)
 		-- for debugging
 		compiler.is_base_environment = true
