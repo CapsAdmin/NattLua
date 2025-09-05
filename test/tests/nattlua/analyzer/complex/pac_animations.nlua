@@ -1,7 +1,3 @@
-do
-	return
-end
-
 type pac = {}
 type pac.AddHook = function=(string, string, Function)>(nil)
 type pac.ResetEntityBoneMatrix = function=(any, number)>(nil)
@@ -459,15 +455,14 @@ function animations.RegisterAnimation(name: string, tInfo: Gesture)
 
 	animations.registered[name] = tInfo
 
-	do
-		return
-	end
-
 	for _, ent in ipairs(animations.playing) do
 		if ent.pac_animations and ent.pac_animations[name] then
 			local frame, delta = animations.GetEntityAnimationFrame(ent, name)
-			animations.ResetEntityAnimation(ent, name)
-			animations.SetEntityAnimationFrame(ent, name, frame, delta)
+
+			if frame and delta then
+				animations.ResetEntityAnimation(ent, name)
+				animations.SetEntityAnimationFrame(ent, name, frame, delta)
+			end
 		end
 	end
 end
@@ -799,7 +794,7 @@ function animations.SetEntityAnimationCycle(ent: Entity, name: string, f: number
 
 			if sec + dt >= f then
 				data.Frame = i
-				data.FrameDelta = math.Clamp((f - sec) / dt, 0, 1)
+				data.FrameDelta = math.Clamp(((f - sec) / dt) as number, 0, 1)
 
 				break
 			end
