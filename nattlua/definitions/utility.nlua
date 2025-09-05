@@ -115,7 +115,7 @@ analyzer function keysof(tbl: Table)
 		end
 	end
 
-	return union
+	return union:Simplify()
 end
 
 analyzer function seal(tbl: Table)
