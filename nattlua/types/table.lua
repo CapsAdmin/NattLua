@@ -284,14 +284,6 @@ function META:GetArrayLength()
 	return LNumber(len)
 end
 
-function META:CanBeEmpty()
-	for _, keyval in ipairs(self:GetData()) do
-		if not keyval.val:IsNil() then return false end
-	end
-
-	return true
-end
-
 function META:FollowsContract(contract--[[#: TTable]])
 	if self.suppress then return true end
 
@@ -366,6 +358,22 @@ local function can_be_nil(obj)
 	return obj:IsNil() or (obj.Type == "union" and obj:HasType("any")) or obj.Type == "any"
 end
 
+function META:CanBeEmpty()
+	for _, keyval in ipairs(self:GetData()) do
+		if not can_be_nil(keyval.val) then return false end
+	end
+
+	return true
+end
+
+function META:IsEmpty()
+	if self:GetContract() and self:GetContract() ~= self then
+		return self:GetContract():IsEmpty()
+	end
+
+	return not self.Data[1]
+end
+
 function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 	if a.suppress then return true, "suppressed" end
 
@@ -386,31 +394,8 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 			return true, "same metatable"
 		end
 
-		--if b:GetSelf() and b:GetSelf():Equal(a) then return true end
-		local can_be_empty = true
-		a.suppress = true
-
-		for _, keyval in ipairs(b:GetData()) do
-			if not can_be_nil(keyval.val) then
-				can_be_empty = false
-
-				break
-			end
-		end
-
-		a.suppress = false
-
-		if
-			not a:GetData()[1] and
-			(
-				not a:GetContract() or
-				(
-					a:GetContract():GetData() and
-					not a:GetContract():GetData()[1]
-				)
-			)
-		then
-			if can_be_empty then
+		if a:IsEmpty() then
+			if b:CanBeEmpty() then
 				return true, "can be empty"
 			else
 				return false, type_errors.subset(a, b)
@@ -670,12 +655,6 @@ end
 
 function META:HasKey(key--[[#: TBaseType]])
 	return self:FindKeyValWide(key)
-end
-
-function META:IsEmpty()
-	if self:GetContract() then return false end
-
-	return self:GetData()[1] == nil
 end
 
 function META:FindKeyValExact(key--[[#: TBaseType]])
