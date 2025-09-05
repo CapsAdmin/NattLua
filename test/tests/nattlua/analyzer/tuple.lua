@@ -97,7 +97,7 @@ local function Extract<|a: any, b: any|>
 	local out = Union<||>
     for aval in UnionValues(a) do
 		for bval in UnionValues(b) do
-			if aval < bval then
+			if aval subsetof bval then
 				out = out | aval
 			end
 		end

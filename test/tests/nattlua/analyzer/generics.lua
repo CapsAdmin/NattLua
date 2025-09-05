@@ -77,7 +77,7 @@ analyze(
 )
 analyze[[
     local function TypeToString<|T: any|>
-        if T > number then
+        if T supersetof number then
             return "number"
         end
         return "other"

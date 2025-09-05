@@ -282,9 +282,9 @@ local function BinaryWithUnion(self, node, l, r, op)
 			end
 
 			return l:Extend(r)
-		elseif op == ">" or op == "supersetof" then
+		elseif op == "supersetof" then
 			return Symbol((r:IsSubsetOf(l)))
-		elseif op == "<" or op == "subsetof" then
+		elseif op == "subsetof" then
 			return Symbol((l:IsSubsetOf(r)))
 		elseif op == ".." then
 			if l.Type == "tuple" and r.Type == "tuple" then

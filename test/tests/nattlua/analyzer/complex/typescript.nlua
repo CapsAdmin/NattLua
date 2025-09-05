@@ -182,7 +182,7 @@ do
 
 		for aval in UnionValues(a) do
 			for bval in UnionValues(b) do
-				if aval < bval then out = out | aval end
+				if aval subsetof bval then out = out | aval end
 			end
 		end
 
