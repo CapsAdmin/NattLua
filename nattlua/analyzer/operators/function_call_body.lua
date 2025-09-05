@@ -50,22 +50,16 @@ end
 local function check_argument_against_contract(self, arg, contract, i)
 	local ok, reason
 
-	if not arg then
-		if contract:IsFalsy() then
-			arg = Nil()
-			ok = true
-		else
-			ok = false
-			reason = type_errors.subset("*missing argument #" .. i .. "* ", contract)
-		end
+	if not arg and contract:IsFalsy() then
+		ok = true
+	elseif not arg then
+		ok, reason = false, type_errors.subset("*missing argument #" .. i .. "* ", contract)
 	elseif arg.Type == "table" and contract.Type == "table" then
 		ok, reason = arg:FollowsContract(contract)
+	elseif arg.Type == "function" and contract.Type == "function" then
+		ok, reason = arg:IsCallbackSubsetOf(contract)
 	else
-		if arg.Type == "function" and contract.Type == "function" then
-			ok, reason = arg:IsCallbackSubsetOf(contract)
-		else
-			ok, reason = arg:IsSubsetOf(contract)
-		end
+		ok, reason = arg:IsSubsetOf(contract)
 	end
 
 	if not ok then
