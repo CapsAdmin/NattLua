@@ -473,7 +473,11 @@ function META:Get(key--[[#: TBaseType]])
 end
 
 function META:IsLiteral()
-	return false
+	for _, v in ipairs(self.Data) do
+		if not v:IsLiteral() then return false end
+	end
+
+	return true
 end
 
 function META:GetWithoutExpansion(i--[[#: number]])
