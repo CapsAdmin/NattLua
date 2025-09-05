@@ -168,9 +168,9 @@ return function(META)
 		end
 	end
 
-	function META:ThrowError(msg, obj, level)
+	function META:ThrowError(msg, level)
 		self.lua_error_thrown = msg
-		self:PushCurrentExpression(self:GetCallFrame(level).call_node)
+		self:PushCurrentExpression((self:GetCallFrame(level) or self:GetCallFrame(1)).call_node)
 		self:Error(type_errors.plain_error(msg))
 		self:PopCurrentExpression()
 	end
