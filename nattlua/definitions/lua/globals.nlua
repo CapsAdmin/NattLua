@@ -403,7 +403,9 @@ type select = ReturnIfNonLiteral<|
 		local x = ...
 
 		if x and x.Type == "tuple" then
-			return select(index:GetData(), x:Unpack())
+			if index:GetData() == "#" then return x:GetSafeLength() end
+
+			return x:GetAtTupleIndex(index:GetData())
 		end
 
 		return select(index:GetData(), ...)
