@@ -1,8 +1,41 @@
 local function cdata<|
-	CType: number | AnyFunction | nil | {[string | number] = number | string | AnyFunction | nil | self}
+	CType: number | AnyFunction | nil | {[string | number] = CurrentType<|"union", 3|> | self},
+	...: ...any
 |>
-	-- pointers are indexed by numbers, arrays are indexed by 0 .. n
 	local type is_pointer = type(CType) == "table" and keysof<|CType|> == number
+	local type is_array = type(CType) == "table" and
+		(
+			type(keysof<|CType|>) == "number" or
+			type(keysof<|CType|>) == "range"
+		)
+
+	-- this assumes keys are in order, which in the typesystem they SHOULD be
+	if ... then
+		if is_array then
+			if #... - 1 > keysof<|CType|> then error<|"too many initializers", 2|> end
+
+			local contract = CType[keysof<|CType|>]
+			CType[keysof<|CType|>] = nil
+
+			for i, v in ipairs(...) do
+				if not v subsetof contract then
+					error("expected type '" .. tostring(contract) .. "' at index " .. (i - 1), 2)
+				end
+
+				CType[i - 1] = v
+			end
+		else
+			local type i = 1
+
+			for k, v in pairs(CType) do
+				local type l = select(i, ...)
+				CType[k] = l
+				i = i + 1
+			end
+		end
+	end
+
+	-- pointers are indexed by numbers, arrays are indexed by 0 .. n
 	return {
 		@MetaTable = self,
 		__is_cdata_number = CType == number,
@@ -14,7 +47,7 @@ local function cdata<|
 				return cdata<|CType[number](...)|>
 			end
 
-			error("not callable")
+			error<|"not callable", 2|>
 		end,
 		__index = function <|self: self, key: string | number|>
 			if is_pointer then
@@ -40,15 +73,20 @@ local function cdata<|
 	}
 end
 
-local function ctype<|CType: number | {[string | number] = number | string | self}|>
+local function ctype<|
+	CType: number | AnyFunction | nil | {[string | number] = CurrentType<|"union", 3|> | self}
+|>
 	-- pointers are indexed by numbers, arrays are indexed by 0 .. n
 	local type is_pointer = type(CType) == "table" and keysof<|CType|> == number
 	return {
 		@MetaTable = self,
-		__tostring = function(self: ref self)
+		__tostring = function <|self: self|>
 			return "ctype<" .. tostring(CType) .. (is_pointer and " *" or "") .. ">"
 		end,
-		__index = function(self: ref self, key: ref (string | number))
+		__call = function <|self: self, ...: ...any|>
+			return cdata<|CType, ...|>
+		end,
+		__index = function <|self: self, key: string | number|>
 			if is_pointer then
 				if type(key) == "string" then return CType[number][key] end
 
@@ -72,12 +110,12 @@ local function ctype<|CType: number | {[string | number] = number | string | sel
 	}
 end
 
-local function get_cdata<|anon_cdef: string|>
-	return cdata<|ffi.get_type2<|anon_cdef|>|>
+local function get_cdata<|anon_cdef: string, ...: ...any|>
+	return cdata<|ffi.get_type2<|anon_cdef|>, ...|>
 end
 
-local function get_ctype<|anon_cdef: string|>
-	return ctype<|ffi.get_type2<|anon_cdef|>|>
+local function get_ctype<|anon_cdef: string, ...: ...any|>
+	return ctype<|ffi.get_type2<|anon_cdef, ...|>|>
 end
 
 attest.equal<|get_cdata<|"struct {int i;}"|>.i, number|>
@@ -85,11 +123,67 @@ attest.equal<|get_cdata<|"struct {int i;}[1]"|>[0].i, number|>
 attest.equal<|get_cdata<|"struct {int i;}*"|>[0].i, number|>
 attest.equal<|get_cdata<|"struct {int i;}*"|>[14].i, number|>
 attest.equal<|tonumber(get_cdata<|"int"|>), number|>
-attest.expect_diagnostic<|"error", "subset"|>
-attest.equal<|tonumber(get_ctype<|"int"|>), number | nil|>
+
+do
+	attest.expect_diagnostic<|"error", "subset"|>
+	attest.equal<|tonumber(get_ctype<|"int"|>), number | nil|>
+end
+
 attest.subset_of<|get_cdata<|"int[1]"|>, get_cdata<|"int*"|>|>
 attest.equal<|tostring(get_cdata<|"int[1]"|>), "cdata<{ [0] = number }>"|>
 attest.equal<|tostring(get_cdata<|"int[2]"|>), "cdata<{ [0..1] = number }>"|>
 attest.equal<|(get_cdata<|"int (*)(int)"|>)(1), get_cdata<|"int"|>|>
 attest.equal<|(get_cdata<|"int (*)()"|>)(), get_cdata<|"int"|>|>
 attest.equal<|(get_cdata<|"void (*)()"|>)(), get_cdata<|"void"|>|>
+
+do
+	local x = get_cdata<|"void"|>
+	attest.expect_diagnostic<|"error", "not callable"|>
+	x()
+end
+
+do
+	local ct = get_ctype<|[[struct {
+		uint32_t foo;
+		uint8_t uhoh;
+		uint64_t bar1;
+	}]]|>
+	local cd = ct()
+end
+
+do
+	local ct = get_ctype<|"$*", get_ctype<|"int"|>|>
+	attest.equal<|ct, get_ctype<|"int *"|>|>
+end
+
+do
+	local cd = get_cdata<|"struct {int i;}", 1337|>
+	attest.equal<|cd.i, 1337|>
+end
+
+do
+	local cd = get_cdata<|"struct {int a; int b; int c;}", 1, 2, 3|>
+	attest.equal<|cd.a, 1|>
+	attest.equal<|cd.b, 2|>
+	attest.equal<|cd.c, 3|>
+end
+
+do
+	local ffi = require("ffi")
+	local x = get_ctype("struct { int foo; }[1]")
+	x = x({{foo = 1}})
+	attest.equal(x[0].foo, 1)
+end
+
+do
+	local x = get_cdata("struct { int foo; }[2]", {{foo = 1}, {foo = 2}})
+	attest.equal(x[0].foo, 1)
+	attest.equal(x[1].foo, 2)
+end
+
+do
+	attest.expect_diagnostic<|"error", "too many initializers"|>
+	local x = get_cdata("struct { int foo; }[1]", {{foo = 1}, {foo = 2}})
+	attest.equal(x[0].foo, 1)
+	attest.equal(x[1].foo, 2)
+end
