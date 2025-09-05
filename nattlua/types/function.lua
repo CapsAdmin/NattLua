@@ -167,14 +167,20 @@ function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 	return true
 end
 
-function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
-	if b.Type == "tuple" then b = b:GetWithNumber(1) end
-
-	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
-
-	if b.Type == "any" then return true end
-
-	if b.Type ~= "function" then return false, type_errors.subset(a, b) end
+function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TFunction]])
+	if
+		(
+			not b:IsCalled() and
+			not b:IsExplicitOutputSignature()
+		)
+		or
+		(
+			not a:IsCalled() and
+			not a:IsExplicitOutputSignature()
+		)
+	then
+		return true
+	end
 
 	local ok, reason = a:GetInputSignature():IsSubsetOf(b:GetInputSignature(), a:GetInputSignature():GetMinimumLength())
 
@@ -184,23 +190,6 @@ function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 	end
 
 	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
-
-	if
-		not ok and
-		(
-			(
-				not b:IsCalled() and
-				not b:IsExplicitOutputSignature()
-			)
-			or
-			(
-				not a:IsCalled() and
-				not a:IsExplicitOutputSignature()
-			)
-		)
-	then
-		return true
-	end
 
 	if not ok then
 		return false,
