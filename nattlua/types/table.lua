@@ -403,7 +403,7 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 		end
 
 		for _, bkeyval in ipairs(b:GetData()) do
-			local akeyval, reason = a:FindKeyValWideReverse(bkeyval.key)
+			local akeyval, reason = a:FindKeyValWide(bkeyval.key, true)
 
 			if not can_be_nil(bkeyval.val) then
 				if not akeyval then
@@ -679,7 +679,7 @@ function META:FindKeyValExact(key--[[#: TBaseType]])
 	return false, type_errors.because(type_errors.table_index(self, key), reasons)
 end
 
-function META:FindKeyValWide(key--[[#: TBaseType]])
+function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]])
 	local keyval = read_cache(self, key)
 
 	if keyval then return keyval end
@@ -689,41 +689,13 @@ function META:FindKeyValWide(key--[[#: TBaseType]])
 	for i, keyval in ipairs(self.Data) do
 		if key:Equal(keyval.key) then return keyval end
 
-		local ok, reason = key:IsSubsetOf(keyval.key)
+		local ok, reason
 
-		if ok then return keyval end
-
-		if i <= 20 then reasons[i] = reason end
-	end
-
-	if #reasons > 20 then reasons = {type_errors.table_index(self, key)} end
-
-	if self.BaseTable then
-		local ok, reason = self.BaseTable:FindKeyValWide(key)
-
-		if ok then return ok end
-
-		table.insert(reasons, reason)
-	end
-
-	if not reasons[1] then
-		reasons[1] = type_errors.because(type_errors.table_index(self, key), "table is empty")
-	end
-
-	return false, type_errors.because(type_errors.table_index(self, key), reasons)
-end
-
-function META:FindKeyValWideReverse(key--[[#: TBaseType]])
-	local keyval = read_cache(self, key)
-
-	if keyval then return keyval end
-
-	local reasons = {}
-
-	for i, keyval in ipairs(self.Data) do
-		if key:Equal(keyval.key) then return keyval end
-
-		local ok, reason = keyval.key:IsSubsetOf(key)
+		if reverse then
+			ok, reason = keyval.key:IsSubsetOf(key)
+		else
+			ok, reason = key:IsSubsetOf(keyval.key)
+		end
 
 		if ok then return keyval end
 
