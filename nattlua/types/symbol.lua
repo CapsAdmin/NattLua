@@ -77,6 +77,10 @@ function META:IsNil()
 	return self.Data == NIL
 end
 
+function META:CanBeNil()
+	return self.Data == NIL
+end
+
 function META:IsBoolean()
 	return self.Data == TRUE or self.Data == FALSE
 end

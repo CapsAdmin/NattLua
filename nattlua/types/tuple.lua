@@ -553,7 +553,7 @@ function META:GetMinimumLength2()
 	for i = #self:GetData(), 1, -1 do
 		local obj = self:GetData()[i]--[[# as TBaseType]]
 
-		if not obj:IsNil() then return len else len = len - 1 end
+		if not obj:IsNil() and obj.Type ~= "any" then return len else len = len - 1 end
 	end
 
 	return len
@@ -568,16 +568,7 @@ function META:GetMinimumLength()
 	for i = #self:GetData(), 1, -1 do
 		local obj = self:GetData()[i]--[[# as TBaseType]]
 
-		if
-			(
-				obj.Type == "union" and
-				obj:IsNil()
-			) or
-			(
-				obj.Type == "symbol" and
-				obj:IsNil()
-			)
-		then
+		if obj:IsNil() and obj.Type ~= "any" then
 			found_nil = true
 			len = i - 1
 		elseif found_nil then

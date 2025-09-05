@@ -36,6 +36,10 @@ function META:IsTruthy()
 end
 
 function META:IsNil()
+	return false
+end
+
+function META:CanBeNil()
 	return true
 end
 

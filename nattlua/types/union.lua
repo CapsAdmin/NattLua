@@ -400,7 +400,15 @@ end
 
 function META:IsNil()
 	for _, obj in ipairs(self.Data) do
-		if obj.Type == "symbol" and (obj--[[# as TSymbol]]):IsNil() then return true end
+		if obj:IsNil() then return true end
+	end
+
+	return false
+end
+
+function META:CanBeNil()
+	for _, obj in ipairs(self.Data) do
+		if obj:CanBeNil() then return true end
 	end
 
 	return false

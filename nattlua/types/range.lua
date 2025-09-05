@@ -19,6 +19,7 @@ local META = require("nattlua.types.base")()
 --[[#type TRange = META.@Self]]
 --[[#type TRange.DontWiden = boolean]]
 --[[#type TRange.Type = "range"]]
+--[[#type TRange.Data = nil]]
 META.Type = "range"
 META:GetSet("MinNumber", false--[[# as TNumber]])
 META:GetSet("MaxNumber", false--[[# as TNumber]])

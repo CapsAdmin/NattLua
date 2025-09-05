@@ -23,6 +23,10 @@ return function()
 		return false
 	end
 
+	function META:CanBeNil()
+		return false
+	end
+
 	function META:GetLuaType()
 		return self.Type
 	end

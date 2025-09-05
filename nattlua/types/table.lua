@@ -354,13 +354,9 @@ function META:FollowsContract(contract--[[#: TTable]])
 	return true
 end
 
-local function can_be_nil(obj)
-	return obj:IsNil() or (obj.Type == "union" and obj:HasType("any")) or obj.Type == "any"
-end
-
 function META:CanBeEmpty()
 	for _, keyval in ipairs(self:GetData()) do
-		if not can_be_nil(keyval.val) then return false end
+		if not keyval.val:CanBeNil() then return false end
 	end
 
 	return true
@@ -379,7 +375,7 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 
 	if b.Type == "tuple" then b = b:GetWithNumber(1) end
 
-	if b.Type == "any" then return true, "b is any " end
+	if b.Type == "any" then return true, "b is any" end
 
 	if b.Type == "table" then
 		if a == b then return true, "same type" end
@@ -395,17 +391,15 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 		end
 
 		if a:IsEmpty() then
-			if b:CanBeEmpty() then
-				return true, "can be empty"
-			else
-				return false, type_errors.subset(a, b)
-			end
+			if b:CanBeEmpty() then return true, "can be empty" end
+
+			return false, type_errors.subset(a, b)
 		end
 
 		for _, bkeyval in ipairs(b:GetData()) do
 			local akeyval, reason = a:FindKeyValWide(bkeyval.key, true)
 
-			if not can_be_nil(bkeyval.val) then
+			if not bkeyval.val:CanBeNil() then
 				if not akeyval then
 					if b.BaseTable and b.BaseTable == a then
 						akeyval = bkeyval
@@ -449,20 +443,7 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 			local ok, err = self:FindKeyValExact(keyval.key)
 
 			if not ok then
-				if
-					(
-						keyval.val.Type == "symbol" and
-						keyval.val:IsNil()
-					) or
-					(
-						keyval.val.Type == "union" and
-						keyval.val:IsNil()
-					)
-					or
-					keyval.val.Type == "any"
-				then
-					return true
-				end
+				if keyval.val:CanBeNil() then return true end
 
 				return false,
 				type_errors.because(type_errors.key_missing_contract(keyval.key, contract), err)
