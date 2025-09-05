@@ -1133,3 +1133,10 @@ attest.equal(#tbl, 3)
 attest.equal(table.remove(tbl, 2), "bar")
 attest.equal(tbl, {"foo", "faz"})
 ]]
+analyze[[
+local x = {
+	foo: boolean = true,
+	["bar"]: string = "hello",
+}
+attest.equal<|x, {foo = boolean, bar = string}|>
+]]

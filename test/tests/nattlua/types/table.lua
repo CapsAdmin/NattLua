@@ -13,11 +13,6 @@ test("union and get", function()
 	assert(tbl:Set(LString("foo"), LNumber(1337)))
 	equal(1337, tbl:Get(LString("foo")):GetData())
 	assert(tbl:IsSubsetOf(contract))
-
-	do
-		return
-	end
-
 	assert(not contract:IsSubsetOf(tbl))
 end)
 

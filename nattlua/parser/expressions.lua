@@ -550,6 +550,12 @@ return function(META)
 				elseif self:IsTokenType("letter") and self:IsTokenValue("=", 1) then
 					local node = self:StartNode("sub_statement_table_key_value")
 					node.tokens["identifier"] = self:ExpectTokenType("letter")
+
+					if self:IsTokenValue(":") and not self:IsTokenValue("(", 2) then
+						node.tokens[":"] = self:ExpectTokenValue(":")
+						node.type_expression = self:ExpectTypeExpression(0)
+					end
+
 					node.tokens["="] = self:ExpectTokenValue("=")
 					local spread = self:read_table_spread()
 

@@ -899,6 +899,15 @@ return function()
 		self:EmitToken(node.tokens["["])
 		self:EmitExpression(node.key_expression)
 		self:EmitToken(node.tokens["]"])
+
+		if node.tokens[":"] then
+			local ok = self:StartEmittingInvalidLuaCode()
+			self:EmitToken(node.tokens[":"])
+			self:Whitespace(" ")
+			self:EmitTypeExpression(node.type_expression)
+			self:StopEmittingInvalidLuaCode(ok)
+		end
+		
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["="])
 		self:Whitespace(" ")
