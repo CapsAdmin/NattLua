@@ -82,7 +82,10 @@ local function cast(self, node)
 
 		if _G.FFI2 then
 			local arr = Table()
-			arr:Set(size:GetData() == 0 and LNumber(0) or LNumberRange(0, size:GetData() - 1), cast(self, assert(node.of)))
+			arr:Set(
+				size:GetData() == 1 and LNumber(0) or LNumberRange(0, size:GetData() - 1),
+				cast(self, assert(node.of))
+			)
 			return arr
 		end
 
