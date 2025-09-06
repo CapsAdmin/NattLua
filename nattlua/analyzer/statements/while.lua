@@ -1,4 +1,5 @@
 local type_errors = require("nattlua.types.error_messages")
+local ipairs = _G.ipairs
 return {
 	AnalyzeWhile = function(self, statement)
 		local obj = self:AnalyzeConditionalExpression(statement.expression)

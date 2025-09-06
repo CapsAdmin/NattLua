@@ -11,7 +11,8 @@ local error = _G.error
 local ipairs = _G.ipairs
 local stringx = require("nattlua.other.string")
 local formating = {}
-
+local assert = _G.assert
+local select = _G.select
 function formating.QuoteToken(str--[[#: string]])--[[#: string]]
 	return "❲" .. str .. "❳"
 end

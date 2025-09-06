@@ -2,7 +2,9 @@ local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
 local LStringNoMeta = require("nattlua.types.string").LStringNoMeta
 local Analyzer = require("nattlua.analyzer.analyzer").New
-
+local assert = _G.assert
+local io_open = _G.io.open
+local math_huge = _G.math.huge
 if not _G.IMPORTS then
 	_G.IMPORTS = setmetatable(
 		{},
@@ -17,7 +19,7 @@ if not _G.IMPORTS then
 end
 
 local function import_data(path)
-	local f, err = io.open(path, "rb")
+	local f, err = io_open(path, "rb")
 
 	if not f then return nil, err end
 
@@ -55,7 +57,7 @@ return {
 		assert(compiler:Lex())
 		assert(compiler:Parse())
 		local runtime_env = Table()
-		runtime_env:SetMutationLimit(math.huge)
+		runtime_env:SetMutationLimit(math_huge)
 		local typesystem_env = Table()
 		typesystem_env.string_metatable = Table()
 		compiler:SetEnvironments(runtime_env, typesystem_env)

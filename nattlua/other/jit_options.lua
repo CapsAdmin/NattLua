@@ -1,6 +1,11 @@
 --[[HOTRELOAD
 run_lua("test/performance/tests.lua")
 ]]
+
+local type = _G.type
+local table_insert = _G.table.insert
+local tostring = _G.tostring
+local pairs = _G.pairs
 local jit = _G.jit--[[# as jit | nil]]
 local jit_options = {}
 
@@ -118,14 +123,14 @@ function jit_options.Set(options, flags)
 	local args = {}
 
 	for k, v in pairs(p) do
-		table.insert(args, k .. "=" .. tostring(v))
+		table_insert(args, k .. "=" .. tostring(v))
 	end
 
 	for k, v in pairs(f) do
 		if v then
-			table.insert(args, "+" .. k)
+			table_insert(args, "+" .. k)
 		else
-			table.insert(args, "-" .. k)
+			table_insert(args, "-" .. k)
 		end
 	end
 

@@ -1,4 +1,6 @@
 --ANALYZE
+local assert = _G.assert
+local table_insert = _G.table.insert
 local attach = _G.jit and _G.jit.attach
 local ok, jutil = pcall(require, "jit.util")
 local traceinfo = ok and jutil.traceinfo
@@ -74,7 +76,7 @@ local function abort(
 		code = code,
 		reason = reason,
 	}
-	table.insert(trace.pc_lines, {func = func, pc = pc, depth = 0})
+	table_insert(trace.pc_lines, {func = func, pc = pc, depth = 0})
 	aborted[id] = trace
 
 	if trace.parent and trace.parent.children then
@@ -102,7 +104,7 @@ end
 
 local function record(tr--[[#: number]], func--[[#: Function]], pc--[[#: number]], depth--[[#: number]])
 	assert(traces[tr])
-	table.insert(traces[tr].pc_lines, {func = func, pc = pc, depth = depth})
+	table_insert(traces[tr].pc_lines, {func = func, pc = pc, depth = depth})
 end
 
 local trace_track = {}

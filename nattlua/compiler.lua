@@ -1,9 +1,11 @@
-local io = io
-local error = error
-local xpcall = xpcall
-local tostring = tostring
+local io = _G.io
+local error = _G.error
+local xpcall = _G.xpcall
+local tostring = _G.tostring
+local ipairs = _G.ipairs
 local table = _G.table
-local assert = assert
+local assert = _G.assert
+local math_huge = _G.math.huge
 local formating = require("nattlua.other.formating")
 local stack_trace = require("nattlua.other.stack_trace")
 local debug = _G.debug
@@ -123,7 +125,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 		local level = 2
 
 		if _G.TEST then
-			for i = 1, math.huge do
+			for i = 1, math_huge do
 				local info = debug.getinfo(i)
 
 				if not info then break end

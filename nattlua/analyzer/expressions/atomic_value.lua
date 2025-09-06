@@ -11,6 +11,8 @@ local String = require("nattlua.types.string").String
 local Number = require("nattlua.types.number").Number
 local Boolean = require("nattlua.types.union").Boolean
 local table = _G.table
+local math_abs = math.abs
+local math_huge = math.huge
 local type_errors = require("nattlua.types.error_messages")
 
 local function lookup_value(self, ident)
@@ -109,9 +111,9 @@ return {
 				if value == "any" then
 					return Any()
 				elseif value == "inf" then
-					return LNumber(math.huge)
+					return LNumber(math_huge)
 				elseif value == "nan" then
-					return LNumber(math.abs(0 / 0))
+					return LNumber(math_abs(0 / 0))
 				elseif value == "string" then
 					return String()
 				elseif value == "number" then

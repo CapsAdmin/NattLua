@@ -5,6 +5,7 @@ local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
+local math_huge = math.huge
 return {
 	AnalyzeGenericFor = function(self, statement)
 		local args = self:AnalyzeExpressions(statement.expressions)
@@ -42,7 +43,7 @@ return {
 					end
 				end
 
-				if max_length ~= math.huge then
+				if max_length ~= math_huge then
 					for i = 1, max_length do
 						tup:Set(i, values:GetAtTupleIndex(i))
 					end

@@ -5,6 +5,8 @@
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 local math_huge = math.huge
+local table_insert = table.insert
+local tostring = tostring
 return function(META)
 	function META:ParseTealFunctionArgument(expect_type--[[#: nil | boolean]])
 		if
@@ -154,7 +156,7 @@ return function(META)
 				kv.tokens["="] = self:NewToken("symbol", "=")
 				kv.value_expression = self:ParseTealExpression(0)
 				kv = self:EndNode(kv)
-				table.insert(node.children, kv)
+				table_insert(node.children, kv)
 
 				if not self:IsTokenValue(",") then
 					if i > 1 then key.value = self:NewToken("number", tostring(i)) end
@@ -164,7 +166,7 @@ return function(META)
 
 				key.value = self:NewToken("number", tostring(i))
 				i = i + 1
-				table.insert(node.tokens["separators"], self:ExpectTokenValue(","))
+				table_insert(node.tokens["separators"], self:ExpectTokenValue(","))
 			end
 		end
 
@@ -356,7 +358,7 @@ return function(META)
 		local block = self:StartNode("statement_do")
 		block.tokens["do"] = self:NewToken("letter", "do")
 		block.statements = {}
-		table.insert(
+		table_insert(
 			block.statements,
 			self:ParseString("PushTypeEnvironment<|" .. name .. "|>").statements[1]
 		)
@@ -373,22 +375,22 @@ return function(META)
 
 			if #node > 0 then
 				for _, node in ipairs(node) do
-					table.insert(block.statements, node)
+					table_insert(block.statements, node)
 				end
 			else
-				table.insert(block.statements, node)
+				table_insert(block.statements, node)
 			end
 		end
 
-		table.insert(block.statements, self:ParseString("PopTypeEnvironment<||>").statements[1])
+		table_insert(block.statements, self:ParseString("PopTypeEnvironment<||>").statements[1])
 		block.tokens["end"] = self:ExpectTokenValue("end")
 		block = self:EndNode(block)
 		self:PopParserEnvironment()
 
 		if func then
-			table.insert(func.statements, assignment)
-			table.insert(func.statements, block)
-			table.insert(func.statements, self:ParseString("return " .. name).statements[1])
+			table_insert(func.statements, assignment)
+			table_insert(func.statements, block)
+			table_insert(func.statements, self:ParseString("return " .. name).statements[1])
 			func.tokens["end"] = self:NewToken("letter", "end")
 			func = self:EndNode(func)
 			return func

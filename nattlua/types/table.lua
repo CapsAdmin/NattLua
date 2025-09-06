@@ -16,6 +16,8 @@ local META = require("nattlua.types.base")()
 local context = require("nattlua.analyzer.context")
 local mutation_solver = require("nattlua.analyzer.mutation_solver")
 local Any = require("nattlua.types.any").Any
+local math_abs = math.abs
+local math_huge = math.huge
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type TTable = META.@Self]]
 --[[#type TTable.suppress = boolean]]
@@ -815,9 +817,9 @@ function META:Get(key--[[#: TBaseType | TString]])
 	if key.Type == "range" then
 		local union = Union()
 		local min, max = key:GetMin(), key:GetMax()
-		local len = math.abs(min - max)
+		local len = math_abs(min - max)
 
-		if len == math.huge or len == -math.huge then
+		if len == math_huge or len == -math_huge then
 			union:AddType(Nil())
 
 			for _, keyval in ipairs(self:GetData()) do

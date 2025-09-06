@@ -1,6 +1,7 @@
 local ipairs = _G.ipairs
 local Union = require("nattlua.types.union").Union
 local type_errors = require("nattlua.types.error_messages")
+local table_insert = _G.table.insert
 return {
 	AnalyzeIf = function(self, statement)
 		local prev_obj
@@ -14,7 +15,7 @@ return {
 				local obj = self:AnalyzeConditionalExpression(exp)
 
 				if obj:IsTruthy() then
-					table.insert(
+					table_insert(
 						blocks,
 						{
 							statements = statements,
@@ -85,7 +86,7 @@ return {
 				end
 
 				if prev_obj:IsFalsy() then
-					table.insert(
+					table_insert(
 						blocks,
 						{
 							statements = statements,
@@ -124,7 +125,7 @@ return {
 					local prev = {}
 
 					for i = 1, i do
-						table.insert(prev, blocks[i])
+						table_insert(prev, blocks[i])
 					end
 
 					self:ApplyMutationsInIfElse(prev)

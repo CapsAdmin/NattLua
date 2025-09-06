@@ -1,6 +1,7 @@
 --[[HOTRELOAD
 	run_test("test/tests/nattlua/c_declarations/cdef.nlua")
 ]]
+
 local math = _G.math
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
@@ -22,6 +23,7 @@ local Nil = require("nattlua.types.symbol").Nil
 local Boolean = require("nattlua.types.union").Boolean
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
+local ERROR_REDECLARE = false
 local walk_cdeclarations = require("nattlua.c_declarations.ast_walker")
 META.OnInitialize = {}
 require("nattlua.other.context_mixin")(META)

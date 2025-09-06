@@ -1,6 +1,6 @@
 --ANALYZE
-local math = math
-local assert = assert
+local math = _G.math
+local assert = _G.assert
 local error = _G.error
 local tostring = _G.tostring
 local tonumber = _G.tonumber
@@ -65,7 +65,7 @@ function META:GetLuaType()
 end
 
 local function LNumberRange(from--[[#: number]], to--[[#: number]])
-	assert(type(from) == "number", debug.traceback())
+	assert(type(from) == "number")
 	assert(type(to) == "number")
 	return META.New(LNumber(from), LNumber(to))
 end

@@ -2,13 +2,20 @@
 	run_test("test/tests/coverage.lua")
 ]]
 
+
 local coverage = {}
 _G.__COVERAGE = _G.__COVERAGE or {}
 coverage.collected = {}
 local nl = require("nattlua")
 local FUNC_NAME = "__CLCT"
-local loadstring = loadstring or load
-
+local loadstring = require("nattlua.other.loadstring")
+local table_insert = _G.table.insert
+local tostring = _G.tostring
+local table_concat = _G.table.concat
+local table_sort = _G.table.sort
+local math_min = _G.math.min
+local math_max = _G.math.max
+local math_huge = _G.math.huge
 function coverage.Preprocess(code, key)
 	local expressions = {}
 
@@ -40,7 +47,7 @@ function coverage.Preprocess(code, key)
 			call_expression.right = node.right
 		end
 
-		table.insert(expressions, node)
+		table_insert(expressions, node)
 		-- to prevent start stop messing up from previous injections
 		call_expression.code_start = node.code_start
 		call_expression.code_stop = node.code_stop
@@ -137,13 +144,13 @@ end
 
 local function normalizeRanges(ranges)
 	local map = {}
-	local minVal = math.huge
-	local maxVal = -math.huge
+	local minVal = math_huge
+	local maxVal = -math_huge
 
 	for _, range in ipairs(ranges) do
 		local start, finish, count = range[1], range[2], range[3]
-		minVal = math.min(minVal, start)
-		maxVal = math.max(maxVal, finish)
+		minVal = math_min(minVal, start)
+		maxVal = math_max(maxVal, finish)
 
 		for i = start, finish do
 			map[i] = count
@@ -158,7 +165,7 @@ local function normalizeRanges(ranges)
 		local nextCount = map[i] or 0
 
 		if nextCount ~= currentCount then
-			table.insert(result, {currentStart, i - 1, currentCount})
+			table_insert(result, {currentStart, i - 1, currentCount})
 			currentStart = i
 			currentCount = nextCount
 		end
@@ -176,19 +183,19 @@ function coverage.Collect(key)
 	local list = {}
 
 	for _, item in pairs(data.called) do
-		table.insert(list, item)
+		table_insert(list, item)
 	end
 
-	table.sort(list, function(a, b)
+	table_sort(list, function(a, b)
 		return a[1] < b[1]
 	end)
 
 	list = normalizeRanges(list)
 
 	for _, item in ipairs(list) do
-		table.insert(
+		table_insert(
 			buffer,
-			"{" .. table.concat(
+			"{" .. table_concat(
 					{
 						tostring(item[1]),
 						tostring(item[2]),
@@ -199,7 +206,7 @@ function coverage.Collect(key)
 		)
 	end
 
-	return "return {" .. table.concat(buffer, ",") .. "}"
+	return "return {" .. table_concat(buffer, ",") .. "}"
 end
 
 return coverage

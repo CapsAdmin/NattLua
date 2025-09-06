@@ -1,3 +1,4 @@
+local setmetatable = _G.setmetatable
 local type_errors = require("nattlua.types.error_messages")
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]

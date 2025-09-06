@@ -10,6 +10,7 @@ local table = _G.table
 local setmetatable = _G.setmetatable
 local pcall = _G.pcall
 local debug = _G.debug
+local assert = _G.assert
 local Compiler = require("nattlua.compiler").New
 local formating = require("nattlua.other.formating")
 local Union = require("nattlua.types.union").Union

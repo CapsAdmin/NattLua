@@ -12,6 +12,9 @@ local table_concat = _G.table.concat
 local table_remove = _G.table.remove
 local table_sort = require("nattlua.other.sort")
 local table_clear = require("nattlua.other.tablex").clear
+local assert = _G.assert
+local math_max = _G.math.max
+local math_huge = _G.math.huge
 
 --[[#local type { TSymbol } = require("nattlua.types.symbol")]]
 
@@ -234,9 +237,9 @@ function META:GetTupleLength()
 
 	for _, obj in ipairs(self.Data) do
 		if obj.Type == "union" or obj.Type == "tuple" then
-			len = math.max(len, obj:GetTupleLength())
+			len = math_max(len, obj:GetTupleLength())
 		else
-			len = math.max(len, 1)
+			len = math_max(len, 1)
 		end
 	end
 
@@ -271,7 +274,7 @@ function META:GetAtTupleIndexUnion(i--[[#: number]])
 			local found, err = (obj--[[# as any]]):GetWithNumber(i)
 
 			if found then
-				if (obj--[[# as any]]):GetElementCount() == math.huge then is_inf = true end
+				if (obj--[[# as any]]):GetElementCount() == math_huge then is_inf = true end
 
 				if found.Type == "union" then
 					found, err = found:GetAtTupleIndexUnion(1)

@@ -1,4 +1,6 @@
 local table = _G.table
+local math_huge = _G.math.huge
+local ipairs = _G.ipairs
 local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
 local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
@@ -14,7 +16,7 @@ local function postfix_call(self, self_arg, node, callable)
 		if
 			#types == 1 and
 			types[1].Type == "tuple" and
-			callable:GetInputSignature():GetTupleLength() == math.huge
+			callable:GetInputSignature():GetTupleLength() == math_huge
 		then
 			arguments = types[1]
 		else

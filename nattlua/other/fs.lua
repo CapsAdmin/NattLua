@@ -1,3 +1,5 @@
+local bit_band = bit.band
+
 local fs = {}
 
 if not jit then
@@ -184,7 +186,7 @@ elseif jit.arch ~= "Windows" then
 
 			function fs.get_type(path)
 				if stat_func(path, buff) == 0 then
-					return bit.band(buff[0].st_mode, DIRECTORY) ~= 0 and "directory" or "file"
+					return bit_band(buff[0].st_mode, DIRECTORY) ~= 0 and "directory" or "file"
 				end
 
 				return nil

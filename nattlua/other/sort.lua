@@ -1,3 +1,4 @@
+local math_floor = _G.math.floor
 -- https://github.com/DarkRoku12/lua_sort
 -- Copyright (C) 2017 - DarkRoku12
 -- Optimized version.
@@ -26,7 +27,7 @@ function auxsort(t--[[#: any]], l, u, sort_comp)
 		end
 
 		if u - l == 1 then break end -- only 2 elements
-		local i = math.floor((l + u) / 2)
+		local i = math_floor((l + u) / 2)
 
 		-- -- for tail recursion (i).
 		do
@@ -105,9 +106,5 @@ end
 
 -- sort function.
 return function(t, comp)
-	assert(type(t) == "table")
-
-	if comp then assert(type(comp) == "function") end
-
 	auxsort(t, 1, #t, comp or default_comp)
 end

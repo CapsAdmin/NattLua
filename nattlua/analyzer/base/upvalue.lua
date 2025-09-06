@@ -4,6 +4,7 @@ local type_errors = require("nattlua.types.error_messages")
 local tostring = _G.tostring
 local assert = _G.assert
 local table_insert = _G.table.insert
+local table_remove = _G.table.remove
 local setmetatable = _G.setmetatable
 local META = class.CreateTemplate("upvalue")
 META:GetSet("Value")
@@ -76,7 +77,7 @@ do
 		for i = #mutations, 1, -1 do
 			local mut = mutations[i]
 
-			if mut.from_tracking then table.remove(mutations, i) end
+			if mut.from_tracking then table_remove(mutations, i) end
 		end
 	end
 end

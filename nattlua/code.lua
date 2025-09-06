@@ -1,5 +1,6 @@
 --ANALYZE
 local setmetatable = _G.setmetatable
+local debug_getinfo = _G.debug.getinfo
 local formating = require("nattlua.other.formating")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("code")
@@ -18,7 +19,7 @@ function META:SubPosToLineChar(start--[[#: number]], stop--[[#: number]])
 end
 
 local function get_default_name()
-	local info = debug.getinfo(3)
+	local info = debug_getinfo(3)
 
 	if info then
 		local parent_line = info.currentline

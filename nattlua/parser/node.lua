@@ -962,7 +962,7 @@ function META:Render(config)
 		-- we have to do this because nattlua.emitter is not yet typed
 		-- so if it's hoisted the self/node.lua will fail
 		if _G.IMPORTS--[[# as false]] then
-			emitter = IMPORTS["nattlua.emitter.emitter"]()
+			emitter = _G.IMPORTS["nattlua.emitter.emitter"]()
 		else
 			--[[#£ parser.dont_hoist_next_import = true]]
 

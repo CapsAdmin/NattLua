@@ -1,8 +1,12 @@
 local stringx = require("nattlua.other.string")
+local string_gsub = _G.string.gsub
+local ipairs = _G.ipairs
+local package = _G.package
+local table_concat = _G.table.concat
 local path = {}
 
 function path.RemoveProtocol(str--[[#: string]])
-	return (string.gsub(str, "^.+://", ""))
+	return (string_gsub(str, "^.+://", ""))
 end
 
 function path.UrlSchemeToPath(url, wdir)
@@ -52,7 +56,7 @@ function path.Normalize(str--[[#: string]])
 		if v == ".." then new[#new] = nil else new[#new + 1] = v end
 	end
 
-	str = table.concat(new, "/")
+	str = table_concat(new, "/")
 
 	if str:sub(1, 2) == "./" then str = str:sub(3) end
 
@@ -126,7 +130,7 @@ end
 function path.ResolveRequire(str)
 	local paths = package.path .. ";"
 	paths = paths .. "./?/init.lua;"
-	require_path = stringx.replace(str, ".", "/")
+	local require_path = stringx.replace(str, ".", "/")
 
 	for _, package_path in ipairs(stringx.split(paths, ";")) do
 		local lua_path = stringx.replace(package_path, "?", require_path)

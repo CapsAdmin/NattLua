@@ -1,12 +1,14 @@
 --ANALYZE
-local math = math
-local assert = assert
+local math = _G.math
+local assert = _G.assert
 local error = _G.error
 local tostring = _G.tostring
 local tonumber = _G.tonumber
 local setmetatable = _G.setmetatable
+local type = _G.type
 local type_errors = require("nattlua.types.error_messages")
 local bit = require("nattlua.other.bit")
+local loadstring = require("nattlua.other.loadstring")
 local jit = _G.jit
 local False = require("nattlua.types.symbol").False
 local META = require("nattlua.types.base")()
@@ -347,7 +349,7 @@ local function string_to_integer(str--[[#: string]])--[[#: number]]
 		end
 	end
 
-	return assert(load("return " .. str))()
+	return assert(loadstring("return " .. str))()
 end
 
 function META:IsNumeric()

@@ -1,4 +1,5 @@
 local cli = require("nattlua.cli.init")
+local io = require("io")
 local colors = require("nattlua.cli.colors")
 local fs = require("nattlua.other.fs")
 local path = require("nattlua.other.path")

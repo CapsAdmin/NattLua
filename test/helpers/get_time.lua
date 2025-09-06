@@ -1,3 +1,4 @@
+local tonumber = _G.tonumber
 local has_ffi, ffi = pcall(require, "ffi")
 
 if not has_ffi then return os.clock end

@@ -1,12 +1,13 @@
 local ipairs = ipairs
 local type_errors = require("nattlua.types.error_messages")
+local table_unpack = _G.table.unpack or _G.unpack
 return function(analyzer, obj, input)
 	do
 		local new_tup, errors = input:SubsetOrFallbackWithTuple(obj:GetInputSignature())
 
 		if errors then
 			for _, error in ipairs(errors) do
-				local reason, a, b, i = table.unpack(error)
+				local reason, a, b, i = table_unpack(error)
 				analyzer:Error(
 					type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
 				)

@@ -1,4 +1,9 @@
 --ANALYZE
+local string = require("string")
+local table = require("table")
+local tonumber = _G.tonumber
+local tostring = _G.tostring
+local ipairs = _G.ipairs
 local map = {
 	["a"] = "\a",
 	["b"] = "\b",

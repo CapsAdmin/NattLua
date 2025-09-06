@@ -6,6 +6,9 @@ local reverse_escape_string = require("nattlua.other.reverse_escape_string")
 local runtime_syntax = require("nattlua." .. "syntax.runtime"--[[# as any]]) -- TODO infinite require token.lua recursion
 local typesystem_syntax = require("nattlua." .. "syntax.typesystem"--[[# as any]])
 local setmetatable = _G.setmetatable
+local ipairs = _G.ipairs
+local tostring = _G.tostring
+local table_insert = _G.table.insert
 --[[#type META.@Name = "Token"]]
 --[[#type META.TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
 --[[#type META.TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "unknown" | META.TokenWhitespaceType]]
@@ -86,7 +89,7 @@ function META:FindType()
 		local node = self.parent
 
 		while node and node.parent do
-			table.insert(found_parents, node)
+			table_insert(found_parents, node)
 			node = node.parent
 		end
 	end
@@ -117,7 +120,7 @@ function META:FindType()
 			then
 
 			else
-				table.insert(types, obj)
+				table_insert(types, obj)
 				found = true
 			end
 		end

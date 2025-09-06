@@ -1,4 +1,5 @@
 --ANALYZE
+local table_concat = _G.table.concat
 local stringx = {}
 
 function stringx.split(self--[[#: string]], separator--[[#: string]])
@@ -30,7 +31,7 @@ function stringx.replace(self--[[#: string]], old--[[#: string]], new--[[#: stri
 
 	if #parts == 1 then return self end
 
-	return table.concat(parts, new)
+	return table_concat(parts, new)
 end
 
 function stringx.pad_left(str--[[#: string]], len--[[#: number]], char--[[#: string]])

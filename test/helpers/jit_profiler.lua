@@ -1,4 +1,7 @@
 --ANALYZE
+local ipairs = _G.ipairs
+local table_concat = _G.table.concat
+local table_insert = _G.table.insert
 local profiler = {}
 --[[#local type VMState = "I" | "G" | "N" | "J" | "C"]]
 --[[#local type Config = {
@@ -209,30 +212,30 @@ local function process(
 		local str = {}
 
 		for _, data in ipairs(data.lines) do
-			table.insert(
+			table_insert(
 				str,
 				stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. data.path .. "\n"
 			)
 		end
 
 		if str[1] then
-			table.insert(
+			table_insert(
 				str,
 				stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. " < total" .. "\n\n"
 			)
 		end
 
-		if str[1] then table.insert(out, table.concat(str)) end
+		if str[1] then table_insert(out, table_concat(str)) end
 	end
 
-	return table.concat(out)
+	return table_concat(out)
 end
 
 function profiler.Start(config--[[#: Config | nil]])
 	config = config or {}
 	config.mode = config.mode or "line"
 	config.depth = config.depth or 1
-	config.sampling_rate = config.sampling_rate or 10
+	config.sampling_rate = config.sampling_rate or 1
 	config.sample_threshold = config.sample_threshold or 50
 	local raw_samples--[[#: List<|{
 		stack = string,

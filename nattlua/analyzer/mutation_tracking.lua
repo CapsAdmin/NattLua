@@ -1,5 +1,6 @@
-local ipairs = ipairs
+local ipairs = _G.ipairs
 local table = _G.table
+local pairs = _G.pairs
 local Union = require("nattlua.types.union").Union
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange

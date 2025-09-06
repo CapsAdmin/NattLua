@@ -1,3 +1,4 @@
+local table_insert = _G.table.insert
 return function(META)
 	function META:ParseLSXExpression()
 		if
@@ -29,7 +30,7 @@ return function(META)
 				local right = self:ExpectTokenValue("}")
 				spread.tokens["{"] = left
 				spread.tokens["}"] = right
-				table.insert(node.props, spread)
+				table_insert(node.props, spread)
 			elseif self:IsTokenType("letter") and self:IsTokenValue("=", 1) then
 				if self:IsTokenValue("{", 2) then
 					local keyval = self:StartNode("sub_statement_table_key_value")
@@ -39,14 +40,14 @@ return function(META)
 					keyval.value_expression = self:ExpectRuntimeExpression()
 					keyval.tokens["}"] = self:ExpectTokenValue("}")
 					keyval = self:EndNode(keyval)
-					table.insert(node.props, keyval)
+					table_insert(node.props, keyval)
 				elseif self:IsTokenType("string", 2) or self:IsTokenType("number", 2) then
 					local keyval = self:StartNode("sub_statement_table_key_value")
 					keyval.tokens["identifier"] = self:ExpectTokenType("letter")
 					keyval.tokens["="] = self:ExpectTokenValue("=")
 					keyval.value_expression = self:ParseKeywordValueTypeExpression()
 					keyval = self:EndNode(keyval)
-					table.insert(node.props, keyval)
+					table_insert(node.props, keyval)
 				else
 					self:Error("expected = { or = string or = number got " .. self:GetToken(3).type)
 					local keyval = self:StartNode("sub_statement_table_key_value")
@@ -54,7 +55,7 @@ return function(META)
 					keyval.tokens["="] = self:NewToken("symbol", "=")
 					keyval.value_expression = self:ErrorExpression()
 					keyval = self:EndNode(keyval)
-					table.insert(node.props, keyval)
+					table_insert(node.props, keyval)
 				end
 			else
 				break
@@ -75,13 +76,13 @@ return function(META)
 				local left = self:ExpectTokenValue("{")
 				local child = self:ExpectRuntimeExpression()
 				child.tokens["lsx{"] = left
-				table.insert(node.children, child)
+				table_insert(node.children, child)
 				child.tokens["lsx}"] = self:ExpectTokenValue("}")
 			end
 
 			for _ = self:GetPosition(), self:GetLength() do
 				if self:IsTokenValue("<") and self:IsTokenType("letter", 1) then
-					table.insert(node.children, self:ParseLSXExpression())
+					table_insert(node.children, self:ParseLSXExpression())
 				else
 					break
 				end
@@ -93,7 +94,7 @@ return function(META)
 				local string_node = self:StartNode("expression_value")
 				string_node.value = self:ExpectTokenType("string")
 				string_node = self:EndNode(string_node)
-				table.insert(node.children, string_node)
+				table_insert(node.children, string_node)
 			end
 		end
 

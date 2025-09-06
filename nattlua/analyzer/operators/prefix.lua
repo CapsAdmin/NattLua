@@ -1,6 +1,7 @@
 local ipairs = ipairs
 local error = error
 local tostring = tostring
+local math_huge = math.huge
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")
@@ -101,7 +102,7 @@ local function Prefix(analyzer, node, r)
 
 			if r:IsLiteral() then return LNumber(#str) end
 
-			return LNumberRange(0, math.huge)
+			return LNumberRange(0, math_huge)
 		elseif r.Type == "any" then
 			return r
 		end

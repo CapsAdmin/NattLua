@@ -5,7 +5,9 @@ local Any = require("nattlua.types.any").Any
 local Nil = require("nattlua.types.symbol").Nil
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
+local math_huge = math.huge
 local type_errors = require("nattlua.types.error_messages")
+local debug_getinfo = _G.debug.getinfo
 -- this turns out to be really hard so I'm trying 
 -- naive approaches while writing tests
 return function(META)
@@ -257,16 +259,16 @@ return function(META)
 					else
 						-- if not we sadly have to resort to any
 						-- TODO: error?
-						obj.recursively_called = Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+						obj.recursively_called = Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math_huge))
 						return obj.recursively_called
 					end
 				end
 			end
 
-			if #self:GetCallStack() > 100 or debug.getinfo(500, "") then
+			if #self:GetCallStack() > 100 or debug_getinfo(500, "") then
 				local len = 501
 
-				while debug.getinfo(len, "") do
+				while debug_getinfo(len, "") do
 					len = len + 1
 				end
 

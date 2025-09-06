@@ -1,6 +1,10 @@
 local io = require("io")
 local diff = require("nattlua.other.diff")
+local debug = require("debug")
 local pcall = _G.pcall
+local type = _G.type
+local ipairs = _G.ipairs
+local xpcall = _G.xpcall
 
 function _G.test(name, cb, start, stop)
 	if start and stop then

@@ -6,7 +6,10 @@ local ffi = jit and require("ffi") or nil
 local Tuple = require("nattlua.types.tuple").Tuple
 local Any = require("nattlua.types.any").Any
 local LString = require("nattlua.types.string").LString
-
+local tonumber = _G.tonumber
+local type = _G.type
+local ipairs = _G.ipairs
+local math_huge = _G.math.huge
 local function cast_lua_type_to_type(v)
 	local t = type(v)
 
@@ -15,8 +18,8 @@ local function cast_lua_type_to_type(v)
 	elseif t == "function" then
 		local func = Function()
 		func:SetAnalyzerFunction(v)
-		func:SetInputSignature(Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
-		func:SetOutputSignature(Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge)))
+		func:SetInputSignature(Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math_huge)))
+		func:SetOutputSignature(Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math_huge)))
 		return func
 	elseif t == "number" then
 		return LNumber(v)

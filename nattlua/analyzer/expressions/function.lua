@@ -8,6 +8,7 @@ local Any = require("nattlua.types.any").Any
 local VarArg = require("nattlua.types.tuple").VarArg
 local ipairs = _G.ipairs
 local Emitter = require("nattlua.emitter.emitter").New
+local assert = _G.assert
 
 local function analyze_arguments(self, node)
 	local args = {}

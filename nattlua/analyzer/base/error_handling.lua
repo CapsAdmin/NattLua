@@ -6,6 +6,8 @@ local io = io
 local debug = debug
 local error = error
 local Any = require("nattlua.types.any").Any
+local math_abs = math.abs
+local assert = _G.assert
 return function(META)
 	--[[#type META.diagnostics = {
 		[1 .. inf] = {
@@ -109,7 +111,7 @@ return function(META)
 	)
 		if self.SuppressDiagnostics then return end
 
-		if math.abs(start - stop) > 10000 then
+		if math_abs(start - stop) > 10000 then
 			start = 0
 			stop = 0
 			print("WARNING: Diagnostic start/stop is too large, resetting to 0")
@@ -222,7 +224,7 @@ return function(META)
 	end
 
 	function META:ReportConstantIfExpressions()
-		for _, info in pairs(self.constant_expression_warnings_ordered) do
+		for _, info in ipairs(self.constant_expression_warnings_ordered) do
 			if info ~= false and info.msg then self:Warning(info.msg, info.node) end
 		end
 	end

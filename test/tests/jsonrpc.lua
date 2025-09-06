@@ -1,6 +1,7 @@
 local rpc_util = require("language_server.jsonrpc")
 local json = require("language_server.json")
 local receive_json = rpc_util.ReceiveJSON
+local assert = _G.assert
 
 do
 	local function table_equal(o1, o2, ignore_mt, callList)

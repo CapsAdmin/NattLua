@@ -1,24 +1,25 @@
-local type = type
-local next = next
-local error = error
-local tonumber = tonumber
-local tostring = tostring
-local table_concat = table.concat
-local table_sort = table.sort
-local string_char = string.char
-local string_byte = string.byte
-local string_find = string.find
-local string_match = string.match
-local string_gsub = string.gsub
-local string_sub = string.sub
-local string_format = string.format
-local setmetatable = setmetatable
-local getmetatable = getmetatable
-local huge = math.huge
+local type = _G.type
+local next = _G.next
+local error = _G.error
+local tonumber = _G.tonumber
+local tostring = _G.tostring
+local table_concat = _G.table.concat
+local table_sort = _G.table.sort
+local string_char = _G.string.char
+local string_byte = _G.string.byte
+local string_find = _G.string.find
+local string_match = _G.string.match
+local string_gsub = _G.string.gsub
+local string_sub = _G.string.sub
+local string_format = _G.string.format
+local setmetatable = _G.setmetatable
+local getmetatable = _G.getmetatable
+local debug = _G.debug
+local huge = _G.math.huge
+local assert = _G.assert
 local tiny = -huge
 local utf8_char
 local math_type
-
 if _VERSION == "Lua 5.1" or _VERSION == "Lua 5.2" then
 	local math_floor = math.floor
 

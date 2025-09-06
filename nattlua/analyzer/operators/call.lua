@@ -3,7 +3,9 @@ local ConstString = require("nattlua.types.string").ConstString
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 local type_errors = require("nattlua.types.error_messages")
-
+local ipairs = _G.ipairs
+local table_insert = _G.table.insert
+local math_huge = _G.math.huge
 local function union_call(self, analyzer, input, call_node)
 	if false--[[# as true]] then return end
 
@@ -51,7 +53,7 @@ local function union_call(self, analyzer, input, call_node)
 				obj.Type == "function" and
 				input:GetElementCount() < obj:GetInputSignature():GetMinimumLength()
 			then
-				table.insert(
+				table_insert(
 					errors,
 					{
 						"invalid amount of arguments: ",
@@ -66,7 +68,7 @@ local function union_call(self, analyzer, input, call_node)
 
 					if res then return res end
 
-					table.insert(errors, reason)
+					table_insert(errors, reason)
 				end
 			end
 		end
@@ -119,7 +121,7 @@ local function table_call(self, analyzer, input, call_node)
 		local new_input = {self}
 
 		for _, v in ipairs(input:GetData()) do
-			table.insert(new_input, v)
+			table_insert(new_input, v)
 		end
 
 		return analyzer:Call(__call, Tuple(new_input), call_node, true)
@@ -282,7 +284,7 @@ local function any_call(self, analyzer, input, call_node)
 		end
 	end
 
-	return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
+	return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math_huge))
 end
 
 local function call(self, obj, input, call_node, not_recursive_call)

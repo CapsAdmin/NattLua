@@ -1,4 +1,9 @@
 --ANALYZE
+local table_insert = _G.table.insert
+local table_sort = _G.table.sort
+local pairs = _G.pairs
+local ipairs = _G.ipairs
+local type = _G.type
 local class = require("nattlua.other.class")
 
 --[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]
@@ -58,11 +63,11 @@ end
 function META:AddSymbols(tbl--[[#: List<|string|>]])
 	for _, symbol in pairs(tbl) do
 		if symbol:find("%p") and not has_value(self.Symbols, symbol) then
-			table.insert(self.Symbols, symbol)
+			table_insert(self.Symbols, symbol)
 		end
 	end
 
-	table.sort(self.Symbols, function(a, b)
+	table_sort(self.Symbols, function(a, b)
 		return #a > #b
 	end)
 end
@@ -153,11 +158,11 @@ function META:AddSymbolCharacters(tbl--[[#: List<|string | {string, string}|>]])
 
 	for _, val in ipairs(tbl) do
 		if type(val) == "table" then
-			table.insert(list, val[1])
-			table.insert(list, val[2])
+			table_insert(list, val[1])
+			table_insert(list, val[2])
 			self.SymbolPairs[val[1]] = val[2]
 		else
-			table.insert(list, val)
+			table_insert(list, val)
 		end
 	end
 

@@ -5,6 +5,9 @@ local colors = require("nattlua.cli.colors")
 local version = "forever pre alpha"
 local DEFAULT_CONFIG_NAME = "nlconfig.lua"
 local config_path = "./" .. DEFAULT_CONFIG_NAME
+local io = _G.io
+local type = _G.type
+local pairs = _G.pairs
 
 local function parse_args(args, allowed_options)
 	local options = {}

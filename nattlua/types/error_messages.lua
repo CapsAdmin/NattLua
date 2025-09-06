@@ -3,6 +3,7 @@ local table = _G.table
 local type = _G.type
 local ipairs = _G.ipairs
 local table_insert = table.insert
+local debug_traceback = _G.debug.traceback
 local type_errors = {}
 --[[#local type Reason = string | {[number] = any | string}]]
 
@@ -301,7 +302,7 @@ function type_errors.plain_error(msg--[[#: any]])--[[#: Reason]]
 end
 
 function type_errors.analyzer_error(msg, trace)--[[#: Reason]]
-	return {msg, " at ", trace or debug.traceback()}
+	return {msg, " at ", trace or debug_traceback()}
 end
 
 do

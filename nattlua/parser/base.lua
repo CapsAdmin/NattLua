@@ -16,6 +16,7 @@ local setmetatable = _G.setmetatable
 local type = _G.type
 local table = _G.table
 local math_min = math.min
+local select = _G.select
 local class = require("nattlua.other.class")
 local Token = require("nattlua.lexer.token").New
 return function()
