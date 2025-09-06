@@ -127,8 +127,8 @@ local function process(
 				end
 			end
 
-			if false then
-				local path = "other"
+			do
+				local path = "other samples < " .. config.sample_threshold
 				local sample_count = 0
 				local new_vm_states = {}
 
@@ -136,13 +136,16 @@ local function process(
 					for k, v in pairs(vm_states) do
 						new_vm_states[k] = (new_vm_states[k] or 0) + v
 						sample_count = sample_count + v
+						total_vm_states[k] = (total_vm_states[k] or 0) + v
+						total_sample_count = total_sample_count + v
 					end
 				end
 
 				table.insert(
 					lines,
 					{
-						path = "other",
+						other = true,
+						path = path,
 						sample_count = sample_count,
 						vm_states = new_vm_states,
 					}
@@ -210,18 +213,27 @@ local function process(
 
 	for _, data in ipairs(sorted_samples) do
 		local str = {}
+		local other
 
 		for _, data in ipairs(data.lines) do
-			table_insert(
-				str,
-				stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. data.path .. "\n"
-			)
+			if data.other then
+				other = data
+			else
+				table_insert(
+					str,
+					stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. data.path .. "\n"
+				)
+			end
 		end
 
 		if str[1] then
 			table_insert(
 				str,
-				stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. " < total" .. "\n\n"
+				stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. "total + " .. (
+						other and
+						other.sample_count or
+						0
+					) .. "\n\n"
 			)
 		end
 
@@ -234,7 +246,7 @@ end
 function profiler.Start(config--[[#: Config | nil]])
 	config = config or {}
 	config.mode = config.mode or "line"
-	config.depth = config.depth or 1
+	config.depth = config.depth or 10
 	config.sampling_rate = config.sampling_rate or 1
 	config.sample_threshold = config.sample_threshold or 50
 	local raw_samples--[[#: List<|{
