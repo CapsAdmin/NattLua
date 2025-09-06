@@ -346,9 +346,7 @@ return function(self, obj, input)
 			then
 				mutate_type(self, i, arg, contract, input)
 			elseif not contract:IsReferenceType() then
-				local doit = self:IsRuntime()
-
-				if function_node.identifiers_typesystem then doit = true end
+				local doit = true
 
 				if contract.Type == "union" then
 					local t = contract:GetType("table")
