@@ -187,6 +187,9 @@ local function check_input(self, obj, input)
 				)
 			then
 				self:CreateLocalValue(identifier, arg)
+
+				if arg.Type == "any" and arg.Type ~= contract.Type then arg = contract end
+
 				signature_override[i] = arg
 				signature_override[i]:SetReferenceType(true)
 				local ok, err = check_argument_against_contract(self, signature_override[i], contract, i)
@@ -366,7 +369,13 @@ local function check_input(self, obj, input)
 			end
 
 			if doit then
-				-- if it's a ref argument we pass the incoming value
+				-- if it's not a ref argument we pass the incoming value
+				local t = contract:GetFirstValue():Copy(nil, true)
+				t:SetContract(contract)
+				input:Set(i, t)
+			end
+		else
+			if arg.Type == "any" and arg.Type ~= contract.Type then
 				local t = contract:GetFirstValue():Copy(nil, true)
 				t:SetContract(contract)
 				input:Set(i, t)

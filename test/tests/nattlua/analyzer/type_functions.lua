@@ -817,3 +817,10 @@ local type overloads = function=(number, string)>("ROFL") | function=(string, nu
 attest.equal(overloads(1, ""), "ROFL")
 attest.equal(overloads("", 1), "LOL")
 ]]
+analyze[[
+local function foo(x: ref number)
+	attest.equal(x, _ as number)
+end
+
+foo(_ as any)
+]]
