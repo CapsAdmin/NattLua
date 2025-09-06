@@ -942,6 +942,24 @@ end
 META:IsSet("Unreachable", nil--[[# as boolean | nil]])
 
 function META:Render(config)
+	config = config or
+		{
+			pretty_print = true,
+			no_newlines = true,
+			comment_type_annotations = false,
+			type_annotations = true,
+		}
+
+	if config.pretty_print == nil then config.pretty_print = true end
+
+	if config.no_newlines == nil then config.no_newlines = true end
+
+	if config.comment_type_annotations == nil then
+		config.comment_type_annotations = false
+	end
+
+	if config.type_annotations == nil then config.type_annotations = true end
+
 	local emitter
 
 	do
@@ -956,7 +974,7 @@ function META:Render(config)
 		end
 	end
 
-	local em = emitter.New(config or {pretty_print = true, no_newlines = true})
+	local em = emitter.New(config)
 
 	if self.is_expression then
 		--[[#attest.expect_diagnostic<|"error", "mutate argument"|>]]
