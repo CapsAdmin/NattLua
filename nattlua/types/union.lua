@@ -97,7 +97,7 @@ function META:GetHash(visited)--[[#: string]]
 		types[i] = v:GetHash(visited)
 	end
 
-	table.sort(types)
+	table_sort(types)
 	visited[self] = table.concat(types, "|")
 	return visited[self]--[[# as string]]
 end

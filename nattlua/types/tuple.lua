@@ -624,8 +624,6 @@ function META:ToTable(length--[[#: nil | number]])
 	length = math.min(length, self:GetElementCount())
 	assert(length ~= math.huge, "length must be finite")
 
-	if length == 1 then return {(self:GetWithNumber(1))} end
-
 	local out = {}
 
 	for i = 1, length do

@@ -265,7 +265,7 @@ return function(META)
 				end
 			end
 
-			if #self:GetCallStack() > 100 or debug_getinfo(500, "") then
+			if #self:GetCallStack() > 100 then
 				local len = 501
 
 				while debug_getinfo(len, "") do

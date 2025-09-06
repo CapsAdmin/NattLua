@@ -35,8 +35,11 @@ local function compute_hash(min--[[#: TNumber]], max--[[#: TNumber]])
 	return min:GetHash() .. ".." .. max:GetHash()
 end
 
+local mod = nil
+
 local function LNumber(num--[[#: number | nil]])
-	return require("nattlua.types.number").LNumber(num)
+	mod = mod or require("nattlua.types.number")
+	return mod.LNumber(num)
 end
 
 function META.New(min--[[#: TNumber]], max--[[#: TNumber]])
