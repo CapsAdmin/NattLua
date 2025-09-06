@@ -507,7 +507,8 @@ return function(self, obj, input)
 		end
 	end
 
-	-- first setup runtime generics type arguments if any
+	-- foo<|T: any|>(x: T)
+	-- setup runtime generics type arguments if any
 	if function_node.identifiers_typesystem then
 		-- if this is a generics we setup the generic upvalues for the signature
 		local call_expression = self:GetCallStack()[1].call_node
@@ -528,15 +529,17 @@ return function(self, obj, input)
 	for i, identifier in ipairs(function_node.identifiers) do
 		local argi = function_node.self_call and (i + 1) or i
 
-		if self:IsTypesystem() then
-			if identifier.value.value == "..." then
-				local val, err = input:Slice(argi)
+		if identifier.value.value == "..." then
+			local val, err = input:Slice(argi)
 
-				if not val then return val, err end
+			if not val then return val, err end
 
-				self:CreateLocalValue(identifier.value.value, val)
-			else
-				local val, err = input:GetWithoutExpansion(argi)
+			self:CreateLocalValue(identifier.value.value, val)
+		else
+			local val, err
+
+			if self:IsTypesystem() then
+				val, err = input:GetWithoutExpansion(argi)
 
 				if not val then
 					local t = obj:GetInputSignature():GetWithoutExpansion(argi)
@@ -546,25 +549,8 @@ return function(self, obj, input)
 						val = Nil()
 					end
 				end
-
-				if not val then
-					self:Error(err)
-					val = Nil()
-				end
-
-				self:CreateLocalValue(identifier.value.value, val)
-			end
-		end
-
-		if self:IsRuntime() then
-			if identifier.value.value == "..." then
-				local val, err = input:Slice(argi)
-
-				if not val then return val, err end
-
-				self:CreateLocalValue(identifier.value.value, val)
 			else
-				local val, err = input:GetWithNumber(argi)
+				val, err = input:GetWithNumber(argi)
 
 				if not val then
 					val = Nil()
@@ -572,24 +558,26 @@ return function(self, obj, input)
 
 					if arg and arg:IsReferenceType() then val:SetReferenceType(true) end
 				end
-
-				if not val then
-					self:Error(err)
-					val = Any()
-				end
-
-				self:CreateLocalValue(identifier.value.value, val)
 			end
+
+			if not val then
+				self:Error(err)
+				val = Any()
+			end
+
+			self:CreateLocalValue(identifier.value.value, val)
 		end
 	end
 
 	-- if we have a return type we must also set this up for this call
-	local output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
+	local output_signature
 
 	if function_node.return_types then
 		self:PushAnalyzerEnvironment("typesystem")
 		output_signature = Tuple(self:AnalyzeExpressions(function_node.return_types))
 		self:PopAnalyzerEnvironment()
+	else
+		output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
 	end
 
 	if is_type_function then self:PushAnalyzerEnvironment("typesystem") end
@@ -631,6 +619,9 @@ return function(self, obj, input)
 	-- used for analyzing side effects
 	obj:AddScope(input, output, scope)
 
+	-- if the function is untyped we warn about untyped arguments
+	-- and we also merge merge the input into the function's input signature
+	-- this way we get a more accurate picture of what the function does
 	if not obj:IsExplicitInputSignature() then
 		if not obj:IsArgumentsInferred() and function_node.identifiers then
 			for i in ipairs(obj:GetInputSignature():GetData()) do
