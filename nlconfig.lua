@@ -242,6 +242,7 @@ do -- these override existing commands and should probably be made more generic
 					type_annotations = true,
 					force_parenthesis = true,
 					module_encapsulation_method = "loadstring",
+					no_newlines = false,
 					extra_indent = {
 						Start = {to = "Stop"},
 						Toggle = "toggle",
