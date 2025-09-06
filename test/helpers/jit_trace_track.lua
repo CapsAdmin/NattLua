@@ -21,99 +21,96 @@ local bcnames = ok and vmdef.bcnames
 	children = nil | Map<|number, self|>,
 	trace_info = ReturnType<|traceinfo|>[1] ~ nil,
 }]]
-local traces--[[#: Map<|number, Trace|>]] = {}
-local aborted = {}
-
-local function start(
-	id--[[#: number]],
-	func--[[#: Function]],
-	pc--[[#: number]],
-	parent_id--[[#: nil | number]],
-	exit_id--[[#: nil | number]]
-)
-	if parent_id == nil then assert(exit_id == nil) end
-
-	if exit_id == nil then assert(parent_id == nil) end
-
-	-- TODO, both should be nil here
-	local tr = {
-		pc_lines = {{func = func, pc = pc, depth = 0}},
-		id = id,
-		exit_id = exit_id,
-		parent_id = parent_id,
-	}
-
-	if parent_id then
-		if traces[parent_id] then
-			tr.parent = traces[parent_id]
-			traces[parent_id].children = traces[parent_id].children or {}
-			traces[parent_id].children[id] = tr
-		else
-			tr.parent_id = parent_id
-		end
-	end
-
-	traces[id] = tr
-end
-
-local function stop(id--[[#: number]], func--[[#: Function]])
-	local trace = assert(traces[id])
-	assert(trace.aborted == nil)
-	trace.trace_info = assert(traceinfo(id), "invalid trace id: " .. id)
-end
-
-local function abort(
-	id--[[#: number]],
-	func--[[#: Function]],
-	pc--[[#: number]],
-	code--[[#: number]],
-	reason--[[#: number]]
-)
-	local trace = assert(traces[id])
-	assert(trace.stopped == nil)
-	trace.trace_info = assert(traceinfo(id), "invalid trace id: " .. id)
-	trace.aborted = {
-		code = code,
-		reason = reason,
-	}
-	table_insert(trace.pc_lines, {func = func, pc = pc, depth = 0})
-	aborted[id] = trace
-
-	if trace.parent and trace.parent.children then
-		trace.parent.children[id] = nil
-	end
-
-	trace.DEAD = true
-	traces[id] = nil
-end
-
-local function flush()
-	local count = 0
-
-	for i, v in pairs(traces) do
-		count = count + 1
-	end
-
-	if count > 0 then
-		print("too many traces, flushing " .. count .. " traces")
-	end
-
-	traces = {}
-	aborted = {}
-end
-
-local function record(tr--[[#: number]], func--[[#: Function]], pc--[[#: number]], depth--[[#: number]])
-	assert(traces[tr])
-	table_insert(traces[tr].pc_lines, {func = func, pc = pc, depth = depth})
-end
-
 local trace_track = {}
 
 function trace_track.Start()
 	if not attach or not funcinfo or not traceinfo then return nil end
 
-	local traces = {}
+	local traces--[[#: Map<|number, Trace|>]] = {}
 	local aborted = {}
+
+	local function start(
+		id--[[#: number]],
+		func--[[#: Function]],
+		pc--[[#: number]],
+		parent_id--[[#: nil | number]],
+		exit_id--[[#: nil | number]]
+	)
+		if parent_id == nil then assert(exit_id == nil) end
+
+		if exit_id == nil then assert(parent_id == nil) end
+
+		-- TODO, both should be nil here
+		local tr = {
+			pc_lines = {{func = func, pc = pc, depth = 0}},
+			id = id,
+			exit_id = exit_id,
+			parent_id = parent_id,
+		}
+		local parent = parent_id and traces[parent_id]
+
+		if parent then
+			tr.parent = parent
+			parent.children = parent.children or {}
+			parent.children[id] = tr
+		else
+			tr.parent_id = parent_id
+		end
+
+		traces[id] = tr
+	end
+
+	local function stop(id--[[#: number]], func--[[#: Function]])
+		local trace = assert(traces[id])
+		assert(trace.aborted == nil)
+		trace.trace_info = assert(traceinfo(id), "invalid trace id: " .. id)
+	end
+
+	local function abort(
+		id--[[#: number]],
+		func--[[#: Function]],
+		pc--[[#: number]],
+		code--[[#: number]],
+		reason--[[#: number]]
+	)
+		local trace = assert(traces[id])
+		assert(trace.stopped == nil)
+		trace.trace_info = assert(traceinfo(id), "invalid trace id: " .. id)
+		trace.aborted = {
+			code = code,
+			reason = reason,
+		}
+		table_insert(trace.pc_lines, {func = func, pc = pc, depth = 0})
+		aborted[id] = trace
+
+		if trace.parent and trace.parent.children then
+			trace.parent.children[id] = nil
+		end
+
+		trace.DEAD = true
+		traces[id] = nil
+	end
+
+	local function flush()
+		local count = 0
+
+		for i, v in pairs(traces) do
+			count = count + 1
+		end
+
+		if count > 0 then
+			print("too many traces, flushing " .. count .. " traces")
+		end
+
+		traces = {}
+		aborted = {}
+	end
+
+	local function record(tr--[[#: number]], func--[[#: Function]], pc--[[#: number]], depth--[[#: number]])
+		assert(traces[tr])
+		table_insert(traces[tr].pc_lines, {func = func, pc = pc, depth = depth})
+	end
+
 	local on_trace_event--[[#: jit_attach_trace]] = function(what, tr, func, pc, otr, oex)
 		if what == "start" then
 			start(tr, func, pc, otr, oex)
@@ -138,10 +135,6 @@ function trace_track.Start()
 
 		for what, traces in pairs({traces = traces, aborted = aborted}) do
 			for k, v in pairs(traces) do
-				if not v.pc_lines then table.print(v) end
-
-				assert(v.pc_lines)
-
 				do
 					if what == "aborted" then
 						assert(v.stopped == nil)
