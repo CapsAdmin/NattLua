@@ -96,7 +96,7 @@ do -- index errors
 		}
 	end
 
-	function type_errors.undefined_get(self--[[#: any]], key--[[#: any]], type_name--[[#: type_name]])--[[#: Reason]]
+	function type_errors.undefined_get(self--[[#: any]], key--[[#: any]], type_name--[[#: string]])--[[#: Reason]]
 		return {
 			"undefined get:",
 			self,

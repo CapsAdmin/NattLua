@@ -81,38 +81,37 @@ return function(self, obj, input)
 	local input_signature_length = input_signature:GetSafeLength(input)
 	local signature_override = {}
 
+	-- before we call the function we have to compute the new input signature
 	if obj:IsExplicitInputSignature() then
-		local function_node = obj:GetFunctionBodyNode()
 		self:CreateAndPushFunctionScope(obj)
 		self:PushAnalyzerEnvironment("typesystem")
 
-		if
-			function_node.Type == "statement_local_type_function" or
-			function_node.Type == "statement_type_function" or
-			function_node.Type == "expression_type_function"
-		then
+		if is_type_function then
 			if is_generic_function then
-				-- if this is a generics we setup the generic upvalues for the signature
+				-- if this is a generics we create upvalues based on the generic arguments
+				-- and the generic input signature, ie:
+				-- foo<|1, 2|>(...)
+				-- function foo<|TA, TB|>(a: TA, b: TB) end
+				-- or
+				-- local TA = 1
+				-- local TB = 2
+				-- (a: TA, b: TB)
+				-- this makes the input signature become (a: 1, b: 2) when TA and TB evaluated later on
 				local call_expression = self:GetCallStack()[1].call_node
 
-				for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
+				for i, identifier in ipairs(function_node.identifiers_typesystem) do
 					local generic_type = call_expression.expressions_typesystem and
 						call_expression.expressions_typesystem[i] or
-						generic_upvalue
+						identifier
 					local T = self:AnalyzeExpression(generic_type)
-					self:CreateLocalValue(generic_upvalue.value.value, T)
+					self:CreateLocalValue(identifier.value.value, T)
 				end
-			elseif obj:IsExplicitInputSignature() then
-				local new_tup, err
+			else
+				-- without generics we just check the input against the input signature
+				local new_tup, errors = input:SubsetWithoutExpansionOrFallbackWithTuple(obj:GetInputSignature())
 
-				if self:IsTypesystem() then
-					new_tup, err = input:SubsetWithoutExpansionOrFallbackWithTuple(obj:GetInputSignature())
-				else
-					new_tup, err = input:SubsetOrFallbackWithTuple(obj:GetInputSignature())
-				end
-
-				if err then
-					for i, v in ipairs(err) do
+				if errors then
+					for i, v in ipairs(errors) do
 						local reason, a, b, i = table.unpack(v)
 						self:Error(
 							type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
@@ -130,44 +129,31 @@ return function(self, obj, input)
 			-- against the input
 			-- foo(1, "hello")
 			for i = 1, input_signature_length do
-				local node
 				local identifier
 				local type_expression
 
 				if i == 1 and function_node.self_call then
-					node = function_node
 					identifier = "self"
 					type_expression = function_node
 				else
-					local i = i
-
-					if function_node.self_call then i = i - 1 end
-
-					node = function_node.identifiers[i] or
+					local node = function_node.identifiers[i - (
+							function_node.self_call and
+							1 or
+							0
+						)] or
 						function_node.identifiers[#function_node.identifiers]
 					identifier = node.value.value
 					type_expression = node.type_expression
 				end
 
-				-- stem type so that we can allow
-				-- function(x: foo<|x|>): nil
-				self:CreateLocalValue(identifier, Any())
-				local contract
-
-				if identifier == "..." or self:IsTypesystem() then
-					contract = input_signature:GetWithoutExpansion(i)
-				else
-					contract = input_signature:GetWithNumber(i)
-				end
-
 				local arg = input:GetWithNumber(i)
+				local contract = input_signature:GetWithoutExpansion(i)
 
 				if not arg then
+					-- if the argument is missing we expand input with nil
 					arg = Nil()
 					input:Set(i, arg)
-				end
-
-				if
+				elseif
 					contract and
 					contract:IsReferenceType() and
 					(
@@ -176,126 +162,117 @@ return function(self, obj, input)
 						arg:IsArgumentsInferred()
 					)
 				then
+					-- this is for ref arguments or untyped functions
 					self:CreateLocalValue(identifier, arg)
 
 					if arg.Type == "any" and arg.Type ~= contract.Type then arg = contract end
 
-					signature_override[i] = arg
-					signature_override[i]:SetReferenceType(true)
-					local ok, err = check_argument_against_contract(self, signature_override[i], contract, i)
+					arg:SetReferenceType(true)
+					local ok, err = check_argument_against_contract(self, arg, contract, i)
 
 					if not ok then
 						self:Error(type_errors.context("argument #" .. i, err))
 					end
+
+					signature_override[i] = arg
 				elseif type_expression then
 					local val, err
 
 					if function_node.self_call and i == 1 then
-						val, err = input_signature:GetWithNumber(1)
-
-						if not val then
-							self:Error(type_errors.context("argument #" .. i, err))
-						end
+						val, err = input_signature:GetWithNumber(i)
 					else
+						self:CreateLocalValue(identifier, Any())
 						val, err = self:AnalyzeExpression(type_expression)
-
-						if not is_generic_function then
-
-						--val, err = self:GetFirstValue(val)
-						end
-
-						if not val then
-							self:Error(type_errors.context("argument #" .. i, err))
-						end
 					end
 
+					if not val then
+						val = Any()
+						self:Error(type_errors.context("argument #" .. i, err))
+					end
+
+					self:CreateLocalValue(identifier, val)
 					signature_override[i] = val
-					self:CreateLocalValue(identifier, signature_override[i])
+				end
+
+				-- coerce untyped functions to contract callbacks
+				if arg and arg.Type == "function" then
+					local func = arg
+
+					if
+						signature_override[i] and
+						signature_override[i].Type == "union" and
+						not signature_override[i]:IsReferenceType()
+					then
+						local merged = shrink_union_to_function_signature(signature_override[i])
+
+						if merged then
+							func:SetInputSignature(merged:GetInputSignature())
+							func:SetOutputSignature(merged:GetOutputSignature())
+							func:SetExplicitInputSignature(true)
+							func:SetExplicitOutputSignature(true)
+							func:SetCalled(false)
+						end
+					else
+						if not func:IsExplicitInputSignature() then
+							local contract = signature_override[i] or obj:GetInputSignature():GetWithNumber(i)
+
+							if contract then
+								if contract.Type == "union" then
+									local tup = Tuple()
+
+									for _, func in ipairs(contract:GetData()) do
+										tup:Merge(func:GetInputSignature())
+									end
+
+									func:SetInputSignature(tup)
+								elseif contract.Type == "function" then
+									local len = func:GetInputSignature():GetTupleLength()
+									local new = contract:GetInputSignature():Copy(nil, true)
+									local err
+
+									if not contract:GetInputSignature():IsInfinite() then
+										new, err = new:Slice(1, len)
+									end
+
+									if not new then
+										self:Error(err)
+									else
+										func:SetInputSignature(new) -- force copy tables so we don't mutate the contract
+									end
+								end
+
+								func:SetInputArgumentsInferred(true)
+								func:SetCalled(false)
+							end
+						end
+
+						if not func:IsExplicitOutputSignature() then
+							local contract = signature_override[i] or obj:GetOutputSignature():GetWithNumber(i)
+
+							if contract then
+								if contract.Type == "union" then
+									local tup = Tuple()
+
+									for _, func in ipairs(contract:GetData()) do
+										tup:Merge(func:GetOutputSignature())
+									end
+
+									func:SetOutputSignature(tup)
+								elseif contract.Type == "function" then
+									func:SetOutputSignature(contract:GetOutputSignature())
+								end
+
+								func:SetExplicitOutputSignature(true)
+								func:SetCalled(false)
+							end
+						end
+					end
 				end
 			end
 		end
 
 		self:PopAnalyzerEnvironment()
 		self:PopScope()
-
-		-- coerce untyped functions to contract callbacks
-		for i = 1, input_signature_length do
-			local arg = input:GetWithNumber(i)
-
-			if arg.Type == "function" then
-				local func = arg
-
-				if
-					signature_override[i] and
-					signature_override[i].Type == "union" and
-					not signature_override[i]:IsReferenceType()
-				then
-					local merged = shrink_union_to_function_signature(signature_override[i])
-
-					if merged then
-						func:SetInputSignature(merged:GetInputSignature())
-						func:SetOutputSignature(merged:GetOutputSignature())
-						func:SetExplicitInputSignature(true)
-						func:SetExplicitOutputSignature(true)
-						func:SetCalled(false)
-					end
-				else
-					if not func:IsExplicitInputSignature() then
-						local contract = signature_override[i] or obj:GetInputSignature():GetWithNumber(i)
-
-						if contract then
-							if contract.Type == "union" then
-								local tup = Tuple()
-
-								for _, func in ipairs(contract:GetData()) do
-									tup:Merge(func:GetInputSignature())
-								end
-
-								func:SetInputSignature(tup)
-							elseif contract.Type == "function" then
-								local len = func:GetInputSignature():GetTupleLength()
-								local new = contract:GetInputSignature():Copy(nil, true)
-								local err
-
-								if not contract:GetInputSignature():IsInfinite() then
-									new, err = new:Slice(1, len)
-								end
-
-								if not new then
-									self:Error(err)
-								else
-									func:SetInputSignature(new) -- force copy tables so we don't mutate the contract
-								end
-							end
-
-							func:SetInputArgumentsInferred(true)
-							func:SetCalled(false)
-						end
-					end
-
-					if not func:IsExplicitOutputSignature() then
-						local contract = signature_override[i] or obj:GetOutputSignature():GetWithNumber(i)
-
-						if contract then
-							if contract.Type == "union" then
-								local tup = Tuple()
-
-								for _, func in ipairs(contract:GetData()) do
-									tup:Merge(func:GetOutputSignature())
-								end
-
-								func:SetOutputSignature(tup)
-							elseif contract.Type == "function" then
-								func:SetOutputSignature(contract:GetOutputSignature())
-							end
-
-							func:SetExplicitOutputSignature(true)
-							func:SetCalled(false)
-						end
-					end
-				end
-			end
-		end
 
 		-- finally check the input against the generated signature
 		for i = 1, input_signature_length do
@@ -379,7 +356,7 @@ return function(self, obj, input)
 	)
 	local output_signature
 
-	do -- setup and analyze the function's generics if any, arguments and output
+	do -- create upvalues for the function's generics if any, arguments and output
 		if
 			function_node.Type == "statement_function" or
 			function_node.Type == "statement_analyzer_function" or
