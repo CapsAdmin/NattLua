@@ -76,7 +76,6 @@ return function(self, obj, input)
 		function_node.Type == "statement_type_function" or
 		function_node.Type == "expression_type_function"
 	-- analyze the input signature to resolve generics and other types
-	local function_node = obj:GetFunctionBodyNode()
 	local input_signature = obj:GetInputSignature()
 	local input_signature_length = input_signature:GetSafeLength(input)
 	local signature_override = {}
