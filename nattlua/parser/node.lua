@@ -41,7 +41,6 @@ local META = class.CreateTemplate("node")
 	first_node = any,
 	environments = any,
 	identifiers_typesystem = any,
-	error_node = boolean,
 	is_identifier = boolean,
 	is_left_assignment = boolean,
 	is_expression = boolean,
@@ -212,7 +211,6 @@ local all_nodes = {
 	["expression_error"] = function()
 		return {
 			is_expression = true,
-			error_node = true,
 			tokens = {},
 		}
 	end,
@@ -714,7 +712,6 @@ local all_nodes = {
 	["statement_error"] = function()
 		return {
 			is_statement = true,
-			error_node = true,
 			tokens = {},
 		}
 	end,
@@ -897,7 +894,6 @@ function META.New(
 	--
 	init.environments = false
 	init.identifiers_typesystem = false
-	init.error_node = false
 	init.is_identifier = false
 	init.is_left_assignment = false
 	return setmetatable(init--[[# as META.@Self]], META)

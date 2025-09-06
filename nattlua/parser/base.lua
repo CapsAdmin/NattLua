@@ -1,4 +1,4 @@
---[[# --ANALYZE
+--[[#
 local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type { NodeKind, Nodes, Node } = import("~/nattlua/parser/node.lua")]]
@@ -274,22 +274,15 @@ end
 	end
 
 	function META:IsTokenValue(str--[[#: string]], offset--[[#: number | nil]])
-		local tk = self:GetToken(offset)
-
-		if tk then return tk.value == str end
+	return self:GetToken(offset).value == str
 	end
 
 	function META:IsTokenType(token_type--[[#: TokenType]], offset--[[#: number | nil]])
-		local tk = self:GetToken(offset)
-
-		if tk then return tk.type == token_type end
+	return self:GetToken(offset).type == token_type
 	end
 
 	function META:ParseToken()
 		local tk = self:GetToken()
-
-		if not tk then return nil end
-
 		self:Advance(1)
 		tk.parent = self:GetParentNode()
 		return tk

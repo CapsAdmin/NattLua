@@ -203,7 +203,7 @@ do
 	end
 
 	function META:AnalyzeExpression(node)
-		if node.error_node then return Any() end
+		if node.Type == "statement_error" or node.Type == "expression_error" then return Any() end
 
 		self:PushCurrentExpression(node)
 		local obj, err = self:AnalyzeRuntimeExpression(node)
