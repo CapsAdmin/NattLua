@@ -71,9 +71,15 @@ end
 
 return function(self, obj, input)
 	local function_node = obj:GetFunctionBodyNode()
+	local is_generic_function = function_node.identifiers_typesystem
 	local is_type_function = function_node.Type == "statement_local_type_function" or
 		function_node.Type == "statement_type_function" or
 		function_node.Type == "expression_type_function"
+	-- analyze the input signature to resolve generics and other types
+	local function_node = obj:GetFunctionBodyNode()
+	local input_signature = obj:GetInputSignature()
+	local input_signature_length = input_signature:GetSafeLength(input)
+	local signature_override = {}
 
 	if obj:IsExplicitInputSignature() then
 		local function_node = obj:GetFunctionBodyNode()
@@ -85,7 +91,18 @@ return function(self, obj, input)
 			function_node.Type == "statement_type_function" or
 			function_node.Type == "expression_type_function"
 		then
-			if not function_node.identifiers_typesystem and obj:IsExplicitInputSignature() then
+			if is_generic_function then
+				-- if this is a generics we setup the generic upvalues for the signature
+				local call_expression = self:GetCallStack()[1].call_node
+
+				for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
+					local generic_type = call_expression.expressions_typesystem and
+						call_expression.expressions_typesystem[i] or
+						generic_upvalue
+					local T = self:AnalyzeExpression(generic_type)
+					self:CreateLocalValue(generic_upvalue.value.value, T)
+				end
+			elseif obj:IsExplicitInputSignature() then
 				local new_tup, err
 
 				if self:IsTypesystem() then
@@ -105,26 +122,7 @@ return function(self, obj, input)
 
 				input = new_tup
 			end
-
-			if function_node.identifiers_typesystem then
-				-- if this is a generics we setup the generic upvalues for the signature
-				local call_expression = self:GetCallStack()[1].call_node
-
-				for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
-					local generic_type = call_expression.expressions_typesystem and
-						call_expression.expressions_typesystem[i] or
-						generic_upvalue
-					local T = self:AnalyzeExpression(generic_type)
-					self:CreateLocalValue(generic_upvalue.value.value, T)
-				end
-			end
 		end
-
-		-- analyze the input signature to resolve generics and other types
-		local function_node = obj:GetFunctionBodyNode()
-		local input_signature = obj:GetInputSignature()
-		local input_signature_length = input_signature:GetSafeLength(input)
-		local signature_override = {}
 
 		if function_node.identifiers[1] then
 			-- analyze the type expressions
@@ -201,7 +199,7 @@ return function(self, obj, input)
 					else
 						val, err = self:AnalyzeExpression(type_expression)
 
-						if not function_node.identifiers_typesystem then
+						if not is_generic_function then
 
 						--val, err = self:GetFirstValue(val)
 						end
@@ -220,80 +218,79 @@ return function(self, obj, input)
 		self:PopAnalyzerEnvironment()
 		self:PopScope()
 
-		do -- coerce untyped functions to contract callbacks
-			for i = 1, input_signature_length do
-				local arg = input:GetWithNumber(i)
+		-- coerce untyped functions to contract callbacks
+		for i = 1, input_signature_length do
+			local arg = input:GetWithNumber(i)
 
-				if arg.Type == "function" then
-					local func = arg
+			if arg.Type == "function" then
+				local func = arg
 
-					if
-						signature_override[i] and
-						signature_override[i].Type == "union" and
-						not signature_override[i]:IsReferenceType()
-					then
-						local merged = shrink_union_to_function_signature(signature_override[i])
+				if
+					signature_override[i] and
+					signature_override[i].Type == "union" and
+					not signature_override[i]:IsReferenceType()
+				then
+					local merged = shrink_union_to_function_signature(signature_override[i])
 
-						if merged then
-							func:SetInputSignature(merged:GetInputSignature())
-							func:SetOutputSignature(merged:GetOutputSignature())
-							func:SetExplicitInputSignature(true)
-							func:SetExplicitOutputSignature(true)
+					if merged then
+						func:SetInputSignature(merged:GetInputSignature())
+						func:SetOutputSignature(merged:GetOutputSignature())
+						func:SetExplicitInputSignature(true)
+						func:SetExplicitOutputSignature(true)
+						func:SetCalled(false)
+					end
+				else
+					if not func:IsExplicitInputSignature() then
+						local contract = signature_override[i] or obj:GetInputSignature():GetWithNumber(i)
+
+						if contract then
+							if contract.Type == "union" then
+								local tup = Tuple()
+
+								for _, func in ipairs(contract:GetData()) do
+									tup:Merge(func:GetInputSignature())
+								end
+
+								func:SetInputSignature(tup)
+							elseif contract.Type == "function" then
+								local len = func:GetInputSignature():GetTupleLength()
+								local new = contract:GetInputSignature():Copy(nil, true)
+								local err
+
+								if not contract:GetInputSignature():IsInfinite() then
+									new, err = new:Slice(1, len)
+								end
+
+								if not new then
+									self:Error(err)
+								else
+									func:SetInputSignature(new) -- force copy tables so we don't mutate the contract
+								end
+							end
+
+							func:SetInputArgumentsInferred(true)
 							func:SetCalled(false)
 						end
-					else
-						if not func:IsExplicitInputSignature() then
-							local contract = signature_override[i] or obj:GetInputSignature():GetWithNumber(i)
+					end
 
-							if contract then
-								if contract.Type == "union" then
-									local tup = Tuple()
+					if not func:IsExplicitOutputSignature() then
+						local contract = signature_override[i] or obj:GetOutputSignature():GetWithNumber(i)
 
-									for _, func in ipairs(contract:GetData()) do
-										tup:Merge(func:GetInputSignature())
-									end
+						if contract then
+							if contract.Type == "union" then
+								local tup = Tuple()
 
-									func:SetInputSignature(tup)
-								elseif contract.Type == "function" then
-									local len = func:GetInputSignature():GetTupleLength()
-									local new = contract:GetInputSignature():Copy(nil, true)
-									local err
-
-									if not contract:GetInputSignature():IsInfinite() then
-										new, err = new:Slice(1, len)
-									end
-
-									if not new then
-										self:Error(err)
-									else
-										func:SetInputSignature(new) -- force copy tables so we don't mutate the contract
-									end
+								for _, func in ipairs(contract:GetData()) do
+									tup:Merge(func:GetOutputSignature())
 								end
 
-								func:SetInputArgumentsInferred(true)
-								func:SetCalled(false)
+								func:SetOutputSignature(tup)
+							elseif contract.Type == "function" then
+								func:SetOutputSignature(contract:GetOutputSignature())
 							end
-						end
 
-						if not func:IsExplicitOutputSignature() then
-							local contract = signature_override[i] or obj:GetOutputSignature():GetWithNumber(i)
-
-							if contract then
-								if contract.Type == "union" then
-									local tup = Tuple()
-
-									for _, func in ipairs(contract:GetData()) do
-										tup:Merge(func:GetOutputSignature())
-									end
-
-									func:SetOutputSignature(tup)
-								elseif contract.Type == "function" then
-									func:SetOutputSignature(contract:GetOutputSignature())
-								end
-
-								func:SetExplicitOutputSignature(true)
-								func:SetCalled(false)
-							end
+							func:SetExplicitOutputSignature(true)
+							func:SetCalled(false)
 						end
 					end
 				end
@@ -323,15 +320,14 @@ return function(self, obj, input)
 			if not ok then self:Error(reason) end
 
 			if self:IsTypesystem() then
-				local doit = function_node.identifiers_typesystem
+				if is_generic_function then
+					--[[
+						local function test<|T: any|>(val: T): T
+							return val
+						end
 
-				if contract.Type == "union" then
-					local t = contract:GetType("table")
-
-					if t and t.PotentialSelf then doit = false end
-				end
-
-				if doit then
+						test<|number|>(1)
+					]]
 					-- if it's a ref argument we pass the incoming value
 					local t = contract:GetFirstValue():Copy(nil, true)
 					t:SetContract(contract)
@@ -381,88 +377,76 @@ return function(self, obj, input)
 		self:GetDefaultEnvironment(self:GetCurrentAnalyzerEnvironment()),
 		self:GetCurrentAnalyzerEnvironment()
 	)
-
-	if
-		function_node.Type == "statement_function" or
-		function_node.Type == "statement_analyzer_function" or
-		function_node.Type == "statement_type_function"
-	then
-		if function_node.self_call then
-			self:CreateLocalValue("self", input:GetWithNumber(1) or Nil())
-		end
-	end
-
-	-- foo<|T: any|>(x: T)
-	-- setup runtime generics type arguments if any
-	if function_node.identifiers_typesystem then
-		-- if this is a generics we setup the generic upvalues for the signature
-		local call_expression = self:GetCallStack()[1].call_node
-
-		for i, generic_upvalue in ipairs(function_node.identifiers_typesystem) do
-			local generic_type = call_expression.expressions_typesystem and
-				call_expression.expressions_typesystem[i] or
-				nil
-
-			if generic_type then
-				local T = self:AnalyzeExpression(generic_type)
-				self:CreateLocalValue(generic_upvalue.value.value, T)
-			end
-		end
-	end
-
-	-- then setup the runtime arguments
-	for i, identifier in ipairs(function_node.identifiers) do
-		local argi = function_node.self_call and (i + 1) or i
-
-		if identifier.value.value == "..." then
-			local val, err = input:Slice(argi)
-
-			if not val then return val, err end
-
-			self:CreateLocalValue(identifier.value.value, val)
-		else
-			local val, err
-
-			if self:IsTypesystem() then
-				val, err = input:GetWithoutExpansion(argi)
-
-				if not val then
-					local t = obj:GetInputSignature():GetWithoutExpansion(argi)
-
-					if t and t:IsNil() then
-						err = nil
-						val = Nil()
-					end
-				end
-			else
-				val, err = input:GetWithNumber(argi)
-
-				if not val then
-					val = Nil()
-					local arg = obj:GetInputSignature():GetWithNumber(argi)
-
-					if arg and arg:IsReferenceType() then val:SetReferenceType(true) end
-				end
-			end
-
-			if not val then
-				self:Error(err)
-				val = Any()
-			end
-
-			self:CreateLocalValue(identifier.value.value, val)
-		end
-	end
-
-	-- if we have a return type we must also set this up for this call
 	local output_signature
 
-	if function_node.return_types then
-		self:PushAnalyzerEnvironment("typesystem")
-		output_signature = Tuple(self:AnalyzeExpressions(function_node.return_types))
-		self:PopAnalyzerEnvironment()
-	else
-		output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
+	do -- setup and analyze the function's generics if any, arguments and output
+		if
+			function_node.Type == "statement_function" or
+			function_node.Type == "statement_analyzer_function" or
+			function_node.Type == "statement_type_function"
+		then
+			if function_node.self_call then
+				self:CreateLocalValue("self", input:GetWithNumber(1) or Nil())
+			end
+		end
+
+		-- setup runtime generics type arguments if any
+		if is_generic_function then
+			-- if this is a generics we setup the generic upvalues for the signature
+			-- local function foo<|TA, TB|>(a: TA, b: TB) end
+			-- foo<|A, B|>(...)
+			-- create upvalues like TA = A, TB = B so that we can use them in the function arguments and body
+			local call_expression = self:GetCallStack()[1].call_node
+
+			for i, identifier in ipairs(function_node.identifiers_typesystem) do
+				local generic_expression = call_expression.expressions_typesystem and
+					call_expression.expressions_typesystem[i] or
+					nil
+
+				if generic_expression then
+					local T = self:AnalyzeExpression(generic_expression)
+					self:CreateLocalValue(identifier.value.value, T)
+				end
+			end
+		end
+
+		-- then setup the runtime arguments
+		for i, identifier in ipairs(function_node.identifiers) do
+			local argi = function_node.self_call and (i + 1) or i
+
+			if identifier.value.value == "..." then
+				local val, err = input:Slice(argi)
+
+				if not val then return val, err end
+
+				self:CreateLocalValue(identifier.value.value, val)
+			else
+				local val
+
+				if self:IsTypesystem() then
+					-- pure typesystem function, generics are not used here
+					-- function foo<|T|> end
+					val = input:GetWithoutExpansion(argi) or Nil()
+				else
+					val = input:GetWithNumber(argi) or Nil()
+				end
+
+				-- this will error down the line if something is wrong with the input signature
+				self:CreateLocalValue(identifier.value.value, val)
+			end
+		end
+
+		-- if we have an explicit output type we must also set this up for this call
+		-- note that this is done after generics and other types are setup, so that we can access then
+		-- from the output type
+		-- ie function foo<|T|>(): T end
+		if function_node.return_types then
+			self:PushAnalyzerEnvironment("typesystem")
+			output_signature = Tuple(self:AnalyzeExpressions(function_node.return_types))
+			self:PopAnalyzerEnvironment()
+		else
+			output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
+		end
 	end
 
 	if is_type_function then self:PushAnalyzerEnvironment("typesystem") end
