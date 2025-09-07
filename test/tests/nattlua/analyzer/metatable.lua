@@ -1094,3 +1094,21 @@ end
 
 
 ]]
+analyze[[
+local class = require("nattlua.other.class")
+local META = class.CreateTemplate("Animal")
+META:GetSet("Name", "Unknown")
+
+META:AddInitializer(function(init)
+	init.test = 1337
+end)
+
+local function create()
+	local obj = META.NewObject({Name = "Dog"})
+	attest.equal(obj.Name, _ as string)
+	attest.equal(obj.test, 1337)
+	return obj
+end
+
+create()
+]]
