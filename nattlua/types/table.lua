@@ -229,9 +229,11 @@ function META:__tostring()
 
 	if contract and contract.Type == "table" and contract ~= self then
 		for i, keyval in ipairs(contract:GetData()) do
-			local key, val = tostring(self:GetData()[i] and self:GetData()[i].key or "nil"),
-			tostring(self:GetData()[i] and self:GetData()[i].val or "nil")
-			local tkey, tval = tostring(keyval.key), tostring(keyval.val)
+			local table_kv = self:FindKeyValExact(keyval.key)
+			local key = tostring(table_kv and table_kv.key or "nil")
+			local val = tostring(table_kv and table_kv.val or "nil")
+			local tkey = tostring(keyval.key)
+			local tval = tostring(keyval.val)
 
 			if key == tkey then
 				s[i] = indent .. "[" .. key .. "]"
