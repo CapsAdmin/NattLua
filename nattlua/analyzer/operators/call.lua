@@ -6,6 +6,7 @@ local type_errors = require("nattlua.types.error_messages")
 local ipairs = _G.ipairs
 local table_insert = _G.table.insert
 local math_huge = _G.math.huge
+
 local function union_call(self, analyzer, input, call_node)
 	if false--[[# as true]] then return end
 
@@ -91,7 +92,7 @@ local function union_call(self, analyzer, input, call_node)
 			analyzer:Error(err)
 		else
 			if val.Type == "tuple" and val:HasOneValue() then
-				val, err = val:Unpack(1)
+				val, err = val:GetFirstValue()
 			elseif val.Type == "union" and val:GetMinimumLength() == 1 then
 				val, err = val:GetAtTupleIndex(1)
 			end

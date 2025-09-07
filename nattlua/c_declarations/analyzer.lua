@@ -1,7 +1,6 @@
 --[[HOTRELOAD
 	run_test("test/tests/nattlua/c_declarations/cdef.nlua")
 ]]
-
 local math = _G.math
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
@@ -92,7 +91,7 @@ local function cast(self, node)
 		end
 
 		local tup = self.analyzer:Call(self.env.FFIArray, Tuple({size, cast(self, assert(node.of))}))
-		return tup:Unpack()
+		return tup:GetFirstValue()
 	elseif node.type == "pointer" then
 		if
 			node.of.type == "type" and
@@ -109,7 +108,7 @@ local function cast(self, node)
 		end
 
 		local res = (
-			self.analyzer:Call(self.env.FFIPointer, Tuple({cast(self, assert(node.of))})):Unpack()
+			self.analyzer:Call(self.env.FFIPointer, Tuple({cast(self, assert(node.of))})):GetFirstValue()
 		)
 
 		if self:GetContextRef("function_argument") == true then

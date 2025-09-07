@@ -81,7 +81,7 @@ if jit then
 		end
 
 		characters[key] = function(c--[[#: number]])--[[#: boolean]]
-			return map[c] ~= 0
+			return map[c] == 1
 		end
 	end
 end

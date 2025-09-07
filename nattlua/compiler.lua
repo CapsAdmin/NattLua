@@ -71,7 +71,9 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 	local messages = {}
 
 	if self.analyzer then
-		for i, v in ipairs(self.analyzer:GetCallStack()) do
+		local stack = self.analyzer:GetCallStack()
+		for i = #stack, 1, -1 do
+			local v = stack[i]
 			if i > 1 then
 				local node = v.call_node or v.obj:GetFunctionBodyNode()
 
@@ -81,7 +83,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 
 					if path:sub(1, 1) == "@" then path = path:sub(2) end
 
-					table.insert(messages, 1, path .. ":" .. info.line_start .. ":" .. info.character_start)
+					table.insert(messages, path .. ":" .. info.line_start .. ":" .. info.character_start)
 				else
 					for k, v in pairs(v.obj) do
 						print(k, v)

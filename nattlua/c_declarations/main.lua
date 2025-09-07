@@ -274,7 +274,7 @@ function cparser.metatype(ctype, meta)
 		local new_func = LuaTypeFunction(
 			function(self, ...)
 				local analyzer = analyzer_context:GetCurrentAnalyzer()
-				local val = analyzer:Assert(analyzer:Call(new, Tuple({ctype, ...}))):Unpack()
+				local val = analyzer:Assert(analyzer:Call(new, Tuple({ctype, ...}))):GetFirstValue()
 
 				if val.Type == "union" then
 					for i, v in ipairs(val:GetData()) do

@@ -140,11 +140,13 @@ function util.Measure(what, cb) -- type util.Measure = function(string, function
 	local times = {}
 	local threshold = 0.01
 	local lookback = 5
+	local total_time = 0
 
 	for i = 1, 30 do
 		local time = get_time()
 		local ok, err = pcall(cb)
 		times[i] = get_time() - time
+		total_time = total_time + times[i]
 		io.write(("%.5f"):format(times[i]), " seconds\n")
 
 		if i >= lookback and times[i] > 0.5 then
@@ -162,6 +164,12 @@ function util.Measure(what, cb) -- type util.Measure = function(string, function
 					threshold,
 					"), stopped measuring.\n"
 				)
+
+				break
+			end
+
+			if total_time > 10 and #times > 5 then
+				io.write("total time exceeded 10 seconds after 5 attempts, stopped measuring.\n")
 
 				break
 			end
