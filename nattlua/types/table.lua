@@ -502,8 +502,6 @@ local function AddKey(self, keyval, key, val)
 		local keyval = {key = key, val = val}
 		table.insert(self.Data, keyval)
 		write_cache(self, key, keyval)
-
-		if LOL then print(self, self.LiteralDataCache, get_hash(key), "!!") end
 	else
 		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
 			keyval.val = val
@@ -893,6 +891,25 @@ function META:CopyLiteralness(from)
 		if keyval then
 			keyval.key = keyval.key:CopyLiteralness(keyval_from.key)
 			keyval.val = keyval.val:CopyLiteralness(keyval_from.val)
+		end
+	end
+
+	return self
+end
+
+function META:CopyLiteralness2(from)
+	if from.Type ~= self.Type then return self end
+
+	if self:Equal(from) then return self end
+
+	local ref_map = {[from] = self}
+
+	for _, keyval_from in ipairs(from:GetData()) do
+		local keyval, reason = self:FindKeyValExact(keyval_from.key)
+
+		if keyval then
+			self:Delete(keyval.key)
+			AddKey(self, nil, keyval_from.key:Copy(ref_map), keyval_from.val:Copy(ref_map))
 		end
 	end
 

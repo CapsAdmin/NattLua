@@ -10,11 +10,11 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 	function META.GetSet(META--[[#: ref META]], name--[[#: ref string]], default--[[#: ref any]])
 		META[name] = default--[[# as NonLiteral<|default|>]]
 		--[[#type META.@Self[name] = META[name] ]]
-		META["Set" .. name] = function(self--[[#: META.@Self]], val--[[#: META[name] ]])
+		META["Set" .. name] = function(self--[[#: ref META.@Self]], val--[[#: META[name] ]])
 			self[name] = val
 			return self
 		end
-		META["Get" .. name] = function(self--[[#: META.@Self]])--[[#: META[name] ]]
+		META["Get" .. name] = function(self--[[#: ref META.@Self]])--[[#: META[name] ]]
 			return self[name]
 		end
 	end
@@ -31,7 +31,7 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 		end
 	end
 
-	do
+	if true--[[# as false]] then
 		local function get_line()
 			local info = debug.getinfo(3)
 
@@ -57,8 +57,6 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 		local done--[[#: List<|function=(obj: ref AnyTable)>()|>]] = {}
 
 		function META:DebugPropertyAccess()
-			if false--[[# as true]] then return end
-
 			local function tostring_obj(obj)
 				if rawget(obj, "Type") then return obj.Type end
 

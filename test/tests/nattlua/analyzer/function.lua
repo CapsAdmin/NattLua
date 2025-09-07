@@ -1085,3 +1085,20 @@ do
 	local i = a:GetLocalOrGlobalValue(LString("i"))
 	equal(i:GetData(), 2)
 end
+
+analyze[[
+    local META = {}
+
+    function META.GetSet(name: ref string, default: ref any)
+        META[name] = default as NonLiteral<|default|>
+        local x = function(val: META[name], ...: ...string) 
+            attest.equal(val, _ as number) 
+            attest.equal<|..., _ as ((string,)*inf,)|> 
+        end
+    end
+
+    META.GetSet("Data", "1")
+    META.GetSet("Data", 1)
+    attest.equal(META.Data, _ as number)
+
+]]

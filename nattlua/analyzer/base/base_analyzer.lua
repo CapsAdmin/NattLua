@@ -101,7 +101,7 @@ return function(META)
 
 			if tbl and tbl.Type == "union" then tbl = tbl:GetType("table") end
 
-			if not tbl or tbl.Type ~= "table" then return tup end
+			if not tbl or tbl.Type ~= "table" then return end
 
 			if tbl.Self then
 				local self = tbl.Self:Copy()
@@ -153,18 +153,26 @@ return function(META)
 
 				return new_tup
 			end
-
-			return tup
 		end
 
 		function META:CrawlFunctionWithoutOrigin(obj)
 			-- use function's arguments in case they have been maniupulated (ie string.gsub)
 			local arguments = obj:GetInputSignature():Copy()
-			arguments = add_potential_self(arguments)
 
-			for _, obj in ipairs(arguments:GetData()) do
-				if obj.Type == "upvalue" or obj.Type == "table" then
-					obj:ClearMutations()
+			
+			if obj:IsExplicitInputSignature() then
+				local new_arguments = add_potential_self(arguments)
+				arguments = new_arguments or arguments
+				for i = 1, arguments:GetSafeLength() do
+					if new_arguments then i = i + 1 end
+					arguments:Set(i, Any())
+				end
+			else
+				arguments = add_potential_self(arguments) or arguments
+				for _, obj in ipairs(arguments:GetData()) do
+					if obj.Type == "upvalue" or obj.Type == "table" then
+						obj:ClearMutations()
+					end
 				end
 			end
 

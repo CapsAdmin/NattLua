@@ -1097,18 +1097,35 @@ end
 analyze[[
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("Animal")
+type META.@Self = {
+	Foo = true,
+	callback = nil | function=(self: self)>(number),
+}
 META:GetSet("Name", "Unknown")
 
-META:AddInitializer(function(init)
-	init.test = 1337
-end)
-
-local function create()
-	local obj = META.NewObject({Name = "Dog"})
-	attest.equal(obj.Name, _ as string)
-	attest.equal(obj.test, 1337)
-	return obj
+function META:Test()
+	self.test = self.test + 1
+	return self.test
 end
 
-create()
+META:AddInitializer(function(init)
+	init.test = 1337 as number
+end)
+
+function META:Call()
+	if self.callback then return self:callback() end
+
+	return _ as number
+end
+
+local cb = function(self: META.@Self)
+	attest.equal(self.Name, _ as string)
+	return 1
+end
+local obj = META.NewObject({Name = "Dog", Foo = true, callback = cb})
+attest.equal(obj.Name, _ as string)
+attest.equal(obj.test, _ as number)
+attest.equal(obj.Foo, true)
+attest.equal(obj:Test(), _ as number)
+attest.equal(obj:Call(), _ as number)
 ]]

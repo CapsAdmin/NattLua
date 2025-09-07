@@ -276,7 +276,9 @@ end
 
 analyzer function ReturnType(func: Function)
 	if not func:IsCalled() and not func:IsExplicitOutputSignature() then
+		analyzer:PushAnalyzerEnvironment("runtime")
 		analyzer:CrawlFunctionWithoutOrigin(func)
+		analyzer:PopAnalyzerEnvironment()
 	end
 
 	return func:GetOutputSignature():Copy():ToTable()

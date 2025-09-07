@@ -22,7 +22,7 @@ analyze(
         return 1,2,3
     end
 ]],
-	"number.-is not a subset of.-string"
+	"1.-is not a subset of.-string"
 )
 analyze[[
     local type contract = {}

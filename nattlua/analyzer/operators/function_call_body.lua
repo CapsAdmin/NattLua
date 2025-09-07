@@ -330,6 +330,7 @@ return function(self, obj, input)
 					-- if it's not a ref argument we pass the incoming value
 					local t = contract:GetFirstValue():Copy(nil, true)
 					t:SetContract(contract)
+
 					input:Set(i, t)
 				end
 			else

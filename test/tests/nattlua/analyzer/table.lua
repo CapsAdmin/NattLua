@@ -1140,3 +1140,26 @@ local x = {
 }
 attest.equal<|x, {foo = boolean, bar = string}|>
 ]]
+analyze[[
+local tbl = {
+	callback = function(x) end,
+	foo = 123,
+	bar = true,
+}
+local type contract = {
+	foo = number,
+	callback = function=(self: self)>(number) | function=(self: self, n: number)>(number),
+	bar = boolean,
+}
+
+local analyzer function test(tbl: any, contract: any)
+	tbl:CopyLiteralness2(contract)
+
+	for k, v in pairs(tbl:Get(types.LString("callback")):GetData()) do
+		assert(v:GetInputSignature():GetWithNumber(1) == tbl)
+	end
+end
+
+test<|tbl, contract|>
+attest.equal(tbl, contract)
+]]
