@@ -58,6 +58,8 @@ return {
 		local loop_scope = self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
 		loop_scope:SetLoopScope(true)
 
+		self:ClearBreak()
+
 		if literal_init and literal_max and literal_step and literal_max < 1000 then
 			for i = literal_init, literal_max, literal_step do
 				self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())

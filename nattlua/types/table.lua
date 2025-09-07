@@ -368,7 +368,7 @@ function META:CanBeEmpty()
 end
 
 function META:IsEmpty()
-	if self:GetContract() and self:GetContract() ~= self then
+	if self:GetContract() and self:GetContract() ~= self and self:GetContract().Type == "table" then
 		return self:GetContract():IsEmpty()
 	end
 

@@ -61,7 +61,7 @@ end
 local function reverse_escape_string(str--[[#: string]])
 	local pos = 1
 
-	while true do
+	while true --[[# as boolean]] do
 		local start, stop = str:find("\\", pos, true)
 
 		if not start or not stop then break end

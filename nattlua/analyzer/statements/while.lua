@@ -22,6 +22,8 @@ return {
 		local max_iterations = self.max_loop_iterations or 32
 		local count = 0
 
+		self:ClearBreak()
+
 		for i = 1, max_iterations do
 			local loop_scope = self:PushConditionalScope(statement, obj:IsTruthy(), obj:IsFalsy())
 			loop_scope:SetLoopScope(true)

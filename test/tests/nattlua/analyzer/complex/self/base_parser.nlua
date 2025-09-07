@@ -1,1 +1,1 @@
---local parser = require("nattlua.parser.base")
+local parser = require("nattlua.parser.base")

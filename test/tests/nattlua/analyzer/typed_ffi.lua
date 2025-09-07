@@ -98,7 +98,7 @@ analyze[=[
 ]=]
 analyze[=[
 	local ctype = ffi.typeof("struct { const char *foo; }")
-	attest.equal(ctype.foo, _ as nil | ffi.get_type<|"const char*"|>)
+	attest.equal(ctype().foo, _ as nil | ffi.get_type<|"const char*"|>)
 ]=]
 analyze[=[
 	local struct

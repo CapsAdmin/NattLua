@@ -24,7 +24,9 @@ return {
 			callable_iterator.Type == "any" or
 			args[1] and
 			args[1].Type == "any"
+			
 		local uncertain_break = nil
+		self:ClearBreak()
 
 		for i = 1, 1000 do
 			local values = self:Assert(self:Call(callable_iterator, Tuple(args), statement.expressions[1]))
@@ -32,7 +34,7 @@ return {
 			if values.Type == "tuple" and values:HasOneValue() then
 				values = values:GetWithNumber(1)
 			end
-
+		
 			if values.Type == "union" then
 				local tup = Tuple()
 				local max_length = 0
@@ -76,7 +78,11 @@ return {
 			for i, identifier in ipairs(statement.identifiers) do
 				local obj = self:Assert(values:GetWithNumber(i))
 
-				if obj.Type == "union" then obj:RemoveType(Nil()) end
+				if self:IsRuntime() then
+					if obj.Type == "union" then 
+						obj = obj:Copy():RemoveType(Nil()) 
+					end
+				end
 
 				if uncertain_break then
 					obj = obj:Widen()
