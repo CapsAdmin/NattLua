@@ -12,6 +12,7 @@ local Any = require("nattlua.types.any").Any
 local type_errors = require("nattlua.types.error_messages")
 local ipairs = _G.ipairs
 local type = _G.type
+local table_unpack = _G.unpack
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 META.Type = "tuple"
@@ -623,7 +624,6 @@ function META:ToTable(length--[[#: nil | number]])
 	length = length or self:GetElementCount()
 	length = math.min(length, self:GetElementCount())
 	assert(length ~= math.huge, "length must be finite")
-
 	local out = {}
 
 	for i = 1, length do
@@ -634,7 +634,7 @@ function META:ToTable(length--[[#: nil | number]])
 end
 
 function META:Unpack(length--[[#: nil | number]])
-	return table.unpack(self:ToTable(length))
+	return table_unpack(self:ToTable(length))
 end
 
 function META:ToTableWithoutExpansion()

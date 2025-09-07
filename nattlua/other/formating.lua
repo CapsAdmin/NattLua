@@ -13,6 +13,7 @@ local stringx = require("nattlua.other.string")
 local formating = {}
 local assert = _G.assert
 local select = _G.select
+
 function formating.QuoteToken(str--[[#: string]])--[[#: string]]
 	return "❲" .. str .. "❳"
 end
@@ -319,6 +320,9 @@ function formating.BuildSourceCodePointMessage2(
 	local number_length = #tostring(d.line_offset + #d.lines)
 	local annotated = {}
 
+	-- this will be replaced later
+	if config.show_box then table.insert(annotated, "") end
+
 	for i, line in ipairs(d.lines) do
 		local header = config.show_line_numbers == false and
 			"" or
@@ -369,15 +373,11 @@ function formating.BuildSourceCodePointMessage2(
 			if #v > longest_line then longest_line = #v end
 		end
 
-		table.insert(
-			annotated,
-			1,
-			(
-					" "
-				):rep(number_length + #SEPARATOR) .. (
-					"_"
-				):rep(longest_line - number_length - #SEPARATOR)
-		)
+		annotated[1] = (
+				" "
+			):rep(number_length + #SEPARATOR) .. (
+				"_"
+			):rep(longest_line - number_length - #SEPARATOR)
 		table.insert(
 			annotated,
 			(

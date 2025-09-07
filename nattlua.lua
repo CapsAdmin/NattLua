@@ -53,27 +53,31 @@ if false then
 	)
 end
 
-if jit and not pcall(require, "nattlua.cli.init") then
-	local current_path
-	local ffi = require("ffi")
+if jit then
+	local ok, err = pcall(require, "nattlua.cli.init")
+	print(err)
+	if not ok then
+		local current_path
+		local ffi = require("ffi")
 
-	if jit.os ~= "Windows" then
-		ffi.cdef("char *getcwd(char *buf, size_t size);")
-		local buf = ffi.new("uint8_t[256]")
-		ffi.C.getcwd(buf, 256)
-		current_path = ffi.string(buf)
-	else
-		ffi.cdef("unsigned long GetCurrentDirectoryA(unsigned long length, char *buffer);")
-		local buf = ffi.new("uint8_t[256]")
-		ffi.C.GetCurrentDirectoryA(256, buf)
-		current_path = ffi.string(buf):gsub("\\", "/")
+		if jit.os ~= "Windows" then
+			ffi.cdef("char *getcwd(char *buf, size_t size);")
+			local buf = ffi.new("uint8_t[256]")
+			ffi.C.getcwd(buf, 256)
+			current_path = ffi.string(buf)
+		else
+			ffi.cdef("unsigned long GetCurrentDirectoryA(unsigned long length, char *buffer);")
+			local buf = ffi.new("uint8_t[256]")
+			ffi.C.GetCurrentDirectoryA(256, buf)
+			current_path = ffi.string(buf):gsub("\\", "/")
+		end
+
+		local nattlua_path = debug.getinfo(1, "S").source:match("^@(.+)$")
+		nattlua_path = nattlua_path:match("(.+)/nattlua%.lua$")
+		local dir = current_path .. "/" .. nattlua_path .. "/"
+		_G.ROOT_PATH = dir
+		package.path = package.path .. ";" .. dir .. "?.lua" .. ";" .. dir .. "?/init.lua"
 	end
-
-	local nattlua_path = debug.getinfo(1, "S").source:match("^@(.+)$")
-	nattlua_path = nattlua_path:match("(.+)/nattlua%.lua$")
-	local dir = current_path .. "/" .. nattlua_path .. "/"
-	_G.ROOT_PATH = dir
-	package.path = package.path .. ";" .. dir .. "?.lua" .. ";" .. dir .. "?/init.lua"
 end
 
 if ... == "test" then

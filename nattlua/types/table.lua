@@ -12,12 +12,13 @@ local String = require("nattlua.types.string").String
 local ConstString = require("nattlua.types.string").ConstString
 local Tuple = require("nattlua.types.tuple").Tuple
 local type_errors = require("nattlua.types.error_messages")
-local META = require("nattlua.types.base")()
 local context = require("nattlua.analyzer.context")
 local mutation_solver = require("nattlua.analyzer.mutation_solver")
+local table_sort = require("nattlua.other.sort")
 local Any = require("nattlua.types.any").Any
 local math_abs = math.abs
 local math_huge = math.huge
+local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type TTable = META.@Self]]
 --[[#type TTable.suppress = boolean]]
@@ -173,7 +174,7 @@ function META:GetHash(visited)
 		table.insert(entries, data[i].key:GetHash(visited) .. "=" .. data[i].val:GetHash(visited))
 	end
 
-	table.sort(entries)
+	table_sort(entries)
 	visited[self] = "{" .. table.concat(entries, ",") .. "}"
 	return visited[self]
 end
