@@ -98,7 +98,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 			code:GetString(),
 			start,
 			stop,
-			{path = code:GetName(), messages = messages}
+			{path = code:GetName(), messages = messages, surrounding_line_count = 1}
 		) .. "\n"
 
 	if severity == "error" then
