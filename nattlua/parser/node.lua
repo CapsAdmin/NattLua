@@ -15,12 +15,7 @@ local META = class.CreateTemplate("node")
 --[[#type META.@Name = "Node"]]
 --[[#type META.@Self = {
 	@Name = "Node",
-	type = "expression" | "statement",
-	_type = "expression" | "statement",
-	kind = string,
-	_kind = string,
 	Type = string,
-	id = number,
 	Code = Code,
 	tokens = Map<|string, false | Token | List<|Token|>|>,
 	inferred_types = List<|any|>,
@@ -896,7 +891,7 @@ function META.New(
 	init.identifiers_typesystem = false
 	init.is_identifier = false
 	init.is_left_assignment = false
-	return setmetatable(init--[[# as META.@Self]], META)
+	return META.NewObject(init--[[# as META.@Self]])
 end
 
 function META:__tostring()

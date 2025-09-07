@@ -9,8 +9,8 @@ function profiler.Start()
 	stop_profiler = jit_profiler.Start(
 		{
 			mode = "line",
-			sampling_rate = 1,
-			depth = 1, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
+			sampling_rate = 10,
+			depth = 10, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
 			sample_threshold = 20,
 		}
 	)
@@ -23,7 +23,7 @@ function profiler.Stop()
 		local str = trace_tracker.ToStringProblematicTraces(traces, aborted)
 
 		if #str > 0 then
-		io.write("\nluajit traces that were aborted and stitched:\n")
+			io.write("\nluajit traces that were aborted and stitched:\n")
 			io.write(str, "\n")
 		else
 			io.write("\nno problematic traces found\n")

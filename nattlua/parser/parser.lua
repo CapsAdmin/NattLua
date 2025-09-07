@@ -2,7 +2,6 @@
 	run_test("test/tests/nattlua/parser.lua")
 	run_test("test/performance/parser.lua")
 ]]
-
 --ANALYZE
 local Code = require("nattlua.code").New
 local Lexer = require("nattlua.lexer.lexer").New

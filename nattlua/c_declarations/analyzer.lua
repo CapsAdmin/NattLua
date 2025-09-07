@@ -24,7 +24,6 @@ local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 local ERROR_REDECLARE = false
 local walk_cdeclarations = require("nattlua.c_declarations.ast_walker")
-META.OnInitialize = {}
 require("nattlua.other.context_mixin")(META)
 local valid_qualifiers = {
 	["double"] = true,
@@ -286,7 +285,7 @@ function META:AnalyzeRoot(ast, vars, typs)
 end
 
 function META.New()
-	local self = setmetatable(
+	return META.NewObject(
 		{
 			context_values = {},
 			type_table = false,
@@ -299,15 +298,8 @@ function META.New()
 			dollar_signs_vars = false,
 			dollar_signs_typs = false,
 			current_nodes = false,
-		},
-		META
+		}
 	)
-
-	for i, v in ipairs(META.OnInitialize) do
-		v(self)
-	end
-
-	return self
 end
 
 return META

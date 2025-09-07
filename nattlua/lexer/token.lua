@@ -422,7 +422,7 @@ function META.New(
 	start--[[#: number]],
 	stop--[[#: number]]
 )--[[#: META.@Self]]
-	return setmetatable(
+	return META.NewObject(
 		{
 			is_token = true,
 			type = type,
@@ -436,8 +436,7 @@ function META.New(
 			parent = false,
 			whitespace = false,
 			c_keyword = false,
-		}--[[# as META.@Self]],
-		META
+		}--[[# as META.@Self]]
 	)
 end
 

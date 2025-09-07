@@ -713,7 +713,7 @@ function META:SetTable(data)
 end
 
 function META.New(data--[[#: nil | List<|TBaseType|>]])
-	local self = setmetatable(
+	local self = META.NewObject(
 		{
 			Type = "tuple",
 			Data = {},
@@ -727,8 +727,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			Upvalue = false,
 			Parent = false,
 			Contract = false,
-		},
-		META
+		}
 	)
 
 	if data then self:SetTable(data) end

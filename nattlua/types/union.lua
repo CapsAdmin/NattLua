@@ -570,7 +570,7 @@ function META:GetParentTable()
 end
 
 function META.New(data--[[#: nil | List<|TBaseType|>]])
-	local self = setmetatable(
+	local self = META.NewObject(
 		{
 			Type = "union",
 			Data = {},
@@ -585,8 +585,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			Parent = false,
 			Upvalue = false,
 			Parent = false,
-		},
-		META
+		}
 	)
 
 	if data then for _, v in ipairs(data) do

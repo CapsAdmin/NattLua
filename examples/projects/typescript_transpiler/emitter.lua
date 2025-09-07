@@ -1012,8 +1012,7 @@ do -- extra
 end
 
 function META.New(config)
-	local self = setmetatable({}, META)
-	self.config = config or {}
+	local self = META.NewObject({config = config or {}})
 	self:Initialize()
 	return self
 end

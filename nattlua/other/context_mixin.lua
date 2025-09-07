@@ -4,7 +4,7 @@ return function(META--[[#: ref any]])
 	--[[#type META.@Self.context_values = Map<|string, {i = number, [number] = any}|>]]
 	--[[#type META.@Self.context_ref = Map<|string, number|>]]
 
-	table_insert(META.OnInitialize, function(self--[[#: ref any]])
+	META:AddInitializer(function(self--[[#: ref any]])
 		self.context_values = {}--[[# as META.@Self.context_values]]
 		self.context_ref = {}--[[# as META.@Self.context_ref]]
 	end)

@@ -322,23 +322,20 @@ function META.New(
 		end
 	end
 
-	return setmetatable(
-		{
-			Code = Code(lua_code, name),
-			ParentSourceLine = parent_line,
-			ParentSourceName = parent_name,
-			Config = config or false,
-			Tokens = false,
-			SyntaxTree = false,
-			default_environment = false,
-			analyzer = false,
-			AnalyzedResult = false,
-			debug = false,
-			is_base_environment = false,
-			errors = {},
-		},
-		META
-	)
+	return META.NewObject({
+		Code = Code(lua_code, name),
+		ParentSourceLine = parent_line,
+		ParentSourceName = parent_name,
+		Config = config or false,
+		Tokens = false,
+		SyntaxTree = false,
+		default_environment = false,
+		analyzer = false,
+		AnalyzedResult = false,
+		debug = false,
+		is_base_environment = false,
+		errors = {},
+	})
 end
 
 function META.FromFile(path, config)

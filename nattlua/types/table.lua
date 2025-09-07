@@ -500,6 +500,8 @@ local function AddKey(self, keyval, key, val)
 		local keyval = {key = key, val = val}
 		table.insert(self.Data, keyval)
 		write_cache(self, key, keyval)
+
+		if LOL then print(self, self.LiteralDataCache, get_hash(key), "!!") end
 	else
 		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
 			keyval.val = val
@@ -1060,7 +1062,7 @@ local function unpack_keyval(keyval--[[#: ref {key = any, val = any}]])
 end
 
 function META.Extend(a--[[#: TTable]], b--[[#: TTable]])
-	assert(b.Type == "table")
+	local own_contract = a:GetContract() == a
 	a = a:Copy()
 	b = b:Copy()
 	local ref_map = {[b] = a}
@@ -1071,6 +1073,8 @@ function META.Extend(a--[[#: TTable]], b--[[#: TTable]])
 
 		if not ok then return ok, reason end
 	end
+
+	if own_contract then a.Contract = a end
 
 	return a
 end
@@ -1294,7 +1298,7 @@ function META:GetLuaType()
 end
 
 function META.New()
-	return setmetatable(
+	return META.NewObject(
 		{
 			Type = "table",
 			Data = {},
@@ -1327,8 +1331,7 @@ function META.New()
 			MetaTable = false,
 			Contract = false,
 			MutationLimit = 100,
-		},
-		META
+		}
 	)
 end
 

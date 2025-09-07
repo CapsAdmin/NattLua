@@ -1,8 +1,8 @@
---[[HOTRELOAD
+--[=[#--[[HOTRELOAD
 	run_test("test/tests/nattlua/lexer.lua")
 	run_test("test/performance/lexer.lua")
 ]]
---[[#local type { TokenType } = import("./token.lua")]]
+local type { TokenType } = import("./token.lua")]=]
 
 local Token = require("nattlua.lexer.token").New
 local class = require("nattlua.other.class")
@@ -720,15 +720,14 @@ function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
 end
 
 function META.New(code--[[#: Code]], config--[[#: {} | nil]])
-	local self = setmetatable(
+	local self = META.NewObject(
 		{
 			Code = code,
 			Position = 1,
 			comment_escape = false,
 			OnError = META.OnError,
 			Config = config,
-		},
-		META
+		}
 	)
 	self:ResetState()
 	return self

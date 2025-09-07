@@ -4,7 +4,7 @@ local function check_read_args<|...: ...pattern|>
 	local out = {}
 
 	for i = 1, select<|"#", ...|> do
-		local v = ...[i]
+		local v = select(i, ...)
 
 		if type(v) == "string" and (v:sub(1, 1) == "n" or v:sub(1, 2) == "*n") then
 			out[i] = number | nil

@@ -50,14 +50,12 @@ function META:GetProjectConfig(what, path)
 end
 
 function META.New()
-	local self = {
+	return META.NewObject({
 		TempFiles = {},
 		LoadedFiles = {},
 		debug = false,
 		node_to_type = {},
-	}
-	setmetatable(self, META)
-	return self
+	})
 end
 
 function META:NodeToType(typ)

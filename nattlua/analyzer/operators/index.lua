@@ -8,7 +8,18 @@ local type_errors = require("nattlua.types.error_messages")
 local ConstString = require("nattlua.types.string").ConstString
 
 local function index_table(analyzer, self, key, raw)
-	if not raw and self:GetMetaTable() and not self:HasKey(key) then
+	if
+		not raw and
+		self:GetMetaTable() and
+		(
+			key.Type ~= "string" or
+			not key:IsLiteral()
+			or
+			key:GetData():sub(1, 1) ~= "@"
+		)
+		and
+		not self:HasKey(key)
+	then
 		local index = self:GetMetaTable():Get(ConstString("__index"))
 
 		if index then

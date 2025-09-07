@@ -1,5 +1,4 @@
---[[#
-local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
+--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type { NodeKind, Nodes, Node } = import("~/nattlua/parser/node.lua")]]
 
@@ -12,7 +11,6 @@ local NewNode = require("nattlua.parser.node").New
 local ipairs = _G.ipairs
 local pairs = _G.pairs
 local assert = _G.assert
-local setmetatable = _G.setmetatable
 local type = _G.type
 local table = _G.table
 local math_min = math.min
@@ -21,7 +19,6 @@ local class = require("nattlua.other.class")
 local Token = require("nattlua.lexer.token").New
 return function()
 	local META = class.CreateTemplate("parser")
-	META.OnInitialize = {}
 	--[[#type META.@Self = {
 		@Name = "Parser",
 		config = ParserConfig,
@@ -41,7 +38,7 @@ return function()
 		CDECL_PARSING_MODE = "typeof" | "ffinew" | false,
 		OnPreCreateNode = function=(self: any, node: any)>(),
 		OnError = function=(
-			self: self,
+			self: any,
 			code: Code,
 			message: string,
 			start: number,
@@ -66,30 +63,26 @@ return function()
 			path = nil | string,
 		}]]
 	)
-		local self = {
-			config = config or {},
-			Code = code,
-			current_token_index = 1,
-			tokens = tokens,
-			suppress_on_parsed_node = false,
-			RootStatement = false,
-			TealCompat = false,
-			dont_hoist_next_import = false,
-			imported = false,
-			statement_count = false,
-			dollar_signs = false,
-			CDECL_PARSING_MODE = false,
-			value = false,
-			FFI_DECLARATION_PARSER = false,
-			OnPreCreateNode = META.OnPreCreateNode,
-			OnError = META.OnError,
-		}
-
-		for _, func in ipairs(META.OnInitialize) do
-			func(self)
-		end
-
-		return setmetatable(self, META)
+		return META.NewObject(
+			{
+				config = config or {},
+				Code = code,
+				current_token_index = 1,
+				tokens = tokens,
+				suppress_on_parsed_node = false,
+				RootStatement = false,
+				TealCompat = false,
+				dont_hoist_next_import = false,
+				imported = false,
+				statement_count = false,
+				dollar_signs = false,
+				CDECL_PARSING_MODE = false,
+				value = false,
+				FFI_DECLARATION_PARSER = false,
+				OnPreCreateNode = META.OnPreCreateNode,
+				OnError = META.OnError,
+			}
+		)
 	end
 
 	do
@@ -275,11 +268,11 @@ end
 	end
 
 	function META:IsTokenValue(str--[[#: string]], offset--[[#: number | nil]])
-	return self:GetToken(offset).value == str
+		return self:GetToken(offset).value == str
 	end
 
 	function META:IsTokenType(token_type--[[#: TokenType]], offset--[[#: number | nil]])
-	return self:GetToken(offset).type == token_type
+		return self:GetToken(offset).type == token_type
 	end
 
 	function META:ParseToken()

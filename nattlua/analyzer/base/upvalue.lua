@@ -85,7 +85,7 @@ end
 local id = 0
 
 function META.New(obj)
-	local self = setmetatable(
+	local self = META.NewObject(
 		{
 			Type = "upvalue",
 			truthy_falsy_union = false,
@@ -99,8 +99,7 @@ function META.New(obj)
 			Mutations = false,
 			UseCount = 0,
 			statement = false,
-		},
-		META
+		}
 	)
 	id = id + 1
 	self:SetValue(obj)

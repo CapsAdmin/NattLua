@@ -278,7 +278,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 			return l
 		elseif op == "&" or op == "extends" then
 			if l.Type ~= "table" then
-				return false, "type " .. tostring(l) .. " cannot be extended"
+				return false, {"type " .. tostring(l) .. " cannot be extended"}
 			end
 
 			return l:Extend(r)

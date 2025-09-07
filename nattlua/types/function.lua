@@ -247,7 +247,7 @@ function META:HasReferenceTypes()
 end
 
 function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
-	local self = setmetatable(
+	return META.NewObject(
 		{
 			Type = "function",
 			Falsy = false,
@@ -275,10 +275,8 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			Parent = false,
 			suppress = false,
 			InputArgumentsInferred = false,
-		},
-		META
+		}
 	)
-	return self
 end
 
 return {

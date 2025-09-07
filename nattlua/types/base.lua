@@ -125,7 +125,7 @@ return function()
 
 	do -- contract
 		function META:Seal()
-			self:SetContract(self:GetContract() or self:Copy())
+			(self--[[# as any]]):SetContract(self:GetContract() or self:Copy())
 		end
 
 		META:GetSet("Contract", false--[[# as TBaseType | false]])

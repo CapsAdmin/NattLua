@@ -43,7 +43,7 @@ local function LNumber(num--[[#: number | nil]])
 end
 
 function META.New(min--[[#: TNumber]], max--[[#: TNumber]])
-	return setmetatable(
+	return META.NewObject(
 		{
 			Type = META.Type,
 			MinNumber = min,
@@ -56,8 +56,7 @@ function META.New(min--[[#: TNumber]], max--[[#: TNumber]])
 			Contract = false,
 			Hash = compute_hash(min, max),
 			DontWiden = false,
-		},
-		META
+		}
 	)
 end
 

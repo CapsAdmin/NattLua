@@ -433,7 +433,7 @@ function META:GetAllVisibleUpvalues()
 end
 
 function META.New(parent, upvalue_position, obj)
-	local scope = {
+	local scope = META.NewObject({
 		obj = obj,
 		CachedLoopScope = false,
 		Children = {},
@@ -475,8 +475,7 @@ function META.New(parent, upvalue_position, obj)
 				map = {},
 			},
 		},
-	}
-	setmetatable(scope, META)
+	})
 	scope:SetParent(parent or false)
 	pos = pos + 1
 	return scope

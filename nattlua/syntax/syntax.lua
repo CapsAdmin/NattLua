@@ -29,7 +29,7 @@ local META = class.CreateTemplate("syntax")
 }]]
 
 function META.New()
-	local self = setmetatable(
+	return META.NewObject(
 		{
 			NumberAnnotations = {},
 			BinaryOperatorInfo = {},
@@ -46,10 +46,8 @@ function META.New()
 			BinaryOperatorFunctionTranslate = {},
 			PostfixOperatorFunctionTranslate = {},
 			PrefixOperatorFunctionTranslate = {},
-		},
-		META
+		}
 	)
-	return self
 end
 
 local function has_value(tbl--[[#: {[1 .. inf] = string} | {}]], value--[[#: string]])

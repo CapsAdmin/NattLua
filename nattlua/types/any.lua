@@ -64,7 +64,7 @@ function META:IsLiteral()
 end
 
 function META.New()
-	return setmetatable(
+	return META.NewObject(
 		{
 			Type = "any",
 			Falsy = false,
@@ -74,8 +74,7 @@ function META.New()
 			ReferenceType = false,
 			Contract = false,
 			Parent = false,
-		},
-		META
+		}
 	)
 end
 

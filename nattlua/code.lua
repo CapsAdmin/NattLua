@@ -190,14 +190,10 @@ else
 	end
 
 	function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
-		local self = setmetatable(
-			{
-				Buffer = remove_bom_header(lua_code),
-				Name = name or get_default_name(),
-			},
-			META
-		)
-		return self
+		return META.NewObject({
+			Buffer = remove_bom_header(lua_code),
+			Name = name or get_default_name(),
+		})
 	end
 end
 

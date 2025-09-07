@@ -11,7 +11,7 @@ META.Type = "string"
 --[[#type META.@Name = "TString"]]
 --[[#type TString = META.@Self]]
 --[[#type TString.Type = "string"]]
---[[#type TString.lua_compiler = false|string]]
+--[[#type TString.lua_compiler = false | string]]
 META:GetSet("Data", false--[[# as string | false]])
 META:GetSet("Hash", false--[[# as string]])
 META:GetSet("PatternContract", false--[[# as false | string]])
@@ -41,7 +41,7 @@ function META:GetHashForMutationTracking()
 end
 
 function META:Copy()
-	local copy = self.New(self.Data)
+	local copy = self.New(self.Data)--[[# as any]]
 	copy:SetPatternContract(self:GetPatternContract())
 	copy:SetMetaTable(self:GetMetaTable())
 	copy:CopyInternalsFrom(self)
@@ -129,7 +129,7 @@ function META:Get()
 end
 
 local function new(data--[[#: string | nil]], pattern--[[#: string | nil]])
-	return setmetatable(
+	return META.NewObject(
 		{
 			Type = "string",
 			Data = data or false,
@@ -144,8 +144,7 @@ local function new(data--[[#: string | nil]], pattern--[[#: string | nil]])
 			MetaTable = false,
 			Hash = compute_hash(data, pattern),
 			lua_compiler = false,
-		},
-		META
+		}
 	)
 end
 

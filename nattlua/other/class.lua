@@ -1,100 +1,128 @@
+local setmetatable = _G.setmetatable
 local class = {}
 
 function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
-	local meta = {}
-	meta.Type = type_name
-	meta.__index = meta
-	--[[#type meta.@Self = {}]]
+	local META = {}
+	META.Type = type_name
+	META.__index = META
+	--[[#type META.@Self = {}]]
 
-	function meta.GetSet(tbl--[[#: ref tbl]], name--[[#: ref string]], default--[[#: ref any]])
-		tbl[name] = default--[[# as NonLiteral<|default|>]]
-		--[[#type tbl.@Self[name] = tbl[name] ]]
-		tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
+	function META.GetSet(META--[[#: ref META]], name--[[#: ref string]], default--[[#: ref any]])
+		META[name] = default--[[# as NonLiteral<|default|>]]
+		--[[#type META.@Self[name] = META[name] ]]
+		META["Set" .. name] = function(self--[[#: META.@Self]], val--[[#: META[name] ]])
 			self[name] = val
 			return self
 		end
-		tbl["Get" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
+		META["Get" .. name] = function(self--[[#: META.@Self]])--[[#: META[name] ]]
 			return self[name]
 		end
 	end
 
-	function meta.IsSet(tbl--[[#: ref tbl]], name--[[#: ref string]], default--[[#: ref any]])
-		tbl[name] = default--[[# as NonLiteral<|default|>]]
-		--[[#type tbl.@Self[name] = tbl[name] ]]
-		tbl["Set" .. name] = function(self--[[#: tbl.@Self]], val--[[#: tbl[name] ]])
+	function META.IsSet(META--[[#: ref META]], name--[[#: ref string]], default--[[#: ref any]])
+		META[name] = default--[[# as NonLiteral<|default|>]]
+		--[[#type META.@Self[name] = META[name] ]]
+		META["Set" .. name] = function(self--[[#: META.@Self]], val--[[#: META[name] ]])
 			self[name] = val
 			return self
 		end
-		tbl["Is" .. name] = function(self--[[#: tbl.@Self]])--[[#: tbl[name] ]]
+		META["Is" .. name] = function(self--[[#: META.@Self]])--[[#: META[name] ]]
 			return self[name]
 		end
 	end
 
-	local function get_line()
-		local info = debug.getinfo(3)
-
-		if not info then return "**unknown line**" end
-
-		if info.source:find("class.lua", nil, true) then
-			info = debug.getinfo(4)
+	do
+		local function get_line()
+			local info = debug.getinfo(3)
 
 			if not info then return "**unknown line**" end
-		end
 
-		return info.source:sub(2) .. ":" .. info.currentline
-	end
+			if info.source:find("class.lua", nil, true) then
+				info = debug.getinfo(4)
 
-	local function get_constructor()
-		local info = debug.getinfo(meta.New--[[# as any]])
-
-		if not info then return "**unknown line**" end
-
-		return info.source:sub(2) .. ":" .. info.linedefined
-	end
-
-	local done = {}
-
-	function meta:DebugPropertyAccess()
-		if false--[[# as true]] then return end
-
-		local function tostring_obj(obj)
-			if rawget(obj, "Type") then return obj.Type end
-
-			return tostring(obj)
-		end
-
-		meta.__index = function(self, key)
-			if meta[key] == nil or type(meta[key]) ~= "function" then
-				local line = get_line()
-				local hash = key .. "-" .. line
-
-				if not done[hash] then
-					io.write(tostring_obj(self), " - ", get_constructor(), "\n")
-					io.write("\t", line, "\n")
-					io.write("\tGET " .. key, "\n")
-					done[hash] = true
-				end
+				if not info then return "**unknown line**" end
 			end
 
-			return meta[key]
+			return info.source:sub(2) .. ":" .. info.currentline
 		end
-		meta.__newindex = function(self, key, val)
-			if val == nil or meta[key] == nil or type(meta[key]) ~= "function" then
-				local line = get_line()
-				local hash = key .. "-" .. line .. "-" .. type(val)
 
-				if not done[hash] then
-					io.write(tostring_obj(self), " - ", get_constructor(), "\n")
-					io.write("\t", line, "\n")
-					io.write("\tSET " .. key .. " = " .. type(val), "\n")
-					done[hash] = true
-				end
+		local function get_constructor()
+			local info = debug.getinfo(META.New--[[# as any]])
+
+			if not info then return "**unknown line**" end
+
+			return info.source:sub(2) .. ":" .. info.linedefined
+		end
+
+		local done--[[#: List<|function=(obj: ref AnyTable)>()|>]] = {}
+
+		function META:DebugPropertyAccess()
+			if false--[[# as true]] then return end
+
+			local function tostring_obj(obj)
+				if rawget(obj, "Type") then return obj.Type end
+
+				return tostring(obj)
 			end
 
-			rawset(self--[[# as any]], key, val)
+			META.__index = function(self, key)
+				if META[key] == nil or type(META[key]) ~= "function" then
+					local line = get_line()
+					local hash = key .. "-" .. line
+
+					if not done[hash] then
+						io.write(tostring_obj(self), " - ", get_constructor(), "\n")
+						io.write("\t", line, "\n")
+						io.write("\tGET " .. key, "\n")
+						done[hash] = true
+					end
+				end
+
+				return META[key]
+			end
+			META.__newindex = function(self, key, val)
+				if val == nil or META[key] == nil or type(META[key]) ~= "function" then
+					local line = get_line()
+					local hash = key .. "-" .. line .. "-" .. type(val)
+
+					if not done[hash] then
+						io.write(tostring_obj(self), " - ", get_constructor(), "\n")
+						io.write("\t", line, "\n")
+						io.write("\tSET " .. key .. " = " .. type(val), "\n")
+						done[hash] = true
+					end
+				end
+
+				rawset(self--[[# as any]], key, val)
+			end
 		end
 	end
-	return meta
+
+	local on_initialize = {}
+
+	function META.NewObject(init--[[#: ref AnyTable]])
+		for _, func in ipairs(on_initialize) do
+			func(init)
+		end
+
+		local obj = setmetatable(init, META)
+		return obj
+	end
+
+	function META.AddInitializer(_, func--[[#: ref function=(obj: ref AnyTable)>()]])
+		table.insert(on_initialize, func)
+
+		if false--[[# as true]] then
+			--[[#local type res = {}]]
+			--[[#func<|res|>]]
+
+			for k, v in pairs(res) do
+				--[[#type META.@Self[k] = v]]
+			end
+		end
+	end
+
+	return META
 end
 
 return class

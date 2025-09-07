@@ -11,7 +11,7 @@ local type_errors = require("nattlua.types.error_messages")
 return function(META)
 	require("nattlua.other.context_mixin")(META)
 
-	table_insert(META.OnInitialize, function(self)
+	META:AddInitializer(function(self)
 		self.default_environment = {
 			runtime = Table(),
 			typesystem = Table(),

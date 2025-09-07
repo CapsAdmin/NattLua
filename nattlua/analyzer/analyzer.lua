@@ -5,7 +5,6 @@ local setmetatable = setmetatable
 local ipairs = ipairs
 require("nattlua.types.types").Initialize()
 local META = class.CreateTemplate("analyzer")
-META.OnInitialize = {}
 require("nattlua.other.context_mixin")(META)
 require("nattlua.analyzer.base.base_analyzer")(META)
 require("nattlua.analyzer.control_flow")(META)
@@ -300,9 +299,9 @@ do
 			if i > 10 then break end
 
 			self:Warning({info.node, " was crawled ", info.count, " times"})
-			print(info.node, " was crawled ", info.count, " times")
+			io.write(tostring(info.node), " was crawled ", info.count, " times\n")
 		end
-
+		debug.trace()
 		self:FatalError("too many iterations (" .. count .. "), stopping execution")
 	end
 end
@@ -328,7 +327,7 @@ function META.New(config)
 		config.should_crawl_untyped_functions = true
 	end
 
-	local init = {
+	return META.NewObject({
 		config = config,
 		compiler = false,
 		processing_deferred_calls = false,
@@ -371,16 +370,9 @@ function META.New(config)
 		check_count = 0,
 		call_stack_map = {},
 		LEFT_SIDE_OR = false,
-	}
-
-	for _, func in ipairs(META.OnInitialize) do
-		func(init)
-	end
-
-	local self = setmetatable(init, META)
-	self.context_values = {}
-	self.context_ref = {}
-	return self
+		context_values = {},
+		context_ref = {},
+	})
 end
 
 return META

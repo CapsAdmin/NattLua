@@ -20,7 +20,7 @@ return function(META)
 		},
 	}]]
 
-	table.insert(META.OnInitialize, function(self)
+	META:AddInitializer(function(self)
 		self.diagnostics = {}
 		self.constant_expression_warnings = {}
 		self.constant_expression_warnings_ordered = {}

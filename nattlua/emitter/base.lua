@@ -2137,7 +2137,7 @@ return function()
 			config.comment_type_annotations = true
 		end
 
-		local self = setmetatable(
+		local self = META.NewObject(
 			{
 				level = 0,
 				out = {},
@@ -2157,8 +2157,7 @@ return function()
 				toggled_indents = false,
 				done = false,
 				FFI_DECLARATION_EMITTER = false,
-			},
-			META
+			}
 		)
 		self:Initialize()
 		return self

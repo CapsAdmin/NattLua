@@ -10,27 +10,27 @@ local BinaryCustom = require("nattlua.analyzer.operators.binary").BinaryCustom
 local LNumberRange = require("nattlua.types.range").LNumberRange
 
 local function get_largest_number(obj)
-	if obj:IsLiteral() then
-		if obj.Type == "union" then
-			local max = -math.huge
+	if not obj:IsLiteral() then return end
 
-			for _, v in ipairs(obj:GetData()) do
-				if v:IsNumeric() then
-					if v.Type == "range" then
-						max = math.max(max, v:GetMax())
-					else
-						max = math.max(max, v:GetData())
-					end
+	if obj.Type == "union" then
+		local max = -math.huge
+
+		for _, v in ipairs(obj:GetData()) do
+			if v:IsNumeric() then
+				if v.Type == "range" then
+					max = math.max(max, v:GetMax())
+				else
+					max = math.max(max, v:GetData())
 				end
 			end
-
-			return max
-		elseif obj.Type == "range" then
-			return obj:GetMax()
 		end
 
-		return obj:GetData()
+		return max
+	elseif obj.Type == "range" then
+		return obj:GetMax()
 	end
+
+	return obj:GetData()
 end
 
 return {
@@ -38,8 +38,7 @@ return {
 		local init = self:GetFirstValue(self:AnalyzeExpression(statement.expressions[1]))
 		local max = self:GetFirstValue(self:AnalyzeExpression(statement.expressions[2]))
 		local step = statement.expressions[3] and
-			self:GetFirstValue(self:AnalyzeExpression(statement.expressions[3])) or
-			nil
+			self:GetFirstValue(self:AnalyzeExpression(statement.expressions[3]))
 
 		if step then assert(step:IsNumeric()) end
 

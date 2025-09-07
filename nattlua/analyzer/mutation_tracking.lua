@@ -6,7 +6,7 @@ local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange
 local shallow_copy = require("nattlua.other.tablex").copy
 return function(META)
-	table.insert(META.OnInitialize, function(self)
+	META:AddInitializer(function(self)
 		self.tracked_upvalues = {}
 		self.tracked_upvalues_done = {}
 	end)

@@ -46,12 +46,13 @@ return function(META)
 	end
 
 	function META:IsCallExpression(offset--[[#: number]])
-		return self:IsTokenValue("(", offset) or
-			self:IsTokenValue("<|", offset) or
-			self:IsTokenValue("{", offset) or
-			self:IsTokenType("string", offset) or
+		local tk = self:GetToken(offset)
+		return tk.value == "(" or
+			tk.value == "<|" or
+			tk.value == "{" or
+			tk.type == "string" or
 			(
-				self:IsTokenValue("!", offset) and
+				tk.value == "!" and
 				self:IsTokenValue("(", offset + 1)
 			)
 	end

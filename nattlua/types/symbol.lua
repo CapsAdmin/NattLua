@@ -138,7 +138,7 @@ function META.New(data--[[#: true | false | nil | TSymbol.Data]])
 
 	if data == false then data = FALSE end
 
-	local self = setmetatable(
+	local self = META.NewObject(
 		{
 			Type = META.Type,
 			Data = data,
@@ -149,9 +149,8 @@ function META.New(data--[[#: true | false | nil | TSymbol.Data]])
 			Parent = false,
 			Contract = false,
 			Hash = "",
-		},
-		META
-	)
+		})
+		
 	self.Hash = tostring(self)
 	return self
 end

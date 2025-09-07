@@ -502,7 +502,7 @@ identical([[return function(config)
 	config = config or {}
 	local self = setmetatable({config = config}, META)
 
-	for _, func in ipairs(META.OnInitialize) do
+	for _, func in ipairs(META.Test) do
 		func(self)
 	end
 
