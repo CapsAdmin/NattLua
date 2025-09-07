@@ -46,7 +46,7 @@ function META.New()
 			BinaryOperatorFunctionTranslate = {},
 			PostfixOperatorFunctionTranslate = {},
 			PrefixOperatorFunctionTranslate = {},
-		}
+		}, true
 	)
 end
 

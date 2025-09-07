@@ -1012,7 +1012,7 @@ do -- extra
 end
 
 function META.New(config)
-	local self = META.NewObject({config = config or {}})
+	local self = META.NewObject({config = config or {}}, true)
 	self:Initialize()
 	return self
 end

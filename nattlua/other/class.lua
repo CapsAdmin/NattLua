@@ -98,12 +98,21 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 
 	local on_initialize = {}
 
-	function META.NewObject(init--[[#: ref AnyTable]])
+	function META.NewObject(init--[[#: ref AnyTable]], unroll_functions--[[#: boolean | nil]])
 		for _, func in ipairs(on_initialize) do
 			func(init)
 		end
 
+		if true --[[# as false]] and unroll_functions then
+			for k,v in pairs(META) do
+				if type(v) == "function" then
+					init[k] = v
+				end
+			end
+		end
+
 		local obj = setmetatable(init, META)
+
 		return obj
 	end
 

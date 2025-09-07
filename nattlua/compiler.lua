@@ -335,7 +335,7 @@ function META.New(
 		debug = false,
 		is_base_environment = false,
 		errors = {},
-	})
+	}, true)
 end
 
 function META.FromFile(path, config)

@@ -193,7 +193,7 @@ else
 		return META.NewObject({
 			Buffer = remove_bom_header(lua_code),
 			Name = name or get_default_name(),
-		})
+		}, true)
 	end
 end
 

@@ -55,7 +55,7 @@ function META.New()
 		LoadedFiles = {},
 		debug = false,
 		node_to_type = {},
-	})
+	}, true)
 end
 
 function META:NodeToType(typ)

@@ -727,7 +727,7 @@ function META.New(code--[[#: Code]], config--[[#: {} | nil]])
 			comment_escape = false,
 			OnError = META.OnError,
 			Config = config,
-		}
+		}, true
 	)
 	self:ResetState()
 	return self

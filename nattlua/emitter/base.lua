@@ -2157,7 +2157,7 @@ return function()
 				toggled_indents = false,
 				done = false,
 				FFI_DECLARATION_EMITTER = false,
-			}
+			}, true
 		)
 		self:Initialize()
 		return self

@@ -14,4 +14,4 @@ function META:PopCurrentAnalyzer()
 	self:PopContextValue("analyzer")
 end
 
-return META.NewObject({context_values = {}, context_ref = {}})
+return META.NewObject({context_values = {}, context_ref = {}}, true)
