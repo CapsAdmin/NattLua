@@ -184,9 +184,9 @@ end
 
 function _G.run_test(path)
 	if path then
-		io.write("running single test ", path)
+		io.write("running single test ", path, "\n")
 	else
-		io.write("running all tests")
+		io.write("running all tests", "\n")
 	end
 
 	assert(loadfile("test/run.lua"))()(path)
