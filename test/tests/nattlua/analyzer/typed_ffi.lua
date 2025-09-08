@@ -384,7 +384,7 @@ analyze[[
 	|>|>
 	attest.equal<|
 		x,
-		"Array1(Array2(Pointer(Pointer(function=(Pointer(number),)>(Pointer(Array3(Array4(Pointer(number)))),)))))"
+		"Array[1]<Array[2]<Pointer<Pointer<function=(Pointer<number>,)>(Pointer<Array[3]<Array[4]<Pointer<number>>>>,)>>>>"
 	|>
 ]]
 analyze[=[

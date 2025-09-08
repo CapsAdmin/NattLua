@@ -22,7 +22,7 @@ function FFIPointer<|T: any|>
 		@MetaTable = self,
 		[number] = T,
 		__tostring = function(self: ref self)
-			return "Pointer(" .. tostring(self[number]) .. ")"
+			return "Pointer<" .. tostring(self[number]) .. ">"
 		end,
 		__index = function(self: ref self, key: ref (string | number))
 			return self[number][key]
@@ -53,7 +53,7 @@ function FFIArray<|size: number, T: any|>
 		@MetaTable = self,
 		[0 .. (size - 1)] = T,
 		__tostring = function(self: ref self)
-			return "Array" .. tostring(size) .. "(" .. tostring(T) .. ")"
+			return "Array[" .. tostring(size) .. "]<" .. tostring(T) .. ">"
 		end,
 		__index = function(self: ref self, key: ref (string | number))
 			return T --self[number][key]
