@@ -36,24 +36,200 @@ return function(META)
 		end
 	end
 
-	function META:Break()
-		local scope = self:GetScope()
-		self.break_out_scope = scope
-		self:PushScope(scope:GetNearestLoopScope())
-		self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
-		self:PopScope()
+	do
+		function META:Break()
+			local scope = self:GetScope()
+			self.break_out_scope = scope
+			self:PushScope(scope:GetNearestLoopScope())
+			self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
+			self:PopScope()
+		end
+
+		function META:DidCertainBreak()
+			return self.break_out_scope and self.break_out_scope:IsCertain()
+		end
+
+		function META:DidUncertainBreak()
+			return self.break_out_scope and self.break_out_scope:IsUncertain()
+		end
+
+		function META:ClearBreak()
+			self.break_out_scope = false
+		end
 	end
 
-	function META:DidCertainBreak()
-		return self.break_out_scope and self.break_out_scope:IsCertain()
-	end
+	do
+		-- Enhanced Break function using context management
+		function META:Break()
+			local scope = self:GetScope()
+			local loop_scope = scope:GetNearestLoopScope()
+			-- Use context system to track break states
+			local break_state = {
+				break_scope = scope,
+				loop_scope = loop_scope,
+				is_certain = scope:IsCertain(),
+				is_uncertain = scope:IsUncertain(),
+			}
+			self:PushContextValue("break_state", break_state)
+			self:PushScope(loop_scope)
+			self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
+			self:PopScope()
+		end
 
-	function META:DidUncertainBreak()
-		return self.break_out_scope and self.break_out_scope:IsUncertain()
-	end
+		function META:DidCertainBreak()
+			local break_state = self:GetContextValue("break_state")
+			return break_state and break_state.is_certain or false
+		end
 
-	function META:ClearBreak()
-		self.break_out_scope = false
+		function META:DidUncertainBreak()
+			local break_state = self:GetContextValue("break_state")
+			return break_state and break_state.is_uncertain or false
+		end
+
+		-- Get the current break scope (for debugging/inspection)
+		function META:GetBreakScope()
+			local break_state = self:GetContextValue("break_state")
+			return break_state and break_state.break_scope or nil
+		end
+
+		function META:ClearBreak()
+			if self:GetContextValue("break_state") then
+				self:PopContextValue("break_state")
+			end
+		end
+
+		-- Enhanced uncertainty management using context system
+		function META:PushBreakUncertainty(loop_scope, is_uncertain)
+			local uncertainty_state = {
+				loop_scope = loop_scope,
+				is_uncertain = is_uncertain,
+				previous_uncertain = self:IsInBreakUncertainty(),
+			}
+			self:PushContextValue("break_uncertainty", uncertainty_state)
+		end
+
+		function META:PopBreakUncertainty()
+			if self:GetContextValue("break_uncertainty") then
+				self:PopContextValue("break_uncertainty")
+			end
+		end
+
+		function META:IsInBreakUncertainty(target_scope)
+			local uncertainty_state = self:GetContextValue("break_uncertainty")
+
+			if not uncertainty_state then return false end
+
+			if target_scope then
+				return uncertainty_state.loop_scope == target_scope and uncertainty_state.is_uncertain
+			end
+
+			return uncertainty_state.is_uncertain
+		end
+
+		-- Enhanced loop entry using existing patterns
+		function META:EnterLoop(statement, condition_obj)
+			local loop_scope = self:PushConditionalScope(
+				statement,
+				condition_obj and condition_obj:IsTruthy() or nil,
+				condition_obj and condition_obj:IsFalsy() or nil
+			)
+			loop_scope:SetLoopScope(true)
+			-- Use existing uncertain loop context management but enhance it
+			local has_uncertain_condition = condition_obj and condition_obj:IsTruthy() and condition_obj:IsFalsy()
+			local has_uncertain_break = self:DidUncertainBreak()
+
+			if has_uncertain_condition or has_uncertain_break then
+				self:PushUncertainLoop(loop_scope)
+				self:PushBreakUncertainty(loop_scope, true)
+			else
+				self:PushUncertainLoop(false)
+				self:PushBreakUncertainty(loop_scope, false)
+			end
+
+			return loop_scope
+		end
+
+		-- Enhanced loop exit using existing patterns
+		function META:ExitLoop(loop_scope)
+			self:PopBreakUncertainty()
+			self:PopUncertainLoop()
+			self:PopConditionalScope()
+			-- Clear any breaks that were resolved by this loop level
+			local break_state = self:GetContextValue("break_state")
+
+			if break_state and break_state.loop_scope == loop_scope then
+				self:ClearBreak()
+			end
+		end
+
+		-- Enhanced widening that works with context system
+		function META:WidenForUncertainty(obj, loop_scope)
+			if
+				self:IsInBreakUncertainty(loop_scope) or
+				self:IsInUncertainLoop(loop_scope) or
+				self:DidUncertainBreak()
+			then
+				return obj:Widen()
+			end
+
+			return obj
+		end
+
+		-- Enhanced break checking that respects loop boundaries
+		function META:DidBreakForLoop(loop_scope)
+			local break_state = self:GetContextValue("break_state")
+
+			if not break_state then return false, false end
+
+			-- Check if the break applies to this specific loop
+			local applies_to_loop = break_state.loop_scope == loop_scope or
+				loop_scope:Contains(break_state.loop_scope)
+
+			if not applies_to_loop then return false, false end
+
+			return break_state.is_certain, break_state.is_uncertain
+		end
+
+		-- Helper to check if we should continue loop iteration
+		function META:ShouldContinueLoop(loop_scope)
+			local certain_break, uncertain_break = self:DidBreakForLoop(loop_scope)
+
+			if certain_break then return false, "certain_break" end
+
+			if uncertain_break then return false, "uncertain_break" end
+
+			if self:GetScope():DidCertainReturn() then
+				return false, "certain_return"
+			end
+
+			return true, nil
+		end
+
+		-- Context-aware break state management for nested loops
+		function META:PushLoopContext(statement, condition_obj)
+			-- Save the current break state before entering nested context
+			local current_break = self:GetContextValue("break_state")
+			self:PushContextRef("saved_break_state", current_break)
+
+			-- Clear break state for the new loop level
+			if current_break then self:PopContextValue("break_state") end
+
+			return self:EnterLoop(statement, condition_obj)
+		end
+
+		function META:PopLoopContext(loop_scope)
+			self:ExitLoop(loop_scope)
+			-- Restore any saved break state from outer loops
+			local saved_break = self:GetContextValue("saved_break_state")
+
+			if saved_break then
+				self:PopContextValue("saved_break_state")
+
+				if saved_break ~= nil then
+					self:PushContextValue("break_state", saved_break)
+				end
+			end
+		end
 	end
 
 	function META:AnalyzeStatementsAndCollectOutputSignatures(statement)

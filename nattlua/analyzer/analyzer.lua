@@ -19,6 +19,7 @@ do
 	local AnalyzeGenericFor = require("nattlua.analyzer.statements.generic_for").AnalyzeGenericFor
 	local AnalyzeNumericFor = require("nattlua.analyzer.statements.numeric_for").AnalyzeNumericFor
 	local AnalyzeWhile = require("nattlua.analyzer.statements.while").AnalyzeWhile
+	local AnalyzeRepeat = require("nattlua.analyzer.statements.repeat").AnalyzeRepeat
 	local AnalyzeAssignment = require("nattlua.analyzer.statements.assignment").AnalyzeAssignment
 	local ConstString = require("nattlua.types.string").ConstString
 	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
@@ -39,9 +40,7 @@ do
 			self:AnalyzeStatements(node.statements)
 			self:PopScope()
 		elseif node.Type == "statement_repeat" then
-			self:CreateAndPushScope()
-			self:AnalyzeStatements(node.statements)
-			self:PopScope()
+			AnalyzeRepeat(self, node)
 		elseif node.Type == "statement_return" then
 			local ret = self:AnalyzeExpressions(node.expressions)
 			self:Return(node, ret)

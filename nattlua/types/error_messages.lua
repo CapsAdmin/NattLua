@@ -261,6 +261,10 @@ function type_errors.loop_always_false()--[[#: Reason]]
 	return {"loop expression is always false"}
 end
 
+function type_errors.loop_always_true()--[[#: Reason]]
+	return {"loop expression is always true"}
+end
+
 function type_errors.too_many_iterations()--[[#: Reason]]
 	return {"too many iterations"}
 end

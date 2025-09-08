@@ -21,49 +21,43 @@ return {
 		self:ApplyMutationsInIf(upvalues, tables)
 		local max_iterations = self.max_loop_iterations or 32
 		local count = 0
-
-		self:ClearBreak()
+		local loop_scope = self:PushLoopContext(statement, obj)
 
 		for i = 1, max_iterations do
-			local loop_scope = self:PushConditionalScope(statement, obj:IsTruthy(), obj:IsFalsy())
-			loop_scope:SetLoopScope(true)
-			self:PushUncertainLoop(obj:IsTruthy() and obj:IsFalsy() and loop_scope or false)
+			count = count + 1
 			self:AnalyzeStatements(statement.statements)
-			self:PopUncertainLoop()
-			self:PopConditionalScope()
+			local should_continue, break_reason = self:ShouldContinueLoop(loop_scope)
 
-			if self:DidCertainBreak() then
-				self:ClearBreak()
+			if not should_continue then
+				if break_reason == "certain_break" then
+					self:ClearBreak()
 
-				if self:IsRuntime() and count == 0 then
-					self:PushCurrentExpression(statement.expression)
-					self:ConstantIfExpressionWarning(type_errors.useless_while_loop())
-					self:PopCurrentExpression()
+					if self:IsRuntime() and count == 1 then
+						self:PushCurrentExpression(statement.expression)
+						self:ConstantIfExpressionWarning(type_errors.useless_while_loop())
+						self:PopCurrentExpression()
+					end
+
+					break
+				elseif break_reason == "uncertain_break" then
+					self:ClearBreak()
+
+					if self:IsRuntime() then
+						self:PushCurrentExpression(statement.expression)
+						self:ConstantIfExpressionWarning()
+						self:PopCurrentExpression()
+					end
+
+					break
+				elseif break_reason == "certain_return" then
+					if self:IsRuntime() and count == 1 then
+						self:PushCurrentExpression(statement.expression)
+						self:ConstantIfExpressionWarning(type_errors.useless_while_loop())
+						self:PopCurrentExpression()
+					end
+
+					break
 				end
-
-				break
-			end
-
-			if self:DidUncertainBreak() then
-				self:ClearBreak()
-
-				if self:IsRuntime() then
-					self:PushCurrentExpression(statement.expression)
-					self:ConstantIfExpressionWarning()
-					self:PopCurrentExpression()
-				end
-
-				break
-			end
-
-			if self:GetScope():DidCertainReturn() then
-				if self:IsRuntime() and count == 0 then
-					self:PushCurrentExpression(statement.expression)
-					self:ConstantIfExpressionWarning(type_errors.useless_while_loop())
-					self:PopCurrentExpression()
-				end
-
-				break
 			end
 
 			-- Re-analyze with same context as initial analysis
@@ -76,7 +70,7 @@ return {
 					self:PopCurrentExpression()
 				end
 
-				return
+				break
 			end
 
 			if obj:IsUncertain() or obj:IsFalsy() then break end
@@ -87,5 +81,7 @@ return {
 
 			count = count + 1
 		end
+
+		self:PopLoopContext(loop_scope)
 	end,
 }

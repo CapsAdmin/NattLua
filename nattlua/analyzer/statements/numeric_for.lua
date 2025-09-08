@@ -58,17 +58,18 @@ return {
 		local loop_scope = self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
 		loop_scope:SetLoopScope(true)
 
-		self:ClearBreak()
-
 		if literal_init and literal_max and literal_step and literal_max < 1000 then
 			for i = literal_init, literal_max, literal_step do
-				self:PushConditionalScope(statement, condition:IsTruthy(), condition:IsFalsy())
 				local brk = false
-				local uncertain_break = self:DidUncertainBreak()
+				-- Use context-based uncertainty checking
+				local is_uncertain = self:IsInBreakUncertainty(loop_scope) or
+					self:IsInUncertainLoop(loop_scope) or
+					self:DidUncertainBreak()
 
-				if uncertain_break then
+				if is_uncertain then
 					self:PushUncertainLoop(loop_scope)
-					i = Number()
+					-- Use enhanced widening with context awareness
+					i = self:WidenForUncertainty(LNumber(i), loop_scope)
 					brk = true
 				else
 					i = LNumber(i)
@@ -80,19 +81,24 @@ return {
 
 				if self._continue_ then self._continue_ = nil end
 
-				self:PopConditionalScope()
+				-- Use enhanced break checking
+				local certain_break, uncertain_break = self:DidBreakForLoop(loop_scope)
 
-				if self:DidCertainBreak() then brk = true end
-
-				if uncertain_break then self:PopUncertainLoop() end
-
-				if brk then
+				if certain_break then
+					brk = true
 					self:ClearBreak()
-
-					break
+				elseif uncertain_break then
+					self:PushBreakUncertainty(loop_scope, true)
+					self:ClearBreak()
+					brk = false
 				end
+
+				if is_uncertain then self:PopUncertainLoop() end
+
+				if brk then break end
 			end
 		else
+			-- Non-literal case with enhanced uncertainty
 			if literal_init then
 				if max:IsNumeric() then
 					if not max:IsLiteral() then
@@ -114,13 +120,17 @@ return {
 					end
 				end
 
-				if max.Type == "any" then init = init:Widen() end
+				if max.Type == "any" then
+					init = self:WidenForUncertainty(init, loop_scope)
+				end
 			end
 
 			self:PushUncertainLoop(loop_scope)
+			self:PushBreakUncertainty(loop_scope, true)
 			local range = self:Assert(init)
 			self:CreateLocalValue(statement.identifiers[1].value.value, range)
 			self:AnalyzeStatements(statement.statements)
+			self:PopBreakUncertainty()
 			self:PopUncertainLoop()
 		end
 

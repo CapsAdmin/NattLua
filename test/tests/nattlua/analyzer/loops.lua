@@ -159,3 +159,25 @@ end
 
 attest.equal<|i, 3|>
 ]]
+analyze[[
+local x = 1
+
+for i = 1, 10 do
+	if _ as boolean then break end
+
+	for i = 1, 2 do
+		x = x + 1
+	end
+end
+
+attest.equal(x, _ as number)
+]]
+analyze[[
+local x = 1
+
+repeat
+	x = x + 1
+until x > 3
+
+attest.equal(x, 4)
+]]

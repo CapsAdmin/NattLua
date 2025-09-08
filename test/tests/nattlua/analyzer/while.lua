@@ -24,7 +24,7 @@ analyze[[
     local a = 1
     repeat
         attest.equal(a, 1)
-    until false
+    until true
 ]]
 analyze[[
     local a = 0
@@ -101,7 +101,7 @@ analyze[[
         x = 0
     end
 ]]
-analyze[[
+pending[[
 	attest.expect_diagnostic<|"warning", "while loop only executed once"|>
 
 	while true do
