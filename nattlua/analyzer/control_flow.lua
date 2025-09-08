@@ -37,28 +37,6 @@ return function(META)
 	end
 
 	do
-		function META:Break()
-			local scope = self:GetScope()
-			self.break_out_scope = scope
-			self:PushScope(scope:GetNearestLoopScope())
-			self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
-			self:PopScope()
-		end
-
-		function META:DidCertainBreak()
-			return self.break_out_scope and self.break_out_scope:IsCertain()
-		end
-
-		function META:DidUncertainBreak()
-			return self.break_out_scope and self.break_out_scope:IsUncertain()
-		end
-
-		function META:ClearBreak()
-			self.break_out_scope = false
-		end
-	end
-
-	do
 		-- Enhanced Break function using context management
 		function META:Break()
 			local scope = self:GetScope()
