@@ -1,121 +1,11 @@
-local function cdata<|
-	CType: number | AnyFunction | nil | {[string | number] = CurrentType<|"union", 3|> | self},
-	...: ...any
-|>
-	local type is_pointer = type(CType) == "table" and keysof<|CType|> == number
-	local type is_array = type(CType) == "table" and
-		(
-			type(keysof<|CType|>) == "number" or
-			type(keysof<|CType|>) == "range"
-		)
-
-	-- this assumes keys are in order, which in the typesystem they SHOULD be
-	if ... then
-		if is_array then
-			if #... - 1 > keysof<|CType|> then error<|"too many initializers", 2|> end
-
-			local contract = CType[keysof<|CType|>]
-			CType[keysof<|CType|>] = nil
-
-			for i, v in ipairs(...) do
-				if not v subsetof contract then
-					error("expected type '" .. tostring(contract) .. "' at index " .. (i - 1), 2)
-				end
-
-				CType[i - 1] = v
-			end
-		else
-			local type i = 1
-
-			for k, v in pairs(CType) do
-				local type l = select(i, ...)
-				CType[k] = l
-				i = i + 1
-			end
-		end
-	end
-
-	-- pointers are indexed by numbers, arrays are indexed by 0 .. n
-	return {
-		@MetaTable = self,
-		__is_cdata_number = CType == number,
-		__tostring = function <|self: self|>
-			return "cdata<" .. tostring(CType) .. (is_pointer and " *" or "") .. ">"
-		end,
-		__call = function <|self: self, ...: any|>
-			if is_pointer and type(CType[number]) == "function" then
-				return cdata<|CType[number](...)|>
-			end
-
-			error<|"not callable", 2|>
-		end,
-		__index = function <|self: self, key: string | number|>
-			if is_pointer then
-				if type(key) == "string" then return CType[number][key] end
-
-				if type(key) == "number" then return cdata<|CType[key]|> end
-			end
-
-			return CType[key]
-		end,
-		__le = function <|self: self, other: self|>
-			return boolean
-		end,
-		__lt = function <|self: self, other: self|>
-			return boolean
-		end,
-		__add = function <|self: self, other: self | number|>
-			return cdata<|CType|>
-		end,
-		__sub = function <|self: self, other: self | number|>
-			return cdata<|CType|>
-		end,
-	}
-end
-
-local function ctype<|
-	CType: number | AnyFunction | nil | {[string | number] = CurrentType<|"union", 3|> | self}
-|>
-	-- pointers are indexed by numbers, arrays are indexed by 0 .. n
-	local type is_pointer = type(CType) == "table" and keysof<|CType|> == number
-	return {
-		@MetaTable = self,
-		__tostring = function <|self: self|>
-			return "ctype<" .. tostring(CType) .. (is_pointer and " *" or "") .. ">"
-		end,
-		__call = function <|self: self, ...: ...any|>
-			return cdata<|CType, ...|>
-		end,
-		__index = function <|self: self, key: string | number|>
-			if is_pointer then
-				if type(key) == "string" then return CType[number][key] end
-
-				if type(key) == "number" then return ctype<|CType[key]|> end
-			end
-
-			return CType[key]
-		end,
-		__le = function <|self: self, other: self|>
-			return boolean
-		end,
-		__lt = function <|self: self, other: self|>
-			return boolean
-		end,
-		__add = function <|self: self, other: self | number|>
-			return ctype<|CType|>
-		end,
-		__sub = function <|self: self, other: self | number|>
-			return ctype<|CType|>
-		end,
-	}
-end
+§ _G.OLD_FFI = false
 
 local function get_cdata<|anon_cdef: string, ...: ...any|>
-	return cdata<|ffi.get_type2<|anon_cdef|>, ...|>
+	return TCData<|ffi.get_type<|anon_cdef|>, ...|>
 end
 
 local function get_ctype<|anon_cdef: string, ...: ...any|>
-	return ctype<|ffi.get_type2<|anon_cdef, ...|>|>
+	return TCType<|ffi.get_type<|anon_cdef, ...|>|>
 end
 
 attest.equal<|get_cdata<|"struct {int i;}"|>.i, number|>
@@ -187,3 +77,5 @@ do
 	attest.equal(x[0].foo, 1)
 	attest.equal(x[1].foo, 2)
 end
+
+§ _G.OLD_FFI = true

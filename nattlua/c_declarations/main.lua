@@ -7,6 +7,9 @@ run_lua("examples/projects/luajit/build.lua", path)
 run_lua("examples/projects/love2d/nlconfig.lua", path)
 
 ]]
+
+_G.OLD_FFI = true
+
 local pcall = _G.pcall
 local assert = _G.assert
 local ipairs = _G.ipairs
@@ -134,15 +137,23 @@ local function analyze(c_code, mode, env, analyzer, ...)
 
 	a.env = env.typesystem
 	a.analyzer = analyzer
-	return a:AnalyzeRoot(ast, variables, types, mode)
+	return a, a:AnalyzeRoot(ast, variables, types, mode)
 end
 
-local function extract_anonymous_type(typs)
+local function extract_anonymous_type(a, typs, use_ctype)
 	local ctype = typs:Get(LString("TYPEOF_CDECL"))
-	if _G.FFI2 then return ctype:Get(Number()):GetInputSignature():GetWithNumber(1) end
 
-	ctype:RemoveType(Nil())
-	return ctype:GetData()[1]:Get(Number()):GetInputSignature():GetWithNumber(1)
+	if _G.OLD_FFI then
+		ctype:RemoveType(Nil())
+		return ctype:GetData()[1]:Get(Number()):GetInputSignature():GetWithNumber(1)
+	end
+
+	local T = ctype:Get(Number()):GetInputSignature():GetWithNumber(1)
+
+	if not a then return T end
+
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
+	return a.analyzer:Call(use_ctype and a.env.TCType or a.env.TCData, Tuple({T})):GetFirstValue()
 end
 
 function cparser.sizeof(cdecl, len)
@@ -151,8 +162,8 @@ function cparser.sizeof(cdecl, len)
 		local ffi = require("ffi")
 		local analyzer = analyzer_context:GetCurrentAnalyzer()
 		local env = analyzer:GetScopeHelper(analyzer.function_scope)
-		local vars, typs = analyze(cdecl, "typeof", env, analyzer)
-		local ctype = extract_anonymous_type(typs)
+		local a, vars, typs = analyze(cdecl, "typeof", env, analyzer)
+		local ctype = extract_anonymous_type(a, typs)
 		local ok, val = pcall(ffi.sizeof, cdecl:GetData(), len and len:GetData() or nil)
 
 		if ok then return val end
@@ -165,7 +176,7 @@ function cparser.cdef(cdecl, ...)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = analyze(cdecl, "cdef", env, analyzer, ...)
+	local a, vars, typs = analyze(cdecl, "cdef", env, analyzer, ...)
 	variables = vars
 	types = typs
 
@@ -189,8 +200,8 @@ function cparser.cast(cdecl, src)
 	if cdecl.Type == "string" and cdecl:IsLiteral() then
 		local analyzer = analyzer_context:GetCurrentAnalyzer()
 		local env = analyzer:GetScopeHelper(analyzer.function_scope)
-		local vars, typs = analyze(cdecl, "typeof", env, analyzer)
-		local ctype = extract_anonymous_type(typs)
+		local a, vars, typs = analyze(cdecl, "typeof", env, analyzer)
+		local ctype = extract_anonymous_type(a, typs)
 
 		if ctype.Type == "union" then
 			for _, v in ipairs(ctype:GetData()) do
@@ -207,8 +218,8 @@ function cparser.cast(cdecl, src)
 		ctype:SetMetaTable(ctype)
 		return ctype
 	elseif cdecl.Type == "function" then
-		local vars, typs = analyze(LString("void(*)()"), "typeof", env, analyzer)
-		local ctype = extract_anonymous_type(typs)
+		local a, vars, typs = analyze(LString("void(*)()"), "typeof", env, analyzer)
+		local ctype = extract_anonymous_type(a, typs)
 		return ctype
 	elseif cdecl.Type == "table" then
 		return src:Copy()
@@ -223,27 +234,31 @@ function cparser.typeof(cdecl, ...)
 
 		local analyzer = analyzer_context:GetCurrentAnalyzer()
 		local env = analyzer:GetScopeHelper(analyzer.function_scope)
-		local vars, typs = analyze(cdecl, "typeof", env, analyzer, ...)
-		local ctype = extract_anonymous_type(typs)
+		local a, vars, typs = analyze(cdecl, "typeof", env, analyzer, ...)
+		local ctype = extract_anonymous_type(a, typs, true)
 
-		-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
-		if ctype.Type == "union" then
-			for _, v in ipairs(ctype:GetData()) do
-				if v.Type == "table" then
-					ctype = v
+		if _G.OLD_FFI then
+			-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
+			if ctype.Type == "union" then
+				for _, v in ipairs(ctype:GetData()) do
+					if v.Type == "table" then
+						ctype = v
 
-					break
+						break
+					end
 				end
 			end
+
+			return analyzer:Call(env.typesystem.FFICtype, Tuple({ctype}), analyzer:GetCurrentStatement())
 		end
 
-		return analyzer:Call(env.typesystem.FFICtype, Tuple({ctype}), analyzer:GetCurrentStatement())
+		return ctype
 	end
 
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = analyze(LString("void *"), "typeof", env, analyzer)
-	local ctype = extract_anonymous_type(typs)
+	local a, vars, typs = analyze(LString("void *"), "typeof", env, analyzer)
+	local ctype = extract_anonymous_type(a, typs, true)
 	return ctype
 end
 
@@ -251,16 +266,25 @@ function cparser.get_type(cdecl, ...)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = analyze(cdecl, "typeof", env, analyzer, ...)
-	local ctype = extract_anonymous_type(typs)
+	local a, vars, typs = analyze(cdecl, "typeof", env, analyzer, ...)
+	local ctype = extract_anonymous_type(a, typs)
+	return ctype
+end
+
+function cparser.get_raw_type(cdecl, ...)
+	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
+	local env = analyzer:GetScopeHelper(analyzer.function_scope)
+	local _, vars, typs = analyze(cdecl, "typeof", env, analyzer, ...)
+	local ctype = extract_anonymous_type(nil, typs)
 	return ctype
 end
 
 function cparser.new(cdecl, ...)
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local vars, typs = analyze(cdecl, "ffinew", env, analyzer, ...)
-	local ctype = extract_anonymous_type(vars)
+	local a, vars, typs = analyze(cdecl, "ffinew", env, analyzer, ...)
+	local ctype = extract_anonymous_type(a, vars)
 	return ctype
 end
 

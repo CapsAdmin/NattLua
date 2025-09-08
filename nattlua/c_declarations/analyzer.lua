@@ -80,17 +80,22 @@ local function cast(self, node)
 			size = LNumber(tonumber(node.size) or math.huge)
 		end
 
-		if _G.FFI2 then
-			local arr = Table()
-			arr:Set(
-				size:GetData() == 1 and LNumber(0) or LNumberRange(0, size:GetData() - 1),
-				cast(self, assert(node.of))
-			)
-			return arr
+		if _G.OLD_FFI then
+			local tup = self.analyzer:Call(self.env.FFIArray, Tuple({size, cast(self, assert(node.of))}))
+			return tup:GetFirstValue()
 		end
 
-		local tup = self.analyzer:Call(self.env.FFIArray, Tuple({size, cast(self, assert(node.of))}))
-		return tup:GetFirstValue()
+		if size.Type == "number" then
+			if size:GetData() == 1 then
+				size = LNumber(0)
+			else
+				size = LNumberRange(0, size:GetData() - 1)
+			end
+		end
+
+		local arr = Table()
+		arr:Set(size, cast(self, assert(node.of)))
+		return arr
 	elseif node.type == "pointer" then
 		if
 			node.of.type == "type" and
@@ -100,27 +105,27 @@ local function cast(self, node)
 			return Any() -- TODO: is this true?
 		end
 
-		if _G.FFI2 then
-			local arr = Table()
-			arr:Set(Number(), cast(self, assert(node.of)))
-			return arr
-		end
+		if _G.OLD_FFI then
+			local res = (
+				self.analyzer:Call(self.env.FFIPointer, Tuple({cast(self, assert(node.of))})):GetFirstValue()
+			)
 
-		local res = (
-			self.analyzer:Call(self.env.FFIPointer, Tuple({cast(self, assert(node.of))})):GetFirstValue()
-		)
-
-		if self:GetContextRef("function_argument") == true then
-			if
-				node.of.type == "type" and
-				node.of.modifiers[1] == "const" and
-				node.of.modifiers[2] == "char"
-			then
-				return Union({res, String(), Nil()})
+			if self:GetContextRef("function_argument") == true then
+				if
+					node.of.type == "type" and
+					node.of.modifiers[1] == "const" and
+					node.of.modifiers[2] == "char"
+				then
+					return Union({res, String(), Nil()})
+				end
 			end
+
+			return Union({res, Nil()})
 		end
 
-		return Union({res, Nil()})
+		local arr = Table()
+		arr:Set(Number(), cast(self, assert(node.of)))
+		return arr
 	elseif node.type == "type" then
 		for _, v in ipairs(node.modifiers) do
 			if type(v) == "table" then
