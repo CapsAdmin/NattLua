@@ -100,11 +100,10 @@ end
 
 analyzer function keysof(tbl: Table)
 	local union = types.Union()
-
 	if tbl.Type == "union" then
 		for _, val in ipairs(tbl:GetData()) do
 			if val.Type == "table" then
-				for _, keyval in ipairs(tbl:GetData()) do
+				for _, keyval in ipairs(val:GetData()) do
 					union:AddType(keyval.key)
 				end
 			end
@@ -370,7 +369,11 @@ analyzer function PopTypeEnvironment()
 end
 
 analyzer function CurrentType(what: "table" | "tuple" | "function" | "union", level: nil | number)
-	return analyzer:GetCurrentType(what:GetData(), level and level:GetData())
+	local obj = analyzer:GetCurrentType(what:GetData(), level and level:GetData())
+	if not obj then
+		error("no current " .. what:GetData() .. " type", 2)
+	end
+	return obj
 end
 
 analyzer function LuaVersion()

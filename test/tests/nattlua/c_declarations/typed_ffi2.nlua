@@ -1,0 +1,71 @@
+local ctype = ffi.typeof("struct { const char *foo; }")
+attest.equal(tonumber(assert(ctype().foo)[0]), _ as number)
+attest.equal<|tonumber(ffi.new<|"struct {int i;}"|>.i), number|>
+attest.equal<|tonumber(ffi.new<|"struct {int i;}[1]"|>[0].i), number|>
+attest.equal<|tonumber(ffi.new<|"struct {int i;}*"|>[0].i), number|>
+attest.equal<|tonumber(ffi.new<|"struct {int i;}*"|>[14].i), number|>
+attest.equal<|tonumber(ffi.new<|"int"|>), number|>
+
+do
+	attest.expect_diagnostic<|"error", "subset"|>
+	attest.equal<|tonumber(ffi.typeof<|"int"|>), number | nil|>
+end
+
+attest.subset_of<|ffi.new<|"int[1]"|>, ffi.new<|"int*"|>|>
+attest.equal<|tostring(ffi.new<|"int[1]"|>), "cdata<{ [0] = number }>"|>
+attest.equal<|tostring(ffi.new<|"int[2]"|>), "cdata<{ [0..1] = number }>"|>
+attest.equal<|(ffi.new<|"int (*)(int)"|>)(1), ffi.new<|"int"|>|>
+attest.equal<|(ffi.new<|"int (*)()"|>)(), ffi.new<|"int"|>|>
+attest.equal<|(ffi.new<|"void (*)()"|>)(), ffi.new<|"void"|>|>
+
+do
+	local x = ffi.new<|"struct { int foo; }"|>
+	attest.expect_diagnostic<|"error", "not callable"|>
+	x()
+end
+
+do
+	local ct = ffi.typeof<|[[struct {
+		uint32_t foo;
+		uint8_t uhoh;
+		uint64_t bar1;
+	}]]|>
+	local cd = ct()
+end
+
+do
+	local ct = ffi.typeof<|"$*", ffi.typeof<|"int"|>|>
+	attest.equal<|ct, ffi.typeof<|"int *"|>|>
+end
+
+do
+	local cd = ffi.new<|"struct {int i;}", 1337|>
+	attest.equal<|tonumber(cd.i), 1337|>
+end
+
+do
+	local cd = ffi.new<|"struct {int a; int b; int c;}", 1, 2, 3|>
+	attest.equal<|tonumber(cd.a), 1|>
+	attest.equal<|tonumber(cd.b), 2|>
+	attest.equal<|tonumber(cd.c), 3|>
+end
+
+do
+	local ffi = require("ffi")
+	local x = ffi.typeof("struct { int foo; }[1]")
+	x = x({{foo = 1}})
+	attest.equal(tonumber(x[0].foo), 1)
+end
+
+do
+	local x = ffi.new("struct { int foo; }[2]", {{foo = 1}, {foo = 2}})
+	attest.equal(tonumber(x[0].foo), 1)
+	attest.equal(tonumber(x[1].foo), 2)
+end
+
+do
+	attest.expect_diagnostic<|"error", "too many initializers"|>
+	local x = ffi.new("struct { int foo; }[1]", {{foo = 1}, {foo = 2}})
+	attest.equal(tonumber(x[0].foo), 1)
+	attest.equal(tonumber(x[1].foo), 2)
+end

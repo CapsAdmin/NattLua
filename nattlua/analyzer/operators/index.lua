@@ -52,8 +52,9 @@ local function index_table(analyzer, self, key, raw)
 				local val = obj:GetWithNumber(1)
 
 				if val and (val.Type ~= "symbol" or not val:IsNil()) then
-					if val.Type == "union" and val:IsNil() then val:RemoveType(Nil()) end
-
+					if index:GetFunctionBodyNode() and index:GetFunctionBodyNode().environment == "runtime" then
+						if val.Type == "union" and val:IsNil() then val:RemoveType(Nil()) end
+					end
 					if val.Type == "union" then
 						analyzer:TrackTableIndex(real_obj, key, val)
 					end

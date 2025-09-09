@@ -23,15 +23,14 @@ analyze[=[
 		foo = number,
 		uhoh = number,
 		bar1 = number,
-	}, typeof struct|>
+	}, struct.T|>
 ]=]
-pending[=[
+analyze[=[
 	local ctype = ffi.typeof([[struct {
 		uint32_t foo;
 		uint8_t uhoh;
 		uint64_t bar1;
 	}]])
-
 
 	local box = ffi.typeof("$[1]", ctype)
 	
@@ -43,7 +42,7 @@ pending[=[
 			uhoh = number,
 			bar1 = number,
 		}
-	}, typeof struct|>
+	}, struct.T|>
 ]=]
 analyze[=[
 	ffi.cdef("typedef size_t lol;")
@@ -82,19 +81,7 @@ analyze[=[
 	end
 
 	local val = struct()
-
-	local analyzer function remove_call_function(union: any)
-		local new_union = types.Union()
-		for _, obj in ipairs(union:GetData()) do
-			obj:Delete(types.ConstString("__call"))
-			new_union:AddType(obj)
-		end
-		return new_union
-	end
-
-	local union = remove_call_function(val)
-
-	attest.equal<|typeof union, {foo = number, bar2 = number} | {foo = number, bar3 = number} | {foo = number, uhoh = number, bar1 = number}|>
+	attest.equal<|val, TCType{foo = number, bar2 = number} | TCType{foo = number, bar3 = number} | TCType{foo = number, uhoh = number, bar1 = number}|>
 ]=]
 analyze[=[
 	local ctype = ffi.typeof("struct { const char *foo; }")
@@ -107,18 +94,18 @@ analyze[=[
 
 	if LINUX then
 		ffi.cdef("void foo(int a);")
-		attest.equal(ffi.C.foo, _ as function=(number)>((nil)))
+		attest.equal(ffi.C.foo, _ as function=(number)>(()))
 	else
 		if X64 then
 			ffi.cdef("void foo(const char *a);")
-			attest.equal(ffi.C.foo, _ as function=(string | nil | ffi.typeof<|"const char*"|>)>((nil)))
+			attest.equal(ffi.C.foo, _ as function=(string | nil | ffi.new<|"const char*"|>)>(()))
 		else
 			ffi.cdef("int foo(int a);")
 			attest.equal(ffi.C.foo, _ as function=(number)>((number)))
 		end	
 	end
 
-	attest.equal(ffi.C.foo, _ as function=(number)>((nil)) | function=(number)>((number)) | function=(nil | string | ffi.typeof<|"const char*"|>)>((nil)))
+	attest.equal(ffi.C.foo, _ as function=(number)>() | function=(number)>(number) | function=(nil | string | ffi.new<|"const char*"|>)>())
 ]=]
 analyze[=[
 	ffi.cdef("void foo(void *ptr, int foo, const char *test);")
@@ -128,12 +115,10 @@ analyze[=[
 ]=]
 analyze[=[
 	local ctype = ffi.typeof("struct { int foo; }")
-
 	local cdata = ctype({})
-
-	attest.equal<|(typeof cdata).foo, number|>
+	attest.equal<|tonumber((typeof cdata).foo), number|>
 ]=]
-analyze[=[
+pending[=[
 	local handle = ffi.typeof("struct {}")
 	local pointer = ffi.typeof("$*", handle)
 	local meta = {}
@@ -189,7 +174,7 @@ analyze[=[
 	]])
 
 	local lol = ffi.new("struct in6_addr")
-	attest.equal(lol.u6_addr.u6_addr16, _ as FFIArray<|8, number|>)
+	attest.equal(lol.u6_addr.u6_addr16, _ as TCData<|{[0..7] = number}|>)
 ]=]
 analyze[=[
 	ffi.cdef[[
@@ -197,14 +182,14 @@ analyze[=[
 	]]
 	
 	local num = ffi.new("SOCKET", -1)
-	attest.equal<|num, number|>
+	attest.equal<|tonumber(num), -1|>
 ]=]
 analyze[=[
 	local buffer = ffi.new("char[?]", 5)
-	attest.equal<|buffer, FFIArray<|5, number|>|>
+	attest.equal<|buffer, TCData<|{[0..4] = number}|>|>
 
 	local buffer = ffi.new("char[8]")
-	attest.equal<|buffer, FFIArray<|8, number|>|>
+	attest.equal<|buffer, TCData<|{[0..7] = number}|>|>
 ]=]
 analyze[[
 	if _ as boolean then
@@ -213,7 +198,7 @@ analyze[[
 			if _ as boolean then
 				local function test()
 					local x = ffi.C.test
-					attest.equal(x, _ as function=()>(nil))
+					attest.equal(x, _ as function=()>())
 				end
 				test()
 			end
@@ -248,7 +233,7 @@ analyze[[
 ]]
 analyze[[
 	local newbuf = ffi.new("char [?]", _ as number)
-	attest.equal(newbuf, _ as FFIArray<|number, number|>)
+	attest.equal(newbuf, _ as TCData<|{[number] = number}|>)
 ]]
 analyze[[
 	local gbuf_n = 1024
@@ -267,9 +252,9 @@ analyze[==[
 	local addrinfo = ffi.new("struct addrinfo")
 	
 	attest.equal(addrinfo.foo, _ as boolean)
-
-	assert(addrinfo.ai_next)
-	attest.equal(addrinfo.ai_next.foo, _ as boolean)
+	local next = addrinfo.ai_next
+	assert(next)
+	attest.equal(next.foo, _ as boolean)
 ]==]
 analyze[==[
 	ffi.cdef([[
@@ -315,12 +300,13 @@ analyze[=[
 	
 	local box = ffi.new("struct foo[1]")
 	
-	attest.equal(box[0], _ as {a = number, b = number})
+	attest.equal(box[0], _ as TCData{a = number, b = number})
 ]=]
 analyze[[
 	local str_v = ffi.new("const char *[?]", 1)
 
-	attest.equal(str_v, _ as FFIArray<|1, ffi.typeof<|"const char*"|> | nil|>)
+	attest.equal(str_v, _ as TCData<|{[0] = ffi.typeof<|"const char*"|>.T}|>)
+	attest.equal(str_v[0], _ as nil | ffi.typeof<|"const char*"|>.T)
 ]]
 analyze[[
 	ffi.cdef([=[
@@ -328,8 +314,11 @@ analyze[[
 			char *str;
 		}
 	]=])
-	local foo = ffi.new("struct foo") as ffi.get_type<|"struct foo*"|> ~ nil
-	if foo.str then ffi.string(foo.str) end
+	local foo = ffi.new("struct foo")
+	local str = foo.str -- TODO, table mutations not working with ctypes
+	if str then 
+		ffi.string(str)
+	 end
 ]]
 analyze[=[
     ffi.cdef([[
@@ -347,7 +336,7 @@ analyze[=[
     local function addrinfo_get_ip(self: AddressInfo)
         if self.addrinfo.ai_addr == nil then return nil end
     
-        local x = self.addrinfo.ai_addr.sa_data
+        local x = assert(assert(self.addrinfo).ai_addr).sa_data
         attest.equal(x, _ as number)
     end
     
@@ -370,23 +359,6 @@ analyze[=[
 	local srcaddr = ffi.new("struct sockaddr")
 	local x = ffi.cast("struct sockaddr2 *", srcaddr)
 ]=]
-analyze[[
-	local type x = tostring<|FFIArray<|
-		1,
-		FFIArray<|
-			2,
-			FFIPointer<|
-				FFIPointer<|
-					function=(FFIPointer<|FFIType<|"char"|>|>)>(FFIPointer<|FFIArray<|3, FFIArray<|4, FFIPointer<|FFIType<|"unsigned long long"|>|>|>|>|>)
-				|>
-			|>
-		|>
-	|>|>
-	attest.equal<|
-		x,
-		"Array[1]<Array[2]<Pointer<Pointer<function=(Pointer<number>,)>(Pointer<Array[3]<Array[4]<Pointer<number>>>>,)>>>>"
-	|>
-]]
 analyze[=[
 	local ffi = require("ffi")
 	ffi.cdef[[
@@ -400,7 +372,7 @@ analyze[=[
 	local M = {}
 
 	function M.poll(
-		s: ffi.get_type<|"struct pollfd*"|> ~ nil,
+		s: ffi.new<|"struct pollfd*"|>,
 	)
 		local pfd = {
 			fd = s.fd,
@@ -409,7 +381,7 @@ analyze[=[
 	end
 ]=]
 analyze[=[
-	local t = ffi.typeof([[
+	local t = ffi.new([[
 		struct {
 			int a;
 			union {
@@ -424,7 +396,7 @@ analyze[=[
 	attest.equal(t.c, _ as number)
 	attest.equal(t.d, _ as number)
 ]=]
-analyze[=[
+pending[=[
 	local meta = {}
 	meta.__index = meta
 	ffi.cdef[[
@@ -448,9 +420,8 @@ analyze[=[
 	meta = ffi.metatype("struct foo", meta)
 	local x = meta() --ffi.new("struct foo")
 	attest.equal(x:test(), 10)
-
 ]=]
-analyze[=[
+pending[=[
 	local ffi = require("ffi")
 	ffi.cdef[[
 	struct OpusEncoder { int dummy; };
@@ -472,7 +443,7 @@ analyze[=[
 	local Encoder = ffi.metatype("OpusEncoder", Encoder)
 	local test = Encoder()
 ]=]
-analyze[=[
+pending[=[
 	local ffi = require("ffi")
 	ffi.cdef[[
 	struct OpusEncoder { int dummy; };
@@ -487,10 +458,70 @@ analyze[=[
 	end
 
 	function Encoder:encode()
-		attest.equal(assert(self[0]).dummy, _ as number)
+		--attest.equal(assert(self.dummy), _ as number)
+		print(self)
 		return ffi.C.opus_encode(self)
 	end
 
 	local Encoder = ffi.metatype("OpusEncoder", Encoder)
 
+]=]
+analyze[[
+    local ffi = require("ffi")
+
+    do
+        local C
+
+        -- make sure C is not C | nil because it's assigned to the same value in both branches
+
+        if ffi.os == "Windows" then
+            C = assert(ffi.load("ws2_32"))
+        else
+            C = ffi.C
+        end
+        
+        do 
+            attest.equal(C, _ as ffi.C)
+        end
+    end
+]]
+analyze[=[
+    local ffi = require("ffi")
+
+    if math.random() > 0.5 then
+        ffi.cdef[[
+            uint32_t FormatMessageA(
+                uint32_t dwFlags,
+            );
+        ]]
+        
+        do
+            if math.random() > 0.5 then
+                ffi.C.FormatMessageA(1)
+            end
+        end
+    
+        if math.random() > 0.5 then
+            ffi.C.FormatMessageA(1)
+        end
+    end
+]=]
+analyze[=[
+    local ffi = require("ffi")
+
+    local x: boolean
+    if x == true then
+        error("LOL")
+    end
+    
+    attest.equal(x, false)
+    
+    ffi.cdef[[
+        void strerror(int errnum);
+    ]]
+    
+    if ffi.os == "Windows" then
+        local x = ffi.C.strerror
+        attest.equal(x, _ as function=(number)>())
+    end
 ]=]

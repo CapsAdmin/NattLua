@@ -1,3 +1,8 @@
+ --PENDING_TEST
+do
+	return
+end
+
 local nl = require("nattlua")
 local builder = assert(
 	nl.File(

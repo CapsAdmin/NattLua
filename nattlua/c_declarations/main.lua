@@ -7,9 +7,6 @@ run_lua("examples/projects/luajit/build.lua", path)
 run_lua("examples/projects/love2d/nlconfig.lua", path)
 
 ]]
-
-_G.OLD_FFI = true
-
 local pcall = _G.pcall
 local assert = _G.assert
 local ipairs = _G.ipairs
@@ -61,7 +58,11 @@ local function gen(parser, ...)
 	for i, v in ipairs(parser.dollar_signs) do
 		local ct = select(i, ...)
 
-		if not ct then error("expected ctype at argument #" .. i, 2) end
+		if not ct then
+			error("expected ctype or value to fill $ or ? at argument #" .. i, 2)
+		end
+
+		if ct.Type == "table" then ct = assert(ct:Get(LString("T"))) end
 
 		table.insert(new, ct)
 	end
@@ -105,7 +106,7 @@ local function fixup_tokens(tokens)
 	end
 end
 
-local function analyze(c_code, mode, env, analyzer, ...)
+local function analyze(c_code, mode, ...)
 	local c_code_string_obj = c_code
 	c_code = c_code:GetData()
 
@@ -135,35 +136,27 @@ local function analyze(c_code, mode, env, analyzer, ...)
 		a.dollar_signs_vars = gen(parser, ...)
 	end
 
-	a.env = env.typesystem
-	a.analyzer = analyzer
-	return a, a:AnalyzeRoot(ast, variables, types, mode)
+	local vars, typs = a:AnalyzeRoot(ast, variables, types, mode)
+	return vars, typs, a.captured
 end
 
-local function extract_anonymous_type(a, typs, use_ctype)
-	local ctype = typs:Get(LString("TYPEOF_CDECL"))
-
-	if _G.OLD_FFI then
-		ctype:RemoveType(Nil())
-		return ctype:GetData()[1]:Get(Number()):GetInputSignature():GetWithNumber(1)
-	end
-
-	local T = ctype:Get(Number()):GetInputSignature():GetWithNumber(1)
-
-	if not a then return T end
-
+local function TCType(obj)
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
-	return a.analyzer:Call(use_ctype and a.env.TCType or a.env.TCData, Tuple({T})):GetFirstValue()
+	local env = analyzer:GetScopeHelper(analyzer.function_scope)
+	return analyzer:Call(env.typesystem.TCType, Tuple({obj})):GetFirstValue()
+end
+
+local function TCData(obj, ...)
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
+	local env = analyzer:GetScopeHelper(analyzer.function_scope)
+	return analyzer:Call(env.typesystem.TCData, Tuple({obj, ...})):GetFirstValue()
 end
 
 function cparser.sizeof(cdecl, len)
 	-- TODO: support non string sizeof
 	if jit and cdecl.Type == "string" and cdecl:IsLiteral() then
 		local ffi = require("ffi")
-		local analyzer = analyzer_context:GetCurrentAnalyzer()
-		local env = analyzer:GetScopeHelper(analyzer.function_scope)
-		local a, vars, typs = analyze(cdecl, "typeof", env, analyzer)
-		local ctype = extract_anonymous_type(a, typs)
+		local vars, typs, ctype = analyze(cdecl, "typeof")
 		local ok, val = pcall(ffi.sizeof, cdecl:GetData(), len and len:GetData() or nil)
 
 		if ok then return val end
@@ -174,13 +167,48 @@ end
 
 function cparser.cdef(cdecl, ...)
 	assert(cdecl:IsLiteral(), "cdecl must be a string literal")
-	local analyzer = analyzer_context:GetCurrentAnalyzer()
-	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local a, vars, typs = analyze(cdecl, "cdef", env, analyzer, ...)
+	local vars, typs = analyze(cdecl, "cdef", ...)
 	variables = vars
 	types = typs
+	local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
 
 	for _, kv in ipairs(variables:GetData()) do
+		if kv.val.Type == "function" then
+			for i, v in ipairs(kv.val:GetInputSignature():GetData()) do
+				if v.Type == "table" then
+					kv.val:GetInputSignature():Set(i, Union({Nil(), TCData(v)}))
+				elseif v.Type == "union" then
+					local u = {}
+
+					for i, obj in ipairs(v:GetData()) do
+						if obj.Type == "table" then
+							u[i] = TCData(obj)
+						else
+							u[i] = obj
+						end
+					end
+
+					kv.val:GetInputSignature():Set(i, Union(u))
+				end
+			end
+
+			local ret = kv.val:GetOutputSignature():GetFirstValue()
+
+			if ret.Type == "any" then
+				kv.val:SetOutputSignature(Tuple({}))
+			elseif ret.Type == "table" then
+				if
+					ret:GetData()[1].key.Type == "number" and
+					not ret:GetData()[1].key:IsLiteral()
+				then
+					-- only pointers can be nil
+					kv.val:GetOutputSignature():Set(1, Union({Nil(), TCData(ret)}))
+				else
+					kv.val:GetOutputSignature():Set(1, TCData(ret))
+				end
+			end
+		end
+
 		analyzer:NewIndexOperator(C_DECLARATIONS(), kv.key, kv.val)
 	end
 
@@ -198,10 +226,7 @@ end
 
 function cparser.cast(cdecl, src)
 	if cdecl.Type == "string" and cdecl:IsLiteral() then
-		local analyzer = analyzer_context:GetCurrentAnalyzer()
-		local env = analyzer:GetScopeHelper(analyzer.function_scope)
-		local a, vars, typs = analyze(cdecl, "typeof", env, analyzer)
-		local ctype = extract_anonymous_type(a, typs)
+		local vars, typs, ctype = analyze(cdecl, "typeof")
 
 		if ctype.Type == "union" then
 			for _, v in ipairs(ctype:GetData()) do
@@ -216,10 +241,9 @@ function cparser.cast(cdecl, src)
 		if ctype.Type == "any" then return ctype end
 
 		ctype:SetMetaTable(ctype)
-		return ctype
+		return TCData(ctype)
 	elseif cdecl.Type == "function" then
-		local a, vars, typs = analyze(LString("void(*)()"), "typeof", env, analyzer)
-		local ctype = extract_anonymous_type(a, typs)
+		local vars, typs, ctype = analyze(LString("void(*)()"), "typeof")
 		return ctype
 	elseif cdecl.Type == "table" then
 		return src:Copy()
@@ -232,64 +256,38 @@ function cparser.typeof(cdecl, ...)
 
 		if args[1] and args[1].Type == "tuple" then args = args[1]:ToTable() end
 
-		local analyzer = analyzer_context:GetCurrentAnalyzer()
-		local env = analyzer:GetScopeHelper(analyzer.function_scope)
-		local a, vars, typs = analyze(cdecl, "typeof", env, analyzer, ...)
-		local ctype = extract_anonymous_type(a, typs, true)
-
-		if _G.OLD_FFI then
-			-- TODO, this tries to extract cdata from cdata | nil, since if we cast a valid pointer it cannot be invalid when returned
-			if ctype.Type == "union" then
-				for _, v in ipairs(ctype:GetData()) do
-					if v.Type == "table" then
-						ctype = v
-
-						break
-					end
-				end
-			end
-
-			return analyzer:Call(env.typesystem.FFICtype, Tuple({ctype}), analyzer:GetCurrentStatement())
-		end
-
-		return ctype
+		local vars, typs, ctype = analyze(cdecl, "typeof", ...)
+		return TCType(ctype)
 	end
 
-	local analyzer = analyzer_context:GetCurrentAnalyzer()
-	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local a, vars, typs = analyze(LString("void *"), "typeof", env, analyzer)
-	local ctype = extract_anonymous_type(a, typs, true)
-	return ctype
+	local vars, typs, ctype = analyze(LString("void *"), "typeof")
+	return TCType(ctype)
 end
 
 function cparser.get_type(cdecl, ...)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-	local analyzer = analyzer_context:GetCurrentAnalyzer()
-	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local a, vars, typs = analyze(cdecl, "typeof", env, analyzer, ...)
-	local ctype = extract_anonymous_type(a, typs)
-	return ctype
+	local vars, typs, ctype = analyze(cdecl, "typeof", ...)
+	return TCData(ctype)
 end
 
 function cparser.get_raw_type(cdecl, ...)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
-	local analyzer = analyzer_context:GetCurrentAnalyzer()
-	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local _, vars, typs = analyze(cdecl, "typeof", env, analyzer, ...)
-	local ctype = extract_anonymous_type(nil, typs)
+	local vars, typs, ctype = analyze(cdecl, "typeof", ...)
 	return ctype
 end
 
 function cparser.new(cdecl, ...)
-	local analyzer = analyzer_context:GetCurrentAnalyzer()
-	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	local a, vars, typs = analyze(cdecl, "ffinew", env, analyzer, ...)
-	local ctype = extract_anonymous_type(a, vars)
-	return ctype
+	local vars, typs, ctype = analyze(cdecl, "ffinew", ...)
+	return TCData(ctype, ...)
 end
 
 function cparser.metatype(ctype, meta)
+	error("metatype is not supported yet")
 	if ctype.Type == "string" then ctype = cparser.get_type(ctype) end
+
+	for _, kv in ipairs(meta:GetData()) do
+		if kv.key:GetData() == "__index" then  else ctype:Set(kv.key, kv.val) end
+	end
 
 	local new = meta:Get(ConstString("__new"))
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
@@ -299,14 +297,6 @@ function cparser.metatype(ctype, meta)
 			function(self, ...)
 				local analyzer = analyzer_context:GetCurrentAnalyzer()
 				local val = analyzer:Assert(analyzer:Call(new, Tuple({ctype, ...}))):GetFirstValue()
-
-				if val.Type == "union" then
-					for i, v in ipairs(val:GetData()) do
-						if v.Type == "table" then v:SetMetaTable(meta) end
-					end
-				else
-					val:SetMetaTable(meta)
-				end
 
 				if analyzer:IsRuntime() then
 					meta.PotentialSelf = meta.PotentialSelf or Union()
@@ -320,19 +310,6 @@ function cparser.metatype(ctype, meta)
 		)
 		meta:Set(ConstString("__call"), new_func)
 		analyzer:AddToUnreachableCodeAnalysis(new_func)
-	end
-
-	ctype:SetMetaTable(meta)
-
-	if meta.Self then
-		analyzer:ErrorIfFalse(ctype:FollowsContract(meta.Self))
-		ctype = ctype:CopyLiteralness(meta.Self)
-		ctype:SetContract(meta.Self)
-		-- clear mutations so that when looking up values in the table they won't return their initial value
-		ctype:ClearMutations()
-	elseif not new and analyzer:IsRuntime() then
-		meta.PotentialSelf = meta.PotentialSelf or Union()
-		meta.PotentialSelf:AddType(ctype)
 	end
 
 	return ctype

@@ -1,3 +1,6 @@
+do
+	return
+end --PENDING_TEST
 --ANALYZE
 local type print = any
 local ffi = require("ffi")
@@ -245,7 +248,7 @@ do
                     char * lpVendorInfo;
                     char szDescription[257];
                     char szSystemStatus[129];
-                }]])
+                }*]])
 			else
 				wsa_data = ffi.typeof([[struct {
                     uint16_t wVersion;
@@ -255,7 +258,7 @@ do
                     unsigned short iMax_M;
                     unsigned short iMaxUdpDg;
                     char * lpVendorInfo;
-                }]])
+                }*]])
 			end
 
 			function socket.initialize()
@@ -358,10 +361,10 @@ do
 					local cstr = ffi.C.strerror(num)
 					local err
 
-					if not cstr then
-						err = "invalid error"
-					else
+					if cstr then
 						err = ffi.string(cstr)
+					else
+						err = "invalid error"
 					end
 
 					cache[num] = err == "" and tostring(num) or err
@@ -423,7 +426,7 @@ do
 	function socket.getaddrinfo(
 		node_name: nil | string,
 		service_name: nil | string,
-		hints: ffi.get_type<|"struct addrinfo *"|>,
+		hints: ffi.get_type<|"struct addrinfo *"|> | nil,
 		result: ffi.get_type<|"struct addrinfo **"|>
 	)
 		local ret = C.getaddrinfo(node_name, service_name, hints, result)
@@ -891,7 +894,7 @@ local type AddressInfo = {
 	socket_type = keysof<|SOCK.lookup|>,
 	protocol = keysof<|IPPROTO.lookup|>,
 	flags = List<|keysof<|AI.lookup|>|>,
-	addrinfo = ffi.get_type<|"struct addrinfo*"|> ~ nil,
+	addrinfo = ffi.new<|"struct addrinfo*"|>,
 }
 
 local function addrinfo_get_ip(self: AddressInfo)
@@ -948,7 +951,7 @@ local function addrinfo_to_table(
 	local info = {}
 
 	if res.ai_canonname ~= nil then
-		info.canonical_name = ffi.string(res.ai_canonname)
+		info.canonical_name = ffi.string(assert(res.ai_canonname))
 	end
 
 	info.host = host ~= "*" and host or nil

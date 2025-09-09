@@ -255,10 +255,17 @@ analyzer function loadfile(path: string)
 end
 
 analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
+	if analyzer:IsTypesystem() then
+		tbl:Set(key, val)
+		return
+	end
 	analyzer:NewIndexOperator(tbl, key, val, true)
 end
 
 analyzer function rawget(tbl: {[any] = any} | {}, key: any)
+	if analyzer:IsTypesystem() then
+		return tbl:Get(key) or types.Nil()
+	end
 	return analyzer:AssertFallback(types.Nil(), analyzer:IndexOperator(tbl, key, true))
 end
 
@@ -583,7 +590,10 @@ analyzer function tostring(val: any)
 end
 
 analyzer function tonumber(val: string | number | {__is_cdata_number = true}, base: number | nil)
-	if val.Type == "table" then return types.Number() end
+	if val.Type == "table" then
+		local T = val:Get(types.ConstString("T"))
+		return T or types.Number()
+	end
 
 	if val.Type == "number" and not val:IsLiteral() then return types.Number() end
 

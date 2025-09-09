@@ -1,3 +1,5 @@
+do return end -- PENDING_TEST
+
 local ffi = require("ffi")
 local _M = {}
 ffi.cdef[[

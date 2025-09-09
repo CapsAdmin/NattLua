@@ -1,7 +1,6 @@
-function TCData<|
-	T: number | AnyFunction | nil | {[string | number] = CurrentType<|"union", 3|> | self},
-	...: ...any
-|>
+local type ConstructorArgument = boolean | number | AnyFunction | nil | {[string | number] = self | number | AnyFunction | boolean | nil}
+
+function TCData<|T: ConstructorArgument, ...: ...any|>
 	local type is_pointer = type(T) == "table" and keysof<|T|> == number
 	local type is_array = type(T) == "table" and
 		(
@@ -12,33 +11,46 @@ function TCData<|
 	-- this assumes keys are in order, which in the typesystem they SHOULD be
 	if ... then
 		if is_array then
-			if #... - 1 > keysof<|T|> then error<|"too many initializers", 2|> end
+			local tbl = ...
 
-			local contract = T[keysof<|T|>]
-			T[keysof<|T|>] = nil
+			if type(tbl) == "table" then
+				if #tbl - 1 > keysof<|T|> then error<|"too many initializers", 2|> end
 
-			for i, v in ipairs(...) do
-				if not v subsetof contract then
-					error("expected type '" .. tostring(contract) .. "' at index " .. (i - 1), 2)
+				local contract = T[keysof<|T|>]
+				T[keysof<|T|>] = nil
+
+				for i, v in ipairs(tbl) do
+					if not v subsetof contract then
+						error("expected type '" .. tostring(contract) .. "' at index " .. (i - 1), 2)
+					end
+
+					T[i - 1] = v
 				end
-
-				T[i - 1] = v
 			end
-		else
+		elseif type(T) == "table" then
 			local type i = 1
 
 			for k, v in pairs(T) do
 				local type l = select(i, ...)
-				T[k] = l
+
+				if type(l) == "table" then
+					T[k] = rawget(l, k) or v
+				else
+					T[k] = l
+				end
+
 				i = i + 1
 			end
+		else
+			T = ...
 		end
 	end
 
 	-- pointers are indexed by numbers, arrays are indexed by 0 .. n
 	return {
+		T = T,
 		@MetaTable = self,
-		__is_cdata_number = T == number,
+		__is_cdata_number = type(T) == "number",
 		__tostring = function(self: self)
 			return "cdata<" .. tostring(T) .. (is_pointer and " *" or "") .. ">"
 		end,
@@ -50,13 +62,21 @@ function TCData<|
 			error<|"not callable", 2|>
 		end,
 		__index = function <|self: self, key: string | number|>
-			if is_pointer then
-				if type(key) == "string" then return T[number][key] end
+			local type obj
 
-				if type(key) == "number" then return TCData<|T[key]|> end
+			if is_pointer and type(key) == "string" then
+				obj = T[number][key]
+			else
+				obj = T[key]
 			end
 
-			return T[key]
+			if type(obj) == "table" and keysof<|obj|> == number then
+				return TCData<|obj|> | nil
+			end
+
+			if type(obj) == "number" or type(obj) == "boolean" then return obj end
+
+			return TCData<|obj|>
 		end,
 		__le = function <|self: self, other: self|>
 			return boolean
@@ -73,13 +93,13 @@ function TCData<|
 	}
 end
 
-function TCType<|
-	T: number | AnyFunction | nil | {[string | number] = CurrentType<|"union", 3|> | self}
-|>
+function TCType<|T: ConstructorArgument|>
 	-- pointers are indexed by numbers, arrays are indexed by 0 .. n
 	local type is_pointer = type(T) == "table" and keysof<|T|> == number
 	return {
+		T = T,
 		@MetaTable = self,
+		__is_pointer = is_pointer,
 		__tostring = function <|self: self|>
 			return "ctype<" .. tostring(T) .. (is_pointer and " *" or "") .. ">"
 		end,
@@ -87,13 +107,7 @@ function TCType<|
 			return TCData<|T, ...|>
 		end,
 		__index = function <|self: self, key: string | number|>
-			if is_pointer then
-				if type(key) == "string" then return T[number][key] end
-
-				if type(key) == "number" then return TCType<|T[key]|> end
-			end
-
-			return T[key]
+			error<|"ctype does not support indexing", 2|>
 		end,
 		__le = function <|self: self, other: self|>
 			return boolean
@@ -127,66 +141,11 @@ function FFICtype<|obj: any|>
 end
 
 function FFIPointer<|T: any|>
-	if T == nil then return T end
-
-	-- https://github.com/LuaJIT/LuaJIT/blob/v2.1/src/lj_carith.c#L96-L159
-	return {
-		@MetaTable = self,
-		[number] = T,
-		__tostring = function(self: ref self)
-			return "Pointer<" .. tostring(self[number]) .. ">"
-		end,
-		__index = function(self: ref self, key: ref (string | number))
-			return self[number][key]
-		end,
-		__le = function(self: ref self, other: ref self)
-			return boolean
-		end,
-		__lt = function(self: ref self, other: ref self)
-			return boolean
-		end,
-		__add = function(self: ref self, other: ref (self | number))
-			return FFIPointer<|T|>
-		end,
-		__sub = function(self: ref self, other: ref (self | number))
-			return FFIPointer<|T|>
-		end,
-		free = function(self: ref self)
-			return nil
-		end,
-		__call = function=(self: ref self, ...: ...any)>(...any),
-	}
+	return {[number] = T}
 end
 
 function FFIArray<|size: number, T: any|>
-	if T == nil then return T end
-
-	return {
-		@MetaTable = self,
-		[0 .. (size - 1)] = T,
-		__tostring = function(self: ref self)
-			return "Array[" .. tostring(size) .. "]<" .. tostring(T) .. ">"
-		end,
-		__index = function(self: ref self, key: ref (string | number))
-			return T --self[number][key]
-		end,
-		__le = function(self: ref self, other: ref self)
-			return boolean
-		end,
-		__lt = function(self: ref self, other: ref self)
-			return boolean
-		end,
-		__add = function(self: ref self, other: ref self | number)
-			return FFIPointer<|T|>
-		end,
-		__sub = function(self: ref self, other: ref self | number)
-			return FFIPointer<|T|>
-		end,
-		free = function(self: ref self)
-			return nil
-		end,
-		__call = function=(self: ref self, ...: ...any)>(...any),
-	}
+	return {[0 .. size - 1] = T}
 end
 
 type cdata = FFIPointer<|number|>
@@ -336,6 +295,10 @@ end
 SetPreventInputExpansionOnFunction<|ffi.typeof, true|>
 
 analyzer function ffi.get_type(cdecl: string, ...: ...any)
+	return cdecl_parser.get_type(cdecl, ...)
+end
+
+analyzer function ffi.get_raw_type(cdecl: string, ...: ...any)
 	return cdecl_parser.get_raw_type(cdecl, ...)
 end
 
@@ -359,7 +322,7 @@ function FFIType<|str: string|>
 	return number
 end
 
-type ffi.string = function=(FFIPointer<|number|> | string, number | nil)>(string)
+type ffi.string = function=(TCData<|{[number] = number}|> | string, number | nil)>(string)
 
 do
 	type ffi.C = ffi.load("")

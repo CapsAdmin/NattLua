@@ -273,7 +273,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 		if op == "==" then
 			return l:Equal(r) and True() or False()
 		elseif op == "~" then
-			if l.Type == "union" then return l:Copy():RemoveType(r) end
+			if l.Type == "union" then return l:Copy():RemoveType(r):Simplify() end
 
 			return l
 		elseif op == "&" or op == "extends" then

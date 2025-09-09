@@ -1154,65 +1154,6 @@ analyze[[
     attest.equal(i, _ as -1 | 0 | 1)
 ]]
 analyze[[
-    local ffi = require("ffi")
-
-    do
-        local C
-
-        -- make sure C is not C | nil because it's assigned to the same value in both branches
-
-        if ffi.os == "Windows" then
-            C = assert(ffi.load("ws2_32"))
-        else
-            C = ffi.C
-        end
-        
-        do 
-            attest.equal(C, _ as ffi.C)
-        end
-    end
-]]
-analyze[=[
-    local ffi = require("ffi")
-
-    local x: boolean
-    if x == true then
-        error("LOL")
-    end
-    
-    attest.equal(x, false)
-    
-    ffi.cdef[[
-        void strerror(int errnum);
-    ]]
-    
-    if ffi.os == "Windows" then
-        local x = ffi.C.strerror
-        attest.equal(x, _ as function=(number)>(nil))
-    end
-]=]
-analyze[=[
-    local ffi = require("ffi")
-
-    if math.random() > 0.5 then
-        ffi.cdef[[
-            uint32_t FormatMessageA(
-                uint32_t dwFlags,
-            );
-        ]]
-        
-        do
-            if math.random() > 0.5 then
-                ffi.C.FormatMessageA(1)
-            end
-        end
-    
-        if math.random() > 0.5 then
-            ffi.C.FormatMessageA(1)
-        end
-    end
-]=]
-analyze[[
     local function foo(x: any)
         if type(x) == "string" then
             § SCOPE1 = analyzer:GetScope()

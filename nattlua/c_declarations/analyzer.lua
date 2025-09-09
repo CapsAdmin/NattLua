@@ -80,16 +80,15 @@ local function cast(self, node)
 			size = LNumber(tonumber(node.size) or math.huge)
 		end
 
-		if _G.OLD_FFI then
-			local tup = self.analyzer:Call(self.env.FFIArray, Tuple({size, cast(self, assert(node.of))}))
-			return tup:GetFirstValue()
-		end
-
 		if size.Type == "number" then
-			if size:GetData() == 1 then
-				size = LNumber(0)
+			if size:IsLiteral() then
+				if size:GetData() == 1 then
+					size = LNumber(0)
+				else
+					size = LNumberRange(0, size:GetData() - 1)
+				end
 			else
-				size = LNumberRange(0, size:GetData() - 1)
+				size = Number()
 			end
 		end
 
@@ -97,34 +96,20 @@ local function cast(self, node)
 		arr:Set(size, cast(self, assert(node.of)))
 		return arr
 	elseif node.type == "pointer" then
-		if
-			node.of.type == "type" and
-			#node.of.modifiers == 1 and
-			node.of.modifiers[1] == "void"
-		then
-			return Any() -- TODO: is this true?
-		end
-
-		if _G.OLD_FFI then
-			local res = (
-				self.analyzer:Call(self.env.FFIPointer, Tuple({cast(self, assert(node.of))})):GetFirstValue()
-			)
-
-			if self:GetContextRef("function_argument") == true then
-				if
-					node.of.type == "type" and
-					node.of.modifiers[1] == "const" and
-					node.of.modifiers[2] == "char"
-				then
-					return Union({res, String(), Nil()})
-				end
-			end
-
-			return Union({res, Nil()})
-		end
-
 		local arr = Table()
 		arr:Set(Number(), cast(self, assert(node.of)))
+
+
+		if self:GetContextRef("function_argument") == true then
+			if
+				node.of.type == "type" and
+				node.of.modifiers[1] == "const" and
+				node.of.modifiers[2] == "char"
+			then
+				return Union({arr, Nil(), String()})
+			end
+		end
+
 		return arr
 	elseif node.type == "type" then
 		for _, v in ipairs(node.modifiers) do
@@ -212,7 +197,7 @@ local function cast(self, node)
 		elseif t == "bool" or t == "_Bool" then
 			return Boolean()
 		elseif t == "void" then
-			return Nil()
+			return Any()
 		elseif t == "$" or t == "?" then
 			return table.remove(self.dollar_signs_vars)
 		elseif t == "va_list" then
@@ -241,7 +226,7 @@ local function cast(self, node)
 
 		if not self.super_hack then self:PopContextRef("function_argument") end
 
-		return (Function(Tuple(args), Tuple({cast(self, assert(node.rets))})))
+		return(Function(Tuple(args), Tuple({cast(self, assert(node.rets))})))
 	elseif node.type == "root" then
 		return (cast(self, assert(node.of)))
 	end
@@ -280,6 +265,8 @@ function META:AnalyzeRoot(ast, vars, typs)
 				self.vars_table:Set(LString(ident), obj)
 			end
 		end
+
+		if ident == "TYPEOF_CDECL" then self.captured = obj:GetData()[1].val:GetInputSignature():GetData()[1] end
 
 		if ident == "TYPEOF_CDECL" then self.super_hack = false -- TODO
 		end
