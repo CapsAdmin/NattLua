@@ -54,8 +54,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'yarn'
-          cache-dependency-path: web_playground/yarn.lock
 
       - name: Install dependencies
         run: |
