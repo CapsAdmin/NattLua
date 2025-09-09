@@ -35,3 +35,43 @@ jobs:
         with:
           name: nattlua          
           path: nattlua.lua
+
+  web-playground:
+    runs-on: ubuntu-latest
+    needs: nattlua
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - name: checkout the project
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:nixpkgs-unstable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: web_playground/yarn.lock
+
+      - name: Install dependencies
+        run: |
+          cd web_playground
+          yarn install
+
+      - name: Build web playground
+        run: |
+          cd web_playground
+          nix develop --command bash -c "node build.js"
+
+      - name: Deploy to GitHub Pages
+        run: |
+          cd web_playground
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          bash publish.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
