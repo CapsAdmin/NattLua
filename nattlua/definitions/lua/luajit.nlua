@@ -292,6 +292,10 @@ analyzer function ffi.typeof(cdecl: string | TCType<|any|>, ...: ...any)
 	return cdecl_parser.typeof(cdecl, ...)
 end
 
+analyzer function ffi.typeof_arg(cdecl: string | TCType<|any|>, ...: ...any)
+	return cdecl_parser.typeof_arg(cdecl, ...)
+end
+
 SetPreventInputExpansionOnFunction<|ffi.typeof, true|>
 
 analyzer function ffi.get_type(cdecl: string, ...: ...any)

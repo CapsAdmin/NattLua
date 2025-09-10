@@ -42,7 +42,6 @@ local function index_table(analyzer, self, key, raw)
 			end
 
 			if index.Type == "function" then
-				local real_obj = self
 				analyzer:PushCurrentType(nil, "table")
 				local obj, err = analyzer:Call(index, Tuple({self, key}), analyzer:GetCurrentStatement())
 				analyzer:PopCurrentType("table")
@@ -52,11 +51,15 @@ local function index_table(analyzer, self, key, raw)
 				local val = obj:GetWithNumber(1)
 
 				if val and (val.Type ~= "symbol" or not val:IsNil()) then
-					if index:GetFunctionBodyNode() and index:GetFunctionBodyNode().environment == "runtime" then
+					if
+						index:GetFunctionBodyNode() and
+						index:GetFunctionBodyNode().environment == "runtime"
+					then
 						if val.Type == "union" and val:IsNil() then val:RemoveType(Nil()) end
 					end
+
 					if val.Type == "union" then
-						analyzer:TrackTableIndex(real_obj, key, val)
+						analyzer:TrackTableIndex(self, key, val)
 					end
 
 					return val

@@ -525,3 +525,14 @@ analyze[=[
         attest.equal(x, _ as function=(number)>())
     end
 ]=]
+analyze[=[
+ffi.cdef[[void FormatMessageA(void*);]]
+local a = ffi.C.FormatMessageA
+ffi.cdef[[int GetLastError();]]
+attest.equal(ffi.C.FormatMessageA, a)
+]=]
+analyze[[
+local function foo(x: ffi.typeof_arg("void*")) end
+local y = _ as TCData<|{["s_addr"] = number}|>
+foo(y)
+]]

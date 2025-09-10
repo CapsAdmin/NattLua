@@ -106,6 +106,75 @@ local function fixup_tokens(tokens)
 	end
 end
 
+local function TCType(obj)
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
+	local env = analyzer:GetScopeHelper(analyzer.function_scope)
+	return analyzer:Call(env.typesystem.TCType, Tuple({obj})):GetFirstValue()
+end
+
+local function TCData(obj, ...)
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
+	local env = analyzer:GetScopeHelper(analyzer.function_scope)
+	return analyzer:Call(env.typesystem.TCData, Tuple({obj, ...})):GetFirstValue()
+end
+
+local function process_arg(obj)
+	if obj.Type == "table" then
+		local typ = obj:Get(Number())
+		if typ then
+			return Union({TCData(typ:Copy()), Nil(), TCData(obj)})
+		end
+	elseif obj.Type == "union" then
+		local u = {}
+
+		for i, obj in ipairs(obj:GetData()) do
+			if obj.Type == "table" then
+				u[i] = TCData(obj)
+			else
+				u[i] = obj
+			end
+		end
+
+		return Union(u)
+	end
+end
+
+local function process_type(key, obj, is_typedef, mode)
+	if obj.Type == "function" then
+		for i, v in ipairs(obj:GetInputSignature():GetData()) do
+			local newtype = process_arg(v)
+			if newtype then
+				obj:GetInputSignature():Set(i, newtype)
+			end
+		end
+
+		local ret = obj:GetOutputSignature():GetFirstValue()
+
+		if ret then
+			if ret.Type == "any" then
+				obj:SetOutputSignature(Tuple({}))
+			elseif ret.Type == "table" then
+				if
+					ret:GetData()[1].key.Type == "number" and
+					not ret:GetData()[1].key:IsLiteral()
+				then
+					-- only pointers can be nil
+					obj:GetOutputSignature():Set(1, Union({Nil(), TCData(ret)}))
+				else
+					obj:GetOutputSignature():Set(1, TCData(ret))
+				end
+			end
+		end
+	end
+
+	if mode == "cdef" and not is_typedef then
+		local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
+		analyzer:NewIndexOperator(C_DECLARATIONS(), key, obj)
+	end
+
+	return obj
+end
+
 local function analyze(c_code, mode, ...)
 	local c_code_string_obj = c_code
 	c_code = c_code:GetData()
@@ -136,20 +205,8 @@ local function analyze(c_code, mode, ...)
 		a.dollar_signs_vars = gen(parser, ...)
 	end
 
-	local vars, typs = a:AnalyzeRoot(ast, variables, types, mode)
+	local vars, typs = a:AnalyzeRoot(ast, variables, types, process_type, mode)
 	return vars, typs, a.captured
-end
-
-local function TCType(obj)
-	local analyzer = analyzer_context:GetCurrentAnalyzer()
-	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	return analyzer:Call(env.typesystem.TCType, Tuple({obj})):GetFirstValue()
-end
-
-local function TCData(obj, ...)
-	local analyzer = analyzer_context:GetCurrentAnalyzer()
-	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	return analyzer:Call(env.typesystem.TCData, Tuple({obj, ...})):GetFirstValue()
 end
 
 function cparser.sizeof(cdecl, len)
@@ -170,48 +227,6 @@ function cparser.cdef(cdecl, ...)
 	local vars, typs = analyze(cdecl, "cdef", ...)
 	variables = vars
 	types = typs
-	local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
-
-	for _, kv in ipairs(variables:GetData()) do
-		if kv.val.Type == "function" then
-			for i, v in ipairs(kv.val:GetInputSignature():GetData()) do
-				if v.Type == "table" then
-					kv.val:GetInputSignature():Set(i, Union({Nil(), TCData(v)}))
-				elseif v.Type == "union" then
-					local u = {}
-
-					for i, obj in ipairs(v:GetData()) do
-						if obj.Type == "table" then
-							u[i] = TCData(obj)
-						else
-							u[i] = obj
-						end
-					end
-
-					kv.val:GetInputSignature():Set(i, Union(u))
-				end
-			end
-
-			local ret = kv.val:GetOutputSignature():GetFirstValue()
-
-			if ret.Type == "any" then
-				kv.val:SetOutputSignature(Tuple({}))
-			elseif ret.Type == "table" then
-				if
-					ret:GetData()[1].key.Type == "number" and
-					not ret:GetData()[1].key:IsLiteral()
-				then
-					-- only pointers can be nil
-					kv.val:GetOutputSignature():Set(1, Union({Nil(), TCData(ret)}))
-				else
-					kv.val:GetOutputSignature():Set(1, TCData(ret))
-				end
-			end
-		end
-
-		analyzer:NewIndexOperator(C_DECLARATIONS(), kv.key, kv.val)
-	end
-
 	return vars, typs
 end
 
@@ -264,6 +279,12 @@ function cparser.typeof(cdecl, ...)
 	return TCType(ctype)
 end
 
+function cparser.typeof_arg(cdecl, ...)
+	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
+	local vars, typs, ctype = analyze(cdecl, "typeof", ...)
+	return process_arg(ctype) or ctype
+end
+
 function cparser.get_type(cdecl, ...)
 	assert(cdecl:IsLiteral(), "c_declaration must be a string literal")
 	local vars, typs, ctype = analyze(cdecl, "typeof", ...)
@@ -283,6 +304,7 @@ end
 
 function cparser.metatype(ctype, meta)
 	error("metatype is not supported yet")
+
 	if ctype.Type == "string" then ctype = cparser.get_type(ctype) end
 
 	for _, kv in ipairs(meta:GetData()) do

@@ -134,7 +134,7 @@ do
 	local vars, typs = cdef([[
 		int readdir(void *dirp);
 	]])
-	attest.equal(vars.readdir, _ as function=(ffi.new("void *") | nil)>(number))
+	attest.equal(vars.readdir, _ as function=(ffi.typeof_arg("void *"))>(number))
 end
 
 do

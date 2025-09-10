@@ -99,7 +99,6 @@ local function cast(self, node)
 		local arr = Table()
 		arr:Set(Number(), cast(self, assert(node.of)))
 
-
 		if self:GetContextRef("function_argument") == true then
 			if
 				node.of.type == "type" and
@@ -226,7 +225,7 @@ local function cast(self, node)
 
 		if not self.super_hack then self:PopContextRef("function_argument") end
 
-		return(Function(Tuple(args), Tuple({cast(self, assert(node.rets))})))
+		return (Function(Tuple(args), Tuple({cast(self, assert(node.rets))})))
 	elseif node.type == "root" then
 		return (cast(self, assert(node.of)))
 	end
@@ -234,7 +233,7 @@ local function cast(self, node)
 	error("unknown type " .. node.type)
 end
 
-function META:AnalyzeRoot(ast, vars, typs)
+function META:AnalyzeRoot(ast, vars, typs, process_type, mode)
 	self.type_table = typs or Table()
 	self.vars_table = vars or Table()
 
@@ -259,14 +258,20 @@ function META:AnalyzeRoot(ast, vars, typs)
 		local obj = cast(self, node)
 
 		if type(ident) == "string" then
+			local key = LString(ident)
+
 			if typedef then
-				self.type_table:Set(LString(ident), obj)
+				obj = process_type(key, obj, true, mode)
+				self.type_table:Set(key, obj)
 			else
-				self.vars_table:Set(LString(ident), obj)
+				obj = process_type(key, obj, false, mode)
+				self.vars_table:Set(key, obj)
 			end
 		end
 
-		if ident == "TYPEOF_CDECL" then self.captured = obj:GetData()[1].val:GetInputSignature():GetData()[1] end
+		if ident == "TYPEOF_CDECL" then
+			self.captured = obj:GetData()[1].val:GetInputSignature():GetData()[1]
+		end
 
 		if ident == "TYPEOF_CDECL" then self.super_hack = false -- TODO
 		end

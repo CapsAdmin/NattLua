@@ -259,18 +259,23 @@ analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
 		tbl:Set(key, val)
 		return
 	end
+
 	analyzer:NewIndexOperator(tbl, key, val, true)
 end
 
 analyzer function rawget(tbl: {[any] = any} | {}, key: any)
-	if analyzer:IsTypesystem() then
-		return tbl:Get(key) or types.Nil()
-	end
+	if analyzer:IsTypesystem() then return tbl:Get(key) or types.Nil() end
+
 	return analyzer:AssertFallback(types.Nil(), analyzer:IndexOperator(tbl, key, true))
 end
 
 analyzer function assert(...: ...any)
 	local obj = select(1, ...)
+
+	if not obj then
+		analyzer:ThrowError("value expected!")
+		return ...
+	end
 
 	if obj:IsCertainlyFalse() then analyzer:Warning({"redundant assertion"}) end
 

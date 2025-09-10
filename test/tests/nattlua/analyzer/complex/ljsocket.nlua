@@ -285,7 +285,7 @@ do
 
 			function socket.inet_ntop(
 				family: number,
-				pAddr: ffi.get_type<|"struct sockaddr *"|>,
+				pAddr: ffi.typeof_arg<|"void *"|>,
 				strptr: string,
 				strlen: number
 			)
@@ -326,7 +326,7 @@ do
 			end
 		end
 
-		function socket.poll(fds: ffi.get_type<|"struct pollfd*"|>, ndfs: number, timeout: number)
+		function socket.poll(fds: ffi.typeof_arg<|"struct pollfd*"|>, ndfs: number, timeout: number)
 			local ret = C.WSAPoll(fds, ndfs, timeout)
 
 			if ret < 0 then return nil, socket.lasterror() end
@@ -404,7 +404,7 @@ do
 			end
 		end
 
-		function socket.poll(fds: ffi.get_type<|"struct pollfd*"|>, ndfs: number, timeout: number)
+		function socket.poll(fds: ffi.typeof_arg<|"struct pollfd*"|>, ndfs: number, timeout: number)
 			local ret = C.poll(fds, ndfs, timeout)
 
 			if ret < 0 then return nil, socket.lasterror() end
@@ -426,8 +426,8 @@ do
 	function socket.getaddrinfo(
 		node_name: nil | string,
 		service_name: nil | string,
-		hints: ffi.get_type<|"struct addrinfo *"|> | nil,
-		result: ffi.get_type<|"struct addrinfo **"|>
+		hints: ffi.typeof_arg<|"struct addrinfo *"|> | nil,
+		result: ffi.typeof_arg<|"struct addrinfo **"|>
 	)
 		local ret = C.getaddrinfo(node_name, service_name, hints, result)
 
@@ -437,11 +437,11 @@ do
 	end
 
 	function socket.getnameinfo(
-		address: ffi.get_type<|"struct sockaddr*"|> ~ nil,
+		address: ffi.typeof_arg<|"struct sockaddr*"|> ~ nil,
 		length: number,
-		host: ffi.get_type<|"char *"|> ~ nil,
+		host: ffi.typeof_arg<|"char *"|> ~ nil,
 		hostlen: number,
-		serv: ffi.get_type<|"char *"|> ~ nil,
+		serv: ffi.typeof_arg<|"char *"|> ~ nil,
 		servlen: number,
 		flags: number
 	)
@@ -457,8 +457,8 @@ do
 
 		function socket.inet_ntop(
 			family: number,
-			addrinfo: ffi.get_type<|"void*"|>,
-			strptr: ffi.get_type<|"char*"|>,
+			addrinfo: ffi.typeof_arg<|"void *"|>,
+			strptr: ffi.typeof_arg<|"char*"|>,
 			strlen: number
 		)
 			if C.inet_ntop(family, addrinfo, strptr, strlen) == nil then
@@ -513,7 +513,7 @@ do
 	socket.inet_ntoa = C.inet_ntoa
 	socket.ntohs = C.ntohs
 
-	function socket.poll(fds: ffi.get_type<|"struct pollfd*"|>, ndfs: number, timeout: number) end
+	function socket.poll(fds: ffi.typeof_arg<|"struct pollfd*"|>, ndfs: number, timeout: number) end
 
 	e = {
 		TCP_NODELAY = 1,
@@ -865,7 +865,7 @@ timeout_messages[errno.EWOULDBLOCK] = true
 timeout_messages[errno.ETIMEDOUT] = true
 
 function M.poll(
-	s: ffi.get_type<|"struct pollfd*"|> ~ nil,
+	s: ffi.typeof_arg<|"struct pollfd*"|> ~ nil,
 	flags: List<|keysof<|POLL.lookup|>|>,
 	timeout: nil | number
 )
@@ -901,14 +901,8 @@ local function addrinfo_get_ip(self: AddressInfo)
 	if self.addrinfo.ai_addr == nil then return nil end
 
 	local str = ffi.new("char[256]")
-	local addr = assert(
-		socket.inet_ntop(
-			AF.lookup[self.family],
-			ffi.cast("struct sockaddr_in*", self.addrinfo.ai_addr).sin_addr,
-			str,
-			ffi.sizeof(str)
-		)
-	)
+	local xxx = ffi.cast("struct sockaddr_in*", self.addrinfo.ai_addr).sin_addr
+	local addr = assert(socket.inet_ntop(AF.lookup[self.family], xxx, str, ffi.sizeof(str)))
 	return ffi.string(addr)
 end
 
@@ -944,7 +938,7 @@ local function flags_to_list(
 end
 
 local function addrinfo_to_table(
-	res: ffi.get_type<|"struct addrinfo *"|> ~ nil,
+	res: ffi.typeof_arg<|"struct addrinfo *"|> ~ nil,
 	host: nil | string,
 	service: nil | string | number
 ): AddressInfo
@@ -1004,7 +998,10 @@ function M.get_address_info(
 	local res = out[0]
 
 	while res ~= nil do
-		table.insert(tbl, addrinfo_to_table(res, data.host, data.service))
+		table.insert(
+			tbl,
+			addrinfo_to_table(res as ffi.new<|"struct addrinfo *"|>, data.host, data.service)
+		)
 		res = res.ai_next
 	end
 
@@ -1408,7 +1405,7 @@ do
 	function meta:receive(
 		size: nil | number,
 		flags: nil | number,
-		src_address: nil | ffi.get_type<|"struct sockaddr *"|> | ffi.get_type<|"struct sockaddr_in*"|>,
+		src_address: nil | ffi.new<|"struct sockaddr *"|> | ffi.new<|"struct sockaddr_in*"|>,
 		address_len: nil | number
 	)
 		size = size or 64000
