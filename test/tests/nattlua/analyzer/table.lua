@@ -1163,3 +1163,7 @@ end
 test<|tbl, contract|>
 attest.equal(tbl, contract)
 ]]
+
+analyze[[
+attest.equal<|{test = nil | {string}} == {test = nil | {number}}, false|>
+]]

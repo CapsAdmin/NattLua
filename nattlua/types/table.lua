@@ -135,9 +135,11 @@ function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: Map<
 		for i = 1, #bdata do
 			if not matched[i] then -- Skip already matched entries
 				local bkv = bdata[i]
-				ok = akv.key:Equal(bkv.key, visited) and akv.val:Equal(bkv.val, visited)
+				local ok_key, reason_key = akv.key:Equal(bkv.key, visited)
+				local ok_val, reason_val = akv.val:Equal(bkv.val, visited)
 
-				if ok then
+				if ok_key and ok_val then
+					ok = true
 					matched[i] = true
 
 					break
@@ -145,7 +147,9 @@ function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: Map<
 			end
 		end
 
-		if not ok then return false, "table key-value mismatch" end
+		if not ok then
+			return false, "table key-value mismatch"
+		end
 	end
 
 	return true, "all table entries match"
@@ -368,7 +372,11 @@ function META:CanBeEmpty()
 end
 
 function META:IsEmpty()
-	if self:GetContract() and self:GetContract() ~= self and self:GetContract().Type == "table" then
+	if
+		self:GetContract() and
+		self:GetContract() ~= self and
+		self:GetContract().Type == "table"
+	then
 		return self:GetContract():IsEmpty()
 	end
 

@@ -59,8 +59,6 @@ function META.Equal(
 		local a = assert(a.Data[i])
 		local ok = false
 
-		if a.Type == "table" then visited[a] = true end
-
 		local reasons = {}
 
 		for i = 1, len do
@@ -72,6 +70,8 @@ function META.Equal(
 
 			table.insert(reasons, reason--[[# as string]])
 		end
+		
+		if a.Type == "table" then visited[a] = true end
 
 		if not ok then
 			return false, "union value mismatch: " .. table.concat(reasons, "\n")

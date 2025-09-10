@@ -286,9 +286,7 @@ analyze[=[
 	
 	local a = ffi.new("struct sockaddr_in")
 	local b = ffi.cast("struct sockaddr *", a)
-	attest.equal<|b | nil,  nil | ffi.typeof("struct sockaddr *")|>
-	
-
+	attest.equal<|b, ffi.new("struct sockaddr *")|>
 ]=]
 analyze[=[
 	ffi.cdef[[
@@ -305,8 +303,8 @@ analyze[=[
 analyze[[
 	local str_v = ffi.new("const char *[?]", 1)
 
-	attest.equal(str_v, _ as TCData<|{[0] = ffi.typeof<|"const char*"|>.T}|>)
-	attest.equal(str_v[0], _ as nil | ffi.typeof<|"const char*"|>.T)
+	attest.equal(str_v, _ as ffi.new<|"const char*[1]"|>)
+	attest.equal(str_v[0], _ as nil | ffi.new<|"const char*"|>)
 ]]
 analyze[[
 	ffi.cdef([=[
