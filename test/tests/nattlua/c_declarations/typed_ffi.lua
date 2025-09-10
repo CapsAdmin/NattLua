@@ -534,3 +534,19 @@ local function foo(x: ffi.typeof_arg("void*")) end
 local y = _ as TCData<|{["s_addr"] = number}|>
 foo(y)
 ]]
+analyze[=[
+ffi.cdef([[
+struct sockaddr {
+	uint16_t sa_family;
+	char sa_data[14];
+};
+
+struct addrinfo {
+	int ai_flags;
+	int ai_family;
+};
+]])
+local res = ffi.new("struct addrinfo[1]", {{ai_flags = 0}})
+attest.equal(res[0].ai_flags, _ as number)
+attest.equal(res[0].ai_family, _ as number)
+]=]

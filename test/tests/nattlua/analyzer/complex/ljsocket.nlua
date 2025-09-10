@@ -965,14 +965,10 @@ function M.get_address_info(
 			"struct addrinfo[1]", -- TODO: [1] is not in the original code?
 			{
 				{
-					ai_family = data.family and AF.strict_lookup(data.family) or nil,
-					ai_socktype = data.socket_type and SOCK.strict_lookup(data.socket_type) or nil,
-					ai_protocol = data.protocol and IPPROTO.strict_lookup(data.protocol) or nil,
-					ai_flags = data.flags and table_to_flags(AI.lookup, data.flags, bit.bor) or nil,
-					ai_addrlen = 0,
-					ai_addr = nil as any,
-					ai_canonname = nil as any,
-					ai_next = nil as any,
+					ai_family = data.family and AF.strict_lookup(data.family),
+					ai_socktype = data.socket_type and SOCK.strict_lookup(data.socket_type),
+					ai_protocol = data.protocol and IPPROTO.strict_lookup(data.protocol),
+					ai_flags = data.flags and table_to_flags(AI.lookup, data.flags, bit.bor),
 				},
 			}
 		)

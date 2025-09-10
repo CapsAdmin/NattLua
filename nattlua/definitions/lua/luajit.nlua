@@ -24,7 +24,7 @@ function TCData<|T: ConstructorArgument, ...: ...any|>
 						error("expected type '" .. tostring(contract) .. "' at index " .. (i - 1), 2)
 					end
 
-					T[i - 1] = v
+					T[i - 1] = v & contract
 				end
 			end
 		elseif type(T) == "table" then
