@@ -406,8 +406,8 @@ local function BinaryWithUnion(self, node, l, r, op)
 					local truthy_union_lr = Union():SetUpvalue(upvalue)
 					local falsy_union_lr = Union():SetUpvalue(upvalue)
 
-					for k, v in ipairs(union:GetData()) do
-						local val, err = v:Get(key)
+					for _, v in ipairs(union:GetData()) do
+						local val, err = self:IndexOperator(v, key)
 
 						if val then
 							local l = val

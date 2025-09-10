@@ -1,6 +1,3 @@
-do
-	return
-end --PENDING_TEST
 --ANALYZE
 local type print = any
 local ffi = require("ffi")
@@ -283,17 +280,13 @@ do
 		if jit.arch ~= "x64" then -- xp or something
 			ffi.cdef[[int WSAAddressToStringA(struct sockaddr *, unsigned long, void *, const char *, unsigned long *);]]
 
-			function socket.inet_ntop(
-				family: number,
-				pAddr: ffi.typeof_arg<|"void *"|>,
-				strptr: string,
-				strlen: number
-			)
+			function socket.inet_ntop(family: number, pAddr: ffi.typeof_arg<|"void *"|>)
+				local strptr = ffi.new("char[256]")
 				-- win XP: http://memset.wordpress.com/2010/10/09/inet_ntop-for-win32/
 				local srcaddr = ffi.new("struct sockaddr_in")
 				ffi.copy(srcaddr.sin_addr, pAddr, ffi.sizeof(srcaddr.sin_addr))
 				srcaddr.sin_family = family
-				local len = ffi.new("unsigned long[1]", strlen)
+				local len = ffi.new("unsigned long[1]", ffi.sizeof(strptr))
 				C.WSAAddressToStringA(ffi.cast("struct sockaddr *", srcaddr), ffi.sizeof(srcaddr), nil, strptr, len)
 				return strptr
 			end
@@ -455,17 +448,14 @@ do
 	do
 		ffi.cdef[[const char *inet_ntop(int __af, const void *__cp, char *__buf, unsigned int __len);]]
 
-		function socket.inet_ntop(
-			family: number,
-			addrinfo: ffi.typeof_arg<|"void *"|>,
-			strptr: ffi.typeof_arg<|"char*"|>,
-			strlen: number
-		)
-			if C.inet_ntop(family, addrinfo, strptr, strlen) == nil then
+		function socket.inet_ntop(family: number, addrinfo: ffi.typeof_arg<|"void *"|>)
+			local strptr = ffi.new("char[256]")
+
+			if C.inet_ntop(family, addrinfo, strptr, ffi.sizeof(strptr)) == nil then
 				return nil, socket.lasterror()
 			end
 
-			return strptr
+			return ffi.string(strptr)
 		end
 	end
 
@@ -900,10 +890,8 @@ local type AddressInfo = {
 local function addrinfo_get_ip(self: AddressInfo)
 	if self.addrinfo.ai_addr == nil then return nil end
 
-	local str = ffi.new("char[256]")
 	local xxx = ffi.cast("struct sockaddr_in*", self.addrinfo.ai_addr).sin_addr
-	local addr = assert(socket.inet_ntop(AF.lookup[self.family], xxx, str, ffi.sizeof(str)))
-	return ffi.string(addr)
+	return socket.inet_ntop(AF.lookup[self.family], xxx)
 end
 
 local function addrinfo_get_port(self: AddressInfo)
@@ -938,7 +926,7 @@ local function flags_to_list(
 end
 
 local function addrinfo_to_table(
-	res: ffi.typeof_arg<|"struct addrinfo *"|> ~ nil,
+	res: ffi.new<|"struct addrinfo *"|> ~ nil,
 	host: nil | string,
 	service: nil | string | number
 ): AddressInfo
@@ -976,10 +964,16 @@ function M.get_address_info(
 		hints = ffi.new(
 			"struct addrinfo[1]", -- TODO: [1] is not in the original code?
 			{
-				ai_family = data.family and AF.strict_lookup(data.family) or nil,
-				ai_socktype = data.socket_type and SOCK.strict_lookup(data.socket_type) or nil,
-				ai_protocol = data.protocol and IPPROTO.strict_lookup(data.protocol) or nil,
-				ai_flags = data.flags and table_to_flags(AI.lookup, data.flags, bit.bor) or nil,
+				{
+					ai_family = data.family and AF.strict_lookup(data.family) or nil,
+					ai_socktype = data.socket_type and SOCK.strict_lookup(data.socket_type) or nil,
+					ai_protocol = data.protocol and IPPROTO.strict_lookup(data.protocol) or nil,
+					ai_flags = data.flags and table_to_flags(AI.lookup, data.flags, bit.bor) or nil,
+					ai_addrlen = 0,
+					ai_addr = nil as any,
+					ai_canonname = nil as any,
+					ai_next = nil as any,
+				},
 			}
 		)
 	end
