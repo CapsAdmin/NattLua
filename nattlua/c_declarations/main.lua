@@ -62,6 +62,16 @@ local function gen(parser, ...)
 			error("expected ctype or value to fill $ or ? at argument #" .. i, 2)
 		end
 
+		if ct.Type == "union" then
+			local u = {}
+
+			for i, obj in ipairs(ct:GetData()) do
+				u[i] = assert(obj:Get(LString("T")))
+			end
+
+			ct = Union(u)
+		end
+
 		if ct.Type == "table" then ct = assert(ct:Get(LString("T"))) end
 
 		table.insert(new, ct)

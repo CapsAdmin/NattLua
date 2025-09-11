@@ -118,13 +118,15 @@ do
 			local ret = follow_link and stat_link(path, buff) or stat(path, buff)
 
 			if ret == 0 then
+				local s = assert(buff[0])
+				local xxx = s.st_atime
 				return {
-					last_accessed = tonumber(buff[0].st_atime),
-					last_changed = tonumber(buff[0].st_ctime),
-					last_modified = tonumber(buff[0].st_mtime),
-					creation_time = tonumber(buff[0].st_mtime),
-					size = tonumber(buff[0].st_size),
-					type = bit.band(buff[0].st_mode, DIRECTORY) ~= 0 and "directory" or "file",
+					last_accessed = tonumber(s.st_atime),
+					last_changed = tonumber(s.st_ctime),
+					last_modified = tonumber(s.st_mtime),
+					creation_time = tonumber(s.st_mtime),
+					size = tonumber(s.st_size),
+					type = bit.band(s.st_mode, DIRECTORY) ~= 0 and "directory" or "file",
 				}
 			end
 
@@ -166,7 +168,7 @@ do
 
 	local dot = string.byte(".")
 
-	local function is_dots(ptr: {[number] = number}) --FFIArray<|3, number|>)
+	local function is_dots(ptr: ffi.new("char*"))
 		if ptr[0] == dot then
 			if ptr[1] == dot and ptr[2] == 0 then return true end
 
@@ -186,7 +188,6 @@ do
 
 		while true do
 			local dir_info = ffi.C.readdir(ptr)
-			dir_info = dir_info
 
 			if dir_info == nil then break end
 

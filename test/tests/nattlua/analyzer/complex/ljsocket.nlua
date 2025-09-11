@@ -1400,7 +1400,7 @@ do
 		address_len: nil | number
 	)
 		size = size or 64000
-		local buff = ffi.new("char[?]", size) as any
+		local buff = ffi.new("char[?]", size as number)
 
 		if self.on_receive then return self:on_receive(buff, size, flags) end
 

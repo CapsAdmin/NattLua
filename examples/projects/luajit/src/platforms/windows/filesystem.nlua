@@ -50,7 +50,7 @@ do
 		struct
 	)
 
-	local function POSIX_TIME(time: number)
+	local function POSIX_TIME(time: number): number
 		return tonumber(time / 10000000 - 11644473600)
 	end
 
@@ -73,18 +73,20 @@ do
 		temporary = 0x100, -- A file that is being used for temporary storage. File systems avoid writing data back to mass storage if sufficient cache memory is available, because typically, an application deletes a temporary file after the handle is closed. In that scenario, the system can entirely avoid writing the data. Otherwise, the data is written after the handle is closed.
 		virtual = 0x10000, -- This value is reserved for system use.
 	}
+	local box = ffi.typeof("$[1]", struct)
 
 	function fs.get_attributes(path, follow_link)
-		local info = ffi.new("$[1]", struct)
+		local info = box()
 
 		if ffi.C.GetFileAttributesExA(path, 0, info) ~= 0 then
+			local s = assert(info[0])
 			return {
-				creation_time = POSIX_TIME(info[0].ftCreationTime),
-				last_accessed = POSIX_TIME(info[0].ftLastAccessTime),
-				last_modified = POSIX_TIME(info[0].ftLastWriteTime),
+				creation_time = POSIX_TIME(s.ftCreationTime),
+				last_accessed = POSIX_TIME(s.ftLastAccessTime),
+				last_modified = POSIX_TIME(s.ftLastWriteTime),
 				last_changed = -1, -- last permission changes
-				size = tonumber(info[0].nFileSize),
-				type = bit.band(info[0].dwFileAttributes, flags.directory) == flags.directory and
+				size = assert(tonumber(s.nFileSize)),
+				type = bit.band(s.dwFileAttributes, flags.directory) == flags.directory and
 					"directory" or
 					"file",
 			}
@@ -122,7 +124,7 @@ do
 	)
 	local dot = string.byte(".")
 
-	local function is_dots(ptr: {[number] = number}) -- todo: maybe FFIArray<|12, number|> should be ok to pass when the argument contract is FFIArray<|3, number|> , because it's at least 3 in length
+	local function is_dots(ptr: ffi.new("const char *")) -- todo: maybe FFIArray<|12, number|> should be ok to pass when the argument contract is FFIArray<|3, number|> , because it's at least 3 in length
 		if ptr[0] == dot then
 			if ptr[1] == dot and ptr[2] == 0 then return true end
 
@@ -133,13 +135,14 @@ do
 	end
 
 	local INVALID_FILE = ffi.cast("void *", 0xFFFFFFFFFFFFFFFFULL)
+	local box = ffi.typeof("$[1]", struct)
 
 	function fs.get_files(path)
 		if path == "" then path = "." end
 
 		if path:sub(-1) ~= "/" then path = path .. "/" end
 
-		local data = ffi.new("$[1]", struct)
+		local data = box()
 		local handle = ffi.C.FindFirstFileA(path .. "*", data)
 
 		if handle == nil then return nil, last_error() end
@@ -170,7 +173,7 @@ do
 	]])
 
 	function fs.set_current_directory(path)
-		if ffi.C.chdir(path) == 0 then return true end
+		if ffi.C.SetCurrentDirectoryA(path) == 0 then return true end
 
 		return nil, last_error()
 	end

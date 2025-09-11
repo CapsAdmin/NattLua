@@ -7,6 +7,6 @@ end
 
 print(assert(fs.get_current_directory()))
 
-for k, v in pairs((assert(fs.get_attributes("nlconfig.lua")))) do
+for k, v in pairs((assert(fs.get_attributes("README.md")))) do
 	print(k, v)
 end

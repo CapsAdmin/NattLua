@@ -524,24 +524,60 @@ analyze[=[
     end
 ]=]
 analyze[=[
-ffi.cdef[[void FormatMessageA(void*);]]
-local a = ffi.C.FormatMessageA
-ffi.cdef[[int GetLastError();]]
-attest.equal(ffi.C.FormatMessageA, a)
+	ffi.cdef[[void FormatMessageA(void*);]]
+	local a = ffi.C.FormatMessageA
+	ffi.cdef[[int GetLastError();]]
+	attest.equal(ffi.C.FormatMessageA, a)
 ]=]
 analyze[[
-local function foo(x: ffi.typeof_arg("void*")) end
-local y = _ as TCData<|{["s_addr"] = number}|>
-foo(y)
+	local function foo(x: ffi.typeof_arg("void*")) end
+	local y = _ as TCData<|{["s_addr"] = number}|>
+	foo(y)
 ]]
 analyze[=[
-ffi.cdef([[
-struct wwww {
-	int ai_flags;
-	int ai_family;
-};
-]])
-local res = ffi.new("struct wwww[1]", {{ai_flags = 0}})
-attest.equal(res[0].ai_flags, _ as 0)
-attest.equal(res[0].ai_family, _ as number)
+	ffi.cdef([[
+	struct wwww {
+		int ai_flags;
+		int ai_family;
+	};
+	]])
+	local res = ffi.new("struct wwww[1]", {{ai_flags = 0}})
+	attest.equal(res[0].ai_flags, _ as 0)
+	attest.equal(res[0].ai_family, _ as number)
+]=]
+analyze[=[
+	local stat_struct
+	local OSX = ffi.os == "OSX"
+	local X64 = ffi.arch == "x64"
+
+	if OSX then
+		stat_struct = ffi.typeof([[
+				struct {
+					uint32_t st_dev;
+					uint16_t st_mode;
+				}
+			]])
+	else
+		if X64 then
+			stat_struct = ffi.typeof([[
+					struct {
+						uint64_t st_dev;
+						uint64_t st_ino;
+					}
+				]])
+		else
+			stat_struct = ffi.typeof([[
+					struct {
+						uint64_t st_dev;
+						uint32_t __st_ino;
+					}
+				]])
+		end
+	end
+
+	local statbox = ffi.typeof("$[1]", stat_struct)
+	local buff = statbox()
+	local s = assert(buff[0])
+	attest.equal(s.st_dev, _ as number)
+
 ]=]
