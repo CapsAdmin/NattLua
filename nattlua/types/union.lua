@@ -453,11 +453,11 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: any]])
 	for _, a_val in ipairs(a.Data) do
 		a.suppress = true
 		local b_val, reason
-
+		local ok
 		if b.Type == "union" then
 			b_val, reason = b:IsTypeObjectSubsetOf(a_val)
 		else
-			local ok, reason = a_val:IsSubsetOf(b)
+			ok, reason = a_val:IsSubsetOf(b)
 
 			if ok then
 				b_val = b

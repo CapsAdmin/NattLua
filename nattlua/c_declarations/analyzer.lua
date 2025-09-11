@@ -105,7 +105,7 @@ local function cast(self, node)
 				node.of.modifiers[1] == "const" and
 				node.of.modifiers[2] == "char"
 			then
-				return Union({arr, Nil(), String()})
+				arr.is_string = true
 			end
 		end
 

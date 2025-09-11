@@ -59,7 +59,7 @@ end
 local gbuf_n = 1024
 local gbuf = ffi.new("char [?]", gbuf_n)
 
-local function buf_grow(len: number, nokeep: boolean | nil)
+local function buf_grow(len: ffi.typeof_arg("int"), nokeep: boolean | nil)
 	if len > gbuf_n then
 		gbuf_n = len
 		local newbuf = ffi.new("char [?]", gbuf_n)
@@ -95,9 +95,9 @@ function _M.replace(automate: ac_t, str: string, replacement: string, ignore_cas
 	-- you can change this to gbuf_p = gbuf to observe another kind of bug behaviour
 	local gbuf_p = ffi.new("char *", gbuf)
 
-	if not gbuf_p then error("uh oh") end
-
 	while true do
+		if _ as boolean then break end
+
 		local r = ac.ac_match(automate, compare_str_p, str_n)
 
 		if r.match_begin >= 0 then
@@ -114,7 +114,7 @@ function _M.replace(automate: ac_t, str: string, replacement: string, ignore_cas
 			C.strncpy(gbuf_p, str_p, str_n)
 			gbuf_p = gbuf_p + str_n
 			-- you can also try call ffi.string(gbuf, tonumber(gbuf_p - gbuf))
-			return ffi.string(gbuf, (gbuf_p - gbuf) as number) --  lol
+			return ffi.string(gbuf, (gbuf_p - gbuf)) --  lol
 		end
 	-- here, add print of info also changes behaviour
 	-- print(tostring(ffi.typeof(gbuf_p)))
@@ -173,6 +173,8 @@ function _M.mask(automate: ac_t, str: string, p: string, ignore_case: boolean)
 	local gbuf_p = gbuf
 
 	while true do
+		if _ as boolean then break end
+
 		local r = ac.ac_match(automate, compare_str_p, str_n)
 
 		if r.match_begin >= 0 then

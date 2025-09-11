@@ -53,7 +53,7 @@ analyze[=[
 		int foo(int, bool, lol);
 	]])
 
-	attest.equal(ffi.C.foo, _ as function=(number, boolean, number)>(number))
+	attest.equal(ffi.C.foo, _ as function=(number|TCData<|number|>, boolean, TCData<|number|> | number)>(number))
 ]=]
 analyze[=[
 	local struct
@@ -94,18 +94,18 @@ analyze[=[
 
 	if LINUX then
 		ffi.cdef("void foo(int a);")
-		attest.equal(ffi.C.foo, _ as function=(number)>(()))
+		attest.equal(ffi.C.foo, _ as function=(number|TCData<|number|>)>())
 	else
 		if X64 then
 			ffi.cdef("void foo(const char *a);")
-			attest.equal(ffi.C.foo, _ as function=(string | nil | ffi.new<|"const char*"|>)>(()))
+			attest.equal(ffi.C.foo, _ as function=(string | nil | ffi.new<|"const char*"|>)>())
 		else
 			ffi.cdef("int foo(int a);")
-			attest.equal(ffi.C.foo, _ as function=(number)>((number)))
+			attest.equal(ffi.C.foo, _ as function=(number|TCData<|number|>)>(number))
 		end	
 	end
 
-	attest.equal(ffi.C.foo, _ as function=(number)>() | function=(number)>(number) | function=(nil | string | ffi.new<|"const char*"|>)>())
+	attest.equal(ffi.C.foo, _ as function=(number|TCData<|number|>)>() | function=(number|TCData<|number|>)>(number) | function=(nil | string | ffi.new<|"const char*"|>)>())
 ]=]
 analyze[=[
 	ffi.cdef("void foo(void *ptr, int foo, const char *test);")
@@ -520,7 +520,7 @@ analyze[=[
     
     if ffi.os == "Windows" then
         local x = ffi.C.strerror
-        attest.equal(x, _ as function=(number)>())
+        attest.equal(x, _ as function=(number | TCData<|number|>)>())
     end
 ]=]
 analyze[=[
@@ -536,17 +536,12 @@ foo(y)
 ]]
 analyze[=[
 ffi.cdef([[
-struct sockaddr {
-	uint16_t sa_family;
-	char sa_data[14];
-};
-
-struct addrinfo {
+struct wwww {
 	int ai_flags;
 	int ai_family;
 };
 ]])
-local res = ffi.new("struct addrinfo[1]", {{ai_flags = 0}})
-attest.equal(res[0].ai_flags, _ as number)
+local res = ffi.new("struct wwww[1]", {{ai_flags = 0}})
+attest.equal(res[0].ai_flags, _ as 0)
 attest.equal(res[0].ai_family, _ as number)
 ]=]

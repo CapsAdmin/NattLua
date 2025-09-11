@@ -1,4 +1,5 @@
 --ANALYZE
+ffi.C = {}
 local type print = any
 local ffi = require("ffi")
 local socket = {}
@@ -992,7 +993,7 @@ function M.get_address_info(
 			tbl,
 			addrinfo_to_table(res as ffi.new<|"struct addrinfo *"|>, data.host, data.service)
 		)
-		res = res.ai_next
+		res = assert(res.ai_next)
 	end
 
 	--ffi.C.freeaddrinfo(out[0])
@@ -1497,7 +1498,9 @@ if TEST then
 	local socket = M
 
 	do
-		for _, info in ipairs((assert(socket.get_address_info({host = "www.google.com"})))) do
+		local x = socket.get_address_info({host = "www.google.com"})
+
+		for _, info in ipairs((assert(x))) do
 			print("================================")
 			print("host: ", info.host)
 			print("service: ", info.service)

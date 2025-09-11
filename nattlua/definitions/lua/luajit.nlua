@@ -11,7 +11,7 @@ function TCData<|T: ConstructorArgument, ...: ...any|>
 	-- this assumes keys are in order, which in the typesystem they SHOULD be
 	if ... then
 		if is_array then
-			local tbl = ...
+			local tbl = copy<|...|>
 
 			if type(tbl) == "table" then
 				if #tbl - 1 > keysof<|T|> then error<|"too many initializers", 2|> end
@@ -24,7 +24,13 @@ function TCData<|T: ConstructorArgument, ...: ...any|>
 						error("expected type '" .. tostring(contract) .. "' at index " .. (i - 1), 2)
 					end
 
-					T[i - 1] = v & contract
+					local obj = copy<|v|>
+
+					for k, v in pairs(contract) do
+						if rawget(obj, k) == nil then obj[k] = v end
+					end
+
+					T[i - 1] = obj
 				end
 			end
 		elseif type(T) == "table" then
@@ -78,16 +84,16 @@ function TCData<|T: ConstructorArgument, ...: ...any|>
 
 			return TCData<|obj|>
 		end,
-		__le = function <|self: self, other: self|>
+		__le = function <|self: self, other: self | number | any|>
 			return boolean
 		end,
-		__lt = function <|self: self, other: self|>
+		__lt = function <|self: self, other: self | number | any|>
 			return boolean
 		end,
-		__add = function <|self: self, other: self | number|>
+		__add = function <|self: self, other: self | number | any|>
 			return TCData<|T|>
 		end,
-		__sub = function <|self: self, other: self | number|>
+		__sub = function <|self: self, other: self | number | any|>
 			return TCData<|T|>
 		end,
 	}
@@ -156,13 +162,12 @@ type Modules["ffi"] = {
 	arch = "x86" | "x64" | "arm" | "ppc" | "ppcspe" | "mips",
 	C = {},
 	abi = function=(string)>(boolean),
-	copy = function=(any, any, number | nil)>(nil),
+	copy = function=(any, any, number | nil | TCData<|number|>)>(),
 	alignof = function=(ctype)>(number),
-	string = function=(cdata, number | nil)>(string),
 	gc = function=(ctype, Function)>(cdata),
 	istype = function=(ctype, any)>(boolean),
-	fill = function=(cdata, number, any)>(nil),
-	offsetof = function=(cdata, number)>(number),
+	fill = function=(cdata, number | TCData<|number|>, any)>(),
+	offsetof = function=(cdata, number | TCData<|number|>)>(number),
 }
 --type Modules["ffi"].C.@Name = "FFI_C"
 type Modules["jit.vmdef"] = {
@@ -326,7 +331,7 @@ function FFIType<|str: string|>
 	return number
 end
 
-type ffi.string = function=(TCData<|{[number] = number}|> | string, number | nil)>(string)
+type ffi.string = function=(TCData<|{[number] = number}|> | string, TCData<|number|> | number | nil)>(string)
 
 do
 	type ffi.C = ffi.load("")

@@ -773,7 +773,7 @@ return {
 
 				if v and v.Type == "tuple" or is_inf then
 					-- inf tuple
-					temp[i] = v
+					temp[i] = v or Any()
 
 					break
 				end

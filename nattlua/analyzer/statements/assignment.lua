@@ -228,7 +228,9 @@ return {
 
 							if contract then
 								val = val:CopyLiteralness(contract)
+								self:PushCurrentExpression(exp_key)
 								self:ErrorIfFalse(check_type_against_contract(val, contract))
+								self:PopCurrentExpression()
 								val:SetContract(contract)
 							end
 						end

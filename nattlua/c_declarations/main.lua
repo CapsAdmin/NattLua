@@ -119,20 +119,23 @@ local function TCData(obj, ...)
 end
 
 local function process_arg(obj)
-	if obj.Type == "table" then
+	if obj.Type == "number" then
+		return Union({TCData(obj), obj})
+	elseif obj.Type == "table" then
 		local typ = obj:Get(Number())
+
 		if typ then
-			return Union({TCData(typ:Copy()), Nil(), TCData(obj)})
+			if typ.Type == "number" then
+				return Union({Nil(), TCData(obj), obj.is_string and String() or nil})
+			end
+
+			return Union({TCData(typ:Copy()), Nil(), TCData(obj), obj.is_string and String() or nil})
 		end
 	elseif obj.Type == "union" then
 		local u = {}
 
 		for i, obj in ipairs(obj:GetData()) do
-			if obj.Type == "table" then
-				u[i] = TCData(obj)
-			else
-				u[i] = obj
-			end
+			if obj.Type == "table" then u[i] = TCData(obj) else u[i] = obj end
 		end
 
 		return Union(u)
@@ -143,9 +146,8 @@ local function process_type(key, obj, is_typedef, mode)
 	if obj.Type == "function" then
 		for i, v in ipairs(obj:GetInputSignature():GetData()) do
 			local newtype = process_arg(v)
-			if newtype then
-				obj:GetInputSignature():Set(i, newtype)
-			end
+
+			if newtype then obj:GetInputSignature():Set(i, newtype) end
 		end
 
 		local ret = obj:GetOutputSignature():GetFirstValue()
@@ -235,7 +237,7 @@ function cparser.reset()
 	types = Table()
 	local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	analyzer:ErrorIfFalse(env.typesystem.ffi:Set(ConstString("C"), Table()))
+	--analyzer:ErrorIfFalse(env.typesystem.ffi:Set(ConstString("C"), Table()))
 	analyzer:ErrorIfFalse(env.runtime.ffi:Set(ConstString("C"), Table()))
 end
 
