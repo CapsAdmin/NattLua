@@ -180,6 +180,10 @@ return function(META)
 				return false, "certain_return"
 			end
 
+			if self:GetScope():DidUncertainReturn() then
+				return false, "uncertain_return"
+			end
+
 			return true, nil
 		end
 

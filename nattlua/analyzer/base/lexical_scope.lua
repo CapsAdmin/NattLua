@@ -284,6 +284,10 @@ do
 		self:GetNearestFunctionScope().uncertain_function_return = true
 	end
 
+	function META:DidUncertainReturn()
+		return self:GetNearestFunctionScope().uncertain_function_return == true
+	end
+
 	function META:GetNearestFunctionScope()
 		for _, scope in ipairs(self.ParentList) do
 			if scope.returns then return scope end
@@ -433,49 +437,51 @@ function META:GetAllVisibleUpvalues()
 end
 
 function META.New(parent, upvalue_position, obj)
-	local scope = META.NewObject({
-		obj = obj,
-		CachedLoopScope = false,
-		Children = {},
-		upvalue_position = upvalue_position or pos,
-		uncertain_function_return = false,
-		TrackedObjects = {},
-		loop_iteration = false,
-		returns = false,
-		statement = false,
-		node = false,
-		scope_helper = false,
-		missing_return = false,
-		missing_types = false,
-		lua_silent_error = false,
-		certain_return = false,
-		mutated_types = {},
-		ParentList = {},
-		ParentMap = {},
-		Root = false,
-		dependencies = {},
-		throws = false,
-		ElseConditionalScope = false,
-		ConditionalScope = false,
-		TrackedUpvalues = false,
-		TrackedTables = false,
-		Truthy = false,
-		Falsy = false,
-		Parent = false,
-		LoopScope = false,
-		NextConditionalSibling = false,
-		PreviousConditionalSibling = false,
-		upvalues = {
-			runtime = {
-				list = {},
-				map = {},
+	local scope = META.NewObject(
+		{
+			obj = obj,
+			CachedLoopScope = false,
+			Children = {},
+			upvalue_position = upvalue_position or pos,
+			uncertain_function_return = false,
+			TrackedObjects = {},
+			loop_iteration = false,
+			returns = false,
+			statement = false,
+			node = false,
+			scope_helper = false,
+			missing_return = false,
+			missing_types = false,
+			lua_silent_error = false,
+			certain_return = false,
+			mutated_types = {},
+			ParentList = {},
+			ParentMap = {},
+			Root = false,
+			dependencies = {},
+			throws = false,
+			ElseConditionalScope = false,
+			ConditionalScope = false,
+			TrackedUpvalues = false,
+			TrackedTables = false,
+			Truthy = false,
+			Falsy = false,
+			Parent = false,
+			LoopScope = false,
+			NextConditionalSibling = false,
+			PreviousConditionalSibling = false,
+			upvalues = {
+				runtime = {
+					list = {},
+					map = {},
+				},
+				typesystem = {
+					list = {},
+					map = {},
+				},
 			},
-			typesystem = {
-				list = {},
-				map = {},
-			},
-		},
-	})
+		}
+	)
 	scope:SetParent(parent or false)
 	pos = pos + 1
 	return scope
