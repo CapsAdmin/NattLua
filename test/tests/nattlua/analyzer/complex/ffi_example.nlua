@@ -1,6 +1,3 @@
-do
-	return
-end -- PENDING_TEST
 local ffi = require("ffi")
 local _M = {}
 ffi.cdef[[
@@ -62,7 +59,7 @@ local gbuf = ffi.new("char [?]", gbuf_n)
 local function buf_grow(len: ffi.typeof_arg("int"), nokeep: boolean | nil)
 	if len > gbuf_n then
 		gbuf_n = len
-		local newbuf = ffi.new("char [?]", gbuf_n)
+		local newbuf = ffi.new("char [?]", gbuf_n as number)
 
 		if not nokeep then ffi.copy(newbuf, gbuf, gbuf_n) end
 
@@ -81,10 +78,6 @@ function _M.replace(automate: ac_t, str: string, replacement: string, ignore_cas
 		compare_str_p = ffi.new("const char *", compare_str)
 	end
 
-	if not compare_str_p then error("uh oh") end
-
-	if not str_p then error("uh oh") end
-
 	buf_grow(#str, true)
 	-- BUG HERE!
 	-- we cannot rely on (gbuf_p - gbuf) to calculate length. it seems like pointer arithmetic triggers bug of luajit
@@ -96,8 +89,6 @@ function _M.replace(automate: ac_t, str: string, replacement: string, ignore_cas
 	local gbuf_p = ffi.new("char *", gbuf)
 
 	while true do
-		if _ as boolean then break end
-
 		local r = ac.ac_match(automate, compare_str_p, str_n)
 
 		if r.match_begin >= 0 then
@@ -165,16 +156,10 @@ function _M.mask(automate: ac_t, str: string, p: string, ignore_case: boolean)
 		compare_str_p = ffi.new("const char *", compare_str)
 	end
 
-	if not compare_str_p then error("uh oh") end
-
-	if not str_p then error("uh oh") end
-
 	buf_grow(#str, true)
 	local gbuf_p = gbuf
 
 	while true do
-		if _ as boolean then break end
-
 		local r = ac.ac_match(automate, compare_str_p, str_n)
 
 		if r.match_begin >= 0 then
