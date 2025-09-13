@@ -25,8 +25,8 @@ A, B, C, D = test(), 4
 
 attest.equal(A, 1)
 attest.equal(B, 4)
-attest.equal(C, nil)
-attest.equal(D, nil)
+attest.equal<|typeof C, nil|>
+attest.equal<|typeof D, nil|>
 
 local z,x,y,æ,ø,å = test(4,5,6)
 local novalue

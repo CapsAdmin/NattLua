@@ -159,16 +159,18 @@ return function(META)
 			-- use function's arguments in case they have been maniupulated (ie string.gsub)
 			local arguments = obj:GetInputSignature():Copy()
 
-			
 			if obj:IsExplicitInputSignature() then
 				local new_arguments = add_potential_self(arguments)
 				arguments = new_arguments or arguments
+
 				for i = 1, arguments:GetSafeLength() do
 					if new_arguments then i = i + 1 end
+
 					arguments:Set(i, Any())
 				end
 			else
 				arguments = add_potential_self(arguments) or arguments
+
 				for _, obj in ipairs(arguments:GetData()) do
 					if obj.Type == "upvalue" or obj.Type == "table" then
 						obj:ClearMutations()
@@ -551,6 +553,20 @@ return function(META)
 
 			function META:IsRuntime()
 				return self:GetCurrentAnalyzerEnvironment() == "runtime"
+			end
+		end
+
+		do
+			function META:PushNilAccessAllowed()
+				self:PushContextRef("global_access_allowed")
+			end
+
+			function META:PopNilAccessAllowed()
+				self:PopContextRef("global_access_allowed")
+			end
+
+			function META:IsNilAccessAllowed()
+				return self:GetContextRef("global_access_allowed")
 			end
 		end
 

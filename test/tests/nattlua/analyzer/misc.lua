@@ -31,7 +31,7 @@ do -- assignment
 	analyze[[
         a = nil
         -- todo, if any calls don't happen here then it's probably nil?
-        attest.equal(a, _ as nil)
+        attest.equal<|typeof a, _ as nil|>
     ]]
 	analyze[[
         local a = {}
@@ -56,14 +56,14 @@ do -- assignment
         a, b, c = 0, 1
         attest.equal(a, 0)
         attest.equal(b, 1)
-        attest.equal(c, nil)
+        attest.equal<|typeof c, nil|>
         a, b = a+1, b+1, a+b
         attest.equal(a, 1)
         attest.equal(b, 2)
         a, b, c = 0
         attest.equal(a, 0)
-        attest.equal(b, nil)
-        attest.equal(c, nil)
+        attest.equal<|typeof b, nil|>
+        attest.equal<|typeof c, nil|>
     ]]
 	analyze[[
         local a = {}

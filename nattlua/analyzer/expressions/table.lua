@@ -150,7 +150,8 @@ return {
 			self:ClearTracked()
 		end
 
-		tbl:RemoveRedundantNilValues()
+		if self:IsRuntime() then tbl:RemoveRedundantNilValues() end
+
 		self:PopCurrentType("table")
 		return tbl
 	end,

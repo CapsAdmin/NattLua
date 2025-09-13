@@ -33,17 +33,7 @@ local function Prefix(analyzer, node, r)
 	if r.Type == "tuple" then r = r:GetWithNumber(1) or Nil() end
 
 	if analyzer:IsTypesystem() then
-		if op == "typeof" then
-			analyzer:PushAnalyzerEnvironment("runtime")
-			local obj = analyzer:AnalyzeExpression(node.right)
-			analyzer:PopAnalyzerEnvironment()
-
-			if not obj then
-				return false, type_errors.typeof_lookup_missing(node.right:Render())
-			end
-
-			return obj:GetContract() or obj
-		elseif op == "unique" then
+		if op == "unique" then
 			if r.Type ~= "table" then
 				return false, type_errors.unique_must_be_table(r)
 			end
@@ -113,6 +103,22 @@ end
 
 return {
 	Prefix = function(analyzer, node)
+		if analyzer:IsTypesystem() then
+			if node.value.value == "typeof" then
+				analyzer:PushAnalyzerEnvironment("runtime")
+				analyzer:PushNilAccessAllowed()
+				local obj = analyzer:AnalyzeExpression(node.right)
+				analyzer:PopNilAccessAllowed()
+				analyzer:PopAnalyzerEnvironment()
+
+				if not obj then
+					return false, type_errors.typeof_lookup_missing(node.right:Render())
+				end
+
+				return obj:GetContract() or obj
+			end
+		end
+
 		if node.value.value == "not" then analyzer:PushInvertedExpressionContext() end
 
 		local r = analyzer:Assert(analyzer:AnalyzeExpression(node.right))

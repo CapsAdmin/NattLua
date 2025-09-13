@@ -68,7 +68,13 @@ local function index_table(analyzer, self, key, raw)
 		end
 	end
 
-	if analyzer:IsTypesystem() then return self:Get(key) end
+	if analyzer:IsTypesystem() then
+		if analyzer:IsNilAccessAllowed() and not self:FindKeyValExact(key) then
+			return Nil()
+		end
+
+		return self:Get(key)
+	end
 
 	local tracked = analyzer:GetTrackedTableWithKey(self, key)
 
