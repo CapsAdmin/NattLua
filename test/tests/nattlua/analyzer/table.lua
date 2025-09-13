@@ -1163,7 +1163,17 @@ end
 test<|tbl, contract|>
 attest.equal(tbl, contract)
 ]]
-
 analyze[[
 attest.equal<|{test = nil | {string}} == {test = nil | {number}}, false|>
+]]
+analyze[[
+local x = {"foo", "bar", "faz"}
+
+for i, v in ipairs(x) do
+	attest.subset_of(i, _ as number)
+	x[v] = i
+	x[i] = nil
+end
+do return end
+attest.equal(x, _ as {foo = 1, bar = 2, faz = 3, [1] = nil, [2] = nil, [3] = nil})
 ]]

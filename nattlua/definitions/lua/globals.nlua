@@ -117,7 +117,7 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 	if tbl:IsLiteral() then
 		local i = 1
 		return function(key, val)
-			local kv = tbl:GetData()[i]
+			local kv = tbl:FindKeyValExact(types.LNumber(i))
 
 			if not kv then return nil end
 
