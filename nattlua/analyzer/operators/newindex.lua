@@ -24,7 +24,7 @@ return {
 			return obj:Set(key, val)
 		end
 
-		local function newindex_table(analyzer, obj, key, val, raw)
+		local function newindex_table(analyzer, obj, key, val, raw, allow_nil_set)
 			if not raw and obj:GetMetaTable() then
 				local func = obj:GetMetaTable():Get(ConstString("__newindex"))
 
@@ -120,14 +120,12 @@ return {
 
 			analyzer:MutateTable(obj, key, val)
 
-			if not obj:GetContract() then
-				return obj:Set(key, val, analyzer:IsRuntime())
-			end
+			if not obj:GetContract() then return obj:Set(key, val, allow_nil_set) end
 
 			return true
 		end
 
-		function META:NewIndexOperator(obj, key, val, raw)
+		function META:NewIndexOperator(obj, key, val, raw, allow_nil_set)
 			if obj.Type == "any" then return true end
 
 			if val.Type == "function" then
@@ -173,7 +171,7 @@ return {
 			elseif obj.Type == "tuple" then
 				ok, err = newindex_tuple(self, obj, key, val)
 			elseif obj.Type == "table" then
-				ok, err = newindex_table(self, obj, key, val, raw)
+				ok, err = newindex_table(self, obj, key, val, raw, allow_nil_set)
 			else
 				ok, err = obj:Set(key, val)
 			end

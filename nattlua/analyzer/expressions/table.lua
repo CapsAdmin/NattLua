@@ -141,7 +141,7 @@ return {
 							end
 						end
 					elseif obj then
-						self:NewIndexOperator(tbl, LNumber(numerical_index + 1), obj)
+						self:NewIndexOperator(tbl, LNumber(numerical_index + 1), obj, nil, true)
 						numerical_index = numerical_index + 1
 					end
 				end

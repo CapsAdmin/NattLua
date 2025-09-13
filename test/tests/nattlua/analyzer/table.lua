@@ -1174,6 +1174,5 @@ for i, v in ipairs(x) do
 	x[v] = i
 	x[i] = nil
 end
-do return end
-attest.equal(x, _ as {foo = 1, bar = 2, faz = 3, [1] = nil, [2] = nil, [3] = nil})
+attest.equal(x, _ as {foo = 1, bar = 2, faz = 3})
 ]]
