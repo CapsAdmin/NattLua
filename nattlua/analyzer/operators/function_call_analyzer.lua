@@ -57,7 +57,7 @@ end
 
 -- Generate Cartesian product recursively
 local function generate_combinations(packed_args, argument_options, arg_index)
-	if arg_index > #packed_args then
+	if arg_index > packed_args then
 		return {{}} -- Base case: one empty combination
 	end
 
@@ -110,7 +110,7 @@ local function unpack_union_tuples(obj, input)
 	-- If nothing needs expansion, return original arguments
 	if not has_expandable_args then return {packed_args} end
 
-	return generate_combinations(packed_args, argument_options, 1)
+	return generate_combinations(#packed_args, argument_options, 1)
 end
 
 local function call_and_collect(analyzer, obj, arguments, ret)
@@ -199,7 +199,7 @@ return function(analyzer, obj, input)
 	end
 
 	local ret = Tuple()
-
+	
 	for _, arguments in ipairs(unpack_union_tuples(obj, input)) do
 		local t = call_and_collect(analyzer, obj, arguments, ret)
 

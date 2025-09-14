@@ -1,6 +1,18 @@
 #!/usr/bin/env luajit
 
 if false then
+	debug.sethook(
+		function()
+			if os.clock() > 10 then
+				debug.trace()
+				error("timeout")
+			end
+		end,
+		"c"
+	)
+end
+
+if false then
 	local _G = _G
 	local blacklist = {_G = true, require = true, analyze = true, equal = true}
 	local debug = _G.debug
@@ -20,7 +32,6 @@ if false then
 	end
 
 	local done = {}
-
 	setfenv(
 		0,
 		setmetatable(
@@ -31,6 +42,7 @@ if false then
 
 					if not blacklist[k] then
 						local str = k .. " GET " .. get_line() .. "\n"
+
 						if not done[str] and not str:find("tests/", nil, true) then
 							io_write(str)
 						end
@@ -41,6 +53,7 @@ if false then
 				__newindex = function(_, k, v)
 					if not blacklist[k] then
 						local str = k .. " SET " .. get_line() .. "\n"
+
 						if not done[str] and not str:find("tests/", nil, true) then
 							io_write(str)
 						end
@@ -56,6 +69,7 @@ end
 if jit then
 	local ok, err = pcall(require, "nattlua.cli.init")
 	print(err)
+
 	if not ok then
 		local current_path
 		local ffi = require("ffi")
