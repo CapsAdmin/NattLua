@@ -252,7 +252,7 @@ analyze[[
     META.__index = META
     type META.Type = string
     type META.@Self = {}
-    type BaseType = META.@Self
+    local type BaseType = META.@Self
     
     function META.GetSet(tbl: ref any, name: ref string, default: ref any)
         tbl[name] = default as NonLiteral<|default|>

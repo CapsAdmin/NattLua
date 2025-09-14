@@ -1,5 +1,5 @@
 return function(...)
-	local path = ...
+	local path, count = ...
 	local assert = _G.assert
 	local loadfile = _G.loadfile
 	local get_time = require("test.helpers.get_time")
@@ -95,37 +95,41 @@ return function(...)
 
 	if not _G.HOTRELOAD then profiler.Start() end
 
-	if path and path:sub(-4) == ".lua" then
-		io_write(path, " ")
-		local time = get_time()
-		assert(loadfile(path))()
-		io_write(" ", format_time(get_time() - time), " seconds\n")
-	else
-		local tests = find_tests(path)
+	for i = 1, tonumber(count or 1) do
+		if path == "all" then path = nil end
 
-		for _, path in ipairs(tests) do
-			if path:sub(-4) == ".lua" then
-				io_write((path:gsub("test/tests/", "")), " ")
-				local func = assert(loadfile(path))
-				local time = get_time()
-				func()
-				local diff = get_time() - time
-				total = total + diff
-				io_write(" ", format_time(diff), " seconds\n")
+		if path and path:sub(-4) == ".lua" then
+			io_write(path, " ")
+			local time = get_time()
+			assert(loadfile(path))()
+			io_write(" ", format_time(get_time() - time), " seconds\n")
+		else
+			local tests = find_tests(path)
+
+			for _, path in ipairs(tests) do
+				if path:sub(-4) == ".lua" then
+					io_write((path:gsub("test/tests/", "")), " ")
+					local func = assert(loadfile(path))
+					local time = get_time()
+					func()
+					local diff = get_time() - time
+					total = total + diff
+					io_write(" ", format_time(diff), " seconds\n")
+				end
 			end
-		end
 
-		for _, path in ipairs(tests) do
-			if path:sub(-5) == ".nlua" then
-				io_write((path:gsub("test/tests/", "")), " ")
-				local f = assert(io.open(path, "r"))
-				local str = assert(f:read("*all"))
-				f:close()
-				local time = get_time()
-				analyze(str)
-				local diff = get_time() - time
-				total = total + diff
-				io_write(" ", format_time(diff), " seconds\n")
+			for _, path in ipairs(tests) do
+				if path:sub(-5) == ".nlua" then
+					io_write((path:gsub("test/tests/", "")), " ")
+					local f = assert(io.open(path, "r"))
+					local str = assert(f:read("*all"))
+					f:close()
+					local time = get_time()
+					analyze(str)
+					local diff = get_time() - time
+					total = total + diff
+					io_write(" ", format_time(diff), " seconds\n")
+				end
 			end
 		end
 	end

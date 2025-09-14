@@ -1,6 +1,6 @@
 -- https://github.com/Jacbo1/Public-Starfall/tree/main/Sprite%20Sheet%20Manager
 -- some starfall types
-type Material = {}
+local type Material = {}
 Material.@Name = "Material"
 type Material.__index = Material
 type Material.setTextureURL = function=(
@@ -10,15 +10,16 @@ type Material.setTextureURL = function=(
 	nil | function=(any, any, number, number)>(),
 	nil | function=()>()
 )>()
-type material = {}
+local type material = {}
 type material.create = function=("UnlitGeneric" | "VertexLitGeneric")>(Material)
+local type math = {} & math
 type math.round = function=(number)>(number)
-type hook = {}
+local type hook = {}
 type hook.add = function=(string, string, function=()>())>()
-type render = {}
+local type render = {}
 type render.setMaterial = function=(Material)>()
 type render.drawTexturedRectUV = function=(number, number, number, number, number, number, number, number)>()
-type timer = {}
+local type timer = {}
 type timer.systime = function=()>(number)
 --@name Sprite sheet Manager
 --@author Jacbo

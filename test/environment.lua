@@ -1,5 +1,6 @@
 local io = require("io")
 local diff = require("nattlua.other.diff")
+local Table = require("nattlua.types.table").Table
 local debug = require("debug")
 local pcall = _G.pcall
 local type = _G.type
@@ -65,8 +66,28 @@ do
 
 		_G.TEST = true
 		local compiler = nl.Compiler(code, nil, nil, 3)
-		compiler:SetEnvironments(runtime_env:Copy(), typesystem_env)
+		compiler:SetEnvironments(Table({}), typesystem_env)
+		_G.TEST_GARBAGE = {}
 		local ok, err = compiler:Analyze()
+		do
+			local tbl = {}
+			for k,v in pairs(_G.TEST_GARBAGE) do
+				tbl[k:GetHash()] = v
+			end
+			
+			for hash, v in pairs(tbl) do
+				if v and v.Type == "symbol" and v:IsNil() then
+					tbl[hash] = nil
+				end
+			end
+
+			if next(tbl) then
+				table.print(tbl)
+				error("garbage not collected", 2)
+			end
+		end
+
+
 		_G.TEST = false
 
 		if expect_warning then

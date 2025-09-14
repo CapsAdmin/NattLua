@@ -148,9 +148,9 @@ end
 analyze[[
 local type IToken = {type = string}
 
-analyzer function test(x: any) end
+local analyzer function test(x: any) end
 
-analyzer function lol(x: any) end
+local analyzer function lol(x: any) end
 
 local function Token<||>
 	local x = IToken

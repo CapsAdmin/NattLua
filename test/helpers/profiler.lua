@@ -9,8 +9,8 @@ function profiler.Start()
 	stop_profiler = jit_profiler.Start(
 		{
 			mode = "line",
-			sampling_rate = 10,
-			depth = 10, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
+			sampling_rate = 1,
+			depth = 1, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
 			sample_threshold = 20,
 		}
 	)

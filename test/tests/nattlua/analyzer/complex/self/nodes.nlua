@@ -1,4 +1,4 @@
-local type { Nodes } = import("~/nattlua/parser/node.lua")
+local type { Nodes, Node } = import("~/nattlua/parser/node.lua")
 
 local META = require("nattlua.parser.base")()
 local Code = require("nattlua.code").New

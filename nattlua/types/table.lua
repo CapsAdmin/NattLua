@@ -147,9 +147,7 @@ function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: Map<
 			end
 		end
 
-		if not ok then
-			return false, "table key-value mismatch"
-		end
+		if not ok then return false, "table key-value mismatch" end
 	end
 
 	return true, "all table entries match"
@@ -757,7 +755,8 @@ end
 
 function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
-		assert(self["Set" .. key:GetData():sub(2)], key:GetData() .. " is not a function")(self, val)
+		local lua_key = "Set" .. key:GetData():sub(2)
+		assert(self[lua_key], lua_key .. " is not a function")(self, val)
 		return true
 	end
 

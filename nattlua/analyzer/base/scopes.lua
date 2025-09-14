@@ -151,6 +151,8 @@ return function(META)
 
 		if self:IsRuntime() then
 			self:Warning(type_errors.global_assignment(key, val), self:GetCurrentStatement())
+		elseif _G.TEST_GARBAGE then
+			TEST_GARBAGE[key] = val
 		end
 
 		self:NewIndexOperator(g, key, val)

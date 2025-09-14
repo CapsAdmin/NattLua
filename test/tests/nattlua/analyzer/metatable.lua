@@ -390,7 +390,7 @@ analyze(
 	"4.-is not a subset of"
 )
 analyze[[
-    type code_ptr = {
+    local type code_ptr = {
         @Name = "codeptr",
         @MetaTable = self,
         [number] = number,
@@ -700,7 +700,7 @@ analyze[[
         type IPlayer.@Contract = IPlayer
     end
     
-    type Player = function=(entityIndex: number)>(IPlayer)
+    local type Player = function=(entityIndex: number)>(IPlayer)
     
     do
         local ply = Player(1337)
@@ -733,7 +733,7 @@ analyze[[
         type IPlayer.@Contract = IPlayer
     end
 
-    type Player = function=(entityIndex: number)>(IPlayer)
+    local type Player = function=(entityIndex: number)>(IPlayer)
 
 
     do

@@ -470,7 +470,7 @@ analyze[[
     function Foo.Bar:init() end
 ]]
 analyze[[
-    function test2(callback: function=(...any)>(...any)) 
+    local function test2(callback: function=(...any)>(...any))
 
     end
 
@@ -520,6 +520,7 @@ analyze[[
     end
 
     attest.equal(lib.myfunc, _ as function=(number, string)>(boolean))
+    type lib = nil
 ]]
 analyze[[
     local val: nan

@@ -19,7 +19,7 @@ local unpack_symbol = {
 	[NIL] = nil,
 }
 --[[#type META.@Name = "TSymbol"]]
---[[#type TSymbol = META.@Self]]
+--[[#local type TSymbol = META.@Self]]
 --[[#type TSymbol.Type = "symbol"]]
 META.Type = "symbol"
 META:GetSet("Data", false--[[# as TRUE | FALSE | NIL | {}]])
@@ -149,8 +149,8 @@ function META.New(data--[[#: true | false | nil | TSymbol.Data]])
 			Parent = false,
 			Contract = false,
 			Hash = "",
-		})
-		
+		}
+	)
 	self.Hash = tostring(self)
 	return self
 end

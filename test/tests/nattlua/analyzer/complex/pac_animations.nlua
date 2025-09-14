@@ -1,11 +1,11 @@
-type pac = {}
+local type pac = {}
 type pac.AddHook = function=(string, string, Function)>(nil)
 type pac.ResetEntityBoneMatrix = function=(any, number)>(nil)
 type pac.SetEntityBoneMatrix = function=(any, number, any)>(nil)
-type hook = {}
+local type hook = {}
 type hook.Add = function=(string, string, Function)>(nil)
-type positive_numbers = number -- 0 .. inf
-type table_index_range = number -- 1 .. inf
+local type positive_numbers = number -- 0 .. inf
+local type table_index_range = number -- 1 .. inf
 local type TVector = {
 	x = number,
 	y = number,
@@ -26,8 +26,8 @@ local type TMatrix = {
 	GetAngles = function=(self)>(TAngle),
 }
 
+local type Angle = function=(number, number, number)>(TAngle)
 do
-	type Angle = function=(number, number, number)>(TAngle)
 	setmetatable<|
 		TAngle,
 		{
@@ -36,11 +36,11 @@ do
 			__mul = function=(number | TAngle, number | TAngle)>(TAngle),
 		}
 	|>
-	type LerpAngle = function=(number, TAngle, TAngle)>(TAngle)
 end
+local type LerpAngle = function=(number, TAngle, TAngle)>(TAngle)
 
+	local type Vector = function=(number, number, number)>(TVector)
 do
-	type Vector = function=(number, number, number)>(TVector)
 	setmetatable<|
 		TVector,
 		{
@@ -49,29 +49,29 @@ do
 			__mul = function=(number | TVector, number | TVector)>(TVector),
 		}
 	|>
-	type LerpVector = function=(number, TVector, TVector)>(TVector)
 end
+local type LerpVector = function=(number, TVector, TVector)>(TVector)
 
+	local type Matrix = function=()>(TMatrix)
 do
-	type Matrix = function=()>(TMatrix)
 	setmetatable<|TMatrix, {
 		__mul = function=(self, TMatrix)>(TMatrix),
 	}|>
 end
 
-type BodyGroup = {
+local type BodyGroup = {
 	id = positive_numbers,
 	name = string,
 	num = positive_numbers,
 	submodels = {[table_index_range] = any}, -- not sure what's in here
 }
-type Color = {
+local type Color = {
 	r = number,
 	g = number,
 	b = number,
 	a = number,
 }
-type Triangle = {
+local type Triangle = {
 	color = Color,
 	normal = TVector,
 	binormal = TVector,
@@ -81,12 +81,12 @@ type Triangle = {
 	userdata = {number, number, number, number},
 	weights = {[table_index_range] = {bone = number, weight = number}},
 }
-type TMesh = {
+local type TMesh = {
 	Draw = function=(self)>(nil),
 	BuildFromTriangles = function=(self, {[table_index_range] = Triangle})>(self),
 }
-type Mesh = function=()>(TMesh)
-type Entity = {
+local type Mesh = function=()>(TMesh)
+local type Entity = {
 	SetAngles = function=(self, TAngle)>(nil),
 	GetModel = function=(self)>(string),
 	GetBodyGroups = function=(self, positive_numbers)>({[table_index_range] = BodyGroup}),
@@ -109,20 +109,22 @@ type Entity = {
 	CallOnRemove = function=(self, string, Function)>(nil),
 	GetBoneCount = function=(self)>(number),
 }
-type ClientsideModel = function=(string)>(Entity)
-type ModelMeshes = {
+local type ClientsideModel = function=(string)>(Entity)
+local type ModelMeshes = {
 	[table_index_range] = {
 		material = string,
 		triangles = {[table_index_range] = Triangle},
 		verticies = {[table_index_range] = Triangle},
 	},
 }
-type util = {}
+local type util = {}
 type util.GetModelMeshes = function=(string, number, number)>(ModelMeshes)
-type WorldToLocal = function=(TVector, TAngle, TVector, TAngle)>(TVector, TAngle)
-type FrameTime = function=()>(number)
-type CurTime = function=()>(number)
-type Lerp = function=(number, number, number)>(number)
+local type WorldToLocal = function=(TVector, TAngle, TVector, TAngle)>(TVector, TAngle)
+local type FrameTime = function=()>(number)
+local type CurTime = function=()>(number)
+local type Lerp = function=(number, number, number)>(number)
+local type math = {} & math
+local type table = {} & table
 type math.Clamp = function=(number, number, number)>(number)
 type table.Count = function=(Table)>(number)
 --- 

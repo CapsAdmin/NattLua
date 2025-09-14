@@ -1,42 +1,42 @@
-type setmetatable = function(T, M)
+local type setmetatable = function(T, M)
 	T:SetMetaTable(M)
 end
-type positive_numbers = number -- 0 .. inf
-type table_index_range = number -- 1 .. inf
-type TAngle = {
+local type positive_numbers = number -- 0 .. inf
+local type table_index_range = number -- 1 .. inf
+local type TAngle = {
 	p = number,
 	y = number,
 	r = number,
 }
-type Angle = function=(number, number, number)>(TAngle)
-type TVector = {
+local type Angle = function=(number, number, number)>(TAngle)
+local type TVector = {
 	x = number,
 	y = number,
 	z = number,
 }
-type Vector = function=(number, number, number)>(TVector)
+local type Vector = function=(number, number, number)>(TVector)
 setmetatable<|TVector, {
 	__sub = TVector,
 	__add = TVector,
 	__mul = TVector,
 }|>
-type BodyGroup = {
+local type BodyGroup = {
 	id = positive_numbers,
 	name = string,
 	num = positive_numbers,
 	submodels = {[table_index_range] = any}, -- not sure what's in here
 }
-type TMatrix = {
+local type TMatrix = {
 	GetTranslation = function=(self)>(TVector),
 	GetAngles = function=(self)>(TAngle),
 }
-type Color = {
+local type Color = {
 	r = number,
 	g = number,
 	b = number,
 	a = number,
 }
-type Triangle = {
+local type Triangle = {
 	color = Color,
 	normal = TVector,
 	binormal = TVector,
@@ -46,12 +46,12 @@ type Triangle = {
 	userdata = {number, number, number, number},
 	weights = {[table_index_range] = {bone = number, weight = number}},
 }
-type TMesh = {
+local type TMesh = {
 	Draw = function=(self)>(nil),
 	BuildFromTriangles = function=(self, {[table_index_range] = Triangle})>(self),
 }
-type Mesh = function=()>(TMesh)
-type Entity = {
+local type Mesh = function=()>(TMesh)
+local type Entity = {
 	SetAngles = function=(self, TAngle)>(nil),
 	GetModel = function=(self)>(string),
 	GetBodyGroups = function=(self, positive_numbers)>({[table_index_range] = BodyGroup}),
@@ -68,17 +68,17 @@ type Entity = {
 	Remove = function=(self)>(nil),
 	GetBoneParent = function=(self)>(number),
 }
-type ClientsideModel = function=(string)>(Entity)
-type ModelMeshes = {
+local type ClientsideModel = function=(string)>(Entity)
+local type ModelMeshes = {
 	[table_index_range] = {
 		material = string,
 		triangles = {[table_index_range] = Triangle},
 		verticies = {[table_index_range] = Triangle},
 	},
 }
-type util = {}
+local type util = {}
 type util.GetModelMeshes = function=(string, number, number)>(ModelMeshes)
-type WorldToLocal = function=(TVector, TAngle, TVector, TAngle)>(TVector, TAngle)
+local type WorldToLocal = function=(TVector, TAngle, TVector, TAngle)>(TVector, TAngle)
 --[[
     TODO:
     mutating triangles does not error, should it?
@@ -90,7 +90,7 @@ local vec_zero = Vector(0, 0, 0)
 local ang_zero = Angle(0, 0, 0)
 local CACHE = {}
 
-function GetBoneMeshes(ent: Entity, phys_bone: number)
+local function GetBoneMeshes(ent: Entity, phys_bone: number)
 	local mdl = ent:GetModel()
 	CACHE[mdl] = CACHE[mdl] or {}
 	local bg_mask = 0

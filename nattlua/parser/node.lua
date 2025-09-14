@@ -41,7 +41,7 @@ local META = class.CreateTemplate("node")
 	is_expression = boolean,
 	is_statement = boolean,
 }]]
---[[#type Node = META.@Self]]
+--[[#local type Node = META.@Self]]
 local all_nodes = {
 	["sub_statement_table_expression_value"] = function()
 		return {

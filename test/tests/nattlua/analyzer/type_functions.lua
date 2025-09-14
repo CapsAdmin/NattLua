@@ -538,6 +538,9 @@ analyze[[
 
     attest.equal(tl, {x=1337, foo=1})
     attest.equal(bar, 2)
+
+    type foo = nil
+    type bar = nil
 ]]
 analyze[[
     local type tl = {x=1337}
@@ -560,13 +563,17 @@ analyze[[
         foo = 1,
         x={bar=2}
     }|>
+
+    type foo = nil
+    type bar = nil
+    type x = nil
 ]]
 analyze[[
     local ok, err = _ as any | nil, _ as any | nil | string
     attest.equal(assert(ok, err), _ as any)
 ]]
 analyze[[
-    type f = Function
+    local type f = Function
 
     local a, b, c = xpcall(f, f, 1,2,3)
     attest.equal(a, _ as boolean)

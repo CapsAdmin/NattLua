@@ -12,6 +12,9 @@ analyze[[
 
     attest.equal(tl.LoadMode, _ as "b" | "bt" | "t")
     attest.equal(tl.lol, _ as "b" | "bt" | "t")
+
+    type LoadMode = nil
+    type lol = nil
 ]]
 analyze[[
     £parser.TealCompat = true
@@ -25,6 +28,9 @@ analyze[[
     £parser.TealCompat = false
 
     attest.equal(x, _ as {foo = string, bar = number})
+
+    type foo = nil
+    type bar = nil
 ]]
 analyze[[
     £parser.TealCompat = true
@@ -52,6 +58,7 @@ analyze[[
     £parser.TealCompat = false
 
     attest.equal(tl, _ as {load_envs = {[{[any] = any}] = string}})
+    type load_envs = nil
 ]]
 analyze[[
     £parser.TealCompat = true
@@ -65,7 +72,10 @@ analyze[[
 analyze[[
     £parser.TealCompat = true
     type LoadFunction = function(...:any): any...
+    £parser.TealCompat = false
+
     attest.equal<|LoadFunction, Function|>
+    type LoadFunction = nil
 ]]
 analyze[[
     £parser.TealCompat = true
@@ -77,8 +87,10 @@ analyze[[
     local type DirectGraph = {Color:{BagData}}
     £parser.TealCompat = false
     attest.equal<|DirectGraph, {[string] = {[number] = {count = number, color = string}}}|>
+    type count = nil
+    type color = nil
 ]]
-analyze[[
+    analyze[[
     £parser.TealCompat = true
     §analyzer.TealCompat = true
 
@@ -113,4 +125,7 @@ analyze[[
             }
         }
     }|>
+
+    type count = nil
+    type color = nil
 ]]
