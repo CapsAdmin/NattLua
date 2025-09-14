@@ -31,7 +31,6 @@ local function should_expand(arg, contract)
 	return false
 end
 
--- Helper to extract all possible values for an argument
 local function get_all_values(val)
 	if val.Type == "range" then
 		-- extract min and max as separate values like a union, not as a range
@@ -55,28 +54,43 @@ local function get_all_values(val)
 	end
 end
 
--- Generate Cartesian product recursively
-local function generate_combinations(packed_args, argument_options, arg_index)
-	if arg_index > packed_args then
-		return {{}} -- Base case: one empty combination
-	end
-
-	local rest_combinations = generate_combinations(packed_args, argument_options, arg_index + 1)
-	local all_combinations = {}
-
-	for _, value in ipairs(argument_options[arg_index]) do
-		for _, rest in ipairs(rest_combinations) do
-			local combination = {value}
-
-			for _, v in ipairs(rest) do
-				table.insert(combination, v)
+local function generate_combinations_iterative(argument_options)
+	local result = {{}}
+	
+	for arg_index = 1, #argument_options do
+		local new_result = {}
+		local new_index = 1
+		
+		for _, combination in ipairs(result) do
+			for _, value in ipairs(argument_options[arg_index]) do
+				local new_combination = {}
+				for i, v in ipairs(combination) do
+					new_combination[i] = v
+				end
+				new_combination[#combination + 1] = value
+				
+				new_result[new_index] = new_combination
+				new_index = new_index + 1
 			end
+		end
+		
+		result = new_result
+	end
+	
+	return result
+end
 
-			table.insert(all_combinations, combination)
+local max_combinations = 1000
+
+local function is_above_limit(argument_options)
+	local total = 1
+	for i = 1, #argument_options do
+		total = total * #argument_options[i]
+		if total > max_combinations then 
+			return total, true
 		end
 	end
-
-	return all_combinations
+	return total, false
 end
 
 local function unpack_union_tuples(obj, input)
@@ -110,7 +124,12 @@ local function unpack_union_tuples(obj, input)
 	-- If nothing needs expansion, return original arguments
 	if not has_expandable_args then return {packed_args} end
 
-	return generate_combinations(#packed_args, argument_options, 1)
+	local total_combinations, is_above_limit = is_above_limit(argument_options)
+	if is_above_limit then
+		return nil, "too many argument combinations (" .. total_combinations .. " > " .. max_combinations .. ")"
+	end
+
+	return generate_combinations_iterative(argument_options)
 end
 
 local function call_and_collect(analyzer, obj, arguments, ret)
@@ -200,7 +219,14 @@ return function(analyzer, obj, input)
 
 	local ret = Tuple()
 	
-	for _, arguments in ipairs(unpack_union_tuples(obj, input)) do
+	local combinations, error_msg = unpack_union_tuples(obj, input)
+	
+	if not combinations then
+		analyzer:Error({error_msg})
+		return output_signature:Copy()
+	end
+	
+	for _, arguments in ipairs(combinations) do
 		local t = call_and_collect(analyzer, obj, arguments, ret)
 
 		if t then return t end

@@ -126,9 +126,9 @@ do
 	analyzer function bit.extract(n: number, field: number, width: nil | number): number
 		if n:IsLiteral() and field:IsLiteral() then
 			if width and width:IsLiteral() then
-				return bit.extract(n:GetData(), field:GetData(), width:GetData())
+				return bit.band(bit.rshift(n:GetData(), field:GetData()), bit.lshift(1, width:GetData()) - 1)
 			else
-				return bit.extract(n:GetData(), field:GetData())
+				return bit.band(bit.rshift(n:GetData(), field:GetData()), 1)
 			end
 		end
 
