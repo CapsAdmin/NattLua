@@ -253,26 +253,17 @@ end
 
 function cparser.cast(cdecl, src)
 	if cdecl.Type == "string" and cdecl:IsLiteral() then
-		local vars, typs, ctype = analyze(cdecl, "typeof")
-
-		if ctype.Type == "union" then
-			for _, v in ipairs(ctype:GetData()) do
-				if v.Type == "table" then
-					ctype = v
-
-					break
-				end
-			end
-		end
-
-		if ctype.Type == "any" then return ctype end
-
-		ctype:SetMetaTable(ctype)
+		local vars, typs, ctype = analyze(cdecl, "ffinew")
 		return TCData(ctype)
 	elseif cdecl.Type == "function" then
-		local vars, typs, ctype = analyze(LString("void(*)()"), "typeof")
-		return ctype
+		local vars, typs, ctype = analyze(LString("void(*)()"), "ffinew")
+		return TCData(ctype)
 	elseif cdecl.Type == "table" then
+		if src.Type == "string" then
+			local vars, typs, ctype = analyze(LString("const char *"), "ffinew")
+			return TCData(ctype)
+		end
+
 		return src:Copy()
 	end
 end

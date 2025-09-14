@@ -33,7 +33,7 @@ type File = {
 	end,
 	lines = function=(self)>(function=()>(string)),
 	setvbuf = function=(self, mode: "no" | "full" | "line", size: number | nil)>(boolean | nil, string | nil),
-	seek = function=(self, mode: "set" | "cur" | "end", offset: number | nil)>(number | nil, string | nil),
+	seek = function=(self, mode: "set" | "cur" | "end" | nil, offset: number | nil)>(number | nil, string | nil),
 }
 type io.open = function=(string, string | nil)>(nil | File)
 type io.popen = function=(string, string | nil)>(nil | File)

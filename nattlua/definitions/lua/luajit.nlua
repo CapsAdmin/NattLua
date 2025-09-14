@@ -298,7 +298,7 @@ end
 
 SetPreventInputExpansionOnFunction<|ffi.cdef, true|>
 
-analyzer function ffi.cast(cdecl: string | TCType<|any|>, src: any)
+analyzer function ffi.cast(cdecl: string | any, src: string | any)
 	return cdecl_parser.cast(cdecl, src)
 end
 
