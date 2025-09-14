@@ -289,8 +289,13 @@ do
 	end
 
 	function META:GetNearestFunctionScope()
+		if self.CachedFunctionScope then return self.CachedFunctionScope end
+
 		for _, scope in ipairs(self.ParentList) do
-			if scope.returns then return scope end
+			if scope.returns then
+				self.CachedFunctionScope = scope
+				return scope
+			end
 		end
 
 		return self
@@ -441,6 +446,7 @@ function META.New(parent, upvalue_position, obj)
 		{
 			obj = obj,
 			CachedLoopScope = false,
+			CachedFunctionScope = false,
 			Children = {},
 			upvalue_position = upvalue_position or pos,
 			uncertain_function_return = false,
