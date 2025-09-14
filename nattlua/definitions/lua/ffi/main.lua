@@ -2,9 +2,7 @@
 
 run_test("test/tests/nattlua/c_declarations/cdef.nlua")
 run_test("test/tests/nattlua/c_declarations/parsing.lua")
-run_test("test/tests/nattlua/analyzer/typed_ffi.lua")
-run_lua("examples/projects/luajit/build.lua", path)
-run_lua("examples/projects/love2d/nlconfig.lua", path)
+run_test("test/tests/nattlua/c_declarations/typed_ffi.lua")
 
 ]]
 local pcall = _G.pcall
@@ -247,7 +245,7 @@ function cparser.reset()
 	types = Table()
 	local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	--analyzer:ErrorIfFalse(env.typesystem.ffi:Set(ConstString("C"), Table()))
+	env.runtime.ffi:ClearMutations()
 	analyzer:ErrorIfFalse(env.runtime.ffi:Set(ConstString("C"), Table()))
 end
 

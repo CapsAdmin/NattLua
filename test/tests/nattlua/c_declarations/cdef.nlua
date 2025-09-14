@@ -13,9 +13,6 @@ end
 
 local function reset()
 	§require("nattlua.definitions.lua.ffi.main").reset()
-
-	local ffi = require("ffi")
-	ffi.C = {}
 end
 
 do
