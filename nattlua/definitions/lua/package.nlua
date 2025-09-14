@@ -1,8 +1,18 @@
+-- Package loader function type - returns either a loader function or error message + optional path
+type PackageLoader = function=(modname: string)>(Function | nil, string | nil)
+-- Searcher function type - searches for a module and returns loader or nil + error message  
+type PackageSearcher = function=(modname: string)>(PackageLoader | nil, string | nil)
 type package = {
-	searchpath = function=(name: string, path: string, sep: string | nil, rep: string | nil)>(string | nil, string | nil),
-	seeall = function=(module: Table)>(nil),
-	loadlib = function=(libname: string, funcname: string)>(AnyFunction | nil),
-	config = "/\n;\n?\n!\n-\n",
+	config = string,
 	path = string,
+	cpath = string,
 	loaded = Map<|string, any|>,
+	searchers = List<|PackageSearcher|>,
+	preload = Map<|string, PackageLoader|>,
+	searchpath = function=(
+		name: string, -- module name to search for
+		path: string, -- search path template with ? placeholders
+		sep: string | nil, -- separator to replace in name (default: '.')
+		rep: string | nil -- replacement for separator (default: system path separator)
+	)>(string | nil, string | nil), -- returns (filepath | nil, error_message | nil)
 }
