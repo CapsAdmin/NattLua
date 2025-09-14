@@ -10,6 +10,8 @@ return function(...)
 	local io_write = _G.HOTRELOAD and function(...) end or io.write
 	local pcall = _G.pcall
 	local table = _G.table
+	local collectgarbage = _G.collectgarbage
+	local colors = require("nattlua.cli.colors")
 	require("test.environment")
 
 	local function find_tests(path)
@@ -79,18 +81,47 @@ return function(...)
 	local function format_time(seconds)
 		local str = ("%.3f"):format(seconds)
 
-		if seconds > 0.5 then return "\x1b[0;31m" .. str .. " seconds\x1b[0m" end
+		if seconds > 0.5 then return colors.red(str .. "s") end
 
-		return str
+		return str .. "s"
+	end
+
+	local function format_gc(kb)
+		if kb > 1024 then
+			local str = ("%.2f MB"):format(kb / 1024) 
+			if kb > 10 * 1024 then return colors.red(str) end
+		end
+
+		return ("%.2f KB"):format(kb)
+	end
+
+	local function run_func(func, ...)
+		local time = get_time()
+		local gc = collectgarbage("count")
+		func(...)
+		gc = collectgarbage("count") - gc
+		local diff = get_time() - time
+		io_write("\t", format_time(diff), " and ", format_gc(gc), "\n")
+		return diff, gc
 	end
 
 	local total = 0
+	local total_gc = 0
 	local time_taken_before_tests = os.clock()
 
 	if STARTUP_PROFILE then
 		io_write("== startup profiling == :")
 		profiler.Stop()
 		io_write("== == :")
+	end
+
+	local i = 0
+	function _G.loading_indicator()
+		if i % 4 == 0 then 
+			io_write(colors.dim("."))
+			io.flush()
+		end
+		i = i + 1
 	end
 
 	if not _G.HOTRELOAD then profiler.Start() end
@@ -108,27 +139,23 @@ return function(...)
 
 			for _, path in ipairs(tests) do
 				if path:sub(-4) == ".lua" then
-					io_write((path:gsub("test/tests/", "")), " ")
+					io_write((path:gsub("test/tests/", "")), "\t")
 					local func = assert(loadfile(path))
-					local time = get_time()
-					func()
-					local diff = get_time() - time
-					total = total + diff
-					io_write(" ", format_time(diff), " seconds\n")
+					local time, gc = run_func(func)
+					total = total + time
+					total_gc = total_gc + gc
 				end
 			end
 
 			for _, path in ipairs(tests) do
 				if path:sub(-5) == ".nlua" then
-					io_write((path:gsub("test/tests/", "")), " ")
+					io_write((path:gsub("test/tests/", "")), "\t")
 					local f = assert(io.open(path, "r"))
 					local str = assert(f:read("*all"))
 					f:close()
-					local time = get_time()
-					analyze(str)
-					local diff = get_time() - time
-					total = total + diff
-					io_write(" ", format_time(diff), " seconds\n")
+					local time, gc = run_func(analyze, str)
+					total = total + time
+					total_gc = total_gc + gc
 				end
 			end
 		end
@@ -143,6 +170,7 @@ return function(...)
 			format_time(time_taken_before_tests),
 			" seconds\n"
 		)
+		io_write("total memory allocated during tests: ", format_gc(total_gc), "\n")
 	end
 --[=[
 if ALL_NODES then
