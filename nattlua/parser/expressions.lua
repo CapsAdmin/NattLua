@@ -1096,31 +1096,10 @@ return function(META)
 			return node or false
 		end
 
-		function META:IsRuntimeExpression()
-			local token = self:GetToken()
-			return not (
-				token.type == "end_of_file" or
-				token.value == "}" or
-				token.value == "," or
-				token.value == "]" or
-				token.value == ")" or
-				(
-					(
-						runtime_syntax:IsKeyword(token) or
-						runtime_syntax:IsNonStandardKeyword(token)
-					) and
-					not runtime_syntax:IsPrefixOperator(token)
-					and
-					not runtime_syntax:IsValue(token)
-					and
-					token.value ~= "function"
-				)
-			)
-		end
-
 		function META:ExpectRuntimeExpression(priority--[[#: number]])
-			if not self:IsRuntimeExpression() then
-				local token = self:GetToken()
+			local token = self:GetToken()
+
+			if not runtime_syntax:IsRuntimeExpression(token) then
 				self:Error(
 					"expected beginning of expression, got $1",
 					nil,

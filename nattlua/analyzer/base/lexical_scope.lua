@@ -221,9 +221,7 @@ function META:SetLoopIteration(i)
 end
 
 function META:FindLoopIteration()
-	for _, scope in ipairs(self.ParentList) do
-		if scope.loop_iteration ~= false then return scope.loop_iteration end
-	end
+	return self:GetNearestLoopScope().loop_iteration
 end
 
 function META:GetStatementType()
@@ -231,6 +229,8 @@ function META:GetStatementType()
 end
 
 function META.BelongsToIfStatement(a, b)
+	if not a.statement or not b.statement then return false end
+
 	local yes = a:GetStatementType() == "statement_if" and
 		b:GetStatementType() == "statement_if" and
 		a.statement == b.statement
@@ -245,8 +245,13 @@ function META.BelongsToIfStatement(a, b)
 end
 
 function META:FindFirstConditionalScope()
+	if self.CachedConditionalScope then return self.CachedConditionalScope end
+
 	for _, scope in ipairs(self.ParentList) do
-		if scope.ConditionalScope ~= nil then return scope end
+		if scope.ConditionalScope ~= nil then
+			self.CachedConditionalScope = scope
+			return scope
+		end
 	end
 end
 
@@ -298,6 +303,7 @@ do
 			end
 		end
 
+		self.CachedFunctionScope = self
 		return self
 	end
 
@@ -311,6 +317,7 @@ do
 			end
 		end
 
+		self.CachedLoopScope = self
 		return self
 	end
 
@@ -330,6 +337,8 @@ do
 		if from == self then return false end
 
 		if self:BelongsToIfStatement(from) then return true end
+
+		if self:Contains(from) then return false end
 
 		for _, scope in ipairs(self.ParentList) do
 			if scope == from then break end

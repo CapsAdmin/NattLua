@@ -46,7 +46,8 @@ function META.New()
 			BinaryOperatorFunctionTranslate = {},
 			PostfixOperatorFunctionTranslate = {},
 			PrefixOperatorFunctionTranslate = {},
-		}, true
+		},
+		true
 	)
 end
 
@@ -286,6 +287,28 @@ function META:GetTokenType(tk--[[#: Token]])
 	end
 
 	return tk.type
+end
+
+function META:IsRuntimeExpression(token--[[#: Token]])
+	if token.type == "end_of_file" then return false end
+
+	return (
+			token.value ~= "}" and
+			token.value ~= "," and
+			token.value ~= "]" and
+			token.value ~= ")" and
+			not (
+				(
+					self:IsKeyword(token) or
+					self:IsNonStandardKeyword(token)
+				) and
+				not self:IsPrefixOperator(token)
+				and
+				not self:IsValue(token)
+				and
+				token.value ~= "function"
+			)
+		)
 end
 
 return META

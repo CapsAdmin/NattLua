@@ -469,9 +469,7 @@ return {
 			self:PushCurrentType(cur_union, "union")
 			local l = self:Assert(self:AnalyzeExpression(node.left))
 			local r = self:Assert(self:AnalyzeExpression(node.right))
-
-			if cur_union then self:PopCurrentType("union") end
-
+			self:PopCurrentType("union")
 			cur_union:AddType(l)
 			cur_union:AddType(r)
 			return cur_union

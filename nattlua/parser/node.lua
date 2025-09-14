@@ -18,8 +18,8 @@ local META = class.CreateTemplate("node")
 	Type = string,
 	Code = Code,
 	tokens = Map<|string, false | Token | List<|Token|>|>,
-	inferred_types = List<|any|>,
-	inferred_types_done = Map<|any, any|>,
+	inferred_types = false | List<|any|>,
+	inferred_types_done = false | Map<|any, any|>,
 	environment = "typesystem" | "runtime",
 	parent = false | self,
 	code_start = number,
@@ -878,8 +878,8 @@ function META.New(
 	init.code_stop = code_stop
 	init.parent = parent
 	init.Code = code
-	init.inferred_types = {}
-	init.inferred_types_done = {}
+	init.inferred_types = false
+	init.inferred_types_done = false
 	--
 	init.scope = false
 	init.scopes = false
@@ -1056,6 +1056,9 @@ local NAN_TYPE = {}
 local ANY_TYPE = {}
 
 function META:AssociateType(obj)
+	self.inferred_types_done = self.inferred_types_done or {}
+	self.inferred_types = self.inferred_types or {}
+
 	do
 		local t = obj.Type
 		local hash = obj
@@ -1081,10 +1084,12 @@ function META:AssociateType(obj)
 end
 
 function META:GetAssociatedTypes()
+	self.inferred_types = self.inferred_types or {}
 	return self.inferred_types
 end
 
 function META:GetLastAssociatedType()
+	self.inferred_types = self.inferred_types or {}
 	return self.inferred_types[#self.inferred_types]
 end
 
