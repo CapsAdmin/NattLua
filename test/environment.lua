@@ -60,8 +60,7 @@ do
 		local name = info.source:match("(test/tests/.+)") or info.source
 
 		if not _G.HOTRELOAD then
-			io.write(".")
-			io.flush()
+			_G.loading_indicator()
 		end
 
 		_G.TEST = true
