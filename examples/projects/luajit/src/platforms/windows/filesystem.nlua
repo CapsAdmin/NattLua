@@ -124,7 +124,7 @@ do
 	)
 	local dot = string.byte(".")
 
-	local function is_dots(ptr: ffi.new("const char *")) -- todo: maybe FFIArray<|12, number|> should be ok to pass when the argument contract is FFIArray<|3, number|> , because it's at least 3 in length
+	local function is_dots(ptr: ffi.new("const char *"))
 		if ptr[0] == dot then
 			if ptr[1] == dot and ptr[2] == 0 then return true end
 

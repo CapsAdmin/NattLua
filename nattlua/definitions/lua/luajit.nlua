@@ -140,30 +140,6 @@ function TCType<|T: ConstructorArgument|>
 	}
 end
 
-function FFICtype<|obj: any|>
-	local type t = TypeName<|obj|>
-
-	if t == "any" then return obj end
-
-	if t == "table" then
-		local type self = obj
-		obj.__call = function(self: ref any, init: ref nil | Partial<|obj|>)
-			return copy<|self|>
-		end
-		obj.@MetaTable = obj
-	end
-
-	return obj
-end
-
-function FFIPointer<|T: any|>
-	return {[number] = T}
-end
-
-function FFIArray<|size: number, T: any|>
-	return {[0 .. size - 1] = T}
-end
-
 type cdata = TCData<|any|>
 type Modules["ffi"] = {
 	errno = function=(nil | number)>(number),
@@ -334,10 +310,6 @@ end
 
 analyzer function ffi.gc(obj: cdata, callback: Function)
 	return obj
-end
-
-function FFIType<|str: string|>
-	return number
 end
 
 type ffi.string = function=(TCData<|{[number] = number}|> | string, TCData<|number|> | number | nil)>(string)

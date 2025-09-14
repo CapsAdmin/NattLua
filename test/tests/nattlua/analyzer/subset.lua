@@ -13,9 +13,9 @@ attest.subset_of<|
 		},
 	}
 |>
-attest.subset_of<|FFIArray<|1, {foo = number}|>, FFIPointer<|{foo = number}|>|>
+attest.subset_of<|ffi.new<|"struct {int foo;}[1]"|>, ffi.new<|"struct {int foo;}*"|>|>
 attest.expect_diagnostic<|"error", "subset"|>
-attest.subset_of<|FFIPointer<|{foo = number}|>, FFIArray<|1, {foo = number}|>|>
+attest.subset_of<|ffi.new<|"struct {int foo;}*"|>, ffi.new<|"struct {int foo;}[1]"|>|>
 attest.expect_diagnostic<|"error", "subset"|>
 attest.subset_of<|{foo = true, bar = false, faz = 1}, List<|any|>|>
 attest.expect_diagnostic<|"error", "subset"|>

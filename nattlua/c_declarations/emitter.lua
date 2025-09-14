@@ -68,6 +68,7 @@ do
 	end
 
 	function META:EmitNattluaCDeclaration(node)
+		error("to be implemented")
 		self.skip_emit[node.tokens["potential_identifier"]] = true
 
 		while node.expression do -- find the inner most expression
@@ -83,17 +84,17 @@ do
 
 			for i, v in ipairs(out) do
 				if v.type == "array" then
-					table.insert(str, "FFIArray<|" .. (v.size or "inf") .. ",")
+					table.insert(str, "TCType<|{[0 .. " .. (v.size or "inf") .. "] = ")
 					opened = opened + 1
 				end
 
 				if v.type == "pointer" then
-					table.insert(str, "FFIPointer<|")
+					table.insert(str, "TCType<|{[number] =")
 					opened = opened + 1
 				end
 
 				if v.type == "modifier" then
-					table.insert(str, "FFIType<|\"" .. table.concat(v.value, " ") .. "\"|>")
+					table.insert(str, "TCType<|\"" .. table.concat(v.value, " ") .. "\"|>")
 				end
 
 				if v.type == "function" then

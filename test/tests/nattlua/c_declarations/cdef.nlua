@@ -65,17 +65,15 @@ do
 	local vars, typs = cdef[[
 		unsigned long long * volatile (* (* *NAME [1][2])(char *))[3][4];
 	]]
-	attest.equal(vars.NAME, _ as FFIArray(
-		1,
-		FFIArray(
-			2,
-			FFIPointer(
-				FFIPointer(
-					function=(FFIPointer(number))>(FFIPointer(FFIArray(3, FFIArray(4, FFIPointer(number)))))
-				)
-			)
-		)
-	))
+	attest.equal(vars.NAME, _ as {
+		[0] = {
+			[0 .. 1] = {
+				[number] = {
+					[number] = function=({[number] = number})>({[number] = {[0 .. 2] = {[0 .. 3] = {[number] = number}}}}),
+				},
+			},
+		},
+	})
 end
 
 do
