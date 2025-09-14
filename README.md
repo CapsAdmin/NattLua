@@ -1,25 +1,30 @@
 # About
 
-NattLua is a superset of LuaJIT that introduces a typesystem. The typesystem aims to provide, by default, precise code analysis, while allowing you to optionally constrain variables with types.
-
-The typesystem itself follows the same philosophy and feel as Lua; built on simple primitives that can be extended with type functions.
+NattLua is variant of LuaJIT with optional types. The main goal is to provide a complete picture of how a program might run or fail in all possible paths.
 
 There is a [playground](https://capsadmin.github.io/NattLua/) you can try. It supports hover type information and other diagnostics.
 
-Complex type structures, such as array-like tables, map-like tables, metatables, and more are supported:
+Here are some examples:
 
 ```lua
+local x = 1 -- literal number 1
+x = x + 1 -- x is now 2
+
+local x: number = 1 -- wide number 1
+x = x + 1 -- x is still number
+
 local list: {[number] = string | nil} = {} -- -1 index is alllowed
-local list: {[number] = string} | {} = {} -- same as the above, but expressed differently
+local list: {[number] = string} | {} = {} -- same as the above, but expressed another way
 local list: {[1..inf] = string | nil} = {} -- only 1..inf index is allowed
 
 local map: {[string] = string | nil} = {} -- any string index is allowed
-local map: {foo = string, bar = string} = {foo = "hello", bar = "world"} -- only foo and bar is allowed as keys, but value can be of any string type
+local map: {foo = string, bar = string} = {foo = "hello", bar = "world"} -- only foo and bar is allowed as keys, but values can be any string
 
-local a = "fo" -- a is literally "fo", and not string, because we don't specify a contract
+local a = "fo" -- a is a string literal "fo", and not the wide type string
 local b = string.char(string.byte("o")) -- these are type functions that take in literal and non literal types
 local map = {}
 map[a..b] = "hello"
+
 -- this print call is a typesystem call, this will be ommitted when transpiling back to LuaJIT
 print<|map|> -- >> {foo = "hello"}
 ```
@@ -53,11 +58,11 @@ local new_vector = Vector(1,2,3) + Vector(100,100,100) -- OK
 
 It aims to be compatible with LuaJIT as a frst class citizen, but also 5.1, 5.2, 5.3, 5.4 and Garry's Mod Lua (a variant of Lua 5.1).
 
-The `build_output.lua` file is a bundle of this project that can be required in your project. It also should work in garry's mod.
+The `build_output.lua` file is a bundle of this project that can be require()'d in your project. It also should work in garry's mod, though type definitions there are lacking.
 
 # Code analysis and typesystem
 
-The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level, and can take take multiple branches if its not sure about if conditions, loops and so on. If everything is known about a program and you didn't add any types, you may get the actual output at type-check time.
+The analyzer works by evaluating the syntax tree. It runs similar to how Lua runs, but on a more general level, and can take take multiple paths when "if" conditions and loops are uncertain. If everything is known about a program and you didn't add any types, you may get the actual output during analysis.
 
 ```lua
 local cfg = [[
@@ -88,56 +93,58 @@ print<|tbl|>
 
 The `ref` keyword means that the `cfg` variable should be passed in as a type reference. This is similar to how type arguments in a generic function is passed to the function itself. If we removed the `ref` keyword, the output of the function is be inferred to be `{ string = string }` because `str` would become a non literal string.
 
-We can also add a return type to `parse` by writing `parse(str: ref string): {[string] = string}`, but if you don't it will be inferred.
+We can also add a return type to `parse` by writing `function parse(str: ref string): {[string] = string}` to help constrain the ouput, but if you don't it will be inferred. The the `ref` keyword is also supported on the return type so that you may get the literal output, serving as a typical generic function.
 
 When the analyzer detects an error, it will try to recover from the error and continue. For example:
 
 ```lua
-local obj: nil | (function(): number)
-local x = obj()
-local y = x + 1
+local func = nil
+if math.random() > 0.5 then func = function() return 1336 end end
+-- func is now the type: nil | function=()>(1336)
+local x = func() -- error calling a nil value, but the value is 1336
+local y = x + 1 -- y is 1337
 ```
 
-This code will report an error about potentially calling a nil value. Internally the analyzer would duplicate the current state, remove nil from the union `nil | (function(): number)` and continue.
+When the analyser reports an error in this case, it would would branch out, creating a scope where nil is removed from the union `nil | (function(): number)` after the call and continue.
 
 # Current status and goals
 
-My long term goal is to develop a capable language to use for my other projects (such as [goluwa](https://github.com/CapsAdmin/goluwa)).
+My long term goal is to develop a language to use for my other projects (such as [goluwa](https://github.com/CapsAdmin/goluwa)).
 
 At the moment I focus strongly on type inference correctness, adding tests and keeping the codebase maintainable.
 
-I'm also in the middle of bootstrapping the project with comment types. So far the lexer part of the project and some other parts are typed and is part of the test suite.
+I'm also working on bootstrapping the project with comment types. So far the lexer part of the project and some other parts are typed and is part of the test suite.
 
 # Types
 
-Fundamentally the typesystem consists of number, string, table, function, symbol, union, tuple and any. Tuples and unions exist only in the typesystem. Symbols are things like true, false, nil, etc.
+Fundamentally the typesystem consists of number, string, table, function, symbol, range, union, tuple and any. Tuples and unions and ranges exist only in the typesystem. Symbols are things like true, false, nil, etc.
 
-These types can also be literals, so as a showcase example we can describe the fundamental types like this:
+Most types can go from wide, narrow and literal, so as a showcase example we can describe the fundamental types like this:
 
 ```lua
 local type Boolean = true | false
-local type Number = -inf .. inf | nan
+local type Number = -inf..inf | nan
 local type String = $".*"
-local type Any = Number | Boolean | String | nil
+local type AnyValue = Number | Boolean | String | nil
 
--- nil cannot be a key in tables
-local type Table = { [exclude<|Any, nil|> | self] = Any | self }
+-- nil and nan cannot be used as a key
+-- self means the current table type, useful for recursive type declarations
+local type Table = { [AnyValue ~ (nan | nil) | self] = AnyValue | self }
 
--- extend the Any type to also include Table
-type Any = Any | Table
+local type AnyValueWithTable = AnyValue | Table
 
 -- CurrentType is a type function that lets us get the reference to the current type we're constructing
-local type Function = function=(...Any | CurrentType<|"function"|>)>(...Any | CurrentType<|"function"|>)
+local type Function = function=(...AnyValueWithTable | CurrentType<|"function"|>)>(...AnyValueWithTable | CurrentType<|"function"|>)
 
--- extend the Any type to also include Function
-type Any = Any | Function
+-- declare the global type
+type Any = AnyValueWithTable | Function
 ```
 
 So here all the PascalCase types should have semantically the same meaning as their lowercase counter parts.
 
 # Numbers
 
-From narrow to wide
+From literal > narrow > wide
 
 ```lua
 type N = 1
@@ -175,11 +182,11 @@ local qux: N = 0/0
       ^^^: nan is not a subset of -inf .. inf
 ```
 
-The logical progression is to define N as `-inf .. inf | nan` but that has semantically the same meaning as `number`
+The logical progression would be defining N as `-inf .. inf | nan` but that has semantically the same meaning as `number`
 
 # Strings
 
-Strings can be defined as lua string patterns to constrain them:
+Strings can be defined more narrowly as lua string patterns:
 
 ```lua
 local type MyString = $"FOO_.-"
@@ -189,7 +196,7 @@ local b: MyString = "lol"
                     ^^^^^ : the pattern failed to match
 ```
 
-A narrow value:
+A literal value:
 
 ```lua
 type foo = "foo"
@@ -229,11 +236,14 @@ local type MyTable = {
         [any] = any
     }
 }
+
+-- extend the type
+type MyTable.bar = number
 ```
 
 # Unions
 
-A Union is a type separated by `|` I feel these tend to show up in uncertain conditions.
+A Union is a type separated by `|` These tend to show up in uncertain conditions.
 
 For example this case:
 
@@ -266,6 +276,7 @@ if true then
     -- x is 1 here
 end
 -- x is still 1 here because the mutation = 1 occured in a certain branch
+-- we would also get a warning saying the branch is always truthy
 ```
 
 This happens because `true` is true as opposed to `true | false` and so there's no uncertainty in executing the if block.
@@ -335,7 +346,7 @@ local list: Array<|number, 3|> = {1, 2, 3, 4}
                                  ^^^^^^^^^^^^: 4 is not a subset of 1..3
 ```
 
-In type functions, the type is by default passed by reference. So `T: any` does not meant that T will be any. It just means that T is allowed to be anything.
+In type functions, the type is by default passed by reference. So `T: any` does not mean that T will be any in the function body. It just means that T is allowed to be anything.
 
 In Typescript it would be something like
 
@@ -363,15 +374,14 @@ names[-1] = "faz"
 
 ## ffi.cdef parse errors to type errors
 
-ffi functions including cdef are already typed, but to showcase how we might throw parsing errors to the type system we can do the following:
+In NattLua, ffi type definitions are mostly complete. There is a c declaration parser and type definitions for ctype and cdata, 
+but to showcase analyzer functions, here's an example of a minimal but useful ffi.def definition:
 
 ```lua
 analyzer function ffi.cdef(c_declaration: string)
-    -- this requires using analyzer functions
-
     if c_declaration:IsLiteral() then
         local ffi = require("ffi")
-        ffi.cdef(c_declaration:GetData()) -- if this function throws it's propagated up to the compiler as an error
+        ffi.cdef(c_declaration:GetData()) -- if cdef throws an error, it's propagated up to the compiler as an error
     end
 end
 
@@ -430,7 +440,7 @@ local func = build_summary_function({
     -> | myfunc:3:14 : expected assignment or call expression got ❲symbol❳ (❲!❳)
 ```
 
-This works because there is no uncertainty about the code generated passed to the load function. If we did `body = "sum = sum + 1" .. (unknown_global as string)`, that would make the table itself become uncertain so that table.concat would return `string` and not the actual results of the concatenation.
+This works because there is no uncertainty about the code generated passed to the load function. If we wrote `body = "sum = sum + 1" as string`, it would widen the body value in the table so, which in turn would cause table.concat return `string` and not the actual results of the concatenation.
 
 ## anagram proof
 
@@ -449,9 +459,9 @@ assert(anagram == "SLEEP")
 print<|anagram|> -- >> "SLEEP"
 ```
 
-This is true because `anagram` becomes a union of all possible letter combinations which contains the string "SLEEP".
+This is true because `anagram` becomes a union of all possible letter combinations which also contains the string "SLEEP".
 
-It's also false as it contains all the other combinations, but since we use assert to check the result at runtime, it will silently "error" and mutate anagram to become "SLEEP" after the assertion.
+However, it's also false as it contains all the other combinations, but since we use assert to check the result at runtime, it will silently "error" and mutate the anagram upvalue to become "SLEEP" after the assertion.
 
 If we did assert<|anagram == "SLEEP"|> (a type call) it would error, because the typesystem operates more literally.
 
@@ -465,7 +475,7 @@ As a learning experience I wrote the lexer and parser trying not to look at exis
 - Both single-line C comments (from GLua) and the Lua 5.4 division operator can be used in the same source file.
 - Transpiles bitwise operators, integer division, \_ENV, etc down to valid LuaJIT code.
 - Supports inline importing via require, loadfile, and dofile.
-- Supports teal syntax, but does not currently support its scoping rules.
+- Supports teal syntax, however the analyser does not currently support its scoping rules.
 
 I have not fully decided the syntax for the language and runtime semantics for lua 5.3/4 features. But I feel this is more of a detail that can easily be changed later.
 
@@ -483,9 +493,11 @@ To install run `luajit nattlua.lua install`
 
 If you install you'd get the binary `nattlua` which behaves the same as `luajit nattlua.lua ...`
 
-I've setup vscode to run the task `onsave` when a file is saved with the plugin `gruntfuggly.triggertaskonsave`. This runs `on_editor_save.lua` which has some logic to choose which files to run when modifying project.
+I've setup vscode to run the task `onsave` when a file is saved with the plugin `pucelle.run-on-save`. This runs `on_editor_save.lua` which has some logic to choose which files to run when modifying project.
 
-I also locally have a file called `test_focus.nlua` in root which will override the test suite when the file is not empty. This makes it easier to debug specific tests and code.
+There is also some hotreload comment syntax which can let you specify which tests to run when saving a file, along with hotreload.lua scripts that specify how any file in the directory and sub directories will be ran when saved.
+
+I also locally have a file called `test_focus.nlua` in root which will override hotreload logic when the file is not empty. This makes it easier to debug specific tests and code.
 
 Some debug language features are:
 
@@ -506,10 +518,10 @@ local x = 1337
 
 # Similar projects
 
-[Teal](https://github.com/teal-language/tl) is a language similar to this which has a more pragmatic approach. I'm thinking a nice goal is that I can contribute what I've learned here, be it through tests or other things.
+[Teal](https://github.com/teal-language/tl) has a more pragmatic and stricter approach when it comes to type inference.
 
-[Luau](https://github.com/Roblox/luau) is another project similar to this, but I have not looked so much into it yet.
+[Luau](https://github.com/Roblox/luau) Similar to teal, but closer to typescript in syntax for types.
 
-[sumneko lua](https://github.com/sumneko/lua-language-server) a language server for lua that supports analyzing lua code. It a typesystem that can be controlled by using comments.
+[sumneko lua](https://github.com/sumneko/lua-language-server) a language server for lua that supports analyzing lua code. It has a typesystem that can be controlled by using comments.
 
 [EmmyLua](https://github.com/EmmyLua/VSCode-EmmyLua) Similar to sumneko lua.
