@@ -1,7 +1,6 @@
 local table = _G.table
 local ipairs = ipairs
 local Tuple = require("nattlua.types.tuple").Tuple
-local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local type_errors = require("nattlua.types.error_messages")

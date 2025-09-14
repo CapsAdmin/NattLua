@@ -303,9 +303,7 @@ function META.IsNotSubsetOfTuple(a--[[#: TTuple]], b--[[#: TTuple]])
 	for i = 1, math.max(a:GetMinimumLength2(), b:GetMinimumLength2()) do
 		local ok, reason, a_val, b_val, offset = a.IsSubsetOfTupleAtIndex(a, b, i)
 
-		if not ok then
-			table.insert(errors, {reason, a_val, b_val, offset})
-		end
+		if not ok then table.insert(errors, {reason, a_val, b_val, offset}) end
 	end
 
 	return errors[1] and errors or nil
@@ -746,9 +744,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 		}
 	)
 
-	if data and data[1] then 
-		self:SetTable(data)
-	end
+	if data and data[1] then self:SetTable(data) end
 
 	return self
 end
@@ -759,51 +755,5 @@ return {
 		local self = META.New({t})
 		self:SetRepeat(math.huge)
 		return self
-	end,
-	NormalizeTuples = function(types--[[#: List<|TBaseType|>]])
-		local arguments
-
-		if #types == 1 and types[1] and types[1].Type == "tuple" then
-			arguments = types[1]
-		else
-			local temp = {}
-
-			for i, v in ipairs(types) do
-				if v.Type == "tuple" then
-					if i == #types then
-						table.insert(temp, v)
-					else
-						local obj = v:GetWithNumber(1)
-
-						if obj then table.insert(temp, obj) end
-					end
-				else
-					table.insert(temp, v)
-				end
-			end
-
-			local old_temp = temp
-			arguments = META.New(temp)
-			local temp = {}
-
-			for i = 1, 128 do
-				local v, is_inf = arguments:GetAtTupleIndex(i)
-
-				if v and v.Type == "tuple" or is_inf then
-					-- inf tuple
-					temp[i] = v or Any()
-
-					break
-				end
-
-				if not v then break end
-
-				temp[i] = v
-			end
-
-			arguments = META.New(temp)
-		end
-
-		return arguments
 	end,
 }

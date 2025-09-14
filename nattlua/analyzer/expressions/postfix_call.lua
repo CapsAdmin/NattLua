@@ -1,31 +1,78 @@
 local table = _G.table
 local math_huge = _G.math.huge
 local ipairs = _G.ipairs
-local NormalizeTuples = require("nattlua.types.tuple").NormalizeTuples
 local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
 local Nil = require("nattlua.types.symbol").Nil
 local AnalyzeImport = require("nattlua.analyzer.expressions.import").AnalyzeImport
 
+local function normalize_tuples(self, callable, types)
+	local is_typesystem = self:IsTypesystem()
+
+	if
+		#types == 1 and
+		types[1].Type == "tuple" and
+		(
+			not is_typesystem or
+			callable:GetInputSignature():GetTupleLength() == math_huge
+		)
+	then
+		return types[1]
+	end
+
+	if is_typesystem then return Tuple(types) end
+
+	local temp = {}
+	local temp_i = 1
+
+	for i, v in ipairs(types) do
+		if v.Type == "tuple" then
+			if i == #types then
+				temp[temp_i] = v
+				temp_i = temp_i + 1
+			else
+				local obj = v:GetWithNumber(1)
+
+				if obj then
+					temp[temp_i] = obj
+					temp_i = temp_i + 1
+				end
+			end
+		else
+			temp[temp_i] = v
+			temp_i = temp_i + 1
+		end
+	end
+
+	if #temp == 1 and temp[1].Type ~= "tuple" and temp[1].Type ~= "union" then
+		return Tuple({temp[1]})
+	end
+
+	local arguments = Tuple(temp)
+	temp = {}
+
+	for i = 1, 128 do
+		local v, is_inf = arguments:GetAtTupleIndex(i)
+
+		if v and v.Type == "tuple" or is_inf then
+			-- inf tuple
+			temp[i] = v or Any()
+
+			break
+		end
+
+		if not v then break end
+
+		temp[i] = v
+	end
+
+	return Tuple(temp)
+end
+
 local function postfix_call(self, self_arg, node, callable)
 	local types = {self_arg}
 	self:AnalyzeExpressions(node.expressions, types)
-	local arguments
-
-	if self:IsTypesystem() then
-		if
-			#types == 1 and
-			types[1].Type == "tuple" and
-			callable:GetInputSignature():GetTupleLength() == math_huge
-		then
-			arguments = types[1]
-		else
-			arguments = Tuple(types)
-		end
-	else
-		arguments = NormalizeTuples(types)
-	end
-
+	local arguments = normalize_tuples(self, callable, types)
 	self:PushCurrentExpression(node)
 	local ret, err = self:Call(callable, arguments, node)
 	self:PopCurrentExpression()

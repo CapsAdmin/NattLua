@@ -485,23 +485,32 @@ return function(self, obj, input)
 	local output
 
 	do
-		local union = Union()
+		local union = {}
 
-		for _, ret in ipairs(returns) do
+		for i, ret in ipairs(returns) do
 			if #ret.types == 1 then
-				union:AddType(ret.types[1])
+				union[i] = ret.types[1]
 			elseif #ret.types == 0 then
-				local tup = Tuple({Nil()})
-				union:AddType(tup)
+				union[i] = Nil()
 			else
-				local tup = Tuple(ret.types)
-				union:AddType(tup)
+				union[i] = Tuple(ret.types)
 			end
 		end
-
-		output = union:Simplify()
-
-		if output.Type ~= "tuple" then output = Tuple({output}) end
+		
+		if #union == 1 then
+			if union[1].Type == "tuple" then
+				output = union[1]
+			elseif union[1].Type == "union" then
+				output = union[1]
+				output = output:Simplify()
+				if output.Type ~= "tuple" then output = Tuple({output}) end
+			else
+				output = Tuple({union[1]})
+			end
+		else
+			output = Union(union):Simplify()
+			if output.Type ~= "tuple" then output = Tuple({output}) end
+		end
 	end
 
 	if not obj:IsExplicitOutputSignature() then
