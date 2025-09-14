@@ -236,7 +236,7 @@ end
 
 function META:LexString(str--[[#: string]], config--[[#: nil | any]])
 	config = config or {}
-	local code = Code(str, config.file_path)
+	local code = Code(str, config.file_path or str:sub(1, 20))
 	local lexer = Lexer(code)
 	lexer.OnError = self.OnError
 	local ok, tokens = xpcall(lexer.GetTokens, debug.traceback, lexer)
