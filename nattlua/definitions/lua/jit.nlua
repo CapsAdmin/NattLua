@@ -1,0 +1,106 @@
+type jit_attach_bc = function=(func: Function--[[the function that's just been recorded]]
+)>(nil)
+type jit_attach_trace = function=(
+	what: "flush" | "start" | "stop" | "abort", -- a description of the trace event
+	tr: number, -- the trace number, not available for flush
+	func: Function, -- the function being traced, available for start and abort
+	pc: number, -- the program counter - the bytecode number of the function being recorded (if this a Lua function), available for start and abort
+	otr: number, -- start: the parent trace number if this is a side trace, abort: abort code
+	oex: number | string -- start: the exit number for the parent trace, abort: abort reason (string)
+)>(nil)
+type jit_attach_record = function=(
+	tr: number, -- the trace number, not available for flush
+	func: Function, -- the function being traced, available for start and abort
+	pc: number, -- the program counter - the bytecode number of the function being recorded (if this a Lua function), available for start and abort
+	depth: number -- the depth of the inlining of the current bytecode
+)>(nil)
+type jit_attach_texit = function=(
+	tr: number, -- the trace number, not available for flush
+	ex: number, -- the exit number
+	ngpr: number, -- the number of general-purpose and floating point registers that are active at the exit
+	nfpr: number -- the number of general-purpose and floating point registers that are active at the exit
+)>(nil)
+type Modules["jit.opt"] = {
+	start = function=(...string)>(nil),
+}
+type jit = {
+	os = "Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other",
+	arch = "x86" | "x64" | "arm" | "ppc" | "ppcspe" | "mips",
+	attach = function=(
+		jit_attach_bc | jit_attach_trace | jit_attach_record | jit_attach_texit,
+		"bc" | "trace" | "record" | "texit" | nil
+	)>(nil),
+	tracebarrier = function=()>(nil),
+	version_num = number,
+	version = string,
+	on = function=(Function | true, boolean | nil)>(nil),
+	off = function=(Function | true, boolean | nil)>(nil),
+	flush = function=(nil | Function | true, boolean | nil)>(nil),
+	status = function=()>(boolean, ...string),
+	security = function=()>(boolean, ...string),
+	opt = Modules["jit.opt"],
+}
+type Modules["jit.vmdef"] = {
+	ffnames = List<|string|>,
+	irfield = List<|string|>,
+	ircall = List<|string|>,
+	irnames = string,
+	traceerr = List<|string|>,
+	irfpm = List<|string|>,
+	bcnames = string,
+}
+type Modules["jit.profile"] = {
+	stop = Function,
+	start = Function,
+	dumpstack = Function,
+}
+type Modules["jit.util"] = {
+	-- Retrieves LuaJIT information about a given function, similarly to debug.getinfo
+	funcinfo = function=(Function, position: number | nil)>(
+		{
+			linedefined = number,
+			lastlinedefined = number,
+			params = number,
+			stackslots = number,
+			upvalues = number,
+			bytecodes = number,
+			gcconsts = number,
+			nconsts = number,
+			children = boolean,
+			currentline = number,
+			isvararg = boolean,
+			source = string,
+			loc = string,
+			ffid = nil | number,
+			addr = nil | number,
+		}
+	),
+	-- Get bytecode instruction at given position
+	funcbc = function=(func: Function, pc: number)>(number, number), -- returns (ins, m)
+	-- Get upvalue name for function
+	funcuvname = function=(func: Function, index: number)>(nil | string),
+	-- Get function constant
+	funck = function=(func: Function, index: number)>(any),
+	-- Get trace information
+	traceinfo = function=(trace: number)>(
+		{
+				link = number,
+				nk = number,
+				nins = number,
+				linktype = "none" | "root" | "loop" | "tail-recursion" | "up-recursion" | "down-recursion" | "interpreter" | "return" | "stitch",
+				nexit = number,
+			} | nil
+	),
+	-- Get trace IR instruction
+	traceir = function=(trace: number, position: number | nil)>(number, number, number, number, number), -- returns (m, ot, op1, op2, prev/ridsp)
+	-- Get trace constant
+	tracek = function=(trace: number, position: number | nil)>(any, number, number | nil), -- returns (k, t [, slot])
+	-- Get trace snapshot
+	tracesnap = function=(trace: number, sn: number | nil)>(List<|number|> | nil),
+	-- Get trace exit stub address
+	traceexitstub = function=(exitno: number)>(number),
+	-- Get IR call address
+	ircalladdr = function=(index: number)>(number),
+	-- Get trace machine code
+	tracemc = function=(tr: number)>(string, number, number), -- returns (mcode, addr, loop)
+}
