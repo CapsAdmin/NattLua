@@ -52,6 +52,19 @@ do -- these are just helpers for print debugging
 		io.write("\n")
 	end
 
+	function debug.print_line(level)
+		local info = debug.getinfo(level or 3)
+
+		if not info then return "**unknown line**" end
+
+		if info.source:sub(1, 1) == "@" then
+			io.write(info.source:sub(2) .. ":" .. info.currentline, "\n")
+			return
+		end
+
+		io.write(info.source .. ":" .. info.currentline, "\n")
+	end
+
 	do
 		local old = print
 		local context = require("nattlua.analyzer.context")
