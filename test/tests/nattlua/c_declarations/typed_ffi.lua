@@ -3,7 +3,7 @@ local analyze_old = _G.analyze
 local function analyze(c)
 	return analyze_old(
 		[=[
-			§require("nattlua.c_declarations.main").reset()
+			§require("nattlua.definitions.lua.ffi.main").reset()
 			local ffi = require("ffi")
 			ffi.C = {}
 		]=] .. c

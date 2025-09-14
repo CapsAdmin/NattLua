@@ -114,8 +114,8 @@ if false then
 end
 
 local Lexer = require("nattlua.lexer.lexer").New
-local Parser = require("nattlua.c_declarations.parser").New
-local Emitter = require("nattlua.c_declarations.emitter").New
+local Parser = require("nattlua.definitions.lua.ffi.parser").New
+local Emitter = require("nattlua.definitions.lua.ffi.emitter").New
 local Code = require("nattlua.code").New
 local Compiler = require("nattlua.compiler")
 local type = _G.type

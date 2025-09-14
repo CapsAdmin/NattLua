@@ -23,7 +23,7 @@ local Boolean = require("nattlua.types.union").Boolean
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 local ERROR_REDECLARE = false
-local walk_cdeclarations = require("nattlua.c_declarations.ast_walker")
+local walk_cdeclarations = require("nattlua.definitions.lua.ffi.ast_walker")
 require("nattlua.other.context_mixin")(META)
 local valid_qualifiers = {
 	["double"] = true,

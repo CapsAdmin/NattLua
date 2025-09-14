@@ -1,3 +1,5 @@
+§ context.cdecl_parser = require("nattlua.definitions.lua.ffi.main")
+
 local type ConstructorArgument = boolean | number | AnyFunction | nil | {[string | number] = self | number | AnyFunction | boolean | nil}
 
 function TCData<|T: ConstructorArgument, ...: ...any|>
@@ -159,47 +161,47 @@ local type ffi = require("ffi")
 type _G.ffi = ffi
 
 analyzer function ffi.sizeof(cdecl: any, len: nil | number)
-	return cdecl_parser.sizeof(cdecl, len)
+	return context.cdecl_parser.sizeof(cdecl, len)
 end
 
 analyzer function ffi.cdef(cdecl: string, ...: ...any)
-	cdecl_parser.cdef(cdecl, ...)
+	context.cdecl_parser.cdef(cdecl, ...)
 end
 
 SetPreventInputExpansionOnFunction<|ffi.cdef, true|>
 
 analyzer function ffi.cast(cdecl: string | any, src: string | any)
-	return cdecl_parser.cast(cdecl, src)
+	return context.cdecl_parser.cast(cdecl, src)
 end
 
 analyzer function ffi.typeof(cdecl: string | TCType<|any|>, ...: ...any)
-	return cdecl_parser.typeof(cdecl, ...)
+	return context.cdecl_parser.typeof(cdecl, ...)
 end
 
 analyzer function ffi.typeof_arg(cdecl: string | TCType<|any|>, ...: ...any)
-	return cdecl_parser.typeof_arg(cdecl, ...)
+	return context.cdecl_parser.typeof_arg(cdecl, ...)
 end
 
 SetPreventInputExpansionOnFunction<|ffi.typeof, true|>
 
 analyzer function ffi.get_type(cdecl: string, ...: ...any)
-	return cdecl_parser.get_type(cdecl, ...)
+	return context.cdecl_parser.get_type(cdecl, ...)
 end
 
 analyzer function ffi.get_raw_type(cdecl: string, ...: ...any)
-	return cdecl_parser.get_raw_type(cdecl, ...)
+	return context.cdecl_parser.get_raw_type(cdecl, ...)
 end
 
 analyzer function ffi.new(cdecl: any, ...: ...any)
-	return cdecl_parser.new(cdecl, ...)
+	return context.cdecl_parser.new(cdecl, ...)
 end
 
 analyzer function ffi.metatype(ctype: any, meta: any)
-	return cdecl_parser.metatype(ctype, meta)
+	return context.cdecl_parser.metatype(ctype, meta)
 end
 
 analyzer function ffi.load(lib: string, global: boolean | nil)
-	return cdecl_parser.load(lib)
+	return context.cdecl_parser.load(lib)
 end
 
 analyzer function ffi.gc(obj: cdata, callback: Function)

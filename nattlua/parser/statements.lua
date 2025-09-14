@@ -432,7 +432,6 @@ return function(META)
 			{key = "nl", path = "nattlua.init"},
 			{key = "types", path = "nattlua.types.types"},
 			{key = "context", path = "nattlua.analyzer.context"},
-			{key = "cdecl_parser", path = "nattlua.c_declarations.main"},
 			{
 				key = "type_errors",
 				path = "nattlua.types.error_messages",

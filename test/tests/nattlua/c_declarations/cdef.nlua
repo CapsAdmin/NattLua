@@ -1,18 +1,18 @@
 local analyzer function cdef(str: string, ...: ...any)
-	return require("nattlua.c_declarations.main").cdef(str, ...)
+	return require("nattlua.definitions.lua.ffi.main").cdef(str, ...)
 end
 
 local analyzer function cdef_error(str: string, expect: string, ...: ...any)
 	local args = {...}
 	local ok, err = pcall(function()
-		return require("nattlua.c_declarations.main").cdef(str, unpack(args))
+		return require("nattlua.definitions.lua.ffi.main").cdef(str, unpack(args))
 	end)
 	assert(ok == false)
 	assert(err:find(expect:GetData()))
 end
 
 local function reset()
-	§require("nattlua.c_declarations.main").reset()
+	§require("nattlua.definitions.lua.ffi.main").reset()
 
 	local ffi = require("ffi")
 	ffi.C = {}
