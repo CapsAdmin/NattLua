@@ -330,7 +330,6 @@ return function(self, obj, input)
 					-- if it's not a ref argument we pass the incoming value
 					local t = contract:GetFirstValue():Copy(nil, true)
 					t:SetContract(contract)
-
 					input:Set(i, t)
 				end
 			else
@@ -421,39 +420,12 @@ return function(self, obj, input)
 			self:PushAnalyzerEnvironment("typesystem")
 			output_signature = Tuple(self:AnalyzeExpressions(function_node.return_types))
 			self:PopAnalyzerEnvironment()
-		else
-			output_signature = obj:IsExplicitOutputSignature() and obj:GetOutputSignature()
 		end
 	end
 
 	if is_type_function then self:PushAnalyzerEnvironment("typesystem") end
 
 	local returns = self:AnalyzeStatementsAndCollectOutputSignatures(function_node)
-	local outputs = {}
-	local output
-
-	do
-		local union = Union()
-
-		for _, ret in ipairs(returns) do
-			if #ret.types == 1 then
-				union:AddType(ret.types[1])
-				table.insert(outputs, {obj = Tuple(ret.types), node = ret.node})
-			elseif #ret.types == 0 then
-				local tup = Tuple({Nil()})
-				table.insert(outputs, {obj = tup, node = ret.node})
-				union:AddType(tup)
-			else
-				local tup = Tuple(ret.types)
-				union:AddType(tup)
-				table.insert(outputs, {obj = tup, node = ret.node})
-			end
-		end
-
-		output = union:Simplify()
-
-		if output.Type ~= "tuple" then output = Tuple({output}) end
-	end
 
 	if is_type_function then self:PopAnalyzerEnvironment() end
 
@@ -463,7 +435,7 @@ return function(self, obj, input)
 	self:PopStashedTrackedChanges()
 	restore_mutated_types(self)
 	-- used for analyzing side effects
-	obj:AddScope(input, output, scope)
+	obj:AddScope(scope)
 
 	-- if the function is untyped we warn about untyped arguments
 	-- and we also merge merge the input into the function's input signature
@@ -510,7 +482,29 @@ return function(self, obj, input)
 		function_node:AssociateType(obj)
 	end
 
-	if not output_signature then
+	local output
+
+	do
+		local union = Union()
+
+		for _, ret in ipairs(returns) do
+			if #ret.types == 1 then
+				union:AddType(ret.types[1])
+			elseif #ret.types == 0 then
+				local tup = Tuple({Nil()})
+				union:AddType(tup)
+			else
+				local tup = Tuple(ret.types)
+				union:AddType(tup)
+			end
+		end
+
+		output = union:Simplify()
+
+		if output.Type ~= "tuple" then output = Tuple({output}) end
+	end
+
+	if not obj:IsExplicitOutputSignature() then
 		-- if there is no return type 
 		if function_node.environment == "runtime" then
 			local copy
@@ -534,11 +528,20 @@ return function(self, obj, input)
 		return output
 	end
 
+	output_signature = output_signature or obj:GetOutputSignature()
+
 	-- check against the function's return type
-	for _, output_entry in ipairs(outputs) do
-		local output = output_entry.obj
+	for _, ret in ipairs(returns) do
+		local output = nil
+
+		if #ret.types == 0 then
+			output = Tuple({Nil()})
+		else
+			output = Tuple(ret.types)
+		end
+
 		local output_signature = output_signature
-		local function_node = output_entry.node
+		local function_node = ret.node
 
 		if self:IsTypesystem() then
 			-- in the typesystem we must not unpack tuples when checking
@@ -555,8 +558,6 @@ return function(self, obj, input)
 
 			output = new_tup
 		end
-
-		local original_contract = output_signature
 
 		if
 			output_signature:HasOneValue() and
@@ -614,7 +615,7 @@ return function(self, obj, input)
 				end
 
 				if check then
-					local _, err = output:SubsetOrFallbackWithTuple(output_signature)
+					local err = output:IsNotSubsetOfTuple(output_signature)
 
 					if err then
 						for i, v in ipairs(err) do
@@ -633,7 +634,6 @@ return function(self, obj, input)
 		end
 	end
 
-	--check_output(self, output, output_signature, function_node)
 	if function_node.environment == "typesystem" then return output end
 
 	local contract = output_signature:Copy()

@@ -66,7 +66,7 @@ function META:__tostring()
 	self.suppress = true
 	local strings--[[#: List<|string|>]] = {}
 
-	for i, v in ipairs(self:GetData()) do
+	for i, v in ipairs(self.Data) do
 		strings[i] = tostring(v)
 	end
 
@@ -89,7 +89,7 @@ function META:__tostring()
 end
 
 function META:Merge(tup--[[#: TTuple]])
-	local src = self:GetData()
+	local src = self.Data
 	local len = tup:GetMinimumLength()
 
 	if len == 0 and not tup:HasInfiniteValues() then
@@ -126,7 +126,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	local copy = META.New({})
 	map[self] = copy
 
-	for i, v in ipairs(self:GetData()) do
+	for i, v in ipairs(self.Data) do
 		copy.Data[i] = copy_val(v, map, copy_tables)
 	end
 
@@ -295,6 +295,22 @@ function META.SubsetOrFallbackWithTuple(a--[[#: TTuple]], b--[[#: TTuple]])
 	return a, errors
 end
 
+function META.IsNotSubsetOfTuple(a--[[#: TTuple]], b--[[#: TTuple]])
+	if a:Equal(b) then return nil end
+
+	local errors = {}
+
+	for i = 1, math.max(a:GetMinimumLength2(), b:GetMinimumLength2()) do
+		local ok, reason, a_val, b_val, offset = a.IsSubsetOfTupleAtIndex(a, b, i)
+
+		if not ok then
+			table.insert(errors, {reason, a_val, b_val, offset})
+		end
+	end
+
+	return errors[1] and errors or nil
+end
+
 function META.SubsetWithoutExpansionOrFallbackWithTuple(a--[[#: TTuple]], b--[[#: TTuple]])
 	if a:Equal(b) then return a end
 
@@ -332,7 +348,7 @@ function META:GetUnpackedElementCount()--[[#: number]]
 
 	local len = 0
 
-	for i, v in ipairs(self:GetData()) do
+	for i, v in ipairs(self.Data) do
 		if v.Type == "tuple" then
 			len = len + v:GetUnpackedElementCount()
 		elseif v.Type == "union" then
@@ -394,18 +410,18 @@ function META:GetAtTupleIndex(i)
 end
 
 function META:GetWithNumber(i--[[#: number]])
-	local val = self:GetData()[i]
+	local val = self.Data[i]
 
-	if not val and self.Repeat and i <= (#self:GetData() * self.Repeat) then
-		return self:GetData()[((i - 1) % #self:GetData()) + 1]
+	if not val and self.Repeat and i <= (#self.Data * self.Repeat) then
+		return self.Data[((i - 1) % #self.Data) + 1]
 	end
 
 	if not val and self.Remainder then
-		return self.Remainder:GetWithNumber(i - #self:GetData())
+		return self.Remainder:GetWithNumber(i - #self.Data)
 	end
 
 	if not val then
-		local last = self:GetData()[#self:GetData()]
+		local last = self.Data[#self.Data]
 
 		if last then
 			if last.Type == "tuple" and (last.Repeat or last.Remainder) then
@@ -415,7 +431,7 @@ function META:GetWithNumber(i--[[#: number]])
 			if last.Type == "tuple" and last.Repeat == math.huge then return last end
 
 			if last.Type == "union" and last:HasTuples() then
-				local i = i - #self:GetData() + 1
+				local i = i - #self.Data + 1
 				local found = Union()
 
 				for _, v in ipairs(last:GetData()) do
@@ -482,7 +498,7 @@ function META:IsLiteral()
 end
 
 function META:GetWithoutExpansion(i--[[#: number]])
-	local val = self:GetData()[i]
+	local val = self.Data[i]
 
 	if not val then if self.Remainder then return self.Remainder end end
 
@@ -546,17 +562,17 @@ function META:GetElementCount()--[[#: number]]
 
 	local remainder = self.Remainder and self.Remainder:GetElementCount() or 0
 	local rep = self.Repeat or 1
-	return (#self:GetData() + remainder) * rep
+	return (#self.Data + remainder) * rep
 end
 
 function META:GetMinimumLength2()
 	if self.Repeat == math.huge or self.Repeat == 0 then return 0 end
 
-	local len = #self:GetData()
+	local len = #self.Data
 	local found_nil--[[#: boolean]] = false
 
-	for i = #self:GetData(), 1, -1 do
-		local obj = self:GetData()[i]--[[# as TBaseType]]
+	for i = #self.Data, 1, -1 do
+		local obj = self.Data[i]--[[# as TBaseType]]
 
 		if not obj:IsNil() and obj.Type ~= "any" then return len else len = len - 1 end
 	end
@@ -567,11 +583,11 @@ end
 function META:GetMinimumLength()
 	if self.Repeat == math.huge or self.Repeat == 0 then return 0 end
 
-	local len = #self:GetData()
+	local len = #self.Data
 	local found_nil--[[#: boolean]] = false
 
-	for i = #self:GetData(), 1, -1 do
-		local obj = self:GetData()[i]--[[# as TBaseType]]
+	for i = #self.Data, 1, -1 do
+		local obj = self.Data[i]--[[# as TBaseType]]
 
 		if obj:IsNil() and obj.Type ~= "any" then
 			found_nil = true
@@ -652,7 +668,7 @@ end
 function META:Slice(start--[[#: number]], stop--[[#: number]])
 	-- TODO: not accurate yet
 	start = start or 1
-	stop = stop or #self:GetData()
+	stop = stop or #self.Data
 	local data = {}
 
 	for i = start, stop do
@@ -730,7 +746,9 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 		}
 	)
 
-	if data then self:SetTable(data) end
+	if data and data[1] then 
+		self:SetTable(data)
+	end
 
 	return self
 end

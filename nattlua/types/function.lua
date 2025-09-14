@@ -200,23 +200,16 @@ function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TFunction]])
 end
 
 do
-	function META:AddScope(arguments--[[#: TTuple]], return_result--[[#: TTuple]], scope--[[#: any]])
-		table.insert(
-			self.scopes,
-			{
-				arguments = arguments,
-				return_result = return_result,
-				scope = scope,
-			}
-		)
+	function META:AddScope(scope--[[#: any]])
+		table.insert(self.scopes, scope)
 	end
 
 	function META:GetSideEffects()
 		local out = {}
 
-		for _, call_info in ipairs(self.scopes) do
-			for _, val in ipairs(call_info.scope:GetDependencies()) do
-				if (val.Type == "upvalue" and val:GetScope() or val.scope) ~= call_info.scope then
+		for _, scope in ipairs(self.scopes) do
+			for _, val in ipairs(scope:GetDependencies()) do
+				if (val.Type == "upvalue" and val:GetScope() or val.scope) ~= scope then
 					table.insert(out, val)
 				end
 			end
