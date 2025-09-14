@@ -34,8 +34,6 @@ do -- custom commands specific for nattlua
 	config.commands["test"] = {
 		description = "Run NattLua test suite with optional test filter",
 		cb = function(args)
-			debug.trace()
-			table.print(args)
 			require("test.run")(unpack(args))
 			os.exit() -- no need to wait for gc to complete
 		end,
