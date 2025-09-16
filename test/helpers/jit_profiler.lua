@@ -8,35 +8,22 @@ local profiler = {}
 	mode = "function" | "line" | nil,
 	depth = number | nil,
 	sampling_rate = 1 .. inf | nil,
-	sample_threshold = number | nil,
+	threshold = number | nil,
 }]]
 
 local function starts_with(str--[[#: string]], what--[[#: string]])
 	return str:sub(1, #what) == what
 end
 
-local function process(
-	config--[[#: Config]],
+local function process_samples(
+	config--[[#: Required<|Config|>]],
 	raw_samples--[[#: List<|{
 		stack = string,
 		sample_count = number,
 		vm_state = VMState,
 	}|>]]
 )
-	local processed_samples--[[#: Map<|
-		string,
-		{
-			sample_count = number,
-			vm_states = Map<|VMState, number|>,
-			children = Map<|
-				number,
-				{
-					sample_count = number,
-					vm_states = Map<|VMState, number|>,
-				}
-			|>,
-		}
-	|>]] = {}
+	local processed_samples = {}
 
 	for _, sample in ipairs(raw_samples) do
 		local stack = {}
@@ -92,7 +79,7 @@ local function process(
 			local other_lines = {}
 
 			for line_number, vm_states in pairs(data.lines) do
-				if get_samples(vm_states) < config.sample_threshold then
+				if get_samples(vm_states) < config.threshold then
 					other_lines[line_number] = vm_states
 				else
 					new_lines[line_number] = vm_states
@@ -128,7 +115,7 @@ local function process(
 			end
 
 			do
-				local path = "other samples < " .. config.sample_threshold
+				local path = "other samples < " .. config.threshold
 				local sample_count = 0
 				local new_vm_states = {}
 
@@ -215,7 +202,7 @@ local function process(
 		local str = {}
 		local other
 
-		for _, data in ipairs(data.lines) do
+		for _, data in ipairs(assert(data.lines)) do
 			if data.other then
 				other = data
 			else
@@ -248,17 +235,18 @@ function profiler.Start(config--[[#: Config | nil]])
 	config.mode = config.mode or "line"
 	config.depth = config.depth or 10
 	config.sampling_rate = config.sampling_rate or 1
-	config.sample_threshold = config.sample_threshold or 50
+	config.threshold = config.threshold or 50
+	local ok, func = pcall(require, "jit.profile")
+
+	if not ok then return nil, func end
+
+	local jit_profiler = func--[[# as any]]
+	local dumpstack = jit_profiler.dumpstack--[[# as function=(string, number)>(string) | function=(any, string, number)>(string)]]
 	local raw_samples--[[#: List<|{
 		stack = string,
 		sample_count = number,
 		vm_state = VMState,
 	}|>]] = {}
-	local ok, jit_profiler = pcall(require, "jit.profile")
-
-	if not ok then return nil, jit_profiler end
-
-	local dumpstack = jit_profiler.dumpstack
 	local i = 1
 
 	jit_profiler.start((config.mode == "line" and "l" or "f") .. "i" .. config.sampling_rate, function(thread, sample_count--[[#: number]], vmstate--[[#: VMState]])
@@ -272,7 +260,7 @@ function profiler.Start(config--[[#: Config | nil]])
 
 	return function()
 		jit_profiler.stop()
-		return process(config, raw_samples)
+		return process_samples(config, raw_samples)
 	end
 end
 

@@ -11,7 +11,7 @@ function profiler.Start()
 			mode = "line",
 			sampling_rate = 1,
 			depth = 1, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
-			sample_threshold = 20,
+			threshold = 20,
 		}
 	)
 	stop_tracer = trace_tracker.Start()

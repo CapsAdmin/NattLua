@@ -52,7 +52,7 @@ local function update()
 			mode = "line",
 			sampling_rate = 1,
 			depth = 2, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
-			sample_threshold = 100,
+			threshold = 100,
 		}
 	)
 	local res = rpc_util.ReceiveJSON(body, lsp.methods)
