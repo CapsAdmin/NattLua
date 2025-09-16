@@ -44,8 +44,12 @@ function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])--[[#: st
 	return self.Code:GetStringSlice(start, stop)
 end
 
-function META:PeekByte(offset--[[#: number | nil]])--[[#: number]]
-	offset = offset or 0
+function META:PeekByte()--[[#: number]]
+	return self.Code:GetByte(self.Position)
+end
+
+
+function META:PeekByteOffset(offset--[[#: number]])--[[#: number]]
 	return self.Code:GetByte(self.Position + offset)
 end
 
@@ -75,9 +79,12 @@ function META:GetPosition()
 	return self.Position
 end
 
-function META:IsString(str--[[#: string]], offset--[[#: number | nil]])--[[#: boolean]]
-	offset = offset or 0
-	return self.Code:IsStringSlice(self.Position + offset, self.Position + offset + #str - 1, str)
+function META:IsString(str--[[#: string]])--[[#: boolean]]
+	return self.Code:IsStringSlice(self.Position, str)
+end
+
+function META:IsStringOffset(str--[[#: string]], offset--[[#: number]])--[[#: boolean]]
+	return self.Code:IsStringSlice(self.Position + offset, str)
 end
 
 function META:OnError(
@@ -201,7 +208,7 @@ local function BuildTrieReader(list, lowercase)
 		local last_match = nil
 
 		for i = 1, longest do
-			local b = self:PeekByte(i - 1)
+			local b = self:PeekByteOffset(i - 1)
 
 			if lowercase then b = bit_bor(b, 32) end
 
@@ -315,8 +322,8 @@ function META:ReadMultilineComment()--[[#: TokenReturnType]]
 	if
 		not self:IsString("--[") or
 		(
-			not self:IsString("[", 3) and
-			not self:IsString("=", 3)
+			not self:IsStringOffset("[", 3) and
+			not self:IsStringOffset("=", 3)
 		)
 	then
 		return false
@@ -421,8 +428,8 @@ function META:ReadHexNumber()
 	if
 		not self:IsString("0") or
 		(
-			not self:IsString("x", 1) and
-			not self:IsString("X", 1)
+			not self:IsStringOffset("x", 1) and
+			not self:IsStringOffset("X", 1)
 		)
 	then
 		return false
@@ -437,7 +444,7 @@ function META:ReadHexNumber()
 		if not has_dot and self:IsString(".") then
 			-- 22..66 would be a number range
 			-- so we have to return 22 only
-			if self:IsString(".", 1) then break end
+			if self:IsStringOffset(".", 1) then break end
 
 			has_dot = true
 			self:Advance(1)
@@ -470,8 +477,8 @@ function META:ReadBinaryNumber()
 	if
 		not self:IsString("0") or
 		not (
-			self:IsString("b", 1) and
-			not self:IsString("B", 1)
+			self:IsStringOffset("b", 1) and
+			not self:IsStringOffset("B", 1)
 		)
 	then
 		return false
@@ -511,7 +518,7 @@ function META:ReadDecimalNumber()
 		not IsNumber(self:PeekByte()) and
 		(
 			not self:IsString(".") or
-			not IsNumber(self:PeekByte(1))
+			not IsNumber(self:PeekByteOffset(1))
 		)
 	then
 		return false
@@ -532,7 +539,7 @@ function META:ReadDecimalNumber()
 		if not has_dot and self:IsString(".") then
 			-- 22..66 would be a number range
 			-- so we have to return 22 only
-			if self:IsString(".", 1) then break end
+			if self:IsStringOffset(".", 1) then break end
 
 			has_dot = true
 			self:Advance(1)
@@ -563,10 +570,10 @@ end
 
 function META:ReadMultilineString()--[[#: TokenReturnType]]
 	if
-		not self:IsString("[", 0) or
+		not self:IsString("[") or
 		(
-			not self:IsString("[", 1) and
-			not self:IsString("=", 1)
+			not self:IsStringOffset("[", 1) and
+			not self:IsStringOffset("=", 1)
 		)
 	then
 		return false
@@ -727,7 +734,8 @@ function META.New(code--[[#: Code]], config--[[#: {} | nil]])
 			comment_escape = false,
 			OnError = META.OnError,
 			Config = config,
-		}, true
+		},
+		true
 	)
 	self:ResetState()
 	return self

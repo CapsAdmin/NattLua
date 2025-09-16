@@ -105,12 +105,11 @@ function line_profiler.Start(whitelist)
 	end
 
 	local function grow_events_array()
-		local new_capacity = events_capacity * 2
+		local new_capacity = events_capacity * 4
 		local new_events = ffi.new("profile_event_t[?]", new_capacity)
 		ffi.copy(new_events, events, events_capacity * ffi.sizeof("profile_event_t"))
 		events = new_events
 		events_capacity = new_capacity
-		io.write("Grew events array to " .. new_capacity .. " entries\n")
 	end
 
 	local start_time = get_time_raw()
@@ -178,11 +177,6 @@ function line_profiler.Start(whitelist)
 		_G.LINE_CLOSE = nil
 		local end_time = get_time_raw()
 		local total_profiling_time = get_time_seconds(end_time - start_time)
-		io.write(
-			"Processing " .. event_count .. " profiling events (using " .. (
-					event_count * ffi.sizeof("profile_event_t")
-				) .. " bytes)...\n"
-		)
 		-- Process events to calculate times (keep everything in raw time units)
 		local lines = {} -- key -> {path, start_pos, end_pos, inclusive_time_raw, exclusive_time, count}
 		local call_stack = {}
@@ -258,11 +252,6 @@ function line_profiler.Start(whitelist)
 
 		-- Handle any unclosed entries
 		local unclosed_count = #call_stack
-
-		if unclosed_count > 0 then
-			io.write("Warning: " .. unclosed_count .. " unclosed profiling entries\n")
-		end
-
 		-- Convert to the expected format and sort
 		local sorted_files = {}
 		local files_map = {}

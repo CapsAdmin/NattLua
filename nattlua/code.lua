@@ -81,11 +81,11 @@ if has_ffi--[[# as false]] then
 		local len = #str
 
 		for i = start, self.buffer_len - 1 do
-			if self:IsStringSlice(i, len, str) then return i + len end
+			if self:IsStringSlice(i, str) then return i + #str end
 		end
 	end
 
-	function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
+	function META:IsStringSlice(start--[[#: number]], str--[[#: string]])
 		start = start - 2
 
 		for i = 1, #str do
@@ -93,6 +93,17 @@ if has_ffi--[[# as false]] then
 		end
 
 		return true
+	end
+
+	do
+		ffi.cdef([[
+			int memcmp(const void *s1, const void *s2, size_t n);
+		]])
+		local C = ffi.C
+
+		function META:IsStringSlice(start--[[#: number]], str--[[#: string]])
+			return C.memcmp(self.Buffer + start - 1, str, #str) == 0
+		end
 	end
 
 	local ctype
@@ -163,7 +174,7 @@ else
 
 	if jit then
 		-- this is faster in luajit than the else block
-		function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
+		function META:IsStringSlice(start--[[#: number]], str--[[#: string]])
 			for i = 1, #str do
 				local a = self.Buffer:byte(start + i - 1)
 				local b = str:byte(i)
@@ -174,8 +185,8 @@ else
 			return true
 		end
 	else
-		function META:IsStringSlice(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
-			return self.Buffer:sub(start, stop) == str
+		function META:IsStringSlice(start--[[#: number]], str--[[#: string]])
+			return self.Buffer:sub(start, start + #str) == str
 		end
 	end
 
@@ -190,10 +201,13 @@ else
 	end
 
 	function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
-		return META.NewObject({
-			Buffer = remove_bom_header(lua_code),
-			Name = name or get_default_name(),
-		}, true)
+		return META.NewObject(
+			{
+				Buffer = remove_bom_header(lua_code),
+				Name = name or get_default_name(),
+			},
+			true
+		)
 	end
 end
 
