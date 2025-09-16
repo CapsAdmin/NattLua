@@ -66,6 +66,10 @@ typedef struct {
     uint32_t end_pos;    // End position from start_stop
     $ time;              // Timestamp (raw time type)
 } profile_event_t;
+
+void* malloc(size_t size);
+void* realloc(void* ptr, size_t size);
+void free(void* ptr);
 ]],
 	ffi.typeof(get_time_raw())
 )
@@ -83,8 +87,15 @@ function line_profiler.Start(whitelist)
 	end
 
 	-- Event storage
-	local events_capacity = 100000 -- Start with 100k events
-	local events = ffi.new("profile_event_t[?]", events_capacity)
+	local events_capacity = 100000ULL -- Start with 100k events
+	local event_size = ffi.sizeof("profile_event_t")
+	local events_ptr = ffi.C.malloc(events_capacity * event_size)
+
+	if events_ptr == nil then
+		error("Failed to allocate memory for events array")
+	end
+
+	local events = ffi.cast("profile_event_t*", events_ptr)
 	local event_count = 0
 	-- Path lookup tables
 	local path_to_id = {}
@@ -105,10 +116,15 @@ function line_profiler.Start(whitelist)
 	end
 
 	local function grow_events_array()
-		local new_capacity = events_capacity * 4
-		local new_events = ffi.new("profile_event_t[?]", new_capacity)
-		ffi.copy(new_events, events, events_capacity * ffi.sizeof("profile_event_t"))
-		events = new_events
+		local new_capacity = events_capacity * 2ULL
+		local new_events_ptr = ffi.C.realloc(events_ptr, new_capacity * event_size)
+
+		if new_events_ptr == nil then
+			error("Failed to reallocate memory for events array")
+		end
+
+		events_ptr = new_events_ptr
+		events = ffi.cast("profile_event_t*", events_ptr)
 		events_capacity = new_capacity
 	end
 
@@ -377,6 +393,8 @@ function line_profiler.Start(whitelist)
 			table.insert(str, "")
 		end
 
+		-- Free the malloc'd events array
+		ffi.C.free(events_ptr)
 		return table.concat(str, "\n")
 	end
 end

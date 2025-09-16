@@ -18,6 +18,7 @@ local B = string.byte
 local characters = require("nattlua.syntax.characters")
 local runtime_syntax = require("nattlua.syntax.runtime")
 local formating = require("nattlua.other.formating")
+	local bit = require("nattlua.other.bit")
 local IsSpace = characters.IsSpace
 local IsNumber = characters.IsNumber
 local IsHex = characters.IsHex
@@ -169,7 +170,6 @@ do
 end
 
 local function BuildTrieReader(list, lowercase)
-	local bit = require("nattlua.other.bit")
 	local bit_bor = bit.bor
 	local longest = 0
 	local min_byte = math.huge

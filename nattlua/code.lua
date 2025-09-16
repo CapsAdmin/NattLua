@@ -49,50 +49,36 @@ if has_ffi--[[# as false]] then
 		Name = string,
 		name_len = number,
 	}]]
+	local ffi_string = ffi.string
 
 	function META:GetString()
-		return ffi.string(self.Buffer, self.buffer_len)
+		return ffi_string(self.BufferOffsetPlusOne, self.buffer_len)
 	end
 
 	function META:GetName()
-		return ffi.string(self.Name, self.name_length)
+		return ffi_string(self.Name, self.name_length)
 	end
 
 	function META:GetByteSize()
 		return self.buffer_len
 	end
 
-	local ffi_string = ffi.string
-
 	function META:GetStringSlice(start--[[#: number]], stop--[[#: number]])
-		start = start - 1
-		stop = stop - 1
-
-		if start >= self.buffer_len then return "" end
+		if start > self.buffer_len then return "" end
 
 		return ffi_string(self.Buffer + start, (stop - start) + 1)
 	end
 
 	function META:GetByte(pos--[[#: number]])
-		return self.Buffer[pos - 1]
+		return self.Buffer[pos]
 	end
 
 	function META:FindNearest(str--[[#: string]], start--[[#: number]])
 		local len = #str
 
-		for i = start, self.buffer_len - 1 do
+		for i = start, self.buffer_len do
 			if self:IsStringSlice(i, str) then return i + #str end
 		end
-	end
-
-	function META:IsStringSlice(start--[[#: number]], str--[[#: string]])
-		start = start - 2
-
-		for i = 1, #str do
-			if self.Buffer[start + i] ~= str:byte(i) then return false end
-		end
-
-		return true
 	end
 
 	do
@@ -102,8 +88,16 @@ if has_ffi--[[# as false]] then
 		local C = ffi.C
 
 		function META:IsStringSlice(start--[[#: number]], str--[[#: string]])
-			return C.memcmp(self.Buffer + start - 1, str, #str) == 0
+			return C.memcmp(self.Buffer + start, str, #str) == 0
 		end
+	end
+
+	function META:IsStringSlice2(start--[[#: number]], str--[[#: string]])
+		for i = 1, #str do
+			if self.BufferOffsetMinusOne[start + i] ~= str:byte(i) then return false end
+		end
+
+		return true
 	end
 
 	local ctype
@@ -111,14 +105,17 @@ if has_ffi--[[# as false]] then
 
 	function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
 		name = name or get_default_name()
+		local code = " " .. lua_code
 		local self = ctype(
 			{
-				Buffer = lua_code,
-				buffer_len = #lua_code,
+				Buffer = code,
+				buffer_len = #code,
 				Name = name,
 				name_length = #name,
 			}
 		)
+		--self.Buffer = self.Buffer + 1
+		self.buffer_len = self.buffer_len - 1
 
 		if lua_code:sub(1, 2) == "\xFE\xFF" then
 			self.Buffer = self.Buffer + 2
@@ -128,7 +125,9 @@ if has_ffi--[[# as false]] then
 			self.buffer_len = self.buffer_len - 3
 		end
 
-		refs[self] = {lua_code, name}
+		self.BufferOffsetMinusOne = self.Buffer - 1
+		self.BufferOffsetPlusOne = self.Buffer + 1
+		refs[self] = {code, name}
 		return self
 	end
 
@@ -136,6 +135,8 @@ if has_ffi--[[# as false]] then
 		ffi.typeof([[
 			struct { 
 				const uint8_t * Buffer; 
+				const uint8_t * BufferOffsetMinusOne; 
+				const uint8_t * BufferOffsetPlusOne; 
 				uint32_t buffer_len; 
 				const char * Name; 
 				uint32_t name_length;
