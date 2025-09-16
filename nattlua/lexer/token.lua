@@ -416,28 +416,20 @@ do
 	end
 end
 
+META.is_token = true
+
 function META.New(
 	type--[[#: META.TokenType]],
 	value--[[#: string]],
 	start--[[#: number]],
 	stop--[[#: number]]
 )--[[#: META.@Self]]
-	return META.NewObject(
-		{
-			is_token = true,
-			type = type,
-			value = value,
-			start = start,
-			stop = stop,
-			whitespace = false,
-			string_value = false,
-			inferred_types = false,
-			potential_idiv = false,
-			parent = false,
-			whitespace = false,
-			c_keyword = false,
-		}--[[# as META.@Self]]
-	)
+	return META.NewObject({
+		type = type,
+		value = value,
+		start = start,
+		stop = stop,
+	}--[[# as META.@Self]])
 end
 
 return META

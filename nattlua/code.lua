@@ -92,7 +92,7 @@ if has_ffi--[[# as false]] then
 		end
 	end
 
-	function META:IsStringSlice2(start--[[#: number]], str--[[#: string]])
+	function META:IsStringSlice(start--[[#: number]], str--[[#: string]])
 		for i = 1, #str do
 			if self.BufferOffsetMinusOne[start + i] ~= str:byte(i) then return false end
 		end
