@@ -2,7 +2,7 @@ local INSTRUMENTAL = false
 require("nattlua.other.jit_options").SetOptimized()
 local util = require("examples.util")
 local profiler = require("test.helpers.profiler")
-local lua_code = util.GetNattLuaCodeAsString()
+local lua_code = util.Get10MBLua()
 
 -- this must be called before loading modules since it injects line hooks into the code
 if INSTRUMENTAL then profiler.Start("instrumental") end
