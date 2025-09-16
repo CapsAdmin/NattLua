@@ -5,14 +5,10 @@ if not has_ffi then return os.clock end
 
 if ffi.os == "OSX" then
 	ffi.cdef([[
-		struct mach_timebase_info {
-			uint32_t	numer;
-			uint32_t	denom;
-		};
-		int mach_timebase_info(struct mach_timebase_info *info);
+		int mach_timebase_info(void *info);
 		uint64_t mach_absolute_time(void);
 	]])
-	local tb = ffi.new("struct mach_timebase_info")
+	local tb = ffi.new("struct { uint32_t numer; uint32_t denom; }")
 	ffi.C.mach_timebase_info(tb)
 	local orwl_timebase = tb.numer / tb.denom
 	local orwl_timestart = ffi.C.mach_absolute_time()
@@ -40,13 +36,9 @@ elseif ffi.os == "Windows" then
 	end
 else
 	ffi.cdef([[
-		struct timespec {
-			long int tv_sec;
-			long tv_nsec;
-		};
-		int clock_gettime(int clock_id, struct timespec *tp);
+		int clock_gettime(int clock_id, void *tp);
 	]])
-	local ts = ffi.new("struct timespec")
+	local ts = ffi.new("struct { long int tv_sec; long int tv_nsec; }")
 	local enum = 1
 	local func = ffi.C.clock_gettime
 	return function()
