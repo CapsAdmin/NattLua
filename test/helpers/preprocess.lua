@@ -74,34 +74,34 @@ function preprocess.Init(unload_list)
 			package.loaded[v] = nil
 		end
 	end
-end
+	
+	return function()
+		if _G.old_preprocess_load then
+			_G.load = _G.old_preprocess_load
+			_G.old_preprocess_load = nil
+		end
 
-function preprocess.Shutdown()
-	if _G.old_preprocess_load then
-		_G.load = _G.old_preprocess_load
-		_G.old_preprocess_load = nil
-	end
+		if _G.old_preprocess_loadstring then
+			_G.loadstring = _G.old_preprocess_loadstring
+			_G.old_preprocess_loadstring = nil
+		end
 
-	if _G.old_preprocess_loadstring then
-		_G.loadstring = _G.old_preprocess_loadstring
-		_G.old_preprocess_loadstring = nil
-	end
+		if _G.old_preprocess_loadfile then
+			_G.loadfile = _G.old_preprocess_loadfile
+			_G.old_preprocess_loadfile = nil
+		end
 
-	if _G.old_preprocess_loadfile then
-		_G.loadfile = _G.old_preprocess_loadfile
-		_G.old_preprocess_loadfile = nil
-	end
+		if _G.old_preprocess_dofile then
+			_G.dofile = _G.old_preprocess_dofile
+			_G.old_preprocess_dofile = nil
+		end
 
-	if _G.old_preprocess_dofile then
-		_G.dofile = _G.old_preprocess_dofile
-		_G.old_preprocess_dofile = nil
-	end
+		for i, func in ipairs(package.loaders) do
+			if preprocess.package_load == func then
+				table.remove(package.loaders, i)
 
-	for i, func in ipairs(package.loaders) do
-		if preprocess.package_load == func then
-			table.remove(package.loaders, i)
-
-			break
+				break
+			end
 		end
 	end
 end
