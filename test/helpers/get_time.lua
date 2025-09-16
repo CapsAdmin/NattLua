@@ -5,17 +5,14 @@ if not has_ffi then return os.clock end
 
 if ffi.os == "OSX" then
 	ffi.cdef([[
-		int mach_timebase_info(void *info);
-		uint64_t mach_absolute_time(void);
+		uint64_t clock_gettime_nsec_np(int clock_id);
 	]])
-	local tb = ffi.new("struct { uint32_t numer; uint32_t denom; }")
-	ffi.C.mach_timebase_info(tb)
-	local orwl_timebase = tb.numer / tb.denom
-	local orwl_timestart = ffi.C.mach_absolute_time()
+	local C = ffi.C
+	local CLOCK_UPTIME_RAW_APPROX = 9
+	local start_time = C.clock_gettime_nsec_np(CLOCK_UPTIME_RAW_APPROX)
 	return function()
-		local diff = (ffi.C.mach_absolute_time() - orwl_timestart) * orwl_timebase
-		diff = tonumber(diff) / 1000000000
-		return diff
+		local current_time = C.clock_gettime_nsec_np(CLOCK_UPTIME_RAW_APPROX)
+		return tonumber(current_time - start_time) / 1000000000.0
 	end
 elseif ffi.os == "Windows" then
 	ffi.cdef([[
@@ -27,8 +24,7 @@ elseif ffi.os == "Windows" then
 	local freq = tonumber(q[0])
 	local start_time = ffi.new("int64_t[1]")
 	ffi.C.QueryPerformanceCounter(start_time)
-
-	function system.GetTime()
+	return function()
 		local time = ffi.new("int64_t[1]")
 		ffi.C.QueryPerformanceCounter(time)
 		time[0] = time[0] - start_time[0]
