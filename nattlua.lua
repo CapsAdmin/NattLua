@@ -67,9 +67,7 @@ if false then
 end
 
 if jit then
-	local ok, err = pcall(require, "nattlua.cli.init")
-
-	if not ok and err:find("not found", nil, true) then
+	if not package.searchpath("nattlua.cli.init", package.path) then
 		local current_path
 		local ffi = require("ffi")
 
