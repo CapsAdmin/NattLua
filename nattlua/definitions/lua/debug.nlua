@@ -1,4 +1,4 @@
-local type DebugHookCallback = function=(event: "call" | "return" | "tail call" | "count" | "line", line: number | nil)>(nil)
+local type DebugHookCallback = function=(event: "call" | "return" | "tail call" | "count" | "line", line: number | nil)>()
 local type DebugHookMask = "c" | "r" | "l" | "cr" | "cl" | "rl" | "crl"
 local type LineNumber = -1 .. inf
 type DebugGetInfo = {
