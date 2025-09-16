@@ -227,6 +227,11 @@ local function process_samples(
 		if str[1] then table_insert(out, table_concat(str)) end
 	end
 
+	table_insert(out, 1, "\nprofiler statistics:\n")
+	table_insert(out, 2, 
+		"I = interpreter, G = garbage collection, J = busy tracing, N = native / tracing completed:\n"
+	)
+
 	return table_concat(out)
 end
 

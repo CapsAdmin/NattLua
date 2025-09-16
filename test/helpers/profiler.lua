@@ -6,14 +6,14 @@ local stop_profiler
 local stop_tracing
 
 function profiler.Start()
-	stop_profiler = jit_profiler.Start(
-		{
-			mode = "line",
-			sampling_rate = 1,
-			depth = 1, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
-			threshold = 20,
-		}
-	)
+		stop_profiler = jit_profiler.Start(
+			{
+				mode = "line",
+				sampling_rate = 1,
+				depth = 1, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
+				threshold = 20,
+			}
+		)
 	stop_tracer = trace_tracker.Start()
 end
 
@@ -30,13 +30,7 @@ function profiler.Stop()
 		end
 	end
 
-	if stop_profiler then
-		io.write("\nprofiler statistics:\n")
-		io.write(
-			"I = interpreter, G = garbage collection, J = busy tracing, N = native / tracing completed:\n"
-		)
-		io.write(stop_profiler())
-	end
+	if stop_profiler then io.write(stop_profiler()) end
 end
 
 return profiler
