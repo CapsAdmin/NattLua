@@ -19,7 +19,7 @@ collectgarbage("stop")
 
 if INSTRUMENTAL then
 	-- much slower than sampling profiler
-	while true do
+	for i = 1, 100000 do
 		local type = lexer:ReadSimple()
 
 		if type == "end_of_file" then break end
