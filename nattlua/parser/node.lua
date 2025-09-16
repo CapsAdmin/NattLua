@@ -111,7 +111,6 @@ local all_nodes = {
 			statements = false,
 			compiled_function = false,
 			identifiers = false,
-			environments_override = false,
 			self_call = false,
 			tokens = {
 				["analyzer"] = false,
@@ -130,7 +129,6 @@ local all_nodes = {
 			statements = false,
 			identifiers = false,
 			identifiers_typesystem = false,
-			environments_override = false,
 			self_call = false,
 			return_types = false,
 			tokens = {
@@ -717,6 +715,7 @@ local all_nodes = {
 			code = false,
 			imports = false,
 			data_import = false,
+			environments = false,
 			statements = false,
 			imported = false,
 			lexer_tokens = false,
@@ -734,8 +733,8 @@ local all_nodes = {
 			return_types = false,
 			statements = false,
 			compiled_function = false,
+			identifiers_typesystem = false,
 			identifiers = false,
-			environments_override = false,
 			tokens = {
 				["return:"] = false,
 				["arguments("] = false,
@@ -756,6 +755,7 @@ local all_nodes = {
 			statements = false,
 			identifiers = false,
 			environments_override = false,
+			identifiers_typesystem = false,
 			tokens = {
 				["table"] = false,
 				["arguments)"] = false,
@@ -777,6 +777,7 @@ local all_nodes = {
 			expression = false,
 			identifiers = false,
 			environments_override = false,
+			identifiers_typesystem = false,
 			tokens = {
 				["function"] = false,
 				["end"] = false,
@@ -794,7 +795,6 @@ local all_nodes = {
 			identifiers_typesystem = false,
 			statements = false,
 			identifiers = false,
-			environments_override = false,
 			tokens = {
 				["arguments_typesystem("] = false,
 				["arguments_typesystem)"] = false,
@@ -816,7 +816,6 @@ local all_nodes = {
 			self_call = false,
 			statements = false,
 			compiled_function = false,
-			environments_override = false,
 			expression = false,
 			identifiers = false,
 			tokens = {
@@ -835,11 +834,9 @@ local all_nodes = {
 		return {
 			is_statement = true,
 			self_call = false,
-			identifiers_typesystem = false,
 			statements = false,
 			expression = false,
 			identifiers = false,
-			environments_override = false,
 			tokens = {
 				["arguments)"] = false,
 				["function"] = false,
@@ -852,10 +849,9 @@ local all_nodes = {
 		}
 	end,
 }
+
 --[[#local type NodeKind = keysof<|all_nodes|>]]
 
--- TODO, replace this with META.New_type_kind()
--- TODO, replace type-kind with .Type
 function META.New(
 	type--[[#: ref NodeKind]],
 	environment--[[#: "typesystem" | "runtime"]],
@@ -865,33 +861,13 @@ function META.New(
 	parent--[[#: any]]
 )
 	local init = all_nodes[type]()
-
-	if init.is_expression then
-		init.is_statement = false
-	else
-		init.is_expression = false
-	end
-
 	init.Type = type
 	init.environment = environment
 	init.code_start = code_start
 	init.code_stop = code_stop
 	init.parent = parent
 	init.Code = code
-	init.inferred_types = false
-	init.inferred_types_done = false
-	--
-	init.scope = false
-	init.scopes = false
-	init.type_expression = false
-	init.identifier = false
-	init.first_node = false
-	--
-	init.environments = false
-	init.identifiers_typesystem = false
-	init.is_identifier = false
-	init.is_left_assignment = false
-	return META.NewObject(init--[[# as META.@Self]])
+	return META.NewObject(init--[[# as META.@Self]], true)
 end
 
 function META:__tostring()
