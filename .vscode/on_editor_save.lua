@@ -1,4 +1,6 @@
 --ANALYZE
+require("nattlua.other.lua_compat")
+
 local path = ...--[[# as string | nil]]
 assert(type(path) == "string", "expected path string")
 local is_lua = path:sub(-4) == ".lua"
@@ -38,8 +40,6 @@ end
 _G.HOTRELOAD = true
 _G.path = path
 _G.code = code
-local nl = (require--[[# as any]])("nattlua")
-local profiler = require("test.helpers.profiler")
 
 
 local function run_hotreload_config()
@@ -92,6 +92,9 @@ function _G.run_lua(path--[[#: string]], ...)
 end
 
 function _G.run_nlua(path)
+	local nl = (require--[[# as any]])("nattlua")
+	local profiler = require("test.helpers.profiler")
+
 	io.write("running nattlua: ", path, "\n")
 	local lua_code = assert(read_file(path))
 
