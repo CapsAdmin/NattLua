@@ -196,30 +196,45 @@ function util.Measure(what, cb) -- type util.Measure = function(string, function
 end
 
 function util.GetNattLuaCodeAsString()
-	local paths = {}
+	local files = {}
 
 	for path in (
 		io.popen("git ls-tree --full-tree --name-only -r HEAD"):read("*a")
 	):gmatch("(.-)\n") do
 		if path:find("%.lua") or path:find("%.nlua") then
-			table.insert(paths, path)
+			local f = io.open(path)
+			local str = f:read("*a")
+			f:close()
+			if loadstring(str) then
+				if str:sub(1,1) == "#" then
+					str = str:sub(str:find("\n") + 1)
+				end
+				table.insert(files, {code = str, path = path})
+			end
 		end
 	end
 
 	local tokens = {}
-	local str = {}
+	local out = {}
 	local size = 0
 
-	for i, path in ipairs(paths) do
-		local str = io.open(path):read("*a")
-		str = "function _BUNDLE" .. i .. "(...) -- " .. path .. "\n" .. str .. "\nend\n\n"
-		table.insert(str, str)
+	for i, info in ipairs(files) do
+		table.insert(out, "function _BUNDLE" .. i .. "(...) -- " .. info.path .. "\n" .. info.code .. "\nend\n\n")
 	end
 
-	f:close()
-	local lua = table.concat(str, "\n")
+	local lua = table.concat(out, "\n")
 	assert(loadstring(lua))
 	return lua
+end
+
+
+function util.Get10MBLua()
+	return assert(
+		util.FetchCode(
+			"examples/benchmarks/temp/10mb.lua",
+			"https://gist.githubusercontent.com/CapsAdmin/0bc3fce0624a72d83ff0667226511ecd/raw/b84b097b0382da524c4db36e644ee8948dd4fb20/10mb.lua"
+		)
+	)
 end
 
 function util.MeasureFunction(cb)

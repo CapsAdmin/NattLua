@@ -1,11 +1,6 @@
 require("nattlua.other.jit_options").SetOptimized()
 local util = require("examples.util")
-local lua_code = assert(
-	util.FetchCode(
-		"examples/benchmarks/temp/10mb.lua",
-		"https://gist.githubusercontent.com/CapsAdmin/0bc3fce0624a72d83ff0667226511ecd/raw/b84b097b0382da524c4db36e644ee8948dd4fb20/10mb.lua"
-	)
-)
+local lua_code = util.Get10MBLua()
 util.LoadGithub("franko/luajit-lang-toolkit/master/lang/reader.lua", "lang.reader")
 util.LoadGithub("franko/luajit-lang-toolkit/master/lang/id_generator.lua", "lang.id_generator")
 util.LoadGithub("franko/luajit-lang-toolkit/master/lang/lua_ast.lua", "lang.lua_ast")

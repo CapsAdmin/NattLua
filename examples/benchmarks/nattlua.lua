@@ -2,12 +2,7 @@ require("nattlua.other.jit_options").SetOptimized()
 local nl = require("nattlua")
 local util = require("examples.util")
 local load = loadstring or load
-local lua_code = assert(
-	util.FetchCode(
-		"examples/benchmarks/temp/10mb.lua",
-		"https://gist.githubusercontent.com/CapsAdmin/0bc3fce0624a72d83ff0667226511ecd/raw/b84b097b0382da524c4db36e644ee8948dd4fb20/10mb.lua"
-	)
-)
+local lua_code = util.Get10MBLua()
 local sec = util.MeasureFunction(function()
 	local compiler = nl.Compiler(lua_code, "10mb.lua", {parser = {
 		skip_import = true,
