@@ -195,6 +195,33 @@ function util.Measure(what, cb) -- type util.Measure = function(string, function
 	)
 end
 
+function util.GetNattLuaCodeAsString()
+	local paths = {}
+
+	for path in (
+		io.popen("git ls-tree --full-tree --name-only -r HEAD"):read("*a")
+	):gmatch("(.-)\n") do
+		if path:find("%.lua") or path:find("%.nlua") then
+			table.insert(paths, path)
+		end
+	end
+
+	local tokens = {}
+	local str = {}
+	local size = 0
+
+	for i, path in ipairs(paths) do
+		local str = io.open(path):read("*a")
+		str = "function _BUNDLE" .. i .. "(...) -- " .. path .. "\n" .. str .. "\nend\n\n"
+		table.insert(str, str)
+	end
+
+	f:close()
+	local lua = table.concat(str, "\n")
+	assert(loadstring(lua))
+	return lua
+end
+
 function util.MeasureFunction(cb)
 	local start = get_time()
 	cb()
