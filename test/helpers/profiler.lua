@@ -1,11 +1,15 @@
 local jit_profiler = require("test.helpers.jit_profiler")
+local line_profiler = require("test.helpers.line_profiler")
 local trace_tracker = require("test.helpers.jit_trace_track")
 local profiler = {}
 local should_run = true
 local stop_profiler
 local stop_tracing
 
-function profiler.Start()
+function profiler.Start(mode)
+	if mode == "instrumental" then
+		stop_profiler = line_profiler.Start()
+	else
 		stop_profiler = jit_profiler.Start(
 			{
 				mode = "line",
@@ -14,6 +18,8 @@ function profiler.Start()
 				threshold = 20,
 			}
 		)
+	end
+
 	stop_tracer = trace_tracker.Start()
 end
 
