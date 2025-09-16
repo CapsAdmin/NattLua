@@ -188,9 +188,11 @@ function _G.run_test(path)
 	else
 		io.write("running all tests", "\n")
 	end
-
+	local get_time = require("test.helpers.get_time")
+	local time = get_time()
 	assert(loadfile("test/run.lua"))()(path)
 	io.write(" - ok\n")
+	io.write("total time: ", get_time() - time, " seconds\n")
 end
 
 function _G.run_fallback()
