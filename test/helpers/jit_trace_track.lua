@@ -26,6 +26,21 @@ local function format_error(err--[[#: number]], arg--[[#: number | nil]])
 	return string.format(fmt, arg)
 end
 
+local function create_warn_log()
+	local i = 0
+	local last_time = 0
+	return function()
+		i = i + 1
+
+		if last_time < os.clock() then
+			last_time = os.clock() + 1
+			return i
+		end
+
+		return false
+	end
+end
+
 --[[#local type Trace = {
 	pc_lines = List<|{func = Function, depth = number, pc = number}|>,
 	id = number,
@@ -43,8 +58,11 @@ local trace_track = {}
 function trace_track.Start()
 	if not attach or not funcinfo or not traceinfo then return nil end
 
+	local should_warn_mcode = create_warn_log()
+	local should_warn_abort = create_warn_log()
 	local traces--[[#: Map<|number, Trace|>]] = {}
 	local aborted = {}
+	local trace_count = 0
 
 	local function start(
 		id--[[#: number]],
@@ -53,10 +71,6 @@ function trace_track.Start()
 		parent_id--[[#: nil | number]],
 		exit_id--[[#: nil | number]]
 	)
-		if parent_id == nil then assert(exit_id == nil) end
-
-		if exit_id == nil then assert(parent_id == nil) end
-
 		-- TODO, both should be nil here
 		local tr = {
 			pc_lines = {{func = func, pc = pc, depth = 0}},
@@ -75,6 +89,7 @@ function trace_track.Start()
 		end
 
 		traces[id] = tr
+		trace_count = trace_count + 1
 	end
 
 	local function stop(id--[[#: number]], func--[[#: Function]])
@@ -82,9 +97,6 @@ function trace_track.Start()
 		assert(trace.aborted == nil)
 		trace.trace_info = assert(traceinfo(id), "invalid trace id: " .. id)
 	end
-
-	local mcode_error_log_i = 0
-	local mcode_error_log_last = 0
 
 	local function abort(
 		id--[[#: number]],
@@ -109,37 +121,40 @@ function trace_track.Start()
 
 		trace.DEAD = true
 		traces[id] = nil
+		trace_count = trace_count - 1
 
 		-- mcode allocation issues should be logged right away
 		if code == 27 then
-			if mcode_error_log_last < os.clock() then
+			local x = should_warn_mcode()
+
+			if x then
 				io.write(
 					format_error(code, reason),
-					mcode_error_log_i == 0 and
-						"" or
-						" [" .. mcode_error_log_i .. " times the last second]",
+					x == 0 and "" or " [" .. x .. " times the last second]",
 					"\n"
 				)
-				mcode_error_log_last = os.clock() + 1
 			end
-
-			mcode_error_log_i = mcode_error_log_i + 1
 		end
 	end
 
 	local function flush()
-		local count = 0
+		if trace_count > 0 then
+			local x = should_warn_abort()
 
-		for i, v in pairs(traces) do
-			count = count + 1
-		end
-
-		if count > 0 then
-			io.write("too many traces, flushing " .. count .. " traces\n")
+			if x then
+				io.write(
+					"flushing ",
+					trace_count,
+					" traces, ",
+					(x == 0 and "" or "[" .. x .. " times the last second]"),
+					"\n"
+				)
+			end
 		end
 
 		traces = {}
 		aborted = {}
+		trace_count = 0
 	end
 
 	local function record(tr--[[#: number]], func--[[#: Function]], pc--[[#: number]], depth--[[#: number]])
