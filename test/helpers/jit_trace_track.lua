@@ -26,15 +26,15 @@ local function format_error(err--[[#: number]], arg--[[#: number | nil]])
 	return string.format(fmt, arg)
 end
 
-local function create_warn_log()
+local function create_warn_log(interval)
 	local i = 0
 	local last_time = 0
 	return function()
 		i = i + 1
 
 		if last_time < os.clock() then
-			last_time = os.clock() + 1
-			return i
+			last_time = os.clock() + interval
+			return i, interval
 		end
 
 		return false
@@ -58,8 +58,8 @@ local trace_track = {}
 function trace_track.Start()
 	if not attach or not funcinfo or not traceinfo then return nil end
 
-	local should_warn_mcode = create_warn_log()
-	local should_warn_abort = create_warn_log()
+	local should_warn_mcode = create_warn_log(2)
+	local should_warn_abort = create_warn_log(8)
 	local traces--[[#: Map<|number, Trace|>]] = {}
 	local aborted = {}
 	local trace_count = 0
@@ -125,12 +125,12 @@ function trace_track.Start()
 
 		-- mcode allocation issues should be logged right away
 		if code == 27 then
-			local x = should_warn_mcode()
+			local x, interval = should_warn_mcode()
 
 			if x then
 				io.write(
 					format_error(code, reason),
-					x == 0 and "" or " [" .. x .. " times the last second]",
+					x == 0 and "" or " [" .. x .. " times the last "..interval.." seconds]",
 					"\n"
 				)
 			end
@@ -139,14 +139,14 @@ function trace_track.Start()
 
 	local function flush()
 		if trace_count > 0 then
-			local x = should_warn_abort()
+			local x, interval = should_warn_abort()
 
 			if x then
 				io.write(
 					"flushing ",
 					trace_count,
 					" traces, ",
-					(x == 0 and "" or "[" .. x .. " times the last second]"),
+					(x == 0 and "" or "[" .. x .. " times the last "..interval.." seconds]"),
 					"\n"
 				)
 			end
