@@ -138,16 +138,11 @@ function jit_options.Set(options, flags)
 end
 
 function jit_options.SetOptimized()
-	local maxmcode = 128000
-	local sizemcode = nil
-
-	if jit.os == "OSX" and jit.arch == "arm64" then maxmcode = nil end
-
 	jit_options.Set(
 		{
 			maxtrace = 65535,
-			maxmcode = maxmcode,
-			sizemcode = sizemcode,
+			maxmcode = 128000,
+			sizemcode = 1024,
 			minstitch = 3,
 			maxrecord = 2000,
 			maxirconst = 8000,
