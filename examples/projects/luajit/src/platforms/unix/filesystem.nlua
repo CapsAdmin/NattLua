@@ -141,7 +141,8 @@ do
 		int closedir(void *dirp);
 	]]
 
-	if OSX then
+	-- TODO
+	if OSX as boolean then
 		ffi.cdef([[
 			struct dirent {
 				uint64_t d_ino;

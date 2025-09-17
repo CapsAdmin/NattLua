@@ -69,25 +69,23 @@ do
 		local info = debug.getinfo(2)
 		local name = info.source:match("(test/tests/.+)") or info.source
 
-		if not _G.HOTRELOAD then
-			_G.loading_indicator()
-		end
+		if not _G.HOTRELOAD then _G.loading_indicator() end
 
 		_G.TEST = true
 		local compiler = nl.Compiler(code, nil, nil, 3)
 		compiler:SetEnvironments(Table({}), typesystem_env)
 		_G.TEST_GARBAGE = {}
 		local ok, err = compiler:Analyze()
+
 		do
 			local tbl = {}
-			for k,v in pairs(_G.TEST_GARBAGE) do
+
+			for k, v in pairs(_G.TEST_GARBAGE) do
 				tbl[k:GetHash()] = v
 			end
-			
+
 			for hash, v in pairs(tbl) do
-				if v and v.Type == "symbol" and v:IsNil() then
-					tbl[hash] = nil
-				end
+				if v and v.Type == "symbol" and v:IsNil() then tbl[hash] = nil end
 			end
 
 			if next(tbl) then
@@ -95,7 +93,6 @@ do
 				error("garbage not collected", 2)
 			end
 		end
-
 
 		_G.TEST = false
 
@@ -141,16 +138,15 @@ do
 end
 
 function _G.find_tests(filter)
+	local test_directory = fs.get_current_directory() .. "/test/tests/"
 	local filtered = {}
-	local files = fs.get_files_recursive("test/tests/")
+	local files = fs.get_files_recursive(test_directory)
 
 	if not filter or filter == "all" then
 		filtered = files
 	else
 		for _, path in ipairs(files) do
-			if path:find(filter, nil, true) then
-				table.insert(filtered, path)
-			end
+			if path:find(filter, nil, true) then table.insert(filtered, path) end
 		end
 	end
 
@@ -206,14 +202,16 @@ function _G.find_tests(filter)
 	for i, path in ipairs(found) do
 		local is_lua = path:sub(-4) == ".lua"
 		local is_nl = path:sub(-5) == ".nlua"
-		local name = path:gsub("test/tests/", "")
-
-		table.insert(expanded, {
-			path = path,
-			name = name,
-			is_lua = is_lua,
-			is_nl = is_nl,
-		})
+		local name = path:gsub(test_directory, "")
+		table.insert(
+			expanded,
+			{
+				path = path,
+				name = name,
+				is_lua = is_lua,
+				is_nl = is_nl,
+			}
+		)
 	end
 
 	return expanded
@@ -233,7 +231,8 @@ do
 
 	local function format_gc(kb)
 		if kb > 1024 then
-			local str = ("%.2f MB"):format(kb / 1024) 
+			local str = ("%.2f MB"):format(kb / 1024)
+
 			if kb > 10 * 1024 then return colors.red(str) end
 		end
 
@@ -241,12 +240,15 @@ do
 	end
 
 	local i = 0
+
 	function _G.loading_indicator()
 		if not LOGGING then return end
-		if i % 4 == 0 then 
+
+		if i % 4 == 0 then
 			io_write(colors.dim("."))
 			io.flush()
 		end
+
 		i = i + 1
 	end
 
@@ -281,15 +283,15 @@ do
 		total_gc = total_gc + gc
 	end
 
-	function _G.run_test(test)
-		if LOGGING then
-			io_write(test.name, "\t")
-		end
+	function _G.run_single_test(test)
+		if LOGGING then io_write(test.name, "\t") end
+
 		if test.is_lua then
 			run_func(assert(loadfile(test.path)))
 		else
 			run_func(analyze, assert(fs.read(test.path)))
 		end
+
 		test_count = test_count + 1
 	end
 

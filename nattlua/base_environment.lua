@@ -5,6 +5,8 @@ local Analyzer = require("nattlua.analyzer.analyzer").New
 local assert = _G.assert
 local io_open = _G.io.open
 local math_huge = _G.math.huge
+local ROOT_PATH = _G.ROOT_PATH
+
 if not _G.IMPORTS then
 	_G.IMPORTS = setmetatable(
 		{},
@@ -19,6 +21,8 @@ if not _G.IMPORTS then
 end
 
 local function import_data(path)
+	if ROOT_PATH then path = ROOT_PATH .. path end
+
 	local f, err = io_open(path, "rb")
 
 	if not f then return nil, err end
@@ -36,12 +40,13 @@ local function load_definitions(root_node)
 	local config = {}
 	config.file_path = config.file_path or path
 	config.file_name = config.file_name or "@" .. path
+	config.root_directory = ROOT_PATH
 	config.emitter = {
 		comment_type_annotations = false,
 	}
 	config.parser = {root_statement_override = root_node}
 	-- import_data will be transformed on build and the local function will not be used
-	-- we canot use the upvalue path here either since this happens at parse time
+	-- we cannot use the upvalue path here either since this happens at parse time
 	local code = assert(import_data("nattlua/definitions/index.nlua"))
 	local Compiler = require("nattlua.compiler").New
 	return Compiler(code, config.file_name, config)

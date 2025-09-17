@@ -1,5 +1,4 @@
 local bit_band = bit.band
-
 local fs = {}
 
 if not jit then
@@ -275,16 +274,18 @@ elseif jit.arch ~= "Windows" then
 			return out
 		end
 
-		local function walk(path, tbl, errors, can_traverse)
+		function fs.walk(path, tbl, errors, can_traverse, files_only)
 			local ptr = ffi.C.opendir(path or "")
 
 			if ptr == nil then
-				list.insert(errors, {path = path, error = fs.last_error()})
+				table.insert(errors, {path = path, error = fs.last_error()})
 				return
 			end
 
-			tbl[tbl[0]] = path
-			tbl[0] = tbl[0] + 1
+			if not files_only then
+				tbl[tbl[0]] = path
+				tbl[0] = tbl[0] + 1
+			end
 
 			while true do
 				local dir_info = ffi.C.readdir(ptr)
@@ -295,10 +296,8 @@ elseif jit.arch ~= "Windows" then
 					local name = path .. ffi.string(dir_info.d_name)
 
 					if dir_info.d_type == 4 then
-						local name = name .. "/"
-
 						if not can_traverse or can_traverse(name) ~= false then
-							walk(name, tbl, errors, can_traverse)
+							fs.walk(name .. "/", tbl, errors, can_traverse, files_only)
 						end
 					else
 						tbl[tbl[0]] = name
@@ -309,21 +308,6 @@ elseif jit.arch ~= "Windows" then
 
 			ffi.C.closedir(ptr)
 			return tbl
-		end
-
-		function fs.get_files_recursive(path, can_traverse)
-			if path:sub(-1) ~= "/" then path = path .. "/" end
-
-			local out = {}
-			local errors = {}
-			out[0] = 1
-
-			if not walk(path, out, errors, can_traverse) then
-				return nil, errors[1].error
-			end
-
-			out[0] = nil
-			return out, errors[1] and errors or nil
 		end
 	end
 
@@ -514,7 +498,7 @@ else
 			return out
 		end
 
-		local function walk(path, tbl, errors)
+		function fs.walk(path, tbl, errors, can_traverse, files_only)
 			local handle = ffi.C.FindFirstFileA(path .. "*", data)
 
 			if handle == nil then
@@ -522,8 +506,10 @@ else
 				return
 			end
 
-			tbl[tbl[0]] = path
-			tbl[0] = tbl[0] + 1
+			if not files_only then
+				tbl[tbl[0]] = path
+				tbl[0] = tbl[0] + 1
+			end
 
 			if handle ~= INVALID_FILE then
 				local i = 1
@@ -533,7 +519,9 @@ else
 						local name = path .. ffi_string(data[0].cFileName)
 
 						if bit.band(data[0].dwFileAttributes, DIRECTORY) == DIRECTORY then
-							walk(name .. "/", tbl, errors)
+							if not can_traverse or can_traverse(name) ~= false then
+								fs.walk(name .. "/", tbl, errors)
+							end
 						else
 							tbl[tbl[0]] = name
 							tbl[0] = tbl[0] + 1
@@ -545,21 +533,6 @@ else
 			end
 
 			return tbl
-		end
-
-		function fs.get_files_recursive(path)
-			if path == "" then path = "." end
-
-			if not path:sub(-1) ~= "/" then path = path .. "/" end
-
-			local out = {}
-			local errors = {}
-			out[0] = 1
-
-			if not walk(path, out, errors) then return nil, errors[1].error end
-
-			out[0] = nil
-			return out, errors[1] and errors or nil
 		end
 	end
 
@@ -751,6 +724,23 @@ function fs.create_directory_recursive(path)
 
 	-- Create the directory
 	return fs.create_directory(path)
+end
+
+function fs.get_files_recursive(path)
+	if path == "" then path = "." end
+
+	if path:sub(-1) ~= "/" then path = path .. "/" end
+
+	local out = {}
+	local errors = {}
+	out[0] = 1
+
+	if not fs.walk(path, out, errors, nil, true) then
+		return nil, errors[1].error
+	end
+
+	out[0] = nil
+	return out, errors[1] and errors or nil
 end
 
 return fs

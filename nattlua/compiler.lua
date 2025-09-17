@@ -319,6 +319,7 @@ function META.New(
 			config[v] = config[v] or {}
 			config[v].file_path = config[v].file_path or config.file_path
 			config[v].file_name = config[v].file_name or config.file_name
+			config[v].root_directory = config[v].root_directory or config.root_directory
 		end
 	end
 

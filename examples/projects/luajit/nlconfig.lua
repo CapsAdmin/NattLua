@@ -20,16 +20,11 @@ config.commands["build"] = {
 		local code, err = builder:Emit(
 			{
 				pretty_print = true,
-				string_quote = "\"",
-				no_semicolon = true,
+				no_newlines = false,
 				omit_invalid_code = true,
 				comment_type_annotations = true,
 				type_annotations = false,
 				force_parenthesis = true,
-				extra_indent = {
-					Start = {to = "Stop"},
-					Toggle = "toggle",
-				},
 			}
 		)
 		local file = assert(io.open("out.lua", "w"))
