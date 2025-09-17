@@ -34,11 +34,10 @@ else
 	ffi.cdef([[
 		int clock_gettime(int clock_id, void *tp);
 	]])
-	local ts = ffi.new("struct { long int tv_sec; long int tv_nsec; }")
-	local enum = 1
+	local ts = ffi.new("struct { long int tv_sec; long int tv_nsec; }[1]")
 	local func = ffi.C.clock_gettime
 	return function()
-		func(enum, ts)
-		return tonumber(ts.tv_sec) + tonumber(ts.tv_nsec) * 0.000000001
+		func(1, ts)
+		return tonumber(ts[0].tv_sec) + tonumber(ts[0].tv_nsec) * 0.000000001
 	end
 end
