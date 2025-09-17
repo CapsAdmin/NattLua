@@ -17,6 +17,7 @@ local table = _G.table
 local collectgarbage = _G.collectgarbage
 local colors = require("nattlua.cli.colors")
 local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
+local callstack = require("nattlua.other.callstack")
 local nl = require("nattlua")
 
 function _G.test(name, cb, start, stop)
@@ -66,8 +67,8 @@ do
 	local runtime_env, typesystem_env = BuildBaseEnvironment()
 
 	function _G.analyze(code, expect_error, expect_warning)
-		local info = debug.getinfo(2)
-		local name = info.source:match("(test/tests/.+)") or info.source
+		local path = callstack.get_line(2)
+		local name = path:match("(test/tests/.+)") or path
 
 		if not _G.HOTRELOAD then _G.loading_indicator() end
 

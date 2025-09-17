@@ -22,6 +22,7 @@ local context = require("nattlua.analyzer.context")
 local path_util = require("nattlua.other.path")
 local type_errors = require("nattlua.types.error_messages")
 local formating = require("nattlua.other.formating")
+local callstack = require("nattlua.other.callstack")
 local table = _G.table
 local table_insert = table.insert
 local table_remove = table.remove
@@ -314,42 +315,40 @@ return function(META)
 		local analyzer_context = require("nattlua.analyzer.context")
 
 		local function on_error(msg)
-			local info = debug.getinfo(3)
-			local source = info.source
-			local line = info.currentline
+			local path, line = callstack.get_path_line(3)
 
-			if source == "@./nattlua/analyzer/base/base_analyzer.lua" and current_func then
-				info = debug.getinfo(current_func)
-				source = info.source
-				local test, test_line = source:match("^(.+):(%d+)$")
+			if path == "./nattlua/analyzer/base/base_analyzer.lua" and current_func then
+				path, line = callstack.get_func_path_line(current_func)
 
-				if test then
-					source = test
-					line = test_line
+				-- the name of the function might be path:line
+				if path then
+					local line = tostring(line)
+
+					if path:sub(-#line) == line then path = path:sub(1, -(#line + 2)) end
 				end
-			elseif source:sub(1, 1) == "@" then
-				local test = source:match("^(.+):%d+$")
-
-				if test then source = test:sub(2) end
 			end
 
-			if source then
-				local f, err = io.open(source, "r")
+			if path then
+				if path:sub(1, 1) == "@" then path = path:sub(2) end
+
+				local f, err = io.open(path, "r")
 
 				if f then
 					local code = f:read("*all")
 					f:close()
-					local start = formating.LineCharToSubPos(code, tonumber(line), 0)
+					local start = formating.LineCharToSubPos(code, line, 0)
 					local stop = start + #(code:sub(start):match("(.-)\n") or "") - 1
 
-					if msg:sub(1, #source) == source then
-						msg = msg:sub(#source)
+					if msg:sub(1, #path) == path then
+						msg = msg:sub(#path)
 						msg = msg:match("^:%d+:%d+:%s*(.+)") or msg:match("^:%d+%s*(.+)") or msg
+					elseif msg:sub(1, #"[string \"") == "[string \"" then
+						msg = msg:match("^%b[].-: (.+)")
 					end
 
 					local analyzer = analyzer_context:GetCurrentAnalyzer()
 					local node = analyzer:GetCurrentExpression() or analyzer:GetCurrentStatement()
-					return formating.BuildSourceCodePointMessage(code, source, msg, start, stop)
+					return formating.BuildSourceCodePointMessage(code, path, msg, start, stop)
 				end
 			end
 

@@ -496,19 +496,21 @@ return function(self, obj, input)
 				union[i] = Tuple(ret.types)
 			end
 		end
-		
+
 		if #union == 1 then
 			if union[1].Type == "tuple" then
 				output = union[1]
 			elseif union[1].Type == "union" then
 				output = union[1]
 				output = output:Simplify()
+
 				if output.Type ~= "tuple" then output = Tuple({output}) end
 			else
 				output = Tuple({union[1]})
 			end
 		else
 			output = Union(union):Simplify()
+
 			if output.Type ~= "tuple" then output = Tuple({output}) end
 		end
 	end
@@ -628,7 +630,7 @@ return function(self, obj, input)
 
 					if err then
 						for i, v in ipairs(err) do
-							local reason, a, b, i = table.unpack(v)
+							local reason, a, b, i = v[1], v[2], v[3], v[4]
 							self:PushCurrentStatement(function_node)
 							self:PushCurrentExpression(function_node.return_types and function_node.return_types[i])
 							self:Error(

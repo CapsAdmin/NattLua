@@ -3,6 +3,7 @@ local setmetatable = _G.setmetatable
 local debug_getinfo = _G.debug.getinfo
 local formating = require("nattlua.other.formating")
 local class = require("nattlua.other.class")
+local callstack = require("nattlua.other.callstack")
 local META = class.CreateTemplate("code")
 --[[#type META.@Name = "Code"]]
 --[[#type META.@Self = {
@@ -16,18 +17,6 @@ end
 
 function META:SubPosToLineChar(start--[[#: number]], stop--[[#: number]])
 	return formating.SubPosToLineCharCached(self:GetString(), start, stop)
-end
-
-local function get_default_name()
-	local info = debug_getinfo(3)
-
-	if info then
-		local parent_line = info.currentline
-		local parent_name = info.source:sub(2)
-		return parent_name .. ":" .. parent_line
-	end
-
-	return "unknown line : unknown name"
 end
 
 function META:BuildSourceCodePointMessage(
@@ -104,7 +93,7 @@ if has_ffi--[[# as false]] then
 	local refs = setmetatable({}, {_mode = "kv"})
 
 	function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
-		name = name or get_default_name()
+		name = name or callstack.get_line(2)
 		local code = " " .. lua_code
 		local self = ctype(
 			{
@@ -205,7 +194,7 @@ else
 		return META.NewObject(
 			{
 				Buffer = remove_bom_header(lua_code),
-				Name = name or get_default_name(),
+				Name = name or callstack.get_line(2) or "unknown name",
 			},
 			true
 		)

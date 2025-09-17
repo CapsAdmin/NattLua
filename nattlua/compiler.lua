@@ -19,6 +19,7 @@ local Analyzer = require("nattlua.analyzer.analyzer").New
 local Emitter = require("nattlua.emitter.emitter").New
 local loadstring = require("nattlua.other.loadstring")
 local stringx = require("nattlua.other.string")
+local callstack = require("nattlua.other.callstack")
 local META = class.CreateTemplate("compiler")
 --[[#local type CompilerConfig = Partial<|
 	{
@@ -72,8 +73,10 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 
 	if self.analyzer then
 		local stack = self.analyzer:GetCallStack()
+
 		for i = #stack, 1, -1 do
 			local v = stack[i]
+
 			if i > 1 then
 				local node = v.call_node or v.obj:GetFunctionBodyNode()
 
@@ -128,11 +131,11 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 
 		if _G.TEST then
 			for i = 1, math_huge do
-				local info = debug.getinfo(i)
+				local path = callstack.get_line(i)
 
-				if not info then break end
+				if not path then break end
 
-				if info.source:find("@test/tests", nil, true) then
+				if path:find("test/tests", nil, true) then
 					level = i
 
 					break
@@ -146,39 +149,12 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 	end
 end
 
-local function check_info(info, level)
-	if info.source:sub(1, 1) == "@" then
-		if info.name == "Error" or info.name == "OnDiagnostic" then return false end
-	end
-
-	return true
-end
-
-local function stack_trace_simple(level, check_info)
-	local s = ""
-
-	for i = level, 50 do
-		local info = debug.getinfo(i)
-
-		if not info then break end
-
-		if check_info(info, level) then
-			s = s .. info.source:sub(2) .. ":" .. info.currentline .. " - " .. (
-					info.name or
-					"?"
-				) .. "\n"
-		end
-	end
-
-	return s
-end
-
 local traceback = function(self, obj, msg)
 	if self.debug or _G.TEST then
 		local ret = {
 			xpcall(function()
 				msg = msg or "no error"
-				local s = msg .. "\n" .. stack_trace_simple(2, check_info)
+				local s = msg .. "\n" .. callstack.traceback(2)
 
 				if self.analyzer then s = s .. self.analyzer:DebugStateToString() end
 
@@ -309,10 +285,10 @@ function META.New(
 	config--[[#: CompilerConfig]],
 	level--[[#: number | nil]]
 )
-	local info = debug.getinfo(level or 2)
-	local parent_line = info and tostring(info.currentline) or "unknown line"
-	local parent_name = info and info.source:sub(2) or "unknown name"
-	name = name or (parent_name .. ":" .. parent_line)
+	local path, line, name = callstack.get_path_line(level or 2)
+	path = path or "unknown name"
+	line = line or "unknown line"
+	name = name or path .. ":" .. line
 
 	if config then
 		for _, v in ipairs({"emitter", "parser", "analyzer"}) do
@@ -323,20 +299,23 @@ function META.New(
 		end
 	end
 
-	return META.NewObject({
-		Code = Code(lua_code, name),
-		ParentSourceLine = parent_line,
-		ParentSourceName = parent_name,
-		Config = config or false,
-		Tokens = false,
-		SyntaxTree = false,
-		default_environment = false,
-		analyzer = false,
-		AnalyzedResult = false,
-		debug = false,
-		is_base_environment = false,
-		errors = {},
-	}, true)
+	return META.NewObject(
+		{
+			Code = Code(lua_code, name),
+			ParentSourceLine = parent_line,
+			ParentSourceName = parent_name,
+			Config = config or false,
+			Tokens = false,
+			SyntaxTree = false,
+			default_environment = false,
+			analyzer = false,
+			AnalyzedResult = false,
+			debug = false,
+			is_base_environment = false,
+			errors = {},
+		},
+		true
+	)
 end
 
 function META.FromFile(path, config)

@@ -7,7 +7,7 @@ return function(analyzer, obj, input)
 
 		if errors then
 			for _, error in ipairs(errors) do
-				local reason, a, b, i = table_unpack(error)
+				local reason, a, b, i = error[1], error[2], error[3], error[4]
 				analyzer:Error(
 					type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
 				)
