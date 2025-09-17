@@ -1,7 +1,6 @@
 --[[HOTRELOAD
-run_lua("test/performance/tests.lua")
+os.execute("luajit nattlua.lua profile")
 ]]
-
 local type = _G.type
 local table_insert = _G.table.insert
 local tostring = _G.tostring
@@ -139,11 +138,16 @@ function jit_options.Set(options, flags)
 end
 
 function jit_options.SetOptimized()
+	local maxmcode = 128000
+	local sizemcode = nil
+
+	if jit.os == "OSX" and jit.arch == "arm64" then maxmcode = nil end
+
 	jit_options.Set(
 		{
 			maxtrace = 65535,
-			maxmcode = 128000,
-			sizemcode = jit.arch == "arm64" and 50000 or nil,
+			maxmcode = maxmcode,
+			sizemcode = sizemcode,
 			minstitch = 3,
 			maxrecord = 2000,
 			maxirconst = 8000,
