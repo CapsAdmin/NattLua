@@ -867,7 +867,7 @@ function META.New(
 	init.code_stop = code_stop
 	init.parent = parent
 	init.Code = code
-	return META.NewObject(init--[[# as META.@Self]], true)
+	return META.NewObject(init--[[# as META.@Self]])
 end
 
 function META:__tostring()
