@@ -8,10 +8,10 @@ if ffi.os == "OSX" then
 		uint64_t clock_gettime_nsec_np(int clock_id);
 	]])
 	local C = ffi.C
-	local CLOCK_UPTIME_RAW_APPROX = 9
-	local start_time = C.clock_gettime_nsec_np(CLOCK_UPTIME_RAW_APPROX)
+	local CLOCK_UPTIME_RAW = 8
+	local start_time = C.clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
 	return function()
-		local current_time = C.clock_gettime_nsec_np(CLOCK_UPTIME_RAW_APPROX)
+		local current_time = C.clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
 		return tonumber(current_time - start_time) / 1000000000.0
 	end
 elseif ffi.os == "Windows" then
