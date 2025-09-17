@@ -9,6 +9,23 @@ local ok, vmdef = pcall(require, "jit.vmdef")
 local ffnames = ok and vmdef.ffnames
 local traceerr = ok and vmdef.traceerr
 local bcnames = ok and vmdef.bcnames
+
+local function format_error(err--[[#: number]], arg--[[#: number | nil]])
+	local fmt = traceerr[err]
+
+	if not fmt then return "unknown error: " .. err end
+
+	if not arg then return fmt end
+
+	if fmt:sub(1, #"NYI: bytecode") == "NYI: bytecode" then
+		local oidx = 6 * arg
+		arg = bcnames:sub(oidx + 1, oidx + 6)
+		fmt = "NYI bytecode %s"
+	end
+
+	return string.format(fmt, arg)
+end
+
 --[[#local type Trace = {
 	pc_lines = List<|{func = Function, depth = number, pc = number}|>,
 	id = number,
@@ -66,6 +83,9 @@ function trace_track.Start()
 		trace.trace_info = assert(traceinfo(id), "invalid trace id: " .. id)
 	end
 
+	local mcode_error_log_i = 0
+	local mcode_error_log_last = 0
+
 	local function abort(
 		id--[[#: number]],
 		func--[[#: Function]],
@@ -89,6 +109,22 @@ function trace_track.Start()
 
 		trace.DEAD = true
 		traces[id] = nil
+
+		-- mcode allocation issues should be logged right away
+		if code == 27 then
+			if mcode_error_log_last < os.clock() then
+				io.write(
+					format_error(code, reason),
+					mcode_error_log_i == 0 and
+						"" or
+						" [" .. mcode_error_log_i .. " times the last second]",
+					"\n"
+				)
+				mcode_error_log_last = os.clock() + 1
+			end
+
+			mcode_error_log_i = mcode_error_log_i + 1
+		end
 	end
 
 	local function flush()
@@ -99,7 +135,7 @@ function trace_track.Start()
 		end
 
 		if count > 0 then
-			print("too many traces, flushing " .. count .. " traces")
+			io.write("too many traces, flushing " .. count .. " traces\n")
 		end
 
 		traces = {}
@@ -185,22 +221,6 @@ local function format_func_info(fi--[[#: ReturnType<|funcinfo|>[1] ]], func--[[#
 	else
 		return "(?)"
 	end
-end
-
-local function format_error(err--[[#: number]], arg--[[#: number | nil]])
-	local fmt = traceerr[err]
-
-	if not fmt then return "unknown error: " .. err end
-
-	if not arg then return fmt end
-
-	if fmt:sub(1, #"NYI: bytecode") == "NYI: bytecode" then
-		local oidx = 6 * arg
-		arg = bcnames:sub(oidx + 1, oidx + 6)
-		fmt = "NYI bytecode %s"
-	end
-
-	return string.format(fmt, arg)
 end
 
 local function tostring_trace(v--[[#: Trace]], tab--[[#: nil | string]], stop_lines_only--[[#: nil | true]])
