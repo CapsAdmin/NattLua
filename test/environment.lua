@@ -1,11 +1,23 @@
 local io = require("io")
+local io_write = io.write
 local diff = require("nattlua.other.diff")
+local fs = require("nattlua.other.fs")
 local Table = require("nattlua.types.table").Table
 local debug = require("debug")
 local pcall = _G.pcall
 local type = _G.type
 local ipairs = _G.ipairs
 local xpcall = _G.xpcall
+local assert = _G.assert
+local loadfile = _G.loadfile
+local get_time = require("test.helpers.get_time")
+local profiler = require("test.helpers.profiler")
+local jit = _G.jit
+local table = _G.table
+local collectgarbage = _G.collectgarbage
+local colors = require("nattlua.cli.colors")
+local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
+local nl = require("nattlua")
 
 function _G.test(name, cb, start, stop)
 	if start and stop then
@@ -51,9 +63,7 @@ end
 
 do
 	-- reuse an existing environment to speed up tests
-	local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
 	local runtime_env, typesystem_env = BuildBaseEnvironment()
-	local nl = require("nattlua")
 
 	function _G.analyze(code, expect_error, expect_warning)
 		local info = debug.getinfo(2)
@@ -127,5 +137,168 @@ do
 		end
 
 		return compiler.analyzer, compiler.SyntaxTree, compiler.AnalyzedResult
+	end
+end
+
+function _G.find_tests(filter)
+	local filtered = {}
+	local files = fs.get_files_recursive("test/tests/")
+
+	if not filter or filter == "all" then
+		filtered = files
+	else
+		for _, path in ipairs(files) do
+			if path:find(filter, nil, true) then
+				table.insert(filtered, path)
+			end
+		end
+	end
+
+	local analyzer = {}
+	local analyzer_complex = {}
+	local types = {}
+	local other = {}
+
+	for _, path in ipairs(filtered) do
+		if fs.is_file(path) then
+			if not path:find("/file_importing/", nil, true) then
+				if path:find("nattlua/project.lua", nil, true) then
+					table.insert(analyzer_complex, path)
+				elseif path:find("nattlua/analyzer/", nil, true) then
+					if path:find("analyzer/complex", nil, true) then
+						table.insert(analyzer_complex, path)
+					else
+						table.insert(analyzer, path)
+					end
+				elseif path:find("nattlua/types/", nil, true) then
+					table.insert(types, path)
+				else
+					table.insert(other, path)
+				end
+			end
+		end
+	end
+
+	table.sort(analyzer)
+	table.sort(analyzer_complex)
+	table.sort(types)
+	table.sort(other)
+	local found = {}
+
+	for i, v in ipairs(other) do
+		table.insert(found, v)
+	end
+
+	for i, v in ipairs(types) do
+		table.insert(found, v)
+	end
+
+	for i, v in ipairs(analyzer) do
+		table.insert(found, v)
+	end
+
+	for i, v in ipairs(analyzer_complex) do
+		table.insert(found, v)
+	end
+
+	local expanded = {}
+
+	for i, path in ipairs(found) do
+		local is_lua = path:sub(-4) == ".lua"
+		local is_nl = path:sub(-5) == ".nlua"
+		local name = path:gsub("test/tests/", "")
+
+		table.insert(expanded, {
+			path = path,
+			name = name,
+			is_lua = is_lua,
+			is_nl = is_nl,
+		})
+	end
+
+	return expanded
+end
+
+do
+	local LOGGING = false
+	local PROFILING = false
+
+	local function format_time(seconds)
+		local str = ("%.3f"):format(seconds)
+
+		if seconds > 0.5 then return colors.red(str .. "s") end
+
+		return str .. "s"
+	end
+
+	local function format_gc(kb)
+		if kb > 1024 then
+			local str = ("%.2f MB"):format(kb / 1024) 
+			if kb > 10 * 1024 then return colors.red(str) end
+		end
+
+		return ("%.2f KB"):format(kb)
+	end
+
+	local i = 0
+	function _G.loading_indicator()
+		if not LOGGING then return end
+		if i % 4 == 0 then 
+			io_write(colors.dim("."))
+			io.flush()
+		end
+		i = i + 1
+	end
+
+	local total = 0
+	local total_gc = 0
+	local test_count = 0
+
+	function _G.begin_tests(logging, profiling)
+		if _G.STOP_STARTUP_PROFILE then
+			_G.STOP_STARTUP_PROFILE()
+			_G.STOP_STARTUP_PROFILE = nil
+		end
+
+		LOGGING = logging or false
+		PROFILING = profiling or false
+
+		if PROFILING then profiler.Start() end
+	end
+
+	local function run_func(func, ...)
+		local gc = collectgarbage("count")
+		local time = get_time()
+		func(...)
+		time = get_time() - time
+		gc = collectgarbage("count") - gc
+
+		if LOGGING then
+			io_write("\t", format_time(time), " and ", format_gc(gc), "\n")
+		end
+
+		total = total + time
+		total_gc = total_gc + gc
+	end
+
+	function _G.run_test(test)
+		if LOGGING then
+			io_write(test.name, "\t")
+		end
+		if test.is_lua then
+			run_func(assert(loadfile(test.path)))
+		else
+			run_func(analyze, assert(fs.read(test.path)))
+		end
+		test_count = test_count + 1
+	end
+
+	function _G.end_tests()
+		if PROFILING then profiler.Stop() end
+
+		if test_count > 0 then
+			io_write("running ", test_count, " tests took ", format_time(total), " seconds\n")
+			io_write("total memory allocated: ", format_gc(total_gc), "\n")
+		end
 	end
 end

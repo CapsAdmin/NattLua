@@ -193,7 +193,7 @@ function _G.run_test(path)
 	end
 	local get_time = require("test.helpers.get_time")
 	local time = get_time()
-	assert(loadfile("test/run.lua"))()(path)
+	assert(loadfile("test/run.lua"))()(path, false, false)
 	io.write(" - ok\n")
 	io.write("total time: ", get_time() - time, " seconds\n")
 end

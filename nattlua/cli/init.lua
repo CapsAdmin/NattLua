@@ -431,7 +431,6 @@ end
 
 function cli.get_config()
 	if fs.is_file(config_path) then
-		io.write("loading config ", config_path, "\n")
 		return copy_and_deep_merge(config, cli.load_config(config_path))
 	end
 
