@@ -14,7 +14,7 @@ local get_time = require("test.helpers.get_time")
 local profiler = require("test.helpers.profiler")
 local jit = _G.jit
 local table = _G.table
-local collectgarbage = _G.collectgarbage
+local memory = require("nattlua.other.memory")
 local colors = require("nattlua.cli.colors")
 local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
 local callstack = require("nattlua.other.callstack")
@@ -221,36 +221,57 @@ end
 do
 	local LOGGING = false
 	local PROFILING = false
+	local max_path_width = 0
+	local current_test_name = ""
+	local current_test_count = 0
+	local total_test_count = 0
 
 	local function format_time(seconds)
-		local str = ("%.3f"):format(seconds)
-
-		if seconds > 0.5 then return colors.red(str .. "s") end
-
-		return str .. "s"
-	end
-
-	local function format_gc(kb)
-		if kb > 1024 then
-			local str = ("%.2f MB"):format(kb / 1024)
-
-			if kb > 10 * 1024 then return colors.red(str) end
+		if seconds < 1 then
+			return string.format("%4d%s", math.floor(seconds * 1000), colors.dim(" ms"))
 		end
 
-		return ("%.2f KB"):format(kb)
+		return string.format("%4f%s", seconds, colors.dim(" s"))
 	end
 
-	local i = 0
+local function format_gc(kb)
+    return string.format("%4d%s", math.floor(kb / 1024), colors.dim(" mb"))
+end
+
+	local spinner_chars = {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"}
+	local spinner_index = 1
+
+	local function update_test_line(status, time_str, gc_str)
+		if not LOGGING then return end
+		
+		local padded_name = current_test_name .. string.rep(" ", max_path_width - #current_test_name)
+		
+		if status == "RUNNING" then
+			local spinner = spinner_chars[spinner_index]
+			io_write(string.format("\r%s %s RUNNING...", padded_name, spinner))
+		elseif status == "DONE" then
+			io_write(string.format("\r%s %s  %s\n", padded_name, time_str, gc_str))  
+		end
+		
+		io.flush()
+	end
 
 	function _G.loading_indicator()
 		if not LOGGING then return end
+		
+		-- Advance spinner and update line
+		spinner_index = (spinner_index % #spinner_chars) + 1
+		update_test_line("RUNNING")
+	end
 
-		if i % 4 == 0 then
-			io_write(colors.dim("."))
-			io.flush()
+	-- Call this before running tests to calculate max width
+	function _G.set_test_paths(tests)
+		max_path_width = 0
+		for _, test in ipairs(tests) do
+			max_path_width = math.max(max_path_width, #test.name)
 		end
-
-		i = i + 1
+		-- Add some padding for clean alignment
+		max_path_width = max_path_width + 2
 	end
 
 	local total = 0
@@ -270,22 +291,29 @@ do
 	end
 
 	local function run_func(func, ...)
-		local gc = collectgarbage("count")
+		local gc = memory.get_usage_kb()
 		local time = get_time()
 		func(...)
 		time = get_time() - time
-		gc = collectgarbage("count") - gc
+		gc = memory.get_usage_kb() - gc
 
-		if LOGGING then
-			io_write("\t", format_time(time), " and ", format_gc(gc), "\n")
-		end
+		-- Update final result
+		update_test_line("DONE", format_time(time), format_gc(gc))
 
 		total = total + time
 		total_gc = total_gc + gc
 	end
 
 	function _G.run_single_test(test)
-		if LOGGING then io_write(test.name, "\t") end
+		current_test_name = test.name
+		current_test_count = 0
+		-- You'll need to pass the expected test count somehow, or estimate it
+		-- For now, setting to 0 means no progress counter shown
+		total_test_count = 0  -- or test.expected_count if you have it
+		
+		if LOGGING then
+			update_test_line("RUNNING")
+		end
 
 		if test.is_lua then
 			run_func(assert(loadfile(test.path)))
@@ -300,8 +328,7 @@ do
 		if PROFILING then profiler.Stop() end
 
 		if test_count > 0 then
-			io_write("running ", test_count, " tests took ", format_time(total), " seconds\n")
-			io_write("total memory allocated: ", format_gc(total_gc), "\n")
+			io_write("running ", test_count, " tests took ", format_time(total), " and ", format_gc(total_gc), "\n")
 		end
 	end
 end
