@@ -518,7 +518,7 @@ return function(META)
 			local line
 
 			if node.Code:GetString() then
-				line = node.Code:SubPosToLineChar(node:GetStartStop()).line_start
+				line = node.Code:SubPosToLineChar(node.code_start, node.code_stop).line_start
 				code = ("\n"):rep(line - 1) .. code
 			end
 

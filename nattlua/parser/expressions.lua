@@ -728,22 +728,24 @@ return function(META)
 
 			if
 				primary_node.Type == "expression_value" and
+				(
+					primary_node.value.value == "import" or
+					primary_node.value.value == "dofile" or
+					primary_node.value.value == "loadfile" or
+					primary_node.value.value == "require" or
+					primary_node.value.value == "import_data"
+				) and
 				node.expressions[1] and
 				node.expressions[1].Type == "expression_value" and
-				node.expressions[1].value and
-				node.expressions[1].value:GetStringValue()
+				node.expressions[1].value
 			then
-				local name = primary_node.value.value
-
-				if
-					name == "import" or
-					name == "dofile" or
-					name == "loadfile" or
-					name == "require"
-				then
-					self:HandleImportExpression(node, name, node.expressions[1].value:GetStringValue(), start)
-				elseif name == "import_data" then
-					self:HandleImportDataExpression(node, node.expressions[1].value:GetStringValue(), start)
+				local data = node.expressions[1].value:GetStringValue()
+				if data then
+					if primary_node.value.value == "import_data" then
+						self:HandleImportDataExpression(node, data, start)
+					else
+						self:HandleImportExpression(node, primary_node.value.value, data, start)
+					end
 				end
 			end
 

@@ -77,8 +77,6 @@ function coverage.Preprocess(code, key)
 							node.value = inject_call_expression(parser, node.value, start, stop)
 						end
 					elseif node.is_expression then
-						local start, stop = node:GetStartStop()
-
 						if
 							node.is_left_assignment or
 							node.is_identifier or
@@ -103,8 +101,7 @@ function coverage.Preprocess(code, key)
 						then
 							return
 						end
-
-						return inject_call_expression(parser, node, start, stop)
+						return inject_call_expression(parser, node, node:GetStartStop())
 					end
 				end,
 				skip_import = true,
