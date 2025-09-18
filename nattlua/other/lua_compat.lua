@@ -32,7 +32,7 @@ _G.bit = _G.bit or require("nattlua.other.bit")
 do -- these are just helpers for print debugging
 	table.print = require("nattlua.other.table_print").print
 	debug.trace = function(max_level)
-		return debug.fast_traceback(max_level)
+		io.write(callstack.traceback(max_level))
 	end
 
 	do
