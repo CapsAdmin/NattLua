@@ -47,21 +47,7 @@ local jit_profiler = require("test.helpers.jit_profiler")
 
 local function update()
 	local body = read_message()
-	local stop_profiler = jit_profiler.Start(
-		{
-			mode = "line",
-			sampling_rate = 1,
-			depth = 2, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
-			threshold = 100,
-		}
-	)
 	local res = rpc_util.ReceiveJSON(body, lsp.methods)
-
-	if stop_profiler then
-		local res = stop_profiler()
-
-		if res and res ~= "" then print(res) end
-	end
 
 	if res then
 		if res.error then
