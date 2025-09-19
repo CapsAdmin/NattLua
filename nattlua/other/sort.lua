@@ -1,4 +1,5 @@
 local math_floor = _G.math.floor
+
 -- https://github.com/DarkRoku12/lua_sort
 -- Copyright (C) 2017 - DarkRoku12
 -- Optimized version.

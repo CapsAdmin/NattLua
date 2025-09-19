@@ -90,7 +90,7 @@ analyze[[
     type count = nil
     type color = nil
 ]]
-    analyze[[
+analyze[[
     £parser.TealCompat = true
     §analyzer.TealCompat = true
 

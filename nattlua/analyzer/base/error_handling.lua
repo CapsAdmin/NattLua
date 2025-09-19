@@ -80,7 +80,9 @@ return function(META)
 	end
 
 	function META:ErrorAssert(ok, err)
-		if not ok then error(self:ErrorMessageToString(err or "assertion failed!"), 2) end
+		if not ok then
+			error(self:ErrorMessageToString(err or "assertion failed!"), 2)
+		end
 	end
 
 	function META:ErrorMessageToString(tbl)

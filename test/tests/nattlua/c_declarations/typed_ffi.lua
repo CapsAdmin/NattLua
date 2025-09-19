@@ -1,11 +1,9 @@
 local analyze_old = _G.analyze
 
 local function analyze(c)
-	return analyze_old(
-		[=[
+	return analyze_old([=[
 			§require("nattlua.definitions.lua.ffi.main").reset()
-		]=] .. c
-	)
+		]=] .. c)
 end
 
 analyze[=[

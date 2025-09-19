@@ -149,9 +149,5 @@ for _, v in sorted_pairs(found) do
 	code = code .. "}\n"
 end
 
-local res = nl.Compiler(
-	code,
-	"",
-	{emitter = {pretty_print = true, comment_type_annotations = false}}
-):Emit()
+local res = nl.Compiler(code, "", {emitter = {pretty_print = true, comment_type_annotations = false}}):Emit()
 print(res, #res)

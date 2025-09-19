@@ -7,6 +7,7 @@ config.ignorefiles = {
 	"nattlua_for_ai%.lua",
 	"language_server/json%.lua",
 	"examples/benchmarks/temp/10mb%.lua",
+	"examples/benchmarks/temp/nattlua%.nlua",
 	"examples/projects/luajit/out%.lua",
 	"examples/projects/love2d/love%-api/.*",
 	"test/tests/nattlua/analyzer/file_importing/deep_error/.*",

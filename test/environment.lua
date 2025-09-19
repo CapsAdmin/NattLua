@@ -245,7 +245,7 @@ do
 
 	local function update_test_line(status, time_str, gc_str)
 		if not LOGGING then return end
-		
+
 		local padded_name = current_test_name .. string.rep(" ", max_path_width - #current_test_name)
 		local cr = IS_TERMINAL and "\r" or ""
 
@@ -255,14 +255,15 @@ do
 		elseif status == "DONE" then
 			io_write(string.format("%s%s %s  %s\n", cr, padded_name, time_str, gc_str))
 		end
-		
+
 		io.flush()
 	end
 
 	function _G.loading_indicator()
 		if not LOGGING then return end
+
 		if not IS_TERMINAL then return end
-		
+
 		-- Advance spinner and update line
 		spinner_index = (spinner_index % #spinner_chars) + 1
 		update_test_line("RUNNING")
@@ -271,9 +272,11 @@ do
 	-- Call this before running tests to calculate max width
 	function _G.set_test_paths(tests)
 		max_path_width = 0
+
 		for _, test in ipairs(tests) do
 			max_path_width = math.max(max_path_width, #test.name)
 		end
+
 		-- Add some padding for clean alignment
 		max_path_width = max_path_width + 2
 	end
@@ -300,10 +303,8 @@ do
 		func(...)
 		time = get_time() - time
 		gc = memory.get_usage_kb() - gc
-
 		-- Update final result
 		update_test_line("DONE", format_time(time), format_gc(gc))
-
 		total = total + time
 		total_gc = total_gc + gc
 	end
@@ -313,11 +314,8 @@ do
 		current_test_count = 0
 		-- You'll need to pass the expected test count somehow, or estimate it
 		-- For now, setting to 0 means no progress counter shown
-		total_test_count = 0  -- or test.expected_count if you have it
-		
-		if LOGGING then
-			update_test_line("RUNNING")
-		end
+		total_test_count = 0 -- or test.expected_count if you have it
+		if LOGGING then update_test_line("RUNNING") end
 
 		if test.is_lua then
 			run_func(assert(loadfile(test.path)))
@@ -332,7 +330,15 @@ do
 		if PROFILING then profiler.Stop() end
 
 		if test_count > 0 then
-			io_write("running ", test_count, " tests took ", format_time(total), " and ", format_gc(total_gc), "\n")
+			io_write(
+				"running ",
+				test_count,
+				" tests took ",
+				format_time(total),
+				" and ",
+				format_gc(total_gc),
+				"\n"
+			)
 		end
 	end
 end

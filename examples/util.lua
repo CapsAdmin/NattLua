@@ -205,10 +205,10 @@ function util.GetNattLuaCodeAsString()
 			local f = io.open(path)
 			local str = f:read("*a")
 			f:close()
+
 			if loadstring(str) then
-				if str:sub(1,1) == "#" then
-					str = str:sub(str:find("\n") + 1)
-				end
+				if str:sub(1, 1) == "#" then str = str:sub(str:find("\n") + 1) end
+
 				table.insert(files, {code = str, path = path})
 			end
 		end
@@ -219,14 +219,16 @@ function util.GetNattLuaCodeAsString()
 	local size = 0
 
 	for i, info in ipairs(files) do
-		table.insert(out, "function _BUNDLE" .. i .. "(...) -- " .. info.path .. "\n" .. info.code .. "\nend\n\n")
+		table.insert(
+			out,
+			"function _BUNDLE" .. i .. "(...) -- " .. info.path .. "\n" .. info.code .. "\nend\n\n"
+		)
 	end
 
 	local lua = table.concat(out, "\n")
 	assert(loadstring(lua))
 	return lua
 end
-
 
 function util.Get10MBLua()
 	return assert(

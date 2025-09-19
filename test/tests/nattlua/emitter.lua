@@ -203,10 +203,7 @@ check(
 	[[foo<|"lol"|>]],
 	[[]]
 )
-check(
-	{pretty_print = true, type_annotations = true},
-	[=[local type x = (...,)]=]
-)
+check({pretty_print = true, type_annotations = true}, [=[local type x = (...,)]=])
 check(
 	{
 		pretty_print = true,

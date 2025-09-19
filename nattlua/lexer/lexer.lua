@@ -18,7 +18,7 @@ local B = string.byte
 local characters = require("nattlua.syntax.characters")
 local runtime_syntax = require("nattlua.syntax.runtime")
 local formating = require("nattlua.other.formating")
-	local bit = require("nattlua.other.bit")
+local bit = require("nattlua.other.bit")
 local IsSpace = characters.IsSpace
 local IsNumber = characters.IsNumber
 local IsHex = characters.IsHex
@@ -48,7 +48,6 @@ end
 function META:PeekByte()--[[#: number]]
 	return self.Code:GetByte(self.Position)
 end
-
 
 function META:PeekByteOffset(offset--[[#: number]])--[[#: number]]
 	return self.Code:GetByte(self.Position + offset)

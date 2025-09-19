@@ -228,10 +228,11 @@ local function process_samples(
 	end
 
 	table_insert(out, 1, "\nprofiler statistics:\n")
-	table_insert(out, 2, 
+	table_insert(
+		out,
+		2,
 		"I = interpreter, G = garbage collection, J = busy tracing, N = native / tracing completed:\n"
 	)
-
 	return table_concat(out)
 end
 

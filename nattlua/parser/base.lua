@@ -81,7 +81,8 @@ return function()
 				FFI_DECLARATION_PARSER = false,
 				OnPreCreateNode = META.OnPreCreateNode,
 				OnError = META.OnError,
-			}, true
+			},
+			true
 		)
 	end
 

@@ -58,7 +58,6 @@ function META.Equal(
 	for i = 1, len do
 		local a = assert(a.Data[i])
 		local ok = false
-
 		local reasons = {}
 
 		for i = 1, len do
@@ -70,7 +69,7 @@ function META.Equal(
 
 			table.insert(reasons, reason--[[# as string]])
 		end
-		
+
 		if a.Type == "table" then visited[a] = true end
 
 		if not ok then
@@ -454,6 +453,7 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: any]])
 		a.suppress = true
 		local b_val, reason
 		local ok
+
 		if b.Type == "union" then
 			b_val, reason = b:IsTypeObjectSubsetOf(a_val)
 		else

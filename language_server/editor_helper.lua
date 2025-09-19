@@ -50,12 +50,15 @@ function META:GetProjectConfig(what, path)
 end
 
 function META.New()
-	return META.NewObject({
-		TempFiles = {},
-		LoadedFiles = {},
-		debug = false,
-		node_to_type = {},
-	}, true)
+	return META.NewObject(
+		{
+			TempFiles = {},
+			LoadedFiles = {},
+			debug = false,
+			node_to_type = {},
+		},
+		true
+	)
 end
 
 function META:NodeToType(typ)
@@ -284,9 +287,13 @@ function META:Recompile(path, lol, diagnostics)
 
 			if not ok then
 				diagnostics[name] = diagnostics[name] or {}
-				local node = cfg.analyzer and cfg.analyzer:GetCurrentExpression() or cfg.analyzer:GetCurrentStatement()
+				local node = cfg.analyzer and
+					cfg.analyzer:GetCurrentExpression() or
+					cfg.analyzer:GetCurrentStatement()
 				local start, stop = 1, compiler:GetCode():GetByteSize()
+
 				if node then start, stop = node:GetStartStop() end
+
 				table.insert(
 					diagnostics[name],
 					{

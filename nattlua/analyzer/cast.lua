@@ -10,6 +10,7 @@ local tonumber = _G.tonumber
 local type = _G.type
 local ipairs = _G.ipairs
 local math_huge = _G.math.huge
+
 local function cast_lua_type_to_type(v)
 	local t = type(v)
 

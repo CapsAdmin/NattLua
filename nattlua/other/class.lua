@@ -103,16 +103,13 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 			func(init)
 		end
 
-		if true --[[# as false]] and unroll_functions then
-			for k,v in pairs(META) do
-				if type(v) == "function" then
-					init[k] = v
-				end
+		if true--[[# as false and unroll_functions]] then
+			for k, v in pairs(META) do
+				if type(v) == "function" then init[k] = v end
 			end
 		end
 
 		local obj = setmetatable(init, META)
-
 		return obj
 	end
 

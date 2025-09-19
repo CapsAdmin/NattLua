@@ -130,7 +130,7 @@ function trace_track.Start()
 			if x then
 				io.write(
 					format_error(code, reason),
-					x == 0 and "" or " [" .. x .. " times the last "..interval.." seconds]",
+					x == 0 and "" or " [" .. x .. " times the last " .. interval .. " seconds]",
 					"\n"
 				)
 			end
@@ -146,7 +146,7 @@ function trace_track.Start()
 					"flushing ",
 					trace_count,
 					" traces, ",
-					(x == 0 and "" or "[" .. x .. " times the last "..interval.." seconds]"),
+					(x == 0 and "" or "[" .. x .. " times the last " .. interval .. " seconds]"),
 					"\n"
 				)
 			end

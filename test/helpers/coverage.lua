@@ -1,8 +1,6 @@
 --[[HOTRELOAD
 	run_test("test/tests/coverage.lua")
 ]]
-
-
 local coverage = {}
 _G.__COVERAGE = _G.__COVERAGE or {}
 coverage.collected = {}
@@ -16,6 +14,7 @@ local table_sort = _G.table.sort
 local math_min = _G.math.min
 local math_max = _G.math.max
 local math_huge = _G.math.huge
+
 function coverage.Preprocess(code, key)
 	local expressions = {}
 
@@ -101,6 +100,7 @@ function coverage.Preprocess(code, key)
 						then
 							return
 						end
+
 						return inject_call_expression(parser, node, node:GetStartStop())
 					end
 				end,

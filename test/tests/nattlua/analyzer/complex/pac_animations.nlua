@@ -25,8 +25,8 @@ local type TMatrix = {
 	GetTranslation = function=(self)>(TVector),
 	GetAngles = function=(self)>(TAngle),
 }
-
 local type Angle = function=(number, number, number)>(TAngle)
+
 do
 	setmetatable<|
 		TAngle,
@@ -37,9 +37,10 @@ do
 		}
 	|>
 end
-local type LerpAngle = function=(number, TAngle, TAngle)>(TAngle)
 
-	local type Vector = function=(number, number, number)>(TVector)
+local type LerpAngle = function=(number, TAngle, TAngle)>(TAngle)
+local type Vector = function=(number, number, number)>(TVector)
+
 do
 	setmetatable<|
 		TVector,
@@ -50,9 +51,10 @@ do
 		}
 	|>
 end
-local type LerpVector = function=(number, TVector, TVector)>(TVector)
 
-	local type Matrix = function=()>(TMatrix)
+local type LerpVector = function=(number, TVector, TVector)>(TVector)
+local type Matrix = function=()>(TMatrix)
+
 do
 	setmetatable<|TMatrix, {
 		__mul = function=(self, TMatrix)>(TMatrix),

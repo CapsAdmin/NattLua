@@ -56,27 +56,28 @@ end
 
 local function generate_combinations_iterative(argument_options)
 	local result = {{}}
-	
+
 	for arg_index = 1, #argument_options do
 		local new_result = {}
 		local new_index = 1
-		
+
 		for _, combination in ipairs(result) do
 			for _, value in ipairs(argument_options[arg_index]) do
 				local new_combination = {}
+
 				for i, v in ipairs(combination) do
 					new_combination[i] = v
 				end
+
 				new_combination[#combination + 1] = value
-				
 				new_result[new_index] = new_combination
 				new_index = new_index + 1
 			end
 		end
-		
+
 		result = new_result
 	end
-	
+
 	return result
 end
 
@@ -84,12 +85,13 @@ local max_combinations = 1000
 
 local function is_above_limit(argument_options)
 	local total = 1
+
 	for i = 1, #argument_options do
 		total = total * #argument_options[i]
-		if total > max_combinations then 
-			return total, true
-		end
+
+		if total > max_combinations then return total, true end
 	end
+
 	return total, false
 end
 
@@ -125,8 +127,10 @@ local function unpack_union_tuples(obj, input)
 	if not has_expandable_args then return {packed_args} end
 
 	local total_combinations, is_above_limit = is_above_limit(argument_options)
+
 	if is_above_limit then
-		return nil, "too many argument combinations (" .. total_combinations .. " > " .. max_combinations .. ")"
+		return nil,
+		"too many argument combinations (" .. total_combinations .. " > " .. max_combinations .. ")"
 	end
 
 	return generate_combinations_iterative(argument_options)
@@ -218,14 +222,13 @@ return function(analyzer, obj, input)
 	end
 
 	local ret = Tuple()
-	
 	local combinations, error_msg = unpack_union_tuples(obj, input)
-	
+
 	if not combinations then
 		analyzer:Error({error_msg})
 		return output_signature:Copy()
 	end
-	
+
 	for _, arguments in ipairs(combinations) do
 		local t = call_and_collect(analyzer, obj, arguments, ret)
 

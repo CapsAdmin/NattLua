@@ -734,12 +734,14 @@ return function(META)
 					primary_node.value.value == "loadfile" or
 					primary_node.value.value == "require" or
 					primary_node.value.value == "import_data"
-				) and
+				)
+				and
 				node.expressions[1] and
 				node.expressions[1].Type == "expression_value" and
 				node.expressions[1].value
 			then
 				local data = node.expressions[1].value:GetStringValue()
+
 				if data then
 					if primary_node.value.value == "import_data" then
 						self:HandleImportDataExpression(node, data, start)

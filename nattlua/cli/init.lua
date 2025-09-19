@@ -110,7 +110,7 @@ config.commands["check"] = {
 			cmp[1] = Compiler.FromFile(entry_point, config)
 		else
 			for i, path in ipairs(
-				cli.get_files({path = args, blacklist = config.ignorefiles, ext = {".lua", ".nlua"}})
+				cli.get_files({path = args, ignorefiles = config.ignorefiles, ext = {".lua", ".nlua"}})
 			) do
 				cmp[i] = Compiler.FromFile(path, config)
 			end
@@ -169,7 +169,7 @@ config.commands["fmt"] = {
 			io.write(assert(Compiler.New(input, "stdin-", config):Emit()))
 		else
 			for _, path in ipairs(
-				cli.get_files({path = args, blacklist = config.ignorefiles, ext = {".lua", ".nlua"}})
+				cli.get_files({path = args, ignorefiles = config.ignorefiles, ext = {".lua", ".nlua"}})
 			) do
 				local old = config.emitter.comment_type_annotations
 				config.emitter.comment_type_annotations = config.emitter.comment_type_annotations_in_lua_files and
@@ -524,7 +524,7 @@ function cli.get_files(tbl)
 				cli.get_files({
 					path = path,
 					ext = tbl.ext,
-					blacklist = tbl.blacklist,
+					ignorefiles = tbl.ignorefiles,
 				})
 			) do
 				table.insert(out, v)
@@ -540,9 +540,9 @@ function cli.get_files(tbl)
 	end
 
 	local function is_path_allowed(path)
-		if not tbl.blacklist then return true end
+		if not tbl.ignorefiles then return true end
 
-		for _, pattern in ipairs(tbl.blacklist) do
+		for _, pattern in ipairs(tbl.ignorefiles) do
 			if path:find(pattern) then return false end
 		end
 

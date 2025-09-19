@@ -1,5 +1,6 @@
-do return end -- TODO
-
+do
+	return
+end -- TODO
 local ffi = require("ffi")
 local lib = ffi.load("opus")
 ffi.cdef[[

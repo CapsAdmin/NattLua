@@ -907,7 +907,7 @@ return function()
 			self:EmitTypeExpression(node.type_expression)
 			self:StopEmittingInvalidLuaCode(ok)
 		end
-		
+
 		self:Whitespace(" ")
 		self:EmitToken(node.tokens["="])
 		self:Whitespace(" ")
@@ -2157,7 +2157,8 @@ return function()
 				toggled_indents = false,
 				done = false,
 				FFI_DECLARATION_EMITTER = false,
-			}, true
+			},
+			true
 		)
 		self:Initialize()
 		return self

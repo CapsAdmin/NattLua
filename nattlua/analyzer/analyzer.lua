@@ -201,7 +201,9 @@ do
 	end
 
 	function META:AnalyzeExpression(node)
-		if node.Type == "statement_error" or node.Type == "expression_error" then return Any() end
+		if node.Type == "statement_error" or node.Type == "expression_error" then
+			return Any()
+		end
 
 		self:PushCurrentExpression(node)
 		local obj, err = self:AnalyzeRuntimeExpression(node)
@@ -300,6 +302,7 @@ do
 			self:Warning({info.node, " was crawled ", info.count, " times"})
 			io.write(tostring(info.node), " was crawled ", info.count, " times\n")
 		end
+
 		debug.trace()
 		self:FatalError("too many iterations (" .. count .. "), stopping execution")
 	end
@@ -326,52 +329,55 @@ function META.New(config)
 		config.should_crawl_untyped_functions = true
 	end
 
-	return META.NewObject({
-		config = config,
-		compiler = false,
-		processing_deferred_calls = false,
-		SuppressDiagnostics = false,
-		expect_diagnostic = false,
-		diagnostics_map = false,
-		type_checked = false,
-		max_iterations = false,
-		break_out_scope = false,
-		_continue_ = false,
-		tracked_tables = false,
-		inverted_index_tracking = false,
-		deferred_calls = false,
-		function_scope = false,
-		call_stack = false,
-		self_arg_stack = false,
-		tracked_upvalues_done = false,
-		tracked_upvalues = false,
-		tracked_tables_done = false,
-		scope = false,
-		current_statement = false,
-		left_assigned = false,
-		current_expression = false,
-		lua_error_thrown = false,
-		max_loop_iterations = false,
-		enable_random_functions = false,
-		yielded_results = false,
-		vars_table = false,
-		type_table = false,
-		analyzer = false,
-		super_hack = false,
-		stem_types = false,
-		TealCompat = false,
-		lua_assert_error_thrown = false,
-		type_to_node = {},
-		track_stash = {},
-		analyzed_root_statements = {},
-		loaded_modules = {},
-		parsed_paths = {},
-		check_count = 0,
-		call_stack_map = {},
-		LEFT_SIDE_OR = false,
-		context_values = {},
-		context_ref = {},
-	}, true)
+	return META.NewObject(
+		{
+			config = config,
+			compiler = false,
+			processing_deferred_calls = false,
+			SuppressDiagnostics = false,
+			expect_diagnostic = false,
+			diagnostics_map = false,
+			type_checked = false,
+			max_iterations = false,
+			break_out_scope = false,
+			_continue_ = false,
+			tracked_tables = false,
+			inverted_index_tracking = false,
+			deferred_calls = false,
+			function_scope = false,
+			call_stack = false,
+			self_arg_stack = false,
+			tracked_upvalues_done = false,
+			tracked_upvalues = false,
+			tracked_tables_done = false,
+			scope = false,
+			current_statement = false,
+			left_assigned = false,
+			current_expression = false,
+			lua_error_thrown = false,
+			max_loop_iterations = false,
+			enable_random_functions = false,
+			yielded_results = false,
+			vars_table = false,
+			type_table = false,
+			analyzer = false,
+			super_hack = false,
+			stem_types = false,
+			TealCompat = false,
+			lua_assert_error_thrown = false,
+			type_to_node = {},
+			track_stash = {},
+			analyzed_root_statements = {},
+			loaded_modules = {},
+			parsed_paths = {},
+			check_count = 0,
+			call_stack_map = {},
+			LEFT_SIDE_OR = false,
+			context_values = {},
+			context_ref = {},
+		},
+		true
+	)
 end
 
 return META

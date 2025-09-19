@@ -23,7 +23,6 @@ return {
 			callable_iterator.Type == "any" or
 			args[1] and
 			args[1].Type == "any"
-			
 		local uncertain_break = nil
 		self:ClearBreak()
 
@@ -33,7 +32,7 @@ return {
 			if values.Type == "tuple" and values:HasOneValue() then
 				values = values:GetWithNumber(1)
 			end
-		
+
 			if values.Type == "union" then
 				local tup = Tuple()
 				local max_length = 0
@@ -78,9 +77,7 @@ return {
 				local obj = self:Assert(values:GetWithNumber(i))
 
 				if self:IsRuntime() then
-					if obj.Type == "union" then 
-						obj = obj:Copy():RemoveType(Nil()) 
-					end
+					if obj.Type == "union" then obj = obj:Copy():RemoveType(Nil()) end
 				end
 
 				if uncertain_break then

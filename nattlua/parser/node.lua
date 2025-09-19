@@ -849,7 +849,6 @@ local all_nodes = {
 		}
 	end,
 }
-
 --[[#local type NodeKind = keysof<|all_nodes|>]]
 
 function META.New(
