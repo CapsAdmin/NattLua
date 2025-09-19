@@ -372,12 +372,12 @@ return function(META)
 		function META:CallLuaTypeFunction(func, scope, args)
 			self.function_scope = scope
 			current_func = func
-			local res = {xpcall(func, on_error_safe, table.unpack(args))}
+			local ok, a, b, c, d, e, f, g = xpcall(func, on_error_safe, table.unpack(args))
 			current_func = nil
 
-			if not table_remove(res, 1) then
-				local err = res[1]
-				local trace = res[2]
+			if not ok then
+				local err = a
+				local trace = b
 				local stack = self:GetCallStack()
 
 				if stack[1] then self:PushCurrentExpression(stack[#stack].call_node) end
@@ -389,9 +389,9 @@ return function(META)
 				return Nil()
 			end
 
-			if res[1] == nil then res[1] = Nil() end
+			if a == nil then a = Nil() end
 
-			return table.unpack(res)
+			return a, b, c, d, e, f, g
 		end
 
 		do

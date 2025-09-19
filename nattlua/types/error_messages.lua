@@ -26,7 +26,7 @@ function type_errors.context(context--[[#: Reason]], reason--[[#: Reason]])--[[#
 	if type(reason) ~= "table" then
 		reason = {context, reason}
 	else
-		reason = {context, table.unpack(reason)}
+		reason = {context, reason[1], reason[2], reason[3], reason[4], reason[5], reason[6]}
 	end
 
 	return reason

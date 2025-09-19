@@ -1,3 +1,6 @@
+--[[HOTRELOAD
+os.execute("luajit nattlua.lua profile trace")
+]]
 --ANALYZE
 local assert = _G.assert
 local table_insert = _G.table.insert
@@ -238,40 +241,44 @@ local function format_func_info(fi--[[#: ReturnType<|funcinfo|>[1] ]], func--[[#
 	end
 end
 
-local function tostring_trace(v--[[#: Trace]], tab--[[#: nil | string]], stop_lines_only--[[#: nil | true]])
+local function tostring_trace(
+	v--[[#: Trace]],
+	tab--[[#: nil | string]],
+	stop_lines_only--[[#: nil | boolean]],
+	msg--[[#: nil | string]]
+)
 	tab = tab or ""
 	local done--[[#: Map<|string, nil | true|>]] = {}
 	local start_location = {}
+	local stop_lines_only = stop_lines_only
+	local max_lines = nil
 
-	do
-		if stop_lines_only then
-			local start_depth = assert(v.pc_lines[#v.pc_lines]).depth
+	if stop_lines_only then
+		local start_depth = assert(v.pc_lines[#v.pc_lines]).depth
 
-			for i = #v.pc_lines, 1, -1 do
-				local v = assert(v.pc_lines[i])
-				local line = format_func_info(funcinfo(v.func, v.pc), v.func)
+		for i = #v.pc_lines, 1, -1 do
+			local v = assert(v.pc_lines[i])
+			local line = format_func_info(funcinfo(v.func, v.pc), v.func)
 
-				if not done[line] then
-					table.insert(start_location, 1, line)
-					done[line] = true
+			if not done[line] then
+				table.insert(start_location, 1, " " .. line)
+				done[line] = true
 
-					if v.depth ~= start_depth then break end
-				end
-			end
-		else
-			for i, v in ipairs(v.pc_lines) do
-				local line = format_func_info(funcinfo(v.func, v.pc), v.func)
-
-				if not done[line] then
-					table.insert(start_location, (i == 1 and "" or tab) .. (" "):rep(v.depth) .. line)
-					done[line] = true
-				end
+				if v.depth ~= start_depth then break end
 			end
 		end
+	else
+		for i, v in ipairs(v.pc_lines) do
+			local line = format_func_info(funcinfo(v.func, v.pc), v.func)
 
-		start_location = table.concat(start_location, "\n")
+			if not done[line] then
+				table.insert(start_location, " " .. (i == 1 and "" or tab) .. (" "):rep(v.depth) .. line)
+				done[line] = true
+			end
+		end
 	end
 
+	start_location = table.concat(start_location, "\n")
 	local str = ""
 
 	if not stop_lines_only then str = str .. "[" .. v.id .. "] " end
@@ -288,14 +295,15 @@ local function tostring_trace(v--[[#: Trace]], tab--[[#: nil | string]], stop_li
 		end
 	end
 
-	str = str .. link
-	str = str .. " - "
-
 	if v.aborted then
 		str = str .. "ABORTED: " .. format_error(v.aborted.code, v.aborted.reason)
-		str = str .. " - "
+	else
+		str = str .. link
 	end
 
+	if msg then str = str .. " - " .. msg end
+
+	str = str .. ":\n"
 	str = str .. start_location
 	return str
 end
@@ -353,12 +361,43 @@ function trace_track.ToStringProblematicTraces(traces--[[#: Map<|number, Trace|>
 	local map = {}
 
 	for k, v in pairs(traces) do
-		if v.trace_info.linktype == "stitch" then
-			local res = tostring_trace(v, nil, true)
+		local linktype = v.trace_info.linktype
+		local nexit = v.trace_info.nexit or 0
+		-- Check for various problematic patterns
+		local is_problematic = false
+		local reason
+		local stop_lines_only = false
+
+		if linktype == "stitch" then
+			-- Always problematic - should have been stitched
+			is_problematic = true
+			stop_lines_only = true
+		elseif linktype == "interpreter" and nexit > 100 then
+			-- Hot exit to interpreter
+			is_problematic = true
+			reason = "HOT_INTERP(exits:" .. nexit .. ")"
+		elseif linktype == "none" then
+			-- No continuation
+			is_problematic = true
+			reason = "NO_LINK"
+		elseif linktype == "return" and nexit > 100 then
+			-- Frequently returning
+			is_problematic = true
+			stop_lines_only = true -- limit to 10 lines
+			reason = "HOT_RETURN(exits:" .. nexit .. ")"
+		elseif linktype == "loop" and nexit > 1000 then
+			-- Loop exiting frequently
+			is_problematic = true
+			reason = "UNSTABLE_LOOP(exits:" .. nexit .. ")"
+		end
+
+		if is_problematic then
+			local res = tostring_trace(v, nil, stop_lines_only, reason)
 			map[res] = (map[res] or 0) + 1
 		end
 	end
 
+	-- Keep aborted traces as-is
 	for k, v in pairs(aborted) do
 		local res = tostring_trace(v, nil, true)
 		map[res] = (map[res] or 0) + 1
@@ -377,7 +416,7 @@ function trace_track.ToStringProblematicTraces(traces--[[#: Map<|number, Trace|>
 	local out = {}
 
 	for i, v in ipairs(sorted) do
-		out[i] = "x" .. v.count .. " :" .. v.line
+		out[i] = v.line .. (v.count > 1 and (" (x" .. v.count .. ")") or "") .. "\n"
 	end
 
 	return table.concat(out, "\n")

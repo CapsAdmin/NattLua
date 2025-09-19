@@ -1844,7 +1844,7 @@ return function()
 
 			if self.config.blank_invalid_code then
 				for i = self.i, i, -1 do
-					if self.out[i] then self.out[i] = self.out[i]:gsub("%S+", "") end
+					if self.out[i] then self.out[i] = "" end
 				end
 			end
 

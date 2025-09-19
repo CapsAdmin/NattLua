@@ -20,7 +20,7 @@ function profiler.Start(mode)
 				threshold = 20,
 			}
 		)
-stop_tracer = trace_tracker.Start()
+		stop_tracer = trace_tracker.Start()
 	end
 end
 

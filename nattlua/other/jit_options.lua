@@ -1,5 +1,5 @@
 --[[HOTRELOAD
-os.execute("luajit nattlua.lua profile")
+os.execute("luajit nattlua.lua test")
 ]]
 local type = _G.type
 local table_insert = _G.table.insert
@@ -31,10 +31,10 @@ local default_options = {
 	hotexit = 10, -- number of taken exits to start a side trace.
 	tryside = 4, -- number of attempts to compile a side trace.
 	--
-	instunroll = 4, -- max unroll for instable loops.
+	instunroll = 4, -- max unroll attempts for loops with an unknown iteration count before falling back to normal loop construct
 	loopunroll = 15, -- max unroll for loop ops in side traces.
-	callunroll = 3, -- max. unroll for recursive calls.
-	recunroll = 2, -- min  unroll for true recursion.
+	callunroll = 3, -- max depth for recursive calls.
+	recunroll = 2, -- min unroll for true recursion.
 	--
 	-- size of each machine code area (in KBytes).
 	-- See: https://devblogs.microsoft.com/oldnewthing/20031008-00/?p=42223
@@ -64,6 +64,7 @@ local default_flags = {
 	]]
 	fma = false,
 }
+local last_options = {options = {}, flags = {}}
 
 function jit_options.Set(options, flags)
 	if not jit then return end
@@ -119,6 +120,7 @@ function jit_options.Set(options, flags)
 		end
 	end
 
+	last_options = {options = p, flags = f}
 	local args = {}
 
 	for k, v in pairs(p) do
@@ -137,6 +139,10 @@ function jit_options.Set(options, flags)
 	jit.flush()
 end
 
+function jit_options.Get()
+	return last_options
+end
+
 function jit_options.SetOptimized()
 	jit_options.Set(
 		{
@@ -146,15 +152,15 @@ function jit_options.SetOptimized()
 			minstitch = 3,
 			maxrecord = 2000,
 			maxirconst = 8000,
-			maxside = 5000,
-			maxsnap = 5000,
-			hotloop = 200,
-			hotexit = 30,
-			tryside = 4,
-			instunroll = 1000,
-			loopunroll = 1000,
-			callunroll = 1000,
-			recunroll = 0,
+			maxside = 3000,
+			maxsnap = 10000,
+			hotloop = 5,
+			hotexit = 100,
+			tryside = 3,
+			instunroll = 100,
+			loopunroll = 100,
+			callunroll = 100,
+			recunroll = 3,
 		},
 		{
 			fold = true,
@@ -167,6 +173,7 @@ function jit_options.SetOptimized()
 			abc = true,
 			sink = true,
 			fuse = true,
+			fma = true,
 		}
 	)
 end
