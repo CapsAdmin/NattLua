@@ -18,6 +18,7 @@ local memory = require("nattlua.other.memory")
 local colors = require("nattlua.cli.colors")
 local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
 local callstack = require("nattlua.other.callstack")
+local system = require("nattlua.other.system")
 local nl = require("nattlua")
 
 function _G.test(name, cb, start, stop)
@@ -221,6 +222,7 @@ end
 do
 	local LOGGING = false
 	local PROFILING = false
+	local IS_TERMINAL = system.is_tty()
 	local max_path_width = 0
 	local current_test_name = ""
 	local current_test_count = 0
@@ -234,9 +236,9 @@ do
 		return string.format("%4f%s", seconds, colors.dim(" s"))
 	end
 
-local function format_gc(kb)
-    return string.format("%4d%s", math.floor(kb / 1024), colors.dim(" mb"))
-end
+	local function format_gc(kb)
+		return string.format("%4d%s", math.floor(kb / 1024), colors.dim(" mb"))
+	end
 
 	local spinner_chars = {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"}
 	local spinner_index = 1
@@ -245,12 +247,13 @@ end
 		if not LOGGING then return end
 		
 		local padded_name = current_test_name .. string.rep(" ", max_path_width - #current_test_name)
-		
-		if status == "RUNNING" then
+		local cr = IS_TERMINAL and "\r" or ""
+
+		if status == "RUNNING" and IS_TERMINAL then
 			local spinner = spinner_chars[spinner_index]
-			io_write(string.format("\r%s %s RUNNING...", padded_name, spinner))
+			io_write(string.format("%s%s %s RUNNING...", cr, padded_name, spinner))
 		elseif status == "DONE" then
-			io_write(string.format("\r%s %s  %s\n", padded_name, time_str, gc_str))  
+			io_write(string.format("%s%s %s  %s\n", cr, padded_name, time_str, gc_str))
 		end
 		
 		io.flush()
@@ -258,6 +261,7 @@ end
 
 	function _G.loading_indicator()
 		if not LOGGING then return end
+		if not IS_TERMINAL then return end
 		
 		-- Advance spinner and update line
 		spinner_index = (spinner_index % #spinner_chars) + 1
