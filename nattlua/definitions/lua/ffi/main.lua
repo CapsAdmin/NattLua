@@ -219,10 +219,11 @@ local function analyze(c_code, mode, ...)
 	return vars, typs, a.captured
 end
 
+local ok, ffi = pcall(require, "ffi")
+
 function cparser.sizeof(cdecl, len)
 	-- TODO: support non string sizeof
-	if jit and cdecl.Type == "string" and cdecl:IsLiteral() then
-		local ffi = require("ffi")
+	if ffi and cdecl.Type == "string" and cdecl:IsLiteral() then
 		local vars, typs, ctype = analyze(cdecl, "typeof")
 		local ok, val = pcall(ffi.sizeof, cdecl:GetData(), len and len:GetData() or nil)
 
