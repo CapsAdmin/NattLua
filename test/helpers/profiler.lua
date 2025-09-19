@@ -7,20 +7,21 @@ local stop_profiler
 local stop_tracing
 
 function profiler.Start(mode)
-	if mode == "instrumental" then
+	if mode == "trace" then
+		stop_tracer = trace_tracker.Start()
+	elseif mode == "instrumental" then
 		stop_profiler = line_profiler.Start()
 	else
 		stop_profiler = jit_profiler.Start(
 			{
 				mode = "line",
-				sampling_rate = 1,
+				sampling_rate = 10,
 				depth = 1, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
 				threshold = 20,
 			}
 		)
+stop_tracer = trace_tracker.Start()
 	end
-
-	stop_tracer = trace_tracker.Start()
 end
 
 function profiler.Stop()

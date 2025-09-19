@@ -285,7 +285,7 @@ do
 	local total_gc = 0
 	local test_count = 0
 
-	function _G.begin_tests(logging, profiling)
+	function _G.begin_tests(logging, profiling, profiling_mode)
 		if _G.STOP_STARTUP_PROFILE then
 			_G.STOP_STARTUP_PROFILE()
 			_G.STOP_STARTUP_PROFILE = nil
@@ -294,7 +294,7 @@ do
 		LOGGING = logging or false
 		PROFILING = profiling or false
 
-		if PROFILING then profiler.Start() end
+		if PROFILING then profiler.Start(profiling_mode) end
 	end
 
 	local function run_func(func, ...)

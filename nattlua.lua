@@ -1,8 +1,8 @@
 #!/usr/bin/env luajit
 
-if select(1, ...) == "profile" then
+if select(1, ...) == "profile" and select(2, ...) ~= "trace" then
 	local profiler = require("test.helpers.profiler")
-	profiler.Start()
+	profiler.Start(select(2, ...))
 	_G.STOP_STARTUP_PROFILE = function()
 		io.write("== startup profiling == :")
 		profiler.Stop()

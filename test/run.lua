@@ -1,6 +1,6 @@
-return function(filter, logging, profiling)
+return function(filter, logging, profiling, profiling_mode)
 	require("test.environment")
-	_G.begin_tests(logging, profiling)
+	_G.begin_tests(logging, profiling, profiling_mode)
 	local tests = _G.find_tests(filter)
 	_G.set_test_paths(tests)
 
