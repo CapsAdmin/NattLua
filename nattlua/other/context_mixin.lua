@@ -47,9 +47,10 @@ return function(META--[[#: ref any]])
 			local key_i = key .. "_i"
 			--[[#type META.@Self[key] = List<|any|>]]
 			--[[#type META.@Self[key_i] = number]]
+			local new = require("table.new")
 
 			META:AddInitializer(function(self--[[#: ref any]])
-				self[key] = {}--[[# as META.@Self[key] ]]
+				self[key] = new(100, 0)--[[# as META.@Self[key] ]]
 				self[key_i] = 0--[[# as META.@Self[key_i] ]]
 			end)
 
@@ -62,17 +63,11 @@ return function(META--[[#: ref any]])
 
 			local function get(self)
 				local val = self[key][self[key_i]]
-
-				if val == NIL then val = nil end
-
 				return val
 			end
 
 			local function get_offset(self, offset--[[#: number]])
 				local val = self[key][self[key_i] - (offset or 1) + 1]
-
-				if val == NIL then val = nil end
-
 				return val
 			end
 
