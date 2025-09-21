@@ -77,6 +77,7 @@ return function(META)
 		if not expressions then return end
 
 		out = out or {}
+		local i = #out + 1
 
 		for _, expression in ipairs(expressions) do
 			local obj, err = self:AnalyzeExpression(expression)
@@ -90,7 +91,8 @@ return function(META)
 				obj = obj:GetWithNumber(1)
 			end
 
-			table_insert(out, obj)
+			out[i] = obj
+			i = i + 1
 		end
 
 		return out
