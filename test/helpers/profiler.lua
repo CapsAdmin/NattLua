@@ -27,14 +27,8 @@ end
 function profiler.Stop()
 	if stop_tracer then
 		local traces, aborted = stop_tracer()
-		local str = trace_tracker.ToStringProblematicTraces(traces, aborted)
-
-		if #str > 0 then
-			io.write("\nluajit traces that were aborted and stitched:\n")
-			io.write(str, "\n")
-		else
-			io.write("\nno problematic traces found\n")
-		end
+		local str = trace_tracker.ToStringTraceInfo(traces, aborted)
+		io.write(str)
 	end
 
 	if stop_profiler then io.write(stop_profiler()) end
