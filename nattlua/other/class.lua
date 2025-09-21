@@ -1,4 +1,5 @@
 local setmetatable = _G.setmetatable
+local ipairs = _G.ipairs
 local class = {}
 
 function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]

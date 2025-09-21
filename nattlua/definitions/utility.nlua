@@ -370,7 +370,8 @@ analyzer function PopTypeEnvironment()
 end
 
 analyzer function CurrentType(what: "table" | "tuple" | "function" | "union", level: nil | number)
-	local obj = analyzer:GetCurrentType(what:GetData(), level and level:GetData())
+	assert(analyzer["GetCurrentType_" .. what:GetData()])
+	local obj = analyzer["GetCurrentType_" .. what:GetData()](analyzer, level and level:GetData())
 
 	if not obj then error("no current " .. what:GetData() .. " type", 2) end
 

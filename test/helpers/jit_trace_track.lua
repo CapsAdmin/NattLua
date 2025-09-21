@@ -1,5 +1,6 @@
 --[[HOTRELOAD
-os.execute("luajit nattlua.lua profile trace")
+--os.execute("luajit nattlua.lua profile trace")
+run_test_focus()
 ]]
 --ANALYZE
 local jutil = require("jit.util")
@@ -60,7 +61,7 @@ end
 }]]
 
 local function format_func_info(fi--[[#: ReturnType<|funcinfo|>[1] ]], func--[[#: Function]])
-	if fi.loc then
+	if fi.loc and fi.currentline ~= 0 then
 		local source = fi.source
 
 		if source:sub(1, 1) == "@" then source = source:sub(2) end
@@ -286,7 +287,7 @@ function trace_track.Start()
 					done[line] = true
 					lines[lines_i] = {
 						line = line,
-						code = get_code(line),
+						--code = get_code(line),
 						depth = pc_line.depth,
 						is_path = info.loc ~= nil,
 					}
@@ -634,6 +635,109 @@ function trace_track.ToStringTraceStatistics(traces--[[#: Map<|number, Trace|>]]
 	return table.concat(lines, "\n")
 end
 
+-- Add this near the top of your file, after the other requires
+local traceir = jutil.traceir
+local bit = require("bit")
+local band, shr = bit.band, bit.rshift
+local sub = string.sub
+local irnames = vmdef.irnames
+-- List of slow IR operations with their severity scores
+local SLOW_IR_OPS = {
+	{op = "GCSTEP", desc = "gc step"},
+	{op = "CALLXS", desc = "external call"},
+	{op = "XBAR", desc = "optimization barrier"},
+	{op = "NEWREF", desc = "new reference"},
+	{op = "XSNEW", desc = "string alloc"},
+	{op = "TDUP", desc = "Allocate Lua table, copying a template table"},
+}
+-- Build lookup table for faster access
+local SLOW_OPS_LOOKUP = {}
+
+for _, op_info in ipairs(SLOW_IR_OPS) do
+	SLOW_OPS_LOOKUP[op_info.op] = op_info
+end
+
+-- Analyze IR for slow operations and map to source lines
+local function analyze_trace_ir(trace--[[#: Trace]])
+	local slow_ops = {}
+
+	-- Iterate through IR instructions (1 to nins)
+	for ins = 1, trace.trace_info.nins do
+		local m, ot, op1, op2 = traceir(trace.id, ins)
+
+		if not m then break end
+
+		-- Extract opcode from ot using bit operations
+		local oidx = 6 * shr(ot, 8)
+		local opcode = sub(irnames, oidx + 1, oidx + 6)
+		-- Trim spaces from opcode
+		opcode = opcode:match("^%s*(.-)%s*$")
+		local line_idx = math.min(math.floor(ins / trace.trace_info.nins * #trace.pc_lines) + 1, #trace.pc_lines)
+		local pc_line = trace.pc_lines[line_idx]
+		local info = funcinfo(pc_line.func, pc_line.pc)
+
+		if info.loc then
+			local line = format_func_info(info, pc_line.func)
+
+			-- indicates global load
+			if opcode == "FLOAD" and op1 == 2 and op2 == 1 then
+				table_insert(slow_ops, {
+					what = "FLOAD GLOBAL",
+					line = line,
+				})
+			end
+
+			if SLOW_OPS_LOOKUP[opcode] then
+				table_insert(slow_ops, {
+					what = opcode,
+					line = line,
+				})
+			end
+		end
+	end
+
+	return slow_ops
+end
+
+function trace_track.ToStringProblematicIRInstructions(traces--[[#: Map<|number, Trace|>]])
+	local done = {}
+
+	for _, trace in ipairs(traces) do
+		local slow_ops = analyze_trace_ir(trace)
+
+		for _, slow_op in ipairs(slow_ops) do
+			done[slow_op.line] = done[slow_op.line] or {}
+			done[slow_op.line][slow_op.what] = (done[slow_op.line][slow_op.what] or 0) + 1
+		end
+	end
+
+	local sorted = {}
+
+	for line, ops in pairs(done) do
+		local descs = {}
+
+		for what, count in pairs(ops) do
+			if count > 30 then table.insert(descs, what .. " x" .. count) end
+		end
+
+		if descs[1] then
+			table.insert(sorted, {line = line, desc = table.concat(descs, ", ")})
+		end
+	end
+
+	table.sort(sorted, function(a, b)
+		return a.line < b.line
+	end)
+
+	local str = {}
+
+	for _, entry in ipairs(sorted) do
+		table.insert(str, entry.line .. " -- " .. entry.desc)
+	end
+
+	return table.concat(str, "\n")
+end
+
 function trace_track.ToStringProblematicTraces(traces--[[#: Map<|number, Trace|>]], aborted--[[#: Map<|number, Trace|>]])
 	local map = {}
 
@@ -721,7 +825,8 @@ function trace_track.ToStringTraceInfo(traces--[[#: Map<|number, Trace|>]], abor
 		str = str .. "\nno problematic traces found\n"
 	end
 
-	return str
+	local ir_instructions = trace_track.ToStringProblematicIRInstructions(traces)
+	return str .. "\n" .. ir_instructions .. "\n"
 end
 
 return trace_track

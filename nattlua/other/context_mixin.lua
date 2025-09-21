@@ -15,21 +15,76 @@ return function(META--[[#: ref any]])
 		function META:PushContextValue(key--[[#: string]], value--[[#: any]])
 			if value == nil then value = NIL end
 
+			io.write(key, "\n")
 			self.context_values[key] = self.context_values[key] or {i = 0}
 			self.context_values[key].i = self.context_values[key].i + 1
 			self.context_values[key][self.context_values[key].i] = value
 		end
 
-		function META:GetContextValue(key--[[#: string]], level--[[#: number | nil]])
+		function META:GetContextValue(key--[[#: string]])
+			local val = self.context_values[key] and
+				self.context_values[key][self.context_values[key].i]
+
+			if val == NIL then val = nil end
+
+			return val
+		end
+
+		function META:GetContextValueOffset(key--[[#: string]], offset--[[#: number]])
 			local val = self.context_values[key] and
 				self.context_values[key][self.context_values[key].i - (
-					level or
+					offset or
 					1
 				) + 1]
 
 			if val == NIL then val = nil end
 
 			return val
+		end
+
+		function META.SetupContextValue(META--[[#: ref any]], name--[[#: ref string]])
+			local key = "context_value_" .. name
+			--[[#type META.@Self[key] = Map<|string, {i = number, [number] = any}|>]]
+
+			META:AddInitializer(function(self--[[#: ref any]])
+				self[key] = {i = 0}--[[# as META.@Self[key] ]]
+			end)
+
+			local function push(self, value)
+				if false--[[# as true]] then return end
+
+				self[key].i = self[key].i + 1
+				self[key][self[key].i] = value
+			end
+
+			local function get(self)
+				local val = self[key][(self--[[# as any]])[key].i]
+
+				if val == NIL then val = nil end
+
+				return val
+			end
+
+			local function get_offset(self, offset--[[#: number]])
+				local val = self[key][self[key].i - (offset or 1) + 1]
+
+				if val == NIL then val = nil end
+
+				return val
+			end
+
+			local function pop(self)
+				if false--[[# as true]] then return end
+
+				self[key][self[key].i] = nil
+				self[key].i = self[key].i - 1
+			end
+
+			local function get_stack(self)
+				return self[key]
+			end
+
+			return push, get, get_offset, pop, get_stack
 		end
 
 		function META:PopContextValue(key--[[#: string]])
@@ -51,11 +106,34 @@ return function(META--[[#: ref any]])
 		end
 
 		function META:GetContextRef(key--[[#: string]])
-			return self.context_ref[key] and self.context_ref[key] > 0
+			return self.context_ref[key] and self.context_ref[key] ~= 0
 		end
 
 		function META:PopContextRef(key--[[#: string]])
 			self.context_ref[key] = (self.context_ref[key] or 0) - 1
+		end
+
+		function META.SetupContextRef(META--[[#: ref any]], name--[[#: ref string]])
+			local key = "context_ref_" .. name
+			--[[#type META.@Self[key] = number]]
+
+			META:AddInitializer(function(self--[[#: ref any]])
+				self[key] = 0--[[# as META.@Self[key] ]]
+			end)
+
+			local function push(self)
+				self[key] = self[key] + 1
+			end
+
+			local function get(self)
+				return self[key] > 0
+			end
+
+			local function pop(self)
+				self[key] = self[key] - 1
+			end
+
+			return push, get, pop
 		end
 	end
 end

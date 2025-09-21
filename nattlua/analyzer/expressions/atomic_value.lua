@@ -94,7 +94,7 @@ return {
 		elseif type == "letter" and node.standalone_letter then
 			-- standalone_letter means it's the first part of something, either >true<, >foo<.bar, >foo<()
 			if self:IsTypesystem() then
-				local current_table = self:GetCurrentType("table")
+				local current_table = self:GetCurrentTypeTable()
 
 				if current_table then
 					if value == "self" then

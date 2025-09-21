@@ -92,7 +92,7 @@ type Modules["jit.util"] = {
 			} | nil
 	),
 	-- Get trace IR instruction
-	traceir = function=(trace: number, position: number | nil)>(number, number, number, number, number), -- returns (m, ot, op1, op2, prev/ridsp)
+	traceir = function=(trace: number, position: number)>(number, number, number, number, number), -- returns (m, ot, op1, op2, prev/ridsp)
 	-- Get trace constant
 	tracek = function=(trace: number, position: number | nil)>(any, number, number | nil), -- returns (k, t [, slot])
 	-- Get trace snapshot

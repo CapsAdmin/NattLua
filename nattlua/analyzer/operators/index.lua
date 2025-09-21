@@ -42,9 +42,9 @@ local function index_table(analyzer, self, key, raw)
 			end
 
 			if index.Type == "function" then
-				analyzer:PushCurrentType(nil, "table")
+				analyzer:PushCurrentTypeTable(nil)
 				local obj, err = analyzer:Call(index, Tuple({self, key}), analyzer:GetCurrentStatement())
-				analyzer:PopCurrentType("table")
+				analyzer:PopCurrentTypeTable()
 
 				if not obj then return obj, err end
 

@@ -112,44 +112,50 @@ return function(META)
 
 	do
 		do
+			local push, get, pop = META:SetupContextRef("truthy_expression_context")
+
 			function META:PushTruthyExpressionContext()
-				self:PushContextRef("truthy_expression_context")
+				push(self)
 			end
 
 			function META:PopTruthyExpressionContext()
-				self:PopContextRef("truthy_expression_context")
+				pop(self)
 			end
 
 			function META:IsTruthyExpressionContext()
-				return self:GetContextRef("truthy_expression_context")
+				return get(self)
 			end
 		end
 
 		do
+			local push, get, pop = META:SetupContextRef("context_values")
+
 			function META:PushFalsyExpressionContext()
-				self:PushContextRef("falsy_expression_context")
+				push(self)
 			end
 
 			function META:PopFalsyExpressionContext()
-				self:PopContextRef("falsy_expression_context")
+				pop(self)
 			end
 
 			function META:IsFalsyExpressionContext()
-				return self:GetContextRef("falsy_expression_context")
+				return get(self)
 			end
 		end
 
 		do
+			local push, get, pop = META:SetupContextRef("inverted_expression_context")
+
 			function META:PushInvertedExpressionContext()
-				self:PushContextRef("inverted_expression_context")
+				push(self)
 			end
 
 			function META:PopInvertedExpressionContext()
-				self:PopContextRef("inverted_expression_context")
+				pop(self)
 			end
 
 			function META:IsInvertedExpressionContext()
-				return self:GetContextRef("inverted_expression_context")
+				return get(self)
 			end
 		end
 

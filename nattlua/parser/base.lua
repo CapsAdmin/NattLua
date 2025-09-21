@@ -87,30 +87,38 @@ return function()
 	end
 
 	do
+		local push, get, get_offset, pop = META:SetupContextValue("parser_environment")
+
 		function META:PushParserEnvironment(env--[[#: "typesystem" | "runtime"]])
-			self:PushContextValue("parser_environment", env)
+			push(self, env)
 		end
 
 		function META:GetCurrentParserEnvironment()
-			return self:GetContextValue("parser_environment") or "runtime"
+			return get(self) or "runtime"
 		end
 
 		function META:PopParserEnvironment()
-			self:PopContextValue("parser_environment")
+			pop(self)
 		end
 	end
 
 	do
+		local push, get, get_offset, pop = META:SetupContextValue("parent_node")
+
 		function META:PushParentNode(node--[[#: any]])
-			self:PushContextValue("parent_node", node)
+			push(self, node)
 		end
 
-		function META:GetParentNode(level--[[#: nil | number]])
-			return self:GetContextValue("parent_node", level) or false--[[# as Node | false]]
+		function META:GetParentNode()
+			return get(self) or false--[[# as Node | false]]
+		end
+
+		function META:GetParentNodeOffset(level--[[#: number]])
+			return get_offset(self, level) or false--[[# as Node | false]]
 		end
 
 		function META:PopParentNode()
-			self:PopContextValue("parent_node")
+			pop(self)
 		end
 	end
 

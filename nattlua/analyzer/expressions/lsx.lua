@@ -13,7 +13,7 @@ return {
 		local tbl = Table()
 
 		do
-			self:PushCurrentType(tbl, "table")
+			self:PushCurrentTypeTable(tbl)
 			tbl:SetCreationScope(self:GetScope())
 
 			for _, node in ipairs(node.props) do
@@ -31,7 +31,7 @@ return {
 			end
 
 			self:NewIndexOperator(tbl, ConstString("children"), children)
-			self:PopCurrentType("table")
+			self:PopCurrentTypeTable()
 		end
 
 		self:PushCurrentExpression(node)

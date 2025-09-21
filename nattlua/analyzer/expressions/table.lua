@@ -43,7 +43,7 @@ return {
 
 		if self:IsRuntime() then tbl:SetReferenceId(tostring(tbl:GetData())) end
 
-		self:PushCurrentType(tbl, "table")
+		self:PushCurrentTypeTable(tbl)
 		tbl:SetCreationScope(self:GetScope())
 		local numerical_index = 0
 
@@ -152,7 +152,7 @@ return {
 
 		if self:IsRuntime() then tbl:RemoveRedundantNilValues() end
 
-		self:PopCurrentType("table")
+		self:PopCurrentTypeTable()
 		return tbl
 	end,
 }

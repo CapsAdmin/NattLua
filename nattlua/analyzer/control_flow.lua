@@ -37,6 +37,9 @@ return function(META)
 	end
 
 	do
+		local push_break_state, get_break_state, get_offset, pop_break_state = META:SetupContextValue("break_state")
+		local push_break_uncertainty, get_break_uncertainty, pop_break_uncertainty = META:SetupContextValue("break_uncertainty")
+
 		-- Enhanced Break function using context management
 		function META:Break()
 			local scope = self:GetScope()
@@ -48,32 +51,30 @@ return function(META)
 				is_certain = scope:IsCertain(),
 				is_uncertain = scope:IsUncertain(),
 			}
-			self:PushContextValue("break_state", break_state)
+			push_break_state(self, break_state)
 			self:PushScope(loop_scope)
 			self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
 			self:PopScope()
 		end
 
 		function META:DidCertainBreak()
-			local break_state = self:GetContextValue("break_state")
+			local break_state = get_break_state(self)
 			return break_state and break_state.is_certain or false
 		end
 
 		function META:DidUncertainBreak()
-			local break_state = self:GetContextValue("break_state")
+			local break_state = get_break_state(self)
 			return break_state and break_state.is_uncertain or false
 		end
 
 		-- Get the current break scope (for debugging/inspection)
 		function META:GetBreakScope()
-			local break_state = self:GetContextValue("break_state")
+			local break_state = get_break_state(self)
 			return break_state and break_state.break_scope or nil
 		end
 
 		function META:ClearBreak()
-			if self:GetContextValue("break_state") then
-				self:PopContextValue("break_state")
-			end
+			if get_break_state(self) then pop_break_state(self) end
 		end
 
 		-- Enhanced uncertainty management using context system
@@ -83,17 +84,15 @@ return function(META)
 				is_uncertain = is_uncertain,
 				previous_uncertain = self:IsInBreakUncertainty(),
 			}
-			self:PushContextValue("break_uncertainty", uncertainty_state)
+			push_break_uncertainty(self, uncertainty_state)
 		end
 
 		function META:PopBreakUncertainty()
-			if self:GetContextValue("break_uncertainty") then
-				self:PopContextValue("break_uncertainty")
-			end
+			if get_break_uncertainty(self) then pop_break_uncertainty(self) end
 		end
 
 		function META:IsInBreakUncertainty(target_scope)
-			local uncertainty_state = self:GetContextValue("break_uncertainty")
+			local uncertainty_state = get_break_uncertainty(self)
 
 			if not uncertainty_state then return false end
 
@@ -133,7 +132,7 @@ return function(META)
 			self:PopUncertainLoop()
 			self:PopConditionalScope()
 			-- Clear any breaks that were resolved by this loop level
-			local break_state = self:GetContextValue("break_state")
+			local break_state = get_break_state(self)
 
 			if break_state and break_state.loop_scope == loop_scope then
 				self:ClearBreak()
@@ -155,7 +154,7 @@ return function(META)
 
 		-- Enhanced break checking that respects loop boundaries
 		function META:DidBreakForLoop(loop_scope)
-			local break_state = self:GetContextValue("break_state")
+			local break_state = get_break_state(self)
 
 			if not break_state then return false, false end
 
@@ -190,26 +189,29 @@ return function(META)
 		-- Context-aware break state management for nested loops
 		function META:PushLoopContext(statement, condition_obj)
 			-- Save the current break state before entering nested context
-			local current_break = self:GetContextValue("break_state")
-			self:PushContextRef("saved_break_state", current_break)
+			local current_break = get_break_state(self)
 
+			--	self:PushContextRef("saved_break_state", current_break)
 			-- Clear break state for the new loop level
-			if current_break then self:PopContextValue("break_state") end
+			if current_break then pop_break_state(self) end
 
 			return self:EnterLoop(statement, condition_obj)
 		end
 
 		function META:PopLoopContext(loop_scope)
 			self:ExitLoop(loop_scope)
+
+			do
+				return
+			end
+
 			-- Restore any saved break state from outer loops
 			local saved_break = self:GetContextValue("saved_break_state")
 
 			if saved_break then
 				self:PopContextValue("saved_break_state")
 
-				if saved_break ~= nil then
-					self:PushContextValue("break_state", saved_break)
-				end
+				if saved_break ~= nil then push_break_state(self, saved_break) end
 			end
 		end
 	end
@@ -389,12 +391,14 @@ return function(META)
 	end
 
 	do
+		local push, get, get_offset, pop, get_stack = META:SetupContextValue("call_stack")
+
 		function META:GetCallStack()
-			return self:GetContextStack("call_stack") or {}
+			return get_stack(self) or {}
 		end
 
 		function META:GetCallFrame(level)
-			return self:GetContextValue("call_stack", level)
+			return get_offset(self, level or 1)
 		end
 
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
@@ -442,12 +446,12 @@ return function(META)
 
 			if call_node then self.call_stack_map[call_node] = val end
 
-			self:PushContextValue("call_stack", val)
+			push(self, val)
 		end
 
 		function META:PopCallFrame()
 			local val = self:GetCallFrame()
-			self:PopContextValue("call_stack")
+			pop(self)
 
 			if val.call_node then self.call_stack_map[val.call_node] = nil end
 		end

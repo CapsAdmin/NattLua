@@ -164,9 +164,9 @@ do
 			return Union()
 		elseif node.Type == "expression_tuple" then
 			local tup = Tuple():SetUnpackable(true)
-			self:PushCurrentType(tup, "tuple")
+			self:PushCurrentTypeTuple(tup)
 			tup:SetTable(self:AnalyzeExpressions(node.expressions))
-			self:PopCurrentType("tuple")
+			self:PopCurrentTypeTuple()
 			return tup
 		elseif node.Type == "expression_lsx" then
 			return AnalyzeLSX(self, node)

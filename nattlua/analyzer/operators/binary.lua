@@ -466,10 +466,10 @@ return {
 
 		if op == "|" and self:IsTypesystem() then
 			local cur_union = Union()
-			self:PushCurrentType(cur_union, "union")
+			self:PushCurrentTypeUnion(cur_union)
 			local l = self:Assert(self:AnalyzeExpression(node.left))
 			local r = self:Assert(self:AnalyzeExpression(node.right))
-			self:PopCurrentType("union")
+			self:PopCurrentTypeUnion()
 			cur_union:AddType(l)
 			cur_union:AddType(r)
 			return cur_union

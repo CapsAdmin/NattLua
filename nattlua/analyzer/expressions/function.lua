@@ -214,14 +214,14 @@ return {
 		obj:SetUpvaluePosition(self:IncrementUpvaluePosition())
 		obj:SetScope(self:GetScope())
 		obj:SetInputIdentifiers(node.identifiers)
-		self:PushCurrentType(obj, "function")
+		self:PushCurrentTypeFunction(obj)
 		self:CreateAndPushFunctionScope(obj)
 		self:PushAnalyzerEnvironment("typesystem")
 		obj:SetInputSignature(analyze_arguments(self, node))
 		obj:SetOutputSignature(analyze_return_types(self, node))
 		self:PopAnalyzerEnvironment()
 		self:PopScope()
-		self:PopCurrentType("function")
+		self:PopCurrentTypeFunction()
 
 		if
 			node.Type == "expression_analyzer_function" or

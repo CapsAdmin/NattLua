@@ -28,7 +28,7 @@ function profiler.Stop()
 	if stop_tracer then
 		local traces, aborted = stop_tracer()
 		local str = trace_tracker.ToStringTraceInfo(traces, aborted)
-		io.write(str)
+		io.write(str or "")
 	end
 
 	if stop_profiler then io.write(stop_profiler()) end

@@ -182,22 +182,42 @@ return function(META)
 		end
 
 		do
+			local push_runtime, get_runtime, get_offset_runtime, pop_runtime = META:SetupContextValue("global_environment_runtime")
+			local push_typesystem, get_typesystem, get_offset_typesystem, pop_typesystem = META:SetupContextValue("global_environment_typesystem")
+			local push_nodes, get_nodes, get_offset_nodes, pop_nodes = META:SetupContextValue("global_environment_nodes")
+
 			function META:PushGlobalEnvironment(node, obj, env)
 				node.environments = node.environments or {}
 				node.environments[env] = obj
-				self:PushContextValue("global_environment_" .. env, obj)
-				self:PushContextValue("global_environment_nodes", node)
+				if env == "runtime" then
+					push_runtime(self, obj)
+				elseif env == "typesystem" then
+					push_typesystem(self, obj)
+				end
+
+				push_nodes(self, node)
 			end
 
 			function META:PopGlobalEnvironment(env)
-				self:PopContextValue("global_environment_" .. env)
-				self:PopContextValue("global_environment_nodes")
+				if env == "runtime" then
+					pop_runtime(self)
+				elseif env == "typesystem" then
+					pop_typesystem(self)
+				end
+				pop_nodes(self)
 			end
 
 			function META:GetGlobalEnvironment(env)
-				local g = self:GetContextValue("global_environment_" .. env) or
-					self:GetDefaultEnvironment(env)
-				local node = self:GetContextValue("global_environment_nodes")
+				local g
+				
+				if env == "runtime" then
+					g = get_runtime(self)
+				elseif env == "typesystem" then
+					g = get_typesystem(self)
+				end
+				g = g or self:GetDefaultEnvironment(env)
+
+				local node = get_nodes(self)
 
 				if node and node.environments_override and node.environments_override[env] then
 					g = node.environments_override[env]

@@ -304,15 +304,15 @@ test("parser errors", function()
 end)
 
 parse[[
-    £ assert(parser:GetParentNode(1).Type == "statement_root")
-    £ assert(parser:GetParentNode(1).Type == "statement_root")
+    £ assert(parser:GetParentNodeOffset(1).Type == "statement_root")
+    £ assert(parser:GetParentNodeOffset(1).Type == "statement_root")
     
     do
-        £ assert(parser:GetParentNode(1).Type == "statement_do")
-        £ assert(parser:GetParentNode(2).Type == "statement_root")
+        £ assert(parser:GetParentNodeOffset(1).Type == "statement_do")
+        £ assert(parser:GetParentNodeOffset(2).Type == "statement_root")
         
         local function test()
-            £ assert(parser:GetParentNode(1).Type == "statement_local_function")
+            £ assert(parser:GetParentNodeOffset(1).Type == "statement_local_function")
 			£ parser.config.on_parsed_node = function(_, node) if node.Type == "expression_value" and node.value.value == "1337" then parser.value = node end end
             local x = 1337
 			£ parser.config.on_parsed_node = nil
@@ -322,8 +322,8 @@ parse[[
         end
     end
 
-    £ assert(parser:GetParentNode(1).Type == "statement_root")
-    £ assert(parser:GetParentNode(1).Type == "statement_root")
+    £ assert(parser:GetParentNodeOffset(1).Type == "statement_root")
+    £ assert(parser:GetParentNodeOffset(1).Type == "statement_root")
 ]]
 
 do

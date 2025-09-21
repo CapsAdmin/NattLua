@@ -172,16 +172,19 @@ return function(META)
 		)
 	end
 
-	function META:PushProtectedCall()
-		self:PushContextRef("type_protected_call")
-	end
+	do
+		local push, get, pop = META:SetupContextRef("type_protected_call")
+		function META:PushProtectedCall()
+			push(self)
+		end
 
-	function META:PopProtectedCall()
-		self:PopContextRef("type_protected_call")
-	end
+		function META:PopProtectedCall()
+			pop(self)
+		end
 
-	function META:IsTypeProtectedCall()
-		return self:GetContextRef("type_protected_call")
+		function META:IsTypeProtectedCall()
+			return get(self)
+		end
 	end
 
 	function META:Error(msg, node)

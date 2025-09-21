@@ -534,16 +534,18 @@ return function(META)
 		end
 
 		do
+			local push, get, get_offset, pop = META:SetupContextValue("analyzer_environment")
+
 			function META:GetCurrentAnalyzerEnvironment()
-				return self:GetContextValue("analyzer_environment") or "runtime"
+				return get(self) or "runtime"
 			end
 
 			function META:PushAnalyzerEnvironment(env--[[#: "typesystem" | "runtime"]])
-				self:PushContextValue("analyzer_environment", env)
+				push(self, env)
 			end
 
 			function META:PopAnalyzerEnvironment()
-				self:PopContextValue("analyzer_environment")
+				pop(self)
 			end
 
 			function META:IsTypesystem()
@@ -556,22 +558,25 @@ return function(META)
 		end
 
 		do
+			local push, get, pop = META:SetupContextRef("global_access_allowed")
+
 			function META:PushNilAccessAllowed()
-				self:PushContextRef("global_access_allowed")
+				push(self)
 			end
 
 			function META:PopNilAccessAllowed()
-				self:PopContextRef("global_access_allowed")
+				pop(self)
 			end
 
 			function META:IsNilAccessAllowed()
-				return self:GetContextRef("global_access_allowed")
+				return get(self)
 			end
 		end
 
 		do
+			local push, get, get_offset, pop = META:SetupContextValue("in_loop")
 			function META:IsInUncertainLoop(scope)
-				local b = self:GetContextValue("uncertain_loop")
+				local b = get(self)
 
 				if b == false or b == nil then return false end
 
@@ -579,53 +584,63 @@ return function(META)
 			end
 
 			function META:PushUncertainLoop(scope)
-				self:PushContextValue("uncertain_loop", scope or false)
+				push(self, scope or false)
 			end
 
 			function META:PopUncertainLoop()
-				self:PopContextValue("uncertain_loop")
+				pop(self)
 			end
 		end
 
 		do
-			function META:PushCurrentType(obj, type)
-				self:PushContextValue("current_type_" .. type, obj)
-			end
+			for _, type in ipairs({"Function", "Table", "Tuple", "Union"}) do
+				local push, get, get_offset, pop = META:SetupContextValue("current_type_" .. type)
 
-			function META:PopCurrentType(type)
-				self:PopContextValue("current_type_" .. type)
-			end
+				META["PushCurrentType" .. type] = function(self, obj)
+					push(self, obj)
+				end
 
-			function META:GetCurrentType(type, offset)
-				return self:GetContextValue("current_type_" .. type, offset)
+				META["PopCurrentType" .. type] = function(self)
+					pop(self)
+				end
+
+				META["GetCurrentType" .. type] = function(self, offset)
+					return get_offset(self, offset or 1)
+				end
+
+				META["GetCurrentType_" .. type:lower()] = META["GetCurrentType" .. type]
 			end
 		end
 
 		do
+			local push, get, get_offset, pop = META:SetupContextValue("current_statement")
+
 			function META:PushCurrentStatement(node)
-				self:PushContextValue("current_statement", node)
+				push(self, node)
 			end
 
 			function META:PopCurrentStatement()
-				self:PopContextValue("current_statement")
+				pop(self)
 			end
 
-			function META:GetCurrentStatement(offset)
-				return self:GetContextValue("current_statement", offset)
+			function META:GetCurrentStatement()
+				return get(self)
 			end
 		end
 
 		do
+			local push, get, get_offset, pop = META:SetupContextValue("current_expression")
+
 			function META:PushCurrentExpression(node)
-				self:PushContextValue("current_expression", node)
+				push(self, node)
 			end
 
 			function META:PopCurrentExpression()
-				self:PopContextValue("current_expression")
+				pop(self)
 			end
 
-			function META:GetCurrentExpression(offset)
-				return self:GetContextValue("current_expression", offset)
+			function META:GetCurrentExpression()
+				return get(self)
 			end
 		end
 
