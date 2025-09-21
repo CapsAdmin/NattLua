@@ -44,21 +44,24 @@ return function(META--[[#: ref any]])
 
 		function META.SetupContextValue(META--[[#: ref any]], name--[[#: ref string]])
 			local key = "context_value_" .. name
-			--[[#type META.@Self[key] = Map<|string, {i = number, [number] = any}|>]]
+			local key_i = key .. "_i"
+			--[[#type META.@Self[key] = List<|any|>]]
+			--[[#type META.@Self[key_i] = number]]
 
 			META:AddInitializer(function(self--[[#: ref any]])
-				self[key] = {i = 0}--[[# as META.@Self[key] ]]
+				self[key] = {}--[[# as META.@Self[key] ]]
+				self[key_i] = 0--[[# as META.@Self[key_i] ]]
 			end)
 
 			local function push(self, value)
 				if false--[[# as true]] then return end
 
-				self[key].i = self[key].i + 1
-				self[key][self[key].i] = value
+				self[key_i] = self[key_i] + 1
+				self[key][self[key_i]] = value
 			end
 
 			local function get(self)
-				local val = self[key][(self--[[# as any]])[key].i]
+				local val = self[key][self[key_i]]
 
 				if val == NIL then val = nil end
 
@@ -66,7 +69,7 @@ return function(META--[[#: ref any]])
 			end
 
 			local function get_offset(self, offset--[[#: number]])
-				local val = self[key][self[key].i - (offset or 1) + 1]
+				local val = self[key][self[key_i] - (offset or 1) + 1]
 
 				if val == NIL then val = nil end
 
@@ -76,8 +79,8 @@ return function(META--[[#: ref any]])
 			local function pop(self)
 				if false--[[# as true]] then return end
 
-				self[key][self[key].i] = nil
-				self[key].i = self[key].i - 1
+				self[key][self[key_i]] = nil
+				self[key_i] = self[key_i] - 1
 			end
 
 			local function get_stack(self)

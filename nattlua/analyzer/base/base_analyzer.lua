@@ -575,6 +575,7 @@ return function(META)
 
 		do
 			local push, get, get_offset, pop = META:SetupContextValue("in_loop")
+
 			function META:IsInUncertainLoop(scope)
 				local b = get(self)
 
@@ -595,19 +596,15 @@ return function(META)
 		do
 			for _, type in ipairs({"Function", "Table", "Tuple", "Union"}) do
 				local push, get, get_offset, pop = META:SetupContextValue("current_type_" .. type)
-
 				META["PushCurrentType" .. type] = function(self, obj)
 					push(self, obj)
 				end
-
 				META["PopCurrentType" .. type] = function(self)
 					pop(self)
 				end
-
 				META["GetCurrentType" .. type] = function(self, offset)
 					return get_offset(self, offset or 1)
 				end
-
 				META["GetCurrentType_" .. type:lower()] = META["GetCurrentType" .. type]
 			end
 		end
