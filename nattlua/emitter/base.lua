@@ -1805,7 +1805,7 @@ return function()
 			return emitted
 		end
 
-		function META:StopEmittingInvalidLuaCode(emitted--[[#: boolean]])
+		function META:StopEmittingInvalidLuaCode(emitted--[[#: false | number]])
 			if emitted then
 				if self:GetPrevChar() == B("]") then self:Emit(" ") end
 
