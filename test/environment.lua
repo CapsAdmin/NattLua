@@ -68,7 +68,7 @@ end
 
 do
 	-- reuse an existing environment to speed up tests
-	local runtime_env, typesystem_env = BuildBaseEnvironment()
+	local _, typesystem_env = BuildBaseEnvironment()
 
 	function _G.analyze(code, expect_error, expect_warning)
 		total_test_count = total_test_count + 1

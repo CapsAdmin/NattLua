@@ -130,6 +130,8 @@ return function(META)
 		return self:IndexOperator(self:GetGlobalEnvironment(self:GetCurrentAnalyzerEnvironment()), key)
 	end
 
+	local TEST_GARBAGE = _G.TEST_GARBAGE
+
 	function META:SetLocalOrGlobalValue(key, val, scope)
 		local upvalue = self:FindLocalUpvalue(key, scope)
 
@@ -151,7 +153,7 @@ return function(META)
 
 		if self:IsRuntime() then
 			self:Warning(error_messages.global_assignment(key, val), self:GetCurrentStatement())
-		elseif _G.TEST_GARBAGE then
+		elseif TEST_GARBAGE then
 			TEST_GARBAGE[key] = val
 		end
 
@@ -189,6 +191,7 @@ return function(META)
 			function META:PushGlobalEnvironment(node, obj, env)
 				node.environments = node.environments or {}
 				node.environments[env] = obj
+
 				if env == "runtime" then
 					push_runtime(self, obj)
 				elseif env == "typesystem" then
@@ -204,19 +207,20 @@ return function(META)
 				elseif env == "typesystem" then
 					pop_typesystem(self)
 				end
+
 				pop_nodes(self)
 			end
 
 			function META:GetGlobalEnvironment(env)
 				local g
-				
+
 				if env == "runtime" then
 					g = get_runtime(self)
 				elseif env == "typesystem" then
 					g = get_typesystem(self)
 				end
-				g = g or self:GetDefaultEnvironment(env)
 
+				g = g or self:GetDefaultEnvironment(env)
 				local node = get_nodes(self)
 
 				if node and node.environments_override and node.environments_override[env] then

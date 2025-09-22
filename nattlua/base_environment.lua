@@ -52,9 +52,17 @@ local function load_definitions(root_node)
 	return Compiler(code, config.file_name, config)
 end
 
+local DISABLE = _G.DISABLE_BASE_ENV
+local REUSE = _G.REUSE_BASE_ENV
+local cached_runtime
+local cached_typesystem
 return {
 	BuildBaseEnvironment = function(root_node)
-		if _G.DISABLE_BASE_ENV then return Table(), Table() end
+		if DISABLE then return Table(), Table() end
+
+		if REUSE and cached_runtime and cached_typesystem then
+			return cached_runtime, cached_typesystem
+		end
 
 		local compiler = load_definitions(root_node)
 		-- for debugging
@@ -71,6 +79,12 @@ return {
 			LStringNoMeta("__index"),
 			assert(typesystem_env:Get(LStringNoMeta("string")), "failed to find string table")
 		)
+
+		if REUSE then
+			cached_runtime = runtime_env
+			cached_typesystem = typesystem_env
+		end
+
 		return runtime_env, typesystem_env
 	end,
 }
