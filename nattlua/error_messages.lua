@@ -282,7 +282,7 @@ function error_messages.useless_while_loop()--[[#: Reason]]
 end
 
 function error_messages.too_many_arguments()--[[#: Reason]]
-	return {"too many iterations"}
+	return {"too many arguments"}
 end
 
 function error_messages.untyped_argument()--[[#: Reason]]

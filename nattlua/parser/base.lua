@@ -24,7 +24,7 @@ return function()
 		config = ParserConfig,
 		Code = Code,
 		tokens = List<|Token|>,
-		current_token_index = number,
+		TokenPosition = number,
 		suppress_on_parsed_node = false | {parent = Node | false, node_stack = List<|Node|>},
 		RootStatement = false | Node,
 		TealCompat = any,
@@ -67,7 +67,7 @@ return function()
 			{
 				config = config or {},
 				Code = code,
-				current_token_index = 1,
+				TokenPosition = 1,
 				tokens = tokens,
 				suppress_on_parsed_node = false,
 				RootStatement = false,
@@ -157,7 +157,7 @@ end
 	end
 
 	function META:EndNode(node--[[#: Node]])
-		local prev = self:GetToken(-1)
+		local prev = self:GetTokenOffset(-1)
 
 		if prev then
 			node.code_stop = prev.stop
@@ -246,20 +246,22 @@ end
 		...--[[#: ...any]]
 	) end
 
-	function META:GetToken(offset--[[#: number | nil]])
-		return self.tokens[self.current_token_index + (
-				offset or
-				0
-			)] or
+	function META:GetToken()
+		return self.tokens[self.TokenPosition] or
+			self:NewToken("end_of_file", "see previous parser error")
+	end
+
+	function META:GetTokenOffset(offset--[[#: number]])
+		return self.tokens[self.TokenPosition + offset] or
 			self:NewToken("end_of_file", "see previous parser error")
 	end
 
 	function META:GetPosition()
-		return self.current_token_index
+		return self.TokenPosition
 	end
 
 	function META:SetPosition(pos--[[#: number]])
-		self.current_token_index = pos
+		self.TokenPosition = pos
 	end
 
 	function META:GetLength()
@@ -267,7 +269,7 @@ end
 	end
 
 	function META:Advance(offset--[[#: number]])
-		self.current_token_index = self.current_token_index + offset
+		self.TokenPosition = self.TokenPosition + offset
 	end
 
 	function META:ConsumeToken()
@@ -276,12 +278,40 @@ end
 		return tk
 	end
 
-	function META:IsTokenValue(str--[[#: string]], offset--[[#: number | nil]])
-		return self:GetToken(offset).value == str
+	function META:IsTokenValue(str--[[#: string]])
+		if self.tokens[self.TokenPosition] then
+			return self.tokens[self.TokenPosition].value == str
+		end
+
+		return false
 	end
 
-	function META:IsTokenType(token_type--[[#: TokenType]], offset--[[#: number | nil]])
-		return self:GetToken(offset).type == token_type
+	function META:IsTokenType(token_type--[[#: TokenType]])
+		if not self.tokens[self.TokenPosition] then
+			return token_type == "end_of_file"
+		end
+
+		return self.tokens[self.TokenPosition].type == token_type
+	end
+
+	function META:IsTokenValueOffset(str--[[#: string]], offset--[[#: number]])
+		if false--[[# as true]] then return false--[[# as boolean]] end
+
+		if self.tokens[self.TokenPosition + offset] then
+			return self.tokens[self.TokenPosition + offset].value == str
+		end
+
+		return false
+	end
+
+	function META:IsTokenTypeOffset(token_type--[[#: TokenType]], offset--[[#: number]])
+		if false--[[# as true]] then return false--[[# as boolean]] end
+
+		if not self.tokens[self.TokenPosition + offset] then
+			return token_type == "end_of_file"
+		end
+
+		return self.tokens[self.TokenPosition + offset].type == token_type
 	end
 
 	function META:ParseToken()
@@ -303,7 +333,7 @@ end
 		for i, token in ipairs(tokens) do
 			if token.type == "end_of_file" then break end
 
-			table.insert(self.tokens, self.current_token_index + i - 1, token)
+			table.insert(self.tokens, self.TokenPosition + i - 1, token)
 		end
 
 		table.insert(self.tokens, eof)

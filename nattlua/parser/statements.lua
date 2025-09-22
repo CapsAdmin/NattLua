@@ -11,19 +11,21 @@ return function(META)
 		function META:IsDestructureStatement(offset--[[#: number]])
 			offset = offset or 0
 			return (
-					self:IsTokenValue("{", offset + 0) and
-					self:IsTokenType("letter", offset + 1)
+					self:IsTokenValueOffset("{", offset + 0) and
+					self:IsTokenTypeOffset("letter", offset + 1)
 				) or
 				(
-					self:IsTokenType("letter", offset + 0) and
-					self:IsTokenValue(",", offset + 1) and
-					self:IsTokenValue("{", offset + 2)
+					self:IsTokenTypeOffset("letter", offset + 0) and
+					self:IsTokenValueOffset(",", offset + 1) and
+					self:IsTokenValueOffset("{", offset + 2)
 				)
 		end
 
 		function META:IsLocalDestructureAssignmentStatement()
 			if self:IsTokenValue("local") then
-				if self:IsTokenValue("type", 1) then return self:IsDestructureStatement(2) end
+				if self:IsTokenValueOffset("type", 1) then
+					return self:IsDestructureStatement(2)
+				end
 
 				return self:IsDestructureStatement(1)
 			end
@@ -128,7 +130,7 @@ return function(META)
 		end
 
 		function META:ParseAnalyzerFunctionStatement()
-			if not (self:IsTokenValue("analyzer") and self:IsTokenValue("function", 1)) then
+			if not (self:IsTokenValue("analyzer") and self:IsTokenValueOffset("function", 1)) then
 				return false
 			end
 
@@ -163,7 +165,7 @@ return function(META)
 	end
 
 	function META:ParseLocalFunctionStatement()
-		if not (self:IsTokenValue("local") and self:IsTokenValue("function", 1)) then
+		if not (self:IsTokenValue("local") and self:IsTokenValueOffset("function", 1)) then
 			return false
 		end
 
@@ -180,8 +182,8 @@ return function(META)
 		if
 			not (
 				self:IsTokenValue("local") and
-				self:IsTokenValue("analyzer", 1) and
-				self:IsTokenValue("function", 2)
+				self:IsTokenValueOffset("analyzer", 1) and
+				self:IsTokenValueOffset("function", 2)
 			)
 		then
 			return false
@@ -201,10 +203,10 @@ return function(META)
 		if
 			not (
 				self:IsTokenValue("local") and
-				self:IsTokenValue("function", 1) and
+				self:IsTokenValueOffset("function", 1) and
 				(
-					self:IsTokenValue("<|", 3) or
-					self:IsTokenValue("!", 3)
+					self:IsTokenValueOffset("<|", 3) or
+					self:IsTokenValueOffset("!", 3)
 				)
 			)
 		then
@@ -267,7 +269,7 @@ return function(META)
 	end
 
 	function META:ParseGotoStatement()
-		if not self:IsTokenValue("goto") or not self:IsTokenType("letter", 1) then
+		if not self:IsTokenValue("goto") or not self:IsTokenTypeOffset("letter", 1) then
 			return false
 		end
 
@@ -331,7 +333,7 @@ return function(META)
 		local node = self:StartNode("statement_local_assignment")
 		node.tokens["local"] = self:ExpectTokenValue("local")
 
-		if self.TealCompat and self:IsTokenValue(",", 1) then
+		if self.TealCompat and self:IsTokenValueOffset(",", 1) then
 			node.left = self:ParseMultipleValues(self.ParseIdentifier, false)
 
 			if self:IsTokenValue(":") then
@@ -357,7 +359,7 @@ return function(META)
 	end
 
 	function META:ParseNumericForStatement()
-		if not (self:IsTokenValue("for") and self:IsTokenValue("=", 2)) then
+		if not (self:IsTokenValue("for") and self:IsTokenValueOffset("=", 2)) then
 			return false
 		end
 
@@ -550,8 +552,8 @@ return function(META)
 		if
 			not (
 				self:IsTokenValue("local") and
-				self:IsTokenValue("type", 1) and
-				runtime_syntax:GetTokenType(self:GetToken(2)) == "letter"
+				self:IsTokenValueOffset("type", 1) and
+				runtime_syntax:GetTokenType(self:GetTokenOffset(2)) == "letter"
 			)
 		then
 			return
@@ -579,8 +581,8 @@ return function(META)
 			not (
 				self:IsTokenValue("type") and
 				(
-					self:IsTokenType("letter", 1) or
-					self:IsTokenValue("^", 1)
+					self:IsTokenTypeOffset("letter", 1) or
+					self:IsTokenValueOffset("^", 1)
 				)
 			)
 		then
@@ -618,7 +620,7 @@ return function(META)
 				self:IsTokenValue("^") or
 				self:IsTokenValue("..")
 			) and
-			self:IsTokenValue("=", 1)
+			self:IsTokenValueOffset("=", 1)
 		then
 			-- roblox compound assignment
 			local op_token = self:ParseToken()

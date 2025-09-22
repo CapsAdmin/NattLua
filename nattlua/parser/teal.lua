@@ -15,7 +15,7 @@ return function(META)
 				self:IsTokenType("letter") or
 				self:IsTokenValue("...")
 			) and
-			self:IsTokenValue(":", 1)
+			self:IsTokenValueOffset(":", 1)
 		then
 			if self:IsTokenValue("...") then
 				local node = self:StartNode("expression_vararg")
@@ -83,7 +83,7 @@ return function(META)
 	end
 
 	function META:ParseTealVarargExpression()
-		if not self:IsTokenType("letter") or not self:IsTokenValue("...", 1) then
+		if not self:IsTokenType("letter") or not self:IsTokenValueOffset("...", 1) then
 			return
 		end
 
@@ -103,12 +103,12 @@ return function(META)
 		node.children = {}
 
 		if
-			self:IsTokenValue(":", 1) or
+			self:IsTokenValueOffset(":", 1) or
 			self:IsTokenValue("(") or
 			(
 				self:IsTokenValue("{") and
-				self:IsTokenValue(":", 2) and
-				self:IsTokenValue(":", 5)
+				self:IsTokenValueOffset(":", 2) and
+				self:IsTokenValueOffset(":", 5)
 			)
 		then
 			local kv = self:StartNode("sub_statement_table_expression_value")
@@ -272,7 +272,7 @@ return function(META)
 	end
 
 	function META:ParseTealAssignment()
-		if not self:IsTokenValue("type") or not self:IsTokenType("letter", 1) then
+		if not self:IsTokenValue("type") or not self:IsTokenTypeOffset("letter", 1) then
 			return nil
 		end
 
@@ -286,7 +286,7 @@ return function(META)
 	end
 
 	function META:ParseTealRecordKeyVal()
-		if not self:IsTokenType("letter") or not self:IsTokenValue(":", 1) then
+		if not self:IsTokenType("letter") or not self:IsTokenValueOffset(":", 1) then
 			return nil
 		end
 
@@ -314,9 +314,9 @@ return function(META)
 	function META:ParseTealRecordMetamethod()
 		if
 			not self:IsTokenValue("metamethod") or
-			not self:IsTokenType("letter", 1)
+			not self:IsTokenTypeOffset("letter", 1)
 			or
-			not self:IsTokenValue(":", 2)
+			not self:IsTokenValueOffset(":", 2)
 		then
 			return nil
 		end
@@ -400,7 +400,7 @@ return function(META)
 	end
 
 	function META:ParseTealRecord()
-		if not self:IsTokenValue("record") or not self:IsTokenType("letter", 1) then
+		if not self:IsTokenValue("record") or not self:IsTokenTypeOffset("letter", 1) then
 			return nil
 		end
 
@@ -415,9 +415,9 @@ return function(META)
 	function META:ParseLocalTealRecord()
 		if
 			not self:IsTokenValue("local") or
-			not self:IsTokenValue("record", 1)
+			not self:IsTokenValueOffset("record", 1)
 			or
-			not self:IsTokenType("letter", 2)
+			not self:IsTokenTypeOffset("letter", 2)
 		then
 			return nil
 		end
@@ -457,7 +457,7 @@ return function(META)
 		end
 
 		function META:ParseTealEnumStatement()
-			if not self:IsTokenValue("enum") or not self:IsTokenType("letter", 1) then
+			if not self:IsTokenValue("enum") or not self:IsTokenTypeOffset("letter", 1) then
 				return nil
 			end
 
@@ -472,9 +472,9 @@ return function(META)
 		function META:ParseLocalTealEnumStatement()
 			if
 				not self:IsTokenValue("local") or
-				not self:IsTokenValue("enum", 1)
+				not self:IsTokenValueOffset("enum", 1)
 				or
-				not self:IsTokenType("letter", 2)
+				not self:IsTokenTypeOffset("letter", 2)
 			then
 				return nil
 			end

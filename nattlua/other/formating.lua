@@ -152,12 +152,18 @@ end
 do
 	function formating.FormatMessage(msg--[[#: string]], ...--[[#: ...(string | List<|string|>)]])
 		for i = 1, select("#", ...) do
-			local arg = select(i, ...)--[[# as string | List<|string|>]]
+			local arg = select(i, ...)--[[# as string | List<|string|> or "?"]]
 
 			if type(arg) == "table" then
 				arg = formating.QuoteTokens(arg)
+			elseif type(arg) == "string" then
+				if not arg:find("\n", nil, true) then
+					arg = formating.QuoteToken(tostring(arg))
+				else
+					arg = tostring(arg)
+				end
 			else
-				arg = formating.QuoteToken(tostring(arg or "?"))
+				arg = tostring(arg)
 			end
 
 			msg = stringx.replace(msg, "$" .. i, arg)

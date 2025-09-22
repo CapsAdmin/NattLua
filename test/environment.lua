@@ -21,7 +21,11 @@ local callstack = require("nattlua.other.callstack")
 local system = require("nattlua.other.system")
 local nl = require("nattlua")
 
+local total_test_count = 0
+
 function _G.test(name, cb, start, stop)
+	total_test_count = total_test_count + 1
+
 	if start and stop then
 		local ok_start, err_start = xpcall(start, debug.traceback)
 		local ok_cb, err_cb = xpcall(cb, debug.traceback)
@@ -68,6 +72,7 @@ do
 	local runtime_env, typesystem_env = BuildBaseEnvironment()
 
 	function _G.analyze(code, expect_error, expect_warning)
+		total_test_count = total_test_count + 1
 		local path = callstack.get_line(2)
 		local name = path:match("(test/tests/.+)") or path
 
@@ -225,8 +230,6 @@ do
 	local IS_TERMINAL = system.is_tty()
 	local max_path_width = 0
 	local current_test_name = ""
-	local current_test_count = 0
-	local total_test_count = 0
 
 	local function format_time(seconds)
 		if seconds < 1 then
@@ -283,7 +286,7 @@ do
 
 	local total = 0
 	local total_gc = 0
-	local test_count = 0
+	local test_file_count = 0
 
 	function _G.begin_tests(logging, profiling, profiling_mode)
 		if _G.STOP_STARTUP_PROFILE then
@@ -311,10 +314,8 @@ do
 
 	function _G.run_single_test(test)
 		current_test_name = test.name
-		current_test_count = 0
 		-- You'll need to pass the expected test count somehow, or estimate it
 		-- For now, setting to 0 means no progress counter shown
-		total_test_count = 0 -- or test.expected_count if you have it
 		if LOGGING then update_test_line("RUNNING") end
 
 		if test.is_lua then
@@ -323,17 +324,18 @@ do
 			run_func(analyze, assert(fs.read(test.path)))
 		end
 
-		test_count = test_count + 1
+		test_file_count = test_file_count + 1
 	end
 
 	function _G.end_tests()
 		if PROFILING then profiler.Stop() end
 
-		if test_count > 0 then
+		if test_file_count > 0 then
 			io_write(
 				"running ",
-				test_count,
-				" tests took ",
+				total_test_count, " tests in ",
+				test_file_count,
+				" files took ",
 				format_time(total),
 				" and ",
 				format_gc(total_gc),

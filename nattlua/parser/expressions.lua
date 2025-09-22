@@ -12,7 +12,7 @@ local path_util = require("nattlua.other.path")
 
 return function(META)
 	function META:ParseAnalyzerFunctionExpression()
-		if not (self:IsTokenValue("analyzer") and self:IsTokenValue("function", 1)) then
+		if not (self:IsTokenValue("analyzer") and self:IsTokenValueOffset("function", 1)) then
 			return
 		end
 
@@ -35,7 +35,9 @@ return function(META)
 	end
 
 	function META:ParseIndexSubExpression(left_node--[[#: Node]])
-		if not (self:IsTokenValue(".") and self:IsTokenType("letter", 1)) then return end
+		if not (self:IsTokenValue(".") and self:IsTokenTypeOffset("letter", 1)) then
+			return
+		end
 
 		local node = self:StartNode("expression_binary_operator")
 		node.value = self:ParseToken()
@@ -46,14 +48,14 @@ return function(META)
 	end
 
 	function META:IsCallExpression(offset--[[#: number]])
-		local tk = self:GetToken(offset)
+		local tk = self:GetTokenOffset(offset)
 		return tk.value == "(" or
 			tk.value == "<|" or
 			tk.value == "{" or
 			tk.type == "string" or
 			(
 				tk.value == "!" and
-				self:IsTokenValue("(", offset + 1)
+				self:IsTokenValueOffset("(", offset + 1)
 			)
 	end
 
@@ -61,7 +63,7 @@ return function(META)
 		if
 			not (
 				self:IsTokenValue(":") and
-				self:IsTokenType("letter", 1) and
+				self:IsTokenTypeOffset("letter", 1) and
 				self:IsCallExpression(2)
 			)
 		then
@@ -151,7 +153,7 @@ return function(META)
 						self:IsTokenType("letter") or
 						self:IsTokenValue("...")
 					) and
-					self:IsTokenValue(":", 1)
+					self:IsTokenValueOffset(":", 1)
 				)
 			then
 				local identifier = self:ParseToken()
@@ -166,7 +168,7 @@ return function(META)
 		end
 
 		function META:ParseFunctionSignatureExpression()
-			if not (self:IsTokenValue("function") and self:IsTokenValue("=", 1)) then
+			if not (self:IsTokenValue("function") and self:IsTokenValueOffset("=", 1)) then
 				return
 			end
 
@@ -185,7 +187,7 @@ return function(META)
 		end
 
 		function META:ParseTypeFunctionExpression()
-			if not (self:IsTokenValue("function") and self:IsTokenValue("<|", 1)) then
+			if not (self:IsTokenValue("function") and self:IsTokenValueOffset("<|", 1)) then
 				return
 			end
 
@@ -216,7 +218,7 @@ return function(META)
 					node.value_expression = self:ParseTypeExpression(0)
 					node = self:EndNode(node)
 					return node
-				elseif self:IsTokenType("letter") and self:IsTokenValue("=", 1) then
+				elseif self:IsTokenType("letter") and self:IsTokenValueOffset("=", 1) then
 					local node = self:StartNode("sub_statement_table_key_value")
 					node.tokens["identifier"] = self:ExpectTokenType("letter")
 					node.tokens["="] = self:ExpectTokenValue("=")
@@ -287,7 +289,9 @@ return function(META)
 		end
 
 		function META:ParseStringTypeExpression()
-			if not (self:IsTokenType("$") and self:IsTokenType("string", 1)) then return end
+			if not (self:IsTokenType("$") and self:IsTokenTypeOffset("string", 1)) then
+				return
+			end
 
 			local node = self:StartNode("expression_type_string")
 			node.tokens["$"] = self:ParseToken("...")
@@ -513,9 +517,9 @@ return function(META)
 					not (
 						self:IsTokenValue("...") and
 						(
-							self:IsTokenType("letter", 1) or
-							self:IsTokenValue("{", 1) or
-							self:IsTokenValue("(", 1)
+							self:IsTokenTypeOffset("letter", 1) or
+							self:IsTokenValueOffset("{", 1) or
+							self:IsTokenValueOffset("(", 1)
 						)
 					)
 				then
@@ -536,7 +540,7 @@ return function(META)
 					node.key_expression = self:ExpectRuntimeExpression(0)
 					node.tokens["]"] = self:ExpectTokenValue("]")
 
-					if self:IsTokenValue(":") and not self:IsTokenValue("(", 2) then
+					if self:IsTokenValue(":") and not self:IsTokenValueOffset("(", 2) then
 						node.tokens[":"] = self:ExpectTokenValue(":")
 						node.type_expression = self:ExpectTypeExpression(0)
 					end
@@ -548,11 +552,11 @@ return function(META)
 
 					node = self:EndNode(node)
 					return node
-				elseif self:IsTokenType("letter") and self:IsTokenValue("=", 1) then
+				elseif self:IsTokenType("letter") and self:IsTokenValueOffset("=", 1) then
 					local node = self:StartNode("sub_statement_table_key_value")
 					node.tokens["identifier"] = self:ExpectTokenType("letter")
 
-					if self:IsTokenValue(":") and not self:IsTokenValue("(", 2) then
+					if self:IsTokenValue(":") and not self:IsTokenValueOffset("(", 2) then
 						node.tokens[":"] = self:ExpectTokenValue(":")
 						node.type_expression = self:ExpectTypeExpression(0)
 					end
@@ -570,8 +574,8 @@ return function(META)
 					return node
 				elseif
 					self:IsTokenType("letter") and
-					self:IsTokenValue(":", 1) and
-					not self:IsTokenValue("(", 3)
+					self:IsTokenValueOffset(":", 1) and
+					not self:IsTokenValueOffset("(", 3)
 				then
 					local node = self:StartNode("sub_statement_table_key_value")
 					node.tokens["identifier"] = self:ExpectTokenType("letter")
@@ -775,12 +779,12 @@ return function(META)
 				if
 					self:IsTokenValue(":") and
 					(
-						not self:IsTokenType("letter", 1) or
+						not self:IsTokenTypeOffset("letter", 1) or
 						not self:IsCallExpression(2)
 					)
 					and
 					-- special case for autocompletion to work while typing and : is the last character of the code
-					not self:IsTokenType("end_of_file", 2)
+					not self:IsTokenTypeOffset("end_of_file", 2)
 				then
 					node.tokens[":"] = self:ExpectTokenValue(":")
 					node.type_expression = self:ExpectTypeExpression(0)
@@ -1064,7 +1068,7 @@ return function(META)
 					not (
 						(
 							runtime_syntax:GetBinaryOperatorInfo(self:GetToken()) and
-							not self:IsTokenValue("=", 1)
+							not self:IsTokenValueOffset("=", 1)
 						)
 						and
 						runtime_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority

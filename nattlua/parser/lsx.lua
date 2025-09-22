@@ -4,8 +4,8 @@ return function(META)
 		if
 			not (
 				self:IsTokenValue("<") and
-				self:IsTokenType("letter", 1) and
-				not self:IsTokenValue("local", -1)
+				self:IsTokenTypeOffset("letter", 1) and
+				not self:IsTokenValueOffset("local", -1)
 			)
 		then
 			return
@@ -18,7 +18,7 @@ return function(META)
 		node.children = {}
 
 		for _ = self:GetPosition(), self:GetLength() do
-			if self:IsTokenValue("{") and self:IsTokenValue("...", 1) then
+			if self:IsTokenValue("{") and self:IsTokenValueOffset("...", 1) then
 				local left = self:ExpectTokenValue("{")
 				local spread = self:read_table_spread()
 
@@ -31,8 +31,8 @@ return function(META)
 				spread.tokens["{"] = left
 				spread.tokens["}"] = right
 				table_insert(node.props, spread)
-			elseif self:IsTokenType("letter") and self:IsTokenValue("=", 1) then
-				if self:IsTokenValue("{", 2) then
+			elseif self:IsTokenType("letter") and self:IsTokenValueOffset("=", 1) then
+				if self:IsTokenValueOffset("{", 2) then
 					local keyval = self:StartNode("sub_statement_table_key_value")
 					keyval.tokens["identifier"] = self:ExpectTokenType("letter")
 					keyval.tokens["="] = self:ExpectTokenValue("=")
@@ -41,7 +41,7 @@ return function(META)
 					keyval.tokens["}"] = self:ExpectTokenValue("}")
 					keyval = self:EndNode(keyval)
 					table_insert(node.props, keyval)
-				elseif self:IsTokenType("string", 2) or self:IsTokenType("number", 2) then
+				elseif self:IsTokenTypeOffset("string", 2) or self:IsTokenType("number", 2) then
 					local keyval = self:StartNode("sub_statement_table_key_value")
 					keyval.tokens["identifier"] = self:ExpectTokenType("letter")
 					keyval.tokens["="] = self:ExpectTokenValue("=")
@@ -49,7 +49,7 @@ return function(META)
 					keyval = self:EndNode(keyval)
 					table_insert(node.props, keyval)
 				else
-					self:Error("expected = { or = string or = number got " .. self:GetToken(3).type)
+					self:Error("expected = { or = string or = number got " .. self:GetTokenOffset(3).type)
 					local keyval = self:StartNode("sub_statement_table_key_value")
 					keyval.tokens["identifier"] = self:NewToken("letter", "_")
 					keyval.tokens["="] = self:NewToken("symbol", "=")
@@ -81,14 +81,14 @@ return function(META)
 			end
 
 			for _ = self:GetPosition(), self:GetLength() do
-				if self:IsTokenValue("<") and self:IsTokenType("letter", 1) then
+				if self:IsTokenValue("<") and self:IsTokenTypeOffset("letter", 1) then
 					table_insert(node.children, self:ParseLSXExpression())
 				else
 					break
 				end
 			end
 
-			if self:IsTokenValue("<") and self:IsTokenValue("/", 1) then break end
+			if self:IsTokenValue("<") and self:IsTokenValueOffset("/", 1) then break end
 
 			do
 				local string_node = self:StartNode("expression_value")

@@ -164,7 +164,7 @@ function META:ParseTypeFunctionArgument(expect_type--[[#: nil | boolean]])
 
 	if self:IsTokenValue("...") then return end
 
-	if expect_type or self:IsTokenType("letter") and self:IsTokenValue(":", 1) then
+	if expect_type or self:IsTokenType("letter") and self:IsTokenValueOffset(":", 1) then
 		local identifier = self:ParseToken()
 		local token = self:ExpectTokenValue(":")
 		local exp = self:ExpectTypeExpression(0)

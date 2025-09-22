@@ -23,7 +23,7 @@ do
 	end
 
 	function META:IsWhitespace(str, offset)
-		local tk = self:GetToken(offset)
+		local tk = self:GetTokenOffset(offset)
 
 		if tk.whitespace then
 			for _, whitespace in ipairs(tk.whitespace) do
@@ -35,7 +35,7 @@ do
 	end
 
 	function META:IsMultiWhitespace(str, offset)
-		local tk = self:GetToken(offset)
+		local tk = self:GetTokenOffset(offset)
 
 		if tk and tk.whitespace then
 			for _, whitespace in ipairs(tk.whitespace) do
@@ -84,7 +84,7 @@ do
 
 	function META:GetDefinition(identifier, offset)
 		if not identifier then
-			local tk = self:GetToken(offset)
+			local tk = self:GetTokenOffset(offset)
 
 			if not tk then return false end
 
@@ -152,7 +152,7 @@ do
 
 		for _ = self:GetPosition(), self:GetLength() do
 			if self:IsTokenValue(")") then
-				if not is_va_opt and self:IsTokenValue(",", -1) then
+				if not is_va_opt and self:IsTokenValueOffset(",", -1) then
 					local tokens = {}
 					table.insert(tokens, self:NewToken("symbol", ""))
 					table.insert(args, tokens)
@@ -248,7 +248,7 @@ do
 	end
 
 	function META:ReadDefine()
-		if not (self:IsTokenValue("#") and self:IsTokenValue("define", 1)) then
+		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("define", 1)) then
 			return false
 		end
 
@@ -261,7 +261,7 @@ do
 	end
 
 	function META:ReadUndefine()
-		if not (self:IsTokenValue("#") and self:IsTokenValue("undef", 1)) then
+		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("undef", 1)) then
 			return false
 		end
 
@@ -275,7 +275,7 @@ do
 	function META:ExpandMacroCall()
 		local def = self:GetDefinition()
 
-		if not (def and self:IsTokenValue("(", 1)) then return false end
+		if not (def and self:IsTokenValueOffset("(", 1)) then return false end
 
 		local whitespace = self:GetToken():Copy().whitespace
 		local tokens = copy_tokens(def.tokens)
@@ -367,7 +367,7 @@ do
 	end
 
 	function META:ExpandMacroConcatenation()
-		if not (self:IsTokenValue("#", 1) and self:IsTokenValue("#", 2)) then
+		if not (self:IsTokenValueOffset("#", 1) and self:IsTokenValueOffset("#", 2)) then
 			return false
 		end
 
@@ -379,7 +379,7 @@ do
 
 		self:SetPosition(pos)
 		self:AddTokens({
-			self:NewToken("letter", tk_left.value .. self:GetToken(3).value),
+			self:NewToken("letter", tk_left.value .. self:GetTokenOffset(3).value),
 		})
 		self:Advance(1)
 

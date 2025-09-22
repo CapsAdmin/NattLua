@@ -80,20 +80,20 @@ function META:IsInArguments()
 			-- what happens if we have a function pointer in the arguments?
 			-- void foo(void (*)(int, int))
 			-- I guess it still works as a hacky solution
-			if self:IsTokenValue(",", i) then return true end
+			if self:IsTokenValueOffset(",", i) then return true end
 
-			if self:IsTokenValue("(", i) and self:IsTokenValue(")", i + 1) then
+			if self:IsTokenValueOffset("(", i) and self:IsTokenValueOffset(")", i + 1) then
 				return false
 			end
 
 			if
-				self:IsTokenValue(")", i) and
+				self:IsTokenValueOffset(")", i) and
 				(
-					self:IsTokenValue(";", i + 1) or
-					self:IsTokenType("end_of_file", i + 1)
+					self:IsTokenValueOffset(";", i + 1) or
+					self:IsTokenTypeOffset("end_of_file", i + 1)
 				)
 				and
-				not self:IsTokenValue(")", i - 1)
+				not self:IsTokenValueOffset(")", i - 1)
 			then
 				return true
 			end
@@ -282,9 +282,9 @@ function META:HasOpeningParenthesis()
 	if not self:IsTokenValue("(") then return false end
 
 	for i = 1, self:GetLength() do
-		if self:IsTokenValue(";", i) then return false end
+		if self:IsTokenValueOffset(";", i) then return false end
 
-		if self:IsTokenValue(")", i) and self:IsTokenValue("(", i + 1) then
+		if self:IsTokenValueOffset(")", i) and self:IsTokenValueOffset("(", i + 1) then
 			return true
 		end
 	end
@@ -294,10 +294,10 @@ end
 
 function META:ParseCFunctionDeclaration(node)
 	if
-		self:IsTokenValue("*", 1) or
+		self:IsTokenValueOffset("*", 1) or
 		(
-			self:IsTokenType("letter", 1) and
-			self:IsTokenValue("*", 2) and
+			self:IsTokenTypeOffset("letter", 1) and
+			self:IsTokenValueOffset("*", 2) and
 			-- TODO:
 			-- void foo(char *>>,<< short *)
 			not self:IsInArguments()
@@ -305,8 +305,8 @@ function META:ParseCFunctionDeclaration(node)
 		or
 		(
 			(
-				self:IsTokenValue("__attribute__", 1) or
-				self:IsTokenValue("__attribute", 1)
+				self:IsTokenValueOffset("__attribute__", 1) or
+				self:IsTokenValueOffset("__attribute", 1)
 			) and
 			self:HasOpeningParenthesis()
 		)
@@ -336,10 +336,10 @@ function META:ParseCFunctionDeclaration(node)
 	else
 		if
 			self:IsTokenValue("(") and
-			self:IsTokenType("letter", 1) and
-			self:IsTokenValue(")", 2) and
+			self:IsTokenTypeOffset("letter", 1) and
+			self:IsTokenValueOffset(")", 2) and
 			-- make sure it's not void foo(int);
-			not self:IsTokenValue(";", 3)
+			not self:IsTokenValueOffset(";", 3)
 		then
 			-- void >>(foo)<<()
 			node.tokens["identifier_("] = self:ExpectTokenValue("(")
@@ -531,7 +531,7 @@ function META:ParsePointers()
 			end
 
 			table.insert(out, t)
-		elseif self:IsTokenType("letter") and self:IsTokenValue("*", 1) then
+		elseif self:IsTokenType("letter") and self:IsTokenValueOffset("*", 1) then
 			-- void void (>>__ptr32*<<*foo())
 			local type = self:ExpectTokenType("letter")
 			local ptr = self:ConsumeToken()
