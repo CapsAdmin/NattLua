@@ -291,7 +291,6 @@ do
 		max_path_width = max_path_width + 2
 	end
 
-	local total = 0
 	local total_gc = 0
 	local test_file_count = 0
 
@@ -314,7 +313,6 @@ do
 		gc = memory.get_usage_kb() - gc
 		-- Update final result
 		update_test_line("DONE", format_time(time), format_gc(gc))
-		total = total + time
 		total_gc = total_gc + gc
 	end
 
@@ -338,15 +336,38 @@ do
 		if PROFILING then profiler.Stop() end
 
 		if test_file_count > 0 then
+			local times = profiler.GetSimpleSections()
+			local sorted = {}
+
+			for name, data in pairs(times) do
+				table.insert(sorted, {name = name, total = data.total})
+			end
+
+			table.sort(sorted, function(a, b)
+				return a.total > b.total
+			end)
+
+			local details = {}
+			local total = 0
+
+			for _, data in ipairs(sorted) do
+				table.insert(details, colors.dim(string.format("%s: %s", data.name, format_time(data.total))))
+				total = total + data.total
+			end
+
 			io_write(
-				"running ",
+				"\n",
+				"ran ",
 				total_test_count,
 				" tests in ",
 				test_file_count,
-				" files took ",
-				format_time(total),
-				" and ",
-				format_gc(total_gc),
+				" files",
+				"\n\n"
+			)
+			io_write(
+				table.concat(details, colors.dim(" +\n")),
+				"\n",
+				string.format("total: %s", format_time(total)),
 				"\n"
 			)
 		end

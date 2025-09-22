@@ -5,6 +5,10 @@ if select(1, ...) == "profile" and select(2, ...) ~= "trace" then
 	profiler.Start(select(2, ...))
 	profiler.StartSection("startup")
 	_G.STARTUP_PROFILE = true
+elseif select(1, ...) == "test" then
+	local profiler = require("test.helpers.profiler")
+	profiler.StartSection("startup")
+	_G.STARTUP_PROFILE = true
 end
 
 if jit then

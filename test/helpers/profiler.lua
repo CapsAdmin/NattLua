@@ -1,6 +1,7 @@
 local jit_profiler = require("test.helpers.jit_profiler")
 local line_profiler = require("test.helpers.line_profiler")
 local trace_tracker = require("test.helpers.jit_trace_track")
+local get_time = require("test.helpers.get_time")
 local profiler = {}
 local should_run = true
 local stop_profiler
@@ -24,16 +25,30 @@ function profiler.Start(mode)
 	end
 end
 
+local simple_times = {}
+local simple_stack = {}
+
 function profiler.StartSection(name--[[#: string]])
+	simple_times[name] = simple_times[name] or {total = 0}
+	simple_times[name].time = get_time()
+	table.insert(simple_stack, name)
+
 	if not stop_profiler then return end
 
 	jit_profiler.StartSection(name)
 end
 
 function profiler.StopSection()
+	local name = table.remove(simple_stack)
+	simple_times[name].total = simple_times[name].total + (get_time() - simple_times[name].time)
+
 	if not stop_profiler then return end
 
 	jit_profiler.StopSection()
+end
+
+function profiler.GetSimpleSections()
+	return simple_times
 end
 
 function profiler.Stop()
