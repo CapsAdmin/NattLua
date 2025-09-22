@@ -68,7 +68,9 @@ end
 
 do
 	-- reuse an existing environment to speed up tests
+	profiler.StartSection("base environment")
 	local _, typesystem_env = BuildBaseEnvironment()
+	profiler.StopSection()
 
 	function _G.analyze(code, expect_error, expect_warning)
 		total_test_count = total_test_count + 1
@@ -337,6 +339,8 @@ do
 
 		if test_file_count > 0 then
 			local times = profiler.GetSimpleSections()
+			-- base environment time is included in startup time, so remove it
+			times["startup"].total = times["startup"].total - times["base environment"].total
 			local sorted = {}
 
 			for name, data in pairs(times) do
