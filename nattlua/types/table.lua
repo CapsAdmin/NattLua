@@ -165,7 +165,7 @@ function META:GetHash(visited)
 	if visited[self] then return visited[self] end
 
 	visited[self] = "*circular*"
-	local data = self:GetData()
+	local data = self.Data
 	local entries = {}
 
 	for i = 1, #data do
@@ -221,7 +221,7 @@ function META:__tostring()
 	level = level + 1
 	local indent = ("\t"):rep(level)
 
-	if #self:GetData() <= 1 then indent = " " end
+	if #self.Data <= 1 then indent = " " end
 
 	local contract = self:GetContract()
 
@@ -246,7 +246,7 @@ function META:__tostring()
 			end
 		end
 	else
-		for i, keyval in ipairs(self:GetData()) do
+		for i, keyval in ipairs(self.Data) do
 			local key, val = tostring(keyval.key), tostring(keyval.val)
 			s[i] = indent .. "[" .. key .. "]" .. " = " .. val
 		end
@@ -255,7 +255,7 @@ function META:__tostring()
 	level = level - 1
 	self.suppress = false
 
-	if #self:GetData() <= 1 then return "{" .. table.concat(s, ",") .. " }" end
+	if #self.Data <= 1 then return "{" .. table.concat(s, ",") .. " }" end
 
 	return "{\n" .. table.concat(s, ",\n") .. "\n" .. ("\t"):rep(level) .. "}"
 end
@@ -267,7 +267,7 @@ function META:GetArrayLength()
 
 	local len = 0
 
-	for _, kv in ipairs(self:GetData()) do
+	for _, kv in ipairs(self.Data) do
 		if kv.key:IsNumeric() then
 			if kv.key:IsLiteral() then
 				-- TODO: not very accurate
@@ -292,7 +292,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 
 	if self:GetContract() == contract then return true end
 
-	if not self:GetData()[1] and contract:CanBeEmpty() then return true end
+	if not self.Data[1] and contract:CanBeEmpty() then return true end
 
 	for _, keyval in ipairs(contract:GetData()) do
 		local required_key = keyval.key
@@ -317,7 +317,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 		else
 			local found_anything = false
 
-			for _, keyval2 in ipairs(self:GetData()) do
+			for _, keyval2 in ipairs(self.Data) do
 				if keyval2.key:IsSubsetOf(required_key) then
 					self.suppress = true
 					local ok, err = keyval2.val:IsSubsetOf(keyval.val)
@@ -337,7 +337,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 		end
 	end
 
-	for _, keyval in ipairs(self:GetData()) do
+	for _, keyval in ipairs(self.Data) do
 		if not keyval.val:IsNil() then
 			local res, err = contract:FindKeyValExact(keyval.key)
 
@@ -358,7 +358,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 end
 
 function META:CanBeEmpty()
-	for _, keyval in ipairs(self:GetData()) do
+	for _, keyval in ipairs(self.Data) do
 		if not keyval.val:CanBeNil() then return false end
 	end
 
@@ -572,7 +572,7 @@ do
 
 		local out = {}
 
-		for i, keyval in ipairs(self:GetData()) do
+		for i, keyval in ipairs(self.Data) do
 			if not keyval.val:IsLiteral() or keyval.val.Type == "union" then
 				return String()
 			end
@@ -648,9 +648,7 @@ function META:HasKey(key--[[#: TBaseType]])
 		if key:Equal(keyval.key) or key:IsSubsetOf(keyval.key) then return true end
 	end
 
-	if self.BaseTable then
-		if self.BaseTable:HasKey(key) then return true end
-	end
+	if self.BaseTable then if self.BaseTable:HasKey(key) then return true end end
 
 	return false
 end
@@ -813,7 +811,7 @@ function META:Get(key--[[#: TBaseType | TString]])
 		local union = Union({Nil()})
 		local found_non_literal = false
 
-		for _, keyval in ipairs(self:GetData()) do
+		for _, keyval in ipairs(self.Data) do
 			if keyval.key.Type == "union" then
 				for _, ukey in ipairs(keyval.key:GetData()) do
 					if ukey:IsSubsetOf(key) then union:AddType(keyval.val) end
@@ -840,7 +838,7 @@ function META:Get(key--[[#: TBaseType | TString]])
 		if len == math_huge or len == -math_huge then
 			union:AddType(Nil())
 
-			for _, keyval in ipairs(self:GetData()) do
+			for _, keyval in ipairs(self.Data) do
 				if keyval.key.Type == "number" then union:AddType(keyval.val) end
 			end
 
@@ -863,7 +861,7 @@ function META:Get(key--[[#: TBaseType | TString]])
 	if key.Type == "any" then
 		local union = Union({Nil()})
 
-		for _, keyval in ipairs(self:GetData()) do
+		for _, keyval in ipairs(self.Data) do
 			union:AddType(keyval.val)
 		end
 
@@ -886,7 +884,7 @@ function META:Get(key--[[#: TBaseType | TString]])
 end
 
 function META:IsNumericallyIndexed()
-	for _, keyval in ipairs(self:GetData()) do
+	for _, keyval in ipairs(self.Data) do
 		if not keyval.key:IsNumeric() then return false end -- TODO, check if there are holes?
 	end
 
@@ -932,9 +930,7 @@ function META:CopyLiteralness2(from)
 end
 
 function META:CoerceUntypedFunctions(from--[[#: TTable]])
-	assert(from.Type == "table")
-
-	for _, kv in ipairs(self:GetData()) do
+	for _, kv in ipairs(self.Data) do
 		local kv_from, reason = from:FindKeyValWide(kv.key)
 
 		if not kv_from then return nil, reason end
@@ -1026,7 +1022,7 @@ function META:HasLiteralKeys()
 		return false
 	end
 
-	for _, v in ipairs(self:GetData()) do
+	for _, v in ipairs(self.Data) do
 		if
 			v.val ~= self and
 			v.key ~= self and
@@ -1037,9 +1033,7 @@ function META:HasLiteralKeys()
 			local ok, reason = v.key:IsLiteral()
 			self.suppress = false
 
-			if not ok then
-				return false, error_messages.table_key(error_messages.not_literal(v.key))
-			end
+			if not ok then return false end
 		end
 	end
 
@@ -1051,7 +1045,7 @@ function META:IsLiteral()
 
 	if self:GetContract() then return false end
 
-	for _, v in ipairs(self:GetData()) do
+	for _, v in ipairs(self.Data) do
 		if
 			v.val ~= self and
 			v.key ~= self and
