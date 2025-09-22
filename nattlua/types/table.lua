@@ -134,11 +134,7 @@ function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: Map<
 
 		for i = 1, #bdata do
 			if not matched[i] then -- Skip already matched entries
-				local bkv = bdata[i]
-				local ok_key, reason_key = akv.key:Equal(bkv.key, visited)
-				local ok_val, reason_val = akv.val:Equal(bkv.val, visited)
-
-				if ok_key and ok_val then
+				if akv.key:Equal(bdata[i].key, visited) and akv.val:Equal(bdata[i].val, visited) then
 					ok = true
 					matched[i] = true
 
@@ -646,7 +642,17 @@ function META:GetValueUnion()
 end
 
 function META:HasKey(key--[[#: TBaseType]])
-	return self:FindKeyValWide(key)
+	if read_cache(self, key) then return true end
+
+	for i, keyval in ipairs(self.Data) do
+		if key:Equal(keyval.key) or key:IsSubsetOf(keyval.key) then return true end
+	end
+
+	if self.BaseTable then
+		if self.BaseTable:HasKey(key) then return true end
+	end
+
+	return false
 end
 
 function META:FindKeyValExact(key--[[#: TBaseType]])
@@ -1032,8 +1038,7 @@ function META:HasLiteralKeys()
 			self.suppress = false
 
 			if not ok then
-				return false,
-				error_messages.table_key(error_messages.not_literal(v.key))
+				return false, error_messages.table_key(error_messages.not_literal(v.key))
 			end
 		end
 	end
@@ -1057,17 +1062,13 @@ function META:IsLiteral()
 			local ok, reason = v.key:IsLiteral()
 			self.suppress = false
 
-			if not ok then
-				return false
-			end
+			if not ok then return false end
 
 			self.suppress = true
 			local ok, reason = v.val:IsLiteral()
 			self.suppress = false
 
-			if not ok then
-				return false
-			end
+			if not ok then return false end
 		end
 	end
 
