@@ -3,11 +3,8 @@
 if select(1, ...) == "profile" and select(2, ...) ~= "trace" then
 	local profiler = require("test.helpers.profiler")
 	profiler.Start(select(2, ...))
-	_G.STOP_STARTUP_PROFILE = function()
-		io.write("== startup profiling == :")
-		profiler.Stop()
-		io.write("== == :")
-	end
+	profiler.StartSection("startup")
+	_G.STARTUP_PROFILE = true
 end
 
 if jit then

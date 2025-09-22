@@ -12,26 +12,38 @@ function profiler.Start(mode)
 	elseif mode == "instrumental" then
 		stop_profiler = line_profiler.Start()
 	else
+		stop_tracer = trace_tracker.Start()
 		stop_profiler = jit_profiler.Start(
 			{
 				mode = "line",
-				sampling_rate = 10,
+				sampling_rate = 1,
 				depth = 1, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
 				threshold = 20,
 			}
 		)
-		stop_tracer = trace_tracker.Start()
 	end
 end
 
+function profiler.StartSection(name--[[#: string]])
+	if not stop_profiler then return end
+
+	jit_profiler.StartSection(name)
+end
+
+function profiler.StopSection()
+	if not stop_profiler then return end
+
+	jit_profiler.StopSection()
+end
+
 function profiler.Stop()
+	if stop_profiler then io.write(stop_profiler()) end
+
 	if stop_tracer then
 		local traces, aborted = stop_tracer()
 		local str = trace_tracker.ToStringTraceInfo(traces, aborted)
 		io.write(str or "")
 	end
-
-	if stop_profiler then io.write(stop_profiler()) end
 end
 
 return profiler

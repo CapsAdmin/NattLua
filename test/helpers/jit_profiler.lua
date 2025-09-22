@@ -3,6 +3,10 @@ local ipairs = _G.ipairs
 local table_concat = _G.table.concat
 local table_insert = _G.table.insert
 local profiler = {}
+-- Section tracking state
+local profiler_active = false
+local section_stack = {}
+local current_section_path = ""
 --[[#local type VMState = "I" | "G" | "N" | "J" | "C"]]
 --[[#local type Config = {
 	mode = "function" | "line" | nil,
@@ -11,21 +15,47 @@ local profiler = {}
 	threshold = number | nil,
 }]]
 
+function profiler.StartSection(name--[[#: string]])
+	if not profiler_active then return end
+
+	table_insert(section_stack, name)
+	current_section_path = table_concat(section_stack, " > ")
+end
+
+function profiler.StopSection()
+	if not profiler_active then return end
+
+	if #section_stack > 0 then
+		section_stack[#section_stack] = nil
+		current_section_path = table_concat(section_stack, " > ")
+	end
+end
+
 local function starts_with(str--[[#: string]], what--[[#: string]])
 	return str:sub(1, #what) == what
 end
 
 local function process_samples(
 	config--[[#: Required<|Config|>]],
-	raw_samples--[[#: List<|{
-		stack = string,
-		sample_count = number,
-		vm_state = VMState,
-	}|>]]
+	raw_samples--[[#: List<|
+		{
+			stack = string,
+			sample_count = number,
+			vm_state = VMState,
+			section_path = string,
+		}
+	|>]]
 )
 	local processed_samples = {}
+	local section_samples = {}
 
 	for _, sample in ipairs(raw_samples) do
+		local section_key = sample.section_path == "" and "(no section)" or sample.section_path
+
+		if not section_samples[section_key] then
+			section_samples[section_key] = {}
+		end
+
 		local stack = {}
 
 		for line in sample.stack:gmatch("(.-)\n") do
@@ -46,19 +76,24 @@ local function process_samples(
 				local line_number = assert(tonumber(line_number))
 
 				do
-					if not processed_samples[path] then
-						processed_samples[path] = {lines = {}}
+					if not section_samples[section_key][path] then
+						section_samples[section_key][path] = {lines = {}}
 					end
 
-					if not processed_samples[path].lines[line_number] then
-						processed_samples[path].lines[line_number] = {}
+					if not section_samples[section_key][path].lines[line_number] then
+						section_samples[section_key][path].lines[line_number] = {}
 					end
 
-					local vm_states = processed_samples[path].lines[line_number]
+					local vm_states = section_samples[section_key][path].lines[line_number]
 					vm_states[sample.vm_state] = (vm_states[sample.vm_state] or 0) + sample.sample_count
 				end
 			end
 		end
+	end
+
+	-- Convert section_samples to the expected format
+	for section_key, section_data in pairs(section_samples) do
+		processed_samples[section_key] = section_data
 	end
 
 	local function get_samples(vm_states)
@@ -74,88 +109,117 @@ local function process_samples(
 	local sorted_samples = {}
 
 	do
-		for path, data in pairs(processed_samples) do
-			local new_lines = {}
-			local other_lines = {}
+		for section_key, section_data in pairs(processed_samples) do
+			for path, data in pairs(section_data) do
+				local new_lines = {}
+				local other_lines = {}
 
-			for line_number, vm_states in pairs(data.lines) do
-				if get_samples(vm_states) < config.threshold then
-					other_lines[line_number] = vm_states
-				else
-					new_lines[line_number] = vm_states
+				for line_number, vm_states in pairs(data.lines) do
+					if get_samples(vm_states) < config.threshold then
+						other_lines[line_number] = vm_states
+					else
+						new_lines[line_number] = vm_states
+					end
 				end
-			end
 
-			data.lines = new_lines
-			data.other_lines = other_lines
+				data.lines = new_lines
+				data.other_lines = other_lines
+			end
 		end
 
-		for path, data in pairs(processed_samples) do
-			local lines = {}
-			local total_sample_count = 0
-			local total_vm_states = {}
+		for section_key, section_data in pairs(processed_samples) do
+			local section_samples = {}
 
-			do
-				for line_number, vm_states in pairs(data.lines) do
-					local samples = get_samples(vm_states)
+			for path, data in pairs(section_data) do
+				local lines = {}
+				local total_sample_count = 0
+				local total_vm_states = {}
+
+				do
+					for line_number, vm_states in pairs(data.lines) do
+						local samples = get_samples(vm_states)
+						table.insert(
+							lines,
+							{
+								path = path .. ":" .. line_number,
+								sample_count = samples,
+								vm_states = vm_states,
+							}
+						)
+
+						for k, v in pairs(vm_states) do
+							total_vm_states[k] = (total_vm_states[k] or 0) + v
+							total_sample_count = total_sample_count + v
+						end
+					end
+				end
+
+				do
+					local path = "other samples < " .. config.threshold
+					local sample_count = 0
+					local new_vm_states = {}
+
+					for line_number, vm_states in pairs(data.other_lines) do
+						for k, v in pairs(vm_states) do
+							new_vm_states[k] = (new_vm_states[k] or 0) + v
+							sample_count = sample_count + v
+							total_vm_states[k] = (total_vm_states[k] or 0) + v
+							total_sample_count = total_sample_count + v
+						end
+					end
+
 					table.insert(
 						lines,
 						{
-							path = path .. ":" .. line_number,
-							sample_count = samples,
-							vm_states = vm_states,
+							other = true,
+							path = path,
+							sample_count = sample_count,
+							vm_states = new_vm_states,
 						}
 					)
-
-					for k, v in pairs(vm_states) do
-						total_vm_states[k] = (total_vm_states[k] or 0) + v
-						total_sample_count = total_sample_count + v
-					end
 				end
-			end
 
-			do
-				local path = "other samples < " .. config.threshold
-				local sample_count = 0
-				local new_vm_states = {}
-
-				for line_number, vm_states in pairs(data.other_lines) do
-					for k, v in pairs(vm_states) do
-						new_vm_states[k] = (new_vm_states[k] or 0) + v
-						sample_count = sample_count + v
-						total_vm_states[k] = (total_vm_states[k] or 0) + v
-						total_sample_count = total_sample_count + v
-					end
-				end
+				table.sort(lines, function(a, b)
+					return a.sample_count < b.sample_count
+				end)
 
 				table.insert(
-					lines,
+					section_samples,
 					{
-						other = true,
 						path = path,
-						sample_count = sample_count,
-						vm_states = new_vm_states,
+						vm_states = total_vm_states,
+						lines = lines,
+						sample_count = total_sample_count,
 					}
 				)
 			end
 
-			table.sort(lines, function(a, b)
+			table.sort(section_samples, function(a, b)
 				return a.sample_count < b.sample_count
 			end)
 
 			table.insert(
 				sorted_samples,
 				{
-					path = path,
-					vm_states = total_vm_states,
-					lines = lines,
-					sample_count = total_sample_count,
+					section = section_key,
+					samples = section_samples,
 				}
 			)
 		end
 
 		table.sort(sorted_samples, function(a, b)
-			return a.sample_count < b.sample_count
+			local a_total = 0
+			local b_total = 0
+
+			for _, sample in ipairs(a.samples) do
+				a_total = a_total + sample.sample_count
+			end
+
+			for _, sample in ipairs(b.samples) do
+				b_total = b_total + sample.sample_count
+			end
+
+			return a_total < b_total
 		end)
 	end
 
@@ -198,33 +262,40 @@ local function process_samples(
 
 	local out = {}
 
-	for _, data in ipairs(sorted_samples) do
-		local str = {}
-		local other
+	for _, section_data in ipairs(sorted_samples) do
+		-- Add section header if it's not the default section
+		if section_data.section ~= "(no section)" then
+			table_insert(out, "\n" .. section_data.section .. ":\n")
+		end
 
-		for _, data in ipairs(assert(data.lines)) do
-			if data.other then
-				other = data
-			else
+		for _, data in ipairs(section_data.samples) do
+			local str = {}
+			local other
+
+			for _, data in ipairs(assert(data.lines)) do
+				if data.other then
+					other = data
+				else
+					table_insert(
+						str,
+						stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. data.path .. "\n"
+					)
+				end
+			end
+
+			if str[1] then
 				table_insert(
 					str,
-					stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. data.path .. "\n"
+					stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. "total + " .. (
+							other and
+							other.sample_count or
+							0
+						) .. "\n\n"
 				)
 			end
-		end
 
-		if str[1] then
-			table_insert(
-				str,
-				stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. "total + " .. (
-						other and
-						other.sample_count or
-						0
-					) .. "\n\n"
-			)
+			if str[1] then table_insert(out, table_concat(str)) end
 		end
-
-		if str[1] then table_insert(out, table_concat(str)) end
 	end
 
 	table_insert(out, 1, "\nprofiler statistics:\n")
@@ -246,13 +317,20 @@ function profiler.Start(config--[[#: Config | nil]])
 
 	if not ok then return nil, func end
 
+	-- Reset section state
+	profiler_active = true
+	section_stack = {}
+	current_section_path = ""
 	local jit_profiler = func--[[# as any]]
 	local dumpstack = jit_profiler.dumpstack--[[# as function=(string, number)>(string) | function=(any, string, number)>(string)]]
-	local raw_samples--[[#: List<|{
-		stack = string,
-		sample_count = number,
-		vm_state = VMState,
-	}|>]] = {}
+	local raw_samples--[[#: List<|
+		{
+			stack = string,
+			sample_count = number,
+			vm_state = VMState,
+			section_path = string,
+		}
+	|>]] = {}
 	local i = 1
 
 	jit_profiler.start((config.mode == "line" and "l" or "f") .. "i" .. config.sampling_rate, function(thread, sample_count--[[#: number]], vmstate--[[#: VMState]])
@@ -260,12 +338,14 @@ function profiler.Start(config--[[#: Config | nil]])
 			stack = dumpstack(thread, "pl\n", config.depth),
 			sample_count = sample_count,
 			vm_state = vmstate,
+			section_path = current_section_path,
 		}
 		i = i + 1
 	end)
 
 	return function()
 		jit_profiler.stop()
+		profiler_active = false
 		return process_samples(config, raw_samples)
 	end
 end

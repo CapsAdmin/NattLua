@@ -20,7 +20,6 @@ local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnviro
 local callstack = require("nattlua.other.callstack")
 local system = require("nattlua.other.system")
 local nl = require("nattlua")
-
 local total_test_count = 0
 
 function _G.test(name, cb, start, stop)
@@ -80,9 +79,17 @@ do
 
 		_G.TEST = true
 		local compiler = nl.Compiler(code, nil, nil, 3)
+		profiler.StartSection("lexer")
+		compiler:Lex()
+		profiler.StopSection()
+		profiler.StartSection("parser")
+		compiler:Parse()
+		profiler.StopSection()
 		compiler:SetEnvironments(Table({}), typesystem_env)
 		_G.TEST_GARBAGE = {}
+		profiler.StartSection("analyzer")
 		local ok, err = compiler:Analyze()
+		profiler.StopSection()
 
 		do
 			local tbl = {}
@@ -289,15 +296,14 @@ do
 	local test_file_count = 0
 
 	function _G.begin_tests(logging, profiling, profiling_mode)
-		if _G.STOP_STARTUP_PROFILE then
-			_G.STOP_STARTUP_PROFILE()
-			_G.STOP_STARTUP_PROFILE = nil
-		end
-
 		LOGGING = logging or false
 		PROFILING = profiling or false
 
-		if PROFILING then profiler.Start(profiling_mode) end
+		if _G.STARTUP_PROFILE then profiler.StopSection() end
+
+		if PROFILING and not _G.STARTUP_PROFILE then
+			profiler.Start(profiling_mode)
+		end
 	end
 
 	local function run_func(func, ...)
@@ -314,6 +320,7 @@ do
 
 	function _G.run_single_test(test)
 		current_test_name = test.name
+
 		-- You'll need to pass the expected test count somehow, or estimate it
 		-- For now, setting to 0 means no progress counter shown
 		if LOGGING then update_test_line("RUNNING") end
@@ -333,7 +340,8 @@ do
 		if test_file_count > 0 then
 			io_write(
 				"running ",
-				total_test_count, " tests in ",
+				total_test_count,
+				" tests in ",
 				test_file_count,
 				" files took ",
 				format_time(total),
