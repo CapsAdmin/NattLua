@@ -218,9 +218,10 @@ function META:Recompile(path, lol, diagnostics)
 
 	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
 		local name = code:GetName()
+		local str_msg = formating.FormatMessage(msg, ...)
 
 		if severity == "fatal" then
-			self:DebugLog("[ " .. entry_point .. " ] " .. formating.FormatMessage(msg, ...))
+			self:DebugLog("[ " .. entry_point .. " ] " .. str_msg)
 		end
 
 		diagnostics[name] = diagnostics[name] or {}
@@ -231,7 +232,7 @@ function META:Recompile(path, lol, diagnostics)
 				code = code,
 				start = start,
 				stop = stop,
-				message = formating.FormatMessage(msg, ...),
+				message = str_msg,
 				trace = debug.traceback(),
 			}
 		)

@@ -3,9 +3,29 @@ local table = _G.table
 local type = _G.type
 local ipairs = _G.ipairs
 local table_insert = table.insert
+local table_concat = table.concat
+local tostring = _G.tostring
 local callstack = require("nattlua.other.callstack")
 local error_messages = {}
 --[[#local type Reason = string | {[number] = any | string}]]
+
+function error_messages.ErrorMessageToString(tbl--[[#: List<|string | Reason|>]])--[[#: string]]
+	local out = {}
+
+	for i, v in ipairs(tbl) do
+		if type(v) == "table" then
+			if v.Type then
+				table_insert(out, tostring(v))
+			else
+				table_insert(out, error_messages.ErrorMessageToString(v))
+			end
+		else
+			table_insert(out, tostring(v))
+		end
+	end
+
+	return table_concat(out, " ")
+end
 
 function error_messages.because(msg--[[#: Reason]], reason--[[#: nil | Reason]])--[[#: Reason]]
 	if type(msg) ~= "table" then msg = {msg} end

@@ -6,6 +6,7 @@ local io = io
 local debug = debug
 local error = error
 local Any = require("nattlua.types.any").Any
+local error_messages = require("nattlua.error_messages")
 local math_abs = math.abs
 local assert = _G.assert
 return function(META)
@@ -81,26 +82,8 @@ return function(META)
 
 	function META:ErrorAssert(ok, err)
 		if not ok then
-			error(self:ErrorMessageToString(err or "assertion failed!"), 2)
+			error(error_messages.ErrorMessageToString(err or "assertion failed!"), 2)
 		end
-	end
-
-	function META:ErrorMessageToString(tbl)
-		local out = {}
-
-		for i, v in ipairs(tbl) do
-			if type(v) == "table" then
-				if v.Type then
-					table.insert(out, tostring(v))
-				else
-					table.insert(out, self:ErrorMessageToString(v))
-				end
-			else
-				table.insert(out, tostring(v))
-			end
-		end
-
-		return table.concat(out, " ")
 	end
 
 	function META:ReportDiagnostic(
@@ -123,7 +106,7 @@ return function(META)
 			print(debug.traceback())
 		end
 
-		local msg_str = self:ErrorMessageToString(msg)
+		local msg_str = error_messages.ErrorMessageToString(msg)
 
 		if self.processing_deferred_calls then
 			msg_str = "DEFERRED CALL: " .. msg_str
