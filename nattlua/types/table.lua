@@ -315,7 +315,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 
 				if not ok then
 					return false,
-					error_messages.because(error_messages.context("the key", error_messages.subset(res.key, keyval.key)), err)
+					error_messages.because(error_messages.table_key(error_messages.subset(res.key, keyval.key)), err)
 				end
 			end
 		else
@@ -330,7 +330,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 
 					if not ok then
 						return false,
-						error_messages.because(error_messages.context("the key", error_messages.subset(keyval2.key, keyval.key)), err)
+						error_messages.because(error_messages.table_key(error_messages.subset(keyval2.key, keyval.key)), err)
 					end
 				end
 			end
@@ -352,7 +352,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 
 				if not ok then
 					return false,
-					error_messages.because(error_messages.context("the value", error_messages.subset(res.val, keyval.val)), err)
+					error_messages.because(error_messages.table_value(error_messages.subset(res.val, keyval.val)), err)
 				end
 			end
 		end
@@ -665,10 +665,11 @@ function META:FindKeyValExact(key--[[#: TBaseType]])
 	end
 
 	if not reasons[1] then
-		reasons[1] = error_messages.because(error_messages.table_index(self, key), "table is empty")
+		reasons[1] = error_messages.because(error_messages.table_index(self, key), {"table is empty"})
 	end
 
-	return false, error_messages.because(error_messages.table_index(self, key), reasons)
+	return false,
+	error_messages.because(error_messages.table_index(self, key), reasons)
 end
 
 function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]])
@@ -705,10 +706,11 @@ function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]
 	end
 
 	if not reasons[1] then
-		reasons[1] = error_messages.because(error_messages.table_index(self, key), "table is empty")
+		reasons[1] = error_messages.because(error_messages.table_index(self, key), {"table is empty"})
 	end
 
-	return false, error_messages.because(error_messages.table_index(self, key), reasons)
+	return false,
+	error_messages.because(error_messages.table_index(self, key), reasons)
 end
 
 function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete--[[#: boolean | nil]])
@@ -1031,7 +1033,7 @@ function META:HasLiteralKeys()
 
 			if not ok then
 				return false,
-				error_messages.because(error_messages.context("the key", error_messages.not_literal(v.key)), reason)
+				error_messages.table_key(error_messages.not_literal(v.key))
 			end
 		end
 	end
@@ -1056,8 +1058,7 @@ function META:IsLiteral()
 			self.suppress = false
 
 			if not ok then
-				return false,
-				error_messages.because(error_messages.context("the key", error_messages.not_literal(v.key)), reason)
+				return false
 			end
 
 			self.suppress = true
@@ -1065,8 +1066,7 @@ function META:IsLiteral()
 			self.suppress = false
 
 			if not ok then
-				return false,
-				error_messages.because(error_messages.context("the value", error_messages.not_literal(v.val)), reason)
+				return false
 			end
 		end
 	end

@@ -80,7 +80,7 @@ return function(META)
 		return ok, err, ...
 	end
 
-	function META:ErrorAssert(ok, err)
+	function META:AssertFatal(ok, err)
 		if not ok then
 			error(error_messages.ErrorMessageToString(err or "assertion failed!"), 2)
 		end

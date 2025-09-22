@@ -181,12 +181,7 @@ return function(analyzer, obj, input)
 		if errors then
 			for _, error in ipairs(errors) do
 				local reason, a, b, i = table.unpack(error)
-				analyzer:Error(
-					error_messages.context(
-						"argument #" .. i .. ":",
-						error_messages.because(error_messages.subset(a, b), reason)
-					)
-				)
+				analyzer:Error(error_messages.argument(i, error_messages.because(error_messages.subset(a, b), reason)))
 			end
 		end
 
@@ -243,10 +238,7 @@ return function(analyzer, obj, input)
 			for i, v in ipairs(err) do
 				local reason, a, b, i = table.unpack(v)
 				analyzer:Error(
-					error_messages.context(
-						"return #" .. i .. ":",
-						error_messages.because(error_messages.subset(a, b), reason)
-					)
+					error_messages.return_(i, error_messages.because(error_messages.subset(a, b), reason))
 				)
 			end
 		end

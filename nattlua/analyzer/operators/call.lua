@@ -113,7 +113,7 @@ end
 local function table_call(self, analyzer, input, call_node)
 	if not self:GetMetaTable() then
 		return false,
-		error_messages.because(error_messages.table_index(self, "__call"), "it has no metatable")
+		error_messages.because(error_messages.table_index(self, "__call"), {"it has no metatable"})
 	end
 
 	local __call, reason = self:GetMetaTable():Get(ConstString("__call"))

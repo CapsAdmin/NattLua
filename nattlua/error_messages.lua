@@ -7,7 +7,7 @@ local table_concat = table.concat
 local tostring = _G.tostring
 local callstack = require("nattlua.other.callstack")
 local error_messages = {}
---[[#local type Reason = string | {[number] = any | string}]]
+--[[#local type Reason = {[number] = any | string}]]
 
 function error_messages.ErrorMessageToString(tbl--[[#: List<|string | Reason|>]])--[[#: string]]
 	local out = {}
@@ -27,37 +27,34 @@ function error_messages.ErrorMessageToString(tbl--[[#: List<|string | Reason|>]]
 	return table_concat(out, " ")
 end
 
-function error_messages.because(msg--[[#: Reason]], reason--[[#: nil | Reason]])--[[#: Reason]]
-	if type(msg) ~= "table" then msg = {msg} end
-
-	if reason then
-		if type(reason) ~= "table" then reason = {reason} end
-
-		table_insert(msg, "because")
-		table_insert(msg, reason)
-	end
-
+function error_messages.because(msg--[[#: Reason]], reason--[[#: Reason]])--[[#: Reason]]
+	table_insert(msg, "because")
+	table_insert(msg, reason)
 	return msg
 end
 
-function error_messages.context(context--[[#: Reason]], reason--[[#: Reason]])--[[#: Reason]]
-	if type(context) ~= "table" then context = {context} end
+function error_messages.argument(i--[[#: number]], reason--[[#: Reason]])
+	return {"argument #", i, ":", reason}
+end
 
-	if type(reason) ~= "table" then
-		reason = {context, reason}
-	else
-		reason = {context, reason[1], reason[2], reason[3], reason[4], reason[5], reason[6]}
-	end
+function error_messages.return_(i--[[#: number]], reason--[[#: Reason]])
+	return {"return #", i, ":", reason}
+end
 
-	return reason
+function error_messages.table_key(reason--[[#: Reason]])
+	return {"the key", reason}
+end
+
+function error_messages.table_value(reason--[[#: Reason]])
+	return {"the value", reason}
 end
 
 do -- string pattern
 	function error_messages.string_pattern_invalid_construction(a--[[#: any]])--[[#: Reason]]
-		return error_messages.context(
+		return {
 			"string pattern must be a string literal, but",
-			error_messages.subset(a, "literal string")
-		)
+			error_messages.subset(a, "literal string"),
+		}
 	end
 
 	function error_messages.string_pattern_match_fail(a--[[#: any]], b--[[#: any]])--[[#: Reason]]
@@ -71,10 +68,12 @@ do -- string pattern
 	end
 
 	function error_messages.string_pattern_type_mismatch(a--[[#: any]])--[[#: Reason]]
-		return error_messages.context(
-			{"to compare against a string pattern,", a, "must be a string literal, but"},
-			error_messages.subset(a, "literal string")
-		)
+		return {
+			"to compare against a string pattern,",
+			a,
+			"must be a string literal, but",
+			error_messages.subset(a, "literal string"),
+		}
 	end
 end
 
@@ -226,22 +225,10 @@ function error_messages.mutating_function_argument(obj--[[#: any]], i--[[#: numb
 	return {
 		"mutating function argument ",
 		obj,
-		" #" .. i,
+		" #",
+		i,
 		" without a contract",
 	}
-end
-
-function error_messages.return_type_mismatch(
-	function_node--[[#: any]],
-	output_signature--[[#: any]],
-	output--[[#: any]],
-	reason--[[#: Reason]],
-	i--[[#: number]]
-)
-	return error_messages.context(
-		"expected return type " .. tostring(output_signature) .. ", but found " .. tostring(output) .. " at return #" .. i .. ":",
-		reason
-	)
 end
 
 function error_messages.global_assignment(key--[[#: any]], val--[[#: any]])--[[#: Reason]]
@@ -272,7 +259,8 @@ function error_messages.mutating_immutable_function_argument(obj--[[#: any]], i-
 	return {
 		"mutating function argument",
 		obj,
-		"#" .. i,
+		"#",
+		i,
 		"with an immutable contract",
 	}
 end
@@ -303,7 +291,8 @@ end
 
 function error_messages.argument_mutation(i--[[#: number]], arg--[[#: any]])--[[#: Reason]]
 	return {
-		"argument #" .. i,
+		"argument #",
+		i,
 		arg,
 		"can be mutated by external call",
 	}
@@ -329,7 +318,7 @@ function error_messages.invalid_number(value--[[#: any]])--[[#: Reason]]
 end
 
 function error_messages.typeof_lookup_missing(type_name--[[#: string]])--[[#: Reason]]
-	return {"cannot find '" .. type_name .. "' in the current typesystem scope"}
+	return {"cannot find '", type_name, "' in the current typesystem scope"}
 end
 
 function error_messages.plain_error(msg--[[#: any]])--[[#: Reason]]
@@ -341,7 +330,7 @@ function error_messages.analyzer_error(msg, trace)--[[#: Reason]]
 end
 
 function error_messages.too_many_combinations(total--[[#: number]], max--[[#: number]])--[[#: Reason]]
-	return {"too many argument combinations (" .. total .. " > " .. max .. ")"}
+	return {"too many argument combinations (", total, " > ", max, ")"}
 end
 
 do

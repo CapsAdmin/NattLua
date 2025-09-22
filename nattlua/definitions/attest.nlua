@@ -29,17 +29,17 @@ end
 SetPreventInputExpansionOnFunction<|attest.equal, true|>
 
 analyzer function attest.literal(A: any)
-	analyzer:ErrorAssert(A:IsLiteral())
+	analyzer:AssertFatal(A:IsLiteral())
 	return A
 end
 
 analyzer function attest.superset_of(A: any, B: any)
-	analyzer:ErrorAssert(B:IsSubsetOf(A))
+	analyzer:AssertFatal(B:IsSubsetOf(A))
 	return A
 end
 
 analyzer function attest.subset_of(A: any, B: any)
-	analyzer:ErrorAssert(A:IsSubsetOf(B))
+	analyzer:AssertFatal(A:IsSubsetOf(B))
 	return A
 end
 

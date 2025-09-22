@@ -8,9 +8,7 @@ return function(analyzer, obj, input)
 		if errors then
 			for _, error in ipairs(errors) do
 				local reason, a, b, i = error[1], error[2], error[3], error[4]
-				analyzer:Error(
-					error_messages.context("argument #" .. i .. ":", error_messages.because(error_messages.subset(a, b), reason))
-				)
+				analyzer:Error(error_messages.argument(i, error_messages.because(error_messages.subset(a, b), reason)))
 			end
 		end
 

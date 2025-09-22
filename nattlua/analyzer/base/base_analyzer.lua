@@ -357,6 +357,8 @@ return function(META)
 			return tostring(msg)
 		end
 
+		local traceback = nil
+
 		local function on_error_safe(msg)
 			local ok, ret = pcall(on_error, msg)
 
@@ -368,7 +370,8 @@ return function(META)
 				ret = "error in nattlua error handling"
 			end
 
-			return ret, debug.traceback()
+			traceback = callstack.traceback()
+			return ret
 		end
 
 		function META:CallLuaTypeFunction(func, scope, args)
@@ -378,8 +381,8 @@ return function(META)
 			current_func = nil
 
 			if not ok then
-				local err = a
-				local trace = b
+				local err = assert(a)
+				local trace = traceback
 				local stack = self:GetCallStack()
 
 				if stack[1] then self:PushCurrentExpression(stack[#stack].call_node) end

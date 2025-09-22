@@ -62,9 +62,7 @@ local function check_argument_against_contract(self, arg, contract, i)
 		ok, reason = arg:IsSubsetOf(contract)
 	end
 
-	if not ok then
-		return false, error_messages.context("argument #" .. i .. ":", reason)
-	end
+	if not ok then return false, error_messages.argument(i, reason) end
 
 	return true
 end
@@ -112,9 +110,7 @@ return function(self, obj, input)
 				if errors then
 					for i, v in ipairs(errors) do
 						local reason, a, b, i = table.unpack(v)
-						self:Error(
-							error_messages.context("argument #" .. i .. ":", error_messages.because(error_messages.subset(a, b), reason))
-						)
+						self:Error(error_messages.argument(i, error_messages.because(error_messages.subset(a, b), reason)))
 					end
 				end
 
@@ -169,9 +165,7 @@ return function(self, obj, input)
 					arg:SetReferenceType(true)
 					local ok, err = check_argument_against_contract(self, arg, contract, i)
 
-					if not ok then
-						self:Error(error_messages.context("argument #" .. i, err))
-					end
+					if not ok then self:Error(error_messages.argument(i, err)) end
 
 					signature_override[i] = arg
 				elseif type_expression then
@@ -186,7 +180,7 @@ return function(self, obj, input)
 
 					if not val then
 						val = Any()
-						self:Error(error_messages.context("argument #" .. i, err))
+						self:Error(error_messages.argument(i, err))
 					end
 
 					self:CreateLocalValue(identifier, val)
@@ -561,9 +555,7 @@ return function(self, obj, input)
 			if err then
 				for i, v in ipairs(err) do
 					local reason, a, b, i = table.unpack(v)
-					self:Error(
-						error_messages.context("return #" .. i .. ":", error_messages.because(error_messages.subset(a, b), reason))
-					)
+					self:Error(error_messages.return_(i, error_messages.because(error_messages.subset(a, b), reason)))
 				end
 			end
 
@@ -634,7 +626,7 @@ return function(self, obj, input)
 							self:PushCurrentStatement(function_node)
 							self:PushCurrentExpression(function_node.return_types and function_node.return_types[i])
 							self:Error(
-								error_messages.context("return #" .. i .. ":", error_messages.because(error_messages.subset(a, b), reason))
+								error_messages.return_(i, error_messages.because(error_messages.subset(a, b), reason))
 							)
 							self:PopCurrentExpression()
 							self:PopCurrentStatement()
