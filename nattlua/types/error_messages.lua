@@ -289,6 +289,17 @@ function type_errors.argument_mutation(i--[[#: number]], arg--[[#: any]])--[[#: 
 	}
 end
 
+function type_errors.argument_contract_mutation(obj--[[#: any]])--[[#: Reason]]
+	return {
+		"cannot mutate argument with contract ",
+		obj,
+	}
+end
+
+function type_errors.analyzer_timeout(count--[[#: number]], node--[[#: any]])--[[#: Reason]]
+	return {node, " was crawled ", count, " times"}
+end
+
 function type_errors.const_assignment(key--[[#: any]])--[[#: Reason]]
 	return {"cannot assign to const variable", key}
 end
@@ -307,6 +318,10 @@ end
 
 function type_errors.analyzer_error(msg, trace)--[[#: Reason]]
 	return {msg, " at ", trace or callstack.traceback()}
+end
+
+function type_errors.too_many_combinations(total--[[#: number]], max--[[#: number]])--[[#: Reason]]
+	return {"too many argument combinations (" .. total .. " > " .. max .. ")"}
 end
 
 do

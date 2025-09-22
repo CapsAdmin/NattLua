@@ -130,7 +130,7 @@ local function unpack_union_tuples(obj, input)
 
 	if is_above_limit then
 		return nil,
-		"too many argument combinations (" .. total_combinations .. " > " .. max_combinations .. ")"
+		type_errors.too_many_combinations(total_combinations, max_combinations)
 	end
 
 	return generate_combinations_iterative(argument_options)
@@ -225,7 +225,7 @@ return function(analyzer, obj, input)
 	local combinations, error_msg = unpack_union_tuples(obj, input)
 
 	if not combinations then
-		analyzer:Error({error_msg})
+		analyzer:Error(error_msg)
 		return output_signature:Copy()
 	end
 

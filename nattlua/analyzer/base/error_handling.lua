@@ -174,6 +174,7 @@ return function(META)
 
 	do
 		local push, get, pop = META:SetupContextRef("type_protected_call")
+
 		function META:PushProtectedCall()
 			push(self)
 		end
