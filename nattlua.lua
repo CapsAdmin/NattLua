@@ -1,5 +1,7 @@
 #!/usr/bin/env luajit
 
+_G.EARLY_STARTUP_TIME = os.clock()
+
 if select(1, ...) == "profile" and select(2, ...) ~= "trace" then
 	_G.REUSE_BASE_ENV = true
 	local profiler = require("test.helpers.profiler")

@@ -335,6 +335,9 @@ do
 	end
 
 	function _G.end_tests()
+		local luajit_startup_time = _G.EARLY_STARTUP_TIME or 0
+		local actual_total = os.clock() - luajit_startup_time
+
 		if PROFILING then profiler.Stop() end
 
 		if test_file_count > 0 then
@@ -342,21 +345,24 @@ do
 			-- base environment time is included in startup time, so remove it
 			times["startup"].total = times["startup"].total - times["base environment"].total
 			local sorted = {}
+			local sections_total = 0
 
 			for name, data in pairs(times) do
 				table.insert(sorted, {name = name, total = data.total})
+				sections_total = sections_total + data.total
 			end
+
+			table.insert(sorted, {name = "luajit", total = luajit_startup_time})
+			table.insert(sorted, {name = "untracked", total = actual_total - sections_total})
 
 			table.sort(sorted, function(a, b)
 				return a.total > b.total
 			end)
 
 			local details = {}
-			local total = 0
 
 			for _, data in ipairs(sorted) do
 				table.insert(details, colors.dim(string.format("%s: %s", data.name, format_time(data.total))))
-				total = total + data.total
 			end
 
 			io_write(
@@ -368,12 +374,8 @@ do
 				" files",
 				"\n\n"
 			)
-			io_write(
-				table.concat(details, colors.dim(" +\n")),
-				"\n",
-				string.format("total: %s", format_time(total)),
-				"\n"
-			)
+			io_write(table.concat(details, colors.dim(" +\n")), "\n")
+			io_write(string.format("total: %s", format_time(actual_total)), "\n")
 		end
 	end
 end
