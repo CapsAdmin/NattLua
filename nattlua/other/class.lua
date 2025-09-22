@@ -98,6 +98,7 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 	end
 
 	local on_initialize = {}
+	local unrolled_keys
 
 	function META.NewObject(init--[[#: ref AnyTable]], unroll_functions--[[#: boolean | nil]])
 		for _, func in ipairs(on_initialize) do
@@ -106,8 +107,19 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 
 		if unroll_functions then
 			if true--[[# as false]] then
-				for k, v in pairs(META) do
-					if type(v) == "function" then init[k] = v end
+				if not unrolled_keys then
+					unrolled_keys = {}
+
+					for k, v in pairs(META) do
+						if type(v) == "function" then
+							init[k] = v
+							table.insert(unrolled_keys, {k, v})
+						end
+					end
+				else
+					for k, v in ipairs(unrolled_keys) do
+						init[v[1]] = v[2]
+					end
 				end
 			end
 		end
