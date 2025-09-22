@@ -5,7 +5,7 @@ local Any = require("nattlua.types.any").Any
 local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
 local ConstString = require("nattlua.types.string").ConstString
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 return {
 	NewIndex = function(META)
 		local function newindex_union(analyzer, obj, key, val)
@@ -47,9 +47,9 @@ return {
 				not obj.mutable
 			then
 				if not obj:GetContract() then
-					analyzer:Warning(type_errors.mutating_function_argument(obj, obj.argument_index))
+					analyzer:Warning(error_messages.mutating_function_argument(obj, obj.argument_index))
 				else
-					analyzer:Error(type_errors.mutating_immutable_function_argument(obj, obj.argument_index))
+					analyzer:Error(error_messages.mutating_immutable_function_argument(obj, obj.argument_index))
 				end
 			end
 
@@ -76,13 +76,13 @@ return {
 							if val:GetInputIdentifiers() then
 								for i, v in ipairs(val:GetInputIdentifiers()) do
 									if not existing:GetInputIdentifiers()[i] then
-										analyzer:Error(type_errors.too_many_arguments())
+										analyzer:Error(error_messages.too_many_arguments())
 
 										break
 									end
 								end
 							else
-								analyzer:Error(type_errors.too_few_arguments())
+								analyzer:Error(error_messages.too_few_arguments())
 							end
 
 							val:SetInputSignature(existing:GetInputSignature())

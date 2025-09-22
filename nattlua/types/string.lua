@@ -2,7 +2,7 @@
 local tostring = tostring
 local setmetatable = _G.setmetatable
 local jit = _G.jit
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local Number = require("nattlua.types.number").Number
 local context = require("nattlua.analyzer.context")
 local META = require("nattlua.types.base")()
@@ -56,12 +56,12 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TString | TBaseType]])
 
 	if B.Type == "union" then return B:IsTargetSubsetOfChild(A) end
 
-	if B.Type ~= "string" then return false, type_errors.subset(A, B) end
+	if B.Type ~= "string" then return false, error_messages.subset(A, B) end
 
 	if not A.Data and B.PatternContract then
 		if A.PatternContract == B.PatternContract then return true end
 
-		return false, type_errors.string_pattern_type_mismatch(A)
+		return false, error_messages.string_pattern_type_mismatch(A)
 	end
 
 	if A.Data == B.Data and not B.PatternContract then -- "A" subsetof "B" or string subsetof string
@@ -76,17 +76,17 @@ function META.IsSubsetOf(A--[[#: TString]], B--[[#: TString | TBaseType]])
 		local str = A.Data
 
 		if not str then -- TODO: this is not correct, it should be .Data but I have not yet decided this behavior yet
-			return false, type_errors.string_pattern_type_mismatch(A)
+			return false, error_messages.string_pattern_type_mismatch(A)
 		end
 
 		if not str:find(B.PatternContract) then
-			return false, type_errors.string_pattern_match_fail(A, B)
+			return false, error_messages.string_pattern_match_fail(A, B)
 		end
 
 		return true
 	end
 
-	return false, type_errors.subset(A, B)
+	return false, error_messages.subset(A, B)
 end
 
 function META:__tostring()
@@ -98,7 +98,7 @@ function META:__tostring()
 end
 
 function META.LogicalComparison(a--[[#: TString]], b--[[#: TBaseType]], op--[[#: string]])
-	if b.Type ~= "string" then return false, type_errors.binary(op, a, b) end
+	if b.Type ~= "string" then return false, error_messages.binary(op, a, b) end
 
 	if not a.Data or not b.Data then return nil end -- undefined comparison, nil is the same as true | false
 	if op == ">" then
@@ -113,7 +113,7 @@ function META.LogicalComparison(a--[[#: TString]], b--[[#: TBaseType]], op--[[#:
 		return a.Data == b.Data
 	end
 
-	return false, type_errors.binary(op, a, b)
+	return false, error_messages.binary(op, a, b)
 end
 
 function META:IsFalsy()
@@ -125,7 +125,7 @@ function META:IsTruthy()
 end
 
 function META:Get()
-	return false, type_errors.index_string_attempt()
+	return false, error_messages.index_string_attempt()
 end
 
 local function new(data--[[#: string | nil]], pattern--[[#: string | nil]])

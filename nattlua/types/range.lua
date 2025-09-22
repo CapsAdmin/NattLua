@@ -6,7 +6,7 @@ local tostring = _G.tostring
 local tonumber = _G.tonumber
 local setmetatable = _G.setmetatable
 local type = _G.type
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local bit = require("nattlua.other.bit")
 local jit = _G.jit
 local False = require("nattlua.types.symbol").False
@@ -125,11 +125,11 @@ function META.IsSubsetOf(a--[[#: TRange]], b--[[#: TBaseType]])
 
 	if b.Type == "number" and not b.Data then return true end
 
-	if b.Type ~= "range" then return false, type_errors.subset(a, b) end
+	if b.Type ~= "range" then return false, error_messages.subset(a, b) end
 
 	if a:GetMin() >= b:GetMin() and a:GetMax() <= b:GetMax() then return true end
 
-	return false, type_errors.subset(a, b)
+	return false, error_messages.subset(a, b)
 end
 
 function META:__tostring()

@@ -1,6 +1,6 @@
 local class = require("nattlua.other.class")
 local mutation_solver = require("nattlua.analyzer.mutation_solver")
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local tostring = _G.tostring
 local assert = _G.assert
 local table_insert = _G.table.insert
@@ -54,7 +54,7 @@ do
 		val:SetUpvalue(self)
 		self.Mutations = self.Mutations or {}
 
-		if self.Mutations[100] then return false, type_errors.too_many_mutations() end
+		if self.Mutations[100] then return false, error_messages.too_many_mutations() end
 
 		table_insert(self.Mutations, {scope = scope, value = val, from_tracking = from_tracking})
 

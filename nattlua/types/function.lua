@@ -5,7 +5,7 @@ local table = _G.table
 local Tuple = require("nattlua.types.tuple").Tuple
 local VarArg = require("nattlua.types.tuple").VarArg
 local Any = require("nattlua.types.any").Any
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TFunction"]]
@@ -34,7 +34,7 @@ META:IsSet("InputArgumentsInferred", false)
 function META.LogicalComparison(l--[[#: TFunction]], r--[[#: TFunction]], op--[[#: string]])
 	if op == "==" then return l:Equal(r) end
 
-	return false, type_errors.binary(op, l, r)
+	return false, error_messages.binary(op, l, r)
 end
 
 function META:__tostring()
@@ -131,13 +131,13 @@ function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 
 	if b.Type == "any" then return true end
 
-	if b.Type ~= "function" then return false, type_errors.subset(a, b) end
+	if b.Type ~= "function" then return false, error_messages.subset(a, b) end
 
 	local ok, reason = a:GetInputSignature():IsSubsetOf(b:GetInputSignature())
 
 	if not ok then
 		return false,
-		type_errors.because(type_errors.subset(a:GetInputSignature(), b:GetInputSignature()), reason)
+		error_messages.because(error_messages.subset(a:GetInputSignature(), b:GetInputSignature()), reason)
 	end
 
 	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
@@ -161,7 +161,7 @@ function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 
 	if not ok then
 		return false,
-		type_errors.because(type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature()), reason)
+		error_messages.because(error_messages.subset(a:GetOutputSignature(), b:GetOutputSignature()), reason)
 	end
 
 	return true
@@ -186,14 +186,14 @@ function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TFunction]])
 
 	if not ok then
 		return false,
-		type_errors.because(type_errors.subset(a:GetInputSignature(), b:GetInputSignature()), reason)
+		error_messages.because(error_messages.subset(a:GetInputSignature(), b:GetInputSignature()), reason)
 	end
 
 	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
 
 	if not ok then
 		return false,
-		type_errors.because(type_errors.subset(a:GetOutputSignature(), b:GetOutputSignature()), reason)
+		error_messages.because(error_messages.subset(a:GetOutputSignature(), b:GetOutputSignature()), reason)
 	end
 
 	return true

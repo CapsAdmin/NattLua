@@ -7,7 +7,7 @@ local ipairs = _G.ipairs
 local Nil = require("nattlua.types.symbol").Nil
 local True = require("nattlua.types.symbol").True
 local False = require("nattlua.types.symbol").False
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local table_concat = _G.table.concat
 local table_remove = _G.table.remove
 local table_sort = require("nattlua.other.sort")
@@ -435,7 +435,7 @@ function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 		errors[i] = reason
 	end
 
-	return false, type_errors.subset(target, self, errors)
+	return false, error_messages.subset(target, self, errors)
 end
 
 function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: any]])
@@ -446,7 +446,7 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: any]])
 	if b.Type == "any" then return true end
 
 	if a:IsEmpty() then
-		return false, type_errors.because(type_errors.subset(a, b), "union is empty")
+		return false, error_messages.because(error_messages.subset(a, b), "union is empty")
 	end
 
 	for _, a_val in ipairs(a.Data) do
@@ -470,7 +470,7 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: any]])
 		a.suppress = false
 
 		if not b_val then
-			return false, type_errors.because(type_errors.subset(b, a_val), reason)
+			return false, error_messages.because(error_messages.subset(b, a_val), reason)
 		end
 
 		a.suppress = true
@@ -478,7 +478,7 @@ function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: any]])
 		a.suppress = false
 
 		if not ok then
-			return false, type_errors.because(type_errors.subset(a_val, b_val), reason)
+			return false, error_messages.because(error_messages.subset(a_val, b_val), reason)
 		end
 	end
 

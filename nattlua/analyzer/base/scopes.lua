@@ -7,7 +7,7 @@ local LString = require("nattlua.types.string").LString
 local table = _G.table
 local table_remove = _G.table.remove
 local table_insert = _G.table.insert
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 return function(META)
 	require("nattlua.other.context_mixin")(META)
 
@@ -135,7 +135,7 @@ return function(META)
 
 		if upvalue then
 			if upvalue:IsImmutable() then
-				return self:Error(type_errors.const_assignment(key))
+				return self:Error(error_messages.const_assignment(key))
 			end
 
 			self:MutateUpvalue(upvalue, val)
@@ -150,7 +150,7 @@ return function(META)
 		end
 
 		if self:IsRuntime() then
-			self:Warning(type_errors.global_assignment(key, val), self:GetCurrentStatement())
+			self:Warning(error_messages.global_assignment(key, val), self:GetCurrentStatement())
 		elseif _G.TEST_GARBAGE then
 			TEST_GARBAGE[key] = val
 		end

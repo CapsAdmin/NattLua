@@ -1,6 +1,6 @@
 local ipairs = ipairs
 local table = _G.table
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local Tuple = require("nattlua.types.tuple").Tuple
 local Table = require("nattlua.types.table").Table
 local Union = require("nattlua.types.union").Union
@@ -53,7 +53,7 @@ local function check_argument_against_contract(self, arg, contract, i)
 	if not arg and contract:CanBeNil() then
 		ok = true
 	elseif not arg then
-		ok, reason = false, type_errors.subset("*missing argument #" .. i .. "* ", contract)
+		ok, reason = false, error_messages.subset("*missing argument #" .. i .. "* ", contract)
 	elseif arg.Type == "table" and contract.Type == "table" then
 		ok, reason = arg:FollowsContract(contract)
 	elseif arg.Type == "function" and contract.Type == "function" then
@@ -63,7 +63,7 @@ local function check_argument_against_contract(self, arg, contract, i)
 	end
 
 	if not ok then
-		return false, type_errors.context("argument #" .. i .. ":", reason)
+		return false, error_messages.context("argument #" .. i .. ":", reason)
 	end
 
 	return true
@@ -113,7 +113,7 @@ return function(self, obj, input)
 					for i, v in ipairs(errors) do
 						local reason, a, b, i = table.unpack(v)
 						self:Error(
-							type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+							error_messages.context("argument #" .. i .. ":", error_messages.because(error_messages.subset(a, b), reason))
 						)
 					end
 				end
@@ -170,7 +170,7 @@ return function(self, obj, input)
 					local ok, err = check_argument_against_contract(self, arg, contract, i)
 
 					if not ok then
-						self:Error(type_errors.context("argument #" .. i, err))
+						self:Error(error_messages.context("argument #" .. i, err))
 					end
 
 					signature_override[i] = arg
@@ -186,7 +186,7 @@ return function(self, obj, input)
 
 					if not val then
 						val = Any()
-						self:Error(type_errors.context("argument #" .. i, err))
+						self:Error(error_messages.context("argument #" .. i, err))
 					end
 
 					self:CreateLocalValue(identifier, val)
@@ -448,14 +448,14 @@ return function(self, obj, input)
 					local node = function_node.identifiers[i + 1]
 
 					if node and not node.type_expression then
-						self:Warning(type_errors.untyped_argument(), node.type_expression)
+						self:Warning(error_messages.untyped_argument(), node.type_expression)
 					end
 				elseif
 					function_node.identifiers[i] and
 					not function_node.identifiers[i].type_expression
 				then
 					if not obj:IsInputArgumentsInferred() then
-						self:Warning(type_errors.untyped_argument(), function_node.identifiers[i])
+						self:Warning(error_messages.untyped_argument(), function_node.identifiers[i])
 					end
 				end
 			end
@@ -562,7 +562,7 @@ return function(self, obj, input)
 				for i, v in ipairs(err) do
 					local reason, a, b, i = table.unpack(v)
 					self:Error(
-						type_errors.context("return #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+						error_messages.context("return #" .. i .. ":", error_messages.because(error_messages.subset(a, b), reason))
 					)
 				end
 			end
@@ -634,7 +634,7 @@ return function(self, obj, input)
 							self:PushCurrentStatement(function_node)
 							self:PushCurrentExpression(function_node.return_types and function_node.return_types[i])
 							self:Error(
-								type_errors.context("return #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+								error_messages.context("return #" .. i .. ":", error_messages.because(error_messages.subset(a, b), reason))
 							)
 							self:PopCurrentExpression()
 							self:PopCurrentStatement()

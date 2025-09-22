@@ -1,4 +1,4 @@
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local ipairs = _G.ipairs
 return {
 	AnalyzeWhile = function(self, statement)
@@ -10,7 +10,7 @@ return {
 			end
 
 			self:PushCurrentExpression(statement.expression)
-			self:ConstantIfExpressionWarning(type_errors.loop_always_false())
+			self:ConstantIfExpressionWarning(error_messages.loop_always_false())
 			self:PopCurrentExpression()
 			return
 		end
@@ -34,7 +34,7 @@ return {
 
 					if self:IsRuntime() and count == 1 then
 						self:PushCurrentExpression(statement.expression)
-						self:ConstantIfExpressionWarning(type_errors.useless_while_loop())
+						self:ConstantIfExpressionWarning(error_messages.useless_while_loop())
 						self:PopCurrentExpression()
 					end
 
@@ -52,7 +52,7 @@ return {
 				elseif break_reason == "certain_return" then
 					if self:IsRuntime() and count == 1 then
 						self:PushCurrentExpression(statement.expression)
-						self:ConstantIfExpressionWarning(type_errors.useless_while_loop())
+						self:ConstantIfExpressionWarning(error_messages.useless_while_loop())
 						self:PopCurrentExpression()
 					end
 
@@ -66,7 +66,7 @@ return {
 			if obj:IsCertainlyFalse() then
 				if self:IsRuntime() and count == 0 then
 					self:PushCurrentExpression(statement.expression)
-					self:ConstantIfExpressionWarning(type_errors.useless_while_loop())
+					self:ConstantIfExpressionWarning(error_messages.useless_while_loop())
 					self:PopCurrentExpression()
 				end
 
@@ -76,7 +76,7 @@ return {
 			if obj:IsUncertain() or obj:IsFalsy() then break end
 
 			if i == max_iterations and self:IsRuntime() then
-				self:Warning(type_errors.too_many_iterations())
+				self:Warning(error_messages.too_many_iterations())
 			end
 
 			count = count + 1

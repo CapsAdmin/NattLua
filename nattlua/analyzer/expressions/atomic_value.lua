@@ -13,7 +13,7 @@ local Boolean = require("nattlua.types.union").Boolean
 local table = _G.table
 local math_abs = math.abs
 local math_huge = math.huge
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 
 local function lookup_value(self, ident)
 	local errors = {}
@@ -128,7 +128,7 @@ return {
 			local num = LNumberFromString(value)
 
 			if not num then
-				self:Error(type_errors.invalid_number(value))
+				self:Error(error_messages.invalid_number(value))
 				num = Number()
 			end
 

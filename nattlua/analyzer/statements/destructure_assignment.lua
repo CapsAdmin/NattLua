@@ -2,7 +2,7 @@ local tostring = tostring
 local ipairs = ipairs
 local ConstString = require("nattlua.types.string").ConstString
 local Nil = require("nattlua.types.symbol").Nil
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 return {
 	AnalyzeDestructureAssignment = function(self, statement)
 		local obj, err = self:AnalyzeExpression(statement.right)
@@ -12,7 +12,7 @@ return {
 		if obj.Type == "tuple" then obj = obj:GetWithNumber(1) end
 
 		if obj.Type ~= "table" then
-			self:Error(type_errors.destructure_assignment(obj.Type))
+			self:Error(error_messages.destructure_assignment(obj.Type))
 			return
 		end
 
@@ -31,7 +31,7 @@ return {
 				if self:IsRuntime() then
 					obj = Nil()
 				else
-					self:Error(type_errors.destructure_assignment_missing(node.value.value))
+					self:Error(error_messages.destructure_assignment_missing(node.value.value))
 				end
 			end
 

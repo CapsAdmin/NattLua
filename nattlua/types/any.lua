@@ -1,5 +1,5 @@
 local setmetatable = _G.setmetatable
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TAny"]]
@@ -56,7 +56,7 @@ function META.LogicalComparison(l--[[#: TAny]], r--[[#: TBaseType]], op--[[#: st
 	if op == "==" then return true -- TODO: should be nil (true | false)?
 	end
 
-	return false, type_errors.binary(op, l, r)
+	return false, error_messages.binary(op, l, r)
 end
 
 function META:IsLiteral()

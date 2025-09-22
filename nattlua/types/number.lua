@@ -6,7 +6,7 @@ local tostring = _G.tostring
 local tonumber = _G.tonumber
 local setmetatable = _G.setmetatable
 local type = _G.type
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local bit = require("nattlua.other.bit")
 local loadstring = require("nattlua.other.loadstring")
 local jit = _G.jit
@@ -166,17 +166,17 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 			return true
 		end
 
-		return false, type_errors.subset(a, b)
+		return false, error_messages.subset(a, b)
 	end
 
-	if b.Type ~= "number" then return false, type_errors.subset(a, b) end
+	if b.Type ~= "number" then return false, error_messages.subset(a, b) end
 
 	if a.Data and b.Data then
 		if a:IsNan() and b:IsNan() then return true end
 
 		if a.Data == b.Data then return true end
 
-		return false, type_errors.subset(a, b)
+		return false, error_messages.subset(a, b)
 	elseif a.Data == false and b.Data == false then
 		-- number contains number
 		return true
@@ -185,7 +185,7 @@ function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
 		return true
 	elseif not a.Data and b.Data then
 		-- number subset of 42 ?
-		return false, type_errors.subset(a, b)
+		return false, error_messages.subset(a, b)
 	end
 
 	-- number == number
@@ -266,7 +266,7 @@ do
 	function META.BinaryOperator(l--[[#: TNumber]], r--[[#: TBaseType]], op--[[#: keysof<|operators|>]])
 		local func = operators[op]
 
-		if not func then return nil, type_errors.binary(op, l, r) end
+		if not func then return nil, error_messages.binary(op, l, r) end
 
 		if l.Data == false then return Number() end
 
@@ -319,7 +319,7 @@ do
 			local min = lcontract.Data
 
 			if min and min > res then
-				return false, type_errors.number_underflow(x)
+				return false, error_messages.number_underflow(x)
 			end
 		end
 

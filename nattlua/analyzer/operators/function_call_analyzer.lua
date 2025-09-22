@@ -16,7 +16,7 @@ local LNumber = require("nattlua.types.number").LNumber
 local Number = require("nattlua.types.number").Number
 local LNumberRange = require("nattlua.types.range").LNumberRange
 local Symbol = require("nattlua.types.symbol").Symbol
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 
 local function should_expand(arg, contract)
 	-- ranges are expanded into their min/max values
@@ -130,7 +130,7 @@ local function unpack_union_tuples(obj, input)
 
 	if is_above_limit then
 		return nil,
-		type_errors.too_many_combinations(total_combinations, max_combinations)
+		error_messages.too_many_combinations(total_combinations, max_combinations)
 	end
 
 	return generate_combinations_iterative(argument_options)
@@ -182,9 +182,9 @@ return function(analyzer, obj, input)
 			for _, error in ipairs(errors) do
 				local reason, a, b, i = table.unpack(error)
 				analyzer:Error(
-					type_errors.context(
+					error_messages.context(
 						"argument #" .. i .. ":",
-						type_errors.because(type_errors.subset(a, b), reason)
+						error_messages.because(error_messages.subset(a, b), reason)
 					)
 				)
 			end
@@ -243,9 +243,9 @@ return function(analyzer, obj, input)
 			for i, v in ipairs(err) do
 				local reason, a, b, i = table.unpack(v)
 				analyzer:Error(
-					type_errors.context(
+					error_messages.context(
 						"return #" .. i .. ":",
-						type_errors.because(type_errors.subset(a, b), reason)
+						error_messages.because(error_messages.subset(a, b), reason)
 					)
 				)
 			end

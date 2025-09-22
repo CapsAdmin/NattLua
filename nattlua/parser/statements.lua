@@ -433,8 +433,8 @@ return function(META)
 			{key = "types", path = "nattlua.types.types"},
 			{key = "context", path = "nattlua.analyzer.context"},
 			{
-				key = "type_errors",
-				path = "nattlua.types.error_messages",
+				key = "error_messages",
+				path = "nattlua.error_messages",
 			},
 		}
 		local locals = ""

@@ -23,7 +23,7 @@ do
 	local AnalyzeAssignment = require("nattlua.analyzer.statements.assignment").AnalyzeAssignment
 	local ConstString = require("nattlua.types.string").ConstString
 	local AnalyzeFunction = require("nattlua.analyzer.expressions.function").AnalyzeFunction
-	local type_errors = require("nattlua.types.error_messages")
+	local error_messages = require("nattlua.error_messages")
 
 	function META:AnalyzeStatement(node)
 		self:CheckTimeout()
@@ -300,7 +300,7 @@ do
 		for i, info in ipairs(top) do
 			if i > 10 then break end
 
-			self:Warning(type_errors.analyzer_timeout(info.count, info.node))
+			self:Warning(error_messages.analyzer_timeout(info.count, info.node))
 			io.write(tostring(info.node), " was crawled ", info.count, " times\n")
 		end
 

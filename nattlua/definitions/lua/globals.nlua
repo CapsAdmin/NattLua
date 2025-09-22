@@ -306,7 +306,7 @@ analyzer function assert(...: ...any)
 	if obj:IsFalsy() then
 		analyzer:AssertError(
 			obj,
-			type_errors.plain_error(potential_msg and potential_msg:GetData() or "assertion failed!"),
+			error_messages.plain_error(potential_msg and potential_msg:GetData() or "assertion failed!"),
 			nil,
 			obj:IsTruthy()
 		)

@@ -1,6 +1,6 @@
 local ipairs = _G.ipairs
 local Union = require("nattlua.types.union").Union
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local table_insert = _G.table.insert
 return {
 	AnalyzeIf = function(self, statement)
@@ -29,7 +29,7 @@ return {
 
 				if self:IsRuntime() then
 					if obj:IsCertainlyFalse() then
-						self:ConstantIfExpressionWarning(type_errors.if_always_false())
+						self:ConstantIfExpressionWarning(error_messages.if_always_false())
 
 						for _, statement in ipairs(statements) do
 							if statement.Unreachable == nil then
@@ -37,7 +37,7 @@ return {
 							end
 						end
 					elseif obj:IsCertainlyTrue() then
-						self:ConstantIfExpressionWarning(type_errors.if_always_true())
+						self:ConstantIfExpressionWarning(error_messages.if_always_true())
 
 						for _, statement in ipairs(statements) do
 							statement:SetUnreachable(false)
@@ -81,7 +81,7 @@ return {
 					if prev_obj:IsUncertain() then
 						self:ConstantIfExpressionWarning(nil, og_statement.tokens["if/else/elseif"][i])
 					elseif prev_obj:IsCertainlyFalse() then
-						self:ConstantIfExpressionWarning(type_errors.if_else_always_true(), og_statement.tokens["if/else/elseif"][i])
+						self:ConstantIfExpressionWarning(error_messages.if_else_always_true(), og_statement.tokens["if/else/elseif"][i])
 					end
 				end
 

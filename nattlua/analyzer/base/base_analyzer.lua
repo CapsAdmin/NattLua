@@ -20,7 +20,7 @@ local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 local context = require("nattlua.analyzer.context")
 local path_util = require("nattlua.other.path")
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local formating = require("nattlua.other.formating")
 local callstack = require("nattlua.other.callstack")
 local table = _G.table
@@ -384,7 +384,7 @@ return function(META)
 
 				if stack[1] then self:PushCurrentExpression(stack[#stack].call_node) end
 
-				self:Error(type_errors.analyzer_error(err, trace))
+				self:Error(error_messages.analyzer_error(err, trace))
 
 				if stack[1] then self:PopCurrentExpression() end
 

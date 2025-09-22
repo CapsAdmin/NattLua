@@ -4,7 +4,7 @@ local tostring = tostring
 local math_huge = math.huge
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local LString = require("nattlua.types.string").LString
 local StringPattern = require("nattlua.types.string").StringPattern
 local ConstString = require("nattlua.types.string").ConstString
@@ -35,7 +35,7 @@ local function Prefix(analyzer, node, r)
 	if analyzer:IsTypesystem() then
 		if op == "unique" then
 			if r.Type ~= "table" then
-				return false, type_errors.unique_must_be_table(r)
+				return false, error_messages.unique_must_be_table(r)
 			end
 
 			r:MakeUnique(true)
@@ -45,7 +45,7 @@ local function Prefix(analyzer, node, r)
 			return r
 		elseif op == "$" then
 			if r.Type ~= "string" or not r:IsLiteral() then
-				return false, type_errors.string_pattern_invalid_construction(r)
+				return false, error_messages.string_pattern_invalid_construction(r)
 			end
 
 			return StringPattern(r:GetData())
@@ -98,7 +98,7 @@ local function Prefix(analyzer, node, r)
 		end
 	end
 
-	return false, type_errors.no_operator(op, r)
+	return false, error_messages.no_operator(op, r)
 end
 
 return {
@@ -112,7 +112,7 @@ return {
 				analyzer:PopAnalyzerEnvironment()
 
 				if not obj then
-					return false, type_errors.typeof_lookup_missing(node.right:Render())
+					return false, error_messages.typeof_lookup_missing(node.right:Render())
 				end
 
 				return obj:GetContract() or obj

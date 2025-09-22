@@ -15,7 +15,7 @@ local False = require("nattlua.types.symbol").False
 local Nil = require("nattlua.types.symbol").Nil
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local ARITHMETIC_OPS = {
 	["+"] = "__add",
 	["-"] = "__sub",
@@ -65,7 +65,7 @@ local function metatable_function(self, node, meta_method, l, r)
 end
 
 local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | nil]])
-	if not val and err then return val, type_errors.plain_error(err) end
+	if not val and err then return val, error_messages.plain_error(err) end
 
 	if val == nil then
 		return Boolean()
@@ -263,7 +263,7 @@ function Binary(self, node, l, r, op)
 		return logical_cmp_cast(l.LogicalComparison(l, r, op))
 	end
 
-	return false, type_errors.binary(op, l, r)
+	return false, error_messages.binary(op, l, r)
 end
 
 local function BinaryWithUnion(self, node, l, r, op)
@@ -296,7 +296,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 					return LString(l:GetData() .. r:GetData())
 				end
 
-				return false, type_errors.binary(op, l, r)
+				return false, error_messages.binary(op, l, r)
 			elseif l.Type == "number" and r.Type == "number" then
 				if l:IsLiteral() and r:IsLiteral() then
 					if l:GetData() == r:GetData() then return LNumber(l:GetData()) end

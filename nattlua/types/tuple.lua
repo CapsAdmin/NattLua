@@ -9,7 +9,7 @@ local setmetatable = _G.setmetatable
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local ipairs = _G.ipairs
 local type = _G.type
 local table_unpack = _G.unpack
@@ -162,25 +162,25 @@ function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#:
 
 	if b.Type == "table" then
 		if not b:IsNumericallyIndexed() then
-			return false, type_errors.numerically_indexed(b)
+			return false, error_messages.numerically_indexed(b)
 		end
 	end
 
-	if b.Type ~= "tuple" then return false, type_errors.subset(a, b) end
+	if b.Type ~= "tuple" then return false, error_messages.subset(a, b) end
 
 	max_length = max_length or math.max(a:GetMinimumLength(), b:GetMinimumLength())
 
 	for i = 1, max_length do
 		local a_val, err = a:GetWithNumber(i)
 
-		if not a_val then return false, type_errors.subset(a, b, err) end
+		if not a_val then return false, error_messages.subset(a, b, err) end
 
 		local b_val, err = b:GetWithNumber(i)
 
 		if not b_val and a_val.Type == "any" then break end
 
 		if not b_val then
-			return false, type_errors.because(type_errors.table_index(b, i), err)
+			return false, error_messages.because(error_messages.table_index(b, i), err)
 		end
 
 		a.suppress = true
@@ -188,7 +188,7 @@ function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#:
 		a.suppress = false
 
 		if not ok then
-			return false, type_errors.because(type_errors.subset(a_val, b_val), reason)
+			return false, error_messages.because(error_messages.subset(a_val, b_val), reason)
 		end
 	end
 
@@ -213,7 +213,7 @@ function META.IsSubsetOfTupleAtIndexWithoutExpansion(a--[[#: TTuple]], b--[[#: T
 	local a_val = a:GetWithNumber(i)
 
 	if not a_val then
-		return false, type_errors.missing_index(i), Nil(), b:GetWithoutExpansion(i), i
+		return false, error_messages.missing_index(i), Nil(), b:GetWithoutExpansion(i), i
 	end
 
 	local b_val, err = b:GetWithoutExpansion(i)
@@ -453,7 +453,7 @@ function META:GetWithNumber(i--[[#: number]])
 		end
 	end
 
-	if not val then return false, type_errors.missing_index(i) end
+	if not val then return false, error_messages.missing_index(i) end
 
 	return val
 end
@@ -500,7 +500,7 @@ function META:GetWithoutExpansion(i--[[#: number]])
 
 	if not val then if self.Remainder then return self.Remainder end end
 
-	if not val then return false, type_errors.missing_index(i) end
+	if not val then return false, error_messages.missing_index(i) end
 
 	return val
 end

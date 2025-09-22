@@ -1,5 +1,5 @@
 -- Enhanced repeat loop implementation using context management
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 return {
 	AnalyzeRepeat = function(self, statement)
 		-- Analyze the until condition first to understand what we're dealing with
@@ -33,7 +33,7 @@ return {
 					if self:IsRuntime() and count == 1 then
 						-- Warn about potentially useless loop
 						self:PushCurrentExpression(statement.expression)
-						self:ConstantIfExpressionWarning(type_errors.useless_repeat_loop())
+						self:ConstantIfExpressionWarning(error_messages.useless_repeat_loop())
 						self:PopCurrentExpression()
 					end
 
@@ -53,7 +53,7 @@ return {
 				elseif break_reason == "certain_return" then
 					if self:IsRuntime() and count == 1 then
 						self:PushCurrentExpression(statement.expression)
-						self:ConstantIfExpressionWarning(type_errors.useless_repeat_loop())
+						self:ConstantIfExpressionWarning(error_messages.useless_repeat_loop())
 						self:PopCurrentExpression()
 					end
 
@@ -71,7 +71,7 @@ return {
 			if new_condition:IsCertainlyFalse() then
 				-- Check for infinite loop
 				if i == max_iterations and self:IsRuntime() then
-					self:Error(type_errors.too_many_iterations())
+					self:Error(error_messages.too_many_iterations())
 				end
 			-- Continue to next iteration
 			else
@@ -92,11 +92,11 @@ return {
 		if self:IsRuntime() then
 			if final_condition:IsCertainlyFalse() then
 				self:PushCurrentExpression(statement.expression)
-				self:ConstantIfExpressionWarning(type_errors.loop_always_false())
+				self:ConstantIfExpressionWarning(error_messages.loop_always_false())
 				self:PopCurrentExpression()
 			elseif final_condition:IsCertainlyTrue() and count <= 1 then
 				self:PushCurrentExpression(statement.expression)
-				self:ConstantIfExpressionWarning(type_errors.loop_always_true())
+				self:ConstantIfExpressionWarning(error_messages.loop_always_true())
 				self:PopCurrentExpression()
 			end
 		end

@@ -2,7 +2,7 @@
 local type = type
 local tostring = tostring
 local setmetatable = _G.setmetatable
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 local TRUE = {"true"}
@@ -52,7 +52,7 @@ end
 function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#: string]])
 	if op == "==" then return l.Data == r.Data end
 
-	return false, type_errors.binary(op, l, r)
+	return false, error_messages.binary(op, l, r)
 end
 
 function META:GetLuaType()
@@ -100,9 +100,9 @@ function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
 
 	if b.Type == "union" then return b:IsTargetSubsetOfChild(a--[[# as any]]) end
 
-	if b.Type ~= "symbol" then return false, type_errors.subset(a, b) end
+	if b.Type ~= "symbol" then return false, error_messages.subset(a, b) end
 
-	if a.Data ~= b.Data then return false, type_errors.subset(a, b) end
+	if a.Data ~= b.Data then return false, error_messages.subset(a, b) end
 
 	return true
 end

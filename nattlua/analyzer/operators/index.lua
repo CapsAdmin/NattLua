@@ -4,7 +4,7 @@ local Nil = require("nattlua.types.symbol").Nil
 local Tuple = require("nattlua.types.tuple").Tuple
 local String = require("nattlua.types.string").String
 local Union = require("nattlua.types.union").Union
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local ConstString = require("nattlua.types.string").ConstString
 
 local function index_table(analyzer, self, key, raw)

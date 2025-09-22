@@ -2,7 +2,7 @@
 local assert = _G.assert
 local tostring = _G.tostring
 local setmetatable = _G.setmetatable
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local class = require("nattlua.other.class")
 return function()
 	local META = class.CreateTemplate("base")
@@ -89,11 +89,11 @@ return function()
 
 	do -- operators
 		function META:Set(key--[[#: TBaseType | nil]], val--[[#: TBaseType | nil]])
-			return false, type_errors.undefined_set(self, key, val, self.Type)
+			return false, error_messages.undefined_set(self, key, val, self.Type)
 		end
 
 		function META:Get(key--[[#: boolean]])
-			return false, type_errors.undefined_get(self, key, self.Type)
+			return false, error_messages.undefined_get(self, key, self.Type)
 		end
 	end
 
@@ -137,7 +137,7 @@ return function()
 	end
 
 	function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[#: string]])
-		return false, type_errors.binary(op, l, r)
+		return false, error_messages.binary(op, l, r)
 	end
 
 	function META:IsNumeric()

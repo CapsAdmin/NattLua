@@ -3,7 +3,7 @@ local ipairs = ipairs
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local math_huge = math.huge
 return {
 	AnalyzeGenericFor = function(self, statement)
@@ -112,7 +112,7 @@ return {
 			if brk then break end
 
 			if i == (self.max_iterations or 1000) and self:IsRuntime() then
-				self:Error(type_errors.too_many_iterations())
+				self:Error(error_messages.too_many_iterations())
 			end
 		end
 

@@ -6,7 +6,7 @@ local Nil = require("nattlua.types.symbol").Nil
 local Tuple = require("nattlua.types.tuple").Tuple
 local Union = require("nattlua.types.union").Union
 local math_huge = math.huge
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local debug_getinfo = _G.debug.getinfo
 -- this turns out to be really hard so I'm trying 
 -- naive approaches while writing tests
@@ -333,7 +333,7 @@ return function(META)
 	function META:ThrowError(msg, level)
 		self.lua_error_thrown = msg
 		self:PushCurrentExpression((self:GetCallFrame(level) or self:GetCallFrame(1)).call_node)
-		self:Error(type_errors.plain_error(msg))
+		self:Error(error_messages.plain_error(msg))
 		self:PopCurrentExpression()
 	end
 
@@ -434,7 +434,7 @@ return function(META)
 					len = len + 1
 				end
 
-				self:Error(type_errors.analyzer_callstack_too_deep(#self:GetCallStack(), len))
+				self:Error(error_messages.analyzer_callstack_too_deep(#self:GetCallStack(), len))
 				return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
 			end
 

@@ -1,5 +1,5 @@
 local ipairs = ipairs
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local table_unpack = _G.table.unpack or _G.unpack
 return function(analyzer, obj, input)
 	do
@@ -9,7 +9,7 @@ return function(analyzer, obj, input)
 			for _, error in ipairs(errors) do
 				local reason, a, b, i = error[1], error[2], error[3], error[4]
 				analyzer:Error(
-					type_errors.context("argument #" .. i .. ":", type_errors.because(type_errors.subset(a, b), reason))
+					error_messages.context("argument #" .. i .. ":", error_messages.because(error_messages.subset(a, b), reason))
 				)
 			end
 		end
@@ -20,7 +20,7 @@ return function(analyzer, obj, input)
 	for i, arg in ipairs(input:GetData()) do
 		if arg.Type == "table" and arg:GetAnalyzerEnvironment() == "runtime" then
 			if analyzer.config.external_mutation then
-				analyzer:Warning(type_errors.argument_mutation(i, arg))
+				analyzer:Warning(error_messages.argument_mutation(i, arg))
 			end
 		end
 	end

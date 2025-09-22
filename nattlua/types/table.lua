@@ -11,7 +11,7 @@ local LString = require("nattlua.types.string").LString
 local String = require("nattlua.types.string").String
 local ConstString = require("nattlua.types.string").ConstString
 local Tuple = require("nattlua.types.tuple").Tuple
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local context = require("nattlua.analyzer.context")
 local mutation_solver = require("nattlua.analyzer.mutation_solver")
 local table_sort = require("nattlua.other.sort")
@@ -315,7 +315,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 
 				if not ok then
 					return false,
-					type_errors.because(type_errors.context("the key", type_errors.subset(res.key, keyval.key)), err)
+					error_messages.because(error_messages.context("the key", error_messages.subset(res.key, keyval.key)), err)
 				end
 			end
 		else
@@ -330,13 +330,13 @@ function META:FollowsContract(contract--[[#: TTable]])
 
 					if not ok then
 						return false,
-						type_errors.because(type_errors.context("the key", type_errors.subset(keyval2.key, keyval.key)), err)
+						error_messages.because(error_messages.context("the key", error_messages.subset(keyval2.key, keyval.key)), err)
 					end
 				end
 			end
 
 			if not found_anything then
-				return false, type_errors.table_index(self, required_key)
+				return false, error_messages.table_index(self, required_key)
 			end
 		end
 	end
@@ -352,7 +352,7 @@ function META:FollowsContract(contract--[[#: TTable]])
 
 				if not ok then
 					return false,
-					type_errors.because(type_errors.context("the value", type_errors.subset(res.val, keyval.val)), err)
+					error_messages.because(error_messages.context("the value", error_messages.subset(res.val, keyval.val)), err)
 				end
 			end
 		end
@@ -404,7 +404,7 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 		if a:IsEmpty() then
 			if b:CanBeEmpty() then return true, "can be empty" end
 
-			return false, type_errors.subset(a, b)
+			return false, error_messages.subset(a, b)
 		end
 
 		for _, bkeyval in ipairs(b:GetData()) do
@@ -425,13 +425,13 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 
 				if not ok then
 					return false,
-					type_errors.because(type_errors.table_subset(bkeyval.key, akeyval.key, bkeyval.val, akeyval.val), err)
+					error_messages.because(error_messages.table_subset(bkeyval.key, akeyval.key, bkeyval.val, akeyval.val), err)
 				end
 			end
 		end
 
 		if b:IsNumericallyIndexed() and not a:IsNumericallyIndexed() then
-			return false, type_errors.subset(a, b)
+			return false, error_messages.subset(a, b)
 		end
 
 		return true, "all is equal"
@@ -442,10 +442,10 @@ function META.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]])
 			if ok then return true, "a is subset of one in the union" end
 		end
 
-		return false, type_errors.subset(a, b)
+		return false, error_messages.subset(a, b)
 	end
 
-	return false, type_errors.subset(a, b)
+	return false, error_messages.subset(a, b)
 end
 
 function META:ContainsAllKeysIn(contract--[[#: TTable]])
@@ -457,7 +457,7 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 				if keyval.val:CanBeNil() then return true end
 
 				return false,
-				type_errors.because(type_errors.key_missing_contract(keyval.key, contract), err)
+				error_messages.because(error_messages.key_missing_contract(keyval.key, contract), err)
 			end
 		end
 	end
@@ -487,7 +487,7 @@ local function read_cache(self, key)
 
 		if val then return val end
 
-		return false, type_errors.table_index(self, key)
+		return false, error_messages.table_index(self, key)
 	end
 
 	return nil
@@ -612,7 +612,7 @@ do
 		end
 
 		if not found_index then
-			return false, type_errors.table_index(self, index)
+			return false, error_messages.table_index(self, index)
 		end
 
 		for i, keyval in ipairs(self.Data) do
@@ -665,10 +665,10 @@ function META:FindKeyValExact(key--[[#: TBaseType]])
 	end
 
 	if not reasons[1] then
-		reasons[1] = type_errors.because(type_errors.table_index(self, key), "table is empty")
+		reasons[1] = error_messages.because(error_messages.table_index(self, key), "table is empty")
 	end
 
-	return false, type_errors.because(type_errors.table_index(self, key), reasons)
+	return false, error_messages.because(error_messages.table_index(self, key), reasons)
 end
 
 function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]])
@@ -694,7 +694,7 @@ function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]
 		if i <= 20 then reasons[i] = reason end
 	end
 
-	if #reasons > 20 then reasons = {type_errors.table_index(self, key)} end
+	if #reasons > 20 then reasons = {error_messages.table_index(self, key)} end
 
 	if self.BaseTable then
 		local ok, reason = self.BaseTable:FindKeyValWide(key)
@@ -705,10 +705,10 @@ function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]
 	end
 
 	if not reasons[1] then
-		reasons[1] = type_errors.because(type_errors.table_index(self, key), "table is empty")
+		reasons[1] = error_messages.because(error_messages.table_index(self, key), "table is empty")
 	end
 
-	return false, type_errors.because(type_errors.table_index(self, key), reasons)
+	return false, error_messages.because(error_messages.table_index(self, key), reasons)
 end
 
 function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete--[[#: boolean | nil]])
@@ -723,11 +723,11 @@ function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete-
 	end
 
 	if key.Type == "symbol" and key:IsNil() then
-		return false, type_errors.invalid_table_index(key)
+		return false, error_messages.invalid_table_index(key)
 	end
 
 	if key.Type == "number" and key:IsNan() then
-		return false, type_errors.invalid_table_index(key)
+		return false, error_messages.invalid_table_index(key)
 	end
 
 	-- delete entry
@@ -761,7 +761,7 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 	end
 
 	if key.Type == "symbol" and key:IsNil() then
-		return false, type_errors.key_nil()
+		return false, error_messages.key_nil()
 	end
 
 	-- if the key exists, check if we can replace it and maybe the value
@@ -781,7 +781,7 @@ function META:Get(key--[[#: TBaseType | TString]])
 	end
 
 	if key.Type == "union" then
-		if key:IsEmpty() then return false, type_errors.union_key_empty() end
+		if key:IsEmpty() then return false, error_messages.union_key_empty() end
 
 		local union = Union()
 		local errors = {}
@@ -1031,7 +1031,7 @@ function META:HasLiteralKeys()
 
 			if not ok then
 				return false,
-				type_errors.because(type_errors.context("the key", type_errors.not_literal(v.key)), reason)
+				error_messages.because(error_messages.context("the key", error_messages.not_literal(v.key)), reason)
 			end
 		end
 	end
@@ -1057,7 +1057,7 @@ function META:IsLiteral()
 
 			if not ok then
 				return false,
-				type_errors.because(type_errors.context("the key", type_errors.not_literal(v.key)), reason)
+				error_messages.because(error_messages.context("the key", error_messages.not_literal(v.key)), reason)
 			end
 
 			self.suppress = true
@@ -1066,7 +1066,7 @@ function META:IsLiteral()
 
 			if not ok then
 				return false,
-				type_errors.because(type_errors.context("the value", type_errors.not_literal(v.val)), reason)
+				error_messages.because(error_messages.context("the value", error_messages.not_literal(v.val)), reason)
 			end
 		end
 	end
@@ -1133,7 +1133,7 @@ function META.LogicalComparison(l, r, op, env)
 		end
 	end
 
-	return false, type_errors.binary(op, l, r)
+	return false, error_messages.binary(op, l, r)
 end
 
 do
@@ -1181,7 +1181,7 @@ do
 		initialize_table_mutation_tracker(self, scope, key, hash)
 
 		if #self.mutations[hash] > self:GetMutationLimit() then
-			return false, type_errors.too_many_mutations()
+			return false, error_messages.too_many_mutations()
 		end
 
 		table.insert(self.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking, key = key})
@@ -1291,11 +1291,11 @@ do
 		if b.Type ~= "table" then return false end
 
 		if a.UniqueID and not b.UniqueID then
-			return false, type_errors.unique_type_type_mismatch(a, b)
+			return false, error_messages.unique_type_type_mismatch(a, b)
 		end
 
 		if a.UniqueID ~= b.UniqueID then
-			return false, type_errors.unique_type_mismatch(a, b)
+			return false, error_messages.unique_type_mismatch(a, b)
 		end
 
 		return true

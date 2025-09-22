@@ -2,7 +2,7 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local ConstString = require("nattlua.types.string").ConstString
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
-local type_errors = require("nattlua.types.error_messages")
+local error_messages = require("nattlua.error_messages")
 local ipairs = _G.ipairs
 local table_insert = _G.table.insert
 local math_huge = _G.math.huge
@@ -11,7 +11,7 @@ local function union_call(self, analyzer, input, call_node)
 	if false--[[# as true]] then return end
 
 	if self:IsEmpty() then
-		return false, type_errors.operation("call", nil, "union")
+		return false, error_messages.operation("call", nil, "union")
 	end
 
 	do
@@ -26,7 +26,7 @@ local function union_call(self, analyzer, input, call_node)
 			end
 
 			if v.Type ~= "function" and v.Type ~= "table" and v.Type ~= "any" then
-				analyzer:Error(type_errors.union_contains_non_callable(self, v))
+				analyzer:Error(error_messages.union_contains_non_callable(self, v))
 			else
 				truthy_union:AddType(v)
 			end
@@ -113,7 +113,7 @@ end
 local function table_call(self, analyzer, input, call_node)
 	if not self:GetMetaTable() then
 		return false,
-		type_errors.because(type_errors.table_index(self, "__call"), "it has no metatable")
+		error_messages.because(error_messages.table_index(self, "__call"), "it has no metatable")
 	end
 
 	local __call, reason = self:GetMetaTable():Get(ConstString("__call"))
@@ -129,7 +129,7 @@ local function table_call(self, analyzer, input, call_node)
 	end
 
 	return false,
-	type_errors.because(type_errors.table_index(self, "__call"), reason)
+	error_messages.because(error_messages.table_index(self, "__call"), reason)
 end
 
 local function_call
@@ -260,7 +260,7 @@ do
 end
 
 local function base_call(self, analyzer, input, call_node)
-	return false, type_errors.invalid_type_call(self.Type, self)
+	return false, error_messages.invalid_type_call(self.Type, self)
 end
 
 local function any_call(self, analyzer, input, call_node)
@@ -271,7 +271,7 @@ local function any_call(self, analyzer, input, call_node)
 			if arg:GetContract() then
 				-- error if we call any with tables that have contracts
 				-- since anything might happen to them in an any call
-				analyzer:Error(type_errors.argument_contract_mutation(arg:GetContract()))
+				analyzer:Error(error_messages.argument_contract_mutation(arg:GetContract()))
 			else
 				-- if we pass a table without a contract to an any call, we add any to its key values
 				for _, keyval in ipairs(arg:GetData()) do
