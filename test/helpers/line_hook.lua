@@ -47,15 +47,15 @@ function line_hook.Preprocess(code, key, path)
 		local start, stop = node:GetStartStop()
 
 		if node.Type == "statement_return" and node.expressions[1] then
-			self:Emit(" LINE_OPEN(LINE_PATH, " .. start .. ", " .. stop .. ")")
+			self:Emit(" LINE_OPEN(LINE_PATH, " .. start .. ", " .. stop .. ");")
 			self:Emit("return LINE_RETURN(LINE_PATH, " .. start .. ", " .. stop .. ", ")
 			node.tokens["return"].value = ""
 			old(self, node)
-			self:Emit(")")
+			self:Emit(");")
 		else
-			self:Emit(" LINE_OPEN(LINE_PATH, " .. start .. ", " .. stop .. ")")
+			self:Emit(" LINE_OPEN(LINE_PATH, " .. start .. ", " .. stop .. ");")
 			old(self, node)
-			self:Emit(" LINE_CLOSE(LINE_PATH, " .. start .. ", " .. stop .. ")")
+			self:Emit(" LINE_CLOSE(LINE_PATH, " .. start .. ", " .. stop .. ");")
 		end
 	end
 
