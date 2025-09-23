@@ -140,6 +140,8 @@ do
 		return tk, is_whitespace
 	end
 
+	local B = string.byte("/")
+
 	function META:ReadNonWhitespaceToken()
 		local token, is_whitespace = self:ReadToken()
 
@@ -161,8 +163,10 @@ do
 			whitespace[whitespace_i] = token
 			whitespace_i = whitespace_i + 1
 
-			if token.type == "line_comment" and token:GetValueString():sub(1, 2) == "//" then
-				potential_idiv = true
+			if token.type == "line_comment" then
+				if token:GetByte(0) == B and token:GetByte(1) == B then
+					potential_idiv = true
+				end
 			end
 		end
 	end

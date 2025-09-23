@@ -11,88 +11,133 @@ local class = require("nattlua.other.class")
 --[[#type TreeNode = {[number] = self | nil, value = any | nil, max_len = nil | number}]]
 --[[#type BinaryOperatorInfo = {op = string, left_priority = number, right_priority = number}]]
 --[[#type OperatorFunctionInfo = {op = string, info = {string, string} | {string, string, string}}]]
+--[[#type CompiledTree = {tree = TreeNode, lookup = nil | Function}]]
 local META = class.CreateTemplate("syntax")
 --[[#type META.@Name = "Syntax"]]
 --[[#type META.@Self = {
 	BinaryOperatorInfo = List<|BinaryOperatorInfo|>,
-	BinaryOperatorInfoTree = TreeNode,
+	BinaryOperatorInfoTree = function=(Token)>(BinaryOperatorInfo | nil),
 	NumberAnnotations = List<|string|>,
 	Symbols = List<|string|>,
 	BinaryOperators = Map<|string, true|>,
 	PrefixOperators = List<|string|>,
-	PrefixOperatorsTree = TreeNode,
+	PrefixOperatorsTree = function=(Token)>(string | nil),
 	PostfixOperators = List<|string|>,
-	PostfixOperatorsTree = TreeNode,
+	PostfixOperatorsTree = function=(Token)>(string | nil),
 	PrimaryBinaryOperators = List<|string|>,
-	PrimaryBinaryOperatorsTree = TreeNode,
+	PrimaryBinaryOperatorsTree = function=(Token)>(string | nil),
 	SymbolCharacters = List<|string|>,
 	SymbolPairs = Map<|string, string|>,
 	KeywordValues = List<|string|>,
-	KeywordValuesTree = TreeNode,
+	KeywordValuesTree = function=(Token)>(string | nil),
 	Keywords = List<|string|>,
-	KeywordsTree = TreeNode,
+	KeywordsTree = function=(Token)>(string | nil),
 	NonStandardKeywords = List<|string|>,
-	NonStandardKeywordsTree = TreeNode,
+	NonStandardKeywordsTree = function=(Token)>(string | nil),
 	BinaryOperatorFunctionTranslate = List<|OperatorFunctionInfo|>,
-	BinaryOperatorFunctionTranslateTree = TreeNode,
+	BinaryOperatorFunctionTranslateTree = function=(Token)>(OperatorFunctionInfo | nil),
 	PostfixOperatorFunctionTranslate = List<|OperatorFunctionInfo|>,
-	PostfixOperatorFunctionTranslateTree = TreeNode,
+	PostfixOperatorFunctionTranslateTree = function=(Token)>(OperatorFunctionInfo | nil),
 	PrefixOperatorFunctionTranslate = List<|OperatorFunctionInfo|>,
-	PrefixOperatorFunctionTranslateTree = TreeNode,
+	PrefixOperatorFunctionTranslateTree = function=(Token)>(OperatorFunctionInfo | nil),
 }]]
 
--- Helper function to build a tree from a list of strings/operators
+-- Fixed version - the key issue was not respecting token length in the loop
 local function build_tree(
 	items--[[#: List<|string|> | List<|BinaryOperatorInfo|> | List<|OperatorFunctionInfo|>]]
-)--[[#: TreeNode]]
-	local tree = {max_len = 0}
+)
+	local return_value = type(items[1]) == "table"
+	local longest = 0
+	local map = {}
+
+	if return_value then
+		table.sort(items, function(a, b)
+			return #a.op > #b.op
+		end)
+	else
+		table.sort(items, function(a, b)
+			return #a > #b
+		end)
+	end
 
 	for _, item in ipairs(items) do
-		local current = tree
-		local str--[[#: string]]
+		local str
 
-		if type(item) == "table" then str = item.op else str = item end
+		if return_value then str = item.op else str = item end
 
-		tree.max_len = math.max(tree.max_len, #str)
+		if #str > longest then longest = #str end
 
-		-- Traverse/build the tree byte by byte
+		str = str--[[# as string]]
+		local node = map
+
 		for i = 1, #str do
-			local byte = str:byte(i)
+			local b = str:byte(i)
+			node[b] = node[b] or {}
+			node = node[b]
 
-			if not current[byte] then current[byte] = {} end
-
-			current = current[byte]
-		end
-
-		-- Store the value at the leaf
-		current.value = item
-	end
-
-	return tree
-end
-
--- Helper function to lookup an operator in the tree using token:GetByte()
-local function lookup_in_tree(tree--[[#: TreeNode]], token--[[#: Token]])--[[#: any]]
-	local current = tree
-	local length = token:GetLength()
-
-	if length > tree.max_len--[[# as number]] then return nil end
-
-	if length == 1 then
-		local byte = token:GetByte(0)
-		current = current[byte]--[[# as any]]
-		return current and current.value or nil
-	end
-
-	for i = 0, length - 1 do -- assuming 0-based offset
-		local byte = token:GetByte(i)
-		current = current[byte]--[[# as any]]
-
-		if not current then return nil -- No match found
+			if i == #str then
+				if return_value then
+					node.END = item
+					node.LENGTH = #str
+				else
+					node.END = item
+					node.LENGTH = #str
+				end
+			end
 		end
 	end
 
-	return current.value
+	local function sanity_check(token)
+		if return_value then
+			for _, item in ipairs(items) do
+				if token:ValueEquals(item.op) then return item end
+			end
+		else
+			for _, item in ipairs(items) do
+				if token:ValueEquals(item) then return token:GetValueString() end
+			end
+		end
+	end
+
+	local min = math.max
+
+	local function find_match(token)
+		local token_length = token:GetLength()
+
+		if token_length > longest then return nil end
+
+		local last_match = nil
+		local node = map
+
+		for i = 0, min(longest - 1, token_length) do
+			node = node[token:GetByte(i)]
+
+			if not node then break end
+
+			if node.END and token_length == node.LENGTH then last_match = node.END end
+		end
+
+		return last_match
+	end
+
+	do
+		return find_match
+	end
+
+	return function(token)
+		local res = sanity_check(token)
+		local res2 = find_match(token)
+
+		if res2 ~= res then
+			print(token)
+			table.print(res)
+			table.print(res2)
+			table.print(items)
+			os.exit()
+		end
+
+		return res
+	end
 end
 
 function META.New()
@@ -100,30 +145,20 @@ function META.New()
 		{
 			NumberAnnotations = {},
 			BinaryOperatorInfo = {},
-			BinaryOperatorInfoTree = {},
 			Symbols = {},
 			BinaryOperators = {},
 			PrefixOperators = {},
-			PrefixOperatorsTree = {},
 			PostfixOperators = {},
-			PostfixOperatorsTree = {},
 			PrimaryBinaryOperators = {},
-			PrimaryBinaryOperatorsTree = {},
 			SymbolCharacters = {},
 			SymbolPairs = {},
 			KeywordValues = {},
-			KeywordValuesTree = {},
 			Keywords = {},
-			KeywordsTree = {},
 			NonStandardKeywords = {},
-			NonStandardKeywordsTree = {},
 			BinaryOperatorFunctionTranslate = {},
-			BinaryOperatorFunctionTranslateTree = {},
 			PostfixOperatorFunctionTranslate = {},
-			PostfixOperatorFunctionTranslateTree = {},
 			PrefixOperatorFunctionTranslate = {},
-			PrefixOperatorFunctionTranslateTree = {},
-		},
+		}--[[# as META.@Self]],
 		true
 	)
 end
@@ -178,16 +213,17 @@ function META:AddBinaryOperators(tbl--[[#: List<|List<|string|>|>]])
 			}
 			table.insert(self.BinaryOperatorInfo, info)
 			self:AddSymbols({token})
+			assert(self.BinaryOperators[token] == nil)
 			self.BinaryOperators[token] = true
 		end
 	end
 
-	-- Build the tree after adding all operators
+	-- Build and compile the tree
 	self.BinaryOperatorInfoTree = build_tree(self.BinaryOperatorInfo)
 end
 
 function META:GetBinaryOperatorInfo(token--[[#: Token]])--[[#: BinaryOperatorInfo | nil]]
-	return lookup_in_tree(self.BinaryOperatorInfoTree, token)
+	return self.BinaryOperatorInfoTree(token)
 end
 
 function META:AddPrefixOperators(tbl--[[#: List<|string|>]])
@@ -197,12 +233,12 @@ function META:AddPrefixOperators(tbl--[[#: List<|string|>]])
 		table.insert(self.PrefixOperators, str)
 	end
 
-	-- Build the tree
+	-- Build and compile the tree
 	self.PrefixOperatorsTree = build_tree(self.PrefixOperators)
 end
 
 function META:IsPrefixOperator(token--[[#: Token]])--[[#: boolean]]
-	return lookup_in_tree(self.PrefixOperatorsTree, token) ~= nil
+	return self.PrefixOperatorsTree(token) ~= nil
 end
 
 function META:AddPostfixOperators(tbl--[[#: List<|string|>]])
@@ -212,12 +248,12 @@ function META:AddPostfixOperators(tbl--[[#: List<|string|>]])
 		table.insert(self.PostfixOperators, str)
 	end
 
-	-- Build the tree
+	-- Build and compile the tree
 	self.PostfixOperatorsTree = build_tree(self.PostfixOperators)
 end
 
 function META:IsPostfixOperator(token--[[#: Token]])--[[#: boolean]]
-	return lookup_in_tree(self.PostfixOperatorsTree, token) ~= nil
+	return self.PostfixOperatorsTree(token) ~= nil
 end
 
 function META:AddPrimaryBinaryOperators(tbl--[[#: List<|string|>]])
@@ -227,12 +263,12 @@ function META:AddPrimaryBinaryOperators(tbl--[[#: List<|string|>]])
 		table.insert(self.PrimaryBinaryOperators, str)
 	end
 
-	-- Build the tree
+	-- Build and compile the tree
 	self.PrimaryBinaryOperatorsTree = build_tree(self.PrimaryBinaryOperators)
 end
 
 function META:IsPrimaryBinaryOperator(token--[[#: Token]])--[[#: boolean]]
-	return lookup_in_tree(self.PrimaryBinaryOperatorsTree, token) ~= nil
+	return self.PrimaryBinaryOperatorsTree(token) ~= nil
 end
 
 function META:AddSymbolCharacters(tbl--[[#: List<|string | {string, string}|>]])
@@ -259,7 +295,7 @@ function META:AddKeywords(tbl--[[#: List<|string|>]])
 		table.insert(self.Keywords, str)
 	end
 
-	-- Build the tree
+	-- Build and compile the tree
 	self.KeywordsTree = build_tree(self.Keywords)
 end
 
@@ -273,7 +309,7 @@ function META:IsVariableName(token--[[#: Token]])--[[#: boolean]]
 end
 
 function META:IsKeyword(token--[[#: Token]])--[[#: boolean]]
-	return lookup_in_tree(self.KeywordsTree, token) ~= nil
+	return self.KeywordsTree(token) ~= nil
 end
 
 function META:AddKeywordValues(tbl--[[#: List<|string|>]])
@@ -284,13 +320,13 @@ function META:AddKeywordValues(tbl--[[#: List<|string|>]])
 		table.insert(self.KeywordValues, str)
 	end
 
-	-- Build the trees
+	-- Build and compile both trees
 	self.KeywordsTree = build_tree(self.Keywords)
 	self.KeywordValuesTree = build_tree(self.KeywordValues)
 end
 
 function META:IsKeywordValue(token--[[#: Token]])--[[#: boolean]]
-	return lookup_in_tree(self.KeywordValuesTree, token) ~= nil
+	return self.KeywordValuesTree(token) ~= nil
 end
 
 function META:AddNonStandardKeywords(tbl--[[#: List<|string|>]])
@@ -300,12 +336,12 @@ function META:AddNonStandardKeywords(tbl--[[#: List<|string|>]])
 		table.insert(self.NonStandardKeywords, str)
 	end
 
-	-- Build the tree
+	-- Build and compile the tree
 	self.NonStandardKeywordsTree = build_tree(self.NonStandardKeywords)
 end
 
 function META:IsNonStandardKeyword(token--[[#: Token]])--[[#: boolean]]
-	return lookup_in_tree(self.NonStandardKeywordsTree, token) ~= nil
+	return self.NonStandardKeywordsTree(token) ~= nil
 end
 
 function META:GetSymbols()
@@ -322,12 +358,12 @@ function META:AddBinaryOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>
 		end
 	end
 
-	-- Build the tree
+	-- Build and compile the tree
 	self.BinaryOperatorFunctionTranslateTree = build_tree(self.BinaryOperatorFunctionTranslate)
 end
 
 function META:GetFunctionForBinaryOperator(token--[[#: Token]])--[[#: {string, string, string} | nil]]
-	local result--[[#: OperatorFunctionInfo | nil]] = lookup_in_tree(self.BinaryOperatorFunctionTranslateTree, token)
+	local result = self.BinaryOperatorFunctionTranslateTree(token)
 	return result and result.info or nil
 end
 
@@ -341,12 +377,12 @@ function META:AddPrefixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>
 		end
 	end
 
-	-- Build the tree
+	-- Build and compile the tree
 	self.PrefixOperatorFunctionTranslateTree = build_tree(self.PrefixOperatorFunctionTranslate)
 end
 
 function META:GetFunctionForPrefixOperator(token--[[#: Token]])--[[#: {string, string} | nil]]
-	local result--[[#: OperatorFunctionInfo | nil]] = lookup_in_tree(self.PrefixOperatorFunctionTranslateTree, token)
+	local result = self.PrefixOperatorFunctionTranslateTree(token)
 	return result and result.info or nil
 end
 
@@ -360,12 +396,12 @@ function META:AddPostfixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|
 		end
 	end
 
-	-- Build the tree
+	-- Build and compile the tree
 	self.PostfixOperatorFunctionTranslateTree = build_tree(self.PostfixOperatorFunctionTranslate)
 end
 
 function META:GetFunctionForPostfixOperator(token--[[#: Token]])--[[#: {string, string} | nil]]
-	local result--[[#: OperatorFunctionInfo | nil]] = lookup_in_tree(self.PostfixOperatorFunctionTranslateTree, token)
+	local result = self.PostfixOperatorFunctionTranslateTree(token)
 	return result and result.info or nil
 end
 

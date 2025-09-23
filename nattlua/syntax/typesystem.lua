@@ -71,21 +71,6 @@ typesystem:AddPostfixOperators(
 		"ÆØÅÆ",
 	}
 )
-typesystem:AddBinaryOperators(
-	{
-		{"or", "||"},
-		{"and", "&&"},
-		{"<", ">", "<=", ">=", "~=", "==", "!="},
-		{"|"},
-		{"~"},
-		{"&"},
-		{"<<", ">>"},
-		{"R.."}, -- right associative
-		{"+", "-"},
-		{"*", "/", "/idiv/", "%"},
-		{"R^"}, -- right associative
-	}
-)
 typesystem:AddPrimaryBinaryOperators({
 	".",
 	":",

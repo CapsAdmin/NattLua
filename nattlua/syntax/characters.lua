@@ -74,14 +74,14 @@ if jit then
 	local ffi = require("ffi")
 
 	for key, val in pairs(characters) do
-		local map = ffi.new("char[256]")
+		local map = ffi.new("bool[256]")
 
 		for i = 0, 255 do
-			map[i] = val(i) and 1 or 0
+			map[i] = val(i)
 		end
 
 		characters[key] = function(c--[[#: number]])--[[#: boolean]]
-			return map[c] == 1
+			return map[c]--[[# as boolean]]
 		end
 	end
 end
