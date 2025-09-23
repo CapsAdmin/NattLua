@@ -12,30 +12,30 @@ local META = class.CreateTemplate("syntax")
 --[[#type META.@Name = "Syntax"]]
 --[[#type META.@Self = {
 	BinaryOperatorInfo = List<|{op = string, left_priority = number, right_priority = number}|>,
-	BinaryOperatorsMaxLength = number,
-	PostfixOperatorsMaxLength = number,
-	PrimaryBinaryOperatorsMaxLength = number,
-	KeywordsMaxLength = number,
-	KeywordValuesMaxLength = number,
-	NonStandardKeywordsMaxLength = number,
-	BinaryOperatorFunctionTranslateMaxLength = number,
-	PrefixOperatorFunctionTranslateMaxLength = number,
-	PostfixOperatorFunctionTranslateMaxLength = number,
-	PrefixOperatorsMaxLength = number,
+	BinaryOperatorInfoByLength = Map<|number, List<|{op = string, left_priority = number, right_priority = number}|>|>,
 	NumberAnnotations = List<|string|>,
 	Symbols = List<|string|>,
 	BinaryOperators = Map<|string, true|>,
 	PrefixOperators = List<|string|>,
+	PrefixOperatorsByLength = Map<|number, List<|string|>|>,
 	PostfixOperators = List<|string|>,
+	PostfixOperatorsByLength = Map<|number, List<|string|>|>,
 	PrimaryBinaryOperators = List<|string|>,
+	PrimaryBinaryOperatorsByLength = Map<|number, List<|string|>|>,
 	SymbolCharacters = List<|string|>,
 	SymbolPairs = Map<|string, string|>,
 	KeywordValues = List<|string|>,
+	KeywordValuesByLength = Map<|number, List<|string|>|>,
 	Keywords = List<|string|>,
+	KeywordsByLength = Map<|number, List<|string|>|>,
 	NonStandardKeywords = List<|string|>,
+	NonStandardKeywordsByLength = Map<|number, List<|string|>|>,
 	BinaryOperatorFunctionTranslate = List<|{op = string, info = {string, string, string}}|>,
+	BinaryOperatorFunctionTranslateByLength = Map<|number, List<|{op = string, info = {string, string, string}}|>|>,
 	PostfixOperatorFunctionTranslate = List<|{op = string, info = {string, string}}|>,
+	PostfixOperatorFunctionTranslateByLength = Map<|number, List<|{op = string, info = {string, string}}|>|>,
 	PrefixOperatorFunctionTranslate = List<|{op = string, info = {string, string}}|>,
+	PrefixOperatorFunctionTranslateByLength = Map<|number, List<|{op = string, info = {string, string}}|>|>,
 }]]
 
 function META.New()
@@ -43,29 +43,29 @@ function META.New()
 		{
 			NumberAnnotations = {},
 			BinaryOperatorInfo = {},
+			BinaryOperatorInfoByLength = {},
 			Symbols = {},
 			BinaryOperators = {},
 			PrefixOperators = {},
+			PrefixOperatorsByLength = {},
 			PostfixOperators = {},
+			PostfixOperatorsByLength = {},
 			PrimaryBinaryOperators = {},
+			PrimaryBinaryOperatorsByLength = {},
 			SymbolCharacters = {},
 			SymbolPairs = {},
 			KeywordValues = {},
+			KeywordValuesByLength = {},
 			Keywords = {},
+			KeywordsByLength = {},
 			NonStandardKeywords = {},
+			NonStandardKeywordsByLength = {},
 			BinaryOperatorFunctionTranslate = {},
+			BinaryOperatorFunctionTranslateByLength = {},
 			PostfixOperatorFunctionTranslate = {},
+			PostfixOperatorFunctionTranslateByLength = {},
 			PrefixOperatorFunctionTranslate = {},
-			BinaryOperatorsMaxLength = 0,
-			PrefixOperatorsMaxLength = 0,
-			PostfixOperatorsMaxLength = 0,
-			PrimaryBinaryOperatorsMaxLength = 0,
-			KeywordsMaxLength = 0,
-			KeywordValuesMaxLength = 0,
-			NonStandardKeywordsMaxLength = 0,
-			BinaryOperatorFunctionTranslateMaxLength = 0,
-			PrefixOperatorFunctionTranslateMaxLength = 0,
-			PostfixOperatorFunctionTranslateMaxLength = 0,
+			PrefixOperatorFunctionTranslateByLength = {},
 		},
 		true
 	)
@@ -77,6 +77,13 @@ local function has_value(tbl--[[#: {[1 .. inf] = string} | {}]], value--[[#: str
 	end
 
 	return false
+end
+
+-- Helper function to add items to length-indexed tables
+local function add_to_length_table(length_table--[[#: any]], item, length)
+	if not length_table[length] then length_table[length] = {} end
+
+	table_insert(length_table[length], item)
 end
 
 function META:AddSymbols(tbl--[[#: List<|string|>]])
@@ -114,37 +121,25 @@ function META:AddBinaryOperators(tbl--[[#: List<|List<|string|>|>]])
 
 			if right then token = token:sub(2) end
 
-			if right then
-				table.insert(
-					self.BinaryOperatorInfo,
-					{
-						op = token,
-						left_priority = priority + 1,
-						right_priority = priority,
-					}
-				)
-			else
-				table.insert(
-					self.BinaryOperatorInfo,
-					{
-						op = token,
-						left_priority = priority,
-						right_priority = priority,
-					}
-				)
-			end
-
+			local info = {
+				op = token,
+				left_priority = right and (priority + 1) or priority,
+				right_priority = priority,
+			}
+			table.insert(self.BinaryOperatorInfo, info)
+			add_to_length_table(self.BinaryOperatorInfoByLength, info, #token)
 			self:AddSymbols({token})
 			self.BinaryOperators[token] = true
-			self.BinaryOperatorsMaxLength = math.max(#token, self.BinaryOperatorsMaxLength)
 		end
 	end
 end
 
 function META:GetBinaryOperatorInfo(token--[[#: Token]])
-	if token:GetLength() > self.BinaryOperatorsMaxLength then return nil end
+	local operators_of_length = self.BinaryOperatorInfoByLength[token:GetLength()]
 
-	for _, info in ipairs(self.BinaryOperatorInfo) do
+	if not operators_of_length then return nil end
+
+	for _, info in ipairs(operators_of_length) do
 		if token:ValueEquals(info.op) then return info end
 	end
 end
@@ -154,14 +149,16 @@ function META:AddPrefixOperators(tbl--[[#: List<|string|>]])
 
 	for _, str in ipairs(tbl) do
 		table.insert(self.PrefixOperators, str)
-		self.PrefixOperatorsMaxLength = math.max(#str, self.PrefixOperatorsMaxLength)
+		add_to_length_table(self.PrefixOperatorsByLength, str, #str)
 	end
 end
 
 function META:IsPrefixOperator(token--[[#: Token]])
-	if token:GetLength() > self.PrefixOperatorsMaxLength then return false end
+	local operators_of_length = self.PrefixOperatorsByLength[token:GetLength()]
 
-	for _, op in ipairs(self.PrefixOperators) do
+	if not operators_of_length then return false end
+
+	for _, op in ipairs(operators_of_length) do
 		if token:ValueEquals(op) then return true end
 	end
 
@@ -173,14 +170,16 @@ function META:AddPostfixOperators(tbl--[[#: List<|string|>]])
 
 	for _, str in ipairs(tbl) do
 		table.insert(self.PostfixOperators, str)
-		self.PostfixOperatorsMaxLength = math.max(#str, self.PostfixOperatorsMaxLength)
+		add_to_length_table(self.PostfixOperatorsByLength, str, #str)
 	end
 end
 
 function META:IsPostfixOperator(token--[[#: Token]])
-	if token:GetLength() > self.PostfixOperatorsMaxLength then return false end
+	local operators_of_length = self.PostfixOperatorsByLength[token:GetLength()]
 
-	for _, op in ipairs(self.PostfixOperators) do
+	if not operators_of_length then return false end
+
+	for _, op in ipairs(operators_of_length) do
 		if token:ValueEquals(op) then return true end
 	end
 
@@ -192,14 +191,16 @@ function META:AddPrimaryBinaryOperators(tbl--[[#: List<|string|>]])
 
 	for _, str in ipairs(tbl) do
 		table.insert(self.PrimaryBinaryOperators, str)
-		self.PrimaryBinaryOperatorsMaxLength = math.max(#str, self.PrimaryBinaryOperatorsMaxLength)
+		add_to_length_table(self.PrimaryBinaryOperatorsByLength, str, #str)
 	end
 end
 
 function META:IsPrimaryBinaryOperator(token--[[#: Token]])
-	if token:GetLength() > self.PrimaryBinaryOperatorsMaxLength then return false end
+	local operators_of_length = self.PrimaryBinaryOperatorsByLength[token:GetLength()]
 
-	for _, op in ipairs(self.PrimaryBinaryOperators) do
+	if not operators_of_length then return false end
+
+	for _, op in ipairs(operators_of_length) do
 		if token:ValueEquals(op) then return true end
 	end
 
@@ -228,7 +229,7 @@ function META:AddKeywords(tbl--[[#: List<|string|>]])
 
 	for _, str in ipairs(tbl) do
 		table.insert(self.Keywords, str)
-		self.KeywordsMaxLength = math.max(#str, self.KeywordsMaxLength)
+		add_to_length_table(self.KeywordsByLength, str, #str)
 	end
 end
 
@@ -242,9 +243,11 @@ function META:IsVariableName(token--[[#: Token]])
 end
 
 function META:IsKeyword(token--[[#: Token]])
-	if token:GetLength() > self.KeywordsMaxLength then return false end
+	local keywords_of_length = self.KeywordsByLength[token:GetLength()]
 
-	for _, str in ipairs(self.Keywords) do
+	if not keywords_of_length then return false end
+
+	for _, str in ipairs(keywords_of_length) do
 		if token:ValueEquals(str) then return true end
 	end
 
@@ -257,17 +260,21 @@ function META:AddKeywordValues(tbl--[[#: List<|string|>]])
 	for _, str in ipairs(tbl) do
 		table.insert(self.Keywords, str)
 		table.insert(self.KeywordValues, str)
-		self.KeywordsMaxLength = math.max(#str, self.KeywordsMaxLength)
-		self.KeywordValuesMaxLength = math.max(#str, self.KeywordValuesMaxLength)
+		add_to_length_table(self.KeywordsByLength, str, #str)
+		add_to_length_table(self.KeywordValuesByLength, str, #str)
 	end
 end
 
 function META:IsKeywordValue(token--[[#: Token]])
-	if token:GetLength() > self.KeywordValuesMaxLength then return false end
+	local keyword_values_of_length = self.KeywordValuesByLength[token:GetLength()]
 
-	for _, str in ipairs(self.KeywordValues) do
+	if not keyword_values_of_length then return false end
+
+	for _, str in ipairs(keyword_values_of_length) do
 		if token:ValueEquals(str) then return true end
 	end
+
+	return false
 end
 
 function META:AddNonStandardKeywords(tbl--[[#: List<|string|>]])
@@ -275,14 +282,16 @@ function META:AddNonStandardKeywords(tbl--[[#: List<|string|>]])
 
 	for _, str in ipairs(tbl) do
 		table.insert(self.NonStandardKeywords, str)
-		self.NonStandardKeywordsMaxLength = math.max(#str, self.NonStandardKeywordsMaxLength)
+		add_to_length_table(self.NonStandardKeywordsByLength, str, #str)
 	end
 end
 
 function META:IsNonStandardKeyword(token--[[#: Token]])
-	if token:GetLength() > self.NonStandardKeywordsMaxLength then return false end
+	local keywords_of_length = self.NonStandardKeywordsByLength[token:GetLength()]
 
-	for _, str in ipairs(self.NonStandardKeywords) do
+	if not keywords_of_length then return false end
+
+	for _, str in ipairs(keywords_of_length) do
 		if token:ValueEquals(str) then return true end
 	end
 
@@ -298,18 +307,19 @@ function META:AddBinaryOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>
 		local a, b, c = v:match("(.-)A(.-)B(.*)")
 
 		if a and b and c then
-			table.insert(self.BinaryOperatorFunctionTranslate, {op = k, info = {" " .. a, b, c .. " "}})
-			self.BinaryOperatorFunctionTranslateMaxLength = math.max(#k, self.BinaryOperatorFunctionTranslateMaxLength)
+			local info = {op = k, info = {" " .. a, b, c .. " "}}
+			table.insert(self.BinaryOperatorFunctionTranslate, info)
+			add_to_length_table(self.BinaryOperatorFunctionTranslateByLength, info, #k)
 		end
 	end
 end
 
 function META:GetFunctionForBinaryOperator(token--[[#: Token]])
-	if token:GetLength() > self.BinaryOperatorFunctionTranslateMaxLength then
-		return nil
-	end
+	local operators_of_length = self.BinaryOperatorFunctionTranslateByLength[token:GetLength()]
 
-	for _, v in ipairs(self.BinaryOperatorFunctionTranslate) do
+	if not operators_of_length then return nil end
+
+	for _, v in ipairs(operators_of_length) do
 		if token:ValueEquals(v.op) then return v.info end
 	end
 end
@@ -319,18 +329,19 @@ function META:AddPrefixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>
 		local a, b = v:match("^(.-)A(.-)$")
 
 		if a and b then
-			table.insert(self.PrefixOperatorFunctionTranslate, {op = k, info = {" " .. a, b .. " "}})
-			self.PrefixOperatorFunctionTranslateMaxLength = math.max(#k, self.PrefixOperatorFunctionTranslateMaxLength)
+			local info = {op = k, info = {" " .. a, b .. " "}}
+			table.insert(self.PrefixOperatorFunctionTranslate, info)
+			add_to_length_table(self.PrefixOperatorFunctionTranslateByLength, info, #k)
 		end
 	end
 end
 
 function META:GetFunctionForPrefixOperator(token--[[#: Token]])
-	if token:GetLength() > self.PrefixOperatorFunctionTranslateMaxLength then
-		return nil
-	end
+	local operators_of_length = self.PrefixOperatorFunctionTranslateByLength[token:GetLength()]
 
-	for _, v in ipairs(self.PrefixOperatorFunctionTranslate) do
+	if not operators_of_length then return nil end
+
+	for _, v in ipairs(operators_of_length) do
 		if token:ValueEquals(v.op) then return v.info end
 	end
 end
@@ -340,18 +351,19 @@ function META:AddPostfixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|
 		local a, b = v:match("^(.-)A(.-)$")
 
 		if a and b then
-			table.insert(self.PostfixOperatorFunctionTranslate, {op = k, info = {" " .. a, b .. " "}})
-			self.PostfixOperatorFunctionTranslateMaxLength = math.max(#k, self.PostfixOperatorFunctionTranslateMaxLength)
+			local info = {op = k, info = {" " .. a, b .. " "}}
+			table.insert(self.PostfixOperatorFunctionTranslate, info)
+			add_to_length_table(self.PostfixOperatorFunctionTranslateByLength, info, #k)
 		end
 	end
 end
 
 function META:GetFunctionForPostfixOperator(token--[[#: Token]])
-	if token:GetLength() > self.PostfixOperatorFunctionTranslateMaxLength then
-		return nil
-	end
+	local operators_of_length = self.PostfixOperatorFunctionTranslateByLength[token:GetLength()]
 
-	for _, v in ipairs(self.PostfixOperatorFunctionTranslate) do
+	if not operators_of_length then return nil end
+
+	for _, v in ipairs(operators_of_length) do
 		if token:ValueEquals(v.op) then return v.info end
 	end
 end
