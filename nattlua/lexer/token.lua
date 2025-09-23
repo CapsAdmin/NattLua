@@ -9,6 +9,7 @@ local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
 local tostring = _G.tostring
 local table_insert = _G.table.insert
+local assert = _G.assert
 
 --[[#local type { Code } = import<|"~/nattlua/code.lua"|>]]
 
@@ -430,13 +431,13 @@ end
 function META:GetByte(offset--[[#: number]])
 	if self.value then return self.value:byte(offset + 1) or 0 end
 
-	return assert(self.code--[[# as any]]):GetByte(self.start + offset)
+	return (self.code--[[# as any]]):GetByte(self.start + offset)
 end
 
 function META:ValueEquals(str--[[#: string]])
 	if self.value then return self.value == str end
 
-	return assert(self.code--[[# as any]]):IsStringSlice2(self.start, self.stop, str)
+	return (self.code--[[# as any]]):IsStringSlice2(self.start, self.stop, str)
 end
 
 function META:ReplaceValue(new_str--[[#: string]])

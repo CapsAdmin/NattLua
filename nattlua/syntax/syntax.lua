@@ -1,4 +1,8 @@
 --ANALYZE
+--[[HOTRELOAD
+		run_test("test/tests/nattlua/parser.lua")
+
+]]
 local table_insert = _G.table.insert
 local table_sort = _G.table.sort
 local pairs = _G.pairs
@@ -43,7 +47,7 @@ local META = class.CreateTemplate("syntax")
 }]]
 
 -- Fixed version - the key issue was not respecting token length in the loop
-local function build_tree(
+local function build_tree1(
 	items--[[#: List<|string|> | List<|BinaryOperatorInfo|> | List<|OperatorFunctionInfo|>]]
 )
 	local return_value = type(items[1]) == "table"
@@ -76,69 +80,130 @@ local function build_tree(
 			node = node[b]
 
 			if i == #str then
-				if return_value then
-					node.END = item
-					node.LENGTH = #str
-				else
-					node.END = item
-					node.LENGTH = #str
-				end
+				if return_value then node.END = item else node.END = item end
 			end
 		end
 	end
 
-	local function sanity_check(token)
-		if return_value then
-			for _, item in ipairs(items) do
-				if token:ValueEquals(item.op) then return item end
-			end
-		else
-			for _, item in ipairs(items) do
-				if token:ValueEquals(item) then return token:GetValueString() end
-			end
-		end
-	end
-
-	local min = math.max
-
-	local function find_match(token)
+	return function(token)
 		local token_length = token:GetLength()
 
 		if token_length > longest then return nil end
 
-		local last_match = nil
 		local node = map
 
-		for i = 0, min(longest - 1, token_length) do
+		for i = 0, token_length - 1 do
 			node = node[token:GetByte(i)]
 
-			if not node then break end
-
-			if node.END and token_length == node.LENGTH then last_match = node.END end
+			if not node then return nil end
 		end
 
-		return last_match
+		return node.END
+	end
+end
+
+local function build_tree2(
+	items--[[#: List<|string|> | List<|BinaryOperatorInfo|> | List<|OperatorFunctionInfo|>]]
+)
+	if false--[[# as true]] then return _--[[# as any]] end
+
+	local ffi = require("ffi")
+	local return_value = type(items[1]) == "table"
+	local longest = 0
+	local max_nodes = 1 -- root
+	if return_value then
+		table.sort(items, function(a, b)
+			return #a.op > #b.op
+		end)
+
+		for _, str in ipairs(items) do
+			max_nodes = max_nodes + #str.op
+			longest = math.max(longest, #str.op)
+		end
+	else
+		table.sort(items, function(a, b)
+			return #a > #b
+		end)
+
+		for _, str in ipairs(items) do
+			max_nodes = max_nodes + #str
+			longest = math.max(longest, #str)
+		end
 	end
 
-	do
-		return find_match
+	local node_type = ffi.typeof([[
+		struct {
+			uint8_t children[256];
+			uint8_t end_marker;
+		}
+	]])
+	local node_array_type = ffi.typeof("$[?]", node_type)
+	local nodes = ffi.new(node_array_type, max_nodes)
+	local string_storage = {}
+	local node_count = 1
+
+	for i = 0, 255 do
+		nodes[0].children[i] = 0
+	end
+
+	nodes[0].end_marker = 0
+
+	for _, item in ipairs(items) do
+		local current_node = 0
+
+		if return_value then str = item.op else str = item end
+
+		for i = 1, #str do
+			local byte_val = str:byte(i)
+			local child_node = nodes[current_node].children[byte_val]
+
+			if child_node == 0 then
+				child_node = node_count
+				node_count = node_count + 1
+
+				for j = 0, 255 do
+					nodes[child_node].children[j] = 0
+				end
+
+				nodes[child_node].end_marker = 0
+				nodes[current_node].children[byte_val] = child_node
+			end
+
+			current_node = child_node
+		end
+
+		nodes[current_node].end_marker = 1
+		string_storage[current_node] = item
 	end
 
 	return function(token)
-		local res = sanity_check(token)
-		local res2 = find_match(token)
+		local token_length = token:GetLength()
 
-		if res2 ~= res then
-			print(token)
-			table.print(res)
-			table.print(res2)
-			table.print(items)
-			os.exit()
+		if token_length > longest then return nil end
+
+		local node_index = 0
+
+		if token_length == 1 then
+			local child = nodes[0].children[token:GetByte(0)]
+
+			if child == 0 then return nil end
+
+			return nodes[child].end_marker == 1 and string_storage[child] or nil
 		end
 
-		return res
+		for i = 0, token_length - 1 do
+			local child = nodes[node_index].children[token:GetByte(i)]
+
+			if child == 0 then return nil end
+
+			node_index = child
+		end
+
+		return nodes[node_index].end_marker == 1 and string_storage[node_index] or nil
 	end
 end
+
+if jit then build_tree = build_tree2 else build_tree = build_tree1 end
 
 function META.New()
 	return META.NewObject(
