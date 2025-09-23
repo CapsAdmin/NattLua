@@ -8,82 +8,132 @@ local class = require("nattlua.other.class")
 
 --[[#local type { Token } = import("~/nattlua/lexer/token.lua")]]
 
+--[[#type TreeNode = {[number] = self | nil, value = any | nil, max_len = nil | number}]]
+--[[#type BinaryOperatorInfo = {op = string, left_priority = number, right_priority = number}]]
+--[[#type OperatorFunctionInfo = {op = string, info = {string, string} | {string, string, string}}]]
 local META = class.CreateTemplate("syntax")
 --[[#type META.@Name = "Syntax"]]
 --[[#type META.@Self = {
-	BinaryOperatorInfo = List<|{op = string, left_priority = number, right_priority = number}|>,
-	BinaryOperatorInfoByLength = Map<|number, List<|{op = string, left_priority = number, right_priority = number}|>|>,
+	BinaryOperatorInfo = List<|BinaryOperatorInfo|>,
+	BinaryOperatorInfoTree = TreeNode,
 	NumberAnnotations = List<|string|>,
 	Symbols = List<|string|>,
 	BinaryOperators = Map<|string, true|>,
 	PrefixOperators = List<|string|>,
-	PrefixOperatorsByLength = Map<|number, List<|string|>|>,
+	PrefixOperatorsTree = TreeNode,
 	PostfixOperators = List<|string|>,
-	PostfixOperatorsByLength = Map<|number, List<|string|>|>,
+	PostfixOperatorsTree = TreeNode,
 	PrimaryBinaryOperators = List<|string|>,
-	PrimaryBinaryOperatorsByLength = Map<|number, List<|string|>|>,
+	PrimaryBinaryOperatorsTree = TreeNode,
 	SymbolCharacters = List<|string|>,
 	SymbolPairs = Map<|string, string|>,
 	KeywordValues = List<|string|>,
-	KeywordValuesByLength = Map<|number, List<|string|>|>,
+	KeywordValuesTree = TreeNode,
 	Keywords = List<|string|>,
-	KeywordsByLength = Map<|number, List<|string|>|>,
+	KeywordsTree = TreeNode,
 	NonStandardKeywords = List<|string|>,
-	NonStandardKeywordsByLength = Map<|number, List<|string|>|>,
-	BinaryOperatorFunctionTranslate = List<|{op = string, info = {string, string, string}}|>,
-	BinaryOperatorFunctionTranslateByLength = Map<|number, List<|{op = string, info = {string, string, string}}|>|>,
-	PostfixOperatorFunctionTranslate = List<|{op = string, info = {string, string}}|>,
-	PostfixOperatorFunctionTranslateByLength = Map<|number, List<|{op = string, info = {string, string}}|>|>,
-	PrefixOperatorFunctionTranslate = List<|{op = string, info = {string, string}}|>,
-	PrefixOperatorFunctionTranslateByLength = Map<|number, List<|{op = string, info = {string, string}}|>|>,
+	NonStandardKeywordsTree = TreeNode,
+	BinaryOperatorFunctionTranslate = List<|OperatorFunctionInfo|>,
+	BinaryOperatorFunctionTranslateTree = TreeNode,
+	PostfixOperatorFunctionTranslate = List<|OperatorFunctionInfo|>,
+	PostfixOperatorFunctionTranslateTree = TreeNode,
+	PrefixOperatorFunctionTranslate = List<|OperatorFunctionInfo|>,
+	PrefixOperatorFunctionTranslateTree = TreeNode,
 }]]
+
+-- Helper function to build a tree from a list of strings/operators
+local function build_tree(
+	items--[[#: List<|string|> | List<|BinaryOperatorInfo|> | List<|OperatorFunctionInfo|>]]
+)--[[#: TreeNode]]
+	local tree = {max_len = 0}
+
+	for _, item in ipairs(items) do
+		local current = tree
+		local str--[[#: string]]
+
+		if type(item) == "table" then str = item.op else str = item end
+
+		tree.max_len = math.max(tree.max_len, #str)
+
+		-- Traverse/build the tree byte by byte
+		for i = 1, #str do
+			local byte = str:byte(i)
+
+			if not current[byte] then current[byte] = {} end
+
+			current = current[byte]
+		end
+
+		-- Store the value at the leaf
+		current.value = item
+	end
+
+	return tree
+end
+
+-- Helper function to lookup an operator in the tree using token:GetByte()
+local function lookup_in_tree(tree--[[#: TreeNode]], token--[[#: Token]])--[[#: any]]
+	local current = tree
+	local length = token:GetLength()
+
+	if length > tree.max_len--[[# as number]] then return nil end
+
+	if length == 1 then
+		local byte = token:GetByte(0)
+		current = current[byte]--[[# as any]]
+		return current and current.value or nil
+	end
+
+	for i = 0, length - 1 do -- assuming 0-based offset
+		local byte = token:GetByte(i)
+		current = current[byte]--[[# as any]]
+
+		if not current then return nil -- No match found
+		end
+	end
+
+	return current.value
+end
 
 function META.New()
 	return META.NewObject(
 		{
 			NumberAnnotations = {},
 			BinaryOperatorInfo = {},
-			BinaryOperatorInfoByLength = {},
+			BinaryOperatorInfoTree = {},
 			Symbols = {},
 			BinaryOperators = {},
 			PrefixOperators = {},
-			PrefixOperatorsByLength = {},
+			PrefixOperatorsTree = {},
 			PostfixOperators = {},
-			PostfixOperatorsByLength = {},
+			PostfixOperatorsTree = {},
 			PrimaryBinaryOperators = {},
-			PrimaryBinaryOperatorsByLength = {},
+			PrimaryBinaryOperatorsTree = {},
 			SymbolCharacters = {},
 			SymbolPairs = {},
 			KeywordValues = {},
-			KeywordValuesByLength = {},
+			KeywordValuesTree = {},
 			Keywords = {},
-			KeywordsByLength = {},
+			KeywordsTree = {},
 			NonStandardKeywords = {},
-			NonStandardKeywordsByLength = {},
+			NonStandardKeywordsTree = {},
 			BinaryOperatorFunctionTranslate = {},
-			BinaryOperatorFunctionTranslateByLength = {},
+			BinaryOperatorFunctionTranslateTree = {},
 			PostfixOperatorFunctionTranslate = {},
-			PostfixOperatorFunctionTranslateByLength = {},
+			PostfixOperatorFunctionTranslateTree = {},
 			PrefixOperatorFunctionTranslate = {},
-			PrefixOperatorFunctionTranslateByLength = {},
+			PrefixOperatorFunctionTranslateTree = {},
 		},
 		true
 	)
 end
 
-local function has_value(tbl--[[#: {[1 .. inf] = string} | {}]], value--[[#: string]])
+local function has_value(tbl--[[#: {[1 .. inf] = string} | {}]], value--[[#: string]])--[[#: boolean]]
 	for k, v in ipairs(tbl) do
 		if v == value then return true end
 	end
 
 	return false
-end
-
--- Helper function to add items to length-indexed tables
-local function add_to_length_table(length_table--[[#: any]], item, length)
-	if not length_table[length] then length_table[length] = {} end
-
-	table_insert(length_table[length], item)
 end
 
 function META:AddSymbols(tbl--[[#: List<|string|>]])
@@ -121,27 +171,23 @@ function META:AddBinaryOperators(tbl--[[#: List<|List<|string|>|>]])
 
 			if right then token = token:sub(2) end
 
-			local info = {
+			local info--[[#: BinaryOperatorInfo]] = {
 				op = token,
 				left_priority = right and (priority + 1) or priority,
 				right_priority = priority,
 			}
 			table.insert(self.BinaryOperatorInfo, info)
-			add_to_length_table(self.BinaryOperatorInfoByLength, info, #token)
 			self:AddSymbols({token})
 			self.BinaryOperators[token] = true
 		end
 	end
+
+	-- Build the tree after adding all operators
+	self.BinaryOperatorInfoTree = build_tree(self.BinaryOperatorInfo)
 end
 
-function META:GetBinaryOperatorInfo(token--[[#: Token]])
-	local operators_of_length = self.BinaryOperatorInfoByLength[token:GetLength()]
-
-	if not operators_of_length then return nil end
-
-	for _, info in ipairs(operators_of_length) do
-		if token:ValueEquals(info.op) then return info end
-	end
+function META:GetBinaryOperatorInfo(token--[[#: Token]])--[[#: BinaryOperatorInfo | nil]]
+	return lookup_in_tree(self.BinaryOperatorInfoTree, token)
 end
 
 function META:AddPrefixOperators(tbl--[[#: List<|string|>]])
@@ -149,20 +195,14 @@ function META:AddPrefixOperators(tbl--[[#: List<|string|>]])
 
 	for _, str in ipairs(tbl) do
 		table.insert(self.PrefixOperators, str)
-		add_to_length_table(self.PrefixOperatorsByLength, str, #str)
 	end
+
+	-- Build the tree
+	self.PrefixOperatorsTree = build_tree(self.PrefixOperators)
 end
 
-function META:IsPrefixOperator(token--[[#: Token]])
-	local operators_of_length = self.PrefixOperatorsByLength[token:GetLength()]
-
-	if not operators_of_length then return false end
-
-	for _, op in ipairs(operators_of_length) do
-		if token:ValueEquals(op) then return true end
-	end
-
-	return false
+function META:IsPrefixOperator(token--[[#: Token]])--[[#: boolean]]
+	return lookup_in_tree(self.PrefixOperatorsTree, token) ~= nil
 end
 
 function META:AddPostfixOperators(tbl--[[#: List<|string|>]])
@@ -170,20 +210,14 @@ function META:AddPostfixOperators(tbl--[[#: List<|string|>]])
 
 	for _, str in ipairs(tbl) do
 		table.insert(self.PostfixOperators, str)
-		add_to_length_table(self.PostfixOperatorsByLength, str, #str)
 	end
+
+	-- Build the tree
+	self.PostfixOperatorsTree = build_tree(self.PostfixOperators)
 end
 
-function META:IsPostfixOperator(token--[[#: Token]])
-	local operators_of_length = self.PostfixOperatorsByLength[token:GetLength()]
-
-	if not operators_of_length then return false end
-
-	for _, op in ipairs(operators_of_length) do
-		if token:ValueEquals(op) then return true end
-	end
-
-	return false
+function META:IsPostfixOperator(token--[[#: Token]])--[[#: boolean]]
+	return lookup_in_tree(self.PostfixOperatorsTree, token) ~= nil
 end
 
 function META:AddPrimaryBinaryOperators(tbl--[[#: List<|string|>]])
@@ -191,20 +225,14 @@ function META:AddPrimaryBinaryOperators(tbl--[[#: List<|string|>]])
 
 	for _, str in ipairs(tbl) do
 		table.insert(self.PrimaryBinaryOperators, str)
-		add_to_length_table(self.PrimaryBinaryOperatorsByLength, str, #str)
 	end
+
+	-- Build the tree
+	self.PrimaryBinaryOperatorsTree = build_tree(self.PrimaryBinaryOperators)
 end
 
-function META:IsPrimaryBinaryOperator(token--[[#: Token]])
-	local operators_of_length = self.PrimaryBinaryOperatorsByLength[token:GetLength()]
-
-	if not operators_of_length then return false end
-
-	for _, op in ipairs(operators_of_length) do
-		if token:ValueEquals(op) then return true end
-	end
-
-	return false
+function META:IsPrimaryBinaryOperator(token--[[#: Token]])--[[#: boolean]]
+	return lookup_in_tree(self.PrimaryBinaryOperatorsTree, token) ~= nil
 end
 
 function META:AddSymbolCharacters(tbl--[[#: List<|string | {string, string}|>]])
@@ -229,11 +257,13 @@ function META:AddKeywords(tbl--[[#: List<|string|>]])
 
 	for _, str in ipairs(tbl) do
 		table.insert(self.Keywords, str)
-		add_to_length_table(self.KeywordsByLength, str, #str)
 	end
+
+	-- Build the tree
+	self.KeywordsTree = build_tree(self.Keywords)
 end
 
-function META:IsVariableName(token--[[#: Token]])
+function META:IsVariableName(token--[[#: Token]])--[[#: boolean]]
 	return token.type == "letter" and
 		not self:IsKeyword(token)
 		and
@@ -242,16 +272,8 @@ function META:IsVariableName(token--[[#: Token]])
 		not self:IsNonStandardKeyword(token)
 end
 
-function META:IsKeyword(token--[[#: Token]])
-	local keywords_of_length = self.KeywordsByLength[token:GetLength()]
-
-	if not keywords_of_length then return false end
-
-	for _, str in ipairs(keywords_of_length) do
-		if token:ValueEquals(str) then return true end
-	end
-
-	return false
+function META:IsKeyword(token--[[#: Token]])--[[#: boolean]]
+	return lookup_in_tree(self.KeywordsTree, token) ~= nil
 end
 
 function META:AddKeywordValues(tbl--[[#: List<|string|>]])
@@ -260,21 +282,15 @@ function META:AddKeywordValues(tbl--[[#: List<|string|>]])
 	for _, str in ipairs(tbl) do
 		table.insert(self.Keywords, str)
 		table.insert(self.KeywordValues, str)
-		add_to_length_table(self.KeywordsByLength, str, #str)
-		add_to_length_table(self.KeywordValuesByLength, str, #str)
 	end
+
+	-- Build the trees
+	self.KeywordsTree = build_tree(self.Keywords)
+	self.KeywordValuesTree = build_tree(self.KeywordValues)
 end
 
-function META:IsKeywordValue(token--[[#: Token]])
-	local keyword_values_of_length = self.KeywordValuesByLength[token:GetLength()]
-
-	if not keyword_values_of_length then return false end
-
-	for _, str in ipairs(keyword_values_of_length) do
-		if token:ValueEquals(str) then return true end
-	end
-
-	return false
+function META:IsKeywordValue(token--[[#: Token]])--[[#: boolean]]
+	return lookup_in_tree(self.KeywordValuesTree, token) ~= nil
 end
 
 function META:AddNonStandardKeywords(tbl--[[#: List<|string|>]])
@@ -282,20 +298,14 @@ function META:AddNonStandardKeywords(tbl--[[#: List<|string|>]])
 
 	for _, str in ipairs(tbl) do
 		table.insert(self.NonStandardKeywords, str)
-		add_to_length_table(self.NonStandardKeywordsByLength, str, #str)
 	end
+
+	-- Build the tree
+	self.NonStandardKeywordsTree = build_tree(self.NonStandardKeywords)
 end
 
-function META:IsNonStandardKeyword(token--[[#: Token]])
-	local keywords_of_length = self.NonStandardKeywordsByLength[token:GetLength()]
-
-	if not keywords_of_length then return false end
-
-	for _, str in ipairs(keywords_of_length) do
-		if token:ValueEquals(str) then return true end
-	end
-
-	return false
+function META:IsNonStandardKeyword(token--[[#: Token]])--[[#: boolean]]
+	return lookup_in_tree(self.NonStandardKeywordsTree, token) ~= nil
 end
 
 function META:GetSymbols()
@@ -307,21 +317,18 @@ function META:AddBinaryOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>
 		local a, b, c = v:match("(.-)A(.-)B(.*)")
 
 		if a and b and c then
-			local info = {op = k, info = {" " .. a, b, c .. " "}}
+			local info--[[#: OperatorFunctionInfo]] = {op = k, info = {" " .. a, b, c .. " "}}
 			table.insert(self.BinaryOperatorFunctionTranslate, info)
-			add_to_length_table(self.BinaryOperatorFunctionTranslateByLength, info, #k)
 		end
 	end
+
+	-- Build the tree
+	self.BinaryOperatorFunctionTranslateTree = build_tree(self.BinaryOperatorFunctionTranslate)
 end
 
-function META:GetFunctionForBinaryOperator(token--[[#: Token]])
-	local operators_of_length = self.BinaryOperatorFunctionTranslateByLength[token:GetLength()]
-
-	if not operators_of_length then return nil end
-
-	for _, v in ipairs(operators_of_length) do
-		if token:ValueEquals(v.op) then return v.info end
-	end
+function META:GetFunctionForBinaryOperator(token--[[#: Token]])--[[#: {string, string, string} | nil]]
+	local result--[[#: OperatorFunctionInfo | nil]] = lookup_in_tree(self.BinaryOperatorFunctionTranslateTree, token)
+	return result and result.info or nil
 end
 
 function META:AddPrefixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
@@ -329,21 +336,18 @@ function META:AddPrefixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>
 		local a, b = v:match("^(.-)A(.-)$")
 
 		if a and b then
-			local info = {op = k, info = {" " .. a, b .. " "}}
+			local info--[[#: OperatorFunctionInfo]] = {op = k, info = {" " .. a, b .. " "}}
 			table.insert(self.PrefixOperatorFunctionTranslate, info)
-			add_to_length_table(self.PrefixOperatorFunctionTranslateByLength, info, #k)
 		end
 	end
+
+	-- Build the tree
+	self.PrefixOperatorFunctionTranslateTree = build_tree(self.PrefixOperatorFunctionTranslate)
 end
 
-function META:GetFunctionForPrefixOperator(token--[[#: Token]])
-	local operators_of_length = self.PrefixOperatorFunctionTranslateByLength[token:GetLength()]
-
-	if not operators_of_length then return nil end
-
-	for _, v in ipairs(operators_of_length) do
-		if token:ValueEquals(v.op) then return v.info end
-	end
+function META:GetFunctionForPrefixOperator(token--[[#: Token]])--[[#: {string, string} | nil]]
+	local result--[[#: OperatorFunctionInfo | nil]] = lookup_in_tree(self.PrefixOperatorFunctionTranslateTree, token)
+	return result and result.info or nil
 end
 
 function META:AddPostfixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
@@ -351,24 +355,21 @@ function META:AddPostfixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|
 		local a, b = v:match("^(.-)A(.-)$")
 
 		if a and b then
-			local info = {op = k, info = {" " .. a, b .. " "}}
+			local info--[[#: OperatorFunctionInfo]] = {op = k, info = {" " .. a, b .. " "}}
 			table.insert(self.PostfixOperatorFunctionTranslate, info)
-			add_to_length_table(self.PostfixOperatorFunctionTranslateByLength, info, #k)
 		end
 	end
+
+	-- Build the tree
+	self.PostfixOperatorFunctionTranslateTree = build_tree(self.PostfixOperatorFunctionTranslate)
 end
 
-function META:GetFunctionForPostfixOperator(token--[[#: Token]])
-	local operators_of_length = self.PostfixOperatorFunctionTranslateByLength[token:GetLength()]
-
-	if not operators_of_length then return nil end
-
-	for _, v in ipairs(operators_of_length) do
-		if token:ValueEquals(v.op) then return v.info end
-	end
+function META:GetFunctionForPostfixOperator(token--[[#: Token]])--[[#: {string, string} | nil]]
+	local result--[[#: OperatorFunctionInfo | nil]] = lookup_in_tree(self.PostfixOperatorFunctionTranslateTree, token)
+	return result and result.info or nil
 end
 
-function META:IsValue(token--[[#: Token]])
+function META:IsValue(token--[[#: Token]])--[[#: boolean]]
 	if token.type == "number" or token.type == "string" then return true end
 
 	if self:IsKeywordValue(token) then return true end
@@ -380,7 +381,7 @@ function META:IsValue(token--[[#: Token]])
 	return false
 end
 
-function META:GetTokenType(tk--[[#: Token]])
+function META:GetTokenType(tk--[[#: Token]])--[[#: string]]
 	if tk.type == "letter" and self:IsKeyword(tk) then
 		return "keyword"
 	elseif tk.type == "symbol" then
@@ -396,7 +397,7 @@ function META:GetTokenType(tk--[[#: Token]])
 	return tk.type
 end
 
-function META:IsRuntimeExpression(token--[[#: Token]])
+function META:IsRuntimeExpression(token--[[#: Token]])--[[#: boolean]]
 	if token.type == "end_of_file" then return false end
 
 	return (
