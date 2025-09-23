@@ -7,11 +7,11 @@ local should_run = true
 local stop_profiler
 local stop_tracing
 
-function profiler.Start(mode)
+function profiler.Start(mode, whitelist)
 	if mode == "trace" then
 		stop_tracer = trace_tracker.Start()
 	elseif mode == "instrumental" then
-		stop_profiler = line_profiler.Start()
+		stop_profiler = line_profiler.Start(whitelist)
 	else
 		stop_tracer = trace_tracker.Start()
 		stop_profiler = jit_profiler.Start(

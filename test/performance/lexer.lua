@@ -5,7 +5,7 @@ local profiler = require("test.helpers.profiler")
 local lua_code = util.Get10MBLua()
 
 -- this must be called before loading modules since it injects line hooks into the code
-if INSTRUMENTAL then profiler.Start("instrumental") end
+if INSTRUMENTAL then profiler.Start("instrumental", {"nattlua/lexer/.+"}) end
 
 local Lexer = require("nattlua.lexer.lexer").New
 local Code = require("nattlua.code").New
