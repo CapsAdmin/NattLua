@@ -2,14 +2,15 @@ local coverage = require("test.helpers.coverage")
 
 local function collect(code)
 	local new_code = coverage.Preprocess(code, "test")
-	assert(load(new_code))()
+	assert(load(new_code, code))()
 	local res = coverage.Collect("test")
 	coverage.Clear("test")
 	return res
 end
 
 local function annotate(code)
-	local data = loadstring(collect(code))()
+	local lua = collect(code)
+	local data = loadstring(lua, code)()
 	local buffer = {}
 
 	for i, v in ipairs(data) do

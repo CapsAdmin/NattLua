@@ -113,7 +113,7 @@ function META:AddBinaryOperators(tbl--[[#: List<|List<|string|>|>]])
 end
 
 function META:GetBinaryOperatorInfo(tk--[[#: Token]])
-	return self.BinaryOperatorInfo[tk.value]
+	return self.BinaryOperatorInfo[tk:GetValueString()]
 end
 
 function META:AddPrefixOperators(tbl--[[#: List<|string|>]])
@@ -125,7 +125,7 @@ function META:AddPrefixOperators(tbl--[[#: List<|string|>]])
 end
 
 function META:IsPrefixOperator(token--[[#: Token]])
-	return self.PrefixOperators[token.value]
+	return self.PrefixOperators[token:GetValueString()]
 end
 
 function META:AddPostfixOperators(tbl--[[#: List<|string|>]])
@@ -137,7 +137,7 @@ function META:AddPostfixOperators(tbl--[[#: List<|string|>]])
 end
 
 function META:IsPostfixOperator(token--[[#: Token]])
-	return self.PostfixOperators[token.value]
+	return self.PostfixOperators[token:GetValueString()]
 end
 
 function META:AddPrimaryBinaryOperators(tbl--[[#: List<|string|>]])
@@ -149,7 +149,7 @@ function META:AddPrimaryBinaryOperators(tbl--[[#: List<|string|>]])
 end
 
 function META:IsPrimaryBinaryOperator(token--[[#: Token]])
-	return self.PrimaryBinaryOperators[token.value]
+	return self.PrimaryBinaryOperators[token:GetValueString()]
 end
 
 function META:AddSymbolCharacters(tbl--[[#: List<|string | {string, string}|>]])
@@ -187,7 +187,7 @@ function META:IsVariableName(token--[[#: Token]])
 end
 
 function META:IsKeyword(token--[[#: Token]])
-	return self.Keywords[token.value]
+	return self.Keywords[token:GetValueString()]
 end
 
 function META:AddKeywordValues(tbl--[[#: List<|string|>]])
@@ -200,7 +200,7 @@ function META:AddKeywordValues(tbl--[[#: List<|string|>]])
 end
 
 function META:IsKeywordValue(token--[[#: Token]])
-	return self.KeywordValues[token.value]
+	return self.KeywordValues[token:GetValueString()]
 end
 
 function META:AddNonStandardKeywords(tbl--[[#: List<|string|>]])
@@ -212,7 +212,7 @@ function META:AddNonStandardKeywords(tbl--[[#: List<|string|>]])
 end
 
 function META:IsNonStandardKeyword(token--[[#: Token]])
-	return self.NonStandardKeywords[token.value]
+	return self.NonStandardKeywords[token:GetValueString()]
 end
 
 function META:GetSymbols()
@@ -230,7 +230,7 @@ function META:AddBinaryOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>
 end
 
 function META:GetFunctionForBinaryOperator(token--[[#: Token]])
-	return self.BinaryOperatorFunctionTranslate[token.value]
+	return self.BinaryOperatorFunctionTranslate[token:GetValueString()]
 end
 
 function META:AddPrefixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
@@ -244,7 +244,7 @@ function META:AddPrefixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>
 end
 
 function META:GetFunctionForPrefixOperator(token--[[#: Token]])
-	return self.PrefixOperatorFunctionTranslate[token.value]
+	return self.PrefixOperatorFunctionTranslate[token:GetValueString()]
 end
 
 function META:AddPostfixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
@@ -258,7 +258,7 @@ function META:AddPostfixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|
 end
 
 function META:GetFunctionForPostfixOperator(token--[[#: Token]])
-	return self.PostfixOperatorFunctionTranslate[token.value]
+	return self.PostfixOperatorFunctionTranslate[token:GetValueString()]
 end
 
 function META:IsValue(token--[[#: Token]])
@@ -293,10 +293,10 @@ function META:IsRuntimeExpression(token--[[#: Token]])
 	if token.type == "end_of_file" then return false end
 
 	return (
-			token.value ~= "}" and
-			token.value ~= "," and
-			token.value ~= "]" and
-			token.value ~= ")" and
+			not token:ValueEquals("}") and
+			not token:ValueEquals(",") and
+			not token:ValueEquals("]") and
+			not token:ValueEquals(")") and
 			not (
 				(
 					self:IsKeyword(token) or
@@ -306,7 +306,7 @@ function META:IsRuntimeExpression(token--[[#: Token]])
 				and
 				not self:IsValue(token)
 				and
-				token.value ~= "function"
+				not token:ValueEquals("function")
 			)
 		)
 end

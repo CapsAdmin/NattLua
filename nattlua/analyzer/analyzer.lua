@@ -62,7 +62,7 @@ do
 			node.Type == "statement_local_type_function"
 		then
 			self:PushAnalyzerEnvironment(node.Type == "statement_local_function" and "runtime" or "typesystem")
-			self:CreateLocalValue(node.tokens["identifier"].value, AnalyzeFunction(self, node))
+			self:CreateLocalValue(node.tokens["identifier"]:GetValueString(), AnalyzeFunction(self, node))
 			self:PopAnalyzerEnvironment()
 		elseif
 			node.Type == "statement_function" or
@@ -78,7 +78,7 @@ do
 				local val = AnalyzeFunction(self, node)
 				self:NewIndexOperator(obj, key, val)
 			else
-				local key = ConstString(key.value.value)
+				local key = ConstString(key.value:GetValueString())
 				local val = AnalyzeFunction(self, node)
 				self:SetLocalOrGlobalValue(key, val)
 			end
@@ -89,7 +89,7 @@ do
 		elseif node.Type == "statement_numeric_for" then
 			AnalyzeNumericFor(self, node)
 		elseif node.Type == "statement_analyzer_debug_code" then
-			local code = node.lua_code.value.value:sub(3)
+			local code = node.lua_code.value:GetValueString():sub(3)
 			self:CallLuaTypeFunction(node.compiled_function, self:GetScope(), {})
 		elseif node.Type == "statement_import" then
 
@@ -155,9 +155,9 @@ do
 		elseif node.Type == "expression_vararg" then
 			if node.value then return VarArg(self:AnalyzeExpression(node.value)) end
 
-			return LookupValue(self, "...")
+			return LookupValue(self, node.tokens["..."])
 		elseif node.Type == "expression_postfix_operator" then
-			if node.value.value == "++" then
+			if node.value:ValueEquals("++") then
 				local r = self:AnalyzeExpression(node.left)
 				return BinaryCustom(self, setmetatable({value = {value = "+"}}, Node), r, r, "+")
 			end
@@ -250,7 +250,7 @@ do
 			exp.Type ~= "expression_prefix_operator" or
 			(
 				exp.Type == "expression_binary_operator" and
-				exp.value.value == "."
+				exp.value:ValueEquals(".")
 			)
 
 		if no_operator_expression then self:PushTruthyExpressionContext() end

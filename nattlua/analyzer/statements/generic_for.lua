@@ -85,7 +85,7 @@ return {
 					brk = true
 				end
 
-				local upvalue = self:CreateLocalValue(identifier.value.value, obj)
+				local upvalue = self:CreateLocalValue(identifier.value:GetValueString(), obj)
 				upvalue:SetFromForLoop(true)
 				identifier:AssociateType(obj)
 			end

@@ -15,6 +15,7 @@ local table_insert = _G.table.insert
 --[[#type META.@Self = {
 	@Name = "Token",
 	type = META.TokenType,
+	_value = string,
 	value = string,
 	start = number,
 	stop = number,
@@ -116,7 +117,7 @@ function META:FindType()
 					obj.Type == "number"
 				)
 				and
-				tostring(obj:GetData()) == self.value
+				tostring(obj:GetData()) == self:GetValueString()
 			then
 
 			else
@@ -153,7 +154,7 @@ function META:GetStringValue()
 	if self.string_value then return self.string_value end
 
 	if self.type == "string" then
-		local value = self.value
+		local value = self:GetValueString()
 
 		if value:sub(1, 1) == [["]] or value:sub(1, 1) == [[']] then
 			self.string_value = reverse_escape_string(value:sub(2, #value - 1))
@@ -227,11 +228,11 @@ do
 				self.parent.parent.Type == "expression_binary_operator" and
 				(
 					self.parent.parent.value and
-					self.parent.parent.value.value == "." or
-					self.parent.parent.value.value == ":"
+					self.parent.parent.value:ValueEquals(".") or
+					self.parent.parent.value:ValueEquals(":")
 				)
 			then
-				if self.value:sub(1, 1) == "@" then return true end
+				if self:ValueEquals("@") then return true end
 			end
 		end
 
@@ -273,12 +274,12 @@ do
 		local self = self--[[# as any]]
 
 		if
-			self.value == "." or
-			self.value == ":" or
-			self.value == "=" or
-			self.value == "or" or
-			self.value == "and" or
-			self.value == "not" or
+			self:ValueEquals(".") or
+			self:ValueEquals(":") or
+			self:ValueEquals("=") or
+			self:ValueEquals("or") or
+			self:ValueEquals("and") or
+			self:ValueEquals("not") or
 			runtime_syntax:GetTokenType(self):find("operator", nil, true) or
 			typesystem_syntax:GetTokenType(self):find("operator", nil, true)
 		then
@@ -395,9 +396,11 @@ do
 	function META:DecomposeString()--[[#: string | nil, string | nil, string | nil]]
 		if self.type ~= "string" then return end
 
+		local str = self:GetValueString()
+
 		local start = ""
 		local stop = ""
-		local t = self.value:sub(1, 1)
+		local t = str:sub(1, 1)
 
 		if t == "\"" then
 			start = t
@@ -406,17 +409,29 @@ do
 			start = t
 			stop = t
 		elseif t == "[" then
-			start = assert(self.value:match("^%[[=]*%["))
+			start = assert(str:match("^%[[=]*%["))
 			stop = start:gsub("%[", "]")
 		else
-			error("what? " .. self.value)
+			error("what? " .. str)
 		end
 
-		return self.value:sub(#start + 1, -#stop - 1), start, stop
+		return str:sub(#start + 1, -#stop - 1), start, stop
 	end
 end
 
 META.is_token = true
+
+function META:ValueEquals(str)
+	return self._value == str
+end
+
+function META:ReplaceValue(new_str--[[#: string]])
+	self._value = new_str
+end
+
+function META:GetValueString()
+	return self._value
+end
 
 function META.New(
 	type--[[#: META.TokenType]],
@@ -426,7 +441,7 @@ function META.New(
 )--[[#: META.@Self]]
 	return META.NewObject({
 		type = type,
-		value = value,
+		_value = value,
 		start = start,
 		stop = stop,
 	}--[[# as META.@Self]])

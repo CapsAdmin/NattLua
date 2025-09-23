@@ -54,18 +54,18 @@ local function analyze_arguments(self, node)
 			if node.self_call then i = i + 1 end
 
 			-- stem type so that we can allow
-			-- function(x: foo<|x|>): nil
-			self:MapTypeToNode(self:CreateLocalValue(key.value.value, Any()), key)
+			-- function(x: foo<x>): nil
+			self:MapTypeToNode(self:CreateLocalValue(key.value:GetValueString(), Any()), key)
 
 			if key.type_expression then
 				args[i] = self:AssertFallback(Nil(), self:AnalyzeExpression(key.type_expression))
-			elseif key.value.value == "..." then
+			elseif key.value:ValueEquals("...") then
 				args[i] = VarArg(Any())
 			else
 				args[i] = Any()
 			end
 
-			self:MapTypeToNode(self:CreateLocalValue(key.value.value, assert(args[i])), key)
+			self:MapTypeToNode(self:CreateLocalValue(key.value:GetValueString(), assert(args[i])), key)
 		end
 	elseif
 		node.Type == "statement_analyzer_function" or
@@ -78,16 +78,16 @@ local function analyze_arguments(self, node)
 	then
 		if node.identifiers_typesystem then
 			for i, generic_type in ipairs(node.identifiers_typesystem) do
-				if generic_type.identifier and generic_type.identifier.value ~= "..." then
+				if generic_type.identifier and not generic_type.identifier:ValueEquals("...") then
 					self:MapTypeToNode(
 						self:GetFirstValue(
-							self:CreateLocalValue(generic_type.identifier.value, self:AnalyzeExpression(generic_type)) or
+							self:CreateLocalValue(generic_type.identifier:GetValueString(), self:AnalyzeExpression(generic_type)) or
 								Nil()
 						),
 						generic_type
 					)
 				elseif generic_type.type_expression then
-					self:MapTypeToNode(self:CreateLocalValue(generic_type.value.value, Any(), i), generic_type)
+					self:MapTypeToNode(self:CreateLocalValue(generic_type.value:GetValueString(), Any(), i), generic_type)
 				end
 			end
 		end
@@ -105,13 +105,13 @@ local function analyze_arguments(self, node)
 				if node.self_call then i = i + 1 end
 			end
 
-			if key.identifier and key.identifier.value ~= "..." then
+			if key.identifier and not key.identifier:ValueEquals("...") then
 				args[i] = self:GetFirstValue(self:AnalyzeExpression(key))
-				self:MapTypeToNode(self:CreateLocalValue(key.identifier.value, args[i]), key)
+				self:MapTypeToNode(self:CreateLocalValue(key.identifier:GetValueString(), args[i]), key)
 			elseif key.Type == "expression_vararg" then
 				args[i] = self:AnalyzeExpression(key)
 			elseif key.type_expression then
-				self:MapTypeToNode(self:CreateLocalValue(key.value.value, Any(), i), key)
+				self:MapTypeToNode(self:CreateLocalValue(key.value:GetValueString(), Any(), i), key)
 				args[i] = self:AnalyzeExpression(key.type_expression)
 			elseif key.Type == "expression_value" then
 				if node.Type == "expression_function_signature" then

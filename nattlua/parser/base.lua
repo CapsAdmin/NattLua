@@ -280,7 +280,7 @@ end
 
 	function META:IsTokenValue(str--[[#: string]])
 		if self.tokens[self.TokenPosition] then
-			return self.tokens[self.TokenPosition].value == str
+			return self.tokens[self.TokenPosition]:ValueEquals(str)
 		end
 
 		return false
@@ -298,7 +298,7 @@ end
 		if false--[[# as true]] then return false--[[# as boolean]] end
 
 		if self.tokens[self.TokenPosition + offset] then
-			return self.tokens[self.TokenPosition + offset].value == str
+			return self.tokens[self.TokenPosition + offset]:ValueEquals(str)
 		end
 
 		return false
@@ -361,7 +361,13 @@ end
 					kind
 				)
 			else
-				self:Error("expected $1 $2: got $3 while parsing $4", start, stop, what, str, tk[what], kind)
+				local val
+				if what == "value" then
+					val = tk:GetValueString()
+				else
+					val = tk.type
+				end
+				self:Error("expected $1 $2: got $3 while parsing $4", start, stop, what, str, val, kind)
 			end
 		end
 
@@ -386,7 +392,7 @@ end
 			end
 
 			local tk = self:ParseToken()--[[# as Token]]
-			tk.value = new_str
+			tk:ReplaceValue(new_str)
 			return tk
 		end
 
@@ -420,7 +426,7 @@ end
 			return
 		end
 
-		if not values[tk.value] then
+		if not values[tk:GetValueString()] then
 			local array = {}
 
 			for k in pairs(values) do
@@ -442,7 +448,7 @@ end
 
 			if not tk then break end
 
-			if stop_token and stop_token[tk.value] then break end
+			if stop_token and stop_token[tk:GetValueString()] then break end
 
 			local node = (self--[[# as any]]):ParseStatement()
 

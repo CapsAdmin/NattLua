@@ -249,7 +249,7 @@ function META:AnalyzeRoot(ast, vars, typs, process_type, mode)
 		end
 
 		if not ident and real_node.tokens["potential_identifier"] then
-			ident = real_node.tokens["potential_identifier"].value
+			ident = real_node.tokens["potential_identifier"]:GetValueString()
 		end
 
 		if ident == "TYPEOF_CDECL" then self.super_hack = true -- TODO

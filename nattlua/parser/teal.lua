@@ -211,7 +211,7 @@ return function(META)
 
 			found.left = left_node
 
-			if left_node.value and left_node.value.value == ":" then
+			if left_node.value and left_node.value:ValueEquals(":") then
 				found.parser_call = true
 			end
 
@@ -237,7 +237,7 @@ return function(META)
 				first.Type == "expression_value" and
 				(
 					first.value.type == "letter" or
-					first.value.value == "..."
+					first.value:ValueEquals("...")
 				)
 			then
 				first.standalone_letter = node
@@ -346,7 +346,7 @@ return function(META)
 			func.statements = {}
 		end
 
-		local name = func and "__env" or assignment.left[1].value.value
+		local name = func and "__env" or assignment.left[1].value:GetValueString()
 		assignment.left[1].value = self:NewToken("letter", name)
 		local tbl = self:StartNode("expression_type_table")
 		tbl.tokens["{"] = self:NewToken("symbol", "{")

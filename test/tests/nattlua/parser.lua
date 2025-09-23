@@ -161,7 +161,7 @@ test("operator precedence", function()
 			node.Type == "expression_prefix_operator" or
 			node.Type == "expression_postfix_operator"
 		then
-			table.insert(tbl, node.value.value)
+			table.insert(tbl, node.value:GetValueString())
 			table.insert(tbl, "(")
 			expand(node.right or node.left, tbl)
 			table.insert(tbl, ")")
@@ -171,7 +171,7 @@ test("operator precedence", function()
 		elseif node.Type ~= "expression_binary_operator" then
 			table.insert(tbl, node:Render())
 		else
-			table.insert(tbl, node.value.value)
+			table.insert(tbl, node.value:GetValueString())
 		end
 
 		if node.left then
@@ -288,7 +288,7 @@ test("parser errors", function()
 			{"a = 'aaaa", "expected single quote.-reached end of file"},
 			{"a = 'aaaa \ndawd=1", "expected single quote"},
 			{"foo = !", "expected beginning of expression.-end_of_file"},
-			{"foo = then", "expected beginning of expression.-got.-then"},
+			{"foo = then", "expected beginning of expression.-got.-letter"},
 			{"--[[aaaa", "expected multiline comment.-reached end of code"},
 			{"--[[aaaa\na=1", "expected multiline comment.-reached end of code"},
 			{"::1::", "expected.-letter.-got.-number"},
@@ -313,7 +313,7 @@ parse[[
         
         local function test()
             £ assert(parser:GetParentNodeOffset(1).Type == "statement_local_function")
-			£ parser.config.on_parsed_node = function(_, node) if node.Type == "expression_value" and node.value.value == "1337" then parser.value = node end end
+			£ parser.config.on_parsed_node = function(_, node) if node.Type == "expression_value" and node.value:ValueEquals("1337") then parser.value = node end end
             local x = 1337
 			£ parser.config.on_parsed_node = nil
             £ assert(parser.value.Type == "expression_value")

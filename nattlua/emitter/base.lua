@@ -115,9 +115,9 @@ return function()
 			then
 				self.tracking_indents = self.tracking_indents or {}
 
-				if type(self.config.extra_indent[token.value]) == "table" then
+				if type(self.config.extra_indent[token:GetValueString()]) == "table" then
 					self:Indent()
-					local info = self.config.extra_indent[token.value]
+					local info = self.config.extra_indent[token:GetValueString()]
 
 					if type(info.to) == "table" then
 						for to in pairs(info.to) do
@@ -128,11 +128,11 @@ return function()
 						self.tracking_indents[info.to] = self.tracking_indents[info.to] or {}
 						table.insert(self.tracking_indents[info.to], {info = info, level = self.level})
 					end
-				elseif self.tracking_indents[token.value] then
-					for _, info in ipairs(assert(self.tracking_indents[token.value])) do
+				elseif self.tracking_indents[token:GetValueString()] then
+					for _, info in ipairs(assert(self.tracking_indents[token:GetValueString()])) do
 						if info.level == self.level or info.level == self.pre_toggle_level then
 							self:Outdent()
-							local info = self.tracking_indents[token.value]
+							local info = self.tracking_indents[token:GetValueString()]
 
 							for key, val in pairs(self.tracking_indents) do
 								if info == val.info then self.tracking_indents[key] = nil end
@@ -156,14 +156,14 @@ return function()
 					end
 				end
 
-				if self.config.extra_indent[token.value] == "toggle" then
+				if self.config.extra_indent[token:GetValueString()] == "toggle" then
 					self.toggled_indents = self.toggled_indents or {}
 
-					if not self.toggled_indents[token.value] then
-						self.toggled_indents[token.value] = true
+					if not self.toggled_indents[token:GetValueString()] then
+						self.toggled_indents[token:GetValueString()] = true
 						self.pre_toggle_level = self.level
 						self:Indent()
-					elseif self.toggled_indents[token.value] then
+					elseif self.toggled_indents[token:GetValueString()] then
 						if self.out[self.last_indent_index] then
 							self.out[self.last_indent_index] = self.out[self.last_indent_index]:sub(2)
 						end
@@ -186,7 +186,7 @@ return function()
 									for i = start, 1, -1 do
 										local wtoken = token.whitespace[i]
 
-										if wtoken.value:find("\n") then
+										if wtoken:GetValueString():find("\n") then
 											found_newline = true
 
 											break
@@ -228,14 +228,14 @@ return function()
 
 			if translate then
 				if type(translate) == "table" then
-					self:Emit(translate[token.value] or token.value)
+					self:Emit(translate[token:GetValueString()] or token:GetValueString())
 				elseif type(translate) == "function" then
-					self:Emit(translate(token.value))
+					self:Emit(translate(token:GetValueString()))
 				elseif translate ~= "" then
 					self:Emit(translate)
 				end
 			else
-				self:Emit(token.value)
+				self:Emit(token:GetValueString())
 			end
 
 			if
@@ -500,17 +500,17 @@ return function()
 
 		function META:EmitStringToken(token--[[#: Token]])
 			if self.config.string_quote then
-				local current = token.value:sub(1, 1)
+				local current = token:GetValueString():sub(1, 1)
 				local target = self.config.string_quote
 
 				if current == "\"" or current == "'" then
-					local contents = escape_string(token.value:sub(2, -2), target)
+					local contents = escape_string(token:GetValueString():sub(2, -2), target)
 					self:EmitToken(token, target .. contents .. target)
 					return
 				end
 			end
 
-			local needs_space = token.value:sub(1, 1) == "[" and self:GetPrevChar() == B("[")
+			local needs_space = token:GetValueString():sub(1, 1) == "[" and self:GetPrevChar() == B("[")
 
 			if needs_space then self:Whitespace(" ") end
 
@@ -710,7 +710,7 @@ return function()
 		local multiline_string = false
 
 		if #node.expressions == 1 and node.expressions[1].Type == "expression_value" then
-			multiline_string = node.expressions[1].value.value:sub(1, 1) == "["
+			multiline_string = node.expressions[1].value:GetValueString():sub(1, 1) == "["
 		end
 
 		-- this will not work for calls with functions that contain statements
@@ -1059,7 +1059,7 @@ return function()
 
 			self:EmitToken(
 				node.value,
-				not self.config.skip_translation and translate_prefix[node.value.value] or nil
+				not self.config.skip_translation and translate_prefix[node.value:GetValueString()] or nil
 			)
 			self:OptionalWhitespace()
 			self:EmitExpression(node.right)
@@ -1086,13 +1086,13 @@ return function()
 
 			if func_chunks then self:Emit(func_chunks[2]) end
 
-			if node.value.value == "." or node.value.value == ":" then
+			if node.value:ValueEquals(".") or node.value:ValueEquals(":") then
 				self:EmitToken(node.value)
 			else
-				local special_break = node.value.value == "and" or
-					node.value.value == "or" or
-					node.value.value == "||" or
-					node.value.value == "&&"
+				local special_break = node.value:ValueEquals("and") or
+					node.value:ValueEquals("or") or
+					node.value:ValueEquals("||") or
+					node.value:ValueEquals("&&")
 
 				if special_break and self:IsLineBreaking() then
 					if
@@ -1114,7 +1114,7 @@ return function()
 
 				self:EmitToken(
 					node.value,
-					not self.config.skip_translation and translate_binary[node.value.value] or nil
+					not self.config.skip_translation and translate_binary[node.value:GetValueString()] or nil
 				)
 
 				if special_break and self:IsLineBreaking() then
@@ -1630,7 +1630,7 @@ return function()
 		function META:EmitTypeBinaryOperator(node--[[#: Node]])
 			if node.left then self:EmitTypeExpression(node.left) end
 
-			if node.value.value == "." or node.value.value == ":" then
+			if node.value:ValueEquals(".") or node.value:ValueEquals(":") then
 				self:EmitToken(node.value)
 			else
 				self:Whitespace(" ")
@@ -1919,7 +1919,7 @@ return function()
 
 		function META:Emit_ENVFromAssignment(node--[[#: Node]])
 			for i, v in ipairs(node.left) do
-				if v.Type == "expression_value" and v.value.value == "_ENV" then
+				if v.Type == "expression_value" and v.value:ValueEquals("_ENV") then
 					if node.right[i] then
 						local key = node.left[i]
 						local val = node.right[i]
@@ -1936,7 +1936,7 @@ return function()
 				self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")
 			end
 
-			if node.left.value.value ~= "loadfile" or not node.path then
+			if not node.left.value:ValueEquals("loadfile") or not node.path then
 				if node.tokens["call("] then
 					self:EmitToken(node.tokens["call("])
 				elseif self.config.force_parenthesis then

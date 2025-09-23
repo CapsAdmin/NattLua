@@ -28,7 +28,7 @@ local function metatable_function(analyzer, meta_method, obj, node)
 end
 
 local function Prefix(analyzer, node, r)
-	local op = node.value.value
+	local op = node.value:GetValueString()
 
 	if r.Type == "tuple" then r = r:GetWithNumber(1) or Nil() end
 
@@ -104,7 +104,7 @@ end
 return {
 	Prefix = function(analyzer, node)
 		if analyzer:IsTypesystem() then
-			if node.value.value == "typeof" then
+			if node.value:ValueEquals("typeof") then
 				analyzer:PushAnalyzerEnvironment("runtime")
 				analyzer:PushNilAccessAllowed()
 				local obj = analyzer:AnalyzeExpression(node.right)
@@ -119,13 +119,13 @@ return {
 			end
 		end
 
-		if node.value.value == "not" then analyzer:PushInvertedExpressionContext() end
+		if node.value:ValueEquals("not") then analyzer:PushInvertedExpressionContext() end
 
 		local r = analyzer:Assert(analyzer:AnalyzeExpression(node.right))
 
-		if node.value.value == "not" then analyzer:PopInvertedExpressionContext() end
+		if node.value:ValueEquals("not") then analyzer:PopInvertedExpressionContext() end
 
-		if node.value.value == "ref" then
+		if node.value:ValueEquals("ref") then
 			r:SetReferenceType(true)
 			return r
 		end

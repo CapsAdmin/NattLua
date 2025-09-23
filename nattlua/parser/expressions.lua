@@ -49,12 +49,12 @@ return function(META)
 
 	function META:IsCallExpression(offset--[[#: number]])
 		local tk = self:GetTokenOffset(offset)
-		return tk.value == "(" or
-			tk.value == "<|" or
-			tk.value == "{" or
+		return tk:ValueEquals("(") or
+			tk:ValueEquals("<|") or
+			tk:ValueEquals("{") or
 			tk.type == "string" or
 			(
-				tk.value == "!" and
+				tk:ValueEquals("!") and
 				self:IsTokenValueOffset("(", offset + 1)
 			)
 	end
@@ -117,13 +117,13 @@ return function(META)
 			node.value = self:ParseToken()
 			node.tokens[1] = node.value
 
-			if node.value.value == "expand" then
+			if node.value:ValueEquals("expand") then
 				self:PushParserEnvironment("runtime")
 			end
 
 			node.right = self:ParseRuntimeExpression(math_huge)
 
-			if node.value.value == "expand" then self:PopParserEnvironment() end
+			if node.value:ValueEquals("expand") then self:PopParserEnvironment() end
 
 			node = self:EndNode(node)
 			return node
@@ -270,7 +270,7 @@ return function(META)
 							nil,
 							nil,
 							{",", ";", "}"},
-							(self:GetToken() and self:GetToken().value) or "no token"
+							(self:GetToken() and self:GetToken():GetValueString()) or "no token"
 						)
 						tree.tokens["separators"][i] = self:NewToken(",")
 					else
@@ -346,11 +346,14 @@ return function(META)
 			end
 
 			if primary_node.Type == "expression_value" then
-				local name = primary_node.value.value
-
-				if name == "import" then
-					self:HandleImportExpression(node, name, node.expressions[1].value:GetStringValue(), start)
-				elseif name == "import_data" then
+				if primary_node.value:ValueEquals("import") then
+					self:HandleImportExpression(
+						node,
+						primary_node.value,
+						node.expressions[1].value:GetStringValue(),
+						start
+					)
+				elseif primary_node.value:ValueEquals("import_data") then
 					self:HandleImportDataExpression(node, node.expressions[1].value:GetStringValue(), start)
 				end
 			end
@@ -385,7 +388,10 @@ return function(META)
 
 				if not found then break end
 
-				if left_node.Type == "expression_binary_operator" and left_node.value.value == ":" then
+				if
+					left_node.Type == "expression_binary_operator" and
+					left_node.value:ValueEquals(":")
+				then
 					found.parser_call = true
 				end
 
@@ -426,7 +432,7 @@ return function(META)
 					first.Type == "expression_value" and
 					(
 						first.value.type == "letter" or
-						first.value.value == "..."
+						first.value:ValueEquals("...")
 					)
 				then
 					first.standalone_letter = node
@@ -465,16 +471,16 @@ return function(META)
 			return not (
 				not token or
 				token.type == "end_of_file" or
-				token.value == "}" or
-				token.value == "," or
-				token.value == "]" or
+				token:ValueEquals("}") or
+				token:ValueEquals(",") or
+				token:ValueEquals("]") or
 				(
 					typesystem_syntax:IsKeyword(token) and
 					not typesystem_syntax:IsPrefixOperator(token)
 					and
 					not typesystem_syntax:IsValue(token)
 					and
-					token.value ~= "function"
+					not token:ValueEquals("function")
 				)
 			)
 		end
@@ -482,12 +488,7 @@ return function(META)
 		function META:ExpectTypeExpression(priority--[[#: number]])
 			if not self:IsTypeExpression() then
 				local token = self:GetToken()
-				self:Error(
-					"expected beginning of expression, got $1",
-					nil,
-					nil,
-					token and token.value ~= "" and token.value or token.type
-				)
+				self:Error("expected beginning of expression, got $1", nil, nil, token.type)
 				return self:ErrorExpression()
 			end
 
@@ -495,12 +496,7 @@ return function(META)
 
 			if not exp then
 				local token = self:GetToken()
-				self:Error(
-					"faiiled to parse type expression, got $1",
-					nil,
-					nil,
-					token and token.value ~= "" and token.value or token.type
-				)
+				self:Error("faiiled to parse type expression, got $1", nil, nil, token.type)
 				return self:ErrorExpression()
 			end
 
@@ -648,7 +644,7 @@ return function(META)
 							nil,
 							nil,
 							{",", ";", "}"},
-							(self:GetToken() and self:GetToken().value) or "no token"
+							self:GetToken():GetValueString()
 						)
 						tree.tokens["separators"][i] = self:NewToken(",")
 					else
@@ -720,7 +716,7 @@ return function(META)
 					-- hack for sizeof as it expects a c declaration expression in the C declaration parser
 					self.FFI_DECLARATION_PARSER and
 					primary_node.Type == "expression_value" and
-					primary_node.value.value == "sizeof"
+					primary_node.value:ValueEquals("sizeof")
 				then
 					node.expressions = self:ParseMultipleValues(self.ParseCDeclaration, 0)
 				else
@@ -733,11 +729,11 @@ return function(META)
 			if
 				primary_node.Type == "expression_value" and
 				(
-					primary_node.value.value == "import" or
-					primary_node.value.value == "dofile" or
-					primary_node.value.value == "loadfile" or
-					primary_node.value.value == "require" or
-					primary_node.value.value == "import_data"
+					primary_node.value:ValueEquals("import") or
+					primary_node.value:ValueEquals("dofile") or
+					primary_node.value:ValueEquals("loadfile") or
+					primary_node.value:ValueEquals("require") or
+					primary_node.value:ValueEquals("import_data")
 				)
 				and
 				node.expressions[1] and
@@ -747,10 +743,10 @@ return function(META)
 				local data = node.expressions[1].value:GetStringValue()
 
 				if data then
-					if primary_node.value.value == "import_data" then
+					if primary_node.value:ValueEquals("import_data") then
 						self:HandleImportDataExpression(node, data, start)
 					else
-						self:HandleImportExpression(node, primary_node.value.value, data, start)
+						self:HandleImportExpression(node, primary_node.value, data, start)
 					end
 				end
 			end
@@ -801,7 +797,7 @@ return function(META)
 
 				if not found then break end
 
-				if left_node.Type == "expression_value" and left_node.value.value == ":" then
+				if left_node.Type == "expression_value" and left_node.value:ValueEquals(":") then
 					found.parser_call = true
 				end
 
@@ -840,7 +836,7 @@ return function(META)
 			return self:ParseValueExpressionToken()
 		end
 
-		function META:HandleImportExpression(node--[[#: Node]], name--[[#: string]], str--[[#: string]], start--[[#: number]])
+		function META:HandleImportExpression(node--[[#: Node]], tkname--[[#: Token]], str--[[#: string]], start--[[#: number]])
 			if self.config.skip_import then return end
 
 			if self.dont_hoist_next_import then
@@ -850,7 +846,7 @@ return function(META)
 
 			local path
 
-			if name == "require" then path = path_util.ResolveRequire(str) end
+			if tkname:ValueEquals("require") then path = path_util.ResolveRequire(str) end
 
 			path = path_util.Resolve(
 				path or str,
@@ -859,14 +855,16 @@ return function(META)
 				self.config.file_path
 			)
 
-			if name == "require" then if not path_util.Exists(path) then return end end
+			if tkname:ValueEquals("require") then
+				if not path_util.Exists(path) then return end
+			end
 
 			if not path then return end
 
 			local dont_hoist_import = _G.dont_hoist_import and _G.dont_hoist_import > 0
 			node.import_expression = true
 			node.path = path
-			local key = name == "require" and str or path
+			local key = tkname:ValueEquals("require") and str or path
 			local root_node = self.config.root_statement_override_data or
 				self.config.root_statement_override or
 				self.RootStatement
@@ -911,7 +909,7 @@ return function(META)
 				return
 			end
 
-			if name == "require" and not self.config.inline_require then
+			if tkname:ValueEquals("require") and not self.config.inline_require then
 				root_node.imports = root_node.imports or {}
 				table_insert(root_node.imports, node)
 				return
@@ -1014,11 +1012,13 @@ return function(META)
 			if not node or node.idiv_resolved then return end
 
 			for i, token in ipairs(node.whitespace) do
-				if token.value:find("\n", nil, true) then break end
+				local str = token:GetValueString()
 
-				if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
+				if str:find("\n", nil, true) then break end
+
+				if token.type == "line_comment" and str:sub(1, 2) == "//" then
 					table_remove(node.whitespace, i)
-					local tokens = self:LexString("/idiv" .. token.value:sub(2))
+					local tokens = self:LexString("/idiv" .. str:sub(2))
 
 					for _, token in ipairs(tokens) do
 						self:check_integer_division_operator(token)
@@ -1054,7 +1054,7 @@ return function(META)
 					first.Type == "expression_value" and
 					(
 						first.value.type == "letter" or
-						first.value.value == "..."
+						first.value:ValueEquals("...")
 					)
 				then
 					first.standalone_letter = node
@@ -1093,7 +1093,7 @@ return function(META)
 						"expected right side to be an expression, got $1",
 						nil,
 						nil,
-						token and token.value ~= "" and token.value or token.type
+						token.type
 					)
 					return self:ErrorExpression()
 				end
@@ -1108,12 +1108,7 @@ return function(META)
 			local token = self:GetToken()
 
 			if not runtime_syntax:IsRuntimeExpression(token) then
-				self:Error(
-					"expected beginning of expression, got $1",
-					nil,
-					nil,
-					token and token.value ~= "" and token.value or token.type
-				)
+				self:Error("expected beginning of expression, got $1", nil, nil, token.type)
 				return self:ErrorExpression()
 			end
 

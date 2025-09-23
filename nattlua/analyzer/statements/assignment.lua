@@ -43,7 +43,7 @@ return {
 		for left_pos, exp_key in ipairs(statement.left) do
 			if exp_key.Type == "expression_value" then
 				-- local foo, bar = *
-				left[left_pos] = ConstString(exp_key.value.value)
+				left[left_pos] = ConstString(exp_key.value:GetValueString())
 			elseif exp_key.Type == "expression_postfix_expression_index" then
 				-- foo[bar] = *
 				left[left_pos] = self:AnalyzeExpression(exp_key.expression)
@@ -130,7 +130,7 @@ return {
 			-- c should be nil
 			local last = statement.right[#statement.right]
 
-			if last.Type == "expression_value" and last.value.value ~= "..." then
+			if last.Type == "expression_value" and not last.value:ValueEquals("...") then
 				for _ = 1, #right - #statement.right do
 					table.remove(right, #right)
 				end
@@ -207,11 +207,11 @@ return {
 				local immutable = false
 
 				if exp_key.attribute then
-					if exp_key.attribute.value == "const" then immutable = true end
+					if exp_key.attribute:ValueEquals("const") then immutable = true end
 				end
 
 				-- local assignment: local a = 1
-				self:MapTypeToNode(self:CreateLocalValue(exp_key.value.value, val, immutable), exp_key)
+				self:MapTypeToNode(self:CreateLocalValue(exp_key.value:GetValueString(), val, immutable), exp_key)
 			elseif statement.Type == "statement_assignment" then
 				local key = left[left_pos]
 

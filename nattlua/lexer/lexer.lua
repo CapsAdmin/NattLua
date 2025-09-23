@@ -161,7 +161,7 @@ do
 			whitespace[whitespace_i] = token
 			whitespace_i = whitespace_i + 1
 
-			if token.type == "line_comment" and token.value:sub(1, 2) == "//" then
+			if token.type == "line_comment" and token:GetValueString():sub(1, 2) == "//" then
 				potential_idiv = true
 			end
 		end

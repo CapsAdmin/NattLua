@@ -154,7 +154,7 @@ return function(META)
 					node.expression.force_upvalue = force_upvalue
 				end
 
-				if node.expression.value.value == ":" then node.self_call = true end
+				if node.expression.value:ValueEquals(":") then node.self_call = true end
 			end
 
 			self:ParseAnalyzerFunctionBody(node, true)
@@ -305,7 +305,7 @@ return function(META)
 			if not token then return false end -- TODO: what happens here? :End is never called
 			node.tokens["if/else/elseif"][i] = token
 
-			if token.value ~= "else" then
+			if not token:ValueEquals("else") then
 				node.expressions[i] = self:ExpectRuntimeExpression(0)
 				node.tokens["then"][i] = self:ExpectTokenValue("then")
 			end
@@ -531,12 +531,12 @@ return function(META)
 		if self:IsTokenType("analyzer_debug_code") then
 			local node = self:StartNode("statement_analyzer_debug_code")
 			node.lua_code = self:ParseValueExpressionType("analyzer_debug_code")
-			node.compiled_function = self:CompileLuaAnalyzerDebugCode(node.lua_code.value.value:sub(3), node)
+			node.compiled_function = self:CompileLuaAnalyzerDebugCode(node.lua_code.value:GetValueString():sub(3), node)
 			node = self:EndNode(node)
 			return node
 		elseif self:IsTokenType("parser_debug_code") then
 			local token = self:ExpectTokenType("parser_debug_code")
-			assert(loadstring("local parser = ...;" .. token.value:sub(3)))(self)
+			assert(loadstring("local parser = ...;" .. token:GetValueString():sub(3)))(self)
 			local node = self:StartNode("statement_parser_debug_code")
 			local code = self:StartNode("expression_value")
 			code.value = token
@@ -668,11 +668,10 @@ return function(META)
 		end
 
 		self:Error(
-			"expected assignment or call expression got $1 ($2)",
+			"expected assignment or call expression got $1",
 			start,
 			self:GetToken(),
-			self:GetToken().type,
-			self:GetToken().value
+			self:GetToken().type
 		)
 
 		if left and left[1] and left[1].Type ~= "expression_postfix_call" then

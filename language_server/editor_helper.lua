@@ -23,7 +23,8 @@ local fs = require("nattlua.other.fs")
 local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
 local runtime_env, typesystem_env = BuildBaseEnvironment()
 local path_util = require("nattlua.other.path")
-local META = class.CreateTemplate("token")
+local Token = require("nattlua.lexer.token")
+local META = class.CreateTemplate("editor_helper")
 META:GetSet("WorkingDirectory", "./")
 
 function META:SetWorkingDirectory(dir)
@@ -556,13 +557,13 @@ function META:GetRenameInstructions(path, line, character, newName)
 		local u = v:FindUpvalue()
 
 		if u == upvalue and v.type == "letter" then
-			if v.value == token.value then
+			if v:GetValueString() == token:GetValueString() then
 				table.insert(
 					edits,
 					{
 						start = v.start,
 						stop = v.stop,
-						from = v.value,
+						from = v:GetValueString(),
 						to = newName,
 					}
 				)
@@ -1230,7 +1231,7 @@ do
 				end
 			end
 
-			local lines = stringx.split(token.value, "\n")
+			local lines = stringx.split(token:GetValueString(), "\n")
 			local line_start = pos_data.line_start - 1
 			local line_stop = pos_data.line_stop - 1
 			local char_start = pos_data.character_start - 1
@@ -1293,22 +1294,22 @@ do
 				token.type == "string" and
 				(
 					(
-						data.tokens[i - 1].value == "loadstring" or
-						data.tokens[i - 2].value == "loadstring"
+						data.tokens[i - 1]:ValueEquals("loadstring") or
+						data.tokens[i - 2]:ValueEquals("loadstring")
 					)
 					or
 					(
-						data.tokens[i - 1].value == "cdef" or
-						data.tokens[i - 2].value == "cdef"
+						data.tokens[i - 1]:ValueEquals("cdef") or
+						data.tokens[i - 2]:ValueEquals("cdef")
 					)
 					or
 					types[1] and
 					types[1].Type == "string" and
 					types[1].lua_compiler or
-					is_lua(token.value)
+					is_lua(token:GetValueString())
 				)
 			then
-				local func_kind = data.tokens[i - 1].value or data.tokens[i - 2].value
+				local func_kind = data.tokens[i - 1]:GetValueString() or data.tokens[i - 2]:GetValueString()
 				local str, start = token:DecomposeString()
 				local tokens
 				local offset = token.start + #start - 1
@@ -1318,7 +1319,7 @@ do
 					local new_tokens = {}
 
 					for i, token in ipairs(tokens) do
-						if token.value == "TYPEOF_CDECL" then
+						if token:ValueEquals("TYPEOF_CDECL") then
 							local offset = tokens[i + 2].stop
 
 							for i = i + 3, #tokens - 3 do
@@ -1345,12 +1346,7 @@ do
 
 				if tokens then
 					process_token(
-						{
-							type = "fake",
-							value = start,
-							start = token.start,
-							stop = token.start + #start,
-						}
+						Token.New("fake", start, token.start, token.start + #start)
 					)
 
 					for i, token in ipairs(tokens) do
@@ -1367,12 +1363,7 @@ do
 					end
 
 					process_token(
-						{
-							type = "fake",
-							value = start,
-							start = token.stop,
-							stop = token.stop + #start,
-						}
+						Token.New("fake", start, token.stop, token.stop + #start)
 					)
 				else
 					process_token(token)

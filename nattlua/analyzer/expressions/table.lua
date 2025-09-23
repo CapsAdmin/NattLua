@@ -49,7 +49,7 @@ return {
 
 		for _, node in ipairs(tree.children) do
 			if node.Type == "sub_statement_table_key_value" then
-				local key = ConstString(node.tokens["identifier"].value)
+				local key = ConstString(node.tokens["identifier"]:GetValueString())
 
 				if node.type_expression then
 					self:PushAnalyzerEnvironment("typesystem")
@@ -116,7 +116,7 @@ return {
 					if
 						(
 							node.value_expression.Type ~= "expression_value" or
-							node.value_expression.value.value ~= "..."
+							not node.value_expression.value:ValueEquals("...")
 						)
 						and
 						node.value_expression.Type ~= "expression_postfix_call"

@@ -16,7 +16,7 @@ local function handle_struct(state, node)
 	local struct = {type = map[node.Type]}
 
 	if node.tokens["identifier"] then
-		struct.identifier = node.tokens["identifier"].value
+		struct.identifier = node.tokens["identifier"]:GetValueString()
 	end
 
 	local old = state.cdecl
@@ -27,7 +27,7 @@ local function handle_struct(state, node)
 		for _, field in ipairs(node.fields) do
 			local _, t = walk_cdecl(state, field)
 			t.of.identifier = field.tokens["potential_identifier"] and
-				field.tokens["potential_identifier"].value or
+				field.tokens["potential_identifier"]:GetValueString() or
 				nil
 			table.insert(struct.fields, t.of)
 		end
@@ -41,12 +41,12 @@ local function handle_enum(state, node)
 	local struct = {
 		type = "enum",
 		fields = {},
-		identifier = node.tokens["identifier"] and node.tokens["identifier"].value,
+		identifier = node.tokens["identifier"] and node.tokens["identifier"]:GetValueString(),
 	}
 
 	if node.fields then
 		for _, field in ipairs(node.fields) do
-			table.insert(struct.fields, {type = "enum_field", identifier = field.tokens["identifier"].value})
+			table.insert(struct.fields, {type = "enum_field", identifier = field.tokens["identifier"]:GetValueString()})
 		end
 	end
 
@@ -63,6 +63,8 @@ local function handle_modifiers(state, node)
 			table.insert(modifiers, handle_enum(state, v))
 		elseif v.Type == "expression_dollar_sign" then
 			table.insert(modifiers, "$")
+		elseif v.is_token then
+			table.insert(modifiers, v:GetValueString())
 		else
 			table.insert(modifiers, v.value)
 		end
@@ -113,7 +115,11 @@ local function handle_pointers(state, node)
 		for i = #v, 1, -1 do
 			local v = v[i]
 
-			if v.value ~= "*" then table.insert(modifiers, v.value) end
+			if v.is_token then
+				if not v:ValueEquals("*") then table.insert(modifiers, v:GetValueString()) end
+			else
+				table.insert(modifiers, v.value)
+			end
 		end
 
 		state.cdecl.of = {

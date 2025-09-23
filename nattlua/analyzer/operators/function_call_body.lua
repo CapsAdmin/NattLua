@@ -101,7 +101,7 @@ return function(self, obj, input)
 						call_expression.expressions_typesystem[i] or
 						identifier
 					local T = self:AnalyzeExpression(generic_type)
-					self:CreateLocalValue(identifier.value.value, T)
+					self:CreateLocalValue(identifier.value:GetValueString(), T)
 				end
 			else
 				-- without generics we just check the input against the input signature
@@ -137,7 +137,7 @@ return function(self, obj, input)
 							0
 						)] or
 						function_node.identifiers[#function_node.identifiers]
-					identifier = node.value.value
+					identifier = node.value:GetValueString()
 					type_expression = node.type_expression
 				end
 
@@ -375,7 +375,7 @@ return function(self, obj, input)
 
 				if generic_expression then
 					local T = self:AnalyzeExpression(generic_expression)
-					self:CreateLocalValue(identifier.value.value, T)
+					self:CreateLocalValue(identifier.value:GetValueString(), T)
 				end
 			end
 		end
@@ -384,12 +384,12 @@ return function(self, obj, input)
 		for i, identifier in ipairs(function_node.identifiers) do
 			local argi = function_node.self_call and (i + 1) or i
 
-			if identifier.value.value == "..." then
+			if identifier.value:ValueEquals("...") then
 				local val, err = input:Slice(argi)
 
 				if not val then return val, err end
 
-				self:CreateLocalValue(identifier.value.value, val)
+				self:CreateLocalValue(identifier.value:GetValueString(), val)
 			else
 				local val
 
@@ -402,7 +402,7 @@ return function(self, obj, input)
 				end
 
 				-- this will error down the line if something is wrong with the input signature
-				self:CreateLocalValue(identifier.value.value, val)
+				self:CreateLocalValue(identifier.value:GetValueString(), val)
 			end
 		end
 

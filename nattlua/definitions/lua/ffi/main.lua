@@ -110,7 +110,7 @@ local function fixup_tokens(tokens)
 	}
 
 	for _, token in ipairs(tokens) do
-		if keywords[token.value] then token.c_keyword = true end
+		if keywords[token:GetValueString()] then token.c_keyword = true end
 	end
 end
 

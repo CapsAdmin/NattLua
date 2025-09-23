@@ -75,7 +75,7 @@ return {
 					i = LNumber(i)
 				end
 
-				local upvalue = self:CreateLocalValue(statement.identifiers[1].value.value, i)
+				local upvalue = self:CreateLocalValue(statement.identifiers[1].value:GetValueString(), i)
 				upvalue:SetFromForLoop(true)
 				self:AnalyzeStatements(statement.statements)
 
@@ -128,7 +128,7 @@ return {
 			self:PushUncertainLoop(loop_scope)
 			self:PushBreakUncertainty(loop_scope, true)
 			local range = self:Assert(init)
-			self:CreateLocalValue(statement.identifiers[1].value.value, range)
+			self:CreateLocalValue(statement.identifiers[1].value:GetValueString(), range)
 			self:AnalyzeStatements(statement.statements)
 			self:PopBreakUncertainty()
 			self:PopUncertainLoop()

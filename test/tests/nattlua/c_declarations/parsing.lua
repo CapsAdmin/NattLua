@@ -268,10 +268,10 @@ local function test(c_code, error_level)
 				error("unable to find name", error_level)
 			end
 
-			if not node.tokens["potential_identifier"].value:find("NAME") then
+			if not node.tokens["potential_identifier"]:GetValueString():find("NAME") then
 				print_node(node)
 				print(c_code)
-				error("name is not right " .. node.tokens["potential_identifier"].value, error_level)
+				error("name is not right " .. node.tokens["potential_identifier"]:GetValueString(), error_level)
 			end
 		end
 	end
@@ -282,7 +282,7 @@ local function test(c_code, error_level)
 
 			for _, v in pairs(tbl) do
 				if type(v) == "table" then
-					if not v.is_statement and not v.is_expression and v.value then
+					if v.is_token then
 						out[v] = v
 					else
 						if not done[v] then

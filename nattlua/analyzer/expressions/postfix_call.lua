@@ -92,10 +92,10 @@ return {
 	AnalyzePostfixCall = function(self, node)
 		if
 			node.import_expression and
-			node.left.value.value ~= "dofile" and
-			node.left.value.value ~= "loadfile"
+			not node.left.value:ValueEquals("dofile") and
+			not node.left.value:ValueEquals("loadfile")
 		then
-			return AnalyzeImport(self, node, node.left.value.value == "require" and node.path)
+			return AnalyzeImport(self, node, node.left.value:ValueEquals("require") and node.path)
 		end
 
 		self:PushAnalyzerEnvironment(node.type_call and "typesystem" or "runtime")
@@ -105,7 +105,7 @@ return {
 		if
 			self.self_arg_stack and
 			node.left.Type == "expression_binary_operator" and
-			node.left.value.value == ":"
+			node.left.value:ValueEquals(":")
 		then
 			self_arg = table.remove(self.self_arg_stack)
 

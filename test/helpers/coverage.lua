@@ -54,7 +54,7 @@ function coverage.Preprocess(code, key)
 	end
 
 	local function inject_token(token)
-		token.value = " " .. FUNC_NAME .. "(" .. token.start .. "," .. token.stop .. ",x) " .. token.value
+		token:ReplaceValue(" " .. FUNC_NAME .. "(" .. token.start .. "," .. token.stop .. ",x) " .. token:GetValueString())
 	end
 
 	local compiler = nl.Compiler(
@@ -86,15 +86,15 @@ function coverage.Preprocess(code, key)
 							or
 							(
 								node.Type == "expression_binary_operator" and
-								node.value.value == ":"
+								node.value:ValueEquals(":")
 							)
 							or
 							(
 								node.parent and
 								node.parent.Type == "expression_binary_operator" and
 								(
-									node.parent.value.value == "." or
-									node.parent.value.value == ":"
+									node.parent.value:ValueEquals(".") or
+									node.parent.value:ValueEquals(":")
 								)
 							)
 						then

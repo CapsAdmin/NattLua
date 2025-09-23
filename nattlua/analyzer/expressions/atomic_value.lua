@@ -15,9 +15,9 @@ local math_abs = math.abs
 local math_huge = math.huge
 local error_messages = require("nattlua.error_messages")
 
-local function lookup_value(self, ident)
+local function lookup_value(self, tk)
 	local errors = {}
-	local key = ConstString(ident)
+	local key = ConstString(tk:GetValueString())
 	local obj, err = self:GetLocalOrGlobalValue(key)
 
 	if self:IsTypesystem() then
@@ -64,79 +64,79 @@ local function lookup_value(self, ident)
 	return obj
 end
 
-local function is_primitive(val)
-	return val == "string" or
-		val == "number" or
-		val == "boolean" or
-		val == "true" or
-		val == "false" or
-		val == "nil"
+local function is_primitive(tk)
+	return tk:ValueEquals("string") or
+		tk:ValueEquals("number") or
+		tk:ValueEquals("boolean") or
+		tk:ValueEquals("true") or
+		tk:ValueEquals("false") or
+		tk:ValueEquals("nil")
 end
 
 return {
 	LookupValue = lookup_value,
 	AnalyzeAtomicValue = function(self, node)
-		local value = node.value.value
-		local type = runtime_syntax:GetTokenType(node.value)
+		local tk = node.value
+		local type = runtime_syntax:GetTokenType(tk)
 
 		if type == "keyword" then
-			if value == "nil" then
+			if tk:ValueEquals("nil") then
 				return Nil()
-			elseif value == "true" then
+			elseif tk:ValueEquals("true") then
 				return True()
-			elseif value == "false" then
+			elseif tk:ValueEquals("false") then
 				return False()
 			end
 		elseif node.force_upvalue then
-			return lookup_value(self, node.value.value)
-		elseif value == "..." then
-			return lookup_value(self, node.value.value)
+			return lookup_value(self, tk)
+		elseif tk:ValueEquals("...") then
+			return lookup_value(self, tk)
 		elseif type == "letter" and node.standalone_letter then
 			-- standalone_letter means it's the first part of something, either >true<, >foo<.bar, >foo<()
 			if self:IsTypesystem() then
 				local current_table = self:GetCurrentTypeTable()
 
 				if current_table then
-					if value == "self" then
+					if tk:ValueEquals("self") then
 						return current_table
 					elseif
 						self.left_assigned and
-						self.left_assigned:GetData() == value and
-						not is_primitive(value)
+						tk:ValueEquals(self.left_assigned:GetData()) and
+						not is_primitive(tk)
 					then
 						return current_table
 					end
 				end
 
-				if value == "any" then
+				if tk:ValueEquals("any") then
 					return Any()
-				elseif value == "inf" then
+				elseif tk:ValueEquals("inf") then
 					return LNumber(math_huge)
-				elseif value == "nan" then
+				elseif tk:ValueEquals("nan") then
 					return LNumber(math_abs(0 / 0))
-				elseif value == "string" then
+				elseif tk:ValueEquals("string") then
 					return String()
-				elseif value == "number" then
+				elseif tk:ValueEquals("number") then
 					return Number()
-				elseif value == "boolean" then
+				elseif tk:ValueEquals("boolean") then
 					return Boolean()
 				end
 			end
 
-			return lookup_value(self, node.value.value)
+			return lookup_value(self, tk)
 		elseif type == "number" then
-			local num = LNumberFromString(value)
+			local num = LNumberFromString(tk:GetValueString())
 
 			if not num then
-				self:Error(error_messages.invalid_number(value))
+				self:Error(error_messages.invalid_number(tk:GetValueString()))
 				num = Number()
 			end
 
 			return num
 		elseif type == "string" then
-			return LString(node.value:GetStringValue())
+			return LString(tk:GetStringValue())
 		elseif type == "letter" then
-			return ConstString(value)
+			return ConstString(tk:GetValueString())
 		end
 
 		self:FatalError("unhandled value type " .. type .. " " .. node:Render())

@@ -18,28 +18,28 @@ return {
 
 		if statement.default then
 			if statement.Type == "statement_local_destructure_assignment" then
-				self:MapTypeToNode(self:CreateLocalValue(statement.default.value.value, obj), statement.default)
+				self:MapTypeToNode(self:CreateLocalValue(statement.default.value:GetValueString(), obj), statement.default)
 			elseif statement.Type == "statement_destructure_assignment" then
-				self:SetLocalOrGlobalValue(ConstString(statement.default.value.value), obj)
+				self:SetLocalOrGlobalValue(ConstString(statement.default.value:GetValueString()), obj)
 			end
 		end
 
 		for _, node in ipairs(statement.left) do
-			local obj = node.value and obj:Get(ConstString(node.value.value))
+			local obj = node.value and obj:Get(ConstString(node.value:GetValueString()))
 
 			if not obj then
 				if self:IsRuntime() then
 					obj = Nil()
 				else
-					self:Error(error_messages.destructure_assignment_missing(node.value.value))
+					self:Error(error_messages.destructure_assignment_missing(node.value:GetValueString()))
 				end
 			end
 
 			if obj then
 				if statement.Type == "statement_local_destructure_assignment" then
-					self:MapTypeToNode(self:CreateLocalValue(node.value.value, obj), node.value)
+					self:MapTypeToNode(self:CreateLocalValue(node.value:GetValueString(), obj), node.value)
 				elseif statement.Type == "statement_destructure_assignment" then
-					self:SetLocalOrGlobalValue(ConstString(node.value.value), obj)
+					self:SetLocalOrGlobalValue(ConstString(node.value:GetValueString()), obj)
 				end
 			end
 		end

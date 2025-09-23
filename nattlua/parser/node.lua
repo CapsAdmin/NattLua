@@ -896,8 +896,8 @@ function META:__tostring()
 				str = str .. " @ " .. name .. ":" .. data.line_start
 			end
 		else
-			if self.value and type(self.value.value) == "string" then
-				str = str .. " - " .. formating.QuoteToken(self.value.value)
+			if self.value then
+				str = str .. " - " .. formating.QuoteToken(self.value:GetValueString())
 			end
 		end
 	end

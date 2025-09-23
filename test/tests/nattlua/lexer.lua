@@ -61,7 +61,7 @@ test("comment escape", function()
 	local tokens
 
 	local function check(what)
-		equal(tokens[i].value, what)
+		equal(tokens[i]:GetValueString(), what)
 		i = i + 1
 	end
 
