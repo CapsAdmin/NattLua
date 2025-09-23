@@ -235,7 +235,7 @@ return function(META)
 
 		local node = self:StartNode("statement_do")
 		node.tokens["do"] = self:ExpectTokenValue("do")
-		node.statements = self:ParseStatements({"end"})
+		node.statements = self:ParseStatementsUntilEnd()
 		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
 		node = self:EndNode(node)
 		return node
@@ -250,7 +250,7 @@ return function(META)
 		node.tokens["in"] = self:ExpectTokenValue("in")
 		node.expressions = self:ParseMultipleValues(self.ExpectRuntimeExpression, 0)
 		node.tokens["do"] = self:ExpectTokenValue("do")
-		node.statements = self:ParseStatements({"end"})
+		node.statements = self:ParseStatementsUntilEnd()
 		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
 		node = self:EndNode(node)
 		return node
@@ -279,6 +279,10 @@ return function(META)
 		return node
 	end
 
+	do
+		local function condition(token)
+			return token:ValueEquals("end") or token:ValueEquals("else") or token:ValueEquals("elseif")
+		end
 	function META:ParseIfStatement()
 		if not self:IsTokenValue("if") then return false end
 
@@ -313,11 +317,7 @@ return function(META)
 				node.tokens["then"][i] = self:ExpectTokenValue("then")
 			end
 
-			node.statements[i] = self:ParseStatements({
-				"end",
-				"else",
-				"elseif",
-			})
+			node.statements[i] = self:ParseStatementsUntilCondition(condition)
 
 			if self:IsTokenValue("end") then break end
 
@@ -327,6 +327,7 @@ return function(META)
 		node.tokens["end"] = self:ExpectTokenValue("end")
 		node = self:EndNode(node)
 		return node
+	end
 	end
 
 	function META:ParseLocalAssignmentStatement()
@@ -371,22 +372,28 @@ return function(META)
 		node.tokens["="] = self:ExpectTokenValue("=")
 		node.expressions = self:ParseFixedMultipleValues(3, self.ExpectRuntimeExpression, 0)
 		node.tokens["do"] = self:ExpectTokenValue("do")
-		node.statements = self:ParseStatements({"end"})
+		node.statements = self:ParseStatementsUntilEnd()
 		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
 		node = self:EndNode(node)
 		return node
 	end
 
-	function META:ParseRepeatStatement()
-		if not self:IsTokenValue("repeat") then return false end
+	do
+		local function condition(token)
+			return token:ValueEquals("until")
+		end
 
-		local node = self:StartNode("statement_repeat")
-		node.tokens["repeat"] = self:ExpectTokenValue("repeat")
-		node.statements = self:ParseStatements({"until"})
-		node.tokens["until"] = self:ExpectTokenValue("until")
-		node.expression = self:ExpectRuntimeExpression()
-		node = self:EndNode(node)
-		return node
+		function META:ParseRepeatStatement()
+			if not self:IsTokenValue("repeat") then return false end
+
+			local node = self:StartNode("statement_repeat")
+			node.tokens["repeat"] = self:ExpectTokenValue("repeat")
+			node.statements = self:ParseStatementsUntilCondition(condition)
+			node.tokens["until"] = self:ExpectTokenValue("until")
+			node.expression = self:ExpectRuntimeExpression()
+			node = self:EndNode(node)
+			return node
+		end
 	end
 
 	function META:ParseSemicolonStatement()
@@ -415,7 +422,7 @@ return function(META)
 		node.tokens["while"] = self:ExpectTokenValue("while")
 		node.expression = self:ExpectRuntimeExpression()
 		node.tokens["do"] = self:ExpectTokenValue("do")
-		node.statements = self:ParseStatements({"end"})
+		node.statements = self:ParseStatementsUntilEnd()
 		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
 		node = self:EndNode(node)
 		return node

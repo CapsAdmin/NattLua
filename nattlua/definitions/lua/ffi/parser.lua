@@ -24,7 +24,7 @@ end
 
 function META:ParseRootNode()
 	local node = self:StartNode("statement_root")
-	node.statements = self:ParseStatements()
+	node.statements = self:ParseStatementsUntilCondition()
 	local eof = self:StartNode("statement_end_of_file")
 	eof.tokens["end_of_file"] = self:ExpectTokenType("end_of_file")
 	eof = self:EndNode(eof)

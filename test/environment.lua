@@ -380,6 +380,7 @@ do
 			)
 			io_write(table.concat(details, colors.dim(" +\n")), "\n")
 			io_write(string.format("total: %s", format_time(actual_total)), "\n")
+			io_write(string.format("memory: %s", format_gc(total_gc)), "\n")
 		end
 	end
 end

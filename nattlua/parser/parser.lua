@@ -67,6 +67,14 @@ function META:ParseValueExpressionToken(expect_value--[[#: nil | string]])
 	return node
 end
 
+local function is_end(tk)
+	return tk:ValueEquals("end")
+end
+
+function META:ParseStatementsUntilEnd(out--[[#: List<|any|>]])
+	return self:ParseStatementsUntilCondition(is_end, out)
+end
+
 function META:ParseValueExpressionType(expect_value--[[#: TokenType]])
 	local node = self:StartNode("expression_value")
 	node.value = self:ExpectTokenType(expect_value)
@@ -96,7 +104,7 @@ function META:ParseFunctionBody(
 		self:PopParserEnvironment()
 	end
 
-	node.statements = self:ParseStatements({"end"})
+	node.statements = self:ParseStatementsUntilEnd()
 	node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["function"])
 	return node
 end
@@ -153,7 +161,7 @@ function META:ParseTypeFunctionBody(
 	end
 
 	local start = self:GetToken()
-	node.statements = self:ParseStatements({"end"})
+	node.statements = self:ParseStatementsUntilEnd()
 	node.tokens["end"] = self:ExpectTokenValue("end", start, start)
 	self:PopParserEnvironment()
 	return node
@@ -210,13 +218,13 @@ function META:ParseAnalyzerFunctionBody(
 		self:PopParserEnvironment()
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
-		node.statements = self:ParseStatements({"end"})
+		node.statements = self:ParseStatementsUntilEnd()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectTokenValue("end", start, start)
 	elseif not self:IsTokenValue(",") then
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
-		node.statements = self:ParseStatements({"end"})
+		node.statements = self:ParseStatementsUntilEnd()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectTokenValue("end", start, start)
 	end
@@ -344,7 +352,7 @@ function META:ParseRootNode()
 		end
 	end
 
-	self:ParseStatements(nil, statements)
+	self:ParseStatementsUntilCondition(nil, statements)
 
 	if self:IsTokenType("end_of_file") then
 		local eof = self:StartNode("statement_end_of_file")

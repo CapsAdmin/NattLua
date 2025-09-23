@@ -44,3 +44,4 @@ else
 end
 
 profiler.Stop()
+os.exit()

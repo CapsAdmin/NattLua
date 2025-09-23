@@ -345,16 +345,16 @@ return function(META)
 				node.tokens["call)"] = self:ExpectTokenValue(")")
 			end
 
-			if primary_node.Type == "expression_value" then
+			if
+				primary_node.Type == "expression_value" and
+				node.expressions[1] and
+				node.expressions[1].value and
+				node.expressions[1].value.type == "string"
+			then
 				if primary_node.value:ValueEquals("import") then
-					self:HandleImportExpression(
-						node,
-						primary_node.value,
-						node.expressions[1].value:GetStringValue(),
-						start
-					)
+					self:HandleImportExpression(node, primary_node.value, node.expressions[1].value, start)
 				elseif primary_node.value:ValueEquals("import_data") then
-					self:HandleImportDataExpression(node, node.expressions[1].value:GetStringValue(), start)
+					self:HandleImportDataExpression(node, node.expressions[1].value, start)
 				end
 			end
 
@@ -723,6 +723,10 @@ return function(META)
 
 			if
 				primary_node.Type == "expression_value" and
+				node.expressions[1] and
+				node.expressions[1].Type == "expression_value" and
+				node.expressions[1].value and
+				node.expressions[1].value.type == "string" and
 				(
 					primary_node.value:ValueEquals("import") or
 					primary_node.value:ValueEquals("dofile") or
@@ -730,19 +734,11 @@ return function(META)
 					primary_node.value:ValueEquals("require") or
 					primary_node.value:ValueEquals("import_data")
 				)
-				and
-				node.expressions[1] and
-				node.expressions[1].Type == "expression_value" and
-				node.expressions[1].value
 			then
-				local data = node.expressions[1].value:GetStringValue()
-
-				if data then
-					if primary_node.value:ValueEquals("import_data") then
-						self:HandleImportDataExpression(node, data, start)
-					else
-						self:HandleImportExpression(node, primary_node.value, data, start)
-					end
+				if primary_node.value:ValueEquals("import_data") then
+					self:HandleImportDataExpression(node, node.expressions[1].value, start)
+				else
+					self:HandleImportExpression(node, primary_node.value, node.expressions[1].value, start)
 				end
 			end
 
@@ -831,7 +827,14 @@ return function(META)
 			return self:ParseValueExpressionToken()
 		end
 
-		function META:HandleImportExpression(node--[[#: Node]], tkname--[[#: Token]], str--[[#: string]], start--[[#: number]])
+		function META:HandleImportExpression(
+			node--[[#: Node]],
+			tkname--[[#: Token]],
+			tk_path--[[#: string]],
+			start--[[#: number]]
+		)
+			assert(tk_path.type == "string", "expected string token for import path")
+
 			if self.config.skip_import then return end
 
 			if self.dont_hoist_next_import then
@@ -839,6 +842,7 @@ return function(META)
 				return
 			end
 
+			local str = tk_path:GetStringValue()
 			local path
 
 			if tkname:ValueEquals("require") then path = path_util.ResolveRequire(str) end
@@ -914,9 +918,12 @@ return function(META)
 			table_insert(self.RootStatement.imports, node)
 		end
 
-		function META:HandleImportDataExpression(node--[[#: Node]], path--[[#: string]], start--[[#: number]])
+		function META:HandleImportDataExpression(node--[[#: Node]], tk_path--[[#: string]], start--[[#: number]])
+			assert(tk_path.type == "string", "expected string token for import path")
+
 			if self.config.skip_import then return end
 
+			local path = tk_path:GetStringValue()
 			node.import_expression = true
 			node.path = path_util.Resolve(
 				path,

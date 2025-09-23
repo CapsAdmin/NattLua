@@ -416,28 +416,14 @@ end
 		end
 	end
 
-	function META:ParseStatements(stop_token--[[#: List<|string|>]], out--[[#: List<|any|>]])
+	function META:ParseStatementsUntilCondition(condition--[[#: function=(Token)>(boolean)]], out--[[#: List<|any|>]])
 		out = out or {}
 		local i = #out
 
 		for _ = self:GetPosition(), self:GetLength() do
 			local tk = self:GetToken()
 
-			if not tk then break end
-
-			if stop_token then
-				local found = false
-
-				for _, str in ipairs(stop_token) do
-					if tk:ValueEquals(str) then
-						found = true
-
-						break
-					end
-				end
-
-				if found then break end
-			end
+			if not tk or (condition and condition(tk)) then break end
 
 			local node = (self--[[# as any]]):ParseStatement()
 

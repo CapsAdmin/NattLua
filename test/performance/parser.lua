@@ -23,6 +23,7 @@ if INSTRUMENTAL then
 			tokens,
 			code,
 			{
+				skip_import = true,
 				on_parsed_node = function(_, node)
 					count = count + 1
 
@@ -37,8 +38,10 @@ else
 	profiler.Start()
 
 	util.Measure("code:Parse()", function()
-		Parser(tokens, code):ParseRootNode()
+		Parser(tokens, code, {skip_import = true}):ParseRootNode()
 	end)
 
 	profiler.Stop()
 end
+
+os.exit()
