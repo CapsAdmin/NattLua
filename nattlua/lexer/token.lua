@@ -68,7 +68,7 @@ function META:Copy()
 end
 
 function META:__tostring()
-	return "[token - " .. self.type .. " - " .. formating.QuoteToken(self.value) .. "]"
+	return "[token - " .. self.type .. " - " .. formating.QuoteToken(self:GetValueString()) .. "]"
 end
 
 function META:AssociateType(obj)
@@ -425,6 +425,12 @@ META.is_token = true
 
 function META:GetLength()
 	return self.stop - self.start + 1
+end
+
+function META:GetByte(offset--[[#: number]])
+	if self.value then return self.value:byte(offset + 1) or 0 end
+
+	return assert(self.code--[[# as any]]):GetByte(self.start + offset)
 end
 
 function META:ValueEquals(str--[[#: string]])
