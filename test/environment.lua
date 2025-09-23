@@ -342,8 +342,12 @@ do
 
 		if test_file_count > 0 then
 			local times = profiler.GetSimpleSections()
+
 			-- base environment time is included in startup time, so remove it
-			times["startup"].total = times["startup"].total - times["base environment"].total
+			if times["startup"] then
+				times["startup"].total = times["startup"].total - times["base environment"].total
+			end
+
 			local sorted = {}
 			local sections_total = 0
 
