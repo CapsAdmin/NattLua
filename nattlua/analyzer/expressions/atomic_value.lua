@@ -125,10 +125,11 @@ return {
 
 			return lookup_value(self, tk)
 		elseif type == "number" then
-			local num = LNumberFromString(tk:GetValueString())
+			local str = tk:GetValueString()
+			local num = LNumberFromString(str)
 
 			if not num then
-				self:Error(error_messages.invalid_number(tk:GetValueString()))
+				self:Error(error_messages.invalid_number(str))
 				num = Number()
 			end
 

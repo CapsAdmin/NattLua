@@ -11,21 +11,22 @@ local class = require("nattlua.other.class")
 local META = class.CreateTemplate("syntax")
 --[[#type META.@Name = "Syntax"]]
 --[[#type META.@Self = {
-	BinaryOperatorInfo = Map<|string, {left_priority = number, right_priority = number}|>,
+	BinaryOperatorInfo = List<|{op = string, left_priority = number, right_priority = number}|>,
+	BinaryOperatorsMaxLength = number,
 	NumberAnnotations = List<|string|>,
 	Symbols = List<|string|>,
 	BinaryOperators = Map<|string, true|>,
-	PrefixOperators = Map<|string, true|>,
-	PostfixOperators = Map<|string, true|>,
-	PrimaryBinaryOperators = Map<|string, true|>,
+	PrefixOperators = List<|string|>,
+	PostfixOperators = List<|string|>,
+	PrimaryBinaryOperators = List<|string|>,
 	SymbolCharacters = List<|string|>,
 	SymbolPairs = Map<|string, string|>,
-	KeywordValues = Map<|string, true|>,
-	Keywords = Map<|string, true|>,
-	NonStandardKeywords = Map<|string, true|>,
-	BinaryOperatorFunctionTranslate = Map<|string, {string, string, string}|>,
-	PostfixOperatorFunctionTranslate = Map<|string, {string, string}|>,
-	PrefixOperatorFunctionTranslate = Map<|string, {string, string}|>,
+	KeywordValues = List<|string|>,
+	Keywords = List<|string|>,
+	NonStandardKeywords = List<|string|>,
+	BinaryOperatorFunctionTranslate = List<|{op = string, info = {string, string, string}}|>,
+	PostfixOperatorFunctionTranslate = List<|{op = string, info = {string, string}}|>,
+	PrefixOperatorFunctionTranslate = List<|{op = string, info = {string, string}}|>,
 }]]
 
 function META.New()
@@ -46,6 +47,7 @@ function META.New()
 			BinaryOperatorFunctionTranslate = {},
 			PostfixOperatorFunctionTranslate = {},
 			PrefixOperatorFunctionTranslate = {},
+			BinaryOperatorsMaxLength = 0,
 		},
 		true
 	)
@@ -95,61 +97,86 @@ function META:AddBinaryOperators(tbl--[[#: List<|List<|string|>|>]])
 			if right then token = token:sub(2) end
 
 			if right then
-				self.BinaryOperatorInfo[token] = {
-					left_priority = priority + 1,
-					right_priority = priority,
-				}
+				table.insert(
+					self.BinaryOperatorInfo,
+					{
+						op = token,
+						left_priority = priority + 1,
+						right_priority = priority,
+					}
+				)
 			else
-				self.BinaryOperatorInfo[token] = {
-					left_priority = priority,
-					right_priority = priority,
-				}
+				table.insert(
+					self.BinaryOperatorInfo,
+					{
+						op = token,
+						left_priority = priority,
+						right_priority = priority,
+					}
+				)
 			end
 
 			self:AddSymbols({token})
 			self.BinaryOperators[token] = true
+			self.BinaryOperatorsMaxLength = math.max(#token, self.BinaryOperatorsMaxLength)
 		end
 	end
 end
 
-function META:GetBinaryOperatorInfo(tk--[[#: Token]])
-	return self.BinaryOperatorInfo[tk:GetValueString()]
+function META:GetBinaryOperatorInfo(token--[[#: Token]])
+	if token:GetLength() > self.BinaryOperatorsMaxLength then return nil end
+
+	for _, info in ipairs(self.BinaryOperatorInfo) do
+		if token:ValueEquals(info.op) then return info end
+	end
 end
 
 function META:AddPrefixOperators(tbl--[[#: List<|string|>]])
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
-		self.PrefixOperators[str] = true
+		table.insert(self.PrefixOperators, str)
 	end
 end
 
 function META:IsPrefixOperator(token--[[#: Token]])
-	return self.PrefixOperators[token:GetValueString()]
+	for _, op in ipairs(self.PrefixOperators) do
+		if token:ValueEquals(op) then return true end
+	end
+
+	return false
 end
 
 function META:AddPostfixOperators(tbl--[[#: List<|string|>]])
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
-		self.PostfixOperators[str] = true
+		table.insert(self.PostfixOperators, str)
 	end
 end
 
 function META:IsPostfixOperator(token--[[#: Token]])
-	return self.PostfixOperators[token:GetValueString()]
+	for _, op in ipairs(self.PostfixOperators) do
+		if token:ValueEquals(op) then return true end
+	end
+
+	return false
 end
 
 function META:AddPrimaryBinaryOperators(tbl--[[#: List<|string|>]])
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
-		self.PrimaryBinaryOperators[str] = true
+		table.insert(self.PrimaryBinaryOperators, str)
 	end
 end
 
 function META:IsPrimaryBinaryOperator(token--[[#: Token]])
-	return self.PrimaryBinaryOperators[token:GetValueString()]
+	for _, op in ipairs(self.PrimaryBinaryOperators) do
+		if token:ValueEquals(op) then return true end
+	end
+
+	return false
 end
 
 function META:AddSymbolCharacters(tbl--[[#: List<|string | {string, string}|>]])
@@ -173,7 +200,7 @@ function META:AddKeywords(tbl--[[#: List<|string|>]])
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
-		self.Keywords[str] = true
+		table.insert(self.Keywords, str)
 	end
 end
 
@@ -187,32 +214,42 @@ function META:IsVariableName(token--[[#: Token]])
 end
 
 function META:IsKeyword(token--[[#: Token]])
-	return self.Keywords[token:GetValueString()]
+	for _, str in ipairs(self.Keywords) do
+		if token:ValueEquals(str) then return true end
+	end
+
+	return false
 end
 
 function META:AddKeywordValues(tbl--[[#: List<|string|>]])
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
-		self.Keywords[str] = true
-		self.KeywordValues[str] = true
+		table.insert(self.Keywords, str)
+		table.insert(self.KeywordValues, str)
 	end
 end
 
 function META:IsKeywordValue(token--[[#: Token]])
-	return self.KeywordValues[token:GetValueString()]
+	for _, str in ipairs(self.KeywordValues) do
+		if token:ValueEquals(str) then return true end
+	end
 end
 
 function META:AddNonStandardKeywords(tbl--[[#: List<|string|>]])
 	self:AddSymbols(tbl)
 
 	for _, str in ipairs(tbl) do
-		self.NonStandardKeywords[str] = true
+		table.insert(self.NonStandardKeywords, str)
 	end
 end
 
 function META:IsNonStandardKeyword(token--[[#: Token]])
-	return self.NonStandardKeywords[token:GetValueString()]
+	for _, str in ipairs(self.NonStandardKeywords) do
+		if token:ValueEquals(str) then return true end
+	end
+
+	return false
 end
 
 function META:GetSymbols()
@@ -224,13 +261,15 @@ function META:AddBinaryOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>
 		local a, b, c = v:match("(.-)A(.-)B(.*)")
 
 		if a and b and c then
-			self.BinaryOperatorFunctionTranslate[k] = {" " .. a, b, c .. " "}
+			table.insert(self.BinaryOperatorFunctionTranslate, {op = k, info = {" " .. a, b, c .. " "}})
 		end
 	end
 end
 
 function META:GetFunctionForBinaryOperator(token--[[#: Token]])
-	return self.BinaryOperatorFunctionTranslate[token:GetValueString()]
+	for _, v in ipairs(self.BinaryOperatorFunctionTranslate) do
+		if token:ValueEquals(v.op) then return v.info end
+	end
 end
 
 function META:AddPrefixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
@@ -238,13 +277,15 @@ function META:AddPrefixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>
 		local a, b = v:match("^(.-)A(.-)$")
 
 		if a and b then
-			self.PrefixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+			table.insert(self.PrefixOperatorFunctionTranslate, {op = k, info = {" " .. a, b .. " "}})
 		end
 	end
 end
 
 function META:GetFunctionForPrefixOperator(token--[[#: Token]])
-	return self.PrefixOperatorFunctionTranslate[token:GetValueString()]
+	for _, v in ipairs(self.PrefixOperatorFunctionTranslate) do
+		if token:ValueEquals(v.op) then return v.info end
+	end
 end
 
 function META:AddPostfixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|>]])
@@ -252,13 +293,15 @@ function META:AddPostfixOperatorFunctionTranslate(tbl--[[#: Map<|string, string|
 		local a, b = v:match("^(.-)A(.-)$")
 
 		if a and b then
-			self.PostfixOperatorFunctionTranslate[k] = {" " .. a, b .. " "}
+			table.insert(self.PostfixOperatorFunctionTranslate, {op = k, info = {" " .. a, b .. " "}})
 		end
 	end
 end
 
 function META:GetFunctionForPostfixOperator(token--[[#: Token]])
-	return self.PostfixOperatorFunctionTranslate[token:GetValueString()]
+	for _, v in ipairs(self.PostfixOperatorFunctionTranslate) do
+		if token:ValueEquals(v.op) then return v.info end
+	end
 end
 
 function META:IsValue(token--[[#: Token]])
@@ -294,9 +337,12 @@ function META:IsRuntimeExpression(token--[[#: Token]])
 
 	return (
 			not token:ValueEquals("}") and
-			not token:ValueEquals(",") and
-			not token:ValueEquals("]") and
-			not token:ValueEquals(")") and
+			not token:ValueEquals(",")
+			and
+			not token:ValueEquals("]")
+			and
+			not token:ValueEquals(")")
+			and
 			not (
 				(
 					self:IsKeyword(token) or

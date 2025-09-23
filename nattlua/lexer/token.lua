@@ -9,16 +9,19 @@ local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
 local tostring = _G.tostring
 local table_insert = _G.table.insert
+
+--[[#local type { Code } = import<|"~/nattlua/code.lua"|>]]
+
 --[[#type META.@Name = "Token"]]
 --[[#type META.TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
 --[[#type META.TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "unknown" | META.TokenWhitespaceType]]
 --[[#type META.@Self = {
 	@Name = "Token",
 	type = META.TokenType,
-	_value = string,
-	value = string,
+	code = Code | nil,
 	start = number,
 	stop = number,
+	value = false | string,
 	string_value = false | string,
 	inferred_types = false | List<|any|>,
 	potential_idiv = false | boolean,
@@ -397,7 +400,6 @@ do
 		if self.type ~= "string" then return end
 
 		local str = self:GetValueString()
-
 		local start = ""
 		local stop = ""
 		local t = str:sub(1, 1)
@@ -421,19 +423,43 @@ end
 
 META.is_token = true
 
-function META:ValueEquals(str)
-	return self._value == str
+function META:GetLength()
+	return self.stop - self.start + 1
+end
+
+function META:ValueEquals(str--[[#: string]])
+	if self.value then return self.value == str end
+
+	return assert(self.code--[[# as any]]):IsStringSlice2(self.start, self.stop, str)
 end
 
 function META:ReplaceValue(new_str--[[#: string]])
-	self._value = new_str
+	self.value = new_str
 end
 
 function META:GetValueString()
-	return self._value
+	self.value = self.value or assert(self.code):GetStringSlice(self.start, self.stop)
+	return self.value
 end
 
 function META.New(
+	type--[[#: META.TokenType]],
+	code--[[#: Code]],
+	start--[[#: number]],
+	stop--[[#: number]]
+)--[[#: META.@Self]]
+	return META.NewObject(
+		{
+			type = type,
+			code = code,
+			value = false,
+			start = start,
+			stop = stop,
+		}--[[# as META.@Self]]
+	)
+end
+
+function META.New2(
 	type--[[#: META.TokenType]],
 	value--[[#: string]],
 	start--[[#: number]],
@@ -441,7 +467,7 @@ function META.New(
 )--[[#: META.@Self]]
 	return META.NewObject({
 		type = type,
-		_value = value,
+		value = value,
 		start = start,
 		stop = stop,
 	}--[[# as META.@Self]])

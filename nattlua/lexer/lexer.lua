@@ -136,7 +136,7 @@ end
 do
 	function META:ReadToken()
 		local type, is_whitespace, start, stop = self:ReadSimple()
-		local tk = Token(type, self:GetStringSlice(start, stop), start, stop)
+		local tk = Token(type, self.Code, start, stop)
 		return tk, is_whitespace
 	end
 

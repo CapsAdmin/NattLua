@@ -16,7 +16,7 @@ local table = _G.table
 local math_min = math.min
 local select = _G.select
 local class = require("nattlua.other.class")
-local Token = require("nattlua.lexer.token").New
+local Token = require("nattlua.lexer.token").New2
 return function()
 	local META = class.CreateTemplate("parser")
 	--[[#type META.@Self = {
@@ -362,11 +362,13 @@ end
 				)
 			else
 				local val
+
 				if what == "value" then
 					val = tk:GetValueString()
 				else
 					val = tk.type
 				end
+
 				self:Error("expected $1 $2: got $3 while parsing $4", start, stop, what, str, val, kind)
 			end
 		end
@@ -414,32 +416,7 @@ end
 		end
 	end
 
-	function META:ParseValues(
-		values--[[#: Map<|string, true|>]],
-		start--[[#: Token | nil]],
-		stop--[[#: Token | nil]]
-	)
-		local tk = self:GetToken()
-
-		if not tk then
-			self:Error("expected $1: reached end of code", start, stop, values)
-			return
-		end
-
-		if not values[tk:GetValueString()] then
-			local array = {}
-
-			for k in pairs(values) do
-				table.insert(array, k)
-			end
-
-			self:Error("expected $1 got $2", start, stop, array, tk.type)
-		end
-
-		return self:ParseToken()
-	end
-
-	function META:ParseStatements(stop_token--[[#: {[string] = true} | nil]], out--[[#: List<|any|>]])
+	function META:ParseStatements(stop_token--[[#: List<|string|>]], out--[[#: List<|any|>]])
 		out = out or {}
 		local i = #out
 
@@ -448,7 +425,19 @@ end
 
 			if not tk then break end
 
-			if stop_token and stop_token[tk:GetValueString()] then break end
+			if stop_token then
+				local found = false
+
+				for _, str in ipairs(stop_token) do
+					if tk:ValueEquals(str) then
+						found = true
+
+						break
+					end
+				end
+
+				if found then break end
+			end
 
 			local node = (self--[[# as any]]):ParseStatement()
 

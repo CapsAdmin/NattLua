@@ -270,7 +270,7 @@ return function(META)
 							nil,
 							nil,
 							{",", ";", "}"},
-							(self:GetToken() and self:GetToken():GetValueString()) or "no token"
+							self:GetToken():GetValueString()
 						)
 						tree.tokens["separators"][i] = self:NewToken(",")
 					else
@@ -445,20 +445,15 @@ return function(META)
 			end
 
 			for _ = self:GetPosition(), self:GetLength() do
-				if
-					not (
-						typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()) and
-						typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
-					)
-				then
-					break
-				end
+				local info = typesystem_syntax:GetBinaryOperatorInfo(self:GetToken())
+
+				if not (info and info.left_priority > priority) then break end
 
 				local left_node = node
 				node = self:StartNode("expression_binary_operator", left_node)
 				node.value = self:ParseToken()
 				node.left = left_node
-				node.right = self:ParseTypeExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
+				node.right = self:ParseTypeExpression(info.right_priority)
 				node = self:EndNode(node)
 			end
 
@@ -1064,18 +1059,11 @@ return function(META)
 			self:check_integer_division_operator(self:GetToken())
 
 			for _ = self:GetPosition(), self:GetLength() do
-				if
-					not (
-						(
-							runtime_syntax:GetBinaryOperatorInfo(self:GetToken()) and
-							not self:IsTokenValueOffset("=", 1)
-						)
-						and
-						runtime_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
-					)
-				then
-					break
-				end
+				if self:IsTokenValueOffset("=", 1) then break end
+
+				local info = runtime_syntax:GetBinaryOperatorInfo(self:GetToken())
+
+				if not info or info.left_priority <= priority then break end
 
 				local left_node = node or false
 				node = self:StartNode("expression_binary_operator", left_node)
@@ -1084,7 +1072,7 @@ return function(META)
 
 				if node.left then node.left.parent = node end
 
-				node.right = self:ExpectRuntimeExpression(runtime_syntax:GetBinaryOperatorInfo(node.value).right_priority)
+				node.right = self:ExpectRuntimeExpression(info.right_priority)
 				node = self:EndNode(node)
 
 				if not node.right then

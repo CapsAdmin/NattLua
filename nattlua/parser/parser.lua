@@ -96,7 +96,7 @@ function META:ParseFunctionBody(
 		self:PopParserEnvironment()
 	end
 
-	node.statements = self:ParseStatements({["end"] = true})
+	node.statements = self:ParseStatements({"end"})
 	node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["function"])
 	return node
 end
@@ -153,7 +153,7 @@ function META:ParseTypeFunctionBody(
 	end
 
 	local start = self:GetToken()
-	node.statements = self:ParseStatements({["end"] = true})
+	node.statements = self:ParseStatements({"end"})
 	node.tokens["end"] = self:ExpectTokenValue("end", start, start)
 	self:PopParserEnvironment()
 	return node
@@ -210,13 +210,13 @@ function META:ParseAnalyzerFunctionBody(
 		self:PopParserEnvironment()
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
-		node.statements = self:ParseStatements({["end"] = true})
+		node.statements = self:ParseStatements({"end"})
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectTokenValue("end", start, start)
 	elseif not self:IsTokenValue(",") then
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
-		node.statements = self:ParseStatements({["end"] = true})
+		node.statements = self:ParseStatements({"end"})
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
 		node.tokens["end"] = self:ExpectTokenValue("end", start, start)
 	end

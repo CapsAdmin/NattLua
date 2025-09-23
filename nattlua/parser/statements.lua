@@ -235,7 +235,7 @@ return function(META)
 
 		local node = self:StartNode("statement_do")
 		node.tokens["do"] = self:ExpectTokenValue("do")
-		node.statements = self:ParseStatements({["end"] = true})
+		node.statements = self:ParseStatements({"end"})
 		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
 		node = self:EndNode(node)
 		return node
@@ -250,7 +250,7 @@ return function(META)
 		node.tokens["in"] = self:ExpectTokenValue("in")
 		node.expressions = self:ParseMultipleValues(self.ExpectRuntimeExpression, 0)
 		node.tokens["do"] = self:ExpectTokenValue("do")
-		node.statements = self:ParseStatements({["end"] = true})
+		node.statements = self:ParseStatements({"end"})
 		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
 		node = self:EndNode(node)
 		return node
@@ -294,12 +294,15 @@ return function(META)
 
 			if i == 1 then
 				token = self:ExpectTokenValue("if")
+			elseif
+				self:IsTokenValue("elseif") or
+				self:IsTokenValue("else") or
+				self:IsTokenValue("end")
+			then
+				token = self:GetToken()
+				self:Advance(1)
 			else
-				token = self:ParseValues({
-					["else"] = true,
-					["elseif"] = true,
-					["end"] = true,
-				})
+				self:Error("expected elseif, else or end got $2", start, stop, array, self:GetToken().type)
 			end
 
 			if not token then return false end -- TODO: what happens here? :End is never called
@@ -311,9 +314,9 @@ return function(META)
 			end
 
 			node.statements[i] = self:ParseStatements({
-				["end"] = true,
-				["else"] = true,
-				["elseif"] = true,
+				"end",
+				"else",
+				"elseif",
 			})
 
 			if self:IsTokenValue("end") then break end
@@ -368,7 +371,7 @@ return function(META)
 		node.tokens["="] = self:ExpectTokenValue("=")
 		node.expressions = self:ParseFixedMultipleValues(3, self.ExpectRuntimeExpression, 0)
 		node.tokens["do"] = self:ExpectTokenValue("do")
-		node.statements = self:ParseStatements({["end"] = true})
+		node.statements = self:ParseStatements({"end"})
 		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
 		node = self:EndNode(node)
 		return node
@@ -379,7 +382,7 @@ return function(META)
 
 		local node = self:StartNode("statement_repeat")
 		node.tokens["repeat"] = self:ExpectTokenValue("repeat")
-		node.statements = self:ParseStatements({["until"] = true})
+		node.statements = self:ParseStatements({"until"})
 		node.tokens["until"] = self:ExpectTokenValue("until")
 		node.expression = self:ExpectRuntimeExpression()
 		node = self:EndNode(node)
@@ -412,7 +415,7 @@ return function(META)
 		node.tokens["while"] = self:ExpectTokenValue("while")
 		node.expression = self:ExpectRuntimeExpression()
 		node.tokens["do"] = self:ExpectTokenValue("do")
-		node.statements = self:ParseStatements({["end"] = true})
+		node.statements = self:ParseStatements({"end"})
 		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
 		node = self:EndNode(node)
 		return node

@@ -537,6 +537,7 @@ function META:GetRenameInstructions(path, line, character, newName)
 
 	if not token then return end
 
+	local str = token:GetValueString()
 	local upvalue = token:FindUpvalue()
 	local edits = {}
 
@@ -557,13 +558,13 @@ function META:GetRenameInstructions(path, line, character, newName)
 		local u = v:FindUpvalue()
 
 		if u == upvalue and v.type == "letter" then
-			if v:GetValueString() == token:GetValueString() then
+			if v:ValueEquals(str) then
 				table.insert(
 					edits,
 					{
 						start = v.start,
 						stop = v.stop,
-						from = v:GetValueString(),
+						from = str,
 						to = newName,
 					}
 				)
@@ -1296,8 +1297,7 @@ do
 					(
 						data.tokens[i - 1]:ValueEquals("loadstring") or
 						data.tokens[i - 2]:ValueEquals("loadstring")
-					)
-					or
+					) or
 					(
 						data.tokens[i - 1]:ValueEquals("cdef") or
 						data.tokens[i - 2]:ValueEquals("cdef")
@@ -1345,9 +1345,7 @@ do
 				end
 
 				if tokens then
-					process_token(
-						Token.New("fake", start, token.start, token.start + #start)
-					)
+					process_token(Token.New2("fake", start, token.start, token.start + #start))
 
 					for i, token in ipairs(tokens) do
 						token.start = token.start + offset
@@ -1362,9 +1360,7 @@ do
 						process_token(token)
 					end
 
-					process_token(
-						Token.New("fake", start, token.stop, token.stop + #start)
-					)
+					process_token(Token.New2("fake", start, token.stop, token.stop + #start))
 				else
 					process_token(token)
 				end

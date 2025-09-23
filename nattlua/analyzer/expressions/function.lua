@@ -55,7 +55,9 @@ local function analyze_arguments(self, node)
 
 			-- stem type so that we can allow
 			-- function(x: foo<x>): nil
-			self:MapTypeToNode(self:CreateLocalValue(key.value:GetValueString(), Any()), key)
+
+			local ident = key.value:GetValueString()
+			self:MapTypeToNode(self:CreateLocalValue(ident, Any()), key)
 
 			if key.type_expression then
 				args[i] = self:AssertFallback(Nil(), self:AnalyzeExpression(key.type_expression))
@@ -65,7 +67,7 @@ local function analyze_arguments(self, node)
 				args[i] = Any()
 			end
 
-			self:MapTypeToNode(self:CreateLocalValue(key.value:GetValueString(), assert(args[i])), key)
+			self:MapTypeToNode(self:CreateLocalValue(ident, assert(args[i])), key)
 		end
 	elseif
 		node.Type == "statement_analyzer_function" or

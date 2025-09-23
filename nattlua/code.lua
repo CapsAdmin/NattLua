@@ -70,18 +70,19 @@ if has_ffi--[[# as false]] then
 		end
 	end
 
-	do
-		ffi.cdef([[
-			int memcmp(const void *s1, const void *s2, size_t n);
-		]])
-		local C = ffi.C
-
-		function META:IsStringSlice(start--[[#: number]], str--[[#: string]])
-			return C.memcmp(self.Buffer + start, str, #str) == 0
+	function META:IsStringSlice(start--[[#: number]], str--[[#: string]])
+		for i = 1, #str do
+			if self.BufferOffsetMinusOne[start + i] ~= str:byte(i) then return false end
 		end
+
+		return true
 	end
 
-	function META:IsStringSlice(start--[[#: number]], str--[[#: string]])
+	function META:IsStringSlice2(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
+		if start > self.buffer_len then return str == "" end
+
+		if stop - start + 1 ~= #str then return false end
+
 		for i = 1, #str do
 			if self.BufferOffsetMinusOne[start + i] ~= str:byte(i) then return false end
 		end
@@ -177,6 +178,10 @@ else
 	else
 		function META:IsStringSlice(start--[[#: number]], str--[[#: string]])
 			return self.Buffer:sub(start, start + #str) == str
+		end
+
+		function META:IsStringSlice2(start--[[#: number]], stop--[[#: number]], str--[[#: string]])
+			return self.Buffer:sub(start, stop) == str
 		end
 	end
 

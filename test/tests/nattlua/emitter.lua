@@ -524,8 +524,8 @@ local name = ReadSpace(self) or
 	ReadLineComment(self)]])
 identical([[do
 	while
-		runtime_syntax:GetBinaryOperatorInfo(self:GetToken()) and
-		runtime_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
+		runtime_syntax:Lol(self:GetToken()) and
+		runtime_syntax:Lol(self:GetToken()).left_priority > priority
 	do
 
 	end

@@ -250,20 +250,15 @@ return function(META)
 		end
 
 		for _ = self:GetPosition(), self:GetLength() do
-			if
-				not (
-					typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()) and
-					typesystem_syntax:GetBinaryOperatorInfo(self:GetToken()).left_priority > priority
-				)
-			then
-				break
-			end
+			local info = typesystem_syntax:GetBinaryOperatorInfo(self:GetToken())
+
+			if not info or info.left_priority <= priority then break end
 
 			local left_node = node
 			node = self:StartNode("expression_binary_operator")
 			node.value = self:ParseToken()
 			node.left = left_node
-			node.right = self:ParseTealExpression(typesystem_syntax:GetBinaryOperatorInfo(node.value).right_priority)
+			node.right = self:ParseTealExpression(info.right_priority)
 			node = self:EndNode(node)
 		end
 
