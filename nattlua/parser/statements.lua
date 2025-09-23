@@ -1,6 +1,5 @@
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
-local formating = require("nattlua.other.formating")
 local loadstring = require("nattlua.other.loadstring")
 local math_huge = _G.math.huge
 local ipairs = _G.ipairs
