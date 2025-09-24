@@ -278,6 +278,24 @@ end
 		return tk
 	end
 
+	function META:IsToken(str--[[#: string]])
+		if self.tokens[self.TokenPosition] then
+			return self.tokens[self.TokenPosition].sub_type == str
+		end
+
+		return false
+	end
+
+	function META:IsTokenOffset(str--[[#: string]], offset--[[#: number]])
+		if false--[[# as true]] then return false--[[# as boolean]] end
+
+		if self.tokens[self.TokenPosition + offset] then
+			return self.tokens[self.TokenPosition + offset].sub_type == str
+		end
+
+		return false
+	end
+
 	function META:IsTokenValue(str--[[#: string]])
 		if self.tokens[self.TokenPosition] then
 			return self.tokens[self.TokenPosition]:ValueEquals(str)
@@ -365,8 +383,10 @@ end
 
 				if what == "value" then
 					val = tk:GetValueString()
-				else
+				elseif what == "type" then
 					val = tk.type
+				elseif what == "sub_type" then
+					val = tk.sub_type or "UNKNOWN SUBTYPE"
 				end
 
 				self:Error("expected $1 $2: got $3 while parsing $4", start, stop, what, str, val, kind)
@@ -376,6 +396,15 @@ end
 		function META:ExpectTokenValue(str--[[#: string]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])--[[#: Token]]
 			if not self:IsTokenValue(str) then
 				error_expect(self, str, "value", error_start, error_stop)
+				return self:NewToken("letter", str)
+			end
+
+			return self:ParseToken()--[[# as Token]]
+		end
+
+		function META:ExpectToken(str--[[#: string]], error_start--[[#: Token | nil]], error_stop--[[#: Token | nil]])--[[#: Token]]
+			if not self:IsToken(str) then
+				error_expect(self, str, "sub_type", error_start, error_stop)
 				return self:NewToken("letter", str)
 			end
 
@@ -458,7 +487,7 @@ end
 
 			out[i] = node
 
-			if not self:IsTokenValue(",") then break end
+			if not self:IsToken(",") then break end
 
 			(node.tokens--[[# as any]])[","] = self:ExpectTokenValue(",")
 		end
@@ -482,7 +511,7 @@ end
 
 			out[i] = node
 
-			if not self:IsTokenValue(",") then break end
+			if not self:IsToken(",") then break end
 
 			(node.tokens--[[# as any]])[","] = self:ExpectTokenValue(",")
 		end
@@ -504,7 +533,7 @@ end
 
 			out[i] = node
 
-			if not self:IsTokenValue(",") then break end
+			if not self:IsToken(",") then break end
 
 			(node.tokens--[[# as any]])[","] = self:ExpectTokenValue(",")
 		end

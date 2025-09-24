@@ -124,11 +124,11 @@ do
 	end
 
 	function META:CaptureArgumentDefinition()
-		self:ExpectTokenValue("(")
+		self:ExpectToken("(")
 		local args = {}
 
 		for i = 1, self:GetLength() do
-			if self:IsTokenValue(")") then break end
+			if self:IsToken(")") then break end
 
 			local node = self:ExpectTokenType("letter")
 
@@ -136,23 +136,23 @@ do
 
 			args[i] = node
 
-			if not self:IsTokenValue(",") then break end
+			if not self:IsToken(",") then break end
 
-			self:ExpectTokenValue(",")
+			self:ExpectToken(",")
 		end
 
-		self:ExpectTokenValue(")")
+		self:ExpectToken(")")
 		return args
 	end
 
 	function META:CaptureArgs(def)
 		local is_va_opt = def and def.identifier == "__VA_OPT__"
-		self:ExpectTokenValue("(")
+		self:ExpectToken("(")
 		local args = {}
 
 		for _ = self:GetPosition(), self:GetLength() do
-			if self:IsTokenValue(")") then
-				if not is_va_opt and self:IsTokenValueOffset(",", -1) then
+			if self:IsToken(")") then
+				if not is_va_opt and self:IsTokenOffset(",", -1) then
 					local tokens = {}
 					table.insert(tokens, self:NewToken("symbol", ""))
 					table.insert(args, tokens)
@@ -163,16 +163,16 @@ do
 
 			local tokens = {}
 
-			if not is_va_opt and self:IsTokenValue(",") then
+			if not is_va_opt and self:IsToken(",") then
 				table.insert(tokens, self:NewToken("symbol", ""))
 			else
 				local paren_depth = 0
 
 				for _ = self:GetPosition(), self:GetLength() do
 					if paren_depth == 0 then
-						if self:IsTokenValue(",") then break end
+						if self:IsToken(",") then break end
 
-						if self:IsTokenValue(")") then break end
+						if self:IsToken(")") then break end
 					end
 
 					local pos = self:GetPosition()
@@ -194,10 +194,10 @@ do
 
 			table.insert(args, tokens)
 
-			if self:IsTokenValue(",") then self:ExpectTokenValue(",") end
+			if self:IsToken(",", -1) then self:ExpectToken(",") end
 		end
 
-		self:ExpectTokenValue(")")
+		self:ExpectToken(")")
 
 		for i, tokens in ipairs(args) do
 			tokens = copy_tokens(tokens)
@@ -248,24 +248,24 @@ do
 	end
 
 	function META:ReadDefine()
-		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("define", 1)) then
+		if not (self:IsToken("#") and self:IsTokenOffset("define", 1)) then
 			return false
 		end
 
-		local hashtag = self:ExpectTokenValue("#")
+		local hashtag = self:ExpectToken("#")
 		local directive = self:ExpectTokenValue("define")
 		local identifier = self:ExpectTokenType("letter")
-		local args = self:IsTokenValue("(") and self:CaptureArgumentDefinition() or nil
+		local args = self:IsToken("(") and self:CaptureArgumentDefinition() or nil
 		self:Define(identifier.value, args, self:CaptureTokens())
 		return true
 	end
 
 	function META:ReadUndefine()
-		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("undef", 1)) then
+		if not (self:IsToken("#") and self:IsTokenOffset("undef", 1)) then
 			return false
 		end
 
-		local hashtag = self:ExpectTokenValue("#")
+		local hashtag = self:ExpectToken("#")
 		local directive = self:ExpectTokenValue("undef")
 		local identifier = self:ExpectTokenType("letter")
 		self:Undefine(identifier.value)
@@ -275,7 +275,7 @@ do
 	function META:ExpandMacroCall()
 		local def = self:GetDefinition()
 
-		if not (def and self:IsTokenValueOffset("(", 1)) then return false end
+		if not (def and self:IsTokenOffset("(", 1)) then return false end
 
 		local whitespace = self:GetToken():Copy().whitespace
 		local tokens = copy_tokens(def.tokens)
@@ -367,7 +367,7 @@ do
 	end
 
 	function META:ExpandMacroConcatenation()
-		if not (self:IsTokenValueOffset("#", 1) and self:IsTokenValueOffset("#", 2)) then
+		if not (self:IsTokenOffset("#", 1) and self:IsTokenOffset("#", 2)) then
 			return false
 		end
 
@@ -391,7 +391,7 @@ do
 	end
 
 	function META:ExpandMacroString()
-		if not self:IsTokenValue("#") then return false end
+		if not self:IsToken("#") then return false end
 
 		local def = self:GetDefinition(nil, 1)
 

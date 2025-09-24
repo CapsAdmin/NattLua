@@ -10,22 +10,19 @@ return function(META)
 		function META:IsDestructureStatement(offset--[[#: number]])
 			offset = offset or 0
 			return (
-					self:IsTokenTypeOffset("symbol", offset + 0) and
-					self:IsTokenTypeOffset("letter", offset + 1) and
-					self:IsTokenValueOffset("{", offset + 0)
-				) or
+				self:IsTokenOffset("{", offset + 0) and
+				self:IsTokenTypeOffset("letter", offset + 1)
+			) or
 				(
 					self:IsTokenTypeOffset("letter", offset + 0) and
-					self:IsTokenTypeOffset("symbol", offset + 1) and
-					self:IsTokenTypeOffset("symbol", offset + 2) and
-					self:IsTokenValueOffset(",", offset + 1) and
-					self:IsTokenValueOffset("{", offset + 2)
+					self:IsTokenOffset(",", offset + 1) and
+					self:IsTokenOffset("{", offset + 2)
 				)
 		end
 
 		function META:IsLocalDestructureAssignmentStatement()
-			if self:IsTokenType("letter") and self:IsTokenValue("local") then
-				if self:IsTokenValueOffset("type", 1) then
+			if self:IsToken("local") then
+				if self:IsTokenOffset("type", 1) then
 					return self:IsDestructureStatement(2)
 				end
 
@@ -41,13 +38,13 @@ return function(META)
 			do
 				if self:IsTokenType("letter") then
 					node.default = self:ParseValueExpressionToken()
-					node.default_comma = self:ExpectTokenValue(",")
+					node.default_comma = self:ExpectToken(",")
 				end
 
-				node.tokens["{"] = self:ExpectTokenValue("{")
+				node.tokens["{"] = self:ExpectToken("{")
 				node.left = self:ParseMultipleValues(self.ParseIdentifier)
-				node.tokens["}"] = self:ExpectTokenValue("}")
-				node.tokens["="] = self:ExpectTokenValue("=")
+				node.tokens["}"] = self:ExpectToken("}")
+				node.tokens["="] = self:ExpectToken("=")
 				node.right = self:ExpectRuntimeExpression(0)
 			end
 
@@ -59,23 +56,23 @@ return function(META)
 			if not self:IsLocalDestructureAssignmentStatement() then return false end
 
 			local node = self:StartNode("statement_local_destructure_assignment")
-			node.tokens["local"] = self:ExpectTokenValue("local")
+			node.tokens["local"] = self:ExpectToken("local")
 
-			if self:IsTokenValue("type") then
-				node.tokens["type"] = self:ExpectTokenValue("type")
+			if self:IsToken("type") then
+				node.tokens["type"] = self:ExpectToken("type")
 				node.environment = "typesystem"
 			end
 
 			do -- remaining
 				if self:IsTokenType("letter") then
 					node.default = self:ParseValueExpressionToken()
-					node.default_comma = self:ExpectTokenValue(",")
+					node.default_comma = self:ExpectToken(",")
 				end
 
-				node.tokens["{"] = self:ExpectTokenValue("{")
+				node.tokens["{"] = self:ExpectToken("{")
 				node.left = self:ParseMultipleValues(self.ParseIdentifier)
-				node.tokens["}"] = self:ExpectTokenValue("}")
-				node.tokens["="] = self:ExpectTokenValue("=")
+				node.tokens["}"] = self:ExpectToken("}")
+				node.tokens["="] = self:ExpectToken("=")
 				node.right = self:ExpectRuntimeExpression(0)
 			end
 
@@ -93,10 +90,10 @@ return function(META)
 			first.standalone_letter = node
 
 			for _ = self:GetPosition(), self:GetLength() do
-				if not (self:IsTokenValue(".") or self:IsTokenValue(":")) then break end
+				if not (self:IsToken(".") or self:IsToken(":")) then break end
 
 				local left = node
-				local self_call = self:IsTokenValue(":")
+				local self_call = self:IsToken(":")
 				node = self:StartNode("expression_binary_operator")
 				node.value = self:ParseToken()
 				node.right = self:ParseValueExpressionType("letter")
@@ -110,19 +107,17 @@ return function(META)
 		end
 
 		function META:ParseFunctionStatement()
-			if not self:IsTokenType("letter") or not self:IsTokenValue("function") then
-				return false
-			end
+			if not self:IsToken("function") then return false end
 
 			local node = self:StartNode("statement_function")
-			node.tokens["function"] = self:ExpectTokenValue("function")
+			node.tokens["function"] = self:ExpectToken("function")
 			node.expression = self:ParseFunctionNameIndex()
 
 			if node.expression and node.expression.Type == "expression_binary_operator" then
 				node.self_call = node.expression.right.self_call or false
 			end
 
-			if self:IsTokenValue("<|") then
+			if self:IsToken("<|") then
 				node.Type = "statement_type_function"
 				self:ParseTypeFunctionBody(node)
 			else
@@ -136,21 +131,19 @@ return function(META)
 		function META:ParseAnalyzerFunctionStatement()
 			if
 				not (
-					self:IsTokenType("letter") and
-					self:IsTokenTypeOffset("letter", 1) and
-					self:IsTokenValue("analyzer") and
-					self:IsTokenValueOffset("function", 1)
+					self:IsToken("analyzer") and
+					self:IsTokenOffset("function", 1)
 				)
 			then
 				return false
 			end
 
 			local node = self:StartNode("statement_analyzer_function")
-			node.tokens["analyzer"] = self:ExpectTokenValue("analyzer")
-			node.tokens["function"] = self:ExpectTokenValue("function")
+			node.tokens["analyzer"] = self:ExpectToken("analyzer")
+			node.tokens["function"] = self:ExpectToken("function")
 			local force_upvalue = false
 
-			if self:IsTokenValue("^") then
+			if self:IsToken("^") then
 				force_upvalue = true
 				node.tokens["^"] = self:ParseToken()
 			end
@@ -176,20 +169,13 @@ return function(META)
 	end
 
 	function META:ParseLocalFunctionStatement()
-		if
-			not (
-				self:IsTokenType("letter") and
-				self:IsTokenTypeOffset("letter", 1) and
-				self:IsTokenValue("local") and
-				self:IsTokenValueOffset("function", 1)
-			)
-		then
+		if not (self:IsToken("local") and self:IsTokenOffset("function", 1)) then
 			return false
 		end
 
 		local node = self:StartNode("statement_local_function")
-		node.tokens["local"] = self:ExpectTokenValue("local")
-		node.tokens["function"] = self:ExpectTokenValue("function")
+		node.tokens["local"] = self:ExpectToken("local")
+		node.tokens["function"] = self:ExpectToken("function")
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
 		self:ParseFunctionBody(node)
 		node = self:EndNode(node)
@@ -199,21 +185,18 @@ return function(META)
 	function META:ParseLocalAnalyzerFunctionStatement()
 		if
 			not (
-				self:IsTokenType("letter") and
-				self:IsTokenTypeOffset("letter", 1) and
-				self:IsTokenTypeOffset("letter", 2) and
-				self:IsTokenValue("local") and
-				self:IsTokenValueOffset("analyzer", 1) and
-				self:IsTokenValueOffset("function", 2)
+				self:IsToken("local") and
+				self:IsTokenOffset("analyzer", 1) and
+				self:IsTokenOffset("function", 2)
 			)
 		then
 			return false
 		end
 
 		local node = self:StartNode("statement_local_analyzer_function")
-		node.tokens["local"] = self:ExpectTokenValue("local")
-		node.tokens["analyzer"] = self:ExpectTokenValue("analyzer")
-		node.tokens["function"] = self:ExpectTokenValue("function")
+		node.tokens["local"] = self:ExpectToken("local")
+		node.tokens["analyzer"] = self:ExpectToken("analyzer")
+		node.tokens["function"] = self:ExpectToken("function")
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
 		self:ParseAnalyzerFunctionBody(node, true)
 		node = self:EndNode(node)
@@ -223,14 +206,11 @@ return function(META)
 	function META:ParseLocalTypeFunctionStatement()
 		if
 			not (
-				self:IsTokenType("letter") and
-				self:IsTokenTypeOffset("letter", 1) and
-				self:IsTokenTypeOffset("symbol", 3) and
-				self:IsTokenValue("local") and
-				self:IsTokenValueOffset("function", 1) and
+				self:IsToken("local") and
+				self:IsTokenOffset("function", 1) and
 				(
-					self:IsTokenValueOffset("<|", 3) or
-					self:IsTokenValueOffset("!", 3)
+					self:IsTokenOffset("<|", 3) or
+					self:IsTokenOffset("!", 3)
 				)
 			)
 		then
@@ -238,8 +218,8 @@ return function(META)
 		end
 
 		local node = self:StartNode("statement_local_type_function")
-		node.tokens["local"] = self:ExpectTokenValue("local")
-		node.tokens["function"] = self:ExpectTokenValue("function")
+		node.tokens["local"] = self:ExpectToken("local")
+		node.tokens["function"] = self:ExpectToken("function")
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
 		self:ParseTypeFunctionBody(node)
 		node = self:EndNode(node)
@@ -247,71 +227,58 @@ return function(META)
 	end
 
 	function META:ParseBreakStatement()
-		if not self:IsTokenType("letter") or not self:IsTokenValue("break") then
-			return false
-		end
+		if not self:IsToken("break") then return false end
 
 		local node = self:StartNode("statement_break")
-		node.tokens["break"] = self:ExpectTokenValue("break")
+		node.tokens["break"] = self:ExpectToken("break")
 		node = self:EndNode(node)
 		return node
 	end
 
 	function META:ParseDoStatement()
-		if not self:IsTokenType("letter") or not self:IsTokenValue("do") then
-			return false
-		end
+		if not self:IsToken("do") then return false end
 
 		local node = self:StartNode("statement_do")
-		node.tokens["do"] = self:ExpectTokenValue("do")
+		node.tokens["do"] = self:ExpectToken("do")
 		node.statements = self:ParseStatementsUntilEnd()
-		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
+		node.tokens["end"] = self:ExpectToken("end", node.tokens["do"])
 		node = self:EndNode(node)
 		return node
 	end
 
 	function META:ParseGenericForStatement()
-		if not self:IsTokenType("letter") or not self:IsTokenValue("for") then
-			return false
-		end
+		if not self:IsToken("for") then return false end
 
 		local node = self:StartNode("statement_generic_for")
-		node.tokens["for"] = self:ExpectTokenValue("for")
+		node.tokens["for"] = self:ExpectToken("for")
 		node.identifiers = self:ParseMultipleValues(self.ParseIdentifier)
-		node.tokens["in"] = self:ExpectTokenValue("in")
+		node.tokens["in"] = self:ExpectToken("in")
 		node.expressions = self:ParseMultipleValues(self.ExpectRuntimeExpression, 0)
-		node.tokens["do"] = self:ExpectTokenValue("do")
+		node.tokens["do"] = self:ExpectToken("do")
 		node.statements = self:ParseStatementsUntilEnd()
-		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
+		node.tokens["end"] = self:ExpectToken("end", node.tokens["do"])
 		node = self:EndNode(node)
 		return node
 	end
 
 	function META:ParseGotoLabelStatement()
-		if not self:IsTokenType("symbol") or not self:IsTokenValue("::") then
-			return false
-		end
+		if not self:IsToken("::") then return false end
 
 		local node = self:StartNode("statement_goto_label")
-		node.tokens["::"] = self:ExpectTokenValue("::")
+		node.tokens["::"] = self:ExpectToken("::")
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
-		node.tokens["::"] = self:ExpectTokenValue("::")
+		node.tokens["::"] = self:ExpectToken("::")
 		node = self:EndNode(node)
 		return node
 	end
 
 	function META:ParseGotoStatement()
-		if
-			not self:IsTokenType("letter") or
-			not self:IsTokenValue("goto")
-			or
-			not self:IsTokenTypeOffset("letter", 1)
-		then
+		if not self:IsToken("goto") or not self:IsTokenTypeOffset("letter", 1) then
 			return false
 		end
 
 		local node = self:StartNode("statement_goto")
-		node.tokens["goto"] = self:ExpectTokenValue("goto")
+		node.tokens["goto"] = self:ExpectToken("goto")
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
 		node = self:EndNode(node)
 		return node
@@ -328,9 +295,7 @@ return function(META)
 		end
 
 		function META:ParseIfStatement()
-			if not self:IsTokenType("letter") or not self:IsTokenValue("if") then
-				return false
-			end
+			if not self:IsToken("if") then return false end
 
 			local node = self:StartNode("statement_if")
 			node.expressions = {}
@@ -343,12 +308,8 @@ return function(META)
 				local token
 
 				if i == 1 then
-					token = self:ExpectTokenValue("if")
-				elseif
-					self:IsTokenValue("elseif") or
-					self:IsTokenValue("else") or
-					self:IsTokenValue("end")
-				then
+					token = self:ExpectToken("if")
+				elseif self:IsToken("elseif") or self:IsToken("else") or self:IsToken("end") then
 					token = self:GetToken()
 					self:Advance(1)
 				else
@@ -360,34 +321,32 @@ return function(META)
 
 				if not token:ValueEquals("else") then
 					node.expressions[i] = self:ExpectRuntimeExpression(0)
-					node.tokens["then"][i] = self:ExpectTokenValue("then")
+					node.tokens["then"][i] = self:ExpectToken("then")
 				end
 
 				node.statements[i] = self:ParseStatementsUntilCondition(condition)
 
-				if self:IsTokenValue("end") then break end
+				if self:IsToken("end") then break end
 
 				i = i + 1
 			end
 
-			node.tokens["end"] = self:ExpectTokenValue("end")
+			node.tokens["end"] = self:ExpectToken("end")
 			node = self:EndNode(node)
 			return node
 		end
 	end
 
 	function META:ParseLocalAssignmentStatement()
-		if not self:IsTokenType("letter") or not self:IsTokenValue("local") then
-			return false
-		end
+		if not self:IsToken("local") then return false end
 
 		local node = self:StartNode("statement_local_assignment")
-		node.tokens["local"] = self:ExpectTokenValue("local")
+		node.tokens["local"] = self:ExpectToken("local")
 
-		if self.TealCompat and self:IsTokenValueOffset(",", 1) then
+		if self.TealCompat and self:IsTokenOffset(",", 1) then
 			node.left = self:ParseMultipleValues(self.ParseIdentifier, false)
 
-			if self:IsTokenValue(":") then
+			if self:IsToken(":") then
 				self:Advance(1)
 				local expressions = self:ParseMultipleValues(self.ParseTealExpression, 0)
 
@@ -400,8 +359,8 @@ return function(META)
 			node.left = self:ParseMultipleValues(self.ParseIdentifier)
 		end
 
-		if self:IsTokenValue("=") then
-			node.tokens["="] = self:ExpectTokenValue("=")
+		if self:IsToken("=") then
+			node.tokens["="] = self:ExpectToken("=")
 			node.right = self:ParseMultipleValues(self.ExpectRuntimeExpression, 0)
 		end
 
@@ -410,25 +369,18 @@ return function(META)
 	end
 
 	function META:ParseNumericForStatement()
-		if
-			not (
-				self:IsTokenType("letter") and
-				self:IsTokenValue("for") and
-				self:IsTokenTypeOffset("symbol", 2) and
-				self:IsTokenValueOffset("=", 2)
-			)
-		then
+		if not (self:IsToken("for") and self:IsTokenOffset("=", 2)) then
 			return false
 		end
 
 		local node = self:StartNode("statement_numeric_for")
-		node.tokens["for"] = self:ExpectTokenValue("for")
+		node.tokens["for"] = self:ExpectToken("for")
 		node.identifiers = self:ParseFixedMultipleValues(1, self.ParseIdentifier)
-		node.tokens["="] = self:ExpectTokenValue("=")
+		node.tokens["="] = self:ExpectToken("=")
 		node.expressions = self:ParseFixedMultipleValues(3, self.ExpectRuntimeExpression, 0)
-		node.tokens["do"] = self:ExpectTokenValue("do")
+		node.tokens["do"] = self:ExpectToken("do")
 		node.statements = self:ParseStatementsUntilEnd()
-		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
+		node.tokens["end"] = self:ExpectToken("end", node.tokens["do"])
 		node = self:EndNode(node)
 		return node
 	end
@@ -439,14 +391,12 @@ return function(META)
 		end
 
 		function META:ParseRepeatStatement()
-			if not self:IsTokenType("letter") or not self:IsTokenValue("repeat") then
-				return false
-			end
+			if not self:IsToken("repeat") then return false end
 
 			local node = self:StartNode("statement_repeat")
-			node.tokens["repeat"] = self:ExpectTokenValue("repeat")
+			node.tokens["repeat"] = self:ExpectToken("repeat")
 			node.statements = self:ParseStatementsUntilCondition(condition)
-			node.tokens["until"] = self:ExpectTokenValue("until")
+			node.tokens["until"] = self:ExpectToken("until")
 			node.expression = self:ExpectRuntimeExpression()
 			node = self:EndNode(node)
 			return node
@@ -454,50 +404,42 @@ return function(META)
 	end
 
 	function META:ParseSemicolonStatement()
-		if not self:IsTokenType("symbol") or not self:IsTokenValue(";") then
-			return false
-		end
+		if not self:IsToken(";") then return false end
 
 		local node = self:StartNode("statement_semicolon")
-		node.tokens[";"] = self:ExpectTokenValue(";")
+		node.tokens[";"] = self:ExpectToken(";")
 		node = self:EndNode(node)
 		return node
 	end
 
 	function META:ParseReturnStatement()
-		if not self:IsTokenType("letter") or not self:IsTokenValue("return") then
-			return false
-		end
+		if not self:IsToken("return") then return false end
 
 		local node = self:StartNode("statement_return")
-		node.tokens["return"] = self:ExpectTokenValue("return")
+		node.tokens["return"] = self:ExpectToken("return")
 		node.expressions = self:ParseMultipleValues(self.ParseRuntimeExpression, 0)
 		node = self:EndNode(node)
 		return node
 	end
 
 	function META:ParseWhileStatement()
-		if not self:IsTokenType("letter") or not self:IsTokenValue("while") then
-			return false
-		end
+		if not self:IsToken("while") then return false end
 
 		local node = self:StartNode("statement_while")
-		node.tokens["while"] = self:ExpectTokenValue("while")
+		node.tokens["while"] = self:ExpectToken("while")
 		node.expression = self:ExpectRuntimeExpression()
-		node.tokens["do"] = self:ExpectTokenValue("do")
+		node.tokens["do"] = self:ExpectToken("do")
 		node.statements = self:ParseStatementsUntilEnd()
-		node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["do"])
+		node.tokens["end"] = self:ExpectToken("end", node.tokens["do"])
 		node = self:EndNode(node)
 		return node
 	end
 
 	function META:ParseContinueStatement()
-		if not self:IsTokenType("letter") or not self:IsTokenValue("continue") then
-			return false
-		end
+		if not self:IsToken("continue") then return false end
 
 		local node = self:StartNode("statement_continue")
-		node.tokens["continue"] = self:ExpectTokenValue("continue")
+		node.tokens["continue"] = self:ExpectToken("continue")
 		node = self:EndNode(node)
 		return node
 	end
@@ -625,10 +567,8 @@ return function(META)
 	function META:ParseLocalTypeAssignmentStatement()
 		if
 			not (
-				self:IsTokenType("letter") and
-				self:IsTokenTypeOffset("letter", 1) and
-				self:IsTokenValue("local") and
-				self:IsTokenValueOffset("type", 1) and
+				self:IsToken("local") and
+				self:IsTokenOffset("type", 1) and
 				runtime_syntax:GetTokenType(self:GetTokenOffset(2)) == "letter"
 			)
 		then
@@ -636,13 +576,13 @@ return function(META)
 		end
 
 		local node = self:StartNode("statement_local_assignment")
-		node.tokens["local"] = self:ExpectTokenValue("local")
-		node.tokens["type"] = self:ExpectTokenValue("type")
+		node.tokens["local"] = self:ExpectToken("local")
+		node.tokens["type"] = self:ExpectToken("type")
 		node.left = self:ParseMultipleValues(self.ParseIdentifier)
 		node.environment = "typesystem"
 
-		if self:IsTokenValue("=") then
-			node.tokens["="] = self:ExpectTokenValue("=")
+		if self:IsToken("=") then
+			node.tokens["="] = self:ExpectToken("=")
 			self:PushParserEnvironment("typesystem")
 			node.right = self:ParseMultipleValues(self.ExpectTypeExpression, 0)
 			self:PopParserEnvironment()
@@ -655,11 +595,10 @@ return function(META)
 	function META:ParseTypeAssignmentStatement()
 		if
 			not (
-				self:IsTokenType("letter") and
-				self:IsTokenValue("type") and
+				self:IsToken("type") and
 				(
 					self:IsTokenTypeOffset("letter", 1) or
-					self:IsTokenValueOffset("^", 1)
+					self:IsTokenOffset("^", 1)
 				)
 			)
 		then
@@ -667,12 +606,12 @@ return function(META)
 		end
 
 		local node = self:StartNode("statement_assignment")
-		node.tokens["type"] = self:ExpectTokenValue("type")
+		node.tokens["type"] = self:ExpectToken("type")
 		node.left = self:ParseMultipleValues(self.ExpectTypeExpression, 0)
 		node.environment = "typesystem"
 
-		if self:IsTokenValue("=") then
-			node.tokens["="] = self:ExpectTokenValue("=")
+		if self:IsToken("=") then
+			node.tokens["="] = self:ExpectToken("=")
 			self:PushParserEnvironment("typesystem")
 			node.right = self:ParseMultipleValues(self.ExpectTypeExpression, 0)
 			self:PopParserEnvironment()
@@ -689,15 +628,15 @@ return function(META)
 
 		if
 			(
-				self:IsTokenValue("+") or
-				self:IsTokenValue("-") or
-				self:IsTokenValue("*") or
-				self:IsTokenValue("/") or
-				self:IsTokenValue("%") or
-				self:IsTokenValue("^") or
-				self:IsTokenValue("..")
+				self:IsToken("+") or
+				self:IsToken("-") or
+				self:IsToken("*") or
+				self:IsToken("/") or
+				self:IsToken("%") or
+				self:IsToken("^") or
+				self:IsToken("..")
 			) and
-			self:IsTokenValueOffset("=", 1)
+			self:IsTokenOffset("=", 1)
 		then
 			-- roblox compound assignment
 			local op_token = self:ParseToken()
@@ -721,9 +660,9 @@ return function(META)
 			return node
 		end
 
-		if self:IsTokenValue("=") then
+		if self:IsToken("=") then
 			local node = self:StartNode("statement_assignment", left[1])
-			node.tokens["="] = self:ExpectTokenValue("=")
+			node.tokens["="] = self:ExpectToken("=")
 			node.left = left
 
 			for i, v in ipairs(node.left) do

@@ -143,9 +143,11 @@ do
 
 		if type == "symbol" then
 			tk = TokenWithString(type, self.Code:GetStringSlice(start, stop), start, stop)
+			tk.sub_type = tk.value
 		elseif type == "letter" then
 			tk = Token(type, self.Code, start, stop)
 			tk.value = read_letter(tk) or false
+			if tk.value then tk.sub_type = tk.value end
 		else
 			tk = Token(type, self.Code, start, stop)
 		end

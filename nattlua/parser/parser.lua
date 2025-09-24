@@ -30,28 +30,26 @@ require("nattlua.parser.teal")(META)
 require("nattlua.parser.lsx")(META)
 
 function META:ParseIdentifier(expect_type--[[#: nil | boolean]])
-	if not self:IsTokenType("letter") and not self:IsTokenValue("...") then
-		return
-	end
+	if not self:IsTokenType("letter") and not self:IsToken("...") then return end
 
 	local node = self:StartNode("expression_value") -- as ValueExpression ]]
 	node.is_identifier = true
 
-	if self:IsTokenValue("...") then
-		node.value = self:ExpectTokenValue("...")
+	if self:IsToken("...") then
+		node.value = self:ExpectToken("...")
 	else
 		node.value = self:ExpectTokenType("letter")
 
-		if self:IsTokenValue("<") then
-			node.tokens["<"] = self:ExpectTokenValue("<")
+		if self:IsToken("<") then
+			node.tokens["<"] = self:ExpectToken("<")
 			node.attribute = self:ExpectTokenType("letter")
-			node.tokens[">"] = self:ExpectTokenValue(">")
+			node.tokens[">"] = self:ExpectToken(">")
 		end
 	end
 
 	if expect_type ~= false then
-		if self:IsTokenValue(":") or expect_type then
-			node.tokens[":"] = self:ExpectTokenValue(":")
+		if self:IsToken(":") or expect_type then
+			node.tokens[":"] = self:ExpectToken(":")
 			node.type_expression = self:ExpectTypeExpression(0)
 		end
 	end
@@ -62,7 +60,7 @@ end
 
 function META:ParseValueExpressionToken(expect_value--[[#: nil | string]])
 	local node = self:StartNode("expression_value")
-	node.value = expect_value and self:ExpectTokenValue(expect_value) or self:ParseToken()
+	node.value = expect_value and self:ExpectToken(expect_value) or self:ParseToken()
 	node = self:EndNode(node)
 	return node
 end
@@ -86,56 +84,56 @@ function META:ParseFunctionBody(
 	node--[[#: expression.analyzer_function | expression["function"] | statement["local_function"] | statement["function"] ]]
 )
 	if self.TealCompat then
-		if self:IsTokenValue("<") then
-			node.tokens["arguments_typesystem("] = self:ExpectTokenValue("<")
+		if self:IsToken("<") then
+			node.tokens["arguments_typesystem("] = self:ExpectToken("<")
 			node.identifiers_typesystem = self:ParseMultipleValues(self.ParseIdentifier) or false
-			node.tokens["arguments_typesystem)"] = self:ExpectTokenValue(">")
+			node.tokens["arguments_typesystem)"] = self:ExpectToken(">")
 		end
 	end
 
-	node.tokens["arguments("] = self:ExpectTokenValue("(")
+	node.tokens["arguments("] = self:ExpectToken("(")
 	node.identifiers = self:ParseMultipleValues(self.ParseIdentifier)
-	node.tokens["arguments)"] = self:ExpectTokenValue(")", node.tokens["arguments("])
+	node.tokens["arguments)"] = self:ExpectToken(")", node.tokens["arguments("])
 
-	if self:IsTokenValue(":") then
-		node.tokens["return:"] = self:ExpectTokenValue(":")
+	if self:IsToken(":") then
+		node.tokens["return:"] = self:ExpectToken(":")
 		self:PushParserEnvironment("typesystem")
 		node.return_types = self:ParseMultipleValues(self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
 	end
 
 	node.statements = self:ParseStatementsUntilEnd()
-	node.tokens["end"] = self:ExpectTokenValue("end", node.tokens["function"])
+	node.tokens["end"] = self:ExpectToken("end", node.tokens["function"])
 	return node
 end
 
 function META:ParseTypeFunctionBody(
 	node--[[#: statement["type_function"] | expression["type_function"] | statement["type_function"] ]]
 )
-	if self:IsTokenValue("!") then
-		node.tokens["!"] = self:ExpectTokenValue("!")
-		node.tokens["arguments("] = self:ExpectTokenValue("(")
+	if self:IsToken("!") then
+		node.tokens["!"] = self:ExpectToken("!")
+		node.tokens["arguments("] = self:ExpectToken("(")
 		node.identifiers = self:ParseMultipleValues(self.ParseIdentifier, true)
 
-		if self:IsTokenValue("...") then
+		if self:IsToken("...") then
 			table_insert(node.identifiers, self:ParseValueExpressionToken("..."))
 		end
 
-		node.tokens["arguments)"] = self:ExpectTokenValue(")")
+		node.tokens["arguments)"] = self:ExpectToken(")")
 	else
-		node.tokens["arguments("] = self:ExpectTokenValue("<|")
+		node.tokens["arguments("] = self:ExpectToken("<|")
 		node.identifiers = self:ParseMultipleValues(self.ParseIdentifier, true)
 
-		if self:IsTokenValue("...") then
+		if self:IsToken("...") then
 			table_insert(node.identifiers, self:ParseValueExpressionToken("..."))
 		end
 
-		node.tokens["arguments)"] = self:ExpectTokenValue("|>", node.tokens["arguments("])
+		node.tokens["arguments)"] = self:ExpectToken("|>", node.tokens["arguments("])
 
-		if self:IsTokenValue("(") then
-			local lparen = self:ExpectTokenValue("(")
+		if self:IsToken("(") then
+			local lparen = self:ExpectToken("(")
 			local identifiers = self:ParseMultipleValues(self.ParseIdentifier, true)
-			local rparen = self:ExpectTokenValue(")")
+			local rparen = self:ExpectToken(")")
 			node.identifiers_typesystem = node.identifiers or false
 			node.identifiers = identifiers
 			node.tokens["arguments_typesystem("] = node.tokens["arguments("]
@@ -145,8 +143,8 @@ function META:ParseTypeFunctionBody(
 		end
 	end
 
-	if self:IsTokenValue(":") then
-		node.tokens["return:"] = self:ExpectTokenValue(":")
+	if self:IsToken(":") then
+		node.tokens["return:"] = self:ExpectToken(":")
 		self:PushParserEnvironment("typesystem")
 		node.return_types = self:ParseMultipleValues(self.ExpectTypeExpression, 0)
 		self:PopParserEnvironment()
@@ -162,19 +160,19 @@ function META:ParseTypeFunctionBody(
 
 	local start = self:GetToken()
 	node.statements = self:ParseStatementsUntilEnd()
-	node.tokens["end"] = self:ExpectTokenValue("end", start, start)
+	node.tokens["end"] = self:ExpectToken("end", start, start)
 	self:PopParserEnvironment()
 	return node
 end
 
 function META:ParseTypeFunctionArgument(expect_type--[[#: nil | boolean]])
-	if self:IsTokenValue(")") then return end
+	if self:IsToken(")") then return end
 
-	if self:IsTokenValue("...") then return end
+	if self:IsToken("...") then return end
 
-	if expect_type or self:IsTokenType("letter") and self:IsTokenValueOffset(":", 1) then
+	if expect_type or self:IsTokenType("letter") and self:IsTokenOffset(":", 1) then
 		local identifier = self:ParseToken()
-		local token = self:ExpectTokenValue(":")
+		local token = self:ExpectToken(":")
 		local exp = self:ExpectTypeExpression(0)
 		exp.tokens[":"] = token
 		exp.identifier = identifier
@@ -189,15 +187,15 @@ function META:ParseAnalyzerFunctionBody(
 	type_args--[[#: boolean]]
 )
 	self:PushParserEnvironment("runtime")
-	node.tokens["arguments("] = self:ExpectTokenValue("(")
+	node.tokens["arguments("] = self:ExpectToken("(")
 	node.identifiers = self:ParseMultipleValues(self.ParseTypeFunctionArgument, type_args)
 
-	if self:IsTokenValue("...") then
+	if self:IsToken("...") then
 		local vararg = self:StartNode("expression_value")
-		vararg.value = self:ExpectTokenValue("...")
+		vararg.value = self:ExpectToken("...")
 
-		if self:IsTokenValue(":") or type_args then
-			vararg.tokens[":"] = self:ExpectTokenValue(":")
+		if self:IsToken(":") or type_args then
+			vararg.tokens[":"] = self:ExpectToken(":")
 			vararg.type_expression = self:ExpectTypeExpression(0)
 		else
 			if self:IsTokenType("letter") then
@@ -209,10 +207,10 @@ function META:ParseAnalyzerFunctionBody(
 		table_insert(node.identifiers, vararg)
 	end
 
-	node.tokens["arguments)"] = self:ExpectTokenValue(")", node.tokens["arguments("])
+	node.tokens["arguments)"] = self:ExpectToken(")", node.tokens["arguments("])
 
-	if self:IsTokenValue(":") then
-		node.tokens["return:"] = self:ExpectTokenValue(":")
+	if self:IsToken(":") then
+		node.tokens["return:"] = self:ExpectToken(":")
 		self:PushParserEnvironment("typesystem")
 		node.return_types = self:ParseMultipleValues(self.ParseTypeExpression, 0)
 		self:PopParserEnvironment()
@@ -220,13 +218,13 @@ function META:ParseAnalyzerFunctionBody(
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
 		node.statements = self:ParseStatementsUntilEnd()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
-		node.tokens["end"] = self:ExpectTokenValue("end", start, start)
-	elseif not self:IsTokenValue(",") then
+		node.tokens["end"] = self:ExpectToken("end", start, start)
+	elseif not self:IsToken(",") then
 		local start = self:GetToken()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) + 1
 		node.statements = self:ParseStatementsUntilEnd()
 		_G.dont_hoist_import = (_G.dont_hoist_import or 0) - 1
-		node.tokens["end"] = self:ExpectTokenValue("end", start, start)
+		node.tokens["end"] = self:ExpectToken("end", start, start)
 	end
 
 	self:PopParserEnvironment()

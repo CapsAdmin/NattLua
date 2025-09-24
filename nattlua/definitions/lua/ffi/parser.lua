@@ -52,18 +52,16 @@ function META:ParseStatement()
 
 	-- multi declaration
 	-- int foo, *bar;
-	if not self:IsTokenValue(";") then
+	if not self:IsToken(";") then
 		local decls = {}
 
 		for i = 1, self:GetLength() do
-			if self:IsTokenValue(";") then break end
+			if self:IsToken(";") then break end
 
 			local typ = self:ParseDeclarationStatement()
 			table.insert(decls, typ)
 
-			if self:IsTokenValue(",") then
-				typ.tokens[","] = self:ExpectTokenValue(",")
-			end
+			if self:IsToken(",") then typ.tokens[","] = self:ExpectTokenValue(",") end
 
 			node.decls = decls
 		end
@@ -75,29 +73,27 @@ end
 
 -- TODO: remove the need for this
 function META:IsInArguments()
-	if self:IsTokenValue("(") then
+	if self:IsToken("(") then
 		for i = 1, self:GetLength() do
 			-- what happens if we have a function pointer in the arguments?
 			-- void foo(void (*)(int, int))
 			-- I guess it still works as a hacky solution
-			if self:IsTokenTypeOffset("symbol", i) then
-				if self:IsTokenValueOffset(",", i) then return true end
+			if self:IsTokenOffset(",", i) then return true end
 
-				if self:IsTokenValueOffset("(", i) and self:IsTokenValueOffset(")", i + 1) then
-					return false
-				end
+			if self:IsTokenOffset("(", i) and self:IsTokenOffset(")", i + 1) then
+				return false
+			end
 
-				if
-					self:IsTokenValueOffset(")", i) and
-					(
-						self:IsTokenValueOffset(";", i + 1) or
-						self:IsTokenTypeOffset("end_of_file", i + 1)
-					)
-					and
-					not self:IsTokenValueOffset(")", i - 1)
-				then
-					return true
-				end
+			if
+				self:IsTokenOffset(")", i) and
+				(
+					self:IsTokenOffset(";", i + 1) or
+					self:IsTokenTypeOffset("end_of_file", i + 1)
+				)
+				and
+				not self:IsTokenOffset(")", i - 1)
+			then
+				return true
 			end
 		end
 	end
@@ -108,7 +104,7 @@ end
 function META:ParseCDeclaration()
 	local node = self:StartNode("expression_c_declaration")
 
-	if self:IsTokenType("symbol") and self:IsTokenValue("...") then
+	if self:IsToken("...") then
 		node.tokens["..."] = self:ExpectTokenValue("...")
 		return self:EndNode(node)
 	end
@@ -133,7 +129,7 @@ function META:ParseCDeclaration()
 
 	-- plain function or function pointer
 	-- void >>(foo)<<() or void >>(*foo)<<()
-	if self:IsTokenValue("(") then
+	if self:IsToken("(") then
 		self:ParseCFunctionDeclaration(node)
 	else
 		self:ParseCTypeDeclaration(node)
@@ -146,7 +142,7 @@ end
 function META:ParseDeclarationStatement()
 	local node = self:ParseCDeclaration()
 
-	if self:IsTokenValue("=") then
+	if self:IsToken("=") then
 		node.tokens["="] = self:ExpectTokenValue("=")
 		node.default_expression = self:ParseRuntimeExpression()
 	end
@@ -157,12 +153,12 @@ end
 function META:ParseStructField()
 	local node = self:ParseCDeclaration()
 
-	if self:IsTokenValue(":") then
+	if self:IsToken(":") then
 		node.tokens[":"] = self:ExpectTokenValue(":")
 		node.bitfield_expression = self:ParseRuntimeExpression()
 	end
 
-	if self:IsTokenValue("=") then
+	if self:IsToken("=") then
 		node.tokens["="] = self:ExpectTokenValue("=")
 		node.default_expression = self:ParseRuntimeExpression()
 	end
@@ -213,17 +209,17 @@ end
 function META:IsEndOfTypeQualifiersAndSpecifiers()
 	return self:GetToken().type == "symbol" and
 		(
-			self:IsTokenValue("(") or
-			self:IsTokenValue("*") or
-			self:IsTokenValue("[") or
+			self:IsToken("(") or
+			self:IsToken("*") or
+			self:IsToken("[") or
 			-- void foo(int >>,<< long >>)<<
-			self:IsTokenValue(",") or
-			self:IsTokenValue(")") or
+			self:IsToken(",") or
+			self:IsToken(")") or
 			-- long foo>>;<<
-			self:IsTokenValue(";") or
+			self:IsToken(";") or
 			-- struct and union bit fields
-			self:IsTokenValue(":") or
-			self:IsTokenValue("=")
+			self:IsToken(":") or
+			self:IsToken("=")
 		)
 end
 
@@ -284,15 +280,13 @@ function META:ParseCTypeDeclaration(node)
 end
 
 function META:HasOpeningParenthesis()
-	if not self:IsTokenValue("(") then return false end
+	if not self:IsToken("(") then return false end
 
 	for i = 1, self:GetLength() do
-		if self:IsTokenTypeOffset("symbol", i)  then
-			if self:IsTokenValueOffset(";", i) then return false end
+		if self:IsTokenOffset(";", i) then return false end
 
-			if self:IsTokenValueOffset(")", i) and self:IsTokenValueOffset("(", i + 1) then
-				return true
-			end
+		if self:IsTokenOffset(")", i) and self:IsTokenOffset("(", i + 1) then
+			return true
 		end
 	end
 
@@ -301,10 +295,10 @@ end
 
 function META:ParseCFunctionDeclaration(node)
 	if
-		self:IsTokenValueOffset("*", 1) or
+		self:IsTokenOffset("*", 1) or
 		(
 			self:IsTokenTypeOffset("letter", 1) and
-			self:IsTokenValueOffset("*", 2) and
+			self:IsTokenOffset("*", 2) and
 			-- TODO:
 			-- void foo(char *>>,<< short *)
 			not self:IsInArguments()
@@ -330,7 +324,7 @@ function META:ParseCFunctionDeclaration(node)
 
 		-- void (*foo>>()<<)()
 		-- TODO: this is just a nested function..
-		if self:IsTokenValue("(") then
+		if self:IsToken("(") then
 			--node.tokens["inner_("] = self:ExpectTokenValue("(")
 			--node.inner_arguments = self:ParseFunctionArguments()
 			--node.tokens["inner_)"] = self:ExpectTokenValue(")")
@@ -342,11 +336,11 @@ function META:ParseCFunctionDeclaration(node)
 		node.tokens[")"] = self:ExpectTokenValue(")")
 	else
 		if
-			self:IsTokenValue("(") and
+			self:IsToken("(") and
 			self:IsTokenTypeOffset("letter", 1) and
-			self:IsTokenValueOffset(")", 2) and
+			self:IsTokenOffset(")", 2) and
 			-- make sure it's not void foo(int);
-			not self:IsTokenValueOffset(";", 3)
+			not self:IsTokenOffset(";", 3)
 		then
 			-- void >>(foo)<<()
 			node.tokens["identifier_("] = self:ExpectTokenValue("(")
@@ -356,7 +350,7 @@ function META:ParseCFunctionDeclaration(node)
 		end
 	end
 
-	if self:IsTokenValue("(") then
+	if self:IsToken("(") then
 		node.tokens["arguments_("] = self:ExpectTokenValue("(")
 		node.arguments = self:ParseFunctionArguments()
 		node.tokens["arguments_)"] = self:ExpectTokenValue(")")
@@ -382,14 +376,12 @@ function META:ParseTypeDef()
 	local decls = {}
 
 	for i = 1, self:GetLength() do
-		if self:IsTokenValue(";") then break end
+		if self:IsToken(";") then break end
 
 		local typ = self:ParseCDeclaration()
 		table.insert(decls, typ)
 
-		if self:IsTokenValue(",") then
-			typ.tokens[","] = self:ExpectTokenValue(",")
-		end
+		if self:IsToken(",") then typ.tokens[","] = self:ExpectTokenValue(",") end
 
 		node.decls = decls
 	end
@@ -406,7 +398,7 @@ function META:ParseEnum()
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
 	end
 
-	if not self:IsTokenValue("{") then -- forward declaration
+	if not self:IsToken("{") then -- forward declaration
 		return self:EndNode(node)
 	end
 
@@ -414,21 +406,19 @@ function META:ParseEnum()
 	node.fields = {}
 
 	for i = 1, self:GetLength() do
-		if self:IsTokenValue("}") then break end
+		if self:IsToken("}") then break end
 
 		local field = self:StartNode("expression_enum_field")
 		field.tokens["identifier"] = self:ExpectTokenType("letter")
 
-		if self:IsTokenValue("=") then
+		if self:IsToken("=") then
 			field.tokens["="] = self:ExpectTokenValue("=")
 			field.expression = self:ParseRuntimeExpression()
 		end
 
 		table.insert(node.fields, self:EndNode(field))
 
-		if self:IsTokenValue(",") then
-			field.tokens[","] = self:ExpectTokenValue(",")
-		end
+		if self:IsToken(",") then field.tokens[","] = self:ExpectTokenValue(",") end
 	end
 
 	node.tokens["}"] = self:ExpectTokenValue("}")
@@ -447,7 +437,7 @@ for _, type in ipairs({"Struct", "Union"}) do
 			node.tokens["identifier"] = self:ExpectTokenType("letter")
 		end
 
-		if not self:IsTokenValue("{") then -- forward declaration
+		if not self:IsToken("{") then -- forward declaration
 			return self:EndNode(node)
 		end
 
@@ -455,30 +445,30 @@ for _, type in ipairs({"Struct", "Union"}) do
 		local fields = {}
 
 		for i = 1, self:GetLength() do
-			if self:IsTokenValue("}") then break end
+			if self:IsToken("}") then break end
 
 			local CDeclaration = self:ParseStructField()
 
-			if self:IsTokenValue(",") then
+			if self:IsToken(",") then
 				CDeclaration.tokens["first_comma"] = self:ConsumeToken()
 				CDeclaration.multi_values = {}
 
 				for i = 1, self:GetLength() do
 					local t = self:ParseStructField()
 
-					if not self:IsTokenValue(";") then
+					if not self:IsToken(";") then
 						t.tokens[","] = self:ExpectTokenValue(",")
 					end
 
 					table.insert(CDeclaration.multi_values, t)
 
-					if self:IsTokenValue(";") then break end
+					if self:IsToken(";") then break end
 				end
 			end
 
 			table.insert(fields, CDeclaration)
 
-			if self:IsTokenValue(";") then
+			if self:IsToken(";") then
 				CDeclaration.tokens[";"] = self:ExpectTokenValue(";")
 			end
 		end
@@ -493,11 +483,11 @@ function META:ParseArrayIndex()
 	local out = {}
 
 	for i = 1, self:GetLength() do
-		if self:IsTokenValue("[") then
+		if self:IsToken("[") then
 			local node = self:StartNode("expression_array")
 			node.tokens["["] = self:ExpectTokenValue("[")
 
-			if self:IsTokenType("unknown") and self:IsTokenValue("?") then
+			if self:IsTokenValue("?") then
 				node.expression = self:ParseDollarSign()
 			else
 				node.expression = self:ParseRuntimeExpression()
@@ -523,12 +513,12 @@ function META:ParsePointers()
 			-- void (>>__attribute__((stdcall))*<<foo)()
 			local t = {self:ParseAttributeExtension()}
 
-			if self:IsTokenValue("*") then
+			if self:IsToken("*") then
 				t[2] = self:ExpectTokenValue("*") -- TODO: __ptr32?
 			end
 
 			table.insert(out, t)
-		elseif self:IsTokenValue("*") then
+		elseif self:IsToken("*") then
 			-- void (>>*volatile<< foo())
 			local ptr = self:ConsumeToken()
 			local t = {ptr}
@@ -538,7 +528,7 @@ function META:ParsePointers()
 			end
 
 			table.insert(out, t)
-		elseif self:IsTokenType("letter") and self:IsTokenValueOffset("*", 1) then
+		elseif self:IsTokenType("letter") and self:IsTokenOffset("*", 1) then
 			-- void void (>>__ptr32*<<*foo())
 			local type = self:ExpectTokenType("letter")
 			local ptr = self:ConsumeToken()
@@ -564,12 +554,12 @@ function META:ParseFunctionArguments()
 	local out = {}
 
 	for i = 1, self:GetLength() do
-		if self:IsTokenValue(")") then break end
+		if self:IsToken(")") then break end
 
 		local arg = self:ParseCDeclaration()
 		table.insert(out, arg)
 
-		if self:IsTokenValue(",") then arg.tokens[","] = self:ConsumeToken() end
+		if self:IsToken(",") then arg.tokens[","] = self:ConsumeToken() end
 	end
 
 	return out

@@ -19,6 +19,7 @@ local assert = _G.assert
 --[[#type META.@Self = {
 	@Name = "Token",
 	type = META.TokenType,
+	sub_type = false | string,
 	code = Code | nil,
 	start = number,
 	stop = number,
@@ -473,6 +474,7 @@ function META.New(
 		{
 			type = type,
 			code = code,
+			sub_type = false,
 			value = false,
 			start = start,
 			stop = stop,
@@ -488,6 +490,7 @@ function META.New2(
 )--[[#: META.@Self]]
 	return META.NewObject({
 		type = type,
+		sub_type = false,
 		value = value,
 		start = start,
 		stop = stop,

@@ -35,6 +35,7 @@ typesystem:AddKeywords(
 		"and",
 		"not",
 		"or",
+		"as",
 		-- these are just to make sure all code is covered by tests
 		"ÆØÅ",
 		"ÆØÅÆ",

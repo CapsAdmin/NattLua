@@ -576,13 +576,10 @@ function META:IsRuntimeExpression(token--[[#: Token]])--[[#: boolean]]
 	if token.type == "number" or token.type == "string" then return true end
 
 	return (
-			not token:ValueEquals("}") and
-			not token:ValueEquals(",")
-			and
-			not token:ValueEquals("]")
-			and
-			not token:ValueEquals(")")
-			and
+			token.sub_type ~= "}" and
+			token.sub_type ~= "," and
+			token.sub_type ~= "]" and
+			token.sub_type ~= ")" and
 			not (
 				(
 					self:IsKeyword(token) or

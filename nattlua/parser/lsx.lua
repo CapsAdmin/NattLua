@@ -3,28 +3,22 @@ return function(META)
 	function META:ParseLSXExpression()
 		if
 			not (
-				(self:IsTokenType("symbol") and
-				self:IsTokenValue("<")) and
-				self:IsTokenTypeOffset("letter", 1) and 
-	(
-				not self:IsTokenTypeOffset("letter", -1)
-				or
-				not self:IsTokenValueOffset("local", -1)
-				)
+				self:IsToken("<") and
+				not self:IsTokenOffset("local", -1)
 			)
 		then
 			return
 		end
 
 		local node = self:StartNode("expression_lsx")
-		node.tokens["<"] = self:ExpectTokenValue("<")
+		node.tokens["<"] = self:ExpectToken("<")
 		node.tag = self:ParseFunctionNameIndex()
 		node.props = {}
 		node.children = {}
 
 		for _ = self:GetPosition(), self:GetLength() do
-			if self:IsTokenValue("{") and self:IsTokenValueOffset("...", 1) then
-				local left = self:ExpectTokenValue("{")
+			if self:IsToken("{") and self:IsTokenOffset("...", 1) then
+				local left = self:ExpectToken("{")
 				local spread = self:read_table_spread()
 
 				if not spread then
@@ -32,24 +26,24 @@ return function(META)
 					return self:ErrorExpression()
 				end
 
-				local right = self:ExpectTokenValue("}")
+				local right = self:ExpectToken("}")
 				spread.tokens["{"] = left
 				spread.tokens["}"] = right
 				table_insert(node.props, spread)
-			elseif self:IsTokenType("letter") and self:IsTokenValueOffset("=", 1) then
-				if self:IsTokenTypeOffset("symbol", 2) and self:IsTokenValueOffset("{", 2) then
+			elseif self:IsTokenType("letter") and self:IsTokenOffset("=", 1) then
+				if self:IsTokenTypeOffset("symbol", 2) and self:IsTokenOffset("{", 2) then
 					local keyval = self:StartNode("sub_statement_table_key_value")
 					keyval.tokens["identifier"] = self:ExpectTokenType("letter")
-					keyval.tokens["="] = self:ExpectTokenValue("=")
-					keyval.tokens["{"] = self:ExpectTokenValue("{")
+					keyval.tokens["="] = self:ExpectToken("=")
+					keyval.tokens["{"] = self:ExpectToken("{")
 					keyval.value_expression = self:ExpectRuntimeExpression()
-					keyval.tokens["}"] = self:ExpectTokenValue("}")
+					keyval.tokens["}"] = self:ExpectToken("}")
 					keyval = self:EndNode(keyval)
 					table_insert(node.props, keyval)
 				elseif self:IsTokenTypeOffset("string", 2) or self:IsTokenType("number", 2) then
 					local keyval = self:StartNode("sub_statement_table_key_value")
 					keyval.tokens["identifier"] = self:ExpectTokenType("letter")
-					keyval.tokens["="] = self:ExpectTokenValue("=")
+					keyval.tokens["="] = self:ExpectToken("=")
 					keyval.value_expression = self:ParseKeywordValueTypeExpression()
 					keyval = self:EndNode(keyval)
 					table_insert(node.props, keyval)
@@ -67,28 +61,28 @@ return function(META)
 			end
 		end
 
-		if self:IsTokenValue("/") then
-			node.tokens["/"] = self:ExpectTokenValue("/")
-			node.tokens[">"] = self:ExpectTokenValue(">")
+		if self:IsToken("/") then
+			node.tokens["/"] = self:ExpectToken("/")
+			node.tokens[">"] = self:ExpectToken(">")
 			node = self:EndNode(node)
 			return node
 		end
 
-		node.tokens[">"] = self:ExpectTokenValue(">")
+		node.tokens[">"] = self:ExpectToken(">")
 
 		for _ = self:GetPosition(), self:GetLength() do
-			if self:IsTokenType("symbol") and self:IsTokenValue("{") then
-				local left = self:ExpectTokenValue("{")
+			if self:IsTokenType("symbol") and self:IsToken("{") then
+				local left = self:ExpectToken("{")
 				local child = self:ExpectRuntimeExpression()
 				child.tokens["lsx{"] = left
 				table_insert(node.children, child)
-				child.tokens["lsx}"] = self:ExpectTokenValue("}")
+				child.tokens["lsx}"] = self:ExpectToken("}")
 			end
 
 			for _ = self:GetPosition(), self:GetLength() do
 				if
 					self:IsTokenType("symbol") and
-					self:IsTokenValue("<") and
+					self:IsToken("<") and
 					self:IsTokenTypeOffset("letter", 1)
 				then
 					table_insert(node.children, self:ParseLSXExpression())
@@ -99,9 +93,9 @@ return function(META)
 
 			if
 				self:IsTokenType("symbol") and
-				self:IsTokenValue("<") and
+				self:IsToken("<") and
 				self:IsTokenTypeOffset("symbol", 1) and
-				self:IsTokenValueOffset("/", 1)
+				self:IsTokenOffset("/", 1)
 			then
 				break
 			end
@@ -114,10 +108,10 @@ return function(META)
 			end
 		end
 
-		node.tokens["<2"] = self:ExpectTokenValue("<")
-		node.tokens["/"] = self:ExpectTokenValue("/")
+		node.tokens["<2"] = self:ExpectToken("<")
+		node.tokens["/"] = self:ExpectToken("/")
 		node.tokens["type2"] = self:ExpectTokenType("letter")
-		node.tokens[">2"] = self:ExpectTokenValue(">")
+		node.tokens[">2"] = self:ExpectToken(">")
 		node = self:EndNode(node)
 		return node
 	end
