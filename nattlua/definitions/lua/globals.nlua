@@ -32,6 +32,7 @@ end
 
 SetPreventInputExpansionOnFunction<|print, true|>
 type type_print = print
+type print_once = print
 type tostring = function=(val: any)>(string)
 
 analyzer function next(t: Map<|any, any|>, k: any)

@@ -38,7 +38,7 @@ return function(META)
 	end
 
 	function META:ParseTealFunctionSignature()
-		if not self:IsTokenValue("function") then return nil end
+		if not self:IsTokenType("letter") or not self:IsTokenValue("function") then return nil end
 
 		local node = self:StartNode("expression_function_signature")
 		node.tokens["function"] = self:ExpectTokenValue("function")
@@ -237,7 +237,8 @@ return function(META)
 				first.Type == "expression_value" and
 				(
 					first.value.type == "letter" or
-					first.value:ValueEquals("...")
+					(first.value.type == "symbol" and
+					first.value:ValueEquals("..."))
 				)
 			then
 				first.standalone_letter = node
@@ -437,7 +438,7 @@ return function(META)
 			local bnode = self:ParseValueExpressionType("string")
 
 			for _ = self:GetPosition(), self:GetLength() do
-				if self:IsTokenValue("end") then break end
+				if self:IsTokenType("letter") and self:IsTokenValue("end") then break end
 
 				local left = bnode
 				bnode = self:StartNode("expression_binary_operator")

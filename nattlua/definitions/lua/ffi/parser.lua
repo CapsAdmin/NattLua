@@ -80,22 +80,24 @@ function META:IsInArguments()
 			-- what happens if we have a function pointer in the arguments?
 			-- void foo(void (*)(int, int))
 			-- I guess it still works as a hacky solution
-			if self:IsTokenValueOffset(",", i) then return true end
+			if self:IsTokenTypeOffset("symbol", i) then
+				if self:IsTokenValueOffset(",", i) then return true end
 
-			if self:IsTokenValueOffset("(", i) and self:IsTokenValueOffset(")", i + 1) then
-				return false
-			end
+				if self:IsTokenValueOffset("(", i) and self:IsTokenValueOffset(")", i + 1) then
+					return false
+				end
 
-			if
-				self:IsTokenValueOffset(")", i) and
-				(
-					self:IsTokenValueOffset(";", i + 1) or
-					self:IsTokenTypeOffset("end_of_file", i + 1)
-				)
-				and
-				not self:IsTokenValueOffset(")", i - 1)
-			then
-				return true
+				if
+					self:IsTokenValueOffset(")", i) and
+					(
+						self:IsTokenValueOffset(";", i + 1) or
+						self:IsTokenTypeOffset("end_of_file", i + 1)
+					)
+					and
+					not self:IsTokenValueOffset(")", i - 1)
+				then
+					return true
+				end
 			end
 		end
 	end
@@ -106,7 +108,7 @@ end
 function META:ParseCDeclaration()
 	local node = self:StartNode("expression_c_declaration")
 
-	if self:IsTokenValue("...") then
+	if self:IsTokenType("symbol") and self:IsTokenValue("...") then
 		node.tokens["..."] = self:ExpectTokenValue("...")
 		return self:EndNode(node)
 	end
@@ -209,17 +211,20 @@ function META:FindPotentialIdentifier(node)
 end
 
 function META:IsEndOfTypeQualifiersAndSpecifiers()
-	return self:IsTokenValue("(") or
-		self:IsTokenValue("*") or
-		self:IsTokenValue("[") or
-		-- void foo(int >>,<< long >>)<<
-		self:IsTokenValue(",") or
-		self:IsTokenValue(")") or
-		-- long foo>>;<<
-		self:IsTokenValue(";") or
-		-- struct and union bit fields
-		self:IsTokenValue(":") or
-		self:IsTokenValue("=")
+	return self:GetToken().type == "symbol" and
+		(
+			self:IsTokenValue("(") or
+			self:IsTokenValue("*") or
+			self:IsTokenValue("[") or
+			-- void foo(int >>,<< long >>)<<
+			self:IsTokenValue(",") or
+			self:IsTokenValue(")") or
+			-- long foo>>;<<
+			self:IsTokenValue(";") or
+			-- struct and union bit fields
+			self:IsTokenValue(":") or
+			self:IsTokenValue("=")
+		)
 end
 
 function META:ParseAttributes(node)
@@ -282,10 +287,12 @@ function META:HasOpeningParenthesis()
 	if not self:IsTokenValue("(") then return false end
 
 	for i = 1, self:GetLength() do
-		if self:IsTokenValueOffset(";", i) then return false end
+		if self:IsTokenTypeOffset("symbol", i)  then
+			if self:IsTokenValueOffset(";", i) then return false end
 
-		if self:IsTokenValueOffset(")", i) and self:IsTokenValueOffset("(", i + 1) then
-			return true
+			if self:IsTokenValueOffset(")", i) and self:IsTokenValueOffset("(", i + 1) then
+				return true
+			end
 		end
 	end
 
@@ -490,7 +497,7 @@ function META:ParseArrayIndex()
 			local node = self:StartNode("expression_array")
 			node.tokens["["] = self:ExpectTokenValue("[")
 
-			if self:IsTokenValue("?") then
+			if self:IsTokenType("unknown") and self:IsTokenValue("?") then
 				node.expression = self:ParseDollarSign()
 			else
 				node.expression = self:ParseRuntimeExpression()

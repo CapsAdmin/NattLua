@@ -278,12 +278,24 @@ do
 		local self = self--[[# as any]]
 
 		if
-			self:ValueEquals(".") or
-			self:ValueEquals(":") or
-			self:ValueEquals("=") or
-			self:ValueEquals("or") or
-			self:ValueEquals("and") or
-			self:ValueEquals("not") or
+			(
+				self.type == "symbol" and
+				(
+					self:ValueEquals(".") or
+					self:ValueEquals(":") or
+					self:ValueEquals("=")
+				)
+			)
+			or
+			(
+				self.type == "letter" and
+				(
+					self:ValueEquals("or") or
+					self:ValueEquals("and") or
+					self:ValueEquals("not")
+				)
+			)
+			or
 			runtime_syntax:GetTokenType(self):find("operator", nil, true) or
 			typesystem_syntax:GetTokenType(self):find("operator", nil, true)
 		then
@@ -433,6 +445,8 @@ function META:GetByte(offset--[[#: number]])
 
 	return (self.code--[[# as any]]):GetByte(self.start + offset)
 end
+
+local callstack = require("nattlua.other.callstack")
 
 function META:ValueEquals(str--[[#: string]])
 	if self.value then return self.value == str end

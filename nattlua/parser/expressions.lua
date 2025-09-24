@@ -12,7 +12,14 @@ local path_util = require("nattlua.other.path")
 
 return function(META)
 	function META:ParseAnalyzerFunctionExpression()
-		if not (self:IsTokenValue("analyzer") and self:IsTokenValueOffset("function", 1)) then
+		if
+			not (
+				self:IsTokenType("letter") and
+				self:IsTokenTypeOffset("letter", 1) and
+				self:IsTokenValue("analyzer") and
+				self:IsTokenValueOffset("function", 1)
+			)
+		then
 			return
 		end
 
@@ -25,7 +32,9 @@ return function(META)
 	end
 
 	function META:ParseFunctionExpression()
-		if not self:IsTokenValue("function") then return end
+		if not self:IsTokenType("letter") or not self:IsTokenValue("function") then
+			return
+		end
 
 		local node = self:StartNode("expression_function")
 		node.tokens["function"] = self:ExpectTokenValue("function")
@@ -35,7 +44,13 @@ return function(META)
 	end
 
 	function META:ParseIndexSubExpression(left_node--[[#: Node]])
-		if not (self:IsTokenValue(".") and self:IsTokenTypeOffset("letter", 1)) then
+		if
+			not (
+				self:IsTokenType("symbol") and
+				self:IsTokenValue(".") and
+				self:IsTokenTypeOffset("letter", 1)
+			)
+		then
 			return
 		end
 
@@ -49,11 +64,19 @@ return function(META)
 
 	function META:IsCallExpression(offset--[[#: number]])
 		local tk = self:GetTokenOffset(offset)
-		return tk:ValueEquals("(") or
-			tk:ValueEquals("<|") or
-			tk:ValueEquals("{") or
+		return (
+				tk.type == "symbol" and
+				(
+					tk:ValueEquals("(") or
+					tk:ValueEquals("<|") or
+					tk:ValueEquals("{")
+				)
+			)
+			or
 			tk.type == "string" or
 			(
+				tk.type == "symbol" and
+				self:IsTokenTypeOffset("symbol", offset + 1) and
 				tk:ValueEquals("!") and
 				self:IsTokenValueOffset("(", offset + 1)
 			)
@@ -62,6 +85,7 @@ return function(META)
 	function META:ParseSelfCallSubExpression(left_node--[[#: Node]])
 		if
 			not (
+				self:IsTokenType("symbol") and
 				self:IsTokenValue(":") and
 				self:IsTokenTypeOffset("letter", 1) and
 				self:IsCallExpression(2)
@@ -80,7 +104,7 @@ return function(META)
 
 	do -- typesystem
 		function META:ParseParenthesisOrTupleTypeExpression()
-			if not self:IsTokenValue("(") then return end
+			if not self:IsTokenType("symbol") or not self:IsTokenValue("(") then return end
 
 			local pleft = self:ExpectTokenValue("(")
 			local node = self:ParseTypeExpression(0)
@@ -130,7 +154,7 @@ return function(META)
 		end
 
 		function META:ParseValueTypeExpression()
-			if not self:IsTokenValue("...") then return end
+			if not self:IsTokenType("symbol") or not self:IsTokenValue("...") then return end
 
 			local node = self:StartNode("expression_vararg")
 			node.tokens["..."] = self:ExpectTokenValue("...")
@@ -144,15 +168,20 @@ return function(META)
 		end
 
 		function META:ParseTypeSignatureFunctionArgument(expect_type)
-			if self:IsTokenValue(")") then return end
+			if self:IsTokenType("symbol") and self:IsTokenValue(")") then return end
 
 			if
 				expect_type or
 				(
 					(
 						self:IsTokenType("letter") or
-						self:IsTokenValue("...")
-					) and
+						(
+							self:IsTokenType("symbol") and
+							self:IsTokenValue("...")
+						)
+					)
+					and
+					self:IsTokenTypeOffset("symbol", 1) and
 					self:IsTokenValueOffset(":", 1)
 				)
 			then
@@ -168,7 +197,14 @@ return function(META)
 		end
 
 		function META:ParseFunctionSignatureExpression()
-			if not (self:IsTokenValue("function") and self:IsTokenValueOffset("=", 1)) then
+			if
+				not (
+					self:IsTokenType("letter") and
+					self:IsTokenValue("function") and
+					self:IsTokenTypeOffset("symbol", 1) and
+					self:IsTokenValueOffset("=", 1)
+				)
+			then
 				return
 			end
 
@@ -187,7 +223,14 @@ return function(META)
 		end
 
 		function META:ParseTypeFunctionExpression()
-			if not (self:IsTokenValue("function") and self:IsTokenValueOffset("<|", 1)) then
+			if
+				not (
+					self:IsTokenType("letter") and
+					self:IsTokenValue("function") and
+					self:IsTokenTypeOffset("symbol", 1) and
+					self:IsTokenValueOffset("<|", 1)
+				)
+			then
 				return
 			end
 
@@ -209,7 +252,7 @@ return function(META)
 
 		do
 			function META:read_type_table_entry(i--[[#: number]])
-				if self:IsTokenValue("[") then
+				if self:IsTokenType("symbol") and self:IsTokenValue("[") then
 					local node = self:StartNode("sub_statement_table_expression_value")
 					node.tokens["["] = self:ExpectTokenValue("[")
 					node.key_expression = self:ParseTypeExpression(0)
@@ -251,7 +294,7 @@ return function(META)
 				local i = 1
 
 				for _ = self:GetPosition(), self:GetLength() do
-					if self:IsTokenValue("}") then break end
+					if self:IsTokenType("symbol") and self:IsTokenValue("}") then break end
 
 					local entry = self:read_type_table_entry(i)
 
@@ -300,7 +343,7 @@ return function(META)
 		end
 
 		function META:ParseEmptyUnionTypeExpression()
-			if not self:IsTokenValue("|") then return end
+			if not self:IsTokenType("symbol") or not self:IsTokenValue("|") then return end
 
 			local node = self:StartNode("expression_empty_union")
 			node.tokens["|"] = self:ParseToken("|")
@@ -309,7 +352,7 @@ return function(META)
 		end
 
 		function META:ParseAsSubExpression(node--[[#: Node]])
-			if not self:IsTokenValue("as") then return end
+			if not self:IsTokenType("letter") or not self:IsTokenValue("as") then return end
 
 			node.tokens["as"] = self:ExpectTokenValue("as")
 			node.type_expression = self:ParseTypeExpression(0)
@@ -408,7 +451,7 @@ return function(META)
 			local node
 			local force_upvalue
 
-			if self:IsTokenValue("^") then
+			if self:IsTokenType("symbol") and self:IsTokenValue("^") then
 				force_upvalue = self:ExpectTokenValue("^")
 			end
 
@@ -432,7 +475,10 @@ return function(META)
 					first.Type == "expression_value" and
 					(
 						first.value.type == "letter" or
-						first.value:ValueEquals("...")
+						(
+							first.value.type == "symbol" and
+							first.value:ValueEquals("...")
+						)
 					)
 				then
 					first.standalone_letter = node
@@ -463,6 +509,9 @@ return function(META)
 
 		function META:IsTypeExpression()
 			local token = self:GetToken()
+
+			if token.type == "string" or token.type == "number" then return true end
+
 			return not (
 				not token or
 				token.type == "end_of_file" or
@@ -506,11 +555,15 @@ return function(META)
 			function META:read_table_spread()
 				if
 					not (
+						self:IsTokenType("symbol") and
 						self:IsTokenValue("...") and
 						(
 							self:IsTokenTypeOffset("letter", 1) or
-							self:IsTokenValueOffset("{", 1) or
-							self:IsTokenValueOffset("(", 1)
+							(
+								self:IsTokenTypeOffset("symbol", 1) and
+								self:IsTokenValueOffset("{", 1) or
+								self:IsTokenValueOffset("(", 1)
+							)
 						)
 					)
 				then
@@ -525,7 +578,7 @@ return function(META)
 			end
 
 			function META:read_table_entry(i--[[#: number]])
-				if self:IsTokenValue("[") then
+				if self:IsTokenType("symbol") and self:IsTokenValue("[") then
 					local node = self:StartNode("sub_statement_table_expression_value")
 					node.tokens["["] = self:ExpectTokenValue("[")
 					node.key_expression = self:ExpectRuntimeExpression(0)
@@ -612,7 +665,7 @@ return function(META)
 				local i = 1
 
 				for _ = self:GetPosition(), self:GetLength() do
-					if self:IsTokenValue("}") then break end
+					if self:IsTokenType("symbol") and self:IsTokenValue("}") then break end
 
 					local entry = self:read_table_entry(i)
 
@@ -629,6 +682,7 @@ return function(META)
 					tree.children[i] = entry
 
 					if
+						not self:IsTokenType("symbol") or
 						not self:IsTokenValue(",") and
 						not self:IsTokenValue(";")
 						and
@@ -677,11 +731,11 @@ return function(META)
 			local node = self:StartNode("expression_postfix_call", left_node)
 			local start = self:GetToken()
 
-			if self:IsTokenValue("{") then
+			if self:IsTokenType("symbol") and self:IsTokenValue("{") then
 				node.expressions = {self:ParseTableExpression()}
 			elseif self:IsTokenType("string") then
 				node.expressions = {self:ParseValueExpressionToken()}
-			elseif self:IsTokenValue("<|") then
+			elseif self:IsTokenType("symbol") and self:IsTokenValue("<|") then
 				node.tokens["call("] = self:ExpectTokenValue("<|")
 				node.expressions = self:ParseMultipleValues(self.ParseTypeExpression, 0)
 				node.tokens["call)"] = self:ExpectTokenValue("|>")
@@ -698,7 +752,7 @@ return function(META)
 					node.tokens["call("] = lparen
 					node.tokens["call)"] = rparen
 				end
-			elseif self:IsTokenValue("!") then
+			elseif self:IsTokenType("symbol") and self:IsTokenValue("!") then
 				node.tokens["!"] = self:ExpectTokenValue("!")
 				node.tokens["call("] = self:ExpectTokenValue("(")
 				node.expressions = self:ParseMultipleValues(self.ParseTypeExpression, 0)
@@ -748,7 +802,7 @@ return function(META)
 		end
 
 		function META:ParsePostfixIndexExpressionSubExpression(left_node--[[#: Node]])
-			if not self:IsTokenValue("[") then return end
+			if not self:IsTokenType("symbol") or not self:IsTokenValue("[") then return end
 
 			local node = self:StartNode("expression_postfix_expression_index")
 			node.tokens["["] = self:ExpectTokenValue("[")
@@ -764,6 +818,7 @@ return function(META)
 				local left_node = node
 
 				if
+					self:IsTokenType("symbol") and
 					self:IsTokenValue(":") and
 					(
 						not self:IsTokenTypeOffset("letter", 1) or
@@ -775,7 +830,7 @@ return function(META)
 				then
 					node.tokens[":"] = self:ExpectTokenValue(":")
 					node.type_expression = self:ExpectTypeExpression(0)
-				elseif self:IsTokenValue("as") then
+				elseif self:IsTokenType("letter") and self:IsTokenValue("as") then
 					node.tokens["as"] = self:ExpectTokenValue("as")
 					node.type_expression = self:ExpectTypeExpression(0)
 				end
@@ -788,7 +843,11 @@ return function(META)
 
 				if not found then break end
 
-				if left_node.Type == "expression_value" and left_node.value:ValueEquals(":") then
+				if
+					left_node.Type == "expression_value" and
+					left_node.value.type == "symbol" and
+					left_node.value:ValueEquals(":")
+				then
 					found.parser_call = true
 				end
 
@@ -810,7 +869,7 @@ return function(META)
 		end
 
 		function META:ParseParenthesisExpression()
-			if not self:IsTokenValue("(") then return end
+			if not self:IsTokenType("symbol") or not self:IsTokenValue("(") then return end
 
 			local pleft = self:ExpectTokenValue("(")
 			local node = self:ExpectRuntimeExpression(0)
@@ -1056,7 +1115,10 @@ return function(META)
 					first.Type == "expression_value" and
 					(
 						first.value.type == "letter" or
-						first.value:ValueEquals("...")
+						(
+							first.value.type == "symbol" and
+							first.value:ValueEquals("...")
+						)
 					)
 				then
 					first.standalone_letter = node
@@ -1066,7 +1128,9 @@ return function(META)
 			self:check_integer_division_operator(self:GetToken())
 
 			for _ = self:GetPosition(), self:GetLength() do
-				if self:IsTokenValueOffset("=", 1) then break end
+				if self:IsTokenTypeOffset("symbol", 1) and self:IsTokenValueOffset("=", 1) then
+					break
+				end
 
 				local info = runtime_syntax:GetBinaryOperatorInfo(self:GetToken())
 

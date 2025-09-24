@@ -116,7 +116,8 @@ return {
 					if
 						(
 							node.value_expression.Type ~= "expression_value" or
-							not node.value_expression.value:ValueEquals("...")
+							(node.value_expression.value.type == "symbol" and 
+							not node.value_expression.value:ValueEquals("..."))
 						)
 						and
 						node.value_expression.Type ~= "expression_postfix_call"

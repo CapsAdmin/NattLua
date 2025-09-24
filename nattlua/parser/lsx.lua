@@ -3,9 +3,14 @@ return function(META)
 	function META:ParseLSXExpression()
 		if
 			not (
-				self:IsTokenValue("<") and
-				self:IsTokenTypeOffset("letter", 1) and
+				(self:IsTokenType("symbol") and
+				self:IsTokenValue("<")) and
+				self:IsTokenTypeOffset("letter", 1) and 
+	(
+				not self:IsTokenTypeOffset("letter", -1)
+				or
 				not self:IsTokenValueOffset("local", -1)
+				)
 			)
 		then
 			return
@@ -32,7 +37,7 @@ return function(META)
 				spread.tokens["}"] = right
 				table_insert(node.props, spread)
 			elseif self:IsTokenType("letter") and self:IsTokenValueOffset("=", 1) then
-				if self:IsTokenValueOffset("{", 2) then
+				if self:IsTokenTypeOffset("symbol", 2) and self:IsTokenValueOffset("{", 2) then
 					local keyval = self:StartNode("sub_statement_table_key_value")
 					keyval.tokens["identifier"] = self:ExpectTokenType("letter")
 					keyval.tokens["="] = self:ExpectTokenValue("=")
@@ -72,7 +77,7 @@ return function(META)
 		node.tokens[">"] = self:ExpectTokenValue(">")
 
 		for _ = self:GetPosition(), self:GetLength() do
-			if self:IsTokenValue("{") then
+			if self:IsTokenType("symbol") and self:IsTokenValue("{") then
 				local left = self:ExpectTokenValue("{")
 				local child = self:ExpectRuntimeExpression()
 				child.tokens["lsx{"] = left
@@ -81,14 +86,25 @@ return function(META)
 			end
 
 			for _ = self:GetPosition(), self:GetLength() do
-				if self:IsTokenValue("<") and self:IsTokenTypeOffset("letter", 1) then
+				if
+					self:IsTokenType("symbol") and
+					self:IsTokenValue("<") and
+					self:IsTokenTypeOffset("letter", 1)
+				then
 					table_insert(node.children, self:ParseLSXExpression())
 				else
 					break
 				end
 			end
 
-			if self:IsTokenValue("<") and self:IsTokenValueOffset("/", 1) then break end
+			if
+				self:IsTokenType("symbol") and
+				self:IsTokenValue("<") and
+				self:IsTokenTypeOffset("symbol", 1) and
+				self:IsTokenValueOffset("/", 1)
+			then
+				break
+			end
 
 			do
 				local string_node = self:StartNode("expression_value")

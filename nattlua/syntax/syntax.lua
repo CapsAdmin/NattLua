@@ -564,6 +564,8 @@ end
 function META:IsRuntimeExpression(token--[[#: Token]])--[[#: boolean]]
 	if token.type == "end_of_file" then return false end
 
+	if token.type == "number" or token.type == "string" then return true end
+
 	return (
 			not token:ValueEquals("}") and
 			not token:ValueEquals(",")

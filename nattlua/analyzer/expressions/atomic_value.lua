@@ -89,7 +89,7 @@ return {
 			end
 		elseif node.force_upvalue then
 			return lookup_value(self, tk)
-		elseif tk:ValueEquals("...") then
+		elseif tk.type == "symbol" and tk:ValueEquals("...") then
 			return lookup_value(self, tk)
 		elseif type == "letter" and node.standalone_letter then
 			-- standalone_letter means it's the first part of something, either >true<, >foo<.bar, >foo<()
