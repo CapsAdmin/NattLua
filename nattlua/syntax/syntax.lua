@@ -54,15 +54,14 @@ local function build_tree1(
 	local return_value = type(items[1]) == "table"
 	local longest = 0
 	local map = {}
-
 	local lookup = {}
 
 	if return_value then
-		for i,v in ipairs(items) do
+		for i, v in ipairs(items) do
 			lookup[v.op] = v
 		end
 	else
-		for i,v in ipairs(items) do
+		for i, v in ipairs(items) do
 			lookup[v] = v
 		end
 	end
@@ -99,9 +98,8 @@ local function build_tree1(
 	end
 
 	return function(token)
-		if token.value then
-			return lookup[token.value]
-		end
+		if token.value then return lookup[token.value] end
+
 		local token_length = token:GetLength()
 
 		if token_length > longest then return nil end
@@ -127,19 +125,17 @@ local function build_tree2(
 	local return_value = type(items[1]) == "table"
 	local longest = 0
 	local max_nodes = 1 -- root
-
 	local lookup = {}
 
 	if return_value then
-		for i,v in ipairs(items) do
+		for i, v in ipairs(items) do
 			lookup[v.op] = v
 		end
 	else
-		for i,v in ipairs(items) do
+		for i, v in ipairs(items) do
 			lookup[v] = v
 		end
 	end
-
 
 	if return_value then
 		table.sort(items, function(a, b)
@@ -207,9 +203,9 @@ local function build_tree2(
 	end
 
 	return function(token)
-		if token.value then
-			return lookup[token.value]
-		end
+		if token.value then return lookup[token.value] end
+
+		if token.type == "end_of_file" then return nil end
 
 		local token_length = token:GetLength()
 
@@ -467,14 +463,26 @@ function META:GetBinaryOperatorInfo(token--[[#: Token]])--[[#: BinaryOperatorInf
 end
 
 function META:IsPrefixOperator(token--[[#: Token]])--[[#: boolean]]
+	if token.type == "number" then return false end
+
+	if token.type == "string" then return false end
+
 	return self.PrefixOperatorsTree(token) ~= nil
 end
 
 function META:IsPostfixOperator(token--[[#: Token]])--[[#: boolean]]
+	if token.type == "number" then return false end
+
+	if token.type == "string" then return false end
+
 	return self.PostfixOperatorsTree(token) ~= nil
 end
 
 function META:IsPrimaryBinaryOperator(token--[[#: Token]])--[[#: boolean]]
+	if token.type == "number" then return false end
+
+	if token.type == "string" then return false end
+
 	return self.PrimaryBinaryOperatorsTree(token) ~= nil
 end
 
@@ -488,7 +496,7 @@ function META:IsVariableName(token--[[#: Token]])--[[#: boolean]]
 end
 
 function META:IsKeyword(token--[[#: Token]])--[[#: boolean]]
-	return self.KeywordsTree(token) ~= nil
+	return token.type == "letter" and self.KeywordsTree(token) ~= nil
 end
 
 function META:IsKeywordValue(token--[[#: Token]])--[[#: boolean]]
@@ -501,16 +509,17 @@ end
 
 function META:BuildReadMapReader(extra_map)
 	local list = {}
-	for k,v in pairs(self.ReadMap) do
+
+	for k, v in pairs(self.ReadMap) do
 		table.insert(list, k)
 	end
+
 	if extra_map then
-		for k,v in pairs(extra_map) do
-			if not self.ReadMap[k] then
-				table.insert(list, k)
-			end
+		for k, v in pairs(extra_map) do
+			if not self.ReadMap[k] then table.insert(list, k) end
 		end
 	end
+
 	return build_tree(list)
 end
 
