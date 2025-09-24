@@ -5,6 +5,7 @@
 local type { TokenType } = import("./token.lua")]=]
 
 local Token = require("nattlua.lexer.token").New
+local TokenWithString = require("nattlua.lexer.token").New2
 local class = require("nattlua.other.class")
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
@@ -26,6 +27,8 @@ local IsDuringLetter = characters.IsDuringLetter
 local IsLetter = characters.IsLetter
 local IsKeyword = characters.IsKeyword
 local IsSymbol = characters.IsSymbol
+local typesystem_syntax = require("nattlua.syntax.typesystem")
+local read_letter = runtime_syntax:BuildReadMapReader(typesystem_syntax.ReadMap)
 local META = class.CreateTemplate("lexer")
 --[[#type META.@Name = "Lexer"]]
 --[[#type META.@Self = {
@@ -136,7 +139,17 @@ end
 do
 	function META:ReadToken()
 		local type, is_whitespace, start, stop = self:ReadSimple()
-		local tk = Token(type, self.Code, start, stop)
+		local tk
+
+		if type == "symbol" then
+			tk = TokenWithString(type, self.Code:GetStringSlice(start, stop), start, stop)
+		elseif type == "letter" then
+			tk = Token(type, self.Code, start, stop)
+			tk.value = read_letter(tk) or false
+		else
+			tk = Token(type, self.Code, start, stop)
+		end
+
 		return tk, is_whitespace
 	end
 
