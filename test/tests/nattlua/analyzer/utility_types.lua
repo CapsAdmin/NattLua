@@ -62,13 +62,13 @@ analyze[[
 
     local type CatName = "miffy" | "boris" | "mordred"
 
-    local cats = Record<|CatName, CatInfo|> = {
+    local cats: Record<|CatName, CatInfo|> = {
         miffy = { age = 10, breed = "tabby" },
         boris = { age = 20, breed = "shiba" },
         mordred = { age = 30, breed = "sphynx" },
     }
 
-    attest.equal(cats.boris.age, _ as number)
+    attest.equal(cats.boris.age, 20)
 ]]
 analyze[[
 

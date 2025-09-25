@@ -53,7 +53,7 @@ runtime:AddKeywordValues({
 	"true",
 	"false",
 })
-runtime:AddPrefixOperators({"-", "#", "not", "!", "~", "supertype"})
+runtime:AddPrefixOperators({"-", "#", "not", "!", "~"})
 runtime:AddPostfixOperators(
 	{
 		-- these are just to make sure all code is covered by tests

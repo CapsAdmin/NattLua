@@ -295,7 +295,7 @@ test("parser errors", function()
 			{"::", "expected.-letter.-got.-end_of_file"},
 			{"!!!!!!!!!!!", "expected.-got.-end_of_file"},
 			{"do do end", "expected.-end.-got.-"},
-			{"local a = 1 === 1", "expected assignment or call"},
+			{"local a = 1 === 1", "expected beginning of expression, got.+symbol"},
 			{"\n\n\nif $test then end", "expected.-then.-got.-$"},
 			{"local x = <Text>foo</Text>", "expected.-string.-got.-letter.-$"},
 			{"local x = <Text>1</Text>", "expected.-string.-got.-number.-$"},

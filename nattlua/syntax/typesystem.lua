@@ -57,14 +57,6 @@ typesystem:AddKeywordValues({
 	"true",
 	"false",
 })
-typesystem:AddPrefixOperators({
-	"-",
-	"#",
-	"not",
-	"!",
-	"~",
-	"supertype",
-})
 typesystem:AddPostfixOperators(
 	{ -- these are just to make sure all code is covered by tests
 		"++",
@@ -99,6 +91,7 @@ typesystem:AddPrefixOperators(
 		"-",
 		"#",
 		"not",
+		"!",
 		"~",
 		"typeof",
 		"$",
@@ -110,7 +103,6 @@ typesystem:AddPrefixOperators(
 		"expand",
 	}
 )
-typesystem:AddPrimaryBinaryOperators({"."})
 typesystem:AddBinaryOperators(
 	{
 		{"or"},

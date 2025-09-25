@@ -284,7 +284,9 @@ do -- these override existing commands and should probably be made more generic
 				f:close()
 				io.write("running tests with temp_build_output.lua ")
 				io.flush()
-				local exit_code = os.execute("luajit -e 'require(\"temp_build_output\") require(\"test.run\")()'")
+				local exit_code = os.execute(
+					"luajit -e 'require(\"temp_build_output\") _G.REUSE_BASE_ENV = true require(\"test.run\")()'"
+				)
 
 				if exit_code ~= 0 then
 					io.write(" - FAIL\n")

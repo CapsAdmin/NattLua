@@ -124,7 +124,7 @@ return function(META)
 				self:PushParserEnvironment("runtime")
 			end
 
-			node.right = self:ParseRuntimeExpression(math_huge)
+			node.right = self:ParseTypeExpression(math_huge)
 
 			if node.value:ValueEquals("expand") then self:PopParserEnvironment() end
 
@@ -292,12 +292,12 @@ return function(META)
 		end
 
 		function META:ParseStringTypeExpression()
-			if not (self:IsTokenType("$") and self:IsTokenTypeOffset("string", 1)) then
+			if not self:IsToken("$") or not self:IsTokenTypeOffset("string", 1) then
 				return
 			end
 
 			local node = self:StartNode("expression_type_string")
-			node.tokens["$"] = self:ParseToken("...")
+			node.tokens["$"] = self:ParseToken("$")
 			node.value = self:ExpectTokenType("string")
 			return node
 		end

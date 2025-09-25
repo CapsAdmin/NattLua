@@ -1,9 +1,9 @@
---[=[#--[[HOTRELOAD
-	run_test("test/tests/nattlua/lexer.lua")
-	run_test("test/performance/lexer.lua")
-]]
-local type { TokenType } = import("./token.lua")]=]
+--[[#local type { TokenType } = import("./token.lua")]]
 
+--[[HOTRELOAD
+	run_test("test/tests/nattlua/lexer.lua")
+	--run_test("test/performance/lexer.lua")
+	]]
 local Token = require("nattlua.lexer.token").New
 local TokenWithString = require("nattlua.lexer.token").New2
 local class = require("nattlua.other.class")
@@ -18,8 +18,10 @@ local B = string.byte
 
 local characters = require("nattlua.syntax.characters")
 local runtime_syntax = require("nattlua.syntax.runtime")
+local typesystem_syntax = require("nattlua.syntax.typesystem")
 local formating = require("nattlua.other.formating")
 local bit = require("nattlua.other.bit")
+local string_reader = require("nattlua.other.string_reader")
 local IsSpace = characters.IsSpace
 local IsNumber = characters.IsNumber
 local IsHex = characters.IsHex
@@ -27,8 +29,6 @@ local IsDuringLetter = characters.IsDuringLetter
 local IsLetter = characters.IsLetter
 local IsKeyword = characters.IsKeyword
 local IsSymbol = characters.IsSymbol
-local typesystem_syntax = require("nattlua.syntax.typesystem")
-local read_letter = runtime_syntax:BuildReadMapReader(typesystem_syntax.ReadMap)
 local META = class.CreateTemplate("lexer")
 --[[#type META.@Name = "Lexer"]]
 --[[#type META.@Self = {
@@ -137,6 +137,24 @@ function META:ReadSimple()--[[#: (TokenType, boolean, number, number)]]
 end
 
 do
+	local read_letter
+
+	do
+		local list = {}
+
+		for k, v in pairs(runtime_syntax.ReadMap) do
+			if not k:find("%p") then table.insert(list, k) end
+		end
+
+		for k, v in pairs(typesystem_syntax.ReadMap) do
+			if not runtime_syntax.ReadMap[k] then
+				if not k:find("%p") then table.insert(list, k) end
+			end
+		end
+
+		read_letter = string_reader(list)
+	end
+
 	function META:ReadToken()
 		local type, is_whitespace, start, stop = self:ReadSimple()
 		local tk
@@ -146,8 +164,9 @@ do
 			tk.sub_type = tk.value
 		elseif type == "letter" then
 			tk = Token(type, self.Code, start, stop)
-			tk.value = read_letter(tk) or false
-			if tk.value then tk.sub_type = tk.value end
+			local sub_type = read_letter(tk) or false
+			tk.value = sub_type
+			tk.sub_type = sub_type
 		else
 			tk = Token(type, self.Code, start, stop)
 		end
@@ -676,7 +695,19 @@ do
 	META.ReadSingleQuoteString = build_string_reader("single", "'")
 end
 
-local ReadSymbolFromTrie = BuildTrieReader(runtime_syntax:GetSymbols(), false)
+local symbols = {}
+local done = {}
+
+for _, v in ipairs(runtime_syntax:GetSymbols()) do
+	done[v] = true
+	table.insert(symbols, v)
+end
+
+for _, v in ipairs(typesystem_syntax:GetSymbols()) do
+	if not done[v] then table.insert(symbols, v) end
+end
+
+local ReadSymbolFromTrie = BuildTrieReader(symbols, false)
 
 function META:ReadSymbol()
 	if ReadSymbolFromTrie(self) then return "symbol" end
