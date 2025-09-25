@@ -20,7 +20,7 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 local formating = require("nattlua.other.formating")
 local bit = require("nattlua.other.bit")
-local string_reader = require("nattlua.other.string_reader")
+local string_reader = require("nattlua.other.string_reader")--[[# as any]]
 local IsSpace = characters.IsSpace
 local IsNumber = characters.IsNumber
 local IsHex = characters.IsHex
@@ -132,7 +132,10 @@ end
 function META:ReadSimple()--[[#: (TokenType, boolean, number, number)]]
 	local start = self.Position
 	local type, is_whitespace = self:Read()
-	return type, is_whitespace, start, self.Position - 1
+	return type--[[# as TokenType]],
+	is_whitespace--[[# as boolean]],
+	start,
+	self.Position - 1
 end
 
 local read_letter
@@ -160,67 +163,8 @@ do
 		end
 	end
 
-	read_letter = string_reader(list_letters)
-	read_symbol = string_reader(list_symbols)
-end
-
-local function BuildTrieReader(list, lowercase)
-	local bit_bor = bit.bor
-	local longest = 0
-	local min_byte = math.huge
-	local max_byte = 0
-	local map = {}
-
-	for _, v in ipairs(list) do
-		if #v > longest then longest = #v end
-
-		local node = map
-
-		for i = 1, #v do
-			local b = v:byte(i)
-
-			if lowercase then b = bit_bor(b, 32) end
-
-			if b < min_byte then min_byte = b end
-
-			if b > max_byte then max_byte = b end
-
-			node[b] = node[b] or {}
-			node = node[b]
-
-			if i == #v then node.END = v end
-		end
-	end
-
-	return function(self)
-		local b = self:PeekByte()
-
-		if lowercase then b = bit_bor(b, 32) end
-
-		if b < min_byte or b > max_byte then return false end
-
-		local node = map
-		local last_match = nil
-
-		for i = 1, longest do
-			local b = self:PeekByteOffset(i - 1)
-
-			if lowercase then b = bit_bor(b, 32) end
-
-			if not node[b] then break end
-
-			node = node[b]
-
-			if node.END then last_match = i end
-		end
-
-		if last_match then
-			self:Advance(last_match)
-			return true
-		end
-
-		return false
-	end
+	read_letter = string_reader(list_letters, false)
+	read_symbol = string_reader(list_symbols, false)
 end
 
 function META:GetTokens()
@@ -239,11 +183,11 @@ function META:GetTokens()
 			whitespace_start = nil
 
 			if type == "symbol" then
-				local sub_type = read_symbol(tk) or false
+				local sub_type = read_symbol(tk--[[# as any]]) or false
 				tk.value = sub_type
 				tk.sub_type = sub_type
 			elseif type == "letter" then
-				local sub_type = read_letter(tk) or false
+				local sub_type = read_letter(tk--[[# as any]]) or false
 				tk.value = sub_type
 				tk.sub_type = sub_type
 			end
@@ -433,7 +377,7 @@ function META:ReadNumberPowExponent(what--[[#: string]])
 	return true
 end
 
-local ReadNumberAnnotations = BuildTrieReader(runtime_syntax:GetNumberAnnotations(), true)
+local ReadNumberAnnotations = string_reader(runtime_syntax:GetNumberAnnotations(), true, true)
 
 function META:ReadHexNumber()
 	if
@@ -470,7 +414,13 @@ function META:ReadHexNumber()
 				if self:ReadNumberPowExponent("pow") then break end
 			end
 
-			if ReadNumberAnnotations(self) then break end
+			local what = ReadNumberAnnotations(self)
+
+			if what then
+				self:Advance(#what)
+
+				break
+			end
 
 			self:Error(
 				"malformed hex number, got " .. string.char(self:PeekByte()),
@@ -510,7 +460,13 @@ function META:ReadBinaryNumber()
 				if self:ReadNumberPowExponent("exponent") then break end
 			end
 
-			if ReadNumberAnnotations(self) then break end
+			local what = ReadNumberAnnotations(self)
+
+			if what then
+				self:Advance(#what)
+
+				break
+			end
 
 			self:Error(
 				"malformed binary number, got " .. string.char(self:PeekByte()),
@@ -565,7 +521,13 @@ function META:ReadDecimalNumber()
 				if self:ReadNumberPowExponent("exponent") then break end
 			end
 
-			if ReadNumberAnnotations(self) then break end
+			local what = ReadNumberAnnotations(self)
+
+			if what then
+				self:Advance(#what)
+
+				break
+			end
 
 			self:Error(
 				"malformed number, got " .. string.char(self:PeekByte()) .. " in decimal notation",
@@ -681,12 +643,19 @@ for _, v in ipairs(typesystem_syntax:GetSymbols()) do
 	if not done[v] then table.insert(symbols, v) end
 end
 
-local ReadSymbolFromTrie = BuildTrieReader(symbols, false)
+do
+	local read_symbol = string_reader(symbols, true)
 
-function META:ReadSymbol()
-	if ReadSymbolFromTrie(self) then return "symbol" end
+	function META:ReadSymbol()--[[#: "symbol" | false]]
+		local str = read_symbol(self--[[# as any]])
 
-	return false
+		if str then
+			self:Advance(#str)
+			return "symbol"
+		end
+
+		return false
+	end
 end
 
 function META.ReadCommentEscape(self--[[#: Lexer]])--[[#: TokenReturnType]]

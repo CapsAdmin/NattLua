@@ -170,8 +170,8 @@ end
 
 function META:AddType(e--[[#: TBaseType]])
 	if e.Type == "union" then
-		for _, v in ipairs(e.Data) do
-			self:AddType(v)
+		for i = 1, #e.Data do
+			self:AddType(e.Data[i])
 		end
 
 		return self

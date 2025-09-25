@@ -29,7 +29,7 @@ else
 		end)
 	end
 
-	if false then
+	if true then
 		-- should take around 0.8 seconds
 		local tokens = util.Measure("lexer:ReadSimple() reading only kind, start and stop", function()
 			lexer:ResetState()

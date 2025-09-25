@@ -1,41 +1,19 @@
+local ffi = require("ffi")
+local bit_bor = require("bit").bor
 
+local function build_tree1(items, is_lexer)
+	if is_lexer then error("Lexer mode not supported in build_tree1") end
 
--- Fixed version - the key issue was not respecting token length in the loop
-local function build_tree1(
-	items--[[#: List<|string|> | List<|BinaryOperatorInfo|> | List<|OperatorFunctionInfo|>]]
-)
 	if false--[[# as true]] then return _--[[# as any]] end
 
-	local return_value = type(items[1]) == "table"
 	local longest = 0
 	local map = {}
-	local lookup = {}
 
-	if return_value then
-		for i, v in ipairs(items) do
-			lookup[v.op] = v
-		end
-	else
-		for i, v in ipairs(items) do
-			lookup[v] = v
-		end
-	end
+	table.sort(items, function(a, b)
+		return #a > #b
+	end)
 
-	if return_value then
-		table.sort(items, function(a, b)
-			return #a.op > #b.op
-		end)
-	else
-		table.sort(items, function(a, b)
-			return #a > #b
-		end)
-	end
-
-	for _, item in ipairs(items) do
-		local str
-
-		if return_value then str = item.op else str = item end
-
+	for _, str in ipairs(items) do
 		if #str > longest then longest = #str end
 
 		str = str--[[# as string]]
@@ -53,8 +31,6 @@ local function build_tree1(
 	end
 
 	return function(token)
-		if token.value then return lookup[token.value] end
-
 		local token_length = token:GetLength()
 
 		if token_length > longest then return nil end
@@ -71,45 +47,18 @@ local function build_tree1(
 	end
 end
 
-local function build_tree2(
-	items--[[#: List<|string|> | List<|BinaryOperatorInfo|> | List<|OperatorFunctionInfo|>]]
-)
+local function build_tree2(items, is_lexer, lowercase)
 	if false--[[# as true]] then return _--[[# as any]] end
 
-	local ffi = require("ffi")
-	local return_value = type(items[1]) == "table"
 	local longest = 0
 	local max_nodes = 1 -- root
-	local lookup = {}
+	table.sort(items, function(a, b)
+		return #a > #b
+	end)
 
-	if return_value then
-		for i, v in ipairs(items) do
-			lookup[v.op] = v
-		end
-	else
-		for i, v in ipairs(items) do
-			lookup[v] = v
-		end
-	end
-
-	if return_value then
-		table.sort(items, function(a, b)
-			return #a.op > #b.op
-		end)
-
-		for _, str in ipairs(items) do
-			max_nodes = max_nodes + #str.op
-			longest = math.max(longest, #str.op)
-		end
-	else
-		table.sort(items, function(a, b)
-			return #a > #b
-		end)
-
-		for _, str in ipairs(items) do
-			max_nodes = max_nodes + #str
-			longest = math.max(longest, #str)
-		end
+	for _, str in ipairs(items) do
+		max_nodes = max_nodes + #str
+		longest = math.max(longest, #str)
 	end
 
 	local node_type = ffi.typeof([[
@@ -129,13 +78,14 @@ local function build_tree2(
 
 	nodes[0].end_marker = 0
 
-	for _, item in ipairs(items) do
+	for _, str in ipairs(items) do
 		local current_node = 0
-
-		if return_value then str = item.op else str = item end
 
 		for i = 1, #str do
 			local byte_val = str:byte(i)
+
+			if lowercase then byte_val = bit_bor(byte_val, 32) end
+
 			local child_node = nodes[current_node].children[byte_val]
 
 			if child_node == 0 then
@@ -154,7 +104,44 @@ local function build_tree2(
 		end
 
 		nodes[current_node].end_marker = 1
-		string_storage[current_node] = item
+		string_storage[current_node + 1] = str
+	end
+
+	if is_lexer then
+		if lowercase then
+			return function(lexer)
+				local node_index = 0
+
+				for i = 0, longest - 1 do
+					local b = lexer:PeekByteOffset(i)
+
+					if lowercase then b = bit_bor(b, 32) end
+
+					local child = nodes[node_index].children[b]
+
+					if child == 0 then break end
+
+					node_index = child
+				end
+
+				return nodes[node_index].end_marker == 1 and string_storage[node_index + 1] or nil
+			end
+		end
+
+		return function(lexer)
+			local node_index = 0
+
+			for i = 0, longest - 1 do
+				local b = lexer:PeekByteOffset(i)
+				local child = nodes[node_index].children[b]
+
+				if child == 0 then break end
+
+				node_index = child
+			end
+
+			return nodes[node_index].end_marker == 1 and string_storage[node_index + 1] or nil
+		end
 	end
 
 	return function(token)
@@ -162,15 +149,15 @@ local function build_tree2(
 
 		if token_length > longest then return nil end
 
-		local node_index = 0
-
 		if token_length == 1 then
 			local child = nodes[0].children[token:GetByte(0)]
 
 			if child == 0 then return nil end
 
-			return nodes[child].end_marker == 1 and string_storage[child] or nil
+			return nodes[child].end_marker == 1 and string_storage[child + 1] or nil
 		end
+
+		local node_index = 0
 
 		for i = 0, token_length - 1 do
 			local child = nodes[node_index].children[token:GetByte(i)]
@@ -180,7 +167,7 @@ local function build_tree2(
 			node_index = child
 		end
 
-		return nodes[node_index].end_marker == 1 and string_storage[node_index] or nil
+		return nodes[node_index].end_marker == 1 and string_storage[node_index + 1] or nil
 	end
 end
 

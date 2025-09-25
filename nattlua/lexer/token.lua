@@ -508,7 +508,7 @@ function META.New(
 	lexer--[[#: any]],
 	start--[[#: number]],
 	stop--[[#: number]],
-	whitespace_start--[[#: number]]
+	whitespace_start--[[#: nil | number]]
 )--[[#: META.@Self]]
 	return META.NewObject(
 		{

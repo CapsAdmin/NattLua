@@ -73,7 +73,7 @@ runtime:AddBinaryOperators(
 		{"<<", ">>"},
 		{"R.."}, -- right associative
 		{"+", "-"},
-		{"*", "/", "/idiv/", "%"},
+		{"*", "/", "%"},
 		{"R^"}, -- right associative
 	}
 )
