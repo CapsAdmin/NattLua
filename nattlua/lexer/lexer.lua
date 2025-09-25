@@ -5,7 +5,6 @@
 	run_lua("test/performance/lexer.lua")
 ]]
 local Token = require("nattlua.lexer.token").New
-local TokenWithString = require("nattlua.lexer.token").New2
 local class = require("nattlua.other.class")
 local setmetatable = _G.setmetatable
 local ipairs = _G.ipairs
@@ -192,25 +191,17 @@ do
 
 		local whitespace = {token}
 		local whitespace_i = 2
-		local potential_idiv = false
 
 		for i = self.Position, self:GetLength() + 1 do
 			local token, is_whitespace = self:ReadToken()
 
 			if not is_whitespace then
 				token.whitespace = whitespace
-				token.potential_idiv = potential_idiv
 				return token
 			end
 
 			whitespace[whitespace_i] = token
 			whitespace_i = whitespace_i + 1
-
-			if token.type == "line_comment" then
-				if token:GetByte(0) == B and token:GetByte(1) == B then
-					potential_idiv = true
-				end
-			end
 		end
 	end
 end

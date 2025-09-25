@@ -26,7 +26,6 @@ local assert = _G.assert
 	value = false | string,
 	string_value = false | string,
 	inferred_types = false | List<|any|>,
-	potential_idiv = false | boolean,
 	parent = false | any,
 	whitespace = false | List<|CurrentType<|"table", 1|>|>,
 	c_keyword = false | true,
@@ -53,8 +52,6 @@ function META:Copy()
 			copy.inferred_types[i] = v
 		end
 	end
-
-	if self.potential_idiv then copy.potential_idiv = self.potential_idiv end
 
 	if self.whitespace then
 		copy.whitespace = {}
@@ -488,13 +485,15 @@ function META.New2(
 	start--[[#: number]],
 	stop--[[#: number]]
 )--[[#: META.@Self]]
-	return META.NewObject({
-		type = type,
-		sub_type = false,
-		value = value,
-		start = start,
-		stop = stop,
-	}--[[# as META.@Self]])
+	return META.NewObject(
+		{
+			type = type,
+			sub_type = false,
+			value = value,
+			start = start,
+			stop = stop,
+		}--[[# as META.@Self]]
+	)
 end
 
 return META

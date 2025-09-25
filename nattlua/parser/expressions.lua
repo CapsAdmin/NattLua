@@ -1018,32 +1018,6 @@ return function(META)
 			return node
 		end
 
-		function META:check_integer_division_operator(node--[[#: Node]])
-			if not node.potential_idiv then return end
-
-			if not node or node.idiv_resolved then return end
-
-			for i, token in ipairs(node.whitespace) do
-				local str = token:GetValueString()
-
-				if str:find("\n", nil, true) then break end
-
-				if token.type == "line_comment" and str:sub(1, 2) == "//" then
-					table_remove(node.whitespace, i)
-					local tokens = self:LexString("/idiv" .. str:sub(2))
-
-					for _, token in ipairs(tokens) do
-						self:check_integer_division_operator(token)
-					end
-
-					self:AddTokens(tokens)
-					node.idiv_resolved = true
-
-					break
-				end
-			end
-		end
-
 		function META:ParseRuntimeExpression(priority--[[#: number]])
 			if self:GetCurrentParserEnvironment() == "typesystem" then
 				return self:ParseTypeExpression(priority)
@@ -1075,8 +1049,6 @@ return function(META)
 					first.standalone_letter = node
 				end
 			end
-
-			self:check_integer_division_operator(self:GetToken())
 
 			for _ = self:GetPosition(), self:GetLength() do
 				if self:IsTokenOffset("=", 1) then break end
