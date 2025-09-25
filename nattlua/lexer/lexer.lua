@@ -2,8 +2,8 @@
 
 --[[HOTRELOAD
 	run_test("test/tests/nattlua/lexer.lua")
-	--run_test("test/performance/lexer.lua")
-	]]
+	run_lua("test/performance/lexer.lua")
+]]
 local Token = require("nattlua.lexer.token").New
 local TokenWithString = require("nattlua.lexer.token").New2
 local class = require("nattlua.other.class")
@@ -138,37 +138,46 @@ end
 
 do
 	local read_letter
+	local read_symbol
 
 	do
-		local list = {}
+		local list_letters = {}
+		local list_symbols = {}
 
 		for k, v in pairs(runtime_syntax.ReadMap) do
-			if not k:find("%p") then table.insert(list, k) end
+			if not k:find("%p") then
+				table.insert(list_letters, k)
+			else
+				table.insert(list_symbols, k)
+			end
 		end
 
 		for k, v in pairs(typesystem_syntax.ReadMap) do
 			if not runtime_syntax.ReadMap[k] then
-				if not k:find("%p") then table.insert(list, k) end
+				if not k:find("%p") then
+					table.insert(list_letters, k)
+				else
+					table.insert(list_symbols, k)
+				end
 			end
 		end
 
-		read_letter = string_reader(list)
+		read_letter = string_reader(list_letters)
+		read_symbol = string_reader(list_symbols)
 	end
 
 	function META:ReadToken()
 		local type, is_whitespace, start, stop = self:ReadSimple()
-		local tk
+		local tk = Token(type, self.Code, start, stop)
 
 		if type == "symbol" then
-			tk = TokenWithString(type, self.Code:GetStringSlice(start, stop), start, stop)
-			tk.sub_type = tk.value
+			local sub_type = read_symbol(tk) or false
+			tk.value = sub_type
+			tk.sub_type = sub_type
 		elseif type == "letter" then
-			tk = Token(type, self.Code, start, stop)
 			local sub_type = read_letter(tk) or false
 			tk.value = sub_type
 			tk.sub_type = sub_type
-		else
-			tk = Token(type, self.Code, start, stop)
 		end
 
 		return tk, is_whitespace
