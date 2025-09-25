@@ -1282,8 +1282,8 @@ do
 		end
 
 		for i, token in ipairs(data.tokens) do
-			if token.whitespace then
-				for _, token in ipairs(token.whitespace) do
+			if token:HasWhitespace() then
+				for _, token in ipairs(token:GetWhitespace()) do
 					process_token(token)
 				end
 			end
@@ -1345,14 +1345,14 @@ do
 				end
 
 				if tokens then
-					process_token(Token.New2("fake", start, token.start, token.start + #start))
+					process_token(Token.NewVirtualToken("fake", start, token.start, token.start + #start))
 
 					for i, token in ipairs(tokens) do
 						token.start = token.start + offset
 						token.stop = token.stop + offset
 
-						if token.whitespace then
-							for _, token in ipairs(token.whitespace) do
+						if token:HasWhitespace() then
+							for _, token in ipairs(token:GetWhitespace()) do
 								process_token(token)
 							end
 						end
@@ -1360,7 +1360,7 @@ do
 						process_token(token)
 					end
 
-					process_token(Token.New2("fake", start, token.stop, token.stop + #start))
+					process_token(Token.NewVirtualToken("fake", start, token.stop, token.stop + #start))
 				else
 					process_token(token)
 				end

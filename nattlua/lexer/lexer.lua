@@ -135,75 +135,33 @@ function META:ReadSimple()--[[#: (TokenType, boolean, number, number)]]
 	return type, is_whitespace, start, self.Position - 1
 end
 
+local read_letter
+local read_symbol
+
 do
-	local read_letter
-	local read_symbol
+	local list_letters = {}
+	local list_symbols = {}
 
-	do
-		local list_letters = {}
-		local list_symbols = {}
+	for k, v in pairs(runtime_syntax.ReadMap) do
+		if not k:find("%p") then
+			table.insert(list_letters, k)
+		else
+			table.insert(list_symbols, k)
+		end
+	end
 
-		for k, v in pairs(runtime_syntax.ReadMap) do
+	for k, v in pairs(typesystem_syntax.ReadMap) do
+		if not runtime_syntax.ReadMap[k] then
 			if not k:find("%p") then
 				table.insert(list_letters, k)
 			else
 				table.insert(list_symbols, k)
 			end
 		end
-
-		for k, v in pairs(typesystem_syntax.ReadMap) do
-			if not runtime_syntax.ReadMap[k] then
-				if not k:find("%p") then
-					table.insert(list_letters, k)
-				else
-					table.insert(list_symbols, k)
-				end
-			end
-		end
-
-		read_letter = string_reader(list_letters)
-		read_symbol = string_reader(list_symbols)
 	end
 
-	function META:ReadToken()
-		local type, is_whitespace, start, stop = self:ReadSimple()
-		local tk = Token(type, self.Code, start, stop)
-
-		if type == "symbol" then
-			local sub_type = read_symbol(tk) or false
-			tk.value = sub_type
-			tk.sub_type = sub_type
-		elseif type == "letter" then
-			local sub_type = read_letter(tk) or false
-			tk.value = sub_type
-			tk.sub_type = sub_type
-		end
-
-		return tk, is_whitespace
-	end
-
-	local B = string.byte("/")
-
-	function META:ReadNonWhitespaceToken()
-		local token, is_whitespace = self:ReadToken()
-
-		if not is_whitespace then return token end
-
-		local whitespace = {token}
-		local whitespace_i = 2
-
-		for i = self.Position, self:GetLength() + 1 do
-			local token, is_whitespace = self:ReadToken()
-
-			if not is_whitespace then
-				token.whitespace = whitespace
-				return token
-			end
-
-			whitespace[whitespace_i] = token
-			whitespace_i = whitespace_i + 1
-		end
-	end
+	read_letter = string_reader(list_letters)
+	read_symbol = string_reader(list_symbols)
 end
 
 local function BuildTrieReader(list, lowercase)
@@ -269,16 +227,32 @@ function META:GetTokens()
 	self:ResetState()
 	local tokens = {}
 	local tokens_i = 1
+	local whitespace_start
 
 	for i = self.Position, self:GetLength() + 1 do
-		local token = self:ReadNonWhitespaceToken()
+		local type, is_whitespace, start, stop = self:ReadSimple()
 
-		if not token then break end
+		if is_whitespace then
+			whitespace_start = whitespace_start or start
+		else
+			local tk = Token(type, self, start, stop, whitespace_start)
+			whitespace_start = nil
 
-		tokens[tokens_i] = token
-		tokens_i = tokens_i + 1
+			if type == "symbol" then
+				local sub_type = read_symbol(tk) or false
+				tk.value = sub_type
+				tk.sub_type = sub_type
+			elseif type == "letter" then
+				local sub_type = read_letter(tk) or false
+				tk.value = sub_type
+				tk.sub_type = sub_type
+			end
 
-		if token.type == "end_of_file" then break end
+			tokens[tokens_i] = tk
+			tokens_i = tokens_i + 1
+
+			if type == "end_of_file" then break end
+		end
 	end
 
 	return tokens

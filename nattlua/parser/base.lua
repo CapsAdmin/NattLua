@@ -16,7 +16,7 @@ local table = _G.table
 local math_min = math.min
 local select = _G.select
 local class = require("nattlua.other.class")
-local Token = require("nattlua.lexer.token").New2
+local VirtualToken = require("nattlua.lexer.token").NewVirtualToken
 return function()
 	local META = class.CreateTemplate("parser")
 	--[[#type META.@Self = {
@@ -441,7 +441,7 @@ end
 		end
 
 		function META:NewToken(type--[[#: TokenType]], value--[[#: string]])
-			return Token(type, value, 0, 0)
+			return VirtualToken(type, value, 0, 0)
 		end
 	end
 

@@ -20,9 +20,10 @@ local assert = _G.assert
 	@Name = "Token",
 	type = META.TokenType,
 	sub_type = false | string,
-	code = Code | nil,
+	lexer = any,
 	start = number,
 	stop = number,
+	whitespace_start = false | number,
 	value = false | string,
 	string_value = false | string,
 	inferred_types = false | List<|any|>,
@@ -434,6 +435,49 @@ end
 
 META.is_token = true
 
+function META:HasWhitespace()--[[#: boolean]]
+	return self.whitespace_start ~= nil
+end
+
+function META:GetWhitespace()--[[#: List<|META.@Self|>]]
+	if false--[[# as true]] then return _--[[# as List<|META.Token|>]] end -- TODO
+	if self.whitespace then return self.whitespace end
+
+	if self.whitespace_start then
+		local start = self.whitespace_start
+		self.whitespace = {}
+		local i = 1
+		self.lexer:SetPosition(start)
+
+		if self.lexer:IsString("]]") then
+			self.whitespace[i] = META.NewVirtualToken("comment_escape", "]]", start, start + 2)
+			i = i + 1
+			start = start + 2
+		elseif self.lexer:IsString("]=]") then
+			self.whitespace[i] = META.NewVirtualToken("comment_escape", "]=]", start, start + 3)
+			i = i + 1
+			start = start + 3
+		end
+
+		self.lexer:SetPosition(start)
+
+		while true do
+			local type, is_whitespace, start, stop = self.lexer:ReadSimple()
+
+			if not is_whitespace then break end
+
+			self.whitespace[i] = META.NewVirtualToken(type, self.lexer.Code:GetStringSlice(start, stop), start, stop)
+			i = i + 1
+
+			if stop >= self.start then break end
+		end
+
+		return self.whitespace
+	end
+
+	error("no whitespace")
+end
+
 function META:GetLength()
 	return self.stop - self.start + 1
 end
@@ -441,15 +485,13 @@ end
 function META:GetByte(offset--[[#: number]])
 	if self.value then return self.value:byte(offset + 1) or 0 end
 
-	return (self.code--[[# as any]]):GetByte(self.start + offset)
+	return self.lexer.Code:GetByte(self.start + offset)
 end
-
-local callstack = require("nattlua.other.callstack")
 
 function META:ValueEquals(str--[[#: string]])
 	if self.value then return self.value == str end
 
-	return (self.code--[[# as any]]):IsStringSlice2(self.start, self.stop, str)
+	return self.lexer.Code:IsStringSlice2(self.start, self.stop, str)
 end
 
 function META:ReplaceValue(new_str--[[#: string]])
@@ -457,29 +499,31 @@ function META:ReplaceValue(new_str--[[#: string]])
 end
 
 function META:GetValueString()
-	self.value = self.value or assert(self.code):GetStringSlice(self.start, self.stop)
+	self.value = self.value or self.lexer.Code:GetStringSlice(self.start, self.stop)
 	return self.value
 end
 
 function META.New(
 	type--[[#: META.TokenType]],
-	code--[[#: Code]],
+	lexer--[[#: any]],
 	start--[[#: number]],
-	stop--[[#: number]]
+	stop--[[#: number]],
+	whitespace_start--[[#: number]]
 )--[[#: META.@Self]]
 	return META.NewObject(
 		{
 			type = type,
-			code = code,
+			lexer = lexer,
 			sub_type = false,
 			value = false,
 			start = start,
 			stop = stop,
+			whitespace_start = whitespace_start,
 		}--[[# as META.@Self]]
 	)
 end
 
-function META.New2(
+function META.NewVirtualToken(
 	type--[[#: META.TokenType]],
 	value--[[#: string]],
 	start--[[#: number]],

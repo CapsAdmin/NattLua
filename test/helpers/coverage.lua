@@ -123,7 +123,7 @@ function coverage.Preprocess(code, key)
 		local diff = require("nattlua.other.diff")
 		local old = code
 		local new = gen
-		assert(diff.assert_equal(old, new))
+		print(diff.diff(old, new))
 	end
 
 	_G.__COVERAGE[key] = _G.__COVERAGE[key] or

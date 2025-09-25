@@ -138,7 +138,7 @@ return function(META)
 			local node = self:StartNode("expression_vararg")
 			node.tokens["..."] = self:ExpectToken("...")
 
-			if not self:GetToken().whitespace then
+			if not self:GetToken():HasWhitespace() then
 				node.value = self:ParseTypeExpression(0) or false
 			end
 

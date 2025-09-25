@@ -171,9 +171,11 @@ return function()
 				end
 			end
 
-			if token.whitespace then
+			if token:HasWhitespace() then
+				local whitespace = token:GetWhitespace()
+
 				if self.config.pretty_print == true then
-					for i, wtoken in ipairs(token.whitespace) do
+					for i, wtoken in ipairs(whitespace) do
 						if wtoken.type == "line_comment" then
 							local start = i
 
@@ -184,9 +186,7 @@ return function()
 									local found_newline = false
 
 									for i = start, 1, -1 do
-										local wtoken = token.whitespace[i]
-
-										if wtoken:GetValueString():find("\n") then
+										if whitespace[i]:GetValueString():find("\n") then
 											found_newline = true
 
 											break
@@ -204,21 +204,21 @@ return function()
 
 							self:EmitToken(wtoken)
 
-							if token.whitespace[i + 1] then
+							if whitespace[i + 1] then
 								self:Whitespace("\n")
 								self:Whitespace("\t")
 							end
 						elseif wtoken.type == "multiline_comment" then
 							self:EmitToken(wtoken)
 
-							if token.whitespace[i + 1] then
+							if whitespace[i + 1] then
 								self:Whitespace("\n")
 								self:Whitespace("\t")
 							end
 						end
 					end
 				else
-					for _, wtoken in ipairs(token.whitespace) do
+					for _, wtoken in ipairs(whitespace) do
 						if wtoken.type ~= "comment_escape" then self:EmitWhitespace(wtoken) end
 					end
 				end
@@ -1059,7 +1059,9 @@ return function()
 
 			self:EmitToken(
 				node.value,
-				not self.config.skip_translation and translate_prefix[node.value:GetValueString()] or nil
+				not self.config.skip_translation and
+					translate_prefix[node.value:GetValueString()] or
+					nil
 			)
 			self:OptionalWhitespace()
 			self:EmitExpression(node.right)
@@ -1114,7 +1116,9 @@ return function()
 
 				self:EmitToken(
 					node.value,
-					not self.config.skip_translation and translate_binary[node.value:GetValueString()] or nil
+					not self.config.skip_translation and
+						translate_binary[node.value:GetValueString()] or
+						nil
 				)
 
 				if special_break and self:IsLineBreaking() then
