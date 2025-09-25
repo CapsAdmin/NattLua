@@ -10,9 +10,9 @@ return function(META)
 		function META:IsDestructureStatement(offset--[[#: number]])
 			offset = offset or 0
 			return (
-				self:IsTokenOffset("{", offset + 0) and
-				self:IsTokenTypeOffset("letter", offset + 1)
-			) or
+					self:IsTokenOffset("{", offset + 0) and
+					self:IsTokenTypeOffset("letter", offset + 1)
+				) or
 				(
 					self:IsTokenTypeOffset("letter", offset + 0) and
 					self:IsTokenOffset(",", offset + 1) and
@@ -313,7 +313,7 @@ return function(META)
 					token = self:GetToken()
 					self:Advance(1)
 				else
-					self:Error("expected elseif, else or end got $2", start, stop, array, self:GetToken().type)
+					self:Error("expected elseif, else or end got $2", nil, nil, self:GetToken().type)
 				end
 
 				if not token then return false end -- TODO: what happens here? :End is never called
@@ -520,7 +520,11 @@ return function(META)
 		}
 		runtime_injection = table.concat(runtime_injection, ";") .. ";"
 
-		function META:CompileLuaAnalyzerDebugCode(code, node)
+		local function invalid_function()
+			error("invalid function")
+		end
+
+		function META:CompileLuaAnalyzerDebugCode(code, node, start_token, stop_token)
 			local start, stop = code:find("__REPLACE_ME__", nil, true)
 
 			if start and stop then
@@ -540,7 +544,14 @@ return function(META)
 				code = ("\n"):rep(line - 1) .. code
 			end
 
-			return assert(loadstring(code, node.Code:GetName() .. ":" .. line)), code
+			local func, err = loadstring(code, node.Code:GetName() .. ":" .. line)
+
+			if not func then
+				self:Error("error compiling debug code: $1", start_token, stop_token, err)
+				return invalid_function, code
+			end
+
+			return func, code
 		end
 	end
 
@@ -548,7 +559,7 @@ return function(META)
 		if self:IsTokenType("analyzer_debug_code") then
 			local node = self:StartNode("statement_analyzer_debug_code")
 			node.lua_code = self:ParseValueExpressionType("analyzer_debug_code")
-			node.compiled_function = self:CompileLuaAnalyzerDebugCode(node.lua_code.value:GetValueString():sub(3), node)
+			node.compiled_function = self:CompileLuaAnalyzerDebugCode(node.lua_code.value:GetValueString():sub(3), node, node.lua_code.value, node.lua_code.value)
 			node = self:EndNode(node)
 			return node
 		elseif self:IsTokenType("parser_debug_code") then
