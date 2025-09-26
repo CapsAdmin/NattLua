@@ -42,17 +42,15 @@ elseif ffi.os == "Windows" then
 	end
 else
 	ffi.cdef([[
-		struct timespec { long tv_sec; long tv_nsec; };
-		int clock_gettime(int clock_id, struct timespec *tp);
+		int clock_gettime(int clock_id, void *tp);
 	]])
-	local CLOCK_MONOTONIC = 1
-	local ts = ffi.new("struct timespec")
+	local ts = ffi.new("struct { long int tv_sec; long int tv_nsec; }[1]")
 	get_time_raw = function()
-		ffi.C.clock_gettime(CLOCK_MONOTONIC, ts)
-		return ts.tv_sec * 1000000000ULL + ts.tv_nsec
+		ffi.C.clock_gettime(1, ts)
+		return ts[0].tv_sec + ts[0].tv_nsec
 	end
 	get_time_seconds = function(raw_time)
-		return tonumber(raw_time) / 1000000000.0
+		return tonumber(raw_time) * 0.000000001
 	end
 end
 

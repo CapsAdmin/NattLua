@@ -3,7 +3,7 @@ local has_ffi, ffi = pcall(require, "ffi")
 
 if not has_ffi then return os.clock end
 
-if ffi.os == "OSX" then
+if ffi.os == "OSX" and false then
 	ffi.cdef([[
 		uint64_t clock_gettime_nsec_np(int clock_id);
 	]])
