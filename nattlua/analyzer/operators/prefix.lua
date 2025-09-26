@@ -104,7 +104,7 @@ end
 return {
 	Prefix = function(analyzer, node)
 		if analyzer:IsTypesystem() then
-			if node.value:ValueEquals("typeof") then
+			if node.value.sub_type == "typeof" then
 				analyzer:PushAnalyzerEnvironment("runtime")
 				analyzer:PushNilAccessAllowed()
 				local obj = analyzer:AnalyzeExpression(node.right)
@@ -119,13 +119,13 @@ return {
 			end
 		end
 
-		if node.value:ValueEquals("not") then analyzer:PushInvertedExpressionContext() end
+		if node.value.sub_type == "not" then analyzer:PushInvertedExpressionContext() end
 
 		local r = analyzer:Assert(analyzer:AnalyzeExpression(node.right))
 
-		if node.value:ValueEquals("not") then analyzer:PopInvertedExpressionContext() end
+		if node.value.sub_type == "not" then analyzer:PopInvertedExpressionContext() end
 
-		if node.value:ValueEquals("ref") then
+		if node.value.sub_type == "ref" then
 			r:SetReferenceType(true)
 			return r
 		end

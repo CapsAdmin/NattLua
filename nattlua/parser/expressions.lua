@@ -393,7 +393,7 @@ return function(META)
 
 				if
 					left_node.Type == "expression_binary_operator" and
-					left_node.value:ValueEquals(":")
+					left_node.value.sub_type == ":"
 				then
 					found.parser_call = true
 				end
@@ -470,23 +470,23 @@ return function(META)
 			return not (
 				not token or
 				token.type == "end_of_file" or
-				token:ValueEquals("}") or
-				token:ValueEquals(",") or
-				token:ValueEquals("]") or
+				token.sub_type == ("}") or
+				token.sub_type == (",") or
+				token.sub_type == ("]") or
 				(
 					typesystem_syntax:IsKeyword(token) and
 					not typesystem_syntax:IsPrefixOperator(token)
 					and
 					not typesystem_syntax:IsValue(token)
 					and
-					not token:ValueEquals("function")
+					token.sub_type ~= "function"
 				)
 			)
 		end
 
 		function META:ExpectTypeExpression(priority--[[#: number]])
-			if not self:IsTypeExpression() then
-				local token = self:GetToken()
+			local token = self:GetToken()
+			if not typesystem_syntax:IsTypesystemExpression(token) then
 				self:Error("expected beginning of expression, got $1", nil, nil, token.type)
 				return self:ErrorExpression()
 			end
@@ -494,7 +494,6 @@ return function(META)
 			local exp = self:ParseTypeExpression(priority)
 
 			if not exp then
-				local token = self:GetToken()
 				self:Error("faiiled to parse type expression, got $1", nil, nil, token.type)
 				return self:ErrorExpression()
 			end
@@ -796,8 +795,7 @@ return function(META)
 
 				if
 					left_node.Type == "expression_value" and
-					left_node.value.type == "symbol" and
-					left_node.value:ValueEquals(":")
+					left_node.value.sub_type == ":"
 				then
 					found.parser_call = true
 				end
@@ -1040,10 +1038,7 @@ return function(META)
 					first.Type == "expression_value" and
 					(
 						first.value.type == "letter" or
-						(
-							first.value.type == "symbol" and
-							first.value:ValueEquals("...")
-						)
+						first.value.sub_type == "..."
 					)
 				then
 					first.standalone_letter = node

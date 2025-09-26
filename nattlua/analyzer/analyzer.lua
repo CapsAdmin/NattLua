@@ -157,7 +157,7 @@ do
 
 			return LookupValue(self, node.tokens["..."])
 		elseif node.Type == "expression_postfix_operator" then
-			if node.value:ValueEquals("++") then
+			if node.value.sub_type == "++" then
 				local r = self:AnalyzeExpression(node.left)
 				return BinaryCustom(self, setmetatable({value = {value = "+"}}, Node), r, r, "+")
 			end
@@ -251,7 +251,7 @@ do
 			exp.Type ~= "expression_prefix_operator" or
 			(
 				exp.Type == "expression_binary_operator" and
-				exp.value:ValueEquals(".")
+				exp.value.sub_type == "."
 			)
 
 		if no_operator_expression then self:PushTruthyExpressionContext() end

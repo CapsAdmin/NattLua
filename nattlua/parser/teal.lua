@@ -209,7 +209,7 @@ return function(META)
 
 			found.left = left_node
 
-			if left_node.value and left_node.value:ValueEquals(":") then
+			if left_node.value and left_node.value.sub_type == ":" then
 				found.parser_call = true
 			end
 
@@ -235,10 +235,7 @@ return function(META)
 				first.Type == "expression_value" and
 				(
 					first.value.type == "letter" or
-					(
-						first.value.type == "symbol" and
-						first.value:ValueEquals("...")
-					)
+					first.value.sub_type == "..."
 				)
 			then
 				first.standalone_letter = node

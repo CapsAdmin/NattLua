@@ -767,7 +767,7 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 	end
 
 	if key.Type == "symbol" and key:IsNil() then
-		return false, error_messages.key_nil()
+		return false, error_messages.table_key("is nil")
 	end
 
 	-- if the key exists, check if we can replace it and maybe the value

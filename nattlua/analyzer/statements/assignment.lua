@@ -130,7 +130,7 @@ return {
 			-- c should be nil
 			local last = statement.right[#statement.right]
 
-			if last.Type == "expression_value" and last.value.type ~= "symbol" and not last.value:ValueEquals("...") then
+			if last.Type == "expression_value" and last.value.type ~= "symbol" and last.value.sub_type ~= "..." then
 				for _ = 1, #right - #statement.right do
 					table.remove(right, #right)
 				end

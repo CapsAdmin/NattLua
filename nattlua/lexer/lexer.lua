@@ -1,7 +1,7 @@
 --[[#local type { TokenType } = import("./token.lua")]]
 
---[[HOTRELOAD
-	run_test("test/tests/nattlua/lexer.lua")
+--[[HOTRELWOAD
+	--run_test("test/tests/nattlua/lexer.lua")
 	run_lua("test/performance/lexer.lua")
 ]]
 local Token = require("nattlua.lexer.token").New
@@ -129,42 +129,55 @@ function META:ReadUnknown()
 	return "unknown", false
 end
 
-function META:ReadSimple()--[[#: (TokenType, boolean, number, number)]]
+function META:ReadSimple()--[[#: (TokenType, boolean, number, number, string | nil)]]
 	local start = self.Position
-	local type, is_whitespace = self:Read()
+	local type, is_whitespace, content = self:Read()
 	return type--[[# as TokenType]],
 	is_whitespace--[[# as boolean]],
 	start,
-	self.Position - 1
+	self.Position - 1,
+	content
 end
 
 local read_letter
-local read_symbol
 
 do
-	local list_letters = {}
-	local list_symbols = {}
+	local map = {
+		symbol = true,
+		nan = true,
+		number = true,
+		boolean = true,
+		self = true,
+		string = true,
+		any = true,
+		require = true,
+		import = true,
+		dofile = true,
+		loadstring = true,
+		inf = true,
+	}
 
 	for k, v in pairs(runtime_syntax.ReadMap) do
 		if not k:find("%p") then
-			table.insert(list_letters, k)
-		else
-			table.insert(list_symbols, k)
+			map[k] = true
 		end
 	end
 
 	for k, v in pairs(typesystem_syntax.ReadMap) do
 		if not runtime_syntax.ReadMap[k] then
 			if not k:find("%p") then
-				table.insert(list_letters, k)
-			else
-				table.insert(list_symbols, k)
+				map[k] = true
 			end
 		end
 	end
 
-	read_letter = string_reader(list_letters, false)
-	read_symbol = string_reader(list_symbols, false)
+	local list = {}
+	for k in pairs(map) do
+		table.insert(list, k)
+	end
+
+
+	read_letter = string_reader(list, false)
 end
 
 function META:GetTokens()
@@ -174,7 +187,7 @@ function META:GetTokens()
 	local whitespace_start
 
 	for i = self.Position, self:GetLength() + 1 do
-		local type, is_whitespace, start, stop = self:ReadSimple()
+		local type, is_whitespace, start, stop, content = self:ReadSimple()
 
 		if is_whitespace then
 			whitespace_start = whitespace_start or start
@@ -182,14 +195,17 @@ function META:GetTokens()
 			local tk = Token(type, self, start, stop, whitespace_start)
 			whitespace_start = nil
 
+		
 			if type == "symbol" then
-				local sub_type = read_symbol(tk--[[# as any]]) or false
-				tk.value = sub_type
-				tk.sub_type = sub_type
+				tk.value = content--[[#  as string]]
+				tk.sub_type = content--[[# as string]]
 			elseif type == "letter" then
-				local sub_type = read_letter(tk--[[# as any]]) or false
-				tk.value = sub_type
-				tk.sub_type = sub_type
+				local sub_type = read_letter(tk--[[# as any]])
+				
+				if sub_type then
+					tk.value = sub_type
+					tk.sub_type = sub_type
+				end
 			end
 
 			tokens[tokens_i] = tk
@@ -651,7 +667,7 @@ do
 
 		if str then
 			self:Advance(#str)
-			return "symbol"
+			return "symbol", str
 		end
 
 		return false
@@ -682,7 +698,7 @@ function META.ReadRemainingCommentEscape(self--[[#: Lexer]])--[[#: TokenReturnTy
 	return false
 end
 
-function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
+function META:Read()--[[#: (TokenType, boolean, string | nil) | (nil, nil)]]
 	if self:ReadShebang() then return "shebang", false end
 
 	if self:ReadRemainingCommentEscape() then return "comment_escape", true end
@@ -699,6 +715,7 @@ function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
 	end
 
 	do
+		local content
 		local name = self:ReadInlineAnalyzerDebugCode() or
 			self:ReadInlineParserDebugCode() or
 			self:ReadHexNumber() or
@@ -707,10 +724,14 @@ function META:Read()--[[#: (TokenType, boolean) | (nil, nil)]]
 			self:ReadMultilineString() or
 			self:ReadSingleQuoteString() or
 			self:ReadDoubleQuoteString() or
-			self:ReadLetter() or
-			self:ReadSymbol()
+			self:ReadLetter()
+			
+		if not name then
+			name, content = self:ReadSymbol()
+		end
 
-		if name then return name, false end
+
+		if name then return name, false, content end
 	end
 
 	if self:ReadEndOfFile() then return "end_of_file", false end

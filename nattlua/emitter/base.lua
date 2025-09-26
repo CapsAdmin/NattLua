@@ -1088,13 +1088,14 @@ return function()
 
 			if func_chunks then self:Emit(func_chunks[2]) end
 
-			if node.value:ValueEquals(".") or node.value:ValueEquals(":") then
+			if node.value.sub_type == "." or node.value.sub_type == ":" then
 				self:EmitToken(node.value)
 			else
-				local special_break = node.value:ValueEquals("and") or
-					node.value:ValueEquals("or") or
-					node.value:ValueEquals("||") or
-					node.value:ValueEquals("&&")
+				local special_break = 
+					node.value.sub_type == ("and") or
+					node.value.sub_type == ("or") or
+					node.value.sub_type == ("||") or
+					node.value.sub_type == ("&&")
 
 				if special_break and self:IsLineBreaking() then
 					if
@@ -1634,7 +1635,7 @@ return function()
 		function META:EmitTypeBinaryOperator(node--[[#: Node]])
 			if node.left then self:EmitTypeExpression(node.left) end
 
-			if node.value:ValueEquals(".") or node.value:ValueEquals(":") then
+			if node.value.sub_type == "." or node.value.sub_type == ":" then
 				self:EmitToken(node.value)
 			else
 				self:Whitespace(" ")

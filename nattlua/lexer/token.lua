@@ -231,8 +231,8 @@ do
 				self.parent.parent.Type == "expression_binary_operator" and
 				(
 					self.parent.parent.value and
-					self.parent.parent.value:ValueEquals(".") or
-					self.parent.parent.value:ValueEquals(":")
+					self.parent.parent.value.sub_type == "." or
+					self.parent.parent.value.sub_type == ":"
 				)
 			then
 				if self:ValueEquals("@") then return true end
@@ -280,18 +280,18 @@ do
 			(
 				self.type == "symbol" and
 				(
-					self:ValueEquals(".") or
-					self:ValueEquals(":") or
-					self:ValueEquals("=")
+					self.sub_type == (".") or
+					self.sub_type == (":") or
+					self.sub_type == ("=")
 				)
 			)
 			or
 			(
 				self.type == "letter" and
 				(
-					self:ValueEquals("or") or
-					self:ValueEquals("and") or
-					self:ValueEquals("not")
+					self.sub_type == ("or") or
+					self.sub_type == ("and") or
+					self.sub_type == ("not")
 				)
 			)
 			or
@@ -488,8 +488,11 @@ function META:GetByte(offset--[[#: number]])
 	return self.lexer.Code:GetByte(self.start + offset)
 end
 
+--[[# type get_line = print]]
+
 function META:ValueEquals(str--[[#: string]])
 	if self.value then return self.value == str end
+	if self.sub_type then return self.sub_type == str end
 
 	return self.lexer.Code:IsStringSlice2(self.start, self.stop, str)
 end
@@ -532,7 +535,7 @@ function META.NewVirtualToken(
 	return META.NewObject(
 		{
 			type = type,
-			sub_type = false,
+			sub_type = value,
 			value = value,
 			start = start,
 			stop = stop,

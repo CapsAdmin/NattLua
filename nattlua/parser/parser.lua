@@ -66,7 +66,7 @@ function META:ParseValueExpressionToken(expect_value--[[#: nil | string]])
 end
 
 local function is_end(tk)
-	return tk:ValueEquals("end")
+	return tk.sub_type == "end"
 end
 
 function META:ParseStatementsUntilEnd(out--[[#: List<|any|>]])

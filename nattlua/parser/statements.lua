@@ -159,7 +159,7 @@ return function(META)
 					node.expression.force_upvalue = force_upvalue
 				end
 
-				if node.expression.value:ValueEquals(":") then node.self_call = true end
+				if node.expression.value.sub_type == ":" then node.self_call = true end
 			end
 
 			self:ParseAnalyzerFunctionBody(node, true)
@@ -288,9 +288,9 @@ return function(META)
 		local function condition(token)
 			return token.type == "letter" and
 				(
-					token:ValueEquals("end") or
-					token:ValueEquals("else") or
-					token:ValueEquals("elseif")
+					token.sub_type == ("end") or
+					token.sub_type == ("else") or
+					token.sub_type == ("elseif")
 				)
 		end
 
@@ -319,7 +319,7 @@ return function(META)
 				if not token then return false end -- TODO: what happens here? :End is never called
 				node.tokens["if/else/elseif"][i] = token
 
-				if not token:ValueEquals("else") then
+				if token.sub_type ~= "else" then
 					node.expressions[i] = self:ExpectRuntimeExpression(0)
 					node.tokens["then"][i] = self:ExpectToken("then")
 				end
@@ -387,7 +387,7 @@ return function(META)
 
 	do
 		local function condition(token)
-			return token:ValueEquals("until")
+			return token.sub_type == "until"
 		end
 
 		function META:ParseRepeatStatement()

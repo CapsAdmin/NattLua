@@ -31,7 +31,7 @@ return function(META)
 				spread.tokens["}"] = right
 				table_insert(node.props, spread)
 			elseif self:IsTokenType("letter") and self:IsTokenOffset("=", 1) then
-				if self:IsTokenTypeOffset("symbol", 2) and self:IsTokenOffset("{", 2) then
+				if self:IsTokenOffset("{", 2) then
 					local keyval = self:StartNode("sub_statement_table_key_value")
 					keyval.tokens["identifier"] = self:ExpectTokenType("letter")
 					keyval.tokens["="] = self:ExpectToken("=")
@@ -71,7 +71,7 @@ return function(META)
 		node.tokens[">"] = self:ExpectToken(">")
 
 		for _ = self:GetPosition(), self:GetLength() do
-			if self:IsTokenType("symbol") and self:IsToken("{") then
+			if self:IsToken("{") then
 				local left = self:ExpectToken("{")
 				local child = self:ExpectRuntimeExpression()
 				child.tokens["lsx{"] = left
@@ -81,7 +81,6 @@ return function(META)
 
 			for _ = self:GetPosition(), self:GetLength() do
 				if
-					self:IsTokenType("symbol") and
 					self:IsToken("<") and
 					self:IsTokenTypeOffset("letter", 1)
 				then
@@ -92,9 +91,7 @@ return function(META)
 			end
 
 			if
-				self:IsTokenType("symbol") and
 				self:IsToken("<") and
-				self:IsTokenTypeOffset("symbol", 1) and
 				self:IsTokenOffset("/", 1)
 			then
 				break

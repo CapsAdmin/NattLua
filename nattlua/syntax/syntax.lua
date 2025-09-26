@@ -358,4 +358,54 @@ function META:IsRuntimeExpression(token--[[#: Token]])--[[#: boolean]]
 	return false
 end
 
+
+function META:IsTypesystemExpression(token--[[#: Token]])--[[#: boolean]]
+	do
+		if token.type == "string" or token.type == "number" then return true end
+
+		return not (
+			not token or
+			token.type == "end_of_file" or
+			token.sub_type == ("}") or
+			token.sub_type == (",") or
+			token.sub_type == ("]") or
+			(
+				self:IsKeyword(token) and
+				not self:IsPrefixOperator(token)
+				and
+				not self:IsValue(token)
+				and
+				token.sub_type ~= "function"
+			)
+		)
+	end
+
+
+	if token.type == "number" or token.type == "string" then return true end
+
+	-- letter with no sub type means its an identifier
+	if token.type == "letter" and not token.sub_type then return true end
+
+	if token.sub_type == "function" then return true end
+
+	if token.sub_type == "|" then return true end
+
+	if token.sub_type == "{" then return true end
+
+	if token.sub_type == "(" then return true end
+
+	if token.sub_type == "$" then return true end
+
+	if token.sub_type == "<" then return true end -- lsx expression
+	if self:IsPrefixOperator(token) then return true end
+
+	if self:IsKeywordValue(token) then return true end
+
+	if self:IsKeyword(token) then return false end
+
+	if token.type == "letter" then return true end
+
+	return false
+end
+
 return META

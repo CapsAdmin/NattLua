@@ -86,15 +86,15 @@ function coverage.Preprocess(code, key)
 							or
 							(
 								node.Type == "expression_binary_operator" and
-								node.value:ValueEquals(":")
+								node.value.sub_type == ":"
 							)
 							or
 							(
 								node.parent and
 								node.parent.Type == "expression_binary_operator" and
 								(
-									node.parent.value:ValueEquals(".") or
-									node.parent.value:ValueEquals(":")
+									node.parent.value.sub_type == "." or
+									node.parent.value.sub_type == ":"
 								)
 							)
 						then

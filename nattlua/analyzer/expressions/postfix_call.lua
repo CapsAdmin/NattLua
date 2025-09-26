@@ -105,7 +105,7 @@ return {
 		if
 			self.self_arg_stack and
 			node.left.Type == "expression_binary_operator" and
-			node.left.value:ValueEquals(":")
+			node.left.value.sub_type == ":"
 		then
 			self_arg = table.remove(self.self_arg_stack)
 

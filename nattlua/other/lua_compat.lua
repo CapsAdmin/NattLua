@@ -92,4 +92,6 @@ do -- these are just helpers for print debugging
 			end
 		end
 	end
+
+	_G.get_line = callstack.get_line
 end

@@ -116,7 +116,7 @@ local function handle_pointers(state, node)
 			local v = v[i]
 
 			if v.is_token then
-				if not v:ValueEquals("*") then table.insert(modifiers, v:GetValueString()) end
+				if v.sub_type ~= "*" then table.insert(modifiers, v:GetValueString()) end
 			else
 				table.insert(modifiers, v.value)
 			end

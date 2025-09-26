@@ -384,7 +384,7 @@ return function(self, obj, input)
 		for i, identifier in ipairs(function_node.identifiers) do
 			local argi = function_node.self_call and (i + 1) or i
 
-			if identifier.value:ValueEquals("...") then
+			if identifier.value.sub_type == "..." then
 				local val, err = input:Slice(argi)
 
 				if not val then return val, err end
