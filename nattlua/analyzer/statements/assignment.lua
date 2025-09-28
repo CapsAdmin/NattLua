@@ -114,9 +114,6 @@ return {
 					end
 				else
 					right[right_pos] = obj
-
-					-- when the right side has a type expression, it's invoked using the as operator
-					if exp_val.type_expression then obj:Seal() end
 				end
 
 				self.left_assigned = false
