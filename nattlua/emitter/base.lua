@@ -1091,11 +1091,21 @@ return function()
 			if node.value.sub_type == "." or node.value.sub_type == ":" then
 				self:EmitToken(node.value)
 			else
-				local special_break = 
-					node.value.sub_type == ("and") or
-					node.value.sub_type == ("or") or
-					node.value.sub_type == ("||") or
-					node.value.sub_type == ("&&")
+				local special_break = node.value.sub_type == (
+						"and"
+					)
+					or
+					node.value.sub_type == (
+						"or"
+					)
+					or
+					node.value.sub_type == (
+						"||"
+					)
+					or
+					node.value.sub_type == (
+						"&&"
+					)
 
 				if special_break and self:IsLineBreaking() then
 					if

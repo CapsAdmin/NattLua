@@ -470,9 +470,18 @@ return function(META)
 			return not (
 				not token or
 				token.type == "end_of_file" or
-				token.sub_type == ("}") or
-				token.sub_type == (",") or
-				token.sub_type == ("]") or
+				token.sub_type == (
+					"}"
+				)
+				or
+				token.sub_type == (
+					","
+				)
+				or
+				token.sub_type == (
+					"]"
+				)
+				or
 				(
 					typesystem_syntax:IsKeyword(token) and
 					not typesystem_syntax:IsPrefixOperator(token)
@@ -486,6 +495,7 @@ return function(META)
 
 		function META:ExpectTypeExpression(priority--[[#: number]])
 			local token = self:GetToken()
+
 			if not typesystem_syntax:IsTypesystemExpression(token) then
 				self:Error("expected beginning of expression, got $1", nil, nil, token.type)
 				return self:ErrorExpression()
@@ -793,10 +803,7 @@ return function(META)
 
 				if not found then break end
 
-				if
-					left_node.Type == "expression_value" and
-					left_node.value.sub_type == ":"
-				then
+				if left_node.Type == "expression_value" and left_node.value.sub_type == ":" then
 					found.parser_call = true
 				end
 

@@ -1,12 +1,7 @@
 local table_insert = _G.table.insert
 return function(META)
 	function META:ParseLSXExpression()
-		if
-			not (
-				self:IsToken("<") and
-				not self:IsTokenOffset("local", -1)
-			)
-		then
+		if not (self:IsToken("<") and not self:IsTokenOffset("local", -1)) then
 			return
 		end
 
@@ -80,22 +75,14 @@ return function(META)
 			end
 
 			for _ = self:GetPosition(), self:GetLength() do
-				if
-					self:IsToken("<") and
-					self:IsTokenTypeOffset("letter", 1)
-				then
+				if self:IsToken("<") and self:IsTokenTypeOffset("letter", 1) then
 					table_insert(node.children, self:ParseLSXExpression())
 				else
 					break
 				end
 			end
 
-			if
-				self:IsToken("<") and
-				self:IsTokenOffset("/", 1)
-			then
-				break
-			end
+			if self:IsToken("<") and self:IsTokenOffset("/", 1) then break end
 
 			do
 				local string_node = self:StartNode("expression_value")

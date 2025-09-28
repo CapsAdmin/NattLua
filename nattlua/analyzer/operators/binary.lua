@@ -440,8 +440,13 @@ local function BinaryWithUnion(self, node, l, r, op)
 				if
 					node.parent.Type ~= "expression_binary_operator" or
 					(
-						node.parent.value.sub_type ~= ("==") and
-						node.parent.value.sub_type ~= ("~=")
+						node.parent.value.sub_type ~= (
+							"=="
+						)
+						and
+						node.parent.value.sub_type ~= (
+							"~="
+						)
 					)
 				then
 					self:TrackUpvalueUnion(l, truthy_union, falsy_union)

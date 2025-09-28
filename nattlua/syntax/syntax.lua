@@ -358,7 +358,6 @@ function META:IsRuntimeExpression(token--[[#: Token]])--[[#: boolean]]
 	return false
 end
 
-
 function META:IsTypesystemExpression(token--[[#: Token]])--[[#: boolean]]
 	do
 		if token.type == "string" or token.type == "number" then return true end
@@ -366,9 +365,18 @@ function META:IsTypesystemExpression(token--[[#: Token]])--[[#: boolean]]
 		return not (
 			not token or
 			token.type == "end_of_file" or
-			token.sub_type == ("}") or
-			token.sub_type == (",") or
-			token.sub_type == ("]") or
+			token.sub_type == (
+				"}"
+			)
+			or
+			token.sub_type == (
+				","
+			)
+			or
+			token.sub_type == (
+				"]"
+			)
+			or
 			(
 				self:IsKeyword(token) and
 				not self:IsPrefixOperator(token)
@@ -379,7 +387,6 @@ function META:IsTypesystemExpression(token--[[#: Token]])--[[#: boolean]]
 			)
 		)
 	end
-
 
 	if token.type == "number" or token.type == "string" then return true end
 

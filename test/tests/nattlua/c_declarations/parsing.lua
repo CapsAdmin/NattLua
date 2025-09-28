@@ -271,7 +271,10 @@ local function test(c_code, error_level)
 			if not node.tokens["potential_identifier"]:GetValueString():find("NAME") then
 				print_node(node)
 				print(c_code)
-				error("name is not right " .. node.tokens["potential_identifier"]:GetValueString(), error_level)
+				error(
+					"name is not right " .. node.tokens["potential_identifier"]:GetValueString(),
+					error_level
+				)
 			end
 		end
 	end

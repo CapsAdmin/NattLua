@@ -92,7 +92,8 @@ return {
 	AnalyzePostfixCall = function(self, node)
 		if
 			node.import_expression and
-			not node.left.value:ValueEquals("dofile") and
+			not node.left.value:ValueEquals("dofile")
+			and
 			not node.left.value:ValueEquals("loadfile")
 		then
 			return AnalyzeImport(self, node, node.left.value:ValueEquals("require") and node.path)

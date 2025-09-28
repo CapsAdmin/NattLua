@@ -65,19 +65,36 @@ local function lookup_value(self, tk)
 end
 
 local function is_primitive(tk)
-	return tk.sub_type == ("string") or
-		tk.sub_type == ("number") or
-		tk.sub_type == ("boolean") or
-		tk.sub_type == ("true") or
-		tk.sub_type == ("false") or
-		tk.sub_type == ("nil")
+	return tk.sub_type == (
+			"string"
+		)
+		or
+		tk.sub_type == (
+			"number"
+		)
+		or
+		tk.sub_type == (
+			"boolean"
+		)
+		or
+		tk.sub_type == (
+			"true"
+		)
+		or
+		tk.sub_type == (
+			"false"
+		)
+		or
+		tk.sub_type == (
+			"nil"
+		)
 end
 
 return {
 	LookupValue = lookup_value,
 	AnalyzeAtomicValue = function(self, node)
 		local tk = node.value
-		
+
 		if tk.sub_type == "nil" then
 			return Nil()
 		elseif tk.sub_type == "true" then
@@ -112,7 +129,8 @@ return {
 						if tk.sub_type == "self" then
 							return current_table
 						elseif
-							self.left_assigned and self.left_assigned.Type == "string" and
+							self.left_assigned and
+							self.left_assigned.Type == "string" and
 							tk:ValueEquals(self.left_assigned:GetData()) and
 							not is_primitive(tk)
 						then

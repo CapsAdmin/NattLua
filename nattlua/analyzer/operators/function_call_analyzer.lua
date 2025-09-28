@@ -237,9 +237,7 @@ return function(analyzer, obj, input)
 		if err then
 			for i, v in ipairs(err) do
 				local reason, a, b, i = table.unpack(v)
-				analyzer:Error(
-					error_messages.return_(i, error_messages.because(error_messages.subset(a, b), reason))
-				)
+				analyzer:Error(error_messages.return_(i, error_messages.because(error_messages.subset(a, b), reason)))
 			end
 		end
 

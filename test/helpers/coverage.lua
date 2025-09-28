@@ -54,7 +54,9 @@ function coverage.Preprocess(code, key)
 	end
 
 	local function inject_token(token)
-		token:ReplaceValue(" " .. FUNC_NAME .. "(" .. token.start .. "," .. token.stop .. ",x) " .. token:GetValueString())
+		token:ReplaceValue(
+			" " .. FUNC_NAME .. "(" .. token.start .. "," .. token.stop .. ",x) " .. token:GetValueString()
+		)
 	end
 
 	local compiler = nl.Compiler(

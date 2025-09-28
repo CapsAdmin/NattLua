@@ -288,9 +288,17 @@ return function(META)
 		local function condition(token)
 			return token.type == "letter" and
 				(
-					token.sub_type == ("end") or
-					token.sub_type == ("else") or
-					token.sub_type == ("elseif")
+					token.sub_type == (
+						"end"
+					)
+					or
+					token.sub_type == (
+						"else"
+					)
+					or
+					token.sub_type == (
+						"elseif"
+					)
 				)
 		end
 

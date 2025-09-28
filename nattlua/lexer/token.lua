@@ -280,18 +280,34 @@ do
 			(
 				self.type == "symbol" and
 				(
-					self.sub_type == (".") or
-					self.sub_type == (":") or
-					self.sub_type == ("=")
+					self.sub_type == (
+						"."
+					)
+					or
+					self.sub_type == (
+						":"
+					)
+					or
+					self.sub_type == (
+						"="
+					)
 				)
 			)
 			or
 			(
 				self.type == "letter" and
 				(
-					self.sub_type == ("or") or
-					self.sub_type == ("and") or
-					self.sub_type == ("not")
+					self.sub_type == (
+						"or"
+					)
+					or
+					self.sub_type == (
+						"and"
+					)
+					or
+					self.sub_type == (
+						"not"
+					)
 				)
 			)
 			or
@@ -488,10 +504,11 @@ function META:GetByte(offset--[[#: number]])
 	return self.lexer.Code:GetByte(self.start + offset)
 end
 
---[[# type get_line = print]]
+--[[#type get_line = print]]
 
 function META:ValueEquals(str--[[#: string]])
 	if self.value then return self.value == str end
+
 	if self.sub_type then return self.sub_type == str end
 
 	return self.lexer.Code:IsStringSlice2(self.start, self.stop, str)

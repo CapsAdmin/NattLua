@@ -46,7 +46,10 @@ local function handle_enum(state, node)
 
 	if node.fields then
 		for _, field in ipairs(node.fields) do
-			table.insert(struct.fields, {type = "enum_field", identifier = field.tokens["identifier"]:GetValueString()})
+			table.insert(
+				struct.fields,
+				{type = "enum_field", identifier = field.tokens["identifier"]:GetValueString()}
+			)
 		end
 	end
 

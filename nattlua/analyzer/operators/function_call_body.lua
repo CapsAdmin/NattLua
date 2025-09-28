@@ -625,9 +625,7 @@ return function(self, obj, input)
 							local reason, a, b, i = v[1], v[2], v[3], v[4]
 							self:PushCurrentStatement(function_node)
 							self:PushCurrentExpression(function_node.return_types and function_node.return_types[i])
-							self:Error(
-								error_messages.return_(i, error_messages.because(error_messages.subset(a, b), reason))
-							)
+							self:Error(error_messages.return_(i, error_messages.because(error_messages.subset(a, b), reason)))
 							self:PopCurrentExpression()
 							self:PopCurrentStatement()
 						end

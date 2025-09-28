@@ -233,7 +233,12 @@ function META:ParseAnalyzerFunctionBody(
 		local em = Emitter({type_annotations = false})
 		em:EmitFunctionBody(node, true)
 		em:EmitToken(node.tokens["end"])
-		local func, code = self:CompileLuaAnalyzerDebugCode("return function " .. em:Concat(), node, node.tokens["arguments)"], node.tokens["end"])
+		local func, code = self:CompileLuaAnalyzerDebugCode(
+			"return function " .. em:Concat(),
+			node,
+			node.tokens["arguments)"],
+			node.tokens["end"]
+		)
 		node.compiled_function = func()
 	end
 

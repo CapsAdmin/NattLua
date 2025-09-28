@@ -55,7 +55,6 @@ local function analyze_arguments(self, node)
 
 			-- stem type so that we can allow
 			-- function(x: foo<x>): nil
-
 			local ident = key.value:GetValueString()
 			self:MapTypeToNode(self:CreateLocalValue(ident, Any()), key)
 
@@ -89,7 +88,10 @@ local function analyze_arguments(self, node)
 						generic_type
 					)
 				elseif generic_type.type_expression then
-					self:MapTypeToNode(self:CreateLocalValue(generic_type.value:GetValueString(), Any(), i), generic_type)
+					self:MapTypeToNode(
+						self:CreateLocalValue(generic_type.value:GetValueString(), Any(), i),
+						generic_type
+					)
 				end
 			end
 		end
