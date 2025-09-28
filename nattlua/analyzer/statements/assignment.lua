@@ -242,7 +242,7 @@ return {
 
 					local val = self:SetLocalOrGlobalValue(key, val)
 
-					if val then
+					if false and val then
 						-- this is used for tracking function dependencies
 						if val.Type == "upvalue" then
 							self:GetScope():AddDependency(val)

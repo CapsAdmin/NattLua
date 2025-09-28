@@ -1,3 +1,7 @@
+do
+	return
+end
+
 local LString = require("nattlua.types.string").LString
 
 do
