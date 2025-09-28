@@ -1951,7 +1951,7 @@ return function()
 				self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")
 			end
 
-			if not node.left.value:ValueEquals("loadfile") or not node.path then
+			if node.left.value.sub_type ~= "loadfile" or not node.path then
 				if node.tokens["call("] then
 					self:EmitToken(node.tokens["call("])
 				elseif self.config.force_parenthesis then

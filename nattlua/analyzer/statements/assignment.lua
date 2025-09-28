@@ -211,7 +211,7 @@ return {
 				local immutable = false
 
 				if exp_key.attribute then
-					if exp_key.attribute:ValueEquals("const") then immutable = true end
+					if exp_key.attribute.sub_type == "const" then immutable = true end
 				end
 
 				-- local assignment: local a = 1

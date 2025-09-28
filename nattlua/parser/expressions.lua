@@ -120,13 +120,13 @@ return function(META)
 			node.value = self:ParseToken()
 			node.tokens[1] = node.value
 
-			if node.value:ValueEquals("expand") then
+			if node.value.sub_type == "expand" then
 				self:PushParserEnvironment("runtime")
 			end
 
 			node.right = self:ParseTypeExpression(math_huge)
 
-			if node.value:ValueEquals("expand") then self:PopParserEnvironment() end
+			if node.value.sub_type == "expand" then self:PopParserEnvironment() end
 
 			node = self:EndNode(node)
 			return node
@@ -354,9 +354,9 @@ return function(META)
 				node.expressions[1].value and
 				node.expressions[1].value.type == "string"
 			then
-				if primary_node.value:ValueEquals("import") then
+				if primary_node.value.sub_type == "import" then
 					self:HandleImportExpression(node, primary_node.value, node.expressions[1].value, start)
-				elseif primary_node.value:ValueEquals("import_data") then
+				elseif primary_node.value.sub_type == "import_data" then
 					self:HandleImportDataExpression(node, node.expressions[1].value, start)
 				end
 			end
@@ -726,7 +726,7 @@ return function(META)
 					-- hack for sizeof as it expects a c declaration expression in the C declaration parser
 					self.FFI_DECLARATION_PARSER and
 					primary_node.Type == "expression_value" and
-					primary_node.value:ValueEquals("sizeof")
+					primary_node.value.sub_type == "sizeof"
 				then
 					node.expressions = self:ParseMultipleValues(self.ParseCDeclaration, 0)
 				else
@@ -743,14 +743,14 @@ return function(META)
 				node.expressions[1].value and
 				node.expressions[1].value.type == "string" and
 				(
-					primary_node.value:ValueEquals("import") or
-					primary_node.value:ValueEquals("dofile") or
-					primary_node.value:ValueEquals("loadfile") or
-					primary_node.value:ValueEquals("require") or
-					primary_node.value:ValueEquals("import_data")
+					primary_node.value.sub_type == "import" or
+					primary_node.value.sub_type == "dofile" or
+					primary_node.value.sub_type == "loadfile" or
+					primary_node.value.sub_type == "require" or
+					primary_node.value.sub_type == "import_data"
 				)
 			then
-				if primary_node.value:ValueEquals("import_data") then
+				if primary_node.value.sub_type == "import_data" then
 					self:HandleImportDataExpression(node, node.expressions[1].value, start)
 				else
 					self:HandleImportExpression(node, primary_node.value, node.expressions[1].value, start)
@@ -860,7 +860,7 @@ return function(META)
 			local str = tk_path:GetStringValue()
 			local path
 
-			if tkname:ValueEquals("require") then path = path_util.ResolveRequire(str) end
+			if tkname.sub_type == "require" then path = path_util.ResolveRequire(str) end
 
 			path = path_util.Resolve(
 				path or str,
@@ -869,7 +869,7 @@ return function(META)
 				self.config.file_path
 			)
 
-			if tkname:ValueEquals("require") then
+			if tkname.sub_type == "require" then
 				if not path_util.Exists(path) then return end
 			end
 
@@ -878,7 +878,7 @@ return function(META)
 			local dont_hoist_import = _G.dont_hoist_import and _G.dont_hoist_import > 0
 			node.import_expression = true
 			node.path = path
-			local key = tkname:ValueEquals("require") and str or path
+			local key = tkname.sub_type == "require" and str or path
 			local root_node = self.config.root_statement_override_data or
 				self.config.root_statement_override or
 				self.RootStatement
@@ -923,7 +923,7 @@ return function(META)
 				return
 			end
 
-			if tkname:ValueEquals("require") and not self.config.inline_require then
+			if tkname.sub_type == "require" and not self.config.inline_require then
 				root_node.imports = root_node.imports or {}
 				table_insert(root_node.imports, node)
 				return

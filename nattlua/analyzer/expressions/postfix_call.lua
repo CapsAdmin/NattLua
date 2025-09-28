@@ -92,11 +92,10 @@ return {
 	AnalyzePostfixCall = function(self, node)
 		if
 			node.import_expression and
-			not node.left.value:ValueEquals("dofile")
-			and
-			not node.left.value:ValueEquals("loadfile")
+			node.left.value.sub_type ~= "dofile" and
+			node.left.value.sub_type ~= "loadfile"
 		then
-			return AnalyzeImport(self, node, node.left.value:ValueEquals("require") and node.path)
+			return AnalyzeImport(self, node, node.left.value.sub_type == "require" and node.path)
 		end
 
 		self:PushAnalyzerEnvironment(node.type_call and "typesystem" or "runtime")

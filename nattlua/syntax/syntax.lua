@@ -81,6 +81,12 @@ function META:AddSymbols(tbl--[[#: List<|string|>]])
 	end)
 end
 
+function META:AddReadSymbols(tbl--[[#: List<|string|>]])
+	for _, symbol in pairs(tbl) do
+		self.ReadMap[symbol] = true
+	end
+end
+
 function META:AddNumberAnnotations(tbl--[[#: List<|string|>]])
 	for i, v in ipairs(tbl) do
 		if not has_value(self.NumberAnnotations, v) then

@@ -99,4 +99,22 @@ runtime:AddPostfixOperatorFunctionTranslate({
 	["ÆØÅ"] = "(A)",
 	["ÆØÅÆ"] = "(A)",
 })
+-- these speed up the lexer a little bit
+-- if these are removed, we cannot do token.sub_type == "import" checks
+-- and have to do token:ValueEquals("import") instead
+-- ValueEquals will scan the code of the token every time it is called
+runtime:AddReadSymbols(
+	{
+		"import",
+		"require",
+		"dofile",
+		"loadfile",
+		"loadstring",
+		"import_data",
+		"expand",
+		"sizeof",
+		"cdef",
+		"const",
+	}
+)
 return runtime

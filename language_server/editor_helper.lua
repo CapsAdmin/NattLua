@@ -1295,12 +1295,13 @@ do
 				token.type == "string" and
 				(
 					(
-						data.tokens[i - 1]:ValueEquals("loadstring") or
-						data.tokens[i - 2]:ValueEquals("loadstring")
-					) or
+						data.tokens[i - 1].sub_type == "loadstring" or
+						data.tokens[i - 2].sub_type == "loadstring"
+					)
+					or
 					(
-						data.tokens[i - 1]:ValueEquals("cdef") or
-						data.tokens[i - 2]:ValueEquals("cdef")
+						data.tokens[i - 1].sub_type == "cdef" or
+						data.tokens[i - 2].sub_type == "cdef"
 					)
 					or
 					types[1] and
