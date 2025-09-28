@@ -1134,7 +1134,12 @@ end
 do
 	local function initialize_table_mutation_tracker(tbl, scope, key, hash)
 		tbl.mutations = tbl.mutations or {}
-		tbl.mutations[hash] = tbl.mutations[hash] or {}
+		tbl.mutationsi = tbl.mutationsi or {}
+
+		if not tbl.mutations[hash] then
+			tbl.mutations[hash] = {}
+			table.insert(tbl.mutationsi, tbl.mutations[hash])
+		end
 
 		if tbl.mutations[hash][1] == nil then
 			if tbl.Type == "table" then
@@ -1188,6 +1193,7 @@ do
 
 	function META:ClearMutations()
 		self.mutations = false
+		self.mutationsi = false
 	end
 
 	function META:SetMutations(tbl)
@@ -1196,6 +1202,10 @@ do
 
 	function META:GetMutations()
 		return self.mutations
+	end
+
+	function META:GetMutationsi()
+		return self.mutationsi
 	end
 
 	function META:HasMutations()
@@ -1212,7 +1222,7 @@ do
 
 		done[self] = out
 
-		for hash, mutations in pairs(self.mutations) do
+		for _, mutations in ipairs(self.mutationsi) do
 			for _, mutation in ipairs(mutations) do
 				local key = mutation.key
 				local val = self:GetMutatedValue(key, scope)

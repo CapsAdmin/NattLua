@@ -2,7 +2,6 @@ local tonumber = tonumber
 local ipairs = ipairs
 local os = os
 local print = print
-local pairs = pairs
 local setmetatable = setmetatable
 local pcall = pcall
 local tostring = tostring

@@ -1,6 +1,4 @@
 local ipairs = _G.ipairs
-local table = _G.table
-local pairs = _G.pairs
 local Union = require("nattlua.types.union").Union
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange
@@ -98,7 +96,7 @@ return function(META)
 				if obj.Type == "upvalue" then
 					obj:ClearTrackedMutations()
 				elseif obj:HasMutations() then
-					for _, mutations in pairs(obj:GetMutations()) do
+					for _, mutations in ipairs(obj:GetMutationsi()) do
 						for i = #mutations, 1, -1 do
 							local mut = mutations[i]
 
@@ -342,7 +340,12 @@ return function(META)
 				end
 
 				data.stack = data.stack or {}
-				data.stack[hash] = data.stack[hash] or {}
+
+				if not data.stack[hash] then
+					data.stack[hash] = {}
+					data.stacki = data.stacki or {}
+					table.insert(data.stacki, data.stack[hash])
+				end
 
 				if falsy_union then falsy_union:SetParentTable(tbl, key) end
 
@@ -403,7 +406,7 @@ return function(META)
 
 					for _, data in ipairs(self.tracked_tables) do
 						if data.stack then
-							for _, stack in pairs(data.stack) do
+							for _, stack in ipairs(data.stacki) do
 								local new_stack = {}
 
 								for i, v in ipairs(stack) do

@@ -5,7 +5,6 @@ local type { Token } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type NodeType = "expression" | "statement"]]
 local ipairs = _G.ipairs
-local pairs = _G.pairs
 local setmetatable = _G.setmetatable
 local type = _G.type
 local table = _G.table

@@ -1,5 +1,4 @@
 local ipairs = ipairs
-local pairs = pairs
 local error = error
 local tostring = tostring
 local assert = assert

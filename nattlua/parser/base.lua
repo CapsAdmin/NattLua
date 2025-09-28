@@ -9,7 +9,6 @@
 --[[#local type NodeType = "expression" | "statement"]]
 local NewNode = require("nattlua.parser.node").New
 local ipairs = _G.ipairs
-local pairs = _G.pairs
 local assert = _G.assert
 local type = _G.type
 local table = _G.table
@@ -122,25 +121,6 @@ return function()
 		end
 	end
 
-	--[=[
-ALL_NODES = {}
-local function dump_fields(node)
-	if false --[[# as true]] then return end
-	local key = node.type .. "_" .. node.kind
-	ALL_NODES[node.type] = ALL_NODES[node.type] or {}
-	ALL_NODES[node.type][node.kind] = ALL_NODES[node.type][node.kind] or {tokens = {}}
-	local NODE = ALL_NODES[node.type][node.kind]
-
-	for k, v in pairs(node) do
-		NODE[k] = NODE[k] or {}
-		NODE[k][type(v)] = true
-	end
-
-	for k, v in pairs(node.tokens) do
-		NODE.tokens[k] = true
-	end
-end
-]=]
 	function META:StartNode(node_type--[[#: ref NodeKind]], start_node--[[#: nil | Node]])--[[#: ref any]]
 		local code_start = start_node and start_node.code_start or assert(self:GetToken()).start
 		local node = NewNode(
