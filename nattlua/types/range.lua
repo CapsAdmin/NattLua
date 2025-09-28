@@ -93,17 +93,13 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 
 	local self = self:Copy()
 
-	if obj:IsReferenceType() then
-		self:SetReferenceType(true)
+	if obj.Type == "range" then
+
 	else
-		if obj.Type == "range" then
+		if obj.Type == "union" then
+			local x = obj:GetType("range")
 
-		else
-			if obj.Type == "union" then
-				local x = obj:GetType("range")
-
-				if x then return self end
-			end
+			if x then return self end
 		end
 	end
 

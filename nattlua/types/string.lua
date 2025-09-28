@@ -189,22 +189,18 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 
 	local self = self:Copy()
 
-	if obj:IsReferenceType() then
-		self:SetReferenceType(true)
+	if obj.Type == "string" and obj.PatternContract then
+
 	else
-		if obj.Type == "string" and obj.PatternContract then
+		if obj.Type == "union" then
+			local str = obj:GetType("string")
 
-		else
-			if obj.Type == "union" then
-				local str = obj:GetType("string")
+			if str then if str.PatternContract then return self end end
+		end
 
-				if str then if str.PatternContract then return self end end
-			end
-
-			if not obj:IsLiteral() then
-				self.Data = false
-				self.Hash = compute_hash(self.Data, self.PatternContract)
-			end
+		if not obj:IsLiteral() then
+			self.Data = false
+			self.Hash = compute_hash(self.Data, self.PatternContract)
 		end
 	end
 
