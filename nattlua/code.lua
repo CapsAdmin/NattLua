@@ -63,8 +63,6 @@ if has_ffi--[[# as false]] then
 	end
 
 	function META:FindNearest(str--[[#: string]], start--[[#: number]])
-		local len = #str
-
 		for i = start, self.buffer_len do
 			if self:IsStringSlice(i, str) then return i + #str end
 		end

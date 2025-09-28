@@ -158,24 +158,20 @@ do
 	}
 
 	for k, v in pairs(runtime_syntax.ReadMap) do
-		if not k:find("%p") then
-			map[k] = true
-		end
+		if not k:find("%p") then map[k] = true end
 	end
 
 	for k, v in pairs(typesystem_syntax.ReadMap) do
 		if not runtime_syntax.ReadMap[k] then
-			if not k:find("%p") then
-				map[k] = true
-			end
+			if not k:find("%p") then map[k] = true end
 		end
 	end
 
 	local list = {}
+
 	for k in pairs(map) do
 		table.insert(list, k)
 	end
-
 
 	read_letter = string_reader(list, false)
 end
@@ -195,13 +191,12 @@ function META:GetTokens()
 			local tk = Token(type, self, start, stop, whitespace_start)
 			whitespace_start = nil
 
-		
 			if type == "symbol" then
-				tk.value = content--[[#  as string]]
+				tk.value = content--[[# as string]]
 				tk.sub_type = content--[[# as string]]
 			elseif type == "letter" then
 				local sub_type = read_letter(tk--[[# as any]])
-				
+
 				if sub_type then
 					tk.value = sub_type
 					tk.sub_type = sub_type
@@ -316,7 +311,18 @@ function META:ReadMultilineComment()--[[#: TokenReturnType]]
 
 	-- skip the last [
 	self:Advance(1)
-	local pos = self:FindNearest("]" .. string.rep("=", (self:GetPosition() - start) - 4) .. "]")
+	local count = (self:GetPosition() - start) - 4
+	local closing
+
+	if count == 0 then
+		closing = "]]"
+	elseif count == 1 then
+		closing = "]=]"
+	else
+		closing = "]" .. string_rep("=", count) .. "]"
+	end
+
+	local pos = self:FindNearest(closing)
 
 	if pos then
 		self:SetPosition(pos)
@@ -571,12 +577,8 @@ function META:ReadMultilineString()--[[#: TokenReturnType]]
 	local start = self:GetPosition()
 	self:Advance(1)
 
-	if self:IsString("=") then
-		for _ = self:GetPosition(), self:GetLength() do
-			self:Advance(1)
-
-			if not self:IsString("=") then break end
-		end
+	while self:IsString("=") do
+		self:Advance(1)
 	end
 
 	if not self:IsString("[") then
@@ -589,7 +591,17 @@ function META:ReadMultilineString()--[[#: TokenReturnType]]
 	end
 
 	self:Advance(1)
-	local closing = "]" .. string_rep("=", (self:GetPosition() - start) - 2) .. "]"
+	local count = (self:GetPosition() - start) - 2
+	local closing
+
+	if count == 0 then
+		closing = "]]"
+	elseif count == 1 then
+		closing = "]=]"
+	else
+		closing = "]" .. string_rep("=", count) .. "]"
+	end
+
 	local pos = self:FindNearest(closing)
 
 	if pos then
@@ -725,11 +737,8 @@ function META:Read()--[[#: (TokenType, boolean, string | nil) | (nil, nil)]]
 			self:ReadSingleQuoteString() or
 			self:ReadDoubleQuoteString() or
 			self:ReadLetter()
-			
-		if not name then
-			name, content = self:ReadSymbol()
-		end
 
+		if not name then name, content = self:ReadSymbol() end
 
 		if name then return name, false, content end
 	end
