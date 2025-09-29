@@ -71,7 +71,6 @@ function META.New()
 			Truthy = false,
 			Data = false,
 			Upvalue = false,
-			ReferenceType = false,
 			Contract = false,
 			Parent = false,
 		}

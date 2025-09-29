@@ -69,10 +69,6 @@ return function()
 	end
 
 	do
-		META:IsSet("ReferenceType", false--[[# as boolean]])
-	end
-
-	do
 		function META:IsLiteral()
 			return false
 		end

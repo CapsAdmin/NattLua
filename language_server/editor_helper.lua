@@ -290,8 +290,11 @@ function META:Recompile(path, lol, diagnostics)
 			if not ok then
 				diagnostics[name] = diagnostics[name] or {}
 				local node = cfg.analyzer and
-					cfg.analyzer:GetCurrentExpression() or
-					cfg.analyzer:GetCurrentStatement()
+					cfg.analyzer.GetCurrentExpression and
+					(
+						cfg.analyzer:GetCurrentExpression() or
+						cfg.analyzer:GetCurrentStatement()
+					)
 				local start, stop = 1, compiler:GetCode():GetByteSize()
 
 				if node then start, stop = node:GetStartStop() end

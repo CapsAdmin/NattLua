@@ -30,6 +30,8 @@ META:IsSet("ArgumentsInferred", false)
 META:IsSet("LiteralFunction", false)
 META:GetSet("PreventInputArgumentExpansion", false)
 META:IsSet("InputArgumentsInferred", false)
+META:IsSet("InputModifiers", false)
+META:IsSet("OutputModifiers", false)
 
 function META.LogicalComparison(l--[[#: TFunction]], r--[[#: TFunction]], op--[[#: string]])
 	if op == "==" then return l:Equal(r) end
@@ -121,6 +123,8 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	copy:SetPreventInputArgumentExpansion(self:GetPreventInputArgumentExpansion())
 	copy:SetLiteralFunction(self:IsLiteralFunction())
 	copy:SetInputArgumentsInferred(self:IsInputArgumentsInferred())
+	copy:SetInputModifiers(self.InputModifiers)
+	copy:SetOutputModifiers(self.OutputModifiers)
 	return copy
 end
 
@@ -229,14 +233,42 @@ end
 
 function META:HasReferenceTypes()
 	for i, v in ipairs(self:GetInputSignature():GetData()) do
-		if v:IsReferenceType() then return true end
+		if self:IsInputModifier(i, "ref") then return true end
 	end
 
 	for i, v in ipairs(self:GetOutputSignature():GetData()) do
-		if v:IsReferenceType() then return true end
+		if self:IsOutputModifier(i, "ref") then return true end
 	end
 
 	return false
+end
+
+function META:SetInputModifiers(index--[[#: number]], modifiers--[[#: List<|string|>]])
+	if not self.InputModifiers then self.InputModifiers = {} end
+
+	self.InputModifiers[index] = modifiers
+end
+
+function META:SetOutputModifiers(index--[[#: number]], modifiers--[[#: List<|string|>]])
+	if not self.OutputModifiers then self.OutputModifiers = {} end
+
+	self.OutputModifiers[index] = modifiers
+end
+
+function META:IsInputModifier(index--[[#: number]], modifier--[[#: string]])
+	if not self.InputModifiers then return false end
+
+	if not self.InputModifiers[index] then return false end
+
+	return self.InputModifiers[index][modifier]
+end
+
+function META:IsOutputModifier(index--[[#: number]], modifier--[[#: string]])
+	if not self.OutputModifiers then return false end
+
+	if not self.OutputModifiers[index] then return false end
+
+	return self.OutputModifiers[index][modifier]
 end
 
 function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
@@ -248,7 +280,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			Contract = false,
 			Hash = false,
 			Truthy = true,
-			ReferenceType = false,
 			ExplicitInputSignature = false,
 			ExplicitOutputSignature = false,
 			ArgumentsInferred = false,
@@ -268,6 +299,8 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			Parent = false,
 			suppress = false,
 			InputArgumentsInferred = false,
+			InputModifiers = false,
+			OutputModifiers = false,
 		}
 	)
 end

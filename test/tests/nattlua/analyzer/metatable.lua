@@ -647,9 +647,8 @@ analyze[[
                 
                 local constructor = analyzer:AssertFallback(types.Nil(), meta:Get(types.ConstString("constructor")))
     
-                local self_arg = types.Any()
-                self_arg:SetReferenceType(true)
-                constructor:GetInputSignature():Set(1, self_arg)
+                constructor:SetInputModifiers(0, {ref = true})
+                constructor:GetInputSignature():Set(1, types.Any())
             
                 tbl:SetMetaTable(meta)
                 analyzer:ErrorIfFalse(analyzer:Call(constructor, types.Tuple({tbl, ...})))
@@ -994,11 +993,11 @@ type Enemy = nil
 
 
 local Entity = {}
-type Entity.@Self2 = ref {x = number, y = number, id = string}
+type Entity.@Self = {x = number, y = number, id = string}
 Entity.__index = Entity
 
 function Entity.New(x: number, y: number)
-	local self: Entity.@Self2 = {x = x, y = y, id = tostring({})}
+	local self: Entity.@Self = {x = x, y = y, id = tostring({})}
 	setmetatable2(self, Entity)
 	return self
 end
@@ -1018,7 +1017,7 @@ end
 
 -- Player class deriving from Entity
 local Player = {}
-type Player.@Self2 = Entity.@Self2 & {
+type Player.@Self = Entity.@Self & {
 	health = number,
 	name = string,
 }
@@ -1030,7 +1029,7 @@ function Player:__index(key)
 end
 
 function Player.New(x: number, y: number, name: string)
-	local self: Player.@Self2 = {x = x, y = y, id = tostring({}), health = 100, name = name}
+	local self: Player.@Self = {x = x, y = y, id = tostring({}), health = 100, name = name}
 	setmetatable2(self, Player)
 	return self
 end
@@ -1049,7 +1048,7 @@ end
 
 -- Enemy class deriving from Entity
 local Enemy = {}
-type Enemy.@Self2 = Entity.@Self2 & {
+type Enemy.@Self = Entity.@Self & {
 	damage = number,
 	enemy_type = string,
 }
@@ -1061,7 +1060,7 @@ function Enemy:__index(key)
 end
 
 function Enemy.New(x: number, y: number, enemy_type: string)
-	local self: Enemy.@Self2 = {x = x, y = y, id = tostring({}), damage = 10, enemy_type = enemy_type}
+	local self: Enemy.@Self = {x = x, y = y, id = tostring({}), damage = 10, enemy_type = enemy_type}
 	setmetatable2(self, Enemy)
 	return self
 end

@@ -55,7 +55,6 @@ function META.New(data--[[#: number | nil]])
 			Data = data or false,
 			Falsy = false,
 			Truthy = true,
-			ReferenceType = false,
 			Upvalue = false,
 			Parent = false,
 			Contract = false,
@@ -120,10 +119,6 @@ function META:Widen()
 end
 
 function META:CopyLiteralness(obj--[[#: TNumber]])
-	if self.ReferenceType == obj.ReferenceType and self.Data == obj.Data then
-		return self
-	end
-
 	local self = self:Copy()
 
 	if obj.Type == "range" then

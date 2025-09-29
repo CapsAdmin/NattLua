@@ -376,6 +376,7 @@ function META.New(config)
 			LEFT_SIDE_OR = false,
 			context_values = {},
 			context_ref = {},
+			ReferenceTypes = {},
 		},
 		true
 	)

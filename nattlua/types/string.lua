@@ -136,7 +136,6 @@ local function new(data--[[#: string | nil]], pattern--[[#: string | nil]])
 			PatternContract = pattern or false,
 			Falsy = false,
 			Truthy = true,
-			ReferenceType = false,
 			Parent = false,
 			Upvalue = false,
 			Parent = false,
@@ -183,10 +182,6 @@ function META:Widen()
 end
 
 function META:CopyLiteralness(obj--[[#: TBaseType]])
-	if self.ReferenceType == obj.ReferenceType and self.Data == obj.Data then
-		return self
-	end
-
 	local self = self:Copy()
 
 	if obj.Type == "string" and obj.PatternContract then

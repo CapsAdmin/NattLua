@@ -10,7 +10,35 @@ local ipairs = _G.ipairs
 local Emitter = require("nattlua.emitter.emitter").New
 local assert = _G.assert
 
-local function analyze_arguments(self, node)
+local function collect_modifiers(node)
+	if node.Type ~= "expression_prefix_operator" then return nil end
+
+	local mod = node.value.sub_type
+
+	if
+		node.value.sub_type ~= "ref" and
+		node.value.sub_type ~= "mutable" and
+		node.value.sub_type ~= "literal"
+	then
+		return nil
+	end
+
+	local modifiers = {}
+	local node = node
+
+	while node do
+		if node.Type == "expression_prefix_operator" then
+			modifiers[node.value.sub_type] = true
+			node = node.right
+		else
+			break
+		end
+	end
+
+	return modifiers
+end
+
+local function analyze_arguments(self, node, func)
 	local args = {}
 
 	if
@@ -59,6 +87,7 @@ local function analyze_arguments(self, node)
 			self:MapTypeToNode(self:CreateLocalValue(ident, Any()), key)
 
 			if key.type_expression then
+				func:SetInputModifiers((node.self_call and i - 1) or i, collect_modifiers(key.type_expression))
 				args[i] = self:AssertFallback(Nil(), self:AnalyzeExpression(key.type_expression))
 			elseif key.value.sub_type == "..." then
 				args[i] = VarArg(Any())
@@ -154,7 +183,7 @@ local function analyze_arguments(self, node)
 	return Tuple(args)
 end
 
-local function analyze_return_types(self, node)
+local function analyze_return_types(self, node, func)
 	local ret = {}
 
 	if node.return_types then
@@ -164,6 +193,7 @@ local function analyze_return_types(self, node)
 		-- the return tuple becomes a tuple inside a tuple
 		for i, type_exp in ipairs(node.return_types) do
 			local obj = self:AnalyzeExpression(type_exp)
+			func:SetOutputModifiers(i, collect_modifiers(type_exp))
 
 			if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 and not obj.Repeat then
 				-- if we pass in a tuple, we want to override the return type
@@ -221,8 +251,8 @@ return {
 		self:PushCurrentTypeFunction(obj)
 		self:CreateAndPushFunctionScope(obj)
 		self:PushAnalyzerEnvironment("typesystem")
-		obj:SetInputSignature(analyze_arguments(self, node))
-		obj:SetOutputSignature(analyze_return_types(self, node))
+		obj:SetInputSignature(analyze_arguments(self, node, obj))
+		obj:SetOutputSignature(analyze_return_types(self, node, obj))
 		self:PopAnalyzerEnvironment()
 		self:PopScope()
 		self:PopCurrentTypeFunction()

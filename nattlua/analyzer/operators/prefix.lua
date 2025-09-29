@@ -125,10 +125,7 @@ return {
 
 		if node.value.sub_type == "not" then analyzer:PopInvertedExpressionContext() end
 
-		if node.value.sub_type == "ref" then
-			r:SetReferenceType(true)
-			return r
-		end
+		if node.value.sub_type == "ref" then return r end
 
 		if r.Type == "union" then
 			local new_union = Union()

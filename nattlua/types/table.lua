@@ -560,12 +560,16 @@ do
 		if
 			separator and
 			(
-				separator.Type ~= "string" or
-				not separator:IsLiteral()
+				(
+					separator.Type ~= "string" or
+					not separator:IsLiteral()
+				)
+				and
+				(
+					separator.Type ~= "symbol" or
+					separator:IsBoolean()
+				)
 			)
-			and
-			not separator.Type ~= "symbol" and
-			separator:IsBoolean()
 		then
 			return String()
 		end
@@ -1346,7 +1350,6 @@ function META.New()
 			Falsy = false,
 			TypeOverride = false,
 			Truthy = false,
-			ReferenceType = false,
 			suppress = false,
 			mutations = false,
 			PotentialSelf = false,

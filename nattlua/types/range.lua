@@ -50,7 +50,6 @@ function META.New(min--[[#: TNumber]], max--[[#: TNumber]])
 			MaxNumber = max,
 			Falsy = false,
 			Truthy = true,
-			ReferenceType = false,
 			Upvalue = false,
 			Parent = false,
 			Contract = false,
@@ -87,10 +86,6 @@ function META:IsLiteral()
 end
 
 function META:CopyLiteralness(obj--[[#: TBaseType]])
-	if self.ReferenceType == obj.ReferenceType and self:Equal(obj) then
-		return self
-	end
-
 	local self = self:Copy()
 
 	if obj.Type == "range" then

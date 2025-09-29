@@ -578,7 +578,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			LiteralDataCache = {},
 			Falsy = false,
 			Truthy = false,
-			ReferenceType = false,
 			suppress = false,
 			left_right_source = false,
 			parent_table = false,

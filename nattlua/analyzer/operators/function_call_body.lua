@@ -126,17 +126,21 @@ return function(self, obj, input)
 			for i = 1, input_signature_length do
 				local identifier
 				local type_expression
+				local identifier_index = 1
 
 				if i == 1 and function_node.self_call then
 					identifier = "self"
 					type_expression = function_node
+					identifier_index = 0
 				else
-					local node = function_node.identifiers[i - (
-							function_node.self_call and
-							1 or
-							0
-						)] or
-						function_node.identifiers[#function_node.identifiers]
+					identifier_index = i - (function_node.self_call and 1 or 0)
+					local node = function_node.identifiers[identifier_index]
+
+					if not node then
+						identifier_index = #function_node.identifiers
+						node = function_node.identifiers[identifier_index]
+					end
+
 					identifier = node.value:GetValueString()
 					type_expression = node.type_expression
 				end
@@ -150,7 +154,7 @@ return function(self, obj, input)
 					input:Set(i, arg)
 				elseif
 					contract and
-					contract:IsReferenceType() and
+					obj:IsInputModifier(identifier_index, "ref") and
 					(
 						contract.Type ~= "function" or
 						arg.Type ~= "function" or
@@ -162,7 +166,7 @@ return function(self, obj, input)
 
 					if arg.Type == "any" and arg.Type ~= contract.Type then arg = contract end
 
-					arg:SetReferenceType(true)
+					obj:SetInputModifiers(identifier_index, {ref = true})
 					local ok, err = check_argument_against_contract(self, arg, contract, i)
 
 					if not ok then self:Error(error_messages.argument(i, err)) end
@@ -194,7 +198,7 @@ return function(self, obj, input)
 					if
 						signature_override[i] and
 						signature_override[i].Type == "union" and
-						not signature_override[i]:IsReferenceType()
+						not obj:IsInputModifier(identifier_index, "ref")
 					then
 						local merged = shrink_union_to_function_signature(signature_override[i])
 
@@ -253,6 +257,7 @@ return function(self, obj, input)
 									func:SetOutputSignature(tup)
 								elseif contract.Type == "function" then
 									func:SetOutputSignature(contract:GetOutputSignature())
+									func.OutputModifiers = contract.OutputModifiers
 								end
 
 								func:SetExplicitOutputSignature(true)
@@ -270,6 +275,17 @@ return function(self, obj, input)
 		-- finally check the input against the generated signature
 		for i = 1, input_signature_length do
 			local arg, contract
+			local identifier_index = 1
+
+			if function_node.self_call and i == 1 then
+				identifier_index = 0
+			else
+				identifier_index = i - (function_node.self_call and 1 or 0)
+
+				if not function_node.identifiers[identifier_index] then
+					identifier_index = #function_node.identifiers
+				end
+			end
 
 			if self:IsTypesystem() then
 				arg = input:GetWithoutExpansion(i)
@@ -308,10 +324,10 @@ return function(self, obj, input)
 				arg.Type == "table" and
 				contract.Type == "table" and
 				arg:GetUpvalue() and
-				not contract:IsReferenceType()
+				not obj:IsInputModifier(identifier_index, "ref")
 			then
 				mutate_type(self, i, arg, contract, input)
-			elseif not contract:IsReferenceType() then
+			elseif not obj:IsInputModifier(identifier_index, "ref") then
 				local doit = true
 
 				if contract.Type == "union" then
@@ -646,7 +662,9 @@ return function(self, obj, input)
 	-- if a return type is marked with ref, it will pass the ref value back to the caller
 	-- a bit like generics
 	for i, v in ipairs(output_signature:GetData()) do
-		if v:IsReferenceType() then contract:Set(i, output:GetWithNumber(i)) end
+		if obj:IsOutputModifier(i, "ref") then
+			contract:Set(i, output:GetWithNumber(i))
+		end
 	end
 
 	return contract

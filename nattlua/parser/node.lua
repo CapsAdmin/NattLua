@@ -896,7 +896,11 @@ function META:__tostring()
 			end
 		else
 			if self.value then
-				str = str .. " - " .. formating.QuoteToken(self.value:GetValueString())
+				if self.value.is_token then
+					str = str .. " - " .. formating.QuoteToken(self.value:GetValueString())
+				else
+					str = str .. " - " .. tostring(self.value)
+				end
 			end
 		end
 	end
