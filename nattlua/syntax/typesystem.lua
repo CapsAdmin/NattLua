@@ -48,7 +48,6 @@ typesystem:AddNonStandardKeywords({
 	"literal",
 	"ref",
 	"analyzer",
-	"mutable",
 	"type",
 })
 typesystem:AddKeywordValues({
@@ -96,7 +95,6 @@ typesystem:AddPrefixOperators(
 		"typeof",
 		"$",
 		"unique",
-		"mutable",
 		"ref",
 		"literal",
 		"supertype",

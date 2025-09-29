@@ -255,16 +255,6 @@ function error_messages.destructure_assignment_missing(name--[[#: string]])--[[#
 	return {"field", name, "does not exist"}
 end
 
-function error_messages.mutating_immutable_function_argument(obj--[[#: any]], i--[[#: number]])--[[#: Reason]]
-	return {
-		"mutating function argument",
-		obj,
-		"#",
-		i,
-		"with an immutable contract",
-	}
-end
-
 function error_messages.loop_always_false()--[[#: Reason]]
 	return {"loop expression is always false"}
 end

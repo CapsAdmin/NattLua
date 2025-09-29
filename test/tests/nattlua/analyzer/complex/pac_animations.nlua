@@ -471,7 +471,7 @@ function animations.RegisterAnimation(name: string, tInfo: Gesture)
 	end
 end
 
-local function AdvanceFrame(tGestureTable: mutable Gesture, tFrameData: FrameData)
+local function AdvanceFrame(tGestureTable: Gesture, tFrameData: FrameData)
 	if tGestureTable.Paused then return end
 
 	if tGestureTable.TimeScale == 0 then
@@ -839,7 +839,7 @@ function animations.GetAnimationDuration(ent: Entity, name: string)
 	return 0
 end
 
-local function ResetInSequence(ent: mutable Entity)
+local function ResetInSequence(ent: Entity)
 	if ent.pac_animations then
 		for _, tbl in pairs(ent.pac_animations) do
 			if

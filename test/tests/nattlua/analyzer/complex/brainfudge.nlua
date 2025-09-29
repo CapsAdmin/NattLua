@@ -214,7 +214,7 @@ end
 
 -- very short unit test
 local function replaceIRs(
-	haystack: mutable InstructionList,
+	haystack: InstructionList,
 	needle: InstructionList,
 	replaceBy: {[number] = {number, number | string}},
 	startPos: number
@@ -270,7 +270,7 @@ local function replaceIRs(
 	return replacmentCount
 end
 
-local function firstPassOptimization(instList: mutable InstructionList)
+local function firstPassOptimization(instList: InstructionList)
 	--[[
 		while data[i] ~= 0 do
 			data[i] = data[i] -+ 1

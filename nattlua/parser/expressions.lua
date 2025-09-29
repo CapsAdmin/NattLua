@@ -411,6 +411,8 @@ return function(META)
 			local node
 			local force_upvalue
 
+			local modifiers = self:ParseModifiers()
+
 			if self:IsToken("^") then force_upvalue = self:ExpectToken("^") end
 
 			node = self:ParseParenthesisOrTupleTypeExpression() or
@@ -459,6 +461,11 @@ return function(META)
 			end
 
 			self:PopParserEnvironment()
+
+			if node then
+				node.modifiers = modifiers
+			end
+
 			return node
 		end
 

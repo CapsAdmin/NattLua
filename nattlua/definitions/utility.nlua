@@ -206,6 +206,15 @@ function Readonly<|tbl: Table|>
 	return copy
 end
 
+function Immutable<|T: AnyTable|>
+    T.@MetaTable = {
+        __newindex = function(_, key, value)
+            error("table is immutable", 2)
+        end,
+    }
+    return T
+end
+
 function Record<|keys: string, tbl: Table|>
 	local out = {}
 

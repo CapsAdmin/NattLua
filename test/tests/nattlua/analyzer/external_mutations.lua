@@ -25,7 +25,7 @@ analyze[[
     attest.equal(x.foo, "bar")    
 ]]
 pending[[
-    local function string_mutator<|tbl: mutable {[any] = any}|>
+    local function string_mutator<|tbl: {[any] = any}|>
         for key, val in pairs(tbl) do
             tbl[key] = nil
         end
@@ -42,7 +42,7 @@ pending[[
     attest.equal<|a, {foo = true} | {[string] = string}|>
 ]]
 analyze[[
-    local function mutate_table(tbl: mutable ref {foo = number})
+    local function mutate_table(tbl: ref {foo = number})
         if math.random() > 0.5 then
             tbl.foo = 2
         end
@@ -57,7 +57,7 @@ analyze[[
     attest.equal(tbl.foo, _ as 1 | 2)
 ]]
 analyze[[
-    local function mutate_table(tbl: mutable ref {foo = number})
+    local function mutate_table(tbl: ref {foo = number})
         tbl.foo = 2
     end
 
@@ -71,7 +71,7 @@ analyze[[
 ]]
 analyze(
 	[[
-    local function mutate_table(tbl: {lol = number})
+    local function mutate_table(tbl: Immutable<|{lol = number}|>)
         tbl.lol = 1
     end
     
@@ -79,12 +79,12 @@ analyze(
     
     mutate_table(tbl)
     
-    attest.equal(tbl.lol, 1)
+    attest.equal(tbl.lol, 2)
 ]],
-	"immutable contract"
+	"immutable"
 )
 analyze([[
-    local function mutate_table(tbl: mutable ref {lol = number})
+    local function mutate_table(tbl: ref {lol = number})
         tbl.lol = 1
     end
     
@@ -95,7 +95,7 @@ analyze([[
     attest.equal(tbl.lol, 1)
 ]])
 analyze([[
-    local function mutate_table(tbl: mutable ref {lol = number})
+    local function mutate_table(tbl: ref {lol = number})
         tbl.lol = 1
     end
     
@@ -110,7 +110,7 @@ analyze([[
     §assert(not analyzer:GetDiagnostics()[1])
 ]])
 analyze[[
-    local function mutate_table(tbl: ref mutable {foo = number})
+    local function mutate_table(tbl: ref {foo = number})
         if math.random() > 0.5 then
             tbl.foo = 2
             attest.equal<|typeof tbl.foo, 2|>
@@ -175,7 +175,7 @@ analyze[[
     
 ]]
 analyze[[
-    local function mutate(tbl: mutable ref {foo = number, [string] = any})
+    local function mutate(tbl: ref {foo = number, [string] = any})
         tbl.lol = true
         tbl.foo = 3
     end
@@ -219,7 +219,7 @@ analyze[[
     })
 ]]
 analyze[[
-    local function string_mutator<|tbl: mutable {[any] = any}|>
+    local function string_mutator<|tbl: {[any] = any}|>
         for key, val in pairs(tbl) do
             tbl[key] = nil
         end
@@ -234,7 +234,7 @@ analyze[[
     attest.equal(a.foo, true)
 ]]
 analyze[[
-    local function string_mutator<|tbl: ref mutable {[any] = any}|>
+    local function string_mutator<|tbl: ref {[any] = any}|>
         for key, val in pairs(tbl) do
             tbl[key] = nil
         end

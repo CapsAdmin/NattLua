@@ -55,7 +55,7 @@ return function()
 			return self
 		end
 
-		function META:CopyInternalsFrom(obj--[[#: mutable TBaseType]])
+		function META:CopyInternalsFrom(obj--[[#: TBaseType]])
 			self:SetContract(obj:GetContract())
 		end
 	end

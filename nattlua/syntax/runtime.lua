@@ -46,7 +46,7 @@ runtime:AddKeywords(
 	}
 )
 -- these are keywords, but can be used as names
-runtime:AddNonStandardKeywords({"continue", "import", "literal", "ref", "mutable", "goto"})
+runtime:AddNonStandardKeywords({"continue", "import", "literal", "ref", "goto"})
 runtime:AddKeywordValues({
 	"...",
 	"nil",

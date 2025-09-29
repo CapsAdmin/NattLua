@@ -40,9 +40,6 @@ local function Prefix(analyzer, node, r)
 
 			r:MakeUnique(true)
 			return r
-		elseif op == "mutable" then
-			r.mutable = true
-			return r
 		elseif op == "$" then
 			if r.Type ~= "string" or not r:IsLiteral() then
 				return false, error_messages.string_pattern_invalid_construction(r)

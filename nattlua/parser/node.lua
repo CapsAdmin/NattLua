@@ -1074,8 +1074,8 @@ end
 local function find_by_type(
 	node--[[#: META.@Self]],
 	what--[[#: NodeKind]],
-	out--[[#: ref mutable List<|Node|>]]
-)--[[#: mutable List<|Node|>]]
+	out--[[#: ref List<|Node|>]]
+)--[[#: List<|Node|>]]
 	out = out or {}
 
 	for _, child in ipairs(node:GetNodes()) do

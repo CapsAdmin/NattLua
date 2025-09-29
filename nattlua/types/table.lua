@@ -22,7 +22,6 @@ local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type TTable = META.@Self]]
 --[[#type TTable.suppress = boolean]]
---[[#type TTable.mutable = boolean]]
 --[[#type TTable.mutations = Map<|
 		TBaseType,
 		List<|{scope = TBaseType, value = TBaseType, contract = TBaseType, key = TBaseType}|>
@@ -76,7 +75,6 @@ end
 
 function META:SetSelf(tbl--[[#: TTable]])
 	tbl:SetMetaTable(self)
-	tbl.mutable = true
 	tbl:SetContract(tbl)
 	self.Self = tbl
 end
@@ -995,7 +993,6 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	copy.Contract = self:GetContract() --copy_val(self.Contract, map, copy_tables)
 	copy:SetAnalyzerEnvironment(self:GetAnalyzerEnvironment())
 	copy.PotentialSelf = copy_val(self.PotentialSelf, map, copy_tables)
-	copy.mutable = self.mutable
 	copy.mutations = self.mutations or false
 	copy:SetCreationScope(self:GetCreationScope())
 	copy.BaseTable = self.BaseTable
@@ -1353,7 +1350,6 @@ function META.New()
 			suppress = false,
 			mutations = false,
 			PotentialSelf = false,
-			mutable = false,
 			string_metatable = false,
 			argument_index = false,
 			size = false,

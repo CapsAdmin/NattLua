@@ -9,7 +9,7 @@ local Any = require("nattlua.types.any").Any
 local Function = require("nattlua.types.function").Function
 local table_clear = require("nattlua.other.tablex").clear
 
-local function mutate_type(self, i, arg, contract, arguments)
+local function mutate_type(self, i, arg, contract, arguments, func, identifier_index)
 	local env = self:GetScope():GetNearestFunctionScope()
 	arg:PushContract(contract)
 	arg.argument_index = i
@@ -326,7 +326,7 @@ return function(self, obj, input)
 				arg:GetUpvalue() and
 				not obj:IsInputModifier(identifier_index, "ref")
 			then
-				mutate_type(self, i, arg, contract, input)
+				mutate_type(self, i, arg, contract, input, obj, identifier_index)
 			elseif not obj:IsInputModifier(identifier_index, "ref") then
 				local doit = true
 

@@ -102,7 +102,7 @@ local function tostring_table_sorted(tbl--[[#: Table]], state--[[#: State]])--[[
 	return sorted
 end
 
-function tostring_object_(obj--[[#: any]], state--[[#: mutable State]])--[[#: string]]
+function tostring_object_(obj--[[#: any]], state--[[#: State]])--[[#: string]]
 	local T = type(obj)
 
 	if T == "table" then

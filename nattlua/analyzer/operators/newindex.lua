@@ -37,22 +37,6 @@ return {
 				end
 			end
 
-			if
-				obj.argument_index and
-				(
-					not obj:GetContract() or
-					not obj:GetContract().mutable
-				)
-				and
-				not obj.mutable
-			then
-				if not obj:GetContract() then
-					analyzer:Warning(error_messages.mutating_function_argument(obj, obj.argument_index))
-				else
-					analyzer:Error(error_messages.mutating_immutable_function_argument(obj, obj.argument_index))
-				end
-			end
-
 			local contract = obj:GetContract()
 
 			if contract then
@@ -61,7 +45,7 @@ return {
 					local err
 
 					if obj == contract then
-						if obj.mutable and obj:GetMetaTable() and obj:GetMetaTable().Self == obj then
+						if obj:GetMetaTable() and obj:GetMetaTable().Self == obj then
 							analyzer:MutateTable(obj, key, val)
 							return obj:SetExplicit(key, val)
 						else

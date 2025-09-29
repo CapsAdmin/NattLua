@@ -1,7 +1,7 @@
 -- mutable: suppress warnings about mutating the argument within this function
 -- ref: passes the reference of the type from caller to this function instead of making a copy
 local function AddFunction(
-	META: mutable ref {
+	META: ref {
 		i = number,
 		code = string,
 		-- I want to express the ability to mutate this type within some constraint

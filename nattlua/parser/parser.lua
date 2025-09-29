@@ -29,6 +29,21 @@ require("nattlua.parser.statements")(META)
 require("nattlua.parser.teal")(META)
 require("nattlua.parser.lsx")(META)
 
+function META:ParseModifiers()
+	local modifiers
+	while self:IsTokenType("letter") do
+		local tk = self:GetToken()
+		if tk.sub_type == "ref" or tk.sub_type == "literal" then
+			if not modifiers then modifiers = {} end
+			table.insert(modifiers, tk)
+			self:Advance(1)
+		else
+			break
+		end
+	end
+	return modifiers
+end
+
 function META:ParseIdentifier(expect_type--[[#: nil | boolean]])
 	if not self:IsTokenType("letter") and not self:IsToken("...") then return end
 
@@ -50,6 +65,7 @@ function META:ParseIdentifier(expect_type--[[#: nil | boolean]])
 	if expect_type ~= false then
 		if self:IsToken(":") or expect_type then
 			node.tokens[":"] = self:ExpectToken(":")
+			node.modifiers = self:ParseModifiers()
 			node.type_expression = self:ExpectTypeExpression(0)
 		end
 	end

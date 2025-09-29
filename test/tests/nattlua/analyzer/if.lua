@@ -801,7 +801,7 @@ analyze[[
         @Name = "BlackBox",
     }
 
-    local function FindHeadPosition(ent: mutable HeadPos)
+    local function FindHeadPosition(ent: HeadPos)
         
         if Any() then
             ent.findheadpos_head_bone = false

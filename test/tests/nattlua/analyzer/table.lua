@@ -354,7 +354,7 @@ analyze[[
     attest.equal(tbl.foo, true)
 ]]
 analyze[[
-    local function fill(t: mutable ref {foo = boolean, bar = number})
+    local function fill(t: ref {foo = boolean, bar = number})
         t.foo = true
     end
     
@@ -366,7 +366,7 @@ analyze[[
     local type ShapeA = {Foo = boolean | nil}
     local type ShapeB = {Bar = string | nil}
     
-    local function mutate(obj: mutable ShapeA & ShapeB)
+    local function mutate(obj: ShapeA & ShapeB)
         obj.Bar = "asdf"
     end
     
@@ -378,14 +378,14 @@ analyze(
     local type ShapeA = {Foo = boolean | nil}
     local type ShapeB = {Bar = string | nil}
 
-    local function mutate(obj: ShapeA & ShapeB)
+    local function mutate(obj: Immutable<|ShapeA & ShapeB|>)
         obj.Bar = "asdf"
     end
 
     local obj = {Foo = nil}
     mutate(obj)
 ]],
-	"mutating function argument"
+	"immutable"
 )
 analyze[[
     local type ShapeA = {Foo = boolean | nil}
