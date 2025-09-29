@@ -12,7 +12,6 @@ local table_clear = require("nattlua.other.tablex").clear
 local function mutate_type(self, i, arg, contract, arguments, func, identifier_index)
 	local env = self:GetScope():GetNearestFunctionScope()
 	arg:PushContract(contract)
-	arg.argument_index = i
 	arg:ClearMutations()
 	table.insert(env.mutated_types, {arg = arg, mutations = arg:GetMutations()})
 	arguments:Set(i, arg)
@@ -25,7 +24,6 @@ local function restore_mutated_types(self)
 
 	for _, data in ipairs(env.mutated_types) do
 		data.arg:PopContract()
-		data.arg.argument_index = false
 		data.arg:SetMutations(data.mutations)
 		self:MutateUpvalue(data.arg:GetUpvalue(), data.arg)
 	end

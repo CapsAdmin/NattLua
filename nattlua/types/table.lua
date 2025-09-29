@@ -1351,7 +1351,6 @@ function META.New()
 			mutations = false,
 			PotentialSelf = false,
 			string_metatable = false,
-			argument_index = false,
 			size = false,
 			disabled_unique_id = false,
 			co_func = false,
