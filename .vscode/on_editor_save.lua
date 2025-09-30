@@ -177,7 +177,7 @@ function _G.run_test_focus()
 	str = str:gsub("%s+", "")
 
 	if str == "" or str:find("--SKIP", nil, true) then return false end
-	
+
 	_G.run_nlua("test_focus.nlua")
 	return true
 end

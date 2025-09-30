@@ -542,9 +542,7 @@ return function()
 		local emitted_invalid_code = false
 		local newlines = self:IsLineBreaking()
 
-		if self.emitting_function_signature then
-			self:EmitModifiers(node)
-		end
+		if self.emitting_function_signature then self:EmitModifiers(node) end
 
 		if node.tokens["^"] then self:EmitToken(node.tokens["^"]) end
 
@@ -638,11 +636,11 @@ return function()
 			self:Whitespace("\t")
 		end
 
-
 		if not node.tokens[")"] then
 			if self.config.type_annotations and node.tokens[":"] then
 				self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
 			end
+
 			if self.config.type_annotations and node.tokens["as"] then
 				self:EmitInvalidLuaCode("EmitAsAnnotationExpression", node)
 			end
@@ -1619,9 +1617,7 @@ return function()
 		end
 
 		self:Whitespace(" ")
-
 		self:EmitModifiers(node)
-
 		self:EmitAnnotationExpression(node)
 	end
 
@@ -1754,11 +1750,7 @@ return function()
 		end
 
 		function META:EmitTypeExpression(node--[[#: Node]])
-
-			
-			if self.emitting_function_signature then
-				self:EmitModifiers(node)
-			end
+			if self.emitting_function_signature then self:EmitModifiers(node) end
 
 			if node.tokens["^"] then self:EmitToken(node.tokens["^"]) end
 

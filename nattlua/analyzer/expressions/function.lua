@@ -72,6 +72,7 @@ local function analyze_arguments(self, node, func)
 				if key.modifiers then
 					func:SetInputModifiers((node.self_call and i - 1) or i, collect_modifiers(key.modifiers))
 				end
+
 				args[i] = self:AssertFallback(Nil(), self:AnalyzeExpression(key.type_expression))
 			elseif key.value.sub_type == "..." then
 				args[i] = VarArg(Any())
@@ -177,6 +178,7 @@ local function analyze_return_types(self, node, func)
 		-- the return tuple becomes a tuple inside a tuple
 		for i, type_exp in ipairs(node.return_types) do
 			local obj = self:AnalyzeExpression(type_exp)
+
 			if type_exp.modifiers then
 				func:SetOutputModifiers(i, collect_modifiers(type_exp.modifiers))
 			end

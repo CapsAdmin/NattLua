@@ -31,16 +31,20 @@ require("nattlua.parser.lsx")(META)
 
 function META:ParseModifiers()
 	local modifiers
+
 	while self:IsTokenType("letter") do
 		local tk = self:GetToken()
+
 		if tk.sub_type == "ref" or tk.sub_type == "literal" then
 			if not modifiers then modifiers = {} end
+
 			table.insert(modifiers, tk)
 			self:Advance(1)
 		else
 			break
 		end
 	end
+
 	return modifiers
 end
 

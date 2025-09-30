@@ -166,11 +166,10 @@ return function(META)
 				exp.tokens[":"] = token
 				exp.identifier = identifier
 				exp.modifiers = modifiers
-				
 				return exp
 			end
-			local modifiers = self:ParseModifiers()
 
+			local modifiers = self:ParseModifiers()
 			local exp = self:ExpectTypeExpression(0)
 			exp.modifiers = modifiers
 			return exp
@@ -466,9 +465,7 @@ return function(META)
 
 			self:PopParserEnvironment()
 
-			if node then
-				node.modifiers = modifiers
-			end
+			if node then node.modifiers = modifiers end
 
 			return node
 		end
