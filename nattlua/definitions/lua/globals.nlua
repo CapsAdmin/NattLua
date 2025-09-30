@@ -104,7 +104,7 @@ analyzer function pairs(tbl: Table)
 	local k, v = analyzer:CallLuaTypeFunction(next:GetAnalyzerFunction(), analyzer:GetScope(), {tbl})
 	local done = 1
 
-	if v and v.Type == "union" then v:RemoveType(types.Symbol(nil)) end
+	if v and v.Type == "union" then v:RemoveType(types.Nil()) end
 
 	return function()
 		if done == 3 then return nil end
@@ -149,7 +149,7 @@ analyzer function ipairs(tbl: {[number] = any} | {})
 		done = done + 1
 
 		-- v must never be nil here
-		if v.Type == "union" then v = v:Copy():RemoveType(types.Symbol(nil)) end
+		if v.Type == "union" then v = v:Copy():RemoveType(types.Nil()) end
 
 		return k, v
 	end

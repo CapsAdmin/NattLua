@@ -1,7 +1,9 @@
 local Function = require("nattlua.types.function").Function
 local LNumber = require("nattlua.types.number").LNumber
 local Table = require("nattlua.types.table").Table
-local Symbol = require("nattlua.types.symbol").Symbol
+local Nil = require("nattlua.types.symbol").Nil
+local False = require("nattlua.types.symbol").False
+local True = require("nattlua.types.symbol").True
 local ffi = jit and require("ffi") or nil
 local Tuple = require("nattlua.types.tuple").Tuple
 local Any = require("nattlua.types.any").Any
@@ -27,7 +29,7 @@ local function cast_lua_type_to_type(v)
 	elseif t == "string" then
 		return LString(v)
 	elseif t == "boolean" then
-		return Symbol(v)
+		return v and True() or False()
 	elseif t == "table" then
 		local t = Table()
 

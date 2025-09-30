@@ -285,9 +285,9 @@ local function BinaryWithUnion(self, node, l, r, op)
 
 			return l:Extend(r)
 		elseif op == "supersetof" then
-			return Symbol((r:IsSubsetOf(l)))
+			return r:IsSubsetOf(l) and True() or False()
 		elseif op == "subsetof" then
-			return Symbol((l:IsSubsetOf(r)))
+			return l:IsSubsetOf(r) and True() or False()
 		elseif op == ".." then
 			if l.Type == "tuple" and r.Type == "tuple" then
 				return l:Copy():Concat(r)
