@@ -154,13 +154,13 @@ local traceback = function(self, obj, msg)
 		local ret = {
 			xpcall(function()
 				msg = msg or "no error"
-				local s = msg .. "\n" .. callstack.traceback(2)
+				local s = msg .. "\n" .. callstack.traceback(nil, 2)
 
 				if self.analyzer then s = s .. self.analyzer:DebugStateToString() end
 
 				return s
 			end, function(msg)
-				return debug.traceback(tostring(msg))
+				return callstack.traceback(tostring(msg), 2)
 			end),
 		}
 

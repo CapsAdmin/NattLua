@@ -7,6 +7,7 @@ local debug = debug
 local error = error
 local Any = require("nattlua.types.any").Any
 local error_messages = require("nattlua.error_messages")
+local callstack = require("nattlua.other.callstack")
 local math_abs = math.abs
 local assert = _G.assert
 return function(META)
@@ -103,7 +104,7 @@ return function(META)
 			print("EXPRESSION: ", self:GetCurrentExpression())
 			print("STATEMENT: ", self:GetCurrentStatement())
 			print("NODE: ", node)
-			print(debug.traceback())
+			print(callstack.traceback())
 		end
 
 		local msg_str = error_messages.ErrorMessageToString(msg)
@@ -149,7 +150,7 @@ return function(META)
 				stop = stop,
 				msg = msg_str,
 				severity = severity,
-				traceback = debug.traceback(),
+				traceback = callstack.traceback(),
 				protected_call = self:IsTypeProtectedCall(),
 			}
 		)

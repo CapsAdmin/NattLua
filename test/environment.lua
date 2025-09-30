@@ -19,6 +19,7 @@ local colors = require("nattlua.cli.colors")
 local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
 local callstack = require("nattlua.other.callstack")
 local system = require("nattlua.other.system")
+local callstack = require("nattlua.other.callstack")
 local nl = require("nattlua")
 local total_test_count = 0
 
@@ -26,9 +27,9 @@ function _G.test(name, cb, start, stop)
 	total_test_count = total_test_count + 1
 
 	if start and stop then
-		local ok_start, err_start = xpcall(start, debug.traceback)
-		local ok_cb, err_cb = xpcall(cb, debug.traceback)
-		local ok_stop, err_stop = xpcall(stop, debug.traceback)
+		local ok_start, err_start = xpcall(start, callstack.traceback)
+		local ok_cb, err_cb = xpcall(cb, callstack.traceback)
+		local ok_stop, err_stop = xpcall(stop, callstack.traceback)
 
 		-- Report errors in priority order, but only after all functions have run
 		if not ok_start then
@@ -40,7 +41,7 @@ function _G.test(name, cb, start, stop)
 		end
 	else
 		-- If setup/teardown not provided, just run the test
-		local ok_cb, err_cb = xpcall(cb, debug.traceback)
+		local ok_cb, err_cb = xpcall(cb, callstack.traceback)
 
 		if not ok_cb then
 			error(string.format("Test '%s' failed: %s", name, err_cb), 2)
@@ -310,12 +311,13 @@ do
 	local function run_func(func, ...)
 		local gc = memory.get_usage_kb()
 		local time = get_time()
-		func(...)
+		local ok, err = xpcall(func, callstack.traceback, ...)
 		time = get_time() - time
 		gc = memory.get_usage_kb() - gc
 		-- Update final result
 		update_test_line("DONE", format_time(time), format_gc(gc))
 		total_gc = total_gc + gc
+		return ok, err
 	end
 
 	function _G.run_single_test(test)
@@ -326,9 +328,21 @@ do
 		if LOGGING then update_test_line("RUNNING") end
 
 		if test.is_lua then
-			run_func(assert(loadfile(test.path)))
+			local func, err = loadfile(test.path)
+
+			if not func then error("failed to load " .. test.path .. ": " .. err, 2) end
+
+			local ok, err = run_func(func)
+
+			if not ok then error("failed to run " .. test.path .. ": " .. err, 2) end
 		else
-			run_func(analyze, assert(fs.read(test.path)))
+			local code, err = fs.read(test.path)
+
+			if not code then error("failed to read " .. test.path .. ": " .. err, 2) end
+
+			local ok, err = run_func(analyze, code)
+
+			if not ok then error("failed to analyze " .. test.path .. ": " .. err, 2) end
 		end
 
 		test_file_count = test_file_count + 1

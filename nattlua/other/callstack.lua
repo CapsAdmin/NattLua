@@ -4,9 +4,10 @@ local debug = _G.debug
 local ok, prof = pcall(require, "jit.profile")
 
 if ok--[[# as boolean]] then
-	function callstack.traceback(level--[[#: 1 .. inf | nil]])
+	function callstack.traceback(msg--[[#: string | nil]], level--[[#: 1 .. inf | nil]])
 		level = level or 50
-		return prof.dumpstack("pl\n", level + 2)
+		msg = msg or "stack traceback:\n"
+		return msg .. prof.dumpstack("pl\n", level + 2)
 	end
 
 	function callstack.get_line(level--[[#: 1 .. inf]])

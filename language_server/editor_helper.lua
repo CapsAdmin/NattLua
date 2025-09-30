@@ -17,6 +17,7 @@ local Union = require("nattlua.types.union").Union
 local Table = require("nattlua.types.table").Table
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
+local callstack = require("nattlua.other.callstack")
 local bit = require("nattlua.other.bit")
 local class = require("nattlua.other.class")
 local fs = require("nattlua.other.fs")
@@ -234,7 +235,7 @@ function META:Recompile(path, lol, diagnostics)
 				start = start,
 				stop = stop,
 				message = str_msg,
-				trace = debug.traceback(),
+				trace = callstack.traceback(),
 			}
 		)
 	end
