@@ -384,11 +384,6 @@ do
 			if obj.Type == "union" and obj:IsTypeExceptNil("function") then
 				return true
 			end
-
-			local parent = obj:GetParent()
-
-			if parent then if obj.Type == "function" then return true -- ?
-			end end
 		end
 
 		return false

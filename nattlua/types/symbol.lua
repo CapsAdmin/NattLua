@@ -145,7 +145,6 @@ function META.New(data--[[#: true | false | nil | TSymbol.Data]])
 			Falsy = false,
 			Truthy = false,
 			Upvalue = false,
-			Parent = false,
 			Contract = false,
 			Hash = "",
 		}

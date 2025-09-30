@@ -296,7 +296,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			InputIdentifiers = false,
 			LiteralFunction = false,
 			Scope = false,
-			Parent = false,
 			suppress = false,
 			InputArgumentsInferred = false,
 			InputModifiers = false,

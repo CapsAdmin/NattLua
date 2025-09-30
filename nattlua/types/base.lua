@@ -9,7 +9,6 @@ return function()
 	--[[#type META.Type = string]]
 	--[[#type META.@Self = {
 		Type = string,
-		Parent = any,
 	}]]
 	--[[#local type TBaseType = META.@Self]]
 	--[[#type META.TBaseType = TBaseType]]
@@ -89,32 +88,6 @@ return function()
 
 		function META:Get(key--[[#: boolean]])
 			return false, error_messages.undefined_get(self, key, self.Type)
-		end
-	end
-
-	do
-		META:GetSet("Parent", false--[[# as TBaseType | false]])
-
-		function META:SetParent(parent--[[#: TBaseType | false | nil]])
-			if parent then
-				if parent ~= self then self.Parent = parent end
-			else
-				self.Parent = false
-			end
-		end
-
-		function META:GetRoot()
-			local parent = self
-			local done = {}
-
-			while true do
-				if not parent.Parent or done[parent] then break end
-
-				done[parent] = true
-				parent = parent.Parent--[[# as any]]
-			end
-
-			return parent
 		end
 	end
 

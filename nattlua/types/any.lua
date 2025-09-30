@@ -72,7 +72,6 @@ function META.New()
 			Data = false,
 			Upvalue = false,
 			Contract = false,
-			Parent = false,
 		}
 	)
 end

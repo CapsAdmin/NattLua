@@ -56,7 +56,6 @@ function META.New(data--[[#: number | nil]])
 			Falsy = false,
 			Truthy = true,
 			Upvalue = false,
-			Parent = false,
 			Contract = false,
 			DontWiden = false,
 			Hash = compute_hash(data),

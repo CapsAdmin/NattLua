@@ -51,7 +51,6 @@ function META.New(min--[[#: TNumber]], max--[[#: TNumber]])
 			Falsy = false,
 			Truthy = true,
 			Upvalue = false,
-			Parent = false,
 			Contract = false,
 			Hash = compute_hash(min, max),
 			DontWiden = false,

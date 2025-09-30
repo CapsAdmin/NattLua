@@ -497,8 +497,6 @@ end
 
 local function AddKey(self, keyval, key, val)
 	if not keyval then
-		val:SetParent(self)
-		key:SetParent(self)
 		local keyval = {key = key, val = val}
 		table.insert(self.Data, keyval)
 		write_cache(self, key, keyval)
@@ -520,8 +518,6 @@ function META:RemoveRedundantNilValues()
 			keyval.val.Type == "symbol" and
 			keyval.val:IsNil()
 		then
-			keyval.val:SetParent()
-			keyval.key:SetParent()
 			table.remove(self.Data, i)
 			write_cache(self, keyval.key, nil)
 		else
@@ -535,8 +531,6 @@ function META:Delete(key--[[#: TBaseType]])
 		local keyval = self.Data[i]
 
 		if key:Equal(keyval.key) then
-			keyval.val:SetParent()
-			keyval.key:SetParent()
 			table.remove(self.Data, i)
 			write_cache(self, keyval.key, nil)
 		end
@@ -599,8 +593,6 @@ do
 				if key_num == index_num then
 					removed_val = keyval.val
 					found_index = i
-					keyval.val:SetParent()
-					keyval.key:SetParent()
 					table.remove(self.Data, i)
 					write_cache(self, keyval.key, nil)
 
@@ -620,7 +612,6 @@ do
 				if key_num > index_num then
 					write_cache(self, keyval.key, nil)
 					local new_key = LNumber(key_num - 1)
-					new_key:SetParent(self)
 					keyval.key = new_key
 					write_cache(self, new_key, keyval)
 				end
@@ -1336,7 +1327,6 @@ function META.New()
 			Data = {},
 			CreationScope = false,
 			AnalyzerEnvironment = false,
-			Parent = false,
 			Upvalue = false,
 			UniqueID = false,
 			Name = false,
