@@ -8,16 +8,6 @@ local META = require("nattlua.types.base")()
 local TRUE = {"true"}
 local FALSE = {"false"}
 local NIL = {"nil"}
-local symbol_to_type = {
-	[TRUE] = "boolean",
-	[FALSE] = "boolean",
-	[NIL] = "nil",
-}
-local unpack_symbol = {
-	[TRUE] = true,
-	[FALSE] = false,
-	[NIL] = nil,
-}
 --[[#type META.@Name = "TSymbol"]]
 --[[#local type TSymbol = META.@Self]]
 --[[#type TSymbol.Type = "symbol"]]
@@ -55,8 +45,16 @@ function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#:
 	return false, error_messages.binary(op, l, r)
 end
 
-function META:GetLuaType()
-	return symbol_to_type[self.Data] or type(self.Data)
+do
+	local symbol_to_type = {
+		[TRUE] = "boolean",
+		[FALSE] = "boolean",
+		[NIL] = "nil",
+	}
+
+	function META:GetLuaType()
+		return symbol_to_type[self.Data] or type(self.Data)
+	end
 end
 
 function META:__tostring()
@@ -107,26 +105,6 @@ function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
 	return true
 end
 
-function META:IsFalsy()
-	if self.Data == TRUE then return false end
-
-	if self.Data == FALSE then return true end
-
-	if self.Data == NIL then return true end
-
-	return not self.Data
-end
-
-function META:IsTruthy()
-	if self.Data == TRUE then return true end
-
-	if self.Data == FALSE then return false end
-
-	if self.Data == NIL then return false end
-
-	return not not self.Data
-end
-
 function META:IsLiteral()
 	return true
 end
@@ -142,14 +120,19 @@ function META.New(data--[[#: true | false | nil | TSymbol.Data]])
 		{
 			Type = META.Type,
 			Data = data,
-			Falsy = false,
-			Truthy = false,
+			Falsy = data == NIL or data == FALSE and true,
+			Truthy = data == TRUE and true,
 			Upvalue = false,
 			Contract = false,
-			Hash = "",
+			Hash = data == NIL and
+				"nil" or
+				data == TRUE and
+				"true" or
+				data == FALSE and
+				"false" or
+				tostring(data),
 		}
 	)
-	self.Hash = tostring(self)
 	return self
 end
 
