@@ -1555,6 +1555,7 @@ return function()
 
 		if node.return_types then
 			for i, exp in ipairs(node.return_types) do
+				self:EmitModifiers(exp)
 				self:EmitTypeExpression(exp)
 
 				if i ~= #node.return_types then
@@ -1588,6 +1589,8 @@ return function()
 	end
 
 	function META:EmitAnnotationExpression(node--[[#: Node]])
+		self:EmitModifiers(node)
+
 		if node.type_expression then
 			self:EmitTypeExpression(node.type_expression)
 		elseif node:GetLastAssociatedType() and self.config.type_annotations ~= "explicit" then
@@ -1620,6 +1623,15 @@ return function()
 
 		if self:HasTypeNotation(node) and not node.tokens["as"] then
 			self:EmitInvalidLuaCode("EmitColonAnnotationExpression", node)
+		end
+	end
+
+	function META:EmitModifiers(node--[[#: Node]])
+		if node.modifiers then
+			for i, mod in ipairs(node.modifiers) do
+				self:EmitToken(mod)
+				self:Whitespace(" ")
+			end
 		end
 	end
 

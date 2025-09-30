@@ -335,6 +335,19 @@ do
 	assert(_G.LOL == nil)
 end
 
+parse[[
+local function foo(a: ref number, b: ref function=(ref number)>(ref string, ref number)): ref string
+	return tostring(a)
+end
+
+function META:ParseMultipleValues(
+	reader: ref function=(Parser, ...: ref ...any)>(ref (nil | Node)),
+	a: ref any,
+	b: ref any,
+	c: ref any
+)
+end
+]]
 parse[=[
 
 	--[[#type integer = number]]

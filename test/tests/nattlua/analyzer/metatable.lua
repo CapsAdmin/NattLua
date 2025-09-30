@@ -804,8 +804,8 @@ analyze(
 
     local type meta = {}
     type meta.@Self = {
-        pointer = ref boolean,
-        ffi_name = ref string,
+        pointer = boolean,
+        ffi_name = string,
         fields = {[string] = number | self | string},
     }
     
@@ -851,7 +851,7 @@ analyze(
 analyze[[
     local type meta = {}
     type meta.__index = meta
-    type meta.@Self = {value = ref {[any] = any}}
+    type meta.@Self = {value = {[any] = any}}
 
     function meta:__index<|key: any|>
         local obj = setmetatable<|{value = {[any] = any}}, meta|>

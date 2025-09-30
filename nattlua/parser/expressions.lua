@@ -161,13 +161,19 @@ return function(META)
 			then
 				local identifier = self:ParseToken()
 				local token = self:ExpectToken(":")
+				local modifiers = self:ParseModifiers()
 				local exp = self:ExpectTypeExpression(0)
 				exp.tokens[":"] = token
 				exp.identifier = identifier
+				exp.modifiers = modifiers
+				
 				return exp
 			end
+			local modifiers = self:ParseModifiers()
 
-			return self:ExpectTypeExpression(0)
+			local exp = self:ExpectTypeExpression(0)
+			exp.modifiers = modifiers
+			return exp
 		end
 
 		function META:ParseFunctionSignatureExpression()
@@ -410,8 +416,6 @@ return function(META)
 			self:PushParserEnvironment("typesystem")
 			local node
 			local force_upvalue
-
-			local modifiers = self:ParseModifiers()
 
 			if self:IsToken("^") then force_upvalue = self:ExpectToken("^") end
 
