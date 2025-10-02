@@ -33,6 +33,16 @@ return function()
 	META:GetSet("Data", false--[[# as any]])
 
 	do
+		META:GetSet("TruthyFalsy", false--[[# as "truthy" | "falsy" | "unknown"]])
+
+		function META:IsTruthy()
+			return self.TruthyFalsy == "truthy" or self.TruthyFalsy == "unknown"
+		end
+		
+		function META:IsFalsy()
+			return self.TruthyFalsy == "falsy" or self.TruthyFalsy == "unknown"
+		end
+
 		function META:IsUncertain()
 			return self:IsTruthy() and self:IsFalsy()
 		end
@@ -44,9 +54,7 @@ return function()
 		function META:IsCertainlyTrue()
 			return self:IsTruthy() and not self:IsFalsy()
 		end
-
-		META:IsSet("Falsy", false--[[# as boolean]])
-		META:IsSet("Truthy", false--[[# as boolean]])
+		
 	end
 
 	do

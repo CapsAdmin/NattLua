@@ -1061,14 +1061,6 @@ function META:IsLiteral()
 	return true
 end
 
-function META:IsFalsy()
-	return false
-end
-
-function META:IsTruthy()
-	return true
-end
-
 local function unpack_keyval(keyval--[[#: ref {key = any, val = any}]])
 	local key, val = keyval.key, keyval.val
 	return key, val
@@ -1324,6 +1316,7 @@ function META.New()
 	return META.NewObject(
 		{
 			Type = "table",
+			TruthyFalsy = "truthy",
 			Data = {},
 			CreationScope = false,
 			AnalyzerEnvironment = false,
@@ -1334,9 +1327,7 @@ function META.New()
 			Self2 = false,
 			LiteralDataCache = {},
 			Contracts = {},
-			Falsy = false,
 			TypeOverride = false,
-			Truthy = false,
 			suppress = false,
 			mutations = false,
 			PotentialSelf = false,

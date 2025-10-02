@@ -14,8 +14,6 @@ local META = require("nattlua.types.base")()
 --[[#type TFunction.scope = any]]
 --[[#type TFunction.suppress = boolean]]
 META.Type = "function"
-META.Truthy = true
-META.Falsy = false
 META:IsSet("Called", false)
 META:IsSet("ExplicitInputSignature", false)
 META:IsSet("ExplicitOutputSignature", false)
@@ -274,12 +272,11 @@ end
 function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 	return META.NewObject(
 		{
+			TruthyFalsy = "truthy",
 			Type = "function",
-			Falsy = false,
 			Called = false,
 			Contract = false,
 			Hash = false,
-			Truthy = true,
 			ExplicitInputSignature = false,
 			ExplicitOutputSignature = false,
 			ArgumentsInferred = false,

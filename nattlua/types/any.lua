@@ -28,14 +28,6 @@ function META:__tostring()
 	return "any"
 end
 
-function META:IsFalsy()
-	return true
-end
-
-function META:IsTruthy()
-	return true
-end
-
 function META:IsNil()
 	return false
 end
@@ -67,8 +59,7 @@ function META.New()
 	return META.NewObject(
 		{
 			Type = "any",
-			Falsy = false,
-			Truthy = false,
+			TruthyFalsy = "unknown",
 			Data = false,
 			Upvalue = false,
 			Contract = false,
@@ -77,7 +68,5 @@ function META.New()
 end
 
 return {
-	Any = function()
-		return META.New()
-	end,
+	Any = META.New,
 }

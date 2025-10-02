@@ -576,8 +576,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			Type = "union",
 			Data = {},
 			LiteralDataCache = {},
-			Falsy = false,
-			Truthy = false,
 			suppress = false,
 			left_right_source = false,
 			parent_table = false,

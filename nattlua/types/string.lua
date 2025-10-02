@@ -116,14 +116,6 @@ function META.LogicalComparison(a--[[#: TString]], b--[[#: TBaseType]], op--[[#:
 	return false, error_messages.binary(op, a, b)
 end
 
-function META:IsFalsy()
-	return false
-end
-
-function META:IsTruthy()
-	return true
-end
-
 function META:Get()
 	return false, error_messages.index_string_attempt()
 end
@@ -134,8 +126,7 @@ local function new(data--[[#: string | nil]], pattern--[[#: string | nil]])
 			Type = "string",
 			Data = data or false,
 			PatternContract = pattern or false,
-			Falsy = false,
-			Truthy = true,
+			TruthyFalsy = "truthy",
 			Upvalue = false,
 			Contract = false,
 			MetaTable = false,

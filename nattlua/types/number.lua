@@ -53,8 +53,7 @@ function META.New(data--[[#: number | nil]])
 		{
 			Type = META.Type,
 			Data = data or false,
-			Falsy = false,
-			Truthy = true,
+			TruthyFalsy = "truthy",
 			Upvalue = false,
 			Contract = false,
 			DontWiden = false,
