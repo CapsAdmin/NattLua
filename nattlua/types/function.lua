@@ -11,7 +11,6 @@ local META = require("nattlua.types.base")()
 --[[#type META.@Name = "TFunction"]]
 --[[#type TFunction = META.@Self]]
 --[[#type TFunction.scopes = List<|any|>]]
---[[#type TFunction.scope = any]]
 --[[#type TFunction.suppress = boolean]]
 META.Type = "function"
 META:IsSet("Called", false)
@@ -201,34 +200,6 @@ function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TFunction]])
 	return true
 end
 
-do
-	function META:AddScope(scope--[[#: any]])
-		table.insert(self.scopes, scope)
-	end
-
-	function META:GetSideEffects()
-		local out = {}
-
-		for _, scope in ipairs(self.scopes) do
-			for _, val in ipairs(scope:GetDependencies()) do
-				if (val.Type == "upvalue" and val:GetScope() or val.scope) ~= scope then
-					table.insert(out, val)
-				end
-			end
-		end
-
-		return out
-	end
-
-	function META:GetCallCount()
-		return #self.scopes
-	end
-
-	function META:IsPure()
-		return #self:GetSideEffects() == 0
-	end
-end
-
 function META:HasReferenceTypes()
 	for i, v in ipairs(self:GetInputSignature():GetData()) do
 		if self:IsInputModifier(i, "ref") then return true end
@@ -281,11 +252,8 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			ExplicitOutputSignature = false,
 			ArgumentsInferred = false,
 			PreventInputArgumentExpansion = false,
-			scopes = {},
-			scope = false,
 			InputSignature = input or false,
 			OutputSignature = output or false,
-			recursively_called = false,
 			AnalyzerFunction = false,
 			FunctionBodyNode = false,
 			Upvalue = false,

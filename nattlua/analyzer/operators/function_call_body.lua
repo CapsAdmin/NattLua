@@ -442,8 +442,6 @@ return function(self, obj, input)
 	self:ClearScopedTrackedObjects(scope)
 	self:PopStashedTrackedChanges()
 	restore_mutated_types(self)
-	-- used for analyzing side effects
-	obj:AddScope(scope)
 
 	-- if the function is untyped we warn about untyped arguments
 	-- and we also merge merge the input into the function's input signature

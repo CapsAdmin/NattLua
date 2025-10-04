@@ -11,6 +11,11 @@ local debug_getinfo = _G.debug.getinfo
 -- this turns out to be really hard so I'm trying 
 -- naive approaches while writing tests
 return function(META)
+	META:AddInitializer(function(self)
+		self.call_stack_map = {}
+		self.recursively_called = {}
+	end)
+
 	function META:AnalyzeStatements(statements)
 		for _, statement in ipairs(statements) do
 			self:AnalyzeStatement(statement)
@@ -402,9 +407,7 @@ return function(META)
 		end
 
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
-			self.call_stack_map = self.call_stack_map or {}
-
-			if obj.recursively_called then return obj.recursively_called end
+			if self.recursively_called[obj] then return self.recursively_called[obj] end
 
 			if
 				self:IsRuntime() and
@@ -416,13 +419,13 @@ return function(META)
 				if self.call_stack_map[call_node] then
 					if obj:IsExplicitOutputSignature() then
 						-- so if we have explicit return types, just return those
-						obj.recursively_called = obj:GetOutputSignature():Copy()
-						return obj.recursively_called
+						self.recursively_called[obj] = obj:GetOutputSignature():Copy()
+						return self.recursively_called[obj]
 					else
 						-- if not we sadly have to resort to any
 						-- TODO: error?
-						obj.recursively_called = Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math_huge))
-						return obj.recursively_called
+						self.recursively_called[obj] = Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math_huge))
+						return self.recursively_called[obj]
 					end
 				end
 			end
