@@ -37,7 +37,7 @@
   "runOnSave.statusMessageTimeout": 3000,
   "runOnSave.commands": [
     {
-      "globMatch": "**",
+      "globMatch": "**/*.{lua,nlua}",
       "command": "cd ${workspaceFolder} && luajit .vscode/on_editor_save.lua '${file}'",
       "runIn": "terminal"
     }
