@@ -127,8 +127,7 @@ return {
 
 			self:PushUncertainLoop(loop_scope)
 			self:PushBreakUncertainty(loop_scope, true)
-			local range = self:Assert(init)
-			self:CreateLocalValue(statement.identifiers[1].value:GetValueString(), range)
+			self:CreateLocalValue(statement.identifiers[1].value:GetValueString(), init)
 			self:AnalyzeStatements(statement.statements)
 			self:PopBreakUncertainty()
 			self:PopUncertainLoop()
