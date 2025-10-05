@@ -364,11 +364,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 					end
 				end
 
-				local tbl_key = type_checked:GetParentTable()
-
-				if tbl_key then
-					self:TrackTableIndexUnion(tbl_key.table, tbl_key.key, truthy_union, falsy_union)
-				end
+				self:TrackTableIndexUnion(type_checked, truthy_union, falsy_union)
 			else
 				self.type_checked = false -- this could happen with something like print(type("foo")) so clear it in case
 				for _, l_elem in ipairs(l:GetData()) do
@@ -392,12 +388,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 			if op == "and" or op == "or" then
 				return new_union
 			elseif op == "==" or op == "!=" or op == "~=" then
-				local tbl_key = l:GetParentTable()
-
-				if tbl_key then
-					self:TrackTableIndexUnion(tbl_key.table, tbl_key.key, truthy_union, falsy_union)
-				end
-
+				self:TrackTableIndexUnion(l, truthy_union, falsy_union)
 				local left_right = l:GetLeftRightSource()
 
 				if left_right then
@@ -431,11 +422,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 				return new_union
 			else
 				-- General handling for other operators with unions
-				local tbl_key = l:GetParentTable()
-
-				if tbl_key then
-					self:TrackTableIndexUnion(tbl_key.table, tbl_key.key, truthy_union, falsy_union)
-				end
+				self:TrackTableIndexUnion(l, truthy_union, falsy_union)
 
 				if
 					node.parent.Type ~= "expression_binary_operator" or

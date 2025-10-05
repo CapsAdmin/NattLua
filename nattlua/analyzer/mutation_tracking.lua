@@ -315,10 +315,16 @@ return function(META)
 				val:SetParentTable(tbl, key)
 				local truthy_union = val:GetTruthy()
 				local falsy_union = val:GetFalsy()
-				self:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, self:IsInvertedExpressionContext(), true)
+				self:TrackTableIndexUnion(val, truthy_union, falsy_union, self:IsInvertedExpressionContext(), true)
 			end
 
-			function META:TrackTableIndexUnion(tbl, key, truthy_union, falsy_union, inverted, truthy_falsy)
+			function META:TrackTableIndexUnion(obj, truthy_union, falsy_union, inverted, truthy_falsy)
+				local tbl_key = obj:GetParentTable()
+
+				if not tbl_key then return end
+
+				local tbl = tbl_key.table
+				local key = tbl_key.key
 				local hash = key:GetHashForMutationTracking()
 
 				if hash == nil then return end
