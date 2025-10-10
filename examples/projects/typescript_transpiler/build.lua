@@ -1,13 +1,14 @@
 local nl = require("nattlua")
-local Emitter = require("examples.projects.typescript_emitter").New
+local Emitter = require("examples.projects.typescript_transpiler.emitter").New
 local code = assert(io.open("examples/projects/typescript_transpiler/input.lua")):read("*all")
-local ast = assert(assert(nl.Compiler(code):Parse()):Analyze()).SyntaxTree
-local em = Emitter()
+local ast = assert(assert(nl.Compiler(code, {parser = {skip_import = true}}):Parse({skip_import = true})):Analyze()).SyntaxTree
+local em = Emitter({skip_import = true})
 local f = loadstring(code)
 
 if f then pcall(f) end
 
 local code = em:BuildCode(ast)
+code = code:gsub("_G.IMPORTS = _G.IMPORTS or {}", "let IMPORTS = IMPORTS || {}")
 code = (
 		[[
 

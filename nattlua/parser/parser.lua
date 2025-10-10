@@ -367,13 +367,14 @@ function META:ParseRootNode()
 		table_insert(statements, shebang)
 	end
 
-	if self.config.emit_environment then
+	if self.config.emit_environment and not self.config.skip_import then
 		if not imported_index then
 			imported_index = true
 			imported_index = self:ParseString([[import("nattlua/definitions/index.nlua")]])
 		end
 
 		if imported_index and imported_index ~= true then
+			error("WTF")
 			self.RootStatement.imports = self.RootStatement.imports or {}
 
 			for _, import in ipairs(imported_index.imports) do

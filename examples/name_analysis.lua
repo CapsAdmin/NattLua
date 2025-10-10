@@ -77,26 +77,27 @@ local function check_tokens(tokens)
 
 	for i, tk in ipairs(tokens) do
 		if runtime_syntax:IsVariableName(tk) and typesystem_syntax:IsVariableName(tk) then
-			score[tk.value] = score[tk.value] or {}
+			local value = tk:GetValueString()
+			score[value] = score[value] or {}
 
-			if tk.value:sub(1, 1) == tk.value:sub(1, 1):upper() then
-				for word in tk.value:gmatch("(%u%l.-)%u") do
+			if value:sub(1, 1) == value:sub(1, 1):upper() then
+				for word in value:gmatch("(%u%l.-)%u") do
 					word = word:lower()
 					words[word] = words[word] or {}
 					table.insert(words[word], tk)
 				end
-			elseif tk.value:find("_", nil, true) then
-				for word in (tk.value .. "_"):gmatch("([^_]+)_") do
+			elseif value:find("_", nil, true) then
+				for word in (value .. "_"):gmatch("([^_]+)_") do
 					word = word:lower()
 					words[word] = words[word] or {}
 					table.insert(words[word], tk)
 				end
 			else
-				words[tk.value] = words[tk.value] or {}
-				table.insert(words[tk.value], tk)
+				words[value] = words[value] or {}
+				table.insert(words[value], tk)
 			end
 
-			table.insert(score[tk.value], tk)
+			table.insert(score[value], tk)
 		end
 	end
 

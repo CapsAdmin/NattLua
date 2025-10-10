@@ -390,7 +390,7 @@ return function()
 	end
 
 	function META:BuildCode(block)
-		if block.imports then
+		if block.imports and not self.config.skip_import then
 			self.done = {}
 			self:EmitNonSpace("_G.IMPORTS = _G.IMPORTS or {}\n")
 

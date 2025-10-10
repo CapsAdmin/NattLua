@@ -12,21 +12,21 @@ function META:EmitExpression(node)
 
 	if node.Type == "expression_binary_operator" then
 		self:EmitBinaryOperator(node)
-	elseif node.kind == "function" then
+	elseif node.Type == "expression_function" then
 		self:EmitAnonymousFunction(node)
-	elseif node.kind == "analyzer_function" then
+	elseif node.Type == "expression_analyzer_function" then
 		self:EmitTypeFunction(node)
-	elseif node.kind == "table" then
+	elseif node.Type == "expression_table" then
 		self:EmitTable(node)
-	elseif node.kind == "prefix_operator" then
+	elseif node.Type == "expression_prefix_operator" then
 		self:EmitPrefixOperator(node)
-	elseif node.kind == "postfix_operator" then
+	elseif node.Type == "expression_postfix_operator" then
 		self:EmitPostfixOperator(node)
-	elseif node.kind == "postfix_call" then
+	elseif node.Type == "expression_postfix_call" then
 		self:EmitCall(node)
-	elseif node.kind == "postfix_expression_index" then
+	elseif node.Type == "expression_postfix_expression_index" then
 		self:EmitExpressionIndex(node)
-	elseif node.kind == "value" then
+	elseif node.Type == "expression_value" then
 		if node.value.type == "letter" then
 			self:EmitToken(node.value, "")
 			node.value.whitespace = nil
@@ -45,9 +45,9 @@ function META:EmitExpression(node)
 				self:EmitToken(node.value)
 			end
 		end
-	elseif node.kind == "import" then
+	elseif node.Type == "expression_import" then
 		self:EmitImportExpression(node)
-	elseif node.kind == "type_table" then
+	elseif node.Type == "expression_type_table" then
 		self:EmitTableType(node)
 	else
 		error("unhandled token type " .. node.kind)
@@ -128,7 +128,7 @@ function META:EmitBinaryOperator(node)
 
 		if node.right then
 			if node.value.value == "." or node.value.value == ":" then
-				self:EmitToken(node.right, "")
+				self:EmitToken(node.right.value, "")
 				self:Emit("'")
 				self:EmitToken(node.right.value)
 				self:Emit("'")
@@ -286,12 +286,12 @@ function META:EmitTable(tree)
 
 	if tree.children[1] then
 		self:Whitespace("\n")
-		self:Whitespace("\t+")
+		self:Indent()
 
 		for i, node in ipairs(tree.children) do
 			self:Whitespace("\t")
 
-			if node.kind == "table_index_value" then
+			if node.Type == "statement_table_index_value" then
 				if node.spread then
 					if during_spread then
 						self:Emit("},")
@@ -311,7 +311,7 @@ function META:EmitTable(tree)
 				self:EmitToken(node.tokens["identifier"])
 				self:EmitToken(node.tokens["="], ":")
 				self:EmitExpression(node.value_expression)
-			elseif node.kind == "table_expression_value" then
+			elseif node.Type == "statement_table_expression_value" then
 				self:EmitToken(node.tokens["["])
 				self:Whitespace("(")
 				self:EmitExpression(node.expressions[1])
@@ -324,13 +324,13 @@ function META:EmitTable(tree)
 			if tree.tokens["separators"][i] then
 				self:EmitToken(tree.tokens["separators"][i])
 			else
-				self:Whitespace(",")
+				self:Emit(",")
 			end
 
 			self:Whitespace("\n")
 		end
 
-		self:Whitespace("\t-")
+		self:Outdent()
 		self:Whitespace("\t")
 	end
 
@@ -397,9 +397,9 @@ function META:EmitPostfixOperator(node)
 end
 
 function META:EmitBlock(statements)
-	self:Whitespace("\t+")
+	self:Indent()
 	self:EmitStatements(statements)
-	self:Whitespace("\t-")
+	self:Outdent()
 end
 
 function META:TranslateToken(token)
@@ -643,7 +643,7 @@ function META:EmitAssignment(node)
 			end
 
 			self:Emit(");")
-		elseif left.kind == "postfix_expression_index" then
+		elseif left.Type == "statement_postfix_expression_index" then
 			self:Emit("OP['='](")
 			self:EmitExpression(left.left)
 			self:Emit(",")
@@ -664,54 +664,54 @@ function META:EmitAssignment(node)
 end
 
 function META:EmitStatement(node)
-	if node.kind == "if" then
+	if node.Type == "statement_if" then
 		self:EmitIfStatement(node)
-	elseif node.kind == "goto" then
+	elseif node.Type == "statement_goto" then
 		self:EmitGotoStatement(node)
-	elseif node.kind == "goto_label" then
+	elseif node.Type == "statement_goto_label" then
 		self:EmitLabelStatement(node)
-	elseif node.kind == "while" then
+	elseif node.Type == "statement_while" then
 		self:EmitWhileStatement(node)
-	elseif node.kind == "repeat" then
+	elseif node.Type == "statement_repeat" then
 		self:EmitRepeatStatement(node)
-	elseif node.kind == "break" then
+	elseif node.Type == "statement_break" then
 		self:EmitBreakStatement(node)
-	elseif node.kind == "return" then
+	elseif node.Type == "statement_return" then
 		self:EmitReturnStatement(node)
-	elseif node.kind == "numeric_for" then
+	elseif node.Type == "statement_numeric_for" then
 		self:EmitNumericForStatement(node)
-	elseif node.kind == "generic_for" then
+	elseif node.Type == "statement_generic_for" then
 		self:EmitGenericForStatement(node)
-	elseif node.kind == "do" then
+	elseif node.Type == "statement_do" then
 		self:EmitDoStatement(node)
-	elseif node.kind == "analyzer_function" then
+	elseif node.Type == "statement_analyzer_function" then
 		self:EmitTypeFunctionStatement(node)
-	elseif node.kind == "function" then
+	elseif node.Type == "statement_function" then
 		self:EmitFunction(node)
-	elseif node.kind == "local_function" then
+	elseif node.Type == "statement_local_function" then
 		self:EmitLocalFunction(node)
 	elseif node.Type == "statement_local_analyzer_function" then
 		self:EmitLocalTypeFunction(node)
-	elseif node.kind == "destructure_assignment" then
+	elseif node.Type == "statement_destructure_assignment" then
 		self:EmitDestructureAssignment(node)
-	elseif node.kind == "assignment" then
+	elseif node.Type == "statement_assignment" then
 		self:EmitAssignment(node)
 		self:Emit_ENVFromAssignment(node)
-	elseif node.kind == "local_assignment" then
+	elseif node.Type == "statement_local_assignment" then
 		self:EmitLocalAssignment(node)
-	elseif node.kind == "local_destructure_assignment" then
+	elseif node.Type == "statement_local_destructure_assignment" then
 		self:EmitLocalDestructureAssignment(node)
-	elseif node.kind == "import" then
+	elseif node.Type == "statement_import" then
 		self:Emit("local ")
 		self:EmitIdentifierList(node.left)
 		self:Emit(" = ")
 		self:EmitImportExpression(node)
-	elseif node.kind == "call_expression" then
+	elseif node.Type == "statement_call_expression" then
 		self:Whitespace("\t")
 		self:EmitExpression(node.value)
-	elseif node.kind == "shebang" then
+	elseif node.Type == "statement_shebang" then
 		self:EmitToken(node.tokens["shebang"])
-	elseif node.kind == "semicolon" then
+	elseif node.Type == "statement_semicolon" then
 		self:EmitSemicolonStatement(node)
 
 		if self.config.pretty_print == true then
@@ -719,9 +719,9 @@ function META:EmitStatement(node)
 				self.out[self.i - 2] = ""
 			end
 		end
-	elseif node.kind == "end_of_file" then
+	elseif node.Type == "statement_end_of_file" then
 		self:EmitToken(node.tokens["end_of_file"])
-	elseif node.kind == "root" then
+	elseif node.Type == "statement_root" then
 		self:EmitStatements(node.statements)
 	else
 		error("unhandled statement: " .. node.kind)
@@ -831,7 +831,7 @@ do -- types
 
 		if node.children[1] then
 			self:Whitespace("\n")
-			self:Whitespace("\t+")
+			self:Indent()
 
 			for i, node in ipairs(node.children) do
 				self:Whitespace("\t")
@@ -861,7 +861,7 @@ do -- types
 				self:Whitespace("\n")
 			end
 
-			self:Whitespace("\t-")
+			self:Outdent()
 			self:Whitespace("\t")
 		end
 
@@ -921,21 +921,21 @@ do -- types
 
 		if node.Type == "expression_binary_operator" then
 			self:EmitTypeBinaryOperator(node)
-		elseif node.kind == "analyzer_function" then
+		elseif node.Type == "expression_analyzer_function" then
 			self:EmitTypeFunction(node)
-		elseif node.kind == "table" then
+		elseif node.Type == "expression_table" then
 			self:EmitTable(node)
-		elseif node.kind == "prefix_operator" then
+		elseif node.Type == "expression_prefix_operator" then
 			self:EmitPrefixOperator(node)
-		elseif node.kind == "postfix_operator" then
+		elseif node.Type == "expression_postfix_operator" then
 			self:EmitPostfixOperator(node)
-		elseif node.kind == "postfix_call" then
+		elseif node.Type == "expression_postfix_call" then
 			self:EmitCall(node)
-		elseif node.kind == "postfix_expression_index" then
+		elseif node.Type == "expression_postfix_expression_index" then
 			self:EmitExpressionIndex(node)
-		elseif node.kind == "value" then
+		elseif node.Type == "expression_value" then
 			self:EmitToken(node.value)
-		elseif node.kind == "type_table" then
+		elseif node.Type == "expression_type_table" then
 			self:EmitTableType(node)
 		else
 			error("unhandled token type " .. node.kind)
@@ -994,7 +994,7 @@ do -- extra
 
 	function META:Emit_ENVFromAssignment(node)
 		for i, v in ipairs(node.left) do
-			if v.kind == "value" and v.value.value == "_ENV" then
+			if v.Type == "expression_value" and v.value.value == "_ENV" then
 				if node.right[i] then
 					local key = node.left[i]
 					local val = node.right[i]

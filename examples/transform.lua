@@ -1,7 +1,7 @@
 local nl = require("nattlua")
 local LuaEmitter = require("nattlua.emitter.emitter").New
 local ast = assert(nl.File("nattlua/parser/parser.lua"):Parse()).SyntaxTree
-local em = LuaEmitter({pretty_print = true})
+local em = LuaEmitter({pretty_print = true, no_newlines = false})
 
 function em:OnEmitStatement()
 	self:Emit(";")
@@ -67,17 +67,18 @@ function em:EmitForStatement(node)
 end
 
 function em:TranslateToken(token)
-	if translate[token.value] then return translate[token.value] end
+	local value = token:GetValueString()
+	if translate[value] then return translate[value] end
 
 	if token.type == "line_comment" then
-		return "//" .. token.value:sub(3)
+		return "//" .. value:sub(3)
 	elseif token.type == "multiline_comment" then
-		local content = token.value:sub(5, -3):gsub("%*/", "* /"):gsub("/%*", "/ *")
+		local content = value:sub(5, -3):gsub("%*/", "* /"):gsub("/%*", "/ *")
 		return "/*" .. content .. "*/"
 	end
 
-	if token.type == "letter" and token.value:upper() ~= token.value then
-		return token.value:sub(1, 1):lower() .. token.value:sub(2)
+	if token.type == "letter" and value:upper() ~= value then
+		return value:sub(1, 1):lower() .. value:sub(2)
 	end
 end
 

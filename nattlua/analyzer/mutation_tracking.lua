@@ -310,15 +310,13 @@ return function(META)
 
 		do
 			function META:TrackTableIndex(tbl, key, val)
-				if val.Type ~= "union" then error("only union needs to be tracked") end
-
 				val:SetParentTable(tbl, key)
 				local truthy_union = val:GetTruthy()
 				local falsy_union = val:GetFalsy()
-				self:TrackTableIndexUnion(val, truthy_union, falsy_union, self:IsInvertedExpressionContext(), true)
+				self:TrackTableIndexUnion(val, truthy_union, falsy_union, true)
 			end
 
-			function META:TrackTableIndexUnion(obj, truthy_union, falsy_union, inverted, truthy_falsy)
+			function META:TrackTableIndexUnion(obj, truthy_union, falsy_union, truthy_falsy)
 				local tbl_key = obj:GetParentTable()
 
 				if not tbl_key then return end
@@ -353,9 +351,8 @@ return function(META)
 					table.insert(data.stacki, data.stack[hash])
 				end
 
-				if falsy_union then falsy_union:SetParentTable(tbl, key) end
-
-				if truthy_union then truthy_union:SetParentTable(tbl, key) end
+				falsy_union:SetParentTable(tbl, key)
+				truthy_union:SetParentTable(tbl, key)
 
 				for i = #data.stack[hash], 1, -1 do
 					local tracked = data.stack[hash][i]
@@ -369,7 +366,7 @@ return function(META)
 						key = key,
 						truthy = truthy_union,
 						falsy = falsy_union,
-						inverted = inverted,
+						inverted = self:IsInvertedExpressionContext(),
 						truthy_falsy = truthy_falsy,
 						scope = scope,
 					}

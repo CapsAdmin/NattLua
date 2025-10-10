@@ -1,1 +1,1 @@
-os.execute("cd examples/projects/love2d && nattlua build")
+os.execute("cd examples/projects/love2d && luajit ../../../nattlua.lua build")
