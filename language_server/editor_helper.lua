@@ -1267,7 +1267,6 @@ do
 
 			if middle_lines then
 				for i, line in ipairs(middle_lines) do
-					print(i, line)
 					local len = #line
 					local y = line_start - last_y + i
 					local x = 0
