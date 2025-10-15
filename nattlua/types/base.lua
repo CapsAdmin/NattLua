@@ -12,8 +12,7 @@ return function()
 	}]]
 	--[[#local type TBaseType = META.@Self]]
 	--[[#type META.TBaseType = TBaseType]]
-	--[[#--copy<|META|>.@Self
-	type META.Type = string]]
+	--[[#type META.Type = string]]
 
 	function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]]) --error("nyi " .. a.Type .. " == " .. b.Type)
 	end
@@ -38,7 +37,7 @@ return function()
 		function META:IsTruthy()
 			return self.TruthyFalsy == "truthy" or self.TruthyFalsy == "unknown"
 		end
-		
+
 		function META:IsFalsy()
 			return self.TruthyFalsy == "falsy" or self.TruthyFalsy == "unknown"
 		end
@@ -54,7 +53,6 @@ return function()
 		function META:IsCertainlyTrue()
 			return self:IsTruthy() and not self:IsFalsy()
 		end
-		
 	end
 
 	do

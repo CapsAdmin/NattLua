@@ -15,7 +15,7 @@
 
   "nattlua.executable": "luajit",
   "nattlua.workingDirectory": "${workspaceFolder}",
-  "nattlua.arguments": ["${workspaceFolder}/nattlua.lua", "lsp"],
+  "nattlua.arguments": ["nattlua.lua", "lsp"],
 
   "[typescript]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"

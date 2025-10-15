@@ -346,10 +346,8 @@ function META:OnResponse(response) end
 function META:Initialize()
 	local ok, reason = self:Recompile()
 
-	if not ok then
-		if not _G.TEST then
-			print("failed to recompile without path: " .. reason)
-		end
+	if not ok and reason ~= "no entry point" then
+		if not _G.TEST then print(":Recompile() failed: " .. reason) end
 	end
 end
 
