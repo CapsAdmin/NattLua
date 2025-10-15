@@ -329,7 +329,7 @@ function META:Recompile(path, lol, diagnostics)
 	end
 
 	for name, data in pairs(diagnostics) do
-		self:OnDiagnostics(name, data)
+		if #data > 0 then self:OnDiagnostics(name, data) end
 	end
 
 	return true
