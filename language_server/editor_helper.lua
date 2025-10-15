@@ -153,6 +153,8 @@ do
 end
 
 function META:Recompile(path, lol, diagnostics)
+	if path then path = path_util.Normalize(path) end
+
 	local cfg = self:GetCompilerConfig(path)
 	diagnostics = diagnostics or {}
 
