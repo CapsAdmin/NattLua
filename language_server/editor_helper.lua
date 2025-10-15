@@ -79,7 +79,7 @@ function META:GetCompilerConfig(path)
 	end
 
 	if cfg.analyzer.should_crawl_untyped_functions == nil then
-		cfg.analyzer.should_crawl_untyped_functions = false
+		cfg.analyzer.should_crawl_untyped_functions = true
 	end
 
 	return cfg
@@ -208,9 +208,6 @@ function META:Recompile(path, lol, diagnostics)
 	cfg.analyzer.on_read_file = function(parser, path, content)
 		if not self.TempFiles[path] then self:SetFileContent(path, content) end
 	end
-	cfg.analyzer.on_read_file = function(parser, path, content)
-		if not self.TempFiles[path] then self:SetFileContent(path, content) end
-	end
 	cfg.parser.on_parsed_file = function(path, compiler)
 		self:LoadFile(path, compiler.Code, compiler.Tokens)
 	end
@@ -218,7 +215,7 @@ function META:Recompile(path, lol, diagnostics)
 	self:DebugLog("[ " .. entry_point .. " ] compiling")
 	local compiler = Compiler([[return import("]] .. entry_point .. [[")]], entry_point, cfg)
 	compiler.debug = true
-	compiler:SetEnvironments(runtime_env, typesystem_env)
+	compiler:SetEnvironments(self:GetEnvironment())
 
 	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
 		local name = code:GetName()
