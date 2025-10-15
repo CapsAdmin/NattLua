@@ -132,8 +132,6 @@ do
 	helper:Initialize()
 
 	function helper:OnDiagnostics(name, data)
-		if #data == 0 then return end
-
 		print(name)
 		table.print(data)
 		error("should not be called")
@@ -373,6 +371,32 @@ loadstring("local x = 'hello'")
 		local integers = helper:GetSemanticTokens(path)
 		local tokens = convert_semantic_tokens_to_tokens(integers, str)
 		equal(#tokens, 34)
+	end
+
+	do
+		local str = [===[
+		local function mod()
+			local i = 0
+			return function()
+				i = i + 1
+				return i
+			end
+		end
+		local f = mod()
+		f()
+		f()
+		local yyy = f()
+		attest.equal(yyy, 3)
+		]===]
+		local helper = single_file(str)
+
+		function helper:OnDiagnostics(name, data)
+			print(name)
+			table.print(data)
+			error("should not be called")
+		end
+
+		helper:Recompile(path)
 	end
 end
 
