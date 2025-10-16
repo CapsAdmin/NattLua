@@ -374,7 +374,6 @@ function META:ParseRootNode()
 		end
 
 		if imported_index and imported_index ~= true then
-			error("WTF")
 			self.RootStatement.imports = self.RootStatement.imports or {}
 
 			for _, import in ipairs(imported_index.imports) do

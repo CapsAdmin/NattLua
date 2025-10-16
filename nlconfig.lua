@@ -239,22 +239,24 @@ do -- these override existing commands and should probably be made more generic
 					}
 				)
 			)
-			local lua_code = c:Emit(
-				{
-					pretty_print = true,
-					string_quote = "\"",
-					no_semicolon = true,
-					omit_invalid_code = true,
-					comment_type_annotations = true,
-					type_annotations = true,
-					force_parenthesis = true,
-					module_encapsulation_method = "loadstring",
-					no_newlines = false,
-					extra_indent = {
-						Start = {to = "Stop"},
-						Toggle = "toggle",
-					},
-				}
+			local lua_code = assert(
+				c:Emit(
+					{
+						pretty_print = true,
+						string_quote = "\"",
+						no_semicolon = true,
+						omit_invalid_code = true,
+						comment_type_annotations = true,
+						type_annotations = true,
+						force_parenthesis = true,
+						module_encapsulation_method = "loadstring",
+						no_newlines = false,
+						extra_indent = {
+							Start = {to = "Stop"},
+							Toggle = "toggle",
+						},
+					}
+				)
 			)
 			lua_code = "_G.BUNDLE = true\n" .. lua_code
 			lua_code = lua_code:gsub("%#%!%/usr%/local%/bin%/luajit\n", "\n")
