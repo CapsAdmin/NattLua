@@ -173,6 +173,8 @@ do
 		table.insert(list, k)
 	end
 
+	table.insert(list, "import_data")
+
 	read_letter = string_reader(list, false)
 end
 

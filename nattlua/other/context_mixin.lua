@@ -1,5 +1,6 @@
 --ANALYZE
 local table_insert = _G.table.insert
+local table_new = require("nattlua.other.tablex").new
 return function(META--[[#: ref any]])
 	--[[#type META.@Self.context_values = Map<|string, {i = number, [number] = any}|>]]
 	--[[#type META.@Self.context_ref = Map<|string, number|>]]
@@ -47,10 +48,9 @@ return function(META--[[#: ref any]])
 			local key_i = key .. "_i"
 			--[[#type META.@Self[key] = List<|any|>]]
 			--[[#type META.@Self[key_i] = number]]
-			local new = require("table.new")
 
 			META:AddInitializer(function(self--[[#: ref any]])
-				self[key] = new(100, 0)--[[# as META.@Self[key] ]]
+				self[key] = table_new(100, 0)--[[# as META.@Self[key] ]]
 				self[key_i] = 0--[[# as META.@Self[key_i] ]]
 			end)
 

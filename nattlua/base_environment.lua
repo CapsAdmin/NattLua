@@ -47,7 +47,7 @@ local function load_definitions(root_node)
 	config.parser = {root_statement_override = root_node}
 	-- import_data will be transformed on build and the local function will not be used
 	-- we cannot use the upvalue path here either since this happens at parse time
-	local code = assert(import_data("nattlua/definitions/index.nlua"))
+	local code = import_data("nattlua/definitions/index.nlua")
 	local Compiler = require("nattlua.compiler").New
 	return Compiler(code, config.file_name, config)
 end

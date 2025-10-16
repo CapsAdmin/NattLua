@@ -264,7 +264,7 @@ local function encode_unexpected(v--[[#: any]])
 	if v == json.null then
 		return "null"
 	else
-		error("unexpected type '" .. type(v) .. "'")
+		return "null" --error("unexpected type '" .. type(v) .. "'")
 	end
 end
 
