@@ -5,47 +5,16 @@ if not jit then
 
 elseif jit.arch ~= "Windows" then
 	local ffi = require("ffi")
-	ffi.cdef("char *strerror(int);")
 
-	function fs.last_error()
-		local num = ffi.errno()
-		local err = ffi.string(ffi.C.strerror(num))
-		return err == "" and tostring(num) or err
+	do
+		ffi.cdef("char *strerror(int);")
+
+		function fs.last_error()
+			local num = ffi.errno()
+			local err = ffi.string(ffi.C.strerror(num))
+			return err == "" and tostring(num) or err
+		end
 	end
-else
-	local ffi = require("ffi")
-	ffi.cdef("uint32_t GetLastError();")
-	ffi.cdef[[
-		uint32_t FormatMessageA(
-			uint32_t dwFlags,
-			const void* lpSource,
-			uint32_t dwMessageId,
-			uint32_t dwLanguageId,
-			char* lpBuffer,
-			uint32_t nSize,
-			va_list *Arguments
-		);
-	]]
-	local error_str = ffi.new("uint8_t[?]", 1024)
-	local FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
-	local FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200
-	local error_flags = bit.bor(FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS)
-
-	function fs.last_error()
-		local code = ffi.C.GetLastError()
-		local numout = ffi.C.FormatMessageA(error_flags, nil, code, 0, error_str, 1023, nil)
-		local err = numout ~= 0 and ffi.string(error_str, numout)
-
-		if err and err:sub(-2) == "\r\n" then return err:sub(0, -3) end
-
-		return err
-	end
-end
-
-if not jit then
-
-elseif jit.arch ~= "Windows" then
-	local ffi = require("ffi")
 
 	do -- attributes
 		local stat_struct
@@ -361,6 +330,37 @@ elseif jit.arch ~= "Windows" then
 	end
 else
 	local ffi = require("ffi")
+
+	do
+		local ffi = require("ffi")
+		ffi.cdef("uint32_t GetLastError();")
+		ffi.cdef[[
+			uint32_t FormatMessageA(
+				uint32_t dwFlags,
+				const void* lpSource,
+				uint32_t dwMessageId,
+				uint32_t dwLanguageId,
+				char* lpBuffer,
+				uint32_t nSize,
+				va_list *Arguments
+			);
+		]]
+		local error_str = ffi.new("uint8_t[?]", 1024)
+		local FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
+		local FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200
+		local error_flags = bit.bor(FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS)
+
+		function fs.last_error()
+			local code = ffi.C.GetLastError()
+			local numout = ffi.C.FormatMessageA(error_flags, nil, code, 0, error_str, 1023, nil)
+			local err = numout ~= 0 and ffi.string(error_str, numout)
+
+			if err and err:sub(-2) == "\r\n" then return err:sub(0, -3) end
+
+			return err
+		end
+	end
+
 	local DIRECTORY = 0x10
 	local time_struct = ffi.typeof([[
 		struct {
