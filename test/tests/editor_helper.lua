@@ -400,4 +400,27 @@ loadstring("local x = 'hello'")
 	end
 end
 
+do
+	-- Test that diagnostics are properly cleared when errors are fixed
+	local helper = EditorHelper.New()
+	helper:Initialize()
+	local diagnostics_calls = {}
+
+	function helper:OnDiagnostics(name, data)
+		table.insert(diagnostics_calls, {
+			name = name,
+			data = data,
+			count = #data,
+		})
+	end
+
+	helper:OpenFile(path, [[locwal]])
+	helper:Recompile(path)
+	assert(#diagnostics_calls > 0)
+	diagnostics_calls = {} -- reset
+	helper:UpdateFile(path, [[local a = 1]])
+	helper:Recompile(path)
+	assert(#diagnostics_calls == 0)
+end
+
 _G.TEST = false

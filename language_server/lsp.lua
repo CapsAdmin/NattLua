@@ -104,6 +104,18 @@ editor_helper:SetConfigFunction(function(path)
 	end
 end)
 
+function editor_helper:OnClearDiagnostics(path)
+	lsp.Call(
+		{
+			method = "textDocument/publishDiagnostics",
+			params = {
+				uri = to_lsp_path(path),
+				diagnostics = {},
+			},
+		}
+	)
+end
+
 function editor_helper:OnDiagnostics(path, data)
 	local DiagnosticSeverity = {
 		error = 1,

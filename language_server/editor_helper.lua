@@ -328,7 +328,11 @@ function META:Recompile(path, lol, diagnostics)
 	end
 
 	for name, data in pairs(diagnostics) do
-		if #data > 0 then self:OnDiagnostics(name, data) end
+		if #data > 0 then
+			self:OnDiagnostics(name, data)
+		else
+			self:OnClearDiagnostics(name)
+		end
 	end
 
 	return true
@@ -339,6 +343,8 @@ function META:GetEnvironment()
 end
 
 function META:OnDiagnostics(name, data) end
+
+function META:OnClearDiagnostics(name) end
 
 function META:OnResponse(response) end
 
