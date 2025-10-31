@@ -224,7 +224,11 @@ function META:__tostring()
 	local contract = self:GetContract()
 
 	if contract and contract.Type == "table" and contract ~= self then
-		for i, keyval in ipairs(contract:GetData()) do
+		local contract_data = contract:GetData()
+		local contract_len = #contract_data
+		
+		for i = 1, contract_len do
+			local keyval = contract_data[i]
 			local table_kv = self:FindKeyValExact(keyval.key)
 			local key = tostring(table_kv and table_kv.key or "nil")
 			local val = tostring(table_kv and table_kv.val or "nil")
@@ -244,7 +248,11 @@ function META:__tostring()
 			end
 		end
 	else
-		for i, keyval in ipairs(self.Data) do
+		local data = self.Data
+		local len = #data
+		
+		for i = 1, len do
+			local keyval = data[i]
 			local key, val = tostring(keyval.key), tostring(keyval.val)
 			s[i] = indent .. "[" .. key .. "]" .. " = " .. val
 		end
@@ -264,8 +272,11 @@ function META:GetArrayLength()
 	if contract and contract ~= self then return contract:GetArrayLength() end
 
 	local len = 0
+	local data = self.Data
+	local data_len = #data
 
-	for _, kv in ipairs(self.Data) do
+	for i = 1, data_len do
+		local kv = data[i]
 		if kv.key:IsNumeric() then
 			if kv.key:IsLiteral() then
 				-- TODO: not very accurate
@@ -335,7 +346,11 @@ function META:FollowsContract(contract--[[#: TTable]])
 		end
 	end
 
-	for _, keyval in ipairs(self.Data) do
+	local data = self.Data
+	local len = #data
+	
+	for i = 1, len do
+		local keyval = data[i]
 		if not keyval.val:IsNil() then
 			local res, err = contract:FindKeyValExact(keyval.key)
 
@@ -356,8 +371,11 @@ function META:FollowsContract(contract--[[#: TTable]])
 end
 
 function META:CanBeEmpty()
-	for _, keyval in ipairs(self.Data) do
-		if not keyval.val:CanBeNil() then return false end
+	local data = self.Data
+	local len = #data
+	
+	for i = 1, len do
+		if not data[i].val:CanBeNil() then return false end
 	end
 
 	return true

@@ -51,9 +51,11 @@ function META:GetHash(visited)
 
 	visited[self] = "*circular*"
 	local types = {}
+	local data = self.Data
+	local len = #data
 
-	for i, v in ipairs(self.Data) do
-		types[i] = v:GetHash(visited)
+	for i = 1, len do
+		types[i] = data[i]:GetHash(visited)
 	end
 
 	visited[self] = table.concat(types, ",")
@@ -65,9 +67,11 @@ function META:__tostring()
 
 	self.suppress = true
 	local strings--[[#: List<|string|>]] = {}
+	local data = self.Data
+	local len = #data
 
-	for i, v in ipairs(self.Data) do
-		strings[i] = tostring(v)
+	for i = 1, len do
+		strings[i] = tostring(data[i])
 	end
 
 	if self.Remainder then table.insert(strings, tostring(self.Remainder)) end
@@ -125,9 +129,13 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 
 	local copy = META.New({})
 	map[self] = copy
+	
+	local data = self.Data
+	local copy_data = copy.Data
+	local len = #data
 
-	for i, v in ipairs(self.Data) do
-		copy.Data[i] = copy_val(v, map, copy_tables)
+	for i = 1, len do
+		copy_data[i] = copy_val(data[i], map, copy_tables)
 	end
 
 	copy.Repeat = self.Repeat
