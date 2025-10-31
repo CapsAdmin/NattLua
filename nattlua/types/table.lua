@@ -675,8 +675,11 @@ function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]
 	if keyval then return keyval end
 
 	local reasons = {}
+	local data = self.Data
+	local len = #data
 
-	for i, keyval in ipairs(self.Data) do
+	for i = 1, len do
+		local keyval = data[i]
 		if key:Equal(keyval.key) then return keyval end
 
 		local ok, reason

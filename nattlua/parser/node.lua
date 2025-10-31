@@ -1034,31 +1034,37 @@ local NAN_TYPE = {}
 local ANY_TYPE = {}
 
 function META:AssociateType(obj)
-	self.inferred_types_done = self.inferred_types_done or {}
-	self.inferred_types = self.inferred_types or {}
-
-	do
-		local t = obj.Type
-		local hash = obj
-
-		if hash.Type == "symbol" then
-			hash = obj.Data
-		elseif obj.Type == "string" then
-			hash = obj.Data or STRING_TYPE
-		elseif obj.Type == "number" then
-			hash = obj.Data or NUMBER_TYPE
-
-			if hash ~= hash then hash = NAN_TYPE end
-		elseif obj.Type == "any" then
-			hash = ANY_TYPE
-		end
-
-		if self.inferred_types_done[hash] then return end
-
-		self.inferred_types_done[hash] = true
+	local done = self.inferred_types_done
+	local types = self.inferred_types
+	
+	if not done then
+		done = {}
+		self.inferred_types_done = done
+	end
+	
+	if not types then
+		types = {}
+		self.inferred_types = types
 	end
 
-	self.inferred_types[#self.inferred_types + 1] = obj
+	local obj_type = obj.Type
+	local hash = obj
+
+	if obj_type == "symbol" then
+		hash = obj.Data
+	elseif obj_type == "string" then
+		hash = obj.Data or STRING_TYPE
+	elseif obj_type == "number" then
+		hash = obj.Data or NUMBER_TYPE
+		if hash ~= hash then hash = NAN_TYPE end
+	elseif obj_type == "any" then
+		hash = ANY_TYPE
+	end
+
+	if done[hash] then return end
+
+	done[hash] = true
+	types[#types + 1] = obj
 end
 
 function META:GetAssociatedTypes()

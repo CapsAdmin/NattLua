@@ -81,8 +81,9 @@ function META.Equal(
 end
 
 function META:GetHash(visited)--[[#: string]]
-	if self:GetCardinality() == 1 then
-		return (self.Data[1]--[[# as any]]):GetHash()
+	local data = self.Data
+	if #data == 1 then
+		return (data[1]--[[# as any]]):GetHash()
 	end
 
 	visited = visited or {}
@@ -91,14 +92,16 @@ function META:GetHash(visited)--[[#: string]]
 
 	visited[self] = "*circular*"
 	local types = {}
+	local len = #data
 
-	for i, v in ipairs(self.Data) do
-		types[i] = v:GetHash(visited)
+	for i = 1, len do
+		types[i] = data[i]:GetHash(visited)
 	end
 
 	table_sort(types)
-	visited[self] = table.concat(types, "|")
-	return visited[self]--[[# as string]]
+	local hash = table_concat(types, "|")
+	visited[self] = hash
+	return hash
 end
 
 local sort = function(a--[[#: string]], b--[[#: string]])
@@ -110,9 +113,12 @@ function META:__tostring()
 
 	local s = {}
 	self.suppress = true
+	
+	local data = self.Data
+	local len = #data
 
-	for i, v in ipairs(self.Data) do
-		s[i] = tostring(v)
+	for i = 1, len do
+		s[i] = tostring(data[i])
 	end
 
 	if not s[1] then
@@ -122,7 +128,7 @@ function META:__tostring()
 
 	self.suppress = false
 
-	if #s == 1 then return (s[1]--[[# as string]]) .. "|" end
+	if len == 1 then return (s[1]--[[# as string]]) .. "|" end
 
 	table_sort(s, sort)
 	return table_concat(s, " | ")
@@ -155,11 +161,16 @@ local function remove(self--[[#: TUnion]], index--[[#: number]])
 end
 
 local function find_index(self--[[#: TUnion]], obj--[[#: any]])
-	for i = 1, #self.Data do
-		local v = self.Data[i]--[[# as any]]
+	local data = self.Data
+	local len = #data
+	local obj_type = obj.Type
 
-		if v:Equal(obj) then
-			if v.Type ~= "function" or v:GetFunctionBodyNode() == obj:GetFunctionBodyNode() then
+	for i = 1, len do
+		local v = data[i]--[[# as any]]
+		
+		-- Early exit if types don't match
+		if v.Type == obj_type and v:Equal(obj) then
+			if obj_type ~= "function" or v:GetFunctionBodyNode() == obj:GetFunctionBodyNode() then
 				return i
 			end
 		end

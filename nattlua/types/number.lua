@@ -92,21 +92,7 @@ end
 function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
 	if a.Type ~= b.Type then return false, "types differ" end
 
-	do
-		return a.Hash == b.Hash
-	end
-
-	if a.Data == b.Data then return true, "max values are equal" end
-
-	if not a.Data and not b.Data then
-		return true, "no literal data in either value"
-	else
-		if a:IsNan() and b:IsNan() then return true, "both values are nan" end
-
-		return a.Data == b.Data, "literal values are equal"
-	end
-
-	return false, "values are not equal"
+	return a.Hash == b.Hash, "hash values are equal"
 end
 
 function META:IsLiteral()
