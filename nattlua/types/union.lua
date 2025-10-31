@@ -99,9 +99,8 @@ function META:GetHash(visited)--[[#: string]]
 	end
 
 	table_sort(types)
-	local hash = table_concat(types, "|")
-	visited[self] = hash
-	return hash
+	visited[self] = table_concat(types, "|")
+	return visited[self]--[[# as string]]
 end
 
 local sort = function(a--[[#: string]], b--[[#: string]])
@@ -168,7 +167,7 @@ local function find_index(self--[[#: TUnion]], obj--[[#: any]])
 	for i = 1, len do
 		local v = data[i]--[[# as any]]
 		
-		-- Early exit if types don't match
+		-- Check type first before expensive Equal call
 		if v.Type == obj_type and v:Equal(obj) then
 			if obj_type ~= "function" or v:GetFunctionBodyNode() == obj:GetFunctionBodyNode() then
 				return i
