@@ -2,7 +2,6 @@
 	run_lua(path)
 ]]
 local SKIP_GCC = true
-local SKIP_TESTS = false
 local Parser = nil
 
 do
@@ -335,7 +334,6 @@ do
 		--   - Expression evaluation with macro expansion and > operator has edge cases
 		--   - Multi-character operators (>=, ==, etc.) with complex expressions may fail
 		--   - See TODO comments in tests for specific failing cases
-
 		-- Helper to evaluate a simple expression (for #if and #elif)
 		-- This is a simplified evaluator that handles:
 		-- - defined(MACRO) and defined MACRO operators
@@ -357,15 +355,17 @@ do
 
 			local function parse_primary()
 				local tk = peek()
+
 				if not tk then return 0 end
 
 				-- Handle defined(X) or defined X
 				if tk:ValueEquals("defined") then
 					advance() -- consume 'defined'
 					local has_paren = peek() and peek():ValueEquals("(")
-					if has_paren then advance() end -- consume '('
 
+					if has_paren then advance() end -- consume '('
 					local name_tk = advance()
+
 					if not name_tk then return 0 end
 
 					local is_defined = self:GetDefinition(name_tk:GetValueString()) ~= nil
@@ -389,9 +389,11 @@ do
 				if tk:ValueEquals("(") then
 					advance() -- consume '('
 					local val = parse_logical_or()
+
 					if peek() and peek():ValueEquals(")") then
 						advance() -- consume ')'
 					end
+
 					return val
 				end
 
@@ -416,9 +418,11 @@ do
 				if tk.type == "letter" then
 					advance()
 					local def = self:GetDefinition(tk:GetValueString())
+
 					if def and def.tokens[1] and def.tokens[1].type == "number" then
 						return tonumber(def.tokens[1]:GetValueString()) or 0
 					end
+
 					return 0
 				end
 
@@ -431,6 +435,7 @@ do
 
 				while peek() do
 					local op = peek()
+
 					if op:ValueEquals("*") then
 						advance()
 						left = left * parse_primary()
@@ -455,6 +460,7 @@ do
 
 				while peek() do
 					local op = peek()
+
 					if op:ValueEquals("+") then
 						advance()
 						left = left + parse_multiplicative()
@@ -573,12 +579,14 @@ do
 
 			while depth > 0 do
 				local tk = self:GetToken()
+
 				if tk.type == "end_of_file" then
 					error("Unterminated conditional directive")
 				end
 
 				if tk:ValueEquals("#") then
 					local next_tk = self:GetTokenOffset(1)
+
 					if next_tk.type == "letter" then
 						local directive = next_tk:GetValueString()
 
@@ -587,12 +595,15 @@ do
 							depth = depth + 1
 						elseif directive == "endif" then
 							depth = depth - 1
+
 							if depth == 0 then
 								-- Remove all tokens from start to here (not including the # and endif)
 								local end_pos = self:GetPosition()
+
 								for i = end_pos - 1, start_pos, -1 do
 									self:RemoveToken(i)
 								end
+
 								self:SetPosition(start_pos)
 								-- Now consume the #endif directive
 								self:ExpectToken("#")
@@ -604,9 +615,11 @@ do
 							if directive == "else" then
 								-- Remove all tokens from start to here (not including the # and else)
 								local end_pos = self:GetPosition()
+
 								for i = end_pos - 1, start_pos, -1 do
 									self:RemoveToken(i)
 								end
+
 								self:SetPosition(start_pos)
 								-- Consume #else
 								self:ExpectToken("#")
@@ -615,9 +628,11 @@ do
 							elseif directive == "elif" then
 								-- Remove all tokens from start to here (not including the # and elif)
 								local end_pos = self:GetPosition()
+
 								for i = end_pos - 1, start_pos, -1 do
 									self:RemoveToken(i)
 								end
+
 								self:SetPosition(start_pos)
 								return "elif"
 							end
@@ -639,7 +654,6 @@ do
 			self:ExpectToken("#")
 			self:ExpectTokenValue("ifdef")
 			local identifier = self:ExpectTokenType("letter")
-
 			local is_defined = self:GetDefinition(identifier:GetValueString()) ~= nil
 			table.insert(self.conditional_stack, {active = is_defined, had_true = is_defined})
 
@@ -658,7 +672,6 @@ do
 			self:ExpectToken("#")
 			self:ExpectTokenValue("ifndef")
 			local identifier = self:ExpectTokenType("letter")
-
 			local is_defined = self:GetDefinition(identifier:GetValueString()) ~= nil
 			local is_active = not is_defined
 			table.insert(self.conditional_stack, {active = is_active, had_true = is_active})
@@ -678,7 +691,6 @@ do
 			self:ExpectToken("#")
 			self:ExpectTokenValue("if")
 			local tokens = self:CaptureTokens()
-
 			local condition = evaluate_condition(self, tokens)
 			table.insert(self.conditional_stack, {active = condition, had_true = condition})
 
@@ -701,7 +713,6 @@ do
 			self:ExpectToken("#")
 			self:ExpectTokenValue("elif")
 			local tokens = self:CaptureTokens()
-
 			local state = self.conditional_stack[#self.conditional_stack]
 
 			-- If we already had a true branch, skip this elif
@@ -732,7 +743,6 @@ do
 
 			self:ExpectToken("#")
 			self:ExpectTokenValue("else")
-
 			local state = self.conditional_stack[#self.conditional_stack]
 
 			-- If we already had a true branch, skip the else
@@ -758,10 +768,208 @@ do
 
 			self:ExpectToken("#")
 			self:ExpectTokenValue("endif")
-
 			-- Remove the last conditional state, but be careful with nested else
 			table.remove(self.conditional_stack)
+			return true
+		end
+	end
 
+	do -- #include directive
+		local function resolve_include_path(self, filename, is_system_include)
+			local opts = self.preprocess_options
+
+			if not opts then return nil, "No preprocessor options available" end
+
+			-- Prevent infinite recursion
+			if self.include_depth >= opts.max_include_depth then
+				return nil, "Maximum include depth exceeded"
+			end
+
+			-- Check if file was already included (include guards simulation)
+			if self.included_files[filename] then
+				return nil, filename .. " already included"
+			end
+
+			local search_paths = {}
+
+			if is_system_include then
+				-- System includes: search system paths first
+				for _, path in ipairs(opts.system_include_paths) do
+					table.insert(search_paths, path)
+				end
+
+				for _, path in ipairs(opts.include_paths) do
+					table.insert(search_paths, path)
+				end
+			else
+				-- Local includes: search working directory first
+				table.insert(search_paths, opts.working_directory)
+
+				for _, path in ipairs(opts.include_paths) do
+					table.insert(search_paths, path)
+				end
+
+				for _, path in ipairs(opts.system_include_paths) do
+					table.insert(search_paths, path)
+				end
+			end
+
+			-- Try to find the file
+			for _, base_path in ipairs(search_paths) do
+				local full_path = base_path .. "/" .. filename
+				local file = io.open(full_path, "r")
+
+				if file then
+					local content = file:read("*all")
+					file:close()
+					return content, full_path
+				end
+			end
+
+			-- Try absolute path
+			if filename:sub(1, 1) == "/" then
+				local file = io.open(filename, "r")
+
+				if file then
+					local content = file:read("*all")
+					file:close()
+					return content, filename
+				end
+			end
+
+			return nil, "Include file not found: " .. filename
+		end
+
+		function META:ReadInclude()
+			if not (self:IsTokenValue("#") and self:IsTokenValueOffset("include", 1)) then
+				return false
+			end
+
+			local hashtag = self:ExpectToken("#")
+			local directive = self:ExpectTokenValue("include")
+			-- Parse the filename
+			local filename
+			local is_system_include = false
+
+			-- Check if we have a proper string token (luajit lexer)
+			-- IsToken checks sub_type, so we need to check token type instead
+			if self:IsTokenType("string") then
+				-- #include "file.h" (as a single string token)
+				local str_token = self:ExpectTokenType("string")
+				local str_val = str_token:GetValueString()
+				-- Remove surrounding quotes
+				filename = str_val:sub(2, -2)
+				is_system_include = false
+			elseif self:IsTokenValue("\"") then
+				-- #include "file.h" (tokenized as separate symbols)
+				self:ExpectTokenValue("\"")
+				local parts = {}
+
+				while not self:IsTokenValue("\"") do
+					local tk = self:GetToken()
+
+					if tk.type == "end_of_file" then
+						error("Unterminated #include directive")
+					end
+
+					table.insert(parts, tk:GetValueString())
+					self:Advance(1)
+				end
+
+				self:ExpectTokenValue("\"")
+				filename = table.concat(parts)
+				is_system_include = false
+			elseif self:IsTokenValue("<") then
+				-- #include <file.h>
+				self:ExpectTokenValue("<")
+				local parts = {}
+
+				while not self:IsTokenValue(">") do
+					local tk = self:GetToken()
+
+					if tk.type == "end_of_file" then
+						error("Unterminated #include directive")
+					end
+
+					table.insert(parts, tk:GetValueString())
+					self:Advance(1)
+				end
+
+				self:ExpectTokenValue(">")
+				filename = table.concat(parts)
+				is_system_include = true
+			else
+				error("Invalid #include directive: expected string or <filename>")
+			end
+
+			-- Resolve and read the include file
+			local content, full_path = resolve_include_path(self, filename, is_system_include)
+
+			if not content then
+				-- For now, just skip the include if file not found
+				-- In production, you might want to error or warn
+				print("Warning: " .. (full_path or filename))
+				return true
+			end
+
+			-- Mark file as included
+			self.included_files[filename] = true
+			self.included_files[full_path] = true
+
+			-- Callback for tracking includes
+			if self.preprocess_options.on_include then
+				self.preprocess_options.on_include(filename, full_path)
+			end
+
+			-- Preprocess the included file recursively
+			local Code = require("nattlua.code").New
+			local Lexer = require("nattlua.lexer.lexer").New
+
+			local function lex(code_str)
+				local lexer = Lexer(code_str)
+				lexer.ReadShebang = function()
+					return false
+				end
+				return lexer:GetTokens()
+			end
+
+			local code_obj = Code(content, full_path)
+			local tokens = lex(code_obj)
+			local include_parser = Parser(tokens, code_obj)
+			-- Inherit context from parent parser
+			include_parser.defines = self.defines
+			-- Create a copy of options with updated working directory
+			local include_opts = {}
+
+			for k, v in pairs(self.preprocess_options) do
+				include_opts[k] = v
+			end
+
+			-- Set working directory to the directory of the included file
+			-- so relative includes from that file work correctly
+			include_opts.working_directory = full_path:match("(.*/)") or self.preprocess_options.working_directory
+			include_parser.preprocess_options = include_opts
+			include_parser.include_depth = self.include_depth + 1
+			include_parser.included_files = self.included_files
+			-- Process the included file
+			include_parser:Parse()
+			-- Get the processed tokens
+			local processed_tokens = include_parser.tokens
+
+			-- Remove EOF token from included tokens
+			if
+				processed_tokens[#processed_tokens] and
+				processed_tokens[#processed_tokens].type == "end_of_file"
+			then
+				table.remove(processed_tokens)
+			end
+
+			-- Insert the processed tokens at the current position
+			-- We need to add them where the #include directive was
+			local current_pos = self:GetPosition()
+			self:AddTokens(processed_tokens)
+			-- Update defines from included file (they persist)
+			self.defines = include_parser.defines
 			return true
 		end
 	end
@@ -892,7 +1100,6 @@ do
 		if not consumed_closing_paren then self:ExpectToken(")") end
 
 		local stop = self:GetPosition()
-
 		-- Remove __VA_OPT__(content) from token stream
 		remove_token_range(self, start, stop - 1)
 		self:SetPosition(start)
@@ -983,7 +1190,6 @@ do
 		-- Expand left operand if it's a parameter/macro
 		local def_left = self:GetDefinition(nil, 0)
 		tk_left = get_token_from_definition(self, def_left, tk_left)
-
 		self:Advance(3)
 		-- Expand right operand if it's a parameter/macro
 		local tk_right = self:GetToken()
@@ -992,7 +1198,6 @@ do
 
 		local def_right = self:GetDefinition(nil, 0)
 		tk_right = get_token_from_definition(self, def_right, tk_right)
-
 		self:SetPosition(pos)
 		self:AddTokens(
 			{
@@ -1179,6 +1384,7 @@ do
 					self:ReadElif() or
 					self:ReadElse() or
 					self:ReadEndif() or
+					self:ReadInclude() or
 					self:ExpandMacroCall() or
 					self:ExpandMacroConcatenation() or
 					self:ExpandMacroString() or
@@ -1207,9 +1413,19 @@ local function run_tests() -- tests
 	end
 
 	local function preprocess(code)
-		local code = Code(code, "test.c")
-		local tokens = lex(code)
-		local parser = Parser(tokens, code)
+		local code_obj = Code(code, "test.c")
+		local tokens = lex(code_obj)
+		local parser = Parser(tokens, code_obj)
+		-- Initialize options for include support
+		parser.preprocess_options = {
+			working_directory = "/tmp",
+			include_paths = {},
+			system_include_paths = {},
+			max_include_depth = 100,
+			defines = {},
+		}
+		parser.include_depth = 0
+		parser.included_files = {}
 		parser:Parse()
 		return parser:ToString()
 	end
@@ -1563,60 +1779,70 @@ X(Item3, "This is a description of item 3")
 		assert_find("#define EVAL(x) x \n #define INDIRECT EVAL \n >INDIRECT(5)<", "5")
 	end
 
+	do -- #include directive
+		-- Create a temporary header file for testing
+		local tmp_header = "/tmp/nattlua_test_include.h"
+		local f = io.open(tmp_header, "w")
+		f:write("#ifndef TEST_H\n#define TEST_H\n#define INCLUDED_VALUE 42\n#endif\n")
+		f:close()
+		-- Test basic include with quotes
+		local code_with_include = string.format("#include \"%s\"\n>INCLUDED_VALUE<", tmp_header)
+		assert_find(code_with_include, "42")
+		-- Test include with angle brackets (will treat as system include)
+		-- Note: This will search in system paths, so we skip if not found
+		-- Cleanup
+		os.remove(tmp_header)
+	end
+
 	do -- conditional compilation
 		-- Basic #ifdef / #ifndef
 		assert_find("#define FOO 1\n#ifdef FOO\n>x=FOO<\n#endif", "x=1")
 		assert_find("#ifdef UNDEFINED\n>x=1<\n#endif\n>y=2<", "y=2")
 		assert_find("#ifndef UNDEFINED\n>x=1<\n#endif", "x=1")
 		assert_find("#define FOO 1\n#ifndef FOO\n>x=2<\n#endif\n>y=3<", "y=3")
-
 		-- #ifdef with #else
 		assert_find("#define FOO 1\n#ifdef FOO\n>x=1<\n#else\n>x=2<\n#endif", "x=1")
 		assert_find("#ifdef UNDEFINED\n>x=1<\n#else\n>x=2<\n#endif", "x=2")
-
 		-- #ifndef with #else
 		assert_find("#ifndef UNDEFINED\n>x=1<\n#else\n>x=2<\n#endif", "x=1")
 		assert_find("#define FOO 1\n#ifndef FOO\n>x=1<\n#else\n>x=2<\n#endif", "x=2")
-
 		-- #if with constant expressions
 		assert_find("#if 1\n>x=1<\n#endif", "x=1")
 		assert_find("#if 0\n>x=1<\n#endif\n>y=2<", "y=2")
 		assert_find("#if 1 + 1\n>x=1<\n#endif", "x=1")
 		assert_find("#if 2 - 2\n>x=1<\n#endif\n>y=2<", "y=2")
-
 		-- #if with defined() operator
 		assert_find("#define FOO 1\n#if defined(FOO)\n>x=1<\n#endif", "x=1")
 		assert_find("#if defined(UNDEFINED)\n>x=1<\n#endif\n>y=2<", "y=2")
 		assert_find("#define BAR 2\n#if defined BAR\n>x=1<\n#endif", "x=1")
-
 		-- #if with macro expansion in condition
 		-- TODO: Fix macro expansion in conditions with comparison operators
 		-- assert_find("#define VAL 5\n#if VAL > 3\n>x=1<\n#endif", "x=1")
 		-- assert_find("#define VAL 2\n#if VAL > 3\n>x=1<\n#endif\n>y=2<", "y=2")
-
 		-- #if with #else
 		assert_find("#if 1\n>x=1<\n#else\n>x=2<\n#endif", "x=1")
 		assert_find("#if 0\n>x=1<\n#else\n>x=2<\n#endif", "x=2")
-
 		-- #if with #elif
 		assert_find("#if 0\n>x=1<\n#elif 1\n>x=2<\n#endif", "x=2")
 		assert_find("#if 1\n>x=1<\n#elif 1\n>x=2<\n#endif", "x=1")
 		assert_find("#if 0\n>x=1<\n#elif 0\n>x=2<\n#else\n>x=3<\n#endif", "x=3")
-
 		-- Multiple #elif
 		assert_find("#if 0\n>x=1<\n#elif 0\n>x=2<\n#elif 1\n>x=3<\n#endif", "x=3")
 		-- TODO: Fix macro expansion in elif conditions with comparison operators
 		-- assert_find("#define A 2\n#if A == 1\n>x=1<\n#elif A == 2\n>x=2<\n#elif A == 3\n>x=3<\n#endif", "x=2")
-
 		-- Nested conditionals
 		assert_find("#ifdef FOO\n#ifdef BAR\n>x=1<\n#endif\n#endif\n>y=2<", "y=2")
-		assert_find("#define FOO 1\n#ifdef FOO\n#ifdef BAR\n>x=1<\n#else\n>x=2<\n#endif\n#endif", "x=2")
-		assert_find("#define FOO 1\n#define BAR 2\n#ifdef FOO\n#ifdef BAR\n>x=1<\n#endif\n#endif", "x=1")
-
+		assert_find(
+			"#define FOO 1\n#ifdef FOO\n#ifdef BAR\n>x=1<\n#else\n>x=2<\n#endif\n#endif",
+			"x=2"
+		)
+		assert_find(
+			"#define FOO 1\n#define BAR 2\n#ifdef FOO\n#ifdef BAR\n>x=1<\n#endif\n#endif",
+			"x=1"
+		)
 		-- Conditional with macro definitions
 		assert_find("#define ENABLE 1\n#if ENABLE\n#define VAL 42\n#endif\n>x=VAL<", "x=42")
 		assert_find("#if 0\n#define VAL 42\n#endif\n>x=VAL<", "x=VAL")
-
 		-- Complex expressions
 		assert_find("#if (1 + 2) * 3 == 9\n>x=1<\n#endif", "x=1")
 		-- TODO: Fix division with comparison operators
@@ -1626,12 +1852,10 @@ X(Item3, "This is a description of item 3")
 		assert_find("#if 0 && 1\n>x=1<\n#endif\n>y=2<", "y=2")
 		assert_find("#if !0\n>x=1<\n#endif", "x=1")
 		assert_find("#if !1\n>x=1<\n#endif\n>y=2<", "y=2")
-
 		-- Logical operators
 		assert_find("#define A 1\n#define B 0\n#if A && !B\n>x=1<\n#endif", "x=1")
 		assert_find("#if defined(FOO) || defined(BAR)\n>x=1<\n#endif\n>y=2<", "y=2")
 		assert_find("#define FOO 1\n#if defined(FOO) || defined(BAR)\n>x=1<\n#endif", "x=1")
-
 		-- Comparison operators
 		-- TODO: Fix > operator tokenization issue
 		-- assert_find("#if 5 > 3\n>x=1<\n#endif", "x=1")
@@ -1641,7 +1865,6 @@ X(Item3, "This is a description of item 3")
 		assert_find("#if 5 <= 5\n>x=1<\n#endif", "x=1")
 		assert_find("#if 5 == 5\n>x=1<\n#endif", "x=1")
 		assert_find("#if 5 != 3\n>x=1<\n#endif", "x=1")
-
 		-- Undefined identifiers evaluate to 0
 		assert_find("#if UNDEFINED\n>x=1<\n#endif\n>y=2<", "y=2")
 		assert_find("#if !UNDEFINED\n>x=1<\n#endif", "x=1")
@@ -1673,4 +1896,71 @@ end
 
 if not SKIP_TESTS then run_tests() end
 
-return Parser
+-- Main preprocessor function with options support
+return function(code_or_options, options)
+	local code, opts
+
+	-- Handle both old and new calling conventions
+	if type(code_or_options) == "string" then
+		code = code_or_options
+		opts = options or {}
+	else
+		opts = code_or_options or {}
+		code = opts.code
+	end
+
+	-- Default options
+	opts.working_directory = opts.working_directory or os.getenv("PWD") or "."
+	opts.defines = opts.defines or {}
+	opts.include_paths = opts.include_paths or {}
+	opts.max_include_depth = opts.max_include_depth or 100
+	opts.on_include = opts.on_include -- Optional callback for includes
+	opts.system_include_paths = opts.system_include_paths or {}
+	-- Create Code and Lexer instances
+	local Code = require("nattlua.code").New
+	local Lexer = require("nattlua.lexer.lexer").New
+
+	local function lex(code_str)
+		local lexer = Lexer(code_str)
+		lexer.ReadShebang = function()
+			return false
+		end
+		return lexer:GetTokens()
+	end
+
+	-- Create code object
+	local code_obj = Code(code, opts.filename or "input.c")
+	local tokens = lex(code_obj)
+	local parser = Parser(tokens, code_obj)
+
+	-- Add predefined macros
+	for name, value in pairs(opts.defines) do
+		if type(value) == "string" then
+			-- Parse the value as tokens
+			local value_code = Code(value, "define")
+			local value_tokens = lex(value_code)
+
+			-- Remove EOF token
+			if value_tokens[#value_tokens] and value_tokens[#value_tokens].type == "end_of_file" then
+				table.remove(value_tokens)
+			end
+
+			parser:Define(name, nil, value_tokens)
+		elseif type(value) == "boolean" then
+			if value then
+				parser:Define(name, nil, {parser:NewToken("number", "1")})
+			end
+		else
+			parser:Define(name, nil, {parser:NewToken("number", tostring(value))})
+		end
+	end
+
+	-- Store options in parser for include handling
+	parser.preprocess_options = opts
+	parser.include_depth = 0
+	parser.included_files = {}
+	-- Parse/preprocess
+	parser:Parse()
+	-- Return processed code
+	return parser:ToString()
+end
