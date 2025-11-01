@@ -42,7 +42,9 @@ end
 
 function META:Copy()
 	if false--[[# as true]] then return _--[[# as META.Token]] end -- TODO
-	local copy = META.New(self.type, self.value, self.start, self.stop)
+	local copy = META.New(self.type, self.lexer, self.start, self.stop, self.whitespace_start)
+
+	if self.value then copy.value = self.value end
 
 	if self.string_value then copy.string_value = self.string_value end
 
@@ -63,6 +65,8 @@ function META:Copy()
 	end
 
 	if self.parent then copy.parent = self.parent end
+
+	if self.sub_type then copy.sub_type = self.sub_type end
 
 	return copy
 end

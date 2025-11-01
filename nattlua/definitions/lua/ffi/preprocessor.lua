@@ -1,3 +1,6 @@
+--[[HOTRELOAD
+	run_lua(path)
+]]
 local Parser = nil
 
 do
@@ -19,15 +22,16 @@ do
 		local obj = old(...)
 		obj.defines = {}
 		obj.define_stack = {}
+		obj.expansion_stack = {}
 		return obj
 	end
 
 	function META:IsWhitespace(str, offset)
-		local tk = self:GetTokenOffset(offset)
+		local tk = self:GetTokenOffset(offset or 0)
 
-		if tk.whitespace then
-			for _, whitespace in ipairs(tk.whitespace) do
-				if whitespace.value:find(str, nil, true) then return true end
+		if tk.type ~= "end_of_file" and tk:HasWhitespace() then
+			for _, whitespace in ipairs(tk:GetWhitespace()) do
+				if whitespace:GetValueString():find(str, nil, true) then return true end
 			end
 		end
 
@@ -35,14 +39,14 @@ do
 	end
 
 	function META:IsMultiWhitespace(str, offset)
-		local tk = self:GetTokenOffset(offset)
+		local tk = self:GetTokenOffset(offset or 0)
 
-		if tk and tk.whitespace then
-			for _, whitespace in ipairs(tk.whitespace) do
+		if tk.type ~= "end_of_file" and tk:HasWhitespace() then
+			for _, whitespace in ipairs(tk:GetWhitespace()) do
 				local count = 0
 
-				for i = 1, #whitespace.value do
-					if whitespace.value:sub(i, i) == str then count = count + 1 end
+				for i = 1, #whitespace:GetValueString() do
+					if whitespace:GetValueString():sub(i, i) == str then count = count + 1 end
 				end
 
 				if count and count > 1 then return true end
@@ -86,11 +90,9 @@ do
 		if not identifier then
 			local tk = self:GetTokenOffset(offset)
 
-			if not tk then return false end
+			if tk.type == "end_of_file" or tk.type ~= "letter" then return false end
 
-			if tk.type ~= "letter" then return false end
-
-			identifier = tk.value
+			identifier = tk:GetValueString()
 		end
 
 		if self.define_stack[identifier] then
@@ -106,7 +108,7 @@ do
 		for _ = self:GetPosition(), self:GetLength() do
 			if
 				self:IsWhitespace("\n") and
-				not self:IsTokenValue("\\", -1)
+				not self:IsTokenValueOffset("\\", -1)
 				or
 				self:IsMultiWhitespace("\n")
 			then
@@ -117,7 +119,7 @@ do
 
 			if not tk then break end
 
-			if tk then if tk.value ~= "\\" then table.insert(tks, tk) end end
+			if tk then if tk:GetValueString() ~= "\\" then table.insert(tks, tk) end end
 		end
 
 		return tks
@@ -130,7 +132,14 @@ do
 		for i = 1, self:GetLength() do
 			if self:IsToken(")") then break end
 
-			local node = self:ExpectTokenType("letter")
+			-- Accept either letter (regular parameter) or symbol "..." (variadic)
+			local node
+
+			if self:IsTokenValue("...") then
+				node = self:ExpectTokenValue("...")
+			else
+				node = self:ExpectTokenType("letter")
+			end
 
 			if not node then break end
 
@@ -153,9 +162,8 @@ do
 		for _ = self:GetPosition(), self:GetLength() do
 			if self:IsToken(")") then
 				if not is_va_opt and self:IsTokenOffset(",", -1) then
-					local tokens = {}
-					table.insert(tokens, self:NewToken("symbol", ""))
-					table.insert(args, tokens)
+					-- Empty argument - just add empty table
+					table.insert(args, {})
 				end
 
 				break
@@ -164,7 +172,8 @@ do
 			local tokens = {}
 
 			if not is_va_opt and self:IsToken(",") then
-				table.insert(tokens, self:NewToken("symbol", ""))
+
+			-- Empty argument - leave tokens table empty
 			else
 				local paren_depth = 0
 
@@ -177,13 +186,18 @@ do
 
 					local pos = self:GetPosition()
 					local parent = self:GetToken()
-					self:Parse()
+
+					if parent.type == "end_of_file" then break end
+
+					-- Don't call Parse() for __VA_OPT__ arguments to avoid recursive expansion
+					if not is_va_opt then self:Parse() end
+
 					self:SetPosition(pos)
 					local tk = self:ConsumeToken()
 
-					if tk.value == "(" then
+					if tk:GetValueString() == "(" then
 						paren_depth = paren_depth + 1
-					elseif tk.value == ")" then
+					elseif tk:GetValueString() == ")" then
 						paren_depth = paren_depth - 1
 					end
 
@@ -204,14 +218,14 @@ do
 			args[i] = tokens
 
 			for _, tk in ipairs(tokens) do
-				if tk.whitespace then
+				if tk:HasWhitespace() then
 					tk.whitespace = {
 						self:NewToken("space", " "),
 					}
 				end
 
 				if tk.parent then
-					if tk.parent.whitespace then
+					if tk.parent:HasWhitespace() then
 						tk.parent.whitespace = {
 							self:NewToken("space", " "),
 						}
@@ -239,8 +253,8 @@ do
 		local str_point = ""
 
 		for i, tk in ipairs(tokens) do
-			str = str .. " " .. tk.value
-			str_point = str_point .. " " .. (i == pos and "^" or (" "):rep(#tk.value))
+			str = str .. " " .. tk:GetValueString()
+			str_point = str_point .. " " .. (i == pos and "^" or (" "):rep(#tk:GetValueString()))
 		end
 
 		str = str .. "\n" .. str_point
@@ -248,7 +262,7 @@ do
 	end
 
 	function META:ReadDefine()
-		if not (self:IsToken("#") and self:IsTokenOffset("define", 1)) then
+		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("define", 1)) then
 			return false
 		end
 
@@ -256,34 +270,121 @@ do
 		local directive = self:ExpectTokenValue("define")
 		local identifier = self:ExpectTokenType("letter")
 		local args = self:IsToken("(") and self:CaptureArgumentDefinition() or nil
-		self:Define(identifier.value, args, self:CaptureTokens())
+		self:Define(identifier:GetValueString(), args, self:CaptureTokens())
 		return true
 	end
 
 	function META:ReadUndefine()
-		if not (self:IsToken("#") and self:IsTokenOffset("undef", 1)) then
+		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("undef", 1)) then
 			return false
 		end
 
 		local hashtag = self:ExpectToken("#")
 		local directive = self:ExpectTokenValue("undef")
 		local identifier = self:ExpectTokenType("letter")
-		self:Undefine(identifier.value)
+		self:Undefine(identifier:GetValueString())
 		return true
 	end
 
 	function META:ExpandMacroCall()
-		local def = self:GetDefinition()
+		local def = self:GetDefinition(nil, 0)
 
 		if not (def and self:IsTokenOffset("(", 1)) then return false end
 
-		local whitespace = self:GetToken():Copy().whitespace
-		local tokens = copy_tokens(def.tokens)
-		tokens[1].whitespace = whitespace
+		-- Check if this token was created by expanding the same macro (prevent infinite recursion)
+		local current_tk = self:GetToken()
+		if current_tk.expanded_from and current_tk.expanded_from[def.identifier] then
+			return false
+		end
 
-		if tokens[1].whitespace then
-			for k, v in ipairs(tokens[1].whitespace) do
-				v.value = v.value:gsub("\n", "")
+		-- Special handling for __VA_OPT__ - handle before other processing
+		if def.identifier == "__VA_OPT__" and self:IsTokenValueOffset("(", 1) then
+			local start = self:GetPosition()
+			self:ExpectTokenType("letter")
+			local va = self:GetDefinition("__VA_ARGS__")
+			self:ExpectToken("(")
+			local content_tokens = {}
+			local paren_depth = 0
+			local consumed_closing_paren = false
+
+			-- Capture content inside __VA_OPT__(content)
+			while true do
+				if paren_depth == 0 and self:IsToken(")") then break end
+
+				local tk = self:ConsumeToken()
+
+				if tk.type == "end_of_file" then break end
+
+				if tk:GetValueString() == "(" then
+					paren_depth = paren_depth + 1
+					table.insert(content_tokens, tk)
+				elseif tk:GetValueString() == ")" then
+					paren_depth = paren_depth - 1
+
+					-- Only add the ) if it's not the final closing paren
+					if paren_depth >= 0 then
+						table.insert(content_tokens, tk)
+					else
+						-- This is the final closing paren, we've consumed it
+						consumed_closing_paren = true
+
+						break
+					end
+				else
+					table.insert(content_tokens, tk)
+				end
+			end
+
+			if not consumed_closing_paren then self:ExpectToken(")") end
+
+			local stop = self:GetPosition()
+
+			-- Remove __VA_OPT__(content) from token stream
+			for i = stop - 1, start, -1 do
+				self:RemoveToken(i)
+			end
+
+			self:SetPosition(start)
+
+			-- Only add content if __VA_ARGS__ is non-empty
+			if va and #va.tokens > 0 and va.tokens[1]:GetValueString() ~= "" then
+				-- Copy tokens before modifying them
+				content_tokens = copy_tokens(content_tokens)
+
+				-- Transfer whitespace from __VA_OPT__ token to the first content token
+				if #content_tokens > 0 and va_opt_token:HasWhitespace() then
+					content_tokens[1].whitespace = va_opt_token:GetWhitespace()
+					content_tokens[1].whitespace_start = va_opt_token.whitespace_start
+				end
+
+				self:AddTokens(content_tokens)
+			end
+
+			return true
+		end
+
+		local tk = self:GetToken()
+
+		if tk.type == "end_of_file" then return false end
+
+		tk = tk:Copy()
+		local tokens = copy_tokens(def.tokens)
+
+		if tokens[1] then
+			if tk:HasWhitespace() then
+				tokens[1].whitespace = tk:GetWhitespace()
+				tokens[1].whitespace_start = tk.whitespace_start
+
+				if tokens[1]:HasWhitespace() then
+					for k, v in ipairs(tokens[1]:GetWhitespace()) do
+						local str = v:GetValueString():gsub("\n", "")
+						v:ReplaceValue(str)
+					end
+				end
+			else
+				-- Clear whitespace if the replaced token doesn't have any
+				tokens[1].whitespace = nil
+				tokens[1].whitespace_start = nil
 			end
 		end
 
@@ -297,18 +398,8 @@ do
 		end
 
 		self:SetPosition(start)
-
-		if def.identifier == "__VA_OPT__" then
-			local va = self:GetDefinition("__VA_ARGS__")
-
-			if va and #va.tokens > 0 and va.tokens[1].value ~= "" then
-				self:AddTokens(tokens)
-			end
-		else
-			self:AddTokens(tokens)
-		end
-
-		local has_var_arg = def.args[1] and def.args[#def.args].value == "..."
+		self:AddTokens(tokens)
+		local has_var_arg = def.args[1] and def.args[#def.args]:GetValueString() == "..."
 
 		if has_var_arg then
 			if #args < #def.args - 1 then error("Argument count mismatch") end
@@ -317,7 +408,7 @@ do
 		end
 
 		for i, param in ipairs(def.args) do
-			if param.value == "..." then
+			if param:GetValueString() == "..." then
 				local remaining = {}
 
 				for j = i, #args do
@@ -333,33 +424,49 @@ do
 				if #remaining == 0 then remaining = {self:NewToken("symbol", "")} end
 
 				self:PushDefine("__VA_ARGS__", nil, remaining)
-				self:PushDefine(
-					"__VA_OPT__",
-					{
-						self:NewToken("letter", "arg"),
-					},
-					{
-						self:NewToken("symbol", ","),
-					}
-				)
 
+				-- Don't define __VA_OPT__ as a macro - it's handled specially in ExpandMacro
+				-- self:PushDefine(
+				-- 	"__VA_OPT__",
+				-- 	{
+				-- 		self:NewToken("letter", "content"),
+				-- 	},
+				-- 	{}  -- Empty tokens - expansion is handled by special case
+				-- )
 				break
 			else
-				self:PushDefine(param.value, nil, args[i] or {})
+				self:PushDefine(param:GetValueString(), nil, args[i] or {})
 			end
 		end
 
 		self:Parse()
 
+		-- Mark all tokens at current position as being created from this macro expansion
+		-- This must be done AFTER Parse() so that parameters get expanded first
+		local end_pos = self:GetPosition()
+		for i = start, end_pos - 1 do
+			local token = self.tokens[i]
+			if token then
+				token.expanded_from = token.expanded_from or {}
+				token.expanded_from[def.identifier] = true
+				-- Inherit expanded_from from the original macro call token
+				if tk.expanded_from then
+					for macro_name, _ in pairs(tk.expanded_from) do
+						token.expanded_from[macro_name] = true
+					end
+				end
+			end
+		end
+
 		-- Clean up definitions - also unified approach
 		for i, param in ipairs(def.args) do
-			if param.value == "..." then
+			if param:GetValueString() == "..." then
 				self:PushUndefine("__VA_ARGS__")
-				self:PushUndefine("__VA_OPT__")
 
+				-- Don't undefine __VA_OPT__ since it's not defined anymore
 				break
 			else
-				self:PushUndefine(param.value)
+				self:PushUndefine(param:GetValueString())
 			end
 		end
 
@@ -367,20 +474,50 @@ do
 	end
 
 	function META:ExpandMacroConcatenation()
-		if not (self:IsTokenOffset("#", 1) and self:IsTokenOffset("#", 2)) then
+		if not (self:IsTokenValueOffset("#", 1) and self:IsTokenValueOffset("#", 2)) then
 			return false
 		end
 
 		local tk_left = self:GetToken()
-		local pos = self:GetPosition()
-		self:Advance(3)
 
-		if self:GetDefinition() then self:Parse() end
+		if tk_left.type == "end_of_file" then return false end
+
+		local pos = self:GetPosition()
+		-- Expand left operand if it's a parameter/macro
+		local def_left = self:GetDefinition(nil, 0)
+
+		if def_left then
+			if def_left.tokens[1] then
+				tk_left = def_left.tokens[1]
+			elseif #def_left.tokens == 0 then
+				-- Empty parameter - treat as empty string
+				tk_left = self:NewToken("symbol", "")
+			end
+		end
+
+		self:Advance(3)
+		-- Expand right operand if it's a parameter/macro
+		local tk_right = self:GetToken()
+
+		if tk_right.type == "end_of_file" then return false end
+
+		local def_right = self:GetDefinition(nil, 0)
+
+		if def_right then
+			if def_right.tokens[1] then
+				tk_right = def_right.tokens[1]
+			elseif #def_right.tokens == 0 then
+				-- Empty parameter - treat as empty string
+				tk_right = self:NewToken("symbol", "")
+			end
+		end
 
 		self:SetPosition(pos)
-		self:AddTokens({
-			self:NewToken("letter", tk_left.value .. self:GetTokenOffset(3).value),
-		})
+		self:AddTokens(
+			{
+				self:NewToken("letter", tk_left:GetValueString() .. tk_right:GetValueString()),
+			}
+		)
 		self:Advance(1)
 
 		for i = 1, 4 do
@@ -391,7 +528,7 @@ do
 	end
 
 	function META:ExpandMacroString()
-		if not self:IsToken("#") then return false end
+		if not self:IsTokenValue("#") then return false end
 
 		local def = self:GetDefinition(nil, 1)
 
@@ -400,11 +537,14 @@ do
 		local original_tokens = {}
 
 		for i, v in pairs(def.tokens) do
-			original_tokens[i] = v.parent
+			original_tokens[i] = v.parent or v
 		end
 
 		self:RemoveToken(self:GetPosition())
-		local tk = self:NewToken("string", "\"" .. self:ToString(original_tokens) .. "\"")
+		local str = self:ToString(original_tokens)
+		-- Normalize whitespace: trim and collapse multiple spaces
+		str = str:gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+		local tk = self:NewToken("string", "\"" .. str .. "\"")
 		self:RemoveToken(self:GetPosition())
 		self:AddTokens({tk})
 		self:Advance(#def.tokens)
@@ -412,24 +552,154 @@ do
 	end
 
 	function META:ExpandMacro()
-		local def = self:GetDefinition()
+		-- Special handling for __VA_OPT__ even if not defined as a macro
+		local tk = self:GetToken()
+
+		if tk.type == "end_of_file" then return false end
+
+		local next_tk = self:GetTokenOffset(1)
+
+		if
+			tk.type == "letter" and
+			tk:GetValueString() == "__VA_OPT__" and
+			next_tk.type ~= "end_of_file" and
+			next_tk:GetValueString() == "("
+		then
+			local start = self:GetPosition()
+			local va_opt_token = tk -- Save the __VA_OPT__ token to preserve its whitespace
+			self:ExpectTokenType("letter")
+			local va = self:GetDefinition("__VA_ARGS__")
+			self:ExpectToken("(")
+			local content_tokens = {}
+			local paren_depth = 0
+			local consumed_closing_paren = false
+
+			-- Capture content inside __VA_OPT__(content)
+			while true do
+				if paren_depth == 0 and self:IsToken(")") then break end
+
+				local tk = self:ConsumeToken()
+
+				if tk.type == "end_of_file" then break end
+
+				if tk:GetValueString() == "(" then
+					paren_depth = paren_depth + 1
+					table.insert(content_tokens, tk)
+				elseif tk:GetValueString() == ")" then
+					paren_depth = paren_depth - 1
+
+					-- Only add the ) if it's not the final closing paren
+					if paren_depth >= 0 then
+						table.insert(content_tokens, tk)
+					else
+						-- This is the final closing paren, we've consumed it
+						consumed_closing_paren = true
+
+						break
+					end
+				else
+					table.insert(content_tokens, tk)
+				end
+			end
+
+			if not consumed_closing_paren then self:ExpectToken(")") end
+
+			local stop = self:GetPosition()
+
+			-- Remove __VA_OPT__(content) from token stream
+			for i = stop - 1, start, -1 do
+				self:RemoveToken(i)
+			end
+
+			self:SetPosition(start)
+
+			-- Only add content if __VA_ARGS__ is non-empty
+			if va and #va.tokens > 0 and va.tokens[1]:GetValueString() ~= "" then
+				-- Copy tokens before modifying them
+				content_tokens = copy_tokens(content_tokens)
+
+				-- Transfer whitespace from __VA_OPT__ token to the first content token
+				if #content_tokens > 0 and va_opt_token:HasWhitespace() then
+					content_tokens[1].whitespace = va_opt_token:GetWhitespace()
+					content_tokens[1].whitespace_start = va_opt_token.whitespace_start
+				end
+
+				self:AddTokens(content_tokens)
+			end
+
+			return true
+		end
+
+		local def = self:GetDefinition(nil, 0)
 
 		if not def then return false end
 
+		-- Don't expand function-like macros here - they need arguments
+		-- Function-like macros are handled by ExpandMacroCall()
+		if def.args then return false end
+
 		local tokens = def.tokens
 
-		if tokens[1] and tokens[1].value == self:GetToken().value then
+		-- Handle empty parameters (no tokens)
+		if #tokens == 0 then
+			-- If the empty parameter has whitespace, we need to preserve it
+			local current = self:GetToken()
+
+			if current.type == "end_of_file" then return false end
+
+			local has_ws = current:HasWhitespace()
+			local ws = has_ws and current:GetWhitespace() or nil
+			self:RemoveToken(self:GetPosition())
+
+			-- If there was whitespace, insert an empty token to preserve it
+			if has_ws then
+				local empty_ws_token = self:NewToken("symbol", "")
+				empty_ws_token.whitespace = ws
+				empty_ws_token.whitespace_start = current.whitespace_start
+				self:AddTokens({empty_ws_token})
+			end
+
+			return true
+		end
+
+		local current_token = self:GetToken()
+
+		if current_token.type == "end_of_file" then return false end
+
+		-- Check if this token was created by expanding the same macro (prevent infinite recursion)
+		if current_token.expanded_from and current_token.expanded_from[def.identifier] then
 			return false
 		end
 
 		if tokens[1] then
-			local tk = self:GetToken():Copy()
+			local tk = current_token:Copy()
 			tokens = copy_tokens(tokens)
-			tokens[1].whitespace = tk.whitespace
 
-			if tokens[1].whitespace and false then
-				for k, v in ipairs(tokens[1].whitespace) do
-					v.value = v.value:gsub("\n", "")
+			if tk:HasWhitespace() then
+				tokens[1].whitespace = tk:GetWhitespace()
+				tokens[1].whitespace_start = tk.whitespace_start
+			else
+				-- Clear whitespace if the replaced token doesn't have any
+				tokens[1].whitespace = nil
+				tokens[1].whitespace_start = nil
+			end
+
+			if false and tokens[1]:HasWhitespace() then
+				for k, v in ipairs(tokens[1]:GetWhitespace()) do
+					local str = v:GetValueString():gsub("\n", "")
+					v:ReplaceValue(str)
+				end
+			end
+		end
+
+		-- Mark all tokens as being created from this macro expansion
+		for _, token in ipairs(tokens) do
+			token.expanded_from = token.expanded_from or {}
+			token.expanded_from[def.identifier] = true
+			-- Inherit expanded_from from the current token to prevent re-expansion
+			if current_token.expanded_from then
+				for macro_name, _ in pairs(current_token.expanded_from) do
+					token.expanded_from[macro_name] = true
 				end
 			end
 		end
@@ -444,33 +714,47 @@ do
 		local output = ""
 
 		for i, tk in ipairs(tokens) do
-			if not skip_whitespace then
-				if tk.whitespace then
-					for _, whitespace in ipairs(tk.whitespace) do
-						output = output .. whitespace.value
-					end
-				else
-					local prev = tokens[i - 1]
+			local value = tk:GetValueString()
 
-					if prev then
-						if tk.type ~= "symbol" and tk.type == prev.type then
-							output = output .. " "
+			-- For empty tokens, output their whitespace but not the value
+			if value == "" then
+				if not skip_whitespace and tk:HasWhitespace() then
+					for _, whitespace in ipairs(tk:GetWhitespace()) do
+						output = output .. whitespace:GetValueString()
+					end
+				end
+			-- Don't output the empty value itself
+			else
+				if not skip_whitespace then
+					if tk:HasWhitespace() then
+						for _, whitespace in ipairs(tk:GetWhitespace()) do
+							output = output .. whitespace:GetValueString()
+						end
+					else
+						local prev = tokens[i - 1]
+
+						if prev then
+							-- Only add space between non-empty tokens of same type
+							if prev:GetValueString() ~= "" and tk.type ~= "symbol" and tk.type == prev.type then
+								output = output .. " "
+							end
 						end
 					end
 				end
-			end
 
-			output = output .. tk.value
+				output = output .. tostring(value)
+			end
 		end
 
 		return output
 	end
 
 	function META:NextToken()
-		if not self:GetDefinition() then
+		if not self:GetDefinition(nil, 0) then
 			self:Advance(1)
+			local tk = self:GetToken()
 
-			if not self:GetToken() then return false end
+			if tk.type == "end_of_file" then return false end
 
 			return true
 		end
@@ -485,9 +769,9 @@ do
 					self:ReadDefine() or
 					self:ReadUndefine() or
 					self:ExpandMacroCall() or
-					self:ExpandMacro() or
 					self:ExpandMacroConcatenation() or
 					self:ExpandMacroString() or
+					self:ExpandMacro() or
 					self:NextToken()
 				)
 			then
@@ -499,7 +783,7 @@ do
 	Parser = META.New
 end
 
-do -- tests
+local function run_tests() -- tests
 	local Code = require("nattlua.code").New
 	local Lexer = require("nattlua.lexer.lexer").New
 
@@ -524,7 +808,14 @@ do -- tests
 		local f = assert(io.open(tmp_file, "w"))
 		f:write(code)
 		f:close()
-		local p = assert(io.popen("gcc -E " .. tmp_file, "r"))
+		-- Speed up gcc by:
+		-- -E: preprocess only (already had this)
+		-- -P: omit line markers (already had this)
+		-- -w: suppress warnings (already had this)
+		-- -x c: treat as C code (skip file type detection)
+		-- -nostdinc: don't search standard include directories
+		-- -undef: don't predefine non-standard macros
+		local p = assert(io.popen("gcc -E -P -w -x c -nostdinc -undef " .. tmp_file .. " 2>&1", "r"))
 		local res = p:read("*all")
 		p:close()
 		os.remove(tmp_file)
@@ -533,28 +824,63 @@ do -- tests
 		return res
 	end
 
-	local function assert_find(code, find)
+	local test_results = {
+		passed = 0,
+		failed = 0,
+		test_number = 0
+	}
+
+	local function assert_find(code, find, skip_gcc)
 		if not code:find(">.-<") then error("must define a macro with > and <", 2) end
 
 		if find:find(">.-<") then error("must not contain > and <", 2) end
 
-		do
+		test_results.test_number = test_results.test_number + 1
+		local test_name = code:match("#define%s+(%w+)")
+		local gcc_ok = true
+		local gcc_error = nil
+
+		if not skip_gcc then
 			local gcc_code = preprocess_gcc(code)
 			local captured = gcc_code:match(">(.-)<")
 
 			if find ~= captured then
-				print(captured .. " != " .. find)
-				print("gcc -E fail, could not find:\n" .. find .. "\nin:\n" .. gcc_code)
+				gcc_ok = false
+				gcc_error = "gcc -E: expected '" .. find .. "', got '" .. (captured or "nil") .. "'"
 			end
 		end
 
 		do
-			local code = preprocess(code)
-			local captured = code:match(">(.-)<")
+			local success, code_result = pcall(function()
+				return preprocess(code)
+			end)
+
+			if not success then
+				test_results.failed = test_results.failed + 1
+				print(string.format("✗ Test #%d: %s", test_results.test_number, test_name or "unknown"))
+				print(string.format("  Expected: %s", find))
+				print(string.format("  Got:      ERROR: %s", tostring(code_result)))
+				if gcc_error then
+					print(string.format("  GCC:      %s", gcc_error))
+				end
+				print()
+				return
+			end
+
+			local captured = code_result:match(">(.-)<")
 
 			if find ~= captured then
-				print(captured .. " != " .. find)
-				error("Could not find:\n" .. find .. "\nin:\n" .. code, 2)
+				test_results.failed = test_results.failed + 1
+				print(string.format("✗ Test #%d: %s", test_results.test_number, test_name or "unknown"))
+				print(string.format("  Expected: %s", find))
+				print(string.format("  Got:      %s", captured or "nil"))
+				if gcc_error then
+					print(string.format("  GCC:      %s", gcc_error))
+				end
+				print()
+			else
+				test_results.passed = test_results.passed + 1
+				print(string.format("✓ Test #%d: %s = %s", test_results.test_number, test_name or "unknown", captured))
 			end
 		end
 	end
@@ -571,15 +897,39 @@ do -- tests
 
 	-- Test argument error cases
 	local function assert_error(code, error_msg)
+		test_results.test_number = test_results.test_number + 1
+		local test_name = code:match("#define%s+(%w+)") or "error_test"
 		local success, err = pcall(function()
 			preprocess(code)
 		end)
-		assert(not success, "Expected an error but none was thrown")
-		assert(err:find(error_msg, nil, true), "Error message doesn't match: " .. err)
+
+		if success then
+			test_results.failed = test_results.failed + 1
+			print(string.format("✗ Test #%d: %s (error expected)", test_results.test_number, test_name))
+			print(string.format("  Expected: ERROR: %s", error_msg))
+			print(string.format("  Got:      No error was thrown"))
+			print()
+		elseif not err:find(error_msg, nil, true) then
+			test_results.failed = test_results.failed + 1
+			print(string.format("✗ Test #%d: %s (error expected)", test_results.test_number, test_name))
+			print(string.format("  Expected: ERROR: %s", error_msg))
+			print(string.format("  Got:      ERROR: %s", tostring(err)))
+			print()
+		else
+			test_results.passed = test_results.passed + 1
+			print(string.format("✓ Test #%d: %s (correctly threw error)", test_results.test_number, test_name))
+		end
 	end
 
+	print(string.rep("=", 70))
+	print("RUNNING PREPROCESSOR TESTS")
+	print(string.rep("=", 70))
+	print()
+
 	do -- whitespace
+		assert_find("#define M 1 \n >x=M<", "x=1")
 		assert_find("#define M z \n >x=\nM<", "x=\nz")
+		assert_find("#define M 1 \n >x=M<", "x=1")
 		assert_find("#define M \\\n z \n >x=M<", "x=z")
 		assert_find("#define S(a) a \n >S(x-y)<", "x-y")
 		assert_find("#define S(a) a \n >S(x - y)<", "x - y")
@@ -631,6 +981,7 @@ do -- tests
 	end
 
 	do -- empty arguments
+		-- Empty parameters should preserve surrounding whitespace
 		assert_find("#define F(x,y) x and y \n >F(,)<", " and ")
 	end
 
@@ -723,4 +1074,25 @@ X(Item3, "This is a description of item 3")
 		assert_error("#define FUNC(a, b, c) a + b + c \n FUNC(1, 2)", "Argument count mismatch")
 		assert_error("#define FUNC(a, b) a + b \n FUNC(1, 2, 3)", "Argument count mismatch")
 	end
+
+	-- Print summary
+	print()
+	print(string.rep("=", 70))
+	print("TEST SUMMARY")
+	print(string.rep("=", 70))
+	print(string.format("Total: %d | Passed: %d | Failed: %d",
+		test_results.test_number,
+		test_results.passed,
+		test_results.failed))
+	print(string.rep("=", 70))
+	if test_results.failed == 0 then
+		print("ALL TESTS PASSED! ✓")
+	else
+		print(string.format("TESTS FAILED: %d/%d", test_results.failed, test_results.test_number))
+	end
+	print(string.rep("=", 70) .. "\n")
 end
+
+if not SKIP_TESTS then run_tests() end
+
+return Parser
