@@ -155,6 +155,71 @@ do
 		return args
 	end
 
+	local function normalize_argument_whitespace(self, args)
+		for i, tokens in ipairs(args) do
+			tokens = copy_tokens(tokens)
+			args[i] = tokens
+
+			for _, tk in ipairs(tokens) do
+				if tk:HasWhitespace() then
+					tk.whitespace = {self:NewToken("space", " ")}
+				end
+
+				if tk.parent and tk.parent:HasWhitespace() then
+					tk.parent.whitespace = {self:NewToken("space", " ")}
+				end
+			end
+
+			-- Remove whitespace from first token in first argument
+			if i == 1 and tokens[1] then
+				tokens[1].whitespace = nil
+				if tokens[1].parent then
+					tokens[1].parent.whitespace = nil
+				end
+			end
+		end
+		return args
+	end
+
+	local function capture_single_argument(self, is_va_opt)
+		local tokens = {}
+
+		if not is_va_opt and self:IsToken(",") then
+			-- Empty argument - leave tokens table empty
+			return tokens
+		end
+
+		local paren_depth = 0
+
+		for _ = self:GetPosition(), self:GetLength() do
+			if paren_depth == 0 then
+				if self:IsToken(",") or self:IsToken(")") then break end
+			end
+
+			local pos = self:GetPosition()
+			local parent = self:GetToken()
+
+			if parent.type == "end_of_file" then break end
+
+			-- Don't call Parse() for __VA_OPT__ arguments to avoid recursive expansion
+			if not is_va_opt then self:Parse() end
+
+			self:SetPosition(pos)
+			local tk = self:ConsumeToken()
+
+			if tk:GetValueString() == "(" then
+				paren_depth = paren_depth + 1
+			elseif tk:GetValueString() == ")" then
+				paren_depth = paren_depth - 1
+			end
+
+			tk.parent = parent
+			table.insert(tokens, tk)
+		end
+
+		return tokens
+	end
+
 	function META:CaptureArgs(def)
 		local is_va_opt = def and def.identifier == "__VA_OPT__"
 		self:ExpectToken("(")
@@ -162,90 +227,23 @@ do
 
 		for _ = self:GetPosition(), self:GetLength() do
 			if self:IsToken(")") then
+				-- Handle empty arguments at end
 				if not is_va_opt and self:IsTokenOffset(",", -1) then
-					-- Empty argument after comma - just add empty table
 					table.insert(args, {})
 				elseif not is_va_opt and #args == 0 and def and def.args and #def.args > 0 then
-					-- Empty argument for macro that expects arguments: STR() where STR(x) is defined
-					-- Add one empty argument
 					table.insert(args, {})
 				end
-
 				break
 			end
 
-			local tokens = {}
-
-			if not is_va_opt and self:IsToken(",") then
-
-			-- Empty argument - leave tokens table empty
-			else
-				local paren_depth = 0
-
-				for _ = self:GetPosition(), self:GetLength() do
-					if paren_depth == 0 then
-						if self:IsToken(",") then break end
-
-						if self:IsToken(")") then break end
-					end
-
-					local pos = self:GetPosition()
-					local parent = self:GetToken()
-
-					if parent.type == "end_of_file" then break end
-
-					-- Don't call Parse() for __VA_OPT__ arguments to avoid recursive expansion
-					if not is_va_opt then self:Parse() end
-
-					self:SetPosition(pos)
-					local tk = self:ConsumeToken()
-
-					if tk:GetValueString() == "(" then
-						paren_depth = paren_depth + 1
-					elseif tk:GetValueString() == ")" then
-						paren_depth = paren_depth - 1
-					end
-
-					tk.parent = parent
-					table.insert(tokens, tk)
-				end
-			end
-
+			local tokens = capture_single_argument(self, is_va_opt)
 			table.insert(args, tokens)
 
 			if self:IsToken(",", -1) then self:ExpectToken(",") end
 		end
 
 		self:ExpectToken(")")
-
-		for i, tokens in ipairs(args) do
-			tokens = copy_tokens(tokens)
-			args[i] = tokens
-
-			for _, tk in ipairs(tokens) do
-				if tk:HasWhitespace() then
-					tk.whitespace = {
-						self:NewToken("space", " "),
-					}
-				end
-
-				if tk.parent then
-					if tk.parent:HasWhitespace() then
-						tk.parent.whitespace = {
-							self:NewToken("space", " "),
-						}
-					end
-				end
-			end
-
-			if i == 1 then if tokens[1] then tokens[1].whitespace = nil end end
-
-			if i == 1 then
-				if tokens[1] and tokens[1].parent then tokens[1].parent.whitespace = nil end
-			end
-		end
-
-		return args
+		return normalize_argument_whitespace(self, args)
 	end
 
 	function META:PrintState(tokens, pos)
@@ -291,112 +289,186 @@ do
 		return true
 	end
 
+	-- Helper to transfer whitespace from original token to replacement tokens
+	local function transfer_token_whitespace(original_token, tokens, strip_newlines)
+		if not tokens[1] then return end
+
+		if original_token:HasWhitespace() then
+			tokens[1].whitespace = original_token:GetWhitespace()
+			tokens[1].whitespace_start = original_token.whitespace_start
+
+			-- Optionally remove newlines from whitespace (for function-like macros)
+			if strip_newlines and tokens[1]:HasWhitespace() then
+				for _, v in ipairs(tokens[1]:GetWhitespace()) do
+					local str = v:GetValueString():gsub("\n", "")
+					v:ReplaceValue(str)
+				end
+			end
+		else
+			tokens[1].whitespace = nil
+			tokens[1].whitespace_start = nil
+		end
+	end
+
+	-- Helper to mark tokens as expanded from a macro
+	local function mark_tokens_expanded(tokens, start_pos, end_pos, def_identifier, original_token)
+		for i = start_pos, end_pos - 1 do
+			local token = tokens[i]
+			if token then
+				token.expanded_from = token.expanded_from or {}
+				token.expanded_from[def_identifier] = true
+
+				-- Inherit expanded_from from the original token
+				if original_token.expanded_from then
+					for macro_name, _ in pairs(original_token.expanded_from) do
+						token.expanded_from[macro_name] = true
+					end
+				end
+			end
+		end
+	end
+
+	-- Helper to validate argument count
+	local function validate_arg_count(def, args)
+		local has_var_arg = def.args[1] and def.args[#def.args]:GetValueString() == "..."
+
+		if has_var_arg then
+			if #args < #def.args - 1 then
+				error("Argument count mismatch")
+			end
+		else
+			assert(#args == #def.args, "Argument count mismatch")
+		end
+	end
+
+	-- Helper to define parameters as macros
+	local function define_parameters(self, def, args)
+		for i, param in ipairs(def.args) do
+			if param:GetValueString() == "..." then
+				local remaining = {}
+
+				for j = i, #args do
+					for _, token in ipairs(args[j] or {}) do
+						if j ~= i then
+							table.insert(remaining, self:NewToken("symbol", ","))
+						end
+						table.insert(remaining, token)
+					end
+				end
+
+				if #remaining == 0 then
+					remaining = {self:NewToken("symbol", "")}
+				end
+
+				self:PushDefine("__VA_ARGS__", nil, remaining)
+				break
+			else
+				self:PushDefine(param:GetValueString(), nil, args[i] or {})
+			end
+		end
+	end
+
+	-- Helper to undefine parameters
+	local function undefine_parameters(self, def)
+		for _, param in ipairs(def.args) do
+			if param:GetValueString() == "..." then
+				self:PushUndefine("__VA_ARGS__")
+				break
+			else
+				self:PushUndefine(param:GetValueString())
+			end
+		end
+	end
+
+	-- Extract __VA_OPT__ handling to reduce duplication
+	function META:HandleVAOPT()
+		local start = self:GetPosition()
+		local va_opt_token = self:GetToken()
+		self:ExpectTokenType("letter")
+		local va = self:GetDefinition("__VA_ARGS__")
+		self:ExpectToken("(")
+
+		local content_tokens = {}
+		local paren_depth = 0
+		local consumed_closing_paren = false
+
+		-- Capture content inside __VA_OPT__(content)
+		while true do
+			if paren_depth == 0 and self:IsToken(")") then break end
+
+			local tk = self:ConsumeToken()
+			if tk.type == "end_of_file" then break end
+
+			if tk:GetValueString() == "(" then
+				paren_depth = paren_depth + 1
+				table.insert(content_tokens, tk)
+			elseif tk:GetValueString() == ")" then
+				paren_depth = paren_depth - 1
+				-- Only add the ) if it's not the final closing paren
+				if paren_depth >= 0 then
+					table.insert(content_tokens, tk)
+				else
+					consumed_closing_paren = true
+					break
+				end
+			else
+				table.insert(content_tokens, tk)
+			end
+		end
+
+		if not consumed_closing_paren then self:ExpectToken(")") end
+
+		local stop = self:GetPosition()
+
+		-- Remove __VA_OPT__(content) from token stream
+		for i = stop - 1, start, -1 do
+			self:RemoveToken(i)
+		end
+
+		self:SetPosition(start)
+
+		-- Only add content if __VA_ARGS__ is non-empty
+		if va and #va.tokens > 0 and va.tokens[1]:GetValueString() ~= "" then
+			content_tokens = copy_tokens(content_tokens)
+
+			-- Transfer whitespace from __VA_OPT__ token to the first content token
+			if #content_tokens > 0 and va_opt_token:HasWhitespace() then
+				content_tokens[1].whitespace = va_opt_token:GetWhitespace()
+				content_tokens[1].whitespace_start = va_opt_token.whitespace_start
+			end
+
+			self:AddTokens(content_tokens)
+		end
+
+		return true
+	end
+
 	function META:ExpandMacroCall()
 		local def = self:GetDefinition(nil, 0)
 
 		if not (def and self:IsTokenOffset("(", 1)) then return false end
+		if not def.args then return false end  -- Only expand function-like macros
 
-		-- Only expand if this is actually a function-like macro (has parameters)
-		if not def.args then return false end
-
-		-- Check if this token was created by expanding the same macro (prevent infinite recursion)
 		local current_tk = self:GetToken()
 
+		-- Prevent infinite recursion
 		if current_tk.expanded_from and current_tk.expanded_from[def.identifier] then
 			return false
 		end
 
-		-- Special handling for __VA_OPT__ - handle before other processing
+		-- Special handling for __VA_OPT__
 		if def.identifier == "__VA_OPT__" and self:IsTokenValueOffset("(", 1) then
-			local start = self:GetPosition()
-			self:ExpectTokenType("letter")
-			local va = self:GetDefinition("__VA_ARGS__")
-			self:ExpectToken("(")
-			local content_tokens = {}
-			local paren_depth = 0
-			local consumed_closing_paren = false
-
-			-- Capture content inside __VA_OPT__(content)
-			while true do
-				if paren_depth == 0 and self:IsToken(")") then break end
-
-				local tk = self:ConsumeToken()
-
-				if tk.type == "end_of_file" then break end
-
-				if tk:GetValueString() == "(" then
-					paren_depth = paren_depth + 1
-					table.insert(content_tokens, tk)
-				elseif tk:GetValueString() == ")" then
-					paren_depth = paren_depth - 1
-
-					-- Only add the ) if it's not the final closing paren
-					if paren_depth >= 0 then
-						table.insert(content_tokens, tk)
-					else
-						-- This is the final closing paren, we've consumed it
-						consumed_closing_paren = true
-
-						break
-					end
-				else
-					table.insert(content_tokens, tk)
-				end
-			end
-
-			if not consumed_closing_paren then self:ExpectToken(")") end
-
-			local stop = self:GetPosition()
-
-			-- Remove __VA_OPT__(content) from token stream
-			for i = stop - 1, start, -1 do
-				self:RemoveToken(i)
-			end
-
-			self:SetPosition(start)
-
-			-- Only add content if __VA_ARGS__ is non-empty
-			if va and #va.tokens > 0 and va.tokens[1]:GetValueString() ~= "" then
-				-- Copy tokens before modifying them
-				content_tokens = copy_tokens(content_tokens)
-
-				-- Transfer whitespace from __VA_OPT__ token to the first content token
-				if #content_tokens > 0 and va_opt_token:HasWhitespace() then
-					content_tokens[1].whitespace = va_opt_token:GetWhitespace()
-					content_tokens[1].whitespace_start = va_opt_token.whitespace_start
-				end
-
-				self:AddTokens(content_tokens)
-			end
-
-			return true
+			return self:HandleVAOPT()
 		end
 
-		local tk = self:GetToken()
+		if current_tk.type == "end_of_file" then return false end
 
-		if tk.type == "end_of_file" then return false end
-
-		tk = tk:Copy()
+		local tk = current_tk:Copy()
 		local tokens = copy_tokens(def.tokens)
 
-		if tokens[1] then
-			if tk:HasWhitespace() then
-				tokens[1].whitespace = tk:GetWhitespace()
-				tokens[1].whitespace_start = tk.whitespace_start
+		transfer_token_whitespace(tk, tokens, true)  -- Strip newlines for function-like macros
 
-				if tokens[1]:HasWhitespace() then
-					for k, v in ipairs(tokens[1]:GetWhitespace()) do
-						local str = v:GetValueString():gsub("\n", "")
-						v:ReplaceValue(str)
-					end
-				end
-			else
-				-- Clear whitespace if the replaced token doesn't have any
-				tokens[1].whitespace = nil
-				tokens[1].whitespace_start = nil
-			end
-		end
-
+		-- Replace macro call with macro body
 		local start = self:GetPosition()
 		self:ExpectTokenType("letter")
 		local args = self:CaptureArgs(def)
@@ -408,78 +480,19 @@ do
 
 		self:SetPosition(start)
 		self:AddTokens(tokens)
-		local has_var_arg = def.args[1] and def.args[#def.args]:GetValueString() == "..."
 
-		if has_var_arg then
-			if #args < #def.args - 1 then error("Argument count mismatch") end
-		else
-			assert(#args == #def.args, "Argument count mismatch")
-		end
+		-- Validate and bind arguments
+		validate_arg_count(def, args)
+		define_parameters(self, def, args)
 
-		for i, param in ipairs(def.args) do
-			if param:GetValueString() == "..." then
-				local remaining = {}
-
-				for j = i, #args do
-					for _, token in ipairs(args[j] or {}) do
-						if j ~= i then
-							table.insert(remaining, self:NewToken("symbol", ","))
-						end
-
-						table.insert(remaining, token)
-					end
-				end
-
-				if #remaining == 0 then remaining = {self:NewToken("symbol", "")} end
-
-				self:PushDefine("__VA_ARGS__", nil, remaining)
-
-				-- Don't define __VA_OPT__ as a macro - it's handled specially in ExpandMacro
-				-- self:PushDefine(
-				-- 	"__VA_OPT__",
-				-- 	{
-				-- 		self:NewToken("letter", "content"),
-				-- 	},
-				-- 	{}  -- Empty tokens - expansion is handled by special case
-				-- )
-				break
-			else
-				self:PushDefine(param:GetValueString(), nil, args[i] or {})
-			end
-		end
-
+		-- Expand the macro body with parameters substituted
 		self:Parse()
-		-- Mark all tokens at current position as being created from this macro expansion
-		-- This must be done AFTER Parse() so that parameters get expanded first
-		local end_pos = self:GetPosition()
 
-		for i = start, end_pos - 1 do
-			local token = self.tokens[i]
+		-- Mark expanded tokens to prevent re-expansion
+		mark_tokens_expanded(self.tokens, start, self:GetPosition(), def.identifier, tk)
 
-			if token then
-				token.expanded_from = token.expanded_from or {}
-				token.expanded_from[def.identifier] = true
-
-				-- Inherit expanded_from from the original macro call token
-				if tk.expanded_from then
-					for macro_name, _ in pairs(tk.expanded_from) do
-						token.expanded_from[macro_name] = true
-					end
-				end
-			end
-		end
-
-		-- Clean up definitions - also unified approach
-		for i, param in ipairs(def.args) do
-			if param:GetValueString() == "..." then
-				self:PushUndefine("__VA_ARGS__")
-
-				-- Don't undefine __VA_OPT__ since it's not defined anymore
-				break
-			else
-				self:PushUndefine(param:GetValueString())
-			end
-		end
+		-- Clean up parameter definitions
+		undefine_parameters(self, def)
 
 		return true
 	end
@@ -563,159 +576,78 @@ do
 		return true
 	end
 
-	function META:ExpandMacro()
-		-- Special handling for __VA_OPT__ even if not defined as a macro
-		local tk = self:GetToken()
-
-		if tk.type == "end_of_file" then return false end
-
-		local next_tk = self:GetTokenOffset(1)
-
-		if
-			tk.type == "letter" and
-			tk:GetValueString() == "__VA_OPT__" and
-			next_tk.type ~= "end_of_file" and
-			next_tk:GetValueString() == "("
-		then
-			local start = self:GetPosition()
-			local va_opt_token = tk -- Save the __VA_OPT__ token to preserve its whitespace
-			self:ExpectTokenType("letter")
-			local va = self:GetDefinition("__VA_ARGS__")
-			self:ExpectToken("(")
-			local content_tokens = {}
-			local paren_depth = 0
-			local consumed_closing_paren = false
-
-			-- Capture content inside __VA_OPT__(content)
-			while true do
-				if paren_depth == 0 and self:IsToken(")") then break end
-
-				local tk = self:ConsumeToken()
-
-				if tk.type == "end_of_file" then break end
-
-				if tk:GetValueString() == "(" then
-					paren_depth = paren_depth + 1
-					table.insert(content_tokens, tk)
-				elseif tk:GetValueString() == ")" then
-					paren_depth = paren_depth - 1
-
-					-- Only add the ) if it's not the final closing paren
-					if paren_depth >= 0 then
-						table.insert(content_tokens, tk)
-					else
-						-- This is the final closing paren, we've consumed it
-						consumed_closing_paren = true
-
-						break
-					end
-				else
-					table.insert(content_tokens, tk)
-				end
-			end
-
-			if not consumed_closing_paren then self:ExpectToken(")") end
-
-			local stop = self:GetPosition()
-
-			-- Remove __VA_OPT__(content) from token stream
-			for i = stop - 1, start, -1 do
-				self:RemoveToken(i)
-			end
-
-			self:SetPosition(start)
-
-			-- Only add content if __VA_ARGS__ is non-empty
-			if va and #va.tokens > 0 and va.tokens[1]:GetValueString() ~= "" then
-				-- Copy tokens before modifying them
-				content_tokens = copy_tokens(content_tokens)
-
-				-- Transfer whitespace from __VA_OPT__ token to the first content token
-				if #content_tokens > 0 and va_opt_token:HasWhitespace() then
-					content_tokens[1].whitespace = va_opt_token:GetWhitespace()
-					content_tokens[1].whitespace_start = va_opt_token.whitespace_start
-				end
-
-				self:AddTokens(content_tokens)
-			end
-
-			return true
-		end
-
-		local def = self:GetDefinition(nil, 0)
-
-		if not def then return false end
-
-		-- Don't expand function-like macros here - they need arguments
-		-- Function-like macros are handled by ExpandMacroCall()
-		if def.args then return false end
-
-		local tokens = def.tokens
-
-		-- Handle empty parameters (no tokens)
-		if #tokens == 0 then
-			-- If the empty parameter has whitespace, we need to preserve it
-			local current = self:GetToken()
-
-			if current.type == "end_of_file" then return false end
-
-			local has_ws = current:HasWhitespace()
-			local ws = has_ws and current:GetWhitespace() or nil
-			self:RemoveToken(self:GetPosition())
-
-			-- If there was whitespace, insert an empty token to preserve it
-			if has_ws then
-				local empty_ws_token = self:NewToken("symbol", "")
-				empty_ws_token.whitespace = ws
-				empty_ws_token.whitespace_start = current.whitespace_start
-				self:AddTokens({empty_ws_token})
-			end
-
-			return true
-		end
-
-		local current_token = self:GetToken()
-
+	-- Helper to handle empty macro expansion
+	local function handle_empty_macro(self, current_token)
 		if current_token.type == "end_of_file" then return false end
 
-		-- Check if this token was created by expanding the same macro (prevent infinite recursion)
-		if current_token.expanded_from and current_token.expanded_from[def.identifier] then
-			return false
+		local has_ws = current_token:HasWhitespace()
+		local ws = has_ws and current_token:GetWhitespace() or nil
+		self:RemoveToken(self:GetPosition())
+
+		-- Preserve whitespace with empty token if needed
+		if has_ws then
+			local empty_ws_token = self:NewToken("symbol", "")
+			empty_ws_token.whitespace = ws
+			empty_ws_token.whitespace_start = current_token.whitespace_start
+			self:AddTokens({empty_ws_token})
 		end
 
-		if tokens[1] then
-			local tk = current_token:Copy()
-			tokens = copy_tokens(tokens)
+		return true
+	end
 
-			if tk:HasWhitespace() then
-				tokens[1].whitespace = tk:GetWhitespace()
-				tokens[1].whitespace_start = tk.whitespace_start
-			else
-				-- Clear whitespace if the replaced token doesn't have any
-				tokens[1].whitespace = nil
-				tokens[1].whitespace_start = nil
-			end
-
-			if false and tokens[1]:HasWhitespace() then
-				for k, v in ipairs(tokens[1]:GetWhitespace()) do
-					local str = v:GetValueString():gsub("\n", "")
-					v:ReplaceValue(str)
-				end
-			end
-		end
-
-		-- Mark all tokens as being created from this macro expansion
+	-- Helper to mark tokens and inherit expansion history
+	local function mark_and_inherit_expansion(tokens, def_identifier, current_token)
 		for _, token in ipairs(tokens) do
 			token.expanded_from = token.expanded_from or {}
-			token.expanded_from[def.identifier] = true
+			token.expanded_from[def_identifier] = true
 
-			-- Inherit expanded_from from the current token to prevent re-expansion
+			-- Inherit expansion history to prevent re-expansion
 			if current_token.expanded_from then
 				for macro_name, _ in pairs(current_token.expanded_from) do
 					token.expanded_from[macro_name] = true
 				end
 			end
 		end
+	end
+
+	function META:ExpandMacro()
+		local tk = self:GetToken()
+		if tk.type == "end_of_file" then return false end
+
+		-- Special handling for __VA_OPT__
+		local next_tk = self:GetTokenOffset(1)
+		if
+			tk.type == "letter" and
+			tk:GetValueString() == "__VA_OPT__" and
+			next_tk.type ~= "end_of_file" and
+			next_tk:GetValueString() == "("
+		then
+			return self:HandleVAOPT()
+		end
+
+		local def = self:GetDefinition(nil, 0)
+		if not def then return false end
+
+		-- Function-like macros are handled by ExpandMacroCall()
+		if def.args then return false end
+
+		local current_token = self:GetToken()
+		if current_token.type == "end_of_file" then return false end
+
+		-- Prevent infinite recursion
+		if current_token.expanded_from and current_token.expanded_from[def.identifier] then
+			return false
+		end
+
+		-- Handle empty macro definitions
+		if #def.tokens == 0 then
+			return handle_empty_macro(self, current_token)
+		end
+
+		-- Expand macro
+		local tokens = copy_tokens(def.tokens)
+		transfer_token_whitespace(current_token:Copy(), tokens, false)  -- Don't strip newlines for object-like macros
+		mark_and_inherit_expansion(tokens, def.identifier, current_token)
 
 		self:RemoveToken(self:GetPosition())
 		self:AddTokens(tokens)
