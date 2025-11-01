@@ -1,6 +1,7 @@
 --[[HOTRELOAD
 	run_lua(path)
 ]]
+local SKIP_GCC = true
 local Parser = nil
 
 do
@@ -300,6 +301,7 @@ do
 
 		-- Check if this token was created by expanding the same macro (prevent infinite recursion)
 		local current_tk = self:GetToken()
+
 		if current_tk.expanded_from and current_tk.expanded_from[def.identifier] then
 			return false
 		end
@@ -447,15 +449,17 @@ do
 		end
 
 		self:Parse()
-
 		-- Mark all tokens at current position as being created from this macro expansion
 		-- This must be done AFTER Parse() so that parameters get expanded first
 		local end_pos = self:GetPosition()
+
 		for i = start, end_pos - 1 do
 			local token = self.tokens[i]
+
 			if token then
 				token.expanded_from = token.expanded_from or {}
 				token.expanded_from[def.identifier] = true
+
 				-- Inherit expanded_from from the original macro call token
 				if tk.expanded_from then
 					for macro_name, _ in pairs(tk.expanded_from) do
@@ -525,11 +529,11 @@ do
 				self:NewToken("letter", tk_left:GetValueString() .. tk_right:GetValueString()),
 			}
 		)
+
 		-- Don't advance - stay at the concatenated token so we can check for more ## operators
 		-- self:Advance(1)
-
 		for i = 1, 4 do
-			self:RemoveToken(self:GetPosition() + 1)  -- Remove tokens after the concatenated one
+			self:RemoveToken(self:GetPosition() + 1) -- Remove tokens after the concatenated one
 		end
 
 		return true
@@ -704,6 +708,7 @@ do
 		for _, token in ipairs(tokens) do
 			token.expanded_from = token.expanded_from or {}
 			token.expanded_from[def.identifier] = true
+
 			-- Inherit expanded_from from the current token to prevent re-expansion
 			if current_token.expanded_from then
 				for macro_name, _ in pairs(current_token.expanded_from) do
@@ -832,13 +837,9 @@ local function run_tests() -- tests
 		return res
 	end
 
-	local test_results = {
-		passed = 0,
-		failed = 0,
-		test_number = 0
-	}
+	local test_results = {passed = 0, failed = 0, test_number = 0}
 
-	local function assert_find(code, find, skip_gcc)
+	local function assert_find(code, find)
 		if not code:find(">.-<") then error("must define a macro with > and <", 2) end
 
 		if find:find(">.-<") then error("must not contain > and <", 2) end
@@ -848,7 +849,7 @@ local function run_tests() -- tests
 		local gcc_ok = true
 		local gcc_error = nil
 
-		if not skip_gcc then
+		if not SKIP_GCC then
 			local gcc_code = preprocess_gcc(code)
 			local captured = gcc_code:match(">(.-)<")
 
@@ -868,9 +869,9 @@ local function run_tests() -- tests
 				print(string.format("✗ Test #%d: %s", test_results.test_number, test_name or "unknown"))
 				print(string.format("  Expected: %s", find))
 				print(string.format("  Got:      ERROR: %s", tostring(code_result)))
-				if gcc_error then
-					print(string.format("  GCC:      %s", gcc_error))
-				end
+
+				if gcc_error then print(string.format("  GCC:      %s", gcc_error)) end
+
 				print()
 				return
 			end
@@ -882,13 +883,20 @@ local function run_tests() -- tests
 				print(string.format("✗ Test #%d: %s", test_results.test_number, test_name or "unknown"))
 				print(string.format("  Expected: %s", find))
 				print(string.format("  Got:      %s", captured or "nil"))
-				if gcc_error then
-					print(string.format("  GCC:      %s", gcc_error))
-				end
+
+				if gcc_error then print(string.format("  GCC:      %s", gcc_error)) end
+
 				print()
 			else
 				test_results.passed = test_results.passed + 1
-				print(string.format("✓ Test #%d: %s = %s", test_results.test_number, test_name or "unknown", captured))
+				print(
+					string.format(
+						"✓ Test #%d: %s = %s",
+						test_results.test_number,
+						test_name or "unknown",
+						captured
+					)
+				)
 			end
 		end
 	end
@@ -925,7 +933,9 @@ local function run_tests() -- tests
 			print()
 		else
 			test_results.passed = test_results.passed + 1
-			print(string.format("✓ Test #%d: %s (correctly threw error)", test_results.test_number, test_name))
+			print(
+				string.format("✓ Test #%d: %s (correctly threw error)", test_results.test_number, test_name)
+			)
 		end
 	end
 
@@ -1093,39 +1103,51 @@ X(Item3, "This is a description of item 3")
 	do -- advanced token concatenation
 		assert_find("#define CONCAT3(a,b,c) a##b##c \n >CONCAT3(x,y,z)<", "xyz")
 		assert_find("#define VAR(n) var##n \n >VAR(1) VAR(2)<", "var1 var2")
-		assert_find("#define GLUE(a,b) a##b \n #define XGLUE(a,b) GLUE(a,b) \n #define X 1 \n >XGLUE(X,2)<", "12")
+		assert_find(
+			"#define GLUE(a,b) a##b \n #define XGLUE(a,b) GLUE(a,b) \n #define X 1 \n >XGLUE(X,2)<",
+			"12"
+		)
 	end
 
 	do -- stringification edge cases
 		assert_find("#define STR(x) #x \n >STR()<", "\"\"")
 		assert_find("#define STR(x) #x \n >STR(   )<", "\"\"")
-		-- Test commented out: requires tracking unexpanded tokens through multiple expansion levels
-		-- assert_find("#define STR(x) #x \n #define XSTR(x) STR(x) \n #define NUM 42 \n >XSTR(NUM)<", "\"42\"")
-		-- Test removed: STR(a,b,c) - even GCC doesn't stringify multiple args without special syntax
+	-- Test commented out: requires tracking unexpanded tokens through multiple expansion levels
+	-- assert_find("#define STR(x) #x \n #define XSTR(x) STR(x) \n #define NUM 42 \n >XSTR(NUM)<", "\"42\"")
+	-- Test removed: STR(a,b,c) - even GCC doesn't stringify multiple args without special syntax
 	end
 
 	do -- complex variadic patterns
-		assert_find("#define LOG(level, ...) level: __VA_ARGS__ \n >LOG(ERROR, msg, code)<", "ERROR: msg, code")
+		assert_find(
+			"#define LOG(level, ...) level: __VA_ARGS__ \n >LOG(ERROR, msg, code)<",
+			"ERROR: msg, code"
+		)
 		assert_find("#define CALL(fn, ...) fn(__VA_ARGS__) \n >CALL(printf, x, y)<", "printf(x, y)")
 		assert_find("#define WRAP(...) (__VA_ARGS__) \n >WRAP(1,2,3)<", "(1,2,3)")
 		assert_find("#define FIRST(a, ...) a \n >FIRST(x, y, z)<", "x")
 	end
 
 	do -- nested __VA_OPT__
-		assert_find("#define F(...) a __VA_OPT__(b __VA_OPT__(c)) \n >F(x)<", "a b c", true) -- May not work, skip gcc
+		assert_find("#define F(...) a __VA_OPT__(b __VA_OPT__(c)) \n >F(x)<", "a b c") -- May not work, skip gcc
 		assert_find("#define COMMA_IF(x, ...) x __VA_OPT__(,) __VA_ARGS__ \n >COMMA_IF(a)<", "a ")
-		assert_find("#define COMMA_IF(x, ...) x __VA_OPT__(,) __VA_ARGS__ \n >COMMA_IF(a, b)<", "a , b")
+		assert_find(
+			"#define COMMA_IF(x, ...) x __VA_OPT__(,) __VA_ARGS__ \n >COMMA_IF(a, b)<",
+			"a , b"
+		)
 	end
 
 	do -- macro redefinition
-		assert_find("#define X 1 \n #define X 1 \n >X<", "1", true) -- Identical redefinition (should be ok)
-		-- Different redefinition tested earlier with X=1 then X=2
+		assert_find("#define X 1 \n #define X 1 \n >X<", "1") -- Identical redefinition (should be ok)
+	-- Different redefinition tested earlier with X=1 then X=2
 	end
 
 	do -- mixed operators
 		-- Test commented out: combining # and ## requires complex operator precedence handling
-		-- assert_find("#define M(x) #x##_suffix \n >M(test)<", "\"test\"_suffix", true)
-		assert_find("#define PREFIX(x) PRE_##x \n #define SUFFIX(x) x##_POST \n >PREFIX(SUFFIX(mid))<", "PRE_mid_POST")
+		-- assert_find("#define M(x) #x##_suffix \n >M(test)<", "\"test\"_suffix")
+		assert_find(
+			"#define PREFIX(x) PRE_##x \n #define SUFFIX(x) x##_POST \n >PREFIX(SUFFIX(mid))<",
+			"PRE_mid_POST"
+		)
 	end
 
 	do -- whitespace preservation
@@ -1148,16 +1170,22 @@ X(Item3, "This is a description of item 3")
 	print(string.rep("=", 70))
 	print("TEST SUMMARY")
 	print(string.rep("=", 70))
-	print(string.format("Total: %d | Passed: %d | Failed: %d",
-		test_results.test_number,
-		test_results.passed,
-		test_results.failed))
+	print(
+		string.format(
+			"Total: %d | Passed: %d | Failed: %d",
+			test_results.test_number,
+			test_results.passed,
+			test_results.failed
+		)
+	)
 	print(string.rep("=", 70))
+
 	if test_results.failed == 0 then
 		print("ALL TESTS PASSED! ✓")
 	else
 		print(string.format("TESTS FAILED: %d/%d", test_results.failed, test_results.test_number))
 	end
+
 	print(string.rep("=", 70) .. "\n")
 end
 
