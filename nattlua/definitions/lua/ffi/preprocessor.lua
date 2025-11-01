@@ -190,6 +190,34 @@ do
 		return args
 	end
 
+	-- Helper to update parenthesis depth based on token value
+	local function update_paren_depth(token, depth)
+		if token:ValueEquals("(") then
+			return depth + 1
+		elseif token:ValueEquals(")") then
+			return depth - 1
+		end
+
+		return depth
+	end
+
+	-- Helper to remove a range of tokens (inclusive, in reverse order)
+	local function remove_token_range(self, start_pos, end_pos)
+		for i = end_pos, start_pos, -1 do
+			self:RemoveToken(i)
+		end
+	end
+
+	-- Helper to check if __VA_ARGS__ is non-empty
+	local function is_va_args_non_empty(va)
+		return va and #va.tokens > 0 and not va.tokens[1]:ValueEquals("")
+	end
+
+	-- Helper to check if token was already expanded from a macro (prevents infinite recursion)
+	local function is_already_expanded(token, macro_identifier)
+		return token.expanded_from and token.expanded_from[macro_identifier]
+	end
+
 	local function capture_single_argument(self, is_va_opt)
 		local tokens = {}
 
@@ -215,13 +243,7 @@ do
 
 			self:SetPosition(pos)
 			local tk = self:ConsumeToken()
-
-			if tk:ValueEquals("(") then
-				paren_depth = paren_depth + 1
-			elseif tk:ValueEquals(")") then
-				paren_depth = paren_depth - 1
-			end
-
+			paren_depth = update_paren_depth(tk, paren_depth)
 			tk.parent = parent
 			table.insert(tokens, tk)
 		end
@@ -409,23 +431,17 @@ do
 
 			if tk.type == "end_of_file" then break end
 
-			if tk:ValueEquals("(") then
-				paren_depth = paren_depth + 1
-				table.insert(content_tokens, tk)
-			elseif tk:ValueEquals(")") then
-				paren_depth = paren_depth - 1
+			local new_depth = update_paren_depth(tk, paren_depth)
 
-				-- Only add the ) if it's not the final closing paren
-				if paren_depth >= 0 then
-					table.insert(content_tokens, tk)
-				else
-					consumed_closing_paren = true
+			-- Only add the ) if it's not the final closing paren
+			if tk:ValueEquals(")") and new_depth < 0 then
+				consumed_closing_paren = true
 
-					break
-				end
-			else
-				table.insert(content_tokens, tk)
+				break
 			end
+
+			paren_depth = new_depth
+			table.insert(content_tokens, tk)
 		end
 
 		if not consumed_closing_paren then self:ExpectToken(")") end
@@ -433,14 +449,11 @@ do
 		local stop = self:GetPosition()
 
 		-- Remove __VA_OPT__(content) from token stream
-		for i = stop - 1, start, -1 do
-			self:RemoveToken(i)
-		end
-
+		remove_token_range(self, start, stop - 1)
 		self:SetPosition(start)
 
 		-- Only add content if __VA_ARGS__ is non-empty
-		if va and #va.tokens > 0 and not va.tokens[1]:ValueEquals("") then
+		if is_va_args_non_empty(va) then
 			-- Copy before modifying whitespace
 			content_tokens = copy_tokens(content_tokens)
 
@@ -465,9 +478,7 @@ do
 		local current_tk = self:GetToken()
 
 		-- Prevent infinite recursion
-		if current_tk.expanded_from and current_tk.expanded_from[def.identifier] then
-			return false
-		end
+		if is_already_expanded(current_tk, def.identifier) then return false end
 
 		-- Special handling for __VA_OPT__
 		if def.identifier == "__VA_OPT__" and self:IsTokenValueOffset("(", 1) then
@@ -485,11 +496,7 @@ do
 		self:ExpectTokenType("letter")
 		local args = self:CaptureArgs(def)
 		local stop = self:GetPosition()
-
-		for i = stop - 1, start, -1 do
-			self:RemoveToken(i)
-		end
-
+		remove_token_range(self, start, stop - 1)
 		self:SetPosition(start)
 		self:AddTokens(tokens)
 		-- Validate and bind arguments
@@ -504,6 +511,20 @@ do
 		return true
 	end
 
+	-- Helper to get token from definition or create empty token
+	local function get_token_from_definition(self, def, fallback_token)
+		if not def then return fallback_token end
+
+		if def.tokens[1] then
+			return def.tokens[1]
+		elseif #def.tokens == 0 then
+			-- Empty parameter - treat as empty string
+			return self:NewToken("symbol", "")
+		end
+
+		return fallback_token
+	end
+
 	function META:ExpandMacroConcatenation()
 		if not (self:IsTokenValueOffset("#", 1) and self:IsTokenValueOffset("#", 2)) then
 			return false
@@ -516,15 +537,7 @@ do
 		local pos = self:GetPosition()
 		-- Expand left operand if it's a parameter/macro
 		local def_left = self:GetDefinition(nil, 0)
-
-		if def_left then
-			if def_left.tokens[1] then
-				tk_left = def_left.tokens[1]
-			elseif #def_left.tokens == 0 then
-				-- Empty parameter - treat as empty string
-				tk_left = self:NewToken("symbol", "")
-			end
-		end
+		tk_left = get_token_from_definition(self, def_left, tk_left)
 
 		self:Advance(3)
 		-- Expand right operand if it's a parameter/macro
@@ -533,15 +546,7 @@ do
 		if tk_right.type == "end_of_file" then return false end
 
 		local def_right = self:GetDefinition(nil, 0)
-
-		if def_right then
-			if def_right.tokens[1] then
-				tk_right = def_right.tokens[1]
-			elseif #def_right.tokens == 0 then
-				-- Empty parameter - treat as empty string
-				tk_right = self:NewToken("symbol", "")
-			end
-		end
+		tk_right = get_token_from_definition(self, def_right, tk_right)
 
 		self:SetPosition(pos)
 		self:AddTokens(
@@ -646,9 +651,7 @@ do
 		if current_token.type == "end_of_file" then return false end
 
 		-- Prevent infinite recursion
-		if current_token.expanded_from and current_token.expanded_from[def.identifier] then
-			return false
-		end
+		if is_already_expanded(current_token, def.identifier) then return false end
 
 		-- Handle empty macro definitions
 		if #def.tokens == 0 then return handle_empty_macro(self, current_token) end
