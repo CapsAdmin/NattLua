@@ -1352,7 +1352,18 @@ function META:ExpandMacroConcatenation()
 	local def_right = self:GetDefinition(nil, 0)
 	tk_right = get_token_from_definition(self, def_right, tk_right)
 	self:SetPosition(pos)
-	local concatenated_token = self:NewToken("letter", tk_left:GetValueString() .. tk_right:GetValueString())
+
+	-- Determine the token type for the concatenated result
+	-- If left is a string literal, keep it as string type
+	-- Otherwise, default to letter (identifier) type
+	local result_type = "letter"
+	if tk_left.type == "string" then
+		result_type = "string"
+	elseif tk_right.type == "string" then
+		result_type = "string"
+	end
+
+	local concatenated_token = self:NewToken(result_type, tk_left:GetValueString() .. tk_right:GetValueString())
 	self:AddTokens({concatenated_token})
 
 	-- Remove the original tokens (left, ##, ##, right)
@@ -1372,6 +1383,11 @@ function META:ExpandMacroString()
 	local def = self:GetDefinition(nil, 1)
 
 	if not def then return false end
+
+	-- Check if this stringification is followed by ## (concatenation)
+	-- Pattern: # <param> ## <something>
+	-- In this case, we need to stringify and then concatenate
+	local followed_by_concat = self:IsTokenOffset("#", 2) and self:IsTokenOffset("#", 3)
 
 	local original_tokens = {}
 
@@ -1411,6 +1427,14 @@ function META:ExpandMacroString()
 	local tk = self:NewToken("string", "\"" .. str .. "\"")
 	self:RemoveToken(self:GetPosition())
 	self:AddTokens({tk})
+
+	-- If followed by ##, don't advance - stay positioned at the string token
+	-- so that ExpandMacroConcatenation can process the pattern: <string> # # <right>
+	if followed_by_concat then
+		-- Don't advance past the parameter; let concatenation handle the rest
+		return true
+	end
+
 	self:Advance(#def.tokens)
 	return true
 end

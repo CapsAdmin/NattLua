@@ -293,8 +293,10 @@ do -- macro redefinition
 end
 
 do -- mixed operators
-	-- Test commented out: combining # and ## requires complex operator precedence handling
-	-- test("#define M(x) #x##_suffix \n >M(test)<", "\"test\"_suffix")
+	-- Combining # and ## operators in the same macro
+	test("#define M(x) #x##_suffix \n >M(test)<", "\"test\"_suffix")
+	test("#define M2(x) prefix_##x#x \n >M2(val)<", "prefix_val\"val\"")
+	test("#define M3(x,y) #x##y##_end \n >M3(foo,bar)<", "\"foo\"bar_end")
 	test(
 		"#define PREFIX(x) PRE_##x \n #define SUFFIX(x) x##_POST \n >PREFIX(SUFFIX(mid))<",
 		"PRE_mid_POST"
