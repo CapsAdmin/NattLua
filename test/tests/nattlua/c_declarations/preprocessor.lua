@@ -364,7 +364,10 @@ do -- conditional compilation
 	test("#if 0\n>x=1<\n#elif 0\n>x=2<\n#else\n>x=3<\n#endif", "x=3")
 	-- Multiple #elif
 	test("#if 0\n>x=1<\n#elif 0\n>x=2<\n#elif 1\n>x=3<\n#endif", "x=3")
-	test("#define A 2\n#if A == 1\n>x=1<\n#elif A == 2\n>x=2<\n#elif A == 3\n>x=3<\n#endif", "x=2")
+	test(
+		"#define A 2\n#if A == 1\n>x=1<\n#elif A == 2\n>x=2<\n#elif A == 3\n>x=3<\n#endif",
+		"x=2"
+	)
 	-- Nested conditionals
 	test("#ifdef FOO\n#ifdef BAR\n>x=1<\n#endif\n#endif\n>y=2<", "y=2")
 	test(

@@ -1,8 +1,10 @@
 --[[HOTRELOAD
 	run_lua("test/tests/nattlua/c_declarations/preprocessor.lua")
 ]]
-local META = require("nattlua.parser.base")()
+local Lexer = require("nattlua.definitions.lua.ffi.preprocessor.lexer").New
+local Code = require("nattlua.code").New
 local buffer = require("string.buffer")
+local META = require("nattlua.parser.base")()
 
 -- Deep copy tokens to prevent shared state corruption
 -- This is CRITICAL because:
@@ -22,14 +24,51 @@ end
 
 local old = META.New
 
-function META.New(...)
-	local obj = old(...)
-	obj.defines = {}
-	obj.define_stack = {}
-	obj.expansion_stack = {}
-	obj.conditional_stack = {} -- Track nested #if/#ifdef/#ifndef states
-	obj.position_stack = {} -- Track positions for directive token removal
-	return obj
+function META.New(tokens, code, config)
+	config = config or {}
+	config.working_directory = config.working_directory or os.getenv("PWD") or "."
+	config.defines = config.defines or {}
+	config.include_paths = config.include_paths or {}
+	config.max_include_depth = config.max_include_depth or 100
+	config.on_include = config.on_include -- Optional callback for includes
+	config.system_include_paths = config.system_include_paths or {}
+
+	if config.add_standard_defines ~= false then
+		local standard_defines = {
+			__STDC__ = 1,
+			__STDC_VERSION__ = "201710L",
+			__STDC_HOSTED__ = 1,
+			__GNUC__ = 4,
+			__GNUC_MINOR__ = 2,
+			__GNUC_PATCHLEVEL__ = 1,
+		}
+
+		for name, value in pairs(standard_defines) do
+			if config.defines[name] == nil then config.defines[name] = value end
+		end
+	end
+
+	local self = old(tokens, code, config)
+	self.defines = {}
+	self.define_stack = {}
+	self.conditional_stack = {} -- Track nested #if/#ifdef/#ifndef states
+	self.position_stack = {} -- Track positions for directive token removal
+	self.include_depth = 0 -- Track current include depth
+	-- Add predefined macros
+	for name, value in pairs(config.defines) do
+		if type(value) == "boolean" then
+			value = value and "1" or "0"
+		else
+			value = tostring(value)
+		end
+
+		local value_tokens = Lexer(Code(value, "define")):GetTokens()
+		assert(value_tokens[#value_tokens].type == "end_of_file")
+		table.remove(value_tokens)
+		self:Define(name, nil, value_tokens)
+	end
+
+	return self
 end
 
 -- Helper functions for saving/restoring positions when removing directive tokens
@@ -745,7 +784,7 @@ do -- #include directive
 	local fs = require("nattlua.other.fs")
 
 	local function resolve_include_path(self, filename, is_system_include)
-		local opts = self.preprocess_options
+		local opts = self.config
 
 		if not opts then return nil, "No preprocessor options available" end
 
@@ -874,8 +913,8 @@ do -- #include directive
 		end
 
 		-- Callback for tracking includes
-		if self.preprocess_options.on_include then
-			self.preprocess_options.on_include(filename, full_path)
+		if self.config.on_include then
+			self.config.on_include(filename, full_path)
 		end
 
 		-- Preprocess the included file recursively
@@ -898,14 +937,14 @@ do -- #include directive
 		-- Create a copy of options with updated working directory
 		local include_opts = {}
 
-		for k, v in pairs(self.preprocess_options) do
+		for k, v in pairs(self.config) do
 			include_opts[k] = v
 		end
 
 		-- Set working directory to the directory of the included file
 		-- so relative includes from that file work correctly
-		include_opts.working_directory = full_path:match("(.*/)") or self.preprocess_options.working_directory
-		include_parser.preprocess_options = include_opts
+		include_opts.working_directory = full_path:match("(.*/)") or self.config.working_directory
+		include_parser.config = include_opts
 		include_parser.include_depth = self.include_depth + 1
 		-- Process the included file
 		include_parser:Parse()
