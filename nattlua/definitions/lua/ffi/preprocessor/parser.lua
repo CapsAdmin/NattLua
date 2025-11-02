@@ -1,3 +1,6 @@
+--[[HOTRELOAD
+	run_lua("test/tests/nattlua/c_declarations/preprocessor.lua")
+]]
 local META = require("nattlua.parser.base")()
 
 -- Deep copy tokens to prevent shared state corruption
@@ -164,8 +167,8 @@ function META:CaptureArgumentDefinition()
 		-- Accept either letter (regular parameter) or symbol "..." (variadic)
 		local node
 
-		if self:IsTokenValue("...") then
-			node = self:ExpectTokenValue("...")
+		if self:IsToken("...") then
+			node = self:ExpectToken("...")
 		else
 			node = self:ExpectTokenType("letter")
 		end
@@ -317,7 +320,7 @@ function META:PrintState(tokens, pos)
 end
 
 function META:ReadDefine()
-	if not (self:IsTokenValue("#") and self:IsTokenValueOffset("define", 1)) then
+	if not (self:IsToken("#") and self:IsTokenValueOffset("define", 1)) then
 		return false
 	end
 
@@ -332,7 +335,7 @@ function META:ReadDefine()
 end
 
 function META:ReadUndefine()
-	if not (self:IsTokenValue("#") and self:IsTokenValueOffset("undef", 1)) then
+	if not (self:IsToken("#") and self:IsTokenValueOffset("undef", 1)) then
 		return false
 	end
 
@@ -684,7 +687,7 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 	end
 
 	function META:ReadIfdef()
-		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("ifdef", 1)) then
+		if not (self:IsToken("#") and self:IsTokenValueOffset("ifdef", 1)) then
 			return false
 		end
 
@@ -704,7 +707,7 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 	end
 
 	function META:ReadIfndef()
-		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("ifndef", 1)) then
+		if not (self:IsToken("#") and self:IsTokenValueOffset("ifndef", 1)) then
 			return false
 		end
 
@@ -723,13 +726,13 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 	end
 
 	function META:ReadIf()
-		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("if", 1)) then
+		if not (self:IsToken("#") and self:IsTokenOffset("if", 1)) then
 			return false
 		end
 
 		self:PushPosition()
 		self:ExpectToken("#")
-		self:ExpectTokenValue("if")
+		self:ExpectToken("if")
 		local tokens = self:CaptureTokens()
 		local condition = evaluate_condition(self, tokens)
 		table.insert(self.conditional_stack, {active = condition, had_true = condition})
@@ -743,7 +746,7 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 	end
 
 	function META:ReadElif()
-		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("elif", 1)) then
+		if not (self:IsToken("#") and self:IsTokenValueOffset("elif", 1)) then
 			return false
 		end
 
@@ -774,7 +777,7 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 	end
 
 	function META:ReadElse()
-		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("else", 1)) then
+		if not (self:IsToken("#") and self:IsTokenOffset("else", 1)) then
 			return false
 		end
 
@@ -791,7 +794,7 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 
 		self:PushPosition()
 		self:ExpectToken("#")
-		self:ExpectTokenValue("else")
+		self:ExpectToken("else")
 		local state = self.conditional_stack[#self.conditional_stack]
 		self:RemoveDirectiveTokens()
 
@@ -808,7 +811,7 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 	end
 
 	function META:ReadEndif()
-		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("endif", 1)) then
+		if not (self:IsToken("#") and self:IsTokenValueOffset("endif", 1)) then
 			return false
 		end
 
@@ -891,7 +894,7 @@ do -- #include directive
 	end
 
 	function META:ReadInclude()
-		if not (self:IsTokenValue("#") and self:IsTokenValueOffset("include", 1)) then
+		if not (self:IsToken("#") and self:IsTokenValueOffset("include", 1)) then
 			return false
 		end
 
@@ -912,12 +915,12 @@ do -- #include directive
 			-- Remove surrounding quotes
 			filename = str_val:sub(2, -2)
 			is_system_include = false
-		elseif self:IsTokenValue("\"") then
+		elseif self:IsToken("\"") then
 			-- #include "file.h" (tokenized as separate symbols)
-			self:ExpectTokenValue("\"")
+			self:ExpectToken("\"")
 			local parts = {}
 
-			while not self:IsTokenValue("\"") do
+			while not self:IsToken("\"") do
 				local tk = self:GetToken()
 
 				if tk.type == "end_of_file" then
@@ -928,15 +931,15 @@ do -- #include directive
 				self:Advance(1)
 			end
 
-			self:ExpectTokenValue("\"")
+			self:ExpectToken("\"")
 			filename = table.concat(parts)
 			is_system_include = false
-		elseif self:IsTokenValue("<") then
+		elseif self:IsToken("<") then
 			-- #include <file.h>
-			self:ExpectTokenValue("<")
+			self:ExpectToken("<")
 			local parts = {}
 
-			while not self:IsTokenValue(">") do
+			while not self:IsToken(">") do
 				local tk = self:GetToken()
 
 				if tk.type == "end_of_file" then
@@ -947,7 +950,7 @@ do -- #include directive
 				self:Advance(1)
 			end
 
-			self:ExpectTokenValue(">")
+			self:ExpectToken(">")
 			filename = table.concat(parts)
 			is_system_include = true
 		else
@@ -1188,7 +1191,7 @@ function META:ExpandMacroCall()
 	if is_already_expanded(current_tk, def.identifier) then return false end
 
 	-- Special handling for __VA_OPT__
-	if def.identifier == "__VA_OPT__" and self:IsTokenValueOffset("(", 1) then
+	if def.identifier == "__VA_OPT__" and self:IsTokenOffset("(", 1) then
 		return self:HandleVAOPT()
 	end
 
@@ -1233,7 +1236,7 @@ local function get_token_from_definition(self, def, fallback_token)
 end
 
 function META:ExpandMacroConcatenation()
-	if not (self:IsTokenValueOffset("#", 1) and self:IsTokenValueOffset("#", 2)) then
+	if not (self:IsTokenOffset("#", 1) and self:IsTokenOffset("#", 2)) then
 		return false
 	end
 
@@ -1270,7 +1273,7 @@ function META:ExpandMacroConcatenation()
 end
 
 function META:ExpandMacroString()
-	if not self:IsTokenValue("#") then return false end
+	if not self:IsToken("#") then return false end
 
 	local def = self:GetDefinition(nil, 1)
 
