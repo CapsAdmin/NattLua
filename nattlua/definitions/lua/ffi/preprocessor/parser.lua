@@ -356,245 +356,156 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 	--   - #ifdef, #ifndef, #if, #elif, #else, #endif
 	--   - Nested conditionals with proper depth tracking
 	--   - Token removal for false branches
-	--
-	-- Known limitations:
-	--   - Expression evaluation with macro expansion and > operator has edge cases
-	--   - Multi-character operators (>=, ==, etc.) with complex expressions may fail
-	--   - See TODO comments in tests for specific failing cases
-	-- Helper to evaluate a simple expression (for #if and #elif)
-	-- This is a simplified evaluator that handles:
-	-- - defined(MACRO) and defined MACRO operators
-	-- - Integer literals
-	-- - Basic arithmetic and comparison operators
-	-- - Logical operators (&&, ||, !)
-	local function evaluate_condition(self, tokens)
-		-- Simple recursive descent parser for constant expressions
-		local pos = 1
+	--   - Uses the project's existing Lua parser for expression evaluation
+	-- Inline expression parser using the project's parser infrastructure
+	do
+		-- Create parser meta once and reuse it
+		local parser_meta = require("nattlua.parser.base")()
+		require("nattlua.parser.expressions")(parser_meta)
 
-		local function peek()
-			return tokens[pos]
-		end
+		-- Evaluator for the AST
+		local function evaluate_ast(self, node)
+			if not node then return 0 end
 
-		local function advance()
-			pos = pos + 1
-			return tokens[pos - 1]
-		end
+			if node.Type == "expression_value" then
+				local tk = node.value
 
-		local function parse_primary()
-			local tk = peek()
+				-- Handle numbers
+				if tk.type == "number" then
+					return tonumber(tk:GetValueString()) or 0
+				end
 
-			if not tk then return 0 end
+				-- Handle defined operator
+				if tk:ValueEquals("defined") then
+					return 0 -- This should be handled by prefix operator
+				end
 
-			-- Handle defined(X) or defined X
-			if tk:ValueEquals("defined") then
-				advance() -- consume 'defined'
-				local has_paren = peek() and peek():ValueEquals("(")
+				-- Handle identifiers (check if it's a macro)
+				if tk.type == "letter" then
+					local def = self:GetDefinition(tk:GetValueString())
 
-				if has_paren then advance() end -- consume '('
-				local name_tk = advance()
-
-				if not name_tk then return 0 end
-
-				local is_defined = self:GetDefinition(name_tk:GetValueString()) ~= nil
-
-				if has_paren then
-					if peek() and peek():ValueEquals(")") then
-						advance() -- consume ')'
+					if def and def.tokens[1] and def.tokens[1].type == "number" then
+						return tonumber(def.tokens[1]:GetValueString()) or 0
 					end
+
+					return 0 -- Undefined identifiers evaluate to 0
 				end
 
-				return is_defined and 1 or 0
-			end
+				return 0
+			elseif node.Type == "expression_prefix_operator" then
+				local op = node.value:GetValueString()
+				local right = evaluate_ast(self, node.right)
 
-			-- Handle numbers
-			if tk.type == "number" then
-				advance()
-				return tonumber(tk:GetValueString()) or 0
-			end
-
-			-- Handle parentheses
-			if tk:ValueEquals("(") then
-				advance() -- consume '('
-				local val = parse_logical_or()
-
-				if peek() and peek():ValueEquals(")") then advance() -- consume ')'
+				if op == "!" or op == "not" then
+					return right == 0 and 1 or 0
+				elseif op == "-" then
+					return -right
+				elseif op == "+" then
+					return right
 				end
 
-				return val
-			end
+				return 0
+			elseif node.Type == "expression_binary_operator" then
+				local op = node.value:GetValueString()
 
-			-- Handle unary operators
-			if tk:ValueEquals("!") then
-				advance()
-				local val = parse_primary()
-				return val == 0 and 1 or 0
-			end
+				-- Handle 'defined' operator specially
+				if op == "defined" then
+					-- This shouldn't happen in well-formed code
+					return 0
+				end
 
-			if tk:ValueEquals("-") then
-				advance()
-				return -parse_primary()
-			end
+				local left = evaluate_ast(self, node.left)
 
-			if tk:ValueEquals("+") then
-				advance()
-				return parse_primary()
-			end
+				-- Short-circuit evaluation for logical operators
+				if op == "&&" or op == "and" then
+					if left == 0 then return 0 end
 
-			-- Undefined identifiers evaluate to 0
-			if tk.type == "letter" then
-				advance()
-				local def = self:GetDefinition(tk:GetValueString())
+					local right = evaluate_ast(self, node.right)
+					return (left ~= 0 and right ~= 0) and 1 or 0
+				elseif op == "||" or op == "or" then
+					if left ~= 0 then return 1 end
 
-				if def and def.tokens[1] and def.tokens[1].type == "number" then
-					return tonumber(def.tokens[1]:GetValueString()) or 0
+					local right = evaluate_ast(self, node.right)
+					return (left ~= 0 or right ~= 0) and 1 or 0
+				end
+
+				local right = evaluate_ast(self, node.right)
+
+				if op == "+" then
+					return left + right
+				elseif op == "-" then
+					return left - right
+				elseif op == "*" then
+					return left * right
+				elseif op == "/" then
+					return right ~= 0 and (left / right) or 0
+				elseif op == "%" then
+					return right ~= 0 and (left % right) or 0
+				elseif op == "==" then
+					return left == right and 1 or 0
+				elseif op == "~=" or op == "!=" then
+					return left ~= right and 1 or 0
+				elseif op == "<" then
+					return left < right and 1 or 0
+				elseif op == ">" then
+					return left > right and 1 or 0
+				elseif op == "<=" then
+					return left <= right and 1 or 0
+				elseif op == ">=" then
+					return left >= right and 1 or 0
 				end
 
 				return 0
 			end
 
-			advance() -- skip unknown token
 			return 0
 		end
 
-		local function parse_multiplicative()
-			local left = parse_primary()
+		-- Main evaluation function
+		function META:EvaluateCondition(tokens)
+			-- Handle 'defined' operator preprocessing
+			-- Convert "defined(X)" or "defined X" into a numeric value
+			local processed_tokens = {}
+			local i = 1
 
-			while peek() do
-				local op = peek()
+			while i <= #tokens do
+				local tk = tokens[i]
 
-				if op:ValueEquals("*") then
-					advance()
-					left = left * parse_primary()
-				elseif op:ValueEquals("/") then
-					advance()
-					local right = parse_primary()
-					left = right ~= 0 and (left / right) or 0
-				elseif op:ValueEquals("%") then
-					advance()
-					local right = parse_primary()
-					left = right ~= 0 and (left % right) or 0
+				if tk:ValueEquals("defined") then
+					-- Check if next token is '('
+					local has_paren = tokens[i + 1] and tokens[i + 1]:ValueEquals("(")
+					local name_idx = has_paren and i + 2 or i + 1
+					local name_tk = tokens[name_idx]
+
+					if name_tk then
+						local is_defined = self:GetDefinition(name_tk:GetValueString()) ~= nil
+						local value_token = self:NewToken("number", is_defined and "1" or "0")
+						table.insert(processed_tokens, value_token)
+						-- Skip past the defined operator and its argument
+						i = name_idx + 1
+
+						if has_paren and tokens[i] and tokens[i]:ValueEquals(")") then
+							i = i + 1
+						end
+					else
+						i = i + 1
+					end
 				else
-					break
+					table.insert(processed_tokens, tk)
+					i = i + 1
 				end
 			end
 
-			return left
+			-- Parse the expression
+			local parser = parser_meta.New(processed_tokens, self.Code)
+			local ast = parser:ParseRuntimeExpression(0)
+
+			if not ast then return false end
+
+			-- Evaluate the AST
+			local result = evaluate_ast(self, ast)
+			return result ~= 0
 		end
-
-		local function parse_additive()
-			local left = parse_multiplicative()
-
-			while peek() do
-				local op = peek()
-
-				if op:ValueEquals("+") then
-					advance()
-					left = left + parse_multiplicative()
-				elseif op:ValueEquals("-") then
-					advance()
-					left = left - parse_multiplicative()
-				else
-					break
-				end
-			end
-
-			return left
-		end
-
-		local function parse_relational()
-			local left = parse_additive()
-
-			while peek() do
-				local op = peek()
-				local next_op = tokens[pos + 1]
-
-				if op:ValueEquals("<") and next_op and next_op:ValueEquals("=") then
-					advance() -- consume <
-					advance() -- consume =
-					left = left <= parse_additive() and 1 or 0
-				elseif op:ValueEquals(">") and next_op and next_op:ValueEquals("=") then
-					advance() -- consume >
-					advance() -- consume =
-					left = left >= parse_additive() and 1 or 0
-				elseif op:ValueEquals("<") then
-					advance()
-					left = left < parse_additive() and 1 or 0
-				elseif op:ValueEquals(">") then
-					advance()
-					left = left > parse_additive() and 1 or 0
-				else
-					break
-				end
-			end
-
-			return left
-		end
-
-		local function parse_equality()
-			local left = parse_relational()
-
-			while peek() do
-				local op = peek()
-				local next_op = tokens[pos + 1]
-
-				if op:ValueEquals("=") and next_op and next_op:ValueEquals("=") then
-					advance() -- consume =
-					advance() -- consume =
-					left = left == parse_relational() and 1 or 0
-				elseif op:ValueEquals("!") and next_op and next_op:ValueEquals("=") then
-					advance() -- consume !
-					advance() -- consume =
-					left = left ~= parse_relational() and 1 or 0
-				else
-					break
-				end
-			end
-
-			return left
-		end
-
-		local function parse_logical_and()
-			local left = parse_equality()
-
-			while peek() do
-				local op = peek()
-				local next_op = tokens[pos + 1]
-
-				if op:ValueEquals("&") and next_op and next_op:ValueEquals("&") then
-					advance() -- consume &
-					advance() -- consume &
-					local right = parse_equality()
-					left = (left ~= 0 and right ~= 0) and 1 or 0
-				else
-					break
-				end
-			end
-
-			return left
-		end
-
-		function parse_logical_or()
-			local left = parse_logical_and()
-
-			while peek() do
-				local op = peek()
-				local next_op = tokens[pos + 1]
-
-				if op:ValueEquals("|") and next_op and next_op:ValueEquals("|") then
-					advance() -- consume |
-					advance() -- consume |
-					local right = parse_logical_and()
-					left = (left ~= 0 or right ~= 0) and 1 or 0
-				else
-					break
-				end
-			end
-
-			return left
-		end
-
-		local result = parse_logical_or()
-		return result ~= 0
 	end
 
 	-- Helper to skip tokens until we find a matching directive
@@ -735,7 +646,7 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 		self:ExpectToken("#")
 		self:ExpectToken("if")
 		local tokens = self:CaptureTokens()
-		local condition = evaluate_condition(self, tokens)
+		local condition = self:EvaluateCondition(tokens)
 		table.insert(self.conditional_stack, {active = condition, had_true = condition})
 		self:RemoveDirectiveTokens()
 
@@ -765,7 +676,7 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 			skip_until_directive(self, {"else", "elif", "endif"})
 		else
 			-- Evaluate the elif condition
-			local condition = evaluate_condition(self, tokens)
+			local condition = self:EvaluateCondition(tokens)
 			state.active = condition
 			state.had_true = condition
 

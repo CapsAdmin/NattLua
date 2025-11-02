@@ -1,13 +1,6 @@
 local META = require("nattlua.parser.base")()
 require("nattlua.parser.expressions")(META)
 
-function META:ParseValueExpressionToken(expect_value--[[#: nil | string]])
-	local node = self:StartNode("expression_value")
-	node.value = expect_value and self:ExpectTokenValue(expect_value) or self:ParseToken()
-	node = self:EndNode(node)
-	return node
-end
-
 function META:ParseLSXExpression()
 	return nil
 end

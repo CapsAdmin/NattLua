@@ -353,9 +353,8 @@ do -- conditional compilation
 	test("#if defined(UNDEFINED)\n>x=1<\n#endif\n>y=2<", "y=2")
 	test("#define BAR 2\n#if defined BAR\n>x=1<\n#endif", "x=1")
 	-- #if with macro expansion in condition
-	-- TODO: Fix macro expansion in conditions with comparison operators
-	-- test("#define VAL 5\n#if VAL > 3\n>x=1<\n#endif", "x=1")
-	-- test("#define VAL 2\n#if VAL > 3\n>x=1<\n#endif\n>y=2<", "y=2")
+	test("#define VAL 5\n#if VAL > 3\n>x=1<\n#endif", "x=1")
+	test("#define VAL 2\n#if VAL > 3\n>x=1<\n#endif\n>y=2<", "y=2")
 	-- #if with #else
 	test("#if 1\n>x=1<\n#else\n>x=2<\n#endif", "x=1")
 	test("#if 0\n>x=1<\n#else\n>x=2<\n#endif", "x=2")
@@ -365,8 +364,7 @@ do -- conditional compilation
 	test("#if 0\n>x=1<\n#elif 0\n>x=2<\n#else\n>x=3<\n#endif", "x=3")
 	-- Multiple #elif
 	test("#if 0\n>x=1<\n#elif 0\n>x=2<\n#elif 1\n>x=3<\n#endif", "x=3")
-	-- TODO: Fix macro expansion in elif conditions with comparison operators
-	-- test("#define A 2\n#if A == 1\n>x=1<\n#elif A == 2\n>x=2<\n#elif A == 3\n>x=3<\n#endif", "x=2")
+	test("#define A 2\n#if A == 1\n>x=1<\n#elif A == 2\n>x=2<\n#elif A == 3\n>x=3<\n#endif", "x=2")
 	-- Nested conditionals
 	test("#ifdef FOO\n#ifdef BAR\n>x=1<\n#endif\n#endif\n>y=2<", "y=2")
 	test(
@@ -382,8 +380,7 @@ do -- conditional compilation
 	test("#if 0\n#define VAL 42\n#endif\n>x=VAL<", "x=VAL")
 	-- Complex expressions
 	test("#if (1 + 2) * 3 == 9\n>x=1<\n#endif", "x=1")
-	-- TODO: Fix division with comparison operators
-	-- test("#if 10 / 2 > 4\n>x=1<\n#endif", "x=1")
+	test("#if 10 / 2 > 4\n>x=1<\n#endif", "x=1")
 	test("#if 1 && 1\n>x=1<\n#endif", "x=1")
 	test("#if 1 || 0\n>x=1<\n#endif", "x=1")
 	test("#if 0 && 1\n>x=1<\n#endif\n>y=2<", "y=2")
@@ -394,15 +391,21 @@ do -- conditional compilation
 	test("#if defined(FOO) || defined(BAR)\n>x=1<\n#endif\n>y=2<", "y=2")
 	test("#define FOO 1\n#if defined(FOO) || defined(BAR)\n>x=1<\n#endif", "x=1")
 	-- Comparison operators
-	-- TODO: Fix > operator tokenization issue
-	-- test("#if 5 > 3\n>x=1<\n#endif", "x=1")
+	test("#if 5 > 3\n>x=1<\n#endif", "x=1")
 	test("#if 5 < 3\n>x=1<\n#endif\n>y=2<", "y=2")
-	-- TODO: Fix >= operator tokenization issue
-	-- test("#if 5 >= 5\n>x=1<\n#endif", "x=1")
+	test("#if 5 >= 5\n>x=1<\n#endif", "x=1")
 	test("#if 5 <= 5\n>x=1<\n#endif", "x=1")
 	test("#if 5 == 5\n>x=1<\n#endif", "x=1")
 	test("#if 5 != 3\n>x=1<\n#endif", "x=1")
 	-- Undefined identifiers evaluate to 0
 	test("#if UNDEFINED\n>x=1<\n#endif\n>y=2<", "y=2")
 	test("#if !UNDEFINED\n>x=1<\n#endif", "x=1")
+	-- Additional comprehensive tests for new parser
+	test("#if 3 > 2 && 5 < 10\n>x=1<\n#endif", "x=1")
+	test("#if (5 + 3) >= 8\n>x=1<\n#endif", "x=1")
+	test("#define X 10\n#define Y 20\n#if X < Y\n>x=1<\n#endif", "x=1")
+	test("#define X 10\n#if X * 2 > 15\n>x=1<\n#endif", "x=1")
+	test("#if (10 - 5) == 5\n>x=1<\n#endif", "x=1")
+	test("#if !(5 > 10)\n>x=1<\n#endif", "x=1")
+	test("#define A 5\n#define B 10\n#if A + B > 10\n>x=1<\n#endif", "x=1")
 end

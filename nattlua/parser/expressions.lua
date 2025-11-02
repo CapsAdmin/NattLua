@@ -11,6 +11,13 @@ local path_util = require("nattlua.other.path")
 --[[#local type { Node } = import("~/nattlua/parser/node.lua")]]
 
 return function(META)
+	function META:ParseValueExpressionToken(expect_value--[[#: nil | string]])
+		local node = self:StartNode("expression_value")
+		node.value = expect_value and self:ExpectTokenValue(expect_value) or self:ParseToken()
+		node = self:EndNode(node)
+		return node
+	end
+
 	function META:ParseAnalyzerFunctionExpression()
 		if not (self:IsToken("analyzer") and self:IsTokenOffset("function", 1)) then
 			return
