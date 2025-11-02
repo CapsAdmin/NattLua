@@ -5,6 +5,7 @@ local Lexer = require("nattlua.definitions.lua.ffi.preprocessor.lexer").New
 local Code = require("nattlua.code").New
 local buffer = require("string.buffer")
 local META = require("nattlua.parser.base")()
+local bit = require("bit")
 
 -- Deep copy tokens to prevent shared state corruption
 -- This is CRITICAL because:
@@ -61,6 +62,7 @@ function META.New(tokens, code, config)
 	self.position_stack = {} -- Track positions for directive token removal
 	self.include_depth = 0 -- Track current include depth
 	self.current_line = 1 -- Track current line number for __LINE__ macro
+	self.counter_value = 0 -- Track __COUNTER__ macro value
 	-- Add predefined macros
 	for name, value in pairs(config.defines) do
 		if type(value) == "boolean" then
@@ -375,7 +377,13 @@ function META:ReadDefine()
 	local hashtag = self:ExpectToken("#")
 	local directive = self:ExpectTokenValue("define")
 	local identifier = self:ExpectTokenType("letter")
-	local args = self:IsToken("(") and self:CaptureArgumentDefinition() or nil
+	-- Check for function-like macro: ( must immediately follow identifier with NO whitespace
+	local args = nil
+
+	if self:IsToken("(") and not self:GetToken():HasWhitespace() then
+		args = self:CaptureArgumentDefinition()
+	end
+
 	self:Define(identifier:GetValueString(), args, self:CaptureTokens())
 	self:RemoveDirectiveTokens()
 	return true
@@ -448,6 +456,8 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 					return -right
 				elseif op == "+" then
 					return right
+				elseif op == "~" then
+					return bit.bnot(math.floor(right))
 				end
 
 				return 0
@@ -499,6 +509,17 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 					return left <= right and 1 or 0
 				elseif op == ">=" then
 					return left >= right and 1 or 0
+				-- Bitwise operators
+				elseif op == "&" then
+					return bit.band(math.floor(left), math.floor(right))
+				elseif op == "|" then
+					return bit.bor(math.floor(left), math.floor(right))
+				elseif op == "^" then
+					return bit.bxor(math.floor(left), math.floor(right))
+				elseif op == "<<" then
+					return bit.lshift(math.floor(left), math.floor(right))
+				elseif op == ">>" then
+					return bit.rshift(math.floor(left), math.floor(right))
 				end
 
 				return 0
@@ -509,10 +530,60 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 
 		-- Main evaluation function
 		function META:EvaluateCondition(tokens)
+			-- First, expand macros in the tokens (except for defined operator arguments)
+			-- We need to create a temporary parser instance to do this
+			local Code = require("nattlua.code").New
+			local expanded_tokens = {}
+			local i = 1
+
+			while i <= #tokens do
+				local tk = tokens[i]
+
+				-- Don't expand the argument to 'defined'
+				if tk:ValueEquals("defined") then
+					table.insert(expanded_tokens, tk)
+					i = i + 1
+
+					-- Check if next token is '('
+					local has_paren = tokens[i] and tokens[i]:ValueEquals("(")
+
+					if has_paren then
+						table.insert(expanded_tokens, tokens[i]) -- (
+						i = i + 1
+					end
+
+					if tokens[i] then
+						table.insert(expanded_tokens, tokens[i]) -- identifier
+						i = i + 1
+					end
+
+					if has_paren and tokens[i] and tokens[i]:ValueEquals(")") then
+						table.insert(expanded_tokens, tokens[i]) -- )
+						i = i + 1
+					end
+				else
+					-- Try to expand this token if it's a macro
+					local def = self:GetDefinition(tk:GetValueString())
+
+					if def and not def.args and tk.type == "letter" then
+						-- Object-like macro - expand it
+						for _, expanded_tk in ipairs(def.tokens) do
+							table.insert(expanded_tokens, expanded_tk)
+						end
+
+						i = i + 1
+					else
+						table.insert(expanded_tokens, tk)
+						i = i + 1
+					end
+				end
+			end
+
+			tokens = expanded_tokens
 			-- Handle 'defined' operator preprocessing
 			-- Convert "defined(X)" or "defined X" into a numeric value
 			local processed_tokens = {}
-			local i = 1
+			i = 1
 
 			while i <= #tokens do
 				local tk = tokens[i]
@@ -1252,18 +1323,17 @@ function META:ExpandMacroConcatenation()
 	local def_right = self:GetDefinition(nil, 0)
 	tk_right = get_token_from_definition(self, def_right, tk_right)
 	self:SetPosition(pos)
-	self:AddTokens(
-		{
-			self:NewToken("letter", tk_left:GetValueString() .. tk_right:GetValueString()),
-		}
-	)
+	local concatenated_token = self:NewToken("letter", tk_left:GetValueString() .. tk_right:GetValueString())
+	self:AddTokens({concatenated_token})
 
-	-- Don't advance - stay at the concatenated token so we can check for more ## operators
-	-- self:Advance(1)
+	-- Remove the original tokens (left, ##, ##, right)
 	for i = 1, 4 do
-		self:RemoveToken(self:GetPosition() + 1) -- Remove tokens after the concatenated one
+		self:RemoveToken(self:GetPosition() + 1)
 	end
 
+	-- Rescan: check if the concatenated token is a macro and expand it
+	-- But first, we need to continue concatenating if there are more ## operators
+	-- So we stay at the current position and let the next iteration handle it
 	return true
 end
 
@@ -1342,7 +1412,7 @@ function META:ExpandMacro()
 		return self:HandleVAOPT()
 	end
 
-	-- Special handling for __LINE__ and __FILE__
+	-- Special handling for __LINE__, __FILE__, and __COUNTER__
 	if tk.type == "letter" and tk:ValueEquals("__LINE__") then
 		local line_token = self:NewToken("number", tostring(self.current_line))
 		transfer_token_whitespace(tk:Copy(), {line_token}, false)
@@ -1357,6 +1427,15 @@ function META:ExpandMacro()
 		transfer_token_whitespace(tk:Copy(), {file_token}, false)
 		self:RemoveToken(self:GetPosition())
 		self:AddTokens({file_token})
+		return true
+	end
+
+	if tk.type == "letter" and tk:ValueEquals("__COUNTER__") then
+		local counter_token = self:NewToken("number", tostring(self.counter_value))
+		transfer_token_whitespace(tk:Copy(), {counter_token}, false)
+		self:RemoveToken(self:GetPosition())
+		self:AddTokens({counter_token})
+		self.counter_value = self.counter_value + 1
 		return true
 	end
 
