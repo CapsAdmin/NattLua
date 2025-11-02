@@ -31,7 +31,33 @@ do
 		obj.define_stack = {}
 		obj.expansion_stack = {}
 		obj.conditional_stack = {} -- Track nested #if/#ifdef/#ifndef states
+		obj.position_stack = {} -- Track positions for directive token removal
 		return obj
+	end
+
+	-- Helper functions for saving/restoring positions when removing directive tokens
+	function META:PushPosition()
+		table.insert(self.position_stack, self:GetPosition())
+	end
+
+	function META:PopPosition()
+		local start_pos = table.remove(self.position_stack)
+
+		if not start_pos then error("Position stack underflow") end
+
+		return start_pos
+	end
+
+	-- Remove directive tokens and reset position
+	function META:RemoveDirectiveTokens()
+		local start_pos = self:PopPosition()
+		local end_pos = self:GetPosition()
+
+		for i = end_pos - 1, start_pos, -1 do
+			self:RemoveToken(i)
+		end
+
+		self:SetPosition(start_pos)
 	end
 
 	function META:IsWhitespace(str, offset)
@@ -302,11 +328,13 @@ do
 			return false
 		end
 
+		self:PushPosition()
 		local hashtag = self:ExpectToken("#")
 		local directive = self:ExpectTokenValue("define")
 		local identifier = self:ExpectTokenType("letter")
 		local args = self:IsToken("(") and self:CaptureArgumentDefinition() or nil
 		self:Define(identifier:GetValueString(), args, self:CaptureTokens())
+		self:RemoveDirectiveTokens()
 		return true
 	end
 
@@ -315,10 +343,12 @@ do
 			return false
 		end
 
+		self:PushPosition()
 		local hashtag = self:ExpectToken("#")
 		local directive = self:ExpectTokenValue("undef")
 		local identifier = self:ExpectTokenType("letter")
 		self:Undefine(identifier:GetValueString())
+		self:RemoveDirectiveTokens()
 		return true
 	end
 
@@ -605,9 +635,16 @@ do
 								end
 
 								self:SetPosition(start_pos)
-								-- Now consume the #endif directive
+								-- Now consume and remove the #endif directive
 								self:ExpectToken("#")
 								self:ExpectTokenType("letter")
+								local directive_end = self:GetPosition()
+
+								for i = directive_end - 1, start_pos, -1 do
+									self:RemoveToken(i)
+								end
+
+								self:SetPosition(start_pos)
 								return "endif"
 							end
 						elseif depth == 1 then
@@ -621,9 +658,16 @@ do
 								end
 
 								self:SetPosition(start_pos)
-								-- Consume #else
+								-- Consume and remove the #else directive
 								self:ExpectToken("#")
 								self:ExpectTokenType("letter")
+								local directive_end = self:GetPosition()
+
+								for i = directive_end - 1, start_pos, -1 do
+									self:RemoveToken(i)
+								end
+
+								self:SetPosition(start_pos)
 								return "else"
 							elseif directive == "elif" then
 								-- Remove all tokens from start to here (not including the # and elif)
@@ -634,6 +678,7 @@ do
 								end
 
 								self:SetPosition(start_pos)
+								-- Don't consume elif - let ReadElif handle it
 								return "elif"
 							end
 						end
@@ -651,11 +696,13 @@ do
 				return false
 			end
 
+			self:PushPosition()
 			self:ExpectToken("#")
 			self:ExpectTokenValue("ifdef")
 			local identifier = self:ExpectTokenType("letter")
 			local is_defined = self:GetDefinition(identifier:GetValueString()) ~= nil
 			table.insert(self.conditional_stack, {active = is_defined, had_true = is_defined})
+			self:RemoveDirectiveTokens()
 
 			if not is_defined then
 				skip_until_directive(self, {"else", "elif", "endif"})
@@ -669,12 +716,14 @@ do
 				return false
 			end
 
+			self:PushPosition()
 			self:ExpectToken("#")
 			self:ExpectTokenValue("ifndef")
 			local identifier = self:ExpectTokenType("letter")
 			local is_defined = self:GetDefinition(identifier:GetValueString()) ~= nil
 			local is_active = not is_defined
 			table.insert(self.conditional_stack, {active = is_active, had_true = is_active})
+			self:RemoveDirectiveTokens()
 
 			if is_defined then
 				skip_until_directive(self, {"else", "elif", "endif"})
@@ -688,11 +737,13 @@ do
 				return false
 			end
 
+			self:PushPosition()
 			self:ExpectToken("#")
 			self:ExpectTokenValue("if")
 			local tokens = self:CaptureTokens()
 			local condition = evaluate_condition(self, tokens)
 			table.insert(self.conditional_stack, {active = condition, had_true = condition})
+			self:RemoveDirectiveTokens()
 
 			if not condition then
 				skip_until_directive(self, {"else", "elif", "endif"})
@@ -710,10 +761,12 @@ do
 				error("#elif without matching #if")
 			end
 
+			self:PushPosition()
 			self:ExpectToken("#")
 			self:ExpectTokenValue("elif")
 			local tokens = self:CaptureTokens()
 			local state = self.conditional_stack[#self.conditional_stack]
+			self:RemoveDirectiveTokens()
 
 			-- If we already had a true branch, skip this elif
 			if state.had_true then
@@ -738,12 +791,21 @@ do
 			end
 
 			if #self.conditional_stack == 0 then
-				error("#else without matching #if")
+				local tk = self:GetToken()
+				error(
+					string.format(
+						"#else without matching #if at %s:%d",
+						tk.code_ptr and tk.code_ptr.path or "unknown",
+						tk.line or 0
+					)
+				)
 			end
 
+			self:PushPosition()
 			self:ExpectToken("#")
 			self:ExpectTokenValue("else")
 			local state = self.conditional_stack[#self.conditional_stack]
+			self:RemoveDirectiveTokens()
 
 			-- If we already had a true branch, skip the else
 			if state.had_true then
@@ -766,10 +828,12 @@ do
 				error("#endif without matching #if")
 			end
 
+			self:PushPosition()
 			self:ExpectToken("#")
 			self:ExpectTokenValue("endif")
 			-- Remove the last conditional state, but be careful with nested else
 			table.remove(self.conditional_stack)
+			self:RemoveDirectiveTokens()
 			return true
 		end
 	end
@@ -785,11 +849,9 @@ do
 				return nil, "Maximum include depth exceeded"
 			end
 
-			-- Check if file was already included (include guards simulation)
-			if self.included_files[filename] then
-				return nil, filename .. " already included"
-			end
-
+			-- Note: We don't check included_files here anymore
+			-- Include guards (#ifndef) inside the header files themselves
+			-- will prevent duplicate content, which is the proper C way
 			local search_paths = {}
 
 			if is_system_include then
@@ -845,6 +907,8 @@ do
 				return false
 			end
 
+			-- Remember the starting position to remove the #include directive tokens
+			local start_pos = self:GetPosition()
 			local hashtag = self:ExpectToken("#")
 			local directive = self:ExpectTokenValue("include")
 			-- Parse the filename
@@ -912,10 +976,6 @@ do
 				return true
 			end
 
-			-- Mark file as included
-			self.included_files[filename] = true
-			self.included_files[full_path] = true
-
 			-- Callback for tracking includes
 			if self.preprocess_options.on_include then
 				self.preprocess_options.on_include(filename, full_path)
@@ -950,7 +1010,6 @@ do
 			include_opts.working_directory = full_path:match("(.*/)") or self.preprocess_options.working_directory
 			include_parser.preprocess_options = include_opts
 			include_parser.include_depth = self.include_depth + 1
-			include_parser.included_files = self.included_files
 			-- Process the included file
 			include_parser:Parse()
 			-- Get the processed tokens
@@ -964,9 +1023,17 @@ do
 				table.remove(processed_tokens)
 			end
 
-			-- Insert the processed tokens at the current position
-			-- We need to add them where the #include directive was
-			local current_pos = self:GetPosition()
+			-- Remove the #include directive tokens and insert the included content
+			local end_pos = self:GetPosition()
+
+			-- Remove all tokens from the #include directive (from start_pos to end_pos - 1)
+			for i = end_pos - 1, start_pos, -1 do
+				self:RemoveToken(i)
+			end
+
+			-- Set position back to where the #include was
+			self:SetPosition(start_pos)
+			-- Insert the processed tokens from the included file
 			self:AddTokens(processed_tokens)
 			-- Update defines from included file (they persist)
 			self.defines = include_parser.defines
@@ -1425,7 +1492,6 @@ local function run_tests() -- tests
 			defines = {},
 		}
 		parser.include_depth = 0
-		parser.included_files = {}
 		parser:Parse()
 		return parser:ToString()
 	end
@@ -1896,6 +1962,26 @@ end
 
 if not SKIP_TESTS then run_tests() end
 
+-- Get GCC/C standard predefined macros
+local function get_standard_defines()
+	return {
+		-- Standard C macros
+		__STDC__ = 1,
+		__STDC_VERSION__ = "201710L", -- C17
+		__STDC_HOSTED__ = 1,
+		-- GCC version (simulating GCC 4.2.1 for compatibility)
+		__GNUC__ = 4,
+		__GNUC_MINOR__ = 2,
+		__GNUC_PATCHLEVEL__ = 1,
+	-- Common architecture/platform detection
+	-- Note: Users should override these based on their target platform
+	-- __linux__ = 1,
+	-- __unix__ = 1,
+	-- __x86_64__ = 1,
+	-- __LP64__ = 1,
+	}
+end
+
 -- Main preprocessor function with options support
 return function(code_or_options, options)
 	local code, opts
@@ -1916,6 +2002,16 @@ return function(code_or_options, options)
 	opts.max_include_depth = opts.max_include_depth or 100
 	opts.on_include = opts.on_include -- Optional callback for includes
 	opts.system_include_paths = opts.system_include_paths or {}
+
+	-- Merge standard defines with user defines (user defines take precedence)
+	if opts.add_standard_defines ~= false then
+		local standard_defines = get_standard_defines()
+
+		for name, value in pairs(standard_defines) do
+			if opts.defines[name] == nil then opts.defines[name] = value end
+		end
+	end
+
 	-- Create Code and Lexer instances
 	local Code = require("nattlua.code").New
 	local Lexer = require("nattlua.lexer.lexer").New
@@ -1958,7 +2054,6 @@ return function(code_or_options, options)
 	-- Store options in parser for include handling
 	parser.preprocess_options = opts
 	parser.include_depth = 0
-	parser.included_files = {}
 	-- Parse/preprocess
 	parser:Parse()
 	-- Return processed code
