@@ -174,7 +174,6 @@ do
 	end
 
 	table.insert(list, "import_data")
-
 	read_letter = string_reader(list, false)
 end
 
@@ -661,19 +660,19 @@ do
 	META.ReadSingleQuoteString = build_string_reader("single", "'")
 end
 
-local symbols = {}
-local done = {}
-
-for _, v in ipairs(runtime_syntax:GetSymbols()) do
-	done[v] = true
-	table.insert(symbols, v)
-end
-
-for _, v in ipairs(typesystem_syntax:GetSymbols()) do
-	if not done[v] then table.insert(symbols, v) end
-end
-
 do
+	local symbols = {}
+	local done = {}
+
+	for _, v in ipairs(runtime_syntax:GetSymbols()) do
+		done[v] = true
+		table.insert(symbols, v)
+	end
+
+	for _, v in ipairs(typesystem_syntax:GetSymbols()) do
+		if not done[v] then table.insert(symbols, v) end
+	end
+
 	local read_symbol = string_reader(symbols, true)
 
 	function META:ReadSymbol()--[[#: "symbol" | false]]
