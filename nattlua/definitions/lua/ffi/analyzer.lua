@@ -70,14 +70,14 @@ local valid_qualifiers = {
 	["unsigned long long int"] = true,
 }
 
-local function cast(self, node)
-	if node.type == "array" then
+local function cast(self, decl)
+	if decl.type == "array" then
 		local size
 
-		if node.size == "?" then
+		if decl.size == "?" then
 			size = table.remove(self.dollar_signs_vars)
 		else
-			size = LNumber(tonumber(node.size) or math.huge)
+			size = LNumber(tonumber(decl.size) or math.huge)
 		end
 
 		if size.Type == "number" then
@@ -93,25 +93,25 @@ local function cast(self, node)
 		end
 
 		local arr = Table()
-		arr:Set(size, cast(self, assert(node.of)))
+		arr:Set(size, cast(self, assert(decl.of)))
 		return arr
-	elseif node.type == "pointer" then
+	elseif decl.type == "pointer" then
 		local arr = Table()
-		arr:Set(Number(), cast(self, assert(node.of)))
+		arr:Set(Number(), cast(self, assert(decl.of)))
 
 		if self:GetContextRef("function_argument") == true then
 			if
-				node.of.type == "type" and
-				node.of.modifiers[1] == "const" and
-				node.of.modifiers[2] == "char"
+				decl.of.type == "type" and
+				decl.of.modifiers[1] == "const" and
+				decl.of.modifiers[2] == "char"
 			then
 				arr.is_string = true
 			end
 		end
 
 		return arr
-	elseif node.type == "type" then
-		for _, v in ipairs(node.modifiers) do
+	elseif decl.type == "type" then
+		for _, v in ipairs(decl.modifiers) do
 			if type(v) == "table" then
 				-- only catch struct, union and enum TYPE declarations
 				if v.type == "struct" or v.type == "union" then
@@ -122,8 +122,7 @@ local function cast(self, node)
 						tbl = Table()
 
 						if ident then
-							self.current_nodes = self.current_nodes or {}
-							table.insert(self.current_nodes, {ident = ident, tbl = tbl})
+							table.insert(self.current_decls, {ident = ident, tbl = tbl})
 						end
 
 						for _, v in ipairs(v.fields) do
@@ -138,9 +137,9 @@ local function cast(self, node)
 							end
 						end
 
-						if ident then table.remove(self.current_nodes) end
+						if ident then table.remove(self.current_decls) end
 					elseif ident then
-						local current = self.current_nodes and self.current_nodes[#self.current_nodes]
+						local current = self.current_decls and self.current_decls[#self.current_decls]
 
 						if current and current.ident == v.identifier then
 							-- recursion
@@ -187,9 +186,9 @@ local function cast(self, node)
 			end
 		end
 
-		local t = node.modifiers[1]
+		local t = decl.modifiers[1]
 
-		if t == "const" then t = assert(node.modifiers[2]) end
+		if t == "const" then t = assert(decl.modifiers[2]) end
 
 		if valid_qualifiers[t] then
 			return Number()
@@ -211,37 +210,37 @@ local function cast(self, node)
 		end
 
 		return Number()
-	elseif node.type == "va_list" then
+	elseif decl.type == "va_list" then
 		return Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math.huge))
-	elseif node.type == "function" then
+	elseif decl.type == "function" then
 		local args = {}
 		local rets = {}
 
 		if not self.super_hack then self:PushContextRef("function_argument") end
 
-		for i, v in ipairs(node.args) do
+		for i, v in ipairs(decl.args) do
 			table.insert(args, cast(self, v))
 		end
 
 		if not self.super_hack then self:PopContextRef("function_argument") end
 
-		return (Function(Tuple(args), Tuple({cast(self, assert(node.rets))})))
-	elseif node.type == "root" then
-		return (cast(self, assert(node.of)))
+		return (Function(Tuple(args), Tuple({cast(self, assert(decl.rets))})))
+	elseif decl.type == "root" then
+		return (cast(self, assert(decl.of)))
 	end
 
-	error("unknown type " .. node.type)
+	error("unknown type " .. decl.type)
 end
 
 function META:AnalyzeRoot(ast, vars, typs, process_type, mode)
 	self.type_table = typs or Table()
 	self.vars_table = vars or Table()
 
-	local function callback(node, ident, typedef)
+	local function callback(decl, ident, typedef)
 		if ident == "TYPEOF_CDECL" then self.super_hack = true -- TODO
 		end
 
-		local obj = cast(self, node)
+		local obj = cast(self, decl)
 		local key = LString(ident)
 
 		if typedef then
@@ -274,10 +273,9 @@ function META.New()
 			context_ref = false,
 			super_hack = false,
 			env = false,
-			curent_nodes = false,
 			dollar_signs_vars = false,
 			dollar_signs_typs = false,
-			current_nodes = false,
+			current_decls = {},
 		}
 	)
 end
