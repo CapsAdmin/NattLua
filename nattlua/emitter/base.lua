@@ -175,45 +175,49 @@ return function()
 				local whitespace = token:GetWhitespace()
 
 				if self.config.pretty_print == true then
-					for i, wtoken in ipairs(whitespace) do
-						if wtoken.type == "line_comment" then
-							local start = i
+					if self.config.skip_comments then
 
-							for i = self.i - 1, 1, -1 do
-								local val = assert(self.out[i])
+					else
+						for i, wtoken in ipairs(whitespace) do
+							if wtoken.type == "line_comment" then
+								local start = i
 
-								if not val:find("^%s+") then
-									local found_newline = false
+								for i = self.i - 1, 1, -1 do
+									local val = assert(self.out[i])
 
-									for i = start, 1, -1 do
-										if whitespace[i]:GetValueString():find("\n") then
-											found_newline = true
+									if not val:find("^%s+") then
+										local found_newline = false
 
-											break
+										for i = start, 1, -1 do
+											if whitespace[i]:GetValueString():find("\n") then
+												found_newline = true
+
+												break
+											end
 										end
-									end
 
-									if not found_newline then
-										self.i = i + 1
-										self:Emit(" ")
-									end
+										if not found_newline then
+											self.i = i + 1
+											self:Emit(" ")
+										end
 
-									break
+										break
+									end
 								end
-							end
 
-							self:EmitToken(wtoken)
+								self:EmitToken(wtoken)
 
-							if whitespace[i + 1] then
-								self:Whitespace("\n")
-								self:Whitespace("\t")
-							end
-						elseif wtoken.type == "multiline_comment" then
-							self:EmitToken(wtoken)
+								if whitespace[i + 1] then
+									self:Whitespace("\n")
+									self:Whitespace("\t")
+								end
+							elseif wtoken.type == "multiline_comment" then
+								self:EmitToken(wtoken)
 
-							if whitespace[i + 1] then
-								self:Whitespace("\n")
-								self:Whitespace("\t")
+								if whitespace[i + 1] then
+									self:Whitespace("\n")
+									self:Whitespace("\t")
+								end
 							end
 						end
 					end

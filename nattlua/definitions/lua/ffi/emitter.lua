@@ -1,3 +1,6 @@
+--[[HOTRELOAD
+	run_lua("/Users/caps/github/NattLua/examples/c_preprocessor.lua")
+]]
 local ipairs = _G.ipairs
 local META = require("nattlua.emitter.base")()
 local old_new = META.New
@@ -29,6 +32,7 @@ end
 
 function META:EmitTypeDef(node)
 	self:EmitToken(node.tokens["typedef"])
+	self:Whitespace(" ")
 
 	for _, v in ipairs(node.decls) do
 		self:EmitCDeclaration(v)
@@ -38,6 +42,8 @@ function META:EmitTypeDef(node)
 end
 
 function META:EmitCDeclaration(node)
+	if node.default_expression then self:Emit("/*") end
+
 	if node.tokens["..."] then
 		self:EmitToken(node.tokens["..."])
 		return
@@ -65,6 +71,8 @@ function META:EmitCDeclaration(node)
 		else
 			self:EmitToken(v)
 		end
+
+		if i < #node.modifiers then self:Whitespace(" ") end
 	end
 
 	if node.tokens["("] then self:EmitToken(node.tokens["("]) end
@@ -109,7 +117,9 @@ function META:EmitCDeclaration(node)
 	end
 
 	if node.default_expression then
+		self:Whitespace(" ")
 		self:EmitToken(node.tokens["="])
+		self:Whitespace(" ")
 		self:EmitExpression(node.default_expression)
 	end
 
@@ -120,6 +130,8 @@ function META:EmitCDeclaration(node)
 			if v.tokens[","] then self:EmitToken(v.tokens[","]) end
 		end
 	end
+
+	if node.default_expression then self:Emit("*/") end
 end
 
 function META:EmitDollarSign(node)
@@ -141,6 +153,7 @@ function META:EmitPointers(pointers)
 		if a.Type == "expression_attribute_expression" then
 			self:EmitAttributeExpression(a)
 		else
+			self:Whitespace(" ")
 			self:EmitToken(a)
 		end
 
@@ -165,6 +178,18 @@ function META:EmitAttributeExpression(node)
 	self:EmitToken(node.tokens[")"])
 end
 
+function META:EmitNumberTokenUNUSED(token--[[#: Token]])
+	local num = token:GetValueString()
+
+	if num:sub(-3):lower() == "ull" then
+		num = num:sub(1, -4)
+	elseif num:sub(-2):lower() == "ll" then
+		num = num:sub(1, -3)
+	end
+
+	self:EmitToken(token, num)
+end
+
 function META:EmitStructField(node)
 	self:EmitCDeclaration(node)
 
@@ -180,15 +205,21 @@ for _, type in ipairs({"Struct", "Union"}) do
 	-- EmitStruct, EmitUnion
 	META["Emit" .. Type] = function(self, node)
 		self:EmitToken(node.tokens[type])
+		self:Whitespace(" ")
 
 		if node.tokens["identifier"] then
 			self:EmitToken(node.tokens["identifier"])
 		end
 
+		self:Whitespace(" ")
+
 		if node.tokens["{"] then
 			self:EmitToken(node.tokens["{"])
+			self:Indent()
+			self:Whitespace("\n")
 
 			for _, field in ipairs(node.fields) do
+				self:Whitespace("\t")
 				self:EmitStructField(field)
 
 				if field.tokens["first_comma"] then
@@ -202,8 +233,11 @@ for _, type in ipairs({"Struct", "Union"}) do
 				end
 
 				if field.tokens[";"] then self:EmitToken(field.tokens[";"]) end
+
+				self:Whitespace("\n")
 			end
 
+			self:Outdent()
 			self:EmitToken(node.tokens["}"])
 		end
 	end
@@ -211,6 +245,7 @@ end
 
 function META:EmitEnum(node)
 	self:EmitToken(node.tokens["enum"])
+	self:Whitespace(" ")
 
 	if node.tokens["identifier"] then
 		self:EmitToken(node.tokens["identifier"])
@@ -218,18 +253,26 @@ function META:EmitEnum(node)
 
 	if node.tokens["{"] then
 		self:EmitToken(node.tokens["{"])
+		self:Whitespace("\n")
+		self:Indent()
 
 		for _, v in ipairs(node.fields) do
+			self:Whitespace("\t")
 			self:EmitToken(v.tokens["identifier"])
 
 			if v.tokens["="] then
+				self:Whitespace(" ")
 				self:EmitToken(v.tokens["="])
+				self:Whitespace(" ")
 				self:EmitExpression(v.expression)
 			end
 
 			if v.tokens[","] then self:EmitToken(v.tokens[","]) end
+
+			self:Whitespace("\n")
 		end
 
+		self:Outdent()
 		self:EmitToken(node.tokens["}"])
 	end
 end
