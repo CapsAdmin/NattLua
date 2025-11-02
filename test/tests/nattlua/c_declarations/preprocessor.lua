@@ -137,6 +137,15 @@ do -- token concatenation (##)
 	test("#define EMPTY_ARG(a, b) a##b \n >EMPTY_ARG(test, )<", "test")
 	test("#define EMPTY_ARG(a, b) a##b \n >EMPTY_ARG(, test)<", "test")
 	test("#define JOIN(a, b) a##b \n >JOIN(pre, post)<", "prepost")
+	test(
+		[[
+		#define VK_DEFINE_HANDLE(object) typedef struct object##_T* object;
+		VK_DEFINE_HANDLE(VkInstance)
+
+		int foo(void *>object<); 
+	]],
+		"object"
+	)
 end
 
 do -- empty arguments
