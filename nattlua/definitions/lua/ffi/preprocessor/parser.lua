@@ -7,12 +7,6 @@ local buffer = require("string.buffer")
 local META = require("nattlua.parser.base")()
 local bit = require("bit")
 
--- Deep copy tokens to prevent shared state corruption
--- This is CRITICAL because:
--- 1. Macro definitions store tokens that are reused on each expansion
--- 2. During expansion, we modify tokens (whitespace, expanded_from markers)
--- 3. Without copying, modifications would affect the stored definition
--- 4. This would break subsequent expansions and cause test failures
 local function copy_tokens(tokens)
 	local new_tokens = {}
 
@@ -31,11 +25,10 @@ function META.New(tokens, code, config)
 	config.defines = config.defines or {}
 	config.include_paths = config.include_paths or {}
 	config.max_include_depth = config.max_include_depth or 100
-	config.on_include = config.on_include -- Optional callback for includes
+	config.on_include = config.on_include
 	config.system_include_paths = config.system_include_paths or {}
 
 	if config.add_standard_defines ~= false then
-		-- Generate __DATE__ and __TIME__ at preprocessing time
 		local date_str = os.date("\"%b %d %Y\"")
 		local time_str = os.date("\"%H:%M:%S\"")
 		local standard_defines = {
@@ -57,12 +50,12 @@ function META.New(tokens, code, config)
 	local self = old(tokens, code, config)
 	self.defines = {}
 	self.define_stack = {}
-	self.conditional_stack = {} -- Track nested #if/#ifdef/#ifndef states
-	self.position_stack = {} -- Track positions for directive token removal
-	self.include_depth = 0 -- Track current include depth
-	self.current_line = 1 -- Track current line number for __LINE__ macro
-	self.counter_value = 0 -- Track __COUNTER__ macro value
-	-- Add predefined macros
+	self.conditional_stack = {}
+	self.position_stack = {}
+	self.include_depth = 0
+	self.current_line = 1
+	self.counter_value = 0
+
 	for name, value in pairs(config.defines) do
 		if type(value) == "boolean" then
 			value = value and "1" or "0"
@@ -79,7 +72,6 @@ function META.New(tokens, code, config)
 	return self
 end
 
--- Helper functions for saving/restoring positions when removing directive tokens
 function META:PushPosition()
 	table.insert(self.position_stack, self:GetPosition())
 end
@@ -92,7 +84,6 @@ function META:PopPosition()
 	return start_pos
 end
 
--- Remove directive tokens and reset position
 function META:RemoveDirectiveTokens()
 	local start_pos = self:PopPosition()
 	local end_pos = self:GetPosition()
@@ -134,9 +125,8 @@ function META:IsMultiWhitespace(str, offset)
 	return false
 end
 
-do -- for normal define, can be overridden
+do
 	function META:Define(identifier, args, tokens)
-		-- Store a copy because the original tokens may be modified elsewhere
 		self.defines[identifier] = {args = args, tokens = copy_tokens(tokens), identifier = identifier}
 	end
 
@@ -145,13 +135,12 @@ do -- for normal define, can be overridden
 	end
 end
 
-do -- for parameters (scoped macro definitions during expansion)
+do
 	function META:PushDefine(identifier, args, tokens)
 		self.define_stack[identifier] = self.define_stack[identifier] or {}
 		table.insert(
 			self.define_stack[identifier],
 			1,
-			-- Store copy for same reason as Define()
 			{args = args, tokens = copy_tokens(tokens), identifier = identifier}
 		)
 	end
@@ -212,7 +201,6 @@ function META:CaptureArgumentDefinition()
 	for i = 1, self:GetLength() do
 		if self:IsToken(")") then break end
 
-		-- Accept either letter (regular parameter) or symbol "..." (variadic)
 		local node
 
 		if self:IsToken("...") then
@@ -236,7 +224,6 @@ end
 
 local function normalize_argument_whitespace(self, args)
 	for i, tokens in ipairs(args) do
-		-- Copy because we're about to modify whitespace properties
 		tokens = copy_tokens(tokens)
 		args[i] = tokens
 
@@ -250,7 +237,6 @@ local function normalize_argument_whitespace(self, args)
 			end
 		end
 
-		-- Remove whitespace from first token in first argument
 		if i == 1 and tokens[1] then
 			tokens[1].whitespace = nil
 
@@ -261,7 +247,6 @@ local function normalize_argument_whitespace(self, args)
 	return args
 end
 
--- Helper to update parenthesis depth based on token value
 local function update_paren_depth(token, depth)
 	if token:ValueEquals("(") then
 		return depth + 1
@@ -272,19 +257,16 @@ local function update_paren_depth(token, depth)
 	return depth
 end
 
--- Helper to remove a range of tokens (inclusive, in reverse order)
 local function remove_token_range(self, start_pos, end_pos)
 	for i = end_pos, start_pos, -1 do
 		self:RemoveToken(i)
 	end
 end
 
--- Helper to check if __VA_ARGS__ is non-empty
 local function is_va_args_non_empty(va)
 	return va and #va.tokens > 0 and not va.tokens[1]:ValueEquals("")
 end
 
--- Helper to check if token was already expanded from a macro (prevents infinite recursion)
 local function is_already_expanded(token, macro_identifier)
 	return token.expanded_from and token.expanded_from[macro_identifier]
 end
@@ -292,10 +274,7 @@ end
 local function capture_single_argument(self, is_va_opt)
 	local tokens = {}
 
-	if not is_va_opt and self:IsToken(",") then
-		-- Empty argument - leave tokens table empty
-		return tokens
-	end
+	if not is_va_opt and self:IsToken(",") then return tokens end
 
 	local paren_depth = 0
 
@@ -309,19 +288,13 @@ local function capture_single_argument(self, is_va_opt)
 
 		if parent.type == "end_of_file" then break end
 
-		-- Don't call Parse() for __VA_OPT__ arguments to avoid recursive expansion
 		if not is_va_opt then self:Parse() end
 
 		self:SetPosition(pos)
 		local tk = self:ConsumeToken()
 		paren_depth = update_paren_depth(tk, paren_depth)
 
-		-- Track both parent and whether this was expanded
-		-- If the token changed after Parse(), mark it with unexpanded_form
-		if tk ~= parent then
-			-- Token was expanded/modified during Parse()
-			tk.unexpanded_form = parent
-		end
+		if tk ~= parent then tk.unexpanded_form = parent end
 
 		tk.parent = parent
 		table.insert(tokens, tk)
@@ -337,7 +310,6 @@ function META:CaptureArgs(def)
 
 	for _ = self:GetPosition(), self:GetLength() do
 		if self:IsToken(")") then
-			-- Handle empty arguments at end
 			if not is_va_opt and self:IsTokenOffset(",", -1) then
 				table.insert(args, {})
 			elseif not is_va_opt and #args == 0 and def and def.args and #def.args > 0 then
@@ -384,7 +356,6 @@ function META:ReadDefine()
 	local hashtag = self:ExpectToken("#")
 	local directive = self:ExpectTokenValue("define")
 	local identifier = self:ExpectTokenType("letter")
-	-- Check for function-like macro: ( must immediately follow identifier with NO whitespace
 	local args = nil
 
 	if self:IsToken("(") and not self:GetToken():HasWhitespace() then
@@ -410,38 +381,23 @@ function META:ReadUndefine()
 	return true
 end
 
-do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
-	-- Implementation of C preprocessor conditional directives
-	--
-	-- Features:
-	--   - #ifdef, #ifndef, #if, #elif, #else, #endif
-	--   - Nested conditionals with proper depth tracking
-	--   - Token removal for false branches
-	--   - Uses the project's existing Lua parser for expression evaluation
-	-- Inline expression parser using the project's parser infrastructure
+do
 	do
-		-- Create parser meta once and reuse it
 		local parser_meta = require("nattlua.parser.base")()
 		require("nattlua.parser.expressions")(parser_meta)
 
-		-- Evaluator for the AST
 		local function evaluate_ast(self, node)
 			if not node then return 0 end
 
 			if node.Type == "expression_value" then
 				local tk = node.value
 
-				-- Handle numbers
 				if tk.type == "number" then
 					return tonumber(tk:GetValueString()) or 0
 				end
 
-				-- Handle defined operator
-				if tk:ValueEquals("defined") then
-					return 0 -- This should be handled by prefix operator
-				end
+				if tk:ValueEquals("defined") then return 0 end
 
-				-- Handle identifiers (check if it's a macro)
 				if tk.type == "letter" then
 					local def = self:GetDefinition(tk:GetValueString())
 
@@ -449,7 +405,7 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 						return tonumber(def.tokens[1]:GetValueString()) or 0
 					end
 
-					return 0 -- Undefined identifiers evaluate to 0
+					return 0
 				end
 
 				return 0
@@ -471,15 +427,10 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 			elseif node.Type == "expression_binary_operator" then
 				local op = node.value:GetValueString()
 
-				-- Handle 'defined' operator specially
-				if op == "defined" then
-					-- This shouldn't happen in well-formed code
-					return 0
-				end
+				if op == "defined" then return 0 end
 
 				local left = evaluate_ast(self, node.left)
 
-				-- Short-circuit evaluation for logical operators
 				if op == "&&" or op == "and" then
 					if left == 0 then return 0 end
 
@@ -516,7 +467,6 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 					return left <= right and 1 or 0
 				elseif op == ">=" then
 					return left >= right and 1 or 0
-				-- Bitwise operators
 				elseif op == "&" then
 					return bit.band(math.floor(left), math.floor(right))
 				elseif op == "|" then
@@ -535,25 +485,13 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 			return 0
 		end
 
-		-- Main evaluation function
 		function META:EvaluateCondition(tokens)
-			-- First, expand macros in the tokens (except for defined operator arguments)
-			-- We need to create a temporary parser instance to do this
 			local Code = require("nattlua.code").New
-
-			-- Create a temporary parser to expand all macros except 'defined' arguments
-			-- We'll add an EOF token and then remove it after expansion
 			local temp_tokens = copy_tokens(tokens)
 			table.insert(temp_tokens, self:NewToken("end_of_file", ""))
-
 			local temp_parser = META.New(temp_tokens, self.Code, self.config)
-			-- Inherit defines from current parser
 			temp_parser.defines = self.defines
 			temp_parser.define_stack = self.define_stack
-
-			-- Expand macros, but protect 'defined' operator arguments
-			-- Note: Per C standard, 'defined' shall not appear as a result of macro expansion.
-			-- We only protect 'defined' that appears literally in the #if condition.
 			local expanded_tokens = {}
 			local i = 1
 			temp_parser:SetPosition(1)
@@ -563,12 +501,9 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 
 				if tk.type == "end_of_file" then break end
 
-				-- Don't expand the argument to 'defined'
 				if tk:ValueEquals("defined") then
 					table.insert(expanded_tokens, tk:Copy())
 					temp_parser:Advance(1)
-
-					-- Check if next token is '('
 					local has_paren = temp_parser:IsToken("(")
 
 					if has_paren then
@@ -586,22 +521,20 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 						temp_parser:Advance(1)
 					end
 				else
-					-- Try to expand macros at current position
 					local start_pos = temp_parser:GetPosition()
 					local expanded = temp_parser:ExpandMacroCall() or temp_parser:ExpandMacro()
 
 					if expanded then
-						-- Macro was expanded, collect all tokens that were inserted
-						-- The position should have advanced
 						local end_pos = temp_parser:GetPosition()
+
 						for j = start_pos, end_pos - 1 do
 							local token = temp_parser.tokens[j]
+
 							if token and token.type ~= "end_of_file" then
 								table.insert(expanded_tokens, token:Copy())
 							end
 						end
 					else
-						-- No expansion, just copy the token
 						table.insert(expanded_tokens, tk:Copy())
 						temp_parser:Advance(1)
 					end
@@ -609,8 +542,6 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 			end
 
 			tokens = expanded_tokens
-			-- Handle 'defined' operator preprocessing
-			-- Convert "defined(X)" or "defined X" into a numeric value
 			local processed_tokens = {}
 			i = 1
 
@@ -618,7 +549,6 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 				local tk = tokens[i]
 
 				if tk:ValueEquals("defined") then
-					-- Check if next token is '('
 					local has_paren = tokens[i + 1] and tokens[i + 1]:ValueEquals("(")
 					local name_idx = has_paren and i + 2 or i + 1
 					local name_tk = tokens[name_idx]
@@ -627,7 +557,6 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 						local is_defined = self:GetDefinition(name_tk:GetValueString()) ~= nil
 						local value_token = self:NewToken("number", is_defined and "1" or "0")
 						table.insert(processed_tokens, value_token)
-						-- Skip past the defined operator and its argument
 						i = name_idx + 1
 
 						if has_paren and tokens[i] and tokens[i]:ValueEquals(")") then
@@ -642,20 +571,16 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 				end
 			end
 
-			-- Parse the expression
 			local parser = parser_meta.New(processed_tokens, self.Code)
 			local ast = parser:ParseRuntimeExpression(0)
 
 			if not ast then return false end
 
-			-- Evaluate the AST
 			local result = evaluate_ast(self, ast)
 			return result ~= 0
 		end
 	end
 
-	-- Helper to skip tokens until we find a matching directive
-	-- This removes all tokens between the current position and the target directive
 	local function skip_until_directive(self, directives)
 		local depth = 1
 		local start_pos = self:GetPosition()
@@ -673,14 +598,12 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 				if next_tk.type == "letter" then
 					local directive = next_tk:GetValueString()
 
-					-- Track nesting
 					if directive == "if" or directive == "ifdef" or directive == "ifndef" then
 						depth = depth + 1
 					elseif directive == "endif" then
 						depth = depth - 1
 
 						if depth == 0 then
-							-- Remove all tokens from start to here (not including the # and endif)
 							local end_pos = self:GetPosition()
 
 							for i = end_pos - 1, start_pos, -1 do
@@ -688,7 +611,6 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 							end
 
 							self:SetPosition(start_pos)
-							-- Now consume and remove the #endif directive
 							self:ExpectToken("#")
 							self:ExpectTokenType("letter")
 							local directive_end = self:GetPosition()
@@ -701,9 +623,7 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 							return "endif"
 						end
 					elseif depth == 1 then
-						-- Only respond to else/elif at our nesting level
 						if directive == "else" then
-							-- Remove all tokens from start to here (not including the # and else)
 							local end_pos = self:GetPosition()
 
 							for i = end_pos - 1, start_pos, -1 do
@@ -711,7 +631,6 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 							end
 
 							self:SetPosition(start_pos)
-							-- Consume and remove the #else directive
 							self:ExpectToken("#")
 							self:ExpectTokenType("letter")
 							local directive_end = self:GetPosition()
@@ -723,7 +642,6 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 							self:SetPosition(start_pos)
 							return "else"
 						elseif directive == "elif" then
-							-- Remove all tokens from start to here (not including the # and elif)
 							local end_pos = self:GetPosition()
 
 							for i = end_pos - 1, start_pos, -1 do
@@ -731,7 +649,6 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 							end
 
 							self:SetPosition(start_pos)
-							-- Don't consume elif - let ReadElif handle it
 							return "elif"
 						end
 					end
@@ -817,11 +734,9 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 		local state = self.conditional_stack[#self.conditional_stack]
 		self:RemoveDirectiveTokens()
 
-		-- If we already had a true branch, skip this elif
 		if state.had_true then
 			skip_until_directive(self, {"else", "elif", "endif"})
 		else
-			-- Evaluate the elif condition
 			local condition = self:EvaluateCondition(tokens)
 			state.active = condition
 			state.had_true = condition
@@ -856,11 +771,9 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 		local state = self.conditional_stack[#self.conditional_stack]
 		self:RemoveDirectiveTokens()
 
-		-- If we already had a true branch, skip the else
 		if state.had_true then
 			skip_until_directive(self, {"endif"})
 		else
-			-- This else branch should be active
 			state.active = true
 			state.had_true = true
 		end
@@ -880,14 +793,13 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 		self:PushPosition()
 		self:ExpectToken("#")
 		self:ExpectTokenValue("endif")
-		-- Remove the last conditional state, but be careful with nested else
 		table.remove(self.conditional_stack)
 		self:RemoveDirectiveTokens()
 		return true
 	end
 end
 
-do -- #include directive
+do -- #include
 	local fs = require("nattlua.other.fs")
 
 	local function resolve_include_path(self, filename, is_system_include)
@@ -895,18 +807,13 @@ do -- #include directive
 
 		if not opts then return nil, "No preprocessor options available" end
 
-		-- Prevent infinite recursion
 		if self.include_depth >= opts.max_include_depth then
 			return nil, "Maximum include depth exceeded"
 		end
 
-		-- Note: We don't check included_files here anymore
-		-- Include guards (#ifndef) inside the header files themselves
-		-- will prevent duplicate content, which is the proper C way
 		local search_paths = {}
 
 		if is_system_include then
-			-- System includes: search system paths first
 			for _, path in ipairs(opts.system_include_paths) do
 				table.insert(search_paths, path)
 			end
@@ -915,7 +822,6 @@ do -- #include directive
 				table.insert(search_paths, path)
 			end
 		else
-			-- Local includes: search working directory first
 			table.insert(search_paths, opts.working_directory)
 
 			for _, path in ipairs(opts.include_paths) do
@@ -927,7 +833,6 @@ do -- #include directive
 			end
 		end
 
-		-- Try to find the file
 		for _, base_path in ipairs(search_paths) do
 			local full_path = base_path .. "/" .. filename
 			local content, err = fs.read(full_path)
@@ -935,7 +840,6 @@ do -- #include directive
 			if content then return content, full_path end
 		end
 
-		-- Try absolute path
 		if filename:sub(1, 1) == "/" then
 			local content, err = fs.read(filename)
 
@@ -982,7 +886,6 @@ do -- #include directive
 		self:PushPosition()
 		local hashtag = self:ExpectToken("#")
 		local directive = self:ExpectTokenValue("pragma")
-		-- Capture and ignore the pragma content (implementation-specific)
 		self:CaptureTokens()
 		self:RemoveDirectiveTokens()
 		return true
@@ -993,25 +896,18 @@ do -- #include directive
 			return false
 		end
 
-		-- Remember the starting position to remove the #include directive tokens
 		local start_pos = self:GetPosition()
 		local hashtag = self:ExpectToken("#")
 		local directive = self:ExpectTokenValue("include")
-		-- Parse the filename
 		local filename
 		local is_system_include = false
 
-		-- Check if we have a proper string token (luajit lexer)
-		-- IsToken checks sub_type, so we need to check token type instead
 		if self:IsTokenType("string") then
-			-- #include "file.h" (as a single string token)
 			local str_token = self:ExpectTokenType("string")
 			local str_val = str_token:GetValueString()
-			-- Remove surrounding quotes
 			filename = str_val:sub(2, -2)
 			is_system_include = false
 		elseif self:IsToken("\"") then
-			-- #include "file.h" (tokenized as separate symbols)
 			self:ExpectToken("\"")
 			local parts = {}
 
@@ -1030,7 +926,6 @@ do -- #include directive
 			filename = table.concat(parts)
 			is_system_include = false
 		elseif self:IsToken("<") then
-			-- #include <file.h>
 			self:ExpectToken("<")
 			local parts = {}
 
@@ -1052,22 +947,17 @@ do -- #include directive
 			error("Invalid #include directive: expected string or <filename>")
 		end
 
-		-- Resolve and read the include file
 		local content, full_path = resolve_include_path(self, filename, is_system_include)
 
 		if not content then
-			-- For now, just skip the include if file not found
-			-- In production, you might want to error or warn
 			print("Warning: " .. (full_path or filename))
 			return true
 		end
 
-		-- Callback for tracking includes
 		if self.config.on_include then
 			self.config.on_include(filename, full_path)
 		end
 
-		-- Preprocess the included file recursively
 		local Code = require("nattlua.code").New
 		local Lexer = require("nattlua.lexer.lexer").New
 
@@ -1082,26 +972,19 @@ do -- #include directive
 		local code_obj = Code(content, full_path)
 		local tokens = lex(code_obj)
 		local include_parser = META.New(tokens, code_obj)
-		-- Inherit context from parent parser
 		include_parser.defines = self.defines
-		-- Create a copy of options with updated working directory
 		local include_opts = {}
 
 		for k, v in pairs(self.config) do
 			include_opts[k] = v
 		end
 
-		-- Set working directory to the directory of the included file
-		-- so relative includes from that file work correctly
 		include_opts.working_directory = full_path:match("(.*/)") or self.config.working_directory
 		include_parser.config = include_opts
 		include_parser.include_depth = self.include_depth + 1
-		-- Process the included file
 		include_parser:Parse()
-		-- Get the processed tokens
 		local processed_tokens = include_parser.tokens
 
-		-- Remove EOF token from included tokens
 		if
 			processed_tokens[#processed_tokens] and
 			processed_tokens[#processed_tokens].type == "end_of_file"
@@ -1109,25 +992,19 @@ do -- #include directive
 			table.remove(processed_tokens)
 		end
 
-		-- Remove the #include directive tokens and insert the included content
 		local end_pos = self:GetPosition()
 
-		-- Remove all tokens from the #include directive (from start_pos to end_pos - 1)
 		for i = end_pos - 1, start_pos, -1 do
 			self:RemoveToken(i)
 		end
 
-		-- Set position back to where the #include was
 		self:SetPosition(start_pos)
-		-- Insert the processed tokens from the included file
 		self:AddTokens(processed_tokens)
-		-- Update defines from included file (they persist)
 		self.defines = include_parser.defines
 		return true
 	end
 end
 
--- Helper to transfer whitespace from original token to replacement tokens
 local function transfer_token_whitespace(original_token, tokens, strip_newlines)
 	if not tokens[1] then return end
 
@@ -1135,7 +1012,6 @@ local function transfer_token_whitespace(original_token, tokens, strip_newlines)
 		tokens[1].whitespace = original_token:GetWhitespace()
 		tokens[1].whitespace_start = original_token.whitespace_start
 
-		-- Optionally remove newlines from whitespace (for function-like macros)
 		if strip_newlines and tokens[1]:HasWhitespace() then
 			for _, v in ipairs(tokens[1]:GetWhitespace()) do
 				local str = v:GetValueString():gsub("\n", "")
@@ -1148,7 +1024,6 @@ local function transfer_token_whitespace(original_token, tokens, strip_newlines)
 	end
 end
 
--- Helper to mark tokens as expanded from a macro
 local function mark_tokens_expanded(tokens, start_pos, end_pos, def_identifier, original_token)
 	for i = start_pos, end_pos - 1 do
 		local token = tokens[i]
@@ -1157,7 +1032,6 @@ local function mark_tokens_expanded(tokens, start_pos, end_pos, def_identifier, 
 			token.expanded_from = token.expanded_from or {}
 			token.expanded_from[def_identifier] = true
 
-			-- Inherit expanded_from from the original token
 			if original_token.expanded_from then
 				for macro_name, _ in pairs(original_token.expanded_from) do
 					token.expanded_from[macro_name] = true
@@ -1167,7 +1041,6 @@ local function mark_tokens_expanded(tokens, start_pos, end_pos, def_identifier, 
 	end
 end
 
--- Helper to validate argument count
 local function validate_arg_count(def, args)
 	local has_var_arg = def.args[1] and def.args[#def.args]:ValueEquals("...")
 
@@ -1178,7 +1051,6 @@ local function validate_arg_count(def, args)
 	end
 end
 
--- Helper to define parameters as macros
 local function define_parameters(self, def, args)
 	for i, param in ipairs(def.args) do
 		if param:ValueEquals("...") then
@@ -1205,7 +1077,6 @@ local function define_parameters(self, def, args)
 	end
 end
 
--- Helper to undefine parameters
 local function undefine_parameters(self, def)
 	for _, param in ipairs(def.args) do
 		if param:ValueEquals("...") then
@@ -1218,7 +1089,6 @@ local function undefine_parameters(self, def)
 	end
 end
 
--- Extract __VA_OPT__ handling to reduce duplication
 function META:HandleVAOPT()
 	local start = self:GetPosition()
 	local va_opt_token = self:GetToken()
@@ -1229,7 +1099,6 @@ function META:HandleVAOPT()
 	local paren_depth = 0
 	local consumed_closing_paren = false
 
-	-- Capture content inside __VA_OPT__(content)
 	while true do
 		if paren_depth == 0 and self:IsToken(")") then break end
 
@@ -1239,7 +1108,6 @@ function META:HandleVAOPT()
 
 		local new_depth = update_paren_depth(tk, paren_depth)
 
-		-- Only add the ) if it's not the final closing paren
 		if tk:ValueEquals(")") and new_depth < 0 then
 			consumed_closing_paren = true
 
@@ -1253,16 +1121,12 @@ function META:HandleVAOPT()
 	if not consumed_closing_paren then self:ExpectToken(")") end
 
 	local stop = self:GetPosition()
-	-- Remove __VA_OPT__(content) from token stream
 	remove_token_range(self, start, stop - 1)
 	self:SetPosition(start)
 
-	-- Only add content if __VA_ARGS__ is non-empty
 	if is_va_args_non_empty(va) then
-		-- Copy before modifying whitespace
 		content_tokens = copy_tokens(content_tokens)
 
-		-- Transfer whitespace from __VA_OPT__ token to the first content token
 		if #content_tokens > 0 and va_opt_token:HasWhitespace() then
 			content_tokens[1].whitespace = va_opt_token:GetWhitespace()
 			content_tokens[1].whitespace_start = va_opt_token.whitespace_start
@@ -1279,13 +1143,12 @@ function META:ExpandMacroCall()
 
 	if not (def and self:IsTokenOffset("(", 1)) then return false end
 
-	if not def.args then return false end -- Only expand function-like macros
+	if not def.args then return false end
+
 	local current_tk = self:GetToken()
 
-	-- Prevent infinite recursion
 	if is_already_expanded(current_tk, def.identifier) then return false end
 
-	-- Special handling for __VA_OPT__
 	if def.identifier == "__VA_OPT__" and self:IsTokenOffset("(", 1) then
 		return self:HandleVAOPT()
 	end
@@ -1293,10 +1156,8 @@ function META:ExpandMacroCall()
 	if current_tk.type == "end_of_file" then return false end
 
 	local tk = current_tk:Copy()
-	-- Must copy the macro body tokens before modification
 	local tokens = copy_tokens(def.tokens)
-	transfer_token_whitespace(tk, tokens, true) -- Strip newlines for function-like macros
-	-- Replace macro call with macro body
+	transfer_token_whitespace(tk, tokens, true)
 	local start = self:GetPosition()
 	self:ExpectTokenType("letter")
 	local args = self:CaptureArgs(def)
@@ -1304,26 +1165,20 @@ function META:ExpandMacroCall()
 	remove_token_range(self, start, stop - 1)
 	self:SetPosition(start)
 	self:AddTokens(tokens)
-	-- Validate and bind arguments
 	validate_arg_count(def, args)
 	define_parameters(self, def, args)
-	-- Expand the macro body with parameters substituted
 	self:Parse()
-	-- Mark expanded tokens to prevent re-expansion
 	mark_tokens_expanded(self.tokens, start, self:GetPosition(), def.identifier, tk)
-	-- Clean up parameter definitions
 	undefine_parameters(self, def)
 	return true
 end
 
--- Helper to get token from definition or create empty token
 local function get_token_from_definition(self, def, fallback_token)
 	if not def then return fallback_token end
 
 	if def.tokens[1] then
 		return def.tokens[1]
 	elseif #def.tokens == 0 then
-		-- Empty parameter - treat as empty string
 		return self:NewToken("symbol", "")
 	end
 
@@ -1340,11 +1195,9 @@ function META:ExpandMacroConcatenation()
 	if tk_left.type == "end_of_file" then return false end
 
 	local pos = self:GetPosition()
-	-- Expand left operand if it's a parameter/macro
 	local def_left = self:GetDefinition(nil, 0)
 	tk_left = get_token_from_definition(self, def_left, tk_left)
 	self:Advance(3)
-	-- Expand right operand if it's a parameter/macro
 	local tk_right = self:GetToken()
 
 	if tk_right.type == "end_of_file" then return false end
@@ -1352,11 +1205,8 @@ function META:ExpandMacroConcatenation()
 	local def_right = self:GetDefinition(nil, 0)
 	tk_right = get_token_from_definition(self, def_right, tk_right)
 	self:SetPosition(pos)
-
-	-- Determine the token type for the concatenated result
-	-- If left is a string literal, keep it as string type
-	-- Otherwise, default to letter (identifier) type
 	local result_type = "letter"
+
 	if tk_left.type == "string" then
 		result_type = "string"
 	elseif tk_right.type == "string" then
@@ -1366,14 +1216,10 @@ function META:ExpandMacroConcatenation()
 	local concatenated_token = self:NewToken(result_type, tk_left:GetValueString() .. tk_right:GetValueString())
 	self:AddTokens({concatenated_token})
 
-	-- Remove the original tokens (left, ##, ##, right)
 	for i = 1, 4 do
 		self:RemoveToken(self:GetPosition() + 1)
 	end
 
-	-- Rescan: check if the concatenated token is a macro and expand it
-	-- But first, we need to continue concatenating if there are more ## operators
-	-- So we stay at the current position and let the next iteration handle it
 	return true
 end
 
@@ -1384,62 +1230,38 @@ function META:ExpandMacroString()
 
 	if not def then return false end
 
-	-- Check if this stringification is followed by ## (concatenation)
-	-- Pattern: # <param> ## <something>
-	-- In this case, we need to stringify and then concatenate
 	local followed_by_concat = self:IsTokenOffset("#", 2) and self:IsTokenOffset("#", 3)
-
 	local original_tokens = {}
 
 	for i, v in pairs(def.tokens) do
-		-- Strategy: always use parent if available, which gives us the unexpanded form
-		-- The key insight: capture_single_argument always sets parent to the pre-Parse token
-		-- For XSTR(VALUE)->STR(42): parent is the 'x' parameter token before it was expanded to 42
-		-- For STR(VALUE): parent is the 'VALUE' token before it was expanded to 42
-		-- But we want to stringify the immediate argument, not parameter names!
-		-- So: if parent is a parameter token (from an outer macro body), use v instead
 		local parent_token = v.parent or v
 
-		-- Check if the unexpanded_form is a parameter (scoped definition) vs a macro
-		-- If it's a scoped definition (parameter), we should stringify the expanded value
-		-- If it's a regular macro, we should stringify the unexpanded form
 		if v.unexpanded_form and v.unexpanded_form.type == "letter" then
 			local unexpanded_name = v.unexpanded_form:GetValueString()
 
-			-- Check if this is a scoped parameter definition
 			if self.define_stack[unexpanded_name] then
-				-- It's a parameter from an outer macro, use the expanded value
 				original_tokens[i] = v
 			else
-				-- It's a regular macro name, use the unexpanded form
 				original_tokens[i] = v.unexpanded_form
 			end
 		else
-			-- Normal case: stringify the parent (original argument form)
 			original_tokens[i] = parent_token
 		end
 	end
 
 	self:RemoveToken(self:GetPosition())
 	local str = self:ToString(original_tokens)
-	-- Normalize whitespace: trim and collapse multiple spaces
 	str = str:gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
 	local tk = self:NewToken("string", "\"" .. str .. "\"")
 	self:RemoveToken(self:GetPosition())
 	self:AddTokens({tk})
 
-	-- If followed by ##, don't advance - stay positioned at the string token
-	-- so that ExpandMacroConcatenation can process the pattern: <string> # # <right>
-	if followed_by_concat then
-		-- Don't advance past the parameter; let concatenation handle the rest
-		return true
-	end
+	if followed_by_concat then return true end
 
 	self:Advance(#def.tokens)
 	return true
 end
 
--- Helper to handle empty macro expansion
 local function handle_empty_macro(self, current_token)
 	if current_token.type == "end_of_file" then return false end
 
@@ -1447,7 +1269,6 @@ local function handle_empty_macro(self, current_token)
 	local ws = has_ws and current_token:GetWhitespace() or nil
 	self:RemoveToken(self:GetPosition())
 
-	-- Preserve whitespace with empty token if needed
 	if has_ws then
 		local empty_ws_token = self:NewToken("symbol", "")
 		empty_ws_token.whitespace = ws
@@ -1458,13 +1279,11 @@ local function handle_empty_macro(self, current_token)
 	return true
 end
 
--- Helper to mark tokens and inherit expansion history
 local function mark_and_inherit_expansion(tokens, def_identifier, current_token)
 	for _, token in ipairs(tokens) do
 		token.expanded_from = token.expanded_from or {}
 		token.expanded_from[def_identifier] = true
 
-		-- Inherit expansion history to prevent re-expansion
 		if current_token.expanded_from then
 			for macro_name, _ in pairs(current_token.expanded_from) do
 				token.expanded_from[macro_name] = true
@@ -1478,7 +1297,6 @@ function META:ExpandMacro()
 
 	if tk.type == "end_of_file" then return false end
 
-	-- Special handling for __VA_OPT__
 	local next_tk = self:GetTokenOffset(1)
 
 	if
@@ -1490,7 +1308,6 @@ function META:ExpandMacro()
 		return self:HandleVAOPT()
 	end
 
-	-- Special handling for __LINE__, __FILE__, and __COUNTER__
 	if tk.type == "letter" and tk:ValueEquals("__LINE__") then
 		local line_token = self:NewToken("number", tostring(self.current_line))
 		transfer_token_whitespace(tk:Copy(), {line_token}, false)
@@ -1521,26 +1338,18 @@ function META:ExpandMacro()
 
 	if not def then return false end
 
-	-- Function-like macros are handled by ExpandMacroCall()
 	if def.args then return false end
 
 	local current_token = self:GetToken()
 
 	if current_token.type == "end_of_file" then return false end
 
-	-- Prevent infinite recursion
 	if is_already_expanded(current_token, def.identifier) then return false end
 
-	-- Handle empty macro definitions
 	if #def.tokens == 0 then return handle_empty_macro(self, current_token) end
 
-	-- Expand macro
-	-- IMPORTANT: We MUST copy tokens because:
-	-- 1. Macros can be expanded multiple times
-	-- 2. We modify tokens (whitespace, expanded_from) during expansion
-	-- 3. Without copying, these modifications would corrupt the stored definition
 	local tokens = copy_tokens(def.tokens)
-	transfer_token_whitespace(current_token:Copy(), tokens, false) -- Don't strip newlines for object-like macros
+	transfer_token_whitespace(current_token:Copy(), tokens, false)
 	mark_and_inherit_expansion(tokens, def.identifier, current_token)
 	self:RemoveToken(self:GetPosition())
 	self:AddTokens(tokens)
@@ -1554,14 +1363,12 @@ function META:ToString(tokens, skip_whitespace)
 	for i, tk in ipairs(tokens) do
 		local value = tk:GetValueString()
 
-		-- For empty tokens, output their whitespace but not the value
 		if value == "" then
 			if not skip_whitespace and tk:HasWhitespace() then
 				for _, whitespace in ipairs(tk:GetWhitespace()) do
 					output:put(whitespace:GetValueString())
 				end
 			end
-		-- Don't output the empty value itself
 		else
 			if not skip_whitespace then
 				if tk:HasWhitespace() then
@@ -1572,7 +1379,6 @@ function META:ToString(tokens, skip_whitespace)
 					local prev = tokens[i - 1]
 
 					if prev then
-						-- Only add space between non-empty tokens of same type
 						if not prev:ValueEquals("") and tk.type ~= "symbol" and tk.type == prev.type then
 							output:put(" ")
 						end
@@ -1593,7 +1399,6 @@ function META:NextToken()
 		self:Advance(1)
 		local tk = self:GetToken()
 
-		-- Update line counter when we see newlines in whitespace
 		if prev_tk:HasWhitespace() then
 			for _, ws in ipairs(prev_tk:GetWhitespace()) do
 				local ws_str = ws:GetValueString()

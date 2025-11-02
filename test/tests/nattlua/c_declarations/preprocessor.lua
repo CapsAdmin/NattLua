@@ -246,7 +246,6 @@ end
 
 do -- self-referential macros (should not expand infinitely)
 	test("#define FOO FOO \n >FOO<", "FOO")
-	-- Test removed: BAR BAR(1) - even GCC doesn't handle this correctly
 	test("#define X X+1 \n >X<", "X+1")
 	test("#define INDIRECT INDIRECT \n >INDIRECT<", "INDIRECT")
 end
@@ -263,9 +262,10 @@ end
 do -- stringification edge cases
 	test("#define STR(x) #x \n >STR()<", "\"\"")
 	test("#define STR(x) #x \n >STR(   )<", "\"\"")
--- Test commented out: requires tracking unexpanded tokens through multiple expansion levels
--- test("#define STR(x) #x \n #define XSTR(x) STR(x) \n #define NUM 42 \n >XSTR(NUM)<", "\"42\"")
--- Test removed: STR(a,b,c) - even GCC doesn't stringify multiple args without special syntax
+	test(
+		"#define STR(x) #x \n #define XSTR(x) STR(x) \n #define NUM 42 \n >XSTR(NUM)<",
+		"\"42\""
+	)
 end
 
 do -- complex variadic patterns
@@ -319,17 +319,12 @@ do -- multiple levels of indirection
 end
 
 do -- #include directive
-	-- Create a temporary header file for testing
 	local tmp_header = "/tmp/nattlua_test_include.h"
 	local f = io.open(tmp_header, "w")
 	f:write("#ifndef TEST_H\n#define TEST_H\n#define INCLUDED_VALUE 42\n#endif\n")
 	f:close()
-	-- Test basic include with quotes
 	local code_with_include = string.format("#include \"%s\"\n>INCLUDED_VALUE<", tmp_header)
 	test(code_with_include, "42")
-	-- Test include with angle brackets (will treat as system include)
-	-- Note: This will search in system paths, so we skip if not found
-	-- Cleanup
 	os.remove(tmp_header)
 end
 
@@ -431,7 +426,6 @@ do -- #error directive
 end
 
 do -- #warning directive (warnings should not stop preprocessing)
-	-- Note: warnings print to stdout but don't throw errors
 	local old = print
 	local called = false
 	print = function()
@@ -443,7 +437,6 @@ do -- #warning directive (warnings should not stop preprocessing)
 end
 
 do -- __DATE__ and __TIME__ macros
-	-- These are dynamic, so we just test they expand to quoted strings
 	local result = preprocess(">__DATE__<")
 	assert(
 		result:match(">\".-\"<"),
@@ -454,7 +447,6 @@ do -- __DATE__ and __TIME__ macros
 		result:match(">\".-\"<"),
 		"Expected __TIME__ to expand to a quoted string, got: " .. result
 	)
-	-- Test that DATE and TIME expand in macro definitions
 	local date_value = preprocess("__DATE__")
 	local result2 = preprocess("#define BUILD_DATE __DATE__\n>BUILD_DATE<")
 	assert(result2:match("\""), "Expected BUILD_DATE to expand to a date string")
@@ -466,13 +458,11 @@ do -- __LINE__ and __FILE__ macros
 	test("\n>__LINE__<", "2")
 	test("\n\n>__LINE__<", "3")
 	test("#define X __LINE__\n>X<", "2") -- __LINE__ expands at use time, line 2
-	-- __FILE__ expands to the current filename
 	local result = preprocess(">__FILE__<")
 	assert(
 		result:match(">\".-\"<"),
 		"Expected __FILE__ to expand to a quoted string, got: " .. result
 	)
-	-- Should contain "cpreprocessor" (the default filename from preprocessor.lua)
 	assert(
 		result:match("cpreprocessor"),
 		"Expected __FILE__ to contain 'cpreprocessor', got: " .. result
@@ -516,8 +506,6 @@ do -- __COUNTER__ macro
 end
 
 do -- indirect stringification (XSTR pattern)
-	-- Indirect stringification requires sophisticated argument expansion rules
-	-- that distinguish between # and ## operands
 	test(
 		"#define STR(x) #x\n#define XSTR(x) STR(x)\n#define VALUE 42\n>XSTR(VALUE)<",
 		"\"42\""
@@ -541,7 +529,6 @@ end
 do -- complex bitwise expressions
 	test("#if ((1 << 8) - 1) == 255\n>x=1<\n#endif", "x=1")
 	test("#if (0xFF00 >> 8) == 0xFF\n>x=1<\n#endif", "x=1")
-	-- Function-like macros in #if now work!
 	test("#define BIT(n) (1 << (n))\n#if BIT(3) == 8\n>x=1<\n#endif", "x=1")
 	test(
 		"#define FLAGS (0x01 | 0x04 | 0x10)\n#if (FLAGS & 0x04) != 0\n>x=1<\n#endif",
@@ -550,14 +537,11 @@ do -- complex bitwise expressions
 end
 
 do -- edge cases for concatenation with rescan
-	-- Multiple concatenations forming a macro
 	test("#define ABC 777\n#define CONCAT3(a,b,c) a##b##c\n>CONCAT3(A,B,C)<", "777")
-	-- Concatenation creating a number (should not expand as macro)
 	test("#define JOIN(a,b) a##b\n>JOIN(12,34)<", "1234")
 end
 
 do -- edge cases for __COUNTER__
-	-- Counter should persist across macro expansions
 	result = preprocess([[
 #define NEXT __COUNTER__
 #define ARRAY_SIZE NEXT
@@ -567,7 +551,6 @@ do -- edge cases for __COUNTER__
 end
 
 do -- combined features: bitwise + macros + conditionals
-	-- Simple test with object-like macros (nested expansion is complex)
 	test([[
 #define ALL_FLAGS 7
 #if ALL_FLAGS == 7
@@ -587,32 +570,21 @@ do -- combined features: bitwise + macros + conditionals
 end
 
 do -- function-like macros in #if conditions
-	-- Basic function-like macro expansion
-	test("#define GET_VALUE(x) x\n#define VALUE 5\n#if GET_VALUE(VALUE) > 3\n>x=1<\n#endif", "x=1")
+	test(
+		"#define GET_VALUE(x) x\n#define VALUE 5\n#if GET_VALUE(VALUE) > 3\n>x=1<\n#endif",
+		"x=1"
+	)
 	test("#define ADD(a,b) a+b\n#if ADD(2,3) == 5\n>x=1<\n#endif", "x=1")
 	test("#define MUL(a,b) (a*b)\n#if MUL(2,3) == 6\n>x=1<\n#endif", "x=1")
-
-	-- Nested function-like macros
 	test(
 		"#define INNER(x) (x*2)\n#define OUTER(y) INNER(y)\n#if OUTER(5) == 10\n>x=1<\n#endif",
 		"x=1"
 	)
-
-	-- Function-like macros with arithmetic
 	test("#define MAX(a,b) ((a)>(b)?(a):(b))\n#if MAX(5,3) > 0\n>x=1<\n#endif", "x=1")
-
-	-- Combining function-like and object-like macros
 	test(
 		"#define VALUE 10\n#define DOUBLE(x) (x*2)\n#if DOUBLE(VALUE) == 20\n>x=1<\n#endif",
 		"x=1"
 	)
-
-	-- Note: Function-like macros that produce 'defined' are undefined behavior per C standard
-	-- C11 6.10.1: "The defined operator shall not appear as a result of a macro expansion"
-	-- Therefore, these are intentionally not supported:
-	-- test("#define HAS_FEATURE(x) defined(x)\n#define FEATURE_A 1\n#if HAS_FEATURE(FEATURE_A)\n>x=1<\n#endif", "x=1")
-
-	-- Complex expressions with multiple function-like macros
 	test(
 		"#define A(x) (x+1)\n#define B(x) (x*2)\n#if A(5) + B(3) == 12\n>x=1<\n#endif",
 		"x=1"
@@ -624,16 +596,11 @@ do -- defined() operator behavior
 	test("#define FOO 1\n#if defined(FOO)\n>x=1<\n#endif", "x=1")
 	test("#if defined(UNDEFINED)\n>x=1<\n#else\n>x=2<\n#endif", "x=2")
 	test("#define BAR 1\n#if defined BAR\n>x=1<\n#endif", "x=1")
-
 	-- defined() should NOT expand its argument
 	test("#define ALIAS REAL\n#define REAL 1\n#if defined(ALIAS)\n>x=1<\n#endif", "x=1")
 	test("#define ALIAS REAL\n#if defined(REAL)\n>x=1<\n#else\n>x=2<\n#endif", "x=2")
-
 	-- defined() in complex expressions
-	test(
-		"#define A 1\n#define B 2\n#if defined(A) && defined(B)\n>x=1<\n#endif",
-		"x=1"
-	)
+	test("#define A 1\n#define B 2\n#if defined(A) && defined(B)\n>x=1<\n#endif", "x=1")
 	test("#if defined(X) || defined(Y)\n>x=1<\n#else\n>x=2<\n#endif", "x=2")
 	test("#define X 1\n#if !defined(Y) && defined(X)\n>x=1<\n#endif", "x=1")
 end
