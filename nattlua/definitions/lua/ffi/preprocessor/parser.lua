@@ -2,6 +2,7 @@
 	run_lua("test/tests/nattlua/c_declarations/preprocessor.lua")
 ]]
 local META = require("nattlua.parser.base")()
+local buffer = require("string.buffer")
 
 -- Deep copy tokens to prevent shared state corruption
 -- This is CRITICAL because:
@@ -1379,7 +1380,7 @@ end
 
 function META:ToString(tokens, skip_whitespace)
 	tokens = tokens or self.tokens
-	local output = ""
+	local output = buffer.new()
 
 	for i, tk in ipairs(tokens) do
 		local value = tk:GetValueString()
@@ -1388,7 +1389,7 @@ function META:ToString(tokens, skip_whitespace)
 		if value == "" then
 			if not skip_whitespace and tk:HasWhitespace() then
 				for _, whitespace in ipairs(tk:GetWhitespace()) do
-					output = output .. whitespace:GetValueString()
+					output:put(whitespace:GetValueString())
 				end
 			end
 		-- Don't output the empty value itself
@@ -1396,7 +1397,7 @@ function META:ToString(tokens, skip_whitespace)
 			if not skip_whitespace then
 				if tk:HasWhitespace() then
 					for _, whitespace in ipairs(tk:GetWhitespace()) do
-						output = output .. whitespace:GetValueString()
+						output:put(whitespace:GetValueString())
 					end
 				else
 					local prev = tokens[i - 1]
@@ -1404,17 +1405,17 @@ function META:ToString(tokens, skip_whitespace)
 					if prev then
 						-- Only add space between non-empty tokens of same type
 						if not prev:ValueEquals("") and tk.type ~= "symbol" and tk.type == prev.type then
-							output = output .. " "
+							output:put(" ")
 						end
 					end
 				end
 			end
 
-			output = output .. tostring(value)
+			output:put(tostring(value))
 		end
 	end
 
-	return output
+	return tostring(output)
 end
 
 function META:NextToken()
