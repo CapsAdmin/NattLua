@@ -78,42 +78,6 @@ local function gen(parser, ...)
 	return new
 end
 
-local function fixup_tokens(tokens)
-	local keywords = {
-		["struct"] = true,
-		["typeof"] = true,
-		["double"] = true,
-		["float"] = true,
-		["int8_t"] = true,
-		["uint8_t"] = true,
-		["int16_t"] = true,
-		["uint16_t"] = true,
-		["int32_t"] = true,
-		["uint32_t"] = true,
-		["char"] = true,
-		["signed"] = true,
-		["unsigned"] = true,
-		["short"] = true,
-		["int"] = true,
-		["long"] = true,
-		["float"] = true,
-		["double"] = true,
-		["size_t"] = true,
-		["intptr_t"] = true,
-		["uintptr_t"] = true,
-		["uint64_t"] = true,
-		["int64_t"] = true,
-		["void"] = true,
-		["const"] = true,
-		["typedef"] = true,
-		["union"] = true,
-	}
-
-	for _, token in ipairs(tokens) do
-		if keywords[token:GetValueString()] then token.c_keyword = true end
-	end
-end
-
 local function TCType(obj)
 	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
@@ -198,7 +162,6 @@ local function analyze(c_code, mode, ...)
 	local code = Code(c_code, "test.c")
 	local lex = Lexer(code)
 	local tokens = lex:GetTokens()
-	fixup_tokens(tokens)
 	c_code_string_obj.c_tokens = tokens
 	local parser = Parser(tokens, code)
 	parser.OnError = function(parser, code, msg, start, stop, ...)

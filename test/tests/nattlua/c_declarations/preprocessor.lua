@@ -326,6 +326,18 @@ do -- #include directive
 	local code_with_include = string.format("#include \"%s\"\n>INCLUDED_VALUE<", tmp_header)
 	test(code_with_include, "42")
 	os.remove(tmp_header)
+
+	do
+		local res = preprocess("#include \"non_existent_file.h\"\nsome other code")
+		assert(
+			res:find("some other code"),
+			"Expected preprocessing to continue after failed #include"
+		)
+		assert(
+			not res:find("non_existent_file"),
+			"Expected non-existent include to be skipped"
+		)
+	end
 end
 
 do -- conditional compilation

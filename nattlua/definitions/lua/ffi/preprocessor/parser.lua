@@ -72,29 +72,6 @@ function META.New(tokens, code, config)
 	return self
 end
 
-function META:PushPosition()
-	table.insert(self.position_stack, self:GetPosition())
-end
-
-function META:PopPosition()
-	local start_pos = table.remove(self.position_stack)
-
-	if not start_pos then error("Position stack underflow") end
-
-	return start_pos
-end
-
-function META:RemoveDirectiveTokens()
-	local start_pos = self:PopPosition()
-	local end_pos = self:GetPosition()
-
-	for i = end_pos - 1, start_pos, -1 do
-		self:RemoveToken(i)
-	end
-
-	self:SetPosition(start_pos)
-end
-
 function META:IsWhitespace(str, offset)
 	local tk = self:GetTokenOffset(offset or 0)
 
@@ -352,7 +329,6 @@ function META:ReadDefine()
 		return false
 	end
 
-	self:PushPosition()
 	local hashtag = self:ExpectToken("#")
 	local directive = self:ExpectTokenValue("define")
 	local identifier = self:ExpectTokenType("letter")
@@ -363,7 +339,6 @@ function META:ReadDefine()
 	end
 
 	self:Define(identifier:GetValueString(), args, self:CaptureTokens())
-	self:RemoveDirectiveTokens()
 	return true
 end
 
@@ -372,12 +347,10 @@ function META:ReadUndefine()
 		return false
 	end
 
-	self:PushPosition()
 	local hashtag = self:ExpectToken("#")
 	local directive = self:ExpectTokenValue("undef")
 	local identifier = self:ExpectTokenType("letter")
 	self:Undefine(identifier:GetValueString())
-	self:RemoveDirectiveTokens()
 	return true
 end
 
@@ -666,13 +639,11 @@ do
 			return false
 		end
 
-		self:PushPosition()
 		self:ExpectToken("#")
 		self:ExpectTokenValue("ifdef")
 		local identifier = self:ExpectTokenType("letter")
 		local is_defined = self:GetDefinition(identifier:GetValueString()) ~= nil
 		table.insert(self.conditional_stack, {active = is_defined, had_true = is_defined})
-		self:RemoveDirectiveTokens()
 
 		if not is_defined then
 			skip_until_directive(self, {"else", "elif", "endif"})
@@ -686,14 +657,12 @@ do
 			return false
 		end
 
-		self:PushPosition()
 		self:ExpectToken("#")
 		self:ExpectTokenValue("ifndef")
 		local identifier = self:ExpectTokenType("letter")
 		local is_defined = self:GetDefinition(identifier:GetValueString()) ~= nil
 		local is_active = not is_defined
 		table.insert(self.conditional_stack, {active = is_active, had_true = is_active})
-		self:RemoveDirectiveTokens()
 
 		if is_defined then skip_until_directive(self, {"else", "elif", "endif"}) end
 
@@ -705,13 +674,11 @@ do
 			return false
 		end
 
-		self:PushPosition()
 		self:ExpectToken("#")
 		self:ExpectToken("if")
 		local tokens = self:CaptureTokens()
 		local condition = self:EvaluateCondition(tokens)
 		table.insert(self.conditional_stack, {active = condition, had_true = condition})
-		self:RemoveDirectiveTokens()
 
 		if not condition then
 			skip_until_directive(self, {"else", "elif", "endif"})
@@ -727,12 +694,10 @@ do
 
 		if #self.conditional_stack == 0 then error("#elif without matching #if") end
 
-		self:PushPosition()
 		self:ExpectToken("#")
 		self:ExpectTokenValue("elif")
 		local tokens = self:CaptureTokens()
 		local state = self.conditional_stack[#self.conditional_stack]
-		self:RemoveDirectiveTokens()
 
 		if state.had_true then
 			skip_until_directive(self, {"else", "elif", "endif"})
@@ -765,11 +730,9 @@ do
 			)
 		end
 
-		self:PushPosition()
 		self:ExpectToken("#")
 		self:ExpectToken("else")
 		local state = self.conditional_stack[#self.conditional_stack]
-		self:RemoveDirectiveTokens()
 
 		if state.had_true then
 			skip_until_directive(self, {"endif"})
@@ -790,11 +753,9 @@ do
 			error("#endif without matching #if")
 		end
 
-		self:PushPosition()
 		self:ExpectToken("#")
 		self:ExpectTokenValue("endif")
 		table.remove(self.conditional_stack)
-		self:RemoveDirectiveTokens()
 		return true
 	end
 end
@@ -854,12 +815,10 @@ do -- #include
 			return false
 		end
 
-		self:PushPosition()
 		local hashtag = self:ExpectToken("#")
 		local directive = self:ExpectTokenValue("error")
 		local message_tokens = self:CaptureTokens()
 		local message = self:ToString(message_tokens, false):gsub("^%s+", ""):gsub("%s+$", "")
-		self:RemoveDirectiveTokens()
 		error("#error: " .. message)
 	end
 
@@ -868,12 +827,10 @@ do -- #include
 			return false
 		end
 
-		self:PushPosition()
 		local hashtag = self:ExpectToken("#")
 		local directive = self:ExpectTokenValue("warning")
 		local message_tokens = self:CaptureTokens()
 		local message = self:ToString(message_tokens, false):gsub("^%s+", ""):gsub("%s+$", "")
-		self:RemoveDirectiveTokens()
 		print("#warning: " .. message)
 		return true
 	end
@@ -883,11 +840,61 @@ do -- #include
 			return false
 		end
 
-		self:PushPosition()
 		local hashtag = self:ExpectToken("#")
 		local directive = self:ExpectTokenValue("pragma")
 		self:CaptureTokens()
-		self:RemoveDirectiveTokens()
+		return true
+	end
+
+	function META:ReadLine()
+		if not (self:IsToken("#") and self:IsTokenValueOffset("line", 1)) then
+			return false
+		end
+
+		local hashtag = self:ExpectToken("#")
+		local directive = self:ExpectTokenValue("line")
+		local tokens = self:CaptureTokens()
+
+		-- Expand macros in the line directive
+		if #tokens > 0 then
+			local Code = require("nattlua.code").New
+			table.insert(tokens, self:NewToken("end_of_file", ""))
+			local temp_parser = META.New(tokens, self.Code, self.config)
+			temp_parser.defines = self.defines
+			temp_parser.define_stack = self.define_stack
+			temp_parser:SetPosition(1)
+
+			while temp_parser:GetPosition() <= #temp_parser.tokens do
+				local tk = temp_parser:GetToken()
+
+				if tk.type == "end_of_file" then break end
+
+				if not (temp_parser:ExpandMacroCall() or temp_parser:ExpandMacro()) then
+					temp_parser:Advance(1)
+				end
+			end
+
+			table.remove(temp_parser.tokens)
+			tokens = temp_parser.tokens
+		end
+
+		-- Parse line number and optional filename
+		if #tokens > 0 and tokens[1].type == "number" then
+			local line_num = tonumber(tokens[1]:GetValueString())
+
+			if line_num then
+				self.current_line = line_num - 1 -- Will be incremented on next newline
+			end
+
+			-- Check for optional filename
+			if #tokens > 1 and tokens[2].type == "string" then
+				local filename = tokens[2]:GetValueString()
+				-- Remove quotes
+				filename = filename:sub(2, -2)
+				self.line_filename = filename
+			end
+		end
+
 		return true
 	end
 
@@ -896,13 +903,73 @@ do -- #include
 			return false
 		end
 
-		local start_pos = self:GetPosition()
 		local hashtag = self:ExpectToken("#")
 		local directive = self:ExpectTokenValue("include")
 		local filename
 		local is_system_include = false
+		-- First, check if we need to expand macros (computed include)
+		local needs_expansion = false
+		local tk = self:GetToken()
 
-		if self:IsTokenType("string") then
+		if tk.type == "letter" then
+			-- Check if this is a macro that needs expansion
+			local def = self:GetDefinition(tk:GetValueString())
+
+			if def then needs_expansion = true end
+		end
+
+		if needs_expansion then
+			-- Capture tokens for macro expansion
+			local tokens = self:CaptureTokens()
+
+			-- Expand macros in the include directive
+			if #tokens > 0 then
+				local Code = require("nattlua.code").New
+				table.insert(tokens, self:NewToken("end_of_file", ""))
+				local temp_parser = META.New(tokens, self.Code, self.config)
+				temp_parser.defines = self.defines
+				temp_parser.define_stack = self.define_stack
+				temp_parser:SetPosition(1)
+
+				while temp_parser:GetPosition() <= #temp_parser.tokens do
+					local tk = temp_parser:GetToken()
+
+					if tk.type == "end_of_file" then break end
+
+					if not (temp_parser:ExpandMacroCall() or temp_parser:ExpandMacro()) then
+						temp_parser:Advance(1)
+					end
+				end
+
+				table.remove(temp_parser.tokens)
+				tokens = temp_parser.tokens
+
+				-- Now parse the expanded tokens
+				if #tokens > 0 then
+					if tokens[1].type == "string" then
+						local str_val = tokens[1]:GetValueString()
+						filename = str_val:sub(2, -2)
+						is_system_include = false
+					elseif tokens[1]:ValueEquals("<") then
+						-- Reconstruct from < ... >
+						local parts = {}
+
+						for i = 2, #tokens do
+							if tokens[i]:ValueEquals(">") then break end
+
+							table.insert(parts, tokens[i]:GetValueString())
+						end
+
+						filename = table.concat(parts)
+						is_system_include = true
+					else
+						error("Invalid #include directive after macro expansion")
+					end
+				else
+					error("Empty #include directive after macro expansion")
+				end
+			end
+		elseif self:IsTokenType("string") then
 			local str_token = self:ExpectTokenType("string")
 			local str_val = str_token:GetValueString()
 			filename = str_val:sub(2, -2)
@@ -951,26 +1018,15 @@ do -- #include
 
 		if not content then
 			print("Warning: " .. (full_path or filename))
-			return true
+			content = ""
 		end
 
 		if self.config.on_include then
 			self.config.on_include(filename, full_path)
 		end
 
-		local Code = require("nattlua.code").New
-		local Lexer = require("nattlua.lexer.lexer").New
-
-		local function lex(code_str)
-			local lexer = Lexer(code_str)
-			lexer.ReadShebang = function()
-				return false
-			end
-			return lexer:GetTokens()
-		end
-
 		local code_obj = Code(content, full_path)
-		local tokens = lex(code_obj)
+		local tokens = Lexer(code_obj):GetTokens()
 		local include_parser = META.New(tokens, code_obj)
 		include_parser.defines = self.defines
 		local include_opts = {}
@@ -983,23 +1039,7 @@ do -- #include
 		include_parser.config = include_opts
 		include_parser.include_depth = self.include_depth + 1
 		include_parser:Parse()
-		local processed_tokens = include_parser.tokens
-
-		if
-			processed_tokens[#processed_tokens] and
-			processed_tokens[#processed_tokens].type == "end_of_file"
-		then
-			table.remove(processed_tokens)
-		end
-
-		local end_pos = self:GetPosition()
-
-		for i = end_pos - 1, start_pos, -1 do
-			self:RemoveToken(i)
-		end
-
-		self:SetPosition(start_pos)
-		self:AddTokens(processed_tokens)
+		self:AddTokens(include_parser.tokens)
 		self.defines = include_parser.defines
 		return true
 	end
@@ -1317,7 +1357,7 @@ function META:ExpandMacro()
 	end
 
 	if tk.type == "letter" and tk:ValueEquals("__FILE__") then
-		local filename = (self.Code and self.Code:GetName()) or "unknown"
+		local filename = self.line_filename or (self.Code and self.Code:GetName()) or "unknown"
 		local file_token = self:NewToken("string", "\"" .. filename .. "\"")
 		transfer_token_whitespace(tk:Copy(), {file_token}, false)
 		self:RemoveToken(self:GetPosition())
@@ -1419,22 +1459,36 @@ function META:NextToken()
 	return false
 end
 
+function META:ReadDirective()
+	local start_pos = self:GetPosition()
+	local ok = self:ReadDefine() or
+		self:ReadUndefine() or
+		self:ReadIfdef() or
+		self:ReadIfndef() or
+		self:ReadIf() or
+		self:ReadElif() or
+		self:ReadElse() or
+		self:ReadEndif() or
+		self:ReadError() or
+		self:ReadWarning() or
+		self:ReadPragma() or
+		self:ReadLine() or
+		self:ReadInclude()
+	local end_pos = self:GetPosition()
+
+	for i = end_pos - 1, start_pos, -1 do
+		self:RemoveToken(i)
+	end
+
+	self:SetPosition(start_pos)
+	return ok
+end
+
 function META:Parse()
 	while true do
 		if
 			not (
-				self:ReadDefine() or
-				self:ReadUndefine() or
-				self:ReadIfdef() or
-				self:ReadIfndef() or
-				self:ReadIf() or
-				self:ReadElif() or
-				self:ReadElse() or
-				self:ReadEndif() or
-				self:ReadError() or
-				self:ReadWarning() or
-				self:ReadPragma() or
-				self:ReadInclude() or
+				self:ReadDirective() or
 				self:ExpandMacroCall() or
 				self:ExpandMacroConcatenation() or
 				self:ExpandMacroString() or

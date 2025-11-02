@@ -9,8 +9,42 @@ local table = _G.table
 local ipairs = _G.ipairs
 local old_new = META.New
 
-function META.New(...)
-	local self = old_new(...)
+function META.New(tokens, code)
+	local keywords = {
+		["struct"] = true,
+		["typeof"] = true,
+		["double"] = true,
+		["float"] = true,
+		["int8_t"] = true,
+		["uint8_t"] = true,
+		["int16_t"] = true,
+		["uint16_t"] = true,
+		["int32_t"] = true,
+		["uint32_t"] = true,
+		["char"] = true,
+		["signed"] = true,
+		["unsigned"] = true,
+		["short"] = true,
+		["int"] = true,
+		["long"] = true,
+		["float"] = true,
+		["double"] = true,
+		["size_t"] = true,
+		["intptr_t"] = true,
+		["uintptr_t"] = true,
+		["uint64_t"] = true,
+		["int64_t"] = true,
+		["void"] = true,
+		["const"] = true,
+		["typedef"] = true,
+		["union"] = true,
+	}
+
+	for _, token in ipairs(tokens) do
+		if keywords[token:GetValueString()] then token.c_keyword = true end
+	end
+
+	local self = old_new(tokens, code)
 	self.FFI_DECLARATION_PARSER = true
 	return self
 end
