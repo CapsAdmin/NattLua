@@ -34,7 +34,6 @@ return function()
 		value = any,
 		context_values = any,
 		FFI_DECLARATION_PARSER = boolean,
-		CDECL_PARSING_MODE = "typeof" | "ffinew" | false,
 		OnPreCreateNode = function=(self: any, node: any)>(),
 		OnError = function=(
 			self: any,
@@ -75,7 +74,6 @@ return function()
 				imported = false,
 				statement_count = false,
 				dollar_signs = false,
-				CDECL_PARSING_MODE = false,
 				value = false,
 				FFI_DECLARATION_PARSER = false,
 				OnPreCreateNode = META.OnPreCreateNode,

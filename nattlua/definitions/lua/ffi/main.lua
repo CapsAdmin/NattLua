@@ -167,7 +167,6 @@ local function analyze(c_code, mode, ...)
 	parser.OnError = function(parser, code, msg, start, stop, ...)
 		Compiler.OnDiagnostic({}, code, msg, "error", start, stop, nil, ...)
 	end
-	parser.CDECL_PARSING_MODE = mode
 	local ast = parser:ParseRootNode()
 	local emitter = Emitter({skip_translation = true})
 	local res = emitter:BuildCode(ast)
