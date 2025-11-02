@@ -38,7 +38,6 @@ function META.New(tokens, code, config)
 		-- Generate __DATE__ and __TIME__ at preprocessing time
 		local date_str = os.date("\"%b %d %Y\"")
 		local time_str = os.date("\"%H:%M:%S\"")
-
 		local standard_defines = {
 			__STDC__ = 1,
 			__STDC_VERSION__ = "201710L",
@@ -316,6 +315,14 @@ local function capture_single_argument(self, is_va_opt)
 		self:SetPosition(pos)
 		local tk = self:ConsumeToken()
 		paren_depth = update_paren_depth(tk, paren_depth)
+
+		-- Track both parent and whether this was expanded
+		-- If the token changed after Parse(), mark it with unexpanded_form
+		if tk ~= parent then
+			-- Token was expanded/modified during Parse()
+			tk.unexpanded_form = parent
+		end
+
 		tk.parent = parent
 		table.insert(tokens, tk)
 	end
@@ -543,7 +550,6 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 				if tk:ValueEquals("defined") then
 					table.insert(expanded_tokens, tk)
 					i = i + 1
-
 					-- Check if next token is '('
 					local has_paren = tokens[i] and tokens[i]:ValueEquals("(")
 
@@ -1347,7 +1353,32 @@ function META:ExpandMacroString()
 	local original_tokens = {}
 
 	for i, v in pairs(def.tokens) do
-		original_tokens[i] = v.parent or v
+		-- Strategy: always use parent if available, which gives us the unexpanded form
+		-- The key insight: capture_single_argument always sets parent to the pre-Parse token
+		-- For XSTR(VALUE)->STR(42): parent is the 'x' parameter token before it was expanded to 42
+		-- For STR(VALUE): parent is the 'VALUE' token before it was expanded to 42
+		-- But we want to stringify the immediate argument, not parameter names!
+		-- So: if parent is a parameter token (from an outer macro body), use v instead
+		local parent_token = v.parent or v
+
+		-- Check if the unexpanded_form is a parameter (scoped definition) vs a macro
+		-- If it's a scoped definition (parameter), we should stringify the expanded value
+		-- If it's a regular macro, we should stringify the unexpanded form
+		if v.unexpanded_form and v.unexpanded_form.type == "letter" then
+			local unexpanded_name = v.unexpanded_form:GetValueString()
+
+			-- Check if this is a scoped parameter definition
+			if self.define_stack[unexpanded_name] then
+				-- It's a parameter from an outer macro, use the expanded value
+				original_tokens[i] = v
+			else
+				-- It's a regular macro name, use the unexpanded form
+				original_tokens[i] = v.unexpanded_form
+			end
+		else
+			-- Normal case: stringify the parent (original argument form)
+			original_tokens[i] = parent_token
+		end
 	end
 
 	self:RemoveToken(self:GetPosition())
@@ -1519,6 +1550,7 @@ function META:NextToken()
 		if prev_tk:HasWhitespace() then
 			for _, ws in ipairs(prev_tk:GetWhitespace()) do
 				local ws_str = ws:GetValueString()
+
 				for i = 1, #ws_str do
 					if ws_str:sub(i, i) == "\n" then
 						self.current_line = self.current_line + 1

@@ -31,6 +31,7 @@ local assert = _G.assert
 	whitespace = false | List<|CurrentType<|"table", 1|>|>,
 	c_keyword = false | true,
 	is_token = true,
+	unexpanded_form = any, -- for c preprocessor macros
 }]]
 --[[#type META.Token = META.@Self]]
 
@@ -65,6 +66,8 @@ function META:Copy()
 	end
 
 	if self.parent then copy.parent = self.parent end
+
+	if self.unexpanded_form then copy.unexpanded_form = self.unexpanded_form end
 
 	if self.sub_type then copy.sub_type = self.sub_type end
 

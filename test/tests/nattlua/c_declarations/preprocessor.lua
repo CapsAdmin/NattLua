@@ -421,23 +421,37 @@ end
 
 do -- #error directive
 	test_error("#error This is an error message", "#error: This is an error message")
-	test_error("#define ERR 1\n#if ERR\n#error Compilation stopped\n#endif", "#error: Compilation stopped")
+	test_error(
+		"#define ERR 1\n#if ERR\n#error Compilation stopped\n#endif",
+		"#error: Compilation stopped"
+	)
 	test_error("#error", "#error: ")
 end
 
 do -- #warning directive (warnings should not stop preprocessing)
 	-- Note: warnings print to stdout but don't throw errors
+	local old = print
+	local called = false
+	print = function()
+		called = true
+	end -- suppress output
 	test("#warning This is a warning\n>x=1<", "x=1")
+	print = old
+	assert(called, "Expected warning to be printed")
 end
 
 do -- __DATE__ and __TIME__ macros
 	-- These are dynamic, so we just test they expand to quoted strings
 	local result = preprocess(">__DATE__<")
-	assert(result:match(">\".-\"<"), "Expected __DATE__ to expand to a quoted string, got: " .. result)
-
+	assert(
+		result:match(">\".-\"<"),
+		"Expected __DATE__ to expand to a quoted string, got: " .. result
+	)
 	result = preprocess(">__TIME__<")
-	assert(result:match(">\".-\"<"), "Expected __TIME__ to expand to a quoted string, got: " .. result)
-
+	assert(
+		result:match(">\".-\"<"),
+		"Expected __TIME__ to expand to a quoted string, got: " .. result
+	)
 	-- Test that DATE and TIME expand in macro definitions
 	local date_value = preprocess("__DATE__")
 	local result2 = preprocess("#define BUILD_DATE __DATE__\n>BUILD_DATE<")
@@ -450,13 +464,17 @@ do -- __LINE__ and __FILE__ macros
 	test("\n>__LINE__<", "2")
 	test("\n\n>__LINE__<", "3")
 	test("#define X __LINE__\n>X<", "2") -- __LINE__ expands at use time, line 2
-
 	-- __FILE__ expands to the current filename
 	local result = preprocess(">__FILE__<")
-	assert(result:match(">\".-\"<"), "Expected __FILE__ to expand to a quoted string, got: " .. result)
-
+	assert(
+		result:match(">\".-\"<"),
+		"Expected __FILE__ to expand to a quoted string, got: " .. result
+	)
 	-- Should contain "cpreprocessor" (the default filename from preprocessor.lua)
-	assert(result:match("cpreprocessor"), "Expected __FILE__ to contain 'cpreprocessor', got: " .. result)
+	assert(
+		result:match("cpreprocessor"),
+		"Expected __FILE__ to contain 'cpreprocessor', got: " .. result
+	)
 end
 
 do -- combined predefined macros
@@ -481,23 +499,35 @@ end
 do -- __COUNTER__ macro
 	local result = preprocess(">__COUNTER__ __COUNTER__ __COUNTER__<")
 	assert(result:match(">0 1 2<"), "Expected __COUNTER__ to increment, got: " .. result)
-
 	-- Test __COUNTER__ in macro definitions
 	result = preprocess("#define A __COUNTER__\n#define B __COUNTER__\n>A B<")
-	assert(result:match(">0 1<"), "Expected __COUNTER__ in defines to increment, got: " .. result)
-
+	assert(
+		result:match(">0 1<"),
+		"Expected __COUNTER__ in defines to increment, got: " .. result
+	)
 	-- Test __COUNTER__ expands each time it's used
 	result = preprocess("#define UNIQUE_ID __COUNTER__\n>UNIQUE_ID UNIQUE_ID UNIQUE_ID<")
-	assert(result:match(">0 1 2<"), "Expected UNIQUE_ID to expand __COUNTER__ each time, got: " .. result)
+	assert(
+		result:match(">0 1 2<"),
+		"Expected UNIQUE_ID to expand __COUNTER__ each time, got: " .. result
+	)
 end
 
 do -- indirect stringification (XSTR pattern)
-	-- Note: Indirect stringification is complex and requires argument expansion rules
-	-- that distinguish between # and ## operands. This is a known limitation.
-	-- Commented out for now:
-	-- test("#define STR(x) #x\n#define XSTR(x) STR(x)\n#define VALUE 42\n>XSTR(VALUE)<", "\"42\"")
-	-- test("#define STR(x) #x\n#define XSTR(x) STR(x)\n#define CONCAT(a,b) a##b\n>XSTR(CONCAT(12,34))<", "\"1234\"")
-	-- test("#define STR(x) #x\n#define XSTR(x) STR(x)\n#define PI 314\n>STR(PI) XSTR(PI)<", "\"PI\" \"314\"")
+	-- Indirect stringification requires sophisticated argument expansion rules
+	-- that distinguish between # and ## operands
+	test(
+		"#define STR(x) #x\n#define XSTR(x) STR(x)\n#define VALUE 42\n>XSTR(VALUE)<",
+		"\"42\""
+	)
+	test(
+		"#define STR(x) #x\n#define XSTR(x) STR(x)\n#define CONCAT(a,b) a##b\n>XSTR(CONCAT(12,34))<",
+		"\"1234\""
+	)
+	test(
+		"#define STR(x) #x\n#define XSTR(x) STR(x)\n#define PI 314\n>STR(PI) XSTR(PI)<",
+		"\"PI\" \"314\""
+	)
 end
 
 do -- token rescan after concatenation
@@ -511,13 +541,15 @@ do -- complex bitwise expressions
 	test("#if (0xFF00 >> 8) == 0xFF\n>x=1<\n#endif", "x=1")
 	-- Function-like macros in #if are complex, skip for now
 	-- test("#define BIT(n) (1 << (n))\n#if BIT(3) == 8\n>x=1<\n#endif", "x=1")
-	test("#define FLAGS (0x01 | 0x04 | 0x10)\n#if (FLAGS & 0x04) != 0\n>x=1<\n#endif", "x=1")
+	test(
+		"#define FLAGS (0x01 | 0x04 | 0x10)\n#if (FLAGS & 0x04) != 0\n>x=1<\n#endif",
+		"x=1"
+	)
 end
 
 do -- edge cases for concatenation with rescan
 	-- Multiple concatenations forming a macro
 	test("#define ABC 777\n#define CONCAT3(a,b,c) a##b##c\n>CONCAT3(A,B,C)<", "777")
-
 	-- Concatenation creating a number (should not expand as macro)
 	test("#define JOIN(a,b) a##b\n>JOIN(12,34)<", "1234")
 end
@@ -540,12 +572,14 @@ do -- combined features: bitwise + macros + conditionals
 >x=1<
 #endif
 ]], "x=1")
-
-	test([[
+	test(
+		[[
 #define MASK 0xF0
 #define SHIFT 4
 #if (MASK >> SHIFT) == 0x0F
 >x=1<
 #endif
-]], "x=1")
+]],
+		"x=1"
+	)
 end
