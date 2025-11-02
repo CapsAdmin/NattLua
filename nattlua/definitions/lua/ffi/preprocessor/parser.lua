@@ -34,6 +34,10 @@ function META.New(tokens, code, config)
 	config.system_include_paths = config.system_include_paths or {}
 
 	if config.add_standard_defines ~= false then
+		-- Generate __DATE__ and __TIME__ at preprocessing time
+		local date_str = os.date("\"%b %d %Y\"")
+		local time_str = os.date("\"%H:%M:%S\"")
+
 		local standard_defines = {
 			__STDC__ = 1,
 			__STDC_VERSION__ = "201710L",
@@ -41,6 +45,8 @@ function META.New(tokens, code, config)
 			__GNUC__ = 4,
 			__GNUC_MINOR__ = 2,
 			__GNUC_PATCHLEVEL__ = 1,
+			__DATE__ = date_str,
+			__TIME__ = time_str,
 		}
 
 		for name, value in pairs(standard_defines) do
@@ -54,6 +60,7 @@ function META.New(tokens, code, config)
 	self.conditional_stack = {} -- Track nested #if/#ifdef/#ifndef states
 	self.position_stack = {} -- Track positions for directive token removal
 	self.include_depth = 0 -- Track current include depth
+	self.current_line = 1 -- Track current line number for __LINE__ macro
 	-- Add predefined macros
 	for name, value in pairs(config.defines) do
 		if type(value) == "boolean" then
@@ -838,6 +845,49 @@ do -- #include directive
 		return nil, "Include file not found: " .. filename
 	end
 
+	function META:ReadError()
+		if not (self:IsToken("#") and self:IsTokenValueOffset("error", 1)) then
+			return false
+		end
+
+		self:PushPosition()
+		local hashtag = self:ExpectToken("#")
+		local directive = self:ExpectTokenValue("error")
+		local message_tokens = self:CaptureTokens()
+		local message = self:ToString(message_tokens, false):gsub("^%s+", ""):gsub("%s+$", "")
+		self:RemoveDirectiveTokens()
+		error("#error: " .. message)
+	end
+
+	function META:ReadWarning()
+		if not (self:IsToken("#") and self:IsTokenValueOffset("warning", 1)) then
+			return false
+		end
+
+		self:PushPosition()
+		local hashtag = self:ExpectToken("#")
+		local directive = self:ExpectTokenValue("warning")
+		local message_tokens = self:CaptureTokens()
+		local message = self:ToString(message_tokens, false):gsub("^%s+", ""):gsub("%s+$", "")
+		self:RemoveDirectiveTokens()
+		print("#warning: " .. message)
+		return true
+	end
+
+	function META:ReadPragma()
+		if not (self:IsToken("#") and self:IsTokenValueOffset("pragma", 1)) then
+			return false
+		end
+
+		self:PushPosition()
+		local hashtag = self:ExpectToken("#")
+		local directive = self:ExpectTokenValue("pragma")
+		-- Capture and ignore the pragma content (implementation-specific)
+		self:CaptureTokens()
+		self:RemoveDirectiveTokens()
+		return true
+	end
+
 	function META:ReadInclude()
 		if not (self:IsToken("#") and self:IsTokenValueOffset("include", 1)) then
 			return false
@@ -1292,6 +1342,24 @@ function META:ExpandMacro()
 		return self:HandleVAOPT()
 	end
 
+	-- Special handling for __LINE__ and __FILE__
+	if tk.type == "letter" and tk:ValueEquals("__LINE__") then
+		local line_token = self:NewToken("number", tostring(self.current_line))
+		transfer_token_whitespace(tk:Copy(), {line_token}, false)
+		self:RemoveToken(self:GetPosition())
+		self:AddTokens({line_token})
+		return true
+	end
+
+	if tk.type == "letter" and tk:ValueEquals("__FILE__") then
+		local filename = (self.Code and self.Code:GetName()) or "unknown"
+		local file_token = self:NewToken("string", "\"" .. filename .. "\"")
+		transfer_token_whitespace(tk:Copy(), {file_token}, false)
+		self:RemoveToken(self:GetPosition())
+		self:AddTokens({file_token})
+		return true
+	end
+
 	local def = self:GetDefinition(nil, 0)
 
 	if not def then return false end
@@ -1364,8 +1432,21 @@ end
 
 function META:NextToken()
 	if not self:GetDefinition(nil, 0) then
+		local prev_tk = self:GetToken()
 		self:Advance(1)
 		local tk = self:GetToken()
+
+		-- Update line counter when we see newlines in whitespace
+		if prev_tk:HasWhitespace() then
+			for _, ws in ipairs(prev_tk:GetWhitespace()) do
+				local ws_str = ws:GetValueString()
+				for i = 1, #ws_str do
+					if ws_str:sub(i, i) == "\n" then
+						self.current_line = self.current_line + 1
+					end
+				end
+			end
+		end
 
 		if tk.type == "end_of_file" then return false end
 
@@ -1387,6 +1468,9 @@ function META:Parse()
 				self:ReadElif() or
 				self:ReadElse() or
 				self:ReadEndif() or
+				self:ReadError() or
+				self:ReadWarning() or
+				self:ReadPragma() or
 				self:ReadInclude() or
 				self:ExpandMacroCall() or
 				self:ExpandMacroConcatenation() or

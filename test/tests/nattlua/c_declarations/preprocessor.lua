@@ -412,3 +412,55 @@ do -- conditional compilation
 	test("#if !(5 > 10)\n>x=1<\n#endif", "x=1")
 	test("#define A 5\n#define B 10\n#if A + B > 10\n>x=1<\n#endif", "x=1")
 end
+
+do -- #pragma directive
+	test("#pragma once\n>x=1<", "x=1")
+	test("#pragma pack(push, 1)\n>x=1<", "x=1")
+	test("#define X 42\n#pragma GCC diagnostic ignored \"-Wunused\"\n>X<", "42")
+end
+
+do -- #error directive
+	test_error("#error This is an error message", "#error: This is an error message")
+	test_error("#define ERR 1\n#if ERR\n#error Compilation stopped\n#endif", "#error: Compilation stopped")
+	test_error("#error", "#error: ")
+end
+
+do -- #warning directive (warnings should not stop preprocessing)
+	-- Note: warnings print to stdout but don't throw errors
+	test("#warning This is a warning\n>x=1<", "x=1")
+end
+
+do -- __DATE__ and __TIME__ macros
+	-- These are dynamic, so we just test they expand to quoted strings
+	local result = preprocess(">__DATE__<")
+	assert(result:match(">\".-\"<"), "Expected __DATE__ to expand to a quoted string, got: " .. result)
+
+	result = preprocess(">__TIME__<")
+	assert(result:match(">\".-\"<"), "Expected __TIME__ to expand to a quoted string, got: " .. result)
+
+	-- Test that DATE and TIME expand in macro definitions
+	local date_value = preprocess("__DATE__")
+	local result2 = preprocess("#define BUILD_DATE __DATE__\n>BUILD_DATE<")
+	assert(result2:match("\""), "Expected BUILD_DATE to expand to a date string")
+end
+
+do -- __LINE__ and __FILE__ macros
+	-- __LINE__ uses a simple counter that increments on newlines
+	test(">__LINE__<", "1")
+	test("\n>__LINE__<", "2")
+	test("\n\n>__LINE__<", "3")
+	test("#define X __LINE__\n>X<", "2") -- __LINE__ expands at use time, line 2
+
+	-- __FILE__ expands to the current filename
+	local result = preprocess(">__FILE__<")
+	assert(result:match(">\".-\"<"), "Expected __FILE__ to expand to a quoted string, got: " .. result)
+
+	-- Should contain "cpreprocessor" (the default filename from preprocessor.lua)
+	assert(result:match("cpreprocessor"), "Expected __FILE__ to contain 'cpreprocessor', got: " .. result)
+end
+
+do -- combined predefined macros
+	test(">__STDC__<", "1")
+	test("#if __STDC__\n>x=1<\n#endif", "x=1")
+	test("#if __GNUC__ >= 4\n>x=1<\n#endif", "x=1")
+end
