@@ -167,17 +167,33 @@ function walk_cdecl(state, node)
 	return node, cdecl, real_node
 end
 
+local function find_ident(node, real_node)
+	if
+		node.modifiers and
+		node.modifiers[#node.modifiers] and
+		type(node.modifiers[#node.modifiers]) == "string"
+	then
+		return node.modifiers[#node.modifiers]
+	end
+
+	if real_node.tokens["potential_identifier"] then
+		return real_node.tokens["potential_identifier"]:GetValueString()
+	end
+end
+
 local function walk_cdeclarations(node, callback)
 	local state = {}
 
 	for _, node in ipairs(node.statements) do
 		if node.Type == "expression_c_declaration" then
 			local node, cdecl, real_node = walk_cdecl(state, node)
-			callback(cdecl.of, real_node, false)
+			local ident = find_ident(cdecl.of, real_node)
+			callback(cdecl.of, ident, false)
 		elseif node.Type == "expression_typedef" then
 			for _, node in ipairs(node.decls) do
 				local node, cdecl, real_node = walk_cdecl(state, node)
-				callback(cdecl.of, real_node, true)
+				local ident = find_ident(cdecl.of, real_node)
+				callback(cdecl.of, ident, true)
 			end
 		end
 	end

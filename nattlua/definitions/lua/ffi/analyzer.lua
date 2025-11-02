@@ -237,36 +237,19 @@ function META:AnalyzeRoot(ast, vars, typs, process_type, mode)
 	self.type_table = typs or Table()
 	self.vars_table = vars or Table()
 
-	local function callback(node, real_node, typedef)
-		local ident = nil
-
-		if
-			node.modifiers and
-			node.modifiers[#node.modifiers] and
-			type(node.modifiers[#node.modifiers]) == "string"
-		then
-			ident = node.modifiers[#node.modifiers]
-		end
-
-		if not ident and real_node.tokens["potential_identifier"] then
-			ident = real_node.tokens["potential_identifier"]:GetValueString()
-		end
-
+	local function callback(node, ident, typedef)
 		if ident == "TYPEOF_CDECL" then self.super_hack = true -- TODO
 		end
 
 		local obj = cast(self, node)
+		local key = LString(ident)
 
-		if type(ident) == "string" then
-			local key = LString(ident)
-
-			if typedef then
-				obj = process_type(key, obj, true, mode)
-				self.type_table:Set(key, obj)
-			else
-				obj = process_type(key, obj, false, mode)
-				self.vars_table:Set(key, obj)
-			end
+		if typedef then
+			obj = process_type(key, obj, true, mode)
+			self.type_table:Set(key, obj)
+		else
+			obj = process_type(key, obj, false, mode)
+			self.vars_table:Set(key, obj)
 		end
 
 		if ident == "TYPEOF_CDECL" then

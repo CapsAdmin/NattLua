@@ -42,7 +42,9 @@ function META:EmitTypeDef(node)
 end
 
 function META:EmitCDeclaration(node)
-	if node.default_expression then self:Emit("/*") end
+	if self.config.comment_c_variables and node.default_expression then
+		self:Emit("/*")
+	end
 
 	if node.tokens["..."] then
 		self:EmitToken(node.tokens["..."])
@@ -131,7 +133,9 @@ function META:EmitCDeclaration(node)
 		end
 	end
 
-	if node.default_expression then self:Emit("*/") end
+	if self.config.comment_c_variables and node.default_expression then
+		self:Emit("*/")
+	end
 end
 
 function META:EmitDollarSign(node)

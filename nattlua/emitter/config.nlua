@@ -20,5 +20,6 @@ local type EmitterConfig = {
 	max_line_length = number,
 	comment_type_annotations_in_lua_files = boolean,
 	skip_comments = boolean,
+	comment_c_variables = boolean,
 }
 return Partial<|EmitterConfig|>
