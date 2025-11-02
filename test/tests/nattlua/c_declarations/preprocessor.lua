@@ -539,8 +539,8 @@ end
 do -- complex bitwise expressions
 	test("#if ((1 << 8) - 1) == 255\n>x=1<\n#endif", "x=1")
 	test("#if (0xFF00 >> 8) == 0xFF\n>x=1<\n#endif", "x=1")
-	-- Function-like macros in #if are complex, skip for now
-	-- test("#define BIT(n) (1 << (n))\n#if BIT(3) == 8\n>x=1<\n#endif", "x=1")
+	-- Function-like macros in #if now work!
+	test("#define BIT(n) (1 << (n))\n#if BIT(3) == 8\n>x=1<\n#endif", "x=1")
 	test(
 		"#define FLAGS (0x01 | 0x04 | 0x10)\n#if (FLAGS & 0x04) != 0\n>x=1<\n#endif",
 		"x=1"
@@ -582,4 +582,56 @@ do -- combined features: bitwise + macros + conditionals
 ]],
 		"x=1"
 	)
+end
+
+do -- function-like macros in #if conditions
+	-- Basic function-like macro expansion
+	test("#define GET_VALUE(x) x\n#define VALUE 5\n#if GET_VALUE(VALUE) > 3\n>x=1<\n#endif", "x=1")
+	test("#define ADD(a,b) a+b\n#if ADD(2,3) == 5\n>x=1<\n#endif", "x=1")
+	test("#define MUL(a,b) (a*b)\n#if MUL(2,3) == 6\n>x=1<\n#endif", "x=1")
+
+	-- Nested function-like macros
+	test(
+		"#define INNER(x) (x*2)\n#define OUTER(y) INNER(y)\n#if OUTER(5) == 10\n>x=1<\n#endif",
+		"x=1"
+	)
+
+	-- Function-like macros with arithmetic
+	test("#define MAX(a,b) ((a)>(b)?(a):(b))\n#if MAX(5,3) > 0\n>x=1<\n#endif", "x=1")
+
+	-- Combining function-like and object-like macros
+	test(
+		"#define VALUE 10\n#define DOUBLE(x) (x*2)\n#if DOUBLE(VALUE) == 20\n>x=1<\n#endif",
+		"x=1"
+	)
+
+	-- Note: Function-like macros that produce 'defined' are undefined behavior per C standard
+	-- C11 6.10.1: "The defined operator shall not appear as a result of a macro expansion"
+	-- Therefore, these are intentionally not supported:
+	-- test("#define HAS_FEATURE(x) defined(x)\n#define FEATURE_A 1\n#if HAS_FEATURE(FEATURE_A)\n>x=1<\n#endif", "x=1")
+
+	-- Complex expressions with multiple function-like macros
+	test(
+		"#define A(x) (x+1)\n#define B(x) (x*2)\n#if A(5) + B(3) == 12\n>x=1<\n#endif",
+		"x=1"
+	)
+end
+
+do -- defined() operator behavior
+	-- Basic defined() usage
+	test("#define FOO 1\n#if defined(FOO)\n>x=1<\n#endif", "x=1")
+	test("#if defined(UNDEFINED)\n>x=1<\n#else\n>x=2<\n#endif", "x=2")
+	test("#define BAR 1\n#if defined BAR\n>x=1<\n#endif", "x=1")
+
+	-- defined() should NOT expand its argument
+	test("#define ALIAS REAL\n#define REAL 1\n#if defined(ALIAS)\n>x=1<\n#endif", "x=1")
+	test("#define ALIAS REAL\n#if defined(REAL)\n>x=1<\n#else\n>x=2<\n#endif", "x=2")
+
+	-- defined() in complex expressions
+	test(
+		"#define A 1\n#define B 2\n#if defined(A) && defined(B)\n>x=1<\n#endif",
+		"x=1"
+	)
+	test("#if defined(X) || defined(Y)\n>x=1<\n#else\n>x=2<\n#endif", "x=2")
+	test("#define X 1\n#if !defined(Y) && defined(X)\n>x=1<\n#endif", "x=1")
 end

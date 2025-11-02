@@ -540,47 +540,70 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 			-- First, expand macros in the tokens (except for defined operator arguments)
 			-- We need to create a temporary parser instance to do this
 			local Code = require("nattlua.code").New
+
+			-- Create a temporary parser to expand all macros except 'defined' arguments
+			-- We'll add an EOF token and then remove it after expansion
+			local temp_tokens = copy_tokens(tokens)
+			table.insert(temp_tokens, self:NewToken("end_of_file", ""))
+
+			local temp_parser = META.New(temp_tokens, self.Code, self.config)
+			-- Inherit defines from current parser
+			temp_parser.defines = self.defines
+			temp_parser.define_stack = self.define_stack
+
+			-- Expand macros, but protect 'defined' operator arguments
+			-- Note: Per C standard, 'defined' shall not appear as a result of macro expansion.
+			-- We only protect 'defined' that appears literally in the #if condition.
 			local expanded_tokens = {}
 			local i = 1
+			temp_parser:SetPosition(1)
 
-			while i <= #tokens do
-				local tk = tokens[i]
+			while temp_parser:GetPosition() <= #temp_parser.tokens do
+				local tk = temp_parser:GetToken()
+
+				if tk.type == "end_of_file" then break end
 
 				-- Don't expand the argument to 'defined'
 				if tk:ValueEquals("defined") then
-					table.insert(expanded_tokens, tk)
-					i = i + 1
+					table.insert(expanded_tokens, tk:Copy())
+					temp_parser:Advance(1)
+
 					-- Check if next token is '('
-					local has_paren = tokens[i] and tokens[i]:ValueEquals("(")
+					local has_paren = temp_parser:IsToken("(")
 
 					if has_paren then
-						table.insert(expanded_tokens, tokens[i]) -- (
-						i = i + 1
+						table.insert(expanded_tokens, temp_parser:GetToken():Copy())
+						temp_parser:Advance(1)
 					end
 
-					if tokens[i] then
-						table.insert(expanded_tokens, tokens[i]) -- identifier
-						i = i + 1
+					if not temp_parser:IsToken("end_of_file") then
+						table.insert(expanded_tokens, temp_parser:GetToken():Copy())
+						temp_parser:Advance(1)
 					end
 
-					if has_paren and tokens[i] and tokens[i]:ValueEquals(")") then
-						table.insert(expanded_tokens, tokens[i]) -- )
-						i = i + 1
+					if has_paren and temp_parser:IsToken(")") then
+						table.insert(expanded_tokens, temp_parser:GetToken():Copy())
+						temp_parser:Advance(1)
 					end
 				else
-					-- Try to expand this token if it's a macro
-					local def = self:GetDefinition(tk:GetValueString())
+					-- Try to expand macros at current position
+					local start_pos = temp_parser:GetPosition()
+					local expanded = temp_parser:ExpandMacroCall() or temp_parser:ExpandMacro()
 
-					if def and not def.args and tk.type == "letter" then
-						-- Object-like macro - expand it
-						for _, expanded_tk in ipairs(def.tokens) do
-							table.insert(expanded_tokens, expanded_tk)
+					if expanded then
+						-- Macro was expanded, collect all tokens that were inserted
+						-- The position should have advanced
+						local end_pos = temp_parser:GetPosition()
+						for j = start_pos, end_pos - 1 do
+							local token = temp_parser.tokens[j]
+							if token and token.type ~= "end_of_file" then
+								table.insert(expanded_tokens, token:Copy())
+							end
 						end
-
-						i = i + 1
 					else
-						table.insert(expanded_tokens, tk)
-						i = i + 1
+						-- No expansion, just copy the token
+						table.insert(expanded_tokens, tk:Copy())
+						temp_parser:Advance(1)
 					end
 				end
 			end
