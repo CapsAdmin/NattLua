@@ -831,6 +831,8 @@ do -- conditional compilation (#if, #ifdef, #ifndef, #else, #elif, #endif)
 end
 
 do -- #include directive
+	local fs = require("nattlua.other.fs")
+
 	local function resolve_include_path(self, filename, is_system_include)
 		local opts = self.preprocess_options
 
@@ -871,24 +873,16 @@ do -- #include directive
 		-- Try to find the file
 		for _, base_path in ipairs(search_paths) do
 			local full_path = base_path .. "/" .. filename
-			local file = io.open(full_path, "r")
+			local content, err = fs.read(full_path)
 
-			if file then
-				local content = file:read("*all")
-				file:close()
-				return content, full_path
-			end
+			if content then return content, full_path end
 		end
 
 		-- Try absolute path
 		if filename:sub(1, 1) == "/" then
-			local file = io.open(filename, "r")
+			local content, err = fs.read(filename)
 
-			if file then
-				local content = file:read("*all")
-				file:close()
-				return content, filename
-			end
+			if content then return content, filename end
 		end
 
 		return nil, "Include file not found: " .. filename
