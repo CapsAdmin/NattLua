@@ -106,6 +106,8 @@ end
 do
 	function META:Define(identifier, args, tokens)
 		self.defines[identifier] = {args = args, tokens = copy_tokens(tokens), identifier = identifier}
+
+		if self.config.on_define then self.config.on_define(identifier, args, tokens) end
 	end
 
 	function META:Undefine(identifier)
@@ -1212,13 +1214,14 @@ function META:ExpandMacroCall()
 	validate_arg_count(def, args)
 	define_parameters(self, def, args)
 	self.macro_expansion_depth = self.macro_expansion_depth + 1
+
 	-- Parse only until we hit the end marker
 	while self:GetPosition() < macro_body_end + 1 do
 		local current_pos = self:GetPosition()
 		local tk_at_pos = self.tokens[current_pos]
-		if tk_at_pos and tk_at_pos.type == "end_of_macro_body" then
-			break
-		end
+
+		if tk_at_pos and tk_at_pos.type == "end_of_macro_body" then break end
+
 		if
 			not (
 				self:ReadDirective() or
@@ -1231,21 +1234,26 @@ function META:ExpandMacroCall()
 		then
 			break
 		end
+
 		-- Update macro_body_end in case tokens were added
 		for i = current_pos, #self.tokens do
 			if self.tokens[i] and self.tokens[i].type == "end_of_macro_body" then
 				macro_body_end = i
+
 				break
 			end
 		end
 	end
+
 	-- Remove the end marker
 	for i = 1, #self.tokens do
 		if self.tokens[i] and self.tokens[i].type == "end_of_macro_body" then
 			self:RemoveToken(i)
+
 			break
 		end
 	end
+
 	self.macro_expansion_depth = self.macro_expansion_depth - 1
 	mark_tokens_expanded(self.tokens, start, self:GetPosition(), def.identifier, tk)
 	undefine_parameters(self, def)

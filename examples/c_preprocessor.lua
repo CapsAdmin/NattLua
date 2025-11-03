@@ -1,537 +1,34 @@
 local preprocess = require("nattlua.definitions.lua.ffi.preprocessor.preprocessor")
-local Lexer = require("nattlua.lexer.lexer").New
-local Parser = require("nattlua.definitions.lua.ffi.parser").New
-local Code = require("nattlua.code").New
-local Compiler = require("nattlua.compiler")
-local Emitter = require("nattlua.definitions.lua.ffi.emitter").New
-local walk_cdeclarations = require("nattlua.definitions.lua.ffi.ast_walker")
-local buffer = require("string.buffer")
+local build_lua = require("nattlua.definitions.lua.ffi.binding_gen")
 
-local function build_lua(c_header)
-	local code = Code(c_header, "test.c")
-	local lex = Lexer(code)
-	local tokens = lex:GetTokens()
-	local parser = Parser(tokens, code)
-	parser.OnError = function(parser, code, msg, start, stop, ...)
-		Compiler.OnDiagnostic({}, code, msg, "error", start, stop, nil, ...)
-	end
-	local ast = parser:ParseRootNode()
-	local buf = buffer.new()
-	local typedefs = {}
-	local valid_qualifiers = {
-		["void"] = true,
-		["double"] = true,
-		["float"] = true,
-		["int8_t"] = true,
-		["uint8_t"] = true,
-		["int16__t"] = true,
-		["uint16_t"] = true,
-		["int32_t"] = true,
-		["uint32_t"] = true,
-		["char"] = true,
-		["signed char"] = true,
-		["unsigned char"] = true,
-		["short"] = true,
-		["short int"] = true,
-		["signed short"] = true,
-		["signed short int"] = true,
-		["unsigned short"] = true,
-		["unsigned short int"] = true,
-		["int"] = true,
-		["signed"] = true,
-		["signed int"] = true,
-		["unsigned"] = true,
-		["unsigned int"] = true,
-		["long"] = true,
-		["long int"] = true,
-		["signed long"] = true,
-		["signed long int"] = true,
-		["unsigned long"] = true,
-		["unsigned long int"] = true,
-		["float"] = true,
-		["double"] = true,
-		["long double"] = true,
-		["size_t"] = true,
-		["intptr_t"] = true,
-		["uintptr_t"] = true,
-		["int64_t"] = true,
-		["uint64_t"] = true,
-		["long long"] = true,
-		["long long int"] = true,
-		["signed long long"] = true,
-		["signed long long int"] = true,
-		["unsigned long long"] = true,
-		["unsigned long long int"] = true,
-		["const"] = true,
-		["volatile"] = true,
-		["restrict"] = true,
-	}
-	local typedefss = {}
-	-- Track function pointer typedefs
-	local function_ptr_typedefs = {}
+local function tostring_tokens(tokens)
+	local parts = {}
 
-	-- Helper to check if a type is a Vulkan/custom type that needs parameterization
-	local function is_custom_type(type_name)
-		return typedefss[type_name] or type_name:match("^Vk") or type_name:match("^PFN_")
+	for _, token in ipairs(tokens) do
+		parts[#parts + 1] = token:GetStringValue()
 	end
 
-	-- Track which struct/union types have been fully defined (not just forward declared)
-	local defined_structs = {}
-
-	-- Emit a type reference, either as-is or as $ with parameterization
-	-- skip_identifier: if true, don't emit the identifier part (for struct fields)
-	-- self_struct: name of the struct being defined (for self-referential structs)
-	local function emit_type_ref(decl, parameterized, skip_name, skip_identifier, self_struct)
-		if decl.type == "root" then
-			return emit_type_ref(decl.of, parameterized, skip_name, skip_identifier, self_struct)
-		end
-
-		if decl.type == "type" then
-			local buf = buffer.new()
-
-			for i, mod in ipairs(decl.modifiers) do
-				if type(mod) == "string" then
-					if skip_name and skip_name == mod then
-
-					-- Skip this modifier (it's the typedef name itself)
-					elseif
-						skip_identifier and
-						i == #decl.modifiers and
-						not valid_qualifiers[mod] and
-						not is_custom_type(mod)
-					then
-
-					-- Skip the last modifier if it's likely an identifier (not a type keyword)
-					-- This handles cases where the parser puts the identifier as the last modifier
-					elseif self_struct and mod == self_struct then
-						-- Self-referential struct: use struct tag name for forward reference
-						-- Don't parameterize it
-						buf:put("struct ", mod, " ")
-					elseif is_custom_type(mod) and parameterized then
-						buf:put("$ ")
-						table.insert(parameterized, mod)
-					elseif is_custom_type(mod) then
-						buf:put("$ ")
-					else
-						buf:put(mod, " ")
-					end
-				elseif type(mod) == "table" and (mod.type == "struct" or mod.type == "union") then
-					-- Handle anonymous or named struct/union in type position
-					-- If it's a self-reference, use the tag name directly
-					if self_struct and mod.identifier == self_struct then
-						buf:put(mod.type, " ", mod.identifier, " ")
-					else
-						buf:put(mod.type, " ")
-
-						if mod.identifier then buf:put(mod.identifier, " ") end
-					end
-				end
-			end
-
-			return tostring(buf)
-		elseif decl.type == "pointer" then
-			local buf = buffer.new()
-			-- Pass skip_identifier through for pointer types
-			local base = emit_type_ref(decl.of, parameterized, skip_name, skip_identifier, self_struct)
-			-- Trim trailing whitespace from base
-			base = base:gsub("%s+$", "")
-			buf:put(base)
-			buf:put("*")
-
-			for _, mod in ipairs(decl.modifiers or {}) do
-				if type(mod) == "string" then
-					-- Skip the typedef name if it matches
-					if skip_name and skip_name == mod then
-
-					-- Skip it
-					elseif skip_identifier and not valid_qualifiers[mod] then
-
-					-- Skip it (likely an identifier)
-					else
-						buf:put(" ", mod)
-					end
-				end
-			end
-
-			return tostring(buf)
-		elseif decl.type == "array" then
-			local base = emit_type_ref(decl.of, parameterized, skip_name, skip_identifier, self_struct)
-			base = base:gsub("%s+$", "")
-			local size_str = decl.size or ""
-			return base .. "[" .. size_str .. "]"
-		end
-
-		return ""
-	end
-
-	-- Emit a complete declaration
-	local function emit(decl, ident, is_typedef)
-		if decl.type == "root" then return emit(decl.of, ident, is_typedef) end
-
-		-- Handle function pointer typedefs (e.g., typedef void (*PFN_foo)(...))
-		if decl.type == "pointer" and decl.of and decl.of.type == "function" then
-			-- Function pointer typedef - use ffi.typeof
-			local buf = buffer.new()
-			local params = {}
-			local func = decl.of
-			buf:put("vk.", ident, " = ffi.typeof([[")
-			buf:put(emit_type_ref(func.rets, params, nil, true))
-			buf:put("(*)(")
-
-			for i, arg in ipairs(func.args) do
-				buf:put(emit_type_ref(arg, params, nil, true))
-
-				if arg.identifier then buf:put(" ", arg.identifier) end
-
-				if i < #func.args then buf:put(", ") end
-			end
-
-			buf:put(")]]")
-
-			for _, param in ipairs(params) do
-				buf:put(", vk.", param)
-			end
-
-			buf:put(")")
-			typedefss[ident] = true
-			function_ptr_typedefs[ident] = true
-			return tostring(buf)
-		end
-
-		-- Handle pointer/array typedefs (e.g., typedef struct Foo* VkBuffer)
-		if decl.type == "pointer" or decl.type == "array" then
-			-- Check if this is an opaque handle (struct without definition)
-			local is_opaque = false
-
-			if decl.type == "pointer" and decl.of and decl.of.type == "type" then
-				for _, mod in ipairs(decl.of.modifiers) do
-					if type(mod) == "table" and (mod.type == "struct" or mod.type == "union") then
-						-- Opaque handle: struct/union mentioned but not defined (no fields)
-						if not mod.fields then
-							is_opaque = true
-
-							break
-						end
-					end
-				end
-			end
-
-			local buf = buffer.new()
-			local params = {}
-			buf:put("vk.", ident, " = ffi.typeof([[")
-
-			if is_opaque then
-				-- Use void* for opaque handles
-				buf:put("void*")
-			else
-				buf:put(emit_type_ref(decl, params, ident))
-			end
-
-			buf:put("]]")
-
-			for _, param in ipairs(params) do
-				buf:put(", vk.", param)
-			end
-
-			buf:put(")")
-			typedefss[ident] = true
-			return tostring(buf)
-		end
-
-		if decl.type == "type" then
-			-- Check if this is a struct/union/enum definition
-			for _, v in ipairs(decl.modifiers) do
-				if type(v) == "table" then
-					if v.type == "enum" then
-						local buf = buffer.new()
-						buf:put("vk.", ident, " = ffi.typeof([[enum")
-
-						if v.fields then
-							buf:put(" {\n")
-
-							for i, field in ipairs(v.fields) do
-								buf:put("\t", field.identifier)
-
-								if field.value then buf:put(" = ", field.value) end
-
-								buf:put(",\n")
-							end
-
-							buf:put("}]])")
-						else
-							buf:put("]])")
-						end
-
-						typedefss[ident] = true
-						return tostring(buf)
-					elseif v.type == "struct" or v.type == "union" then
-						local buf = buffer.new()
-						local params = {}
-						local struct_name = ident or v.identifier
-						-- Mark this struct as being defined (not just declared)
-						typedefss[struct_name] = true
-						buf:put("vk.", struct_name, " = ffi.typeof([[", v.type)
-
-						if v.fields then
-							buf:put(" {\n")
-
-							for _, field in ipairs(v.fields) do
-								buf:put("\t")
-								-- Check if this field is self-referential
-								local is_self_ref = false
-
-								local function check_self_ref(decl)
-									if decl.type == "root" then
-										return check_self_ref(decl.of)
-									elseif decl.type == "pointer" or decl.type == "array" then
-										-- Only replace if it's a pointer to self
-										if decl.type == "pointer" then
-											return check_self_ref(decl.of)
-										end
-									elseif decl.type == "type" then
-										for _, mod in ipairs(decl.modifiers) do
-											if mod == struct_name then
-												return true
-											elseif type(mod) == "table" and mod.identifier == struct_name then
-												return true
-											end
-										end
-									end
-
-									return false
-								end
-
-								is_self_ref = check_self_ref(field)
-								-- Extract array dimensions if present
-								local array_dims = {}
-								local base_decl = field
-
-								while base_decl do
-									if base_decl.type == "root" then
-										base_decl = base_decl.of
-									elseif base_decl.type == "array" then
-										table.insert(array_dims, 1, base_decl.size or "")
-										base_decl = base_decl.of
-									else
-										break
-									end
-								end
-
-								local field_type
-
-								if is_self_ref then
-									-- Use void* for self-referential pointers
-									-- Navigate to the pointer declaration
-									local ptr_decl = field
-
-									if field.type == "root" then ptr_decl = field.of end
-
-									if ptr_decl.type == "pointer" then
-										-- Collect all const/volatile modifiers
-										local quals = {}
-
-										-- Check for const in the pointed-to type
-										if ptr_decl.of and ptr_decl.of.type == "type" then
-											for _, mod in ipairs(ptr_decl.of.modifiers or {}) do
-												if mod == "const" or mod == "volatile" then
-													table.insert(quals, mod)
-												end
-											end
-										end
-
-										-- Build the type string
-										if #quals > 0 then
-											field_type = table.concat(quals, " ") .. " void*"
-										else
-											field_type = "void*"
-										end
-									else
-										field_type = emit_type_ref(field, params, nil, true, struct_name)
-									end
-								else
-									-- Get base type without array dimensions
-									local base_type_decl = field
-
-									while base_type_decl.type == "root" or base_type_decl.type == "array" do
-										if base_type_decl.type == "root" then
-											base_type_decl = base_type_decl.of
-										elseif base_type_decl.type == "array" then
-											base_type_decl = base_type_decl.of
-										end
-									end
-
-									field_type = emit_type_ref(base_type_decl, params, nil, true, struct_name)
-								end
-
-								-- Trim whitespace
-								field_type = field_type:gsub("%s+$", "")
-								buf:put(field_type)
-
-								if field.identifier then buf:put(" ", field.identifier) end
-
-								-- Add array dimensions after identifier
-								for _, dim in ipairs(array_dims) do
-									buf:put("[", dim, "]")
-								end
-
-								buf:put(";\n")
-							end
-
-							buf:put("}]]")
-						else
-							buf:put("]]")
-						end
-
-						-- Add parameterized types
-						for _, param in ipairs(params) do
-							buf:put(", vk.", param)
-						end
-
-						buf:put(")")
-						return tostring(buf)
-					end
-				end
-			end
-
-			-- Simple typedef
-			local buf = buffer.new()
-			local params = {}
-			buf:put("vk.", ident, " = ffi.typeof([[")
-			buf:put(emit_type_ref(decl, params, ident))
-			buf:put("]]")
-
-			-- Add parameterized types
-			for _, param in ipairs(params) do
-				buf:put(", vk.", param)
-			end
-
-			buf:put(")")
-			typedefss[ident] = true
-			return tostring(buf)
-		elseif decl.type == "function" then
-			local buf = buffer.new()
-			local params = {}
-			buf:put("ffi.cdef([[")
-			buf:put(emit_type_ref(decl.rets, params, nil, true))
-			buf:put(" ", ident, "(")
-
-			for i, arg in ipairs(decl.args) do
-				buf:put(emit_type_ref(arg, params, nil, true))
-
-				if arg.identifier then buf:put(" ", arg.identifier) end
-
-				if i < #decl.args then buf:put(", ") end
-			end
-
-			buf:put(");]]")
-
-			-- Add parameterized types
-			for _, param in ipairs(params) do
-				buf:put(", vk.", param)
-			end
-
-			buf:put(")")
-			return tostring(buf)
-		end
-
-		error(
-			"Unhandled declaration type: " .. tostring(decl.type) .. " for identifier: " .. tostring(ident)
-		)
-	end
-
-	-- Initialize output buffer with header
-	buf:put("local ffi = require(\"ffi\")\n")
-	buf:put("local vk = {}\n\n")
-
-	-- Helper to get the statement node from real_node
-	local function get_statement_node(node)
-		-- Walk up the parent chain to find the statement (expression_c_declaration)
-		while node do
-			if node.Type == "expression_c_declaration" then return node end
-
-			node = node.parent
-		end
-
-		return nil
-	end
-
-	-- Single pass: emit all declarations in order
-	walk_cdeclarations(ast, function(decl, ident, is_typedef, real_node)
-		-- Handle non-typedef declarations
-		if not is_typedef then
-			-- Check if this is a static const variable (a constant)
-			if decl.type ~= "function" then
-				-- This is a variable - check if it has an initializer
-				local has_static = false
-				local has_const = false
-				-- Check modifiers in the declaration
-				local check_decl = decl
-
-				while check_decl do
-					if check_decl.type == "type" then
-						for _, mod in ipairs(check_decl.modifiers or {}) do
-							if mod == "static" then has_static = true end
-
-							if mod == "const" then has_const = true end
-						end
-
-						break
-					elseif check_decl.type == "root" then
-						check_decl = check_decl.of
-					else
-						break
-					end
-				end
-
-				-- Check if real_node has an expression (initializer)
-				if has_static and has_const then
-					-- Try to find the value in the statement node
-					local stmt = get_statement_node(real_node)
-					local value = nil
-
-					if stmt and stmt.default_expression then
-						local ok, result = pcall(function()
-							return stmt.default_expression:Render()
-						end)
-
-						if ok then value = result end
-					end
-
-					if value then
-						-- Clean up the value (remove ULL suffix for Lua, convert to proper format)
-						value = value:gsub("ULL$", "ULL") -- Keep ULL for now
-						buf:put("vk.", ident, " = ", value, "\n")
-						return
-					end
-				end
-
-				-- Skip non-function, non-constant variables
-				return
-			end
-		end
-
-		local result = emit(decl, ident, is_typedef)
-
-		if result and result ~= "" then buf:put(result, "\n") end
-	end)
-
-	-- Add return statement
-	buf:put("\nreturn vk\n")
-	return tostring(buf)
+	return table.concat(parts, " ")
 end
 
 local c_header = preprocess(
 	[[
 	typedef int VkSamplerYcbcrConversion;
 	typedef int VkDescriptorUpdateTemplate;
+	#define LOL 1
 
 	#include <vulkan/vulkan.h>
+
+
+	static const uint32_t VK_API_VERSION_1_0_ = VK_API_VERSION_1_0;
+
 	]],
 	{
 		working_directory = "/Users/caps/github/ffibuild/vulkan/repo/include",
 		system_include_paths = {"/Users/caps/github/ffibuild/vulkan/repo/include"},
 		defines = {__LP64__ = true},
-		on_include = function(filename, full_path) --print(string.format("Including: %s", filename))
+		on_define = function(name, args, tokens)
+			print(name, tostring_tokens(tokens))
 		end,
 	}
 )
@@ -541,19 +38,19 @@ f:write(res)
 f:close()
 local ffi = require("ffi")
 
-local function try_load(tbl)
-	local errors = {}
+local function load_vulkan()
+	local function try_load(tbl)
+		local errors = {}
 
-	for _, name in ipairs(tbl) do
-		local status, lib = pcall(ffi.load, name)
+		for _, name in ipairs(tbl) do
+			local status, lib = pcall(ffi.load, name)
 
-		if status then return lib else table.insert(errors, lib) end
+			if status then return lib else table.insert(errors, lib) end
+		end
+
+		return nil, table.concat(errors, "\n")
 	end
 
-	return nil, table.concat(errors, "\n")
-end
-
-local function load_library()
 	if ffi.os == "Windows" then
 		return assert(try_load({"vulkan-1.dll"}))
 	elseif ffi.os == "OSX" then
@@ -562,23 +59,22 @@ local function load_library()
 		local vulkan_sdk = os.getenv("VULKAN_SDK")
 		local paths = {}
 
-		-- Try VULKAN_SDK environment variable first
-		if vulkan_sdk then
-			table.insert(paths, vulkan_sdk .. "/lib/libvulkan.dylib")
-			table.insert(paths, vulkan_sdk .. "/lib/libMoltenVK.dylib")
-		end
-
-		-- Try common VulkanSDK installation paths
+		-- Try MoltenVK directly first (more reliable on macOS)
 		if home then
-			table.insert(paths, home .. "/VulkanSDK/1.4.328.1/macOS/lib/libvulkan.dylib")
 			table.insert(paths, home .. "/VulkanSDK/1.4.328.1/macOS/lib/libMoltenVK.dylib")
 		end
 
+		-- Try VULKAN_SDK environment variable
+		if vulkan_sdk then
+			table.insert(paths, vulkan_sdk .. "/lib/libMoltenVK.dylib")
+			table.insert(paths, vulkan_sdk .. "/lib/libvulkan.dylib")
+		end
+
 		-- Try standard locations
+		table.insert(paths, "libMoltenVK.dylib")
 		table.insert(paths, "libvulkan.dylib")
 		table.insert(paths, "libvulkan.1.dylib")
 		table.insert(paths, "/usr/local/lib/libvulkan.dylib")
-		table.insert(paths, "libMoltenVK.dylib")
 		return assert(try_load(paths))
 	end
 
@@ -586,23 +82,35 @@ local function load_library()
 end
 
 local vk = assert(loadstring(res, "@vulkan.lua"))()
-local lib = load_library()
-print(vk, lib)
+local lib = load_vulkan()
 -- Simple Vulkan example: Query physical device properties
 print("\n=== Vulkan Physical Device Query ===\n")
 -- Create a Vulkan instance
-local VkInstanceBox = ffi.typeof("$[1]", vk.VkInstance)
-local appInfo = VkInstanceBox()
+local VkApplicationInfoBox = ffi.typeof("$[1]", vk.VkApplicationInfo)
+local appInfo = VkApplicationInfoBox()
 appInfo[0].sType = 0 -- VK_STRUCTURE_TYPE_APPLICATION_INFO
 appInfo[0].pApplicationName = "NattLua Vulkan Test"
 appInfo[0].applicationVersion = 1
 appInfo[0].pEngineName = "No Engine"
 appInfo[0].engineVersion = 1
 appInfo[0].apiVersion = 0x00400000 -- VK_API_VERSION_1_0
+-- Create info struct - initialize with table to avoid const issues
 local VkInstanceCreateInfoBox = ffi.typeof("$[1]", vk.VkInstanceCreateInfo)
-local createInfo = VkInstanceCreateInfoBox()
-createInfo[0].sType = 1 -- VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO
-createInfo[0].pApplicationInfo = appInfo
+local createInfo = VkInstanceCreateInfoBox(
+	{
+		{
+			sType = "VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO",
+			pNext = nil,
+			flags = 0,
+			pApplicationInfo = appInfo,
+			enabledLayerCount = 0,
+			ppEnabledLayerNames = nil,
+			enabledExtensionCount = 0,
+			ppEnabledExtensionNames = nil,
+		},
+	}
+)
+local VkInstanceBox = ffi.typeof("$[1]", vk.VkInstance)
 local instance = VkInstanceBox()
 local result = lib.vkCreateInstance(createInfo, nil, instance)
 
@@ -623,7 +131,7 @@ end
 
 print(string.format("✓ Found %d physical device(s)", deviceCount[0]))
 local VkPhysicalDeviceArray = ffi.typeof("$[?]", vk.VkPhysicalDevice)
-local devices = ffi.new(VkPhysicalDeviceArray, deviceCount[0])
+local devices = VkPhysicalDeviceArray(deviceCount[0])
 result = lib.vkEnumeratePhysicalDevices(instance[0], deviceCount, devices)
 local VkPhysicalDevicePropertiesBox = ffi.typeof("$[1]", vk.VkPhysicalDeviceProperties)
 
@@ -646,19 +154,22 @@ for i = 0, deviceCount[0] - 1 do
 	print(string.format("  Driver Version: 0x%08X", driverVersion))
 	print(string.format("  Vendor ID: 0x%04X", vendorID))
 	print(string.format("  Device ID: 0x%04X", deviceID))
-	print(string.format("  Device Type: %d", properties[0].deviceType))
+	print(string.format("  Device Type: %d", tonumber(properties[0].deviceType)))
 	-- Print some limits
 	local limits = properties[0].limits
-	print(string.format("  Max Image Dimension 2D: %d", limits.maxImageDimension2D))
+	print(string.format("  Max Image Dimension 2D: %d", tonumber(limits.maxImageDimension2D)))
 	print(
-		string.format("  Max Compute Shared Memory Size: %d bytes", limits.maxComputeSharedMemorySize)
+		string.format(
+			"  Max Compute Shared Memory Size: %d bytes",
+			tonumber(limits.maxComputeSharedMemorySize)
+		)
 	)
 	print(
 		string.format(
 			"  Max Compute Work Group Count: [%d, %d, %d]",
-			limits.maxComputeWorkGroupCount[0],
-			limits.maxComputeWorkGroupCount[1],
-			limits.maxComputeWorkGroupCount[2]
+			tonumber(limits.maxComputeWorkGroupCount[0]),
+			tonumber(limits.maxComputeWorkGroupCount[1]),
+			tonumber(limits.maxComputeWorkGroupCount[2])
 		)
 	)
 end
