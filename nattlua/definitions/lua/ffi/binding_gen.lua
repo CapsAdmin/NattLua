@@ -447,8 +447,17 @@ local function build_lua(c_header, expanded_defines, extra_lua)
 
 	if expanded_defines then
 		buf:put("do -- Preprocessor Definitions\n")
+		local sorted = {}
 
-		for _, def in ipairs(expanded_defines) do
+		for k, v in pairs(expanded_defines) do
+			table.insert(sorted, {key = v.key, val = v.val})
+		end
+
+		table.sort(sorted, function(a, b)
+			return a.key < b.key
+		end)
+
+		for _, def in ipairs(sorted) do
 			buf:put("\tmod.", def.key, " = ", def.val, "\n")
 		end
 

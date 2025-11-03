@@ -4,6 +4,32 @@ local c_header, parser = preprocess(
 	[[
 	typedef int VkSamplerYcbcrConversion;
 	typedef int VkDescriptorUpdateTemplate;
+	typedef void* Display;
+	typedef void* VisualID;
+	typedef void* Window;
+
+	typedef void* IDirectFB;
+	typedef void* IDirectFBSurface;
+	typedef void* GgpStreamDescriptor;
+	typedef void* GgpFrameToken;
+	typedef void* _screen_context;
+	typedef void* SECURITY_ATTRIBUTES;
+
+
+	#define VK_USE_PLATFORM_MIR_KHR
+	#define VK_USE_PLATFORM_WAYLAND_KHR
+	//#define VK_USE_PLATFORM_WIN32_KHR
+	//#define VK_USE_PLATFORM_XCB_KHR
+	#define VK_USE_PLATFORM_XLIB_KHR
+	#define VK_USE_PLATFORM_DIRECTFB_EXT
+	#define VK_USE_PLATFORM_ANDROID_KHR
+	#define VK_USE_PLATFORM_MACOS_MVK
+	#define VK_USE_PLATFORM_IOS_MVK
+	#define VK_USE_PLATFORM_GGP
+	#define VK_USE_PLATFORM_METAL_EXT
+	#define VK_USE_PLATFORM_VI_NN
+	#define VK_USE_PLATFORM_SCREEN_QNX
+	//#define VK_USE_PLATFORM_FUCHSIA
 	#include <vulkan/vulkan.h>
 	]],
 	{
@@ -17,6 +43,23 @@ local res = build_lua(
 	c_header,
 	parser:GetExpandedDefinitions(),
 	[[
+
+	ffi.cdef[=[
+		struct ANativeWindow;
+		struct AHardwareBuffer;
+		struct wl_display;
+		struct wl_surface;
+	 	struct _screen_context;
+	 	struct _screen_window;
+	 	struct _screen_buffer;
+		typedef void* zx_handle_t;
+		typedef void* HINSTANCE;
+		typedef void* HWND;
+		typedef void* HANDLE;
+		typedef void* LPCWSTR;
+		typedef void* DWORD;
+		typedef void* xcb_window_t;
+	]=]
 
 	do
 		local cache = {}
@@ -52,6 +95,15 @@ local res = build_lua(
 
 			return nil
 		end
+	end
+
+	function mod.GetExtension(lib, instance, name)
+		local ptr = lib.vkGetInstanceProcAddr(instance, name)
+
+		if ptr == nil then error("extension function not found", 2) end
+
+		local func = ffi.cast(mod["PFN_" .. name], ptr)
+		return func
 	end
 
 	do
