@@ -443,12 +443,68 @@ local function build_lua(c_header)
 	buf:put("local ffi = require(\"ffi\")\n")
 	buf:put("local vk = {}\n\n")
 
+	-- Helper to get the statement node from real_node
+	local function get_statement_node(node)
+		-- Walk up the parent chain to find the statement (expression_c_declaration)
+		while node do
+			if node.Type == "expression_c_declaration" then
+				return node
+			end
+			node = node.parent
+		end
+		return nil
+	end
+
 	-- Single pass: emit all declarations in order
 	walk_cdeclarations(ast, function(decl, ident, is_typedef, real_node)
-		-- Skip non-typedef variable declarations (like extern variables, static constants, etc.)
+		-- Handle non-typedef declarations
 		if not is_typedef then
-			-- Only process function declarations (not variables)
-			if decl.type ~= "function" then return end
+			-- Check if this is a static const variable (a constant)
+			if decl.type ~= "function" then
+				-- This is a variable - check if it has an initializer
+				local has_static = false
+				local has_const = false
+
+				-- Check modifiers in the declaration
+				local check_decl = decl
+				while check_decl do
+					if check_decl.type == "type" then
+						for _, mod in ipairs(check_decl.modifiers or {}) do
+							if mod == "static" then has_static = true end
+							if mod == "const" then has_const = true end
+						end
+						break
+					elseif check_decl.type == "root" then
+						check_decl = check_decl.of
+					else
+						break
+					end
+				end
+
+				-- Check if real_node has an expression (initializer)
+				if has_static and has_const then
+					-- Try to find the value in the statement node
+					local stmt = get_statement_node(real_node)
+					local value = nil
+
+					if stmt and stmt.default_expression then
+						local ok, result = pcall(function() return stmt.default_expression:Render() end)
+						if ok then
+							value = result
+						end
+					end
+
+					if value then
+						-- Clean up the value (remove ULL suffix for Lua, convert to proper format)
+						value = value:gsub("ULL$", "ULL")  -- Keep ULL for now
+						buf:put("vk.", ident, " = ", value, "\n")
+						return
+					end
+				end
+
+				-- Skip non-function, non-constant variables
+				return
+			end
 		end
 
 		local result = emit(decl, ident, is_typedef)
@@ -480,5 +536,4 @@ local res = build_lua(c_header)
 local f = io.open("vulkan.lua", "w")
 f:write(res)
 f:close()
-local vk = assert(loadstring(res, "@vulkan.lua"))()
-table.print(vk)
+assert(loadstring(res, "@vulkan.lua"))()
