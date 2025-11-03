@@ -17,6 +17,69 @@ local res = build_lua(
 	c_header,
 	parser:GetExpandedDefinitions(),
 	[[
+
+	do
+		local cache = {}
+		function mod.EnumToString(enum_type, index)
+			if not index then
+				index = tonumber(enum_type)
+			end
+			local enum_id = tonumber(ffi.typeof(enum_type))
+
+			if cache[enum_id] ~= nil then return cache[enum_id] end
+			
+			local enum_ctype = ffi.typeinfo(enum_id)
+			local current_index = 0
+			local sib = enum_ctype.sib
+
+			while sib do
+				local sib_ctype = ffi.typeinfo(sib)
+				local CT_code = bit.rshift(sib_ctype.info, 28)
+
+				if CT_code == 11 then -- constant
+					if current_index == index then 
+						cache[enum_id] = sib_ctype.name 
+						return cache[enum_id] 
+					end
+
+					current_index = current_index + 1
+				end
+
+				sib = sib_ctype.sib
+			end
+
+			cache[enum_id] = false
+
+			return nil
+		end
+	end
+
+	do
+		local t_cache = {}
+
+		local function array_type(t, len)
+			if len then
+				t_cache[t] = t_cache[t] or ffi.typeof("$[" .. len .. "]", t)
+				return t_cache[t]
+			end
+
+			t_cache[t] = t_cache[t] or ffi.typeof("$[?]", t)
+			return t_cache[t]
+		end
+
+		function mod.Array(t, len, ctor)
+			if ctor then return array_type(t, len)(ctor) end
+
+			return array_type(t, len)
+		end
+
+		function mod.Box(t, ctor)
+			if ctor then return array_type(t, 1)({ctor}) end
+
+			return array_type(t, 1)
+		end
+	end
+
 	function mod.find_library()
 		local function try_load(tbl)
 			local errors = {}
@@ -64,101 +127,88 @@ local res = build_lua(
 local f = io.open("vulkan.lua", "w")
 f:write(res)
 f:close()
+local ffi = require("ffi")
 
 do
-	local ffi = require("ffi")
 	local vk = require("vulkan")
 	local lib = vk.find_library()
-	-- Simple Vulkan example: Query physical device properties
-	print("\n=== Vulkan Physical Device Query ===\n")
-	-- Create a Vulkan instance
-	local VkApplicationInfoBox = ffi.typeof("$[1]", vk.VkApplicationInfo)
-	local appInfo = VkApplicationInfoBox()
-	appInfo[0].sType = 0 -- VK_STRUCTURE_TYPE_APPLICATION_INFO
-	appInfo[0].pApplicationName = "NattLua Vulkan Test"
-	appInfo[0].applicationVersion = 1
-	appInfo[0].pEngineName = "No Engine"
-	appInfo[0].engineVersion = 1
-	appInfo[0].apiVersion = vk.VK_API_VERSION_1_0
-	-- Create info struct - initialize with table to avoid const issues
-	local VkInstanceCreateInfoBox = ffi.typeof("$[1]", vk.VkInstanceCreateInfo)
-	local createInfo = VkInstanceCreateInfoBox(
+	local appInfo = vk.Box(
+		vk.VkApplicationInfo,
 		{
-			{
-				sType = "VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO",
-				pNext = nil,
-				flags = 0,
-				pApplicationInfo = appInfo,
-				enabledLayerCount = 0,
-				ppEnabledLayerNames = nil,
-				enabledExtensionCount = 0,
-				ppEnabledExtensionNames = nil,
-			},
+			sType = "VK_STRUCTURE_TYPE_APPLICATION_INFO",
+			pApplicationName = "NattLua Vulkan Test",
+			applicationVersion = 1,
+			pEngineName = "No Engine",
+			engineVersion = 1,
+			apiVersion = vk.VK_API_VERSION_1_0,
 		}
 	)
-	local VkInstanceBox = ffi.typeof("$[1]", vk.VkInstance)
-	local instance = VkInstanceBox()
+	local createInfo = vk.Box(
+		vk.VkInstanceCreateInfo,
+		{
+			sType = "VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO",
+			pNext = nil,
+			flags = 0,
+			pApplicationInfo = appInfo,
+			enabledLayerCount = 0,
+			ppEnabledLayerNames = nil,
+			enabledExtensionCount = 0,
+			ppEnabledExtensionNames = nil,
+		}
+	)
+	local instance = vk.Box(vk.VkInstance)()
 	local result = lib.vkCreateInstance(createInfo, nil, instance)
 
 	if result ~= 0 then
-		print("Failed to create Vulkan instance. Error code: " .. tostring(result))
-		os.exit(1)
+		error("failed to create vulkan instance: " .. vk.EnumToString(result))
 	end
 
-	print("✓ Created Vulkan instance successfully")
-	-- Enumerate physical devices
+	print("vulkan instance created successfully: " .. vk.EnumToString(result))
 	local deviceCount = ffi.new("uint32_t[1]", 0)
 	result = lib.vkEnumeratePhysicalDevices(instance[0], deviceCount, nil)
 
-	if result ~= 0 or deviceCount[0] == 0 then
-		print("No Vulkan devices found!")
-		os.exit(1)
-	end
+	if result ~= 0 or deviceCount[0] == 0 then error("devices found") end
 
-	print(string.format("✓ Found %d physical device(s)", deviceCount[0]))
-	local VkPhysicalDeviceArray = ffi.typeof("$[?]", vk.VkPhysicalDevice)
-	local devices = VkPhysicalDeviceArray(deviceCount[0])
+	print(string.format("found %d physical device(s)", deviceCount[0]))
+	local devices = vk.Array(vk.VkPhysicalDevice)(deviceCount[0])
 	result = lib.vkEnumeratePhysicalDevices(instance[0], deviceCount, devices)
-	local VkPhysicalDevicePropertiesBox = ffi.typeof("$[1]", vk.VkPhysicalDeviceProperties)
 
-	-- Query properties for each device
 	for i = 0, deviceCount[0] - 1 do
-		local properties = VkPhysicalDevicePropertiesBox()
+		local properties = vk.Box(vk.VkPhysicalDeviceProperties)()
 		lib.vkGetPhysicalDeviceProperties(devices[i], properties)
-		local deviceName = ffi.string(properties[0].deviceName)
-		local apiVersion = properties[0].apiVersion
-		local driverVersion = properties[0].driverVersion
-		local vendorID = properties[0].vendorID
-		local deviceID = properties[0].deviceID
+		local props = properties[0]
 		-- Decode API version (major.minor.patch)
-		local apiMajor = bit.rshift(apiVersion, 22)
-		local apiMinor = bit.band(bit.rshift(apiVersion, 12), 0x3FF)
-		local apiPatch = bit.band(apiVersion, 0xFFF)
-		print(string.format("\nDevice %d:", i))
-		print(string.format("  Name: %s", deviceName))
-		print(string.format("  API Version: %d.%d.%d", apiMajor, apiMinor, apiPatch))
-		print(string.format("  Driver Version: 0x%08X", driverVersion))
-		print(string.format("  Vendor ID: 0x%04X", vendorID))
-		print(string.format("  Device ID: 0x%04X", deviceID))
-		print(string.format("  Device Type: %d", tonumber(properties[0].deviceType)))
-		-- Print some limits
-		local limits = properties[0].limits
-		print(string.format("  Max Image Dimension 2D: %d", tonumber(limits.maxImageDimension2D)))
+		print(string.format("device %d:", i))
+		print(string.format("  name: %s", ffi.string(props.deviceName)))
+		local apiVersion = props.apiVersion
 		print(
 			string.format(
-				"  Max Compute Shared Memory Size: %d bytes",
+				"  api version: %d.%d.%d",
+				bit.rshift(apiVersion, 22),
+				bit.band(bit.rshift(apiVersion, 12), 0x3FF),
+				bit.band(apiVersion, 0xFFF)
+			)
+		)
+		print(string.format("  driver version: 0x%08X", props.driverVersion))
+		print(string.format("  vendor id: 0x%04X", props.vendorID))
+		print(string.format("  device id: 0x%04X", props.deviceID))
+		print(string.format("  device type: %s", vk.EnumToString(props.deviceType)))
+		-- Print some limits
+		local limits = props.limits
+		print(string.format("  max image dimension 2D: %d", tonumber(limits.maxImageDimension2D)))
+		print(
+			string.format(
+				"  max compute shared memory size: %d bytes",
 				tonumber(limits.maxComputeSharedMemorySize)
 			)
 		)
 		print(
 			string.format(
-				"  Max Compute Work Group Count: [%d, %d, %d]",
+				"  max compute work group count: [%d, %d, %d]",
 				tonumber(limits.maxComputeWorkGroupCount[0]),
 				tonumber(limits.maxComputeWorkGroupCount[1]),
 				tonumber(limits.maxComputeWorkGroupCount[2])
 			)
 		)
 	end
-
-	print("\n=== Query Complete ===\n")
 end
