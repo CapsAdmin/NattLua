@@ -1,5 +1,6 @@
 --[[HOTRELOAD
 	run_lua("test/tests/nattlua/c_declarations/preprocessor.lua")
+	run_lua("/Users/caps/github/NattLua/examples/c_preprocessor.lua")
 ]]
 local Lexer = require("nattlua.definitions.lua.ffi.preprocessor.lexer").New
 local Code = require("nattlua.code").New
@@ -1546,6 +1547,62 @@ function META:Parse()
 			break
 		end
 	end
+end
+
+local parse_define = require("nattlua.definitions.lua.ffi.define_parser")
+
+function META:GetExpandedDefinitions()
+	local out = {}
+
+	for name, def in pairs(self.defines) do
+		if not def.args then
+			-- Object-like macro - expand it to get final value
+			local tokens = copy_tokens(def.tokens)
+
+			if #tokens == 0 then
+
+			--table.insert(out, name .. " = nil")
+			else
+				-- Create a temporary parser to expand this macro's tokens
+				table.insert(tokens, self:NewToken("end_of_file", ""))
+				local temp_parser = META.New(tokens, self.Code, self.config)
+				temp_parser.defines = self.defines
+				temp_parser.define_stack = self.define_stack
+				temp_parser:SetPosition(1)
+
+				while temp_parser:GetPosition() <= #temp_parser.tokens do
+					local tk = temp_parser:GetToken()
+
+					if tk.type == "end_of_file" then break end
+
+					if not (temp_parser:ExpandMacroCall() or temp_parser:ExpandMacro()) then
+						temp_parser:Advance(1)
+					end
+				end
+
+				-- Remove the end_of_file token we added
+				table.remove(temp_parser.tokens)
+				-- Convert to string
+				local value = temp_parser:ToString(temp_parser.tokens, false)
+				table.insert(out, parse_define(name .. " =" .. value))
+			end
+		else
+			-- Function-like macro - store signature
+			local arg_names = {}
+
+			for _, arg in ipairs(def.args) do
+				table.insert(arg_names, arg:GetValueString())
+			end
+
+			table.insert(out, parse_define(self:ToString(def.tokens, false)))
+		--expanded_defines[name] = {
+		--	args = arg_names,
+		--	body = self:ToString(def.tokens, false):gsub("^%s+", ""):gsub("%s+$", ""),
+		--}
+		end
+	end
+
+	return out
 end
 
 return META

@@ -7,7 +7,7 @@ local Emitter = require("nattlua.definitions.lua.ffi.emitter").New
 local walk_cdeclarations = require("nattlua.definitions.lua.ffi.ast_walker")
 local buffer = require("string.buffer")
 
-local function build_lua(c_header)
+local function build_lua(c_header, expanded_defines, extra_lua)
 	local code = Code(c_header, "test.c")
 	local lex = Lexer(code)
 	local tokens = lex:GetTokens()
@@ -442,6 +442,18 @@ local function build_lua(c_header)
 	-- Initialize output buffer with header
 	buf:put("local ffi = require(\"ffi\")\n")
 	buf:put("local mod = {}\n\n")
+
+	if extra_lua then buf:put(extra_lua, "\n\n") end
+
+	if expanded_defines then
+		buf:put("do -- Preprocessor Definitions\n")
+
+		for _, def in ipairs(expanded_defines) do
+			buf:put("\tmod.", def.key, " = ", def.val, "\n")
+		end
+
+		buf:put("end\n")
+	end
 
 	-- Helper to get the statement node from real_node
 	local function get_statement_node(node)

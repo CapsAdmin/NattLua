@@ -10,5 +10,5 @@ return function(code, config)
 	local tokens = Lexer(code_obj):GetTokens()
 	local parser = Parser(tokens, code_obj, config)
 	parser:Parse()
-	return parser:ToString()
+	return parser:ToString(), parser
 end
