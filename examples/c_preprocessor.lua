@@ -19,11 +19,12 @@ local function build_lua(c_header)
 	local buf = buffer.new()
 	local typedefs = {}
 	local valid_qualifiers = {
+		["void"] = true,
 		["double"] = true,
 		["float"] = true,
 		["int8_t"] = true,
 		["uint8_t"] = true,
-		["int16_t"] = true,
+		["int16__t"] = true,
 		["uint16_t"] = true,
 		["int32_t"] = true,
 		["uint32_t"] = true,
@@ -61,226 +62,372 @@ local function build_lua(c_header)
 		["signed long long int"] = true,
 		["unsigned long long"] = true,
 		["unsigned long long int"] = true,
+		["const"] = true,
+		["volatile"] = true,
+		["restrict"] = true,
 	}
-	local struct_names = {}
+	local typedefss = {}
+	-- Track function pointer typedefs
+	local function_ptr_typedefs = {}
 
-	local function emit(decl, ident, collect_structs, skip_identifier)
+	-- Helper to check if a type is a Vulkan/custom type that needs parameterization
+	local function is_custom_type(type_name)
+		return typedefss[type_name] or type_name:match("^Vk") or type_name:match("^PFN_")
+	end
+
+	-- Track which struct/union types have been fully defined (not just forward declared)
+	local defined_structs = {}
+
+	-- Emit a type reference, either as-is or as $ with parameterization
+	-- skip_identifier: if true, don't emit the identifier part (for struct fields)
+	-- self_struct: name of the struct being defined (for self-referential structs)
+	local function emit_type_ref(decl, parameterized, skip_name, skip_identifier, self_struct)
+		if decl.type == "root" then
+			return emit_type_ref(decl.of, parameterized, skip_name, skip_identifier, self_struct)
+		end
+
 		if decl.type == "type" then
-			local has_inline_def = false
+			local buf = buffer.new()
 
-			for _, v in ipairs(decl.modifiers) do
-				if type(v) == "table" then
-					has_inline_def = true
+			for i, mod in ipairs(decl.modifiers) do
+				if type(mod) == "string" then
+					if skip_name and skip_name == mod then
 
-					if v.type == "enum" then
-						if v.identifier and collect_structs then
-							struct_names[v.identifier] = true
-						end
+					-- Skip this modifier (it's the typedef name itself)
+					elseif
+						skip_identifier and
+						i == #decl.modifiers and
+						not valid_qualifiers[mod] and
+						not is_custom_type(mod)
+					then
 
-						local buf = buffer.new()
-						buf:put("enum")
-
-						-- Only include enum name when NOT collecting for typeof
-						-- ffi.typeof doesn't support named enums
-						if v.identifier and not collect_structs then
-							buf:put(" ", v.identifier)
-						end
-
-						buf:put(" {\n")
-						local i = 0
-
-						for _, field in ipairs(v.fields) do
-							buf:put("\t", field.identifier, " = ", i, ",\n")
-							i = i + 1
-						end
-
-						buf:put("}")
-						return tostring(buf)
-					elseif v.type == "struct" or v.type == "union" then
-						if v.identifier and collect_structs then
-							struct_names[v.identifier] = true
-						end
-
-						local buf = buffer.new()
-						buf:put(v.type)
-
-						-- Only include struct name when NOT collecting for typeof
-						-- ffi.typeof doesn't support named structs
-						if v.identifier and not collect_structs then
-							buf:put(" ", v.identifier)
-						end
-
-						if v.fields then
-							buf:put(" {\n")
-
-							for _, field in ipairs(v.fields) do
-								-- For arrays/pointers, we need to emit: type identifier[size];
-								-- The identifier is on field.identifier, not in the type
-								-- Pass field.identifier as skip_identifier to prevent it from being included in the type
-								local field_type, array_suffix = emit(field, nil, collect_structs, field.identifier)
-
-								if field.identifier then
-									buf:put("\t", field_type, " ", field.identifier)
-
-									if array_suffix then buf:put(array_suffix) end
-
-									buf:put(";\n")
-								else
-									buf:put("\t", field_type, ";\n")
-								end
-							end
-
-							buf:put("}")
-						end
-
-						return tostring(buf)
+					-- Skip the last modifier if it's likely an identifier (not a type keyword)
+					-- This handles cases where the parser puts the identifier as the last modifier
+					elseif self_struct and mod == self_struct then
+						-- Self-referential struct: use struct tag name for forward reference
+						-- Don't parameterize it
+						buf:put("struct ", mod, " ")
+					elseif is_custom_type(mod) and parameterized then
+						buf:put("$ ")
+						table.insert(parameterized, mod)
+					elseif is_custom_type(mod) then
+						buf:put("$ ")
 					else
-						error("Unhandled type: " .. v.type)
+						buf:put(mod, " ")
+					end
+				elseif type(mod) == "table" and (mod.type == "struct" or mod.type == "union") then
+					-- Handle anonymous or named struct/union in type position
+					-- If it's a self-reference, use the tag name directly
+					if self_struct and mod.identifier == self_struct then
+						buf:put(mod.type, " ", mod.identifier, " ")
+					else
+						buf:put(mod.type, " ")
+
+						if mod.identifier then buf:put(mod.identifier, " ") end
 					end
 				end
 			end
 
-			-- If we didn't find an inline definition, build the type from modifiers
-			if not has_inline_def then
-				local buf = buffer.new()
-				local parts = {}
-
-				for i, v in ipairs(decl.modifiers) do
-					if type(v) == "string" then
-						-- Skip the last modifier if it matches skip_identifier or decl.identifier
-						-- (ast_walker places field names as the last modifier)
-						if
-							i == #decl.modifiers and
-							(
-								(
-									skip_identifier and
-									v == skip_identifier
-								)
-								or
-								(
-									decl.identifier and
-									v == decl.identifier
-								)
-							)
-						then
-
-						-- Skip - this is the field name, not part of the type
-						elseif typedefs[v] or struct_names[v] then
-							table.insert(parts, "$")
-						elseif collect_structs then
-							-- When collecting for struct definitions (typedef), include all type names
-							-- This ensures field types like VkDeviceAddress are preserved
-							table.insert(parts, v)
-						elseif
-							valid_qualifiers[v] or
-							v == "void" or
-							v == "const" or
-							v == "volatile" or
-							v == "restrict"
-						then
-							-- Only include actual type qualifiers, not identifiers
-							table.insert(parts, v)
-						end
-					-- Skip unknown strings (they might be function/variable names)
-					end
-				end
-
-				for i, part in ipairs(parts) do
-					buf:put(part)
-
-					if i < #parts then buf:put(" ") end
-				end
-
-				return tostring(buf)
-			end
-		elseif decl.type == "root" then
-			-- Pass ident through only for function nodes at the top level
-			-- If ident is provided AND this is a function, pass it through
-			-- Otherwise, don't pass ident to avoid it appearing in return types, etc.
-			-- IMPORTANT: Never pass ident through root nodes, even for functions
-			-- The function case will handle adding the identifier itself
-			-- But DO pass skip_identifier through so nested nodes can filter it out
-			return emit(decl.of, nil, collect_structs, skip_identifier)
+			return tostring(buf)
 		elseif decl.type == "pointer" then
 			local buf = buffer.new()
-			-- Pass skip_identifier to avoid including field names in the type
-			buf:put(emit(decl.of, nil, collect_structs, skip_identifier))
-			buf:put(" *")
+			-- Pass skip_identifier through for pointer types
+			local base = emit_type_ref(decl.of, parameterized, skip_name, skip_identifier, self_struct)
+			-- Trim trailing whitespace from base
+			base = base:gsub("%s+$", "")
+			buf:put(base)
+			buf:put("*")
 
 			for _, mod in ipairs(decl.modifiers or {}) do
-				-- Skip the identifier if it matches skip_identifier
-				if not (skip_identifier and mod == skip_identifier) then
-					buf:put(" ", mod)
+				if type(mod) == "string" then
+					-- Skip the typedef name if it matches
+					if skip_name and skip_name == mod then
+
+					-- Skip it
+					elseif skip_identifier and not valid_qualifiers[mod] then
+
+					-- Skip it (likely an identifier)
+					else
+						buf:put(" ", mod)
+					end
 				end
 			end
 
 			return tostring(buf)
 		elseif decl.type == "array" then
-			-- For arrays, if the innermost type has an identifier (field name),
-			-- we return the type and array suffix separately
-			-- This allows the caller to emit: type identifier[size];
-			-- Pass decl.identifier OR skip_identifier to skip it from the type's modifiers
-			local skip_id = decl.identifier or skip_identifier
-			local inner_type, inner_suffix = emit(decl.of, nil, collect_structs, skip_id)
-			local array_suffix = "[" .. decl.size .. "]"
-
-			-- If there's already a suffix from nested arrays, combine them
-			if inner_suffix then array_suffix = inner_suffix .. array_suffix end
-
-			-- Only return suffix separately if we're the outermost array (skip_identifier is nil)
-			-- Inner arrays should just combine with their children
-			if not skip_identifier then
-				-- Check if there's an identifier anywhere in the tree
-				local function has_identifier(node)
-					if node.identifier then return true end
-
-					if node.of then return has_identifier(node.of) end
-
-					return false
-				end
-
-				-- If any node has an identifier, return type and suffix separately
-				if has_identifier(decl) then return inner_type, array_suffix end
-			end
-
-			-- No identifier or we're a nested array - combine type and array
-			return inner_type .. array_suffix
+			local base = emit_type_ref(decl.of, parameterized, skip_name, skip_identifier, self_struct)
+			base = base:gsub("%s+$", "")
+			local size_str = decl.size or ""
+			return base .. "[" .. size_str .. "]"
 		end
 
-		local t = decl.modifiers and decl.modifiers[1]
+		return ""
+	end
 
-		if valid_qualifiers[t] then
+	-- Emit a complete declaration
+	local function emit(decl, ident, is_typedef)
+		if decl.type == "root" then return emit(decl.of, ident, is_typedef) end
+
+		-- Handle function pointer typedefs (e.g., typedef void (*PFN_foo)(...))
+		if decl.type == "pointer" and decl.of and decl.of.type == "function" then
+			-- Function pointer typedef - use ffi.typeof
 			local buf = buffer.new()
+			local params = {}
+			local func = decl.of
+			buf:put("vk.", ident, " = ffi.typeof([[")
+			buf:put(emit_type_ref(func.rets, params, nil, true))
+			buf:put("(*)(")
 
-			for i, mod in ipairs(decl.modifiers) do
-				buf:put(mod)
+			for i, arg in ipairs(func.args) do
+				buf:put(emit_type_ref(arg, params, nil, true))
 
-				if i < #decl.modifiers then buf:put(" ") end
+				if arg.identifier then buf:put(" ", arg.identifier) end
+
+				if i < #func.args then buf:put(", ") end
 			end
 
+			buf:put(")]]")
+
+			for _, param in ipairs(params) do
+				buf:put(", vk.", param)
+			end
+
+			buf:put(")")
+			typedefss[ident] = true
+			function_ptr_typedefs[ident] = true
+			return tostring(buf)
+		end
+
+		-- Handle pointer/array typedefs (e.g., typedef struct Foo* VkBuffer)
+		if decl.type == "pointer" or decl.type == "array" then
+			-- Check if this is an opaque handle (struct without definition)
+			local is_opaque = false
+
+			if decl.type == "pointer" and decl.of and decl.of.type == "type" then
+				for _, mod in ipairs(decl.of.modifiers) do
+					if type(mod) == "table" and (mod.type == "struct" or mod.type == "union") then
+						-- Opaque handle: struct/union mentioned but not defined (no fields)
+						if not mod.fields then
+							is_opaque = true
+
+							break
+						end
+					end
+				end
+			end
+
+			local buf = buffer.new()
+			local params = {}
+			buf:put("vk.", ident, " = ffi.typeof([[")
+
+			if is_opaque then
+				-- Use void* for opaque handles
+				buf:put("void*")
+			else
+				buf:put(emit_type_ref(decl, params, ident))
+			end
+
+			buf:put("]]")
+
+			for _, param in ipairs(params) do
+				buf:put(", vk.", param)
+			end
+
+			buf:put(")")
+			typedefss[ident] = true
+			return tostring(buf)
+		end
+
+		if decl.type == "type" then
+			-- Check if this is a struct/union/enum definition
+			for _, v in ipairs(decl.modifiers) do
+				if type(v) == "table" then
+					if v.type == "enum" then
+						local buf = buffer.new()
+						buf:put("vk.", ident, " = ffi.typeof([[enum")
+
+						if v.fields then
+							buf:put(" {\n")
+
+							for i, field in ipairs(v.fields) do
+								buf:put("\t", field.identifier)
+
+								if field.value then buf:put(" = ", field.value) end
+
+								buf:put(",\n")
+							end
+
+							buf:put("}]])")
+						else
+							buf:put("]])")
+						end
+
+						typedefss[ident] = true
+						return tostring(buf)
+					elseif v.type == "struct" or v.type == "union" then
+						local buf = buffer.new()
+						local params = {}
+						local struct_name = ident or v.identifier
+						-- Mark this struct as being defined (not just declared)
+						typedefss[struct_name] = true
+						buf:put("vk.", struct_name, " = ffi.typeof([[", v.type)
+
+						if v.fields then
+							buf:put(" {\n")
+
+							for _, field in ipairs(v.fields) do
+								buf:put("\t")
+								-- Check if this field is self-referential
+								local is_self_ref = false
+
+								local function check_self_ref(decl)
+									if decl.type == "root" then
+										return check_self_ref(decl.of)
+									elseif decl.type == "pointer" or decl.type == "array" then
+										-- Only replace if it's a pointer to self
+										if decl.type == "pointer" then
+											return check_self_ref(decl.of)
+										end
+									elseif decl.type == "type" then
+										for _, mod in ipairs(decl.modifiers) do
+											if mod == struct_name then
+												return true
+											elseif type(mod) == "table" and mod.identifier == struct_name then
+												return true
+											end
+										end
+									end
+
+									return false
+								end
+
+								is_self_ref = check_self_ref(field)
+								-- Extract array dimensions if present
+								local array_dims = {}
+								local base_decl = field
+
+								while base_decl do
+									if base_decl.type == "root" then
+										base_decl = base_decl.of
+									elseif base_decl.type == "array" then
+										table.insert(array_dims, 1, base_decl.size or "")
+										base_decl = base_decl.of
+									else
+										break
+									end
+								end
+
+								local field_type
+
+								if is_self_ref then
+									-- Use void* for self-referential pointers
+									-- Navigate to the pointer declaration
+									local ptr_decl = field
+
+									if field.type == "root" then ptr_decl = field.of end
+
+									if ptr_decl.type == "pointer" then
+										-- Collect all const/volatile modifiers
+										local quals = {}
+
+										-- Check for const in the pointed-to type
+										if ptr_decl.of and ptr_decl.of.type == "type" then
+											for _, mod in ipairs(ptr_decl.of.modifiers or {}) do
+												if mod == "const" or mod == "volatile" then
+													table.insert(quals, mod)
+												end
+											end
+										end
+
+										-- Build the type string
+										if #quals > 0 then
+											field_type = table.concat(quals, " ") .. " void*"
+										else
+											field_type = "void*"
+										end
+									else
+										field_type = emit_type_ref(field, params, nil, true, struct_name)
+									end
+								else
+									-- Get base type without array dimensions
+									local base_type_decl = field
+
+									while base_type_decl.type == "root" or base_type_decl.type == "array" do
+										if base_type_decl.type == "root" then
+											base_type_decl = base_type_decl.of
+										elseif base_type_decl.type == "array" then
+											base_type_decl = base_type_decl.of
+										end
+									end
+
+									field_type = emit_type_ref(base_type_decl, params, nil, true, struct_name)
+								end
+
+								-- Trim whitespace
+								field_type = field_type:gsub("%s+$", "")
+								buf:put(field_type)
+
+								if field.identifier then buf:put(" ", field.identifier) end
+
+								-- Add array dimensions after identifier
+								for _, dim in ipairs(array_dims) do
+									buf:put("[", dim, "]")
+								end
+
+								buf:put(";\n")
+							end
+
+							buf:put("}]]")
+						else
+							buf:put("]]")
+						end
+
+						-- Add parameterized types
+						for _, param in ipairs(params) do
+							buf:put(", vk.", param)
+						end
+
+						buf:put(")")
+						return tostring(buf)
+					end
+				end
+			end
+
+			-- Simple typedef
+			local buf = buffer.new()
+			local params = {}
+			buf:put("vk.", ident, " = ffi.typeof([[")
+			buf:put(emit_type_ref(decl, params, ident))
+			buf:put("]]")
+
+			-- Add parameterized types
+			for _, param in ipairs(params) do
+				buf:put(", vk.", param)
+			end
+
+			buf:put(")")
+			typedefss[ident] = true
 			return tostring(buf)
 		elseif decl.type == "function" then
 			local buf = buffer.new()
-			-- Emit return type without any identifier
-			local ret_type = emit(decl.rets, nil, collect_structs)
+			local params = {}
+			buf:put("ffi.cdef([[")
+			buf:put(emit_type_ref(decl.rets, params, nil, true))
+			buf:put(" ", ident, "(")
 
-			-- Debug: check if return type contains the function name
-			if ident and ret_type:find(ident) then
-				print("ERROR: Return type contains function name!")
-				print("  ident:", ident)
-				print("  ret_type:", ret_type)
-				print("  decl.rets.type:", decl.rets.type)
-			end
+			for i, arg in ipairs(decl.args) do
+				buf:put(emit_type_ref(arg, params, nil, true))
 
-			buf:put(ret_type)
-			-- Only add function name if ident is provided
-			--if ident then buf:put(" ", ident) end
-			buf:put("(")
-
-			for i, param in ipairs(decl.args) do
-				buf:put(emit(param, nil, collect_structs))
+				if arg.identifier then buf:put(" ", arg.identifier) end
 
 				if i < #decl.args then buf:put(", ") end
+			end
+
+			buf:put(");]]")
+
+			-- Add parameterized types
+			for _, param in ipairs(params) do
+				buf:put(", vk.", param)
 			end
 
 			buf:put(")")
@@ -295,245 +442,18 @@ local function build_lua(c_header)
 	-- Initialize output buffer with header
 	buf:put("local ffi = require(\"ffi\")\n")
 	buf:put("local vk = {}\n\n")
-	-- First pass: collect all typedefs and categorize them
-	local type_definitions = {}
-	local simple_typedefs = {}
 
-	walk_cdeclarations(ast, function(decl, ident, typedef, real_node)
-		if typedef then
-			-- Mark ALL typedefs so they get replaced with $ in emit
-			typedefs[ident] = true
-			-- Check if this is a struct, union, or enum type that needs ffi.typeof
-			local inner = decl
-
-			while inner.type == "root" or inner.type == "pointer" or inner.type == "array" do
-				if inner.of then inner = inner.of else break end
-			end
-
-			local is_complex_type = false
-
-			if inner.type == "type" then
-				for _, v in ipairs(inner.modifiers) do
-					if
-						type(v) == "table" and
-						(
-							v.type == "struct" or
-							v.type == "union" or
-							v.type == "enum"
-						)
-					then
-						is_complex_type = true
-						type_definitions[ident] = {decl = decl, ident = ident}
-
-						break
-					end
-				end
-			end
-
-			-- Store simple typedefs separately
-			if not is_complex_type then
-				simple_typedefs[ident] = {decl = decl, ident = ident}
-			end
-		end
-	end)
-
-	-- Helper function to collect typedef references in a declaration (in order)
-	local function collect_all_typedef_refs(decl)
-		local refs = {} -- array to preserve order, including duplicates
-		local function walk(node)
-			if not node then return end
-
-			if node.type == "type" then
-				for _, v in ipairs(node.modifiers or {}) do
-					if type(v) == "string" and typedefs[v] then
-						-- Add every occurrence, even if we've seen it before
-						-- Each $ needs its own parameter
-						table.insert(refs, v)
-					elseif
-						type(v) == "table" and
-						(
-							v.type == "struct" or
-							v.type == "union" or
-							v.type == "enum"
-						)
-					then
-						-- Walk struct/union/enum fields
-						if v.fields then
-							for _, field in ipairs(v.fields) do
-								walk(field)
-							end
-						end
-					end
-				end
-			elseif node.type == "pointer" or node.type == "array" or node.type == "root" then
-				walk(node.of)
-			elseif node.type == "function" then
-				walk(node.rets)
-
-				for _, arg in ipairs(node.args or {}) do
-					walk(arg)
-				end
-			end
+	-- Single pass: emit all declarations in order
+	walk_cdeclarations(ast, function(decl, ident, is_typedef, real_node)
+		-- Skip non-typedef variable declarations (like extern variables, static constants, etc.)
+		if not is_typedef then
+			-- Only process function declarations (not variables)
+			if decl.type ~= "function" then return end
 		end
 
-		walk(decl)
-		return refs
-	end
+		local result = emit(decl, ident, is_typedef)
 
-	-- Second pass: emit all typedefs
-	-- First emit simple typedefs (they have no dependencies on complex types)
-	for ident, info in pairs(simple_typedefs) do
-		-- Pass ident as skip_identifier to prevent it from being included in the type
-		local type_str = emit(info.decl, nil, false, ident)
-
-		-- Skip typedefs that reference other typedefs (contain $) or are empty
-		-- These are just aliases and will be resolved through the original typedef
-		if type_str == "" or type_str:find("%$") then
-
-		-- Skip - this is just an alias to another typedef
-		else
-			-- For function pointer typedefs: "return_type(args) *" -> "return_type (*)(args)"
-			-- Check if it's a function pointer (has '(' and ends with ' *')
-			if type_str:find("%)%s*%*%s*$") then
-				-- Remove the trailing " *"
-				type_str = type_str:gsub("%s*%*%s*$", "")
-				-- Insert (*) before the opening paren of args (no name in typeof!)
-				local args_start = type_str:find("%(")
-
-				if args_start then
-					type_str = type_str:sub(1, args_start - 1) .. " (*)" .. type_str:sub(args_start)
-				end
-			-- For regular types, the type is already correct
-			end
-
-			buf:put("vk.", ident, " = ffi.typeof([[", type_str, "]])\n")
-		end
-	end
-
-	-- Then emit complex types (struct/union/enum) in dependency order
-	local emitted = {}
-
-	local function emit_typedef(ident, info)
-		if emitted[ident] then return end
-
-		local typedef_refs = collect_all_typedef_refs(info.decl)
-
-		-- First emit all dependencies
-		for _, ref in ipairs(typedef_refs) do
-			if ref ~= ident and type_definitions[ref] and not emitted[ref] then
-				emit_typedef(ref, type_definitions[ref])
-			end
-		end
-
-		-- Now emit this type
-		local type_str = emit(info.decl, ident, true)
-		local params = {}
-
-		for _, ref in ipairs(typedef_refs) do
-			if ref ~= ident then table.insert(params, ref) end
-		end
-
-		buf:put("vk.", ident, " = ffi.typeof([[\n\t", type_str, "\n]]")
-
-		for _, ref in ipairs(params) do
-			buf:put(", vk.", ref)
-		end
-
-		buf:put(")\n")
-		emitted[ident] = true
-	end
-
-	for ident, info in pairs(type_definitions) do
-		emit_typedef(ident, info)
-	end
-
-	-- Helper function to collect typedef references in a declaration
-	local function collect_typedef_refs(decl)
-		local refs = {}
-
-		local function walk(node)
-			if not node then return end
-
-			if node.type == "type" then
-				for _, v in ipairs(node.modifiers or {}) do
-					if type(v) == "string" and typedefs[v] then refs[v] = true end
-				end
-			elseif node.type == "pointer" or node.type == "array" or node.type == "root" then
-				walk(node.of)
-			elseif node.type == "function" then
-				walk(node.rets)
-
-				for _, arg in ipairs(node.args or {}) do
-					walk(arg)
-				end
-			end
-		end
-
-		walk(decl)
-		return refs
-	end
-
-	-- Third pass: emit function declarations and variables
-	walk_cdeclarations(ast, function(decl, ident, typedef, real_node)
-		if typedef then
-			-- Skip all typedefs as we already handled them
-			-- (both complex type_definitions and simple_typedefs)
-			return
-		else
-			-- Check if this is a function by trying to detect function signature
-			-- Emit first to see if it has a function signature
-			local func_str_no_ident = emit(decl, nil, false)
-			local paren_pos = func_str_no_ident:find("%(")
-
-			-- If there's no opening paren, it's a variable/constant declaration, not a function
-			if not paren_pos then
-				-- This is a variable/constant declaration like: const VkFlags VK_SOMETHING = value
-				-- Check if it has an initialization expression
-				if real_node and real_node.default_expression then
-					-- Emit as: vk.CONSTANT_NAME = value
-					local value = real_node.default_expression:Render()
-					buf:put("vk.", ident, " = ", value, "\n")
-				end
-
-				-- Skip declarations without initialization
-				return
-			end
-
-			-- This is a function declaration
-			-- Insert the function name before the opening paren
-			local func_str = func_str_no_ident:sub(1, paren_pos - 1) .. " " .. ident .. func_str_no_ident:sub(paren_pos)
-
-			-- Debug output
-			if func_str:find(ident .. ".*" .. ident) then
-				print("WARNING: Duplicate function name detected for:", ident)
-				print("Output:", func_str)
-			end
-
-			-- Check if function uses parameterized types
-			local needs_params = func_str:find("%$")
-
-			if needs_params then
-				-- Extract only the struct names actually used in this function
-				local typedef_refs = collect_typedef_refs(decl)
-				local params = {}
-
-				for param_name in pairs(typedef_refs) do
-					if type_definitions[param_name] then
-						table.insert(params, param_name)
-					end
-				end
-
-				buf:put("ffi.cdef([[\n\t", func_str, "\n]]")
-
-				for _, param in ipairs(params) do
-					buf:put(", vk.", param)
-				end
-
-				buf:put(")\n")
-			else
-				buf:put("ffi.cdef([[\n\t", func_str, "\n]])\n")
-			end
-		end
+		if result and result ~= "" then buf:put(result, "\n") end
 	end)
 
 	-- Add return statement
@@ -552,11 +472,13 @@ local c_header = preprocess(
 		working_directory = "/Users/caps/github/ffibuild/vulkan/repo/include",
 		system_include_paths = {"/Users/caps/github/ffibuild/vulkan/repo/include"},
 		defines = {__LP64__ = true},
-		on_include = function(filename, full_path)
-			print(string.format("Including: %s", filename))
+		on_include = function(filename, full_path) --print(string.format("Including: %s", filename))
 		end,
 	}
 )
 local res = build_lua(c_header)
-local vk = assert(loadstring(res))()
+local f = io.open("vulkan.lua", "w")
+f:write(res)
+f:close()
+local vk = assert(loadstring(res, "@vulkan.lua"))()
 table.print(vk)
