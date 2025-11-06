@@ -252,7 +252,7 @@ local function build_lua(c_header, expanded_defines, extra_lua)
 							for i, field in ipairs(v.fields) do
 								buf:put("\t", field.identifier)
 
-								if field.value then buf:put(" = ", field.value) end
+								if field.expression then buf:put(" = ", field.expression:Render()) end
 
 								buf:put(",\n")
 							end

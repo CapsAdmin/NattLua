@@ -61,42 +61,6 @@ local res = build_lua(
 		typedef void* xcb_window_t;
 	]=]
 
-	do
-		local cache = {}
-		function mod.EnumToString(enum_type, index)
-			if not index then
-				index = tonumber(enum_type)
-			end
-			local enum_id = tonumber(ffi.typeof(enum_type))
-
-			if cache[enum_id] ~= nil then return cache[enum_id] end
-			
-			local enum_ctype = ffi.typeinfo(enum_id)
-			local current_index = 0
-			local sib = enum_ctype.sib
-
-			while sib do
-				local sib_ctype = ffi.typeinfo(sib)
-				local CT_code = bit.rshift(sib_ctype.info, 28)
-
-				if CT_code == 11 then -- constant
-					if current_index == index then 
-						cache[enum_id] = sib_ctype.name 
-						return cache[enum_id] 
-					end
-
-					current_index = current_index + 1
-				end
-
-				sib = sib_ctype.sib
-			end
-
-			cache[enum_id] = false
-
-			return nil
-		end
-	end
-
 	function mod.GetExtension(lib, instance, name)
 		local ptr = lib.vkGetInstanceProcAddr(instance, name)
 
@@ -104,32 +68,6 @@ local res = build_lua(
 
 		local func = ffi.cast(mod["PFN_" .. name], ptr)
 		return func
-	end
-
-	do
-		local t_cache = {}
-
-		local function array_type(t, len)
-			if len then
-				t_cache[t] = t_cache[t] or ffi.typeof("$[" .. len .. "]", t)
-				return t_cache[t]
-			end
-
-			t_cache[t] = t_cache[t] or ffi.typeof("$[?]", t)
-			return t_cache[t]
-		end
-
-		function mod.Array(t, len, ctor)
-			if ctor then return array_type(t, len)(ctor) end
-
-			return array_type(t, len)
-		end
-
-		function mod.Box(t, ctor)
-			if ctor then return array_type(t, 1)({ctor}) end
-
-			return array_type(t, 1)
-		end
 	end
 
 	function mod.find_library()
@@ -155,6 +93,9 @@ local res = build_lua(
 
 			-- Try MoltenVK directly first (more reliable on macOS)
 			if home then
+				if vulkan_sdk then
+					table.insert(paths, home .. "/VulkanSDK/1.4.328.1/macOS/lib/libvulkan.1.dylib")
+				end
 				table.insert(paths, home .. "/VulkanSDK/1.4.328.1/macOS/lib/libMoltenVK.dylib")
 			end
 
@@ -182,9 +123,61 @@ f:close()
 local ffi = require("ffi")
 
 do
+	local function array_type(t, len)
+		if len then return ffi.typeof("$[" .. len .. "]", t) end
+
+		return ffi.typeof("$[?]", t)
+	end
+
+	local function Array(t, len, ctor)
+		if ctor then return array_type(t, len)(ctor) end
+
+		return array_type(t, len)
+	end
+
+	local function Box(t, ctor)
+		if ctor then return array_type(t, 1)({ctor}) end
+
+		return array_type(t, 1)
+	end
+
+	local function get_enums(enum_type)
+		local out = {}
+		local enum_id = tonumber(ffi.typeof(enum_type))
+		local enum_ctype = ffi.typeinfo(enum_id)
+		local sib = enum_ctype.sib
+
+		while sib do
+			local sib_ctype = ffi.typeinfo(sib)
+			local CT_code = bit.rshift(sib_ctype.info, 28)
+			local current_index = sib_ctype.size
+
+			-- bug?
+			if current_index == nil then current_index = -1 end
+
+			if CT_code == 11 then out[sib_ctype.name] = current_index end
+
+			sib = sib_ctype.sib
+		end
+
+		return out
+	end
+
+	local function enum_to_string(enum_type, value)
+		if not value then value = enum_type end
+
+		local enums = get_enums(enum_type)
+
+		for k, v in pairs(enums) do
+			if v == value then return k end
+		end
+
+		return "unknown enum value: " .. tostring(value)
+	end
+
 	local vk = require("vulkan")
 	local lib = vk.find_library()
-	local appInfo = vk.Box(
+	local appInfo = Box(
 		vk.VkApplicationInfo,
 		{
 			sType = "VK_STRUCTURE_TYPE_APPLICATION_INFO",
@@ -195,7 +188,7 @@ do
 			apiVersion = vk.VK_API_VERSION_1_0,
 		}
 	)
-	local createInfo = vk.Box(
+	local createInfo = Box(
 		vk.VkInstanceCreateInfo,
 		{
 			sType = "VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO",
@@ -208,25 +201,25 @@ do
 			ppEnabledExtensionNames = nil,
 		}
 	)
-	local instance = vk.Box(vk.VkInstance)()
+	local instance = Box(vk.VkInstance)()
 	local result = lib.vkCreateInstance(createInfo, nil, instance)
 
 	if result ~= 0 then
-		error("failed to create vulkan instance: " .. vk.EnumToString(result))
+		error("failed to create vulkan instance: " .. enum_to_string(result))
 	end
 
-	print("vulkan instance created successfully: " .. vk.EnumToString(result))
+	print("vulkan instance created successfully: " .. enum_to_string(result))
 	local deviceCount = ffi.new("uint32_t[1]", 0)
 	result = lib.vkEnumeratePhysicalDevices(instance[0], deviceCount, nil)
 
 	if result ~= 0 or deviceCount[0] == 0 then error("devices found") end
 
 	print(string.format("found %d physical device(s)", deviceCount[0]))
-	local devices = vk.Array(vk.VkPhysicalDevice)(deviceCount[0])
+	local devices = Array(vk.VkPhysicalDevice)(deviceCount[0])
 	result = lib.vkEnumeratePhysicalDevices(instance[0], deviceCount, devices)
 
 	for i = 0, deviceCount[0] - 1 do
-		local properties = vk.Box(vk.VkPhysicalDeviceProperties)()
+		local properties = Box(vk.VkPhysicalDeviceProperties)()
 		lib.vkGetPhysicalDeviceProperties(devices[i], properties)
 		local props = properties[0]
 		-- Decode API version (major.minor.patch)
@@ -244,7 +237,7 @@ do
 		print(string.format("  driver version: 0x%08X", props.driverVersion))
 		print(string.format("  vendor id: 0x%04X", props.vendorID))
 		print(string.format("  device id: 0x%04X", props.deviceID))
-		print(string.format("  device type: %s", vk.EnumToString(props.deviceType)))
+		print(string.format("  device type: %s", enum_to_string(props.deviceType)))
 		-- Print some limits
 		local limits = props.limits
 		print(string.format("  max image dimension 2D: %d", tonumber(limits.maxImageDimension2D)))
