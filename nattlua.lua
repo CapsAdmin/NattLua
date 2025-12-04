@@ -34,9 +34,12 @@ if jit then
 
 		local nattlua_path = debug.getinfo(1, "S").source:match("^@(.+)$")
 		nattlua_path = nattlua_path:match("(.+)/nattlua%.lua$")
-		local dir = current_path .. "/" .. nattlua_path .. "/"
-		_G.ROOT_PATH = dir
-		package.path = package.path .. ";" .. dir .. "?.lua" .. ";" .. dir .. "?/init.lua"
+
+		if nattlua_path then
+			local dir = current_path .. "/" .. nattlua_path .. "/"
+			_G.ROOT_PATH = dir
+			package.path = package.path .. ";" .. dir .. "?.lua" .. ";" .. dir .. "?/init.lua"
+		end
 	end
 end
 
