@@ -66,6 +66,29 @@ local function build_lua(c_header, expanded_defines, extra_lua)
 		["volatile"] = true,
 		["restrict"] = true,
 	}
+	local lua_keywords = {
+		["and"] = true,
+		["break"] = true,
+		["do"] = true,
+		["else"] = true,
+		["elseif"] = true,
+		["end"] = true,
+		["false"] = true,
+		["for"] = true,
+		["function"] = true,
+		["if"] = true,
+		["in"] = true,
+		["local"] = true,
+		["nil"] = true,
+		["not"] = true,
+		["or"] = true,
+		["repeat"] = true,
+		["return"] = true,
+		["then"] = true,
+		["true"] = true,
+		["until"] = true,
+		["while"] = true,
+	}
 	local typedefss = {}
 	-- Track function pointer typedefs
 	local function_ptr_typedefs = {}
@@ -387,7 +410,69 @@ local function build_lua(c_header, expanded_defines, extra_lua)
 							buf:put(", mod.", param)
 						end
 
-						buf:put(")")
+						if v.fields then
+							buf:put(")\n")
+							buf:put(
+								"ffi.metatype(mod.",
+								struct_name,
+								", {__tostring = function(s) return ('struct " .. struct_name .. "[%p]'):format(s) end,__new = function(T, t) if not t then return N(T) end \n"
+							)
+
+							if v.type == "union" then
+								-- For unions: create object, then assign whichever field is provided
+								buf:put("local obj = N(T)\n")
+
+								for i, field in ipairs(v.fields) do
+									if field.identifier then
+										if lua_keywords[field.identifier] then
+											buf:put(
+												"if t['",
+												field.identifier,
+												"'] ~= nil then obj.",
+												field.identifier,
+												" = t['",
+												field.identifier,
+												"'] end\n"
+											)
+										else
+											buf:put(
+												"if t.",
+												field.identifier,
+												" ~= nil then obj.",
+												field.identifier,
+												" = t.",
+												field.identifier,
+												" end\n"
+											)
+										end
+									end
+								end
+
+								buf:put("return obj\n")
+							else
+								-- For structs: use the original N(T, ...) pattern
+								buf:put("return N(\n\tT,\n")
+
+								for i, field in ipairs(v.fields) do
+									if field.identifier then
+										if lua_keywords[field.identifier] then
+											buf:put("\tt['", field.identifier, "']")
+										else
+											buf:put("\tt.", field.identifier)
+										end
+
+										if i ~= #v.fields then buf:put(",") end
+
+										buf:put("\n")
+									end
+								end
+
+								buf:put(")\n")
+							end
+
+							buf:put("end,\n})")
+						end
+
 						return tostring(buf)
 					end
 				end
@@ -441,6 +526,7 @@ local function build_lua(c_header, expanded_defines, extra_lua)
 
 	-- Initialize output buffer with header
 	buf:put("local ffi = require(\"ffi\")\n")
+	buf:put("local N = ffi.new\n")
 	buf:put("local mod = {}\n\n")
 
 	if extra_lua then buf:put(extra_lua, "\n\n") end
