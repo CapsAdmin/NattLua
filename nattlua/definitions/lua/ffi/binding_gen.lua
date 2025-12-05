@@ -7,7 +7,10 @@ local Emitter = require("nattlua.definitions.lua.ffi.emitter").New
 local walk_cdeclarations = require("nattlua.definitions.lua.ffi.ast_walker")
 local buffer = require("string.buffer")
 
-local function build_lua(c_header, expanded_defines, extra_lua)
+local function build_lua(c_header, expanded_defines, extra_lua, options)
+	options = options or {}
+	-- Options:
+	--   collect_metadata: boolean - if true, returns metadata about enums and structs as second return value
 	local code = Code(c_header, "test.c")
 	local lex = Lexer(code)
 	local tokens = lex:GetTokens()
@@ -92,6 +95,43 @@ local function build_lua(c_header, expanded_defines, extra_lua)
 	local typedefss = {}
 	-- Track function pointer typedefs
 	local function_ptr_typedefs = {}
+	-- Metadata collection (when options.collect_metadata is true)
+	-- Maps enum type name -> { prefix = "VK_...", values = { {name="SUFFIX", value=numeric_value}, ... } }
+	local enum_metadata = {}
+	-- Maps struct name -> { fields = { {name=..., type_name=...}, ... } }
+	local struct_metadata = {}
+
+	-- Helper to extract type name from a field declaration
+	-- The last modifier in a field's type is typically the identifier, not the type
+	local function get_field_type_name(decl)
+		if decl.type == "root" then return get_field_type_name(decl.of) end
+
+		if decl.type == "array" then return get_field_type_name(decl.of) end
+
+		if decl.type == "pointer" then return nil end -- pointers are not translated
+		if decl.type == "type" then
+			-- For struct fields, modifiers are like [TypeName, fieldName]
+			-- So we want the second-to-last non-qualifier modifier
+			for i = #decl.modifiers - 1, 1, -1 do
+				local mod = decl.modifiers[i]
+
+				if type(mod) == "string" and not valid_qualifiers[mod] then
+					return mod
+				end
+			end
+		end
+
+		return nil
+	end
+
+	-- Helper to check if a field declaration is a pointer type
+	local function is_pointer_type(decl)
+		if decl.type == "root" then return is_pointer_type(decl.of) end
+
+		if decl.type == "pointer" then return true end
+
+		return false
+	end
 
 	-- Helper to check if a type is a Vulkan/custom type that needs parameterization
 	local function is_custom_type(type_name)
@@ -269,6 +309,27 @@ local function build_lua(c_header, expanded_defines, extra_lua)
 						local buf = buffer.new()
 						buf:put("mod.", ident, " = ffi.typeof([[enum")
 
+						-- Collect enum metadata
+						if v.fields and options.collect_metadata then
+							local values = {}
+
+							for _, field in ipairs(v.fields) do
+								local val = nil
+
+								if field.expression then
+									local ok, result = pcall(function()
+										return field.expression:Render()
+									end)
+
+									if ok then val = result end
+								end
+
+								table.insert(values, {name = field.identifier, value = val})
+							end
+
+							enum_metadata[ident] = {values = values}
+						end
+
 						if v.fields then
 							buf:put(" {\n")
 
@@ -293,6 +354,24 @@ local function build_lua(c_header, expanded_defines, extra_lua)
 						local struct_name = ident or v.identifier
 						-- Mark this struct as being defined (not just declared)
 						typedefss[struct_name] = true
+						-- Collect struct field metadata
+						local field_metadata = {}
+
+						if v.fields and options.collect_metadata then
+							for _, field in ipairs(v.fields) do
+								if field.identifier then
+									local type_name = get_field_type_name(field)
+									local is_ptr = is_pointer_type(field)
+									table.insert(
+										field_metadata,
+										{name = field.identifier, type_name = type_name, is_pointer = is_ptr}
+									)
+								end
+							end
+
+							struct_metadata[struct_name] = {fields = field_metadata}
+						end
+
 						buf:put("mod.", struct_name, " = ffi.typeof([[", v.type)
 
 						if v.fields then
@@ -624,6 +703,11 @@ local function build_lua(c_header, expanded_defines, extra_lua)
 
 	-- Add return statement
 	buf:put("\nreturn mod\n")
+
+	if options.collect_metadata then
+		return tostring(buf), {enums = enum_metadata, structs = struct_metadata}
+	end
+
 	return tostring(buf)
 end
 
