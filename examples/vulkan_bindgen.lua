@@ -204,7 +204,12 @@ for enum_name, enum_data in pairs(metadata.enums) do
 
 		if last_underscore then
 			local prefix = common:sub(1, last_underscore)
+
+			-- Special case overrides for enums with inconsistent naming
+			if enum_name == "VkColorSpaceKHR" then prefix = "VK_COLOR_SPACE_" end
+
 			local lookup = {}
+			local all_numeric_keys = true
 
 			for _, v in ipairs(values) do
 				local suffix = v.name:sub(#prefix + 1)
@@ -215,11 +220,15 @@ for enum_name, enum_data in pairs(metadata.enums) do
 					-- _BIT_KHR, _BIT_EXT, etc. -> keep as _KHR, _EXT
 					local short_suffix = suffix:gsub("_BIT$", ""):gsub("_BIT_", "_")
 					-- Only store lowercase keys
-					lookup[short_suffix:lower()] = v.name
+					local key = short_suffix:lower()
+					lookup[key] = v.name
+
+					-- Check if this key is purely numeric
+					if not tonumber(key) then all_numeric_keys = false end
 				end
 			end
 
-			enum_lookups[enum_name] = {prefix = prefix, lookup = lookup}
+			enum_lookups[enum_name] = {prefix = prefix, lookup = lookup, all_numeric_keys = all_numeric_keys}
 		end
 	end
 end
@@ -276,9 +285,11 @@ end
 -- Generate the enum lookup tables
 extra_code:put("\n-- Enum lookup tables for string -> value translation\n")
 extra_code:put("mod.e = {}\n")
+extra_code:put("mod.str = {}\n")
 extra_code:put("local type = _G.type\n")
 extra_code:put("local ipairs = _G.ipairs\n")
 extra_code:put("local bit_bor = bit.bor\n")
+extra_code:put("local bit_band = bit.band\n")
 -- Helper function for combining flags (generated once)
 extra_code:put("local function combine_flags(lookup, values, enum_name)\n")
 extra_code:put("\tlocal result = 0\n")
@@ -297,6 +308,8 @@ extra_code:put("\treturn result\n")
 extra_code:put("end\n")
 
 for enum_name, data in pairs(enum_lookups) do
+	-- Determine if this is a bit flags enum (contains FlagBits in name)
+	local is_flags = enum_name:match("FlagBits") ~= nil
 	extra_code:put("do\n")
 	extra_code:put("\tlocal lookup = {\n")
 
@@ -305,21 +318,70 @@ for enum_name, data in pairs(enum_lookups) do
 	end
 
 	extra_code:put("\t}\n")
+	-- Generate reverse lookup table
+	extra_code:put("\tlocal reverse_lookup = {\n")
+
+	for suffix, full_name in pairs(data.lookup) do
+		extra_code:put("\t\t[tonumber(mod.", enum_name, "('", full_name, "'))] = '", suffix, "',\n")
+	end
+
+	extra_code:put("\t}\n")
 	extra_code:put("mod.e.", enum_name, " = function(s)\n")
 	extra_code:put("\tif s == nil then return 0 end\n")
-	extra_code:put("\tif type(s) == 'number' then return s end\n")
-	-- Handle table of flags (e.g., {"color", "depth"} -> VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
-	extra_code:put(
-		"\tif type(s) == 'table' then return combine_flags(lookup, s, '",
-		enum_name,
-		"') end\n"
-	)
-	extra_code:put(
-		"\treturn lookup[s] or error('unknown ",
-		enum_name,
-		" value: ' .. tostring(s))\n"
-	)
+
+	if data.all_numeric_keys then
+		-- For enums with all numeric keys (like VkSampleCountFlagBits), convert to string and look up
+		extra_code:put("\tlocal key = tostring(s)\n")
+		extra_code:put(
+			"\tif type(s) == 'table' then return combine_flags(lookup, s, '",
+			enum_name,
+			"') end\n"
+		)
+		extra_code:put(
+			"\treturn lookup[key] or error('unknown ",
+			enum_name,
+			" value: ' .. tostring(s))\n"
+		)
+	else
+		extra_code:put("\tif tonumber(s) then return s end\n")
+		-- Handle table of flags (e.g., {"color", "depth"} -> VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
+		extra_code:put(
+			"\tif type(s) == 'table' then return combine_flags(lookup, s, '",
+			enum_name,
+			"') end\n"
+		)
+		extra_code:put(
+			"\treturn lookup[s] or error('unknown ",
+			enum_name,
+			" value: ' .. tostring(s))\n"
+		)
+	end
+
 	extra_code:put("end\n")
+
+	-- Generate reverse lookup function (enum value -> string or table)
+	if is_flags then
+		-- For bit flags, return a table of all set flags
+		extra_code:put("mod.str.", enum_name, " = function(v)\n")
+		extra_code:put("\tif v == nil or v == 0 then return {} end\n")
+		extra_code:put("\tv = tonumber(v)\n")
+		extra_code:put("\tlocal result = {}\n")
+		extra_code:put("\tfor enum_val, name in pairs(reverse_lookup) do\n")
+		extra_code:put("\t\tif bit_band(v, enum_val) ~= 0 then\n")
+		extra_code:put("\t\t\tresult[#result + 1] = name\n")
+		extra_code:put("\t\tend\n")
+		extra_code:put("\tend\n")
+		extra_code:put("\treturn result\n")
+		extra_code:put("end\n")
+	else
+		-- For regular enums, return a single string
+		extra_code:put("mod.str.", enum_name, " = function(v)\n")
+		extra_code:put("\tif v == nil then return nil end\n")
+		extra_code:put("\tv = tonumber(v)\n")
+		extra_code:put("\treturn reverse_lookup[v]\n")
+		extra_code:put("end\n")
+	end
+
 	extra_code:put("end\n")
 end
 
@@ -354,8 +416,9 @@ local function get_enum_for_field(field_type_name)
 	if enum_lookups[field_type_name] then return field_type_name end
 
 	-- Flags -> FlagBits conversion (e.g., VkImageAspectFlags -> VkImageAspectFlagBits)
-	if field_type_name:match("Flags$") or field_type_name:match("Flags%d*$") then
-		local bits_name = field_type_name:gsub("Flags(%d*)$", "FlagBits%1")
+	-- Also handles vendor extensions like FlagsKHR -> FlagBitsKHR, FlagsEXT -> FlagBitsEXT
+	if field_type_name:match("Flags") then
+		local bits_name = field_type_name:gsub("Flags(%d*)", "FlagBits%1")
 
 		if enum_lookups[bits_name] then return bits_name end
 	end
