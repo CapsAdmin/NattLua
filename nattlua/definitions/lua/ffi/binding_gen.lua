@@ -144,9 +144,10 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 	-- Emit a type reference, either as-is or as $ with parameterization
 	-- skip_identifier: if true, don't emit the identifier part (for struct fields)
 	-- self_struct: name of the struct being defined (for self-referential structs)
-	local function emit_type_ref(decl, parameterized, skip_name, skip_identifier, self_struct)
+	-- keep_const: if true, keep const/volatile qualifiers (needed for pointer base types like const char*)
+	local function emit_type_ref(decl, parameterized, skip_name, skip_identifier, self_struct, keep_const)
 		if decl.type == "root" then
-			return emit_type_ref(decl.of, parameterized, skip_name, skip_identifier, self_struct)
+			return emit_type_ref(decl.of, parameterized, skip_name, skip_identifier, self_struct, keep_const)
 		end
 
 		if decl.type == "type" then
@@ -175,6 +176,9 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 						table.insert(parameterized, mod)
 					elseif is_custom_type(mod) then
 						buf:put("$ ")
+					elseif not keep_const and (mod == "const" or mod == "volatile") then
+
+					-- Skip const/volatile for non-pointer struct fields to avoid LuaJIT issues
 					else
 						buf:put(mod, " ")
 					end
@@ -195,7 +199,8 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 		elseif decl.type == "pointer" then
 			local buf = buffer.new()
 			-- Pass skip_identifier through for pointer types
-			local base = emit_type_ref(decl.of, parameterized, skip_name, skip_identifier, self_struct)
+			-- Pass keep_const=true to preserve const for pointer base types (e.g., const char*)
+			local base = emit_type_ref(decl.of, parameterized, skip_name, skip_identifier, self_struct, true)
 			-- Trim trailing whitespace from base
 			base = base:gsub("%s+$", "")
 			buf:put(base)
@@ -210,6 +215,9 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 					elseif skip_identifier and not valid_qualifiers[mod] then
 
 					-- Skip it (likely an identifier)
+					elseif not keep_const and (mod == "const" or mod == "volatile") then
+
+					-- Skip const/volatile on the pointer itself when not keeping const
 					else
 						buf:put(" ", mod)
 					end
@@ -218,7 +226,7 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 
 			return tostring(buf)
 		elseif decl.type == "array" then
-			local base = emit_type_ref(decl.of, parameterized, skip_name, skip_identifier, self_struct)
+			local base = emit_type_ref(decl.of, parameterized, skip_name, skip_identifier, self_struct, keep_const)
 			base = base:gsub("%s+$", "")
 			local size_str = decl.size or ""
 			return base .. "[" .. size_str .. "]"
@@ -494,59 +502,67 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 							buf:put(
 								"ffi.metatype(mod.",
 								struct_name,
-								", {__tostring = function(s) return ('struct " .. struct_name .. "[%p]'):format(s) end,__new = function(T, t) if not t then return N(T) end \n"
+								", {__tostring = function(s) return ('struct " .. struct_name .. "[%p]'):format(s) end,__new = function(T, t) \n"
 							)
 
 							if v.type == "union" then
 								-- For unions: create object, then assign whichever field is provided
 								buf:put("local obj = N(T)\n")
+								buf:put("if not t then return obj end\n")
 
 								for i, field in ipairs(v.fields) do
 									if field.identifier then
 										if lua_keywords[field.identifier] then
 											buf:put(
-												"if t['",
+												"obj['",
 												field.identifier,
-												"'] ~= nil then obj.",
+												"'] = t['",
 												field.identifier,
-												" = t['",
-												field.identifier,
-												"'] end\n"
+												"']"
 											)
 										else
 											buf:put(
-												"if t.",
+												"obj.",
 												field.identifier,
-												" ~= nil then obj.",
+												" = t.",
+												field.identifier
+											)
+										end
+
+										buf:put("\n")
+									end
+								end
+
+								buf:put("return obj\n")
+							else
+								-- For structs: use field-by-field assignment to avoid LuaJIT NYI
+								-- issues with union members (same pattern as unions above)
+								buf:put("local obj = N(T)\n")
+								buf:put("if not t then return obj end\n")
+
+								for i, field in ipairs(v.fields) do
+									if field.identifier then
+										if lua_keywords[field.identifier] then
+											buf:put(
+												"obj['",
+												field.identifier,
+												"'] = t['",
+												field.identifier,
+												"']\n"
+											)
+										else
+											buf:put(
+												"obj.",
 												field.identifier,
 												" = t.",
 												field.identifier,
-												" end\n"
+												"\n"
 											)
 										end
 									end
 								end
 
 								buf:put("return obj\n")
-							else
-								-- For structs: use the original N(T, ...) pattern
-								buf:put("return N(\n\tT,\n")
-
-								for i, field in ipairs(v.fields) do
-									if field.identifier then
-										if lua_keywords[field.identifier] then
-											buf:put("\tt['", field.identifier, "']")
-										else
-											buf:put("\tt.", field.identifier)
-										end
-
-										if i ~= #v.fields then buf:put(",") end
-
-										buf:put("\n")
-									end
-								end
-
-								buf:put(")\n")
 							end
 
 							buf:put("end,\n})")

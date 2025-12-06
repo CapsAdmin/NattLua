@@ -343,7 +343,7 @@ for enum_name, data in pairs(enum_lookups) do
 			" value: ' .. tostring(s))\n"
 		)
 	else
-		extra_code:put("\tif tonumber(s) then return s end\n")
+		extra_code:put("\tif type(s) == \"number\" or type(s) == \"cdata\" then return s end\n")
 		-- Handle table of flags (e.g., {"color", "depth"} -> VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
 		extra_code:put(
 			"\tif type(s) == 'table' then return combine_flags(lookup, s, '",
@@ -460,8 +460,7 @@ for struct_name in pairs(structs_needing_builders) do
 	local info = info_structs[struct_name]
 	local short_name = struct_name:gsub("^Vk", "")
 	extra_code:put("mod.s.", short_name, " = function(t)\n")
-	extra_code:put("\tif type(t) ~= 'table' then return t end\n")
-	extra_code:put("\treturn mod.", struct_name, "({\n")
+	extra_code:put("\treturn mod.", struct_name, "(t and {\n")
 	local struct_data = metadata.structs[struct_name]
 
 	for _, field in ipairs(struct_data.fields) do
@@ -475,10 +474,7 @@ for struct_name in pairs(structs_needing_builders) do
 				"\t\t",
 				key,
 				" = ",
-				t_access,
-				" and mod.e.VkStructureType(",
-				t_access,
-				") or mod.VkStructureType('",
+				" mod.VkStructureType('",
 				info.stype,
 				"'),\n"
 			)
@@ -509,7 +505,7 @@ for struct_name in pairs(structs_needing_builders) do
 		end
 	end
 
-	extra_code:put("\t})\n")
+	extra_code:put("\t} or nil)\n")
 	extra_code:put("end\n")
 end
 
