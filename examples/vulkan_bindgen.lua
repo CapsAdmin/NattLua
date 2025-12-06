@@ -27,6 +27,24 @@ local LUA_KEYWORDS = {
 	["while"] = true,
 }
 
+-- Helper function for deterministic iteration (sorted keys)
+local function sorted_pairs(t)
+	local keys = {}
+
+	for k in pairs(t) do
+		table.insert(keys, k)
+	end
+
+	table.sort(keys)
+	local i = 0
+	return function()
+		i = i + 1
+		local k = keys[i]
+
+		if k ~= nil then return k, t[k] end
+	end
+end
+
 -- Generate field access syntax (use bracket notation for keywords)
 local function field_access(obj, field_name)
 	if LUA_KEYWORDS[field_name] then
@@ -181,7 +199,7 @@ local extra_code = buffer.new()
 -- Build a map of enum type -> { prefix, suffix_to_value }
 local enum_lookups = {}
 
-for enum_name, enum_data in pairs(metadata.enums) do
+for enum_name, enum_data in sorted_pairs(metadata.enums) do
 	-- Find common prefix among all enum values
 	local values = enum_data.values
 
@@ -245,7 +263,7 @@ if metadata.enums.VkStructureType then
 end
 
 -- Find all info structs
-for struct_name, struct_data in pairs(metadata.structs) do
+for struct_name, struct_data in sorted_pairs(metadata.structs) do
 	local has_stype = false
 
 	for _, field in ipairs(struct_data.fields) do
@@ -307,13 +325,13 @@ extra_code:put("\tend\n")
 extra_code:put("\treturn result\n")
 extra_code:put("end\n")
 
-for enum_name, data in pairs(enum_lookups) do
+for enum_name, data in sorted_pairs(enum_lookups) do
 	-- Determine if this is a bit flags enum (contains FlagBits in name)
 	local is_flags = enum_name:match("FlagBits") ~= nil
 	extra_code:put("do\n")
 	extra_code:put("\tlocal lookup = {\n")
 
-	for suffix, full_name in pairs(data.lookup) do
+	for suffix, full_name in sorted_pairs(data.lookup) do
 		extra_code:put("\t\t['", suffix, "'] = mod.", enum_name, "('", full_name, "'),\n")
 	end
 
@@ -321,7 +339,7 @@ for enum_name, data in pairs(enum_lookups) do
 	-- Generate reverse lookup table
 	extra_code:put("\tlocal reverse_lookup = {\n")
 
-	for suffix, full_name in pairs(data.lookup) do
+	for suffix, full_name in sorted_pairs(data.lookup) do
 		extra_code:put("\t\t[tonumber(mod.", enum_name, "('", full_name, "'))] = '", suffix, "',\n")
 	end
 
@@ -429,7 +447,7 @@ end
 -- Build a map of structs that have enum fields (for nested struct translation)
 local structs_with_enums = {}
 
-for struct_name, struct_data in pairs(metadata.structs) do
+for struct_name, struct_data in sorted_pairs(metadata.structs) do
 	local enum_fields = {}
 
 	for _, field in ipairs(struct_data.fields) do
@@ -447,15 +465,15 @@ extra_code:put("mod.s = {}\n")
 -- Collect all structs that need builders (have enum fields or sType)
 local structs_needing_builders = {}
 
-for struct_name, enum_fields in pairs(structs_with_enums) do
+for struct_name, enum_fields in sorted_pairs(structs_with_enums) do
 	structs_needing_builders[struct_name] = true
 end
 
-for struct_name, info in pairs(info_structs) do
+for struct_name, info in sorted_pairs(info_structs) do
 	structs_needing_builders[struct_name] = true
 end
 
-for struct_name in pairs(structs_needing_builders) do
+for struct_name in sorted_pairs(structs_needing_builders) do
 	local enum_fields = structs_with_enums[struct_name] or {}
 	local info = info_structs[struct_name]
 	local short_name = struct_name:gsub("^Vk", "")
