@@ -95,6 +95,8 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 	local typedefss = {}
 	-- Track function pointer typedefs
 	local function_ptr_typedefs = {}
+	-- Track enum typedefs (these become Lua tables, not ffi types)
+	local enum_typedefs = {}
 	-- Metadata collection (when options.collect_metadata is true)
 	-- Maps enum type name -> { prefix = "VK_...", values = { {name="SUFFIX", value=numeric_value}, ... } }
 	local enum_metadata = {}
@@ -171,6 +173,9 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 						-- Self-referential struct: use struct tag name for forward reference
 						-- Don't parameterize it
 						buf:put("struct ", mod, " ")
+					elseif enum_typedefs[mod] then
+						-- Enum types become Lua tables, so use uint32_t in FFI structs
+						buf:put("uint32_t ")
 					elseif is_custom_type(mod) and parameterized then
 						buf:put("$ ")
 						table.insert(parameterized, mod)
@@ -315,7 +320,7 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 				if type(v) == "table" then
 					if v.type == "enum" then
 						local buf = buffer.new()
-						buf:put("mod.", ident, " = ffi.typeof([[enum")
+						buf:put("mod.", ident, " = {\n")
 
 						-- Collect enum metadata
 						if v.fields and options.collect_metadata then
@@ -338,22 +343,60 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 							enum_metadata[ident] = {values = values}
 						end
 
+						-- Build a set of field names for detecting self-references
+						local field_names = {}
 						if v.fields then
-							buf:put(" {\n")
-
-							for i, field in ipairs(v.fields) do
-								buf:put("\t", field.identifier)
-
-								if field.expression then buf:put(" = ", field.expression:Render()) end
-
-								buf:put(",\n")
+							for _, field in ipairs(v.fields) do
+								field_names[field.identifier] = true
 							end
-
-							buf:put("}]])")
-						else
-							buf:put("]])")
 						end
 
+						-- Track fields that reference other fields (need to be set after table creation)
+						local deferred_fields = {}
+
+						if v.fields then
+							for i, field in ipairs(v.fields) do
+								local expr_str = nil
+								if field.expression then
+									local ok, result = pcall(function()
+										return field.expression:Render()
+									end)
+									if ok then expr_str = result end
+								end
+
+								-- Check if expression references another field in this enum
+								local is_self_ref = false
+								if expr_str then
+									for other_name in pairs(field_names) do
+										if expr_str:match("^" .. other_name .. "$") or
+											expr_str:match("[^%w_]" .. other_name .. "[^%w_]") or
+											expr_str:match("^" .. other_name .. "[^%w_]") or
+											expr_str:match("[^%w_]" .. other_name .. "$") then
+											is_self_ref = true
+											break
+										end
+									end
+								end
+
+								if is_self_ref then
+									-- Defer this field to after table creation
+									table.insert(deferred_fields, {name = field.identifier, expr = expr_str})
+								else
+									buf:put("\t", field.identifier)
+									if expr_str then buf:put(" = ", expr_str) end
+									buf:put(",\n")
+								end
+							end
+						end
+
+						buf:put("}")
+
+						-- Emit deferred self-referencing fields after table creation
+						for _, def in ipairs(deferred_fields) do
+							buf:put("\nmod.", ident, ".", def.name, " = mod.", ident, ".", def.expr)
+						end
+
+						enum_typedefs[ident] = true
 						typedefss[ident] = true
 						return tostring(buf)
 					elseif v.type == "struct" or v.type == "union" then

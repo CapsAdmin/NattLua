@@ -309,15 +309,16 @@ extra_code:put("local ipairs = _G.ipairs\n")
 extra_code:put("local bit_bor = bit.bor\n")
 extra_code:put("local bit_band = bit.band\n")
 -- Helper function for combining flags (generated once)
-extra_code:put("local function combine_flags(lookup, values, enum_name)\n")
+-- enum_tbl is the raw enum table (mod.EnumName) for fallback lookup
+extra_code:put("local function combine_flags(lookup, values, enum_tbl)\n")
 extra_code:put("\tlocal result = 0\n")
 extra_code:put("\tfor _, v in ipairs(values) do\n")
 extra_code:put("\t\tif type(v) == 'number' then\n")
 extra_code:put("\t\t\tresult = bit_bor(result, v)\n")
 extra_code:put("\t\telse\n")
-extra_code:put("\t\t\tlocal val = lookup[v]\n")
+extra_code:put("\t\t\tlocal val = lookup[v] or (enum_tbl and enum_tbl[v])\n")
 extra_code:put(
-	"\t\t\tif not val then error('unknown ' .. enum_name .. ' value: ' .. tostring(v)) end\n"
+	"\t\t\tif not val then error('unknown enum value: ' .. tostring(v)) end\n"
 )
 extra_code:put("\t\t\tresult = bit_bor(result, val)\n")
 extra_code:put("\t\tend\n")
@@ -332,7 +333,7 @@ for enum_name, data in sorted_pairs(enum_lookups) do
 	extra_code:put("\tlocal lookup = {\n")
 
 	for suffix, full_name in sorted_pairs(data.lookup) do
-		extra_code:put("\t\t['", suffix, "'] = mod.", enum_name, "('", full_name, "'),\n")
+		extra_code:put("\t\t['", suffix, "'] = mod.", enum_name, ".", full_name, ",\n")
 	end
 
 	extra_code:put("\t}\n")
@@ -340,7 +341,7 @@ for enum_name, data in sorted_pairs(enum_lookups) do
 	extra_code:put("\tlocal reverse_lookup = {\n")
 
 	for suffix, full_name in sorted_pairs(data.lookup) do
-		extra_code:put("\t\t[tonumber(mod.", enum_name, "('", full_name, "'))] = '", suffix, "',\n")
+		extra_code:put("\t\t[mod.", enum_name, ".", full_name, "] = '", suffix, "',\n")
 	end
 
 	extra_code:put("\t}\n")
@@ -351,9 +352,9 @@ for enum_name, data in sorted_pairs(enum_lookups) do
 		-- For enums with all numeric keys (like VkSampleCountFlagBits), convert to string and look up
 		extra_code:put("\tlocal key = tostring(s)\n")
 		extra_code:put(
-			"\tif type(s) == 'table' then return combine_flags(lookup, s, '",
+			"\tif type(s) == 'table' then return combine_flags(lookup, s, mod.",
 			enum_name,
-			"') end\n"
+			") end\n"
 		)
 		extra_code:put(
 			"\treturn lookup[key] or error('unknown ",
@@ -364,9 +365,9 @@ for enum_name, data in sorted_pairs(enum_lookups) do
 		extra_code:put("\tif type(s) == \"number\" or type(s) == \"cdata\" then return s end\n")
 		-- Handle table of flags (e.g., {"color", "depth"} -> VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
 		extra_code:put(
-			"\tif type(s) == 'table' then return combine_flags(lookup, s, '",
+			"\tif type(s) == 'table' then return combine_flags(lookup, s, mod.",
 			enum_name,
-			"') end\n"
+			") end\n"
 		)
 		extra_code:put(
 			"\treturn lookup[s] or error('unknown ",
@@ -492,9 +493,9 @@ for struct_name in sorted_pairs(structs_needing_builders) do
 				"\t\t",
 				key,
 				" = ",
-				" mod.VkStructureType('",
+				" mod.VkStructureType.",
 				info.stype,
-				"'),\n"
+				",\n"
 			)
 		elseif enum_type then
 			extra_code:put(
