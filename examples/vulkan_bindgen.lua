@@ -133,55 +133,54 @@ local res, metadata = build_lua(
 		return func
 	end
 
-function mod.find_library()
-	local function try_load(tbl)
-		local errors = {}
+	function mod.find_library()
+		local function try_load(tbl)
+			local errors = {}
 
-		for _, name in ipairs(tbl) do
-			local status, lib = pcall(ffi.load, name)
+			for _, name in ipairs(tbl) do
+				local status, lib = pcall(ffi.load, name)
 
-			if status then
-				llog("Loaded Vulkan library:", name)
-				return lib
-			else
-				table.insert(errors, lib)
+				if status then
+					llog("Loaded Vulkan library:", name)
+					return lib
+				else
+					table.insert(errors, lib)
+				end
 			end
+
+			return nil, table.concat(errors, "\n")
 		end
 
-		return nil, table.concat(errors, "\n")
+		if ffi.os == "Windows" then
+			return assert(try_load({"vulkan-1.dll"}))
+		elseif ffi.os == "OSX" then
+			local home = os.getenv("HOME")
+			local vulkan_sdk = os.getenv("VULKAN_SDK")
+			local paths = {}
+			-- Load the Vulkan LOADER (not the ICD directly)
+			-- The loader will automatically find kosmickrisp via the ICD system
+			table.insert(paths, "/opt/homebrew/lib/libvulkan.dylib")
+			table.insert(paths, "/opt/homebrew/lib/libvulkan.1.dylib")
+			table.insert(paths, "/usr/local/lib/libvulkan.dylib")
+			table.insert(paths, "libvulkan.dylib")
+			table.insert(paths, "libvulkan.1.dylib")
+
+			-- Try VULKAN_SDK paths
+			if vulkan_sdk then
+				table.insert(paths, vulkan_sdk .. "/lib/libvulkan.dylib")
+				table.insert(paths, vulkan_sdk .. "/lib/libvulkan.1.dylib")
+			end
+
+			-- Try VulkanSDK in home directory
+			if home and vulkan_sdk then
+				table.insert(paths, home .. "/VulkanSDK/1.4.328.1/macOS/lib/libvulkan.1.dylib")
+			end
+
+			return assert(try_load(paths))
+		end
+
+		return assert(try_load({"libvulkan.so", "libvulkan.so.1"}))
 	end
-
-	if ffi.os == "Windows" then
-		return assert(try_load({"vulkan-1.dll"}))
-	elseif ffi.os == "OSX" then
-		local home = os.getenv("HOME")
-		local vulkan_sdk = os.getenv("VULKAN_SDK")
-		local paths = {}
-		-- Load the Vulkan LOADER (not the ICD directly)
-		-- The loader will automatically find kosmickrisp via the ICD system
-		table.insert(paths, "/opt/homebrew/lib/libvulkan.dylib")
-		table.insert(paths, "/opt/homebrew/lib/libvulkan.1.dylib")
-		table.insert(paths, "/usr/local/lib/libvulkan.dylib")
-		table.insert(paths, "libvulkan.dylib")
-		table.insert(paths, "libvulkan.1.dylib")
-
-		-- Try VULKAN_SDK paths
-		if vulkan_sdk then
-			table.insert(paths, vulkan_sdk .. "/lib/libvulkan.dylib")
-			table.insert(paths, vulkan_sdk .. "/lib/libvulkan.1.dylib")
-		end
-
-		-- Try VulkanSDK in home directory
-		if home and vulkan_sdk then
-			table.insert(paths, home .. "/VulkanSDK/1.4.328.1/macOS/lib/libvulkan.1.dylib")
-		end
-
-		return assert(try_load(paths))
-	end
-
-	return assert(try_load({"libvulkan.so", "libvulkan.so.1"}))
-end
-
 ]],
 	{collect_metadata = true}
 )
@@ -301,30 +300,54 @@ for struct_name, struct_data in sorted_pairs(metadata.structs) do
 end
 
 -- Generate the enum lookup tables
-extra_code:put("\n-- Enum lookup tables for string -> value translation\n")
-extra_code:put("mod.e = {}\n")
-extra_code:put("mod.str = {}\n")
-extra_code:put("local type = _G.type\n")
-extra_code:put("local ipairs = _G.ipairs\n")
-extra_code:put("local bit_bor = bit.bor\n")
-extra_code:put("local bit_band = bit.band\n")
--- Helper function for combining flags (generated once)
--- enum_tbl is the raw enum table (mod.EnumName) for fallback lookup
-extra_code:put("local function combine_flags(lookup, values, enum_tbl)\n")
-extra_code:put("\tlocal result = 0\n")
-extra_code:put("\tfor _, v in ipairs(values) do\n")
-extra_code:put("\t\tif type(v) == 'number' then\n")
-extra_code:put("\t\t\tresult = bit_bor(result, v)\n")
-extra_code:put("\t\telse\n")
-extra_code:put("\t\t\tlocal val = lookup[v] or (enum_tbl and enum_tbl[v])\n")
-extra_code:put(
-	"\t\t\tif not val then error('unknown enum value: ' .. tostring(v)) end\n"
-)
-extra_code:put("\t\t\tresult = bit_bor(result, val)\n")
-extra_code:put("\t\tend\n")
-extra_code:put("\tend\n")
-extra_code:put("\treturn result\n")
-extra_code:put("end\n")
+extra_code:put([[
+
+-- Enum lookup tables for string -> value translation
+mod.e = {}
+mod.str = {}
+local type = _G.type
+local ipairs = _G.ipairs
+local pairs = _G.pairs
+local tostring = _G.tostring
+local tonumber = _G.tonumber
+local bit_bor = bit.bor
+local bit_band = bit.band
+local function enum_lookup(lookup, enum_tbl, enum_name, numeric_keys, s)
+	if s == nil then return 0 end
+	if type(s) == 'table' then
+		local result = 0
+		for _, v in ipairs(s) do
+			if type(v) == 'number' then
+				result = bit_bor(result, v)
+			else
+				local val = lookup[v] or (enum_tbl and enum_tbl[v])
+				if not val then error('unknown ' .. enum_name .. ' value: ' .. tostring(v)) end
+				result = bit_bor(result, val)
+			end
+		end
+		return result
+	end
+	if numeric_keys then s = tostring(s)
+	elseif type(s) == 'number' or type(s) == 'cdata' then return s end
+	return lookup[s] or error('unknown ' .. enum_name .. ' value: ' .. tostring(s))
+end
+local function enum_tostring(reverse_lookup, is_flags, v)
+	if v == nil then return is_flags and {} or nil end
+	v = tonumber(v)
+	if is_flags then
+		if v == 0 then return {} end
+		local result = {}
+		for enum_val, name in pairs(reverse_lookup) do
+			if bit_band(v, enum_val) ~= 0 then
+				result[#result + 1] = name
+			end
+		end
+		return result
+	else
+		return reverse_lookup[v]
+	end
+end
+]])
 
 for enum_name, data in sorted_pairs(enum_lookups) do
 	-- Determine if this is a bit flags enum (contains FlagBits in name)
@@ -341,90 +364,57 @@ for enum_name, data in sorted_pairs(enum_lookups) do
 	extra_code:put("\tlocal reverse_lookup = {\n")
 
 	for suffix, full_name in sorted_pairs(data.lookup) do
-		extra_code:put("\t\t[mod.", enum_name, ".", full_name, "] = '", suffix, "',\n")
+		extra_code:put("\t\t[lookup['", suffix, "']] = '", suffix, "',\n")
 	end
 
 	extra_code:put("\t}\n")
-	extra_code:put("mod.e.", enum_name, " = function(s)\n")
-	extra_code:put("\tif s == nil then return 0 end\n")
-
-	if data.all_numeric_keys then
-		-- For enums with all numeric keys (like VkSampleCountFlagBits), convert to string and look up
-		extra_code:put("\tlocal key = tostring(s)\n")
-		extra_code:put(
-			"\tif type(s) == 'table' then return combine_flags(lookup, s, mod.",
-			enum_name,
-			") end\n"
-		)
-		extra_code:put(
-			"\treturn lookup[key] or error('unknown ",
-			enum_name,
-			" value: ' .. tostring(s))\n"
-		)
-	else
-		extra_code:put("\tif type(s) == \"number\" or type(s) == \"cdata\" then return s end\n")
-		-- Handle table of flags (e.g., {"color", "depth"} -> VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
-		extra_code:put(
-			"\tif type(s) == 'table' then return combine_flags(lookup, s, mod.",
-			enum_name,
-			") end\n"
-		)
-		extra_code:put(
-			"\treturn lookup[s] or error('unknown ",
-			enum_name,
-			" value: ' .. tostring(s))\n"
-		)
-	end
-
-	extra_code:put("end\n")
+	extra_code:put(
+		"mod.e.",
+		enum_name,
+		" = function(s) return enum_lookup(lookup, mod.",
+		enum_name,
+		", '",
+		enum_name,
+		"', ",
+		data.all_numeric_keys and "true" or "false",
+		", s) end\n"
+	)
 
 	-- Generate reverse lookup function (enum value -> string or table)
-	if is_flags then
-		-- For bit flags, return a table of all set flags
-		extra_code:put("mod.str.", enum_name, " = function(v)\n")
-		extra_code:put("\tif v == nil or v == 0 then return {} end\n")
-		extra_code:put("\tv = tonumber(v)\n")
-		extra_code:put("\tlocal result = {}\n")
-		extra_code:put("\tfor enum_val, name in pairs(reverse_lookup) do\n")
-		extra_code:put("\t\tif bit_band(v, enum_val) ~= 0 then\n")
-		extra_code:put("\t\t\tresult[#result + 1] = name\n")
-		extra_code:put("\t\tend\n")
-		extra_code:put("\tend\n")
-		extra_code:put("\treturn result\n")
-		extra_code:put("end\n")
-	else
-		-- For regular enums, return a single string
-		extra_code:put("mod.str.", enum_name, " = function(v)\n")
-		extra_code:put("\tif v == nil then return nil end\n")
-		extra_code:put("\tv = tonumber(v)\n")
-		extra_code:put("\treturn reverse_lookup[v]\n")
-		extra_code:put("end\n")
-	end
+	extra_code:put(
+		"mod.str.",
+		enum_name,
+		" = function(v) return enum_tostring(reverse_lookup, ",
+		is_flags and "true" or "false",
+		", v) end\n"
+	)
 
 	extra_code:put("end\n")
 end
 
 -- Generate helper to fill struct fields recursively
-extra_code:put("\n-- Helper to fill struct fields with enum translation\n")
-extra_code:put("local function fill_struct(ctype, field_info, t)\n")
-extra_code:put("\tif t == nil then return nil end\n")
-extra_code:put("\tlocal obj = N(ctype)\n")
-extra_code:put("\tfor k, v in pairs(t) do\n")
-extra_code:put("\t\tlocal info = field_info[k]\n")
-extra_code:put("\t\tif info then\n")
-extra_code:put("\t\t\tif info.enum_lookup then\n")
-extra_code:put("\t\t\t\tobj[k] = info.enum_lookup(v)\n")
-extra_code:put("\t\t\telseif info.struct_fill then\n")
-extra_code:put("\t\t\t\tinfo.struct_fill(obj[k], v)\n")
-extra_code:put("\t\t\telse\n")
-extra_code:put("\t\t\t\tobj[k] = v\n")
-extra_code:put("\t\t\tend\n")
-extra_code:put("\t\telse\n")
-extra_code:put("\t\t\tobj[k] = v\n")
-extra_code:put("\t\tend\n")
-extra_code:put("\tend\n")
-extra_code:put("\treturn obj\n")
-extra_code:put("end\n")
+extra_code:put([[
+	-- Helper to fill struct fields with enum translation
+	local function fill_struct(ctype, field_info, t)
+		if t == nil then return nil end
+		local obj = N(ctype)
+		for k, v in pairs(t) do
+			local info = field_info[k]
+			if info then
+				if info.enum_lookup then
+					obj[k] = info.enum_lookup(v)
+				elseif info.struct_fill then
+					info.struct_fill(obj[k], v)
+				else
+					obj[k] = v
+				end
+			else
+				obj[k] = v
+			end
+		end
+		return obj
+	end
+]])
 
 -- Helper to find the enum type for a field
 -- Handles both direct enums (VkImageViewType) and flag types (VkImageAspectFlags -> VkImageAspectFlagBits)
