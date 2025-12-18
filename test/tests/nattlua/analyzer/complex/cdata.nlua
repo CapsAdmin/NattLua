@@ -30,7 +30,7 @@ do --- smoke band
 			LuaJITArch() ~= "arm64"
 		)
 	then
-		attest.equal(tostring(band(1ll, 1, 1ull, -1)), "0ULL")
+		attest.equal(tostring(band(1ll, 1, 1ull, -1)), "1ULL")
 	end
 end
 
