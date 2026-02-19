@@ -197,6 +197,84 @@ do -- custom commands specific for nattlua
 			print("roughly " .. math.floor(total_tokens) .. "k tokens for claude")
 		end,
 	}
+	config.commands["self-check"] = {
+		description = "Analyze the whole project starting from multiple entry points and output statistics",
+		cb = function(args, options, config, cli)
+			local Compiler = require("nattlua.compiler")
+			local entry_points = {
+				config.entry_point or "./nattlua.lua",
+				"./language_server/main.lua",
+				"./language_server/lsp.lua",
+			}
+			local all_files = cli.get_files({
+				path = "./*",
+				ignorefiles = config.ignorefiles,
+				ext = {".lua", ".nlua"},
+			})
+			-- filter out examples and other non-core files
+			local filtered = {}
+			for _, path in ipairs(all_files) do
+				if not path:find("^examples/") and not path:find("^%./examples/") then
+					table.insert(filtered, path)
+				end
+			end
+			all_files = filtered
+
+			local analyzer_config = {}
+
+			for k, v in pairs(config.analyzer or {}) do
+				analyzer_config[k] = v
+			end
+
+			analyzer_config.working_directory = ("./")
+			local analyzer = require("nattlua.analyzer.analyzer").New(analyzer_config)
+			
+			for _, entry_point in ipairs(entry_points) do
+				cli.print_success("Analyzing from entry point: " .. entry_point)
+				local compiler = Compiler.FromFile(entry_point, config)
+				analyzer.parsed_paths[entry_point] = true
+				analyzer.parsed_paths["./" .. entry_point] = true
+				pcall(function() compiler:Analyze(analyzer) end)
+			end
+			
+			local total_statement_count = analyzer.statement_count or 0
+			local files_checked_via_imports = 0
+
+			local final_tracked = {}
+			for path, _ in pairs(analyzer.parsed_paths) do
+				local clean = path:gsub("^%./", "")
+				final_tracked[clean] = true
+			end
+			files_checked_via_imports = 0
+			for _ in pairs(final_tracked) do files_checked_via_imports = files_checked_via_imports + 1 end
+
+			local unchecked_list = {}
+
+			for _, path in ipairs(all_files) do
+				local path_clean = path:gsub("^%./", "")
+				if not final_tracked[path_clean] then
+					table.insert(unchecked_list, path)
+				end
+			end
+
+			cli.print_success("Self-check completed")
+			io.write("Files checked (visited via imports from entry points): " .. files_checked_via_imports .. "\n")
+			io.write("Total statements crawled: " .. total_statement_count .. "\n")
+			io.write("Files left unchecked (not in dependency graph): " .. #unchecked_list .. "\n")
+
+			if #unchecked_list > 0 then
+				io.write("Unchecked files (showing up to 20):\n")
+
+				for i, path in ipairs(unchecked_list) do
+					if i > 20 then
+						io.write("  ... and " .. (#unchecked_list - 20) .. " more\n")
+						break
+					end
+					io.write("  " .. path .. "\n")
+				end
+			end
+		end,
+	}
 end
 
 do -- these override existing commands and should probably be made more generic

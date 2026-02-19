@@ -26,6 +26,7 @@ do
 	local error_messages = require("nattlua.error_messages")
 
 	function META:AnalyzeStatement(node)
+		self.statement_count = self.statement_count + 1
 		self:CheckTimeout()
 		self:PushCurrentStatement(node)
 		self:PushAnalyzerEnvironment(node.environment or "runtime")
@@ -377,6 +378,7 @@ function META.New(config)
 			context_values = {},
 			context_ref = {},
 			ReferenceTypes = {},
+			statement_count = 0,
 		},
 		true
 	)

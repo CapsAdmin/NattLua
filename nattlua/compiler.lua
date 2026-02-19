@@ -247,7 +247,7 @@ function META:Analyze(analyzer, ...)
 		analyzer:SetDefaultEnvironment(self.default_environment["runtime"], "runtime")
 		analyzer:SetDefaultEnvironment(self.default_environment["typesystem"], "typesystem")
 	else
-		local runtime_env, typesystem_env = BuildBaseEnvironment(self.SyntaxTree)
+		local runtime_env, typesystem_env = BuildBaseEnvironment(self.SyntaxTree, analyzer)
 		analyzer:SetDefaultEnvironment(runtime_env, "runtime")
 		analyzer:SetDefaultEnvironment(typesystem_env, "typesystem")
 	end

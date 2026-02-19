@@ -14,7 +14,12 @@ type os = {
 	rename = function=(oldname: string, newname: string)>(boolean | nil, string, number | nil),
 	getenv = function=(varname: string)>(string | nil),
 	exit = analyzer function(code: boolean | number, close: boolean)
-		analyzer:Terminate()
+		if not analyzer:IsDefinetlyReachable() then
+			analyzer:ThrowSilentError()
+			return
+		end
+
+		analyzer:ThrowError("os.exit called from " .. tostring(analyzer:GetCurrentExpression()))
 	end,
 	remove = function=(filename: string)>(boolean | nil, string, number | nil),
 	setlocale = function=(locale: string, category: string)>(string | nil) | function=(locale: string)>(string | nil),
