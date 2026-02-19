@@ -191,7 +191,7 @@ analyzer function require(name: string)
 
 					if analyzer.loaded_modules[path] then return analyzer.loaded_modules[path] end
 
-					local res = analyzer:AnalyzeRootStatement(analyzer:ParseFile(path))
+					local res = analyzer:AnalyzeRootStatement(analyzer:ParseFile(path), str)
 					analyzer.loaded_modules[path] = res
 					return res
 				end
@@ -356,22 +356,20 @@ type pcall = ReturnIfNonLiteral<|
 		do
 			local errors = {}
 
-			for i = math.max(diagnostics_index, 1), #diagnostics do
+			for i = diagnostics_index + 1, #diagnostics do
 				local d = diagnostics[i]
 
 				if d.severity == "error" then
-					return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
+					return false, types.LString(d.msg)
 				end
 			end
 		end
 
-		if
-			callable.Type ~= "function" or
-			not callable:GetFunctionBodyNode()
-			or
-			not callable:GetFunctionBodyNode()
-		then
-			return types.Boolean(), tuple
+		if callable.Type ~= "function" or not callable:GetFunctionBodyNode() then
+			return types.Union({
+				types.Tuple({types.True(), tuple}),
+				types.Tuple({types.False(), types.String()}),
+			})
 		end
 
 		return true, tuple
@@ -389,23 +387,28 @@ type xpcall = ReturnIfNonLiteral<|
 		do
 			local errors = {}
 
-			for i = math.max(diagnostics_index, 1), #diagnostics do
+			for i = diagnostics_index + 1, #diagnostics do
 				local d = diagnostics[i]
 
 				if d.severity == "error" then
-					analyzer:ErrorIfFalse(analyzer:Call(callable, types.Union({types.LString(d.msg)})))
-					return types.Boolean(), types.Union({types.LString(d.msg), types.Any()})
+					local _, res = analyzer:Call(error_cb, types.Tuple({types.LString(d.msg)}))
+
+					if res then
+						if res.Type == "tuple" then return false, res:Get(1) end
+
+						return false, res
+					end
+
+					return false, types.LString(d.msg)
 				end
 			end
 		end
 
-		if
-			callable.Type ~= "function" or
-			not callable:GetFunctionBodyNode()
-			or
-			not callable:GetFunctionBodyNode()
-		then
-			return types.Boolean(), tuple
+		if callable.Type ~= "function" or not callable:GetFunctionBodyNode() then
+			return types.Union({
+				types.Tuple({types.True(), tuple}),
+				types.Tuple({types.False(), types.String()}),
+			})
 		end
 
 		return true, tuple

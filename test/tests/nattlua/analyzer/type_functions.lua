@@ -516,7 +516,7 @@ analyze[[
 ]]
 analyze[[
     local ok, err = pcall(require, "foo")
-    attest.equal(ok, _ as true | false)
+    attest.equal(ok, false)
     if type(err) == "string" then
         attest.equal(not not err:find("not found"), true)
     end
@@ -577,13 +577,13 @@ analyze[[
 
     local a, b, c = xpcall(f, f, 1,2,3)
     attest.equal(a, _ as boolean)
-    attest.equal(b, _ as any)
-    attest.equal(c, _ as any)
+    attest.equal(b, _ as any | string)
+    attest.equal(c, _ as any | nil)
 
     local a, b, c = pcall(f, 1,2,3)
     attest.equal(a, _ as boolean)
-    attest.equal(b, _ as any)
-    attest.equal(c, _ as any)
+    attest.equal(b, _ as any | string)
+    attest.equal(c, _ as any | nil)
 ]]
 analyze[[
     local function AddSymbols(tbl: List<|string|>)

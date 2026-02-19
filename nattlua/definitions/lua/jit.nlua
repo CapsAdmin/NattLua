@@ -20,12 +20,21 @@ type jit_attach_texit = function=(
 	ngpr: number, -- the number of general-purpose and floating point registers that are active at the exit
 	nfpr: number -- the number of general-purpose and floating point registers that are active at the exit
 )>(nil)
+type Modules["jit.dis_x86"] = {}
+type Modules["jit.dis_x64"] = {}
+type Modules["jit.dis_arm"] = {}
+type Modules["jit.dis_arm64"] = {}
+type Modules["jit.dis_ppc"] = {}
+type Modules["jit.dis_mips"] = {}
+type Modules["jit.dis_mips64"] = {}
+type Modules["jit.dis_mips64el"] = {}
+type Modules["jit.dis_riscv64"] = {}
 type Modules["jit.opt"] = {
 	start = function=(...string)>(nil),
 }
 type jit = {
 	os = "Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other",
-	arch = "x86" | "x64" | "arm" | "ppc" | "ppcspe" | "mips",
+	arch = "x86" | "x64" | "arm" | "arm64" | "ppc" | "mips" | "mips64" | "mips64el" | "riscv64",
 	attach = function=(
 		jit_attach_bc | jit_attach_trace | jit_attach_record | jit_attach_texit,
 		"bc" | "trace" | "record" | "texit" | nil
