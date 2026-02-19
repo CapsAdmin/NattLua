@@ -14,6 +14,8 @@ return {
 
 			if self.loaded_modules[cache] then return self.loaded_modules[cache] end
 
+			self.loaded_modules[cache] = Nil()
+
 			if root then
 				self.loaded_modules[cache] = self:AnalyzeRootStatement(root)
 			elseif node.data then

@@ -1,0 +1,2 @@
+_G.b_counter = (_G.b_counter or 0) + 1
+import("./test/tests/nattlua/analyzer/file_importing/recursive/a.nlua")

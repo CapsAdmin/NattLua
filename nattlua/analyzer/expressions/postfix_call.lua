@@ -95,7 +95,7 @@ return {
 			node.left.value.sub_type ~= "dofile" and
 			node.left.value.sub_type ~= "loadfile"
 		then
-			return AnalyzeImport(self, node, node.left.value.sub_type == "require" and node.path)
+			return AnalyzeImport(self, node, node.path)
 		end
 
 		self:PushAnalyzerEnvironment(node.type_call and "typesystem" or "runtime")
