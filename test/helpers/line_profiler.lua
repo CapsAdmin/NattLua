@@ -1,3 +1,4 @@
+--ANALYZE
 --[[HOTRELOAD 
     run_lua("test/performance/lexer.lua")
 ]]

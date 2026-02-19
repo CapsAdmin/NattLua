@@ -19,10 +19,8 @@ local io = _G.io
 
 --[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
---[[#local type { ExpressionKind, StatementKind, Nodes } = import("./node.lua")]]
+--[[#local type { NodeKind, ExpressionKind, StatementKind, Nodes, Node, expression, statement } = import("./node.lua")]]
 
---[[#local type expression = Nodes.expression]]
---[[#local type statement = Nodes.statement]]
 local META = require("nattlua.parser.base")()
 require("nattlua.parser.expressions")(META)
 require("nattlua.parser.statements")(META)

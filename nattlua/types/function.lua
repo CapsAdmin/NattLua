@@ -31,7 +31,10 @@ META:IsSet("InputModifiers", false)
 META:IsSet("OutputModifiers", false)
 
 function META.LogicalComparison(l--[[#: TFunction]], r--[[#: TFunction]], op--[[#: string]])
-	if op == "==" then return l:Equal(r) end
+	if op == "==" then
+		local ok = l:Equal(r)
+		return ok
+	end
 
 	return false, error_messages.binary(op, l, r)
 end

@@ -8,9 +8,10 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 local path_util = require("nattlua.other.path")
 
+--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 --[[#local type { Node } = import("~/nattlua/parser/node.lua")]]
 
-return function(META)
+return function(META--[[#: any]])
 	function META:ParseValueExpressionToken(expect_value--[[#: nil | string]])
 		local node = self:StartNode("expression_value")
 		node.value = expect_value and self:ExpectTokenValue(expect_value) or self:ParseToken()
@@ -860,7 +861,7 @@ return function(META)
 		function META:HandleImportExpression(
 			node--[[#: Node]],
 			tkname--[[#: Token]],
-			tk_path--[[#: string]],
+			tk_path--[[#: Token]],
 			start--[[#: number]]
 		)
 			assert(tk_path.type == "string", "expected string token for import path")

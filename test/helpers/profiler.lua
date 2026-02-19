@@ -1,5 +1,5 @@
 local jit_profiler = require("test.helpers.jit_profiler")
-local line_profiler = require("test.helpers.line_profiler")
+local line_profiler = require("test.helpers.line_profiler")--[[#: {Start = function=(any)>(any)}]]
 local trace_tracker = require("test.helpers.jit_trace_track")
 local get_time = require("test.helpers.get_time")
 local profiler = {}

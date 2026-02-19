@@ -789,7 +789,7 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 	return true
 end
 
-function META:Get(key--[[#: TBaseType | TString]])
+function META:Get(key--[[#: TBaseType]])
 	if key.Type == "string" and key:IsLiteral() and key:GetData():sub(1, 1) == "@" then
 		if
 			context:GetCurrentAnalyzer() and

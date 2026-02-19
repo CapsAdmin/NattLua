@@ -45,6 +45,7 @@ type jit = {
 	tracebarrier = function=()>(nil),
 	version_num = number,
 	version = string,
+	vmdef = AnyTable | nil,
 	on = function=(Function | true, boolean | nil)>(nil),
 	off = function=(Function | true, boolean | nil)>(nil),
 	flush = function=(nil | Function | true, boolean | nil)>(nil),

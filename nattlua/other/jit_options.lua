@@ -66,7 +66,7 @@ local default_flags = {
 }
 local last_options = {options = {}, flags = {}}
 
-function jit_options.Set(options, flags)
+function jit_options.Set(options--[[#: AnyTable | nil]], flags--[[#: AnyTable | nil]])
 	if not jit then return end
 
 	options = options or {}

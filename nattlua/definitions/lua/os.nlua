@@ -13,7 +13,9 @@ type os = {
 	execute = function=(command: string)>(boolean | nil, string, number | nil) | function=()>(boolean | nil, string, number | nil),
 	rename = function=(oldname: string, newname: string)>(boolean | nil, string, number | nil),
 	getenv = function=(varname: string)>(string | nil),
-	exit = function=(code: boolean | number, close: boolean)>(nil) | function=(code: boolean | number)>(nil) | function=()>(nil),
+	exit = analyzer function(code: boolean | number, close: boolean)
+		analyzer:Terminate()
+	end,
 	remove = function=(filename: string)>(boolean | nil, string, number | nil),
 	setlocale = function=(locale: string, category: string)>(string | nil) | function=(locale: string)>(string | nil),
 	date = function <|format: nil | string, time: nil | number|>

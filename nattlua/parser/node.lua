@@ -848,7 +848,11 @@ local all_nodes = {
 		}
 	end,
 }
---[[#local type NodeKind = keysof<|all_nodes|>]]
+--[[#type NodeKind = keysof<|all_nodes|>]]
+--[[#type ExpressionKind = NodeKind]]
+--[[#type StatementKind = NodeKind]]
+--[[#type expression = Map<|string, Node|>]]
+--[[#type statement = Map<|string, Node|>]]
 
 function META.New(
 	type--[[#: ref NodeKind]],
@@ -1096,6 +1100,10 @@ function META:FindNodesByType(what--[[#: NodeKind]])
 end
 
 --[[#type META.NodeKind = NodeKind]]
+--[[#type META.ExpressionKind = ExpressionKind]]
+--[[#type META.StatementKind = StatementKind]]
 --[[#type META.Node = Node]]
---[[#type META.Nodes = all_nodes]]
+--[[#type META.Nodes = Map<|NodeKind, Node|>]]
+--[[#type META.expression = Map<|string, Node|>]]
+--[[#type META.statement = Map<|string, Node|>]]
 return META

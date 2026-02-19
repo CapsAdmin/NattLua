@@ -736,3 +736,26 @@ analyze[[
     end
     jit.attach(f, "trace")
 ]]
+
+analyze[==[
+local class = {}
+function class.CreateTemplate(name)
+	local META = {}
+	META.Type = name
+	META.__index = META
+	--[[#type META.@Self = {}]]
+	function META:GetSet(name, default)
+		self[name] = default
+		--[[#type self.@Self[name] = default ]]
+	end
+	return META
+end
+local T = class.CreateTemplate("test")
+T:GetSet("Value", nil)
+]==]
+
+analyze[[
+	if jit and jit.vmdef then
+		local x = jit.vmdef
+	end
+]]

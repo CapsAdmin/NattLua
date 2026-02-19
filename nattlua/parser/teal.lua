@@ -1,13 +1,13 @@
 --[[#local type { Node, statement } = import("~/nattlua/parser/node.lua")]]
 
---[[#local type { TokenType } = import("~/nattlua/lexer/token.lua")]]
+--[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 local math_huge = math.huge
 local table_insert = table.insert
 local tostring = tostring
-return function(META)
+return function(META--[[#: any]])
 	function META:ParseTealFunctionArgument(expect_type--[[#: nil | boolean]])
 		if
 			expect_type or

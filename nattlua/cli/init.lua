@@ -325,19 +325,19 @@ config.commands["lsp"] = {
 	end,
 }
 
-function cli.print_error(msg)
+function cli.print_error(msg--[[#: any]])
 	if _G.NATTLUA_MARKDOWN_OUTPUT then
-		io.stderr:write("### error: " .. msg .. "\n")
+		io.stderr:write("### error: " .. tostring(msg) .. "\n")
 	else
-		io.stderr:write(colors.red("error") .. ": " .. msg .. "\n")
+		io.stderr:write(colors.red("error") .. ": " .. tostring(msg) .. "\n")
 	end
 end
 
-function cli.print_warning(msg)
+function cli.print_warning(msg--[[#: any]])
 	if _G.NATTLUA_MARKDOWN_OUTPUT then
-		io.stderr:write("### warning: " .. msg .. "\n")
+		io.stderr:write("### warning: " .. tostring(msg) .. "\n")
 	else
-		io.stderr:write(colors.yellow("warning") .. ": " .. msg .. "\n")
+		io.stderr:write(colors.yellow("warning") .. ": " .. tostring(msg) .. "\n")
 	end
 end
 
@@ -464,14 +464,14 @@ function cli.load_config(config_path)
 	local load_func, err = loadfile(config_path)
 
 	if not load_func then
-		cli.print_error("Failed to load config: " .. err)
+		cli.print_error("Failed to load config: " .. tostring(err))
 		os.exit(1)
 	end
 
 	local success, config = pcall(load_func)
 
 	if not success then
-		cli.print_error("Failed to execute config: " .. config)
+		cli.print_error("Failed to execute config: " .. tostring(config))
 		os.exit(1)
 	end
 
@@ -508,7 +508,7 @@ function cli.main(...)
 		local f, err = io.open(markdown_output_path, "w")
 
 		if not f then
-			cli.print_error("Failed to open output file: " .. err)
+			cli.print_error("Failed to open output file: " .. tostring(err))
 			os.exit(1)
 		end
 
@@ -564,7 +564,7 @@ function cli.main(...)
 	local ok, args, options = pcall(parse_args, args, config.commands[command].options)
 
 	if not ok then
-		cli.print_error("Failed to parse command " .. command .. ": " .. args)
+		cli.print_error("Failed to parse command " .. tostring(command) .. ": " .. tostring(args))
 		os.exit(1)
 	end
 
@@ -572,9 +572,9 @@ function cli.main(...)
 
 	if not ok then
 		if _G.NATTLUA_MARKDOWN_OUTPUT then
-			io.stderr:write("### error: Failed to execute command " .. command .. "\n\n" .. err .. "\n")
+			io.stderr:write("### error: Failed to execute command " .. tostring(command) .. "\n\n" .. tostring(err) .. "\n")
 		else
-			cli.print_error("Failed to execute command " .. command .. ": " .. err)
+			cli.print_error("Failed to execute command " .. tostring(command) .. ": " .. tostring(err))
 		end
 		os.exit(1)
 	end
