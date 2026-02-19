@@ -8,6 +8,7 @@ type package = {
 	cpath = string,
 	loaded = Map<|string, any|>,
 	searchers = List<|PackageSearcher|>,
+	loaders = List<|PackageSearcher|>,
 	preload = Map<|string, PackageLoader|>,
 	searchpath = function=(
 		name: string, -- module name to search for
