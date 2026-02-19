@@ -31,7 +31,7 @@ local function format_error(err--[[#: number]], arg--[[#: number | nil]])
 	return string.format(fmt, arg)
 end
 
-local function create_warn_log(interval)
+local function create_warn_log(interval--[[#: number]])
 	local i = 0
 	local last_time = 0
 	return function()

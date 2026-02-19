@@ -150,16 +150,27 @@ local function process_type(key, obj, is_typedef, mode)
 end
 
 local function analyze(c_code, mode, ...)
-	local c_code_string_obj = c_code
-	c_code = c_code:GetData()
+	if c_code.Type == "union" then
+		local vars, typs, captured
 
-	if mode == "typeof" then
-		c_code = "typedef void (*TYPEOF_CDECL)(" .. c_code .. ");"
-	elseif mode == "ffinew" then
-		c_code = "void (*TYPEOF_CDECL)(" .. c_code .. ");"
+		for _, v in ipairs(c_code:GetData()) do
+			vars, typs, captured = analyze(v, mode, ...)
+		end
+
+		return vars, typs, captured
 	end
 
-	local code = Code(c_code, "test.c")
+	local c_code_string_obj = c_code
+	local c_code_raw = c_code:GetData()
+	assert(type(c_code_raw) == "string", "c_code:GetData() must return a string")
+
+	if mode == "typeof" then
+		c_code_raw = "typedef void (*TYPEOF_CDECL)(" .. c_code_raw .. ");"
+	elseif mode == "ffinew" then
+		c_code_raw = "void (*TYPEOF_CDECL)(" .. c_code_raw .. ");"
+	end
+
+	local code = Code(c_code_raw, "test.c")
 	local lex = Lexer(code)
 	local tokens = lex:GetTokens()
 	c_code_string_obj.c_tokens = tokens

@@ -55,6 +55,7 @@ else
 end
 
 -- Define the event structure
+local time_type = ffi.os == "OSX" and "uint64_t" or (ffi.os == "Windows" and "int64_t" or "long int")
 ffi.cdef(
 	[[
 typedef struct {
@@ -62,14 +63,13 @@ typedef struct {
     uint16_t path_id;    // Index into path lookup table
     uint32_t start_pos;  // Start position from start_stop
     uint32_t end_pos;    // End position from start_stop
-    $ time;              // Timestamp (raw time type)
+    ]] .. time_type .. [[ time;              // Timestamp (raw time type)
 } profile_event_t;
 
 void* malloc(size_t size);
 void* realloc(void* ptr, size_t size);
 void free(void* ptr);
-]],
-	ffi.typeof(get_time_raw())
+]]
 )
 
 -- this must be called before loading modules

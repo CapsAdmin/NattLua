@@ -35,10 +35,13 @@ type Modules["jit.opt"] = {
 type jit = {
 	os = "Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other",
 	arch = "x86" | "x64" | "arm" | "arm64" | "ppc" | "mips" | "mips64" | "mips64el" | "riscv64",
-	attach = function=(
-		jit_attach_bc | jit_attach_trace | jit_attach_record | jit_attach_texit,
-		"bc" | "trace" | "record" | "texit" | nil
-	)>(nil),
+	attach = (
+		function=(jit_attach_bc, "bc")>(nil) |
+		function=(jit_attach_trace, "trace")>(nil) |
+		function=(jit_attach_record, "record")>(nil) |
+		function=(jit_attach_texit, "texit")>(nil) |
+		function=(Function, nil | "bc" | "trace" | "record" | "texit")>(nil)
+	),
 	tracebarrier = function=()>(nil),
 	version_num = number,
 	version = string,

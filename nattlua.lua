@@ -32,14 +32,12 @@ if jit then
 			current_path = ffi.string(buf):gsub("\\", "/")
 		end
 
-		local nattlua_path = debug.getinfo(1, "S").source:match("^@(.+)$")
-		nattlua_path = nattlua_path:match("(.+)/nattlua%.lua$")
+		local nattlua_path = assert(assert(debug.getinfo(1, "S")).source:match("^@(.+)$"))
+		nattlua_path = assert(nattlua_path:match("(.+)/nattlua%.lua$"))
 
-		if nattlua_path then
-			local dir = current_path .. "/" .. nattlua_path .. "/"
-			_G.ROOT_PATH = dir
-			package.path = package.path .. ";" .. dir .. "?.lua" .. ";" .. dir .. "?/init.lua"
-		end
+		local dir = current_path .. "/" .. nattlua_path .. "/"
+		_G.ROOT_PATH = dir
+		package.path = package.path .. ";" .. dir .. "?.lua" .. ";" .. dir .. "?/init.lua"
 	end
 end
 

@@ -7,7 +7,7 @@ local should_run = true
 local stop_profiler
 local stop_tracing
 
-function profiler.Start(mode, whitelist)
+function profiler.Start(mode--[[#: string | nil]], whitelist--[[#: List<|string|> | nil]])
 	if mode == "trace" then
 		stop_tracer = trace_tracker.Start()
 	elseif mode == "instrumental" then

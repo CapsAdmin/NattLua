@@ -727,3 +727,12 @@ analyze[[
     x = 2
     ::foo::
 ]]
+
+
+analyze[[
+    local jit = _G.jit as jit
+    local f: jit_attach_trace = function(what, tr, func, pc, otr, oex)
+        attest.equal(what, _ as "abort" | "flush" | "start" | "stop")
+    end
+    jit.attach(f, "trace")
+]]
