@@ -11,10 +11,54 @@ local error = _G.error
 local ipairs = _G.ipairs
 local stringx = require("nattlua.other.string")
 local formating = {}
+local is_plain = false
+local is_markdown = false
+
+function formating.SetPlain(b--[[#: boolean]])
+	is_plain = b
+end
+
+function formating.SetMarkdown(b--[[#: boolean]])
+	is_markdown = b
+end
+
+local function try_to_markdown_link(msg)
+	if msg:sub(1, 1) == "[" then return msg end
+
+	local path, line = msg:match("^([^:]+):(%d+)")
+
+	if path and (path:find("/") or path:find("%.lua") or path:find("%.nlua")) then
+		if path:sub(1, 1) == "@" then path = path:sub(2) end
+
+		local link = path
+
+		if line and line ~= "" then
+			link = link .. "#L" .. line
+		end
+
+		return "[" .. msg .. "](" .. link .. ")"
+	end
+
+	-- check for at stack traceback: lines and other lines that contains paths
+	local out = msg:gsub("([%w%._%-%/]+):(%d+)", function(path, line)
+		if path:find("/") or path:find("%.lua") or path:find("%.nlua") then
+			return "[" .. path .. ":" .. line .. "](" .. path .. "#L" .. line .. ")"
+		end
+	end)
+
+	if out ~= msg then return out end
+
+	return msg
+end
+
 local assert = _G.assert
 local select = _G.select
 
 function formating.QuoteToken(str--[[#: string]])--[[#: string]]
+	if is_markdown then return "`" .. str .. "`" end
+
+	if is_plain then return "'" .. str .. "'" end
+
 	return "❲" .. str .. "❳"
 end
 
@@ -372,7 +416,7 @@ function formating.BuildSourceCodePointMessage2(
 		end
 	end
 
-	if config.show_box then
+	if config.show_box and not is_markdown then
 		local longest_line = 0
 
 		for i, v in ipairs(annotated) do
@@ -397,6 +441,48 @@ function formating.BuildSourceCodePointMessage2(
 	local header = config.show_line_numbers == false and
 		"" or
 		stringx.pad_left(ARROW, number_length, " ") .. SEPARATOR
+
+	if is_markdown then
+		local out = ""
+		local main_link = nil
+
+		if config.path then
+			local path = config.path
+
+			if path:sub(1, 1) == "@" then path = path:sub(2) end
+
+			local line = (d.line_start + d.line_offset)
+			local col = d.source_code_char_start
+			main_link = "[" .. path .. ":" .. line .. ":" .. col .. "](" .. path .. "#L" .. line .. ")"
+			out = out .. main_link .. "\n\n"
+		end
+
+		if config.messages then
+			for _, msg in ipairs(config.messages) do
+				local transformed = try_to_markdown_link(msg)
+
+				if transformed ~= msg then
+					-- if the location is exactly the same as main_link, don't repeat it
+					if transformed ~= main_link then
+						out = out .. transformed .. "\n\n"
+					end
+				else
+					local label = msg:gsub("^### ", "")
+
+					if main_link then
+						local link = main_link:match("%((.-)%)")
+						out = out .. "[" .. label .. "](" .. link .. ")\n\n"
+					else
+						out = out .. "**" .. label .. "**\n\n"
+					end
+				end
+			end
+		end
+
+		out = out .. "\n```lua\n" .. table.concat(annotated, "\n"):gsub("\t", TAB_WIDTH):gsub(" +(\n)", "%1"):gsub(" +$", "") .. "\n```\n"
+
+		return out
+	end
 
 	if config.path then
 		local path = config.path

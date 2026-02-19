@@ -21,6 +21,7 @@ local loadstring = require("nattlua.other.loadstring")
 local stringx = require("nattlua.other.string")
 local callstack = require("nattlua.other.callstack")
 local META = class.CreateTemplate("compiler")
+local NATTLUA_MARKDOWN_OUTPUT = _G.NATTLUA_MARKDOWN_OUTPUT
 --[[#local type CompilerConfig = Partial<|
 	{
 		file_path = string | nil,
@@ -104,12 +105,14 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 			{path = code:GetName(), messages = messages, surrounding_line_count = 1}
 		) .. "\n"
 
-	if severity == "error" then
-		msg = "\x1b[0;31m" .. msg .. "\x1b[0m"
-	elseif severity == "warning" then
-		msg = "\x1b[0;33m" .. msg .. "\x1b[0m"
-	elseif severity == "fatal" then
-		msg = "\x1b[0;35m" .. msg .. "\x1b[0m"
+	if not NATTLUA_MARKDOWN_OUTPUT then
+		if severity == "error" then
+			msg = "\x1b[0;31m" .. msg .. "\x1b[0m"
+		elseif severity == "warning" then
+			msg = "\x1b[0;33m" .. msg .. "\x1b[0m"
+		elseif severity == "fatal" then
+			msg = "\x1b[0;35m" .. msg .. "\x1b[0m"
+		end
 	end
 
 	if not _G.TEST then
@@ -143,14 +146,14 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 			end
 		end
 
-		if not _G.TEST then print(msg) end
+		if not _G.TEST and not NATTLUA_MARKDOWN_OUTPUT then print(msg) end
 
 		table.insert(self.errors, msg)
 	end
 end
 
 local traceback = function(self, obj, msg)
-	if self.debug or _G.TEST then
+	if self.debug or _G.TEST or NATTLUA_MARKDOWN_OUTPUT then
 		local ret = {
 			xpcall(function()
 				msg = msg or "no error"

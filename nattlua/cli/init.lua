@@ -326,15 +326,27 @@ config.commands["lsp"] = {
 }
 
 function cli.print_error(msg)
-	io.stderr:write(colors.red("error") .. ": " .. msg .. "\n")
+	if _G.NATTLUA_MARKDOWN_OUTPUT then
+		io.stderr:write("### error: " .. msg .. "\n")
+	else
+		io.stderr:write(colors.red("error") .. ": " .. msg .. "\n")
+	end
 end
 
 function cli.print_warning(msg)
-	io.stderr:write(colors.yellow("warning") .. ": " .. msg .. "\n")
+	if _G.NATTLUA_MARKDOWN_OUTPUT then
+		io.stderr:write("### warning: " .. msg .. "\n")
+	else
+		io.stderr:write(colors.yellow("warning") .. ": " .. msg .. "\n")
+	end
 end
 
 function cli.print_success(msg)
-	io.write(colors.green("success") .. ": " .. msg .. "\n")
+	if _G.NATTLUA_MARKDOWN_OUTPUT then
+		io.write("### success: " .. msg .. "\n")
+	else
+		io.write(colors.green("success") .. ": " .. msg .. "\n")
+	end
 end
 
 function cli.version()
@@ -474,6 +486,55 @@ end
 function cli.main(...)
 	local args = {...}
 
+	local markdown_output_path = nil
+
+	for i = #args, 1, -1 do
+		if args[i]:sub(1, 13) == "--to-markdown" then
+			local arg = args[i]
+			table.remove(args, i)
+			_G.NATTLUA_MARKDOWN_OUTPUT = true
+			colors.Disable()
+			require("nattlua.other.formating").SetMarkdown(true)
+
+			if arg:sub(14, 14) == "=" then
+				markdown_output_path = arg:sub(15)
+			else
+				markdown_output_path = "output.md"
+			end
+		end
+	end
+
+	if _G.NATTLUA_MARKDOWN_OUTPUT and markdown_output_path ~= "stdout" then
+		local f, err = io.open(markdown_output_path, "w")
+
+		if not f then
+			cli.print_error("Failed to open output file: " .. err)
+			os.exit(1)
+		end
+
+		_G.io.write = function(...)
+			f:write(...)
+			f:flush()
+		end
+
+		_G.io.stderr = f
+		_G.io.stdout = f
+
+		_G.print = function(...)
+			local n = select("#", ...)
+
+			for i = 1, n do
+				_G.io.write(tostring(select(i, ...)))
+
+				if i < n then
+					_G.io.write("\t")
+				end
+			end
+
+			_G.io.write("\n")
+		end
+	end
+
 	if #args == 0 then
 		cli.help()
 		os.exit(0)
@@ -510,7 +571,11 @@ function cli.main(...)
 	local ok, err = xpcall(config.commands[command].cb, debug.traceback, args, options, config, cli)
 
 	if not ok then
-		cli.print_error("Failed to execute command " .. command .. ": " .. err)
+		if _G.NATTLUA_MARKDOWN_OUTPUT then
+			io.stderr:write("### error: Failed to execute command " .. command .. "\n\n" .. err .. "\n")
+		else
+			cli.print_error("Failed to execute command " .. command .. ": " .. err)
+		end
 		os.exit(1)
 	end
 end
