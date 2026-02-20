@@ -14,7 +14,12 @@ return function()
 	--[[#type META.TBaseType = TBaseType]]
 	--[[#type META.Type = string]]
 
-	function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]]) --error("nyi " .. a.Type .. " == " .. b.Type)
+	function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: any]])--[[#: boolean, string | nil]]
+		return false, "nyi"
+	end
+
+	function META:IsSubsetOf(other--[[#: TBaseType]], visited--[[#: any]])--[[#: boolean, string | nil]]
+		return false, "nyi"
 	end
 
 	function META:IsNil()

@@ -25,14 +25,18 @@ do -- basic arithmetic functions
 		for i = 1, select("#", ...) do
 			local obj = select(i, ...)
 
-			if not obj:IsLiteral() then
+			if not obj:IsLiteral() or obj.Type ~= "number" then
 				return types.Number()
 			else
-				numbers[i] = obj:GetData()
+				local data = obj:GetData()
+
+				if type(data) ~= "number" then return types.Number() end
+
+				numbers[i] = data
 			end
 		end
 
-		return math.min(table.unpack(numbers))
+		return _G.math.min(table.unpack(numbers))
 	end
 
 	analyzer function math.max(...: ...number)
@@ -41,14 +45,18 @@ do -- basic arithmetic functions
 		for i = 1, select("#", ...) do
 			local obj = select(i, ...)
 
-			if not obj:IsLiteral() then
+			if not obj:IsLiteral() or obj.Type ~= "number" then
 				return types.Number()
 			else
-				numbers[i] = obj:GetData()
+				local data = obj:GetData()
+
+				if type(data) ~= "number" then return types.Number() end
+
+				numbers[i] = data
 			end
 		end
 
-		return math.max(table.unpack(numbers))
+		return _G.math.max(table.unpack(numbers))
 	end
 end
 
