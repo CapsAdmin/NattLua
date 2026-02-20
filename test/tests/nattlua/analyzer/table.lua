@@ -1176,3 +1176,17 @@ for i, v in ipairs(x) do
 end
 attest.equal(x, _ as {foo = 1, bar = 2, faz = 3})
 ]]
+
+analyze[[
+local META = {}
+META.Type = "table"
+type META.@Self = {}
+type META.@Self.literal_data_cache = META.@Self
+type META.@Name = "TTable"
+function META.Foo(visited: META.@Self)
+visited = visited
+end
+local v = {}
+v.literal_data_cache = v
+META.Foo(v)
+]]

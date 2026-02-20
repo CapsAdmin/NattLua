@@ -909,23 +909,28 @@ function META:IsNumericallyIndexed()
 	return true
 end
 
-function META:CopyLiteralness(from)
+function META:CopyLiteralness(from, map)
 	if from.Type ~= self.Type then return self end
 
 	if self:Equal(from) then return self end
 
-	local self = self:Copy()
+	map = map or {}
+
+	if map[from] then return map[from] end
+
+	local copy = self:Copy()
+	map[from] = copy
 
 	for _, keyval_from in ipairs(from:GetData()) do
-		local keyval, reason = self:FindKeyValExact(keyval_from.key)
+		local keyval = copy:FindKeyValExact(keyval_from.key)
 
 		if keyval then
-			keyval.key = keyval.key:CopyLiteralness(keyval_from.key)
-			keyval.val = keyval.val:CopyLiteralness(keyval_from.val)
+			keyval.key = keyval.key:CopyLiteralness(keyval_from.key, map)
+			keyval.val = keyval.val:CopyLiteralness(keyval_from.val, map)
 		end
 	end
 
-	return self
+	return copy
 end
 
 function META:CopyLiteralness2(from)
@@ -984,6 +989,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 
 	local copy = META.New()
 	map[self] = copy -- map any lua references from self to this new copy
+
 	for i, keyval in ipairs(self.Data) do
 		local k = copy_val(keyval.key, map, copy_tables)
 		local v = copy_val(keyval.val, map, copy_tables)
@@ -995,13 +1001,18 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 
 	if self.Self then
 		local tbl = self.Self
-		local m, c = tbl.MetaTable, tbl.Contract
-		tbl.MetaTable = false
-		tbl.Contract = false
-		local tbl_copy = copy_val(self.Self, map, copy_tables)
-		tbl.MetaTable = m
-		tbl.Contract = c
-		copy:SetSelf(tbl_copy)
+
+		if map[tbl] then
+			copy:SetSelf(map[tbl])
+		else
+			local m, c = tbl.MetaTable, tbl.Contract
+			tbl.MetaTable = false
+			tbl.Contract = false
+			local tbl_copy = copy_val(self.Self, map, copy_tables)
+			tbl.MetaTable = m
+			tbl.Contract = c
+			copy:SetSelf(tbl_copy)
+		end
 	end
 
 	copy.Self2 = self.Self2
