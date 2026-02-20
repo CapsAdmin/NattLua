@@ -18,6 +18,7 @@ local META = require("nattlua.types.base")()
 META.Type = "tuple"
 --[[#type META.@Name = "TTuple"]]
 --[[#local type TTuple = META.@Self]]
+--[[#type TTuple.Type = "tuple"]]
 --[[#type TTuple.suppress = boolean]]
 META:GetSet("Data", nil--[[# as List<|any|>]])
 META:GetSet("Unpackable", false--[[# as boolean]])

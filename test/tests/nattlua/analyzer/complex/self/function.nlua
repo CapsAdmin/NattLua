@@ -1,0 +1,1 @@
+local type { Function } = require("nattlua.types.function")

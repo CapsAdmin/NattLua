@@ -4,6 +4,7 @@ local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TAny"]]
 --[[#local type TAny = META.@Self]]
+--[[#type TAny.Type = "any"]]
 META.Type = "any"
 
 function META:Get(key--[[#: TBaseType]])

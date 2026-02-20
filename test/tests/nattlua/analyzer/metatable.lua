@@ -647,7 +647,7 @@ analyze[[
                 
                 local constructor = analyzer:AssertFallback(types.Nil(), meta:Get(types.ConstString("constructor")))
     
-                constructor:SetInputModifiers(0, {ref = true})
+                constructor:SetInputModifier(0, {ref = true})
                 constructor:GetInputSignature():Set(1, types.Any())
             
                 tbl:SetMetaTable(meta)

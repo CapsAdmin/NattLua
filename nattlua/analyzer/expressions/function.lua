@@ -70,7 +70,7 @@ local function analyze_arguments(self, node, func)
 
 			if key.type_expression then
 				if key.modifiers then
-					func:SetInputModifiers((node.self_call and i - 1) or i, collect_modifiers(key.modifiers))
+					func:SetInputModifier((node.self_call and i - 1) or i, collect_modifiers(key.modifiers))
 				end
 
 				args[i] = self:AssertFallback(Nil(), self:AnalyzeExpression(key.type_expression))
@@ -180,7 +180,7 @@ local function analyze_return_types(self, node, func)
 			local obj = self:AnalyzeExpression(type_exp)
 
 			if type_exp.modifiers then
-				func:SetOutputModifiers(i, collect_modifiers(type_exp.modifiers))
+				func:SetOutputModifier(i, collect_modifiers(type_exp.modifiers))
 			end
 
 			if i == 1 and obj.Type == "tuple" and #node.identifiers == 1 and not obj.Repeat then

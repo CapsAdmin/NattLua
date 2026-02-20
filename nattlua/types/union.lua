@@ -23,6 +23,7 @@ local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TUnion"]]
 --[[#local type TUnion = META.@Self]]
+--[[#type TUnion.Type = "union"]]
 --[[#type TUnion.literal_data_cache = Map<|string, TBaseType|>]]
 --[[#type TUnion.suppress = boolean]]
 --[[#type TUnion.left_right_source = {left = TBaseType, right = TBaseType} | false]]

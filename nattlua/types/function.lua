@@ -2,16 +2,26 @@ local tostring = _G.tostring
 local ipairs = _G.ipairs
 local setmetatable = _G.setmetatable
 local table = _G.table
+
+--[[#local type { TTuple } = require("nattlua.types.tuple")]]
+
+--[[#local type { TUnion } = require("nattlua.types.union")]]
+
+--[[#local type { TAny } = require("nattlua.types.any")]]
+
 local Tuple = require("nattlua.types.tuple").Tuple
 local VarArg = require("nattlua.types.tuple").VarArg
 local Any = require("nattlua.types.any").Any
+--
 local error_messages = require("nattlua.error_messages")
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TFunction"]]
 --[[#local type TFunction = META.@Self]]
---[[#type TFunction.scopes = List<|any|>]]
+--[[#type TFunction.Type = "function"]]
 --[[#type TFunction.suppress = boolean]]
+--[[#type TFunction.InputModifiers = false | Map<|number, Map<|string, any|>|>]]
+--[[#type TFunction.OutputModifiers = false | Map<|number, Map<|string, any|>|>]]
 META.Type = "function"
 META:IsSet("Called", false)
 META:IsSet("ExplicitInputSignature", false)
@@ -27,8 +37,8 @@ META:IsSet("ArgumentsInferred", false)
 META:IsSet("LiteralFunction", false)
 META:GetSet("PreventInputArgumentExpansion", false)
 META:IsSet("InputArgumentsInferred", false)
-META:IsSet("InputModifiers", false)
-META:IsSet("OutputModifiers", false)
+META:GetSet("InputModifiers", false--[[# as TFunction.InputModifiers]])
+META:GetSet("OutputModifiers", false--[[# as TFunction.OutputModifiers]])
 
 function META.LogicalComparison(l--[[#: TFunction]], r--[[#: TFunction]], op--[[#: string]])
 	if op == "==" then
@@ -128,8 +138,10 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	return copy
 end
 
-function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
-	if b.Type == "tuple" then b = b:GetWithNumber(1) end
+function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TTuple | TUnion | TAny | TFunction]])
+	if b.Type == "tuple" then
+		b = assert(b:GetWithNumber(1))--[[# as TUnion | TAny | TFunction]]
+	end
 
 	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
 
@@ -215,13 +227,13 @@ function META:HasReferenceTypes()
 	return false
 end
 
-function META:SetInputModifiers(index--[[#: number]], modifiers--[[#: List<|string|>]])
+function META:SetInputModifier(index--[[#: number]], modifiers--[[#: Map<|string, any|>]])
 	if not self.InputModifiers then self.InputModifiers = {} end
 
 	self.InputModifiers[index] = modifiers
 end
 
-function META:SetOutputModifiers(index--[[#: number]], modifiers--[[#: List<|string|>]])
+function META:SetOutputModifier(index--[[#: number]], modifiers--[[#: Map<|string, any|>]])
 	if not self.OutputModifiers then self.OutputModifiers = {} end
 
 	self.OutputModifiers[index] = modifiers
@@ -268,6 +280,7 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			InputArgumentsInferred = false,
 			InputModifiers = false,
 			OutputModifiers = false,
+			Data = false,
 		}
 	)
 end

@@ -164,7 +164,7 @@ return function(self, obj, input)
 
 					if arg.Type == "any" and arg.Type ~= contract.Type then arg = contract end
 
-					obj:SetInputModifiers(identifier_index, {ref = true})
+					obj:SetInputModifier(identifier_index, {ref = true})
 					local ok, err = check_argument_against_contract(self, arg, contract, i)
 
 					if not ok then self:Error(error_messages.argument(i, err)) end

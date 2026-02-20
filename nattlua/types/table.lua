@@ -21,6 +21,7 @@ local math_huge = math.huge
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#local type TTable = META.@Self]]
+--[[#type TTable.Type = "table"]]
 --[[#type TTable.suppress = boolean]]
 --[[#type TTable.mutations = Map<|
 		TBaseType,
