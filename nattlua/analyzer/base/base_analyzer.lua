@@ -502,7 +502,12 @@ return function(META--[[#: any]])
 				print(debug.traceback(err))
 			end)
 
-			if not ok then s = "* error in rendering statement * " end
+			if not ok then 
+				s = "* error in rendering statement * " 
+				print("error in rendering statement:")
+				print(err)
+				print(debug.traceback())
+			end
 
 			return s
 		end
