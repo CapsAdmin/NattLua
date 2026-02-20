@@ -5,7 +5,7 @@ local get_time = require("test.helpers.get_time")
 local profiler = {}
 local should_run = true
 local stop_profiler
-local stop_tracing
+local stop_tracer
 
 function profiler.Start(mode--[[#: string | nil]], whitelist--[[#: List<|string|> | nil]])
 	if mode == "trace" then
