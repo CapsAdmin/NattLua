@@ -21,12 +21,15 @@ META.Type = "tuple"
 --[[#type TTuple.suppress = boolean]]
 META:GetSet("Data", nil--[[# as List<|any|>]])
 META:GetSet("Unpackable", false--[[# as boolean]])
-META.Remainder = false
 --[[#type TTuple.Remainder = TBaseType | false]]
 META.Repeat = false
 --[[#type TTuple.Repeat = number | false]]
 
-function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]], visited--[[#: Map<|TBaseType, boolean|> | nil]])
+function META.Equal(
+	a--[[#: TTuple]],
+	b--[[#: TBaseType]],
+	visited--[[#: Map<|TBaseType, boolean|> | nil]]
+)
 	if a.Type ~= b.Type then return false, "types differ" end
 
 	visited = visited or {}
@@ -39,7 +42,7 @@ function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]], visited--[[#: Map<|TB
 	visited[a] = true
 
 	for i = 1, #a.Data do
-		ok, reason = a.Data[i]:Equal(b.Data[i], visited)
+		ok, reason = (a.Data[i]--[[# as any]]):Equal(b.Data[i]--[[# as any]], visited)
 
 		if not ok then break end
 	end
@@ -117,40 +120,43 @@ function META:Merge(tup--[[#: TTuple]])
 	return self
 end
 
-local function copy_val(val, map, copy_tables)
+local function copy_val(
+	val--[[#: TBaseType]],
+	map--[[#: Map<|any, TTuple|>]],
+	copy_tables--[[#: boolean | nil]]
+)
 	if not val then return val end
 
 	-- if it's already copied
-	if map[val] then return map[val] end
+	if map[val] then return assert(map[val]) end
 
 	map[val] = val:Copy(map, copy_tables)
-	return map[val]
+	return assert(map[val])
 end
 
-function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
+function META:Copy(map--[[#: Map<|any, TTuple|> | nil]], copy_tables--[[#: boolean | nil]])--[[#: TTuple]]
 	map = map or {}
 
-	if map[self] then return map[self] end
+	if map[self] then return assert(map[self]) end
 
 	local copy = META.New({})
 	map[self] = copy
-	
 	local data = self.Data
 	local copy_data = copy.Data
 	local len = #data
 
 	for i = 1, len do
-		copy_data[i] = copy_val(data[i], map, copy_tables)
+		copy_data[i] = copy_val(assert(data[i]), map, copy_tables)
 	end
 
 	copy.Repeat = self.Repeat
-	copy.Remainder = copy_val(self.Remainder, map, copy_tables)
+	copy.Remainder = copy_val(self.Remainder, map, copy_tables) or false
 	copy.Unpackable = self.Unpackable
 	copy:CopyInternalsFrom(self)
 	return copy
 end
 
-function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#: nil | number]])
+function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: any]], max_length--[[#: nil | number]])
 	if a == b then return true end
 
 	if a.suppress then return true end
@@ -161,7 +167,7 @@ function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: TBaseType]], max_length--[[#:
 		if t and t.Type == "any" and #a:GetData() == 0 then return true end
 	end
 
-	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
+	if b.Type == "union" then return b:IsTargetSubsetOfChild(a--[[# as any]]) end
 
 	do
 		local t = a:GetWithNumber(1)
@@ -405,7 +411,7 @@ end
 function META:GetAtTupleIndex(i)
 	if i > self:GetTupleLength() then return nil end
 
-	local obj = self:GetWithNumber(i)
+	local obj = self:GetWithNumber(i)--[[# as any]]
 
 	if obj then
 		if obj.Type == "union" then
@@ -519,7 +525,7 @@ function META:GetWithoutExpansion(i--[[#: number]])
 end
 
 -- TODO, this should really be SetWithNumber, and Set should take a number object
-function META:Set(i--[[#: number]], val--[[#: TBaseType]])
+function META:Set(i--[[#: number]], val--[[#: any]])
 	if type(i) == "table" then
 		if i.Type ~= "number" then return false, "expected number" end
 
@@ -748,6 +754,10 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TTuple]]
 			suppress = false,
 			Remainder = false,
 			Repeat = false,
+			TruthyFalsy = "unknown",
+			Upvalue = false,
+			Contract = false,
+			MetaTable = false,
 		}
 	)
 
