@@ -74,7 +74,7 @@ end
 function META:__tostring()
 	if self.suppress then return "current_tuple" end
 
-	self.suppress = true
+	self.suppress = true--[[# as any]]
 	local strings--[[#: List<|string|>]] = {}
 	local data = self.Data
 	local len = #data
@@ -752,7 +752,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TTuple]]
 			Type = "tuple",
 			Data = {},
 			Unpackable = false,
-			suppress = false,
+			suppress = false--[[# as boolean]],
 			Remainder = false,
 			Repeat = false,
 			TruthyFalsy = "unknown",

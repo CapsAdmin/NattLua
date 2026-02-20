@@ -20,19 +20,19 @@ local META = require("nattlua.types.base")()
 --[[#local type TFunction = META.@Self]]
 --[[#type TFunction.Type = "function"]]
 --[[#type TFunction.suppress = boolean]]
---[[#type TFunction.InputModifiers = false | Map<|number, Map<|string, any|>|>]]
---[[#type TFunction.OutputModifiers = false | Map<|number, Map<|string, any|>|>]]
+--[[#type TFunction.InputModifiers = Map<|number, Map<|string, any|>|> | false]]
+--[[#type TFunction.OutputModifiers = Map<|number, Map<|string, any|>|> | false]]
 META.Type = "function"
 META:IsSet("Called", false)
 META:IsSet("ExplicitInputSignature", false)
 META:IsSet("ExplicitOutputSignature", false)
-META:GetSet("InputSignature", false--[[# as TTuple]])
-META:GetSet("OutputSignature", false--[[# as TTuple]])
-META:GetSet("FunctionBodyNode", false--[[# as nil | any]])
-META:GetSet("Scope", false--[[# as nil | any]])
-META:GetSet("UpvaluePosition", false--[[# as nil | number]])
-META:GetSet("InputIdentifiers", false--[[# as nil | List<|any|>]])
-META:GetSet("AnalyzerFunction", false--[[# as nil | Function]])
+META:GetSet("InputSignature", false--[[# as TTuple | false]])
+META:GetSet("OutputSignature", false--[[# as TTuple | false]])
+META:GetSet("FunctionBodyNode", false--[[# as false | any]])
+META:GetSet("Scope", false--[[# as false | any]])
+META:GetSet("UpvaluePosition", false--[[# as false | number]])
+META:GetSet("InputIdentifiers", false--[[# as false | List<|any|>]])
+META:GetSet("AnalyzerFunction", false--[[# as false | Function]])
 META:IsSet("ArgumentsInferred", false)
 META:IsSet("LiteralFunction", false)
 META:GetSet("PreventInputArgumentExpansion", false)
@@ -53,7 +53,17 @@ function META:__tostring()
 	if self.suppress then return "current_function" end
 
 	self.suppress = true
-	local s = "function=" .. tostring(self:GetInputSignature()) .. ">" .. tostring(self:GetOutputSignature())
+	local input = self:GetInputSignature()
+	local output = self:GetOutputSignature()
+	local s = "function=" .. (
+			input and
+			tostring(input) or
+			"nil"
+		) .. ">" .. (
+			output and
+			tostring(output) or
+			"nil"
+		)
 	self.suppress = false
 	return s
 end
@@ -65,11 +75,21 @@ end
 function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]], visited--[[#: any]])
 	if a.Type ~= b.Type then return false, "types differ" end
 
-	local ok, reason = a:GetInputSignature():Equal(b:GetInputSignature(), visited)
+	local a_input = a:GetInputSignature()
+	local b_input = b:GetInputSignature()--[[# as TTuple]]
+
+	if not a_input or not b_input then return false, "missing input signature" end
+
+	local ok, reason = a_input:Equal(b_input, visited)
 
 	if not ok then return false, "input signature mismatch: " .. reason end
 
-	local ok, reason = a:GetOutputSignature():Equal(b:GetOutputSignature(), visited)
+	local a_output = a:GetOutputSignature()
+	local b_output = b:GetOutputSignature()--[[# as TTuple]]
+
+	if not a_output or not b_output then return false, "missing output signature" end
+
+	local ok, reason = a_output:Equal(b_output, visited)
 
 	if not ok then return false, "output signature mismatch: " .. reason end
 
@@ -83,17 +103,23 @@ function META:GetHash(visited)
 
 	visited[self] = "*circular*"
 	local result = "("
-
 	-- Add hash for input signature
-	if self:GetInputSignature() then
-		result = result .. self:GetInputSignature():GetHash(visited)
+	local input = self:GetInputSignature()
+
+	if input then
+		local h = input:GetHash(visited)
+
+		if h then result = result .. h end
 	end
 
 	result = result .. ")=>("
-
 	-- Add hash for output signature
-	if self:GetOutputSignature() then
-		result = result .. self:GetOutputSignature():GetHash(visited)
+	local output = self:GetOutputSignature()
+
+	if output then
+		local h = output:GetHash(visited)
+
+		if h then result = result .. h end
 	end
 
 	result = result .. ")"
@@ -118,8 +144,8 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 
 	local copy = META.New()
 	map[self] = copy
-	copy.InputSignature = copy_val(self.InputSignature, map, copy_tables)
-	copy.OutputSignature = copy_val(self.OutputSignature, map, copy_tables)
+	copy:SetInputSignature(copy_val(self.InputSignature, map, copy_tables)--[[# as TTuple | false]])
+	copy:SetOutputSignature(copy_val(self.OutputSignature, map, copy_tables)--[[# as TTuple | false]])
 	copy:SetUpvaluePosition(self:GetUpvaluePosition())
 	copy:SetAnalyzerFunction(self:GetAnalyzerFunction())
 	copy:SetScope(self:GetScope())
@@ -138,9 +164,9 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	return copy
 end
 
-function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TTuple | TUnion | TAny | TFunction]])
+function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
 	if b.Type == "tuple" then
-		b = assert(b:GetWithNumber(1))--[[# as TUnion | TAny | TFunction]]
+		b = assert(b:GetWithNumber(1--[[# as any]]))--[[# as TBaseType]]
 	end
 
 	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
@@ -149,14 +175,24 @@ function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TTuple | TUnion | TAny | T
 
 	if b.Type ~= "function" then return false, error_messages.subset(a, b) end
 
-	local ok, reason = a:GetInputSignature():IsSubsetOf(b:GetInputSignature())
+	local a_input = a:GetInputSignature()
+	local b_input = b:GetInputSignature()
+
+	if not a_input or not b_input then return false, "missing input signature" end
+
+	local ok, reason = a_input:IsSubsetOf(b_input)
 
 	if not ok then
 		return false,
-		error_messages.because(error_messages.subset(a:GetInputSignature(), b:GetInputSignature()), reason)
+		error_messages.because(error_messages.subset(a_input, b_input), reason)
 	end
 
-	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
+	local a_output = a:GetOutputSignature()
+	local b_output = b:GetOutputSignature()
+
+	if not a_output or not b_output then return false, "missing output signature" end
+
+	local ok, reason = a_output:IsSubsetOf(b_output)
 
 	if
 		not ok and
@@ -177,7 +213,7 @@ function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TTuple | TUnion | TAny | T
 
 	if not ok then
 		return false,
-		error_messages.because(error_messages.subset(a:GetOutputSignature(), b:GetOutputSignature()), reason)
+		error_messages.because(error_messages.subset(a_output, b_output), reason)
 	end
 
 	return true
@@ -198,30 +234,48 @@ function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TFunction]])
 		return true
 	end
 
-	local ok, reason = a:GetInputSignature():IsSubsetOf(b:GetInputSignature(), a:GetInputSignature():GetMinimumLength())
+	local a_input = a:GetInputSignature()
+	local b_input = b:GetInputSignature()
+
+	if not a_input or not b_input then return false, "missing input signature" end
+
+	local ok, reason = a_input:IsSubsetOf(b_input, a_input:GetMinimumLength())
 
 	if not ok then
 		return false,
-		error_messages.because(error_messages.subset(a:GetInputSignature(), b:GetInputSignature()), reason)
+		error_messages.because(error_messages.subset(a_input, b_input), reason)
 	end
 
-	local ok, reason = a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
+	local a_output = a:GetOutputSignature()
+	local b_output = b:GetOutputSignature()
+
+	if not a_output or not b_output then return false, "missing output signature" end
+
+	local ok, reason = a_output:IsSubsetOf(b_output)
 
 	if not ok then
 		return false,
-		error_messages.because(error_messages.subset(a:GetOutputSignature(), b:GetOutputSignature()), reason)
+		error_messages.because(error_messages.subset(a_output, b_output), reason)
 	end
 
 	return true
 end
 
 function META:HasReferenceTypes()
-	for i, v in ipairs(self:GetInputSignature():GetData()) do
-		if self:IsInputModifier(i, "ref") then return true end
+	local input = self:GetInputSignature()
+
+	if input then
+		for i, v in ipairs(input:GetData()) do
+			if self:IsInputModifier(i, "ref") then return true end
+		end
 	end
 
-	for i, v in ipairs(self:GetOutputSignature():GetData()) do
-		if self:IsOutputModifier(i, "ref") then return true end
+	local output = self:GetOutputSignature()
+
+	if output then
+		for i, v in ipairs(output:GetData()) do
+			if self:IsOutputModifier(i, "ref") then return true end
+		end
 	end
 
 	return false
@@ -230,13 +284,13 @@ end
 function META:SetInputModifier(index--[[#: number]], modifiers--[[#: Map<|string, any|>]])
 	if not self.InputModifiers then self.InputModifiers = {} end
 
-	self.InputModifiers[index] = modifiers
+	if self.InputModifiers then self.InputModifiers[index] = modifiers end
 end
 
 function META:SetOutputModifier(index--[[#: number]], modifiers--[[#: Map<|string, any|>]])
 	if not self.OutputModifiers then self.OutputModifiers = {} end
 
-	self.OutputModifiers[index] = modifiers
+	if self.OutputModifiers then self.OutputModifiers[index] = modifiers end
 end
 
 function META:IsInputModifier(index--[[#: number]], modifier--[[#: string]])
@@ -276,7 +330,7 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			InputIdentifiers = false,
 			LiteralFunction = false,
 			Scope = false,
-			suppress = false,
+			suppress = false--[[# as boolean]],
 			InputArgumentsInferred = false,
 			InputModifiers = false,
 			OutputModifiers = false,
@@ -289,7 +343,10 @@ return {
 	TFunction = TFunction,
 	Function = META.New,
 	AnyFunction = function()
-		return META.New(Tuple({VarArg(Any())}), Tuple({VarArg(Any())}))
+		return META.New(
+			Tuple({VarArg(Any()--[[# as any]])})--[[# as TTuple]],
+			Tuple({VarArg(Any()--[[# as any]])})--[[# as TTuple]]
+		)
 	end,
 	LuaTypeFunction = function(
 		lua_function--[[#: Function]],
