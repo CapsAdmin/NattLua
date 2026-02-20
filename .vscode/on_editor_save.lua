@@ -1,5 +1,6 @@
 --ANALYZE
 require("nattlua.other.lua_compat")
+_G.REUSE_BASE_ENV = true
 local path = ...--[[# as string | nil]]
 assert(type(path) == "string", "expected path string")
 local is_lua = path:sub(-4) == ".lua"
@@ -36,6 +37,26 @@ then
 	return
 end
 
+if not _G.ROOT_PATH then
+	local source = debug.getinfo(1, "S").source:sub(2)
+	local start = source:find("%.vscode/on_editor_save%.lua$")
+
+	if start then
+		local root = source:sub(1, start - 1)
+
+		if root == "" then
+			_G.ROOT_PATH = "./"
+		else
+			if root:sub(-1) ~= "/" then root = root .. "/" end
+
+			_G.ROOT_PATH = root
+		end
+	else
+		_G.ROOT_PATH = "./"
+	end
+end
+
+_G.REUSE_BASE_ENV = true
 _G.HOTRELOAD = true
 _G.path = path
 _G.code = code
