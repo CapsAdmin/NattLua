@@ -20,7 +20,7 @@ local math_abs = math.abs
 local math_huge = math.huge
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
---[[#type TTable = META.@Self]]
+--[[#local type TTable = META.@Self]]
 --[[#type TTable.suppress = boolean]]
 --[[#type TTable.mutations = Map<|
 		TBaseType,
@@ -226,7 +226,7 @@ function META:__tostring()
 	if contract and contract.Type == "table" and contract ~= self then
 		local contract_data = contract:GetData()
 		local contract_len = #contract_data
-		
+
 		for i = 1, contract_len do
 			local keyval = contract_data[i]
 			local table_kv = self:FindKeyValExact(keyval.key)
@@ -250,7 +250,7 @@ function META:__tostring()
 	else
 		local data = self.Data
 		local len = #data
-		
+
 		for i = 1, len do
 			local keyval = data[i]
 			local key, val = tostring(keyval.key), tostring(keyval.val)
@@ -277,6 +277,7 @@ function META:GetArrayLength()
 
 	for i = 1, data_len do
 		local kv = data[i]
+
 		if kv.key:IsNumeric() then
 			if kv.key:IsLiteral() then
 				-- TODO: not very accurate
@@ -348,9 +349,10 @@ function META:FollowsContract(contract--[[#: TTable]])
 
 	local data = self.Data
 	local len = #data
-	
+
 	for i = 1, len do
 		local keyval = data[i]
+
 		if not keyval.val:IsNil() then
 			local res, err = contract:FindKeyValExact(keyval.key)
 
@@ -373,7 +375,7 @@ end
 function META:CanBeEmpty()
 	local data = self.Data
 	local len = #data
-	
+
 	for i = 1, len do
 		if not data[i].val:CanBeNil() then return false end
 	end
@@ -698,6 +700,7 @@ function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]
 
 	for i = 1, len do
 		local keyval = data[i]
+
 		if key:Equal(keyval.key) then return keyval end
 
 		local ok, reason
@@ -1366,4 +1369,7 @@ function META.New()
 	)
 end
 
-return {Table = META.New}
+return {
+	TTable = TTable,
+	Table = META.New,
+}

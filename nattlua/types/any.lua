@@ -3,7 +3,7 @@ local error_messages = require("nattlua.error_messages")
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TAny"]]
---[[#type TAny = META.@Self]]
+--[[#local type TAny = META.@Self]]
 META.Type = "any"
 
 function META:Get(key--[[#: TBaseType]])
@@ -68,5 +68,6 @@ function META.New()
 end
 
 return {
+	TAny = TAny,
 	Any = META.New,
 }

@@ -9,7 +9,7 @@ local error_messages = require("nattlua.error_messages")
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TFunction"]]
---[[#type TFunction = META.@Self]]
+--[[#local type TFunction = META.@Self]]
 --[[#type TFunction.scopes = List<|any|>]]
 --[[#type TFunction.suppress = boolean]]
 META.Type = "function"
@@ -273,6 +273,7 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 end
 
 return {
+	TFunction = TFunction,
 	Function = META.New,
 	AnyFunction = function()
 		return META.New(Tuple({VarArg(Any())}), Tuple({VarArg(Any())}))

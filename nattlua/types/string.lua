@@ -193,6 +193,7 @@ end
 
 local cache--[[#: Map<|string, TBaseType|>]] = {}
 return {
+	TString = TString,
 	String = function(data)
 		return META.New()
 	end,

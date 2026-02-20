@@ -120,7 +120,15 @@ function META.New(data--[[#: true | false | nil | TSymbol.Data]])
 		{
 			Type = META.Type,
 			Data = data,
-			TruthyFalsy =  (data == NIL or data == FALSE) and "falsy" or data == TRUE and "truthy" or "unknown",
+			TruthyFalsy = (
+					data == NIL or
+					data == FALSE
+				)
+				and
+				"falsy" or
+				data == TRUE and
+				"truthy" or
+				"unknown",
 			Upvalue = false,
 			Contract = false,
 			Hash = data == NIL and
