@@ -247,7 +247,10 @@ do -- custom commands specific for nattlua
                 
 				analyzer.parsed_paths[entry_point] = true
 				analyzer.parsed_paths["./" .. entry_point] = true
-				pcall(function() compiler:Analyze(analyzer) end)
+				local ok, err = compiler:Analyze(analyzer)
+				if not ok then
+					cli.print_error("Analysis failed for entry point " .. entry_point .. ": " .. tostring(err))
+				end
 			end
 			
 			local total_statement_count = analyzer.statement_count or 0

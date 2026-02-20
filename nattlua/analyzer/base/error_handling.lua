@@ -183,6 +183,8 @@ return function(META--[[#: any]])
 	end
 
 	function META:FatalError(msg)
+		local node = self:GetCurrentExpression() or self:GetCurrentStatement()
+		self:ReportDiagnostic(msg, "fatal", node, node.Code, node:GetStartStop())
 		error(msg, 2)
 	end
 

@@ -305,12 +305,9 @@ do
 			io.write(tostring(info.node), " was crawled ", info.count, " times\n")
 		end
 
-		debug.trace()
 		self:FatalError("too many iterations (" .. count .. "), stopping execution")
 	end
 end
-
-function META:OnDiagnostic() end
 
 function META:MapTypeToNode(typ, node)
 	self.type_to_node[typ] = node

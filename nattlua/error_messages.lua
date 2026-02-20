@@ -9,7 +9,9 @@ local callstack = require("nattlua.other.callstack")
 local error_messages = {}
 --[[#local type Reason = {[number] = any | string}]]
 
-function error_messages.ErrorMessageToString(tbl--[[#: List<|string | Reason|>]])--[[#: string]]
+function error_messages.ErrorMessageToString(tbl--[[#: any]])--[[#: string]]
+	if type(tbl) == "string" then return tbl end
+
 	local out = {}
 
 	for i, v in ipairs(tbl) do
