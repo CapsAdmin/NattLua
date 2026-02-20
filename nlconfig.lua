@@ -199,6 +199,9 @@ do -- custom commands specific for nattlua
 	}
 	config.commands["self-check"] = {
 		description = "Analyze the whole project starting from multiple entry points and output statistics",
+		options = {
+			{name = "error-only", description = "only output errors"},
+		},
 		cb = function(args, options, config, cli)
 			local Compiler = require("nattlua.compiler")
 			local entry_points = {
@@ -232,6 +235,16 @@ do -- custom commands specific for nattlua
 			for _, entry_point in ipairs(entry_points) do
 				cli.print_success("Analyzing from entry point: " .. entry_point)
 				local compiler = Compiler.FromFile(entry_point, config)
+				
+				if options["error-only"] then
+                    local original_OnDiagnostic = compiler.OnDiagnostic
+                    compiler.OnDiagnostic = function(self, code, msg, severity, ...)
+                        if severity == "error" or severity == "fatal" then
+                            return original_OnDiagnostic(self, code, msg, severity, ...)
+                        end
+                    end
+                end
+                
 				analyzer.parsed_paths[entry_point] = true
 				analyzer.parsed_paths["./" .. entry_point] = true
 				pcall(function() compiler:Analyze(analyzer) end)
