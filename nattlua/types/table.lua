@@ -26,7 +26,7 @@ local META = require("nattlua.types.base")()
 		TBaseType,
 		List<|{scope = TBaseType, value = TBaseType, contract = TBaseType, key = TBaseType}|>
 	|> | false]]
---[[#type TTable.LiteralDataCache = Map<|TBaseType, TBaseType|>]]
+--[[#type TTable.literal_data_cache = Map<|TBaseType, TBaseType|>]]
 --[[#type TTable.PotentialSelf = TBaseType | false]]
 --[[#type META.@Name = "TTable"]]
 META.Type = "table"
@@ -488,14 +488,14 @@ end
 local function write_cache(self, key, val)
 	local hash = get_hash(key)
 
-	if hash then self.LiteralDataCache[hash] = val end
+	if hash then self.literal_data_cache[hash] = val end
 end
 
 local function read_cache(self, key)
 	local hash = get_hash(key)
 
 	if hash then
-		local val = self.LiteralDataCache[hash]
+		local val = self.literal_data_cache[hash]
 
 		if val then return val end
 
@@ -508,7 +508,7 @@ end
 local function read_cache_no_error(self, key)
 	local hash = get_hash(key)
 
-	if hash then return self.LiteralDataCache[hash] end
+	if hash then return self.literal_data_cache[hash] end
 
 	return nil
 end
@@ -1346,7 +1346,7 @@ function META.New()
 			Name = false,
 			Self = false,
 			Self2 = false,
-			LiteralDataCache = {},
+			literal_data_cache = {},
 			Contracts = {},
 			TypeOverride = false,
 			suppress = false,

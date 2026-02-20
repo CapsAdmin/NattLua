@@ -1,7 +1,6 @@
 do
 	return
 end
-
 local type { Tuple } = require("nattlua.types.tuple")
 
 local obj = Tuple({1, 2, 3})

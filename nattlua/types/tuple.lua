@@ -18,10 +18,15 @@ local META = require("nattlua.types.base")()
 META.Type = "tuple"
 --[[#type META.@Name = "TTuple"]]
 --[[#type TTuple = META.@Self]]
-META:GetSet("Data", nil--[[# as List<|TBaseType|>]])
+--[[#type TTuple.suppress = boolean]]
+META:GetSet("Data", nil--[[# as List<|any|>]])
 META:GetSet("Unpackable", false--[[# as boolean]])
+META.Remainder = false
+--[[#type TTuple.Remainder = TBaseType | false]]
+META.Repeat = false
+--[[#type TTuple.Repeat = number | false]]
 
-function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]], visited--[[#: Map<|TBaseType, boolean|>]])
+function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]], visited--[[#: Map<|TBaseType, boolean|> | nil]])
 	if a.Type ~= b.Type then return false, "types differ" end
 
 	visited = visited or {}
@@ -44,7 +49,7 @@ function META.Equal(a--[[#: TTuple]], b--[[#: TBaseType]], visited--[[#: Map<|TB
 	return ok, reason
 end
 
-function META:GetHash(visited)
+function META:GetHash(visited--[[#: Map<|TBaseType, string|> | nil]])
 	visited = visited or {}
 
 	if visited[self] then return visited[self] end
@@ -55,7 +60,7 @@ function META:GetHash(visited)
 	local len = #data
 
 	for i = 1, len do
-		types[i] = data[i]:GetHash(visited)
+		types[i] = (data[i]--[[# as any]]):GetHash(visited)
 	end
 
 	visited[self] = table.concat(types, ",")
@@ -471,8 +476,8 @@ function META:Get(key--[[#: TBaseType]])
 		local union = Union()
 
 		for _, v in ipairs(key:GetData()) do
-			if key.Type == "number" then
-				local val = (self--[[# as any]]):Get(v)
+			if v.Type == "number" then
+				local val = self:Get(v)
 				union:AddType(val)
 			end
 		end
@@ -715,7 +720,7 @@ function META:Concat(tup--[[#: TTuple]])
 	return self
 end
 
-function META:SetTable(data)
+function META:SetTable(data--[[#: List<|TBaseType|>]])
 	self.Data = {}
 
 	for i, v in ipairs(data) do
@@ -727,14 +732,14 @@ function META:SetTable(data)
 			--[[# as TTuple]]).Remainder and
 			v ~= self
 		then
-			self:AddRemainder(v)
+			self:AddRemainder(v--[[# as TTuple]])
 		else
-			table.insert(self.Data, v--[[# as any]])
+			table.insert(self.Data, v)
 		end
 	end
 end
 
-function META.New(data--[[#: nil | List<|TBaseType|>]])
+function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TTuple]]
 	local self = META.NewObject(
 		{
 			Type = "tuple",
@@ -743,8 +748,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])
 			suppress = false,
 			Remainder = false,
 			Repeat = false,
-			Upvalue = false,
-			Contract = false,
 		}
 	)
 

@@ -271,7 +271,7 @@ do
 		return obj
 	end
 
-	local max_iterations = 20000
+	local max_iterations = 200000
 
 	function META:CheckTimeout()
 		self.check_count = (self.check_count or 0) + 1

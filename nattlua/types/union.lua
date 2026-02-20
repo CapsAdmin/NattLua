@@ -23,8 +23,8 @@ local math_huge = _G.math.huge
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TUnion"]]
---[[#type TUnion = META.@Self]]
---[[#type TUnion.LiteralDataCache = Map<|string, TBaseType|>]]
+--[[#local type TUnion = META.@Self]]
+--[[#type TUnion.literal_data_cache = Map<|string, TBaseType|>]]
 --[[#type TUnion.suppress = boolean]]
 --[[#type TUnion.left_right_source = {left = TBaseType, right = TBaseType} | false]]
 --[[#type TUnion.parent_table = {table = TBaseType, key = string} | false]]
@@ -80,11 +80,10 @@ function META.Equal(
 	return true, "all union values match"
 end
 
-function META:GetHash(visited)--[[#: string]]
+function META:GetHash(visited--[[#: Map<|TBaseType, string|> | nil]])--[[#: string]]
 	local data = self.Data
-	if #data == 1 then
-		return (data[1]--[[# as any]]):GetHash()
-	end
+
+	if #data == 1 then return (data[1]--[[# as any]]):GetHash(visited) end
 
 	visited = visited or {}
 
@@ -112,7 +111,6 @@ function META:__tostring()
 
 	local s = {}
 	self.suppress = true
-	
 	local data = self.Data
 	local len = #data
 
@@ -146,7 +144,7 @@ end
 local function add(self--[[#: TUnion]], obj--[[#: any]])
 	local s = hash(obj)
 
-	if s then self.LiteralDataCache[s] = obj end
+	if s then self.literal_data_cache[s] = obj end
 
 	self.Data[#self.Data + 1] = obj
 end
@@ -156,7 +154,7 @@ local function remove(self--[[#: TUnion]], index--[[#: number]])
 	table_remove(self.Data, index)
 	local s = hash(obj)
 
-	if s then self.LiteralDataCache[s] = nil end
+	if s then self.literal_data_cache[s] = nil end
 end
 
 local function find_index(self--[[#: TUnion]], obj--[[#: any]])
@@ -166,7 +164,7 @@ local function find_index(self--[[#: TUnion]], obj--[[#: any]])
 
 	for i = 1, len do
 		local v = data[i]--[[# as any]]
-		
+
 		-- Check type first before expensive Equal call
 		if v.Type == obj_type and v:Equal(obj) then
 			if obj_type ~= "function" or v:GetFunctionBodyNode() == obj:GetFunctionBodyNode() then
@@ -190,7 +188,7 @@ function META:AddType(e--[[#: TBaseType]])
 	do
 		local s = hash(e)
 
-		if s and self.LiteralDataCache[s] then return self end
+		if s and self.literal_data_cache[s] then return self end
 	end
 
 	if find_index(self, e) then return self end
@@ -229,7 +227,7 @@ function META:Clear()
 	end
 
 	do
-		(table_clear--[[# as any]])(self.LiteralDataCache)
+		(table_clear--[[# as any]])(self.literal_data_cache)
 	end
 end
 
@@ -580,17 +578,19 @@ function META:GetParentTable()
 	return self.parent_table
 end
 
-function META.New(data--[[#: nil | List<|TBaseType|>]])
+function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TUnion]]
 	local self = META.NewObject(
 		{
 			Type = "union",
 			Data = {},
-			LiteralDataCache = {},
+			literal_data_cache = {},
 			suppress = false,
 			left_right_source = false,
 			parent_table = false,
-			Contract = false,
+			TruthyFalsy = "unknown",
 			Upvalue = false,
+			Contract = false,
+			MetaTable = false,
 		}
 	)
 
