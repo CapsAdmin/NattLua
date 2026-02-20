@@ -106,6 +106,6 @@ function auxsort(t--[[#: any]], l, u, sort_comp)
 end
 
 -- sort function.
-return function(t, comp)
-	auxsort(t, 1, #t, comp or default_comp)
+return function(tbl--[[#: List<|any|>]], func--[[#: nil | function=(a: any, b: any)>(boolean)]])
+	auxsort(tbl, 1, #tbl, func or default_comp)
 end

@@ -1,4 +1,3 @@
---ANALYZE
 local tostring = tostring
 local setmetatable = _G.setmetatable
 local table = _G.table
@@ -80,7 +79,7 @@ function META.Equal(
 	return true, "all union values match"
 end
 
-function META:GetHash(visited--[[#: Map<|TBaseType, string|> | nil]])--[[#: string]]
+function META:GetHash(visited--[[#: Map<|any, string|> | nil]])--[[#: string]]
 	local data = self.Data
 
 	if #data == 1 then return (data[1]--[[# as any]]):GetHash(visited) end
@@ -94,7 +93,7 @@ function META:GetHash(visited--[[#: Map<|TBaseType, string|> | nil]])--[[#: stri
 	local len = #data
 
 	for i = 1, len do
-		types[i] = data[i]:GetHash(visited)
+		types[i] = assert(data[i]):GetHash(visited)
 	end
 
 	table_sort(types)
@@ -222,13 +221,8 @@ function META:RemoveType(e--[[#: TBaseType]])
 end
 
 function META:Clear()
-	do
-		(table_clear--[[# as any]])(self.Data)
-	end
-
-	do
-		(table_clear--[[# as any]])(self.literal_data_cache)
-	end
+	table_clear(self.Data)
+	table_clear(self.literal_data_cache)
 end
 
 function META:HasTuples()
@@ -584,7 +578,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TUnion]]
 			Type = "union",
 			Data = {},
 			literal_data_cache = {},
-			suppress = false,
+			suppress = false--[[# as boolean]],
 			left_right_source = false,
 			parent_table = false,
 			TruthyFalsy = "unknown",
@@ -614,6 +608,7 @@ function META:IsNumeric()
 end
 
 return {
+	TUnion = TUnion,
 	Union = META.New,
 	Nilable = function(typ--[[#: TBaseType]])
 		return META.New({typ, Nil()})
