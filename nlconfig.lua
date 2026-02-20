@@ -263,13 +263,9 @@ do -- custom commands specific for nattlua
 			io.write("Files left unchecked (not in dependency graph): " .. #unchecked_list .. "\n")
 
 			if #unchecked_list > 0 then
-				io.write("Unchecked files (showing up to 20):\n")
+				io.write("Unchecked files:\n")
 
-				for i, path in ipairs(unchecked_list) do
-					if i > 20 then
-						io.write("  ... and " .. (#unchecked_list - 20) .. " more\n")
-						break
-					end
+				for _, path in ipairs(unchecked_list) do
 					io.write("  " .. path .. "\n")
 				end
 			end
