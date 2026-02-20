@@ -36,8 +36,8 @@ local colors = {
 	bg_white = "47",
 }
 
-local function wrap_color(code)
-	return function(text)
+local function wrap_color(code--[[#: string]])
+	return function(text--[[#: string]])
 		if use_colors then
 			return string.format("\27[%sm%s\27[0m", code, text)
 		else

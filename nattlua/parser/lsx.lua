@@ -1,5 +1,5 @@
 local table_insert = _G.table.insert
-return function(META)
+return function(META--[[#: any]])
 	function META:ParseLSXExpression()
 		if not (self:IsToken("<") and not self:IsTokenOffset("local", -1)) then
 			return

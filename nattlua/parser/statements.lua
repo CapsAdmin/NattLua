@@ -5,7 +5,7 @@ local math_huge = _G.math.huge
 local ipairs = _G.ipairs
 local assert = _G.assert
 local tostring = _G.tostring
-return function(META)
+return function(META--[[#: any]])
 	do -- destructure statement
 		function META:IsDestructureStatement(offset--[[#: number]])
 			offset = offset or 0

@@ -376,7 +376,7 @@ type pcall = ReturnIfNonLiteral<|
 	end
 |>
 type xpcall = ReturnIfNonLiteral<|
-	analyzer function(callable: Function, error_cb: function=(any)>(), ...: ...any): (boolean,
+	analyzer function(callable: Function, error_cb: function=(any)>(...any), ...: ...any): (boolean,
 	...any)
 		local diagnostics_index = #analyzer:GetDiagnostics()
 		analyzer:PushProtectedCall()

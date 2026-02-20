@@ -10,7 +10,7 @@ local error_messages = require("nattlua.error_messages")
 local callstack = require("nattlua.other.callstack")
 local math_abs = math.abs
 local assert = _G.assert
-return function(META)
+return function(META--[[#: any]])
 	--[[#type META.diagnostics = {
 		[1 .. inf] = {
 			node = any,

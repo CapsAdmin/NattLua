@@ -180,7 +180,7 @@ local function index_tuple(analyzer, obj, key)
 end
 
 return {
-	Index = function(META)
+	Index = function(META--[[#: any]])
 		function META:IndexOperator(obj, key, raw)
 			self:CheckTimeout()
 

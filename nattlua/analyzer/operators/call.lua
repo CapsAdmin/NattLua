@@ -302,7 +302,7 @@ local function call(self, obj, input, call_node, not_recursive_call)
 end
 
 return {
-	Call = function(META)
+	Call = function(META--[[#: any]])
 		function META:Call(obj, input, call_node, not_recursive_call)
 			self:PushCurrentExpression(call_node)
 			local ret, err = call(self, obj, input, call_node, not_recursive_call)

@@ -13,7 +13,7 @@ type os = {
 	execute = function=(command: string)>(boolean | nil, string, number | nil) | function=()>(boolean | nil, string, number | nil),
 	rename = function=(oldname: string, newname: string)>(boolean | nil, string, number | nil),
 	getenv = function=(varname: string)>(string | nil),
-	exit = analyzer function(code: boolean | number, close: boolean)
+	exit = analyzer function(code: boolean | number, close: boolean | nil)
 		if not analyzer:IsDefinetlyReachable() then
 			analyzer:ThrowSilentError()
 			return

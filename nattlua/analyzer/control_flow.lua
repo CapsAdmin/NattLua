@@ -10,7 +10,7 @@ local error_messages = require("nattlua.error_messages")
 local debug_getinfo = _G.debug.getinfo
 -- this turns out to be really hard so I'm trying 
 -- naive approaches while writing tests
-return function(META)
+return function(META--[[#: any]])
 	META:AddInitializer(function(self)
 		self.call_stack_map = {}
 		self.recursively_called = {}

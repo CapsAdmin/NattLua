@@ -38,7 +38,7 @@ do -- these are just helpers for print debugging
 	do
 		local old = print
 		local context = require("nattlua.analyzer.context")
-		print = function(...)
+		_G.print = function(...--[[#: ...any]])
 			local str = {}
 
 			for i = 1, select("#", ...) do
@@ -77,7 +77,7 @@ do -- these are just helpers for print debugging
 		local old = print
 		local done = {}
 
-		function print_once(...)
+		_G.print_once = function(...--[[#: ...any]])
 			local tbl = {}
 
 			for i = 1, select("#", ...) do

@@ -7,7 +7,7 @@ local Tuple = require("nattlua.types.tuple").Tuple
 local ConstString = require("nattlua.types.string").ConstString
 local error_messages = require("nattlua.error_messages")
 return {
-	NewIndex = function(META)
+	NewIndex = function(META--[[#: any]])
 		local function newindex_union(analyzer, obj, key, val)
 			for _, v in ipairs(obj:GetData()) do
 				analyzer:NewIndexOperator(v, key, val)

@@ -370,7 +370,7 @@ local function sorted_pairs(tbl--[[#: AnyTable]])
 	end
 end
 
-function cli.help(command)
+function cli.help(command--[[#: string | nil]])
 	local commands = cli.get_config().commands
 
 	if command and commands[command] then
@@ -449,7 +449,7 @@ function cli.get_config()
 	return copy_and_deep_merge(config, {})
 end
 
-function cli.load_config(config_path)
+function cli.load_config(config_path--[[#: string | nil]])
 	config_path = config_path or DEFAULT_CONFIG_NAME
 
 	if not fs.is_file(config_path) then
@@ -513,8 +513,10 @@ function cli.main(...)
 		end
 
 		_G.io.write = function(...)
-			f:write(...)
-			f:flush()
+			if f then
+				f:write(...)
+				f:flush()
+			end
 		end
 
 		_G.io.stderr = f
@@ -536,7 +538,7 @@ function cli.main(...)
 	end
 
 	if #args == 0 then
-		cli.help()
+		cli.help(nil)
 		os.exit(0)
 	end
 
@@ -544,7 +546,7 @@ function cli.main(...)
 	table.remove(args, 1)
 
 	if command == "help" then
-		cli.help(args)
+		cli.help(args[1])
 		os.exit(0)
 	end
 
@@ -557,7 +559,7 @@ function cli.main(...)
 
 	if not config.commands[command] then
 		cli.print_error("Unknown command: " .. command)
-		cli.help()
+		cli.help(nil)
 		os.exit(1)
 	end
 

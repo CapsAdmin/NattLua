@@ -8,7 +8,7 @@ local table = _G.table
 local table_remove = _G.table.remove
 local table_insert = _G.table.insert
 local error_messages = require("nattlua.error_messages")
-return function(META)
+return function(META--[[#: any]])
 	require("nattlua.other.context_mixin")(META)
 
 	META:AddInitializer(function(self)

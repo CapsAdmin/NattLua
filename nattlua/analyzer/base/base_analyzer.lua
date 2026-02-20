@@ -26,7 +26,7 @@ local table = _G.table
 local table_insert = table.insert
 local table_remove = table.remove
 local math = _G.math
-return function(META)
+return function(META--[[#: any]])
 	require("nattlua.analyzer.base.scopes")(META)
 	require("nattlua.analyzer.base.error_handling")(META)
 
