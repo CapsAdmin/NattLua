@@ -290,9 +290,11 @@ function error_messages.argument_mutation(i--[[#: number]], arg--[[#: any]])--[[
 	}
 end
 
-function error_messages.argument_contract_mutation(obj--[[#: any]])--[[#: Reason]]
+function error_messages.argument_contract_mutation(obj--[[#: any]], obj--[[#: any]])--[[#: Reason]]
 	return {
-		"cannot mutate argument with contract ",
+		"cannot mutate argument ",
+		obj,
+		" with contract ",
 		obj,
 	}
 end

@@ -156,7 +156,7 @@ analyzer function copy(obj: any)
 
 	if copy.Type == "table" then
 		copy:SetCreationScope(false)
-		copy.PotentialSelf = false
+		copy.potential_self = false
 	end
 
 	return copy

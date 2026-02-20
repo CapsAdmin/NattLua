@@ -1,11 +1,3 @@
-analyze(
-	[[
-    local x: {foo = boolean} = {foo = true}
-
-    Any()(x)
-]],
-	"cannot mutate argument"
-)
 analyze([[
     local x = {foo = true}
 

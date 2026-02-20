@@ -38,11 +38,13 @@ end
 local function load_definitions(root_node, parent_config)
 	local path = "nattlua/definitions/index.nlua"
 	local config = {}
+
 	if parent_config then
 		for k, v in pairs(parent_config) do
 			config[k] = v
 		end
 	end
+
 	config.file_path = config.file_path or path
 	config.file_name = config.file_name or "@" .. path
 	config.root_directory = ROOT_PATH
@@ -79,24 +81,25 @@ return {
 		local typesystem_env = Table()
 		typesystem_env.string_metatable = Table()
 		compiler:SetEnvironments(runtime_env, typesystem_env)
-		
 		-- Use parent analyzer's config if it exists or just use a fresh analyzer
 		local analyzer
+
 		if parent_analyzer then
 			analyzer = require("nattlua.analyzer.analyzer").New(parent_analyzer.config)
-			-- Ensure we're using a common statement count if we want to track it
-			-- but for base environment it might be noisy. Let's at least record parsed paths.
+		-- Ensure we're using a common statement count if we want to track it
+		-- but for base environment it might be noisy. Let's at least record parsed paths.
 		end
-		
+
 		assert(compiler:Analyze(analyzer))
-		
+
 		if parent_analyzer then
 			for path, _ in pairs(compiler.analyzer.parsed_paths) do
 				parent_analyzer.parsed_paths[path] = true
 			end
+
 			parent_analyzer.statement_count = (parent_analyzer.statement_count or 0) + (compiler.analyzer.statement_count or 0)
 		end
-		
+
 		typesystem_env.string_metatable:Set(
 			LStringNoMeta("__index"),
 			assert(typesystem_env:Get(LStringNoMeta("string")), "failed to find string table")

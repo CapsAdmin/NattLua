@@ -131,9 +131,9 @@ return function(META--[[#: any]])
 				end
 
 				return new_tup
-			elseif tbl.PotentialSelf then
+			elseif tbl.potential_self then
 				local meta = tbl
-				local self = tbl.PotentialSelf
+				local self = tbl.potential_self
 
 				if self.Type == "union" then
 					for _, obj in ipairs(self:GetData()) do

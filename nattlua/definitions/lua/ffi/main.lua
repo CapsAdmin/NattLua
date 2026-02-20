@@ -296,8 +296,8 @@ function cparser.metatype(ctype, meta)
 				local val = analyzer:Assert(analyzer:Call(new, Tuple({ctype, ...}))):GetFirstValue()
 
 				if analyzer:IsRuntime() then
-					meta.PotentialSelf = meta.PotentialSelf or Union()
-					meta.PotentialSelf:AddType(val)
+					meta.potential_self = meta.potential_self or Union()
+					meta.potential_self:AddType(val)
 				end
 
 				return val

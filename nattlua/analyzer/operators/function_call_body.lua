@@ -331,7 +331,7 @@ return function(self, obj, input)
 				if contract.Type == "union" then
 					local t = contract:GetType("table")
 
-					if t and t.PotentialSelf then doit = false end
+					if t and t.potential_self then doit = false end
 				end
 
 				if doit then
