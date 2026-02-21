@@ -58,7 +58,7 @@ return function(META--[[#: any]])
 			}
 			push_break_state(self, break_state)
 			self:PushScope(loop_scope)
-			self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
+			self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedNarrowings())
 			self:PopScope()
 		end
 
@@ -256,34 +256,27 @@ return function(META--[[#: any]])
 
 			if assert_expression and assert_expression:IsTruthy() then
 				-- track the assertion expression
-				local upvalues
-				local tracked = self:GetTrackedUpvalues(nil, frame.scope)
+				local tracked_objects
+				local tracked_from_scope = self:GetTrackedObjects(nil, frame.scope)
 
-				if tracked[1] then
-					upvalues = {}
+				if tracked_from_scope[1] then
+					local current_tracked = self:GetTrackedObjects()
+					tracked_objects = {}
 
-					for _, a in ipairs(tracked) do
-						for _, b in ipairs(self:GetTrackedUpvalues()) do
-							if a.upvalue == b.upvalue then table_insert(upvalues, a) end
-						end
-					end
-				end
-
-				local tables
-				local tracked = self:GetTrackedTables(nil, frame.scope)
-
-				if tracked[1] then
-					tables = {}
-
-					for _, a in ipairs(tracked) do
-						for _, b in ipairs(self:GetTrackedTables()) do
-							if a.obj == b.obj then table_insert(tables, a) end
+					for _, a in ipairs(tracked_from_scope) do
+						for _, b in ipairs(current_tracked) do
+							if
+								(a.kind == "upvalue" and b.kind == "upvalue" and a.upvalue == b.upvalue) or
+								(a.kind == "table" and b.kind == "table" and a.obj == b.obj)
+							then
+								table_insert(tracked_objects, a)
+							end
 						end
 					end
 				end
 
 				self:PushScope(function_scope)
-				self:ApplyMutationsAfterStatement(frame.scope, false, upvalues, tables)
+				self:ApplyMutationsAfterStatement(frame.scope, false, tracked_objects)
 				self:PopScope()
 				return
 			end
@@ -292,8 +285,7 @@ return function(META--[[#: any]])
 			self:ApplyMutationsAfterStatement(
 				frame.scope,
 				true,
-				frame.scope:GetTrackedUpvalues(),
-				frame.scope:GetTrackedTables()
+				frame.scope:GetTrackedNarrowings()
 			)
 			self:PopScope()
 		end
@@ -323,9 +315,9 @@ return function(META--[[#: any]])
 		end
 
 		local scope = self:GetScope()
-		local u, t = self:GetTrackedUpvalues(old), self:GetTrackedTables()
+		local tracked = self:GetTrackedObjects(old)
 		self:PushScope(self:GetScope():GetNearestFunctionScope())
-		self:ApplyMutationsAfterStatement(scope, false, u, t)
+		self:ApplyMutationsAfterStatement(scope, false, tracked)
 		self:PopScope()
 
 		if not no_report then
@@ -391,7 +383,7 @@ return function(META--[[#: any]])
 		end
 
 		self:PushScope(function_scope)
-		self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedUpvalues(), scope:GetTrackedTables())
+		self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedNarrowings())
 		self:PopScope()
 	end
 

@@ -15,10 +15,9 @@ return {
 			return
 		end
 
-		local upvalues = self:GetTrackedUpvalues()
-		local tables = self:GetTrackedTables()
+		local tracked_objects = self:GetTrackedObjects()
 		self:ClearTracked()
-		self:ApplyMutationsInIf(upvalues, tables)
+		self:ApplyMutationsInIf(tracked_objects)
 		local max_iterations = self.max_loop_iterations or 32
 		local count = 0
 		local loop_scope = self:PushLoopContext(statement, obj)

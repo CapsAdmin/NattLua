@@ -453,6 +453,40 @@ local function BinaryWithUnion(self, node, l, r, op)
 	return Binary(self, node, l, r, op)
 end
 
+local function is_condition_expression(node)
+	-- walk up through nested binary operators to find if we're
+	-- inside a conditional statement's expression (if/while/repeat)
+	local n = node
+
+	while n do
+		local parent = n.parent
+
+		if not parent then break end
+
+		local pt = parent.Type
+
+		if
+			pt == "statement_if" or
+			pt == "statement_while" or
+			pt == "statement_repeat"
+		then
+			return true
+		end
+
+		-- keep walking up through nested binary/prefix operators
+		if
+			pt == "expression_binary_operator" or
+			pt == "expression_prefix_operator"
+		then
+			n = parent
+		else
+			break
+		end
+	end
+
+	return false
+end
+
 return {
 	BinaryCustom = BinaryWithUnion,
 	Binary = function(self, node)
@@ -483,12 +517,28 @@ return {
 				r = Nil()
 			else
 				-- right hand side of and is the "true" part
+				-- create a conditional scope so narrowing is visible inside function calls
+				-- but only when not already inside a conditional statement (if/while/repeat handle their own scopes)
+				local tracked, scope
+
+				if not is_condition_expression(node) then
+					tracked = self:GetTrackedObjects()
+					scope = self:PushConditionalScope(node, l:IsTruthy(), l:IsFalsy())
+					scope:SetTrackedNarrowings(tracked)
+					self:ApplyMutationsInIf(tracked)
+				end
+
 				self:PushTruthyExpressionContext()
 				r = self:Assert(self:AnalyzeExpression(node.right))
 				self:PopTruthyExpressionContext()
 
 				if r.Type == "union" then
 					self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
+				end
+
+				if scope then
+					self:ClearScopedTrackedObjects(scope)
+					self:PopConditionalScope()
 				end
 			end
 		elseif op == "or" then
@@ -504,6 +554,18 @@ return {
 				r = Nil()
 			else
 				-- right hand side of or is the "false" part
+				-- create a conditional scope so narrowing is visible inside function calls
+				-- but only when not already inside a conditional statement (if/while/repeat handle their own scopes)
+				local tracked, scope
+
+				if not is_condition_expression(node) then
+					tracked = self:GetTrackedObjects()
+					scope = self:PushConditionalScope(node, l:IsTruthy(), l:IsFalsy())
+					scope:SetTrackedNarrowings(tracked)
+					scope:SetElseConditionalScope(true)
+					self:ApplyMutationsInIfElse({{tracked_objects = tracked}})
+				end
+
 				self.LEFT_SIDE_OR = l
 				self:PushFalsyExpressionContext()
 				r = self:Assert(self:AnalyzeExpression(node.right))
@@ -512,6 +574,11 @@ return {
 
 				if r.Type == "union" then
 					self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
+				end
+
+				if scope then
+					self:ClearScopedTrackedObjects(scope)
+					self:PopConditionalScope()
 				end
 			end
 		else

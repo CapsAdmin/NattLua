@@ -19,8 +19,7 @@ return {
 						blocks,
 						{
 							statements = statements,
-							upvalues = self:GetTrackedUpvalues(),
-							tables = self:GetTrackedTables(),
+							tracked_objects = self:GetTrackedObjects(),
 							obj = obj,
 						}
 					)
@@ -90,8 +89,7 @@ return {
 						blocks,
 						{
 							statements = statements,
-							upvalues = blocks[#blocks] and blocks[#blocks].upvalues,
-							tables = blocks[#blocks] and blocks[#blocks].tables,
+							tracked_objects = blocks[#blocks] and blocks[#blocks].tracked_objects,
 							obj = prev_obj,
 							is_else = true,
 						}
@@ -114,8 +112,7 @@ return {
 			end
 
 			last_scope = scope
-			scope:SetTrackedUpvalues(block.upvalues or false)
-			scope:SetTrackedTables(block.tables or false)
+			scope:SetTrackedNarrowings(block.tracked_objects or false)
 
 			if block.is_else then
 				scope:SetElseConditionalScope(true)
@@ -131,7 +128,7 @@ return {
 					self:ApplyMutationsInIfElse(prev)
 				end
 
-				self:ApplyMutationsInIf(block.upvalues, block.tables)
+				self:ApplyMutationsInIf(block.tracked_objects)
 			end
 
 			self:AnalyzeStatements(block.statements)

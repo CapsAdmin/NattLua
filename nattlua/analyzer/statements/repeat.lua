@@ -9,10 +9,9 @@ return {
 		local max_iterations = self.max_loop_iterations or 32
 		local count = 0
 		-- Track upvalues and tables for mutation analysis
-		local upvalues = self:GetTrackedUpvalues()
-		local tables = self:GetTrackedTables()
+		local tracked_objects = self:GetTrackedObjects()
 		self:ClearTracked()
-		self:ApplyMutationsInIf(upvalues, tables)
+		self:ApplyMutationsInIf(tracked_objects)
 
 		-- Execute the repeat loop
 		for i = 1, max_iterations do

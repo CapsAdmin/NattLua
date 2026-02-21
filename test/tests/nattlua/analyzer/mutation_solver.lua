@@ -105,9 +105,10 @@ local function test_mutation_solver()
 		upvalue:SetScope(root)
 		local truthy = Union({LString("truthy1"), LString("truthy2")})
 		local falsy = Union({LString("falsy1"), LString("falsy2")})
-		scope1:SetTrackedUpvalues(
+		scope1:SetTrackedNarrowings(
 			{
 				{
+					kind = "upvalue",
 					upvalue = upvalue,
 					stack = {{truthy = truthy, falsy = falsy}},
 				},
@@ -132,11 +133,11 @@ local function test_mutation_solver()
 		scope2:SetStatement({kind = "if"})
 		-- Setup tracking for same conditions
 		local test_obj = LString("test")
-		scope1:SetTrackedUpvalues({
-			{upvalue = test_obj, stack = {{truthy = test_obj, falsy = test_obj}}},
+		scope1:SetTrackedNarrowings({
+			{kind = "upvalue", upvalue = test_obj, stack = {{truthy = test_obj, falsy = test_obj}}},
 		})
-		scope2:SetTrackedUpvalues({
-			{upvalue = test_obj, stack = {{truthy = test_obj, falsy = test_obj}}},
+		scope2:SetTrackedNarrowings({
+			{kind = "upvalue", upvalue = test_obj, stack = {{truthy = test_obj, falsy = test_obj}}},
 		})
 		local value1 = LString("value1")
 		local value2 = LString("value2")
@@ -200,9 +201,10 @@ local function test_mutation_solver()
 		upvalue:SetScope(root)
 		-- Set up a tracking stack with empty union
 		local empty_union = Union()
-		scope:SetTrackedUpvalues(
+		scope:SetTrackedNarrowings(
 			{
 				{
+					kind = "upvalue",
 					upvalue = upvalue,
 					stack = {{truthy = value, falsy = empty_union}},
 				},
@@ -389,9 +391,10 @@ local function test_mutation_solver()
 		local upvalue = Upvalue(value1)
 		upvalue:SetScope(root)
 		-- Set up stack with multiple truthy/falsy values
-		if_scope:SetTrackedUpvalues(
+		if_scope:SetTrackedNarrowings(
 			{
 				{
+					kind = "upvalue",
 					upvalue = upvalue,
 					stack = {
 						{truthy = value1, falsy = value2},
@@ -494,9 +497,10 @@ local function test_mutation_solver()
 		local upvalue = Upvalue(value1)
 		upvalue:SetScope(root)
 		-- Set up empty union in the tracking stack
-		scope1:SetTrackedUpvalues(
+		scope1:SetTrackedNarrowings(
 			{
 				{
+					kind = "upvalue",
 					upvalue = upvalue,
 					stack = {{truthy = value1, falsy = empty_union}},
 				},
@@ -528,9 +532,10 @@ local function test_mutation_solver()
 		local upvalue = Upvalue(value1)
 		upvalue:SetScope(root)
 		-- Add multiple empty stacks
-		if_scope:SetTrackedUpvalues(
+		if_scope:SetTrackedNarrowings(
 			{
 				{
+					kind = "upvalue",
 					upvalue = upvalue,
 					stack = {
 						{truthy = empty_union, falsy = empty_union},

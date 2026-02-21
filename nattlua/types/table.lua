@@ -1308,6 +1308,18 @@ do
 		self.mutationsi = false
 	end
 
+	function META:ClearTrackedMutations()
+		if not self:HasMutations() then return end
+
+		for _, mutations in ipairs(self:GetMutationsi()) do
+			for i = #mutations, 1, -1 do
+				local mut = mutations[i]
+
+				if mut.from_tracking then table.remove(mutations, i) end
+			end
+		end
+	end
+
 	function META:SetMutations(tbl)
 		self.mutations = tbl
 	end
