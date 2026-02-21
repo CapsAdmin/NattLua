@@ -10,6 +10,7 @@ local LString = require("nattlua.types.string").LString
 local String = require("nattlua.types.string").String
 local Number = require("nattlua.types.number").Number
 local Boolean = require("nattlua.types.union").Boolean
+local Deferred = require("nattlua.types.deferred").Deferred
 local table = _G.table
 local math_abs = math.abs
 local math_huge = math.huge
@@ -150,6 +151,8 @@ return {
 						return Number()
 					elseif tk.sub_type == ("boolean") then
 						return Boolean()
+					elseif tk:ValueEquals("deferred") then
+						return Deferred()
 					end
 				end
 

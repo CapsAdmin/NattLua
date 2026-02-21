@@ -442,6 +442,8 @@ function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 end
 
 function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: any]])
+	if b.Type == "deferred" then b = b:Unwrap() end
+
 	if a.suppress then return true, "suppressed" end
 
 	if b.Type == "tuple" then b = b:GetWithNumber(1) end

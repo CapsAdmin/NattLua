@@ -158,6 +158,8 @@ function META:Copy(map--[[#: Map<|any, TTuple|> | nil]], copy_tables--[[#: boole
 end
 
 function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: any]], max_length--[[#: nil | number]])
+	if b.Type == "deferred" then b = b:Unwrap() end
+
 	if a == b then return true end
 
 	if a.suppress then return true end

@@ -166,8 +166,8 @@ local function GetFirstToken<|T: List<|IToken|>|>
 	return {U, V}
 end
 
-local type ParseLiteral
-local type ParseRoot
+local type ParseLiteral = deferred
+local type ParseRoot = deferred
 
 local function ParseString<|T: List<|IToken|>|>
 	local type res = GetFirstToken<|T|>

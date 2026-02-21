@@ -96,6 +96,32 @@ function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]], visited--[[#: any]
 	return true, "ok"
 end
 
+local context = require("nattlua.analyzer.context")
+
+function META:Get(key--[[#: TBaseType]])--[[#: (TBaseType | false), (any | nil)]]
+	if
+		key.Type == "string" and
+		key:IsLiteral() and
+		(
+			key
+		--[[# as any]]):GetData():sub(1, 1) == "@"
+	then
+		local a = context:GetCurrentAnalyzer()--[[# as any]]
+
+		if a and a:GetCurrentAnalyzerEnvironment() == "typesystem" then
+			return (
+					assert(
+						(self--[[# as any]])["Get" .. (key--[[# as any]]):GetData():sub(2)],
+						(key--[[# as any]]):GetData() .. " is not a function"
+					)
+				)(self) or
+				Nil()
+		end
+	end
+
+	return false, error_messages.undefined_get(self, key, self.Type)
+end
+
 function META:GetHash(visited)
 	visited = visited or {}
 
@@ -165,6 +191,8 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 end
 
 function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
+	if b.Type == "deferred" then b = b:Unwrap() end
+
 	if b.Type == "tuple" then
 		b = assert(b:GetWithNumber(1--[[# as any]]))--[[# as TBaseType]]
 	end

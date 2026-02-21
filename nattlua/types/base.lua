@@ -19,6 +19,8 @@ return function()
 	end
 
 	function META:IsSubsetOf(other--[[#: TBaseType]], visited--[[#: any]])--[[#: boolean, string | nil]]
+		if other.Type == "deferred" then other = (other--[[# as any]]):Unwrap() end
+
 		return false, "nyi"
 	end
 

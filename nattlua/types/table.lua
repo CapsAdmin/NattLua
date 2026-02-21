@@ -425,6 +425,8 @@ function META:IsEmpty()--[[#: boolean]]
 end
 
 function META.IsSubsetOf(a--[[#: TTable]], b--[[#: TBaseType]])--[[#: boolean, any | nil]]
+	if b.Type == "deferred" then b = b:Unwrap() end
+
 	if a.suppress then return true, "suppressed" end
 
 	if b.Type == "tuple" then b = (b--[[# as any]]):GetWithNumber(1) end

@@ -21,6 +21,7 @@ function types.Initialize()
 	types.True = require("nattlua.types.symbol").True
 	types.False = require("nattlua.types.symbol").False
 	types.Boolean = require("nattlua.types.union").Boolean
+	types.Deferred = require("nattlua.types.deferred").Deferred
 end
 
 return types

@@ -4,6 +4,7 @@ local table = _G.table
 local ConstString = require("nattlua.types.string").ConstString
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
+local Deferred = require("nattlua.types.deferred").Deferred
 
 local function check_type_against_contract(val, contract)
 	-- if the contract is unique / nominal, ie
@@ -140,7 +141,19 @@ return {
 
 		-- here we check the types
 		for left_pos, exp_key in ipairs(statement.left) do
-			local val = right[left_pos] or Nil()
+			local val = right[left_pos]
+
+			if
+				not val and
+				self.TealCompat and
+				not exp_key.type_expression and
+				self:GetCurrentAnalyzerEnvironment() == "typesystem" and
+				statement.Type == "statement_local_assignment"
+			then
+				val = Deferred(exp_key.value:GetValueString())
+			end
+
+			val = val or Nil()
 
 			-- do we have a type expression? 
 			-- local a: >>number<< = 1

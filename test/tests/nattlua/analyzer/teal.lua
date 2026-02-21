@@ -129,3 +129,15 @@ analyze[[
     type count = nil
     type color = nil
 ]]
+analyze[[
+    §analyzer.TealCompat = true
+    local type T -- Implicitly a TReference in Teal mode
+    
+    local type A = { t = T }
+    type T = { a = A | nil }
+    
+    local obj_a: A = { t = { a = nil } }
+    attest.subset_of<| obj_a, A |>
+    attest.subset_of<| obj_a.t, T |>
+    attest.subset_of<| obj_a.t.a, A | nil |>
+]]

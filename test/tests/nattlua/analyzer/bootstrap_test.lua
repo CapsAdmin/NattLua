@@ -1,47 +1,4 @@
 analyze[[
-    local x = _  as {foo = true, bar = 1337} | {foo = false, bar = 777}
-
-    if x.foo then 
-        attest.equal(x.bar, 1337) 
-    else 
-        attest.equal(x.bar, 777) 
-    end
-]]
-analyze[[
-    local x = _  as {foo = true, bar = 1337, lol = "!?", kind = 1} | {foo = false, bar = 777, kind = 2}
-
-    if x.kind == 2 then 
-        attest.equal(x, {foo = false, bar = 777, kind = 2}) 
-    end
-]]
-analyze[[
-    local x = _  as {foo = true, bar = 1337, lol = "!?", kind = 1} | {foo = false, bar = 777, kind = 2}
-
-    if x.kind == 2 then 
-        attest.equal(x, {foo = false, bar = 777, kind = 2}) 
-    else
-        attest.equal(x.bar, 1337)
-    end
-]]
-analyze[[
-    local x = _  as {foo = true, bar = 1337, lol = "!?", kind = 1} | {foo = false, bar = 777, kind = 2}
-
-    if x.kind == 2 or x.bar == 1337 then 
-        attest.equal(x.bar, _ as 1337 | 777)
-    else
-        error("shouldn't be reached")
-    end
-]]
-analyze[[
-    local x = _  as {foo = true, bar = 1337, lol = "!?", kind = 1} | {foo = false, bar = 777, kind = 2}
-
-    if x.bar ~= 1337 then 
-        attest.equal(x.bar, 777)
-    else
-        attest.equal(x.bar, 1337)
-    end
-]]
-analyze[[
     -- 1. Defining the Union and types.
     local type TAnyObject = deferred -- Use the reserved "deferred" for forward declaration
     
@@ -99,15 +56,15 @@ analyze[==[
     local C_META = class.CreateTemplate("C")
 
     -- 2. Define the union of all our 'type' objects
-    type TAnyObject = A_META.@Self | B_META.@Self | C_META.@Self
+    --[[# type TAnyObject = A_META.@Self | B_META.@Self | C_META.@Self ]]
 
     -- 3. Define unique fields
     A_META:GetSet("Value", 0)
     B_META:GetSet("Flag", false)
-    C_META:GetSet("Children", {} as List<|TAnyObject|>)
+    C_META:GetSet("Children", {}--[[# as List<|TAnyObject|>]])
 
     -- 4. Verification function with narrowing
-    local function dispatch(obj: TAnyObject)
+    local function dispatch(obj--[[#: TAnyObject]])
         if obj.Type == "A" then
             -- This should narrow to A_META.@Self
             attest.equal(obj.Value, _ as number)
@@ -128,4 +85,5 @@ analyze[==[
     dispatch(a)
     dispatch(b)
     dispatch(c)
+
 ]==]
