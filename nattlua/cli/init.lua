@@ -97,15 +97,19 @@ config.commands["run"] = {
 config.commands["check"] = {
 	description = "type check a nattlua or lua script",
 	usage = "nattlua check <file>",
+	options = {
+		{name = "profile", description = "Run with profiler"},
+	},
 	cb = function(args, options, config, cli)
-		require("test.helpers.profiler").Start()
+		if options.profile then require("test.helpers.profiler").Start() end
+
 		args[1] = args[1] or "./*"
 		local cmp = {}
 		local entry_point = nil
 
 		if #args == 1 and args[1] == "-" then
 			cmp[1] = Compiler.New(assert(io.read("*all")), "stdin-", config)
-		elseif config.entry_point then
+		elseif #args == 0 and config.entry_point then
 			entry_point = config.entry_point
 			cmp[1] = Compiler.FromFile(entry_point, config)
 		else
@@ -120,7 +124,7 @@ config.commands["check"] = {
 			cmp:Analyze()
 		end
 
-		require("test.helpers.profiler").Stop()
+		if options.profile then require("test.helpers.profiler").Stop() end
 	end,
 }
 config.commands["build"] = {
