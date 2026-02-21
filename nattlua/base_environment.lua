@@ -45,9 +45,10 @@ local function load_definitions(root_node, parent_config)
 		end
 	end
 
-	config.file_path = config.file_path or path
+	config.file_path = path
 	config.file_name = config.file_name or "@" .. path
 	config.root_directory = ROOT_PATH
+	config.working_directory = ""
 	config.emitter = config.emitter or {}
 	config.emitter.comment_type_annotations = false
 	config.parser = config.parser or {}

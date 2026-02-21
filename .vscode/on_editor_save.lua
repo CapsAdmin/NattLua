@@ -38,22 +38,22 @@ then
 end
 
 if not _G.ROOT_PATH then
-	local source = debug.getinfo(1, "S").source:sub(2)
-	local start = source:find("%.vscode/on_editor_save%.lua$")
+	local current_path
+	local ffi = require("ffi")
 
-	if start then
-		local root = source:sub(1, start - 1)
-
-		if root == "" then
-			_G.ROOT_PATH = "./"
-		else
-			if root:sub(-1) ~= "/" then root = root .. "/" end
-
-			_G.ROOT_PATH = root
-		end
+	if jit.os ~= "Windows" then
+		ffi.cdef("char *getcwd(char *buf, size_t size);")
+		local buf = ffi.new("uint8_t[256]")
+		ffi.C.getcwd(buf, 256)
+		current_path = ffi.string(buf)
 	else
-		_G.ROOT_PATH = "./"
+		ffi.cdef("unsigned long GetCurrentDirectoryA(unsigned long length, char *buffer);")
+		local buf = ffi.new("uint8_t[256]")
+		ffi.C.GetCurrentDirectoryA(256, buf)
+		current_path = ffi.string(buf):gsub("\\", "/")
 	end
+
+	_G.ROOT_PATH = dir
 end
 
 _G.REUSE_BASE_ENV = true
