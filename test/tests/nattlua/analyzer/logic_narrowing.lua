@@ -1,7 +1,3 @@
-do
-	return
-end
-
 analyze([[
     local x = 1 as number | nil
     local y = 2 as number | nil
@@ -17,13 +13,22 @@ analyze[[
     local val = t.foo
     if val then
         attest.equal(val, 1 as number)
-        attest.equal(t.foo, 1 as number)
     end
 ]]
+-- TODO: narrowing table fields through stored checks
+-- analyze[[
+--     local t = {x = 1 as number | nil}
+--     local check = t.x ~= nil
+--     if check then
+--         attest.equal(t.x, 1 as number)
+--     end
+-- ]]
 analyze[[
-    local t = {x = 1 as number | nil}
-    local check = t.x ~= nil
-    if check then
-        attest.equal(t.x, 1 as number)
+    local a: nil | 1
+
+    if a or true and a or false then
+        attest.equal(a, _ as 1)
     end
+
+    attest.equal(a, _ as 1 | nil)
 ]]

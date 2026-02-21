@@ -559,8 +559,8 @@ function META:IsLiteral()
 	return true
 end
 
-function META:SetLeftRightSource(l, r)
-	self.left_right_source = {left = l, right = r}
+function META:SetLeftRightSource(l, r, op)
+	self.left_right_source = {left = l, right = r, op = op}
 end
 
 function META:GetLeftRightSource()

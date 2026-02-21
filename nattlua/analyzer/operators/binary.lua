@@ -331,7 +331,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 
 		if l.Type == "union" and r.Type == "union" then
 			local new_union = Union()
-			new_union:SetLeftRightSource(l, r)
+			new_union:SetLeftRightSource(l, r, op)
 			local truthy_union = Union():SetUpvalue(upvalue)
 			local falsy_union = Union():SetUpvalue(upvalue)
 

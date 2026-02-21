@@ -148,10 +148,23 @@ return function(META--[[#: any]])
 		end
 
 		do
-			function META:TrackDependentUpvalues(obj)
+			function META:TrackDependentUpvalues(obj, follow_intermediate)
 				local upvalue = obj:GetUpvalue()
 
-				if not upvalue then return end
+				if not upvalue then
+					-- Follow LeftRightSource chains only when traversing from a
+					-- stored variable's chain (not from direct condition expressions)
+					if follow_intermediate and obj.Type == "union" then
+						local left_right = obj:GetLeftRightSource()
+
+						if left_right then
+							self:TrackDependentUpvalues(left_right.left, true)
+							self:TrackDependentUpvalues(left_right.right, true)
+						end
+					end
+
+					return
+				end
 
 				local val = upvalue:GetValue()
 				local truthy_falsy = upvalue:GetTruthyFalsyUnion()
@@ -164,8 +177,8 @@ return function(META--[[#: any]])
 					local left_right = val:GetLeftRightSource()
 
 					if left_right then
-						self:TrackDependentUpvalues(left_right.left)
-						self:TrackDependentUpvalues(left_right.right)
+						self:TrackDependentUpvalues(left_right.left, true)
+						self:TrackDependentUpvalues(left_right.right, true)
 					end
 				end
 			end
@@ -472,6 +485,7 @@ return function(META--[[#: any]])
 
 		local function apply_mutation(self, data)
 			local obj = collect_truthy_values(data.stack)
+
 			if not obj then return end
 
 			if data.kind == "upvalue" then
