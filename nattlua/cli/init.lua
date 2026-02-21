@@ -23,14 +23,14 @@ local function parse_args(args, allowed_options)
 		if arg:sub(1, 2) == "--" then
 			local option = arg:sub(3)
 			local val = true
+			local exp = arg:match("=(.+)$")
 
-			if arg:sub(-#"=true") == "=true" then
-				arg = arg:sub(1, -#"=true" - 1)
-				val = true
-			elseif arg:sub(-#"=false") == "=false" then
-				arg = arg:sub(1, -#"=false" - 1)
-				val = false
+			if exp then
+				option = option:sub(1, #option - #exp - 1)
+				val = loadstring("return " .. exp)()
 			end
+
+			print(arg, val)
 
 			if allowed_options and options[option] == nil then
 				error("unknown option " .. option)
@@ -485,7 +485,6 @@ end
 
 function cli.main(...)
 	local args = {...}
-
 	local markdown_output_path = nil
 
 	for i = #args, 1, -1 do
@@ -518,19 +517,15 @@ function cli.main(...)
 				f:flush()
 			end
 		end
-
 		_G.io.stderr = f
 		_G.io.stdout = f
-
 		_G.print = function(...)
 			local n = select("#", ...)
 
 			for i = 1, n do
 				_G.io.write(tostring(select(i, ...)))
 
-				if i < n then
-					_G.io.write("\t")
-				end
+				if i < n then _G.io.write("\t") end
 			end
 
 			_G.io.write("\n")
@@ -574,10 +569,13 @@ function cli.main(...)
 
 	if not ok then
 		if _G.NATTLUA_MARKDOWN_OUTPUT then
-			io.stderr:write("### error: Failed to execute command " .. tostring(command) .. "\n\n" .. tostring(err) .. "\n")
+			io.stderr:write(
+				"### error: Failed to execute command " .. tostring(command) .. "\n\n" .. tostring(err) .. "\n"
+			)
 		else
 			cli.print_error("Failed to execute command " .. tostring(command) .. ": " .. tostring(err))
 		end
+
 		os.exit(1)
 	end
 end
