@@ -345,6 +345,7 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 
 						-- Build a set of field names for detecting self-references
 						local field_names = {}
+
 						if v.fields then
 							for _, field in ipairs(v.fields) do
 								field_names[field.identifier] = true
@@ -357,22 +358,28 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 						if v.fields then
 							for i, field in ipairs(v.fields) do
 								local expr_str = nil
+
 								if field.expression then
 									local ok, result = pcall(function()
 										return field.expression:Render()
 									end)
+
 									if ok then expr_str = result end
 								end
 
 								-- Check if expression references another field in this enum
 								local is_self_ref = false
+
 								if expr_str then
 									for other_name in pairs(field_names) do
-										if expr_str:match("^" .. other_name .. "$") or
+										if
+											expr_str:match("^" .. other_name .. "$") or
 											expr_str:match("[^%w_]" .. other_name .. "[^%w_]") or
 											expr_str:match("^" .. other_name .. "[^%w_]") or
-											expr_str:match("[^%w_]" .. other_name .. "$") then
+											expr_str:match("[^%w_]" .. other_name .. "$")
+										then
 											is_self_ref = true
+
 											break
 										end
 									end
@@ -383,7 +390,9 @@ local function build_lua(c_header, expanded_defines, extra_lua, options)
 									table.insert(deferred_fields, {name = field.identifier, expr = expr_str})
 								else
 									buf:put("\t", field.identifier)
+
 									if expr_str then buf:put(" = ", expr_str) end
+
 									buf:put(",\n")
 								end
 							end

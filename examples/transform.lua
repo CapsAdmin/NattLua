@@ -68,6 +68,7 @@ end
 
 function em:TranslateToken(token)
 	local value = token:GetValueString()
+
 	if translate[value] then return translate[value] end
 
 	if token.type == "line_comment" then

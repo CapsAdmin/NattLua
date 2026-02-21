@@ -201,7 +201,10 @@ do -- custom commands specific for nattlua
 		description = "Analyze the whole project starting from multiple entry points and output statistics",
 		options = {
 			{name = "error-only", description = "only output errors"},
-			{name = "max-errors", description = "maximum number of errors to output before exiting (only applies with --error-only)"},
+			{
+				name = "max-errors",
+				description = "maximum number of errors to output before exiting (only applies with --error-only)",
+			},
 		},
 		cb = function(args, options, config, cli)
 			local Compiler = require("nattlua.compiler")

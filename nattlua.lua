@@ -34,7 +34,6 @@ if jit then
 
 		local nattlua_path = assert(assert(debug.getinfo(1, "S")).source:match("^@(.+)$"))
 		nattlua_path = assert(nattlua_path:match("(.+)/nattlua%.lua$"))
-
 		local dir = current_path .. "/" .. nattlua_path .. "/"
 		_G.ROOT_PATH = dir
 		package.path = package.path .. ";" .. dir .. "?.lua" .. ";" .. dir .. "?/init.lua"

@@ -359,17 +359,17 @@ type pcall = ReturnIfNonLiteral<|
 			for i = diagnostics_index + 1, #diagnostics do
 				local d = diagnostics[i]
 
-				if d.severity == "error" then
-					return false, types.LString(d.msg)
-				end
+				if d.severity == "error" then return false, types.LString(d.msg) end
 			end
 		end
 
 		if callable.Type ~= "function" or not callable:GetFunctionBodyNode() then
-			return types.Union({
-				types.Tuple({types.True(), tuple}),
-				types.Tuple({types.False(), types.String()}),
-			})
+			return types.Union(
+				{
+					types.Tuple({types.True(), tuple}),
+					types.Tuple({types.False(), types.String()}),
+				}
+			)
 		end
 
 		return true, tuple
@@ -405,10 +405,12 @@ type xpcall = ReturnIfNonLiteral<|
 		end
 
 		if callable.Type ~= "function" or not callable:GetFunctionBodyNode() then
-			return types.Union({
-				types.Tuple({types.True(), tuple}),
-				types.Tuple({types.False(), types.String()}),
-			})
+			return types.Union(
+				{
+					types.Tuple({types.True(), tuple}),
+					types.Tuple({types.False(), types.String()}),
+				}
+			)
 		end
 
 		return true, tuple

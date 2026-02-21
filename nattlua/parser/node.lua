@@ -1040,12 +1040,12 @@ local ANY_TYPE = {}
 function META:AssociateType(obj)
 	local done = self.inferred_types_done
 	local types = self.inferred_types
-	
+
 	if not done then
 		done = {}
 		self.inferred_types_done = done
 	end
-	
+
 	if not types then
 		types = {}
 		self.inferred_types = types
@@ -1060,6 +1060,7 @@ function META:AssociateType(obj)
 		hash = obj.Data or STRING_TYPE
 	elseif obj_type == "number" then
 		hash = obj.Data or NUMBER_TYPE
+
 		if hash ~= hash then hash = NAN_TYPE end
 	elseif obj_type == "any" then
 		hash = ANY_TYPE

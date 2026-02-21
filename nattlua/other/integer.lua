@@ -1,4 +1,3 @@
-
 local strip_integer = (
 		not jit and
 		(

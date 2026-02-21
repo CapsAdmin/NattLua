@@ -32,9 +32,7 @@ local function try_to_markdown_link(msg)
 
 		local link = path
 
-		if line and line ~= "" then
-			link = link .. "#L" .. line
-		end
+		if line and line ~= "" then link = link .. "#L" .. line end
 
 		return "[" .. msg .. "](" .. link .. ")"
 	end
@@ -469,22 +467,22 @@ function formating.BuildSourceCodePointMessage2(
 				else
 					local label = msg:gsub("^### ", "")
 
-				if main_link then
-					local link = main_link:match("%((.-)%)")
-					if link then
-						out = out .. "[" .. label .. "](" .. link .. ")\n\n"
+					if main_link then
+						local link = main_link:match("%((.-)%)")
+
+						if link then
+							out = out .. "[" .. label .. "](" .. link .. ")\n\n"
+						else
+							out = out .. "**" .. label .. "**\n\n"
+						end
 					else
 						out = out .. "**" .. label .. "**\n\n"
 					end
-				else
-					out = out .. "**" .. label .. "**\n\n"
-				end
 				end
 			end
 		end
 
 		out = out .. "\n```lua\n" .. table.concat(annotated, "\n"):gsub("\t", TAB_WIDTH):gsub(" +(\n)", "%1"):gsub(" +$", "") .. "\n```\n"
-
 		return out
 	end
 

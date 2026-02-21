@@ -15,7 +15,6 @@ analyze[[
     attest.equal(ok2, true)
     attest.equal(res2, 42)
 ]]
-
 analyze[[
     -- Test pcall narrowing
     local function failing()
@@ -30,7 +29,6 @@ analyze[[
     attest.equal(ok2, true)
     attest.equal(res, 123)
 ]]
-
 analyze[[
     -- Test pcall narrowing with unknown function
     local f: function=()>(number)
@@ -38,7 +36,6 @@ analyze[[
     attest.equal(ok, _ as boolean)
     attest.equal(res, _ as number | string)
 ]]
-
 analyze[[
     -- Test xpcall
     local function failing()

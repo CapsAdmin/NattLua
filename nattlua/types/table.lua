@@ -703,6 +703,7 @@ end
 
 function META:HasKey(key--[[#: TBaseType]])--[[#: boolean]]
 	if key.Type == "deferred" then key = key:Unwrap() end
+
 	if read_cache(self, key) then return true end
 
 	for i, keyval in ipairs(self.Data) do
@@ -718,6 +719,7 @@ end
 
 function META:FindKeyValExact(key--[[#: TBaseType]])--[[#: ({key = TBaseType, val = TBaseType} | false), (any | nil)]]
 	if key.Type == "deferred" then key = key:Unwrap() end
+
 	local keyval, reason = read_cache(self--[[# as any]], key)
 
 	if keyval then return keyval--[[# as any]], reason end
@@ -742,6 +744,7 @@ end
 
 function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]])--[[#: ({key = TBaseType, val = TBaseType} | false), (any | nil)]]
 	if key.Type == "deferred" then key = key:Unwrap() end
+
 	local keyval = read_cache(self--[[# as any]], key)
 
 	if keyval then return keyval--[[# as any]] end

@@ -47,9 +47,7 @@ local function wrap_color(code--[[#: string]])
 end
 
 for name, code in pairs(colors) do
-	if type(code) == "string" then
-		colors[name] = wrap_color(code)
-	end
+	if type(code) == "string" then colors[name] = wrap_color(code) end
 end
 
 function colors.Disable()

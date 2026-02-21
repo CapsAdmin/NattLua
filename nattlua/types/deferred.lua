@@ -11,9 +11,7 @@ function META:Unwrap(visited--[[#: any]])
 	if not (ref and ref ~= self) then
 		local upv = self:GetUpvalue()
 
-		if upv then
-			ref = upv:GetValue()
-		end
+		if upv then ref = upv:GetValue() end
 	end
 
 	if ref and ref ~= self and ref.Type == "deferred" then
@@ -153,7 +151,9 @@ end
 function META:Get(key)
 	local unwrapped = self:Unwrap()
 
-	if unwrapped == self then return false, "cannot get from unresolved deferred reference" end
+	if unwrapped == self then
+		return false, "cannot get from unresolved deferred reference"
+	end
 
 	return unwrapped:Get(key)
 end

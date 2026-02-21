@@ -727,8 +727,6 @@ analyze[[
     x = 2
     ::foo::
 ]]
-
-
 analyze[[
     local jit = _G.jit as jit
     local f: jit_attach_trace = function(what, tr, func, pc, otr, oex)
@@ -736,7 +734,6 @@ analyze[[
     end
     jit.attach(f, "trace")
 ]]
-
 analyze[==[
 local class = {}
 function class.CreateTemplate(name)
@@ -753,7 +750,6 @@ end
 local T = class.CreateTemplate("test")
 T:GetSet("Value", nil)
 ]==]
-
 analyze[[
 	if jit and jit.vmdef then
 		local x = jit.vmdef

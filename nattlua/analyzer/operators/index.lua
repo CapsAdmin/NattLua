@@ -62,7 +62,7 @@ local function index_table(analyzer, self, key, raw)
 						analyzer:TrackTableIndex(self, key, val)
 					end
 
-					return val				
+					return val
 				end
 			end
 		end
@@ -189,10 +189,8 @@ return {
 				key = self:GetFirstValue(key)
 			end
 
-			if obj.Type == "deferred" then
-				obj = obj:Unwrap()
-			end
-			
+			if obj.Type == "deferred" then obj = obj:Unwrap() end
+
 			if obj.Type == "union" then
 				return index_union(self, obj, key)
 			elseif obj.Type == "tuple" then

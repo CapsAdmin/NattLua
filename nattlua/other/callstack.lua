@@ -3,6 +3,7 @@ local callstack = {}
 local debug = _G.debug
 local ok, prof = pcall(require, "jit.profile")
 local NATTLUA_MARKDOWN_OUTPUT = _G.NATTLUA_MARKDOWN_OUTPUT
+
 if ok--[[# as boolean]] then
 	function callstack.traceback(msg--[[#: string | nil]], level--[[#: 1 .. inf | nil]])
 		level = level or 50
@@ -55,7 +56,14 @@ else
 
 		if NATTLUA_MARKDOWN_OUTPUT then
 			out = out:gsub("([%w%._%-%/]+):(%d+)", function(path, line)
-				if (path:find("/") or path:find("%.lua") or path:find("%.nlua")) and not path:find("%[") then
+				if
+					(
+						path:find("/") or
+						path:find("%.lua") or
+						path:find("%.nlua")
+					) and
+					not path:find("%[")
+				then
 					return "[" .. path .. ":" .. line .. "](" .. path .. "#L" .. line .. ")"
 				end
 			end)

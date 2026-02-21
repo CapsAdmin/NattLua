@@ -56,7 +56,13 @@ else
 end
 
 -- Define the event structure
-local time_type = ffi.os == "OSX" and "uint64_t" or (ffi.os == "Windows" and "int64_t" or "long int")
+local time_type = ffi.os == "OSX" and
+	"uint64_t" or
+	(
+		ffi.os == "Windows" and
+		"int64_t" or
+		"long int"
+	)
 ffi.cdef(
 	[[
 typedef struct {

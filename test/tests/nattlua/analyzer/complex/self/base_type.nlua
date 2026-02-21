@@ -2,4 +2,7 @@ local base = require("nattlua.types.base")()
 
 §analyzer:AnalyzeUnreachableCode()
 
-attest.equal<|unpack<|argument_type<|base.SetTruthyFalsy|>|>, (base.@Self, "truthy" | "falsy" | "unknown")|>
+attest.equal<|
+	unpack<|argument_type<|base.SetTruthyFalsy|>|>,
+	(base.@Self, "truthy" | "falsy" | "unknown")
+|>

@@ -9,6 +9,7 @@ local typesystem_syntax = require("nattlua.syntax.typesystem")
 local path_util = require("nattlua.other.path")
 
 --[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
+
 --[[#local type { Node } = import("~/nattlua/parser/node.lua")]]
 
 return function(META--[[#: any]])

@@ -532,7 +532,11 @@ return {
 		end
 
 		local ok, err = BinaryWithUnion(self, node, l, r, op)
-		if not ok and not err then print("Binary operator failed without error message",node, op, l, r) end
+
+		if not ok and not err then
+			print("Binary operator failed without error message", node, op, l, r)
+		end
+
 		return ok, err
 	end,
 }

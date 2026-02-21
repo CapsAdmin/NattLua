@@ -379,7 +379,6 @@ for enum_name, data in sorted_pairs(enum_lookups) do
 		data.all_numeric_keys and "true" or "false",
 		", s) end\n"
 	)
-
 	-- Generate reverse lookup function (enum value -> string or table)
 	extra_code:put(
 		"mod.str.",
@@ -388,7 +387,6 @@ for enum_name, data in sorted_pairs(enum_lookups) do
 		is_flags and "true" or "false",
 		", v) end\n"
 	)
-
 	extra_code:put("end\n")
 end
 

@@ -1,2 +1,5 @@
-do return end
+do
+	return
+end
+
 local type { Table } = require("nattlua.types.table") --local obj = Table({1, 2, 3, foo = true, bar = "hello"})

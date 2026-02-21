@@ -1176,7 +1176,6 @@ for i, v in ipairs(x) do
 end
 attest.equal(x, _ as {foo = 1, bar = 2, faz = 3})
 ]]
-
 analyze[[
 local META = {}
 META.Type = "table"

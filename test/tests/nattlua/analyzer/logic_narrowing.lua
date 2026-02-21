@@ -1,4 +1,7 @@
-do return end
+do
+	return
+end
+
 analyze([[
     local x = 1 as number | nil
     local y = 2 as number | nil
