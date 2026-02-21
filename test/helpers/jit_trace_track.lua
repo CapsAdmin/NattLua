@@ -48,7 +48,7 @@ end
 
 --[[#local type Trace = {
 	pc_lines = List<|{func = Function, depth = number, pc = number}|>,
-	lines = List<|{line = string, depth = number}|>,
+	lines = List<|{line = string, depth = number, code = string | nil}|>,
 	id = number,
 	exit_id = number,
 	parent_id = number,
@@ -187,13 +187,13 @@ function trace_track.Start()
 		table_insert(traces[tr].pc_lines, {func = func, pc = pc, depth = depth})
 	end
 
-	local on_trace_event--[[#: jit_attach_trace]] = function(what, tr, func, pc, otr, oex)
+	local on_trace_event--[[#: jit_attach_trace]] = function(what, tr, func, pc, otr--[[#: nil | number]], oex--[[#: nil | number]])
 		if what == "start" then
 			start(tr, func, pc, otr, oex)
 		elseif what == "stop" then
 			stop(tr, func)
 		elseif what == "abort" then
-			abort(tr, func, pc, otr, oex)
+			abort(tr, func, pc--[[#: number]], otr--[[#: number]], oex--[[#: number]])
 		elseif what == "flush" then
 			flush()
 		else
@@ -341,7 +341,7 @@ local function tostring_trace_lines_end(trace--[[#: Trace]], line_prefix--[[#: n
 	local start_depth = assert(trace.lines[#trace.lines]).depth
 
 	for i = #trace.lines, 1, -1 do
-		local line = trace.lines[i]
+		local line = assert(trace.lines[i])
 		table.insert(lines, 1, line_prefix .. line.line)
 
 		if line.depth ~= start_depth then break end
@@ -366,9 +366,9 @@ local function tostring_trace_lines_full(trace--[[#: Trace]], tab--[[#: nil | st
 	end
 
 	for i, line in ipairs(lines) do
-		if trace.lines[i].code then
-			lines[i] = lines[i] .. (" "):rep(max_len - #line + 2) .. " -- " .. trace.lines[i].code
-		end
+		local pc_line = assert(trace.lines[i])
+		local code = assert(pc_line.code)
+		lines[i] = lines[i] .. (" "):rep(max_len - #line + 2) .. " -- " .. code
 	end
 
 	return table.concat(lines, "\n")
@@ -673,7 +673,7 @@ local function analyze_trace_ir(trace--[[#: Trace]])
 		-- Trim spaces from opcode
 		opcode = opcode:match("^%s*(.-)%s*$")
 		local line_idx = math.min(math.floor(ins / trace.trace_info.nins * #trace.pc_lines) + 1, #trace.pc_lines)
-		local pc_line = trace.pc_lines[line_idx]
+		local pc_line = assert(trace.pc_lines[line_idx])
 		local info = funcinfo(pc_line.func, pc_line.pc)
 
 		if info.loc then

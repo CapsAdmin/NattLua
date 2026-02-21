@@ -469,12 +469,16 @@ function formating.BuildSourceCodePointMessage2(
 				else
 					local label = msg:gsub("^### ", "")
 
-					if main_link then
-						local link = main_link:match("%((.-)%)")
+				if main_link then
+					local link = main_link:match("%((.-)%)")
+					if link then
 						out = out .. "[" .. label .. "](" .. link .. ")\n\n"
 					else
 						out = out .. "**" .. label .. "**\n\n"
 					end
+				else
+					out = out .. "**" .. label .. "**\n\n"
+				end
 				end
 			end
 		end
