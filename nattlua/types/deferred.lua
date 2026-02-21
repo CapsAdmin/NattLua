@@ -5,23 +5,19 @@ local tostring = _G.tostring
 local META = require("nattlua.types.base")()
 META:GetSet("Reference", false)
 
-function META:Unwrap(visited)
-	local upv = self:GetUpvalue()
-	local ref
+function META:Unwrap(visited--[[#: any]])
+	local ref = self:GetReference()
 
-	if upv then ref = upv:GetValue() else ref = self:GetReference() end
+	if not (ref and ref ~= self) then
+		local upv = self:GetUpvalue()
 
-	if ref and ref ~= self then
-		if ref.Type == "deferred" then
-			visited = visited or {}
-
-			if visited[ref] then return ref end
-
-			visited[ref] = true
-			return ref:Unwrap(visited)
+		if upv then
+			ref = upv:GetValue()
 		end
+	end
 
-		return ref
+	if ref and ref ~= self and ref.Type == "deferred" then
+		return ref:Unwrap(visited)
 	end
 
 	return self
@@ -31,6 +27,38 @@ function META:IsResolved()
 	local ref = self:GetReference()
 	local upv = self:GetUpvalue()
 	return (ref and ref ~= self) or (upv and upv:GetValue() and upv:GetValue() ~= self)
+end
+
+function META:IsTruthy()
+	local unwrapped = self:Unwrap()
+
+	if unwrapped == self then return true end
+
+	return unwrapped:IsTruthy()
+end
+
+function META:IsFalsy()
+	local unwrapped = self:Unwrap()
+
+	if unwrapped == self then return false end
+
+	return unwrapped:IsFalsy(visited)
+end
+
+function META:IsCertainlyTrue()
+	local unwrapped = self:Unwrap()
+
+	if unwrapped == self then return true end
+
+	return unwrapped:IsCertainlyTrue()
+end
+
+function META:IsCertainlyFalse()
+	local unwrapped = self:Unwrap()
+
+	if unwrapped == self then return false end
+
+	return unwrapped:IsCertainlyFalse()
 end
 
 function META:Equal(other, visited)
@@ -99,15 +127,16 @@ function META:CanBeNil()
 	return unwrapped:CanBeNil()
 end
 
-function META:Copy(visited)
-	visited = visited or {}
+function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
+	map = map or {}
 
-	if visited[self] then return visited[self] end
+	if map[self] then return map[self] end
 
 	local copy = self.New()
-	visited[self] = copy
+	map[self] = copy
 	copy:SetUpvalue(self:GetUpvalue())
 	copy:SetReference(self:GetReference())
+	copy:CopyInternalsFrom(self)
 	return copy
 end
 
@@ -124,7 +153,7 @@ end
 function META:Get(key)
 	local unwrapped = self:Unwrap()
 
-	if unwrapped == self then return nil end
+	if unwrapped == self then return false, "cannot get from unresolved deferred reference" end
 
 	return unwrapped:Get(key)
 end

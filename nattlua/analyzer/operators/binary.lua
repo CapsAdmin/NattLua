@@ -269,6 +269,10 @@ end
 local function BinaryWithUnion(self, node, l, r, op)
 	if l.Type == "any" or r.Type == "any" then return Any() end
 
+	if l.Type == "deferred" then l = l:Unwrap() end
+
+	if r.Type == "deferred" then r = r:Unwrap() end
+
 	if self:IsTypesystem() then
 		if op == "==" then
 			return l:Equal(r) and True() or False()
@@ -527,6 +531,8 @@ return {
 			if r.Type == "tuple" then r = self:GetFirstValue(r) or Nil() end
 		end
 
-		return BinaryWithUnion(self, node, l, r, op)
+		local ok, err = BinaryWithUnion(self, node, l, r, op)
+		if not ok and not err then print("Binary operator failed without error message",node, op, l, r) end
+		return ok, err
 	end,
 }

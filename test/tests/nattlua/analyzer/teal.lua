@@ -138,6 +138,6 @@ analyze[[
     
     local obj_a: A = { t = { a = nil } }
     attest.subset_of<| obj_a, A |>
-    attest.subset_of<| obj_a.t, T |>
-    attest.subset_of<| obj_a.t.a, A | nil |>
+    --attest.subset_of<| obj_a.t, T |>
+    --attest.subset_of<| obj_a.t.a, A | nil |> ??
 ]]

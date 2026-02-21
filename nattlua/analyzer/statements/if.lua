@@ -124,8 +124,8 @@ return {
 				if blocks[i - 1] then
 					local prev = {}
 
-					for i = 1, i do
-						table_insert(prev, blocks[i])
+					for j = 1, i do
+						table_insert(prev, blocks[j])
 					end
 
 					self:ApplyMutationsInIfElse(prev)

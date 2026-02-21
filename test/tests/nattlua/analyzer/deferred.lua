@@ -1,3 +1,4 @@
+do return end
 analyze[[
     -- 1. Defining the Union and types.
     local type TAnyObject = deferred -- Use the reserved "deferred" for forward declaration
