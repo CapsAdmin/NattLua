@@ -99,6 +99,7 @@ config.commands["check"] = {
 	usage = "nattlua check <file>",
 	options = {
 		{name = "profile", description = "Run with profiler"},
+		{name = "error-only", description = "Only print errors, not warnings"},
 	},
 	cb = function(args, options, config, cli)
 		if options.profile then require("test.helpers.profiler").Start() end
@@ -121,6 +122,15 @@ config.commands["check"] = {
 		end
 
 		for _, cmp in ipairs(cmp) do
+			if options["error-only"] then
+				local original_OnDiagnostic = cmp.OnDiagnostic
+				cmp.OnDiagnostic = function(self, code, msg, severity, ...)
+					if severity == "error" or severity == "fatal" then
+						return original_OnDiagnostic(self, code, msg, severity, ...)
+					end
+				end
+			end
+
 			cmp:Analyze()
 		end
 
