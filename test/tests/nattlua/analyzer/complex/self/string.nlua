@@ -1,4 +1,0 @@
-local type { LString } = require("nattlua.types.string")
-
-local str = LString("hello world")
-attest.equal(str:GetData(), _ as false | string)

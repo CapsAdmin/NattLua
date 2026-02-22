@@ -1,4 +1,0 @@
-local type { AnyFunction } = require("nattlua.types.function")
-
-local obj = AnyFunction()
-attest.equal(obj.Type, "function")

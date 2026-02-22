@@ -503,7 +503,34 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 	end
 
 	if meta.Type == "table" then
-		if meta.Self then
+		if meta.NewMetaTable and not meta.Self then
+			-- @NewMetaTable mode: build an inferred Self from tbl's fields
+			-- This is informational (no contract enforcement)
+			local inferred_self = types.Table()
+			for _, kv in ipairs(tbl:GetData()) do
+				local key = kv.key
+				local val = kv.val
+				-- Widen literal values to their base types for the inferred self
+				if val:IsLiteral() and val.Type ~= "function" and val.Type ~= "table" and val.Widen then
+					val = val:Widen()
+				end
+				inferred_self:Set(key, val)
+			end
+			inferred_self:SetMetaTable(meta)
+			meta.Self = inferred_self
+		elseif meta.NewMetaTable and meta.Self then
+			-- Subsequent setmetatable calls: merge additional fields
+			for _, kv in ipairs(tbl:GetData()) do
+				local key = kv.key
+				local val = kv.val
+				if val:IsLiteral() and val.Type ~= "function" and val.Type ~= "table" and val.Widen then
+					val = val:Widen()
+				end
+				if not meta.Self:HasKey(key) then
+					meta.Self:Set(key, val)
+				end
+			end
+		elseif meta.Self then
 			analyzer:ErrorIfFalse(tbl:FollowsContract(meta.Self))
 			tbl:CopyLiteralness2(meta.Self)
 			tbl:SetContract(meta.Self)

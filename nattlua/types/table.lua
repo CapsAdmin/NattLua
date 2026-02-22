@@ -38,6 +38,7 @@ META:GetSet("BaseTable", nil--[[# as TTable | false]])
 META:GetSet("ReferenceId", nil--[[# as string | false]])
 META:GetSet("Self", nil--[[# as false | TTable]])
 META:GetSet("Self2", nil--[[# as false | TTable]])
+META:GetSet("NewMetaTable", false--[[# as boolean]])
 META:GetSet("Contracts", nil--[[# as List<|TTable|>]])
 META:GetSet("CreationScope", nil--[[# as any]])
 META:GetSet("AnalyzerEnvironment", false--[[# as false | "runtime" | "typesystem"]])
@@ -83,6 +84,14 @@ function META:SetSelf(tbl--[[#: TTable]])
 	tbl:SetMetaTable(self)
 	tbl:SetContract(tbl)
 	self.Self = tbl
+end
+
+function META:SetNewMetaTable(val)
+	if val and val.Type == "symbol" and val:IsTrue() then
+		self.NewMetaTable = true
+	else
+		self.NewMetaTable = false
+	end
 end
 
 function META.Equal(
@@ -1099,6 +1108,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	end
 
 	copy.Self2 = self.Self2
+	copy.NewMetaTable = self.NewMetaTable
 	copy.MetaTable = self.MetaTable --copy_val(self.MetaTable, map, copy_tables)
 	copy.Contract = self:GetContract() --copy_val(self.Contract, map, copy_tables)
 	copy:SetAnalyzerEnvironment(self:GetAnalyzerEnvironment())
@@ -1465,6 +1475,7 @@ function META.New()
 			Name = false,
 			Self = false,
 			Self2 = false,
+			NewMetaTable = false,
 			literal_data_cache = {},
 			Contracts = {},
 			TypeOverride = false,
