@@ -41,7 +41,7 @@ function META:GetHashForMutationTracking()
 end
 
 function META:Copy()
-	local copy = self.New(self.Data)--[[# as any]]
+	local copy = self.New(self.Data)
 	copy:SetPatternContract(self:GetPatternContract())
 	copy:SetMetaTable(self:GetMetaTable())
 	copy:CopyInternalsFrom(self)

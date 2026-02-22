@@ -24,11 +24,6 @@ META.Type = "range"
 META:GetSet("MinNumber", false--[[# as TNumber]])
 META:GetSet("MaxNumber", false--[[# as TNumber]])
 META:GetSet("Hash", ""--[[# as string]])
---[[#local type TUnion = {
-	@Name = "TUnion",
-	Type = "union",
-	GetLargestNumber = function=(self)>(TRange | nil, nil | any),
-}]]
 local VERSION = jit and "LUAJIT" or _VERSION
 
 local function compute_hash(min--[[#: TNumber]], max--[[#: TNumber]])

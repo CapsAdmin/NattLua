@@ -246,7 +246,6 @@ do
 
 		if l.Data == false then return Number() end
 
-		r = r--[[# as TBaseType]] --?
 		if r.Type == "range" then
 			local l_min = l.Data
 			local l_max = l.Data
