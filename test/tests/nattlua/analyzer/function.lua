@@ -824,7 +824,7 @@ analyze[[
         attest.equal(node, 1337)
     end
 ]]
-pending[[
+analyze[[
     local type F = function=(foo: number, a: string, b: boolean, c: string)>(nil)
 
     local function foo(a: string, b: F)

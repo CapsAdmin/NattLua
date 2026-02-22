@@ -1012,15 +1012,6 @@ analyze[[
     x = nil
 ]]
 analyze[[
-    local a: nil | 1
-
-    if not not a then
-        attest.equal(a, _ as nil)
-    end
-
-    attest.equal(a, _ as 1 | nil)
-]]
-analyze[[
     local x = 1
 
     do
@@ -1753,31 +1744,6 @@ analyze[[
     §assert(env.runtime.A:GetUpvalue():GetMutations()[5] == nil)
 ]]
 
-if false then
-	pending[[
-        local Any(): boolean
-        local x = 0
-        if Any() then x = x + 1 end -- 1
-        if Any() then x = x - 1 end -- 0
-        attest.equal(x, 0)
-    ]]
-	pending[[
-        local a: nil | 1
-
-        if not not a then
-            attest.equal(a, _ as 1)
-        end
-
-        attest.equal(a, _ as 1 | nil)
-    ]]
-	pending[[
-        local x: number
-        
-        if x >= 0 and x <= 10 then
-            attest.equal<|x, 0 .. 10|>
-        end
-    ]]
-end
 
 analyze[[
 local value

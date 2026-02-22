@@ -155,6 +155,17 @@ return function(META--[[#: any]])
 					-- Follow LeftRightSource chains only when traversing from a
 					-- stored variable's chain (not from direct condition expressions)
 					if follow_intermediate and obj.Type == "union" then
+						-- Check for table field narrowing data (e.g., t.x had ~= nil comparison)
+						local stored_tf = obj:GetStoredTruthyFalsy()
+
+						if stored_tf and obj:GetParentTable() then
+							local t, f = stored_tf.truthy, stored_tf.falsy
+
+							if self:IsInvertedExpressionContext() then t, f = f, t end
+
+							self:TrackTableIndexUnion(obj, t, f)
+						end
+
 						local left_right = obj:GetLeftRightSource()
 
 						if left_right then
@@ -170,7 +181,33 @@ return function(META--[[#: any]])
 				local truthy_falsy = upvalue:GetTruthyFalsyUnion()
 
 				if truthy_falsy then
-					self:TrackUpvalueUnion(upvalue:GetValue(), truthy_falsy.truthy, truthy_falsy.falsy)
+					local t, f = truthy_falsy.truthy, truthy_falsy.falsy
+
+					-- When inside a `not` prefix, the condition meaning is inverted:
+					-- `local c = x == nil; if not c then` means x ~= nil in the body,
+					-- so we swap truthy/falsy from the stored comparison.
+					if self:IsInvertedExpressionContext() then t, f = f, t end
+
+					self:TrackUpvalueUnion(upvalue:GetValue(), t, f)
+				end
+
+				-- If the upvalue's value has a ParentTable reference (e.g., local val = t.foo),
+				-- also narrow the table field when the alias is checked.
+				if val.Type == "union" and val:GetParentTable() then
+					local stored_tf = val:GetStoredTruthyFalsy()
+					local t, f
+
+					if stored_tf then
+						-- Use comparison-derived truthy/falsy (from ~= nil etc.)
+						t, f = stored_tf.truthy, stored_tf.falsy
+					else
+						-- Use truthiness-based split (from plain `if val then`)
+						t, f = val:GetTruthy(), val:GetFalsy()
+					end
+
+					if self:IsInvertedExpressionContext() then t, f = f, t end
+
+					self:TrackTableIndexUnion(val, t, f)
 				end
 
 				if val.Type == "union" then

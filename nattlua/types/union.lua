@@ -28,6 +28,7 @@ local META = require("nattlua.types.base")()
 --[[#type TUnion.suppress = boolean]]
 --[[#type TUnion.left_right_source = {left = TBaseType, right = TBaseType} | false]]
 --[[#type TUnion.parent_table = {table = TBaseType, key = string} | false]]
+--[[#type TUnion.stored_truthy_falsy = any]]
 META.Type = "union"
 META:GetSet("Data", false--[[# as List<|TBaseType|>]])
 
@@ -575,6 +576,14 @@ function META:GetParentTable()
 	return self.parent_table
 end
 
+function META:SetStoredTruthyFalsy(truthy, falsy)
+	self.stored_truthy_falsy = {truthy = truthy, falsy = falsy}
+end
+
+function META:GetStoredTruthyFalsy()
+	return self.stored_truthy_falsy
+end
+
 function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TUnion]]
 	local self = META.NewObject(
 		{
@@ -584,6 +593,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TUnion]]
 			suppress = false--[[# as boolean]],
 			left_right_source = false,
 			parent_table = false,
+			stored_truthy_falsy = false,
 			TruthyFalsy = "unknown",
 			Upvalue = false,
 			Contract = false,

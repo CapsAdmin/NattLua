@@ -337,6 +337,9 @@ local function BinaryWithUnion(self, node, l, r, op)
 
 			if upvalue then upvalue:SetTruthyFalsyUnion(truthy_union, falsy_union) end
 
+				-- Store truthy/falsy on the left value for table field narrowing
+				-- through stored checks (e.g., local check = t.x ~= nil; if check then)
+				if l:GetParentTable() then l:SetStoredTruthyFalsy(truthy_union, falsy_union) end
 			-- special case for type(x) ==/~=
 			if self.type_checked and (op == "==" or op == "!=" or op == "~=") then
 				local type_checked = self.type_checked
@@ -545,6 +548,10 @@ return {
 			self:PushFalsyExpressionContext()
 			l = self:Assert(self:AnalyzeExpression(node.left))
 			self:PopFalsyExpressionContext()
+
+			if l.Type == "union" then
+				self:TrackUpvalueUnion(l, l:GetTruthy(), l:GetFalsy())
+			end
 
 			if l:IsCertainlyFalse() then
 				self:PushFalsyExpressionContext()

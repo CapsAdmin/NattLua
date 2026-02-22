@@ -255,7 +255,7 @@ pending[[
         attest.equal(b, _ as number | nil)
     end
 ]]
-pending[[
+analyze[[
     local type A = {Type = "human"}
     local type B = {Type = "cat"}
 
