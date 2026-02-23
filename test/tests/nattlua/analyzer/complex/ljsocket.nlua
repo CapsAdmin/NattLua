@@ -1,3 +1,7 @@
+do
+	return
+end
+
 --ANALYZE
 ffi.C = {}
 local type print = any

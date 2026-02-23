@@ -98,88 +98,9 @@ return function(META--[[#: any]])
 	end
 
 	do
-		local function add_potential_self(tup)
-			local tbl = tup:GetWithNumber(1)
-
-			if tbl and tbl.Type == "union" then tbl = tbl:GetType("table") end
-
-			if not tbl or tbl.Type ~= "table" then return end
-
-			if tbl.Self then
-				local self = tbl.Self:Copy()
-				local new_tup = Tuple()
-
-				for i, obj in ipairs(tup:GetData()) do
-					if i == 1 then
-						new_tup:Set(i, self)
-					else
-						new_tup:Set(i, obj)
-					end
-				end
-
-				return new_tup
-			elseif tbl.Self2 then
-				local self = tbl.Self2
-				local new_tup = Tuple()
-
-				for i, obj in ipairs(tup:GetData()) do
-					if i == 1 then
-						new_tup:Set(i, self)
-					else
-						new_tup:Set(i, obj)
-					end
-				end
-
-				return new_tup
-			elseif tbl.potential_self then
-				local meta = tbl
-				local self = tbl.potential_self
-
-				if self.Type == "union" then
-					for _, obj in ipairs(self:GetData()) do
-						obj:SetMetaTable(meta)
-					end
-				else
-					self:SetMetaTable(meta)
-				end
-
-				local new_tup = Tuple()
-
-				for i, obj in ipairs(tup:GetData()) do
-					if i == 1 then
-						new_tup:Set(i, self)
-					else
-						new_tup:Set(i, obj)
-					end
-				end
-
-				return new_tup
-			end
-		end
-
 		function META:CrawlFunctionWithoutOrigin(obj)
 			-- use function's arguments in case they have been maniupulated (ie string.gsub)
 			local arguments = obj:GetInputSignature():Copy()
-
-			if obj:IsExplicitInputSignature() then
-				local new_arguments = add_potential_self(arguments)
-				arguments = new_arguments or arguments
-
-				for i = 1, arguments:GetSafeLength() do
-					if new_arguments then i = i + 1 end
-
-					arguments:Set(i, Any())
-				end
-			else
-				arguments = add_potential_self(arguments) or arguments
-
-				for _, obj in ipairs(arguments:GetData()) do
-					if obj.Type == "upvalue" or obj.Type == "table" then
-						obj:ClearMutations()
-					end
-				end
-			end
-
 			self:CreateAndPushFunctionScope(obj)
 			self:PushCurrentStatement(obj:GetFunctionBodyNode())
 			self:ErrorIfFalse(self:Call(obj, arguments, obj:GetFunctionBodyNode()))

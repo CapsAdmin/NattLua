@@ -34,13 +34,10 @@ local META = require("nattlua.types.base")()
 --[[#type META.@Name = "TTable"]]
 META.Type = "table"
 META:GetSet("Data", nil--[[# as List<|{key = TBaseType, val = TBaseType}|>]])
-META:GetSet("BaseTable", nil--[[# as TTable | false]])
 META:GetSet("ReferenceId", nil--[[# as string | false]])
-META:GetSet("Self", nil--[[# as false | TTable]])
-META:GetSet("Self2", nil--[[# as false | TTable]])
-META:GetSet("NewMetaTable", false--[[# as boolean]])
 META:GetSet("Contracts", nil--[[# as List<|TTable|>]])
 META:GetSet("CreationScope", nil--[[# as any]])
+META:GetSet("SelfArgument", nil--[[# as any]])
 META:GetSet("AnalyzerEnvironment", false--[[# as false | "runtime" | "typesystem"]])
 META:GetSet("MutationLimit", 100)
 
@@ -77,20 +74,6 @@ do
 		end
 
 		return self.MetaTable
-	end
-end
-
-function META:SetSelf(tbl--[[#: TTable]])
-	tbl:SetMetaTable(self)
-	tbl:SetContract(tbl)
-	self.Self = tbl
-end
-
-function META:SetNewMetaTable(val)
-	if val and val.Type == "symbol" and val:IsTrue() then
-		self.NewMetaTable = true
-	else
-		self.NewMetaTable = false
 	end
 end
 
@@ -465,13 +448,7 @@ function META.IsSubsetOf(a--[[#: TTable]], b--[[#: TBaseType]])--[[#: boolean, a
 			local akeyval, reason = a:FindKeyValWide(bkeyval.key, true)
 
 			if not bkeyval.val:CanBeNil() then
-				if not akeyval then
-					if (b--[[# as TTable]]).BaseTable and (b--[[# as TTable]]).BaseTable == a then
-						akeyval = bkeyval
-					else
-						return (akeyval--[[# as any]]), reason
-					end
-				end
+				if not akeyval then return (akeyval--[[# as any]]), reason end
 
 				local a_any = a--[[# as any]]
 				local old = a_any.suppress
@@ -719,10 +696,6 @@ function META:HasKey(key--[[#: TBaseType]])--[[#: boolean]]
 		if key:Equal(keyval.key) or key:IsSubsetOf(keyval.key) then return true end
 	end
 
-	if self.BaseTable then
-		if (self.BaseTable--[[# as TTable]]):HasKey(key) then return true end
-	end
-
 	return false
 end
 
@@ -783,14 +756,6 @@ function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]
 	end
 
 	if #reasons > 20 then reasons = {error_messages.table_index(self, key)} end
-
-	if self.BaseTable then
-		local ok, reason = (self.BaseTable--[[# as TTable]]):FindKeyValWide(key)
-
-		if ok then return ok--[[# as any]] end
-
-		reasons[#reasons + 1] = reason
-	end
 
 	if not reasons[1] then
 		reasons[1] = error_messages.because(error_messages.table_index(self, key), {"table is empty"})
@@ -1090,35 +1055,19 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	end
 
 	copy:CopyInternalsFrom(self)
-
-	if self.Self then
-		local tbl = self.Self
-
-		if map[tbl] then
-			copy:SetSelf(map[tbl])
-		else
-			local m, c = tbl.MetaTable, tbl.Contract
-			tbl.MetaTable = false
-			tbl.Contract = false
-			local tbl_copy = copy_val(self.Self, map, copy_tables)
-			tbl.MetaTable = m
-			tbl.Contract = c
-			copy:SetSelf(tbl_copy)
-		end
-	end
-
-	copy.Self2 = self.Self2
-	copy.NewMetaTable = self.NewMetaTable
 	copy.MetaTable = self.MetaTable --copy_val(self.MetaTable, map, copy_tables)
 	copy.Contract = self:GetContract() --copy_val(self.Contract, map, copy_tables)
 	copy:SetAnalyzerEnvironment(self:GetAnalyzerEnvironment())
-	copy.potential_self = copy_val(self.potential_self, map, copy_tables)
 	copy.mutations = self.mutations or false
 	copy:SetCreationScope(self:GetCreationScope())
-	copy.BaseTable = self.BaseTable
 	copy.UniqueID = self.UniqueID
 	copy:SetName(self:GetName())
 	copy:SetTypeOverride(self:GetTypeOverride())
+
+	if self:GetSelfArgument() then
+		copy:SetSelfArgument(self:GetSelfArgument():Copy(map, copy_tables))
+	end
+
 	return copy
 end
 
@@ -1474,8 +1423,6 @@ function META.New()
 			UniqueID = false,
 			Name = false,
 			Self = false,
-			Self2 = false,
-			NewMetaTable = false,
 			literal_data_cache = {},
 			Contracts = {},
 			TypeOverride = false,
@@ -1487,7 +1434,6 @@ function META.New()
 			disabled_unique_id = false,
 			co_func = false,
 			func = false,
-			BaseTable = false,
 			ReferenceId = false,
 			MetaTable = false,
 			Contract = false,

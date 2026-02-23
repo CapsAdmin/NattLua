@@ -533,6 +533,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	end
 
 	copy:CopyInternalsFrom(self)
+	copy.tr = self.tr
 	return copy
 end
 
@@ -598,6 +599,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TUnion]]
 			Upvalue = false,
 			Contract = false,
 			MetaTable = false,
+			tr = debug.traceback(),
 		}
 	)
 

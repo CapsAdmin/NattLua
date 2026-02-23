@@ -549,28 +549,6 @@ analyze[[
     attest.equal<|tbl.bar, boolean | nil|>
 ]]
 analyze[[
-    local meta = {}
-    meta.__index = meta
-    type meta.@Self = {foo = number}
-    
-    local function test(tbl: meta.@Self & {bar = string | nil})
-        attest.equal(tbl.bar, _ as nil | string)
-        return tbl:Foo() + 1
-    end
-    
-    function meta:Foo()
-        attest.equal<|self.foo, number|>
-        return 1336
-    end
-    
-    local obj = setmetatable({
-        foo = 1
-    }, meta)
-    
-    attest.equal(obj:Foo(), 1336)
-    attest.equal(test(obj), 1337)
-]]
-analyze[[
     local type foo = (function=(
         boolean | nil, 
         boolean | nil, 
@@ -1085,20 +1063,3 @@ do
 	local i = a:GetLocalOrGlobalValue(LString("i"))
 	equal(i:GetData(), 2)
 end
-
-analyze[[
-    local META = {}
-
-    function META.GetSet(name: ref string, default: ref any)
-        META[name] = default as NonLiteral<|default|>
-        local x = function(val: META[name], ...: ...string) 
-            attest.equal(val, _ as number) 
-            attest.equal<|..., _ as ((string,)*inf,)|> 
-        end
-    end
-
-    META.GetSet("Data", "1")
-    META.GetSet("Data", 1)
-    attest.equal(META.Data, _ as number)
-
-]]

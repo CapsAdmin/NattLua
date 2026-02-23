@@ -663,18 +663,6 @@ analyze(
 	"is not a subset of nil"
 )
 analyze[[
-    local META =  {}
-    META.__index = META
-
-    type META.@Self = {
-        foo = true,
-    }
-
-    local type x = META.@Self & {bar = false}
-    attest.equal<|x, {foo = true, bar = false}|>
-    attest.equal<|META.@Self, _ as {foo = true}|>
-]]
-analyze[[
     local t = {} as {[1 .. inf] = number}
     attest.equal(#t, _ as 1 .. inf)
 ]]
@@ -736,40 +724,6 @@ analyze[[
 analyze[[
     local type t = {[any] = any}
     attest.equal(t["foo" as string], _ as any)
-]]
-analyze[[
-    local META = {}
-    META.__index = META
-    type META.@Self = {}
-
-    function META.GetSet(name: ref string, default: ref any)
-        META[name] = default
-        type META.@Self[name] = META[name]
-    end
-
-    META.GetSet("Name", nil as nil | META.@Self)
-    META.GetSet("Literal", false)
-
-    function META:SetName(name: META.@Self)
-        self.Name = name
-    end
-]]
-analyze[[
-    local META = {}
-    META.__index = META
-    type META.@Self = {}
-
-    function META.GetSet<|allowed: any|>(name: ref string, default: ref any)
-        META[name] = default as allowed
-        type META.@Self[name] = allowed
-    end
-
-    META.GetSet<|nil | META.@Self|>("Name", nil)
-    META.GetSet<|boolean|>("Literal", false)
-
-    function META:SetName(name: META.@Self)
-        self.Name = name
-    end
 ]]
 analyze[[
     local type T = {
@@ -1014,65 +968,6 @@ analyze(
 	".-is not a subset of.-number"
 )
 analyze[[
-local META = {}
-META.__index = META
-type META.@Self = {
-    Foo = boolean,
-    Bar = boolean,
-}
-
-local function get_base()
-    return copy<|META|>
-end
-
-do
-    local META = get_base()
-    type META.@Self.Test = number
-    type META.@Self.tbl = nil | List<|number|>
-
-    local function New()
-        return setmetatable({Foo = true, Bar = false, Test = 1}, META)
-    end
-
-    function META:Test()
-        self.tbl = self.tbl or {}
-        --attest.equal(self.tbl, _ as {} | List<|number|>)
-    end
-
-    function META:Test2()
-        if self.tbl then return self.tbl end
-        -- this shouldn't cause self.tbl to become nil, although it technically is below the return statement
-        -- the contract should allow .tbl to be assigned to List<|number|> or nil
-        self.tbl = {}
-    end
-
-
-    local obj = New()
-    attest.equal<|obj, {
-        Foo = boolean,
-        Bar = boolean,
-        Test = number,
-        tbl = nil | List<|number|>,
-    }|>
-end
-
-do
-    local META = get_base()
-    type META.@Self.Baz = number
-
-    local function New()
-        return setmetatable({Foo = true, Bar = false, Baz = 1}, META)
-    end
-
-    local obj = New()
-    attest.equal<|obj, {
-        Foo = boolean,
-        Bar = boolean,
-        Baz = number,
-    }|>
-end
-]]
-analyze[[
 
 local type X = {
     foo = true | false | self,
@@ -1175,17 +1070,4 @@ for i, v in ipairs(x) do
 	x[i] = nil
 end
 attest.equal(x, _ as {foo = 1, bar = 2, faz = 3})
-]]
-analyze[[
-local META = {}
-META.Type = "table"
-type META.@Self = {}
-type META.@Self.literal_data_cache = META.@Self
-type META.@Name = "TTable"
-function META.Foo(visited: META.@Self)
-visited = visited
-end
-local v = {}
-v.literal_data_cache = v
-META.Foo(v)
 ]]

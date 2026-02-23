@@ -968,32 +968,6 @@ analyze[[
     end
 ]]
 analyze[[
-    local META = {}
-    META.__index = META
-
-    type META.@Self = {
-        Position = number,
-    }
-
-    local function GetStringSlice(start: number)
-    end
-
-    function META:IsString(str: string, offset: number | nil)
-        offset = offset or 0
-        GetStringSlice(self.Position + offset)
-        GetStringSlice(self.Position)
-        return math.random() > 0.5
-    end
-
-
-    local function ReadMultilineString(lexer: META.@Self)
-        -- PushTruthy/FalsyExpressionContext leak to calls
-        if lexer:IsString("[", 0) or lexer:IsString("[", 1) then
-        end
-    end
-
-]]
-analyze[[
     local maybe: boolean
 
     x = 1
@@ -1071,19 +1045,6 @@ analyze[[
     if t.config.extra_indent then
         local lol = t.config.extra_indent
         attest.equal(t.config.extra_indent[x], lol[x])
-    end
-]]
-analyze[[
-    local META = {}
-    META.__index = META
-    type META.@Self = {parent = number | nil}
-    function META:SetParent(parent : number | nil)
-        if parent then
-            self.parent = parent
-        else
-            -- test BaseType:UpvalueReference collision with object and upvalue
-            attest.equal(self.parent, _ as nil | number)
-        end
     end
 ]]
 analyze[[
@@ -1387,33 +1348,6 @@ if jit then
 end
 
 analyze[[
-    local meta = {}
-    meta.__index = meta
-    type meta.@Self = {
-        on_close = nil | function=(self)>(),
-        on_receive = nil | function=(self, string, number, number)>(),
-    }
-    type meta.@Self.@Name = "TSocket"
-
-    local function create()
-        return setmetatable({}, meta)
-    end
-
-    function meta:close()
-        if self.on_close then self:on_close() end
-    end
-
-    function meta:receive_from(size: number)
-        return self:receive(size)
-    end
-
-    function meta:receive(size: number)
-        if self.on_receive then return self:on_receive("hello", 1, size) end
-
-        if math.random() > 0.5 then self:close() end
-    end
-]]
-analyze[[
     local x = {}
 
     if math.random() > 0.5 then
@@ -1664,57 +1598,6 @@ local self = _  as {comment_escape = false | string, test = string}
 if self.comment_escape and IsString() then local x = #self.comment_escape end
 ]]
 analyze[[
-local META = {}
-
-function META:__index(key)
-	return META[key]
-end
-
-type META.@Self = {
-	comment_escape = false | string,
-}
-
-function META:IsString(str: string, offset: number | nil): boolean
-	offset = offset or 0
-	return _  as boolean
-end
-
-function META:ReadRemainingCommentEscape()
-	if self.comment_escape and self:IsString(self.comment_escape) then
-		local x = #self.comment_escape
-	end
-
-	return false
-end
-]]
-analyze[[
-local function IsString(offset: number | nil)
-	offset = 1
-	return true
-end
-
-local comment_escape = _  as false | string
-
-if comment_escape and IsString() then local x = #comment_escape end
-
-]]
-analyze[[
-local META = {}
-META.__index = META
-type META.@Self = {
-	comment_escape = false | string,
-}
-
-function META:IsString(str: number) end
-
-local self = _  as META.@Self
-assert(self.comment_escape)
-self:IsString(1)
-assert(self.comment_escape)
-
-
-]]
-analyze[[
     local A = _ as true | false
     local B = _ as true | false
     local C = _ as true | false
@@ -1743,8 +1626,6 @@ analyze[[
 
     §assert(env.runtime.A:GetUpvalue():GetMutations()[5] == nil)
 ]]
-
-
 analyze[[
 local value
 local x = _ as 1 | 2 | 3

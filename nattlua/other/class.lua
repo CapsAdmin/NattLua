@@ -6,28 +6,27 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 	local META = {}
 	META.Type = type_name
 	META.__index = META
-	--[[#type META.@Self = {}]]
 
 	function META.GetSet(META--[[#: ref META]], name--[[#: ref string]], default--[[#: ref any]])
 		META[name] = default--[[# as NonLiteral<|default|>]]
-		--[[#type META.@Self[name] = NonLiteral<|default|>]]
-		META["Set" .. name] = function(self--[[#: ref META.@Self]], val--[[#: NonLiteral<|default|>]])
+		--[[#type META.@SelfArgument[name] = NonLiteral<|default|>]]
+		META["Set" .. name] = function(self--[[#: ref META.@SelfArgument]], val--[[#: NonLiteral<|default|>]])
 			self[name] = val
 			return self
 		end
-		META["Get" .. name] = function(self--[[#: ref META.@Self]])--[[#: NonLiteral<|default|>]]
+		META["Get" .. name] = function(self--[[#: ref META.@SelfArgument]])--[[#: NonLiteral<|default|>]]
 			return self[name]
 		end
 	end
 
 	function META.IsSet(META--[[#: ref META]], name--[[#: ref string]], default--[[#: ref any]])
 		META[name] = default--[[# as NonLiteral<|default|>]]
-		--[[#type META.@Self[name] = NonLiteral<|default|>]]
-		META["Set" .. name] = function(self--[[#: META.@Self]], val--[[#: NonLiteral<|default|>]])
+		--[[#type META.@SelfArgument[name] = NonLiteral<|default|>]]
+		META["Set" .. name] = function(self--[[#: META.@SelfArgument]], val--[[#: NonLiteral<|default|>]])
 			self[name] = val
 			return self
 		end
-		META["Is" .. name] = function(self--[[#: META.@Self]])--[[#: NonLiteral<|default|>]]
+		META["Is" .. name] = function(self--[[#: META.@SelfArgument]])--[[#: NonLiteral<|default|>]]
 			return self[name]
 		end
 	end
@@ -136,7 +135,7 @@ function class.CreateTemplate(type_name--[[#: ref string]])--[[#: ref Table]]
 			--[[#func<|res|>]]
 
 			for k, v in pairs(res) do
-				--[[#type META.@Self[k] = v]]
+				--[[#type META.@SelfArgument[k] = v]]
 			end
 		end
 	end

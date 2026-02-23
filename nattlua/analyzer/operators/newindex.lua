@@ -45,7 +45,7 @@ return {
 					local err
 
 					if obj == contract then
-						if obj:GetMetaTable() and obj:GetMetaTable().Self == obj then
+						if obj:GetMetaTable() then
 							analyzer:MutateTable(obj, key, val)
 							return obj:SetExplicit(key, val)
 						else
@@ -111,42 +111,6 @@ return {
 
 		function META:NewIndexOperator(obj, key, val, raw, allow_nil_set)
 			if obj.Type == "any" then return true end
-
-			if val.Type == "function" then
-				local node = val:GetFunctionBodyNode()
-
-				if
-					node and
-					(
-						node.Type == "expression_function" or
-						node.Type == "expression_type_function" or
-						node.Type == "expression_analyzer_function" or
-						node.Type == "statement_function" or
-						node.Type == "statement_type_function" or
-						node.Type == "statement_analyzer_function"
-					)
-					and
-					node.self_call
-				then
-					local arg = val:GetInputSignature():GetWithNumber(1)
-
-					if
-						arg and
-						arg.Type == "table" and
-						not arg:GetContract()
-						and
-						not arg.Self and
-						obj.Self2 ~= arg and
-						not self:IsTypesystem()
-					then
-						val:SetCalled(true)
-						val = val:Copy()
-						val:SetCalled(false)
-						val:GetInputSignature():Set(1, Union({Any(), obj}))
-						self:AddToUnreachableCodeAnalysis(val)
-					end
-				end
-			end
 
 			local ok, err
 

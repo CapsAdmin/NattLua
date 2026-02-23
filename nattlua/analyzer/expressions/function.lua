@@ -41,12 +41,10 @@ local function analyze_arguments(self, node, func)
 		self:PopAnalyzerEnvironment()
 
 		if val then
-			if val.Self then
-				args[1] = val.Self
-			elseif val.Self2 then
-				args[1] = val.Self2
-			elseif val:GetContract() then
+			if val:GetContract() then
 				args[1] = val
+			elseif val:GetSelfArgument() then
+				args[1] = val:GetSelfArgument()
 			else
 				args[1] = Union({Any(), val})
 			end
