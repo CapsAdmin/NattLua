@@ -127,6 +127,7 @@ end
 function META:Copy()--[[#: TNumber]]
 	local copy = self.New(self.Data)
 	copy:CopyInternalsFrom(self)
+	copy.LengthSourceTable = self.LengthSourceTable
 	return copy
 end
 

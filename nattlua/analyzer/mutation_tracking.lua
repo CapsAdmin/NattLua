@@ -225,7 +225,9 @@ return function(META--[[#: any]])
 				if self:IsInvertedExpressionContext() then
 					if self:IsFalsyExpressionContext() then
 						local val = stack[#stack].falsy
+
 						if set_upvalue_fn then set_upvalue_fn(val) end
+
 						return val
 					elseif self:IsTruthyExpressionContext() then
 						local union = stack[#stack].truthy
@@ -239,12 +241,15 @@ return function(META--[[#: any]])
 						end
 
 						if set_upvalue_fn then set_upvalue_fn(union) end
+
 						return union
 					end
 				else
 					if self:IsTruthyExpressionContext() then
 						local val = stack[#stack].truthy
+
 						if set_upvalue_fn then set_upvalue_fn(val) end
+
 						return val
 					elseif self:IsFalsyExpressionContext() then
 						local union = stack[#stack].falsy
@@ -258,6 +263,7 @@ return function(META--[[#: any]])
 						end
 
 						if set_upvalue_fn then set_upvalue_fn(union) end
+
 						return union
 					end
 				end
@@ -428,7 +434,10 @@ return function(META--[[#: any]])
 
 						-- stack is needed to simply track upvalues used, even if they were not mutated for warnings
 						if upvalue then
-							table.insert(objects, {kind = "upvalue", upvalue = upvalue, stack = stack and shallow_copy(stack)})
+							table.insert(
+								objects,
+								{kind = "upvalue", upvalue = upvalue, stack = stack and shallow_copy(stack)}
+							)
 						end
 					elseif data.kind == "table" then
 						if data.stack then

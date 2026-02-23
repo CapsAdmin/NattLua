@@ -337,9 +337,10 @@ local function BinaryWithUnion(self, node, l, r, op)
 
 			if upvalue then upvalue:SetTruthyFalsyUnion(truthy_union, falsy_union) end
 
-				-- Store truthy/falsy on the left value for table field narrowing
-				-- through stored checks (e.g., local check = t.x ~= nil; if check then)
-				if l:GetParentTable() then l:SetStoredTruthyFalsy(truthy_union, falsy_union) end
+			-- Store truthy/falsy on the left value for table field narrowing
+			-- through stored checks (e.g., local check = t.x ~= nil; if check then)
+			if l:GetParentTable() then l:SetStoredTruthyFalsy(truthy_union, falsy_union) end
+
 			-- special case for type(x) ==/~=
 			if self.type_checked and (op == "==" or op == "!=" or op == "~=") then
 				local type_checked = self.type_checked
@@ -468,19 +469,12 @@ local function is_condition_expression(node)
 
 		local pt = parent.Type
 
-		if
-			pt == "statement_if" or
-			pt == "statement_while" or
-			pt == "statement_repeat"
-		then
+		if pt == "statement_if" or pt == "statement_while" or pt == "statement_repeat" then
 			return true
 		end
 
 		-- keep walking up through nested binary/prefix operators
-		if
-			pt == "expression_binary_operator" or
-			pt == "expression_prefix_operator"
-		then
+		if pt == "expression_binary_operator" or pt == "expression_prefix_operator" then
 			n = parent
 		else
 			break

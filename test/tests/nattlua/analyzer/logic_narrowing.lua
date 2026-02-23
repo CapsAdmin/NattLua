@@ -48,7 +48,6 @@ analyze[[
         attest.equal<|x, 0 .. 10|>
     end
 ]]
-
 pending[[
     local Any(): boolean
     local x = 0

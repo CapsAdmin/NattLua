@@ -83,7 +83,20 @@ local function Prefix(analyzer, node, r)
 
 			if res then return res end
 
-			return r:GetArrayLength()
+			local len = r:GetArrayLength()
+
+			if len.Type == "number" or len.Type == "range" then
+				-- Tag with the contract table if it exists, since Get() is called on the contract
+				local contract = r:GetContract()
+
+				if contract and contract ~= r and contract.Type == "table" then
+					len.LengthSourceTable = contract
+				else
+					len.LengthSourceTable = r
+				end
+			end
+
+			return len
 		elseif r.Type == "string" then
 			local str = r:GetData()
 
@@ -209,7 +222,6 @@ return {
 			end
 
 			analyzer:TrackUpvalueUnion(r, truthy_union, falsy_union)
-
 			return new_union
 		end
 

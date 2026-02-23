@@ -112,6 +112,11 @@ return {
 					init = LNumber(literal_init)
 				end
 
+				-- Carry the LengthSourceTable tag from max to the range
+				if init.Type == "range" and max.LengthSourceTable then
+					init.LengthSourceTable = max.LengthSourceTable
+				end
+
 				if init.Type == "number" then init:SetDontWiden(true) end
 			else
 				if init:IsNumeric() and max:IsNumeric() then

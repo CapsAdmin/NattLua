@@ -370,7 +370,32 @@ return function(self, obj, input)
 			function_node.Type == "statement_type_function"
 		then
 			if function_node.self_call then
-				self:CreateLocalValue("self", input:GetWithNumber(1) or Nil())
+				local arg = input:GetWithNumber(1) or Nil()
+				self:CreateLocalValue("self", arg)
+
+				-- if the meta table has @SelfArgument, also create a typesystem self
+				-- so that --[[#type]] blocks see the contract type instead of the concrete value
+				if not is_type_function and arg.Type == "table" then
+					local self_arg_contract
+
+					if arg:GetSelfArgument() then
+						self_arg_contract = arg:GetSelfArgument()
+					elseif arg:GetMetaTable() and arg:GetMetaTable().Type == "table" then
+						self_arg_contract = arg:GetMetaTable():GetSelfArgument()
+					end
+
+					if self_arg_contract then
+						-- make @SelfArgument accessible from the contract itself
+						-- so that self.@SelfArgument works in typesystem blocks
+						if not self_arg_contract:GetSelfArgument() then
+							self_arg_contract:SetSelfArgument(self_arg_contract)
+						end
+
+						self:PushAnalyzerEnvironment("typesystem")
+						self:CreateLocalValue("self", self_arg_contract)
+						self:PopAnalyzerEnvironment()
+					end
+				end
 			end
 		end
 
@@ -385,12 +410,9 @@ return function(self, obj, input)
 			for i, identifier in ipairs(function_node.identifiers_typesystem) do
 				local generic_expression = call_expression.expressions_typesystem and
 					call_expression.expressions_typesystem[i] or
-					nil
-
-				if generic_expression then
-					local T = self:AnalyzeExpression(generic_expression)
-					self:CreateLocalValue(identifier.value:GetValueString(), T)
-				end
+					identifier
+				local T = self:AnalyzeExpression(generic_expression)
+				self:CreateLocalValue(identifier.value:GetValueString(), T)
 			end
 		end
 

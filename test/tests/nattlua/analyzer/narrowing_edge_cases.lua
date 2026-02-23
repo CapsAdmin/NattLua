@@ -7,11 +7,9 @@
       - expression-level and/or with statement-level if/else scopes
       - LeftRightSource chain traversal for stored conditions
 ]]
-
 -- ==========================================================================
 -- Stored condition narrowing (single variable)
 -- ==========================================================================
-
 -- simple stored ~= nil
 analyze[[
     local x = 1 as number | nil
@@ -20,7 +18,6 @@ analyze[[
         attest.equal(x, 1 as number)
     end
 ]]
-
 -- stored == nil with negated if (inverted stored condition)
 analyze[[
     local x = 1 as number | nil
@@ -29,7 +26,6 @@ analyze[[
         attest.equal(x, 1 as number)
     end
 ]]
-
 -- stored truthy check
 analyze[[
     local x = 1 as number | nil
@@ -38,11 +34,9 @@ analyze[[
         attest.equal(check, 1 as number)
     end
 ]]
-
 -- ==========================================================================
 -- Compound stored conditions (and)
 -- ==========================================================================
-
 -- two variables via and
 analyze[[
     local a = 1 as number | nil
@@ -53,7 +47,6 @@ analyze[[
         attest.equal(b, 1 as string)
     end
 ]]
-
 -- three variables via and chain
 analyze[[
     local a = 1 as number | nil
@@ -66,11 +59,9 @@ analyze[[
         attest.equal(c, 1 as boolean)
     end
 ]]
-
 -- ==========================================================================
 -- and/or narrowing inside function calls (expression scope unification)
 -- ==========================================================================
-
 -- function called in and branch sees narrowed upvalue
 analyze[[
     local x: number | nil
@@ -79,7 +70,6 @@ analyze[[
     end
     local res = x and check_x()
 ]]
-
 -- function called in or branch sees narrowed (falsy) upvalue
 analyze[[
     local x: number | false
@@ -98,11 +88,9 @@ analyze[[
     end
     local res = a and b and check()
 ]]
-
 -- ==========================================================================
 -- and/or inside condition expressions (should NOT create extra scopes)
 -- ==========================================================================
-
 -- and inside if condition
 analyze[[
     local x: number | nil
@@ -112,7 +100,6 @@ analyze[[
         attest.equal(y, _ as string)
     end
 ]]
-
 -- or inside if condition preserves narrowing
 analyze[[
     local x: 1 | 2 | 3
@@ -122,7 +109,6 @@ analyze[[
         attest.equal(x, _ as 3)
     end
 ]]
-
 -- nested and/or inside if condition
 analyze[[
     local a: nil | 1
@@ -131,12 +117,10 @@ analyze[[
     end
     attest.equal(a, _ as 1 | nil)
 ]]
-
 -- ==========================================================================
 -- Dependent type narrowing (discriminated unions)
 -- should NOT be broken by LeftRightSource traversal
 -- ==========================================================================
-
 -- basic discriminant narrowing
 analyze([[
     local type A = {Type = "human", name = string}
@@ -149,7 +133,6 @@ analyze([[
         attest.equal(x.Type, "human")
     end
 ]])
-
 -- discriminant with else
 analyze([[
     local type A = {kind = "a", val = number}
@@ -161,11 +144,9 @@ analyze([[
         attest.equal(x.kind, "b")
     end
 ]])
-
 -- ==========================================================================
 -- Local alias narrowing
 -- ==========================================================================
-
 -- alias narrows the local, original union is unchanged
 analyze[[
     local x: number | nil
@@ -175,11 +156,9 @@ analyze[[
     end
     attest.equal(x, _ as number | nil)
 ]]
-
 -- ==========================================================================
 -- Table field narrowing (direct, not through stored checks)
 -- ==========================================================================
-
 -- direct truthiness check on table field
 analyze[[
     local t: {foo = nil | number}
@@ -187,7 +166,6 @@ analyze[[
         attest.equal(t.foo, _ as number)
     end
 ]]
-
 -- direct ~= nil check on table field
 analyze[[
     local t: {foo = nil | number}
@@ -195,18 +173,15 @@ analyze[[
         attest.equal(t.foo, _ as number)
     end
 ]]
-
 -- early return narrows remainder
 analyze[[
     local t: {foo = nil | number}
     if not t.foo then return end
     attest.equal(t.foo, _ as number)
 ]]
-
 -- ==========================================================================
 -- Combined expression and statement narrowing
 -- ==========================================================================
-
 -- and expression assigns narrowed value
 analyze[[
     local x: nil | number
@@ -214,31 +189,26 @@ analyze[[
     local result = x and y
     attest.equal(result, _ as nil | string)
 ]]
-
 -- or expression assigns narrowed value
 analyze[[
     local x: false | number
     local result = x or "fallback"
     attest.equal(result, _ as number | "fallback")
 ]]
-
 -- and/or with literals
 analyze[[
     local a: 1, b: 2
     local result = a and b
     attest.equal(result, 2)
 ]]
-
 analyze[[
     local a = false
     local result = a or 42
     attest.equal(result, 42)
 ]]
-
 -- ==========================================================================
 -- Edge cases: multiple narrowing in sequence
 -- ==========================================================================
-
 -- sequential if blocks don't interfere
 analyze[[
     local x: number | nil
@@ -252,7 +222,6 @@ analyze[[
     attest.equal(x, _ as number | nil)
     attest.equal(y, _ as string | nil)
 ]]
-
 -- narrowing same variable in nested ifs
 analyze[[
     local x: 1 | 2 | 3
@@ -267,11 +236,9 @@ analyze[[
         end
     end
 ]]
-
 -- ==========================================================================
 -- Edge cases: not operator interactions
 -- ==========================================================================
-
 -- not with stored condition
 analyze[[
     local x: number | nil
@@ -280,7 +247,6 @@ analyze[[
         attest.equal(x, nil)
     end
 ]]
-
 -- double negation narrowing
 analyze[[
     local x: number | nil
@@ -288,11 +254,9 @@ analyze[[
         attest.equal(x, _ as number)
     end
 ]]
-
 -- ==========================================================================
 -- while loop condition narrowing
 -- ==========================================================================
-
 analyze[[
     local x: number | nil
     while x do
@@ -300,29 +264,24 @@ analyze[[
         break
     end
 ]]
-
 -- ==========================================================================
 -- and/or result type combinations
 -- ==========================================================================
-
 -- or with certainly-false left
 analyze[[
     local result = false or 42
     attest.equal(result, 42)
 ]]
-
 -- and with certainly-true left
 analyze[[
     local result = true and "hello"
     attest.equal(result, "hello")
 ]]
-
 -- and with certainly-false left
 analyze[[
     local result = nil and "hello"
     attest.equal(result, nil)
 ]]
-
 -- chained or with mixed types (a and b are always falsy, so result is c)
 analyze[[
     local a: nil | false
@@ -331,11 +290,9 @@ analyze[[
     local result = a or b or c
     attest.equal(result, _ as number)
 ]]
-
 -- ==========================================================================
 -- Future / harder edge cases (pending)
 -- ==========================================================================
-
 -- narrowing table fields through stored checks
 analyze[[
     local t = {x = 1 as number | nil}
@@ -344,7 +301,6 @@ analyze[[
         attest.equal(t.x, 1 as number)
     end
 ]]
-
 -- narrowing table field via local alias back-propagation
 analyze[[
     local t = {foo = 1 as number | nil}
@@ -353,7 +309,6 @@ analyze[[
         attest.equal(t.foo, 1 as number)
     end
 ]]
-
 -- TODO: and/or in else branches of stored conditions
 pending[[
     local a: number | nil
@@ -365,7 +320,6 @@ pending[[
         attest.equal(b, _ as string | nil)
     end
 ]]
-
 -- stored condition with type() check
 analyze[[
     local x: number | string
@@ -374,7 +328,6 @@ analyze[[
         attest.equal(x, _ as number)
     end
 ]]
-
 -- stored condition reused in multiple branches
 analyze[[
     local x: number | nil

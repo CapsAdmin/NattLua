@@ -266,8 +266,17 @@ return function(META--[[#: any]])
 					for _, a in ipairs(tracked_from_scope) do
 						for _, b in ipairs(current_tracked) do
 							if
-								(a.kind == "upvalue" and b.kind == "upvalue" and a.upvalue == b.upvalue) or
-								(a.kind == "table" and b.kind == "table" and a.obj == b.obj)
+								(
+									a.kind == "upvalue" and
+									b.kind == "upvalue" and
+									a.upvalue == b.upvalue
+								)
+								or
+								(
+									a.kind == "table" and
+									b.kind == "table" and
+									a.obj == b.obj
+								)
 							then
 								table_insert(tracked_objects, a)
 							end
@@ -282,11 +291,7 @@ return function(META--[[#: any]])
 			end
 
 			self:PushScope(function_scope)
-			self:ApplyMutationsAfterStatement(
-				frame.scope,
-				true,
-				frame.scope:GetTrackedNarrowings()
-			)
+			self:ApplyMutationsAfterStatement(frame.scope, true, frame.scope:GetTrackedNarrowings())
 			self:PopScope()
 		end
 	end

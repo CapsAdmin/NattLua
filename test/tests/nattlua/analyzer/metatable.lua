@@ -688,7 +688,7 @@ pending[[
         attest.equal(ply:IsVisible(ply), _ as boolean)
     end
 ]]
-pending[[
+analyze[[
     local FALLBACK = "lol"
 
     setmetatable(_G, {
@@ -2180,7 +2180,7 @@ pending[[
         attest.equal(val, _ as nil | string)
     end
 ]]
-pending[[
+analyze[[
     local meta = {}
     meta.__index = meta
     type meta.@SelfArgument = {foo = number}

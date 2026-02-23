@@ -909,7 +909,11 @@ function META:Get(key--[[#: TBaseType]])--[[#: (TBaseType | false), (any | nil)]
 		local len = math_abs(min - max)
 
 		if len == math_huge or len == -math_huge then
-			union:AddType(Nil())
+			-- Check if this range key came from #self (tagged by the analyzer)
+			local source = key.LengthSourceTable
+			local is_bounded = source and source == self
+
+			if not is_bounded then union:AddType(Nil()) end
 
 			for _, keyval in ipairs(self.Data) do
 				if keyval.key.Type == "number" then union:AddType(keyval.val) end

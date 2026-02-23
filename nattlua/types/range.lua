@@ -97,6 +97,7 @@ end
 function META:Copy()
 	local copy = LNumberRange(self:GetMin(), self:GetMax())
 	copy:CopyInternalsFrom(self)
+	copy.LengthSourceTable = self.LengthSourceTable
 	return copy
 end
 

@@ -502,9 +502,7 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 		end
 	end
 
-	if meta.Type == "table" then
-		tbl:SetMetaTable(meta)
-	end
+	if meta.Type == "table" then tbl:SetMetaTable(meta) end
 
 	return tbl
 end

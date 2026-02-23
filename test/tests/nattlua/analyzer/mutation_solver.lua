@@ -133,12 +133,24 @@ local function test_mutation_solver()
 		scope2:SetStatement({kind = "if"})
 		-- Setup tracking for same conditions
 		local test_obj = LString("test")
-		scope1:SetTrackedNarrowings({
-			{kind = "upvalue", upvalue = test_obj, stack = {{truthy = test_obj, falsy = test_obj}}},
-		})
-		scope2:SetTrackedNarrowings({
-			{kind = "upvalue", upvalue = test_obj, stack = {{truthy = test_obj, falsy = test_obj}}},
-		})
+		scope1:SetTrackedNarrowings(
+			{
+				{
+					kind = "upvalue",
+					upvalue = test_obj,
+					stack = {{truthy = test_obj, falsy = test_obj}},
+				},
+			}
+		)
+		scope2:SetTrackedNarrowings(
+			{
+				{
+					kind = "upvalue",
+					upvalue = test_obj,
+					stack = {{truthy = test_obj, falsy = test_obj}},
+				},
+			}
+		)
 		local value1 = LString("value1")
 		local value2 = LString("value2")
 		local upvalue = Upvalue(value1)
