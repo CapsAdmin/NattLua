@@ -2701,6 +2701,12 @@ pending[[
 pending[==[
     local Maze = {}
     Maze.__index = Maze
+    type Maze.@SelfArgument = {
+        width = 0 .. inf,
+        height = 0 .. inf,
+        grid = {[0 .. inf] = 1 | 0},
+        @MetaTable = Maze,
+    }
 
     function Maze:__tostring()
         local out = {}
