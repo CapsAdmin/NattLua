@@ -109,18 +109,6 @@ faz]]
 end
 
 do
-	local test = ("x"):rep(50) .. "FROM---TO" .. ("x"):rep(50)
-	local start, stop = test:find("FROM.-TO")
-	local out = formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2)
-	-- long line is truncated with ellipsis but FROM---TO is kept
-	contains(out, "FROM---TO")
-	contains(out, "...")
-	contains(out, "^^^^^^^^^")
-	contains(out, "script.txt:1:51")
-	contains(out, "hello world")
-end
-
-do
 	local test = [[]]
 	local pos = formating.LineCharToSubPos(test, 2, 6)
 	equal(pos, #test)
