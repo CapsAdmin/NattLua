@@ -10,42 +10,54 @@ return function(META--[[#: any]])
 	end)
 
 	function META:GetArrayLengthFromTable(tbl)
-		local contract = tbl:GetContract()
+		if tbl.Type ~= "table" then
+			if tbl.GetArrayLength then return tbl:GetArrayLength() end
 
-		if contract and contract ~= tbl then tbl = contract end
+			return LNumber(0)
+		end
 
+		local len_type = tbl:GetArrayLength()
+		local scope = self:GetScope()
 		local len = 0
 
-		for _, kv in ipairs(tbl:GetData()) do
-			if tbl:HasMutations() then
-				local val = self:GetMutatedTableValue(tbl, kv.key)
+		if len_type.Type ~= "number" or not len_type:IsLiteral() then
+			return len_type
+		end
 
-				if val then
-					if val.Type == "union" and val:IsNil() then
-						return LNumberRange(len, len + 1)
-					end
+		len = (len_type--[[# as any]]):GetData()
+		-- grow
+		local cur = len + 1
+		local max_grow = 100
 
-					if val.Type == "symbol" and val:IsNil() then return LNumber(len) end
-				end
+		while cur < len + max_grow do
+			local val = tbl:GetMutatedValue(LNumber(cur), scope)
+
+			if not val or (val.Type == "symbol" and val:GetData() == nil) then
+				break
 			end
 
-			if kv.key:IsNumeric() then
-				if kv.key:IsLiteral() then
-					-- TODO: not very accurate
-					if kv.key.Type == "range" then return kv.key:Copy() end
+			cur = cur + 1
+		end
 
-					if len + 1 == kv.key:GetData() then
-						len = kv.key:GetData()
-					else
-						break
-					end
-				else
-					return kv.key
-				end
+		local final_len = cur - 1
+		-- shrink
+		cur = final_len
+
+		while cur > 0 do
+			local val = tbl:GetMutatedValue(LNumber(cur), scope)
+
+			if val and val.Type == "symbol" and val:GetData() == nil then
+				cur = cur - 1
+			else
+				break
 			end
 		end
 
-		return LNumber(len)
+		final_len = cur
+
+		if final_len == 0 and not len_type:IsLiteral() then return len_type end
+
+		return LNumber(final_len)
 	end
 
 	function META:GetMutatedTableValue(tbl, key)

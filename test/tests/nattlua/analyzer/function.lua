@@ -974,7 +974,7 @@ do
 		return {str}
 	end
 
-	attest.equal(length_split("abc", 3), _  as {[1] = string} | {[number] = string})
+	attest.equal(length_split("abc", 3), _ as { [1] = string })
 end
 
 ]]

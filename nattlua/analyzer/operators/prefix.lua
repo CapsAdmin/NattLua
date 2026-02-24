@@ -91,7 +91,7 @@ local function Prefix(analyzer, node, r)
 
 			if res then return res end
 
-			local len = r:GetArrayLength()
+			local len = analyzer:GetArrayLengthFromTable(r)
 
 			if len.Type == "number" or len.Type == "range" then
 				-- Tag with the contract table if it exists, since Get() is called on the contract

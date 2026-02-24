@@ -287,10 +287,12 @@ function META:__tostring()--[[#: string]]
 end
 
 function META:GetArrayLength()--[[#: TBaseType]]
-	local contract = self:GetContract()
+	if #self.Data == 0 then
+		local contract = self:GetContract()
 
-	if contract and contract ~= self and contract.Type == "table" then
-		return (contract--[[# as TTable]]):GetArrayLength()
+		if contract and contract ~= self and contract.Type == "table" then
+			return (contract--[[# as TTable]]):GetArrayLength()
+		end
 	end
 
 	local len = 0
@@ -907,12 +909,10 @@ function META:Get(key--[[#: TBaseType]])--[[#: (TBaseType | false), (any | nil)]
 		local union = Union()
 		local min, max = (key--[[# as any]]):GetMin(), (key--[[# as any]]):GetMax()
 		local len = math_abs(min - max)
+		local source = key.LengthSourceTable
+		local is_bounded = source and source == self
 
 		if len == math_huge or len == -math_huge then
-			-- Check if this range key came from #self (tagged by the analyzer)
-			local source = key.LengthSourceTable
-			local is_bounded = source and source == self
-
 			if not is_bounded then union:AddType(Nil()) end
 
 			for _, keyval in ipairs(self.Data) do
@@ -929,7 +929,14 @@ function META:Get(key--[[#: TBaseType]])--[[#: (TBaseType | false), (any | nil)]
 
 			if not res then res = Nil() end
 
-			union:AddType(res)
+			if is_bounded and res and res.Type == "union" then
+				res = res:Copy()
+				res:RemoveOneType(Nil())
+			elseif is_bounded and res and res.Type == "symbol" and res:GetData() == nil then
+				res = nil
+			end
+
+			if res then union:AddType(res) end
 		end
 
 		return union

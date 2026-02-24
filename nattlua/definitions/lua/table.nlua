@@ -14,9 +14,7 @@ do -- Basic table manipulation functions
 
 		if not val then
 			val = pos
-			pos = analyzer:GetArrayLengthFromTable(tbl)
-		else
-			pos = analyzer:GetArrayLengthFromTable(tbl)
+			pos = analyzer:GetArrayLengthFromTable(tbl):BinaryOperator(types.LNumber(1), "+")
 		end
 
 		local contract = tbl:GetContract()
@@ -29,29 +27,23 @@ do -- Basic table manipulation functions
 
 		if not tbl:HasLiteralKeys() then return end
 
-		if pos and pos:IsLiteral() then
-			if pos.Type == "range" then
-				pos = types.LNumberRange(pos:GetMin() + 1, pos:GetMax() + 1)
-			else
-				pos = types.LNumber(pos:GetData() + 1)
-			end
-		end
-
-		if analyzer:IsInUncertainLoop(analyzer:GetScope()) then
-			pos = pos:Widen()
-		end
-
 		analyzer:NewIndexOperator(tbl, pos, val)
 	end
 
 	analyzer function table.remove(tbl: List<|any|>, index: number | nil)
-		if tbl:GetContract() then tbl = tbl:GetContract() end
+		local len_obj = analyzer:GetArrayLengthFromTable(tbl)
+		local pos = index or len_obj
+		local val = analyzer:IndexOperator(tbl, pos)
 
-		if not tbl:IsLiteral() then return tbl:Get(types.Number()) end
+		if len_obj:IsLiteral() and pos:IsLiteral() then
+			for i = pos:GetData(), len_obj:GetData() - 1 do
+				analyzer:NewIndexOperator(tbl, types.LNumber(i), analyzer:IndexOperator(tbl, types.LNumber(i + 1)))
+			end
 
-		if index and not index:IsLiteral() then return tbl:Get(types.Number()) end
+			analyzer:NewIndexOperator(tbl, len_obj, types.Nil())
+		end
 
-		return analyzer:Assert(tbl:Remove(index))
+		return val
 	end
 
 	analyzer function table.move(a1: Table, f: any, e: any, t: any, a2: Table | nil)
