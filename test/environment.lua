@@ -21,6 +21,8 @@ local callstack = require("nattlua.other.callstack")
 local system = require("nattlua.other.system")
 local callstack = require("nattlua.other.callstack")
 local nl = require("nattlua")
+-- disable colors at test time
+require("nattlua.other.formating").SetColor(false)
 local total_test_count = 0
 
 function _G.test(name, cb, start, stop)

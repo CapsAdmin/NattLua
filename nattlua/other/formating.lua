@@ -224,10 +224,48 @@ end
 local SEPARATOR = " | "
 local ARROW = "->"
 local TAB_WIDTH = (" "):rep(4)
--- Maximum source-content width (columns) before the context around the
--- highlighted span is truncated with ellipsis markers.
-local MAX_CONTENT_WIDTH = 100
+-- Maximum content width (columns).  Source spans beyond this are truncated
+-- with ellipsis (preserving the highlighted region); footer message lines
+-- beyond this are soft-wrapped at word boundaries.
+local MAX_CONTENT_WIDTH = 120
 local ELLIPSIS = "..."
+
+-- Soft-wrap `text` into a list of strings each no wider than `max_width`.
+-- Breaks at the last space at or before the limit; falls back to a hard
+-- break when no space is found in the segment.
+local function wrap_text(text--[[#: string]], max_width--[[#: number]])--[[#: List<|string|>]]
+	if #text <= max_width then return {text} end
+
+	local result = {}
+
+	while #text > max_width do
+		local pos = max_width
+
+		-- Search backward for a space
+		while pos > 1 and text:sub(pos, pos) ~= " " do
+			pos = pos - 1
+		end
+
+		if pos <= 1 then
+			-- No space found in this segment; hard-break at the limit
+			pos = max_width
+		end
+
+		result[#result + 1] = text:sub(1, pos)
+		-- Skip leading spaces at the start of the next segment
+		local next = pos + 1
+
+		while next <= #text and text:sub(next, next) == " " do
+			next = next + 1
+		end
+
+		text = text:sub(next)
+	end
+
+	if #text > 0 then result[#result + 1] = text end
+
+	return result
+end
 
 -- Trim the text surrounding a highlighted span so the total display width
 -- stays within MAX_CONTENT_WIDTH.  `before` / `between` / `after` are the
@@ -711,6 +749,7 @@ function formating.BuildSourceCodePointMessage2(
 	if config.show_box then
 		-- Compute inner_width from all content (source lines, carets, footer items).
 		-- annotated[1] is the box-top placeholder (empty ""), skip it.
+		local gutter_len = number_length + #SEPARATOR
 		local longest_line = 0
 
 		for i = 2, #annotated do
@@ -718,10 +757,11 @@ function formating.BuildSourceCodePointMessage2(
 		end
 
 		for _, item in ipairs(footer_items) do
-			if #item.text > longest_line then longest_line = #item.text end
+			-- Cap footer item width at MAX_CONTENT_WIDTH so very long messages
+			-- don't inflate the box; they will be word-wrapped in color mode.
+			local w = math.min(#item.text, gutter_len + MAX_CONTENT_WIDTH)
+			if w > longest_line then longest_line = w end
 		end
-
-		local gutter_len = number_length + #SEPARATOR
 		-- inner_width: visual content cols between gutter and right │ border
 		local inner_width = math.max(longest_line - gutter_len, 4)
 		-- full_visual_width: gutter + content (right border adds 2 more visual cols)
@@ -831,23 +871,39 @@ function formating.BuildSourceCodePointMessage2(
 				local n = #entry - #prefix
 				annotated[ai] = border_color .. prefix .. ("─"):rep(n) .. ansi.reset
 			elseif footer_main_set[ai] then
-				-- Main error: bold + severity color
+				-- Main error: bold + severity color, word-wrapped at MAX_CONTENT_WIDTH
 				local gl = 1 + number_length + #SEPARATOR
-				local gutter = entry:sub(1, gl):gsub("%->", "→ "):gsub(" | $", " │ ")
+				local gutter = entry:sub(1, gl):gsub("%->" , "→ "):gsub(" | $", " │ ")
 				local text = entry:sub(gl + 1)
-				local padding = has_border and math.max(0, full_visual_width - gl - #text) or 0
-				local border = has_border and (border_color .. " │" .. ansi.reset) or ""
-				annotated[ai] = sev_color .. ansi.bold .. gutter .. text .. ansi.reset .. (
-						" "
-					):rep(padding) .. border
+				local cont_indent = (" "):rep(gl)
+				local wrapped = wrap_text(text, MAX_CONTENT_WIDTH)
+				local rendered = {}
+
+				for j, wline in ipairs(wrapped) do
+					local g = j == 1 and gutter or cont_indent
+					local padding = has_border and math.max(0, full_visual_width - gl - #wline) or 0
+					local border = has_border and (border_color .. " │" .. ansi.reset) or ""
+					rendered[j] = sev_color .. ansi.bold .. g .. wline .. ansi.reset .. (" "):rep(padding) .. border
+				end
+
+				annotated[ai] = table.concat(rendered, "\n")
 			elseif footer_trace_set[ai] then
-				-- Trace/path line: dim
+				-- Trace/path line: dim, word-wrapped at MAX_CONTENT_WIDTH
 				local gl = 2 + number_length + #SEPARATOR
-				local gutter = entry:sub(1, gl):gsub("%->", "→ "):gsub(" | $", " │ ")
+				local gutter = entry:sub(1, gl):gsub("%->" , "→ "):gsub(" | $", " │ ")
 				local text = entry:sub(gl + 1)
-				local padding = has_border and math.max(0, full_visual_width - gl - #text) or 0
-				local border = has_border and (border_color .. " │" .. ansi.reset) or ""
-				annotated[ai] = ansi.dim .. gutter .. text .. ansi.reset .. (" "):rep(padding) .. border
+				local cont_indent = (" "):rep(gl)
+				local wrapped = wrap_text(text, MAX_CONTENT_WIDTH)
+				local rendered = {}
+
+				for j, wline in ipairs(wrapped) do
+					local g = j == 1 and gutter or cont_indent
+					local padding = has_border and math.max(0, full_visual_width - gl - #wline) or 0
+					local border = has_border and (border_color .. " │" .. ansi.reset) or ""
+					rendered[j] = ansi.dim .. g .. wline .. ansi.reset .. (" "):rep(padding) .. border
+				end
+
+				annotated[ai] = table.concat(rendered, "\n")
 			elseif config.show_box and ai == 1 then
 				-- Box top: "____..." → ╭ severity_label ────╮
 				local prefix = entry:match("^( *)")
