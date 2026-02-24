@@ -476,14 +476,14 @@ return function(self, obj, input)
 					local node = function_node.identifiers[i + 1]
 
 					if node and not node.type_expression then
-						self:Warning(error_messages.untyped_argument(), node.type_expression)
+						self:Warning(error_messages.untyped_argument(), 2, node.type_expression or node)
 					end
 				elseif
 					function_node.identifiers[i] and
 					not function_node.identifiers[i].type_expression
 				then
 					if not obj:IsInputArgumentsInferred() then
-						self:Warning(error_messages.untyped_argument(), function_node.identifiers[i])
+						self:Warning(error_messages.untyped_argument(), 2, function_node.identifiers[i])
 					end
 				end
 			end

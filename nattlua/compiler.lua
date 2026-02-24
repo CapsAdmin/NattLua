@@ -64,12 +64,10 @@ function META:__tostring()
 	return str
 end
 
-function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
-	local t = 0
+function META:OnDiagnostic(code, msg, severity, start, stop, node, level, ...)
+	local t = #self.errors + 1
 	msg = stringx.replace(msg, " because ", "\nbecause ")
-
-	if t > 0 then msg = "\n" .. msg end
-
+	msg = formating.FormatMessage(msg, ...)
 	local messages = {}
 
 	if self.analyzer then
@@ -90,19 +88,44 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, ...)
 					table.insert(messages, path .. ":" .. info.line_start .. ":" .. info.character_start)
 				else
 					for k, v in pairs(v.obj) do
-						print(k, v)
+
+					-- print(k, v)
 					end
 				end
 			end
 		end
 	end
 
-	table.insert(messages, formating.FormatMessage(msg, ...))
-	local msg = formating.BuildSourceCodePointMessage2(
-			code:GetString(),
+	local title = severity
+
+	if
+		level and
+		self.Config and
+		self.Config.analyzer and
+		self.Config.analyzer.show_severity
+	then
+		title = severity .. "(" .. level .. ")"
+	end
+
+	table.insert(messages, msg)
+	local str_code = "unknown code"
+	local path = "unknown path"
+
+	if code then
+		str_code = code:GetString()
+		path = code:GetName()
+	end
+
+	msg = formating.BuildSourceCodePointMessage2(
+			str_code,
 			start,
 			stop,
-			{path = code:GetName(), messages = messages, surrounding_line_count = 1}
+			{
+				path = path,
+				messages = messages,
+				surrounding_line_count = 1,
+				title = title,
+			}
 		) .. "\n"
 
 	if not NATTLUA_MARKDOWN_OUTPUT then
@@ -178,7 +201,7 @@ end
 function META:Lex()
 	local lexer = Lexer(self.Code, self.Config and self.Config.lexer)
 	lexer.OnError = function(lexer, code, msg, start, stop, ...)
-		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, ...)
+		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, nil, ...)
 	end
 	local ok, tokens = xpcall(function()
 		return lexer:GetTokens()
@@ -201,7 +224,7 @@ function META:Parse()
 
 	local parser = Parser(self.Tokens, self.Code, self.Config and self.Config.parser)
 	parser.OnError = function(parser, code, msg, start, stop, ...)
-		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, ...)
+		self:OnDiagnostic(code, msg, "fatal", start, stop, nil, nil, ...)
 	end
 	parser.OnPreCreateNode = function(_, node)
 		self:OnPreCreateNode(node)
@@ -239,8 +262,8 @@ function META:Analyze(analyzer, ...)
 	analyzer = analyzer or Analyzer(self.Config and self.Config.analyzer)
 	analyzer.compiler = self
 	self.analyzer = analyzer
-	analyzer.OnDiagnostic = function(analyzer, ...)
-		self:OnDiagnostic(...)
+	analyzer.OnDiagnostic = function(analyzer, code, msg, severity, start, stop, node, level)
+		self:OnDiagnostic(code, msg, severity, start, stop, node, level)
 	end
 
 	if self.default_environment then
@@ -288,7 +311,7 @@ function META.New(
 	config--[[#: CompilerConfig]],
 	level--[[#: number | nil]]
 )
-	local path, line, name = callstack.get_path_line(level or 2)
+	local path, line, parent_name = callstack.get_path_line(level or 2)
 	path = path or "unknown name"
 	line = line or "unknown line"
 	name = name or path .. ":" .. line
@@ -305,7 +328,7 @@ function META.New(
 	return META.NewObject(
 		{
 			Code = Code(lua_code, name),
-			ParentSourceLine = parent_line,
+			ParentSourceLine = line,
 			ParentSourceName = parent_name,
 			Config = config or false,
 			Tokens = false,

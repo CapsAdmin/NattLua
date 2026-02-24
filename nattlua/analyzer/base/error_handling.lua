@@ -1,4 +1,5 @@
 local table = _G.table
+local table_insert = table.insert
 local type = type
 local ipairs = ipairs
 local tostring = tostring
@@ -89,7 +90,8 @@ return function(META--[[#: any]])
 
 	function META:ReportDiagnostic(
 		msg--[[#: {reasons = {[number] = string}} | {[number] = string}]],
-		severity--[[#: "warning" | "error"]],
+		severity--[[#: "warning" | "error" | "fatal"]],
+		level--[[#: number | nil]],
 		node--[[#: any]],
 		code--[[#: any]],
 		start--[[#: number]],
@@ -108,6 +110,18 @@ return function(META--[[#: any]])
 		end
 
 		local msg_str = error_messages.ErrorMessageToString(msg)
+
+		if
+			not _G.TEST and
+			severity == "error" and
+			(
+				msg_str:find("does not exist", nil, true) or
+				msg_str:find("has no key", nil, true)
+			)
+		then
+			severity = "warning"
+			level = 1
+		end
 
 		if self.processing_deferred_calls then
 			msg_str = "DEFERRED CALL: " .. msg_str
@@ -129,7 +143,16 @@ return function(META--[[#: any]])
 		end
 
 		do
-			local key = msg_str .. "-" .. "severity" .. start .. "-" .. stop
+			local key = msg_str .. "-" .. (
+					severity or
+					"error"
+				) .. "-" .. (
+					start or
+					0
+				) .. "-" .. (
+					stop or
+					0
+				)
 			self.diagnostics_map = self.diagnostics_map or {}
 
 			if self.diagnostics_map[key] then return end
@@ -138,10 +161,10 @@ return function(META--[[#: any]])
 		end
 
 		if self.OnDiagnostic and not self:IsTypeProtectedCall() then
-			self:OnDiagnostic(code, msg_str, severity, start, stop, node)
+			self:OnDiagnostic(code, msg_str, severity, start, stop, node, level)
 		end
 
-		table.insert(
+		table_insert(
 			self.diagnostics,
 			{
 				node = node,
@@ -150,6 +173,7 @@ return function(META--[[#: any]])
 				stop = stop,
 				msg = msg_str,
 				severity = severity,
+				level = level,
 				traceback = callstack.traceback(),
 				protected_call = self:IsTypeProtectedCall(),
 			}
@@ -172,19 +196,55 @@ return function(META--[[#: any]])
 		end
 	end
 
-	function META:Error(msg, node)
+	function META:Error(msg, level_or_node, node)
+		local level
+
+		if type(level_or_node) == "number" then
+			level = level_or_node
+		else
+			node = level_or_node
+		end
+
 		node = node or self:GetCurrentExpression() or self:GetCurrentStatement()
-		self:ReportDiagnostic(msg, "error", node, node.Code, node:GetStartStop())
+		local start, stop = 0, 0
+
+		if node then start, stop = node:GetStartStop() end
+
+		self:ReportDiagnostic(msg, "error", level, node, node and node.Code, start, stop)
 	end
 
-	function META:Warning(msg, node)
+	function META:Warning(msg, level_or_node, node)
+		local level
+
+		if type(level_or_node) == "number" then
+			level = level_or_node
+		else
+			node = level_or_node
+		end
+
 		node = node or self:GetCurrentExpression() or self:GetCurrentStatement()
-		self:ReportDiagnostic(msg, "warning", node, node.Code, node:GetStartStop())
+		local start, stop = 0, 0
+
+		if node then start, stop = node:GetStartStop() end
+
+		self:ReportDiagnostic(msg, "warning", level, node, node and node.Code, start, stop)
 	end
 
-	function META:FatalError(msg)
-		local node = self:GetCurrentExpression() or self:GetCurrentStatement()
-		self:ReportDiagnostic(msg, "fatal", node, node.Code, node:GetStartStop())
+	function META:FatalError(msg, level_or_node, node)
+		local level
+
+		if type(level_or_node) == "number" then
+			level = level_or_node
+		else
+			node = level_or_node
+		end
+
+		local node = node or self:GetCurrentExpression() or self:GetCurrentStatement()
+		local start, stop = 0, 0
+
+		if node then start, stop = node:GetStartStop() end
+
+		self:ReportDiagnostic(msg, "fatal", level, node, node and node.Code, start, stop)
 		error(msg, 2)
 	end
 

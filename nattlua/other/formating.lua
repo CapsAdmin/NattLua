@@ -421,19 +421,17 @@ function formating.BuildSourceCodePointMessage2(
 			if #v > longest_line then longest_line = #v end
 		end
 
+		local total_len = longest_line - number_length - #SEPARATOR
+		local title = config.title or ""
+
+		if title ~= "" then title = "__" .. title .. "__" end
+
 		annotated[1] = (
 				" "
-			):rep(number_length + #SEPARATOR) .. (
+			):rep(number_length + #SEPARATOR) .. title .. (
 				"_"
-			):rep(longest_line - number_length - #SEPARATOR)
-		table.insert(
-			annotated,
-			(
-					" "
-				):rep(number_length + #SEPARATOR) .. (
-					"-"
-				):rep(longest_line - number_length - #SEPARATOR)
-		)
+			):rep(math.max(0, total_len - #title))
+		table.insert(annotated, (" "):rep(number_length + #SEPARATOR) .. ("-"):rep(total_len))
 	end
 
 	local header = config.show_line_numbers == false and

@@ -30,8 +30,6 @@ local function parse_args(args, allowed_options)
 				val = loadstring("return " .. exp)()
 			end
 
-			print(arg, val)
-
 			if allowed_options and options[option] == nil then
 				error("unknown option " .. option)
 			end
@@ -100,6 +98,7 @@ config.commands["check"] = {
 	options = {
 		{name = "profile", description = "Run with profiler"},
 		{name = "error-only", description = "Only print errors, not warnings"},
+		{name = "show-severity", description = "Show severity level for warnings"},
 	},
 	cb = function(args, options, config, cli)
 		if options.profile then require("test.helpers.profiler").Start() end
@@ -107,6 +106,8 @@ config.commands["check"] = {
 		args[1] = args[1] or "./*"
 		local cmp = {}
 		local entry_point = nil
+
+		if options["show-severity"] then config.analyzer.show_severity = true end
 
 		if #args == 1 and args[1] == "-" then
 			cmp[1] = Compiler.New(assert(io.read("*all")), "stdin-", config)
@@ -124,9 +125,9 @@ config.commands["check"] = {
 		for _, cmp in ipairs(cmp) do
 			if options["error-only"] then
 				local original_OnDiagnostic = cmp.OnDiagnostic
-				cmp.OnDiagnostic = function(self, code, msg, severity, ...)
+				cmp.OnDiagnostic = function(self, code, msg, severity, start, stop, node, level)
 					if severity == "error" or severity == "fatal" then
-						return original_OnDiagnostic(self, code, msg, severity, ...)
+						return original_OnDiagnostic(self, code, msg, severity, start, stop, node, level)
 					end
 				end
 			end
