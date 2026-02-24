@@ -207,7 +207,12 @@ analyzer function type_error(str: string, level: number | nil)
 	error(str:GetData(), level and level:GetData() or nil)
 end
 
-analyzer function load(code: string | function=()>(string | nil), chunk_name: string | nil)
+analyzer function load(
+	code: string | function=()>(string | nil),
+	chunk_name: string | nil,
+	mode: string | nil,
+	env: AnyTable | nil
+)
 	if not code:IsLiteral() or code.Type == "union" then
 		return types.Tuple(
 			{

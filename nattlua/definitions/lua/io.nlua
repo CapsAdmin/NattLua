@@ -35,8 +35,8 @@ type File = {
 	setvbuf = function=(self, mode: "no" | "full" | "line", size: number | nil)>(boolean | nil, string | nil),
 	seek = function=(self, mode: "set" | "cur" | "end" | nil, offset: number | nil)>(number | nil, string | nil),
 }
-type io.open = function=(string, string | nil)>(nil | File)
-type io.popen = function=(string, string | nil)>(nil | File)
+type io.open = function=(string, string | nil)>(nil | File, nil | string)
+type io.popen = function=(string, string | nil)>(nil | File, nil | string)
 type io.output = function=()>(File)
 type io.type = function=(File)>("file" | "closed file" | nil)
 type io.stdout = File

@@ -134,7 +134,7 @@ do -- Array manipulation functions
 		end
 	end
 
-	analyzer function table.unpack(tbl: List<|any|>, from: number | nil, to: number | nil)
+	analyzer function table.unpack(tbl: List<|any|> & {n = number | nil}, from: number | nil, to: number | nil)
 		if tbl.Type == "any" then
 			return types.Tuple():AddRemainder(types.Tuple({tbl:Get(len)}):SetRepeat(math.huge))
 		end
