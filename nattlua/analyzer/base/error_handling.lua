@@ -99,16 +99,6 @@ return function(META--[[#: any]])
 	)
 		if self.SuppressDiagnostics then return end
 
-		if math_abs(start - stop) > 10000 then
-			start = 0
-			stop = 0
-			print("WARNING: Diagnostic start/stop is too large, resetting to 0")
-			print("EXPRESSION: ", self:GetCurrentExpression())
-			print("STATEMENT: ", self:GetCurrentStatement())
-			print("NODE: ", node)
-			print(callstack.traceback())
-		end
-
 		local msg_str = error_messages.ErrorMessageToString(msg)
 
 		if
