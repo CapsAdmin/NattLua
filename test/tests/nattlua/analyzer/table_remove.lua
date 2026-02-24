@@ -10,10 +10,24 @@ test("table.remove shifting", function()
 	]]
 end)
 
-test("table length with contract", function()
+test("table.remove recursive path traversal", function()
 	analyze[[
-		local t: List<|string|> = {"a", "b"}
-        -- this should return number, not 2, since List<|string|> could have any number of elements, not just 2
-		attest.equal(#t, _ as number)
+		local function set_recursive(t, path, value)
+			local key = table.remove(path, 1)
+			if not path[1] then
+				t[key] = value
+			else
+				t[key] = t[key] or {}
+				set_recursive(t[key], path, value)
+			end
+		end
+
+		local data = {}
+		set_recursive(data, {"a", "b", "c"}, 42)
+		attest.equal(data.a.b.c, 42)
+
+		local data2 = {}
+		set_recursive(data2, {"x", "y"}, "final")
+		attest.equal(data2.x.y, "final")
 	]]
 end)

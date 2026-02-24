@@ -406,6 +406,14 @@ return function(META--[[#: any]])
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
 			if self.recursively_called[obj] then return self.recursively_called[obj] end
 
+			local current_unrolls = 0
+
+			if call_node then
+				for _, frame in ipairs(self:GetCallStack()) do
+					if frame.call_node == call_node then current_unrolls = current_unrolls + 1 end
+				end
+			end
+
 			if
 				self:IsRuntime() and
 				call_node and
@@ -413,7 +421,7 @@ return function(META--[[#: any]])
 				not obj:HasReferenceTypes()
 			then
 				-- if the callnode is the same, we're doing some infinite recursion
-				if self.call_stack_map[call_node] then
+				if current_unrolls > 10 then
 					if obj:IsExplicitOutputSignature() then
 						-- so if we have explicit return types, just return those
 						self.recursively_called[obj] = obj:GetOutputSignature():Copy()
