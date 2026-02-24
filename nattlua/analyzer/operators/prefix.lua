@@ -46,6 +46,8 @@ local function Prefix(analyzer, node, r)
 			end
 
 			return StringPattern(r:GetData())
+		elseif op == "|" then
+			return r
 		end
 	end
 
@@ -73,6 +75,12 @@ local function Prefix(analyzer, node, r)
 
 			if res then return res end
 		elseif r:IsNumeric() then
+			return r:PrefixOperator(op)
+		elseif r.Type == "any" then
+			return r
+		end
+	elseif op == "+" then
+		if r:IsNumeric() then
 			return r:PrefixOperator(op)
 		elseif r.Type == "any" then
 			return r
@@ -200,7 +208,9 @@ return {
 			end
 		end
 
-		if node.value.sub_type == "ref" then return r end
+		if node.value.sub_type == "ref" or node.value.sub_type == "|" then
+			return r
+		end
 
 		if r.Type == "union" then
 			local new_union = Union()

@@ -81,6 +81,27 @@ analyze(
 analyze([[
     local type test = unique 1
 ]], "must be a table")
+analyze[[
+    local <const> a = 1
+    attest.equal(a, 1)
+]]
+analyze([[
+    local <const> a = 1
+    a = 2
+]], "cannot assign to const variable")
+analyze[[
+    local ref = 1
+    attest.equal(ref, 1)
+]]
+analyze[[
+    local ref a = 1
+    a = 2
+    attest.equal(a, 2)
+]]
+analyze[[
+    local literal a = 1
+    attest.equal(a, 1)
+]]
 
 test("runtime reassignment", function()
 	local v = analyze[[

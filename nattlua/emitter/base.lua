@@ -1350,7 +1350,10 @@ return function()
 		end
 
 		if node.tokens["local"] then
-			self:EmitIdentifierList(node.left)
+			local old = self.emitting_function_signature
+			self.emitting_function_signature = true
+			self:EmitNodeList(node.left, self.EmitExpression)
+			self.emitting_function_signature = old
 		else
 			self:EmitExpressionList(node.left)
 		end
@@ -1636,7 +1639,14 @@ return function()
 	function META:EmitModifiers(node--[[#: Node]])
 		if node.modifiers then
 			for i, mod in ipairs(node.modifiers) do
-				self:EmitToken(mod)
+				if mod[1] and mod[2] and mod[3] then
+					self:EmitToken(mod[1])
+					self:EmitToken(mod[2])
+					self:EmitToken(mod[3])
+				else
+					self:EmitToken(mod)
+				end
+
 				self:Whitespace(" ")
 			end
 		end

@@ -177,7 +177,11 @@ do
 				local tokens = {}
 
 				for i, v in pairs(node) do
-					table.insert(tokens, i .. "=" .. tostring(v.value))
+					if type(v) == "table" then
+						table.insert(tokens, i .. "=" .. tostring(v.value))
+					else
+						table.insert(tokens, i .. "=" .. tostring(v))
+					end
 				end
 
 				write(state, table.concat(tokens, " "))

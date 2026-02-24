@@ -96,6 +96,16 @@ do
 	reset()
 	local vars, typs = cdef[[
 		typedef struct {
+			int a : +1+1;
+		} foo;
+	]]
+	attest.equal(typs.foo, _ as {a = number})
+end
+
+do
+	reset()
+	local vars, typs = cdef[[
+		typedef struct {
 			int bar;
 		} foo;
 	]]

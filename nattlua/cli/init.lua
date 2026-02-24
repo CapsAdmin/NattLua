@@ -120,6 +120,11 @@ config.commands["check"] = {
 			) do
 				cmp[i] = Compiler.FromFile(path, config)
 			end
+
+			if not cmp[1] then
+				cli.print_error("No files found to check")
+				os.exit(1)
+			end
 		end
 
 		for _, cmp in ipairs(cmp) do
@@ -132,7 +137,7 @@ config.commands["check"] = {
 				end
 			end
 
-			cmp:Analyze()
+			assert(cmp:Analyze())
 		end
 
 		if options.profile then require("test.helpers.profiler").Stop() end

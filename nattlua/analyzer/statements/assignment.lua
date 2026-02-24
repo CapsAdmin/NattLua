@@ -221,7 +221,13 @@ return {
 				local immutable = false
 
 				if exp_key.attribute then
-					if exp_key.attribute.sub_type == "const" then immutable = true end
+					if exp_key.attribute.value == "const" or exp_key.attribute.sub_type == "const" then
+						immutable = true
+					end
+				end
+
+				if exp_key.modifiers then
+					if exp_key.modifiers.const then immutable = true end
 				end
 
 				-- local assignment: local a = 1

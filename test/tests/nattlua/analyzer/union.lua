@@ -10,6 +10,25 @@ do -- smoke
 	equal(8888, union:GetData()[2]:GetData())
 end
 
+do -- leading pipe smoke
+	local a = analyze[[local type a = | 1337 | 8888]]
+	a:PushAnalyzerEnvironment("typesystem")
+	local union = a:GetLocalOrGlobalValue(LString("a"))
+	a:PopAnalyzerEnvironment()
+	equal(2, union:GetCardinality())
+	equal(1337, union:GetData()[1]:GetData())
+	equal(8888, union:GetData()[2]:GetData())
+end
+
+do -- empty union smoke
+	local a = analyze[[local type a = |]]
+	a:PushAnalyzerEnvironment("typesystem")
+	local union = a:GetLocalOrGlobalValue(LString("a"))
+	a:PopAnalyzerEnvironment()
+	equal(union.Type, "union")
+	equal(0, union:GetCardinality())
+end
+
 do -- union operator
 	local a = analyze[[
         local type a = 1337 | 888

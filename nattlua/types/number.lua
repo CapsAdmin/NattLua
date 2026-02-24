@@ -263,6 +263,9 @@ end
 
 do
 	local operators--[[#: {[string] = function=(number)>(number)}]] = {
+		["+"] = function(x)
+			return x
+		end,
 		["-"] = function(x)
 			return -x
 		end,

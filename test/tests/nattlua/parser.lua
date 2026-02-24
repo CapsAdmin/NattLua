@@ -100,6 +100,8 @@ test("optional semicolons", function()
 	check("local a = 1;")
 	check("local a = 1;local a = 1")
 	check("local a = 1;;;")
+	check("local <const> c = 1")
+	check("local ref = 1")
 	check(";;foo 'testing syntax';;")
 	check("#testse tseokt osektokseotk\nprint('ok')")
 	check("do ;;; end\n; do ; a = 3; assert(a == 3) end;\n;")
@@ -107,6 +109,8 @@ end)
 
 test("parenthesis", function()
 	check("local a = (1)+(1)")
+	check("local a = +1")
+	check("local a = +1 + +1")
 	check("local a = (1)+(((((1)))))")
 	check("local a = 1 --[[a]];")
 	check("local a = 1 --[=[a]=] + (1);")
@@ -133,6 +137,9 @@ test("types", function()
 	--	check("function foo<||> end", "--[[#function foo<||> end]]")
 	check("local function foo<||> end", "--[[#local function foo<||> end]]")
 	check("local analyzer function foo() end", "--[[#local analyzer function foo() end]]")
+	check("local type a = | 1 | 2", "--[[#local type a = 1 | 2]]")
+	check("local type a = |", "--[[#local type a = |]]")
+	check("local type a = | 1", "--[[#local type a = 1]]")
 end)
 
 test("teal", function()
@@ -261,6 +268,8 @@ test("parser errors", function()
 
 	check(
 		{
+			{"local a = ", "expected beginning of expression, got.-end_of_file"},
+			{"local a = 1, ", "expected beginning of expression, got.-end_of_file"},
 			{"a,b", "expected assignment or call expression"},
 			{"local foo[123] = true", ".- expected assignment or call expression"},
 			{
