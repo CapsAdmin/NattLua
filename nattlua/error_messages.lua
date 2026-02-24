@@ -341,6 +341,10 @@ do
 	function error_messages.too_many_mutations()
 		return {"too many mutations"}
 	end
+
+	function error_messages.recursion_limit_reached()
+		return {"recursion limit reached"}
+	end
 end
 
 return error_messages

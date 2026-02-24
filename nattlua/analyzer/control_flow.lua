@@ -422,16 +422,16 @@ return function(META--[[#: any]])
 			then
 				-- if the callnode is the same, we're doing some infinite recursion
 				if current_unrolls > 10 then
+					self:Warning(error_messages.recursion_limit_reached())
+
 					if obj:IsExplicitOutputSignature() then
 						-- so if we have explicit return types, just return those
 						self.recursively_called[obj] = obj:GetOutputSignature():Copy()
 						return self.recursively_called[obj]
-					else
-						-- if not we sadly have to resort to any
-						-- TODO: error?
-						self.recursively_called[obj] = Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math_huge))
-						return self.recursively_called[obj]
 					end
+
+					self.recursively_called[obj] = Tuple():AddRemainder(Tuple({Any()}):SetRepeat(math_huge))
+					return self.recursively_called[obj]
 				end
 			end
 
