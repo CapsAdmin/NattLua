@@ -2,12 +2,12 @@
 local table_insert = _G.table.insert
 local table_new = require("nattlua.other.tablex").new
 return function(META--[[#: ref any]])
-	--[[#type META.@Self.context_values = Map<|string, {i = number, [number] = any}|>]]
-	--[[#type META.@Self.context_ref = Map<|string, number|>]]
+	--[[#type META.@SelfArgument.context_values = Map<|string, {i = number, [number] = any}|>]]
+	--[[#type META.@SelfArgument.context_ref = Map<|string, number|>]]
 
 	META:AddInitializer(function(self--[[#: ref any]])
-		self.context_values = {}--[[# as META.@Self.context_values]]
-		self.context_ref = {}--[[# as META.@Self.context_ref]]
+		self.context_values = {}--[[# as META.@SelfArgument.context_values]]
+		self.context_ref = {}--[[# as META.@SelfArgument.context_ref]]
 	end)
 
 	do
@@ -46,12 +46,12 @@ return function(META--[[#: ref any]])
 		function META.SetupContextValue(META--[[#: ref any]], name--[[#: ref string]])
 			local key = "context_value_" .. name
 			local key_i = key .. "_i"
-			--[[#type META.@Self[key] = List<|any|>]]
-			--[[#type META.@Self[key_i] = number]]
+			--[[#type META.@SelfArgument[key] = List<|any|>]]
+			--[[#type META.@SelfArgument[key_i] = number]]
 
 			META:AddInitializer(function(self--[[#: ref any]])
-				self[key] = table_new(100, 0)--[[# as META.@Self[key] ]]
-				self[key_i] = 0--[[# as META.@Self[key_i] ]]
+				self[key] = table_new(100, 0)--[[# as META.@SelfArgument[key] ]]
+				self[key_i] = 0--[[# as META.@SelfArgument[key_i] ]]
 			end)
 
 			local function push(self, value)
@@ -113,10 +113,10 @@ return function(META--[[#: ref any]])
 
 		function META.SetupContextRef(META--[[#: ref any]], name--[[#: ref string]])
 			local key = "context_ref_" .. name
-			--[[#type META.@Self[key] = number]]
+			--[[#type META.@SelfArgument[key] = number]]
 
 			META:AddInitializer(function(self--[[#: ref any]])
-				self[key] = 0--[[# as META.@Self[key] ]]
+				self[key] = 0--[[# as META.@SelfArgument[key] ]]
 			end)
 
 			local function push(self)

@@ -12,7 +12,7 @@ local formating = require("nattlua.other.formating")
 local class = require("nattlua.other.class")
 local META = class.CreateTemplate("node")
 --[[#type META.@Name = "Node"]]
---[[#type META.@Self = {
+--[[#type META.@SelfArgument = {
 	@Name = "Node",
 	Type = string,
 	Code = Code,
@@ -40,7 +40,7 @@ local META = class.CreateTemplate("node")
 	is_expression = boolean,
 	is_statement = boolean,
 }]]
---[[#local type Node = META.@Self]]
+--[[#local type Node = META.@SelfArgument]]
 local all_nodes = {
 	["sub_statement_table_expression_value"] = function()
 		return {
@@ -869,7 +869,7 @@ function META.New(
 	init.code_stop = code_stop
 	init.parent = parent
 	init.Code = code
-	return META.NewObject(init--[[# as META.@Self]])
+	return META.NewObject(init--[[# as META.@SelfArgument]])
 end
 
 function META:__tostring()
@@ -1082,7 +1082,7 @@ function META:GetLastAssociatedType()
 	return self.inferred_types[#self.inferred_types]
 end
 
-local function find_by_type(node--[[#: META.@Self]], what--[[#: NodeKind]], out--[[#: ref List<|Node|>]])--[[#: List<|Node|>]]
+local function find_by_type(node--[[#: META.@SelfArgument]], what--[[#: NodeKind]], out--[[#: ref List<|Node|>]])--[[#: List<|Node|>]]
 	out = out or {}
 
 	for _, child in ipairs(node:GetNodes()) do

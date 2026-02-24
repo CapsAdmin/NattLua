@@ -22,24 +22,24 @@ local B = string.byte
 --[[#local type EmitterConfig = import("~/nattlua/emitter/config.nlua")]]
 return function()
 	local META = class.CreateTemplate("emitter")
-	--[[#type META.@Self.toggled_indents = Map<|string, true | nil|>]]
-	--[[#type META.@Self.last_indent_index = nil | number]]
-	--[[#type META.@Self.level = number]]
-	--[[#type META.@Self.out = List<|string|>]]
-	--[[#type META.@Self.i = number]]
-	--[[#type META.@Self.config = EmitterConfig]]
-	--[[#type META.@Self.last_non_space_index = false | number]]
-	--[[#type META.@Self.last_newline_index = nil | number]]
-	--[[#type META.@Self.force_newlines = nil | List<|boolean|>]]
-	--[[#type META.@Self.during_comment_type = false | number]]
-	--[[#type META.@Self.is_call_expression = boolean]]
-	--[[#type META.@Self.inside_call_expression = boolean]]
-	--[[#type META.@Self.OnEmitStatement = false | Function]]
-	--[[#type META.@Self.loop_nodes = false | List<|Node|>]]
-	--[[#type META.@Self.tracking_indents = nil | Map<|string, List<|{info = any, level = number}|>|>]]
-	--[[#type META.@Self.done = nil | Map<|string, true|>]]
-	--[[#type META.@Self.FFI_DECLARATION_EMITTER = false | any]]
-	--[[#type META.@Self.pre_toggle_level = nil | number]]
+	--[[#type META.@SelfArgument.toggled_indents = Map<|string, true | nil|>]]
+	--[[#type META.@SelfArgument.last_indent_index = nil | number]]
+	--[[#type META.@SelfArgument.level = number]]
+	--[[#type META.@SelfArgument.out = List<|string|>]]
+	--[[#type META.@SelfArgument.i = number]]
+	--[[#type META.@SelfArgument.config = EmitterConfig]]
+	--[[#type META.@SelfArgument.last_non_space_index = false | number]]
+	--[[#type META.@SelfArgument.last_newline_index = nil | number]]
+	--[[#type META.@SelfArgument.force_newlines = nil | List<|boolean|>]]
+	--[[#type META.@SelfArgument.during_comment_type = false | number]]
+	--[[#type META.@SelfArgument.is_call_expression = boolean]]
+	--[[#type META.@SelfArgument.inside_call_expression = boolean]]
+	--[[#type META.@SelfArgument.OnEmitStatement = false | Function]]
+	--[[#type META.@SelfArgument.loop_nodes = false | List<|Node|>]]
+	--[[#type META.@SelfArgument.tracking_indents = nil | Map<|string, List<|{info = any, level = number}|>|>]]
+	--[[#type META.@SelfArgument.done = nil | Map<|string, true|>]]
+	--[[#type META.@SelfArgument.FFI_DECLARATION_EMITTER = false | any]]
+	--[[#type META.@SelfArgument.pre_toggle_level = nil | number]]
 
 	do -- internal
 		function META:Whitespace(str--[[#: string]], force--[[#: boolean]])
@@ -1462,7 +1462,7 @@ return function()
 		end
 	end
 
-	local function general_kind(self--[[#: META.@Self]], node--[[#: Node]])
+	local function general_kind(self--[[#: META.@SelfArgument]], node--[[#: Node]])
 		if node.Type == "statement_call_expression" then
 			for i, v in ipairs(node.value.expressions) do
 				if v.Type == "expression_function" then return "other" end

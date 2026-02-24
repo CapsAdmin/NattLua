@@ -53,7 +53,7 @@ Vec3.__index = Vec3
 type Vec3.@Name = "Vector"
 
 -- define the type of the first argument in setmetatable
-type Vec3.@Self = {
+type Vec3.@SelfArgument = {
     x = number,
     y = number,
     z = number,

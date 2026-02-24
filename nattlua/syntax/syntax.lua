@@ -19,7 +19,7 @@ local callstack = require("nattlua.other.callstack")
 --[[#type CompiledTree = {tree = TreeNode, lookup = nil | Function}]]
 local META = class.CreateTemplate("syntax")
 --[[#type META.@Name = "Syntax"]]
---[[#type META.@Self = {
+--[[#type META.@SelfArgument = {
 	BinaryOperatorInfo = Map<|string, BinaryOperatorInfo|>,
 	NumberAnnotations = List<|string|>,
 	Symbols = List<|string|>,
@@ -55,7 +55,7 @@ function META.New()
 			PostfixOperatorFunctionTranslate = {},
 			PrefixOperatorFunctionTranslate = {},
 			ReadMap = {},
-		}--[[# as META.@Self]],
+		}--[[# as META.@SelfArgument]],
 		true
 	)
 end

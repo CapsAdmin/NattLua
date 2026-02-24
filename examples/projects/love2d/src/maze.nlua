@@ -1,6 +1,6 @@
 local Maze = {}
 Maze.__index = Maze
-type Maze.@Self = {
+type Maze.@SelfArgument = {
 	width = 0 .. inf,
 	height = 0 .. inf,
 	grid = {[0 .. inf] = 1 | 0},
@@ -81,7 +81,7 @@ local function constructor(_, width: 0 .. inf, height: 0 .. inf)
 			--[[ lie to the typesystem since we're just about to fill the grid with numbers ]]
 			width = width,
 			height = height,
-		} as Maze.@Self,
+		} as Maze.@SelfArgument,
 		Maze
 	)
 

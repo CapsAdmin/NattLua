@@ -6,7 +6,7 @@ local class = require("nattlua.other.class")
 local callstack = require("nattlua.other.callstack")
 local META = class.CreateTemplate("code")
 --[[#type META.@Name = "Code"]]
---[[#type META.@Self = {
+--[[#type META.@SelfArgument = {
 	Buffer = string,
 	Name = string,
 }]]
@@ -32,7 +32,7 @@ local has_ffi, ffi = pcall(require, "ffi")
 
 if has_ffi--[[# as false]] then
 	--[[#-- todo, ffimetatype inference
-	type META.@Self = {
+	type META.@SelfArgument = {
 		Buffer = string,
 		buffer_len = number,
 		Name = string,
@@ -204,5 +204,5 @@ else
 	end
 end
 
---[[#type META.Code = META.@Self]]
+--[[#type META.Code = META.@SelfArgument]]
 return META

@@ -30,14 +30,14 @@ local IsKeyword = characters.IsKeyword
 local IsSymbol = characters.IsSymbol
 local META = class.CreateTemplate("lexer")
 --[[#type META.@Name = "Lexer"]]
---[[#type META.@Self = {
+--[[#type META.@SelfArgument = {
 	Code = Code,
 	Position = number,
 	comment_escape = false | string,
 	OnError = function=(self: self, code: Code, msg: string, start: number | nil, stop: number | nil)>(),
 	Config = {} | nil,
 }]]
---[[#local type Lexer = META.@Self]]
+--[[#local type Lexer = META.@SelfArgument]]
 
 function META:GetLength()--[[#: number]]
 	return self.Code:GetByteSize()

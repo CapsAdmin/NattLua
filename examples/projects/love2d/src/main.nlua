@@ -4,7 +4,7 @@ type love = import("./love_api.nlua")
 local Maze = import("./maze.nlua")
 local Vec2 = import("./vec2.nlua")
 -- not sure about this, Vec2 the metatable and which doubles as a constructor and NOT the type Vec2
-local type Vec2 = Vec2.@Self
+local type Vec2 = Vec2.@SelfArgument
 local type Node = {
 	pos = Vec2,
 	wall = boolean,

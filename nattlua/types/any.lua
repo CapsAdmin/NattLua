@@ -3,7 +3,7 @@ local error_messages = require("nattlua.error_messages")
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#type META.@Name = "TAny"]]
---[[#local type TAny = META.@Self]]
+--[[#local type TAny = META.@SelfArgument]]
 --[[#type TAny.Type = "any"]]
 META.Type = "any"
 

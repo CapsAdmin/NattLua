@@ -7,10 +7,10 @@ local class = require("nattlua.other.class")
 return function()
 	local META = class.CreateTemplate("base")
 	--[[#type META.Type = string]]
-	--[[#type META.@Self = {
+	--[[#type META.@SelfArgument = {
 		Type = string,
 	}]]
-	--[[#local type TBaseType = META.@Self]]
+	--[[#local type TBaseType = META.@SelfArgument]]
 	--[[#type META.TBaseType = TBaseType]]
 	--[[#type META.Type = string]]
 

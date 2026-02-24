@@ -17,7 +17,7 @@ local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 META.Type = "tuple"
 --[[#type META.@Name = "TTuple"]]
---[[#local type TTuple = META.@Self]]
+--[[#local type TTuple = META.@SelfArgument]]
 --[[#type TTuple.Type = "tuple"]]
 --[[#type TTuple.suppress = boolean]]
 META:GetSet("Data", nil--[[# as List<|any|>]])

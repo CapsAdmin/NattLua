@@ -31,7 +31,7 @@ local NATTLUA_MARKDOWN_OUTPUT = _G.NATTLUA_MARKDOWN_OUTPUT
 		emitter = Partial<|import("~/nattlua/emitter/config.nlua")|>,
 	}
 |>]]
---[[#type META.@Self = {
+--[[#type META.@SelfArgument = {
 	Code = any,
 	ParentSourceLine = string,
 	ParentSourceName = string,

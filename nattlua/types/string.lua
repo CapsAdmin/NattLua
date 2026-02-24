@@ -9,7 +9,7 @@ local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 META.Type = "string"
 --[[#type META.@Name = "TString"]]
---[[#local type TString = META.@Self]]
+--[[#local type TString = META.@SelfArgument]]
 --[[#type TString.Type = "string"]]
 --[[#type TString.lua_compiler = false | string]]
 META:GetSet("Data", false--[[# as string | false]])

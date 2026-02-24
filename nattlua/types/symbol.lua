@@ -9,7 +9,7 @@ local TRUE = {"true"}
 local FALSE = {"false"}
 local NIL = {"nil"}
 --[[#type META.@Name = "TSymbol"]]
---[[#local type TSymbol = META.@Self]]
+--[[#local type TSymbol = META.@SelfArgument]]
 --[[#type TSymbol.Type = "symbol"]]
 META.Type = "symbol"
 META:GetSet("Data", false--[[# as TRUE | FALSE | NIL | {}]])

@@ -18,7 +18,7 @@ local class = require("nattlua.other.class")
 local VirtualToken = require("nattlua.lexer.token").NewVirtualToken
 return function()
 	local META = class.CreateTemplate("parser")
-	--[[#type META.@Self = {
+	--[[#type META.@SelfArgument = {
 		@Name = "Parser",
 		config = ParserConfig,
 		Code = Code,
@@ -46,7 +46,7 @@ return function()
 	}]]
 	--[[#type META.@Name = "Parser"]]
 	require("nattlua.other.context_mixin")(META)
-	--[[#local type Parser = META.@Self]]
+	--[[#local type Parser = META.@SelfArgument]]
 
 	function META:OnPreCreateNode(node--[[#: any]]) end
 
@@ -337,7 +337,7 @@ return function()
 
 	do
 		local function error_expect(
-			self--[[#: META.@Self]],
+			self--[[#: META.@SelfArgument]],
 			str--[[#: string]],
 			what--[[#: string]],
 			start--[[#: Token | nil]],

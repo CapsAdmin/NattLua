@@ -2289,7 +2289,7 @@ local op = {
 for key, op in pairs(op) do
 	local code = [[
         local Vec2 = ...
-        function Vec2.]] .. key .. [[(a--[=[#: Vec2.@Self]=], b--[=[#: number | Vec2.@Self]=])
+        function Vec2.]] .. key .. [[(a--[=[#: Vec2.@SelfArgument]=], b--[=[#: number | Vec2.@SelfArgument]=])
             if type(b) == "number" then
                 return Vec2(a.x ]] .. op .. [[ b, a.y ]] .. op .. [[ b)
             end

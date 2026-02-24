@@ -323,7 +323,7 @@ return function(META--[[#: any]])
 	end
 
 	local function ParseRecordBody(
-		self--[[#: META.@Self]],
+		self--[[#: META.@SelfArgument]],
 		assignment--[[#: statement.assignment | statement.local_assignment]]
 	)
 		local func
@@ -426,7 +426,7 @@ return function(META--[[#: any]])
 
 	do
 		local function ParseBody(
-			self--[[#: META.@Self]],
+			self--[[#: META.@SelfArgument]],
 			assignment--[[#: statement.assignment | statement.local_assignment]]
 		)
 			assignment.tokens["type"] = self:ExpectValueTranslate("enum", "type")

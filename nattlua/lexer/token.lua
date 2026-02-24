@@ -16,7 +16,7 @@ local assert = _G.assert
 --[[#type META.@Name = "Token"]]
 --[[#type META.TokenWhitespaceType = "line_comment" | "multiline_comment" | "comment_escape" | "space"]]
 --[[#type META.TokenType = "analyzer_debug_code" | "parser_debug_code" | "letter" | "string" | "number" | "symbol" | "end_of_file" | "shebang" | "unknown" | META.TokenWhitespaceType]]
---[[#type META.@Self = {
+--[[#type META.@SelfArgument = {
 	@Name = "Token",
 	type = META.TokenType,
 	sub_type = false | string,
@@ -33,7 +33,7 @@ local assert = _G.assert
 	is_token = true,
 	unexpanded_form = any, -- for c preprocessor macros
 }]]
---[[#type META.Token = META.@Self]]
+--[[#type META.Token = META.@SelfArgument]]
 
 function META:GetRoot()
 	if self.parent then return (self.parent--[[# as any]]):GetRoot() end
@@ -457,7 +457,7 @@ function META:HasWhitespace()--[[#: boolean]]
 	return self.whitespace_start ~= nil
 end
 
-function META:GetWhitespace()--[[#: List<|META.@Self|>]]
+function META:GetWhitespace()--[[#: List<|META.@SelfArgument|>]]
 	if false--[[# as true]] then return _--[[# as List<|META.Token|>]] end -- TODO
 	if self.whitespace then return self.whitespace end
 
@@ -531,7 +531,7 @@ function META.New(
 	start--[[#: number]],
 	stop--[[#: number]],
 	whitespace_start--[[#: nil | number]]
-)--[[#: META.@Self]]
+)--[[#: META.@SelfArgument]]
 	return META.NewObject(
 		{
 			type = type,
@@ -541,7 +541,7 @@ function META.New(
 			start = start,
 			stop = stop,
 			whitespace_start = whitespace_start,
-		}--[[# as META.@Self]]
+		}--[[# as META.@SelfArgument]]
 	)
 end
 
@@ -550,7 +550,7 @@ function META.NewVirtualToken(
 	value--[[#: string]],
 	start--[[#: number]],
 	stop--[[#: number]]
-)--[[#: META.@Self]]
+)--[[#: META.@SelfArgument]]
 	return META.NewObject(
 		{
 			type = type,
@@ -558,7 +558,7 @@ function META.NewVirtualToken(
 			value = value,
 			start = start,
 			stop = stop,
-		}--[[# as META.@Self]]
+		}--[[# as META.@SelfArgument]]
 	)
 end
 
