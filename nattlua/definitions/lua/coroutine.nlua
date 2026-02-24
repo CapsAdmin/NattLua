@@ -1,42 +1,89 @@
 type coroutine = {
-	close = function=(thread)>(boolean, string),
+	close = function=(any)>(boolean, string),
 	isyieldable = function=()>(boolean),
-	running = function=()>(thread, boolean),
-	status = function=(thread)>(string),
+	running = function=()>(any, boolean),
+	status = function=(any)>(string),
 }
 
-analyzer function coroutine.yield(...: ...any)
-	analyzer.yielded_results = {...}
+analyzer function coroutine.yield(...: any)
+	local results = {...}
+
+	if analyzer.current_thread then
+		table.insert(analyzer.current_thread.yields, results)
+	end
+
+	return types.Any()
 end
 
 analyzer function coroutine.resume(thread: any, ...: ...any)
 	if thread.Type == "any" then
-		-- TODO: thread is untyped, when inferred
-		return types.Boolean()
+		return types.Tuple({types.Boolean(true), types.Any()})
 	end
 
-	if not thread.co_func then
-		error(tostring(thread) .. " is not a thread!", 2)
+	if not thread.co_func then error(tostring(thread) .. " is not a thread!", 2) end
+
+	if not thread.analyzed then
+		local old_thread = analyzer.current_thread
+		analyzer.current_thread = thread
+		thread.yields = {}
+		thread.index = 0
+		local ret = analyzer:Call(thread.co_func, types.Tuple({...}))
+
+		if ret and ret.Type == "tuple" then
+			table.insert(thread.yields, (ret as any):ToTable())
+		elseif ret then
+			table.insert(thread.yields, {ret})
+		end
+
+		analyzer.current_thread = old_thread
+		thread.analyzed = true
 	end
 
-	analyzer:Call(thread.co_func, types.Tuple({...}))
-	return types.Boolean()
+	thread.index = (thread.index or 0) + 1
+	local res = thread.yields[thread.index]
+
+	if res then return types.Tuple({types.Boolean(true), table.unpack(res)}) end
+
+	return types.Boolean(true)
 end
 
 analyzer function coroutine.create(func: Function, ...: ...any)
 	local t = types.Table()
 	t.co_func = func
+	t.yields = {}
+	t.index = 0
 	return t
 end
 
-analyzer function coroutine.wrap(cb: Function)
+analyzer function coroutine.wrap(func: any, ...: ...any)
+	local thread = types.Table()
+	thread.co_func = func
+	thread.yields = {}
+	thread.index = 0
+	local resume_func = coroutine.resume
 	return function(...)
-		analyzer:Call(cb, types.Tuple({...}))
-		local res = analyzer.yielded_results
+		if not thread.analyzed then
+			local old_thread = analyzer.current_thread
+			analyzer.current_thread = thread
+			thread.yields = {}
+			thread.index = 0
+			local ret = analyzer:Call(thread.co_func, types.Tuple({...}))
 
-		if res then
-			analyzer.yielded_results = nil
-			return table.unpack(res)
+			if ret and ret.Type == "tuple" then
+				table.insert(thread.yields, (ret as any):ToTable())
+			elseif ret then
+				table.insert(thread.yields, {ret})
+			end
+
+			analyzer.current_thread = old_thread
+			thread.analyzed = true
 		end
+
+		thread.index = (thread.index or 0) + 1
+		local res = thread.yields[thread.index]
+
+		if res then return table.unpack(res) end
+
+		return types.Any()
 	end
 end
