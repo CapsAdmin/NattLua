@@ -294,20 +294,35 @@ return function(META--[[#: any]])
 			return ret
 		end
 
+		function META:ProtectedCall(func, ...)
+			local old_scope = self.scope
+			local old_scope_stack_len = #self.scope_stack
+			local ok, a, b, c, d, e, f, g = xpcall(func, on_error_safe, ...)
+
+			if not ok then
+				self.scope = old_scope
+
+				while #self.scope_stack > old_scope_stack_len do
+					table.remove(self.scope_stack)
+				end
+			end
+
+			return ok, a, b, c, d, e, f, g
+		end
+
 		function META:CallLuaTypeFunction(func, scope, args)
 			self.function_scope = scope
 			current_func = func
-			local ok, a, b, c, d, e, f, g = xpcall(func, on_error_safe, table.unpack(args))
+			local ok, a, b, c, d, e, f, g = self:ProtectedCall(func, table.unpack(args))
 			current_func = nil
 
 			if not ok then
 				local err = assert(a)
-				local trace = traceback
 				local stack = self:GetCallStack()
 
 				if stack[1] then self:PushCurrentExpression(stack[#stack].call_node) end
 
-				self:Error(error_messages.analyzer_error(err, trace))
+				self:Error(error_messages.analyzer_error(err, traceback))
 
 				if stack[1] then self:PopCurrentExpression() end
 
