@@ -43,4 +43,13 @@ attest.expect_diagnostic<|"error", "not a subset of"|>
 attest.subset_of<|{foo = true}, number | {foo = true, faz = true}|>
 attest.expect_diagnostic<|"error", "not a subset of"|>
 attest.subset_of<|({foo = true}, 1), (number | {foo = true, faz = true}, number)|>
+
+-- verify tuple optionality (untyped/any/nilable are optional)
+attest.subset_of<|(1), (1, any)|>
+attest.subset_of<|(1), (1, number | nil)|>
+attest.subset_of<|(1), (1, 2 | 3 | nil)|>
+
+-- verify it fails if it's NOT nilable
+attest.expect_diagnostic<|"error", "nil is not a subset of number"|>
+attest.subset_of<|(1), (1, number)|>
 ]]

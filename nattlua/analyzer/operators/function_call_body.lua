@@ -489,7 +489,7 @@ return function(self, obj, input)
 			end
 		end
 
-		local tup, err = input:Slice(1, obj:GetInputSignature():GetMinimumLength())
+		local tup, err = input:Slice(1, obj:GetInputSignature():GetSafeLength(input))
 
 		if not tup then
 			self:Error(err)

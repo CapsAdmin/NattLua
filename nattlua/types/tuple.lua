@@ -232,10 +232,16 @@ function META.IsSubsetOfTupleWithoutExpansion(a--[[#: TTuple]], b--[[#: TBaseTyp
 end
 
 function META.IsSubsetOfTupleAtIndexWithoutExpansion(a--[[#: TTuple]], b--[[#: TTuple]], i--[[#: number]])
-	local a_val = a:GetWithNumber(i)
+	local a_val, a_err = a:GetWithNumber(i)
 
 	if not a_val then
-		return false, error_messages.missing_index(i), Nil(), b:GetWithoutExpansion(i), i
+		local b_val, b_err = b:GetWithoutExpansion(i)
+
+		if b_val and b_val:CanBeNil() then
+			a_val = Nil()
+		else
+			return false, a_err, Nil(), b_val or Nil(), i
+		end
 	end
 
 	local b_val, err = b:GetWithoutExpansion(i)
@@ -262,8 +268,8 @@ function META.IsSubsetOfTupleAtIndex(a--[[#: TTuple]], b--[[#: TTuple]], i--[[#:
 	end
 
 	if not a_val then
-		if b_val and b_val.Type == "any" then
-			a_val = Any()
+		if b_val and b_val:CanBeNil() then
+			a_val = Nil()
 		else
 			return false, a_err, a_val or Nil(), b_val or Nil(), i
 		end
@@ -604,19 +610,11 @@ function META:GetMinimumLength()
 	if self.Repeat == math.huge or self.Repeat == 0 then return 0 end
 
 	local len = #self.Data
-	local found_nil--[[#: boolean]] = false
 
 	for i = #self.Data, 1, -1 do
 		local obj = self.Data[i]--[[# as TBaseType]]
 
-		if obj:IsNil() and obj.Type ~= "any" then
-			found_nil = true
-			len = i - 1
-		elseif found_nil then
-			len = i
-
-			break
-		end
+		if obj:CanBeNil() then len = i - 1 else break end
 	end
 
 	return len
@@ -629,7 +627,10 @@ function META:GetSafeLength(arguments--[[#: TTuple | nil]])
 
 		if len == math.huge or arg_len == math.huge then
 			if arg_len == math.huge then
-				return math.max(self:GetMinimumLength(), arguments:GetMinimumLength())
+				return math.max(
+					len ~= math.huge and len or self:GetMinimumLength(),
+					arguments:GetMinimumLength()
+				)
 			else
 				return math.max(self:GetMinimumLength(), arguments:GetMinimumLength(), arg_len)
 			end
@@ -663,7 +664,7 @@ function META:ToTable(length--[[#: nil | number]])
 	local out = {}
 
 	for i = 1, length do
-		out[i] = self:GetWithNumber(i)
+		out[i] = self:GetWithNumber(i) or Nil()
 	end
 
 	return out
@@ -693,10 +694,7 @@ function META:Slice(start--[[#: number]], stop--[[#: number]])
 
 	for i = start, stop do
 		local val, err = self:GetWithNumber(i)
-
-		if not val then return val, err end
-
-		table.insert(data, val)
+		table.insert(data, val or Nil())
 	end
 
 	local copy = META.New(data)
