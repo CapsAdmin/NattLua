@@ -1,7 +1,7 @@
 local Compiler = require("nattlua.compiler")
 local fs = require("nattlua.other.fs")
 local path = require("nattlua.other.path")
-local colors = require("nattlua.cli.colors")
+local ansi = require("nattlua.other.ansi")
 local version = "forever pre alpha"
 local DEFAULT_CONFIG_NAME = "nlconfig.lua"
 local config_path = "./" .. DEFAULT_CONFIG_NAME
@@ -349,7 +349,7 @@ function cli.print_error(msg--[[#: any]])
 	if _G.NATTLUA_MARKDOWN_OUTPUT then
 		io.stderr:write("### error: " .. tostring(msg) .. "\n")
 	else
-		io.stderr:write(colors.red("error") .. ": " .. tostring(msg) .. "\n")
+		io.stderr:write(ansi.wrap(ansi.red, "error") .. ": " .. tostring(msg) .. "\n")
 	end
 end
 
@@ -357,7 +357,7 @@ function cli.print_warning(msg--[[#: any]])
 	if _G.NATTLUA_MARKDOWN_OUTPUT then
 		io.stderr:write("### warning: " .. tostring(msg) .. "\n")
 	else
-		io.stderr:write(colors.yellow("warning") .. ": " .. tostring(msg) .. "\n")
+		io.stderr:write(ansi.wrap(ansi.yellow, "warning") .. ": " .. tostring(msg) .. "\n")
 	end
 end
 
@@ -365,12 +365,12 @@ function cli.print_success(msg)
 	if _G.NATTLUA_MARKDOWN_OUTPUT then
 		io.write("### success: " .. msg .. "\n")
 	else
-		io.write(colors.green("success") .. ": " .. msg .. "\n")
+		io.write(ansi.wrap(ansi.green, "success") .. ": " .. msg .. "\n")
 	end
 end
 
 function cli.version()
-	io.write("NattLua version " .. colors.cyan(version) .. "\n")
+	io.write("NattLua version " .. ansi.wrap(ansi.cyan, version) .. "\n")
 	io.write("LuaJIT " .. jit.version .. "\n")
 end
 
@@ -395,11 +395,11 @@ function cli.help(command--[[#: string | nil]])
 
 	if command and commands[command] then
 		local cmd = commands[command]
-		io.write(colors.bold(cmd.description) .. "\n\n")
-		io.write(colors.bold("Usage:") .. "\n  " .. cmd.usage .. "\n\n")
+		io.write(ansi.wrap(ansi.bold, cmd.description) .. "\n\n")
+		io.write(ansi.wrap(ansi.bold, "Usage:") .. "\n  " .. cmd.usage .. "\n\n")
 
 		if #cmd.options > 0 then
-			io.write(colors.bold("Options:") .. "\n")
+			io.write(ansi.wrap(ansi.bold, "Options:") .. "\n")
 
 			for _, option in ipairs(cmd.options) do
 				local option_text = "  " .. option.name
@@ -408,19 +408,19 @@ function cli.help(command--[[#: string | nil]])
 					option_text = option_text .. " <" .. option.arg .. ">"
 				end
 
-				io.write(colors.yellow(option_text) .. "\n    " .. option.description .. "\n")
+				io.write(ansi.wrap(ansi.yellow, option_text) .. "\n    " .. option.description .. "\n")
 			end
 
 			io.write("\n")
 		end
 	else
 		cli.version()
-		io.write("\n" .. colors.bold("Usage:") .. "\n  nattlua <command> [options]\n\n")
-		io.write(colors.bold("Commands:") .. "\n")
+		io.write("\n" .. ansi.wrap(ansi.bold, "Usage:") .. "\n  nattlua <command> [options]\n\n")
+		io.write(ansi.wrap(ansi.bold, "Commands:") .. "\n")
 
 		for name, cmd in sorted_pairs(commands) do
 			io.write(
-				"  " .. colors.yellow(name) .. "\n    " .. (
+				"  " .. ansi.wrap(ansi.yellow, name) .. "\n    " .. (
 						cmd.description or
 						"*no description*"
 					) .. "\n"
@@ -428,7 +428,7 @@ function cli.help(command--[[#: string | nil]])
 		end
 
 		io.write(
-			"\nRun " .. colors.yellow("nattlua help <command>") .. " for more information about a command.\n"
+			"\nRun " .. ansi.wrap(ansi.yellow, "nattlua help <command>") .. " for more information about a command.\n"
 		)
 	end
 end
@@ -512,7 +512,7 @@ function cli.main(...)
 			local arg = args[i]
 			table.remove(args, i)
 			_G.NATTLUA_MARKDOWN_OUTPUT = true
-			colors.Disable()
+			ansi.Disable()
 			require("nattlua.other.formating").SetMarkdown(true)
 
 			if arg:sub(14, 14) == "=" then

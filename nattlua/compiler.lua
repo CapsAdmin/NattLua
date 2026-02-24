@@ -125,18 +125,10 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, level, ...)
 				messages = messages,
 				surrounding_line_count = 1,
 				title = title,
+				severity = severity,
+				level = level,
 			}
 		) .. "\n"
-
-	if not NATTLUA_MARKDOWN_OUTPUT then
-		if severity == "error" then
-			msg = "\x1b[0;31m" .. msg .. "\x1b[0m"
-		elseif severity == "warning" then
-			msg = "\x1b[0;33m" .. msg .. "\x1b[0m"
-		elseif severity == "fatal" then
-			msg = "\x1b[0;35m" .. msg .. "\x1b[0m"
-		end
-	end
 
 	if not _G.TEST then
 		io.write(msg)

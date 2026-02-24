@@ -65,7 +65,8 @@ do -- these are just helpers for print debugging
 				local a = context:GetCurrentAnalyzer()
 
 				if a and a.compiler and a.compiler.is_base_environment then
-					str = require("nattlua.cli.colors").dim(str)
+					local _ansi = require("nattlua.other.ansi")
+					str = _ansi.wrap(_ansi.dim, str)
 				end
 			end
 

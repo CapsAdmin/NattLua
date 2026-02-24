@@ -15,7 +15,7 @@ local profiler = require("test.helpers.profiler")
 local jit = _G.jit
 local table = _G.table
 local memory = require("nattlua.other.memory")
-local colors = require("nattlua.cli.colors")
+local ansi = require("nattlua.other.ansi")
 local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
 local callstack = require("nattlua.other.callstack")
 local system = require("nattlua.other.system")
@@ -243,14 +243,14 @@ do
 
 	local function format_time(seconds)
 		if seconds < 1 then
-			return string.format("%4d%s", math.floor(seconds * 1000), colors.dim(" ms"))
+			return string.format("%4d%s", math.floor(seconds * 1000), ansi.wrap(ansi.dim, " ms"))
 		end
 
-		return string.format("%4f%s", seconds, colors.dim(" s"))
+		return string.format("%4f%s", seconds, ansi.wrap(ansi.dim, " s"))
 	end
 
 	local function format_gc(kb)
-		return string.format("%4d%s", math.floor(kb / 1024), colors.dim(" mb"))
+		return string.format("%4d%s", math.floor(kb / 1024), ansi.wrap(ansi.dim, " mb"))
 	end
 
 	local spinner_chars = {"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"}
@@ -380,7 +380,10 @@ do
 			local details = {}
 
 			for _, data in ipairs(sorted) do
-				table.insert(details, colors.dim(string.format("%s: %s", data.name, format_time(data.total))))
+				table.insert(
+					details,
+					ansi.wrap(ansi.dim, string.format("%s: %s", data.name, format_time(data.total)))
+				)
 			end
 
 			io_write(
@@ -392,7 +395,7 @@ do
 				" files",
 				"\n\n"
 			)
-			io_write(table.concat(details, colors.dim(" +\n")), "\n")
+			io_write(table.concat(details, ansi.wrap(ansi.dim, " +\n")), "\n")
 			io_write(string.format("total: %s", format_time(actual_total)), "\n")
 			io_write(string.format("memory allocated: %s\n", format_gc(total_gc)))
 		end

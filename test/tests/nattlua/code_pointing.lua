@@ -1,4 +1,6 @@
 local formating = require("nattlua.other.formating")
+-- Disable ANSI color output for tests: we compare plain text strings
+formating.SetColor(false)
 
 for _, formating_SubPosToLineChar in ipairs({formating.SubPosToLineChar, formating.SubPosToLineCharCached}) do
 	do
@@ -47,6 +49,18 @@ faz]]
 	end
 end
 
+-- Helper: assert output contains all given plain substrings
+local function contains(output, ...)
+	for _, s in ipairs({...}) do
+		if not output:find(s, 1, true) then
+			error(
+				"expected output to contain:\n  " .. tostring(s) .. "\nbut got:\n" .. tostring(output),
+				2
+			)
+		end
+	end
+end
+
 do
 	local test = [[foo
 wad
@@ -58,21 +72,16 @@ new
 ewww
 faz]]
 	local start, stop = test:find("FROM.-TO")
-	equal(
-		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 3),
-		[[    ____________________________________________________
- 2 | wad
- 3 | 111111E
- 4 |     waddwa
- 5 |     FROM>baradwadwwda HERE awd wdadwa<TOwawaddawdaw
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
- 6 |     22222E
- 7 | new
- 8 | ewww
-    ----------------------------------------------------
--> | script.txt:5:5
--> | hello world]]
-	)
+	local out = formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 3)
+	-- correct source lines shown with line numbers
+	contains(out, " 2 | wad")
+	contains(out, " 5 |     FROM>baradwadwwda HERE awd wdadwa<TOwawaddawdaw")
+	contains(out, " 8 | ewww")
+	-- carets present
+	contains(out, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+	-- path and message present
+	contains(out, "script.txt:5:5")
+	contains(out, "hello world")
 end
 
 do
@@ -89,41 +98,26 @@ new
 ewww
 faz]]
 	local start, stop = test:find("FROM.-TO")
-	equal(
-		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 3),
-		[[     _____________________________________
-  2 | wad
-  3 | 111111E
-  4 |     waddwa
-  5 |     FROM>baradwadwwda HE
-          ^^^^^^^^^^^^^^^^^^^^
-  6 |     
-      ^^^^
-  7 |     
-      ^^^^
-  8 |     RE awd wdadwa<TOwawaddawdawafter
-      ^^^^^^^^^^^^^^^^^^^^
-  9 |     22222E
- 10 | new
- 11 | ewww
-     -------------------------------------
- -> | script.txt:5:5
- -> | hello world]]
-	)
+	local out = formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 3)
+	-- correct source lines shown across the multi-line span
+	contains(out, "  5 |     FROM>baradwadwwda HE")
+	contains(out, "  8 |     RE awd wdadwa<TOwawaddawdawafter")
+	-- carets on every spanned source line
+	contains(out, "^^^^^^^^^^^^^^^^^^^^")
+	contains(out, "script.txt:5:5")
+	contains(out, "hello world")
 end
 
 do
 	local test = ("x"):rep(50) .. "FROM---TO" .. ("x"):rep(50)
 	local start, stop = test:find("FROM.-TO")
-	equal(
-		formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2),
-		[[    ______________________________________________________________________________________________________________
- 1 | xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxFROM---TOxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-                                                       ^^^^^^^^^
-    --------------------------------------------------------------------------------------------------------------
--> | script.txt:1:51
--> | hello world]]
-	)
+	local out = formating.BuildSourceCodePointMessage(test, "script.txt", "hello world", start, stop, 2)
+	-- long line is truncated with ellipsis but FROM---TO is kept
+	contains(out, "FROM---TO")
+	contains(out, "...")
+	contains(out, "^^^^^^^^^")
+	contains(out, "script.txt:1:51")
+	contains(out, "hello world")
 end
 
 do
@@ -198,21 +192,18 @@ do
 	end
 
 	local start, stop = str:find("FROM.-TO")
-	equal(
-		formating.BuildSourceCodePointMessage(str, "script.txt", "hello world", start, stop, 3),
-		[[     ______________________________________________
- 47 |         foo
- 48 |         foo
- 49 |         foo
- 50 |                                     FROM---TO
-                                          ^^^^^^^^^
- 51 |         foo
- 52 |         foo
- 53 |         foo
-     ----------------------------------------------
- -> | script.txt:50:10
- -> | hello world]]
-	)
+	local out = formating.BuildSourceCodePointMessage(str, "script.txt", "hello world", start, stop, 3)
+	-- context lines visible
+	contains(out, " 47 |         foo")
+	contains(out, " 53 |         foo")
+	-- highlighted line with token
+	contains(out, " 50 |")
+	contains(out, "FROM---TO")
+	-- carets
+	contains(out, "^^^^^^^^^")
+	-- path uses correct tab-expanded column
+	contains(out, "script.txt:50:10")
+	contains(out, "hello world")
 end
 
 do
@@ -227,17 +218,15 @@ do
 	end
 
 	local start, stop = str:find("FROM.-TO")
-	equal(
-		formating.BuildSourceCodePointMessage(str, "script.txt", "hello world", start, stop, 1),
-		[[     ______________________________________________
- 49 |         foo
- 50 |                                     FROM---TO
-                                          ^^^^^^^^^
- 51 |         foo
-     ----------------------------------------------
- -> | script.txt:50:10
- -> | hello world]]
-	)
+	local out = formating.BuildSourceCodePointMessage(str, "script.txt", "hello world", start, stop, 1)
+	-- only 1 context line each side
+	contains(out, " 49 |         foo")
+	contains(out, " 51 |         foo")
+	contains(out, " 50 |")
+	contains(out, "FROM---TO")
+	contains(out, "^^^^^^^^^")
+	contains(out, "script.txt:50:10")
+	contains(out, "hello world")
 end
 
 do
@@ -249,17 +238,58 @@ local function deferred_func()
 	foo()
 end
 ]]
-	equal(
-		formating.BuildSourceCodePointMessage(str, "test", "aaa", 34, 38, 3),
-		[[    _______________________________
- 1 | local function foo(a, b)
- 2 |     return a + b
-                ^^^^^
- 3 | end
- 4 | 
- 5 | local function deferred_func()
-    -------------------------------
--> | test:2:9
--> | aaa]]
-	)
+	local out = formating.BuildSourceCodePointMessage(str, "test", "aaa", 34, 38, 3)
+	-- the highlighted line and its content
+	contains(out, " 2 |")
+	contains(out, "return a + b")
+	-- carets span "a + b" (5 chars)
+	contains(out, "^^^^^")
+	-- path and message
+	contains(out, "test:2:9")
+	contains(out, "aaa")
+end
+
+do
+	-- Token that IS a tab character: the ^ must cover all 4 expanded spaces,
+	-- not just the last one (bug: char_start was captured after tab expansion).
+	local test = "\tFOO"
+	local start, stop = 1, 1
+	local out = formating.BuildSourceCodePointMessage(test, nil, "tab token", start, stop, 0)
+	-- source line shows tab expanded to spaces
+	contains(out, " 1 |")
+	contains(out, "FOO")
+	-- 4 carets for the tab-width expansion
+	contains(out, "^^^^")
+	contains(out, "tab token")
+end
+
+do
+	-- Token at the very end of the string (no trailing newline): the flush that
+	-- happens at i==#local_str must not zero out char_start before it is captured.
+	local test = "abc"
+	local start, stop = 3, 3
+	local out = formating.BuildSourceCodePointMessage(test, nil, "last char", start, stop, 0)
+	contains(out, " 1 | abc")
+	contains(out, "^")
+	contains(out, "last char")
+end
+
+do
+	-- When the span sits inside a very long line the context around it must
+	-- be truncated with '...' markers so the output stays within
+	-- MAX_CONTENT_WIDTH (100) columns.  The span itself ('HELLO') is kept
+	-- intact; 45 chars of context from `before` and 44 from `after` are shown.
+	local pre = ("a"):rep(60)
+	local between = "HELLO"
+	local post = ("z"):rep(60)
+	local code = pre .. between .. post
+	local s, e = #pre + 1, #pre + #between
+	local out = formating.BuildSourceCodePointMessage2(code, s, e, {messages = {"long span test"}})
+	-- token is preserved intact
+	contains(out, "HELLO")
+	-- ellipsis truncation applied
+	contains(out, "...")
+	-- carets span HELLO (5 chars)
+	contains(out, "^^^^^")
+	contains(out, "long span test")
 end

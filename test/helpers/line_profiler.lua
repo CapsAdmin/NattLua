@@ -6,7 +6,7 @@ local ffi = require("ffi")
 local preprocess = require("test.helpers.preprocess")
 local line_hook = require("test.helpers.line_hook")
 local formating = require("nattlua.other.formating")
-local colors = require("nattlua.cli.colors")
+local ansi = require("nattlua.other.ansi")
 local line_profiler = {}
 local get_time_raw, get_time_seconds
 
@@ -337,12 +337,12 @@ function line_profiler.Start(whitelist)
 			local time_str = format_time(raw_time)
 
 			if seconds > 0.1 then
-				return colors.red(time_str)
+				return ansi.wrap(ansi.red, time_str)
 			elseif seconds > 0.01 then
-				return colors.yellow(time_str)
+				return ansi.wrap(ansi.yellow, time_str)
 			end
 
-			return colors.green(time_str)
+			return ansi.wrap(ansi.green, time_str)
 		end
 
 		local function pad_right(str, len)
