@@ -406,15 +406,17 @@ function META:FindUnusedUpvalues(unused)
 	unused = unused or {}
 
 	for _, upvalue in ipairs(self.upvalues.runtime.list) do
-		if upvalue:GetUseCount() == 0 and upvalue:GetKey() ~= "..." then
+		if
+			upvalue.RuntimeUseCount == 0 and
+			upvalue:GetUseCount() == 0 and
+			upvalue:GetKey() ~= "..."
+		then
 			table.insert(unused, upvalue)
 		end
 	end
 
 	for _, upvalue in ipairs(self.upvalues.typesystem.list) do
-		if upvalue:GetUseCount() == 0 and upvalue:GetKey() ~= "..." then
-			table.insert(unused, upvalue)
-		end
+		-- we don't care about unused typesystem upvalues for now since they are not emitted
 	end
 
 	for _, child in ipairs(self:GetChildren()) do

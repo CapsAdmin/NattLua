@@ -15,6 +15,9 @@ META:GetSet("Shadow")
 META:GetSet("Scope")
 META:GetSet("Mutations")
 META:GetSet("UseCount", 0)
+META:GetSet("RuntimeUseCount", 0)
+META:GetSet("TypesystemUseCount", 0)
+META:GetSet("Identifier")
 META:IsSet("FromForLoop")
 
 function META:SetTruthyFalsyUnion(t, f)
@@ -26,20 +29,37 @@ function META:GetTruthyFalsyUnion()
 end
 
 function META:__tostring()
-	return "[" .. tostring(self.Scope) .. ":" .. tostring(self.Position) .. ":" .. tostring(self.key) .. ":" .. tostring(self.value) .. "]"
+	return "[" .. tostring(self.Scope) .. ":" .. tostring(self.Position) .. ":" .. (self.key and tostring(self.key) or "??") .. ":" .. tostring(self:GetValue()) .. "]"
 end
 
 function META:GetHashForMutationTracking()
 	return self
 end
 
-function META:SetValue(value)
-	self.Value = value
-	value:SetUpvalue(self)
+function META:GetHash()
+	return self
+end
+
+local context = require("nattlua.analyzer.context")
+
+local function increment_use_count(self)
+	self.UseCount = self.UseCount + 1
+
+	local analyzer = context:GetCurrentAnalyzer()
+
+	if analyzer then
+		local env = analyzer:GetCurrentAnalyzerEnvironment()
+
+		if env == "runtime" then
+			self.RuntimeUseCount = self.RuntimeUseCount + 1
+		elseif env == "typesystem" then
+			self.TypesystemUseCount = self.TypesystemUseCount + 1
+		end
+	end
 end
 
 function META:GetValue()
-	self.UseCount = self.UseCount + 1
+	increment_use_count(self)
 	return self.Value
 end
 
@@ -98,6 +118,8 @@ function META.New(obj)
 			Scope = false,
 			Mutations = false,
 			UseCount = 0,
+			RuntimeUseCount = 0,
+			TypesystemUseCount = 0,
 			statement = false,
 		}
 	)

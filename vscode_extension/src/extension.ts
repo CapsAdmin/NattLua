@@ -6,12 +6,16 @@ import {
 import {
   LanguageClient,
   LanguageClientOptions,
-  NotificationType
+  NotificationType,
+  ErrorAction,
+  CloseAction,
+  ErrorHandler
 } from "vscode-languageclient/node";
 import { resolveVariables } from "./vscode-variables";
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import { chdir } from "process";
 import { resolve } from "path";
+import * as fs from "fs";
 
 let client: LanguageClient;
 let server: ChildProcessWithoutNullStreams;
@@ -23,114 +27,87 @@ export async function activate(context: ExtensionContext) {
   let serverOutput = window.createOutputChannel("NattLua Server");
   let clientOutput: OutputChannel
 
-  const executable = resolveVariables(config.get<string>("executable"));
-  const workingDirectory = resolveVariables(config.get<string>("workingDirectory"));
-  const args = config.get<string[]>("arguments").map(arg => resolveVariables(arg))
+  const executable = resolveVariables(config.get<string>("executable") || "nattlua");
+  const workingDirectory = resolveVariables(config.get<string>("workingDirectory") || "${workspaceFolder}");
+  const args = (config.get<string[]>("arguments") || []).map(arg => resolveVariables(arg))
+
+  if (!fs.existsSync(workingDirectory)) {
+    window.showWarningMessage(`NattLua: Working directory '${workingDirectory}' not found. Defaulting to workspace root.`);
+  }
+
+  const errorHandler: ErrorHandler = {
+    error: (error, message, count) => {
+      LSPOutput.appendLine(`LSP Error: ${message} (${count}) - ${error.message}`);
+      if (count <= 3) return { action: ErrorAction.Continue };
+      return { action: ErrorAction.Shutdown };
+    },
+    closed: () => {
+      LSPOutput.appendLine("LSP connection closed.");
+      return { action: CloseAction.Restart };
+    }
+  };
 
   const clientOptions: LanguageClientOptions = {
     documentSelector,
     synchronize: {
       configurationSection: "nattlua",
     },
+    errorHandler: errorHandler,
   };
 
   client = new LanguageClient(
     "nattlua",
     "NattLua Client",
     async () => {
+      try {
+        server = spawn(executable, args, { cwd: workingDirectory, shell: true });
+        server.on("error", (err) => {
+          serverOutput.appendLine("SERVER SPAWN ERROR: " + err.toString());
+          window.showErrorMessage(`Failed to start NattLua server: ${err.message}. Make sure '${executable}' is installed and in your PATH.`);
+        });
 
-      chdir(workingDirectory);
-      server = spawn(executable, args, { cwd: workingDirectory });
-      server.on("error", (err) => {
-        serverOutput.appendLine("ERROR: " + err.toString());
-      });
+        const reader = server.stderr  // using STDERR explicitly to have a clean communication channel
+        reader.setEncoding("utf8");
+        reader.on("data", (str) => LSPOutput.appendLine(">>\n" + str));
 
-      const reader = server.stderr  // using STDERR explicitly to have a clean communication channel
-      reader.setEncoding("utf8");
-      reader.on("data", (str) => LSPOutput.appendLine(">>\n" + str));
+        const output = server.stdout
+        output.setEncoding("utf8");
+        output.on("data", (str: string) => serverOutput.append(str));
 
-      const output = server.stdout
-      output.setEncoding("utf8");
-      output.on("data", (str: string) => serverOutput.append(str));
+        const writer = server.stdin
 
-      const writer = server.stdin
+        {
+          const originalWrite = writer._write;
+          writer._write = function (chunk: any, encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
+            LSPOutput.appendLine("<<\n" + chunk.toString());
+            originalWrite.call(this, chunk, encoding, callback);
+          };
+        }
 
+        context.subscriptions.push({
+          dispose: () => {
+            if (server) server.kill("SIGTERM");
+          },
+        })
 
-      {
-        const originalWrite = writer._write;
-
-        writer._write = function (chunk: any, encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
-          LSPOutput.appendLine("<<\n" + chunk.toString());
-          originalWrite.call(this, chunk, encoding, callback);
+        return {
+          reader,
+          writer
         };
+      } catch (e) {
+        window.showErrorMessage(`NattLua Critical Error: ${e}`);
+        throw e;
       }
-
-      context.subscriptions.push({
-        dispose: () => {
-          server.kill("SIGKILL");
-        },
-      })
-
-      return {
-        reader,
-        writer
-      };
-
     },
     clientOptions
   );
 
-  let oldErrorHandler = client.error;
-  client.error = (error, message, count) => {
-    oldErrorHandler(error, message, count);
-    if (server) {
-      server.kill("SIGKILL");
-    }
-    LSPOutput.appendLine("Client stopped");
+  clientOutput = client.outputChannel
+  if (!clientOutput) {
+    // fallback if it's not immediately available
+    clientOutput = LSPOutput;
   }
 
-  clientOutput = client.outputChannel
-  if (!clientOutput) throw new Error("Failed to create output channel");
-
-  languages.registerDocumentFormattingEditProvider(documentSelector, {
-    async provideDocumentFormattingEdits(document) {
-      try {
-        const timeout = new Promise<never>((_, reject) => {
-          setTimeout(() => {
-            reject(new Error('Formatting timeout: operation took longer than 500 ms'));
-          }, 500);
-        });
-
-        const formatOperation = async () => {
-          const range = document.validateRange(
-            new Range(0, 0, Infinity, Infinity)
-          );
-          const params = await client.sendRequest<{ code: string }>(
-            "nattlua/format",
-            {
-              code: document.getText(),
-              textDocument: {
-                uri: document.uri.toString(),
-              }
-            }
-          );
-          return [
-            new TextEdit(
-              range,
-              Buffer.from(params.code, "base64").toString("utf8")
-            ),
-          ];
-        };
-
-        return await Promise.race([formatOperation(), timeout]);
-      } catch (err) {
-        // Handle both timeout and formatting errors
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        clientOutput.appendLine(`NattLua Format error: ${errorMessage}`);
-        return [];
-      }
-    },
-  });
   const highlightDecorationType = window.createTextEditorDecorationType({
     backgroundColor: 'rgba(255, 255, 0, 0.2)',
   });
@@ -185,9 +162,13 @@ export async function activate(context: ExtensionContext) {
   });
 
   clientOutput.appendLine(`Starting NattLua server with command: ${executable} ${args.join(" ")}`);
-  await client.start();
-
-  clientOutput.appendLine(`NattLua server started successfully`);
+  try {
+    await client.start();
+    clientOutput.appendLine(`NattLua server started successfully`);
+  } catch (err: any) {
+    clientOutput.appendLine(`NattLua failed to start: ${err.message}`);
+    window.showErrorMessage(`Failed to start NattLua Language Client. Check the output channels for details.`);
+  }
 }
 
 export async function deactivate(): Promise<void> | undefined {

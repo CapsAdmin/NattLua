@@ -21,5 +21,6 @@ local type EmitterConfig = {
 	comment_type_annotations_in_lua_files = boolean,
 	skip_comments = boolean,
 	comment_c_variables = boolean,
+	remove_unused = boolean,
 }
 return Partial<|EmitterConfig|>

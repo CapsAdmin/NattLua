@@ -265,8 +265,7 @@ analyze[[
     -- 
 
     if x.Type == "human" then
-    print("x.Type:" , x.Type)
-    print(x)
+        attest.equal(x.Type, "human")
     end
 ]]
 analyze[[

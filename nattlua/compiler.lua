@@ -232,6 +232,7 @@ function META:Parse()
 	if self.errors[1] then return nil, table.concat(self.errors, "\n") end
 
 	self.SyntaxTree = res
+	self.SyntaxTree.code = self.Code
 	return self
 end
 
@@ -271,6 +272,11 @@ function META:Analyze(analyzer, ...)
 	local ok, res = xpcall(function()
 		local res = analyzer:AnalyzeRootStatement(self.SyntaxTree, table.unpack(args))
 		analyzer:AnalyzeUnreachableCode()
+
+		if self.Config and self.Config.analyzer and self.Config.analyzer.remove_unused then
+			analyzer:ReportUnusedUpvalues(analyzer:GetScope())
+		end
+
 		return res
 	end, function(msg)
 		return traceback(self, analyzer, msg)
@@ -319,7 +325,7 @@ function META.New(
 
 	return META.NewObject(
 		{
-			Code = Code(lua_code, name),
+			Code = Code(lua_code or "", name),
 			ParentSourceLine = line,
 			ParentSourceName = parent_name,
 			Config = config or false,

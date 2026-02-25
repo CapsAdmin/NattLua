@@ -231,7 +231,7 @@ return {
 				end
 
 				-- local assignment: local a = 1
-				self:MapTypeToNode(self:CreateLocalValue(exp_key.value:GetValueString(), val, immutable), exp_key)
+				self:CreateLocalValue(exp_key.value:GetValueString(), val, immutable, exp_key)
 			elseif statement.Type == "statement_assignment" then
 				local key = left[left_pos]
 
@@ -257,6 +257,7 @@ return {
 					end
 
 					local val = self:SetLocalOrGlobalValue(key, val)
+					self:MapTypeToNode(val, exp_key)
 
 					if false and val then
 						-- this is used for tracking function dependencies

@@ -19,6 +19,10 @@ local error_messages = require("nattlua.error_messages")
 local function lookup_value(self, tk)
 	local errors = {}
 	local key = ConstString(tk:GetValueString())
+	local upvalue = self:FindLocalUpvalue(key)
+
+	if upvalue then tk:AssociateType(upvalue) end
+
 	local obj, err = self:GetLocalOrGlobalValue(key)
 
 	if self:IsTypesystem() then

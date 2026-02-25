@@ -1021,7 +1021,7 @@ do -- #include
 		local content, full_path = resolve_include_path(self, filename, is_system_include)
 
 		if not content then
-			print("Warning: " .. (full_path or filename))
+			--print("Warning: " .. (full_path or filename))
 			content = ""
 		end
 

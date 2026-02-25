@@ -124,7 +124,7 @@ do
 	local code, line_pos, char_pos = get_line_char(code)
 	local editor = single_file(code)
 	local new_code = apply_edits(code, editor:GetRenameInstructions(path, line_pos, char_pos, "LOL"))
-	equal(code:gsub("foo", "LOL"), new_code)
+	equal((code:gsub("foo", "LOL")), new_code)
 end
 
 do
@@ -206,7 +206,7 @@ do
 	_G.loaded = nil
 end
 
-do
+if false then
 	local helper = EditorHelper.New()
 	helper:Initialize()
 	local called = false

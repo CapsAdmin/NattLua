@@ -76,6 +76,11 @@
             "type": "string"
           },
           "description": "arguments for executable"
+        },
+        "nattlua.removeUnusedOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to automatically remove unused local variables and functions when saving a file."
         }
       }
     }

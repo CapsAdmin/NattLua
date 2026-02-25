@@ -7,5 +7,6 @@ local type AnalyzerConfig = {
 	on_read_file = function=(Any, string, string)>(),
 	allow_global_lookup = boolean,
 	should_crawl_untyped_functions = boolean,
+	remove_unused = boolean,
 }
 return Partial<|AnalyzerConfig|>

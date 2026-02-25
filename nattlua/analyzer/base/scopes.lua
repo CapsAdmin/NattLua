@@ -84,12 +84,16 @@ return function(META--[[#: any]])
 		return self.upvalue_position
 	end
 
-	function META:CreateLocalValue(key, obj, const)
+	function META:CreateLocalValue(key, obj, const, node)
 		local upvalue = self:GetScope():CreateUpvalue(key, obj, self:GetCurrentAnalyzerEnvironment())
 		upvalue.statement = self:GetCurrentStatement()
 		upvalue:SetPosition(self:IncrementUpvaluePosition())
+		upvalue:SetIdentifier(node)
 		self:MutateUpvalue(upvalue, obj)
 		upvalue:SetImmutable(const or false)
+
+		if node then self:MapTypeToNode(upvalue, node) end
+
 		return upvalue
 	end
 

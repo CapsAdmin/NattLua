@@ -63,25 +63,31 @@ do
 			node.Type == "statement_local_type_function"
 		then
 			self:PushAnalyzerEnvironment(node.Type == "statement_local_function" and "runtime" or "typesystem")
-			self:CreateLocalValue(node.tokens["identifier"]:GetValueString(), AnalyzeFunction(self, node))
+			local val = AnalyzeFunction(self, node)
+			local ident_token = node.tokens["identifier"]
+			local upvalue = self:CreateLocalValue(ident_token:GetValueString(), val, false, ident_token)
+			self:MapTypeToNode(val, ident_token)
+			self:MapTypeToNode(upvalue, ident_token)
 			self:PopAnalyzerEnvironment()
 		elseif
 			node.Type == "statement_function" or
 			node.Type == "statement_analyzer_function" or
 			node.Type == "statement_type_function"
 		then
-			local key = node.expression
+			local key_node = node.expression
 			self:PushAnalyzerEnvironment(node.Type == "statement_function" and "runtime" or "typesystem")
 
-			if key.Type == "expression_binary_operator" then
-				local obj = self:AnalyzeExpression(key.left)
-				local key = self:AnalyzeExpression(key.right)
+			if key_node.Type == "expression_binary_operator" then
+				local obj = self:AnalyzeExpression(key_node.left)
+				local key = self:AnalyzeExpression(key_node.right)
 				local val = AnalyzeFunction(self, node)
 				self:NewIndexOperator(obj, key, val)
+				self:MapTypeToNode(val, key_node.right)
 			else
-				local key = ConstString(key.value:GetValueString())
+				local key = ConstString(key_node.value:GetValueString())
 				local val = AnalyzeFunction(self, node)
 				self:SetLocalOrGlobalValue(key, val)
+				self:MapTypeToNode(val, key_node)
 			end
 
 			self:PopAnalyzerEnvironment()
@@ -310,7 +316,11 @@ do
 end
 
 function META:MapTypeToNode(typ, node)
+	if not typ or not node then return end
+
 	self.type_to_node[typ] = node
+
+	if node.AssociateType then node:AssociateType(typ) end
 end
 
 function META:GetTypeToNodeMap()

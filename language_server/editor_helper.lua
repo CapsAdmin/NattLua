@@ -21,15 +21,15 @@ local callstack = require("nattlua.other.callstack")
 local bit = require("nattlua.other.bit")
 local class = require("nattlua.other.class")
 local fs = require("nattlua.other.fs")
+local Emitter = require("nattlua.emitter.emitter").New
 local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
-local runtime_env, typesystem_env = BuildBaseEnvironment()
+local runtime_env, typesystem_env, base_node_to_type = BuildBaseEnvironment()
 local path_util = require("nattlua.other.path")
 local Token = require("nattlua.lexer.token")
 local META = class.CreateTemplate("editor_helper")
 META:GetSet("WorkingDirectory", "./")
 
 function META:SetWorkingDirectory(dir)
-	print("setting working directory to " .. dir)
 	self.WorkingDirectory = dir
 end
 
@@ -52,19 +52,29 @@ function META:GetProjectConfig(what, path)
 end
 
 function META.New()
+	local node_to_type = {}
+
+	for k, v in pairs(base_node_to_type) do
+		node_to_type[k] = v
+	end
+
 	return META.NewObject(
 		{
 			TempFiles = {},
 			LoadedFiles = {},
 			debug = false,
-			node_to_type = {},
+			node_to_type = node_to_type,
 		},
 		true
 	)
 end
 
-function META:NodeToType(typ)
-	return self.node_to_type[typ]
+function META:NodeToType(obj)
+	local node = self.node_to_type[obj]
+
+	if node and node.GetStartStop then return node end
+
+	return nil
 end
 
 function META:GetCompilerConfig(path)
@@ -73,6 +83,13 @@ function META:GetCompilerConfig(path)
 	cfg.analyzer = cfg.analyzer or {}
 	cfg.lsp = cfg.lsp or {}
 	cfg.parser = cfg.parser or {}
+
+	if self.workspace_config then
+		if self.workspace_config.removeUnusedOnSave then
+			cfg.emitter.remove_unused = true
+			cfg.analyzer.remove_unused = true
+		end
+	end
 
 	if cfg.emitter.type_annotations == nil then
 		cfg.emitter.type_annotations = true
@@ -113,11 +130,12 @@ do
 		return self.LoadedFiles[path]
 	end
 
-	function META:LoadFile(path, code, tokens)
+	function META:LoadFile(path, code, tokens, compiler)
 		path = path_util.Normalize(path)
 		self.LoadedFiles[path] = {
 			code = code,
 			tokens = tokens,
+			compiler = compiler,
 		}
 	end
 
@@ -152,9 +170,20 @@ do
 	end
 end
 
-function META:Recompile(path, lol, diagnostics)
-	if path then path = path_util.Normalize(path) end
+	local function normalize_path(path)
+		if not path then return nil end
 
+		if path:sub(1, 1) == "@" then path = path:sub(2) end
+
+		return path_util.Normalize(path)
+	end
+
+	function META:Recompile(path, lol, diagnostics, on_save_path)
+		if path then path = normalize_path(path) end
+
+		on_save_path = on_save_path or path
+
+		if on_save_path then on_save_path = normalize_path(on_save_path) end
 	local cfg = self:GetCompilerConfig(path)
 	diagnostics = diagnostics or {}
 
@@ -173,7 +202,7 @@ function META:Recompile(path, lol, diagnostics)
 					table.print(cfg)
 				end
 
-				local b, reason = self:Recompile(new_path, true, diagnostics)
+				local b, reason = self:Recompile(new_path, true, diagnostics, on_save_path)
 
 				if not b then
 					ok = false
@@ -191,7 +220,7 @@ function META:Recompile(path, lol, diagnostics)
 				table.print(cfg)
 			end
 
-			return self:Recompile(path, true, diagnostics)
+			return self:Recompile(path, true, diagnostics, on_save_path)
 		end
 	end
 
@@ -200,21 +229,42 @@ function META:Recompile(path, lol, diagnostics)
 	if not entry_point then return false, "no entry point" end
 
 	cfg.parser.pre_read_file = function(parser, path)
+		path = path_util.Normalize(path)
+
 		if self.TempFiles[path] then return self:GetFileContent(path) end
+
+		if path:sub(1, 1) ~= "/" then
+			local workspace_path = path_util.Normalize(self.WorkingDirectory .. "/" .. path)
+
+			if self.TempFiles[workspace_path] then
+				return self:GetFileContent(workspace_path)
+			end
+		end
+
+		return fs.read(path)
 	end
 	cfg.analyzer.pre_read_file = function(parser, path)
 		if self.TempFiles[path] then return self:GetFileContent(path) end
+		return fs.read(path)
 	end
 	cfg.analyzer.on_read_file = function(parser, path, content)
 		if not self.TempFiles[path] then self:SetFileContent(path, content) end
 	end
 	cfg.parser.on_parsed_file = function(path, compiler)
-		self:LoadFile(path, compiler.Code, compiler.Tokens)
+		self:LoadFile(path, compiler.Code, compiler.Tokens, compiler)
 	end
 	cfg.parser.inline_require = true
 	self:DebugLog("[ " .. entry_point .. " ] compiling")
-	local compiler = Compiler([[return import("]] .. entry_point .. [[")]], entry_point, cfg)
-	compiler.debug = true
+
+	local compiler
+
+	if path == entry_point or entry_point == on_save_path then
+		local content = self.TempFiles[entry_point] or fs.read(entry_point)
+		compiler = Compiler(content or "", entry_point, cfg)
+	else
+		compiler = Compiler([[return import("]] .. entry_point .. [[")]], entry_point, cfg)
+	end
+
 	compiler:SetEnvironments(self:GetEnvironment())
 
 	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
@@ -241,10 +291,7 @@ function META:Recompile(path, lol, diagnostics)
 
 	local ok, err = compiler:Parse()
 
-	if not ok then print("FAILED TO PARSE", path, err) end
-
 	if ok then
-		self:DebugLog("[ " .. entry_point .. " ] parsed with " .. #compiler.Tokens .. " tokens")
 
 		if compiler.SyntaxTree.imports then
 			for _, root_node in ipairs(compiler.SyntaxTree.imports) do
@@ -258,29 +305,57 @@ function META:Recompile(path, lol, diagnostics)
 					-- if root is false it failed to import and will be reported shortly after
 					if root then
 						self:SetFileContent(root.parser.config.file_path, root.code:GetString())
-						self:LoadFile(root.parser.config.file_path, root.code, root.lexer_tokens)
+						self:LoadFile(root.parser.config.file_path, root.code, root.lexer_tokens, root.parser.compiler or compiler)
 						diagnostics[root.parser.config.file_path] = diagnostics[root.parser.config.file_path] or {}
 					end
 				end
 			end
-		else
+		end
+
+		-- Always load the main file itself
+		if path then
 			self:SetFileContent(path, compiler.Code:GetString())
-			self:LoadFile(path, compiler.Code, compiler.Tokens)
+			self:LoadFile(path, compiler.Code, compiler.Tokens, compiler)
 			diagnostics[path] = diagnostics[path] or {}
 		end
 
-		local should_analyze = true
+		local should_analyze = false
 
-		if cfg then
-			if entry_point then
-				should_analyze = self.TempFiles[entry_point] and
-					self:IsLoaded(entry_point) and
-					self:GetFileContent(entry_point):find("-" .. "-ANALYZE", nil, true)
+		if path then
+			local ignored = false
+			local project_cfg = self:GetProjectConfig("get-compiler-config", path)
+
+			if project_cfg and project_cfg.ignorefiles then
+				for _, pattern in ipairs(project_cfg.ignorefiles) do
+					if path:find(pattern) then
+						if path:find("test_focus%.nlua") then
+							self:DebugLog("not ignoring test_focus.nlua")
+						else
+							ignored = true
+
+							break
+						end
+					end
+				end
 			end
 
-			if not should_analyze and path and path:find("%.nlua$") then
-				should_analyze = true
+			if not ignored then
+				local content = self.TempFiles[path] or fs.read(path)
+
+				if
+					content and
+					(
+						content:match("^%s*%-%-%s*ANALYZE") or
+						content:match("^%#%!.-%s*%-%-%s*ANALYZE")
+					)
+				then
+					should_analyze = true
+				elseif path:find("%.nlua$") then
+					should_analyze = true
+				end
 			end
+		elseif cfg.lsp.entry_point then
+			should_analyze = true
 		end
 
 		if should_analyze then
@@ -312,16 +387,81 @@ function META:Recompile(path, lol, diagnostics)
 			end
 
 			for typ, node in pairs(compiler.analyzer:GetTypeToNodeMap()) do
-				self.node_to_type[node] = typ
+				self.node_to_type[typ] = node
 			end
 
-			self:DebugLog(
-				"[ " .. entry_point .. " ] analyzed with " .. (
-						diagnostics[name] and
-						#diagnostics[name] or
-						0
-					) .. " diagnostics"
-			)
+			if
+				on_save_path and
+				cfg and
+				(cfg.analyzer.remove_unused or (cfg.emitter and cfg.emitter.remove_unused))
+			then
+				self:DebugLog("checking roots for on_save_path: " .. tostring(on_save_path))
+				local roots = {}
+
+				if compiler.SyntaxTree.code then
+					self:DebugLog("compiler.SyntaxTree.code:GetName() = " .. tostring(compiler.SyntaxTree.code:GetName()))
+
+					if normalize_path(compiler.SyntaxTree.code:GetName()) == normalize_path(on_save_path) then
+						self:DebugLog("found compiler.SyntaxTree match")
+						table.insert(roots, compiler.SyntaxTree)
+					end
+				end
+
+				if compiler.SyntaxTree.imports then
+					for _, root_node in ipairs(compiler.SyntaxTree.imports) do
+						local root = root_node.RootStatement
+
+						if root_node.RootStatement then
+							if not root_node.RootStatement.parser then
+								root = root_node.RootStatement.RootStatement
+							end
+
+							if
+								root and
+								root.code
+							then
+								if normalize_path(root.code:GetName()) == normalize_path(on_save_path) then
+									self:DebugLog("found import match: " .. tostring(root.code:GetName()))
+									table.insert(roots, root)
+								-- else
+								-- 	self:DebugLog("not matching import: " .. tostring(root.code:GetName()))
+								end
+							end
+						end
+					end
+				end
+
+				for _, root in ipairs(roots) do
+					self:DebugLog("REMOVING UNUSED IN: " .. tostring(root.code:GetName()))
+					local ok, new_code = pcall(function()
+						local cfg_copy = {}
+
+						for k, v in pairs(cfg.emitter) do
+							cfg_copy[k] = v
+						end
+
+						cfg_copy.remove_unused = true
+						cfg_copy.skip_import = true
+						cfg_copy.no_pipeline = true
+						cfg_copy.comment_type_annotations = on_save_path:sub(-#".lua") == ".lua"
+						local emitter = Emitter(cfg_copy)
+						return emitter:BuildCode(root)
+					end)
+
+					if not ok then
+						self:DebugLog("[ " .. entry_point .. " ] emitter failed: " .. new_code)
+					elseif new_code ~= root.code:GetString() then
+						local path = on_save_path
+
+						if root.parser and root.parser.config then
+							path = root.parser.config.file_path
+						end
+
+						fs.write(path, new_code)
+						self:SetFileContent(path, new_code)
+					end
+				end
+			end
 		else
 			self:DebugLog("[ " .. entry_point .. " ] skipped analysis")
 		end
@@ -356,9 +496,10 @@ function META:Initialize()
 	end
 end
 
-function META:Format(code, path)
+function META:Format(code, path, extra_emitter_config)
+	path = path_util.Normalize(path)
 	local config = self:GetCompilerConfig(path)
-	config.emitter = {
+	local emitter_cfg = {
 		pretty_print = true,
 		string_quote = "\"",
 		no_semicolon = true,
@@ -366,10 +507,53 @@ function META:Format(code, path)
 		type_annotations = "explicit",
 		force_parenthesis = true,
 	}
+
+	for k, v in pairs(emitter_cfg) do
+		if config.emitter[k] == nil then config.emitter[k] = v end
+	end
+
 	config.parser = {skip_import = true}
 	config.emitter.comment_type_annotations = path:sub(-#".lua") == ".lua"
 	config.emitter.transpile_extensions = path:sub(-#".lua") == ".lua"
+	config.emitter.skip_import = true
+	config.emitter.no_pipeline = true
+
+	-- remove_unused should only be triggered by explicit request (e.g. code action),
+	-- not by the workspace-level removeUnusedOnSave setting (that goes through the Recompile save path)
+	local do_remove_unused = extra_emitter_config and extra_emitter_config.remove_unused
+	config.emitter.remove_unused = do_remove_unused or false
+	config.analyzer.remove_unused = do_remove_unused or false
+
+	local file_data = self:IsLoaded(path) and self:GetFile(path)
+
+	if file_data and file_data.compiler and file_data.code:GetString() == code then
+		local cfg_copy = {}
+
+		for k, v in pairs(config.emitter) do
+			cfg_copy[k] = v
+		end
+
+		if do_remove_unused then
+			file_data.compiler:Analyze()
+		end
+
+		local emitter = Emitter(cfg_copy)
+
+		if extra_emitter_config then
+			for k, v in pairs(extra_emitter_config) do
+				emitter.config[k] = v
+			end
+		end
+
+		return emitter:BuildCode(file_data.compiler.SyntaxTree)
+	end
+
 	local compiler = Compiler(code, "@" .. path, config)
+
+	if do_remove_unused then
+		compiler:Analyze()
+	end
+
 	local code, err = compiler:Emit()
 	return code
 end
@@ -391,7 +575,7 @@ end
 
 function META:SaveFile(path)
 	self:SetFileContent(path, nil)
-	assert(self:Recompile(path))
+	assert(self:Recompile(path, nil, nil, path))
 end
 
 function META:GetAllTokens(path)
@@ -403,17 +587,29 @@ function META:FindToken(path, line, char)
 	line = line + 1
 	char = char + 1
 	local data = self:GetFile(path)
+
+	if not data then return end
+
 	local sub_pos = data.code:LineCharToSubPos(line, char)
 
 	for i, token in ipairs(data.tokens) do
-		if sub_pos >= token.start and sub_pos <= token.stop + 1 then
+		if sub_pos >= token.start and sub_pos <= token.stop then
 			return token, data
 		end
 	end
 
-	print(
-		"cannot find token at " .. path .. ":" .. line .. ":" .. char .. " or sub pos " .. sub_pos
-	)
+	-- Fallback to nearby token (e.g. if cursor is on whitespace)
+	for i = 1, 5 do
+		local offset = i
+
+		for _, dir in ipairs({-1, 1}) do
+			local p = sub_pos + offset * dir
+
+			for _, token in ipairs(data.tokens) do
+				if p >= token.start and p <= token.stop then return token, data end
+			end
+		end
+	end
 end
 
 function META:FindTokensFromRange(
@@ -423,7 +619,14 @@ function META:FindTokensFromRange(
 	line_stop--[[#: number]],
 	char_stop--[[#: number]]
 )
+	line_start = line_start + 1
+	char_start = char_start + 1
+	line_stop = line_stop + 1
+	char_stop = char_stop + 1
 	local data = self:GetFile(path)
+
+	if not data then return {} end
+
 	local sub_pos_start = data.code:LineCharToSubPos(line_start, char_start)
 	local sub_pos_stop = data.code:LineCharToSubPos(line_stop, char_stop)
 	local found = {}
@@ -495,19 +698,43 @@ do
 								assignment.right[i].value.value.type == "letter"
 							)
 						then
-							local start, stop = left:GetStartStop()
-							local label = #types == 1 and tostring(types[1]) or tostring(Union(types))
+							local label
 
-							if #label > 20 then label = label:sub(1, 20) .. "..." end
+							do
+								local filtered = {}
 
-							table.insert(
-								hints,
-								{
-									label = label,
-									start = start,
-									stop = stop,
-								}
-							)
+								for _, t in ipairs(types) do
+									if t.Type == "upvalue" then
+										table.insert(filtered, t:GetValue())
+									else
+										table.insert(filtered, t)
+									end
+								end
+
+								if #filtered == 1 then
+									label = tostring(filtered[1])
+								elseif #filtered > 1 then
+									label = tostring(Union(filtered))
+								else
+									label = ""
+								end
+
+								if label:sub(-1) == "|" then label = label:sub(1, -2) end
+							end
+
+							if #label > 0 then
+								if #label > 20 then label = label:sub(1, 20) .. "..." end
+
+								local start, stop = left:GetStartStop()
+								table.insert(
+									hints,
+									{
+										label = label,
+										start = start,
+										stop = stop,
+									}
+								)
+							end
 						end
 					end
 				end
@@ -564,8 +791,8 @@ function META:GetRenameInstructions(path, line, character, newName)
 	for i, v in ipairs(data.tokens) do
 		local u = v:FindUpvalue()
 
-		if u == upvalue and v.type == "letter" then
-			if v:ValueEquals(str) then
+		if u and v.type == "letter" and v:GetValueString() == str then
+			if u == upvalue or u:GetKey() == upvalue:GetKey() then
 				table.insert(
 					edits,
 					{
@@ -587,27 +814,145 @@ function META:GetDefinition(path, line, character)
 
 	if not token then return end
 
-	local types = token:FindType()
+	local all_types = token:FindType()
 
-	if not types[1] then return end
+	if not all_types[1] then return end
 
-	for i, typ in ipairs(types) do
-		if typ:GetUpvalue() then
-			local node = self:NodeToType(typ:GetUpvalue())
+	local types = {}
 
-			if node then return node end
+	for _, t in ipairs(all_types) do
+		if t.Type == "union" then
+			for _, v in ipairs(t:GetData()) do
+				table.insert(types, v)
+			end
+		else
+			table.insert(types, t)
+		end
+	end
+
+	for _, typ in ipairs(types) do
+		do
+			local node = self:NodeToType(typ)
+
+			if node and node.GetStartStop then return node end
+		end
+
+		if typ.Type == "upvalue" then
+			local node = self:NodeToType(typ)
+
+			if node and node.GetStartStop then return node end
+
+			typ = typ:GetValue()
+
+			if typ.Type == "union" then
+				for _, v in ipairs(typ:GetData()) do
+					table.insert(types, v)
+				end
+
+				goto next_type
+			end
+
+			local node = self:NodeToType(typ)
+
+			if node and node.GetStartStop then return node end
 		end
 
 		if typ.Type == "function" then
 			local node = typ:GetFunctionBodyNode()
 
-			if node then return node end
+			if node and node.GetStartStop then return node end
 		end
 
-		local node = self:NodeToType(typ)
+		do
+			local upvalue = typ.GetUpvalue and typ:GetUpvalue()
 
-		if node then return node end
+			if upvalue then
+				local node = self:NodeToType(upvalue)
+
+				if node and node.GetStartStop then return node end
+			end
+		end
+
+		::next_type::
 	end
+end
+
+function META:GetSignatureHelp(path, line, character)
+	local token, data = self:FindToken(path, line, character)
+
+	if not token then return end
+
+	local function find_call_node(node)
+		while node do
+			if
+				node.Type == "expression_call" or
+				node.Type == "statement_call" or
+				node.Type == "expression_postfix_call"
+			then
+				return node
+			end
+
+			node = node.parent
+		end
+	end
+
+	local call_node = find_call_node(token.parent)
+
+	if not call_node then return end
+
+	local types = call_node.left:GetAssociatedTypes()
+	local func_type
+
+	for _, t in ipairs(types) do
+		if t.Type == "function" then
+			func_type = t
+
+			break
+		end
+	end
+
+	if not func_type then return end
+
+	local signatures = {}
+	local active_param = 0
+
+	-- Calculate active parameter based on comma counts or current args
+	if call_node.expressions then
+		for i, arg in ipairs(call_node.expressions) do
+			local start, stop = arg:GetStartStop()
+
+			if start and stop then
+				local sub_pos = data.code:LineCharToSubPos(line + 1, character + 1)
+
+				if sub_pos > stop then active_param = i end
+			end
+		end
+	end
+
+	local func_name = call_node.left:Render()
+	local input = func_type:GetInputSignature()
+	local params = {}
+	local label = func_name .. "("
+
+	if input then
+		for i, param in ipairs(input:GetData()) do
+			local param_name = "arg" .. i
+			local param_label = tostring(param)
+			table.insert(params, {label = param_label})
+			label = label .. param_label .. (i < #input:GetData() and ", " or "")
+		end
+	end
+
+	label = label .. ")"
+	table.insert(signatures, {
+		label = label,
+		parameters = params,
+	})
+	return {
+		signatures = signatures,
+		activeSignature = 0,
+		activeParameter = active_param,
+	}
 end
 
 function META:GetHighlightRanges(path)
@@ -650,6 +995,29 @@ function META:GetHighlightRanges(path)
 	return ranges
 end
 
+function META:GetUpvalueHighlightRanges(path, line, character)
+	local token, data = self:FindToken(path, line, character)
+
+	if not token then return end
+
+	local upvalue = token:FindUpvalue()
+
+	if not upvalue then return end
+
+	local ranges = {}
+
+	for i, v in ipairs(data.tokens) do
+		local u = v:FindUpvalue()
+
+		if u == upvalue and v.type == "letter" then
+			local start, stop = v.start, v.stop
+			table.insert(ranges, self:GetCode(path):SubPosToLineChar(start, stop))
+		end
+	end
+
+	return ranges
+end
+
 function META:GetHover(path, line, character)
 	local token = self:FindToken(path, line, character)
 
@@ -658,7 +1026,21 @@ function META:GetHover(path, line, character)
 	local types, found_parents, scope = token:FindType()
 	local obj
 
-	if #types == 1 then obj = types[1] elseif #types > 1 then obj = Union(types) end
+	if #types > 0 then
+		local filtered = {}
+
+		for _, t in ipairs(types) do
+			if t.Type ~= "upvalue" then table.insert(filtered, t) end
+		end
+
+		if #filtered == 1 then
+			obj = filtered[1]
+		elseif #filtered > 1 then
+			obj = Union(filtered)
+		else
+			obj = types[1]
+		end
+	end
 
 	return {
 		obj = obj,
@@ -779,28 +1161,50 @@ do
 end
 
 function META:GetReferences(path, line, character)
-	local token = self:FindToken(path, line, character)
+	local token, data = self:FindToken(path, line, character)
 
-	if not token then return end
+	if not token then return {} end
 
+	local upvalue = token:FindUpvalue()
+
+	if upvalue then
+		local references = {}
+
+		for path, data in pairs(self.LoadedFiles) do
+			for _, v in ipairs(data.tokens) do
+				if
+					v:FindUpvalue() == upvalue and
+					v.type == "letter" and
+					v:GetValueString() == token:GetValueString()
+				then
+					table.insert(references, v)
+				end
+			end
+		end
+
+		if #references > 0 then return references end
+	end
+
+	-- Fallback for non-upvalue (could be a type from node_to_type mapping)
 	local types = token:FindType()
-	local references = {}
+	local nodes = {}
 
 	for _, obj in ipairs(types) do
 		local node
+		local upvalue = (obj.Type == "upvalue" and obj) or (obj.GetUpvalue and obj:GetUpvalue())
 
-		if obj:GetUpvalue() then
-			node = self:NodeToType(obj:GetUpvalue())
+		if upvalue then
+			node = self:NodeToType(upvalue)
 		elseif obj.GetFunctionBodyNode and obj:GetFunctionBodyNode() then
 			node = obj:GetFunctionBodyNode()
 		elseif self:NodeToType(obj) then
 			node = self:NodeToType(obj)
 		end
 
-		if node then table.insert(references, node) end
+		if node then table.insert(nodes, node) end
 	end
 
-	return references
+	return nodes
 end
 
 do
@@ -1026,54 +1430,99 @@ do
 	end
 
 	local function build_nodes(self, path, node)
-		if node.is_statement then
-			if node.Type == "statement_root" then
-				local scope = node.scopes and node.scopes[#node.scopes]
-				local str = "\n" .. tostring(scope) .. "\n"
-				local root = {
-					name = tostring(node) .. str,
-					kind = "Module",
-					children = {},
-					node = node,
-				}
+		if not node then return {} end
 
-				if scope then
-					for _, upvalue in ipairs(scope.upvalues.runtime.list) do
-						table.insert(root.children, build_scopes(self, path, node, upvalue, "runtime", done))
-					end
+		local symbols = {}
 
-					for _, upvalue in ipairs(scope.upvalues.typesystem.list) do
-						table.insert(root.children, build_scopes(self, path, node, upvalue, "typesystem", done))
+		local function add_symbol(name, kind, n, parent_symbols)
+			local start, stop = n:GetStartStop()
+
+			if not start then return end
+
+			local code = self:GetCode(path)
+
+			if not code then return end
+
+			local range_data = code:SubPosToLineChar(start, stop)
+			local symbol = {
+				name = name,
+				kind = kind,
+				range = {
+					start = {line = range_data.line_start - 1, character = range_data.character_start - 1},
+					["end"] = {line = range_data.line_stop - 1, character = range_data.character_stop},
+				},
+				selectionRange = {
+					start = {line = range_data.line_start - 1, character = range_data.character_start - 1},
+					["end"] = {line = range_data.line_stop - 1, character = range_data.character_stop},
+				},
+				children = {},
+			}
+			table.insert(parent_symbols or symbols, symbol)
+			return symbol
+		end
+
+		local function walk(n, current_symbols)
+			if not n.GetNodes then return end
+
+			for _, child in ipairs(n:GetNodes()) do
+				local symbol
+
+				if
+					child.Type == "statement_local_function" or
+					child.Type == "statement_global_function"
+				then
+					symbol = add_symbol(
+						child.tokens["identifier"] and
+							child.tokens["identifier"]:GetValueString() or
+							"function",
+						"Function",
+						child,
+						current_symbols
+					)
+				elseif
+					child.Type == "statement_local_assignment" or
+					child.Type == "statement_assignment"
+				then
+					if child.left then
+						for _, expr in ipairs(child.left) do
+							symbol = add_symbol(expr:Render(), "Variable", child, current_symbols)
+						end
 					end
+				elseif child.Type == "statement_local_type_function" then
+					symbol = add_symbol(
+						child.tokens["identifier"] and
+							child.tokens["identifier"]:GetValueString() or
+							"type function",
+						"Function",
+						child,
+						current_symbols
+					)
 				end
 
-				return root
-			else
-
-			--error("nyi type: " .. obj.Type)
+				if child.statements and type(child.statements) == "table" then
+					walk(child, symbol and symbol.children or current_symbols)
+				end
 			end
 		end
+
+		walk(node, symbols)
+		return symbols
 	end
 
 	function META:GetSymbolTree(path)
-		local tokens = self:GetAllTokens(path)
+		local data = self:GetFile(path)
 
-		if not tokens then return {} end
+		if not data or not data.tokens or #data.tokens == 0 then return {} end
 
-		local root_node
-		local node = tokens[1]
+		local root_node = data.tokens[1].parent
 
-		if node then
-			while node.parent do
-				node = node.parent
-			end
-
-			root_node = node
+		while root_node and root_node.parent do
+			root_node = root_node.parent
 		end
 
-		return {
-			build_nodes(self, path, root_node),
-		}
+		if not root_node then return {} end
+
+		return build_nodes(self, path, root_node)
 	end
 end
 

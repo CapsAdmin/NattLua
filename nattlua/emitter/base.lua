@@ -1,4 +1,3 @@
---ANALYZE
 local runtime_syntax = require("nattlua.syntax.runtime")
 local characters = require("nattlua.syntax.characters")
 local class = require("nattlua.other.class")
@@ -42,6 +41,111 @@ return function()
 	--[[#type META.@SelfArgument.pre_toggle_level = nil | number]]
 
 	do -- internal
+		function META:IsNodeUnused(node)
+			if not self.config.remove_unused then return false end
+
+			local types = node:GetAssociatedTypes()
+
+			if types then
+				local has_upvalue = false
+
+				for _, typ in ipairs(types) do
+					if type(typ) == "table" and typ.Type == "upvalue" then
+						has_upvalue = true
+
+						if
+							typ.RuntimeUseCount > 0 or
+							typ:GetUseCount() > 0 or
+							typ:GetKey() == "_" or
+							typ:GetKey() == "..."
+						then
+							return false
+						end
+					end
+				end
+
+				if has_upvalue then return true end
+			end
+
+			return false
+		end
+
+		function META:IsUnused(node)
+			if not self.config.remove_unused then return false end
+
+			if node.Type == "statement_expression" then
+				local expr = node.value
+
+				if expr.Type == "expression_postfix_call" then
+					if
+						expr.import_expression or
+						(
+							expr.left.Type == "expression_value" and
+							expr.left.value:GetValueString() == "require"
+						)
+					then
+						return self:IsNodeUnused(expr.left)
+					end
+				end
+			elseif node.Type == "statement_local_assignment" then
+				local all_unused = true
+
+				for _, left in ipairs(node.left) do
+					if not self:IsNodeUnused(left) then
+						all_unused = false
+
+						break
+					end
+				end
+
+				if all_unused then
+					if node.right then
+						for _, expr in ipairs(node.right) do
+							if
+								expr.Type ~= "expression_value" and
+								not (
+									expr.Type == "expression_postfix_call" and
+									(
+										expr.import_expression or
+										(
+											expr.left.Type == "expression_value" and
+											expr.left.value:GetValueString() == "require"
+										)
+									)
+								)
+							then
+								return false
+							end
+						end
+					end
+
+					return true
+				end
+			elseif
+				node.Type == "statement_local_function" or
+				node.Type == "statement_local_analyzer_function" or
+				node.Type == "statement_local_type_function"
+			then
+				return self:IsNodeUnused(node.tokens["identifier"])
+			elseif node.Type == "statement_local_type" then
+				return self:IsNodeUnused(node.left)
+			elseif node.Type == "statement_local_declaration" or node.Type == "statement_local_analyzer_declaration" then
+				local all_unused = true
+
+				for _, left in ipairs(node.left) do
+					if not self:IsNodeUnused(left) then
+						all_unused = false
+
+						break
+					end
+				end
+
+				return all_unused
+			end
+
+			return false
+		end
+
 		function META:Whitespace(str--[[#: string]], force--[[#: boolean]])
 			if self.config.pretty_print == nil and not force then return end
 
@@ -1369,6 +1473,8 @@ return function()
 	end
 
 	function META:EmitStatement(node--[[#: Node]])
+		if self:IsUnused(node) then return end
+
 		if node.Type == "statement_if" then
 			self:EmitIfStatement(node)
 		elseif node.Type == "statement_goto" then
@@ -1482,6 +1588,14 @@ return function()
 	end
 
 	function META:EmitStatements(tbl--[[#: List<|Node|>]])
+		local temp = {}
+
+		for _, node in ipairs(tbl) do
+			if not self:IsUnused(node) then table.insert(temp, node) end
+		end
+
+		tbl = temp
+
 		for i, node in ipairs(tbl) do
 			if
 				i > 1 and
@@ -1976,7 +2090,7 @@ return function()
 		end
 
 		function META:EmitImportExpression(node--[[#: Node]])
-			if not node.path then
+			if not node.path or self.config.skip_import then
 				self:EmitToken(node.left.value)
 			else
 				self:EmitToken(node.left.value, "IMPORTS['" .. node.key .. "']")

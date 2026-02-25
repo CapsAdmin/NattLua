@@ -12,29 +12,42 @@ io.stdout:setvbuf("no")
 local function read_message()
 	local line = INPUT:read("*l")
 
+	while line and not line:match("Content%-Length:") do
+		line = INPUT:read("*l")
+	end
+
 	if not line then return nil end
 
 	local content_length = tonumber(line:match("Content%-Length: (%d+)"))
-	INPUT:read("*l") -- Read the empty line
+
+	if not content_length then return nil end
+
+	-- Skip any other headers until we find the empty line
+	while line and line ~= "" and line ~= "\r" do
+		line = INPUT:read("*l")
+	end
+
 	local str = INPUT:read(content_length)
-	session_input:write(str, "\n\n")
-	session_input:flush()
+
+	if session_input then
+		session_input:write(str, "\n\n")
+		session_input:flush()
+	end
+
 	return str
 end
 
 -- Without this, it seems like vscode will error as the body length deviates from content-length with unicode characters
--- I initially thought utf8.length would work, but that doesn't seem to be it.
-local function escape_unicode(c)
-	return string.format("\\u%04x", c:byte())
-end
-
 local function write_message(message)
 	local encoded = json.encode(message)
 	local data = string.format("Content-Length: %d\r\n\r\n%s", #encoded, encoded)
 	OUTPUT:write(data)
 	OUTPUT:flush()
-	session_output:write(data)
-	session_output:flush()
+
+	if session_output then
+		session_output:write(data)
+		session_output:flush()
+	end
 end
 
 OUTPUT:setvbuf("no")

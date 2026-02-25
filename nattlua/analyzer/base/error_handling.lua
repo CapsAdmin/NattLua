@@ -270,4 +270,25 @@ return function(META--[[#: any]])
 			if info ~= false and info.msg then self:Warning(info.msg, info.node) end
 		end
 	end
+
+	function META:ReportUnusedUpvalues(custom_scope)
+		if not self.config.remove_unused then return end
+
+		local scope = custom_scope or self:GetScope()
+		local unused = scope:FindUnusedUpvalues()
+
+		if unused then
+			for _, upvalue in ipairs(unused) do
+				local name = upvalue:GetKey()
+
+				if name ~= "_" then
+					local identifier = upvalue:GetIdentifier()
+
+					if identifier and type(identifier) == "table" and identifier.GetStartStop then
+						self:Warning(name .. " is never used", identifier)
+					end
+				end
+			end
+		end
+	end
 end

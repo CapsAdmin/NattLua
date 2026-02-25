@@ -99,7 +99,7 @@ function META:FindType()
 	do
 		local node = self.parent
 
-		while node and node.parent do
+		while node do
 			table_insert(found_parents, node)
 			node = node.parent
 		end
@@ -120,19 +120,21 @@ function META:FindType()
 	for _, node in ipairs(found_parents) do
 		local found = false
 
-		for _, obj in ipairs(node:GetAssociatedTypes()) do
-			if
-				(
-					obj.Type == "string" or
-					obj.Type == "number"
-				)
-				and
-				tostring(obj:GetData()) == self:GetValueString()
-			then
+		if node.GetAssociatedTypes then
+			for _, obj in ipairs(node:GetAssociatedTypes()) do
+				if
+					(
+						obj.Type == "string" or
+						obj.Type == "number"
+					)
+					and
+					tostring(obj:GetData()) == self:GetValueString()
+				then
 
-			else
-				table_insert(types, obj)
-				found = true
+				else
+					table_insert(types, obj)
+					found = true
+				end
 			end
 		end
 
@@ -149,8 +151,9 @@ function META:FindUpvalue()
 		local types = node:GetAssociatedTypes()
 
 		if #types > 0 then
-			for i, v in ipairs(types) do
-				local upvalue = v:GetUpvalue()
+			for i = #types, 1, -1 do
+				local v = types[i]
+				local upvalue = (v.Type == "upvalue" and v) or (v.GetUpvalue and v:GetUpvalue())
 
 				if upvalue then return upvalue end
 			end

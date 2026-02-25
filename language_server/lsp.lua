@@ -64,6 +64,7 @@ local function get_range(code, start, stop)
 end
 
 local editor_helper = EditorHelper.New()
+lsp.editor_helper = editor_helper
 editor_helper.debug = false
 
 local function to_fs_path(url)
@@ -128,10 +129,15 @@ function editor_helper:OnDiagnostics(path, data)
 
 	for i, v in ipairs(data) do
 		local range = get_range(v.code, v.start, v.stop)
+		local tags
+
+		if v.message:find("is never used") then tags = {1} end
+
 		diagnostics[i] = {
 			severity = DiagnosticSeverity[v.severity],
 			range = range,
 			message = v.message .. "\n" .. (v.trace or "no trace??"),
+			tags = tags,
 		}
 	end
 
@@ -147,7 +153,12 @@ function editor_helper:OnDiagnostics(path, data)
 end
 
 lsp.methods["initialize"] = function(params)
-	editor_helper:SetWorkingDirectory(to_fs_path(params.workspaceFolders[1].uri))
+	if params.workspaceFolders and params.workspaceFolders[1] then
+		editor_helper:SetWorkingDirectory(to_fs_path(params.workspaceFolders[1].uri))
+	elseif params.rootUri then
+		editor_helper:SetWorkingDirectory(to_fs_path(params.rootUri))
+	end
+
 	return {
 		clientInfo = {name = "NattLua", version = "1.0"},
 		capabilities = {
@@ -182,30 +193,68 @@ lsp.methods["initialize"] = function(params)
 				resolveProvider = true,
 			},]]
 			documentSymbolProvider = true,
-		-- for symbols like all functions within a file
-		-- highlighting equal upvalues
-		-- documentHighlightProvider = true, 
-		--[[
+			documentHighlightProvider = true,
 			signatureHelpProvider = {
-				triggerCharacters = { "(" },
+				triggerCharacters = {"(", ","},
 			},
-			
-			workspaceSymbolProvider = true,
-			codeActionProvider = true,
+			codeActionProvider = {
+				codeActionKinds = {"quickfix", "source.fixAll.unusedImports"},
+			},
 			documentFormattingProvider = true,
-			documentRangeFormattingProvider = true,
-			documentOnTypeFormattingProvider = {
-				firstTriggerCharacter = "}",
-				moreTriggerCharacter = { "end" },
-			},
-			renameProvider = true,
-			]]
 		},
 	}
 end
 lsp.methods["initialized"] = function(params)
 	editor_helper:Initialize()
 end
+lsp.methods["textDocument/codeAction"] = function(params)
+	local actions = {}
+	local has_unused = false
+
+	for _, diagnostic in ipairs(params.context.diagnostics) do
+		if diagnostic.tags then
+			for _, tag in ipairs(diagnostic.tags) do
+				if tag == 1 then
+					has_unused = true
+
+					break
+				end
+			end
+		end
+	end
+
+	if has_unused then
+		local path = to_fs_path(params.textDocument.uri)
+		local code = editor_helper:GetFileContent(path)
+		local new_code = editor_helper:Format(code, path, {remove_unused = true})
+
+		if new_code ~= code then
+			table.insert(
+				actions,
+				{
+					title = "Remove all unused code",
+					kind = "source.fixAll.unusedImports",
+					edit = {
+						changes = {
+							[params.textDocument.uri] = {
+								{
+									range = {
+										start = {line = 0, character = 0},
+										["end"] = {line = 100000, character = 0},
+									},
+									newText = new_code,
+								},
+							},
+						},
+					},
+				}
+			)
+		end
+	end
+
+	return actions
+end
+
 lsp.methods["nattlua/format"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 	local code = editor_helper:Format(params.code, path)
@@ -215,6 +264,25 @@ lsp.methods["nattlua/format"] = function(params)
 	return {
 		code = b64.encode(code),
 	}
+end
+lsp.methods["textDocument/formatting"] = function(params)
+	local path = to_fs_path(params.textDocument.uri)
+	local code = editor_helper:GetFileContent(path)
+	local new_code = editor_helper:Format(code, path)
+
+	if new_code ~= code then
+		return {
+			{
+				range = {
+					start = {line = 0, character = 0},
+					["end"] = {line = 100000, character = 0},
+				},
+				newText = new_code,
+			},
+		}
+	end
+
+	return {}
 end
 lsp.methods["shutdown"] = function(params)
 	table.print(params)
@@ -234,8 +302,9 @@ lsp.methods["$/cancelRequest"] = function(params)
 	table.print(params)
 end
 lsp.methods["workspace/didChangeConfiguration"] = function(params)
-	print("configuration changed")
-	table.print(params)
+	if params.settings and params.settings.nattlua then
+		editor_helper.workspace_config = params.settings.nattlua
+	end
 end
 lsp.methods["textDocument/didOpen"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
@@ -255,21 +324,32 @@ lsp.methods["textDocument/references"] = function(params)
 
 	if not editor_helper:IsLoaded(path) then return {} end
 
-	local data = editor_helper:GetFile(path)
-	local nodes = editor_helper:GetReferences(path, params.position.line, params.position.character - 1)
+	local items = editor_helper:GetReferences(path, params.position.line, params.position.character)
 
-	if not nodes then return {} end
+	if not items then return {} end
 
 	local result = {}
 
-	for k, node in pairs(nodes) do
-		local path = node:GetSourcePath() or to_fs_path(path)
-		editor_helper:OpenFile(path, node.Code:GetString())
+	for k, item in pairs(items) do
+		local start, stop
+		local source_path
+
+		if item.GetStartStop then
+			start, stop = item:GetStartStop()
+			source_path = item:GetSourcePath()
+		else
+			start, stop = item.start, item.stop
+			source_path = item.lexer.Code:GetName()
+		end
+
+		source_path = source_path or path
+		local fs_path = to_fs_path(source_path)
+		local lsp_path = to_lsp_path(source_path)
 		table.insert(
 			result,
 			{
-				uri = to_fs_path(path),
-				range = get_range(editor_helper:GetCode(path), node:GetStartStop()),
+				uri = lsp_path,
+				range = get_range(editor_helper:GetCode(fs_path), start, stop),
 			}
 		)
 	end
@@ -483,6 +563,44 @@ if false then
 	end
 end
 
+lsp.methods["textDocument/documentHighlight"] = function(params)
+	local path = to_fs_path(params.textDocument.uri)
+
+	if not editor_helper:IsLoaded(path) then return {} end
+
+	local highlights = editor_helper:GetUpvalueHighlightRanges(path, params.position.line, params.position.character)
+
+	if not highlights then return {} end
+
+	local result = {}
+
+	for i, range_data in ipairs(highlights) do
+		local range = {
+			start = {
+				line = range_data.line_start - 1,
+				character = range_data.character_start - 1,
+			},
+			["end"] = {
+				line = range_data.line_stop - 1,
+				character = range_data.character_stop,
+			},
+		}
+		table.insert(result, {
+			range = range,
+			kind = 1, -- Text
+		})
+	end
+
+	return result
+end
+lsp.methods["textDocument/signatureHelp"] = function(params)
+	local path = to_fs_path(params.textDocument.uri)
+
+	if not editor_helper:IsLoaded(path) then return {} end
+
+	local result = editor_helper:GetSignatureHelp(path, params.position.line, params.position.character)
+	return result or {signatures = {}, activeSignature = 0, activeParameter = 0}
+end
 lsp.methods["textDocument/rename"] = function(params)
 	local fs_path = to_fs_path(params.textDocument.uri)
 
@@ -517,7 +635,7 @@ lsp.methods["textDocument/definition"] = function(params)
 
 	local node = editor_helper:GetDefinition(path, params.position.line, params.position.character)
 
-	if node then
+	if node and node.GetStartStop then
 		local start, stop = node:GetStartStop()
 		local path = node:GetSourcePath() or path
 		path = to_fs_path(path)

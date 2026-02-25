@@ -64,12 +64,13 @@ local DISABLE = _G.DISABLE_BASE_ENV
 local REUSE = _G.REUSE_BASE_ENV
 local cached_runtime
 local cached_typesystem
+local cached_node_map
 return {
 	BuildBaseEnvironment = function(root_node, parent_analyzer)
-		if DISABLE then return Table(), Table() end
+		if DISABLE then return Table(), Table(), {} end
 
 		if REUSE and cached_runtime and cached_typesystem then
-			return cached_runtime, cached_typesystem
+			return cached_runtime, cached_typesystem, cached_node_map
 		end
 
 		local compiler = load_definitions(root_node, parent_analyzer and parent_analyzer.config)
@@ -87,6 +88,7 @@ return {
 
 		if parent_analyzer then
 			analyzer = require("nattlua.analyzer.analyzer").New(parent_analyzer.config)
+			analyzer.type_to_node = parent_analyzer.type_to_node
 		-- Ensure we're using a common statement count if we want to track it
 		-- but for base environment it might be noisy. Let's at least record parsed paths.
 		end
@@ -109,8 +111,9 @@ return {
 		if REUSE then
 			cached_runtime = runtime_env
 			cached_typesystem = typesystem_env
+			cached_node_map = compiler.analyzer:GetTypeToNodeMap()
 		end
 
-		return runtime_env, typesystem_env
+		return runtime_env, typesystem_env, compiler.analyzer:GetTypeToNodeMap()
 	end,
 }
