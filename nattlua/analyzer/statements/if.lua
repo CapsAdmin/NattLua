@@ -24,10 +24,19 @@ return {
 						}
 					)
 					self:ClearTracked()
+				elseif self.config.remove_unused and obj:IsFalsy() then
+					table_insert(
+						blocks,
+						{
+							statements = statements,
+							tracked_objects = self:GetTrackedObjects(),
+							obj = obj,
+						}
+					)
 				end
 
 				if self:IsRuntime() then
-					if obj:IsCertainlyFalse() then
+					if obj:IsCertainlyFalse() or obj:IsUncertain() then
 						self:ConstantIfExpressionWarning(error_messages.if_always_false())
 
 						for _, statement in ipairs(statements) do

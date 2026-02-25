@@ -101,9 +101,8 @@ return function()
 				if all_unused then
 					if node.right then
 						for _, expr in ipairs(node.right) do
-							if
-								expr.Type ~= "expression_value" and
-								not (
+							local is_safe = expr.Type == "expression_value" or
+								(
 									expr.Type == "expression_postfix_call" and
 									(
 										expr.import_expression or
@@ -113,14 +112,19 @@ return function()
 										)
 									)
 								)
-							then
-								return false
+
+							if not is_safe and expr.Type == "expression_binary_operator" then
+								is_safe = true
 							end
+
+							if not is_safe then return false end
 						end
 					end
 
 					return true
 				end
+
+				return false
 			elseif
 				node.Type == "statement_local_function" or
 				node.Type == "statement_local_analyzer_function" or
@@ -129,7 +133,10 @@ return function()
 				return self:IsNodeUnused(node.tokens["identifier"])
 			elseif node.Type == "statement_local_type" then
 				return self:IsNodeUnused(node.left)
-			elseif node.Type == "statement_local_declaration" or node.Type == "statement_local_analyzer_declaration" then
+			elseif
+				node.Type == "statement_local_declaration" or
+				node.Type == "statement_local_analyzer_declaration"
+			then
 				local all_unused = true
 
 				for _, left in ipairs(node.left) do

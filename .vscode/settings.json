@@ -12,7 +12,7 @@
   },
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "unpublished.nattlua",
-
+  "nattlua.removeUnusedOnSave": false,
   "nattlua.executable": "luajit",
   "nattlua.workingDirectory": "${workspaceFolder}",
   "nattlua.arguments": ["nattlua.lua", "lsp"],
