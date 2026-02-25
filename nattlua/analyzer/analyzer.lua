@@ -277,13 +277,19 @@ do
 		return obj
 	end
 
-	local max_iterations = 200000
+	local max_iterations = 100000
+	local max_time_seconds = 8
 
 	function META:CheckTimeout()
+		local start_prof = os.clock()
+
+		if not self.start_time then self.start_time = os.clock() end
+
 		self.check_count = (self.check_count or 0) + 1
 		local count = self.check_count
+		local elapsed = os.clock() - self.start_time
 
-		if count < max_iterations then return end
+		if count < max_iterations and elapsed < max_time_seconds then return end
 
 		self.timeout = self.timeout or {}
 		local node = self:GetCurrentStatement()
@@ -292,7 +298,7 @@ do
 
 		self.timeout[node] = (self.timeout[node] or 0) + 1
 
-		if count < max_iterations then return end
+		if count < max_iterations and elapsed < max_time_seconds then return end
 
 		local top = {}
 
@@ -311,7 +317,9 @@ do
 			io.write(tostring(info.node), " was crawled ", info.count, " times\n")
 		end
 
-		self:FatalError("too many iterations (" .. count .. "), stopping execution")
+		self:FatalError(
+			"too many iterations (" .. count .. ") or timeout (" .. elapsed .. "s > " .. max_time_seconds .. "s), stopping execution"
+		)
 	end
 end
 

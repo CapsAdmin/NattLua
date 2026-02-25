@@ -599,7 +599,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TUnion]]
 			Upvalue = false,
 			Contract = false,
 			MetaTable = false,
-			tr = debug.traceback(),
 		}
 	)
 
