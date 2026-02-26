@@ -59,10 +59,6 @@ function META:IsCertainlyFalse()
 	return unwrapped:IsCertainlyFalse()
 end
 
-function META:IsSubsetOf(other, visited)
-	return shared.IsSubsetOf(self, other, visited)
-end
-
 function META:GetHash(visited)
 	local unwrapped = self:Unwrap()
 

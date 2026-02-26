@@ -17,7 +17,6 @@ local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange
 local shared = require("nattlua.types.shared")
 local error_messages = require("nattlua.error_messages")
-local shared = require("nattlua.types.shared")
 local ARITHMETIC_OPS = {
 	["+"] = "__add",
 	["-"] = "__sub",
@@ -291,9 +290,9 @@ local function BinaryWithUnion(self, node, l, r, op)
 
 			return l:Extend(r)
 		elseif op == "supersetof" then
-			return r:IsSubsetOf(l) and True() or False()
+			return shared.IsSubsetOf(r, l) and True() or False()
 		elseif op == "subsetof" then
-			return l:IsSubsetOf(r) and True() or False()
+			return shared.IsSubsetOf(l, r) and True() or False()
 		elseif op == ".." then
 			if l.Type == "tuple" and r.Type == "tuple" then
 				return l:Copy():Concat(r)

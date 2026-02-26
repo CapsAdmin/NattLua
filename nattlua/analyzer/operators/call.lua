@@ -3,6 +3,7 @@ local ConstString = require("nattlua.types.string").ConstString
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
 local error_messages = require("nattlua.error_messages")
+local shared = require("nattlua.types.shared")
 local ipairs = _G.ipairs
 local table_insert = _G.table.insert
 local math_huge = _G.math.huge
@@ -153,10 +154,10 @@ do
 					(
 						(
 							a.Type == "function" and
-							not a:GetOutputSignature():IsSubsetOf(b:GetOutputSignature())
+							not shared.IsSubsetOf(a:GetOutputSignature(), b:GetOutputSignature())
 						)
 						or
-						not a:IsSubsetOf(b)
+						not shared.IsSubsetOf(a, b)
 					)
 				then
 					local func = a

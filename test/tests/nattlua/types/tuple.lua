@@ -2,25 +2,26 @@ local String = require("nattlua.types.string").String
 local Number = require("nattlua.types.number").Number
 local Tuple = require("nattlua.types.tuple").Tuple
 local Any = require("nattlua.types.any").Any
+local shared = require("nattlua.types.shared")
 local SN = Tuple({String(), Number()})
 local NS = Tuple({Number(), String()})
 local SNS = Tuple({String(), Number(), String()})
 local cast = require("nattlua.analyzer.cast")
 
 test(tostring(SN) .. " should not be a subset of " .. tostring(NS), function()
-	assert(not SN:IsSubsetOf(NS))
+	assert(not shared.IsSubsetOf(SN, NS))
 end)
 
 test(tostring(SN) .. " should be a subset of " .. tostring(SN), function()
-	assert(SN:IsSubsetOf(SN))
+	assert(shared.IsSubsetOf(SN, SN))
 end)
 
 pending(tostring(SN) .. " should be a subset of " .. tostring(SNS), function()
-	assert(SN:IsSubsetOf(SNS))
+	assert(shared.IsSubsetOf(SN, SNS))
 end)
 
 test(tostring(SNS) .. " should not be a subset of " .. tostring(SN), function()
-	assert(not SNS:IsSubsetOf(SN))
+	assert(not shared.IsSubsetOf(SNS, SN))
 end)
 
 test("remainder", function()
@@ -98,13 +99,13 @@ end)
 test("length subset", function()
 	local A = Tuple({String(), String()})
 	local B = Tuple({String(), String(), String()})
-	assert(B:IsSubsetOf(A) == false)
+	assert(shared.IsSubsetOf(B, A) == false)
 end)
 
 test("length subset", function()
 	local A = Tuple({String(), String()})
 	local B = Tuple({String()}):AddRemainder(Tuple({String()}):SetRepeat(4))
-	assert(B:IsSubsetOf(A) == true)
+	assert(shared.IsSubsetOf(B, A) == true)
 end)
 
 test("initialize with remainder", function()

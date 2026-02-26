@@ -8,6 +8,7 @@ local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
 local Function = require("nattlua.types.function").Function
 local table_clear = require("nattlua.other.tablex").clear
+local shared = require("nattlua.types.shared")
 
 local function mutate_type(self, i, arg, contract, arguments, func, identifier_index)
 	local env = self:GetScope():GetNearestFunctionScope()
@@ -57,7 +58,7 @@ local function check_argument_against_contract(self, arg, contract, i)
 	elseif arg.Type == "function" and contract.Type == "function" then
 		ok, reason = arg:IsCallbackSubsetOf(contract)
 	else
-		ok, reason = arg:IsSubsetOf(contract)
+		ok, reason = shared.IsSubsetOf(arg, contract)
 	end
 
 	if not ok then return false, error_messages.argument(i, reason) end

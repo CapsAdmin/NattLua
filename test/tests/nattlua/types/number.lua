@@ -6,75 +6,75 @@ local stringx = require("nattlua.other.string")
 local shared = require("nattlua.types.shared")
 
 test("a literal number should be contained within all numbers", function()
-	assert(LNumber(42):IsSubsetOf(Number()))
+	assert(shared.IsSubsetOf(LNumber(42), Number()))
 end)
 
 test("all numbers should not be contained within a literal number", function()
-	assert(not Number():IsSubsetOf(LNumber(42)))
+	assert(not shared.IsSubsetOf(Number(), LNumber(42)))
 end)
 
 test("42 should be contained within any", function()
-	assert(LNumber(42):IsSubsetOf(Any()))
+	assert(shared.IsSubsetOf(LNumber(42), Any()))
 end)
 
 test("any should be contained within 42", function()
-	assert(Any():IsSubsetOf(LNumber(42)))
+	assert(shared.IsSubsetOf(Any(), LNumber(42)))
 end)
 
 test("42 should be contained within 32..52", function()
-	assert(LNumber(42):IsSubsetOf(LNumberRange(32, 52)))
+	assert(shared.IsSubsetOf(LNumber(42), LNumberRange(32, 52)))
 end)
 
 test("32..52 should not be contained within 42", function()
-	assert(not LNumberRange(32, 52):IsSubsetOf(LNumber(42)))
+	assert(not shared.IsSubsetOf(LNumberRange(32, 52), LNumber(42)))
 end)
 
 test("a non-literal number should be contained within all numbers", function()
-	assert(Number():IsSubsetOf(Number()))
+	assert(shared.IsSubsetOf(Number(), Number()))
 end)
 
 test("a literal number should not contain all numbers", function()
-	assert(not Number():IsSubsetOf(LNumber(42)))
+	assert(not shared.IsSubsetOf(Number(), LNumber(42)))
 end)
 
 test("two identical literal numbers should be subsets of each other", function()
-	assert(LNumber(10):IsSubsetOf(LNumber(10)))
+	assert(shared.IsSubsetOf(LNumber(10), LNumber(10)))
 end)
 
 test("a number range should contain a literal number within its range", function()
-	assert(LNumber(50):IsSubsetOf(LNumberRange(0, 100)))
+	assert(shared.IsSubsetOf(LNumber(50), LNumberRange(0, 100)))
 end)
 
 test("a number range should not contain a literal number outside its range", function()
-	assert(not LNumber(101):IsSubsetOf(LNumberRange(0, 100)))
+	assert(not shared.IsSubsetOf(LNumber(101), LNumberRange(0, 100)))
 end)
 
 test("a smaller range should be a subset of a larger range that contains it", function()
-	assert(LNumberRange(25, 75):IsSubsetOf(LNumberRange(0, 100)))
+	assert(shared.IsSubsetOf(LNumberRange(25, 75), LNumberRange(0, 100)))
 end)
 
 test("a larger range should not be a subset of a smaller range contained within it", function()
-	assert(not LNumberRange(0, 100):IsSubsetOf(LNumberRange(25, 75)))
+	assert(not shared.IsSubsetOf(LNumberRange(0, 100), LNumberRange(25, 75)))
 end)
 
 test("a non-literal number should be a subset of any", function()
-	assert(Number():IsSubsetOf(Any()))
+	assert(shared.IsSubsetOf(Number(), Any()))
 end)
 
 test("a literal number at the lower bound of a range should be a subset of that range", function()
-	assert(LNumber(32):IsSubsetOf(LNumberRange(32, 52)))
+	assert(shared.IsSubsetOf(LNumber(32), LNumberRange(32, 52)))
 end)
 
 test("a literal number at the upper bound of a range should be a subset of that range", function()
-	assert(LNumber(52):IsSubsetOf(LNumberRange(32, 52)))
+	assert(shared.IsSubsetOf(LNumber(52), LNumberRange(32, 52)))
 end)
 
 test("a literal number just outside the lower bound of a range should not be a subset of that range", function()
-	assert(not LNumber(31):IsSubsetOf(LNumberRange(32, 52)))
+	assert(not shared.IsSubsetOf(LNumber(31), LNumberRange(32, 52)))
 end)
 
 test("a literal number just outside the upper bound of a range should not be a subset of that range", function()
-	assert(not LNumber(53):IsSubsetOf(LNumberRange(32, 52)))
+	assert(not shared.IsSubsetOf(LNumber(53), LNumberRange(32, 52)))
 end)
 
 if false then
@@ -114,34 +114,34 @@ test("PrefixOperator should work correctly for literal numbers", function()
 end)
 
 test("Overlapping ranges should not be subsets of each other", function()
-	assert(not LNumberRange(0, 50):IsSubsetOf(LNumberRange(25, 75)))
-	assert(not LNumberRange(25, 75):IsSubsetOf(LNumberRange(0, 50)))
+	assert(not shared.IsSubsetOf(LNumberRange(0, 50), LNumberRange(25, 75)))
+	assert(not shared.IsSubsetOf(LNumberRange(25, 75), LNumberRange(0, 50)))
 end)
 
 test("A range should be a subset of itself", function()
 	local range = LNumberRange(10, 20)
-	assert(range:IsSubsetOf(range))
+	assert(shared.IsSubsetOf(range, range))
 end)
 
 test("An open-ended range should contain all numbers above its lower bound", function()
 	local openRange = LNumberRange(100, math.huge)
-	assert(LNumber(1000):IsSubsetOf(openRange))
-	assert(not LNumber(99):IsSubsetOf(openRange))
+	assert(shared.IsSubsetOf(LNumber(1000), openRange))
+	assert(not shared.IsSubsetOf(LNumber(99), openRange))
 end)
 
 test("Negative numbers should work correctly in ranges", function()
 	local negativeRange = LNumberRange(-50, -10)
-	assert(LNumber(-30):IsSubsetOf(negativeRange))
-	assert(not LNumber(-60):IsSubsetOf(negativeRange))
-	assert(not LNumber(0):IsSubsetOf(negativeRange))
+	assert(shared.IsSubsetOf(LNumber(-30), negativeRange))
+	assert(not shared.IsSubsetOf(LNumber(-60), negativeRange))
+	assert(not shared.IsSubsetOf(LNumber(0), negativeRange))
 end)
 
 test("Zero should be handled correctly in ranges and comparisons", function()
-	assert(LNumber(0):IsSubsetOf(LNumberRange(-10, 10)))
+	assert(shared.IsSubsetOf(LNumber(0), LNumberRange(-10, 10)))
 end)
 
 test("Non-integer numbers should work correctly", function()
-	assert(LNumber(3.14):IsSubsetOf(LNumberRange(3, 4)))
+	assert(shared.IsSubsetOf(LNumber(3.14), LNumberRange(3, 4)))
 	assert(LNumber(2.5):BinaryOperator(LNumber(1.5), "+"):GetData() == 4)
 end)
 

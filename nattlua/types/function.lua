@@ -158,10 +158,6 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	return copy
 end
 
-function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
-	return shared.IsSubsetOf(a, b)
-end
-
 function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TFunction]])
 	if
 		(
@@ -182,7 +178,7 @@ function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TFunction]])
 
 	if not a_input or not b_input then return false, "missing input signature" end
 
-	local ok, reason = a_input:IsSubsetOf(b_input, a_input:GetMinimumLength())
+	local ok, reason = shared.IsSubsetOf(a_input, b_input, a_input:GetMinimumLength())
 
 	if not ok then
 		return false,
@@ -194,7 +190,7 @@ function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TFunction]])
 
 	if not a_output or not b_output then return false, "missing output signature" end
 
-	local ok, reason = a_output:IsSubsetOf(b_output)
+	local ok, reason = shared.IsSubsetOf(a_output, b_output)
 
 	if not ok then
 		return false,

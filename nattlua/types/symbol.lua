@@ -77,10 +77,6 @@ function META:IsFalse()
 	return self.Data == FALSE
 end
 
-function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
-	return shared.IsSubsetOf(a, b)
-end
-
 function META:IsLiteral()
 	return true
 end

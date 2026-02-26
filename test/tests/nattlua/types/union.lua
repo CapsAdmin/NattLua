@@ -14,35 +14,35 @@ local smaller = Union(cast({"a", "b"}))
 local different = Union(cast({"b", "x", "y"}))
 
 test("a union should be a subset of an identical union", function()
-	assert(smaller:IsSubsetOf(smaller))
+	assert(shared.IsSubsetOf(smaller, smaller))
 end)
 
 test("a smaller union should be a subset of a larger union", function()
-	assert(smaller:IsSubsetOf(larger))
+	assert(shared.IsSubsetOf(smaller, larger))
 end)
 
 test("a larger union should not be a subset of a smaller union", function()
-	assert(not larger:IsSubsetOf(smaller))
+	assert(not shared.IsSubsetOf(larger, smaller))
 end)
 
 test("a different union should not be a subset of a union", function()
-	assert(not different:IsSubsetOf(larger))
+	assert(not shared.IsSubsetOf(different, larger))
 end)
 
 test("a larger union should not be a subset of a different union", function()
-	assert(not larger:IsSubsetOf(different))
+	assert(not shared.IsSubsetOf(larger, different))
 end)
 
 pending("a tuple of one smaller union should be a subset of a larger union", function()
-	assert(Tuple({smaller}):IsSubsetOf(larger))
+	assert(shared.IsSubsetOf(Tuple({smaller}), larger))
 end)
 
 test("a smaller union should be a subset of a tuple containing 1 larger union", function()
-	assert(smaller:IsSubsetOf(Tuple({larger})))
+	assert(shared.IsSubsetOf(smaller, Tuple({larger})))
 end)
 
 test("a number should be a subset of a union with numbers", function()
-	assert(LNumber(24)):IsSubsetOf(Union(Number(), Number()))
+	assert(shared.IsSubsetOf(LNumber(24), Union({Number(), Number()})))
 end)
 
 test("a smaller union within an empty union should be identical to the smaller union", function()
@@ -50,7 +50,7 @@ test("a smaller union within an empty union should be identical to the smaller u
 end)
 
 test("a union containing one literal number should be a subset of a union containing a number", function()
-	assert(Union(cast({1})):IsSubsetOf(Number()))
+	assert(shared.IsSubsetOf(Union(cast({1})), Number()))
 end)
 
 local A = Union(cast({1, 2, 3}))
@@ -59,7 +59,7 @@ local B = Union(cast({1, 2, 3, 4}))
 test(tostring(B) .. " should equal the union of " .. tostring(A) .. " and " .. tostring(B), function()
 	assert(shared.Equal(B, A:Union(B)))
 	equal(4, B:GetCardinality())
-	assert(A:IsSubsetOf(B))
+	assert(shared.IsSubsetOf(A, B))
 end)
 
 assert(tostring(Union()) == "|")

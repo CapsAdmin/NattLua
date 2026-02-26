@@ -98,10 +98,6 @@ function META:Copy()
 	return copy
 end
 
-function META.IsSubsetOf(a--[[#: TRange]], b--[[#: TBaseType]])
-	return shared.IsSubsetOf(a, b)
-end
-
 function META:__tostring()
 	return tostring(self:GetMin()) .. ".." .. tostring(self:GetMax())
 end

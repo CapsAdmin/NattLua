@@ -131,17 +131,13 @@ function META:Copy(map--[[#: Map<|any, TTuple|> | nil]], copy_tables--[[#: boole
 	return copy
 end
 
-function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: any]], max_length--[[#: nil | number]])
-	return shared.IsSubsetOf(a, b, max_length)
-end
-
 function META.IsSubsetOfTupleWithoutExpansion(a--[[#: TTuple]], b--[[#: TBaseType]])
 	for i, a_val in ipairs(a:GetData()) do
 		local b_val, err = b:GetWithoutExpansion(i)
 
 		if not b_val then return b_val, err, a_val, "nil", i end
 
-		local ok, err = a_val:IsSubsetOf(b_val)
+		local ok, err = shared.IsSubsetOf(a_val, b_val)
 
 		if not ok then return ok, err, a_val, b_val, i end
 	end
@@ -166,7 +162,7 @@ function META.IsSubsetOfTupleAtIndexWithoutExpansion(a--[[#: TTuple]], b--[[#: T
 
 	if not b_val then return false, err, a_val, Nil(), i end
 
-	local ok, err = a_val:IsSubsetOf(b_val)
+	local ok, err = shared.IsSubsetOf(a_val, b_val)
 
 	if not ok then return false, err, a_val, b_val or Nil(), i end
 
@@ -203,7 +199,7 @@ function META.IsSubsetOfTupleAtIndex(a--[[#: TTuple]], b--[[#: TTuple]], i--[[#:
 
 	a_val = a_val or Nil()
 	b_val = b_val or Nil()
-	local ok, reason = a_val:IsSubsetOf(b_val)
+	local ok, reason = shared.IsSubsetOf(a_val, b_val)
 
 	if not ok then return false, reason, a_val, b_val or Nil(), i end
 

@@ -1,4 +1,5 @@
 local LString = require("nattlua.types.string").LString
+local shared = require("nattlua.types.shared")
 
 test("reassignment", function()
 	local analyzer = analyze[[
@@ -71,7 +72,7 @@ test("self referenced tables should be equal", function()
     ]])
 	local a = analyzer:GetLocalOrGlobalValue(LString("a"))
 	local b = analyzer:GetLocalOrGlobalValue(LString("b"))
-	local ok, err = a:IsSubsetOf(b)
+	local ok, err = shared.IsSubsetOf(a, b)
 
 	if not ok then error(err) end
 
@@ -648,7 +649,7 @@ analyze[[
 ]]
 analyze[[
     local analyzer function test(a: any, b: any)
-        analyzer:ErrorIfFalse(b:IsSubsetOf(a))
+        analyzer:ErrorIfFalse(shared.IsSubsetOf(b, a))
     end
     
     test(_ as {foo = number}, _ as {foo = number, bar = nil | number})

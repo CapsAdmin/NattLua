@@ -258,7 +258,7 @@ function META:FollowsContract(contract--[[#: TTable]])--[[#: boolean, string | n
 
 				if not res then return res, err end
 
-				local ok, err = (res--[[# as any]]).val:IsSubsetOf(keyval.val)
+				local ok, err = shared.IsSubsetOf((res--[[# as any]]).val, keyval.val)
 
 				if not ok then
 					return false,
@@ -269,10 +269,10 @@ function META:FollowsContract(contract--[[#: TTable]])--[[#: boolean, string | n
 			local found_anything = false
 
 			for _, keyval2 in ipairs(self.Data) do
-				if keyval2.key:IsSubsetOf(required_key) then
+				if shared.IsSubsetOf(keyval2.key, required_key) then
 					local old = self.suppress
 					self.suppress = true
-					local ok, err = keyval2.val:IsSubsetOf(keyval.val)
+					local ok, err = shared.IsSubsetOf(keyval2.val, keyval.val)
 					self.suppress = old
 					found_anything = true
 
@@ -301,7 +301,7 @@ function META:FollowsContract(contract--[[#: TTable]])--[[#: boolean, string | n
 			-- it's ok if the key is not found, as we're doing structural checking
 			if res then
 				-- if it is found, we make sure its type matches
-				local ok, err = keyval.val:IsSubsetOf((res--[[# as any]]).val)
+				local ok, err = shared.IsSubsetOf(keyval.val, (res--[[# as any]]).val)
 
 				if not ok then
 					return false,
@@ -547,7 +547,7 @@ function META:HasKey(key--[[#: TBaseType]])--[[#: boolean]]
 	if read_cache(self, key) then return true end
 
 	for i, keyval in ipairs(self.Data) do
-		if shared.Equal(key, keyval.key) or key:IsSubsetOf(keyval.key) then
+		if shared.Equal(key, keyval.key) or shared.IsSubsetOf(key, keyval.key) then
 			return true
 		end
 	end
@@ -566,7 +566,7 @@ function META:FindKeyValExact(key--[[#: TBaseType]])--[[#: ({key = TBaseType, va
 
 	for i, keyval in ipairs(self.Data--[[# as any]]) do
 		if keyval then
-			local ok, reason = (keyval--[[# as any]]).key:IsSubsetOf(key)
+			local ok, reason = shared.IsSubsetOf((keyval--[[# as any]]).key, key)
 
 			if ok then return keyval--[[# as any]] end
 
@@ -600,9 +600,9 @@ function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]
 			local ok, reason
 
 			if reverse then
-				ok, reason = keyval.key:IsSubsetOf(key)
+				ok, reason = shared.IsSubsetOf(keyval.key, key)
 			else
-				ok, reason = key:IsSubsetOf(keyval.key)
+				ok, reason = shared.IsSubsetOf(key, keyval.key)
 			end
 
 			if ok then return keyval--[[# as any]] end

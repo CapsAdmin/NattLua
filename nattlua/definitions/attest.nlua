@@ -34,12 +34,12 @@ analyzer function attest.literal(A: any)
 end
 
 analyzer function attest.superset_of(A: any, B: any)
-	analyzer:AssertFatal(B:IsSubsetOf(A))
+	analyzer:AssertFatal(shared.IsSubsetOf(B, A))
 	return A
 end
 
 analyzer function attest.subset_of(A: any, B: any)
-	analyzer:AssertFatal(A:IsSubsetOf(B))
+	analyzer:AssertFatal(shared.IsSubsetOf(A, B))
 	return A
 end
 

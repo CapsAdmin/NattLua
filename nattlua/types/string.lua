@@ -43,10 +43,6 @@ function META:Copy()
 	return copy
 end
 
-function META.IsSubsetOf(A--[[#: TString]], B--[[#: TString | TBaseType]])
-	return shared.IsSubsetOf(A, B)
-end
-
 function META:__tostring()
 	if self.PatternContract then return "$\"" .. self.PatternContract .. "\"" end
 

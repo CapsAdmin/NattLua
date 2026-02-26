@@ -7,6 +7,7 @@ local ConstString = require("nattlua.types.string").ConstString
 local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
 local table = _G.table
+local shared = require("nattlua.types.shared")
 
 local function check_type_against_contract(val, contract)
 	-- if the contract is unique / nominal, ie
@@ -22,7 +23,7 @@ local function check_type_against_contract(val, contract)
 		end
 	end
 
-	local ok, reason = val:IsSubsetOf(contract)
+	local ok, reason = shared.IsSubsetOf(val, contract)
 
 	if not ok then return ok, reason end
 

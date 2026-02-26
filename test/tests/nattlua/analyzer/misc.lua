@@ -716,7 +716,7 @@ analyze[[
             types.True()
         })
 
-        assert(b:IsSubsetOf(a))
+        assert(shared.IsSubsetOf(b, a))
     end
 
     check(test, "!")

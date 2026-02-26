@@ -126,44 +126,6 @@ function META:Copy()--[[#: TNumber]]
 	return copy
 end
 
-function META.IsSubsetOf(a--[[#: TNumber]], b--[[#: TBaseType]])
-	if b.Type == "tuple" then b = b:GetWithNumber(1) end
-
-	if b.Type == "any" then return true end
-
-	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
-
-	if b.Type == "range" then
-		if a.Data and a.Data >= b:GetMin() and a.Data <= b:GetMax() then
-			return true
-		end
-
-		return false, error_messages.subset(a, b)
-	end
-
-	if b.Type ~= "number" then return false, error_messages.subset(a, b) end
-
-	if a.Data and b.Data then
-		if a:IsNan() and b:IsNan() then return true end
-
-		if a.Data == b.Data then return true end
-
-		return false, error_messages.subset(a, b)
-	elseif a.Data == false and b.Data == false then
-		-- number contains number
-		return true
-	elseif a.Data and not b.Data then
-		-- 42 subset of number?
-		return true
-	elseif not a.Data and b.Data then
-		-- number subset of 42 ?
-		return false, error_messages.subset(a, b)
-	end
-
-	-- number == number
-	return true
-end
-
 function META:IsNan()--[[#: boolean]]
 	return self.Data ~= self.Data
 end

@@ -20,10 +20,6 @@ function META:Copy()
 	return self
 end
 
-function META.IsSubsetOf(A--[[#: TAny]], B--[[#: TBaseType]])
-	return shared.IsSubsetOf(A, B)
-end
-
 function META:GetHashForMutationTracking() end
 
 function META:__tostring()

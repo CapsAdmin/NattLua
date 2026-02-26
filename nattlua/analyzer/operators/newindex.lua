@@ -6,6 +6,7 @@ local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
 local ConstString = require("nattlua.types.string").ConstString
 local error_messages = require("nattlua.error_messages")
+local shared = require("nattlua.types.shared")
 return {
 	NewIndex = function(META--[[#: any]])
 		local function newindex_union(analyzer, obj, key, val)
@@ -76,7 +77,7 @@ return {
 							val:SetCalled(false)
 						end
 
-						local ok, err = val:IsSubsetOf(existing)
+						local ok, err = shared.IsSubsetOf(val, existing)
 
 						if ok then
 							if obj == contract then

@@ -2,6 +2,7 @@ local Number = require("nattlua.types.number").Number
 local LNumber = require("nattlua.types.number").LNumber
 local LString = require("nattlua.types.string").LString
 local Table = require("nattlua.types.table").Table
+local shared = require("nattlua.types.shared")
 
 test("union and get", function()
 	local contract = Table()
@@ -12,8 +13,8 @@ test("union and get", function()
 	tbl:SetContract(contract)
 	assert(tbl:Set(LString("foo"), LNumber(1337)))
 	equal(1337, tbl:Get(LString("foo")):GetData())
-	assert(tbl:IsSubsetOf(contract))
-	assert(not contract:IsSubsetOf(tbl))
+	assert(shared.IsSubsetOf(tbl, contract))
+	assert(not shared.IsSubsetOf(contract, tbl))
 end)
 
 test("errors when trying to modify a table without a defined structure", function()

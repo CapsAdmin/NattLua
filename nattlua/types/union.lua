@@ -314,7 +314,7 @@ function META:IsTypeObjectSubsetOf(typ--[[#: TBaseType]])
 	local errors
 
 	for i, obj in ipairs(self.Data) do
-		local ok, reason = typ:IsSubsetOf(obj)
+		local ok, reason = shared.IsSubsetOf(typ, obj)
 
 		if ok then return obj end
 
@@ -327,7 +327,7 @@ end
 
 function META:HasTypeObject(obj--[[#: TBaseType]])
 	for i, v in ipairs(self.Data) do
-		local ok, reason = obj:IsSubsetOf(v)
+		local ok, reason = shared.IsSubsetOf(obj, v)
 
 		if ok then return v end
 	end
@@ -425,7 +425,7 @@ function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 	local errors = {}
 
 	for i, obj in ipairs(self.Data) do
-		local ok, reason = target:IsSubsetOf(obj)
+		local ok, reason = shared.IsSubsetOf(target, obj)
 
 		if ok then return true end
 
@@ -433,10 +433,6 @@ function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 	end
 
 	return false, error_messages.subset(target, self, errors)
-end
-
-function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: any]])
-	return shared.IsSubsetOf(a, b)
 end
 
 function META:Union(union--[[#: TUnion]])

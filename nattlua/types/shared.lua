@@ -208,6 +208,44 @@ end
 function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: any]])--[[#: boolean, string | nil]]
 	if a.Type == "any" then return true end
 
+	if a.Type == "number" then
+		if b.Type == "tuple" then b = b:GetWithNumber(1) end
+
+		if b.Type == "any" then return true end
+
+		if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
+
+		if b.Type == "range" then
+			if a.Data and a.Data >= b:GetMin() and a.Data <= b:GetMax() then
+				return true
+			end
+
+			return false, error_messages.subset(a, b)
+		end
+
+		if b.Type ~= "number" then return false, error_messages.subset(a, b) end
+
+		if a.Data and b.Data then
+			if a:IsNan() and b:IsNan() then return true end
+
+			if a.Data == b.Data then return true end
+
+			return false, error_messages.subset(a, b)
+		elseif a.Data == false and b.Data == false then
+			-- number contains number
+			return true
+		elseif a.Data and not b.Data then
+			-- 42 subset of number?
+			return true
+		elseif not a.Data and b.Data then
+			-- number subset of 42 ?
+			return false, error_messages.subset(a, b)
+		end
+
+		-- number == number
+		return true
+	end
+
 	if a.Type == "deferred" then
 		if b.Type == "any" then return true end
 
@@ -215,7 +253,7 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 
 		if unwrapped == a then return b == a end
 
-		return unwrapped:IsSubsetOf(b, visited)
+		return shared.IsSubsetOf(unwrapped, b, visited)
 	end
 
 	if a.Type == "string" then
@@ -311,7 +349,7 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 					local a_any = a--[[# as any]]
 					local old = a_any.suppress
 					a_any.suppress = true
-					local ok, err = (akeyval--[[# as any]]).val:IsSubsetOf(bkeyval.val)
+					local ok, err = shared.IsSubsetOf((akeyval--[[# as any]]).val, bkeyval.val)
 					a_any.suppress = old
 
 					if not ok then
@@ -392,7 +430,7 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 			end
 
 			a.suppress = true
-			local ok, reason = a_val:IsSubsetOf(b_val)
+			local ok, reason = shared.IsSubsetOf(a_val, b_val)
 			a.suppress = false
 
 			if not ok then
@@ -425,7 +463,7 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 			if b.Type == "union" then
 				b_val, reason = b:IsTypeObjectSubsetOf(a_val)
 			else
-				ok, reason = a_val:IsSubsetOf(b)
+				ok, reason = shared.IsSubsetOf(a_val, b)
 
 				if ok then
 					b_val = b
@@ -442,7 +480,7 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 			end
 
 			a.suppress = true
-			local ok, reason = a_val:IsSubsetOf(b_val)
+			local ok, reason = shared.IsSubsetOf(a_val, b_val)
 			a.suppress = false
 
 			if not ok then
@@ -487,7 +525,7 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 
 		if not a_input or not b_input then return false, "missing input signature" end
 
-		local ok, reason = a_input:IsSubsetOf(b_input)
+		local ok, reason = shared.IsSubsetOf(a_input, b_input)
 
 		if not ok then
 			return false,
@@ -499,7 +537,7 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 
 		if not a_output or not b_output then return false, "missing output signature" end
 
-		local ok, reason = a_output:IsSubsetOf(b_output)
+		local ok, reason = shared.IsSubsetOf(a_output, b_output)
 
 		if
 			not ok and
@@ -527,9 +565,9 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 	end
 
 	do -- base
-		if b.Type == "deferred" then b = (other--[[# as any]]):Unwrap() end
+		if b.Type == "deferred" then b = b:Unwrap() end
 
-		return false, "nyi"
+		return false, error_messages.subset(a, b)
 	end
 end
 
@@ -604,7 +642,7 @@ function shared.Get(a--[[#: TBaseType]], key--[[#: TBaseType]])
 			for _, keyval in ipairs(self.Data) do
 				if keyval.key.Type == "union" then
 					for _, ukey in ipairs((keyval.key--[[# as any]]):GetData()) do
-						if ukey:IsSubsetOf(key) then union:AddType(keyval.val) end
+						if shared.IsSubsetOf(ukey, key) then union:AddType(keyval.val) end
 					end
 				elseif keyval.key.Type == key.Type or keyval.key.Type == "any" then
 					if keyval.key:IsLiteral() then
@@ -775,7 +813,7 @@ function shared.Set(a--[[#: TBaseType]], key--[[#: TBaseType]], val--[[#: TBaseT
 
 			if not keyval then return (keyval--[[# as any]]), reason end
 
-			local ok, reason = (val--[[# as TBaseType]]):IsSubsetOf((keyval--[[# as any]]).val)
+			local ok, reason = shared.IsSubsetOf(val--[[# as TBaseType]], (keyval--[[# as any]]).val)
 
 			if not ok then return ok, reason end
 		end
@@ -865,7 +903,7 @@ function shared.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--
 
 				return nil
 			elseif env == "typesystem" then
-				return l:IsSubsetOf(r) and r:IsSubsetOf(l)
+				return shared.IsSubsetOf(l, r) and shared.IsSubsetOf(r, l)
 			end
 		end
 

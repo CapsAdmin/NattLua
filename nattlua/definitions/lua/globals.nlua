@@ -41,7 +41,7 @@ analyzer function next(t: Map<|any, any|>, k: any)
 	if t:IsLiteral() then
 		if k and not (k.Type == "symbol" and k:IsNil()) then
 			for i, kv in ipairs(t:GetData()) do
-				if kv.key:IsSubsetOf(k) then
+				if shared.IsSubsetOf(kv.key, k) then
 					local kv = t:GetData()[i + 1]
 
 					if kv then
