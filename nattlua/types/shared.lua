@@ -1,16 +1,5 @@
 local shared = {}
 local error_messages = require("nattlua.error_messages")
-local context = require("nattlua.analyzer.context")
-local Nil = nil
-local Any = nil
-local Union = nil
-local LNumber = nil
-local math_abs = math.abs
-local math_huge = math.huge
-
-local function base(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: any]])--[[#: boolean, string | nil]]
-	return false, "nyi"
-end
 
 function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: any]])--[[#: boolean, string | nil]]
 	if a.Type == "string" then
@@ -202,7 +191,7 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 		return a.Type == b.Type, "any types match"
 	end
 
-	return base(a, b, visited)
+	return false, "nyi"
 end
 
 function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: any]])--[[#: boolean, string | nil]]
