@@ -476,7 +476,6 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 	end
 
 	copy:CopyInternalsFrom(self)
-	copy.tr = self.tr
 	return copy
 end
 
