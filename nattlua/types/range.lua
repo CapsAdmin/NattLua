@@ -6,6 +6,7 @@ local tostring = _G.tostring
 local tonumber = _G.tonumber
 local setmetatable = _G.setmetatable
 local type = _G.type
+local shared = require("nattlua.types.shared")
 local error_messages = require("nattlua.error_messages")
 local bit = require("nattlua.other.bit")
 local jit = _G.jit
@@ -71,7 +72,7 @@ function META:GetHashForMutationTracking()
 end
 
 function META.Equal(a--[[#: TRange]], b--[[#: TBaseType]])
-	return a.Hash == b.Hash
+	return shared.Equal(a, b)
 end
 
 function META:IsLiteral()
@@ -102,19 +103,7 @@ function META:Copy()
 end
 
 function META.IsSubsetOf(a--[[#: TRange]], b--[[#: TBaseType]])
-	if b.Type == "tuple" then b = b:GetWithNumber(1) end
-
-	if b.Type == "any" then return true end
-
-	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
-
-	if b.Type == "number" and not b.Data then return true end
-
-	if b.Type ~= "range" then return false, error_messages.subset(a, b) end
-
-	if a:GetMin() >= b:GetMin() and a:GetMax() <= b:GetMax() then return true end
-
-	return false, error_messages.subset(a, b)
+	return shared.IsSubsetOf(a, b)
 end
 
 function META:__tostring()

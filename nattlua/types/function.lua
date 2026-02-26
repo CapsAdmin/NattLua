@@ -12,6 +12,7 @@ local table = _G.table
 local Tuple = require("nattlua.types.tuple").Tuple
 local VarArg = require("nattlua.types.tuple").VarArg
 local Any = require("nattlua.types.any").Any
+local shared = require("nattlua.types.shared")
 --
 local error_messages = require("nattlua.error_messages")
 local META = require("nattlua.types.base")()
@@ -41,12 +42,7 @@ META:GetSet("InputModifiers", false--[[# as TFunction.InputModifiers]])
 META:GetSet("OutputModifiers", false--[[# as TFunction.OutputModifiers]])
 
 function META.LogicalComparison(l--[[#: TFunction]], r--[[#: TFunction]], op--[[#: string]])
-	if op == "==" then
-		local ok = l:Equal(r)
-		return ok
-	end
-
-	return false, error_messages.binary(op, l, r)
+	return shared.LogicalComparison(l, r, op)
 end
 
 function META:__tostring()
@@ -73,27 +69,7 @@ function META:IsLiteral()
 end
 
 function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]], visited--[[#: any]])
-	if a.Type ~= b.Type then return false, "types differ" end
-
-	local a_input = a:GetInputSignature()
-	local b_input = b:GetInputSignature()--[[# as TTuple]]
-
-	if not a_input or not b_input then return false, "missing input signature" end
-
-	local ok, reason = a_input:Equal(b_input, visited)
-
-	if not ok then return false, "input signature mismatch: " .. reason end
-
-	local a_output = a:GetOutputSignature()
-	local b_output = b:GetOutputSignature()--[[# as TTuple]]
-
-	if not a_output or not b_output then return false, "missing output signature" end
-
-	local ok, reason = a_output:Equal(b_output, visited)
-
-	if not ok then return false, "output signature mismatch: " .. reason end
-
-	return true, "ok"
+	return shared.Equal(a, b, visited)
 end
 
 local context = require("nattlua.analyzer.context")
@@ -191,60 +167,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 end
 
 function META.IsSubsetOf(a--[[#: TFunction]], b--[[#: TBaseType]])
-	if b.Type == "deferred" then b = b:Unwrap() end
-
-	if b.Type == "tuple" then
-		b = assert(b:GetWithNumber(1--[[# as any]]))--[[# as TBaseType]]
-	end
-
-	if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
-
-	if b.Type == "any" then return true end
-
-	if b.Type ~= "function" then return false, error_messages.subset(a, b) end
-
-	local a_input = a:GetInputSignature()
-	local b_input = b:GetInputSignature()
-
-	if not a_input or not b_input then return false, "missing input signature" end
-
-	local ok, reason = a_input:IsSubsetOf(b_input)
-
-	if not ok then
-		return false,
-		error_messages.because(error_messages.subset(a_input, b_input), reason)
-	end
-
-	local a_output = a:GetOutputSignature()
-	local b_output = b:GetOutputSignature()
-
-	if not a_output or not b_output then return false, "missing output signature" end
-
-	local ok, reason = a_output:IsSubsetOf(b_output)
-
-	if
-		not ok and
-		(
-			(
-				not b:IsCalled() and
-				not b:IsExplicitOutputSignature()
-			)
-			or
-			(
-				not a:IsCalled() and
-				not a:IsExplicitOutputSignature()
-			)
-		)
-	then
-		return true
-	end
-
-	if not ok then
-		return false,
-		error_messages.because(error_messages.subset(a_output, b_output), reason)
-	end
-
-	return true
+	return shared.IsSubsetOf(a, b)
 end
 
 function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TFunction]])

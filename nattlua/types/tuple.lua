@@ -10,6 +10,7 @@ local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
 local error_messages = require("nattlua.error_messages")
+local shared = require("nattlua.types.shared")
 local ipairs = _G.ipairs
 local type = _G.type
 local table_unpack = _G.unpack or _G.table.unpack
@@ -31,26 +32,7 @@ function META.Equal(
 	b--[[#: TBaseType]],
 	visited--[[#: Map<|TBaseType, boolean|> | nil]]
 )
-	if a.Type ~= b.Type then return false, "types differ" end
-
-	visited = visited or {}
-
-	if visited[a] then return true, "circular reference detected" end
-
-	if #a.Data ~= #b.Data then return false, "length mismatch" end
-
-	local ok, reason = true, "all match"
-	visited[a] = true
-
-	for i = 1, #a.Data do
-		ok, reason = (a.Data[i]--[[# as any]]):Equal(b.Data[i]--[[# as any]], visited)
-
-		if not ok then break end
-	end
-
-	if not ok then reason = reason or "unknown reason" end
-
-	return ok, reason
+	return shared.Equal(a, b, visited)
 end
 
 function META:GetHash(visited--[[#: Map<|TBaseType, string|> | nil]])
@@ -158,63 +140,7 @@ function META:Copy(map--[[#: Map<|any, TTuple|> | nil]], copy_tables--[[#: boole
 end
 
 function META.IsSubsetOf(a--[[#: TTuple]], b--[[#: any]], max_length--[[#: nil | number]])
-	if b.Type == "deferred" then b = b:Unwrap() end
-
-	if a == b then return true end
-
-	if a.suppress then return true end
-
-	if a.Remainder then
-		local t = a:GetWithNumber(1)
-
-		if t and t.Type == "any" and #a:GetData() == 0 then return true end
-	end
-
-	if b.Type == "union" then return b:IsTargetSubsetOfChild(a--[[# as any]]) end
-
-	do
-		local t = a:GetWithNumber(1)
-
-		if t and t.Type == "any" and b.Type == "tuple" and b:IsEmpty() then
-			return true
-		end
-	end
-
-	if b.Type == "any" then return true end
-
-	if b.Type == "table" then
-		if not b:IsNumericallyIndexed() then
-			return false, error_messages.numerically_indexed(b)
-		end
-	end
-
-	if b.Type ~= "tuple" then return false, error_messages.subset(a, b) end
-
-	max_length = max_length or math.max(a:GetMinimumLength(), b:GetMinimumLength())
-
-	for i = 1, max_length do
-		local a_val, err = a:GetWithNumber(i)
-
-		if not a_val then return false, error_messages.subset(a, b, err) end
-
-		local b_val, err = b:GetWithNumber(i)
-
-		if not b_val and a_val.Type == "any" then break end
-
-		if not b_val then
-			return false, error_messages.because(error_messages.table_index(b, i), err)
-		end
-
-		a.suppress = true
-		local ok, reason = a_val:IsSubsetOf(b_val)
-		a.suppress = false
-
-		if not ok then
-			return false, error_messages.because(error_messages.subset(a_val, b_val), reason)
-		end
-	end
-
-	return true
+	return shared.IsSubsetOf(a, b, max_length)
 end
 
 function META.IsSubsetOfTupleWithoutExpansion(a--[[#: TTuple]], b--[[#: TBaseType]])
@@ -487,32 +413,7 @@ function META:GetWithNumber(i--[[#: number]])
 end
 
 function META:Get(key--[[#: TBaseType]])
-	if key.Type == "union" then
-		local union = Union()
-
-		for _, v in ipairs(key:GetData()) do
-			if v.Type == "number" then
-				local val = self:Get(v)
-				union:AddType(val)
-			end
-		end
-
-		return union--[[# as TBaseType]]
-	end
-
-	if key.Type ~= "number" then
-		return false, {"attempt to index tuple with", key.Type}
-	end
-
-	if key:IsLiteral() then return self:GetWithNumber(key:GetData()) end
-
-	local union = Union()
-
-	for i = 1, self:GetMinimumLength() do
-		union:AddType(self:GetWithNumber(i))
-	end
-
-	return union
+	return shared.Get(self, key)
 end
 
 function META:IsLiteral()
@@ -535,21 +436,7 @@ end
 
 -- TODO, this should really be SetWithNumber, and Set should take a number object
 function META:Set(i--[[#: number]], val--[[#: any]])
-	if type(i) == "table" then
-		if i.Type ~= "number" then return false, "expected number" end
-
-		i = i:GetData()
-	end
-
-	if val.Type == "tuple" and val:HasOneValue() then
-		val = val:GetWithNumber(1)
-	end
-
-	self.Data[i] = val
-
-	if i > 32 then error("tuple too long", 2) end
-
-	return true
+	return shared.Set(self, i, val)
 end
 
 function META:IsEmpty()

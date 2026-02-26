@@ -11,6 +11,7 @@ local table_concat = _G.table.concat
 local table_remove = _G.table.remove
 local table_sort = require("nattlua.other.sort")
 local table_clear = require("nattlua.other.tablex").clear
+local shared = require("nattlua.types.shared")
 local assert = _G.assert
 local math_max = _G.math.max
 local math_huge = _G.math.huge
@@ -41,44 +42,7 @@ function META.Equal(
 	b--[[#: TBaseType]],
 	visited--[[#: nil | Map<|TBaseType, boolean|>]]
 )
-	visited = visited or {}
-
-	if visited[a] then return true, "circular reference detected" end
-
-	if b.Type ~= "union" and a:GetCardinality() == 1 and a.Data[1] then
-		return a.Data[1]:Equal(b, visited)
-	end
-
-	if a.Type ~= b.Type then return false, "types differ" end
-
-	local b = b
-	local len = #a.Data
-
-	if len ~= #b.Data then return false, "length mismatch" end
-
-	for i = 1, len do
-		local a = assert(a.Data[i])
-		local ok = false
-		local reasons = {}
-
-		for i = 1, len do
-			local b = b.Data[i]
-			local reason
-			ok, reason = a:Equal(b, visited)
-
-			if ok then break end
-
-			table.insert(reasons, reason--[[# as string]])
-		end
-
-		if a.Type == "table" then visited[a] = true end
-
-		if not ok then
-			return false, "union value mismatch: " .. table.concat(reasons, "\n")
-		end
-	end
-
-	return true, "all union values match"
+	return shared.Equal(a, b, visited)
 end
 
 function META:GetHash(visited--[[#: Map<|any, string|> | nil]])--[[#: string]]
@@ -480,53 +444,7 @@ function META:IsTargetSubsetOfChild(target--[[#: TBaseType]])
 end
 
 function META.IsSubsetOf(a--[[#: TUnion]], b--[[#: any]])
-	if b.Type == "deferred" then b = b:Unwrap() end
-
-	if a.suppress then return true, "suppressed" end
-
-	if b.Type == "tuple" then b = b:GetWithNumber(1) end
-
-	if b.Type == "any" then return true end
-
-	if a:IsEmpty() then
-		return false,
-		error_messages.because(error_messages.subset(a, b), {"union is empty"})
-	end
-
-	for _, a_val in ipairs(a.Data) do
-		a.suppress = true
-		local b_val, reason
-		local ok
-
-		if b.Type == "union" then
-			b_val, reason = b:IsTypeObjectSubsetOf(a_val)
-		else
-			ok, reason = a_val:IsSubsetOf(b)
-
-			if ok then
-				b_val = b
-			else
-				b_val = false
-				reason = reason
-			end
-		end
-
-		a.suppress = false
-
-		if not b_val then
-			return false, error_messages.because(error_messages.subset(b, a_val), reason)
-		end
-
-		a.suppress = true
-		local ok, reason = a_val:IsSubsetOf(b_val)
-		a.suppress = false
-
-		if not ok then
-			return false, error_messages.because(error_messages.subset(a_val, b_val), reason)
-		end
-	end
-
-	return true
+	return shared.IsSubsetOf(a, b)
 end
 
 function META:Union(union--[[#: TUnion]])

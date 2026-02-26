@@ -12,6 +12,7 @@ local loadstring = require("nattlua.other.loadstring")
 local string_to_integer = require("nattlua.other.integer")
 local jit = _G.jit
 local False = require("nattlua.types.symbol").False
+local shared = require("nattlua.types.shared")
 local META = require("nattlua.types.base")()
 --[[#local type TNumber = META.@SelfArgument]]
 --[[#type TNumber.Type = "number"]]
@@ -90,9 +91,7 @@ function META:GetHashForMutationTracking()
 end
 
 function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
-	if a.Type ~= b.Type then return false, "types differ" end
-
-	return a.Hash == b.Hash, "hash values are equal"
+	return shared.Equal(a, b)
 end
 
 function META:IsLiteral()

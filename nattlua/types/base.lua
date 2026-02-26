@@ -3,6 +3,7 @@ local assert = _G.assert
 local tostring = _G.tostring
 local setmetatable = _G.setmetatable
 local error_messages = require("nattlua.error_messages")
+local shared = require("nattlua.types.shared")
 local class = require("nattlua.other.class")
 return function()
 	local META = class.CreateTemplate("base")
@@ -15,13 +16,11 @@ return function()
 	--[[#type META.Type = string]]
 
 	function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: any]])--[[#: boolean, string | nil]]
-		return false, "nyi"
+		return shared.Equal(a, b, visited)
 	end
 
 	function META:IsSubsetOf(other--[[#: TBaseType]], visited--[[#: any]])--[[#: boolean, string | nil]]
-		if other.Type == "deferred" then other = (other--[[# as any]]):Unwrap() end
-
-		return false, "nyi"
+		return shared.IsSubsetOf(self, other, visited)
 	end
 
 	function META:IsNil()
@@ -96,11 +95,11 @@ return function()
 
 	do -- operators
 		function META:Set(key--[[#: TBaseType | nil]], val--[[#: TBaseType | nil]])
-			return false, error_messages.undefined_set(self, key, val, self.Type)
+			return shared.Set(self, key, val)
 		end
 
 		function META:Get(key--[[#: boolean]])
-			return false, error_messages.undefined_get(self, key, self.Type)
+			return shared.Get(self, key)
 		end
 	end
 
@@ -114,7 +113,7 @@ return function()
 	end
 
 	function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[#: string]])
-		return false, error_messages.binary(op, l, r)
+		return shared.LogicalComparison(l, r, op)
 	end
 
 	function META:IsNumeric()

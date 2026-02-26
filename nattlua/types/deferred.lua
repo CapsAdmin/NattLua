@@ -1,6 +1,6 @@
---ANALYZE
 local setmetatable = _G.setmetatable
 local getmetatable = _G.getmetatable
+local shared = require("nattlua.types.shared")
 local tostring = _G.tostring
 local META = require("nattlua.types.base")()
 META:GetSet("Reference", false)
@@ -60,21 +60,11 @@ function META:IsCertainlyFalse()
 end
 
 function META:Equal(other, visited)
-	local unwrapped = self:Unwrap()
-
-	if unwrapped == self then return other == self end
-
-	return unwrapped:Equal(other, visited)
+	return shared.Equal(self, other, visited)
 end
 
 function META:IsSubsetOf(other, visited)
-	if other.Type == "any" then return true end
-
-	local unwrapped = self:Unwrap()
-
-	if unwrapped == self then return other == self end
-
-	return unwrapped:IsSubsetOf(other, visited)
+	return shared.IsSubsetOf(self, other, visited)
 end
 
 function META:GetHash(visited)
@@ -139,23 +129,11 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 end
 
 function META:Set(key, val)
-	local unwrapped = self:Unwrap()
-
-	if unwrapped == self then
-		return false, "cannot set on unresolved deferred reference"
-	end
-
-	return unwrapped:Set(key, val)
+	return shared.Set(self, key, val)
 end
 
 function META:Get(key)
-	local unwrapped = self:Unwrap()
-
-	if unwrapped == self then
-		return false, "cannot get from unresolved deferred reference"
-	end
-
-	return unwrapped:Get(key)
+	return shared.Get(self, key)
 end
 
 function META:__index(key)

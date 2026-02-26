@@ -1,8 +1,8 @@
---ANALYZE
 local type = type
 local tostring = tostring
 local setmetatable = _G.setmetatable
 local error_messages = require("nattlua.error_messages")
+local shared = require("nattlua.types.shared")
 local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 local TRUE = {"true"}
@@ -32,17 +32,11 @@ function META:GetData()
 end
 
 function META.Equal(a--[[#: TSymbol]], b--[[#: TBaseType]])
-	if a.Type ~= b.Type then return false, "types differ" end
-
-	if a.Data == b.Data then return true, "symbol values match" end
-
-	return false, "values are not equal"
+	return shared.Equal(a, b)
 end
 
 function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#: string]])
-	if op == "==" then return l.Data == r.Data end
-
-	return false, error_messages.binary(op, l, r)
+	return shared.LogicalComparison(l, r, op)
 end
 
 do
@@ -92,17 +86,7 @@ function META:IsFalse()
 end
 
 function META.IsSubsetOf(a--[[#: TSymbol]], b--[[#: TBaseType]])
-	if b.Type == "tuple" then b = b:GetWithNumber(1) end
-
-	if b.Type == "any" then return true end
-
-	if b.Type == "union" then return b:IsTargetSubsetOfChild(a--[[# as any]]) end
-
-	if b.Type ~= "symbol" then return false, error_messages.subset(a, b) end
-
-	if a.Data ~= b.Data then return false, error_messages.subset(a, b) end
-
-	return true
+	return shared.IsSubsetOf(a, b)
 end
 
 function META:IsLiteral()
