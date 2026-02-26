@@ -2,19 +2,43 @@ local shared = {}
 local error_messages = require("nattlua.error_messages")
 
 function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: any]])--[[#: boolean, string | nil]]
-	if a.Type == "string" then
-		if a.Type ~= b.Type then return false, "types differ" end
+	if a == b then return true, "same object" end
 
+	if a.Type == "deferred" then
+		local unwrapped = a:Unwrap()
+
+		if unwrapped == a then return b == a end
+
+		a = unwrapped
+	end
+
+	if b.Type == "deferred" then
+		local unwrapped = b:Unwrap()
+
+		if unwrapped == b then return a == b end
+
+		b = unwrapped
+	end
+
+	if a.Type == "union" and a:GetCardinality() == 1 and a.Data[1] then
+		a = a.Data[1]
+	end
+
+	if b.Type == "union" and b:GetCardinality() == 1 and b.Data[1] then
+		b = b.Data[1]
+	end
+
+	if a.Type ~= b.Type then return false, "types differ" end
+
+	if a.Type == "number" then
+		return a.Hash == b.Hash, "hash values are equal"
+	elseif a.Type == "string" then
 		return a.Hash == b.Hash, "string values are equal"
 	elseif a.Type == "symbol" then
-		if a.Type ~= b.Type then return false, "types differ" end
-
 		if a.Data == b.Data then return true, "symbol values match" end
 
 		return false, "values are not equal"
 	elseif a.Type == "table" then
-		if a.Type ~= b.Type then return false, "types differ" end
-
 		if a:IsUnique() then
 			return a:GetUniqueID() == b:GetUniqueID(), "unique ids match"
 		end
@@ -96,8 +120,6 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 	elseif a.Type == "range" then
 		return a.Hash == b.Hash
 	elseif a.Type == "tuple" then
-		if a.Type ~= b.Type then return false, "types differ" end
-
 		visited = visited or {}
 
 		if visited[a] then return true, "circular reference detected" end
@@ -118,15 +140,6 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 		return ok, reason
 	elseif a.Type == "union" then
 		visited = visited or {}
-
-		if visited[a] then return true, "circular reference detected" end
-
-		if b.Type ~= "union" and a:GetCardinality() == 1 and a.Data[1] then
-			return shared.Equal(a.Data[1], b, visited)
-		end
-
-		if a.Type ~= b.Type then return false, "types differ" end
-
 		local b = b
 		local len = #a.Data
 
@@ -155,13 +168,7 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 		end
 
 		return true, "all union values match"
-	elseif a.Type == "number" then
-		if a.Type ~= b.Type then return false, "types differ" end
-
-		return a.Hash == b.Hash, "hash values are equal"
 	elseif a.Type == "function" then
-		if a.Type ~= b.Type then return false, "types differ" end
-
 		local a_input = a:GetInputSignature()
 		local b_input = b:GetInputSignature()--[[# as TTuple]]
 
@@ -181,14 +188,8 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 		if not ok then return false, "output signature mismatch: " .. reason end
 
 		return true, "ok"
-	elseif a.Type == "deferred" then
-		local unwrapped = a:Unwrap()
-
-		if unwrapped == a then return b == a end
-
-		return shared.Equal(unwrapped, b, visited)
 	elseif a.Type == "any" then
-		return a.Type == b.Type, "any types match"
+		return true
 	end
 
 	return false, "nyi"
