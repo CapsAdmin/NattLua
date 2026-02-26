@@ -9,11 +9,11 @@ local META = require("nattlua.types.base")()
 META.Type = "any"
 
 function META:Get(key--[[#: TBaseType]])
-	return shared.Get(self, key)
+	return self
 end
 
 function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType]])
-	return shared.Set(self, key, val)
+	return true
 end
 
 function META:Copy()

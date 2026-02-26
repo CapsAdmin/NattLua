@@ -401,7 +401,32 @@ function META:GetWithNumber(i--[[#: number]])
 end
 
 function META:Get(key--[[#: TBaseType]])
-	return shared.Get(self, key)
+	if key.Type == "union" then
+		local union = Union()
+
+		for _, v in ipairs(key:GetData()) do
+			if v.Type == "number" then
+				local val = self:Get(v)
+				union:AddType(val)
+			end
+		end
+
+		return union--[[# as TBaseType]]
+	end
+
+	if key.Type ~= "number" then
+		return false, {"attempt to index tuple with", key.Type}
+	end
+
+	if key:IsLiteral() then return self:GetWithNumber(key:GetData()) end
+
+	local union = Union()
+
+	for i = 1, self:GetMinimumLength() do
+		union:AddType(self:GetWithNumber(i))
+	end
+
+	return union
 end
 
 function META:IsLiteral()
@@ -424,7 +449,21 @@ end
 
 -- TODO, this should really be SetWithNumber, and Set should take a number object
 function META:Set(i--[[#: number]], val--[[#: any]])
-	return shared.Set(self, i, val)
+	if type(i) == "table" then
+		if i.Type ~= "number" then return false, "expected number" end
+
+		i = i:GetData()
+	end
+
+	if val.Type == "tuple" and val:HasOneValue() then
+		val = val:GetWithNumber(1)
+	end
+
+	self.Data[i] = val
+
+	if i > 32 then error("tuple too long", 2) end
+
+	return true
 end
 
 function META:IsEmpty()

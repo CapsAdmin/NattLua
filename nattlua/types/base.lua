@@ -87,11 +87,11 @@ return function()
 
 	do -- operators
 		function META:Set(key--[[#: TBaseType | nil]], val--[[#: TBaseType | nil]])
-			return shared.Set(self, key, val)
+			return false, error_messages.undefined_set(self, key, val, self.Type)
 		end
 
 		function META:Get(key--[[#: boolean]])
-			return shared.Get(self, key)
+			return false, error_messages.undefined_get(self, key, self.Type)
 		end
 	end
 

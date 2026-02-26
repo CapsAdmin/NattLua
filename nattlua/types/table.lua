@@ -622,7 +622,58 @@ function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]
 end
 
 function META:Set(key--[[#: TBaseType]], val--[[#: TBaseType | nil]], no_delete--[[#: boolean | nil]])--[[#: boolean, (any | nil)]]
-	return shared.Set(self, key, val, no_delete)
+	if
+		key.Type == "string" and
+		key:IsLiteral() and
+		(
+			key
+		--[[# as any]]):GetData():sub(1, 1) == "@"
+	then
+		if
+			context:GetCurrentAnalyzer() and
+			(
+				context:GetCurrentAnalyzer()
+			--[[# as any]]):GetCurrentAnalyzerEnvironment() == "typesystem"
+		then
+			(assert(
+				(self--[[# as any]])["Set" .. (key--[[# as any]]):GetData():sub(2)],
+				(key--[[# as any]]):GetData() .. " is not a function"
+			))(self, val)
+			return true
+		end
+	end
+
+	if key.Type == "symbol" and key:IsNil() then
+		return false, error_messages.invalid_table_index(key)
+	end
+
+	if key.Type == "number" and (key--[[# as any]]):IsNan() then
+		return false, error_messages.invalid_table_index(key)
+	end
+
+	-- delete entry
+	if not no_delete and not self:GetContract() then
+		if (not val or (val.Type == "symbol" and val:IsNil())) then
+			return self:Delete(key--[[# as any]])
+		end
+	end
+
+	local contract = self:GetContract()
+
+	if contract and contract.Type == "table" then -- TODO
+		local keyval, reason = (contract--[[# as TTable]]):FindKeyValWide(key)
+
+		if not keyval then return (keyval--[[# as any]]), reason end
+
+		local ok, reason = shared.IsSubsetOf(val--[[# as TBaseType]], (keyval--[[# as any]]).val)
+
+		if not ok then return ok, reason end
+	end
+
+	-- if the key exists, check if we can replace it and maybe the value
+	local keyval, reason = self:FindKeyValWide(key)
+	self:AddKey(keyval, key, val or Nil())
+	return true
 end
 
 function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
@@ -642,7 +693,134 @@ function META:SetExplicit(key--[[#: TBaseType]], val--[[#: TBaseType]])
 end
 
 function META:Get(key--[[#: TBaseType]])--[[#: (TBaseType | false), (any | nil)]]
-	return shared.Get(self, key)
+	if
+		key.Type == "string" and
+		key:IsLiteral() and
+		(
+			key
+		--[[# as any]]):GetData():sub(1, 1) == "@"
+	then
+		local a = context:GetCurrentAnalyzer()--[[# as any]]
+
+		if a and a:GetCurrentAnalyzerEnvironment() == "typesystem" then
+			return (
+					assert(
+						(self--[[# as any]])["Get" .. (key--[[# as any]]):GetData():sub(2)],
+						(key--[[# as any]]):GetData() .. " is not a function"
+					)
+				)(self) or
+				Nil()
+		end
+	end
+
+	if key.Type == "union" then
+		if (key--[[# as any]]):IsEmpty() then
+			return false, error_messages.union_key_empty()
+		end
+
+		local union = Union()
+		local errors = {}
+
+		for _, k in ipairs((key--[[# as any]]):GetData()) do
+			local obj, reason = self:Get(k)
+
+			if obj then
+				union:AddType(obj)
+			else
+				table.insert(errors, reason)
+			end
+		end
+
+		if union:GetCardinality() == 0 then return false, errors end
+
+		return union
+	end
+
+	if (key.Type == "string" or key.Type == "number") and not key:IsLiteral() then
+		local union = Union({Nil()})
+		local found_non_literal = false
+
+		for _, keyval in ipairs(self.Data) do
+			if keyval.key.Type == "union" then
+				for _, ukey in ipairs((keyval.key--[[# as any]]):GetData()) do
+					if shared.IsSubsetOf(ukey, key) then union:AddType(keyval.val) end
+				end
+			elseif keyval.key.Type == key.Type or keyval.key.Type == "any" then
+				if keyval.key:IsLiteral() then
+					union:AddType(keyval.val)
+				else
+					found_non_literal = true
+
+					break
+				end
+			end
+		end
+
+		if not found_non_literal then return union end
+	end
+
+	if key.Type == "range" then
+		local union = Union()
+		local min, max = (key--[[# as any]]):GetMin(), (key--[[# as any]]):GetMax()
+		local len = math_abs(min - max)
+		local source = key.LengthSourceTable
+		local is_bounded = source and source == self
+
+		if len == math_huge or len == -math_huge then
+			if not is_bounded then union:AddType(Nil()) end
+
+			for _, keyval in ipairs(self.Data) do
+				if keyval.key.Type == "number" then union:AddType(keyval.val) end
+			end
+
+			return union
+		end
+
+		if len > 100 then return Any() end
+
+		for i = min, max do
+			local res, reason = self:Get(LNumber(i))
+
+			if not res then res = Nil() end
+
+			if is_bounded and res and res.Type == "union" then
+				res = res:Copy()
+				res:RemoveOneType(Nil())
+			elseif is_bounded and res and res.Type == "symbol" and res:GetData() == nil then
+				res = nil
+			end
+
+			if res then union:AddType(res) end
+		end
+
+		return union
+	end
+
+	if key.Type == "any" then
+		local union = Union({Nil()})
+
+		for _, keyval in ipairs(self.Data) do
+			union:AddType(keyval.val)
+		end
+
+		return union
+	end
+
+	local keyval, reason = self:FindKeyValWide(key)
+
+	if keyval then return (keyval--[[# as any]]).val end
+
+	local contract = self:GetContract()
+
+	if contract and contract.Type == "table" then
+		local keyval, reason = (contract--[[# as TTable]]):FindKeyValWide(key)
+
+		if keyval then return (keyval--[[# as any]]).val end
+
+		return false, reason
+	end
+
+	return false, reason
 end
 
 function META:IsNumericallyIndexed()

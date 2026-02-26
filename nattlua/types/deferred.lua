@@ -121,11 +121,23 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 end
 
 function META:Set(key, val)
-	return shared.Set(self, key, val)
+	local unwrapped = self:Unwrap()
+
+	if unwrapped == self then
+		return false, "cannot set on unresolved deferred reference"
+	end
+
+	return unwrapped:Set(key, val)
 end
 
 function META:Get(key)
-	return shared.Get(self, key)
+	local unwrapped = self:Unwrap()
+
+	if unwrapped == self then
+		return false, "cannot get from unresolved deferred reference"
+	end
+
+	return unwrapped:Get(key)
 end
 
 function META:__index(key)
