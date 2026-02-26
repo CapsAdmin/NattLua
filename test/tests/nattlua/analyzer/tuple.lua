@@ -159,8 +159,8 @@ analyze[[
 analyze[[
     local analyzer function test(a: any, b: any)
         local tup = types.Tuple({types.LNumber(1),types.LNumber(2),types.LNumber(3)})
-        assert(a:Equal(tup))
-        assert(b:Equal(tup))
+        assert(shared.Equal(a, tup))
+        assert(shared.Equal(b, tup))
     end
 
     local type a = (1,2,3)

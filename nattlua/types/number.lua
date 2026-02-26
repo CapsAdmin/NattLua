@@ -90,10 +90,6 @@ function META:GetHashForMutationTracking()
 	return self
 end
 
-function META.Equal(a--[[#: TNumber]], b--[[#: TBaseType]])
-	return shared.Equal(a, b)
-end
-
 function META:IsLiteral()
 	return self.Data ~= false
 end

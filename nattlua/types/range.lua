@@ -71,10 +71,6 @@ function META:GetHashForMutationTracking()
 	return self.Hash
 end
 
-function META.Equal(a--[[#: TRange]], b--[[#: TBaseType]])
-	return shared.Equal(a, b)
-end
-
 function META:IsLiteral()
 	return false
 end

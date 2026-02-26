@@ -1,7 +1,7 @@
 local type attest = {}
 
 analyzer function attest.equal(A: any, B: any, level: nil | 0 .. inf)
-	local ok, reason = A:Equal(B)
+	local ok, reason = shared.Equal(A, B)
 
 	if not ok then
 		analyzer:ThrowError(

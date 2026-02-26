@@ -9,6 +9,7 @@ local table = _G.table
 local type = _G.type
 local class = require("nattlua.other.class")
 local Upvalue = require("nattlua.analyzer.base.upvalue").New
+local shared = require("nattlua.types.shared")
 local META = class.CreateTemplate("lexical_scope")
 
 do
@@ -187,7 +188,7 @@ function META:TracksSameAs(scope, obj)
 						local a = data_a.stack[#data_a.stack].truthy
 						local b = data_b.stack[#data_b.stack].truthy
 
-						if a:Equal(b) then return true end
+						if shared.Equal(a, b) then return true end
 					else
 						return true
 					end
@@ -416,7 +417,8 @@ function META:FindUnusedUpvalues(unused)
 	end
 
 	for _, upvalue in ipairs(self.upvalues.typesystem.list) do
-		-- we don't care about unused typesystem upvalues for now since they are not emitted
+
+	-- we don't care about unused typesystem upvalues for now since they are not emitted
 	end
 
 	for _, child in ipairs(self:GetChildren()) do

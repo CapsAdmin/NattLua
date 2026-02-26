@@ -22,6 +22,7 @@ local Nil = require("nattlua.types.symbol").Nil
 local Boolean = require("nattlua.types.union").Boolean
 local Union = require("nattlua.types.union").Union
 local Any = require("nattlua.types.any").Any
+local shared = require("nattlua.types.shared")
 local ERROR_REDECLARE = false
 local walk_cdeclarations = require("nattlua.definitions.lua.ffi.ast_walker")
 require("nattlua.other.context_mixin")(META)
@@ -171,7 +172,7 @@ local function cast(self, decl)
 						if ERROR_REDECLARE then
 							local existing = self.type_table:Get(LString(ident))
 
-							if existing and not existing:Equal(tbl) and not existing:IsEmpty() then
+							if existing and not shared.Equal(existing, tbl) and not existing:IsEmpty() then
 								error(
 									"attempt to redeclare type " .. ident .. " = " .. tostring(existing) .. " as " .. tostring(tbl)
 								)

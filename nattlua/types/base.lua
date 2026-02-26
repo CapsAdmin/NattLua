@@ -15,10 +15,6 @@ return function()
 	--[[#type META.TBaseType = TBaseType]]
 	--[[#type META.Type = string]]
 
-	function META.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: any]])--[[#: boolean, string | nil]]
-		return shared.Equal(a, b, visited)
-	end
-
 	function META:IsSubsetOf(other--[[#: TBaseType]], visited--[[#: any]])--[[#: boolean, string | nil]]
 		return shared.IsSubsetOf(self, other, visited)
 	end

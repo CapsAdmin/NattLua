@@ -78,14 +78,6 @@ do
 	end
 end
 
-function META.Equal(
-	a--[[#: TTable]],
-	b--[[#: TBaseType]],
-	visited--[[#: Map<|TBaseType, boolean|> | nil]]
-)--[[#: boolean, string | nil]]
-	return shared.Equal(a, b, visited)
-end
-
 function META:GetHash(visited--[[#: Map<|TBaseType, string|> | nil]])--[[#: string]]
 	if self:IsUnique() then
 		return "{*" .. (self:GetUniqueID()--[[# as any]]) .. "*}"
@@ -412,7 +404,7 @@ function META:AddKey(
 		table.insert(self.Data--[[# as any]], keyval)
 		write_cache(self, key, keyval)
 	else
-		if keyval.key:IsLiteral() and keyval.key:Equal(key) then
+		if keyval.key:IsLiteral() and shared.Equal(keyval.key, key) then
 			(keyval--[[# as any]]).val = val
 		else
 			(keyval--[[# as any]]).val = Union({keyval.val, val})
@@ -441,7 +433,7 @@ function META:Delete(key--[[#: TBaseType]])--[[#: boolean]]
 	for i = #self.Data, 1, -1 do
 		local keyval = self.Data[i]
 
-		if keyval and key:Equal(keyval.key) then
+		if keyval and shared.Equal(key, keyval.key) then
 			table.remove(self.Data, i)
 			write_cache(self, keyval.key, nil)
 		end
@@ -555,7 +547,9 @@ function META:HasKey(key--[[#: TBaseType]])--[[#: boolean]]
 	if read_cache(self, key) then return true end
 
 	for i, keyval in ipairs(self.Data) do
-		if key:Equal(keyval.key) or key:IsSubsetOf(keyval.key) then return true end
+		if shared.Equal(key, keyval.key) or key:IsSubsetOf(keyval.key) then
+			return true
+		end
 	end
 
 	return false
@@ -601,7 +595,7 @@ function META:FindKeyValWide(key--[[#: TBaseType]], reverse--[[#: boolean | nil]
 		local keyval = data[i]
 
 		if keyval then
-			if key:Equal(keyval.key) then return keyval--[[# as any]] end
+			if shared.Equal(key, keyval.key) then return keyval--[[# as any]] end
 
 			local ok, reason
 
@@ -662,7 +656,7 @@ end
 function META:CopyLiteralness(from, map)--[[#: TTable]]
 	if from.Type ~= self.Type then return self end
 
-	if self:Equal(from) then return self end
+	if shared.Equal(self, from) then return self end
 
 	map = map or {}
 
@@ -686,7 +680,7 @@ end
 function META:CopyLiteralness2(from)
 	if from.Type ~= self.Type then return self end
 
-	if self:Equal(from) then return self end
+	if shared.Equal(self, from) then return self end
 
 	local ref_map = {[from] = self}
 

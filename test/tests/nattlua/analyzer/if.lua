@@ -1616,13 +1616,13 @@ analyze[[
         attest.equal(C, true)
     end
 
-    §assert(env.runtime.A:GetUpvalue():GetMutations()[1].value:Equal(types.Boolean()))
+    §assert(shared.Equal(env.runtime.A:GetUpvalue():GetMutations()[1].value, types.Boolean()))
 
-    §assert(env.runtime.A:GetUpvalue():GetMutations()[2].value:Equal(types.True()))
+    §assert(shared.Equal(env.runtime.A:GetUpvalue():GetMutations()[2].value, types.True()))
 
-    §assert(env.runtime.A:GetUpvalue():GetMutations()[3].value:Equal(types.False()))
+    §assert(shared.Equal(env.runtime.A:GetUpvalue():GetMutations()[3].value, types.False()))
 
-    §assert(env.runtime.A:GetUpvalue():GetMutations()[4].value:Equal(types.False()))
+    §assert(shared.Equal(env.runtime.A:GetUpvalue():GetMutations()[4].value, types.False()))
 
     §assert(env.runtime.A:GetUpvalue():GetMutations()[5] == nil)
 ]]

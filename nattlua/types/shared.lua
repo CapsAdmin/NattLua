@@ -88,7 +88,10 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 
 			for i = 1, #bdata do
 				if not matched[i] then -- Skip already matched entries
-					if akv.key:Equal(bdata[i].key, visited) and akv.val:Equal(bdata[i].val, visited) then
+					if
+						shared.Equal(akv.key, bdata[i].key, visited) and
+						shared.Equal(akv.val, bdata[i].val, visited)
+					then
 						ok = true
 						matched[i] = true
 
@@ -116,7 +119,7 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 		visited[a] = true
 
 		for i = 1, #a.Data do
-			ok, reason = (a.Data[i]--[[# as any]]):Equal(b.Data[i]--[[# as any]], visited)
+			ok, reason = shared.Equal(a.Data[i]--[[# as any]], b.Data[i]--[[# as any]], visited)
 
 			if not ok then break end
 		end
@@ -130,7 +133,7 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 		if visited[a] then return true, "circular reference detected" end
 
 		if b.Type ~= "union" and a:GetCardinality() == 1 and a.Data[1] then
-			return a.Data[1]:Equal(b, visited)
+			return shared.Equal(a.Data[1], b, visited)
 		end
 
 		if a.Type ~= b.Type then return false, "types differ" end
@@ -148,7 +151,7 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 			for i = 1, len do
 				local b = b.Data[i]
 				local reason
-				ok, reason = a:Equal(b, visited)
+				ok, reason = shared.Equal(a, b, visited)
 
 				if ok then break end
 
@@ -175,7 +178,7 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 
 		if not a_input or not b_input then return false, "missing input signature" end
 
-		local ok, reason = a_input:Equal(b_input, visited)
+		local ok, reason = shared.Equal(a_input, b_input, visited)
 
 		if not ok then return false, "input signature mismatch: " .. reason end
 
@@ -184,7 +187,7 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 
 		if not a_output or not b_output then return false, "missing output signature" end
 
-		local ok, reason = a_output:Equal(b_output, visited)
+		local ok, reason = shared.Equal(a_output, b_output, visited)
 
 		if not ok then return false, "output signature mismatch: " .. reason end
 
@@ -194,7 +197,7 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 
 		if unwrapped == a then return b == a end
 
-		return unwrapped:Equal(b, visited)
+		return shared.Equal(unwrapped, b, visited)
 	elseif a.Type == "any" then
 		return a.Type == b.Type, "any types match"
 	end
@@ -819,7 +822,7 @@ function shared.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--
 
 	if l.Type == "function" then
 		if op == "==" then
-			local ok = l:Equal(r)
+			local ok = shared.Equal(l, r)
 			return ok
 		end
 

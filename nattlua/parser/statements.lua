@@ -457,6 +457,7 @@ return function(META--[[#: any]])
 			{key = "bit", path = "nattlua.other.bit"},
 			{key = "nl", path = "nattlua.init"},
 			{key = "types", path = "nattlua.types.types"},
+			{key = "shared", path = "nattlua.types.shared"},
 			{key = "context", path = "nattlua.analyzer.context"},
 			{
 				key = "error_messages",

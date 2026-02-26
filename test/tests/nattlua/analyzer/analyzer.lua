@@ -586,7 +586,7 @@ analyze[[
     x.func = _ as function=(lol: x | nil)>(x)
     x.bar = _ as function=(lol: x)>({lol = x})
 
-    §assert(env.runtime.x:Equal(env.runtime.x:Copy()))
+    §assert(shared.Equal(env.runtime.x, env.runtime.x:Copy()))
 ]]
 analyze[[
     -- this has to do with the analyzer 

@@ -17,6 +17,7 @@ local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange
 local shared = require("nattlua.types.shared")
 local error_messages = require("nattlua.error_messages")
+local shared = require("nattlua.types.shared")
 local ARITHMETIC_OPS = {
 	["+"] = "__add",
 	["-"] = "__sub",
@@ -276,7 +277,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 
 	if self:IsTypesystem() then
 		if op == "==" then
-			return l:Equal(r) and True() or False()
+			return shared.Equal(l, r) and True() or False()
 		elseif op == "~" then
 			if l.Type == "union" then return l:Copy():RemoveType(r):Simplify() end
 

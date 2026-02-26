@@ -1,3 +1,4 @@
+local shared = require("nattlua.types.shared")
 local S = function(code)
 	local res = select(3, analyze(code))
 
@@ -15,7 +16,7 @@ end
 
 local function equal(a, b)
 	local ok1 = a:GetHash() == b:GetHash()
-	local ok2, reason = a:Equal(b)
+	local ok2, reason = shared.Equal(a, b)
 
 	if ok1 ~= ok2 then
 		print("hash mismatch with equal:")

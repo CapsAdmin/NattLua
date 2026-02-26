@@ -27,14 +27,6 @@ META:GetSet("Unpackable", false--[[# as boolean]])
 META.Repeat = false
 --[[#type TTuple.Repeat = number | false]]
 
-function META.Equal(
-	a--[[#: TTuple]],
-	b--[[#: TBaseType]],
-	visited--[[#: Map<|TBaseType, boolean|> | nil]]
-)
-	return shared.Equal(a, b, visited)
-end
-
 function META:GetHash(visited--[[#: Map<|TBaseType, string|> | nil]])
 	visited = visited or {}
 
@@ -219,7 +211,7 @@ function META.IsSubsetOfTupleAtIndex(a--[[#: TTuple]], b--[[#: TTuple]], i--[[#:
 end
 
 function META.IsSubsetOfTuple(a--[[#: TTuple]], b--[[#: TTuple]])
-	if a:Equal(b) then return true end
+	if shared.Equal(a, b) then return true end
 
 	for i = 1, math.max(a:GetMinimumLength2(), b:GetMinimumLength2()) do
 		local ok, reason, a_val, b_val, i = a.IsSubsetOfTupleAtIndex(a, b, i)
@@ -231,7 +223,7 @@ function META.IsSubsetOfTuple(a--[[#: TTuple]], b--[[#: TTuple]])
 end
 
 function META.SubsetOrFallbackWithTuple(a--[[#: TTuple]], b--[[#: TTuple]])
-	if a:Equal(b) then return a end
+	if shared.Equal(a, b) then return a end
 
 	local errors = {}
 
@@ -250,7 +242,7 @@ function META.SubsetOrFallbackWithTuple(a--[[#: TTuple]], b--[[#: TTuple]])
 end
 
 function META.IsNotSubsetOfTuple(a--[[#: TTuple]], b--[[#: TTuple]])
-	if a:Equal(b) then return nil end
+	if shared.Equal(a, b) then return nil end
 
 	local errors = {}
 
@@ -264,7 +256,7 @@ function META.IsNotSubsetOfTuple(a--[[#: TTuple]], b--[[#: TTuple]])
 end
 
 function META.SubsetWithoutExpansionOrFallbackWithTuple(a--[[#: TTuple]], b--[[#: TTuple]])
-	if a:Equal(b) then return a end
+	if shared.Equal(a, b) then return a end
 
 	local errors = {}
 

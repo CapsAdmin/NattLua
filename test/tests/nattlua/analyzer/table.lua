@@ -980,8 +980,8 @@ local type X = {
     local copy = x:Copy()
     assert(copy ~= x)
     assert(tostring(copy) == tostring(x))
-    assert(copy:Equal(x))
-    assert(x:Equal(copy))
+    assert(shared.Equal(copy, x))
+    assert(shared.Equal(x, copy))
  end
 
  test(X)

@@ -64,10 +64,6 @@ function META:IsLiteral()
 	return true
 end
 
-function META.Equal(a--[[#: TFunction]], b--[[#: TBaseType]], visited--[[#: any]])
-	return shared.Equal(a, b, visited)
-end
-
 local context = require("nattlua.analyzer.context")
 
 function META:Get(key--[[#: TBaseType]])--[[#: (TBaseType | false), (any | nil)]]

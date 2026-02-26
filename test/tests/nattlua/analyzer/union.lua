@@ -138,7 +138,7 @@ analyze([[
     
         local f = types.Function(arg, ret)
 
-        assert(f:Equal(b))
+        assert(shared.Equal(f, b))
     end
     local type A = function=(string)>(number)
     local type B = function=(number)>(boolean)

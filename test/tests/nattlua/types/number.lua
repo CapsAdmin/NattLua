@@ -362,16 +362,16 @@ do
 
 	do
 		local at, af, bt, bf = intersect_comparison(LNumber(0), LNumberRange(-math.huge, math.huge), "<")
-		assert(at:Equal(LNumber(0)))
-		assert(af:Equal(LNumber(0)))
+		assert(shared.Equal(at, LNumber(0)))
+		assert(shared.Equal(af, LNumber(0)))
 		assert(rangesEqual(bt, LNumberRange(1, math.huge)))
 		assert(rangesEqual(bf, LNumberRange(-math.huge, 0)))
 	end
 
 	do
 		local at, af, bt, bf = intersect_comparison(LNumber(0), Number(), ">")
-		assert(at:Equal(LNumber(0)))
-		assert(af:Equal(LNumber(0)))
+		assert(shared.Equal(at, LNumber(0)))
+		assert(shared.Equal(af, LNumber(0)))
 		assert(rangesEqual(bt, LNumberRange(-math.huge, -1)))
 		assert(rangesEqual(bf, LNumberRange(0, math.huge)))
 	end

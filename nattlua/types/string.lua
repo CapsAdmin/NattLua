@@ -16,11 +16,6 @@ META.Type = "string"
 META:GetSet("Data", false--[[# as string | false]])
 META:GetSet("Hash", false--[[# as string]])
 META:GetSet("PatternContract", false--[[# as false | string]])
-
-function META.Equal(a--[[#: TString]], b--[[#: TString]])
-	return shared.Equal(a, b)
-end
-
 local STRING_ID = "string"
 
 local function compute_hash(data--[[#: nil | string]], pattern--[[#: nil | string]])--[[#: string]]

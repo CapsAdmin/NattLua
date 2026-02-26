@@ -38,10 +38,6 @@ function META:CanBeNil()
 	return true
 end
 
-function META.Equal(a--[[#: TAny]], b--[[#: TBaseType]])
-	return shared.Equal(a, b)
-end
-
 function META:GetHash()
 	return "?"
 end

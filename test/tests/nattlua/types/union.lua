@@ -3,9 +3,10 @@ local LNumber = require("nattlua.types.number").LNumber
 local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
 local cast = require("nattlua.analyzer.cast")
+local shared = require("nattlua.types.shared")
 
 test("a union should not contain duplicates", function()
-	assert(Union(cast({"a", "b", "a", "a"})):Equal(Union(cast({"a", "b"}))))
+	assert(shared.Equal(Union(cast({"a", "b", "a", "a"})), Union(cast({"a", "b"}))))
 end)
 
 local larger = Union(cast({"a", "b", "c"}))
@@ -45,7 +46,7 @@ test("a number should be a subset of a union with numbers", function()
 end)
 
 test("a smaller union within an empty union should be identical to the smaller union", function()
-	assert(smaller:Equal(Union({smaller})))
+	assert(shared.Equal(smaller, Union({smaller})))
 end)
 
 test("a union containing one literal number should be a subset of a union containing a number", function()
@@ -56,7 +57,7 @@ local A = Union(cast({1, 2, 3}))
 local B = Union(cast({1, 2, 3, 4}))
 
 test(tostring(B) .. " should equal the union of " .. tostring(A) .. " and " .. tostring(B), function()
-	assert(B:Equal(A:Union(B)))
+	assert(shared.Equal(B, A:Union(B)))
 	equal(4, B:GetCardinality())
 	assert(A:IsSubsetOf(B))
 end)

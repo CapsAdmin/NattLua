@@ -59,10 +59,6 @@ function META:IsCertainlyFalse()
 	return unwrapped:IsCertainlyFalse()
 end
 
-function META:Equal(other, visited)
-	return shared.Equal(self, other, visited)
-end
-
 function META:IsSubsetOf(other, visited)
 	return shared.IsSubsetOf(self, other, visited)
 end

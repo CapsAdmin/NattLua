@@ -37,14 +37,6 @@ function META:GetHashForMutationTracking()
 	return tostring(self)
 end
 
-function META.Equal(
-	a--[[#: TUnion]],
-	b--[[#: TBaseType]],
-	visited--[[#: nil | Map<|TBaseType, boolean|>]]
-)
-	return shared.Equal(a, b, visited)
-end
-
 function META:GetHash(visited--[[#: Map<|any, string|> | nil]])--[[#: string]]
 	local data = self.Data
 
@@ -131,7 +123,7 @@ local function find_index(self--[[#: TUnion]], obj--[[#: any]])
 		local v = data[i]--[[# as any]]
 
 		-- Check type first before expensive Equal call
-		if v.Type == obj_type and v:Equal(obj) then
+		if v.Type == obj_type and shared.Equal(v, obj) then
 			if obj_type ~= "function" or v:GetFunctionBodyNode() == obj:GetFunctionBodyNode() then
 				return i
 			end

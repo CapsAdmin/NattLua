@@ -1,4 +1,5 @@
 local LString = require("nattlua.types.string").LString
+local shared = require("nattlua.types.shared")
 
 test("arguments", function()
 	local analyzer = analyze[[
@@ -191,7 +192,7 @@ test("arguments that are not explicitly typed should be volatile", function()
 		local args = analyzer:GetLocalOrGlobalValue(LString("test")):GetInputSignature()
 		local a = args:GetWithNumber(1)
 		local b = args:GetWithNumber(2)
-		assert(a:Equal(b))
+		assert(shared.Equal(a, b))
 	end
 
 	do
@@ -207,7 +208,7 @@ test("arguments that are not explicitly typed should be volatile", function()
 		local args = analyzer:GetLocalOrGlobalValue(LString("test")):GetInputSignature()
 		local a = args:GetWithNumber(1)
 		local b = args:GetWithNumber(2)
-		assert(a:Equal(b))
+		assert(shared.Equal(a, b))
 	end
 
 	local analyzer = analyze[[

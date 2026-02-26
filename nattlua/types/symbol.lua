@@ -31,10 +31,6 @@ function META:GetData()
 	return self.Data--[[# as {}]]
 end
 
-function META.Equal(a--[[#: TSymbol]], b--[[#: TBaseType]])
-	return shared.Equal(a, b)
-end
-
 do
 	local symbol_to_type = {
 		[TRUE] = "boolean",
