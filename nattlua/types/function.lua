@@ -178,7 +178,7 @@ function META.IsCallbackSubsetOf(a--[[#: TFunction]], b--[[#: TFunction]])
 
 	if not a_input or not b_input then return false, "missing input signature" end
 
-	local ok, reason = shared.IsSubsetOf(a_input, b_input, a_input:GetMinimumLength())
+	local ok, reason = shared.IsSubsetOf(a_input, b_input, nil, a_input:GetMinimumLength())
 
 	if not ok then
 		return false,
