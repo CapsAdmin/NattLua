@@ -46,10 +46,6 @@ function META:GetHash()
 	return "?"
 end
 
-function META.LogicalComparison(l--[[#: TAny]], r--[[#: TBaseType]], op--[[#: string]])
-	return shared.LogicalComparison(l, r, op)
-end
-
 function META:IsLiteral()
 	return false
 end

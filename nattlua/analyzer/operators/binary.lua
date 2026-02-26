@@ -15,6 +15,7 @@ local False = require("nattlua.types.symbol").False
 local Nil = require("nattlua.types.symbol").Nil
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange
+local shared = require("nattlua.types.shared")
 local error_messages = require("nattlua.error_messages")
 local ARITHMETIC_OPS = {
 	["+"] = "__add",
@@ -178,14 +179,14 @@ function Binary(self, node, l, r, op)
 		if l.Type ~= r.Type then return is_not_equal and True() or False() end
 
 		if is_not_equal then
-			local val, err = l.LogicalComparison(l, r, "==", self:GetCurrentAnalyzerEnvironment())
+			local val, err = shared.LogicalComparison(l, r, "==", self:GetCurrentAnalyzerEnvironment())
 
 			if val ~= nil then val = not val end
 
 			return logical_cmp_cast(val, err)
 		end
 
-		return logical_cmp_cast(l.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
+		return logical_cmp_cast(shared.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
 	elseif op == "." or op == ":" then
 		return self:IndexOperator(l, r)
 	elseif op == ".." then
@@ -260,7 +261,7 @@ function Binary(self, node, l, r, op)
 
 		if res then return res end
 
-		return logical_cmp_cast(l.LogicalComparison(l, r, op))
+		return logical_cmp_cast(shared.LogicalComparison(l, r, op))
 	end
 
 	return false, error_messages.binary(op, l, r)

@@ -41,10 +41,6 @@ META:IsSet("InputArgumentsInferred", false)
 META:GetSet("InputModifiers", false--[[# as TFunction.InputModifiers]])
 META:GetSet("OutputModifiers", false--[[# as TFunction.OutputModifiers]])
 
-function META.LogicalComparison(l--[[#: TFunction]], r--[[#: TFunction]], op--[[#: string]])
-	return shared.LogicalComparison(l, r, op)
-end
-
 function META:__tostring()
 	if self.suppress then return "current_function" end
 

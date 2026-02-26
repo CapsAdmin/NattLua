@@ -35,10 +35,6 @@ function META.Equal(a--[[#: TSymbol]], b--[[#: TBaseType]])
 	return shared.Equal(a, b)
 end
 
-function META.LogicalComparison(l--[[#: TSymbol]], r--[[#: TBaseType]], op--[[#: string]])
-	return shared.LogicalComparison(l, r, op)
-end
-
 do
 	local symbol_to_type = {
 		[TRUE] = "boolean",

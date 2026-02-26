@@ -112,10 +112,6 @@ return function()
 		return self
 	end
 
-	function META.LogicalComparison(l--[[#: TBaseType]], r--[[#: TBaseType]], op--[[#: string]])
-		return shared.LogicalComparison(l, r, op)
-	end
-
 	function META:IsNumeric()
 		return false
 	end

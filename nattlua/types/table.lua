@@ -879,10 +879,6 @@ function META.Union(a--[[#: TTable]], b--[[#: TTable]])
 	return copy
 end
 
-function META.LogicalComparison(l, r, op, env)
-	return shared.LogicalComparison(l, r, op, env)
-end
-
 do
 	local function initialize_table_mutation_tracker(tbl, scope, key, hash)
 		tbl.mutations = tbl.mutations or {}

@@ -3,6 +3,7 @@ local LNumber = require("nattlua.types.number").LNumber
 local Number = require("nattlua.types.number").Number
 local Any = require("nattlua.types.any").Any
 local stringx = require("nattlua.other.string")
+local shared = require("nattlua.types.shared")
 
 test("a literal number should be contained within all numbers", function()
 	assert(LNumber(42):IsSubsetOf(Number()))
@@ -78,26 +79,26 @@ end)
 
 if false then
 	test("LogicalComparison of two literal numbers should work correctly", function()
-		equal(LNumber(10):LogicalComparison(LNumber(5), ">"), true)
-		equal(LNumber(5):LogicalComparison(LNumber(10), "<"), true)
-		equal(LNumber(10):LogicalComparison(LNumber(10), "=="), true)
-		equal(LNumber(10):LogicalComparison(LNumber(5), "<="), false)
+		equal(shared.LogicalComparison(LNumber(10), LNumber(5), ">"), true)
+		equal(shared.LogicalComparison(LNumber(5), LNumber(10), "<"), true)
+		equal(shared.LogicalComparison(LNumber(10), LNumber(10), "=="), true)
+		equal(shared.LogicalComparison(LNumber(10), LNumber(5), "<="), false)
 	end)
 
 	test("LogicalComparison of a literal number and a number range should work correctly", function()
-		equal(LNumber(20):LogicalComparison(LNumberRange(0, 10), ">"), true)
-		equal(LNumber(5):LogicalComparison(LNumberRange(0, 10), "<"), nil) -- Indeterminate
-		equal(LNumber(15):LogicalComparison(LNumberRange(0, 10), "=="), false)
+		equal(shared.LogicalComparison(LNumber(20), LNumberRange(0, 10), ">"), true)
+		equal(shared.LogicalComparison(LNumber(5), LNumberRange(0, 10), "<"), nil) -- Indeterminate
+		equal(shared.LogicalComparison(LNumber(15), LNumberRange(0, 10), "=="), false)
 	end)
 
 	test("Zero should be handled correctly in ranges and comparisons", function()
-		assert(LNumber(0):LogicalComparison(LNumber(1), "<") == true)
-		assert(LNumber(0):LogicalComparison(LNumber(-1), ">") == true)
+		assert(shared.LogicalComparison(LNumber(0), LNumber(1), "<") == true)
+		assert(shared.LogicalComparison(LNumber(0), LNumber(-1), ">") == true)
 	end)
 
 	test("Zero should be handled correctly in ranges and comparisons", function()
-		assert(LNumber(0):LogicalComparison(LNumber(1), "<") == true)
-		assert(LNumber(0):LogicalComparison(LNumber(-1), ">") == true)
+		assert(shared.LogicalComparison(LNumber(0), LNumber(1), "<") == true)
+		assert(shared.LogicalComparison(LNumber(0), LNumber(-1), ">") == true)
 	end)
 end
 

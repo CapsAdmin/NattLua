@@ -60,10 +60,6 @@ function META:__tostring()
 	return "string"
 end
 
-function META.LogicalComparison(a--[[#: TString]], b--[[#: TBaseType]], op--[[#: string]])
-	return shared.LogicalComparison(a, b, op)
-end
-
 function META:Get()
 	return false, error_messages.index_string_attempt()
 end
