@@ -15,6 +15,36 @@ local current_section_path = ""
 	threshold = number | nil,
 }]]
 
+local function string_starts_with(a, b)
+	return a:sub(0, #b) == b
+end
+
+local function string_split(self, separator, plain_search)
+	if separator == nil or separator == "" then return self:to_list() end
+
+	if plain_search == nil then plain_search = true end
+
+	local tbl = {}
+	local current_pos = 1
+
+	for i = 1, #self do
+		local start_pos, end_pos = self:find(separator, current_pos, plain_search)
+
+		if not start_pos then break end
+
+		tbl[i] = self:sub(current_pos, start_pos - 1)
+		current_pos = end_pos + 1
+	end
+
+	if current_pos > 1 then
+		tbl[#tbl + 1] = self:sub(current_pos)
+	else
+		tbl[1] = self
+	end
+
+	return tbl
+end
+
 function profiler.StartSection(name--[[#: string]])
 	if not profiler_active then return end
 
@@ -29,10 +59,6 @@ function profiler.StopSection()
 		section_stack[#section_stack] = nil
 		current_section_path = table_concat(section_stack, " > ")
 	end
-end
-
-local function starts_with(str--[[#: string]], what--[[#: string]])
-	return str:sub(1, #what) == what
 end
 
 local function process_samples(
@@ -56,38 +82,46 @@ local function process_samples(
 			section_samples[section_key] = {}
 		end
 
-		local stack = {}
+		if not sample.stack_cached then
+			sample.stack_cached = {}
 
-		for line in sample.stack:gmatch("(.-)\n") do
-			if
-				starts_with(line, "[builtin") or
-				starts_with(line, "(command line)") or
-				starts_with(line, "@0x")
-			then
+			for _, line in ipairs(string_split(sample.stack:sub(1, -2), "\n")) do
+				if
+					string_starts_with(line, "[builtin") or
+					string_starts_with(line, "(command line)") or
+					string_starts_with(line, "@0x")
+				then
 
-			-- these can safely be ignored
-			else
-				local path, line_number = line:match("(.+):(.+)")
+				-- these can safely be ignored
+				else
+					local path_line = string_split(line, ":")
 
-				if not path or not line_number then error("uh oh") end
+					if not path_line[2] then error("uh oh") end
 
-				if path:sub(1, 2) == "./" then path = path:sub(3) end
+					local path = path_line[1]
 
-				local line_number = assert(tonumber(line_number))
+					if path:sub(1, 2) == "./" then path = path:sub(3) end
 
-				do
-					if not section_samples[section_key][path] then
-						section_samples[section_key][path] = {lines = {}}
-					end
-
-					if not section_samples[section_key][path].lines[line_number] then
-						section_samples[section_key][path].lines[line_number] = {}
-					end
-
-					local vm_states = section_samples[section_key][path].lines[line_number]
-					vm_states[sample.vm_state] = (vm_states[sample.vm_state] or 0) + sample.sample_count
+					local line_number = assert(tonumber(path_line[2]))
+					table_insert(sample.stack_cached, {path = path, line_number = line_number})
 				end
 			end
+		end
+
+		for _, line_info in ipairs(sample.stack_cached) do
+			local path = line_info.path
+			local line_number = line_info.line_number
+
+			if not section_samples[section_key][path] then
+				section_samples[section_key][path] = {lines = {}}
+			end
+
+			if not section_samples[section_key][path].lines[line_number] then
+				section_samples[section_key][path].lines[line_number] = {}
+			end
+
+			local vm_states = section_samples[section_key][path].lines[line_number]
+			vm_states[sample.vm_state] = (vm_states[sample.vm_state] or 0) + sample.sample_count
 		end
 	end
 
@@ -260,12 +294,25 @@ local function process_samples(
 		return result
 	end
 
+	local function format_file_link(loc--[[#: string]])
+		-- Convert "path/to/file.lua:123" to markdown link "[path/to/file.lua:123](../path/to/file.lua#L123)"
+		-- Uses ../ prefix since the markdown file is in logs/ directory
+		local path, line = loc:match("^(.+):(%d+)$")
+
+		if path and line then
+			local display = loc:gsub("^goluwa/", "")
+			return "[" .. display .. "](" .. path .. "#L" .. line .. ")"
+		else
+			return "`" .. loc:gsub("^goluwa/", "") .. "`"
+		end
+	end
+
 	local out = {}
 
 	for _, section_data in ipairs(sorted_samples) do
 		-- Add section header if it's not the default section
 		if section_data.section ~= "(no section)" then
-			table_insert(out, "\n" .. section_data.section .. ":\n")
+			table_insert(out, "\n### " .. section_data.section .. "\n\n")
 		end
 
 		for _, data in ipairs(section_data.samples) do
@@ -278,19 +325,20 @@ local function process_samples(
 				else
 					table_insert(
 						str,
-						stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. data.path .. "\n"
+						"| `" .. stacked_barchart(data.vm_states, data.sample_count) .. "` | " .. data.sample_count .. " | " .. format_file_link(data.path) .. " |\n"
 					)
 				end
 			end
 
 			if str[1] then
+				table_insert(str, 1, "| VM State | Samples | Location |\n|----------|---------|----------|\n")
 				table_insert(
 					str,
-					stacked_barchart(data.vm_states, data.sample_count) .. "\t" .. data.sample_count .. "\t" .. "total + " .. (
+					"| `" .. stacked_barchart(data.vm_states, data.sample_count) .. "` | " .. data.sample_count .. " | **total** +" .. (
 							other and
 							other.sample_count or
 							0
-						) .. "\n\n"
+						) .. " |\n\n"
 				)
 			end
 
@@ -298,11 +346,10 @@ local function process_samples(
 		end
 	end
 
-	table_insert(out, 1, "\nprofiler statistics:\n")
 	table_insert(
 		out,
-		2,
-		"I = interpreter, G = garbage collection, J = busy tracing, N = native / tracing completed:\n"
+		1,
+		"\n## Profiler Statistics\n\n**Legend:** `I` = interpreter, `G` = garbage collection, `J` = busy tracing, `N` = native/tracing completed, `C` = C code\n\n"
 	)
 	return table_concat(out)
 end
@@ -346,6 +393,8 @@ function profiler.Start(config--[[#: Config | nil]])
 	return function()
 		jit_profiler.stop()
 		profiler_active = false
+	end,
+	function()
 		return process_samples(config, raw_samples)
 	end
 end

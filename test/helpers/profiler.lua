@@ -1,28 +1,50 @@
-local jit_profiler = require("test.helpers.jit_profiler")
 local line_profiler = require("test.helpers.line_profiler")--[[#: {Start = function=(any)>(any)}]]
-local trace_tracker = require("test.helpers.jit_trace_track")
+local jit_profiler = require("test.helpers.jit_profiler")
+local TraceTrack = require("test.helpers.jit_trace_track")
 local get_time = require("test.helpers.get_time")
+local profile_stop, profile_report
+local trace_tracker
 local profiler = {}
-local should_run = true
-local stop_profiler
-local stop_tracer
+local f
 
-function profiler.Start(mode--[[#: string | nil]], whitelist--[[#: List<|string|> | nil]])
-	if mode == "trace" then
-		stop_tracer = trace_tracker.Start()
-	elseif mode == "instrumental" then
-		stop_profiler = line_profiler.Start(whitelist)
-	else
-		stop_tracer = trace_tracker.Start()
-		stop_profiler = jit_profiler.Start(
-			{
-				mode = "line",
-				sampling_rate = 1,
-				depth = 1, -- a high depth will show where time is being spent at a higher level in top level functions which is kinda useless
-				threshold = 20,
-			}
-		)
+local function save_progress()
+	if trace_tracker then
+		f:write(trace_tracker:GetReportProblematicTraces() .. "\n")
 	end
+
+	if profile_report then f:write(profile_report() .. "\n") end
+
+	f:flush()
+	f:seek("set", 0)
+end
+
+function profiler.Start(id)
+	id = id or "global"
+	time_start = get_time()
+	trace_tracker = TraceTrack.New()
+	trace_tracker:Start()
+	profile_stop, profile_report = jit_profiler.Start()
+	f = assert(io.open("profile_summary_" .. id .. ".md", "w"))
+--timer.Repeat("debug", 1, math.huge, save_progress)
+end
+
+function profiler.Stop()
+	save_progress()
+
+	do -- store total time
+		f:seek("end", 0)
+		local total_time = get_time() - time_start
+
+		if f then
+			f:write("## Total time: " .. string.format("%.2f", total_time) .. " seconds\n")
+		end
+	end
+
+	f:close()
+	profile_stop()
+
+	if trace_tracker then trace_tracker:Stop() end
+--timer.RemoveTimer("debug")
 end
 
 local simple_times = {}
@@ -49,16 +71,6 @@ end
 
 function profiler.GetSimpleSections()
 	return simple_times
-end
-
-function profiler.Stop()
-	if stop_profiler then io.write(stop_profiler()) end
-
-	if stop_tracer then
-		local traces, aborted = stop_tracer()
-		local str = trace_tracker.ToStringTraceInfo(traces, aborted)
-		io.write(str or "")
-	end
 end
 
 return profiler
