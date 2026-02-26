@@ -198,6 +198,43 @@ function META:AddType(e--[[#: TBaseType]])
 	return self
 end
 
+local function add_data(self, data--[[#: List<|TBaseType|>]])
+	local len = #data
+
+	for i = 1, len do
+		local v = data[i]
+
+		if v.Type == "union" then
+			local ulen = #v.Data
+
+			for j = 1, ulen do
+				local w = v.Data[j]
+				local s = hash(w)
+
+				if s and self.literal_data_cache[s] then goto w_continue end
+
+				if find_index(self, w) then goto w_continue end
+
+				add(self, w)
+
+				::w_continue::
+			end
+
+			goto continue
+		end
+
+		local s = hash(v)
+
+		if s and self.literal_data_cache[s] then goto continue end
+
+		if find_index(self, v) then goto continue end
+
+		add(self, v)
+
+		::continue::
+	end
+end
+
 function META:GetData()
 	return self.Data
 end
@@ -602,9 +639,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TUnion]]
 		}
 	)
 
-	if data then for _, v in ipairs(data) do
-		self:AddType(v)
-	end end
+	if data then add_data(self, data) end
 
 	return self
 end
