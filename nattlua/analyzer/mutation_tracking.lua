@@ -233,12 +233,12 @@ return function(META--[[#: any]])
 			end
 
 			-- Shared internal: resolve truthy/falsy based on expression context
-			local function resolve_tracked_value(self, stack, set_upvalue_fn)
+			local function resolve_tracked_value(self, stack, set_upvalue_fn, upvalue)
 				if self:IsInvertedExpressionContext() then
 					if self:IsFalsyExpressionContext() then
 						local val = stack[#stack].falsy
 
-						if set_upvalue_fn then set_upvalue_fn(val) end
+						if set_upvalue_fn then set_upvalue_fn(val, upvalue) end
 
 						return val
 					elseif self:IsTruthyExpressionContext() then
@@ -252,7 +252,7 @@ return function(META--[[#: any]])
 							end
 						end
 
-						if set_upvalue_fn then set_upvalue_fn(union) end
+						if set_upvalue_fn then set_upvalue_fn(union, upvalue) end
 
 						return union
 					end
@@ -260,7 +260,7 @@ return function(META--[[#: any]])
 					if self:IsTruthyExpressionContext() then
 						local val = stack[#stack].truthy
 
-						if set_upvalue_fn then set_upvalue_fn(val) end
+						if set_upvalue_fn then set_upvalue_fn(val, upvalue) end
 
 						return val
 					elseif self:IsFalsyExpressionContext() then
@@ -274,7 +274,7 @@ return function(META--[[#: any]])
 							end
 						end
 
-						if set_upvalue_fn then set_upvalue_fn(union) end
+						if set_upvalue_fn then set_upvalue_fn(union, upvalue) end
 
 						return union
 					end
@@ -333,6 +333,10 @@ return function(META--[[#: any]])
 				print(str)
 			end
 
+			local function set_upvalue(val, upvalue)
+				val:SetUpvalue(upvalue)
+			end
+
 			function META:GetTrackedUpvalue(obj)
 				local upvalue = obj:GetUpvalue()
 				local data = self.tracked_objects_done[upvalue]
@@ -340,9 +344,7 @@ return function(META--[[#: any]])
 
 				if not stack then return end
 
-				return resolve_tracked_value(self, stack, function(val)
-					val:SetUpvalue(upvalue)
-				end)
+				return resolve_tracked_value(self, stack, set_upvalue, upvalue)
 			end
 
 			-- Track a table index's truthy/falsy narrowing

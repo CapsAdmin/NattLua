@@ -280,6 +280,10 @@ do
 	local max_iterations = 100000
 	local max_time_seconds = 8
 
+	local function sort(a, b)
+		return a.count > b.count
+	end
+
 	function META:CheckTimeout()
 		local start_prof = os.clock()
 
@@ -306,9 +310,7 @@ do
 			if count > 5 then table.insert(top, {node = node, count = count}) end
 		end
 
-		table.sort(top, function(a, b)
-			return a.count > b.count
-		end)
+		table.sort(top, sort)
 
 		for i, info in ipairs(top) do
 			if i > 10 then break end
