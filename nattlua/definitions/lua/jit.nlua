@@ -20,6 +20,23 @@ type jit_attach_texit = function=(
 	ngpr: number, -- the number of general-purpose and floating point registers that are active at the exit
 	nfpr: number -- the number of general-purpose and floating point registers that are active at the exit
 )>(nil)
+type jit_util_funcinfo = {
+	linedefined = number,
+	lastlinedefined = number,
+	params = number,
+	stackslots = number,
+	upvalues = number,
+	bytecodes = number,
+	gcconsts = number,
+	nconsts = number,
+	children = boolean,
+	currentline = number,
+	isvararg = boolean,
+	source = string,
+	loc = string,
+	ffid = nil | number,
+	addr = nil | number,
+}
 type Modules["jit.dis_x86"] = {}
 type Modules["jit.dis_x64"] = {}
 type Modules["jit.dis_arm"] = {}
@@ -33,9 +50,9 @@ type Modules["jit.opt"] = {
 	start = function=(...string)>(nil),
 }
 type jit = {
+	attach = (function=(jit_attach_bc, "bc")>(nil) | function=(jit_attach_trace, "trace")>(nil) | function=(jit_attach_record, "record")>(nil) | function=(jit_attach_texit, "texit")>(nil) | function=(Function, nil | "bc" | "trace" | "record" | "texit")>(nil)),
 	os = "Windows" | "Linux" | "OSX" | "BSD" | "POSIX" | "Other",
 	arch = "x86" | "x64" | "arm" | "arm64" | "ppc" | "mips" | "mips64" | "mips64el" | "riscv64",
-	attach = (function=(jit_attach_bc, "bc")>(nil) | function=(jit_attach_trace, "trace")>(nil) | function=(jit_attach_record, "record")>(nil) | function=(jit_attach_texit, "texit")>(nil) | function=(Function, nil | "bc" | "trace" | "record" | "texit")>(nil)),
 	tracebarrier = function=()>(nil),
 	version_num = number,
 	version = string,
@@ -63,25 +80,7 @@ type Modules["jit.profile"] = {
 }
 type Modules["jit.util"] = {
 	-- Retrieves LuaJIT information about a given function, similarly to debug.getinfo
-	funcinfo = function=(Function, position: number | nil)>(
-		{
-			linedefined = number,
-			lastlinedefined = number,
-			params = number,
-			stackslots = number,
-			upvalues = number,
-			bytecodes = number,
-			gcconsts = number,
-			nconsts = number,
-			children = boolean,
-			currentline = number,
-			isvararg = boolean,
-			source = string,
-			loc = string,
-			ffid = nil | number,
-			addr = nil | number,
-		}
-	),
+	funcinfo = function=(Function, position: number | nil)>(jit_util_funcinfo),
 	-- Get bytecode instruction at given position
 	funcbc = function=(func: Function, pc: number)>(number, number), -- returns (ins, m)
 	-- Get upvalue name for function

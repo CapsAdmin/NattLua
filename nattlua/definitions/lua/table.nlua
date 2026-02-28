@@ -4,6 +4,8 @@ type Modules["table.clear"] = function=(Table)>()
 
 do -- Basic table manipulation functions
 	analyzer function table.concat(tbl: List<|string|>, separator: string | nil)
+		if tbl.Type == "any" then return types.String() end
+
 		return tbl:Concat(separator)
 	end
 
