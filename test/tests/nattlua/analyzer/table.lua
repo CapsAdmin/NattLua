@@ -661,8 +661,23 @@ analyze(
     }
     t.foo["test"] = true
 ]],
-	"is not a subset of nil"
+	"true is not a subset of nil"
 )
+analyze(
+	[[
+    local t = {} as {
+        foo = {foo = string}    
+    }
+    t.bar = 1
+]],
+	"has no key \"bar\""
+)
+analyze([[
+    local t = {} as {
+        foo = {foo = string, [string] = string | nil}    
+    }
+    t.foo["test"] = "bar"
+]])
 analyze[[
     local t = {} as {[1 .. inf] = number}
     attest.equal(#t, _ as 1 .. inf)
@@ -1072,3 +1087,31 @@ for i, v in ipairs(x) do
 end
 attest.equal(x, _ as {foo = 1, bar = 2, faz = 3})
 ]]
+
+test("repro number is not a subset of nil", function()
+	analyze([=[
+		local type TProfile = {
+			_strings = {[number] = string | nil},
+			_string_lookup = {[string] = number | nil},
+			_string_count = number,
+			_strings_flushed = number,
+		}
+
+		local function intern(self, s)
+			self = self--[[# as TProfile]]
+			s = s--[[# as string | nil]]
+			if not s then return -1 end
+
+			local sl = self._string_lookup
+			local idx = sl[s]
+
+			if idx then return idx end
+
+			idx = self._string_count
+			self._string_count = self._string_count + 1
+			self._strings[idx] = s
+			sl[s] = idx
+			return idx
+		end
+	]=])
+end)

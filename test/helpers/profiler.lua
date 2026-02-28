@@ -56,10 +56,10 @@ local function get_time_function()
 	end
 end
 
-local function format_error(err--[[#: number]], arg--[[#: any]])--[[#: string]]
+local function format_error(err--[[#: number]], arg--[[#: nil | number]])--[[#: string]]
 	local fmt = vmdef.traceerr[err]
 
-	if not fmt then return "unknown error: " .. err end
+	if not fmt then return "unknown error: " .. tostring(err) end
 
 	if not arg then return fmt end
 
@@ -283,7 +283,7 @@ do
 		func--[[#: AnyFunction]],
 		pc--[[#: number]],
 		code--[[#: number]],
-		reason--[[#: number | string]]
+		reason--[[#: number]]
 	)
 		local trace = self._traces[id]
 
@@ -318,7 +318,7 @@ do
 		end
 	end
 
-	local function on_trace_flush(self)
+	local function on_trace_flush(self--[[#: TProfile]])
 		if self._trace_count > 0 then
 			local x, interval = self._should_warn_abort()
 

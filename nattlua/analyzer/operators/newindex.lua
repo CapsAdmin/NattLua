@@ -85,7 +85,19 @@ return {
 								return true
 							end
 						else
-							analyzer:Error(err)
+							if existing.Type == "symbol" and existing:IsNil() then
+								local contract_keyval = contract:FindKeyValWide(key)
+
+								if contract_keyval then
+									local ok, reason = shared.IsSubsetOf(val, contract_keyval.val)
+
+									if not ok then analyzer:Error(reason) end
+								else
+									analyzer:Error(err)
+								end
+							else
+								analyzer:Error(err)
+							end
 						end
 					elseif err then
 						analyzer:Error(err)
