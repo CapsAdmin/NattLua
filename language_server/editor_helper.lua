@@ -1624,9 +1624,9 @@ do
 			return types.symbol
 		elseif token:IsOtherType() then
 			return types.type
-		elseif token:IsAny() then
-			return types.any
 		end
+
+		if token:IsAny() then return types.any end
 
 		return types.variable
 	end

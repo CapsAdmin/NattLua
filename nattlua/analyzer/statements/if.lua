@@ -36,12 +36,18 @@ return {
 				end
 
 				if self:IsRuntime() then
-					if obj:IsCertainlyFalse() or obj:IsUncertain() then
+					if obj:IsCertainlyFalse() then
 						self:ConstantIfExpressionWarning(error_messages.if_always_false())
 
 						for _, statement in ipairs(statements) do
 							if statement.Unreachable == nil then
 								statement:SetUnreachable(true)
+							end
+						end
+					elseif obj:IsUncertain() then
+						for _, statement in ipairs(statements) do
+							if statement.Unreachable == nil then
+								statement:SetUnreachable(false)
 							end
 						end
 					elseif obj:IsCertainlyTrue() then
