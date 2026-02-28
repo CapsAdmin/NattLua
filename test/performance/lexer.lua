@@ -1,11 +1,14 @@
 local INSTRUMENTAL = false
 require("nattlua.other.jit_options").SetOptimized()
 local util = require("examples.util")
-local profiler = require("test.helpers.profiler")
+local profiler_module = require("test.helpers.profiler")
+local profiler
 local lua_code = util.Get10MBLua()
 
 -- this must be called before loading modules since it injects line hooks into the code
-if INSTRUMENTAL then profiler.Start("instrumental", {"nattlua/lexer/.+"}) end
+if INSTRUMENTAL then
+	profiler = profiler_module.New({id = "instrumental", filter = {"nattlua/lexer/.+"}})
+end
 
 local Lexer = require("nattlua.lexer.lexer").New
 local Code = require("nattlua.code").New
@@ -20,7 +23,7 @@ if INSTRUMENTAL then
 		if type == "end_of_file" then break end
 	end
 else
-	profiler.Start()
+	profiler = profiler_module.New()
 
 	do
 		-- should take around 1.2 seconds
@@ -43,5 +46,6 @@ else
 	end
 end
 
-profiler.Stop()
+if profiler then profiler:Stop() end
+
 os.exit()

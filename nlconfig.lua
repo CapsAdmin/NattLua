@@ -207,7 +207,7 @@ do -- custom commands specific for nattlua
 			},
 		},
 		cb = function(args, options, config, cli)
-			require("test.helpers.profiler").Start()
+			local prof = require("test.helpers.profiler").New()
 			local Compiler = require("nattlua.compiler")
 			local entry_points = {
 				config.entry_point or
@@ -313,7 +313,7 @@ do -- custom commands specific for nattlua
 				end
 			end
 
-			require("test.helpers.profiler").Stop()
+			prof:Stop()
 		end,
 	}
 end

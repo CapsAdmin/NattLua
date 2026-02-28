@@ -1,9 +1,10 @@
 require("nattlua.other.jit_options").SetOptimized()
 local INSTRUMENTAL = false
-local profiler = require("test.helpers.profiler")
+local profiler_module = require("test.helpers.profiler")
+local profiler
 
 if INSTRUMENTAL then
-	profiler.Start("instrumental", {"nattlua/parser/.+", "nattlua/syntax/.+"})
+	profiler = profiler_module.New({id = "instrumental", filter = {"nattlua/parser/.+", "nattlua/syntax/.+"}})
 end
 
 local util = require("examples.util")
@@ -33,15 +34,15 @@ if INSTRUMENTAL then
 		):ParseRootNode()
 	end)
 
-	profiler.Stop()
+	if profiler then profiler:Stop() end
 else
-	profiler.Start()
+	profiler = profiler_module.New()
 
 	util.Measure("code:Parse()", function()
 		Parser(tokens, code, {skip_import = true}):ParseRootNode()
 	end)
 
-	profiler.Stop()
+	profiler:Stop()
 end
 
 os.exit()

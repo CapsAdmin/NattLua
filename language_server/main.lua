@@ -37,7 +37,6 @@ local function read_message()
 	return str
 end
 
--- Without this, it seems like vscode will error as the body length deviates from content-length with unicode characters
 local function write_message(message)
 	local encoded = json.encode(message)
 	local data = string.format("Content-Length: %d\r\n\r\n%s", #encoded, encoded)
@@ -55,8 +54,6 @@ OUTPUT:setvbuf("no")
 function lsp.Call(params)
 	write_message(params)
 end
-
-local jit_profiler = require("test.helpers.jit_profiler")
 
 local function update()
 	local body = read_message()

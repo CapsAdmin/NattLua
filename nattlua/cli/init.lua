@@ -101,7 +101,9 @@ config.commands["check"] = {
 		{name = "show-severity", description = "Show severity level for warnings"},
 	},
 	cb = function(args, options, config, cli)
-		if options.profile then require("test.helpers.profiler").Start() end
+		local prof
+
+		if options.profile then prof = require("test.helpers.profiler").New() end
 
 		args[1] = args[1] or "./*"
 		local cmp = {}
@@ -140,7 +142,7 @@ config.commands["check"] = {
 			assert(cmp:Analyze())
 		end
 
-		if options.profile then require("test.helpers.profiler").Stop() end
+		if options.profile then prof:Stop() end
 	end,
 }
 config.commands["build"] = {

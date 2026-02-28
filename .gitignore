@@ -10,4 +10,4 @@ lsp_session.rpc
 lsp_session_in.rpc
 lsp_session_out.rpc
 **/*.DS_Store
-profile_summary**.md
+profile_summary**

@@ -11,7 +11,8 @@ local xpcall = _G.xpcall
 local assert = _G.assert
 local loadfile = _G.loadfile
 local get_time = require("test.helpers.get_time")
-local profiler = require("test.helpers.profiler")
+local profiler_module = require("test.helpers.profiler")
+local profiler = profiler_module.New()
 local jit = _G.jit
 local table = _G.table
 local memory = require("nattlua.other.memory")
@@ -71,9 +72,9 @@ end
 
 do
 	-- reuse an existing environment to speed up tests
-	profiler.StartSection("base environment")
+	profiler:StartSection("base environment")
 	local _, typesystem_env = BuildBaseEnvironment()
-	profiler.StopSection()
+	profiler:StopSection()
 
 	function _G.analyze(code, expect_error, expect_warning)
 		total_test_count = total_test_count + 1
@@ -84,17 +85,17 @@ do
 
 		_G.TEST = true
 		local compiler = nl.Compiler(code, nil, nil, 3)
-		profiler.StartSection("lexer")
+		profiler:StartSection("lexer")
 		compiler:Lex()
-		profiler.StopSection()
-		profiler.StartSection("parser")
+		profiler:StopSection()
+		profiler:StartSection("parser")
 		compiler:Parse()
-		profiler.StopSection()
+		profiler:StopSection()
 		compiler:SetEnvironments(Table({}), typesystem_env)
 		_G.TEST_GARBAGE = {}
-		profiler.StartSection("analyzer")
+		profiler:StartSection("analyzer")
 		local ok, err = compiler:Analyze()
-		profiler.StopSection()
+		profiler:StopSection()
 
 		do
 			local tbl = {}
@@ -303,10 +304,10 @@ do
 		LOGGING = logging or false
 		PROFILING = profiling or false
 
-		if _G.STARTUP_PROFILE then profiler.StopSection() end
+		if _G.STARTUP_PROFILE then profiler:StopSection() end
 
 		if PROFILING and not _G.STARTUP_PROFILE then
-			profiler.Start(profiling_mode)
+			profiler = profiler_module.New({mode = profiling_mode})
 		end
 	end
 
@@ -354,10 +355,10 @@ do
 		local luajit_startup_time = _G.EARLY_STARTUP_TIME or 0
 		local actual_total = os.clock() - luajit_startup_time
 
-		if PROFILING then profiler.Stop() end
+		if PROFILING then profiler:Stop() end
 
 		if test_file_count > 0 then
-			local times = profiler.GetSimpleSections()
+			local times = profiler:GetSimpleSections()
 
 			-- base environment time is included in startup time, so remove it
 			if times["startup"] then

@@ -170,20 +170,21 @@ do
 	end
 end
 
-	local function normalize_path(path)
-		if not path then return nil end
+local function normalize_path(path)
+	if not path then return nil end
 
-		if path:sub(1, 1) == "@" then path = path:sub(2) end
+	if path:sub(1, 1) == "@" then path = path:sub(2) end
 
-		return path_util.Normalize(path)
-	end
+	return path_util.Normalize(path)
+end
 
-	function META:Recompile(path, lol, diagnostics, on_save_path)
-		if path then path = normalize_path(path) end
+function META:Recompile(path, lol, diagnostics, on_save_path)
+	if path then path = normalize_path(path) end
 
-		on_save_path = on_save_path or path
+	on_save_path = on_save_path or path
 
-		if on_save_path then on_save_path = normalize_path(on_save_path) end
+	if on_save_path then on_save_path = normalize_path(on_save_path) end
+
 	local cfg = self:GetCompilerConfig(path)
 	diagnostics = diagnostics or {}
 
@@ -245,6 +246,7 @@ end
 	end
 	cfg.analyzer.pre_read_file = function(parser, path)
 		if self.TempFiles[path] then return self:GetFileContent(path) end
+
 		return fs.read(path)
 	end
 	cfg.analyzer.on_read_file = function(parser, path, content)
@@ -255,7 +257,6 @@ end
 	end
 	cfg.parser.inline_require = true
 	self:DebugLog("[ " .. entry_point .. " ] compiling")
-
 	local compiler
 
 	if path == entry_point or entry_point == on_save_path then
@@ -292,7 +293,6 @@ end
 	local ok, err = compiler:Parse()
 
 	if ok then
-
 		if compiler.SyntaxTree.imports then
 			for _, root_node in ipairs(compiler.SyntaxTree.imports) do
 				local root = root_node.RootStatement
@@ -393,15 +393,25 @@ end
 			if
 				on_save_path and
 				cfg and
-				(cfg.analyzer.remove_unused or (cfg.emitter and cfg.emitter.remove_unused))
+				(
+					cfg.analyzer.remove_unused or
+					(
+						cfg.emitter and
+						cfg.emitter.remove_unused
+					)
+				)
 			then
 				self:DebugLog("checking roots for on_save_path: " .. tostring(on_save_path))
 				local roots = {}
 
 				if compiler.SyntaxTree.code then
-					self:DebugLog("compiler.SyntaxTree.code:GetName() = " .. tostring(compiler.SyntaxTree.code:GetName()))
+					self:DebugLog(
+						"compiler.SyntaxTree.code:GetName() = " .. tostring(compiler.SyntaxTree.code:GetName())
+					)
 
-					if normalize_path(compiler.SyntaxTree.code:GetName()) == normalize_path(on_save_path) then
+					if
+						normalize_path(compiler.SyntaxTree.code:GetName()) == normalize_path(on_save_path)
+					then
 						self:DebugLog("found compiler.SyntaxTree match")
 						table.insert(roots, compiler.SyntaxTree)
 					end
@@ -416,10 +426,7 @@ end
 								root = root_node.RootStatement.RootStatement
 							end
 
-							if
-								root and
-								root.code
-							then
+							if root and root.code then
 								if normalize_path(root.code:GetName()) == normalize_path(on_save_path) then
 									self:DebugLog("found import match: " .. tostring(root.code:GetName()))
 									table.insert(roots, root)
@@ -517,13 +524,11 @@ function META:Format(code, path, extra_emitter_config)
 	config.emitter.transpile_extensions = path:sub(-#".lua") == ".lua"
 	config.emitter.skip_import = true
 	config.emitter.no_pipeline = true
-
 	-- remove_unused should only be triggered by explicit request (e.g. code action),
 	-- not by the workspace-level removeUnusedOnSave setting (that goes through the Recompile save path)
 	local do_remove_unused = extra_emitter_config and extra_emitter_config.remove_unused
 	config.emitter.remove_unused = do_remove_unused or false
 	config.analyzer.remove_unused = do_remove_unused or false
-
 	local file_data = self:IsLoaded(path) and self:GetFile(path)
 
 	if file_data and file_data.compiler and file_data.code:GetString() == code then
@@ -533,9 +538,7 @@ function META:Format(code, path, extra_emitter_config)
 			cfg_copy[k] = v
 		end
 
-		if do_remove_unused then
-			file_data.compiler:Analyze()
-		end
+		if do_remove_unused then file_data.compiler:Analyze() end
 
 		local emitter = Emitter(cfg_copy)
 
@@ -550,9 +553,7 @@ function META:Format(code, path, extra_emitter_config)
 
 	local compiler = Compiler(code, "@" .. path, config)
 
-	if do_remove_unused then
-		compiler:Analyze()
-	end
+	if do_remove_unused then compiler:Analyze() end
 
 	local code, err = compiler:Emit()
 	return code
@@ -1631,6 +1632,9 @@ do
 	end
 
 	local function is_probably_lua(str)
+		do
+			return false
+		end -- this is very buggy
 		local possible_statements = {
 			"%s*local%s",
 			"%s*return%s",

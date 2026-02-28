@@ -110,8 +110,9 @@ function _G.run_lua(path--[[#: string]], ...)
 end
 
 function _G.run_nlua(path)
-	local nl = (require--[[# as any]])("nattlua")
-	local profiler = require("test.helpers.profiler")
+	local nl = require("nattlua")
+	local profiler_module = require("test.helpers.profiler")
+	local profiler
 	io.write("running nattlua: ", path, "\n")
 	local lua_code = assert(read_file(path))
 
@@ -134,7 +135,7 @@ function _G.run_nlua(path)
 	c.debug = has_flag("VERBOSE_STACKTRACE")
 	_G.DISABLE_BASE_ENV = has_flag("DISABLE_BASE_ENV")
 
-	if has_flag("PROFILE") then profiler.Start() end
+	if has_flag("PROFILE") then profiler = profiler_module.New() end
 
 	local ok, err
 
@@ -142,7 +143,7 @@ function _G.run_nlua(path)
 
 	if _G.DISABLE_BASE_ENV then _G.DISABLE_BASE_ENV = nil end
 
-	if has_flag("PROFILE") then profiler.Stop() end
+	if has_flag("PROFILE") then profiler:Stop() end
 
 	if not ok and err then
 		error(err)
@@ -212,7 +213,7 @@ function _G.run_test(path)
 
 	local get_time = require("test.helpers.get_time")
 	local time = get_time()
-	assert(loadfile("test/run.lua"))()(path, false, false)
+	assert(loadfile)()(path, false, false)
 	io.write(" - ok\n")
 	io.write("total time: ", get_time() - time, " seconds\n")
 end
