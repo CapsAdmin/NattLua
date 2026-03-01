@@ -174,6 +174,27 @@ function META:FindTrackedUpvalue(upvalue)
 	end
 end
 
+function META:FindTrackedTable(tbl, key)
+	local objects = self:GetTrackedNarrowings()
+
+	if not objects then return false end
+
+	local hash = key:GetHashForMutationTracking()
+
+	if hash == nil then return false end
+
+	for _, data in ipairs(objects) do
+		if
+			data.kind == "table" and
+			data.obj == tbl and
+			data.key and
+			data.key:GetHashForMutationTracking() == hash
+		then
+			return data
+		end
+	end
+end
+
 function META:TracksSameAs(scope, obj)
 	local objects_a = self:GetTrackedNarrowings()
 	local objects_b = scope:GetTrackedNarrowings()

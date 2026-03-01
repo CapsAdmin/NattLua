@@ -12,7 +12,7 @@ analyze[[
         attest.equal(x.lol, _ as 2 | nil)
     end
 
-    attest.equal(x.lol, _ as 1 | 2 | false | nil)
+    attest.equal(x.lol, _ as 1 | 2 | nil)
 ]]
 analyze[[
     local x = _ as nil | 1 | false
@@ -26,4 +26,15 @@ analyze[[
     local x = _ as nil | 1
     if x then x = nil end
     attest.equal<|x, nil|>
+]]
+analyze[[
+    local type config_get_time = (nil | function=()>(number))
+    local self = {_get_time = config_get_time}
+
+    if not self._get_time then self._get_time = _ as function=()>(number) end
+
+    local get_time = self._get_time
+    attest.equal(get_time, _ as function=()>(number))
+    local _time_start = get_time()
+    attest.equal(type(_time_start), "number")
 ]]

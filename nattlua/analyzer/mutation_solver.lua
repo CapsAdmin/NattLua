@@ -200,14 +200,40 @@ local function mutation_solver(mutations, scope, obj)
 						end
 					end
 				end
-			elseif -- table
-				value.Type ~= "any" and
-				mutations[1].value.Type ~= "union" and
-				mutations[1].value.Type ~= "function" and
-				mutations[1].value.Type ~= "any" and
-				union:HasTypeObject(value)
-			then
-				union:RemoveType(mutations[1].value)
+			elseif obj.Type == "table" then -- table
+				local narrowed = false
+
+				if mut.scope:GetStatementType() == "statement_if" and mut.key then
+					local data = mut.scope:FindTrackedTable(obj, mut.key)
+
+					if data and data.stack then
+						local entry = data.stack[#data.stack]
+						local val
+						local inverted = entry.inverted
+
+						if mut.scope:IsElseConditionalScope() then
+							val = inverted and entry.truthy or entry.falsy
+						else
+							val = inverted and entry.falsy or entry.truthy
+						end
+
+						if val and (val.Type ~= "union" or not val:IsEmpty()) then
+							union:RemoveType(val)
+							narrowed = true
+						end
+					end
+				end
+
+				if
+					not narrowed and
+					value.Type ~= "any" and
+					mutations[1].value.Type ~= "union" and
+					mutations[1].value.Type ~= "function" and
+					mutations[1].value.Type ~= "any" and
+					union:HasTypeObject(value)
+				then
+					union:RemoveType(mutations[1].value)
+				end
 			end
 		end
 
