@@ -358,7 +358,7 @@ do
 		if PROFILING then profiler:Stop() end
 
 		if test_file_count > 0 then
-			local times = profiler:GetSimpleSections()
+			local times = profiler:GetSectionTimes()
 
 			-- base environment time is included in startup time, so remove it
 			if times["startup"] then

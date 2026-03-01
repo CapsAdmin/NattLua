@@ -12,7 +12,7 @@ local time_function--[[#: function=()>(number) | nil]] = nil
 local function get_time_function()
 	local has_ffi, ffi = pcall(require, "ffi")
 
-	if not has_ffi then return os.clock end
+	if not has_ffi--[[# as boolean]] then return os.clock end
 
 	local tonumber = _G.tonumber
 
@@ -56,10 +56,10 @@ local function get_time_function()
 	end
 end
 
-local function format_error(err--[[#: number]], arg--[[#: nil | number]])--[[#: string]]
+local function format_error(err--[[#: number]], arg--[[#: any]])--[[#: string]]
 	local fmt = vmdef.traceerr[err]
 
-	if not fmt then return "unknown error: " .. tostring(err) end
+	if not fmt then return "unknown error: " .. err end
 
 	if not arg then return fmt end
 
@@ -114,25 +114,24 @@ local function json_string(s--[[#: string]])
 	return "\"" .. s .. "\""
 end
 
--- --- Profiler ---
-local HTML_TEMPLATE--[[#: string]] -- forward declaration, assigned at bottom of file
+local HTML_TEMPLATE--[[#: string]]
 local Profiler = {}
 Profiler.__index = Profiler
 --[[#type TEvent = {
 		type = "sample",
-		time = number | nil,
+		time = number,
 		stack = string,
 		sample_count = number,
 		vm_state = string,
 		section_path = string,
 	} | {
 		type = "section_start" | "section_end",
-		time = number | nil,
+		time = number,
 		name = string,
 		section_path = string,
 	} | {
 		type = "trace_start",
-		time = number | nil,
+		time = number,
 		id = number,
 		parent_id = number | nil,
 		exit_id = number | nil,
@@ -140,7 +139,7 @@ Profiler.__index = Profiler
 		func_info = string,
 	} | {
 		type = "trace_stop",
-		time = number | nil,
+		time = number,
 		id = number,
 		func_info = string,
 		linktype = string | nil,
@@ -149,17 +148,16 @@ Profiler.__index = Profiler
 		exit_count = number | nil,
 	} | {
 		type = "trace_abort",
-		time = number | nil,
+		time = number,
 		id = number,
 		abort_code = number | nil,
 		abort_reason = string,
 		func_info = string,
 	} | {
 		type = "trace_flush",
-		time = number | nil,
+		time = number,
 	}]]
---[[#-- --- Type Definitions ---
-type Profiler.@SelfArgument = {
+--[[#type Profiler.@SelfArgument = {
 	_id = string,
 	_path = string,
 	_file_url = string,
@@ -193,19 +191,16 @@ type Profiler.@SelfArgument = {
 }]]
 --[[#local type TProfile = Profiler.@SelfArgument]]
 
--- --- Event accumulation ---
-function Profiler:EmitEvent(event--[[#: TEvent]])
+function Profiler:EmitEvent(event--[[#: TEvent ~ {time = number}]])
 	event.time = self._get_time()
 	local idx = self._event_count + 1
 	self._events[idx] = event
 	self._event_count = idx
 end
 
--- --- Section tracking ---
 function Profiler:StartSection(name--[[#: string]])
 	if not self._running then return end
 
-	-- Event section tracking
 	table_insert(self._section_stack, name)
 	self._section_path = table_concat(self._section_stack, " > ")
 	self:EmitEvent({type = "section_start", name = name, section_path = self._section_path})
@@ -283,7 +278,7 @@ do
 		func--[[#: AnyFunction]],
 		pc--[[#: number]],
 		code--[[#: number]],
-		reason--[[#: number]]
+		reason--[[#: number | string]]
 	)
 		local trace = self._traces[id]
 
@@ -576,38 +571,35 @@ do
 
 			else
 				local f = self._file
+				local event_parts = {}
 
-				if f then
-					local event_parts = {}
-
-					for i = start_idx, end_idx do
-						event_parts[#event_parts + 1] = encode_event(self, assert(self._events[i], "nil event"))
-					end
-
-					local string_parts = {}
-
-					for _, str in ipairs(get_new_strings(self)) do
-						string_parts[#string_parts + 1] = json_string(str)
-					end
-
-					local strings_js, events_js = "[" .. table_concat(string_parts, ",") .. "]",
-					"[" .. table_concat(event_parts, ",") .. "]"
-					f:write("<script>_C(")
-					f:write(strings_js)
-					f:write(",")
-					f:write(events_js)
-					f:write(");</script>\n")
-					f:flush()
-					self._last_flushed_idx = count
+				for i = start_idx, end_idx do
+					event_parts[#event_parts + 1] = encode_event(self, assert(self._events[i], "nil event"))
 				end
+
+				local string_parts = {}
+
+				for _, str in ipairs(get_new_strings(self)) do
+					string_parts[#string_parts + 1] = json_string(str)
+				end
+
+				local strings_js, events_js = "[" .. table_concat(string_parts, ",") .. "]",
+				"[" .. table_concat(event_parts, ",") .. "]"
+				f:write("<script>_C(")
+				f:write(strings_js)
+				f:write(",")
+				f:write(events_js)
+				f:write(");</script>\n")
+				f:flush()
+				self._last_flushed_idx = count
 			end
 		end
 	end
 end
 
-function Profiler:GetSimpleSections()--[[#: Map<|string, {total = number}|>]]
+function Profiler:GetSectionTimes()--[[#: Map<|string, {total = number}|>]]
 	local times = {}
-	local start_times = {}
+	local start_times--[[#: Map<|string, number|>]] = {}
 
 	for _, event in ipairs(self._events) do
 		if event.type == "section_start" then
@@ -693,7 +685,7 @@ body { background: var(--bg-base); color: #e0e0e0; overflow-x: hidden; }
 ::-webkit-scrollbar-thumb:hover { background: var(--bg-hover); }
 ::-webkit-scrollbar-corner { background: var(--bg-base); }
 
-#header { padding: 8px 16px; background: var(--bg-panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; flex-wrap: wrap; position: relative; }
+#header { padding: 8px 16px; background: var(--bg-panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; flex-wrap: wrap; position: relative; contain: layout style; }
 #header .stats { font-size: 13px; color: var(--text-muted); line-height: 1.4; }
 #header .stats b { color: #fff; }
 #header .header-controls { margin-left: auto; position: relative; display: flex; align-items: center; }
@@ -740,14 +732,14 @@ body { background: var(--bg-base); color: #e0e0e0; overflow-x: hidden; }
 .section-header button::before { content: '▼'; display: inline-block; width: 1.2em; text-align: center; flex-shrink: 0; transition: transform 0.1s; font-size: 10px; }
 .section-header button.collapsed::before { content: '▶'; }
 .section-header:hover button { color: #fff; background: rgba(255,255,255,0.04); }
-#trace-panel { background: var(--bg-panel); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; height: 0; }
-#trace-panel.open { overflow: hidden; }
+#trace-panel { background: var(--bg-panel); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; height: 0; contain: strict; }
+#trace-panel.open { overflow: hidden; contain: layout style; }
 
 #trace-sticky-top { position: sticky; top: 0; z-index: 2; background: var(--bg-panel); flex-shrink: 0; padding-right: 10px; /* Match standard scrollbar width */ }
 #trace-filter-header { padding: 6px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
 #trace-filter-header:empty { display: none; }
 #trace-filter-header .panel-btn { padding: 2px 10px; }
-#trace-panel-scroll { flex: 1; overflow: auto; position: relative; }
+#trace-panel-scroll { flex: 1; overflow: auto; position: relative; contain: layout style; }
 #trace-panel table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; margin: 0; padding: 0; border: none; }
 #trace-panel .trace-header { background: var(--bg-elevated); table-layout: fixed; width: 100%; border: none; }
 #trace-panel th, #trace-panel td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; }
@@ -765,7 +757,8 @@ body { background: var(--bg-base); color: #e0e0e0; overflow-x: hidden; }
 #trace-panel .col-ir { width: 50px; }
 #trace-panel .col-exits { width: 60px; }
 #trace-panel thead tr th:last-child .th-resizer { display: none; }
-#trace-panel tr.trace-row { cursor: pointer; }
+#trace-panel tr.trace-row { cursor: pointer; height: 26px; }
+#trace-panel-scroll { overflow-anchor: none; }
 #trace-panel tr.trace-row:hover td, #trace-panel tr.trace-row.hovered td { background: rgba(255,255,255,0.06); }
 #trace-panel tr.trace-row.highlighted td { background: rgba(255,255,255,0.12); outline: 1px solid rgba(255,255,255,0.25); }
 #trace-panel tr.trace-row.selected td { background: rgba(255,220,80,0.18); outline: 1px solid rgba(255,220,80,0.55); }
@@ -775,7 +768,7 @@ body { background: var(--bg-base); color: #e0e0e0; overflow-x: hidden; }
 .trace-abort { color: var(--color-abort); }
 .trace-location { color: #aaa; }
 .trace-id { color: #ccc; font-weight: 600; min-width: 40px; }
-#filter-panel, #sample-filter-panel { background: var(--bg-panel); border-bottom: 1px solid var(--border); overflow: visible; }
+#filter-panel, #sample-filter-panel { background: var(--bg-panel); border-bottom: 1px solid var(--border); overflow: visible; contain: layout style; }
 #filter-panel .filter-grid, #sample-filter-panel .filter-grid { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 8px 16px; font-size: 11px; }
 #filter-panel label, #sample-filter-panel label { display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 2px 0; white-space: nowrap; }
 #filter-panel label:hover, #sample-filter-panel label:hover { color: #fff; }
@@ -785,8 +778,8 @@ body { background: var(--bg-base); color: #e0e0e0; overflow-x: hidden; }
 #filter-panel .filter-all-btn, #filter-panel .filter-none-btn, #sample-filter-panel .filter-all-btn, #sample-filter-panel .filter-none-btn { display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 2px 0; white-space: nowrap; font-size: 11px; user-select: none; }
 #filter-panel .filter-all-btn:hover, #filter-panel .filter-none-btn:hover, #sample-filter-panel .filter-all-btn:hover, #sample-filter-panel .filter-none-btn:hover { color: #fff; }
 .filter-separator { width: 100%; height: 1px; background: var(--border); margin: 4px 0; }
-#flamegraph-container { overflow: hidden; max-height: 0; flex-shrink: 0; }
-#flamegraph-container.open { max-height: none; display: block; overflow-x: hidden; overflow-y: auto; flex: 1; }
+#flamegraph-container { overflow: hidden; max-height: 0; flex-shrink: 0; contain: strict; }
+#flamegraph-container.open { max-height: none; display: block; overflow-x: hidden; overflow-y: auto; flex: 1; contain: layout style; }
 #flamegraph-canvas { width: 100%; min-height: 400px; }
 #tooltip { position: fixed; background: var(--bg-panel); border: 1px solid var(--border-strong); padding: 8px 12px; border-radius: 4px; font-size: 11px; pointer-events: none; display: none; z-index: 100; max-width: 500px; white-space: pre-wrap; line-height: 1.5; }
 .loc-link { color: var(--accent); text-decoration: none; opacity: 0.8; }
@@ -1183,20 +1176,24 @@ function refreshView(lo, hi, immediate) {
 }
 
 // --- Stats ---
+// Precompute sorted sample times for binary-search range queries
+const sampleEvents = [];
+for (const e of EVENTS) { if (e.type === 'sample') sampleEvents.push(e); }
+sampleEvents.sort((a, b) => a.time - b.time);
+const _sampleTimes = new Float64Array(sampleEvents.length);
+for (let i = 0; i < sampleEvents.length; i++) _sampleTimes[i] = sampleEvents[i].time - timeOrigin;
+
+function bisectLeft(arr, val) { let lo = 0, hi = arr.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (arr[mid] < val) lo = mid + 1; else hi = mid; } return lo; }
+function bisectRight(arr, val) { let lo = 0, hi = arr.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (arr[mid] <= val) lo = mid + 1; else hi = mid; } return lo; }
+
 const statsEl = document.getElementById('stats');
 function updateStats(lo, hi) {
-  let count = 0;
-  let totalSamples = 0;
-  for (const e of EVENTS) {
-    if (e.type === 'sample') {
-      totalSamples++;
-      const t = e.time - timeOrigin;
-      if (t >= lo && t <= hi) count++;
-    }
-  }
+  const iLo = bisectLeft(_sampleTimes, lo);
+  const iHi = bisectRight(_sampleTimes, hi);
+  const count = iHi - iLo;
   const dur = hi - lo;
   statsEl.innerHTML = `
-    <b>${count}</b> / ${totalSamples} events<br>
+    <b>${count}</b> / ${sampleEvents.length} events<br>
     <b>${dur.toFixed(3)}</b> / ${TOTAL_TIME.toFixed(3)}s
   `;
 }
@@ -1210,14 +1207,13 @@ function drawVmPie(lo, hi) {
   const size = 72;
   const ctx = setupCanvas(canvas, size, size);
 
-  // Count samples in range
+  // Count samples in range using binary search
   const rangeCounts = {};
   let total = 0;
-  for (const e of EVENTS) {
-    if (e.type !== 'sample') continue;
-    const t = e.time - timeOrigin;
-    if (t < lo || t > hi) continue;
-    const s = e.vm_state || '?';
+  const iLo = bisectLeft(_sampleTimes, lo);
+  const iHi = bisectRight(_sampleTimes, hi);
+  for (let i = iLo; i < iHi; i++) {
+    const s = sampleEvents[i].vm_state || '?';
     rangeCounts[s] = (rangeCounts[s] || 0) + 1;
     total++;
   }
@@ -1309,6 +1305,13 @@ function traceStatusLabel(span) {
 }
 let traceListSortKey = 'id';
 let traceListSortAsc = true;
+let traceVisibleData = [];
+let traceRenderLo = 0, traceRenderHi = 0;
+const TRACE_ROW_H = 26;
+let _traceSkeletonBuilt = false;
+let _traceLastSelectedUid = null;
+let _traceLastSortKey = '';
+let _traceLastSortAsc = true;
 
 function clearSelectionHtml(spanId, label) {
   return ' <span class="sel-star">&#9733; ' + label + '</span><button id="btn-clear-selection" class="panel-btn btn-clear">Clear</button>';
@@ -1318,21 +1321,15 @@ function wireClearBtn(lo, hi) {
   if (btn) btn.addEventListener('click', () => { selectedSpan = null; drawTimeline(); buildTraceListPanel(lo, hi); });
 }
 
-function buildTraceListPanel(tStart, tEnd) {
-  const lo = tStart !== undefined ? tStart : viewStart;
-  const hi = tEnd !== undefined ? tEnd : viewEnd;
-
-  // When a span is selected, collect its entire ancestor+descendant tree
+function _computeVisibleSpans(lo, hi) {
   let selectedTree = null;
   if (selectedSpan) {
     selectedTree = new Set();
-    // Walk up to root
     let anc = selectedSpan;
     while (anc) {
       selectedTree.add(anc.uid);
       anc = anc.start.parent_id ? spanByUid[traceUid(anc.start.generation, anc.start.parent_id)] : null;
     }
-    // BFS down descendants
     const q = [selectedSpan];
     while (q.length) {
       const n = q.shift();
@@ -1341,7 +1338,6 @@ function buildTraceListPanel(tStart, tEnd) {
       if (kids) for (const k of kids) q.push(k);
     }
   }
-
   const visible = [];
   for (const span of traceSpans) {
     if (hoverCategory) {
@@ -1351,7 +1347,6 @@ function buildTraceListPanel(tStart, tEnd) {
       if (!enabledCategories.has(span.category)) continue;
       if (span.abort_reason && !enabledAbortReasons.has(span.abort_reason)) continue;
     }
-    // If a span is selected, only show its tree; otherwise filter by time range
     if (selectedTree) {
       if (!selectedTree.has(span.uid)) continue;
     } else {
@@ -1360,18 +1355,6 @@ function buildTraceListPanel(tStart, tEnd) {
     }
     visible.push(span);
   }
-  const container = document.getElementById('trace-panel');
-  if (visible.length === 0) {
-    let emptyHdr = '<div id="trace-sticky-top"><div id="trace-filter-header">';
-    if (selectedSpan) emptyHdr += clearSelectionHtml(selectedSpan.id, '#' + selectedSpan.id);
-    emptyHdr += '</div><div id="filter-panel"></div></div><div class="empty-msg">No traces in range.</div>';
-    container.innerHTML = emptyHdr;
-    buildFilterPanel(lo, hi);
-    wireClearBtn(lo, hi);
-    return;
-  }
-
-  // Sort
   const cmp = (a, b) => {
     let va, vb;
     switch (traceListSortKey) {
@@ -1387,17 +1370,19 @@ function buildTraceListPanel(tStart, tEnd) {
     return 0;
   };
   visible.sort(cmp);
+  return visible;
+}
 
+function _ensureTraceSkeleton() {
+  if (_traceSkeletonBuilt) return;
+  _traceSkeletonBuilt = true;
+  const container = document.getElementById('trace-panel');
   const arrow = traceListSortAsc ? ' ▲' : ' ▼';
   const hdr = (key, label, cls) => {
     const active = traceListSortKey === key;
     return '<th data-sort="' + key + '" class="' + (cls || '') + '">' + label + (active ? arrow : '') + '<div class="th-resizer"></div></th>';
   };
-  let html = '<div id="trace-sticky-top"><div id="trace-filter-header">';
-  if (selectedSpan) {
-    html += clearSelectionHtml(selectedSpan.id, 'Showing tree for #' + selectedSpan.id);
-  }
-  html += '</div><div id="filter-panel"></div>';
+  let html = '<div id="trace-sticky-top"><div id="trace-filter-header"></div><div id="filter-panel"></div>';
   html += '<table class="trace-header"><thead><tr>' +
     hdr('id','id','col-id') +
     hdr('status','status','col-status') +
@@ -1408,41 +1393,24 @@ function buildTraceListPanel(tStart, tEnd) {
     hdr('ir','ir','col-ir') +
     hdr('exits','exits','col-exits') +
     '</tr></thead></table></div>';
-  html += '<div id="trace-panel-scroll"><table><thead><tr style="height:0; visibility:collapse;">' +
+  html += '<div id="trace-panel-scroll">' +
+    '<div id="trace-vtop" style="height:0"></div>' +
+    '<table><thead><tr style="height:0; visibility:collapse;">' +
     '<th class="col-id"></th><th class="col-status"></th><th class="col-depth"></th><th class="col-location"></th>' +
     '<th class="col-parent"></th><th class="col-time"></th><th class="col-ir"></th><th class="col-exits"></th>' +
-    '</tr></thead><tbody>';
-  for (const s of visible) {
-    const cls = traceStatusClass(s);
-    const irCount = s.end.ir_count || '';
-    const exitCount = s.end.exit_count || '';
-    const parentInfo = s.start.parent_id ? '#' + s.start.parent_id + ' exit ' + s.start.exit_id : '';
-    const t = (s.t0 - timeOrigin).toFixed(4) + 's';
-    const selCls = (selectedSpan && s.uid === selectedSpan.uid) ? ' selected' : '';
-    html += '<tr class="trace-row' + selCls + '" data-span-uid="' + s.uid + '">' +
-      '<td class="col-id">#' + s.id + '</td>' +
-      '<td class="' + cls + ' col-status">' + traceStatusLabel(s) + '</td>' +
-      '<td class="col-depth">' + s.depth + '</td>' +
-      '<td class="trace-location col-location">' + funcInfoLink(s.start.func_info) + '</td>' +
-      '<td class="col-parent">' + parentInfo + '</td>' +
-      '<td class="col-time">' + t + '</td>' +
-      '<td class="col-ir">' + irCount + '</td>' +
-      '<td class="col-exits">' + exitCount + '</td></tr>';
-  }
-  html += '</tbody></table></div>';
+    '</tr></thead><tbody id="trace-vbody"></tbody></table>' +
+    '<div id="trace-vbot" style="height:0"></div></div>';
   container.innerHTML = html;
 
-  buildFilterPanel(lo, hi);
-  wireClearBtn(lo, hi);
-
-  // Sort header click handlers
+  // Wire sort headers once
   container.querySelectorAll('th[data-sort]').forEach(th => {
     th.addEventListener('click', (ev) => {
       if (ev.target.classList.contains('th-resizer')) return;
       const key = th.dataset.sort;
       if (traceListSortKey === key) traceListSortAsc = !traceListSortAsc;
       else { traceListSortKey = key; traceListSortAsc = true; }
-      buildTraceListPanel(lo, hi);
+      _updateSortIndicators();
+      buildTraceListPanel(traceRenderLo, traceRenderHi);
     });
 
     const resizer = th.querySelector('.th-resizer');
@@ -1451,12 +1419,10 @@ function buildTraceListPanel(tStart, tEnd) {
         ev.stopPropagation();
         const startX = ev.clientX;
         const startW = th.getBoundingClientRect().width;
-        
         const onMouseMove = (moveEv) => {
           const newW = Math.max(30, startW + (moveEv.clientX - startX));
           const cls = th.className.split(' ').find(c => c.startsWith('col-'));
           if (cls) {
-            // Find or create style tag for dynamic resizing
             let styleTag = document.getElementById('dynamic-column-styles');
             if (!styleTag) {
               styleTag = document.createElement('style');
@@ -1465,8 +1431,6 @@ function buildTraceListPanel(tStart, tEnd) {
             }
             const selector = '#trace-panel .' + cls;
             const newRule = selector + ' { width: ' + newW + 'px !important; }';
-            
-            // Efficiently update the rule
             const sheet = styleTag.sheet;
             let ruleIdx = -1;
             for (let i = 0; i < sheet.cssRules.length; i++) {
@@ -1488,34 +1452,142 @@ function buildTraceListPanel(tStart, tEnd) {
     }
   });
 
-  // Row hover + click handlers
-  container.querySelectorAll('tr.trace-row').forEach(row => {
-    row.addEventListener('click', (ev) => {
-      if (ev.target.closest('a')) return; // let link navigate, don't select row
-      const uid = row.dataset.spanUid;
-      const span = spanByUid[uid];
-      if (!span) return;
-      selectedSpan = (selectedSpan === span) ? null : span;
-      drawTimeline();
-      buildTraceListPanel(lo, hi);
-    });
-    row.addEventListener('mouseenter', () => {
-      const uid = row.dataset.spanUid;
-      const span = spanByUid[uid];
-      if (span && lastHoveredSpan !== span) {
-        lastHoveredSpan = span;
-        drawTimeline();
-      }
-      row.classList.add('hovered');
-    });
-    row.addEventListener('mouseleave', () => {
-      row.classList.remove('hovered');
-      if (lastHoveredSpan) {
-        lastHoveredSpan = null;
-        drawTimeline();
-      }
-    });
+  // Event delegation wired once
+  const scrollEl = document.getElementById('trace-panel-scroll');
+  scrollEl.addEventListener('click', (ev) => {
+    const row = ev.target.closest('tr.trace-row');
+    if (!row || ev.target.closest('a')) return;
+    const uid = row.dataset.spanUid;
+    const span = spanByUid[uid];
+    if (!span) return;
+    selectedSpan = (selectedSpan === span) ? null : span;
+    drawTimeline();
+    buildTraceListPanel(traceRenderLo, traceRenderHi);
   });
+  scrollEl.addEventListener('mouseover', (ev) => {
+    const row = ev.target.closest('tr.trace-row');
+    if (!row) return;
+    const uid = row.dataset.spanUid;
+    const span = spanByUid[uid];
+    if (span && lastHoveredSpan !== span) {
+      lastHoveredSpan = span;
+      drawTimeline();
+    }
+    row.classList.add('hovered');
+  });
+  scrollEl.addEventListener('mouseout', (ev) => {
+    const row = ev.target.closest('tr.trace-row');
+    if (!row) return;
+    row.classList.remove('hovered');
+    if (lastHoveredSpan) {
+      lastHoveredSpan = null;
+      drawTimeline();
+    }
+  });
+
+  let _traceVScrollRAF = 0;
+  scrollEl.addEventListener('scroll', () => {
+    if (_traceVScrollRAF) return;
+    _traceVScrollRAF = requestAnimationFrame(() => {
+      _traceVScrollRAF = 0;
+      renderVisibleTraceRows();
+    });
+  }, {passive: true});
+}
+
+function _updateSortIndicators() {
+  const container = document.getElementById('trace-panel');
+  if (!container) return;
+  const arrow = traceListSortAsc ? ' ▲' : ' ▼';
+  container.querySelectorAll('th[data-sort]').forEach(th => {
+    const key = th.dataset.sort;
+    // Remove old arrow if present
+    const resizer = th.querySelector('.th-resizer');
+    const label = th.childNodes[0];
+    const baseLabel = key; // the column name
+    if (label && label.nodeType === 3) {
+      label.textContent = baseLabel + (traceListSortKey === key ? arrow : '');
+    }
+  });
+}
+
+function _updateSelectionHeader(lo, hi) {
+  const hdr = document.getElementById('trace-filter-header');
+  if (!hdr) return;
+  const currentUid = selectedSpan ? selectedSpan.uid : null;
+  if (currentUid === _traceLastSelectedUid) return;
+  _traceLastSelectedUid = currentUid;
+  if (selectedSpan) {
+    hdr.innerHTML = clearSelectionHtml(selectedSpan.id, 'Showing tree for #' + selectedSpan.id);
+    wireClearBtn(lo, hi);
+  } else {
+    hdr.innerHTML = '';
+  }
+}
+
+function buildTraceListPanel(tStart, tEnd) {
+  const lo = tStart !== undefined ? tStart : viewStart;
+  const hi = tEnd !== undefined ? tEnd : viewEnd;
+
+  _ensureTraceSkeleton();
+
+  const visible = _computeVisibleSpans(lo, hi);
+
+  traceVisibleData = visible;
+  traceRenderLo = lo;
+  traceRenderHi = hi;
+
+  _updateSelectionHeader(lo, hi);
+
+  if (visible.length === 0) {
+    const tbody = document.getElementById('trace-vbody');
+    if (tbody) tbody.innerHTML = '';
+    const vtop = document.getElementById('trace-vtop');
+    const vbot = document.getElementById('trace-vbot');
+    if (vtop) vtop.style.height = '0';
+    if (vbot) vbot.style.height = '0';
+  } else {
+    renderVisibleTraceRows();
+  }
+}
+
+function renderVisibleTraceRows() {
+  const scrollEl = document.getElementById('trace-panel-scroll');
+  const tbody = document.getElementById('trace-vbody');
+  if (!scrollEl || !tbody) return;
+
+  const scrollTop = scrollEl.scrollTop;
+  const viewH = scrollEl.clientHeight;
+  const totalRows = traceVisibleData.length;
+  const BUFFER = 15;
+  const startIdx = Math.max(0, Math.floor(scrollTop / TRACE_ROW_H) - BUFFER);
+  const endIdx = Math.min(totalRows, Math.ceil((scrollTop + viewH) / TRACE_ROW_H) + BUFFER);
+
+  const vtop = document.getElementById('trace-vtop');
+  const vbot = document.getElementById('trace-vbot');
+  if (vtop) vtop.style.height = (startIdx * TRACE_ROW_H) + 'px';
+  if (vbot) vbot.style.height = ((totalRows - endIdx) * TRACE_ROW_H) + 'px';
+
+  let html = '';
+  for (let i = startIdx; i < endIdx; i++) {
+    const s = traceVisibleData[i];
+    const cls = traceStatusClass(s);
+    const irCount = s.end.ir_count || '';
+    const exitCount = s.end.exit_count || '';
+    const parentInfo = s.start.parent_id ? '#' + s.start.parent_id + ' exit ' + s.start.exit_id : '';
+    const t = (s.t0 - timeOrigin).toFixed(4) + 's';
+    const selCls = (selectedSpan && s.uid === selectedSpan.uid) ? ' selected' : '';
+    html += '<tr class="trace-row' + selCls + '" data-span-uid="' + s.uid + '">' +
+      '<td class="col-id">#' + s.id + '</td>' +
+      '<td class="' + cls + ' col-status">' + traceStatusLabel(s) + '</td>' +
+      '<td class="col-depth">' + s.depth + '</td>' +
+      '<td class="trace-location col-location">' + funcInfoLink(s.start.func_info) + '</td>' +
+      '<td class="col-parent">' + parentInfo + '</td>' +
+      '<td class="col-time">' + t + '</td>' +
+      '<td class="col-ir">' + irCount + '</td>' +
+      '<td class="col-exits">' + exitCount + '</td></tr>';
+  }
+  tbody.innerHTML = html;
 }
 
 
@@ -1560,12 +1632,25 @@ function syncTraceListHighlight(span) {
   const prev = panel.querySelector('tr.trace-row.highlighted');
   if (prev) prev.classList.remove('highlighted');
   if (!span) return;
-  const row = panel.querySelector('tr.trace-row[data-span-id="' + span.id + '"]');
+
+  // Virtual scroll: scroll to the row's position if not currently visible
+  const scrollEl = document.getElementById('trace-panel-scroll');
+  if (scrollEl && traceVisibleData.length > 0) {
+    const idx = traceVisibleData.findIndex(s => s.uid === span.uid);
+    if (idx !== -1) {
+      const targetTop = idx * TRACE_ROW_H;
+      const scrollTop = scrollEl.scrollTop;
+      const viewH = scrollEl.clientHeight;
+      if (targetTop < scrollTop || targetTop + TRACE_ROW_H > scrollTop + viewH) {
+        scrollEl.scrollTop = Math.max(0, targetTop - viewH / 2);
+      }
+      renderVisibleTraceRows();
+    }
+  }
+
+  const row = panel.querySelector('tr.trace-row[data-span-uid="' + span.uid + '"]');
   if (row) {
     if (!row.classList.contains('selected')) row.classList.add('highlighted');
-    if (panel.classList.contains('open')) {
-      row.scrollIntoView({block: 'nearest', behavior: 'instant'});
-    }
   }
 }
 
@@ -2732,16 +2817,23 @@ makeResizable(document.getElementById('timeline-resize-handle'), 25,
 const fgCanvas = document.getElementById('flamegraph-canvas');
 const fgCtx = fgCanvas.getContext('2d');
 let fgRects = [];
+let _fgCacheKey = '';
+let _fgCachedResult = null;
 
 function buildFlamegraph(tStart, tEnd) {
+  const cacheKey = tStart.toFixed(6) + ':' + tEnd.toFixed(6) + ':' +
+    Array.from(enabledStates).sort().join(',') + ':' +
+    Array.from(enabledSections).sort().join(',') + ':' +
+    (hoverState || '') + ':' + (hoverSection || '');
+  if (cacheKey === _fgCacheKey && _fgCachedResult) return _fgCachedResult;
   const stacks = [];
   const currentEnabledStates = new Set(enabledStates);
   const currentEnabledSections = new Set(enabledSections);
 
-  for (const e of EVENTS) {
-    if (e.type !== 'sample') continue;
-    const t = e.time - timeOrigin;
-    if (t < tStart || t > tEnd) continue;
+  const iLo = bisectLeft(_sampleTimes, tStart);
+  const iHi = bisectRight(_sampleTimes, tEnd);
+  for (let idx = iLo; idx < iHi; idx++) {
+    const e = sampleEvents[idx];
     if (!e.stack) continue;
     // Filter out samples belonging to disabled sections or non-hovered state/section
     if (hoverState || hoverSection) {
@@ -2782,7 +2874,10 @@ function buildFlamegraph(tStart, tEnd) {
     node._self++;
   }
 
-  return {root, maxDepth, totalSamples: stacks.length};
+  const result = {root, maxDepth, totalSamples: stacks.length};
+  _fgCacheKey = cacheKey;
+  _fgCachedResult = result;
+  return result;
 }
 
 const FG_ROW_HEIGHT = 20;
@@ -2816,14 +2911,18 @@ function drawFlamegraph(tStart, tEnd) {
   const totalWidth = containerW - 16;
   const xOffset = 8;
 
+  const _frameColorCache = {};
   function colorForFrame(name) {
+    if (_frameColorCache[name]) return _frameColorCache[name];
     let h = 0;
     for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
     h = Math.abs(h);
     const hue = (h % 40) + 10;
     const sat = 50 + (h % 30);
     const lit = 45 + (h % 20);
-    return `hsl(${hue}, ${sat}%, ${lit}%)`;
+    const c = `hsl(${hue}, ${sat}%, ${lit}%)`;
+    _frameColorCache[name] = c;
+    return c;
   }
 
   function drawNode(node, depth, xStart, xEnd) {
@@ -2845,11 +2944,17 @@ function drawFlamegraph(tStart, tEnd) {
       if (textW < w - 6) {
         fgCtx.fillText(label, xStart + 3, y + rectH - 5);
       } else {
-        let truncated = label;
-        while (truncated.length > 1 && fgCtx.measureText(truncated + '…').width > w - 6) {
-          truncated = truncated.slice(0, -1);
+        // Binary search for truncation length instead of linear scan
+        let lo = 1, hi = label.length, best = 1;
+        while (lo <= hi) {
+          const mid = (lo + hi) >> 1;
+          if (fgCtx.measureText(label.slice(0, mid) + '…').width <= w - 6) {
+            best = mid; lo = mid + 1;
+          } else {
+            hi = mid - 1;
+          }
         }
-        fgCtx.fillText(truncated + '…', xStart + 3, y + rectH - 5);
+        fgCtx.fillText(label.slice(0, best) + '…', xStart + 3, y + rectH - 5);
       }
     }
 
