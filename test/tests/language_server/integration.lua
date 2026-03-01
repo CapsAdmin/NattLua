@@ -298,3 +298,100 @@ do
 	test_hover("local a = |(1)", "1")
 	test_hover("local a = (|1)", "1")
 end
+
+-- Test unreachable code is dimmed via Unnecessary diagnostic tag
+do
+	local client = LSPClient.New()
+	local root_uri = "file:///workspace"
+	client:SetWorkingDirectory("/workspace")
+	client:Initialize(lsp, root_uri)
+	local file_uri = root_uri .. "/test.nlua"
+	local code = [[
+if false then
+	local www = "hello"
+end
+]]
+	client:ClearNotifications()
+	client:Notify(
+		lsp,
+		"textDocument/didOpen",
+		{
+			textDocument = {
+				uri = file_uri,
+				languageId = "nattlua",
+				version = 1,
+				text = code,
+			},
+		}
+	)
+	local diag_notifications = client:GetNotifications("textDocument/publishDiagnostics")
+	assert(#diag_notifications > 0, "Should have publishDiagnostics notifications")
+	local found_unnecessary = false
+
+	for _, notif in ipairs(diag_notifications) do
+		for _, diag in ipairs(notif.params.diagnostics) do
+			if diag.tags then
+				for _, tag in ipairs(diag.tags) do
+					if tag == 1 and diag.message:find("unreachable") then
+						found_unnecessary = true
+					end
+				end
+			end
+		end
+	end
+
+	assert(
+		found_unnecessary,
+		"Unreachable code inside 'if false' should produce a diagnostic with Unnecessary tag (1)"
+	)
+end
+
+-- Test unreachable code in else-branch when condition is always true
+do
+	local client = LSPClient.New()
+	local root_uri = "file:///workspace"
+	client:SetWorkingDirectory("/workspace")
+	client:Initialize(lsp, root_uri)
+	local file_uri = root_uri .. "/test.nlua"
+	local code = [[
+local x = true
+if x then
+	local alive = "reachable"
+else
+	local dead = "unreachable"
+end
+]]
+	client:ClearNotifications()
+	client:Notify(
+		lsp,
+		"textDocument/didOpen",
+		{
+			textDocument = {
+				uri = file_uri,
+				languageId = "nattlua",
+				version = 1,
+				text = code,
+			},
+		}
+	)
+	local diag_notifications = client:GetNotifications("textDocument/publishDiagnostics")
+	assert(#diag_notifications > 0, "Should have publishDiagnostics notifications")
+	local found_unnecessary = false
+
+	for _, notif in ipairs(diag_notifications) do
+		for _, diag in ipairs(notif.params.diagnostics) do
+			if diag.tags then
+				for _, tag in ipairs(diag.tags) do
+					if tag == 1 and diag.message:find("unreachable") then
+						found_unnecessary = true
+					end
+				end
+			end
+		end
+	end
+
+	assert(
+		found_unnecessary,
+		"Unreachable else-branch when condition is always true should produce a diagnostic with Unnecessary tag (1)"
+	)
+end

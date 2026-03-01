@@ -73,6 +73,10 @@ return {
 									self:ConstantIfExpressionWarning(nil, og_statement.tokens["if/else/elseif"][i])
 									self:PopCurrentExpression()
 								end
+
+								for _, stmt in ipairs(statements) do
+									if stmt.Unreachable == nil then stmt:SetUnreachable(true) end
+								end
 							end
 						end
 					else

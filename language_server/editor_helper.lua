@@ -474,6 +474,78 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 		end
 	end
 
+	-- Add diagnostics for unreachable code (dimmed with Unnecessary tag)
+	local file_data = self:IsLoaded(path) and self:GetFile(path)
+
+	if file_data and file_data.compiler and file_data.compiler.SyntaxTree then
+		local code_obj = file_data.code
+		local diag_name = code_obj and code_obj:GetName()
+
+		if diag_name then
+			local function collect_unreachable(node)
+				if not node then return end
+
+				if node.statements then
+					for _, child in ipairs(node.statements) do
+						if type(child) == "table" then
+							if child.Type then
+								-- It's a statement node
+								if child.Unreachable == true then
+									local start, stop = child:GetStartStop()
+
+									if start and stop then
+										diagnostics[diag_name] = diagnostics[diag_name] or {}
+										table.insert(
+											diagnostics[diag_name],
+											{
+												severity = "hint",
+												code = code_obj,
+												start = start,
+												stop = stop,
+												message = "unreachable code",
+												unreachable = true,
+											}
+										)
+									end
+								end
+
+								collect_unreachable(child)
+							else
+								-- It's an array of statements (e.g., if branch)
+								for _, stmt in ipairs(child) do
+									if type(stmt) == "table" and stmt.Type then
+										if stmt.Unreachable == true then
+											local start, stop = stmt:GetStartStop()
+
+											if start and stop then
+												diagnostics[diag_name] = diagnostics[diag_name] or {}
+												table.insert(
+													diagnostics[diag_name],
+													{
+														severity = "hint",
+														code = code_obj,
+														start = start,
+														stop = stop,
+														message = "unreachable code",
+														unreachable = true,
+													}
+												)
+											end
+										end
+
+										collect_unreachable(stmt)
+									end
+								end
+							end
+						end
+					end
+				end
+			end
+
+			collect_unreachable(file_data.compiler.SyntaxTree)
+		end
+	end
+
 	for name, data in pairs(diagnostics) do
 		if #data > 0 then
 			self:OnDiagnostics(name, data)

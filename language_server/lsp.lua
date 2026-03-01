@@ -131,7 +131,7 @@ function editor_helper:OnDiagnostics(path, data)
 		local range = get_range(v.code, v.start, v.stop)
 		local tags
 
-		if v.message:find("is never used") then tags = {1} end
+		if v.message:find("is never used") or v.unreachable then tags = {1} end
 
 		diagnostics[i] = {
 			severity = DiagnosticSeverity[v.severity],
@@ -254,7 +254,6 @@ lsp.methods["textDocument/codeAction"] = function(params)
 
 	return actions
 end
-
 lsp.methods["nattlua/format"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 	local code = editor_helper:Format(params.code, path)
