@@ -1632,9 +1632,6 @@ do
 	end
 
 	local function is_probably_lua(str)
-		do
-			return false
-		end -- this is very buggy
 		local possible_statements = {
 			"%s*local%s",
 			"%s*return%s",

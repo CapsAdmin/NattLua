@@ -605,6 +605,27 @@ do
 	end
 end
 
+function Profiler:GetSimpleSections()--[[#: Map<|string, {total = number}|>]]
+	local times = {}
+	local start_times = {}
+
+	for _, event in ipairs(self._events) do
+		if event.type == "section_start" then
+			start_times[event.name] = event.time
+		elseif event.type == "section_end" then
+			local start_time = start_times[event.name]
+
+			if start_time then
+				times[event.name] = times[event.name] or {total = 0}
+				times[event.name].total = times[event.name].total + (event.time - start_time)
+				start_times[event.name] = nil
+			end
+		end
+	end
+
+	return times
+end
+
 function Profiler:Stop()
 	if not self._running then return end
 
