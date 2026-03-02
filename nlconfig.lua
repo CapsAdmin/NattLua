@@ -207,7 +207,11 @@ do -- custom commands specific for nattlua
 			},
 		},
 		cb = function(args, options, config, cli)
-			local prof = require("test.helpers.profiler").New()
+			local prof = require("test.helpers.profiler").New(
+				{
+					file_url = "vscode://file/" .. io.popen("pwd"):read() .. "/${path}:${line}:1",
+				}
+			)
 			local Compiler = require("nattlua.compiler")
 			local entry_points = {
 				config.entry_point or
