@@ -1,6 +1,7 @@
 type _ = any
 type boolean = true | false
 type AnyTable = {[any] = any}
+type AnyList = {[number] = any}
 type AnyFunction = function=(...any)>(...any)
 type userdata = AnyTable
 type ctype = AnyTable

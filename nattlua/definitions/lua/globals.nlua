@@ -84,7 +84,7 @@ analyzer function next(t: Map<|any, any|>, k: any)
 	return k, v
 end
 
-analyzer function pairs(tbl: Table)
+analyzer function pairs(tbl: AnyTable)
 	if tbl.Type == "table" and (tbl:HasLiteralKeys() or analyzer:IsTypesystem()) then
 		local i = 1
 		return function()
@@ -114,7 +114,7 @@ analyzer function pairs(tbl: Table)
 	end
 end
 
-analyzer function ipairs(tbl: {[number] = any} | {})
+analyzer function ipairs(tbl: AnyList)
 	if tbl:IsLiteral() then
 		local i = 1
 		return function(key, val)
