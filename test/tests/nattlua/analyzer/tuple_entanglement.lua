@@ -56,13 +56,19 @@ analyze[[
         attest.equal(str, _ as nil)
     end
 ]]
--- pcall with non-literal function should entangle ok with result
+-- pcall with uncertain error should return union-of-tuples and entangle
 analyze[[
-    local function might_fail(): number
-        return 42
-    end
-    local ok, result = pcall(might_fail)
+    local ok, err = pcall(function()
+        if math.random() > 0.5 then error("!") end
+        return 1337
+    end)
+    attest.equal(ok, _ as false | true)
+    attest.equal(err, _ as 1337 | string)
     if ok then
         attest.equal(ok, _ as true)
+        attest.equal(err, _ as 1337)
+    else
+        attest.equal(ok, _ as false)
+        attest.equal(err, _ as string)
     end
 ]]

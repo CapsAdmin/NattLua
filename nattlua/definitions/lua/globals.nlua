@@ -377,6 +377,15 @@ type pcall = ReturnIfNonLiteral<|
 			)
 		end
 
+		if callable.scope and callable.scope.lua_silent_error then
+			return types.Union(
+				{
+					types.Tuple({types.True(), tuple}),
+					types.Tuple({types.False(), types.String()}),
+				}
+			)
+		end
+
 		return true, tuple
 	end
 |>
@@ -410,6 +419,15 @@ type xpcall = ReturnIfNonLiteral<|
 		end
 
 		if callable.Type ~= "function" or not callable:GetFunctionBodyNode() then
+			return types.Union(
+				{
+					types.Tuple({types.True(), tuple}),
+					types.Tuple({types.False(), types.String()}),
+				}
+			)
+		end
+
+		if callable.scope and callable.scope.lua_silent_error then
 			return types.Union(
 				{
 					types.Tuple({types.True(), tuple}),
