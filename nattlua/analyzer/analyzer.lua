@@ -277,8 +277,8 @@ do
 		return obj
 	end
 
-	local max_iterations = 100000
-	local max_time_seconds = 8
+	local max_iterations = 200000
+	local max_time_seconds = 20
 
 	local function sort(a, b)
 		return a.count > b.count
