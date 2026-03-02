@@ -172,7 +172,7 @@ local traceback = function(self, obj, msg)
 		local ret = {
 			xpcall(function()
 				msg = msg or "no error"
-				local s = msg .. "\n" .. callstack.traceback(nil, 2)
+				local s = tostring(msg) .. "\n" .. callstack.traceback(nil, 2)
 
 				if self.analyzer then s = s .. self.analyzer:DebugStateToString() end
 
@@ -279,7 +279,7 @@ function META:Analyze(analyzer, ...)
 
 		return res
 	end, function(msg)
-		return traceback(self, analyzer, msg)
+		return traceback(self, analyzer, msg) .. "\n" .. callstack.traceback(nil, 2)
 	end)
 	self.AnalyzedResult = res
 

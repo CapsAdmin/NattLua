@@ -587,7 +587,7 @@ function cli.main(...)
 		os.exit(1)
 	end
 
-	local ok, err = xpcall(config.commands[command].cb, debug.traceback, args, options, config, cli)
+	local ok, err = pcall(config.commands[command].cb, args, options, config, cli)
 
 	if not ok then
 		if _G.NATTLUA_MARKDOWN_OUTPUT then

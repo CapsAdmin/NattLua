@@ -6,9 +6,25 @@ local NATTLUA_MARKDOWN_OUTPUT = _G.NATTLUA_MARKDOWN_OUTPUT
 
 if ok--[[# as boolean]] then
 	function callstack.traceback(msg--[[#: string | nil]], level--[[#: 1 .. inf | nil]])
-		level = level or 50
+		level = level or 1
 		msg = msg or "stack traceback:\n"
-		local out = msg .. prof.dumpstack("pl\n", level + 2)
+		local str = prof.dumpstack("pl\n", 50)
+		local count = 0
+		local pos = 1
+
+		for _ = 1, level + 1 do
+			local _, stop = str:find("\n", pos, true)
+
+			if not stop then
+				pos = #str + 1
+
+				break
+			end
+
+			pos = stop + 1
+		end
+
+		local out = msg .. str:sub(pos)
 
 		if NATTLUA_MARKDOWN_OUTPUT then
 			out = out:gsub("([%w%._%-%/]+):(%d+)", function(path, line)
