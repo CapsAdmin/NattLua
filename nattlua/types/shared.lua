@@ -181,14 +181,33 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 	return false, "nyi"
 end
 
-function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: any]], max_length--[[#: nil | number]])--[[#: boolean, string | nil]]
-	if a.Type == "any" then return true end
-
+function shared.IsSubsetOf(
+	a--[[#: TBaseType]],
+	b--[[#: TBaseType]],
+	visited--[[#: any]],
+	max_length--[[#: nil | number]]
+)--[[#: boolean, string | nil]]
 	if b.Type == "deferred" then b = b:Unwrap() end
 
-	if a.Type == "number" then
-		if b.Type == "tuple" then b = b:GetWithNumber(1) end
+	if b.Type == "deferred" then
+		local unwrapped = b:Unwrap()
 
+		if unwrapped == b then return false, "deferred type could not be unwrapped" end
+
+		b = unwrapped
+	end
+
+	if a.Type == "any" then return true end
+
+	if b.Type == "tuple" and a.Type ~= "tuple" then
+		local first = b:GetWithNumber(1)
+
+		if not first then return false, error_messages.subset(a, b) end
+
+		b = first
+	end
+
+	if a.Type == "number" then
 		if b.Type == "any" then return true end
 
 		if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
@@ -235,8 +254,6 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 	end
 
 	if a.Type == "string" then
-		if b.Type == "tuple" then b = b:GetWithNumber(1) end
-
 		if b.Type == "any" then return true end
 
 		if b.Type == "union" then return b:IsTargetSubsetOfChild(a) end
@@ -275,8 +292,6 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 	end
 
 	if a.Type == "symbol" then
-		if b.Type == "tuple" then b = b:GetWithNumber(1) end
-
 		if b.Type == "any" then return true end
 
 		if b.Type == "union" then return b:IsTargetSubsetOfChild(a--[[# as any]]) end
@@ -290,8 +305,6 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 
 	if a.Type == "table" then
 		if a.suppress then return true, "suppressed" end
-
-		if b.Type == "tuple" then b = (b--[[# as any]]):GetWithNumber(1) end
 
 		if b.Type == "any" then return true, "b is any" end
 
@@ -413,8 +426,6 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 	if a.Type == "union" then
 		if a.suppress then return true, "suppressed" end
 
-		if b.Type == "tuple" then b = b:GetWithNumber(1) end
-
 		if b.Type == "any" then return true end
 
 		if a:IsEmpty() then
@@ -430,7 +441,7 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 				a.suppress = false
 
 				if not b_val then
-					return false, error_messages.because(error_messages.subset(b, a_val), reason)
+					return false, error_messages.because(error_messages.subset(a_val, b), reason)
 				end
 
 				a.suppress = true
@@ -445,7 +456,7 @@ function shared.IsSubsetOf(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[
 				a.suppress = false
 
 				if not ok then
-					return false, error_messages.because(error_messages.subset(b, a_val), reason)
+					return false, error_messages.because(error_messages.subset(a_val, b), reason)
 				end
 			end
 		end
