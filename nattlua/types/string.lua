@@ -40,6 +40,7 @@ function META:Copy()
 	copy:SetMetaTable(self:GetMetaTable())
 	copy:CopyInternalsFrom(self)
 	copy.Hash = compute_hash(copy.Data, copy.PatternContract)
+	copy.lua_compiler = self.lua_compiler
 	return copy
 end
 

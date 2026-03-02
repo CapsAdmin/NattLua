@@ -1,5 +1,4 @@
 local tostring = tostring
-local setmetatable = _G.setmetatable
 local table = _G.table
 local type = _G.type
 local ipairs = _G.ipairs
@@ -540,7 +539,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TUnion]]
 			TruthyFalsy = "unknown",
 			Upvalue = false,
 			Contract = false,
-			MetaTable = false,
 		}
 	)
 

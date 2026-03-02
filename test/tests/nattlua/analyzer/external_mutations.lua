@@ -239,3 +239,82 @@ analyze[[
     attest.equal<|a.foo, string|>
     attest.equal<|a.bar, string|>
 ]]
+-- nested non-ref calls: inner call must not clobber outer's contract
+analyze[[
+    local function inner(tbl: {foo = number, bar = number})
+        attest.equal<|typeof tbl.foo, number|>
+        attest.equal<|typeof tbl.bar, number|>
+    end
+
+    local function outer(tbl: {foo = number})
+        attest.equal<|typeof tbl.foo, number|>
+        inner(tbl)
+        attest.equal<|typeof tbl.foo, number|>
+    end
+
+    local tbl = {foo = 1, bar = 2}
+    outer(tbl)
+    attest.equal(tbl.foo, 1)
+    attest.equal(tbl.bar, 2)
+]]
+-- same table passed as two different arguments
+analyze[[
+    local function takes_two(a: {x = number}, b: {x = number})
+        attest.equal<|typeof a.x, number|>
+        attest.equal<|typeof b.x, number|>
+    end
+
+    local tbl = {x = 1}
+    takes_two(tbl, tbl)
+    attest.equal(tbl.x, 1)
+]]
+-- non-ref mutations must not leak back to caller
+analyze[[
+    local function modify(tbl: {val = number})
+        tbl.val = 999
+    end
+
+    local tbl = {val = 1}
+    modify(tbl)
+    attest.equal(tbl.val, 1)
+]]
+-- ref vs non-ref on same table in sequence
+analyze[[
+    local function no_ref(tbl: {val = number})
+        tbl.val = 50
+    end
+
+    local function with_ref(tbl: ref {val = number})
+        tbl.val = 100
+    end
+
+    local tbl = {val = 1}
+    no_ref(tbl)
+    attest.equal(tbl.val, 1)
+    with_ref(tbl)
+    attest.equal(tbl.val, 100)
+]]
+-- recursive function: contract stack grows and unwinds with recursion
+analyze[[
+    local function recurse(tbl: {count = number}, depth: number)
+        if depth > 0 then
+            recurse(tbl, depth - 1)
+        end
+        attest.equal<|typeof tbl.count, number|>
+    end
+
+    local tbl = {count = 0}
+    recurse(tbl, 3)
+    attest.equal(tbl.count, 0)
+]]
+-- non-ref table with return type check
+analyze[[
+    local function transform(tbl: {x = number}): number
+        return tbl.x + 1
+    end
+
+    local tbl = {x = 5}
+    local result = transform(tbl)
+    attest.equal<|typeof result, number|>
+    attest.equal(tbl.x, 5)
+]]

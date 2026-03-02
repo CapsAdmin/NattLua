@@ -920,14 +920,16 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	end
 
 	copy:CopyInternalsFrom(self)
-	copy.MetaTable = self.MetaTable --copy_val(self.MetaTable, map, copy_tables)
-	copy.Contract = self:GetContract() --copy_val(self.Contract, map, copy_tables)
+	copy.MetaTable = self.MetaTable
+	copy.Contract = self.Contract
 	copy:SetAnalyzerEnvironment(self:GetAnalyzerEnvironment())
 	copy.mutations = self.mutations or false
 	copy:SetCreationScope(self:GetCreationScope())
 	copy.UniqueID = self.UniqueID
 	copy:SetName(self:GetName())
 	copy:SetTypeOverride(self:GetTypeOverride())
+	copy:SetReferenceId(self:GetReferenceId())
+	copy:SetMutationLimit(self:GetMutationLimit())
 
 	if self:GetSelfArgument() then
 		copy:SetSelfArgument(self:GetSelfArgument():Copy(map, copy_tables))
