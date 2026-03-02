@@ -136,7 +136,7 @@ return function(META--[[#: any]])
 
 	local TEST_GARBAGE = _G.TEST_GARBAGE
 
-	function META:SetLocalOrGlobalValue(key, val, scope)
+	function META:SetLocalOrGlobalValue(key, val, scope, node)
 		local upvalue = self:FindLocalUpvalue(key, scope)
 
 		if upvalue then
@@ -156,7 +156,7 @@ return function(META--[[#: any]])
 		end
 
 		if self:IsRuntime() then
-			self:Warning(error_messages.global_assignment(key, val), self:GetCurrentStatement())
+			self:Warning(error_messages.global_assignment(key, val), node or self:GetCurrentStatement())
 		elseif TEST_GARBAGE then
 			TEST_GARBAGE[key] = val
 		end

@@ -112,9 +112,11 @@ return {
 							-- ⦗false, string, 2⦘ | ⦗true, 1⦘ at first index would be true | false
 							local index = right_pos + i - 1
 							local val = obj:GetAtTupleIndex(index)
+
 							if val and val.Type == "union" then
 								val:SetTupleSourceUnion(obj, index)
 							end
+
 							right[index] = val
 						end
 					end
@@ -261,7 +263,7 @@ return {
 						end
 					end
 
-					local val = self:SetLocalOrGlobalValue(key, val)
+					local val = self:SetLocalOrGlobalValue(key, val, nil, exp_key)
 					self:MapTypeToNode(val, exp_key)
 
 					if false and val then

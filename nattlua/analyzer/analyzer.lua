@@ -86,7 +86,7 @@ do
 			else
 				local key = ConstString(key_node.value:GetValueString())
 				local val = AnalyzeFunction(self, node)
-				self:SetLocalOrGlobalValue(key, val)
+				self:SetLocalOrGlobalValue(key, val, nil, key_node)
 				self:MapTypeToNode(val, key_node)
 			end
 
