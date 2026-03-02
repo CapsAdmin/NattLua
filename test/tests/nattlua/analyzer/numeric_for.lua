@@ -168,3 +168,15 @@ analyze[[
 
     attest.equal<|called, true|>
 ]]
+analyze[[
+    for i = _, 10 do
+    end
+]]
+analyze[[
+    for i = 1, _ do
+    end
+]]
+analyze[[
+    for i = 1, 10, 1 do
+    end
+]]

@@ -40,7 +40,7 @@ return {
 		local step = statement.expressions[3] and
 			self:GetFirstValue(self:AnalyzeExpression(statement.expressions[3]))
 
-		if step then assert(step:IsNumeric()) end
+		if step then self:Assert(step:IsNumeric(), "step is not a number") end
 
 		local literal_init = get_largest_number(init)
 		local literal_max = get_largest_number(max)

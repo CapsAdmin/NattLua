@@ -36,7 +36,7 @@ return function(META--[[#: any]])
 	function META:GetFirstValue(obj, err)
 		if not obj then
 			self:Error(err)
-			return nil
+			return Any()
 		end
 
 		local val, err = obj:GetFirstValue()
