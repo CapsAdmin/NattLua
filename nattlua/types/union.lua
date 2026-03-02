@@ -25,7 +25,6 @@ local META = require("nattlua.types.base")()
 --[[#local type TUnion = META.@SelfArgument]]
 --[[#type TUnion.Type = "union"]]
 --[[#type TUnion.literal_data_cache = Map<|string, TBaseType|>]]
---[[#type TUnion.suppress = boolean]]
 --[[#type TUnion.left_right_source = {left = TBaseType, right = TBaseType} | false]]
 --[[#type TUnion.parent_table = {table = TBaseType, key = string} | false]]
 --[[#type TUnion.stored_truthy_falsy = any]]
@@ -63,10 +62,10 @@ local sort = function(a--[[#: string]], b--[[#: string]])
 end
 
 function META:__tostring()
-	if self.suppress then return "current_union" end
+	if self:IsSuppressed() then return "current_union" end
 
 	local s = {}
-	self.suppress = true
+	self:PushSuppress()
 	local data = self.Data
 	local len = #data
 
@@ -75,11 +74,11 @@ function META:__tostring()
 	end
 
 	if not s[1] then
-		self.suppress = false
+		self:PopSuppress()
 		return "|"
 	end
 
-	self.suppress = false
+	self:PopSuppress()
 
 	if len == 1 then return (s[1]--[[# as string]]) .. "|" end
 

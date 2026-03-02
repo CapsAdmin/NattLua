@@ -20,7 +20,6 @@ local META = require("nattlua.types.base")()
 --[[#type META.@Name = "TFunction"]]
 --[[#local type TFunction = META.@SelfArgument]]
 --[[#type TFunction.Type = "function"]]
---[[#type TFunction.suppress = boolean]]
 --[[#type TFunction.InputModifiers = Map<|number, Map<|string, any|>|> | false]]
 --[[#type TFunction.OutputModifiers = Map<|number, Map<|string, any|>|> | false]]
 META.Type = "function"
@@ -42,9 +41,9 @@ META:GetSet("InputModifiers", false--[[# as TFunction.InputModifiers]])
 META:GetSet("OutputModifiers", false--[[# as TFunction.OutputModifiers]])
 
 function META:__tostring()
-	if self.suppress then return "current_function" end
+	if self:IsSuppressed() then return "current_function" end
 
-	self.suppress = true
+	self:PushSuppress()
 	local input = self:GetInputSignature()
 	local output = self:GetOutputSignature()
 	local s = "function=" .. (
@@ -56,7 +55,7 @@ function META:__tostring()
 			tostring(output) or
 			"nil"
 		)
-	self.suppress = false
+	self:PopSuppress()
 	return s
 end
 
@@ -269,7 +268,6 @@ function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
 			InputIdentifiers = false,
 			LiteralFunction = false,
 			Scope = false,
-			suppress = false--[[# as boolean]],
 			InputArgumentsInferred = false,
 			InputModifiers = false,
 			OutputModifiers = false,

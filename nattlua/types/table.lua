@@ -23,7 +23,6 @@ local META = require("nattlua.types.base")()
 --[[#local type TBaseType = META.TBaseType]]
 --[[#local type TTable = META.@SelfArgument]]
 --[[#type TTable.Type = "table"]]
---[[#type TTable.suppress = boolean]]
 --[[#type TTable.mutations = Map<|
 		TBaseType,
 		List<|{scope = TBaseType, value = TBaseType, contract = TBaseType, key = TBaseType}|>
@@ -113,21 +112,21 @@ local level = 0
 function META:__tostring()--[[#: string]]
 	local self = self--[[# as any]]
 
-	if self.suppress then return "current_table" end
+	if self:IsSuppressed() then return "current_table" end
 
-	self.suppress = true
+	self:PushSuppress()
 
 	do
 		local contract = self:GetContract()
 
 		if contract and contract.Type == "table" and (contract--[[# as TTable]]).Name then -- never called
-			self.suppress = false
+			self:PopSuppress()
 			return tostring(((contract--[[# as TTable]]).Name--[[# as TBaseType]]):GetData())
 		end
 	end
 
 	if self.Name then
-		self.suppress = false
+		self:PopSuppress()
 		return tostring(self.Name:GetData())
 	end
 
@@ -145,7 +144,7 @@ function META:__tostring()--[[#: string]]
 				--[[# as any]]):GetFirstValue((analyzer--[[# as any]]):Call(func, Tuple({self})))
 
 				if str and str.Type == "string" and str:IsLiteral() then
-					self.suppress = false
+					self:PopSuppress()
 					return tostring(str:GetData())
 				end
 			end
@@ -196,7 +195,7 @@ function META:__tostring()--[[#: string]]
 	end
 
 	level = level - 1
-	self.suppress = false
+	self:PopSuppress()
 
 	if #self.Data <= 1 then return "{" .. table.concat(s, ",") .. " }" end
 
@@ -239,7 +238,7 @@ function META:GetArrayLength()--[[#: TBaseType]]
 end
 
 function META:FollowsContract(contract--[[#: TTable]])--[[#: boolean, string | nil]]
-	if self.suppress then return true end
+	if self:IsSuppressed() then return true end
 
 	if self:GetContract() == contract then return true end
 
@@ -270,10 +269,9 @@ function META:FollowsContract(contract--[[#: TTable]])--[[#: boolean, string | n
 
 			for _, keyval2 in ipairs(self.Data) do
 				if shared.IsSubsetOf(keyval2.key, required_key) then
-					local old = self.suppress
-					self.suppress = true
+					self:PushSuppress()
 					local ok, err = shared.IsSubsetOf(keyval2.val, keyval.val)
-					self.suppress = old
+					self:PopSuppress()
 					found_anything = true
 
 					if not ok then
@@ -951,7 +949,7 @@ function META:PopContract()
 end
 
 function META:HasLiteralKeys()
-	if self.suppress then return true end
+	if self:IsSuppressed() then return true end
 
 	local contract = self:GetContract()
 
@@ -972,10 +970,9 @@ function META:HasLiteralKeys()
 			v.val.Type ~= "function" and
 			v.key.Type ~= "function"
 		then
-			local old = self.suppress
-			self.suppress = true
+			self:PushSuppress()
 			local ok, reason = v.key:IsLiteral()
-			self.suppress = old
+			self:PopSuppress()
 
 			if not ok then return false end
 		end
@@ -985,7 +982,7 @@ function META:HasLiteralKeys()
 end
 
 function META:IsLiteral()
-	if self.suppress then return true end
+	if self:IsSuppressed() then return true end
 
 	if self:GetContract() then return false end
 
@@ -996,17 +993,15 @@ function META:IsLiteral()
 			v.val.Type ~= "function" and
 			v.key.Type ~= "function"
 		then
-			local old = self.suppress
-			self.suppress = true
+			self:PushSuppress()
 			local ok, reason = v.key:IsLiteral()
-			self.suppress = old
+			self:PopSuppress()
 
 			if not ok then return false end
 
-			local old = self.suppress
-			self.suppress = true
+			self:PushSuppress()
 			local ok, reason = v.val:IsLiteral()
-			self.suppress = old
+			self:PopSuppress()
 
 			if not ok then return false end
 		end
@@ -1277,7 +1272,6 @@ function META.New()
 			literal_data_cache = {},
 			Contracts = {},
 			TypeOverride = false,
-			suppress = false,
 			mutations = false,
 			potential_self = false,
 			string_metatable = false,

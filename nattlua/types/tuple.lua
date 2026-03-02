@@ -20,7 +20,6 @@ META.Type = "tuple"
 --[[#type META.@Name = "TTuple"]]
 --[[#local type TTuple = META.@SelfArgument]]
 --[[#type TTuple.Type = "tuple"]]
---[[#type TTuple.suppress = boolean]]
 META:GetSet("Data", nil--[[# as List<|any|>]])
 META:GetSet("Unpackable", false--[[# as boolean]])
 --[[#type TTuple.Remainder = TBaseType | false]]
@@ -46,9 +45,9 @@ function META:GetHash(visited--[[#: Map<|TBaseType, string|> | nil]])
 end
 
 function META:__tostring()
-	if self.suppress then return "current_tuple" end
+	if self:IsSuppressed() then return "current_tuple" end
 
-	self.suppress = true--[[# as any]]
+	self:PushSuppress()--[[# as any]]
 	local strings--[[#: List<|string|>]] = {}
 	local data = self.Data
 	local len = #data
@@ -71,7 +70,7 @@ function META:__tostring()
 
 	if self.Repeat then s = s .. "*" .. tostring(self.Repeat) end
 
-	self.suppress = false
+	self:PopSuppress()
 	return s
 end
 
@@ -666,7 +665,6 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TTuple]]
 			Type = "tuple",
 			Data = {},
 			Unpackable = false,
-			suppress = false--[[# as boolean]],
 			Remainder = false,
 			Repeat = false,
 			TruthyFalsy = "unknown",

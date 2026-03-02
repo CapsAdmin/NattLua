@@ -304,7 +304,7 @@ function shared.IsSubsetOf(
 	end
 
 	if a.Type == "table" then
-		if a.suppress then return true, "suppressed" end
+		if a:IsSuppressed() then return true, "suppressed" end
 
 		if b.Type == "any" then return true, "b is any" end
 
@@ -331,11 +331,9 @@ function shared.IsSubsetOf(
 				if not bkeyval.val:CanBeNil() then
 					if not akeyval then return (akeyval--[[# as any]]), reason end
 
-					local a_any = a--[[# as any]]
-					local old = a_any.suppress
-					a_any.suppress = true
+					a:PushSuppress()
 					local ok, err = shared.IsSubsetOf((akeyval--[[# as any]]).val, bkeyval.val)
-					a_any.suppress = old
+					a:PopSuppress()
 
 					if not ok then
 						return false,
@@ -368,7 +366,7 @@ function shared.IsSubsetOf(
 	if a.Type == "tuple" then
 		if a == b then return true end
 
-		if a.suppress then return true end
+		if a:IsSuppressed() then return true end
 
 		if a.Remainder then
 			local t = a:GetWithNumber(1)
@@ -411,9 +409,9 @@ function shared.IsSubsetOf(
 				return false, error_messages.because(error_messages.table_index(b, i), err)
 			end
 
-			a.suppress = true
+			a:PushSuppress()
 			local ok, reason = shared.IsSubsetOf(a_val, b_val)
-			a.suppress = false
+			a:PopSuppress()
 
 			if not ok then
 				return false, error_messages.because(error_messages.subset(a_val, b_val), reason)
@@ -424,7 +422,7 @@ function shared.IsSubsetOf(
 	end
 
 	if a.Type == "union" then
-		if a.suppress then return true, "suppressed" end
+		if a:IsSuppressed() then return true, "suppressed" end
 
 		if b.Type == "any" then return true end
 
@@ -434,26 +432,26 @@ function shared.IsSubsetOf(
 		end
 
 		for _, a_val in ipairs(a.Data) do
-			a.suppress = true
+			a:PushSuppress()
 
 			if b.Type == "union" then
 				local b_val, reason = b:IsTypeObjectSubsetOf(a_val)
-				a.suppress = false
+				a:PopSuppress()
 
 				if not b_val then
 					return false, error_messages.because(error_messages.subset(a_val, b), reason)
 				end
 
-				a.suppress = true
+				a:PushSuppress()
 				local ok, reason = shared.IsSubsetOf(a_val, b_val)
-				a.suppress = false
+				a:PopSuppress()
 
 				if not ok then
 					return false, error_messages.because(error_messages.subset(a_val, b_val), reason)
 				end
 			else
 				local ok, reason = shared.IsSubsetOf(a_val, b)
-				a.suppress = false
+				a:PopSuppress()
 
 				if not ok then
 					return false, error_messages.because(error_messages.subset(a_val, b), reason)

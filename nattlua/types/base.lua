@@ -108,5 +108,17 @@ return function()
 		return false
 	end
 
+	function META:PushSuppress()
+		self.suppress_depth = (self.suppress_depth or 0) + 1
+	end
+
+	function META:PopSuppress()
+		self.suppress_depth = self.suppress_depth - 1
+	end
+
+	function META:IsSuppressed()
+		return (self.suppress_depth or 0) > 0
+	end
+
 	return META
 end
