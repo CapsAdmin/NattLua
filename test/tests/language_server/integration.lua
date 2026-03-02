@@ -475,3 +475,62 @@ end
 		"Unreachable else-branch when condition is always true should produce a diagnostic with Unnecessary tag (1)"
 	)
 end
+
+-- Test while loop unreachable code issue
+do
+	local client = LSPClient.New()
+	local root_uri = "file:///workspace"
+	client:SetWorkingDirectory("/workspace")
+	client:Initialize(lsp, root_uri)
+	local file_uri = root_uri .. "/test.nlua"
+	local code = [[
+local function test(l, u)
+	while l < u do
+		if l == 1 then break end
+		local i = (l + u) / 2
+		if u - l == 2 then break end
+
+		while true do
+			i = i + 1
+			if i > 10 then break end
+		end
+	end
+end
+test(1, 10)
+]]
+	client:ClearNotifications()
+	client:Notify(
+		lsp,
+		"textDocument/didOpen",
+		{
+			textDocument = {
+				uri = file_uri,
+				languageId = "nattlua",
+				version = 1,
+				text = code,
+			},
+		}
+	)
+	local diag_notifications = client:GetNotifications("textDocument/publishDiagnostics")
+	local found_unnecessary = false
+
+	for _, notif in ipairs(diag_notifications) do
+		for _, diag in ipairs(notif.params.diagnostics) do
+			if diag.tags then
+				for _, tag in ipairs(diag.tags) do
+					if tag == 1 and diag.message:find("unreachable") then
+						-- Check if the diagnostic is inside the while loop (lines 2-10 roughly)
+						if diag.range.start.line >= 0 and diag.range.start.line <= 20 then
+							found_unnecessary = true
+						end
+					end
+				end
+			end
+		end
+	end
+
+	assert(
+		not found_unnecessary,
+		"Code inside while loop should NOT be marked as unreachable"
+	)
+end

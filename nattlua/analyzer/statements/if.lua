@@ -70,7 +70,11 @@ return {
 								else
 									local exp = statement.expressions[i - 1]
 									self:PushCurrentExpression(exp)
-									self:ConstantIfExpressionWarning(nil, og_statement.tokens["if/else/elseif"][i])
+
+									if og_statement.tokens["if/else/elseif"] then
+										self:ConstantIfExpressionWarning(nil, og_statement.tokens["if/else/elseif"][i])
+									end
+
 									self:PopCurrentExpression()
 								end
 

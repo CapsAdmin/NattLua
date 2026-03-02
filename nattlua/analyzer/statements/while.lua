@@ -1,5 +1,22 @@
 local error_messages = require("nattlua.error_messages")
 local ipairs = _G.ipairs
+
+local function clear_unreachable(statements)
+	for _, stmt in ipairs(statements) do
+		stmt.Unreachable = false
+
+		if stmt.statements then
+			if stmt.Type == "statement_if" then
+				for _, s in ipairs(stmt.statements) do
+					clear_unreachable(s)
+				end
+			else
+				clear_unreachable(stmt.statements)
+			end
+		end
+	end
+end
+
 return {
 	AnalyzeWhile = function(self, statement)
 		local obj = self:AnalyzeConditionalExpression(statement.expression)
@@ -24,6 +41,7 @@ return {
 
 		for i = 1, max_iterations do
 			count = count + 1
+			clear_unreachable(statement.statements)
 			self:AnalyzeStatements(statement.statements)
 			local should_continue, break_reason = self:ShouldContinueLoop(loop_scope)
 
