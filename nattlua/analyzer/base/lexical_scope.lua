@@ -142,6 +142,16 @@ function META:GetUpvalues(type--[[#: "runtime" | "typesystem"]])
 	return self.upvalues[type].list
 end
 
+function META:GetAllUpvaluesInScope()
+	local out = {}
+	for _, scope in ipairs(self.ParentList) do
+		for _, upvalue in ipairs(scope.upvalues.runtime.list) do
+			table_insert(out, upvalue)
+		end
+	end
+	return out
+end
+
 function META:Copy()
 	local copy = self.New()
 

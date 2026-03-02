@@ -116,11 +116,11 @@ do -- Pattern matching functions
 		no_pattern = no_pattern and no_pattern:IsLiteral() and no_pattern:GetData() or false
 
 		if not str or not pattern then
-			return types.Tuple(
+			return types.Union(
 				{
-					types.Union({types.Number(), types.Nil()}),
-					types.Union({types.Number(), types.Nil()}),
-					types.Union({types.String(), types.Nil()}),
+					types.Tuple({types.Number(), types.Number(), types.String()}),
+					types.Tuple({types.Number(), types.Number()}),
+					types.Tuple({types.Nil(), types.Nil(), types.Nil()}),
 				}
 			)
 		end

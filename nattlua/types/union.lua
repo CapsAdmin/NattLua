@@ -518,6 +518,14 @@ function META:GetParentTable()
 	return self.parent_table
 end
 
+function META:SetTupleSourceUnion(source_union, index)
+	self.tuple_source_union = {union = source_union, index = index}
+end
+
+function META:GetTupleSourceUnion()
+	return self.tuple_source_union
+end
+
 function META:SetStoredTruthyFalsy(truthy, falsy)
 	self.stored_truthy_falsy = {truthy = truthy, falsy = falsy}
 end
@@ -536,6 +544,7 @@ function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TUnion]]
 			left_right_source = false,
 			parent_table = false,
 			stored_truthy_falsy = false,
+			tuple_source_union = false,
 			TruthyFalsy = "unknown",
 			Upvalue = false,
 			Contract = false,

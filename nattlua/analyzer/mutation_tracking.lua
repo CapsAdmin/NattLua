@@ -1,5 +1,6 @@
 local ipairs = _G.ipairs
 local Union = require("nattlua.types.union").Union
+local Nil = require("nattlua.types.symbol").Nil
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange
 local shallow_copy = require("nattlua.other.tablex").copy
@@ -222,6 +223,10 @@ return function(META--[[#: any]])
 					self:TrackTableIndexUnion(val, t, f)
 				end
 
+				if val.Type == "union" and val:GetTupleSourceUnion() then
+					self:TrackTupleSiblingNarrowing(upvalue, val)
+				end
+
 				if val.Type == "union" then
 					local left_right = val:GetLeftRightSource()
 
@@ -408,6 +413,76 @@ return function(META--[[#: any]])
 						scope = scope,
 					}
 				)
+			end
+
+			function META:TrackTupleSiblingNarrowing(checked_upvalue, checked_val)
+				local source_info = checked_val:GetTupleSourceUnion()
+				if not source_info then return end
+
+				local source_union = source_info.union
+				local checked_index = source_info.index
+
+				local truthy_branches = {}
+				local falsy_branches = {}
+
+				for _, obj in ipairs(source_union:GetData()) do
+					if obj.Type == "tuple" then
+						local val_at_index = obj:GetWithNumber(checked_index)
+						if val_at_index then
+							if val_at_index:IsTruthy() then
+								table.insert(truthy_branches, obj)
+							end
+							if val_at_index:IsFalsy() then
+								table.insert(falsy_branches, obj)
+							end
+						else
+							table.insert(falsy_branches, obj)
+						end
+					end
+				end
+
+				local scope = self:GetScope()
+				if not scope then return end
+
+				local all_upvalues = scope:GetAllUpvaluesInScope()
+				if not all_upvalues then return end
+
+				for _, upv in ipairs(all_upvalues) do
+					if upv ~= checked_upvalue then
+						local sib_val = upv:GetValue()
+						if sib_val and sib_val.Type == "union" then
+							local sib_source = sib_val:GetTupleSourceUnion()
+							if sib_source and sib_source.union == source_union then
+								local sib_index = sib_source.index
+
+								local truthy_vals = {}
+								for _, branch in ipairs(truthy_branches) do
+									local v = branch:GetWithNumber(sib_index)
+									if v then
+										table.insert(truthy_vals, v)
+									else
+										table.insert(truthy_vals, Nil())
+									end
+								end
+
+								local falsy_vals = {}
+								for _, branch in ipairs(falsy_branches) do
+									local v = branch:GetWithNumber(sib_index)
+									if v then
+										table.insert(falsy_vals, v)
+									else
+										table.insert(falsy_vals, Nil())
+									end
+								end
+
+								local truthy_union = #truthy_vals > 0 and Union(truthy_vals) or Union({Nil()})
+								local falsy_union = #falsy_vals > 0 and Union(falsy_vals) or Union({Nil()})
+
+								self:TrackUpvalueUnion(sib_val, truthy_union, falsy_union)
+							end
+						end
+					end
+				end
 			end
 
 			function META:GetTrackedTableWithKey(tbl, key)
