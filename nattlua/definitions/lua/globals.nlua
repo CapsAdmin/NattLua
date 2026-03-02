@@ -589,7 +589,10 @@ analyzer function tostring(val: any)
 	return tostring(val:GetData())
 end
 
-analyzer function tonumber(val: string | number | {__is_cdata_number = true}, base: number | nil)
+analyzer function tonumber(
+	val: string | number | {__is_cdata_number = true} | {__is_ctype = true},
+	base: number | nil
+)
 	if val.Type == "table" then
 		local T = val:Get(types.ConstString("T"))
 		return T or types.Number()

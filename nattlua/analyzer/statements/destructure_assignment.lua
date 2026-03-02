@@ -47,7 +47,7 @@ return {
 				if statement.Type == "statement_local_destructure_assignment" then
 					self:MapTypeToNode(self:CreateLocalValue(node.value:GetValueString(), obj), node.value)
 				elseif statement.Type == "statement_destructure_assignment" then
-					self:SetLocalOrGlobalValue(ConstString(node.value:GetValueString()), obj, nil, node.value)
+					self:SetLocalOrGlobalValue(ConstString(node.value:GetValueString()), obj, nil, node)
 				end
 			end
 		end

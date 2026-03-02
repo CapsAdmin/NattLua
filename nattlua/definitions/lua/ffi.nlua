@@ -110,8 +110,9 @@ function TCType<|T: ConstructorArgument|>
 	local type is_pointer = type(T) == "table" and keysof<|T|> == number
 	return {
 		T = T,
-		@TypeOverride = "cdata",
+		@TypeOverride = "ctype",
 		@MetaTable = self,
+		__is_ctype = true,
 		__is_pointer = is_pointer,
 		__tostring = function <|self: self|>
 			return "ctype<" .. tostring(T) .. (is_pointer and " *" or "") .. ">"
@@ -143,6 +144,7 @@ function TCType<|T: ConstructorArgument|>
 end
 
 type cdata = TCData<|any|>
+type ctype = TCType<|any|>
 type Modules["ffi"] = {
 	errno = function=(nil | number)>(number),
 	os = jit.os,
@@ -155,6 +157,11 @@ type Modules["ffi"] = {
 	istype = function=(ctype, any)>(boolean),
 	fill = function=(cdata, number | TCData<|number|>, any)>(),
 	offsetof = function=(cdata, number | TCData<|number|>)>(number),
+	typeinfo = function=(number | ctype)>({
+		info = number,
+		size = nil | number,
+		name = nil | string,
+	}),
 }
 --type Modules["ffi"].C.@Name = "FFI_C"
 local type ffi = require("ffi")
@@ -174,11 +181,11 @@ analyzer function ffi.cast(cdecl: string | any, src: string | any)
 	return context.cdecl_parser.cast(cdecl, src)
 end
 
-analyzer function ffi.typeof(cdecl: string | TCType<|any|>, ...: ...any)
+analyzer function ffi.typeof(cdecl: string | ctype, ...: ...any)
 	return context.cdecl_parser.typeof(cdecl, ...)
 end
 
-analyzer function ffi.typeof_arg(cdecl: string | TCType<|any|>, ...: ...any)
+analyzer function ffi.typeof_arg(cdecl: string | ctype, ...: ...any)
 	return context.cdecl_parser.typeof_arg(cdecl, ...)
 end
 
