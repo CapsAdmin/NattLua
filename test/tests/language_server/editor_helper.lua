@@ -370,7 +370,7 @@ loadstring("local x = 'hello'")
 		local helper = single_file(str)
 		local integers = helper:GetSemanticTokens(path)
 		local tokens = convert_semantic_tokens_to_tokens(integers, str)
-		equal(#tokens, 34)
+		equal(#tokens, 31)
 	end
 
 	do

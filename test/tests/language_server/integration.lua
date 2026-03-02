@@ -346,6 +346,86 @@ end
 	)
 end
 
+-- Test semantic tokens for a long multiline string
+do
+	local client = LSPClient.New()
+	local root_uri = "file:///workspace"
+	client:SetWorkingDirectory("/workspace")
+	client:Initialize(lsp, root_uri)
+	local file_uri = root_uri .. "/test.nlua"
+	local code = [[
+local HTML_TEMPLATE = [==[
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Profiler</title>
+<style>
+:root {
+  --accent:      #e0e0e0;
+  --accent-dim:  rgba(224,224,224,0.15);
+  --bg-base:     #1a1a1a;
+  --bg-panel:    #222;
+  --bg-elevated: #2a2a2a;
+  --bg-hover:    #383838;
+  --border:      #3030306c;
+}
+</style>
+</head>
+<body>
+	<script>
+		local x = 1
+		return x
+	</script>
+</body>
+</html>
+]==]
+local y = 2
+]]
+	client:Notify(
+		lsp,
+		"textDocument/didOpen",
+		{
+			textDocument = {
+				uri = file_uri,
+				languageId = "nattlua",
+				version = 1,
+				text = code,
+			},
+		}
+	)
+	local tokens = client:Call(lsp, "textDocument/semanticTokens/full", {textDocument = {uri = file_uri}})
+	assert(tokens and tokens.data, "Should return semantic tokens")
+	local current_line = 0
+	local found_html_token = false
+
+	for i = 1, #tokens.data, 5 do
+		local deltaLine = tokens.data[i]
+		current_line = current_line + deltaLine
+
+		-- Check if any token inside the multiline string (lines 1 to 24) is NOT type 11 (string)
+		-- EXCEPT the "local HTML_TEMPLATE =" part on line 0.
+		if current_line >= 1 and current_line <= 24 then
+			assert(
+				tokens.data[i + 3] == 11,
+				"Token on line " .. current_line .. " inside multiline string should be type 11 (string), but got " .. tokens.data[i + 3]
+			)
+			found_html_token = true
+		end
+	end
+
+	assert(found_html_token, "Should have found tokens inside the HTML string")
+end
+
+-- Test unreachable code in else-branch when condition is always true
+do
+	local client = LSPClient.New()
+	local root_uri = "file:///workspace"
+	client:SetWorkingDirectory("/workspace")
+	client:Initialize(lsp, root_uri)
+	local file_uri = root_uri .. "/test.nlua"
+end
+
 -- Test unreachable code in else-branch when condition is always true
 do
 	local client = LSPClient.New()

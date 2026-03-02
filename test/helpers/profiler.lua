@@ -649,7 +649,6 @@ function Profiler:GetElapsed()
 	return self._get_time() - self._time_start
 end
 
--- --- HTML Template ---
 HTML_TEMPLATE = [==[
 <!DOCTYPE html>
 <html lang="en">

@@ -1705,19 +1705,19 @@ do
 
 	local function is_probably_lua(str)
 		local possible_statements = {
-			"%s*local%s",
-			"%s*return%s",
-			"%s*while%s",
-			"%s*repeat%s",
-			"%s*function%s",
-			"%s*do%s",
-			"%s*if%s",
-			"%s*for%s",
-			"%s*[a-Z][a-Z0-9]*%s*=",
+			"^%s*local%s",
+			"^%s*return%s",
+			"^%s*while%s",
+			"^%s*repeat%s",
+			"^%s*function%s",
+			"^%s*do%s",
+			"^%s*if%s",
+			"^%s*for%s",
+			"^%s*[a-zA-Z_][a-zA-Z0-9_]*%s*=%s*",
 		}
 
 		for _, word in ipairs(possible_statements) do
-			if str:find(word, 0) then return true end
+			if str:find(word) then return true end
 		end
 
 		return false
@@ -1876,17 +1876,18 @@ do
 				if tokens then
 					process_token(Token.NewVirtualToken("fake", start, token.start, token.start + #start))
 
-					for i, token in ipairs(tokens) do
-						token.start = token.start + offset
-						token.stop = token.stop + offset
+					for i, t in ipairs(tokens) do
+						local t2 = Token.NewVirtualToken(t.type, t:GetValueString(), t.start + offset, t.stop + offset)
 
-						if token:HasWhitespace() then
-							for _, token in ipairs(token:GetWhitespace()) do
-								process_token(token)
+						if t:HasWhitespace() then
+							for _, ws in ipairs(t:GetWhitespace()) do
+								process_token(
+									Token.NewVirtualToken(ws.type, ws:GetValueString(), ws.start + offset, ws.stop + offset)
+								)
 							end
 						end
 
-						process_token(token)
+						process_token(t2)
 					end
 
 					process_token(Token.NewVirtualToken("fake", start, token.stop, token.stop + #start))
