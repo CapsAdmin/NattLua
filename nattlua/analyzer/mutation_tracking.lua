@@ -417,21 +417,23 @@ return function(META--[[#: any]])
 
 			function META:TrackTupleSiblingNarrowing(checked_upvalue, checked_val)
 				local source_info = checked_val:GetTupleSourceUnion()
+
 				if not source_info then return end
 
 				local source_union = source_info.union
 				local checked_index = source_info.index
-
 				local truthy_branches = {}
 				local falsy_branches = {}
 
 				for _, obj in ipairs(source_union:GetData()) do
 					if obj.Type == "tuple" then
 						local val_at_index = obj:GetWithNumber(checked_index)
+
 						if val_at_index then
 							if val_at_index:IsTruthy() then
 								table.insert(truthy_branches, obj)
 							end
+
 							if val_at_index:IsFalsy() then
 								table.insert(falsy_branches, obj)
 							end
@@ -442,22 +444,27 @@ return function(META--[[#: any]])
 				end
 
 				local scope = self:GetScope()
+
 				if not scope then return end
 
 				local all_upvalues = scope:GetAllUpvaluesInScope()
+
 				if not all_upvalues then return end
 
 				for _, upv in ipairs(all_upvalues) do
 					if upv ~= checked_upvalue then
 						local sib_val = upv:GetValue()
+
 						if sib_val and sib_val.Type == "union" then
 							local sib_source = sib_val:GetTupleSourceUnion()
+
 							if sib_source and sib_source.union == source_union then
 								local sib_index = sib_source.index
-
 								local truthy_vals = {}
+
 								for _, branch in ipairs(truthy_branches) do
 									local v = branch:GetWithNumber(sib_index)
+
 									if v then
 										table.insert(truthy_vals, v)
 									else
@@ -466,8 +473,10 @@ return function(META--[[#: any]])
 								end
 
 								local falsy_vals = {}
+
 								for _, branch in ipairs(falsy_branches) do
 									local v = branch:GetWithNumber(sib_index)
+
 									if v then
 										table.insert(falsy_vals, v)
 									else
@@ -477,7 +486,6 @@ return function(META--[[#: any]])
 
 								local truthy_union = #truthy_vals > 0 and Union(truthy_vals) or Union({Nil()})
 								local falsy_union = #falsy_vals > 0 and Union(falsy_vals) or Union({Nil()})
-
 								self:TrackUpvalueUnion(sib_val, truthy_union, falsy_union)
 							end
 						end
@@ -667,7 +675,13 @@ return function(META--[[#: any]])
 								if
 									data.stack[#data.stack] and
 									data.stack[#data.stack].falsy and
-									data.stack[#data.stack].falsy.Type == "range"
+									(
+										data.stack[#data.stack].falsy.Type == "range" or
+										(
+											union.Type == "union" and
+											union:IsEmpty()
+										)
+									)
 								then
 									self:MutateUpvalue(data.upvalue, collect_falsy_values(data.stack), true)
 								else
@@ -683,7 +697,17 @@ return function(META--[[#: any]])
 										end
 									end
 
-									self:MutateTable(data.obj, data.key, union, true)
+									if union.Type == "union" and union:IsEmpty() then
+										local falsy = collect_falsy_values(data.stack)
+
+										if falsy then
+											self:MutateTable(data.obj, data.key, falsy, true)
+										else
+											self:MutateTable(data.obj, data.key, union, true)
+										end
+									else
+										self:MutateTable(data.obj, data.key, union, true)
+									end
 								end
 							end
 						end

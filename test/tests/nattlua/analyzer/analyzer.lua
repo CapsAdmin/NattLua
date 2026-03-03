@@ -748,3 +748,100 @@ assert(pat)
 attest.equal(name, _ as string)
 attest.equal(pat, _ as string)
 ]]
+-- else branch narrowing does not produce empty union
+-- Fix: when both sides of == are the same non-literal union (e.g. nil | string),
+-- RemoveType(truthy) in the else branch used to remove ALL types leaving an empty union.
+-- Now it falls back to falsy values instead.
+analyze[[
+    local function test(a: nil | string, b: nil | string)
+        if a == b then
+            -- truthy branch: a and b could be equal
+        else
+            -- else branch: a should still have a valid type, not an empty union
+            attest.superset_of<|a, nil | string|>
+            attest.superset_of<|b, nil | string|>
+        end
+    end
+]]
+--else branch narrowing preserves type for table values
+-- Same fix but for table mutation tracking (data.kind == "table")
+analyze[[
+    local t = {x = _ as nil | string}
+    local u = {y = _ as nil | string}
+    if t.x == u.y then
+    else
+        attest.superset_of<|t.x, nil | string|>
+    end
+]]
+-- bounded reverse for loop does not add nil to table access
+-- Fix: for i = #t, 1, -1 do t[i] end should not produce nil | value
+-- because the loop variable is bounded by the table's length.
+analyze[[
+    local t = {}
+    table.insert(t, "a")
+    table.insert(t, "b")
+    table.insert(t, "c")
+    local result = {}
+    for i = #t, 1, -1 do
+        table.insert(result, t[i])
+    end
+]]
+-- bounded forward for loop does not add nil to table access
+analyze[[
+    local t = {}
+    table.insert(t, "a")
+    table.insert(t, "b")
+    table.insert(t, "c")
+    local result = {}
+    for i = 1, #t do
+        table.insert(result, t[i])
+    end
+]]
+-- recursive function with conditional insert and bounded reverse for
+-- Regression test combining both fixes:
+-- 1. The == comparison on non-literal unions must not produce empty unions in else
+-- 2. The reverse for loop over #rev_diff must not add nil to elements
+analyze[[
+    local function get_diff(rev_diff, old, new, i, j)
+        local old_i = old[i]
+        local new_j = new[j]
+        if i >= 1 and j >= 1 and old_i == new_j then
+            if old_i then table.insert(rev_diff, {old_i, "same"}) end
+            return get_diff(rev_diff, old, new, i - 1, j - 1)
+        else
+            if j >= 1 then
+                table.insert(rev_diff, {new_j, "in"})
+                return get_diff(rev_diff, old, new, i, j - 1)
+            elseif i >= 1 then
+                table.insert(rev_diff, {old_i, "out"})
+                return get_diff(rev_diff, old, new, i - 1, j)
+            end
+        end
+    end
+
+    local function build(old: {[number] = string}, new: {[number] = string})
+        local rev_diff = {}
+        get_diff(rev_diff, old, new, #old, #new)
+        local diff = {}
+        for i = #rev_diff, 1, -1 do
+            table.insert(diff, rev_diff[i])
+        end
+        return diff
+    end
+]]
+-- bounded for loop on List<|T|> should not include nil in element type
+-- List<|number|> is defined as {[number] = number | nil}, but when iterating
+-- with for i = 1, #t the access is bounded and nil should be stripped.
+analyze[[
+    local t = {} as List<|number|>
+    for i = 1, #t do
+        attest.equal<|t[i], number|>
+    end
+]]
+-- same for reverse iteration on List<|T|>
+analyze[[
+    local t = {} as List<|string|>
+    for i = #t, 1, -1 do
+        attest.equal<|t[i], string|>
+    end
+]]

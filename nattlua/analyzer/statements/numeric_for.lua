@@ -75,6 +75,12 @@ return {
 					i = LNumber(i)
 				end
 
+				-- Carry LengthSourceTable from the init expression to the loop variable
+				-- so that bounded table access (e.g. t[i] where i comes from #t) can skip nil
+				if init.LengthSourceTable then
+					i.LengthSourceTable = init.LengthSourceTable
+				end
+
 				local upvalue = self:CreateLocalValue(statement.identifiers[1].value:GetValueString(), i)
 				upvalue:SetFromForLoop(true)
 				self:AnalyzeStatements(statement.statements)

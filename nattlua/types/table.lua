@@ -735,17 +735,43 @@ function META:Get(key--[[#: TBaseType]])--[[#: (TBaseType | false), (any | nil)]
 	end
 
 	if (key.Type == "string" or key.Type == "number") and not key:IsLiteral() then
-		local union = Union({Nil()})
+		local is_bounded = key.LengthSourceTable and key.LengthSourceTable == self
+		local union = is_bounded and Union() or Union({Nil()})
 		local found_non_literal = false
 
 		for _, keyval in ipairs(self.Data) do
 			if keyval.key.Type == "union" then
 				for _, ukey in ipairs((keyval.key--[[# as any]]):GetData()) do
-					if shared.IsSubsetOf(ukey, key) then union:AddType(keyval.val) end
+					if shared.IsSubsetOf(ukey, key) then
+						local val = keyval.val
+
+						if is_bounded and val.Type == "union" and val:IsNil() then
+							val = val:Copy()
+							val:RemoveType(Nil())
+						end
+
+						union:AddType(val)
+					end
 				end
 			elseif keyval.key.Type == key.Type or keyval.key.Type == "any" then
 				if keyval.key:IsLiteral() then
-					union:AddType(keyval.val)
+					local val = keyval.val
+
+					if is_bounded and val.Type == "union" and val:IsNil() then
+						val = val:Copy()
+						val:RemoveType(Nil())
+					end
+
+					union:AddType(val)
+				elseif is_bounded then
+					local val = keyval.val
+
+					if val.Type == "union" and val:IsNil() then
+						val = val:Copy()
+						val:RemoveType(Nil())
+					end
+
+					union:AddType(val)
 				else
 					found_non_literal = true
 
@@ -768,7 +794,17 @@ function META:Get(key--[[#: TBaseType]])--[[#: (TBaseType | false), (any | nil)]
 			if not is_bounded then union:AddType(Nil()) end
 
 			for _, keyval in ipairs(self.Data) do
-				if keyval.key.Type == "number" then union:AddType(keyval.val) end
+				if keyval.key.Type == "number" then
+					local val = keyval.val
+
+					-- Strip nil from the value when access is bounded by #table
+					if is_bounded and val.Type == "union" and val:IsNil() then
+						val = val:Copy()
+						val:RemoveType(Nil())
+					end
+
+					union:AddType(val)
+				end
 			end
 
 			return union
