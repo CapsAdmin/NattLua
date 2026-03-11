@@ -97,6 +97,7 @@ config.commands["check"] = {
 	description = "type check a nattlua or lua script",
 	usage = "nattlua check <file>",
 	options = {
+		{name = "parse-only", description = "Only parse the file, do not analyze"},
 		{name = "profile", description = "Run with profiler"},
 		{name = "error-only", description = "Only print errors, not warnings"},
 		{name = "show-severity", description = "Show severity level for warnings"},
@@ -140,7 +141,11 @@ config.commands["check"] = {
 				end
 			end
 
-			assert(cmp:Analyze())
+			if options["parse-only"] then
+				assert(cmp:Parse())
+			else
+				assert(cmp:Analyze())
+			end
 		end
 
 		if options.profile then prof:Stop() end
