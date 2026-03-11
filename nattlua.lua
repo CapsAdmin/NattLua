@@ -14,7 +14,7 @@ elseif select(1, ...) == "test" then
 	_G.STARTUP_PROFILE = true
 end
 
-if jit then
+if jit and not _G.BUNDLE then
 	if not package.searchpath("nattlua.cli.init", package.path) then
 		local current_path
 		local ffi = require("ffi")
