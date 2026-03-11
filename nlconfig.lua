@@ -401,6 +401,18 @@ do -- these override existing commands and should probably be made more generic
 
 			io.write(" - OK\n")
 
+			local function command_succeeded(...)
+				local ok, why, code = ...
+
+				if type(ok) == "number" then return ok == 0 end
+
+				if ok == true then return true end
+
+				if why == "exit" then return code == 0 end
+
+				return false
+			end
+
 			if mode ~= "fast" then
 				-- run tests before we write the file
 				local f = io.open("temp_build_output.lua", "w")
@@ -408,11 +420,11 @@ do -- these override existing commands and should probably be made more generic
 				f:close()
 				io.write("running tests with temp_build_output.lua ")
 				io.flush()
-				local exit_code = os.execute(
+				local ok, why, code = os.execute(
 					"luajit -e 'require(\"temp_build_output\") _G.REUSE_BASE_ENV = true require(\"test.run\")()'"
 				)
 
-				if exit_code ~= 0 then
+				if not command_succeeded(ok, why, code) then
 					io.write(" - FAIL\n")
 					return
 				end
@@ -420,9 +432,11 @@ do -- these override existing commands and should probably be made more generic
 				io.write(" - OK\n")
 				io.write("checking if file can be required outside of the working directory")
 				io.flush()
-				local exit_code = os.execute("cd .github && luajit -e 'local nl = loadfile(\"../temp_build_output.lua\")'")
+				local ok, why, code = os.execute(
+					"cd .github && luajit -e 'local nl = loadfile(\"../temp_build_output.lua\")'"
+				)
 
-				if exit_code ~= 0 then
+				if not command_succeeded(ok, why, code) then
 					io.write(" - FAIL\n")
 					return
 				end

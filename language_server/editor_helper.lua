@@ -21,6 +21,7 @@ local callstack = require("nattlua.other.callstack")
 local bit = require("nattlua.other.bit")
 local class = require("nattlua.other.class")
 local fs = require("nattlua.other.fs")
+local Code = require("nattlua.code").New
 local Emitter = require("nattlua.emitter.emitter").New
 local BuildBaseEnvironment = require("nattlua.base_environment").BuildBaseEnvironment
 local runtime_env, typesystem_env, base_node_to_type = BuildBaseEnvironment()
@@ -840,6 +841,98 @@ function META:GetCode(path)
 	return data.code
 end
 
+local function create_source_node(path, content, start, stop)
+	return {
+		Code = Code(content, path),
+		GetStartStop = function()
+			return start, stop
+		end,
+		GetSourcePath = function()
+			return path
+		end,
+	}
+end
+
+local function find_builtin_definition_node(token)
+	if not token then return nil end
+
+	local root_name = token:GetValueString()
+	local member_name
+	local value_node = token.parent
+	local expression = value_node and value_node.parent
+
+	if
+		expression and
+		expression.Type == "expression_binary_operator" and
+		expression.value and
+		expression.value.value == "." and
+		expression.right == value_node and
+		expression.left and
+		expression.left.value
+	then
+		root_name = expression.left.value:GetValueString()
+		member_name = token:GetValueString()
+	end
+
+	if not root_name or not root_name:match("^[%a_][%w_]*$") then return nil end
+
+	local file_candidates = {
+		"nattlua/definitions/lua/" .. root_name .. ".nlua",
+		"nattlua/definitions/lua/globals.nlua",
+		"nattlua/definitions/utility.nlua",
+	}
+	local search_specs = {}
+
+	if member_name then
+		local qualified_name = root_name .. "." .. member_name
+		table.insert(search_specs, {anchor = "analyzer function " .. qualified_name, symbol = member_name})
+		table.insert(search_specs, {anchor = "function " .. qualified_name, symbol = member_name})
+		table.insert(search_specs, {anchor = 'type Modules["' .. qualified_name .. '"]', symbol = qualified_name})
+		table.insert(search_specs, {anchor = "type Modules['" .. qualified_name .. "']", symbol = qualified_name})
+	else
+		table.insert(search_specs, {anchor = "type " .. root_name .. " =", symbol = root_name})
+		table.insert(search_specs, {anchor = "local " .. root_name .. " =", symbol = root_name})
+		table.insert(search_specs, {anchor = "function " .. root_name, symbol = root_name})
+	end
+
+	for _, builtin_path in ipairs(file_candidates) do
+		local content = fs.read(builtin_path)
+
+		if content then
+			for _, spec in ipairs(search_specs) do
+				local anchor_start = content:find(spec.anchor, 1, true)
+
+				if anchor_start then
+					local symbol_start = content:find(spec.symbol, anchor_start, true)
+
+					if symbol_start then
+						return create_source_node(
+							builtin_path,
+							content,
+							symbol_start,
+							symbol_start + #spec.symbol - 1
+						)
+					end
+				end
+			end
+		end
+	end
+
+	return nil
+end
+
+local function maybe_remap_bundled_builtin_definition(node, token)
+	local source_path = node and node.GetSourcePath and node:GetSourcePath()
+
+	if source_path and source_path:find("nattlua/definitions/index.nlua", 1, true) then
+		return find_builtin_definition_node(token) or node
+	end
+
+	if not node then return find_builtin_definition_node(token) end
+
+	return node
+end
+
 function META:GetRenameInstructions(path, line, character, newName)
 	local token, data = self:FindToken(path, line, character)
 
@@ -888,9 +981,17 @@ function META:GetDefinition(path, line, character)
 
 	if not token then return end
 
+	local function return_definition(node)
+		local mapped = maybe_remap_bundled_builtin_definition(node, token)
+
+		if mapped and mapped.GetStartStop then return mapped end
+
+		return nil
+	end
+
 	local all_types = token:FindType()
 
-	if not all_types[1] then return end
+	if not all_types[1] then return return_definition(nil) end
 
 	local types = {}
 
@@ -908,13 +1009,13 @@ function META:GetDefinition(path, line, character)
 		do
 			local node = self:NodeToType(typ)
 
-			if node and node.GetStartStop then return node end
+			if node and node.GetStartStop then return return_definition(node) end
 		end
 
 		if typ.Type == "upvalue" then
 			local node = self:NodeToType(typ)
 
-			if node and node.GetStartStop then return node end
+			if node and node.GetStartStop then return return_definition(node) end
 
 			typ = typ:GetValue()
 
@@ -928,13 +1029,13 @@ function META:GetDefinition(path, line, character)
 
 			local node = self:NodeToType(typ)
 
-			if node and node.GetStartStop then return node end
+			if node and node.GetStartStop then return return_definition(node) end
 		end
 
 		if typ.Type == "function" then
 			local node = typ:GetFunctionBodyNode()
 
-			if node and node.GetStartStop then return node end
+			if node and node.GetStartStop then return return_definition(node) end
 		end
 
 		do
@@ -943,12 +1044,14 @@ function META:GetDefinition(path, line, character)
 			if upvalue then
 				local node = self:NodeToType(upvalue)
 
-				if node and node.GetStartStop then return node end
+				if node and node.GetStartStop then return return_definition(node) end
 			end
 		end
 
 		::next_type::
 	end
+
+	return return_definition(nil)
 end
 
 function META:GetSignatureHelp(path, line, character)
