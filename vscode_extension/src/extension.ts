@@ -13,27 +13,92 @@ import {
 } from "vscode-languageclient/node";
 import { resolveVariables } from "./vscode-variables";
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
-import { chdir } from "process";
 import { resolve } from "path";
 import * as fs from "fs";
 
 let client: LanguageClient;
 let server: ChildProcessWithoutNullStreams;
 const documentSelector = [{ scheme: 'file', language: 'nattlua' }];
+const MAX_SERVER_RESTARTS = 5;
+const SERVER_RESTART_WINDOW_MS = 60_000;
+const SERVER_RESTART_DELAY_MS = 1_000;
 
 export async function activate(context: ExtensionContext) {
   const config = workspace.getConfiguration("nattlua");
   let LSPOutput = window.createOutputChannel("NattLua LSP Channel");
   let serverOutput = window.createOutputChannel("NattLua Server");
-  let clientOutput: OutputChannel
+  let clientOutput: OutputChannel;
+  let isDeactivating = false;
+  let restartTimestamps: number[] = [];
+  let restartTimer: NodeJS.Timeout | undefined;
+  let startPromise: Promise<void> | undefined;
 
   const executable = resolveVariables(config.get<string>("executable") || "nattlua");
   const workingDirectory = resolveVariables(config.get<string>("workingDirectory") || "${workspaceFolder}");
-  const args = (config.get<string[]>("arguments") || []).map(arg => resolveVariables(arg))
+  const args = (config.get<string[]>("arguments") || []).map(arg => resolveVariables(arg));
 
   if (!fs.existsSync(workingDirectory)) {
     window.showWarningMessage(`NattLua: Working directory '${workingDirectory}' not found. Defaulting to workspace root.`);
   }
+
+  const pruneRestartTimestamps = () => {
+    const cutoff = Date.now() - SERVER_RESTART_WINDOW_MS;
+    restartTimestamps = restartTimestamps.filter(timestamp => timestamp >= cutoff);
+  };
+
+  const scheduleRestart = (reason: string) => {
+    if (isDeactivating) {
+      return;
+    }
+
+    pruneRestartTimestamps();
+
+    if (restartTimestamps.length >= MAX_SERVER_RESTARTS) {
+      const message = `NattLua server restart limit reached (${MAX_SERVER_RESTARTS} retries in ${SERVER_RESTART_WINDOW_MS / 1000} seconds).`;
+      LSPOutput.appendLine(message);
+      window.showErrorMessage(message);
+      return;
+    }
+
+    restartTimestamps.push(Date.now());
+
+    if (restartTimer) {
+      clearTimeout(restartTimer);
+    }
+
+    LSPOutput.appendLine(`Scheduling NattLua server restart (${restartTimestamps.length}/${MAX_SERVER_RESTARTS}) due to: ${reason}`);
+    restartTimer = setTimeout(() => {
+      restartTimer = undefined;
+      void startClient(`restart: ${reason}`);
+    }, SERVER_RESTART_DELAY_MS);
+  };
+
+  const startClient = async (reason: string) => {
+    if (isDeactivating || client.isRunning()) {
+      return;
+    }
+
+    if (startPromise) {
+      return startPromise;
+    }
+
+    startPromise = (async () => {
+      clientOutput.appendLine(`Starting NattLua server (${reason}) with command: ${executable} ${args.join(" ")}`);
+
+      try {
+        await client.start();
+        clientOutput.appendLine(`NattLua server started successfully (${reason})`);
+      } catch (err: any) {
+        const message = err?.message || String(err);
+        clientOutput.appendLine(`NattLua failed to start (${reason}): ${message}`);
+        scheduleRestart(`start failure: ${message}`);
+      } finally {
+        startPromise = undefined;
+      }
+    })();
+
+    return startPromise;
+  };
 
   const errorHandler: ErrorHandler = {
     error: (error, message, count) => {
@@ -43,7 +108,8 @@ export async function activate(context: ExtensionContext) {
     },
     closed: () => {
       LSPOutput.appendLine("LSP connection closed.");
-      return { action: CloseAction.Restart };
+      scheduleRestart("connection closed");
+      return { action: CloseAction.DoNotRestart };
     }
   };
 
@@ -65,16 +131,19 @@ export async function activate(context: ExtensionContext) {
           serverOutput.appendLine("SERVER SPAWN ERROR: " + err.toString());
           window.showErrorMessage(`Failed to start NattLua server: ${err.message}. Make sure '${executable}' is installed and in your PATH.`);
         });
+        server.on("exit", (code, signal) => {
+          serverOutput.appendLine(`SERVER EXIT: code=${code ?? "null"} signal=${signal ?? "null"}`);
+        });
 
-        const reader = server.stderr  // using STDERR explicitly to have a clean communication channel
+        const reader = server.stderr;  // using STDERR explicitly to have a clean communication channel
         reader.setEncoding("utf8");
         reader.on("data", (str) => LSPOutput.appendLine(">>\n" + str));
 
-        const output = server.stdout
+        const output = server.stdout;
         output.setEncoding("utf8");
         output.on("data", (str: string) => serverOutput.append(str));
 
-        const writer = server.stdin
+        const writer = server.stdin;
 
         {
           const originalWrite = writer._write;
@@ -86,9 +155,9 @@ export async function activate(context: ExtensionContext) {
 
         context.subscriptions.push({
           dispose: () => {
-            if (server) server.kill("SIGTERM");
+            if (server && !server.killed) server.kill("SIGTERM");
           },
-        })
+        });
 
         return {
           reader,
@@ -161,14 +230,18 @@ export async function activate(context: ExtensionContext) {
     }
   });
 
-  clientOutput.appendLine(`Starting NattLua server with command: ${executable} ${args.join(" ")}`);
-  try {
-    await client.start();
-    clientOutput.appendLine(`NattLua server started successfully`);
-  } catch (err: any) {
-    clientOutput.appendLine(`NattLua failed to start: ${err.message}`);
-    window.showErrorMessage(`Failed to start NattLua Language Client. Check the output channels for details.`);
-  }
+  context.subscriptions.push({
+    dispose: () => {
+      isDeactivating = true;
+
+      if (restartTimer) {
+        clearTimeout(restartTimer);
+        restartTimer = undefined;
+      }
+    },
+  });
+
+  await startClient("initial start");
 }
 
 export async function deactivate(): Promise<void> | undefined {

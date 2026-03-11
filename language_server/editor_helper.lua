@@ -1507,7 +1507,22 @@ do
 
 		local symbols = {}
 
+		local function normalize_symbol_name(name)
+			if name == nil then return nil end
+
+			name = tostring(name)
+			name = name:match("^%s*(.-)%s*$") or name
+
+			if name == "" then return nil end
+
+			return name
+		end
+
 		local function add_symbol(name, kind, n, parent_symbols)
+			name = normalize_symbol_name(name)
+
+			if not name then return end
+
 			local start, stop = n:GetStartStop()
 
 			if not start then return end

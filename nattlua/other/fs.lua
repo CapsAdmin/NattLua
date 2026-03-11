@@ -635,10 +635,7 @@ function fs.read(path)
 
 	local content = f:read("*all")
 
-	if content == nil then
-		f:close()
-		return nil, "file is empty"
-	end
+	if content == nil then content = "" end
 
 	f:close()
 	return content

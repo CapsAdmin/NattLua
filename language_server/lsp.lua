@@ -487,6 +487,10 @@ do
 	}
 
 	local function translate(node, path)
+		if node.name == nil or tostring(node.name):match("^%s*$") then
+			node.name = "<anonymous>"
+		end
+
 		node.kind = symbol_kind[node.kind] or node.kind
 
 		if node.node then
