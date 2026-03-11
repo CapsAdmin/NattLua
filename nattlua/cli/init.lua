@@ -79,6 +79,7 @@ config.emitter = {
 	no_semicolon = true,
 	type_annotations = "explicit",
 	force_parenthesis = true,
+	omit_parentheses_for_single_table_call = true,
 	trailing_newline = true,
 	comment_type_annotations_in_lua_files = true,
 }
@@ -270,6 +271,7 @@ config.commands["init"] = {
         string_quote = "\"",
         no_semicolon = true,
         force_parenthesis = true,
+		omit_parentheses_for_single_table_call = true,
         max_line_length = 80,
     }
     

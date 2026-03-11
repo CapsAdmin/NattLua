@@ -136,6 +136,57 @@ identical([[pos, ang = LocalToWorld(
 	ang or owner:GetAngles()
 )]])
 identical([[if not ply.pac_cameras then return end]])
+check({pretty_print = true}, [[foo({foo = 1})]], [[foo({foo = 1})]])
+check(
+	{pretty_print = true},
+	[[foo({foo = 1, bar = 2, baz = 3, qux = 4})]],
+	[[foo{foo = 1, bar = 2, baz = 3, qux = 4}]]
+)
+check(
+	{pretty_print = true, force_parenthesis = true},
+	[[foo({foo = 1, bar = 2, baz = 3, qux = 4})]],
+	[[foo({foo = 1, bar = 2, baz = 3, qux = 4})]]
+)
+check(
+	{
+		pretty_print = true,
+		force_parenthesis = true,
+		omit_parentheses_for_single_table_call = true,
+	},
+	[[foo({foo = 1, bar = 2, baz = 3, qux = 4})]],
+	[[foo{foo = 1, bar = 2, baz = 3, qux = 4}]]
+)
+check(
+	{
+		pretty_print = true,
+		force_parenthesis = true,
+		omit_parentheses_for_single_table_call = true,
+	},
+	"foo{\n\tfoo = bar,\n\tblah = blah,\n\tfoo = function() end,\n}",
+	"foo{\n\tfoo = bar,\n\tblah = blah,\n\tfoo = function() end,\n}"
+)
+check(
+	{
+		pretty_print = true,
+		force_parenthesis = true,
+		omit_parentheses_for_single_table_call = true,
+	},
+	"Button{\n\tSize = Vec2(30, 30),\n\tMode = \"filled\",\n\tlayout = {\n\t\tDirection = \"x\",\n\t\tAlignmentY = \"center\",\n\t\tFitHeight = true,\n\t\tGrowWidth = 1,\n\t},\n}{\n\tText{Text = \"Text Button\", IgnoreMouseInput = true},\n}",
+	"Button{\n\tSize = Vec2(30, 30),\n\tMode = \"filled\",\n\tlayout = {\n\t\tDirection = \"x\",\n\t\tAlignmentY = \"center\",\n\t\tFitHeight = true,\n\t\tGrowWidth = 1,\n\t},\n}{\n\tText{Text = \"Text Button\", IgnoreMouseInput = true},\n}"
+)
+check(
+	{pretty_print = true},
+	[[foo({
+	foo = bar,
+	blah = blah,
+	foo = function() end,
+})]],
+	[[foo{
+	foo = bar,
+	blah = blah,
+	foo = function() end,
+}]]
+)
 check(
 	{pretty_print = true, comment_type_annotations = true},
 	[=[--[[#type Vector.__mul = function=(Vector, number | Vector)>(Vector)]]]=]
@@ -365,21 +416,19 @@ local foo = function()
 
 	end
 end
-local foo = x(
-	{
-		x = 1,
-		y = 2,
-		z = 3,
-		z = 3,
-		z = 3,
-		z = 3,
-		z = 3,
-		z = 3,
-		z = 3,
-		z = 3,
-		z = 3,
-	}
-)]])
+local foo = x{
+	x = 1,
+	y = 2,
+	z = 3,
+	z = 3,
+	z = 3,
+	z = 3,
+	z = 3,
+	z = 3,
+	z = 3,
+	z = 3,
+	z = 3,
+}]])
 identical([[local union = stack[#stack].falsy --:Copy()
 if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 

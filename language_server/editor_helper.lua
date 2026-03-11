@@ -585,6 +585,7 @@ function META:Format(code, path, extra_emitter_config)
 		comment_type_annotations = true,
 		type_annotations = "explicit",
 		force_parenthesis = true,
+		omit_parentheses_for_single_table_call = true,
 	}
 
 	for k, v in pairs(emitter_cfg) do

@@ -1,5 +1,7 @@
 local runtime_syntax = require("nattlua.syntax.runtime")
 local characters = require("nattlua.syntax.characters")
+local Code = require("nattlua.code").New
+local Lexer = require("nattlua.lexer.lexer").New
 local class = require("nattlua.other.class")
 local print = _G.print
 local error = _G.error
@@ -10,6 +12,7 @@ local table = _G.table
 local ipairs = _G.ipairs
 local assert = _G.assert
 local type = _G.type
+local pcall = _G.pcall
 local setmetatable = _G.setmetatable
 local B = string.byte
 
@@ -825,8 +828,83 @@ return function()
 		self:EmitToken(node.tokens["]"])
 	end
 
+	do
+		local OMIT_PAREN_TABLE_CALL_TOKEN_LIMIT = 10
+
+		local function count_significant_tokens(str)
+			local ok, tokens = pcall(function()
+				return Lexer(Code(str, "@emitter_call")):GetTokens()
+			end)
+
+			if not ok or not tokens then return 0 end
+
+			local count = 0
+
+			for _, token in ipairs(tokens) do
+				if
+					token.type ~= "space" and
+					token.type ~= "line_comment" and
+					token.type ~= "multiline_comment" and
+					token.type ~= "comment_escape" and
+					token.type ~= "end_of_file"
+				then
+					count = count + 1
+				end
+			end
+
+			return count
+		end
+
+		function META:ShouldOmitCallParentheses(node--[[#: Node]])
+			if self.config.pretty_print ~= true then return false end
+
+			if
+				self.config.force_parenthesis and
+				not self.config.omit_parentheses_for_single_table_call
+			then
+				return false
+			end
+
+			if #node.expressions ~= 1 then return false end
+
+			local expression = node.expressions[1]
+
+			if not expression or expression.Type ~= "expression_table" then return false end
+
+			if not node.tokens["call("] or not node.tokens["call)"] then
+				return self.config.omit_parentheses_for_single_table_call == true
+			end
+
+			if self:ShouldLineBreakNode(expression) then return true end
+
+			if not node.Code then return false end
+
+			local start
+			local stop
+
+			if node.tokens["call("] and node.tokens["call)"] then
+				start = node.tokens["call("].start
+				stop = node.tokens["call)"].stop
+			else
+				start = expression.code_start
+				stop = expression.code_stop
+			end
+
+			if not start or not stop then return false end
+
+			local data = node.Code:SubPosToLineChar(start, stop)
+
+			if data.line_start ~= data.line_stop then return true end
+
+			local source = node.Code:GetStringSlice(start, stop)
+
+			return count_significant_tokens(source) > OMIT_PAREN_TABLE_CALL_TOKEN_LIMIT
+		end
+	end
+
 	function META:EmitCall(node--[[#: Node]])
 		local multiline_string = false
+		local omit_call_parentheses = self:ShouldOmitCallParentheses(node)
 
 		if #node.expressions == 1 and node.expressions[1].Type == "expression_value" then
 			multiline_string = node.expressions[1].value:GetValueString():sub(1, 1) == "["
@@ -844,10 +922,14 @@ return function()
 			self:StopEmittingInvalidLuaCode(emitted)
 		end
 
-		if node.tokens["call("] then
+		if node.tokens["call("] and not omit_call_parentheses then
 			self:EmitToken(node.tokens["call("])
 		else
-			if self.config.force_parenthesis and not multiline_string then
+			if
+				self.config.force_parenthesis and
+				not multiline_string and
+				not omit_call_parentheses
+			then
 				self:EmitNonSpace("(")
 			end
 		end
@@ -862,7 +944,7 @@ return function()
 			newlines = false
 		end
 
-		if node.tokens["call("] and newlines then
+		if node.tokens["call("] and not omit_call_parentheses and newlines then
 			self:Indent()
 			self:Whitespace("\n")
 			self:Whitespace("\t")
@@ -872,9 +954,9 @@ return function()
 		self:EmitExpressionList(node.expressions)
 		self:PopForcedLineBreaking()
 
-		if newlines then self:Outdent() end
+		if newlines and not omit_call_parentheses then self:Outdent() end
 
-		if node.tokens["call)"] then
+		if node.tokens["call)"] and not omit_call_parentheses then
 			if newlines then
 				self:Whitespace("\n")
 				self:Whitespace("\t")
@@ -882,7 +964,11 @@ return function()
 
 			self:EmitToken(node.tokens["call)"])
 		else
-			if self.config.force_parenthesis and not multiline_string then
+			if
+				self.config.force_parenthesis and
+				not multiline_string and
+				not omit_call_parentheses
+			then
 				if newlines then
 					self:Whitespace("\n")
 					self:Whitespace("\t")
