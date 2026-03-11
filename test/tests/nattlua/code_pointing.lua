@@ -2,7 +2,7 @@ local formating = require("nattlua.other.formating")
 -- Disable ANSI color output for tests: we compare plain text strings
 formating.SetColor(false)
 
-for _, formating_SubPosToLineChar in ipairs({formating.SubPosToLineChar, formating.SubPosToLineCharCached}) do
+for _, formating_SubPosToLineChar in ipairs{formating.SubPosToLineChar, formating.SubPosToLineCharCached} do
 	do
 		local test = [[1]]
 		local data = formating_SubPosToLineChar(test, 1, 1)

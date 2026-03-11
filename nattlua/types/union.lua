@@ -534,21 +534,19 @@ function META:GetStoredTruthyFalsy()
 end
 
 function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TUnion]]
-	local self = META.NewObject(
-		{
-			Type = "union",
-			Data = {},
-			literal_data_cache = {},
-			suppress = false--[[# as boolean]],
-			left_right_source = false,
-			parent_table = false,
-			stored_truthy_falsy = false,
-			tuple_source_union = false,
-			TruthyFalsy = "unknown",
-			Upvalue = false,
-			Contract = false,
-		}
-	)
+	local self = META.NewObject{
+		Type = "union",
+		Data = {},
+		literal_data_cache = {},
+		suppress = false--[[# as boolean]],
+		left_right_source = false,
+		parent_table = false,
+		stored_truthy_falsy = false,
+		tuple_source_union = false,
+		TruthyFalsy = "unknown",
+		Upvalue = false,
+		Contract = false,
+	}
 
 	if data then add_data(self, data) end
 
@@ -574,6 +572,6 @@ return {
 		return META.New({typ, Nil()})
 	end,
 	Boolean = function()
-		return META.New({True(), False()})
+		return META.New{True(), False()}
 	end,
 }

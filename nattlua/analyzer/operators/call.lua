@@ -276,8 +276,8 @@ local function any_call(self, analyzer, input, call_node)
 			else
 				-- if we pass a table without a contract to an any call, we add any to its key values
 				for _, keyval in ipairs(arg:GetData()) do
-					keyval.key = Union({Any(), keyval.key})
-					keyval.val = Union({Any(), keyval.val})
+					keyval.key = Union{Any(), keyval.key}
+					keyval.val = Union{Any(), keyval.val}
 				end
 			end
 		end

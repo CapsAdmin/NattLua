@@ -194,8 +194,6 @@ do -- random functions
 	analyzer function math.randomseed(n: number)
 		if not analyzer.enable_random_functions then return end
 
-		if n:IsLiteral() then
-			return math.randomseed(n:GetData())
-		end
+		if n:IsLiteral() then return math.randomseed(n:GetData()) end
 	end
 end

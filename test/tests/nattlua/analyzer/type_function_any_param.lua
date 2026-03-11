@@ -178,7 +178,7 @@ analyze[[
     local r2 = map<|number, string, any|>(r, function(n: number): string
         return tostring(n)
     end)
-]]-- ============================================================
+]] -- ============================================================
 -- collect: passing multiple generic function results in a table
 -- (separate bug: ok<|number|> inside table literal gets confused 
 --  with a result value — "has no key __call")

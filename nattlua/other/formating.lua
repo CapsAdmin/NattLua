@@ -760,8 +760,10 @@ function formating.BuildSourceCodePointMessage2(
 			-- Cap footer item width at MAX_CONTENT_WIDTH so very long messages
 			-- don't inflate the box; they will be word-wrapped in color mode.
 			local w = math.min(#item.text, gutter_len + MAX_CONTENT_WIDTH)
+
 			if w > longest_line then longest_line = w end
 		end
+
 		-- inner_width: visual content cols between gutter and right │ border
 		local inner_width = math.max(longest_line - gutter_len, 4)
 		-- full_visual_width: gutter + content (right border adds 2 more visual cols)
@@ -873,7 +875,7 @@ function formating.BuildSourceCodePointMessage2(
 			elseif footer_main_set[ai] then
 				-- Main error: bold + severity color, word-wrapped at MAX_CONTENT_WIDTH
 				local gl = 1 + number_length + #SEPARATOR
-				local gutter = entry:sub(1, gl):gsub("%->" , "→ "):gsub(" | $", " │ ")
+				local gutter = entry:sub(1, gl):gsub("%->", "→ "):gsub(" | $", " │ ")
 				local text = entry:sub(gl + 1)
 				local cont_indent = (" "):rep(gl)
 				local wrapped = wrap_text(text, MAX_CONTENT_WIDTH)
@@ -883,14 +885,16 @@ function formating.BuildSourceCodePointMessage2(
 					local g = j == 1 and gutter or cont_indent
 					local padding = has_border and math.max(0, full_visual_width - gl - #wline) or 0
 					local border = has_border and (border_color .. " │" .. ansi.reset) or ""
-					rendered[j] = sev_color .. ansi.bold .. g .. wline .. ansi.reset .. (" "):rep(padding) .. border
+					rendered[j] = sev_color .. ansi.bold .. g .. wline .. ansi.reset .. (
+							" "
+						):rep(padding) .. border
 				end
 
 				annotated[ai] = table.concat(rendered, "\n")
 			elseif footer_trace_set[ai] then
 				-- Trace/path line: dim, word-wrapped at MAX_CONTENT_WIDTH
 				local gl = 2 + number_length + #SEPARATOR
-				local gutter = entry:sub(1, gl):gsub("%->" , "→ "):gsub(" | $", " │ ")
+				local gutter = entry:sub(1, gl):gsub("%->", "→ "):gsub(" | $", " │ ")
 				local text = entry:sub(gl + 1)
 				local cont_indent = (" "):rep(gl)
 				local wrapped = wrap_text(text, MAX_CONTENT_WIDTH)

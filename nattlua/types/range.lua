@@ -39,18 +39,16 @@ local function LNumber(num--[[#: number | nil]])
 end
 
 function META.New(min--[[#: TNumber]], max--[[#: TNumber]])
-	return META.NewObject(
-		{
-			Type = META.Type,
-			MinNumber = min,
-			MaxNumber = max,
-			TruthyFalsy = "truthy",
-			Upvalue = false,
-			Contract = false,
-			Hash = compute_hash(min, max),
-			DontWiden = false,
-		}
-	)
+	return META.NewObject{
+		Type = META.Type,
+		MinNumber = min,
+		MaxNumber = max,
+		TruthyFalsy = "truthy",
+		Upvalue = false,
+		Contract = false,
+		Hash = compute_hash(min, max),
+		DontWiden = false,
+	}
 end
 
 function META:GetLuaType()

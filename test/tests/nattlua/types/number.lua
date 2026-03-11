@@ -321,7 +321,7 @@ do
 
 	local max = 2
 
-	for _, op in ipairs({"<", ">", "<=", ">=", "==", "~="}) do
+	for _, op in ipairs{"<", ">", "<=", ">=", "==", "~="} do
 		for x = -max, max do
 			for y = x, max do
 				for z = -max, max do

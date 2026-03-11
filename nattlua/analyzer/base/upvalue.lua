@@ -29,7 +29,11 @@ function META:GetTruthyFalsyUnion()
 end
 
 function META:__tostring()
-	return "[" .. tostring(self.Scope) .. ":" .. tostring(self.Position) .. ":" .. (self.key and tostring(self.key) or "??") .. ":" .. tostring(self:GetValue()) .. "]"
+	return "[" .. tostring(self.Scope) .. ":" .. tostring(self.Position) .. ":" .. (
+			self.key and
+			tostring(self.key) or
+			"??"
+		) .. ":" .. tostring(self:GetValue()) .. "]"
 end
 
 function META:GetHashForMutationTracking()
@@ -44,7 +48,6 @@ local context = require("nattlua.analyzer.context")
 
 local function increment_use_count(self)
 	self.UseCount = self.UseCount + 1
-
 	local analyzer = context:GetCurrentAnalyzer()
 
 	if analyzer then
@@ -105,24 +108,22 @@ end
 local id = 0
 
 function META.New(obj)
-	local self = META.NewObject(
-		{
-			Type = "upvalue",
-			truthy_falsy_union = false,
-			Value = false,
-			Key = false,
-			FromForLoop = false,
-			Immutable = false,
-			Shadow = false,
-			Position = false,
-			Scope = false,
-			Mutations = false,
-			UseCount = 0,
-			RuntimeUseCount = 0,
-			TypesystemUseCount = 0,
-			statement = false,
-		}
-	)
+	local self = META.NewObject{
+		Type = "upvalue",
+		truthy_falsy_union = false,
+		Value = false,
+		Key = false,
+		FromForLoop = false,
+		Immutable = false,
+		Shadow = false,
+		Position = false,
+		Scope = false,
+		Mutations = false,
+		UseCount = 0,
+		RuntimeUseCount = 0,
+		TypesystemUseCount = 0,
+		statement = false,
+	}
 	id = id + 1
 	self:SetValue(obj)
 	return self

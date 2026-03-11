@@ -5,15 +5,13 @@ local path_util = require("nattlua.other.path")
 local META = class.CreateTemplate("lsp_client")
 
 function META.New()
-	return META.NewObject(
-		{
-			last_id = 0,
-			pending_requests = {},
-			notifications = {},
-			responses = {},
-			working_directory = "/",
-		}
-	)
+	return META.NewObject{
+		last_id = 0,
+		pending_requests = {},
+		notifications = {},
+		responses = {},
+		working_directory = "/",
+	}
 end
 
 function META:SetWorkingDirectory(dir)

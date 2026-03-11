@@ -4,7 +4,7 @@ local profiler_module = require("test.helpers.profiler")
 local profiler
 
 if INSTRUMENTAL then
-	profiler = profiler_module.New({id = "instrumental", filter = {"nattlua/parser/.+", "nattlua/syntax/.+"}})
+	profiler = profiler_module.New{id = "instrumental", filter = {"nattlua/parser/.+", "nattlua/syntax/.+"}}
 end
 
 local util = require("examples.util")

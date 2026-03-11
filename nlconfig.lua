@@ -207,11 +207,9 @@ do -- custom commands specific for nattlua
 			},
 		},
 		cb = function(args, options, config, cli)
-			local prof = require("test.helpers.profiler").New(
-				{
-					file_url = "vscode://file/" .. io.popen("pwd"):read() .. "/${path}:${line}:1",
-				}
-			)
+			local prof = require("test.helpers.profiler").New{
+				file_url = "vscode://file/" .. io.popen("pwd"):read() .. "/${path}:${line}:1",
+			}
 			local Compiler = require("nattlua.compiler")
 			local entry_points = {
 				config.entry_point or
@@ -219,13 +217,11 @@ do -- custom commands specific for nattlua
 				"./language_server/main.lua",
 				"./language_server/lsp.lua",
 			}
-			local all_files = cli.get_files(
-				{
-					path = "./*",
-					ignorefiles = config.ignorefiles,
-					ext = {".lua", ".nlua"},
-				}
-			)
+			local all_files = cli.get_files{
+				path = "./*",
+				ignorefiles = config.ignorefiles,
+				ext = {".lua", ".nlua"},
+			}
 			-- filter out examples and other non-core files
 			local filtered = {}
 
@@ -254,7 +250,7 @@ do -- custom commands specific for nattlua
 					local original_OnDiagnostic = compiler.OnDiagnostic
 					compiler.OnDiagnostic = function(self, code, msg, severity, ...)
 						if severity == "error" or severity == "fatal" then
-							local t = table.pack({original_OnDiagnostic(self, code, msg, severity, ...)})
+							local t = table.pack{original_OnDiagnostic(self, code, msg, severity, ...)}
 							local max = tonumber(options["max-errors"])
 
 							if max and count >= max then
@@ -363,23 +359,21 @@ do -- these override existing commands and should probably be made more generic
 				)
 			)
 			local lua_code = assert(
-				c:Emit(
-					{
-						pretty_print = true,
-						string_quote = "\"",
-						no_semicolon = true,
-						omit_invalid_code = true,
-						comment_type_annotations = true,
-						type_annotations = true,
-						force_parenthesis = true,
-						module_encapsulation_method = "loadstring",
-						no_newlines = false,
-						extra_indent = {
-							Start = {to = "Stop"},
-							Toggle = "toggle",
-						},
-					}
-				)
+				c:Emit{
+					pretty_print = true,
+					string_quote = "\"",
+					no_semicolon = true,
+					omit_invalid_code = true,
+					comment_type_annotations = true,
+					type_annotations = true,
+					force_parenthesis = true,
+					module_encapsulation_method = "loadstring",
+					no_newlines = false,
+					extra_indent = {
+						Start = {to = "Stop"},
+						Toggle = "toggle",
+					},
+				}
 			)
 			lua_code = "_G.BUNDLE = true\n" .. lua_code
 			lua_code = lua_code:gsub("%#%!%/usr%/local%/bin%/luajit\n", "\n")
@@ -432,9 +426,7 @@ do -- these override existing commands and should probably be made more generic
 				io.write(" - OK\n")
 				io.write("checking if file can be required outside of the working directory")
 				io.flush()
-				local ok, why, code = os.execute(
-					"cd .github && luajit -e 'local nl = loadfile(\"../temp_build_output.lua\")'"
-				)
+				local ok, why, code = os.execute("cd .github && luajit -e 'local nl = loadfile(\"../temp_build_output.lua\")'")
 
 				if not command_succeeded(ok, why, code) then
 					io.write(" - FAIL\n")

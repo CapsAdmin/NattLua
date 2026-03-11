@@ -94,14 +94,12 @@ if has_ffi--[[# as false]] then
 	function META.New(lua_code--[[#: string]], name--[[#: string | nil]])
 		name = name or callstack.get_line(2)
 		local code = " " .. lua_code
-		local self = ctype(
-			{
-				Buffer = code,
-				buffer_len = #code,
-				Name = name,
-				name_length = #name,
-			}
-		)
+		local self = ctype{
+			Buffer = code,
+			buffer_len = #code,
+			Name = name,
+			name_length = #name,
+		}
 		--self.Buffer = self.Buffer + 1
 		self.buffer_len = self.buffer_len - 1
 

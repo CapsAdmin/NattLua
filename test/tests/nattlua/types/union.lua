@@ -6,7 +6,7 @@ local cast = require("nattlua.analyzer.cast")
 local shared = require("nattlua.types.shared")
 
 test("a union should not contain duplicates", function()
-	assert(shared.Equal(Union(cast({"a", "b", "a", "a"})), Union(cast({"a", "b"}))))
+	assert(shared.Equal(Union(cast{"a", "b", "a", "a"}), Union(cast({"a", "b"}))))
 end)
 
 local larger = Union(cast({"a", "b", "c"}))
@@ -42,7 +42,7 @@ test("a smaller union should be a subset of a tuple containing 1 larger union", 
 end)
 
 test("a number should be a subset of a union with numbers", function()
-	assert(shared.IsSubsetOf(LNumber(24), Union({Number(), Number()})))
+	assert(shared.IsSubsetOf(LNumber(24), Union{Number(), Number()}))
 end)
 
 test("a smaller union within an empty union should be identical to the smaller union", function()
@@ -54,7 +54,7 @@ test("a union containing one literal number should be a subset of a union contai
 end)
 
 local A = Union(cast({1, 2, 3}))
-local B = Union(cast({1, 2, 3, 4}))
+local B = Union(cast{1, 2, 3, 4})
 
 test(tostring(B) .. " should equal the union of " .. tostring(A) .. " and " .. tostring(B), function()
 	assert(shared.Equal(B, A:Union(B)))

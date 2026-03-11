@@ -225,7 +225,7 @@ local function cast(self, decl)
 
 		if not self.super_hack then self:PopContextRef("function_argument") end
 
-		return (Function(Tuple(args), Tuple({cast(self, assert(decl.rets))})))
+		return (Function(Tuple(args), Tuple{cast(self, assert(decl.rets))}))
 	elseif decl.type == "root" then
 		return (cast(self, assert(decl.of)))
 	end
@@ -265,20 +265,18 @@ function META:AnalyzeRoot(ast, vars, typs, process_type, mode)
 end
 
 function META.New()
-	return META.NewObject(
-		{
-			context_values = {},
-			type_table = false,
-			vars_table = false,
-			analyzer = false,
-			context_ref = false,
-			super_hack = false,
-			env = false,
-			dollar_signs_vars = false,
-			dollar_signs_typs = false,
-			current_decls = {},
-		}
-	)
+	return META.NewObject{
+		context_values = {},
+		type_table = false,
+		vars_table = false,
+		analyzer = false,
+		context_ref = false,
+		super_hack = false,
+		env = false,
+		dollar_signs_vars = false,
+		dollar_signs_typs = false,
+		current_decls = {},
+	}
 end
 
 return META

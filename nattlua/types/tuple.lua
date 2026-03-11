@@ -660,19 +660,17 @@ function META:SetTable(data--[[#: List<|TBaseType|>]])
 end
 
 function META.New(data--[[#: nil | List<|TBaseType|>]])--[[#: TTuple]]
-	local self = META.NewObject(
-		{
-			Type = "tuple",
-			Data = {},
-			Unpackable = false,
-			Remainder = false,
-			Repeat = false,
-			TruthyFalsy = "unknown",
-			Upvalue = false,
-			Contract = false,
-			MetaTable = false,
-		}
-	)
+	local self = META.NewObject{
+		Type = "tuple",
+		Data = {},
+		Unpackable = false,
+		Remainder = false,
+		Repeat = false,
+		TruthyFalsy = "unknown",
+		Upvalue = false,
+		Contract = false,
+		MetaTable = false,
+	}
 
 	if data and data[1] then self:SetTable(data) end
 

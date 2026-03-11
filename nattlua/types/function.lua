@@ -248,32 +248,30 @@ function META:IsOutputModifier(index--[[#: number]], modifier--[[#: string]])
 end
 
 function META.New(input--[[#: TTuple]], output--[[#: TTuple]])
-	return META.NewObject(
-		{
-			TruthyFalsy = "truthy",
-			Type = "function",
-			Called = false,
-			Contract = false,
-			Hash = false,
-			ExplicitInputSignature = false,
-			ExplicitOutputSignature = false,
-			ArgumentsInferred = false,
-			PreventInputArgumentExpansion = false,
-			InputSignature = input or false,
-			OutputSignature = output or false,
-			AnalyzerFunction = false,
-			FunctionBodyNode = false,
-			Upvalue = false,
-			UpvaluePosition = false,
-			InputIdentifiers = false,
-			LiteralFunction = false,
-			Scope = false,
-			InputArgumentsInferred = false,
-			InputModifiers = false,
-			OutputModifiers = false,
-			Data = false,
-		}
-	)
+	return META.NewObject{
+		TruthyFalsy = "truthy",
+		Type = "function",
+		Called = false,
+		Contract = false,
+		Hash = false,
+		ExplicitInputSignature = false,
+		ExplicitOutputSignature = false,
+		ArgumentsInferred = false,
+		PreventInputArgumentExpansion = false,
+		InputSignature = input or false,
+		OutputSignature = output or false,
+		AnalyzerFunction = false,
+		FunctionBodyNode = false,
+		Upvalue = false,
+		UpvaluePosition = false,
+		InputIdentifiers = false,
+		LiteralFunction = false,
+		Scope = false,
+		InputArgumentsInferred = false,
+		InputModifiers = false,
+		OutputModifiers = false,
+		Data = false,
+	}
 end
 
 return {
@@ -281,8 +279,8 @@ return {
 	Function = META.New,
 	AnyFunction = function()
 		return META.New(
-			Tuple({VarArg(Any()--[[# as any]])})--[[# as TTuple]],
-			Tuple({VarArg(Any()--[[# as any]])})--[[# as TTuple]]
+			Tuple{VarArg(Any()--[[# as any]])}--[[# as TTuple]],
+			Tuple{VarArg(Any()--[[# as any]])}--[[# as TTuple]]
 		)
 	end,
 	LuaTypeFunction = function(

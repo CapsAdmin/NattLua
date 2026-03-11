@@ -17,16 +17,14 @@ config.commands["build"] = {
 		assert(builder:Lex())
 		assert(builder:Parse())
 		assert(builder:Analyze())
-		local code, err = builder:Emit(
-			{
-				pretty_print = true,
-				no_newlines = false,
-				omit_invalid_code = true,
-				comment_type_annotations = true,
-				type_annotations = false,
-				force_parenthesis = true,
-			}
-		)
+		local code, err = builder:Emit{
+			pretty_print = true,
+			no_newlines = false,
+			omit_invalid_code = true,
+			comment_type_annotations = true,
+			type_annotations = false,
+			force_parenthesis = true,
+		}
 		local file = assert(io.open("out.lua", "w"))
 		file:write(code)
 		file:close()

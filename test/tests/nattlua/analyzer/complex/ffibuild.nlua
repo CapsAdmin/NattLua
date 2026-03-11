@@ -1123,7 +1123,7 @@ end
 do -- type metatables
 	local metatables = {}
 
-	for _, name in ipairs({"function", "struct", "type", "var_arg", "enums"}) do
+	for _, name in ipairs{"function", "struct", "type", "var_arg", "enums"} do
 		local META = {}
 		META.__index = META
 		META.MetaType = name
@@ -1417,7 +1417,7 @@ do -- type metatables
 					table.insert(declaration, (type_replace or node.type):reverse())
 				end
 
-				for _, flag in ipairs({"signed", "unsigned", "const", "volatile"}) do
+				for _, flag in ipairs{"signed", "unsigned", "const", "volatile"} do
 					if node[flag] then table.insert(declaration, flag:reverse()) end
 				end
 

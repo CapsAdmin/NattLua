@@ -1294,34 +1294,32 @@ function META:GetLuaType()
 end
 
 function META.New()
-	return META.NewObject(
-		{
-			Type = "table",
-			TruthyFalsy = "truthy",
-			Data = {},
-			CreationScope = false,
-			AnalyzerEnvironment = false,
-			Upvalue = false,
-			UniqueID = false,
-			Name = false,
-			Self = false,
-			literal_data_cache = {},
-			Contracts = {},
-			TypeOverride = false,
-			mutations = false,
-			potential_self = false,
-			string_metatable = false,
-			size = false,
-			disabled_unique_id = false,
-			co_func = false,
-			func = false,
-			ReferenceId = false,
-			MetaTable = false,
-			Contract = false,
-			MutationLimit = 100,
-			mutationsi = false,
-		}
-	)
+	return META.NewObject{
+		Type = "table",
+		TruthyFalsy = "truthy",
+		Data = {},
+		CreationScope = false,
+		AnalyzerEnvironment = false,
+		Upvalue = false,
+		UniqueID = false,
+		Name = false,
+		Self = false,
+		literal_data_cache = {},
+		Contracts = {},
+		TypeOverride = false,
+		mutations = false,
+		potential_self = false,
+		string_metatable = false,
+		size = false,
+		disabled_unique_id = false,
+		co_func = false,
+		func = false,
+		ReferenceId = false,
+		MetaTable = false,
+		Contract = false,
+		MutationLimit = 100,
+		mutationsi = false,
+	}
 end
 
 return {

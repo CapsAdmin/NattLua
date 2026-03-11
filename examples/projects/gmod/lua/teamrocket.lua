@@ -154,7 +154,7 @@ if SERVER then
 		if suppress or not victim:IsPlayer() then return false end
 
 		local force = info:GetDamageForce()
-		local res = util.TraceLine({start = victim:GetPos(), endpos = victim:GetPos() + force, filter = victim})
+		local res = util.TraceLine{start = victim:GetPos(), endpos = victim:GetPos() + force, filter = victim}
 
 		if res.Hit and res.HitSky and victim:GetPos():Distance(res.HitPos) > 1000 then
 			suppress = true
@@ -167,13 +167,11 @@ if SERVER then
 	end)
 
 	hook.Add("PhysgunThrowPlayer", "teamrocket", function(attacker, victim)
-		local res = util.TraceLine(
-			{
-				start = victim:GetPos(),
-				endpos = victim:GetPos() + victim:GetVelocity() * 10,
-				filter = victim,
-			}
-		)
+		local res = util.TraceLine{
+			start = victim:GetPos(),
+			endpos = victim:GetPos() + victim:GetVelocity() * 10,
+			filter = victim,
+		}
 
 		if
 			(

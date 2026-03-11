@@ -88,30 +88,28 @@ function META.New(data--[[#: true | false | nil | TSymbol.Data]])
 
 	if data == false then data = FALSE end
 
-	local self = META.NewObject(
-		{
-			Type = META.Type,
-			Data = data,
-			TruthyFalsy = (
-					data == NIL or
-					data == FALSE
-				)
-				and
-				"falsy" or
-				data == TRUE and
-				"truthy" or
-				"unknown",
-			Upvalue = false,
-			Contract = false,
-			Hash = data == NIL and
-				"nil" or
-				data == TRUE and
-				"true" or
-				data == FALSE and
-				"false" or
-				tostring(data),
-		}
-	)
+	local self = META.NewObject{
+		Type = META.Type,
+		Data = data,
+		TruthyFalsy = (
+				data == NIL or
+				data == FALSE
+			)
+			and
+			"falsy" or
+			data == TRUE and
+			"truthy" or
+			"unknown",
+		Upvalue = false,
+		Contract = false,
+		Hash = data == NIL and
+			"nil" or
+			data == TRUE and
+			"true" or
+			data == FALSE and
+			"false" or
+			tostring(data),
+	}
 	return self
 end
 

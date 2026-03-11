@@ -51,17 +51,15 @@ local function compute_hash(num--[[#: nil | number]])
 end
 
 function META.New(data--[[#: number | nil]])
-	return META.NewObject(
-		{
-			Type = META.Type,
-			Data = data or false,
-			TruthyFalsy = "truthy",
-			Upvalue = false,
-			Contract = false,
-			DontWiden = false,
-			Hash = compute_hash(data),
-		}
-	)
+	return META.NewObject{
+		Type = META.Type,
+		Data = data or false,
+		TruthyFalsy = "truthy",
+		Upvalue = false,
+		Contract = false,
+		DontWiden = false,
+		Hash = compute_hash(data),
+	}
 end
 
 function META:GetLuaType()

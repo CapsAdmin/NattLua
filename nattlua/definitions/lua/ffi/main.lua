@@ -98,10 +98,10 @@ local function process_arg(obj)
 
 		if typ then
 			if typ.Type == "number" then
-				return Union({Nil(), TCData(obj), obj.is_string and String() or nil})
+				return Union{Nil(), TCData(obj), obj.is_string and String() or nil}
 			end
 
-			return Union({TCData(typ:Copy()), Nil(), TCData(obj), obj.is_string and String() or nil})
+			return Union{TCData(typ:Copy()), Nil(), TCData(obj), obj.is_string and String() or nil}
 		end
 	elseif obj.Type == "union" then
 		local u = {}
@@ -133,7 +133,7 @@ local function process_type(key, obj, is_typedef, mode)
 					not ret:GetData()[1].key:IsLiteral()
 				then
 					-- only pointers can be nil
-					obj:GetOutputSignature():Set(1, Union({Nil(), TCData(ret)}))
+					obj:GetOutputSignature():Set(1, Union{Nil(), TCData(ret)})
 				else
 					obj:GetOutputSignature():Set(1, TCData(ret))
 				end

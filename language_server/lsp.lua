@@ -106,15 +106,13 @@ editor_helper:SetConfigFunction(function(path)
 end)
 
 function editor_helper:OnClearDiagnostics(path)
-	lsp.Call(
-		{
-			method = "textDocument/publishDiagnostics",
-			params = {
-				uri = to_lsp_path(path),
-				diagnostics = {},
-			},
-		}
-	)
+	lsp.Call{
+		method = "textDocument/publishDiagnostics",
+		params = {
+			uri = to_lsp_path(path),
+			diagnostics = {},
+		},
+	}
 end
 
 function editor_helper:OnDiagnostics(path, data)
@@ -141,15 +139,13 @@ function editor_helper:OnDiagnostics(path, data)
 		}
 	end
 
-	lsp.Call(
-		{
-			method = "textDocument/publishDiagnostics",
-			params = {
-				uri = to_lsp_path(path),
-				diagnostics = diagnostics,
-			},
-		}
-	)
+	lsp.Call{
+		method = "textDocument/publishDiagnostics",
+		params = {
+			uri = to_lsp_path(path),
+			diagnostics = diagnostics,
+		},
+	}
 end
 
 lsp.methods["initialize"] = function(params)
@@ -782,27 +778,23 @@ do
 	local MessageType = {error = 1, warning = 2, info = 3, log = 4}
 
 	function lsp.ShowMessage(type, msg)
-		lsp.Call(
-			{
-				method = "window/showMessage",
-				params = {
-					type = assert(MessageType[type]),
-					message = msg,
-				},
-			}
-		)
+		lsp.Call{
+			method = "window/showMessage",
+			params = {
+				type = assert(MessageType[type]),
+				message = msg,
+			},
+		}
 	end
 
 	function lsp.LogMessage(type, msg)
-		lsp.Call(
-			{
-				method = "window/logMessage",
-				params = {
-					type = assert(MessageType[type]),
-					message = msg,
-				},
-			}
-		)
+		lsp.Call{
+			method = "window/logMessage",
+			params = {
+				type = assert(MessageType[type]),
+				message = msg,
+			},
+		}
 	end
 
 	function lsp.PublishDecorations(path)
@@ -824,15 +816,13 @@ do
 			)
 		end
 
-		lsp.Call(
-			{
-				method = "nattlua/textDecoration",
-				params = {
-					uri = to_lsp_path(path),
-					decorations = decorations,
-				},
-			}
-		)
+		lsp.Call{
+			method = "nattlua/textDecoration",
+			params = {
+				uri = to_lsp_path(path),
+				decorations = decorations,
+			},
+		}
 	end
 end
 

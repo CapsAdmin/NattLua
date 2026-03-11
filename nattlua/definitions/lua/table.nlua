@@ -117,7 +117,7 @@ do -- Array manipulation functions
 		if tbl:IsLiteral() then
 			if func then
 				table.sort(tbl:GetData(), function(a, b)
-					local b = analyzer:Call(func, types.Tuple({a.val, b.val})):GetWithNumber(1)
+					local b = analyzer:Call(func, types.Tuple{a.val, b.val}):GetWithNumber(1)
 
 					if b:IsCertainlyTrue() then return true end
 

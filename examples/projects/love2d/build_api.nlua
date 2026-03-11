@@ -122,9 +122,9 @@ function emit_type(t: LAPIType): nil
 		local tbl = string_split(t.type, " or ")
 
 		for i, v in ipairs(tbl) do
-			emit_type({
+			emit_type{
 				type = v,
-			})
+			}
 
 			if i ~= #tbl then e(" | ") end
 		end

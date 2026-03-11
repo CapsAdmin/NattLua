@@ -157,22 +157,20 @@ function _G.run_nlua(path)
 	if has_flag("PRETTY_PRINT") then pretty_print = true end
 
 	local res = assert(
-		c:Emit(
-			{
-				pretty_print = pretty_print,
-				string_quote = "\"",
-				no_semicolon = true,
-				transpile_extensions = has_flag("TRANSPILE_EXTENSIONS"),
-				comment_type_annotations = has_flag("COMMENT_TYPE_ANNOTATIONS"),
-				type_annotations = true,
-				force_parenthesis = true,
-				omit_invalid_code = has_flag("OMIT_INVALID_LUA_CODE"),
-				extra_indent = {
-					Start = {to = "Stop"},
-					Toggle = "toggle",
-				},
-			}
-		)
+		c:Emit{
+			pretty_print = pretty_print,
+			string_quote = "\"",
+			no_semicolon = true,
+			transpile_extensions = has_flag("TRANSPILE_EXTENSIONS"),
+			comment_type_annotations = has_flag("COMMENT_TYPE_ANNOTATIONS"),
+			type_annotations = true,
+			force_parenthesis = true,
+			omit_invalid_code = has_flag("OMIT_INVALID_LUA_CODE"),
+			extra_indent = {
+				Start = {to = "Stop"},
+				Toggle = "toggle",
+			},
+		}
 	)
 
 	if has_flag("ENABLE_CODE_RESULT_TO_FILE") then

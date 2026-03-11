@@ -119,7 +119,7 @@ config.commands["check"] = {
 			cmp[1] = Compiler.FromFile(entry_point, config)
 		else
 			for i, path in ipairs(
-				cli.get_files({path = args, ignorefiles = config.ignorefiles, ext = {".lua", ".nlua"}})
+				cli.get_files{path = args, ignorefiles = config.ignorefiles, ext = {".lua", ".nlua"}}
 			) do
 				cmp[i] = Compiler.FromFile(path, config)
 			end
@@ -192,7 +192,7 @@ config.commands["fmt"] = {
 			io.write(assert(Compiler.New(input, "stdin-", config):Emit()))
 		else
 			for _, path in ipairs(
-				cli.get_files({path = args, ignorefiles = config.ignorefiles, ext = {".lua", ".nlua"}})
+				cli.get_files{path = args, ignorefiles = config.ignorefiles, ext = {".lua", ".nlua"}}
 			) do
 				local old = config.emitter.comment_type_annotations
 				config.emitter.comment_type_annotations = config.emitter.comment_type_annotations_in_lua_files and
@@ -610,11 +610,11 @@ function cli.get_files(tbl)
 	if type(tbl.path) == "table" then
 		for _, path in ipairs(tbl.path) do
 			for i, v in ipairs(
-				cli.get_files({
+				cli.get_files{
 					path = path,
 					ext = tbl.ext,
 					ignorefiles = tbl.ignorefiles,
-				})
+				}
 			) do
 				table.insert(out, v)
 			end

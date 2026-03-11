@@ -80,7 +80,7 @@ function M.tobit(x)
 	return x % 2 ^ 32
 end
 
-M.bxor = make_bitop({[0] = {[0] = 0, [1] = 1}, [1] = {[0] = 1, [1] = 0}, n = 4})
+M.bxor = make_bitop{[0] = {[0] = 0, [1] = 1}, [1] = {[0] = 1, [1] = 0}, n = 4}
 local bxor = M.bxor
 
 function M.bnot(x)

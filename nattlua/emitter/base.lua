@@ -897,7 +897,6 @@ return function()
 			if data.line_start ~= data.line_stop then return true end
 
 			local source = node.Code:GetStringSlice(start, stop)
-
 			return count_significant_tokens(source) > OMIT_PAREN_TABLE_CALL_TOKEN_LIMIT
 		end
 	end

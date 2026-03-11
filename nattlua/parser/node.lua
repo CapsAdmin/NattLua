@@ -1082,7 +1082,11 @@ function META:GetLastAssociatedType()
 	return self.inferred_types[#self.inferred_types]
 end
 
-local function find_by_type(node--[[#: META.@SelfArgument]], what--[[#: NodeKind]], out--[[#: ref List<|Node|>]])--[[#: List<|Node|>]]
+local function find_by_type(
+	node--[[#: META.@SelfArgument]],
+	what--[[#: NodeKind]],
+	out--[[#: ref List<|Node|>]]
+)--[[#: List<|Node|>]]
 	out = out or {}
 
 	for _, child in ipairs(node:GetNodes()) do

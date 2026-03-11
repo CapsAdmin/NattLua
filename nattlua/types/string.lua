@@ -57,19 +57,17 @@ function META:Get()
 end
 
 local function new(data--[[#: string | nil]], pattern--[[#: string | nil]])
-	return META.NewObject(
-		{
-			Type = "string",
-			Data = data or false,
-			PatternContract = pattern or false,
-			TruthyFalsy = "truthy",
-			Upvalue = false,
-			Contract = false,
-			MetaTable = false,
-			Hash = compute_hash(data, pattern),
-			lua_compiler = false,
-		}
-	)
+	return META.NewObject{
+		Type = "string",
+		Data = data or false,
+		PatternContract = pattern or false,
+		TruthyFalsy = "truthy",
+		Upvalue = false,
+		Contract = false,
+		MetaTable = false,
+		Hash = compute_hash(data, pattern),
+		lua_compiler = false,
+	}
 end
 
 do

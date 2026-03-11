@@ -103,17 +103,15 @@ local function test_mutation_solver()
 		local value2 = LString("value2")
 		local upvalue = Upvalue(value1)
 		upvalue:SetScope(root)
-		local truthy = Union({LString("truthy1"), LString("truthy2")})
-		local falsy = Union({LString("falsy1"), LString("falsy2")})
-		scope1:SetTrackedNarrowings(
+		local truthy = Union{LString("truthy1"), LString("truthy2")}
+		local falsy = Union{LString("falsy1"), LString("falsy2")}
+		scope1:SetTrackedNarrowings{
 			{
-				{
-					kind = "upvalue",
-					upvalue = upvalue,
-					stack = {{truthy = truthy, falsy = falsy}},
-				},
-			}
-		)
+				kind = "upvalue",
+				upvalue = upvalue,
+				stack = {{truthy = truthy, falsy = falsy}},
+			},
+		}
 		local mutations = {
 			{scope = scope1, value = value1},
 			{scope = scope2, value = value2},
@@ -133,24 +131,20 @@ local function test_mutation_solver()
 		scope2:SetStatement({kind = "if"})
 		-- Setup tracking for same conditions
 		local test_obj = LString("test")
-		scope1:SetTrackedNarrowings(
+		scope1:SetTrackedNarrowings{
 			{
-				{
-					kind = "upvalue",
-					upvalue = test_obj,
-					stack = {{truthy = test_obj, falsy = test_obj}},
-				},
-			}
-		)
-		scope2:SetTrackedNarrowings(
+				kind = "upvalue",
+				upvalue = test_obj,
+				stack = {{truthy = test_obj, falsy = test_obj}},
+			},
+		}
+		scope2:SetTrackedNarrowings{
 			{
-				{
-					kind = "upvalue",
-					upvalue = test_obj,
-					stack = {{truthy = test_obj, falsy = test_obj}},
-				},
-			}
-		)
+				kind = "upvalue",
+				upvalue = test_obj,
+				stack = {{truthy = test_obj, falsy = test_obj}},
+			},
+		}
 		local value1 = LString("value1")
 		local value2 = LString("value2")
 		local upvalue = Upvalue(value1)
@@ -213,15 +207,13 @@ local function test_mutation_solver()
 		upvalue:SetScope(root)
 		-- Set up a tracking stack with empty union
 		local empty_union = Union()
-		scope:SetTrackedNarrowings(
+		scope:SetTrackedNarrowings{
 			{
-				{
-					kind = "upvalue",
-					upvalue = upvalue,
-					stack = {{truthy = value, falsy = empty_union}},
-				},
-			}
-		)
+				kind = "upvalue",
+				upvalue = upvalue,
+				stack = {{truthy = value, falsy = empty_union}},
+			},
+		}
 		local mutations = {
 			{scope = scope, value = value},
 			{scope = else_scope, value = LString("else")},
@@ -403,18 +395,16 @@ local function test_mutation_solver()
 		local upvalue = Upvalue(value1)
 		upvalue:SetScope(root)
 		-- Set up stack with multiple truthy/falsy values
-		if_scope:SetTrackedNarrowings(
+		if_scope:SetTrackedNarrowings{
 			{
-				{
-					kind = "upvalue",
-					upvalue = upvalue,
-					stack = {
-						{truthy = value1, falsy = value2},
-						{truthy = value2, falsy = value3},
-					},
+				kind = "upvalue",
+				upvalue = upvalue,
+				stack = {
+					{truthy = value1, falsy = value2},
+					{truthy = value2, falsy = value3},
 				},
-			}
-		)
+			},
+		}
 		local mutations = {
 			{scope = if_scope, value = value1},
 			{scope = else_scope, value = value3},
@@ -509,15 +499,13 @@ local function test_mutation_solver()
 		local upvalue = Upvalue(value1)
 		upvalue:SetScope(root)
 		-- Set up empty union in the tracking stack
-		scope1:SetTrackedNarrowings(
+		scope1:SetTrackedNarrowings{
 			{
-				{
-					kind = "upvalue",
-					upvalue = upvalue,
-					stack = {{truthy = value1, falsy = empty_union}},
-				},
-			}
-		)
+				kind = "upvalue",
+				upvalue = upvalue,
+				stack = {{truthy = value1, falsy = empty_union}},
+			},
+		}
 		local mutations = {
 			{scope = scope1, value = value1},
 			{scope = scope2, value = value2},
@@ -544,18 +532,16 @@ local function test_mutation_solver()
 		local upvalue = Upvalue(value1)
 		upvalue:SetScope(root)
 		-- Add multiple empty stacks
-		if_scope:SetTrackedNarrowings(
+		if_scope:SetTrackedNarrowings{
 			{
-				{
-					kind = "upvalue",
-					upvalue = upvalue,
-					stack = {
-						{truthy = empty_union, falsy = empty_union},
-						{truthy = empty_union, falsy = value2},
-					},
+				kind = "upvalue",
+				upvalue = upvalue,
+				stack = {
+					{truthy = empty_union, falsy = empty_union},
+					{truthy = empty_union, falsy = value2},
 				},
-			}
-		)
+			},
+		}
 		local mutations = {
 			{scope = if_scope, value = value1},
 			{scope = else_scope, value = value2},

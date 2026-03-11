@@ -885,10 +885,19 @@ local function find_builtin_definition_node(token)
 
 	if member_name then
 		local qualified_name = root_name .. "." .. member_name
-		table.insert(search_specs, {anchor = "analyzer function " .. qualified_name, symbol = member_name})
+		table.insert(
+			search_specs,
+			{anchor = "analyzer function " .. qualified_name, symbol = member_name}
+		)
 		table.insert(search_specs, {anchor = "function " .. qualified_name, symbol = member_name})
-		table.insert(search_specs, {anchor = 'type Modules["' .. qualified_name .. '"]', symbol = qualified_name})
-		table.insert(search_specs, {anchor = "type Modules['" .. qualified_name .. "']", symbol = qualified_name})
+		table.insert(
+			search_specs,
+			{anchor = "type Modules[\"" .. qualified_name .. "\"]", symbol = qualified_name}
+		)
+		table.insert(
+			search_specs,
+			{anchor = "type Modules['" .. qualified_name .. "']", symbol = qualified_name}
+		)
 	else
 		table.insert(search_specs, {anchor = "type " .. root_name .. " =", symbol = root_name})
 		table.insert(search_specs, {anchor = "local " .. root_name .. " =", symbol = root_name})
@@ -1272,7 +1281,7 @@ do
 				end
 			end
 
-			for _, typ in ipairs({"string", "number", "any", "true", "nil", "false"}) do
+			for _, typ in ipairs{"string", "number", "any", "true", "nil", "false"} do
 				tbl[typ] = {val = typ, obj = "keyword"}
 			end
 

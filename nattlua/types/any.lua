@@ -43,15 +43,13 @@ function META:IsLiteral()
 end
 
 function META.New()
-	return META.NewObject(
-		{
-			Type = "any",
-			TruthyFalsy = "unknown",
-			Data = false,
-			Upvalue = false,
-			Contract = false,
-		}
-	)
+	return META.NewObject{
+		Type = "any",
+		TruthyFalsy = "unknown",
+		Data = false,
+		Upvalue = false,
+		Contract = false,
+	}
 end
 
 return {

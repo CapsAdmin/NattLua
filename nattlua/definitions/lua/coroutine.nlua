@@ -17,7 +17,7 @@ end
 
 analyzer function coroutine.resume(thread: any, ...: ...any)
 	if thread.Type == "any" then
-		return types.Tuple({types.Boolean(true), types.Any()})
+		return types.Tuple{types.Boolean(true), types.Any()}
 	end
 
 	if not thread.co_func then error(tostring(thread) .. " is not a thread!", 2) end
@@ -42,7 +42,7 @@ analyzer function coroutine.resume(thread: any, ...: ...any)
 	thread.index = (thread.index or 0) + 1
 	local res = thread.yields[thread.index]
 
-	if res then return types.Tuple({types.Boolean(true), table.unpack(res)}) end
+	if res then return types.Tuple{types.Boolean(true), table.unpack(res)} end
 
 	return types.Boolean(true)
 end

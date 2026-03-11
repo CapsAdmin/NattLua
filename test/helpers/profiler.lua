@@ -203,7 +203,7 @@ function Profiler:StartSection(name--[[#: string]])
 
 	table_insert(self._section_stack, name)
 	self._section_path = table_concat(self._section_stack, " > ")
-	self:EmitEvent({type = "section_start", name = name, section_path = self._section_path})
+	self:EmitEvent{type = "section_start", name = name, section_path = self._section_path}
 end
 
 function Profiler:StopSection()
@@ -216,7 +216,7 @@ function Profiler:StopSection()
 		self._section_path = table_concat(self._section_stack, " > ")
 	end
 
-	self:EmitEvent({type = "section_end", name = name, section_path = self._section_path})
+	self:EmitEvent{type = "section_end", name = name, section_path = self._section_path}
 end
 
 do
@@ -237,17 +237,15 @@ do
 
 		self._traces[id] = {id = id, parent_id = parent_id, exit_id = exit_id, depth = depth}
 		self._trace_count = self._trace_count + 1
-		self:EmitEvent(
-			{
-				type = "trace_start",
-				id = id,
-				generation = self._trace_generation,
-				parent_id = parent_id,
-				exit_id = exit_id,
-				depth = depth,
-				func_info = loc,
-			}
-		)
+		self:EmitEvent{
+			type = "trace_start",
+			id = id,
+			generation = self._trace_generation,
+			parent_id = parent_id,
+			exit_id = exit_id,
+			depth = depth,
+			func_info = loc,
+		}
 	end
 
 	local function on_trace_stop(self--[[#: TProfile]], id--[[#: number]], func--[[#: AnyFunction]])
@@ -258,18 +256,16 @@ do
 		local ti = jutil.traceinfo(id)
 		local fi = jutil.funcinfo(func)
 		local loc = format_func_info(fi, func)
-		self:EmitEvent(
-			{
-				type = "trace_stop",
-				id = id,
-				generation = self._trace_generation,
-				func_info = loc,
-				linktype = ti and ti.linktype or nil,
-				link_id = ti and ti.link or nil,
-				ir_count = ti and ti.nins or nil,
-				exit_count = ti and ti.nexit or nil,
-			}
-		)
+		self:EmitEvent{
+			type = "trace_stop",
+			id = id,
+			generation = self._trace_generation,
+			func_info = loc,
+			linktype = ti and ti.linktype or nil,
+			link_id = ti and ti.link or nil,
+			ir_count = ti and ti.nins or nil,
+			exit_count = ti and ti.nexit or nil,
+		}
 	end
 
 	local function on_trace_abort(
@@ -289,16 +285,14 @@ do
 		self._aborted[id] = true
 		self._traces[id] = nil
 		self._trace_count = self._trace_count - 1
-		self:EmitEvent(
-			{
-				type = "trace_abort",
-				id = id,
-				generation = self._trace_generation,
-				abort_code = code,
-				abort_reason = format_error(code, reason),
-				func_info = loc,
-			}
-		)
+		self:EmitEvent{
+			type = "trace_abort",
+			id = id,
+			generation = self._trace_generation,
+			abort_code = code,
+			abort_reason = format_error(code, reason),
+			func_info = loc,
+		}
 
 		if code == 27 then
 			local x, interval = self._should_warn_mcode()
@@ -427,15 +421,13 @@ do
 			local depth = self._depth
 
 			jprofile.start((self._mode == "line" and "l" or "f") .. "i" .. self._sampling_rate, function(thread, sample_count, vmstate)
-				self:EmitEvent(
-					{
-						type = "sample",
-						stack = dumpstack(thread, "pl\n", depth),
-						sample_count = sample_count,
-						vm_state = vmstate,
-						section_path = self._section_path,
-					}
-				)
+				self:EmitEvent{
+					type = "sample",
+					stack = dumpstack(thread, "pl\n", depth),
+					sample_count = sample_count,
+					vm_state = vmstate,
+					section_path = self._section_path,
+				}
 				local now = self._get_time()
 
 				if now - self._last_flush_time >= self._flush_interval then

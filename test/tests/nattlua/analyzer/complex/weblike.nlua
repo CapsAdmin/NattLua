@@ -43,18 +43,14 @@ local function Field(props: ref Props)
 	return {field, fieldStyle}
 end
 
-local view = Field(
-	{
-		kind = "viewOnly",
-		value = "Hello World",
-		placeholder = "you can change input by typing in the input",
-	}
-)
-local edit = Field(
-	{
-		kind = "editable",
-		onChange = function(val: string) end,
-		value = "Hello World",
-		placeholder = "you can change input by typing in the input",
-	}
-)
+local view = Field{
+	kind = "viewOnly",
+	value = "Hello World",
+	placeholder = "you can change input by typing in the input",
+}
+local edit = Field{
+	kind = "editable",
+	onChange = function(val: string) end,
+	value = "Hello World",
+	placeholder = "you can change input by typing in the input",
+}

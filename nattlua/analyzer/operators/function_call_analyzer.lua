@@ -137,15 +137,9 @@ local function unpack_union_tuples(obj, input)
 end
 
 local function call_and_collect(analyzer, obj, arguments, ret)
-	local tuple = analyzer:LuaTypesToTuple(
-		{
-			analyzer:CallLuaTypeFunction(
-				obj:GetAnalyzerFunction(),
-				obj:GetScope() or analyzer:GetScope(),
-				arguments
-			),
-		}
-	)
+	local tuple = analyzer:LuaTypesToTuple{
+		analyzer:CallLuaTypeFunction(obj:GetAnalyzerFunction(), obj:GetScope() or analyzer:GetScope(), arguments),
+	}
 
 	if tuple:HasInfiniteValues() then return tuple end
 
@@ -197,15 +191,13 @@ return function(analyzer, obj, input)
 	end
 
 	if analyzer:IsTypesystem() then
-		return analyzer:LuaTypesToTuple(
-			{
-				analyzer:CallLuaTypeFunction(
-					obj:GetAnalyzerFunction(),
-					obj:GetScope() or analyzer:GetScope(),
-					input:ToTableWithoutExpansion()
-				),
-			}
-		)
+		return analyzer:LuaTypesToTuple{
+			analyzer:CallLuaTypeFunction(
+				obj:GetAnalyzerFunction(),
+				obj:GetScope() or analyzer:GetScope(),
+				input:ToTableWithoutExpansion()
+			),
+		}
 	end
 
 	-- Handle infinite tuples

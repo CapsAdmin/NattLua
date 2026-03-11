@@ -1016,15 +1016,13 @@ return function(META--[[#: any]])
 					end
 
 					imported[key] = root
-					data = root:Render(
-						{
-							pretty_print = true,
-							comment_type_annotations = false,
-							type_annotations = true,
-							inside_data_import = true,
-							no_newlines = false,
-						}
-					)
+					data = root:Render{
+						pretty_print = true,
+						comment_type_annotations = false,
+						type_annotations = true,
+						inside_data_import = true,
+						no_newlines = false,
+					}
 				else
 					local f
 					f, err = io_open(node.path, "rb")

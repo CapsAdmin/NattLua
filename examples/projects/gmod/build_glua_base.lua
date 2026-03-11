@@ -472,7 +472,7 @@ for class_name, lib in spairs(wiki_json.CLASSES) do
 
 	do -- these are not defined in the wiki json
 		if class_name == "IVector" then
-			for _, v in ipairs({"x", "y", "z", "X", "Y", "Z"}) do
+			for _, v in ipairs{"x", "y", "z", "X", "Y", "Z"} do
 				indent()
 				e("type ")
 				e(class_name)
@@ -483,7 +483,7 @@ for class_name, lib in spairs(wiki_json.CLASSES) do
 				e("\n")
 			end
 		elseif class_name == "IAngle" then
-			for _, v in ipairs({"p", "y", "r", "P", "Y", "R"}) do
+			for _, v in ipairs{"p", "y", "r", "P", "Y", "R"} do
 				indent()
 				e("type ")
 				e(class_name)

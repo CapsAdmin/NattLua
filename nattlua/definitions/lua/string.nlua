@@ -76,10 +76,10 @@ do -- Character conversion functions
 		end
 
 		if from and from:IsLiteral() and to and to:IsLiteral() then
-			return types.Tuple():AddRemainder(types.Tuple({types.LNumberRange(0, 255)}):SetRepeat(to:GetData() - from:GetData() + 1))
+			return types.Tuple():AddRemainder(types.Tuple{types.LNumberRange(0, 255)}:SetRepeat(to:GetData() - from:GetData() + 1))
 		end
 
-		return types.Tuple():AddRemainder(types.Tuple({types.LNumberRange(0, 255)}):SetRepeat(math.huge))
+		return types.Tuple():AddRemainder(types.Tuple{types.LNumberRange(0, 255)}:SetRepeat(math.huge))
 	end
 end
 
@@ -116,13 +116,11 @@ do -- Pattern matching functions
 		no_pattern = no_pattern and no_pattern:IsLiteral() and no_pattern:GetData() or false
 
 		if not str or not pattern then
-			return types.Union(
-				{
-					types.Tuple({types.Number(), types.Number(), types.String()}),
-					types.Tuple({types.Number(), types.Number()}),
-					types.Tuple({types.Nil(), types.Nil(), types.Nil()}),
-				}
-			)
+			return types.Union{
+				types.Tuple{types.Number(), types.Number(), types.String()},
+				types.Tuple{types.Number(), types.Number()},
+				types.Tuple{types.Nil(), types.Nil(), types.Nil()},
+			}
 		end
 
 		local start, stop, found = str:find(pattern, start_position, no_pattern)
@@ -156,7 +154,7 @@ do -- Pattern matching functions
 		if pattern then len = select(2, pattern:gsub("%b()", "")) end
 
 		len = math.max(len, 1)
-		return types.Tuple():AddRemainder(types.Tuple({types.Union({types.String(), types.Nil()})}):SetRepeat(len))
+		return types.Tuple():AddRemainder(types.Tuple{types.Union{types.String(), types.Nil()}}:SetRepeat(len))
 	end
 
 	analyzer function ^string.gmatch(s: string, pattern: string)

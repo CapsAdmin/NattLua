@@ -157,14 +157,12 @@ function META:__index(key)
 end
 
 function META.New(name)
-	return META.NewObject(
-		{
-			Type = "deferred",
-			Reference = false,
-			Upvalue = false,
-			Contract = false,
-		}
-	)
+	return META.NewObject{
+		Type = "deferred",
+		Reference = false,
+		Upvalue = false,
+		Contract = false,
+	}
 end
 
 return {
