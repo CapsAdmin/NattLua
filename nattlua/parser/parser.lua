@@ -387,6 +387,7 @@ function META:ParseFile(path--[[#: string]], config--[[#: nil | any]])
 	config.file_path = config.file_path or path
 	config.file_name = config.file_name or "@" .. path
 	return self:ParseString(code, config)
+
 end
 
 local imported_index = nil

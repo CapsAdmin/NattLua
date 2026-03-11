@@ -607,6 +607,32 @@ check(
 
 local x = import("platforms/windows/filesystem.nlua")]=]
 )
+do
+	local input = [[
+		assert(loadfile("game/run.lua"))()
+		local f = assert(loadfile("test/run.lua"))
+		assert(loadfile("game/run.lua"))()
+	]]
+	local output = assert(
+		nl.Compiler(
+			input,
+			nil,
+			{
+				parser = {skip_import = true},
+				emitter = {
+					pretty_print = true,
+					force_parenthesis = true,
+					string_quote = "\"",
+					skip_import = true,
+				},
+			}
+		):Emit()
+	)
+	assert(output:find("assert%(loadfile%(\"game/run%.lua\"%)%)%(") ~= nil)
+	assert(output:find("local f = assert%(loadfile%(\"test/run%.lua\"%)%)") ~= nil)
+	assert(output:find("assert%(loadfile%)%(") == nil)
+	assert(output:find("local f = assert%(loadfile%)") == nil)
+end
 identical([[hook.Add("Foo", "bar_foo", function(ply, pos)
     for i = 1, 10 do
         ply:SetPos(pos + VectorRand())

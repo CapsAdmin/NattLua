@@ -178,6 +178,23 @@ end
 do
 	local helper = EditorHelper.New()
 	helper:Initialize()
+	local format_path = "./main.lua"
+	local code = [[
+		assert(loadfile("game/run.lua"))()
+		local f = assert(loadfile("test/run.lua"))
+		assert(loadfile("game/run.lua"))()
+	]]
+	helper:OpenFile(format_path, code)
+	local formatted = helper:Format(code, format_path)
+	assert(formatted:find("assert%(loadfile%(\"game/run%.lua\"%)%)%(") ~= nil)
+	assert(formatted:find("local f = assert%(loadfile%(\"test/run%.lua\"%)%)") ~= nil)
+	assert(formatted:find("assert%(loadfile%)%(") == nil)
+	assert(formatted:find("local f = assert%(loadfile%)") == nil)
+end
+
+do
+	local helper = EditorHelper.New()
+	helper:Initialize()
 
 	function helper:OnDiagnostics(name, data)
 		if #data == 0 then return end

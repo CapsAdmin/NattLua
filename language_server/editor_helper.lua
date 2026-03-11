@@ -604,8 +604,17 @@ function META:Format(code, path, extra_emitter_config)
 	config.emitter.remove_unused = do_remove_unused or false
 	config.analyzer.remove_unused = do_remove_unused or false
 	local file_data = self:IsLoaded(path) and self:GetFile(path)
+	local loaded_parser_cfg = file_data and
+		file_data.compiler and
+		file_data.compiler.Config and
+		file_data.compiler.Config.parser or
+		{}
+	local can_reuse_loaded_tree = file_data and
+		file_data.compiler and
+		file_data.code:GetString() == code and
+		loaded_parser_cfg.skip_import == config.parser.skip_import
 
-	if file_data and file_data.compiler and file_data.code:GetString() == code then
+	if can_reuse_loaded_tree then
 		local cfg_copy = {}
 
 		for k, v in pairs(config.emitter) do
