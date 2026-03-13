@@ -114,6 +114,23 @@ return {
 
 		assert(compiler:Analyze(analyzer))
 
+		do
+			local globals = {
+				"require",
+				"getmetatable",
+				"setmetatable",
+				"rawget",
+				"type",
+			}
+
+			for i = 1, #globals do
+				local key = LStringNoMeta(globals[i])
+				local val = typesystem_env:Get(key)
+
+				if val then runtime_env:Set(key, val) end
+			end
+		end
+
 		if parent_analyzer then
 			for path, _ in pairs(compiler.analyzer.parsed_paths) do
 				parent_analyzer.parsed_paths[path] = true

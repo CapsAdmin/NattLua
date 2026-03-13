@@ -1,5 +1,6 @@
 _G.TEST = true
 local EditorHelper = require("language_server.editor_helper")
+local LStringNoMeta = require("nattlua.types.string").LStringNoMeta
 local path = "./test.nlua"
 
 local function single_file(code)
@@ -27,6 +28,17 @@ do
 	local editor = single_file([[local a = 1; a = 2]])
 	assert(editor:GetHover(path, 0, 6).obj:GetData() == 1)
 	assert(editor:GetHover(path, 0, 13).obj:GetData() == 2)
+end
+
+do
+	local helper = EditorHelper.New()
+	local runtime_env, typesystem_env = helper:GetEnvironment()
+
+	for _, env in ipairs({runtime_env, typesystem_env}) do
+		assert(env:Get(LStringNoMeta("type")).Type == "function")
+		assert(env:Get(LStringNoMeta("require")).Type == "function")
+		assert(env:Get(LStringNoMeta("rawget")).Type == "function")
+	end
 end
 
 do
