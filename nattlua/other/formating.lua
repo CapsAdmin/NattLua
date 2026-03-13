@@ -303,10 +303,10 @@ end
 -- Tokenize str for syntax highlighting.  Uses the NattLua lexer lazily (via
 -- pcall) to avoid the circular dependency formating → lexer → token → formating.
 -- Returns a list of {start, stop, color} byte-indexed spans (relative to str).
-local function get_highlight_spans(str--[[#: string]])
-	local ok_lex, Lexer_mod = pcall(require, "nattlua.lexer.lexer")
-	local ok_code, Code_mod = pcall(require, "nattlua.code")
 
+local function get_highlight_spans(str--[[#: string]])
+	local Lexer_mod = require("nattlua.lexer.lexer")
+	local Code_mod = require("nattlua.code")
 	if not ok_lex or not ok_code then return {} end
 
 	local Lexer_new = Lexer_mod.New

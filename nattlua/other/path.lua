@@ -1,4 +1,5 @@
 local stringx = require("nattlua.other.string")
+local fs = require("nattlua.other.fs")
 local string_gsub = _G.string.gsub
 local ipairs = _G.ipairs
 local package = _G.package
@@ -74,15 +75,10 @@ local function exists(path)
 	return false
 end
 
-local ok, fs = pcall(require, "nattlua.other.fs")
-
-if ok and fs.get_type then
-	exists = function(path)
-		return fs.get_type(path) == "file"
-	end
+function path.Exists(path)
+	return fs.get_type(path) == "file"
 end
 
-path.Exists = exists
 
 local function directory_from_path(path)
 	for i = #path, 1, -1 do
