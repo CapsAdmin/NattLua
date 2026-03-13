@@ -508,6 +508,18 @@ return function()
 	end
 
 	function META:BuildCode(block)
+		local statements = block.statements
+		local first_statement = statements and statements[1]
+		local has_leading_shebang = first_statement and first_statement.Type == "statement_shebang"
+
+		if has_leading_shebang then
+			self:EmitStatement(first_statement)
+
+			if statements[2] or (block.imports and not self.config.skip_import) then
+				self:Whitespace("\n")
+			end
+		end
+
 		if block.imports and not self.config.skip_import then
 			self.done = {}
 			self:EmitNonSpace("_G.IMPORTS = _G.IMPORTS or {}\n")
@@ -564,7 +576,18 @@ return function()
 			end
 		end
 
-		self:EmitStatements(block.statements)
+		if has_leading_shebang then
+			local remaining = {}
+
+			for i = 2, #statements do
+				remaining[#remaining + 1] = statements[i]
+			end
+
+			self:EmitStatements(remaining)
+		else
+			self:EmitStatements(statements)
+		end
+
 		local str = self:Concat()
 
 		if self.config.trailing_newline and str:find("\n", nil, true) then

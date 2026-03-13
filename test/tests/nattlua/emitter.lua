@@ -21,6 +21,30 @@ local function identical(str)
 	check({pretty_print = true}, str)
 end
 
+do
+	local output = assert(
+		nl.Compiler(
+			[[#!/usr/bin/env lua
+local dep = import("./shebang_import_dep.nlua")]],
+			nil,
+			{
+				parser = {
+					working_directory = "test/tests/nattlua/",
+					emit_environment = false,
+				},
+				emitter = {
+					pretty_print = true,
+					force_parenthesis = true,
+					string_quote = "\"",
+				},
+			}
+		):Emit()
+	)
+
+	assert(output:find("^#!/usr/bin/env lua\n_G%.IMPORTS = _G%.IMPORTS or %{%}\n") ~= nil)
+	assert(select(2, output:gsub("#!", "")) == 1)
+end
+
 check(
 	{pretty_print = true, force_parenthesis = true, string_quote = "\""},
 	[[local foo = aaa 'aaa'-- dawdwa
