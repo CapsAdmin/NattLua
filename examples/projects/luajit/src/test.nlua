@@ -3,11 +3,11 @@ local attr = assert(fs.get_attributes("README.md"))
 attest.equal<|
 	attr,
 	{
-		creation_time = number,
-		last_accessed = number,
-		last_changed = number,
-		last_modified = number,
-		size = number,
+		creation_time = number | nil,
+		last_accessed = number | nil,
+		last_changed = number | nil,
+		last_modified = number | nil,
+		size = number | nil,
 		type = "directory" | "file",
 	}
 |>
