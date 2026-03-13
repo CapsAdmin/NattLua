@@ -361,38 +361,42 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 
 		local should_analyze = false
 		local lsp_analyze = not (cfg.lsp and (cfg.lsp.analyze == false or cfg.lsp.parse_only))
+		local force_analyze = false
 
-		if lsp_analyze and path then
-			local ignored = false
-			local project_cfg = self:GetProjectConfig("get-compiler-config", path)
+		if path then
+			local content = self.TempFiles[path] or fs.read(path)
+			force_analyze = content and
+			(
+				content:match("^%s*%-%-%s*ANALYZE") or
+				content:match("^%#%!.-%s*%-%-%s*ANALYZE")
+			)
 
-			if project_cfg and project_cfg.ignorefiles then
-				for _, pattern in ipairs(project_cfg.ignorefiles) do
-					if path:find(pattern) then
-						if path:find("test_focus%.nlua") then
-							self:DebugLog("not ignoring test_focus.nlua")
-						else
-							ignored = true
+			if force_analyze then
+				should_analyze = true
+			elseif not lsp_analyze then
+				should_analyze = false
+			else
+				local ignored = false
+				local project_cfg = self:GetProjectConfig("get-compiler-config", path)
 
-							break
+				if project_cfg and project_cfg.ignorefiles then
+					for _, pattern in ipairs(project_cfg.ignorefiles) do
+						if path:find(pattern) then
+							if path:find("test_focus%.nlua") then
+								self:DebugLog("not ignoring test_focus.nlua")
+							else
+								ignored = true
+
+								break
+							end
 						end
 					end
 				end
-			end
 
-			if not ignored then
-				local content = self.TempFiles[path] or fs.read(path)
-
-				if
-					content and
-					(
-						content:match("^%s*%-%-%s*ANALYZE") or
-						content:match("^%#%!.-%s*%-%-%s*ANALYZE")
-					)
-				then
-					should_analyze = true
-				elseif path:find("%.nlua$") then
-					should_analyze = true
+				if not ignored then
+					if path:find("%.nlua$") then
+						should_analyze = true
+					end
 				end
 			end
 		elseif lsp_analyze and cfg.lsp.entry_point then
@@ -400,7 +404,37 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 		end
 
 		if should_analyze then
+			local restore_import_roots
+			local restore_should_crawl_untyped_functions
+
+			if force_analyze and not lsp_analyze and compiler.SyntaxTree and compiler.SyntaxTree.imports then
+				local imports = {}
+
+				for _, import_node in ipairs(compiler.SyntaxTree.imports) do
+					imports[#imports + 1] = {node = import_node, root = import_node.RootStatement}
+					import_node.RootStatement = false
+				end
+
+				restore_import_roots = function()
+					for _, data in ipairs(imports) do
+						data.node.RootStatement = data.root
+					end
+				end
+			end
+
+			if force_analyze and not lsp_analyze and cfg.analyzer then
+				local previous = cfg.analyzer.should_crawl_untyped_functions
+				cfg.analyzer.should_crawl_untyped_functions = false
+				restore_should_crawl_untyped_functions = function()
+					cfg.analyzer.should_crawl_untyped_functions = previous
+				end
+			end
+
 			local ok, err = compiler:Analyze(nil, cfg.analyzer)
+
+			if restore_import_roots then restore_import_roots() end
+			if restore_should_crawl_untyped_functions then restore_should_crawl_untyped_functions() end
+
 			local name = compiler:GetCode():GetName()
 
 			if not ok then
