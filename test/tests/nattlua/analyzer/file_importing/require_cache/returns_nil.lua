@@ -1,0 +1,1 @@
+_G.__returns_nil_counter = (_G.__returns_nil_counter or 0) + 1

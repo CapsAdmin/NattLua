@@ -329,14 +329,10 @@ do -- these override existing commands and should probably be made more generic
 				Compiler.New(
 					[[
 					_G.ARGS = {...}
-		
-					if _G.IMPORTS then
-						for k, v in pairs(_G.IMPORTS) do
-							if not k:find("/") then package.preload[k] = v end
-						end
-				
-						package.preload.nattlua = package.preload["nattlua.init"]
-					end
+
+					require("nattlua.syntax.runtime")
+					require("nattlua.syntax.typesystem")
+					require("nattlua.types.range")
 					
 					require("nattlua.definitions.lua.ffi.parser")
 					require("nattlua.definitions.lua.ffi.emitter")
@@ -414,9 +410,22 @@ do -- these override existing commands and should probably be made more generic
 				f:close()
 				io.write("running tests with temp_build_output.lua ")
 				io.flush()
+				local build_test_script = [[
+					local old_require = require
+					old_require("temp_build_output")
+					assert(require == old_require, "bundle changed require")
+
+					_G.REUSE_BASE_ENV = true
+					old_require("test.run")()
+				]]
+				local script_path = "temp_build_test.lua"
+				local script_file = assert(io.open(script_path, "w"))
+				script_file:write(build_test_script)
+				script_file:close()
 				local ok, why, code = os.execute(
-					"luajit -e 'require(\"temp_build_output\") _G.REUSE_BASE_ENV = true require(\"test.run\")()'"
+					"luajit " .. script_path
 				)
+				os.remove(script_path)
 
 				if not command_succeeded(ok, why, code) then
 					io.write(" - FAIL\n")

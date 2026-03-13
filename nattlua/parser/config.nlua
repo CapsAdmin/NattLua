@@ -8,6 +8,7 @@ local type ParserConfig = {
 	skip_import = boolean,
 	emit_environment = boolean,
 	inline_require = boolean,
+	cache_imports_like_require = boolean,
 	file_path = string,
 	file_name = string,
 	working_directory = string,

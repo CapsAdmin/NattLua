@@ -1,5 +1,6 @@
 local nl = require("nattlua")
 local stringx = require("nattlua.other.string")
+local path_util = require("nattlua.other.path")
 
 local function check(config, input, expect)
 	expect = expect or input
@@ -19,6 +20,175 @@ end
 
 local function identical(str)
 	check({pretty_print = true}, str)
+end
+
+local function emit_and_run(input, config)
+	config = config or {}
+	config.parser = config.parser or {}
+	config.emitter = config.emitter or {}
+	local output = assert(
+		nl.Compiler(
+			input,
+			nil,
+			{
+				parser = {
+					emit_environment = config.parser.emit_environment == nil and false or config.parser.emit_environment,
+					working_directory = config.parser.working_directory or "./",
+					cache_imports_like_require = config.parser.cache_imports_like_require,
+				},
+				emitter = {
+					pretty_print = config.emitter.pretty_print == nil and true or config.emitter.pretty_print,
+					force_parenthesis = config.emitter.force_parenthesis == nil and true or config.emitter.force_parenthesis,
+					string_quote = config.emitter.string_quote or "\"",
+				},
+			}
+		):Emit()
+	)
+	local env = {
+		assert = assert,
+		getmetatable = getmetatable,
+		rawget = rawget,
+		setmetatable = setmetatable,
+		type = type,
+		import = {loaded = {}},
+		package = {loaded = {}, preload = {}},
+	}
+
+	if config.env then
+		for k, v in pairs(config.env) do
+			env[k] = v
+		end
+	end
+
+	env.require = function(name)
+		local loaded = env.package.loaded[name]
+
+		if loaded ~= nil then return loaded end
+
+		local loader = env.package.preload[name]
+		assert(loader, "module '" .. name .. "' not found")
+		env.package.loaded[name] = true
+		local res = loader(name)
+
+		if res ~= nil then
+			env.package.loaded[name] = res
+		elseif env.package.loaded[name] == nil then
+			env.package.loaded[name] = true
+		end
+
+		return env.package.loaded[name]
+	end
+	env._G = env
+	local chunk = assert(loadstring(output))
+	setfenv(chunk, env)
+	return output, env, {chunk()}
+end
+
+do
+	local import_path = "test/tests/nattlua/analyzer/file_importing/require_cache/alias_shared.lua"
+	local _, _, results = emit_and_run(
+		("local a = import(\"%s\")\nlocal b = import(\"%s\")\nreturn a == b"):format(import_path, import_path)
+	)
+
+	equal(results[1], false)
+end
+
+do
+	local import_path = "test/tests/nattlua/analyzer/file_importing/require_cache/alias_shared.lua"
+	local output, _, results = emit_and_run(
+		("local a = import(\"%s\")\nlocal b = import(\"%s\")\nreturn a == b"):format(import_path, import_path),
+		{
+			parser = {
+				cache_imports_like_require = true,
+			},
+		}
+	)
+
+	assert(output:find("do local __HAS_RUN = false local __M IMPORTS%['" .. import_path:gsub("%.", "%%.") .. "'%]", nil, false))
+	assert(output:find("if __HAS_RUN then return __M end", nil, true))
+	assert(output:find(import_path, nil, true))
+	equal(results[1], true)
+end
+
+do
+	local old_resolve = path_util.Resolve
+	path_util.Resolve = function(path, root_directory, working_directory, file_path)
+		if path == "alias.one" or path == "alias.two" then
+			return "test/tests/nattlua/analyzer/file_importing/require_cache/alias_shared.lua"
+		end
+
+		return old_resolve(path, root_directory, working_directory, file_path)
+	end
+
+	local ok, err = pcall(function()
+		local _, _, results = emit_and_run(
+			[[local a = import("alias.one")
+local b = import("alias.two")
+return a == b]],
+			{
+				parser = {
+					cache_imports_like_require = true,
+				},
+			}
+		)
+
+		equal(results[1], false)
+	end)
+
+	path_util.Resolve = old_resolve
+	assert(ok, err)
+end
+
+do
+	local _, env, results = emit_and_run(
+		[[local a = import("test/fixtures/emitter_import_cache/cycle_a.lua")
+return a.other.other == a]],
+		{
+			parser = {
+				cache_imports_like_require = true,
+			},
+		}
+	)
+
+	equal(results[1], true)
+	assert(env.import)
+	assert(env.import.loaded)
+	assert(env.import.loaded["test/fixtures/emitter_import_cache/cycle_a.lua"])
+	assert(env.import.loaded["test/fixtures/emitter_import_cache/cycle_b.lua"])
+end
+
+do
+	local import_path = "test/tests/nattlua/analyzer/file_importing/require_cache/alias_shared.lua"
+	local output, env, results = emit_and_run(
+		([[local static = import(%q)
+local dynamic = import("test/tests/nattlua/analyzer/file_importing/require_cache/" .. "alias_shared.lua")
+return static == dynamic]]):format(import_path),
+		{
+			parser = {
+				cache_imports_like_require = true,
+			},
+			env = {
+				import = setmetatable(
+					{
+						loaded = {},
+						fallback_calls = {},
+					},
+					{
+						__call = function(self, name)
+							self.fallback_calls[name] = (self.fallback_calls[name] or 0) + 1
+							error("unexpected fallback import: " .. tostring(name))
+						end,
+					}
+				),
+			},
+		}
+	)
+
+	assert(output:find("__NATTLUA_CALL_IMPORT_FALLBACK", nil, true))
+	assert(output:find("local loader = __NATTLUA_RAWGET%(IMPORTS, key%)", nil, false))
+	equal(results[1], true)
+	equal(env.import.fallback_calls[import_path], nil)
+	assert(env.import.loaded[import_path])
 end
 
 do
@@ -43,6 +213,89 @@ local dep = import("./shebang_import_dep.nlua")]],
 
 	assert(output:find("^#!/usr/bin/env lua\n_G%.IMPORTS = _G%.IMPORTS or %{%}\n") ~= nil)
 	assert(select(2, output:gsub("#!", "")) == 1)
+end
+
+do
+	local module_name = "test.tests.nattlua.analyzer.file_importing.require_cache.returns_nil"
+	local _, env, results = emit_and_run(
+		[=[local a = require("test.tests.nattlua.analyzer.file_importing.require_cache.returns_nil")
+local b = require("test.tests.nattlua.analyzer.file_importing.require_cache.returns_nil")
+return a, b, package.loaded["test.tests.nattlua.analyzer.file_importing.require_cache.returns_nil"]]=]
+	)
+
+	equal(results[1], true)
+	equal(results[2], true)
+	equal(results[3], true)
+	equal(env.package.loaded[module_name], true)
+	equal(env.__returns_nil_counter, 1)
+end
+
+do
+	local module_name = "test.tests.nattlua.analyzer.file_importing.require_cache.returns_false"
+	local _, env, results = emit_and_run(
+		[=[local a = require("test.tests.nattlua.analyzer.file_importing.require_cache.returns_false")
+local b = require("test.tests.nattlua.analyzer.file_importing.require_cache.returns_false")
+return a, b, package.loaded["test.tests.nattlua.analyzer.file_importing.require_cache.returns_false"]]=]
+	)
+
+	equal(results[1], false)
+	equal(results[2], false)
+	equal(results[3], false)
+	equal(env.package.loaded[module_name], false)
+	equal(env.__returns_false_counter, 1)
+end
+
+do
+	local module_name = "test.tests.nattlua.analyzer.file_importing.require_cache.returns_nil"
+	local output, env, results = emit_and_run(
+		[=[local original_require = require
+local value = require("test.tests.nattlua.analyzer.file_importing.require_cache.returns_nil")
+return original_require == require, value]=]
+	)
+
+	assert(output:find("package%.preload", nil, false))
+	assert(env.require == env._G.require)
+	equal(results[1], true)
+	equal(results[2], true)
+	equal(env.package.loaded[module_name], true)
+	local first = env.require(module_name)
+	local second = env.require(module_name)
+	equal(first, true)
+	equal(second, true)
+	equal(env.package.loaded[module_name], true)
+	equal(env.__returns_nil_counter, 1)
+end
+
+do
+	local old_resolve_require = path_util.ResolveRequire
+	path_util.ResolveRequire = function(str)
+		if str == "alias.one" or str == "alias.two" then
+			return "test/tests/nattlua/analyzer/file_importing/require_cache/alias_shared.lua"
+		end
+
+		return old_resolve_require(str)
+	end
+
+	local ok, err = pcall(function()
+		local output, env, results = emit_and_run(
+			[=[local a = require("alias.one")
+local b = require("alias.two")
+a.foo = 1
+b.foo = 2
+return a.foo, b.foo, package.loaded["alias.one"].foo, package.loaded["alias.two"].foo]=]
+		)
+
+		assert(output:find("package%.loaded%[\"alias%.one\"%]", nil, false))
+		assert(output:find("package%.loaded%[\"alias%.two\"%]", nil, false))
+		equal(results[1], 1)
+		equal(results[2], 2)
+		equal(results[3], 1)
+		equal(results[4], 2)
+		assert(env.package.loaded["alias.one"] ~= env.package.loaded["alias.two"])
+	end)
+
+	path_util.ResolveRequire = old_resolve_require
+	assert(ok, err)
 end
 
 check(

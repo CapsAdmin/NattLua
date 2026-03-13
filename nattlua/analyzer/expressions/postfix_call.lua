@@ -5,6 +5,7 @@ local Union = require("nattlua.types.union").Union
 local Tuple = require("nattlua.types.tuple").Tuple
 local Nil = require("nattlua.types.symbol").Nil
 local AnalyzeImport = require("nattlua.analyzer.expressions.import").AnalyzeImport
+local AnalyzeRequire = require("nattlua.analyzer.expressions.require").AnalyzeRequire
 
 local function normalize_tuples(self, callable, types)
 	local is_typesystem = self:IsTypesystem()
@@ -90,6 +91,10 @@ end
 
 return {
 	AnalyzePostfixCall = function(self, node)
+		if node.require_expression then
+			return AnalyzeRequire(self, node, node.key)
+		end
+
 		if
 			node.import_expression and
 			node.left.value.sub_type ~= "dofile" and

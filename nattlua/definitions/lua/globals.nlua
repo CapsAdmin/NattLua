@@ -159,7 +159,39 @@ analyzer function require(name: string)
 	if not name:IsLiteral() then return types.Any() end
 
 	local str = name
+	local key = str:GetData()
 	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
+	local function is_nil(obj)
+		return obj and obj.Type == "symbol" and obj:IsNil()
+	end
+
+	local function get_package_loaded()
+		local package_value = analyzer:GetLocalOrGlobalValue(types.ConstString("package"))
+
+		if not package_value then return end
+
+		package_value = analyzer:GetFirstValue(package_value)
+
+		if not package_value or package_value.Type ~= "table" then return end
+
+		local loaded = analyzer:IndexOperator(package_value, types.ConstString("loaded"))
+
+		if loaded and loaded.Type == "table" then return loaded end
+
+		loaded = types.Table()
+		analyzer:NewIndexOperator(package_value, types.ConstString("loaded"), loaded)
+		return loaded
+	end
+
+	local function get_cached_module()
+		local package_loaded = get_package_loaded()
+		local keyval = package_loaded and package_loaded:FindKeyValExact(types.ConstString(key))
+		local cached = keyval and keyval.val
+
+		if cached and not is_nil(cached) then return cached end
+		if analyzer.loaded_modules[key] then return analyzer.loaded_modules[key] end
+		if analyzer.loading_modules[key] then return analyzer.loading_modules[key] end
+	end
 
 	do
 		local val = base_environment:Get(str)
@@ -177,9 +209,17 @@ analyzer function require(name: string)
 		return analyzer:GetLocalOrGlobalValue(str)
 	end
 
+	do
+		local cached = get_cached_module()
+
+		if cached then return cached end
+	end
+
+	analyzer.loading_modules[key] = types.Nil()
+
 	if package.loaders then
 		for i, searcher in ipairs(package.loaders) do
-			local loader = searcher(str:GetData())
+			local loader = searcher(key)
 
 			if type(loader) == "function" then
 				local path = debug.getinfo(loader).source
@@ -189,17 +229,24 @@ analyzer function require(name: string)
 
 					if path:sub(1, 2) == "./" then path = path:sub(3) end
 
-					if analyzer.loaded_modules[path] then return analyzer.loaded_modules[path] end
+					local res = analyzer:GetFirstValue(
+						analyzer:AnalyzeRootStatement(analyzer:ParseFile(path), str)
+					)
 
-					local res = analyzer:AnalyzeRootStatement(analyzer:ParseFile(path), str)
-					analyzer.loaded_modules[path] = res
+					if is_nil(res) then res = types.True() end
+
+					analyzer:NewIndexOperator(get_package_loaded(), types.ConstString(key), res, true)
+					analyzer.loaded_modules[key] = res
+					analyzer.loading_modules[key] = nil
 					return res
 				end
 			end
 		end
 	end
 
-	error("module '" .. str:GetData() .. "' not found")
+	analyzer.loading_modules[key] = nil
+
+	error("module '" .. key .. "' not found")
 	return types.Any()
 end
 

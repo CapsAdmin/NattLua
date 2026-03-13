@@ -1,6 +1,7 @@
 local Table = require("nattlua.types.table").Table
 local Nil = require("nattlua.types.symbol").Nil
 local LStringNoMeta = require("nattlua.types.string").LStringNoMeta
+local Any = require("nattlua.types.any").Any
 local Analyzer = require("nattlua.analyzer.analyzer").New
 local assert = _G.assert
 local io_open = _G.io.open
@@ -65,6 +66,22 @@ local REUSE = _G.REUSE_BASE_ENV
 local cached_runtime
 local cached_typesystem
 local cached_node_map
+
+local function seed_bundle_bootstrap_globals(env)
+	local package_value = Table()
+	package_value:Set(LStringNoMeta("loaded"), Table())
+	package_value:Set(LStringNoMeta("preload"), Table())
+	local import_value = Table()
+	import_value:Set(LStringNoMeta("loaded"), Table())
+	env:Set(LStringNoMeta("package"), package_value)
+	env:Set(LStringNoMeta("import"), import_value)
+	env:Set(LStringNoMeta("require"), Any())
+	env:Set(LStringNoMeta("getmetatable"), Any())
+	env:Set(LStringNoMeta("setmetatable"), Any())
+	env:Set(LStringNoMeta("rawget"), Any())
+	env:Set(LStringNoMeta("type"), Any())
+end
+
 return {
 	BuildBaseEnvironment = function(root_node, parent_analyzer)
 		if DISABLE then return Table(), Table(), {} end
@@ -82,6 +99,8 @@ return {
 		runtime_env:SetMutationLimit(math_huge)
 		local typesystem_env = Table()
 		typesystem_env.string_metatable = Table()
+		seed_bundle_bootstrap_globals(runtime_env)
+		seed_bundle_bootstrap_globals(typesystem_env)
 		compiler:SetEnvironments(runtime_env, typesystem_env)
 		-- Use parent analyzer's config if it exists or just use a fresh analyzer
 		local analyzer

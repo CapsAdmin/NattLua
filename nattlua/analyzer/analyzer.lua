@@ -386,6 +386,7 @@ function META.New(config)
 			track_stash = {},
 			analyzed_root_statements = {},
 			loaded_modules = {},
+			loading_modules = {},
 			parsed_paths = {},
 			check_count = 0,
 			call_stack_map = {},

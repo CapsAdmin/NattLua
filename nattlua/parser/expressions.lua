@@ -905,18 +905,19 @@ return function(META--[[#: any]])
 			if not path then return end
 
 			local dont_hoist_import = _G.dont_hoist_import and _G.dont_hoist_import > 0
-			node.import_expression = true
+			node.require_expression = tkname.sub_type == "require"
+			node.import_expression = not node.require_expression
+			node.cache_imports_like_require = node.import_expression and self.config.cache_imports_like_require or false
 			node.path = path
-			local key = tkname.sub_type == "require" and str or path
 			local root_node = self.config.root_statement_override_data or
 				self.config.root_statement_override or
 				self.RootStatement
 			root_node.imported = root_node.imported or {}
 			local imported = root_node.imported
-			node.key = key
-			local key = path
+			node.key = tkname.sub_type == "require" and str or (self.config.cache_imports_like_require and str or path)
+			local key = node.key
 
-			if key:sub(1, 2) == "./" then key = key:sub(3) end
+			if tkname.sub_type ~= "require" and key:sub(1, 2) == "./" then key = key:sub(3) end
 
 			if imported[key] == nil then
 				imported[key] = node
@@ -927,6 +928,7 @@ return function(META--[[#: any]])
 						path = node.path,
 						working_directory = self.config.working_directory,
 						inline_require = not root_node.data_import,
+						cache_imports_like_require = self.config.cache_imports_like_require,
 						on_parsed_node = self.config.on_parsed_node,
 						pre_read_file = self.config.pre_read_file,
 						on_read_file = self.config.on_read_file,
@@ -969,6 +971,7 @@ return function(META--[[#: any]])
 
 			local path = tk_path:GetStringValue()
 			node.import_expression = true
+			node.cache_imports_like_require = self.config.cache_imports_like_require or false
 			node.path = path_util.Resolve(
 				path,
 				self.config.root_directory,
@@ -1001,6 +1004,7 @@ return function(META--[[#: any]])
 							root_statement_override_data = root_node,
 							path = node.path,
 							working_directory = self.config.working_directory,
+							cache_imports_like_require = self.config.cache_imports_like_require,
 							on_parsed_node = self.config.on_parsed_node,
 							pre_read_file = self.config.pre_read_file,
 							on_read_file = self.config.on_read_file,

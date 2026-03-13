@@ -1,5 +1,6 @@
 local nl = require("nattlua")
 local Code = require("nattlua.code").New
+local path_util = require("nattlua.other.path")
 
 local function parse(code)
 	return assert(assert(nl.Compiler(code)):Parse())
@@ -63,6 +64,124 @@ test("call expressions", function()
 	check("foo(1)'1'{1}[[1]][1]\"1\"")
 	check("a=(foo.bar)()")
 	check("lol({...})")
+end)
+
+test("require cache key uses module name", function()
+	local old_resolve_require = path_util.ResolveRequire
+	path_util.ResolveRequire = function(str)
+		if str == "alias.one" or str == "alias.two" then
+			return "test/tests/nattlua/analyzer/file_importing/require_cache/alias_shared.lua"
+		end
+
+		return old_resolve_require(str)
+	end
+
+	local ok, err = pcall(function()
+		local compiler = assert(
+			nl.Compiler(
+				[[local a = require("alias.one")
+local b = require("alias.two")]],
+				nil,
+				{
+					parser = {
+						emit_environment = false,
+					},
+					emitter = {
+						force_parenthesis = true,
+						string_quote = "\"",
+					},
+				}
+			)
+		)
+
+		assert(compiler:Lex())
+		local syntax_tree = assert(compiler:Parse()).SyntaxTree
+		assert(syntax_tree.imports)
+		equal(#syntax_tree.imports, 2)
+		equal(syntax_tree.imports[1].key, "alias.one")
+		equal(syntax_tree.imports[2].key, "alias.two")
+		assert(syntax_tree.imports[1].require_expression)
+		assert(syntax_tree.imports[2].require_expression)
+		assert(not syntax_tree.imports[1].import_expression)
+		assert(not syntax_tree.imports[2].import_expression)
+		assert(syntax_tree.imports[1].RootStatement ~= syntax_tree.imports[2].RootStatement)
+	end)
+
+	path_util.ResolveRequire = old_resolve_require
+	assert(ok, err)
+end)
+
+test("import cache key can use import string", function()
+	local old_resolve = path_util.Resolve
+	path_util.Resolve = function(path, root_directory, working_directory, file_path)
+		if path == "alias.one" or path == "alias.two" then
+			return "test/tests/nattlua/analyzer/file_importing/require_cache/alias_shared.lua"
+		end
+
+		return old_resolve(path, root_directory, working_directory, file_path)
+	end
+
+	local ok, err = pcall(function()
+		do
+			local compiler = assert(
+				nl.Compiler(
+					[[local a = import("alias.one")
+local b = import("alias.two")]],
+					nil,
+					{
+						parser = {
+							emit_environment = false,
+						},
+					}
+				)
+			)
+
+			assert(compiler:Lex())
+			local syntax_tree = assert(compiler:Parse()).SyntaxTree
+			assert(syntax_tree.imports)
+			equal(#syntax_tree.imports, 2)
+			equal(
+				syntax_tree.imports[1].key,
+				"test/tests/nattlua/analyzer/file_importing/require_cache/alias_shared.lua"
+			)
+			equal(
+				syntax_tree.imports[2].key,
+				"test/tests/nattlua/analyzer/file_importing/require_cache/alias_shared.lua"
+			)
+			assert(syntax_tree.imports[1].RootStatement == syntax_tree.imports[2].RootStatement)
+			assert(syntax_tree.imports[1].import_expression)
+			assert(not syntax_tree.imports[1].require_expression)
+		end
+
+		do
+			local compiler = assert(
+				nl.Compiler(
+					[[local a = import("alias.one")
+local b = import("alias.two")]],
+					nil,
+					{
+						parser = {
+							emit_environment = false,
+							cache_imports_like_require = true,
+						},
+					}
+				)
+			)
+
+			assert(compiler:Lex())
+			local syntax_tree = assert(compiler:Parse()).SyntaxTree
+			assert(syntax_tree.imports)
+			equal(#syntax_tree.imports, 2)
+			equal(syntax_tree.imports[1].key, "alias.one")
+			equal(syntax_tree.imports[2].key, "alias.two")
+			assert(syntax_tree.imports[1].RootStatement ~= syntax_tree.imports[2].RootStatement)
+			assert(syntax_tree.imports[1].import_expression)
+			assert(not syntax_tree.imports[1].require_expression)
+		end
+	end)
+
+	path_util.Resolve = old_resolve
+	assert(ok, err)
 end)
 
 test("if statements", function()

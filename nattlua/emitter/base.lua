@@ -82,6 +82,7 @@ return function()
 				if expr.Type == "expression_postfix_call" then
 					if
 						expr.import_expression or
+						expr.require_expression or
 						(
 							expr.left.Type == "expression_value" and
 							expr.left.value:GetValueString() == "require"
@@ -109,6 +110,7 @@ return function()
 									expr.Type == "expression_postfix_call" and
 									(
 										expr.import_expression or
+										expr.require_expression or
 										(
 											expr.left.Type == "expression_value" and
 											expr.left.value:GetValueString() == "require"
@@ -523,6 +525,25 @@ return function()
 		if block.imports and not self.config.skip_import then
 			self.done = {}
 			self:EmitNonSpace("_G.IMPORTS = _G.IMPORTS or {}\n")
+			self:EmitNonSpace("local package = package--[[# as any]] or {}\n")
+			self:EmitNonSpace("package.preload = package.preload or {}\n")
+			self:EmitNonSpace("package.loaded = package.loaded or {}\n")
+			self:EmitNonSpace("local __NATTLUA_GETMETATABLE = getmetatable--[[# as any]]\n")
+			self:EmitNonSpace("local __NATTLUA_SETMETATABLE = setmetatable--[[# as any]]\n")
+			self:EmitNonSpace("local __NATTLUA_RAWGET = rawget--[[# as any]]\n")
+			self:EmitNonSpace("local __NATTLUA_REQUIRE = require--[[# as any]]\n")
+			self:EmitNonSpace("local __NATTLUA_TYPE = type--[[# as any]]\n")
+			self:EmitNonSpace("local __NATTLUA_IMPORT = import--[[# as any]]\n")
+			self:EmitNonSpace("local function __NATTLUA_GET_IMPORT_CACHE() return import and import.loaded end\n")
+			self:EmitNonSpace(
+				"local function __NATTLUA_CALL_IMPORT_FALLBACK(key--[[#: any]], ...) if __NATTLUA_IMPORT ~= nil then if __NATTLUA_TYPE(__NATTLUA_IMPORT) == 'table' then local mt = __NATTLUA_GETMETATABLE(__NATTLUA_IMPORT) if mt and mt.__call then return mt.__call(__NATTLUA_IMPORT, key, ...) end else return __NATTLUA_IMPORT(key, ...) end end return __NATTLUA_REQUIRE(key) end\n"
+			)
+			self:EmitNonSpace(
+				"if __NATTLUA_TYPE(__NATTLUA_IMPORT) ~= 'table' or not __NATTLUA_RAWGET(__NATTLUA_IMPORT, '__nattlua_bundle_bridge') then local __NATTLUA_IMPORT_PROXY = {loaded = __NATTLUA_TYPE(__NATTLUA_IMPORT) == 'table' and (__NATTLUA_IMPORT.loaded or {}) or {}, __nattlua_bundle_bridge = true} if __NATTLUA_TYPE(__NATTLUA_IMPORT) == 'table' and __NATTLUA_IMPORT.loaded == nil then __NATTLUA_IMPORT.loaded = __NATTLUA_IMPORT_PROXY.loaded end import = __NATTLUA_SETMETATABLE(__NATTLUA_IMPORT_PROXY, {__index = __NATTLUA_TYPE(__NATTLUA_IMPORT) == 'table' and __NATTLUA_IMPORT or nil, __newindex = __NATTLUA_TYPE(__NATTLUA_IMPORT) == 'table' and __NATTLUA_IMPORT or nil, __call = function(_, key--[[#: any]], ...) local loader = __NATTLUA_RAWGET(IMPORTS, key) if loader ~= nil then return loader(key, ...) end return __NATTLUA_CALL_IMPORT_FALLBACK(key, ...) end}) end\n"
+			)
+			self:EmitNonSpace(
+				"if not __NATTLUA_GETMETATABLE(IMPORTS) then __NATTLUA_SETMETATABLE(IMPORTS, {__index = function(_, key--[[#: any]]) return function(...) return __NATTLUA_REQUIRE(key) end end}) end\n"
+			)
 
 			for i, node in ipairs(block.imports) do
 				if not self.done[node.key] then
@@ -550,15 +571,29 @@ return function()
 										) .. "\n"
 								)
 							elseif node.left.value.value == "require" then
+								local preload = ""
+
+								if not node.key:find("/", 1, true) then
+									preload = " package.preload[\"" .. node.key .. "\"] = IMPORTS[\"" .. node.key .. "\"]"
+								end
+
 								self:Emit(
-									"do local __M; IMPORTS[\"" .. node.key .. "\"] = function(...) __M = __M or (" .. encapsulate_module(
+									"do local __HAS_RUN = false IMPORTS[\"" .. node.key .. "\"] = function(...) local __M = package.loaded[\"" .. node.key .. "\"]; if __HAS_RUN and __M ~= nil then return __M end __HAS_RUN = true __M = (" .. encapsulate_module(
 											"function(...) " .. content .. " end",
 											"@" .. node.path,
 											self.config.module_encapsulation_method
-										) .. ")(...) return __M end end\n"
+										) .. ")(...); if __M ~= nil then package.loaded[\"" .. node.key .. "\"] = __M elseif package.loaded[\"" .. node.key .. "\"] == nil then package.loaded[\"" .. node.key .. "\"] = true end return package.loaded[\"" .. node.key .. "\"] end" .. preload .. " end\n"
 								)
 							elseif self.config.inside_data_import then
 								self:Emit("IMPORTS['" .. node.key .. "'] = function(...) " .. content .. " end\n")
+							elseif node.cache_imports_like_require then
+								self:Emit(
+									"do local __HAS_RUN = false local __M IMPORTS['" .. node.key .. "'] = function(...) local __CACHE = __NATTLUA_GET_IMPORT_CACHE() if __CACHE and __CACHE['" .. node.key .. "'] ~= nil then __M = __CACHE['" .. node.key .. "'] __HAS_RUN = true return __M end if __HAS_RUN then return __M end __HAS_RUN = true __M = (" .. encapsulate_module(
+											"function(...) " .. content .. " end",
+											"@" .. node.path,
+											self.config.module_encapsulation_method
+										) .. ")(... ) __CACHE = __NATTLUA_GET_IMPORT_CACHE() if __CACHE and __CACHE['" .. node.key .. "'] ~= nil then __M = __CACHE['" .. node.key .. "'] elseif __CACHE and __M ~= nil then __CACHE['" .. node.key .. "'] = __M end return __M end end\n"
+								)
 							else
 								self:Emit(
 									"IMPORTS['" .. node.key .. "'] = " .. encapsulate_module(
@@ -574,6 +609,10 @@ return function()
 					self.done[node.key] = true
 				end
 			end
+
+			self:EmitNonSpace(
+				"package.preload[\"nattlua\"] = package.preload[\"nattlua\"] or IMPORTS[\"nattlua.init\"]\n"
+			)
 		end
 
 		if has_leading_shebang then

@@ -263,6 +263,7 @@ local all_nodes = {
 			is_expression = true,
 			RootStatement = false,
 			key = false,
+			cache_imports_like_require = false,
 			import_expression = false,
 			type_call = false,
 			data = false,
