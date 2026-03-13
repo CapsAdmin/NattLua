@@ -43,9 +43,27 @@ function META:GetProjectConfig(what, path)
 	local config = get_config(path)
 
 	if config then
-		local sub_config = config[what] and config[what]()
+		local entry = config[what]
+
+		if not entry and config.commands then entry = config.commands[what] end
+
+		local sub_config
+
+		if type(entry) == "function" then
+			sub_config = entry()
+		elseif type(entry) == "table" then
+			if type(entry.cb) == "function" then
+				sub_config = entry.cb()
+			else
+				sub_config = entry
+			end
+		end
 
 		if sub_config then
+			if sub_config.ignorefiles == nil and config.ignorefiles ~= nil then
+				sub_config.ignorefiles = config.ignorefiles
+			end
+
 			sub_config.root_directory = config.config_dir
 			return sub_config
 		end
@@ -212,8 +230,18 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 				end
 			end
 
+			if path and not self:IsLoaded(path) then
+				local b, reason = self:Recompile(path, true, diagnostics, on_save_path)
+
+				if not b then
+					ok = false
+					table.insert(reasons, reason)
+				end
+			end
+
 			return ok, table.concat(reasons, "\n")
 		elseif type(cfg.lsp.entry_point) == "string" then
+			local requested_path = path
 			local path = path_util.Resolve(cfg.lsp.entry_point, cfg.parser.root_directory, cfg.parser.working_directory)
 
 			if self.debug then
@@ -222,7 +250,18 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 				table.print(cfg)
 			end
 
-			return self:Recompile(path, true, diagnostics, on_save_path)
+			local ok, reason = self:Recompile(path, true, diagnostics, on_save_path)
+
+			if requested_path and normalize_path(requested_path) ~= normalize_path(path) and not self:IsLoaded(requested_path) then
+				local b, extra_reason = self:Recompile(requested_path, true, diagnostics, on_save_path)
+
+				if not b then
+					ok = false
+					reason = table.concat({reason, extra_reason}, "\n")
+				end
+			end
+
+			return ok, reason
 		end
 	end
 
@@ -321,8 +360,9 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 		end
 
 		local should_analyze = false
+		local lsp_analyze = not (cfg.lsp and (cfg.lsp.analyze == false or cfg.lsp.parse_only))
 
-		if path then
+		if lsp_analyze and path then
 			local ignored = false
 			local project_cfg = self:GetProjectConfig("get-compiler-config", path)
 
@@ -355,7 +395,7 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 					should_analyze = true
 				end
 			end
-		elseif cfg.lsp.entry_point then
+		elseif lsp_analyze and cfg.lsp.entry_point then
 			should_analyze = true
 		end
 
