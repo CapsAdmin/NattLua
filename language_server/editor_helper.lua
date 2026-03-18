@@ -30,6 +30,23 @@ local Token = require("nattlua.lexer.token")
 local META = class.CreateTemplate("editor_helper")
 META:GetSet("WorkingDirectory", "./")
 
+local format_emitter_defaults = {
+	pretty_print = true,
+	string_quote = "\"",
+	no_semicolon = true,
+	comment_type_annotations = true,
+	type_annotations = "explicit",
+	force_parenthesis = true,
+	omit_parentheses_for_single_table_call = true,
+	trailing_newline = true,
+}
+
+local function apply_format_emitter_defaults(emitter_config)
+	for k, v in pairs(format_emitter_defaults) do
+		if emitter_config[k] == nil then emitter_config[k] = v end
+	end
+end
+
 function META:SetWorkingDirectory(dir)
 	self.WorkingDirectory = dir
 end
@@ -522,6 +539,9 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 							cfg_copy[k] = v
 						end
 
+
+						if cfg_copy.trailing_newline == nil then cfg_copy.trailing_newline = true end
+
 						cfg_copy.remove_unused = true
 						cfg_copy.skip_import = true
 						cfg_copy.no_pipeline = true
@@ -653,19 +673,7 @@ end
 function META:Format(code, path, extra_emitter_config)
 	path = path_util.Normalize(path)
 	local config = self:GetCompilerConfig(path)
-	local emitter_cfg = {
-		pretty_print = true,
-		string_quote = "\"",
-		no_semicolon = true,
-		comment_type_annotations = true,
-		type_annotations = "explicit",
-		force_parenthesis = true,
-		omit_parentheses_for_single_table_call = true,
-	}
-
-	for k, v in pairs(emitter_cfg) do
-		if config.emitter[k] == nil then config.emitter[k] = v end
-	end
+	apply_format_emitter_defaults(config.emitter)
 
 	config.parser = {skip_import = true}
 	config.emitter.comment_type_annotations = path:sub(-#".lua") == ".lua"

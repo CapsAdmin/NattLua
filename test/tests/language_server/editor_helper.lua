@@ -207,6 +207,34 @@ end
 do
 	local helper = EditorHelper.New()
 	helper:Initialize()
+	local format_path = "./main.nlua"
+	local code = [[
+		local a=1
+		local b=2]]
+	helper:OpenFile(format_path, code)
+	local formatted = helper:Format(code, format_path)
+	assert(formatted:sub(#formatted, #formatted) == "\n")
+
+	helper:SetConfigFunction(function(path)
+		return {
+			["get-compiler-config"] = function()
+				return {
+					emitter = {
+						trailing_newline = false,
+					},
+					lsp = {entry_point = path},
+				}
+			end,
+		}
+	end)
+
+	formatted = helper:Format(code, format_path)
+	assert(formatted:sub(#formatted, #formatted) ~= "\n")
+end
+
+do
+	local helper = EditorHelper.New()
+	helper:Initialize()
 
 	function helper:OnDiagnostics(name, data)
 		if #data == 0 then return end

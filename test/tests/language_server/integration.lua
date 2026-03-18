@@ -86,6 +86,56 @@ do
 end
 
 do
+	lsp.editor_helper:SetConfigFunction(function(path)
+		return {
+			["get-compiler-config"] = function()
+				return {
+					lsp = {entry_point = path},
+				}
+			end,
+		}
+	end)
+
+	local client = LSPClient.New()
+	client:SetWorkingDirectory("/workspace")
+	local root_uri = "file:///workspace"
+	client:Initialize(lsp, root_uri)
+	local file_uri = root_uri .. "/format.nlua"
+	local code = [[
+		local a=1
+		local b=2]]
+	client:Notify(
+		lsp,
+		"textDocument/didOpen",
+		{
+			textDocument = {
+				uri = file_uri,
+				languageId = "nattlua",
+				version = 1,
+				text = code,
+			},
+		}
+	)
+	local edits = client:Call(
+		lsp,
+		"textDocument/formatting",
+		{
+			textDocument = {uri = file_uri},
+			options = {
+				tabSize = 4,
+				insertSpaces = true,
+			},
+		}
+	)
+	assert(#edits > 0, "Formatting should return edits for unformatted code")
+	assert(edits[1].newText:sub(#edits[1].newText, #edits[1].newText) == "\n")
+
+	lsp.editor_helper:SetConfigFunction(function()
+		return
+	end)
+end
+
+do
 	local client = LSPClient.New()
 	client:SetWorkingDirectory("/workspace")
 	local root_uri = "file:///workspace"

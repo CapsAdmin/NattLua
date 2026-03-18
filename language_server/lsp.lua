@@ -254,8 +254,6 @@ lsp.methods["nattlua/format"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 	local code = editor_helper:Format(params.code, path)
 
-	if code:sub(#code, #code) ~= "\n" then code = code .. "\n" end
-
 	return {
 		code = b64.encode(code),
 	}
