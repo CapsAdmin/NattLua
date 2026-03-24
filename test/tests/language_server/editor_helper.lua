@@ -207,6 +207,41 @@ end
 do
 	local helper = EditorHelper.New()
 	helper:Initialize()
+	local diagnostics_calls = {}
+	local main_path = "./import_error_main.nlua"
+
+	function helper:OnDiagnostics(name, data)
+		table.insert(diagnostics_calls, {
+			name = name,
+			data = data,
+		})
+	end
+
+	helper:SetFileContent(main_path, [[local bad = import("./does_not_exist.nlua")]])
+	helper:Recompile(main_path)
+
+	local import_error
+
+	for _, call in ipairs(diagnostics_calls) do
+		for _, diagnostic in ipairs(call.data) do
+			if diagnostic.message:find("error importing file:", nil, true) then
+				import_error = diagnostic.message
+				break
+			end
+		end
+
+		if import_error then break end
+	end
+
+	assert(import_error, "expected an import diagnostic")
+	assert(import_error:find("requested path:", nil, true) ~= nil)
+	assert(import_error:find("reason:", nil, true) ~= nil)
+	assert(import_error:find("error importing file: nil", nil, true) == nil)
+end
+
+do
+	local helper = EditorHelper.New()
+	helper:Initialize()
 	local format_path = "./main.nlua"
 	local code = [[
 		local a=1

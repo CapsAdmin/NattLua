@@ -378,15 +378,25 @@ local function read_file(self, path)
 	return code
 end
 
+local function format_parse_file_error(path, err)
+	err = err == nil and "parser returned no error details" or tostring(err)
+	return err .. " path: " .. tostring(path)
+end
+
 function META:ParseFile(path--[[#: string]], config--[[#: nil | any]])
 	local ok, code = pcall(read_file, self, path)
 
-	if not ok then return ok, code .. " path: " .. path end
+	if not ok then return nil, format_parse_file_error(path, code) end
 
 	config = config or {}
 	config.file_path = config.file_path or path
 	config.file_name = config.file_name or "@" .. path
-	return self:ParseString(code, config)
+
+	local root, err = self:ParseString(code, config)
+
+	if not root then return nil, format_parse_file_error(path, err) end
+
+	return root
 
 end
 

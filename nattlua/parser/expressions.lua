@@ -8,6 +8,19 @@ local runtime_syntax = require("nattlua.syntax.runtime")
 local typesystem_syntax = require("nattlua.syntax.typesystem")
 local path_util = require("nattlua.other.path")
 
+local function get_import_error_details(requested_path, resolved_path, err)
+	local lines = {
+		"requested path: " .. tostring(requested_path or resolved_path or "unknown"),
+	}
+
+	if resolved_path and resolved_path ~= requested_path then
+		lines[#lines + 1] = "resolved path: " .. tostring(resolved_path)
+	end
+
+	lines[#lines + 1] = "reason: " .. tostring(err or "parser returned no error details")
+	return table.concat(lines, "\n")
+end
+
 --[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type { Node } = import("~/nattlua/parser/node.lua")]]
@@ -938,7 +951,12 @@ return function(META--[[#: any]])
 				)
 
 				if not root then
-					self:Error("error importing file: $1", start, start, err)
+					self:Error(
+						"error importing file: $1",
+						start,
+						start,
+						get_import_error_details(str, path, err)
+					)
 				end
 
 				imported[key] = root
@@ -1015,7 +1033,12 @@ return function(META--[[#: any]])
 					)
 
 					if not root then
-						self:Error("error importing file: $1", start, start, err .. ": " .. node.path)
+						self:Error(
+							"error importing file: $1",
+							start,
+							start,
+							get_import_error_details(path, node.path, err)
+						)
 						data = self:ErrorExpression()
 					end
 
@@ -1038,7 +1061,12 @@ return function(META--[[#: any]])
 				end
 
 				if not data then
-					self:Error("error importing file: $1", start, start, err .. ": " .. node.path)
+					self:Error(
+						"error importing file: $1",
+						start,
+						start,
+						get_import_error_details(path, node.path, err or "failed to read import data")
+					)
 					data = self:ErrorExpression()
 				end
 

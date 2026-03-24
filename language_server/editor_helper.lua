@@ -325,7 +325,7 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 
 	compiler:SetEnvironments(self:GetEnvironment())
 
-	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, ...)
+	function compiler.OnDiagnostic(_, code, msg, severity, start, stop, node, level, ...)
 		local name = code:GetName()
 		local str_msg = formating.FormatMessage(msg, ...)
 
