@@ -123,6 +123,11 @@ function META:GetCompilerConfig(path)
 	cfg.lsp = cfg.lsp or {}
 	cfg.parser = cfg.parser or {}
 	cfg.root_directory = cfg.root_directory or project_config.config_dir or self:GetWorkingDirectory()
+
+	if cfg.root_directory and cfg.root_directory ~= "" and cfg.root_directory:sub(-1) ~= "/" then
+		cfg.root_directory = cfg.root_directory .. "/"
+	end
+
 	cfg.parser.root_directory = cfg.parser.root_directory or cfg.root_directory
 	cfg.analyzer.root_directory = cfg.analyzer.root_directory or cfg.root_directory
 
