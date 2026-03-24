@@ -105,6 +105,53 @@ local function format_func_info(fi--[[#: jit_util_funcinfo]], func--[[#: AnyFunc
 	end
 end
 
+local function append_trace_pc_line(
+	trace--[[#: {
+		pc_lines = List<|{func = AnyFunction, pc = number, depth = number, loc = string}|>,
+	}]],
+	func--[[#: AnyFunction]],
+	pc--[[#: number]],
+	depth--[[#: number]]
+)--[[#: string]]
+	local loc = format_func_info(jutil.funcinfo(func, pc), func)
+	local last = trace.pc_lines[#trace.pc_lines]
+
+	if last and last.loc == loc and last.depth == depth then return loc end
+
+	trace.pc_lines[#trace.pc_lines + 1] = {func = func, pc = pc, depth = depth, loc = loc}
+	return loc
+end
+
+local function is_source_location(loc--[[#: nil | string]])--[[#: boolean]]
+	return loc ~= nil and loc:find("^.+:%d+$") ~= nil
+end
+
+local function get_trace_location(
+	trace--[[#: nil | {
+		pc_lines = List<|{func = AnyFunction, pc = number, depth = number, loc = string}|>,
+	}]]
+)--[[#: string | nil]]
+	if not trace then return nil end
+
+	local builtin_loc--[[#: string | nil]] = nil
+
+	for i = #trace.pc_lines, 1, -1 do
+		local loc = trace.pc_lines[i].loc
+
+		if is_source_location(loc) then
+			if builtin_loc then return loc .. " (" .. builtin_loc .. ")" end
+
+			return loc
+		end
+
+		if not builtin_loc and loc ~= "(?)" and loc:sub(1, 2) ~= "C:" then
+			builtin_loc = loc
+		end
+	end
+
+	return builtin_loc or trace.pc_lines[#trace.pc_lines].loc
+end
+
 local function json_string(s--[[#: string]])
 	s = s:gsub("\\", "\\\\")
 	s = s:gsub("\"", "\\\"")
@@ -114,24 +161,25 @@ local function json_string(s--[[#: string]])
 	return "\"" .. s .. "\""
 end
 
-local HTML_TEMPLATE--[[#: string]]
+-- --- Profiler ---
+local HTML_TEMPLATE--[[#: string]] -- forward declaration, assigned at bottom of file
 local Profiler = {}
 Profiler.__index = Profiler
 --[[#type TEvent = {
 		type = "sample",
-		time = number,
+		time = number | nil,
 		stack = string,
 		sample_count = number,
 		vm_state = string,
 		section_path = string,
 	} | {
 		type = "section_start" | "section_end",
-		time = number,
+		time = number | nil,
 		name = string,
 		section_path = string,
 	} | {
 		type = "trace_start",
-		time = number,
+		time = number | nil,
 		id = number,
 		parent_id = number | nil,
 		exit_id = number | nil,
@@ -139,7 +187,7 @@ Profiler.__index = Profiler
 		func_info = string,
 	} | {
 		type = "trace_stop",
-		time = number,
+		time = number | nil,
 		id = number,
 		func_info = string,
 		linktype = string | nil,
@@ -148,16 +196,17 @@ Profiler.__index = Profiler
 		exit_count = number | nil,
 	} | {
 		type = "trace_abort",
-		time = number,
+		time = number | nil,
 		id = number,
 		abort_code = number | nil,
 		abort_reason = string,
 		func_info = string,
 	} | {
 		type = "trace_flush",
-		time = number,
+		time = number | nil,
 	}]]
---[[#type Profiler.@SelfArgument = {
+--[[#-- --- Type Definitions ---
+type Profiler.@SelfArgument = {
 	_id = string,
 	_path = string,
 	_file_url = string,
@@ -177,7 +226,15 @@ Profiler.__index = Profiler
 	_strings_flushed = number,
 	_section_stack = List<|string|>,
 	_section_path = string,
-	_traces = List<|{id = number, parent_id = number | nil, exit_id = number | nil, depth = number}|>,
+	_traces = List<|
+		{
+			id = number,
+			parent_id = number | nil,
+			exit_id = number | nil,
+			depth = number,
+			pc_lines = List<|{func = AnyFunction, pc = number, depth = number, loc = string}|>,
+		}
+	|>,
 	_trace_count = number,
 	_trace_generation = number,
 	_aborted = List<|boolean|>,
@@ -187,20 +244,25 @@ Profiler.__index = Profiler
 	_file = File | nil,
 	_trace_event_fn = jit_attach_trace | nil,
 	_trace_event_safe_fn = jit_attach_trace | nil,
+	_record_event_fn = jit_attach_record | nil,
+	_record_event_safe_fn = jit_attach_record | nil,
 	@MetaTable = Profiler,
 }]]
 --[[#local type TProfile = Profiler.@SelfArgument]]
 
-function Profiler:EmitEvent(event--[[#: TEvent ~ {time = number}]])
+-- --- Event accumulation ---
+function Profiler:EmitEvent(event--[[#: TEvent]])
 	event.time = self._get_time()
 	local idx = self._event_count + 1
 	self._events[idx] = event
 	self._event_count = idx
 end
 
+-- --- Section tracking ---
 function Profiler:StartSection(name--[[#: string]])
 	if not self._running then return end
 
+	-- Event section tracking
 	table_insert(self._section_stack, name)
 	self._section_path = table_concat(self._section_stack, " > ")
 	self:EmitEvent{type = "section_start", name = name, section_path = self._section_path}
@@ -235,7 +297,13 @@ do
 
 		if parent then depth = (parent.depth or 0) + 1 end
 
-		self._traces[id] = {id = id, parent_id = parent_id, exit_id = exit_id, depth = depth}
+		self._traces[id] = {
+			id = id,
+			parent_id = parent_id,
+			exit_id = exit_id,
+			depth = depth,
+			pc_lines = {{func = func, pc = pc, depth = 0, loc = loc}},
+		}
 		self._trace_count = self._trace_count + 1
 		self:EmitEvent{
 			type = "trace_start",
@@ -248,14 +316,30 @@ do
 		}
 	end
 
+	local function on_trace_record(
+		self--[[#: TProfile]],
+		id--[[#: number]],
+		func--[[#: AnyFunction]],
+		pc--[[#: number]],
+		depth--[[#: number]]
+	)
+		local trace = self._traces[id]
+
+		if not trace then return end
+
+		append_trace_pc_line(trace, func, pc, depth)
+	end
+
 	local function on_trace_stop(self--[[#: TProfile]], id--[[#: number]], func--[[#: AnyFunction]])
 		local trace = self._traces[id]
 
 		if not trace then return end
 
 		local ti = jutil.traceinfo(id)
-		local fi = jutil.funcinfo(func)
-		local loc = format_func_info(fi, func)
+		local loc = get_trace_location(trace)
+
+		if not loc then loc = format_func_info(jutil.funcinfo(func), func) end
+
 		self:EmitEvent{
 			type = "trace_stop",
 			id = id,
@@ -280,8 +364,11 @@ do
 
 		if not trace then return end
 
-		local fi = jutil.funcinfo(func, pc)
-		local loc = format_func_info(fi, func)
+		append_trace_pc_line(trace, func, pc, 0)
+		local loc = get_trace_location(trace)
+
+		if not loc then loc = format_func_info(jutil.funcinfo(func, pc), func) end
+
 		self._aborted[id] = true
 		self._traces[id] = nil
 		self._trace_count = self._trace_count - 1
@@ -343,15 +430,17 @@ do
 		} | nil]]
 	)
 		config = config or {}
-		local self = setmetatable({}, Profiler)
+		local self = setmetatable({}, Profiler)--[[# as TProfile]]
 		-- Config
+		self._id = config.id or "jit_profiler"
 		self._path = config.path or "./profiler_output.html"
 		self._file_url = config.file_url or "vscode://file/${path}:${line}:1"
 		self._mode = config.mode or "line"
 		self._depth = config.depth or 999
 		self._sampling_rate = config.sampling_rate or 1
 		self._flush_interval = config.flush_interval or 3
-		self._get_time = config.get_time
+
+		if config.get_time then self._get_time = config.get_time end
 
 		if not self._get_time then
 			time_function = time_function or get_time_function()
@@ -414,6 +503,18 @@ do
 				end
 			end--[[# as jit_attach_trace]]
 			jit.attach(self._trace_event_safe_fn, "trace")
+		end
+
+		do
+			self._record_event_fn = function(tr, func, pc, depth)
+				on_trace_record(self, tr, func, pc, depth)
+			end--[[# as jit_attach_record]]
+			self._record_event_safe_fn = function(tr, func, pc, depth)
+				local ok, err = pcall(self._record_event_fn--[[# as any]], tr, func, pc, depth)
+
+				if not ok then io.write("error in record event: " .. tostring(err) .. "\n") end
+			end--[[# as jit_attach_record]]
+			jit.attach(self._record_event_safe_fn, "record")
 		end
 
 		do
@@ -623,6 +724,12 @@ function Profiler:Stop()
 		self._trace_event_safe_fn = nil
 	end
 
+	if self._record_event_safe_fn then
+		jit.attach(self._record_event_safe_fn)
+		self._record_event_fn = nil
+		self._record_event_safe_fn = nil
+	end
+
 	-- Write remaining events and close file
 	self:Save()
 	local f = self._file
@@ -641,6 +748,7 @@ function Profiler:GetElapsed()
 	return self._get_time() - self._time_start
 end
 
+-- --- HTML Template ---
 HTML_TEMPLATE = [==[
 <!DOCTYPE html>
 <html lang="en">
@@ -771,6 +879,9 @@ body { background: var(--bg-base); color: #e0e0e0; overflow-x: hidden; }
 .filter-separator { width: 100%; height: 1px; background: var(--border); margin: 4px 0; }
 #flamegraph-container { overflow: hidden; max-height: 0; flex-shrink: 0; contain: strict; }
 #flamegraph-container.open { max-height: none; display: block; overflow-x: hidden; overflow-y: auto; flex: 1; contain: layout style; }
+#flamegraph-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 8px 16px 0; }
+#fg-copy-status { color: var(--text-dim); font-size: 11px; min-height: 1em; }
+#btn-copy-fg-summary { padding: 2px 10px; }
 #flamegraph-canvas { width: 100%; min-height: 400px; }
 #tooltip { position: fixed; background: var(--bg-panel); border: 1px solid var(--border-strong); padding: 8px 12px; border-radius: 4px; font-size: 11px; pointer-events: none; display: none; z-index: 100; max-width: 500px; white-space: pre-wrap; line-height: 1.5; }
 .loc-link { color: var(--accent); text-decoration: none; opacity: 0.8; }
@@ -820,6 +931,10 @@ body { background: var(--bg-base); color: #e0e0e0; overflow-x: hidden; }
   <button id="btn-toggle-fg">flamegraph</button>
 </div>
 <div id="flamegraph-container" class="open">
+  <div id="flamegraph-toolbar">
+    <span id="fg-copy-status"></span>
+    <button id="btn-copy-fg-summary" class="panel-btn">copy summary</button>
+  </div>
   <div id="fg-section-filter"></div>
   <canvas id="flamegraph-canvas"></canvas>
 </div>
@@ -1352,7 +1467,7 @@ function _computeVisibleSpans(lo, hi) {
       case 'id': va = a.id; vb = b.id; break;
       case 'status': va = a.outcome + (a.end.linktype||''); vb = b.outcome + (b.end.linktype||''); break;
       case 'depth': va = a.depth; vb = b.depth; break;
-      case 'location': va = a.start.func_info||''; vb = b.start.func_info||''; break;
+      case 'location': va = a.location||''; vb = b.location||''; break;
       case 'time': va = a.t0; vb = b.t0; break;
       default: va = a.id; vb = b.id;
     }
@@ -1572,7 +1687,7 @@ function renderVisibleTraceRows() {
       '<td class="col-id">#' + s.id + '</td>' +
       '<td class="' + cls + ' col-status">' + traceStatusLabel(s) + '</td>' +
       '<td class="col-depth">' + s.depth + '</td>' +
-      '<td class="trace-location col-location">' + funcInfoLink(s.start.func_info) + '</td>' +
+      '<td class="trace-location col-location">' + funcInfoLink(s.location || s.start.func_info) + '</td>' +
       '<td class="col-parent">' + parentInfo + '</td>' +
       '<td class="col-time">' + t + '</td>' +
       '<td class="col-ir">' + irCount + '</td>' +
@@ -1614,6 +1729,22 @@ document.getElementById('btn-toggle-fg').addEventListener('click', () => {
   btn.classList.toggle('collapsed', !isOpen);
   if (isOpen) drawFlamegraph(viewStart, viewEnd);
 });
+
+let fgCopyStatusTimer = null;
+function setFlamegraphCopyStatus(message, isError) {
+  const el = document.getElementById('fg-copy-status');
+  if (!el) return;
+  el.textContent = message || '';
+  el.style.color = isError ? COLORS.abort : COLORS.textDim;
+  if (fgCopyStatusTimer) clearTimeout(fgCopyStatusTimer);
+  if (!message) return;
+  fgCopyStatusTimer = setTimeout(() => {
+    if (el.textContent === message) {
+      el.textContent = '';
+      el.style.color = COLORS.textDim;
+    }
+  }, 2400);
+}
 
 // Sync: highlight traces row when timeline hover changes
 function syncTraceListHighlight(span) {
@@ -1670,6 +1801,7 @@ const flushTimes = [];
           t1: e.time,
           start: start,
           end: e,
+          location: e.func_info || start.func_info || '',
           depth: start.depth || 0,
           outcome: e.type === 'trace_stop' ? 'stop' : 'abort',
           category: (function() {
@@ -2810,6 +2942,7 @@ const fgCtx = fgCanvas.getContext('2d');
 let fgRects = [];
 let _fgCacheKey = '';
 let _fgCachedResult = null;
+let fgLastRange = [0, timeDuration];
 
 function buildFlamegraph(tStart, tEnd) {
   const cacheKey = tStart.toFixed(6) + ':' + tEnd.toFixed(6) + ':' +
@@ -2875,9 +3008,158 @@ const FG_ROW_HEIGHT = 20;
 const FG_FONT_SIZE = 11;
 const FG_MIN_WIDTH_PX = 2;
 
+function formatFlamegraphDuration(seconds) {
+  if (seconds < 0.001) return (seconds * 1e6).toFixed(0) + 'µs';
+  if (seconds < 1) return (seconds * 1000).toFixed(2) + 'ms';
+  return seconds.toFixed(3) + 's';
+}
+
+function formatFlamegraphOffset(seconds) {
+  return seconds.toFixed(6) + 's';
+}
+
+function escapeMarkdownText(text) {
+  return String(text || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\|/g, '\\|')
+    .replace(/`/g, '\\`')
+    .replace(/\n+/g, ' ');
+}
+
+function aggregateFlamegraphFrames(node, totals) {
+  const children = Object.values(node.children || {});
+  for (const child of children) {
+    let entry = totals.get(child.name);
+    if (!entry) {
+      entry = {name: child.name, count: 0, self: 0, occurrences: 0};
+      totals.set(child.name, entry);
+    }
+    entry.count += child.count || 0;
+    entry.self += child._self || 0;
+    entry.occurrences++;
+    aggregateFlamegraphFrames(child, totals);
+  }
+}
+
+function appendFlamegraphTreeLines(lines, node, totalSamples, depth, maxDepth, maxChildren) {
+  const indent = '  '.repeat(depth);
+  const pct = totalSamples > 0 ? ((node.count / totalSamples) * 100).toFixed(1) : '0.0';
+  const selfPct = totalSamples > 0 ? ((node._self / totalSamples) * 100).toFixed(1) : '0.0';
+  let line = `${indent}- ${node.name} — ${node.count} samples (${pct}%)`;
+  if (node._self > 0) line += `, self ${node._self} (${selfPct}%)`;
+  lines.push(line);
+  if (depth >= maxDepth) return;
+
+  const children = Object.values(node.children || {}).sort((a, b) => b.count - a.count);
+  const visibleChildren = children.slice(0, maxChildren);
+  for (const child of visibleChildren) {
+    appendFlamegraphTreeLines(lines, child, totalSamples, depth + 1, maxDepth, maxChildren);
+  }
+  const hiddenCount = children.length - visibleChildren.length;
+  if (hiddenCount > 0) {
+    lines.push(`${'  '.repeat(depth + 1)}- … ${hiddenCount} more child${hiddenCount === 1 ? '' : 'ren'}`);
+  }
+}
+
+function getFlamegraphFilterSummary() {
+  const activeStates = hoverState
+    ? [(VM_STATE_LABELS[hoverState] || hoverState) + ' (hover preview)']
+    : Array.from(enabledStates)
+      .sort()
+      .map(state => VM_STATE_LABELS[state] || state);
+
+  const activeSections = hoverSection
+    ? [(hoverSection === SECTION_OTHER ? 'other' : hoverSection) + ' (hover preview)']
+    : Array.from(enabledSections)
+      .sort()
+      .map(section => section === SECTION_OTHER ? 'other' : section);
+
+  return {
+    states: activeStates.length > 0 ? activeStates : ['none'],
+    sections: activeSections.length > 0 ? activeSections : ['none'],
+  };
+}
+
+function buildFlamegraphSummaryMarkdown(tStart, tEnd) {
+  const {root, totalSamples} = buildFlamegraph(tStart, tEnd);
+  const filters = getFlamegraphFilterSummary();
+  const duration = Math.max(0, tEnd - tStart);
+  const lines = [
+    '# Flamegraph Summary',
+    '',
+    `- Window: ${formatFlamegraphOffset(tStart)} → ${formatFlamegraphOffset(tEnd)} (${formatFlamegraphDuration(duration)})`,
+    `- Samples: ${totalSamples}`,
+    `- VM states: ${filters.states.join(', ')}`,
+    `- Sections: ${filters.sections.join(', ')}`,
+  ];
+
+  if (hoverState || hoverSection) {
+    lines.push(`- Hover preview: ${[
+      hoverState ? `state=${VM_STATE_LABELS[hoverState] || hoverState}` : null,
+      hoverSection ? `section=${hoverSection === SECTION_OTHER ? 'other' : hoverSection}` : null,
+    ].filter(Boolean).join(', ')}`);
+  }
+
+  if (totalSamples === 0) {
+    lines.push('', 'No samples matched the current range and filter selection.');
+    return lines.join('\n');
+  }
+
+  const totals = new Map();
+  aggregateFlamegraphFrames(root, totals);
+  const hottestFrames = Array.from(totals.values())
+    .sort((a, b) => (b.count - a.count) || (b.self - a.self) || a.name.localeCompare(b.name))
+    .slice(0, 12);
+  const hottestSelfFrames = Array.from(totals.values())
+    .filter(entry => entry.self > 0)
+    .sort((a, b) => (b.self - a.self) || (b.count - a.count) || a.name.localeCompare(b.name))
+    .slice(0, 12);
+
+  lines.push('', '## Hottest Frames', '', '| Frame | Inclusive | Inclusive % | Self | Self % | Seen |', '| --- | ---: | ---: | ---: | ---: | ---: |');
+  for (const entry of hottestFrames) {
+    const inclusivePct = ((entry.count / totalSamples) * 100).toFixed(1) + '%';
+    const selfPct = ((entry.self / totalSamples) * 100).toFixed(1) + '%';
+    lines.push(`| ${escapeMarkdownText(entry.name)} | ${entry.count} | ${inclusivePct} | ${entry.self} | ${selfPct} | ${entry.occurrences} |`);
+  }
+
+  if (hottestSelfFrames.length > 0) {
+    lines.push('', '## Hottest Self Time', '', '| Frame | Self | Self % | Inclusive | Inclusive % | Seen |', '| --- | ---: | ---: | ---: | ---: | ---: |');
+    for (const entry of hottestSelfFrames) {
+      const selfPct = ((entry.self / totalSamples) * 100).toFixed(1) + '%';
+      const inclusivePct = ((entry.count / totalSamples) * 100).toFixed(1) + '%';
+      lines.push(`| ${escapeMarkdownText(entry.name)} | ${entry.self} | ${selfPct} | ${entry.count} | ${inclusivePct} | ${entry.occurrences} |`);
+    }
+  }
+
+  lines.push('', '## Hottest Call Tree', '');
+  appendFlamegraphTreeLines(lines, root, totalSamples, 0, 5, 5);
+  return lines.join('\n');
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  ta.setSelectionRange(0, ta.value.length);
+  const ok = document.execCommand('copy');
+  document.body.removeChild(ta);
+  if (!ok) throw new Error('copy failed');
+}
+
 function drawFlamegraph(tStart, tEnd) {
   const container = document.getElementById('flamegraph-container');
   if (!container || !container.classList.contains('open')) return;
+  fgLastRange = [tStart, tEnd];
   const {root, maxDepth, totalSamples} = buildFlamegraph(tStart, tEnd);
   const containerW = fgCanvas.parentElement.clientWidth;
   const canvasH = Math.max(400, (maxDepth + 2) * FG_ROW_HEIGHT + 40);
@@ -3013,6 +3295,16 @@ fgCanvas.addEventListener('click', (ev) => {
 });
 
 fgCanvas.addEventListener('mouseleave', () => { hideTooltip(); });
+
+document.getElementById('btn-copy-fg-summary').addEventListener('click', async () => {
+  try {
+    const summary = buildFlamegraphSummaryMarkdown(fgLastRange[0], fgLastRange[1]);
+    await copyTextToClipboard(summary);
+    setFlamegraphCopyStatus('copied markdown summary', false);
+  } catch (err) {
+    setFlamegraphCopyStatus('copy failed', true);
+  }
+});
 
 // --- Init ---
 timelineContainerH = computeDefaultTimelineH();
