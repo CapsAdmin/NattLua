@@ -98,6 +98,8 @@ function META.New()
 		{
 			TempFiles = {},
 			LoadedFiles = {},
+			OpenFiles = {},
+			PublishedDiagnostics = {},
 			debug = false,
 			node_to_type = node_to_type,
 		},
@@ -114,11 +116,15 @@ function META:NodeToType(obj)
 end
 
 function META:GetCompilerConfig(path)
+	local project_config = self.ConfigFunction(path) or {}
 	local cfg = self:GetProjectConfig("get-compiler-config", path) or {}
 	cfg.emitter = cfg.emitter or {}
 	cfg.analyzer = cfg.analyzer or {}
 	cfg.lsp = cfg.lsp or {}
 	cfg.parser = cfg.parser or {}
+	cfg.root_directory = cfg.root_directory or project_config.config_dir or self:GetWorkingDirectory()
+	cfg.parser.root_directory = cfg.parser.root_directory or cfg.root_directory
+	cfg.analyzer.root_directory = cfg.analyzer.root_directory or cfg.root_directory
 
 	if self.workspace_config then
 		if self.workspace_config.removeUnusedOnSave then
@@ -136,6 +142,11 @@ function META:GetCompilerConfig(path)
 	end
 
 	return cfg
+end
+
+function META:IsLightLspMode(path)
+	local cfg = self:GetCompilerConfig(path)
+	return cfg.lsp and (cfg.lsp.analyze == false or cfg.lsp.parse_only) or false
 end
 
 function META:DebugLog(str)
@@ -223,8 +234,11 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 
 	local cfg = self:GetCompilerConfig(path)
 	diagnostics = diagnostics or {}
+	local light_lsp_mode = cfg.lsp and (cfg.lsp.analyze == false or cfg.lsp.parse_only)
 
-	if not lol then
+	if not path and light_lsp_mode then return true end
+
+	if not lol and not light_lsp_mode then
 		if type(cfg.lsp.entry_point) == "table" then
 			if self.debug then print("recompiling entry points from: " .. path) end
 
@@ -286,6 +300,11 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 
 	if not entry_point then return false, "no entry point" end
 
+	if light_lsp_mode then
+		entry_point = path or entry_point
+		cfg.parser.import_validation_only = cfg.parser.import_validation_only ~= false
+	end
+
 	cfg.parser.pre_read_file = function(parser, path)
 		path = path_util.Normalize(path)
 
@@ -312,7 +331,7 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 	cfg.parser.on_parsed_file = function(path, compiler)
 		self:LoadFile(path, compiler.Code, compiler.Tokens, compiler)
 	end
-	cfg.parser.inline_require = true
+	cfg.parser.inline_require = not light_lsp_mode
 	self:DebugLog("[ " .. entry_point .. " ] compiling")
 	local compiler
 
@@ -641,13 +660,44 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 		end
 	end
 
+	local next_published = {}
+	local normalized_path = normalize_path(path)
+	local normalized_entry_point = normalize_path(entry_point)
+	local normalized_on_save_path = normalize_path(on_save_path)
+	local function should_publish(name)
+		name = normalize_path(name)
+
+		return self.OpenFiles[name] or
+			(normalized_path and name == normalized_path) or
+			(normalized_entry_point and name == normalized_entry_point) or
+			(normalized_on_save_path and name == normalized_on_save_path)
+	end
+
 	for name, data in pairs(diagnostics) do
-		if #data > 0 then
-			self:OnDiagnostics(name, data)
-		else
+		if should_publish(name) then
+			next_published[normalize_path(name)] = true
+
+			if #data > 0 then
+				self:OnDiagnostics(name, data)
+			else
+				self:OnClearDiagnostics(name)
+			end
+		end
+	end
+
+	for name in pairs(self.PublishedDiagnostics) do
+		if not next_published[name] and not self.OpenFiles[name] then
 			self:OnClearDiagnostics(name)
 		end
 	end
+
+	for name in pairs(self.OpenFiles) do
+		if not next_published[name] and diagnostics[name] and #diagnostics[name] == 0 then
+			next_published[name] = true
+		end
+	end
+
+	self.PublishedDiagnostics = next_published
 
 	return true
 end
@@ -725,23 +775,47 @@ function META:Format(code, path, extra_emitter_config)
 end
 
 function META:OpenFile(path, code)
+	path = path_util.Normalize(path)
+	self.OpenFiles[path] = true
 	self:SetFileContent(path, code)
-	assert(self:Recompile(path))
+
+	if not self:IsLightLspMode(path) then assert(self:Recompile(path)) end
 end
 
 function META:CloseFile(path)
+	path = path_util.Normalize(path)
+	self.OpenFiles[path] = nil
+	self.PublishedDiagnostics[path] = nil
 	self:SetFileContent(path, nil)
 	self:UnloadFile(path)
+	self:OnClearDiagnostics(path)
 end
 
 function META:UpdateFile(path, code)
+	path = path_util.Normalize(path)
 	self:SetFileContent(path, code)
 	assert(self:Recompile(path))
 end
 
 function META:SaveFile(path)
+	path = path_util.Normalize(path)
 	self:SetFileContent(path, nil)
 	assert(self:Recompile(path, nil, nil, path))
+end
+
+function META:EnsureLoaded(path)
+	path = path_util.Normalize(path)
+
+	if self:IsLoaded(path) then return true end
+
+	local ok, err = self:Recompile(path)
+
+	if not ok then
+		self:DebugLog("[ " .. path .. " ] EnsureLoaded failed: " .. tostring(err))
+		return false
+	end
+
+	return self:IsLoaded(path)
 end
 
 function META:GetAllTokens(path)

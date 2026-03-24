@@ -284,6 +284,7 @@ lsp.methods["textDocument/semanticTokens/full"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 	-- this is not the right place to do this I guess, but it's more reliable and simple
 	lsp.PublishDecorations(path)
+	if not editor_helper:EnsureLoaded(path) then return {data = {}} end
 	return {data = editor_helper:GetSemanticTokens(path)}
 end
 lsp.methods["$/cancelRequest"] = function(params)
@@ -312,10 +313,11 @@ end
 lsp.methods["textDocument/didSave"] = function(params)
 	editor_helper:SaveFile(to_fs_path(params.textDocument.uri))
 end
+
 lsp.methods["textDocument/references"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:IsLoaded(path) then return {} end
+	if not editor_helper:EnsureLoaded(path) then return {} end
 
 	local items = editor_helper:GetReferences(path, params.position.line, params.position.character)
 
@@ -381,7 +383,7 @@ do
 	lsp.methods["textDocument/completion"] = function(params)
 		local path = to_fs_path(params.textDocument.uri)
 
-		if not editor_helper:IsLoaded(path) then
+		if not editor_helper:EnsureLoaded(path) then
 			return {isIncomplete = false, items = {}}
 		end
 
@@ -423,7 +425,7 @@ end
 lsp.methods["textDocument/inlayHint"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:IsLoaded(path) then return {} end
+	if not editor_helper:EnsureLoaded(path) then return {} end
 
 	local result = {}
 
@@ -503,7 +505,7 @@ do
 	lsp.methods["textDocument/documentSymbol"] = function(params)
 		local path = to_fs_path(params.textDocument.uri)
 
-		if not editor_helper:IsLoaded(path) then return {} end
+		if not editor_helper:EnsureLoaded(path) then return {} end
 
 		local nodes = editor_helper:GetSymbolTree(path)
 
@@ -563,7 +565,7 @@ end
 lsp.methods["textDocument/documentHighlight"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:IsLoaded(path) then return {} end
+	if not editor_helper:EnsureLoaded(path) then return {} end
 
 	local highlights = editor_helper:GetUpvalueHighlightRanges(path, params.position.line, params.position.character)
 
@@ -593,7 +595,7 @@ end
 lsp.methods["textDocument/signatureHelp"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:IsLoaded(path) then return {} end
+	if not editor_helper:EnsureLoaded(path) then return {} end
 
 	local result = editor_helper:GetSignatureHelp(path, params.position.line, params.position.character)
 	return result or {signatures = {}, activeSignature = 0, activeParameter = 0}
@@ -601,7 +603,7 @@ end
 lsp.methods["textDocument/rename"] = function(params)
 	local fs_path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:IsLoaded(fs_path) then return {} end
+	if not editor_helper:EnsureLoaded(fs_path) then return {} end
 
 	local lsp_path = to_lsp_path(params.textDocument.uri)
 	local edits = {}
@@ -628,7 +630,7 @@ end
 lsp.methods["textDocument/definition"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:IsLoaded(path) then return {} end
+	if not editor_helper:EnsureLoaded(path) then return {} end
 
 	local node = editor_helper:GetDefinition(path, params.position.line, params.position.character)
 
@@ -637,6 +639,7 @@ lsp.methods["textDocument/definition"] = function(params)
 		local path = node:GetSourcePath() or path
 		path = to_fs_path(path)
 		editor_helper:OpenFile(path, node.Code:GetString())
+		if not editor_helper:EnsureLoaded(path) then return {} end
 		return {
 			uri = to_lsp_path(path),
 			range = get_range(editor_helper:GetCode(path), start, stop),
@@ -648,7 +651,7 @@ end
 lsp.methods["textDocument/hover"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:IsLoaded(path) then return {} end
+	if not editor_helper:EnsureLoaded(path) then return {} end
 
 	local data = editor_helper:GetHover(path, params.position.line, params.position.character)
 

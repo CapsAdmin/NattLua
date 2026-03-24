@@ -63,22 +63,11 @@ function path.Normalize(str--[[#: string]])
 
 	return str
 end
-
-local function exists(path)
-	local f = io.open(path)
-
-	if f then
-		f:close()
-		return true
-	end
-
-	return false
-end
-
 function path.Exists(path)
 	return fs.get_type(path) == "file"
 end
 
+local exists = path.Exists
 
 local function directory_from_path(path)
 	for i = #path, 1, -1 do
@@ -92,6 +81,8 @@ function path.Resolve(path, root_directory, working_directory, file_path)
 	root_directory = root_directory or ""
 	working_directory = working_directory or ""
 
+	if exists(path) then return path end
+
 	if path:sub(1, 1) == "/" then
 		return path
 	elseif path:sub(1, 1) == "~" then
@@ -101,6 +92,22 @@ function path.Resolve(path, root_directory, working_directory, file_path)
 
 		return root_directory .. working_directory .. path
 	else
+		if root_directory ~= "" and path:sub(1, #root_directory) == root_directory then
+			return path
+		end
+
+		if working_directory ~= "" and path:sub(1, #working_directory) == working_directory then
+			return path
+		end
+
+		do
+			local file_directory = file_path and directory_from_path(file_path)
+
+			if file_directory and path:sub(1, #file_directory) == file_directory then
+				return path
+			end
+		end
+
 		if path:sub(1, 2) == "./" then path = path:sub(3) end
 
 		do

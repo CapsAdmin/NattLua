@@ -242,6 +242,193 @@ end
 do
 	local helper = EditorHelper.New()
 	helper:Initialize()
+	local diagnostics_calls = {}
+	local main_path = "./project_root_import/src/main.nlua"
+	local imported_path = "./project_root_import/goluwa/render/render.lua"
+
+	function helper:OnDiagnostics(name, data)
+		table.insert(diagnostics_calls, {
+			name = name,
+			data = data,
+		})
+	end
+
+	helper:SetConfigFunction(function(path)
+		return {
+			config_dir = "project_root_import/",
+			commands = {
+				["get-compiler-config"] = {
+					cb = function()
+						return
+					end,
+				},
+			},
+		}
+	end)
+
+	helper:SetFileContent(main_path, [[local render = import("goluwa/render/render.lua")]])
+	helper:SetFileContent(imported_path, [[return {ok = true}]])
+	helper:Recompile(main_path)
+
+	for _, call in ipairs(diagnostics_calls) do
+		for _, diagnostic in ipairs(call.data) do
+			assert(diagnostic.message:find("error importing file:", nil, true) == nil)
+		end
+	end
+
+	assert(helper:IsLoaded(imported_path))
+end
+
+do
+	local helper = EditorHelper.New()
+	helper:Initialize()
+	local diagnostics_calls = {}
+	local main_path = "./light_mode_import/src/main.nlua"
+	local imported_path = "./light_mode_import/goluwa/render/render.lua"
+
+	function helper:OnDiagnostics(name, data)
+		table.insert(diagnostics_calls, {
+			name = name,
+			data = data,
+		})
+	end
+
+	helper:SetConfigFunction(function(path)
+		return {
+			config_dir = "light_mode_import/",
+			commands = {
+				["get-compiler-config"] = {
+					cb = function()
+						return {
+							lsp = {
+								analyze = false,
+								entry_point = "goluwa/render/render.lua",
+							},
+							parser = {
+								emit_environment = false,
+							},
+						}
+					end,
+				},
+			},
+		}
+	end)
+
+	helper:SetFileContent(main_path, [[local render = import("goluwa/render/render.lua")]])
+	helper:SetFileContent(imported_path, [[return {ok = true}]])
+	helper:Recompile(main_path)
+
+	for _, call in ipairs(diagnostics_calls) do
+		for _, diagnostic in ipairs(call.data) do
+			assert(diagnostic.message:find("error importing file:", nil, true) == nil)
+		end
+	end
+
+	assert(not helper:IsLoaded(imported_path))
+
+	diagnostics_calls = {}
+	helper:SetFileContent(main_path, [[local render = import("goluwa/render/missing.lua")]])
+	helper:Recompile(main_path)
+
+	local import_error
+
+	for _, call in ipairs(diagnostics_calls) do
+		for _, diagnostic in ipairs(call.data) do
+			if diagnostic.message:find("error importing file:", nil, true) then
+				import_error = diagnostic.message
+				break
+			end
+		end
+
+		if import_error then break end
+	end
+
+	assert(import_error)
+	assert(import_error:find("requested path: goluwa/render/missing.lua", nil, true) ~= nil)
+	assert(import_error:find("reason: file not found", nil, true) ~= nil)
+end
+
+do
+	local helper = EditorHelper.New()
+	helper:Initialize()
+	local diagnostics_calls = {}
+	local main_path = "./light_mode_open/src/main.nlua"
+
+	function helper:OnDiagnostics(name, data)
+		table.insert(diagnostics_calls, {
+			name = name,
+			data = data,
+		})
+	end
+
+	helper:SetConfigFunction(function(path)
+		return {
+			config_dir = "light_mode_open/",
+			commands = {
+				["get-compiler-config"] = {
+					cb = function()
+						return {
+							lsp = {
+								analyze = false,
+							},
+							parser = {
+								emit_environment = false,
+							},
+						}
+					end,
+				},
+			},
+		}
+	end)
+
+	helper:OpenFile(main_path, [[local render = import("missing.lua")]])
+	assert(not helper:IsLoaded(main_path))
+	assert(#diagnostics_calls == 0)
+	assert(helper:EnsureLoaded(main_path) == true)
+	assert(helper:IsLoaded(main_path))
+	assert(#diagnostics_calls > 0)
+end
+
+do
+	local helper = EditorHelper.New()
+	local diagnostics_calls = {}
+
+	function helper:OnDiagnostics(name, data)
+		table.insert(diagnostics_calls, {
+			name = name,
+			data = data,
+		})
+	end
+
+	helper:SetConfigFunction(function(path)
+		return {
+			config_dir = "./light_mode_initialize/",
+			commands = {
+				["get-compiler-config"] = {
+					cb = function()
+						return {
+							lsp = {
+								analyze = false,
+								entry_point = "src/entry.nlua",
+							},
+							parser = {
+								emit_environment = false,
+							},
+						}
+					end,
+				},
+			},
+		}
+	end)
+
+	helper:SetFileContent("./light_mode_initialize/src/entry.nlua", [[local x = import("missing.lua")]])
+	helper:Initialize()
+	assert(#diagnostics_calls == 0)
+end
+
+do
+	local helper = EditorHelper.New()
+	helper:Initialize()
 	local format_path = "./main.nlua"
 	local code = [[
 		local a=1
@@ -513,6 +700,20 @@ do
 	helper:UpdateFile(path, [[local a = 1]])
 	helper:Recompile(path)
 	assert(#diagnostics_calls == 0)
+end
+
+do
+	local helper = EditorHelper.New()
+	helper:Initialize()
+	local clears = {}
+
+	function helper:OnClearDiagnostics(name)
+		table.insert(clears, name)
+	end
+
+	helper:OpenFile(path, [[locwal]])
+	helper:CloseFile(path)
+	assert(clears[#clears] == "test.nlua")
 end
 
 _G.TEST = false

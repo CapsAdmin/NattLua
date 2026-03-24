@@ -21,6 +21,23 @@ local function get_import_error_details(requested_path, resolved_path, err)
 	return table.concat(lines, "\n")
 end
 
+local function validate_import_path(self, requested_path, resolved_path, start)
+	if self.config.pre_read_file and self.config.pre_read_file(self, resolved_path) ~= nil then
+		return true
+	end
+
+	if path_util.Exists(resolved_path) then return true end
+
+	self:Error(
+		"error importing file: $1",
+		start,
+		start,
+		get_import_error_details(requested_path, resolved_path, "file not found")
+	)
+
+	return false
+end
+
 --[[#local type { Token, TokenType } = import("~/nattlua/lexer/token.lua")]]
 
 --[[#local type { Node } = import("~/nattlua/parser/node.lua")]]
@@ -892,7 +909,7 @@ return function(META--[[#: any]])
 		)
 			assert(tk_path.type == "string", "expected string token for import path")
 
-			if self.config.skip_import then return end
+			if self.config.skip_import and not self.config.import_validation_only then return end
 
 			if self.dont_hoist_next_import then
 				self.dont_hoist_next_import = false
@@ -932,38 +949,45 @@ return function(META--[[#: any]])
 
 			if tkname.sub_type ~= "require" and key:sub(1, 2) == "./" then key = key:sub(3) end
 
-			if imported[key] == nil then
-				imported[key] = node
-				local root, err = self:ParseFile(
-					path,
-					{
-						root_statement_override = root_node,
-						path = node.path,
-						working_directory = self.config.working_directory,
-						inline_require = not root_node.data_import,
-						cache_imports_like_require = self.config.cache_imports_like_require,
-						on_parsed_node = self.config.on_parsed_node,
-						pre_read_file = self.config.pre_read_file,
-						on_read_file = self.config.on_read_file,
-						on_parsed_file = self.config.on_parsed_file,
-						root_directory = self.config.root_directory,
-					}
-				)
-
-				if not root then
-					self:Error(
-						"error importing file: $1",
-						start,
-						start,
-						get_import_error_details(str, path, err)
-					)
-				end
-
-				imported[key] = root
-				node.RootStatement = root
+			if self.config.import_validation_only then
+				imported[key] = false
+				node.RootStatement = false
+				validate_import_path(self, str, path, start)
 			else
-				-- ugly way of dealing with recursive require
-				node.RootStatement = imported[key]
+
+				if imported[key] == nil then
+					imported[key] = node
+					local root, err = self:ParseFile(
+						path,
+						{
+							root_statement_override = root_node,
+							path = node.path,
+							working_directory = self.config.working_directory,
+							inline_require = not root_node.data_import,
+							cache_imports_like_require = self.config.cache_imports_like_require,
+							on_parsed_node = self.config.on_parsed_node,
+							pre_read_file = self.config.pre_read_file,
+							on_read_file = self.config.on_read_file,
+							on_parsed_file = self.config.on_parsed_file,
+							root_directory = self.config.root_directory,
+						}
+					)
+
+					if not root then
+						self:Error(
+							"error importing file: $1",
+							start,
+							start,
+							get_import_error_details(str, path, err)
+						)
+					end
+
+					imported[key] = root
+					node.RootStatement = root
+				else
+					-- ugly way of dealing with recursive require
+					node.RootStatement = imported[key]
+				end
 			end
 
 			if root_node.data_import and dont_hoist_import then
@@ -985,7 +1009,7 @@ return function(META--[[#: any]])
 		function META:HandleImportDataExpression(node--[[#: Node]], tk_path--[[#: string]], start--[[#: number]])
 			assert(tk_path.type == "string", "expected string token for import path")
 
-			if self.config.skip_import then return end
+			if self.config.skip_import and not self.config.import_validation_only then return end
 
 			local path = tk_path:GetStringValue()
 			node.import_expression = true
@@ -1012,7 +1036,10 @@ return function(META--[[#: any]])
 
 			if key:sub(1, 2) == "./" then key = key:sub(3) end
 
-			if imported[key] == nil then
+			if self.config.import_validation_only then
+				validate_import_path(self, path, node.path, start)
+				node.data = node.data or ""
+			elseif imported[key] == nil then
 				imported[key] = node
 
 				if node.path:sub(-4) == "lua" or node.path:sub(-5) ~= "nlua" then

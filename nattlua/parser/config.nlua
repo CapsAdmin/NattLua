@@ -6,6 +6,7 @@ local type ParserConfig = {
 	root_statement_override = Node,
 	on_parsed_node = function=(ref Table, ref Node)>(ref Node),
 	skip_import = boolean,
+	import_validation_only = boolean,
 	emit_environment = boolean,
 	inline_require = boolean,
 	cache_imports_like_require = boolean,
