@@ -426,7 +426,7 @@ return function(META--[[#: any]])
 
 					if obj:IsExplicitOutputSignature() then
 						-- so if we have explicit return types, just return those
-						self.recursively_called[obj] = obj:GetOutputSignature():Copy()
+						self.recursively_called[obj] = obj:GetOutputSignature():CopyForReturn()
 						return self.recursively_called[obj]
 					end
 

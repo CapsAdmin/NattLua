@@ -91,8 +91,10 @@ local STRING_TYPE = {}
 local NUMBER_TYPE = {}
 
 local function hash(obj)
-	if obj.Type ~= "table" and obj.Type ~= "function" and obj.Type ~= "tuple" then
-		return obj:GetHash(nil)
+	local obj_type = obj.Type
+
+	if obj_type ~= "table" and obj_type ~= "function" and obj_type ~= "tuple" then
+		return obj.Hash or obj:GetHash(nil)
 	end
 end
 
@@ -465,12 +467,75 @@ end
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])--[[#: TUnion]]
 	map = map or {}
 
-	if map[self] then return map[self]--[[# as TUnion]] end -- TODO map[self] doesn't make return map[self] not nil
+	local existing = map[self]
+
+	if existing then return existing--[[# as TUnion]] end -- TODO map[self] doesn't make return map[self] not nil
 	local copy = META.New()
 	map[self] = copy
+	local data = copy.Data
+	local literal_data_cache = copy.literal_data_cache
+	local src = self.Data
 
-	for i, obj in ipairs(self.Data) do
-		add(copy, copy_val(obj, map, copy_tables))
+	for i = 1, #src do
+		local obj = src[i]
+		local mapped = map[obj]
+
+		if mapped then
+			obj = mapped
+		elseif obj.Type == "table" and not copy_tables then
+			-- keep shared table references when the caller explicitly asked for it
+		else
+			map[obj] = obj:Copy(map, copy_tables)
+			obj = map[obj]
+		end
+
+		local s = hash(obj)
+
+		if s then literal_data_cache[s] = obj end
+
+		data[i] = obj
+	end
+
+	copy:CopyInternalsFrom(self)
+	return copy
+end
+
+function META:CopyForReturn(map--[[#: Map<|any, any|> | nil]])--[[#: TUnion]]
+	map = map or {}
+
+	local existing = map[self]
+
+	if existing then return existing--[[# as TUnion]] end
+	local copy = META.New()
+	map[self] = copy
+	local data = copy.Data
+	local literal_data_cache = copy.literal_data_cache
+	local src = self.Data
+
+	for i = 1, #src do
+		local obj = src[i]
+		local obj_type = obj.Type
+
+		if
+			obj_type == "tuple" or
+			obj_type == "union" or
+			obj_type == "table" or
+			obj_type == "function"
+		then
+			local mapped = map[obj]
+
+			if mapped then
+				obj = mapped
+			else
+				obj = obj:CopyForReturn(map)
+			end
+		end
+
+		local s = hash(obj)
+
+		if s then literal_data_cache[s] = obj end
+
+		data[i] = obj
 	end
 
 	copy:CopyInternalsFrom(self)

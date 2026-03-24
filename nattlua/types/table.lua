@@ -938,35 +938,158 @@ local function copy_val(val, map, copy_tables)
 	return map[val]
 end
 
+local function copy_val_for_return(val, map)
+	if not val then return val end
+
+	local val_type = val.Type
+
+	if
+		val_type ~= "tuple" and
+		val_type ~= "union" and
+		val_type ~= "table" and
+		val_type ~= "function"
+	then
+		return val
+	end
+
+	if map[val] then return map[val] end
+
+	return (val--[[# as any]]):CopyForReturn(map)
+end
+
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	map = map or {}
 
-	if map[self] then return map[self] end
+	local existing = map[self]
+
+	if existing then return existing end
 
 	local copy = META.New()
+	local d = copy.Data--[[# as any]]
+	local literal_data_cache = copy.literal_data_cache
 	map[self] = copy -- map any lua references from self to this new copy
-	for i, keyval in ipairs(self.Data) do
-		local k = copy_val(keyval.key, map, copy_tables)--[[# as TBaseType]]
-		local v = copy_val(keyval.val, map, copy_tables)--[[# as TBaseType]]
-		local d = copy.Data--[[# as any]]
-		d[i] = {key = k, val = v}--[[# as any]]
-		write_cache(copy, k, d[i])
+	local src = self.Data
+
+	for i = 1, #src do
+		local keyval = src[i]
+		local k = keyval.key
+		local mapped = map[k]
+
+		if mapped then
+			k = mapped
+		else
+			map[k] = k:Copy(map, copy_tables)
+			k = map[k]
+		end
+
+		local v = keyval.val
+		mapped = map[v]
+
+		if mapped then
+			v = mapped
+		else
+			map[v] = v:Copy(map, copy_tables)
+			v = map[v]
+		end
+
+		local entry = {key = k, val = v}--[[# as any]]
+		d[i] = entry
+		local hash = get_hash(k)
+
+		if hash then literal_data_cache[hash] = entry end
 	end
 
 	copy:CopyInternalsFrom(self)
 	copy.MetaTable = self.MetaTable
 	copy.Contract = self.Contract
-	copy:SetAnalyzerEnvironment(self:GetAnalyzerEnvironment())
+	copy.AnalyzerEnvironment = self.AnalyzerEnvironment
 	copy.mutations = self.mutations or false
-	copy:SetCreationScope(self:GetCreationScope())
+	copy.CreationScope = self.CreationScope
 	copy.UniqueID = self.UniqueID
-	copy:SetName(self:GetName())
-	copy:SetTypeOverride(self:GetTypeOverride())
-	copy:SetReferenceId(self:GetReferenceId())
-	copy:SetMutationLimit(self:GetMutationLimit())
+	copy.Name = self.Name
+	copy.TypeOverride = self.TypeOverride
+	copy.ReferenceId = self.ReferenceId
+	copy.MutationLimit = self.MutationLimit
 
 	if self:GetSelfArgument() then
-		copy:SetSelfArgument(self:GetSelfArgument():Copy(map, copy_tables))
+		copy.SelfArgument = self.SelfArgument:Copy(map, copy_tables)
+	end
+
+	return copy
+end
+
+function META:CopyForReturn(map--[[#: Map<|any, any|> | nil]])
+	map = map or {}
+
+	local existing = map[self]
+
+	if existing then return existing end
+
+	local copy = META.New()
+	local d = copy.Data--[[# as any]]
+	local literal_data_cache = copy.literal_data_cache
+	map[self] = copy
+	local src = self.Data
+
+	for i = 1, #src do
+		local keyval = src[i]
+		local k = keyval.key
+		local k_type = k.Type
+
+		if
+			k_type == "tuple" or
+			k_type == "union" or
+			k_type == "table" or
+			k_type == "function"
+		then
+			local mapped = map[k]
+
+			if mapped then
+				k = mapped
+			else
+				k = k:CopyForReturn(map)
+			end
+		end
+
+		local v = keyval.val
+		local v_type = v.Type
+
+		if
+			v_type == "tuple" or
+			v_type == "union" or
+			v_type == "table" or
+			v_type == "function"
+		then
+			local mapped = map[v]
+
+			if mapped then
+				v = mapped
+			else
+				v = v:CopyForReturn(map)
+			end
+		end
+
+		local entry = {key = k, val = v}--[[# as any]]
+		d[i] = entry
+		local hash = get_hash(k)
+
+		if hash then literal_data_cache[hash] = entry end
+	end
+
+	copy:CopyInternalsFrom(self)
+	copy.MetaTable = self.MetaTable
+	copy.Contract = self.Contract
+	copy.AnalyzerEnvironment = self.AnalyzerEnvironment
+	copy.mutations = self.mutations or false
+	copy.CreationScope = self.CreationScope
+	copy.UniqueID = self.UniqueID
+	copy.Name = self.Name
+	copy.TypeOverride = self.TypeOverride
+	copy.ReferenceId = false
+	copy.MutationLimit = self.MutationLimit
+
+	if self:GetSelfArgument() then
+		copy.SelfArgument = self.SelfArgument:CopyForReturn(map)
 	end
 
 	return copy

@@ -23,12 +23,7 @@ return function(analyzer, obj, input)
 		end
 	end
 
-	local ret = obj:GetOutputSignature():Copy()
-
-	-- clear any reference id from the returned arguments
-	for _, v in ipairs(ret:GetData()) do
-		if v.Type == "table" then v:SetReferenceId(false) end
-	end
+	local ret = obj:GetOutputSignature():CopyForReturn()
 
 	return ret
 end

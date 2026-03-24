@@ -111,7 +111,9 @@ end
 function META:Copy(map--[[#: Map<|any, TTuple|> | nil]], copy_tables--[[#: boolean | nil]])--[[#: TTuple]]
 	map = map or {}
 
-	if map[self] then return assert(map[self]) end
+	local existing = map[self]
+
+	if existing then return existing end
 
 	local copy = META.New({})
 	map[self] = copy
@@ -120,11 +122,88 @@ function META:Copy(map--[[#: Map<|any, TTuple|> | nil]], copy_tables--[[#: boole
 	local len = #data
 
 	for i = 1, len do
-		copy_data[i] = copy_val(assert(data[i]), map, copy_tables)
+		local val = data[i]
+		local mapped = map[val]
+
+		if mapped then
+			copy_data[i] = mapped
+		else
+			map[val] = val:Copy(map, copy_tables)
+			copy_data[i] = map[val]
+		end
 	end
 
 	copy.Repeat = self.Repeat
 	copy.Remainder = copy_val(self.Remainder, map, copy_tables) or false
+	copy.Unpackable = self.Unpackable
+	copy:CopyInternalsFrom(self)
+	return copy
+end
+
+function META:CopyForReturn(map--[[#: Map<|any, TTuple|> | nil]])--[[#: TTuple]]
+	map = map or {}
+
+	local existing = map[self]
+
+	if existing then return existing end
+
+	local copy = META.New({})
+	map[self] = copy
+	local data = self.Data
+	local copy_data = copy.Data
+	local len = #data
+
+	for i = 1, len do
+		local val = data[i]
+		local val_type = val.Type
+
+		if
+			val_type ~= "tuple" and
+			val_type ~= "union" and
+			val_type ~= "table" and
+			val_type ~= "function"
+		then
+			copy_data[i] = val
+		else
+			local mapped = map[val]
+
+			if mapped then
+				copy_data[i] = mapped
+			else
+				copy_data[i] = val:CopyForReturn(map)
+			end
+		end
+	end
+
+	copy.Repeat = self.Repeat
+
+	do
+		local remainder = self.Remainder
+
+		if not remainder then
+			copy.Remainder = false
+		else
+			local remainder_type = remainder.Type
+
+			if
+				remainder_type ~= "tuple" and
+				remainder_type ~= "union" and
+				remainder_type ~= "table" and
+				remainder_type ~= "function"
+			then
+				copy.Remainder = remainder
+			else
+				local mapped = map[remainder]
+
+				if mapped then
+					copy.Remainder = mapped
+				else
+					copy.Remainder = remainder:CopyForReturn(map)
+				end
+			end
+		end
+	end
+
 	copy.Unpackable = self.Unpackable
 	copy:CopyInternalsFrom(self)
 	return copy

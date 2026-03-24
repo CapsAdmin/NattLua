@@ -133,27 +133,122 @@ end
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	map = map or {}
 
-	if map[self] then return map[self] end
+	local existing = map[self]
+
+	if existing then return existing end
 
 	local copy = META.New()
 	map[self] = copy
-	copy:SetInputSignature(copy_val(self.InputSignature, map, copy_tables)--[[# as TTuple | false]])
-	copy:SetOutputSignature(copy_val(self.OutputSignature, map, copy_tables)--[[# as TTuple | false]])
-	copy:SetUpvaluePosition(self:GetUpvaluePosition())
-	copy:SetAnalyzerFunction(self:GetAnalyzerFunction())
-	copy:SetScope(self:GetScope())
+
+	do
+		local input = self.InputSignature
+
+		if input then
+			local mapped = map[input]
+
+			if mapped then
+				copy.InputSignature = mapped
+			else
+				map[input] = input:Copy(map, copy_tables)
+				copy.InputSignature = map[input]
+			end
+		else
+			copy.InputSignature = false
+		end
+	end
+
+	do
+		local output = self.OutputSignature
+
+		if output then
+			local mapped = map[output]
+
+			if mapped then
+				copy.OutputSignature = mapped
+			else
+				map[output] = output:Copy(map, copy_tables)
+				copy.OutputSignature = map[output]
+			end
+		else
+			copy.OutputSignature = false
+		end
+	end
+
+	copy.UpvaluePosition = self.UpvaluePosition
+	copy.AnalyzerFunction = self.AnalyzerFunction
+	copy.Scope = self.Scope
 	copy:CopyInternalsFrom(self)
-	copy:SetFunctionBodyNode(self:GetFunctionBodyNode())
-	copy:SetInputIdentifiers(self:GetInputIdentifiers())
-	copy:SetCalled(self:IsCalled())
-	copy:SetExplicitInputSignature(self:IsExplicitInputSignature())
-	copy:SetExplicitOutputSignature(self:IsExplicitOutputSignature())
-	copy:SetArgumentsInferred(self:IsArgumentsInferred())
-	copy:SetPreventInputArgumentExpansion(self:GetPreventInputArgumentExpansion())
-	copy:SetLiteralFunction(self:IsLiteralFunction())
-	copy:SetInputArgumentsInferred(self:IsInputArgumentsInferred())
-	copy:SetInputModifiers(self.InputModifiers)
-	copy:SetOutputModifiers(self.OutputModifiers)
+	copy.FunctionBodyNode = self.FunctionBodyNode
+	copy.InputIdentifiers = self.InputIdentifiers
+	copy.Called = self.Called
+	copy.ExplicitInputSignature = self.ExplicitInputSignature
+	copy.ExplicitOutputSignature = self.ExplicitOutputSignature
+	copy.ArgumentsInferred = self.ArgumentsInferred
+	copy.PreventInputArgumentExpansion = self.PreventInputArgumentExpansion
+	copy.LiteralFunction = self.LiteralFunction
+	copy.InputArgumentsInferred = self.InputArgumentsInferred
+	copy.InputModifiers = self.InputModifiers
+	copy.OutputModifiers = self.OutputModifiers
+	return copy
+end
+
+function META:CopyForReturn(map--[[#: Map<|any, any|> | nil]])
+	map = map or {}
+
+	local existing = map[self]
+
+	if existing then return existing end
+
+	local copy = META.New()
+	map[self] = copy
+
+	do
+		local input = self.InputSignature
+
+		if input then
+			local mapped = map[input]
+
+			if mapped then
+				copy.InputSignature = mapped
+			else
+				copy.InputSignature = input:CopyForReturn(map)
+			end
+		else
+			copy.InputSignature = false
+		end
+	end
+
+	do
+		local output = self.OutputSignature
+
+		if output then
+			local mapped = map[output]
+
+			if mapped then
+				copy.OutputSignature = mapped
+			else
+				copy.OutputSignature = output:CopyForReturn(map)
+			end
+		else
+			copy.OutputSignature = false
+		end
+	end
+
+	copy.UpvaluePosition = self.UpvaluePosition
+	copy.AnalyzerFunction = self.AnalyzerFunction
+	copy.Scope = self.Scope
+	copy:CopyInternalsFrom(self)
+	copy.FunctionBodyNode = self.FunctionBodyNode
+	copy.InputIdentifiers = self.InputIdentifiers
+	copy.Called = self.Called
+	copy.ExplicitInputSignature = self.ExplicitInputSignature
+	copy.ExplicitOutputSignature = self.ExplicitOutputSignature
+	copy.ArgumentsInferred = self.ArgumentsInferred
+	copy.PreventInputArgumentExpansion = self.PreventInputArgumentExpansion
+	copy.LiteralFunction = self.LiteralFunction
+	copy.InputArgumentsInferred = self.InputArgumentsInferred
+	copy.InputModifiers = self.InputModifiers
+	copy.OutputModifiers = self.OutputModifiers
 	return copy
 end
 

@@ -185,7 +185,7 @@ return function(analyzer, obj, input)
 	if obj:IsLiteralFunction() then
 		for _, v in ipairs(input:GetData()) do
 			if v.Type ~= "function" and not v:IsLiteral() then
-				return output_signature:Copy()
+				return output_signature:CopyForReturn()
 			end
 		end
 	end
@@ -213,7 +213,7 @@ return function(analyzer, obj, input)
 
 	if not combinations then
 		analyzer:Error(error_msg)
-		return output_signature:Copy()
+		return output_signature:CopyForReturn()
 	end
 
 	for _, arguments in ipairs(combinations) do

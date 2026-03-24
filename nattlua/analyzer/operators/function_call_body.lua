@@ -672,11 +672,7 @@ return function(self, obj, input)
 
 	if function_node.environment == "typesystem" then return output end
 
-	local contract = output_signature:Copy()
-
-	for _, v in ipairs(contract:GetData()) do
-		if v.Type == "table" then v:SetReferenceId(false) end
-	end
+	local contract = output_signature:CopyForReturn()
 
 	-- if a return type is marked with ref, it will pass the ref value back to the caller
 	-- a bit like generics

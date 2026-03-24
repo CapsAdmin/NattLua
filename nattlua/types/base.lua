@@ -58,6 +58,10 @@ return function()
 			return self
 		end
 
+		function META:CopyForReturn()
+			return self
+		end
+
 		function META:CopyInternalsFrom(obj--[[#: TBaseType]])
 			self:SetContract(obj:GetContract())
 		end

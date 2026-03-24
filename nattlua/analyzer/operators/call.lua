@@ -8,6 +8,27 @@ local ipairs = _G.ipairs
 local table_insert = _G.table.insert
 local math_huge = _G.math.huge
 
+local function needs_input_copy(obj)
+	if obj.Type == "any" then return true end
+
+	if obj.Type == "function" then return obj:GetFunctionBodyNode() ~= nil end
+
+	if obj.Type == "tuple" then
+		obj = obj:GetFirstValue()
+		return obj and needs_input_copy(obj) or false
+	end
+
+	if obj.Type == "union" then
+		for _, val in ipairs(obj:GetData()) do
+			if needs_input_copy(val) then return true end
+		end
+
+		return false
+	end
+
+	return false
+end
+
 local function union_call(self, analyzer, input, call_node)
 	if false--[[# as true]] then return end
 
@@ -66,7 +87,8 @@ local function union_call(self, analyzer, input, call_node)
 				)
 			else
 				if input:IsSubsetOfTuple(obj:GetInputSignature()) then
-					local res, reason = analyzer:Call(obj, input:Copy(), call_node, true)
+					local arguments = needs_input_copy(obj) and input:Copy() or input
+					local res, reason = analyzer:Call(obj, arguments, call_node, true)
 
 					if res then return res end
 
@@ -87,7 +109,8 @@ local function union_call(self, analyzer, input, call_node)
 			if recursively_called then return recursively_called end
 		end
 
-		local val, err = analyzer:Call(obj, input:Copy(), call_node, true)
+		local arguments = needs_input_copy(obj) and input:Copy() or input
+		local val, err = analyzer:Call(obj, arguments, call_node, true)
 
 		if not val then
 			analyzer:Error(err)
@@ -215,7 +238,7 @@ do
 				analyzer:GetScope():CertainReturn()
 			end
 
-			return self:GetOutputSignature():Copy()
+			return self:GetOutputSignature():CopyForReturn()
 		end
 
 		if
@@ -234,7 +257,7 @@ do
 				analyzer:GetScope():CertainReturn()
 			end
 
-			return self:GetOutputSignature():Copy()
+			return self:GetOutputSignature():CopyForReturn()
 		end
 
 		local recursively_called = analyzer:PushCallFrame(self, call_node, not_recursive_call)

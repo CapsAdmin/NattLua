@@ -82,7 +82,7 @@ local function postfix_call(self, self_arg, node, callable)
 		self:Error(err)
 
 		if callable.Type == "function" and callable:IsExplicitOutputSignature() then
-			return callable:GetOutputSignature():Copy()
+			return callable:GetOutputSignature():CopyForReturn()
 		end
 	end
 

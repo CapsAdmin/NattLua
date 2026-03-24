@@ -17,12 +17,7 @@ META:GetSet("Data", false--[[# as string | false]])
 META:GetSet("Hash", false--[[# as string]])
 META:GetSet("PatternContract", false--[[# as false | string]])
 local STRING_ID = "string"
-
-local function compute_hash(data--[[#: nil | string]], pattern--[[#: nil | string]])--[[#: string]]
-	if pattern then return pattern elseif data then return data end
-
-	return STRING_ID
-end
+local new
 
 function META:GetHashForMutationTracking()
 	if self.Data then return self.Hash end
@@ -35,11 +30,9 @@ function META:GetHashForMutationTracking()
 end
 
 function META:Copy()
-	local copy = self.New(self.Data)
-	copy:SetPatternContract(self:GetPatternContract())
-	copy:SetMetaTable(self:GetMetaTable())
+	local copy = new(self.Data or nil, self.PatternContract or nil)
+	copy.MetaTable = self:GetMetaTable()
 	copy:CopyInternalsFrom(self)
-	copy.Hash = compute_hash(copy.Data, copy.PatternContract)
 	copy.lua_compiler = self.lua_compiler
 	return copy
 end
@@ -56,7 +49,7 @@ function META:Get()
 	return false, error_messages.index_string_attempt()
 end
 
-local function new(data--[[#: string | nil]], pattern--[[#: string | nil]])
+function new(data--[[#: string | nil]], pattern--[[#: string | nil]])
 	return META.NewObject{
 		Type = "string",
 		Data = data or false,
@@ -65,7 +58,7 @@ local function new(data--[[#: string | nil]], pattern--[[#: string | nil]])
 		Upvalue = false,
 		Contract = false,
 		MetaTable = false,
-		Hash = compute_hash(data, pattern),
+		Hash = pattern or data or STRING_ID,
 		lua_compiler = false,
 	}
 end
@@ -88,7 +81,13 @@ function META.New(data--[[#: string | nil]], pattern--[[#: string | nil]])
 	local analyzer = context:GetCurrentAnalyzer()
 
 	if analyzer then
-		self:SetMetaTable(analyzer:GetDefaultEnvironment("typesystem").string_metatable)
+		local default_environment = analyzer.default_environment
+
+		if default_environment then
+			self.MetaTable = default_environment.typesystem.string_metatable
+		else
+			self:SetMetaTable(analyzer:GetDefaultEnvironment("typesystem").string_metatable)
+		end
 	end
 
 	return self
@@ -118,7 +117,7 @@ function META:CopyLiteralness(obj--[[#: TBaseType]])
 
 		if not obj:IsLiteral() then
 			self.Data = false
-			self.Hash = compute_hash(self.Data, self.PatternContract)
+			self.Hash = self.PatternContract or STRING_ID
 		end
 	end
 
