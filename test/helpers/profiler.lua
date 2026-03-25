@@ -210,7 +210,7 @@ type Profiler.@SelfArgument = {
 	id = string,
 	path = string,
 	file_url = string,
-	mode = string,
+	profile_mode = string,
 	depth = number,
 	sampling_rate = number,
 	flush_interval = number,
@@ -422,7 +422,8 @@ do
 			id = string | nil,
 			path = string | nil,
 			file_url = string | nil,
-			mode = "line" | "function" | nil,
+			profile_mode = "line" | "function" | "none" | nil,
+			trace_recorder = boolean | nil,
 			depth = number | nil,
 			sampling_rate = number | nil,
 			flush_interval = number | nil,
@@ -435,7 +436,7 @@ do
 		self.id = config.id or "jit_profiler"
 		self.path = config.path or "./profiler_output.html"
 		self.file_url = config.file_url or "vscode://file/${path}:${line}:1"
-		self.mode = config.mode or "line"
+		self.profile_mode = config.profile_mode or "line"
 		self.depth = config.depth or 999
 		self.sampling_rate = config.sampling_rate or 1
 		self.flush_interval = config.flush_interval or 3
@@ -476,45 +477,47 @@ do
 			self.file = f
 		end
 
-		do
-			self.trace_event_fn = function(what, tr, func, pc, otr, oex)
-				if what == "start" then
-					on_trace_start(self, tr, func, pc, otr, oex)
-				elseif what == "stop" then
-					on_trace_stop(self, tr, func)
-				elseif what == "abort" then
-					on_trace_abort(self, tr, func, pc, otr, oex)
-				elseif what == "flush" then
-					on_trace_flush(self)
-				end
-			end--[[# as jit_attach_trace]]
-			self.trace_event_safe_fn = function(what, tr, func, pc, otr, oex)
-				local ok, err = pcall(self.trace_event_fn--[[# as any]], what, tr, func, pc, otr, oex)
+		if config.trace_recorder == nil or config.trace_recorder then
+			do
+				self.trace_event_fn = function(what, tr, func, pc, otr, oex)
+					if what == "start" then
+						on_trace_start(self, tr, func, pc, otr, oex)
+					elseif what == "stop" then
+						on_trace_stop(self, tr, func)
+					elseif what == "abort" then
+						on_trace_abort(self, tr, func, pc, otr, oex)
+					elseif what == "flush" then
+						on_trace_flush(self)
+					end
+				end--[[# as jit_attach_trace]]
+				self.trace_event_safe_fn = function(what, tr, func, pc, otr, oex)
+					local ok, err = pcall(self.trace_event_fn--[[# as any]], what, tr, func, pc, otr, oex)
 
-				if not ok then
-					io.write("error in trace event (" .. tostring(what) .. "): " .. tostring(err) .. "\n")
-				end
-			end--[[# as jit_attach_trace]]
-			jit.attach(self.trace_event_safe_fn, "trace")
+					if not ok then
+						io.write("error in trace event (" .. tostring(what) .. "): " .. tostring(err) .. "\n")
+					end
+				end--[[# as jit_attach_trace]]
+				jit.attach(self.trace_event_safe_fn, "trace")
+			end
+
+			do
+				self.record_event_fn = function(tr, func, pc, depth)
+					on_trace_record(self, tr, func, pc, depth)
+				end--[[# as jit_attach_record]]
+				self.record_event_safe_fn = function(tr, func, pc, depth)
+					local ok, err = pcall(self.record_event_fn--[[# as any]], tr, func, pc, depth)
+
+					if not ok then io.write("error in record event: " .. tostring(err) .. "\n") end
+				end--[[# as jit_attach_record]]
+				jit.attach(self.record_event_safe_fn, "record")
+			end
 		end
 
-		do
-			self.record_event_fn = function(tr, func, pc, depth)
-				on_trace_record(self, tr, func, pc, depth)
-			end--[[# as jit_attach_record]]
-			self.record_event_safe_fn = function(tr, func, pc, depth)
-				local ok, err = pcall(self.record_event_fn--[[# as any]], tr, func, pc, depth)
-
-				if not ok then io.write("error in record event: " .. tostring(err) .. "\n") end
-			end--[[# as jit_attach_record]]
-			jit.attach(self.record_event_safe_fn, "record")
-		end
-
-		do
+		if self.profile_mode ~= "none" then
 			local dumpstack = jprofile.dumpstack
 			local depth = self.depth
 
-			jprofile.start((self.mode == "line" and "l" or "f") .. "i" .. self.sampling_rate, function(thread, sample_count, vmstate)
+			jprofile.start((self.profile_mode == "line" and "l" or "f") .. "i" .. self.sampling_rate, function(thread, sample_count, vmstate)
 				self:EmitEvent{
 					type = "sample",
 					stack = dumpstack(thread, "pl\n", depth),
