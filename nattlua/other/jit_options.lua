@@ -145,7 +145,7 @@ function jit_options.SetOptimized()
 			-- size of each machine code area (in KBytes).
 			-- See: https://devblogs.microsoft.com/oldnewthing/20031008-00/?p=42223
 			-- Could go as low as 4K, but the mmap() overhead would be rather high.
-			sizemcode = 64, -- default: jit.os == "Windows" or GC64 and 64 or 32
+			sizemcode = 512, -- default: jit.os == "Windows" or GC64 and 64 or 32
 			-- trace size limits
 			maxrecord = 8000, -- default: 4000 | Max number of recorded IR instructions
 			maxirconst = 2000, -- default: 500 | Max number of IR constants of a trace
