@@ -185,19 +185,20 @@ local function find_ident(node, real_node)
 	end
 end
 
-local function walk_cdeclarations(node, callback)
+local function walk_cdeclarations(node, callback, ...)
 	local state = {}
+	local args = {...}
 
 	for _, node in ipairs(node.statements) do
 		if node.Type == "expression_c_declaration" then
 			local node, cdecl, real_node = walk_cdecl(state, node)
 			local ident = find_ident(cdecl.of, real_node)
-			callback(cdecl.of, ident, false, real_node)
+			callback(cdecl.of, ident, false, real_node, unpack(args))
 		elseif node.Type == "expression_typedef" then
 			for _, node in ipairs(node.decls) do
 				local node, cdecl, real_node = walk_cdecl(state, node)
 				local ident = find_ident(cdecl.of, real_node)
-				callback(cdecl.of, ident, true, real_node)
+				callback(cdecl.of, ident, true, real_node, unpack(args))
 			end
 		end
 	end

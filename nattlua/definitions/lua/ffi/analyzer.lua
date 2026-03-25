@@ -233,34 +233,33 @@ local function cast(self, decl)
 	error("unknown type " .. decl.type)
 end
 
+local function callback(decl, ident, typedef, _, self, process_type, mode)
+	if ident == "TYPEOF_CDECL" then self.super_hack = true -- TODO
+	end
+
+	local obj = cast(self, decl)
+	local key = LString(ident)
+
+	if typedef then
+		obj = process_type(key, obj, true, mode)
+		self.type_table:Set(key, obj)
+	else
+		obj = process_type(key, obj, false, mode)
+		self.vars_table:Set(key, obj)
+	end
+
+	if ident == "TYPEOF_CDECL" then
+		self.captured = obj:GetData()[1].val:GetInputSignature():GetData()[1]
+	end
+
+	if ident == "TYPEOF_CDECL" then self.super_hack = false -- TODO
+	end
+end
+
 function META:AnalyzeRoot(ast, vars, typs, process_type, mode)
 	self.type_table = typs or Table()
 	self.vars_table = vars or Table()
-
-	local function callback(decl, ident, typedef)
-		if ident == "TYPEOF_CDECL" then self.super_hack = true -- TODO
-		end
-
-		local obj = cast(self, decl)
-		local key = LString(ident)
-
-		if typedef then
-			obj = process_type(key, obj, true, mode)
-			self.type_table:Set(key, obj)
-		else
-			obj = process_type(key, obj, false, mode)
-			self.vars_table:Set(key, obj)
-		end
-
-		if ident == "TYPEOF_CDECL" then
-			self.captured = obj:GetData()[1].val:GetInputSignature():GetData()[1]
-		end
-
-		if ident == "TYPEOF_CDECL" then self.super_hack = false -- TODO
-		end
-	end
-
-	walk_cdeclarations(ast, callback)
+	walk_cdeclarations(ast, callback, self, process_type, mode)
 	return self.vars_table, self.type_table
 end
 
