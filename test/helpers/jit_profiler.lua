@@ -1507,7 +1507,7 @@ function _computeVisibleSpans(lo, hi) {
     let anc = selectedSpan;
     while (anc) {
       selectedTree.add(anc.uid);
-      anc = anc.start.parent_id ? spanByUid[traceUid(anc.start.generation, anc.start.parent_id)] : null;
+      anc = anc.parent_uid ? spanByUid[anc.parent_uid] : null;
     }
     const q = [selectedSpan];
     while (q.length) {
@@ -1698,7 +1698,7 @@ function _updateSelectionHeader(lo, hi) {
   if (currentUid === _traceLastSelectedUid) return;
   _traceLastSelectedUid = currentUid;
   if (selectedSpan) {
-    hdr.innerHTML = clearSelectionHtml(selectedSpan.id, 'Showing tree for #' + selectedSpan.id);
+    hdr.innerHTML = clearSelectionHtml(selectedSpan.id, 'Showing tree for ' + traceDisplayId(selectedSpan));
     wireClearBtn(lo, hi);
   } else {
     hdr.innerHTML = '';
@@ -1754,11 +1754,11 @@ function renderVisibleTraceRows() {
     const cls = traceStatusClass(s);
     const irCount = s.end.ir_count || '';
     const exitCount = s.end.exit_count || '';
-    const parentInfo = s.start.parent_id ? '#' + s.start.parent_id + ' exit ' + s.start.exit_id : '';
+    const parentInfo = traceParentLabel(s);
     const t = (s.t0 - timeOrigin).toFixed(4) + 's';
     const selCls = (selectedSpan && s.uid === selectedSpan.uid) ? ' selected' : '';
     html += '<tr class="trace-row' + selCls + '" data-span-uid="' + s.uid + '">' +
-      '<td class="col-id">#' + s.id + '</td>' +
+      '<td class="col-id">' + traceDisplayId(s) + '</td>' +
       '<td class="' + cls + ' col-status">' + traceStatusLabel(s) + '</td>' +
       '<td class="col-depth">' + s.depth + '</td>' +
       '<td class="trace-location col-location">' + funcInfoLink(s.location || s.start.func_info) + '</td>' +
@@ -1858,26 +1858,43 @@ function syncTraceListHighlight(span) {
 }
 
 // --- Build trace spans (connect start → stop/abort) with depth-based nesting ---
-// Use generation:id as unique key (uid) so trace ID reuse across flushes is safe
-function traceUid(gen, id) { return gen + ':' + id; }
+// Trace IDs can repeat, even inside the same generation, so keep a per-occurrence uid.
+function tracePendingKey(gen, id) { return gen + ':' + id; }
+function traceUid(gen, id, occurrence) { return gen + ':' + id + ':' + occurrence; }
 const traceSpans = [];
 const spanByUid = {};
 const childrenOfUid = {};
 const flushTimes = [];
 {
   const pending = {};
+  const occurrenceByKey = {};
   for (const e of EVENTS) {
     if (e.type === 'trace_start') {
-      pending[traceUid(e.generation, e.id)] = e;
+      const pendingKey = tracePendingKey(e.generation, e.id);
+      const occurrence = (occurrenceByKey[pendingKey] || 0) + 1;
+      occurrenceByKey[pendingKey] = occurrence;
+      const uid = traceUid(e.generation, e.id, occurrence);
+      const parentPendingKey = e.parent_id != null ? tracePendingKey(e.generation, e.parent_id) : null;
+      const parentPending = parentPendingKey ? pending[parentPendingKey] : null;
+      pending[pendingKey] = {
+        uid: uid,
+        occurrence: occurrence,
+        parent_uid: parentPending ? parentPending.uid : null,
+        event: e,
+      };
     } else if (e.type === 'trace_stop' || e.type === 'trace_abort') {
-      const uid = traceUid(e.generation, e.id);
-      const start = pending[uid];
-      if (start) {
-        const parentUid = start.parent_id != null ? traceUid(start.generation, start.parent_id) : null;
+      const pendingKey = tracePendingKey(e.generation, e.id);
+      const pendingEntry = pending[pendingKey];
+      const start = pendingEntry ? pendingEntry.event : null;
+      if (start && pendingEntry) {
+        const uid = pendingEntry.uid;
+        const parentUid = pendingEntry.parent_uid;
         const span = {
           id: e.id,
           uid: uid,
+          occurrence: pendingEntry.occurrence,
           generation: e.generation,
+          parent_uid: parentUid,
           t0: start.time,
           t1: e.time,
           start: start,
@@ -1899,7 +1916,7 @@ const flushTimes = [];
           if (!childrenOfUid[parentUid]) childrenOfUid[parentUid] = [];
           childrenOfUid[parentUid].push(span);
         }
-        delete pending[uid];
+        delete pending[pendingKey];
       }
     } else if (e.type === 'trace_flush') {
       flushTimes.push(e.time);
@@ -1908,6 +1925,27 @@ const flushTimes = [];
   }
 }
 traceSpans.sort((a, b) => a.t0 - b.t0);
+
+const traceIdCounts = {};
+for (const span of traceSpans) {
+  traceIdCounts[span.id] = (traceIdCounts[span.id] || 0) + 1;
+}
+
+function traceDisplayId(span) {
+  if ((traceIdCounts[span.id] || 0) <= 1) return '#' + span.id;
+  return '#' + span.id + ' g' + span.generation + '.' + span.occurrence;
+}
+
+function traceParentSpan(span) {
+  return span.parent_uid ? (spanByUid[span.parent_uid] || null) : null;
+}
+
+function traceParentLabel(span) {
+  const parentSpan = traceParentSpan(span);
+  if (!parentSpan && !span.start.parent_id) return '';
+  const label = parentSpan ? traceDisplayId(parentSpan) : ('#' + span.start.parent_id + ' g' + span.generation);
+  return span.start.exit_id != null ? label + ' exit ' + span.start.exit_id : label;
+}
 
 // Compute max depth for layout
 let maxTraceDepth = 0;
@@ -2143,7 +2181,7 @@ function mcodeTooltip(layout, offset) {
     const span = layout.generation.spans[seg.traceIndex];
     if (!span) break;
     const relTime = span.end.time - timeOrigin;
-    return '<b>trace #' + span.id + '</b>\n' +
+    return '<b>trace ' + traceDisplayId(span) + '</b>\n' +
       (span.location || span.start.func_info || '?') + '\n' +
       'generation: ' + layout.generation.generation + '\n' +
       'compiled: ' + relTime.toFixed(4) + 's\n' +
@@ -2725,8 +2763,8 @@ function drawTimeline() {
 
     function drawSpanTree(hs, hotColor, dimColor) {
       let root = hs;
-      while (root.start.parent_id && spanByUid[traceUid(root.start.generation, root.start.parent_id)]) {
-        root = spanByUid[traceUid(root.start.generation, root.start.parent_id)];
+      while (root.parent_uid && spanByUid[root.parent_uid]) {
+        root = spanByUid[root.parent_uid];
       }
       tlCtx.setLineDash([3, 3]);
       tlCtx.lineWidth = 1.5;
@@ -2958,17 +2996,17 @@ function formatSpanTooltip(span) {
   if (span.outcome === 'stop') {
     const lt = span.end.linktype || '?';
     const ltColor = traceCategoryColor(traceCategoryFromLinktype(lt));
-    s += `<b style="color:${ltColor}">Trace #${span.id}</b>  <span style="color:${COLORS.textDimmer}">${t0}s</span>  ${dStr}`;
+    s += `<b style="color:${ltColor}">Trace ${traceDisplayId(span)}</b>  <span style="color:${COLORS.textDimmer}">${t0}s</span>  ${dStr}`;
     const e = span.end;
     if (e.linktype) s += `\nLink: <b>${e.linktype}</b>`;
     if (e.link_id) s += ` → #${e.link_id}`;
     if (e.ir_count) s += `\nIR: ${e.ir_count} instructions, ${e.exit_count || 0} exits`;
   } else {
-    s += `<b style="color:${COLORS.abort}">Trace #${span.id} aborted</b>  <span style="color:${COLORS.textDimmer}">${t0}s</span>  ${dStr}`;
+    s += `<b style="color:${COLORS.abort}">Trace ${traceDisplayId(span)} aborted</b>  <span style="color:${COLORS.textDimmer}">${t0}s</span>  ${dStr}`;
     s += `\n<span style="color:${COLORS.abort}">${span.end.abort_reason || '?'}</span>`;
   }
   if (span.start.func_info) s += `\n ${funcInfoLink(span.start.func_info)}`;
-  if (span.start.parent_id) s += `\n↑ parent #${span.start.parent_id} (exit ${span.start.exit_id})`;
+  if (span.start.parent_id) s += `\n↑ parent ${traceParentLabel(span)}`;
   if (span.end.func_info && span.end.func_info !== span.start.func_info) s += `\n   → ${funcInfoLink(span.end.func_info)}`;
   const kids = childrenOfUid[span.uid];
   if (kids && kids.length > 0) {
