@@ -308,6 +308,18 @@ function shared.IsSubsetOf(
 
 		if b.Type == "any" then return true, "b is any" end
 
+		do
+			local contract = a:GetContract()
+
+			if contract and contract ~= a then
+				if contract == b then return true, "same contract" end
+
+				local ok, err = shared.IsSubsetOf(contract, b, visited, max_length)
+
+				if ok then return true, "contract is subset" end
+			end
+		end
+
 		if b.Type == "table" then
 			if a == b then return true, "same type" end
 

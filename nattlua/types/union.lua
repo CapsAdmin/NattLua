@@ -466,7 +466,6 @@ end
 
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | boolean]])--[[#: TUnion]]
 	map = map or {}
-
 	local existing = map[self]
 
 	if existing then return existing--[[# as TUnion]] end -- TODO map[self] doesn't make return map[self] not nil
@@ -483,7 +482,8 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables--[[#: nil | bo
 		if mapped then
 			obj = mapped
 		elseif obj.Type == "table" and not copy_tables then
-			-- keep shared table references when the caller explicitly asked for it
+
+		-- keep shared table references when the caller explicitly asked for it
 		else
 			map[obj] = obj:Copy(map, copy_tables)
 			obj = map[obj]
@@ -502,10 +502,10 @@ end
 
 function META:CopyForReturn(map--[[#: Map<|any, any|> | nil]])--[[#: TUnion]]
 	map = map or {}
-
 	local existing = map[self]
 
 	if existing then return existing--[[# as TUnion]] end
+
 	local copy = META.New()
 	map[self] = copy
 	local data = copy.Data
@@ -524,11 +524,7 @@ function META:CopyForReturn(map--[[#: Map<|any, any|> | nil]])--[[#: TUnion]]
 		then
 			local mapped = map[obj]
 
-			if mapped then
-				obj = mapped
-			else
-				obj = obj:CopyForReturn(map)
-			end
+			if mapped then obj = mapped else obj = obj:CopyForReturn(map) end
 		end
 
 		local s = hash(obj)
@@ -628,6 +624,25 @@ function META:IsNumeric()
 	end
 
 	return true
+end
+
+function META:Get(key)
+	local union = META.New()
+	local errors = {}
+
+	for _, obj in ipairs(self.Data) do
+		if obj.Type == "table" and obj:IsEmpty() then
+
+		else
+			local val, err = obj:Get(key)
+
+			if val then union:AddType(val) else table.insert(errors, err) end
+		end
+	end
+
+	if union:GetCardinality() == 0 then return false, errors end
+
+	return union:Simplify()
 end
 
 return {

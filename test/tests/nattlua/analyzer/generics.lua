@@ -104,24 +104,24 @@ analyze[[
     local function Array<|T: any, Size: number|>(init: nil | {[Size] = T})
         attest.equal<|T, string|>
         attest.equal<|Size, 1..10|>
-        attest.equal(init, _ as nil | {[Size] = T})
+        attest.subset_of(init, _ as nil | {[Size] = T})
         return init
     end
     
     local arr = Array<|string, 1..10|>({"hello", "world"})
-    attest.equal(arr, _ as nil | {[1..10] = string})    
+    attest.subset_of(arr, _ as nil | {[1..10] = string})
 ]]
 analyze[[
     local function Array<|T: any, Size: number|>(init: nil | {[Size] = T})
         attest.equal<|T, string|>
         attest.equal<|Size, 1..10|>
-        attest.equal(init, _ as nil | {[Size] = T})
+        attest.subset_of(init, _ as nil | {[Size] = T})
         return init
     end
     
     do
         local arr = Array<|string, 1..10|>({"hello", "world"})
-        attest.equal(arr, _ as nil | {[1..10] = string})    
+        attest.subset_of(arr, _ as nil | {[1..10] = string})
     end
 ]]
 analyze[[

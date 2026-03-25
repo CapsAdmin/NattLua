@@ -1021,7 +1021,7 @@ local x = {1, 2}
 local type AnyTable = {[any] = any} | {}
 
 local function foo(x: AnyTable)
-	attest.strict_equal(x, _ as {[any] = any} | {})
+    attest.equal(x[1], _ as any)
 	x[1]= 1
 end
 

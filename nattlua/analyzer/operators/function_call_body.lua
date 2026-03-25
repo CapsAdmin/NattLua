@@ -32,6 +32,44 @@ local function restore_mutated_types(self)
 	table_clear(env.mutated_types)
 end
 
+local function can_wrap_table_argument(contract)
+	if contract.Type == "table" then return true end
+
+	if contract.Type ~= "union" then return false end
+
+	for _, obj in ipairs(contract:GetData()) do
+		if obj.Type ~= "table" and (obj.Type ~= "symbol" or not obj:IsNil()) then
+			return false
+		end
+	end
+
+	return true
+end
+
+local function get_argument_value(arg, contract)
+	if
+		arg and
+		arg.Type == "table" and
+		can_wrap_table_argument(contract) and
+		not arg:GetMetaTable()
+		and
+		not arg:GetTypeOverride()
+		and
+		not arg:GetName()
+		and
+		not arg:IsUnique()
+	then
+		local tbl = Table()
+		tbl:SetContract(contract)
+		tbl:SetAnalyzerEnvironment(arg:GetAnalyzerEnvironment())
+		return tbl
+	end
+
+	local val = contract:GetFirstValue():Copy(nil, true)
+	val:SetContract(contract)
+	return val
+end
+
 local function shrink_union_to_function_signature(obj)
 	local arg = Tuple()
 	local ret = Tuple()
@@ -314,9 +352,7 @@ return function(self, obj, input)
 						test<|number|>(1)
 					]]
 					-- if it's a ref argument we pass the incoming value
-					local t = contract:GetFirstValue():Copy(nil, true)
-					t:SetContract(contract)
-					input:Set(i, t)
+					input:Set(i, get_argument_value(arg, contract))
 				end
 			elseif
 				arg and
@@ -337,15 +373,11 @@ return function(self, obj, input)
 
 				if doit then
 					-- if it's not a ref argument we pass the incoming value
-					local t = contract:GetFirstValue():Copy(nil, true)
-					t:SetContract(contract)
-					input:Set(i, t)
+					input:Set(i, get_argument_value(arg, contract))
 				end
 			else
 				if arg.Type == "any" and arg.Type ~= contract.Type then
-					local t = contract:GetFirstValue():Copy(nil, true)
-					t:SetContract(contract)
-					input:Set(i, t)
+					input:Set(i, get_argument_value(arg, contract))
 				end
 			end
 		end
