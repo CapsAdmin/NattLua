@@ -1,5 +1,5 @@
 local nl = require("nattlua")
-local profiler = require("test.helpers.profiler").New()
+local profiler = require("test.helpers.jit_profiler").New()
 
 for full_path in io.popen("locate .lua"):read("*all"):gmatch("(.-)\n") do
 	if full_path:sub(-4) == ".lua" then

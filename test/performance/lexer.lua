@@ -1,7 +1,7 @@
 local INSTRUMENTAL = false
 require("nattlua.other.jit_options").SetOptimized()
 local util = require("examples.util")
-local profiler_module = require("test.helpers.profiler")
+local profiler_module = require("test.helpers.jit_profiler")
 local profiler
 local lua_code = util.Get10MBLua()
 

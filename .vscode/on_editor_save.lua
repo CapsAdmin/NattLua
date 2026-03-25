@@ -111,7 +111,7 @@ end
 
 function _G.run_nlua(path)
 	local nl = require("nattlua")
-	local profiler_module = require("test.helpers.profiler")
+	local profiler_module = require("test.helpers.jit_profiler")
 	local profiler
 	io.write("running nattlua: ", path, "\n")
 	local lua_code = assert(read_file(path))

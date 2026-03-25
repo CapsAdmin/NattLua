@@ -105,7 +105,7 @@ config.commands["check"] = {
 	cb = function(args, options, config, cli)
 		local prof
 
-		if options.profile then prof = require("test.helpers.profiler").New() end
+		if options.profile then prof = require("test.helpers.jit_profiler").New() end
 
 		args[1] = args[1] or "./*"
 		local cmp = {}

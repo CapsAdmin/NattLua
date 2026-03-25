@@ -207,7 +207,7 @@ do -- custom commands specific for nattlua
 			},
 		},
 		cb = function(args, options, config, cli)
-			local prof = require("test.helpers.profiler").New{
+			local prof = require("test.helpers.jit_profiler").New{
 				file_url = "vscode://file/" .. io.popen("pwd"):read() .. "/${path}:${line}:1",
 			}
 			local Compiler = require("nattlua.compiler")
@@ -422,9 +422,7 @@ do -- these override existing commands and should probably be made more generic
 				local script_file = assert(io.open(script_path, "w"))
 				script_file:write(build_test_script)
 				script_file:close()
-				local ok, why, code = os.execute(
-					"luajit " .. script_path
-				)
+				local ok, why, code = os.execute("luajit " .. script_path)
 				os.remove(script_path)
 
 				if not command_succeeded(ok, why, code) then

@@ -5,7 +5,7 @@ local Code = require("nattlua.code").New
 local util = require("examples.util")
 local lua_code = util.Get10MBLua()
 local lexer = Lexer(Code(lua_code, "10mb.lua"))
-local profiler = require("test.helpers.profiler").New()
+local profiler = require("test.helpers.jit_profiler").New()
 collectgarbage("stop")
 
 do

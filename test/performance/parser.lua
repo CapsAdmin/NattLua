@@ -1,6 +1,6 @@
 require("nattlua.other.jit_options").SetOptimized()
 local INSTRUMENTAL = false
-local profiler_module = require("test.helpers.profiler")
+local profiler_module = require("test.helpers.jit_profiler")
 local profiler
 
 if INSTRUMENTAL then
