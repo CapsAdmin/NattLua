@@ -802,6 +802,7 @@ HTML_TEMPLATE = [==[
   --color-ok:    #52b788;
   --color-abort: #ef6461;
   --color-stitch:#e9c46a;
+  --color-interpreter:#4fc3f7;
   --color-linked:#ab47bc;
   --color-jit:   #ffd166;
   --color-select:#ffc832;
@@ -894,6 +895,7 @@ body { background: var(--bg-base); color: #e0e0e0; overflow-x: hidden; }
 #trace-panel tr.trace-row.highlighted td { background: rgba(255,255,255,0.12); outline: 1px solid rgba(255,255,255,0.25); }
 #trace-panel tr.trace-row.selected td { background: rgba(255,220,80,0.18); outline: 1px solid rgba(255,220,80,0.55); }
 .trace-ok { color: var(--color-ok); }
+.trace-interpreter { color: var(--color-interpreter); }
 .trace-linked { color: var(--color-linked); }
 .trace-stitch { color: var(--color-stitch); }
 .trace-abort { color: var(--color-abort); }
@@ -1044,6 +1046,7 @@ const COLORS = {
   ok:         '#52b788',
   abort:      '#ef6461',
   stitch:     '#e9c46a',
+  interpreter:'#4fc3f7',
   linked:     '#ab47bc',
   jit:        '#ffd166',
   select:     '#ffc832',
@@ -1086,7 +1089,7 @@ const COLORS = {
 // --- VM state helpers ---
 const VM_STATE_COLORS = {
   'N': COLORS.ok,     // Native (JIT)
-  'I': COLORS.stitch, // Interpreter
+  'I': COLORS.interpreter, // Interpreter
   'C': COLORS.linked, // C code
   'G': COLORS.abort,  // GC
   'J': COLORS.jit,    // JIT compile
@@ -1101,6 +1104,30 @@ const VM_STATE_LABELS = {
 
 function sampleColor(e) {
   return VM_STATE_COLORS[e.vm_state] || COLORS.ok;
+}
+
+function traceCategoryFromLinktype(linktype) {
+  if (linktype === 'root') return 'linked';
+  if (linktype === 'stitch') return 'stitch';
+  if (linktype === 'interpreter') return 'interpreter';
+  return 'OK';
+}
+
+function traceCategoryColor(category) {
+  if (category === 'aborted') return COLORS.abort;
+  if (category === 'stitch') return COLORS.stitch;
+  if (category === 'interpreter') return COLORS.interpreter;
+  if (category === 'linked') return COLORS.linked;
+  if (category === 'flush') return COLORS.abort;
+  return COLORS.ok;
+}
+
+function traceStatusClassFromCategory(category) {
+  if (category === 'aborted') return 'trace-abort';
+  if (category === 'stitch') return 'trace-stitch';
+  if (category === 'interpreter') return 'trace-interpreter';
+  if (category === 'linked') return 'trace-linked';
+  return 'trace-ok';
 }
 
 // --- Derived state ---
@@ -1447,11 +1474,7 @@ function drawVmPie(lo, hi) {
 
 // --- Trace List ---
 function traceStatusClass(span) {
-  if (span.outcome === 'abort') return 'trace-abort';
-  const lt = span.end.linktype;
-  if (lt === 'stitch') return 'trace-stitch';
-  if (lt === 'root') return 'trace-linked';
-  return 'trace-ok';
+  return traceStatusClassFromCategory(span.category);
 }
 function traceStatusLabel(span) {
   if (span.outcome === 'abort') return span.end.abort_reason || 'aborted';
@@ -1864,10 +1887,7 @@ const flushTimes = [];
           outcome: e.type === 'trace_stop' ? 'stop' : 'abort',
           category: (function() {
             if (e.type === 'trace_stop') {
-              const lt = e.linktype || '?';
-              if (lt === 'root') return 'linked';
-              if (lt === 'stitch') return 'stitch';
-              return 'OK';
+              return traceCategoryFromLinktype(e.linktype || '?');
             }
             return 'aborted';
           })(),
@@ -2250,7 +2270,7 @@ function drawMcode() {
   }
 }
 
-const mainCategoryOrder = ['OK', 'linked', 'stitch', 'aborted', 'flush'];
+const mainCategoryOrder = ['OK', 'interpreter', 'linked', 'stitch', 'aborted', 'flush'];
 const categoryList = mainCategoryOrder.map(cat => [cat, allTraceCategories[cat] || 0]);
 
 const abortReasonList = Object.entries(allAbortReasons).sort((a, b) => b[1] - a[1]);
@@ -2289,11 +2309,7 @@ function buildFilterPanel(tStart, tEnd) {
   
   // Main categories
   categoryList.forEach(([cat, count], idx) => {
-    let color = COLORS.ok;
-    if (cat === 'aborted') color = COLORS.abort;
-    if (cat === 'stitch') color = COLORS.stitch;
-    if (cat === 'linked') color = COLORS.linked;
-    if (cat === 'flush') color = COLORS.abort;
+    const color = traceCategoryColor(cat);
 
     const isEnabled = enabledCategories.has(cat);
     const checkedChar = isEnabled ? '☑' : '☐';
@@ -2647,10 +2663,8 @@ function drawTimeline() {
   // Health-based color for trace spans
   function spanColor(span) {
     if (span.outcome === 'abort') return [COLORS.abort, COLORS.abort];
-    const lt = span.end.linktype;
-    if (lt === 'stitch') return [COLORS.stitch, COLORS.stitch];
-    if (lt === 'root') return [COLORS.linked, COLORS.linked];
-    return [COLORS.ok, COLORS.ok];
+    const color = traceCategoryColor(span.category);
+    return [color, color];
   }
 
   // Draw trace spans in depth-based swimlanes
@@ -2943,7 +2957,7 @@ function formatSpanTooltip(span) {
   let s = '';
   if (span.outcome === 'stop') {
     const lt = span.end.linktype || '?';
-    const ltColor = lt === 'stitch' ? COLORS.stitch : lt === 'root' ? COLORS.linked : COLORS.ok;
+    const ltColor = traceCategoryColor(traceCategoryFromLinktype(lt));
     s += `<b style="color:${ltColor}">Trace #${span.id}</b>  <span style="color:${COLORS.textDimmer}">${t0}s</span>  ${dStr}`;
     const e = span.end;
     if (e.linktype) s += `\nLink: <b>${e.linktype}</b>`;
