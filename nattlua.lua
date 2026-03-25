@@ -1,4 +1,5 @@
 #!/usr/bin/env luajit
+require("nattlua.other.jit_options").SetOptimized()
 _G.EARLY_STARTUP_TIME = os.clock()
 
 if select(1, ...) == "profile" and select(2, ...) ~= "trace" then
@@ -39,7 +40,6 @@ if jit and not _G.BUNDLE then
 end
 
 require("nattlua.other.lua_compat")
-require("nattlua.other.jit_options").SetOptimized()
 local m = require("nattlua.init")
 package.loaded.nattlua = m
 

@@ -19,30 +19,21 @@ end
 local GC64 = #tostring({}) == 19
 -- https://github.com/LuaJIT/LuaJIT/blob/v2.1/src/lj_jit.h#L116-L137
 local default_options = {
-	-- trace cache limits
-	maxtrace = 1000, -- 1 >= 65535: Max number of traces in cache
-	maxmcode = 512, -- max total size of all machine code areas (in KBytes).
-	-- size of each machine code area (in KBytes).
-	-- See: https://devblogs.microsoft.com/oldnewthing/20031008-00/?p=42223
-	-- Could go as low as 4K, but the mmap() overhead would be rather high.
+	maxtrace = 1000,
+	maxmcode = 512,
 	sizemcode = jit.os == "Windows" or GC64 and 64 or 32,
-	-- trace size limits
-	maxrecord = 4000, -- Max number of recorded IR instructions
-	maxirconst = 500, -- Max number of IR constants of a trace
-	maxsnap = 500, -- Max number of snapshots for a trace
-	-- side trace limits
-	minstitch = 0, -- Min number of IR instructions for a stitched trace. depends on maxrecord
-	maxside = 100, -- Max number of side traces of a root trace
-	-- hotness thresholds
-	hotloop = 56, -- loop iterations to start a trace (functions need hotloop*2 calls)
-	hotexit = 10, -- times a trace exit must be taken to start a side trace. depends on maxside
-	tryside = 4, -- number of attempts to compile a side trace
-	-- unroll heuristics
-	instunroll = 4, -- max unroll attempts for loops with instable types.
-	loopunroll = 15, -- max unroll for loop ops in side traces.
-	callunroll = 3, -- max depth for recursive calls.
-	recunroll = 2, -- min unroll for true recursion.
---
+	maxrecord = 4000,
+	maxirconst = 500,
+	maxsnap = 500,
+	minstitch = 0,
+	maxside = 100,
+	hotloop = 56,
+	hotexit = 10,
+	tryside = 4,
+	instunroll = 4,
+	loopunroll = 15,
+	callunroll = 3,
+	recunroll = 2,
 }
 -- https://github.com/LuaJIT/LuaJIT/blob/v2.1/src/lj_jit.h#L93-L103
 local default_flags = {
@@ -121,6 +112,7 @@ function jit_options.Set(options--[[#: AnyTable | nil]], flags--[[#: AnyTable | 
 		end
 	end
 
+	_G.JIT_PARAMS = p
 	last_options = {options = p, flags = f}
 	local args = {}
 
@@ -147,21 +139,29 @@ end
 function jit_options.SetOptimized()
 	jit_options.Set(
 		{
-			maxtrace = 65535,
-			maxmcode = 128000,
-			sizemcode = 256,
-			minstitch = 1,
-			maxrecord = 50000,
-			maxirconst = 8000,
-			maxside = 100,
-			maxsnap = 100,
-			hotloop = 5,
-			hotexit = 100,
-			tryside = 1,
-			instunroll = 1100,
-			loopunroll = 1110,
-			callunroll = 1110,
-			recunroll = 1110,
+			-- trace cache limits
+			maxtrace = 65535, -- default: 1000 | 1 >= 65535: Max number of traces in cache
+			maxmcode = 128000, -- default: 512 | max total size of all machine code areas (in KBytes).
+			-- size of each machine code area (in KBytes).
+			-- See: https://devblogs.microsoft.com/oldnewthing/20031008-00/?p=42223
+			-- Could go as low as 4K, but the mmap() overhead would be rather high.
+			sizemcode = 64, -- default: jit.os == "Windows" or GC64 and 64 or 32
+			-- trace size limits
+			maxrecord = 8000, -- default: 4000 | Max number of recorded IR instructions
+			maxirconst = 2000, -- default: 500 | Max number of IR constants of a trace
+			maxsnap = 1000, -- default: 500 | Max number of snapshots for a trace
+			-- side trace limits
+			minstitch = 0, -- default: 0 | Min number of IR instructions for a stitched trace. depends on maxrecord
+			maxside = 10, -- default: 100 | Max number of side traces of a root trace
+			-- hotness thresholds
+			hotloop = 10000, -- default: 56 | loop iterations to start a trace (functions need hotloop*2 calls)
+			hotexit = 0, -- default: 10 | times a trace exit must be taken to start a side trace. depends on maxside
+			tryside = 0, -- default: 4 | number of attempts to compile a side trace
+			-- unroll heuristics
+			instunroll = 0, -- default: 4 | max unroll attempts for loops with instable types.
+			loopunroll = 1000, -- default: 15 | max unroll for loop ops in side traces.
+			callunroll = 300, -- default: 3 | max depth for recursive calls.
+			recunroll = 0, -- default: 2 | min unroll for true recursion.
 		},
 		{
 			fold = true,

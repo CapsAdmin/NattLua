@@ -8,6 +8,14 @@ local table_insert = _G.table.insert
 local table_remove = _G.table.remove
 local string_format = _G.string.format
 local time_function--[[#: function=()>(number) | nil]] = nil
+local GC64 = #tostring({}) == 19
+local DEFAULT_MAXMCODE_KB = 512
+
+local function get_default_sizemcode_kb()
+	if jit and (jit.os == "Windows" or GC64) then return 64 end
+
+	return 32
+end
 
 local function get_time_function()
 	local has_ffi, ffi = pcall(require, "ffi")
@@ -194,6 +202,8 @@ Profiler.__index = Profiler
 		link_id = number | nil,
 		ir_count = number | nil,
 		exit_count = number | nil,
+		mcode_addr = number | nil,
+		mcode_size = number | nil,
 	} | {
 		type = "trace_abort",
 		time = number | nil,
@@ -211,6 +221,8 @@ type Profiler.@SelfArgument = {
 	path = string,
 	file_url = string,
 	profile_mode = string,
+	maxmcode = number,
+	sizemcode = number,
 	depth = number,
 	sampling_rate = number,
 	flush_interval = number,
@@ -342,8 +354,21 @@ do
 
 		local ti = jutil.traceinfo(id)
 		local loc = get_trace_location(trace)
+		local mcode_addr--[[#: number | nil]] = nil
+		local mcode_size--[[#: number | nil]] = nil
 
 		if not loc then loc = format_func_info(jutil.funcinfo(func), func) end
+
+		do
+			local ok, mcode, addr = pcall(jutil.tracemc, id)
+
+			if ok and type(mcode) == "string" and type(addr) == "number" then
+				mcode_addr = addr
+				mcode_size = #mcode
+
+				if mcode_addr < 0 then mcode_addr = mcode_addr + 2 ^ 32 end
+			end
+		end
 
 		self:EmitEvent{
 			type = "trace_stop",
@@ -354,6 +379,8 @@ do
 			link_id = ti and ti.link or nil,
 			ir_count = ti and ti.nins or nil,
 			exit_count = ti and ti.nexit or nil,
+			mcode_addr = mcode_addr,
+			mcode_size = mcode_size,
 		}
 	end
 
@@ -429,6 +456,8 @@ do
 			file_url = string | nil,
 			profile_mode = "line" | "function" | "none" | nil,
 			trace_recorder = boolean | nil,
+			maxmcode = number | nil,
+			sizemcode = number | nil,
 			depth = number | nil,
 			sampling_rate = number | nil,
 			flush_interval = number | nil,
@@ -436,12 +465,16 @@ do
 		} | nil]]
 	)
 		config = config or {}
+		config.maxmcode = _G.JIT_PARAMS.maxmcode
+		config.sizemcode = _G.JIT_PARAMS.sizemcode
 		local self = setmetatable({}, Profiler)--[[# as TProfile]]
 		-- Config
 		self.id = config.id or "jit_profiler"
 		self.path = config.path or "./profiler_output.html"
 		self.file_url = config.file_url or "vscode://file/${path}:${line}:1"
 		self.profile_mode = config.profile_mode or "line"
+		self.maxmcode = config.maxmcode or DEFAULT_MAXMCODE_KB
+		self.sizemcode = config.sizemcode or get_default_sizemcode_kb()
 		self.depth = config.depth or 999
 		self.sampling_rate = config.sampling_rate or 1
 		self.flush_interval = config.flush_interval or 3
@@ -476,6 +509,8 @@ do
 			html = html:gsub("%%FILE_URL_JSON%%", function()
 				return json_string(self.file_url)
 			end)
+			html = html:gsub("%%MAXMCODE_KB%%", tostring(self.maxmcode))
+			html = html:gsub("%%SIZEMCODE_KB%%", tostring(self.sizemcode))
 			local f = assert(io.open(self.path, "w"))
 			f:write(html)
 			f:flush()
@@ -620,7 +655,7 @@ do
 			)
 		elseif ev.type == "trace_stop" then
 			return string_format(
-				"[%d,%.6f,%d,%d,%d,%d,%s,%d,%d]",
+				"[%d,%.6f,%d,%d,%d,%d,%s,%d,%d,%s,%s]",
 				ti,
 				ev.time,
 				ev.id or 0,
@@ -629,7 +664,9 @@ do
 				intern(self, ev.linktype),
 				ev.link_id and tostring(ev.link_id) or "null",
 				ev.ir_count or 0,
-				ev.exit_count or 0
+				ev.exit_count or 0,
+				ev.mcode_addr ~= nil and tostring(ev.mcode_addr) or "null",
+				ev.mcode_size ~= nil and tostring(ev.mcode_size) or "null"
 			)
 		elseif ev.type == "trace_abort" then
 			return string_format(
@@ -878,6 +915,11 @@ body { background: var(--bg-base); color: #e0e0e0; overflow-x: hidden; }
 #fg-copy-status { color: var(--text-dim); font-size: 11px; min-height: 1em; }
 #btn-copy-fg-summary { padding: 2px 10px; }
 #flamegraph-canvas { width: 100%; min-height: 400px; }
+#mcode-container { overflow: auto; max-height: 0; flex-shrink: 0; contain: strict; }
+#mcode-container.open { max-height: none; display: block; overflow: auto; contain: layout style; }
+#mcode-toolbar { display: flex; align-items: center; gap: 10px; padding: 8px 16px 0; }
+#mcode-summary { color: var(--text-muted); font-size: 11px; line-height: 1.45; min-height: 1em; }
+#mcode-canvas { width: 100%; display: block; }
 #tooltip { position: fixed; background: var(--bg-panel); border: 1px solid var(--border-strong); padding: 8px 12px; border-radius: 4px; font-size: 11px; pointer-events: none; display: none; z-index: 100; max-width: 500px; white-space: pre-wrap; line-height: 1.5; }
 .loc-link { color: var(--accent); text-decoration: none; opacity: 0.8; }
 .loc-link:hover { text-decoration: underline; opacity: 1; }
@@ -923,6 +965,15 @@ body { background: var(--bg-base); color: #e0e0e0; overflow-x: hidden; }
 <div id="trace-panel" class="open"></div>
 <div id="trace-panel-resize-handle" class="resize-handle"></div>
 <div class="section-header">
+  <button id="btn-toggle-mcode">mcode map</button>
+</div>
+<div id="mcode-container" class="open">
+  <div id="mcode-toolbar">
+    <span id="mcode-summary"></span>
+  </div>
+  <canvas id="mcode-canvas"></canvas>
+</div>
+<div class="section-header">
   <button id="btn-toggle-fg">flamegraph</button>
 </div>
 <div id="flamegraph-container" class="open">
@@ -953,7 +1004,7 @@ function _decode(S,E){
     }else if(type==='trace_start'){
       ev={type:type,time:d[1],id:d[2],generation:d[3],parent_id:d[4],exit_id:d[5],depth:d[6],func_info:S[d[7]]};
     }else if(type==='trace_stop'){
-      ev={type:type,time:d[1],id:d[2],generation:d[3],func_info:S[d[4]],linktype:S[d[5]],link_id:d[6],ir_count:d[7],exit_count:d[8]};
+      ev={type:type,time:d[1],id:d[2],generation:d[3],func_info:S[d[4]],linktype:S[d[5]],link_id:d[6],ir_count:d[7],exit_count:d[8],mcode_addr:d[9],mcode_size:d[10]};
     }else if(type==='trace_abort'){
       ev={type:type,time:d[1],id:d[2],generation:d[3],abort_code:d[4],abort_reason:S[d[5]],func_info:S[d[6]]};
     }else if(type==='trace_flush'){
@@ -970,6 +1021,8 @@ const EVENTS = _decode(_S, _E);
 _S = null; _E = null;
 const TOTAL_TIME = EVENTS.length > 1 ? EVENTS[EVENTS.length-1].time - EVENTS[0].time : 0;
 const FILE_URL_TEMPLATE = %FILE_URL_JSON%;
+const MAX_MCODE_KB = %MAXMCODE_KB%;
+const SIZE_MCODE_KB = %SIZEMCODE_KB%;
 // --- File link helper ---
 function funcInfoLink(fi, label) {
   if (!fi) return label || '?';
@@ -1241,6 +1294,7 @@ function schedulePanelUpdate(lo, hi) {
     buildFilterPanel(lo, hi);
     buildSampleFilterPanel(lo, hi);
     drawVmPie(lo, hi);
+    drawMcode(hi);
     panelDebounceTimer = null;
   }, 120);
 }
@@ -1267,6 +1321,7 @@ function refreshView(lo, hi, immediate) {
   if (immediate) {
     drawFlamegraph(filterStart, filterEnd);
     drawVmPie(filterStart, filterEnd);
+    drawMcode(filterEnd);
     buildTraceListPanel(filterStart, filterEnd);
     buildFilterPanel(filterStart, filterEnd);
     buildSampleFilterPanel(filterStart, filterEnd);
@@ -1419,7 +1474,7 @@ function clearSelectionHtml(spanId, label) {
 }
 function wireClearBtn(lo, hi) {
   const btn = document.getElementById('btn-clear-selection');
-  if (btn) btn.addEventListener('click', () => { selectedSpan = null; drawTimeline(); buildTraceListPanel(lo, hi); });
+  if (btn) btn.addEventListener('click', () => { selectedSpan = null; drawTimeline(); buildTraceListPanel(lo, hi); drawMcode(hi); });
 }
 
 function _computeVisibleSpans(lo, hi) {
@@ -1564,6 +1619,7 @@ function _ensureTraceSkeleton() {
     selectedSpan = (selectedSpan === span) ? null : span;
     drawTimeline();
     buildTraceListPanel(traceRenderLo, traceRenderHi);
+    drawMcode(traceRenderHi);
   });
   scrollEl.addEventListener('mouseover', (ev) => {
     const row = ev.target.closest('tr.trace-row');
@@ -1717,6 +1773,13 @@ document.getElementById('btn-toggle-aborts').addEventListener('click', () => {
   panel.style.height = isOpen ? tracePanelH + 'px' : '0px';
   rh.style.display = isOpen ? '' : 'none';
 });
+document.getElementById('btn-toggle-mcode').addEventListener('click', () => {
+  const container = document.getElementById('mcode-container');
+  const btn = document.getElementById('btn-toggle-mcode');
+  const isOpen = container.classList.toggle('open');
+  btn.classList.toggle('collapsed', !isOpen);
+  if (isOpen) drawMcode(Math.max(selStart, selEnd));
+});
 document.getElementById('btn-toggle-fg').addEventListener('click', () => {
   const container = document.getElementById('flamegraph-container');
   const btn = document.getElementById('btn-toggle-fg');
@@ -1854,6 +1917,338 @@ for (const span of traceSpans) {
 }
 const enabledCategories = new Set(Object.keys(allTraceCategories));
 const enabledAbortReasons = new Set(Object.keys(allAbortReasons));
+
+const SAFE_SIZE_MCODE_KB = Math.max(1, SIZE_MCODE_KB || 1);
+const SAFE_MAX_MCODE_KB = Math.max(SAFE_SIZE_MCODE_KB, MAX_MCODE_KB || SAFE_SIZE_MCODE_KB);
+const MCODE_PAGE_BYTES = Math.max(1024, Math.round(SAFE_SIZE_MCODE_KB * 1024));
+const MCODE_MAX_PAGES = Math.max(1, Math.floor(SAFE_MAX_MCODE_KB / SAFE_SIZE_MCODE_KB) || 1);
+const MCODE_MAX_BYTES = MCODE_MAX_PAGES * MCODE_PAGE_BYTES;
+const mcodeCanvas = document.getElementById('mcode-canvas');
+const mcodeCtx = mcodeCanvas.getContext('2d');
+const mcodeSummaryEl = document.getElementById('mcode-summary');
+let mcodeCurrentSnapshot = null;
+let mcodeLayouts = [];
+const MCODE_ROW_H = 9;
+const MCODE_BAR_H = 5;
+
+function alignDown(value, size) {
+  return Math.floor(value / size) * size;
+}
+
+const mcodeGenerations = [];
+{
+  const byGeneration = new Map();
+
+  for (const span of traceSpans) {
+    if (span.outcome !== 'stop') continue;
+
+    const addr = span.end.mcode_addr;
+    const size = span.end.mcode_size;
+
+    if (addr == null || !size || size <= 0) continue;
+
+    let generation = byGeneration.get(span.generation);
+
+    if (!generation) {
+      generation = {
+        generation: span.generation,
+        spans: [],
+        pages: [],
+        pageCount: 0,
+        usedBytes: 0,
+        deadBytes: 0,
+        avgFill: 0,
+        medianFill: 0,
+        tracesPerPage: 0,
+        largestGap: 0,
+      };
+      byGeneration.set(span.generation, generation);
+    }
+
+    generation.spans.push(span);
+  }
+
+  for (const generation of Array.from(byGeneration.values()).sort((a, b) => a.generation - b.generation)) {
+    generation.spans.sort((a, b) => a.end.mcode_addr - b.end.mcode_addr);
+
+    const pageMap = new Map();
+
+    for (let i = 0; i < generation.spans.length; i++) {
+      const span = generation.spans[i];
+      const startAddr = span.end.mcode_addr;
+      const endAddr = startAddr + span.end.mcode_size;
+      let pageBase = alignDown(startAddr, MCODE_PAGE_BYTES);
+
+      while (pageBase < endAddr) {
+        let page = pageMap.get(pageBase);
+
+        if (!page) {
+          page = {
+            base: pageBase,
+            segments: [],
+            traceLookup: {},
+            usedBytes: 0,
+            freeBytes: 0,
+            fill: 0,
+            traceCount: 0,
+            largestGap: 0,
+          };
+          pageMap.set(pageBase, page);
+        }
+
+        const segStart = Math.max(startAddr, pageBase) - pageBase;
+        const segEnd = Math.min(endAddr, pageBase + MCODE_PAGE_BYTES) - pageBase;
+        page.segments.push({traceIndex: i, start: segStart, stop: segEnd});
+        page.traceLookup[span.uid] = true;
+        pageBase += MCODE_PAGE_BYTES;
+      }
+    }
+
+    generation.pages = Array.from(pageMap.values()).sort((a, b) => a.base - b.base);
+    generation.pageCount = generation.pages.length;
+
+    let fillSum = 0;
+    const fills = [];
+    let traceCountSum = 0;
+
+    for (const page of generation.pages) {
+      page.segments.sort((a, b) => a.start - b.start || a.stop - b.stop);
+
+      let used = 0;
+      let largestGap = 0;
+      let coveredEnd = 0;
+
+      for (const seg of page.segments) {
+        const segStart = Math.max(seg.start, coveredEnd);
+        if (seg.start > coveredEnd) largestGap = Math.max(largestGap, seg.start - coveredEnd);
+        if (seg.stop > segStart) used += seg.stop - segStart;
+        if (seg.stop > coveredEnd) coveredEnd = seg.stop;
+      }
+
+      largestGap = Math.max(largestGap, MCODE_PAGE_BYTES - coveredEnd);
+      page.usedBytes = used;
+      page.freeBytes = MCODE_PAGE_BYTES - used;
+      page.fill = used / MCODE_PAGE_BYTES;
+      page.traceCount = Object.keys(page.traceLookup).length;
+      page.largestGap = largestGap;
+
+      generation.usedBytes += page.usedBytes;
+      generation.deadBytes += page.freeBytes;
+      generation.largestGap = Math.max(generation.largestGap, largestGap);
+      fillSum += page.fill;
+      fills.push(page.fill);
+      traceCountSum += page.traceCount;
+    }
+
+    fills.sort((a, b) => a - b);
+    generation.avgFill = generation.pageCount > 0 ? fillSum / generation.pageCount : 0;
+    generation.medianFill = generation.pageCount > 0 ? fills[Math.floor(generation.pageCount / 2)] : 0;
+    generation.tracesPerPage = generation.pageCount > 0 ? traceCountSum / generation.pageCount : 0;
+    mcodeGenerations.push(generation);
+  }
+}
+
+function formatHex(value) {
+  if (value == null || !isFinite(value)) return '?';
+  return '0x' + Math.floor(value).toString(16);
+}
+
+function formatBytes(value) {
+  if (!isFinite(value) || value <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let idx = 0;
+  let n = value;
+
+  while (n >= 1024 && idx < units.length - 1) {
+    n /= 1024;
+    idx++;
+  }
+
+  return (n >= 100 || idx === 0 ? n.toFixed(0) : n.toFixed(1)) + ' ' + units[idx];
+}
+
+function formatPageIndex(index) {
+  return index < 10 ? '0' + index : '' + index;
+}
+
+function traceColor(uid, alpha) {
+  let h = 0;
+  for (let i = 0; i < uid.length; i++) h = (h * 33 + uid.charCodeAt(i)) >>> 0;
+  return 'hsla(' + (h % 360) + ',72%,' + (selectedSpan && selectedSpan.uid === uid ? '66%' : '56%') + ',' + (alpha == null ? 0.95 : alpha) + ')';
+}
+
+function formatPercent(value, total) {
+  if (!total || total <= 0) return '0.0%';
+  return ((value / total) * 100).toFixed(1) + '%';
+}
+
+function buildMcodeSnapshot() {
+  let traceCount = 0;
+  let pageCount = 0;
+  let usedBytes = 0;
+  let deadBytes = 0;
+  let largestGap = 0;
+  let peakPages = 0;
+  let peakUsedBytes = 0;
+
+  for (const generation of mcodeGenerations) {
+    traceCount += generation.spans.length;
+    pageCount += generation.pageCount;
+    usedBytes += generation.usedBytes;
+    deadBytes += generation.deadBytes;
+    largestGap = Math.max(largestGap, generation.largestGap);
+    peakPages = Math.max(peakPages, generation.pageCount);
+    peakUsedBytes = Math.max(peakUsedBytes, generation.usedBytes);
+  }
+
+  return {
+    generations: mcodeGenerations,
+    traceCount,
+    pageCount,
+    usedBytes,
+    deadBytes,
+    largestGap,
+    peakPages,
+    peakUsedBytes,
+  };
+}
+
+function mcodeTooltip(layout, offset) {
+  const page = layout.page;
+  const absolute = page.base + offset;
+
+  for (const seg of page.segments) {
+    if (offset < seg.start || offset >= seg.stop) continue;
+
+    const span = layout.generation.spans[seg.traceIndex];
+    if (!span) break;
+    const relTime = span.end.time - timeOrigin;
+    return '<b>trace #' + span.id + '</b>\n' +
+      (span.location || span.start.func_info || '?') + '\n' +
+      'generation: ' + layout.generation.generation + '\n' +
+      'compiled: ' + relTime.toFixed(4) + 's\n' +
+      'trace: ' + formatHex(span.end.mcode_addr) + ' — ' + formatHex(span.end.mcode_addr + span.end.mcode_size) + ' (' + formatBytes(span.end.mcode_size) + ')\n' +
+      'page: ' + formatHex(page.base) + ' — ' + formatHex(page.base + MCODE_PAGE_BYTES) + '\n' +
+      'page fill: ' + formatPercent(page.usedBytes, MCODE_PAGE_BYTES);
+  }
+
+  return '<b>gap</b>\n' +
+    'generation: ' + layout.generation.generation + '\n' +
+    'page: ' + formatHex(page.base) + ' — ' + formatHex(page.base + MCODE_PAGE_BYTES) + '\n' +
+    'offset: ' + formatHex(absolute) + '\n' +
+    'page fill: ' + formatPercent(page.usedBytes, MCODE_PAGE_BYTES);
+}
+
+function drawMcode() {
+  const container = document.getElementById('mcode-container');
+  if (!container || !container.classList.contains('open')) return;
+
+  const snapshot = buildMcodeSnapshot();
+  mcodeCurrentSnapshot = snapshot;
+
+  if (mcodeSummaryEl) {
+    let summary = '<b>' + snapshot.traceCount + '</b> traces across <b>' + snapshot.pageCount + '</b> inferred pages • <b>' + snapshot.generations.length + '</b> generation(s)';
+    summary += '<br><b>' + formatBytes(snapshot.usedBytes) + '</b> used • <b>' + formatBytes(snapshot.deadBytes) + '</b> dead space inside used pages • occupancy ' + formatPercent(snapshot.usedBytes, snapshot.usedBytes + snapshot.deadBytes);
+    summary += '<br>page size ' + SAFE_SIZE_MCODE_KB + 'KB • max budget ' + formatBytes(MCODE_MAX_BYTES) + ' (' + MCODE_MAX_PAGES + ' pages) • peak generation used ' + formatBytes(snapshot.peakUsedBytes) + ' across ' + snapshot.peakPages + ' page(s)';
+    summary += '<br>largest observed gap ' + formatBytes(snapshot.largestGap);
+    mcodeSummaryEl.innerHTML = summary;
+  }
+
+  const containerW = Math.max(320, mcodeCanvas.parentElement.clientWidth || 320);
+  const sidePad = 12;
+  const labelH = 14;
+  const gapY = 14;
+  const pageLabels = [];
+
+  mcodeCtx.font = '11px monospace';
+  for (const generation of snapshot.generations) {
+    for (let i = 0; i < generation.pages.length; i++) {
+      const page = generation.pages[i];
+      pageLabels.push('#' + formatPageIndex(i + 1) + ' ' + formatPercent(page.usedBytes, MCODE_PAGE_BYTES) + ' • gap ' + formatBytes(page.largestGap));
+    }
+  }
+
+  let maxRightLabelW = 0;
+  for (const label of pageLabels) {
+    const w = mcodeCtx.measureText(label).width;
+    if (w > maxRightLabelW) maxRightLabelW = w;
+  }
+
+  const rightLabelW = Math.ceil(maxRightLabelW) + 12;
+  const mapW = Math.max(180, containerW - sidePad * 2 - rightLabelW);
+  let canvasH = 12;
+
+  for (const generation of snapshot.generations) {
+    canvasH += labelH + generation.pages.length * MCODE_ROW_H + gapY;
+  }
+
+  canvasH = Math.max(120, canvasH);
+  setupCanvas(mcodeCanvas, containerW, canvasH);
+
+  mcodeCtx.fillStyle = COLORS.bgDeep;
+  mcodeCtx.fillRect(0, 0, containerW, canvasH);
+  mcodeLayouts = [];
+
+  if (snapshot.generations.length === 0) {
+    mcodeCtx.fillStyle = COLORS.textDim;
+    mcodeCtx.font = '12px monospace';
+    mcodeCtx.fillText('no compiled traces with machine-code metadata', 16, 28);
+    return;
+  }
+
+  mcodeCtx.font = '11px monospace';
+
+  let yCursor = 12;
+  for (let p = 0; p < snapshot.generations.length; p++) {
+    const generation = snapshot.generations[p];
+    const y0 = yCursor;
+
+    mcodeCtx.fillStyle = COLORS.textMuted;
+    mcodeCtx.fillText(
+      'gen ' + generation.generation + ' • ' + generation.pageCount + '/' + MCODE_MAX_PAGES + ' pages • ' + formatBytes(generation.usedBytes) + '/' + formatBytes(MCODE_MAX_BYTES) + ' • avg fill ' + formatPercent(generation.avgFill, 1) + ' • traces/page ' + generation.tracesPerPage.toFixed(1),
+      sidePad,
+      y0 + 10
+    );
+
+    let pageY = y0 + labelH;
+    for (let i = 0; i < generation.pages.length; i++) {
+      const page = generation.pages[i];
+      const rowY = pageY + i * MCODE_ROW_H;
+      const pageLabel = '#' + formatPageIndex(i + 1) + ' ' + formatPercent(page.usedBytes, MCODE_PAGE_BYTES) + ' • gap ' + formatBytes(page.largestGap);
+
+      mcodeCtx.fillStyle = '#000';
+      mcodeCtx.fillRect(sidePad, rowY, mapW, MCODE_BAR_H);
+      mcodeCtx.strokeStyle = COLORS.borderStrong;
+      mcodeCtx.strokeRect(sidePad + 0.5, rowY + 0.5, mapW, MCODE_BAR_H);
+
+      for (const seg of page.segments) {
+        const span = generation.spans[seg.traceIndex];
+        if (!span) continue;
+        const x0 = sidePad + (seg.start / MCODE_PAGE_BYTES) * mapW;
+        const x1 = sidePad + (seg.stop / MCODE_PAGE_BYTES) * mapW;
+        mcodeCtx.fillStyle = traceColor(span.uid);
+        mcodeCtx.fillRect(x0, rowY, Math.max(1, x1 - x0), MCODE_BAR_H);
+      }
+
+      if (selectedSpan) {
+        mcodeCtx.fillStyle = 'rgba(255,255,255,0.9)';
+        for (const seg of page.segments) {
+          const span = generation.spans[seg.traceIndex];
+          if (!span || span.uid !== selectedSpan.uid) continue;
+          const x0 = sidePad + (seg.start / MCODE_PAGE_BYTES) * mapW;
+          const x1 = sidePad + (seg.stop / MCODE_PAGE_BYTES) * mapW;
+          mcodeCtx.fillRect(x0, rowY, Math.max(1, x1 - x0), MCODE_BAR_H);
+        }
+      }
+
+      mcodeCtx.fillStyle = COLORS.textVeryDim;
+      mcodeCtx.fillText(pageLabel, sidePad + mapW + 8, rowY + 5);
+      mcodeLayouts.push({x: sidePad, y: rowY, w: mapW, h: MCODE_BAR_H, generation, page});
+    }
+
+    yCursor += labelH + generation.pages.length * MCODE_ROW_H + gapY;
+  }
+}
 
 const mainCategoryOrder = ['OK', 'linked', 'stitch', 'aborted', 'flush'];
 const categoryList = mainCategoryOrder.map(cat => [cat, allTraceCategories[cat] || 0]);
@@ -2774,6 +3169,7 @@ window.addEventListener('mouseup', () => {
       panClickSpanCandidate = null;
       drawTimeline();
       syncTraceListHighlight(selectedSpan);
+      drawMcode(Math.max(selStart, selEnd));
       schedulePanelUpdate(selStart, selEnd);
     }
     panClickSpanCandidate = null;
@@ -2930,6 +3326,74 @@ makeResizable(document.getElementById('timeline-resize-handle'), 25,
   () => timelineContainerH,
   (h) => { timelineContainerH = h; tlContainer.style.height = h + 'px'; invalidateTlRect(); drawTimeline(); updateSelOverlay(); }
 );
+
+mcodeCanvas.addEventListener('mousemove', (ev) => {
+  if (!mcodeCurrentSnapshot) return;
+
+  const rect = mcodeCanvas.getBoundingClientRect();
+  const mx = ev.clientX - rect.left;
+  const my = ev.clientY - rect.top;
+
+  for (const layout of mcodeLayouts) {
+    if (mx < layout.x || mx > layout.x + layout.w || my < layout.y || my > layout.y + layout.h) continue;
+
+    const frac = Math.max(0, Math.min(0.999999, (mx - layout.x) / layout.w));
+    const offset = Math.floor(frac * MCODE_PAGE_BYTES);
+    let traceIndex = -1;
+    for (const seg of layout.page.segments) {
+      if (offset >= seg.start && offset < seg.stop) {
+        traceIndex = seg.traceIndex;
+        break;
+      }
+    }
+
+    showTooltip(mcodeTooltip(layout, offset), ev.clientX + 12, ev.clientY - 10);
+    mcodeCanvas.style.cursor = traceIndex >= 0 ? 'pointer' : 'crosshair';
+    return;
+  }
+
+  hideTooltip();
+  mcodeCanvas.style.cursor = 'default';
+});
+
+mcodeCanvas.addEventListener('mouseleave', () => {
+  hideTooltip();
+  mcodeCanvas.style.cursor = 'default';
+});
+
+mcodeCanvas.addEventListener('click', (ev) => {
+  if (!mcodeCurrentSnapshot) return;
+
+  const rect = mcodeCanvas.getBoundingClientRect();
+  const mx = ev.clientX - rect.left;
+  const my = ev.clientY - rect.top;
+
+  for (const layout of mcodeLayouts) {
+    if (mx < layout.x || mx > layout.x + layout.w || my < layout.y || my > layout.y + layout.h) continue;
+
+    const frac = Math.max(0, Math.min(0.999999, (mx - layout.x) / layout.w));
+    const offset = Math.floor(frac * MCODE_PAGE_BYTES);
+    let traceIndex = -1;
+    for (const seg of layout.page.segments) {
+      if (offset >= seg.start && offset < seg.stop) {
+        traceIndex = seg.traceIndex;
+        break;
+      }
+    }
+
+    if (traceIndex < 0) return;
+
+    const span = layout.generation.spans[traceIndex];
+    if (!span) return;
+
+    selectedSpan = (selectedSpan && selectedSpan.uid === span.uid) ? null : span;
+    drawTimeline();
+    buildTraceListPanel(traceRenderLo, traceRenderHi);
+    drawMcode();
+    syncTraceListHighlight(selectedSpan);
+    return;
+  }
+});
 
 // --- Flamegraph ---
 const fgCanvas = document.getElementById('flamegraph-canvas');
