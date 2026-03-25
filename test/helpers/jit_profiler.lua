@@ -1519,13 +1519,7 @@ function _computeVisibleSpans(lo, hi) {
   }
   const visible = [];
   for (const span of traceSpans) {
-    if (hoverCategory) {
-      if (span.category !== hoverCategory) continue;
-      if (hoverCategory === 'aborted' && hoverAbortReason && span.abort_reason !== hoverAbortReason) continue;
-    } else {
-      if (!enabledCategories.has(span.category)) continue;
-      if (span.abort_reason && !enabledAbortReasons.has(span.abort_reason)) continue;
-    }
+    if (!spanMatchesTraceFilters(span)) continue;
     if (selectedTree) {
       if (!selectedTree.has(span.uid)) continue;
     } else {
@@ -1535,18 +1529,37 @@ function _computeVisibleSpans(lo, hi) {
     visible.push(span);
   }
   const cmp = (a, b) => {
+    const dir = traceListSortAsc ? 1 : -1;
+    const ord = (x, y) => x < y ? -1 : x > y ? 1 : 0;
+    const finish = (delta) => delta * dir;
     let va, vb;
     switch (traceListSortKey) {
-      case 'id': va = a.id; vb = b.id; break;
+      case 'id':
+        return finish(
+          ord(a.id, b.id) ||
+          ord(a.generation, b.generation) ||
+          ord(a.occurrence, b.occurrence)
+        );
       case 'status': va = a.outcome + (a.end.linktype||''); vb = b.outcome + (b.end.linktype||''); break;
       case 'depth': va = a.depth; vb = b.depth; break;
       case 'location': va = a.location||''; vb = b.location||''; break;
+      case 'parent':
+        return finish(
+          ord(a.start.parent_id == null ? -1 : a.start.parent_id, b.start.parent_id == null ? -1 : b.start.parent_id) ||
+          ord(a.start.exit_id == null ? -1 : a.start.exit_id, b.start.exit_id == null ? -1 : b.start.exit_id) ||
+          ord(a.t0, b.t0)
+        );
       case 'time': va = a.t0; vb = b.t0; break;
-      default: va = a.id; vb = b.id;
+      case 'ir': va = a.end.ir_count || 0; vb = b.end.ir_count || 0; break;
+      case 'exits': va = a.end.exit_count || 0; vb = b.end.exit_count || 0; break;
+      default:
+        return finish(
+          ord(a.id, b.id) ||
+          ord(a.generation, b.generation) ||
+          ord(a.occurrence, b.occurrence)
+        );
     }
-    if (va < vb) return traceListSortAsc ? -1 : 1;
-    if (va > vb) return traceListSortAsc ? 1 : -1;
-    return 0;
+    return finish(ord(va, vb) || ord(a.t0, b.t0) || ord(a.id, b.id) || ord(a.occurrence, b.occurrence));
   };
   visible.sort(cmp);
   return visible;
@@ -1947,6 +1960,28 @@ function traceParentLabel(span) {
   return span.start.exit_id != null ? label + ' exit ' + span.start.exit_id : label;
 }
 
+function traceSupersessionKey(span) {
+  return [
+    span.generation,
+    span.location || span.start.func_info || '',
+    span.start.parent_id != null ? span.start.parent_id : '',
+    span.start.exit_id != null ? span.start.exit_id : '',
+  ].join('|');
+}
+
+{
+  const seenSuccessfulKeys = new Set();
+  for (let i = traceSpans.length - 1; i >= 0; i--) {
+    const span = traceSpans[i];
+    const key = traceSupersessionKey(span);
+    if (span.outcome === 'stop') {
+      seenSuccessfulKeys.add(key);
+    } else if (span.outcome === 'abort') {
+      span.is_superseded_abort = seenSuccessfulKeys.has(key);
+    }
+  }
+}
+
 // Compute max depth for layout
 let maxTraceDepth = 0;
 for (const span of traceSpans) {
@@ -1958,23 +1993,42 @@ let visibleSpanRects = [];
 let lastHoveredSpan = null;
 let selectedSpan = null;
 let panClickSpanCandidate = null; // span under cursor at mousedown in trace area
+let showSupersededAborts = false;
 
-// --- Trace filter ---
-const allTraceCategories = {};
-const allAbortReasons = {};
-for (const span of traceSpans) {
-  allTraceCategories[span.category] = (allTraceCategories[span.category] || 0) + 1;
-  if (span.abort_reason) {
-    allAbortReasons[span.abort_reason] = (allAbortReasons[span.abort_reason] || 0) + 1;
-  }
+function shouldShowTraceSpan(span) {
+  return showSupersededAborts || !span.is_superseded_abort;
 }
-{
+
+function getTraceFilterStats() {
+  const categories = {};
+  const abortReasons = {};
+  for (const span of traceSpans) {
+    if (!shouldShowTraceSpan(span)) continue;
+    categories[span.category] = (categories[span.category] || 0) + 1;
+    if (span.abort_reason) abortReasons[span.abort_reason] = (abortReasons[span.abort_reason] || 0) + 1;
+  }
   let fc = 0;
   for (const e of EVENTS) if (e.type === 'trace_flush') fc++;
-  if (fc > 0) allTraceCategories['flush'] = fc;
+  if (fc > 0) categories['flush'] = fc;
+  return {categories, abortReasons};
 }
-const enabledCategories = new Set(Object.keys(allTraceCategories));
-const enabledAbortReasons = new Set(Object.keys(allAbortReasons));
+
+// --- Trace filter ---
+const initialTraceFilterStats = getTraceFilterStats();
+const enabledCategories = new Set(['OK', 'interpreter', 'linked', 'stitch', 'aborted', 'flush']);
+const enabledAbortReasons = new Set(Object.keys(initialTraceFilterStats.abortReasons));
+
+function spanMatchesTraceFilters(span) {
+  if (!shouldShowTraceSpan(span)) return false;
+  if (hoverCategory) {
+    if (span.category !== hoverCategory) return false;
+    if (hoverCategory === 'aborted' && hoverAbortReason && span.abort_reason !== hoverAbortReason) return false;
+    return true;
+  }
+  if (!enabledCategories.has(span.category)) return false;
+  if (span.abort_reason && !enabledAbortReasons.has(span.abort_reason)) return false;
+  return true;
+}
 
 const SAFE_SIZE_MCODE_KB = Math.max(1, SIZE_MCODE_KB || 1);
 const SAFE_MAX_MCODE_KB = Math.max(SAFE_SIZE_MCODE_KB, MAX_MCODE_KB || SAFE_SIZE_MCODE_KB);
@@ -2309,19 +2363,20 @@ function drawMcode() {
 }
 
 const mainCategoryOrder = ['OK', 'interpreter', 'linked', 'stitch', 'aborted', 'flush'];
-const categoryList = mainCategoryOrder.map(cat => [cat, allTraceCategories[cat] || 0]);
-
-const abortReasonList = Object.entries(allAbortReasons).sort((a, b) => b[1] - a[1]);
+const categoryList = mainCategoryOrder.map(cat => [cat, 0]);
 
 function buildFilterPanel(tStart, tEnd) {
   const lo = (tStart !== undefined) ? tStart : viewStart;
   const hi = (tEnd !== undefined) ? tEnd : viewEnd;
   const panel = document.getElementById('filter-panel');
+  const traceFilterStats = getTraceFilterStats();
+  const abortReasonList = Object.entries(traceFilterStats.abortReasons).sort((a, b) => b[1] - a[1]);
 
   // Recalculate what categories are actually visible in current range
   const zoomCategories = {};
   const zoomAbortReasons = {};
   for (const span of traceSpans) {
+    if (!shouldShowTraceSpan(span)) continue;
     const t = span.t0 - timeOrigin;
     if (span.t1 - timeOrigin < lo || t > hi) continue;
     zoomCategories[span.category] = (zoomCategories[span.category] || 0) + 1;
@@ -2359,6 +2414,17 @@ function buildFilterPanel(tStart, tEnd) {
       icon = `<span style="color:${color}; border: 1px dashed ${color}; width: 10px; height: 10px; display: inline-block; vertical-align: middle; margin-right: 2px;"></span>`;
     }
     html += `<label class="${isEnabled ? '' : 'disabled'}" style="${zoomCount === 0 ? 'opacity:0.5' : ''}" data-cat-idx="${idx}"><span class="custom-cb">${checkedChar}</span> ${icon} ${escaped} <span class="filter-count" style="${countStyle}">(${zoomCount})</span></label>`;
+    if (cat === 'aborted') {
+      const supersededCheckedChar = showSupersededAborts ? '☑' : '☐';
+      const zoomSupersededCount = traceSpans.reduce((count, span) => {
+        if (!span.is_superseded_abort) return count;
+        const t = span.t0 - timeOrigin;
+        if (span.t1 - timeOrigin < lo || t > hi) return count;
+        return count + 1;
+      }, 0);
+      const supersededCountStyle = zoomSupersededCount === 0 ? `color:${COLORS.borderStrong}` : `color:${COLORS.textFaint}`;
+      html += `<label class="${showSupersededAborts ? '' : 'disabled'}" style="${zoomSupersededCount === 0 ? 'opacity:0.5' : ''}" data-toggle-superseded="1"><span class="custom-cb">${supersededCheckedChar}</span> <span style="color:${COLORS.textDim}">↺</span> superseded aborts <span class="filter-count" style="${supersededCountStyle}">(${zoomSupersededCount})</span></label>`;
+    }
   });
 
   const abortedChecked = enabledCategories.has('aborted');
@@ -2447,6 +2513,17 @@ function buildFilterPanel(tStart, tEnd) {
       hoverCategory = null;
       drawTimeline();
     });
+  });
+  panel.querySelector('label[data-toggle-superseded]')?.addEventListener('click', () => {
+    showSupersededAborts = !showSupersededAborts;
+    const nextStats = getTraceFilterStats();
+    Object.keys(nextStats.abortReasons).forEach(reason => enabledAbortReasons.add(reason));
+    hoverCategory = null;
+    hoverAbortReason = null;
+    drawTimeline();
+    buildFilterPanel(lo, hi);
+    schedulePanelUpdate(lo, hi);
+    scheduleFlamegraph(lo, hi);
   });
   panel.querySelectorAll('label[data-reason-idx]').forEach(label => {
     label.addEventListener('click', () => {
@@ -2711,13 +2788,7 @@ function drawTimeline() {
 
   const TRACE_W = 8;
   for (const span of traceSpans) {
-    if (hoverCategory) {
-      if (span.category !== hoverCategory) continue;
-      if (hoverCategory === 'aborted' && hoverAbortReason && span.abort_reason !== hoverAbortReason) continue;
-    } else {
-      if (!enabledCategories.has(span.category)) continue;
-      if (span.abort_reason && !enabledAbortReasons.has(span.abort_reason)) continue;
-    }
+    if (!spanMatchesTraceFilters(span)) continue;
     const st = span.t0 - timeOrigin;
     if (st < viewStart - (TRACE_W / (w / vDur)) || st > viewEnd) continue;
 
