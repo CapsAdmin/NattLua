@@ -207,26 +207,26 @@ Profiler.__index = Profiler
 	}]]
 --[[#-- --- Type Definitions ---
 type Profiler.@SelfArgument = {
-	_id = string,
-	_path = string,
-	_file_url = string,
-	_mode = string,
-	_depth = number,
-	_sampling_rate = number,
-	_flush_interval = number,
-	_get_time = function=()>(number),
-	_time_start = number,
-	_running = boolean,
-	_events = List<|TEvent|>,
-	_event_count = number,
-	_last_flush_time = number,
-	_strings = List<|string|>,
-	_string_lookup = Map<|string, number|>,
-	_string_count = number,
-	_strings_flushed = number,
-	_section_stack = List<|string|>,
-	_section_path = string,
-	_traces = List<|
+	id = string,
+	path = string,
+	file_url = string,
+	mode = string,
+	depth = number,
+	sampling_rate = number,
+	flush_interval = number,
+	get_time = function=()>(number),
+	time_start = number,
+	running = boolean,
+	events = List<|TEvent|>,
+	event_count = number,
+	last_flush_time = number,
+	strings = List<|string|>,
+	string_lookup = Map<|string, number|>,
+	string_count = number,
+	strings_flushed = number,
+	section_stack = List<|string|>,
+	section_path = string,
+	traces = List<|
 		{
 			id = number,
 			parent_id = number | nil,
@@ -235,50 +235,50 @@ type Profiler.@SelfArgument = {
 			pc_lines = List<|{func = AnyFunction, pc = number, depth = number, loc = string}|>,
 		}
 	|>,
-	_trace_count = number,
-	_trace_generation = number,
-	_aborted = List<|boolean|>,
-	_should_warn_mcode = function=()>(number | false, number | nil),
-	_should_warn_abort = function=()>(number | false, number | nil),
-	_last_flushed_idx = number,
-	_file = File | nil,
-	_trace_event_fn = jit_attach_trace | nil,
-	_trace_event_safe_fn = jit_attach_trace | nil,
-	_record_event_fn = jit_attach_record | nil,
-	_record_event_safe_fn = jit_attach_record | nil,
+	trace_count = number,
+	trace_generation = number,
+	aborted = List<|boolean|>,
+	should_warn_mcode = function=()>(number | false, number | nil),
+	should_warn_abort = function=()>(number | false, number | nil),
+	last_flushed_idx = number,
+	file = File | nil,
+	trace_event_fn = jit_attach_trace | nil,
+	trace_event_safe_fn = jit_attach_trace | nil,
+	record_event_fn = jit_attach_record | nil,
+	record_event_safe_fn = jit_attach_record | nil,
 	@MetaTable = Profiler,
 }]]
 --[[#local type TProfile = Profiler.@SelfArgument]]
 
 -- --- Event accumulation ---
 function Profiler:EmitEvent(event--[[#: TEvent]])
-	event.time = self._get_time()
-	local idx = self._event_count + 1
-	self._events[idx] = event
-	self._event_count = idx
+	event.time = self.get_time()
+	local idx = self.event_count + 1
+	self.events[idx] = event
+	self.event_count = idx
 end
 
 -- --- Section tracking ---
 function Profiler:StartSection(name--[[#: string]])
-	if not self._running then return end
+	if not self.running then return end
 
 	-- Event section tracking
-	table_insert(self._section_stack, name)
-	self._section_path = table_concat(self._section_stack, " > ")
-	self:EmitEvent{type = "section_start", name = name, section_path = self._section_path}
+	table_insert(self.section_stack, name)
+	self.section_path = table_concat(self.section_stack, " > ")
+	self:EmitEvent{type = "section_start", name = name, section_path = self.section_path}
 end
 
 function Profiler:StopSection()
-	if not self._running then return end
+	if not self.running then return end
 
-	local name = self._section_stack[#self._section_stack]
+	local name = self.section_stack[#self.section_stack]
 
-	if #self._section_stack > 0 then
-		self._section_stack[#self._section_stack] = nil
-		self._section_path = table_concat(self._section_stack, " > ")
+	if #self.section_stack > 0 then
+		self.section_stack[#self.section_stack] = nil
+		self.section_path = table_concat(self.section_stack, " > ")
 	end
 
-	self:EmitEvent{type = "section_end", name = name, section_path = self._section_path}
+	self:EmitEvent{type = "section_end", name = name, section_path = self.section_path}
 end
 
 do
@@ -293,22 +293,22 @@ do
 		local fi = jutil.funcinfo(func, pc)
 		local loc = format_func_info(fi, func)
 		local depth = 0
-		local parent = parent_id and self._traces[parent_id]
+		local parent = parent_id and self.traces[parent_id]
 
 		if parent then depth = (parent.depth or 0) + 1 end
 
-		self._traces[id] = {
+		self.traces[id] = {
 			id = id,
 			parent_id = parent_id,
 			exit_id = exit_id,
 			depth = depth,
 			pc_lines = {{func = func, pc = pc, depth = 0, loc = loc}},
 		}
-		self._trace_count = self._trace_count + 1
+		self.trace_count = self.trace_count + 1
 		self:EmitEvent{
 			type = "trace_start",
 			id = id,
-			generation = self._trace_generation,
+			generation = self.trace_generation,
 			parent_id = parent_id,
 			exit_id = exit_id,
 			depth = depth,
@@ -323,7 +323,7 @@ do
 		pc--[[#: number]],
 		depth--[[#: number]]
 	)
-		local trace = self._traces[id]
+		local trace = self.traces[id]
 
 		if not trace then return end
 
@@ -331,7 +331,7 @@ do
 	end
 
 	local function on_trace_stop(self--[[#: TProfile]], id--[[#: number]], func--[[#: AnyFunction]])
-		local trace = self._traces[id]
+		local trace = self.traces[id]
 
 		if not trace then return end
 
@@ -343,7 +343,7 @@ do
 		self:EmitEvent{
 			type = "trace_stop",
 			id = id,
-			generation = self._trace_generation,
+			generation = self.trace_generation,
 			func_info = loc,
 			linktype = ti and ti.linktype or nil,
 			link_id = ti and ti.link or nil,
@@ -360,7 +360,7 @@ do
 		code--[[#: number]],
 		reason--[[#: number | string]]
 	)
-		local trace = self._traces[id]
+		local trace = self.traces[id]
 
 		if not trace then return end
 
@@ -369,20 +369,20 @@ do
 
 		if not loc then loc = format_func_info(jutil.funcinfo(func, pc), func) end
 
-		self._aborted[id] = true
-		self._traces[id] = nil
-		self._trace_count = self._trace_count - 1
+		self.aborted[id] = true
+		self.traces[id] = nil
+		self.trace_count = self.trace_count - 1
 		self:EmitEvent{
 			type = "trace_abort",
 			id = id,
-			generation = self._trace_generation,
+			generation = self.trace_generation,
 			abort_code = code,
 			abort_reason = format_error(code, reason),
 			func_info = loc,
 		}
 
 		if code == 27 then
-			local x, interval = self._should_warn_mcode()
+			local x, interval = self.should_warn_mcode()
 
 			if x and interval then
 				io.write(
@@ -395,13 +395,13 @@ do
 	end
 
 	local function on_trace_flush(self--[[#: TProfile]])
-		if self._trace_count > 0 then
-			local x, interval = self._should_warn_abort()
+		if self.trace_count > 0 then
+			local x, interval = self.should_warn_abort()
 
 			if x and interval then
 				io.write(
 					"flushing ",
-					tostring(self._trace_count),
+					tostring(self.trace_count),
 					" traces, ",
 					(x == 0 and "" or "[" .. x .. " times the last " .. interval .. " seconds]"),
 					"\n"
@@ -409,11 +409,11 @@ do
 			end
 		end
 
-		self._traces = {}
-		self._aborted = {}
-		self._trace_count = 0
+		self.traces = {}
+		self.aborted = {}
+		self.trace_count = 0
 		self:EmitEvent({type = "trace_flush"})
-		self._trace_generation = self._trace_generation + 1
+		self.trace_generation = self.trace_generation + 1
 	end
 
 	-- --- Constructor ---
@@ -432,52 +432,52 @@ do
 		config = config or {}
 		local self = setmetatable({}, Profiler)--[[# as TProfile]]
 		-- Config
-		self._id = config.id or "jit_profiler"
-		self._path = config.path or "./profiler_output.html"
-		self._file_url = config.file_url or "vscode://file/${path}:${line}:1"
-		self._mode = config.mode or "line"
-		self._depth = config.depth or 999
-		self._sampling_rate = config.sampling_rate or 1
-		self._flush_interval = config.flush_interval or 3
-		self._get_time = config.get_time or get_time_function()
+		self.id = config.id or "jit_profiler"
+		self.path = config.path or "./profiler_output.html"
+		self.file_url = config.file_url or "vscode://file/${path}:${line}:1"
+		self.mode = config.mode or "line"
+		self.depth = config.depth or 999
+		self.sampling_rate = config.sampling_rate or 1
+		self.flush_interval = config.flush_interval or 3
+		self.get_time = config.get_time or get_time_function()
 		-- Lifecycle
-		self._time_start = self._get_time()
-		self._running = true
+		self.time_start = self.get_time()
+		self.running = true
 		-- Event accumulation
-		self._events = {}
-		self._event_count = 0
-		self._last_flush_time = 0
+		self.events = {}
+		self.event_count = 0
+		self.last_flush_time = 0
 		-- String interning
-		self._strings = {}
-		self._string_lookup = {}
-		self._string_count = 0
-		self._strings_flushed = 0
+		self.strings = {}
+		self.string_lookup = {}
+		self.string_count = 0
+		self.strings_flushed = 0
 		-- Section tracking
-		self._section_stack = {}
-		self._section_path = ""
+		self.section_stack = {}
+		self.section_path = ""
 		-- Trace tracking
-		self._traces = {}
-		self._trace_count = 0
-		self._trace_generation = 0
-		self._aborted = {}
-		self._should_warn_mcode = create_warn_log(2)
-		self._should_warn_abort = create_warn_log(8)
+		self.traces = {}
+		self.trace_count = 0
+		self.trace_generation = 0
+		self.aborted = {}
+		self.should_warn_mcode = create_warn_log(2)
+		self.should_warn_abort = create_warn_log(8)
 		-- HTML streaming
-		self._last_flushed_idx = 0
+		self.last_flushed_idx = 0
 
 		do
 			local html = HTML_TEMPLATE
 			html = html:gsub("%%FILE_URL_JSON%%", function()
-				return json_string(self._file_url)
+				return json_string(self.file_url)
 			end)
-			local f = assert(io.open(self._path, "w"))
+			local f = assert(io.open(self.path, "w"))
 			f:write(html)
 			f:flush()
-			self._file = f
+			self.file = f
 		end
 
 		do
-			self._trace_event_fn = function(what, tr, func, pc, otr, oex)
+			self.trace_event_fn = function(what, tr, func, pc, otr, oex)
 				if what == "start" then
 					on_trace_start(self, tr, func, pc, otr, oex)
 				elseif what == "stop" then
@@ -488,44 +488,44 @@ do
 					on_trace_flush(self)
 				end
 			end--[[# as jit_attach_trace]]
-			self._trace_event_safe_fn = function(what, tr, func, pc, otr, oex)
-				local ok, err = pcall(self._trace_event_fn--[[# as any]], what, tr, func, pc, otr, oex)
+			self.trace_event_safe_fn = function(what, tr, func, pc, otr, oex)
+				local ok, err = pcall(self.trace_event_fn--[[# as any]], what, tr, func, pc, otr, oex)
 
 				if not ok then
 					io.write("error in trace event (" .. tostring(what) .. "): " .. tostring(err) .. "\n")
 				end
 			end--[[# as jit_attach_trace]]
-			jit.attach(self._trace_event_safe_fn, "trace")
+			jit.attach(self.trace_event_safe_fn, "trace")
 		end
 
 		do
-			self._record_event_fn = function(tr, func, pc, depth)
+			self.record_event_fn = function(tr, func, pc, depth)
 				on_trace_record(self, tr, func, pc, depth)
 			end--[[# as jit_attach_record]]
-			self._record_event_safe_fn = function(tr, func, pc, depth)
-				local ok, err = pcall(self._record_event_fn--[[# as any]], tr, func, pc, depth)
+			self.record_event_safe_fn = function(tr, func, pc, depth)
+				local ok, err = pcall(self.record_event_fn--[[# as any]], tr, func, pc, depth)
 
 				if not ok then io.write("error in record event: " .. tostring(err) .. "\n") end
 			end--[[# as jit_attach_record]]
-			jit.attach(self._record_event_safe_fn, "record")
+			jit.attach(self.record_event_safe_fn, "record")
 		end
 
 		do
 			local dumpstack = jprofile.dumpstack
-			local depth = self._depth
+			local depth = self.depth
 
-			jprofile.start((self._mode == "line" and "l" or "f") .. "i" .. self._sampling_rate, function(thread, sample_count, vmstate)
+			jprofile.start((self.mode == "line" and "l" or "f") .. "i" .. self.sampling_rate, function(thread, sample_count, vmstate)
 				self:EmitEvent{
 					type = "sample",
 					stack = dumpstack(thread, "pl\n", depth),
 					sample_count = sample_count,
 					vm_state = vmstate,
-					section_path = self._section_path,
+					section_path = self.section_path,
 				}
-				local now = self._get_time()
+				local now = self.get_time()
 
-				if now - self._last_flush_time >= self._flush_interval then
-					self._last_flush_time = now
+				if now - self.last_flush_time >= self.flush_interval then
+					self.last_flush_time = now
 					self:Save()
 				end
 			end)
@@ -539,25 +539,25 @@ do
 	local function intern(self--[[#: TProfile]], s--[[#: string | nil]])
 		if not s then return -1 end
 
-		local idx = self._string_lookup[s]
+		local idx = self.string_lookup[s]
 
 		if idx then return idx end
 
-		idx = self._string_count
-		self._string_count = self._string_count + 1
-		self._strings[idx] = s
-		self._string_lookup[s] = idx
+		idx = self.string_count
+		self.string_count = self.string_count + 1
+		self.strings[idx] = s
+		self.string_lookup[s] = idx
 		return idx
 	end
 
 	local function get_new_strings(self--[[#: TProfile]])--[[#: List<|string|>]]
 		local new = {}
 
-		for i = self._strings_flushed, self._string_count - 1 do
-			new[#new + 1] = self._strings[i]
+		for i = self.strings_flushed, self.string_count - 1 do
+			new[#new + 1] = self.strings[i]
 		end
 
-		self._strings_flushed = self._string_count
+		self.strings_flushed = self.string_count
 		return new
 	end
 
@@ -646,21 +646,21 @@ do
 	end
 
 	function Profiler:Save()
-		if not self._file then return end
+		if not self.file then return end
 
-		local count = self._event_count
+		local count = self.event_count
 
-		if count > self._last_flushed_idx then
-			local start_idx, end_idx = self._last_flushed_idx + 1, count
+		if count > self.last_flushed_idx then
+			local start_idx, end_idx = self.last_flushed_idx + 1, count
 
 			if start_idx > end_idx then
 
 			else
-				local f = self._file
+				local f = self.file
 				local event_parts = {}
 
 				for i = start_idx, end_idx do
-					event_parts[#event_parts + 1] = encode_event(self, assert(self._events[i], "nil event"))
+					event_parts[#event_parts + 1] = encode_event(self, assert(self.events[i], "nil event"))
 				end
 
 				local string_parts = {}
@@ -677,7 +677,7 @@ do
 				f:write(events_js)
 				f:write(");</script>\n")
 				f:flush()
-				self._last_flushed_idx = count
+				self.last_flushed_idx = count
 			end
 		end
 	end
@@ -687,7 +687,7 @@ function Profiler:GetSectionTimes()--[[#: Map<|string, {total = number}|>]]
 	local times = {}
 	local start_times--[[#: Map<|string, number|>]] = {}
 
-	for _, event in ipairs(self._events) do
+	for _, event in ipairs(self.events) do
 		if event.type == "section_start" then
 			start_times[event.name] = event.time
 		elseif event.type == "section_end" then
@@ -705,40 +705,40 @@ function Profiler:GetSectionTimes()--[[#: Map<|string, {total = number}|>]]
 end
 
 function Profiler:Stop()
-	if not self._running then return end
+	if not self.running then return end
 
-	self._running = false
+	self.running = false
 	jprofile.stop()
 
 	-- Detach trace events
-	if self._trace_event_safe_fn then
-		jit.attach(self._trace_event_safe_fn)
-		self._trace_event_fn = nil
-		self._trace_event_safe_fn = nil
+	if self.trace_event_safe_fn then
+		jit.attach(self.trace_event_safe_fn)
+		self.trace_event_fn = nil
+		self.trace_event_safe_fn = nil
 	end
 
-	if self._record_event_safe_fn then
-		jit.attach(self._record_event_safe_fn)
-		self._record_event_fn = nil
-		self._record_event_safe_fn = nil
+	if self.record_event_safe_fn then
+		jit.attach(self.record_event_safe_fn)
+		self.record_event_fn = nil
+		self.record_event_safe_fn = nil
 	end
 
 	-- Write remaining events and close file
 	self:Save()
-	local f = self._file
+	local f = self.file
 
 	if f then
 		f:close()
-		self._file = nil
+		self.file = nil
 	end
 end
 
 function Profiler:IsRunning()
-	return self._running
+	return self.running
 end
 
 function Profiler:GetElapsed()
-	return self._get_time() - self._time_start
+	return self.get_time() - self.time_start
 end
 
 -- --- HTML Template ---
