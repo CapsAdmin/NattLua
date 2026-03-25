@@ -303,10 +303,10 @@ end
 -- Tokenize str for syntax highlighting.  Uses the NattLua lexer lazily (via
 -- pcall) to avoid the circular dependency formating → lexer → token → formating.
 -- Returns a list of {start, stop, color} byte-indexed spans (relative to str).
-
 local function get_highlight_spans(str--[[#: string]])
 	local Lexer_mod = require("nattlua.lexer.lexer")
 	local Code_mod = require("nattlua.code")
+
 	if not ok_lex or not ok_code then return {} end
 
 	local Lexer_new = Lexer_mod.New
@@ -738,7 +738,7 @@ function formating.BuildSourceCodePointMessage2(
 			local cont_pfx = (" "):rep(#pfx)
 			local first = true
 
-			for line in (msg .. "\n"):gmatch("([^\n]*)\n") do
+			for _, line in ipairs(stringx.split(msg, "\n")) do
 				local p = first and pfx or cont_pfx
 				table.insert(footer_items, {text = p .. line, kind = kind})
 				first = false
