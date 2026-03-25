@@ -439,14 +439,7 @@ do
 		self._depth = config.depth or 999
 		self._sampling_rate = config.sampling_rate or 1
 		self._flush_interval = config.flush_interval or 3
-
-		if config.get_time then self._get_time = config.get_time end
-
-		if not self._get_time then
-			time_function = time_function or get_time_function()
-			self._get_time = time_function
-		end
-
+		self._get_time = config.get_time or get_time_function()
 		-- Lifecycle
 		self._time_start = self._get_time()
 		self._running = true
