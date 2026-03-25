@@ -46,17 +46,21 @@ function META:SetParent(parent)
 end
 
 function META:BuildParentCache()
-	local parent = self
+	self.ParentList[1] = self
+	self.ParentMap[self] = self
+	local parent = self.Parent
 
-	for i = 1, 1000 do
-		if not parent then break end
-
-		self.ParentList[i] = parent
-		self.ParentMap[parent] = parent
-		parent = parent.Parent
+	if not parent then
+		self.Root = self
+		return
 	end
 
-	self.Root = parent or self
+	for i, scope in ipairs(parent.ParentList) do
+		self.ParentList[i + 1] = scope
+		self.ParentMap[scope] = scope
+	end
+
+	self.Root = parent.Root
 end
 
 function META:AddTrackedObject(val)

@@ -284,14 +284,16 @@ do
 		return a.count > b.count
 	end
 
-	function META:CheckTimeout()
-		local start_prof = os.clock()
+	local os_clock = os.clock
 
-		if not self.start_time then self.start_time = os.clock() end
+	function META:CheckTimeout()
+		local start_prof = os_clock()
+
+		if not self.start_time then self.start_time = start_prof end
 
 		self.check_count = (self.check_count or 0) + 1
 		local count = self.check_count
-		local elapsed = os.clock() - self.start_time
+		local elapsed = start_prof - self.start_time
 
 		if count < max_iterations and elapsed < max_time_seconds then return end
 

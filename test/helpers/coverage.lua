@@ -15,97 +15,101 @@ local math_min = _G.math.min
 local math_max = _G.math.max
 local math_huge = _G.math.huge
 
+local function inject_call_expression(parser, node, start, stop)
+	local expressions = parser.config.coverage_expressions
+
+	if node.environment == "typesystem" then return node end
+
+	if node.Type == "expression_postfix_call" and node.type_call then return node end
+
+	if node.Type == "expression_function" then
+		-- don't mark the funciton body as being called
+		start, stop = node.tokens["function"].start, node.tokens["function"].stop
+	end
+
+	if node.Type == "expression_table" then
+		-- don't mark the funciton body as being called
+		start, stop = node.tokens["{"].start, node.tokens["{"].stop
+	end
+
+	local call_expression = parser:ParseString(" " .. FUNC_NAME .. "(" .. start .. "," .. stop .. ",x)").statements[1].value
+
+	if node.Type == "expression_postfix_call" and not node.tokens["call("] then
+		node.tokens["call("] = parser:NewToken("symbol", "(")
+		node.tokens["call)"] = parser:NewToken("symbol", ")")
+	end
+
+	call_expression.expressions[3] = node
+
+	if node.Type == "expression_binary_operator" and node.right then
+		call_expression.right = node.right
+	end
+
+	table_insert(expressions, node)
+	-- to prevent start stop messing up from previous injections
+	call_expression.code_start = node.code_start
+	call_expression.code_stop = node.code_stop
+	return call_expression
+end
+
+local function inject_token(token)
+	token:ReplaceValue(
+		" " .. FUNC_NAME .. "(" .. token.start .. "," .. token.stop .. ",x) " .. token:GetValueString()
+	)
+end
+
+local function on_parsed_coverage_node(parser, node)
+	if node.is_statement then
+		-- inject a call right before the token itself which uses the token for range
+		if node.Type == "statement_return" then
+			inject_token(node.tokens["return"])
+		elseif node.Type == "statement_break" then
+			inject_token(node.tokens["break"])
+		elseif node.Type == "statement_continue" then
+			inject_token(node.tokens["continue"])
+		elseif node.Type == "statement_call_expression" then
+			local start, stop = node:GetStartStop()
+			node.value = inject_call_expression(parser, node.value, start, stop)
+		end
+	elseif node.is_expression then
+		if
+			node.is_left_assignment or
+			node.is_identifier or
+			(
+				node:GetStatement().Type == "statement_function" or
+				node:GetStatement().Type == "statement_type_function"
+			)
+			or
+			(
+				node.Type == "expression_binary_operator" and
+				node.value.sub_type == ":"
+			)
+			or
+			(
+				node.parent and
+				node.parent.Type == "expression_binary_operator" and
+				(
+					node.parent.value.sub_type == "." or
+					node.parent.value.sub_type == ":"
+				)
+			)
+		then
+			return
+		end
+
+		return inject_call_expression(parser, node, node:GetStartStop())
+	end
+end
+
 function coverage.Preprocess(code, key)
 	local expressions = {}
-
-	local function inject_call_expression(parser, node, start, stop)
-		if node.environment == "typesystem" then return node end
-
-		if node.Type == "expression_postfix_call" and node.type_call then return node end
-
-		if node.Type == "expression_function" then
-			-- don't mark the funciton body as being called
-			start, stop = node.tokens["function"].start, node.tokens["function"].stop
-		end
-
-		if node.Type == "expression_table" then
-			-- don't mark the funciton body as being called
-			start, stop = node.tokens["{"].start, node.tokens["{"].stop
-		end
-
-		local call_expression = parser:ParseString(" " .. FUNC_NAME .. "(" .. start .. "," .. stop .. ",x)").statements[1].value
-
-		if node.Type == "expression_postfix_call" and not node.tokens["call("] then
-			node.tokens["call("] = parser:NewToken("symbol", "(")
-			node.tokens["call)"] = parser:NewToken("symbol", ")")
-		end
-
-		call_expression.expressions[3] = node
-
-		if node.Type == "expression_binary_operator" and node.right then
-			call_expression.right = node.right
-		end
-
-		table_insert(expressions, node)
-		-- to prevent start stop messing up from previous injections
-		call_expression.code_start = node.code_start
-		call_expression.code_stop = node.code_stop
-		return call_expression
-	end
-
-	local function inject_token(token)
-		token:ReplaceValue(
-			" " .. FUNC_NAME .. "(" .. token.start .. "," .. token.stop .. ",x) " .. token:GetValueString()
-		)
-	end
-
 	local compiler = nl.Compiler(
 		code,
 		key,
 		{
 			parser = {
-				on_parsed_node = function(parser, node)
-					if node.is_statement then
-						-- inject a call right before the token itself which uses the token for range
-						if node.Type == "statement_return" then
-							inject_token(node.tokens["return"])
-						elseif node.Type == "statement_break" then
-							inject_token(node.tokens["break"])
-						elseif node.Type == "statement_continue" then
-							inject_token(node.tokens["continue"])
-						elseif node.Type == "statement_call_expression" then
-							local start, stop = node:GetStartStop()
-							node.value = inject_call_expression(parser, node.value, start, stop)
-						end
-					elseif node.is_expression then
-						if
-							node.is_left_assignment or
-							node.is_identifier or
-							(
-								node:GetStatement().Type == "statement_function" or
-								node:GetStatement().Type == "statement_type_function"
-							)
-							or
-							(
-								node.Type == "expression_binary_operator" and
-								node.value.sub_type == ":"
-							)
-							or
-							(
-								node.parent and
-								node.parent.Type == "expression_binary_operator" and
-								(
-									node.parent.value.sub_type == "." or
-									node.parent.value.sub_type == ":"
-								)
-							)
-						then
-							return
-						end
-
-						return inject_call_expression(parser, node, node:GetStartStop())
-					end
-				end,
+				coverage_expressions = expressions,
+				on_parsed_node = on_parsed_coverage_node,
 				skip_import = true,
 			},
 		}

@@ -310,21 +310,6 @@ function META:GetAtTupleIndexUnion(i--[[#: number]])
 	return val, is_inf
 end
 
-function META:IsTypeObjectSubsetOf(typ--[[#: TBaseType]])
-	local errors
-
-	for i, obj in ipairs(self.Data) do
-		local ok, reason = shared.IsSubsetOf(typ, obj)
-
-		if ok then return obj end
-
-		errors = errors or {}
-		errors[i] = reason
-	end
-
-	return false, errors
-end
-
 function META:HasTypeObject(obj--[[#: TBaseType]])
 	for i, v in ipairs(self.Data) do
 		local ok, reason = shared.IsSubsetOf(obj, v)

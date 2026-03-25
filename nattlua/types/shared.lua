@@ -444,24 +444,30 @@ function shared.IsSubsetOf(
 		end
 
 		for _, a_val in ipairs(a.Data) do
-			a:PushSuppress()
-
 			if b.Type == "union" then
-				local b_val, reason = b:IsTypeObjectSubsetOf(a_val)
-				a:PopSuppress()
+				a:PushSuppress()
+				local reasons
+				local found = false
 
-				if not b_val then
-					return false, error_messages.because(error_messages.subset(a_val, b), reason)
+				for i, obj in ipairs(b.Data) do
+					local ok, reason = shared.IsSubsetOf(a_val, obj)
+
+					if ok then
+						found = true
+						break
+					end
+
+					reasons = reasons or {}
+					reasons[i] = reason
 				end
 
-				a:PushSuppress()
-				local ok, reason = shared.IsSubsetOf(a_val, b_val)
 				a:PopSuppress()
 
-				if not ok then
-					return false, error_messages.because(error_messages.subset(a_val, b_val), reason)
+				if not found then
+					return false, error_messages.because(error_messages.subset(a_val, b), reasons)
 				end
 			else
+				a:PushSuppress()
 				local ok, reason = shared.IsSubsetOf(a_val, b)
 				a:PopSuppress()
 
