@@ -19,28 +19,29 @@ end
 local GC64 = #tostring({}) == 19
 -- https://github.com/LuaJIT/LuaJIT/blob/v2.1/src/lj_jit.h#L116-L137
 local default_options = {
-	--
-	maxtrace = 1000, -- 1 > 65535: Max number of of traces in cache. 
-	maxrecord = 4000, -- Max number of of recorded IR instructions.
-	maxirconst = 500, -- Max number of of IR constants of a trace.
-	maxside = 100, -- Max number of of side traces of a root trace.
-	maxsnap = 500, -- Max number of of snapshots for a trace.
-	minstitch = 0, -- Min number of of IR ins for a stitched trace.
-	--
-	hotloop = 56, -- number of iter. to detect a hot loop/call.
-	hotexit = 10, -- number of taken exits to start a side trace.
-	tryside = 4, -- number of attempts to compile a side trace.
-	--
-	instunroll = 4, -- max unroll attempts for loops with an unknown iteration count before falling back to normal loop construct
-	loopunroll = 15, -- max unroll for loop ops in side traces.
-	callunroll = 3, -- max depth for recursive calls.
-	recunroll = 2, -- min unroll for true recursion.
-	--
+	-- trace cache limits
+	maxtrace = 1000, -- 1 >= 65535: Max number of traces in cache
+	maxmcode = 512, -- max total size of all machine code areas (in KBytes).
 	-- size of each machine code area (in KBytes).
 	-- See: https://devblogs.microsoft.com/oldnewthing/20031008-00/?p=42223
 	-- Could go as low as 4K, but the mmap() overhead would be rather high.
 	sizemcode = jit.os == "Windows" or GC64 and 64 or 32,
-	maxmcode = 512, -- max total size of all machine code areas (in KBytes).
+	-- trace size limits
+	maxrecord = 4000, -- Max number of recorded IR instructions
+	maxirconst = 500, -- Max number of IR constants of a trace
+	maxsnap = 500, -- Max number of snapshots for a trace
+	-- side trace limits
+	minstitch = 0, -- Min number of IR instructions for a stitched trace. depends on maxrecord
+	maxside = 100, -- Max number of side traces of a root trace
+	-- hotness thresholds
+	hotloop = 56, -- loop iterations to start a trace (functions need hotloop*2 calls)
+	hotexit = 10, -- times a trace exit must be taken to start a side trace. depends on maxside
+	tryside = 4, -- number of attempts to compile a side trace
+	-- unroll heuristics
+	instunroll = 4, -- max unroll attempts for loops with instable types.
+	loopunroll = 15, -- max unroll for loop ops in side traces.
+	callunroll = 3, -- max depth for recursive calls.
+	recunroll = 2, -- min unroll for true recursion.
 --
 }
 -- https://github.com/LuaJIT/LuaJIT/blob/v2.1/src/lj_jit.h#L93-L103
