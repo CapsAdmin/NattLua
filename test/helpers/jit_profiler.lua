@@ -200,6 +200,7 @@ Profiler.__index = Profiler
 		func_info = string,
 		linktype = string | nil,
 		link_id = number | nil,
+		record_count = number | nil,
 		ir_count = number | nil,
 		exit_count = number | nil,
 		mcode_addr = number | nil,
@@ -210,6 +211,7 @@ Profiler.__index = Profiler
 		id = number,
 		abort_code = number | nil,
 		abort_reason = string,
+		record_count = number | nil,
 		func_info = string,
 	} | {
 		type = "trace_flush",
@@ -244,6 +246,7 @@ type Profiler.@SelfArgument = {
 			parent_id = number | nil,
 			exit_id = number | nil,
 			depth = number,
+			record_count = number,
 			pc_lines = List<|{func = AnyFunction, pc = number, depth = number, loc = string}|>,
 		}
 	|>,
@@ -319,6 +322,7 @@ do
 			parent_id = parent_id,
 			exit_id = exit_id,
 			depth = depth,
+			record_count = 0,
 			pc_lines = {{func = func, pc = pc, depth = 0, loc = loc}},
 		}
 		self.trace_count = self.trace_count + 1
@@ -344,6 +348,7 @@ do
 
 		if not trace then return end
 
+		trace.record_count = trace.record_count + 1
 		append_trace_pc_line(trace, func, pc, depth)
 	end
 
@@ -377,6 +382,7 @@ do
 			func_info = loc,
 			linktype = ti and ti.linktype or nil,
 			link_id = ti and ti.link or nil,
+			record_count = trace.record_count,
 			ir_count = ti and ti.nins or nil,
 			exit_count = ti and ti.nexit or nil,
 			mcode_addr = mcode_addr,
@@ -410,6 +416,7 @@ do
 			generation = self.trace_generation,
 			abort_code = code,
 			abort_reason = format_error(code, reason),
+			record_count = trace.record_count,
 			func_info = loc,
 		}
 
@@ -655,7 +662,7 @@ do
 			)
 		elseif ev.type == "trace_stop" then
 			return string_format(
-				"[%d,%.6f,%d,%d,%d,%d,%s,%d,%d,%s,%s]",
+				"[%d,%.6f,%d,%d,%d,%d,%s,%d,%d,%d,%s,%s]",
 				ti,
 				ev.time,
 				ev.id or 0,
@@ -663,6 +670,7 @@ do
 				intern(self, ev.func_info),
 				intern(self, ev.linktype),
 				ev.link_id and tostring(ev.link_id) or "null",
+				ev.record_count or 0,
 				ev.ir_count or 0,
 				ev.exit_count or 0,
 				ev.mcode_addr ~= nil and tostring(ev.mcode_addr) or "null",
@@ -670,13 +678,14 @@ do
 			)
 		elseif ev.type == "trace_abort" then
 			return string_format(
-				"[%d,%.6f,%d,%d,%s,%d,%d]",
+				"[%d,%.6f,%d,%d,%s,%d,%d,%d]",
 				ti,
 				ev.time,
 				ev.id or 0,
 				ev.generation or 0,
 				ev.abort_code and tostring(ev.abort_code) or "null",
 				intern(self, ev.abort_reason),
+				ev.record_count or 0,
 				intern(self, ev.func_info)
 			)
 		else
@@ -886,6 +895,7 @@ body { background: var(--bg-base); color: #e0e0e0; overflow-x: hidden; }
 #trace-panel .col-location { width: auto; }
 #trace-panel .col-parent { width: 120px; }
 #trace-panel .col-time { width: 100px; }
+#trace-panel .col-rec { width: 52px; }
 #trace-panel .col-ir { width: 50px; }
 #trace-panel .col-exits { width: 60px; }
 #trace-panel thead tr th:last-child .th-resizer { display: none; }
@@ -1006,9 +1016,9 @@ function _decode(S,E){
     }else if(type==='trace_start'){
       ev={type:type,time:d[1],id:d[2],generation:d[3],parent_id:d[4],exit_id:d[5],depth:d[6],func_info:S[d[7]]};
     }else if(type==='trace_stop'){
-      ev={type:type,time:d[1],id:d[2],generation:d[3],func_info:S[d[4]],linktype:S[d[5]],link_id:d[6],ir_count:d[7],exit_count:d[8],mcode_addr:d[9],mcode_size:d[10]};
+      ev={type:type,time:d[1],id:d[2],generation:d[3],func_info:S[d[4]],linktype:S[d[5]],link_id:d[6],record_count:d[7],ir_count:d[8],exit_count:d[9],mcode_addr:d[10],mcode_size:d[11]};
     }else if(type==='trace_abort'){
-      ev={type:type,time:d[1],id:d[2],generation:d[3],abort_code:d[4],abort_reason:S[d[5]],func_info:S[d[6]]};
+      ev={type:type,time:d[1],id:d[2],generation:d[3],abort_code:d[4],abort_reason:S[d[5]],record_count:d[6],func_info:S[d[7]]};
     }else if(type==='trace_flush'){
       ev={type:type,time:d[1]};
     }else{
@@ -1550,6 +1560,7 @@ function _computeVisibleSpans(lo, hi) {
           ord(a.t0, b.t0)
         );
       case 'time': va = a.t0; vb = b.t0; break;
+      case 'records': va = a.end.record_count || 0; vb = b.end.record_count || 0; break;
       case 'ir': va = a.end.ir_count || 0; vb = b.end.ir_count || 0; break;
       case 'exits': va = a.end.exit_count || 0; vb = b.end.exit_count || 0; break;
       default:
@@ -1582,6 +1593,7 @@ function _ensureTraceSkeleton() {
     hdr('location','location','col-location') +
     hdr('parent', 'parent', 'col-parent') +
     hdr('time','time','col-time') +
+    hdr('records','rec','col-rec') +
     hdr('ir','ir','col-ir') +
     hdr('exits','exits','col-exits') +
     '</tr></thead></table></div>';
@@ -1589,7 +1601,7 @@ function _ensureTraceSkeleton() {
     '<div id="trace-vtop" style="height:0"></div>' +
     '<table><thead><tr style="height:0; visibility:collapse;">' +
     '<th class="col-id"></th><th class="col-status"></th><th class="col-depth"></th><th class="col-location"></th>' +
-    '<th class="col-parent"></th><th class="col-time"></th><th class="col-ir"></th><th class="col-exits"></th>' +
+    '<th class="col-parent"></th><th class="col-time"></th><th class="col-rec"></th><th class="col-ir"></th><th class="col-exits"></th>' +
     '</tr></thead><tbody id="trace-vbody"></tbody></table>' +
     '<div id="trace-vbot" style="height:0"></div></div>';
   container.innerHTML = html;
@@ -1765,6 +1777,7 @@ function renderVisibleTraceRows() {
   for (let i = startIdx; i < endIdx; i++) {
     const s = traceVisibleData[i];
     const cls = traceStatusClass(s);
+    const recordCount = s.end.record_count || '';
     const irCount = s.end.ir_count || '';
     const exitCount = s.end.exit_count || '';
     const parentInfo = traceParentLabel(s);
@@ -1777,6 +1790,7 @@ function renderVisibleTraceRows() {
       '<td class="trace-location col-location">' + funcInfoLink(s.location || s.start.func_info) + '</td>' +
       '<td class="col-parent">' + parentInfo + '</td>' +
       '<td class="col-time">' + t + '</td>' +
+        '<td class="col-rec">' + recordCount + '</td>' +
       '<td class="col-ir">' + irCount + '</td>' +
       '<td class="col-exits">' + exitCount + '</td></tr>';
   }
@@ -3037,12 +3051,14 @@ function formatTooltip(e) {
       s += `\nTrace <b>#${e.id}</b> completed`;
       if (e.linktype) s += `  link: ${e.linktype}`;
       if (e.link_id) s += ` → #${e.link_id}`;
+      if (e.record_count) s += `\nRecorded: ${e.record_count} instructions`;
       if (e.ir_count) s += `\nIR: ${e.ir_count} instructions, ${e.exit_count || 0} exits`;
       if (e.func_info) s += `\nLocation: ${funcInfoLink(e.func_info)}`;
       break;
     case 'trace_abort':
       s += `\nTrace <b>#${e.id}</b> aborted`;
       s += `\n<span style="color:${COLORS.abort}">${e.abort_reason || '?'}</span>`;
+      if (e.record_count) s += `\nRecorded: ${e.record_count} instructions`;
       if (e.func_info) s += `\nLocation: ${funcInfoLink(e.func_info)}`;
       break;
     case 'trace_flush':
@@ -3071,10 +3087,12 @@ function formatSpanTooltip(span) {
     const e = span.end;
     if (e.linktype) s += `\nLink: <b>${e.linktype}</b>`;
     if (e.link_id) s += ` → #${e.link_id}`;
+    if (e.record_count) s += `\nRecorded: ${e.record_count} instructions`;
     if (e.ir_count) s += `\nIR: ${e.ir_count} instructions, ${e.exit_count || 0} exits`;
   } else {
     s += `<b style="color:${COLORS.abort}">Trace ${traceDisplayId(span)} aborted</b>  <span style="color:${COLORS.textDimmer}">${t0}s</span>  ${dStr}`;
     s += `\n<span style="color:${COLORS.abort}">${span.end.abort_reason || '?'}</span>`;
+    if (span.end.record_count) s += `\nRecorded: ${span.end.record_count} instructions`;
   }
   if (span.start.func_info) s += `\n ${funcInfoLink(span.start.func_info)}`;
   if (span.start.parent_id) s += `\n↑ parent ${traceParentLabel(span)}`;
