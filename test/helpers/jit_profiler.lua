@@ -256,6 +256,11 @@ function Profiler:EmitEvent(event--[[#: TEvent]])
 	local idx = self.event_count + 1
 	self.events[idx] = event
 	self.event_count = idx
+
+	if event.time - self.last_flush_time >= self.flush_interval then
+		self.last_flush_time = event.time
+		self:Save()
+	end
 end
 
 -- --- Section tracking ---
@@ -447,7 +452,7 @@ do
 		-- Event accumulation
 		self.events = {}
 		self.event_count = 0
-		self.last_flush_time = 0
+		self.last_flush_time = self.time_start
 		-- String interning
 		self.strings = {}
 		self.string_lookup = {}
@@ -525,12 +530,6 @@ do
 					vm_state = vmstate,
 					section_path = self.section_path,
 				}
-				local now = self.get_time()
-
-				if now - self.last_flush_time >= self.flush_interval then
-					self.last_flush_time = now
-					self:Save()
-				end
 			end)
 		end
 
