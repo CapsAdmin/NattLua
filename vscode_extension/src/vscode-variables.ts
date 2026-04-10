@@ -3,34 +3,54 @@ import * as process from 'process';
 import * as path from 'path';
 
 export function resolveVariables(string: string, recursive = false) {
-    let workspaces = vscode.workspace.workspaceFolders;
-    let workspace = vscode.workspace.workspaceFolders.length ? vscode.workspace.workspaceFolders[0] : null;
-    let activeFile = vscode.window.activeTextEditor?.document;
-    let absoluteFilePath = activeFile?.uri.fsPath
-    string = string.replace(/\${workspaceFolder}/g, workspace?.uri.fsPath);
-    string = string.replace(/\${workspaceFolderBasename}/g, workspace?.name);
-    string = string.replace(/\${file}/g, absoluteFilePath);
+    const workspaces = vscode.workspace.workspaceFolders || [];
+    const workspace = workspaces.length ? workspaces[0] : null;
+    const activeEditor = vscode.window.activeTextEditor;
+    const activeDocument = activeEditor?.document;
+    const absoluteFilePath = activeDocument?.uri.fsPath || '';
+    const workspaceFolderPath = workspace?.uri.fsPath || '';
+    const workspaceFolderBasename = workspace?.name || '';
     let activeWorkspace = workspace;
     let relativeFilePath = absoluteFilePath;
-    for (let workspace of workspaces) {
-        if (absoluteFilePath.replace(workspace.uri.fsPath, '') !== absoluteFilePath) {
-            activeWorkspace = workspace;
-            relativeFilePath = absoluteFilePath.replace(workspace.uri.fsPath, '').substr(path.sep.length);
-            break;
+
+    string = string.replace(/\${workspaceFolder}/g, workspaceFolderPath);
+    string = string.replace(/\${workspaceFolderBasename}/g, workspaceFolderBasename);
+    string = string.replace(/\${file}/g, absoluteFilePath);
+
+    if (absoluteFilePath) {
+        for (const workspace of workspaces) {
+            if (absoluteFilePath.startsWith(workspace.uri.fsPath)) {
+                activeWorkspace = workspace;
+                relativeFilePath = absoluteFilePath.slice(workspace.uri.fsPath.length).replace(new RegExp(`^\\${path.sep}+`), '');
+                break;
+            }
         }
     }
-    let parsedPath = path.parse(absoluteFilePath);
-    string = string.replace(/\${fileWorkspaceFolder}/g, activeWorkspace?.uri.fsPath);
+
+    const parsedPath = path.parse(absoluteFilePath || '');
+    const relativeFileDirname = relativeFilePath.includes(path.sep)
+        ? relativeFilePath.slice(0, relativeFilePath.lastIndexOf(path.sep))
+        : '';
+    const fileDirname = parsedPath.dir
+        ? parsedPath.dir.slice(parsedPath.dir.lastIndexOf(path.sep) + 1)
+        : '';
+    const cwd = parsedPath.dir || workspaceFolderPath || process.cwd();
+    const lineNumber = activeEditor ? (activeEditor.selection.start.line + 1).toString() : '1';
+    const selectedText = activeEditor
+        ? activeEditor.document.getText(new vscode.Range(activeEditor.selection.start, activeEditor.selection.end))
+        : '';
+
+    string = string.replace(/\${fileWorkspaceFolder}/g, activeWorkspace?.uri.fsPath || workspaceFolderPath);
     string = string.replace(/\${relativeFile}/g, relativeFilePath);
-    string = string.replace(/\${relativeFileDirname}/g, relativeFilePath.substr(0, relativeFilePath.lastIndexOf(path.sep)));
-    string = string.replace(/\${fileBasename}/g, parsedPath.base);
-    string = string.replace(/\${fileBasenameNoExtension}/g, parsedPath.name);
-    string = string.replace(/\${fileExtname}/g, parsedPath.ext);
-    string = string.replace(/\${fileDirname}/g, parsedPath.dir.substr(parsedPath.dir.lastIndexOf(path.sep) + 1));
-    string = string.replace(/\${cwd}/g, parsedPath.dir);
+    string = string.replace(/\${relativeFileDirname}/g, relativeFileDirname);
+    string = string.replace(/\${fileBasename}/g, parsedPath.base || '');
+    string = string.replace(/\${fileBasenameNoExtension}/g, parsedPath.name || '');
+    string = string.replace(/\${fileExtname}/g, parsedPath.ext || '');
+    string = string.replace(/\${fileDirname}/g, fileDirname);
+    string = string.replace(/\${cwd}/g, cwd);
     string = string.replace(/\${pathSeparator}/g, path.sep);
-    string = string.replace(/\${lineNumber}/g, (vscode.window.activeTextEditor.selection.start.line + 1).toString());
-    string = string.replace(/\${selectedText}/g, vscode.window.activeTextEditor.document.getText(new vscode.Range(vscode.window.activeTextEditor.selection.start, vscode.window.activeTextEditor.selection.end)));
+    string = string.replace(/\${lineNumber}/g, lineNumber);
+    string = string.replace(/\${selectedText}/g, selectedText);
     string = string.replace(/\${env:(.*?)}/g, function (variable) {
         return process.env[variable.match(/\${env:(.*?)}/)[1]] || '';
     });

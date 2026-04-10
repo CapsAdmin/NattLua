@@ -86,6 +86,34 @@ do
 end
 
 do
+	local client = LSPClient.New()
+	client:SetWorkingDirectory("/workspace")
+	local root_uri = "file:///workspace"
+	client:Initialize(lsp, root_uri)
+	client:Notify(lsp, "nattlua/visibleEditors", {uris = {}})
+	local file_uri = root_uri .. "/hidden.nlua"
+	client:Notify(
+		lsp,
+		"textDocument/didOpen",
+		{
+			textDocument = {
+				uri = file_uri,
+				languageId = "nattlua",
+				version = 1,
+				text = "",
+			},
+		}
+	)
+	assert(#client:GetNotifications("textDocument/publishDiagnostics") == 0)
+	client:Notify(lsp, "nattlua/visibleEditors", {uris = {file_uri}})
+	assert(#client:GetNotifications("textDocument/publishDiagnostics") > 0)
+	client:Notify(lsp, "nattlua/visibleEditors", {uris = {}})
+	client:Notify(lsp, "textDocument/didClose", {textDocument = {uri = file_uri}})
+	lsp.editor_helper.UseVisibleFilesForOpen = false
+	lsp.editor_helper.VisibleFiles = {}
+end
+
+do
 	lsp.editor_helper:SetConfigFunction(function(path)
 		return {
 			["get-compiler-config"] = function()

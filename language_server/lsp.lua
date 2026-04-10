@@ -300,6 +300,23 @@ lsp.methods["workspace/didChangeConfiguration"] = function(params)
 		editor_helper.workspace_config = params.settings.nattlua
 	end
 end
+lsp.methods["nattlua/visibleEditors"] = function(params)
+	local paths = {}
+
+	if params and params.uris then
+		for i, uri in ipairs(params.uris) do
+			paths[i] = to_fs_path(uri)
+		end
+	end
+
+	local newly_visible = editor_helper:SetVisibleFiles(paths)
+
+	for _, path in ipairs(newly_visible) do
+		if editor_helper.OpenFiles[path] and not editor_helper:IsLightLspMode(path) then
+			editor_helper:Recompile(path)
+		end
+	end
+end
 lsp.methods["textDocument/didOpen"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 	editor_helper:OpenFile(path, params.textDocument.text)

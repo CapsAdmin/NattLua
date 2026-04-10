@@ -32,6 +32,85 @@ export async function activate(context: ExtensionContext) {
   let restartTimestamps: number[] = [];
   let restartTimer: NodeJS.Timeout | undefined;
   let startPromise: Promise<void> | undefined;
+  const syncedVisibleDocuments = new Set<string>();
+
+  const isVisibleDocument = (document: TextDocument) => {
+    return window.visibleTextEditors.some(editor => editor.document.uri.toString() === document.uri.toString());
+  };
+
+  const isSyncCandidate = (document: TextDocument) => {
+    return document.uri.scheme === 'file' && document.languageId === 'nattlua';
+  };
+
+  const sendDidOpen = (document: TextDocument) => {
+    if (!client || !client.isRunning()) {
+      return;
+    }
+
+    const uri = document.uri.toString();
+    client.sendNotification('textDocument/didOpen', {
+      textDocument: {
+        uri,
+        languageId: document.languageId,
+        version: document.version,
+        text: document.getText(),
+      },
+    });
+    syncedVisibleDocuments.add(uri);
+  };
+
+  const sendDidClose = (document: TextDocument) => {
+    if (!client || !client.isRunning()) {
+      return;
+    }
+
+    const uri = document.uri.toString();
+    client.sendNotification('textDocument/didClose', {
+      textDocument: { uri },
+    });
+    syncedVisibleDocuments.delete(uri);
+  };
+
+  const reconcileVisibleDocumentSync = () => {
+    if (!client || !client.isRunning()) {
+      return;
+    }
+
+    const visibleDocuments = window.visibleTextEditors
+      .map(editor => editor.document)
+      .filter(isSyncCandidate);
+    const nextVisibleUris = new Set(visibleDocuments.map(document => document.uri.toString()));
+
+    for (const document of visibleDocuments) {
+      const uri = document.uri.toString();
+      if (!syncedVisibleDocuments.has(uri)) {
+        sendDidOpen(document);
+      }
+    }
+
+    for (const uri of Array.from(syncedVisibleDocuments)) {
+      if (!nextVisibleUris.has(uri)) {
+        const document = workspace.textDocuments.find(document => document.uri.toString() === uri);
+        if (document && isSyncCandidate(document)) {
+          sendDidClose(document);
+        } else {
+          syncedVisibleDocuments.delete(uri);
+        }
+      }
+    }
+  };
+
+  const sendVisibleEditors = () => {
+    if (!client || !client.isRunning()) {
+      return;
+    }
+
+    const uris = window.visibleTextEditors
+      .filter(editor => editor.document.uri.scheme === 'file' && editor.document.languageId === 'nattlua')
+      .map(editor => editor.document.uri.toString());
+
+    client.sendNotification('nattlua/visibleEditors', { uris });
+  };
 
   const executable = resolveVariables(config.get<string>("executable") || "nattlua");
   const workingDirectory = resolveVariables(config.get<string>("workingDirectory") || "${workspaceFolder}");
@@ -88,6 +167,8 @@ export async function activate(context: ExtensionContext) {
       try {
         await client.start();
         clientOutput.appendLine(`NattLua server started successfully (${reason})`);
+        reconcileVisibleDocumentSync();
+        sendVisibleEditors();
       } catch (err: any) {
         const message = err?.message || String(err);
         clientOutput.appendLine(`NattLua failed to start (${reason}): ${message}`);
@@ -103,7 +184,7 @@ export async function activate(context: ExtensionContext) {
   const errorHandler: ErrorHandler = {
     error: (error, message, count) => {
       LSPOutput.appendLine(`LSP Error: ${message} (${count}) - ${error.message}`);
-      if (count <= 3) return { action: ErrorAction.Continue };
+      if ((count ?? 0) <= 3) return { action: ErrorAction.Continue };
       return { action: ErrorAction.Shutdown };
     },
     closed: () => {
@@ -117,6 +198,41 @@ export async function activate(context: ExtensionContext) {
     documentSelector,
     synchronize: {
       configurationSection: "nattlua",
+    },
+    middleware: {
+      didOpen: (document, next) => {
+        const visible = isVisibleDocument(document);
+
+        if (!visible) {
+          return Promise.resolve();
+        }
+
+        syncedVisibleDocuments.add(document.uri.toString());
+        return next(document);
+      },
+      didChange: (event, next) => {
+        if (!syncedVisibleDocuments.has(event.document.uri.toString())) {
+          return Promise.resolve();
+        }
+
+        return next(event);
+      },
+      didSave: (document, next) => {
+        if (!syncedVisibleDocuments.has(document.uri.toString())) {
+          return Promise.resolve();
+        }
+
+        return next(document);
+      },
+      didClose: (document, next) => {
+        const uri = document.uri.toString();
+        if (!syncedVisibleDocuments.has(uri)) {
+          return Promise.resolve();
+        }
+
+        syncedVisibleDocuments.delete(uri);
+        return next(document);
+      },
     },
     errorHandler: errorHandler,
   };
@@ -241,10 +357,20 @@ export async function activate(context: ExtensionContext) {
     },
   });
 
+  context.subscriptions.push(window.onDidChangeVisibleTextEditors(() => {
+    reconcileVisibleDocumentSync();
+    sendVisibleEditors();
+  }));
+
+  context.subscriptions.push(window.onDidChangeActiveTextEditor(() => {
+    reconcileVisibleDocumentSync();
+    sendVisibleEditors();
+  }));
+
   await startClient("initial start");
 }
 
-export async function deactivate(): Promise<void> | undefined {
+export async function deactivate(): Promise<void | undefined> {
   if (!client) {
     return undefined;
   }

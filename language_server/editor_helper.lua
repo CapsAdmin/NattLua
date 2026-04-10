@@ -99,7 +99,9 @@ function META.New()
 			TempFiles = {},
 			LoadedFiles = {},
 			OpenFiles = {},
+			VisibleFiles = {},
 			PublishedDiagnostics = {},
+			UseVisibleFilesForOpen = false,
 			debug = false,
 			node_to_type = node_to_type,
 		},
@@ -228,6 +230,38 @@ local function normalize_path(path)
 	if path:sub(1, 1) == "@" then path = path:sub(2) end
 
 	return path_util.Normalize(path)
+end
+
+function META:SetVisibleFiles(paths)
+	local next_visible = {}
+	local newly_visible = {}
+
+	for _, path in ipairs(paths or {}) do
+		path = normalize_path(path)
+
+		if path then
+			next_visible[path] = true
+
+			if not self.VisibleFiles[path] then
+				table.insert(newly_visible, path)
+			end
+		end
+	end
+
+	self.VisibleFiles = next_visible
+	self.UseVisibleFilesForOpen = true
+
+	return newly_visible
+end
+
+function META:IsVisibleFile(path)
+	path = normalize_path(path)
+	return path ~= nil and self.VisibleFiles[path] or false
+end
+
+function META:ShouldRecompileOnOpen(path)
+	if not self.UseVisibleFilesForOpen then return true end
+	return self:IsVisibleFile(path)
 end
 
 function META:Recompile(path, lol, diagnostics, on_save_path)
@@ -779,12 +813,13 @@ function META:Format(code, path, extra_emitter_config)
 	return code
 end
 
-function META:OpenFile(path, code)
+function META:OpenFile(path, code, should_recompile)
 	path = path_util.Normalize(path)
 	self.OpenFiles[path] = true
 	self:SetFileContent(path, code)
+	if should_recompile == nil then should_recompile = self:ShouldRecompileOnOpen(path) end
 
-	if not self:IsLightLspMode(path) then assert(self:Recompile(path)) end
+	if should_recompile and not self:IsLightLspMode(path) then assert(self:Recompile(path)) end
 end
 
 function META:CloseFile(path)
