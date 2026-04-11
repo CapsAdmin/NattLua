@@ -279,6 +279,8 @@ do
 
 	local max_iterations = 200000
 	local max_time_seconds = 20
+	local checkpoint_iterations = 1024
+	local checkpoint_seconds = 0.01
 
 	local function sort(a, b)
 		return a.count > b.count
@@ -289,11 +291,27 @@ do
 	function META:CheckTimeout()
 		local start_prof = os_clock()
 
-		if not self.start_time then self.start_time = start_prof end
+		if not self.start_time then
+			self.start_time = start_prof
+			self.last_checkpoint_time = start_prof
+		end
 
 		self.check_count = (self.check_count or 0) + 1
 		local count = self.check_count
 		local elapsed = start_prof - self.start_time
+		local callback = self.config and self.config.check_timeout
+
+		if
+			callback and
+			(
+				count - (self.last_checkpoint_count or 0) >= checkpoint_iterations or
+				start_prof - (self.last_checkpoint_time or start_prof) >= checkpoint_seconds
+			)
+		then
+			self.last_checkpoint_count = count
+			self.last_checkpoint_time = start_prof
+			callback(self, count, elapsed)
+		end
 
 		if count < max_iterations and elapsed < max_time_seconds then return end
 
@@ -391,6 +409,8 @@ function META.New(config)
 			loading_modules = {},
 			parsed_paths = {},
 			check_count = 0,
+			last_checkpoint_count = 0,
+			last_checkpoint_time = false,
 			call_stack_map = {},
 			LEFT_SIDE_OR = false,
 			context_values = {},

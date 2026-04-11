@@ -29,7 +29,6 @@ local path_util = require("nattlua.other.path")
 local Token = require("nattlua.lexer.token")
 local META = class.CreateTemplate("editor_helper")
 META:GetSet("WorkingDirectory", "./")
-
 local format_emitter_defaults = {
 	pretty_print = true,
 	string_quote = "\"",
@@ -98,10 +97,14 @@ function META.New()
 		{
 			TempFiles = {},
 			LoadedFiles = {},
+			DirtyFiles = {},
+			DirtySince = {},
 			OpenFiles = {},
 			VisibleFiles = {},
 			PublishedDiagnostics = {},
 			UseVisibleFilesForOpen = false,
+			InteractiveRefreshDelay = 0.25,
+			OnYield = false,
 			debug = false,
 			node_to_type = node_to_type,
 		},
@@ -120,13 +123,18 @@ end
 function META:GetCompilerConfig(path)
 	local project_config = self.ConfigFunction(path) or {}
 	local cfg = self:GetProjectConfig("get-compiler-config", path) or {}
+	cfg.lexer = cfg.lexer or {}
 	cfg.emitter = cfg.emitter or {}
 	cfg.analyzer = cfg.analyzer or {}
 	cfg.lsp = cfg.lsp or {}
 	cfg.parser = cfg.parser or {}
 	cfg.root_directory = cfg.root_directory or project_config.config_dir or self:GetWorkingDirectory()
 
-	if cfg.root_directory and cfg.root_directory ~= "" and cfg.root_directory:sub(-1) ~= "/" then
+	if
+		cfg.root_directory and
+		cfg.root_directory ~= "" and
+		cfg.root_directory:sub(-1) ~= "/"
+	then
 		cfg.root_directory = cfg.root_directory .. "/"
 	end
 
@@ -148,6 +156,21 @@ function META:GetCompilerConfig(path)
 		cfg.analyzer.should_crawl_untyped_functions = true
 	end
 
+	local function wrap_check_timeout(stage_cfg)
+		if stage_cfg.__nattlua_lsp_check_timeout_wrapped then return end
+
+		local previous = stage_cfg.check_timeout
+		stage_cfg.check_timeout = function(...)
+			if previous then previous(...) end
+
+			self:Yield()
+		end
+		stage_cfg.__nattlua_lsp_check_timeout_wrapped = true
+	end
+
+	wrap_check_timeout(cfg.lexer)
+	wrap_check_timeout(cfg.parser)
+	wrap_check_timeout(cfg.analyzer)
 	return cfg
 end
 
@@ -160,10 +183,49 @@ function META:DebugLog(str)
 	if self.debug then print(coroutine.running(), str) end
 end
 
+function META:Yield()
+	if self.OnYield then return self:OnYield() end
+end
+
+function META:GetTime()
+	if self.Now then return self:Now() end
+
+	return os.clock()
+end
+
 do
 	function META:IsLoaded(path)
 		path = path_util.Normalize(path)
 		return self.LoadedFiles[path] ~= nil
+	end
+
+	function META:IsDirty(path)
+		path = path_util.Normalize(path)
+		return self.DirtyFiles[path] == true
+	end
+
+	function META:MarkDirty(path)
+		path = path_util.Normalize(path)
+		self.DirtyFiles[path] = true
+		self.DirtySince[path] = self:GetTime()
+	end
+
+	function META:ClearDirty(path)
+		path = path_util.Normalize(path)
+		self.DirtyFiles[path] = nil
+		self.DirtySince[path] = nil
+	end
+
+	function META:ShouldDeferInteractiveRefresh(path)
+		path = path_util.Normalize(path)
+
+		if not self:IsDirty(path) then return false end
+
+		local dirty_since = self.DirtySince[path]
+
+		if not dirty_since then return false end
+
+		return self:GetTime() - dirty_since < (self.InteractiveRefreshDelay or 0)
 	end
 
 	function META:GetFile(path)
@@ -184,13 +246,34 @@ do
 		return self.LoadedFiles[path]
 	end
 
-	function META:LoadFile(path, code, tokens, compiler)
+	function META:IsParsed(path)
+		path = path_util.Normalize(path)
+		local data = self.LoadedFiles[path]
+		return data ~= nil and data.parsed == true
+	end
+
+	function META:IsAnalyzed(path)
+		path = path_util.Normalize(path)
+		local data = self.LoadedFiles[path]
+		return data ~= nil and data.analyzed == true
+	end
+
+	function META:LoadFile(path, code, tokens, compiler, analyzed)
 		path = path_util.Normalize(path)
 		self.LoadedFiles[path] = {
 			code = code,
 			tokens = tokens,
 			compiler = compiler,
+			parsed = true,
+			analyzed = analyzed == true,
 		}
+	end
+
+	function META:MarkAnalyzed(path)
+		path = path_util.Normalize(path)
+		local data = self.LoadedFiles[path]
+
+		if data then data.analyzed = true end
 	end
 
 	function META:UnloadFile(path)
@@ -232,6 +315,14 @@ local function normalize_path(path)
 	return path_util.Normalize(path)
 end
 
+local function has_force_analyze_directive(content)
+	return content and
+		(
+			content:match("^%s*%-%-%s*ANALYZE") or
+			content:match("^%#%!.-%s*%-%-%s*ANALYZE")
+		)
+end
+
 function META:SetVisibleFiles(paths)
 	local next_visible = {}
 	local newly_visible = {}
@@ -242,15 +333,12 @@ function META:SetVisibleFiles(paths)
 		if path then
 			next_visible[path] = true
 
-			if not self.VisibleFiles[path] then
-				table.insert(newly_visible, path)
-			end
+			if not self.VisibleFiles[path] then table.insert(newly_visible, path) end
 		end
 	end
 
 	self.VisibleFiles = next_visible
 	self.UseVisibleFilesForOpen = true
-
 	return newly_visible
 end
 
@@ -261,10 +349,11 @@ end
 
 function META:ShouldRecompileOnOpen(path)
 	if not self.UseVisibleFilesForOpen then return true end
+
 	return self:IsVisibleFile(path)
 end
 
-function META:Recompile(path, lol, diagnostics, on_save_path)
+function META:Recompile(path, lol, diagnostics, on_save_path, target_state)
 	if path then path = normalize_path(path) end
 
 	on_save_path = on_save_path or path
@@ -274,10 +363,11 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 	local cfg = self:GetCompilerConfig(path)
 	diagnostics = diagnostics or {}
 	local light_lsp_mode = cfg.lsp and (cfg.lsp.analyze == false or cfg.lsp.parse_only)
+	local syntax_only = target_state == "syntax"
 
 	if not path and light_lsp_mode then return true end
 
-	if not lol and not light_lsp_mode then
+	if not path and not lol and not light_lsp_mode then
 		if type(cfg.lsp.entry_point) == "table" then
 			if self.debug then print("recompiling entry points from: " .. path) end
 
@@ -311,7 +401,6 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 
 			return ok, table.concat(reasons, "\n")
 		elseif type(cfg.lsp.entry_point) == "string" then
-			local requested_path = path
 			local path = path_util.Resolve(cfg.lsp.entry_point, cfg.parser.root_directory, cfg.parser.working_directory)
 
 			if self.debug then
@@ -321,16 +410,6 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 			end
 
 			local ok, reason = self:Recompile(path, true, diagnostics, on_save_path)
-
-			if requested_path and normalize_path(requested_path) ~= normalize_path(path) and not self:IsLoaded(requested_path) then
-				local b, extra_reason = self:Recompile(requested_path, true, diagnostics, on_save_path)
-
-				if not b then
-					ok = false
-					reason = table.concat({reason, extra_reason}, "\n")
-				end
-			end
-
 			return ok, reason
 		end
 	end
@@ -342,6 +421,12 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 	if light_lsp_mode then
 		entry_point = path or entry_point
 		cfg.parser.import_validation_only = cfg.parser.import_validation_only ~= false
+	end
+
+	if syntax_only then
+		entry_point = path or entry_point
+		cfg.parser.skip_import = true
+		cfg.parser.import_validation_only = false
 	end
 
 	cfg.parser.pre_read_file = function(parser, path)
@@ -370,7 +455,7 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 	cfg.parser.on_parsed_file = function(path, compiler)
 		self:LoadFile(path, compiler.Code, compiler.Tokens, compiler)
 	end
-	cfg.parser.inline_require = not light_lsp_mode
+	cfg.parser.inline_require = not light_lsp_mode and not syntax_only
 	self:DebugLog("[ " .. entry_point .. " ] compiling")
 	local compiler
 
@@ -410,6 +495,7 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 	if ok then
 		if compiler.SyntaxTree.imports then
 			for _, root_node in ipairs(compiler.SyntaxTree.imports) do
+				self:Yield()
 				local root = root_node.RootStatement
 
 				if root_node.RootStatement then
@@ -440,11 +526,7 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 
 		if path then
 			local content = self.TempFiles[path] or fs.read(path)
-			force_analyze = content and
-			(
-				content:match("^%s*%-%-%s*ANALYZE") or
-				content:match("^%#%!.-%s*%-%-%s*ANALYZE")
-			)
+			force_analyze = has_force_analyze_directive(content)
 
 			if force_analyze then
 				should_analyze = true
@@ -469,20 +551,25 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 				end
 
 				if not ignored then
-					if path:find("%.nlua$") then
-						should_analyze = true
-					end
+					if path:find("%.nlua$") then should_analyze = true end
 				end
 			end
 		elseif lsp_analyze and cfg.lsp.entry_point then
 			should_analyze = true
 		end
 
+		if target_state == "parsed" or syntax_only then should_analyze = false end
+
 		if should_analyze then
 			local restore_import_roots
 			local restore_should_crawl_untyped_functions
 
-			if force_analyze and not lsp_analyze and compiler.SyntaxTree and compiler.SyntaxTree.imports then
+			if
+				force_analyze and
+				not lsp_analyze and
+				compiler.SyntaxTree and
+				compiler.SyntaxTree.imports
+			then
 				local imports = {}
 
 				for _, import_node in ipairs(compiler.SyntaxTree.imports) do
@@ -508,7 +595,10 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 			local ok, err = compiler:Analyze(nil, cfg.analyzer)
 
 			if restore_import_roots then restore_import_roots() end
-			if restore_should_crawl_untyped_functions then restore_should_crawl_untyped_functions() end
+
+			if restore_should_crawl_untyped_functions then
+				restore_should_crawl_untyped_functions()
+			end
 
 			local name = compiler:GetCode():GetName()
 
@@ -538,6 +628,25 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 
 			for typ, node in pairs(compiler.analyzer:GetTypeToNodeMap()) do
 				self.node_to_type[typ] = node
+			end
+
+			self:MarkAnalyzed(name)
+
+			if compiler.SyntaxTree.imports then
+				for _, root_node in ipairs(compiler.SyntaxTree.imports) do
+					self:Yield()
+					local root = root_node.RootStatement
+
+					if root then
+						if not root.parser and root.RootStatement then
+							root = root.RootStatement
+						end
+
+						if root and root.parser and root.parser.config and root.parser.config.file_path then
+							self:MarkAnalyzed(root.parser.config.file_path)
+						end
+					end
+				end
 			end
 
 			if
@@ -596,7 +705,6 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 						for k, v in pairs(cfg.emitter) do
 							cfg_copy[k] = v
 						end
-
 
 						if cfg_copy.trailing_newline == nil then cfg_copy.trailing_newline = true end
 
@@ -703,16 +811,29 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 	local normalized_path = normalize_path(path)
 	local normalized_entry_point = normalize_path(entry_point)
 	local normalized_on_save_path = normalize_path(on_save_path)
+
 	local function should_publish(name)
 		name = normalize_path(name)
-
 		return self.OpenFiles[name] or
-			(normalized_path and name == normalized_path) or
-			(normalized_entry_point and name == normalized_entry_point) or
-			(normalized_on_save_path and name == normalized_on_save_path)
+			(
+				normalized_path and
+				name == normalized_path
+			)
+			or
+			(
+				normalized_entry_point and
+				name == normalized_entry_point
+			)
+			or
+			(
+				normalized_on_save_path and
+				name == normalized_on_save_path
+			)
 	end
 
 	for name, data in pairs(diagnostics) do
+		self:Yield()
+
 		if should_publish(name) then
 			next_published[normalize_path(name)] = true
 
@@ -725,6 +846,8 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 	end
 
 	for name in pairs(self.PublishedDiagnostics) do
+		self:Yield()
+
 		if not next_published[name] and not self.OpenFiles[name] then
 			self:OnClearDiagnostics(name)
 		end
@@ -737,6 +860,8 @@ function META:Recompile(path, lol, diagnostics, on_save_path)
 	end
 
 	self.PublishedDiagnostics = next_published
+
+	if path then self:ClearDirty(path) end
 
 	return true
 end
@@ -763,7 +888,6 @@ function META:Format(code, path, extra_emitter_config)
 	path = path_util.Normalize(path)
 	local config = self:GetCompilerConfig(path)
 	apply_format_emitter_defaults(config.emitter)
-
 	config.parser = {skip_import = true}
 	config.emitter.comment_type_annotations = path:sub(-#".lua") == ".lua"
 	config.emitter.transpile_extensions = path:sub(-#".lua") == ".lua"
@@ -817,15 +941,21 @@ function META:OpenFile(path, code, should_recompile)
 	path = path_util.Normalize(path)
 	self.OpenFiles[path] = true
 	self:SetFileContent(path, code)
-	if should_recompile == nil then should_recompile = self:ShouldRecompileOnOpen(path) end
 
-	if should_recompile and not self:IsLightLspMode(path) then assert(self:Recompile(path)) end
+	if should_recompile == nil then
+		should_recompile = self:ShouldRecompileOnOpen(path)
+	end
+
+	if should_recompile and not self:IsLightLspMode(path) then
+		assert(self:Recompile(path))
+	end
 end
 
 function META:CloseFile(path)
 	path = path_util.Normalize(path)
 	self.OpenFiles[path] = nil
 	self.PublishedDiagnostics[path] = nil
+	self:ClearDirty(path)
 	self:SetFileContent(path, nil)
 	self:UnloadFile(path)
 	self:OnClearDiagnostics(path)
@@ -834,28 +964,76 @@ end
 function META:UpdateFile(path, code)
 	path = path_util.Normalize(path)
 	self:SetFileContent(path, code)
-	assert(self:Recompile(path))
+	self:MarkDirty(path)
 end
 
 function META:SaveFile(path)
 	path = path_util.Normalize(path)
+	local cfg = self:GetCompilerConfig(path)
+	local content = self.TempFiles[path] or fs.read(path) or ""
+	local needs_full_save_refresh = has_force_analyze_directive(content) or
+		(
+			cfg.analyzer and
+			cfg.analyzer.remove_unused
+		)
+		or
+		(
+			cfg.emitter and
+			cfg.emitter.remove_unused
+		)
+	local target_state = "syntax"
+
+	if needs_full_save_refresh then target_state = nil end
+
 	self:SetFileContent(path, nil)
-	assert(self:Recompile(path, nil, nil, path))
+	assert(self:Recompile(path, nil, nil, path, target_state))
 end
 
 function META:EnsureLoaded(path)
+	return self:EnsureAnalyzed(path)
+end
+
+function META:EnsureParsed(path)
 	path = path_util.Normalize(path)
 
-	if self:IsLoaded(path) then return true end
+	if self:IsParsed(path) and not self:IsDirty(path) then return true end
+
+	local ok, err = self:Recompile(path, nil, nil, nil, "parsed")
+
+	if not ok then
+		self:DebugLog("[ " .. path .. " ] EnsureParsed failed: " .. tostring(err))
+		return false
+	end
+
+	return self:IsParsed(path)
+end
+
+function META:EnsureAnalyzed(path)
+	path = path_util.Normalize(path)
+
+	if self:IsDirty(path) then
+		local ok, err = self:Recompile(path)
+
+		if not ok then
+			self:DebugLog("[ " .. path .. " ] EnsureAnalyzed failed: " .. tostring(err))
+			return false
+		end
+	end
+
+	if self:IsAnalyzed(path) then return true end
+
+	if self:IsLightLspMode(path) then
+		return self:IsParsed(path) or self:EnsureParsed(path)
+	end
 
 	local ok, err = self:Recompile(path)
 
 	if not ok then
-		self:DebugLog("[ " .. path .. " ] EnsureLoaded failed: " .. tostring(err))
+		self:DebugLog("[ " .. path .. " ] EnsureAnalyzed failed: " .. tostring(err))
 		return false
 	end
 
-	return self:IsLoaded(path)
+	return self:IsAnalyzed(path)
 end
 
 function META:GetAllTokens(path)

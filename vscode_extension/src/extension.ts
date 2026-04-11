@@ -26,6 +26,7 @@ const SERVER_RESTART_DELAY_MS = 1_000;
 export async function activate(context: ExtensionContext) {
   const config = workspace.getConfiguration("nattlua");
   let LSPOutput = window.createOutputChannel("NattLua LSP Channel");
+  let LSPCallsOutput = window.createOutputChannel("NattLua LSP Calls");
   let serverOutput = window.createOutputChannel("NattLua Server");
   let clientOutput: OutputChannel;
   let isDeactivating = false;
@@ -33,6 +34,145 @@ export async function activate(context: ExtensionContext) {
   let restartTimer: NodeJS.Timeout | undefined;
   let startPromise: Promise<void> | undefined;
   const syncedVisibleDocuments = new Set<string>();
+  const pendingCalls = new Map<string, {
+    direction: "client->server" | "server->client";
+    method?: string;
+    startedAt: number;
+    sequence: number;
+    pendingAtSend: number;
+    cancelRequested?: boolean;
+  }>();
+  let requestSequence = 0;
+
+  type ParsedLspMessage = {
+    headers: Record<string, string>;
+    body: string;
+    size: number;
+  };
+
+  const createMessageParser = (onMessage: (message: ParsedLspMessage) => void) => {
+    let buffer = "";
+
+    return (chunk: string) => {
+      buffer += chunk;
+
+      while (true) {
+        const headerEnd = buffer.indexOf("\r\n\r\n");
+
+        if (headerEnd === -1) {
+          return;
+        }
+
+        const headerText = buffer.slice(0, headerEnd);
+        const headers: Record<string, string> = {};
+
+        for (const line of headerText.split("\r\n")) {
+          const separatorIndex = line.indexOf(":");
+
+          if (separatorIndex === -1) {
+            continue;
+          }
+
+          const key = line.slice(0, separatorIndex).trim().toLowerCase();
+          const value = line.slice(separatorIndex + 1).trim();
+          headers[key] = value;
+        }
+
+        const contentLength = Number(headers["content-length"] || 0);
+        const messageEnd = headerEnd + 4 + contentLength;
+
+        if (buffer.length < messageEnd) {
+          return;
+        }
+
+        const body = buffer.slice(headerEnd + 4, messageEnd);
+        buffer = buffer.slice(messageEnd);
+        onMessage({ headers, body, size: Buffer.byteLength(body, "utf8") });
+      }
+    };
+  };
+
+  const logLspCall = (direction: "client->server" | "server->client", message: ParsedLspMessage) => {
+    if (message.size === 0 || message.body.trim() === "") {
+      return;
+    }
+
+    let payload: any;
+
+    try {
+      payload = JSON.parse(message.body);
+    } catch {
+      LSPCallsOutput.appendLine(`[PARSE] ${direction} invalid-json bytes=${message.size}`);
+      return;
+    }
+
+    const hasId = payload.id !== undefined && payload.id !== null;
+    const hasMethod = typeof payload.method === "string";
+    const idKey = hasId ? String(payload.id) : undefined;
+
+    if (hasMethod && hasId) {
+      const pendingAtSend = Array.from(pendingCalls.values()).filter((entry) => entry.direction === direction).length;
+      requestSequence += 1;
+      pendingCalls.set(idKey!, {
+        direction,
+        method: payload.method,
+        startedAt: Date.now(),
+        sequence: requestSequence,
+        pendingAtSend,
+      });
+      LSPCallsOutput.appendLine(`[REQ] ${direction} seq=${requestSequence} id=${idKey} method=${payload.method} bytes=${message.size} pending=${pendingAtSend}`);
+      return;
+    }
+
+    if (hasMethod) {
+      if (payload.method === "$/cancelRequest") {
+        const cancelledId = payload.params?.id !== undefined && payload.params?.id !== null
+          ? String(payload.params.id)
+          : undefined;
+        const pending = cancelledId ? pendingCalls.get(cancelledId) : undefined;
+
+        if (pending) {
+          pending.cancelRequested = true;
+        }
+
+        const method = pending?.method ? ` method=${pending.method}` : "";
+        LSPCallsOutput.appendLine(`[CANCEL] ${direction} id=${cancelledId ?? "?"}${method} bytes=${message.size}`);
+        return;
+      }
+
+      LSPCallsOutput.appendLine(`[NOTIFY] ${direction} method=${payload.method} bytes=${message.size}`);
+      return;
+    }
+
+    if (hasId) {
+      const pending = pendingCalls.get(idKey!);
+      const elapsed = pending && pending.direction !== direction ? `${Date.now() - pending.startedAt}ms` : "?ms";
+      const method = pending?.method ? ` method=${pending.method}` : "";
+      const seq = pending ? ` seq=${pending.sequence}` : "";
+      const pendingAtSend = pending ? ` pendingAtSend=${pending.pendingAtSend}` : "";
+      const cancelRequested = pending?.cancelRequested ? ` cancelRequested=true` : "";
+      pendingCalls.delete(idKey!);
+      if (payload.error?.code === -32800) {
+        LSPCallsOutput.appendLine(`[CANCELLED] ${direction} id=${idKey}${seq}${method} bytes=${message.size} e2e=${elapsed}${pendingAtSend}${cancelRequested}`);
+      } else if (payload.error) {
+        const errorCode = payload.error?.code !== undefined ? ` code=${payload.error.code}` : "";
+        LSPCallsOutput.appendLine(`[ERROR] ${direction} id=${idKey}${seq}${method} bytes=${message.size} e2e=${elapsed}${pendingAtSend}${cancelRequested}${errorCode}`);
+      } else {
+        LSPCallsOutput.appendLine(`[RESP] ${direction} id=${idKey}${seq}${method} bytes=${message.size} e2e=${elapsed}${pendingAtSend}${cancelRequested}`);
+      }
+      return;
+    }
+
+    LSPCallsOutput.appendLine(`[MSG] ${direction} bytes=${message.size}`);
+  };
+
+  const parseClientToServer = createMessageParser((message) => {
+    logLspCall("client->server", message);
+  });
+
+  const parseServerToClient = createMessageParser((message) => {
+    logLspCall("server->client", message);
+  });
 
   const isVisibleDocument = (document: TextDocument) => {
     return window.visibleTextEditors.some(editor => editor.document.uri.toString() === document.uri.toString());
@@ -253,7 +393,10 @@ export async function activate(context: ExtensionContext) {
 
         const reader = server.stderr;  // using STDERR explicitly to have a clean communication channel
         reader.setEncoding("utf8");
-        reader.on("data", (str) => LSPOutput.appendLine(">>\n" + str));
+        reader.on("data", (str) => {
+          LSPOutput.appendLine(">>\n" + str);
+          parseServerToClient(str);
+        });
 
         const output = server.stdout;
         output.setEncoding("utf8");
@@ -264,7 +407,9 @@ export async function activate(context: ExtensionContext) {
         {
           const originalWrite = writer._write;
           writer._write = function (chunk: any, encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
-            LSPOutput.appendLine("<<\n" + chunk.toString());
+            const text = chunk.toString();
+            LSPOutput.appendLine("<<\n" + text);
+            parseClientToServer(text);
             originalWrite.call(this, chunk, encoding, callback);
           };
         }

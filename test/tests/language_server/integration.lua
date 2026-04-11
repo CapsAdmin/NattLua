@@ -1,5 +1,6 @@
 local LSPClient = require("test.helpers.lsp_client")
 local lsp = require("language_server.lsp")
+local Compiler = require("nattlua.compiler")
 
 local function find_position(code, pattern)
 	local marker = "|"
@@ -83,6 +84,179 @@ do
 		}
 	)
 	assert(#highlights > 0, "Should have highlights for 'a'")
+end
+
+do
+	local client = LSPClient.New()
+	client:SetWorkingDirectory("/workspace")
+	local root_uri = "file:///workspace"
+	client:Initialize(lsp, root_uri)
+	client:Notify(lsp, "nattlua/visibleEditors", {uris = {}})
+	local file_uri = root_uri .. "/symbols_only.nlua"
+	local code = [[
+		local function foo(x)
+			return x + 1
+		end
+	]]
+	client:Notify(
+		lsp,
+		"textDocument/didOpen",
+		{
+			textDocument = {
+				uri = file_uri,
+				languageId = "nattlua",
+				version = 1,
+				text = code,
+			},
+		}
+	)
+	assert(not lsp.editor_helper:IsLoaded("/workspace/symbols_only.nlua"))
+	local symbols = client:Call(lsp, "textDocument/documentSymbol", {textDocument = {uri = file_uri}})
+	assert(#symbols > 0, "Should have symbols from parsed state")
+	assert(not lsp.editor_helper:IsAnalyzed("/workspace/symbols_only.nlua"), "Document symbols should only require parsed state")
+	client:Notify(lsp, "textDocument/didClose", {textDocument = {uri = file_uri}})
+	lsp.editor_helper.UseVisibleFilesForOpen = false
+	lsp.editor_helper.VisibleFiles = {}
+end
+
+do
+	local client = LSPClient.New()
+	client:SetWorkingDirectory("/workspace")
+	local root_uri = "file:///workspace"
+	client:Initialize(lsp, root_uri)
+	local file_uri = root_uri .. "/burst_tokens.nlua"
+	local file_path = "/workspace/burst_tokens.nlua"
+	local code = [[
+		local a = 1
+		local b = a
+	]]
+	local previous_now = lsp.editor_helper.Now
+	local now = 100
+	lsp.editor_helper.Now = function()
+		return now
+	end
+	client:Notify(
+		lsp,
+		"textDocument/didOpen",
+		{
+			textDocument = {
+				uri = file_uri,
+				languageId = "nattlua",
+				version = 1,
+				text = code,
+			},
+		}
+	)
+	local full = client:Call(lsp, "textDocument/semanticTokens/full", {textDocument = {uri = file_uri}})
+	client:Notify(
+		lsp,
+		"textDocument/didChange",
+		{
+			textDocument = {uri = file_uri, version = 2},
+			contentChanges = {
+				{
+					text = code .. "\n",
+				},
+			},
+		}
+	)
+	assert(lsp.editor_helper:IsDirty(file_path))
+	local delta = client:Call(
+		lsp,
+		"textDocument/semanticTokens/full/delta",
+		{textDocument = {uri = file_uri}, previousResultId = full.resultId}
+	)
+	assert(lsp.editor_helper:IsDirty(file_path), "Burst semantic tokens should not clear dirty state")
+	assert(delta.resultId == full.resultId, "Burst semantic tokens should reuse cached result")
+	local symbols = client:Call(lsp, "textDocument/documentSymbol", {textDocument = {uri = file_uri}})
+	assert(#symbols > 0, "Burst document symbols should return stale parsed tree")
+	assert(lsp.editor_helper:IsDirty(file_path), "Burst document symbols should not clear dirty state")
+	lsp.editor_helper.Now = previous_now
+	client:Notify(lsp, "textDocument/didClose", {textDocument = {uri = file_uri}})
+end
+
+do
+	local client = LSPClient.New()
+	client:SetWorkingDirectory("/workspace")
+	local root_uri = "file:///workspace"
+	client:Initialize(lsp, root_uri)
+	client:Notify(lsp, "nattlua/visibleEditors", {uris = {}})
+	local file_uri = root_uri .. "/tokens_only.nlua"
+	local code = [[
+		local alpha = 1
+		local beta = alpha + 2
+	]]
+	client:Notify(
+		lsp,
+		"textDocument/didOpen",
+		{
+			textDocument = {
+				uri = file_uri,
+				languageId = "nattlua",
+				version = 1,
+				text = code,
+			},
+		}
+	)
+	assert(not lsp.editor_helper:IsLoaded("/workspace/tokens_only.nlua"))
+	local tokens = client:Call(lsp, "textDocument/semanticTokens/full", {textDocument = {uri = file_uri}})
+	assert(tokens.data and #tokens.data > 0, "Semantic tokens should be available")
+	assert(not lsp.editor_helper:IsAnalyzed("/workspace/tokens_only.nlua"), "Semantic tokens should only require parsed state")
+	client:Notify(lsp, "textDocument/didClose", {textDocument = {uri = file_uri}})
+	lsp.editor_helper.UseVisibleFilesForOpen = false
+	lsp.editor_helper.VisibleFiles = {}
+end
+
+do
+	local client = LSPClient.New()
+	client:SetWorkingDirectory("/workspace")
+	local root_uri = "file:///workspace"
+	client:Initialize(lsp, root_uri)
+	client:Notify(lsp, "nattlua/visibleEditors", {uris = {}})
+	local file_uri = root_uri .. "/background_ui.nlua"
+	local code = [[
+		local value = 1
+		local other = value
+	]]
+	client:Notify(
+		lsp,
+		"textDocument/didOpen",
+		{
+			textDocument = {
+				uri = file_uri,
+				languageId = "nattlua",
+				version = 1,
+				text = code,
+			},
+		}
+	)
+	assert(not lsp.editor_helper:IsLoaded("/workspace/background_ui.nlua"))
+	local hints = client:Call(
+		lsp,
+		"textDocument/inlayHint",
+		{
+			textDocument = {uri = file_uri},
+			range = {
+				start = {line = 0, character = 0},
+				["end"] = {line = 10, character = 0},
+			},
+		}
+	)
+	assert(#hints == 0, "Background inlay hints should not force analysis")
+	assert(not lsp.editor_helper:IsAnalyzed("/workspace/background_ui.nlua"), "Background inlay hints should keep parsed-only state")
+	local highlights = client:Call(
+		lsp,
+		"textDocument/documentHighlight",
+		{
+			textDocument = {uri = file_uri},
+			position = find_position(code, "local |value = 1"),
+		}
+	)
+	assert(#highlights == 0, "Background document highlight should not force analysis")
+	assert(not lsp.editor_helper:IsAnalyzed("/workspace/background_ui.nlua"), "Background document highlight should keep parsed-only state")
+	client:Notify(lsp, "textDocument/didClose", {textDocument = {uri = file_uri}})
+	lsp.editor_helper.UseVisibleFilesForOpen = false
+	lsp.editor_helper.VisibleFiles = {}
 end
 
 do
@@ -493,6 +667,98 @@ local y = 2
 	end
 
 	assert(found_html_token, "Should have found tokens inside the HTML string")
+end
+
+do
+	local callback_count = 0
+	local compiler = Compiler.New(("local value = 1\n"):rep(5000), "@lexer_checkpoint.nlua", {
+		lexer = {
+			check_timeout = function()
+				callback_count = callback_count + 1
+			end,
+		},
+	})
+	assert(compiler:Lex())
+	assert(callback_count > 0, "lexer check_timeout should be called when configured")
+end
+
+do
+	local callback_count = 0
+	local compiler = Compiler.New(("local value = 1\n"):rep(5000), "@parser_checkpoint.nlua", {
+		parser = {
+			check_timeout = function()
+				callback_count = callback_count + 1
+			end,
+		},
+	})
+	assert(compiler:Parse())
+	assert(callback_count > 0, "parser check_timeout should be called when configured")
+end
+
+do
+	local callback_count = 0
+	local compiler = Compiler.New(("local value = 1\n"):rep(5000), "@analyzer_checkpoint.nlua", {
+		analyzer = {
+			check_timeout = function()
+				callback_count = callback_count + 1
+			end,
+		},
+	})
+	assert(compiler:Analyze())
+	assert(callback_count > 0, "analyzer check_timeout should be called when configured")
+end
+
+do
+	local client = LSPClient.New()
+	local root_uri = "file:///workspace"
+	client:SetWorkingDirectory("/workspace")
+	client:Initialize(lsp, root_uri)
+	local previous_delay = lsp.editor_helper.InteractiveRefreshDelay
+	lsp.editor_helper.InteractiveRefreshDelay = 0
+	local file_uri = root_uri .. "/tokens.nlua"
+	local code = [[
+local value = 1
+]]
+	client:Notify(
+		lsp,
+		"textDocument/didOpen",
+		{
+			textDocument = {
+				uri = file_uri,
+				languageId = "nattlua",
+				version = 1,
+				text = code,
+			},
+		}
+	)
+	local full = client:Call(lsp, "textDocument/semanticTokens/full", {textDocument = {uri = file_uri}})
+	assert(full.resultId, "full semantic tokens should include a resultId")
+	assert(full.data and #full.data > 0, "full semantic tokens should include data")
+	local code2 = [[
+local value = 22
+]]
+	client:Notify(
+		lsp,
+		"textDocument/didChange",
+		{
+			textDocument = {uri = file_uri, version = 2},
+			contentChanges = {
+				{text = code2},
+			},
+		}
+	)
+	local delta = client:Call(
+		lsp,
+		"textDocument/semanticTokens/full/delta",
+		{textDocument = {uri = file_uri}, previousResultId = full.resultId}
+	)
+	assert(delta.resultId, "semantic token delta should include a resultId")
+	assert(delta.edits, "semantic token delta should return edits")
+	assert(#delta.edits > 0, "semantic token delta should return at least one edit when tokens change")
+	assert(delta.edits[1].start ~= nil, "semantic token delta edit should include a start")
+	assert(delta.edits[1].deleteCount ~= nil, "semantic token delta edit should include deleteCount")
+	client:Notify(lsp, "textDocument/didClose", {textDocument = {uri = file_uri}})
+	lsp.editor_helper.InteractiveRefreshDelay = previous_delay
 end
 
 -- Test unreachable code in else-branch when condition is always true

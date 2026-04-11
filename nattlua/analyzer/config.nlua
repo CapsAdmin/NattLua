@@ -3,6 +3,7 @@ local type AnalyzerConfig = {
 	working_directory = string,
 	root_directory = string,
 	file_path = string,
+	check_timeout = function=(Any, number, number)>(),
 	pre_read_file = function=(Any, string)>(string | nil),
 	on_read_file = function=(Any, string, string)>(),
 	allow_global_lookup = boolean,

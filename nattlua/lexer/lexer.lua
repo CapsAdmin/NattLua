@@ -21,6 +21,7 @@ local typesystem_syntax = require("nattlua.syntax.typesystem")
 local formating = require("nattlua.other.formating")
 local bit = require("nattlua.other.bit")
 local string_reader = require("nattlua.other.string_reader")--[[# as any]]
+local os_clock = os.clock
 local IsSpace = characters.IsSpace
 local IsNumber = characters.IsNumber
 local IsHex = characters.IsHex
@@ -71,6 +72,7 @@ end
 
 function META:Advance(len--[[#: number]])
 	self.Position = self.Position + len
+	self:CheckTimeout()
 end
 
 function META:SetPosition(i--[[#: number]])
@@ -95,6 +97,43 @@ function META:OnError(
 	start--[[#: number | nil]],
 	stop--[[#: number | nil]]
 ) end
+
+do
+	local checkpoint_iterations = 2048
+	local checkpoint_seconds = 0.01
+
+	function META:CheckTimeout()
+		local callback = self.Config and self.Config.check_timeout
+
+		if not callback then return end
+
+		local now = os_clock()
+
+		if not self.start_time then
+			self.start_time = now
+			self.last_checkpoint_time = now
+		end
+
+		self.check_count = (self.check_count or 0) + 1
+
+		if
+			self.check_count - (
+				self.last_checkpoint_count or
+				0
+			) < checkpoint_iterations and
+			now - (
+				self.last_checkpoint_time or
+				now
+			) < checkpoint_seconds
+		then
+			return
+		end
+
+		self.last_checkpoint_count = self.check_count
+		self.last_checkpoint_time = now
+		callback(self, self.check_count, now - self.start_time)
+	end
+end
 
 function META:Error(msg--[[#: string]], start--[[#: number | nil]], stop--[[#: number | nil]])
 	self:OnError(self.Code, msg, start or self.Position, stop or self.Position)
@@ -755,6 +794,10 @@ function META.New(code--[[#: Code]], config--[[#: {} | nil]])
 			Code = code,
 			Position = 1,
 			comment_escape = false,
+			check_count = 0,
+			start_time = false,
+			last_checkpoint_count = 0,
+			last_checkpoint_time = false,
 			OnError = META.OnError,
 			Config = config,
 		},

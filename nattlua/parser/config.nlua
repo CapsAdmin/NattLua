@@ -1,10 +1,11 @@
-local type { Node } = import("./node.lua")
+local type { Node } = import("~/nattlua/parser/node.lua")
 
 local type ParserConfig = {
 	root = Node,
 	root_statement_override_data = Node,
 	root_statement_override = Node,
 	on_parsed_node = function=(ref Table, ref Node)>(ref Node),
+	check_timeout = function=(ref Table, ref number, ref number)>(),
 	skip_import = boolean,
 	import_validation_only = boolean,
 	emit_environment = boolean,

@@ -3,8 +3,30 @@ local b64 = require("language_server.base64")
 local EditorHelper = require("language_server.editor_helper")
 local formating = require("nattlua.other.formating")
 local path = require("nattlua.other.path")
+local coroutine_running = coroutine.running
+local coroutine_yield = coroutine.yield
 local lsp = {}
 lsp.methods = {}
+lsp.cancelled_requests = {}
+
+function lsp.CancelRequest(id)
+	if id ~= nil then lsp.cancelled_requests[id] = true end
+end
+
+function lsp.ClearCancelledRequest(id)
+	if id ~= nil then lsp.cancelled_requests[id] = nil end
+end
+
+function lsp.IsRequestCancelled(id)
+	return id ~= nil and lsp.cancelled_requests[id] == true or false
+end
+
+function lsp.Checkpoint()
+	local thread, is_main = coroutine_running()
+
+	if thread and not is_main then coroutine_yield() end
+end
+
 local TextDocumentSyncKind = {None = 0, Full = 1, Incremental = 2}
 local SemanticTokenTypes = {
 	-- identifiers or reference
@@ -66,6 +88,177 @@ end
 local editor_helper = EditorHelper.New()
 lsp.editor_helper = editor_helper
 editor_helper.debug = false
+editor_helper.OnYield = function()
+	return lsp.Checkpoint()
+end
+local semantic_token_cache = {
+	next_id = 0,
+	by_path = {},
+	by_result_id = {},
+}
+
+local function copy_integer_array(data)
+	local copy = {}
+
+	for i = 1, #data do
+		copy[i] = data[i]
+	end
+
+	return copy
+end
+
+local function arrays_equal(a, b)
+	if #a ~= #b then return false end
+
+	for i = 1, #a do
+		if a[i] ~= b[i] then return false end
+	end
+
+	return true
+end
+
+local function next_semantic_result_id()
+	semantic_token_cache.next_id = semantic_token_cache.next_id + 1
+	return tostring(semantic_token_cache.next_id)
+end
+
+local function store_semantic_tokens(fs_path, data)
+	fs_path = path.Normalize(fs_path)
+	local existing = semantic_token_cache.by_path[fs_path]
+
+	if existing and arrays_equal(existing.data, data) then return existing.result_id, existing.data end
+
+	local result_id = next_semantic_result_id()
+	local stored = {
+		result_id = result_id,
+		data = copy_integer_array(data),
+	}
+	semantic_token_cache.by_path[fs_path] = stored
+	semantic_token_cache.by_result_id[result_id] = {
+		path = fs_path,
+		result_id = result_id,
+		data = stored.data,
+	}
+	return result_id, stored.data
+end
+
+local function clear_semantic_tokens(fs_path)
+	fs_path = path.Normalize(fs_path)
+	local existing = semantic_token_cache.by_path[fs_path]
+
+	if existing then semantic_token_cache.by_result_id[existing.result_id] = nil end
+
+	semantic_token_cache.by_path[fs_path] = nil
+end
+
+local function compute_semantic_token_edit(old_data, new_data)
+	local prefix = 0
+	local old_len = #old_data
+	local new_len = #new_data
+	local max_prefix = math.min(old_len, new_len)
+
+	while prefix < max_prefix and old_data[prefix + 1] == new_data[prefix + 1] do
+		prefix = prefix + 1
+	end
+
+	local suffix = 0
+	local max_suffix = math.min(old_len - prefix, new_len - prefix)
+
+	while suffix < max_suffix and old_data[old_len - suffix] == new_data[new_len - suffix] do
+		suffix = suffix + 1
+	end
+
+	local delete_count = old_len - prefix - suffix
+	local inserted = {}
+
+	for i = prefix + 1, new_len - suffix do
+		inserted[#inserted + 1] = new_data[i]
+	end
+
+	return {
+		start = prefix,
+		deleteCount = delete_count,
+		data = inserted,
+	}
+end
+
+local function build_semantic_tokens_full(fs_path)
+	if editor_helper:ShouldDeferInteractiveRefresh(fs_path) then
+		local normalized_path = path.Normalize(fs_path)
+		local existing = semantic_token_cache.by_path[normalized_path]
+
+		if existing then
+			return {
+				data = existing.data,
+				resultId = existing.result_id,
+			}
+		end
+
+		return {data = {}}
+	end
+
+	if not editor_helper:EnsureParsed(fs_path) then return {data = {}} end
+	local result_id, data = store_semantic_tokens(fs_path, editor_helper:GetSemanticTokens(fs_path))
+	return {
+		data = data,
+		resultId = result_id,
+	}
+end
+
+local function build_semantic_tokens_delta(fs_path, previous_result_id)
+	if editor_helper:ShouldDeferInteractiveRefresh(fs_path) then
+		local normalized_path = path.Normalize(fs_path)
+		local previous = semantic_token_cache.by_result_id[previous_result_id]
+		local existing = semantic_token_cache.by_path[normalized_path]
+
+		if previous and existing and previous.path == normalized_path then
+			if previous.result_id == existing.result_id or arrays_equal(previous.data, existing.data) then
+				return {
+					edits = {},
+					resultId = existing.result_id,
+				}
+			end
+
+			return {
+				edits = {compute_semantic_token_edit(previous.data, existing.data)},
+				resultId = existing.result_id,
+			}
+		end
+
+		if existing then
+			return {
+				data = existing.data,
+				resultId = existing.result_id,
+			}
+		end
+
+		return previous and {
+			edits = {},
+			resultId = previous_result_id,
+		} or {data = {}}
+	end
+
+	if not editor_helper:EnsureParsed(fs_path) then return {data = {}} end
+
+	local previous = semantic_token_cache.by_result_id[previous_result_id]
+
+	if not previous or previous.path ~= fs_path then return build_semantic_tokens_full(fs_path) end
+
+	local latest_data = editor_helper:GetSemanticTokens(fs_path)
+	local result_id, stored_data = store_semantic_tokens(fs_path, latest_data)
+
+	if previous_result_id == result_id or arrays_equal(previous.data, stored_data) then
+		return {
+			edits = {},
+			resultId = result_id,
+		}
+	end
+
+	return {
+		edits = {compute_semantic_token_edit(previous.data, stored_data)},
+		resultId = result_id,
+	}
+end
 
 local function to_fs_path(url)
 	return path.UrlSchemeToPath(url, editor_helper:GetWorkingDirectory())
@@ -167,7 +360,7 @@ lsp.methods["initialize"] = function(params)
 					tokenTypes = SemanticTokenTypes,
 					tokenModifiers = SemanticTokenModifiers,
 				},
-				full = true,
+				full = {delta = true},
 				range = false,
 			},
 			hoverProvider = true,
@@ -282,18 +475,14 @@ lsp.methods["shutdown"] = function(params)
 end
 lsp.methods["textDocument/semanticTokens/full"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
-	-- this is not the right place to do this I guess, but it's more reliable and simple
-	lsp.PublishDecorations(path)
-	if not editor_helper:EnsureLoaded(path) then return {data = {}} end
-	return {data = editor_helper:GetSemanticTokens(path)}
+	return build_semantic_tokens_full(path)
+end
+lsp.methods["textDocument/semanticTokens/full/delta"] = function(params)
+	local path = to_fs_path(params.textDocument.uri)
+	return build_semantic_tokens_delta(path, params.previousResultId)
 end
 lsp.methods["$/cancelRequest"] = function(params)
-	do
-		return
-	end
-
-	print("cancelRequest")
-	table.print(params)
+	if params and params.id ~= nil then lsp.CancelRequest(params.id) end
 end
 lsp.methods["workspace/didChangeConfiguration"] = function(params)
 	if params.settings and params.settings.nattlua then
@@ -322,7 +511,9 @@ lsp.methods["textDocument/didOpen"] = function(params)
 	editor_helper:OpenFile(path, params.textDocument.text)
 end
 lsp.methods["textDocument/didClose"] = function(params)
-	editor_helper:CloseFile(to_fs_path(params.textDocument.uri))
+	local path = to_fs_path(params.textDocument.uri)
+	clear_semantic_tokens(path)
+	editor_helper:CloseFile(path)
 end
 lsp.methods["textDocument/didChange"] = function(params)
 	editor_helper:UpdateFile(to_fs_path(params.textDocument.uri), params.contentChanges[1].text)
@@ -334,7 +525,7 @@ end
 lsp.methods["textDocument/references"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:EnsureLoaded(path) then return {} end
+	if not editor_helper:EnsureAnalyzed(path) then return {} end
 
 	local items = editor_helper:GetReferences(path, params.position.line, params.position.character)
 
@@ -400,7 +591,7 @@ do
 	lsp.methods["textDocument/completion"] = function(params)
 		local path = to_fs_path(params.textDocument.uri)
 
-		if not editor_helper:EnsureLoaded(path) then
+		if not editor_helper:EnsureAnalyzed(path) then
 			return {isIncomplete = false, items = {}}
 		end
 
@@ -442,7 +633,9 @@ end
 lsp.methods["textDocument/inlayHint"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:EnsureLoaded(path) then return {} end
+	if editor_helper:ShouldDeferInteractiveRefresh(path) then return {} end
+	if not editor_helper:EnsureParsed(path) then return {} end
+	if not editor_helper:IsAnalyzed(path) then return {} end
 
 	local result = {}
 
@@ -522,7 +715,19 @@ do
 	lsp.methods["textDocument/documentSymbol"] = function(params)
 		local path = to_fs_path(params.textDocument.uri)
 
-		if not editor_helper:EnsureLoaded(path) then return {} end
+		if editor_helper:ShouldDeferInteractiveRefresh(path) then
+			if not editor_helper:IsParsed(path) then return {} end
+
+			local nodes = editor_helper:GetSymbolTree(path)
+
+			for _, node in ipairs(nodes) do
+				translate(node, path)
+			end
+
+			return nodes
+		end
+
+		if not editor_helper:EnsureParsed(path) then return {} end
 
 		local nodes = editor_helper:GetSymbolTree(path)
 
@@ -582,7 +787,9 @@ end
 lsp.methods["textDocument/documentHighlight"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:EnsureLoaded(path) then return {} end
+	if editor_helper:ShouldDeferInteractiveRefresh(path) then return {} end
+	if not editor_helper:EnsureParsed(path) then return {} end
+	if not editor_helper:IsAnalyzed(path) then return {} end
 
 	local highlights = editor_helper:GetUpvalueHighlightRanges(path, params.position.line, params.position.character)
 
@@ -612,7 +819,7 @@ end
 lsp.methods["textDocument/signatureHelp"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:EnsureLoaded(path) then return {} end
+	if not editor_helper:EnsureAnalyzed(path) then return {} end
 
 	local result = editor_helper:GetSignatureHelp(path, params.position.line, params.position.character)
 	return result or {signatures = {}, activeSignature = 0, activeParameter = 0}
@@ -620,7 +827,7 @@ end
 lsp.methods["textDocument/rename"] = function(params)
 	local fs_path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:EnsureLoaded(fs_path) then return {} end
+	if not editor_helper:EnsureAnalyzed(fs_path) then return {} end
 
 	local lsp_path = to_lsp_path(params.textDocument.uri)
 	local edits = {}
@@ -647,7 +854,7 @@ end
 lsp.methods["textDocument/definition"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:EnsureLoaded(path) then return {} end
+	if not editor_helper:EnsureAnalyzed(path) then return {} end
 
 	local node = editor_helper:GetDefinition(path, params.position.line, params.position.character)
 
@@ -656,7 +863,7 @@ lsp.methods["textDocument/definition"] = function(params)
 		local path = node:GetSourcePath() or path
 		path = to_fs_path(path)
 		editor_helper:OpenFile(path, node.Code:GetString())
-		if not editor_helper:EnsureLoaded(path) then return {} end
+		if not editor_helper:EnsureAnalyzed(path) then return {} end
 		return {
 			uri = to_lsp_path(path),
 			range = get_range(editor_helper:GetCode(path), start, stop),
@@ -668,7 +875,7 @@ end
 lsp.methods["textDocument/hover"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
-	if not editor_helper:EnsureLoaded(path) then return {} end
+	if not editor_helper:EnsureAnalyzed(path) then return {} end
 
 	local data = editor_helper:GetHover(path, params.position.line, params.position.character)
 

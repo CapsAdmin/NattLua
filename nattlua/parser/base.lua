@@ -14,6 +14,7 @@ local type = _G.type
 local table = _G.table
 local math_min = math.min
 local select = _G.select
+local os_clock = os.clock
 local class = require("nattlua.other.class")
 local VirtualToken = require("nattlua.lexer.token").NewVirtualToken
 return function()
@@ -73,6 +74,10 @@ return function()
 				dont_hoist_next_import = false,
 				imported = false,
 				statement_count = false,
+				check_count = 0,
+				start_time = false,
+				last_checkpoint_count = 0,
+				last_checkpoint_time = false,
 				dollar_signs = false,
 				value = false,
 				FFI_DECLARATION_PARSER = false,
@@ -246,8 +251,40 @@ return function()
 		return #self.tokens
 	end
 
+	do
+		local checkpoint_iterations = 2048
+		local checkpoint_seconds = 0.01
+
+		function META:CheckTimeout()
+			local callback = self.config and self.config.check_timeout
+
+			if not callback then return end
+
+			local now = os_clock()
+
+			if not self.start_time then
+				self.start_time = now
+				self.last_checkpoint_time = now
+			end
+
+			self.check_count = (self.check_count or 0) + 1
+
+			if
+				self.check_count - (self.last_checkpoint_count or 0) < checkpoint_iterations and
+				now - (self.last_checkpoint_time or now) < checkpoint_seconds
+			then
+				return
+			end
+
+			self.last_checkpoint_count = self.check_count
+			self.last_checkpoint_time = now
+			callback(self, self.check_count, now - self.start_time)
+		end
+	end
+
 	function META:Advance(offset--[[#: number]])
 		self.TokenPosition = self.TokenPosition + offset
+		self:CheckTimeout()
 	end
 
 	function META:ConsumeToken()

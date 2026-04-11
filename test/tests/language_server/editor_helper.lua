@@ -1,6 +1,8 @@
 _G.TEST = true
 local EditorHelper = require("language_server.editor_helper")
 local LStringNoMeta = require("nattlua.types.string").LStringNoMeta
+local fs = require("nattlua.other.fs")
+local path_util = require("nattlua.other.path")
 local path = "./test.nlua"
 
 local function single_file(code)
@@ -384,6 +386,13 @@ do
 	helper:OpenFile(main_path, [[local render = import("missing.lua")]])
 	assert(not helper:IsLoaded(main_path))
 	assert(#diagnostics_calls == 0)
+	assert(helper:EnsureParsed(main_path) == true)
+	assert(helper:IsParsed(main_path))
+	assert(not helper:IsAnalyzed(main_path))
+	helper:CloseFile(main_path)
+	diagnostics_calls = {}
+	helper:OpenFile(main_path, [[local render = import("missing.lua")]])
+	assert(not helper:IsLoaded(main_path))
 	assert(helper:EnsureLoaded(main_path) == true)
 	assert(helper:IsLoaded(main_path))
 	assert(#diagnostics_calls > 0)
@@ -424,6 +433,71 @@ do
 	helper:SetFileContent("./light_mode_initialize/src/entry.nlua", [[local x = import("missing.lua")]])
 	helper:Initialize()
 	assert(#diagnostics_calls == 0)
+end
+
+do
+	local helper = EditorHelper.New()
+	local old_fs_read = fs.read
+	local save_path = "./save_syntax_only.nlua"
+	local normalized_save_path = path_util.Normalize(save_path)
+	fs.read = function(read_path)
+		if read_path == save_path or read_path == normalized_save_path then return "local value = 1" end
+		return old_fs_read(read_path)
+	end
+
+	helper:SaveFile(save_path)
+	assert(helper:IsParsed(save_path))
+	assert(not helper:IsAnalyzed(save_path))
+
+	fs.read = old_fs_read
+end
+
+do
+	local helper = EditorHelper.New()
+	local now = 100
+	helper.Now = function()
+		return now
+	end
+	helper:MarkDirty("./burst.nlua")
+	assert(helper:ShouldDeferInteractiveRefresh("./burst.nlua") == true)
+	now = now + 1
+	assert(helper:ShouldDeferInteractiveRefresh("./burst.nlua") == false)
+end
+
+do
+	local helper = EditorHelper.New()
+	local old_fs_read = fs.read
+	local save_path = "./save_force_analyze.nlua"
+	local normalized_save_path = path_util.Normalize(save_path)
+	helper:SetConfigFunction(function(cfg_path)
+		return {
+			commands = {
+				["get-compiler-config"] = {
+					cb = function()
+						return {
+							lsp = {},
+						}
+					end,
+				},
+			},
+		}
+	end)
+	fs.read = function(read_path)
+		if read_path == save_path or read_path == normalized_save_path then
+			return [[
+				--ANALYZE
+				local value = 1
+				math.sin(value)
+			]]
+		end
+		return old_fs_read(read_path)
+	end
+
+	helper:SaveFile(save_path)
+	assert(helper:IsParsed(save_path))
+	assert(helper:IsAnalyzed(save_path))
+
+	fs.read = old_fs_read
 end
 
 do
