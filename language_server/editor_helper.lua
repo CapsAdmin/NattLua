@@ -305,6 +305,14 @@ do
 
 		return self.TempFiles[path]
 	end
+
+	function META:GetCurrentContent(path)
+		path = path_util.Normalize(path)
+
+		if self.TempFiles[path] ~= nil then return self.TempFiles[path] end
+
+		return fs.read(path)
+	end
 end
 
 local function normalize_path(path)

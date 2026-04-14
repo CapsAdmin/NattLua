@@ -1,6 +1,7 @@
 local LSPClient = require("test.helpers.lsp_client")
 local lsp = require("language_server.lsp")
 local Compiler = require("nattlua.compiler")
+local fs = require("nattlua.other.fs")
 
 local function find_position(code, pattern)
 	local marker = "|"
@@ -335,6 +336,41 @@ do
 	lsp.editor_helper:SetConfigFunction(function()
 		return
 	end)
+end
+
+do
+	local old_fs_read = fs.read
+	local client = LSPClient.New()
+	client:SetWorkingDirectory("/workspace")
+	local root_uri = "file:///workspace"
+	client:Initialize(lsp, root_uri)
+	local file_uri = root_uri .. "/format_from_disk.nlua"
+	local file_path = "/workspace/format_from_disk.nlua"
+	local code = [[
+		local a=1
+		local b=2]]
+	fs.read = function(read_path)
+		if read_path == file_path then return code end
+
+		return old_fs_read(read_path)
+	end
+
+	local edits = client:Call(
+		lsp,
+		"textDocument/formatting",
+		{
+			textDocument = {uri = file_uri},
+			options = {
+				tabSize = 4,
+				insertSpaces = true,
+			},
+		}
+	)
+
+	fs.read = old_fs_read
+	assert(#edits > 0, "Formatting should return edits for files loaded from disk")
+	assert(edits[1].newText:find("local a = 1", 1, true))
+	assert(not lsp.editor_helper.OpenFiles[file_path], "Formatting should not require opening the document")
 end
 
 do

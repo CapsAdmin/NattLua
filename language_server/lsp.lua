@@ -414,7 +414,7 @@ lsp.methods["textDocument/codeAction"] = function(params)
 
 	if has_unused then
 		local path = to_fs_path(params.textDocument.uri)
-		local code = editor_helper:GetFileContent(path)
+		local code = editor_helper:GetCurrentContent(path)
 		local new_code = editor_helper:Format(code, path, {remove_unused = true})
 
 		if new_code ~= code then
@@ -453,7 +453,7 @@ lsp.methods["nattlua/format"] = function(params)
 end
 lsp.methods["textDocument/formatting"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
-	local code = editor_helper:GetFileContent(path)
+	local code = editor_helper:GetCurrentContent(path)
 	local new_code = editor_helper:Format(code, path)
 
 	if new_code ~= code then
