@@ -62,6 +62,28 @@ test("typed table correct assignment not should error", function()
     ]])
 end)
 
+test("nested typed list field should widen to contract", function()
+	analyze([[
+        local tbl: {loadings = List<|boolean|>} = {
+            loadings = {true},
+        }
+
+        tbl.loadings[1] = false
+        attest.equal(tbl.loadings[1], false)
+    ]])
+end)
+
+test("nested typed table field should widen to contract", function()
+	analyze([[
+        local tbl: {inner = {flag = boolean}} = {
+            inner = {flag = true},
+        }
+
+        tbl.inner.flag = false
+        attest.equal(tbl.inner.flag, false)
+    ]])
+end)
+
 test("self referenced tables should be equal", function()
 	local analyzer = analyze([[
         local a = {a=true}

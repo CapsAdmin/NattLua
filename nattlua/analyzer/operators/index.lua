@@ -87,13 +87,15 @@ local function index_table(analyzer, self, key, raw)
 
 		if not val then return val, err end
 
+		local contract_val = val
+
 		do
 			local val = self:GetMutatedValue(key, analyzer:GetScope())
 
 			if val then
 				if val.Type == "union" then val = val:Copy(nil, true) end
 
-				if not val:GetContract() then val:SetContract(val) end
+				if not val:GetContract() then val:SetContract(contract_val) end
 
 				if val.Type == "union" then analyzer:TrackTableIndex(self, key, val) end
 
@@ -107,7 +109,11 @@ local function index_table(analyzer, self, key, raw)
 		if self:HasMutations() then
 			local tracked = self:GetMutatedValue(key, analyzer:GetScope())
 
-			if tracked then val = tracked end
+			if tracked then
+				val = tracked
+
+				if not val:GetContract() then val:SetContract(contract_val) end
+			end
 		end
 
 		if val.Type == "union" then analyzer:TrackTableIndex(self, key, val) end
