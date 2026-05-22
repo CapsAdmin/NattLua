@@ -77,6 +77,29 @@
           },
           "description": "arguments for executable"
         },
+        "nattlua.formattingMode": {
+          "type": "string",
+          "enum": [
+            "process",
+            "lsp",
+            "auto"
+          ],
+          "default": "process",
+          "description": "How document formatting runs. 'process' formats through a short-lived nattlua fmt subprocess, 'lsp' uses the language server, and 'auto' falls back to the language server if the subprocess formatter fails."
+        },
+        "nattlua.formatterExecutable": {
+          "type": "string",
+          "default": "",
+          "description": "Optional executable override for formatting. When empty, the formatter reuses nattlua.executable."
+        },
+        "nattlua.formatterArguments": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional base arguments for formatting. When empty, the formatter derives them from nattlua.arguments by replacing the trailing 'lsp' command with 'fmt'."
+        },
         "nattlua.removeUnusedOnSave": {
           "type": "boolean",
           "default": false,

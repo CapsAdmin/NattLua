@@ -3,10 +3,17 @@ import * as process from 'process';
 import * as path from 'path';
 
 export function resolveVariables(string: string, recursive = false) {
+    return resolveVariablesForDocument(string, vscode.window.activeTextEditor?.document, recursive);
+}
+
+export function resolveVariablesForDocument(string: string, document?: vscode.TextDocument, recursive = false) {
     const workspaces = vscode.workspace.workspaceFolders || [];
     const workspace = workspaces.length ? workspaces[0] : null;
     const activeEditor = vscode.window.activeTextEditor;
-    const activeDocument = activeEditor?.document;
+    const editorForDocument = document
+        ? vscode.window.visibleTextEditors.find(editor => editor.document.uri.toString() === document.uri.toString())
+        : activeEditor;
+    const activeDocument = document || activeEditor?.document;
     const absoluteFilePath = activeDocument?.uri.fsPath || '';
     const workspaceFolderPath = workspace?.uri.fsPath || '';
     const workspaceFolderBasename = workspace?.name || '';
@@ -35,9 +42,9 @@ export function resolveVariables(string: string, recursive = false) {
         ? parsedPath.dir.slice(parsedPath.dir.lastIndexOf(path.sep) + 1)
         : '';
     const cwd = parsedPath.dir || workspaceFolderPath || process.cwd();
-    const lineNumber = activeEditor ? (activeEditor.selection.start.line + 1).toString() : '1';
-    const selectedText = activeEditor
-        ? activeEditor.document.getText(new vscode.Range(activeEditor.selection.start, activeEditor.selection.end))
+    const lineNumber = editorForDocument ? (editorForDocument.selection.start.line + 1).toString() : '1';
+    const selectedText = editorForDocument
+        ? editorForDocument.document.getText(new vscode.Range(editorForDocument.selection.start, editorForDocument.selection.end))
         : '';
 
     string = string.replace(/\${fileWorkspaceFolder}/g, activeWorkspace?.uri.fsPath || workspaceFolderPath);
@@ -59,7 +66,8 @@ export function resolveVariables(string: string, recursive = false) {
     });
 
     if (recursive && string.match(/\${(workspaceFolder|workspaceFolderBasename|fileWorkspaceFolder|relativeFile|fileBasename|fileBasenameNoExtension|fileExtname|fileDirname|cwd|pathSeparator|lineNumber|selectedText|env:(.*?)|config:(.*?))}/)) {
-        string = resolveVariables(string, recursive);
+        string = resolveVariablesForDocument(string, document, recursive);
     }
+
     return string;
 }

@@ -8,14 +8,17 @@ local config_path = "./" .. DEFAULT_CONFIG_NAME
 local io = _G.io
 local type = _G.type
 local pairs = _G.pairs
+local loadstring = _G.loadstring or _G.load
 
 local function parse_args(args, allowed_options)
 	local options = {}
 	local parsed_args = {}
+	local option_lookup = {}
 
 	if allowed_options then
 		for _, option in ipairs(allowed_options) do
 			options[option.name] = false
+			option_lookup[option.name] = option
 		end
 	end
 
@@ -27,7 +30,17 @@ local function parse_args(args, allowed_options)
 
 			if exp then
 				option = option:sub(1, #option - #exp - 1)
-				val = loadstring("return " .. exp)()
+
+				local option_info = option_lookup[option]
+
+				if option_info and option_info.arg == "path" then
+					val = exp
+				elseif option_info and option_info.arg == "number" then
+					val = tonumber(exp)
+					assert(val ~= nil, "invalid number for option " .. option)
+				else
+					val = assert(loadstring("return " .. exp))()
+				end
 			end
 
 			if allowed_options and options[option] == nil then
@@ -185,16 +198,18 @@ config.commands["build"] = {
 }
 config.commands["fmt"] = {
 	description = "Format NattLua files",
-	usage = "nattlua fmt <file|directory> [options]",
+	usage = "nattlua fmt <file|directory|-> [options]",
 	options = {
 		{name = "check", description = "checks if the files are formated"},
+		{name = "stdin-path", description = "sets the source path when reading code from stdin", arg = "path"},
 	},
 	cb = function(args, options, config, cli)
 		args[1] = args[1] or "./*"
 
 		if #args == 1 and args[1] == "-" then
 			local input = io.read("*all")
-			io.write(assert(Compiler.New(input, "stdin-", config):Emit()))
+			local source_path = options["stdin-path"] or "stdin-"
+			io.write(assert(Compiler.New(input, source_path, config):Emit()))
 		else
 			for _, path in ipairs(
 				cli.get_files{path = args, ignorefiles = config.ignorefiles, ext = {".lua", ".nlua"}}

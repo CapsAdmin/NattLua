@@ -1,5 +1,5 @@
 import {
-  ExtensionContext, languages, Range, TextDocument,
+  CancellationToken, ExtensionContext, FormattingOptions, languages, Range, TextDocument,
   TextEdit, window, workspace, DecorationOptions,
   OutputChannel
 } from "vscode";
@@ -11,9 +11,9 @@ import {
   CloseAction,
   ErrorHandler
 } from "vscode-languageclient/node";
-import { resolveVariables } from "./vscode-variables";
+import { resolveVariables, resolveVariablesForDocument } from "./vscode-variables";
 import { ChildProcessWithoutNullStreams, spawn } from "child_process";
-import { resolve } from "path";
+import { basename, resolve } from "path";
 import * as fs from "fs";
 
 let client: LanguageClient;
@@ -22,6 +22,14 @@ const documentSelector = [{ scheme: 'file', language: 'nattlua' }];
 const MAX_SERVER_RESTARTS = 5;
 const SERVER_RESTART_WINDOW_MS = 60_000;
 const SERVER_RESTART_DELAY_MS = 1_000;
+
+type FormatterMode = "process" | "lsp" | "auto";
+
+type FormatterInvocation = {
+  executable: string;
+  args: string[];
+  workingDirectory: string;
+};
 
 export async function activate(context: ExtensionContext) {
   const config = workspace.getConfiguration("nattlua");
@@ -252,6 +260,149 @@ export async function activate(context: ExtensionContext) {
     client.sendNotification('nattlua/visibleEditors', { uris });
   };
 
+  const getDocumentConfig = (document?: TextDocument) => {
+    return workspace.getConfiguration("nattlua", document?.uri);
+  };
+
+  const getConfiguredExecutable = (document?: TextDocument) => {
+    const documentConfig = getDocumentConfig(document);
+    return resolveVariablesForDocument(documentConfig.get<string>("executable") || "nattlua", document);
+  };
+
+  const getConfiguredWorkingDirectory = (document?: TextDocument) => {
+    const documentConfig = getDocumentConfig(document);
+    return resolveVariablesForDocument(documentConfig.get<string>("workingDirectory") || "${workspaceFolder}", document);
+  };
+
+  const getConfiguredArguments = (document?: TextDocument) => {
+    const documentConfig = getDocumentConfig(document);
+    return (documentConfig.get<string[]>("arguments") || []).map(arg => resolveVariablesForDocument(arg, document));
+  };
+
+  const deriveFormatterInvocation = (document: TextDocument): FormatterInvocation | undefined => {
+    const documentConfig = getDocumentConfig(document);
+    const formatterExecutableSetting = documentConfig.get<string>("formatterExecutable") || "";
+    const formatterArgumentsSetting = documentConfig.get<string[]>("formatterArguments") || [];
+    const executable = formatterExecutableSetting.trim().length > 0
+      ? resolveVariablesForDocument(formatterExecutableSetting, document)
+      : getConfiguredExecutable(document);
+    const baseArgs = formatterArgumentsSetting.length > 0
+      ? formatterArgumentsSetting.map(arg => resolveVariablesForDocument(arg, document))
+      : getConfiguredArguments(document);
+    const args = [...baseArgs];
+
+    if (formatterArgumentsSetting.length === 0) {
+      const lspArgIndex = args.lastIndexOf("lsp");
+
+      if (lspArgIndex >= 0) {
+        args[lspArgIndex] = "fmt";
+      } else if (basename(executable).toLowerCase().includes("nattlua")) {
+        args.push("fmt");
+      } else {
+        return undefined;
+      }
+    }
+
+    args.push("-");
+    args.push(`--stdin-path=${JSON.stringify(document.fileName)}`);
+
+    return {
+      executable,
+      args,
+      workingDirectory: getConfiguredWorkingDirectory(document),
+    };
+  };
+
+  const runFormatterProcess = (
+    invocation: FormatterInvocation,
+    input: string,
+    token: CancellationToken,
+  ): Promise<string> => {
+    return new Promise((resolvePromise, rejectPromise) => {
+      const formatter = spawn(invocation.executable, invocation.args, {
+        cwd: invocation.workingDirectory,
+        shell: true,
+      });
+      let stdout = "";
+      let stderr = "";
+      let settled = false;
+
+      const finish = (callback: () => void) => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        cancelSubscription.dispose();
+        callback();
+      };
+
+      const cancelSubscription = token.onCancellationRequested(() => {
+        if (!formatter.killed) {
+          formatter.kill("SIGTERM");
+        }
+      });
+
+      formatter.stdout.setEncoding("utf8");
+      formatter.stdout.on("data", chunk => {
+        stdout += chunk;
+      });
+
+      formatter.stderr.setEncoding("utf8");
+      formatter.stderr.on("data", chunk => {
+        stderr += chunk;
+      });
+
+      formatter.on("error", err => {
+        finish(() => rejectPromise(err));
+      });
+
+      formatter.on("close", (code, signal) => {
+        finish(() => {
+          if (token.isCancellationRequested) {
+            rejectPromise(new Error("Formatting cancelled"));
+            return;
+          }
+
+          if (code === 0) {
+            resolvePromise(stdout);
+            return;
+          }
+
+          const details = stderr.trim() || stdout.trim() || `Formatter exited with code ${code ?? "null"} signal ${signal ?? "null"}`;
+          rejectPromise(new Error(details));
+        });
+      });
+
+      formatter.stdin.on("error", err => {
+        if ((err as NodeJS.ErrnoException).code === "EPIPE") {
+          return;
+        }
+
+        finish(() => rejectPromise(err));
+      });
+
+      formatter.stdin.end(input);
+    });
+  };
+
+  const formatDocumentWithProcess = async (document: TextDocument, token: CancellationToken) => {
+    const invocation = deriveFormatterInvocation(document);
+
+    if (!invocation) {
+      throw new Error("Could not derive a formatter command from the current NattLua executable and arguments. Configure nattlua.formatterExecutable and nattlua.formatterArguments explicitly.");
+    }
+
+    const original = document.getText();
+    const formatted = await runFormatterProcess(invocation, original, token);
+
+    if (formatted === original) {
+      return [];
+    }
+
+    return [TextEdit.replace(new Range(document.positionAt(0), document.positionAt(original.length)), formatted)];
+  };
+
   const executable = resolveVariables(config.get<string>("executable") || "nattlua");
   const workingDirectory = resolveVariables(config.get<string>("workingDirectory") || "${workspaceFolder}");
   const args = (config.get<string[]>("arguments") || []).map(arg => resolveVariables(arg));
@@ -340,6 +491,37 @@ export async function activate(context: ExtensionContext) {
       configurationSection: "nattlua",
     },
     middleware: {
+      provideDocumentFormattingEdits: async (
+        document: TextDocument,
+        _options: FormattingOptions,
+        token: CancellationToken,
+        next,
+      ) => {
+        const mode = (getDocumentConfig(document).get<string>("formattingMode") || "process") as FormatterMode;
+
+        if (mode === "lsp") {
+          return next(document, _options, token);
+        }
+
+        try {
+          return await formatDocumentWithProcess(document, token);
+        } catch (err: any) {
+          const message = err?.message || String(err);
+
+          if (mode === "auto") {
+            clientOutput.appendLine(`Process formatter failed for ${document.fileName}; falling back to LSP: ${message}`);
+            return next(document, _options, token);
+          }
+
+          clientOutput.appendLine(`Process formatter failed for ${document.fileName}: ${message}`);
+
+          if (!token.isCancellationRequested) {
+            window.showErrorMessage(`NattLua formatter failed: ${message}`);
+          }
+
+          return [];
+        }
+      },
       didOpen: (document, next) => {
         const visible = isVisibleDocument(document);
 
