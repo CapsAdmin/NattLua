@@ -403,6 +403,9 @@ return function(META--[[#: any]])
 			return get_offset(self, level or 1)
 		end
 
+		META.max_callstack = 100
+		META.max_recursion_unrolls = 25
+
 		function META:PushCallFrame(obj, call_node, not_recursive_call)
 			if self.recursively_called[obj] then return self.recursively_called[obj] end
 
@@ -421,7 +424,7 @@ return function(META--[[#: any]])
 				not obj:HasReferenceTypes()
 			then
 				-- if the callnode is the same, we're doing some infinite recursion
-				if current_unrolls > 10 then
+				if current_unrolls > self.max_recursion_unrolls then
 					self:Warning(error_messages.recursion_limit_reached())
 
 					if obj:IsExplicitOutputSignature() then
@@ -435,7 +438,7 @@ return function(META--[[#: any]])
 				end
 			end
 
-			if #self:GetCallStack() > 100 then
+			if #self:GetCallStack() > self.max_callstack then
 				local len = 501
 
 				while debug_getinfo(len, "") do
