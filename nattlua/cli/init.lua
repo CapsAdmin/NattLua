@@ -30,7 +30,6 @@ local function parse_args(args, allowed_options)
 
 			if exp then
 				option = option:sub(1, #option - #exp - 1)
-
 				local option_info = option_lookup[option]
 
 				if option_info and option_info.arg == "path" then
@@ -201,7 +200,11 @@ config.commands["fmt"] = {
 	usage = "nattlua fmt <file|directory|-> [options]",
 	options = {
 		{name = "check", description = "checks if the files are formated"},
-		{name = "stdin-path", description = "sets the source path when reading code from stdin", arg = "path"},
+		{
+			name = "stdin-path",
+			description = "sets the source path when reading code from stdin",
+			arg = "path",
+		},
 	},
 	cb = function(args, options, config, cli)
 		args[1] = args[1] or "./*"
@@ -217,33 +220,44 @@ config.commands["fmt"] = {
 				local old = config.emitter.comment_type_annotations
 				config.emitter.comment_type_annotations = config.emitter.comment_type_annotations_in_lua_files and
 					path:sub(-#".lua") == ".lua"
-				local new_lua_code = assert(Compiler.FromFile(path, config):Emit())
-				config.emitter.comment_type_annotations = old
+				local ok, err = xpcall(
+					function()
+						local new_lua_code = assert(Compiler.FromFile(path, config):Emit())
+						config.emitter.comment_type_annotations = old
 
-				if options.check then
-					local A = new_lua_code
-					local B = fs.read(path)
+						if options.check then
+							local A = new_lua_code
+							local B = fs.read(path)
 
-					if A ~= B then
-						local a = os.tmpname()
-						local b = os.tmpname()
+							if A ~= B then
+								local a = os.tmpname()
+								local b = os.tmpname()
 
-						do
-							local f = assert(io.open(a, "w"))
-							f:write(A)
-							f:close()
+								do
+									local f = assert(io.open(a, "w"))
+									f:write(A)
+									f:close()
+								end
+
+								do
+									local f = assert(io.open(b, "w"))
+									f:write(B)
+									f:close()
+								end
+
+								os.execute("git --no-pager diff --no-index " .. a .. " " .. b)
+							end
+						else
+							fs.write(path, new_lua_code)
 						end
+					end,
+					debug.traceback
+				)
 
-						do
-							local f = assert(io.open(b, "w"))
-							f:write(B)
-							f:close()
-						end
-
-						os.execute("git --no-pager diff --no-index " .. a .. " " .. b)
-					end
+				if not ok then
+					cli.print_error("Failed to format file " .. path .. ": " .. tostring(err))
 				else
-					fs.write(path, new_lua_code)
+					cli.print_success("Formatted " .. path)
 				end
 			end
 		end
