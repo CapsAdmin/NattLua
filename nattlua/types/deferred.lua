@@ -107,6 +107,22 @@ function META:CanBeNil()
 	return unwrapped:CanBeNil()
 end
 
+function META:IsCertainlyNil()
+	local unwrapped = self:Unwrap()
+
+	if unwrapped == self then return false end
+
+	return unwrapped:IsCertainlyNil()
+end
+
+function META:IsCertainlyNotNil()
+	local unwrapped = self:Unwrap()
+
+	if unwrapped == self then return false end
+
+	return unwrapped:IsCertainlyNotNil()
+end
+
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	map = map or {}
 

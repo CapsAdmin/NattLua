@@ -398,6 +398,22 @@ function META:CanBeNil()
 	return false
 end
 
+function META:IsCertainlyNil()
+	for _, obj in ipairs(self.Data) do
+		if not obj:IsCertainlyNil() then return false end
+	end
+
+	return #self.Data > 0
+end
+
+function META:IsCertainlyNotNil()
+	for _, obj in ipairs(self.Data) do
+		if not obj:IsCertainlyNotNil() then return false end
+	end
+
+	return #self.Data > 0
+end
+
 function META:GetType(typ--[[#: string]])
 	for _, obj in ipairs(self.Data) do
 		if obj.Type == typ then return obj end

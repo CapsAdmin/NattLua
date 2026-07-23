@@ -157,6 +157,14 @@ function Binary(self, node, l, r, op)
 		if r:IsTruthy() then return r:Copy() end
 
 		return r:Copy()
+	elseif op == "??" then
+		if l.Type == "any" or r.Type == "any" then return Any() end
+
+		if l:IsCertainlyNil() then return r:Copy() end
+
+		if l:IsCertainlyNotNil() then return l:Copy() end
+
+		return Union({l, r}):Simplify()
 	elseif op == "==" or op == "!=" or op == "~=" then
 		local is_not_equal = op == "~=" or op == "!="
 		local meta_method = "__eq"
@@ -393,8 +401,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 				end
 			end
 
-			-- Operator-specific union handling
-			if op == "and" or op == "or" then
+			if op == "and" or op == "or" or op == "??" then
 				return new_union
 			elseif op == "==" or op == "!=" or op == "~=" then
 				self:TrackTableIndexUnion(l, truthy_union, falsy_union)
@@ -538,6 +545,43 @@ return {
 					self:ClearScopedTrackedObjects(scope)
 					self:PopConditionalScope()
 				end
+			end
+		elseif op == "??" then
+			l = self:Assert(self:AnalyzeExpression(node.left)):GetFirstValue()
+
+			if l.Type == "union" then
+				self:TrackUpvalueUnion(l, l:GetTruthy(), l:GetFalsy())
+			end
+
+			if l:IsCertainlyNil() then
+				r = self:Assert(self:AnalyzeExpression(node.right)):GetFirstValue()
+				return r
+			elseif l:IsCertainlyNotNil() then
+				return l
+			else
+				local tracked, scope
+
+				if not is_condition_expression(node) then
+					tracked = self:GetTrackedObjects()
+					scope = self:PushConditionalScope(node, l:CanBeNil(), not l:CanBeNil())
+					scope:SetTrackedNarrowings(tracked)
+					self:ApplyMutationsInIf(tracked)
+				end
+
+				self:PushTruthyExpressionContext()
+				r = self:Assert(self:AnalyzeExpression(node.right)):GetFirstValue()
+				self:PopTruthyExpressionContext()
+
+				if scope then
+					self:ClearScopedTrackedObjects(scope)
+					self:PopConditionalScope()
+				end
+
+				if r.Type == "union" then
+					self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
+				end
+
+				return Union({l, r}):Simplify()
 			end
 		elseif op == "or" then
 			self:PushFalsyExpressionContext()

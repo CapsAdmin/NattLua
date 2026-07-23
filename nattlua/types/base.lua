@@ -51,6 +51,14 @@ return function()
 		function META:IsCertainlyTrue()
 			return self:IsTruthy() and not self:IsFalsy()
 		end
+
+		function META:IsCertainlyNil()
+			return false
+		end
+
+		function META:IsCertainlyNotNil()
+			return not self:CanBeNil()
+		end
 	end
 
 	do

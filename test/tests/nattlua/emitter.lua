@@ -416,6 +416,46 @@ return f(5)]])
 	equal(results[1], 10)
 end
 
+do
+	local output = nl.Compiler("local x = a ?? b"):Emit()
+	equal(output, "local x = a ?? b")
+end
+
+do
+	local output = nl.Compiler("local x = nil ?? true"):Emit()
+	equal(output, "local x = nil ?? true")
+end
+
+do
+	local _, env, results = emit_and_run([[local x = nil ?? true
+return x]])
+	equal(results[1], true)
+end
+
+do
+	local _, env, results = emit_and_run([[local x = false ?? true
+return x]])
+	equal(results[1], false)
+end
+
+do
+	local _, env, results = emit_and_run([[local x = 42 ?? true
+return x]])
+	equal(results[1], 42)
+end
+
+do
+	local _, env, results = emit_and_run([[local x = "hello" ?? "default"
+return x]])
+	equal(results[1], "hello")
+end
+
+do
+	local _, env, results = emit_and_run([[local x = nil ?? "default"
+return x]])
+	equal(results[1], "default")
+end
+
 --[=[ TODO: // not supported in LuaJIT 2.1 backport yet
 do
 	local _, env, results = emit_and_run([[local x = 7
