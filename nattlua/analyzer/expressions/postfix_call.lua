@@ -105,6 +105,12 @@ return {
 
 		self:PushAnalyzerEnvironment(node.type_call and "typesystem" or "runtime")
 		local callable = self:Assert(self:AnalyzeExpression(node.left))
+
+		-- Handle safe navigation: if callable is certainly nil, return nil immediately
+		if node.safe_navigation and callable:IsCertainlyNil() then
+			self:PopAnalyzerEnvironment()
+			return Nil()
+		end
 		local self_arg
 
 		if

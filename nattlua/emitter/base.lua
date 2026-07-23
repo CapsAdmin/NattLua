@@ -893,6 +893,9 @@ return function()
 
 	function META:EmitExpressionIndex(node--[[#: Node]])
 		self:EmitExpression(node.left)
+
+		if node.safe_navigation then self:EmitToken(node.value) end
+
 		self:EmitToken(node.tokens["["])
 		self:EmitExpression(node.expression)
 		self:EmitToken(node.tokens["]"])
@@ -982,6 +985,8 @@ return function()
 		-- this will not work for calls with functions that contain statements
 		self.inside_call_expression = true
 		self:EmitExpression(node.left)
+
+		if node.safe_navigation then self:EmitNonSpace("?.") end
 
 		if node.expressions_typesystem and not self.config.omit_invalid_code then
 			local emitted = self:StartEmittingInvalidLuaCode()
@@ -1419,7 +1424,15 @@ return function()
 
 			if func_chunks then self:Emit(func_chunks[2]) end
 
-			if node.value.sub_type == "." or node.value.sub_type == ":" then
+			if
+				node.value.sub_type == "." or
+				node.value.sub_type == ":" or
+				node.value.sub_type == "?."
+			then
+				if node.safe_navigation and node.value.sub_type ~= "?." then
+					self:EmitNonSpace("?.")
+				end
+
 				self:EmitToken(node.value)
 			else
 				local special_break = node.value.sub_type == (
@@ -2003,7 +2016,15 @@ return function()
 		function META:EmitTypeBinaryOperator(node--[[#: Node]])
 			if node.left then self:EmitTypeExpression(node.left) end
 
-			if node.value.sub_type == "." or node.value.sub_type == ":" then
+			if
+				node.value.sub_type == "." or
+				node.value.sub_type == ":" or
+				node.value.sub_type == "?."
+			then
+				if node.safe_navigation and node.value.sub_type ~= "?." then
+					self:EmitNonSpace("?.")
+				end
+
 				self:EmitToken(node.value)
 			else
 				self:Whitespace(" ")

@@ -852,14 +852,7 @@ return function(META--[[#: any]])
 			return node
 		end
 
-		function META:ParseCallSubExpression(left_node--[[#: Node]], primary_node--[[#: Node]])
-			if not self:IsCallExpression(0) then return end
-
-			if primary_node and primary_node.Type == "expression_function" then
-				if not primary_node.tokens[")"] then return end
-			end
-
-			local node = self:StartNode("expression_postfix_call", left_node)
+		function META:ParsePostfixCalls(node, primary_node)
 			local start = self:GetToken()
 
 			if self:IsToken("{") then
@@ -926,7 +919,18 @@ return function(META--[[#: any]])
 					self:HandleImportExpression(node, primary_node.value, node.expressions[1].value, start)
 				end
 			end
+		end
 
+		function META:ParseCallSubExpression(left_node--[[#: Node]], primary_node--[[#: Node]])
+			if not self:IsCallExpression(0) then return end
+
+			if primary_node and primary_node.Type == "expression_function" then
+				if not primary_node.tokens[")"] then return end
+			end
+
+			local node = self:StartNode("expression_postfix_call", left_node)
+			node.safe_navigation = left_node.safe_navigation or false
+			self:ParsePostfixCalls(node, primary_node)
 			node.left = left_node
 			node = self:EndNode(node)
 			return node
@@ -940,6 +944,75 @@ return function(META--[[#: any]])
 			node.expression = self:ExpectRuntimeExpression()
 			node.tokens["]"] = self:ExpectToken("]")
 			node.left = left_node
+			node = self:EndNode(node)
+			return node
+		end
+
+		function META:ParseSafeNavigationIndexSubExpression(left_node--[[#: Node]])
+			-- a?.field
+			if not (self:IsToken("?.") and self:IsTokenTypeOffset("letter", 1)) then
+				return
+			end
+
+			local node = self:StartNode("expression_binary_operator")
+			node.value = self:ParseToken()
+			node.right = self:ParseValueExpressionType("letter")
+			node.left = left_node
+			node.safe_navigation = true
+			node = self:EndNode(node)
+			return node
+		end
+
+		function META:ParseSafeNavigationPostfixIndexSubExpression(left_node--[[#: Node]])
+			-- a?.[key]
+			if not (self:IsToken("?.") and self:IsTokenOffset("[", 1)) then return end
+
+			local node = self:StartNode("expression_postfix_expression_index")
+			node.value = self:ParseToken() -- consume ?. (will be used as safe navigation marker)
+			node.tokens["["] = self:ExpectToken("[")
+			node.expression = self:ExpectRuntimeExpression()
+			node.tokens["]"] = self:ExpectToken("]")
+			node.left = left_node
+			node.safe_navigation = true
+			node = self:EndNode(node)
+			return node
+		end
+
+		function META:ParseSafeNavigationCallSubExpression(left_node--[[#: Node]], primary_node--[[#: Node]])
+			if not (self:IsToken("?.") and self:IsCallExpression(1)) then return end
+
+			if primary_node and primary_node.Type == "expression_function" then
+				if not primary_node.tokens[")"] then return end
+			end
+
+			local node = self:StartNode("expression_postfix_call", left_node)
+			node.value = self:ParseToken() -- consume ?. (will be used as safe navigation marker)
+			self:ParsePostfixCalls(node, primary_node)
+			node.left = left_node
+			node.safe_navigation = true
+			node = self:EndNode(node)
+			return node
+		end
+
+		function META:ParseSafeNavigationSelfCallSubExpression(left_node--[[#: Node]])
+			-- obj?.:method(...)
+			if
+				not (
+					self:IsToken("?.") and
+					self:IsTokenOffset(":", 1) and
+					self:IsTokenTypeOffset("letter", 2) and
+					self:IsCallExpression(3)
+				)
+			then
+				return
+			end
+
+			local node = self:StartNode("expression_binary_operator", left_node)
+			node.value = self:ParseToken() -- consume ?. (will be used as safe navigation marker)
+			node.value = self:ParseToken() -- consume :
+			node.right = self:ParseValueExpressionType("letter")
+			node.left = left_node
+			node.safe_navigation = true
 			node = self:EndNode(node)
 			return node
 		end
@@ -968,7 +1041,11 @@ return function(META--[[#: any]])
 					node.type_expression = self:ExpectTypeExpression(0)
 				end
 
-				local found = self:ParseIndexSubExpression(left_node) or
+				local found = self:ParseSafeNavigationIndexSubExpression(left_node) or
+					self:ParseSafeNavigationPostfixIndexSubExpression(left_node) or
+					self:ParseSafeNavigationCallSubExpression(left_node, node) or
+					self:ParseSafeNavigationSelfCallSubExpression(left_node) or
+					self:ParseIndexSubExpression(left_node) or
 					self:ParseSelfCallSubExpression(left_node) or
 					self:ParseCallSubExpression(left_node, node) or
 					self:ParsePostfixOperatorSubExpression(left_node) or
@@ -1300,7 +1377,8 @@ return function(META--[[#: any]])
 				if self:IsTokenOffset("=", 1) then break end
 
 				-- Check for ternary operator ? (lowest precedence, right-assoc)
-				if self:IsToken("?") and not self.in_ternary_middle then
+				-- Exclude ?. (safe navigation) from being treated as ternary
+				if self:IsToken("?") and not self:IsToken("?.") and not self.in_ternary_middle then
 					node = self:ParseTernaryExpression(node)
 
 					break

@@ -197,6 +197,17 @@ function Binary(self, node, l, r, op)
 		return logical_cmp_cast(shared.LogicalComparison(l, r, op, self:GetCurrentAnalyzerEnvironment()))
 	elseif op == "." or op == ":" then
 		return self:IndexOperator(l, r)
+	elseif op == "?." then
+		-- Safe navigation: if l is nil, return nil; otherwise, index into l
+		if l.Type == "any" then return Any() end
+
+		if l:IsCertainlyNil() then return Nil() end
+
+		local result = self:IndexOperator(l, r)
+
+		if result then return result end
+
+		return Nil()
 	elseif op == ".." then
 		if
 			(

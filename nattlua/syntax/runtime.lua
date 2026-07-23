@@ -81,7 +81,6 @@ runtime:AddBinaryOperators{
 }
 runtime:AddPrimaryBinaryOperators{
 	".",
-	"?.",
 	":",
 }
 -- these are really here just for coverage
