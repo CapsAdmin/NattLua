@@ -127,6 +127,7 @@ do
 	local AnalyzeAtomicValue = require("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
 	local LookupValue = require("nattlua.analyzer.expressions.atomic_value").LookupValue
 	local AnalyzeLSX = require("nattlua.analyzer.expressions.lsx").AnalyzeLSX
+	local AnalyzeTernary = require("nattlua.analyzer.expressions.ternary").AnalyzeTernary
 	local Union = require("nattlua.types.union").Union
 	local Tuple = require("nattlua.types.tuple").Tuple
 	local VarArg = require("nattlua.types.tuple").VarArg
@@ -170,6 +171,8 @@ do
 			end
 		elseif node.Type == "expression_empty_union" then
 			return Union()
+		elseif node.Type == "expression_ternary" then
+			return self:Assert(AnalyzeTernary(self, node))
 		elseif node.Type == "expression_tuple" then
 			local tup = Tuple():SetUnpackable(true)
 			self:PushCurrentTypeTuple(tup)
@@ -304,8 +307,14 @@ do
 		if
 			callback and
 			(
-				count - (self.last_checkpoint_count or 0) >= checkpoint_iterations or
-				start_prof - (self.last_checkpoint_time or start_prof) >= checkpoint_seconds
+				count - (
+					self.last_checkpoint_count or
+					0
+				) >= checkpoint_iterations or
+				start_prof - (
+					self.last_checkpoint_time or
+					start_prof
+				) >= checkpoint_seconds
 			)
 		then
 			self.last_checkpoint_count = count

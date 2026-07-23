@@ -357,6 +357,19 @@ local all_nodes = {
 			},
 		}
 	end,
+	["expression_ternary"] = function()
+		return {
+			is_expression = true,
+			condition = false,
+			then_expr = false,
+			else_expr = false,
+			tokens = {
+				["?"] = false,
+				[":"] = false,
+				["table"] = false,
+			},
+		}
+	end,
 	["expression_dollar_sign"] = function()
 		return {
 			is_expression = true,

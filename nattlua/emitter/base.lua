@@ -754,6 +754,8 @@ return function()
 			self:EmitAnonymousFunction(node)
 		elseif node.Type == "expression_short_function" then
 			self:EmitShortFunction(node)
+		elseif node.Type == "expression_ternary" then
+			self:EmitTernary(node)
 		elseif node.Type == "expression_analyzer_function" then
 			emitted_invalid_code = self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
 		elseif node.Type == "expression_table" then
@@ -1145,6 +1147,23 @@ return function()
 			self:EmitExpression(node.expression or node.identifier)
 			self:EmitFunctionBody(node)
 			self:EmitToken(node.tokens["end"])
+		end
+
+		function META:EmitTernary(node--[[#: Node]])
+			-- Native emission: condition ? then_expr : else_expr
+			-- LuaJIT 3+ supports ternary natively
+			self:EmitExpression(node.condition)
+			self:Whitespace(" ")
+			self:EmitToken(node.tokens["?"])
+			self:Whitespace(" ")
+			self:EmitExpression(node.then_expr)
+
+			if node.else_expr then
+				self:Whitespace(" ")
+				self:EmitToken(node.tokens[":"])
+				self:Whitespace(" ")
+				self:EmitExpression(node.else_expr)
+			end
 		end
 
 		function META:EmitShortFunction(node--[[#: Node]])

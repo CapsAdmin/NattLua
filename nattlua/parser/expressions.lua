@@ -957,6 +957,9 @@ return function(META--[[#: any]])
 					and
 					-- special case for autocompletion to work while typing and : is the last character of the code
 					not self:IsTokenTypeOffset("end_of_file", 2)
+					and
+					-- don't consume : in ternary middle expression (spec: b cannot contain method calls)
+					not self.in_ternary_middle
 				then
 					node.tokens[":"] = self:ExpectToken(":")
 					node.type_expression = self:ExpectTypeExpression(0)
@@ -1231,6 +1234,38 @@ return function(META--[[#: any]])
 			return node
 		end
 
+		function META:ParseTernaryExpression(condition--[[#: Node]])
+			local node = self:StartNode("expression_ternary")
+			node.condition = condition
+			node.tokens["?"] = self:ExpectToken("?")
+			-- Parse middle expression (cannot contain method calls due to : ambiguity)
+			self.in_ternary_middle = true
+			node.then_expr = self:ExpectRuntimeExpression(0)
+			self.in_ternary_middle = nil
+
+			if not node.then_expr then
+				self:Error("expected expression after ?", nil, nil, self:GetToken().type)
+				return self:ErrorExpression()
+			end
+
+			-- The : is required for ternary operator
+			if not self:IsToken(":") then
+				self:Error("expected : in ternary expression", nil, nil, self:GetToken().type)
+				return self:ErrorExpression()
+			end
+
+			node.tokens[":"] = self:ExpectToken(":")
+			node.else_expr = self:ExpectRuntimeExpression(0)
+
+			if not node.else_expr then
+				self:Error("expected expression after :", nil, nil, self:GetToken().type)
+				return self:ErrorExpression()
+			end
+
+			node = self:EndNode(node)
+			return node
+		end
+
 		function META:ParseRuntimeExpression(priority--[[#: number]])
 			if self:GetCurrentParserEnvironment() == "typesystem" then
 				return self:ParseTypeExpression(priority)
@@ -1263,6 +1298,13 @@ return function(META--[[#: any]])
 
 			for _ = self:GetPosition(), self:GetLength() do
 				if self:IsTokenOffset("=", 1) then break end
+
+				-- Check for ternary operator ? (lowest precedence, right-assoc)
+				if self:IsToken("?") and not self.in_ternary_middle then
+					node = self:ParseTernaryExpression(node)
+
+					break
+				end
 
 				local info = runtime_syntax:GetBinaryOperatorInfo(self:GetToken())
 

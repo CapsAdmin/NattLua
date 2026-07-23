@@ -75,7 +75,6 @@ test("require cache key uses module name", function()
 
 		return old_resolve_require(str)
 	end
-
 	local ok, err = pcall(function()
 		local compiler = assert(
 			nl.Compiler(
@@ -93,7 +92,6 @@ local b = require("alias.two")]],
 				}
 			)
 		)
-
 		assert(compiler:Lex())
 		local syntax_tree = assert(compiler:Parse()).SyntaxTree
 		assert(syntax_tree.imports)
@@ -106,7 +104,6 @@ local b = require("alias.two")]],
 		assert(not syntax_tree.imports[2].import_expression)
 		assert(syntax_tree.imports[1].RootStatement ~= syntax_tree.imports[2].RootStatement)
 	end)
-
 	path_util.ResolveRequire = old_resolve_require
 	assert(ok, err)
 end)
@@ -120,7 +117,6 @@ test("import cache key can use import string", function()
 
 		return old_resolve(path, root_directory, working_directory, file_path)
 	end
-
 	local ok, err = pcall(function()
 		do
 			local compiler = assert(
@@ -135,7 +131,6 @@ local b = import("alias.two")]],
 					}
 				)
 			)
-
 			assert(compiler:Lex())
 			local syntax_tree = assert(compiler:Parse()).SyntaxTree
 			assert(syntax_tree.imports)
@@ -167,7 +162,6 @@ local b = import("alias.two")]],
 					}
 				)
 			)
-
 			assert(compiler:Lex())
 			local syntax_tree = assert(compiler:Parse()).SyntaxTree
 			assert(syntax_tree.imports)
@@ -179,7 +173,6 @@ local b = import("alias.two")]],
 			assert(not syntax_tree.imports[1].require_expression)
 		end
 	end)
-
 	path_util.Resolve = old_resolve
 	assert(ok, err)
 end)
