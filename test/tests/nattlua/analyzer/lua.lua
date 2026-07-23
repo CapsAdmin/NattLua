@@ -607,3 +607,70 @@ analyze[[
     end
 
 ]]
+-- const declaration tests (LJ3)
+analyze[[
+    const MAX_ITEM = 100
+    local x = MAX_ITEM + 1
+    assert(x == 101)
+]]
+analyze[[
+    const OP_A, OP_B, OP_C = 1, 2, 3
+    assert(OP_A == 1 and OP_B == 2 and OP_C == 3)
+]]
+analyze[[
+    const LAT_2D = {base = 0, top = 10}
+    local base = LAT_2D.base
+    local top = LAT_2D.top
+    assert(base == 0 and top == 10)
+]]
+analyze[[
+    const function foo()
+        return 42
+    end
+    assert(foo() == 42)
+]]
+analyze[[
+    -- The variable is immutable. The referenced table is NOT immutable:
+    const tab = {}
+    tab.field = 1            -- OK!
+    assert(tab.field == 1)
+]]
+analyze[[
+    -- const without assignment sets to nil
+    const FOO
+    assert(FOO == nil)
+]]
+-- Error: cannot assign to const variable
+analyze[[
+    attest.expect_diagnostic("error", "cannot assign to const variable")
+    const X = 42
+    X = 43
+]]
+-- Error: cannot redeclare const variable
+analyze[[
+    attest.expect_diagnostic("error", "cannot redeclare const variable")
+    const X = 42
+    local X = 10
+]]
+-- Error: cannot redeclare const variable as function parameter
+analyze[[
+    attest.expect_diagnostic("error", "cannot redeclare const variable")
+    const MAX = 100
+    local function foo(MAX)
+        return MAX
+    end
+]]
+-- Error: cannot assign to const from parallel declaration
+analyze[[
+    attest.expect_diagnostic("error", "cannot assign to const variable")
+    const A, B, C = 1, 2, 3
+    A = 42
+]]
+-- Error: cannot redeclare const in inner scope
+analyze[[
+    attest.expect_diagnostic("error", "cannot redeclare const variable")
+    const X = 42
+    do
+        local X = 10
+    end
+]]

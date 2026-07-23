@@ -6,6 +6,10 @@ local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Deferred = require("nattlua.types.deferred").Deferred
 local shared = require("nattlua.types.shared")
+local binary_ops = require("nattlua.analyzer.operators.binary")
+local Binary = binary_ops.Binary
+local BinaryWithUnion = binary_ops.BinaryCustom
+local error_messages = require("nattlua.error_messages")
 
 local function check_type_against_contract(val, contract)
 	-- if the contract is unique / nominal, ie
@@ -227,7 +231,9 @@ return {
 			if statement.Type == "statement_local_assignment" then
 				local immutable = false
 
-				if exp_key.attribute then
+				if statement.tokens["const"] then
+					immutable = true
+				elseif exp_key.attribute then
 					if exp_key.attribute.value == "const" or exp_key.attribute.sub_type == "const" then
 						immutable = true
 					end
@@ -242,8 +248,123 @@ return {
 			elseif statement.Type == "statement_assignment" then
 				local key = left[left_pos]
 
-				-- plain assignment: a = 1
-				if exp_key.Type == "expression_value" then
+				-- TODO: LLM SLOP!!
+				-- compound assignment with dotted LHS: x.y.z.field += b
+				if
+					statement.is_compound_assignment and
+					exp_key.Type == "expression_binary_operator" and
+					exp_key.value.sub_type == "." and
+					#statement.left == 1
+				then
+					-- Extract base operator from compound token (e.g., "+=" -> "+")
+					local compound_str = statement.tokens["="]:GetValueString()
+					local base_op = compound_str:sub(1, compound_str:len() - 1)
+					-- The LHS is a chain of "." binary operators
+					-- x.y.z.field = ((x . y) . z) . field
+					-- We need to get the object (x.y.z) and the key (field)
+					local obj_expr = exp_key.left
+					local field_name = exp_key.right.value:GetValueString()
+					-- Analyze the object once
+					local obj = self:Assert(self:AnalyzeExpression(obj_expr))
+					self:ClearTracked()
+					-- Get the current value at obj[field_name]
+					local field_val = self:Assert(self:IndexOperator(obj, ConstString(field_name)))
+					-- Analyze the right side
+					local right_val = self:Assert(self:AnalyzeExpression(statement.right[1]))
+					-- Apply the binary operation
+					local result = self:AssertWithNode(exp_key, BinaryWithUnion(self, exp_key, field_val, right_val, base_op))
+					-- Write result back
+					self:PushCurrentExpression(statement.left[1])
+					self:NewIndexOperator(obj, ConstString(field_name), result)
+					self:PopCurrentExpression()
+				elseif
+					statement.is_compound_assignment and
+					(
+						exp_key.Type == "expression_postfix_expression_index" or
+						exp_key.Type == "expression_postfix_call" or
+						exp_key.Type == "expression_postfix_operator"
+					)
+					and
+					#statement.left == 1
+				then
+					-- Extract base operator from compound token (e.g., "+=" -> "+")
+					local compound_str = statement.tokens["="]:GetValueString()
+					local base_op = compound_str:sub(1, compound_str:len() - 1)
+					-- For indexed access: get the object part (everything except last index)
+					local obj_expr = exp_key
+					local idx_key = key
+
+					-- Unwrap nested postfix: for x.y.z.field, obj_expr = x.y.z, idx_key = "field"
+					if exp_key.Type == "expression_postfix_expression_index" then
+						idx_key = self:Assert(self:AnalyzeExpression(exp_key.expression))
+						obj_expr = exp_key.left
+						-- Analyze the object once
+						local obj = self:Assert(self:AnalyzeExpression(obj_expr))
+						self:ClearTracked()
+
+						if self:IsRuntime() then idx_key = self:GetFirstValue(idx_key) or Nil() end
+
+						-- Read current value at obj[idx_key]
+						local current_val = self:Assert(self:IndexOperator(obj, idx_key))
+						-- Create binary operator: current_val op right
+						local bop = {
+							Type = "expression_binary_operator",
+							value = {
+								GetValueString = function()
+									return base_op
+								end,
+								sub_type = base_op,
+							},
+							left = {
+								Type = "expression_value",
+								value = {
+									GetValueString = function()
+										return "__tmp"
+									end,
+								},
+							},
+							right = statement.right[1],
+							parent = statement,
+						}
+						-- We need to analyze the binary op with current_val as the left operand
+						-- Reuse BinaryWithUnion pattern: analyze left and right, then combine
+						local right_val = self:Assert(self:AnalyzeExpression(statement.right[1]))
+						local result = self:AssertWithNode(bop, BinaryWithUnion(self, bop, current_val, right_val, base_op))
+						-- Write result back
+						self:PushCurrentExpression(statement.left[1])
+						self:NewIndexOperator(obj, idx_key, result)
+						self:PopCurrentExpression()
+					end
+				elseif
+					statement.is_compound_assignment and
+					exp_key.Type == "expression_value" and
+					#statement.left == 1
+				then
+					-- compound assignment: a += 1, a *= 2, etc.
+					-- Extract base operator from compound token (e.g., "+=" -> "+")
+					local compound_str = statement.tokens["="]:GetValueString()
+					local base_op = compound_str:sub(1, compound_str:len() - 1)
+					-- Create a binary operator node: left op right
+					local bop = {
+						Type = "expression_binary_operator",
+						value = {
+							GetValueString = function()
+								return base_op
+							end,
+							sub_type = base_op,
+						},
+						left = statement.left[1],
+						right = statement.right[1],
+						parent = statement,
+					}
+					-- Analyze the binary operation to get the result type
+					local result = self:AssertWithNode(bop, Binary(self, bop))
+					-- Assign the result back to the variable
+					val = result
+					self:SetLocalOrGlobalValue(key, val, nil, exp_key)
+					self:MapTypeToNode(val, exp_key)
+				elseif exp_key.Type == "expression_value" then
+					-- plain assignment: a = 1
 					if self:IsRuntime() then -- check for any previous upvalues
 						local existing_value = self:GetLocalOrGlobalValue(key)
 						local contract = existing_value and existing_value:GetContract()

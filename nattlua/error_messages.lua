@@ -307,6 +307,10 @@ function error_messages.const_assignment(key--[[#: any]])--[[#: Reason]]
 	return {"cannot assign to const variable", key}
 end
 
+function error_messages.const_redeclaration(key--[[#: any]])--[[#: Reason]]
+	return {"cannot redeclare const variable", key}
+end
+
 function error_messages.invalid_number(value--[[#: any]])--[[#: Reason]]
 	return {"unable to convert", value, "to number"}
 end

@@ -534,7 +534,9 @@ return function()
 			self:EmitNonSpace("local __NATTLUA_REQUIRE = require--[[# as any]]\n")
 			self:EmitNonSpace("local __NATTLUA_TYPE = type--[[# as any]]\n")
 			self:EmitNonSpace("local __NATTLUA_IMPORT = import--[[# as any]]\n")
-			self:EmitNonSpace("local function __NATTLUA_GET_IMPORT_CACHE() return import and import.loaded end\n")
+			self:EmitNonSpace(
+				"local function __NATTLUA_GET_IMPORT_CACHE() return import and import.loaded end\n"
+			)
 			self:EmitNonSpace(
 				"local function __NATTLUA_CALL_IMPORT_FALLBACK(key--[[#: any]], ...) if __NATTLUA_IMPORT ~= nil then if __NATTLUA_TYPE(__NATTLUA_IMPORT) == 'table' then local mt = __NATTLUA_GETMETATABLE(__NATTLUA_IMPORT) if mt and mt.__call then return mt.__call(__NATTLUA_IMPORT, key, ...) end else return __NATTLUA_IMPORT(key, ...) end end return __NATTLUA_REQUIRE(key) end\n"
 			)
@@ -724,6 +726,8 @@ return function()
 
 		if self.emitting_function_signature then self:EmitModifiers(node) end
 
+		node.tokens = node.tokens or {}
+
 		if node.tokens["^"] then self:EmitToken(node.tokens["^"]) end
 
 		if node.tokens["("] then
@@ -748,6 +752,8 @@ return function()
 			self:EmitBinaryOperator(node)
 		elseif node.Type == "expression_function" then
 			self:EmitAnonymousFunction(node)
+		elseif node.Type == "expression_short_function" then
+			self:EmitShortFunction(node)
 		elseif node.Type == "expression_analyzer_function" then
 			emitted_invalid_code = self:EmitInvalidLuaCode("EmitAnalyzerFunction", node)
 		elseif node.Type == "expression_table" then
@@ -1080,7 +1086,12 @@ return function()
 		end
 
 		function META:EmitLocalFunction(node--[[#: Node]])
-			self:EmitToken(node.tokens["local"])
+			if node.tokens["const"] then
+				self:EmitToken(node.tokens["const"])
+			else
+				self:EmitToken(node.tokens["local"])
+			end
+
 			self:Whitespace(" ")
 			self:EmitToken(node.tokens["function"])
 			self:Whitespace(" ")
@@ -1134,6 +1145,39 @@ return function()
 			self:EmitExpression(node.expression or node.identifier)
 			self:EmitFunctionBody(node)
 			self:EmitToken(node.tokens["end"])
+		end
+
+		function META:EmitShortFunction(node--[[#: Node]])
+			local has_pipes = type(node.tokens["|"]) == "table"
+			local has_double_pipe = type(node.tokens["||"]) == "table"
+
+			if has_double_pipe then
+				self:EmitToken(node.tokens["||"])
+			elseif has_pipes then
+				self:EmitNonSpace("|")
+
+				if node.parameters and #node.parameters > 0 then
+					for i, param in ipairs(node.parameters) do
+						if i > 1 then self:EmitNonSpace(",") end
+
+						self:EmitExpression(param)
+					end
+				end
+
+				self:EmitNonSpace("|")
+			else
+				if node.parameters and #node.parameters > 0 then
+					self:EmitExpression(node.parameters[1])
+				end
+			end
+
+			self:EmitToken(node.tokens["->"])
+
+			if node.body_type == "block" then
+				self:EmitBlock(node.statements)
+			else
+				self:EmitExpression(node.expression)
+			end
 		end
 
 		function META:EmitAnalyzerFunctionStatement(node--[[#: Node]])
@@ -1305,6 +1349,7 @@ return function()
 	end
 
 	do
+		-- these are just for pretty printing, despite luajit 3.0 syntax support
 		local translate_prefix = {
 			["!"] = "not ",
 		}
@@ -1337,6 +1382,7 @@ return function()
 	end
 
 	do
+		-- these are just for pretty printing, despite luajit 3.0 syntax support
 		local translate_binary = {
 			["&&"] = "and",
 			["||"] = "or",
@@ -1556,16 +1602,7 @@ return function()
 	end
 
 	function META:EmitContinueStatement(node--[[#: Node]])
-		local loop_node = self.config.transpile_extensions and self:GetLoopNode()
-
-		if loop_node then
-			self:EmitToken(node.tokens["continue"], "goto __CONTINUE__")
-			loop_node.on_pop = function()
-				self:EmitNonSpace("::__CONTINUE__::;")
-			end
-		else
-			self:EmitToken(node.tokens["continue"])
-		end
+		self:EmitToken(node.tokens["continue"])
 	end
 
 	function META:EmitDoStatement(node--[[#: Node]])
@@ -1599,6 +1636,9 @@ return function()
 	function META:EmitAssignment(node--[[#: Node]])
 		if node.tokens["local"] then
 			self:EmitToken(node.tokens["local"])
+			self:Whitespace(" ")
+		elseif node.tokens["const"] then
+			self:EmitToken(node.tokens["const"])
 			self:Whitespace(" ")
 		end
 
@@ -1690,6 +1730,8 @@ return function()
 			self.is_call_expression = true
 			self:EmitExpression(node.value)
 			self.is_call_expression = false
+		elseif node.Type == "statement_expression" then
+			self:EmitExpression(node.value)
 		elseif node.Type == "statement_shebang" then
 			self:EmitToken(node.tokens["shebang"])
 		elseif node.Type == "statement_continue" then
@@ -2072,6 +2114,8 @@ return function()
 				self:EmitTypeFunction(node)
 			elseif node.Type == "expression_function" then
 				self:EmitAnonymousFunction(node)
+			elseif node.Type == "expression_short_function" then
+				self:EmitShortFunction(node)
 			elseif node.Type == "expression_function_signature" then
 				self:EmitFunctionSignature(node)
 			elseif node.Type == "expression_vararg" then

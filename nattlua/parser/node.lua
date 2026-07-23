@@ -103,6 +103,24 @@ local all_nodes = {
 			},
 		}
 	end,
+	["expression_short_function"] = function()
+		return {
+			is_expression = true,
+			return_types = false,
+			statements = false,
+			parameters = false,
+			body_type = false, -- "expression" or "block"
+			expression = false,
+			environments_override = false,
+			self_call = false,
+			tokens = {
+				["->"] = false,
+				["|"] = false,
+				["do"] = false,
+				["end"] = false,
+			},
+		}
+	end,
 	["expression_analyzer_function"] = function()
 		return {
 			is_expression = true,
@@ -462,6 +480,12 @@ local all_nodes = {
 				["["] = false,
 				["table"] = false,
 			},
+		}
+	end,
+	["statement_expression"] = function()
+		return {
+			is_statement = true,
+			value = false,
 		}
 	end,
 	["statement_call_expression"] = function()

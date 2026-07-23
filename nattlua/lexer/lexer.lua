@@ -298,6 +298,8 @@ end
 
 function META:ReadLineCComment()--[[#: TokenReturnType]]
 	if not self:IsString("//") then return false end
+	-- Don't match // if followed by another / or = (floor division or compound assignment)
+	if self:IsStringOffset("/", 2) or self:IsStringOffset("=", 2) then return false end
 
 	self:Advance(2)
 
@@ -431,9 +433,17 @@ function META:ReadNumberPowExponent(what--[[#: string]])
 	end
 
 	for _ = self:GetPosition(), self:GetLength() do
-		if not IsNumber(self:PeekByte()) then break end
+		if self:GetPosition() > self:GetLength() then break end
 
-		self:Advance(1)
+		while self:IsString("_") do
+			self:Advance(1)
+
+			if self:GetPosition() > self:GetLength() then break end
+		end
+
+		if self:GetPosition() > self:GetLength() then break end
+
+		if IsNumber(self:PeekByte()) then self:Advance(1) else break end
 	end
 
 	return true
@@ -456,7 +466,15 @@ function META:ReadHexNumber()
 	local has_dot = false
 
 	for _ = self:GetPosition(), self:GetLength() do
-		if self:IsString("_") then self:Advance(1) end
+		if self:GetPosition() > self:GetLength() then break end
+
+		while self:IsString("_") do
+			self:Advance(1)
+
+			if self:GetPosition() > self:GetLength() then break end
+		end
+
+		if self:GetPosition() > self:GetLength() then break end
 
 		if not has_dot and self:IsString(".") then
 			-- 22..66 would be a number range
@@ -511,7 +529,15 @@ function META:ReadBinaryNumber()
 	self:Advance(2)
 
 	for _ = self:GetPosition(), self:GetLength() do
-		if self:IsString("_") then self:Advance(1) end
+		if self:GetPosition() > self:GetLength() then break end
+
+		while self:IsString("_") do
+			self:Advance(1)
+
+			if self:GetPosition() > self:GetLength() then break end
+		end
+
+		if self:GetPosition() > self:GetLength() then break end
 
 		if self:IsString("1") or self:IsString("0") then
 			self:Advance(1)
@@ -563,7 +589,15 @@ function META:ReadDecimalNumber()
 	end
 
 	for _ = self:GetPosition(), self:GetLength() do
-		if self:IsString("_") then self:Advance(1) end
+		if self:GetPosition() > self:GetLength() then break end
+
+		while self:IsString("_") do
+			self:Advance(1)
+
+			if self:GetPosition() > self:GetLength() then break end
+		end
+
+		if self:GetPosition() > self:GetLength() then break end
 
 		if not has_dot and self:IsString(".") then
 			-- 22..66 would be a number range

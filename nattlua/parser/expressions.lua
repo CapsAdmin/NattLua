@@ -22,7 +22,10 @@ local function get_import_error_details(requested_path, resolved_path, err)
 end
 
 local function validate_import_path(self, requested_path, resolved_path, start)
-	if self.config.pre_read_file and self.config.pre_read_file(self, resolved_path) ~= nil then
+	if
+		self.config.pre_read_file and
+		self.config.pre_read_file(self, resolved_path) ~= nil
+	then
 		return true
 	end
 
@@ -34,7 +37,6 @@ local function validate_import_path(self, requested_path, resolved_path, start)
 		start,
 		get_import_error_details(requested_path, resolved_path, "file not found")
 	)
-
 	return false
 end
 
@@ -71,6 +73,115 @@ return function(META--[[#: any]])
 		self:ParseFunctionBody(node)
 		node = self:EndNode(node)
 		return node
+	end
+
+	function META:ParseShortFunctionExpression()
+		-- || -> expr (no params)
+		if self:IsToken("||") and self:IsTokenOffset("->", 1) then
+			local node = self:StartNode("expression_short_function")
+			node.parameters = {}
+			node.tokens["||"] = self:ParseToken() -- consume ||
+			node.tokens["->"] = self:ExpectToken("->")
+
+			if self:IsToken("do") then
+				node.body_type = "block"
+				node.tokens["do"] = self:ExpectToken("do")
+				node.statements = self:ParseBlock()
+				node.tokens["end"] = self:ExpectToken("end")
+			else
+				node.body_type = "expression"
+				node.expression = self:ParseRuntimeExpression(0)
+			end
+
+			node = self:EndNode(node)
+			return node
+		end
+
+		-- |a, b| -> expr (with params)
+		if self:IsToken("|") then
+			local found_closing = false
+			local offset = 2
+
+			while offset <= 10 do
+				if
+					self:GetTokenOffset(offset) and
+					self:GetTokenOffset(offset):GetValueString() == "|"
+				then
+					if self:IsTokenOffset("->", offset + 1) then
+						found_closing = true
+
+						break
+					end
+				end
+
+				offset = offset + 1
+			end
+
+			if not found_closing then return end
+
+			local node = self:StartNode("expression_short_function")
+			node.tokens["|"] = self:ParseToken() -- consume opening |
+			node.parameters = {}
+
+			while true do
+				if not self:IsTokenType("letter") then
+					self:Error("expected parameter name, got $1", self:GetToken())
+					return self:ErrorExpression()
+				end
+
+				local param_token = self:ParseToken()
+				local param_node = self:StartNode("expression_value")
+				param_node.value = param_token
+				param_node = self:EndNode(param_node)
+				table.insert(node.parameters, param_node)
+
+				if not self:IsToken(",") then break end
+
+				self:ParseToken() -- consume comma
+			end
+
+			node.tokens["|"] = self:ExpectToken("|")
+			node.tokens["->"] = self:ExpectToken("->")
+
+			if self:IsToken("do") then
+				node.body_type = "block"
+				node.tokens["do"] = self:ExpectToken("do")
+				node.statements = self:ParseBlock()
+				node.tokens["end"] = self:ExpectToken("end")
+			else
+				node.body_type = "expression"
+				node.expression = self:ParseRuntimeExpression(0)
+			end
+
+			node = self:EndNode(node)
+			return node
+		end
+
+		-- x -> expr (single param, no pipes)
+		if self:IsTokenType("letter") and self:IsTokenOffset("->", 1) then
+			local node = self:StartNode("expression_short_function")
+			local param_token = self:ParseToken()
+			local param_node = self:StartNode("expression_value")
+			param_node.value = param_token
+			param_node = self:EndNode(param_node)
+			node.parameters = {param_node}
+			node.tokens["->"] = self:ExpectToken("->")
+
+			if self:IsToken("do") then
+				node.body_type = "block"
+				node.tokens["do"] = self:ExpectToken("do")
+				node.statements = self:ParseBlock()
+				node.tokens["end"] = self:ExpectToken("end")
+			else
+				node.body_type = "expression"
+				node.expression = self:ParseRuntimeExpression(0)
+			end
+
+			node = self:EndNode(node)
+			return node
+		end
+
+		return nil
 	end
 
 	function META:ParseIndexSubExpression(left_node--[[#: Node]])
@@ -909,7 +1020,9 @@ return function(META--[[#: any]])
 		)
 			assert(tk_path.type == "string", "expected string token for import path")
 
-			if self.config.skip_import and not self.config.import_validation_only then return end
+			if self.config.skip_import and not self.config.import_validation_only then
+				return
+			end
 
 			if self.dont_hoist_next_import then
 				self.dont_hoist_next_import = false
@@ -944,17 +1057,24 @@ return function(META--[[#: any]])
 				self.RootStatement
 			root_node.imported = root_node.imported or {}
 			local imported = root_node.imported
-			node.key = tkname.sub_type == "require" and str or (self.config.cache_imports_like_require and str or path)
+			node.key = tkname.sub_type == "require" and
+				str or
+				(
+					self.config.cache_imports_like_require and
+					str or
+					path
+				)
 			local key = node.key
 
-			if tkname.sub_type ~= "require" and key:sub(1, 2) == "./" then key = key:sub(3) end
+			if tkname.sub_type ~= "require" and key:sub(1, 2) == "./" then
+				key = key:sub(3)
+			end
 
 			if self.config.import_validation_only then
 				imported[key] = false
 				node.RootStatement = false
 				validate_import_path(self, str, path, start)
 			else
-
 				if imported[key] == nil then
 					imported[key] = node
 					local root, err = self:ParseFile(
@@ -1009,7 +1129,9 @@ return function(META--[[#: any]])
 		function META:HandleImportDataExpression(node--[[#: Node]], tk_path--[[#: string]], start--[[#: number]])
 			assert(tk_path.type == "string", "expected string token for import path")
 
-			if self.config.skip_import and not self.config.import_validation_only then return end
+			if self.config.skip_import and not self.config.import_validation_only then
+				return
+			end
 
 			local path = tk_path:GetStringValue()
 			node.import_expression = true
@@ -1119,6 +1241,7 @@ return function(META--[[#: any]])
 				self:ParsePrefixOperatorExpression() or
 				self:ParseAnalyzerFunctionExpression() or
 				self:ParseFunctionExpression() or
+				self:ParseShortFunctionExpression() or
 				self:ParseValueExpression() or
 				self:ParseTableExpression() or
 				self:ParseLSXExpression()

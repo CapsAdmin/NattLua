@@ -42,7 +42,14 @@ runtime:AddKeywords{
 	"ÆØÅÆ",
 }
 -- these are keywords, but can be used as names
-runtime:AddNonStandardKeywords{"continue", "import", "literal", "ref", "goto"}
+runtime:AddNonStandardKeywords{
+	"continue",
+	"import",
+	"literal",
+	"ref",
+	"goto",
+	"const",
+}
 runtime:AddKeywordValues{
 	"...",
 	"nil",
@@ -56,38 +63,52 @@ runtime:AddPostfixOperators{
 	"ÆØÅ",
 	"ÆØÅÆ",
 }
+-- short function expression syntax
+runtime:AddSymbols({"->", "|"})
 runtime:AddBinaryOperators{
-	{"or", "||"},
+	{"or", "||", "??"},
 	{"and", "&&"},
 	{"<", ">", "<=", ">=", "~=", "==", "!="},
 	{"|"},
 	{"~"},
 	{"&"},
-	{"<<", ">>"},
+	{"<<", ">>", "~>>"},
 	{"R.."}, -- right associative
 	{"+", "-"},
-	{"*", "/", "%"},
+	{"*", "/", "%", "//"},
 	{"R^"}, -- right associative
+	{"R?"}, -- ternary ? (lowest precedence, right-assoc)
 }
 runtime:AddPrimaryBinaryOperators{
 	".",
+	"?.",
 	":",
 }
+-- these are really here just for coverage
 runtime:AddBinaryOperatorFunctionTranslate{
-	[">>"] = "bit.rshift(A, B)",
-	["<<"] = "bit.lshift(A, B)",
-	["|"] = "bit.bor(A, B)",
-	["&"] = "bit.band(A, B)",
-	["//"] = "math.floor(A / B)",
-	["~"] = "bit.bxor(A, B)",
+	["ÆØÅØÆ"] = "(A, B)",
 }
 runtime:AddPrefixOperatorFunctionTranslate{
-	["~"] = "bit.bnot(A)",
+	["ÆÆÆ"] = "(A)",
 }
 runtime:AddPostfixOperatorFunctionTranslate{
 	["++"] = "(A+1)",
 	["ÆØÅ"] = "(A)",
 	["ÆØÅÆ"] = "(A)",
+}
+-- compound assignment operators (added as symbols for lexer recognition)
+runtime:AddSymbols{
+	"+=",
+	"-=",
+	"*=",
+	"/=",
+	"//=",
+	"%=",
+	"&=",
+	"|=",
+	"<<=",
+	">>=",
+	"..=",
 }
 -- these speed up the lexer a little bit
 -- if these are removed, we cannot do token.sub_type == "import" checks

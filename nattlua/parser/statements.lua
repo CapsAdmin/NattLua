@@ -169,12 +169,26 @@ return function(META--[[#: any]])
 	end
 
 	function META:ParseLocalFunctionStatement()
-		if not (self:IsToken("local") and self:IsTokenOffset("function", 1)) then
+		if
+			not (
+				(
+					self:IsToken("local") or
+					self:IsToken("const")
+				) and
+				self:IsTokenOffset("function", 1)
+			)
+		then
 			return false
 		end
 
 		local node = self:StartNode("statement_local_function")
-		node.tokens["local"] = self:ExpectToken("local")
+
+		if self:IsToken("local") then
+			node.tokens["local"] = self:ExpectToken("local")
+		else
+			node.tokens["const"] = self:ExpectToken("const")
+		end
+
 		node.tokens["function"] = self:ExpectToken("function")
 		node.tokens["identifier"] = self:ExpectTokenType("letter")
 		self:ParseFunctionBody(node)
@@ -346,10 +360,15 @@ return function(META--[[#: any]])
 	end
 
 	function META:ParseLocalAssignmentStatement()
-		if not self:IsToken("local") then return false end
+		if not (self:IsToken("local") or self:IsToken("const")) then return false end
 
 		local node = self:StartNode("statement_local_assignment")
-		node.tokens["local"] = self:ExpectToken("local")
+
+		if self:IsToken("local") then
+			node.tokens["local"] = self:ExpectToken("local")
+		else
+			node.tokens["const"] = self:ExpectToken("const")
+		end
 
 		if self.TealCompat and self:IsTokenOffset(",", 1) then
 			node.left = self:ParseMultipleValues(self.ParseIdentifier, false)
@@ -648,33 +667,35 @@ return function(META--[[#: any]])
 
 		if
 			(
-				self:IsToken("+") or
-				self:IsToken("-") or
-				self:IsToken("*") or
-				self:IsToken("/") or
-				self:IsToken("%") or
-				self:IsToken("^") or
-				self:IsToken("..")
-			) and
-			self:IsTokenOffset("=", 1)
+				self:IsToken("+=") or
+				self:IsToken("-=") or
+				self:IsToken("*=") or
+				self:IsToken("/=") or
+				self:IsToken("%=") or
+				self:IsToken("..=") or
+				self:IsToken("&=") or
+				self:IsToken("|=") or
+				self:IsToken("<<=") or
+				self:IsToken(">>=") or
+				self:IsToken("//=")
+			)
 		then
-			-- roblox compound assignment
-			local op_token = self:ParseToken()
-			local eq_token = self:ParseToken()
-			local bop = self:StartNode("expression_binary_operator")
-			bop.left = left[1]
-			bop.value = op_token
-			bop.right = self:ExpectRuntimeExpression(0)
-			self:EndNode(bop)
+			if #left > 1 then
+				self:Error("parallel compound assignment is not supported")
+				return self:ErrorStatement()
+			end
+
+			local compound_token = self:ParseToken()
 			local node = self:StartNode("statement_assignment", left[1])
-			node.tokens["="] = eq_token
+			node.tokens["="] = compound_token
 			node.left = left
+			node.is_compound_assignment = true
 
 			for i, v in ipairs(node.left) do
 				v.is_left_assignment = true
 			end
 
-			node.right = {bop}
+			node.right = self:ParseMultipleValues(self.ExpectRuntimeExpression, 0)
 			self:ReRunOnNode(node.left)
 			node = self:EndNode(node)
 			return node
@@ -695,7 +716,15 @@ return function(META--[[#: any]])
 			return node
 		end
 
-		if left[1] and (left[1].Type == "expression_postfix_call") and not left[2] then
+		if left[1] and left[1].Type == "expression_short_function" and not left[2] then
+			local node = self:StartNode("statement_expression", left[1])
+			node.value = left[1]
+			self:ReRunOnNode(left)
+			node = self:EndNode(node)
+			return node
+		end
+
+		if left[1] and left[1].Type == "expression_postfix_call" and not left[2] then
 			local node = self:StartNode("statement_call_expression", left[1])
 			node.value = left[1]
 			node.tokens = left[1].tokens

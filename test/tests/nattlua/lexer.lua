@@ -230,3 +230,31 @@ do
 		end
 	end)
 end
+
+test("number underscores", function()
+	-- decimal with underscores
+	equal(one_token(tokenize("1_234")).type, "number")
+	equal(one_token(tokenize("1_234_567")).type, "number")
+	-- trailing underscore
+	equal(one_token(tokenize("100_")).type, "number")
+	-- consecutive underscores
+	equal(one_token(tokenize("1__2")).type, "number")
+	-- hex with underscores
+	equal(one_token(tokenize("0xFF_FF")).type, "number")
+	equal(one_token(tokenize("0xDEAD_BEEF")).type, "number")
+	-- binary with underscores
+	equal(one_token(tokenize("0b1010_1010")).type, "number")
+	-- float with underscores
+	equal(one_token(tokenize("1.5_0")).type, "number")
+	equal(one_token(tokenize("1_000.5_00")).type, "number")
+	-- exponent with underscores
+	equal(one_token(tokenize("1e1_0")).type, "number")
+	equal(one_token(tokenize("1.5e2_0")).type, "number")
+	equal(one_token(tokenize("0x1p1_0")).type, "number")
+	-- number annotations with underscores
+	equal(one_token(tokenize("1_000ll")).type, "number")
+	-- regular numbers still work
+	equal(one_token(tokenize("1234")).type, "number")
+	equal(one_token(tokenize("0xFF")).type, "number")
+	equal(one_token(tokenize("0b1010")).type, "number")
+end)

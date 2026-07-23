@@ -59,18 +59,20 @@ typesystem:AddPostfixOperators{ -- these are just to make sure all code is cover
 }
 typesystem:AddPrimaryBinaryOperators{
 	".",
+	"?.",
 	":",
 }
+-- these are really here just for coverage
 typesystem:AddBinaryOperatorFunctionTranslate{
-	[">>"] = "bit.rshift(A, B)",
-	["<<"] = "bit.lshift(A, B)",
-	["|"] = "bit.bor(A, B)",
-	["&"] = "bit.band(A, B)",
-	["//"] = "math.floor(A / B)",
-	["~"] = "bit.bxor(A, B)",
+	["ÆØÅØÆ"] = "(A, B)",
 }
 typesystem:AddPrefixOperatorFunctionTranslate{
-	["~"] = "bit.bnot(A)",
+	["ÆÆÆ"] = "(A)",
+}
+typesystem:AddPostfixOperatorFunctionTranslate{
+	["++"] = "(A+1)",
+	["ÆØÅ"] = "(A)",
+	["ÆØÅÆ"] = "(A)",
 }
 typesystem:AddPostfixOperatorFunctionTranslate{
 	["++"] = "(A+1)",
@@ -101,10 +103,10 @@ typesystem:AddBinaryOperators{
 	{"|"},
 	{"~"},
 	{"&"},
-	{"<<", ">>"},
+	{"<<", ">>", "~>>"},
 	{"R.."}, -- right associative
 	{"+", "-"},
-	{"*", "/", "%"},
+	{"*", "/", "%", "//"},
 	{"R^"}, -- right associative
 }
 return typesystem

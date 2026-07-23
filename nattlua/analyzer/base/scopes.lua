@@ -85,6 +85,13 @@ return function(META--[[#: any]])
 	end
 
 	function META:CreateLocalValue(key, obj, const, node)
+		-- check for re-declaration of const variable (const keyword cannot be re-declared)
+		local existing = self:FindLocalUpvalue(key)
+
+		if existing and existing:IsImmutable() and existing.statement and existing.statement.tokens["const"] then
+			self:Error(error_messages.const_redeclaration(key))
+		end
+
 		local upvalue = self:GetScope():CreateUpvalue(key, obj, self:GetCurrentAnalyzerEnvironment())
 		upvalue.statement = self:GetCurrentStatement()
 		upvalue:SetPosition(self:IncrementUpvaluePosition())
