@@ -41,7 +41,7 @@ do -- custom commands specific for nattlua
 	config.commands["profile"] = {
 		description = "Run the profiler on the test suite with optional test filter",
 		cb = function(args)
-			require("test.run")(nil, false, true, args[1])
+			require("test.run")(args[1], true, true)
 			os.exit() -- no need to wait for gc to complete
 		end,
 	}
