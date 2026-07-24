@@ -77,23 +77,119 @@ local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | ni
 	end
 end
 
-local intersect_comparison = require("nattlua.analyzer.intersect_comparison")
-
 local function number_comparison(self, l, r, op)
-	local invert = op == "~=" or op == "!=" or op == ">" or op == ">="
+	-- For relational operators, the constraint store now handles narrowing
+	-- (both discrete unions and ranges). Skip the old intersect_comparison
+	-- system to avoid conflicts.
+	local is_relational = op == "<" or op == ">" or op == "<=" or op == ">="
+
+	if is_relational then
+		-- Track relational constraint for non-union types (ranges, literals)
+		if self.constraint_store then
+			local l_upvalue = l:GetUpvalue()
+			local r_upvalue = r:GetUpvalue()
+			self.constraint_store:TrackRelationalCorrelation(op, l_upvalue, r_upvalue, l, r)
+		end
+
+		-- Determine result if both are literals
+		local l_val = l:IsLiteral() and l:GetData()
+		local r_val = r:IsLiteral() and r:GetData()
+
+		if
+			l_val ~= nil and
+			r_val ~= nil and
+			type(l_val) == "number" and
+			type(r_val) == "number"
+		then
+			if op == "<" then
+				return l_val < r_val and True() or False()
+			elseif op == ">" then
+				return l_val > r_val and True() or False()
+			elseif op == "<=" then
+				return l_val <= r_val and True() or False()
+			elseif op == ">=" then
+				return l_val >= r_val and True() or False()
+			end
+		end
+
+		-- Range-based constant folding: determine if comparison is always true/false
+		local function get_range_bounds(t)
+			if t.Type == "range" then
+				return t:GetMin(), t:GetMax()
+			elseif t:IsLiteral() and type(t:GetData()) == "number" then
+				local v = t:GetData()
+				return v, v
+			end
+
+			return nil, nil
+		end
+
+		local l_min, l_max = get_range_bounds(l)
+		local r_min, r_max = get_range_bounds(r)
+
+		if l_min ~= nil and l_max ~= nil and r_min ~= nil and r_max ~= nil then
+			-- Both sides have known bounds, check if result is determinable
+			local always_true, always_false = false, false
+
+			if op == "<" then
+				-- l < r: always true if l_max < r_min, always false if l_min >= r_max
+				if l_max < r_min then
+					always_true = true
+				elseif l_min >= r_max then
+					always_false = true
+				end
+			elseif op == ">" then
+				-- l > r: always true if l_min > r_max, always false if l_max <= r_min
+				if l_min > r_max then
+					always_true = true
+				elseif l_max <= r_min then
+					always_false = true
+				end
+			elseif op == "<=" then
+				-- l <= r: always true if l_max <= r_min, always false if l_min > r_max
+				if l_max <= r_min then
+					always_true = true
+				elseif l_min > r_max then
+					always_false = true
+				end
+			elseif op == ">=" then
+				-- l >= r: always true if l_min >= r_max, always false if l_max < r_min
+				if l_min >= r_max then
+					always_true = true
+				elseif l_max < r_min then
+					always_false = true
+				end
+			end
+
+			if always_true then return True() end
+
+			if always_false then return False() end
+		end
+
+		return Boolean()
+	end
+
+	-- Track equality correlation for == and ~= (non-union path: ranges, literals)
+	if (op == "==" or op == "~=") and self.constraint_store then
+		local l_upvalue = l:GetUpvalue()
+		local r_upvalue = r:GetUpvalue()
+		self.constraint_store:TrackEqualityCorrelation(op, l_upvalue, r_upvalue, l, r)
+	end
+
+	-- Old tracking system still needed for GetTrackedUpvalue to find narrowed values
+	local intersect_comparison = require("nattlua.analyzer.intersect_comparison")
+	local invert = op == "~=" or op == "!="
 	local nl, nr, nl2, nr2 = intersect_comparison(l, r, op, invert)
 
 	if nl and nr then self:TrackUpvalueUnion(l, nl, nr) end
-
 	if nl2 and nr2 then self:TrackUpvalueUnion(r, nl2, nr2) end
 
+	-- NaN handling: NaN == NaN is false, NaN ~= NaN is true
 	if nl and nr then
 		if nl:IsNan() or nr:IsNan() then
 			if op == "~=" then return logical_cmp_cast(true) end
-
 			return logical_cmp_cast(false)
 		end
-
 		return logical_cmp_cast(nil)
 	elseif nl then
 		return logical_cmp_cast(true)
@@ -446,9 +542,46 @@ local function BinaryWithUnion(self, node, l, r, op)
 
 				self:TrackUpvalueUnion(l, truthy_union, falsy_union, op ~= "==")
 				self:TrackUpvalueUnion(r, truthy_union, falsy_union, op ~= "==")
+				-- Track correlation between upvalues when comparing with == or ~=
+				self.constraint_store:TrackEqualityCorrelation(op, original_l:GetUpvalue(), original_r:GetUpvalue(), l, r)
+				return new_union
+			elseif op == "<" or op == ">" or op == "<=" or op == ">=" then
+				-- Relational narrowing is fully handled by the constraint store
+				-- (both discrete unions and ranges). Skip TrackUpvalueUnion to avoid conflicts.
+				self.constraint_store:TrackRelationalCorrelation(op, original_l:GetUpvalue(), original_r:GetUpvalue(), l, r)
 				return new_union
 			else
 				-- General handling for other operators with unions
+				local cs = self.constraint_store
+				local tag_info = cs:QueryCorrelatedComputation(original_l, original_r, l, r, ARITHMETIC_OPS, op)
+
+				if tag_info then
+					local new_union = Union()
+					local source_map = {}
+
+					for _, l_elem in ipairs(l:GetData()) do
+						for _, r_elem in ipairs(r:GetData()) do
+							if tag_info.predicate(l_elem, r_elem) then
+								local res, err = Binary(self, node, l_elem, r_elem, op)
+
+								if res then
+									new_union:AddType(res)
+
+									if tag_info.track_sources then source_map[res] = l_elem end
+								else
+									self:Error(err)
+								end
+							end
+						end
+					end
+
+					cs:TagCorrelatedResult(new_union, tag_info, source_map)
+					self:TrackTableIndexUnion(l, truthy_union, falsy_union)
+					self:TrackUpvalueUnion(l, truthy_union, falsy_union)
+					self:TrackUpvalueUnion(r, truthy_union, falsy_union)
+					return new_union:Simplify()
+				end
+
 				self:TrackTableIndexUnion(l, truthy_union, falsy_union)
 
 				if
@@ -505,6 +638,7 @@ end
 
 return {
 	BinaryCustom = BinaryWithUnion,
+	BinaryInner = Binary,
 	Binary = function(self, node)
 		local op = node.value:GetValueString()
 		local l = nil
@@ -544,12 +678,33 @@ return {
 					self:ApplyMutationsInIf(tracked)
 				end
 
+				-- Fork constraint store for disjunction handling
+				-- Left branch (falsy): left was false, result is false
+				-- Right branch (truthy): left was true, right side evaluates here
+				-- Skip fork when left side is pure boolean (no mixed upvalue types to preserve)
+				local forked_store
+				local skip_fork = (l.Type == "union") and (l.GetData ~= nil) and (#l:GetData() <= 2)
+
+				if self.constraint_store then
+					if not skip_fork then forked_store = self.constraint_store:Fork() end
+
+					-- Apply relational narrowing so the right side sees narrowed values
+					self.constraint_store:ApplyRelationalNarrowing(self)
+				end
+
 				self:PushTruthyExpressionContext()
 				r = self:Assert(self:AnalyzeExpression(node.right))
 				self:PopTruthyExpressionContext()
 
 				if r.Type == "union" then
 					self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
+				end
+
+				-- Merge: union domains from both branches of the and-expression
+				if forked_store and self.constraint_store then
+					self.constraint_store:Merge(forked_store)
+					-- Re-apply relational narrowing after merge (merge may have widened domains)
+					self.constraint_store:ApplyRelationalNarrowing(self)
 				end
 
 				if scope then
@@ -620,7 +775,34 @@ return {
 					scope = self:PushConditionalScope(node, l:IsTruthy(), l:IsFalsy())
 					scope:SetTrackedNarrowings(tracked)
 					scope:SetElseConditionalScope(true)
-					self:ApplyMutationsInIfElse({{tracked_objects = tracked}})
+				-- NOTE: We intentionally skip ApplyMutationsInIfElse here.
+				-- The constraint store handles narrowing via fork/merge semantics
+				-- for or-conditions. Applying mutations here would narrow upvalues
+				-- before the fork, corrupting the disjunction handling.
+				end
+
+				-- Fork constraint store for disjunction handling
+				-- The forked store represents the right branch (left side was falsy)
+				-- The main store represents the left branch (left side was truthy)
+				local forked_store
+
+				if self.constraint_store then
+					forked_store = self.constraint_store:Fork()
+					-- Clear equality constraints from the forked store.
+					-- Equality constraints from the left side (e.g., x == 1) should
+					-- only apply in the left branch. The right branch may have its own
+					-- equality constraints (e.g., y == 2) that get added during analysis.
+					forked_store:ClearEqualityConstraints()
+					-- Apply equality narrowing on the forked store so the right branch
+					-- sees correct narrowings from its own constraints (added during right-side eval)
+					forked_store:ApplyEqualityNarrowing(self)
+
+					-- Mark arithmetic constraints dirty and propagate on forked store
+					for _, c in pairs(forked_store.constraints) do
+						if c.type == "arithmetic" then c.dirty = true end
+					end
+
+					forked_store:PropagateUntilFixedPoint(self)
 				end
 
 				self.LEFT_SIDE_OR = l
@@ -631,6 +813,12 @@ return {
 
 				if r.Type == "union" then
 					self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
+				end
+
+				-- Merge: union domains from both branches of the or-expression
+				-- Main store has left-branch state; forked store has right-branch state
+				if forked_store and self.constraint_store then
+					self.constraint_store:Merge(forked_store)
 				end
 
 				if scope then

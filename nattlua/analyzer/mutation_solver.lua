@@ -159,6 +159,31 @@ local function mutation_solver(mutations, scope, obj)
 
 		if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 
+		-- Remove generic `number` when a range type is present (inside if-block)
+		-- This fixes: x: number narrowed to 0..inf produces `number | 0..inf` instead of `0..inf`
+		-- Only apply when first mutation was generic number (not when the union is intentional).
+		if first.Type == "number" and not first:IsLiteral() and union.Type == "union" then
+			local data = union:GetData()
+			local has_generic_number = false
+			local has_range = false
+
+			for _, elem in ipairs(data) do
+				if elem.Type == "number" and not elem:IsLiteral() then
+					has_generic_number = true
+				elseif elem.Type == "range" then
+					has_range = true
+				end
+			end
+
+			if has_generic_number and has_range then
+				for i = #data, 1, -1 do
+					if data[i].Type == "number" and not data[i]:IsLiteral() then
+						union:RemoveType(data[i])
+					end
+				end
+			end
+		end
+
 		return union:Simplify()
 	end
 
@@ -241,6 +266,29 @@ local function mutation_solver(mutations, scope, obj)
 	end
 
 	if obj.Type == "upvalue" then union:SetUpvalue(obj) end
+
+	-- Widen back to generic `number` after if-blocks (when original type was generic number).
+	-- This fixes: x: number; if x >= 0 → x: 0..inf | number → x: number (after block)
+	if first.Type == "number" and not first:IsLiteral() and union.Type == "union" then
+		local data = union:GetData()
+		local has_generic_number = false
+		local has_range = false
+
+		for _, elem in ipairs(data) do
+			if elem.Type == "number" and not elem:IsLiteral() then
+				has_generic_number = true
+			elseif elem.Type == "range" then
+				has_range = true
+			end
+		end
+
+		-- If union has both generic number and a range, remove the range (widen to number)
+		if has_generic_number and has_range then
+			for i = #data, 1, -1 do
+				if data[i].Type == "range" then union:RemoveType(data[i]) end
+			end
+		end
+	end
 
 	return union:Simplify()
 end

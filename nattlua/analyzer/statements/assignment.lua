@@ -244,7 +244,13 @@ return {
 				end
 
 				-- local assignment: local a = 1
-				self:CreateLocalValue(exp_key.value:GetValueString(), val, immutable, exp_key)
+				local result_upvalue = self:CreateLocalValue(exp_key.value:GetValueString(), val, immutable, exp_key)
+				-- Track arithmetic dependencies for narrowing propagation
+				local exp_val = statement.right and statement.right[1]
+
+				if exp_val and exp_val.Type == "expression_binary_operator" then
+					self.constraint_store:TrackArithmeticDependencies(self, result_upvalue, exp_val)
+				end
 			elseif statement.Type == "statement_assignment" then
 				local key = left[left_pos]
 
@@ -276,6 +282,19 @@ return {
 					-- Write result back
 					self:PushCurrentExpression(statement.left[1])
 					self:NewIndexOperator(obj, ConstString(field_name), result)
+
+					-- Track table field dependency for narrowing propagation
+					if self.constraint_store then
+						local result_upvalue = result and result:GetUpvalue()
+
+						if
+							result_upvalue and
+							self.constraint_store:HasArithmeticDependencies(result_upvalue)
+						then
+							self.constraint_store:AddTableFieldDependency(obj, ConstString(field_name), result_upvalue)
+						end
+					end
+
 					self:PopCurrentExpression()
 				elseif
 					statement.is_compound_assignment and
@@ -333,6 +352,19 @@ return {
 						-- Write result back
 						self:PushCurrentExpression(statement.left[1])
 						self:NewIndexOperator(obj, idx_key, result)
+
+						-- Track table field dependency for narrowing propagation
+						if self.constraint_store then
+							local result_upvalue = result and result:GetUpvalue()
+
+							if
+								result_upvalue and
+								self.constraint_store:HasArithmeticDependencies(result_upvalue)
+							then
+								self.constraint_store:AddTableFieldDependency(obj, idx_key, result_upvalue)
+							end
+						end
+
 						self:PopCurrentExpression()
 					end
 				elseif
@@ -405,6 +437,29 @@ return {
 
 					self:PushCurrentExpression(exp_key)
 					self:NewIndexOperator(obj, key, val)
+
+					-- Track table field dependency for narrowing propagation
+					if self.constraint_store and statement.right and statement.right[1] then
+						local rhs = statement.right[1]
+
+						-- Extract upvalue from simple variable reference
+						if rhs.Type == "expression_value" and rhs.value then
+							local name = rhs.value:GetValueString()
+
+							if name then
+								local LString = require("nattlua.types.string").LString
+								local source_upvalue = self:FindLocalUpvalue(LString(name))
+
+								if
+									source_upvalue and
+									self.constraint_store:HasArithmeticDependencies(source_upvalue)
+								then
+									self.constraint_store:AddTableFieldDependency(obj, key, source_upvalue)
+								end
+							end
+						end
+					end
+
 					self:PopCurrentExpression()
 				end
 			end

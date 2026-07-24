@@ -69,6 +69,11 @@ return {
 					local val = self:GetFirstValue(self:AnalyzeExpression(node.value_expression)) or Nil()
 					self:MapTypeToNode(val, node.value_expression)
 					self:NewIndexOperator(tbl, key, val)
+
+					-- Track table field dependency for narrowing propagation
+					if self.constraint_store and node.value_expression then
+						self.constraint_store:TrackTableFieldDependency(self, node, tbl, key)
+					end
 				end
 			elseif node.Type == "sub_statement_table_expression_value" then
 				local key = self:GetFirstValue(self:AnalyzeExpression(node.key_expression))
@@ -89,6 +94,11 @@ return {
 				else
 					local val = self:Assert(self:GetFirstValue(self:AnalyzeExpression(node.value_expression)))
 					self:NewIndexOperator(tbl, key, val)
+
+					-- Track table field dependency for narrowing propagation
+					if self.constraint_store and node.value_expression then
+						self.constraint_store:TrackTableFieldDependency(self, node, tbl, key)
+					end
 				end
 			elseif node.Type == "sub_statement_table_index_value" then
 				if node.spread then

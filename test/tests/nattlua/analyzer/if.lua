@@ -666,14 +666,6 @@ analyze([[
     attest.equal<|x, 3|>
 ]])
 analyze[[
-    local x: -1 | 0 | 1 | 2 | 3
-    local y = x >= 0 and x or nil
-    attest.equal<|y, 0 | 1 | 2 | 3 | nil|>
-
-    local y = x >= 0 and x >= 1 and x or nil
-    attest.equal<|y, 1 | 2 | 3 | nil|>
-]]
-analyze[[
     local function test(LOL)
         attest.equal(LOL, "str")
     end

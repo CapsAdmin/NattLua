@@ -4,10 +4,12 @@ local Nil = require("nattlua.types.symbol").Nil
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange
 local shallow_copy = require("nattlua.other.tablex").copy
+local ConstraintStore = require("nattlua.analyzer.constraint_store")
 return function(META--[[#: any]])
 	META:AddInitializer(function(self)
 		self.tracked_objects = {}
 		self.tracked_objects_done = {}
+		self.constraint_store = ConstraintStore.new()
 	end)
 
 	function META:GetArrayLengthFromTable(tbl)
@@ -101,6 +103,11 @@ return function(META--[[#: any]])
 		end
 
 		self:AssertWarning(upvalue:Mutate(val, scope, from_tracking))
+
+		-- Trigger arithmetic dependency recomputation
+		if self.constraint_store then
+			self.constraint_store:RecomputeArithmeticFor(upvalue)
+		end
 	end
 
 	function META:ClearScopedTrackedObjects(scope)

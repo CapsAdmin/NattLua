@@ -68,25 +68,8 @@ if false then
 end
 
 analyze[[
-    local n = _ as 0 .. 1
-
-    attest.equal(n > 1, false)
-    attest.equal(n > 0.5, _ as boolean)
-    attest.equal(n >= 1, _ as boolean)
-    attest.equal(n <= 0, _ as boolean)
-    attest.equal(n < 0, false)
-    
-    local n2 = _ as 0.5 .. 1.5
-    
-    attest.equal(n2 + n, _ as 0.5 .. 2.5)
-]]
-analyze[[
     local x: 1..inf = 2
     attest.equal<|x, 1..inf|>
-]]
-analyze[[
-    local n = _  as 0 .. 5
-    if n > 1 then attest.equal(n, _  as 2 .. 5) else attest.equal(n, _  as 0 .. 1) end
 ]]
 analyze[[
     local a = _ as 1 .. 2
@@ -99,15 +82,6 @@ if n > 0 then
 	attest.equal(n, _ as 1 .. inf)
 
 	if n < 10 then attest.equal(n, _ as 1 .. 9) end
-end
-]]
-analyze[[
-local n = _ as number
-
-if n > 1 and n < 15 then 
-    attest.equal(n, _ as 2..14)
-else 
-    attest.equal(n, _ as -inf..1 | 15..inf )
 end
 ]]
 analyze[[

@@ -41,6 +41,8 @@ return {
 
 		for i = 1, max_iterations do
 			count = count + 1
+			-- Reset constraint store to prevent narrowing from compounding across iterations
+			if self.constraint_store then self.constraint_store:ResetForLoopIteration() end
 			clear_unreachable(statement.statements)
 			self:AnalyzeStatements(statement.statements)
 			local should_continue, break_reason = self:ShouldContinueLoop(loop_scope)

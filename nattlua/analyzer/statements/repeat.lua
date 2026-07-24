@@ -16,6 +16,8 @@ return {
 		-- Execute the repeat loop
 		for i = 1, max_iterations do
 			count = count + 1
+			-- Reset constraint store to prevent narrowing from compounding across iterations
+			if self.constraint_store then self.constraint_store:ResetForLoopIteration() end
 			-- Analyze the statements in the loop body
 			self:AnalyzeStatements(statement.statements)
 

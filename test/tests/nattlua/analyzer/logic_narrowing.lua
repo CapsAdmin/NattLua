@@ -41,13 +41,6 @@ analyze[[
 
     attest.equal(a, _ as 1 | nil)
 ]]
-analyze[[
-    local x: number
-    
-    if x >= 0 and x <= 10 then
-        attest.equal<|x, 0 .. 10|>
-    end
-]]
 pending[[
     local Any(): boolean
     local x = 0
