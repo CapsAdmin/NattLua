@@ -124,8 +124,10 @@ function META:ApplyEqualityNarrowing(analyzer)
 			else
 				-- ~= : remove literal from a's domain
 				local current = self:GetEffectiveDomain(c.a)
+
 				if current then
 					local complement = self:RemoveTypesFromDomain(current, {c.b})
+
 					if complement then
 						narrowed[c.a] = complement
 						self.domains[c.a] = complement
@@ -140,8 +142,10 @@ function META:ApplyEqualityNarrowing(analyzer)
 			else
 				-- ~= : remove literal from b's domain
 				local current = self:GetEffectiveDomain(c.b)
+
 				if current then
 					local complement = self:RemoveTypesFromDomain(current, {c.a})
+
 					if complement then
 						narrowed[c.b] = complement
 						self.domains[c.b] = complement
@@ -155,8 +159,10 @@ function META:ApplyEqualityNarrowing(analyzer)
 	for upvalue, new_domain in pairs(narrowed) do
 		if upvalue.Mutate and analyzer then
 			local scope = analyzer:GetScope()
+
 			if scope then
 				if new_domain and new_domain.SetUpvalue then new_domain:SetUpvalue(upvalue) end
+
 				upvalue:Mutate(new_domain, scope)
 			end
 		end
@@ -1339,10 +1345,12 @@ function META:AreInequalityCorrelated(a, b)
 	if not a or not b then return false end
 
 	local deps_a = self.dependents[a]
+
 	if not deps_a then return false end
 
 	for _, cid in ipairs(deps_a) do
 		local c = self.constraints[cid]
+
 		if not c then continue end
 
 		if (c.a == a and c.b == b) or (c.a == b and c.b == a) then
@@ -1395,7 +1403,7 @@ function META:ComputeArithmetic(constraint)
 				if r_elem.Type == "range" then
 					r_min, r_max = r_elem:GetMin(), r_elem:GetMax()
 				elseif r_elem.Type == "number" and r_elem:IsLiteral() then
-					r_min, r_max = v:GetData(), v:GetData()
+					r_min, r_max = r_elem:GetData(), r_elem:GetData()
 				end
 
 				if l_min ~= nil and r_min ~= nil then
@@ -1445,7 +1453,19 @@ function META:ComputeArithmetic(constraint)
 				then
 					-- For equality-correlated operands, only compute matching pairs.
 					-- For inequality-correlated operands, only compute non-matching pairs.
-					if not ((eq_correlated and not shared.Equal(l_elem, r_elem)) or (neq_correlated and shared.Equal(l_elem, r_elem))) then
+					if
+						not (
+							(
+								eq_correlated and
+								not shared.Equal(l_elem, r_elem)
+							)
+							or
+							(
+								neq_correlated and
+								shared.Equal(l_elem, r_elem)
+							)
+						)
+					then
 						local res_val
 
 						if constraint.op == "+" then
@@ -1598,9 +1618,11 @@ function META:Fork()
 	for upvalue, class in pairs(self.equivalence) do
 		clone.equivalence[upvalue] = class
 	end
+
 	for union, gid in pairs(self.equiv_groups) do
 		clone.equiv_groups[union] = gid
 	end
+
 	for union, smap in pairs(self.source_values) do
 		clone.source_values[union] = smap
 	end
