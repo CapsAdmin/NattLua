@@ -203,9 +203,27 @@ function META:__tostring()--[[#: string]]
 end
 
 function META:GetArrayLength()--[[#: TBaseType]]
-	if #self.Data == 0 then
-		local contract = self:GetContract()
+	local contract = self:GetContract()
 
+	if contract then
+		if contract ~= self and contract.Type == "table" then
+			for _, kv in ipairs(contract.Data) do
+				if kv.key.Type == "range" then return kv.key:Copy() end
+			end
+		end
+
+		if contract.Type == "union" then
+			for _, t in ipairs(contract.Data) do
+				if t.Type == "table" then
+					for _, kv in ipairs(t.Data) do
+						if kv.key.Type == "range" then return kv.key:Copy() end
+					end
+				end
+			end
+		end
+	end
+
+	if #self.Data == 0 then
 		if contract and contract ~= self and contract.Type == "table" then
 			return (contract--[[# as TTable]]):GetArrayLength()
 		end
