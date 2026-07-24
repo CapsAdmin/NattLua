@@ -59,7 +59,7 @@ local function index_table(analyzer, self, key, raw)
 					end
 
 					if val.Type == "union" then
-						analyzer:TrackTableIndex(self, key, val)
+						analyzer.narrowing_store:TrackTableIndex(self, key, val, analyzer)
 					end
 
 					return val
@@ -76,7 +76,7 @@ local function index_table(analyzer, self, key, raw)
 		return self:Get(key)
 	end
 
-	local tracked = analyzer:GetTrackedTableWithKey(self, key)
+	local tracked = analyzer.narrowing_store:GetTrackedTableWithKey(self, key)
 
 	if tracked then return tracked end
 
@@ -97,7 +97,9 @@ local function index_table(analyzer, self, key, raw)
 
 				if not val:GetContract() then val:SetContract(contract_val) end
 
-				if val.Type == "union" then analyzer:TrackTableIndex(self, key, val) end
+				if val.Type == "union" then
+					analyzer.narrowing_store:TrackTableIndex(self, key, val, analyzer)
+				end
 
 				return val
 			end
@@ -116,7 +118,9 @@ local function index_table(analyzer, self, key, raw)
 			end
 		end
 
-		if val.Type == "union" then analyzer:TrackTableIndex(self, key, val) end
+		if val.Type == "union" then
+			analyzer.narrowing_store:TrackTableIndex(self, key, val, analyzer)
+		end
 
 		return val
 	end
@@ -156,7 +160,9 @@ local function index_table(analyzer, self, key, raw)
 	end
 
 	if val then
-		if val.Type == "union" then analyzer:TrackTableIndex(self, key, val) end
+		if val.Type == "union" then
+			analyzer.narrowing_store:TrackTableIndex(self, key, val, analyzer)
+		end
 
 		return val
 	end

@@ -58,7 +58,7 @@ return function(META--[[#: any]])
 			}
 			push_break_state(self, break_state)
 			self:PushScope(loop_scope)
-			self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedNarrowings())
+			self.narrowing_store:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedNarrowings(), self)
 			self:PopScope()
 		end
 
@@ -257,10 +257,10 @@ return function(META--[[#: any]])
 			if assert_expression and assert_expression:IsTruthy() then
 				-- track the assertion expression
 				local tracked_objects
-				local tracked_from_scope = self:GetTrackedObjects(nil, frame.scope)
+				local tracked_from_scope = self.narrowing_store:GetTrackedObjects(nil, frame.scope, self)
 
 				if tracked_from_scope[1] then
-					local current_tracked = self:GetTrackedObjects()
+					local current_tracked = self.narrowing_store:GetTrackedObjects(nil, nil, self)
 					tracked_objects = {}
 
 					for _, a in ipairs(tracked_from_scope) do
@@ -285,13 +285,13 @@ return function(META--[[#: any]])
 				end
 
 				self:PushScope(function_scope)
-				self:ApplyMutationsAfterStatement(frame.scope, false, tracked_objects)
+				self.narrowing_store:ApplyMutationsAfterStatement(frame.scope, false, tracked_objects, self)
 				self:PopScope()
 				return
 			end
 
 			self:PushScope(function_scope)
-			self:ApplyMutationsAfterStatement(frame.scope, true, frame.scope:GetTrackedNarrowings())
+			self.narrowing_store:ApplyMutationsAfterStatement(frame.scope, true, frame.scope:GetTrackedNarrowings(), self)
 			self:PopScope()
 		end
 	end
@@ -299,7 +299,7 @@ return function(META--[[#: any]])
 	function META:AssertError(obj, msg, level, no_report)
 		-- track "if x then" which has no binary or prefix operators
 		if obj.Type == "union" then
-			self:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
+			self.narrowing_store:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy(), nil, self)
 		end
 
 		self.lua_assert_error_thrown = {
@@ -320,9 +320,9 @@ return function(META--[[#: any]])
 		end
 
 		local scope = self:GetScope()
-		local tracked = self:GetTrackedObjects(old)
+		local tracked = self.narrowing_store:GetTrackedObjects(old, nil, self)
 		self:PushScope(self:GetScope():GetNearestFunctionScope())
-		self:ApplyMutationsAfterStatement(scope, false, tracked)
+		self.narrowing_store:ApplyMutationsAfterStatement(scope, false, tracked, self)
 		self:PopScope()
 
 		if not no_report then
@@ -388,7 +388,7 @@ return function(META--[[#: any]])
 		end
 
 		self:PushScope(function_scope)
-		self:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedNarrowings())
+		self.narrowing_store:ApplyMutationsAfterStatement(scope, true, scope:GetTrackedNarrowings(), self)
 		self:PopScope()
 	end
 

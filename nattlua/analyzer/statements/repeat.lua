@@ -9,15 +9,17 @@ return {
 		local max_iterations = self.max_loop_iterations or 32
 		local count = 0
 		-- Track upvalues and tables for mutation analysis
-		local tracked_objects = self:GetTrackedObjects()
-		self:ClearTracked()
-		self:ApplyMutationsInIf(tracked_objects)
+		local tracked_objects = self.narrowing_store:GetTrackedObjects(nil, nil, self)
+		self.narrowing_store:ClearTracked()
+		self.narrowing_store:ApplyMutationsInIf(tracked_objects, self)
 
 		-- Execute the repeat loop
 		for i = 1, max_iterations do
 			count = count + 1
+
 			-- Reset constraint store to prevent narrowing from compounding across iterations
 			if self.constraint_store then self.constraint_store:ResetForLoopIteration() end
+
 			-- Analyze the statements in the loop body
 			self:AnalyzeStatements(statement.statements)
 
@@ -105,6 +107,6 @@ return {
 		-- Clean up the loop context
 		self:PopLoopContext(loop_scope)
 		-- Apply final mutations
-		self:ClearTracked()
+		self.narrowing_store:ClearTracked()
 	end,
 }

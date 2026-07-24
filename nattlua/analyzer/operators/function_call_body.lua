@@ -386,7 +386,7 @@ return function(self, obj, input)
 	-- crawl the function with the new arguments
 	-- return_result is either a union of tuples or a single tuple
 	local scope = self:CreateAndPushFunctionScope(obj)
-	self:StashTrackedChanges()
+	self.narrowing_store:StashTrackedChanges()
 	function_node.scope = scope
 	obj.scope = scope
 	self:PushGlobalEnvironment(
@@ -494,8 +494,8 @@ return function(self, obj, input)
 
 	self:PopGlobalEnvironment(self:GetCurrentAnalyzerEnvironment())
 	self:PopScope()
-	self:ClearScopedTrackedObjects(scope)
-	self:PopStashedTrackedChanges()
+	self.narrowing_store:ClearScopedTrackedObjects(scope)
+	self.narrowing_store:PopStashedTrackedChanges()
 	restore_mutated_types(self)
 
 	-- if the function is untyped we warn about untyped arguments

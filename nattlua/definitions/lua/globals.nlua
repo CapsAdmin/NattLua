@@ -1,12 +1,12 @@
-_G.arg = _ as List<|any|>
-type _VERSION = string
-type _ = any
-type @Name = "_G"
-type rawlen = function=(v: Table | string)>(number)
-type rawequal = function=(v1: any, v2: any)>(boolean)
-type collectgarbage = function=(opt: string, arg: number)>(...any) | function=(opt: string)>(...any) | function=()>(...any)
+_G.arg = _--[[# as List<|any|>]]
+--[[#type _VERSION = string]]
+--[[#type _ = any]]
+--[[#type @Name = "_G"]]
+--[[#type rawlen = function=(v: Table | string)>(number)]]
+--[[#type rawequal = function=(v1: any, v2: any)>(boolean)]]
+--[[#type collectgarbage = function=(opt: string, arg: number)>(...any) | function=(opt: string)>(...any) | function=()>(...any)]]
 
-analyzer function print(...: ...any)
+--[[#analyzer function print(...: ...any)
 	local str = {}
 
 	for i = 1, select("#", ...) do
@@ -28,14 +28,14 @@ analyzer function print(...: ...any)
 	end
 
 	io.write(require("nattlua.cli.colors").green(str))
-end
+end]]
 
-SetPreventInputExpansionOnFunction<|print, true|>
-type type_print = print
-type print_once = print
-type tostring = function=(val: any)>(string)
+--[[#SetPreventInputExpansionOnFunction<|print, true|>]]
+--[[#type type_print = print]]
+--[[#type print_once = print]]
+--[[#type tostring = function=(val: any)>(string)]]
 
-analyzer function next(t: Map<|any, any|>, k: any)
+--[[#analyzer function next(t: Map<|any, any|>, k: any)
 	if t.Type == "any" then return types.Any(), types.Any() end
 
 	if t:IsLiteral() then
@@ -82,9 +82,9 @@ analyzer function next(t: Map<|any, any|>, k: any)
 	end
 
 	return k, v
-end
+end]]
 
-analyzer function pairs(tbl: AnyTable)
+--[[#analyzer function pairs(tbl: AnyTable)
 	if tbl.Type == "table" and (tbl:HasLiteralKeys() or analyzer:IsTypesystem()) then
 		local i = 1
 		return function()
@@ -112,9 +112,9 @@ analyzer function pairs(tbl: AnyTable)
 		done = done + 1
 		return k, v
 	end
-end
+end]]
 
-analyzer function ipairs(tbl: AnyList)
+--[[#analyzer function ipairs(tbl: AnyList)
 	if tbl:IsLiteral() then
 		local i = 1
 		return function(key, val)
@@ -153,14 +153,15 @@ analyzer function ipairs(tbl: AnyList)
 
 		return k, v
 	end
-end
+end]]
 
-analyzer function require(name: string)
+--[[#analyzer function require(name: string)
 	if not name:IsLiteral() then return types.Any() end
 
 	local str = name
 	local key = str:GetData()
 	local base_environment = analyzer:GetDefaultEnvironment("typesystem")
+
 	local function is_nil(obj)
 		return obj and obj.Type == "symbol" and obj:IsNil()
 	end
@@ -189,7 +190,9 @@ analyzer function require(name: string)
 		local cached = keyval and keyval.val
 
 		if cached and not is_nil(cached) then return cached end
+
 		if analyzer.loaded_modules[key] then return analyzer.loaded_modules[key] end
+
 		if analyzer.loading_modules[key] then return analyzer.loading_modules[key] end
 	end
 
@@ -229,9 +232,7 @@ analyzer function require(name: string)
 
 					if path:sub(1, 2) == "./" then path = path:sub(3) end
 
-					local res = analyzer:GetFirstValue(
-						analyzer:AnalyzeRootStatement(analyzer:ParseFile(path), str)
-					)
+					local res = analyzer:GetFirstValue(analyzer:AnalyzeRootStatement(analyzer:ParseFile(path), str))
 
 					if is_nil(res) then res = types.True() end
 
@@ -245,16 +246,15 @@ analyzer function require(name: string)
 	end
 
 	analyzer.loading_modules[key] = nil
-
 	error("module '" .. key .. "' not found")
 	return types.Any()
-end
+end]]
 
-analyzer function type_error(str: string, level: number | nil)
+--[[#analyzer function type_error(str: string, level: number | nil)
 	error(str:GetData(), level and level:GetData() or nil)
-end
+end]]
 
-analyzer function load(
+--[[#analyzer function load(
 	code: string | function=()>(string | nil),
 	chunk_name: string | nil,
 	mode: string | nil,
@@ -281,17 +281,17 @@ analyzer function load(
 	f:SetInputSignature(types.VarArg(types.Any()))
 	f:SetOutputSignature(types.VarArg(types.Any()))
 	return f
-end
+end]]
 
-type loadstring = load
+--[[#type loadstring = load]]
 
-analyzer function dofile(path: string)
+--[[#analyzer function dofile(path: string)
 	if not path:IsLiteral() then return types.Any() end
 
 	return analyzer:AnalyzeRootStatement(analyzer:ParseFile(path:GetData()))
-end
+end]]
 
-analyzer function loadfile(path: string)
+--[[#analyzer function loadfile(path: string)
 	if not path:IsLiteral() then return types.Any() end
 
 	path = path:GetData()
@@ -303,24 +303,24 @@ analyzer function loadfile(path: string)
 	end)
 
 	return f
-end
+end]]
 
-analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
+--[[#analyzer function rawset(tbl: {[any] = any} | {}, key: any, val: any)
 	if analyzer:IsTypesystem() then
 		tbl:Set(key, val)
 		return
 	end
 
 	analyzer:NewIndexOperator(tbl, key, val, true)
-end
+end]]
 
-analyzer function rawget(tbl: {[any] = any} | {}, key: any)
+--[[#analyzer function rawget(tbl: {[any] = any} | {}, key: any)
 	if analyzer:IsTypesystem() then return tbl:Get(key) or types.Nil() end
 
 	return analyzer:AssertFallback(types.Nil(), analyzer:IndexOperator(tbl, key, true))
-end
+end]]
 
-analyzer function assert(...: ...any)
+--[[#analyzer function assert(...: ...any)
 	local obj = select(1, ...)
 
 	if not obj then
@@ -333,7 +333,7 @@ analyzer function assert(...: ...any)
 	local potential_msg = select(2, ...)
 
 	if obj.Type == "union" then
-		analyzer:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
+		analyzer.narrowing_store:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy(), nil, analyzer)
 	end
 
 	analyzer:ThrowSilentError(obj)
@@ -366,9 +366,9 @@ analyzer function assert(...: ...any)
 	end
 
 	return ...
-end
+end]]
 
-analyzer function error(msg: string, level: number | nil)
+--[[#analyzer function error(msg: string, level: number | nil)
 	if not analyzer:IsDefinetlyReachable() then
 		analyzer:ThrowSilentError()
 
@@ -386,15 +386,15 @@ analyzer function error(msg: string, level: number | nil)
 	else
 		analyzer:ThrowError("error thrown from expression " .. tostring(analyzer:GetCurrentExpression()))
 	end
-end
+end]]
 
-analyzer function type_error(msg: LiteralString, level: number | nil)
+--[[#analyzer function type_error(msg: LiteralString, level: number | nil)
 	if analyzer.processing_deferred_calls then return end
 
 	analyzer:ThrowError(msg:GetData(), level and level:GetData() or nil)
-end
+end]]
 
-type pcall = ReturnIfNonLiteral<|
+--[[#type pcall = ReturnIfNonLiteral<|
 	analyzer function(callable: Function, ...: ...any): (boolean,
 	...any)
 		local diagnostics_index = #analyzer:GetDiagnostics()
@@ -429,8 +429,8 @@ type pcall = ReturnIfNonLiteral<|
 
 		return true, tuple
 	end
-|>
-type xpcall = ReturnIfNonLiteral<|
+|>]]
+--[[#type xpcall = ReturnIfNonLiteral<|
 	analyzer function(callable: Function, error_cb: function=(any)>(...any), ...: ...any): (boolean,
 	...any)
 		local diagnostics_index = #analyzer:GetDiagnostics()
@@ -475,8 +475,8 @@ type xpcall = ReturnIfNonLiteral<|
 
 		return true, tuple
 	end
-|>
-type select = ReturnIfNonLiteral<|
+|>]]
+--[[#type select = ReturnIfNonLiteral<|
 	analyzer function(index: 1 .. inf | "#", ...: ...any): ...any
 		local x = ...
 
@@ -488,16 +488,16 @@ type select = ReturnIfNonLiteral<|
 
 		return select(index:GetData(), ...)
 	end
-|>
-type select_type = analyzer function(index: 1 .. inf | "#", ...: ...any): ...any
+|>]]
+--[[#type select_type = analyzer function(index: 1 .. inf | "#", ...: ...any): ...any
 	local x = ...
 
 	if x and x.Type == "tuple" then return x:Slice(index:GetData()) end
 
 	return select(index:GetData(), ...)
-end
+end]]
 
-analyzer function type(obj: any)
+--[[#analyzer function type(obj: any)
 	if obj.Type == "any" then return types.String() end
 
 	if obj.Type == "union" then
@@ -513,9 +513,9 @@ analyzer function type(obj: any)
 	end
 
 	return obj:GetLuaType()
-end
+end]]
 
-function MetaTableFunctions<|T: any|>
+--[[#function MetaTableFunctions<|T: any|>
 	return {
 		__gc = function=(T)>(),
 		__pairs = function=(T)>(function=(T)>(any, any)),
@@ -543,9 +543,9 @@ function MetaTableFunctions<|T: any|>
 		__lt = function=(a: T, b: any)>(boolean),
 		__le = function=(a: T, b: any)>(boolean),
 	}
-end
+end]]
 
-analyzer function setmetatable(tbl: Table, meta: Table | nil)
+--[[#analyzer function setmetatable(tbl: Table, meta: Table | nil)
 	if tbl.Type == "any" then return tbl end
 
 	if not meta or meta.Type == "symbol" and meta:IsFalse() then
@@ -565,9 +565,9 @@ analyzer function setmetatable(tbl: Table, meta: Table | nil)
 	if meta.Type == "table" then tbl:SetMetaTable(meta) end
 
 	return tbl
-end
+end]]
 
-analyzer function setmetatable2(tbl: Table, meta: Table | nil)
+--[[#analyzer function setmetatable2(tbl: Table, meta: Table | nil)
 	if not meta or meta.Type == "symbol" and meta:IsFalse() then
 		tbl:SetMetaTable(false)
 		return tbl
@@ -584,9 +584,9 @@ analyzer function setmetatable2(tbl: Table, meta: Table | nil)
 
 	tbl:SetMetaTable(meta)
 	return tbl
-end
+end]]
 
-analyzer function getmetatable(tbl: Table)
+--[[#analyzer function getmetatable(tbl: Table)
 	if tbl.Type ~= "table" then return nil end
 
 	local meta = tbl:GetMetaTable()
@@ -600,9 +600,9 @@ analyzer function getmetatable(tbl: Table)
 	end
 
 	return nil
-end
+end]]
 
-analyzer function tostring(val: any)
+--[[#analyzer function tostring(val: any)
 	if analyzer:IsTypesystem() then return tostring(val) end
 
 	if val.Type == "function" then return "function: 0x000000000000" end
@@ -624,9 +624,9 @@ analyzer function tostring(val: any)
 	end
 
 	return tostring(val:GetData())
-end
+end]]
 
-analyzer function tonumber(
+--[[#analyzer function tonumber(
 	val: string | number | {__is_cdata_number = true} | {__is_ctype = true},
 	base: number | nil
 )
@@ -647,8 +647,8 @@ analyzer function tonumber(
 	end
 
 	return val
-end
+end]]
 
-function _G.LSX(func: Function, props: Table, children: List<|Table | string | number|>)
+function _G.LSX(func--[[#: Function]], props--[[#: Table]], children--[[#: List<|Table | string | number|>]])
 	return {func = func, props = props, children = children}
 end

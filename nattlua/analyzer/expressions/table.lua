@@ -161,7 +161,7 @@ return {
 				end
 			end
 
-			self:ClearTracked()
+			self.narrowing_store:ClearTracked()
 		end
 
 		if self:IsRuntime() then tbl:RemoveRedundantNilValues() end

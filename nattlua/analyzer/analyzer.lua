@@ -8,7 +8,7 @@ local META = class.CreateTemplate("analyzer")
 require("nattlua.other.context_mixin")(META)
 require("nattlua.analyzer.base.base_analyzer")(META)
 require("nattlua.analyzer.control_flow")(META)
-require("nattlua.analyzer.mutation_tracking")(META)
+require("nattlua.analyzer.mutation_wrapper")(META)
 require("nattlua.analyzer.operators.index").Index(META)
 require("nattlua.analyzer.operators.newindex").NewIndex(META)
 require("nattlua.analyzer.operators.call").Call(META)
@@ -263,20 +263,24 @@ do
 				exp.value.sub_type == "."
 			)
 
-		if no_operator_expression then self:PushTruthyExpressionContext() end
+		if no_operator_expression then
+			self.narrowing_store:PushTruthyExpressionContext()
+		end
 
 		local obj = self:Assert(self:AnalyzeExpression(exp))
-		self:TrackDependentUpvalues(obj)
+		self.narrowing_store:TrackDependentUpvalues(obj, nil, self)
 
-		if no_operator_expression then self:PopTruthyExpressionContext() end
+		if no_operator_expression then
+			self.narrowing_store:PopTruthyExpressionContext()
+		end
 
 		-- Union tracking
 		if no_operator_expression and obj.Type == "union" then
-			self:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy())
+			self.narrowing_store:TrackUpvalueUnion(obj, obj:GetTruthy(), obj:GetFalsy(), nil, self)
 		end
 
 		self:PopCurrentExpression()
-		self:TrackDependentUpvalues(obj)
+		self.narrowing_store:TrackDependentUpvalues(obj, nil, self)
 		return obj
 	end
 

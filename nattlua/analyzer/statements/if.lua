@@ -47,17 +47,17 @@ return {
 						blocks,
 						{
 							statements = statements,
-							tracked_objects = self:GetTrackedObjects(),
+							tracked_objects = self.narrowing_store:GetTrackedObjects(nil, nil, self),
 							obj = obj,
 						}
 					)
-					self:ClearTracked()
+					self.narrowing_store:ClearTracked()
 				elseif self.config.remove_unused and obj:IsFalsy() then
 					table_insert(
 						blocks,
 						{
 							statements = statements,
-							tracked_objects = self:GetTrackedObjects(),
+							tracked_objects = self.narrowing_store:GetTrackedObjects(nil, nil, self),
 							obj = obj,
 						}
 					)
@@ -203,7 +203,7 @@ return {
 
 			if block.is_else then
 				scope:SetElseConditionalScope(true)
-				self:ApplyMutationsInIfElse(blocks)
+				self.narrowing_store:ApplyMutationsInIfElse(blocks, self)
 			else
 				if blocks[i - 1] then
 					local prev = {}
@@ -212,10 +212,10 @@ return {
 						table_insert(prev, blocks[j])
 					end
 
-					self:ApplyMutationsInIfElse(prev)
+					self.narrowing_store:ApplyMutationsInIfElse(prev, self)
 				end
 
-				self:ApplyMutationsInIf(block.tracked_objects)
+				self.narrowing_store:ApplyMutationsInIf(block.tracked_objects, self)
 			end
 
 			-- Recompute arithmetic dependencies after tracked mutations are applied
@@ -227,18 +227,19 @@ return {
 
 			self:AnalyzeStatements(block.statements)
 
--- Restore constraint store to before this branch
+			-- Restore constraint store to before this branch
 			if self.constraint_store then self.constraint_store:PopScope() end
 
 			self:PopConditionalScope()
 		end
 
-self:ClearTracked()
+		self.narrowing_store:ClearTracked()
 
 		-- Check if any branch had a certain return - if so, apply early return narrowing
 		-- This narrows variables for code that follows the if-statement
 		if self.constraint_store and original_upvalue_values then
 			local scope = self:GetScope()
+
 			if scope:DidCertainReturn() or scope:DidUncertainReturn() then
 				self.constraint_store:ApplyEarlyReturnNarrowing(self, original_upvalue_values, true)
 				-- Propagate narrowing through arithmetic dependencies

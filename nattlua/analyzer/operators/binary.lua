@@ -181,15 +181,20 @@ local function number_comparison(self, l, r, op)
 	local invert = op == "~=" or op == "!="
 	local nl, nr, nl2, nr2 = intersect_comparison(l, r, op, invert)
 
-	if nl and nr then self:TrackUpvalueUnion(l, nl, nr) end
-	if nl2 and nr2 then self:TrackUpvalueUnion(r, nl2, nr2) end
+	if nl and nr then self.narrowing_store:TrackUpvalueUnion(l, nl, nr, nil, self) end
+
+	if nl2 and nr2 then
+		self.narrowing_store:TrackUpvalueUnion(r, nl2, nr2, nil, self)
+	end
 
 	-- NaN handling: NaN == NaN is false, NaN ~= NaN is true
 	if nl and nr then
 		if nl:IsNan() or nr:IsNan() then
 			if op == "~=" then return logical_cmp_cast(true) end
+
 			return logical_cmp_cast(false)
 		end
+
 		return logical_cmp_cast(nil)
 	elseif nl then
 		return logical_cmp_cast(true)
@@ -488,7 +493,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 					end
 				end
 
-				self:TrackTableIndexUnion(type_checked, truthy_union, falsy_union)
+				self.narrowing_store:TrackTableIndexUnion(type_checked, truthy_union, falsy_union, nil, self)
 			else
 				self.type_checked = false -- this could happen with something like print(type("foo")) so clear it in case
 				for _, l_elem in ipairs(l:GetData()) do
@@ -511,7 +516,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 			if op == "and" or op == "or" or op == "??" then
 				return new_union
 			elseif op == "==" or op == "!=" or op == "~=" then
-				self:TrackTableIndexUnion(l, truthy_union, falsy_union)
+				self.narrowing_store:TrackTableIndexUnion(l, truthy_union, falsy_union, nil, self)
 				local left_right = l:GetLeftRightSource()
 
 				if left_right then
@@ -536,12 +541,12 @@ local function BinaryWithUnion(self, node, l, r, op)
 						end
 					end
 
-					self:TrackUpvalueUnion(union, truthy_union_lr, falsy_union_lr, op == "==")
+					self.narrowing_store:TrackUpvalueUnion(union, truthy_union_lr, falsy_union_lr, op == "==", self)
 					return new_union
 				end
 
-				self:TrackUpvalueUnion(l, truthy_union, falsy_union, op ~= "==")
-				self:TrackUpvalueUnion(r, truthy_union, falsy_union, op ~= "==")
+				self.narrowing_store:TrackUpvalueUnion(l, truthy_union, falsy_union, op ~= "==", self)
+				self.narrowing_store:TrackUpvalueUnion(r, truthy_union, falsy_union, op ~= "==", self)
 				-- Track correlation between upvalues when comparing with == or ~=
 				self.constraint_store:TrackEqualityCorrelation(op, original_l:GetUpvalue(), original_r:GetUpvalue(), l, r)
 				return new_union
@@ -576,13 +581,13 @@ local function BinaryWithUnion(self, node, l, r, op)
 					end
 
 					cs:TagCorrelatedResult(new_union, tag_info, source_map)
-					self:TrackTableIndexUnion(l, truthy_union, falsy_union)
-					self:TrackUpvalueUnion(l, truthy_union, falsy_union)
-					self:TrackUpvalueUnion(r, truthy_union, falsy_union)
+					self.narrowing_store:TrackTableIndexUnion(l, truthy_union, falsy_union, nil, self)
+					self.narrowing_store:TrackUpvalueUnion(l, truthy_union, falsy_union, nil, self)
+					self.narrowing_store:TrackUpvalueUnion(r, truthy_union, falsy_union, nil, self)
 					return new_union:Simplify()
 				end
 
-				self:TrackTableIndexUnion(l, truthy_union, falsy_union)
+				self.narrowing_store:TrackTableIndexUnion(l, truthy_union, falsy_union, nil, self)
 
 				if
 					node.parent.Type ~= "expression_binary_operator" or
@@ -596,10 +601,10 @@ local function BinaryWithUnion(self, node, l, r, op)
 						)
 					)
 				then
-					self:TrackUpvalueUnion(l, truthy_union, falsy_union)
+					self.narrowing_store:TrackUpvalueUnion(l, truthy_union, falsy_union, nil, self)
 				end
 
-				self:TrackUpvalueUnion(r, truthy_union, falsy_union)
+				self.narrowing_store:TrackUpvalueUnion(r, truthy_union, falsy_union, nil, self)
 				return new_union
 			end
 		end
@@ -659,7 +664,7 @@ return {
 			l = self:Assert(self:AnalyzeExpression(node.left))
 
 			if l.Type == "union" then
-				self:TrackUpvalueUnion(l, l:GetTruthy(), l:GetFalsy())
+				self.narrowing_store:TrackUpvalueUnion(l, l:GetTruthy(), l:GetFalsy(), nil, self)
 			end
 
 			-- attest.equal(nil and 1, nil)
@@ -672,10 +677,10 @@ return {
 				local tracked, scope
 
 				if not is_condition_expression(node) then
-					tracked = self:GetTrackedObjects()
+					tracked = self.narrowing_store:GetTrackedObjects(nil, nil, self)
 					scope = self:PushConditionalScope(node, l:IsTruthy(), l:IsFalsy())
 					scope:SetTrackedNarrowings(tracked)
-					self:ApplyMutationsInIf(tracked)
+					self.narrowing_store:ApplyMutationsInIf(tracked, self)
 				end
 
 				-- Fork constraint store for disjunction handling
@@ -692,12 +697,12 @@ return {
 					self.constraint_store:ApplyRelationalNarrowing(self)
 				end
 
-				self:PushTruthyExpressionContext()
+				self.narrowing_store:PushTruthyExpressionContext()
 				r = self:Assert(self:AnalyzeExpression(node.right))
-				self:PopTruthyExpressionContext()
+				self.narrowing_store:PopTruthyExpressionContext()
 
 				if r.Type == "union" then
-					self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
+					self.narrowing_store:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy(), nil, self)
 				end
 
 				-- Merge: union domains from both branches of the and-expression
@@ -708,7 +713,7 @@ return {
 				end
 
 				if scope then
-					self:ClearScopedTrackedObjects(scope)
+					self.narrowing_store:ClearScopedTrackedObjects(scope)
 					self:PopConditionalScope()
 				end
 			end
@@ -716,7 +721,7 @@ return {
 			l = self:Assert(self:AnalyzeExpression(node.left)):GetFirstValue()
 
 			if l.Type == "union" then
-				self:TrackUpvalueUnion(l, l:GetTruthy(), l:GetFalsy())
+				self.narrowing_store:TrackUpvalueUnion(l, l:GetTruthy(), l:GetFalsy(), nil, self)
 			end
 
 			if l:IsCertainlyNil() then
@@ -728,40 +733,40 @@ return {
 				local tracked, scope
 
 				if not is_condition_expression(node) then
-					tracked = self:GetTrackedObjects()
+					tracked = self.narrowing_store:GetTrackedObjects(nil, nil, self)
 					scope = self:PushConditionalScope(node, l:CanBeNil(), not l:CanBeNil())
 					scope:SetTrackedNarrowings(tracked)
-					self:ApplyMutationsInIf(tracked)
+					self.narrowing_store:ApplyMutationsInIf(tracked, self)
 				end
 
-				self:PushTruthyExpressionContext()
+				self.narrowing_store:PushTruthyExpressionContext()
 				r = self:Assert(self:AnalyzeExpression(node.right)):GetFirstValue()
-				self:PopTruthyExpressionContext()
+				self.narrowing_store:PopTruthyExpressionContext()
 
 				if scope then
-					self:ClearScopedTrackedObjects(scope)
+					self.narrowing_store:ClearScopedTrackedObjects(scope)
 					self:PopConditionalScope()
 				end
 
 				if r.Type == "union" then
-					self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
+					self.narrowing_store:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy(), nil, self)
 				end
 
 				return Union({l, r}):Simplify()
 			end
 		elseif op == "or" then
-			self:PushFalsyExpressionContext()
+			self.narrowing_store:PushFalsyExpressionContext()
 			l = self:Assert(self:AnalyzeExpression(node.left))
-			self:PopFalsyExpressionContext()
+			self.narrowing_store:PopFalsyExpressionContext()
 
 			if l.Type == "union" then
-				self:TrackUpvalueUnion(l, l:GetTruthy(), l:GetFalsy())
+				self.narrowing_store:TrackUpvalueUnion(l, l:GetTruthy(), l:GetFalsy(), nil, self)
 			end
 
 			if l:IsCertainlyFalse() then
-				self:PushFalsyExpressionContext()
+				self.narrowing_store:PushFalsyExpressionContext()
 				r = self:Assert(self:AnalyzeExpression(node.right))
-				self:PopFalsyExpressionContext()
+				self.narrowing_store:PopFalsyExpressionContext()
 			elseif l:IsCertainlyTrue() then
 				r = Nil()
 			else
@@ -771,7 +776,7 @@ return {
 				local tracked, scope
 
 				if not is_condition_expression(node) then
-					tracked = self:GetTrackedObjects()
+					tracked = self.narrowing_store:GetTrackedObjects(nil, nil, self)
 					scope = self:PushConditionalScope(node, l:IsTruthy(), l:IsFalsy())
 					scope:SetTrackedNarrowings(tracked)
 					scope:SetElseConditionalScope(true)
@@ -806,13 +811,13 @@ return {
 				end
 
 				self.LEFT_SIDE_OR = l
-				self:PushFalsyExpressionContext()
+				self.narrowing_store:PushFalsyExpressionContext()
 				r = self:Assert(self:AnalyzeExpression(node.right))
-				self:PopFalsyExpressionContext()
+				self.narrowing_store:PopFalsyExpressionContext()
 				self.LEFT_SIDE_OR = false
 
 				if r.Type == "union" then
-					self:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy())
+					self.narrowing_store:TrackUpvalueUnion(r, r:GetTruthy(), r:GetFalsy(), nil, self)
 				end
 
 				-- Merge: union domains from both branches of the or-expression
@@ -822,7 +827,7 @@ return {
 				end
 
 				if scope then
-					self:ClearScopedTrackedObjects(scope)
+					self.narrowing_store:ClearScopedTrackedObjects(scope)
 					self:PopConditionalScope()
 				end
 			end

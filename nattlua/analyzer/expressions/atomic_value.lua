@@ -62,7 +62,7 @@ local function lookup_value(self, tk)
 		end
 	end
 
-	local obj = self:GetTrackedUpvalue(obj) or obj
+	local obj = self.narrowing_store:GetTrackedUpvalue(obj) or obj
 
 	if obj:GetUpvalue() then self:GetScope():AddDependency(obj:GetUpvalue()) end
 

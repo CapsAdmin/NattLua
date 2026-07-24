@@ -67,7 +67,7 @@ return {
 				-- use context?
 				self.left_assigned = left[right_pos] or false
 				local obj = self:Assert(self:AnalyzeExpression(exp_val))
-				self:ClearTracked()
+				self.narrowing_store:ClearTracked()
 
 				if obj.Type == "union" and obj:GetCardinality() == 1 then
 					obj = obj:GetData()[1]
@@ -272,7 +272,7 @@ return {
 					local field_name = exp_key.right.value:GetValueString()
 					-- Analyze the object once
 					local obj = self:Assert(self:AnalyzeExpression(obj_expr))
-					self:ClearTracked()
+					self.narrowing_store:ClearTracked()
 					-- Get the current value at obj[field_name]
 					local field_val = self:Assert(self:IndexOperator(obj, ConstString(field_name)))
 					-- Analyze the right side
@@ -319,7 +319,7 @@ return {
 						obj_expr = exp_key.left
 						-- Analyze the object once
 						local obj = self:Assert(self:AnalyzeExpression(obj_expr))
-						self:ClearTracked()
+						self.narrowing_store:ClearTracked()
 
 						if self:IsRuntime() then idx_key = self:GetFirstValue(idx_key) or Nil() end
 
@@ -431,7 +431,7 @@ return {
 					-- TODO: refactor out to mutation assignment?
 					-- index assignment: foo[a] = 1
 					local obj = self:Assert(self:AnalyzeExpression(exp_key.left))
-					self:ClearTracked()
+					self.narrowing_store:ClearTracked()
 
 					if self:IsRuntime() then key = self:GetFirstValue(key) or Nil() end
 

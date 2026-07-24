@@ -143,19 +143,8 @@ return {
 		local not_pre_snapshot
 
 		if node.value.sub_type == "not" then
-			not_pre_snapshot = {}
-
-			if analyzer.tracked_objects then
-				not_pre_snapshot.n = #analyzer.tracked_objects
-
-				for i, data in ipairs(analyzer.tracked_objects) do
-					not_pre_snapshot[i] = data.stack and #data.stack or 0
-				end
-			else
-				not_pre_snapshot.n = 0
-			end
-
-			analyzer:PushInvertedExpressionContext()
+			not_pre_snapshot = analyzer.narrowing_store:SnapshotForNot()
+			analyzer.narrowing_store:PushInvertedExpressionContext()
 		end
 
 		local r = analyzer:Assert(analyzer:AnalyzeExpression(node.right))
@@ -164,48 +153,16 @@ return {
 			-- Snapshot after sub-expression but before TrackDependentUpvalues,
 			-- so we only swap entries from inner `not` evaluation, not from
 			-- stored condition chain traversal.
-			local not_post_snapshot
-
-			if analyzer.tracked_objects then
-				not_post_snapshot = {n = #analyzer.tracked_objects}
-
-				for i, data in ipairs(analyzer.tracked_objects) do
-					not_post_snapshot[i] = data.stack and #data.stack or 0
-				end
-			else
-				not_post_snapshot = {n = 0}
-			end
-
+			local not_post_snapshot = analyzer.narrowing_store:SnapshotForNot()
 			-- Follow LeftRightSource chains from stored conditions while
 			-- inverted context is active, so `local c = x == nil; if not c then`
 			-- can narrow x through the chain.
-			analyzer:TrackDependentUpvalues(r)
-			analyzer:PopInvertedExpressionContext()
-
+			analyzer.narrowing_store:TrackDependentUpvalues(r, nil, analyzer)
+			analyzer.narrowing_store:PopInvertedExpressionContext()
 			-- Swap truthy/falsy for tracking entries added during sub-expression
 			-- evaluation (between pre and post snapshots). These come from inner
 			-- `not` handlers and need inversion to cancel out the double negation.
-			if analyzer.tracked_objects then
-				for i = not_pre_snapshot.n + 1, not_post_snapshot.n do
-					local data = analyzer.tracked_objects[i]
-
-					if data and data.stack then
-						for _, entry in ipairs(data.stack) do
-							entry.truthy, entry.falsy = entry.falsy, entry.truthy
-						end
-					end
-				end
-
-				for i = 1, not_pre_snapshot.n do
-					local data = analyzer.tracked_objects[i]
-
-					if data and data.stack then
-						for j = (not_pre_snapshot[i] or 0) + 1, (not_post_snapshot[i] or 0) do
-							data.stack[j].truthy, data.stack[j].falsy = data.stack[j].falsy, data.stack[j].truthy
-						end
-					end
-				end
-			end
+			analyzer.narrowing_store:SwapNotNarrowing(not_pre_snapshot, not_post_snapshot)
 		end
 
 		if node.value.sub_type == "ref" or node.value.sub_type == "|" then
@@ -231,7 +188,7 @@ return {
 				end
 			end
 
-			analyzer:TrackUpvalueUnion(r, truthy_union, falsy_union)
+			analyzer.narrowing_store:TrackUpvalueUnion(r, truthy_union, falsy_union, nil, analyzer)
 			return new_union
 		end
 
