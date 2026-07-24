@@ -610,6 +610,15 @@ local all_nodes = {
 			},
 		}
 	end,
+	["statement_continue"] = function()
+		return {
+			is_statement = true,
+			tokens = {
+				["continue"] = false,
+				["table"] = false,
+			},
+		}
+	end,
 	["statement_do"] = function()
 		return {
 			is_statement = true,
@@ -900,6 +909,8 @@ function META.New(
 	code_stop--[[#: number]],
 	parent--[[#: any]]
 )
+	if not all_nodes[type] then error(type .. " is not a valid node", 2) end
+
 	local init = all_nodes[type]()
 	init.Type = type
 	init.environment = environment
