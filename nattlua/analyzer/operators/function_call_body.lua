@@ -369,8 +369,9 @@ return function(self, obj, input)
 					if t and t.potential_self then doit = false end
 				end
 
-				if doit then
+				if doit and not (i == 1 and function_node.self_call) then
 					-- if it's not a ref argument we pass the incoming value
+					-- skip self parameter to avoid replacing the actual receiver with the contract type
 					input:Set(i, get_argument_value(arg, contract))
 				end
 			else
