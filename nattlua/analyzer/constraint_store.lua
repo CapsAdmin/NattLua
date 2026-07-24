@@ -1248,6 +1248,11 @@ function META:PropagateUntilFixedPoint(analyzer)
 
 			if not left_domain or not right_domain then continue end
 
+			-- Skip if inputs haven't changed since last computation
+			if c.left_domain == left_domain and c.right_domain == right_domain then
+				continue
+			end
+
 			-- Check if any operand changed since last computation
 			if not c.dirty then continue end
 
@@ -1290,8 +1295,10 @@ function META:PropagateUntilFixedPoint(analyzer)
 			end
 
 			-- Update result domain in constraint store
+			local changed = current_result ~= nil
 			self.domains[c.result] = new_result
-			any_changed = true
+
+			if changed then any_changed = true end
 
 			-- Also update the actual upvalue (so GetMutatedUpvalue returns narrowed value)
 			if c.result.Mutate and analyzer then
@@ -1303,8 +1310,10 @@ function META:PropagateUntilFixedPoint(analyzer)
 				end
 			end
 
-			-- Mark as clean
+			-- Mark as clean and cache input domains to detect actual changes
 			c.dirty = false
+			c.left_domain = left_domain
+			c.right_domain = right_domain
 			-- Propagate to equality partners of the result
 			local result_deps = self.dependents[c.result]
 
