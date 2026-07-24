@@ -306,7 +306,7 @@ do
 
 		if _G.STARTUP_PROFILE then profiler:StopSection() end
 
-		if PROFILING and not _G.STARTUP_PROFILE then
+		if not profiler then
 			profiler = profiler_module.New({mode = profiling_mode})
 		end
 	end
