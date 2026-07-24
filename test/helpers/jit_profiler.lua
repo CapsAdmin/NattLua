@@ -472,8 +472,8 @@ do
 		} | nil]]
 	)
 		config = config or {}
-		config.maxmcode = _G.JIT_PARAMS.maxmcode
-		config.sizemcode = _G.JIT_PARAMS.sizemcode
+		config.maxmcode = _G.JIT_PARAMS and _G.JIT_PARAMS.maxmcode
+		config.sizemcode = _G.JIT_PARAMS and _G.JIT_PARAMS.sizemcode
 		local self = setmetatable({}, Profiler)--[[# as TProfile]]
 		-- Config
 		self.id = config.id or "jit_profiler"
