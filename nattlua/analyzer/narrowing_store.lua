@@ -469,7 +469,7 @@ end
 function META:ClearScopedTrackedObjects(scope)
 	if scope.TrackedObjects then
 		for _, obj in ipairs(scope.TrackedObjects) do
-			obj:ClearTrackedMutations()
+			obj.mutator:ClearTracked()
 		end
 	end
 end

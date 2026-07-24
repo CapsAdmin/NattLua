@@ -1,4 +1,5 @@
 local setmetatable = _G.setmetatable
+local mutator = require("nattlua.analyzer.mutator")
 local table = _G.table
 local ipairs = _G.ipairs
 local tostring = _G.tostring
@@ -13,7 +14,6 @@ local ConstString = require("nattlua.types.string").ConstString
 local Tuple = require("nattlua.types.tuple").Tuple
 local error_messages = require("nattlua.error_messages")
 local context = require("nattlua.analyzer.context")
-local mutation_solver = require("nattlua.analyzer.mutation_solver")
 local table_sort = require("nattlua.other.sort")
 local Any = require("nattlua.types.any").Any
 local shared = require("nattlua.types.shared")
@@ -959,7 +959,6 @@ end
 
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	map = map or {}
-
 	local existing = map[self]
 
 	if existing then return existing end
@@ -1003,7 +1002,7 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	copy.MetaTable = self.MetaTable
 	copy.Contract = self.Contract
 	copy.AnalyzerEnvironment = self.AnalyzerEnvironment
-	copy.mutations = self.mutations or false
+	copy.mutator:Set(self.mutator:CopyRaw())
 	copy.CreationScope = self.CreationScope
 	copy.UniqueID = self.UniqueID
 	copy.Name = self.Name
@@ -1020,7 +1019,6 @@ end
 
 function META:CopyForReturn(map--[[#: Map<|any, any|> | nil]])
 	map = map or {}
-
 	local existing = map[self]
 
 	if existing then return existing end
@@ -1044,11 +1042,7 @@ function META:CopyForReturn(map--[[#: Map<|any, any|> | nil]])
 		then
 			local mapped = map[k]
 
-			if mapped then
-				k = mapped
-			else
-				k = k:CopyForReturn(map)
-			end
+			if mapped then k = mapped else k = k:CopyForReturn(map) end
 		end
 
 		local v = keyval.val
@@ -1062,11 +1056,7 @@ function META:CopyForReturn(map--[[#: Map<|any, any|> | nil]])
 		then
 			local mapped = map[v]
 
-			if mapped then
-				v = mapped
-			else
-				v = v:CopyForReturn(map)
-			end
+			if mapped then v = mapped else v = v:CopyForReturn(map) end
 		end
 
 		local entry = {key = k, val = v}--[[# as any]]
@@ -1080,7 +1070,7 @@ function META:CopyForReturn(map--[[#: Map<|any, any|> | nil]])
 	copy.MetaTable = self.MetaTable
 	copy.Contract = self.Contract
 	copy.AnalyzerEnvironment = self.AnalyzerEnvironment
-	copy.mutations = self.mutations or false
+	copy.mutator:Set(self.mutator:CopyRaw())
 	copy.CreationScope = self.CreationScope
 	copy.UniqueID = self.UniqueID
 	copy.Name = self.Name
@@ -1208,28 +1198,22 @@ function META.Union(a--[[#: TTable]], b--[[#: TTable]])
 end
 
 do
-	local function initialize_table_mutation_tracker(tbl, scope, key, hash)
-		tbl.mutations = tbl.mutations or {}
-		tbl.mutationsi = tbl.mutationsi or {}
+	local function initialize_table_mutation_bucket(self, scope, key, hash)
+		local bucket = self.mutator:InitBucket(hash, scope, key)
 
-		if not tbl.mutations[hash] then
-			tbl.mutations[hash] = {}
-			table.insert(tbl.mutationsi, tbl.mutations[hash])
-		end
-
-		if tbl.mutations[hash][1] == nil then
-			if tbl.Type == "table" then
+		if bucket[1] == nil then
+			if self.Type == "table" then
 				-- initialize the table mutations with an existing value or nil
-				local val = (tbl:GetContract() or tbl):Get(key) or Nil()
+				local val = (self:GetContract() or self):Get(key) or Nil()
 
 				if
-					tbl:GetCreationScope() and
-					not scope:IsCertainFromScope(tbl:GetCreationScope())
+					self:GetCreationScope() and
+					not scope:IsCertainFromScope(self:GetCreationScope())
 				then
-					scope = tbl:GetCreationScope()
+					scope = self:GetCreationScope()
 				end
 
-				table.insert(tbl.mutations[hash], {scope = scope, value = val, contract = tbl:GetContract(), key = key})
+				table.insert(bucket, {scope = scope, value = val, contract = self:GetContract(), key = key})
 			end
 		end
 	end
@@ -1245,8 +1229,8 @@ do
 			return
 		end
 
-		initialize_table_mutation_tracker(self, scope, key, hash)
-		return mutation_solver(self.mutations[hash], scope, self)
+		initialize_table_mutation_bucket(self, scope, key, hash)
+		return self.mutator:Resolve(hash, scope, self)
 	end
 
 	function META:Mutate(key, val, scope, from_tracking)
@@ -1254,54 +1238,23 @@ do
 
 		if hash == nil then return true end
 
-		initialize_table_mutation_tracker(self, scope, key, hash)
-
-		if #self.mutations[hash] > self:GetMutationLimit() then
-			return false, error_messages.too_many_mutations()
-		end
-
-		table.insert(self.mutations[hash], {scope = scope, value = val, from_tracking = from_tracking, key = key})
+		initialize_table_mutation_bucket(self, scope, key, hash)
+		local ok, err = self.mutator:Track{
+			hash = hash,
+			scope = scope,
+			value = val,
+			from_tracking = from_tracking,
+			key = key,
+			limit = self:GetMutationLimit(),
+		}
 
 		if from_tracking then scope:AddTrackedObject(self) end
 
-		return true
-	end
-
-	function META:ClearMutations()
-		self.mutations = false
-		self.mutationsi = false
-	end
-
-	function META:ClearTrackedMutations()
-		if not self:HasMutations() then return end
-
-		for _, mutations in ipairs(self:GetMutationsi()) do
-			for i = #mutations, 1, -1 do
-				local mut = mutations[i]
-
-				if mut.from_tracking then table.remove(mutations, i) end
-			end
-		end
-	end
-
-	function META:SetMutations(tbl)
-		self.mutations = tbl
-	end
-
-	function META:GetMutations()
-		return self.mutations
-	end
-
-	function META:GetMutationsi()
-		return self.mutationsi
-	end
-
-	function META:HasMutations()
-		return self.mutations ~= false
+		return ok, err
 	end
 
 	function META:GetMutatedFromScope(scope, done)
-		if not self.mutations then return self end
+		if not self.mutator:HasMutations() then return self end
 
 		done = done or {}
 		local out = META.New()
@@ -1310,7 +1263,7 @@ do
 
 		done[self] = out
 
-		for _, mutations in ipairs(self.mutationsi) do
+		for _, mutations in ipairs(self.mutator:GetList()) do
 			for _, mutation in ipairs(mutations) do
 				local key = mutation.key
 				local val = self:GetMutatedValue(key, scope)
@@ -1430,7 +1383,7 @@ function META.New()
 		literal_data_cache = {},
 		Contracts = {},
 		TypeOverride = false,
-		mutations = false,
+		mutator = mutator.Hashed(),
 		potential_self = false,
 		string_metatable = false,
 		size = false,
@@ -1441,7 +1394,6 @@ function META.New()
 		MetaTable = false,
 		Contract = false,
 		MutationLimit = 100,
-		mutationsi = false,
 	}
 end
 

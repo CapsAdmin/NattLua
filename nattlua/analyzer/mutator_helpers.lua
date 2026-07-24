@@ -8,9 +8,6 @@ return function(META--[[#: any]])
 		self.narrowing_store = NarrowingStore.new()
 	end)
 
-	-- ----------------------------------------------------------------
-	-- Array length helper (not mutation-related)
-	-- ----------------------------------------------------------------
 	function META:GetArrayLengthFromTable(tbl)
 		if tbl.Type ~= "table" then
 			if tbl.GetArrayLength then return tbl:GetArrayLength() end
@@ -62,9 +59,6 @@ return function(META--[[#: any]])
 		return LNumber(final_len)
 	end
 
-	-- ----------------------------------------------------------------
-	-- Direct mutation (needs IsInUncertainLoop, AssertWarning, GetScope)
-	-- ----------------------------------------------------------------
 	function META:GetMutatedTableValue(tbl, key)
 		return tbl:GetMutatedValue(key, self:GetScope())
 	end

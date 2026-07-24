@@ -219,7 +219,7 @@ function cparser.reset()
 	types = Table()
 	local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
 	local env = analyzer:GetScopeHelper(analyzer.function_scope)
-	env.runtime.ffi:ClearMutations()
+	env.runtime.ffi.mutator:Clear()
 	analyzer:ErrorIfFalse(env.runtime.ffi:Set(ConstString("C"), Table()))
 end
 

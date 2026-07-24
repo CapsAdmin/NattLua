@@ -1608,15 +1608,15 @@ analyze[[
         attest.equal(C, true)
     end
 
-    §assert(shared.Equal(env.runtime.A:GetUpvalue():GetMutations()[1].value, types.Boolean()))
+§assert(shared.Equal(env.runtime.A:GetUpvalue().mutator:Get()[1].value, types.Boolean()))
 
-    §assert(shared.Equal(env.runtime.A:GetUpvalue():GetMutations()[2].value, types.True()))
+§assert(shared.Equal(env.runtime.A:GetUpvalue().mutator:Get()[2].value, types.True()))
 
-    §assert(shared.Equal(env.runtime.A:GetUpvalue():GetMutations()[3].value, types.False()))
+§assert(shared.Equal(env.runtime.A:GetUpvalue().mutator:Get()[3].value, types.False()))
 
-    §assert(shared.Equal(env.runtime.A:GetUpvalue():GetMutations()[4].value, types.False()))
+§assert(shared.Equal(env.runtime.A:GetUpvalue().mutator:Get()[4].value, types.False()))
 
-    §assert(env.runtime.A:GetUpvalue():GetMutations()[5] == nil)
+§assert(env.runtime.A:GetUpvalue().mutator:Get()[5] == nil)
 ]]
 analyze[[
 local value

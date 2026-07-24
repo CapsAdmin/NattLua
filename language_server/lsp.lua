@@ -126,7 +126,9 @@ local function store_semantic_tokens(fs_path, data)
 	fs_path = path.Normalize(fs_path)
 	local existing = semantic_token_cache.by_path[fs_path]
 
-	if existing and arrays_equal(existing.data, data) then return existing.result_id, existing.data end
+	if existing and arrays_equal(existing.data, data) then
+		return existing.result_id, existing.data
+	end
 
 	local result_id = next_semantic_result_id()
 	local stored = {
@@ -198,6 +200,7 @@ local function build_semantic_tokens_full(fs_path)
 	end
 
 	if not editor_helper:EnsureParsed(fs_path) then return {data = {}} end
+
 	local result_id, data = store_semantic_tokens(fs_path, editor_helper:GetSemanticTokens(fs_path))
 	return {
 		data = data,
@@ -212,7 +215,10 @@ local function build_semantic_tokens_delta(fs_path, previous_result_id)
 		local existing = semantic_token_cache.by_path[normalized_path]
 
 		if previous and existing and previous.path == normalized_path then
-			if previous.result_id == existing.result_id or arrays_equal(previous.data, existing.data) then
+			if
+				previous.result_id == existing.result_id or
+				arrays_equal(previous.data, existing.data)
+			then
 				return {
 					edits = {},
 					resultId = existing.result_id,
@@ -232,17 +238,21 @@ local function build_semantic_tokens_delta(fs_path, previous_result_id)
 			}
 		end
 
-		return previous and {
-			edits = {},
-			resultId = previous_result_id,
-		} or {data = {}}
+		return previous and
+			{
+				edits = {},
+				resultId = previous_result_id,
+			} or
+			{data = {}}
 	end
 
 	if not editor_helper:EnsureParsed(fs_path) then return {data = {}} end
 
 	local previous = semantic_token_cache.by_result_id[previous_result_id]
 
-	if not previous or previous.path ~= fs_path then return build_semantic_tokens_full(fs_path) end
+	if not previous or previous.path ~= fs_path then
+		return build_semantic_tokens_full(fs_path)
+	end
 
 	local latest_data = editor_helper:GetSemanticTokens(fs_path)
 	local result_id, stored_data = store_semantic_tokens(fs_path, latest_data)
@@ -446,7 +456,6 @@ end
 lsp.methods["nattlua/format"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 	local code = editor_helper:Format(params.code, path)
-
 	return {
 		code = b64.encode(code),
 	}
@@ -521,7 +530,6 @@ end
 lsp.methods["textDocument/didSave"] = function(params)
 	editor_helper:SaveFile(to_fs_path(params.textDocument.uri))
 end
-
 lsp.methods["textDocument/references"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
@@ -634,7 +642,9 @@ lsp.methods["textDocument/inlayHint"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
 	if editor_helper:ShouldDeferInteractiveRefresh(path) then return {} end
+
 	if not editor_helper:EnsureParsed(path) then return {} end
+
 	if not editor_helper:IsAnalyzed(path) then return {} end
 
 	local result = {}
@@ -788,7 +798,9 @@ lsp.methods["textDocument/documentHighlight"] = function(params)
 	local path = to_fs_path(params.textDocument.uri)
 
 	if editor_helper:ShouldDeferInteractiveRefresh(path) then return {} end
+
 	if not editor_helper:EnsureParsed(path) then return {} end
+
 	if not editor_helper:IsAnalyzed(path) then return {} end
 
 	local highlights = editor_helper:GetUpvalueHighlightRanges(path, params.position.line, params.position.character)
@@ -863,7 +875,9 @@ lsp.methods["textDocument/definition"] = function(params)
 		local path = node:GetSourcePath() or path
 		path = to_fs_path(path)
 		editor_helper:OpenFile(path, node.Code:GetString())
+
 		if not editor_helper:EnsureAnalyzed(path) then return {} end
+
 		return {
 			uri = to_lsp_path(path),
 			range = get_range(editor_helper:GetCode(path), start, stop),
@@ -910,10 +924,10 @@ lsp.methods["textDocument/hover"] = function(params)
 				end
 			end
 
-			if upvalue:HasMutations() then
+			if upvalue.mutator:HasMutations() then
 				local code = ""
 
-				for i, mutation in ipairs(upvalue.Mutations) do
+				for i, mutation in ipairs(upvalue.mutator:Get() or {}) do
 					code = code .. "\t" .. i .. ":\n"
 					code = code .. "\t\tvalue = " .. tostring(mutation.value) .. "\n"
 					code = code .. "\t\tscope = " .. tostring(mutation.scope) .. "\n"

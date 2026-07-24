@@ -1,5 +1,5 @@
 local class = require("nattlua.other.class")
-local mutation_solver = require("nattlua.analyzer.mutation_solver")
+local mutator = require("nattlua.analyzer.mutator")
 local error_messages = require("nattlua.error_messages")
 local tostring = _G.tostring
 local assert = _G.assert
@@ -13,7 +13,6 @@ META:IsSet("Immutable")
 META:GetSet("Position")
 META:GetSet("Shadow")
 META:GetSet("Scope")
-META:GetSet("Mutations")
 META:GetSet("UseCount", 0)
 META:GetSet("RuntimeUseCount", 0)
 META:GetSet("TypesystemUseCount", 0)
@@ -68,40 +67,18 @@ end
 
 do
 	function META:GetMutatedValue(scope)
-		self.Mutations = self.Mutations or {}
+		self.mutator:Init()
 		self.UseCount = self.UseCount + 1
-		return mutation_solver(self.Mutations, scope, self)
+		return self.mutator:Resolve(scope, self)
 	end
 
 	function META:Mutate(val, scope, from_tracking)
 		val:SetUpvalue(self)
-		self.Mutations = self.Mutations or {}
-
-		if self.Mutations[100] then return false, error_messages.too_many_mutations() end
-
-		table_insert(self.Mutations, {scope = scope, value = val, from_tracking = from_tracking})
+		local ok, err = self.mutator:Track{scope = scope, value = val, from_tracking = from_tracking}
 
 		if from_tracking then scope:AddTrackedObject(self) end
 
-		return true
-	end
-
-	function META:ClearMutations()
-		self.Mutations = false
-	end
-
-	function META:HasMutations()
-		return self.Mutations ~= false
-	end
-
-	function META:ClearTrackedMutations()
-		local mutations = self:GetMutations()
-
-		for i = #mutations, 1, -1 do
-			local mut = mutations[i]
-
-			if mut.from_tracking then table_remove(mutations, i) end
-		end
+		return ok, err
 	end
 end
 
@@ -118,7 +95,7 @@ function META.New(obj)
 		Shadow = false,
 		Position = false,
 		Scope = false,
-		Mutations = false,
+		mutator = mutator.Linear(),
 		UseCount = 0,
 		RuntimeUseCount = 0,
 		TypesystemUseCount = 0,

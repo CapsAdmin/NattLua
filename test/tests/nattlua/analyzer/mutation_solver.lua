@@ -2,15 +2,13 @@
 local coverage = require("test.helpers.coverage")
 
 local function covered_mutation_solver()
-	local f = assert(io.open("nattlua/analyzer/mutation_solver.lua"))
+	local f = assert(io.open("nattlua/analyzer/mutator.lua"))
 	local code = assert(f:read("*all"))
 	f:close()
-	return assert(
-		load(coverage.Preprocess(code, "mutation_solver"), "@nattlua/analyzer/mutation_solver.lua")
-	)()
+	return assert(load(coverage.Preprocess(code, "mutator"), "@nattlua/analyzer/mutator.lua"))()
 end
 
-local mutation_solver = covered_mutation_solver()
+local mutator = covered_mutation_solver()
 local LexicalScope = require("nattlua.analyzer.base.lexical_scope").New
 local Union = require("nattlua.types.union").Union
 local LString = require("nattlua.types.string").LString
@@ -44,7 +42,7 @@ local function test_mutation_solver()
 			{scope = middle_scope, value = value2},
 			{scope = else_scope, value = value3},
 		}
-		local result = mutation_solver(mutations, else_scope, upvalue)
+		local result = mutator.SolveMutations(mutations, else_scope, upvalue)
 		assert(
 			result:GetData() == "else_value",
 			"Expected else_value but got " .. tostring(result)
@@ -70,7 +68,7 @@ local function test_mutation_solver()
 			{scope = scope3, value = value3},
 			{scope = scope4, value = value4},
 		}
-		local result = mutation_solver(mutations, scope4, upvalue)
+		local result = mutator.SolveMutations(mutations, scope4, upvalue)
 		assert(result:GetData() == "value4", "Expected value4 but got " .. tostring(result))
 	end
 
@@ -87,7 +85,7 @@ local function test_mutation_solver()
 		local mutations = {
 			{scope = scope, value = union},
 		}
-		local result = mutation_solver(mutations, scope, upvalue)
+		local result = mutator.SolveMutations(mutations, scope, upvalue)
 		assert(result ~= nil, "Expected non-nil result")
 	end
 
@@ -116,7 +114,7 @@ local function test_mutation_solver()
 			{scope = scope1, value = value1},
 			{scope = scope2, value = value2},
 		}
-		local result = mutation_solver(mutations, scope2, upvalue)
+		local result = mutator.SolveMutations(mutations, scope2, upvalue)
 		assert(result ~= nil, "Expected non-nil result")
 	end
 
@@ -153,7 +151,7 @@ local function test_mutation_solver()
 			{scope = scope1, value = value1},
 			{scope = scope2, value = value2},
 		}
-		local result = mutation_solver(mutations, scope2, upvalue)
+		local result = mutator.SolveMutations(mutations, scope2, upvalue)
 		assert(result:GetData() == "value2", "Expected value2 but got " .. tostring(result))
 	end
 
@@ -172,7 +170,7 @@ local function test_mutation_solver()
 			{scope = scope1, value = value1, from_tracking = true},
 			{scope = scope2, value = value2, from_tracking = true},
 		}
-		local result = mutation_solver(mutations, scope2, upvalue)
+		local result = mutator.SolveMutations(mutations, scope2, upvalue)
 		assert(result:GetData() == "value2", "Expected value2 but got " .. tostring(result))
 	end
 
@@ -190,7 +188,7 @@ local function test_mutation_solver()
 			{scope = scope, value = func},
 			{scope = scope, value = any},
 		}
-		local result = mutation_solver(mutations, scope, upvalue)
+		local result = mutator.SolveMutations(mutations, scope, upvalue)
 		assert(result ~= nil, "Expected non-nil result")
 	end
 
@@ -218,7 +216,7 @@ local function test_mutation_solver()
 			{scope = scope, value = value},
 			{scope = else_scope, value = LString("else")},
 		}
-		local result = mutation_solver(mutations, else_scope, upvalue)
+		local result = mutator.SolveMutations(mutations, else_scope, upvalue)
 		assert(result ~= nil, "Expected non-nil result")
 	end
 
@@ -245,7 +243,7 @@ local function test_mutation_solver()
 			{scope = else_if_scope, value = value2},
 			{scope = else_scope, value = value3},
 		}
-		local result = mutation_solver(mutations, else_scope, upvalue)
+		local result = mutator.SolveMutations(mutations, else_scope, upvalue)
 		assert(result ~= nil, "Expected non-nil result")
 	end
 
@@ -274,7 +272,7 @@ local function test_mutation_solver()
 			{scope = middle_scope, value = value2},
 			{scope = else_scope, value = value3},
 		}
-		local result = mutation_solver(mutations, else_scope, upvalue)
+		local result = mutator.SolveMutations(mutations, else_scope, upvalue)
 		assert(
 			result:GetData() == "else_value",
 			"Expected else_value but got " .. tostring(result)
@@ -303,7 +301,7 @@ local function test_mutation_solver()
 			{scope = scope1, value = union2}, -- union with any
 			{scope = scope2, value = any}, -- any
 		}
-		local result = mutation_solver(mutations, scope2, upvalue)
+		local result = mutator.SolveMutations(mutations, scope2, upvalue)
 		assert(result ~= nil, "Expected non-nil result")
 	end
 
@@ -337,7 +335,7 @@ local function test_mutation_solver()
 			{scope = nested_scope, value = value3},
 			{scope = else_scope, value = value4},
 		}
-		local result = mutation_solver(mutations, else_scope, upvalue)
+		local result = mutator.SolveMutations(mutations, else_scope, upvalue)
 		assert(result ~= nil, "Expected non-nil result")
 	end
 
@@ -370,7 +368,7 @@ local function test_mutation_solver()
 			{scope = else_scope, value = value3},
 		}
 		-- This should use the else value as all previous mutations are in certain scopes
-		local result = mutation_solver(mutations, else_scope, upvalue)
+		local result = mutator.SolveMutations(mutations, else_scope, upvalue)
 		assert(
 			result:GetData() == "else_value",
 			"Expected else_value but got " .. tostring(result)
@@ -409,7 +407,7 @@ local function test_mutation_solver()
 			{scope = if_scope, value = value1},
 			{scope = else_scope, value = value3},
 		}
-		local result = mutation_solver(mutations, else_scope, upvalue)
+		local result = mutator.SolveMutations(mutations, else_scope, upvalue)
 		assert(result ~= nil, "Expected non-nil result")
 	end
 
@@ -442,7 +440,7 @@ local function test_mutation_solver()
 			{scope = scope3, value = value3},
 			{scope = else_scope, value = value4},
 		}
-		local result = mutation_solver(mutations, else_scope, upvalue)
+		local result = mutator.SolveMutations(mutations, else_scope, upvalue)
 		assert(result ~= nil, "Expected non-nil result")
 	end
 
@@ -479,7 +477,7 @@ local function test_mutation_solver()
 			{scope = middle_scope2, value = value3},
 			{scope = else_scope, value = value4},
 		}
-		local result = mutation_solver(mutations, else_scope, upvalue)
+		local result = mutator.SolveMutations(mutations, else_scope, upvalue)
 		assert(result:GetData() == "value4", "Expected value4 but got " .. tostring(result))
 	end
 
@@ -510,7 +508,7 @@ local function test_mutation_solver()
 			{scope = scope1, value = value1},
 			{scope = scope2, value = value2},
 		}
-		local result = mutation_solver(mutations, scope2, upvalue)
+		local result = mutator.SolveMutations(mutations, scope2, upvalue)
 		assert(result ~= nil, "Expected non-nil result")
 	end
 
@@ -546,9 +544,9 @@ local function test_mutation_solver()
 			{scope = if_scope, value = value1},
 			{scope = else_scope, value = value2},
 		}
-		local result = mutation_solver(mutations, else_scope, upvalue)
+		local result = mutator.SolveMutations(mutations, else_scope, upvalue)
 		assert(result ~= nil, "Expected non-nil result")
 	end
 end
 
-test_mutation_solver() --if HOTRELOAD then print(coverage.Collect("mutation_solver")) end
+test_mutation_solver() --if HOTRELOAD then print(coverage.Collect("mutator.SolveMutations")) end

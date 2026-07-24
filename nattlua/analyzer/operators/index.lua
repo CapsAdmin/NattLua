@@ -108,7 +108,7 @@ local function index_table(analyzer, self, key, raw)
 		if val.Type == "union" then val = val:Copy(nil, true) end
 
 		--TODO: this seems wrong, but it's for deferred analysis maybe not clearing up muations?
-		if self:HasMutations() then
+		if self.mutator:HasMutations() then
 			local tracked = self:GetMutatedValue(key, analyzer:GetScope())
 
 			if tracked then
