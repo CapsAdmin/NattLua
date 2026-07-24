@@ -7,29 +7,27 @@ local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local Any = require("nattlua.types.any").Any
 local Function = require("nattlua.types.function").Function
-local table_clear = require("nattlua.other.tablex").clear
 local shared = require("nattlua.types.shared")
 
-local function mutate_type(self, i, arg, contract, arguments, func, identifier_index)
+local function push_contract(self, i, arg, contract, arguments)
 	local env = self:GetScope():GetNearestFunctionScope()
 	arg:PushContract(contract)
 	arg.mutator:Clear()
-	table.insert(env.mutated_types, {arg = arg, mutations = arg.mutator:Get()})
+	table.insert(env.contract_stack, arg)
 	arguments:Set(i, arg)
 end
 
-local function restore_mutated_types(self)
+local function pop_contracts(self)
 	local env = self:GetScope():GetNearestFunctionScope()
 
-	if not env.mutated_types[1] then return end
+	if not env.contract_stack[1] then return end
 
-	for _, data in ipairs(env.mutated_types) do
-		data.arg:PopContract()
-		data.arg.mutator:Set(data.mutations)
-		self:MutateUpvalue(data.arg:GetUpvalue(), data.arg)
+	for _, arg in ipairs(env.contract_stack) do
+		arg:PopContract()
+		arg.mutator:Clear()
 	end
 
-	table_clear(env.mutated_types)
+	table.clear(env.contract_stack)
 end
 
 local function can_wrap_table_argument(contract)
@@ -361,7 +359,7 @@ return function(self, obj, input)
 				arg:GetUpvalue() and
 				not obj:IsInputModifier(identifier_index, "ref")
 			then
-				mutate_type(self, i, arg, contract, input, obj, identifier_index)
+				push_contract(self, i, arg, contract, input)
 			elseif not obj:IsInputModifier(identifier_index, "ref") then
 				local doit = true
 
@@ -496,7 +494,7 @@ return function(self, obj, input)
 	self:PopScope()
 	self.narrowing_store:ClearScopedTrackedObjects(scope)
 	self.narrowing_store:PopStashedTrackedChanges()
-	restore_mutated_types(self)
+	pop_contracts(self)
 
 	-- if the function is untyped we warn about untyped arguments
 	-- and we also merge merge the input into the function's input signature

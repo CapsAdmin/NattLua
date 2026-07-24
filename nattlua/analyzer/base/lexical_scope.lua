@@ -503,7 +503,7 @@ function META.New(parent, upvalue_position, obj)
 		missing_types = false,
 		lua_silent_error = false,
 		certain_return = false,
-		mutated_types = {},
+		contract_stack = {},
 		ParentList = {},
 		ParentMap = {},
 		Root = false,
