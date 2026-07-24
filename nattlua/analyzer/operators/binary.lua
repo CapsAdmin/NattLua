@@ -15,6 +15,9 @@ local False = require("nattlua.types.symbol").False
 local Nil = require("nattlua.types.symbol").Nil
 local LNumber = require("nattlua.types.number").LNumber
 local LNumberRange = require("nattlua.types.range").LNumberRange
+local math_max = math.max
+local math_min = math.min
+local math_huge = math.huge
 local shared = require("nattlua.types.shared")
 local error_messages = require("nattlua.error_messages")
 local ARITHMETIC_OPS = {
@@ -77,128 +80,167 @@ local function logical_cmp_cast(val--[[#: boolean | nil]], err--[[#: string | ni
 	end
 end
 
-local function number_comparison(self, l, r, op)
-	-- For relational operators, the constraint store now handles narrowing
-	-- (both discrete unions and ranges). Skip the old intersect_comparison
-	-- system to avoid conflicts.
-	local is_relational = op == "<" or op == ">" or op == "<=" or op == ">="
+local REL_CMP = {
+	["<"] = {
+		fn = function(a, b)
+			return a < b
+		end,
+		always_true = function(lm, lx, rm, rx)
+			return lx < rm
+		end,
+		always_false = function(lm, lx, rm, rx)
+			return lm >= rx
+		end,
+	},
+	[">"] = {
+		fn = function(a, b)
+			return a > b
+		end,
+		always_true = function(lm, lx, rm, rx)
+			return lm > rx
+		end,
+		always_false = function(lm, lx, rm, rx)
+			return lx <= rm
+		end,
+	},
+	["<="] = {
+		fn = function(a, b)
+			return a <= b
+		end,
+		always_true = function(lm, lx, rm, rx)
+			return lx <= rm
+		end,
+		always_false = function(lm, lx, rm, rx)
+			return lm > rx
+		end,
+	},
+	[">="] = {
+		fn = function(a, b)
+			return a >= b
+		end,
+		always_true = function(lm, lx, rm, rx)
+			return lm >= rx
+		end,
+		always_false = function(lm, lx, rm, rx)
+			return lx < rm
+		end,
+	},
+}
 
-	if is_relational then
-		-- Track relational constraint for non-union types (ranges, literals)
+local function get_range_bounds(t)
+	if t.Type == "range" then return t:GetMin(), t:GetMax() end
+
+	return t:GetData(), t:GetData()
+end
+
+local function merge_ranges(min1, max1, min2, max2)
+	if max1 < min1 and max2 < min2 then return nil, nil end
+
+	if max1 < min1 then return min2, max2 end
+
+	if max2 < min2 then return min1, max1 end
+
+	return math_min(min1, min2), math_max(max1, max2)
+end
+
+local function build_number_type(min, max)
+	if not min or not max then return nil end
+
+	return min == max and LNumber(min) or LNumberRange(min, max)
+end
+
+local function extract_bounds(t)
+	local min = t.Type == "range" and t:GetMin() or t.Data or -math_huge
+	local max = t.Type == "range" and t:GetMax() or t.Data or not t.Data and math_huge or min
+	return min, max
+end
+
+local function intersect_comparison(l, r, op)
+	if l:IsNan() or r:IsNan() then return l, r end
+
+	local a_min, a_max = extract_bounds(l)
+	local b_min, b_max = extract_bounds(r)
+	local at, am, af, afm, bf, bfm
+
+	if a_max < b_min or b_max < a_min then
+		-- A == B is impossible (non-overlapping ranges)
+		at, am, af, afm, bf, bfm = nil, nil, a_min, a_max, b_min, b_max
+	elseif a_min == a_max and b_min == b_max and a_min == b_min then
+		-- A == B is always true (both are the same single value)
+		at, am, af, afm, bf, bfm = a_min, a_max, nil, nil, nil, nil
+	else
+		-- TRUE branch (A == B): intersection of the two ranges
+		at, am = math_max(a_min, b_min), math_min(a_max, b_max)
+		-- FALSE branch (A != B): values outside the overlap, merged via helper
+		af, afm = merge_ranges(a_min, math_min(a_max, b_min - 1), math_max(a_min, b_max + 1), a_max)
+		bf, bfm = merge_ranges(b_min, math_min(b_max, a_min - 1), math_max(b_min, a_max + 1), b_max)
+	end
+
+	local a_true = build_number_type(at, am)
+	local a_false = build_number_type(af, afm)
+	local b_true = build_number_type(bf, bfm)
+	local b_false = build_number_type(bf, bfm)
+
+	if op == "~=" then
+		-- ~= is the inverse of ==: swap true/false branches
+		return a_false, a_true, b_false, b_true
+	end
+
+	return a_true, a_false, b_true, b_false
+end
+
+local function number_comparison(self, l, r, op)
+	if REL_CMP[op] then
 		if self.constraint_store then
-			local l_upvalue = l:GetUpvalue()
-			local r_upvalue = r:GetUpvalue()
-			self.constraint_store:TrackRelationalCorrelation(op, l_upvalue, r_upvalue, l, r)
+			self.constraint_store:TrackRelationalCorrelation(op, l:GetUpvalue(), r:GetUpvalue(), l, r)
 		end
 
-		-- Determine result if both are literals
+		-- Literal constant folding
 		local l_val = l:IsLiteral() and l:GetData()
 		local r_val = r:IsLiteral() and r:GetData()
 
-		if
-			l_val ~= nil and
-			r_val ~= nil and
-			type(l_val) == "number" and
-			type(r_val) == "number"
-		then
-			if op == "<" then
-				return l_val < r_val and True() or False()
-			elseif op == ">" then
-				return l_val > r_val and True() or False()
-			elseif op == "<=" then
-				return l_val <= r_val and True() or False()
-			elseif op == ">=" then
-				return l_val >= r_val and True() or False()
-			end
+		if l_val and r_val then
+			return REL_CMP[op].fn(l_val, r_val) and True() or False()
 		end
 
-		-- Range-based constant folding: determine if comparison is always true/false
-		local function get_range_bounds(t)
-			if t.Type == "range" then
-				return t:GetMin(), t:GetMax()
-			elseif t:IsLiteral() and type(t:GetData()) == "number" then
-				local v = t:GetData()
-				return v, v
-			end
-
-			return nil, nil
-		end
-
+		-- Range-based constant folding
 		local l_min, l_max = get_range_bounds(l)
 		local r_min, r_max = get_range_bounds(r)
 
-		if l_min ~= nil and l_max ~= nil and r_min ~= nil and r_max ~= nil then
-			-- Both sides have known bounds, check if result is determinable
-			local always_true, always_false = false, false
+		if l_min and r_min then
+			local rel = REL_CMP[op]
 
-			if op == "<" then
-				-- l < r: always true if l_max < r_min, always false if l_min >= r_max
-				if l_max < r_min then
-					always_true = true
-				elseif l_min >= r_max then
-					always_false = true
-				end
-			elseif op == ">" then
-				-- l > r: always true if l_min > r_max, always false if l_max <= r_min
-				if l_min > r_max then
-					always_true = true
-				elseif l_max <= r_min then
-					always_false = true
-				end
-			elseif op == "<=" then
-				-- l <= r: always true if l_max <= r_min, always false if l_min > r_max
-				if l_max <= r_min then
-					always_true = true
-				elseif l_min > r_max then
-					always_false = true
-				end
-			elseif op == ">=" then
-				-- l >= r: always true if l_min >= r_max, always false if l_max < r_min
-				if l_min >= r_max then
-					always_true = true
-				elseif l_max < r_min then
-					always_false = true
-				end
-			end
+			if rel.always_true(l_min, l_max, r_min, r_max) then return True() end
 
-			if always_true then return True() end
-
-			if always_false then return False() end
+			if rel.always_false(l_min, l_max, r_min, r_max) then return False() end
 		end
 
 		return Boolean()
 	end
 
-	-- Track equality correlation for == and ~= (non-union path: ranges, literals)
-	if (op == "==" or op == "~=") and self.constraint_store then
-		local l_upvalue = l:GetUpvalue()
-		local r_upvalue = r:GetUpvalue()
-		self.constraint_store:TrackEqualityCorrelation(op, l_upvalue, r_upvalue, l, r)
+	-- Equality operators: == and ~=
+	if self.constraint_store then
+		self.constraint_store:TrackEqualityCorrelation(op, l:GetUpvalue(), r:GetUpvalue(), l, r)
 	end
 
-	-- Old tracking system still needed for GetTrackedUpvalue to find narrowed values
-	local intersect_comparison = require("nattlua.analyzer.intersect_comparison")
-	local invert = op == "~=" or op == "!="
-	local nl, nr, nl2, nr2 = intersect_comparison(l, r, op, invert)
+	local nl, nr, nl2, nr2 = intersect_comparison(l, r, op)
 
-	if nl and nr then self.narrowing_store:TrackUpvalueUnion(l, nl, nr, nil, self) end
+	if nl and nr then
+		self.narrowing_store:TrackUpvalueUnion(l, nl, nr, nil, self)
+	end
 
 	if nl2 and nr2 then
 		self.narrowing_store:TrackUpvalueUnion(r, nl2, nr2, nil, self)
 	end
 
 	-- NaN handling: NaN == NaN is false, NaN ~= NaN is true
-	if nl and nr then
-		if nl:IsNan() or nr:IsNan() then
-			if op == "~=" then return logical_cmp_cast(true) end
-
-			return logical_cmp_cast(false)
-		end
-
-		return logical_cmp_cast(nil)
-	elseif nl then
-		return logical_cmp_cast(true)
+	if nl and nr and (nl:IsNan() or nr:IsNan()) then
+		return logical_cmp_cast(op == "~=")
 	end
+
+	if nl and nr then return logical_cmp_cast(nil) end
+
+	if nl then return logical_cmp_cast(true) end
 
 	return logical_cmp_cast(false)
 end
