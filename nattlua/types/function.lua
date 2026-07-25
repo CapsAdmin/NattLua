@@ -24,6 +24,7 @@ local META = require("nattlua.types.base")()
 --[[#type TFunction.OutputModifiers = Map<|number, Map<|string, any|>|> | false]]
 META.Type = "function"
 META:IsSet("Called", false)
+META:GetSet("CallCount", 0)
 META:IsSet("ExplicitInputSignature", false)
 META:IsSet("ExplicitOutputSignature", false)
 META:GetSet("InputSignature", false--[[# as TTuple | false]])

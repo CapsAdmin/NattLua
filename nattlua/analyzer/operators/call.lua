@@ -166,6 +166,7 @@ do
 	local function call_function_internal(self, obj, input)
 		-- mark the object as called so the unreachable code step won't call it
 		obj:SetCalled(true)
+		obj:SetCallCount(obj:GetCallCount() + 1)
 
 		-- infer any uncalled functions in the arguments to get their return type
 		for i, b in ipairs(input:GetData()) do
@@ -242,7 +243,6 @@ do
 		end
 
 		if
-			not analyzer.config.should_crawl_untyped_functions and
 			analyzer:IsRuntime() and
 			self:IsCalled() and
 			not self:HasReferenceTypes()
@@ -251,8 +251,25 @@ do
 			self:GetFunctionBodyNode().environment == "runtime" and
 			not self:GetAnalyzerFunction()
 			and
-			not self:IsExplicitInputSignature()
+			(
+				not self:IsExplicitInputSignature() and
+				(
+					not analyzer.config.should_crawl_untyped_functions or
+					self:GetCallCount() >= 50
+				)
+				or
+				false -- explicit input sig handled above
+			)
 		then
+			if
+				analyzer.config.should_crawl_untyped_functions and
+				self:GetCallCount() == 50
+			then
+				analyzer:Warning(
+					error_messages.plain_error("deferred call: function analyzed 50 times, further calls will use cached result")
+				)
+			end
+
 			if self.scope and self.scope.throws then
 				analyzer:GetScope():CertainReturn()
 			end
