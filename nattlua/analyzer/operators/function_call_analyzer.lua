@@ -81,7 +81,7 @@ local function generate_combinations_iterative(argument_options)
 	return result
 end
 
-local max_combinations = 1000
+local max_combinations = 2000
 
 local function is_above_limit(argument_options)
 	local total = 1

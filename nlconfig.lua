@@ -330,6 +330,8 @@ do -- these override existing commands and should probably be made more generic
 					[[
 					_G.ARGS = {...}
 
+					require("nattlua.other.lua_compat")
+
 					require("nattlua.syntax.runtime")
 					require("nattlua.syntax.typesystem")
 					require("nattlua.types.range")

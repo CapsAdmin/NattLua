@@ -501,7 +501,7 @@ do
 		for _, data in ipairs(tracked_objects) do
 			local obj = collect_truthy_values(data.stack)
 
-			if not obj then continue end
+			if not obj then goto continue end
 
 			if data.kind == "upvalue" then
 				obj:SetUpvalue(data.upvalue)
@@ -509,6 +509,8 @@ do
 			elseif data.kind == "table" then
 				analyzer:MutateTable(data.obj, data.key, obj, true)
 			end
+
+			::continue::
 		end
 	end
 end

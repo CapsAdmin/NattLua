@@ -47,7 +47,7 @@ function META:ApplyEqualityNarrowing(analyzer)
 	local processed = {}
 
 	for upvalue, class in pairs(self.equivalence) do
-		if processed[class] then continue end
+		if processed[class] then goto continue end
 
 		processed[class] = true
 		-- Collect all upvalue members in this class (skip literals)
@@ -56,7 +56,7 @@ function META:ApplyEqualityNarrowing(analyzer)
 
 		for member in pairs(class) do
 			-- Read current domain from upvalue, not constraint store
-			if member.Type ~= "upvalue" then continue end
+			if member.Type ~= "upvalue" then goto continue end
 
 			local domain = member:GetValue() or self.domains[member]
 
@@ -66,7 +66,7 @@ function META:ApplyEqualityNarrowing(analyzer)
 			end
 		end
 
-		if #members <= 1 then continue end
+		if #members <= 1 then goto continue end
 
 		-- Compute intersection of all domains
 		local intersection = nil
@@ -107,11 +107,13 @@ function META:ApplyEqualityNarrowing(analyzer)
 				narrowed[member] = intersection
 			end
 		end
+
+		::continue::
 	end
 
 	-- Also check equality constraints where one side is a literal
 	for _, c in pairs(self.constraints) do
-		if c.type ~= "equality" then continue end
+		if c.type ~= "equality" then goto continue end
 
 		local a_is_upvalue = c.a and c.a.Type == "upvalue"
 		local b_is_upvalue = c.b and c.b.Type == "upvalue"
@@ -153,6 +155,8 @@ function META:ApplyEqualityNarrowing(analyzer)
 				end
 			end
 		end
+
+		::continue::
 	end
 
 	-- Mutate upvalues with narrowed domains so the changes are visible
@@ -179,7 +183,7 @@ function META:ApplyRelationalNarrowing(analyzer)
 
 	-- For each relational constraint, narrow both domains
 	for _, c in pairs(self.constraints) do
-		if c.type ~= "relational" then continue end
+		if c.type ~= "relational" then goto continue end
 
 		local domain_a = self:GetEffectiveDomain(c.a)
 		-- For literals (not upvalues), use the value directly
@@ -212,7 +216,7 @@ function META:ApplyRelationalNarrowing(analyzer)
 				narrowed[c.a] = nil
 			end
 
-			continue
+			goto continue
 		end
 
 		if b_is_upvalue and not a_is_upvalue and domain_b then
@@ -238,11 +242,11 @@ function META:ApplyRelationalNarrowing(analyzer)
 				narrowed[c.b] = nil
 			end
 
-			continue
+			goto continue
 		end
 
 		-- Both sides are upvalues with domains
-		if not domain_a or not domain_b then continue end
+		if not domain_a or not domain_b then goto continue end
 
 		local new_a, new_b = self:NarrowByRelational(domain_a, domain_b, c.op)
 
@@ -275,6 +279,8 @@ function META:ApplyRelationalNarrowing(analyzer)
 				end
 			end
 		end
+
+		::continue::
 	end
 
 	return narrowed
@@ -288,7 +294,7 @@ function META:ApplyRelationalNarrowingElse(analyzer)
 	local upvalue_constraints = {}
 
 	for _, c in pairs(self.constraints) do
-		if c.type ~= "relational" then continue end
+		if c.type ~= "relational" then goto continue end
 
 		local a_is_upvalue = c.a and c.a.Type == "upvalue"
 		local b_is_upvalue = c.b and c.b.Type == "upvalue"
@@ -302,13 +308,15 @@ function META:ApplyRelationalNarrowingElse(analyzer)
 
 			table.insert(upvalue_constraints[c.b], {op = META:NegateRelationalOp(c.op), literal = c.a})
 		end
+
+		::continue::
 	end
 
 	-- For each upvalue with relational constraints, narrow using negated constraints
 	for upvalue, constraints in pairs(upvalue_constraints) do
 		local current_domain = self:GetEffectiveDomain(upvalue)
 
-		if not current_domain then continue end
+		if not current_domain then goto continue end
 
 		-- Narrow the current domain using each negated constraint
 		local narrowed_domain = current_domain
@@ -326,7 +334,8 @@ function META:ApplyRelationalNarrowingElse(analyzer)
 			elseif new_domain then
 				narrowed_domain = new_domain
 			end
-		-- else: no change, keep current narrowed_domain
+
+			::continue::
 		end
 
 		if narrowed_domain then
@@ -348,7 +357,7 @@ function META:ApplyRelationalNarrowingElse(analyzer)
 			local truthy_domain = current_domain
 
 			for _, c in pairs(self.constraints) do
-				if c.type ~= "relational" then continue end
+				if c.type ~= "relational" then goto continue end
 
 				local a_is_uv = c.a and c.a == upvalue
 				local b_is_uv = c.b and c.b == upvalue
@@ -375,6 +384,8 @@ function META:ApplyRelationalNarrowingElse(analyzer)
 
 					if nd then truthy_domain = nd end
 				end
+
+				::continue::
 			end
 
 			if truthy_domain then
@@ -420,6 +431,8 @@ function META:ApplyRelationalNarrowingElse(analyzer)
 				end
 			end
 		end
+
+		::continue::
 	end
 
 	return narrowed
@@ -717,10 +730,12 @@ function META:NarrowDomainByLiteral(domain, literal_val, op)
 					new_union:AddType(elem)
 				end
 
-				continue
+				goto continue
 			end
 
 			if rel_holds(elem_num, lit_num, op) then new_union:AddType(elem) end
+
+			::continue::
 		end
 
 		if changed or new_union:GetCardinality() < (#data) then return new_union end
@@ -859,20 +874,22 @@ function META:NarrowUnionByRelational(domain_a, domain_b, op)
 		if not a_val then
 			new_a:AddType(a_elem)
 
-			continue
+			goto continue
 		end
 
 		for _, b_elem in ipairs(b_data) do
 			local b_val = get_num(b_elem)
 
-			if not b_val then continue end
+			if not b_val then goto continue end
 
 			if rel_holds(a_val, b_val, op) then
 				new_a:AddType(a_elem)
 
-				continue
+				goto continue
 			end
 		end
+
+		::continue::
 	end
 
 	-- Filter domain_b: keep only values where a op b holds for at least one a
@@ -884,20 +901,22 @@ function META:NarrowUnionByRelational(domain_a, domain_b, op)
 		if not b_val then
 			new_b:AddType(b_elem)
 
-			continue
+			goto continue
 		end
 
 		for _, a_elem in ipairs(a_data) do
 			local a_val = get_num(a_elem)
 
-			if not a_val then continue end
+			if not a_val then goto continue end
 
 			if rel_holds(a_val, b_val, op) then
 				new_b:AddType(b_elem)
 
-				continue
+				goto continue
 			end
 		end
+
+		::continue::
 	end
 
 	local a_changed = new_a:GetCardinality() < (#a_data)
@@ -929,7 +948,7 @@ function META:NarrowUnionRangeByRelational(union_a, range_b, op)
 		if not a_val then
 			new_a:AddType(a_elem)
 
-			continue
+			goto continue
 		end
 
 		-- Check if a_val op [b_min..b_max] can hold
@@ -953,6 +972,8 @@ function META:NarrowUnionRangeByRelational(union_a, range_b, op)
 
 			if max_matching == nil or a_val > max_matching then max_matching = a_val end
 		end
+
+		::continue::
 	end
 
 	-- Narrow range_b based on matching union values
@@ -1176,7 +1197,7 @@ function META:Narrow(upvalue, new_domain, visited)
 	for _, cid in ipairs(deps) do
 		local c = self.constraints[cid]
 
-		if not c then continue end
+		if not c then goto continue end
 
 		if c.type == "equality" then
 			local other = (c.a == upvalue) and c.b or c.a
@@ -1216,12 +1237,14 @@ function META:Narrow(upvalue, new_domain, visited)
 				if new_a or new_b then changed = true end
 			end
 		end
+
+		::continue::
 	end
 
 	return changed
 end
 
--- Propagate all domains until fixed point (no more changes)
+-- Propagate all domains until fixed point
 -- This handles chains like: x==y, y==z => x+y+z narrows correctly
 function META:PropagateUntilFixedPoint(analyzer)
 	local max_iterations = 50
@@ -1231,7 +1254,7 @@ function META:PropagateUntilFixedPoint(analyzer)
 
 		-- Check all arithmetic constraints
 		for _, c in pairs(self.constraints) do
-			if c.type ~= "arithmetic" then continue end
+			if c.type ~= "arithmetic" then goto continue end
 
 			-- Use GetEffectiveDomain to fall back to upvalue:GetValue() when domain is nil
 			local left_domain = self:GetEffectiveDomain(c.left)
@@ -1246,20 +1269,20 @@ function META:PropagateUntilFixedPoint(analyzer)
 				end
 			end
 
-			if not left_domain or not right_domain then continue end
+			if not left_domain or not right_domain then goto continue end
 
 			-- Skip if inputs haven't changed since last computation
 			if c.left_domain == left_domain and c.right_domain == right_domain then
-				continue
+				goto continue
 			end
 
 			-- Check if any operand changed since last computation
-			if not c.dirty then continue end
+			if not c.dirty then goto continue end
 
 			-- Recompute
 			local new_result = self:ComputeArithmetic(c)
 
-			if not new_result then continue end
+			if not new_result then goto continue end
 
 			local current_result = self.domains[c.result]
 
@@ -1291,7 +1314,7 @@ function META:PropagateUntilFixedPoint(analyzer)
 					end
 				end
 
-				if same then continue end
+				if same then goto continue end
 			end
 
 			-- Update result domain in constraint store
@@ -1334,13 +1357,15 @@ function META:PropagateUntilFixedPoint(analyzer)
 					end
 				end
 			end
+
+			::continue::
 		end
 
 		if not any_changed then break end
 	end
 end
 
--- Check if two upvalues are equality-correlated (same equivalence class)
+-- Check if two upvalues are equality-correlated
 function META:AreEqualityCorrelated(a, b)
 	if not a or not b then return false end
 
@@ -1360,11 +1385,13 @@ function META:AreInequalityCorrelated(a, b)
 	for _, cid in ipairs(deps_a) do
 		local c = self.constraints[cid]
 
-		if not c then continue end
+		if not c then goto continue end
 
 		if (c.a == a and c.b == b) or (c.a == b and c.b == a) then
 			if c.type == "inequality" then return true end
 		end
+
+		::continue::
 	end
 
 	return false
@@ -1544,7 +1571,7 @@ function META:QueryRelationship(a, b)
 	for _, cid in ipairs(deps_a) do
 		local c = self.constraints[cid]
 
-		if not c then continue end
+		if not c then goto continue end
 
 		if (c.a == a and c.b == b) or (c.a == b and c.b == a) then
 			if c.type == "equality" then
@@ -1553,6 +1580,8 @@ function META:QueryRelationship(a, b)
 				return false
 			end
 		end
+
+		::continue::
 	end
 
 	return nil
@@ -1739,21 +1768,21 @@ end
 -- Recompute all arithmetic dependencies (uses ComputeArithmetic which handles correlation)
 function META:RecomputeAllArithmetic(analyzer)
 	for _, c in pairs(self.constraints) do
-		if c.type ~= "arithmetic" then continue end
+		if c.type ~= "arithmetic" then goto continue end
 
-		if not c.left or not c.right or not c.result then continue end
+		if not c.left or not c.right or not c.result then goto continue end
 
 		-- Use effective domain (narrowed by constraint store if available)
 		local left_domain = self:GetEffectiveDomain(c.left)
 		local right_domain = self:GetEffectiveDomain(c.right)
 
-		if not left_domain or not right_domain then continue end
+		if not left_domain or not right_domain then goto continue end
 
 		-- Use ComputeArithmetic which handles equality correlation
 		local new_result = self:ComputeArithmetic(c)
 
 		if not new_result or type(new_result) ~= "table" or new_result.Type ~= "union" then
-			continue
+			goto continue
 		end
 
 		if new_result:GetCardinality() > 0 and c.result.Mutate then
@@ -1761,6 +1790,8 @@ function META:RecomputeAllArithmetic(analyzer)
 
 			if scope then c.result:Mutate(new_result, scope) end
 		end
+
+		::continue::
 	end
 end
 
@@ -2084,23 +2115,25 @@ do
 		for _, cid in ipairs(deps) do
 			local c = self.constraints[cid]
 
-			if not c or c.type ~= "arithmetic" then continue end
+			if not c or c.type ~= "arithmetic" then goto continue end
 
 			-- Use effective domain (includes narrowed domains from constraint store)
 			local left_domain = self:GetEffectiveDomain(c.left)
 			local right_domain = c.right and self:GetEffectiveDomain(c.right)
 
-			if not left_domain or (c.right and not right_domain) then continue end
+			if not left_domain or (c.right and not right_domain) then goto continue end
 
 			-- Compute new result domain using direct arithmetic
 			local new_result = self:ComputeArithmetic(c)
 
-			if not new_result then continue end
+			if not new_result then goto continue end
 
 			-- Update the constraint store's domain for the result
 			self.domains[c.result] = new_result
 			-- Also propagate to table fields that depend on the result
 			self:PropagateTableFieldNarrowing(c.result)
+
+			::continue::
 		end
 
 		-- Also propagate to table fields that depend on this upvalue
@@ -2127,9 +2160,9 @@ function META:ApplyEarlyReturnNarrowing(analyzer, original_values, returning_bra
 	local narrowed_upvalues = {} -- upvalue -> new domain
 	-- Process equality constraints with literals (only "==", not "~=")
 	for _, c in pairs(self.constraints) do
-		if c.type ~= "equality" then continue end
+		if c.type ~= "equality" then goto continue end
 
-		if (c.op or "==") ~= "==" then continue end
+		if (c.op or "==") ~= "==" then goto continue end
 
 		local a_is_upvalue = c.a and c.a.Type == "upvalue"
 		local b_is_upvalue = c.b and c.b.Type == "upvalue"
@@ -2140,25 +2173,27 @@ function META:ApplyEarlyReturnNarrowing(analyzer, original_values, returning_bra
 		elseif b_is_upvalue and not a_is_upvalue then
 			upvalue, literal = c.b, c.a
 		else
-			continue
+			goto continue
 		end
 
 		local current_domain = self:GetEffectiveDomain(upvalue)
 
 		if not current_domain then current_domain = original_values[upvalue] end
 
-		if not current_domain then continue end
+		if not current_domain then goto continue end
 
 		-- Truthy branch: x == literal was true → x IS literal
 		-- After return: exclude literal from domain
 		local complement = self:RemoveTypesFromDomain(current_domain, {literal})
 
 		if complement then narrowed_upvalues[upvalue] = complement end
+
+		::continue::
 	end
 
 	-- Process relational constraints: apply negated operator for complement narrowing
 	for _, c in pairs(self.constraints) do
-		if c.type ~= "relational" then continue end
+		if c.type ~= "relational" then goto continue end
 
 		local a_is_upvalue = c.a and c.a.Type == "upvalue"
 		local b_is_upvalue = c.b and c.b.Type == "upvalue"
@@ -2168,7 +2203,7 @@ function META:ApplyEarlyReturnNarrowing(analyzer, original_values, returning_bra
 
 			if not current_domain then current_domain = original_values[c.a] end
 
-			if not current_domain then continue end
+			if not current_domain then goto continue end
 
 			-- Negate the operator: truthy was x >= 5, complement is x < 5
 			local neg_op = META:NegateRelationalOp(c.op)
@@ -2185,7 +2220,7 @@ function META:ApplyEarlyReturnNarrowing(analyzer, original_values, returning_bra
 
 			if not current_domain then current_domain = original_values[c.b] end
 
-			if not current_domain then continue end
+			if not current_domain then goto continue end
 
 			-- Invert then negate: for "x >= 5" where x is on right side
 			local inv_op = META:InvertRelationalOp(c.op)
@@ -2198,6 +2233,8 @@ function META:ApplyEarlyReturnNarrowing(analyzer, original_values, returning_bra
 				narrowed_upvalues[c.b] = narrowed
 			end
 		end
+
+		::continue::
 	end
 
 	-- Apply narrowed domains

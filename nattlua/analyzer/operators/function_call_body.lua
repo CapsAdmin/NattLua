@@ -1,6 +1,7 @@
 local ipairs = ipairs
 local table = _G.table
 local error_messages = require("nattlua.error_messages")
+local tablex = require("nattlua.other.tablex")
 local Tuple = require("nattlua.types.tuple").Tuple
 local Table = require("nattlua.types.table").Table
 local Union = require("nattlua.types.union").Union
@@ -27,7 +28,7 @@ local function pop_contracts(self)
 		arg.mutator:Clear()
 	end
 
-	table.clear(env.contract_stack)
+	tablex.clear(env.contract_stack)
 end
 
 local function can_wrap_table_argument(contract)
