@@ -572,7 +572,11 @@ return function(META--[[#: any]])
 				code = ("\n"):rep(line - 1) .. code
 			end
 
-			local func, err = loadstring(code, node.Code:GetName() .. ":" .. line)
+			local name = node.Code:GetName()
+
+			if name:sub(1, 1) ~= "@" and name:sub(1, 1) ~= "=" then name = "@" .. name end
+
+			local func, err = loadstring(code, name .. ":" .. line)
 
 			if not func then
 				self:Error("error compiling debug code: $1", start_token, stop_token, err)
