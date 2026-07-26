@@ -82,7 +82,7 @@ type Modules["jit.util"] = {
 	-- Retrieves LuaJIT information about a given function, similarly to debug.getinfo
 	funcinfo = function=(Function, position: number | nil)>(jit_util_funcinfo),
 	-- Get bytecode instruction at given position
-	funcbc = function=(func: Function, pc: number)>(number, number), -- returns (ins, m)
+	funcbc = function=(func: Function, pc: number)>(nil | number, nil | number), -- returns (ins, m) or (nil, nil)
 	-- Get upvalue name for function
 	funcuvname = function=(func: Function, index: number)>(nil | string),
 	-- Get function constant
