@@ -141,9 +141,12 @@ local function process_type(key, obj, is_typedef, mode)
 		end
 	end
 
-	if mode == "cdef" and not is_typedef then
-		local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
-		analyzer:NewIndexOperator(C_DECLARATIONS(), key, obj)
+	local analyzer = assert(analyzer_context:GetCurrentAnalyzer(), "no analyzer in context")
+
+	if analyzer:IsRuntime() then
+		if mode == "cdef" and not is_typedef then
+			analyzer:NewIndexOperator(C_DECLARATIONS(), key, obj)
+		end
 	end
 
 	return obj
