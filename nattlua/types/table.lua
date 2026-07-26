@@ -1122,6 +1122,7 @@ function META:HasLiteralKeys()
 
 	if
 		contract and
+		contract.Type == "table" and
 		contract ~= self and
 		not (
 			contract

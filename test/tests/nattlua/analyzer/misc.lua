@@ -739,3 +739,12 @@ analyze[[
 		local x = jit.vmdef
 	end
 ]]
+analyze[[
+    local function f(t: {x = number} | nil)                                                                                                                                                                       
+        if t then                                                                                                                                                                                                   
+            for k, v in pairs(t) do 
+            end                                                                                                                                                                               
+        end                                                                                                                                                                                                         
+    end                                                                                                                                                                                                           
+    f({x = 1})
+]]
