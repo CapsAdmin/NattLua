@@ -478,14 +478,19 @@ do
 	local function collect_truthy_values(stack)
 		if not stack then return end
 
+		local top_truthy = stack[#stack].truthy
+
+		if top_truthy and top_truthy.Type == "range" then
+			return top_truthy:Copy()
+		end
+
+		if not top_truthy then return end
+
 		local values = {}
 
-		if stack[#stack].truthy and stack[#stack].truthy.Type == "range" then
-			values[1] = stack[#stack].truthy:Copy()
-		else
-			for _, entry in ipairs(stack) do
-				if entry.truthy then table.insert(values, entry.truthy) end
-			end
+		for _, entry in ipairs(stack) do
+			-- Skip entries that were already applied by ApplyMutationsAfterStatement
+			if entry.truthy and not entry.applied then table.insert(values, entry.truthy) end
 		end
 
 		if #values == 0 then return end
@@ -540,7 +545,7 @@ do
 						if data.kind == "upvalue" then
 							local union = analyzer:GetMutatedUpvalue(data.upvalue)
 
-							if union.Type == "union" then
+							if union and union.Type == "union" then
 								for _, v in ipairs(data.stack) do
 									union:RemoveType(v.truthy)
 								end
@@ -554,13 +559,14 @@ do
 								(
 									data.stack[#data.stack].falsy.Type == "range" or
 									(
+										union and
 										union.Type == "union" and
 										union:IsEmpty()
 									)
 								)
 							then
 								analyzer:MutateUpvalue(data.upvalue, collect_falsy_values(data.stack), true)
-							else
+							elseif union then
 								analyzer:MutateUpvalue(data.upvalue, union, true)
 							end
 						elseif data.kind == "table" then
@@ -597,7 +603,7 @@ do
 	local function solve(data, scope, negate)
 		local stack = data.stack
 
-		if stack then
+		if stack and #stack > 0 then
 			local val
 
 			if negate and not (scope:IsElseConditionalScope() or stack[#stack].inverted) then
@@ -628,6 +634,11 @@ do
 					analyzer:MutateUpvalue(data.upvalue, val, true)
 				elseif data.kind == "table" then
 					analyzer:MutateTable(data.obj, data.key, val, true)
+				end
+
+				-- Mark the applied entry so it's not re-collected in ApplyMutationsInIf
+				if data.stack and #data.stack > 0 then
+					data.stack[#data.stack].applied = true
 				end
 			end
 		end

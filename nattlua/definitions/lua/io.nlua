@@ -45,10 +45,11 @@ type io.stderr = File
 
 analyzer function io.write(...: ...string)
 	for i, v in ipairs({...}) do
-		if not v:IsLiteral() then return end
-	end
-
-	for i, v in ipairs({...}) do
-		io.write(v:GetData())
+		if v:IsLiteral() then
+			io.write(tostring(v:GetData()))
+		else
+			local str = tostring(v)
+			if str then io.write(str) end
+		end
 	end
 end

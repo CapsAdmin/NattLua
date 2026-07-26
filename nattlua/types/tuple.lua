@@ -110,7 +110,6 @@ end
 
 function META:Copy(map--[[#: Map<|any, TTuple|> | nil]], copy_tables--[[#: boolean | nil]])--[[#: TTuple]]
 	map = map or {}
-
 	local existing = map[self]
 
 	if existing then return existing end
@@ -142,7 +141,6 @@ end
 
 function META:CopyForReturn(map--[[#: Map<|any, TTuple|> | nil]])--[[#: TTuple]]
 	map = map or {}
-
 	local existing = map[self]
 
 	if existing then return existing end
@@ -227,6 +225,10 @@ function META.IsSubsetOfTupleAtIndexWithoutExpansion(a--[[#: TTuple]], b--[[#: T
 	local a_val, a_err = a:GetWithNumber(i)
 
 	if not a_val then
+		if b:HasInfiniteValues() or b:IsInfinite() or b:HasVariadicElement() then
+			return true
+		end
+
 		local b_val, b_err = b:GetWithoutExpansion(i)
 
 		if b_val and b_val:CanBeNil() then
@@ -260,6 +262,11 @@ function META.IsSubsetOfTupleAtIndex(a--[[#: TTuple]], b--[[#: TTuple]], i--[[#:
 	end
 
 	if not a_val then
+		-- If b has infinite values (variadic), missing args are allowed
+		if b:HasInfiniteValues() or b:IsInfinite() or b:HasVariadicElement() then
+			return true
+		end
+
 		if b_val and b_val:CanBeNil() then
 			a_val = Nil()
 		else
@@ -407,6 +414,17 @@ end
 
 function META:IsInfinite()
 	return self.Remainder and self.Remainder.Repeat == math.huge
+end
+
+function META:HasVariadicElement()
+	-- Check if any element in the tuple is itself an infinite/variadic tuple
+	for _, v in ipairs(self.Data) do
+		if v.Type == "tuple" and (v:HasInfiniteValues() or v:IsInfinite()) then
+			return true
+		end
+	end
+
+	return false
 end
 
 function META:GetAtTupleIndex(i)

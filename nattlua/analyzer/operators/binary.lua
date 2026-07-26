@@ -536,6 +536,10 @@ local function BinaryWithUnion(self, node, l, r, op)
 				end
 
 				self.narrowing_store:TrackTableIndexUnion(type_checked, truthy_union, falsy_union, nil, self)
+
+				if type_checked:GetUpvalue() then
+					self.narrowing_store:TrackUpvalueUnion(type_checked, truthy_union, falsy_union, nil, self)
+				end
 			else
 				self.type_checked = false -- this could happen with something like print(type("foo")) so clear it in case
 				for _, l_elem in ipairs(l:GetData()) do

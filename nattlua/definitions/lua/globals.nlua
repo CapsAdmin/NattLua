@@ -246,7 +246,7 @@ end]]
 	end
 
 	analyzer.loading_modules[key] = nil
-	error("module '" .. key .. "' not found")
+	analyzer:ThrowError("module '" .. key .. "' not found")
 	return types.Any()
 end]]
 
@@ -649,6 +649,10 @@ end]]
 	return val
 end]]
 
-function _G.LSX(func--[[#: Function]], props--[[#: Table]], children--[[#: List<|Table | string | number|>]])
+function _G.LSX(
+	func--[[#: Function]],
+	props--[[#: Table]],
+	children--[[#: List<|Table | string | number|>]]
+)
 	return {func = func, props = props, children = children}
 end

@@ -101,6 +101,11 @@ return {
 						end
 					elseif err then
 						analyzer:Error(err)
+
+						if obj == contract then
+							analyzer:MutateTable(obj, key, val)
+							obj:SetExplicit(key, val)
+						end
 					end
 				elseif analyzer:IsTypesystem() then
 					return obj:GetContract():SetExplicit(key, val)

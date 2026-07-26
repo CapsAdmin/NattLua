@@ -602,10 +602,10 @@ function META:NarrowByRelational(domain_a, domain_b, op)
 	-- Treat "number" type like range (infinite bounds), but not LNumber literals
 	local a_is_literal = domain_a.IsLiteral and domain_a:IsLiteral()
 	local b_is_literal = domain_b.IsLiteral and domain_b:IsLiteral()
-	local a_is_range = domain_a:IsNumeric() and not a_is_literal
-	local b_is_range = domain_b:IsNumeric() and not b_is_literal
 	local a_is_union = domain_a.Type == "union"
 	local b_is_union = domain_b.Type == "union"
+	local a_is_range = domain_a:IsNumeric() and not a_is_literal and not a_is_union
+	local b_is_range = domain_b:IsNumeric() and not b_is_literal and not b_is_union
 
 	if a_is_range and b_is_range then
 		return META:NarrowRangeByRelational(domain_a, domain_b, op)
