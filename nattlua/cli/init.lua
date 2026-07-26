@@ -166,6 +166,9 @@ config.commands["check"] = {
 config.commands["build"] = {
 	description = "Build a NattLua file to Lua",
 	usage = "nattlua build <input> <output> [options]",
+	options = {
+		{name = "error-only", description = "Only print errors, not warnings"},
+	},
 	cb = function(args, options, config, cli)
 		local input_path = args[1]
 		local output_path = args[2]
@@ -182,6 +185,7 @@ config.commands["build"] = {
 		end
 
 		config.parser.skip_import = false
+		config.error_only = options["error-only"]
 		local lua_code = assert(Compiler.FromFile(input_path, config)):Emit()
 		local file, err = io.open(output_path, "w")
 
@@ -623,6 +627,7 @@ function cli.main(...)
 		os.exit(1)
 	end
 
+	if options["error-only"] then _G.NATTLUA_ERROR_ONLY = true end
 	local ok, err = pcall(config.commands[command].cb, args, options, config, cli)
 
 	if not ok then

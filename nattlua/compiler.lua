@@ -132,6 +132,9 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, level, ...)
 		) .. "\n"
 
 	if not _G.TEST then
+		if (self.Config and self.Config.error_only) or _G.NATTLUA_ERROR_ONLY then
+			if severity ~= "error" and severity ~= "fatal" then return end
+		end
 		io.write(msg)
 		io.flush()
 	end
