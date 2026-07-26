@@ -61,6 +61,7 @@ local valid_qualifiers = {
 	["size_t"] = true,
 	["intptr_t"] = true,
 	["uintptr_t"] = true,
+	["ptrdiff_t"] = true,
 	["int64_t"] = true,
 	["uint64_t"] = true,
 	["long long"] = true,
