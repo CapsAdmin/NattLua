@@ -410,10 +410,13 @@ return function(META--[[#: any]])
 			if self.recursively_called[obj] then return self.recursively_called[obj] end
 
 			local current_unrolls = 0
+			local same_func_count = 0
 
 			if call_node then
 				for _, frame in ipairs(self:GetCallStack()) do
 					if frame.call_node == call_node then current_unrolls = current_unrolls + 1 end
+
+					if frame.obj == obj then same_func_count = same_func_count + 1 end
 				end
 			end
 
@@ -423,8 +426,12 @@ return function(META--[[#: any]])
 				not not_recursive_call and
 				not obj:HasReferenceTypes()
 			then
-				-- if the callnode is the same, we're doing some infinite recursion
-				if current_unrolls > self.max_recursion_unrolls then
+				-- if the callnode is the same, or the same function appears too many times,
+				-- we're doing some infinite recursion 
+				if
+					current_unrolls > self.max_recursion_unrolls or
+					same_func_count > self.max_recursion_unrolls
+				then
 					self:Warning(error_messages.recursion_limit_reached())
 
 					if obj:IsExplicitOutputSignature() then
