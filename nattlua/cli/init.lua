@@ -216,7 +216,11 @@ config.commands["fmt"] = {
 		if #args == 1 and args[1] == "-" then
 			local input = io.read("*all")
 			local source_path = options["stdin-path"] or "stdin-"
+			local old = config.emitter.comment_type_annotations
+			config.emitter.comment_type_annotations = config.emitter.comment_type_annotations_in_lua_files and
+				source_path:sub(-#".lua") == ".lua"
 			io.write(assert(Compiler.New(input, source_path, config):Emit()))
+			config.emitter.comment_type_annotations = old
 		else
 			for _, path in ipairs(
 				cli.get_files{path = args, ignorefiles = config.ignorefiles, ext = {".lua", ".nlua"}}
@@ -628,6 +632,7 @@ function cli.main(...)
 	end
 
 	if options["error-only"] then _G.NATTLUA_ERROR_ONLY = true end
+
 	local ok, err = pcall(config.commands[command].cb, args, options, config, cli)
 
 	if not ok then
