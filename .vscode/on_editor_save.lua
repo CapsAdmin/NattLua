@@ -202,7 +202,7 @@ function _G.run_test_focus()
 	return true
 end
 
-function _G.run_test(path)
+function _G.run_test(path--[[#: string | nil]])
 	if path then
 		io.write("running single test ", path, "\n")
 	else
@@ -211,7 +211,13 @@ function _G.run_test(path)
 
 	local get_time = require("test.helpers.get_time")
 	local time = get_time()
-	assert(loadfile)()(path, false, false)
+
+	if is_nattlua then
+		run_nlua(path)
+	else
+		assert(loadfile, path, false, false)
+	end
+
 	io.write(" - ok\n")
 	io.write("total time: ", get_time() - time, " seconds\n")
 end
