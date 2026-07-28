@@ -134,6 +134,7 @@ do
 	local Prefix = require("nattlua.analyzer.operators.prefix").Prefix
 	local Node = require("nattlua.parser.node")
 	local Any = require("nattlua.types.any").Any
+	local error_messages = require("nattlua.error_messages")
 
 	function META:AnalyzeRuntimeExpression(node)
 		if node.Type == "expression_value" then
