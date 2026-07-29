@@ -215,7 +215,8 @@ function _G.run_test(path--[[#: string | nil]])
 	if is_nattlua then
 		run_nlua(path)
 	else
-		assert(loadfile, path, false, false)
+		require("test.environment")
+		assert(loadfile(path))()
 	end
 
 	io.write(" - ok\n")
