@@ -577,3 +577,8 @@ analyze[=[
 	attest.equal(s.st_dev, _ as number)
 
 ]=]
+analyze[=[
+	local x = ffi.typeof("int[?]", 4)
+	local x = ffi.new(x, 0, 1, 2, 3)
+	attest.equal(x, _ as TCData<|{[0..3] = number}|>)
+]=]

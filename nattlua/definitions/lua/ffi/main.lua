@@ -51,6 +51,7 @@ local function C_DECLARATIONS()
 end
 
 local function gen(parser, ...)
+	local analyzer = analyzer_context:GetCurrentAnalyzer()
 	local new = {}
 
 	for i, v in ipairs(parser.dollar_signs) do
@@ -64,13 +65,17 @@ local function gen(parser, ...)
 			local u = {}
 
 			for i, obj in ipairs(ct:GetData()) do
-				u[i] = assert(obj:Get(LString("T")))
+				if obj.Type == "table" then
+					u[i] = analyzer:Assert(obj:Get(LString("T")))
+				else
+					u[i] = obj
+				end
 			end
 
 			ct = Union(u)
 		end
 
-		if ct.Type == "table" then ct = assert(ct:Get(LString("T"))) end
+		if ct.Type == "table" then ct = analyzer:Assert(ct:Get(LString("T"))) end
 
 		table.insert(new, ct)
 	end
@@ -192,7 +197,7 @@ local function analyze(c_code, mode, ...)
 	end
 
 	local vars, typs = a:AnalyzeRoot(ast, variables, types, process_type, mode)
-	return vars, typs, a.captured
+	return vars, typs, a.captured, parser.dollar_signs
 end
 
 local ok, ffi = pcall(require, "ffi")
@@ -276,7 +281,16 @@ function cparser.get_raw_type(cdecl, ...)
 end
 
 function cparser.new(cdecl, ...)
-	local vars, typs, ctype = analyze(cdecl, "ffinew", ...)
+	if cdecl.Type == "table" then
+		local T = cdecl:Get(ConstString("T"))
+
+		if T then return TCData(T, ...) end
+	end
+
+	local vars, typs, ctype, dollar_signs = analyze(cdecl, "ffinew", ...)
+
+	if dollar_signs then return TCData(ctype) end
+
 	return TCData(ctype, ...)
 end
 
