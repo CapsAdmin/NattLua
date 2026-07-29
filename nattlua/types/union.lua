@@ -31,6 +31,20 @@ local META = require("nattlua.types.base")()
 META.Type = "union"
 META:GetSet("Data", false--[[# as List<|TBaseType|>]])
 
+function META:GetNullPointer()--[[#: boolean | nil]]
+	local data = self:GetData()
+
+	if #data == 0 then return nil end
+
+	for _, member in ipairs(data) do
+		if member.GetNullPointer and member:GetNullPointer() ~= false then
+			return nil
+		end
+	end
+
+	return false
+end
+
 function META:GetHashForMutationTracking()
 	return tostring(self)
 end

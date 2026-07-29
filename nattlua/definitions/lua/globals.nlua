@@ -626,13 +626,22 @@ analyzer function tostring(val: any)
 	return tostring(val:GetData())
 end
 
-analyzer function tonumber(
-	val: string | number | {__is_cdata_number = true} | {__is_ctype = true},
-	base: number | nil
-)
+analyzer function tonumber(val: string | number | {__is_cdata_number = true}, base: number | nil)
 	if val.Type == "table" then
 		local T = val:Get(types.ConstString("T"))
-		return T or types.Number()
+
+		if T then
+			if T.Type == "symbol" then
+				return T:IsTrue() and types.LNumber(1) or types.LNumber(0)
+			elseif T.Type == "union" then
+
+			-- todo
+			elseif T.Type == "number" then
+				return T
+			end
+		end
+
+		return types.Number()
 	end
 
 	if val.Type == "number" and not val:IsLiteral() then return types.Number() end

@@ -41,7 +41,10 @@ function TCData<|T: ConstructorArgument, ...: ...any|>
 			for k, v in pairs(T) do
 				local type l = select(i, ...)
 
-				if type(l) == "table" then
+				if type(l) == "string" then
+
+				-- do nothing, strings are converted to numbers
+				elseif type(l) == "table" then
 					T[k] = rawget(l, k) or v
 				else
 					T[k] = l
@@ -71,6 +74,12 @@ function TCData<|T: ConstructorArgument, ...: ...any|>
 			error<|"not callable", 2|>
 		end,
 		__index = function <|self: self, key: string | number|>
+			if self.@NullPointer == true then
+				error<|"attempt to index null cdata", 2|>
+			end
+
+			if (type(T) ~= "table") == true then error<|"non indexable cdata", 2|> end
+
 			local type obj
 
 			if is_pointer and type(key) == "string" then

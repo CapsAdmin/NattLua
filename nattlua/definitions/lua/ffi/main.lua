@@ -244,7 +244,17 @@ function cparser.cast(cdecl, src)
 			return TCData(ctype)
 		end
 
-		return src:Copy()
+		local T = cdecl:Get(ConstString("T"))
+
+		if T then
+			local cdata = TCData(T)
+
+			if src:IsNil() then cdata:SetNullPointer(true) end
+
+			return cdata
+		end
+
+		return TCData(cdecl)
 	end
 end
 

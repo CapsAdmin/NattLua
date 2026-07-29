@@ -40,6 +40,12 @@ META:GetSet("CreationScope", nil--[[# as any]])
 META:GetSet("SelfArgument", nil--[[# as any]])
 META:GetSet("AnalyzerEnvironment", false--[[# as false | "runtime" | "typesystem"]])
 META:GetSet("MutationLimit", 100)
+META:GetSet("NullPointer", nil--[[# as nil | boolean]])
+META:GetSet("ParentTable", false--[[# as false | {table = TBaseType, key = TBaseType}]])
+
+function META:SetParentTable(tbl, key)
+	self.ParentTable = {table = tbl, key = key}
+end
 
 do -- comes from tbl.@Name = "my name"
 	META:GetSet("Name", false--[[# as false | TBaseType]])
@@ -724,9 +730,9 @@ function META:Get(key--[[#: TBaseType]])--[[#: (TBaseType | false), (any | nil)]
 
 		if a and a:GetCurrentAnalyzerEnvironment() == "typesystem" then
 			local func = assert(
-						(self--[[# as any]])["Get" .. (key--[[# as any]]):GetData():sub(2)],
-						(key--[[# as any]]):GetData() .. " is not a function"
-					)
+				(self--[[# as any]])["Get" .. (key--[[# as any]]):GetData():sub(2)],
+				(key--[[# as any]]):GetData() .. " is not a function"
+			)
 			return a:LuaTypesToTuple{func(self) or Nil()}:GetFirstValue()
 		end
 	end
@@ -1029,6 +1035,8 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	copy.TypeOverride = self.TypeOverride
 	copy.ReferenceId = self.ReferenceId
 	copy.MutationLimit = self.MutationLimit
+	copy.NullPointer = self.NullPointer
+	copy.ParentTable = self.ParentTable
 
 	if self:GetSelfArgument() then
 		copy.SelfArgument = self.SelfArgument:Copy(map, copy_tables)
@@ -1097,6 +1105,7 @@ function META:CopyForReturn(map--[[#: Map<|any, any|> | nil]])
 	copy.TypeOverride = self.TypeOverride
 	copy.ReferenceId = false
 	copy.MutationLimit = self.MutationLimit
+	copy.NullPointer = self.NullPointer
 
 	if self:GetSelfArgument() then
 		copy.SelfArgument = self.SelfArgument:CopyForReturn(map)

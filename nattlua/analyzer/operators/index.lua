@@ -7,6 +7,14 @@ local Union = require("nattlua.types.union").Union
 local error_messages = require("nattlua.error_messages")
 local ConstString = require("nattlua.types.string").ConstString
 
+local function track_index(analyzer, tbl, key, val)
+	if val.Type == "union" then
+		analyzer.narrowing_store:TrackTableIndex(tbl, key, val, analyzer)
+	else
+		if val.SetParentTable then val:SetParentTable(tbl, key) end
+	end
+end
+
 local function index_table(analyzer, self, key, raw)
 	if
 		not raw and
@@ -42,6 +50,12 @@ local function index_table(analyzer, self, key, raw)
 			end
 
 			if index.Type == "function" then
+				if self.mutator and self.mutator:HasMutations() then
+					local mutated = self:GetMutatedValue(key, analyzer:GetScope())
+
+					if mutated and mutated.Type ~= "symbol" then return mutated end
+				end
+
 				analyzer:PushCurrentTypeTable(nil)
 				local obj, err = analyzer:Call(index, Tuple({self, key}), analyzer:GetCurrentStatement())
 				analyzer:PopCurrentTypeTable()
@@ -58,9 +72,7 @@ local function index_table(analyzer, self, key, raw)
 						if val.Type == "union" and val:IsNil() then val:RemoveType(Nil()) end
 					end
 
-					if val.Type == "union" then
-						analyzer.narrowing_store:TrackTableIndex(self, key, val, analyzer)
-					end
+					track_index(analyzer, self, key, val)
 
 					return val
 				end
@@ -97,9 +109,7 @@ local function index_table(analyzer, self, key, raw)
 
 				if not val:GetContract() then val:SetContract(contract_val) end
 
-				if val.Type == "union" then
-					analyzer.narrowing_store:TrackTableIndex(self, key, val, analyzer)
-				end
+				track_index(analyzer, self, key, val)
 
 				return val
 			end
@@ -118,9 +128,7 @@ local function index_table(analyzer, self, key, raw)
 			end
 		end
 
-		if val.Type == "union" then
-			analyzer.narrowing_store:TrackTableIndex(self, key, val, analyzer)
-		end
+		track_index(analyzer, self, key, val)
 
 		return val
 	end
@@ -160,14 +168,13 @@ local function index_table(analyzer, self, key, raw)
 	end
 
 	if val then
-		if val.Type == "union" then
-			analyzer.narrowing_store:TrackTableIndex(self, key, val, analyzer)
-		end
+		track_index(analyzer, self, key, val)
 
 		return val
 	end
 
 	val = self:Get(key)
+	if val and val.SetParentTable then val:SetParentTable(self, key) end
 	return val or Nil()
 end
 

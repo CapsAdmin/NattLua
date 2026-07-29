@@ -296,24 +296,6 @@ analyze[=[
 	
 	attest.equal(box[0], _ as TCData{a = number, b = number})
 ]=]
-analyze[[
-	local str_v = ffi.new("const char *[?]", 1)
-
-	attest.equal(str_v, _ as ffi.new<|"const char*[1]"|>)
-	attest.equal(str_v[0], _ as nil | ffi.new<|"const char*"|>)
-]]
-analyze[[
-	ffi.cdef([=[
-		struct foo {
-			char *str;
-		}
-	]=])
-	local foo = ffi.new("struct foo")
-	local str = foo.str -- TODO, table mutations not working with ctypes
-	if str then 
-		ffi.string(str)
-	 end
-]]
 analyze[=[
     ffi.cdef([[
         struct subtest {
@@ -582,3 +564,95 @@ analyze[=[
 	local x = ffi.new(x, 0, 1, 2, 3)
 	attest.equal(x, _ as TCData<|{[0..3] = number}|>)
 ]=]
+analyze[[
+	local str_v = ffi.new("const char *[?]", 1)
+
+	attest.equal(str_v, _ as ffi.new<|"const char*[1]"|>)
+	attest.equal(str_v[0], _ as ffi.new<|"const char*"|> | nil)
+	if str_v[0] ~= nil then
+		local x = str_v[0]
+		§ assert(env.runtime.x:GetNullPointer() == false)
+		ffi.string(x)
+	end
+]]
+analyze[[
+	ffi.cdef([=[
+		struct foo {
+			char *str;
+		}
+	]=])
+	local foo = ffi.new("struct foo")
+
+	if foo.str ~= nil then
+		local x = foo.str
+		§ assert(env.runtime.x:GetNullPointer() == false)
+		ffi.string(foo.str)
+	end
+]]
+-- Nullability narrowing tests
+analyze[=[
+	local ptr = ffi.new("const char*")
+	-- Pointer cdata is nullable by default
+	§ assert(env.runtime.ptr:GetNullPointer() ~= false)
+]=]
+analyze[=[
+	local ptr = ffi.new("const char*")
+	if ptr ~= nil then
+		-- ~= nil guard narrows to non-nullable
+		§ assert(env.runtime.ptr:GetNullPointer() == false)
+	end
+]=]
+analyze[=[
+	local ptr = ffi.new("const char*")
+	if ptr == nil then
+		-- == nil guard keeps nullable
+		§ assert(env.runtime.ptr:GetNullPointer() ~= false)
+	end
+]=]
+analyze[=[
+	local ptr = ffi.new("const char*")
+	if ptr ~= nil then
+		-- Inside guard: non-nullable
+		§ assert(env.runtime.ptr:GetNullPointer() == false)
+	end
+	-- After block: resets to nullable
+	§ assert(env.runtime.ptr:GetNullPointer() ~= false)
+]=]
+analyze[=[
+	local ptr = ffi.new("const char*")
+	local ptr2 = ptr
+	-- Assignment propagates nullability
+	§ assert(env.runtime.ptr2:GetNullPointer() ~= false)
+
+	if ptr2 ~= nil then
+		§ assert(env.runtime.ptr2:GetNullPointer() == false)
+		local ptr3 = ptr2
+		-- Assignment inside narrowed scope preserves non-nullable
+		§ assert(env.runtime.ptr3:GetNullPointer() == false)
+	end
+]=]
+analyze[=[
+	local result = ffi.cast(ffi.typeof("uint8_t *"), nil)
+	attest.equal(result, _ as TCData<|{[number] = number}|>)
+	attest.expect_diagnostic<|"error", "attempt to index null cdata"|>
+	local x = result[0] -- this should error
+]=]
+analyze[=[
+	local ffi = require("ffi")
+	local t = ffi.typeof("bool")
+	local c = ffi.new(t, 1)
+	attest.equal(tonumber(c), 1)
+]=]
+
+if false then
+	analyze[=[
+		local t = ffi.typeof("int[1]")
+		local c = ffi.new(t, 1)
+		attest.equal(c[0], 1)
+	]=]
+	analyze[=[
+		local ffi = require("ffi")
+		local c = ffi.new("bool", false)
+		attest.equal(tonumber(c), 0)
+	]=]
+end

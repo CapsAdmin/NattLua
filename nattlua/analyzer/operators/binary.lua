@@ -271,6 +271,67 @@ local function coerce_number(l, r)
 	return l, r
 end
 
+-- Helper to detect cdata types (checks both LuaType and TypeOverride)
+local function is_cdata(t)
+	if t:GetLuaType() == "cdata" then return true end
+
+	if t.TypeOverride == "cdata" then return true end
+
+	return false
+end
+
+local function is_cdata_or_cdata_union(t)
+	if is_cdata(t) then return true end
+
+	if t.Type == "union" then
+		for _, member in ipairs(t:GetData()) do
+			if is_cdata(member) then return true end
+		end
+	end
+
+	return false
+end
+
+local function map_cdata_nullability(t, null_value)
+	-- Map cdata members with new nullability value
+	if t.Type == "union" then
+		local new_members = {}
+
+		for _, member in ipairs(t:GetData()) do
+			if is_cdata(member) then
+				local copy = member:Copy()
+				copy:SetNullPointer(null_value)
+				table.insert(new_members, copy)
+			else
+				table.insert(new_members, member)
+			end
+		end
+
+		local result = Union(new_members)
+
+		if t.SetParentTable then
+			result:SetParentTable(t:GetParentTable().table, t:GetParentTable().key)
+		end
+
+		return result
+	else
+		local copy = t:Copy()
+		copy:SetNullPointer(null_value)
+		return copy
+	end
+end
+
+local function track_cdata_narrowing(analyzer, cdata_type, non_null, nullable, is_not_equal)
+	-- Swap truthy/falsy based on operator (~= nil vs == nil)
+	local truthy, falsy = is_not_equal and non_null or nullable, is_not_equal and nullable or non_null
+
+	if cdata_type:GetParentTable() then
+		analyzer.narrowing_store:TrackTableIndexUnion(cdata_type, truthy, falsy, nil, analyzer)
+	elseif cdata_type:GetUpvalue() then
+		analyzer.narrowing_store:TrackUpvalueUnion(cdata_type, truthy, falsy, nil, analyzer)
+	end
+end
+
 function Binary(self, node, l, r, op)
 	if l.Type == "any" or r.Type == "any" then return Any() end
 
@@ -325,6 +386,32 @@ function Binary(self, node, l, r, op)
 			local res = number_comparison(self, l, r, op)
 
 			if res then return res end
+		end
+
+		-- cdata pointers can be null, and null cdata == nil is true in LuaJIT
+		if
+			(
+				is_cdata_or_cdata_union(l) and
+				r:IsNil()
+			) or
+			(
+				is_cdata_or_cdata_union(r) and
+				l:IsNil()
+			)
+		then
+			-- Track narrowing for direct (non-union) cdata comparisons
+			-- For union comparisons, the outer loop handles nullability via copies
+			local cdata_type = is_cdata_or_cdata_union(l) and l or r
+
+			if cdata_type and cdata_type.Type ~= "union" then
+				-- Direct cdata comparison (not from union iteration)
+				local non_null = map_cdata_nullability(cdata_type, false)
+				local nullable = map_cdata_nullability(cdata_type, nil)
+
+				track_cdata_narrowing(self, cdata_type, non_null, nullable, is_not_equal)
+			end
+
+			return Boolean()
 		end
 
 		if l.Type ~= r.Type then return is_not_equal and True() or False() end
@@ -549,9 +636,20 @@ local function BinaryWithUnion(self, node, l, r, op)
 						if not res then
 							self:Error(err)
 						else
-							if res:IsTruthy() then truthy_union:AddType(l_elem) end
+						-- For cdata-nil comparisons, create copies with modified nullability
+						local elem_for_tracking = l_elem
 
-							if res:IsFalsy() then falsy_union:AddType(l_elem) end
+						if is_cdata(l_elem) and r_elem:IsNil() then
+							if res:IsTruthy() then
+								elem_for_tracking = map_cdata_nullability(l_elem, false)
+							elseif res:IsFalsy() then
+								elem_for_tracking = map_cdata_nullability(l_elem, nil)
+							end
+						end
+
+						if res:IsTruthy() then truthy_union:AddType(elem_for_tracking) end
+
+						if res:IsFalsy() then falsy_union:AddType(elem_for_tracking) end
 
 							new_union:AddType(res)
 						end

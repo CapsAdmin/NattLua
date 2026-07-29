@@ -79,7 +79,7 @@ end
 function META:GetHashForMutationTracking()
 	if self:IsNan() then return nil end
 
-	if self.Data then return self.Data end
+	if self.Data ~= false then return self.Data end
 
 	local upvalue = self:GetUpvalue()
 

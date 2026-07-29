@@ -181,6 +181,14 @@ function shared.Equal(a--[[#: TBaseType]], b--[[#: TBaseType]], visited--[[#: an
 	return false, "nyi"
 end
 
+local function is_non_nullable(t)
+	if t.Type == "table" or t.Type == "union" then
+		return t:GetNullPointer() == false
+	end
+
+	return false
+end
+
 function shared.IsSubsetOf(
 	a--[[#: TBaseType]],
 	b--[[#: TBaseType]],
@@ -320,6 +328,21 @@ function shared.IsSubsetOf(
 			end
 		end
 
+		do
+			local a_lua_type = a.GetLuaType and a:GetLuaType()
+			local b_lua_type = b.GetLuaType and b:GetLuaType()
+
+			if a_lua_type == "cdata" and b_lua_type == "cdata" then
+				local a_nullable = not is_non_nullable(a)
+				local b_nullable = not is_non_nullable(b)
+
+				-- b is explicitly non-nullable, a is nullable or unknown (defaults to nullable)
+				if not b_nullable and a_nullable then
+					return false, error_messages.subset(a, b)
+				end
+			end
+		end
+
 		if b.Type == "table" then
 			if a == b then return true, "same type" end
 
@@ -338,6 +361,9 @@ function shared.IsSubsetOf(
 			end
 
 			for _, bkeyval in ipairs((b--[[# as TTable]]):GetData()) do
+				-- Skip __may_be_null for all tables (cdata nullability is handled separately)
+				if bkeyval.key:GetData() == "__may_be_null" then goto continue_field end
+
 				local akeyval, reason = a:FindKeyValWide(bkeyval.key, true)
 
 				if not bkeyval.val:CanBeNil() then
@@ -355,6 +381,8 @@ function shared.IsSubsetOf(
 						)
 					end
 				end
+
+				::continue_field::
 			end
 
 			if (b--[[# as TTable]]):IsNumericallyIndexed() and not a:IsNumericallyIndexed() then
