@@ -147,7 +147,11 @@ function META:__tostring()--[[#: string]]
 					self:PopSuppress()
 					return tostring(str:GetData())
 				end
+
+				return "DEBUG: __tostring returned: " .. tostring(str)
 			end
+
+			return "DEBUG: no analyzer in context to call __tostring"
 		end
 	end
 
