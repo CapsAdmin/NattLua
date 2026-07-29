@@ -59,7 +59,7 @@ end
 local read_primitive = (
 	function()
 		local cache = {}
-		local cached_info = function(cdecl)
+		local cached_info = function(cdecl: ref string)
 			if cache[cdecl] then return cache[cdecl] end
 
 			local typ = ffi.typeof(cdecl)
@@ -74,7 +74,7 @@ local read_primitive = (
 			return val
 		end
 		local void_ptr = ffi.typeof("void *")
-		return function(file, cdecl)
+		return function(file, cdecl: ref string)
 			local info = cached_info(cdecl)
 			local str = assert(file:read(info.size))
 			local ptr = ffi.cast(void_ptr, str)
