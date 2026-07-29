@@ -723,13 +723,11 @@ function META:Get(key--[[#: TBaseType]])--[[#: (TBaseType | false), (any | nil)]
 		local a = context:GetCurrentAnalyzer()--[[# as any]]
 
 		if a and a:GetCurrentAnalyzerEnvironment() == "typesystem" then
-			return (
-					assert(
+			local func = assert(
 						(self--[[# as any]])["Get" .. (key--[[# as any]]):GetData():sub(2)],
 						(key--[[# as any]]):GetData() .. " is not a function"
 					)
-				)(self) or
-				Nil()
+			return a:LuaTypesToTuple{func(self) or Nil()}:GetFirstValue()
 		end
 	end
 
