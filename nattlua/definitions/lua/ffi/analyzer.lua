@@ -188,7 +188,7 @@ local function cast(self, decl)
 			end
 		end
 
-	local t = decl.modifiers[1]
+		local t = decl.modifiers[1]
 
 		if t == "const" or t == "static" then t = assert(decl.modifiers[2]) end
 

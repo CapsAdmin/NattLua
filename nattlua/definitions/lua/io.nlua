@@ -49,6 +49,7 @@ analyzer function io.write(...: ...string)
 			io.write(tostring(v:GetData()))
 		else
 			local str = tostring(v)
+
 			if str then io.write(str) end
 		end
 	end

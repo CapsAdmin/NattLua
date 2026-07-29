@@ -454,6 +454,7 @@ function shared.IsSubsetOf(
 
 					if ok then
 						found = true
+
 						break
 					end
 

@@ -22,9 +22,10 @@ return {
 			if cache:sub(1, 2) == "./" then cache = cache:sub(3) end
 
 			self.parsed_paths[cache] = true
-			if self.loaded_modules[cache] then return self.loaded_modules[cache] end
-			self.loaded_modules[cache] = Nil()
 
+			if self.loaded_modules[cache] then return self.loaded_modules[cache] end
+
+			self.loaded_modules[cache] = Nil()
 			local result = analyze_import_value(self, node, root)
 			self.loaded_modules[cache] = result
 			return self.loaded_modules[cache]

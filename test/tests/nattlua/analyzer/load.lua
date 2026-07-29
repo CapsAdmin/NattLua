@@ -72,18 +72,17 @@ analyze[[
 ]]
 
 do
-    local path_util = require("nattlua.other.path")
-    local old_resolve_require = path_util.ResolveRequire
-    path_util.ResolveRequire = function(str)
-        if str == "alias.one" or str == "alias.two" then
-            return "test/tests/nattlua/analyzer/file_importing/require_cache/alias_shared.lua"
-        end
+	local path_util = require("nattlua.other.path")
+	local old_resolve_require = path_util.ResolveRequire
+	path_util.ResolveRequire = function(str)
+		if str == "alias.one" or str == "alias.two" then
+			return "test/tests/nattlua/analyzer/file_importing/require_cache/alias_shared.lua"
+		end
 
-        return old_resolve_require(str)
-    end
-
-    local ok, err = pcall(function()
-        analyze[[
+		return old_resolve_require(str)
+	end
+	local ok, err = pcall(function()
+		analyze[[
             local a = require("alias.one")
             local b = require("alias.two")
             a.foo = 1
@@ -93,8 +92,7 @@ do
             attest.equal(package.loaded["alias.one"].foo, 1)
             attest.equal(package.loaded["alias.two"].foo, 2)
         ]]
-    end)
-
-    path_util.ResolveRequire = old_resolve_require
-    assert(ok, err)
+	end)
+	path_util.ResolveRequire = old_resolve_require
+	assert(ok, err)
 end

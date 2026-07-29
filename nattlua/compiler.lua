@@ -135,6 +135,7 @@ function META:OnDiagnostic(code, msg, severity, start, stop, node, level, ...)
 		if (self.Config and self.Config.error_only) or _G.NATTLUA_ERROR_ONLY then
 			if severity ~= "error" and severity ~= "fatal" then return end
 		end
+
 		io.write(msg)
 		io.flush()
 	end
@@ -319,7 +320,7 @@ function META.New(
 	name = name or path .. ":" .. line
 
 	if config then
-		for _, v in ipairs({"lexer", "emitter", "parser", "analyzer"}) do
+		for _, v in ipairs{"lexer", "emitter", "parser", "analyzer"} do
 			config[v] = config[v] or {}
 			config[v].file_path = config[v].file_path or config.file_path
 			config[v].file_name = config[v].file_name or config.file_name

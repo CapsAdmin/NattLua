@@ -298,8 +298,11 @@ end
 
 function META:ReadLineCComment()--[[#: TokenReturnType]]
 	if not self:IsString("//") then return false end
+
 	-- Don't match // if followed by another / or = (floor division or compound assignment)
-	if self:IsStringOffset("/", 2) or self:IsStringOffset("=", 2) then return false end
+	if self:IsStringOffset("/", 2) or self:IsStringOffset("=", 2) then
+		return false
+	end
 
 	self:Advance(2)
 

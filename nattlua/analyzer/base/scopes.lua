@@ -88,7 +88,12 @@ return function(META--[[#: any]])
 		-- check for re-declaration of const variable (const keyword cannot be re-declared)
 		local existing = self:FindLocalUpvalue(key)
 
-		if existing and existing:IsImmutable() and existing.statement and existing.statement.tokens["const"] then
+		if
+			existing and
+			existing:IsImmutable() and
+			existing.statement and
+			existing.statement.tokens["const"]
+		then
 			self:Error(error_messages.const_redeclaration(key))
 		end
 

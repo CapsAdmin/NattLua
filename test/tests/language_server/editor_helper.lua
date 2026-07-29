@@ -221,13 +221,13 @@ do
 
 	helper:SetFileContent(main_path, [[local bad = import("./does_not_exist.nlua")]])
 	helper:Recompile(main_path)
-
 	local import_error
 
 	for _, call in ipairs(diagnostics_calls) do
 		for _, diagnostic in ipairs(call.data) do
 			if diagnostic.message:find("error importing file:", nil, true) then
 				import_error = diagnostic.message
+
 				break
 			end
 		end
@@ -327,17 +327,16 @@ do
 	end
 
 	assert(not helper:IsLoaded(imported_path))
-
 	diagnostics_calls = {}
 	helper:SetFileContent(main_path, [[local render = import("goluwa/render/missing.lua")]])
 	helper:Recompile(main_path)
-
 	local import_error
 
 	for _, call in ipairs(diagnostics_calls) do
 		for _, diagnostic in ipairs(call.data) do
 			if diagnostic.message:find("error importing file:", nil, true) then
 				import_error = diagnostic.message
+
 				break
 			end
 		end
@@ -441,14 +440,15 @@ do
 	local save_path = "./save_syntax_only.nlua"
 	local normalized_save_path = path_util.Normalize(save_path)
 	fs.read = function(read_path)
-		if read_path == save_path or read_path == normalized_save_path then return "local value = 1" end
+		if read_path == save_path or read_path == normalized_save_path then
+			return "local value = 1"
+		end
+
 		return old_fs_read(read_path)
 	end
-
 	helper:SaveFile(save_path)
 	assert(helper:IsParsed(save_path))
 	assert(not helper:IsAnalyzed(save_path))
-
 	fs.read = old_fs_read
 end
 
@@ -469,6 +469,7 @@ do
 	local old_fs_read = fs.read
 	local save_path = "./save_force_analyze.nlua"
 	local normalized_save_path = path_util.Normalize(save_path)
+
 	helper:SetConfigFunction(function(cfg_path)
 		return {
 			commands = {
@@ -482,6 +483,7 @@ do
 			},
 		}
 	end)
+
 	fs.read = function(read_path)
 		if read_path == save_path or read_path == normalized_save_path then
 			return [[
@@ -490,13 +492,12 @@ do
 				math.sin(value)
 			]]
 		end
+
 		return old_fs_read(read_path)
 	end
-
 	helper:SaveFile(save_path)
 	assert(helper:IsParsed(save_path))
 	assert(helper:IsAnalyzed(save_path))
-
 	fs.read = old_fs_read
 end
 

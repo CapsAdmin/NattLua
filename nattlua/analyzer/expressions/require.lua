@@ -52,9 +52,10 @@ return {
 		end
 
 		if self.loaded_modules[cache] then return self.loaded_modules[cache] end
-		if self.loading_modules[cache] then return self.loading_modules[cache] end
-		self.loading_modules[cache] = Nil()
 
+		if self.loading_modules[cache] then return self.loading_modules[cache] end
+
+		self.loading_modules[cache] = Nil()
 		local result = self:GetFirstValue(self:AnalyzeRootStatement(root))
 
 		if is_nil(result) then result = True() end

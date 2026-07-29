@@ -133,7 +133,6 @@ end
 
 function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 	map = map or {}
-
 	local existing = map[self]
 
 	if existing then return existing end
@@ -195,7 +194,6 @@ end
 
 function META:CopyForReturn(map--[[#: Map<|any, any|> | nil]])
 	map = map or {}
-
 	local existing = map[self]
 
 	if existing then return existing end

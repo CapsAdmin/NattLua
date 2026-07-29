@@ -3,5 +3,4 @@ local type LexerConfig = {
 	file_name = string,
 	check_timeout = function=(ref Table, ref number, ref number)>(),
 }
-
 return Partial<|LexerConfig|>

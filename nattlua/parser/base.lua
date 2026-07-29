@@ -270,8 +270,14 @@ return function()
 			self.check_count = (self.check_count or 0) + 1
 
 			if
-				self.check_count - (self.last_checkpoint_count or 0) < checkpoint_iterations and
-				now - (self.last_checkpoint_time or now) < checkpoint_seconds
+				self.check_count - (
+					self.last_checkpoint_count or
+					0
+				) < checkpoint_iterations and
+				now - (
+					self.last_checkpoint_time or
+					now
+				) < checkpoint_seconds
 			then
 				return
 			end

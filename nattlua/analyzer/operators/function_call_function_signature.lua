@@ -24,6 +24,5 @@ return function(analyzer, obj, input)
 	end
 
 	local ret = obj:GetOutputSignature():CopyForReturn()
-
 	return ret
 end

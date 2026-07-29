@@ -391,13 +391,11 @@ function META:ParseFile(path--[[#: string]], config--[[#: nil | any]])
 	config = config or {}
 	config.file_path = config.file_path or path
 	config.file_name = config.file_name or "@" .. path
-
 	local root, err = self:ParseString(code, config)
 
 	if not root then return nil, format_parse_file_error(path, err) end
 
 	return root
-
 end
 
 local imported_index = nil

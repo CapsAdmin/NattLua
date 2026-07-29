@@ -63,6 +63,7 @@ function path.Normalize(str--[[#: string]])
 
 	return str
 end
+
 function path.Exists(path)
 	return fs.get_type(path) == "file"
 end

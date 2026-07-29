@@ -7,7 +7,6 @@ local OUTPUT = io.stderr -- using STDERR explcitly to have a clean channel
 local session_output = io.open("lsp_session_out.rpc", "w")
 local session_input = io.open("lsp_session_in.rpc", "w")
 io.stdout:setvbuf("no")
-
 ffi.cdef[[
 typedef long ssize_t;
 typedef unsigned long nfds_t;
@@ -19,7 +18,6 @@ struct pollfd {
 int poll(struct pollfd *fds, nfds_t nfds, int timeout);
 ssize_t read(int fd, void *buf, size_t count);
 ]]
-
 local INPUT_FD = 0
 local POLLIN = 0x001
 local READ_CHUNK_SIZE = 65536
@@ -124,7 +122,6 @@ end
 
 local function start_job(entry)
 	local id = type(entry.rpc) == "table" and entry.rpc.id or nil
-
 	active_job = {
 		id = id,
 		co = coroutine.create(function()
@@ -157,14 +154,14 @@ local function step_job()
 		print(response)
 
 		if active_job.id ~= nil then
-			finish_job({
+			finish_job{
 				jsonrpc = "2.0",
 				id = active_job.id,
 				error = {
 					code = -32603,
 					message = tostring(response),
 				},
-			})
+			}
 		else
 			finish_job(nil)
 		end

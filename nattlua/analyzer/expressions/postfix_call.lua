@@ -111,6 +111,7 @@ return {
 			self:PopAnalyzerEnvironment()
 			return Nil()
 		end
+
 		local self_arg
 
 		if

@@ -3,18 +3,18 @@ do
 	return
 end
 
---[[#§analyzer.max_callstack = 10000]]
+§analyzer.max_callstack = 10000
 
---[[#§analyzer.max_recursion_unrolls = 10000]]
+§analyzer.max_recursion_unrolls = 10000
 
 local Maze = {}
 Maze.__index = Maze
---[[#type Maze.@SelfArgument = {
+type Maze.@SelfArgument = {
 	@Name = "Maze",
 	width = number,
 	height = number,
 	grid = List<|1 | 0|>,
-}]]
+}
 
 function Maze:__tostring()
 	local out = {}
@@ -35,15 +35,15 @@ function Maze:__tostring()
 	return table.concat(out)
 end
 
-function Maze:Get(x--[[#: ref number]], y--[[#: ref number]])
+function Maze:Get(x: ref number, y: ref number)
 	return self.grid[y * self.width + x]
 end
 
-function Maze:Set(x--[[#: ref number]], y--[[#: ref number]], v--[[#: ref (1 | 0)]])
+function Maze:Set(x: ref number, y: ref number, v: ref (1 | 0))
 	self.grid[y * self.width + x] = v
 end
 
-local function build(self--[[#: ref any]], x--[[#: ref number]], y--[[#: ref number]])
+local function build(self: ref any, x: ref number, y: ref number)
 	local r = math.random(0, 3)
 	self:Set(x, y, 0)
 
@@ -76,14 +76,14 @@ local function build(self--[[#: ref any]], x--[[#: ref number]], y--[[#: ref num
 	end
 end
 
-function Maze:Build(seed--[[#: ref number]])
+function Maze:Build(seed: ref number)
 	math.randomseed(seed)
 	build(self, 2, 2)
 	self.grid[self.width + 2] = 0
 	self.grid[(self.height - 2) * self.width + self.width - 3] = 0
 end
 
-local function constructor(_--[[#: ref any]], width--[[#: ref number]], height--[[#: ref number]])
+local function constructor(_: ref any, width: ref number, height: ref number)
 	local self = setmetatable({width = width, height = height, grid = {}}, Maze)
 
 	for y = 0, height - 1 do
@@ -105,7 +105,7 @@ end
 
 setmetatable(Maze, {__call = constructor})
 
---[[#§analyzer.enable_random_functions = true]]
+§analyzer.enable_random_functions = true
 
 local maze = Maze(13, 13)
 maze:Build(3)
@@ -123,4 +123,4 @@ if str:find(".█████████.█.", nil, true) == nil then
 	error("end of maze not found")
 end
 
---[[#§analyzer.enable_random_functions = false]]
+§analyzer.enable_random_functions = false

@@ -261,10 +261,7 @@ do
 				false -- explicit input sig handled above
 			)
 		then
-			if
-				analyzer.config.should_crawl_untyped_functions and
-				self:GetCallCount() == 50
-			then
+			if analyzer.config.should_crawl_untyped_functions and self:GetCallCount() == 50 then
 				analyzer:Warning(
 					error_messages.plain_error("deferred call: function analyzed 50 times, further calls will use cached result")
 				)

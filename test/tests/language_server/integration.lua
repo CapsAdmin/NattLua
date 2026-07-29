@@ -114,7 +114,10 @@ do
 	assert(not lsp.editor_helper:IsLoaded("/workspace/symbols_only.nlua"))
 	local symbols = client:Call(lsp, "textDocument/documentSymbol", {textDocument = {uri = file_uri}})
 	assert(#symbols > 0, "Should have symbols from parsed state")
-	assert(not lsp.editor_helper:IsAnalyzed("/workspace/symbols_only.nlua"), "Document symbols should only require parsed state")
+	assert(
+		not lsp.editor_helper:IsAnalyzed("/workspace/symbols_only.nlua"),
+		"Document symbols should only require parsed state"
+	)
 	client:Notify(lsp, "textDocument/didClose", {textDocument = {uri = file_uri}})
 	lsp.editor_helper.UseVisibleFilesForOpen = false
 	lsp.editor_helper.VisibleFiles = {}
@@ -167,11 +170,17 @@ do
 		"textDocument/semanticTokens/full/delta",
 		{textDocument = {uri = file_uri}, previousResultId = full.resultId}
 	)
-	assert(lsp.editor_helper:IsDirty(file_path), "Burst semantic tokens should not clear dirty state")
+	assert(
+		lsp.editor_helper:IsDirty(file_path),
+		"Burst semantic tokens should not clear dirty state"
+	)
 	assert(delta.resultId == full.resultId, "Burst semantic tokens should reuse cached result")
 	local symbols = client:Call(lsp, "textDocument/documentSymbol", {textDocument = {uri = file_uri}})
 	assert(#symbols > 0, "Burst document symbols should return stale parsed tree")
-	assert(lsp.editor_helper:IsDirty(file_path), "Burst document symbols should not clear dirty state")
+	assert(
+		lsp.editor_helper:IsDirty(file_path),
+		"Burst document symbols should not clear dirty state"
+	)
 	lsp.editor_helper.Now = previous_now
 	client:Notify(lsp, "textDocument/didClose", {textDocument = {uri = file_uri}})
 end
@@ -202,7 +211,10 @@ do
 	assert(not lsp.editor_helper:IsLoaded("/workspace/tokens_only.nlua"))
 	local tokens = client:Call(lsp, "textDocument/semanticTokens/full", {textDocument = {uri = file_uri}})
 	assert(tokens.data and #tokens.data > 0, "Semantic tokens should be available")
-	assert(not lsp.editor_helper:IsAnalyzed("/workspace/tokens_only.nlua"), "Semantic tokens should only require parsed state")
+	assert(
+		not lsp.editor_helper:IsAnalyzed("/workspace/tokens_only.nlua"),
+		"Semantic tokens should only require parsed state"
+	)
 	client:Notify(lsp, "textDocument/didClose", {textDocument = {uri = file_uri}})
 	lsp.editor_helper.UseVisibleFilesForOpen = false
 	lsp.editor_helper.VisibleFiles = {}
@@ -244,7 +256,10 @@ do
 		}
 	)
 	assert(#hints == 0, "Background inlay hints should not force analysis")
-	assert(not lsp.editor_helper:IsAnalyzed("/workspace/background_ui.nlua"), "Background inlay hints should keep parsed-only state")
+	assert(
+		not lsp.editor_helper:IsAnalyzed("/workspace/background_ui.nlua"),
+		"Background inlay hints should keep parsed-only state"
+	)
 	local highlights = client:Call(
 		lsp,
 		"textDocument/documentHighlight",
@@ -254,7 +269,10 @@ do
 		}
 	)
 	assert(#highlights == 0, "Background document highlight should not force analysis")
-	assert(not lsp.editor_helper:IsAnalyzed("/workspace/background_ui.nlua"), "Background document highlight should keep parsed-only state")
+	assert(
+		not lsp.editor_helper:IsAnalyzed("/workspace/background_ui.nlua"),
+		"Background document highlight should keep parsed-only state"
+	)
 	client:Notify(lsp, "textDocument/didClose", {textDocument = {uri = file_uri}})
 	lsp.editor_helper.UseVisibleFilesForOpen = false
 	lsp.editor_helper.VisibleFiles = {}
@@ -354,7 +372,6 @@ do
 
 		return old_fs_read(read_path)
 	end
-
 	local edits = client:Call(
 		lsp,
 		"textDocument/formatting",
@@ -366,11 +383,13 @@ do
 			},
 		}
 	)
-
 	fs.read = old_fs_read
 	assert(#edits > 0, "Formatting should return edits for files loaded from disk")
 	assert(edits[1].newText:find("local a = 1", 1, true))
-	assert(not lsp.editor_helper.OpenFiles[file_path], "Formatting should not require opening the document")
+	assert(
+		not lsp.editor_helper.OpenFiles[file_path],
+		"Formatting should not require opening the document"
+	)
 end
 
 do
@@ -707,39 +726,51 @@ end
 
 do
 	local callback_count = 0
-	local compiler = Compiler.New(("local value = 1\n"):rep(5000), "@lexer_checkpoint.nlua", {
-		lexer = {
-			check_timeout = function()
-				callback_count = callback_count + 1
-			end,
-		},
-	})
+	local compiler = Compiler.New(
+		("local value = 1\n"):rep(5000),
+		"@lexer_checkpoint.nlua",
+		{
+			lexer = {
+				check_timeout = function()
+					callback_count = callback_count + 1
+				end,
+			},
+		}
+	)
 	assert(compiler:Lex())
 	assert(callback_count > 0, "lexer check_timeout should be called when configured")
 end
 
 do
 	local callback_count = 0
-	local compiler = Compiler.New(("local value = 1\n"):rep(5000), "@parser_checkpoint.nlua", {
-		parser = {
-			check_timeout = function()
-				callback_count = callback_count + 1
-			end,
-		},
-	})
+	local compiler = Compiler.New(
+		("local value = 1\n"):rep(5000),
+		"@parser_checkpoint.nlua",
+		{
+			parser = {
+				check_timeout = function()
+					callback_count = callback_count + 1
+				end,
+			},
+		}
+	)
 	assert(compiler:Parse())
 	assert(callback_count > 0, "parser check_timeout should be called when configured")
 end
 
 do
 	local callback_count = 0
-	local compiler = Compiler.New(("local value = 1\n"):rep(5000), "@analyzer_checkpoint.nlua", {
-		analyzer = {
-			check_timeout = function()
-				callback_count = callback_count + 1
-			end,
-		},
-	})
+	local compiler = Compiler.New(
+		("local value = 1\n"):rep(5000),
+		"@analyzer_checkpoint.nlua",
+		{
+			analyzer = {
+				check_timeout = function()
+					callback_count = callback_count + 1
+				end,
+			},
+		}
+	)
 	assert(compiler:Analyze())
 	assert(callback_count > 0, "analyzer check_timeout should be called when configured")
 end
@@ -790,7 +821,10 @@ local value = 22
 	)
 	assert(delta.resultId, "semantic token delta should include a resultId")
 	assert(delta.edits, "semantic token delta should return edits")
-	assert(#delta.edits > 0, "semantic token delta should return at least one edit when tokens change")
+	assert(
+		#delta.edits > 0,
+		"semantic token delta should return at least one edit when tokens change"
+	)
 	assert(delta.edits[1].start ~= nil, "semantic token delta edit should include a start")
 	assert(delta.edits[1].deleteCount ~= nil, "semantic token delta edit should include deleteCount")
 	client:Notify(lsp, "textDocument/didClose", {textDocument = {uri = file_uri}})
