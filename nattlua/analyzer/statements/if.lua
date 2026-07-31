@@ -178,7 +178,7 @@ return {
 				if block.is_else and not IsOrCondition(statement.expressions[i]) then
 					-- Else branch: restore upvalue values before computing complement
 					for upvalue, orig_value in pairs(original_upvalue_values) do
-						if upvalue.SetValue then upvalue:SetValue(orig_value) end
+						upvalue:SetValue(orig_value)
 					end
 
 					self.constraint_store:ClearDomainsFor(original_upvalue_values)

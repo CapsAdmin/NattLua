@@ -281,7 +281,6 @@ do
 		end
 
 		self:PopCurrentExpression()
-		self.narrowing_store:TrackDependentUpvalues(obj, nil, self)
 		return obj
 	end
 
