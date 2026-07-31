@@ -2,75 +2,60 @@ local ipairs = _G.ipairs
 local Union = require("nattlua.types.union").Union
 local Nil = require("nattlua.types.symbol").Nil
 local shallow_copy = require("nattlua.other.tablex").copy
---[[
-    Narrowing Store for NattLua analyzer
-
-    Tracks truthy/falsy type narrowing through conditional branches:
-    - Truthy/falsy union splitting via tracked objects and stacks
-    - Expression context management (truthy/falsy/inverted)
-    - Applying narrowed types in if/else/after-statement
-    - Tuple sibling narrowing
-    - Table index tracking
-    - Stashing tracked changes
-]]
 local META = {}
 META.__index = META
 
 function META.new()
-	local store = {
-		tracked_objects = {},
-		tracked_objects_done = {},
-		track_stash = {},
-		-- Context counters
-		truthy_expression_depth = 0,
-		falsy_expression_depth = 0,
-		inverted_expression_depth = 0,
-	}
-	return setmetatable(store, META)
+	return setmetatable(
+		{
+			tracked_objects = {},
+			tracked_objects_done = {},
+			track_stash = {},
+			truthy_depth = 0,
+			falsy_depth = 0,
+			inverted_depth = 0,
+		},
+		META
+	)
 end
 
--- ----------------------------------------------------------------
--- Context management
--- ----------------------------------------------------------------
 function META:PushTruthyExpressionContext()
-	self.truthy_expression_depth = self.truthy_expression_depth + 1
+	self.truthy_depth = self.truthy_depth + 1
 end
 
 function META:PopTruthyExpressionContext()
-	self.truthy_expression_depth = self.truthy_expression_depth - 1
+	self.truthy_depth = self.truthy_depth - 1
 end
 
 function META:IsTruthyExpressionContext()
-	return self.truthy_expression_depth > 0
+	return self.truthy_depth > 0
 end
 
 function META:PushFalsyExpressionContext()
-	self.falsy_expression_depth = self.falsy_expression_depth + 1
+	self.falsy_depth = self.falsy_depth + 1
 end
 
 function META:PopFalsyExpressionContext()
-	self.falsy_expression_depth = self.falsy_expression_depth - 1
+	self.falsy_depth = self.falsy_depth - 1
 end
 
 function META:IsFalsyExpressionContext()
-	return self.falsy_expression_depth > 0
+	return self.falsy_depth > 0
 end
 
 function META:PushInvertedExpressionContext()
-	self.inverted_expression_depth = self.inverted_expression_depth + 1
+	self.inverted_depth = self.inverted_depth + 1
 end
 
 function META:PopInvertedExpressionContext()
-	self.inverted_expression_depth = self.inverted_expression_depth - 1
+	self.inverted_depth = self.inverted_depth - 1
 end
 
-function META:IsInvertedExpressionContext()
-	return self.inverted_expression_depth > 0
+local function swap_if_inverted(store, a, b)
+	return store.inverted_depth % 2 == 1 and b or a,
+	store.inverted_depth % 2 == 1 and a or b
 end
 
--- ----------------------------------------------------------------
--- Tracking
--- ----------------------------------------------------------------
 function META:TrackUpvalueUnion(obj, truthy_union, falsy_union, inverted, analyzer)
 	local upvalue = obj:GetUpvalue()
 
@@ -91,10 +76,8 @@ function META:TrackUpvalueUnion(obj, truthy_union, falsy_union, inverted, analyz
 	table.insert(
 		data.stack,
 		{
-			-- when inside `not`, swap truthy/falsy so all read logic works unchanged.
-			-- the inverted flag records the original operator semantics for after-statement narrowing.
-			truthy = self.inverted_expression_depth % 2 == 1 and falsy_union or truthy_union,
-			falsy = self.inverted_expression_depth % 2 == 1 and truthy_union or falsy_union,
+			truthy = swap_if_inverted(self, truthy_union, falsy_union),
+			falsy = swap_if_inverted(self, falsy_union, truthy_union),
 			inverted = inverted,
 			scope = scope,
 		}
@@ -114,8 +97,7 @@ function META:TrackTableIndexUnion(obj, truthy_union, falsy_union, truthy_falsy,
 
 	if not tbl_key then return end
 
-	local tbl = tbl_key.table
-	local key = tbl_key.key
+	local tbl, key = tbl_key.table, tbl_key.key
 	local hash = key:GetHashForMutationTracking()
 
 	if hash == nil then return end
@@ -124,14 +106,12 @@ function META:TrackTableIndexUnion(obj, truthy_union, falsy_union, truthy_falsy,
 
 	if not scope then return end
 
-	-- Use a compound key for table+hash in the done map
-	local lookup_key = tbl
-	local data = self.tracked_objects_done[lookup_key]
+	local data = self.tracked_objects_done[tbl]
 
 	if not data then
 		data = {kind = "table", tbl = tbl}
 		table.insert(self.tracked_objects, data)
-		self.tracked_objects_done[lookup_key] = data
+		self.tracked_objects_done[tbl] = data
 	end
 
 	data.stack = data.stack or {}
@@ -155,8 +135,8 @@ function META:TrackTableIndexUnion(obj, truthy_union, falsy_union, truthy_falsy,
 		data.stack[hash],
 		{
 			key = key,
-			truthy = self.inverted_expression_depth % 2 == 1 and falsy_union or truthy_union,
-			falsy = self.inverted_expression_depth % 2 == 1 and truthy_union or falsy_union,
+			truthy = swap_if_inverted(self, truthy_union, falsy_union),
+			falsy = swap_if_inverted(self, falsy_union, truthy_union),
 			inverted = false,
 			truthy_falsy = truthy_falsy,
 			scope = scope,
@@ -165,24 +145,32 @@ function META:TrackTableIndexUnion(obj, truthy_union, falsy_union, truthy_falsy,
 end
 
 do
+	local function collect(branch, idx)
+		local vals = {}
+
+		for _, b in ipairs(branch) do
+			table.insert(vals, b:GetWithNumber(idx) or Nil())
+		end
+
+		return #vals > 0 and Union(vals) or Union({Nil()})
+	end
+
 	local function track_tuple_sibling_narrowing(self, checked_upvalue, checked_val, analyzer)
 		local source_info = checked_val:GetTupleSourceUnion()
 
 		if not source_info then return end
 
-		local source_union = source_info.union
-		local checked_index = source_info.index
-		local truthy_branches = {}
-		local falsy_branches = {}
+		local source_union, checked_index = source_info.union, source_info.index
+		local truthy_branches, falsy_branches = {}, {}
 
 		for _, obj in ipairs(source_union:GetData()) do
 			if obj.Type == "tuple" then
-				local val_at_index = obj:GetWithNumber(checked_index)
+				local v = obj:GetWithNumber(checked_index)
 
-				if val_at_index then
-					if val_at_index:IsTruthy() then table.insert(truthy_branches, obj) end
+				if v then
+					if v:IsTruthy() then table.insert(truthy_branches, obj) end
 
-					if val_at_index:IsFalsy() then table.insert(falsy_branches, obj) end
+					if v:IsFalsy() then table.insert(falsy_branches, obj) end
 				else
 					table.insert(falsy_branches, obj)
 				end
@@ -193,11 +181,7 @@ do
 
 		if not scope then return end
 
-		local all_upvalues = scope:GetAllUpvaluesInScope()
-
-		if not all_upvalues then return end
-
-		for _, upv in ipairs(all_upvalues) do
+		for _, upv in ipairs(scope:GetAllUpvaluesInScope()) do
 			if upv ~= checked_upvalue then
 				local sib_val = upv:GetValue()
 
@@ -205,34 +189,13 @@ do
 					local sib_source = sib_val:GetTupleSourceUnion()
 
 					if sib_source and sib_source.union == source_union then
-						local sib_index = sib_source.index
-						local truthy_vals = {}
-
-						for _, branch in ipairs(truthy_branches) do
-							local v = branch:GetWithNumber(sib_index)
-
-							if v then
-								table.insert(truthy_vals, v)
-							else
-								table.insert(truthy_vals, Nil())
-							end
-						end
-
-						local falsy_vals = {}
-
-						for _, branch in ipairs(falsy_branches) do
-							local v = branch:GetWithNumber(sib_index)
-
-							if v then
-								table.insert(falsy_vals, v)
-							else
-								table.insert(falsy_vals, Nil())
-							end
-						end
-
-						local truthy_union = #truthy_vals > 0 and Union(truthy_vals) or Union({Nil()})
-						local falsy_union = #falsy_vals > 0 and Union(falsy_vals) or Union({Nil()})
-						self:TrackUpvalueUnion(sib_val, truthy_union, falsy_union, nil, analyzer)
+						self:TrackUpvalueUnion(
+							sib_val,
+							collect(truthy_branches, sib_source.index),
+							collect(falsy_branches, sib_source.index),
+							nil,
+							analyzer
+						)
 					end
 				end
 			end
@@ -243,22 +206,18 @@ do
 		local upvalue = obj:GetUpvalue()
 
 		if not upvalue then
-			-- Follow LeftRightSource chains only when traversing from a
-			-- stored variable's chain (not from direct condition expressions)
 			if follow_intermediate and obj.Type == "union" then
-				-- Check for table field narrowing data (e.g., t.x had ~= nil comparison)
 				local stored_tf = obj:GetStoredTruthyFalsy()
 
 				if stored_tf and obj:GetParentTable() then
-					local t, f = stored_tf.truthy, stored_tf.falsy
-					self:TrackTableIndexUnion(obj, t, f, nil, analyzer)
+					self:TrackTableIndexUnion(obj, stored_tf.truthy, stored_tf.falsy, nil, analyzer)
 				end
 
-				local left_right = obj:GetLeftRightSource()
+				local lr = obj:GetLeftRightSource()
 
-				if left_right then
-					self:TrackDependentUpvalues(left_right.left, true, analyzer)
-					self:TrackDependentUpvalues(left_right.right, true, analyzer)
+				if lr then
+					self:TrackDependentUpvalues(lr.left, true, analyzer)
+					self:TrackDependentUpvalues(lr.right, true, analyzer)
 				end
 			end
 
@@ -266,28 +225,21 @@ do
 		end
 
 		local val = upvalue:GetValue()
-		local truthy_falsy = upvalue:GetTruthyFalsyUnion()
+		local tf = upvalue:GetTruthyFalsyUnion()
 
-		if truthy_falsy then
-			local t, f = truthy_falsy.truthy, truthy_falsy.falsy
-			self:TrackUpvalueUnion(upvalue:GetValue(), t, f, nil, analyzer)
+		if tf then
+			self:TrackUpvalueUnion(val, tf.truthy, tf.falsy, nil, analyzer)
 		end
 
-		-- If the upvalue's value has a ParentTable reference (e.g., local val = t.foo),
-		-- also narrow the table field when the alias is checked.
 		if val.Type == "union" and val:GetParentTable() then
-			local stored_tf = val:GetStoredTruthyFalsy()
-			local t, f
-
-			if stored_tf then
-				-- Use comparison-derived truthy/falsy (from ~= nil etc.)
-				t, f = stored_tf.truthy, stored_tf.falsy
-			else
-				-- Use truthiness-based split (from plain `if val then`)
-				t, f = val:GetTruthy(), val:GetFalsy()
-			end
-
-			self:TrackTableIndexUnion(val, t, f, nil, analyzer)
+			local stored = val:GetStoredTruthyFalsy()
+			self:TrackTableIndexUnion(
+				val,
+				stored and stored.truthy or val:GetTruthy(),
+				stored and stored.falsy or val:GetFalsy(),
+				nil,
+				analyzer
+			)
 		end
 
 		if val.Type == "union" and val:GetTupleSourceUnion() then
@@ -295,11 +247,11 @@ do
 		end
 
 		if val.Type == "union" then
-			local left_right = val:GetLeftRightSource()
+			local lr = val:GetLeftRightSource()
 
-			if left_right then
-				self:TrackDependentUpvalues(left_right.left, true, analyzer)
-				self:TrackDependentUpvalues(left_right.right, true, analyzer)
+			if lr then
+				self:TrackDependentUpvalues(lr.left, true, analyzer)
+				self:TrackDependentUpvalues(lr.right, true, analyzer)
 			end
 		end
 	end
@@ -334,28 +286,29 @@ do
 
 	function META:GetTrackedUpvalue(obj)
 		local upvalue = obj:GetUpvalue()
-		local data = self.tracked_objects_done[upvalue]
-		local stack = data and data.stack
+		local stack = self.tracked_objects_done[upvalue]
 
 		if not stack then return end
 
-		local function set_upvalue(val, upvalue)
-			val:SetUpvalue(upvalue)
-		end
+		stack = stack.stack
 
-		return resolve_tracked_value(self, stack, set_upvalue, upvalue)
+		if not stack then return end
+
+		return resolve_tracked_value(self, stack, function(val, uv)
+			val:SetUpvalue(uv)
+		end, upvalue)
 	end
 
 	function META:GetTrackedTableWithKey(tbl, key)
 		local hash = key:GetHashForMutationTracking()
 
-		if hash == nil then return end
+		if not hash then return end
 
 		local data = self.tracked_objects_done[tbl]
 
-		if not data then return end
+		if not data or not data.stack then return end
 
-		local stack = data.stack and data.stack[hash]
+		local stack = data.stack[hash]
 
 		if not stack then return end
 
@@ -365,49 +318,34 @@ end
 
 function META:GetTrackedObjects(old_upvalues, scope, analyzer)
 	scope = scope or analyzer:GetScope()
-	local objects = {}
-	local translate = {}
+	local objects, translate = {}, nil
 
 	if old_upvalues then
+		translate = {}
+
 		for i, upvalue in ipairs(scope.upvalues.runtime.list) do
-			local old = old_upvalues[i]
-			translate[old] = upvalue
+			translate[old_upvalues[i]] = upvalue
 		end
 	end
 
 	for _, data in ipairs(self.tracked_objects) do
 		if data.kind == "upvalue" then
-			local stack = data.stack
-			local upvalue = data.upvalue
+			local upvalue = translate and translate[data.upvalue] or data.upvalue
 
-			if old_upvalues then upvalue = translate[upvalue] end
-
-			-- stack is needed to simply track upvalues used, even if they were not mutated for warnings
-			if upvalue then
+			if upvalue and data.stack then
+				table.insert(objects, {kind = "upvalue", upvalue = upvalue, stack = shallow_copy(data.stack)})
+			end
+		elseif data.kind == "table" and data.stack then
+			for _, stack in ipairs(data.stacki) do
 				table.insert(
 					objects,
-					{kind = "upvalue", upvalue = upvalue, stack = stack and shallow_copy(stack)}
+					{
+						kind = "table",
+						obj = data.tbl,
+						key = stack[#stack].key,
+						stack = shallow_copy(stack),
+					}
 				)
-			end
-		elseif data.kind == "table" then
-			if data.stack then
-				for _, stack in ipairs(data.stacki) do
-					local new_stack = {}
-
-					for i, v in ipairs(stack) do
-						table.insert(new_stack, v)
-					end
-
-					table.insert(
-						objects,
-						{
-							kind = "table",
-							obj = data.tbl,
-							key = stack[#stack].key,
-							stack = new_stack,
-						}
-					)
-				end
 			end
 		end
 	end
@@ -421,18 +359,13 @@ function META:ClearTracked()
 end
 
 function META:StashTrackedChanges()
-	self.track_stash[#self.track_stash + 1] = {
-		self.tracked_objects,
-		self.tracked_objects_done,
-	}
+	self.track_stash[#self.track_stash + 1] = {self.tracked_objects, self.tracked_objects_done}
 end
 
 function META:PopStashedTrackedChanges()
-	local tip = #self.track_stash
-	local t = self.track_stash[tip]
-	self.track_stash[tip] = nil
-	self.tracked_objects = t[1]
-	self.tracked_objects_done = t[2]
+	local t = self.track_stash[#self.track_stash]
+	self.track_stash[#self.track_stash] = nil
+	self.tracked_objects, self.tracked_objects_done = t[1], t[2]
 end
 
 function META:ClearScopedTrackedObjects(scope)
@@ -444,22 +377,19 @@ function META:ClearScopedTrackedObjects(scope)
 end
 
 do
-	local function collect_truthy_values(stack)
-		if not stack then return end
-
-		local top_truthy = stack[#stack].truthy
-
-		if top_truthy and top_truthy.Type == "range" then
-			return top_truthy:Copy()
-		end
-
-		if not top_truthy then return end
+	local function collect_values(stack, field, skip_applied)
+		if not stack or #stack == 0 then return end
 
 		local values = {}
 
 		for _, entry in ipairs(stack) do
-			-- Skip entries that were already applied by ApplyMutationsAfterStatement
-			if entry.truthy and not entry.applied then table.insert(values, entry.truthy) end
+			local v = entry[field]
+
+			if skip_applied and entry.applied then goto continue end
+
+			if v then table.insert(values, v) end
+
+			::continue::
 		end
 
 		if #values == 0 then return end
@@ -473,7 +403,20 @@ do
 		if not tracked_objects then return end
 
 		for _, data in ipairs(tracked_objects) do
-			local obj = collect_truthy_values(data.stack)
+			local stack = data.stack
+			local obj
+
+			-- Range types are returned directly without collection
+			if
+				stack and
+				#stack > 0 and
+				stack[#stack].truthy and
+				stack[#stack].truthy.Type == "range"
+			then
+				obj = stack[#stack].truthy:Copy()
+			else
+				obj = collect_values(stack, "truthy", true)
+			end
 
 			if not obj then goto continue end
 
@@ -487,83 +430,67 @@ do
 			::continue::
 		end
 	end
-end
-
-do
-	local function collect_falsy_values(stack)
-		if not stack then return end
-
-		local values = {}
-
-		for _, entry in ipairs(stack) do
-			if entry.falsy then table.insert(values, entry.falsy) end
-		end
-
-		if #values == 0 then return end
-
-		if #values == 1 then return values[1] end
-
-		return Union(values)
-	end
 
 	function META:ApplyMutationsInIfElse(blocks, analyzer)
-		for i, block in ipairs(blocks) do
-			if block.tracked_objects then
-				for _, data in ipairs(block.tracked_objects) do
-					if data.stack then
-						if data.kind == "upvalue" then
-							local union = analyzer:GetMutatedUpvalue(data.upvalue)
+		for _, block in ipairs(blocks) do
+			if not block.tracked_objects then goto continue_block end
 
-							if union and union.Type == "union" then
-								for _, v in ipairs(data.stack) do
-									union:RemoveType(v.truthy)
-								end
+			for _, data in ipairs(block.tracked_objects) do
+				if not data.stack then goto continue end
 
-								union:SetUpvalue(data.upvalue)
+				if data.kind == "upvalue" then
+					local union = analyzer:GetMutatedUpvalue(data.upvalue)
+
+					if union and union.Type == "union" then
+						for _, v in ipairs(data.stack) do
+							union:RemoveType(v.truthy)
+						end
+
+						union:SetUpvalue(data.upvalue)
+					end
+
+					local top_falsy = data.stack[#data.stack].falsy
+
+					if
+						top_falsy and
+						(
+							top_falsy.Type == "range" or
+							(
+								union and
+								union.Type == "union" and
+								union:IsEmpty()
+							)
+						)
+					then
+						local falsy = collect_values(data.stack, "falsy")
+
+						if falsy then analyzer:MutateUpvalue(data.upvalue, falsy, true) end
+					elseif union then
+						analyzer:MutateUpvalue(data.upvalue, union, true)
+					end
+				elseif data.kind == "table" then
+					local union = analyzer:GetMutatedTableValue(data.obj, data.key)
+
+					if union then
+						if union.Type == "union" then
+							for _, v in ipairs(data.stack) do
+								union:RemoveType(v.truthy)
 							end
+						end
 
-							if
-								data.stack[#data.stack] and
-								data.stack[#data.stack].falsy and
-								(
-									data.stack[#data.stack].falsy.Type == "range" or
-									(
-										union and
-										union.Type == "union" and
-										union:IsEmpty()
-									)
-								)
-							then
-								analyzer:MutateUpvalue(data.upvalue, collect_falsy_values(data.stack), true)
-							elseif union then
-								analyzer:MutateUpvalue(data.upvalue, union, true)
-							end
-						elseif data.kind == "table" then
-							local union = analyzer:GetMutatedTableValue(data.obj, data.key)
-
-							if union then
-								if union.Type == "union" then
-									for _, v in ipairs(data.stack) do
-										union:RemoveType(v.truthy)
-									end
-								end
-
-								if union.Type == "union" and union:IsEmpty() then
-									local falsy = collect_falsy_values(data.stack)
-
-									if falsy then
-										analyzer:MutateTable(data.obj, data.key, falsy, true)
-									else
-										analyzer:MutateTable(data.obj, data.key, union, true)
-									end
-								else
-									analyzer:MutateTable(data.obj, data.key, union, true)
-								end
-							end
+						if union.Type == "union" and union:IsEmpty() then
+							local falsy = collect_values(data.stack, "falsy")
+							analyzer:MutateTable(data.obj, data.key, falsy or union, true)
+						else
+							analyzer:MutateTable(data.obj, data.key, union, true)
 						end
 					end
 				end
+
+				::continue::
 			end
+
+			::continue_block::
 		end
 	end
 end
@@ -572,23 +499,25 @@ do
 	local function solve(data, scope, negate)
 		local stack = data.stack
 
-		if stack and #stack > 0 then
-			local val
+		if not stack or #stack == 0 then return end
 
-			if negate and not (scope:IsElseConditionalScope() or stack[#stack].inverted) then
-				val = stack[#stack].falsy
-			else
-				val = stack[#stack].truthy
-			end
+		local val = (
+				negate and
+				not scope:IsElseConditionalScope()
+				and
+				not stack[#stack].inverted
+			)
+			and
+			stack[#stack].falsy or
+			stack[#stack].truthy
 
-			if val and (val.Type ~= "union" or not val:IsEmpty()) then
-				if val.Type == "union" and #val:GetData() == 1 then
-					val = val:GetData()[1]
-				end
+		if not val then return end
 
-				return val
-			end
-		end
+		if val.Type == "union" and val:IsEmpty() then return end
+
+		if val.Type == "union" and #val:GetData() == 1 then val = val:GetData()[1] end
+
+		return val
 	end
 
 	function META:ApplyMutationsAfterStatement(scope, negate, tracked_objects, analyzer)
@@ -597,19 +526,20 @@ do
 		for _, data in ipairs(tracked_objects) do
 			local val = solve(data, scope, negate)
 
-			if val then
-				if data.kind == "upvalue" then
-					val:SetUpvalue(data.upvalue)
-					analyzer:MutateUpvalue(data.upvalue, val, true)
-				elseif data.kind == "table" then
-					analyzer:MutateTable(data.obj, data.key, val, true)
-				end
+			if not val then goto continue end
 
-				-- Mark the applied entry so it's not re-collected in ApplyMutationsInIf
-				if data.stack and #data.stack > 0 then
-					data.stack[#data.stack].applied = true
-				end
+			if data.kind == "upvalue" then
+				val:SetUpvalue(data.upvalue)
+				analyzer:MutateUpvalue(data.upvalue, val, true)
+			elseif data.kind == "table" then
+				analyzer:MutateTable(data.obj, data.key, val, true)
 			end
+
+			if data.stack and #data.stack > 0 then
+				data.stack[#data.stack].applied = true
+			end
+
+			::continue::
 		end
 	end
 end
@@ -619,15 +549,13 @@ function META:DumpUpvalueTracking(obj)
 
 	if not upvalue then return "no upvalue" end
 
-	if not self.tracked_objects_done[upvalue] then return "no upvalues done" end
-
 	local data = self.tracked_objects_done[upvalue]
 
-	if not data.stack then return "no stack" end
+	if not data or not data.stack then return "no tracking data" end
 
 	local str = tostring(data.upvalue) .. "\n"
 
-	for i, v in ipairs(data.stack) do
+	for _, v in ipairs(data.stack) do
 		str = str .. "T=" .. tostring(v.truthy:Simplify()) .. " F=" .. tostring(v.falsy:Simplify()) .. "\n"
 	end
 
