@@ -340,3 +340,46 @@ analyze[[
         attest.equal(x, _ as number)
     end
 ]]
+-- triple negation: not not not x → same as not x
+analyze[[
+    local x: number | nil
+    if not not not x then
+        attest.equal(x, nil)
+    end
+]]
+-- quadruple negation: not not not not x → same as x
+analyze[[
+    local x: number | nil
+    if not not not not x then
+        attest.equal(x, _ as number)
+    end
+]]
+-- not with stored condition and triple negation
+analyze[[
+    local x: number | nil
+    local check = x ~= nil
+    if not not not check then
+        attest.equal(x, nil)
+    end
+]]
+-- not with table field narrowing
+analyze[[
+    local t: {foo = nil | 1}
+    if not t.foo then return end
+    attest.equal(t.foo, 1)
+]]
+-- not not with table field narrowing
+analyze[[
+    local t: {foo = nil | 1}
+    if not not t.foo then return end
+    attest.equal(t.foo, nil)
+]]
+-- nested not in or expression
+analyze[[
+    local a: nil | 1
+    local b: nil | 2
+    local result = (not a) or b
+    -- not a is true when a is nil, false when a is 1
+    -- so result is: (a is nil) or (b when a is 1)
+    attest.equal(result, _ as 2 | nil | true)
+]]

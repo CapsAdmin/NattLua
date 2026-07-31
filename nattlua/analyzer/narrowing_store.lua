@@ -91,8 +91,10 @@ function META:TrackUpvalueUnion(obj, truthy_union, falsy_union, inverted, analyz
 	table.insert(
 		data.stack,
 		{
-			truthy = truthy_union,
-			falsy = falsy_union,
+			-- when inside `not`, swap truthy/falsy so all read logic works unchanged.
+			-- the inverted flag records the original operator semantics for after-statement narrowing.
+			truthy = self.inverted_expression_depth % 2 == 1 and falsy_union or truthy_union,
+			falsy = self.inverted_expression_depth % 2 == 1 and truthy_union or falsy_union,
 			inverted = inverted,
 			scope = scope,
 		}
@@ -153,9 +155,9 @@ function META:TrackTableIndexUnion(obj, truthy_union, falsy_union, truthy_falsy,
 		data.stack[hash],
 		{
 			key = key,
-			truthy = truthy_union,
-			falsy = falsy_union,
-			inverted = self:IsInvertedExpressionContext(),
+			truthy = self.inverted_expression_depth % 2 == 1 and falsy_union or truthy_union,
+			falsy = self.inverted_expression_depth % 2 == 1 and truthy_union or falsy_union,
+			inverted = false,
 			truthy_falsy = truthy_falsy,
 			scope = scope,
 		}
@@ -249,9 +251,6 @@ do
 
 				if stored_tf and obj:GetParentTable() then
 					local t, f = stored_tf.truthy, stored_tf.falsy
-
-					if self:IsInvertedExpressionContext() then t, f = f, t end
-
 					self:TrackTableIndexUnion(obj, t, f, nil, analyzer)
 				end
 
@@ -271,12 +270,6 @@ do
 
 		if truthy_falsy then
 			local t, f = truthy_falsy.truthy, truthy_falsy.falsy
-
-			-- When inside a `not` prefix, the condition meaning is inverted:
-			-- `local c = x == nil; if not c then` means x ~= nil in the body,
-			-- so we swap truthy/falsy from the stored comparison.
-			if self:IsInvertedExpressionContext() then t, f = f, t end
-
 			self:TrackUpvalueUnion(upvalue:GetValue(), t, f, nil, analyzer)
 		end
 
@@ -293,8 +286,6 @@ do
 				-- Use truthiness-based split (from plain `if val then`)
 				t, f = val:GetTruthy(), val:GetFalsy()
 			end
-
-			if self:IsInvertedExpressionContext() then t, f = f, t end
 
 			self:TrackTableIndexUnion(val, t, f, nil, analyzer)
 		end
@@ -316,50 +307,28 @@ end
 
 do
 	local function resolve_tracked_value(store, stack, set_upvalue_fn, upvalue)
-		if store:IsInvertedExpressionContext() then
-			if store:IsFalsyExpressionContext() then
-				local val = stack[#stack].falsy
+		local top = stack[#stack]
 
-				if set_upvalue_fn then set_upvalue_fn(val, upvalue) end
+		if store:IsTruthyExpressionContext() then
+			local val = top.truthy
 
-				return val
-			elseif store:IsTruthyExpressionContext() then
-				local union = stack[#stack].truthy
+			if set_upvalue_fn then set_upvalue_fn(val, upvalue) end
 
-				if union.Type == "union" and union:GetCardinality() == 0 then
-					union = Union()
+			return val
+		elseif store:IsFalsyExpressionContext() then
+			local union = top.falsy
 
-					for _, val in ipairs(stack) do
-						union:AddType(val.truthy)
-					end
+			if union.Type == "union" and union:GetCardinality() == 0 then
+				union = Union()
+
+				for _, entry in ipairs(stack) do
+					union:AddType(entry.falsy)
 				end
-
-				if set_upvalue_fn then set_upvalue_fn(union, upvalue) end
-
-				return union
 			end
-		else
-			if store:IsTruthyExpressionContext() then
-				local val = stack[#stack].truthy
 
-				if set_upvalue_fn then set_upvalue_fn(val, upvalue) end
+			if set_upvalue_fn then set_upvalue_fn(union, upvalue) end
 
-				return val
-			elseif store:IsFalsyExpressionContext() then
-				local union = stack[#stack].falsy
-
-				if union.Type == "union" and union:GetCardinality() == 0 then
-					union = Union()
-
-					for _, val in ipairs(stack) do
-						union:AddType(val.falsy)
-					end
-				end
-
-				if set_upvalue_fn then set_upvalue_fn(union, upvalue) end
-
-				return union
-			end
+			return union
 		end
 	end
 
@@ -640,41 +609,6 @@ do
 				if data.stack and #data.stack > 0 then
 					data.stack[#data.stack].applied = true
 				end
-			end
-		end
-	end
-end
-
-function META:SnapshotForNot()
-	local snapshot = {}
-	snapshot.n = #self.tracked_objects
-
-	for i, data in ipairs(self.tracked_objects) do
-		snapshot[i] = data.stack and #data.stack or 0
-	end
-
-	return snapshot
-end
-
-function META:SwapNotNarrowing(pre_snapshot, post_snapshot)
-	-- swap for entries added during sub-expression evaluation
-	for i = pre_snapshot.n + 1, post_snapshot.n do
-		local data = self.tracked_objects[i]
-
-		if data and data.stack then
-			for _, entry in ipairs(data.stack) do
-				entry.truthy, entry.falsy = entry.falsy, entry.truthy
-			end
-		end
-	end
-
-	-- swap for new stack entries in existing tracked objects
-	for i = 1, pre_snapshot.n do
-		local data = self.tracked_objects[i]
-
-		if data and data.stack then
-			for j = (pre_snapshot[i] or 0) + 1, (post_snapshot[i] or 0) do
-				data.stack[j].truthy, data.stack[j].falsy = data.stack[j].falsy, data.stack[j].truthy
 			end
 		end
 	end

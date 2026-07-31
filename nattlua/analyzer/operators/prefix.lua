@@ -137,32 +137,15 @@ return {
 			end
 		end
 
-		-- Save tracked state before evaluating `not` sub-expression, so we can
-		-- swap truthy/falsy for any narrowing entries added by inner `not` layers.
-		-- This handles double negation: `not not x` → each `not` layer inverts.
-		local not_pre_snapshot
-
 		if node.value.sub_type == "not" then
-			not_pre_snapshot = analyzer.narrowing_store:SnapshotForNot()
 			analyzer.narrowing_store:PushInvertedExpressionContext()
 		end
 
 		local r = analyzer:Assert(analyzer:AnalyzeExpression(node.right))
 
 		if node.value.sub_type == "not" then
-			-- Snapshot after sub-expression but before TrackDependentUpvalues,
-			-- so we only swap entries from inner `not` evaluation, not from
-			-- stored condition chain traversal.
-			local not_post_snapshot = analyzer.narrowing_store:SnapshotForNot()
-			-- Follow LeftRightSource chains from stored conditions while
-			-- inverted context is active, so `local c = x == nil; if not c then`
-			-- can narrow x through the chain.
 			analyzer.narrowing_store:TrackDependentUpvalues(r, nil, analyzer)
 			analyzer.narrowing_store:PopInvertedExpressionContext()
-			-- Swap truthy/falsy for tracking entries added during sub-expression
-			-- evaluation (between pre and post snapshots). These come from inner
-			-- `not` handlers and need inversion to cancel out the double negation.
-			analyzer.narrowing_store:SwapNotNarrowing(not_pre_snapshot, not_post_snapshot)
 		end
 
 		if node.value.sub_type == "ref" or node.value.sub_type == "|" then
