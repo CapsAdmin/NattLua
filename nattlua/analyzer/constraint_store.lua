@@ -31,7 +31,11 @@ end
 
 -- Register a domain for an upvalue
 function META:RegisterDomain(upvalue, domain)
-	self.domains[upvalue:GetHash()] = domain
+	self.domains[upvalue:GetHash()] = assert(domain)
+end
+
+function META:RemoveDomain(upvalue)
+	self.domains[upvalue:GetHash()] = nil
 end
 
 -- Get current domain for an upvalue
@@ -204,7 +208,7 @@ function META:ApplyRelationalNarrowing(scope)
 				c.a:Mutate(new_a, scope)
 			elseif empty_a then
 				-- Domain became empty
-				self:RegisterDomain(c.a, nil)
+				self:RemoveDomain(c.a)
 				narrowed[c.a] = nil
 			end
 
@@ -223,7 +227,7 @@ function META:ApplyRelationalNarrowing(scope)
 				c.b:Mutate(new_b, scope)
 			elseif empty_b then
 				-- Domain became empty
-				self:RegisterDomain(c.b, nil)
+				self:RemoveDomain(c.b)
 				narrowed[c.b] = nil
 			end
 
@@ -413,15 +417,11 @@ function META:AddEquality(a, b, op)
 
 	-- Auto-register domains from upvalue values
 	if a.Type == "upvalue" and not self:GetDomain(a) then
-		local val = a:GetValue()
-
-		if val then self:RegisterDomain(a, val) end
+		self:RegisterDomain(a, a:GetValue())
 	end
 
 	if b.Type == "upvalue" and not self:GetDomain(b) then
-		local val = b:GetValue()
-
-		if val then self:RegisterDomain(b, val) end
+		self:RegisterDomain(b, a:GetValue())
 	end
 
 	-- Update equivalence classes (transitive closure)
@@ -534,15 +534,11 @@ function META:AddRelational(a, b, op)
 
 	-- Auto-register domains from upvalue values
 	if a and a.Type == "upvalue" and not self:GetDomain(a) then
-		local val = a:GetValue()
-
-		if val then self:RegisterDomain(a, val) end
+		self:RegisterDomain(a, a:GetValue())
 	end
 
 	if b and b.Type == "upvalue" and not self:GetDomain(b) then
-		local val = b:GetValue()
-
-		if val then self:RegisterDomain(b, val) end
+		self:RegisterDomain(b, b:GetValue())
 	end
 
 	return id
@@ -980,21 +976,15 @@ function META:AddArithmetic(result, op, left, right)
 
 	-- Auto-register domains from upvalue values
 	if left and left.Type == "upvalue" and not self:GetDomain(left) then
-		local val = left:GetValue()
-
-		if val then self:RegisterDomain(left, val) end
+		self:RegisterDomain(left, left:GetValue())
 	end
 
 	if right and right.Type == "upvalue" and not self:GetDomain(right) then
-		local val = right:GetValue()
-
-		if val then self:RegisterDomain(right, val) end
+		self:RegisterDomain(right, right:GetValue())
 	end
 
 	if result and result.Type == "upvalue" and not self:GetDomain(result) then
-		local val = result:GetValue()
-
-		if val then self:RegisterDomain(result, val) end
+		self:RegisterDomain(result, result:GetValue())
 	end
 
 	return id
@@ -2268,7 +2258,7 @@ end
 -- Clear domains for a set of upvalues
 function META:ClearDomainsFor(upvalues)
 	for upvalue in pairs(upvalues) do
-		self:RegisterDomain(upvalue, nil)
+		self:RemoveDomain(upvalue)
 	end
 end
 
