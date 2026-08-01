@@ -16,7 +16,7 @@ META.__index = META
 function META.new()
 	local store = {
 		domains = {}, -- upvalue -> current Union
-		table_field_domains = {}, -- {table, field} -> narrowed domain
+		table_field_domains = {}, -- array of {table, field, domain} entries
 		constraints = {}, -- list of all constraints
 		dependents = {}, -- upvalue -> list of constraints involving it
 		scope_stack = {}, -- snapshots for push/pop
@@ -1047,36 +1047,18 @@ function META:PropagateTableFieldNarrowing(source_upvalue)
 		if tbl and field then
 			-- Store the narrowed domain for this table field
 			-- The key is a compound: tbl + field
-			local field_key = {table = tbl, field = field}
-			self.table_field_domains[field_key] = new_domain
+			table.insert(self.table_field_domains, {table = tbl, field = field, domain = new_domain})
 		end
 	end
-end
-
--- Get narrowed domain for a table field
-function META:GetTableFieldDomain(tbl, field)
-	local field_key = {table = tbl, field = field}
-	return self.table_field_domains[field_key]
-end
-
--- Check if a table field has a narrowed domain
-function META:HasTableFieldDomain(tbl, field)
-	return self:GetTableFieldDomain(tbl, field) ~= nil
 end
 
 -- Apply table field narrowing to actual table objects
 -- Called after arithmetic dependencies are recomputed in if-block handler
 -- analyzer: required, used for MutateTable
 function META:ApplyTableFieldNarrowing(analyzer)
-	for domain_key, narrowed_domain in pairs(self.table_field_domains) do
-		local tbl = domain_key.table
-		local field = domain_key.field
-
-		if tbl and field and narrowed_domain then
-			if narrowed_domain.SetUpvalue then narrowed_domain:SetUpvalue(nil) end
-
-			analyzer:MutateTable(tbl, field, narrowed_domain, true)
-		end
+	for _, entry in ipairs(self.table_field_domains) do
+		entry.domain:SetUpvalue(nil)
+		analyzer:MutateTable(entry.table, entry.field, entry.domain, true)
 	end
 end
 
@@ -1538,11 +1520,17 @@ function META:PushScope()
 		constraints = {},
 		dependents = {},
 		constraint_id = self.constraint_id,
+		table_field_domains = {},
 	}
 
 	-- Snapshot domains
 	for upvalue, domain in pairs(self.domains) do
 		snapshot.domains[upvalue] = domain
+	end
+
+	-- Snapshot table field domains
+	for _, entry in ipairs(self.table_field_domains) do
+		table.insert(snapshot.table_field_domains, entry)
 	end
 
 	-- Snapshot constraints
@@ -1572,6 +1560,7 @@ function META:PopScope()
 	self.constraints = snapshot.constraints
 	self.dependents = snapshot.dependents
 	self.constraint_id = snapshot.constraint_id
+	self.table_field_domains = snapshot.table_field_domains
 end
 
 -- Fork: create a clone for disjunction handling
@@ -1581,6 +1570,11 @@ function META:Fork()
 	-- Clone domains
 	for upvalue, domain in pairs(self.domains) do
 		clone.domains[upvalue] = domain
+	end
+
+	-- Clone table field domains
+	for _, entry in ipairs(self.table_field_domains) do
+		table.insert(clone.table_field_domains, entry)
 	end
 
 	-- Clone constraints
@@ -2282,6 +2276,7 @@ end
 function META:ResetForLoopIteration()
 	-- Clear all narrowed domains so they fall back to upvalue:GetValue()
 	self.domains = {}
+	self.table_field_domains = {}
 	-- Keep only arithmetic and table_field constraints
 	local new_constraints = {}
 	local new_dependents = {}
