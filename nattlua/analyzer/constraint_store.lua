@@ -16,6 +16,7 @@ META.__index = META
 function META.new()
 	local store = {
 		domains = {}, -- upvalue -> current Union
+		table_field_domains = {}, -- {table, field} -> narrowed domain
 		constraints = {}, -- list of all constraints
 		dependents = {}, -- upvalue -> list of constraints involving it
 		scope_stack = {}, -- snapshots for push/pop
@@ -1047,7 +1048,7 @@ function META:PropagateTableFieldNarrowing(source_upvalue)
 			-- Store the narrowed domain for this table field
 			-- The key is a compound: tbl + field
 			local field_key = {table = tbl, field = field}
-			self.domains[field_key] = new_domain
+			self.table_field_domains[field_key] = new_domain
 		end
 	end
 end
@@ -1055,7 +1056,7 @@ end
 -- Get narrowed domain for a table field
 function META:GetTableFieldDomain(tbl, field)
 	local field_key = {table = tbl, field = field}
-	return self.domains[field_key]
+	return self.table_field_domains[field_key]
 end
 
 -- Check if a table field has a narrowed domain
@@ -1067,17 +1068,14 @@ end
 -- Called after arithmetic dependencies are recomputed in if-block handler
 -- analyzer: required, used for MutateTable
 function META:ApplyTableFieldNarrowing(analyzer)
-	for domain_key, narrowed_domain in pairs(self.domains) do
-		if type(domain_key) == "table" and domain_key.table and domain_key.field then
-			table.print(domain_key)
-			local tbl = domain_key.table
-			local field = domain_key.field
+	for domain_key, narrowed_domain in pairs(self.table_field_domains) do
+		local tbl = domain_key.table
+		local field = domain_key.field
 
-			if tbl and field and narrowed_domain then
-				if narrowed_domain.SetUpvalue then narrowed_domain:SetUpvalue(nil) end
+		if tbl and field and narrowed_domain then
+			if narrowed_domain.SetUpvalue then narrowed_domain:SetUpvalue(nil) end
 
-				analyzer:MutateTable(tbl, field, narrowed_domain, true)
-			end
+			analyzer:MutateTable(tbl, field, narrowed_domain, true)
 		end
 	end
 end
