@@ -40,8 +40,9 @@ end
 
 -- Apply pending equality narrowing for all equivalence classes
 -- Called when entering a truthy branch after equality comparisons
--- Mutates upvalues directly (analyzer is used for scope-aware mutation)
-function META:ApplyEqualityNarrowing(analyzer)
+-- scope: optional, current lexical scope for mutation tracking.
+--        When nil, only computes internal domain intersections (no upvalue mutation).
+function META:ApplyEqualityNarrowing(scope)
 	local narrowed = {}
 	-- For each equivalence class with > 1 member, narrow all to intersection
 	local processed = {}
@@ -160,15 +161,12 @@ function META:ApplyEqualityNarrowing(analyzer)
 	end
 
 	-- Mutate upvalues with narrowed domains so the changes are visible
-	for upvalue, new_domain in pairs(narrowed) do
-		if upvalue.Mutate and analyzer then
-			local scope = analyzer:GetScope()
+	-- (only when scope is provided; otherwise narrowing_store handles mutation)
+	if scope then
+		for upvalue, new_domain in pairs(narrowed) do
+			if new_domain and new_domain.SetUpvalue then new_domain:SetUpvalue(upvalue) end
 
-			if scope then
-				if new_domain and new_domain.SetUpvalue then new_domain:SetUpvalue(upvalue) end
-
-				upvalue:Mutate(new_domain, scope)
-			end
+			upvalue:Mutate(new_domain, scope)
 		end
 	end
 
@@ -177,8 +175,8 @@ end
 
 -- Apply pending relational narrowing for all relational constraints
 -- Called when entering a truthy branch after relational comparisons
--- Returns a table of {upvalue = narrowed_domain} pairs for the caller to apply
-function META:ApplyRelationalNarrowing(analyzer)
+-- scope: current lexical scope for mutation tracking
+function META:ApplyRelationalNarrowing(scope)
 	local narrowed = {}
 
 	-- For each relational constraint, narrow both domains
@@ -201,15 +199,8 @@ function META:ApplyRelationalNarrowing(analyzer)
 			if new_a then
 				self.domains[c.a] = new_a
 				narrowed[c.a] = new_a
-
-				if c.a.Mutate and analyzer then
-					local scope = analyzer:GetScope()
-
-					if scope then
-						new_a:SetUpvalue(c.a)
-						c.a:Mutate(new_a, scope)
-					end
-				end
+				new_a:SetUpvalue(c.a)
+				c.a:Mutate(new_a, scope)
 			elseif empty_a then
 				-- Domain became empty
 				self.domains[c.a] = nil
@@ -227,15 +218,8 @@ function META:ApplyRelationalNarrowing(analyzer)
 			if new_b then
 				self.domains[c.b] = new_b
 				narrowed[c.b] = new_b
-
-				if c.b.Mutate and analyzer then
-					local scope = analyzer:GetScope()
-
-					if scope then
-						new_b:SetUpvalue(c.b)
-						c.b:Mutate(new_b, scope)
-					end
-				end
+				new_b:SetUpvalue(c.b)
+				c.b:Mutate(new_b, scope)
 			elseif empty_b then
 				-- Domain became empty
 				self.domains[c.b] = nil
@@ -253,31 +237,17 @@ function META:ApplyRelationalNarrowing(analyzer)
 		if new_a then
 			self.domains[c.a] = new_a
 			narrowed[c.a] = new_a
-
 			-- Also mutate the actual upvalue so the narrowed value is visible
-			if c.a.Mutate and analyzer then
-				local scope = analyzer:GetScope()
-
-				if scope then
-					new_a:SetUpvalue(c.a)
-					c.a:Mutate(new_a, scope)
-				end
-			end
+			new_a:SetUpvalue(c.a)
+			c.a:Mutate(new_a, scope)
 		end
 
 		if new_b then
 			self.domains[c.b] = new_b
 			narrowed[c.b] = new_b
-
 			-- Also mutate the actual upvalue
-			if c.b.Mutate and analyzer then
-				local scope = analyzer:GetScope()
-
-				if scope then
-					new_b:SetUpvalue(c.b)
-					c.b:Mutate(new_b, scope)
-				end
-			end
+			new_b:SetUpvalue(c.b)
+			c.b:Mutate(new_b, scope)
 		end
 
 		::continue::
@@ -288,7 +258,8 @@ end
 
 -- Apply relational narrowing for the else/falsy branch
 -- Negates the relational constraints to compute the complement domain
-function META:ApplyRelationalNarrowingElse(analyzer)
+-- scope: current lexical scope for mutation tracking
+function META:ApplyRelationalNarrowingElse(scope)
 	local narrowed = {}
 	-- Collect all relational constraints per upvalue
 	local upvalue_constraints = {}
@@ -341,15 +312,8 @@ function META:ApplyRelationalNarrowingElse(analyzer)
 		if narrowed_domain then
 			self.domains[upvalue] = narrowed_domain
 			narrowed[upvalue] = narrowed_domain
-
-			if upvalue.Mutate and analyzer then
-				local scope = analyzer:GetScope()
-
-				if scope then
-					narrowed_domain:SetUpvalue(upvalue)
-					upvalue:Mutate(narrowed_domain, scope)
-				end
-			end
+			narrowed_domain:SetUpvalue(upvalue)
+			upvalue:Mutate(narrowed_domain, scope)
 		else
 			-- Negated constraints produced empty domain.
 			-- Compute complement of the truthy-narrowed domain.
@@ -419,15 +383,8 @@ function META:ApplyRelationalNarrowingElse(analyzer)
 				if complement:GetCardinality() > 0 then
 					self.domains[upvalue] = complement
 					narrowed[upvalue] = complement
-
-					if upvalue.Mutate and analyzer then
-						local scope = analyzer:GetScope()
-
-						if scope then
-							complement:SetUpvalue(upvalue)
-							upvalue:Mutate(complement, scope)
-						end
-					end
+					complement:SetUpvalue(upvalue)
+					upvalue:Mutate(complement, scope)
 				end
 			end
 		end
@@ -1108,22 +1065,18 @@ end
 
 -- Apply table field narrowing to actual table objects
 -- Called after arithmetic dependencies are recomputed in if-block handler
+-- analyzer: required, used for MutateTable
 function META:ApplyTableFieldNarrowing(analyzer)
-	-- Iterate over all domains that are compound keys (table + field)
 	for domain_key, narrowed_domain in pairs(self.domains) do
-		-- Check if this is a compound key (table field)
 		if type(domain_key) == "table" and domain_key.table and domain_key.field then
+			table.print(domain_key)
 			local tbl = domain_key.table
 			local field = domain_key.field
 
 			if tbl and field and narrowed_domain then
-				-- Set upvalue on the narrowed domain
 				if narrowed_domain.SetUpvalue then narrowed_domain:SetUpvalue(nil) end
 
-				-- Mutate the table field with the narrowed value
-				if analyzer and analyzer.MutateTable then
-					analyzer:MutateTable(tbl, field, narrowed_domain, true)
-				end
+				analyzer:MutateTable(tbl, field, narrowed_domain, true)
 			end
 		end
 	end
@@ -1245,8 +1198,8 @@ function META:Narrow(upvalue, new_domain, visited)
 end
 
 -- Propagate all domains until fixed point
--- This handles chains like: x==y, y==z => x+y+z narrows correctly
-function META:PropagateUntilFixedPoint(analyzer)
+-- scope: current lexical scope for mutation tracking
+function META:PropagateUntilFixedPoint(scope)
 	local max_iterations = 50
 
 	for _ = 1, max_iterations do
@@ -1324,15 +1277,8 @@ function META:PropagateUntilFixedPoint(analyzer)
 			if changed then any_changed = true end
 
 			-- Also update the actual upvalue (so GetMutatedUpvalue returns narrowed value)
-			if c.result.Mutate and analyzer then
-				local scope = analyzer:GetScope()
-
-				if scope then
-					new_result:SetUpvalue(c.result)
-					c.result:Mutate(new_result, scope)
-				end
-			end
-
+			new_result:SetUpvalue(c.result)
+			c.result:Mutate(new_result, scope)
 			-- Mark as clean and cache input domains to detect actual changes
 			c.dirty = false
 			c.left_domain = left_domain
@@ -1766,7 +1712,8 @@ function META:GetEffectiveDomain(upvalue)
 end
 
 -- Recompute all arithmetic dependencies (uses ComputeArithmetic which handles correlation)
-function META:RecomputeAllArithmetic(analyzer)
+-- scope: current lexical scope for mutation tracking
+function META:RecomputeAllArithmetic(scope)
 	for _, c in pairs(self.constraints) do
 		if c.type ~= "arithmetic" then goto continue end
 
@@ -1785,10 +1732,8 @@ function META:RecomputeAllArithmetic(analyzer)
 			goto continue
 		end
 
-		if new_result:GetCardinality() > 0 and c.result.Mutate then
-			local scope = analyzer and analyzer:GetScope()
-
-			if scope then c.result:Mutate(new_result, scope) end
+		if new_result:GetCardinality() > 0 then
+			c.result:Mutate(new_result, scope)
 		end
 
 		::continue::
@@ -2145,15 +2090,9 @@ end
 -- When a branch like "if x == 1 then return end" exits, the remaining code
 -- should see x narrowed to exclude the value that triggered the return.
 --
--- NOTE: This only handles "==" comparisons with literals. "~=" comparisons
--- are already handled correctly by the existing mutation tracking system
--- (truthy/falsy union splitting).
---
--- Parameters:
---   analyzer: the analyzer context (for mutating upvalues)
---   original_values: table mapping upvalue -> original domain (saved before if)
---   returning_branch_truthy: boolean, true if the returning branch was truthy
-function META:ApplyEarlyReturnNarrowing(analyzer, original_values, returning_branch_truthy)
+-- scope: current lexical scope for mutation tracking
+-- original_values: table mapping upvalue -> original domain (saved before if)
+function META:ApplyEarlyReturnNarrowing(scope, original_values)
 	if not original_values then return end
 
 	-- Collect equality constraints with literals (only "==", not "~=")
@@ -2241,22 +2180,13 @@ function META:ApplyEarlyReturnNarrowing(analyzer, original_values, returning_bra
 	for upvalue, new_domain in pairs(narrowed_upvalues) do
 		self.domains[upvalue] = new_domain
 
-		-- Mutate the actual upvalue so narrowed value is visible
-		if upvalue.Mutate and analyzer then
-			local scope = analyzer:GetScope()
+		if new_domain and new_domain.SetUpvalue then new_domain:SetUpvalue(upvalue) end
 
-			if scope then
-				if new_domain and new_domain.SetUpvalue then new_domain:SetUpvalue(upvalue) end
-
-				if new_domain then upvalue:Mutate(new_domain, scope) end
-			end
-		end
+		if new_domain then upvalue:Mutate(new_domain, scope) end
 	end
 
 	-- Propagate narrowing through arithmetic dependencies
-	if next(narrowed_upvalues) and analyzer then
-		self:PropagateUntilFixedPoint(analyzer)
-	end
+	if next(narrowed_upvalues) then self:PropagateUntilFixedPoint(scope) end
 end
 
 -- Remove specific types from a domain (union or range)
@@ -2411,6 +2341,101 @@ function META:ResetForLoopIteration()
 	for _, c in pairs(self.constraints) do
 		if c.type == "arithmetic" then c.dirty = true end
 	end
+end
+
+-- ----------------------------------------------------------------
+-- High-level orchestration methods for if-branch narrowing.
+-- These encapsulate the full narrowing pipeline so callers (if.lua,
+-- binary.lua, etc.) don't need to know the internal step ordering.
+-- ----------------------------------------------------------------
+-- Check if a condition expression has "or" as its top-level operator.
+-- Used to skip equality narrowing for or-conditions, since the constraint
+-- store handles fork/merge semantics separately.
+function META:IsOrCondition(expr)
+	if not expr then return false end
+
+	local n = expr
+
+	while n do
+		local parent = n.parent
+
+		if not parent or parent.Type ~= "expression_binary_operator" then break end
+
+		n = parent
+	end
+
+	if n.Type == "expression_binary_operator" and n.value then
+		local op = n.value:GetValueString()
+
+		if op == "or" then return true end
+	end
+
+	return false
+end
+
+-- Snapshot original upvalue values (used for else-branch complement & early return).
+-- Returns a table mapping upvalue -> original domain.
+function META:SnapshotOriginalValues()
+	local values = {}
+
+	for upvalue in pairs(self:GetAllTrackedUpvalues()) do
+		values[upvalue] = upvalue:GetValue()
+	end
+
+	return values
+end
+
+-- Restore upvalue values to a previous snapshot.
+function META:RestoreOriginalValues(original_values)
+	for upvalue, orig_value in pairs(original_values) do
+		upvalue:SetValue(orig_value)
+	end
+end
+
+-- Apply initial narrowing for a truthy branch (equality + relational + propagation).
+-- NOTE: Does NOT include RecomputeAllArithmetic or ApplyTableFieldNarrowing.
+-- Those are called separately after narrowing_store mutations are applied,
+-- so mutations take effect before arithmetic recomputation.
+-- Apply initial narrowing for a truthy branch (equality + relational + propagation).
+-- scope: current lexical scope for mutation tracking
+function META:ApplyBranchNarrowing(scope)
+	-- Equality narrowing without scope: only computes internal domain intersections.
+	-- Actual upvalue mutation is done by the narrowing_store.
+	self:ApplyEqualityNarrowing()
+	self:ApplyRelationalNarrowing(scope)
+	self:MarkConstraintsDirty("arithmetic")
+	self:PropagateUntilFixedPoint(scope)
+end
+
+-- Recompute arithmetic and table field narrowing after mutations are applied.
+-- scope: current lexical scope for mutation tracking
+-- analyzer: required, used for MutateTable
+function META:RecomputeAfterMutations(scope, analyzer)
+	self:RecomputeAllArithmetic(scope)
+	self:ApplyTableFieldNarrowing(analyzer)
+end
+
+-- Apply initial narrowing for an else (falsy) branch.
+-- scope: current lexical scope for mutation tracking
+-- original_values: snapshot from SnapshotOriginalValues (taken before any branch).
+function META:ApplyElseBranchNarrowing(scope, original_values)
+	self:RestoreOriginalValues(original_values)
+	self:ClearDomainsFor(original_values)
+	self:ApplyRelationalNarrowingElse(scope)
+end
+
+-- Apply narrowing after an if-statement where a branch returned early.
+-- scope: current lexical scope for mutation tracking
+-- analyzer: required, used for MutateTable
+-- original_values: snapshot from SnapshotOriginalValues (taken before any branch).
+function META:ApplyPostIfNarrowing(scope, analyzer, original_values)
+	if not (scope:DidCertainReturn() or scope:DidUncertainReturn()) then return end
+
+	self:ApplyEarlyReturnNarrowing(scope, original_values)
+	self:MarkConstraintsDirty("arithmetic")
+	self:PropagateUntilFixedPoint(scope)
+	self:RecomputeAllArithmetic(scope)
+	self:ApplyTableFieldNarrowing(analyzer)
 end
 
 return META

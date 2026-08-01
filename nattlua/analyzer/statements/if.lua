@@ -2,34 +2,6 @@ local ipairs = _G.ipairs
 local Union = require("nattlua.types.union").Union
 local error_messages = require("nattlua.error_messages")
 local table_insert = _G.table.insert
-
--- Check if a condition expression has "or" as its top-level operator
--- This is used to skip equality narrowing for or-conditions, since the
--- constraint store handles fork/merge semantics separately
-local function IsOrCondition(expr)
-	if not expr then return false end
-
-	-- Walk up through parent binary operators to find the top-level operator
-	local n = expr
-
-	while n do
-		local parent = n.parent
-
-		if not parent or parent.Type ~= "expression_binary_operator" then break end
-
-		n = parent
-	end
-
-	-- n is now the top-level expression; check its operator
-	if n.Type == "expression_binary_operator" and n.value then
-		local op = n.value:GetValueString()
-
-		if op == "or" then return true end
-	end
-
-	return false
-end
-
 return {
 	AnalyzeIf = function(self, statement)
 		local prev_obj
@@ -152,15 +124,11 @@ return {
 		end
 
 		local last_scope
-		-- Save original domains and upvalue values before any branch narrowing (for else branch complement)
+		-- Save original upvalue values before any branch narrowing (for else complement & early return)
 		local original_upvalue_values
 
 		if self.constraint_store then
-			original_upvalue_values = {}
-
-			for upvalue in pairs(self.constraint_store:GetAllTrackedUpvalues()) do
-				original_upvalue_values[upvalue] = upvalue:GetValue()
-			end
+			original_upvalue_values = self.constraint_store:SnapshotOriginalValues()
 		end
 
 		for i, block in ipairs(blocks) do
@@ -170,26 +138,17 @@ return {
 			-- Snapshot constraint store for this branch (isolation)
 			if self.constraint_store then
 				self.constraint_store:PushScope()
-
-				-- Apply equality narrowing before analyzing the block
+				-- Apply narrowing for this branch
 				-- Skip for or-conditions: the or handler manages fork/merge semantics
-				-- via the constraint store, and applying equality narrowing here would
+				-- via the constraint store, and applying narrowing here would
 				-- incorrectly treat constraints from both branches as simultaneously true
-				if block.is_else and not IsOrCondition(statement.expressions[i]) then
-					-- Else branch: restore upvalue values before computing complement
-					for upvalue, orig_value in pairs(original_upvalue_values) do
-						upvalue:SetValue(orig_value)
-					end
+				local cond = statement.expressions[i]
+				local branchScope = self:GetScope()
 
-					self.constraint_store:ClearDomainsFor(original_upvalue_values)
-					self.constraint_store:ApplyRelationalNarrowingElse(self)
-				elseif block.obj:IsTruthy() and not IsOrCondition(statement.expressions[i]) then
-					self.constraint_store:ApplyEqualityNarrowing()
-					self.constraint_store:ApplyRelationalNarrowing(self)
-					-- Mark all arithmetic constraints dirty for propagation
-					self.constraint_store:MarkConstraintsDirty("arithmetic")
-					-- Propagate until fixed point (handles chained arithmetic)
-					self.constraint_store:PropagateUntilFixedPoint(self)
+				if block.is_else and not self.constraint_store:IsOrCondition(cond) then
+					self.constraint_store:ApplyElseBranchNarrowing(branchScope, original_upvalue_values)
+				elseif block.obj:IsTruthy() and not self.constraint_store:IsOrCondition(cond) then
+					self.constraint_store:ApplyBranchNarrowing(branchScope)
 				end
 			end
 
@@ -218,11 +177,9 @@ return {
 				self.narrowing_store:ApplyMutationsInIf(block.tracked_objects, self)
 			end
 
-			-- Recompute arithmetic dependencies after tracked mutations are applied
+			-- Recompute arithmetic and table field narrowing after mutations are applied
 			if self.constraint_store and block.obj:IsTruthy() then
-				self.constraint_store:RecomputeAllArithmetic(self)
-				-- Apply table field narrowing
-				self.constraint_store:ApplyTableFieldNarrowing(self)
+				self.constraint_store:RecomputeAfterMutations(self:GetScope(), self)
 			end
 
 			self:AnalyzeStatements(block.statements)
@@ -235,19 +192,9 @@ return {
 
 		self.narrowing_store:ClearTracked()
 
-		-- Check if any branch had a certain return - if so, apply early return narrowing
-		-- This narrows variables for code that follows the if-statement
+		-- Apply post-if narrowing (early return narrowing for code after the if)
 		if self.constraint_store and original_upvalue_values then
-			local scope = self:GetScope()
-
-			if scope:DidCertainReturn() or scope:DidUncertainReturn() then
-				self.constraint_store:ApplyEarlyReturnNarrowing(self, original_upvalue_values, true)
-				-- Propagate narrowing through arithmetic dependencies
-				self.constraint_store:MarkConstraintsDirty("arithmetic")
-				self.constraint_store:PropagateUntilFixedPoint(self)
-				self.constraint_store:RecomputeAllArithmetic(self)
-				self.constraint_store:ApplyTableFieldNarrowing(self)
-			end
+			self.constraint_store:ApplyPostIfNarrowing(self:GetScope(), self, original_upvalue_values)
 		end
 
 		-- Clear equality constraints to prevent leaking across ifs

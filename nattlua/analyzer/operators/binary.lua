@@ -407,7 +407,6 @@ function Binary(self, node, l, r, op)
 				-- Direct cdata comparison (not from union iteration)
 				local non_null = map_cdata_nullability(cdata_type, false)
 				local nullable = map_cdata_nullability(cdata_type, nil)
-
 				track_cdata_narrowing(self, cdata_type, non_null, nullable, is_not_equal)
 			end
 
@@ -636,20 +635,20 @@ local function BinaryWithUnion(self, node, l, r, op)
 						if not res then
 							self:Error(err)
 						else
-						-- For cdata-nil comparisons, create copies with modified nullability
-						local elem_for_tracking = l_elem
+							-- For cdata-nil comparisons, create copies with modified nullability
+							local elem_for_tracking = l_elem
 
-						if is_cdata(l_elem) and r_elem:IsNil() then
-							if res:IsTruthy() then
-								elem_for_tracking = map_cdata_nullability(l_elem, false)
-							elseif res:IsFalsy() then
-								elem_for_tracking = map_cdata_nullability(l_elem, nil)
+							if is_cdata(l_elem) and r_elem:IsNil() then
+								if res:IsTruthy() then
+									elem_for_tracking = map_cdata_nullability(l_elem, false)
+								elseif res:IsFalsy() then
+									elem_for_tracking = map_cdata_nullability(l_elem, nil)
+								end
 							end
-						end
 
-						if res:IsTruthy() then truthy_union:AddType(elem_for_tracking) end
+							if res:IsTruthy() then truthy_union:AddType(elem_for_tracking) end
 
-						if res:IsFalsy() then falsy_union:AddType(elem_for_tracking) end
+							if res:IsFalsy() then falsy_union:AddType(elem_for_tracking) end
 
 							new_union:AddType(res)
 						end
@@ -838,7 +837,7 @@ return {
 					if not skip_fork then forked_store = self.constraint_store:Fork() end
 
 					-- Apply relational narrowing so the right side sees narrowed values
-					self.constraint_store:ApplyRelationalNarrowing(self)
+					self.constraint_store:ApplyRelationalNarrowing(self:GetScope())
 				end
 
 				self.narrowing_store:PushTruthyExpressionContext()
@@ -853,7 +852,7 @@ return {
 				if forked_store and self.constraint_store then
 					self.constraint_store:Merge(forked_store)
 					-- Re-apply relational narrowing after merge (merge may have widened domains)
-					self.constraint_store:ApplyRelationalNarrowing(self)
+					self.constraint_store:ApplyRelationalNarrowing(self:GetScope())
 				end
 
 				if scope then
@@ -951,7 +950,7 @@ return {
 						if c.type == "arithmetic" then c.dirty = true end
 					end
 
-					forked_store:PropagateUntilFixedPoint(self)
+					forked_store:PropagateUntilFixedPoint(self:GetScope())
 				end
 
 				self.LEFT_SIDE_OR = l
