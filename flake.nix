@@ -19,8 +19,8 @@
           name = "luajit";
           src = pkgs.fetchgit {
             url = "https://github.com/LuaJIT/LuaJIT.git";
-            rev = "2460b3ff93a1c955de3d62cfc825de7d68dc272e";
-            sha256 = "sha256-nAj0HL7gBsfy0IKKilhgoczu9Vl36i1xp3LvzXAyr4c=";
+            rev = "4886b676a698acc4bbdf54adfabb3e33a8c020e8";
+            sha256 = "sha256-02MMi/k1B6Ot0wgMn64jASGPjloytpxEH7h73+Ll90s=";
           };
 
           buildInputs = [pkgs.makeWrapper];
