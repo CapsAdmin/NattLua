@@ -198,13 +198,6 @@ do
 		end
 	end
 
-	-- Build union from single mutation (early exit path)
-	local function build_union_from_value(value)
-		if value.Type == "union" then return value:Copy() end
-
-		return Union({value})
-	end
-
 	-- Get narrowed value from conditional tracking data
 	local function get_conditional_value(stack_entry, is_else)
 		if is_else then return stack_entry.falsy end
@@ -264,7 +257,7 @@ do
 		-- common case early exit, if the last mutation was done in the same scope
 		if mutations[#mutations] and mutations[#mutations].scope == scope then
 			local first = get_value(mutations[#mutations])
-			local union = build_union_from_value(first)
+			local union = first.Type == "union" and first:Copy() or Union({first})
 
 			if obj.Type == "upvalue" then union:SetUpvalue(obj) end
 
