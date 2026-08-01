@@ -1788,9 +1788,9 @@ do
 	-- l, r                       : union values being operated on
 	-- arith_ops                  : table of arithmetic operator names
 	-- op                         : the operator string
-	function META:QueryCorrelatedComputation(original_l, original_r, l, r, arith_ops, op)
-		local l_upvalue = original_l:GetUpvalue()
-		local r_upvalue = original_r:GetUpvalue()
+	function META:QueryCorrelatedComputation(op, l, r, arith_ops)
+		local l_upvalue = l:GetUpvalue()
+		local r_upvalue = r:GetUpvalue()
 		local has_l_upvalue = l_upvalue ~= nil and l_upvalue ~= false
 		local has_r_upvalue = r_upvalue ~= nil and r_upvalue ~= false
 		-- --- Correlation branch ---

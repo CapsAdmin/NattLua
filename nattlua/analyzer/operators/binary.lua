@@ -707,7 +707,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 			else
 				-- General handling for other operators with unions
 				local cs = self.constraint_store
-				local tag_info = cs:QueryCorrelatedComputation(original_l, original_r, l, r, ARITHMETIC_OPS, op)
+				local tag_info = cs:QueryCorrelatedComputation(op, l, r, ARITHMETIC_OPS)
 
 				if tag_info then
 					local new_union = Union()
