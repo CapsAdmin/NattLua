@@ -412,13 +412,13 @@ function META:AddEquality(a, b, op)
 	self:add_dependent(b, id)
 
 	-- Auto-register domains from upvalue values
-	if a and a.Type == "upvalue" and not self:GetDomain(a) then
+	if a.Type == "upvalue" and not self:GetDomain(a) then
 		local val = a:GetValue()
 
 		if val then self:RegisterDomain(a, val) end
 	end
 
-	if b and b.Type == "upvalue" and not self:GetDomain(b) then
+	if b.Type == "upvalue" and not self:GetDomain(b) then
 		local val = b:GetValue()
 
 		if val then self:RegisterDomain(b, val) end
@@ -1019,8 +1019,11 @@ end
 -- Get all table field constraints for a source upvalue
 function META:GetTableFieldDependencies(source)
 	local deps = {}
+	local t = self:get_dependents(source)
 
-	for _, cid in ipairs(self.dependents[source] or {}) do
+	if not t then return deps end
+
+	for _, cid in ipairs(t) do
 		local c = self.constraints[cid]
 
 		if c and c.type == "table_field" and c.source == source then
@@ -1065,8 +1068,11 @@ end
 -- Get all arithmetic constraints for a result upvalue
 function META:GetArithmeticConstraints(result)
 	local constraints = {}
+	local t = self:get_dependents(result)
 
-	for _, cid in ipairs(self.dependents[result] or {}) do
+	if not t then return constraints end
+
+	for _, cid in ipairs(t) do
 		local c = self.constraints[cid]
 
 		if c and c.type == "arithmetic" and c.result == result then
@@ -1123,7 +1129,7 @@ function META:Narrow(upvalue, new_domain, visited)
 	end
 
 	-- Propagate to dependent constraints
-	local deps = self.dependents[upvalue]
+	local deps = self:get_dependents(upvalue)
 
 	if not deps then return changed end
 
@@ -1264,7 +1270,7 @@ function META:PropagateUntilFixedPoint(scope)
 			c.left_domain = left_domain
 			c.right_domain = right_domain
 			-- Propagate to equality partners of the result
-			local result_deps = self.dependents[c.result]
+			local result_deps = self:get_dependents(c.result)
 
 			if result_deps then
 				for _, rid in ipairs(result_deps) do
@@ -1304,7 +1310,7 @@ end
 function META:AreInequalityCorrelated(a, b)
 	if not a or not b then return false end
 
-	local deps_a = self.dependents[a]
+	local deps_a = self:get_dependents(a)
 
 	if not deps_a then return false end
 
@@ -1490,7 +1496,7 @@ end
 -- Query relationship between two upvalues
 -- Returns: true (equal), false (inequal), or nil (unknown)
 function META:QueryRelationship(a, b)
-	local deps_a = self.dependents[a]
+	local deps_a = self:get_dependents(a)
 
 	if not deps_a then return nil end
 
@@ -1739,9 +1745,13 @@ function META:next_id()
 end
 
 function META:add_dependent(upvalue, cid)
-	if not self.dependents[upvalue] then self.dependents[upvalue] = {} end
+	local key = upvalue:GetHash()
+	self.dependents[key] = self.dependents[key] or {}
+	table.insert(self.dependents[key], cid)
+end
 
-	table.insert(self.dependents[upvalue], cid)
+function META:get_dependents(upvalue)
+	return self.dependents[upvalue:GetHash()]
 end
 
 -- these have been moved from the analyzer to the constraint store in order to reduce change complexity
@@ -2045,7 +2055,7 @@ do
 	-- Uses the constraint store's effective domain (includes narrowed values)
 	function META:RecomputeArithmeticFor(upvalue)
 		-- Check arithmetic constraints where this upvalue is an operand
-		local deps = self.dependents[upvalue]
+		local deps = self:get_dependents(upvalue)
 
 		if not deps then return end
 
