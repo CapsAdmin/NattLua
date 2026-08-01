@@ -1880,8 +1880,10 @@ do
 	-- original_r: right operand node
 	-- l: left atomic value (for literal tracking)
 	-- r: right atomic value (for literal tracking)
-	function META:TrackEqualityCorrelation(op, l_upvalue, r_upvalue, l, r)
+	function META:TrackEqualityCorrelation(op, l, r)
 		if op ~= "==" and op ~= "~=" and op ~= "!=" then return end
+
+		local l_upvalue, r_upvalue = l:GetUpvalue(), r:GetUpvalue()
 
 		-- Track correlation between upvalues when comparing with == or ~=
 		if l_upvalue and r_upvalue and l_upvalue ~= r_upvalue then
@@ -1909,8 +1911,10 @@ do
 	-- r_upvalue: right operand upvalue (or nil if literal)
 	-- l: left atomic value (for literal tracking)
 	-- r: right atomic value (for literal tracking)
-	function META:TrackRelationalCorrelation(op, l_upvalue, r_upvalue, l, r)
+	function META:TrackRelationalCorrelation(op, l, r)
 		if op ~= "<" and op ~= ">" and op ~= "<=" and op ~= ">=" then return end
+
+		local l_upvalue, r_upvalue = l:GetUpvalue(), r:GetUpvalue()
 
 		-- Track relational constraint between upvalues
 		-- Skip if either side's current value is a single literal number (can't be narrowed)

@@ -192,7 +192,7 @@ end
 local function number_comparison(self, l, r, op)
 	if REL_CMP[op] then
 		if self.constraint_store then
-			self.constraint_store:TrackRelationalCorrelation(op, l:GetUpvalue(), r:GetUpvalue(), l, r)
+			self.constraint_store:TrackRelationalCorrelation(op, l, r)
 		end
 
 		-- Literal constant folding
@@ -220,7 +220,7 @@ local function number_comparison(self, l, r, op)
 
 	-- Equality operators: == and ~=
 	if self.constraint_store then
-		self.constraint_store:TrackEqualityCorrelation(op, l:GetUpvalue(), r:GetUpvalue(), l, r)
+		self.constraint_store:TrackEqualityCorrelation(op, l, r)
 	end
 
 	local nl, nr, nl2, nr2 = intersect_comparison(l, r, op)
@@ -574,9 +574,15 @@ local function BinaryWithUnion(self, node, l, r, op)
 		local original_r = r
 
 		-- normalize l and r to be both unions to reduce complexity
-		if l.Type ~= "union" and r.Type == "union" then l = Union({l}) end
+		if l.Type ~= "union" and r.Type == "union" then
+			l = Union({l})
+			l:SetUpvalue(original_l:GetUpvalue())
+		end
 
-		if l.Type == "union" and r.Type ~= "union" then r = Union({r}) end
+		if l.Type == "union" and r.Type ~= "union" then
+			r = Union({r})
+			r:SetUpvalue(original_r:GetUpvalue())
+		end
 
 		if l.Type == "union" and r.Type == "union" then
 			local new_union = Union()
@@ -691,12 +697,12 @@ local function BinaryWithUnion(self, node, l, r, op)
 				self.narrowing_store:TrackUpvalueUnion(l, truthy_union, falsy_union, op ~= "==", self)
 				self.narrowing_store:TrackUpvalueUnion(r, truthy_union, falsy_union, op ~= "==", self)
 				-- Track correlation between upvalues when comparing with == or ~=
-				self.constraint_store:TrackEqualityCorrelation(op, original_l:GetUpvalue(), original_r:GetUpvalue(), l, r)
+				self.constraint_store:TrackEqualityCorrelation(op, l, r)
 				return new_union
 			elseif op == "<" or op == ">" or op == "<=" or op == ">=" then
 				-- Relational narrowing is fully handled by the constraint store
 				-- (both discrete unions and ranges). Skip TrackUpvalueUnion to avoid conflicts.
-				self.constraint_store:TrackRelationalCorrelation(op, original_l:GetUpvalue(), original_r:GetUpvalue(), l, r)
+				self.constraint_store:TrackRelationalCorrelation(op, l, r)
 				return new_union
 			else
 				-- General handling for other operators with unions
