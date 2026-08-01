@@ -204,6 +204,7 @@ do -- custom commands specific for nattlua
 			{
 				name = "max-errors",
 				description = "maximum number of errors to output before exiting (only applies with --error-only)",
+				arg = "number",
 			},
 		},
 		cb = function(args, options, config, cli)
@@ -245,13 +246,14 @@ do -- custom commands specific for nattlua
 				cli.print_success("Analyzing from entry point: " .. entry_point)
 				local compiler = Compiler.FromFile(entry_point, config)
 
-				if options["error-only"] then
+				do
 					local count = 0
 					local original_OnDiagnostic = compiler.OnDiagnostic
 					compiler.OnDiagnostic = function(self, code, msg, severity, ...)
-						if severity == "error" or severity == "fatal" then
+						if not options["error-only"] or (severity == "error" or severity == "fatal") then
 							local t = table.pack{original_OnDiagnostic(self, code, msg, severity, ...)}
 							local max = tonumber(options["max-errors"])
+							os.exit(1)
 
 							if max and count >= max then
 								print("too many errors (> " .. max .. "), exiting")
