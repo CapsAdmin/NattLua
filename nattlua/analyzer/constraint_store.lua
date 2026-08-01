@@ -31,12 +31,12 @@ end
 
 -- Register a domain for an upvalue
 function META:RegisterDomain(upvalue, domain)
-	self.domains[upvalue] = domain
+	self.domains[upvalue:GetHash()] = domain
 end
 
 -- Get current domain for an upvalue
 function META:GetDomain(upvalue)
-	return self.domains[upvalue]
+	return self.domains[upvalue:GetHash()]
 end
 
 -- Apply pending equality narrowing for all equivalence classes
@@ -60,7 +60,7 @@ function META:ApplyEqualityNarrowing(scope)
 			-- Read current domain from upvalue, not constraint store
 			if member.Type ~= "upvalue" then goto continue end
 
-			local domain = member:GetValue() or self.domains[member]
+			local domain = member:GetValue() or self:GetDomain(member)
 
 			if domain then
 				table.insert(members, member)
@@ -105,7 +105,7 @@ function META:ApplyEqualityNarrowing(scope)
 		-- Narrow all members to intersection
 		if intersection then
 			for _, member in ipairs(members) do
-				self.domains[member] = intersection
+				self:RegisterDomain(member, intersection)
 				narrowed[member] = intersection
 			end
 		end
@@ -124,7 +124,7 @@ function META:ApplyEqualityNarrowing(scope)
 			if c.op == "==" then
 				-- Narrow a to match b (literal)
 				narrowed[c.a] = c.b
-				self.domains[c.a] = c.b
+				self:RegisterDomain(c.a, c.b)
 			else
 				-- ~= : remove literal from a's domain
 				local current = self:GetEffectiveDomain(c.a)
@@ -134,7 +134,7 @@ function META:ApplyEqualityNarrowing(scope)
 
 					if complement then
 						narrowed[c.a] = complement
-						self.domains[c.a] = complement
+						self:RegisterDomain(c.a, complement)
 					end
 				end
 			end
@@ -142,7 +142,7 @@ function META:ApplyEqualityNarrowing(scope)
 			if c.op == "==" then
 				-- Narrow b to match a (literal)
 				narrowed[c.b] = c.a
-				self.domains[c.b] = c.a
+				self:RegisterDomain(c.b, c.a)
 			else
 				-- ~= : remove literal from b's domain
 				local current = self:GetEffectiveDomain(c.b)
@@ -152,7 +152,7 @@ function META:ApplyEqualityNarrowing(scope)
 
 					if complement then
 						narrowed[c.b] = complement
-						self.domains[c.b] = complement
+						self:RegisterDomain(c.b, complement)
 					end
 				end
 			end
@@ -198,13 +198,13 @@ function META:ApplyRelationalNarrowing(scope)
 			local new_a, empty_a = META:NarrowDomainByLiteral(domain_a, c.b, c.op)
 
 			if new_a then
-				self.domains[c.a] = new_a
+				self:RegisterDomain(c.a, new_a)
 				narrowed[c.a] = new_a
 				new_a:SetUpvalue(c.a)
 				c.a:Mutate(new_a, scope)
 			elseif empty_a then
 				-- Domain became empty
-				self.domains[c.a] = nil
+				self:RegisterDomain(c.a, nil)
 				narrowed[c.a] = nil
 			end
 
@@ -217,13 +217,13 @@ function META:ApplyRelationalNarrowing(scope)
 			local new_b, empty_b = META:NarrowDomainByLiteral(domain_b, c.a, inv_op)
 
 			if new_b then
-				self.domains[c.b] = new_b
+				self:RegisterDomain(c.b, new_b)
 				narrowed[c.b] = new_b
 				new_b:SetUpvalue(c.b)
 				c.b:Mutate(new_b, scope)
 			elseif empty_b then
 				-- Domain became empty
-				self.domains[c.b] = nil
+				self:RegisterDomain(c.b, nil)
 				narrowed[c.b] = nil
 			end
 
@@ -236,7 +236,7 @@ function META:ApplyRelationalNarrowing(scope)
 		local new_a, new_b = self:NarrowByRelational(domain_a, domain_b, c.op)
 
 		if new_a then
-			self.domains[c.a] = new_a
+			self:RegisterDomain(c.a, new_a)
 			narrowed[c.a] = new_a
 			-- Also mutate the actual upvalue so the narrowed value is visible
 			new_a:SetUpvalue(c.a)
@@ -244,7 +244,7 @@ function META:ApplyRelationalNarrowing(scope)
 		end
 
 		if new_b then
-			self.domains[c.b] = new_b
+			self:RegisterDomain(c.b, new_b)
 			narrowed[c.b] = new_b
 			-- Also mutate the actual upvalue
 			new_b:SetUpvalue(c.b)
@@ -311,7 +311,7 @@ function META:ApplyRelationalNarrowingElse(scope)
 		end
 
 		if narrowed_domain then
-			self.domains[upvalue] = narrowed_domain
+			self:RegisterDomain(upvalue, narrowed_domain)
 			narrowed[upvalue] = narrowed_domain
 			narrowed_domain:SetUpvalue(upvalue)
 			upvalue:Mutate(narrowed_domain, scope)
@@ -382,7 +382,7 @@ function META:ApplyRelationalNarrowingElse(scope)
 				end
 
 				if complement:GetCardinality() > 0 then
-					self.domains[upvalue] = complement
+					self:RegisterDomain(upvalue, complement)
 					narrowed[upvalue] = complement
 					complement:SetUpvalue(upvalue)
 					upvalue:Mutate(complement, scope)
@@ -412,16 +412,16 @@ function META:AddEquality(a, b, op)
 	self:add_dependent(b, id)
 
 	-- Auto-register domains from upvalue values
-	if a and a.Type == "upvalue" and not self.domains[a] then
+	if a and a.Type == "upvalue" and not self:GetDomain(a) then
 		local val = a:GetValue()
 
-		if val then self.domains[a] = val end
+		if val then self:RegisterDomain(a, val) end
 	end
 
-	if b and b.Type == "upvalue" and not self.domains[b] then
+	if b and b.Type == "upvalue" and not self:GetDomain(b) then
 		local val = b:GetValue()
 
-		if val then self.domains[b] = val end
+		if val then self:RegisterDomain(b, val) end
 	end
 
 	-- Update equivalence classes (transitive closure)
@@ -533,16 +533,16 @@ function META:AddRelational(a, b, op)
 	self:add_dependent(b, id)
 
 	-- Auto-register domains from upvalue values
-	if a and a.Type == "upvalue" and not self.domains[a] then
+	if a and a.Type == "upvalue" and not self:GetDomain(a) then
 		local val = a:GetValue()
 
-		if val then self.domains[a] = val end
+		if val then self:RegisterDomain(a, val) end
 	end
 
-	if b and b.Type == "upvalue" and not self.domains[b] then
+	if b and b.Type == "upvalue" and not self:GetDomain(b) then
 		local val = b:GetValue()
 
-		if val then self.domains[b] = val end
+		if val then self:RegisterDomain(b, val) end
 	end
 
 	return id
@@ -979,22 +979,22 @@ function META:AddArithmetic(result, op, left, right)
 	self:add_dependent(result, id)
 
 	-- Auto-register domains from upvalue values
-	if left and left.Type == "upvalue" and not self.domains[left] then
+	if left and left.Type == "upvalue" and not self:GetDomain(left) then
 		local val = left:GetValue()
 
-		if val then self.domains[left] = val end
+		if val then self:RegisterDomain(left, val) end
 	end
 
-	if right and right.Type == "upvalue" and not self.domains[right] then
+	if right and right.Type == "upvalue" and not self:GetDomain(right) then
 		local val = right:GetValue()
 
-		if val then self.domains[right] = val end
+		if val then self:RegisterDomain(right, val) end
 	end
 
-	if result and result.Type == "upvalue" and not self.domains[result] then
+	if result and result.Type == "upvalue" and not self:GetDomain(result) then
 		local val = result:GetValue()
 
-		if val then self.domains[result] = val end
+		if val then self:RegisterDomain(result, val) end
 	end
 
 	return id
@@ -1034,7 +1034,7 @@ end
 -- Propagate narrowing to table fields when a source upvalue narrows
 -- Called during RecomputeArithmeticFor / Narrow propagation
 function META:PropagateTableFieldNarrowing(source_upvalue)
-	local new_domain = self.domains[source_upvalue]
+	local new_domain = self:GetDomain(source_upvalue)
 
 	if not new_domain then return end
 
@@ -1090,10 +1090,10 @@ function META:Narrow(upvalue, new_domain, visited)
 	if visited[upvalue] then return false end
 
 	visited[upvalue] = true
-	local current = self.domains[upvalue]
+	local current = self:GetDomain(upvalue)
 
 	if not current then
-		self.domains[upvalue] = new_domain
+		self:RegisterDomain(upvalue, new_domain)
 		return true
 	end
 
@@ -1114,11 +1114,11 @@ function META:Narrow(upvalue, new_domain, visited)
 		end
 
 		if intersection:GetCardinality() > 0 then
-			self.domains[upvalue] = intersection
+			self:RegisterDomain(upvalue, intersection)
 			changed = true
 		end
 	elseif current.Type == "union" then
-		self.domains[upvalue] = new_domain
+		self:RegisterDomain(upvalue, new_domain)
 		changed = true
 	end
 
@@ -1134,7 +1134,7 @@ function META:Narrow(upvalue, new_domain, visited)
 
 		if c.type == "equality" then
 			local other = (c.a == upvalue) and c.b or c.a
-			local narrowed = self.domains[upvalue]
+			local narrowed = self:GetDomain(upvalue)
 
 			if narrowed then
 				if self:Narrow(other, narrowed, visited) then changed = true end
@@ -1148,20 +1148,20 @@ function META:Narrow(upvalue, new_domain, visited)
 		elseif c.type == "relational" then
 			-- Propagate narrowing through relational constraints
 			local other = (c.a == upvalue) and c.b or c.a
-			local domain_a = self.domains[c.a]
-			local domain_b = self.domains[c.b]
+			local domain_a = self:GetDomain(c.a)
+			local domain_b = self:GetDomain(c.b)
 
 			if domain_a and domain_b then
 				local new_a, new_b = self:NarrowByRelational(domain_a, domain_b, c.op)
 
 				if new_a and c.a ~= upvalue then
-					self.domains[c.a] = new_a
+					self:RegisterDomain(c.a, new_a)
 
 					if self:Narrow(c.a, new_a, visited) then changed = true end
 				end
 
 				if new_b and c.b ~= upvalue then
-					self.domains[c.b] = new_b
+					self:RegisterDomain(c.b, new_b)
 
 					if self:Narrow(c.b, new_b, visited) then changed = true end
 				end
@@ -1217,7 +1217,7 @@ function META:PropagateUntilFixedPoint(scope)
 
 			if not new_result then goto continue end
 
-			local current_result = self.domains[c.result]
+			local current_result = self:GetDomain(c.result)
 
 			if current_result and current_result.Type == "union" and new_result.Type == "union" then
 				-- Check if domains are the same
@@ -1252,7 +1252,7 @@ function META:PropagateUntilFixedPoint(scope)
 
 			-- Update result domain in constraint store
 			local changed = current_result ~= nil
-			self.domains[c.result] = new_result
+			self:RegisterDomain(c.result, new_result)
 
 			if changed then any_changed = true end
 
@@ -1456,8 +1456,8 @@ end
 -- Recompute an arithmetic constraint if operands are available
 -- Returns the new result domain or nil if not available
 function META:RecomputeArithmetic(constraint, visited)
-	local left_domain = self.domains[constraint.left]
-	local right_domain = constraint.right and self.domains[constraint.right]
+	local left_domain = self:GetDomain(constraint.left)
+	local right_domain = constraint.right and self:GetDomain(constraint.right)
 
 	if not left_domain then return nil end
 
@@ -1569,7 +1569,7 @@ function META:Fork()
 
 	-- Clone domains
 	for upvalue, domain in pairs(self.domains) do
-		clone.domains[upvalue] = domain
+		clone:RegisterDomain(upvalue, domain)
 	end
 
 	-- Clone table field domains
@@ -1611,11 +1611,11 @@ function META:Merge(other)
 	local Union = require("nattlua.types.union").Union
 
 	for upvalue, domain in pairs(other.domains) do
-		local current = self.domains[upvalue]
+		local current = self:GetDomain(upvalue)
 
 		if not current then
 			-- No current domain, just copy
-			self.domains[upvalue] = domain
+			self:RegisterDomain(upvalue, domain)
 		elseif current.Type == "union" and domain.Type == "union" then
 			-- Both are unions, union them
 			for _, elem in ipairs(domain:GetData()) do
@@ -1630,7 +1630,7 @@ function META:Merge(other)
 				new_union:AddType(elem)
 			end
 
-			self.domains[upvalue] = new_union
+			self:RegisterDomain(upvalue, new_union)
 		elseif current.Type == "union" and domain.Type ~= "union" then
 			-- Current is union, domain is single value - add to existing union
 			current:AddType(domain)
@@ -1639,7 +1639,7 @@ function META:Merge(other)
 			local new_union = Union()
 			new_union:AddType(current)
 			new_union:AddType(domain)
-			self.domains[upvalue] = new_union
+			self:RegisterDomain(upvalue, new_union)
 		end
 	end
 end
@@ -1698,7 +1698,7 @@ end
 
 -- Get effective domain for an upvalue (narrowed if available, otherwise from upvalue)
 function META:GetEffectiveDomain(upvalue)
-	if self.domains[upvalue] then return self.domains[upvalue] end
+	if self:GetDomain(upvalue) then return self:GetDomain(upvalue) end
 
 	return upvalue.Type == "upvalue" and upvalue:GetValue()
 end
@@ -1919,8 +1919,8 @@ do
 		end
 
 		if l_upvalue and r_upvalue and l_upvalue ~= r_upvalue then
-			local l_domain = self.domains[l_upvalue] or l_upvalue:GetValue()
-			local r_domain = self.domains[r_upvalue] or r_upvalue:GetValue()
+			local l_domain = self:GetDomain(l_upvalue) or l_upvalue:GetValue()
+			local r_domain = self:GetDomain(r_upvalue) or r_upvalue:GetValue()
 
 			if not is_single_literal(l_domain) and not is_single_literal(r_domain) then
 				self:AddRelational(l_upvalue, r_upvalue, op)
@@ -1930,14 +1930,14 @@ do
 		-- Track relational constraint with literal: x < 5 means narrow x
 		-- Only if the upvalue side is not itself a single literal
 		if l_upvalue and not r_upvalue then
-			local l_domain = self.domains[l_upvalue] or l_upvalue:GetValue()
+			local l_domain = self:GetDomain(l_upvalue) or l_upvalue:GetValue()
 
 			if not is_single_literal(l_domain) then
 				self:AddRelational(l_upvalue, r, op)
 			end
 		elseif r_upvalue and not l_upvalue then
 			-- For right-side upvalue, invert the operator
-			local r_domain = self.domains[r_upvalue] or r_upvalue:GetValue()
+			local r_domain = self:GetDomain(r_upvalue) or r_upvalue:GetValue()
 
 			if not is_single_literal(r_domain) then
 				local inv_op
@@ -2066,7 +2066,7 @@ do
 			if not new_result then goto continue end
 
 			-- Update the constraint store's domain for the result
-			self.domains[c.result] = new_result
+			self:RegisterDomain(c.result, new_result)
 			-- Also propagate to table fields that depend on the result
 			self:PropagateTableFieldNarrowing(c.result)
 
@@ -2170,7 +2170,7 @@ function META:ApplyEarlyReturnNarrowing(scope, original_values)
 
 	-- Apply narrowed domains
 	for upvalue, new_domain in pairs(narrowed_upvalues) do
-		self.domains[upvalue] = new_domain
+		self:RegisterDomain(upvalue, new_domain)
 
 		if new_domain and new_domain.SetUpvalue then new_domain:SetUpvalue(upvalue) end
 
@@ -2258,7 +2258,7 @@ end
 -- Clear domains for a set of upvalues
 function META:ClearDomainsFor(upvalues)
 	for upvalue in pairs(upvalues) do
-		self.domains[upvalue] = nil
+		self:RegisterDomain(upvalue, nil)
 	end
 end
 
