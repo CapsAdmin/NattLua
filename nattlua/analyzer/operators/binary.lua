@@ -706,8 +706,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 				return new_union
 			else
 				-- General handling for other operators with unions
-				local cs = self.constraint_store
-				local tag_info = cs:QueryCorrelatedComputation(op, l, r, ARITHMETIC_OPS)
+				local tag_info = self.constraint_store:QueryCorrelatedComputation(op, l, r)
 
 				if tag_info then
 					local new_union = Union()
@@ -729,7 +728,7 @@ local function BinaryWithUnion(self, node, l, r, op)
 						end
 					end
 
-					cs:TagCorrelatedResult(new_union, tag_info, source_map)
+					self.constraint_store:TagCorrelatedResult(new_union, tag_info, source_map)
 					self.narrowing_store:TrackTableIndexUnion(l, truthy_union, falsy_union, nil, self)
 					self.narrowing_store:TrackUpvalueUnion(l, truthy_union, falsy_union, nil, self)
 					self.narrowing_store:TrackUpvalueUnion(r, truthy_union, falsy_union, nil, self)

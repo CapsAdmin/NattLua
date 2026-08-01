@@ -1778,17 +1778,7 @@ do
 	-- ----------------------------------------------------------------
 	local AnalyzeAtomicValue = require("nattlua.analyzer.expressions.atomic_value").AnalyzeAtomicValue
 
-	-- Query whether operands are correlated or equivalent.
-	-- Returns nil, or { predicate, tag_key, track_sources }.
-	--
-	-- predicate(l_elem, r_elem) -> bool : which pairs the caller should compute
-	-- tag_key                    : upvalue or union to tag equivalence on
-	-- track_sources              : whether to build a source map for tagging
-	-- original_l, original_r     : AST operand nodes (for upvalue lookup)
-	-- l, r                       : union values being operated on
-	-- arith_ops                  : table of arithmetic operator names
-	-- op                         : the operator string
-	function META:QueryCorrelatedComputation(op, l, r, arith_ops)
+	function META:QueryCorrelatedComputation(op, l, r)
 		local l_upvalue = l:GetUpvalue()
 		local r_upvalue = r:GetUpvalue()
 		local has_l_upvalue = l_upvalue ~= nil and l_upvalue ~= false
@@ -1801,18 +1791,14 @@ do
 		end
 
 		if correlation ~= nil then
-			local is_valid_op = arith_ops[op] or op == ".." or op == "//" or op == "//idiv//"
-
-			if is_valid_op then
-				return {
-					predicate = function(l_elem, r_elem)
-						local eq = shared.Equal(l_elem, r_elem)
-						return (correlation and eq) or (not correlation and not eq)
-					end,
-					tag_key = correlation and l_upvalue,
-					track_sources = correlation ~= false,
-				}
-			end
+			return {
+				predicate = function(l_elem, r_elem)
+					local eq = shared.Equal(l_elem, r_elem)
+					return (correlation and eq) or (not correlation and not eq)
+				end,
+				tag_key = correlation and l_upvalue,
+				track_sources = correlation ~= false,
+			}
 		end
 
 		-- --- Equivalence branch ---
@@ -1840,7 +1826,7 @@ do
 				r_union_equiv == l_equiv
 			)
 
-		if same_equiv and arith_ops[op] then
+		if same_equiv then
 			local l_sources = self:GetSourceValues(l)
 			local tag_key = l_upvalue or l
 			return {
