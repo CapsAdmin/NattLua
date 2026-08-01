@@ -83,36 +83,6 @@ do
 	end
 end
 
-function META:GetHash(visited--[[#: Map<|TBaseType, string|> | nil]])--[[#: string]]
-	if self:IsUnique() then
-		return "{*" .. (self:GetUniqueID()--[[# as any]]) .. "*}"
-	end
-
-	local contract = self:GetContract()
-
-	if contract and contract.Type == "table" and (contract--[[# as TTable]]).Name then
-		return "{*" .. ((contract--[[# as TTable]]).Name--[[# as TBaseType]]):GetData() .. "*}"
-	end
-
-	if self.Name then return "{*" .. (self.Name:GetData()--[[# as any]]) .. "*}" end
-
-	visited = visited or {}
-
-	if visited[self] then return (visited[self]--[[# as any]]) end
-
-	visited[self] = "*circular*"
-	local data = self.Data
-	local entries = {}
-
-	for i = 1, #data do
-		table.insert(entries, data[i].key:GetHash(visited) .. "=" .. data[i].val:GetHash(visited))
-	end
-
-	table_sort(entries)
-	visited[self] = "{" .. table.concat(entries, ",") .. "}"
-	return visited[self]
-end
-
 local level = 0
 
 function META:__tostring()--[[#: string]]
@@ -382,27 +352,17 @@ function META:ContainsAllKeysIn(contract--[[#: TTable]])
 	return true
 end
 
-local function get_hash(key--[[#: TBaseType]])
-	if key.Type ~= "table" and key.Type ~= "function" and key.Type ~= "tuple" then
-		return key:GetHash()
-	end
-end
-
 local function write_cache(
 	self--[[#: TTable]],
 	key--[[#: TBaseType]],
 	val--[[#: {key = TBaseType, val = TBaseType} | nil]]
 )
-	local hash = get_hash(key)
-
-	if hash then self.literal_data_cache[hash] = val end
+	if key.Hash then self.literal_data_cache[key.Hash] = val end
 end
 
 local function read_cache(self--[[#: TTable]], key--[[#: TBaseType]])
-	local hash = get_hash(key)
-
-	if hash then
-		local val = self.literal_data_cache[hash]
+	if key.Hash then
+		local val = self.literal_data_cache[key.Hash]
 
 		if val then return val end
 
@@ -413,9 +373,7 @@ local function read_cache(self--[[#: TTable]], key--[[#: TBaseType]])
 end
 
 local function read_cache_no_error(self--[[#: TTable]], key--[[#: TBaseType]])
-	local hash = get_hash(key)
-
-	if hash then return self.literal_data_cache[hash] end
+	if key.Hash then return self.literal_data_cache[key.Hash] end
 
 	return nil
 end
@@ -1019,9 +977,8 @@ function META:Copy(map--[[#: Map<|any, any|> | nil]], copy_tables)
 
 		local entry = {key = k, val = v}--[[# as any]]
 		d[i] = entry
-		local hash = get_hash(k)
 
-		if hash then literal_data_cache[hash] = entry end
+		if k.Hash then literal_data_cache[k.Hash] = entry end
 	end
 
 	copy:CopyInternalsFrom(self)
@@ -1089,9 +1046,8 @@ function META:CopyForReturn(map--[[#: Map<|any, any|> | nil]])
 
 		local entry = {key = k, val = v}--[[# as any]]
 		d[i] = entry
-		local hash = get_hash(k)
 
-		if hash then literal_data_cache[hash] = entry end
+		if k.Hash then literal_data_cache[k.Hash] = entry end
 	end
 
 	copy:CopyInternalsFrom(self)

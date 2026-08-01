@@ -31,16 +31,16 @@ end
 
 -- Register a domain for an upvalue
 function META:RegisterDomain(upvalue, domain)
-	self.domains[upvalue:GetHash()] = assert(domain)
+	self.domains[upvalue] = assert(domain)
 end
 
 function META:RemoveDomain(upvalue)
-	self.domains[upvalue:GetHash()] = nil
+	self.domains[upvalue] = nil
 end
 
 -- Get current domain for an upvalue
 function META:GetDomain(upvalue)
-	return self.domains[upvalue:GetHash()]
+	return self.domains[upvalue]
 end
 
 -- Apply pending equality narrowing for all equivalence classes
@@ -1735,13 +1735,12 @@ function META:next_id()
 end
 
 function META:add_dependent(upvalue, cid)
-	local key = upvalue:GetHash()
-	self.dependents[key] = self.dependents[key] or {}
-	table.insert(self.dependents[key], cid)
+	self.dependents[upvalue] = self.dependents[upvalue] or {}
+	table.insert(self.dependents[upvalue], cid)
 end
 
 function META:get_dependents(upvalue)
-	return self.dependents[upvalue:GetHash()]
+	return self.dependents[upvalue]
 end
 
 -- these have been moved from the analyzer to the constraint store in order to reduce change complexity

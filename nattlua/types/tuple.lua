@@ -26,24 +26,6 @@ META:GetSet("Unpackable", false--[[# as boolean]])
 META.Repeat = false
 --[[#type TTuple.Repeat = number | false]]
 
-function META:GetHash(visited--[[#: Map<|TBaseType, string|> | nil]])
-	visited = visited or {}
-
-	if visited[self] then return visited[self] end
-
-	visited[self] = "*circular*"
-	local types = {}
-	local data = self.Data
-	local len = #data
-
-	for i = 1, len do
-		types[i] = (data[i]--[[# as any]]):GetHash(visited)
-	end
-
-	visited[self] = table.concat(types, ",")
-	return visited[self]
-end
-
 function META:__tostring()
 	if self:IsSuppressed() then return "current_tuple" end
 

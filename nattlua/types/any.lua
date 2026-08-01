@@ -34,10 +34,6 @@ function META:CanBeNil()
 	return true
 end
 
-function META:GetHash()
-	return "?"
-end
-
 function META:IsLiteral()
 	return false
 end

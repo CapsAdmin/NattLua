@@ -101,7 +101,7 @@ do
 			local tbl = {}
 
 			for k, v in pairs(_G.TEST_GARBAGE) do
-				tbl[k:GetHash()] = v
+				tbl[k.Hash or tostring(k)] = v
 			end
 
 			for hash, v in pairs(tbl) do

@@ -14,70 +14,51 @@ local X = function(code)
 	return S("return " .. code)
 end
 
-local function equal(a, b)
-	local ok1 = a:GetHash() == b:GetHash()
-	local ok2, reason = shared.Equal(a, b)
-
-	if ok1 ~= ok2 then
-		print("hash mismatch with equal:")
-		print("a b hash:")
-		print(a:GetHash())
-		print(b:GetHash())
-		print("a b types:")
-		print(a)
-		print(b)
-		print("a == b ? ", ok2, reason)
-		error("")
-	end
-
-	return ok1
-end
-
 -- Test cases covering all scenarios
 do
 	test("basic table equality", function()
 		local a = X("{1, 2, 3}")
 		local b = X("{1, 2, 3}")
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("", function()
 		local a = X("{[Any()] = Any()}")
 		local b = X("{}")
-		assert(not equal(a, b))
+		assert(not shared.Equal(a, b))
 	end)
 
 	test("", function()
 		local a = X("_ as { [number] = string }")
 		local b = X("_ as { [1] = string }")
-		assert(not equal(a, b))
+		assert(not shared.Equal(a, b))
 	end)
 
 	test("number ranges", function()
 		local a = X("_ as 0..inf")
 		local b = X("_ as 1..inf")
-		local ok, reason = equal(a, b)
+		local ok, reason = shared.Equal(a, b)
 		assert(not ok, reason)
 	end)
 
 	test("different table values", function()
 		local a = X("{1, 2, 3}")
 		local b = X("{1, 2, 4}")
-		local equal, reason = equal(a, b)
-		assert(not equal, reason)
+		local eq, reason = shared.Equal(a, b)
+		assert(not eq, reason)
 	end)
 
 	test("nested tables", function()
 		local a = X("{1, 2, {3, 4}}")
 		local b = X("{1, 2, {3, 4}}")
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("different nested values", function()
 		local a = X("{1, 2, {3, 4}}")
 		local b = X("{1, 2, {3, 5}}")
-		local equal, reason = equal(a, b)
-		assert(not equal, reason)
+		local eq, reason = shared.Equal(a, b)
+		assert(not eq, reason)
 	end)
 
 	test("self-references", function()
@@ -90,7 +71,7 @@ do
             
             return a, b
         ]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("cross-references", function()
@@ -102,7 +83,7 @@ do
 
             return a, b
         ]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("simple metatables", function()
@@ -119,7 +100,7 @@ do
 
             return a, b
         ]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("different metatables", function()
@@ -145,8 +126,8 @@ do
 
             return a, b
         ]]
-		local equal, reason = equal(a, b)
-		assert(not equal, reason)
+		local eq, reason = shared.Equal(a, b)
+		assert(not eq, reason)
 	end)
 
 	test("metatable with self-reference", function()
@@ -159,7 +140,7 @@ do
             setmetatable(b, mt_b)
             return a, b
         ]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("complex nested structure", function()
@@ -177,7 +158,7 @@ do
 				w = {v = 5},
 			},
 		}]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("mixed key types", function()
@@ -191,7 +172,7 @@ do
 				["two"] = 2,
 				[true] = false,
 			}]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("tables as keys", function()
@@ -203,7 +184,7 @@ do
 			a[key1] = "value"
 			b[key2] = "value"
             return a, b]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("Complex self-references", function()
@@ -215,19 +196,19 @@ do
 			b.self = b
 			b.other = a
             return a, b]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("Array with table elements", function()
 		local a = X("{{1, 2}, {3, 4}}")
 		local b = X("{{1, 2}, {3, 4}}")
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("Different order", function()
 		local a = X("{c = 3, b = 2, a = 1}")
 		local b = X("{a = 1, b = 2, c = 3}")
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("Circular metatables", function()
@@ -240,7 +221,7 @@ do
 			setmetatable(b, mt_b)
             return a,b
             ]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("Deep nested self-references", function()
@@ -250,7 +231,7 @@ do
 			local b = {level1 = {}}
 			b.level1.back = b
             return a, b]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("Metatable inheritance", function()
@@ -270,7 +251,7 @@ do
 			setmetatable(b, {__index = b_proto})
             return a, b
             ]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("Three-way circular references", function()
@@ -291,7 +272,7 @@ do
 		b3.next = b1
         return a1, b1
         ]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("Four-way circular references", function()
@@ -316,7 +297,7 @@ do
 		b4.next = b1
         return a1, b1
         ]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("Diamond pattern references", function()
@@ -342,7 +323,7 @@ do
 		b_right.bottom = b_bottom
 		b_bottom.top = b_top
         return a_top, b_top]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("Complex graph with cross-references", function()
@@ -381,7 +362,7 @@ do
 
         return a_nodes[1], b_nodes[1]
         ]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("Mixed self and cross-references", function()
@@ -414,7 +395,7 @@ do
 
             return a1, b1
         ]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("tuple equal", function()
@@ -425,7 +406,7 @@ do
 		]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("tuple equal nested", function()
@@ -436,7 +417,7 @@ do
 		]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("tuple equal nested", function()
@@ -450,7 +431,7 @@ do
 		]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("union equal", function()
@@ -461,7 +442,7 @@ do
 		]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	-- Edge cases for unions
@@ -473,7 +454,7 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("union equal with nested unions", function()
@@ -484,7 +465,7 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("union equal one-element union vs non-union", function()
@@ -495,7 +476,7 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("union equal with table elements", function()
@@ -506,7 +487,7 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("union equal with mixed types", function()
@@ -517,7 +498,7 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("union equal with different lengths should not be equal", function()
@@ -528,8 +509,8 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		local equal, reason = equal(a, b)
-		assert(not equal, reason)
+		local eq, reason = shared.Equal(a, b)
+		assert(not eq, reason)
 	end)
 
 	-- Edge cases for tuples
@@ -541,7 +522,7 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("tuple equal with different ordering", function()
@@ -552,8 +533,8 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		local equal, reason = equal(a, b)
-		assert(not equal, reason)
+		local eq, reason = shared.Equal(a, b)
+		assert(not eq, reason)
 	end)
 
 	test("tuple equal deeply nested", function()
@@ -564,7 +545,7 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("tuple equal with circular reference to parent", function()
@@ -577,7 +558,7 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("tuple equal with table elements", function()
@@ -588,7 +569,7 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("tuple equal with union elements", function()
@@ -599,7 +580,7 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("tuple equal with mixed types", function()
@@ -610,7 +591,7 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("tuple equal with different lengths should not be equal", function()
@@ -621,13 +602,13 @@ do
     ]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		local equal, reason = equal(a, b)
-		assert(not equal, reason)
+		local eq, reason = shared.Equal(a, b)
+		assert(not eq, reason)
 	end)
 
 	test("fail case", function()
 		local a, b = S[[return _ as function=(number)>(nil), _ as function=(number)>(nil)]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("fail case1", function()
@@ -675,7 +656,7 @@ do
 		]]
 		local a = tup:GetWithoutExpansion(1)
 		local b = tup:GetWithoutExpansion(2)
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 
 	test("fail case 2", function()
@@ -693,6 +674,6 @@ do
 
 			return val, _ as any | ffi.get_type("int[1]")
 		]]
-		assert(equal(a, b))
+		assert(shared.Equal(a, b))
 	end)
 end

@@ -14,18 +14,6 @@ analyzer function attest.equal(A: any, B: any, level: nil | 0 .. inf)
 	return A
 end
 
-analyzer function attest.strict_equal(A: any, B: any, level: nil | 0 .. inf)
-	if A:GetHash() ~= B:GetHash() then
-		analyzer:ThrowError(
-			"hashes A and B are not equal:\n" .. tostring(A:GetHash()) .. "\n" .. tostring(B:GetHash()),
-			level and level:GetData() or 2
-		)
-		return
-	end
-
-	return A
-end
-
 SetPreventInputExpansionOnFunction<|attest.equal, true|>
 
 analyzer function attest.literal(A: any)

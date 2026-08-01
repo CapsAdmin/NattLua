@@ -26,11 +26,6 @@ META:GetSet("MinNumber", false--[[# as TNumber]])
 META:GetSet("MaxNumber", false--[[# as TNumber]])
 META:GetSet("Hash", ""--[[# as string]])
 local VERSION = jit and "LUAJIT" or _VERSION
-
-local function compute_hash(min--[[#: TNumber]], max--[[#: TNumber]])
-	return min:GetHash() .. ".." .. max:GetHash()
-end
-
 local mod = nil
 
 local function LNumber(num--[[#: number | nil]])
@@ -46,7 +41,7 @@ function META.New(min--[[#: TNumber]], max--[[#: TNumber]])
 		TruthyFalsy = "truthy",
 		Upvalue = false,
 		Contract = false,
-		Hash = compute_hash(min, max),
+		Hash = min.Hash .. ".." .. max.Hash,
 		DontWiden = false,
 	}
 end

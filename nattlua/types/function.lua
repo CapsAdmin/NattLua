@@ -90,37 +90,6 @@ function META:Get(key--[[#: TBaseType]])--[[#: (TBaseType | false), (any | nil)]
 	return false, error_messages.undefined_get(self, key, self.Type)
 end
 
-function META:GetHash(visited)
-	visited = visited or {}
-
-	if visited[self] then return visited[self] end
-
-	visited[self] = "*circular*"
-	local result = "("
-	-- Add hash for input signature
-	local input = self:GetInputSignature()
-
-	if input then
-		local h = input:GetHash(visited)
-
-		if h then result = result .. h end
-	end
-
-	result = result .. ")=>("
-	-- Add hash for output signature
-	local output = self:GetOutputSignature()
-
-	if output then
-		local h = output:GetHash(visited)
-
-		if h then result = result .. h end
-	end
-
-	result = result .. ")"
-	visited[self] = result
-	return visited[self]
-end
-
 local function copy_val(val, map, copy_tables)
 	if not val then return val end
 

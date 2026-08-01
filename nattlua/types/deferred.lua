@@ -59,17 +59,6 @@ function META:IsCertainlyFalse()
 	return unwrapped:IsCertainlyFalse()
 end
 
-function META:GetHash(visited)
-	local unwrapped = self:Unwrap()
-
-	if unwrapped == self then
-		local upv = self:GetUpvalue()
-		return "reference:" .. tostring(upv and upv:GetKey() or self)
-	end
-
-	return unwrapped:GetHash(visited)
-end
-
 function META:__tostring(visited)
 	local unwrapped = self:Unwrap()
 

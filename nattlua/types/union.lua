@@ -49,28 +49,6 @@ function META:GetHashForMutationTracking()
 	return tostring(self)
 end
 
-function META:GetHash(visited--[[#: Map<|any, string|> | nil]])--[[#: string]]
-	local data = self.Data
-
-	if #data == 1 then return (data[1]--[[# as any]]):GetHash(visited) end
-
-	visited = visited or {}
-
-	if visited[self] then return visited[self]--[[# as string]] end
-
-	visited[self] = "*circular*"
-	local types = {}
-	local len = #data
-
-	for i = 1, len do
-		types[i] = assert(data[i]):GetHash(visited)
-	end
-
-	table_sort(types)
-	visited[self] = table_concat(types, "|")
-	return visited[self]--[[# as string]]
-end
-
 local sort = function(a--[[#: string]], b--[[#: string]])
 	return a < b
 end
@@ -105,11 +83,7 @@ local STRING_TYPE = {}
 local NUMBER_TYPE = {}
 
 local function hash(obj)
-	local obj_type = obj.Type
-
-	if obj_type ~= "table" and obj_type ~= "function" and obj_type ~= "tuple" then
-		return obj.Hash or obj:GetHash(nil)
-	end
+	return obj.Hash
 end
 
 local function add(self--[[#: TUnion]], obj--[[#: any]])

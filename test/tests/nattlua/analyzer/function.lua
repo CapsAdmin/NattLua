@@ -1026,8 +1026,8 @@ local function foo(x: AnyTable)
 end
 
 foo(x)
-attest.strict_equal(x, {1, 2})
-attest.strict_equal<|AnyTable, {[any] = any} | {}|>
+attest.equal(x, {1, 2})
+attest.equal<|AnyTable, {[any] = any} | {}|>
 ]]
 analyze(
 	[[

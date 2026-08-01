@@ -39,10 +39,6 @@ function META:GetHashForMutationTracking()
 	return self
 end
 
-function META:GetHash()
-	return self
-end
-
 local context = require("nattlua.analyzer.context")
 
 local function increment_use_count(self)
