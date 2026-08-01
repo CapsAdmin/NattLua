@@ -323,12 +323,14 @@ do
 		return ok, err
 	end
 
-	function _G.run_single_test(test)
+function _G.run_single_test(test)
 		current_test_name = test.name
 
 		-- You'll need to pass the expected test count somehow, or estimate it
 		-- For now, setting to 0 means no progress counter shown
 		if LOGGING then update_test_line("RUNNING") end
+
+		_G.TEST = true
 
 		if test.is_lua then
 			local func, err = loadfile(test.path)
@@ -347,6 +349,8 @@ do
 
 			if not ok then error("failed to analyze " .. test.path .. ": " .. err, 2) end
 		end
+
+		_G.TEST = false
 
 		test_file_count = test_file_count + 1
 	end
