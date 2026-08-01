@@ -195,6 +195,8 @@ function shared.IsSubsetOf(
 	visited--[[#: any]],
 	max_length--[[#: nil | number]]
 )--[[#: boolean, string | nil]]
+	if a == b then return true end
+
 	if b.Type == "deferred" then b = b:Unwrap() end
 
 	if b.Type == "deferred" then
@@ -478,6 +480,12 @@ function shared.IsSubsetOf(
 				local found = false
 
 				for i, obj in ipairs(b.Data) do
+					if a_val.Hash and b.literal_data_cache[a_val.Hash] then
+						found = true
+
+						break
+					end
+
 					local ok, reason = shared.IsSubsetOf(a_val, obj)
 
 					if ok then
