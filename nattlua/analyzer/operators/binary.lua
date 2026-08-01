@@ -712,19 +712,16 @@ local function BinaryWithUnion(self, node, l, r, op)
 					local new_union = Union()
 					local source_map = {}
 
-					for _, l_elem in ipairs(l:GetData()) do
-						for _, r_elem in ipairs(r:GetData()) do
-							if tag_info.predicate(l_elem, r_elem) then
-								local res, err = Binary(self, node, l_elem, r_elem, op)
+					for _, pair in ipairs(tag_info.pairs) do
+						local l_elem, r_elem = pair[1], pair[2]
+						local res, err = Binary(self, node, l_elem, r_elem, op)
 
-								if res then
-									new_union:AddType(res)
+						if res then
+							new_union:AddType(res)
 
-									if tag_info.track_sources then source_map[res] = l_elem end
-								else
-									self:Error(err)
-								end
-							end
+							if tag_info.track_sources then source_map[res] = l_elem end
+						else
+							self:Error(err)
 						end
 					end
 

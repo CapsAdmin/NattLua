@@ -1783,7 +1783,6 @@ do
 		local r_upvalue = r:GetUpvalue()
 		local has_l_upvalue = l_upvalue ~= nil and l_upvalue ~= false
 		local has_r_upvalue = r_upvalue ~= nil and r_upvalue ~= false
-		-- --- Correlation branch ---
 		local correlation
 
 		if has_l_upvalue and has_r_upvalue then
@@ -1791,11 +1790,20 @@ do
 		end
 
 		if correlation ~= nil then
-			return {
-				predicate = function(l_elem, r_elem)
+			local pairs = {}
+
+			for _, l_elem in ipairs(l:GetData()) do
+				for _, r_elem in ipairs(r:GetData()) do
 					local eq = shared.Equal(l_elem, r_elem)
-					return (correlation and eq) or (not correlation and not eq)
-				end,
+
+					if (correlation == true and eq) or (correlation == false and not eq) then
+						table.insert(pairs, {l_elem, r_elem})
+					end
+				end
+			end
+
+			return {
+				pairs = pairs,
 				tag_key = correlation and l_upvalue,
 				track_sources = correlation ~= false,
 			}
@@ -1829,15 +1837,26 @@ do
 		if same_equiv then
 			local l_sources = self:GetSourceValues(l)
 			local tag_key = l_upvalue or l
-			return {
-				predicate = function(l_elem, r_elem)
+			-- Enumerate valid pairs using source tracking or direct equality
+			local pairs = {}
+
+			for _, l_elem in ipairs(l:GetData()) do
+				for _, r_elem in ipairs(r:GetData()) do
+					local match = false
+
 					if l_sources then
 						local orig = self:GetOriginalValue(l, l_elem)
-						return orig and shared.Equal(orig, r_elem)
+						match = orig and shared.Equal(orig, r_elem)
+					else
+						match = shared.Equal(l_elem, r_elem)
 					end
 
-					return shared.Equal(l_elem, r_elem)
-				end,
+					if match then table.insert(pairs, {l_elem, r_elem}) end
+				end
+			end
+
+			return {
+				pairs = pairs,
 				tag_key = tag_key,
 				track_sources = true,
 			}
