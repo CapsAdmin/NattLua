@@ -1146,3 +1146,24 @@ check(
 	"local function foo() return 1 end",
 	"local function foo()\n\treturn 1\nend"
 )
+
+do -- strip_comments
+	local code = "-- hello\nlocal a = 1 -- TODO fix\n--[[ big ]] local b = 2 -- hack\nreturn a"
+
+	for _, pretty in ipairs({true, false}) do
+		local function emit(strip)
+			return assert(
+				nl.Compiler(code, nil, {emitter = {pretty_print = pretty, strip_comments = strip}}):Emit()
+			)
+		end
+
+		local all = emit(true)
+		assert(not all:find("%-%-"))
+		local some = emit({"TODO", "hack"})
+		assert(some:find("TODO fix", nil, true))
+		assert(some:find("hack", nil, true))
+		assert(not some:find("hello", nil, true))
+		assert(not some:find("big", nil, true))
+		assert(emit(false):find("hello", nil, true))
+	end
+end

@@ -223,6 +223,26 @@ return function()
 			end
 		end
 
+		function META:ShouldEmitComment(token--[[#: Token]])
+			local strip = self.config.strip_comments
+
+			if not strip then return true end
+
+			if token.type ~= "line_comment" and token.type ~= "multiline_comment" then
+				return true
+			end
+
+			if type(strip) == "table" then
+				local str = token:GetValueString()
+
+				for _, pattern in ipairs(strip) do
+					if str:find(pattern) then return true end
+				end
+			end
+
+			return false
+		end
+
 		function META:EmitToken(token--[[#: Token]], translate--[[#: any]])
 			if
 				self.config.extra_indent and
@@ -291,11 +311,11 @@ return function()
 				local whitespace = token:GetWhitespace()
 
 				if self.config.pretty_print == true then
-					if self.config.skip_comments then
-
-					else
+					do
 						for i, wtoken in ipairs(whitespace) do
-							if wtoken.type == "line_comment" then
+							if not self:ShouldEmitComment(wtoken) then
+
+							elseif wtoken.type == "line_comment" then
 								local start = i
 
 								for i = self.i - 1, 1, -1 do
@@ -339,7 +359,9 @@ return function()
 					end
 				else
 					for _, wtoken in ipairs(whitespace) do
-						if wtoken.type ~= "comment_escape" then self:EmitWhitespace(wtoken) end
+						if wtoken.type ~= "comment_escape" and self:ShouldEmitComment(wtoken) then
+							self:EmitWhitespace(wtoken)
+						end
 					end
 				end
 			end
