@@ -206,6 +206,22 @@ do
 	assert(formatted:find("local f = assert%(loadfile%)") == nil)
 end
 
+do -- Format uses config.emitter from nlconfig.lua (same as `nattlua fmt`)
+	local helper = EditorHelper.New()
+	helper:Initialize()
+
+	helper:SetConfigFunction(function()
+		return {emitter = {strip_comments = {"TODO"}}}
+	end)
+
+	local path = "./strip_comments.lua"
+	local code = "-- remove me\nlocal a = 1 -- TODO keep me\nreturn a\n"
+	helper:OpenFile(path, code)
+	local formatted = helper:Format(code, path)
+	assert(formatted:find("TODO keep me", nil, true))
+	assert(not formatted:find("remove me", nil, true))
+end
+
 do
 	local helper = EditorHelper.New()
 	helper:Initialize()

@@ -895,6 +895,15 @@ end
 function META:Format(code, path, extra_emitter_config)
 	path = path_util.Normalize(path)
 	local config = self:GetCompilerConfig(path)
+	local project_config = self.ConfigFunction(path)
+
+	-- same source of emitter settings as `nattlua fmt` (config.emitter in nlconfig.lua)
+	if project_config and type(project_config.emitter) == "table" then
+		for k, v in pairs(project_config.emitter) do
+			if config.emitter[k] == nil then config.emitter[k] = v end
+		end
+	end
+
 	apply_format_emitter_defaults(config.emitter)
 	config.parser = {skip_import = true}
 	config.emitter.comment_type_annotations = path:sub(-#".lua") == ".lua"
